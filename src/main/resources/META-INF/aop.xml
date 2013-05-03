@@ -1,0 +1,19 @@
+<!DOCTYPE aspectj PUBLIC
+        "-//AspectJ//DTD//EN" "http://www.eclipse.org/aspectj/dtd/aspectj.dtd">
+
+<aspectj>
+
+    <weaver options="-verbose"/>
+
+    <aspects>
+        <aspect name="akka.actor.ActorAspect"/>
+
+        <include within="*"/>
+        <exclude within="javax.*"/>
+        <exclude within="org.aspectj.*"/>
+        <exclude within="scala.*"/>
+        <exclude within="scalaz.*"/>
+        <exclude within="scalad.*"/>
+    </aspects>
+
+</aspectj>
