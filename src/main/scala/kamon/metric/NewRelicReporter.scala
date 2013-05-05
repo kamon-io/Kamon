@@ -3,11 +3,10 @@ package kamon.metric
 import com.newrelic.api.agent.NewRelic
 import com.yammer.metrics.reporting.AbstractPollingReporter
 import com.yammer.metrics.core._
+import scala.collection.JavaConversions._
 
 
 class NewRelicReporter(registry: MetricsRegistry, name: String) extends AbstractPollingReporter(registry, name) with MetricProcessor[String] {
-
-  
 
   def processMeter(name: MetricName, meter: Metered, context: String) {
     println(s"Logging to NewRelic: ${meter.count()}")
@@ -23,19 +22,12 @@ class NewRelicReporter(registry: MetricsRegistry, name: String) extends Abstract
 
   def processGauge(name: MetricName, gauge: Gauge[_], context: String) {}
 
-  private final val predicate: MetricPredicate = null
-
 
   def run() {
-    import scala.collection.JavaConversions._
-    for (entry <- getMetricsRegistry.groupedMetrics(predicate).entrySet) {
-      import scala.collection.JavaConversions._
+    for (entry <- getMetricsRegistry.groupedMetrics(MetricPredicate.ALL).entrySet) {
       for (subEntry <- entry.getValue.entrySet) {
         subEntry.getValue.processWith(this, subEntry.getKey, "")
       }
-
     }
-
   }
-
 }

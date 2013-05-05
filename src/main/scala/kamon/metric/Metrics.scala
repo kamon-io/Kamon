@@ -11,14 +11,13 @@ class Metrics {
   private lazy val metricsRegistry: MetricsRegistry = new MetricsRegistry()
   private lazy val metricsGroup = new MetricsGroup(this.getClass, metricsRegistry)
 
-  private lazy val meters = new mutable.HashMap[String, Meter]
+  private lazy val meters = new mutable.HashMap[String, Meter] with SynchronizedMap[String, Meter]
   private lazy val timers = new HashMap[String, Timer] with SynchronizedMap[String, Timer]
   private lazy val counters = new HashMap[String, Counter] with SynchronizedMap[String, Counter]
 
-
-
   val consoleReporter = ConsoleReporter.enable(metricsRegistry, 1, TimeUnit.SECONDS)
   val newrelicReport = new NewRelicReporter(metricsRegistry, "newrelic-reporter");
+
   newrelicReport.run()
   newrelicReport.start(1, TimeUnit.SECONDS)
 

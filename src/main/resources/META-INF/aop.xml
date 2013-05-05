@@ -6,7 +6,10 @@
     <weaver options="-verbose"/>
 
     <aspects>
-        <aspect name="akka.actor.ActorAspect"/>
+        <aspect name="akka.ActorSystemAspect"/>
+        <aspect name="akka.MailboxAspect"/>
+        <aspect name="akka.PoolMonitorAspect"/>
+        <aspect name="akka.ActorAspect"/>
 
         <include within="*"/>
         <exclude within="javax.*"/>
