@@ -14,6 +14,7 @@ class ActorAspect extends Metrics {
   @Around("actorReceive() && this(actor)")
   def around(pjp: ProceedingJoinPoint, actor: akka.actor.ActorCell): AnyRef = {
 
+    //println("The path is: "+actor.self.path.)
     val actorName:String  = actor.self.path.toString
 
     markAndCountMeter(actorName){

@@ -10,7 +10,10 @@ class NewRelicReporter(registry: MetricsRegistry, name: String) extends Abstract
 
   def processMeter(name: MetricName, meter: Metered, context: String) {
     println(s"Logging to NewRelic: ${meter.count()}")
-    NewRelic.recordMetric("Custom/Actor/MessagesPerSecond", meter.count())
+    NewRelic.recordMetric("Custom/Actor/MessagesPerSecond", meter.meanRate().toFloat)
+
+
+
   }
 
 

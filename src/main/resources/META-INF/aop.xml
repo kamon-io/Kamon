@@ -3,7 +3,7 @@
 
 <aspectj>
 
-    <weaver options="-verbose"/>
+    <weaver options="-verbose -showWeaveInfo"/>
 
     <aspects>
         <aspect name="akka.ActorSystemAspect"/>
