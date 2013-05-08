@@ -8,6 +8,8 @@ import kamon.metric.NewRelicReporter
 
 import com.yammer.metrics.core.{MetricName, MetricsRegistry}
 import com.yammer.metrics.reporting.ConsoleReporter
+import kamon.actor.{DeveloperComment, TransactionContext, ContextAwareMessage, EnhancedActor}
+import scala.concurrent.Future
 
 
 trait Message
@@ -48,18 +50,28 @@ object TryAkka extends App{
   case class Ping()
   case class Pong()
 
-  class PingActor(val target: ActorRef) extends Actor {
-    def receive = {
-      case Pong() => target ! Ping()
+  class PingActor(val target: ActorRef) extends EnhancedActor {
+    import akka.pattern.pipe
+    implicit def executionContext = context.dispatcher
+
+    def wrappedReceive = {
+      case Pong() => {
+        transactionContext = transactionContext.append(DeveloperComment("In PONG"))
+
+
+        Future {
+          Thread.sleep(1000) // Doing something really expensive
+          ContextAwareMessage(transactionContext, Ping())
+        } pipeTo target
+
+      }
     }
   }
 
-  class PongActor extends Actor {
-    var i = 0
-    def receive = {
+  class PongActor extends EnhancedActor {
+    def wrappedReceive = {
       case Ping() => {
-        i=i+1
-        sender ! Pong()
+        superTell(sender, Pong())
       }
     }
   }
@@ -71,10 +83,10 @@ object TryAkka extends App{
 
 */
 
-  for(i <- 1 to 8) {
-    val ping = system.actorOf(Props(new PingActor(system.actorOf(Props[PongActor], s"ping-actor-${i}"))), s"pong-actor-${i}")
-    ping ! Pong()
-  }
+  /*for(i <- 1 to 8) {*/
+    val ping = system.actorOf(Props(new PingActor(system.actorOf(Props[PongActor], "ping"))), "pong")
+    ping ! ContextAwareMessage(TransactionContext(1707, Nil), Pong())
+  //}
 
 
 /*  appActorEventBus.subscribe(subscriber, NEW_POST_CHANNEL)
