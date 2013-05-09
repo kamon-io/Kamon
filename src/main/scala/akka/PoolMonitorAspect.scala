@@ -1,29 +1,36 @@
 package akka
 
 import org.aspectj.lang.annotation.{Pointcut, Before, Aspect}
-import java.util.concurrent.{TimeUnit, Executors}
+import scala.concurrent.duration._
+import com.newrelic.api.agent.NewRelic
 
-@Aspect
-class PoolMonitorAspect {
+@Aspect("perthis(poolMonitor())")
+class PoolMonitorAspect extends ActorSystem {
 
-  @Pointcut("execution(scala.concurrent.forkjoin.ForkJoinPool.new(..))")
+  @Pointcut("execution(scala.concurrent.forkjoin.ForkJoinPool.new(..)) && !within(PoolMonitorAspect)")
   protected def poolMonitor:Unit = {}
 
   @Before("poolMonitor() && this(pool)")
   def beforePoolInstantiation(pool: scala.concurrent.forkjoin.ForkJoinPool) {
+    actorSystem.scheduler.schedule(10 seconds, 6 second, new Runnable {
+      def run() {
+        val poolName = pool.getClass.getSimpleName
 
-       val scheduler = Executors.newScheduledThreadPool(1);
+        println(s"Sending metrics to Newrelic PoolMonitor -> ${poolName}")
+        PoolConverter.toMap(pool).map{case(k,v) => NewRelic.recordMetric(s"${poolName}:${k}",v)}
+        }
+      })
+    }
+}
 
-        scheduler.scheduleAtFixedRate(new Runnable {
-          def run() {
-                println("PoolName : " + pool.getClass.getSimpleName)
-                println("ThreadCount :" + pool.getActiveThreadCount)
-                println("Parallelism :" + pool.getParallelism)
-                println("PoolSize :" + pool.getPoolSize())
-                println("Submission :" + pool.getQueuedSubmissionCount())
-                println("Steals :" + pool.getStealCount())
-                println("All :" + pool.toString)
-          }
-        }, 4, 4, TimeUnit.SECONDS)
-      }
+object PoolConverter {
+  def toMap(pool: scala.concurrent.forkjoin.ForkJoinPool):Map[String,Int] = Map[String,Int](
+    "ActiveThreadCount" -> pool.getActiveThreadCount,
+    "Parallelism" -> pool.getParallelism,
+    "PoolSize" -> pool.getPoolSize,
+    "QueuedSubmissionCount" -> pool.getQueuedSubmissionCount,
+    "StealCount" -> pool.getStealCount.toInt,
+    "QueuedTaskCount" -> pool.getQueuedTaskCount.toInt,
+    "RunningThreadCount" -> pool.getRunningThreadCount
+  )
 }
