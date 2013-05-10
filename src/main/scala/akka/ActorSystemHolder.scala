@@ -2,8 +2,8 @@ package akka
 
 import org.aspectj.lang.Aspects
 
-trait ActorSystem {
+trait ActorSystemHolder {
   lazy val actorSystemAspect = Aspects.aspectOf(classOf[ActorSystemAspect])
   lazy val actorSystem = actorSystemAspect.currentActorSystem
-  implicit val dispatcher = actorSystem.dispatcher
+  lazy implicit val dispatcher = actorSystem.dispatcher
 }

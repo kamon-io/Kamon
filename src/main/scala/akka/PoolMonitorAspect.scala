@@ -5,7 +5,7 @@ import scala.concurrent.duration._
 import com.newrelic.api.agent.NewRelic
 
 @Aspect("perthis(poolMonitor())")
-class PoolMonitorAspect extends ActorSystem {
+class PoolMonitorAspect extends ActorSystemHolder {
 
   @Pointcut("execution(scala.concurrent.forkjoin.ForkJoinPool.new(..)) && !within(PoolMonitorAspect)")
   protected def poolMonitor:Unit = {}

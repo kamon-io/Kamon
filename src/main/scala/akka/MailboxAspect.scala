@@ -5,7 +5,7 @@ import scala.concurrent.duration._
 import com.newrelic.api.agent.NewRelic
 
 @Aspect("perthis(mailboxMonitor())")
-class MailboxAspect extends ActorSystem {
+class MailboxAspect extends ActorSystemHolder {
 
   @Pointcut("execution(akka.dispatch.Mailbox.new(..)) && !within(MailboxAspect)")
   protected def mailboxMonitor():Unit = {}
