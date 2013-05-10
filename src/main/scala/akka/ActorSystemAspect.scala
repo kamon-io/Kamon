@@ -1,18 +1,18 @@
 package akka
 
 import org.aspectj.lang.annotation._
-import akka.actor.ActorSystemImpl
-import com.typesafe.config.Config
+import actor.ActorSystemImpl
 
 @Aspect
-@DeclarePrecedence("ActorSystemAspect")
 class ActorSystemAspect {
+  println("Created ActorSystemAspect")
 
-  var currentActorSystem:ActorSystemImpl = _
-
-  @Pointcut("execution(akka.actor.ActorSystemImpl.new(..)) && !within(ActorSystemAspect)")
+  @Pointcut("execution(* akka.actor.ActorRefProvider+.init(..)) && !within(ActorSystemAspect)")
   protected def actorSystem():Unit = {}
 
-  @Before("actorSystem() && this(system) && args(name, config, classLoader)")
-  def collectActorSystem(system: ActorSystemImpl, name: String, config: Config, classLoader: ClassLoader) { currentActorSystem = system }
+  @After("actorSystem() && args(system)")
+  def collectActorSystem(system: ActorSystemImpl):Unit = {
+    Tracer.collectActorSystem(system)
+    Tracer.start()
+  }
 }

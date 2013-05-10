@@ -7,6 +7,7 @@ import akka.actor.ActorCell
 
 @Aspect
 class ActorAspect extends Metrics {
+  println("Created ActorAspect")
 
   @Pointcut("execution(* akka.actor.ActorCell+.receiveMessage(..))")
   protected def actorReceive:Unit = {}
