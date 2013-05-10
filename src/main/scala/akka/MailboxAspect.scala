@@ -11,6 +11,6 @@ class MailboxAspect {
 
   @After("mailboxMonitor() && this(mb)")
   def afterInitialization(mb: akka.dispatch.Mailbox) : Unit = {
-    Tracer.collectMailBox(mb)
+    Tracer.collectMailbox(mb)
   }
 }

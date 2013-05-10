@@ -1,33 +1,34 @@
 package akka
 
 import actor.{Props, Actor, ActorSystemImpl}
-import concurrent.forkjoin.ForkJoinPool
+import scala.concurrent.forkjoin.ForkJoinPool
 import scala.concurrent.duration._
 import com.newrelic.api.agent.NewRelic
 import akka.dispatch.Mailbox
+import scala._
 
 object Tracer {
-  var system: ActorSystemImpl = _
-  var forkJoinPool:ForkJoinPool = _
-  var mailbox:Mailbox = _
+  protected[this] var mailboxes:List[Mailbox] = List.empty
+  protected[this] var tracerActorSystem: ActorSystemImpl = _
+  protected[this] var forkJoinPool:ForkJoinPool = _
 
   def collectPool(pool: ForkJoinPool) = forkJoinPool = pool
-  def collectActorSystem(actorSystem: ActorSystemImpl)  = system = actorSystem
-
-  def collectMailBox(mb: akka.dispatch.Mailbox)  =  {
-    mailbox = mb
-  }
+  def collectActorSystem(actorSystem: ActorSystemImpl)  = tracerActorSystem = actorSystem
+  def collectMailbox(mb: akka.dispatch.Mailbox)  =  mailboxes ::= mb
 
   def start():Unit ={
-    implicit val dispatcher = system.dispatcher
-    val metricsActor = system.actorOf(Props[MetricsActor], "PoolActor")
+    implicit val dispatcher = tracerActorSystem.dispatcher
+    val metricsActor = tracerActorSystem.actorOf(Props[MetricsActor], "MetricsActor")
 
-    system.scheduler.schedule(10 seconds, 6 second, metricsActor, PoolMetrics(forkJoinPool))
-    system.scheduler.schedule(10 seconds, 6 second, metricsActor, MailboxMetrics(mailbox))
+    tracerActorSystem.scheduler.schedule(10 seconds, 6 second, metricsActor, PoolMetrics(forkJoinPool))
+    tracerActorSystem.scheduler.schedule(10 seconds, 6 second, metricsActor, MailboxMetrics(mailboxes))
   }
 }
 
 case class PoolMetrics(poolName:String, data:Map[String,Int])
+case class MailboxMetrics(mailboxes:Map[String,Mailbox])
+
+
 object PoolMetrics {
   def apply(pool: ForkJoinPool) = new PoolMetrics(pool.getClass.getSimpleName, toMap(pool))
 
@@ -41,28 +42,30 @@ object PoolMetrics {
     "RunningThreadCount" -> pool.getRunningThreadCount
   )
 }
-case class MailboxMetrics(mbName:String, mailBox:Mailbox)
+
 object  MailboxMetrics {
-  def apply(mb: Mailbox) = new MailboxMetrics(mb.actor.self.path.toString,mb)
+  def apply(mailboxes: List[Mailbox]) = {
+    new MailboxMetrics(mailboxes.take(mailboxes.length - 1).map{m => (m.actor.self.path.toString -> m)}.toMap) //TODO:reseach why collect an ActorSystemImpl
+  }
 }
 
 class MetricsActor extends Actor {
     def receive = {
+
       case poolMetrics:PoolMetrics => {
         println(poolMetrics)
         poolMetrics.data.map{case(k,v) => NewRelic.recordMetric(s"${poolMetrics.poolName}:${k}",v)}
       }
       case mailboxMetrics:MailboxMetrics => {
-        val actorName  = mailboxMetrics.mbName
-        val mb = mailboxMetrics.mailBox
-        println(s"Sending metrics to Newrelic MailBoxMonitor -> ${actorName}")
+        mailboxMetrics.mailboxes.map { case(actorName,mb) =>
+          println(s"Sending metrics to Newrelic MailBoxMonitor -> ${actorName}")
 
+          NewRelic.recordMetric(s"${actorName}:Mailbox:NumberOfMessages",mb.numberOfMessages)
+          NewRelic.recordMetric(s"${actorName}:Mailbox:MailboxDispatcherThroughput",mb.dispatcher.throughput)
 
-        NewRelic.recordMetric(s"${actorName}:Mailbox:NumberOfMessages",mb.numberOfMessages)
-        NewRelic.recordMetric(s"${actorName}:Mailbox:MailboxDispatcherThroughput",mb.dispatcher.throughput)
-
-        NewRelic.addCustomParameter(s"${actorName}:Mailbox:Status", mb.hasMessages.toString)
-        NewRelic.addCustomParameter(s"${actorName}:Mailbox:HasMessages", mb.hasMessages.toString)
+          NewRelic.addCustomParameter(s"${actorName}:Mailbox:Status", mb.hasMessages.toString)
+          NewRelic.addCustomParameter(s"${actorName}:Mailbox:HasMessages", mb.hasMessages.toString)
+        }
       }
     }
 }
