@@ -7,9 +7,9 @@
 
     <aspects>
         <aspect name="akka.ActorSystemAspect"/>
-        <aspect name="akka.MailboxAspect"/>
+        <!--<aspect name="akka.MailboxAspect"/>-->
         <aspect name="akka.PoolMonitorAspect"/>
-        <aspect name="akka.ActorAspect"/>
+        <!--<aspect name="akka.ActorAspect"/>-->
 
         <include within="*"/>
         <exclude within="javax.*"/>
