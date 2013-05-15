@@ -1,18 +1,18 @@
-<!DOCTYPE aspectj PUBLIC
-        "-//AspectJ//DTD//EN" "http://www.eclipse.org/aspectj/dtd/aspectj.dtd">
+<!DOCTYPE aspectj PUBLIC "-//AspectJ//DTD//EN" "http://www.eclipse.org/aspectj/dtd/aspectj.dtd">
 
 <aspectj>
 
     <weaver options="-verbose -showWeaveInfo"/>
 
     <aspects>
-        <aspect name="akka.ActorSystemAspect"/>
-        <!--<aspect name="akka.MailboxAspect"/>-->
-        <aspect name="akka.PoolMonitorAspect"/>
-        <!--<aspect name="akka.ActorAspect"/>-->
+        <!--<aspect name="akka.ActorSystemAspect"/>
+        &lt;!&ndash;<aspect name="akka.MailboxAspect"/>&ndash;&gt;
+        <aspect name="akka.PoolMonitorAspect"/>-->
+        <aspect name="akka.instrumentation.ActorInstrumentation"/>
 
         <include within="*"/>
         <exclude within="javax.*"/>
+
         <exclude within="org.aspectj.*"/>
         <exclude within="scala.*"/>
         <exclude within="scalaz.*"/>

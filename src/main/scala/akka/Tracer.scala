@@ -3,6 +3,7 @@ package akka
 import actor.{Props, ActorSystemImpl}
 import scala.concurrent.forkjoin.ForkJoinPool
 import scala.concurrent.duration._
+import com.newrelic.api.agent.NewRelic
 import akka.dispatch.Mailbox
 import scala._
 import com.newrelic.api.agent.NewRelic
@@ -28,6 +29,7 @@ object Tracer {
         val mbm = MailboxMetrics(mailboxes)
         mbm.mailboxes.map { case(actorName,mb) => {
           println(s"Sending metrics to Newrelic MailBoxMonitor -> ${actorName}")
+
           NewRelic.recordMetric(s"${actorName}:Mailbox:NumberOfMessages",mb.numberOfMessages)
           NewRelic.recordMetric(s"${actorName}:Mailbox:MailboxDispatcherThroughput",mb.dispatcher.throughput)
 

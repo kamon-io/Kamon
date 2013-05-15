@@ -8,8 +8,13 @@ import kamon.metric.NewRelicReporter
 
 import com.yammer.metrics.core.{MetricName, MetricsRegistry}
 import com.yammer.metrics.reporting.ConsoleReporter
-import kamon.actor.{DeveloperComment, TransactionContext, ContextAwareMessage, EnhancedActor}
+import kamon.actor._
 import scala.concurrent.Future
+import kamon.{TraceSupport, TraceContext}
+import akka.util.Timeout
+
+//import kamon.executor.MessageEvent
+import java.util.UUID
 
 
 trait Message
@@ -33,6 +38,33 @@ class AppActorEventBus extends ActorEventBus with LookupClassification{
     subscriber ! event
   }
 }
+case class Ping()
+case class Pong()
+
+class PingActor(val target: ActorRef) extends Actor {
+  implicit def executionContext = context.dispatcher
+  implicit val timeout = Timeout(30, TimeUnit.SECONDS)
+
+  def receive = {
+    case Pong() => {
+      println("pong")
+      Thread.sleep(1000)
+      target ! Ping()
+    }
+    case a: Any => println(s"Got ${a} in PING"); Thread.sleep(1000)
+  }
+}
+
+class PongActor extends Actor {
+  def receive = {
+    case Ping() => {
+      println("ping")
+      sender ! Pong()
+    }
+    case a: Any => println(s"Got ${a} in PONG")
+  }
+}
+
 
 object TryAkka extends App{
   val system = ActorSystem("MySystem")
@@ -47,34 +79,7 @@ object TryAkka extends App{
 
 
 
-  case class Ping()
-  case class Pong()
 
-  class PingActor(val target: ActorRef) extends EnhancedActor {
-    import akka.pattern.pipe
-    implicit def executionContext = context.dispatcher
-
-    def wrappedReceive = {
-      case Pong() => {
-        transactionContext = transactionContext.append(DeveloperComment("In PONG"))
-
-
-        Future {
-          Thread.sleep(1000) // Doing something really expensive
-          ContextAwareMessage(transactionContext, Ping())
-        } pipeTo target
-
-      }
-    }
-  }
-
-  class PongActor extends EnhancedActor {
-    def wrappedReceive = {
-      case Ping() => {
-        superTell(sender, Pong())
-      }
-    }
-  }
 
 
   /*
@@ -85,7 +90,7 @@ object TryAkka extends App{
 
   /*for(i <- 1 to 8) {*/
     val ping = system.actorOf(Props(new PingActor(system.actorOf(Props[PongActor], "ping"))), "pong")
-    ping ! ContextAwareMessage(TransactionContext(1707, Nil), Pong())
+    ping ! Pong()
   //}
 
 

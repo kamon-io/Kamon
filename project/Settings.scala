@@ -1,5 +1,6 @@
 import sbt._
 import Keys._
+import spray.revolver.RevolverPlugin.Revolver
 
 object Settings {
   val VERSION = "0.1-SNAPSHOT"
@@ -21,5 +22,13 @@ object Settings {
       "-Xlog-reflective-calls"
     )
   )
+
+
+  import spray.revolver.RevolverPlugin.Revolver._
+  lazy val revolverSettings = Revolver.settings ++ seq(
+    reJRebelJar := "~/.jrebel/jrebel.jar"
+  )
+
+
 }
 
