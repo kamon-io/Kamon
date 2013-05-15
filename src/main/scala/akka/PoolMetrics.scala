@@ -1,7 +1,6 @@
 package akka
 
 import scala.concurrent.forkjoin.ForkJoinPool
-import akka.actor.Actor
 import com.newrelic.api.agent.NewRelic
 
 case class PoolMetrics(poolName:String, data:Map[String,Int])
@@ -20,13 +19,11 @@ object PoolMetrics {
   )
 }
 
-class PoolMetricsActorSender(forkJoinPool:ForkJoinPool) extends Actor {
-  def receive = {
-    case "SendPoolMetrics" => {
+class PoolMetricsSender(forkJoinPool:ForkJoinPool) extends Runnable {
+  def run() {
       val pool = PoolMetrics(forkJoinPool)
       println(s"Sending Metrics to NewRelic -> ${pool}")
       pool.data.map{case(k,v) => NewRelic.recordMetric(s"${pool.poolName}:${k}",v)}
-    }
   }
 }
 
