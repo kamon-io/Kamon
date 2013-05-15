@@ -1,7 +1,6 @@
 package akka
 
 import akka.dispatch.Mailbox
-import akka.actor.Actor
 import com.newrelic.api.agent.NewRelic
 
 case class MailboxMetrics(mailboxes:Map[String,Mailbox])
@@ -19,18 +18,18 @@ object  MailboxMetrics {
   )
 }
 
-class MailboxSenderMetricsActor(mailboxes: List[Mailbox]) extends Actor {
-  def receive = {
-    case "SendMailboxMetrics" => {
-        val mbm = MailboxMetrics(mailboxes)
-        mbm.mailboxes.map { case(actorName, mb) => {
-          println(s"Sending metrics to Newrelic MailBoxMonitor -> ${actorName}")
-          NewRelic.recordMetric(s"${actorName}:Mailbox:NumberOfMessages", mb.numberOfMessages)
-          NewRelic.recordMetric(s"${actorName}:Mailbox:MailboxDispatcherThroughput", mb.dispatcher.throughput)
-          NewRelic.recordMetric(s"${actorName}:Mailbox:SuspendCount", mb.suspendCount)
-        }
+class MailboxSenderMetrics(mailboxes:List[Mailbox]) extends Runnable {
+  def run() {
+    val mbm = MailboxMetrics(mailboxes)
+    mbm.mailboxes.map { case(actorName,mb) => {
+      println(s"Sending metrics to Newrelic MailBoxMonitor for Actor -> ${actorName}")
+
+      MailboxMetrics.toMap(mb).map {case(property, value) =>
+          NewRelic.recordMetric(s"${actorName}:Mailbox:${property}", value)
       }
     }
   }
+ }
 }
+
 
