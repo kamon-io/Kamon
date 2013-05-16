@@ -11,7 +11,7 @@ class ActorAspect extends Metrics {
    @Pointcut("execution(* akka.actor.ActorCell+.receiveMessage(..))")
    protected def actorReceive:Unit = {}
 
-   @Around("actorReceive() && this(actor)")
+   @Around("sendingMessageToActorRef() && this(actor)")
    def around(pjp: ProceedingJoinPoint, actor: akka.actor.ActorCell): AnyRef = {
 
      //println("The path is: "+actor.self.path.)

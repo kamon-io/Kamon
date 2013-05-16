@@ -13,6 +13,7 @@ object Settings {
     scalacOptions := Seq(
       "-encoding",
       "utf8",
+      "-g:vars",
       "-feature",
       "-unchecked",
       "-deprecation",

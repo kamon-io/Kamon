@@ -2,7 +2,7 @@ package kamon.executor
 
 import akka.event.ActorEventBus
 import akka.event.LookupClassification
-import akka.actor.{ActorRef, ActorSystem, Props, Actor}
+import akka.actor._
 import java.util.concurrent.TimeUnit
 import kamon.metric.NewRelicReporter
 
@@ -12,6 +12,9 @@ import kamon.actor._
 import scala.concurrent.Future
 import kamon.{TraceSupport, TraceContext}
 import akka.util.Timeout
+import kamon.executor.Ping
+import kamon.executor.MessageEvent
+import kamon.executor.Pong
 
 //import kamon.executor.MessageEvent
 import java.util.UUID
@@ -41,24 +44,27 @@ class AppActorEventBus extends ActorEventBus with LookupClassification{
 case class Ping()
 case class Pong()
 
-class PingActor(val target: ActorRef) extends Actor {
+class PingActor(val target: ActorRef) extends Actor with ActorLogging {
   implicit def executionContext = context.dispatcher
   implicit val timeout = Timeout(30, TimeUnit.SECONDS)
 
   def receive = {
     case Pong() => {
-      println("pong")
+      log.info(s"pong with context ${TraceContext.current}")
       Thread.sleep(1000)
       target ! Ping()
     }
     case a: Any => println(s"Got ${a} in PING"); Thread.sleep(1000)
   }
+
+  def withAny(): Any = {1}
+  def withAnyRef(): AnyRef = {new Object}
 }
 
-class PongActor extends Actor {
+class PongActor extends Actor with ActorLogging {
   def receive = {
     case Ping() => {
-      println("ping")
+      log.info(s"ping with context ${TraceContext.current}")
       sender ! Pong()
     }
     case a: Any => println(s"Got ${a} in PONG")
@@ -88,10 +94,11 @@ object TryAkka extends App{
 
 */
 
-  /*for(i <- 1 to 8) {*/
-    val ping = system.actorOf(Props(new PingActor(system.actorOf(Props[PongActor], "ping"))), "pong")
+  for(i <- 1 to 8) {
+    TraceContext.start
+    val ping = system.actorOf(Props(new PingActor(system.actorOf(Props[PongActor], s"ping-${i}"))), s"pong-${i}")
     ping ! Pong()
-  //}
+  }
 
 
 /*  appActorEventBus.subscribe(subscriber, NEW_POST_CHANNEL)

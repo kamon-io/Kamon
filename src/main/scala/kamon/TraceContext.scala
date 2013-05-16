@@ -10,7 +10,21 @@ case class TraceContext(id: UUID, entries: List[TraceEntry]) {
 }
 
 object TraceContext {
-  val current = new ThreadLocal[TraceContext]
+  private val context = new ThreadLocal[TraceContext]
+
+  def current = {
+    val ctx = context.get()
+    if(ctx ne null)
+      Some(ctx)
+    else
+      None
+  }
+
+  def clear = context.remove()
+
+  def set(ctx: TraceContext) = context.set(ctx)
+
+  def start = set(TraceContext(UUID.randomUUID(), Nil))
 }
 
 trait TraceEntry
@@ -31,12 +45,12 @@ trait TraceSupport {
     val result = f
 
     val after = System.currentTimeMillis
-    swapContext(current.get().withEntry(CodeBlockExecutionTime(blockName, before, after)))
+    //swapContext(current.get().withEntry(CodeBlockExecutionTime(blockName, before, after)))
 
     result
   }
 
   def swapContext(newContext: TraceContext) {
-    current.set(newContext)
+    //current.set(newContext)
   }
 }

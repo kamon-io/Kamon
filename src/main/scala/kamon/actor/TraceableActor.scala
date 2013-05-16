@@ -9,11 +9,11 @@ trait TraceableActor extends Actor with TracingImplicitConversions {
     case a: Any => {
       a match {
         case TraceableMessage(ctx, message) => {
-          TraceContext.current.set(ctx)
+          //TraceContext.current.set(ctx)
 
           tracedReceive(message)
 
-          TraceContext.current.remove()
+          //TraceContext.current.remove()
 
           /** Publish the partial context information to the EventStream */
           context.system.eventStream.publish(ctx)
@@ -29,7 +29,7 @@ trait TraceableActor extends Actor with TracingImplicitConversions {
 
 class TraceableActorRef(val target: ActorRef) {
   def !! (message: Any)(implicit sender: ActorRef) = {
-    val traceableMessage = TraceableMessage(TraceContext.current.get().fork, message)
+    val traceableMessage = TraceableMessage(TraceContext.current.get.fork, message)
     target.tell(traceableMessage, sender)
   }
 }
