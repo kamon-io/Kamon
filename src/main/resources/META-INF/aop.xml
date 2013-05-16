@@ -10,6 +10,7 @@
         <aspect name="akka.PoolMonitorAspect"/>
         <aspect name="akka.instrumentation.ActorRefTellInstrumentation"/>
         <aspect name="akka.instrumentation.ActorCellInvokeInstrumentation"/>
+        <aspect name="akka.instrumentation.PromiseInstrumentation"/>
 
         <include within="*"/>
         <exclude within="javax.*"/>

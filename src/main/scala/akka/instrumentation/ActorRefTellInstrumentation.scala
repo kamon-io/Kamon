@@ -11,7 +11,7 @@ import akka.dispatch.Envelope
 class ActorRefTellInstrumentation {
   println("Created ActorAspect")
 
-  @Pointcut("execution(* akka.actor.ScalaActorRef+.$bang(..)) && args(message, sender)")
+  @Pointcut("execution(* akka.actor.ScalaActorRef+.$bang(..)) && !within(akka.pattern.PromiseActorRef) && args(message, sender)")
   def sendingMessageToActorRef(message: Any, sender: ActorRef) = {}
 
   @Around("sendingMessageToActorRef(message, sender)")

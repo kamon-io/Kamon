@@ -15,6 +15,8 @@ import akka.util.Timeout
 import kamon.executor.Ping
 import kamon.executor.MessageEvent
 import kamon.executor.Pong
+import scala.util.Success
+import scala.util.Failure
 
 //import kamon.executor.MessageEvent
 import java.util.UUID
@@ -52,7 +54,7 @@ class PingActor(val target: ActorRef) extends Actor with ActorLogging {
     case Pong() => {
       log.info(s"pong with context ${TraceContext.current}")
       Thread.sleep(1000)
-      target ! Ping()
+      sender ! Ping()
     }
     case a: Any => println(s"Got ${a} in PING"); Thread.sleep(1000)
   }
@@ -93,12 +95,20 @@ object TryAkka extends App{
   newRelicReporter.start(1, TimeUnit.SECONDS)
 
 */
-
-  for(i <- 1 to 8) {
+  import akka.pattern.ask
+  implicit val timeout = Timeout(10, TimeUnit.SECONDS)
+  implicit def execContext = system.dispatcher
+  //for(i <- 1 to 8) {
+  val i = 1
     TraceContext.start
     val ping = system.actorOf(Props(new PingActor(system.actorOf(Props[PongActor], s"ping-${i}"))), s"pong-${i}")
-    ping ! Pong()
-  }
+    val f = ping ? Pong()
+
+    f.onComplete({
+      case Success(p) => println("On my main success")
+      case Failure(t) => println(s"Something went wrong in the main, with the context: ${TraceContext.current}")
+    })
+  //}
 
 
 /*  appActorEventBus.subscribe(subscriber, NEW_POST_CHANNEL)
