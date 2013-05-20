@@ -23,8 +23,6 @@ object Dependencies {
   val metrics         = "com.yammer.metrics"        %   "metrics-core"          % "2.2.0"
   val metricsScala    = "com.yammer.metrics"        %   "metrics-scala_2.9.1"   % "2.2.0"
   val newrelic        = "com.newrelic.agent.java"   %   "newrelic-api"          % "2.17.2"
-  val playJson        = "play"                      %   "play-json"             % "2.2-SNAPSHOT"
-
 
   def compile   (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "compile")
   def provided  (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "provided")

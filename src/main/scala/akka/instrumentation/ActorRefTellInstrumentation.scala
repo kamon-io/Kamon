@@ -2,7 +2,7 @@ package akka.instrumentation
 
 import org.aspectj.lang.annotation.{Around, Pointcut, Aspect}
 import org.aspectj.lang.ProceedingJoinPoint
-import akka.actor.{ActorRef, ActorCell}
+import akka.actor.{ActorRef}
 import kamon.TraceContext
 import kamon.actor.TraceableMessage
 import akka.dispatch.Envelope
@@ -27,6 +27,7 @@ class ActorRefTellInstrumentation {
     }
   }
 }
+
 
 @Aspect
 class ActorCellInvokeInstrumentation {

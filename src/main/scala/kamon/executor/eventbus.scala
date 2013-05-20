@@ -4,23 +4,12 @@ import akka.event.ActorEventBus
 import akka.event.LookupClassification
 import akka.actor._
 import java.util.concurrent.TimeUnit
-import kamon.metric.NewRelicReporter
 
-import com.yammer.metrics.core.{MetricName, MetricsRegistry}
-import com.yammer.metrics.reporting.ConsoleReporter
-import kamon.actor._
-import scala.concurrent.Future
-import kamon.{TraceSupport, TraceContext}
+import kamon.{TraceContext}
 import akka.util.Timeout
-import kamon.executor.Ping
-import kamon.executor.MessageEvent
-import kamon.executor.Pong
 import scala.util.Success
 import scala.util.Failure
-
-//import kamon.executor.MessageEvent
-import java.util.UUID
-
+import scala.concurrent.Future
 
 trait Message
 
@@ -66,8 +55,9 @@ class PingActor(val target: ActorRef) extends Actor with ActorLogging {
 class PongActor extends Actor with ActorLogging {
   def receive = {
     case Ping() => {
-      log.info(s"ping with context ${TraceContext.current}")
+      Thread.sleep(3000)
       sender ! Pong()
+      log.info(s"ping with context ${TraceContext.current}")
     }
     case a: Any => println(s"Got ${a} in PONG")
   }
@@ -105,7 +95,7 @@ object TryAkka extends App{
     val f = ping ? Pong()
 
     f.onComplete({
-      case Success(p) => println("On my main success")
+      case Success(p) => println(s"On my main success, with the context: ${TraceContext.current}")
       case Failure(t) => println(s"Something went wrong in the main, with the context: ${TraceContext.current}")
     })
   //}

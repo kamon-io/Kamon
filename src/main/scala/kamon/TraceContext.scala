@@ -36,21 +36,11 @@ case class CodeBlockExecutionTime(blockName: String, begin: Long, end: Long) ext
 
 
 trait TraceSupport {
-  import TraceContext.current
-
-
-  def trace[T](blockName: String)(f: => T): T = {
-    val before = System.currentTimeMillis
-
-    val result = f
-
-    val after = System.currentTimeMillis
-    //swapContext(current.get().withEntry(CodeBlockExecutionTime(blockName, before, after)))
+  def withContext[Out](func: => Any => Out, ctx: TraceContext) = {
+    TraceContext.set(ctx)
+    val result = func
+    TraceContext.clear
 
     result
-  }
-
-  def swapContext(newContext: TraceContext) {
-    //current.set(newContext)
   }
 }
