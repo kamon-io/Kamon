@@ -10,7 +10,7 @@ object Build extends Build {
     .settings(revolverSettings: _*)
     .settings(
       libraryDependencies ++=
-        compile(akkaActor, sprayCan, sprayClient, sprayRouting, sprayServlet, aspectJ, metrics, newrelic, metricsScala, sprayJson) ++
+        compile(akkaActor, sprayCan, sprayClient, sprayRouting, sprayServlet, aspectJ, metrics, newrelic, metricsScala, sprayJson, guava) ++
         test(scalatest, sprayTestkit))
 
 
