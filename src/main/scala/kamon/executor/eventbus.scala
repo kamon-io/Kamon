@@ -78,7 +78,7 @@ object TryAkka extends App{
 
 
 
-
+  def threadPrintln(body: String) = println(s"[${Thread.currentThread().getName}] - [${TraceContext.current}] : $body")
 
   /*
   val newRelicReporter = new NewRelicReporter(registry)
@@ -89,16 +89,30 @@ object TryAkka extends App{
   implicit val timeout = Timeout(10, TimeUnit.SECONDS)
   implicit def execContext = system.dispatcher
   //for(i <- 1 to 8) {
-  val i = 1
+/*  val i = 1
     TraceContext.start
     val ping = system.actorOf(Props(new PingActor(system.actorOf(Props[PongActor], s"ping-${i}"))), s"pong-${i}")
     val f = ping ? Pong()
 
-    f.onComplete({
-      case Success(p) => println(s"On my main success, with the context: ${TraceContext.current}")
-      case Failure(t) => println(s"Something went wrong in the main, with the context: ${TraceContext.current}")
-    })
+  f.map({
+    a => threadPrintln(s"In the map body, with the context: ${TraceContext.current}")
+  })
+  .flatMap({
+    (a: Any) => {
+      threadPrintln(s"Executing the flatMap, with the context: ${TraceContext.current}")
+      Future { s"In the flatMap body, with the context: ${TraceContext.current}" }
+    }
+  })
+    .onComplete({
+    case Success(p) => threadPrintln(s"On my main success, with String [$p] and the context: ${TraceContext.current}")
+    case Failure(t) => threadPrintln(s"Something went wrong in the main, with the context: ${TraceContext.current}")
+  })*/
   //}
+
+  TraceContext.start
+  threadPrintln("Before doing it")
+  val f = Future { threadPrintln("This is happening inside the future body") }
+
 
 
 /*  appActorEventBus.subscribe(subscriber, NEW_POST_CHANNEL)

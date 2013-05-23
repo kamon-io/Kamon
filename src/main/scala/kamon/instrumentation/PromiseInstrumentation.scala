@@ -1,4 +1,4 @@
-package akka.instrumentation
+package kamon.instrumentation
 
 import org.aspectj.lang.annotation.{Around, Before, Pointcut, Aspect}
 import kamon.TraceContext
@@ -16,6 +16,7 @@ class PromiseInstrumentation {
 
   @Before("promiseCreation()")
   def catchTheTraceContext = {
+    println(s"During promise creation the context is: ${TraceContext.current}")
     TraceContext.current match {
       case Some(ctx) => traceContext = Some(ctx.fork)
       case None      => traceContext = None
@@ -27,6 +28,7 @@ class PromiseInstrumentation {
 
   @Around("registeringOnCompleteCallback(func, executor)")
   def around(pjp: ProceedingJoinPoint, func: Try[Any] => Any, executor: ExecutionContext) = {
+    import pjp._
 
     val wrappedFunction = traceContext match {
       case Some(ctx) => (tryResult: Try[Any]) => {
@@ -39,6 +41,6 @@ class PromiseInstrumentation {
       case None => func
     }
 
-    pjp.proceed(pjp.getArgs.updated(0, wrappedFunction))
+    proceed(getArgs.updated(0, wrappedFunction))
   }
 }
