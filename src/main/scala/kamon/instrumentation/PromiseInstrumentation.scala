@@ -44,28 +44,4 @@ class PromiseInstrumentation {
     proceed(getArgs.updated(0, wrappedFunction))
   }
 
-  @Pointcut("execution(* scala.concurrent.impl.Future$.apply(..)) && args(body, executor)")
-  def registeringApplyOnFuture(body: () => Any, executor: ExecutionContext) = {}
-
-  @Around("registeringApplyOnFuture(body, executor)")
-  def aroundApplyOnFuture(pjp:ProceedingJoinPoint, body: () => Any, executor: ExecutionContext) = {
-    import pjp._
-
-    val wrappedBody = wrapFutureBody(traceContext)(body)
-    proceed(getArgs.updated(0, wrappedBody))
-  }
-
-  def wrapFutureBody[A](ctx:Option[TraceContext])(block: => A) : A = {
-    ctx match {
-        case Some(ctx) => {
-          println("Wrapping body")
-          TraceContext.set(ctx)
-          val result = block
-          TraceContext.clear
-          result
-        }
-        case None => block
-    }
-  }
-
 }
