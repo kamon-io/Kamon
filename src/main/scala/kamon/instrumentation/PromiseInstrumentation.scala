@@ -16,7 +16,6 @@ class PromiseInstrumentation {
 
   @Before("promiseCreation()")
   def catchTheTraceContext = {
-    println(s"During promise creation the context is: ${TraceContext.current}")
     TraceContext.current match {
       case Some(ctx) => traceContext = Some(ctx.fork)
       case None      => traceContext = None

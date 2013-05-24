@@ -11,6 +11,7 @@
         <aspect name="akka.instrumentation.ActorRefTellInstrumentation"/>
         <aspect name="akka.instrumentation.ActorCellInvokeInstrumentation"/>
         <aspect name="kamon.instrumentation.PromiseInstrumentation"/>
+        <aspect name="kamon.instrumentation.PromiseCompletingRunnableInstrumentation" />
 
         <include within="*"/>
         <exclude within="javax.*"/>

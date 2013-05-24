@@ -13,7 +13,7 @@ object Build extends Build {
     .settings(
       libraryDependencies ++=
         compile(akkaActor, sprayCan, sprayClient, sprayRouting, sprayServlet, aspectJ, metrics, newrelic, metricsScala, sprayJson, guava) ++
-        test(specs2, sprayTestkit))
+        test(scalatest, sprayTestkit))
 
 
 }

@@ -1,25 +1,36 @@
 package kamon.instrumentation
 
-import scala.concurrent.{Await, Future}
-import org.specs2.mutable.Specification
+import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration.{FiniteDuration, DurationLong}
-import org.specs2.time.{ Duration => SpecsDuration }
+import org.scalatest.WordSpec
+import org.scalatest.matchers.MustMatchers
+import org.scalatest.concurrent.PatienceConfiguration
+import kamon.TraceContext
+import java.util.UUID
 
 
-class FutureInstrumentationSpec extends Specification {
-  import Await.result
-  implicit def specsDuration2Akka(duration: SpecsDuration): FiniteDuration = new DurationLong(duration.inMillis).millis
+class FutureInstrumentationSpec extends WordSpec with MustMatchers with ScalaFutures with PatienceConfiguration {
 
   "a instrumented Future" should {
     "preserve the transaction context available during the future creation" in {
+      new ContextAwareTest {
+        val future = Future { TraceContext.current.get }
 
+        whenReady(future) { result =>
+          result must be === context
+        }
+      }
     }
 
     "use the same context available at creation when executing the onComplete callback" in {
-      val future = Future { "hello" }
 
-      result(future, 100 millis) === "hello"
     }
   }
+
+  trait ContextAwareTest {
+    val context = TraceContext(UUID.randomUUID(), Nil)
+    TraceContext.set(context)
+  }
 }
+
+
