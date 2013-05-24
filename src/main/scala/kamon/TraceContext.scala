@@ -10,19 +10,15 @@ case class TraceContext(id: UUID, entries: List[TraceEntry]) {
 }
 
 object TraceContext {
-  private val context = new ThreadLocal[TraceContext]
-
-  def current = {
-    val ctx = context.get()
-    if(ctx ne null)
-      Some(ctx)
-    else
-      None
+  private val context = new ThreadLocal[Option[TraceContext]] {
+    override def initialValue(): Option[TraceContext] = None
   }
 
-  def clear = context.remove()
+  def current = context.get
 
-  def set(ctx: TraceContext) = context.set(ctx)
+  def clear = context.remove
+
+  def set(ctx: TraceContext) = context.set(Some(ctx))
 
   def start = set(TraceContext(UUID.randomUUID(), Nil))
 }

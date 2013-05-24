@@ -1,9 +1,6 @@
 <!DOCTYPE aspectj PUBLIC "-//AspectJ//DTD//EN" "http://www.eclipse.org/aspectj/dtd/aspectj.dtd">
 
 <aspectj>
-
-    <weaver options="-verbose -showWeaveInfo"/>
-
     <aspects>
         <!--<aspect name="akka.ActorSystemAspect"/>
         &lt;!&ndash;<aspect name="akka.MailboxAspect"/>&ndash;&gt;
@@ -14,11 +11,12 @@
         <aspect name="kamon.instrumentation.PromiseCompletingRunnableInstrumentation" />
 
         <include within="*"/>
-        <exclude within="javax.*"/>
-        <exclude within="org.aspectj.*"/>
-        <exclude within="scala.*"/>
-        <exclude within="scalaz.*"/>
-        <exclude within="scalad.*"/>
+        <exclude within="javax..*"/>
+        <exclude within="org.aspectj..*"/>
+        <exclude within="scala..*"/>
+        <exclude within="scalaz..*"/>
+        <exclude within="scalad..*"/>
+        <exclude within="play..*"/>
     </aspects>
 
 </aspectj>

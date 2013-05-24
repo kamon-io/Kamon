@@ -8,7 +8,8 @@ import com.typesafe.sbt.SbtAspectj.AspectjKeys._
 object AspectJ {
 
   lazy val aspectJSettings = SbtAspectj.aspectjSettings ++ Seq(
-           fork in Test   := true,
-    javaOptions in Test   <++= weaverOptions in Aspectj
+          showWeaveInfo     :=  false,
+           fork in Test     :=  true,
+    javaOptions in Test   <++=  weaverOptions in Aspectj
   )
 }

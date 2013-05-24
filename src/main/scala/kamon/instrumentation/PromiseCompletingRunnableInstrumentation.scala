@@ -7,7 +7,7 @@ import org.aspectj.lang.ProceedingJoinPoint
 @Aspect("perthis(promiseCompletingRunnableCreation())")
 class PromiseCompletingRunnableInstrumentation {
 
-  private var traceContext: Option[TraceContext] = None
+  @volatile private var traceContext: Option[TraceContext] = None
 
   @Pointcut("execution(scala.concurrent.impl.Future.PromiseCompletingRunnable.new(..))")
   def promiseCompletingRunnableCreation(): Unit = {}
