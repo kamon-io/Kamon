@@ -20,8 +20,7 @@ class FutureInstrumentationSpec extends WordSpec with MustMatchers with ScalaFut
             whenReady(futureWithContext) { result =>
               result.value must be === testContext
             }
-          }
-        }
+        }}
 
         "should be available during the execution of onComplete callbacks" in { new FutureWithContext {
             val onCompleteContext = Promise[TraceContext]()
@@ -33,19 +32,29 @@ class FutureInstrumentationSpec extends WordSpec with MustMatchers with ScalaFut
             whenReady(onCompleteContext.future) { result =>
               result must be === testContext
             }
-          }
-        }
+        }}
       }
     }
 
     "created in a thread that doest have a TraceContext" must {
-      "not capture any TraceContext" in { new FutureWithoutContext{
+      "not capture any TraceContext for the body execution" in { new FutureWithoutContext{
 
           whenReady(futureWithoutContext) { result =>
             result must be === None
           }
+      }}
+
+      "not make any TraceContext available during the onComplete callback" in { new FutureWithoutContext {
+        val onCompleteContext = Promise[Option[TraceContext]]()
+
+        futureWithoutContext.onComplete({
+          case _ => onCompleteContext.complete(Success(TraceContext.current))
+        })
+
+        whenReady(onCompleteContext.future) { result =>
+          result must be === None
         }
-      }
+      }}
     }
   }
 
@@ -60,7 +69,7 @@ class FutureInstrumentationSpec extends WordSpec with MustMatchers with ScalaFut
   }
 
   trait FutureWithoutContext {
-    TraceContext.clear
+    TraceContext.clear // Make sure no TraceContext is available
     val futureWithoutContext = Future { TraceContext.current }
   }
 }
