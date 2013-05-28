@@ -1,7 +1,9 @@
 <!DOCTYPE aspectj PUBLIC "-//AspectJ//DTD//EN" "http://www.eclipse.org/aspectj/dtd/aspectj.dtd">
 
 <aspectj>
+    <weaver options="-verbose -showWeaveInfo -nowarn"/>
     <aspects>
+
         <!--<aspect name="akka.ActorSystemAspect"/>
         &lt;!&ndash;<aspect name="akka.MailboxAspect"/>&ndash;&gt;
         <aspect name="akka.PoolMonitorAspect"/>-->

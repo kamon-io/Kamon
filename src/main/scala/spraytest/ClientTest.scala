@@ -40,9 +40,6 @@ class ClientTest extends App {
 
   val response = pipeline {
     Get("http://geo.despegar.com/geo-services-web/service/Autocomplete/DESAR/1/0/0/10/0/0/Obelisco")
-
-    Post("http://www.")
-
   } onSuccess {
     case a => {
       println(a)
