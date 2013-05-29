@@ -1,7 +1,10 @@
 <!DOCTYPE aspectj PUBLIC "-//AspectJ//DTD//EN" "http://www.eclipse.org/aspectj/dtd/aspectj.dtd">
 
 <aspectj>
-    <weaver options="-verbose -showWeaveInfo -nowarn"/>
+    <weaver options="-verbose -showWeaveInfo -nowarn">
+       <dump within="*"/>
+    </weaver>
+
     <aspects>
 
         <!--<aspect name="akka.ActorSystemAspect"/>
