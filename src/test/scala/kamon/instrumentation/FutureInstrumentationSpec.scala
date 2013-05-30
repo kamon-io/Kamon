@@ -1,6 +1,6 @@
 package kamon.instrumentation
 
-import scala.concurrent.{Promise, Future}
+import scala.concurrent.{Await, Promise, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
 import org.scalatest.{OptionValues, WordSpec}
 import org.scalatest.matchers.MustMatchers
@@ -8,6 +8,8 @@ import org.scalatest.concurrent.PatienceConfiguration
 import kamon.TraceContext
 import java.util.UUID
 import scala.util.Success
+import scala.concurrent.duration._
+import java.util.concurrent.TimeUnit
 
 
 class FutureInstrumentationSpec extends WordSpec with MustMatchers with ScalaFutures with PatienceConfiguration with OptionValues {

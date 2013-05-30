@@ -8,7 +8,7 @@ object Build extends Build {
 
   lazy val root = Project("kamon", file("."))
     .settings(basicSettings: _*)
-    //.settings(revolverSettings: _*)
+    .settings(revolverSettings: _*)
     .settings(aspectJSettings: _*)
     .settings(
       libraryDependencies ++=

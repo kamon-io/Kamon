@@ -10,7 +10,9 @@ object AspectJ {
      compileOnly in Aspectj    :=  true,
                fork in Test    :=  true,
         javaOptions in Test  <++=  weaverOptions in Aspectj,
-        lintProperties in Aspectj  +=  "invalidAbsoluteTypeName = ignore",
-        products in Compile   <<=   products in Aspectj
+  lintProperties in Aspectj    +=  "invalidAbsoluteTypeName = ignore"
+
+    //  Add this line if we need to include some .aj aspects again in the project.
+    //    products in Compile   <<=   products in Aspectj
   )
 }
