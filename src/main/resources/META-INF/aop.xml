@@ -12,7 +12,7 @@
         <aspect name="akka.PoolMonitorAspect"/>-->
         <aspect name="akka.instrumentation.ActorRefTellInstrumentation"/>
         <aspect name="akka.instrumentation.ActorCellInvokeInstrumentation"/>
-        <aspect name="kamon.instrumentation.PromiseCompletingRunnableInstrumentation" />
+        <aspect name="kamon.instrumentation.RunnableInstrumentation" />
 
         <include within="*"/>
         <exclude within="javax..*"/>

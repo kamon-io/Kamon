@@ -5,7 +5,7 @@ import akka.event.LookupClassification
 import akka.actor._
 import java.util.concurrent.TimeUnit
 
-import kamon.{TraceContext}
+import kamon.{Kamon, TraceContext}
 import akka.util.Timeout
 import scala.util.Success
 import scala.util.Failure
@@ -41,7 +41,7 @@ class PingActor(val target: ActorRef) extends Actor with ActorLogging {
 
   def receive = {
     case Pong() => {
-      log.info(s"pong with context ${TraceContext.current}")
+      log.info(s"pong with context ${Kamon.context}")
       Thread.sleep(1000)
       sender ! Ping()
     }
@@ -57,7 +57,7 @@ class PongActor extends Actor with ActorLogging {
     case Ping() => {
       Thread.sleep(3000)
       sender ! Pong()
-      log.info(s"ping with context ${TraceContext.current}")
+      log.info(s"ping with context ${Kamon.context}")
     }
     case a: Any => println(s"Got ${a} in PONG")
   }
@@ -78,7 +78,7 @@ object TryAkka extends App{
 
 
 
-  def threadPrintln(body: String) = println(s"[${Thread.currentThread().getName}] - [${TraceContext.current}] : $body")
+  def threadPrintln(body: String) = println(s"[${Thread.currentThread().getName}] - [${Kamon.context}] : $body")
 
   /*
   val newRelicReporter = new NewRelicReporter(registry)
@@ -109,9 +109,11 @@ object TryAkka extends App{
   })*/
   //}
 
-  TraceContext.start
+  Kamon.start
   threadPrintln("Before doing it")
   val f = Future { threadPrintln("This is happening inside the future body") }
+
+  Kamon.context.get.close
 
 
 

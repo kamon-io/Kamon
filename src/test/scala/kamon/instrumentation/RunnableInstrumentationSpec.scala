@@ -5,19 +5,20 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import org.scalatest.{OptionValues, WordSpec}
 import org.scalatest.matchers.MustMatchers
 import org.scalatest.concurrent.PatienceConfiguration
-import kamon.TraceContext
+import kamon.{Kamon, TraceContext}
 import java.util.UUID
 import scala.util.Success
 import scala.concurrent.duration._
 import java.util.concurrent.TimeUnit
+import akka.actor.ActorSystem
 
 
-class FutureInstrumentationSpec extends WordSpec with MustMatchers with ScalaFutures with PatienceConfiguration with OptionValues {
+class RunnableInstrumentationSpec extends WordSpec with MustMatchers with ScalaFutures with PatienceConfiguration with OptionValues {
 
-  "a instrumented Future" when {
+  "a instrumented runnable" when {
     "created in a thread that does have a TraceContext" must {
       "preserve the TraceContext" which {
-        "should be available during the body's execution" in { new FutureWithContext {
+        "should be available during the run method execution" in { new FutureWithContext {
 
             whenReady(futureWithContext) { result =>
               result.value must be === testContext
@@ -28,7 +29,7 @@ class FutureInstrumentationSpec extends WordSpec with MustMatchers with ScalaFut
             val onCompleteContext = Promise[TraceContext]()
 
             futureWithContext.onComplete({
-              case _ => onCompleteContext.complete(Success(TraceContext.current.get))
+              case _ => onCompleteContext.complete(Success(Kamon.context.get))
             })
 
             whenReady(onCompleteContext.future) { result =>
@@ -50,7 +51,7 @@ class FutureInstrumentationSpec extends WordSpec with MustMatchers with ScalaFut
         val onCompleteContext = Promise[Option[TraceContext]]()
 
         futureWithoutContext.onComplete({
-          case _ => onCompleteContext.complete(Success(TraceContext.current))
+          case _ => onCompleteContext.complete(Success(Kamon.context))
         })
 
         whenReady(onCompleteContext.future) { result =>
@@ -61,18 +62,22 @@ class FutureInstrumentationSpec extends WordSpec with MustMatchers with ScalaFut
   }
 
 
+  /**
+   *  We are using Futures for the test since they exercise Runnables in the back and also resemble the real use case we have.
+   */
 
 
   trait FutureWithContext {
-    val testContext = TraceContext(UUID.randomUUID(), Nil)
-    TraceContext.set(testContext)
+    implicit val as = ActorSystem("test-actorsystem")
+    val testContext = TraceContext()
+    Kamon.set(testContext)
 
-    val futureWithContext = Future { TraceContext.current }
+    val futureWithContext = Future { Kamon.context}
   }
 
   trait FutureWithoutContext {
-    TraceContext.clear // Make sure no TraceContext is available
-    val futureWithoutContext = Future { TraceContext.current }
+    Kamon.clear // Make sure no TraceContext is available
+    val futureWithoutContext = Future { Kamon.context }
   }
 }
 
