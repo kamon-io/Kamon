@@ -1,6 +1,8 @@
 package kamon.instrumentation;
 
 import kamon.TraceContext;
+import scala.concurrent.impl.Future;
+import scala.Option;
 
 privileged public aspect PromiseCompletingRunnableInstrumentation {
 
