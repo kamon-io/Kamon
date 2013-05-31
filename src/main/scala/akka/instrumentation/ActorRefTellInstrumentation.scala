@@ -20,7 +20,7 @@ class ActorRefTellInstrumentation {
   def around(pjp: ProceedingJoinPoint, message: Any, sender: ActorRef): Unit  = {
     import pjp._
 
-    Kamon.context match {
+    Kamon.context() match {
       case Some(ctx) => {
         val traceableMessage = TraceableMessage(ctx, message)
         proceed(getArgs.updated(0, traceableMessage))

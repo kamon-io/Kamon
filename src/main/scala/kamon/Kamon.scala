@@ -6,15 +6,19 @@ object Kamon {
 
   implicit val actorSystem = ActorSystem("kamon")
 
-  private val ctx = new ThreadLocal[Option[TraceContext]] {
+  val ctx = new ThreadLocal[Option[TraceContext]] {
     override def initialValue() = None
   }
 
-  def context = ctx.get()
+  def context() = ctx.get()
   def clear = ctx.remove()
   def set(traceContext: TraceContext) = ctx.set(Some(traceContext))
 
-  def start: Unit = set(newTraceContext)
+  def start = set(newTraceContext)
+  def stop = ctx.get match {
+    case Some(context) => context.close
+    case None =>
+  }
 
   def newTraceContext(): TraceContext = TraceContext()
 

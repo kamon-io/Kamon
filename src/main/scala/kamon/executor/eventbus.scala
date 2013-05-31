@@ -5,7 +5,7 @@ import akka.event.LookupClassification
 import akka.actor._
 import java.util.concurrent.TimeUnit
 
-import kamon.{Kamon, TraceContext}
+import kamon.{CodeBlockExecutionTime, Kamon, TraceContext}
 import akka.util.Timeout
 import scala.util.Success
 import scala.util.Failure
@@ -88,34 +88,20 @@ object TryAkka extends App{
   import akka.pattern.ask
   implicit val timeout = Timeout(10, TimeUnit.SECONDS)
   implicit def execContext = system.dispatcher
-  //for(i <- 1 to 8) {
-/*  val i = 1
-    TraceContext.start
-    val ping = system.actorOf(Props(new PingActor(system.actorOf(Props[PongActor], s"ping-${i}"))), s"pong-${i}")
-    val f = ping ? Pong()
 
-  f.map({
-    a => threadPrintln(s"In the map body, with the context: ${TraceContext.current}")
-  })
-  .flatMap({
-    (a: Any) => {
-      threadPrintln(s"Executing the flatMap, with the context: ${TraceContext.current}")
-      Future { s"In the flatMap body, with the context: ${TraceContext.current}" }
-    }
-  })
-    .onComplete({
-    case Success(p) => threadPrintln(s"On my main success, with String [$p] and the context: ${TraceContext.current}")
-    case Failure(t) => threadPrintln(s"Something went wrong in the main, with the context: ${TraceContext.current}")
-  })*/
-  //}
+
 
   Kamon.start
+
+  Kamon.context.get.append(CodeBlockExecutionTime("some-block", System.nanoTime(), System.nanoTime()))
   threadPrintln("Before doing it")
   val f = Future { threadPrintln("This is happening inside the future body") }
 
-  Kamon.context.get.close
+  Kamon.stop
 
 
+  Thread.sleep(3000)
+  system.shutdown()
 
 /*  appActorEventBus.subscribe(subscriber, NEW_POST_CHANNEL)
   appActorEventBus.publish(MessageEvent(NEW_POST_CHANNEL,PostMessage(text="hello world")))*/
