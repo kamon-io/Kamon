@@ -10,6 +10,7 @@
         <!--<aspect name="akka.ActorSystemAspect"/>
         &lt;!&ndash;<aspect name="akka.MailboxAspect"/>&ndash;&gt;
         <aspect name="akka.PoolMonitorAspect"/>-->
+        <aspect name="akka.ActorInstrumentation" />
         <aspect name="akka.instrumentation.ActorRefTellInstrumentation"/>
         <aspect name="akka.instrumentation.ActorCellInvokeInstrumentation"/>
         <aspect name="kamon.instrumentation.PromiseCompletingRunnableInstrumentation" />

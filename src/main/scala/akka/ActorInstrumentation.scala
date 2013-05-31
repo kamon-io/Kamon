@@ -8,7 +8,7 @@ import com.codahale.metrics.Meter
 import kamon.metric.MetricsUtils._
 
 @Aspect("perthis(actorCellCreation(*))")
-class ActorAspect {
+class ActorInstrumentation {
 
   /**
    *  Aspect members

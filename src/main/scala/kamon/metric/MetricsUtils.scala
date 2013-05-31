@@ -34,6 +34,15 @@ object MetricsUtils {
 //    }
   //}
 
+//  implicit def runnable(f: () => Unit): Runnable =
+//    new Runnable() { def run() = f() }
+//
+//
+//  import java.util.concurrent.Callable
+//
+//  implicit def callable[T](f: () => T): Callable[T] =
+//    new Callable[T]() { def call() = f() }
+
 //  private val actorCounter:Counter = new Counter
 //  private val actorTimer:Timer = new Timer
 //
