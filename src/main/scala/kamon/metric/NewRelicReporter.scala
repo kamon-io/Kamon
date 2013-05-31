@@ -1,36 +1,25 @@
 package kamon.metric
 
+import com.codahale.metrics._
+import java.util.concurrent.TimeUnit
+import java.util
 import com.newrelic.api.agent.NewRelic
-import com.yammer.metrics.reporting.AbstractPollingReporter
-import com.yammer.metrics.core._
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 
 
-class NewRelicReporter(registry: MetricsRegistry, name: String) extends AbstractPollingReporter(registry, name) with MetricProcessor[String] {
+class NewRelicReporter(registry: MetricRegistry, name: String,filter: MetricFilter, rateUnit: TimeUnit, durationUnit: TimeUnit) extends ScheduledReporter(registry, name, filter, rateUnit, durationUnit) {
 
-  def processMeter(name: MetricName, meter: Metered, context: String) {
-    println(s"Logging to NewRelic: ${meter.count()}")
-    NewRelic.recordMetric("Custom/Actor/MessagesPerSecond", meter.meanRate().toFloat)
-
-
-
+  def processMeter(name: String, meter: Meter) {
+    println(s"Logging to NewRelic: ${meter.getCount()}")
+    NewRelic.recordMetric("Custom/Actor/MessagesPerSecond", meter.getMeanRate().toFloat)
   }
 
-
-  def processCounter(name: MetricName, counter: Counter, context: String) {}
-
-  def processHistogram(name: MetricName, histogram: Histogram, context: String) {}
-
-  def processTimer(name: MetricName, timer: Timer, context: String) {}
-
-  def processGauge(name: MetricName, gauge: Gauge[_], context: String) {}
-
-
-  def run() {
-    for (entry <- getMetricsRegistry.groupedMetrics(MetricPredicate.ALL).entrySet) {
-      for (subEntry <- entry.getValue.entrySet) {
-        subEntry.getValue.processWith(this, subEntry.getKey, "")
-      }
-    }
+  def report(gauges: util.SortedMap[String, Gauge[_]], counters: util.SortedMap[String, Counter], histograms: util.SortedMap[String, Histogram], meters: util.SortedMap[String, Meter], timers: util.SortedMap[String, Timer]) {
+    //Process Meters
+    meters.asScala.map{case(k,v) => processMeter(k,v)}
   }
+}
+
+object NewRelicReporter {
+     def apply(registry: MetricRegistry) = new NewRelicReporter(registry, "NewRelic-reporter", MetricFilter.ALL, TimeUnit.SECONDS, TimeUnit.MILLISECONDS)
 }

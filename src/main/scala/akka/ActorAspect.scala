@@ -1,26 +1,46 @@
 package akka
 
-import org.aspectj.lang.annotation.{Around, Pointcut, Aspect}
+import actor.ActorCell
+import org.aspectj.lang.annotation.{After, Around, Pointcut, Aspect}
 import org.aspectj.lang.ProceedingJoinPoint
-import kamon.metric.Metrics
+import kamon.metric.Metrics.{ metricsRegistry => meterRegistry }
+import com.codahale.metrics.Meter
+import kamon.metric.MetricsUtils._
 
-@Aspect
-class ActorAspect extends Metrics {
-   println("Created ActorAspect")
+@Aspect("perthis(actorCellCreation(*))")
+class ActorAspect {
 
-   @Pointcut("execution(* akka.actor.ActorCell+.receiveMessage(..))")
-   protected def actorReceive:Unit = {}
+  /**
+   *  Aspect members
+   */
 
-   @Around("sendingMessageToActorRef() && this(actor)")
-   def around(pjp: ProceedingJoinPoint, actor: akka.actor.ActorCell): AnyRef = {
+  private val actorMeter:Meter = new Meter
 
-     //println("The path is: "+actor.self.path.)
-     val actorName:String  = actor.self.path.toString
+  /**
+   *  Pointcuts
+   */
+  @Pointcut("execution(akka.actor.ActorCell+.new(..)) && this(actor)")
+  def actorCellCreation(actor:ActorCell):Unit = {}
 
+  @Pointcut("execution(* akka.actor.ActorCell+.receiveMessage(..))")
+  def actorReceive():Unit = {}
 
-     markAndCountMeter(actorName){
-       pjp.proceed
+  /**
+   *  Advices
+   */
+   @After("actorCellCreation(actor)")
+   def afterCellCreation(actor:ActorCell):Unit ={
+      val actorName:String = actor.self.path.toString
+
+      meterRegistry.register(s"meter-for-${actorName}", actorMeter)
+   }
+
+   @Around("actorReceive()")
+   def around(pjp: ProceedingJoinPoint) = {
+     import pjp._
+
+     markMeter(actorMeter) {
+        proceed
      }
-
    }
  }
