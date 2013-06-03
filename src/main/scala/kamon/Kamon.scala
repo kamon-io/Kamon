@@ -4,11 +4,12 @@ import akka.actor.{Props, ActorSystem}
 
 object Kamon {
 
-  implicit val actorSystem = ActorSystem("kamon")
-
   val ctx = new ThreadLocal[Option[TraceContext]] {
     override def initialValue() = None
   }
+  
+  implicit lazy val actorSystem = ActorSystem("kamon")
+
 
   def context() = ctx.get()
   def clear = ctx.remove()
