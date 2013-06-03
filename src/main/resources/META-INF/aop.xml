@@ -8,8 +8,8 @@
     <aspects>
 
         <!--<aspect name="akka.ActorSystemAspect"/>
-        &lt;!&ndash;<aspect name="akka.MailboxAspect"/>&ndash;&gt;
-        <aspect name="akka.PoolMonitorAspect"/>-->
+        &lt;!&ndash;<aspect name="akka.MailboxAspect"/>&ndash;&gt;-->
+        <!--<aspect name="akka.PoolMonitorInstrumentation"/>-->
         <aspect name="akka.ActorInstrumentation" />
         <aspect name="akka.instrumentation.ActorRefTellInstrumentation"/>
         <aspect name="akka.instrumentation.ActorCellInvokeInstrumentation"/>
