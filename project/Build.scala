@@ -3,6 +3,7 @@ import Keys._
 
 object Build extends Build {
   import AspectJ._
+  import NewRelic._
   import Settings._
   import Dependencies._
 
@@ -10,9 +11,10 @@ object Build extends Build {
     .settings(basicSettings: _*)
     .settings(revolverSettings: _*)
     .settings(aspectJSettings: _*)
+    .settings(newrelicSettings: _*)
     .settings(
       libraryDependencies ++=
-        compile(akkaActor, sprayCan, sprayClient, sprayRouting, sprayServlet, aspectJ, metrics, newrelic, sprayJson) ++
+        compile(akkaActor, akkaAgent, sprayCan, sprayClient, sprayRouting, sprayServlet, aspectJ, metrics, newrelic, sprayJson) ++
         test(scalatest, sprayTestkit))
 
 

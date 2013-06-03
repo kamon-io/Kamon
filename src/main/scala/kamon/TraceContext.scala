@@ -1,29 +1,30 @@
 package kamon
 
 import java.util.UUID
-import akka.actor.ActorPath
+import akka.actor.{ActorSystem, ActorPath}
+import akka.agent.Agent
+import java.util.concurrent.TimeUnit
+import scala.util.{Failure, Success}
+import akka.util.Timeout
 
 
-case class TraceContext(id: UUID, entries: List[TraceEntry]) {
-  def fork = this.copy(entries = Nil)
-  def withEntry(entry: TraceEntry) = this.copy(entries = entry :: entries)
+case class TraceContext(id: UUID, private val entries: Agent[List[TraceEntry]], userContext: Option[Any] = None) {
+  implicit val timeout = Timeout(30, TimeUnit.SECONDS)
+  implicit val as = Kamon.actorSystem.dispatcher
+
+  def append(entry: TraceEntry) = entries send (entry :: _)
+  def close = entries.future.onComplete({
+    case Success(list) => Kamon.publish(FullTransaction(id, list))
+    case Failure(t) => println("WTF!")
+  })
 }
 
 object TraceContext {
-  private val context = new ThreadLocal[Option[TraceContext]] {
-    override def initialValue(): Option[TraceContext] = None
-  }
-
-  def current = context.get()
-
-  def clear = context.remove()
-
-  def set(ctx: TraceContext) = context.set(Some(ctx))
-
-  def start = set(TraceContext(UUID.randomUUID(), Nil))
+  def apply()(implicit actorSystem: ActorSystem) = new TraceContext(UUID.randomUUID(), Agent[List[TraceEntry]](Nil))
 }
 
-trait TraceEntry
-case class MessageExecutionTime(actorPath: ActorPath, initiated: Long, ended: Long)
 
-case class CodeBlockExecutionTime(blockName: String, begin: Long, end: Long) extends TraceEntry
+
+trait TraceEntry
+
+case class CodeBlockExecutionTime(name: String, begin: Long, end: Long) extends TraceEntry

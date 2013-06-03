@@ -3,9 +3,11 @@ package akka.instrumentation
 import org.aspectj.lang.annotation.{Around, Pointcut, Aspect}
 import org.aspectj.lang.ProceedingJoinPoint
 import akka.actor.{ActorRef}
-import kamon.TraceContext
-import kamon.actor.TraceableMessage
+import kamon.{Kamon, TraceContext}
 import akka.dispatch.Envelope
+
+case class TraceableMessage(traceContext: TraceContext, message: Any)
+
 
 @Aspect
 class ActorRefTellInstrumentation {
@@ -18,9 +20,9 @@ class ActorRefTellInstrumentation {
   def around(pjp: ProceedingJoinPoint, message: Any, sender: ActorRef): Unit  = {
     import pjp._
 
-    TraceContext.current match {
+    Kamon.context() match {
       case Some(ctx) => {
-        val traceableMessage = TraceableMessage(ctx.fork, message)
+        val traceableMessage = TraceableMessage(ctx, message)
         proceed(getArgs.updated(0, traceableMessage))
       }
       case None => proceed
@@ -42,12 +44,12 @@ class ActorCellInvokeInstrumentation {
 
     envelope match {
       case Envelope(TraceableMessage(ctx, msg), sender) => {
-        TraceContext.set(ctx)
+        Kamon.set(ctx)
 
         val originalEnvelope = envelope.copy(message = msg)
         proceed(getArgs.updated(0, originalEnvelope))
 
-        TraceContext.clear
+        Kamon.clear
       }
       case _ => proceed
     }

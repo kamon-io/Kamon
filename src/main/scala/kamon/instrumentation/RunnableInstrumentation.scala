@@ -1,7 +1,7 @@
 package kamon.instrumentation
 
 import org.aspectj.lang.annotation._
-import kamon.TraceContext
+import kamon.{Kamon, TraceContext}
 import org.aspectj.lang.ProceedingJoinPoint
 import scala.Some
 
@@ -12,7 +12,7 @@ trait TraceContextAwareRunnable extends Runnable {}
 
 
 @Aspect("perthis(instrumentedRunnableCreation())")
-class PromiseCompletingRunnableInstrumentation {
+class RunnableInstrumentation {
 
   /**
    *  These are the Runnables that need to be instrumented and make the TraceContext available
@@ -37,25 +37,19 @@ class PromiseCompletingRunnableInstrumentation {
    *  Aspect members
    */
 
-  private val traceContext = TraceContext.current
+  private val traceContext = Kamon.context
 
 
   /**
    *  Advices
    */
+  import kamon.TraceContextSwap.withContext
 
   @Around("runnableExecution()")
   def around(pjp: ProceedingJoinPoint) = {
     import pjp._
 
-    traceContext match {
-      case Some(ctx) => {
-        TraceContext.set(ctx)
-        proceed()
-        TraceContext.clear
-      }
-      case None => proceed()
-    }
+    withContext(traceContext, proceed())
   }
 
 }

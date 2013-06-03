@@ -8,8 +8,9 @@ object Settings {
   lazy val basicSettings = seq(
     version       := VERSION,
     organization  := "com.despegar",
-    scalaVersion  := "2.10.1",
+    scalaVersion  := "2.10.0",
     resolvers    ++= Dependencies.resolutionRepos,
+    fork in run   := true,
     scalacOptions := Seq(
       "-encoding",
       "utf8",
