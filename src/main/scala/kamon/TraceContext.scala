@@ -28,3 +28,37 @@ object TraceContext {
 trait TraceEntry
 
 case class CodeBlockExecutionTime(name: String, begin: Long, end: Long) extends TraceEntry
+
+
+
+case class TransactionTrace(id: UUID, start: Long, end: Long, entries: Seq[TraceEntry])
+
+
+
+
+
+object Collector {
+
+}
+
+trait TraceEntryStorage {
+  def store(entry: TraceEntry): Boolean
+}
+
+class TransactionContext(val id: UUID, private val storage: TraceEntryStorage) {
+  def store(entry: TraceEntry) = storage.store(entry)
+}
+
+object ThreadLocalTraceEntryStorage extends TraceEntryStorage {
+
+  private val storage = new ThreadLocal[List[TraceEntry]] {
+    override def initialValue(): List[TraceEntry] = Nil
+    def update(f: List[TraceEntry] => List[TraceEntry]) = set(f(get()))
+  }
+
+  def store(entry: TraceEntry): Boolean = {
+    storage.update(entry :: _)
+    true
+  }
+}
+

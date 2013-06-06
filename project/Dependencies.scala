@@ -22,7 +22,7 @@ object Dependencies {
   val logback         = "ch.qos.logback"            %   "logback-classic"       % "1.0.10"
   val aspectJ         = "org.aspectj"               %   "aspectjrt"             % "1.7.2"
   val metrics         = "com.codahale.metrics"      %   "metrics-core"          % "3.0.0-BETA2"
-  val newrelic        = "com.newrelic.agent.java"   %   "newrelic-api"          % "2.17.2"
+  val newrelic        = "com.newrelic.agent.java"   %   "newrelic-api"          % "2.19.0"
 
   def compile   (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "compile")
   def provided  (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "provided")
