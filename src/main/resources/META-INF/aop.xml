@@ -9,11 +9,23 @@
 
         <!--<aspect name="akka.ActorSystemAspect"/>
         &lt;!&ndash;<aspect name="akka.MailboxAspect"/>&ndash;&gt;-->
-        <!--<aspect name="akka.PoolMonitorInstrumentation"/>-->
+        <!--<aspect name="akka.PoolMonitorAspect"/>-->
         <aspect name="akka.ActorInstrumentation" />
         <aspect name="akka.instrumentation.ActorRefTellInstrumentation"/>
         <aspect name="akka.instrumentation.ActorCellInvokeInstrumentation"/>
         <aspect name="kamon.instrumentation.RunnableInstrumentation" />
+        <!--<aspect name="kamon.instrumentation.DispatcherInstrumentation" />-->
+        <!--<aspect name ="akka.dispatch.FactoryInstrumentation" />-->
+
+
+        <!-- ExecutorService Instrumentation for Akka. -->
+        <aspect name="akka.dispatch.ExecutorServiceFactoryProviderInstrumentation"/>
+        <aspect name="akka.dispatch.NamedExecutorServiceFactoryDelegateInstrumentation"/>
+
+
+
+
+
 
         <include within="*"/>
         <exclude within="javax..*"/>

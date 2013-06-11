@@ -14,7 +14,7 @@ object Build extends Build {
     .settings(newrelicSettings: _*)
     .settings(
       libraryDependencies ++=
-        compile(akkaActor, akkaAgent, sprayCan, sprayClient, sprayRouting, sprayServlet, aspectJ, metrics, newrelic, sprayJson) ++
+        compile(akkaActor, akkaAgent, sprayCan, sprayClient, sprayRouting, sprayServlet, aspectJ, metrics, sprayJson) ++
         test(scalatest, sprayTestkit))
 
 

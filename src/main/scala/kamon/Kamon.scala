@@ -8,7 +8,7 @@ object Kamon {
     override def initialValue() = None
   }
   
-  implicit lazy val actorSystem = ActorSystem("kamon")
+  implicit lazy val actorSystem = ActorSystem("kamon-test")
 
 
   def context() = ctx.get()

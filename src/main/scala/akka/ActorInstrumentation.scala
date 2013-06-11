@@ -3,7 +3,7 @@ package akka
 import actor.ActorCell
 import org.aspectj.lang.annotation.{After, Around, Pointcut, Aspect}
 import org.aspectj.lang.ProceedingJoinPoint
-import kamon.metric.Metrics.{ metricsRegistry => meterRegistry }
+import kamon.metric.Metrics.{ registry => meterRegistry }
 import com.codahale.metrics.Meter
 import kamon.metric.MetricsUtils._
 

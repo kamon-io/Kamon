@@ -53,12 +53,14 @@ object ThreadLocalTraceEntryStorage extends TraceEntryStorage {
 
   private val storage = new ThreadLocal[List[TraceEntry]] {
     override def initialValue(): List[TraceEntry] = Nil
-    def update(f: List[TraceEntry] => List[TraceEntry]) = set(f(get()))
   }
 
+  def update(f: List[TraceEntry] => List[TraceEntry]) = storage set f(storage.get)
+
   def store(entry: TraceEntry): Boolean = {
-    storage.update(entry :: _)
+    update(entry :: _)
     true
   }
 }
+
 

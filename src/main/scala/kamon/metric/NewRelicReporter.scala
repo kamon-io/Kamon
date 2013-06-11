@@ -17,12 +17,27 @@ class NewRelicReporter(registry: MetricRegistry, name: String,filter: MetricFilt
     println(s"Logging to NewRelic: ${counter.getCount}")
 
   }
+
+
+/*  def processGauge(name: String, gauge: Gauge[_]) = {
+    println(s"the value is: "+gauge.getValue)
+    NewRelic.recordMetric("Custom/ActorSystem/activeCount", gauge.getValue.asInstanceOf[Float])
+  }*/
+
+
   def report(gauges: util.SortedMap[String, Gauge[_]], counters: util.SortedMap[String, Counter], histograms: util.SortedMap[String, Histogram], meters: util.SortedMap[String, Meter], timers: util.SortedMap[String, Timer]) {
     //Process Meters
     meters.asScala.map{case(name, meter) => processMeter(name, meter)}
 
     //Process Meters
     counters.asScala.map{case(name, counter) => processCounter(name, counter)}
+
+    // Gauges
+    gauges.asScala.foreach{ case (name, gauge) => {
+      val measure: Float = gauge.getValue.asInstanceOf[Number].floatValue()
+      val fullMetricName = "Custom" + name
+      NewRelic.recordMetric(fullMetricName, measure)
+    }}
   }
 }
 

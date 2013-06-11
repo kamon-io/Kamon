@@ -45,6 +45,12 @@ class RunnableInstrumentation {
    */
   import kamon.TraceContextSwap.withContext
 
+  @Before("instrumentedRunnableCreation()")
+  def beforeCreation = {
+    //println((new Throwable).getStackTraceString)
+  }
+
+
   @Around("runnableExecution()")
   def around(pjp: ProceedingJoinPoint) = {
     import pjp._

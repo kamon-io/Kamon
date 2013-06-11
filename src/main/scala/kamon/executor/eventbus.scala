@@ -7,8 +7,7 @@ import java.util.concurrent.TimeUnit
 
 import kamon.{CodeBlockExecutionTime, Kamon, TraceContext}
 import akka.util.Timeout
-import scala.util.Success
-import scala.util.Failure
+import scala.util.{Random, Success, Failure}
 import scala.concurrent.Future
 
 trait Message
@@ -35,31 +34,24 @@ class AppActorEventBus extends ActorEventBus with LookupClassification{
 case class Ping()
 case class Pong()
 
-class PingActor(val target: ActorRef) extends Actor with ActorLogging {
-  implicit def executionContext = context.dispatcher
-  implicit val timeout = Timeout(30, TimeUnit.SECONDS)
+class PingActor extends Actor with ActorLogging {
 
+  val pong = context.actorOf(Props[PongActor])
+  val random = new Random()
   def receive = {
     case Pong() => {
-      log.info(s"pong with context ${Kamon.context}")
-      Thread.sleep(1000)
-      sender ! Ping()
+      Thread.sleep(random.nextInt(2000))
+      //log.info("Message from Ping")
+      pong ! Ping()
     }
-    case a: Any => println(s"Got ${a} in PING"); Thread.sleep(1000)
   }
-
-  def withAny(): Any = {1}
-  def withAnyRef(): AnyRef = {new Object}
 }
 
 class PongActor extends Actor with ActorLogging {
   def receive = {
     case Ping() => {
-      Thread.sleep(3000)
       sender ! Pong()
-      log.info(s"ping with context ${Kamon.context}")
     }
-    case a: Any => println(s"Got ${a} in PONG")
   }
 }
 
@@ -74,8 +66,10 @@ object TryAkka extends App{
     }
   }))
 
-
-
+  for(i <- 1 to 4) {
+    val ping = system.actorOf(Props[PingActor])
+    ping ! Pong()
+  }
 
 
   def threadPrintln(body: String) = println(s"[${Thread.currentThread().getName}] - [${Kamon.context}] : $body")
@@ -100,8 +94,8 @@ object TryAkka extends App{
   Kamon.stop
 
 
-  Thread.sleep(3000)
-  system.shutdown()
+  //Thread.sleep(3000)
+  //system.shutdown()
 
 /*  appActorEventBus.subscribe(subscriber, NEW_POST_CHANNEL)
   appActorEventBus.publish(MessageEvent(NEW_POST_CHANNEL,PostMessage(text="hello world")))*/

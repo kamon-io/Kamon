@@ -7,11 +7,11 @@ object Dependencies {
     "spray nightlies repo"  at "http://nightlies.spray.io"
   )
 
-  val sprayCan        = "io.spray"                  %   "spray-can"             % "1.1-20130509"
-  val sprayRouting    = "io.spray"                  %   "spray-routing"         % "1.1-20130509"
-  val sprayTestkit    = "io.spray"                  %   "spray-testkit"         % "1.1-20130509"
-  val sprayClient     = "io.spray"                  %   "spray-client"          % "1.1-20130509"
-  val sprayServlet    = "io.spray"                  %   "spray-servlet"         % "1.1-20130509"
+  val sprayCan        = "io.spray"                  %   "spray-can"             % "1.1-M8"
+  val sprayRouting    = "io.spray"                  %   "spray-routing"         % "1.1-M8"
+  val sprayTestkit    = "io.spray"                  %   "spray-testkit"         % "1.1-M8"
+  val sprayClient     = "io.spray"                  %   "spray-client"          % "1.1-M8"
+  val sprayServlet    = "io.spray"                  %   "spray-servlet"         % "1.1-M8"
   val sprayJson       = "io.spray"                  %%  "spray-json"            % "1.2.3"
   val scalaReflect    = "org.scala-lang"            %   "scala-reflect"         % "2.10.1"
   val akkaActor       = "com.typesafe.akka"         %%  "akka-actor"            % "2.1.2"
@@ -21,7 +21,7 @@ object Dependencies {
   val scalatest       = "org.scalatest"             %   "scalatest_2.10"        % "2.0.M5b"
   val logback         = "ch.qos.logback"            %   "logback-classic"       % "1.0.10"
   val aspectJ         = "org.aspectj"               %   "aspectjrt"             % "1.7.2"
-  val metrics         = "com.codahale.metrics"      %   "metrics-core"          % "3.0.0-BETA2"
+  val metrics         = "com.codahale.metrics"      %   "metrics-core"          % "3.0.0"
   val newrelic        = "com.newrelic.agent.java"   %   "newrelic-api"          % "2.19.0"
 
   def compile   (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "compile")

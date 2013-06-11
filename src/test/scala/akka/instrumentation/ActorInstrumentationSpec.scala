@@ -25,7 +25,7 @@ class ActorInstrumentationSpec extends WordSpec with MustMatchers with ShouldMat
       //to ensure that all messages was received
       Thread.sleep(1000)
 
-      val messages = metricsRegistry.getMeters.asScala.get(meterForEchoActor).get.getCount
+      val messages = registry.getMeters.asScala.get(meterForEchoActor).get.getCount
 
       messages should equal(totalMessages)
     }
