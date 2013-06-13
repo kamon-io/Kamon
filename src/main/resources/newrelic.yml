@@ -48,7 +48,7 @@ common: &default_settings
   # This setting is dynamic, so changes do not require restarting your application.
   # The levels in increasing order of verboseness are: off, severe, warning, info, fine, finer, finest
   # Default is info.
-  log_level: finer
+  log_level: finest
   enable_custom_tracing: true
 
   # Log all data to and from New Relic in plain text.

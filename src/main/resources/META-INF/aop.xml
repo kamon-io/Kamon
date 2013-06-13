@@ -1,9 +1,9 @@
 <!DOCTYPE aspectj PUBLIC "-//AspectJ//DTD//EN" "http://www.eclipse.org/aspectj/dtd/aspectj.dtd">
 
 <aspectj>
-    <!--<weaver options="-verbose -showWeaveInfo">
+    <weaver options="-verbose -showWeaveInfo">
        <dump within="*"/>
-    </weaver>-->
+    </weaver>
 
     <aspects>
 
@@ -17,6 +17,7 @@
         <!--<aspect name="kamon.instrumentation.DispatcherInstrumentation" />-->
         <!--<aspect name ="akka.dispatch.FactoryInstrumentation" />-->
 
+        <aspect name="akka.instrumentation.MessageQueueInstrumentation" />
 
         <!-- ExecutorService Instrumentation for Akka. -->
         <aspect name="akka.dispatch.ExecutorServiceFactoryProviderInstrumentation"/>

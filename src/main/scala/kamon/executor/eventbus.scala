@@ -40,7 +40,7 @@ class PingActor extends Actor with ActorLogging {
   val random = new Random()
   def receive = {
     case Pong() => {
-      Thread.sleep(random.nextInt(2000))
+      //Thread.sleep(random.nextInt(2000))
       //log.info("Message from Ping")
       pong ! Ping()
     }
@@ -66,6 +66,7 @@ object TryAkka extends App{
     }
   }))
 
+  Kamon.start
   for(i <- 1 to 4) {
     val ping = system.actorOf(Props[PingActor])
     ping ! Pong()

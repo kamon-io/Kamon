@@ -34,7 +34,7 @@ trait ForkJoinPoolMetricCollector {
       fullName + activeThreads        -> forkJoinPoolGauge(_.getActiveThreadCount)
     )
 
-    allMetrics.foreach(kv => Metrics.registry.register(kv._1, kv._2))
+    allMetrics.foreach {  case (name, metric) => Metrics.registry.register(name, metric) }
   }
 }
 
@@ -51,15 +51,15 @@ trait ThreadPoolExecutorMetricCollector {
       fullName + activeThreads        -> tpeGauge(_.getActiveCount)
     )
 
-    allMetrics.foreach(kv => Metrics.registry.register(kv._1, kv._2))
+    allMetrics.foreach {  case (name, metric) => Metrics.registry.register(name, metric) }
   }
 }
 
 
 object BasicExecutorMetricNames {
   val queueSize = "queueSize"
-  val poolSize = "poolSize"
-  val activeThreads = "activeThreads"
+  val poolSize = "threads/poolSize"
+  val activeThreads = "threads/activeThreads"
 }
 
 
