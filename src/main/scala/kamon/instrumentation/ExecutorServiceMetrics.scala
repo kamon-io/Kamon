@@ -1,12 +1,11 @@
-package akka.dispatch
+package kamon.instrumentation
 
 import org.aspectj.lang.annotation._
 import java.util.concurrent._
-import scala.concurrent.forkjoin.ForkJoinPool
 import org.aspectj.lang.ProceedingJoinPoint
 import java.util
-import akka.dispatch.NamedExecutorServiceFactoryDelegate
 import kamon.metric.{MetricDirectory, ExecutorServiceMetricCollector}
+import akka.dispatch.{MonitorableThreadFactory, ExecutorServiceFactory}
 
 
 case class NamedExecutorServiceFactoryDelegate(actorSystemName: String, dispatcherName: String, delegate: ExecutorServiceFactory) extends ExecutorServiceFactory {
@@ -21,7 +20,7 @@ class ExecutorServiceFactoryProviderInstrumentation {
 
   @Around("factoryMethodCall(id, threadFactory)")
   def enrichFactoryCreationWithNames(pjp: ProceedingJoinPoint, id: String, threadFactory: ThreadFactory): ExecutorServiceFactory = {
-    val delegate = pjp.proceed(Array[AnyRef](id, threadFactory)).asInstanceOf[ExecutorServiceFactory] // Safe Cast
+    val delegate = pjp.proceed().asInstanceOf[ExecutorServiceFactory] // Safe Cast
 
     val actorSystemName = threadFactory match {
       case m: MonitorableThreadFactory => m.name
@@ -42,7 +41,7 @@ class NamedExecutorServiceFactoryDelegateInstrumentation {
 
   @Around("factoryMethodCall(namedFactory)")
   def enrichExecutorServiceWithMetricNameRoot(pjp: ProceedingJoinPoint, namedFactory: NamedExecutorServiceFactoryDelegate): ExecutorService = {
-    val delegate = pjp.proceed(Array[AnyRef](namedFactory)).asInstanceOf[ExecutorService]
+    val delegate = pjp.proceed().asInstanceOf[ExecutorService]
     val executorFullName = MetricDirectory.nameForDispatcher(namedFactory.actorSystemName, namedFactory.dispatcherName)
 
     ExecutorServiceMetricCollector.register(executorFullName, delegate)

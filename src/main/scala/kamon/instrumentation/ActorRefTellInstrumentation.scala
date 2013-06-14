@@ -1,4 +1,4 @@
-package akka.instrumentation
+package kamon.instrumentation
 
 import org.aspectj.lang.annotation.{Before, Around, Pointcut, Aspect}
 import org.aspectj.lang.ProceedingJoinPoint
@@ -8,32 +8,18 @@ import akka.dispatch.Envelope
 import com.codahale.metrics.{ExponentiallyDecayingReservoir, Histogram}
 import kamon.metric.{MetricDirectory, Metrics}
 
-case class TraceableEnvelope(traceContext: TraceContext, message: Any, timeStamp: Long = System.nanoTime())
+case class TraceableMessage(traceContext: Option[TraceContext], message: Any, timeStamp: Long = System.nanoTime())
 
 
 @Aspect
 class ActorRefTellInstrumentation {
-  println("Created ActorAspect")
+  import ProceedingJoinPointPimp._
 
   @Pointcut("execution(* akka.actor.ScalaActorRef+.$bang(..)) && !within(akka.pattern.PromiseActorRef) && args(message, sender)")
   def sendingMessageToActorRef(message: Any, sender: ActorRef) = {}
 
   @Around("sendingMessageToActorRef(message, sender)")
-  def around(pjp: ProceedingJoinPoint, message: Any, sender: ActorRef): Unit  = {
-    import pjp._
-
-    Kamon.context() match {
-      case Some(ctx) => {
-        val traceableMessage = TraceableEnvelope(ctx, message)
-
-        // update the args with the new message
-        val args = getArgs
-        args.update(0, traceableMessage)
-        proceed(args)
-      }
-      case None => proceed
-    }
-  }
+  def around(pjp: ProceedingJoinPoint, message: Any, sender: ActorRef): Unit  = pjp.proceedWith(TraceableMessage(Kamon.context, message))
 }
 
 
@@ -41,8 +27,7 @@ class ActorRefTellInstrumentation {
 class ActorCellInvokeInstrumentation {
 
   val latencyHistogram: Histogram = new Histogram(new ExponentiallyDecayingReservoir)
-  val messagesPer
-  @volatile var shouldTrack = false
+  var shouldTrack = false
 
   @Pointcut("execution(akka.actor.ActorCell.new(..)) && args(system, ref, props, parent)")
   def actorCellCreation(system: ActorSystem, ref: ActorRef, props: Props, parent: ActorRef): Unit = {}
@@ -67,20 +52,23 @@ class ActorCellInvokeInstrumentation {
 
   @Around("invokingActorBehaviourAtActorCell(envelope)")
   def around(pjp: ProceedingJoinPoint, envelope: Envelope): Unit = {
-    import pjp._
+    import ProceedingJoinPointPimp._
 
     envelope match {
-      case Envelope(TraceableEnvelope(ctx, msg, timeStamp), sender) => {
+      case Envelope(TraceableMessage(ctx, msg, timeStamp), sender) => {
         latencyHistogram.update(System.nanoTime() - timeStamp)
 
-        Kamon.set(ctx)
-
         val originalEnvelope = envelope.copy(message = msg)
-        proceed(getArgs.updated(0, originalEnvelope))
-
-        Kamon.clear
+        ctx match {
+          case Some(c) => {
+            Kamon.set(c)
+            pjp.proceedWith(originalEnvelope)
+            Kamon.clear
+          }
+          case None => pjp.proceedWith(originalEnvelope)
+        }
       }
-      case _ => proceed
+      case _ => pjp.proceed
     }
   }
 }

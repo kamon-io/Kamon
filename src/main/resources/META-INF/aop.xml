@@ -2,29 +2,19 @@
 
 <aspectj>
     <weaver options="-verbose -showWeaveInfo">
-       <dump within="*"/>
+       <!--<dump within="*"/>-->
     </weaver>
 
     <aspects>
 
-        <!--<aspect name="akka.ActorSystemAspect"/>
-        &lt;!&ndash;<aspect name="akka.MailboxAspect"/>&ndash;&gt;-->
-        <!--<aspect name="akka.PoolMonitorAspect"/>-->
-        <aspect name="akka.ActorInstrumentation" />
-        <aspect name="akka.instrumentation.ActorRefTellInstrumentation"/>
-        <aspect name="akka.instrumentation.ActorCellInvokeInstrumentation"/>
+        <aspect name="kamon.instrumentation.ActorRefTellInstrumentation"/>
+        <aspect name="kamon.instrumentation.ActorCellInvokeInstrumentation"/>
         <aspect name="kamon.instrumentation.RunnableInstrumentation" />
-        <!--<aspect name="kamon.instrumentation.DispatcherInstrumentation" />-->
-        <!--<aspect name ="akka.dispatch.FactoryInstrumentation" />-->
-
-        <aspect name="akka.instrumentation.MessageQueueInstrumentation" />
+        <aspect name="kamon.instrumentation.MessageQueueInstrumentation" />
 
         <!-- ExecutorService Instrumentation for Akka. -->
-        <aspect name="akka.dispatch.ExecutorServiceFactoryProviderInstrumentation"/>
-        <aspect name="akka.dispatch.NamedExecutorServiceFactoryDelegateInstrumentation"/>
-
-
-
+        <aspect name="kamon.instrumentation.ExecutorServiceFactoryProviderInstrumentation"/>
+        <aspect name="kamon.instrumentation.NamedExecutorServiceFactoryDelegateInstrumentation"/>
 
 
 

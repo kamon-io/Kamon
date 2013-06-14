@@ -15,7 +15,7 @@ object Build extends Build {
     .settings(
       libraryDependencies ++=
         compile(akkaActor, akkaAgent, sprayCan, sprayClient, sprayRouting, sprayServlet, aspectJ, metrics, sprayJson) ++
-        test(scalatest, sprayTestkit))
+        test(scalatest, akkaTestKit, sprayTestkit))
 
 
 }

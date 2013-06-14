@@ -1,4 +1,4 @@
-package akka.instrumentation
+package kamon.instrumentation
 
 import com.codahale.metrics.{ExponentiallyDecayingReservoir, Histogram}
 import akka.dispatch.{Envelope, MessageQueue}
@@ -25,40 +25,42 @@ class MessageQueueInstrumentation {
     val delegate = pjp.proceed.asInstanceOf[MessageQueue]
 
     // We are not interested in monitoring mailboxes if we don't know where they belong to.
-    val monitoredMailbox = for(own <- owner; sys <- system) yield new MonitoredMessageQueue(delegate, own, sys)
+    val monitoredMailbox = for(own <- owner; sys <- system) yield {
+      val systemName = sys.name
+      val ownerName = MetricDirectory.nameForActor(own)
+      val mailBoxName = MetricDirectory.nameForMailbox(systemName, ownerName)
+
+      val queueSizeHistogram = new Histogram(new ExponentiallyDecayingReservoir())
+      Metrics.include(mailBoxName, queueSizeHistogram)
+
+      new MonitoredMessageQueue(delegate, queueSizeHistogram)
+    }
 
     monitoredMailbox match {
       case None => delegate
       case Some(mmb) => mmb
     }
-
   }
 }
 
 
-class MonitoredMessageQueue(val delegate: MessageQueue, owner: ActorRef, system: ActorSystem) extends MessageQueue {
-  val queueSizeHistogram: Histogram = new Histogram(new ExponentiallyDecayingReservoir)
-
-  val fullName = MetricDirectory.nameForMailbox(system.name, MetricDirectory.nameForActor(owner))
-  Metrics.registry.register(fullName, queueSizeHistogram)
+class MonitoredMessageQueue(val delegate: MessageQueue, val queueSizeHistogram: Histogram) extends MessageQueue {
 
   def enqueue(receiver: ActorRef, handle: Envelope) = {
-    queueSizeHistogram.update(numberOfMessages)
     delegate.enqueue(receiver, handle)
+    queueSizeHistogram.update(numberOfMessages)
   }
 
   def dequeue(): Envelope = {
+    val envelope = delegate.dequeue()
     queueSizeHistogram.update(numberOfMessages)
-    delegate.dequeue()
+
+    envelope
   }
 
   def numberOfMessages: Int = delegate.numberOfMessages
   def hasMessages: Boolean = delegate.hasMessages
-  def cleanUp(owner: ActorRef, deadLetters: MessageQueue) = {
-    Metrics.deregister(fullName)
-
-    delegate.cleanUp(owner, deadLetters)
-  }
+  def cleanUp(owner: ActorRef, deadLetters: MessageQueue) = delegate.cleanUp(owner, deadLetters)
 }
 
 

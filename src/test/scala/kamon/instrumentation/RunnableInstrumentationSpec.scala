@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit
 import akka.actor.ActorSystem
 
 
-class RunnableInstrumentationSpec extends WordSpec with MustMatchers with ScalaFutures with PatienceConfiguration with OptionValues {
+class RunnableInstrumentationSpec extends WordSpec with MustMatchers with ScalaFuturesSupport with PatienceConfiguration with OptionValues {
 
   "a instrumented runnable" when {
     "created in a thread that does have a TraceContext" must {

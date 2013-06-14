@@ -6,7 +6,7 @@ import scala.util.{Failure, Success}
 import org.scalatest.concurrent.Futures
 import java.util.concurrent.TimeUnit
 
-trait ScalaFutures extends Futures {
+trait ScalaFuturesSupport extends Futures {
   implicit def scalaFutureToFutureConcept[T](future: Future[T]): FutureConcept[T] = new FutureConcept[T] {
     def eitherValue: Option[Either[Throwable, T]] = {
       if(!future.isCompleted)

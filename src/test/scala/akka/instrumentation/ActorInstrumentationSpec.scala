@@ -5,10 +5,11 @@ import org.scalatest.matchers.{ShouldMatchers, MustMatchers}
 import akka.actor.{Actor, Props, ActorSystem}
 import kamon.metric.Metrics._
 import scala.collection.JavaConverters._
+import akka.testkit.TestActorRef
 
 
 class ActorInstrumentationSpec extends WordSpec with MustMatchers with ShouldMatchers {
-  val system = ActorSystem()
+  implicit val system = ActorSystem()
   import system._
 
   val echoRef = actorOf(Props(new EchoActor), "Echo-Actor")
@@ -18,16 +19,18 @@ class ActorInstrumentationSpec extends WordSpec with MustMatchers with ShouldMat
   "an instrumented Actor" should  {
     "send a message and record a metric on the Metrics Registry with the number of sent messages" in {
 
+      val echoActor = TestActorRef[EchoActor]
+
+
+
       (1 to totalMessages).foreach {x:Int =>
-        echoRef ! s"Message ${x}"
+        echoActor ! s"Message ${x}"
       }
 
-      //to ensure that all messages was received
-      Thread.sleep(1000)
+      println("After all")
+      //val messages = registry.getMeters.asScala.get(meterForEchoActor).get.getCount
 
-      val messages = registry.getMeters.asScala.get(meterForEchoActor).get.getCount
-
-      messages should equal(totalMessages)
+      //messages should equal(totalMessages)
     }
   }
 
@@ -35,7 +38,7 @@ class ActorInstrumentationSpec extends WordSpec with MustMatchers with ShouldMat
 
 class EchoActor extends Actor {
   def receive = {
-    case msg ⇒ sender ! msg
+    case msg ⇒ println("SOME"); sender ! msg
   }
 }
 

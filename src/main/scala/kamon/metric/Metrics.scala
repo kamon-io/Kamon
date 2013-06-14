@@ -4,7 +4,14 @@ import java.util.concurrent.TimeUnit
 import com.codahale.metrics._
 import akka.actor.ActorRef
 
-object Metrics {
+trait MetricDepot {
+  def include(name: String, metric: Metric): Unit
+  def exclude(name: String): Unit
+}
+
+
+
+object Metrics extends MetricDepot {
   val registry: MetricRegistry = new MetricRegistry
 
   val consoleReporter = ConsoleReporter.forRegistry(registry)
@@ -12,6 +19,16 @@ object Metrics {
 
   //newrelicReporter.start(5, TimeUnit.SECONDS)
   consoleReporter.build().start(60, TimeUnit.SECONDS)
+
+
+  def include(name: String, metric: Metric) = registry.register(name, metric)
+
+  def exclude(name: String) = {
+    registry.removeMatching(new MetricFilter {
+      def matches(name: String, metric: Metric): Boolean = name.startsWith(name)
+    })
+  }
+
 
 
   def deregister(fullName: String) = {
