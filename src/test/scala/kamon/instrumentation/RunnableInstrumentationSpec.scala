@@ -1,9 +1,8 @@
 package kamon.instrumentation
 
 import scala.concurrent.{Await, Promise, Future}
-import org.scalatest.{OptionValues, WordSpec}
-import org.scalatest.matchers.MustMatchers
-import org.scalatest.concurrent.PatienceConfiguration
+import org.scalatest.{Matchers, OptionValues, WordSpec}
+import org.scalatest.concurrent.{ScalaFutures, PatienceConfiguration}
 import kamon.{Kamon, TraceContext}
 import java.util.UUID
 import scala.util.Success
@@ -12,7 +11,7 @@ import java.util.concurrent.TimeUnit
 import akka.actor.ActorSystem
 
 
-class RunnableInstrumentationSpec extends WordSpec with MustMatchers with ScalaFuturesSupport with PatienceConfiguration with OptionValues {
+class RunnableInstrumentationSpec extends WordSpec with Matchers with ScalaFutures with PatienceConfiguration with OptionValues {
 
   "a instrumented runnable" when {
     "created in a thread that does have a TraceContext" must {
@@ -20,7 +19,7 @@ class RunnableInstrumentationSpec extends WordSpec with MustMatchers with ScalaF
         "should be available during the run method execution" in { new FutureWithContextFixture {
 
             whenReady(futureWithContext) { result =>
-              result.value must be === testContext
+              result.value should equal(testContext)
             }
         }}
 
@@ -32,7 +31,7 @@ class RunnableInstrumentationSpec extends WordSpec with MustMatchers with ScalaF
             })
 
             whenReady(onCompleteContext.future) { result =>
-              result must be === testContext
+              result should equal(testContext)
             }
         }}
       }
@@ -42,7 +41,7 @@ class RunnableInstrumentationSpec extends WordSpec with MustMatchers with ScalaF
       "not capture any TraceContext for the body execution" in { new FutureWithoutContextFixture{
 
           whenReady(futureWithoutContext) { result =>
-            result must be === None
+            result should equal(None)
           }
       }}
 
@@ -54,7 +53,7 @@ class RunnableInstrumentationSpec extends WordSpec with MustMatchers with ScalaF
         })
 
         whenReady(onCompleteContext.future) { result =>
-          result must be === None
+          result should equal(None)
         }
       }}
     }

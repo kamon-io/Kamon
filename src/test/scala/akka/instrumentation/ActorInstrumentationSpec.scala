@@ -1,14 +1,13 @@
 package akka.instrumentation
 
-import org.scalatest.WordSpec
-import org.scalatest.matchers.{ShouldMatchers, MustMatchers}
+import org.scalatest.{Matchers, WordSpec}
 import akka.actor.{Actor, Props, ActorSystem}
 import kamon.metric.Metrics._
 import scala.collection.JavaConverters._
 import akka.testkit.TestActorRef
 
 
-class ActorInstrumentationSpec extends WordSpec with MustMatchers with ShouldMatchers {
+class ActorInstrumentationSpec extends WordSpec with Matchers {
   implicit val system = ActorSystem()
   import system._
 
@@ -27,7 +26,6 @@ class ActorInstrumentationSpec extends WordSpec with MustMatchers with ShouldMat
         echoActor ! s"Message ${x}"
       }
 
-      println("After all")
       //val messages = registry.getMeters.asScala.get(meterForEchoActor).get.getCount
 
       //messages should equal(totalMessages)
@@ -38,7 +36,7 @@ class ActorInstrumentationSpec extends WordSpec with MustMatchers with ShouldMat
 
 class EchoActor extends Actor {
   def receive = {
-    case msg ⇒ println("SOME"); sender ! msg
+    case msg ⇒ sender ! msg
   }
 }
 

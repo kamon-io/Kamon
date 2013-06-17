@@ -18,7 +18,7 @@ object Dependencies {
   val akkaAgent       = "com.typesafe.akka"         %%  "akka-agent"            % "2.1.2"
   val akkaSlf4j       = "com.typesafe.akka"         %%  "akka-slf4j"            % "2.1.2"
   val akkaTestKit     = "com.typesafe.akka"         %%  "akka-testkit"          % "2.1.2"
-  val scalatest       = "org.scalatest"             %   "scalatest_2.10"        % "2.0.M5b"
+  val scalatest       = "org.scalatest"             %   "scalatest_2.10"        % "2.0.M6-SNAP22"
   val logback         = "ch.qos.logback"            %   "logback-classic"       % "1.0.10"
   val aspectJ         = "org.aspectj"               %   "aspectjrt"             % "1.7.2"
   val metrics         = "com.codahale.metrics"      %   "metrics-core"          % "3.0.0"
