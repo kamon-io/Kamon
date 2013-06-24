@@ -12,6 +12,8 @@
         <aspect name="kamon.instrumentation.RunnableInstrumentation" />
         <aspect name="kamon.instrumentation.MessageQueueInstrumentation" />
 
+        <aspect name="kamon.instrumentation.InceptionAspect"/>
+
         <!-- ExecutorService Instrumentation for Akka. -->
         <aspect name="kamon.instrumentation.ExecutorServiceFactoryProviderInstrumentation"/>
         <aspect name="kamon.instrumentation.NamedExecutorServiceFactoryDelegateInstrumentation"/>

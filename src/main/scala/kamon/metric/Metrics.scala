@@ -14,11 +14,11 @@ trait MetricDepot {
 object Metrics extends MetricDepot {
   val registry: MetricRegistry = new MetricRegistry
 
-  val consoleReporter = ConsoleReporter.forRegistry(registry)
+  val consoleReporter = ConsoleReporter.forRegistry(registry).convertDurationsTo(TimeUnit.NANOSECONDS)
   val newrelicReporter = NewRelicReporter(registry)
 
   //newrelicReporter.start(5, TimeUnit.SECONDS)
-  consoleReporter.build().start(60, TimeUnit.SECONDS)
+  consoleReporter.build().start(10, TimeUnit.SECONDS)
 
 
   def include(name: String, metric: Metric) = registry.register(name, metric)
@@ -43,5 +43,18 @@ object MetricDirectory {
 
   def nameForMailbox(actorSystem: String, actor: String) = s"/ActorSystem/$actorSystem/Actor/$actor/Mailbox"
 
-  def nameForActor(actorRef: ActorRef) = actorRef.path.elements.fold("")(_ + "/" + _)
+  def nameForActor(actorRef: ActorRef) = actorRef.path.elements.mkString("/")
+
+  def shouldInstrument(actorSystem: String): Boolean = !actorSystem.startsWith("kamon")
+
+
+  def shouldInstrumentActor(actorPath: String): Boolean = {
+    !(actorPath.isEmpty || actorPath.startsWith("system"))
+  }
+
+
+
+
 }
+
+

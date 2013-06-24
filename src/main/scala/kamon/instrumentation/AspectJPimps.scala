@@ -16,4 +16,8 @@ case class RichProceedingJointPoint(pjp: ProceedingJoinPoint) {
     args.update(0, newUniqueArg)
     pjp.proceed(args)
   }
+
+  def proceedWithTarget(args: AnyRef*) = {
+    pjp.proceed(args.toArray)
+  }
 }
