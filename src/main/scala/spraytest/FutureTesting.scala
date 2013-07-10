@@ -63,7 +63,7 @@ object TraceableFuture {
   implicit def toRegularFuture[T](tf: TraceableFuture[T]) = tf.future
 
   def apply[T](body: => T)(implicit transactionContext: TransactionContext, executor: ExecutionContext) = {
-    val wrappedBody = contextSwitchWrapper(body, TransactionContext(transactionContext.id, Nil))
+    val wrappedBody = contextSwitchWrapper(body, TransactionContext(transactionContext.dispatcherName, Nil))
 
     new TraceableFuture(Future { wrappedBody })
   }

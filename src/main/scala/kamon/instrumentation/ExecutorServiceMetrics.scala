@@ -8,6 +8,47 @@ import kamon.metric.{MetricDirectory, ExecutorServiceMetricCollector}
 import akka.dispatch.{MonitorableThreadFactory, ExecutorServiceFactory}
 
 
+/**
+ *  ExecutorService monitoring base:
+ */
+trait ExecutorServiceCollector {
+  def updateActiveThreadCount(diff: Int): Unit
+  def updateTotalThreadCount(diff: Int): Unit
+  def updateQueueSize(diff: Int): Unit
+}
+
+trait WatchedExecutorService {
+  def collector: ExecutorServiceCollector
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 case class NamedExecutorServiceFactoryDelegate(actorSystemName: String, dispatcherName: String, delegate: ExecutorServiceFactory) extends ExecutorServiceFactory {
   def createExecutorService: ExecutorService = delegate.createExecutorService
 }
@@ -15,11 +56,13 @@ case class NamedExecutorServiceFactoryDelegate(actorSystemName: String, dispatch
 @Aspect
 class ExecutorServiceFactoryProviderInstrumentation {
 
-  @Pointcut("execution(* akka.dispatch.ExecutorServiceFactoryProvider+.createExecutorServiceFactory(..)) && args(id, threadFactory)")
-  def factoryMethodCall(id: String, threadFactory: ThreadFactory) = {}
+  @Pointcut("execution(* akka.dispatch.ExecutorServiceFactoryProvider+.createExecutorServiceFactory(..)) && args(dispatcherName, threadFactory) && if()")
+  def factoryMethodCall(dispatcherName: String, threadFactory: ThreadFactory): Boolean = {
+    true
+  }
 
-  @Around("factoryMethodCall(id, threadFactory)")
-  def enrichFactoryCreationWithNames(pjp: ProceedingJoinPoint, id: String, threadFactory: ThreadFactory): ExecutorServiceFactory = {
+  @Around("factoryMethodCall(dispatcherName, threadFactory)")
+  def enrichFactoryCreationWithNames(pjp: ProceedingJoinPoint, dispatcherName: String, threadFactory: ThreadFactory): ExecutorServiceFactory = {
     val delegate = pjp.proceed().asInstanceOf[ExecutorServiceFactory] // Safe Cast
 
     val actorSystemName = threadFactory match {
@@ -27,7 +70,7 @@ class ExecutorServiceFactoryProviderInstrumentation {
       case _ => "Unknown"   // Find an alternative way to find the actor system name in case we start seeing "Unknown" as the AS name.
     }
 
-    new NamedExecutorServiceFactoryDelegate(actorSystemName, id, delegate)
+    new NamedExecutorServiceFactoryDelegate(actorSystemName, dispatcherName, delegate)
   }
 
 }
@@ -68,3 +111,38 @@ case class NamedExecutorServiceDelegate(fullName: String, delegate: ExecutorServ
   def invokeAny[T](tasks: util.Collection[_ <: Callable[T]], timeout: Long, unit: TimeUnit): T = delegate.invokeAny(tasks, timeout, unit)
   def execute(command: Runnable) = delegate.execute(command)
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

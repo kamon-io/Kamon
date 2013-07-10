@@ -1,8 +1,10 @@
 package kamon.metric
 
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.{ConcurrentHashMap, ConcurrentSkipListSet, TimeUnit}
 import com.codahale.metrics._
 import akka.actor.ActorRef
+import java.util.concurrent.atomic.AtomicReference
+import com.codahale.metrics
 
 trait MetricDepot {
   def include(name: String, metric: Metric): Unit
@@ -38,6 +40,11 @@ object Metrics extends MetricDepot {
   }
 }
 
+object Watched {
+  case object Actor
+  case object Dispatcher
+}
+
 object MetricDirectory {
   def nameForDispatcher(actorSystem: String, dispatcher: String) = s"/ActorSystem/${actorSystem}/Dispatcher/${dispatcher}/"
 
@@ -53,8 +60,82 @@ object MetricDirectory {
   }
 
 
+}
 
+
+
+case class ActorSystemMetrics(actorSystemName: String) {
+  val dispatchers = new ConcurrentHashMap[String, DispatcherMetrics]
+
+  def registerDispatcher(dispatcherName: String): Option[DispatcherMetricCollector] = {
+    ???
+  }
 
 }
 
 
+
+case class DispatcherMetricCollector(activeThreadCount: ValueDistributionCollector, poolSize: ValueDistributionCollector, queueSize: ValueDistributionCollector)
+
+
+
+
+trait ValueDistributionCollector {
+  def update(value: Long): Unit
+  def snapshot: HistogramLike
+}
+
+trait HistogramLike {
+  def median: Long
+  def max: Long
+  def min: Long
+}
+
+case class CodaHaleValueDistributionCollector extends ValueDistributionCollector {
+  private[this] val histogram = new Histogram(new metrics.ExponentiallyDecayingReservoir())
+
+  def median: Long = ???
+
+  def max: Long = ???
+
+  def min: Long = ???
+
+  def snapshot: HistogramLike = histogram.getSnapshot
+
+  def update(value: Long) = histogram.update(value)
+}
+
+
+
+
+
+
+
+
+
+/**
+ *  Dispatcher Metrics that we care about currently with a histogram-like nature:
+ *    - Work Queue Size
+ *    - Total/Active Thread Count
+ */
+
+
+
+import annotation.tailrec
+import java.util.concurrent.atomic.AtomicReference
+
+object Atomic {
+  def apply[T]( obj : T) = new Atomic(new AtomicReference(obj))
+  implicit def toAtomic[T]( ref : AtomicReference[T]) : Atomic[T] = new Atomic(ref)
+}
+
+class Atomic[T](val atomic : AtomicReference[T]) {
+  @tailrec
+  final def update(f: T => T) : T = {
+    val oldValue = atomic.get()
+    val newValue = f(oldValue)
+    if (atomic.compareAndSet(oldValue, newValue)) newValue else update(f)
+  }
+
+  def get() = atomic.get()
+}

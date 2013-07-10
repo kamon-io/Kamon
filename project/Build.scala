@@ -12,6 +12,7 @@ object Build extends Build {
     .settings(revolverSettings: _*)
     .settings(aspectJSettings: _*)
     .settings(newrelicSettings: _*)
+
     .settings(
       libraryDependencies ++=
         compile(akkaActor, akkaAgent, sprayCan, sprayClient, sprayRouting, sprayServlet, aspectJ, metrics, sprayJson) ++
