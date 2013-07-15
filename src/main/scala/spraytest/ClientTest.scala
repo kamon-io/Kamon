@@ -5,6 +5,8 @@ import spray.client.pipelining._
 import spray.httpx.SprayJsonSupport
 import spray.json._
 import scala.concurrent.Future
+import spray.can.Http
+import akka.io.IO
 
 /**
  *    BEGIN JSON Infrastructure
@@ -34,7 +36,7 @@ class ClientTest extends App {
   import SprayJsonSupport._
 
 
-
+  val actor = IO(Http)
 
   val pipeline =  sendReceive ~> unmarshal[Container]
 

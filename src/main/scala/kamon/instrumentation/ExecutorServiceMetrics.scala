@@ -4,8 +4,52 @@ import org.aspectj.lang.annotation._
 import java.util.concurrent._
 import org.aspectj.lang.ProceedingJoinPoint
 import java.util
-import kamon.metric.{MetricDirectory, ExecutorServiceMetricCollector}
+import kamon.metric.{DispatcherMetricCollector, Histogram, MetricDirectory, ExecutorServiceMetricCollector}
 import akka.dispatch.{MonitorableThreadFactory, ExecutorServiceFactory}
+import com.typesafe.config.Config
+import kamon.Kamon
+
+
+@Aspect
+class ActorSystemInstrumentation {
+
+  @Pointcut("execution(akka.actor.ActorSystemImpl.new(..)) && args(name, applicationConfig, classLoader)")
+  def actorSystemInstantiation(name: String, applicationConfig: Config, classLoader: ClassLoader) = {}
+
+  @After("actorSystemInstantiation(name, applicationConfig, classLoader)")
+  def registerActorSystem(name: String, applicationConfig: Config, classLoader: ClassLoader): Unit = {
+
+    Kamon.Metric.registerActorSystem(name)
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 /**
@@ -33,6 +77,14 @@ trait WatchedExecutorService {
 
 
 
+
+trait ExecutorServiceMonitoring {
+  def dispatcherMetrics: DispatcherMetricCollector
+}
+
+class ExecutorServiceMonitoringImpl extends ExecutorServiceMonitoring {
+  @volatile var dispatcherMetrics: DispatcherMetricCollector = _
+}
 
 
 

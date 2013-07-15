@@ -1,6 +1,9 @@
 package kamon
 
 import akka.actor.{Props, ActorSystem}
+import scala.collection.JavaConverters._
+import java.util.concurrent.ConcurrentHashMap
+import kamon.metric.{Atomic, ActorSystemMetrics}
 
 object Kamon {
 
@@ -28,7 +31,23 @@ object Kamon {
 
   def publish(tx: FullTransaction) = publisher ! tx
 
+
+
+  object Metric {
+    val actorSystems = new ConcurrentHashMap[String, ActorSystemMetrics] asScala
+
+    def registerActorSystem(name: String) = actorSystems.getOrElseUpdate(name, ActorSystemMetrics(name))
+
+    def actorSystem(name: String): Option[ActorSystemMetrics] = actorSystems.get(name)
+  }
+
 }
+
+
+
+
+
+
 
 
 
