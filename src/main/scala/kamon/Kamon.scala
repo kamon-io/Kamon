@@ -36,6 +36,7 @@ object Kamon {
   object Metric {
     val actorSystems = new ConcurrentHashMap[String, ActorSystemMetrics] asScala
 
+    def actorSystemNames: List[String] = actorSystems.keys.toList
     def registerActorSystem(name: String) = actorSystems.getOrElseUpdate(name, ActorSystemMetrics(name))
 
     def actorSystem(name: String): Option[ActorSystemMetrics] = actorSystems.get(name)

@@ -16,8 +16,7 @@ class ActorSystemInstrumentationSpec extends WordSpec with Matchers {
 
       Kamon.Metric.actorSystem("as1") should not be (None)
       Kamon.Metric.actorSystem("as2") should not be (None)
-      /*assert(Kamon.Metric.actorSystem("as2") != null)
-      assert(Kamon.Metric.actorSystem("as3") === null)*/
+      Kamon.Metric.actorSystem("unknown") should be (None)
     }
   }
 }

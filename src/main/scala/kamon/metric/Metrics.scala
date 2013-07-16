@@ -88,7 +88,11 @@ case class ActorSystemMetrics(actorSystemName: String) {
 
   private[this] def createDispatcherCollector: DispatcherMetricCollector = DispatcherMetricCollector(CodahaleHistogram(), CodahaleHistogram(), CodahaleHistogram())
 
-  def registerDispatcher(dispatcherName: String): Option[DispatcherMetricCollector] = Some(createDispatcherCollector)
+  def registerDispatcher(dispatcherName: String): Option[DispatcherMetricCollector] = {
+    val stats = createDispatcherCollector
+    dispatchers.put(dispatcherName, stats)
+    Some(stats)
+  }
 
 }
 

@@ -1,8 +1,8 @@
 <!DOCTYPE aspectj PUBLIC "-//AspectJ//DTD//EN" "http://www.eclipse.org/aspectj/dtd/aspectj.dtd">
 
 <aspectj>
-    <weaver options="-verbose">
-       <!--<dump within="*" beforeandafter="true"/>-->
+    <weaver options="-verbose -showWeaveInfo">
+       <dump within="*" beforeandafter="true"/>
     </weaver>
 
     <aspects>
@@ -18,6 +18,7 @@
 <!--        <aspect name="kamon.instrumentation.ExecutorServiceFactoryProviderInstrumentation"/>
         <aspect name="kamon.instrumentation.NamedExecutorServiceFactoryDelegateInstrumentation"/>-->
         <aspect name="kamon.instrumentation.ActorSystemInstrumentation"/>
+        <aspect name ="kamon.instrumentation.ForkJoinPoolInstrumentation"/>
 
 
 
