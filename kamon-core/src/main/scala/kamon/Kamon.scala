@@ -117,10 +117,10 @@ class NewrelicReporterActor extends Actor {
 
   def receive = {
     case DispatcherMetrics(actorSystem, dispatcher, activeThreads, poolSize, queueSize) => {
-      println("PUBLISHED DISPATCHER STATS")
+      /*println("PUBLISHED DISPATCHER STATS")
       println(s"Custom/$actorSystem/Dispatcher/$dispatcher/Threads/active =>" + activeThreads.median.toFloat)
       println(s"Custom/$actorSystem/Dispatcher/$dispatcher/Threads/inactive =>" + (poolSize.median.toFloat-activeThreads.median.toFloat))
-      println(s"Custom/$actorSystem/Dispatcher/$dispatcher/Queue =>" + queueSize.median.toFloat)
+      println(s"Custom/$actorSystem/Dispatcher/$dispatcher/Queue =>" + queueSize.median.toFloat)*/
 
 
       NewRelic.recordMetric(s"Custom/$actorSystem/Dispatcher/$dispatcher/Threads/active", activeThreads.median.toFloat)

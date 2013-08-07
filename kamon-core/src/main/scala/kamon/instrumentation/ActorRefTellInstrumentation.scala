@@ -18,7 +18,7 @@ case class TraceableMessage(traceContext: Option[TraceContext], message: Any, ti
 class ActorRefTellInstrumentation {
   import ProceedingJoinPointPimp._
 
-  @Pointcut("execution(* akka.actor.LocalActorRef+.$bang(..)) && target(actor) && args(message, sender)")
+  @Pointcut("execution(* akka.actor.ScalaActorRef+.$bang(..)) && target(actor) && args(message, sender)")
   def sendingMessageToActorRef(actor: ActorRef, message: Any, sender: ActorRef) = {}
 
   @Around("sendingMessageToActorRef(actor, message, sender)")
@@ -26,7 +26,7 @@ class ActorRefTellInstrumentation {
 
     val actorName = MetricDirectory.nameForActor(actor)
     val t = Metrics.registry.timer(actorName + "LATENCY")
-    //println(s"About to proceed with: $actor $message $sender")
+    //println(s"About to proceed with: $actor $message $sender ${Kamon.context}")
     pjp.proceedWithTarget(actor, TraceableMessage(Kamon.context, message, t.time()), sender)
   }
 }
@@ -63,7 +63,7 @@ class ActorCellInvokeInstrumentation {
   @Around("invokingActorBehaviourAtActorCell(envelope)")
   def around(pjp: ProceedingJoinPoint, envelope: Envelope): Unit = {
     import ProceedingJoinPointPimp._
-    //println("ENVELOPE --------------------->"+envelope)
+    println("ENVELOPE --------------------->"+envelope)
     envelope match {
       case Envelope(TraceableMessage(ctx, msg, timer), sender) => {
         timer.stop()
@@ -75,7 +75,7 @@ class ActorCellInvokeInstrumentation {
         ctx match {
           case Some(c) => {
             Kamon.set(c)
-            //println("ENVELOPE ORIGINAL:---------------->"+originalEnvelope)
+            println(s"ENVELOPE ORIGINAL: [$c]---------------->"+originalEnvelope)
             pjp.proceedWith(originalEnvelope)
             Kamon.clear
           }

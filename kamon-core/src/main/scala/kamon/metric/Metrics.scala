@@ -15,7 +15,9 @@ object Metrics {
   //val newrelicReporter = NewRelicReporter(registry)
   //newrelicReporter.start(5, TimeUnit.SECONDS)
 
-  def include(name: String, metric: Metric) = registry.register(name, metric)
+  def include(name: String, metric: Metric) = {
+    //registry.register(name, metric)
+  }
 
   def exclude(name: String) = {
     registry.removeMatching(new MetricFilter {
