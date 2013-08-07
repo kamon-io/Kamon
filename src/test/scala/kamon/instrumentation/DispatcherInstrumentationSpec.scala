@@ -13,7 +13,7 @@ class DispatcherInstrumentationSpec extends WordSpec with Matchers{
       val x = Kamon.Metric.actorSystem("single-dispatcher").get.dispatchers
       (1 to 10).foreach(actor ! _)
 
-      val active = x.get("akka.actor.default-dispatcher").activeThreadCount.snapshot
+      val active = x.get("akka.actor.default-dispatcher").get.activeThreadCount.snapshot
       println("Active max: "+active.max)
       println("Active min: "+active.min)
 
@@ -25,7 +25,7 @@ class DispatcherInstrumentationSpec extends WordSpec with Matchers{
     val actorSystem = ActorSystem("single-dispatcher")
     val actor = actorSystem.actorOf(Props(new Actor {
       def receive = {
-        case a => sender ! a; println("BAAAANG")
+        case a => sender ! a;
       }
     }))
 

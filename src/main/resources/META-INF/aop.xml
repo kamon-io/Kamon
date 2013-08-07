@@ -2,7 +2,7 @@
 
 <aspectj>
     <weaver options="-verbose -showWeaveInfo">
-       <dump within="*" beforeandafter="true"/>
+       <!--<dump within="*" beforeandafter="true"/>-->
     </weaver>
 
     <aspects>

@@ -10,11 +10,10 @@ object Metrics {
   val registry: MetricRegistry = new MetricRegistry
 
   val consoleReporter = ConsoleReporter.forRegistry(registry).convertDurationsTo(TimeUnit.NANOSECONDS)
-  val newrelicReporter = NewRelicReporter(registry)
+  //consoleReporter.build().start(45, TimeUnit.SECONDS)
 
+  //val newrelicReporter = NewRelicReporter(registry)
   //newrelicReporter.start(5, TimeUnit.SECONDS)
-  consoleReporter.build().start(10, TimeUnit.SECONDS)
-
 
   def include(name: String, metric: Metric) = registry.register(name, metric)
 
@@ -84,7 +83,8 @@ trait HistogramSnapshot {
 
 
 case class ActorSystemMetrics(actorSystemName: String) {
-  val dispatchers = new ConcurrentHashMap[String, DispatcherMetricCollector]
+  import scala.collection.JavaConverters._
+  val dispatchers = new ConcurrentHashMap[String, DispatcherMetricCollector] asScala
 
   private[this] def createDispatcherCollector: DispatcherMetricCollector = DispatcherMetricCollector(CodahaleHistogram(), CodahaleHistogram(), CodahaleHistogram())
 

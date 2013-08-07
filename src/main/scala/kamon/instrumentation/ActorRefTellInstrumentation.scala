@@ -4,7 +4,7 @@ import org.aspectj.lang.annotation._
 import org.aspectj.lang.ProceedingJoinPoint
 import akka.actor.{Props, ActorSystem, ActorRef}
 import kamon.{Kamon, TraceContext}
-import akka.dispatch.Envelope
+import akka.dispatch.{MessageDispatcher, Envelope}
 import com.codahale.metrics.{Timer, ExponentiallyDecayingReservoir, Histogram}
 import kamon.metric.{MetricDirectory, Metrics}
 import com.codahale.metrics
@@ -38,11 +38,13 @@ class ActorCellInvokeInstrumentation {
   var processingTimeTimer: Timer = _
   var shouldTrack = false
 
-  @Pointcut("execution(akka.actor.ActorCell.new(..)) && args(system, ref, props, parent)")
-  def actorCellCreation(system: ActorSystem, ref: ActorRef, props: Props, parent: ActorRef): Unit = {}
+  // AKKA 2.2 introduces the dispatcher parameter. Maybe we could provide a dual pointcut.
 
-  @After("actorCellCreation(system, ref, props, parent)")
-  def registerMetricsInRegistry(system: ActorSystem, ref: ActorRef, props: Props, parent: ActorRef): Unit = {
+  @Pointcut("execution(akka.actor.ActorCell.new(..)) && args(system, ref, props, dispatcher, parent)")
+  def actorCellCreation(system: ActorSystem, ref: ActorRef, props: Props, dispatcher: MessageDispatcher, parent: ActorRef): Unit = {}
+
+  @After("actorCellCreation(system, ref, props, dispatcher, parent)")
+  def registerMetricsInRegistry(system: ActorSystem, ref: ActorRef, props: Props, dispatcher: MessageDispatcher, parent: ActorRef): Unit = {
     val actorName = MetricDirectory.nameForActor(ref)
     val histogramName = MetricDirectory.nameForMailbox(system.name, actorName)
 
@@ -73,6 +75,7 @@ class ActorCellInvokeInstrumentation {
         ctx match {
           case Some(c) => {
             Kamon.set(c)
+            //println("ENVELOPE ORIGINAL:---------------->"+originalEnvelope)
             pjp.proceedWith(originalEnvelope)
             Kamon.clear
           }

@@ -1,7 +1,7 @@
 package kamon.instrumentation
 
 import com.codahale.metrics.{ExponentiallyDecayingReservoir, Histogram}
-import akka.dispatch.{Envelope, MessageQueue}
+import akka.dispatch.{UnboundedMessageQueueSemantics, Envelope, MessageQueue}
 import org.aspectj.lang.annotation.{Around, Pointcut, DeclareMixin, Aspect}
 import akka.actor.{ActorSystem, ActorRef}
 import kamon.metric.{Metrics, MetricDirectory}
@@ -44,7 +44,7 @@ class MessageQueueInstrumentation {
 }
 
 
-class MonitoredMessageQueue(val delegate: MessageQueue, val queueSizeHistogram: Histogram) extends MessageQueue {
+class MonitoredMessageQueue(val delegate: MessageQueue, val queueSizeHistogram: Histogram) extends MessageQueue with UnboundedMessageQueueSemantics{
 
   def enqueue(receiver: ActorRef, handle: Envelope) = {
     delegate.enqueue(receiver, handle)

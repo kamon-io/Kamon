@@ -20,6 +20,7 @@ case class TraceContext(id: UUID, private val entries: Agent[List[TraceEntry]], 
 }
 
 object TraceContext {
+  implicit val as2 = Kamon.actorSystem.dispatcher
   def apply()(implicit actorSystem: ActorSystem) = new TraceContext(UUID.randomUUID(), Agent[List[TraceEntry]](Nil))
 }
 

@@ -28,6 +28,7 @@ class ActorSystemInstrumentation {
 @Aspect("perthis(forkJoinPoolInstantiation(int, scala.concurrent.forkjoin.ForkJoinPool.ForkJoinWorkerThreadFactory, java.lang.Thread.UncaughtExceptionHandler))")
 class ForkJoinPoolInstrumentation {
   var activeThreadsHistogram: Histogram = _
+  var poolSizeHistogram: Histogram = _
 
   @Pointcut("execution(akka.dispatch.ForkJoinExecutorConfigurator.AkkaForkJoinPool.new(..)) && args(parallelism, threadFactory, exceptionHandler)")
   def forkJoinPoolInstantiation(parallelism: Int, threadFactory: ForkJoinPool.ForkJoinWorkerThreadFactory, exceptionHandler: Thread.UncaughtExceptionHandler) = {}
@@ -42,6 +43,7 @@ class ForkJoinPoolInstrumentation {
     val metrics = Kamon.Metric.actorSystem(actorSystemName).get.registerDispatcher(dispatcherName)
     for(m <- metrics) {
       activeThreadsHistogram = m.activeThreadCount
+      poolSizeHistogram = m.poolSize
       println(s"Registered $dispatcherName for actor system $actorSystemName")
     }
   }
@@ -59,7 +61,7 @@ class ForkJoinPoolInstrumentation {
   @After("forkJoinScan(fjp)")
   def updateMetrics(fjp: AkkaForkJoinPool): Unit = {
     activeThreadsHistogram.update(fjp.getActiveThreadCount)
-    println("UPDATED THE COUNT TWOOOO!!!")
+    poolSizeHistogram.update(fjp.getPoolSize)
   }
 
 
