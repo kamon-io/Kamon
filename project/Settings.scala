@@ -22,7 +22,8 @@ object Settings {
       "-language:postfixOps",
       "-language:implicitConversions",
       "-Xlog-reflective-calls"
-    )
+    ),
+    publishTo     := Some("Nexus" at "http://nexus.despegar.it:8080/nexus/content/repositories/snapshots")
   )
 
 
