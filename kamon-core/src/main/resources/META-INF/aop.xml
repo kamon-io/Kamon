@@ -1,0 +1,34 @@
+<!DOCTYPE aspectj PUBLIC "-//AspectJ//DTD//EN" "http://www.eclipse.org/aspectj/dtd/aspectj.dtd">
+
+<aspectj>
+    <weaver options="-verbose -showWeaveInfo">
+       <!--<dump within="*" beforeandafter="true"/>-->
+    </weaver>
+
+    <aspects>
+
+        <aspect name="kamon.instrumentation.ActorRefTellInstrumentation"/>
+        <aspect name="kamon.instrumentation.ActorCellInvokeInstrumentation"/>
+        <aspect name="kamon.instrumentation.RunnableInstrumentation" />
+        <aspect name="kamon.instrumentation.MessageQueueInstrumentation" />
+
+        <aspect name="kamon.instrumentation.InceptionAspect"/>
+
+        <!-- ExecutorService Instrumentation for Akka. -->
+<!--        <aspect name="kamon.instrumentation.ExecutorServiceFactoryProviderInstrumentation"/>
+        <aspect name="kamon.instrumentation.NamedExecutorServiceFactoryDelegateInstrumentation"/>-->
+        <aspect name="kamon.instrumentation.ActorSystemInstrumentation"/>
+        <aspect name ="kamon.instrumentation.ForkJoinPoolInstrumentation"/>
+
+
+
+        <include within="*"/>
+        <exclude within="javax..*"/>
+        <exclude within="org.aspectj..*"/>
+        <exclude within="scala..*"/>
+        <exclude within="scalaz..*"/>
+        <exclude within="scalad..*"/>
+        <exclude within="play..*"/>
+    </aspects>
+
+</aspectj>
