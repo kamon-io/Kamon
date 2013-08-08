@@ -7,8 +7,8 @@ object Settings {
 
   lazy val basicSettings = seq(
     version       := VERSION,
-    organization  := "com.despegar",
-    scalaVersion  := "2.10.0",
+    organization  := "kamon",
+    scalaVersion  := "2.10.2",
     resolvers    ++= Dependencies.resolutionRepos,
     fork in run   := true,
     scalacOptions := Seq(
