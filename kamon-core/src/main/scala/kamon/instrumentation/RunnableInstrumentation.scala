@@ -1,7 +1,7 @@
 package kamon.instrumentation
 
 import org.aspectj.lang.annotation._
-import kamon.{Kamon, TraceContext}
+import kamon.{Tracer, TraceContext}
 import org.aspectj.lang.ProceedingJoinPoint
 import scala.Some
 
@@ -37,7 +37,7 @@ class RunnableInstrumentation {
    *  Aspect members
    */
 
-  private val traceContext = Kamon.context
+  private val traceContext = Tracer.context
 
 
   /**

@@ -3,12 +3,11 @@ package kamon.instrumentation
 import org.aspectj.lang.annotation._
 import org.aspectj.lang.ProceedingJoinPoint
 import akka.actor.{Props, ActorSystem, ActorRef}
-import kamon.{Kamon, TraceContext}
+import kamon.{Tracer, TraceContext}
 import akka.dispatch.{MessageDispatcher, Envelope}
 import com.codahale.metrics.{Timer, ExponentiallyDecayingReservoir, Histogram}
 import kamon.metric.{MetricDirectory, Metrics}
 import com.codahale.metrics
-import kamon.instrumentation.TraceableMessage
 import scala.Some
 
 case class TraceableMessage(traceContext: Option[TraceContext], message: Any, timer: Timer.Context)
@@ -18,7 +17,7 @@ case class TraceableMessage(traceContext: Option[TraceContext], message: Any, ti
 class ActorRefTellInstrumentation {
   import ProceedingJoinPointPimp._
 
-  @Pointcut("execution(* akka.actor.ScalaActorRef+.$bang(..)) && target(actor) && args(message, sender)")
+  @Pointcut("execution(* (akka.actor.ScalaActorRef+ && !akka.event.Logging$StandardOutLogger).$bang(..)) && target(actor) && args(message, sender)")
   def sendingMessageToActorRef(actor: ActorRef, message: Any, sender: ActorRef) = {}
 
   @Around("sendingMessageToActorRef(actor, message, sender)")
@@ -27,7 +26,15 @@ class ActorRefTellInstrumentation {
     val actorName = MetricDirectory.nameForActor(actor)
     val t = Metrics.registry.timer(actorName + "LATENCY")
     //println(s"About to proceed with: $actor $message $sender ${Kamon.context}")
-    pjp.proceedWithTarget(actor, TraceableMessage(Kamon.context, message, t.time()), sender)
+    if(!actor.toString().contains("StandardOutLogger")) {
+      println("Skipped the actor")
+      pjp.proceedWithTarget(actor, TraceableMessage(Tracer.context, message, t.time()), sender)
+
+    }
+    else {
+      println("Got the standardLogger!!")
+      pjp.proceed()
+    }
   }
 }
 
@@ -48,6 +55,7 @@ class ActorCellInvokeInstrumentation {
     val actorName = MetricDirectory.nameForActor(ref)
     val histogramName = MetricDirectory.nameForMailbox(system.name, actorName)
 
+    println("=====> Created ActorCell for: "+ref.toString())
     /** TODO: Find a better way to filter the things we don't want to measure. */
     //if(system.name != "kamon" && actorName.startsWith("/user")) {
       processingTimeTimer = Metrics.registry.timer(histogramName + "/PROCESSINGTIME")
@@ -74,10 +82,10 @@ class ActorCellInvokeInstrumentation {
         val pt = processingTimeTimer.time()
         ctx match {
           case Some(c) => {
-            Kamon.set(c)
+            Tracer.set(c)
             println(s"ENVELOPE ORIGINAL: [$c]---------------->"+originalEnvelope)
             pjp.proceedWith(originalEnvelope)
-            Kamon.clear
+            Tracer.clear
           }
           case None => pjp.proceedWith(originalEnvelope)
         }

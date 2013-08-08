@@ -10,9 +10,9 @@ trait TraceContextSwap {
   def withContext[A](ctx: Option[TraceContext], primary: => A, fallback: => A): A = {
     ctx match {
       case Some(context) => {
-        Kamon.set(context)
+        Tracer.set(context)
         val bodyResult = primary
-        Kamon.clear
+        Tracer.clear
 
         bodyResult
       }
