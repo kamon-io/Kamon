@@ -8,32 +8,7 @@ import scala.concurrent.duration.{FiniteDuration, Duration}
 import com.newrelic.api.agent.NewRelic
 
 object Kamon {
-
-  val ctx = new ThreadLocal[Option[TraceContext]] {
-    override def initialValue() = None
-  }
-  
   implicit lazy val actorSystem = ActorSystem("kamon")
-
-
-  def context() = ctx.get()
-  def clear = ctx.remove()
-  def set(traceContext: TraceContext) = ctx.set(Some(traceContext))
-
-  def start = set(newTraceContext)
-  def stop = ctx.get match {
-    case Some(context) => context.close
-    case None =>
-  }
-
-  def newTraceContext(): TraceContext = TraceContext()
-
-
-  val publisher = actorSystem.actorOf(Props[TransactionPublisher])
-
-  def publish(tx: FullTransaction) = publisher ! tx
-
-
 
   object Metric {
     val actorSystems = new ConcurrentHashMap[String, ActorSystemMetrics] asScala
@@ -44,19 +19,10 @@ object Kamon {
     def actorSystem(name: String): Option[ActorSystemMetrics] = actorSystems.get(name)
   }
 
-
-
   val metricManager = actorSystem.actorOf(Props[MetricManager], "metric-manager")
   val newrelicReporter = actorSystem.actorOf(Props[NewrelicReporterActor], "newrelic-reporter")
 
 }
-
-
-
-
-
-
-
 
 
 object Tracer {
@@ -74,7 +40,7 @@ object Tracer {
     case None =>
   }
 
-  //def newTraceContext(): TraceContext = TraceContext()
+  def newTraceContext(): TraceContext = TraceContext()(Kamon.actorSystem)
 }
 
 

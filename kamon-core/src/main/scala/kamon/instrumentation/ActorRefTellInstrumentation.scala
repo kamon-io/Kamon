@@ -17,7 +17,7 @@ case class TraceableMessage(traceContext: Option[TraceContext], message: Any, ti
 class ActorRefTellInstrumentation {
   import ProceedingJoinPointPimp._
 
-  @Pointcut("execution(* (akka.actor.ScalaActorRef+ && !akka.event.Logging$StandardOutLogger).$bang(..)) && target(actor) && args(message, sender)")
+  @Pointcut("execution(* akka.actor.ScalaActorRef+.$bang(..)) && !within(akka.event.Logging.StandardOutLogger) && !within(akka.pattern.PromiseActorRef) && target(actor) && args(message, sender)")
   def sendingMessageToActorRef(actor: ActorRef, message: Any, sender: ActorRef) = {}
 
   @Around("sendingMessageToActorRef(actor, message, sender)")
@@ -25,16 +25,8 @@ class ActorRefTellInstrumentation {
 
     val actorName = MetricDirectory.nameForActor(actor)
     val t = Metrics.registry.timer(actorName + "LATENCY")
-    //println(s"About to proceed with: $actor $message $sender ${Kamon.context}")
-    if(!actor.toString().contains("StandardOutLogger")) {
-      println("Skipped the actor")
-      pjp.proceedWithTarget(actor, TraceableMessage(Tracer.context, message, t.time()), sender)
+    pjp.proceedWithTarget(actor, TraceableMessage(Tracer.context, message, t.time()), sender)
 
-    }
-    else {
-      println("Got the standardLogger!!")
-      pjp.proceed()
-    }
   }
 }
 
@@ -55,7 +47,7 @@ class ActorCellInvokeInstrumentation {
     val actorName = MetricDirectory.nameForActor(ref)
     val histogramName = MetricDirectory.nameForMailbox(system.name, actorName)
 
-    println("=====> Created ActorCell for: "+ref.toString())
+    //println("=====> Created ActorCell for: "+ref.toString())
     /** TODO: Find a better way to filter the things we don't want to measure. */
     //if(system.name != "kamon" && actorName.startsWith("/user")) {
       processingTimeTimer = Metrics.registry.timer(histogramName + "/PROCESSINGTIME")
@@ -64,14 +56,14 @@ class ActorCellInvokeInstrumentation {
   }
 
 
-  @Pointcut("execution(* akka.actor.ActorCell.invoke(*)) && args(envelope)")
+  @Pointcut("(execution(* akka.actor.ActorCell.invoke(*)) || execution(* akka.routing.RoutedActorCell.sendMessage(*))) && args(envelope)")
   def invokingActorBehaviourAtActorCell(envelope: Envelope) = {}
 
 
   @Around("invokingActorBehaviourAtActorCell(envelope)")
   def around(pjp: ProceedingJoinPoint, envelope: Envelope): Unit = {
     import ProceedingJoinPointPimp._
-    println("ENVELOPE --------------------->"+envelope)
+    //println("ENVELOPE --------------------->"+envelope)
     envelope match {
       case Envelope(TraceableMessage(ctx, msg, timer), sender) => {
         timer.stop()
@@ -83,7 +75,36 @@ class ActorCellInvokeInstrumentation {
         ctx match {
           case Some(c) => {
             Tracer.set(c)
-            println(s"ENVELOPE ORIGINAL: [$c]---------------->"+originalEnvelope)
+            //println(s"ENVELOPE ORIGINAL: [$c]---------------->"+originalEnvelope)
+            pjp.proceedWith(originalEnvelope)
+            Tracer.clear
+          }
+          case None => pjp.proceedWith(originalEnvelope)
+        }
+        pt.stop()
+      }
+      case _ => pjp.proceed
+    }
+  }
+
+
+  @Pointcut("execution(* spray.can.server.ResponseReceiverRef.handle(*)) && args(message)")
+  def sprayResponderHandle(message: AnyRef) = {}
+
+  @Around("sprayResponderHandle(message)")
+  def sprayInvokeAround(pjp: ProceedingJoinPoint, message: AnyRef): Unit = {
+    import ProceedingJoinPointPimp._
+    message match {
+      case TraceableMessage(ctx, msg, timer) => {
+        timer.stop()
+
+        val originalEnvelope: AnyRef = msg.asInstanceOf[AnyRef]
+
+        //println("PROCESSING TIME TIMER: "+processingTimeTimer)
+        val pt = processingTimeTimer.time()
+        ctx match {
+          case Some(c) => {
+            Tracer.set(c)
             pjp.proceedWith(originalEnvelope)
             Tracer.clear
           }
