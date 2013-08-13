@@ -17,7 +17,7 @@ case class TraceableMessage(traceContext: Option[TraceContext], message: Any, ti
 class ActorRefTellInstrumentation {
   import ProceedingJoinPointPimp._
 
-  @Pointcut("execution(* akka.actor.ScalaActorRef+.$bang(..)) && !within(akka.event.Logging.StandardOutLogger) && !within(akka.pattern.PromiseActorRef) && target(actor) && args(message, sender)")
+  @Pointcut("execution(* akka.actor.ScalaActorRef+.$bang(..)) && !within(akka.event.Logging.StandardOutLogger) && !within(akka.pattern.PromiseActorRef) && !within(akka.actor.DeadLetterActorRef) && target(actor) && args(message, sender)")
   def sendingMessageToActorRef(actor: ActorRef, message: Any, sender: ActorRef) = {}
 
   @Around("sendingMessageToActorRef(actor, message, sender)")
@@ -25,6 +25,7 @@ class ActorRefTellInstrumentation {
 
     val actorName = MetricDirectory.nameForActor(actor)
     val t = Metrics.registry.timer(actorName + "LATENCY")
+    //println(s"Wrapped message from [$sender] to [$actor] with content: [$message]")
     pjp.proceedWithTarget(actor, TraceableMessage(Tracer.context, message, t.time()), sender)
 
   }
@@ -86,31 +87,30 @@ class ActorCellInvokeInstrumentation {
       case _ => pjp.proceed
     }
   }
+}
 
 
-  @Pointcut("execution(* spray.can.server.ResponseReceiverRef.handle(*)) && args(message)")
-  def sprayResponderHandle(message: AnyRef) = {}
+@Aspect
+class UnregisteredActorRefInstrumentation {
+  @Pointcut("execution(* akka.spray.UnregisteredActorRefBase+.handle(..)) && args(message, sender)")
+  def sprayResponderHandle(message: Any, sender: ActorRef) = {}
 
-  @Around("sprayResponderHandle(message)")
-  def sprayInvokeAround(pjp: ProceedingJoinPoint, message: AnyRef): Unit = {
+  @Around("sprayResponderHandle(message, sender)")
+  def sprayInvokeAround(pjp: ProceedingJoinPoint, message: Any, sender: ActorRef): Unit = {
     import ProceedingJoinPointPimp._
+    println("Handling unregistered actor ref message: "+message)
     message match {
       case TraceableMessage(ctx, msg, timer) => {
         timer.stop()
 
-        val originalEnvelope: AnyRef = msg.asInstanceOf[AnyRef]
-
-        //println("PROCESSING TIME TIMER: "+processingTimeTimer)
-        val pt = processingTimeTimer.time()
         ctx match {
           case Some(c) => {
             Tracer.set(c)
-            pjp.proceedWith(originalEnvelope)
+            pjp.proceedWith(msg.asInstanceOf[AnyRef])  // TODO: define if we should use Any or AnyRef and unify with the rest of the instrumentation.
             Tracer.clear
           }
-          case None => pjp.proceedWith(originalEnvelope)
+          case None => pjp.proceedWith(msg.asInstanceOf[AnyRef])
         }
-        pt.stop()
       }
       case _ => pjp.proceed
     }
