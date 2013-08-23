@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en" data-ng-app="kamon">
+<head>
+    <meta charset="utf-8">
+    <title>Kamon</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <!-- Le styles -->
+    <link href="css/bootstrap.css" rel="stylesheet">
+    <link href="css/bootstrap-responsive.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/app.css">
+
+    <style type="text/css">
+        body {
+            padding-top: 60px;
+            padding-bottom: 40px;
+        }
+    </style>
+
+
+    <!--Portlets -->
+    <link rel="stylesheet" href="http://code.jquery.com/ui/1.10.3/themes/smoothness/jquery-ui.css" />
+    <script src="http://code.jquery.com/jquery-1.9.1.js"></script>
+    <script src="http://code.jquery.com/ui/1.10.3/jquery-ui.js"></script>
+
+    <!--highcharts -->
+    <script src="http://code.highcharts.com/highcharts.js"></script>
+    <script src="http://code.highcharts.com/modules/exporting.js"></script>
+    <script src="http://code.highcharts.com/modules/exporting.js"></script>
+
+    <style>
+        body { min-width: 520px; }
+        .column { width: 50%; float: left; padding-bottom: 100px; }
+        .portlet { margin: 0 1em 1em 0; }
+        .portlet-header { margin: 0.3em; padding-bottom: 4px; padding-left: 0.2em; }
+        .portlet-header .ui-icon { float: right; }
+        .portlet-content { padding: 0.4em; }
+        .ui-sortable-placeholder { border: 1px dotted black; visibility: visible !important; height: 50px !important; }
+        .ui-sortable-placeholder * { visibility: hidden; }
+    </style>
+
+    <script>
+        $(function() {
+            $(".column").children().sortable({
+                connectWith: ".column"
+            });
+
+            $( ".portlet" ).addClass( "ui-widget ui-widget-content ui-helper-clearfix ui-corner-all" )
+                    .find( ".portlet-header" )
+                    .addClass( "ui-widget-header ui-corner-all" )
+                    .prepend( "<span class='ui-icon ui-icon-minusthick'></span>")
+                    .end()
+                    .find( ".portlet-content" );
+
+            $( ".portlet-header .ui-icon" ).click(function() {
+                $( this ).toggleClass( "ui-icon-minusthick" ).toggleClass( "ui-icon-plusthick" );
+                $( this ).parents( ".portlet:first" ).find( ".portlet-content" ).toggle();
+            });
+
+            $( ".column" ).disableSelection();
+        });
+    </script>
+    <!--End Portlets -->
+    <!-- HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+    <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <link rel="shortcut icon" href="ico/favicon.png">
+</head>
+
+<body>
+
+<div class="navbar navbar-inverse navbar-fixed-top">
+    <div class="navbar-inner">
+        <div class="container">
+            <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </a>
+            <a class="brand" href="#">Kamon</a>
+            <div class="nav-collapse collapse">
+                <ul class="nav">
+                    <li class="active"><a href="#">Home</a></li>
+                    <li><a href="#about">About</a></li>
+                </ul>
+                <form class="navbar-form pull-right">
+                    <button type="submit" class="btn">Sign in</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <div class="column">
+        <div class="portlet">
+            <div class="portlet-header">Messages</div>
+            <div class="portlet-content">
+               <div id="liveramdomdata" style="min-width: 400px; height: 400px; margin: 0 auto"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="column">
+        <div class="portlet" ng-controller="kamonCtrl">
+            <div class="portlet-header">Dispatchers</div>
+            <div class="portlet-content">
+                 <div data-ng-init="startPolling()"/>
+                    <div data-ng-repeat="system in actorSystemMetrics">
+                        <ul class="thumbnails">
+                            <li class="span5 clearfix">
+                                <div class="thumbnail clearfix">
+                                    <div class="caption" class="pull-left">
+                                        <h4>
+                                            <a href="#" >Actor System: {{ system.actorSystem }}</a>
+                                        </h4>
+                                        <div data-ng-repeat="s in system.dispatchers">
+                                            <small><b>Dispatcher Name :</b> {{s.name}}</small></br>
+                                            <small><b>Active Thread Count :</b> {{s.activeThreadCount}}</small></br>
+                                            <small><b>Pool Size :</b> {{s.poolSize}}</small></br>
+                                            <small><b>Queue Size :</b> {{s.queueSize}}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+             </div>
+        </div>
+
+    <hr>
+
+    <footer>
+        <p>&copy; Kamon 2013</p>
+    </footer>
+
+</div> <!-- /container -->
+
+<!-- Le javascript
+================================================== -->
+<!-- Placed at the end of the document so the pages load faster -->
+<script src="js/bootstrap.js"></script>
+<script>
+    $(function () {
+        $(document).ready(function() {
+            Highcharts.setOptions({
+                global: {
+                    useUTC: false
+                }
+            });
+
+            var chart;
+            $('#liveramdomdata').highcharts({
+                chart: {
+                    type: 'spline',
+                    animation: Highcharts.svg, // don't animate in old IE
+                    marginRight: 10,
+                    events: {
+                        load: function() {
+                             // set up the updating of the chart each second
+                            var series = this.series[0];
+                            setInterval(function() {
+                                $.get("/metrics/messages", function(data) {
+                                    var x = (new Date()).getTime(), // current time
+                                            y = data.messages;
+                                    series.addPoint([x, y], true, true);
+                                },"json");
+
+                            }, 1000);
+                        }
+                    }
+                },
+                title: {
+                    text: 'Messages'
+                },
+                xAxis: {
+                    type: 'datetime',
+                    tickPixelInterval: 150
+                },
+                yAxis: {
+                    title: {
+                        text: 'Value'
+                    },
+                    plotLines: [{
+                        value: 0,
+                        width: 1,
+                        color: '#808080'
+                    }]
+                },
+                tooltip: {
+                    formatter: function() {
+                        return '<b>'+ this.series.name +'</b><br/>'+
+                                Highcharts.dateFormat('%Y-%m-%d %H:%M:%S', this.x) +'<br/>'+
+                                Highcharts.numberFormat(this.y, 2);
+                    }
+                },
+                legend: {
+                    enabled: false
+                },
+                exporting: {
+                    enabled: false
+                },
+                series: [{
+                    name: 'Messages',
+                    data: (function() {
+                        // generate an array of random data
+                        var data = [],
+                                time = (new Date()).getTime(),
+                                i;
+
+                        for (i = -19; i <= 0; i++) {
+                            data.push({
+                                x: time + i * 1000,
+                                y: Math.random()
+                            });
+                        }
+                        return data;
+                    })()
+                }]
+            });
+        });
+
+    });
+
+</script>
+</body>
+
+
+<script src="js/angular.js"></script>
+<script src="js/angular-resource.js"></script>
+<script src="js/highcharts-ng.js"></script>
+<script src="js/controllers.js"></script>
+<script src="js/services.js"></script>
+<script src="js/app.js"></script>
+</html>
