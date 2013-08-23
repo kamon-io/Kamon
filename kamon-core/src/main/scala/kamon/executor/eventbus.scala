@@ -36,7 +36,7 @@ case class Pong()
 
 class PingActor extends Actor with ActorLogging {
 
-  val pong = context.actorOf(Props[PongActor])
+  val pong = context.actorOf(Props[PongActor], "Pong")
   val random = new Random()
   def receive = {
     case Pong() => {
@@ -68,7 +68,7 @@ object TryAkka extends App{
 
   Tracer.start
   for(i <- 1 to 4) {
-    val ping = system.actorOf(Props[PingActor])
+    val ping = system.actorOf(Props[PingActor], "Ping" + i)
     ping ! Pong()
   }
 
@@ -86,7 +86,7 @@ object TryAkka extends App{
 
 
 
-  Tracer.start
+  //Tracer.start
 
   Tracer.context.get.append(CodeBlockExecutionTime("some-block", System.nanoTime(), System.nanoTime()))
   threadPrintln("Before doing it")

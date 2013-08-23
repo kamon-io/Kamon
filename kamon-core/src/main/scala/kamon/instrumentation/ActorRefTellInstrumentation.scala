@@ -5,9 +5,8 @@ import org.aspectj.lang.ProceedingJoinPoint
 import akka.actor.{Props, ActorSystem, ActorRef}
 import kamon.{Tracer, TraceContext}
 import akka.dispatch.{MessageDispatcher, Envelope}
-import com.codahale.metrics.{Timer, ExponentiallyDecayingReservoir, Histogram}
+import com.codahale.metrics.Timer
 import kamon.metric.{MetricDirectory, Metrics}
-import com.codahale.metrics
 import scala.Some
 
 case class TraceableMessage(traceContext: Option[TraceContext], message: Any, timer: Timer.Context)
