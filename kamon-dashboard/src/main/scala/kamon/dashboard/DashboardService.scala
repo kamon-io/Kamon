@@ -48,8 +48,8 @@ trait DashboardPages extends HttpService {
 
 trait DashboardMetricsApi extends HttpService with SprayJsonSupport{
 
-  case class TimerDataHolder(name:String, count:Long, percentile99:Double)
-  case class TotalMessages(messages:Long, actors:Long, data:List[TimerDataHolder])
+  case class TimerDataHolder(name:String, count:Double, percentile99:Double)
+  case class TotalMessages(messages:Double, actors:Long, data:Seq[TimerDataHolder])
   case class DispatcherMetricCollectorHolder(name:String, activeThreadCount: Double, poolSize: Double, queueSize:Double)
   case class ActorSystemMetricsHolder(actorSystem:String, dispatchers:Map[String, DispatcherMetricCollectorHolder])
 
@@ -75,13 +75,13 @@ trait DashboardMetricsApi extends HttpService with SprayJsonSupport{
   def actorSystemMetrics = actorSystemNames.flatMap(name => actorSystem(name))
                                            .map(system => ActorSystemMetricsHolder(system.actorSystemName, system.dispatchers.map { case(name, metricCollector) => (name -> DispatcherMetricCollectorHolder(name, metricCollector.activeThreadCount.snapshot.median, metricCollector.poolSize.snapshot.median, metricCollector.queueSize.snapshot.median))}.toMap))
 
-  val withTotalMessages = (dataHolders: List[TimerDataHolder]) => {
+  val withTotalMessages = (dataHolders: Seq[TimerDataHolder]) => {
     val numberOfMessages = dataHolders.map(_.count).sum
 
-    new TotalMessages(numberOfMessages,dataHolders.size, dataHolders)
+    new TotalMessages(numberOfMessages, dataHolders.size, dataHolders)
   }
 
-  def timerMetrics = registry.getTimers(metricFilter).asScala.map{ case(name, timer) => TimerDataHolder(name, timer.getCount, timer.getSnapshot.get99thPercentile())}.toList
+  def timerMetrics = registry.getTimers(metricFilter).asScala.map{ case(name, timer) => TimerDataHolder(name, timer.getMeanRate, timer.getSnapshot.get99thPercentile)}.toVector
 
   val dashboardMetricsApi =
       pathPrefix("metrics") {
