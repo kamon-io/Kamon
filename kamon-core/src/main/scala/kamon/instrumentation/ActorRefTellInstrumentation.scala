@@ -16,16 +16,18 @@ case class TraceableMessage(traceContext: Option[TraceContext], message: Any, ti
 class ActorRefTellInstrumentation {
   import ProceedingJoinPointPimp._
 
+  val t2 = Metrics.registry.timer("some" + "LATENCY")
+
   @Pointcut("execution(* akka.actor.ScalaActorRef+.$bang(..)) && !within(akka.event.Logging.StandardOutLogger) && !within(akka.pattern.PromiseActorRef) && !within(akka.actor.DeadLetterActorRef) && target(actor) && args(message, sender)")
   def sendingMessageToActorRef(actor: ActorRef, message: Any, sender: ActorRef) = {}
 
   @Around("sendingMessageToActorRef(actor, message, sender)")
   def around(pjp: ProceedingJoinPoint, actor: ActorRef, message: Any, sender: ActorRef): Unit  = {
 
-    val actorName = MetricDirectory.nameForActor(actor)
-    val t = Metrics.registry.timer(actorName + "LATENCY")
+    //val actorName = MetricDirectory.nameForActor(actor)
+    //val t = Metrics.registry.timer(actorName + "LATENCY")
     //println(s"Wrapped message from [$sender] to [$actor] with content: [$message]")
-    pjp.proceedWithTarget(actor, TraceableMessage(Tracer.context, message, t.time()), sender)
+    pjp.proceedWithTarget(actor, TraceableMessage(Tracer.context, message, t2.time()), sender)
 
   }
 }
@@ -66,7 +68,7 @@ class ActorCellInvokeInstrumentation {
     //println("ENVELOPE --------------------->"+envelope)
     envelope match {
       case Envelope(TraceableMessage(ctx, msg, timer), sender) => {
-        timer.stop()
+        //timer.stop()
 
         val originalEnvelope = envelope.copy(message = msg)
 
