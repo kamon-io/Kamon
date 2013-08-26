@@ -81,7 +81,7 @@ trait DashboardMetricsApi extends HttpService with SprayJsonSupport{
     new TotalMessages(numberOfMessages,dataHolders.size, dataHolders)
   }
 
-  def timerMetrics = registry.getTimers(metricFilter).asScala.map{ case(name, timer) => TimerDataHolder(name, timer.getCount, timer.getSnapshot.get99thPercentile())}.toList
+  def timerMetrics = registry.getTimers(metricFilter).asScala.map{ case(name, timer) => TimerDataHolder(name, timer.getSnapshot.getMean.toLong, timer.getSnapshot.get99thPercentile())}.toList
 
   val dashboardMetricsApi =
       pathPrefix("metrics") {

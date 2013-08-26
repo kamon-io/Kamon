@@ -9,7 +9,9 @@ import kamon.{Tracer, Kamon}
 
 trait UowDirectives extends BasicDirectives {
   def uow: Directive0 = mapRequest { request =>
-    val generatedUow = Some(UowDirectives.newUow)
+    val uowHeader = request.headers.find(_.name == "X-UOW")
+
+    val generatedUow = uowHeader.map(_.value).orElse(Some(UowDirectives.newUow))
     println("Generated UOW: "+generatedUow)
     Tracer.set(Tracer.newTraceContext().copy(userContext = generatedUow))
 

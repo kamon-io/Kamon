@@ -19,7 +19,7 @@
 <!--        <aspect name="kamon.instrumentation.ExecutorServiceFactoryProviderInstrumentation"/>
         <aspect name="kamon.instrumentation.NamedExecutorServiceFactoryDelegateInstrumentation"/>-->
         <aspect name="kamon.instrumentation.ActorSystemInstrumentation"/>
-        <aspect name ="kamon.instrumentation.ForkJoinPoolInstrumentation"/>
+        <!--<aspect name ="kamon.instrumentation.ForkJoinPoolInstrumentation"/>-->
 
 
 
