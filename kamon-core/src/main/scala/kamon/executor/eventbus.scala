@@ -5,7 +5,7 @@ import akka.event.LookupClassification
 import akka.actor._
 import java.util.concurrent.TimeUnit
 
-import kamon.{CodeBlockExecutionTime, Kamon, TraceContext}
+import kamon.{Tracer, CodeBlockExecutionTime, Kamon, TraceContext}
 import akka.util.Timeout
 import scala.util.{Random, Success, Failure}
 import scala.concurrent.Future
@@ -36,7 +36,7 @@ case class Pong()
 
 class PingActor extends Actor with ActorLogging {
 
-  val pong = context.actorOf(Props[PongActor])
+  val pong = context.actorOf(Props[PongActor], "Pong")
   val random = new Random()
   def receive = {
     case Pong() => {
@@ -66,14 +66,14 @@ object TryAkka extends App{
     }
   }))
 
-  Kamon.start
+  Tracer.start
   for(i <- 1 to 4) {
-    val ping = system.actorOf(Props[PingActor])
+    val ping = system.actorOf(Props[PingActor], "Ping" + i)
     ping ! Pong()
   }
 
 
-  def threadPrintln(body: String) = println(s"[${Thread.currentThread().getName}] - [${Kamon.context}] : $body")
+  def threadPrintln(body: String) = println(s"[${Thread.currentThread().getName}] - [${Tracer.context}] : $body")
 
   /*
   val newRelicReporter = new NewRelicReporter(registry)
@@ -86,13 +86,13 @@ object TryAkka extends App{
 
 
 
-  Kamon.start
+  //Tracer.start
 
-  Kamon.context.get.append(CodeBlockExecutionTime("some-block", System.nanoTime(), System.nanoTime()))
+  Tracer.context.get.append(CodeBlockExecutionTime("some-block", System.nanoTime(), System.nanoTime()))
   threadPrintln("Before doing it")
   val f = Future { threadPrintln("This is happening inside the future body") }
 
-  Kamon.stop
+  Tracer.stop
 
 
   //Thread.sleep(3000)

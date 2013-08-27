@@ -1,29 +1,32 @@
 package kamon
 
 import java.util.UUID
-import akka.actor.{ActorSystem, ActorPath}
+import akka.actor._
 import akka.agent.Agent
 import java.util.concurrent.TimeUnit
 import scala.util.{Failure, Success}
 import akka.util.Timeout
 
 
-case class TraceContext(id: UUID, private val entries: Agent[List[TraceEntry]], userContext: Option[Any] = None) {
+case class TraceContext(id: UUID, entries: ActorRef, userContext: Option[Any] = None) {
   implicit val timeout = Timeout(30, TimeUnit.SECONDS)
   implicit val as = Kamon.actorSystem.dispatcher
 
-  def append(entry: TraceEntry) = entries send (entry :: _)
-  def close = entries.future.onComplete({
-    case Success(list) => Kamon.publish(FullTransaction(id, list))
-    case Failure(t) => println("WTF!")
-  })
+  def append(entry: TraceEntry) = entries ! entry
+  def close = entries ! "Close" // TODO type this thing!.
 }
 
 object TraceContext {
-  implicit val as2 = Kamon.actorSystem.dispatcher
-  def apply()(implicit actorSystem: ActorSystem) = new TraceContext(UUID.randomUUID(), Agent[List[TraceEntry]](Nil))
+  def apply()(implicit system: ActorSystem) = new TraceContext(UUID.randomUUID(), system.actorOf(Props[TraceAccumulator])) // TODO: Move to a kamon specific supervisor, like /user/kamon/tracer
 }
 
+
+
+class TraceAccumulator extends Actor {
+  def receive = {
+    case a  => println("Trace Accumulated: "+a)
+  }
+}
 
 
 trait TraceEntry
