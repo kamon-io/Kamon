@@ -5,13 +5,15 @@ import spray.routing.Directive0
 import spray.routing.directives.BasicDirectives
 import java.net.InetAddress
 import scala.util.Try
-import kamon.Kamon
+import kamon.{Tracer, Kamon}
 
 trait UowDirectives extends BasicDirectives {
   def uow: Directive0 = mapRequest { request =>
-    val generatedUow = Some(UowDirectives.newUow)
+    val uowHeader = request.headers.find(_.name == "X-UOW")
+
+    val generatedUow = uowHeader.map(_.value).orElse(Some(UowDirectives.newUow))
     println("Generated UOW: "+generatedUow)
-    Kamon.set(Kamon.newTraceContext().copy(userContext = generatedUow))
+    Tracer.set(Tracer.newTraceContext().copy(userContext = generatedUow))
 
 
     request
@@ -21,7 +23,7 @@ trait UowDirectives extends BasicDirectives {
 object UowDirectives {
   val uowCounter = new AtomicLong
 
-  val hostnamePrefix = Try(InetAddress.getLocalHost.getHostName.toString).getOrElse("unknown-localhost")
+  val hostnamePrefix = Try(InetAddress.getLocalHost.getHostName).getOrElse("unknown-localhost")
 
   def newUow = "%s-%s".format(hostnamePrefix, uowCounter.incrementAndGet())
 

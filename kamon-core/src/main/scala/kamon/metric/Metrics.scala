@@ -1,9 +1,10 @@
 package kamon.metric
 
-import java.util.concurrent.{ConcurrentHashMap, ConcurrentSkipListSet, TimeUnit}
+import java.util.concurrent.TimeUnit
 import akka.actor.ActorRef
 import com.codahale.metrics
 import com.codahale.metrics.{MetricFilter, Metric, ConsoleReporter, MetricRegistry}
+import scala.collection.concurrent.TrieMap
 
 
 object Metrics {
@@ -85,8 +86,7 @@ trait HistogramSnapshot {
 
 
 case class ActorSystemMetrics(actorSystemName: String) {
-  import scala.collection.JavaConverters._
-  val dispatchers = new ConcurrentHashMap[String, DispatcherMetricCollector] asScala
+  val dispatchers = TrieMap.empty[String, DispatcherMetricCollector]
 
   private[this] def createDispatcherCollector: DispatcherMetricCollector = DispatcherMetricCollector(CodahaleHistogram(), CodahaleHistogram(), CodahaleHistogram())
 

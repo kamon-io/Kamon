@@ -48,12 +48,12 @@ class MonitoredMessageQueue(val delegate: MessageQueue, val queueSizeHistogram: 
 
   def enqueue(receiver: ActorRef, handle: Envelope) = {
     delegate.enqueue(receiver, handle)
-    queueSizeHistogram.update(numberOfMessages)
+    //queueSizeHistogram.update(numberOfMessages)
   }
 
   def dequeue(): Envelope = {
     val envelope = delegate.dequeue()
-    queueSizeHistogram.update(numberOfMessages)
+    //queueSizeHistogram.update(numberOfMessages)
 
     envelope
   }

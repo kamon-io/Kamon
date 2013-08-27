@@ -3,7 +3,7 @@ package kamon.instrumentation
 import scala.concurrent.{Await, Promise, Future}
 import org.scalatest.{Matchers, OptionValues, WordSpec}
 import org.scalatest.concurrent.{ScalaFutures, PatienceConfiguration}
-import kamon.{Kamon, TraceContext}
+import kamon.{Tracer, Kamon, TraceContext}
 import java.util.UUID
 import scala.util.Success
 import scala.concurrent.duration._
@@ -27,7 +27,7 @@ class RunnableInstrumentationSpec extends WordSpec with Matchers with ScalaFutur
             val onCompleteContext = Promise[TraceContext]()
 
             futureWithContext.onComplete({
-              case _ => onCompleteContext.complete(Success(Kamon.context.get))
+              case _ => onCompleteContext.complete(Success(Tracer.context.get))
             })
 
             whenReady(onCompleteContext.future) { result =>
@@ -49,7 +49,7 @@ class RunnableInstrumentationSpec extends WordSpec with Matchers with ScalaFutur
         val onCompleteContext = Promise[Option[TraceContext]]()
 
         futureWithoutContext.onComplete({
-          case _ => onCompleteContext.complete(Success(Kamon.context))
+          case _ => onCompleteContext.complete(Success(Tracer.context))
         })
 
         whenReady(onCompleteContext.future) { result =>
@@ -68,14 +68,14 @@ class RunnableInstrumentationSpec extends WordSpec with Matchers with ScalaFutur
 
   class FutureWithContextFixture {
     val testContext = TraceContext()
-    Kamon.set(testContext)
+    Tracer.set(testContext)
 
-    val futureWithContext = Future { Kamon.context}
+    val futureWithContext = Future { Tracer.context}
   }
 
   trait FutureWithoutContextFixture {
-    Kamon.clear // Make sure no TraceContext is available
-    val futureWithoutContext = Future { Kamon.context }
+    Tracer.clear // Make sure no TraceContext is available
+    val futureWithoutContext = Future { Tracer.context }
   }
 }
 

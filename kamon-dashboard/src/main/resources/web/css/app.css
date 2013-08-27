@@ -1,0 +1,22 @@
+body {
+  /* 60px to make the container go all the way to the bottom of the topbar */
+  padding-top: 60px;
+}
+
+#text-input {
+  width: 80%;
+}
+
+.messages > div {
+  border-bottom: solid lightgray 1px;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+.messages > div:first-of-type {
+  border-top: solid lightgray 1px;
+}
+
+.messages > div > .username {
+  font-weight: bold;
+}

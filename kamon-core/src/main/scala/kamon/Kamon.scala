@@ -1,42 +1,17 @@
 package kamon
 
 import akka.actor.{Actor, Props, ActorSystem}
-import scala.collection.JavaConverters._
-import java.util.concurrent.ConcurrentHashMap
-import kamon.metric.{HistogramSnapshot, Histogram, Atomic, ActorSystemMetrics}
-import scala.concurrent.duration.{FiniteDuration, Duration}
+import kamon.metric.{HistogramSnapshot, ActorSystemMetrics}
+import scala.concurrent.duration.FiniteDuration
 import com.newrelic.api.agent.NewRelic
+import scala.collection.concurrent.TrieMap
 
 object Kamon {
-
-  val ctx = new ThreadLocal[Option[TraceContext]] {
-    override def initialValue() = None
-  }
-  
   implicit lazy val actorSystem = ActorSystem("kamon")
 
-
-  def context() = ctx.get()
-  def clear = ctx.remove()
-  def set(traceContext: TraceContext) = ctx.set(Some(traceContext))
-
-  def start = set(newTraceContext)
-  def stop = ctx.get match {
-    case Some(context) => context.close
-    case None =>
-  }
-
-  def newTraceContext(): TraceContext = TraceContext()
-
-
-  val publisher = actorSystem.actorOf(Props[TransactionPublisher])
-
-  def publish(tx: FullTransaction) = publisher ! tx
-
-
-
   object Metric {
-    val actorSystems = new ConcurrentHashMap[String, ActorSystemMetrics] asScala
+
+    val actorSystems =  TrieMap.empty[String, ActorSystemMetrics]
 
     def actorSystemNames: List[String] = actorSystems.keys.toList
     def registerActorSystem(name: String) = actorSystems.getOrElseUpdate(name, ActorSystemMetrics(name))
@@ -44,19 +19,10 @@ object Kamon {
     def actorSystem(name: String): Option[ActorSystemMetrics] = actorSystems.get(name)
   }
 
-
-
   val metricManager = actorSystem.actorOf(Props[MetricManager], "metric-manager")
   val newrelicReporter = actorSystem.actorOf(Props[NewrelicReporterActor], "newrelic-reporter")
 
 }
-
-
-
-
-
-
-
 
 
 object Tracer {
@@ -68,13 +34,13 @@ object Tracer {
   def clear = ctx.remove()
   def set(traceContext: TraceContext) = ctx.set(Some(traceContext))
 
-  def start = ??? //set(newTraceContext)
+  def start = set(newTraceContext)
   def stop = ctx.get match {
     case Some(context) => context.close
     case None =>
   }
 
-  //def newTraceContext(): TraceContext = TraceContext()
+  def newTraceContext(): TraceContext = TraceContext()(Kamon.actorSystem)
 }
 
 
