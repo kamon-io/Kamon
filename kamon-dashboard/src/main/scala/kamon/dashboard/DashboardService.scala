@@ -5,7 +5,6 @@ import akka.actor._
 import spray.routing.directives.LogEntry
 import akka.event.Logging
 import spray.http.MediaTypes._
-import spray.json._
 import spray.httpx.SprayJsonSupport
 import kamon.Kamon
 import spray.http.HttpRequest
@@ -48,23 +47,10 @@ trait DashboardPages extends HttpService {
 
 trait DashboardMetricsApi extends HttpService with SprayJsonSupport{
 
-  case class TimerDataHolder(name:String, count:Double, percentile99:Double)
-  case class TotalMessages(messages:Double, actors:Long, data:Seq[TimerDataHolder])
-  case class DispatcherMetricCollectorHolder(name:String, activeThreadCount: Double, poolSize: Double, queueSize:Double)
-  case class ActorSystemMetricsHolder(actorSystem:String, dispatchers:Map[String, DispatcherMetricCollectorHolder])
-
-  object DashboardJsonProtocol extends DefaultJsonProtocol {
-    implicit val TimerDataHolderJsonProtocol = jsonFormat3(TimerDataHolder)
-    implicit val TotalMessagesJsonProtocol = jsonFormat3(TotalMessages)
-    implicit val DispatcherMetricCollectorJsonProtocol = jsonFormat4(DispatcherMetricCollectorHolder)
-    implicit val ActorSystemMetricsJsonProtocol = jsonFormat2(ActorSystemMetricsHolder)
-  }
-
-  import spray.httpx.marshalling._
   import Kamon.Metric._
   import scala.collection.JavaConverters._
   import kamon.metric.Metrics._
-  import DashboardJsonProtocol._
+  import kamon.dashboard.protocol.DashboardProtocols._
 
   val metricFilter = new MetricFilter() {
     def matches(name: String, m:Metric) = {
@@ -87,16 +73,17 @@ trait DashboardMetricsApi extends HttpService with SprayJsonSupport{
       pathPrefix("metrics") {
         path("dispatchers") {
           get {
-            complete {
-              marshal(actorSystemMetrics)
-            }
+            complete (actorSystemMetrics)
           }
         } ~
         path("messages") {
           get {
-            complete {
-              marshal(withTotalMessages(timerMetrics))
-            }
+            complete (withTotalMessages(timerMetrics))
+          }
+        } ~
+        path("actorTree") {
+          get {
+            complete (ActorTree("/", ActorTree("Pang", ActorTree("Pang-children") :: Nil) :: ActorTree("Ping") :: ActorTree("Pong", ActorTree("Pong-children") :: Nil):: Nil))
           }
         }
       }
