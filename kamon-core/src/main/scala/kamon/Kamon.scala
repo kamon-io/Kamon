@@ -5,6 +5,12 @@ import kamon.metric.{HistogramSnapshot, ActorSystemMetrics}
 import scala.concurrent.duration.FiniteDuration
 import com.newrelic.api.agent.NewRelic
 import scala.collection.concurrent.TrieMap
+import kamon.instrumentation.{SimpleContextPassingInstrumentation, ActorInstrumentationConfiguration}
+
+
+object Instrument {
+  val instrumentation: ActorInstrumentationConfiguration = new SimpleContextPassingInstrumentation
+}
 
 object Kamon {
   implicit lazy val actorSystem = ActorSystem("kamon")
@@ -19,8 +25,8 @@ object Kamon {
     def actorSystem(name: String): Option[ActorSystemMetrics] = actorSystems.get(name)
   }
 
-  val metricManager = actorSystem.actorOf(Props[MetricManager], "metric-manager")
-  val newrelicReporter = actorSystem.actorOf(Props[NewrelicReporterActor], "newrelic-reporter")
+  //val metricManager = actorSystem.actorOf(Props[MetricManager], "metric-manager")
+  //val newrelicReporter = actorSystem.actorOf(Props[NewrelicReporterActor], "newrelic-reporter")
 
 }
 
@@ -79,7 +85,7 @@ case class DispatcherMetrics(actorSystem: String, dispatcher: String, activeThre
 class NewrelicReporterActor extends Actor {
   import scala.concurrent.duration._
 
-  Kamon.metricManager ! RegisterForAllDispatchers(5 seconds)
+  //Kamon.metricManager ! RegisterForAllDispatchers(5 seconds)
 
   def receive = {
     case DispatcherMetrics(actorSystem, dispatcher, activeThreads, poolSize, queueSize) => {

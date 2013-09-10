@@ -1,6 +1,6 @@
 package test
 
-import akka.actor.{Props, Actor, ActorSystem}
+import akka.actor.{Deploy, Props, Actor, ActorSystem}
 
 object PingPong extends App {
 
@@ -22,8 +22,11 @@ case object Ping
 case object Pong
 
 class Pinger extends Actor {
+  val ponger = context.actorOf(Props[Ponger], "ponger#")
+  val ponger2 = context.actorOf(Props[Ponger], "ponger#")
+
   def receive = {
-    case Pong => sender ! Ping
+    case Pong => ponger ! Ping
   }
 }
 
