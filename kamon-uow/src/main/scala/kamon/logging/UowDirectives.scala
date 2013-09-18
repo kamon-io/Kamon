@@ -13,7 +13,7 @@ trait UowDirectives extends BasicDirectives {
 
     val generatedUow = uowHeader.map(_.value).orElse(Some(UowDirectives.newUow))
     println("Generated UOW: "+generatedUow)
-    Tracer.set(Tracer.newTraceContext().copy(userContext = generatedUow))
+    Tracer.set(Tracer.context().getOrElse(Tracer.newTraceContext()).copy(userContext = generatedUow))
 
 
     request

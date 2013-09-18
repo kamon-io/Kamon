@@ -2,13 +2,14 @@ package kamon.instrumentation
 
 import org.aspectj.lang.annotation._
 import org.aspectj.lang.ProceedingJoinPoint
-import akka.actor.{Props, ActorSystem, ActorRef}
+import akka.actor.{ActorCell, Props, ActorSystem, ActorRef}
 import kamon.{Kamon, Tracer, TraceContext}
 import akka.dispatch.{MessageDispatcher, Envelope}
 import com.codahale.metrics.Timer
 import kamon.metric.{MetricDirectory, Metrics}
 import scala.Some
 import kamon.instrumentation.SimpleContextPassingInstrumentation.SimpleTraceMessage
+import org.slf4j.MDC
 
 case class TraceableMessage(traceContext: Option[TraceContext], message: Any, timer: Timer.Context)
 
@@ -52,11 +53,14 @@ class ActorCellInvokeInstrumentation {
     import ProceedingJoinPointPimp._
 
     val (originalEnvelope, ctx) = instrumentation.preReceive(envelope)
+    //println("Test")
     ctx match {
       case Some(c) => {
+        //MDC.put("uow", c.userContext.get.asInstanceOf[String])
         Tracer.set(c)
         pjp.proceedWith(originalEnvelope)
         Tracer.clear
+        //MDC.remove("uow")
       }
       case None => pjp.proceedWith(originalEnvelope)
     }
@@ -74,9 +78,7 @@ class UnregisteredActorRefInstrumentation {
     import ProceedingJoinPointPimp._
     println("Handling unregistered actor ref message: "+message)
     message match {
-      case TraceableMessage(ctx, msg, timer) => {
-        timer.stop()
-
+      case SimpleTraceMessage(msg, ctx) => {
         ctx match {
           case Some(c) => {
             Tracer.set(c)
