@@ -6,6 +6,7 @@ import java.util.concurrent.atomic.AtomicLong
 import kamon.trace.UowTraceAggregator
 import scala.concurrent.duration._
 import kamon.newrelic.NewRelicReporting
+import kamon.trace.UowTracing.Start
 
 // TODO: Decide if we need or not an ID, generating it takes time and it doesn't seem necessary.
 case class TraceContext(id: Long, entries: ActorRef, userContext: Option[Any] = None) {
@@ -19,7 +20,13 @@ case class TraceContext(id: Long, entries: ActorRef, userContext: Option[Any] = 
 object TraceContext {
   val reporter = Kamon.actorSystem.actorOf(Props[NewRelicReporting])
   val traceIdCounter = new AtomicLong
-  def apply()(implicit system: ActorSystem) = new TraceContext(100, system.actorOf(UowTraceAggregator.props(reporter, 30 seconds), "tracer-"+traceIdCounter.incrementAndGet())) // TODO: Move to a kamon specific supervisor, like /user/kamon/tracer
+
+  def apply()(implicit system: ActorSystem) =  {
+    val actor = system.actorOf(UowTraceAggregator.props(reporter, 30 seconds), s"tracer-${traceIdCounter.incrementAndGet()}")
+    actor ! Start()
+
+    new TraceContext(100, actor) // TODO: Move to a kamon specific supervisor, like /user/kamon/tracer
+  }
 }
 
 
@@ -32,20 +39,10 @@ class TraceAccumulator extends Actor {
 
 
 trait TraceEntry
-
 case class CodeBlockExecutionTime(name: String, begin: Long, end: Long) extends TraceEntry
-
-
-
 case class TransactionTrace(id: UUID, start: Long, end: Long, entries: Seq[TraceEntry])
 
-
-
-
-
-object Collector {
-
-}
+object Collector
 
 trait TraceEntryStorage {
   def store(entry: TraceEntry): Boolean

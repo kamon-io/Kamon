@@ -7,9 +7,8 @@
 
     <aspects>
 
-        <aspect name="kamon.instrumentation.ActorRefTellInstrumentation"/>
+        <aspect name="kamon.instrumentation.EnvelopeTracingContext"/>
         <aspect name="kamon.instrumentation.ActorCellInvokeInstrumentation"/>
-        <aspect name="kamon.instrumentation.UnregisteredActorRefInstrumentation"/>
         <aspect name="kamon.instrumentation.RunnableInstrumentation" />
         <!--<aspect name="kamon.instrumentation.MessageQueueInstrumentation" />-->
 

@@ -2,11 +2,12 @@ package kamon.instrumentation
 
 import org.aspectj.lang.annotation.{DeclareMixin, After, Pointcut, Aspect}
 import kamon.{TraceContext, Tracer}
-import kamon.trace.UowTracing.{WebExternal, Finish, Rename}
+import kamon.trace.UowTracing.{Finish, Rename}
 import spray.http.HttpRequest
 import spray.can.server.{OpenRequest, OpenRequestComponent}
-import spray.can.client.HttpHostConnector.RequestContext
-import spray.http.HttpHeaders.Host
+import kamon.trace.context.TracingAwareContext
+
+//import spray.can.client.HttpHostConnector.RequestContext
 
 trait ContextAware {
   def traceContext: Option[TraceContext]
@@ -41,59 +42,44 @@ class SprayServerInstrumentation {
 
   @After("openRequestCreation()")
   def afterFinishingRequest(): Unit = {
-    //println("Finishing a request: " + Tracer.context())
+//    println("Finishing a request: " + Tracer.context())
 
     Tracer.context().map(_.entries ! Finish())
-/*
+
     if(Tracer.context().isEmpty) {
       println("WOOOOOPAAAAAAAAA")
-    }*/
+    }
   }
-
-
-
 
   @Pointcut("execution(spray.can.client.HttpHostConnector.RequestContext.new(..)) && this(ctx)")
-  def requestRecordInit(ctx: TracingAwareRequestContext): Unit = {}
+  def requestRecordInit(ctx: TracingAwareContext): Unit = {}
 
   @After("requestRecordInit(ctx)")
-  def whenCreatedRequestRecord(ctx: TracingAwareRequestContext): Unit = {
+  def whenCreatedRequestRecord(ctx: TracingAwareContext): Unit = {
     // Necessary to force the initialization of TracingAwareRequestContext at the moment of creation.
-    ctx.context
+    ctx.traceContext
   }
 
-
-
-
-
-
   @Pointcut("execution(* spray.can.client.HttpHostConnectionSlot.dispatchToCommander(..)) && args(ctx, msg)")
-  def requestRecordInit2(ctx: TracingAwareRequestContext, msg: Any): Unit = {}
+  def requestRecordInit2(ctx: TracingAwareContext, msg: Any): Unit = {}
 
   @After("requestRecordInit2(ctx, msg)")
-  def whenCreatedRequestRecord2(ctx: TracingAwareRequestContext, msg: Any): Unit = {
+  def whenCreatedRequestRecord2(ctx: TracingAwareContext, msg: Any): Unit = {
     //println("=======> Spent in WEB External: " + (System.nanoTime() - ctx.timestamp))
 
     // TODO: REMOVE THIS:
-    val request = (ctx.asInstanceOf[RequestContext]).request
+//    val request = (ctx.asInstanceOf[RequestContext]).request
 
-    ctx.context.map(_.entries ! WebExternal(ctx.timestamp, System.nanoTime(), request.header[Host].map(_.host).getOrElse("UNKNOWN")))
+//    ctx.context.map(_.entries ! WebExternal(ctx.timestamp, System.nanoTime(), request.header[Host].map(_.host).getOrElse("UNKNOWN")))
 
   }
 }
 
-trait TracingAwareRequestContext {
-  def context: Option[TraceContext]
-  def timestamp: Long
-}
-
-case class DefaultTracingAwareRequestContext(context: Option[TraceContext] = Tracer.context(),
-                                             timestamp: Long = System.nanoTime) extends TracingAwareRequestContext
-
+case class DefaultTracingAwareRequestContext(traceContext: Option[TraceContext] = Tracer.context(), timestamp: Long = System.nanoTime) extends TracingAwareContext
 
 @Aspect
 class SprayRequestContextTracing {
 
   @DeclareMixin("spray.can.client.HttpHostConnector.RequestContext")
-  def mixin: TracingAwareRequestContext = DefaultTracingAwareRequestContext()
+  def mixin: TracingAwareContext = DefaultTracingAwareRequestContext()
 }
