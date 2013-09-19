@@ -1,12 +1,9 @@
 package kamon.trace
 
 import akka.actor._
-import kamon.trace.UowTracing.{Start, Finish, Rename}
 import scala.concurrent.duration.Duration
 import kamon.trace.UowTracing.Finish
 import kamon.trace.UowTracing.Rename
-import kamon.trace.UowTrace
-import kamon.trace.UowTracing.Start
 import scala.Some
 
 sealed trait UowSegment {
@@ -29,7 +26,6 @@ case class UowTrace(name: String, segments: Seq[UowSegment])
 
 class UowTraceAggregator(reporting: ActorRef, aggregationTimeout: Duration) extends Actor with ActorLogging {
   context.setReceiveTimeout(aggregationTimeout)
-  self ! Start()
 
   var name: Option[String] = None
   var segments: Seq[UowSegment] = Nil
