@@ -4,6 +4,8 @@ import akka.actor.{Deploy, Props, Actor, ActorSystem}
 import java.util.concurrent.atomic.AtomicLong
 import kamon.Tracer
 import spray.routing.SimpleRoutingApp
+import akka.util.Timeout
+import spray.httpx.RequestBuilding
 
 object PingPong extends App {
   import scala.concurrent.duration._
@@ -49,13 +51,23 @@ class Ponger extends Actor {
 }
 
 
-object SimpleRequestProcessor extends App with SimpleRoutingApp {
+object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuilding {
+  import scala.concurrent.duration._
+  import spray.client.pipelining._
+
   implicit val system = ActorSystem("test")
+  import system.dispatcher
+
+  implicit val timeout = Timeout(30 seconds)
+
+  val pipeline = sendReceive
 
   startServer(interface = "localhost", port = 9090) {
     get {
       path("test"){
-        complete("OK")
+        complete {
+          pipeline(Get("http://www.despegar.com.ar")).map(r => "Ok")
+        }
       }
     }
   }
