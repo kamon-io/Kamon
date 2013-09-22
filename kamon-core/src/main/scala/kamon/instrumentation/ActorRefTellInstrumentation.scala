@@ -24,7 +24,7 @@ class ActorRefTellInstrumentation {
   @Around("sendingMessageToActorRef(actor, message, sender)")
   def around(pjp: ProceedingJoinPoint, actor: ActorRef, message: Any, sender: ActorRef): Unit  = {
     import kamon.Instrument.instrumentation.sendMessageTransformation
-
+    //println(s"====> [$sender] => [$actor] --- $message")
     pjp.proceedWithTarget(actor, sendMessageTransformation(sender, actor, message).asInstanceOf[AnyRef], sender)
   }
 }
@@ -76,7 +76,7 @@ class UnregisteredActorRefInstrumentation {
   @Around("sprayResponderHandle(message, sender)")
   def sprayInvokeAround(pjp: ProceedingJoinPoint, message: Any, sender: ActorRef): Unit = {
     import ProceedingJoinPointPimp._
-    println("Handling unregistered actor ref message: "+message)
+    //println("Handling unregistered actor ref message: "+message)
     message match {
       case SimpleTraceMessage(msg, ctx) => {
         ctx match {

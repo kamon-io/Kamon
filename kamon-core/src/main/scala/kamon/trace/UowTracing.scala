@@ -16,6 +16,7 @@ object UowTracing {
   case class Start() extends AutoTimestamp
   case class Finish() extends AutoTimestamp
   case class Rename(name: String) extends AutoTimestamp
+  case class WebExternal(start: Long, end: Long, host: String) extends AutoTimestamp
 }
 
 case class UowTrace(name: String, segments: Seq[UowSegment])

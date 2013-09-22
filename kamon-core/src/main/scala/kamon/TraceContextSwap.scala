@@ -12,11 +12,11 @@ trait TraceContextSwap {
   def withContext[A](ctx: Option[TraceContext], primary: => A, fallback: => A): A = {
     ctx match {
       case Some(context) => {
-        MDC.put("uow", context.userContext.get.asInstanceOf[String])
+        //MDC.put("uow", context.userContext.get.asInstanceOf[String])
         Tracer.set(context)
         val bodyResult = primary
         Tracer.clear
-        MDC.remove("uow")
+        //MDC.remove("uow")
 
         bodyResult
       }
