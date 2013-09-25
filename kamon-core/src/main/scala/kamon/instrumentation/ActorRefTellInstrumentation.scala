@@ -34,6 +34,7 @@ class ActorRefTellInstrumentation {
 @Aspect("""perthis(actorCellCreation(akka.actor.ActorSystem, akka.actor.ActorRef, akka.actor.Props, akka.dispatch.MessageDispatcher, akka.actor.ActorRef))""")
 class ActorCellInvokeInstrumentation {
   var instrumentation =  ActorReceiveInvokeInstrumentation.noopPreReceive
+  var self: ActorRef = _
 
   // AKKA 2.2 introduces the dispatcher parameter. Maybe we could provide a dual pointcut.
   @Pointcut("execution(akka.actor.ActorCell.new(..)) && args(system, ref, props, dispatcher, parent)")
@@ -42,6 +43,7 @@ class ActorCellInvokeInstrumentation {
   @After("actorCellCreation(system, ref, props, dispatcher, parent)")
   def registerMetricsInRegistry(system: ActorSystem, ref: ActorRef, props: Props, dispatcher: MessageDispatcher, parent: ActorRef): Unit = {
     instrumentation = kamon.Instrument.instrumentation.receiveInvokeInstrumentation(system, ref, props, dispatcher, parent)
+    self = ref
   }
 
 
@@ -53,7 +55,7 @@ class ActorCellInvokeInstrumentation {
     import ProceedingJoinPointPimp._
 
     val (originalEnvelope, ctx) = instrumentation.preReceive(envelope)
-    //println("Test")
+    //println(s"====>[$ctx] ## [${originalEnvelope.sender}] => [$self] --- ${originalEnvelope.message}")
     ctx match {
       case Some(c) => {
         //MDC.put("uow", c.userContext.get.asInstanceOf[String])

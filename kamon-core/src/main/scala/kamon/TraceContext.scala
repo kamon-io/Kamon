@@ -19,7 +19,7 @@ case class TraceContext(id: Long, entries: ActorRef, userContext: Option[Any] = 
 object TraceContext {
   val reporter = Kamon.actorSystem.actorOf(Props[NewRelicReporting])
   val traceIdCounter = new AtomicLong
-  def apply()(implicit system: ActorSystem) = new TraceContext(100, system.actorOf(UowTraceAggregator.props(reporter, 30 seconds))) // TODO: Move to a kamon specific supervisor, like /user/kamon/tracer
+  def apply()(implicit system: ActorSystem) = new TraceContext(100, system.actorOf(UowTraceAggregator.props(reporter, 30 seconds), "tracer-"+traceIdCounter.incrementAndGet())) // TODO: Move to a kamon specific supervisor, like /user/kamon/tracer
 }
 
 
