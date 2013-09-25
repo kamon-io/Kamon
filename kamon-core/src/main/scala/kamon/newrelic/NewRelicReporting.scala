@@ -24,11 +24,6 @@ class NewRelicReporting extends Actor {
       NewRelic.recordMetric(s"External/all", external)
       NewRelic.recordMetric(s"External/allWeb", external)
 
-      NewRelic.recordMetric(s"Solr/all", 0.1F)
-      NewRelic.recordMetric(s"Solr/allWeb", 0.1F)
-      NewRelic.recordMetric(s"Solr/set", 0.1F)
-      NewRelic.recordMetric(s"Solr/set/WebTransaction/Custom/test", 0.1F)
-
       NewRelic.recordMetric(s"External/${webExternalTrace.host}/http", external)
       NewRelic.recordMetric(s"External/${webExternalTrace.host}/all", external)
       NewRelic.recordMetric(s"External/${webExternalTrace.host}/http/" + "WebTransaction/Custom" + uowTrace.name, external)

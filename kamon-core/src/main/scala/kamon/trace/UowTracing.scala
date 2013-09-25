@@ -1,8 +1,13 @@
 package kamon.trace
 
-import akka.actor.{Props, ActorRef, Actor}
+import akka.actor._
 import kamon.trace.UowTracing.{Start, Finish, Rename}
 import scala.concurrent.duration.Duration
+import kamon.trace.UowTracing.Finish
+import kamon.trace.UowTracing.Rename
+import kamon.trace.UowTrace
+import kamon.trace.UowTracing.Start
+import scala.Some
 
 sealed trait UowSegment {
   def timestamp: Long
@@ -22,7 +27,7 @@ object UowTracing {
 case class UowTrace(name: String, segments: Seq[UowSegment])
 
 
-class UowTraceAggregator(reporting: ActorRef, aggregationTimeout: Duration) extends Actor {
+class UowTraceAggregator(reporting: ActorRef, aggregationTimeout: Duration) extends Actor with ActorLogging {
   context.setReceiveTimeout(aggregationTimeout)
   self ! Start()
 
@@ -33,6 +38,9 @@ class UowTraceAggregator(reporting: ActorRef, aggregationTimeout: Duration) exte
     case finish: Finish       => segments = segments :+ finish; finishTracing()
     case Rename(newName)      => name = Some(newName)
     case segment: UowSegment  => segments = segments :+ segment
+    case ReceiveTimeout       =>
+      log.warning("Transaction {} did not complete properly, the recorded segments are: {}", name, segments)
+      context.stop(self)
   }
 
   def finishTracing(): Unit = {
