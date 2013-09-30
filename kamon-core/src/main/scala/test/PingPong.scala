@@ -1,11 +1,12 @@
 package test
 
-import akka.actor.{Deploy, Props, Actor, ActorSystem}
+import akka.actor._
 import java.util.concurrent.atomic.AtomicLong
 import kamon.Tracer
 import spray.routing.SimpleRoutingApp
 import akka.util.Timeout
 import spray.httpx.RequestBuilding
+import scala.concurrent.Future
 
 object PingPong extends App {
   import scala.concurrent.duration._
@@ -54,6 +55,7 @@ class Ponger extends Actor {
 object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuilding {
   import scala.concurrent.duration._
   import spray.client.pipelining._
+  import akka.pattern.ask
 
   implicit val system = ActorSystem("test")
   import system.dispatcher
@@ -61,6 +63,7 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
   implicit val timeout = Timeout(30 seconds)
 
   val pipeline = sendReceive
+  val replier = system.actorOf(Props[Replier])
 
   startServer(interface = "localhost", port = 9090) {
     get {
@@ -68,8 +71,34 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
         complete {
           pipeline(Get("http://www.despegar.com.ar")).map(r => "Ok")
         }
+      } ~
+      path("reply") {
+        complete {
+          if (Tracer.context().isEmpty)
+            println("ROUTE NO CONTEXT")
+
+          (replier ? "replytome").mapTo[String]
+        }
+      } ~
+      path("ok") {
+        complete("ok")
+      } ~
+      path("future") {
+        dynamic {
+          complete(Future { "OK" })
+        }
       }
     }
   }
 
+}
+
+class Replier extends Actor with ActorLogging {
+  def receive = {
+    case _ =>
+      if(Tracer.context.isEmpty)
+        log.warning("PROCESSING A MESSAGE WITHOUT CONTEXT")
+
+      sender ! "Ok"
+  }
 }

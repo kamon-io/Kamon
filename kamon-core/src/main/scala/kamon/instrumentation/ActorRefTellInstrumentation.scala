@@ -64,8 +64,11 @@ class ActorCellInvokeInstrumentation {
         Tracer.clear
         //MDC.remove("uow")
       }
-      case None => pjp.proceedWith(originalEnvelope)
+      case None =>
+        assert(Tracer.context() == None)
+        pjp.proceedWith(originalEnvelope)
     }
+    Tracer.clear
   }
 }
 
@@ -79,6 +82,7 @@ class UnregisteredActorRefInstrumentation {
   def sprayInvokeAround(pjp: ProceedingJoinPoint, message: Any, sender: ActorRef): Unit = {
     import ProceedingJoinPointPimp._
     //println("Handling unregistered actor ref message: "+message)
+
     message match {
       case SimpleTraceMessage(msg, ctx) => {
         ctx match {
@@ -87,10 +91,14 @@ class UnregisteredActorRefInstrumentation {
             pjp.proceedWith(msg.asInstanceOf[AnyRef])  // TODO: define if we should use Any or AnyRef and unify with the rest of the instrumentation.
             Tracer.clear
           }
-          case None => pjp.proceedWith(msg.asInstanceOf[AnyRef])
+          case None =>
+            assert(Tracer.context() == None)
+            pjp.proceedWith(msg.asInstanceOf[AnyRef])
         }
       }
-      case _ => pjp.proceed
+      case _ =>
+        //assert(Tracer.context() == None)
+        pjp.proceed
     }
   }
 }
