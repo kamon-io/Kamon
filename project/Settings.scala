@@ -3,7 +3,7 @@ import Keys._
 import spray.revolver.RevolverPlugin.Revolver
 
 object Settings {
-  val VERSION = "0.0.1"
+  val VERSION = "0.0.2"
 
   lazy val basicSettings = seq(
     version       := VERSION,
@@ -23,7 +23,7 @@ object Settings {
       "-language:implicitConversions",
       "-Xlog-reflective-calls"
     ),
-    publishTo     := Some("Nexus" at "http://nexus.despegar.it:8080/nexus/content/repositories/snapshots")
+    publishTo     := Some("Nexus" at "http://nexus.despegar.it:8080/nexus/content/repositories/releases")
   )
 
 

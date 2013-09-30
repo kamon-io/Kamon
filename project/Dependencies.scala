@@ -14,7 +14,6 @@ object Dependencies {
   val sprayRouting    = "io.spray"                  %   "spray-routing"         % sprayVersion
   val sprayTestkit    = "io.spray"                  %   "spray-testkit"         % sprayVersion
   val sprayClient     = "io.spray"                  %   "spray-client"          % sprayVersion
-  val sprayServlet    = "io.spray"                  %   "spray-servlet"         % sprayVersion
   val sprayJson       = "io.spray"                  %%  "spray-json"            % "1.2.3"
   val scalaReflect    = "org.scala-lang"            %   "scala-reflect"         % "2.10.1"
   val akkaActor       = "com.typesafe.akka"         %%  "akka-actor"            % akkaVersion
