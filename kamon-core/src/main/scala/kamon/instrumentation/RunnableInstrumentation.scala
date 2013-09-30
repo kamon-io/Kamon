@@ -37,7 +37,7 @@ class RunnableInstrumentation {
    *  Aspect members
    */
 
-  private val traceContext = Tracer.context
+  private var traceContext = Tracer.context
 
 
   /**
@@ -47,15 +47,21 @@ class RunnableInstrumentation {
 
   @Before("instrumentedRunnableCreation()")
   def beforeCreation = {
-    //println((new Throwable).getStackTraceString)
+    traceContext = Tracer.context
+  /*  if(traceContext.isEmpty)
+      println("NO TRACE CONTEXT FOR RUNNABLE at: [[[%s]]]", (new Throwable).getStackTraceString)//println((new Throwable).getStackTraceString)
+    else
+      println("SUPER TRACE CONTEXT FOR RUNNABLE at: [[[%s]]]", (new Throwable).getStackTraceString)*/
   }
 
 
   @Around("runnableExecution()")
   def around(pjp: ProceedingJoinPoint) = {
     import pjp._
-
+    /*if(traceContext.isEmpty)
+      println("OOHHH NOOOOO")*/
     withContext(traceContext, proceed())
   }
 
 }
+

@@ -32,7 +32,7 @@ class SprayServerInstrumentation {
   //def afterInit(): Unit = {
     Tracer.start
     //openRequest.traceContext
-    println("Created the context: " + Tracer.context() + " for the transaction: " + request)
+    //println("Created the context: " + Tracer.context() + " for the transaction: " + request)
     Tracer.context().map(_.entries ! Rename(request.uri.path.toString()))
   }
 
@@ -41,13 +41,13 @@ class SprayServerInstrumentation {
 
   @After("openRequestCreation()")
   def afterFinishingRequest(): Unit = {
-    println("Finishing a request: " + Tracer.context())
+    //println("Finishing a request: " + Tracer.context())
 
     Tracer.context().map(_.entries ! Finish())
-
+/*
     if(Tracer.context().isEmpty) {
       println("WOOOOOPAAAAAAAAA")
-    }
+    }*/
   }
 
 

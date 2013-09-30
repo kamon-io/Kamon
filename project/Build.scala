@@ -10,6 +10,10 @@ object Build extends Build {
   lazy val root = Project("root", file("."))
     .aggregate(kamonCore, kamonUow, kamonDashboard)
     .settings(basicSettings: _*)
+    .settings(
+      publish := (),
+      publishLocal := ()
+    )
 
   lazy val kamonCore = Project("kamon-core", file("kamon-core"))
     .settings(basicSettings: _*)
