@@ -6,7 +6,7 @@ import kamon.Tracer
 import spray.routing.SimpleRoutingApp
 import akka.util.Timeout
 import spray.httpx.RequestBuilding
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future}
 
 object PingPong extends App {
   import scala.concurrent.duration._
@@ -72,12 +72,12 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
           pipeline(Get("http://www.despegar.com.ar")).map(r => "Ok")
         }
       } ~
-      path("reply") {
+      path("reply" / Segment) { reqID =>
         complete {
           if (Tracer.context().isEmpty)
             println("ROUTE NO CONTEXT")
 
-          (replier ? "replytome").mapTo[String]
+          (replier ? reqID).mapTo[String]
         }
       } ~
       path("ok") {
@@ -93,12 +93,33 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
 
 }
 
+object Verifier extends App with RequestBuilding {
+  import scala.concurrent.duration._
+  import spray.client.pipelining._
+  import akka.pattern.ask
+
+  implicit val system = ActorSystem("test")
+  import system.dispatcher
+
+  implicit val timeout = Timeout(30 seconds)
+
+  val pipeline = sendReceive
+
+  val futures = Future.sequence(for(i <- 1 to 500) yield {
+    pipeline(Get("http://127.0.0.1/reply/"+i)).map(r => r.entity.asString == i.toString)
+  })
+  Await.result(futures, 10 seconds).forall(_)
+
+
+
+}
+
 class Replier extends Actor with ActorLogging {
   def receive = {
-    case _ =>
+    case anything =>
       if(Tracer.context.isEmpty)
         log.warning("PROCESSING A MESSAGE WITHOUT CONTEXT")
 
-      sender ! "Ok"
+      sender ! anything
   }
 }
