@@ -10,7 +10,7 @@ import scala.Some
 import kamon.trace.context.TracingAwareContext
 
 case class TraceableMessage(traceContext: Option[TraceContext], message: Any, timer: Timer.Context)
-case class DefaultTracingAwareEnvelopeContext(traceContext: Option[TraceContext] = Tracer.context(), timestamp: Long = System.nanoTime) extends TracingAwareContext
+case class DefaultTracingAwareEnvelopeContext(traceContext: Option[TraceContext] = Tracer.traceContext.value, timestamp: Long = System.nanoTime) extends TracingAwareContext
 
 @Aspect("perthis(actorCellCreation(akka.actor.ActorSystem, akka.actor.ActorRef, akka.actor.Props, akka.dispatch.MessageDispatcher, akka.actor.ActorRef))")
 class ActorCellInvokeInstrumentation {
@@ -24,17 +24,11 @@ class ActorCellInvokeInstrumentation {
   @Around("invokingActorBehaviourAtActorCell(envelope)")
   def around(pjp: ProceedingJoinPoint, envelope: Envelope): Unit = {
     //safe cast
-    envelope.asInstanceOf[TracingAwareContext].traceContext match {
-      case Some(c) => {
-        Tracer.set(c)
-        pjp.proceed()
-        Tracer.clear
-      }
-      case None =>
-        //assert(Tracer.context() == None)
-        pjp.proceed()
+    val msgContext = envelope.asInstanceOf[TracingAwareContext].traceContext
+
+    Tracer.traceContext.withValue(msgContext) {
+      pjp.proceed()
     }
-    Tracer.clear
   }
 }
 

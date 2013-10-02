@@ -92,7 +92,7 @@ object TryAkka extends App{
   threadPrintln("Before doing it")
   val f = Future { threadPrintln("This is happening inside the future body") }
 
-  Tracer.stop
+
 
 
   //Thread.sleep(3000)

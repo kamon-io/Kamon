@@ -6,6 +6,7 @@ import scala.concurrent.duration.FiniteDuration
 import com.newrelic.api.agent.NewRelic
 import scala.collection.concurrent.TrieMap
 import kamon.instrumentation.{SimpleContextPassingInstrumentation, ActorInstrumentationConfiguration}
+import scala.util.DynamicVariable
 
 
 object Instrument {
@@ -32,20 +33,13 @@ object Kamon {
 
 
 object Tracer {
-  val ctx = new ThreadLocal[Option[TraceContext]] {
-    override def initialValue() = None
-  }
+  val traceContext = new DynamicVariable[Option[TraceContext]](None)
 
-  def context() = ctx.get()
-  def clear = ctx.remove()
-  def set(traceContext: TraceContext) = ctx.set(Some(traceContext))
+
+  def context() = traceContext.value
+  def set(ctx: TraceContext) = traceContext.value = Some(ctx)
 
   def start = set(newTraceContext)
-  def stop = ctx.get match {
-    case Some(context) => context.close
-    case None =>
-  }
-
   def newTraceContext(): TraceContext = TraceContext()(Kamon.actorSystem)
 }
 
