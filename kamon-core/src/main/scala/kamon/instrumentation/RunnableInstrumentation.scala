@@ -58,8 +58,8 @@ class RunnableInstrumentation {
   @Around("runnableExecution()")
   def around(pjp: ProceedingJoinPoint) = {
     import pjp._
-    /*if(traceContext.isEmpty)
-      println("OOHHH NOOOOO")*/
+    if(traceContext.isEmpty)
+      println("NOMONEY")
     withContext(traceContext, proceed())
   }
 

@@ -32,19 +32,31 @@ class SprayServerInstrumentation {
   //@After("openRequestInit()")
   //def afterInit(): Unit = {
     Tracer.start
+    val discard = openRequest.asInstanceOf[ContextAware].traceContext
+
+    //println("Reply: %s - %s ", Tracer.context().get.id, request.uri.path.toString())
+
+//    if(discard.isEmpty || discard != Tracer.context()) {
+//      println("MEGA ERROR")
+//    }
     //openRequest.traceContext
     //println("Created the context: " + Tracer.context() + " for the transaction: " + request)
     Tracer.context().map(_.entries ! Rename(request.uri.path.toString()))
   }
 
-  @Pointcut("execution(* spray.can.server.OpenRequestComponent$DefaultOpenRequest.handleResponseEndAndReturnNextOpenRequest(..))")
-  def openRequestCreation(): Unit = {}
+  @Pointcut("execution(* spray.can.server.OpenRequestComponent$DefaultOpenRequest.handleResponseEndAndReturnNextOpenRequest(..)) && target(openRequest)")
+  def openRequestCreation(openRequest: OpenRequest): Unit = {}
 
-  @After("openRequestCreation()")
-  def afterFinishingRequest(): Unit = {
+  @After("openRequestCreation(openRequest)")
+  def afterFinishingRequest(openRequest: OpenRequest): Unit = {
 //    println("Finishing a request: " + Tracer.context())
-
+    val original = openRequest.asInstanceOf[ContextAware].traceContext
+    println("The original is: " + original + " - " + openRequest.request.uri.path)
     Tracer.context().map(_.entries ! Finish())
+
+    if(Tracer.context() != original) {
+      println(s"OMG DIFFERENT Original: [${original}] - Came in: [${Tracer.context}]")
+    }
 
     if(Tracer.context().isEmpty) {
       println("WOOOOOPAAAAAAAAA")

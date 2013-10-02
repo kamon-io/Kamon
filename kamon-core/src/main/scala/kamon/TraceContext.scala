@@ -22,10 +22,11 @@ object TraceContext {
   val traceIdCounter = new AtomicLong
 
   def apply()(implicit system: ActorSystem) =  {
-    val actor = system.actorOf(UowTraceAggregator.props(reporter, 5 seconds), s"tracer-${traceIdCounter.incrementAndGet()}")
+    val n = traceIdCounter.incrementAndGet()
+    val actor = system.actorOf(UowTraceAggregator.props(reporter, 5 seconds), s"tracer-${n}")
     actor ! Start()
 
-    new TraceContext(100, actor) // TODO: Move to a kamon specific supervisor, like /user/kamon/tracer
+    new TraceContext(n, actor) // TODO: Move to a kamon specific supervisor, like /user/kamon/tracer
   }
 }
 

@@ -25,7 +25,7 @@ class RunnableInstrumentationSpec extends WordSpec with Matchers with ScalaFutur
 
         "should be available during the execution of onComplete callbacks" in { new FutureWithContextFixture {
             val onCompleteContext = Promise[TraceContext]()
-
+            Tracer.clear
             futureWithContext.onComplete({
               case _ => onCompleteContext.complete(Success(Tracer.context.get))
             })
@@ -70,7 +70,7 @@ class RunnableInstrumentationSpec extends WordSpec with Matchers with ScalaFutur
     val testContext = TraceContext()
     Tracer.set(testContext)
 
-    val futureWithContext = Future { Tracer.context}
+    val futureWithContext = Future { Tracer.context }
   }
 
   trait FutureWithoutContextFixture {

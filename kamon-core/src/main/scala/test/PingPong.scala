@@ -93,22 +93,26 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
 
 }
 
-object Verifier extends App with RequestBuilding {
-  import scala.concurrent.duration._
-  import spray.client.pipelining._
-  import akka.pattern.ask
+object Verifier extends App {
 
-  implicit val system = ActorSystem("test")
-  import system.dispatcher
+  def go: Unit = {
+    import scala.concurrent.duration._
+    import spray.client.pipelining._
+    import akka.pattern.ask
 
-  implicit val timeout = Timeout(30 seconds)
+    implicit val system = ActorSystem("test")
+    import system.dispatcher
 
-  val pipeline = sendReceive
+    implicit val timeout = Timeout(30 seconds)
 
-  val futures = Future.sequence(for(i <- 1 to 500) yield {
-    pipeline(Get("http://127.0.0.1/reply/"+i)).map(r => r.entity.asString == i.toString)
-  })
-  Await.result(futures, 10 seconds).forall(_)
+    val pipeline = sendReceive
+
+    val futures = Future.sequence(for(i <- 1 to 500) yield {
+      pipeline(Get("http://127.0.0.1:9090/reply/"+i)).map(r => r.entity.asString == i.toString)
+    })
+    println("Everything is: "+ Await.result(futures, 10 seconds).forall(a => a == true))
+  }
+
 
 
 
