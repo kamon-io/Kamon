@@ -19,11 +19,12 @@ object Build extends Build {
     .settings(basicSettings: _*)
     .settings(revolverSettings: _*)
     .settings(aspectJSettings: _*)
-    .settings(newrelicSettings: _*)
+    //.settings(newrelicSettings: _*)
 
     .settings(
       libraryDependencies ++=
-        compile(akkaActor, akkaAgent, sprayCan, sprayClient, sprayRouting, aspectJ, aspectJWeaver, metrics, sprayJson, newrelic) ++
+        compile(akkaActor, akkaAgent, aspectJ, aspectJWeaver, metrics, newrelic, sprayJson) ++
+        provided(sprayCan, sprayClient, sprayRouting) ++
         test(scalatest, akkaTestKit, sprayTestkit))
     //.dependsOn(kamonDashboard)
 

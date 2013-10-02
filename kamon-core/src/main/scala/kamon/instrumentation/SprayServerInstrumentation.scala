@@ -17,7 +17,7 @@ trait ContextAware {
 class SprayOpenRequestContextTracing {
   @DeclareMixin("spray.can.server.OpenRequestComponent.DefaultOpenRequest")
   def mixinContextAwareToOpenRequest: ContextAware = new ContextAware {
-    val traceContext: Option[TraceContext] = Tracer.context()
+    val traceContext: Option[TraceContext] = Tracer.traceContext.value
   }
 }
 
@@ -29,18 +29,9 @@ class SprayServerInstrumentation {
 
   @After("openRequestInit(openRequest, enclosing, request, closeAfterResponseCompletion, timestamp)")
   def afterInit(openRequest: OpenRequest, enclosing: OpenRequestComponent, request: HttpRequest, closeAfterResponseCompletion: Boolean, timestamp: Long): Unit = {
-  //@After("openRequestInit()")
-  //def afterInit(): Unit = {
     Tracer.start
     val discard = openRequest.asInstanceOf[ContextAware].traceContext
 
-    //println("Reply: %s - %s ", Tracer.context().get.id, request.uri.path.toString())
-
-//    if(discard.isEmpty || discard != Tracer.context()) {
-//      println("MEGA ERROR")
-//    }
-    //openRequest.traceContext
-    //println("Created the context: " + Tracer.context() + " for the transaction: " + request)
     Tracer.context().map(_.entries ! Rename(request.uri.path.toString()))
   }
 
@@ -49,17 +40,12 @@ class SprayServerInstrumentation {
 
   @After("openRequestCreation(openRequest)")
   def afterFinishingRequest(openRequest: OpenRequest): Unit = {
-//    println("Finishing a request: " + Tracer.context())
     val original = openRequest.asInstanceOf[ContextAware].traceContext
-    println("The original is: " + original + " - " + openRequest.request.uri.path)
+
     Tracer.context().map(_.entries ! Finish())
 
     if(Tracer.context() != original) {
       println(s"OMG DIFFERENT Original: [${original}] - Came in: [${Tracer.context}]")
-    }
-
-    if(Tracer.context().isEmpty) {
-      println("WOOOOOPAAAAAAAAA")
     }
   }
 
@@ -70,20 +56,6 @@ class SprayServerInstrumentation {
   def whenCreatedRequestRecord(ctx: TracingAwareContext): Unit = {
     // Necessary to force the initialization of TracingAwareRequestContext at the moment of creation.
     ctx.traceContext
-  }
-
-  @Pointcut("execution(* spray.can.client.HttpHostConnectionSlot.dispatchToCommander(..)) && args(ctx, msg)")
-  def requestRecordInit2(ctx: TracingAwareContext, msg: Any): Unit = {}
-
-  @After("requestRecordInit2(ctx, msg)")
-  def whenCreatedRequestRecord2(ctx: TracingAwareContext, msg: Any): Unit = {
-    //println("=======> Spent in WEB External: " + (System.nanoTime() - ctx.timestamp))
-
-    // TODO: REMOVE THIS:
-//    val request = (ctx.asInstanceOf[RequestContext]).request
-
-//    ctx.context.map(_.entries ! WebExternal(ctx.timestamp, System.nanoTime(), request.header[Host].map(_.host).getOrElse("UNKNOWN")))
-
   }
 }
 
