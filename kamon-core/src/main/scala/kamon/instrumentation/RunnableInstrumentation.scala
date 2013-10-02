@@ -8,10 +8,12 @@ import scala.Some
 /**
  *  Marker interface, just to make sure we don't instrument all the Runnables in the classpath.
  */
-trait TraceContextAwareRunnable extends Runnable {}
+trait TraceContextAwareRunnable {
+  def traceContext: Option[TraceContext]
+}
 
 
-@Aspect("perthis(instrumentedRunnableCreation())")
+@Aspect
 class RunnableInstrumentation {
 
   /**
@@ -19,35 +21,32 @@ class RunnableInstrumentation {
    *  while their run method is executed.
    */
   @DeclareMixin("scala.concurrent.impl.CallbackRunnable || scala.concurrent.impl.Future.PromiseCompletingRunnable")
-  def onCompleteCallbacksRunnable: TraceContextAwareRunnable = null
+  def onCompleteCallbacksRunnable: TraceContextAwareRunnable = new TraceContextAwareRunnable {
+    val traceContext: Option[TraceContext] = Tracer.context()
+  }
 
 
   /**
    *  Pointcuts
    */
 
-  @Pointcut("execution(kamon.instrumentation.TraceContextAwareRunnable+.new(..))")
-  def instrumentedRunnableCreation(): Unit = {}
+  @Pointcut("execution(kamon.instrumentation.TraceContextAwareRunnable+.new(..)) && this(runnable)")
+  def instrumentedRunnableCreation(runnable: TraceContextAwareRunnable): Unit = {}
 
-  @Pointcut("execution(* kamon.instrumentation.TraceContextAwareRunnable.run())")
-  def runnableExecution() = {}
-
-
-  /**
-   *  Aspect members
-   */
-
-  private var traceContext = Tracer.context
+  @Pointcut("execution(* kamon.instrumentation.TraceContextAwareRunnable+.run()) && this(runnable)")
+  def runnableExecution(runnable: TraceContextAwareRunnable) = {}
 
 
-  /**
-   *  Advices
-   */
+
   import kamon.TraceContextSwap.withContext
 
-  @Before("instrumentedRunnableCreation()")
-  def beforeCreation = {
-    traceContext = Tracer.context
+  @After("instrumentedRunnableCreation(runnable)")
+  def beforeCreation(runnable: TraceContextAwareRunnable) = {
+    val x = runnable.traceContext
+    /*if(runnable.traceContext.isEmpty)
+      println("WTFWI from: " + (new Throwable).getStackTraceString)
+    else
+      println("NOWTF: " + (new Throwable).getStackTraceString)*/
   /*  if(traceContext.isEmpty)
       println("NO TRACE CONTEXT FOR RUNNABLE at: [[[%s]]]", (new Throwable).getStackTraceString)//println((new Throwable).getStackTraceString)
     else
@@ -55,12 +54,27 @@ class RunnableInstrumentation {
   }
 
 
-  @Around("runnableExecution()")
-  def around(pjp: ProceedingJoinPoint) = {
+  @Around("runnableExecution(runnable)")
+  def around(pjp: ProceedingJoinPoint, runnable: TraceContextAwareRunnable) = {
     import pjp._
-    if(traceContext.isEmpty)
+
+    /*println("EXECUTING")
+    if(runnable.traceContext.isEmpty)
       println("NOMONEY")
-    withContext(traceContext, proceed())
+
+    runnable.traceContext match {
+      case Some(context) => {
+        //MDC.put("uow", context.userContext.get.asInstanceOf[String])
+        Tracer.set(context)
+        val bodyResult = proceed()
+        Tracer.clear
+        //MDC.remove("uow")
+
+        bodyResult
+      }
+      case None => proceed()
+    }*/
+    withContext(runnable.traceContext, proceed())
   }
 
 }

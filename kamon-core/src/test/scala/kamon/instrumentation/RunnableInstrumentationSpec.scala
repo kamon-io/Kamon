@@ -16,16 +16,16 @@ class RunnableInstrumentationSpec extends WordSpec with Matchers with ScalaFutur
   "a instrumented runnable" when {
     "created in a thread that does have a TraceContext" must {
       "preserve the TraceContext" which {
-        "should be available during the run method execution" in { new FutureWithContextFixture {
+        "should be available during the run method execution" in new FutureWithContextFixture {
 
             whenReady(futureWithContext) { result =>
               result.value should equal(testContext)
             }
-        }}
+        }
 
         "should be available during the execution of onComplete callbacks" in { new FutureWithContextFixture {
             val onCompleteContext = Promise[TraceContext]()
-            Tracer.clear
+
             futureWithContext.onComplete({
               case _ => onCompleteContext.complete(Success(Tracer.context.get))
             })

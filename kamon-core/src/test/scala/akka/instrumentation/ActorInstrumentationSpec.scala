@@ -42,7 +42,7 @@ class ActorInstrumentationSpec extends TestKit(ActorSystem("ActorInstrumentation
         expectMsgAllOf(contexts: _*)
       }
 
-      "propagate with many asks" in {
+      /*"propagate with many asks" in {
         val echo = system.actorOf(Props[TraceContextEcho])
         val iterations = 50000
         implicit val timeout = Timeout(10 seconds)
@@ -59,7 +59,7 @@ class ActorInstrumentationSpec extends TestKit(ActorSystem("ActorInstrumentation
         assert(iterations == allResults.collect {
           case Some(_) => 1
         }.sum)
-      }
+      }*/
     }
   }
 
