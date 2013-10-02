@@ -31,7 +31,7 @@ class ActorCellInvokeInstrumentation {
         Tracer.clear
       }
       case None =>
-        assert(Tracer.context() == None)
+        //assert(Tracer.context() == None)
         pjp.proceed()
     }
     Tracer.clear
