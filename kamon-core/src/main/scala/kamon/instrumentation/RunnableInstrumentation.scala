@@ -39,7 +39,7 @@ class RunnableInstrumentation {
 
 
   @After("instrumentedRunnableCreation(runnable)")
-  def beforeCreation(runnable: TraceContextAwareRunnable) = {
+  def beforeCreation(runnable: TraceContextAwareRunnable): Unit = {
     // Force traceContext initialization.
     runnable.traceContext
   }
