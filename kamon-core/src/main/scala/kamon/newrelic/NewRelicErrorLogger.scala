@@ -13,7 +13,6 @@ class NewRelicErrorLogger extends Actor {
   }
 
   def notifyError(error: Error): Unit = {
-    println(error.message)
     noticeError(error.cause)
   }
 }
