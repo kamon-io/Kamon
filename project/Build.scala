@@ -23,9 +23,9 @@ object Build extends Build {
 
     .settings(
       libraryDependencies ++=
-        compile(akkaActor, akkaAgent, aspectJ, aspectJWeaver, metrics, newrelic, sprayJson, logback, akkaSlf4j) ++
-        compile(sprayCan, sprayClient, sprayRouting) ++
-        test(scalatest, akkaTestKit, sprayTestkit))
+        compile(akkaActor, akkaAgent, aspectJ, aspectJWeaver, metrics, newrelic, sprayJson) ++
+        provided(sprayCan, sprayClient, sprayRouting, logback, akkaSlf4j) ++
+        test(scalatest, akkaTestKit, sprayTestkit, logback, akkaSlf4j))
     //.dependsOn(kamonDashboard)
 
   lazy val kamonDashboard = Project("kamon-dashboard", file("kamon-dashboard"))

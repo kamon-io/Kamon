@@ -3,7 +3,7 @@ import Keys._
 import spray.revolver.RevolverPlugin.Revolver
 
 object Settings {
-  val VERSION = "0.0.4"
+  val VERSION = "0.0.5"
 
   lazy val basicSettings = seq(
     version       := VERSION,
