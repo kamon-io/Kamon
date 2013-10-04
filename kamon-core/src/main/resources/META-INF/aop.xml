@@ -14,7 +14,7 @@
         <aspect name="kamon.instrumentation.SprayOpenRequestContextTracing"/>
         <aspect name = "kamon.instrumentation.SprayServerInstrumentation"/>
         <aspect name="kamon.instrumentation.ActorSystemInstrumentation"/>
-
+        <aspect name="kamon.instrumentation.ActorLoggingInstrumentation"/>
 
         <!--<aspect name="kamon.instrumentation.MessageQueueInstrumentation" />-->
         <!--<aspect name="kamon.instrumentation.InceptionAspect"/>-->

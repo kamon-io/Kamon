@@ -8,7 +8,7 @@ object Build extends Build {
   import Dependencies._
 
   lazy val root = Project("root", file("."))
-    .aggregate(kamonCore, kamonUow, kamonDashboard)
+    .aggregate(kamonCore, kamonDashboard)
     .settings(basicSettings: _*)
     .settings(
       publish := (),
@@ -23,15 +23,10 @@ object Build extends Build {
 
     .settings(
       libraryDependencies ++=
-        compile(akkaActor, akkaAgent, aspectJ, aspectJWeaver, metrics, newrelic, sprayJson) ++
-        provided(sprayCan, sprayClient, sprayRouting) ++
+        compile(akkaActor, akkaAgent, aspectJ, aspectJWeaver, metrics, newrelic, sprayJson, logback, akkaSlf4j) ++
+        compile(sprayCan, sprayClient, sprayRouting) ++
         test(scalatest, akkaTestKit, sprayTestkit))
     //.dependsOn(kamonDashboard)
-
-  lazy val kamonUow = Project("kamon-uow", file("kamon-uow"))
-    .settings(basicSettings: _*)
-    .settings(libraryDependencies ++= compile(akkaActor, akkaSlf4j, sprayRouting))
-    .dependsOn(kamonCore)
 
   lazy val kamonDashboard = Project("kamon-dashboard", file("kamon-dashboard"))
     .settings(basicSettings: _*)

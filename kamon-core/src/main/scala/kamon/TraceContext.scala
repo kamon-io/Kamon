@@ -9,13 +9,7 @@ import kamon.newrelic.NewRelicReporting
 import kamon.trace.UowTracing.Start
 
 // TODO: Decide if we need or not an ID, generating it takes time and it doesn't seem necessary.
-case class TraceContext(id: Long, entries: ActorRef, userContext: Option[Any] = None) {
-  //implicit val timeout = Timeout(30, TimeUnit.SECONDS)
-  implicit val as = Kamon.actorSystem.dispatcher
-
-  def append(entry: TraceEntry) = entries ! entry
-  def close = entries ! "Close" // TODO type this thing!.
-}
+case class TraceContext(id: Long, tracer: ActorRef, uow: String = "", userContext: Option[Any] = None)
 
 object TraceContext {
   val reporter = Kamon.actorSystem.actorOf(Props[NewRelicReporting])
