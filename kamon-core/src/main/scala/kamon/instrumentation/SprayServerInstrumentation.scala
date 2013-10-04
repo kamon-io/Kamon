@@ -32,7 +32,7 @@ class SprayServerInstrumentation {
     Tracer.start
     val discard = openRequest.asInstanceOf[ContextAware].traceContext
 
-    Tracer.context().map(_.entries ! Rename(request.uri.path.toString()))
+    Tracer.context().map(_.tracer ! Rename(request.uri.path.toString()))
   }
 
   @Pointcut("execution(* spray.can.server.OpenRequestComponent$DefaultOpenRequest.handleResponseEndAndReturnNextOpenRequest(..)) && target(openRequest)")
@@ -42,7 +42,7 @@ class SprayServerInstrumentation {
   def afterFinishingRequest(openRequest: OpenRequest): Unit = {
     val original = openRequest.asInstanceOf[ContextAware].traceContext
 
-    Tracer.context().map(_.entries ! Finish())
+    Tracer.context().map(_.tracer ! Finish())
 
     if(Tracer.context() != original) {
       println(s"OMG DIFFERENT Original: [${original}] - Came in: [${Tracer.context}]")

@@ -6,8 +6,9 @@ import spray.routing.SimpleRoutingApp
 import akka.util.Timeout
 import spray.httpx.RequestBuilding
 import scala.concurrent.{Await, Future}
+import kamon.trace.UowDirectives
 
-object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuilding {
+object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuilding with UowDirectives {
   import scala.concurrent.duration._
   import spray.client.pipelining._
   import akka.pattern.ask
@@ -28,11 +29,13 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
         }
       } ~
       path("reply" / Segment) { reqID =>
-        complete {
-          if (Tracer.context().isEmpty)
-            println("ROUTE NO CONTEXT")
+        uow {
+          complete {
+            if (Tracer.context().isEmpty)
+              println("ROUTE NO CONTEXT")
 
-          (replier ? reqID).mapTo[String]
+            (replier ? reqID).mapTo[String]
+          }
         }
       } ~
       path("ok") {
@@ -78,6 +81,7 @@ class Replier extends Actor with ActorLogging {
       if(Tracer.context.isEmpty)
         log.warning("PROCESSING A MESSAGE WITHOUT CONTEXT")
 
+      log.info("Processing at the Replier")
       sender ! anything
   }
 }
