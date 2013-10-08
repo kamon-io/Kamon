@@ -5,7 +5,6 @@ import kamon.{Tracer, TraceContext}
 import org.aspectj.lang.ProceedingJoinPoint
 import org.slf4j.MDC
 
-
 @Aspect
 class ActorLoggingInstrumentation {
 
