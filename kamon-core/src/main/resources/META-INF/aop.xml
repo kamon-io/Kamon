@@ -26,6 +26,7 @@
 
         <include within="*"/>
         <exclude within="javax..*"/>
+        <exclude within="com.newrelic..*"/>
         <exclude within="org.aspectj..*"/>
         <exclude within="scala..*"/>
         <exclude within="scalaz..*"/>

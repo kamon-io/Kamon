@@ -2,8 +2,13 @@ package kamon.trace
 
 import akka.actor._
 import scala.concurrent.duration.Duration
+import kamon.trace.UowTracing._
+import scala.Some
+import kamon.trace.UowTracing.WebExternalFinish
 import kamon.trace.UowTracing.Finish
 import kamon.trace.UowTracing.Rename
+import kamon.trace.UowTrace
+import kamon.trace.UowTracing.WebExternalStart
 import scala.Some
 
 sealed trait UowSegment {
@@ -18,7 +23,9 @@ object UowTracing {
   case class Start() extends AutoTimestamp
   case class Finish() extends AutoTimestamp
   case class Rename(name: String) extends AutoTimestamp
-  case class WebExternal(start: Long, end: Long, host: String) extends AutoTimestamp
+  case class WebExternalStart(id: Long, host: String) extends AutoTimestamp
+  case class WebExternalFinish(id: Long) extends AutoTimestamp
+  case class WebExternal(start: Long, finish: Long, host: String) extends AutoTimestamp
 }
 
 case class UowTrace(name: String, segments: Seq[UowSegment])
@@ -30,8 +37,14 @@ class UowTraceAggregator(reporting: ActorRef, aggregationTimeout: Duration) exte
   var name: Option[String] = None
   var segments: Seq[UowSegment] = Nil
 
+  var pendingExternal = List[WebExternalStart]()
+
   def receive = {
     case finish: Finish       => segments = segments :+ finish; finishTracing()
+    case wes: WebExternalStart => pendingExternal = pendingExternal :+ wes
+    case finish @ WebExternalFinish(id) => pendingExternal.find(_.id == id).map(start => {
+      segments = segments :+ WebExternal(start.timestamp, finish.timestamp, start.host)
+    })
     case Rename(newName)      => name = Some(newName)
     case segment: UowSegment  => segments = segments :+ segment
     case ReceiveTimeout       =>

@@ -24,8 +24,12 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
   startServer(interface = "localhost", port = 9090) {
     get {
       path("test"){
-        complete {
-          pipeline(Get("http://www.despegar.com.ar")).map(r => "Ok")
+        uow {
+          complete {
+            val futures = pipeline(Get("http://10.254.10.57:8000/")).map(r => "Ok") :: pipeline(Get("http://10.254.10.57:8000/")).map(r => "Ok") :: Nil
+
+            Future.sequence(futures).map(l => "Ok")
+          }
         }
       } ~
       path("reply" / Segment) { reqID =>
@@ -44,6 +48,12 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
       path("future") {
         dynamic {
           complete(Future { "OK" })
+        }
+      } ~
+      path("error") {
+        complete {
+          throw new NullPointerException
+          "okk"
         }
       }
     }
