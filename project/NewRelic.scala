@@ -8,6 +8,6 @@ object NewRelic {
 
   lazy val newrelicSettings =  SbtNewrelic.newrelicSettings ++ Seq(
              javaOptions in run   <++=  jvmOptions in newrelic,
-    newrelicVersion in newrelic     :=  "2.20.0"
+    newrelicVersion in newrelic     :=  "3.0.1"
   )
 }

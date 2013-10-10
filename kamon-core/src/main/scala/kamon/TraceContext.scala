@@ -17,7 +17,7 @@ object TraceContext {
 
   def apply()(implicit system: ActorSystem) =  {
     val n = traceIdCounter.incrementAndGet()
-    val actor = system.actorOf(UowTraceAggregator.props(reporter, 5 seconds), s"tracer-${n}")
+    val actor = system.actorOf(UowTraceAggregator.props(reporter, 30 seconds), s"tracer-${n}")
     actor ! Start()
 
     new TraceContext(n, actor) // TODO: Move to a kamon specific supervisor, like /user/kamon/tracer

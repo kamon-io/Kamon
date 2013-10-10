@@ -2,8 +2,9 @@ package kamon.newrelic
 
 import akka.actor.Actor
 import kamon.trace.UowTrace
-import com.newrelic.api.agent.{Trace, NewRelic}
-import kamon.trace.UowTracing.WebExternal
+import com.newrelic.api.agent.{Response, Request, Trace, NewRelic}
+import kamon.trace.UowTracing.{WebExternal, WebExternalFinish, WebExternalStart}
+import java.util
 
 
 class NewRelicReporting extends Actor {
@@ -11,7 +12,6 @@ class NewRelicReporting extends Actor {
     case trace: UowTrace => recordTransaction(trace)
   }
 
-  //@Trace
   def recordTransaction(uowTrace: UowTrace): Unit = {
     val time = ((uowTrace.segments.last.timestamp - uowTrace.segments.head.timestamp)/1E9)
 
@@ -20,16 +20,25 @@ class NewRelicReporting extends Actor {
     NewRelic.recordMetric("HttpDispatcher", time.toFloat)
 
     uowTrace.segments.collect { case we: WebExternal => we }.foreach { webExternalTrace =>
-      val external = ((webExternalTrace.end - webExternalTrace.start)/1E9).toFloat
-      NewRelic.recordMetric(s"External/all", external)
-      NewRelic.recordMetric(s"External/allWeb", external)
+      val external = ((webExternalTrace.finish - webExternalTrace.start)/1E9).toFloat
 
       NewRelic.recordMetric(s"External/${webExternalTrace.host}/http", external)
       NewRelic.recordMetric(s"External/${webExternalTrace.host}/all", external)
-      NewRelic.recordMetric(s"External/${webExternalTrace.host}/http/" + "WebTransaction/Custom" + uowTrace.name, external)
+      NewRelic.recordMetric(s"External/${webExternalTrace.host}/http/WebTransaction/Custom" + uowTrace.name, external)
+    }
+/*
+
+    val allExternals = uowTrace.segments.collect { case we: WebExternal =>  we } sortBy(_.timestamp)
+
+
+    def measureExternal(segments: Seq[WebExternal]): Long = {
 
 
     }
+
+
+    NewRelic.recordMetric(s"External/all", external)
+    NewRelic.recordMetric(s"External/allWeb", external)*/
 
   }
 }

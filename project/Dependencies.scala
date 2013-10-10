@@ -7,7 +7,7 @@ object Dependencies {
     "spray nightlies repo"  at "http://nightlies.spray.io"
   )
 
-  val sprayVersion = "1.2-20130801"
+  val sprayVersion = "1.2-M8"
   val akkaVersion  = "2.2.0"
 
   val sprayCan        = "io.spray"                  %   "spray-can"             % sprayVersion
@@ -25,7 +25,7 @@ object Dependencies {
   val aspectJ         = "org.aspectj"               %   "aspectjrt"             % "1.7.2"
   val aspectJWeaver   = "org.aspectj"               %   "aspectjweaver"         % "1.7.2"
   val metrics         = "com.codahale.metrics"      %   "metrics-core"          % "3.0.0"
-  val newrelic        = "com.newrelic.agent.java"   %   "newrelic-api"          % "2.19.0"
+  val newrelic        = "com.newrelic.agent.java"   %   "newrelic-api"          % "3.0.1"
 
 
   def compile   (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "compile")

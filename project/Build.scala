@@ -24,7 +24,7 @@ object Build extends Build {
     .settings(
       libraryDependencies ++=
         compile(akkaActor, akkaAgent, aspectJ, aspectJWeaver, metrics, newrelic, sprayJson) ++
-        provided(sprayCan, sprayClient, sprayRouting, logback, akkaSlf4j) ++
+        compile(sprayCan, sprayClient, sprayRouting, logback, akkaSlf4j) ++
         test(scalatest, akkaTestKit, sprayTestkit, logback, akkaSlf4j))
     //.dependsOn(kamonDashboard)
 
