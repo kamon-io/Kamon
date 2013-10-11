@@ -26,7 +26,7 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
       path("test"){
         uow {
           complete {
-            val futures = pipeline(Get("http://10.254.10.57:8000/")).map(r => "Ok") :: pipeline(Get("http://10.254.10.57:8000/")).map(r => "Ok") :: Nil
+            val futures = pipeline(Get("http://10.254.209.14:8000/")).map(r => "Ok") :: pipeline(Get("http://10.254.209.14:8000/")).map(r => "Ok") :: Nil
 
             Future.sequence(futures).map(l => "Ok")
           }
