@@ -3,12 +3,12 @@ import Keys._
 import spray.revolver.RevolverPlugin.Revolver
 
 object Settings {
-  val VERSION = "0.0.5"
+  val VERSION = "0.0.6"
 
   lazy val basicSettings = seq(
     version       := VERSION,
     organization  := "kamon",
-    scalaVersion  := "2.10.2",
+    scalaVersion  := "2.10.3",
     resolvers    ++= Dependencies.resolutionRepos,
     fork in run   := true,
     scalacOptions := Seq(

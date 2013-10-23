@@ -62,7 +62,7 @@ class SprayServerInstrumentation {
     }
   }
 
-  @Pointcut("execution(spray.can.client.HttpHostConnector.RequestContext.new(..)) && this(ctx) && args(request, *, *)")
+  @Pointcut("execution(spray.can.client.HttpHostConnector.RequestContext.new(..)) && this(ctx) && args(request, *, *, *)")
   def requestRecordInit(ctx: TimedContextAware, request: HttpRequest): Unit = {}
 
   @After("requestRecordInit(ctx, request)")

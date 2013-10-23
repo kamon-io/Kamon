@@ -7,8 +7,8 @@ object Dependencies {
     "spray nightlies repo"  at "http://nightlies.spray.io"
   )
 
-  val sprayVersion = "1.2-M8"
-  val akkaVersion  = "2.2.0"
+  val sprayVersion = "1.2-RC1"
+  val akkaVersion  = "2.2.3"
 
   val sprayCan        = "io.spray"                  %   "spray-can"             % sprayVersion
   val sprayRouting    = "io.spray"                  %   "spray-routing"         % sprayVersion
