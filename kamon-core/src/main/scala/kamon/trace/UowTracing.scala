@@ -3,13 +3,6 @@ package kamon.trace
 import akka.actor._
 import scala.concurrent.duration.Duration
 import kamon.trace.UowTracing._
-import scala.Some
-import kamon.trace.UowTracing.WebExternalFinish
-import kamon.trace.UowTracing.Finish
-import kamon.trace.UowTracing.Rename
-import kamon.trace.UowTrace
-import kamon.trace.UowTracing.WebExternalStart
-import scala.Some
 
 sealed trait UowSegment {
   def timestamp: Long
@@ -54,6 +47,7 @@ class UowTraceAggregator(reporting: ActorRef, aggregationTimeout: Duration) exte
 
   def finishTracing(): Unit = {
     reporting ! UowTrace(name.getOrElse("UNKNOWN"), segments)
+    println("Recorded Segments: " + segments)
     context.stop(self)
   }
 }
