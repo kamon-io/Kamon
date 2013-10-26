@@ -8,6 +8,7 @@ import kamon.{TraceContext, Tracer}
 import akka.pattern.{pipe, ask}
 import akka.util.Timeout
 import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 import akka.routing.RoundRobinRouter
 
 
@@ -35,11 +36,30 @@ class ActorInstrumentationSpec extends TestKit(ActorSystem("ActorInstrumentation
         expectMsg(Some(testTraceContext))
       }
 
-      "propagate the trace context to actors behind a rounter" in new RoutedTraceContextEchoFixture {
+      "propagate the trace context to actors behind a router" in new RoutedTraceContextEchoFixture {
         val contexts: Seq[Option[TraceContext]] = for(_ <- 1 to 10) yield Some(tellWithNewContext(echo, "test"))
 
         expectMsgAllOf(contexts: _*)
       }
+
+      /*"propagate with many asks" in {
+        val echo = system.actorOf(Props[TraceContextEcho])
+        val iterations = 50000
+        implicit val timeout = Timeout(10 seconds)
+
+        val futures = for(_ <- 1 to iterations) yield {
+          Tracer.start
+          val result = (echo ? "test")
+          Tracer.clear
+
+          result
+        }
+
+        val allResults = Await.result(Future.sequence(futures), 10 seconds)
+        assert(iterations == allResults.collect {
+          case Some(_) => 1
+        }.sum)
+      }*/
     }
   }
 

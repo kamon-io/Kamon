@@ -7,24 +7,26 @@
 
     <aspects>
 
-        <aspect name="kamon.instrumentation.ActorRefTellInstrumentation"/>
+        <aspect name="kamon.instrumentation.EnvelopeTracingContext"/>
         <aspect name="kamon.instrumentation.ActorCellInvokeInstrumentation"/>
-        <aspect name="kamon.instrumentation.UnregisteredActorRefInstrumentation"/>
         <aspect name="kamon.instrumentation.RunnableInstrumentation" />
-        <aspect name="kamon.instrumentation.MessageQueueInstrumentation" />
+        <aspect name="kamon.instrumentation.SprayRequestContextTracing"/>
+        <aspect name="kamon.instrumentation.SprayOpenRequestContextTracing"/>
+        <aspect name = "kamon.instrumentation.SprayServerInstrumentation"/>
+        <aspect name="kamon.instrumentation.ActorSystemInstrumentation"/>
+        <aspect name="kamon.instrumentation.ActorLoggingInstrumentation"/>
 
-        <aspect name="kamon.instrumentation.InceptionAspect"/>
-
+        <!--<aspect name="kamon.instrumentation.MessageQueueInstrumentation" />-->
+        <!--<aspect name="kamon.instrumentation.InceptionAspect"/>-->
         <!-- ExecutorService Instrumentation for Akka. -->
 <!--        <aspect name="kamon.instrumentation.ExecutorServiceFactoryProviderInstrumentation"/>
         <aspect name="kamon.instrumentation.NamedExecutorServiceFactoryDelegateInstrumentation"/>-->
-        <aspect name="kamon.instrumentation.ActorSystemInstrumentation"/>
         <!--<aspect name ="kamon.instrumentation.ForkJoinPoolInstrumentation"/>-->
-
 
 
         <include within="*"/>
         <exclude within="javax..*"/>
+        <exclude within="com.newrelic..*"/>
         <exclude within="org.aspectj..*"/>
         <exclude within="scala..*"/>
         <exclude within="scalaz..*"/>
