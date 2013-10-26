@@ -54,7 +54,7 @@ common: &default_settings
   # Log all data to and from New Relic in plain text.
   # This setting is dynamic, so changes do not require restarting your application.
   # Default is false.
-  #audit_mode: true
+  audit_mode: true
 
   # The number of log files to use.
   # Default is 1.

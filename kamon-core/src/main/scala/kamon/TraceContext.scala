@@ -2,22 +2,26 @@ package kamon
 
 import java.util.UUID
 import akka.actor._
-import akka.agent.Agent
-import java.util.concurrent.TimeUnit
-import scala.util.{Failure, Success}
-import akka.util.Timeout
+import java.util.concurrent.atomic.AtomicLong
+import kamon.trace.UowTraceAggregator
+import scala.concurrent.duration._
+import kamon.newrelic.NewRelicReporting
+import kamon.trace.UowTracing.Start
 
-
-case class TraceContext(id: UUID, entries: ActorRef, userContext: Option[Any] = None) {
-  implicit val timeout = Timeout(30, TimeUnit.SECONDS)
-  implicit val as = Kamon.actorSystem.dispatcher
-
-  def append(entry: TraceEntry) = entries ! entry
-  def close = entries ! "Close" // TODO type this thing!.
-}
+// TODO: Decide if we need or not an ID, generating it takes time and it doesn't seem necessary.
+case class TraceContext(id: Long, tracer: ActorRef, uow: String = "", userContext: Option[Any] = None)
 
 object TraceContext {
-  def apply()(implicit system: ActorSystem) = new TraceContext(UUID.randomUUID(), system.actorOf(Props[TraceAccumulator])) // TODO: Move to a kamon specific supervisor, like /user/kamon/tracer
+  val reporter = Kamon.actorSystem.actorOf(Props[NewRelicReporting])
+  val traceIdCounter = new AtomicLong
+
+  def apply()(implicit system: ActorSystem) =  {
+    val n = traceIdCounter.incrementAndGet()
+    val actor = system.actorOf(UowTraceAggregator.props(reporter, 30 seconds), s"tracer-${n}")
+    actor ! Start()
+
+    new TraceContext(n, actor) // TODO: Move to a kamon specific supervisor, like /user/kamon/tracer
+  }
 }
 
 
@@ -30,20 +34,10 @@ class TraceAccumulator extends Actor {
 
 
 trait TraceEntry
-
 case class CodeBlockExecutionTime(name: String, begin: Long, end: Long) extends TraceEntry
-
-
-
 case class TransactionTrace(id: UUID, start: Long, end: Long, entries: Seq[TraceEntry])
 
-
-
-
-
-object Collector {
-
-}
+object Collector
 
 trait TraceEntryStorage {
   def store(entry: TraceEntry): Boolean

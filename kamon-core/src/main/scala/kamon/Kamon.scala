@@ -5,6 +5,13 @@ import kamon.metric.{HistogramSnapshot, ActorSystemMetrics}
 import scala.concurrent.duration.FiniteDuration
 import com.newrelic.api.agent.NewRelic
 import scala.collection.concurrent.TrieMap
+import kamon.instrumentation.{SimpleContextPassingInstrumentation, ActorInstrumentationConfiguration}
+import scala.util.DynamicVariable
+
+
+object Instrument {
+  val instrumentation: ActorInstrumentationConfiguration = new SimpleContextPassingInstrumentation
+}
 
 object Kamon {
   implicit lazy val actorSystem = ActorSystem("kamon")
@@ -19,27 +26,20 @@ object Kamon {
     def actorSystem(name: String): Option[ActorSystemMetrics] = actorSystems.get(name)
   }
 
-  val metricManager = actorSystem.actorOf(Props[MetricManager], "metric-manager")
-  val newrelicReporter = actorSystem.actorOf(Props[NewrelicReporterActor], "newrelic-reporter")
+  //val metricManager = actorSystem.actorOf(Props[MetricManager], "metric-manager")
+  //val newrelicReporter = actorSystem.actorOf(Props[NewrelicReporterActor], "newrelic-reporter")
 
 }
 
 
 object Tracer {
-  val ctx = new ThreadLocal[Option[TraceContext]] {
-    override def initialValue() = None
-  }
+  val traceContext = new DynamicVariable[Option[TraceContext]](None)
 
-  def context() = ctx.get()
-  def clear = ctx.remove()
-  def set(traceContext: TraceContext) = ctx.set(Some(traceContext))
+
+  def context() = traceContext.value
+  def set(ctx: TraceContext) = traceContext.value = Some(ctx)
 
   def start = set(newTraceContext)
-  def stop = ctx.get match {
-    case Some(context) => context.close
-    case None =>
-  }
-
   def newTraceContext(): TraceContext = TraceContext()(Kamon.actorSystem)
 }
 
@@ -79,7 +79,7 @@ case class DispatcherMetrics(actorSystem: String, dispatcher: String, activeThre
 class NewrelicReporterActor extends Actor {
   import scala.concurrent.duration._
 
-  Kamon.metricManager ! RegisterForAllDispatchers(5 seconds)
+  //Kamon.metricManager ! RegisterForAllDispatchers(5 seconds)
 
   def receive = {
     case DispatcherMetrics(actorSystem, dispatcher, activeThreads, poolSize, queueSize) => {
