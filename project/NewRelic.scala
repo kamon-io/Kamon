@@ -1,3 +1,4 @@
+import sbt._
 import sbt.Keys._
 import com.ivantopo.sbt.newrelic.SbtNewrelic
 import com.ivantopo.sbt.newrelic.SbtNewrelic.newrelic
@@ -8,6 +9,8 @@ object NewRelic {
 
   lazy val newrelicSettings =  SbtNewrelic.newrelicSettings ++ Seq(
              javaOptions in run   <++=  jvmOptions in newrelic,
-    newrelicVersion in newrelic     :=  "3.0.1"
+                    fork in run     :=  true,
+         configFile in newrelic     := file("~/.newrelic/kamon_playground.yml"),
+    newrelicVersion in newrelic     :=  "3.1.0"
   )
 }

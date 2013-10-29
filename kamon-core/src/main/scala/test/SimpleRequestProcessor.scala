@@ -16,6 +16,10 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
   implicit val system = ActorSystem("test")
   import system.dispatcher
 
+  val act = system.actorOf(Props(new Actor {
+    def receive: Actor.Receive = { case any => sender ! any }
+  }), "com.despegar-2:[]s-w@&,*")
+
   implicit val timeout = Timeout(30 seconds)
 
   val pipeline = sendReceive
