@@ -1,12 +1,11 @@
 package kamon
 
-import akka.actor.{Actor, Props, ActorSystem}
+import akka.actor._
 import kamon.metric.{HistogramSnapshot, ActorSystemMetrics}
 import scala.concurrent.duration.FiniteDuration
-import com.newrelic.api.agent.NewRelic
 import scala.collection.concurrent.TrieMap
 import kamon.instrumentation.{SimpleContextPassingInstrumentation, ActorInstrumentationConfiguration}
-import scala.util.DynamicVariable
+import kamon.metric.ActorSystemMetrics
 
 
 object Instrument {
@@ -14,6 +13,19 @@ object Instrument {
 }
 
 object Kamon {
+  trait Extension extends akka.actor.Extension {
+    def manager: ActorRef
+  }
+
+  def apply[T <: Extension](key: ExtensionId[T])(implicit system: ActorSystem): ActorRef = key(system).manager
+
+
+
+
+
+
+
+
   implicit lazy val actorSystem = ActorSystem("kamon")
 
   object Metric {
@@ -29,18 +41,6 @@ object Kamon {
   //val metricManager = actorSystem.actorOf(Props[MetricManager], "metric-manager")
   //val newrelicReporter = actorSystem.actorOf(Props[NewrelicReporterActor], "newrelic-reporter")
 
-}
-
-
-object Tracer {
-  val traceContext = new DynamicVariable[Option[TraceContext]](None)
-
-
-  def context() = traceContext.value
-  def set(ctx: TraceContext) = traceContext.value = Some(ctx)
-
-  def start = set(newTraceContext)
-  def newTraceContext(): TraceContext = TraceContext()(Kamon.actorSystem)
 }
 
 
@@ -70,29 +70,3 @@ class MetricManager extends Actor {
 
 case class RegisterForAllDispatchers(frequency: FiniteDuration)
 case class DispatcherMetrics(actorSystem: String, dispatcher: String, activeThreads: HistogramSnapshot, poolSize: HistogramSnapshot, queueSize: HistogramSnapshot)
-
-
-
-
-
-
-class NewrelicReporterActor extends Actor {
-  import scala.concurrent.duration._
-
-  //Kamon.metricManager ! RegisterForAllDispatchers(5 seconds)
-
-  def receive = {
-    case DispatcherMetrics(actorSystem, dispatcher, activeThreads, poolSize, queueSize) => {
-      /*println("PUBLISHED DISPATCHER STATS")
-      println(s"Custom/$actorSystem/Dispatcher/$dispatcher/Threads/active =>" + activeThreads.median.toFloat)
-      println(s"Custom/$actorSystem/Dispatcher/$dispatcher/Threads/inactive =>" + (poolSize.median.toFloat-activeThreads.median.toFloat))
-      println(s"Custom/$actorSystem/Dispatcher/$dispatcher/Queue =>" + queueSize.median.toFloat)*/
-
-
-      NewRelic.recordMetric(s"Custom/$actorSystem/Dispatcher/$dispatcher/Threads/active", activeThreads.median.toFloat)
-      NewRelic.recordMetric(s"Custom/$actorSystem/Dispatcher/$dispatcher/Threads/inactive", (poolSize.median.toFloat-activeThreads.median.toFloat))
-
-      NewRelic.recordMetric(s"Custom/$actorSystem/Dispatcher/$dispatcher/Queue", queueSize.median.toFloat)
-    }
-  }
-}

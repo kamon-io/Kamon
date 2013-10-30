@@ -1,9 +1,10 @@
 package kamon.instrumentation
 
 import org.aspectj.lang.annotation.{Around, Pointcut, DeclareMixin, Aspect}
-import kamon.{Tracer, TraceContext}
+import kamon.{Tracer}
 import org.aspectj.lang.ProceedingJoinPoint
 import org.slf4j.MDC
+import kamon.trace.TraceContext
 
 @Aspect
 class ActorLoggingInstrumentation {

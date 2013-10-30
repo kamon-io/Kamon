@@ -3,11 +3,12 @@ package kamon.instrumentation
 import org.aspectj.lang.annotation._
 import org.aspectj.lang.ProceedingJoinPoint
 import akka.actor.{Props, ActorSystem, ActorRef}
-import kamon.{Tracer, TraceContext}
+import kamon.{Tracer}
 import akka.dispatch.{Envelope, MessageDispatcher}
 import com.codahale.metrics.Timer
 import scala.Some
 import kamon.trace.context.TracingAwareContext
+import kamon.trace.TraceContext
 
 case class TraceableMessage(traceContext: Option[TraceContext], message: Any, timer: Timer.Context)
 case class DefaultTracingAwareEnvelopeContext(traceContext: Option[TraceContext] = Tracer.traceContext.value, timestamp: Long = System.nanoTime) extends TracingAwareContext

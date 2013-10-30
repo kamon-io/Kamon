@@ -4,12 +4,13 @@ import org.scalatest.{WordSpecLike, Matchers}
 import akka.actor.{ActorRef, Actor, Props, ActorSystem}
 
 import akka.testkit.{ImplicitSender, TestKit}
-import kamon.{TraceContext, Tracer}
+import kamon.{Tracer}
 import akka.pattern.{pipe, ask}
 import akka.util.Timeout
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import akka.routing.RoundRobinRouter
+import kamon.trace.TraceContext
 
 
 class ActorInstrumentationSpec extends TestKit(ActorSystem("ActorInstrumentationSpec")) with WordSpecLike with Matchers with ImplicitSender {
