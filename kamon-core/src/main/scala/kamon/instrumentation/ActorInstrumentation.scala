@@ -2,8 +2,9 @@ package kamon.instrumentation
 
 import akka.actor.{Props, ActorSystem, ActorRef}
 import akka.dispatch.{MessageDispatcher, Envelope}
-import kamon.{Tracer, TraceContext}
+import kamon.{Tracer}
 import kamon.instrumentation.SimpleContextPassingInstrumentation.SimpleTraceMessage
+import kamon.trace.TraceContext
 
 trait ActorInstrumentationConfiguration {
   def sendMessageTransformation(from: ActorRef, to: ActorRef, message: Any): Any

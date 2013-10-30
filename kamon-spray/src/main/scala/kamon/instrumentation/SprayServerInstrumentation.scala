@@ -1,13 +1,8 @@
 package kamon.instrumentation
 
 import org.aspectj.lang.annotation._
-import kamon.{TraceContext, Tracer}
-import kamon.trace.UowTracing._
-import kamon.trace.context.TracingAwareContext
 import org.aspectj.lang.ProceedingJoinPoint
 import spray.http.HttpRequest
-import kamon.trace.UowTracing.Finish
-import kamon.trace.UowTracing.Rename
 import spray.http.HttpHeaders.Host
 
 //import spray.can.client.HttpHostConnector.RequestContext

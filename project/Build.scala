@@ -38,6 +38,7 @@ object Build extends Build {
     libraryDependencies ++=
       compile(akkaActor, aspectJ, newrelic) ++
       test(scalatest, akkaTestKit, sprayTestkit))
+    .dependsOn(kamonCore)
 
 
   lazy val kamonSpray = Project("kamon-spray", file("kamon-spray"))

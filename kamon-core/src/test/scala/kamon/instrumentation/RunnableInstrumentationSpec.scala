@@ -3,12 +3,13 @@ package kamon.instrumentation
 import scala.concurrent.{Await, Promise, Future}
 import org.scalatest.{Matchers, OptionValues, WordSpec}
 import org.scalatest.concurrent.{ScalaFutures, PatienceConfiguration}
-import kamon.{Tracer, Kamon, TraceContext}
+import kamon.{Tracer, Kamon}
 import java.util.UUID
 import scala.util.Success
 import scala.concurrent.duration._
 import java.util.concurrent.TimeUnit
 import akka.actor.ActorSystem
+import kamon.trace.TraceContext
 
 
 class RunnableInstrumentationSpec extends WordSpec with Matchers with ScalaFutures with PatienceConfiguration with OptionValues {

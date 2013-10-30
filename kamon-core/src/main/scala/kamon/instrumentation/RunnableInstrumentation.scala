@@ -1,9 +1,10 @@
 package kamon.instrumentation
 
 import org.aspectj.lang.annotation._
-import kamon.{Tracer, TraceContext}
+import kamon.{Tracer}
 import org.aspectj.lang.ProceedingJoinPoint
 import scala.Some
+import kamon.trace.TraceContext
 
 /**
  *  Marker interface, just to make sure we don't instrument all the Runnables in the classpath.

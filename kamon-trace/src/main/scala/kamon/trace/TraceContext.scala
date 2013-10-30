@@ -1,12 +1,9 @@
-package kamon
+package kamon.trace
 
 import java.util.UUID
 import akka.actor._
 import java.util.concurrent.atomic.AtomicLong
-import kamon.trace.UowTraceAggregator
 import scala.concurrent.duration._
-import kamon.newrelic.NewRelicReporting
-import kamon.trace.UowTracing.Start
 
 // TODO: Decide if we need or not an ID, generating it takes time and it doesn't seem necessary.
 case class TraceContext(id: Long, tracer: ActorRef, uow: String = "", userContext: Option[Any] = None)
