@@ -6,15 +6,17 @@ import akka.actor.{ActorRef, ExtendedActorSystem, ExtensionIdProvider, Extension
 import kamon.Kamon.Extension
 import akka.actor
 
-class MetricsExtension(system: ExtendedActorSystem) extends Kamon.Extension {
-  def manager: ActorRef = ???
-}
-
 object Metrics extends ExtensionId[MetricsExtension] with ExtensionIdProvider {
   def lookup(): ExtensionId[_ <: actor.Extension] = Metrics
   def createExtension(system: ExtendedActorSystem): Extension = new MetricsExtension(system)
 
-  val registry = new MetricRegistry
-
-
 }
+
+
+class MetricsExtension(system: ExtendedActorSystem) extends Kamon.Extension {
+  def manager: ActorRef = ???
+}
+
+
+
+

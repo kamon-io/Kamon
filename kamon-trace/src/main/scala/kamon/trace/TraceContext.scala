@@ -9,8 +9,6 @@ import scala.concurrent.duration._
 case class TraceContext(id: Long, tracer: ActorRef, uow: String = "", userContext: Option[Any] = None)
 
 object TraceContext {
-  val reporter = Kamon.actorSystem.actorOf(Props[NewRelicReporting])
-  val traceIdCounter = new AtomicLong
 
   def apply()(implicit system: ActorSystem) =  {
     val n = traceIdCounter.incrementAndGet()

@@ -9,7 +9,7 @@
 
         <aspect name="kamon.instrumentation.EnvelopeTracingContext"/>
         <aspect name="kamon.instrumentation.ActorCellInvokeInstrumentation"/>
-        <aspect name="kamon.instrumentation.RunnableInstrumentation" />
+        <aspect name="kamon.trace.instrumentation.RunnableTracing" />
         <aspect name="kamon.instrumentation.SprayRequestContextTracing"/>
         <aspect name="kamon.instrumentation.SprayOpenRequestContextTracing"/>
         <aspect name = "kamon.instrumentation.SprayServerInstrumentation"/>

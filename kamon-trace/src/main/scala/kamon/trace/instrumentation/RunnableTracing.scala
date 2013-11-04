@@ -1,21 +1,11 @@
-package kamon.instrumentation
+package kamon.trace.instrumentation
 
 import org.aspectj.lang.annotation._
-import kamon.{Tracer}
 import org.aspectj.lang.ProceedingJoinPoint
-import scala.Some
 import kamon.trace.TraceContext
 
-/**
- *  Marker interface, just to make sure we don't instrument all the Runnables in the classpath.
- */
-trait TraceContextAwareRunnable {
-  def traceContext: Option[TraceContext]
-}
-
-
 @Aspect
-class RunnableInstrumentation {
+class RunnableTracing {
 
   /**
    *  These are the Runnables that need to be instrumented and make the TraceContext available
@@ -57,3 +47,9 @@ class RunnableInstrumentation {
 
 }
 
+/**
+ *  Marker interface, just to make sure we don't instrument all the Runnables in the classpath.
+ */
+trait TraceContextAwareRunnable {
+  def traceContext: Option[TraceContext]
+}

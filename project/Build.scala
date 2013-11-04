@@ -30,6 +30,7 @@ object Build extends Build {
       libraryDependencies ++=
         compile(akkaActor, aspectJ) ++
         test(scalatest, akkaTestKit, sprayTestkit))
+    .dependsOn(kamonCore)
 
   lazy val kamonMetrics = Project("kamon-metrics", file("kamon-metrics"))
     .settings(basicSettings: _*)
@@ -48,6 +49,7 @@ object Build extends Build {
       libraryDependencies ++=
         compile(akkaActor, aspectJ, sprayCan, sprayClient, sprayRouting) ++
         test(scalatest, akkaTestKit, sprayTestkit))
+    .dependsOn(kamonTrace)
 
 
   lazy val kamonNewrelic = Project("kamon-newrelic", file("kamon-newrelic"))
@@ -57,6 +59,7 @@ object Build extends Build {
       libraryDependencies ++=
         compile(aspectJ, sprayCan, sprayClient, sprayRouting, newrelic) ++
         test(scalatest, akkaTestKit, sprayTestkit))
+    .dependsOn(kamonTrace)
 
   lazy val kamonPlayground = Project("kamon-playground", file("kamon-playground"))
     .settings(basicSettings: _*)
