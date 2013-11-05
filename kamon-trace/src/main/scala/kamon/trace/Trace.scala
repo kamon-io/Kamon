@@ -6,6 +6,7 @@ import akka.actor._
 import scala.Some
 import kamon.trace.Trace.Register
 import scala.concurrent.duration._
+import java.util.concurrent.atomic.AtomicLong
 
 object Trace extends ExtensionId[TraceExtension] with ExtensionIdProvider {
   def lookup(): ExtensionId[_ <: Extension] = Trace
@@ -14,10 +15,31 @@ object Trace extends ExtensionId[TraceExtension] with ExtensionIdProvider {
 
   /*** Protocol */
   case object Register
+
+
+
+  /** User API */
+  private[trace] val traceContext = new DynamicVariable[Option[TraceContext]](None)
+  private[trace] val tranid = new AtomicLong()
+
+
+  def context() = traceContext.value
+  def set(ctx: TraceContext) = traceContext.value = Some(ctx)
+
+  def start(name: String)(implicit system: ActorSystem) = set(newTraceContext)
+
+  def finish(): Option[TraceContext] = {
+    val ctx = context()
+    ctx.map(_.finish)
+    ctx
+  }
+
+  // TODO: FIX
+  def newTraceContext()(implicit system: ActorSystem): TraceContext = TraceContext(Kamon(Trace), tranid.getAndIncrement)
 }
 
 class TraceExtension(system: ExtendedActorSystem) extends Kamon.Extension {
-  def manager: ActorRef = ???
+  def manager: ActorRef = system.actorOf(Props[TraceManager])
 }
 
 class TraceManager extends Actor {
@@ -34,16 +56,4 @@ class TraceManager extends Actor {
     case trace: UowTrace =>
       listeners foreach(_ ! trace)
   }
-}
-
-
-object Tracer {
-  val traceContext = new DynamicVariable[Option[TraceContext]](None)
-
-
-  def context() = traceContext.value
-  def set(ctx: TraceContext) = traceContext.value = Some(ctx)
-
-  def start = set(newTraceContext)
-  def newTraceContext(): TraceContext = TraceContext()(Kamon.actorSystem)
 }

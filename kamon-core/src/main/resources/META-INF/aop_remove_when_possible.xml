@@ -7,14 +7,14 @@
 
     <aspects>
 
-        <aspect name="kamon.instrumentation.EnvelopeTracingContext"/>
-        <aspect name="kamon.instrumentation.ActorCellInvokeInstrumentation"/>
+        <aspect name="kamon.trace.instrumentation.EnvelopeTracingContext"/>
+        <aspect name="kamon.trace.instrumentation.ActorCellInvokeInstrumentation"/>
         <aspect name="kamon.trace.instrumentation.RunnableTracing" />
         <aspect name="kamon.instrumentation.SprayRequestContextTracing"/>
         <aspect name="kamon.instrumentation.SprayOpenRequestContextTracing"/>
         <aspect name = "kamon.instrumentation.SprayServerInstrumentation"/>
         <aspect name="kamon.instrumentation.ActorSystemInstrumentation"/>
-        <aspect name="kamon.instrumentation.ActorLoggingInstrumentation"/>
+        <aspect name="kamon.trace.instrumentation.ActorLoggingInstrumentation"/>
 
         <!--<aspect name="kamon.instrumentation.MessageQueueInstrumentation" />-->
         <!--<aspect name="kamon.instrumentation.InceptionAspect"/>-->

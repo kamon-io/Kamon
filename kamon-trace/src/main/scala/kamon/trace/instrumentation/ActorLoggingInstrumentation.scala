@@ -1,10 +1,9 @@
-package kamon.instrumentation
+package kamon.trace.instrumentation
 
 import org.aspectj.lang.annotation.{Around, Pointcut, DeclareMixin, Aspect}
-import kamon.{Tracer}
 import org.aspectj.lang.ProceedingJoinPoint
 import org.slf4j.MDC
-import kamon.trace.TraceContext
+import kamon.trace.{TraceContext, ContextAware, Trace}
 
 @Aspect
 class ActorLoggingInstrumentation {
@@ -12,7 +11,7 @@ class ActorLoggingInstrumentation {
 
   @DeclareMixin("akka.event.Logging.LogEvent+")
   def traceContextMixin: ContextAware = new ContextAware {
-    def traceContext: Option[TraceContext] = Tracer.context()
+    def traceContext: Option[TraceContext] = Trace.context()
   }
 
   @Pointcut("execution(* akka.event.slf4j.Slf4jLogger.withMdc(..)) && args(logSource, logEvent, logStatement)")

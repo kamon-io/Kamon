@@ -8,8 +8,8 @@ object AspectJ {
 
   lazy val aspectJSettings = aspectjSettings ++ Seq(
       compileOnly in Aspectj    :=  true,
-         fork in (Test, run)    :=  true,
-  javaOptions in (Test, run)  <++=  weaverOptions in Aspectj,
+                fork in Test    :=  true,
+         javaOptions in Test  <++=  weaverOptions in Aspectj,
    lintProperties in Aspectj    +=  "invalidAbsoluteTypeName = ignore"
   )
 }

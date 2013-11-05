@@ -10,7 +10,7 @@ class MailboxSizeMetricsSpec extends TestKit(ActorSystem("mailbox-size-metrics-s
     "register a counter for mailbox size upon actor creation" in {
       val target = system.actorOf(Props.empty, "sample")
 
-      Metrics.registry.getHistograms.get("akka://mailbox-size-metrics-spec/sample:MAILBOX")
+      //Metrics.registry.getHistograms.get("akka://mailbox-size-metrics-spec/sample:MAILBOX")
     }
   }
 }

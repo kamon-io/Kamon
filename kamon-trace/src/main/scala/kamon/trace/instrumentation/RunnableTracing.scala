@@ -2,7 +2,7 @@ package kamon.trace.instrumentation
 
 import org.aspectj.lang.annotation._
 import org.aspectj.lang.ProceedingJoinPoint
-import kamon.trace.TraceContext
+import kamon.trace.{TraceContext, Trace}
 
 @Aspect
 class RunnableTracing {
@@ -13,7 +13,7 @@ class RunnableTracing {
    */
   @DeclareMixin("scala.concurrent.impl.CallbackRunnable || scala.concurrent.impl.Future.PromiseCompletingRunnable")
   def onCompleteCallbacksRunnable: TraceContextAwareRunnable = new TraceContextAwareRunnable {
-    val traceContext: Option[TraceContext] = Tracer.traceContext.value
+    val traceContext: Option[TraceContext] = Trace.traceContext.value
   }
 
 
@@ -40,7 +40,7 @@ class RunnableTracing {
   def around(pjp: ProceedingJoinPoint, runnable: TraceContextAwareRunnable): Any = {
     import pjp._
 
-    Tracer.traceContext.withValue(runnable.traceContext) {
+    Trace.traceContext.withValue(runnable.traceContext) {
       proceed()
     }
   }

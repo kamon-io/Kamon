@@ -21,7 +21,7 @@ class ActorSystemInstrumentation {
   @After("actorSystemInstantiation(name, applicationConfig, classLoader)")
   def registerActorSystem(name: String, applicationConfig: Config, classLoader: ClassLoader): Unit = {
 
-    Kamon.Metric.registerActorSystem(name)
+    //Kamon.Metric.registerActorSystem(name)
   }
 }
 
@@ -35,7 +35,7 @@ class ForkJoinPoolInstrumentation {
 
   @After("forkJoinPoolInstantiation(parallelism, threadFactory, exceptionHandler)")
   def initializeMetrics(parallelism: Int, threadFactory: ForkJoinPool.ForkJoinWorkerThreadFactory, exceptionHandler: Thread.UncaughtExceptionHandler): Unit = {
-    val (actorSystemName, dispatcherName) = threadFactory match {
+    /*val (actorSystemName, dispatcherName) = threadFactory match {
       case mtf: MonitorableThreadFactory => splitName(mtf.name, Kamon.Metric.actorSystemNames)
       case _ => ("Unknown", "Unknown")
     }
@@ -45,7 +45,7 @@ class ForkJoinPoolInstrumentation {
       activeThreadsHistogram = m.activeThreadCount
       poolSizeHistogram = m.poolSize
       println(s"Registered $dispatcherName for actor system $actorSystemName")
-    }
+    }*/
   }
 
   def splitName(threadFactoryName: String, knownActorSystems: List[String]): (String, String) = {

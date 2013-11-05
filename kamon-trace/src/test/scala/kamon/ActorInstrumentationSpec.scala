@@ -1,10 +1,10 @@
-package akka.instrumentation
+package kamon
 
 import org.scalatest.{WordSpecLike, Matchers}
 import akka.actor.{ActorRef, Actor, Props, ActorSystem}
 
 import akka.testkit.{ImplicitSender, TestKit}
-import kamon.{Tracer}
+import kamon.trace.Trace
 import akka.pattern.{pipe, ask}
 import akka.util.Timeout
 import scala.concurrent.duration._
@@ -65,18 +65,18 @@ class ActorInstrumentationSpec extends TestKit(ActorSystem("ActorInstrumentation
   }
 
   trait TraceContextEchoFixture {
-    val testTraceContext = Tracer.newTraceContext()
+    val testTraceContext = Trace.newTraceContext()
     val echo = system.actorOf(Props[TraceContextEcho])
 
-    Tracer.set(testTraceContext)
+    Trace.set(testTraceContext)
   }
 
   trait RoutedTraceContextEchoFixture extends TraceContextEchoFixture {
     override val echo = system.actorOf(Props[TraceContextEcho].withRouter(RoundRobinRouter(nrOfInstances = 10)))
 
     def tellWithNewContext(target: ActorRef, message: Any): TraceContext = {
-      val context = Tracer.newTraceContext()
-      Tracer.set(context)
+      val context = Trace.newTraceContext()
+      Trace.set(context)
 
       target ! message
       context
@@ -87,7 +87,7 @@ class ActorInstrumentationSpec extends TestKit(ActorSystem("ActorInstrumentation
 
 class TraceContextEcho extends Actor {
   def receive = {
-    case msg: String ⇒ sender ! Tracer.context()
+    case msg: String ⇒ sender ! Trace.context()
   }
 }
 

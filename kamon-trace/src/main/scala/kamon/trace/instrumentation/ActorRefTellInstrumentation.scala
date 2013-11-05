@@ -1,17 +1,14 @@
-package kamon.instrumentation
+package kamon.trace.instrumentation
 
 import org.aspectj.lang.annotation._
 import org.aspectj.lang.ProceedingJoinPoint
 import akka.actor.{Props, ActorSystem, ActorRef}
-import kamon.{Tracer}
 import akka.dispatch.{Envelope, MessageDispatcher}
 import com.codahale.metrics.Timer
-import scala.Some
-import kamon.trace.context.TracingAwareContext
-import kamon.trace.TraceContext
+import kamon.trace.{ContextAware, TraceContext, Trace}
 
 case class TraceableMessage(traceContext: Option[TraceContext], message: Any, timer: Timer.Context)
-case class DefaultTracingAwareEnvelopeContext(traceContext: Option[TraceContext] = Tracer.traceContext.value, timestamp: Long = System.nanoTime) extends TracingAwareContext
+case class DefaultTracingAwareEnvelopeContext(traceContext: Option[TraceContext] = Trace.traceContext.value, timestamp: Long = System.nanoTime) extends ContextAware
 
 @Aspect
 class ActorCellInvokeInstrumentation {
@@ -25,9 +22,9 @@ class ActorCellInvokeInstrumentation {
   @Around("invokingActorBehaviourAtActorCell(envelope)")
   def around(pjp: ProceedingJoinPoint, envelope: Envelope): Unit = {
     //safe cast
-    val msgContext = envelope.asInstanceOf[TracingAwareContext].traceContext
+    val msgContext = envelope.asInstanceOf[ContextAware].traceContext
 
-    Tracer.traceContext.withValue(msgContext) {
+    Trace.traceContext.withValue(msgContext) {
       pjp.proceed()
     }
   }
@@ -37,13 +34,15 @@ class ActorCellInvokeInstrumentation {
 class EnvelopeTracingContext {
 
   @DeclareMixin("akka.dispatch.Envelope")
-  def mixin: TracingAwareContext = DefaultTracingAwareEnvelopeContext()
+  def mixin: ContextAware =  new ContextAware {
+    val traceContext: Option[TraceContext] = Trace.context()
+  }
 
-  @Pointcut("execution(akka.dispatch.Envelope.new(..)) && this(ctx)")
-  def requestRecordInit(ctx: TracingAwareContext): Unit = {}
+  @Pointcut("execution(akka.dispatch.ContextAware.new(..)) && this(ctx)")
+  def requestRecordInit(ctx: ContextAware): Unit = {}
 
   @After("requestRecordInit(ctx)")
-  def whenCreatedRequestRecord(ctx: TracingAwareContext): Unit = {
+  def whenCreatedRequestRecord(ctx: ContextAware): Unit = {
     // Necessary to force the initialization of TracingAwareRequestContext at the moment of creation.
     ctx.traceContext
   }

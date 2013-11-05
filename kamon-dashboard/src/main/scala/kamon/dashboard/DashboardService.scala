@@ -26,7 +26,7 @@ trait DashboardService extends HttpService with StaticResources with DashboardPa
 
   val DashboardRoute =
     logRequest(showPath _) {
-      staticResources ~ dashboardPages ~ dashboardMetricsApi
+      staticResources ~ dashboardPages //~ dashboardMetricsApi
     }
 }
 
@@ -47,8 +47,7 @@ trait DashboardPages extends HttpService {
 
 trait DashboardMetricsApi extends HttpService with SprayJsonSupport{
 
-  import Kamon.Metric._
-  import scala.collection.JavaConverters._
+  /*import scala.collection.JavaConverters._
   import kamon.metric.Metrics._
   import kamon.dashboard.protocol.DashboardProtocols._
 
@@ -86,5 +85,5 @@ trait DashboardMetricsApi extends HttpService with SprayJsonSupport{
             complete (ActorTree("/", ActorTree("Pang", ActorTree("Pang-children") :: Nil) :: ActorTree("Ping") :: ActorTree("Pong", ActorTree("Pong-children") :: Nil):: Nil))
           }
         }
-      }
+      }*/
 }

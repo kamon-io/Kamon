@@ -8,7 +8,7 @@ import akka.actor
 
 object Metrics extends ExtensionId[MetricsExtension] with ExtensionIdProvider {
   def lookup(): ExtensionId[_ <: actor.Extension] = Metrics
-  def createExtension(system: ExtendedActorSystem): Extension = new MetricsExtension(system)
+  def createExtension(system: ExtendedActorSystem): MetricsExtension = new MetricsExtension(system)
 
 }
 

@@ -69,7 +69,7 @@ object Build extends Build {
     .settings(
       libraryDependencies ++=
         compile(akkaActor, akkaSlf4j, sprayCan, sprayClient, sprayRouting, logback))
-    .dependsOn(kamonCore)
+    .dependsOn(kamonSpray, kamonNewrelic)
 
 
 
