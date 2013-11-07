@@ -57,7 +57,7 @@ object Build extends Build {
     .settings(aspectJSettings: _*)
     .settings(
       libraryDependencies ++=
-        compile(aspectJ, sprayCan, sprayClient, sprayRouting, newrelic) ++
+        compile(aspectJ, sprayCan, sprayClient, sprayRouting, sprayJson, sprayJsonLenses, newrelic) ++
         test(scalatest, akkaTestKit, sprayTestkit))
     .dependsOn(kamonTrace)
 

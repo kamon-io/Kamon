@@ -42,8 +42,9 @@ class ServerRequestTracing {
           publishWarning(s"Different ids when trying to close a Trace, original: [$original] - incoming: [$incoming]")
 
         case Some(_) => // nothing to do here.
-          
+
         case None =>
+          original.finish
           publishWarning(s"Trace context not present while closing the Trace: [$original]")
       }
     }

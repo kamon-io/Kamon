@@ -11,6 +11,7 @@ object Dependencies {
   val akkaVersion  = "2.2.3"
 
   val sprayJson       = "io.spray"                  %%  "spray-json"            % "1.2.5"
+  val sprayJsonLenses = "net.virtual-void"          %%  "json-lenses"           % "0.5.3"
   val scalatest       = "org.scalatest"             %   "scalatest_2.10"        % "2.0.RC2"
   val logback         = "ch.qos.logback"            %   "logback-classic"       % "1.0.13"
   val aspectJ         = "org.aspectj"               %   "aspectjrt"             % "1.7.2"
@@ -23,6 +24,7 @@ object Dependencies {
   val sprayRouting    = "io.spray"                  %   "spray-routing"         % sprayVersion
   val sprayTestkit    = "io.spray"                  %   "spray-testkit"         % sprayVersion
   val sprayClient     = "io.spray"                  %   "spray-client"          % sprayVersion
+
 
 
   def compile   (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "compile")

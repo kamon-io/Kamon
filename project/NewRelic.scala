@@ -10,7 +10,7 @@ object NewRelic {
   lazy val newrelicSettings =  SbtNewrelic.newrelicSettings ++ Seq(
              javaOptions in run   <++=  jvmOptions in newrelic,
                     fork in run     :=  true,
-         configFile in newrelic     := file("~/.newrelic/kamon_playground.yml"),
+         configFile in newrelic     := file(System.getProperty("user.home") + "/.newrelic/kamon_playground.yml"),
     newrelicVersion in newrelic     :=  "3.1.0"
   )
 }

@@ -26,7 +26,12 @@ object Trace extends ExtensionId[TraceExtension] with ExtensionIdProvider {
   def context() = traceContext.value
   def set(ctx: TraceContext) = traceContext.value = Some(ctx)
 
-  def start(name: String)(implicit system: ActorSystem) = set(newTraceContext)
+  def clear: Unit = traceContext.value = None
+  def start(name: String)(implicit system: ActorSystem) = {
+    val ctx = newTraceContext()
+    ctx.start(name)
+    set(ctx)
+  }
 
   def finish(): Option[TraceContext] = {
     val ctx = context()
@@ -39,21 +44,27 @@ object Trace extends ExtensionId[TraceExtension] with ExtensionIdProvider {
 }
 
 class TraceExtension(system: ExtendedActorSystem) extends Kamon.Extension {
-  def manager: ActorRef = system.actorOf(Props[TraceManager])
+  val manager: ActorRef = system.actorOf(Props[TraceManager], "kamon-trace")
 }
 
-class TraceManager extends Actor {
+class TraceManager extends Actor with ActorLogging {
   var listeners: Seq[ActorRef] = Seq.empty
 
   def receive = {
-    case Register => listeners = sender +: listeners
+    case Register =>
+      listeners = sender +: listeners
+      log.info("Registered [{}] as listener for Kamon traces", sender)
+
     case segment: UowSegment =>
-      context.child(segment.id.toString) match {
-        case Some(agreggator) => agreggator ! segment
-        case None => context.actorOf(UowTraceAggregator.props(self, 30 seconds))
-      }
+      val tracerName = segment.id.toString
+      context.child(tracerName).getOrElse(newTracer(tracerName)) ! segment
 
     case trace: UowTrace =>
+      println("Delivering a trace to: " + listeners)
       listeners foreach(_ ! trace)
+  }
+
+  def newTracer(name: String): ActorRef = {
+    context.actorOf(UowTraceAggregator.props(self, 30 seconds), name)
   }
 }

@@ -7,6 +7,7 @@ import spray.httpx.RequestBuilding
 import scala.concurrent.{Await, Future}
 import kamon.spray.UowDirectives
 import kamon.trace.Trace
+import kamon.Kamon
 
 object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuilding with UowDirectives {
   import scala.concurrent.duration._
@@ -18,7 +19,7 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
 
   val act = system.actorOf(Props(new Actor {
     def receive: Actor.Receive = { case any => sender ! any }
-  }), "com.despegar-2:[]s-w@&,*")
+  }), "com")
 
   implicit val timeout = Timeout(30 seconds)
 

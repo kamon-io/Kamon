@@ -10,6 +10,7 @@ object AspectJ {
       compileOnly in Aspectj    :=  true,
                 fork in Test    :=  true,
          javaOptions in Test  <++=  weaverOptions in Aspectj,
+          javaOptions in run  <++=  weaverOptions in Aspectj,
    lintProperties in Aspectj    +=  "invalidAbsoluteTypeName = ignore"
   )
 }
