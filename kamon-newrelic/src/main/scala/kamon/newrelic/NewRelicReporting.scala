@@ -2,10 +2,8 @@ package kamon.newrelic
 
 import akka.actor.Actor
 import kamon.trace.UowTrace
-import com.newrelic.api.agent.{Response, Request, Trace, NewRelic}
-import kamon.trace.UowTracing.{WebExternal, WebExternalFinish, WebExternalStart}
-import java.util
-import java.util.Date
+import com.newrelic.api.agent.NewRelic
+import kamon.trace.UowTracing.WebExternal
 
 
 class NewRelicReporting extends Actor {
