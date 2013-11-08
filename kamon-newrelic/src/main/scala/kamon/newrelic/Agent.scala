@@ -1,6 +1,6 @@
 package kamon.newrelic
 
-import akka.actor.Actor
+import akka.actor.{ActorLogging, Actor}
 import spray.json._
 import scala.concurrent.Future
 import spray.httpx.{SprayJsonSupport, RequestBuilding, ResponseTransformation}
@@ -13,7 +13,7 @@ import spray.client.pipelining._
 import scala.util.control.NonFatal
 import kamon.newrelic.NewRelicMetric.{Data, ID, MetricBatch}
 
-class Agent extends Actor with RequestBuilding with ResponseTransformation with SprayJsonSupport {
+class Agent extends Actor with RequestBuilding with ResponseTransformation with SprayJsonSupport with ActorLogging {
   import context.dispatcher
   import Agent._
 
@@ -79,6 +79,8 @@ class Agent extends Actor with RequestBuilding with ResponseTransformation with 
 
 
   def sendMetricData(runId: Long, collector: String, metrics: List[(ID, Data)]) = {
+    log.info("Reporting this to NewRelic: " + metrics.mkString("\n"))
+
     val end = System.currentTimeMillis() / 1000L
     val start = end - 60
     compressedPipeline {

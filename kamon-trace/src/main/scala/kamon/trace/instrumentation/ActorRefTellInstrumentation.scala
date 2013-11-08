@@ -34,11 +34,9 @@ class ActorCellInvokeInstrumentation {
 class EnvelopeTracingContext {
 
   @DeclareMixin("akka.dispatch.Envelope")
-  def mixin: ContextAware =  new ContextAware {
-    val traceContext: Option[TraceContext] = Trace.context()
-  }
+  def mixin: ContextAware = ContextAware.default
 
-  @Pointcut("execution(akka.dispatch.ContextAware.new(..)) && this(ctx)")
+  @Pointcut("execution(akka.dispatch.Envelope.new(..)) && this(ctx)")
   def requestRecordInit(ctx: ContextAware): Unit = {}
 
   @After("requestRecordInit(ctx)")

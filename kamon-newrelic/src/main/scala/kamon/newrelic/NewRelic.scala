@@ -37,7 +37,7 @@ class NewRelicManager extends Actor with ActorLogging {
 
 object NewRelicMetric {
   case class ID(name: String, scope: Option[String])
-  case class Data(var total: Double, var totalExclusive: Double, var min: Double, var max: Double, var sumOfSquares: Double, var callCount: Long) {
+  case class Data(var callCount: Long, var total: Double, var totalExclusive: Double, var min: Double, var max: Double, var sumOfSquares: Double) {
     def record(value: Double): Unit = {
       if(value > max) max = value
       if(value < min) min = value
@@ -50,7 +50,7 @@ object NewRelicMetric {
   }
 
   object Data {
-    def apply(): Data = Data(0, 0, 0, 0, 0, 0)
+    def apply(): Data = Data(0, 0, 0, Double.MaxValue, 0, 0)
   }
 
   case object FlushMetrics
@@ -59,7 +59,7 @@ object NewRelicMetric {
 
 
 class WebTransactionMetrics extends Actor with ActorLogging {
-  val apdexT = 1500000000
+  val apdexT = 0.5D
   var metrics = mutable.Map.empty[NewRelicMetric.ID, NewRelicMetric.Data]
   var apdex = NewRelicMetric.Data(0, 0, 0, apdexT, apdexT, 0)
 
@@ -80,23 +80,25 @@ class WebTransactionMetrics extends Actor with ActorLogging {
 
   def recordApdex(time: Double): Unit = {
     if(time <= apdexT)
-      apdex.total += 1
+      apdex.callCount += 1
     else
       if(time > apdexT && time <= (4 * apdexT))
-        apdex.totalExclusive += 1
+        apdex.total += 1
       else
-        apdex.min += 1
+        apdex.totalExclusive += 1
 
   }
 
   def updateStats(trace: UowTrace): Unit = {
     // Basic Metrics
-    recordApdex(trace.elapsed)
-    recordValue(NewRelicMetric.ID("WebTransaction", None), trace.elapsed)
-    recordValue(NewRelicMetric.ID("HttpDispatcher", None), trace.elapsed)
-    recordValue(NewRelicMetric.ID("WebTransaction/Custom/" + trace.name, None), trace.elapsed)
+    val elapsedSeconds = trace.elapsed / 1E9D
 
-    println("Recorded Apdex: " + apdex)
-    println("Current Metrics: " + metrics.mkString("\n"))
+    recordApdex(elapsedSeconds)
+    recordValue(NewRelicMetric.ID("WebTransaction", None), elapsedSeconds)
+    recordValue(NewRelicMetric.ID("HttpDispatcher", None), elapsedSeconds)
+    recordValue(NewRelicMetric.ID("WebTransaction/Custom/" + trace.name, None), elapsedSeconds)
+
+    /*println("Recorded Apdex: " + apdex)
+    println("Current Metrics: \n" + metrics.mkString("\n"))*/
   }
 }

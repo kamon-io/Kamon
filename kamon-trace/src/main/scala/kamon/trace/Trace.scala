@@ -60,7 +60,6 @@ class TraceManager extends Actor with ActorLogging {
       context.child(tracerName).getOrElse(newTracer(tracerName)) ! segment
 
     case trace: UowTrace =>
-      println("Delivering a trace to: " + listeners)
       listeners foreach(_ ! trace)
   }
 

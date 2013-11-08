@@ -2,7 +2,7 @@ package kamon.trace.instrumentation
 
 import org.aspectj.lang.annotation._
 import org.aspectj.lang.ProceedingJoinPoint
-import kamon.trace.{TraceContext, Trace}
+import kamon.trace.{ContextAware, TraceContext, Trace}
 
 @Aspect
 class RunnableTracing {
@@ -12,32 +12,30 @@ class RunnableTracing {
    *  while their run method is executed.
    */
   @DeclareMixin("scala.concurrent.impl.CallbackRunnable || scala.concurrent.impl.Future.PromiseCompletingRunnable")
-  def onCompleteCallbacksRunnable: TraceContextAwareRunnable = new TraceContextAwareRunnable {
-    val traceContext: Option[TraceContext] = Trace.traceContext.value
-  }
+  def onCompleteCallbacksRunnable: ContextAware = ContextAware.default
 
 
   /**
    *  Pointcuts
    */
 
-  @Pointcut("execution(kamon.instrumentation.TraceContextAwareRunnable+.new(..)) && this(runnable)")
-  def instrumentedRunnableCreation(runnable: TraceContextAwareRunnable): Unit = {}
+  @Pointcut("execution(kamon.trace.ContextAware+.new(..)) && this(runnable)")
+  def instrumentedRunnableCreation(runnable: ContextAware): Unit = {}
 
-  @Pointcut("execution(* kamon.instrumentation.TraceContextAwareRunnable+.run()) && this(runnable)")
-  def runnableExecution(runnable: TraceContextAwareRunnable) = {}
+  @Pointcut("execution(* kamon.trace.ContextAware+.run()) && this(runnable)")
+  def runnableExecution(runnable: ContextAware) = {}
 
 
 
   @After("instrumentedRunnableCreation(runnable)")
-  def beforeCreation(runnable: TraceContextAwareRunnable): Unit = {
+  def beforeCreation(runnable: ContextAware): Unit = {
     // Force traceContext initialization.
     runnable.traceContext
   }
 
 
   @Around("runnableExecution(runnable)")
-  def around(pjp: ProceedingJoinPoint, runnable: TraceContextAwareRunnable): Any = {
+  def around(pjp: ProceedingJoinPoint, runnable: ContextAware): Any = {
     import pjp._
 
     Trace.traceContext.withValue(runnable.traceContext) {
@@ -45,11 +43,4 @@ class RunnableTracing {
     }
   }
 
-}
-
-/**
- *  Marker interface, just to make sure we don't instrument all the Runnables in the classpath.
- */
-trait TraceContextAwareRunnable {
-  def traceContext: Option[TraceContext]
 }

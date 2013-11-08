@@ -8,6 +8,7 @@ import scala.concurrent.{Await, Future}
 import kamon.spray.UowDirectives
 import kamon.trace.Trace
 import kamon.Kamon
+import scala.util.Random
 
 object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuilding with UowDirectives {
   import scala.concurrent.duration._
@@ -25,7 +26,7 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
 
   val pipeline = sendReceive
   val replier = system.actorOf(Props[Replier])
-
+  val random = new Random()
   startServer(interface = "localhost", port = 9090) {
     get {
       path("test"){
@@ -48,7 +49,10 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
         }
       } ~
       path("ok") {
-        complete("ok")
+        complete{
+          //Thread.sleep(random.nextInt(1) + random.nextInt(5) + random.nextInt(2))
+          "ok"
+        }
       } ~
       path("future") {
         dynamic {
