@@ -33,12 +33,12 @@ object AgentJsonProtocol extends DefaultJsonProtocol {
           "name" -> JsString(id.name) // TODO Include scope
         ),
         JsArray(
+          JsNumber(data.callCount),
           JsNumber(data.total),
           JsNumber(data.totalExclusive),
           JsNumber(data.min),
           JsNumber(data.max),
-          JsNumber(data.sumOfSquares),
-          JsNumber(data.callCount)
+          JsNumber(data.sumOfSquares)
         )
       )
     }
