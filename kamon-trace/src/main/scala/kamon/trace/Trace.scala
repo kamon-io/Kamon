@@ -33,6 +33,10 @@ object Trace extends ExtensionId[TraceExtension] with ExtensionIdProvider {
     set(ctx)
   }
 
+  def transformContext(f: TraceContext => TraceContext): Unit = {
+    context.map(f).foreach(set(_))
+  }
+
   def finish(): Option[TraceContext] = {
     val ctx = context()
     ctx.map(_.finish)

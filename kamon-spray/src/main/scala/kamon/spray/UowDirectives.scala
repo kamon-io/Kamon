@@ -12,8 +12,7 @@ trait UowDirectives extends BasicDirectives {
     val uowHeader = request.headers.find(_.name == "X-UOW")
 
     val generatedUow = uowHeader.map(_.value).getOrElse(UowDirectives.newUow)
-    // TODO: Tracer will always have a context at this point, just rename the uow.
-    Trace.set(Trace.context().getOrElse(Trace.newTraceContext()).copy(uow = generatedUow))
+    Trace.transformContext(_.copy(uow = generatedUow))
     request
   }
 }
