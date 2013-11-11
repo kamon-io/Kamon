@@ -10,6 +10,7 @@ class NewRelicErrorLogger extends Actor {
   def receive = {
     case InitializeLogger(_) => sender ! LoggerInitialized
     case error @ Error(cause, logSource, logClass, message) => notifyError(error)
+    case anythingElse =>
   }
 
   def notifyError(error: Error): Unit = {
