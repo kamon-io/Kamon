@@ -29,7 +29,7 @@ object Build extends Build {
     .settings(
       libraryDependencies ++=
         compile(akkaActor, aspectJ) ++
-        test(scalatest, akkaTestKit, sprayTestkit))
+        test(scalatest, akkaTestKit, sprayTestkit, akkaSlf4j, logback))
     .dependsOn(kamonCore)
 
   lazy val kamonMetrics = Project("kamon-metrics", file("kamon-metrics"))

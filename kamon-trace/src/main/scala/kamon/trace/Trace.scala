@@ -27,10 +27,12 @@ object Trace extends ExtensionId[TraceExtension] with ExtensionIdProvider {
   def set(ctx: TraceContext) = traceContext.value = Some(ctx)
 
   def clear: Unit = traceContext.value = None
-  def start(name: String)(implicit system: ActorSystem) = {
-    val ctx = newTraceContext()
+  def start(name: String)(implicit system: ActorSystem): TraceContext = {
+    val ctx = newTraceContext(name)
     ctx.start(name)
     set(ctx)
+
+    ctx
   }
 
   def transformContext(f: TraceContext => TraceContext): Unit = {
@@ -44,7 +46,7 @@ object Trace extends ExtensionId[TraceExtension] with ExtensionIdProvider {
   }
 
   // TODO: FIX
-  def newTraceContext()(implicit system: ActorSystem): TraceContext = TraceContext(Kamon(Trace), tranid.getAndIncrement)
+  def newTraceContext(name: String)(implicit system: ActorSystem): TraceContext = TraceContext(Kamon(Trace), tranid.getAndIncrement, name)
 }
 
 class TraceExtension(system: ExtendedActorSystem) extends Kamon.Extension {

@@ -10,9 +10,7 @@ class ActorLoggingInstrumentation {
 
 
   @DeclareMixin("akka.event.Logging.LogEvent+")
-  def traceContextMixin: ContextAware = new ContextAware {
-    def traceContext: Option[TraceContext] = Trace.context()
-  }
+  def traceContextMixin: ContextAware = ContextAware.default
 
   @Pointcut("execution(* akka.event.slf4j.Slf4jLogger.withMdc(..)) && args(logSource, logEvent, logStatement)")
   def withMdcInvocation(logSource: String, logEvent: ContextAware, logStatement: () => _): Unit = {}

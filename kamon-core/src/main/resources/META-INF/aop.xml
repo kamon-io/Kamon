@@ -2,7 +2,7 @@
 
 <aspectj>
     <weaver options="-verbose -showWeaveInfo">
-       <!--<dump within="*" beforeandafter="true"/>-->
+       <!--<dump within="*"/>-->
     </weaver>
 
     <aspects>
@@ -12,7 +12,7 @@
         <aspect name="kamon.trace.instrumentation.RunnableTracing" />
         <aspect name="kamon.instrumentation.ActorSystemInstrumentation"/>
         <aspect name="kamon.trace.instrumentation.ActorLoggingInstrumentation"/>
-
+        <aspect name="akka.pattern.tracing.AskPatternTracing"/>
         <!--<aspect name="kamon.instrumentation.MessageQueueInstrumentation" />-->
         <!--<aspect name="kamon.instrumentation.InceptionAspect"/>-->
         <!-- ExecutorService Instrumentation for Akka. -->
@@ -21,14 +21,11 @@
         <!--<aspect name ="kamon.instrumentation.ForkJoinPoolInstrumentation"/>-->
 
 
-        <include within="*"/>
-        <exclude within="javax..*"/>
-        <exclude within="com.newrelic..*"/>
-        <exclude within="org.aspectj..*"/>
-        <exclude within="scala..*"/>
-        <exclude within="scalaz..*"/>
-        <exclude within="scalad..*"/>
-        <exclude within="play..*"/>
+        <!--<exclude within="*"/>-->
+        <include within="scala.concurrent..*"/>
+        <include within="akka..*"/>
+        <include within="spray..*"/>
+        <include within="kamon..*"/>
     </aspects>
 
 </aspectj>

@@ -65,7 +65,7 @@ class ActorInstrumentationSpec extends TestKit(ActorSystem("ActorInstrumentation
   }
 
   trait TraceContextEchoFixture {
-    val testTraceContext = Trace.newTraceContext()
+    val testTraceContext = Trace.newTraceContext("")
     val echo = system.actorOf(Props[TraceContextEcho])
 
     Trace.set(testTraceContext)
@@ -75,7 +75,7 @@ class ActorInstrumentationSpec extends TestKit(ActorSystem("ActorInstrumentation
     override val echo = system.actorOf(Props[TraceContextEcho].withRouter(RoundRobinRouter(nrOfInstances = 10)))
 
     def tellWithNewContext(target: ActorRef, message: Any): TraceContext = {
-      val context = Trace.newTraceContext()
+      val context = Trace.newTraceContext("")
       Trace.set(context)
 
       target ! message
