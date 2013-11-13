@@ -24,7 +24,7 @@ object Dependencies {
   val sprayRouting    = "io.spray"                  %   "spray-routing"         % sprayVersion
   val sprayTestkit    = "io.spray"                  %   "spray-testkit"         % sprayVersion
   val sprayClient     = "io.spray"                  %   "spray-client"          % sprayVersion
-
+  val snakeYaml       = "org.yaml"                  %   "snakeyaml"             % "1.13"
 
 
   def compile   (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "compile")
