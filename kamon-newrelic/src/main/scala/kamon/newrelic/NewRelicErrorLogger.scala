@@ -4,7 +4,7 @@ import akka.actor.Actor
 import akka.event.Logging.Error
 import akka.event.Logging.{LoggerInitialized, InitializeLogger}
 import com.newrelic.api.agent.NewRelic
-import NewRelic.noticeError
+import kamon.trace.ContextAware
 
 class NewRelicErrorLogger extends Actor {
   def receive = {
@@ -14,6 +14,13 @@ class NewRelicErrorLogger extends Actor {
   }
 
   def notifyError(error: Error): Unit = {
-    noticeError(error.cause)
+    val params = new java.util.HashMap[String, String]()
+    val ctx = error.asInstanceOf[ContextAware].traceContext
+
+    for(c <- ctx) {
+      params.put("UOW", c.uow)
+    }
+
+    NewRelic.noticeError(error.cause, params)
   }
 }
