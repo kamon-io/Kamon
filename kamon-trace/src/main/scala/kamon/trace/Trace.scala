@@ -35,6 +35,8 @@ object Trace extends ExtensionId[TraceExtension] with ExtensionIdProvider {
     ctx
   }
 
+  def withValue[T](ctx: Option[TraceContext])(thunk: => T): T = traceContext.withValue(ctx)(thunk)
+
   def transformContext(f: TraceContext => TraceContext): Unit = {
     context.map(f).foreach(set(_))
   }

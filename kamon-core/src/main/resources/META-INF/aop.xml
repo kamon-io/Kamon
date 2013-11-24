@@ -9,7 +9,6 @@
 
         <aspect name="kamon.trace.instrumentation.EnvelopeTracingContext"/>
         <aspect name="kamon.trace.instrumentation.ActorCellInvokeInstrumentation"/>
-        <aspect name="kamon.trace.instrumentation.RunnableTracing" />
         <aspect name="kamon.instrumentation.ActorSystemInstrumentation"/>
         <aspect name="kamon.trace.instrumentation.ActorLoggingInstrumentation"/>
         <aspect name="akka.pattern.tracing.AskPatternTracing"/>

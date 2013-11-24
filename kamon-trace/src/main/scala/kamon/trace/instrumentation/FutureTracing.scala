@@ -5,7 +5,7 @@ import org.aspectj.lang.ProceedingJoinPoint
 import kamon.trace.{ContextAware, TraceContext, Trace}
 
 @Aspect
-class RunnableTracing {
+class FutureTracing {
 
   /**
    *  These are the Runnables that need to be instrumented and make the TraceContext available
@@ -15,16 +15,11 @@ class RunnableTracing {
   def onCompleteCallbacksRunnable: ContextAware = ContextAware.default
 
 
-  /**
-   *  Pointcuts
-   */
-
   @Pointcut("execution(kamon.trace.ContextAware+.new(..)) && this(runnable)")
   def instrumentedRunnableCreation(runnable: ContextAware): Unit = {}
 
   @Pointcut("execution(* kamon.trace.ContextAware+.run()) && this(runnable)")
-  def runnableExecution(runnable: ContextAware) = {}
-
+  def futureRunnableExecution(runnable: ContextAware) = {}
 
 
   @After("instrumentedRunnableCreation(runnable)")
@@ -33,12 +28,11 @@ class RunnableTracing {
     runnable.traceContext
   }
 
-
-  @Around("runnableExecution(runnable)")
+  @Around("futureRunnableExecution(runnable)")
   def around(pjp: ProceedingJoinPoint, runnable: ContextAware): Any = {
     import pjp._
 
-    Trace.traceContext.withValue(runnable.traceContext) {
+    Trace.withValue(runnable.traceContext) {
       proceed()
     }
   }

@@ -1,0 +1,13 @@
+<!DOCTYPE aspectj PUBLIC "-//AspectJ//DTD//EN" "http://www.eclipse.org/aspectj/dtd/aspectj.dtd">
+
+<aspectj>
+    <aspects>
+        <aspect name="kamon.trace.instrumentation.FutureTracing" />
+
+        <include within="scala.concurrent..*"/>
+        <include within="akka..*"/>
+        <include within="spray..*"/>
+        <include within="kamon..*"/>
+    </aspects>
+
+</aspectj>
