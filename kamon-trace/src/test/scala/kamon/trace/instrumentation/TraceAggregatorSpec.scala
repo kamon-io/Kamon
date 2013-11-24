@@ -1,4 +1,4 @@
-package kamon
+package kamon.trace.instrumentation
 
 import org.scalatest.{WordSpecLike, WordSpec}
 import akka.testkit.{TestKitBase, TestKit}

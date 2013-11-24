@@ -6,17 +6,16 @@ import org.slf4j.MDC
 import kamon.trace.{TraceContext, ContextAware, Trace}
 
 @Aspect
-class ActorLoggingInstrumentation {
-
+class ActorLoggingTracing {
 
   @DeclareMixin("akka.event.Logging.LogEvent+")
-  def traceContextMixin: ContextAware = ContextAware.default
+  def mixin: ContextAware = ContextAware.default
 
   @Pointcut("execution(* akka.event.slf4j.Slf4jLogger.withMdc(..)) && args(logSource, logEvent, logStatement)")
   def withMdcInvocation(logSource: String, logEvent: ContextAware, logStatement: () => _): Unit = {}
 
   @Around("withMdcInvocation(logSource, logEvent, logStatement)")
-  def putTraceContextInMDC(pjp: ProceedingJoinPoint, logSource: String, logEvent: ContextAware, logStatement: () => _): Unit = {
+  def aroundWithMdcInvocation(pjp: ProceedingJoinPoint, logSource: String, logEvent: ContextAware, logStatement: () => _): Unit = {
     logEvent.traceContext match {
       case Some(ctx) =>
         MDC.put("uow", ctx.uow)

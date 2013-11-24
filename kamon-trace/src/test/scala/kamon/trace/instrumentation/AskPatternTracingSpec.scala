@@ -1,4 +1,4 @@
-package kamon
+package kamon.trace.instrumentation
 
 import akka.testkit.TestKit
 import akka.actor.{Props, Actor, ActorSystem}

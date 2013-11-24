@@ -4,6 +4,7 @@
     <aspects>
         <aspect name="kamon.trace.instrumentation.EnvelopeTraceContextMixin"/>
         <aspect name="kamon.trace.instrumentation.BehaviourInvokeTracing"/>
+        <aspect name="kamon.trace.instrumentation.ActorLoggingTracing"/>
 
         <aspect name="kamon.trace.instrumentation.FutureTracing" />
 

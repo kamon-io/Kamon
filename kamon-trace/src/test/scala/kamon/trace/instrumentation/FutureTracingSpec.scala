@@ -1,4 +1,4 @@
-package kamon
+package kamon.trace.instrumentation
 
 import scala.concurrent.{ExecutionContext, Await, Promise, Future}
 import org.scalatest.{Matchers, OptionValues, WordSpec}

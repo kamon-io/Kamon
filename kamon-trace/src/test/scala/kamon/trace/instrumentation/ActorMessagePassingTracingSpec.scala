@@ -1,4 +1,4 @@
-package kamon
+package kamon.trace.instrumentation
 
 import org.scalatest.{WordSpecLike, Matchers}
 import akka.actor.{ActorRef, Actor, Props, ActorSystem}
