@@ -7,11 +7,9 @@ import akka.dispatch.{Envelope, MessageDispatcher}
 import com.codahale.metrics.Timer
 import kamon.trace.{ContextAware, TraceContext, Trace}
 
-case class TraceableMessage(traceContext: Option[TraceContext], message: Any, timer: Timer.Context)
-case class DefaultTracingAwareEnvelopeContext(traceContext: Option[TraceContext] = Trace.traceContext.value, timestamp: Long = System.nanoTime) extends ContextAware
 
 @Aspect
-class ActorCellInvokeInstrumentation {
+class BehaviourInvokeTracing {
 
   @Pointcut("execution(akka.actor.ActorCell.new(..)) && args(system, ref, props, dispatcher, parent)")
   def actorCellCreation(system: ActorSystem, ref: ActorRef, props: Props, dispatcher: MessageDispatcher, parent: ActorRef): Unit = {}
@@ -20,28 +18,28 @@ class ActorCellInvokeInstrumentation {
   def invokingActorBehaviourAtActorCell(envelope: Envelope) = {}
 
   @Around("invokingActorBehaviourAtActorCell(envelope)")
-  def around(pjp: ProceedingJoinPoint, envelope: Envelope): Unit = {
+  def aroundBehaviourInvoke(pjp: ProceedingJoinPoint, envelope: Envelope): Unit = {
     //safe cast
-    val msgContext = envelope.asInstanceOf[ContextAware].traceContext
+    val ctxInMessage = envelope.asInstanceOf[ContextAware].traceContext
 
-    Trace.traceContext.withValue(msgContext) {
+    Trace.withValue(ctxInMessage) {
       pjp.proceed()
     }
   }
 }
 
 @Aspect
-class EnvelopeTracingContext {
+class EnvelopeTraceContextMixin {
 
   @DeclareMixin("akka.dispatch.Envelope")
   def mixin: ContextAware = ContextAware.default
 
   @Pointcut("execution(akka.dispatch.Envelope.new(..)) && this(ctx)")
-  def requestRecordInit(ctx: ContextAware): Unit = {}
+  def envelopeCreation(ctx: ContextAware): Unit = {}
 
-  @After("requestRecordInit(ctx)")
-  def whenCreatedRequestRecord(ctx: ContextAware): Unit = {
-    // Necessary to force the initialization of TracingAwareRequestContext at the moment of creation.
+  @After("envelopeCreation(ctx)")
+  def afterEnvelopeCreation(ctx: ContextAware): Unit = {
+    // Necessary to force the initialization of ContextAware at the moment of creation.
     ctx.traceContext
   }
 }
