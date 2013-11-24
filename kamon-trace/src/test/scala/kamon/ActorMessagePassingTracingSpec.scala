@@ -18,7 +18,7 @@ class ActorMessagePassingTracingSpec extends TestKit(ActorSystem("actor-message-
 
   "the message passing instrumentation" should {
       "propagate the TraceContext using bang" in new TraceContextEchoFixture {
-        Trace.withValue(testTraceContext) {
+        Trace.withContext(testTraceContext) {
           ctxEchoActor ! "test"
         }
 
@@ -26,7 +26,7 @@ class ActorMessagePassingTracingSpec extends TestKit(ActorSystem("actor-message-
       }
 
       "propagate the TraceContext using tell" in new TraceContextEchoFixture {
-        Trace.withValue(testTraceContext) {
+        Trace.withContext(testTraceContext) {
           ctxEchoActor.tell("test", testActor)
         }
 
@@ -35,7 +35,7 @@ class ActorMessagePassingTracingSpec extends TestKit(ActorSystem("actor-message-
 
       "propagate the TraceContext using ask" in new TraceContextEchoFixture {
         implicit val timeout = Timeout(1 seconds)
-        Trace.withValue(testTraceContext) {
+        Trace.withContext(testTraceContext) {
           // The pipe pattern use Futures internally, so FutureTracing test should cover the underpinnings of it.
           (ctxEchoActor ? "test") pipeTo(testActor)
         }
@@ -44,7 +44,7 @@ class ActorMessagePassingTracingSpec extends TestKit(ActorSystem("actor-message-
       }
 
       "propagate the TraceContext to actors behind a router" in new RoutedTraceContextEchoFixture {
-        Trace.withValue(testTraceContext) {
+        Trace.withContext(testTraceContext) {
           ctxEchoActor ! "test"
         }
 

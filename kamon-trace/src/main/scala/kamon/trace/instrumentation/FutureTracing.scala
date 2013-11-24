@@ -32,7 +32,7 @@ class FutureTracing {
   def around(pjp: ProceedingJoinPoint, runnable: ContextAware): Any = {
     import pjp._
 
-    Trace.withValue(runnable.traceContext) {
+    Trace.withContext(runnable.traceContext) {
       proceed()
     }
   }

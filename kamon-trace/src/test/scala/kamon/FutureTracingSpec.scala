@@ -20,7 +20,7 @@ class FutureTracingSpec extends WordSpec with Matchers with ScalaFutures with Pa
       "must be available when executing the future's body" in new TraceContextFixture {
         var future: Future[Option[TraceContext]] = _
 
-        Trace.withValue(testTraceContext) {
+        Trace.withContext(testTraceContext) {
           future = Future(Trace.context)
         }
 
@@ -32,7 +32,7 @@ class FutureTracingSpec extends WordSpec with Matchers with ScalaFutures with Pa
       "must be available when executing callbacks on the future" in new TraceContextFixture {
         var future: Future[Option[TraceContext]] = _
 
-        Trace.withValue(testTraceContext) {
+        Trace.withContext(testTraceContext) {
           future = Future("Hello Kamon!")
             // The TraceContext is expected to be available during all intermediate processing.
             .map (_.length)

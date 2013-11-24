@@ -22,7 +22,7 @@ class BehaviourInvokeTracing {
     //safe cast
     val ctxInMessage = envelope.asInstanceOf[ContextAware].traceContext
 
-    Trace.withValue(ctxInMessage) {
+    Trace.withContext(ctxInMessage) {
       pjp.proceed()
     }
   }
