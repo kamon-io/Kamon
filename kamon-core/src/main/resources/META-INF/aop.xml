@@ -7,7 +7,7 @@
 
     <aspects>
         <aspect name="kamon.instrumentation.ActorSystemInstrumentation"/>
-        <aspect name="kamon.trace.instrumentation.ActorLoggingInstrumentation"/>
+
         <aspect name="akka.pattern.tracing.AskPatternTracing"/>
         <!--<aspect name="kamon.instrumentation.MessageQueueInstrumentation" />-->
         <!--<aspect name="kamon.instrumentation.InceptionAspect"/>-->
