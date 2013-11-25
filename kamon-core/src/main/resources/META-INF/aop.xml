@@ -8,15 +8,6 @@
     <aspects>
         <aspect name="kamon.instrumentation.ActorSystemInstrumentation"/>
 
-        <aspect name="akka.pattern.tracing.AskPatternTracing"/>
-        <!--<aspect name="kamon.instrumentation.MessageQueueInstrumentation" />-->
-        <!--<aspect name="kamon.instrumentation.InceptionAspect"/>-->
-        <!-- ExecutorService Instrumentation for Akka. -->
-<!--        <aspect name="kamon.instrumentation.ExecutorServiceFactoryProviderInstrumentation"/>
-        <aspect name="kamon.instrumentation.NamedExecutorServiceFactoryDelegateInstrumentation"/>-->
-        <!--<aspect name ="kamon.instrumentation.ForkJoinPoolInstrumentation"/>-->
-
-
         <!--<exclude within="*"/>-->
         <include within="scala.concurrent..*"/>
         <include within="akka..*"/>
