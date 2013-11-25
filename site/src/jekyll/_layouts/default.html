@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>{{ page.title }}</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="/assets/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/assets/css/syntax-highlight.css">
+    <link rel="stylesheet" href="/assets/css/kamon.css">
+
+  </head>
+  <body>
+    {% include navigation-bar.html %}
+    <div id="wrap">
+      <div class="container">
+        {{ content }}
+      </div>
+      <div id="push"></div>
+    </div>
+
+    <div id="footer">
+      <div class="container">
+        <p class="muted credit">Example courtesy <a href="http://martinbean.co.uk">Martin Bean</a> and <a
+                href="http://ryanfait.com/sticky-footer/">Ryan Fait</a>.</p>
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="/assets/js/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="/assets/js/bootstrap.min.js"></script>
+
+  </body>
+</html>

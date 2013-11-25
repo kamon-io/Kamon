@@ -9,3 +9,5 @@ addSbtPlugin("com.typesafe.sbt" % "sbt-aspectj" % "0.9.0")
 addSbtPlugin("com.ivantopo.sbt" % "sbt-newrelic" % "0.0.1")
 
 addSbtPlugin("com.github.gseitz" % "sbt-release" % "0.8")
+
+addSbtPlugin("com.typesafe.sbt" % "sbt-site" % "0.7.1")

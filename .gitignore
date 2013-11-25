@@ -20,3 +20,5 @@ project/plugins/project/
 .idea/
 *.iml
 *.iws
+
+_site

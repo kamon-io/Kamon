@@ -5,14 +5,14 @@ object Build extends Build {
   import AspectJ._
   import NewRelic._
   import Settings._
+  import Site._
   import Dependencies._
-
-
 
   lazy val root = Project("root", file("."))
     .aggregate(kamonCore, kamonTrace, kamonMetrics, kamonSpray, kamonNewrelic, kamonPlayground, kamonDashboard)
     .settings(basicSettings: _*)
     .settings(noPublishing: _*)
+
 
   lazy val kamonCore = Project("kamon-core", file("kamon-core"))
     .settings(basicSettings: _*)
@@ -31,6 +31,7 @@ object Build extends Build {
         compile(akkaActor, aspectJ) ++
         test(scalatest, akkaTestKit, sprayTestkit, akkaSlf4j, logback))
     .dependsOn(kamonCore)
+
 
   lazy val kamonMetrics = Project("kamon-metrics", file("kamon-metrics"))
     .settings(basicSettings: _*)
@@ -61,6 +62,7 @@ object Build extends Build {
         test(scalatest, akkaTestKit, sprayTestkit))
     .dependsOn(kamonTrace)
 
+
   lazy val kamonPlayground = Project("kamon-playground", file("kamon-playground"))
     .settings(basicSettings: _*)
     .settings(revolverSettings: _*)
@@ -72,11 +74,14 @@ object Build extends Build {
     .dependsOn(kamonSpray, kamonNewrelic)
 
 
-
   lazy val kamonDashboard = Project("kamon-dashboard", file("kamon-dashboard"))
     .settings(basicSettings: _*)
     .settings(libraryDependencies ++= compile(akkaActor, akkaSlf4j, sprayRouting, sprayCan, sprayJson))
     .dependsOn(kamonCore)
+
+
+  lazy val site = Project("site", file("site"))
+    .settings(siteSettings: _*)
 
 
   val noPublishing = Seq(publish := (), publishLocal := ())
