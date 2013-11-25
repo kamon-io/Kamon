@@ -4,8 +4,7 @@ object Dependencies {
 
   val resolutionRepos = Seq(
               "spray repo"  at "http://repo.spray.io/",
-    "spray nightlies repo"  at "http://nightlies.spray.io",
-              "kamon repo"  at "http://repo.kamon.io"
+    "spray nightlies repo"  at "http://nightlies.spray.io"
   )
 
   val sprayVersion = "1.2-RC4"
