@@ -1,18 +1,23 @@
 <!DOCTYPE aspectj PUBLIC "-//AspectJ//DTD//EN" "http://www.eclipse.org/aspectj/dtd/aspectj.dtd">
 
 <aspectj>
-    <aspects>
-        <aspect name="kamon.trace.instrumentation.EnvelopeTraceContextMixin"/>
-        <aspect name="kamon.trace.instrumentation.BehaviourInvokeTracing"/>
-        <aspect name="kamon.trace.instrumentation.ActorLoggingTracing"/>
+  <aspects>
+    <!-- Actors -->
+    <aspect name="kamon.trace.instrumentation.EnvelopeTraceContextMixin"/>
+    <aspect name="kamon.trace.instrumentation.BehaviourInvokeTracing"/>
+    <aspect name="kamon.trace.instrumentation.ActorLoggingTracing"/>
 
-        <aspect name="kamon.trace.instrumentation.FutureTracing" />
+    <!-- Futures -->
+    <aspect name="kamon.trace.instrumentation.FutureTracing"/>
+
+    <!-- Patterns -->
+    <aspect name="akka.pattern.AskPatternTracing"/>
 
 
-        <include within="scala.concurrent..*"/>
-        <include within="akka..*"/>
-        <include within="spray..*"/>
-        <include within="kamon..*"/>
-    </aspects>
+    <include within="scala.concurrent..*"/>
+    <include within="akka..*"/>
+    <include within="spray..*"/>
+    <include within="kamon..*"/>
+  </aspects>
 
 </aspectj>

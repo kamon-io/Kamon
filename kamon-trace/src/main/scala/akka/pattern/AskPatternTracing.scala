@@ -1,7 +1,6 @@
-package akka.pattern.tracing
+package akka.pattern
 
-import org.aspectj.lang.annotation.{After, AfterReturning, Pointcut, Aspect}
-import akka.pattern.{AskTimeoutException, PromiseActorRef}
+import org.aspectj.lang.annotation.{AfterReturning, Pointcut, Aspect}
 import akka.event.Logging.Warning
 import scala.compat.Platform.EOL
 import akka.actor.ActorRefProvider
