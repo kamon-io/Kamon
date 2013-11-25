@@ -81,6 +81,7 @@ object Build extends Build {
 
 
   lazy val site = Project("site", file("site"))
+    .settings(basicSettings: _*)
     .settings(siteSettings: _*)
 
 
