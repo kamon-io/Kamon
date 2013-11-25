@@ -1,7 +1,7 @@
 package spray.can.server
 
 import org.aspectj.lang.annotation.{After, Pointcut, DeclareMixin, Aspect}
-import kamon.trace.{Trace, TraceContext, ContextAware}
+import kamon.trace.{Trace, ContextAware}
 import spray.http.HttpRequest
 import akka.actor.ActorSystem
 import akka.event.Logging.Warning

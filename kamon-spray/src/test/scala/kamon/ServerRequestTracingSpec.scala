@@ -33,7 +33,8 @@ class ServerRequestTracingSpec extends TestKit(ActorSystem("server-request-traci
       }
 
       within(5 seconds) {
-        val traceId = expectMsgPF() { case Start(id, _) => id}
+        val traceId = expectMsgPF() { case Start(id, _) => id }
+        println("Expecting for trace: " + traceId)
         expectMsgPF() { case Finish(traceId) => }
       }
     }
@@ -65,12 +66,13 @@ trait TestServer extends SimpleRoutingApp {
         path("ok") {
           complete("ok")
         } ~
-          path("clearcontext"){
-            complete {
-              Trace.clear
-              "ok"
-            }
+        path("clearcontext"){
+          complete {
+            println("The Context in the route is: " + Trace.context)
+            Trace.clear
+            "ok"
           }
+        }
       }
     ), timeout.duration).localAddress.getPort
 
