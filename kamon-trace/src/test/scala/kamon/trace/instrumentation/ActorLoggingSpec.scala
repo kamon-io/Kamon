@@ -18,10 +18,12 @@ class ActorLoggingSpec extends TestKit(ActorSystem("actor-logging-spec")) with W
         loggerActor ! "info"
       }
 
-      expectMsgPF() {
-        case event: LogEvent =>
+      fishForMessage() {
+        case event: LogEvent if event.message.toString contains "TraceContext =>" =>
           val ctxInEvent = event.asInstanceOf[ContextAware].traceContext
-          ctxInEvent should equal(testTraceContext)
+          ctxInEvent === testTraceContext
+
+        case event: LogEvent => false
       }
     }
   }
