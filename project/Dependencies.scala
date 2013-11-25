@@ -3,11 +3,12 @@ import sbt._
 object Dependencies {
 
   val resolutionRepos = Seq(
-    "spray repo"            at "http://repo.spray.io/",
-    "spray nightlies repo"  at "http://nightlies.spray.io"
+              "spray repo"  at "http://repo.spray.io/",
+    "spray nightlies repo"  at "http://nightlies.spray.io",
+              "kamon repo"  at "http://repo.kamon.io"
   )
 
-  val sprayVersion = "1.2-RC1"
+  val sprayVersion = "1.2-RC4"
   val akkaVersion  = "2.2.3"
 
   val sprayJson       = "io.spray"                  %%  "spray-json"            % "1.2.5"
