@@ -25,18 +25,16 @@ object AgentJsonProtocol extends DefaultJsonProtocol {
       JsArray(
         JsObject(
           "agent_version" -> JsString("3.1.0"),
-          "app_name"      -> JsArray(JsString(obj.appName)),
-          "host"          -> JsString(obj.host),
-          "identifier"    -> JsString(s"java:${obj.appName}"),
-          "language"      -> JsString("java"),
-          "pid"           -> JsNumber(obj.pid)
-        )
-      )
+          "app_name" -> JsArray(JsString(obj.appName)),
+          "host" -> JsString(obj.host),
+          "identifier" -> JsString(s"java:${obj.appName}"),
+          "language" -> JsString("java"),
+          "pid" -> JsNumber(obj.pid)))
   }
 
   import NewRelicMetric._
 
-  implicit def listWriter[T : JsonWriter] = new JsonWriter[List[T]] {
+  implicit def listWriter[T: JsonWriter] = new JsonWriter[List[T]] {
     def write(list: List[T]) = JsArray(list.map(_.toJson))
   }
 
@@ -46,16 +44,14 @@ object AgentJsonProtocol extends DefaultJsonProtocol {
       JsArray(
         JsObject(
           "name" -> JsString(id.name) // TODO Include scope
-        ),
+          ),
         JsArray(
           JsNumber(data.callCount),
           JsNumber(data.total),
           JsNumber(data.totalExclusive),
           JsNumber(data.min),
           JsNumber(data.max),
-          JsNumber(data.sumOfSquares)
-        )
-      )
+          JsNumber(data.sumOfSquares)))
     }
   }
 
@@ -65,7 +61,6 @@ object AgentJsonProtocol extends DefaultJsonProtocol {
         JsNumber(obj.runId),
         JsNumber(obj.start),
         JsNumber(obj.end),
-        obj.metrics.toJson
-      )
+        obj.metrics.toJson)
   }
 }
