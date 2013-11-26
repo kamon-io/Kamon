@@ -19,13 +19,12 @@ import org.aspectj.lang.annotation._
 import java.util.concurrent._
 import org.aspectj.lang.ProceedingJoinPoint
 import java.util
-import kamon.metric.{DispatcherMetricCollector, Histogram, MetricDirectory, ExecutorServiceMetricCollector}
-import akka.dispatch.{MonitorableThreadFactory, ExecutorServiceFactory}
+import kamon.metric.{ DispatcherMetricCollector, Histogram, MetricDirectory, ExecutorServiceMetricCollector }
+import akka.dispatch.{ MonitorableThreadFactory, ExecutorServiceFactory }
 import com.typesafe.config.Config
 import kamon.Kamon
 import scala.concurrent.forkjoin.ForkJoinPool
 import akka.dispatch.ForkJoinExecutorConfigurator.AkkaForkJoinPool
-
 
 @Aspect
 class ActorSystemInstrumentation {
@@ -64,11 +63,8 @@ class ForkJoinPoolInstrumentation {
   }
 
   def splitName(threadFactoryName: String, knownActorSystems: List[String]): (String, String) = {
-    knownActorSystems.find(threadFactoryName.startsWith(_)).map(asName => (asName, threadFactoryName.substring(asName.length+1))).getOrElse(("Unkown", "Unkown"))
+    knownActorSystems.find(threadFactoryName.startsWith(_)).map(asName ⇒ (asName, threadFactoryName.substring(asName.length + 1))).getOrElse(("Unkown", "Unkown"))
   }
-
-
-
 
   @Pointcut("execution(* scala.concurrent.forkjoin.ForkJoinPool.scan(..)) && this(fjp)")
   def forkJoinScan(fjp: AkkaForkJoinPool): Unit = {}
@@ -79,38 +75,7 @@ class ForkJoinPoolInstrumentation {
     poolSizeHistogram.update(fjp.getPoolSize)
   }
 
-
-
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 /**
  *  ExecutorService monitoring base:
@@ -125,19 +90,6 @@ trait WatchedExecutorService {
   def collector: ExecutorServiceCollector
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 trait ExecutorServiceMonitoring {
   def dispatcherMetrics: DispatcherMetricCollector
 }
@@ -145,21 +97,6 @@ trait ExecutorServiceMonitoring {
 class ExecutorServiceMonitoringImpl extends ExecutorServiceMonitoring {
   @volatile var dispatcherMetrics: DispatcherMetricCollector = _
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 case class NamedExecutorServiceFactoryDelegate(actorSystemName: String, dispatcherName: String, delegate: ExecutorServiceFactory) extends ExecutorServiceFactory {
   def createExecutorService: ExecutorService = delegate.createExecutorService
@@ -178,15 +115,14 @@ class ExecutorServiceFactoryProviderInstrumentation {
     val delegate = pjp.proceed().asInstanceOf[ExecutorServiceFactory] // Safe Cast
 
     val actorSystemName = threadFactory match {
-      case m: MonitorableThreadFactory => m.name
-      case _ => "Unknown"   // Find an alternative way to find the actor system name in case we start seeing "Unknown" as the AS name.
+      case m: MonitorableThreadFactory ⇒ m.name
+      case _                           ⇒ "Unknown" // Find an alternative way to find the actor system name in case we start seeing "Unknown" as the AS name.
     }
 
     new NamedExecutorServiceFactoryDelegate(actorSystemName, dispatcherName, delegate)
   }
 
 }
-
 
 @Aspect
 class NamedExecutorServiceFactoryDelegateInstrumentation {
@@ -223,38 +159,4 @@ case class NamedExecutorServiceDelegate(fullName: String, delegate: ExecutorServ
   def invokeAny[T](tasks: util.Collection[_ <: Callable[T]], timeout: Long, unit: TimeUnit): T = delegate.invokeAny(tasks, timeout, unit)
   def execute(command: Runnable) = delegate.execute(command)
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

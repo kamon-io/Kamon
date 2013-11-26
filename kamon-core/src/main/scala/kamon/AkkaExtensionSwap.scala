@@ -15,7 +15,7 @@
  * ========================================================== */
 package kamon
 
-import akka.actor.{Extension, ActorSystem, ExtensionId}
+import akka.actor.{ Extension, ActorSystem, ExtensionId }
 import java.util.concurrent.ConcurrentHashMap
 
 object AkkaExtensionSwap {
