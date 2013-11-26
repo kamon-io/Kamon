@@ -25,15 +25,15 @@ object DashboardExtension extends ExtensionId[DashboardExtensionImpl] with Exten
 }
 
 class DashboardExtensionImpl(system: ExtendedActorSystem) extends Extension {
-  if("kamon".equalsIgnoreCase(system.name)) {
+  if ("kamon".equalsIgnoreCase(system.name)) {
 
     val enabled = system.settings.config getBoolean "dashboard.enabled"
     val interface = system.settings.config getString "dashboard.interface"
-    val port  = system.settings.config getInt "dashboard.port"
+    val port = system.settings.config getInt "dashboard.port"
 
-    if(enabled){
-        val service = system.actorOf(Props[DashboardServiceActor], "kamon-dashboard-service")
-        IO(Http)(system) ! Http.Bind(service, interface, port)
+    if (enabled) {
+      val service = system.actorOf(Props[DashboardServiceActor], "kamon-dashboard-service")
+      IO(Http)(system) ! Http.Bind(service, interface, port)
     }
   }
 }

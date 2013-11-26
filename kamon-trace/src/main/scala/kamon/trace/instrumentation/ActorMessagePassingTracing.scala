@@ -17,11 +17,10 @@ package kamon.trace.instrumentation
 
 import org.aspectj.lang.annotation._
 import org.aspectj.lang.ProceedingJoinPoint
-import akka.actor.{Props, ActorSystem, ActorRef}
-import akka.dispatch.{Envelope, MessageDispatcher}
+import akka.actor.{ Props, ActorSystem, ActorRef }
+import akka.dispatch.{ Envelope, MessageDispatcher }
 import com.codahale.metrics.Timer
-import kamon.trace.{ContextAware, TraceContext, Trace}
-
+import kamon.trace.{ ContextAware, TraceContext, Trace }
 
 @Aspect
 class BehaviourInvokeTracing {

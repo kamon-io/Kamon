@@ -20,7 +20,7 @@ import akka.actor._
 import java.util.concurrent.atomic.AtomicLong
 import scala.concurrent.duration._
 import kamon.Kamon
-import kamon.trace.UowTracing.{Finish, Start}
+import kamon.trace.UowTracing.{ Finish, Start }
 
 // TODO: Decide if we need or not an ID, generating it takes time and it doesn't seem necessary.
 protected[kamon] case class TraceContext(private val collector: ActorRef, id: Long, uow: String = "", userContext: Option[Any] = None) {
@@ -31,9 +31,7 @@ protected[kamon] case class TraceContext(private val collector: ActorRef, id: Lo
     collector ! Finish(id)
   }
 
-
 }
-
 
 trait ContextAware {
   def traceContext: Option[TraceContext]

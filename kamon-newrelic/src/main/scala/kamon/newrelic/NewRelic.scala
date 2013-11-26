@@ -18,8 +18,8 @@ package kamon.newrelic
 import akka.actor._
 import scala.collection.mutable
 import kamon.Kamon
-import kamon.trace.{UowTrace, Trace}
-import kamon.newrelic.NewRelicMetric.{MetricBatch, FlushMetrics}
+import kamon.trace.{ UowTrace, Trace }
+import kamon.newrelic.NewRelicMetric.{ MetricBatch, FlushMetrics }
 import scala.concurrent.duration._
 
 class NewRelic extends ExtensionId[NewRelicExtension] {
@@ -35,8 +35,6 @@ class NewRelicManager extends Actor with ActorLogging {
 
   Kamon(Trace)(context.system) ! Trace.Register
 
-
-
   val webTransactionMetrics = context.actorOf(Props[WebTransactionMetrics], "web-transaction-metrics")
   val agent = context.actorOf(Props[Agent], "agent")
 
@@ -46,7 +44,7 @@ class NewRelicManager extends Actor with ActorLogging {
   }
 
   def receive = {
-    case trace: UowTrace => webTransactionMetrics ! trace
+    case trace: UowTrace ⇒ webTransactionMetrics ! trace
   }
 }
 
@@ -54,8 +52,8 @@ object NewRelicMetric {
   case class ID(name: String, scope: Option[String])
   case class Data(var callCount: Long, var total: Double, var totalExclusive: Double, var min: Double, var max: Double, var sumOfSquares: Double) {
     def record(value: Double): Unit = {
-      if(value > max) max = value
-      if(value < min) min = value
+      if (value > max) max = value
+      if (value < min) min = value
 
       total += value
       totalExclusive += value
@@ -72,15 +70,14 @@ object NewRelicMetric {
   case class MetricBatch(metrics: List[(ID, Data)])
 }
 
-
 class WebTransactionMetrics extends Actor with ActorLogging {
   val apdexT = 0.5D
   var metrics = mutable.Map.empty[NewRelicMetric.ID, NewRelicMetric.Data]
   var apdex = NewRelicMetric.Data(0, 0, 0, apdexT, apdexT, 0)
 
   def receive = {
-    case trace: UowTrace  => updateStats(trace)
-    case FlushMetrics     => flush
+    case trace: UowTrace ⇒ updateStats(trace)
+    case FlushMetrics    ⇒ flush
   }
 
   def flush: Unit = {
@@ -94,13 +91,12 @@ class WebTransactionMetrics extends Actor with ActorLogging {
   }
 
   def recordApdex(time: Double): Unit = {
-    if(time <= apdexT)
+    if (time <= apdexT)
       apdex.callCount += 1
+    else if (time > apdexT && time <= (4 * apdexT))
+      apdex.total += 1
     else
-      if(time > apdexT && time <= (4 * apdexT))
-        apdex.total += 1
-      else
-        apdex.totalExclusive += 1
+      apdex.totalExclusive += 1
 
   }
 

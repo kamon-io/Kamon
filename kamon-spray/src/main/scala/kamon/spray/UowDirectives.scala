@@ -23,7 +23,7 @@ import java.net.InetAddress
 import kamon.trace.Trace
 
 trait UowDirectives extends BasicDirectives {
-  def uow: Directive0 = mapRequest { request =>
+  def uow: Directive0 = mapRequest { request ⇒
     val uowHeader = request.headers.find(_.name == "X-UOW")
 
     val generatedUow = uowHeader.map(_.value).getOrElse(UowDirectives.newUow)

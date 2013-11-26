@@ -15,19 +15,17 @@
  * ========================================================== */
 package spray.can.server
 
-import org.aspectj.lang.annotation.{After, Pointcut, DeclareMixin, Aspect}
-import kamon.trace.{Trace, ContextAware}
+import org.aspectj.lang.annotation.{ After, Pointcut, DeclareMixin, Aspect }
+import kamon.trace.{ Trace, ContextAware }
 import spray.http.HttpRequest
 import akka.actor.ActorSystem
 import akka.event.Logging.Warning
-
 
 @Aspect
 class ServerRequestTracing {
 
   @DeclareMixin("spray.can.server.OpenRequestComponent.DefaultOpenRequest")
   def mixinContextAwareToOpenRequest: ContextAware = ContextAware.default
-
 
   @Pointcut("execution(spray.can.server.OpenRequestComponent$DefaultOpenRequest.new(..)) && this(openRequest) && args(*, request, *, *)")
   def openRequestInit(openRequest: ContextAware, request: HttpRequest): Unit = {}
@@ -51,14 +49,14 @@ class ServerRequestTracing {
     val storedContext = openRequest.traceContext
     val incomingContext = Trace.finish()
 
-    for(original <- storedContext) {
+    for (original ← storedContext) {
       incomingContext match {
-        case Some(incoming) if original.id != incoming.id =>
+        case Some(incoming) if original.id != incoming.id ⇒
           publishWarning(s"Different ids when trying to close a Trace, original: [$original] - incoming: [$incoming]")
 
-        case Some(_) => // nothing to do here.
+        case Some(_) ⇒ // nothing to do here.
 
-        case None =>
+        case None ⇒
           original.finish
           publishWarning(s"Trace context not present while closing the Trace: [$original]")
       }

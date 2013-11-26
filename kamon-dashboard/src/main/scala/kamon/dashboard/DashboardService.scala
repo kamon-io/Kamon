@@ -24,15 +24,14 @@ import spray.httpx.SprayJsonSupport
 import kamon.Kamon
 import spray.http.HttpRequest
 import akka.actor.OneForOneStrategy
-import com.codahale.metrics.{Metric, MetricFilter}
-
+import com.codahale.metrics.{ Metric, MetricFilter }
 
 class DashboardServiceActor extends Actor with DashboardService {
 
   def actorRefFactory = context
   def receive = runRoute(DashboardRoute)
 
-  override def supervisorStrategy: SupervisorStrategy = OneForOneStrategy() { case _ => SupervisorStrategy.Stop }
+  override def supervisorStrategy: SupervisorStrategy = OneForOneStrategy() { case _ ⇒ SupervisorStrategy.Stop }
 }
 
 trait DashboardService extends HttpService with StaticResources with DashboardPages with DashboardMetricsApi {
@@ -47,7 +46,7 @@ trait DashboardService extends HttpService with StaticResources with DashboardPa
 
 trait StaticResources extends HttpService {
 
-  val staticResources = get { getFromResourceDirectory("web")}
+  val staticResources = get { getFromResourceDirectory("web") }
 }
 
 trait DashboardPages extends HttpService {
@@ -60,7 +59,7 @@ trait DashboardPages extends HttpService {
     }
 }
 
-trait DashboardMetricsApi extends HttpService with SprayJsonSupport{
+trait DashboardMetricsApi extends HttpService with SprayJsonSupport {
 
   /*import scala.collection.JavaConverters._
   import kamon.metric.Metrics._

@@ -41,7 +41,6 @@ case class UowTrace(name: String, uow: String, start: Long, end: Long, segments:
   def elapsed: Long = end - start
 }
 
-
 class UowTraceAggregator(reporting: ActorRef, aggregationTimeout: Duration) extends Actor with ActorLogging {
   context.setReceiveTimeout(aggregationTimeout)
 
@@ -54,20 +53,20 @@ class UowTraceAggregator(reporting: ActorRef, aggregationTimeout: Duration) exte
   var end = 0L
 
   def receive = {
-    case start: Start =>
+    case start: Start ⇒
       this.start = start.timestamp
       segments = segments :+ start;
       name = start.name
-    case finish: Finish       =>
+    case finish: Finish ⇒
       end = finish.timestamp
       segments = segments :+ finish; finishTracing()
-    case wes: WebExternalStart => pendingExternal = pendingExternal :+ wes
-    case finish @ WebExternalFinish(id) => pendingExternal.find(_.id == id).map(start => {
+    case wes: WebExternalStart ⇒ pendingExternal = pendingExternal :+ wes
+    case finish @ WebExternalFinish(id) ⇒ pendingExternal.find(_.id == id).map(start ⇒ {
       segments = segments :+ WebExternal(finish.id, start.timestamp, finish.timestamp, start.host)
     })
-    case Rename(id, newName)      => name = newName
-    case segment: UowSegment  => segments = segments :+ segment
-    case ReceiveTimeout       =>
+    case Rename(id, newName) ⇒ name = newName
+    case segment: UowSegment ⇒ segments = segments :+ segment
+    case ReceiveTimeout ⇒
       log.warning("Transaction {} did not complete properly, the recorded segments are: {}", name, segments)
       context.stop(self)
   }

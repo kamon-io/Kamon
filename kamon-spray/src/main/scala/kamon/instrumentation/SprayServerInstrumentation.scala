@@ -19,11 +19,9 @@ import org.aspectj.lang.annotation._
 import org.aspectj.lang.ProceedingJoinPoint
 import spray.http.HttpRequest
 import spray.http.HttpHeaders.Host
-import kamon.trace.{TraceContext, Trace, ContextAware, TimedContextAware}
+import kamon.trace.{ TraceContext, Trace, ContextAware, TimedContextAware }
 
 //import spray.can.client.HttpHostConnector.RequestContext
-
-
 
 @Aspect
 class SprayOpenRequestContextTracing {
@@ -38,7 +36,6 @@ class SprayOpenRequestContextTracing {
 @Aspect
 class SprayServerInstrumentation {
 
-
   @Pointcut("execution(spray.can.client.HttpHostConnector.RequestContext.new(..)) && this(ctx) && args(request, *, *, *)")
   def requestRecordInit(ctx: TimedContextAware, request: HttpRequest): Unit = {}
 
@@ -50,8 +47,6 @@ class SprayServerInstrumentation {
       host <- request.header[Host]
     } tctx.tracer ! WebExternalStart(ctx.timestamp, host.host)*/
   }
-
-
 
   @Pointcut("execution(* spray.can.client.HttpHostConnectionSlot.dispatchToCommander(..)) && args(requestContext, message)")
   def dispatchToCommander(requestContext: TimedContextAware, message: Any): Unit = {}
@@ -68,7 +63,6 @@ class SprayServerInstrumentation {
     }*/
 
   }
-
 
   @Pointcut("execution(* spray.can.client.HttpHostConnector.RequestContext.copy(..)) && this(old)")
   def copyingRequestContext(old: TimedContextAware): Unit = {}

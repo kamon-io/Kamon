@@ -11,11 +11,13 @@ object Build extends Build {
   lazy val root = Project("root", file("."))
     .aggregate(kamonCore, kamonTrace, kamonMetrics, kamonSpray, kamonNewrelic, kamonPlayground, kamonDashboard)
     .settings(basicSettings: _*)
+    .settings(formatSettings: _*)
     .settings(noPublishing: _*)
 
 
   lazy val kamonCore = Project("kamon-core", file("kamon-core"))
     .settings(basicSettings: _*)
+    .settings(formatSettings: _*)
     .settings(aspectJSettings: _*)
     .settings(
       libraryDependencies ++=
@@ -25,6 +27,7 @@ object Build extends Build {
 
   lazy val kamonTrace = Project("kamon-trace", file("kamon-trace"))
     .settings(basicSettings: _*)
+    .settings(formatSettings: _*)
     .settings(aspectJSettings: _*)
     .settings(
       libraryDependencies ++=
@@ -35,6 +38,7 @@ object Build extends Build {
 
   lazy val kamonMetrics = Project("kamon-metrics", file("kamon-metrics"))
     .settings(basicSettings: _*)
+    .settings(formatSettings: _*)
     .settings(aspectJSettings: _*)
     .settings(
     libraryDependencies ++=
@@ -45,6 +49,7 @@ object Build extends Build {
 
   lazy val kamonSpray = Project("kamon-spray", file("kamon-spray"))
     .settings(basicSettings: _*)
+    .settings(formatSettings: _*)
     .settings(aspectJSettings: _*)
     .settings(
       libraryDependencies ++=
@@ -55,6 +60,7 @@ object Build extends Build {
 
   lazy val kamonNewrelic = Project("kamon-newrelic", file("kamon-newrelic"))
     .settings(basicSettings: _*)
+    .settings(formatSettings: _*)
     .settings(aspectJSettings: _*)
     .settings(
       libraryDependencies ++=
@@ -65,6 +71,7 @@ object Build extends Build {
 
   lazy val kamonPlayground = Project("kamon-playground", file("kamon-playground"))
     .settings(basicSettings: _*)
+    .settings(formatSettings: _*)
     .settings(revolverSettings: _*)
     .settings(newrelicSettings: _*)
     .settings(noPublishing: _*)
@@ -76,6 +83,7 @@ object Build extends Build {
 
   lazy val kamonDashboard = Project("kamon-dashboard", file("kamon-dashboard"))
     .settings(basicSettings: _*)
+    .settings(formatSettings: _*)
     .settings(libraryDependencies ++= compile(akkaActor, akkaSlf4j, sprayRouting, sprayCan, sprayJson))
     .dependsOn(kamonCore)
 

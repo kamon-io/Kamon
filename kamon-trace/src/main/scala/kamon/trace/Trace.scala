@@ -27,16 +27,12 @@ object Trace extends ExtensionId[TraceExtension] with ExtensionIdProvider {
   def lookup(): ExtensionId[_ <: Extension] = Trace
   def createExtension(system: ExtendedActorSystem): TraceExtension = new TraceExtension(system)
 
-
   /*** Protocol */
   case object Register
-
-
 
   /** User API */
   private[trace] val traceContext = new DynamicVariable[Option[TraceContext]](None)
   private[trace] val tranid = new AtomicLong()
-
 
   def context() = traceContext.value
   def set(ctx: TraceContext) = traceContext.value = Some(ctx)
@@ -50,9 +46,9 @@ object Trace extends ExtensionId[TraceExtension] with ExtensionIdProvider {
     ctx
   }
 
-  def withContext[T](ctx: Option[TraceContext])(thunk: => T): T = traceContext.withValue(ctx)(thunk)
+  def withContext[T](ctx: Option[TraceContext])(thunk: ⇒ T): T = traceContext.withValue(ctx)(thunk)
 
-  def transformContext(f: TraceContext => TraceContext): Unit = {
+  def transformContext(f: TraceContext ⇒ TraceContext): Unit = {
     context.map(f).foreach(set(_))
   }
 
@@ -74,16 +70,16 @@ class TraceManager extends Actor with ActorLogging {
   var listeners: Seq[ActorRef] = Seq.empty
 
   def receive = {
-    case Register =>
+    case Register ⇒
       listeners = sender +: listeners
       log.info("Registered [{}] as listener for Kamon traces", sender)
 
-    case segment: UowSegment =>
+    case segment: UowSegment ⇒
       val tracerName = segment.id.toString
       context.child(tracerName).getOrElse(newTracer(tracerName)) ! segment
 
-    case trace: UowTrace =>
-      listeners foreach(_ ! trace)
+    case trace: UowTrace ⇒
+      listeners foreach (_ ! trace)
   }
 
   def newTracer(name: String): ActorRef = {

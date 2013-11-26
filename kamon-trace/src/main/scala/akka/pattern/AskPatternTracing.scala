@@ -15,7 +15,7 @@
  * ========================================================== */
 package akka.pattern
 
-import org.aspectj.lang.annotation.{AfterReturning, Pointcut, Aspect}
+import org.aspectj.lang.annotation.{ AfterReturning, Pointcut, Aspect }
 import akka.event.Logging.Warning
 import scala.compat.Platform.EOL
 import akka.actor.ActorRefProvider
@@ -38,7 +38,7 @@ class AskPatternTracing {
     val stack = new StackTraceCaptureException
 
     future onFailure {
-      case timeout: AskTimeoutException =>
+      case timeout: AskTimeoutException ⇒
         val stackString = stack.getStackTrace.drop(3).mkString("", EOL, EOL)
 
         system.eventStream.publish(Warning("AskPatternTracing", classOf[AskPatternTracing],
