@@ -108,8 +108,5 @@ class WebTransactionMetrics extends Actor with ActorLogging {
     recordValue(NewRelicMetric.ID("WebTransaction", None), elapsedSeconds)
     recordValue(NewRelicMetric.ID("HttpDispatcher", None), elapsedSeconds)
     recordValue(NewRelicMetric.ID("WebTransaction/Custom/" + trace.name, None), elapsedSeconds)
-
-    /*println("Recorded Apdex: " + apdex)
-    println("Current Metrics: \n" + metrics.mkString("\n"))*/
   }
 }

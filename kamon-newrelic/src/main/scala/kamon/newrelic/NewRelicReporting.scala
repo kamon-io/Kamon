@@ -35,7 +35,6 @@ class NewRelicReporting extends Actor {
     uowTrace.segments.collect { case we: WebExternal ⇒ we }.foreach { webExternalTrace ⇒
       val external = ((webExternalTrace.finish - webExternalTrace.start) / 1E9).toFloat
 
-      println("Web External: " + webExternalTrace)
       NewRelic.recordMetric(s"External/${webExternalTrace.host}/http", external)
       NewRelic.recordMetric(s"External/${webExternalTrace.host}/all", external)
       NewRelic.recordMetric(s"External/${webExternalTrace.host}/http/WebTransaction/Custom" + uowTrace.name, external)
