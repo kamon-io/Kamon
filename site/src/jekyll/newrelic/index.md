@@ -3,7 +3,7 @@ title: About Me
 layout: default
 ---
 
-NewRelic Configuration
+NewRelic Module
 ===
 A simple module to report some application metrics like External Services, Errors and Apdex. 
 
