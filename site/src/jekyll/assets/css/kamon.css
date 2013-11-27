@@ -49,3 +49,5 @@ body {
 .jumbotron {
   background-color: #BDBDBD;
 }
+
+img[alt=newrelic] { width: 100%; }
