@@ -11,21 +11,22 @@
 
   </head>
   <body>
-    {% include navigation-bar.html %}
     <div id="wrap">
+      {% include navigation-bar.html %}
       <div class="container">
         {{ content }}
       </div>
+      <hr>
       <div id="push"></div>
     </div>
 
-    <div id="footer">
+    <footer class="footer">
       <div class="container">
         <p class="muted credit text-center">Kamon is a open source project, go and check out the code at
-        <a href="http://github.com/kamon-io/Kamon"><img src="/assets/img/github-logo.png" alt="GitHub"></a>
+        <a href="http://github.com/kamon-io/Kamon"><img src="/assets/img/github-logo.png" id="github-logo" alt="GitHub"></a>
         </p>
       </div>
-    </div>
+    </footer>
 
     <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
     <script src="/assets/js/jquery.min.js"></script>
