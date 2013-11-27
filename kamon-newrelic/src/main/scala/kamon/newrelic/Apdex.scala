@@ -61,7 +61,6 @@ class Apdex extends Actor {
     uowTrace.segments.collect { case we: WebExternal ⇒ we }.foreach { webExternalTrace ⇒
       val external = ((webExternalTrace.finish - webExternalTrace.start) / 1E9).toFloat
 
-      println("Web External: " + webExternalTrace)
       NRAgent.recordMetric(s"External/${webExternalTrace.host}/http", external)
       NRAgent.recordMetric(s"External/${webExternalTrace.host}/all", external)
       NRAgent.recordMetric(s"External/${webExternalTrace.host}/http/WebTransaction/Custom" + uowTrace.name, external)

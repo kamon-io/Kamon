@@ -55,7 +55,7 @@ class UowTraceAggregator(reporting: ActorRef, aggregationTimeout: Duration) exte
   def receive = {
     case start: Start ⇒
       this.start = start.timestamp
-      segments = segments :+ start;
+      segments = segments :+ start
       name = start.name
     case finish: Finish ⇒
       end = finish.timestamp
