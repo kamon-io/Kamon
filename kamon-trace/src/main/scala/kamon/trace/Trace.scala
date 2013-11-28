@@ -60,6 +60,14 @@ object Trace extends ExtensionId[TraceExtension] with ExtensionIdProvider {
 
   // TODO: FIX
   def newTraceContext(name: String)(implicit system: ActorSystem): TraceContext = TraceContext(Kamon(Trace), tranid.getAndIncrement, name)
+
+  def startSegment(start: Segments.Start): SegmentCompletionHandle = SegmentCompletionHandle(start)
+
+  case class SegmentCompletionHandle(start: Segments.Start) {
+    def complete(end: Segments.End): Unit = {
+      println(s"Completing the Segment: $start - $end")
+    }
+  }
 }
 
 class TraceExtension(system: ExtendedActorSystem) extends Kamon.Extension {
