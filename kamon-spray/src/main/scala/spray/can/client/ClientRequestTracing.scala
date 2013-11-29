@@ -18,79 +18,68 @@ package spray.can.client
 
 import org.aspectj.lang.annotation._
 import org.aspectj.lang.ProceedingJoinPoint
-import spray.http.HttpRequest
+import spray.http.{HttpMessageEnd, HttpRequest}
 import spray.http.HttpHeaders.Host
-import kamon.trace._
-import spray.http.HttpRequest
-import kamon.trace.TraceContext
-import kamon.trace.Segments.{HttpClientRequest, Start}
+import kamon.trace.{TraceContext, Trace, Segments}
+import kamon.trace.Segments.{ContextAndSegmentCompletionAware, HttpClientRequest}
 import kamon.trace.Trace.SegmentCompletionHandle
 
-trait SegmentCompletionHandleAware {
-  var completionHandle: Option[SegmentCompletionHandle]
-}
-
-trait ContextAndSegmentCompletionAware extends ContextAware with SegmentCompletionHandleAware
-
 @Aspect
-class SprayOpenRequestContextTracing {
+class ClientRequestTracing {
 
   @DeclareMixin("spray.can.client.HttpHostConnector.RequestContext")
-  def mixinContextAwareToRequestContext: ContextAndSegmentCompletionAware = new ContextAndSegmentCompletionAware {
-    def traceContext: Option[TraceContext] = Trace.context()
+  def mixin: ContextAndSegmentCompletionAware = new ContextAndSegmentCompletionAware {
+    val traceContext: Option[TraceContext] = Trace.context()
     var completionHandle: Option[SegmentCompletionHandle] = None
   }
-}
 
-@Aspect
-class SprayServerInstrumentation {
 
   @Pointcut("execution(spray.can.client.HttpHostConnector.RequestContext.new(..)) && this(ctx) && args(request, *, *, *)")
-  def requestRecordInit(ctx: ContextAndSegmentCompletionAware, request: HttpRequest): Unit = {}
+  def requestContextCreation(ctx: ContextAndSegmentCompletionAware, request: HttpRequest): Unit = {}
 
-  @After("requestRecordInit(ctx, request)")
-  def whenCreatedRequestRecord(ctx: ContextAndSegmentCompletionAware, request: HttpRequest): Unit = {
-    val completionHandle = Trace.startSegment(Segments.Start(HttpClientRequest))
-
-    // Necessary to force the initialization of TracingAwareRequestContext at the moment of creation.
-    ctx.traceContext
-    ctx.completionHandle = Some(completionHandle)
+  @After("requestContextCreation(ctx, request)")
+  def afterRequestContextCreation(ctx: ContextAndSegmentCompletionAware, request: HttpRequest): Unit = {
+    // The read to ctx.completionHandle should take care of initializing the aspect timely.
+    if(ctx.completionHandle.isEmpty) {
+      val requestAttributes = Map[String, String](
+        "host" -> request.header[Host].map(_.value).getOrElse("unknown"),
+        "path" -> request.uri.path.toString(),
+        "method" -> request.method.toString()
+      )
+      val completionHandle = Trace.startSegment(category = HttpClientRequest, attributes = requestAttributes)
+      ctx.completionHandle = Some(completionHandle)
+    }
   }
 
+
+  @Pointcut("execution(* spray.can.client.HttpHostConnector.RequestContext.copy(..)) && this(old)")
+  def copyingRequestContext(old: ContextAndSegmentCompletionAware): Unit = {}
+
+  @Around("copyingRequestContext(old)")
+  def aroundCopyingRequestContext(pjp: ProceedingJoinPoint, old: ContextAndSegmentCompletionAware) = {
+    Trace.withContext(old.traceContext) {
+      pjp.proceed()
+    }
+  }
+
+
   @Pointcut("execution(* spray.can.client.HttpHostConnectionSlot.dispatchToCommander(..)) && args(requestContext, message)")
-  def dispatchToCommander(requestContext: TimedContextAware, message: Any): Unit = {}
+  def dispatchToCommander(requestContext: ContextAndSegmentCompletionAware, message: Any): Unit = {}
 
   @Around("dispatchToCommander(requestContext, message)")
   def aroundDispatchToCommander(pjp: ProceedingJoinPoint, requestContext: ContextAndSegmentCompletionAware, message: Any) = {
-    println("Completing the request with context: " + requestContext.traceContext)
+    requestContext.traceContext match {
+      case ctx @ Some(_) =>
+        Trace.withContext(ctx) {
+          if(message.isInstanceOf[HttpMessageEnd])
+            requestContext.completionHandle.map(_.complete(Segments.End()))
 
-    requestContext.completionHandle.map(_.complete(Segments.End()))
-    /*Tracer.context.withValue(requestContext.traceContext) {
-      requestContext.traceContext.map {
-        tctx => //tctx.tracer ! WebExternalFinish(requestContext.timestamp)
-      }
-      pjp.proceed()
-    }*/
+          pjp.proceed()
+        }
 
+      case None => pjp.proceed()
+    }
   }
 
-  @Pointcut("execution(* spray.can.client.HttpHostConnector.RequestContext.copy(..)) && this(old)")
-  def copyingRequestContext(old: TimedContextAware): Unit = {}
 
-  @Around("copyingRequestContext(old)")
-  def aroundCopyingRequestContext(pjp: ProceedingJoinPoint, old: TimedContextAware) = {
-    println("Instrumenting the request context copy.")
-    /*Tracer.traceContext.withValue(old.traceContext) {
-      pjp.proceed()
-    }*/
-  }
-}
-
-@Aspect
-class SprayRequestContextTracing {
-
-  @DeclareMixin("spray.can.client.HttpHostConnector.RequestContext")
-  def mixin: ContextAware = new ContextAware {
-    val traceContext: Option[TraceContext] = Trace.context()
-  }
 }

@@ -16,6 +16,8 @@
 
 package kamon.trace
 
+import kamon.trace.Trace.SegmentCompletionHandle
+
 object Segments {
   
   trait Category
@@ -27,4 +29,13 @@ object Segments {
   case class End(attributes: Map[String, String] = Map(), timestamp: Long = System.nanoTime())
   
   case class Segment(start: Start, end: End)
+
+
+
+
+  trait SegmentCompletionHandleAware {
+    var completionHandle: Option[SegmentCompletionHandle]
+  }
+
+  trait ContextAndSegmentCompletionAware extends ContextAware with SegmentCompletionHandleAware
 }

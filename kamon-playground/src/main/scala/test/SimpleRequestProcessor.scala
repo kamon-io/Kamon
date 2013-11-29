@@ -52,6 +52,12 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
             Future.sequence(futures).map(l ⇒ "Ok")
           }
         }
+      } ~ {
+        path("site") {
+          complete {
+            pipeline(Get("http://localhost:4000/"))
+          }
+        }
       } ~
         path("reply" / Segment) { reqID ⇒
           uow {
@@ -115,4 +121,17 @@ class Replier extends Actor with ActorLogging {
       log.info("Processing at the Replier")
       sender ! anything
   }
+}
+
+object PingPong extends App {
+  val system = ActorSystem()
+  val pinger = system.actorOf(Props(new Actor {
+    def receive: Actor.Receive = { case "pong" => sender ! "ping" }
+  }))
+  val ponger = system.actorOf(Props(new Actor {
+    def receive: Actor.Receive = { case "ping" => sender ! "pong" }
+  }))
+
+  pinger.tell("pong", ponger)
+
 }

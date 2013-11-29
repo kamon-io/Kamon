@@ -5,6 +5,7 @@
 
   <aspects>
     <aspect name="spray.can.server.ServerRequestTracing"/>
+    <aspect name="spray.can.client.ClientRequestTracing"/>
     <include within="spray..*"/>
   </aspects>
 </aspectj>
