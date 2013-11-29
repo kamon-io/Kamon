@@ -1,5 +1,5 @@
 ---
-title: About Me
+title: NewRelic Module
 layout: default
 ---
 
