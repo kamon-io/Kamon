@@ -39,6 +39,9 @@ class ClientRequestTracing {
 
   @After("requestContextCreation(ctx, request)")
   def afterRequestContextCreation(ctx: ContextAndSegmentCompletionAware, request: HttpRequest): Unit = {
+    // The RequestContext will be copied when a request needs to be retried but we are only interested in creating the
+    // completion handle the first time we create one.
+
     // The read to ctx.completionHandle should take care of initializing the aspect timely.
     if(ctx.completionHandle.isEmpty) {
       val requestAttributes = Map[String, String](

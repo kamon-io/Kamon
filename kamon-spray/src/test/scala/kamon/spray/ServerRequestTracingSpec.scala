@@ -13,20 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  * ========================================================== */
-package kamon
+package kamon.spray
 
 import _root_.spray.httpx.RequestBuilding
 import _root_.spray.routing.SimpleRoutingApp
 import akka.testkit.TestKit
-import akka.actor.{ActorRef, ActorSystem}
+import akka.actor.ActorSystem
 import org.scalatest.WordSpecLike
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import _root_.spray.client.pipelining._
 import akka.util.Timeout
-import kamon.trace.Trace
-import kamon.Kamon.Extension
-import kamon.trace.UowTracing.{Finish, Start}
+import kamon.trace.{UowTrace, Trace}
+import kamon.Kamon
 
 class ServerRequestTracingSpec extends TestKit(ActorSystem("server-request-tracing-spec")) with WordSpecLike with RequestBuilding with TestServer {
 
@@ -37,8 +36,7 @@ class ServerRequestTracingSpec extends TestKit(ActorSystem("server-request-traci
       }
 
       within(5 seconds) {
-        val traceId = expectMsgPF() { case Start(id, _) => id}
-        expectMsgPF() { case Finish(traceId) => }
+        fishForNamedTrace("ok")
       }
     }
 
@@ -48,9 +46,7 @@ class ServerRequestTracingSpec extends TestKit(ActorSystem("server-request-traci
       }
 
       within(5 seconds) {
-        val traceId = expectMsgPF() { case Start(id, _) => id }
-        println("Expecting for trace: " + traceId)
-        expectMsgPF() { case Finish(traceId) => }
+        fishForNamedTrace("clearcontext")
       }
     }
 
@@ -60,19 +56,21 @@ class ServerRequestTracingSpec extends TestKit(ActorSystem("server-request-traci
       }
 
       within(5 seconds) {
-        expectMsgPF() { case Start(_, "GET: /accounts") => }
+        fishForNamedTrace("accounts")
       }
     }
+  }
+
+  def fishForNamedTrace(traceName: String) = fishForMessage() {
+    case trace: UowTrace if trace.name.contains(traceName) => true
+    case _ => false
   }
 }
 
 trait TestServer extends SimpleRoutingApp {
   self: TestKit =>
 
-  // Nasty, but very helpful for tests.
-  AkkaExtensionSwap.swap(system, Trace, new Extension {
-    def manager: ActorRef = testActor
-  })
+  Kamon(Trace).tell(Trace.Register, testActor)
 
   implicit val timeout = Timeout(20 seconds)
   val port: Int = Await.result(
