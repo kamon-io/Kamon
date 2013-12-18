@@ -24,7 +24,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import _root_.spray.client.pipelining._
 import akka.util.Timeout
-import kamon.trace.{UowTrace, Trace}
+import kamon.trace.{ UowTrace, Trace }
 import kamon.Kamon
 
 class ServerRequestTracingSpec extends TestKit(ActorSystem("server-request-tracing-spec")) with WordSpecLike with RequestBuilding with TestServer {
@@ -62,13 +62,13 @@ class ServerRequestTracingSpec extends TestKit(ActorSystem("server-request-traci
   }
 
   def fishForNamedTrace(traceName: String) = fishForMessage() {
-    case trace: UowTrace if trace.name.contains(traceName) => true
-    case _ => false
+    case trace: UowTrace if trace.name.contains(traceName) ⇒ true
+    case _ ⇒ false
   }
 }
 
 trait TestServer extends SimpleRoutingApp {
-  self: TestKit =>
+  self: TestKit ⇒
 
   Kamon(Trace).tell(Trace.Register, testActor)
 
@@ -79,15 +79,14 @@ trait TestServer extends SimpleRoutingApp {
         path("ok") {
           complete("ok")
         } ~
-        path("clearcontext"){
-          complete {
-            println("The Context in the route is: " + Trace.context)
-            Trace.clear
-            "ok"
+          path("clearcontext") {
+            complete {
+              println("The Context in the route is: " + Trace.context)
+              Trace.clear
+              "ok"
+            }
           }
-        }
-      }
-    ), timeout.duration).localAddress.getPort
+      }), timeout.duration).localAddress.getPort
 
   val send = sendReceive(system, system.dispatcher, timeout)
 

@@ -15,16 +15,15 @@
  * ========================================================== */
 package kamon.trace.instrumentation
 
-import scala.concurrent.{ExecutionContext, Await, Promise, Future}
-import org.scalatest.{Matchers, OptionValues, WordSpec}
-import org.scalatest.concurrent.{ScalaFutures, PatienceConfiguration}
+import scala.concurrent.{ ExecutionContext, Await, Promise, Future }
+import org.scalatest.{ Matchers, OptionValues, WordSpec }
+import org.scalatest.concurrent.{ ScalaFutures, PatienceConfiguration }
 import java.util.UUID
-import scala.util.{Random, Success}
+import scala.util.{ Random, Success }
 import scala.concurrent.duration._
 import java.util.concurrent.TimeUnit
-import akka.actor.{Actor, ActorSystem}
-import kamon.trace.{Trace, TraceContext}
-
+import akka.actor.{ Actor, ActorSystem }
+import kamon.trace.{ Trace, TraceContext }
 
 class FutureTracingSpec extends WordSpec with Matchers with ScalaFutures with PatienceConfiguration with OptionValues {
 
@@ -39,9 +38,8 @@ class FutureTracingSpec extends WordSpec with Matchers with ScalaFutures with Pa
           future = Future(Trace.context)
         }
 
-        whenReady(future)( ctxInFuture =>
-          ctxInFuture should equal(testTraceContext)
-        )
+        whenReady(future)(ctxInFuture ⇒
+          ctxInFuture should equal(testTraceContext))
       }
 
       "must be available when executing callbacks on the future" in new TraceContextFixture {
@@ -50,14 +48,13 @@ class FutureTracingSpec extends WordSpec with Matchers with ScalaFutures with Pa
         Trace.withContext(testTraceContext) {
           future = Future("Hello Kamon!")
             // The TraceContext is expected to be available during all intermediate processing.
-            .map (_.length)
-            .flatMap(len => Future(len.toString))
-            .map (s => Trace.context())
+            .map(_.length)
+            .flatMap(len ⇒ Future(len.toString))
+            .map(s ⇒ Trace.context())
         }
 
-        whenReady(future)( ctxInFuture =>
-          ctxInFuture should equal(testTraceContext)
-        )
+        whenReady(future)(ctxInFuture ⇒
+          ctxInFuture should equal(testTraceContext))
       }
     }
   }
@@ -67,5 +64,4 @@ class FutureTracingSpec extends WordSpec with Matchers with ScalaFutures with Pa
     val testTraceContext = Some(TraceContext(Actor.noSender, random.nextInt))
   }
 }
-
 

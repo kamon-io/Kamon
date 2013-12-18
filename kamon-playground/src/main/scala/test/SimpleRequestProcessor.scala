@@ -126,10 +126,10 @@ class Replier extends Actor with ActorLogging {
 object PingPong extends App {
   val system = ActorSystem()
   val pinger = system.actorOf(Props(new Actor {
-    def receive: Actor.Receive = { case "pong" => sender ! "ping" }
+    def receive: Actor.Receive = { case "pong" ⇒ sender ! "ping" }
   }))
   val ponger = system.actorOf(Props(new Actor {
-    def receive: Actor.Receive = { case "ping" => sender ! "pong" }
+    def receive: Actor.Receive = { case "ping" ⇒ sender ! "pong" }
   }))
 
   pinger.tell("pong", ponger)

@@ -16,15 +16,14 @@
 package kamon.trace.instrumentation
 
 import akka.testkit.TestKit
-import akka.actor.{Props, Actor, ActorSystem}
-import org.scalatest.{Matchers, WordSpecLike}
+import akka.actor.{ Props, Actor, ActorSystem }
+import org.scalatest.{ Matchers, WordSpecLike }
 import akka.event.Logging.Warning
 import scala.concurrent.duration._
 import akka.pattern.ask
 import akka.util.Timeout
-import kamon.trace.{Trace, ContextAware}
+import kamon.trace.{ Trace, ContextAware }
 import org.scalatest.OptionValues._
-
 
 class AskPatternTracingSpec extends TestKit(ActorSystem("ask-pattern-tracing-spec")) with WordSpecLike with Matchers {
 
@@ -40,12 +39,12 @@ class AskPatternTracingSpec extends TestKit(ActorSystem("ask-pattern-tracing-spe
         noReply ? "hello"
 
         val warn = expectMsgPF() {
-          case warn: Warning if warn.message.toString.contains("Timeout triggered for ask pattern") => warn
+          case warn: Warning if warn.message.toString.contains("Timeout triggered for ask pattern") ⇒ warn
         }
         val capturedCtx = warn.asInstanceOf[ContextAware].traceContext
 
         capturedCtx should be('defined)
-        capturedCtx.value should equal (initialCtx)
+        capturedCtx.value should equal(initialCtx)
       }
     }
   }
@@ -53,6 +52,6 @@ class AskPatternTracingSpec extends TestKit(ActorSystem("ask-pattern-tracing-spe
 
 class NoReply extends Actor {
   def receive = {
-    case any =>
+    case any ⇒
   }
 }

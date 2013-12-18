@@ -15,12 +15,12 @@
  * ========================================================== */
 package kamon.trace.instrumentation
 
-import org.scalatest.{WordSpecLike, WordSpec}
-import akka.testkit.{TestKitBase, TestKit}
+import org.scalatest.{ WordSpecLike, WordSpec }
+import akka.testkit.{ TestKitBase, TestKit }
 import akka.actor.ActorSystem
 import scala.concurrent.duration._
-import kamon.trace.UowTracing.{Finish, Rename, Start}
-import kamon.trace.{UowTrace, UowTraceAggregator}
+import kamon.trace.UowTracing.{ Finish, Rename, Start }
+import kamon.trace.{ UowTrace, UowTraceAggregator }
 
 class TraceAggregatorSpec extends TestKit(ActorSystem("TraceAggregatorSpec")) with WordSpecLike {
 
@@ -44,7 +44,6 @@ class TraceAggregatorSpec extends TestKit(ActorSystem("TraceAggregatorSpec")) wi
       }
     }
   }
-
 
   trait AggregatorFixture {
     val aggregator = system.actorOf(UowTraceAggregator.props(testActor, 10 seconds))

@@ -16,10 +16,10 @@
 package kamon.trace.instrumentation
 
 import akka.testkit.TestKit
-import org.scalatest.{Inspectors, Matchers, WordSpecLike}
-import akka.actor.{Props, ActorLogging, Actor, ActorSystem}
-import akka.event.Logging.{LogEvent}
-import kamon.trace.{ContextAware, TraceContext, Trace}
+import org.scalatest.{ Inspectors, Matchers, WordSpecLike }
+import akka.actor.{ Props, ActorLogging, Actor, ActorSystem }
+import akka.event.Logging.{ LogEvent }
+import kamon.trace.{ ContextAware, TraceContext, Trace }
 
 class ActorLoggingSpec extends TestKit(ActorSystem("actor-logging-spec")) with WordSpecLike with Matchers with Inspectors {
 
@@ -34,11 +34,11 @@ class ActorLoggingSpec extends TestKit(ActorSystem("actor-logging-spec")) with W
       }
 
       fishForMessage() {
-        case event: LogEvent if event.message.toString contains "TraceContext =>" =>
+        case event: LogEvent if event.message.toString contains "TraceContext =>" ⇒
           val ctxInEvent = event.asInstanceOf[ContextAware].traceContext
           ctxInEvent === testTraceContext
 
-        case event: LogEvent => false
+        case event: LogEvent ⇒ false
       }
     }
   }
@@ -46,6 +46,6 @@ class ActorLoggingSpec extends TestKit(ActorSystem("actor-logging-spec")) with W
 
 class LoggerActor extends Actor with ActorLogging {
   def receive = {
-    case "info" => log.info("TraceContext => {}", Trace.context())
+    case "info" ⇒ log.info("TraceContext => {}", Trace.context())
   }
 }

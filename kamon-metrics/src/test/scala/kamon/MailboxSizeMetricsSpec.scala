@@ -15,9 +15,9 @@
  * ========================================================== */
 package kamon
 
-import org.scalatest.{WordSpecLike, WordSpec}
+import org.scalatest.{ WordSpecLike, WordSpec }
 import akka.testkit.TestKit
-import akka.actor.{Props, ActorSystem}
+import akka.actor.{ Props, ActorSystem }
 
 class MailboxSizeMetricsSpec extends TestKit(ActorSystem("mailbox-size-metrics-spec")) with WordSpecLike {
 
