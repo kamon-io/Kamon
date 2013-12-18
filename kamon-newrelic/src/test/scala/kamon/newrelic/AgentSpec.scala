@@ -15,13 +15,13 @@
  * ========================================================== */
 package kamon.newrelic
 
-import akka.testkit.{TestActor, TestProbe, TestKit}
-import akka.actor.{Props, ActorRef, ActorSystem}
+import akka.testkit.{ TestActor, TestProbe, TestKit }
+import akka.actor.{ Props, ActorRef, ActorSystem }
 import org.scalatest.WordSpecLike
 import kamon.AkkaExtensionSwap
 import spray.can.Http
 import akka.io.IO
-import akka.testkit.TestActor.{KeepRunning, AutoPilot}
+import akka.testkit.TestActor.{ KeepRunning, AutoPilot }
 import spray.http._
 import spray.http.HttpRequest
 import spray.http.HttpResponse
@@ -43,7 +43,7 @@ class AgentSpec extends TestKit(ActorSystem("agent-spec")) with WordSpecLike {
     fakeHttpManager.setAutoPilot(new TestActor.AutoPilot {
       def run(sender: ActorRef, msg: Any): AutoPilot = {
         msg match {
-          case HttpRequest(_, uri, _, _, _) if rawMethodIs("get_redirect_host", uri) =>
+          case HttpRequest(_, uri, _, _, _) if rawMethodIs("get_redirect_host", uri) ⇒
             sender ! jsonResponse(
               """
                 | {
@@ -53,7 +53,7 @@ class AgentSpec extends TestKit(ActorSystem("agent-spec")) with WordSpecLike {
 
             println("Selecting Collector")
 
-          case HttpRequest(_, uri, _, _, _) if rawMethodIs("connect", uri) =>
+          case HttpRequest(_, uri, _, _, _) if rawMethodIs("connect", uri) ⇒
             sender ! jsonResponse(
               """
                 | {
@@ -76,7 +76,6 @@ class AgentSpec extends TestKit(ActorSystem("agent-spec")) with WordSpecLike {
         uri.query.get("method").filter(_ == method).isDefined
       }
     })
-
 
     AkkaExtensionSwap.swap(system, Http, new IO.Extension {
       def manager: ActorRef = fakeHttpManager.ref
