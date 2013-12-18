@@ -1,14 +1,13 @@
 import sbt._
 import Keys._
 import spray.revolver.RevolverPlugin.Revolver
+import sbtrelease.ReleasePlugin._
 import com.typesafe.sbt.SbtScalariform
 import com.typesafe.sbt.SbtScalariform.ScalariformKeys
 
 object Settings {
-  val VERSION = "0.0.11"
 
   lazy val basicSettings = seq(
-    version       := VERSION,
     organization  := "kamon",
     scalaVersion  := "2.10.3",
     resolvers    ++= Dependencies.resolutionRepos,
@@ -25,8 +24,14 @@ object Settings {
       "-language:implicitConversions",
       "-Xlog-reflective-calls"
     ),
-    publishTo     := Some("Nexus" at "http://nexus.despegar.it:8080/nexus/content/repositories/releases")
-  )
+    publishTo <<= version { (v: String) =>
+
+      if (v.trim.endsWith("SNAPSHOT"))
+        Some(Resolver.sftp("Kamon Snapshots Repository", "snapshots.kamon.io", "/var/local/snapshots-repo"))
+      else
+        Some(Resolver.sftp("Kamon Repository", "repo.kamon.io", "/var/local/releases-repo"))
+    }
+    ) ++ releaseSettings
 
 
   import spray.revolver.RevolverPlugin.Revolver._
