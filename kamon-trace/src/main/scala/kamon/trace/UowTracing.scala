@@ -19,7 +19,6 @@ import akka.actor._
 import scala.concurrent.duration.Duration
 import kamon.trace.UowTracing._
 
-
 sealed trait UowSegment {
   def id: Long
   def timestamp: Long

@@ -19,19 +19,16 @@ package kamon.trace
 import kamon.trace.Trace.SegmentCompletionHandle
 
 object Segments {
-  
+
   trait Category
   case object HttpClientRequest extends Category
-  
+
   case class Start(category: Category, description: String = "",
-                          attributes: Map[String, String] = Map(), timestamp: Long = System.nanoTime())
-  
+                   attributes: Map[String, String] = Map(), timestamp: Long = System.nanoTime())
+
   case class End(attributes: Map[String, String] = Map(), timestamp: Long = System.nanoTime())
-  
+
   case class Segment(start: Start, end: End)
-
-
-
 
   trait SegmentCompletionHandleAware {
     var completionHandle: Option[SegmentCompletionHandle]
