@@ -15,11 +15,15 @@
  * ========================================================== */
 package spray.can.server
 
-import org.aspectj.lang.annotation.{ After, Pointcut, DeclareMixin, Aspect }
+import org.aspectj.lang.annotation._
 import kamon.trace.{ Trace, ContextAware }
 import spray.http.HttpRequest
 import akka.actor.ActorSystem
 import akka.event.Logging.Warning
+import org.aspectj.lang.ProceedingJoinPoint
+import spray.http.HttpRequest
+import akka.event.Logging.Warning
+import scala.Some
 
 @Aspect
 class ServerRequestTracing {
@@ -39,6 +43,14 @@ class ServerRequestTracing {
 
     // Necessary to force initialization of traceContext when initiating the request.
     openRequest.traceContext
+  }
+
+  @Pointcut("execution(* spray.can.server.ServerFrontend$$anon$2$$anon$1.spray$can$server$ServerFrontend$$anon$$anon$$openNewRequest(..))")
+  def openNewRequest(): Unit = {}
+
+  @After("openNewRequest()")
+  def afterOpenNewRequest(): Unit = {
+    Trace.clear
   }
 
   @Pointcut("execution(* spray.can.server.OpenRequestComponent$DefaultOpenRequest.handleResponseEndAndReturnNextOpenRequest(..)) && target(openRequest)")
