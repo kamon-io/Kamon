@@ -58,10 +58,5 @@ class FutureTracingSpec extends WordSpec with Matchers with ScalaFutures with Pa
       }
     }
   }
-
-  trait TraceContextFixture {
-    val random = new Random(System.nanoTime)
-    val testTraceContext = Some(TraceContext(Actor.noSender, random.nextInt))
-  }
 }
 
