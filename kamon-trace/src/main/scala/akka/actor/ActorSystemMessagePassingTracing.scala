@@ -1,7 +1,7 @@
 package akka.actor
 
 import org.aspectj.lang.annotation._
-import kamon.trace.{Trace, ContextAware}
+import kamon.trace.{ Trace, ContextAware }
 import akka.dispatch.sysmsg.EarliestFirstSystemMessageList
 import org.aspectj.lang.ProceedingJoinPoint
 
@@ -56,7 +56,7 @@ class ActorSystemMessagePassingTracing {
 
   @Around("systemMessageProcessing(messages)")
   def aroundSystemMessageInvoke(pjp: ProceedingJoinPoint, messages: EarliestFirstSystemMessageList): Any = {
-    if(messages.nonEmpty) {
+    if (messages.nonEmpty) {
       val ctx = messages.head.asInstanceOf[ContextAware].traceContext
       Trace.withContext(ctx)(pjp.proceed())
 
