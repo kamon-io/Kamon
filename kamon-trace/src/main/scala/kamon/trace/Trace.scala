@@ -16,7 +16,6 @@
 package kamon.trace
 
 import kamon.Kamon
-import scala.util.DynamicVariable
 import akka.actor._
 import scala.Some
 import kamon.trace.Trace.Register
@@ -31,30 +30,40 @@ object Trace extends ExtensionId[TraceExtension] with ExtensionIdProvider {
   case object Register
 
   /** User API */
-  private[trace] val traceContext = new DynamicVariable[Option[TraceContext]](None)
+  //private[trace] val traceContext = new DynamicVariable[Option[TraceContext]](None)
+  private[trace] val traceContext = new ThreadLocal[Option[TraceContext]] {
+    override def initialValue(): Option[TraceContext] = None
+  }
   private[trace] val tranid = new AtomicLong()
 
-  def context() = traceContext.value
-  def set(ctx: TraceContext) = traceContext.value = Some(ctx)
+  def context() = traceContext.get
+  private def set(ctx: Option[TraceContext]) = traceContext.set(ctx)
 
-  def clear: Unit = traceContext.value = None
+  def clear: Unit = traceContext.remove()
   def start(name: String)(implicit system: ActorSystem): TraceContext = {
     val ctx = newTraceContext(name)
     ctx.start(name)
-    set(ctx)
+    set(Some(ctx))
 
     ctx
   }
 
-  def withContext[T](ctx: Option[TraceContext])(thunk: ⇒ T): T = traceContext.withValue(ctx)(thunk)
+  def withContext[T](ctx: Option[TraceContext])(thunk: ⇒ T): T = {
+    val oldval = context
+    set(ctx)
+
+    try thunk
+    finally set(oldval)
+  }
 
   def transformContext(f: TraceContext ⇒ TraceContext): Unit = {
-    context.map(f).foreach(set(_))
+    context.map(f).foreach(ctx ⇒ set(Some(ctx)))
   }
 
   def finish(): Option[TraceContext] = {
     val ctx = context()
     ctx.map(_.finish)
+    clear
     ctx
   }
 
