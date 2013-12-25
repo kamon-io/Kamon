@@ -42,7 +42,7 @@ object Build extends Build {
     .settings(aspectJSettings: _*)
     .settings(
     libraryDependencies ++=
-      compile(akkaActor, aspectJ, newrelic) ++
+      compile(hdrHistogram, akkaActor, aspectJ, newrelic) ++
       test(scalatest, akkaTestKit, sprayTestkit))
     .dependsOn(kamonCore)
 
