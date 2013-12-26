@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.AtomicLong
 import scala.util.Try
 import java.net.InetAddress
 import kamon.trace.Trace
+import spray.http.HttpHeaders.RawHeader
 
 trait UowDirectives extends BasicDirectives {
   def uow: Directive0 = mapRequest { request ⇒
@@ -30,6 +31,7 @@ trait UowDirectives extends BasicDirectives {
     Trace.transformContext(_.copy(uow = generatedUow))
     request
   }
+  def respondWithUow = mapHttpResponseHeaders(headers ⇒ Trace.context().map(ctx ⇒ RawHeader("X-UOW", ctx.uow) :: headers).getOrElse(headers))
 }
 
 object UowDirectives {

@@ -32,6 +32,7 @@ object Build extends Build {
     .settings(
       libraryDependencies ++=
         compile(akkaActor, aspectJ) ++
+        provided(logback) ++
         test(scalatest, akkaTestKit, sprayTestkit, akkaSlf4j, logback))
     .dependsOn(kamonCore)
 
