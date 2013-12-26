@@ -17,8 +17,7 @@ package kamon.trace.instrumentation
 
 import org.aspectj.lang.annotation.{ Around, Pointcut, DeclareMixin, Aspect }
 import org.aspectj.lang.ProceedingJoinPoint
-import org.slf4j.MDC
-import kamon.trace.{ TraceContext, ContextAware, Trace }
+import kamon.trace.{ ContextAware, Trace }
 
 @Aspect
 class ActorLoggingTracing {
@@ -31,13 +30,8 @@ class ActorLoggingTracing {
 
   @Around("withMdcInvocation(logSource, logEvent, logStatement)")
   def aroundWithMdcInvocation(pjp: ProceedingJoinPoint, logSource: String, logEvent: ContextAware, logStatement: () ⇒ _): Unit = {
-    logEvent.traceContext match {
-      case Some(ctx) ⇒
-        MDC.put("uow", ctx.uow)
-        pjp.proceed()
-        MDC.remove("uow")
-
-      case None ⇒ pjp.proceed()
+    Trace.withContext(logEvent.traceContext) {
+      pjp.proceed()
     }
   }
 }
