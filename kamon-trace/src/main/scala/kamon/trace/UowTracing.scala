@@ -80,11 +80,3 @@ class UowTraceAggregator(reporting: ActorRef, aggregationTimeout: Duration) exte
 object UowTraceAggregator {
   def props(reporting: ActorRef, aggregationTimeout: Duration) = Props(classOf[UowTraceAggregator], reporting, aggregationTimeout)
 }
-
-package logback {
-  import ch.qos.logback.classic.pattern.ClassicConverter
-  import ch.qos.logback.classic.spi.ILoggingEvent
-  class UowConverter extends ClassicConverter {
-    def convert(event: ILoggingEvent): String = Trace.context().map(_.uow).getOrElse("undefined")
-  }
-}
