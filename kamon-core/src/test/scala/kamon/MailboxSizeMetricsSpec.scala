@@ -13,15 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  * ========================================================== */
-package kamon.metric
+package kamon
 
-import com.codahale.metrics.Gauge
+import org.scalatest.{ WordSpecLike, WordSpec }
+import akka.testkit.TestKit
+import akka.actor.{ Props, ActorSystem }
 
-trait GaugeGenerator {
+class MailboxSizeMetricsSpec extends TestKit(ActorSystem("mailbox-size-metrics-spec")) with WordSpecLike {
 
-  def newNumericGaugeFor[T, V >: AnyVal](target: T)(generator: T ⇒ V) = new Gauge[V] {
-    def getValue: V = generator(target)
+  "the mailbox size metrics instrumentation" should {
+    "register a counter for mailbox size upon actor creation" in {
+      val target = system.actorOf(Props.empty, "sample")
+
+      //Metrics.registry.getHistograms.get("akka://mailbox-size-metrics-spec/sample:MAILBOX")
+    }
   }
 }
-
-object GaugeGenerator extends GaugeGenerator

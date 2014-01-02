@@ -13,13 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  * ========================================================== */
-package kamon
 
-import akka.actor._
+package kamon.metrics
 
-object Kamon {
-  trait Extension extends akka.actor.Extension
+import akka.actor.{ Props, ExtendedActorSystem, ExtensionIdProvider, ExtensionId }
+import akka.actor
+import kamon.Kamon
 
-  def apply[T <: Extension](key: ExtensionId[T])(implicit system: ActorSystem): T = key(system)
+object ActorMetrics extends ExtensionId[ActorMetricsExtension] with ExtensionIdProvider {
+  def lookup(): ExtensionId[_ <: actor.Extension] = ActorMetrics
+  def createExtension(system: ExtendedActorSystem): ActorMetricsExtension = new ActorMetricsExtension(system)
+
 }
 
+class ActorMetricsExtension(val system: ExtendedActorSystem) extends Kamon.Extension with ActorMetricsOps {
+  lazy val metricsDispatcher = system.actorOf(Props[ActorMetricsDispatcher], "kamon-actor-metrics")
+}

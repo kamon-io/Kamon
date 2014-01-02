@@ -19,10 +19,8 @@ import org.aspectj.lang.annotation._
 import java.util.concurrent._
 import org.aspectj.lang.ProceedingJoinPoint
 import java.util
-import kamon.metric.{ DispatcherMetricCollector, Histogram, MetricDirectory, ExecutorServiceMetricCollector }
 import akka.dispatch.{ MonitorableThreadFactory, ExecutorServiceFactory }
 import com.typesafe.config.Config
-import kamon.Kamon
 import scala.concurrent.forkjoin.ForkJoinPool
 import akka.dispatch.ForkJoinExecutorConfigurator.AkkaForkJoinPool
 
@@ -41,8 +39,8 @@ class ActorSystemInstrumentation {
 
 @Aspect("perthis(forkJoinPoolInstantiation(int, scala.concurrent.forkjoin.ForkJoinPool.ForkJoinWorkerThreadFactory, java.lang.Thread.UncaughtExceptionHandler))")
 class ForkJoinPoolInstrumentation {
-  var activeThreadsHistogram: Histogram = _
-  var poolSizeHistogram: Histogram = _
+  /*  var activeThreadsHistogram: Histogram = _
+  var poolSizeHistogram: Histogram = _*/
 
   @Pointcut("execution(akka.dispatch.ForkJoinExecutorConfigurator.AkkaForkJoinPool.new(..)) && args(parallelism, threadFactory, exceptionHandler)")
   def forkJoinPoolInstantiation(parallelism: Int, threadFactory: ForkJoinPool.ForkJoinWorkerThreadFactory, exceptionHandler: Thread.UncaughtExceptionHandler) = {}
@@ -71,8 +69,8 @@ class ForkJoinPoolInstrumentation {
 
   @After("forkJoinScan(fjp)")
   def updateMetrics(fjp: AkkaForkJoinPool): Unit = {
-    activeThreadsHistogram.update(fjp.getActiveThreadCount)
-    poolSizeHistogram.update(fjp.getPoolSize)
+    /*activeThreadsHistogram.update(fjp.getActiveThreadCount)
+    poolSizeHistogram.update(fjp.getPoolSize)*/
   }
 
 }
@@ -90,6 +88,7 @@ trait WatchedExecutorService {
   def collector: ExecutorServiceCollector
 }
 
+/*
 trait ExecutorServiceMonitoring {
   def dispatcherMetrics: DispatcherMetricCollector
 }
@@ -97,6 +96,7 @@ trait ExecutorServiceMonitoring {
 class ExecutorServiceMonitoringImpl extends ExecutorServiceMonitoring {
   @volatile var dispatcherMetrics: DispatcherMetricCollector = _
 }
+*/
 
 case class NamedExecutorServiceFactoryDelegate(actorSystemName: String, dispatcherName: String, delegate: ExecutorServiceFactory) extends ExecutorServiceFactory {
   def createExecutorService: ExecutorService = delegate.createExecutorService
@@ -133,9 +133,9 @@ class NamedExecutorServiceFactoryDelegateInstrumentation {
   @Around("factoryMethodCall(namedFactory)")
   def enrichExecutorServiceWithMetricNameRoot(pjp: ProceedingJoinPoint, namedFactory: NamedExecutorServiceFactoryDelegate): ExecutorService = {
     val delegate = pjp.proceed().asInstanceOf[ExecutorService]
-    val executorFullName = MetricDirectory.nameForDispatcher(namedFactory.actorSystemName, namedFactory.dispatcherName)
+    val executorFullName = "" //MetricDirectory.nameForDispatcher(namedFactory.actorSystemName, namedFactory.dispatcherName)
 
-    ExecutorServiceMetricCollector.register(executorFullName, delegate)
+    //ExecutorServiceMetricCollector.register(executorFullName, delegate)
 
     new NamedExecutorServiceDelegate(executorFullName, delegate)
   }
@@ -143,7 +143,7 @@ class NamedExecutorServiceFactoryDelegateInstrumentation {
 
 case class NamedExecutorServiceDelegate(fullName: String, delegate: ExecutorService) extends ExecutorService {
   def shutdown() = {
-    ExecutorServiceMetricCollector.deregister(fullName)
+    //ExecutorServiceMetricCollector.deregister(fullName)
     delegate.shutdown()
   }
   def shutdownNow(): util.List[Runnable] = delegate.shutdownNow()

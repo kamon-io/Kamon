@@ -13,26 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  * ========================================================== */
-package kamon.instrumentation
 
-import org.aspectj.lang.ProceedingJoinPoint
+package kamon.trace
 
-trait ProceedingJoinPointPimp {
-  import language.implicitConversions
+import kamon.trace.Trace.SegmentCompletionHandle
 
-  implicit def pimpProceedingJointPoint(pjp: ProceedingJoinPoint) = RichProceedingJointPoint(pjp)
-}
+object Segments {
 
-object ProceedingJoinPointPimp extends ProceedingJoinPointPimp
+  trait Category
+  case object HttpClientRequest extends Category
 
-case class RichProceedingJointPoint(pjp: ProceedingJoinPoint) {
-  def proceedWith(newUniqueArg: AnyRef) = {
-    val args = pjp.getArgs
-    args.update(0, newUniqueArg)
-    pjp.proceed(args)
+  case class Start(category: Category, description: String = "",
+                   attributes: Map[String, String] = Map(), timestamp: Long = System.nanoTime())
+
+  case class End(attributes: Map[String, String] = Map(), timestamp: Long = System.nanoTime())
+
+  case class Segment(start: Start, end: End)
+
+  trait SegmentCompletionHandleAware {
+    var completionHandle: Option[SegmentCompletionHandle]
   }
 
-  def proceedWithTarget(args: AnyRef*) = {
-    pjp.proceed(args.toArray)
-  }
+  trait ContextAndSegmentCompletionAware extends ContextAware with SegmentCompletionHandleAware
 }
