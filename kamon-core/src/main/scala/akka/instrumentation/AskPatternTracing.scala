@@ -13,12 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  * ========================================================== */
-package akka.pattern
+package akka.instrumentation
 
 import org.aspectj.lang.annotation.{ AfterReturning, Pointcut, Aspect }
 import akka.event.Logging.Warning
 import scala.compat.Platform.EOL
 import akka.actor.ActorRefProvider
+import akka.pattern.{ AskTimeoutException, PromiseActorRef }
 
 @Aspect
 class AskPatternTracing {

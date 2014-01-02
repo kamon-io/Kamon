@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  * ========================================================== */
-package kamon.trace.instrumentation
+package kamon.instrumentation
 
 import org.aspectj.lang.annotation.{ Around, Pointcut, DeclareMixin, Aspect }
 import org.aspectj.lang.ProceedingJoinPoint

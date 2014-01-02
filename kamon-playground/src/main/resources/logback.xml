@@ -1,7 +1,8 @@
 <configuration scan="true">
+    <conversionRule conversionWord="uow" converterClass="kamon.trace.logging.LogbackUowConverter" />
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>%date{HH:mm:ss.SSS} %-5level [%X{uow}][%X{requestId}] [%thread] %logger{55} - %msg%n</pattern>
+            <pattern>%date{HH:mm:ss.SSS} %-5level [%uow][%X{akkaSource}] [%thread] %logger{55} - %msg%n</pattern>
         </encoder>
     </appender>
 

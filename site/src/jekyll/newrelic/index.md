@@ -17,7 +17,7 @@ Add the following sbt dependencies to your project settings:
 libraryDependencies += "org.kamon" 				 %  "kamon-newrelic" % "0.1.0"
 libraryDependencies += "com.newrelic.agent.java" %  "newrelic-api"   % "3.1.0"
 ```
-### Example Configuration
+### Configuration
 
 ```scala
 -javaagent:/path-to-newrelic-agent.jar, -Dnewrelic.environment=production, -Dnewrelic.config.file=/path-to-newrelic.yml

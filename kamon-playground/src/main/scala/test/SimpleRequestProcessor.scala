@@ -24,6 +24,7 @@ import kamon.spray.UowDirectives
 import kamon.trace.Trace
 import kamon.Kamon
 import scala.util.Random
+import akka.routing.RoundRobinRouter
 
 object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuilding with UowDirectives {
   import scala.concurrent.duration._
@@ -34,7 +35,6 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
   import system.dispatcher
 
   val act = system.actorOf(Props(new Actor {
-    println("Initializing from: " + (new Throwable).getStackTraceString)
     def receive: Actor.Receive = { case any ⇒ sender ! any }
   }), "com")
 
@@ -43,7 +43,7 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
   implicit val timeout = Timeout(30 seconds)
 
   val pipeline = sendReceive
-  val replier = system.actorOf(Props[Replier])
+  val replier = system.actorOf(Props[Replier].withRouter(RoundRobinRouter(nrOfInstances = 2)), "replier")
   val random = new Random()
   startServer(interface = "localhost", port = 9090) {
     get {
@@ -80,6 +80,12 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
         } ~
         path("future") {
           dynamic {
+            complete(Future { "OK" })
+          }
+        } ~
+        path("kill") {
+          dynamic {
+            replier ! PoisonPill
             complete(Future { "OK" })
           }
         } ~
@@ -121,7 +127,7 @@ class Replier extends Actor with ActorLogging {
       if (Trace.context.isEmpty)
         log.warning("PROCESSING A MESSAGE WITHOUT CONTEXT")
 
-      log.info("Processing at the Replier")
+      log.info("Processing at the Replier, and self is: {}", self)
       sender ! anything
   }
 }

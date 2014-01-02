@@ -1,4 +1,4 @@
-package akka.actor
+package akka.instrumentation
 
 import org.aspectj.lang.annotation._
 import kamon.trace.{ Trace, ContextAware }

@@ -17,7 +17,7 @@ package kamon.newrelic
 
 import akka.actor.Actor
 import kamon.trace.UowTrace
-import com.newrelic.api.agent.NewRelic
+import com.newrelic.api.agent.{ NewRelic ⇒ NR }
 import kamon.trace.UowTracing.WebExternal
 
 class NewRelicReporting extends Actor {
@@ -28,16 +28,16 @@ class NewRelicReporting extends Actor {
   def recordTransaction(uowTrace: UowTrace): Unit = {
     val time = ((uowTrace.segments.last.timestamp - uowTrace.segments.head.timestamp) / 1E9)
 
-    NewRelic.recordMetric("WebTransaction/Custom" + uowTrace.name, time.toFloat)
-    NewRelic.recordMetric("WebTransaction", time.toFloat)
-    NewRelic.recordMetric("HttpDispatcher", time.toFloat)
+    NR.recordMetric("WebTransaction/Custom" + uowTrace.name, time.toFloat)
+    NR.recordMetric("WebTransaction", time.toFloat)
+    NR.recordMetric("HttpDispatcher", time.toFloat)
 
     uowTrace.segments.collect { case we: WebExternal ⇒ we }.foreach { webExternalTrace ⇒
       val external = ((webExternalTrace.finish - webExternalTrace.start) / 1E9).toFloat
 
-      NewRelic.recordMetric(s"External/${webExternalTrace.host}/http", external)
-      NewRelic.recordMetric(s"External/${webExternalTrace.host}/all", external)
-      NewRelic.recordMetric(s"External/${webExternalTrace.host}/http/WebTransaction/Custom" + uowTrace.name, external)
+      NR.recordMetric(s"External/${webExternalTrace.host}/http", external)
+      NR.recordMetric(s"External/${webExternalTrace.host}/all", external)
+      NR.recordMetric(s"External/${webExternalTrace.host}/http/WebTransaction/Custom" + uowTrace.name, external)
     }
 
     val allExternals = uowTrace.segments.collect { case we: WebExternal ⇒ we } sortBy (_.timestamp)
@@ -53,8 +53,8 @@ class NewRelicReporting extends Actor {
 
     val external = measureExternal(0, 0, allExternals) / 1E9
 
-    NewRelic.recordMetric(s"External/all", external.toFloat)
-    NewRelic.recordMetric(s"External/allWeb", external.toFloat)
+    NR.recordMetric(s"External/all", external.toFloat)
+    NR.recordMetric(s"External/allWeb", external.toFloat)
 
   }
 }

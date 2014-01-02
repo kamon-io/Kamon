@@ -18,7 +18,7 @@ package kamon.newrelic
 import akka.actor.Actor
 import akka.event.Logging.Error
 import akka.event.Logging.{ LoggerInitialized, InitializeLogger }
-import com.newrelic.api.agent.NewRelic
+import com.newrelic.api.agent.{ NewRelic ⇒ NR }
 import kamon.trace.ContextAware
 
 class NewRelicErrorLogger extends Actor {
@@ -36,6 +36,6 @@ class NewRelicErrorLogger extends Actor {
       params.put("UOW", c.uow)
     }
 
-    NewRelic.noticeError(error.cause, params)
+    NR.noticeError(error.cause, params)
   }
 }

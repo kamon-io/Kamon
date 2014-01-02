@@ -9,7 +9,7 @@ object Build extends Build {
   import Dependencies._
 
   lazy val root = Project("root", file("."))
-    .aggregate(kamonCore, kamonTrace, kamonMetrics, kamonSpray, kamonNewrelic, kamonPlayground, kamonDashboard)
+    .aggregate(kamonCore, kamonSpray, kamonNewrelic, kamonPlayground, kamonDashboard)
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
     .settings(noPublishing: _*)
@@ -21,31 +21,9 @@ object Build extends Build {
     .settings(aspectJSettings: _*)
     .settings(
       libraryDependencies ++=
-        compile(akkaActor, aspectJ, metrics) ++
-        test(scalatest, akkaTestKit))
-
-
-  lazy val kamonTrace = Project("kamon-trace", file("kamon-trace"))
-    .settings(basicSettings: _*)
-    .settings(formatSettings: _*)
-    .settings(aspectJSettings: _*)
-    .settings(
-      libraryDependencies ++=
-        compile(akkaActor, aspectJ) ++
+        compile(akkaActor, aspectJ, hdrHistogram) ++
         provided(logback) ++
         test(scalatest, akkaTestKit, sprayTestkit, akkaSlf4j, logback))
-    .dependsOn(kamonCore)
-
-
-  lazy val kamonMetrics = Project("kamon-metrics", file("kamon-metrics"))
-    .settings(basicSettings: _*)
-    .settings(formatSettings: _*)
-    .settings(aspectJSettings: _*)
-    .settings(
-    libraryDependencies ++=
-      compile(hdrHistogram, akkaActor, aspectJ, newrelic) ++
-      test(scalatest, akkaTestKit, sprayTestkit))
-    .dependsOn(kamonCore)
 
 
   lazy val kamonSpray = Project("kamon-spray", file("kamon-spray"))
@@ -56,7 +34,7 @@ object Build extends Build {
       libraryDependencies ++=
         compile(akkaActor, aspectJ, sprayCan, sprayClient, sprayRouting) ++
         test(scalatest, akkaTestKit, sprayTestkit))
-    .dependsOn(kamonTrace)
+    .dependsOn(kamonCore)
 
 
   lazy val kamonNewrelic = Project("kamon-newrelic", file("kamon-newrelic"))
@@ -67,7 +45,7 @@ object Build extends Build {
       libraryDependencies ++=
         compile(aspectJ, sprayCan, sprayClient, sprayRouting, sprayJson, sprayJsonLenses, newrelic, snakeYaml) ++
         test(scalatest, akkaTestKit, sprayTestkit))
-    .dependsOn(kamonTrace)
+    .dependsOn(kamonCore)
 
 
   lazy val kamonPlayground = Project("kamon-playground", file("kamon-playground"))

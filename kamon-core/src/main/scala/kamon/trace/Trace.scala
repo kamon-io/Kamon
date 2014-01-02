@@ -68,7 +68,7 @@ object Trace extends ExtensionId[TraceExtension] with ExtensionIdProvider {
   }
 
   // TODO: FIX
-  def newTraceContext(name: String)(implicit system: ActorSystem): TraceContext = TraceContext(Kamon(Trace), tranid.getAndIncrement, name)
+  def newTraceContext(name: String)(implicit system: ActorSystem): TraceContext = TraceContext(Kamon(Trace).api, tranid.getAndIncrement, name)
 
   def startSegment(category: Segments.Category, description: String = "", attributes: Map[String, String] = Map()): SegmentCompletionHandle = {
     val start = Segments.Start(category, description, attributes)
@@ -89,7 +89,7 @@ object Trace extends ExtensionId[TraceExtension] with ExtensionIdProvider {
 }
 
 class TraceExtension(system: ExtendedActorSystem) extends Kamon.Extension {
-  val manager: ActorRef = system.actorOf(Props[TraceManager], "kamon-trace")
+  val api: ActorRef = system.actorOf(Props[TraceManager], "kamon-trace")
 }
 
 class TraceManager extends Actor with ActorLogging {
