@@ -13,13 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  * ========================================================== */
-package kamon
+package kamon.trace.logging
 
-import akka.actor._
+import ch.qos.logback.classic.pattern.ClassicConverter
+import ch.qos.logback.classic.spi.ILoggingEvent
+import kamon.trace.Trace
 
-object Kamon {
-  trait Extension extends akka.actor.Extension
-
-  def apply[T <: Extension](key: ExtensionId[T])(implicit system: ActorSystem): T = key(system)
+class LogbackUowConverter extends ClassicConverter {
+  def convert(event: ILoggingEvent): String = Trace.context().map(_.uow).getOrElse("undefined")
 }
-

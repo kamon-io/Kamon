@@ -15,17 +15,16 @@
  * ========================================================== */
 package kamon.instrumentation
 
-import com.codahale.metrics.{ ExponentiallyDecayingReservoir, Histogram }
 import akka.dispatch.{ UnboundedMessageQueueSemantics, Envelope, MessageQueue }
 import org.aspectj.lang.annotation.{ Around, Pointcut, DeclareMixin, Aspect }
 import akka.actor.{ ActorSystem, ActorRef }
-import kamon.metric.{ Metrics, MetricDirectory }
 import org.aspectj.lang.ProceedingJoinPoint
 
 /**
  *  For Mailboxes we would like to track the queue size and message latency. Currently the latency
  *  will be gathered from the ActorCellMetrics.
  */
+/*
 
 @Aspect
 class MessageQueueInstrumentation {
@@ -74,4 +73,5 @@ class MonitoredMessageQueue(val delegate: MessageQueue, val queueSizeHistogram: 
   def hasMessages: Boolean = delegate.hasMessages
   def cleanUp(owner: ActorRef, deadLetters: MessageQueue) = delegate.cleanUp(owner, deadLetters)
 }
+*/
 
