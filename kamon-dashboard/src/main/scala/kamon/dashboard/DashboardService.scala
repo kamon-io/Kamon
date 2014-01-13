@@ -21,10 +21,8 @@ import spray.routing.directives.LogEntry
 import akka.event.Logging
 import spray.http.MediaTypes._
 import spray.httpx.SprayJsonSupport
-import kamon.Kamon
 import spray.http.HttpRequest
 import akka.actor.OneForOneStrategy
-import com.codahale.metrics.{ Metric, MetricFilter }
 
 class DashboardServiceActor extends Actor with DashboardService {
 

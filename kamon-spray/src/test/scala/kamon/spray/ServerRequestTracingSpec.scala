@@ -70,7 +70,7 @@ class ServerRequestTracingSpec extends TestKit(ActorSystem("server-request-traci
 trait TestServer extends SimpleRoutingApp {
   self: TestKit ⇒
 
-  Kamon(Trace).tell(Trace.Register, testActor)
+  Kamon(Trace).api.tell(Trace.Register, testActor)
 
   implicit val timeout = Timeout(20 seconds)
   val port: Int = Await.result(

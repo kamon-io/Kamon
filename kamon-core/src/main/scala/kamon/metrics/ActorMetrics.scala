@@ -13,26 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  * ========================================================== */
-package kamon.instrumentation
 
-import org.aspectj.lang.ProceedingJoinPoint
+package kamon.metrics
 
-trait ProceedingJoinPointPimp {
-  import language.implicitConversions
+import akka.actor.{ Props, ExtendedActorSystem, ExtensionIdProvider, ExtensionId }
+import akka.actor
+import kamon.Kamon
 
-  implicit def pimpProceedingJointPoint(pjp: ProceedingJoinPoint) = RichProceedingJointPoint(pjp)
+object ActorMetrics extends ExtensionId[ActorMetricsExtension] with ExtensionIdProvider {
+  def lookup(): ExtensionId[_ <: actor.Extension] = ActorMetrics
+  def createExtension(system: ExtendedActorSystem): ActorMetricsExtension = new ActorMetricsExtension(system)
+
 }
 
-object ProceedingJoinPointPimp extends ProceedingJoinPointPimp
-
-case class RichProceedingJointPoint(pjp: ProceedingJoinPoint) {
-  def proceedWith(newUniqueArg: AnyRef) = {
-    val args = pjp.getArgs
-    args.update(0, newUniqueArg)
-    pjp.proceed(args)
-  }
-
-  def proceedWithTarget(args: AnyRef*) = {
-    pjp.proceed(args.toArray)
-  }
+class ActorMetricsExtension(val system: ExtendedActorSystem) extends Kamon.Extension with ActorMetricsOps {
+  lazy val metricsDispatcher = system.actorOf(Props[ActorMetricsDispatcher], "kamon-actor-metrics")
 }

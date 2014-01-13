@@ -25,7 +25,9 @@ import kamon.trace.UowTracing.{ Finish, Start }
 // TODO: Decide if we need or not an ID, generating it takes time and it doesn't seem necessary.
 case class TraceContext(private val collector: ActorRef, id: Long, uow: String = "", userContext: Option[Any] = None) {
 
-  def start(name: String) = collector ! Start(id, name)
+  def start(name: String) = {
+    collector ! Start(id, name)
+  }
 
   def finish: Unit = {
     collector ! Finish(id)

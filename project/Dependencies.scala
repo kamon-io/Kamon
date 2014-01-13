@@ -12,20 +12,19 @@ object Dependencies {
 
   val sprayJson       = "io.spray"                  %%  "spray-json"            % "1.2.5"
   val sprayJsonLenses = "net.virtual-void"          %%  "json-lenses"           % "0.5.3"
-  val scalatest       = "org.scalatest"             %   "scalatest_2.10"        % "2.0.RC2"
+  val scalatest       = "org.scalatest"             %   "scalatest_2.10"        % "2.0"
   val logback         = "ch.qos.logback"            %   "logback-classic"       % "1.0.13"
   val aspectJ         = "org.aspectj"               %   "aspectjrt"             % "1.7.2"
-  val metrics         = "com.codahale.metrics"      %   "metrics-core"          % "3.0.1"
   val newrelic        = "com.newrelic.agent.java"   %   "newrelic-api"          % "3.1.0"
-  val akkaActor       = "com.typesafe.akka"         %%  "akka-actor"            % akkaVersion
-  val akkaSlf4j       = "com.typesafe.akka"         %%  "akka-slf4j"            % akkaVersion
-  val akkaTestKit     = "com.typesafe.akka"         %%  "akka-testkit"          % akkaVersion
+  val snakeYaml       = "org.yaml"                  %   "snakeyaml"             % "1.13"
+  val hdrHistogram    = "org.hdrhistogram"          %   "HdrHistogram"          % "1.0.8"
   val sprayCan        = "io.spray"                  %   "spray-can"             % sprayVersion
   val sprayRouting    = "io.spray"                  %   "spray-routing"         % sprayVersion
   val sprayTestkit    = "io.spray"                  %   "spray-testkit"         % sprayVersion
   val sprayClient     = "io.spray"                  %   "spray-client"          % sprayVersion
-  val snakeYaml       = "org.yaml"                  %   "snakeyaml"             % "1.13"
-  val hdrHistogram    = "org.hdrhistogram"          %   "HdrHistogram"          % "1.0.8"
+  val akkaActor       = "com.typesafe.akka"         %%  "akka-actor"            % akkaVersion
+  val akkaSlf4j       = "com.typesafe.akka"         %%  "akka-slf4j"            % akkaVersion
+  val akkaTestKit     = "com.typesafe.akka"         %%  "akka-testkit"          % akkaVersion
 
 
   def compile   (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "compile")

@@ -2,13 +2,26 @@
 
 <aspectj>
     <weaver options="-verbose -showWeaveInfo">
-       <!--<dump within="*"/>-->
+        <!-- In case you want to see the weaved classes -->
+        <!--<dump within="*"/>-->
     </weaver>
 
     <aspects>
-        <aspect name="kamon.instrumentation.ActorSystemInstrumentation"/>
+        <!-- Actors -->
+        <aspect name="akka.instrumentation.RepointableActorRefTraceContextMixin"/>
+        <aspect name="akka.instrumentation.SystemMessageTraceContextMixin"/>
+        <aspect name="akka.instrumentation.ActorSystemMessagePassingTracing"/>
+        <aspect name="akka.instrumentation.EnvelopeTraceContextMixin"/>
+        <aspect name="akka.instrumentation.BehaviourInvokeTracing"/>
+        <aspect name="kamon.instrumentation.ActorLoggingTracing"/>
 
-        <!--<exclude within="*"/>-->
+        <!-- Futures -->
+        <aspect name="kamon.instrumentation.FutureTracing"/>
+
+        <!-- Patterns -->
+        <aspect name="akka.instrumentation.AskPatternTracing"/>
+
+
         <include within="scala.concurrent..*"/>
         <include within="akka..*"/>
         <include within="spray..*"/>
