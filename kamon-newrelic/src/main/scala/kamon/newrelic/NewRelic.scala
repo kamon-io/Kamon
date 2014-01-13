@@ -27,13 +27,13 @@ class NewRelic extends ExtensionId[NewRelicExtension] {
 }
 
 class NewRelicExtension(system: ExtendedActorSystem) extends Kamon.Extension {
-  val manager: ActorRef = system.actorOf(Props[NewRelicManager], "kamon-newrelic")
+  val api: ActorRef = system.actorOf(Props[NewRelicManager], "kamon-newrelic")
 }
 
 class NewRelicManager extends Actor with ActorLogging {
   log.info("Registering the Kamon(NewRelic) extension")
 
-  Kamon(Trace)(context.system) ! Trace.Register
+  Kamon(Trace)(context.system).api ! Trace.Register
 
   val webTransactionMetrics = context.actorOf(Props[WebTransactionMetrics], "web-transaction-metrics")
   val agent = context.actorOf(Props[Agent], "agent")
