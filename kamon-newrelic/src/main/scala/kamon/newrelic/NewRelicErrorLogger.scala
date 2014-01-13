@@ -35,7 +35,12 @@ class NewRelicErrorLogger extends Actor {
     for (c ← ctx) {
       params.put("UOW", c.uow)
     }
+    
+    if (error.cause == Error.NoCause) {
+      NewRelic.noticeError(error.message.toString, params)
+    } else {
+      NewRelic.noticeError(error.cause, params)
+    }
 
-    NewRelic.noticeError(error.cause, params)
   }
 }
