@@ -1,58 +1,43 @@
-body {
-  /* 60px to make the container go all the way to the bottom of the topbar */
-  padding-top: 60px;
+/*Navbar*/
+.navbar-static-top {
+    margin-bottom: 20px;
 }
 
-#text-input {
-  width: 80%;
+i {
+    font-size: 16px;
 }
 
-.messages > div {
-  border-bottom: solid lightgray 1px;
-  padding-top: 6px;
-  padding-bottom: 6px;
+.nav > li > a {
+    color: #787878;
 }
 
-.messages > div:first-of-type {
-  border-top: solid lightgray 1px;
+footer {
+    margin-top: 20px;
+    padding-top: 20px;
+    padding-bottom: 20px;
+    background-color: #efefef;
 }
 
-.messages > div > .username {
-  font-weight: bold;
+/* count indicator near icons */
+.nav > li .count {
+    position: absolute;
+    bottom: 12px;
+    right: 6px;
+    font-size: 10px;
+    font-weight: normal;
+    background: rgba(51, 200, 51, 0.55);
+    color: rgba(255, 255, 255, 0.9);
+    line-height: 1em;
+    padding: 2px 4px;
+    -webkit-border-radius: 10px;
+    -moz-border-radius: 10px;
+    -ms-border-radius: 10px;
+    -o-border-radius: 10px;
+    border-radius: 10px;
 }
 
-body {
-    padding-top: 60px;
-    padding-bottom: 40px;
-}
-
-body { min-width: 520px; }
-
-.column { width: 50%; float: left; padding-bottom: 100px; }
-.portlet { margin: 0 1em 1em 0; }
-.portlet-header { margin: 0.3em; padding-bottom: 4px; padding-left: 0.2em; }
-.portlet-header .ui-icon { float: right; }
-.portlet-content { padding: 0.4em; }
-.ui-sortable-placeholder { border: 1px dotted black; visibility: visible !important; height: 50px !important; }
-.ui-sortable-placeholder * { visibility: hidden; }
-
-/*Tree*/
-.node {
-    cursor: pointer;
-}
-
-.node circle {
-    fill: #fff;
-    stroke: steelblue;
-    stroke-width: 1.5px;
-}
-
-.node text {
-    font: 10px sans-serif;
-}
-
-.link {
-    fill: none;
-    stroke: #ccc;
-    stroke-width: 1.5px;
+/* indent 2nd level */
+.list-unstyled li > ul > li {
+    margin-left: 10px;
+    padding: 8px;
 }

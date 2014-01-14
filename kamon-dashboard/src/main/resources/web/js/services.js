@@ -1,6 +1,8 @@
 'use strict';
 
-var kamonModule = angular.module('kamonServices', ['ngResource']);
+/* Services */
 
-kamonModule.factory('ActorSystemMetrics', function($resource) { return $resource('metrics/dispatchers');})
-//kamonModule.factory('ActorSystemTree', function($resource) { return $resource('metrics/actorTree');})
+
+// Demonstrate how to register services
+// In this case it is a simple value service.
+angular.module('dashboard.services', []).value('version', '0.1');
