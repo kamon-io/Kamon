@@ -3,9 +3,10 @@ title: kamon | Akka Toolkit | Documentation
 layout: default
 ---
 
-Documentation
+Akka Module
 ===
 
+---
 Dependencies
 ---
 
@@ -29,13 +30,13 @@ Since kamon uses the same configuration technique as [Spray](http://spray.io/doc
 
 In order to see Kamon in action you need first to set up your sbt project.
 
-1. Add Kamon repository to resolvers
+1) Add Kamon repository to resolvers
 
 ```scala
 "Kamon Repository" at "http://repo.kamon.io"
 ```
 
-2. Add libraryDepenency
+2) Add libraryDepenency
 
 ```scala 
     "kamon" %%  "kamon-spray" % "0.0.11",
@@ -51,11 +52,10 @@ In addition we suggest to create aspectj.sbt file and add this content
     javaOptions <++= AspectjKeys.weaverOptions in Aspectj
 ```
 
-3. Add to your plugins.sbt in project folder (if you don't have one yet, create the file) and add the Kamon release to the resolver and the aspecj.
+3) Add to your plugins.sbt in project folder (if you don't have one yet, create the file) and add the Kamon release to the resolver and the aspecj.
 
 ```scala
-    resolvers += Resolver.url("Kamon Releases", 
-        url("http://repo.kamon.io"))(Resolver.ivyStylePatterns)
+    resolvers += Resolver.url("Kamon Releases", url("http://repo.kamon.io"))(Resolver.ivyStylePatterns)
 
     addSbtPlugin("com.typesafe.sbt" % "sbt-aspectj" % "0.9.2")
 ``` 
@@ -65,9 +65,9 @@ In addition we suggest to create aspectj.sbt file and add this content
     akka {
       loggers = ["akka.event.slf4j.Slf4jLogger"]
   
-    actor {
-       debug {
-      unhandled = on
+        actor {
+           debug {
+                    unhandled = on
             }
         }
     }

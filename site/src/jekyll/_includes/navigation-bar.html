@@ -1,4 +1,4 @@
-<div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+<div class="navbar navbar-default navbar-fixed-top" role="navigation">
   <div class="container">
     <!-- Brand and toggle get grouped for better mobile display -->
     <div class="navbar-header">
@@ -8,13 +8,25 @@
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
       </button>
-      <a class="navbar-brand kamon-title" href="/"><strong>Kamon</strong> <span class="small hidden-xs">Reactive Applications Monitoring</span>
-      </a>
+      <a class="navbar-brand kamon-title" href="/"><img src="../assets/img/kamon-verde-120x120.png" width="20" height="20"/> <strong>Kamon</strong></a>
     </div>
 
     <!-- Collect the nav links, forms, and other content for toggling -->
     <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
-      <ul class="nav navbar-nav navbar-right">
+	<ul class="nav navbar-nav">
+	     <li class="dropdown">
+              <a class="dropdown-toggle" data-toggle="dropdown" href="#" id="modules">Modules <span class="caret"></span></a>
+              <ul class="dropdown-menu" aria-labelledby="download">
+                <li><a tabindex="-1" href="/spray">Spray</a></li>
+                <li><a tabindex="-1" href="/akka">Akka</a></li>
+		<li><a tabindex="-1" href="/newrelic">NewRelic</a></li>
+                <li class="divider"></li>
+                <li><a tabindex="-1" href="/dashboard">Dashboard</a></li>
+                <li><a tabindex="-1" href="/traces">Traces</a></li>
+              </ul>
+            </li>
+ 	</ul>
+      	<ul class="nav navbar-nav navbar-right">
         <li><a href="/teamblog/">Team Blog</a></li>
       </ul>
     </div>
