@@ -1,5 +1,5 @@
 ---
-title: kamon | Akka Toolkit | Documentation
+title: kamon | Spray | Documentation
 layout: default
 ---
 

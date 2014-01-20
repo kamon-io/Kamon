@@ -1,7 +1,7 @@
 ---
-title: kamon | Dashboard | Documentation
+title: kamon | Traces | Documentation
 layout: default
 ---
-Comming soon
+Coming soon
 --------
 
