@@ -47,7 +47,7 @@ Starting your app with the AspectJ weaver is dead simple, just add the `-javaage
 weaver's file location and you are done:
 
 ```
--javaagent:/path-to-newrelic-agent.jar
+-javaagent:/path-to-aspectj-weaver.jar
 ```
 
 In case you want to keep the AspectJ related settings in your build and enjoy using `run` from the console, take a look at
