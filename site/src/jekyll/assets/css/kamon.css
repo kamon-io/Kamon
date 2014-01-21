@@ -46,4 +46,17 @@ body {
 
 img[alt=newrelic] { width: 100%; }
 
+.btn-success {
+  background-color: #29b068
+}
+
+.btn-success:hover {
+  background-color: #39a069
+}
+
+.btn, .btn:hover {
+  border: none !important;
+  background-image: none !important;
+}
+
 
