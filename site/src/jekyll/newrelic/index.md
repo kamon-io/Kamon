@@ -108,7 +108,7 @@ In case you want to keep the NewRelic Agent related setting, take a look at [New
 ab -k -n 2000 http://localhost:8080/helloNewRelic
 ```
 ### Example
-This and others examples are found in the [GitHub](https://github.com/kamon-io/Kamon/tree/master/examples/) Kamon repository inside examples folder.
+This and others examples are found in the [GitHub](https://github.com/kamon-io/Kamon/tree/master/kamon-examples/) Kamon repository inside kamon-examples folder.
 
 ### Screenshot
 
