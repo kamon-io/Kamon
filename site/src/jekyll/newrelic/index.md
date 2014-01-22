@@ -4,53 +4,61 @@ layout: default
 ---
 
 NewRelic Module
-===
-A simple module to report some application metrics like External Services, Errors and Apdex. 
+===============
+
+If you are a Newrelic user and tried to start start your app using the Newrelic agent you probably noticed a crude reality:
+nothing is shown in your dashboard, no web transactions are recognized and errors are not reported for your Spray applications.
+Don't even think about detailed traces for the slowest transactions.
+
+We love Spray, and we love Newrelic, we couldn't leave this happening anymore!
+
+Currently the Newrelic Module works together with the Spray Module to get information about your Web Transactions and send
+that information to Newrelic servers as a aggregate to the data already colected by Newrelic's Agent. Currently the data
+being reported is:
+
+- Time spent for Web Transactions: Also known as `HttpDispatcher` time, represents the total time taken to process a web
+transaction, from the moment the `HttpRequest` is received by spray-can, to the moment the answer is sent to the IO layer.
+- Apdex
+- Errors
+
+Differentiation between JVM and External Services is coming soon, as well as actor metrics and detailed traces.
+
+
+
+Installation
+-------------
+
+To use the Newrelic module just make sure you put the `kamon-newrelic` and `kamon-spray` libraries in your classpath and
+start your application with both, the Aspectj Weaver and Newrelic agents. Please refer to our [get started](/get-started) page
+for more info on how to add the AspectJ Weaver and the [Newrelic Agent Installations Instructions](https://docs.newrelic.com/docs/java/new-relic-for-java#h2-installation).
+
 
 Configuration
----
+-------------
 
-**In order to see Kamon in action you just follow this Simple Example:**
-
-
-**1)** All Kamon libraries are available through the official Kamon repository:
+Currently you will need to add a few settings to your `application.conf` file for the module to work:
 
 ```scala
-"Kamon Repository" at "http://repo.kamon.io"
+akka {
+  // Make sure the NewRelic extension is loaded with the ActorSystem
+  extensions = ["kamon.newrelic.NewRelic"]
+}
+
+kamon {
+  newrelic {
+    // These values must match the values present in your newrelic.yml file.
+    app-name = "KamonNewRelicExample[Development]"
+    license-key = 0123456789012345678901234567890123456789
+  }
+}
 ```
 
-**2)** Add the libraries to your project:
 
-```scala
-resolvers += "Kamon Repository" at "http://repo.kamon.io"
+Let's see it in Action!
+-----------------------
 
-"kamon" %%  "kamon-core" % "0.0.12"
-
-"kamon" %%  "kamon-spray" % "0.0.12"
-
-"kamon" %%  "kamon-newrelic" % "0.0.12"
-```
-
-Also you need add this lines into the `build.sbt` in order to configure the [sbt-aspectj](https://github.com/sbt/sbt-aspectj/) plugin:
-
-```scala
-import com.typesafe.sbt.SbtAspectj._
-
-aspectjSettings
-
-javaOptions <++= AspectjKeys.weaverOptions in Aspectj
-```
-
-**3)** Add to your `plugins.sbt` in project folder (if you don't have one yet, create the file) and add this content:
-
-```scala
-resolvers += "Kamon Releases" at "http://repo.kamon.io"
-
-addSbtPlugin("com.ivantopo.sbt" %% "sbt-newrelic" % "0.0.1")
-
-addSbtPlugin("com.typesafe.sbt" % "sbt-aspectj" % "0.9.4")
-``` 
-**4)** Our Reactive Application:
+Let's create a very simple Spray application to show what you should expect from this module. The entire application code
+is at [Github](https://github.com/kamon-io/Kamon/tree/master/kamon-examples/kamon-newrelic-example).
 
 ```scala
 import akka.actor.ActorSystem
@@ -79,46 +87,29 @@ object NewRelicExample extends App with SimpleRoutingApp {
 }
 ```
 
-**5)** In addition, you have to provide some information about NewRelic configuration in the `application.conf`:
-
-```scala
-akka {
-  extensions = ["kamon.newrelic.NewRelic"]
-}
-
-kamon {
-  newrelic {
-    app-name = "KamonNewRelicExample[Development]"
-    license-key = <<Key>>
-  }
-}
-```
-
-**6)** Add the [NewRelic](http://newrelic.com/) Agent:
-
-```scala
--javaagent:/path-to-newrelic-agent.jar -Dnewrelic.environment=production -Dnewrelic.config.file=/path-to-newrelic.yml
-```
-In case you want to keep the NewRelic Agent related setting, take a look at [NewRelic](https://docs.newrelic.com/docs/java/new-relic-for-java)
-
-
-**7)** To see how it works, you need to send a messages to the rest services
+As you can see, this is a dead simple application: two paths, different responses for each of them. Now let's hit it hard
+with Apache Bench:
 
 ```bash
-ab -k -n 2000 http://localhost:8080/helloNewRelic
+ab -k -n 200000 http://localhost:8080/helloKamon
+ab -k -n 200000 http://localhost:8080/helloNewRelic
 ```
-### Example
-This and others examples are found in the [GitHub](https://github.com/kamon-io/Kamon/tree/master/kamon-examples/) Kamon repository inside kamon-examples folder.
 
-### Screenshot
+After a couple minutes running you should start seeing something similar to this in your dashboard:
 
 ![newrelic](/assets/img/newrelic.png "NewRelic Screenshot")
 
+<div class="alert alert-info">
+Note: Don't think that those numbers are wrong, Spray is that fast!
+</div>
 
-## Limitations
+
+Limitations
+-----------
 * The first implementation only supports a subset of NewRelic metrics
 
-## Licensing
 
+Licensing
+---------
 NewRelic has [its own, separate licensing](http://newrelic.com/terms).
 
