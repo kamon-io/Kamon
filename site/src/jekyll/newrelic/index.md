@@ -7,112 +7,112 @@ NewRelic Module
 ===
 A simple module to report some application metrics like External Services, Errors and Apdex. 
 
----
-Dependencies
----
-
-Apart from scala library kamon depends on:
-
-- aspectj 
-- new relic agent
-- spray-io 
-- akka-actor 
-
-
-Installation
----
-Kamon works with SBT, so you need to add Kamon.io repository to your resolvers.
-
 Configuration
 ---
-Just like other products in the scala ecosystem, it relies on the typesafe configuration library. If you are a new relic user, you will requiere to add a logger to the application.conf file
 
-    
-Since kamon uses the same configuration technique as [Spray](http://spray.io/documentation "Spray") / [Akka](http://akka.io/docs "Akka") you might want to check out the [Akka-Documentation-configuration](http://doc.akka.io/docs/akka/2.1.4/general/configuration.html "Akka Documentation on configuration").
+**In order to see Kamon in action you just follow this Simple Example:**
 
-In order to see Kamon in action you need first to set up your sbt project. Add the following sbt dependencies to your project settings:
 
-1) Add Kamon repository to resolvers
+1) All Kamon libraries are available through the official Kamon repository:
 
 ```scala
-    "Kamon Repository" at "http://repo.kamon.io"
+"Kamon Repository" at "http://repo.kamon.io"
 ```
 
-2) Add libraryDepenency
-
-```scala 
-    "kamon" %%  "kamon-spray" % "0.0.11",
-    "kamon" %%  "kamon-newrelic" % "0.0.11"
-```
-
-In addition we suggest to create aspectj.sbt file and add this content
+2) Add the libraries to your project:
 
 ```scala
-    import com.typesafe.sbt.SbtAspectj._
+resolvers += "Kamon Repository" at "http://repo.kamon.io"
 
-    aspectjSettings
+"kamon" %%  "kamon-core" % "0.0.12"
 
-    javaOptions <++= AspectjKeys.weaverOptions in Aspectj
+"kamon" %%  "kamon-spray" % "0.0.12"
+
+"kamon" %%  "kamon-newrelic" % "0.0.12"
 ```
 
-3) Add to your plugins.sbt in project folder (if you don't have one yet, create the file) and add the Kamon release to the resolver and the aspecj. You need to add the sbt-newrelic plugin
+Also you need add this lines into the build.sbt in order to configure the [sbt-aspectj](https://github.com/sbt/sbt-aspectj/) plugin:
 
 ```scala
-    resolvers += Resolver.url("Kamon Releases", url("http://repo.kamon.io"))(Resolver.ivyStylePatterns)
+import com.typesafe.sbt.SbtAspectj._
 
-    addSbtPlugin("com.ivantopo.sbt" %% "sbt-newrelic" % "0.0.1")
+aspectjSettings
 
-    addSbtPlugin("com.typesafe.sbt" % "sbt-aspectj" % "0.9.2")
+javaOptions <++= AspectjKeys.weaverOptions in Aspectj
+```
+
+3) Add to your `plugins.sbt` in project folder (if you don't have one yet, create the file) and add this content:
+
+```scala
+resolvers += "Kamon Releases" at "http://repo.kamon.io"
+
+addSbtPlugin("com.ivantopo.sbt" %% "sbt-newrelic" % "0.0.1")
+
+addSbtPlugin("com.typesafe.sbt" % "sbt-aspectj" % "0.9.4")
 ``` 
-In addittion, you have to provide the new relic agent and configure a logger in application.conf file.
-
-**application.conf**
+4) Our Reactive Application:
 
 ```scala
-    akka {
-        loggers = ["akka.event.slf4j.Slf4jLogger","kamon.newrelic.NewRelicErrorLogger"]
-  
-        extensions = ["kamon.newrelic.NewRelic"]
-        actor {
-                debug {
-                    unhandled = on
-                }
-        }
-    }    
+import akka.actor.ActorSystem
+import spray.routing.SimpleRoutingApp
+
+object NewRelicExample extends App with SimpleRoutingApp {
+
+ implicit val system = ActorSystem("kamon-system")
+
+ startServer(interface = "localhost", port = 8080) {
+   path("helloKamon") {
+     get {
+       complete {
+         <h1>Say hello to Kamon</h1>
+       }
+     }
+   } ~
+   path("helloNewRelic") {
+     get {
+       complete {
+         <h1>Say hello to NewRelic</h1>
+       }
+     }
+   }
+ }
+}
 ```
-Optionally you can add the newrelic agent in the command line
+
+5) In addition, you have to provide some information about NewRelic configuration in the **application.conf**:
 
 ```scala
--javaagent:/path-to-newrelic-agent.jar, -Dnewrelic.environment=production, -Dnewrelic.config.file=/path-to-newrelic.yml
+akka {
+  extensions = ["kamon.newrelic.NewRelic"]
+}
+
+kamon {
+  newrelic {
+    app-name = "KamonNewRelicExample[Development]"
+    license-key = <<Key>>
+  }
+}
 ```
 
+6) Add the [NewRelic](http://newrelic.com/) Agent:
 
-Examples
----
+```scala
+-javaagent:/path-to-newrelic-agent.jar -Dnewrelic.environment=production -Dnewrelic.config.file=/path-to-newrelic.yml
+```
+In case you want to keep the NewRelic Agent related setting, take a look at [NewRelic](https://docs.newrelic.com/docs/java/new-relic-for-java)
 
-The examples will start a spray server with akka, new relic and logback configuration. Adjust it to your needs in order to see the data in your new relic service. 
 
-Follow the steps in order to clone the repository
-
-1. git clone git://github.com/kamon/kamon.git
-
-2. cd kamon
-
-run
+7) To see how it works, you need to send a messages to the rest services
 
 ```bash
-    sbt "project kamon-new-relic-uow-example"
+ab -k -n 2000 http://localhost:8080/helloNewRelic
 ```
-
-In order to see how it works, you need to send a message to the rest service
-
-```bash
-    curl -v --header 'X-UOW:YOUR_TRACER_ID' -X GET 'http://0.0.0.0:6666/fibonacci'
-```
+### Example
+This and others examples are found in the [GitHub](https://github.com/kamon-io/Kamon/tree/master/examples/) Kamon repository inside examples folder.
 
 ### Screenshot
 
-![newrelic](/assets/img/newrelicdifu2.png "Screenshot NewRelic")
+![newrelic](/assets/img/newrelic.png "NewRelic Screenshot")
 
 
 ## Limitations
