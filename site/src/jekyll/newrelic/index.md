@@ -13,13 +13,13 @@ Configuration
 **In order to see Kamon in action you just follow this Simple Example:**
 
 
-1) All Kamon libraries are available through the official Kamon repository:
+**1)** All Kamon libraries are available through the official Kamon repository:
 
 ```scala
 "Kamon Repository" at "http://repo.kamon.io"
 ```
 
-2) Add the libraries to your project:
+**2)** Add the libraries to your project:
 
 ```scala
 resolvers += "Kamon Repository" at "http://repo.kamon.io"
@@ -31,7 +31,7 @@ resolvers += "Kamon Repository" at "http://repo.kamon.io"
 "kamon" %%  "kamon-newrelic" % "0.0.12"
 ```
 
-Also you need add this lines into the build.sbt in order to configure the [sbt-aspectj](https://github.com/sbt/sbt-aspectj/) plugin:
+Also you need add this lines into the `build.sbt` in order to configure the [sbt-aspectj](https://github.com/sbt/sbt-aspectj/) plugin:
 
 ```scala
 import com.typesafe.sbt.SbtAspectj._
@@ -41,7 +41,7 @@ aspectjSettings
 javaOptions <++= AspectjKeys.weaverOptions in Aspectj
 ```
 
-3) Add to your `plugins.sbt` in project folder (if you don't have one yet, create the file) and add this content:
+**3)** Add to your `plugins.sbt` in project folder (if you don't have one yet, create the file) and add this content:
 
 ```scala
 resolvers += "Kamon Releases" at "http://repo.kamon.io"
@@ -50,7 +50,7 @@ addSbtPlugin("com.ivantopo.sbt" %% "sbt-newrelic" % "0.0.1")
 
 addSbtPlugin("com.typesafe.sbt" % "sbt-aspectj" % "0.9.4")
 ``` 
-4) Our Reactive Application:
+**4)** Our Reactive Application:
 
 ```scala
 import akka.actor.ActorSystem
@@ -79,7 +79,7 @@ object NewRelicExample extends App with SimpleRoutingApp {
 }
 ```
 
-5) In addition, you have to provide some information about NewRelic configuration in the **application.conf**:
+**5)** In addition, you have to provide some information about NewRelic configuration in the `application.conf`:
 
 ```scala
 akka {
@@ -94,7 +94,7 @@ kamon {
 }
 ```
 
-6) Add the [NewRelic](http://newrelic.com/) Agent:
+**6)** Add the [NewRelic](http://newrelic.com/) Agent:
 
 ```scala
 -javaagent:/path-to-newrelic-agent.jar -Dnewrelic.environment=production -Dnewrelic.config.file=/path-to-newrelic.yml
@@ -102,7 +102,7 @@ kamon {
 In case you want to keep the NewRelic Agent related setting, take a look at [NewRelic](https://docs.newrelic.com/docs/java/new-relic-for-java)
 
 
-7) To see how it works, you need to send a messages to the rest services
+**7)** To see how it works, you need to send a messages to the rest services
 
 ```bash
 ab -k -n 2000 http://localhost:8080/helloNewRelic
