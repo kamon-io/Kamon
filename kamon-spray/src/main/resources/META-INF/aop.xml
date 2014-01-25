@@ -1,11 +1,15 @@
 <!DOCTYPE aspectj PUBLIC "-//AspectJ//DTD//EN" "http://www.eclipse.org/aspectj/dtd/aspectj.dtd">
 
 <aspectj>
-  <weaver options="-verbose -showWeaveInfo"/>
-
   <aspects>
+    <!-- Spray Server -->
     <aspect name="spray.can.server.ServerRequestTracing"/>
+
+    <!-- Spray Client -->
     <aspect name="spray.can.client.ClientRequestTracing"/>
-    <include within="spray..*"/>
   </aspects>
+
+  <weaver options="-verbose -showWeaveInfo">
+    <include within="spray.can..*"/>
+  </weaver>
 </aspectj>
