@@ -1,31 +1,27 @@
 <!DOCTYPE aspectj PUBLIC "-//AspectJ//DTD//EN" "http://www.eclipse.org/aspectj/dtd/aspectj.dtd">
 
 <aspectj>
-    <weaver options="-verbose -showWeaveInfo">
-        <!-- In case you want to see the weaved classes -->
-        <!--<dump within="*"/>-->
-    </weaver>
+  <aspects>
+    <!-- Actors -->
+    <aspect name="akka.instrumentation.RepointableActorRefTraceContextMixin"/>
+    <aspect name="akka.instrumentation.SystemMessageTraceContextMixin"/>
+    <aspect name="akka.instrumentation.ActorSystemMessagePassingTracing"/>
+    <aspect name="akka.instrumentation.EnvelopeTraceContextMixin"/>
+    <aspect name="akka.instrumentation.BehaviourInvokeTracing"/>
+    <aspect name="kamon.instrumentation.ActorLoggingTracing"/>
 
-    <aspects>
-        <!-- Actors -->
-        <aspect name="akka.instrumentation.RepointableActorRefTraceContextMixin"/>
-        <aspect name="akka.instrumentation.SystemMessageTraceContextMixin"/>
-        <aspect name="akka.instrumentation.ActorSystemMessagePassingTracing"/>
-        <aspect name="akka.instrumentation.EnvelopeTraceContextMixin"/>
-        <aspect name="akka.instrumentation.BehaviourInvokeTracing"/>
-        <aspect name="kamon.instrumentation.ActorLoggingTracing"/>
+    <!-- Futures -->
+    <aspect name="kamon.instrumentation.FutureTracing"/>
 
-        <!-- Futures -->
-        <aspect name="kamon.instrumentation.FutureTracing"/>
+    <!-- Patterns -->
+    <aspect name="akka.instrumentation.AskPatternTracing"/>
+  </aspects>
 
-        <!-- Patterns -->
-        <aspect name="akka.instrumentation.AskPatternTracing"/>
-
-
-        <include within="scala.concurrent..*"/>
-        <include within="akka..*"/>
-        <include within="spray..*"/>
-        <include within="kamon..*"/>
-    </aspects>
+  <weaver options="-verbose -showWeaveInfo">
+    <include within="scala.concurrent..*"/>
+    <include within="akka..*"/>
+    <include within="spray..*"/>
+    <include within="kamon..*"/>
+  </weaver>
 
 </aspectj>
