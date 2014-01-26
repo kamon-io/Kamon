@@ -25,18 +25,18 @@ import spray.http.HttpHeaders.RawHeader
 
 trait UowDirectives extends BasicDirectives {
   def uow: Directive0 = mapRequest { request ⇒
-    val uowHeader = request.headers.find(_.name == "X-UOW")
-
+    val uowHeader = request.headers.find(_.name == UowDirectives.uowHeaderName).filterNot(header ⇒ UowDirectives.isBlank(header.value))
     val generatedUow = uowHeader.map(_.value).getOrElse(UowDirectives.newUow)
     Trace.transformContext(_.copy(uow = generatedUow))
     request
   }
-  def respondWithUow = mapHttpResponseHeaders(headers ⇒ Trace.context().map(ctx ⇒ RawHeader("X-UOW", ctx.uow) :: headers).getOrElse(headers))
+  def respondWithUow = mapHttpResponseHeaders(headers ⇒ Trace.context().map(ctx ⇒ RawHeader(UowDirectives.uowHeaderName, ctx.uow) :: headers).getOrElse(headers))
 }
 
 object UowDirectives {
+  val uowHeaderName = "X-UOW"
   val uowCounter = new AtomicLong
   val hostnamePrefix = Try(InetAddress.getLocalHost.getHostName).getOrElse("unknown-localhost")
   def newUow = "%s-%s".format(hostnamePrefix, uowCounter.incrementAndGet())
-
+  def isBlank(s: String) = s == null || s.trim.isEmpty
 }
