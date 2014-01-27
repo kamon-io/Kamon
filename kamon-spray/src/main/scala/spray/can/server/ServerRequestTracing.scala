@@ -39,7 +39,7 @@ class ServerRequestTracing {
     val system: ActorSystem = openRequest.asInstanceOf[OpenRequest].context.actorContext.system
     val config = system.settings.config.getConfig("kamon.spray")
 
-    val token = if(config.getBoolean("include-trace-token-header")) {
+    val token = if (config.getBoolean("include-trace-token-header")) {
       val traceTokenHeader = config.getString("trace-token-header-name")
       request.headers.find(_.name == traceTokenHeader).map(_.value)
     } else None

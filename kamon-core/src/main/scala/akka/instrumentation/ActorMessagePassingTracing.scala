@@ -20,26 +20,24 @@ import org.aspectj.lang.ProceedingJoinPoint
 import akka.actor.{ Cell, Props, ActorSystem, ActorRef }
 import akka.dispatch.{ Envelope, MessageDispatcher }
 import kamon.trace.{ TraceContext, ContextAware, Trace }
-import kamon.metrics.{ HdrActorMetricsRecorder, ActorMetrics }
+import kamon.metrics.{ ActorMetrics, HdrActorMetricsRecorder, Metrics }
 import kamon.Kamon
+import kamon.metrics.ActorMetrics.ActorMetricRecorder
 
 @Aspect("perthis(actorCellCreation(*, *, *, *, *))")
 class BehaviourInvokeTracing {
-  var path: Option[String] = None
-  var actorMetrics: Option[HdrActorMetricsRecorder] = None
+  var path: String = _
+  var actorMetrics: Option[ActorMetricRecorder] = None
 
   @Pointcut("execution(akka.actor.ActorCell.new(..)) && args(system, ref, props, dispatcher, parent)")
   def actorCellCreation(system: ActorSystem, ref: ActorRef, props: Props, dispatcher: MessageDispatcher, parent: ActorRef): Unit = {}
 
   @After("actorCellCreation(system, ref, props, dispatcher, parent)")
   def afterCreation(system: ActorSystem, ref: ActorRef, props: Props, dispatcher: MessageDispatcher, parent: ActorRef): Unit = {
-    val metricsExtension = Kamon(ActorMetrics)(system)
-    val simplePathString = ref.path.elements.mkString("/")
+    val metricsExtension = Kamon(Metrics)(system)
 
-    if (metricsExtension.shouldTrackActor(simplePathString)) {
-      path = Some(ref.path.toString)
-      actorMetrics = Some(metricsExtension.registerActor(simplePathString))
-    }
+    path = ref.path.elements.mkString("/")
+    actorMetrics = metricsExtension.register(path, ActorMetrics)
   }
 
   @Pointcut("(execution(* akka.actor.ActorCell.invoke(*)) || execution(* akka.routing.RoutedActorCell.sendMessage(*))) && args(envelope)")
@@ -55,8 +53,8 @@ class BehaviourInvokeTracing {
     }
 
     actorMetrics.map { am ⇒
-      am.recordProcessingTime(System.nanoTime() - timestampBeforeProcessing)
-      am.recordTimeInMailbox(timestampBeforeProcessing - contextAndTimestamp.timestamp)
+      am.processingTime.record(System.nanoTime() - timestampBeforeProcessing)
+      am.timeInMailbox.record(timestampBeforeProcessing - contextAndTimestamp.timestamp)
     }
   }
 
@@ -65,7 +63,7 @@ class BehaviourInvokeTracing {
 
   @After("actorStop(cell)")
   def afterStop(cell: Cell): Unit = {
-    path.map(p ⇒ Kamon(ActorMetrics)(cell.system).unregisterActor(p))
+    actorMetrics.map(p ⇒ Kamon(Metrics)(cell.system).unregister(path, ActorMetrics))
   }
 }
 

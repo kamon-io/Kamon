@@ -18,20 +18,24 @@ package org.HdrHistogram
 
 import java.util.concurrent.atomic.AtomicLongFieldUpdater
 import scala.annotation.tailrec
-import org.HdrHistogram.AtomicSnapshotableHistogram.{ Value, Snapshot }
+import kamon.metrics.{ DefaultMetricSnapshot, MetricSnapshot, MetricRecorder }
+import com.typesafe.config.Config
+import org.HdrHistogram.HighDynamicRangeRecorder.Configuration
 
 /**
  *  This implementation aims to be used for real time data collection where data snapshots are taken often over time.
  *  The snapshotAndReset() operation extracts all the recorded values from the histogram and resets the counts, but still
  *  leave it in a consistent state even in the case of concurrent modification while the snapshot is being taken.
  */
-class AtomicSnapshotableHistogram(highestTrackableValue: Long, numberOfSignificantValueDigits: Int)
-    extends AtomicHistogram(1L, highestTrackableValue, numberOfSignificantValueDigits) {
+class HighDynamicRangeRecorder(configuration: Configuration)
+    extends AtomicHistogram(1L, configuration.highestTrackableValue, configuration.significantValueDigits) with MetricRecorder {
 
-  import AtomicSnapshotableHistogram.totalCountUpdater
+  import HighDynamicRangeRecorder.totalCountUpdater
 
-  def snapshotAndReset(): Snapshot = {
-    val entries = Vector.newBuilder[Value]
+  def record(value: Long): Unit = recordValue(value)
+
+  def collect(): MetricSnapshot = {
+    val entries = Vector.newBuilder[MetricSnapshot.Measurement]
     val countsLength = counts.length()
 
     @tailrec def iterate(index: Int, previousValue: Long, nrOfRecordings: Long, bucketLimit: Long, increment: Long): Long = {
@@ -40,7 +44,7 @@ class AtomicSnapshotableHistogram(highestTrackableValue: Long, numberOfSignifica
         val countAtValue = counts.getAndSet(index, 0)
 
         if (countAtValue > 0)
-          entries += Value(currentValue, countAtValue)
+          entries += MetricSnapshot.Measurement(currentValue, countAtValue)
 
         if (currentValue == bucketLimit)
           iterate(index + 1, currentValue, nrOfRecordings + countAtValue, (bucketLimit << 1) + 1, increment << 1)
@@ -62,14 +66,21 @@ class AtomicSnapshotableHistogram(highestTrackableValue: Long, numberOfSignifica
 
     while (!tryUpdateTotalCount) {}
 
-    Snapshot(nrOfRecordings, entries.result())
+    DefaultMetricSnapshot(nrOfRecordings, entries.result())
   }
 
 }
 
-object AtomicSnapshotableHistogram {
+object HighDynamicRangeRecorder {
   val totalCountUpdater = AtomicLongFieldUpdater.newUpdater(classOf[AtomicHistogram], "totalCount")
 
-  case class Snapshot(nrOfRecordings: Long, values: Vector[Value])
-  case class Value(magnitude: Long, count: Long)
+  def apply(configuration: Configuration): HighDynamicRangeRecorder = new HighDynamicRangeRecorder(configuration)
+
+  case class Configuration(highestTrackableValue: Long, significantValueDigits: Int)
+
+  case object Configuration {
+    def fromConfig(config: Config): Configuration = {
+      Configuration(config.getLong("highest-trackable-value"), config.getInt("significant-value-digits"))
+    }
+  }
 }

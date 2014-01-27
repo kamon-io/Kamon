@@ -32,7 +32,7 @@ class ActorMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
 
   implicit def self = testActor
 
-  lazy val metricsExtension = Kamon(ActorMetrics).metricsDispatcher
+  lazy val metricsExtension = Actor.noSender
 
   "the Kamon actor metrics" should {
     "track configured actors" in {
