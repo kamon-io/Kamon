@@ -33,9 +33,9 @@ class NewRelicErrorLogger extends Actor {
     val ctx = error.asInstanceOf[ContextAware].traceContext
 
     for (c ← ctx) {
-      params.put("UOW", c.uow)
+      params.put("TraceToken", c.token)
     }
-    
+
     if (error.cause == Error.NoCause) {
       NewRelic.noticeError(error.message.toString, params)
     } else {

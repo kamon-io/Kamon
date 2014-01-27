@@ -19,24 +19,32 @@ import _root_.spray.httpx.RequestBuilding
 import _root_.spray.routing.SimpleRoutingApp
 import akka.testkit.TestKit
 import akka.actor.ActorSystem
-import org.scalatest.WordSpecLike
+import org.scalatest.{ Matchers, WordSpecLike }
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import _root_.spray.client.pipelining._
 import akka.util.Timeout
 import kamon.trace.{ UowTrace, Trace }
 import kamon.Kamon
+import org.scalatest.concurrent.{ PatienceConfiguration, ScalaFutures }
+import spray.http.HttpHeaders.RawHeader
+import spray.http.HttpRequest
+import spray.http.HttpHeaders.Host
 
-class ServerRequestTracingSpec extends TestKit(ActorSystem("server-request-tracing-spec")) with WordSpecLike with RequestBuilding with TestServer {
+class ServerRequestTracingSpec extends TestKit(ActorSystem("server-request-tracing-spec")) with WordSpecLike with Matchers with RequestBuilding with ScalaFutures with PatienceConfiguration with TestServer {
 
   "the spray server request tracing instrumentation" should {
     "trace a request start/finish sequence when proper TraceContext is received" in {
-      send {
-        Get(s"http://127.0.0.1:$port/ok")
+      val response = send {
+        Get("/ok")
       }
 
       within(5 seconds) {
         fishForNamedTrace("ok")
+      }
+
+      whenReady(response) { rsp ⇒
+        rsp.headers should contain(RawHeader("X-Trace-Token", ""))
       }
     }
 
@@ -60,6 +68,10 @@ class ServerRequestTracingSpec extends TestKit(ActorSystem("server-request-traci
       }
     }
   }
+  /*
+  - si no llega uow, crear una
+  - si llega con uow hay que propagarla
+   */
 
   def fishForNamedTrace(traceName: String) = fishForMessage() {
     case trace: UowTrace if trace.name.contains(traceName) ⇒ true
@@ -79,15 +91,18 @@ trait TestServer extends SimpleRoutingApp {
         path("ok") {
           complete("ok")
         } ~
-          path("clearcontext") {
-            complete {
-              println("The Context in the route is: " + Trace.context)
-              Trace.clear
-              "ok"
-            }
+        path("clearcontext") {
+          complete {
+            Trace.clear
+            "ok"
           }
+        }
       }), timeout.duration).localAddress.getPort
 
-  val send = sendReceive(system, system.dispatcher, timeout)
+  val send = includeHost("127.0.0.1", port) ~> sendReceive(system, system.dispatcher, timeout)
+
+  def includeHost(host: String, port: Int) = { request: HttpRequest ⇒
+    request.withEffectiveUri(port == 443, Host(host, port))
+  }
 
 }

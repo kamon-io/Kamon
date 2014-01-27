@@ -21,6 +21,8 @@ import scala.Some
 import kamon.trace.Trace.Register
 import scala.concurrent.duration._
 import java.util.concurrent.atomic.AtomicLong
+import scala.util.Try
+import java.net.InetAddress
 
 object Trace extends ExtensionId[TraceExtension] with ExtensionIdProvider {
   def lookup(): ExtensionId[_ <: Extension] = Trace
@@ -40,8 +42,8 @@ object Trace extends ExtensionId[TraceExtension] with ExtensionIdProvider {
   private def set(ctx: Option[TraceContext]) = traceContext.set(ctx)
 
   def clear: Unit = traceContext.remove()
-  def start(name: String)(implicit system: ActorSystem): TraceContext = {
-    val ctx = newTraceContext(name)
+  def start(name: String, token: Option[String])(implicit system: ActorSystem): TraceContext = {
+    val ctx = newTraceContext(name, token.getOrElse(TraceToken.generate()))
     ctx.start(name)
     set(Some(ctx))
 
@@ -68,7 +70,7 @@ object Trace extends ExtensionId[TraceExtension] with ExtensionIdProvider {
   }
 
   // TODO: FIX
-  def newTraceContext(name: String)(implicit system: ActorSystem): TraceContext = TraceContext(Kamon(Trace).api, tranid.getAndIncrement, name)
+  def newTraceContext(name: String, token: String)(implicit system: ActorSystem): TraceContext = TraceContext(Kamon(Trace).api, tranid.getAndIncrement, name, token)
 
   def startSegment(category: Segments.Category, description: String = "", attributes: Map[String, String] = Map()): SegmentCompletionHandle = {
     val start = Segments.Start(category, description, attributes)
@@ -80,12 +82,19 @@ object Trace extends ExtensionId[TraceExtension] with ExtensionIdProvider {
   case class SegmentCompletionHandle(start: Segments.Start) {
     def complete(): Unit = {
       val end = Segments.End()
-      println(s"Completing the Segment: $start - $end")
+      //println(s"Completing the Segment: $start - $end")
     }
     def complete(end: Segments.End): Unit = {
-      println(s"Completing the Segment: $start - $end")
+      //println(s"Completing the Segment: $start - $end")
     }
   }
+}
+
+object TraceToken {
+  val tokenCounter = new AtomicLong
+  val hostnamePrefix = Try(InetAddress.getLocalHost.getHostName).getOrElse("unknown-localhost")
+
+  def generate(): String = "%s-%s".format(hostnamePrefix, tokenCounter.incrementAndGet())
 }
 
 class TraceExtension(system: ExtendedActorSystem) extends Kamon.Extension {

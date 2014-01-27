@@ -28,10 +28,10 @@ trait UowDirectives extends BasicDirectives {
     val uowHeader = request.headers.find(_.name == "X-UOW")
 
     val generatedUow = uowHeader.map(_.value).getOrElse(UowDirectives.newUow)
-    Trace.transformContext(_.copy(uow = generatedUow))
+    Trace.transformContext(_.copy(token = generatedUow))
     request
   }
-  def respondWithUow = mapHttpResponseHeaders(headers ⇒ Trace.context().map(ctx ⇒ RawHeader("X-UOW", ctx.uow) :: headers).getOrElse(headers))
+  def respondWithUow = mapHttpResponseHeaders(headers ⇒ Trace.context().map(ctx ⇒ RawHeader("X-UOW", ctx.token) :: headers).getOrElse(headers))
 }
 
 object UowDirectives {

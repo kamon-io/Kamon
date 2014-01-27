@@ -14,7 +14,7 @@ class ClientRequestTracingSpec extends TestKit(ActorSystem("server-request-traci
   "the client instrumentation" should {
     "record segments for a client http request" in {
 
-      Trace.start("record-segments")(system)
+      Trace.start("record-segments", None)(system)
 
       send {
         Get(s"http://127.0.0.1:$port/ok")

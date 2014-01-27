@@ -18,8 +18,7 @@ package org.HdrHistogram
 
 import java.util.concurrent.atomic.AtomicLongFieldUpdater
 import scala.annotation.tailrec
-import org.HdrHistogram.AtomicSnapshotableHistogram.{Value, Snapshot}
-
+import org.HdrHistogram.AtomicSnapshotableHistogram.{ Value, Snapshot }
 
 /**
  *  This implementation aims to be used for real time data collection where data snapshots are taken often over time.
@@ -27,25 +26,23 @@ import org.HdrHistogram.AtomicSnapshotableHistogram.{Value, Snapshot}
  *  leave it in a consistent state even in the case of concurrent modification while the snapshot is being taken.
  */
 class AtomicSnapshotableHistogram(highestTrackableValue: Long, numberOfSignificantValueDigits: Int)
-  extends AtomicHistogram(1L, highestTrackableValue, numberOfSignificantValueDigits) {
+    extends AtomicHistogram(1L, highestTrackableValue, numberOfSignificantValueDigits) {
 
   import AtomicSnapshotableHistogram.totalCountUpdater
-
 
   def snapshotAndReset(): Snapshot = {
     val entries = Vector.newBuilder[Value]
     val countsLength = counts.length()
 
     @tailrec def iterate(index: Int, previousValue: Long, nrOfRecordings: Long, bucketLimit: Long, increment: Long): Long = {
-      if(index < countsLength) {
+      if (index < countsLength) {
         val currentValue = previousValue + increment
         val countAtValue = counts.getAndSet(index, 0)
 
-        if(countAtValue > 0)
+        if (countAtValue > 0)
           entries += Value(currentValue, countAtValue)
 
-
-        if(currentValue == bucketLimit)
+        if (currentValue == bucketLimit)
           iterate(index + 1, currentValue, nrOfRecordings + countAtValue, (bucketLimit << 1) + 1, increment << 1)
         else
           iterate(index + 1, currentValue, nrOfRecordings + countAtValue, bucketLimit, increment)

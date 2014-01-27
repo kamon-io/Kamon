@@ -37,9 +37,16 @@ class ServerRequestTracing {
   @After("openRequestInit(openRequest, request)")
   def afterInit(openRequest: ContextAware, request: HttpRequest): Unit = {
     val system: ActorSystem = openRequest.asInstanceOf[OpenRequest].context.actorContext.system
+    val config = system.settings.config.getConfig("kamon.spray")
+
+    val token = if(config.getBoolean("include-trace-token-header")) {
+      val traceTokenHeader = config.getString("trace-token-header-name")
+      request.headers.find(_.name == traceTokenHeader).map(_.value)
+    } else None
+
     val defaultTraceName: String = request.method.value + ": " + request.uri.path
 
-    Trace.start(defaultTraceName)(system)
+    Trace.start(defaultTraceName, token)(system)
 
     // Necessary to force initialization of traceContext when initiating the request.
     openRequest.traceContext
