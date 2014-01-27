@@ -19,6 +19,6 @@ import ch.qos.logback.classic.pattern.ClassicConverter
 import ch.qos.logback.classic.spi.ILoggingEvent
 import kamon.trace.Trace
 
-class LogbackUowConverter extends ClassicConverter {
-  def convert(event: ILoggingEvent): String = Trace.context().map(_.uow).getOrElse("undefined")
+class LogbackTraceTokenConverter extends ClassicConverter {
+  def convert(event: ILoggingEvent): String = Trace.context().map(_.token).getOrElse("undefined")
 }

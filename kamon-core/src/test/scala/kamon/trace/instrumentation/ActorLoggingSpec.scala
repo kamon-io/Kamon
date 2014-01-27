@@ -25,7 +25,7 @@ class ActorLoggingSpec extends TestKit(ActorSystem("actor-logging-spec")) with W
 
   "the ActorLogging instrumentation" should {
     "attach the TraceContext (if available) to log events" in {
-      val testTraceContext = Some(TraceContext(Actor.noSender, 1))
+      val testTraceContext = Some(TraceContext(Actor.noSender, 1, "test", "test-1"))
       val loggerActor = system.actorOf(Props[LoggerActor])
       system.eventStream.subscribe(testActor, classOf[LogEvent])
 

@@ -67,7 +67,7 @@ class ActorMessagePassingTracingSpec extends TestKit(ActorSystem("actor-message-
   }
 
   trait TraceContextEchoFixture {
-    val testTraceContext = Some(Trace.newTraceContext(""))
+    val testTraceContext = Some(Trace.newTraceContext("test", "test-1"))
     val ctxEchoActor = system.actorOf(Props[TraceContextEcho])
   }
 

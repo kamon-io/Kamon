@@ -45,14 +45,6 @@ trait ActorMetricsOps {
     () ⇒ new HdrActorMetricsRecorder(processingTimeHdrConfig, timeInMailboxHdrConfig, mailboxSizeHdrConfig)
   }
 
-  import scala.concurrent.duration._
-  system.scheduler.schedule(0.seconds, 10.seconds)(
-    actorMetrics.collect {
-      case (name, recorder: HdrActorMetricsRecorder) ⇒
-        println(s"Actor: $name")
-        recorder.processingTimeHistogram.copy.getHistogramData.outputPercentileDistribution(System.out, 1000000D)
-    })(system.dispatcher)
-
   def shouldTrackActor(path: String): Boolean =
     trackedActors.exists(glob ⇒ glob.accept(path)) && !excludedActors.exists(glob ⇒ glob.accept(path))
 
