@@ -16,7 +16,7 @@
 
 package kamon.metrics
 
-import org.HdrHistogram.{ AbstractHistogram, AtomicHistogram }
+import org.HdrHistogram.{ HighDynamicRangeRecorder, AbstractHistogram, AtomicHistogram }
 import kamon.util.GlobPathFilter
 import scala.collection.concurrent.TrieMap
 import scala.collection.JavaConversions.iterableAsScalaIterable
@@ -28,7 +28,7 @@ import java.util.concurrent.TimeUnit
 import kamon.metrics.ActorMetricsDispatcher.Subscribe
 
 trait ActorMetricsOps {
-  self: ActorMetricsExtension ⇒
+  self: MetricsExtension ⇒
 
   val config = system.settings.config.getConfig("kamon.metrics.actors")
   val actorMetrics = TrieMap[String, HdrActorMetricsRecorder]()
@@ -38,9 +38,9 @@ trait ActorMetricsOps {
 
   val actorMetricsFactory: () ⇒ HdrActorMetricsRecorder = {
     val settings = config.getConfig("hdr-settings")
-    val processingTimeHdrConfig = HdrConfiguration.fromConfig(settings.getConfig("processing-time"))
-    val timeInMailboxHdrConfig = HdrConfiguration.fromConfig(settings.getConfig("time-in-mailbox"))
-    val mailboxSizeHdrConfig = HdrConfiguration.fromConfig(settings.getConfig("mailbox-size"))
+    val processingTimeHdrConfig = HighDynamicRangeRecorder.Configuration.fromConfig(settings.getConfig("processing-time"))
+    val timeInMailboxHdrConfig = HighDynamicRangeRecorder.Configuration.fromConfig(settings.getConfig("time-in-mailbox"))
+    val mailboxSizeHdrConfig = HighDynamicRangeRecorder.Configuration.fromConfig(settings.getConfig("mailbox-size"))
 
     () ⇒ new HdrActorMetricsRecorder(processingTimeHdrConfig, timeInMailboxHdrConfig, mailboxSizeHdrConfig)
   }
@@ -53,8 +53,8 @@ trait ActorMetricsOps {
   def unregisterActor(path: String): Unit = actorMetrics.remove(path)
 }
 
-class HdrActorMetricsRecorder(processingTimeHdrConfig: HdrConfiguration, timeInMailboxHdrConfig: HdrConfiguration,
-                              mailboxSizeHdrConfig: HdrConfiguration) {
+class HdrActorMetricsRecorder(processingTimeHdrConfig: HighDynamicRangeRecorder.Configuration, timeInMailboxHdrConfig: HighDynamicRangeRecorder.Configuration,
+                              mailboxSizeHdrConfig: HighDynamicRangeRecorder.Configuration) {
 
   val processingTimeHistogram = new AtomicHistogram(processingTimeHdrConfig.highestTrackableValue, processingTimeHdrConfig.significantValueDigits)
   val timeInMailboxHistogram = new AtomicHistogram(timeInMailboxHdrConfig.highestTrackableValue, timeInMailboxHdrConfig.significantValueDigits)
@@ -103,8 +103,8 @@ class ActorMetricsDispatcher extends Actor {
   }
 
   def flushMetrics(): Unit = {
-    val currentTick = System.currentTimeMillis()
-    val snapshots = Kamon(ActorMetrics)(context.system).actorMetrics.map {
+    /*    val currentTick = System.currentTimeMillis()
+    val snapshots = Kamon(Metrics)(context.system).actorMetrics.map {
       case (path, metrics) ⇒
         val snapshot = metrics.snapshot()
         metrics.reset()
@@ -116,7 +116,7 @@ class ActorMetricsDispatcher extends Actor {
     dispatchMetricsTo(subscribedForever, snapshots, currentTick)
 
     subscribedForOne = Map.empty
-    lastTick = currentTick
+    lastTick = currentTick*/
   }
 
   def dispatchMetricsTo(subscribers: Map[GlobPathFilter, List[ActorRef]], snapshots: Map[String, HdrActorMetricsSnapshot],
