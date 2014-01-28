@@ -16,36 +16,43 @@
 
 package kamon.metrics
 
-import org.scalatest.{ WordSpecLike, Matchers, WordSpec }
+import org.scalatest.{ WordSpecLike, Matchers }
 import akka.testkit.TestKitBase
 import akka.actor.{ Actor, Props, ActorSystem }
 import com.typesafe.config.ConfigFactory
-import kamon.Kamon
-import kamon.metrics.ActorMetricsDispatcher.{ ActorMetricsSnapshot, Subscribe }
 import scala.concurrent.duration._
+import kamon.Kamon
+import kamon.metrics.Subscriptions.TickMetricSnapshot
 
 class ActorMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
   implicit lazy val system: ActorSystem = ActorSystem("actor-metrics-spec", ConfigFactory.parseString(
     """
-        |kamon.metrics.actors.tracked = ["user/test*"]
-      """.stripMargin))
+      |kamon.metrics {
+      |  filters = [
+      |    {
+      |      actor {
+      |        includes = [ "user/*" ]
+      |        excludes = [ ]
+      |      }
+      |    }
+      |  ]
+      |}
+    """.stripMargin))
 
-  implicit def self = testActor
-
-  lazy val metricsExtension = Actor.noSender
 
   "the Kamon actor metrics" should {
     "track configured actors" in {
-      system.actorOf(Props[Other], "test-tracked-actor") ! "nothing"
-      metricsExtension ! Subscribe("user/test-tracked-actor")
+      Kamon(Metrics).subscribe(ActorMetrics, "user/test-tracked-actor", testActor)
 
-      within(5 seconds) {
-        expectMsgType[ActorMetricsDispatcher.ActorMetricsSnapshot]
-      }
+      system.actorOf(Props[Discard], "test-tracked-actor") ! "nothing"
+
+      println(within(5 seconds) {
+        expectMsgType[TickMetricSnapshot]
+      })
     }
   }
 }
 
-class Other extends Actor {
+class Discard extends Actor {
   def receive = { case a ⇒ }
 }

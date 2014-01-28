@@ -17,12 +17,16 @@
 package kamon.metrics
 
 import scala.collection.concurrent.TrieMap
-import akka.actor.{ ExtensionIdProvider, ExtensionId, ExtendedActorSystem }
+import akka.actor._
 import com.typesafe.config.Config
 import kamon.util.GlobPathFilter
 import kamon.Kamon
 import akka.actor
 import kamon.metrics.Metrics.MetricGroupFilter
+import kamon.metrics.MetricGroupIdentity.Category
+import kamon.metrics.Metrics.MetricGroupFilter
+import scala.Some
+import kamon.metrics.Subscriptions.Subscribe
 
 case class MetricGroupIdentity(name: String, category: MetricGroupIdentity.Category)
 
@@ -59,6 +63,11 @@ object MetricGroupIdentity {
   trait Category {
     def name: String
   }
+
+  val AnyCategory = new Category {
+    def name: String = "match-all"
+    override def equals(that: Any): Boolean = that.isInstanceOf[Category]
+  }
 }
 
 trait MetricGroupFactory {
@@ -66,10 +75,13 @@ trait MetricGroupFactory {
   def create(config: Config): Group
 }
 
+
+
 class MetricsExtension(val system: ExtendedActorSystem) extends Kamon.Extension {
   val config = system.settings.config
   val storage = TrieMap[MetricGroupIdentity, MetricGroupRecorder]()
   val filters = loadFilters(config)
+  lazy val subscriptions = system.actorOf(Props[Subscriptions], "kamon-metrics-subscriptions")
 
   def register(name: String, category: MetricGroupIdentity.Category with MetricGroupFactory): Option[category.Group] = {
     if (shouldTrack(name, category))
@@ -80,6 +92,10 @@ class MetricsExtension(val system: ExtendedActorSystem) extends Kamon.Extension 
 
   def unregister(name: String, category: MetricGroupIdentity.Category with MetricGroupFactory): Unit = {
     storage.remove(MetricGroupIdentity(name, category))
+  }
+
+  def subscribe(category: Category, selection: String, receiver: ActorRef, permanently: Boolean = false): Unit = {
+    subscriptions.tell(Subscribe(category, selection, permanently), receiver)
   }
 
   def collect: Map[MetricGroupIdentity, MetricGroupSnapshot] = {

@@ -17,11 +17,13 @@ package akka.instrumentation
 
 import org.aspectj.lang.annotation._
 import org.aspectj.lang.ProceedingJoinPoint
-import akka.actor.{ Cell, Props, ActorSystem, ActorRef }
+import akka.actor._
 import akka.dispatch.{ Envelope, MessageDispatcher }
 import kamon.trace.{ TraceContext, ContextAware, Trace }
-import kamon.metrics.{ ActorMetrics, HdrActorMetricsRecorder, Metrics }
+import kamon.metrics.{ ActorMetrics, Metrics }
 import kamon.Kamon
+import kamon.metrics.ActorMetrics.ActorMetricRecorder
+import kamon.trace.TraceContext
 import kamon.metrics.ActorMetrics.ActorMetricRecorder
 
 @Aspect("perthis(actorCellCreation(*, *, *, *, *))")
@@ -40,11 +42,11 @@ class BehaviourInvokeTracing {
     actorMetrics = metricsExtension.register(path, ActorMetrics)
   }
 
-  @Pointcut("(execution(* akka.actor.ActorCell.invoke(*)) || execution(* akka.routing.RoutedActorCell.sendMessage(*))) && args(envelope)")
-  def invokingActorBehaviourAtActorCell(envelope: Envelope) = {}
+  @Pointcut("(execution(* akka.actor.ActorCell.invoke(*)) || execution(* akka.routing.RoutedActorCell.sendMessage(*))) && this(cell) && args(envelope)")
+  def invokingActorBehaviourAtActorCell(cell: ActorCell, envelope: Envelope) = {}
 
-  @Around("invokingActorBehaviourAtActorCell(envelope)")
-  def aroundBehaviourInvoke(pjp: ProceedingJoinPoint, envelope: Envelope): Unit = {
+  @Around("invokingActorBehaviourAtActorCell(cell, envelope)")
+  def aroundBehaviourInvoke(pjp: ProceedingJoinPoint, cell: ActorCell, envelope: Envelope): Unit = {
     val timestampBeforeProcessing = System.nanoTime()
     val contextAndTimestamp = envelope.asInstanceOf[ContextAndTimestampAware]
 
@@ -55,6 +57,7 @@ class BehaviourInvokeTracing {
     actorMetrics.map { am ⇒
       am.processingTime.record(System.nanoTime() - timestampBeforeProcessing)
       am.timeInMailbox.record(timestampBeforeProcessing - contextAndTimestamp.timestamp)
+      am.mailboxSize.record(cell.numberOfMessages)
     }
   }
 
