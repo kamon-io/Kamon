@@ -22,60 +22,10 @@ import com.typesafe.config.Config
 import kamon.util.GlobPathFilter
 import kamon.Kamon
 import akka.actor
-import kamon.metrics.Metrics.MetricGroupFilter
 import kamon.metrics.MetricGroupIdentity.Category
 import kamon.metrics.Metrics.MetricGroupFilter
 import scala.Some
 import kamon.metrics.Subscriptions.Subscribe
-
-case class MetricGroupIdentity(name: String, category: MetricGroupIdentity.Category)
-
-trait MetricIdentity {
-  def name: String
-}
-
-trait MetricGroupRecorder {
-  def record(identity: MetricIdentity, value: Long)
-  def collect: MetricGroupSnapshot
-}
-
-trait MetricGroupSnapshot {
-  def metrics: Map[MetricIdentity, MetricSnapshot]
-}
-
-trait MetricRecorder {
-  def record(value: Long)
-  def collect(): MetricSnapshot
-}
-
-trait MetricSnapshot {
-  def numberOfMeasurements: Long
-  def measurementLevels: Vector[MetricSnapshot.Measurement]
-}
-
-object MetricSnapshot {
-  case class Measurement(value: Long, count: Long)
-}
-
-case class DefaultMetricSnapshot(numberOfMeasurements: Long, measurementLevels: Vector[MetricSnapshot.Measurement]) extends MetricSnapshot
-
-object MetricGroupIdentity {
-  trait Category {
-    def name: String
-  }
-
-  val AnyCategory = new Category {
-    def name: String = "match-all"
-    override def equals(that: Any): Boolean = that.isInstanceOf[Category]
-  }
-}
-
-trait MetricGroupFactory {
-  type Group <: MetricGroupRecorder
-  def create(config: Config): Group
-}
-
-
 
 class MetricsExtension(val system: ExtendedActorSystem) extends Kamon.Extension {
   val config = system.settings.config
