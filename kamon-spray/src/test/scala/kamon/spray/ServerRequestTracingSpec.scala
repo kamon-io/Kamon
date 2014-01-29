@@ -17,8 +17,8 @@ package kamon.spray
 
 import _root_.spray.httpx.RequestBuilding
 import _root_.spray.routing.SimpleRoutingApp
-import akka.testkit.TestKit
-import akka.actor.ActorSystem
+import akka.testkit.{ TestProbe, TestKit }
+import akka.actor.{ ActorRef, ActorSystem }
 import org.scalatest.{ Matchers, WordSpecLike }
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -28,27 +28,29 @@ import kamon.trace.{ UowTrace, Trace }
 import kamon.Kamon
 import org.scalatest.concurrent.{ PatienceConfiguration, ScalaFutures }
 import spray.http.HttpHeaders.RawHeader
-import spray.http.HttpRequest
+import spray.http.{ HttpResponse, HttpRequest }
 import spray.http.HttpHeaders.Host
+import akka.io.{ Tcp, IO }
+import spray.can.Http
+import akka.io.Tcp.Bound
 
-class ServerRequestTracingSpec extends TestKit(ActorSystem("server-request-tracing-spec")) with WordSpecLike with Matchers with RequestBuilding with ScalaFutures with PatienceConfiguration with TestServer {
+class ServerRequestTracingSpec extends TestKit(ActorSystem("spec")) with WordSpecLike with Matchers with RequestBuilding with ScalaFutures with PatienceConfiguration with TestServer {
 
   "the spray server request tracing instrumentation" should {
-    "trace a request start/finish sequence when proper TraceContext is received" in {
-      val response = send {
-        Get("/ok")
-      }
+    "reply back with a trace token header" in {
+      val (connection, server) = buildServer()
+      val client = TestProbe()
 
-      within(5 seconds) {
-        fishForNamedTrace("ok")
-      }
+      client.send(connection, Get("/"))
+      server.expectMsgType[HttpRequest]
+      server.reply(HttpResponse(entity = "ok"))
+      client.expectMsgType[HttpResponse]
 
-      whenReady(response) { rsp ⇒
-        rsp.headers should contain(RawHeader("X-Trace-Token", ""))
-      }
+      fail()
+
     }
 
-    "finish a request even if no TraceContext is received in the response" in {
+    /*    "finish a request even if no TraceContext is received in the response" in {
       send {
         Get(s"http://127.0.0.1:$port/clearcontext")
       }
@@ -66,7 +68,7 @@ class ServerRequestTracingSpec extends TestKit(ActorSystem("server-request-traci
       within(5 seconds) {
         fishForNamedTrace("accounts")
       }
-    }
+    }*/
   }
   /*
   - si no llega uow, crear una
@@ -82,27 +84,23 @@ class ServerRequestTracingSpec extends TestKit(ActorSystem("server-request-traci
 trait TestServer extends SimpleRoutingApp {
   self: TestKit ⇒
 
-  Kamon(Trace).api.tell(Trace.Register, testActor)
+  def buildServer(): (ActorRef, TestProbe) = {
+    val serverHandler = TestProbe()
+    IO(Http).tell(Http.Bind(listener = serverHandler.ref, interface = "127.0.0.1", port = 0), serverHandler.ref)
+    val bound = serverHandler.expectMsgType[Bound]
 
-  implicit val timeout = Timeout(20 seconds)
-  val port: Int = Await.result(
-    startServer(interface = "127.0.0.1", port = 0)(
-      get {
-        path("ok") {
-          complete("ok")
-        } ~
-          path("clearcontext") {
-            complete {
-              Trace.clear
-              "ok"
-            }
-          }
-      }), timeout.duration).localAddress.getPort
+    val client = buildClient(bound)
+    serverHandler.expectMsgType[Http.Connected]
+    serverHandler.reply(Http.Register(serverHandler.ref))
 
-  val send = includeHost("127.0.0.1", port) ~> sendReceive(system, system.dispatcher, timeout)
+    (client, serverHandler)
+  }
 
-  def includeHost(host: String, port: Int) = { request: HttpRequest ⇒
-    request.withEffectiveUri(port == 443, Host(host, port))
+  def buildClient(connectionInfo: Http.Bound): ActorRef = {
+    val probe = TestProbe()
+    probe.send(IO(Http), Http.Connect(connectionInfo.localAddress.getHostName, connectionInfo.localAddress.getPort))
+    probe.expectMsgType[Http.Connected]
+    probe.sender
   }
 
 }
