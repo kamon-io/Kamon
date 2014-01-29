@@ -91,12 +91,12 @@ trait TestServer extends SimpleRoutingApp {
         path("ok") {
           complete("ok")
         } ~
-        path("clearcontext") {
-          complete {
-            Trace.clear
-            "ok"
+          path("clearcontext") {
+            complete {
+              Trace.clear
+              "ok"
+            }
           }
-        }
       }), timeout.duration).localAddress.getPort
 
   val send = includeHost("127.0.0.1", port) ~> sendReceive(system, system.dispatcher, timeout)

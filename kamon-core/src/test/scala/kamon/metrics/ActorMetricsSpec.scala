@@ -39,7 +39,6 @@ class ActorMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
       |}
     """.stripMargin))
 
-
   "the Kamon actor metrics" should {
     "track configured actors" in {
       Kamon(Metrics).subscribe(ActorMetrics, "user/test-tracked-actor", testActor)

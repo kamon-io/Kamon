@@ -16,8 +16,8 @@
 
 package kamon.metrics
 
-import akka.actor.{ActorRef, Actor}
-import kamon.metrics.Subscriptions.{MetricGroupFilter, FlushMetrics, TickMetricSnapshot, Subscribe}
+import akka.actor.{ ActorRef, Actor }
+import kamon.metrics.Subscriptions.{ MetricGroupFilter, FlushMetrics, TickMetricSnapshot, Subscribe }
 import kamon.util.GlobPathFilter
 import scala.concurrent.duration.Duration
 import java.util.concurrent.TimeUnit
@@ -36,13 +36,13 @@ class Subscriptions extends Actor {
   var subscribedForOneShot: Map[MetricGroupFilter, List[ActorRef]] = Map.empty
 
   def receive = {
-    case Subscribe(category, selection, permanent) => subscribe(category, selection, permanent)
-    case FlushMetrics => flush()
+    case Subscribe(category, selection, permanent) ⇒ subscribe(category, selection, permanent)
+    case FlushMetrics                              ⇒ flush()
   }
 
   def subscribe(category: Category, selection: String, permanent: Boolean): Unit = {
     val filter = MetricGroupFilter(category, new GlobPathFilter(selection))
-    if(permanent) {
+    if (permanent) {
       val receivers = subscribedPermanently.get(filter).getOrElse(Nil)
       subscribedPermanently = subscribedPermanently.updated(filter, sender :: receivers)
 
@@ -67,8 +67,8 @@ class Subscriptions extends Actor {
   def dispatchSelectedMetrics(lastTick: Long, currentTick: Long, subscriptions: Map[MetricGroupFilter, List[ActorRef]],
                               snapshots: Map[MetricGroupIdentity, MetricGroupSnapshot]): Unit = {
 
-    for((filter, receivers) <- subscriptions) yield {
-      val selection = snapshots.filter(group => filter.accept(group._1))
+    for ((filter, receivers) ← subscriptions) yield {
+      val selection = snapshots.filter(group ⇒ filter.accept(group._1))
       val tickMetrics = TickMetricSnapshot(lastTick, currentTick, selection)
 
       receivers.foreach(_ ! tickMetrics)
@@ -86,5 +86,5 @@ object Subscriptions {
       category.equals(identity.category) && globFilter.accept(identity.name)
     }
   }
-  
+
 }
