@@ -19,10 +19,9 @@ import org.aspectj.lang.annotation._
 import org.aspectj.lang.ProceedingJoinPoint
 import akka.actor._
 import akka.dispatch.{ Envelope, MessageDispatcher }
-import kamon.trace.{ TraceContext, ContextAware, Trace }
+import kamon.trace._
 import kamon.metrics.{ ActorMetrics, Metrics }
 import kamon.Kamon
-import kamon.metrics.ActorMetrics.ActorMetricRecorder
 import kamon.trace.TraceContext
 import kamon.metrics.ActorMetrics.ActorMetricRecorder
 
@@ -48,15 +47,15 @@ class BehaviourInvokeTracing {
   @Around("invokingActorBehaviourAtActorCell(cell, envelope)")
   def aroundBehaviourInvoke(pjp: ProceedingJoinPoint, cell: ActorCell, envelope: Envelope): Unit = {
     val timestampBeforeProcessing = System.nanoTime()
-    val contextAndTimestamp = envelope.asInstanceOf[ContextAndTimestampAware]
+    val contextAndTimestamp = envelope.asInstanceOf[TraceContextAware]
 
-    Trace.withContext(contextAndTimestamp.traceContext) {
+    TraceRecorder.withContext(contextAndTimestamp.traceContext) {
       pjp.proceed()
     }
 
     actorMetrics.map { am ⇒
       am.processingTime.record(System.nanoTime() - timestampBeforeProcessing)
-      am.timeInMailbox.record(timestampBeforeProcessing - contextAndTimestamp.timestamp)
+      am.timeInMailbox.record(timestampBeforeProcessing - contextAndTimestamp.captureMark)
       am.mailboxSize.record(cell.numberOfMessages)
     }
   }
@@ -74,21 +73,14 @@ class BehaviourInvokeTracing {
 class EnvelopeTraceContextMixin {
 
   @DeclareMixin("akka.dispatch.Envelope")
-  def mixin: ContextAndTimestampAware = new ContextAndTimestampAware {
-    val traceContext: Option[TraceContext] = Trace.context()
-    val timestamp: Long = System.nanoTime()
-  }
+  def mixin: TraceContextAware = new TraceContextAware {}
 
   @Pointcut("execution(akka.dispatch.Envelope.new(..)) && this(ctx)")
-  def envelopeCreation(ctx: ContextAware): Unit = {}
+  def envelopeCreation(ctx: TraceContextAware): Unit = {}
 
   @After("envelopeCreation(ctx)")
-  def afterEnvelopeCreation(ctx: ContextAware): Unit = {
+  def afterEnvelopeCreation(ctx: TraceContextAware): Unit = {
     // Necessary to force the initialization of ContextAware at the moment of creation.
     ctx.traceContext
   }
-}
-
-trait ContextAndTimestampAware extends ContextAware {
-  def timestamp: Long
 }

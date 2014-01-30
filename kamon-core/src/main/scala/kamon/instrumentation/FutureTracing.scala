@@ -17,29 +17,29 @@ package kamon.instrumentation
 
 import org.aspectj.lang.annotation._
 import org.aspectj.lang.ProceedingJoinPoint
-import kamon.trace.{ ContextAware, TraceContext, Trace }
+import kamon.trace.{ TraceContextAware, TraceRecorder }
 
 @Aspect
 class FutureTracing {
 
   @DeclareMixin("scala.concurrent.impl.CallbackRunnable || scala.concurrent.impl.Future.PromiseCompletingRunnable")
-  def mixin: ContextAware = ContextAware.default
+  def mixin: TraceContextAware = new TraceContextAware {}
 
   @Pointcut("execution((scala.concurrent.impl.CallbackRunnable || scala.concurrent.impl.Future.PromiseCompletingRunnable).new(..)) && this(runnable)")
-  def futureRelatedRunnableCreation(runnable: ContextAware): Unit = {}
+  def futureRelatedRunnableCreation(runnable: TraceContextAware): Unit = {}
 
   @After("futureRelatedRunnableCreation(runnable)")
-  def afterCreation(runnable: ContextAware): Unit = {
+  def afterCreation(runnable: TraceContextAware): Unit = {
     // Force traceContext initialization.
     runnable.traceContext
   }
 
   @Pointcut("execution(* (scala.concurrent.impl.CallbackRunnable || scala.concurrent.impl.Future.PromiseCompletingRunnable).run()) && this(runnable)")
-  def futureRelatedRunnableExecution(runnable: ContextAware) = {}
+  def futureRelatedRunnableExecution(runnable: TraceContextAware) = {}
 
   @Around("futureRelatedRunnableExecution(runnable)")
-  def aroundExecution(pjp: ProceedingJoinPoint, runnable: ContextAware): Any = {
-    Trace.withContext(runnable.traceContext) {
+  def aroundExecution(pjp: ProceedingJoinPoint, runnable: TraceContextAware): Any = {
+    TraceRecorder.withContext(runnable.traceContext) {
       pjp.proceed()
     }
   }

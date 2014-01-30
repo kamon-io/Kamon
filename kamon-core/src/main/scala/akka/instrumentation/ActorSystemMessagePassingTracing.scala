@@ -1,21 +1,21 @@
 package akka.instrumentation
 
 import org.aspectj.lang.annotation._
-import kamon.trace.{ Trace, ContextAware }
 import akka.dispatch.sysmsg.EarliestFirstSystemMessageList
 import org.aspectj.lang.ProceedingJoinPoint
+import kamon.trace.{TraceRecorder, TraceContextAware}
 
 @Aspect
 class SystemMessageTraceContextMixin {
 
   @DeclareMixin("akka.dispatch.sysmsg.SystemMessage+")
-  def mixin: ContextAware = ContextAware.default
+  def mixin: TraceContextAware = new TraceContextAware {}
 
   @Pointcut("execution(akka.dispatch.sysmsg.SystemMessage+.new(..)) && this(ctx)")
-  def envelopeCreation(ctx: ContextAware): Unit = {}
+  def envelopeCreation(ctx: TraceContextAware): Unit = {}
 
   @After("envelopeCreation(ctx)")
-  def afterEnvelopeCreation(ctx: ContextAware): Unit = {
+  def afterEnvelopeCreation(ctx: TraceContextAware): Unit = {
     // Necessary to force the initialization of ContextAware at the moment of creation.
     ctx.traceContext
   }
@@ -25,23 +25,23 @@ class SystemMessageTraceContextMixin {
 class RepointableActorRefTraceContextMixin {
 
   @DeclareMixin("akka.actor.RepointableActorRef")
-  def mixin: ContextAware = ContextAware.default
+  def mixin: TraceContextAware = new TraceContextAware {}
 
   @Pointcut("execution(akka.actor.RepointableActorRef.new(..)) && this(ctx)")
-  def envelopeCreation(ctx: ContextAware): Unit = {}
+  def envelopeCreation(ctx: TraceContextAware): Unit = {}
 
   @After("envelopeCreation(ctx)")
-  def afterEnvelopeCreation(ctx: ContextAware): Unit = {
+  def afterEnvelopeCreation(ctx: TraceContextAware): Unit = {
     // Necessary to force the initialization of ContextAware at the moment of creation.
     ctx.traceContext
   }
 
   @Pointcut("execution(* akka.actor.RepointableActorRef.point(..)) && this(repointableActorRef)")
-  def repointableActorRefCreation(repointableActorRef: ContextAware): Unit = {}
+  def repointableActorRefCreation(repointableActorRef: TraceContextAware): Unit = {}
 
   @Around("repointableActorRefCreation(repointableActorRef)")
-  def afterRepointableActorRefCreation(pjp: ProceedingJoinPoint, repointableActorRef: ContextAware): Any = {
-    Trace.withContext(repointableActorRef.traceContext) {
+  def afterRepointableActorRefCreation(pjp: ProceedingJoinPoint, repointableActorRef: TraceContextAware): Any = {
+    TraceRecorder.withContext(repointableActorRef.traceContext) {
       pjp.proceed()
     }
   }
@@ -57,8 +57,8 @@ class ActorSystemMessagePassingTracing {
   @Around("systemMessageProcessing(messages)")
   def aroundSystemMessageInvoke(pjp: ProceedingJoinPoint, messages: EarliestFirstSystemMessageList): Any = {
     if (messages.nonEmpty) {
-      val ctx = messages.head.asInstanceOf[ContextAware].traceContext
-      Trace.withContext(ctx)(pjp.proceed())
+      val ctx = messages.head.asInstanceOf[TraceContextAware].traceContext
+      TraceRecorder.withContext(ctx)(pjp.proceed())
 
     } else pjp.proceed()
   }

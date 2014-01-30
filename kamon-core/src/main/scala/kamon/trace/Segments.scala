@@ -16,7 +16,8 @@
 
 package kamon.trace
 
-import kamon.trace.Trace.SegmentCompletionHandle
+
+import kamon.trace.TraceOld.SegmentCompletionHandle
 
 object Segments {
 
@@ -34,5 +35,5 @@ object Segments {
     var completionHandle: Option[SegmentCompletionHandle]
   }
 
-  trait ContextAndSegmentCompletionAware extends ContextAware with SegmentCompletionHandleAware
+  trait ContextAndSegmentCompletionAware extends TraceContextAware with SegmentCompletionHandleAware
 }

@@ -18,14 +18,14 @@ package kamon.trace
 import kamon.Kamon
 import akka.actor._
 import scala.Some
-import kamon.trace.Trace.Register
+import kamon.trace.TraceOld.Register
 import scala.concurrent.duration._
 import java.util.concurrent.atomic.AtomicLong
 import scala.util.Try
 import java.net.InetAddress
 
-object Trace extends ExtensionId[TraceExtension] with ExtensionIdProvider {
-  def lookup(): ExtensionId[_ <: Extension] = Trace
+object TraceOld extends ExtensionId[TraceExtension] with ExtensionIdProvider {
+  def lookup(): ExtensionId[_ <: Extension] = TraceOld
   def createExtension(system: ExtendedActorSystem): TraceExtension = new TraceExtension(system)
 
   /*** Protocol */
@@ -33,16 +33,16 @@ object Trace extends ExtensionId[TraceExtension] with ExtensionIdProvider {
 
   /** User API */
   //private[trace] val traceContext = new DynamicVariable[Option[TraceContext]](None)
-  private[trace] val traceContext = new ThreadLocal[Option[TraceContext]] {
-    override def initialValue(): Option[TraceContext] = None
+  private[trace] val traceContext = new ThreadLocal[Option[TraceContextOld]] {
+    override def initialValue(): Option[TraceContextOld] = None
   }
   private[trace] val tranid = new AtomicLong()
 
   def context() = traceContext.get
-  private def set(ctx: Option[TraceContext]) = traceContext.set(ctx)
+  private def set(ctx: Option[TraceContextOld]) = traceContext.set(ctx)
 
   def clear: Unit = traceContext.remove()
-  def start(name: String, token: Option[String])(implicit system: ActorSystem): TraceContext = {
+  def start(name: String, token: Option[String])(implicit system: ActorSystem): TraceContextOld = {
     val ctx = newTraceContext(name, token.getOrElse(TraceToken.generate()))
     ctx.start(name)
     set(Some(ctx))
@@ -50,7 +50,7 @@ object Trace extends ExtensionId[TraceExtension] with ExtensionIdProvider {
     ctx
   }
 
-  def withContext[T](ctx: Option[TraceContext])(thunk: ⇒ T): T = {
+  def withContext[T](ctx: Option[TraceContextOld])(thunk: ⇒ T): T = {
     val oldval = context
     set(ctx)
 
@@ -58,11 +58,11 @@ object Trace extends ExtensionId[TraceExtension] with ExtensionIdProvider {
     finally set(oldval)
   }
 
-  def transformContext(f: TraceContext ⇒ TraceContext): Unit = {
+  def transformContext(f: TraceContextOld ⇒ TraceContextOld): Unit = {
     context.map(f).foreach(ctx ⇒ set(Some(ctx)))
   }
 
-  def finish(): Option[TraceContext] = {
+  def finish(): Option[TraceContextOld] = {
     val ctx = context()
     ctx.map(_.finish)
     clear
@@ -70,7 +70,7 @@ object Trace extends ExtensionId[TraceExtension] with ExtensionIdProvider {
   }
 
   // TODO: FIX
-  def newTraceContext(name: String, token: String)(implicit system: ActorSystem): TraceContext = TraceContext(Kamon(Trace).api, tranid.getAndIncrement, name, token)
+  def newTraceContext(name: String, token: String)(implicit system: ActorSystem): TraceContextOld = TraceContextOld(Kamon(TraceOld).api, tranid.getAndIncrement, name, token)
 
   def startSegment(category: Segments.Category, description: String = "", attributes: Map[String, String] = Map()): SegmentCompletionHandle = {
     val start = Segments.Start(category, description, attributes)

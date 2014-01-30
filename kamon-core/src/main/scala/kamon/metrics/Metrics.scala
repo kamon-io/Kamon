@@ -96,17 +96,17 @@ case class DefaultMetricSnapshot(numberOfMeasurements: Long, measurementLevels: 
 
 object MetricGroupIdentity {
   trait Category {
-    def name: String
+    def entityName: String
   }
 
   val AnyCategory = new Category {
-    def name: String = "match-all"
+    val entityName: String = "match-all"
     override def equals(that: Any): Boolean = that.isInstanceOf[Category]
   }
 }
 
 trait MetricGroupFactory {
-  type Group <: MetricGroupRecorder
-  def create(config: Config): Group
+  type GroupRecorder <: MetricGroupRecorder
+  def create(config: Config): GroupRecorder
 }
 
