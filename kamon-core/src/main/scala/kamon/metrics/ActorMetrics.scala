@@ -20,8 +20,8 @@ import com.typesafe.config.Config
 import org.HdrHistogram.HighDynamicRangeRecorder
 
 object ActorMetrics extends MetricGroupIdentity.Category with MetricGroupFactory {
-  val name: String = "actor"
-  type Group = ActorMetricRecorder
+  type GroupRecorder = ActorMetricRecorder
+  val entityName = "actor"
 
   case object ProcessingTime extends MetricIdentity { val name = "ProcessingTime" }
   case object MailboxSize extends MetricIdentity { val name = "MailboxSize" }
@@ -53,12 +53,12 @@ object ActorMetrics extends MetricGroupIdentity.Category with MetricGroupFactory
   def create(config: Config): ActorMetricRecorder = {
     import HighDynamicRangeRecorder.Configuration
 
-    val settings = config.getConfig("kamon.metrics.actors.hdr-settings")
+    val settings = config.getConfig("kamon.metrics.precision.actor")
     val processingTimeHdrConfig = Configuration.fromConfig(settings.getConfig("processing-time"))
     val mailboxSizeHdrConfig = Configuration.fromConfig(settings.getConfig("mailbox-size"))
     val timeInMailboxHdrConfig = Configuration.fromConfig(settings.getConfig("time-in-mailbox"))
 
-    ActorMetricRecorder(
+    new ActorMetricRecorder(
       HighDynamicRangeRecorder(processingTimeHdrConfig),
       HighDynamicRangeRecorder(mailboxSizeHdrConfig),
       HighDynamicRangeRecorder(timeInMailboxHdrConfig))

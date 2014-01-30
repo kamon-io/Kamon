@@ -17,7 +17,7 @@
 package akka.testkit
 
 import org.aspectj.lang.annotation._
-import kamon.trace.{ ContextAware, Trace }
+import kamon.trace.{ TraceContextAware, TraceRecorder }
 import org.aspectj.lang.ProceedingJoinPoint
 import akka.testkit.TestActor.RealMessage
 
@@ -25,13 +25,13 @@ import akka.testkit.TestActor.RealMessage
 class TestProbeTracing {
 
   @DeclareMixin("akka.testkit.TestActor.RealMessage")
-  def mixin: ContextAware = ContextAware.default
+  def mixin: TraceContextAware = TraceContextAware.default
 
   @Pointcut("execution(akka.testkit.TestActor.RealMessage.new(..)) && this(ctx)")
-  def realMessageCreation(ctx: ContextAware): Unit = {}
+  def realMessageCreation(ctx: TraceContextAware): Unit = {}
 
   @After("realMessageCreation(ctx)")
-  def afterRealMessageCreation(ctx: ContextAware): Unit = {
+  def afterRealMessageCreation(ctx: TraceContextAware): Unit = {
     // Necessary to force the initialization of ContextAware at the moment of creation.
     ctx.traceContext
   }
@@ -42,11 +42,11 @@ class TestProbeTracing {
   @Around("testProbeReply(testProbe)")
   def aroundTestProbeReply(pjp: ProceedingJoinPoint, testProbe: TestProbe): Any = {
     val traceContext = testProbe.lastMessage match {
-      case msg: RealMessage ⇒ msg.asInstanceOf[ContextAware].traceContext
+      case msg: RealMessage ⇒ msg.asInstanceOf[TraceContextAware].traceContext
       case _                ⇒ None
     }
 
-    Trace.withContext(traceContext) {
+    TraceRecorder.withContext(traceContext) {
       pjp.proceed
     }
   }
