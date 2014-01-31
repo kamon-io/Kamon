@@ -25,7 +25,7 @@ class ActorSystemMessagePassingInstrumentationSpec extends TestKit(ActorSystem("
       expectMsg(testTraceContext)
     }
 
-    "keep the TraceContext while processing the Create message in non top level actors" in  {
+    "keep the TraceContext while processing the Create message in non top level actors" in {
       val testTraceContext = TraceRecorder.withNewTraceContext("creating-non-top-level-actor") {
         system.actorOf(Props(new Actor {
           def receive: Actor.Receive = {

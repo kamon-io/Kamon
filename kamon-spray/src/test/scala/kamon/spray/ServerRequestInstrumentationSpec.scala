@@ -33,55 +33,63 @@ import spray.http.HttpHeaders.Host
 import akka.io.{ Tcp, IO }
 import spray.can.Http
 import akka.io.Tcp.Bound
+import kamon.metrics.{TraceMetrics, Metrics}
+import kamon.metrics.TraceMetrics.TraceMetricSnapshot
+import kamon.metrics.Subscriptions.TickMetricSnapshot
 
-class ServerRequestTracingSpec extends TestKit(ActorSystem("spec")) with WordSpecLike with Matchers with RequestBuilding with ScalaFutures with PatienceConfiguration with TestServer {
+class ServerRequestInstrumentationSpec extends TestKit(ActorSystem("spec")) with WordSpecLike with Matchers with RequestBuilding with ScalaFutures with PatienceConfiguration with TestServer {
 
   "the spray server request tracing instrumentation" should {
-    "reply back with a trace token header" in {
+    "reply back with the same trace token header provided in the request" in {
+      val (connection, server) = buildServer()
+      val client = TestProbe()
+
+      client.send(connection, Get("/").withHeaders(RawHeader("X-Trace-Token", "reply-trace-token")))
+      server.expectMsgType[HttpRequest]
+      server.reply(HttpResponse(entity = "ok"))
+      val response = client.expectMsgType[HttpResponse]
+
+      response.headers should contain(RawHeader("X-Trace-Token", "reply-trace-token"))
+
+    }
+
+    "reply back with a automatically assigned trace token if none was provided with the request" in {
       val (connection, server) = buildServer()
       val client = TestProbe()
 
       client.send(connection, Get("/"))
       server.expectMsgType[HttpRequest]
       server.reply(HttpResponse(entity = "ok"))
+      val response = client.expectMsgType[HttpResponse]
+
+      response.headers.filter(_.name == "X-Trace-Token").size should be(1)
+
+    }
+
+    "open and finish a trace during the lifetime of a request" in {
+      val (connection, server) = buildServer()
+      val client = TestProbe()
+
+      val metricListener = TestProbe()
+      Kamon(Metrics)(system).subscribe(TraceMetrics, "*", metricListener.ref, permanently = true)
+
+      client.send(connection, Get("/open-and-finish"))
+      server.expectMsgType[HttpRequest]
+      server.reply(HttpResponse(entity = "ok"))
       client.expectMsgType[HttpResponse]
 
-      fail()
-
-    }
-
-    /*    "finish a request even if no TraceContext is received in the response" in {
-      send {
-        Get(s"http://127.0.0.1:$port/clearcontext")
-      }
-
-      within(5 seconds) {
-        fishForNamedTrace("clearcontext")
+      metricListener.fishForMessage() {
+        case snapshot @ TickMetricSnapshot(_, _, metrics) => metrics.keys.exists(_.name.contains("open-and-finish"))
+        case other => false
       }
     }
 
-    "give a initial transaction name using the method and path from the request" in {
-      send {
-        Get(s"http://127.0.0.1:$port/accounts")
-      }
-
-      within(5 seconds) {
-        fishForNamedTrace("accounts")
-      }
-    }*/
   }
-  /*
-  - si no llega uow, crear una
-  - si llega con uow hay que propagarla
-   */
 
-  def fishForNamedTrace(traceName: String) = fishForMessage() {
-    case trace: UowTrace if trace.name.contains(traceName) ⇒ true
-    case _ ⇒ false
-  }
+
 }
 
-trait TestServer extends SimpleRoutingApp {
+trait TestServer {
   self: TestKit ⇒
 
   def buildServer(): (ActorRef, TestProbe) = {

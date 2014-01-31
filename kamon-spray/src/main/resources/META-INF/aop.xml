@@ -3,7 +3,7 @@
 <aspectj>
   <aspects>
     <!-- Spray Server -->
-    <aspect name="spray.can.server.ServerRequestTracing"/>
+    <aspect name="spray.can.server.ServerRequestInstrumentation"/>
 
     <!-- Spray Client -->
     <aspect name="spray.can.client.ClientRequestTracing"/>

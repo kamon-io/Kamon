@@ -42,7 +42,8 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
     def receive: Actor.Receive = { case any ⇒ sender ! any }
   }), "com")
 
-  //Kamon(Metrics).subscribe(TraceMetrics, "*", printer, true)
+  Kamon(Metrics).subscribe(TraceMetrics, "*", printer, permanently = true)
+  Kamon(Metrics).subscribe(ActorMetrics, "*", printer, permanently = true)
 
   implicit val timeout = Timeout(30 seconds)
 

@@ -16,16 +16,18 @@
 package spray.can.server
 
 import org.aspectj.lang.annotation._
-import kamon.trace.{ TraceRecorder, TraceContextAware }
+import kamon.trace.{ TraceContext, TraceRecorder, TraceContextAware }
 import akka.actor.ActorSystem
-import spray.http.HttpRequest
+import spray.http.{ HttpResponse, HttpMessagePartWrapper, HttpRequest }
 import akka.event.Logging.Warning
 import scala.Some
 import kamon.Kamon
 import kamon.spray.Spray
+import org.aspectj.lang.ProceedingJoinPoint
+import spray.http.HttpHeaders.RawHeader
 
 @Aspect
-class ServerRequestTracing {
+class ServerRequestInstrumentation {
 
   @DeclareMixin("spray.can.server.OpenRequestComponent.DefaultOpenRequest")
   def mixinContextAwareToOpenRequest: TraceContextAware = TraceContextAware.default
@@ -57,30 +59,52 @@ class ServerRequestTracing {
     TraceRecorder.clearContext
   }
 
-  @Pointcut("execution(* spray.can.server.OpenRequestComponent$DefaultOpenRequest.handleResponseEndAndReturnNextOpenRequest(..)) && target(openRequest)")
-  def openRequestCreation(openRequest: TraceContextAware): Unit = {}
+  @Pointcut("execution(* spray.can.server.OpenRequestComponent$DefaultOpenRequest.handleResponseEndAndReturnNextOpenRequest(..)) && target(openRequest) && args(response)")
+  def openRequestCreation(openRequest: TraceContextAware, response: HttpMessagePartWrapper): Unit = {}
 
-  @After("openRequestCreation(openRequest)")
-  def afterFinishingRequest(openRequest: TraceContextAware): Unit = {
-    val storedContext = openRequest.traceContext
+  @Around("openRequestCreation(openRequest, response)")
+  def afterFinishingRequest(pjp: ProceedingJoinPoint, openRequest: TraceContextAware, response: HttpMessagePartWrapper): Any = {
     val incomingContext = TraceRecorder.currentContext
-    TraceRecorder.finish()
+    val storedContext = openRequest.traceContext
 
-    for (original ← storedContext) {
-      incomingContext match {
+    verifyTraceContextConsistency(incomingContext, storedContext)
+    val proceedResult = incomingContext match {
+      case None ⇒ pjp.proceed()
+      case Some(traceContext) ⇒
+        val sprayExtension = Kamon(Spray)(traceContext.system)
+
+        if (sprayExtension.includeTraceToken) {
+          val responseWithHeader = includeTraceTokenIfPossible(response, sprayExtension.traceTokenHeaderName, traceContext.token)
+          pjp.proceed(Array(openRequest, responseWithHeader))
+
+        } else pjp.proceed
+    }
+
+    TraceRecorder.finish()
+    proceedResult
+  }
+
+  def verifyTraceContextConsistency(incomingTraceContext: Option[TraceContext], storedTraceContext: Option[TraceContext]): Unit = {
+    for (original ← storedTraceContext) {
+      incomingTraceContext match {
         case Some(incoming) if original.token != incoming.token ⇒
-          publishWarning(s"Different ids when trying to close a Trace, original: [$original] - incoming: [$incoming]")
+          publishWarning(s"Different ids when trying to close a Trace, original: [$original] - incoming: [$incoming]", incoming.system)
 
         case Some(_) ⇒ // nothing to do here.
 
         case None ⇒
-          publishWarning(s"Trace context not present while closing the Trace: [$original]")
+          publishWarning(s"Trace context not present while closing the Trace: [$original]", original.system)
       }
     }
 
-    def publishWarning(text: String): Unit = {
-      val system: ActorSystem = openRequest.asInstanceOf[OpenRequest].context.actorContext.system
-      system.eventStream.publish(Warning("", classOf[ServerRequestTracing], text))
-    }
+    def publishWarning(text: String, system: ActorSystem): Unit =
+      system.eventStream.publish(Warning("", classOf[ServerRequestInstrumentation], text))
+
   }
+
+  def includeTraceTokenIfPossible(response: HttpMessagePartWrapper, traceTokenHeaderName: String, token: String): HttpMessagePartWrapper =
+    response match {
+      case response: HttpResponse ⇒ response.withHeaders(RawHeader(traceTokenHeaderName, token))
+      case other                  ⇒ other
+    }
 }

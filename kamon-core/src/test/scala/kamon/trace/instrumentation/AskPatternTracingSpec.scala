@@ -22,7 +22,7 @@ import akka.event.Logging.Warning
 import scala.concurrent.duration._
 import akka.pattern.ask
 import akka.util.Timeout
-import kamon.trace.{TraceContextAware, TraceRecorder}
+import kamon.trace.{ TraceContextAware, TraceRecorder }
 import org.scalatest.OptionValues._
 
 class AskPatternTracingSpec extends TestKit(ActorSystem("ask-pattern-tracing-spec")) with WordSpecLike with Matchers {
