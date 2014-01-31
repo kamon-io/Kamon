@@ -21,10 +21,12 @@ import akka.util.Timeout
 import spray.httpx.RequestBuilding
 import scala.concurrent.{ Await, Future }
 import kamon.spray.UowDirectives
-import kamon.trace.Trace
-import kamon.Kamon
 import scala.util.Random
 import akka.routing.RoundRobinRouter
+import kamon.trace.TraceRecorder
+import kamon.Kamon
+import kamon.metrics.{ ActorMetrics, TraceMetrics, Metrics }
+import spray.http.{ StatusCodes, Uri }
 
 object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuilding with UowDirectives {
   import scala.concurrent.duration._
@@ -34,11 +36,13 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
   implicit val system = ActorSystem("test")
   import system.dispatcher
 
+  val printer = system.actorOf(Props[PrintWhatever])
+
   val act = system.actorOf(Props(new Actor {
     def receive: Actor.Receive = { case any ⇒ sender ! any }
   }), "com")
 
-  Thread.sleep(10000)
+  //Kamon(Metrics).subscribe(TraceMetrics, "*", printer, true)
 
   implicit val timeout = Timeout(30 seconds)
 
@@ -55,19 +59,19 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
             Future.sequence(futures).map(l ⇒ "Ok")
           }
         }
-      } ~ {
+      } ~
         path("site") {
           complete {
-            pipeline(Get("http://localhost:4000/"))
+            pipeline(Get("http://localhost:9090/site-redirect"))
           }
-        }
-      } ~
+        } ~
+        path("site-redirect") {
+          redirect(Uri("http://localhost:4000/"), StatusCodes.MovedPermanently)
+
+        } ~
         path("reply" / Segment) { reqID ⇒
           uow {
             complete {
-              if (Trace.context().isEmpty)
-                println("ROUTE NO CONTEXT")
-
               (replier ? reqID).mapTo[String]
             }
           }
@@ -100,6 +104,12 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
 
 }
 
+class PrintWhatever extends Actor {
+  def receive = {
+    case anything ⇒ println(anything)
+  }
+}
+
 object Verifier extends App {
 
   def go: Unit = {
@@ -124,7 +134,7 @@ object Verifier extends App {
 class Replier extends Actor with ActorLogging {
   def receive = {
     case anything ⇒
-      if (Trace.context.isEmpty)
+      if (TraceRecorder.currentContext.isEmpty)
         log.warning("PROCESSING A MESSAGE WITHOUT CONTEXT")
 
       log.info("Processing at the Replier, and self is: {}", self)

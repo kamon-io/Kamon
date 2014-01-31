@@ -20,7 +20,6 @@ import spray.routing._
 import java.util.concurrent.atomic.AtomicLong
 import scala.util.Try
 import java.net.InetAddress
-import kamon.trace.Trace
 import spray.http.HttpHeaders.RawHeader
 
 trait UowDirectives extends BasicDirectives {
@@ -28,10 +27,10 @@ trait UowDirectives extends BasicDirectives {
     val uowHeader = request.headers.find(_.name == "X-UOW")
 
     val generatedUow = uowHeader.map(_.value).getOrElse(UowDirectives.newUow)
-    Trace.transformContext(_.copy(token = generatedUow))
+    //Trace.transformContext(_.copy(token = generatedUow))
     request
   }
-  def respondWithUow = mapHttpResponseHeaders(headers ⇒ Trace.context().map(ctx ⇒ RawHeader("X-UOW", ctx.token) :: headers).getOrElse(headers))
+  //def respondWithUow = mapHttpResponseHeaders(headers ⇒ Trace.context().map(ctx ⇒ RawHeader("X-UOW", ctx.token) :: headers).getOrElse(headers))
 }
 
 object UowDirectives {

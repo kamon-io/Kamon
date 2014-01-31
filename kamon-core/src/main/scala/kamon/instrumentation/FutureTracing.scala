@@ -23,7 +23,7 @@ import kamon.trace.{ TraceContextAware, TraceRecorder }
 class FutureTracing {
 
   @DeclareMixin("scala.concurrent.impl.CallbackRunnable || scala.concurrent.impl.Future.PromiseCompletingRunnable")
-  def mixin: TraceContextAware = new TraceContextAware {}
+  def mixinTraceContextAwareToFutureRelatedRunnable: TraceContextAware = TraceContextAware.default
 
   @Pointcut("execution((scala.concurrent.impl.CallbackRunnable || scala.concurrent.impl.Future.PromiseCompletingRunnable).new(..)) && this(runnable)")
   def futureRelatedRunnableCreation(runnable: TraceContextAware): Unit = {}
@@ -39,7 +39,7 @@ class FutureTracing {
 
   @Around("futureRelatedRunnableExecution(runnable)")
   def aroundExecution(pjp: ProceedingJoinPoint, runnable: TraceContextAware): Any = {
-    TraceRecorder.withContext(runnable.traceContext) {
+    TraceRecorder.withTraceContext(runnable.traceContext) {
       pjp.proceed()
     }
   }

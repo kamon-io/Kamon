@@ -20,58 +20,60 @@ import org.aspectj.lang.annotation._
 import org.aspectj.lang.ProceedingJoinPoint
 import spray.http.{ HttpMessageEnd, HttpRequest }
 import spray.http.HttpHeaders.Host
-import kamon.trace.{ TraceContext, Trace, Segments }
-import kamon.trace.Segments.{ ContextAndSegmentCompletionAware, HttpClientRequest }
-import kamon.trace.Trace.SegmentCompletionHandle
+import kamon.trace.{ TraceRecorder, SegmentCompletionHandleAware, TraceContextAware }
+import kamon.metrics.TraceMetrics.HttpClientRequest
+import kamon.Kamon
+import kamon.spray.Spray
 
 @Aspect
 class ClientRequestTracing {
 
   @DeclareMixin("spray.can.client.HttpHostConnector.RequestContext")
-  def mixin: ContextAndSegmentCompletionAware = new ContextAndSegmentCompletionAware {
-    val traceContext: Option[TraceContext] = Trace.context()
-    var completionHandle: Option[SegmentCompletionHandle] = None
-  }
+  def mixin: SegmentCompletionHandleAware = SegmentCompletionHandleAware.default
 
   @Pointcut("execution(spray.can.client.HttpHostConnector.RequestContext.new(..)) && this(ctx) && args(request, *, *, *)")
-  def requestContextCreation(ctx: ContextAndSegmentCompletionAware, request: HttpRequest): Unit = {}
+  def requestContextCreation(ctx: SegmentCompletionHandleAware, request: HttpRequest): Unit = {}
 
   @After("requestContextCreation(ctx, request)")
-  def afterRequestContextCreation(ctx: ContextAndSegmentCompletionAware, request: HttpRequest): Unit = {
+  def afterRequestContextCreation(ctx: SegmentCompletionHandleAware, request: HttpRequest): Unit = {
     // The RequestContext will be copied when a request needs to be retried but we are only interested in creating the
     // completion handle the first time we create one.
 
     // The read to ctx.completionHandle should take care of initializing the aspect timely.
-    if (ctx.completionHandle.isEmpty) {
-      val requestAttributes = Map[String, String](
-        "host" -> request.header[Host].map(_.value).getOrElse("unknown"),
-        "path" -> request.uri.path.toString(),
-        "method" -> request.method.toString())
-      val completionHandle = Trace.startSegment(category = HttpClientRequest, attributes = requestAttributes)
-      ctx.completionHandle = Some(completionHandle)
+    if (ctx.segmentCompletionHandle.isEmpty) {
+      TraceRecorder.currentContext.map { traceContext ⇒
+        val requestAttributes = Map[String, String](
+          "host" -> request.header[Host].map(_.value).getOrElse("unknown"),
+          "path" -> request.uri.path.toString(),
+          "method" -> request.method.toString())
+
+        val clientRequestName = Kamon(Spray)(traceContext.system).assignHttpClientRequestName(request)
+        val completionHandle = traceContext.startSegment(HttpClientRequest(clientRequestName), requestAttributes)
+        ctx.segmentCompletionHandle = Some(completionHandle)
+      }
     }
   }
 
   @Pointcut("execution(* spray.can.client.HttpHostConnector.RequestContext.copy(..)) && this(old)")
-  def copyingRequestContext(old: ContextAndSegmentCompletionAware): Unit = {}
+  def copyingRequestContext(old: SegmentCompletionHandleAware): Unit = {}
 
   @Around("copyingRequestContext(old)")
-  def aroundCopyingRequestContext(pjp: ProceedingJoinPoint, old: ContextAndSegmentCompletionAware) = {
-    Trace.withContext(old.traceContext) {
+  def aroundCopyingRequestContext(pjp: ProceedingJoinPoint, old: SegmentCompletionHandleAware): Any = {
+    TraceRecorder.withTraceContext(old.traceContext) {
       pjp.proceed()
     }
   }
 
   @Pointcut("execution(* spray.can.client.HttpHostConnectionSlot.dispatchToCommander(..)) && args(requestContext, message)")
-  def dispatchToCommander(requestContext: ContextAndSegmentCompletionAware, message: Any): Unit = {}
+  def dispatchToCommander(requestContext: SegmentCompletionHandleAware, message: Any): Unit = {}
 
   @Around("dispatchToCommander(requestContext, message)")
-  def aroundDispatchToCommander(pjp: ProceedingJoinPoint, requestContext: ContextAndSegmentCompletionAware, message: Any) = {
+  def aroundDispatchToCommander(pjp: ProceedingJoinPoint, requestContext: SegmentCompletionHandleAware, message: Any) = {
     requestContext.traceContext match {
       case ctx @ Some(_) ⇒
-        Trace.withContext(ctx) {
+        TraceRecorder.withTraceContext(ctx) {
           if (message.isInstanceOf[HttpMessageEnd])
-            requestContext.completionHandle.map(_.complete(Segments.End()))
+            requestContext.segmentCompletionHandle.map(_.finish(Map.empty))
 
           pjp.proceed()
         }

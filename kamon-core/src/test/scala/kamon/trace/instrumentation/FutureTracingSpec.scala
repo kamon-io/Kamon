@@ -15,42 +15,42 @@
  * ========================================================== */
 package kamon.trace.instrumentation
 
-import scala.concurrent.{ ExecutionContext, Await, Promise, Future }
-import org.scalatest.{ Matchers, OptionValues, WordSpec }
+import scala.concurrent.{ ExecutionContext, Future }
+import org.scalatest.{ Matchers, OptionValues, WordSpecLike }
 import org.scalatest.concurrent.{ ScalaFutures, PatienceConfiguration }
-import java.util.UUID
-import scala.util.{ Random, Success }
-import scala.concurrent.duration._
-import java.util.concurrent.TimeUnit
-import akka.actor.{ Actor, ActorSystem }
-import kamon.trace.{ Trace, TraceContext }
+import kamon.trace.TraceRecorder
+import akka.testkit.TestKit
+import akka.actor.ActorSystem
 
-class FutureTracingSpec extends WordSpec with Matchers with ScalaFutures with PatienceConfiguration with OptionValues {
+class FutureTracingSpec extends TestKit(ActorSystem("actor-message-passing-tracing-spec")) with WordSpecLike with Matchers
+  with ScalaFutures with PatienceConfiguration with OptionValues {
 
-  implicit val execContext = ExecutionContext.Implicits.global
+  implicit val execContext = system.dispatcher
 
   "a Future created with FutureTracing" should {
     "capture the TraceContext available when created" which {
-      "must be available when executing the future's body" in new TraceContextFixture {
-        var future: Future[Option[TraceContext]] = _
+      "must be available when executing the future's body" in {
 
-        Trace.withContext(testTraceContext) {
-          future = Future(Trace.context)
+        val (future, testTraceContext) = TraceRecorder.withNewTraceContext("future-body") {
+          val future = Future(TraceRecorder.currentContext)
+
+          (future, TraceRecorder.currentContext)
         }
 
         whenReady(future)(ctxInFuture ⇒
           ctxInFuture should equal(testTraceContext))
       }
 
-      "must be available when executing callbacks on the future" in new TraceContextFixture {
-        var future: Future[Option[TraceContext]] = _
+      "must be available when executing callbacks on the future" in  {
 
-        Trace.withContext(testTraceContext) {
-          future = Future("Hello Kamon!")
+        val (future, testTraceContext) = TraceRecorder.withNewTraceContext("future-body") {
+          val future = Future("Hello Kamon!")
             // The TraceContext is expected to be available during all intermediate processing.
             .map(_.length)
             .flatMap(len ⇒ Future(len.toString))
-            .map(s ⇒ Trace.context())
+            .map(s ⇒ TraceRecorder.currentContext)
+
+          (future, TraceRecorder.currentContext)
         }
 
         whenReady(future)(ctxInFuture ⇒

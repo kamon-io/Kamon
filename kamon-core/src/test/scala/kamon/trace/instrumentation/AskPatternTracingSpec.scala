@@ -22,32 +22,30 @@ import akka.event.Logging.Warning
 import scala.concurrent.duration._
 import akka.pattern.ask
 import akka.util.Timeout
-import kamon.trace.{ Trace, ContextAware }
+import kamon.trace.{TraceContextAware, TraceRecorder}
 import org.scalatest.OptionValues._
 
 class AskPatternTracingSpec extends TestKit(ActorSystem("ask-pattern-tracing-spec")) with WordSpecLike with Matchers {
 
   "the AskPatternTracing" should {
-    "log a warning with a stack trace and TraceContext taken from the moment the ask was triggered" in new TraceContextFixture {
+    "log a warning with a stack trace and TraceContext taken from the moment the ask was triggered" in {
       implicit val ec = system.dispatcher
       implicit val timeout = Timeout(10 milliseconds)
       val noReply = system.actorOf(Props[NoReply])
       system.eventStream.subscribe(testActor, classOf[Warning])
 
-      within(500 milliseconds) {
-        val initialCtx = Trace.withContext(testTraceContext) {
-          noReply ? "hello"
-          Trace.context()
-        }
-
-        val warn = expectMsgPF() {
-          case warn: Warning if warn.message.toString.contains("Timeout triggered for ask pattern") ⇒ warn
-        }
-        val capturedCtx = warn.asInstanceOf[ContextAware].traceContext
-
-        capturedCtx should be('defined)
-        capturedCtx should equal(initialCtx)
+      val testTraceContext = TraceRecorder.withNewTraceContext("ask-timeout-warning") {
+        noReply ? "hello"
+        TraceRecorder.currentContext
       }
+
+      val warn = expectMsgPF() {
+        case warn: Warning if warn.message.toString.contains("Timeout triggered for ask pattern") ⇒ warn
+      }
+      val capturedCtx = warn.asInstanceOf[TraceContextAware].traceContext
+
+      capturedCtx should be('defined)
+      capturedCtx should equal(testTraceContext)
     }
   }
 }

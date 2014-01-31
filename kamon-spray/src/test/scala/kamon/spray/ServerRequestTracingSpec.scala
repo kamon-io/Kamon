@@ -24,7 +24,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import _root_.spray.client.pipelining._
 import akka.util.Timeout
-import kamon.trace.{ UowTrace, Trace }
+import kamon.trace.{ UowTrace }
 import kamon.Kamon
 import org.scalatest.concurrent.{ PatienceConfiguration, ScalaFutures }
 import spray.http.HttpHeaders.RawHeader

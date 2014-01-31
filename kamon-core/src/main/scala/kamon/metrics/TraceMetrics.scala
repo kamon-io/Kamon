@@ -57,9 +57,7 @@ object TraceMetrics extends MetricGroupIdentity.Category with MetricGroupFactory
     val elapsedTimeHdrConfig = Configuration.fromConfig(settings.getConfig("elapsed-time"))
     val segmentHdrConfig = Configuration.fromConfig(settings.getConfig("segment"))
 
-    new TraceMetricRecorder(
-      HighDynamicRangeRecorder(elapsedTimeHdrConfig),
-      () ⇒ HighDynamicRangeRecorder(segmentHdrConfig))
+    new TraceMetricRecorder(HighDynamicRangeRecorder(elapsedTimeHdrConfig), () ⇒ HighDynamicRangeRecorder(segmentHdrConfig))
   }
 
 }

@@ -3,7 +3,7 @@ package kamon.trace.instrumentation
 import akka.testkit.{ ImplicitSender, TestKit }
 import akka.actor._
 import org.scalatest.WordSpecLike
-import kamon.trace.Trace
+import kamon.trace.TraceRecorder
 import scala.util.control.NonFatal
 import akka.actor.SupervisorStrategy.{ Escalate, Stop, Restart, Resume }
 import scala.concurrent.duration._
@@ -12,43 +12,44 @@ class ActorSystemMessagePassingInstrumentationSpec extends TestKit(ActorSystem("
   implicit val executionContext = system.dispatcher
 
   "the system message passing instrumentation" should {
-    "keep the TraceContext while processing the Create message in top level actors" in new TraceContextFixture {
-      Trace.withContext(testTraceContext) {
+    "keep the TraceContext while processing the Create message in top level actors" in {
+      val testTraceContext = TraceRecorder.withNewTraceContext("creating-top-level-actor") {
         system.actorOf(Props(new Actor {
-
-          testActor ! Trace.context()
-
+          testActor ! TraceRecorder.currentContext
           def receive: Actor.Receive = { case any ⇒ }
         }))
+
+        TraceRecorder.currentContext
       }
 
       expectMsg(testTraceContext)
     }
 
-    "keep the TraceContext while processing the Create message in non top level actors" in new TraceContextFixture {
-      Trace.withContext(testTraceContext) {
+    "keep the TraceContext while processing the Create message in non top level actors" in  {
+      val testTraceContext = TraceRecorder.withNewTraceContext("creating-non-top-level-actor") {
         system.actorOf(Props(new Actor {
           def receive: Actor.Receive = {
             case any ⇒
               context.actorOf(Props(new Actor {
-
-                testActor ! Trace.context()
-
+                testActor ! TraceRecorder.currentContext
                 def receive: Actor.Receive = { case any ⇒ }
               }))
           }
         })) ! "any"
+
+        TraceRecorder.currentContext
       }
 
       expectMsg(testTraceContext)
     }
 
     "keep the TraceContext in the supervision cycle" when {
-      "the actor is resumed" in new TraceContextFixture {
+      "the actor is resumed" in {
         val supervisor = supervisorWithDirective(Resume)
 
-        Trace.withContext(testTraceContext) {
+        val testTraceContext = TraceRecorder.withNewTraceContext("fail-and-resume") {
           supervisor ! "fail"
+          TraceRecorder.currentContext
         }
 
         expectMsg(testTraceContext) // From the parent executing the supervision strategy
@@ -58,11 +59,12 @@ class ActorSystemMessagePassingInstrumentationSpec extends TestKit(ActorSystem("
         expectMsg(None)
       }
 
-      "the actor is restarted" in new TraceContextFixture {
+      "the actor is restarted" in {
         val supervisor = supervisorWithDirective(Restart, sendPreRestart = true, sendPostRestart = true)
 
-        Trace.withContext(testTraceContext) {
+        val testTraceContext = TraceRecorder.withNewTraceContext("fail-and-restart") {
           supervisor ! "fail"
+          TraceRecorder.currentContext
         }
 
         expectMsg(testTraceContext) // From the parent executing the supervision strategy
@@ -74,11 +76,12 @@ class ActorSystemMessagePassingInstrumentationSpec extends TestKit(ActorSystem("
         expectMsg(None)
       }
 
-      "the actor is stopped" in new TraceContextFixture {
+      "the actor is stopped" in {
         val supervisor = supervisorWithDirective(Stop, sendPostStop = true)
 
-        Trace.withContext(testTraceContext) {
+        val testTraceContext = TraceRecorder.withNewTraceContext("fail-and-stop") {
           supervisor ! "fail"
+          TraceRecorder.currentContext
         }
 
         expectMsg(testTraceContext) // From the parent executing the supervision strategy
@@ -86,11 +89,12 @@ class ActorSystemMessagePassingInstrumentationSpec extends TestKit(ActorSystem("
         expectNoMsg(1 second)
       }
 
-      "the failure is escalated" in new TraceContextFixture {
+      "the failure is escalated" in {
         val supervisor = supervisorWithDirective(Escalate, sendPostStop = true)
 
-        Trace.withContext(testTraceContext) {
+        val testTraceContext = TraceRecorder.withNewTraceContext("fail-and-escalate") {
           supervisor ! "fail"
+          TraceRecorder.currentContext
         }
 
         expectMsg(testTraceContext) // From the parent executing the supervision strategy
@@ -108,7 +112,7 @@ class ActorSystemMessagePassingInstrumentationSpec extends TestKit(ActorSystem("
       val child = context.actorOf(Props(new Parent))
 
       override def supervisorStrategy: SupervisorStrategy = OneForOneStrategy() {
-        case NonFatal(throwable) ⇒ testActor ! Trace.context(); Stop
+        case NonFatal(throwable) ⇒ testActor ! TraceRecorder.currentContext; Stop
       }
 
       def receive = {
@@ -120,7 +124,7 @@ class ActorSystemMessagePassingInstrumentationSpec extends TestKit(ActorSystem("
       val child = context.actorOf(Props(new Child))
 
       override def supervisorStrategy: SupervisorStrategy = OneForOneStrategy() {
-        case NonFatal(throwable) ⇒ testActor ! Trace.context(); directive
+        case NonFatal(throwable) ⇒ testActor ! TraceRecorder.currentContext; directive
       }
 
       def receive: Actor.Receive = {
@@ -128,7 +132,7 @@ class ActorSystemMessagePassingInstrumentationSpec extends TestKit(ActorSystem("
       }
 
       override def postStop(): Unit = {
-        if (sendPostStop) testActor ! Trace.context()
+        if (sendPostStop) testActor ! TraceRecorder.currentContext
         super.postStop()
       }
     }
@@ -136,26 +140,26 @@ class ActorSystemMessagePassingInstrumentationSpec extends TestKit(ActorSystem("
     class Child extends Actor {
       def receive = {
         case "fail"    ⇒ 1 / 0
-        case "context" ⇒ sender ! Trace.context()
+        case "context" ⇒ sender ! TraceRecorder.currentContext
       }
 
       override def preRestart(reason: Throwable, message: Option[Any]): Unit = {
-        if (sendPreRestart) testActor ! Trace.context()
+        if (sendPreRestart) testActor ! TraceRecorder.currentContext
         super.preRestart(reason, message)
       }
 
       override def postRestart(reason: Throwable): Unit = {
-        if (sendPostRestart) testActor ! Trace.context()
+        if (sendPostRestart) testActor ! TraceRecorder.currentContext
         super.postRestart(reason)
       }
 
       override def postStop(): Unit = {
-        if (sendPostStop) testActor ! Trace.context()
+        if (sendPostStop) testActor ! TraceRecorder.currentContext
         super.postStop()
       }
 
       override def preStart(): Unit = {
-        if (sendPreStart) testActor ! Trace.context()
+        if (sendPreStart) testActor ! TraceRecorder.currentContext
         super.preStart()
       }
     }

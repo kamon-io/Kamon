@@ -19,7 +19,7 @@ import akka.actor.Actor
 import akka.event.Logging.Error
 import akka.event.Logging.{ LoggerInitialized, InitializeLogger }
 import com.newrelic.api.agent.NewRelic
-import kamon.trace.ContextAware
+import kamon.trace.TraceContextAware
 
 class NewRelicErrorLogger extends Actor {
   def receive = {
@@ -30,7 +30,7 @@ class NewRelicErrorLogger extends Actor {
 
   def notifyError(error: Error): Unit = {
     val params = new java.util.HashMap[String, String]()
-    val ctx = error.asInstanceOf[ContextAware].traceContext
+    val ctx = error.asInstanceOf[TraceContextAware].traceContext
 
     for (c ← ctx) {
       params.put("TraceToken", c.token)

@@ -16,37 +16,34 @@
 package spray.can.server
 
 import org.aspectj.lang.annotation._
-import kamon.trace.{ Trace, ContextAware }
-import spray.http.HttpRequest
+import kamon.trace.{ TraceRecorder, TraceContextAware }
 import akka.actor.ActorSystem
-import akka.event.Logging.Warning
-import org.aspectj.lang.ProceedingJoinPoint
 import spray.http.HttpRequest
 import akka.event.Logging.Warning
 import scala.Some
+import kamon.Kamon
+import kamon.spray.Spray
 
 @Aspect
 class ServerRequestTracing {
 
   @DeclareMixin("spray.can.server.OpenRequestComponent.DefaultOpenRequest")
-  def mixinContextAwareToOpenRequest: ContextAware = ContextAware.default
+  def mixinContextAwareToOpenRequest: TraceContextAware = TraceContextAware.default
 
   @Pointcut("execution(spray.can.server.OpenRequestComponent$DefaultOpenRequest.new(..)) && this(openRequest) && args(*, request, *, *)")
-  def openRequestInit(openRequest: ContextAware, request: HttpRequest): Unit = {}
+  def openRequestInit(openRequest: TraceContextAware, request: HttpRequest): Unit = {}
 
   @After("openRequestInit(openRequest, request)")
-  def afterInit(openRequest: ContextAware, request: HttpRequest): Unit = {
+  def afterInit(openRequest: TraceContextAware, request: HttpRequest): Unit = {
     val system: ActorSystem = openRequest.asInstanceOf[OpenRequest].context.actorContext.system
-    val config = system.settings.config.getConfig("kamon.spray")
-
-    val token = if (config.getBoolean("include-trace-token-header")) {
-      val traceTokenHeader = config.getString("trace-token-header-name")
-      request.headers.find(_.name == traceTokenHeader).map(_.value)
-    } else None
+    val sprayExtension = Kamon(Spray)(system)
 
     val defaultTraceName: String = request.method.value + ": " + request.uri.path
+    val token = if (sprayExtension.includeTraceToken) {
+      request.headers.find(_.name == sprayExtension.traceTokenHeaderName).map(_.value)
+    } else None
 
-    Trace.start(defaultTraceName, token)(system)
+    TraceRecorder.start(defaultTraceName, token)(system)
 
     // Necessary to force initialization of traceContext when initiating the request.
     openRequest.traceContext
@@ -57,26 +54,26 @@ class ServerRequestTracing {
 
   @After("openNewRequest()")
   def afterOpenNewRequest(): Unit = {
-    Trace.clear
+    TraceRecorder.clearContext
   }
 
   @Pointcut("execution(* spray.can.server.OpenRequestComponent$DefaultOpenRequest.handleResponseEndAndReturnNextOpenRequest(..)) && target(openRequest)")
-  def openRequestCreation(openRequest: ContextAware): Unit = {}
+  def openRequestCreation(openRequest: TraceContextAware): Unit = {}
 
   @After("openRequestCreation(openRequest)")
-  def afterFinishingRequest(openRequest: ContextAware): Unit = {
+  def afterFinishingRequest(openRequest: TraceContextAware): Unit = {
     val storedContext = openRequest.traceContext
-    val incomingContext = Trace.finish()
+    val incomingContext = TraceRecorder.currentContext
+    TraceRecorder.finish()
 
     for (original ← storedContext) {
       incomingContext match {
-        case Some(incoming) if original.id != incoming.id ⇒
+        case Some(incoming) if original.token != incoming.token ⇒
           publishWarning(s"Different ids when trying to close a Trace, original: [$original] - incoming: [$incoming]")
 
         case Some(_) ⇒ // nothing to do here.
 
         case None ⇒
-          original.finish
           publishWarning(s"Trace context not present while closing the Trace: [$original]")
       }
     }
