@@ -23,14 +23,14 @@ import kamon.trace.{ TraceContextAware, TraceRecorder }
 class ActorLoggingTracing {
 
   @DeclareMixin("akka.event.Logging.LogEvent+")
-  def mixin: TraceContextAware = new TraceContextAware {}
+  def mixinTraceContextAwareToLogEvent: TraceContextAware = TraceContextAware.default
 
   @Pointcut("execution(* akka.event.slf4j.Slf4jLogger.withMdc(..)) && args(logSource, logEvent, logStatement)")
   def withMdcInvocation(logSource: String, logEvent: TraceContextAware, logStatement: () ⇒ _): Unit = {}
 
   @Around("withMdcInvocation(logSource, logEvent, logStatement)")
   def aroundWithMdcInvocation(pjp: ProceedingJoinPoint, logSource: String, logEvent: TraceContextAware, logStatement: () ⇒ _): Unit = {
-    TraceRecorder.withContext(logEvent.traceContext) {
+    TraceRecorder.withTraceContext(logEvent.traceContext) {
       pjp.proceed()
     }
   }

@@ -3,13 +3,13 @@ package akka.instrumentation
 import org.aspectj.lang.annotation._
 import akka.dispatch.sysmsg.EarliestFirstSystemMessageList
 import org.aspectj.lang.ProceedingJoinPoint
-import kamon.trace.{TraceRecorder, TraceContextAware}
+import kamon.trace.{ TraceRecorder, TraceContextAware }
 
 @Aspect
 class SystemMessageTraceContextMixin {
 
   @DeclareMixin("akka.dispatch.sysmsg.SystemMessage+")
-  def mixin: TraceContextAware = new TraceContextAware {}
+  def mixinTraceContextAwareToSystemMessage: TraceContextAware = TraceContextAware.default
 
   @Pointcut("execution(akka.dispatch.sysmsg.SystemMessage+.new(..)) && this(ctx)")
   def envelopeCreation(ctx: TraceContextAware): Unit = {}
@@ -25,7 +25,7 @@ class SystemMessageTraceContextMixin {
 class RepointableActorRefTraceContextMixin {
 
   @DeclareMixin("akka.actor.RepointableActorRef")
-  def mixin: TraceContextAware = new TraceContextAware {}
+  def mixinTraceContextAwareToRepointableActorRef: TraceContextAware = TraceContextAware.default
 
   @Pointcut("execution(akka.actor.RepointableActorRef.new(..)) && this(ctx)")
   def envelopeCreation(ctx: TraceContextAware): Unit = {}
@@ -41,7 +41,7 @@ class RepointableActorRefTraceContextMixin {
 
   @Around("repointableActorRefCreation(repointableActorRef)")
   def afterRepointableActorRefCreation(pjp: ProceedingJoinPoint, repointableActorRef: TraceContextAware): Any = {
-    TraceRecorder.withContext(repointableActorRef.traceContext) {
+    TraceRecorder.withTraceContext(repointableActorRef.traceContext) {
       pjp.proceed()
     }
   }
@@ -58,7 +58,7 @@ class ActorSystemMessagePassingTracing {
   def aroundSystemMessageInvoke(pjp: ProceedingJoinPoint, messages: EarliestFirstSystemMessageList): Any = {
     if (messages.nonEmpty) {
       val ctx = messages.head.asInstanceOf[TraceContextAware].traceContext
-      TraceRecorder.withContext(ctx)(pjp.proceed())
+      TraceRecorder.withTraceContext(ctx)(pjp.proceed())
 
     } else pjp.proceed()
   }

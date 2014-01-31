@@ -49,7 +49,7 @@ class BehaviourInvokeTracing {
     val timestampBeforeProcessing = System.nanoTime()
     val contextAndTimestamp = envelope.asInstanceOf[TraceContextAware]
 
-    TraceRecorder.withContext(contextAndTimestamp.traceContext) {
+    TraceRecorder.withTraceContext(contextAndTimestamp.traceContext) {
       pjp.proceed()
     }
 
@@ -73,7 +73,7 @@ class BehaviourInvokeTracing {
 class EnvelopeTraceContextMixin {
 
   @DeclareMixin("akka.dispatch.Envelope")
-  def mixin: TraceContextAware = new TraceContextAware {}
+  def mixinTraceContextAwareToEnvelope: TraceContextAware = TraceContextAware.default
 
   @Pointcut("execution(akka.dispatch.Envelope.new(..)) && this(ctx)")
   def envelopeCreation(ctx: TraceContextAware): Unit = {}

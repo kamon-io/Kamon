@@ -15,70 +15,71 @@
  * ========================================================== */
 package kamon.trace.instrumentation
 
-import org.scalatest.{ WordSpecLike, Matchers }
-import akka.actor.{ ActorRef, Actor, Props, ActorSystem }
+import org.scalatest.WordSpecLike
+import akka.actor.{ Actor, Props, ActorSystem }
 
 import akka.testkit.{ ImplicitSender, TestKit }
-import kamon.trace.Trace
+import kamon.trace.TraceRecorder
 import akka.pattern.{ pipe, ask }
 import akka.util.Timeout
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, Future }
 import akka.routing.RoundRobinRouter
-import kamon.trace.TraceContext
 
 class ActorMessagePassingTracingSpec extends TestKit(ActorSystem("actor-message-passing-tracing-spec")) with WordSpecLike with ImplicitSender {
   implicit val executionContext = system.dispatcher
 
   "the message passing instrumentation" should {
-    "propagate the TraceContext using bang" in new TraceContextEchoFixture {
-      Trace.withContext(testTraceContext) {
+    "propagate the TraceContext using bang" in new EchoActorFixture {
+      val testTraceContext = TraceRecorder.withNewTraceContext("bang-reply") {
         ctxEchoActor ! "test"
+        TraceRecorder.currentContext
       }
 
       expectMsg(testTraceContext)
     }
 
-    "propagate the TraceContext using tell" in new TraceContextEchoFixture {
-      Trace.withContext(testTraceContext) {
+    "propagate the TraceContext using tell" in new EchoActorFixture {
+      val testTraceContext = TraceRecorder.withNewTraceContext("tell-reply") {
         ctxEchoActor.tell("test", testActor)
+        TraceRecorder.currentContext
       }
 
       expectMsg(testTraceContext)
     }
 
-    "propagate the TraceContext using ask" in new TraceContextEchoFixture {
+    "propagate the TraceContext using ask" in new EchoActorFixture {
       implicit val timeout = Timeout(1 seconds)
-      Trace.withContext(testTraceContext) {
+      val testTraceContext = TraceRecorder.withNewTraceContext("ask-reply") {
         // The pipe pattern use Futures internally, so FutureTracing test should cover the underpinnings of it.
         (ctxEchoActor ? "test") pipeTo (testActor)
+        TraceRecorder.currentContext
       }
 
       expectMsg(testTraceContext)
     }
 
-    "propagate the TraceContext to actors behind a router" in new RoutedTraceContextEchoFixture {
-      Trace.withContext(testTraceContext) {
+    "propagate the TraceContext to actors behind a router" in new RoutedEchoActorFixture {
+      val testTraceContext = TraceRecorder.withNewTraceContext("router-reply") {
         ctxEchoActor ! "test"
+        TraceRecorder.currentContext
       }
 
       expectMsg(testTraceContext)
     }
   }
 
-  trait TraceContextEchoFixture {
-    val testTraceContext = Some(Trace.newTraceContext("test", "test-1"))
+  trait EchoActorFixture {
     val ctxEchoActor = system.actorOf(Props[TraceContextEcho])
   }
 
-  trait RoutedTraceContextEchoFixture extends TraceContextEchoFixture {
+  trait RoutedEchoActorFixture extends EchoActorFixture {
     override val ctxEchoActor = system.actorOf(Props[TraceContextEcho].withRouter(RoundRobinRouter(nrOfInstances = 1)))
   }
 }
 
 class TraceContextEcho extends Actor {
   def receive = {
-    case msg: String ⇒ sender ! Trace.context()
+    case msg: String ⇒ sender ! TraceRecorder.currentContext
   }
 }
 
