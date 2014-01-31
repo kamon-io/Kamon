@@ -18,7 +18,7 @@ package kamon.newrelic
 import akka.actor._
 import scala.collection.mutable
 import kamon.Kamon
-import kamon.trace.{ UowTrace, Trace }
+import kamon.trace.{ UowTrace }
 import kamon.newrelic.NewRelicMetric.{ MetricBatch, FlushMetrics }
 import scala.concurrent.duration._
 
@@ -33,7 +33,7 @@ class NewRelicExtension(system: ExtendedActorSystem) extends Kamon.Extension {
 class NewRelicManager extends Actor with ActorLogging {
   log.info("Registering the Kamon(NewRelic) extension")
 
-  Kamon(Trace)(context.system).api ! Trace.Register
+  //Kamon(Trace)(context.system).api ! Trace.Register
 
   val webTransactionMetrics = context.actorOf(Props[WebTransactionMetrics], "web-transaction-metrics")
   val agent = context.actorOf(Props[Agent], "agent")
