@@ -23,7 +23,7 @@ import akka.testkit.TestKit
 import akka.actor.ActorSystem
 
 class FutureTracingSpec extends TestKit(ActorSystem("actor-message-passing-tracing-spec")) with WordSpecLike with Matchers
-  with ScalaFutures with PatienceConfiguration with OptionValues {
+    with ScalaFutures with PatienceConfiguration with OptionValues {
 
   implicit val execContext = system.dispatcher
 
@@ -41,7 +41,7 @@ class FutureTracingSpec extends TestKit(ActorSystem("actor-message-passing-traci
           ctxInFuture should equal(testTraceContext))
       }
 
-      "must be available when executing callbacks on the future" in  {
+      "must be available when executing callbacks on the future" in {
 
         val (future, testTraceContext) = TraceRecorder.withNewTraceContext("future-body") {
           val future = Future("Hello Kamon!")

@@ -19,7 +19,7 @@ import akka.testkit.TestKit
 import org.scalatest.{ Inspectors, Matchers, WordSpecLike }
 import akka.actor.{ Props, ActorLogging, Actor, ActorSystem }
 import akka.event.Logging.LogEvent
-import kamon.trace.{TraceContextAware, TraceRecorder}
+import kamon.trace.{ TraceContextAware, TraceRecorder }
 
 class ActorLoggingSpec extends TestKit(ActorSystem("actor-logging-spec")) with WordSpecLike with Matchers with Inspectors {
 
