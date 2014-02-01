@@ -40,6 +40,8 @@ Currently you will need to add a few settings to your `application.conf` file fo
 
 ```scala
 akka {
+  // Custom logger for NewRelic that takes all the `Error` events from the event stream and publish them to NewRelic
+  loggers = ["akka.event.slf4j.Slf4jLogger", "kamon.newrelic.NewRelicErrorLogger"]
   // Make sure the NewRelic extension is loaded with the ActorSystem
   extensions = ["kamon.newrelic.NewRelic"]
 }
