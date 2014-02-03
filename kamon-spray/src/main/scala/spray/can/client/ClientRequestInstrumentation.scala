@@ -26,7 +26,8 @@ import kamon.Kamon
 import kamon.spray.Spray
 
 @Aspect
-class ClientRequestTracing {
+class ClientRequestInstrumentation {
+  import ClientRequestInstrumentation._
 
   @DeclareMixin("spray.can.client.HttpHostConnector.RequestContext")
   def mixin: SegmentCompletionHandleAware = SegmentCompletionHandleAware.default
@@ -48,7 +49,7 @@ class ClientRequestTracing {
           "method" -> request.method.toString())
 
         val clientRequestName = Kamon(Spray)(traceContext.system).assignHttpClientRequestName(request)
-        val completionHandle = traceContext.startSegment(HttpClientRequest(clientRequestName), requestAttributes)
+        val completionHandle = traceContext.startSegment(HttpClientRequest(clientRequestName, SprayTime), requestAttributes)
         ctx.segmentCompletionHandle = Some(completionHandle)
       }
     }
@@ -81,5 +82,9 @@ class ClientRequestTracing {
       case None ⇒ pjp.proceed()
     }
   }
+}
 
+object ClientRequestInstrumentation {
+  val SprayTime = "SprayTime"
+  val UserTime = "UserTime"
 }

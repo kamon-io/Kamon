@@ -24,11 +24,9 @@ object TraceMetrics extends MetricGroupIdentity.Category with MetricGroupFactory
   type GroupRecorder = TraceMetricRecorder
   val entityName = "trace"
 
-  case object ElapsedTime extends MetricIdentity {
-    val name = "ElapsedTime"
-  }
+  case object ElapsedTime extends MetricIdentity { val name, tag = "ElapsedTime" }
 
-  case class HttpClientRequest(name: String) extends MetricIdentity
+  case class HttpClientRequest(name: String, tag: String) extends MetricIdentity
 
   class TraceMetricRecorder(val elapsedTime: HighDynamicRangeRecorder, private val segmentRecorderFactory: () ⇒ HighDynamicRangeRecorder)
       extends MetricGroupRecorder {

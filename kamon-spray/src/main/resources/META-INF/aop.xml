@@ -6,7 +6,7 @@
     <aspect name="spray.can.server.ServerRequestInstrumentation"/>
 
     <!-- Spray Client -->
-    <aspect name="spray.can.client.ClientRequestTracing"/>
+    <aspect name="spray.can.client.ClientRequestInstrumentation"/>
   </aspects>
 
   <weaver options="-verbose -showWeaveInfo">
