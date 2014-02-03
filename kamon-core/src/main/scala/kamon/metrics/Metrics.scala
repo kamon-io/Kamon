@@ -20,7 +20,10 @@ import annotation.tailrec
 import com.typesafe.config.Config
 import kamon.metrics.MetricSnapshot.Measurement
 
-case class MetricGroupIdentity(name: String, category: MetricGroupIdentity.Category)
+
+trait MetricGroupIdentity {
+  def name: String
+}
 
 trait MetricIdentity {
   def name: String
@@ -96,9 +99,6 @@ object MetricSnapshot {
 case class DefaultMetricSnapshot(numberOfMeasurements: Long, measurementLevels: Vector[MetricSnapshot.Measurement]) extends MetricSnapshot
 
 object MetricGroupIdentity {
-  trait Category {
-    def entityName: String
-  }
 
   val AnyCategory = new Category {
     val entityName: String = "match-all"

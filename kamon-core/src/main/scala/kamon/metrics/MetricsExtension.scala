@@ -33,9 +33,9 @@ class MetricsExtension(val system: ExtendedActorSystem) extends Kamon.Extension 
   val filters = loadFilters(config)
   lazy val subscriptions = system.actorOf(Props[Subscriptions], "kamon-metrics-subscriptions")
 
-  def register(name: String, category: MetricGroupIdentity.Category with MetricGroupFactory): Option[category.GroupRecorder] = {
-    if (shouldTrack(name, category))
-      Some(storage.getOrElseUpdate(MetricGroupIdentity(name, category), category.create(config)).asInstanceOf[category.GroupRecorder])
+  def register(identity: MetricGroupIdentity, factory: MetricGroupFactory): Option[factory.GroupRecorder] = {
+    if (shouldTrack(identity))
+      Some(storage.getOrElseUpdate(identity, factory.create(config)).asInstanceOf[factory.GroupRecorder])
     else
       None
   }
@@ -52,7 +52,7 @@ class MetricsExtension(val system: ExtendedActorSystem) extends Kamon.Extension 
     (for ((identity, recorder) ← storage) yield (identity, recorder.collect)).toMap
   }
 
-  private def shouldTrack(name: String, category: MetricGroupIdentity.Category): Boolean = {
+  private def shouldTrack(identity: MetricGroupIdentity): Boolean = {
     filters.get(category.entityName).map(filter ⇒ filter.accept(name)).getOrElse(false)
   }
 
