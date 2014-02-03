@@ -18,12 +18,15 @@ package spray.can.client
 
 import org.aspectj.lang.annotation._
 import org.aspectj.lang.ProceedingJoinPoint
-import spray.http.{ HttpMessageEnd, HttpRequest }
+import spray.http.{ HttpResponse, HttpMessageEnd, HttpRequest }
 import spray.http.HttpHeaders.Host
 import kamon.trace.{ TraceRecorder, SegmentCompletionHandleAware, TraceContextAware }
 import kamon.metrics.TraceMetrics.HttpClientRequest
 import kamon.Kamon
 import kamon.spray.Spray
+import akka.actor.ActorRef
+import scala.concurrent.{ Future, ExecutionContext }
+import akka.util.Timeout
 
 @Aspect
 class ClientRequestInstrumentation {
@@ -43,13 +46,10 @@ class ClientRequestInstrumentation {
     // The read to ctx.completionHandle should take care of initializing the aspect timely.
     if (ctx.segmentCompletionHandle.isEmpty) {
       TraceRecorder.currentContext.map { traceContext ⇒
-        val requestAttributes = Map[String, String](
-          "host" -> request.header[Host].map(_.value).getOrElse("unknown"),
-          "path" -> request.uri.path.toString(),
-          "method" -> request.method.toString())
-
+        val requestAttributes = basicRequestAttributes(request)
         val clientRequestName = Kamon(Spray)(traceContext.system).assignHttpClientRequestName(request)
         val completionHandle = traceContext.startSegment(HttpClientRequest(clientRequestName, SprayTime), requestAttributes)
+
         ctx.segmentCompletionHandle = Some(completionHandle)
       }
     }
@@ -81,6 +81,38 @@ class ClientRequestInstrumentation {
 
       case None ⇒ pjp.proceed()
     }
+  }
+
+  @Pointcut("execution(* spray.client.pipelining$.sendReceive(akka.actor.ActorRef, *, *)) && args(transport, ec, timeout)")
+  def requestLevelApiSendReceive(transport: ActorRef, ec: ExecutionContext, timeout: Timeout): Unit = {}
+
+  @Around("requestLevelApiSendReceive(transport, ec, timeout)")
+  def aroundRequestLevelApiSendReceive(pjp: ProceedingJoinPoint, transport: ActorRef, ec: ExecutionContext, timeout: Timeout): Any = {
+    val originalSendReceive = pjp.proceed().asInstanceOf[HttpRequest ⇒ Future[HttpResponse]]
+
+    (request: HttpRequest) ⇒ {
+      val responseFuture = originalSendReceive.apply(request)
+
+      TraceRecorder.currentContext.map { traceContext ⇒
+        val requestAttributes = basicRequestAttributes(request)
+        val clientRequestName = Kamon(Spray)(traceContext.system).assignHttpClientRequestName(request)
+        val completionHandle = traceContext.startSegment(HttpClientRequest(clientRequestName, UserTime), requestAttributes)
+
+        responseFuture.onComplete { result ⇒
+          completionHandle.finish(Map.empty)
+        }(ec)
+      }
+
+      responseFuture
+    }
+
+  }
+
+  def basicRequestAttributes(request: HttpRequest): Map[String, String] = {
+    Map[String, String](
+      "host" -> request.header[Host].map(_.value).getOrElse("unknown"),
+      "path" -> request.uri.path.toString(),
+      "method" -> request.method.toString())
   }
 }
 
