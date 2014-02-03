@@ -27,6 +27,8 @@ import kamon.trace.TraceRecorder
 import kamon.Kamon
 import kamon.metrics.{ ActorMetrics, TraceMetrics, Metrics }
 import spray.http.{ StatusCodes, Uri }
+import kamon.metrics.Subscriptions.TickMetricSnapshot
+import kamon.newrelic.WebTransactionMetrics
 
 object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuilding with UowDirectives {
   import scala.concurrent.duration._
@@ -42,7 +44,7 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
     def receive: Actor.Receive = { case any ⇒ sender ! any }
   }), "com")
 
-  //Kamon(Metrics).subscribe(TraceMetrics, "*", printer, permanently = true)
+  Kamon(Metrics).subscribe(TraceMetrics, "*", printer, permanently = true)
   //Kamon(Metrics).subscribe(ActorMetrics, "*", printer, permanently = true)
 
   implicit val timeout = Timeout(30 seconds)
@@ -107,6 +109,7 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
 
 class PrintWhatever extends Actor {
   def receive = {
+    case tick: TickMetricSnapshot => WebTransactionMetrics.collectWebTransactionMetrics(tick.metrics)
     case anything ⇒ println(anything)
   }
 }

@@ -35,7 +35,7 @@ class NewRelicManager extends Actor with ActorLogging {
 
   //Kamon(Trace)(context.system).api ! Trace.Register
 
-  val webTransactionMetrics = context.actorOf(Props[WebTransactionMetrics], "web-transaction-metrics")
+  val webTransactionMetrics = context.actorOf(Props[WebTransactionMetrics2], "web-transaction-metrics")
   val agent = context.actorOf(Props[Agent], "agent")
 
   import context.dispatcher
@@ -70,7 +70,7 @@ object NewRelicMetric {
   case class MetricBatch(metrics: List[(ID, Data)])
 }
 
-class WebTransactionMetrics extends Actor with ActorLogging {
+class WebTransactionMetrics2 extends Actor with ActorLogging {
   val apdexT = 0.5D
   var metrics = mutable.Map.empty[NewRelicMetric.ID, NewRelicMetric.Data]
   var apdex = NewRelicMetric.Data(0, 0, 0, apdexT, apdexT, 0)

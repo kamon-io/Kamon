@@ -20,9 +20,12 @@ import com.typesafe.config.Config
 import kamon.metrics.instruments.ContinuousHighDynamicRangeRecorder
 import org.HdrHistogram.HighDynamicRangeRecorder
 
-object ActorMetrics extends MetricGroupIdentity.Category with MetricGroupFactory {
-  type GroupRecorder = ActorMetricRecorder
-  val entityName = "actor"
+case class ActorMetrics(name: String) extends MetricGroupIdentity {
+  val category = ActorMetrics
+}
+
+object ActorMetrics extends MetricGroupCategory {
+  val name = "actor"
 
   case object ProcessingTime extends MetricIdentity { val name, tag = "ProcessingTime" }
   case object MailboxSize extends MetricIdentity { val name, tag = "MailboxSize" }
@@ -51,17 +54,21 @@ object ActorMetrics extends MetricGroupIdentity.Category with MetricGroupFactory
       (TimeInMailbox -> timeInMailbox))
   }
 
-  def create(config: Config): ActorMetricRecorder = {
-    import HighDynamicRangeRecorder.Configuration
+  val Factory = new MetricGroupFactory {
+    type GroupRecorder = ActorMetricRecorder
 
-    val settings = config.getConfig("kamon.metrics.precision.actor")
-    val processingTimeHdrConfig = Configuration.fromConfig(settings.getConfig("processing-time"))
-    val mailboxSizeHdrConfig = Configuration.fromConfig(settings.getConfig("mailbox-size"))
-    val timeInMailboxHdrConfig = Configuration.fromConfig(settings.getConfig("time-in-mailbox"))
+    def create(config: Config): ActorMetricRecorder = {
+      import HighDynamicRangeRecorder.Configuration
 
-    new ActorMetricRecorder(
-      HighDynamicRangeRecorder(processingTimeHdrConfig),
-      ContinuousHighDynamicRangeRecorder(mailboxSizeHdrConfig),
-      HighDynamicRangeRecorder(timeInMailboxHdrConfig))
+      val settings = config.getConfig("kamon.metrics.precision.actor")
+      val processingTimeHdrConfig = Configuration.fromConfig(settings.getConfig("processing-time"))
+      val mailboxSizeHdrConfig = Configuration.fromConfig(settings.getConfig("mailbox-size"))
+      val timeInMailboxHdrConfig = Configuration.fromConfig(settings.getConfig("time-in-mailbox"))
+
+      new ActorMetricRecorder(
+        HighDynamicRangeRecorder(processingTimeHdrConfig),
+        ContinuousHighDynamicRangeRecorder(mailboxSizeHdrConfig),
+        HighDynamicRangeRecorder(timeInMailboxHdrConfig))
+    }
   }
 }

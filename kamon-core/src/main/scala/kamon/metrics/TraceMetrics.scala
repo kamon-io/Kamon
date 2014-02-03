@@ -20,12 +20,14 @@ import org.HdrHistogram.HighDynamicRangeRecorder
 import scala.collection.concurrent.TrieMap
 import com.typesafe.config.Config
 
-object TraceMetrics extends MetricGroupIdentity.Category with MetricGroupFactory {
-  type GroupRecorder = TraceMetricRecorder
-  val entityName = "trace"
+case class TraceMetrics(name: String) extends MetricGroupIdentity {
+  val category = TraceMetrics
+}
+
+object TraceMetrics extends MetricGroupCategory {
+  val name = "trace"
 
   case object ElapsedTime extends MetricIdentity { val name, tag = "ElapsedTime" }
-
   case class HttpClientRequest(name: String, tag: String) extends MetricIdentity
 
   class TraceMetricRecorder(val elapsedTime: HighDynamicRangeRecorder, private val segmentRecorderFactory: () ⇒ HighDynamicRangeRecorder)
@@ -48,14 +50,18 @@ object TraceMetrics extends MetricGroupIdentity.Category with MetricGroupFactory
     def metrics: Map[MetricIdentity, MetricSnapshot] = segments + (ElapsedTime -> elapsedTime)
   }
 
-  def create(config: Config): TraceMetricRecorder = {
-    import HighDynamicRangeRecorder.Configuration
+  val Factory = new MetricGroupFactory {
+    type GroupRecorder = TraceMetricRecorder
 
-    val settings = config.getConfig("kamon.metrics.precision.trace")
-    val elapsedTimeHdrConfig = Configuration.fromConfig(settings.getConfig("elapsed-time"))
-    val segmentHdrConfig = Configuration.fromConfig(settings.getConfig("segment"))
+    def create(config: Config): TraceMetricRecorder = {
+      import HighDynamicRangeRecorder.Configuration
 
-    new TraceMetricRecorder(HighDynamicRangeRecorder(elapsedTimeHdrConfig), () ⇒ HighDynamicRangeRecorder(segmentHdrConfig))
+      val settings = config.getConfig("kamon.metrics.precision.trace")
+      val elapsedTimeHdrConfig = Configuration.fromConfig(settings.getConfig("elapsed-time"))
+      val segmentHdrConfig = Configuration.fromConfig(settings.getConfig("segment"))
+
+      new TraceMetricRecorder(HighDynamicRangeRecorder(elapsedTimeHdrConfig), () ⇒ HighDynamicRangeRecorder(segmentHdrConfig))
+    }
   }
 
 }
