@@ -24,6 +24,7 @@ case class MetricGroupIdentity(name: String, category: MetricGroupIdentity.Categ
 
 trait MetricIdentity {
   def name: String
+  def tag: String
 }
 
 trait MetricGroupRecorder {
