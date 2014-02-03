@@ -74,12 +74,10 @@ class ClientRequestInstrumentationSpec extends TestKitBase with WordSpecLike wit
       }
     }
 
-
     "record the elapsed time for a http request when using the pipelining sendReceive and tag it as UserTime" in {
 
       val metricListener = TestProbe()
       Kamon(Metrics)(system).subscribe(TraceMetrics, "*", metricListener.ref, permanently = true)
-
 
       val (hostConnector, server) = buildSHostConnectorAndServer
       val client = TestProbe()

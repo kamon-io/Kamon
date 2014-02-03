@@ -17,6 +17,7 @@
 package kamon.metrics
 
 import com.typesafe.config.Config
+import kamon.metrics.instruments.ContinuousHighDynamicRangeRecorder
 import org.HdrHistogram.HighDynamicRangeRecorder
 
 object ActorMetrics extends MetricGroupIdentity.Category with MetricGroupFactory {
@@ -60,7 +61,7 @@ object ActorMetrics extends MetricGroupIdentity.Category with MetricGroupFactory
 
     new ActorMetricRecorder(
       HighDynamicRangeRecorder(processingTimeHdrConfig),
-      HighDynamicRangeRecorder(mailboxSizeHdrConfig),
+      ContinuousHighDynamicRangeRecorder(mailboxSizeHdrConfig),
       HighDynamicRangeRecorder(timeInMailboxHdrConfig))
   }
 }
