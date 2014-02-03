@@ -9,7 +9,7 @@ object Build extends Build {
   import Dependencies._
 
   lazy val root = Project("root", file("."))
-    .aggregate(kamonCore, kamonSpray, kamonNewrelic, kamonPlayground, kamonDashboard)
+    .aggregate(kamonCore, kamonSpray, kamonNewrelic, kamonPlayground, kamonDashboard, kamonTestkit)
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
     .settings(noPublishing: _*)
@@ -34,7 +34,7 @@ object Build extends Build {
       libraryDependencies ++=
         compile(akkaActor, aspectJ, sprayCan, sprayClient, sprayRouting) ++
         test(scalatest, akkaTestKit, sprayTestkit))
-    .dependsOn(kamonCore)
+    .dependsOn(kamonCore, kamonTestkit)
 
 
   lazy val kamonNewrelic = Project("kamon-newrelic", file("kamon-newrelic"))
@@ -64,6 +64,12 @@ object Build extends Build {
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
     .settings(libraryDependencies ++= compile(akkaActor, akkaSlf4j, sprayRouting, sprayCan, sprayJson))
+    .dependsOn(kamonCore)
+
+  lazy val kamonTestkit = Project("kamon-testkit", file("kamon-testkit"))
+    .settings(basicSettings: _*)
+    .settings(formatSettings: _*)
+    .settings(libraryDependencies ++= compile(akkaActor, akkaTestKit))
     .dependsOn(kamonCore)
 
 

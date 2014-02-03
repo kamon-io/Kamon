@@ -22,7 +22,7 @@ import org.aspectj.lang.ProceedingJoinPoint
 import akka.testkit.TestActor.RealMessage
 
 @Aspect
-class TestProbeTracing {
+class TestProbeInstrumentation {
 
   @DeclareMixin("akka.testkit.TestActor.RealMessage")
   def mixin: TraceContextAware = TraceContextAware.default

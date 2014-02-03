@@ -2,8 +2,8 @@
 
 <aspectj>
     <aspects>
-        <!-- Actors -->
-        <aspect name="akka.testkit.TestProbeTracing"/>
+        <!-- TestKit -->
+        <aspect name="akka.testkit.TestProbeInstrumentation"/>
     </aspects>
 
     <weaver options="-verbose -showWeaveInfo">

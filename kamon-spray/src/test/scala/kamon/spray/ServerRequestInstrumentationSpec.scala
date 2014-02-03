@@ -33,7 +33,7 @@ import spray.http.HttpHeaders.Host
 import akka.io.{ Tcp, IO }
 import spray.can.Http
 import akka.io.Tcp.Bound
-import kamon.metrics.{TraceMetrics, Metrics}
+import kamon.metrics.{ TraceMetrics, Metrics }
 import kamon.metrics.TraceMetrics.TraceMetricSnapshot
 import kamon.metrics.Subscriptions.TickMetricSnapshot
 
@@ -79,13 +79,12 @@ class ServerRequestInstrumentationSpec extends TestKit(ActorSystem("spec")) with
       client.expectMsgType[HttpResponse]
 
       metricListener.fishForMessage() {
-        case snapshot @ TickMetricSnapshot(_, _, metrics) => metrics.keys.exists(_.name.contains("open-and-finish"))
-        case other => false
+        case snapshot @ TickMetricSnapshot(_, _, metrics) ⇒ metrics.keys.exists(_.name.contains("open-and-finish"))
+        case other                                        ⇒ false
       }
     }
 
   }
-
 
 }
 
