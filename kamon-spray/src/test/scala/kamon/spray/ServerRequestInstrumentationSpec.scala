@@ -17,7 +17,7 @@ package kamon.spray
 
 import _root_.spray.httpx.RequestBuilding
 import _root_.spray.routing.SimpleRoutingApp
-import akka.testkit.{TestKitBase, TestProbe, TestKit}
+import akka.testkit.{ TestKitBase, TestProbe, TestKit }
 import akka.actor.{ ActorRef, ActorSystem }
 import org.scalatest.{ Matchers, WordSpecLike }
 import scala.concurrent.Await
@@ -41,7 +41,7 @@ class ServerRequestInstrumentationSpec extends TestKit(ActorSystem("spec")) with
 
   "the spray server request tracing instrumentation" should {
     "reply back with the same trace token header provided in the request" in {
-      val (connection, server) = buildServer(clientConnection)
+      val (connection, server) = buildClientConnectionAndServer
       val client = TestProbe()
 
       client.send(connection, Get("/").withHeaders(RawHeader("X-Trace-Token", "reply-trace-token")))
@@ -54,7 +54,7 @@ class ServerRequestInstrumentationSpec extends TestKit(ActorSystem("spec")) with
     }
 
     "reply back with a automatically assigned trace token if none was provided with the request" in {
-      val (connection, server) = buildServer(clientConnection)
+      val (connection, server) = buildClientConnectionAndServer
       val client = TestProbe()
 
       client.send(connection, Get("/"))
@@ -67,7 +67,7 @@ class ServerRequestInstrumentationSpec extends TestKit(ActorSystem("spec")) with
     }
 
     "open and finish a trace during the lifetime of a request" in {
-      val (connection, server) = buildServer(clientConnection)
+      val (connection, server) = buildClientConnectionAndServer
       val client = TestProbe()
 
       val metricListener = TestProbe()
@@ -85,37 +85,5 @@ class ServerRequestInstrumentationSpec extends TestKit(ActorSystem("spec")) with
     }
 
   }
-
-}
-
-trait TestServer {
-  self: TestKitBase ⇒
-
-  def buildServer(clientBuilder: Http.Bound => ActorRef): (ActorRef, TestProbe) = {
-    val serverHandler = TestProbe()
-    IO(Http).tell(Http.Bind(listener = serverHandler.ref, interface = "127.0.0.1", port = 0), serverHandler.ref)
-    val bound = serverHandler.expectMsgType[Bound]
-
-    val client = clientBuilder(bound)
-    serverHandler.expectMsgType[Http.Connected]
-    serverHandler.reply(Http.Register(serverHandler.ref))
-
-    (client, serverHandler)
-  }
-
-  def clientConnection(connectionInfo: Http.Bound): ActorRef = {
-    val probe = TestProbe()
-    probe.send(IO(Http), Http.Connect(connectionInfo.localAddress.getHostName, connectionInfo.localAddress.getPort))
-    probe.expectMsgType[Http.Connected]
-    probe.sender
-  }
-
-  def httpHostConnector(connectionInfo: Http.Bound): ActorRef = {
-    val probe = TestProbe()
-    probe.send(IO(Http), Http.HostConnectorSetup(connectionInfo.localAddress.getHostName, connectionInfo.localAddress.getPort))
-    probe.expectMsgType[Http.HostConnectorInfo].hostConnector
-  }
-
-
 
 }
