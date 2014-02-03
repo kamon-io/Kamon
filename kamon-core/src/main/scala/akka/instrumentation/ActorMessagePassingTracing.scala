@@ -27,7 +27,7 @@ import kamon.metrics.ActorMetrics.ActorMetricRecorder
 
 @Aspect("perthis(actorCellCreation(*, *, *, *, *))")
 class BehaviourInvokeTracing {
-  var path: String = _
+  var metricIdentity: ActorMetrics = _
   var actorMetrics: Option[ActorMetricRecorder] = None
 
   @Pointcut("execution(akka.actor.ActorCell.new(..)) && args(system, ref, props, dispatcher, parent)")
@@ -37,8 +37,8 @@ class BehaviourInvokeTracing {
   def afterCreation(system: ActorSystem, ref: ActorRef, props: Props, dispatcher: MessageDispatcher, parent: ActorRef): Unit = {
     val metricsExtension = Kamon(Metrics)(system)
 
-    path = ref.path.elements.mkString("/")
-    actorMetrics = metricsExtension.register(path, ActorMetrics)
+    metricIdentity = ActorMetrics(ref.path.elements.mkString("/"))
+    actorMetrics = metricsExtension.register(metricIdentity, ActorMetrics.Factory)
   }
 
   @Pointcut("(execution(* akka.actor.ActorCell.invoke(*)) || execution(* akka.routing.RoutedActorCell.sendMessage(*))) && this(cell) && args(envelope)")
@@ -65,7 +65,7 @@ class BehaviourInvokeTracing {
 
   @After("actorStop(cell)")
   def afterStop(cell: Cell): Unit = {
-    actorMetrics.map(p ⇒ Kamon(Metrics)(cell.system).unregister(path, ActorMetrics))
+    actorMetrics.map(p ⇒ Kamon(Metrics)(cell.system).unregister(metricIdentity))
   }
 }
 

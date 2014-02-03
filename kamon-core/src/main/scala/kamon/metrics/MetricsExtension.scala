@@ -22,9 +22,7 @@ import com.typesafe.config.Config
 import kamon.util.GlobPathFilter
 import kamon.Kamon
 import akka.actor
-import kamon.metrics.MetricGroupIdentity.Category
 import kamon.metrics.Metrics.MetricGroupFilter
-import scala.Some
 import kamon.metrics.Subscriptions.Subscribe
 
 class MetricsExtension(val system: ExtendedActorSystem) extends Kamon.Extension {
@@ -33,18 +31,18 @@ class MetricsExtension(val system: ExtendedActorSystem) extends Kamon.Extension 
   val filters = loadFilters(config)
   lazy val subscriptions = system.actorOf(Props[Subscriptions], "kamon-metrics-subscriptions")
 
-  def register(name: String, category: MetricGroupIdentity.Category with MetricGroupFactory): Option[category.GroupRecorder] = {
-    if (shouldTrack(name, category))
-      Some(storage.getOrElseUpdate(MetricGroupIdentity(name, category), category.create(config)).asInstanceOf[category.GroupRecorder])
+  def register(identity: MetricGroupIdentity, factory: MetricGroupFactory): Option[factory.GroupRecorder] = {
+    if (shouldTrack(identity))
+      Some(storage.getOrElseUpdate(identity, factory.create(config)).asInstanceOf[factory.GroupRecorder])
     else
       None
   }
 
-  def unregister(name: String, category: MetricGroupIdentity.Category with MetricGroupFactory): Unit = {
-    storage.remove(MetricGroupIdentity(name, category))
+  def unregister(identity: MetricGroupIdentity): Unit = {
+    storage.remove(identity)
   }
 
-  def subscribe(category: Category, selection: String, receiver: ActorRef, permanently: Boolean = false): Unit = {
+  def subscribe[C <: MetricGroupCategory](category: C, selection: String, receiver: ActorRef, permanently: Boolean = false): Unit = {
     subscriptions.tell(Subscribe(category, selection, permanently), receiver)
   }
 
@@ -52,8 +50,8 @@ class MetricsExtension(val system: ExtendedActorSystem) extends Kamon.Extension 
     (for ((identity, recorder) ← storage) yield (identity, recorder.collect)).toMap
   }
 
-  private def shouldTrack(name: String, category: MetricGroupIdentity.Category): Boolean = {
-    filters.get(category.entityName).map(filter ⇒ filter.accept(name)).getOrElse(false)
+  private def shouldTrack(identity: MetricGroupIdentity): Boolean = {
+    filters.get(identity.category.name).map(filter ⇒ filter.accept(identity.name)).getOrElse(false)
   }
 
   def loadFilters(config: Config): Map[String, MetricGroupFilter] = {

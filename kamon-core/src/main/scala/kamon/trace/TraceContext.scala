@@ -89,7 +89,7 @@ class SimpleMetricCollectionContext(@volatile private var _name: String, val tok
   def finish(metadata: Map[String, String]): Unit = {
     _isOpen = false
     val finishMark = System.nanoTime()
-    val metricRecorder = metricsExtension.register(name, TraceMetrics)
+    val metricRecorder = metricsExtension.register(TraceMetrics(name), TraceMetrics.Factory)
 
     metricRecorder.map { traceMetrics ⇒
       traceMetrics.elapsedTime.record(finishMark - startMark)
@@ -108,7 +108,7 @@ class SimpleMetricCollectionContext(@volatile private var _name: String, val tok
     finishedSegments.add(SegmentData(identity, duration, metadata))
 
     if (!_isOpen) {
-      metricsExtension.register(name, TraceMetrics).map { traceMetrics ⇒
+      metricsExtension.register(TraceMetrics(name), TraceMetrics.Factory).map { traceMetrics ⇒
         drainFinishedSegments(traceMetrics)
       }
     }

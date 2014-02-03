@@ -21,7 +21,6 @@ import kamon.metrics.Subscriptions.{ MetricGroupFilter, FlushMetrics, TickMetric
 import kamon.util.GlobPathFilter
 import scala.concurrent.duration.Duration
 import java.util.concurrent.TimeUnit
-import kamon.metrics.MetricGroupIdentity.Category
 import kamon.Kamon
 
 class Subscriptions extends Actor {
@@ -40,7 +39,7 @@ class Subscriptions extends Actor {
     case FlushMetrics                              ⇒ flush()
   }
 
-  def subscribe(category: Category, selection: String, permanent: Boolean): Unit = {
+  def subscribe(category: MetricGroupCategory, selection: String, permanent: Boolean): Unit = {
     val filter = MetricGroupFilter(category, new GlobPathFilter(selection))
     if (permanent) {
       val receivers = subscribedPermanently.get(filter).getOrElse(Nil)
@@ -78,10 +77,10 @@ class Subscriptions extends Actor {
 
 object Subscriptions {
   case object FlushMetrics
-  case class Subscribe(category: Category, selection: String, permanently: Boolean = false)
+  case class Subscribe(category: MetricGroupCategory, selection: String, permanently: Boolean = false)
   case class TickMetricSnapshot(from: Long, to: Long, metrics: Map[MetricGroupIdentity, MetricGroupSnapshot])
 
-  case class MetricGroupFilter(category: Category, globFilter: GlobPathFilter) {
+  case class MetricGroupFilter(category: MetricGroupCategory, globFilter: GlobPathFilter) {
     def accept(identity: MetricGroupIdentity): Boolean = {
       category.equals(identity.category) && globFilter.accept(identity.name)
     }
