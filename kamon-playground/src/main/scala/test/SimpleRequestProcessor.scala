@@ -111,7 +111,6 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
 
 class PrintWhatever extends Actor {
   def receive = {
-    case tick: TickMetricSnapshot => WebTransactionMetrics.collectWebTransactionMetrics(tick.metrics)
     case anything ⇒ println(anything)
   }
 }

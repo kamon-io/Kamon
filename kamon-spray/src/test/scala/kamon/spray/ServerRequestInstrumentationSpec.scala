@@ -16,28 +16,18 @@
 package kamon.spray
 
 import _root_.spray.httpx.RequestBuilding
-import _root_.spray.routing.SimpleRoutingApp
-import akka.testkit.{ TestKitBase, TestProbe, TestKit }
-import akka.actor.{ ActorRef, ActorSystem }
+import akka.testkit.{ TestProbe, TestKit }
+import akka.actor.ActorSystem
 import org.scalatest.{ Matchers, WordSpecLike }
-import scala.concurrent.Await
-import scala.concurrent.duration._
-import _root_.spray.client.pipelining._
-import akka.util.Timeout
-import kamon.trace.{ UowTrace }
 import kamon.Kamon
 import org.scalatest.concurrent.{ PatienceConfiguration, ScalaFutures }
 import spray.http.HttpHeaders.RawHeader
 import spray.http.{ HttpResponse, HttpRequest }
-import spray.http.HttpHeaders.Host
-import akka.io.{ Tcp, IO }
-import spray.can.Http
-import akka.io.Tcp.Bound
 import kamon.metrics.{ TraceMetrics, Metrics }
-import kamon.metrics.TraceMetrics.TraceMetricSnapshot
 import kamon.metrics.Subscriptions.TickMetricSnapshot
 
-class ServerRequestInstrumentationSpec extends TestKit(ActorSystem("spec")) with WordSpecLike with Matchers with RequestBuilding with ScalaFutures with PatienceConfiguration with TestServer {
+class ServerRequestInstrumentationSpec extends TestKit(ActorSystem("spec")) with WordSpecLike with Matchers with RequestBuilding
+  with ScalaFutures with PatienceConfiguration with TestServer {
 
   "the spray server request tracing instrumentation" should {
     "reply back with the same trace token header provided in the request" in {
