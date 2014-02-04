@@ -16,97 +16,48 @@
 package kamon.newrelic
 
 import akka.actor._
-import scala.collection.mutable
-import kamon.Kamon
-import kamon.trace.{ UowTrace }
-import kamon.newrelic.NewRelicMetric.{ MetricBatch, FlushMetrics }
 import scala.concurrent.duration._
+import kamon.Kamon
+import kamon.metrics.{TickMetricSnapshotBuffer, TraceMetrics, Metrics}
+import kamon.metrics.Subscriptions.TickMetricSnapshot
+import akka.actor
 
-class NewRelic extends ExtensionId[NewRelicExtension] {
-  def createExtension(system: ExtendedActorSystem): NewRelicExtension = new NewRelicExtension(system)
-}
 
 class NewRelicExtension(system: ExtendedActorSystem) extends Kamon.Extension {
-  val api: ActorRef = system.actorOf(Props[NewRelicManager], "kamon-newrelic")
+  val manager: ActorRef = system.actorOf(Props[NewRelicManager], "kamon-newrelic")
+
+  Kamon(Metrics)(system).subscribe(TraceMetrics, "*", manager, permanently = true)
 }
 
 class NewRelicManager extends Actor with ActorLogging {
-  log.info("Registering the Kamon(NewRelic) extension")
+  log.info("Starting the Kamon(NewRelic) extension")
 
-  //Kamon(Trace)(context.system).api ! Trace.Register
-
-  val webTransactionMetrics = context.actorOf(Props[WebTransactionMetrics2], "web-transaction-metrics")
   val agent = context.actorOf(Props[Agent], "agent")
-
-  import context.dispatcher
-  context.system.scheduler.schedule(1 minute, 1 minute) {
-    webTransactionMetrics.tell(FlushMetrics, agent)
-  }
+  val translator = context.actorOf(MetricTranslator.props(agent), "translator")
+  val buffer = context.actorOf(TickMetricSnapshotBuffer.props(1 minute, translator), "metric-buffer")
 
   def receive = {
-    case trace: UowTrace ⇒ webTransactionMetrics ! trace
+    case tick: TickMetricSnapshot => buffer.forward(tick)
   }
 }
 
-object NewRelicMetric {
-  case class ID(name: String, scope: Option[String])
-  case class Data(var callCount: Long, var total: Double, var totalExclusive: Double, var min: Double, var max: Double, var sumOfSquares: Double) {
-    def record(value: Double): Unit = {
-      if (value > max) max = value
-      if (value < min) min = value
 
-      total += value
-      totalExclusive += value
-      sumOfSquares += value * value
-      callCount += 1
+object NewRelic extends ExtensionId[NewRelicExtension] with ExtensionIdProvider {
+  def lookup(): ExtensionId[_ <: actor.Extension] = NewRelic
+  def createExtension(system: ExtendedActorSystem): NewRelicExtension = new NewRelicExtension(system)
+
+  case class Metric(name: String, scope: Option[String], callCount: Long, total: Double, totalExclusive: Double,
+                    min: Double, max: Double, sumOfSquares: Double) {
+
+    def merge(that: Metric): Metric = {
+      Metric(name, scope,
+        callCount + that.callCount,
+        total + that.total,
+        totalExclusive + that.totalExclusive,
+        math.min(min, that.min),
+        math.max(max, that.max),
+        sumOfSquares + that.sumOfSquares)
     }
-  }
 
-  object Data {
-    def apply(): Data = Data(0, 0, 0, Double.MaxValue, 0, 0)
-  }
-
-  case object FlushMetrics
-  case class MetricBatch(metrics: List[(ID, Data)])
-}
-
-class WebTransactionMetrics2 extends Actor with ActorLogging {
-  val apdexT = 0.5D
-  var metrics = mutable.Map.empty[NewRelicMetric.ID, NewRelicMetric.Data]
-  var apdex = NewRelicMetric.Data(0, 0, 0, apdexT, apdexT, 0)
-
-  def receive = {
-    case trace: UowTrace ⇒ updateStats(trace)
-    case FlushMetrics    ⇒ flush
-  }
-
-  def flush: Unit = {
-    sender ! MetricBatch(metrics.toList :+ (NewRelicMetric.ID("Apdex", None), apdex))
-    apdex = NewRelicMetric.Data(0, 0, 0, apdexT, apdexT, 0)
-    metrics = mutable.Map.empty[NewRelicMetric.ID, NewRelicMetric.Data]
-  }
-
-  def recordValue(metricID: NewRelicMetric.ID, value: Double): Unit = {
-    metrics.getOrElseUpdate(metricID, NewRelicMetric.Data()).record(value)
-  }
-
-  def recordApdex(time: Double): Unit = {
-    if (time <= apdexT)
-      apdex.callCount += 1
-    else if (time > apdexT && time <= (4 * apdexT))
-      apdex.total += 1
-    else
-      apdex.totalExclusive += 1
-
-  }
-
-  def updateStats(trace: UowTrace): Unit = {
-    // Basic Metrics
-    val elapsedSeconds = trace.elapsed / 1E9D
-
-    recordApdex(elapsedSeconds)
-    recordValue(NewRelicMetric.ID("WebTransaction", None), elapsedSeconds)
-    recordValue(NewRelicMetric.ID("HttpDispatcher", None), elapsedSeconds)
-    recordValue(NewRelicMetric.ID("WebTransaction/Custom/" + trace.name, None), elapsedSeconds)
   }
 }

@@ -16,17 +16,23 @@
 
 package kamon.newrelic
 
-case class Metric(name: String, scope: Option[String], callCount: Long, total: Double, totalExclusive: Double,
-                  min: Double, max: Double, sumOfSquares: Double) {
+import akka.actor.{Props, ActorRef, Actor}
+import kamon.metrics.Subscriptions.TickMetricSnapshot
+import kamon.newrelic.MetricTranslator.TimeSliceMetrics
 
-  def merge(that: Metric): Metric = {
-    Metric(name, scope,
-      callCount + that.callCount,
-      total + that.total,
-      totalExclusive + that.totalExclusive,
-      math.min(min, that.min),
-      math.max(max, that.max),
-      sumOfSquares + that.sumOfSquares)
+class MetricTranslator(receiver: ActorRef) extends Actor with WebTransactionMetrics {
+
+  def receive = {
+    case TickMetricSnapshot(from, to, metrics) =>
+      val allMetrics = collectWebTransactionMetrics(metrics)
+
+      receiver ! TimeSliceMetrics(from, to, allMetrics)
   }
 
+}
+
+object MetricTranslator {
+  case class TimeSliceMetrics(from: Long, to: Long, metrics: Seq[NewRelic.Metric])
+
+  def props(receiver: ActorRef): Props = Props(new MetricTranslator(receiver))
 }

@@ -32,26 +32,23 @@ object AgentJsonProtocol extends DefaultJsonProtocol {
           "pid" -> JsNumber(obj.pid)))
   }
 
-  import NewRelicMetric._
-
-  implicit def listWriter[T: JsonWriter] = new JsonWriter[List[T]] {
-    def write(list: List[T]) = JsArray(list.map(_.toJson))
+  implicit def seqWriter[T: JsonWriter] = new JsonWriter[Seq[T]] {
+    def write(seq: Seq[T]) = JsArray(seq.map(_.toJson).toList)
   }
 
-  implicit object MetricDetailWriter extends JsonWriter[(ID, Data)] {
-    def write(obj: (ID, Data)): JsValue = {
-      val (id, data) = obj
+  implicit object MetricDetailWriter extends JsonWriter[NewRelic.Metric] {
+    def write(obj: NewRelic.Metric): JsValue = {
       JsArray(
         JsObject(
-          "name" -> JsString(id.name) // TODO Include scope
+          "name" -> JsString(obj.name) // TODO Include scope
           ),
         JsArray(
-          JsNumber(data.callCount),
-          JsNumber(data.total),
-          JsNumber(data.totalExclusive),
-          JsNumber(data.min),
-          JsNumber(data.max),
-          JsNumber(data.sumOfSquares)))
+          JsNumber(obj.callCount),
+          JsNumber(obj.total),
+          JsNumber(obj.totalExclusive),
+          JsNumber(obj.min),
+          JsNumber(obj.max),
+          JsNumber(obj.sumOfSquares)))
     }
   }
 
@@ -59,8 +56,8 @@ object AgentJsonProtocol extends DefaultJsonProtocol {
     def write(obj: MetricData): JsValue =
       JsArray(
         JsNumber(obj.runId),
-        JsNumber(obj.start),
-        JsNumber(obj.end),
-        obj.metrics.toJson)
+        JsNumber(obj.timeSliceMetrics.from),
+        JsNumber(obj.timeSliceMetrics.to),
+        obj.timeSliceMetrics.metrics.toJson)
   }
 }

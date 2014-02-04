@@ -17,18 +17,17 @@
 package kamon.newrelic
 
 import kamon.metrics.{ TraceMetrics, MetricGroupSnapshot, MetricGroupIdentity }
+import kamon.metrics.TraceMetrics.ElapsedTime
 
-object WebTransactionMetrics {
-  def collectWebTransactionMetrics(metrics: Map[MetricGroupIdentity, MetricGroupSnapshot]): List[Metric] = {
-    metrics.collect {
+trait WebTransactionMetrics {
+  def collectWebTransactionMetrics(metrics: Map[MetricGroupIdentity, MetricGroupSnapshot]): List[NewRelic.Metric] = {
+    val webTransactionMetrics = metrics.collect {
       case (TraceMetrics(name), groupSnapshot) ⇒
-
-
-      groupSnapshot.metrics foreach {
-        case (metricIdentity, snapshot) => println(s"[$name] - ${toNewRelicMetric(name, None, snapshot)}")
-      }
+        groupSnapshot.metrics collect {
+          case (ElapsedTime, snapshot) => toNewRelicMetric("HttpDispatcher", None, snapshot)
+        }
     }
 
-    Nil
+    webTransactionMetrics.flatten.toList
   }
 }

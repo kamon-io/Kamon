@@ -22,7 +22,7 @@ import kamon.metrics.MetricSnapshot
 
 package object newrelic {
 
-  def toNewRelicMetric(name: String, scope: Option[String], snapshot: MetricSnapshot): Metric = {
+  def toNewRelicMetric(name: String, scope: Option[String], snapshot: MetricSnapshot): NewRelic.Metric = {
     var total: Double = 0D
     var sumOfSquares: Double = 0D
 
@@ -40,6 +40,6 @@ package object newrelic {
     val scaledMin = snapshot.min / 1E9D
     val scaledMax = snapshot.max / 1E9D
 
-    Metric(name, scope, snapshot.numberOfMeasurements, total, total, scaledMin, scaledMax, sumOfSquares)
+    NewRelic.Metric(name, scope, snapshot.numberOfMeasurements, total, total, scaledMin, scaledMax, sumOfSquares)
   }
 }
