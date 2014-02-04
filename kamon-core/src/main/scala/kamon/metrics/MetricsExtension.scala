@@ -25,7 +25,7 @@ import akka.actor
 import kamon.metrics.Metrics.MetricGroupFilter
 import kamon.metrics.Subscriptions.Subscribe
 
-class MetricsExtension(val system: ExtendedActorSystem) extends Kamon.Extension {
+class MetricsExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   val config = system.settings.config
   val storage = TrieMap[MetricGroupIdentity, MetricGroupRecorder]()
   val filters = loadFilters(config)
