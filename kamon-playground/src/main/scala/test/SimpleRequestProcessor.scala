@@ -25,7 +25,7 @@ import scala.util.Random
 import akka.routing.RoundRobinRouter
 import kamon.trace.TraceRecorder
 import kamon.Kamon
-import kamon.metrics.{ ActorMetrics, TraceMetrics, Metrics }
+import kamon.metrics.{TickMetricSnapshotBuffer, ActorMetrics, TraceMetrics, Metrics}
 import spray.http.{ StatusCodes, Uri }
 import kamon.metrics.Subscriptions.TickMetricSnapshot
 import kamon.newrelic.WebTransactionMetrics
@@ -44,7 +44,9 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
     def receive: Actor.Receive = { case any ⇒ sender ! any }
   }), "com")
 
-  Kamon(Metrics).subscribe(TraceMetrics, "*", printer, permanently = true)
+  val buffer = system.actorOf(TickMetricSnapshotBuffer.props(10 seconds, printer))
+
+  Kamon(Metrics).subscribe(TraceMetrics, "*", buffer, permanently = true)
   //Kamon(Metrics).subscribe(ActorMetrics, "*", printer, permanently = true)
 
   implicit val timeout = Timeout(30 seconds)
