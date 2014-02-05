@@ -24,7 +24,10 @@ import akka.actor
 
 
 class NewRelicExtension(system: ExtendedActorSystem) extends Kamon.Extension {
+  val config = system.settings.config.getConfig("kamon.newrelic")
+
   val manager: ActorRef = system.actorOf(Props[NewRelicManager], "kamon-newrelic")
+  val apdexT: Double = config.getMilliseconds("apdexT") / 1E3 // scale to seconds.
 
   Kamon(Metrics)(system).subscribe(TraceMetrics, "*", manager, permanently = true)
 }

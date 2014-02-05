@@ -24,9 +24,11 @@ class MetricTranslator(receiver: ActorRef) extends Actor with WebTransactionMetr
 
   def receive = {
     case TickMetricSnapshot(from, to, metrics) =>
+      val scaledFrom = (from / 1E3).toInt
+      val scaledTo = (to / 1E3).toInt
       val allMetrics = collectWebTransactionMetrics(metrics)
 
-      receiver ! TimeSliceMetrics(from, to, allMetrics)
+      receiver ! TimeSliceMetrics(scaledFrom, scaledTo, allMetrics)
   }
 
 }
