@@ -102,8 +102,8 @@ object MetricSnapshot {
 
 case class DefaultMetricSnapshot(numberOfMeasurements: Long, measurementLevels: Vector[MetricSnapshot.Measurement]) extends MetricSnapshot
 
-object MetricGroupIdentity {
-
+object DefaultMetricSnapshot {
+  val empty = DefaultMetricSnapshot(0, Vector.empty)
 }
 
 trait MetricGroupFactory {

@@ -21,21 +21,12 @@ import java.util.concurrent.atomic.AtomicLong
 import scala.util.Try
 import java.net.InetAddress
 import spray.http.HttpHeaders.RawHeader
+import shapeless.HNil
+import kamon.trace.TraceRecorder
 
-trait UowDirectives extends BasicDirectives {
-  def uow: Directive0 = mapRequest { request ⇒
-    val uowHeader = request.headers.find(_.name == "X-UOW")
-
-    val generatedUow = uowHeader.map(_.value).getOrElse(UowDirectives.newUow)
-    //Trace.transformContext(_.copy(token = generatedUow))
-    request
+trait KamonTraceDirectives extends BasicDirectives {
+  def traceName(name: String): Directive0 = mapRequest { req =>
+    TraceRecorder.rename(name)
+    req
   }
-  //def respondWithUow = mapHttpResponseHeaders(headers ⇒ Trace.context().map(ctx ⇒ RawHeader("X-UOW", ctx.token) :: headers).getOrElse(headers))
-}
-
-object UowDirectives {
-  val uowCounter = new AtomicLong
-  val hostnamePrefix = Try(InetAddress.getLocalHost.getHostName).getOrElse("unknown-localhost")
-  def newUow = "%s-%s".format(hostnamePrefix, uowCounter.incrementAndGet())
-
 }

@@ -54,6 +54,8 @@ object TraceRecorder {
   def startSegment(identity: SegmentIdentity, metadata: Map[String, String]): Option[SegmentCompletionHandle] =
     currentContext.map(_.startSegment(identity, metadata))
 
+  def rename(name: String): Unit = currentContext.map(_.rename(name))
+
   def withNewTraceContext[T](name: String, token: Option[String] = None, metadata: Map[String, String] = Map.empty)(thunk: ⇒ T)(implicit system: ActorSystem): T =
     withTraceContext(Some(newTraceContext(name, token, metadata, system)))(thunk)
 

@@ -20,7 +20,7 @@ import spray.routing.SimpleRoutingApp
 import akka.util.Timeout
 import spray.httpx.RequestBuilding
 import scala.concurrent.{ Await, Future }
-import kamon.spray.UowDirectives
+import kamon.spray.KamonTraceDirectives
 import scala.util.Random
 import akka.routing.RoundRobinRouter
 import kamon.trace.TraceRecorder
@@ -30,7 +30,7 @@ import spray.http.{ StatusCodes, Uri }
 import kamon.metrics.Subscriptions.TickMetricSnapshot
 import kamon.newrelic.WebTransactionMetrics
 
-object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuilding with UowDirectives {
+object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuilding with KamonTraceDirectives {
   import scala.concurrent.duration._
   import spray.client.pipelining._
   import akka.pattern.ask
@@ -57,7 +57,7 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
   startServer(interface = "localhost", port = 9090) {
     get {
       path("test") {
-        uow {
+        traceName("test") {
           complete {
             val futures = pipeline(Get("http://10.254.209.14:8000/")).map(r ⇒ "Ok") :: pipeline(Get("http://10.254.209.14:8000/")).map(r ⇒ "Ok") :: Nil
 
@@ -75,21 +75,24 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
 
         } ~
         path("reply" / Segment) { reqID ⇒
-          uow {
+          traceName("reply") {
             complete {
               (replier ? reqID).mapTo[String]
             }
           }
         } ~
         path("ok") {
-          complete {
-            //Thread.sleep(random.nextInt(1) + random.nextInt(5) + random.nextInt(2))
-            "ok"
+          traceName("OK") {
+            complete {
+              "ok"
+            }
           }
         } ~
         path("future") {
-          dynamic {
-            complete(Future { "OK" })
+          traceName("OK-Future") {
+            dynamic {
+              complete(Future { "OK" })
+            }
           }
         } ~
         path("kill") {
