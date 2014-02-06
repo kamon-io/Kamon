@@ -25,7 +25,7 @@ import shapeless.HNil
 import kamon.trace.TraceRecorder
 
 trait KamonTraceDirectives extends BasicDirectives {
-  def traceName(name: String): Directive0 = mapRequest { req =>
+  def traceName(name: String): Directive0 = mapRequest { req ⇒
     TraceRecorder.rename(name)
     req
   }

@@ -27,7 +27,7 @@ import kamon.metrics.{ TraceMetrics, Metrics }
 import kamon.metrics.Subscriptions.TickMetricSnapshot
 
 class ServerRequestInstrumentationSpec extends TestKit(ActorSystem("spec")) with WordSpecLike with Matchers with RequestBuilding
-  with ScalaFutures with PatienceConfiguration with TestServer {
+    with ScalaFutures with PatienceConfiguration with TestServer {
 
   "the spray server request tracing instrumentation" should {
     "reply back with the same trace token header provided in the request" in {

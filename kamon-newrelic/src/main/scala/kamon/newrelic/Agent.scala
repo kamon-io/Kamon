@@ -49,7 +49,6 @@ class Agent extends Actor with RequestBuilding with ResponseTransformation with 
     "marshal_format" -> "json",
     "protocol_version" -> "12")
 
-
   def receive = {
     case Initialize(runId, collector) ⇒
       log.info("Agent initialized with runID: [{}] and collector: [{}]", runId, collector)
@@ -77,11 +76,10 @@ class Agent extends Actor with RequestBuilding with ResponseTransformation with 
   }
 
   import AgentJsonProtocol._
-  val compressedPipeline: HttpRequest ⇒ Future[HttpResponse] = logRequest(println(_)) ~>encode(Deflate) ~> sendReceive ~> logResponse(println(_))
+  val compressedPipeline: HttpRequest ⇒ Future[HttpResponse] = encode(Deflate) ~> sendReceive
   val compressedToJsonPipeline: HttpRequest ⇒ Future[JsValue] = compressedPipeline ~> toJson
 
   def toJson(response: HttpResponse): JsValue = response.entity.asString.asJson
-
 
   def selectCollector: Future[String] = {
     val query = ("method" -> "get_redirect_host") +: baseQuery

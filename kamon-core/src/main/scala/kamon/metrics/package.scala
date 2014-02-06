@@ -18,9 +18,9 @@ package kamon
 
 package object metrics {
 
-  def combineMaps[K, V](left: Map[K, V], right: Map[K, V])(valueMerger: (V, V) => V): Map[K, V] = {
+  def combineMaps[K, V](left: Map[K, V], right: Map[K, V])(valueMerger: (V, V) ⇒ V): Map[K, V] = {
     (left ++ right) map {
-      case (key, rightValue) => key -> left.get(key).map(leftValue => valueMerger(leftValue, rightValue)).getOrElse(rightValue)
+      case (key, rightValue) ⇒ key -> left.get(key).map(leftValue ⇒ valueMerger(leftValue, rightValue)).getOrElse(rightValue)
     }
   }
 }

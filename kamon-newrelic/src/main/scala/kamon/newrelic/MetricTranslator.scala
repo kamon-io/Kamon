@@ -16,14 +16,14 @@
 
 package kamon.newrelic
 
-import akka.actor.{Props, ActorRef, Actor}
+import akka.actor.{ Props, ActorRef, Actor }
 import kamon.metrics.Subscriptions.TickMetricSnapshot
 import kamon.newrelic.MetricTranslator.TimeSliceMetrics
 
 class MetricTranslator(receiver: ActorRef) extends Actor with WebTransactionMetrics {
 
   def receive = {
-    case TickMetricSnapshot(from, to, metrics) =>
+    case TickMetricSnapshot(from, to, metrics) ⇒
       val scaledFrom = (from / 1E3).toInt
       val scaledTo = (to / 1E3).toInt
       val allMetrics = collectWebTransactionMetrics(metrics)
