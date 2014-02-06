@@ -18,7 +18,7 @@ package kamon.newrelic
 import akka.actor.Actor
 import akka.event.Logging.Error
 import akka.event.Logging.{ LoggerInitialized, InitializeLogger }
-import com.newrelic.api.agent.{NewRelic => NR}
+import com.newrelic.api.agent.{ NewRelic ⇒ NR }
 import kamon.trace.TraceContextAware
 
 class NewRelicErrorLogger extends Actor {

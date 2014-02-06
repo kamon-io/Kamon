@@ -22,7 +22,7 @@ import akka.actor.Actor
 import kamon.Kamon
 
 trait WebTransactionMetrics {
-  self: Actor =>
+  self: Actor ⇒
 
   def collectWebTransactionMetrics(metrics: Map[MetricGroupIdentity, MetricGroupSnapshot]): Seq[NewRelic.Metric] = {
     val apdexBuilder = new ApdexBuilder("Apdex", None, (NewRelic)(context.system).apdexT)
@@ -32,9 +32,9 @@ trait WebTransactionMetrics {
       case (TraceMetrics(name), groupSnapshot) ⇒
 
         groupSnapshot.metrics collect {
-          case (ElapsedTime, snapshot) =>
+          case (ElapsedTime, snapshot) ⇒
             accumulatedHttpDispatcher = accumulatedHttpDispatcher.merge(snapshot)
-            snapshot.measurementLevels.foreach(level => apdexBuilder.record(level.value / 1E9D, level.count))
+            snapshot.measurementLevels.foreach(level ⇒ apdexBuilder.record(level.value / 1E9D, level.count))
 
             toNewRelicMetric(s"WebTransaction/Custom/$name", None, snapshot)
         }
@@ -55,13 +55,12 @@ class ApdexBuilder(name: String, scope: Option[String], apdexT: Double) {
   var frustrating = 0L
 
   def record(duration: Double, count: Long): Unit =
-    if(duration <= apdexT)
+    if (duration <= apdexT)
       satisfying += count
+    else if (duration <= frustratingThreshold)
+      tolerating += count
     else
-      if(duration <= frustratingThreshold)
-        tolerating += count
-      else
-        frustrating += count
+      frustrating += count
 
   // NewRelic reuses the same metric structure for recording the Apdex.. weird, but that's how it works.
   def build: NewRelic.Metric = NewRelic.Metric(name, scope, satisfying, tolerating, frustrating, apdexT, apdexT, 0)

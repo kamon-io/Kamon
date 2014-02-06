@@ -18,10 +18,9 @@ package kamon.newrelic
 import akka.actor._
 import scala.concurrent.duration._
 import kamon.Kamon
-import kamon.metrics.{TickMetricSnapshotBuffer, TraceMetrics, Metrics}
+import kamon.metrics.{ TickMetricSnapshotBuffer, TraceMetrics, Metrics }
 import kamon.metrics.Subscriptions.TickMetricSnapshot
 import akka.actor
-
 
 class NewRelicExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   val config = system.settings.config.getConfig("kamon.newrelic")
@@ -40,10 +39,9 @@ class NewRelicManager extends Actor with ActorLogging {
   val buffer = context.actorOf(TickMetricSnapshotBuffer.props(1 minute, translator), "metric-buffer")
 
   def receive = {
-    case tick: TickMetricSnapshot => buffer.forward(tick)
+    case tick: TickMetricSnapshot ⇒ buffer.forward(tick)
   }
 }
-
 
 object NewRelic extends ExtensionId[NewRelicExtension] with ExtensionIdProvider {
   def lookup(): ExtensionId[_ <: actor.Extension] = NewRelic
