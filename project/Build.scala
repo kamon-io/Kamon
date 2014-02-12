@@ -9,7 +9,7 @@ object Build extends Build {
   import Dependencies._
 
   lazy val root = Project("root", file("."))
-    .aggregate(kamonCore, kamonSpray, kamonNewrelic, kamonPlayground, kamonDashboard, kamonTestkit)
+    .aggregate(kamonCore, kamonSpray, kamonNewrelic, kamonPlayground, kamonDashboard, kamonTestkit, kamonPlay)
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
     .settings(noPublishing: _*)
@@ -70,6 +70,14 @@ object Build extends Build {
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
     .settings(libraryDependencies ++= compile(akkaActor, akkaTestKit))
+    .dependsOn(kamonCore)
+
+
+  lazy val kamonPlay = Project("kamon-play", file("kamon-play"))
+    .settings(basicSettings: _*)
+    .settings(formatSettings: _*)
+    .settings(aspectJSettings: _*)
+    .settings(libraryDependencies ++= compile(playTest, aspectJ) ++ test(playTest))
     .dependsOn(kamonCore)
 
 

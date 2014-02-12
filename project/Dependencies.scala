@@ -4,7 +4,8 @@ object Dependencies {
 
   val resolutionRepos = Seq(
               "spray repo"  at "http://repo.spray.io/",
-    "spray nightlies repo"  at "http://nightlies.spray.io"
+              "spray nightlies repo"  at "http://nightlies.spray.io",
+              "typesafe repo" at "http://repo.typesafe.com/typesafe/releases/"
   )
 
   val sprayVersion = "1.2.0"
@@ -25,6 +26,7 @@ object Dependencies {
   val akkaActor       = "com.typesafe.akka"         %%  "akka-actor"            % akkaVersion
   val akkaSlf4j       = "com.typesafe.akka"         %%  "akka-slf4j"            % akkaVersion
   val akkaTestKit     = "com.typesafe.akka"         %%  "akka-testkit"          % akkaVersion
+  val playTest        = "com.typesafe.play"         %%  "play-test"             % "2.2.1"
 
 
   def compile   (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "compile")
