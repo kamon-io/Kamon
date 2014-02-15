@@ -33,6 +33,23 @@ object Settings {
     }
     ) ++ releaseSettings
 
+  pomExtra := {
+      <url>http://kamon.io</url>
+      <licenses>
+        <license>
+          <name>Apache 2</name>
+          <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+        </license>
+      </licenses>
+      <scm>
+        <url>git://github.com/kamon-io/Kamon.git</url>
+        <connection>scm:git:git@github.com:kamon-io/Kamon.git</connection>
+      </scm>
+      <developers>
+        <developer><id>ivantopo</id><name>Ivan Topolnjak</name><url>https://twitter.com/ivantopo</url></developer>
+        <developer><id>dpsoft</id><name>Diego Parra</name><url>https://twitter.com/diegolparra</url></developer>
+      </developers>
+  }
 
   import spray.revolver.RevolverPlugin.Revolver._
   lazy val revolverSettings = Revolver.settings ++ seq(reJRebelJar := "~/.jrebel/jrebel.jar")

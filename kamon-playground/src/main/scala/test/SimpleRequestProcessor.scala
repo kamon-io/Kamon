@@ -14,7 +14,7 @@
  * limitations under the License.
  * ========================================================== */
 
- package test
+package test
 
 import akka.actor._
 import spray.routing.SimpleRoutingApp
