@@ -104,7 +104,7 @@ class ServerRequestInstrumentation {
 
   def includeTraceTokenIfPossible(response: HttpMessagePartWrapper, traceTokenHeaderName: String, token: String): HttpMessagePartWrapper =
     response match {
-      case response: HttpResponse ⇒ response.withHeaders(RawHeader(traceTokenHeaderName, token))
+      case response: HttpResponse ⇒ response.withHeaders(response.headers ::: RawHeader(traceTokenHeaderName, token) :: Nil)
       case other                  ⇒ other
     }
 }
