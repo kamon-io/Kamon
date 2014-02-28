@@ -25,6 +25,11 @@ object Play extends ExtensionId[PlayExtension] with ExtensionIdProvider {
 }
 
 class PlayExtension(private val system: ExtendedActorSystem) extends Kamon.Extension {
-  println("Play extension loaded")
+  publishInfoMessage(system, "Play Extension Loaded!!")
+
   private val config = system.settings.config.getConfig("kamon.play")
+
+  val includeTraceToken: Boolean = config.getBoolean("include-trace-token-header")
+  val traceTokenHeaderName: String = config.getString("trace-token-header-name")
 }
+

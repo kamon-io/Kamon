@@ -2,7 +2,7 @@
 
 <aspectj>
   <aspects>
-    <aspect name="kamon.play.filter.RequestTracing"/>
+    <aspect name="kamon.play.instrumentation.RequestInstrumentation"/>
   </aspects>
 
    <weaver options="-verbose -showWeaveInfo">
