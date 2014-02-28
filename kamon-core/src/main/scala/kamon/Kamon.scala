@@ -16,9 +16,14 @@
 package kamon
 
 import akka.actor._
+import akka.event.Logging.Info
 
 object Kamon {
-  trait Extension extends akka.actor.Extension
+  trait Extension extends akka.actor.Extension {
+    def publishInfoMessage(system: ActorSystem, msg: String): Unit = {
+      system.eventStream.publish(Info("", classOf[Extension], msg))
+    }
+  }
 
   def apply[T <: Extension](key: ExtensionId[T])(implicit system: ActorSystem): T = key(system)
 }
