@@ -16,15 +16,16 @@
 
 package kamon.play.instrumentation
 
-import org.aspectj.lang.annotation._
-import play.api.mvc._
 import kamon.trace.{ TraceRecorder, TraceContextAware }
 import kamon.Kamon
 import kamon.play.Play
-import akka.actor.ActorSystem
 import play.libs.Akka
-import scala.Some
+import play.api.mvc._
+import akka.actor.ActorSystem
 import org.aspectj.lang.ProceedingJoinPoint
+import org.aspectj.lang.annotation._
+import scala.Some
+import scala.concurrent.ExecutionContext.Implicits.global
 
 @Aspect
 class RequestInstrumentation {
@@ -40,26 +41,6 @@ class RequestInstrumentation {
     Kamon(Play)(Akka.system())
   }
 
-  @Pointcut("execution(* play.api.GlobalSettings+.onRouteRequest(*)) && args(request)")
-  def onRouteRequest(request: TraceContextAware): Unit = {}
-
-  @After("onRouteRequest(request)")
-  def afterRouteRequest(request: TraceContextAware): Unit = {
-    val system: ActorSystem = Akka.system()
-    val playExtension = Kamon(Play)(system)
-
-    val requestHeader: RequestHeader = request.asInstanceOf[RequestHeader]
-    val defaultTraceName: String = requestHeader.method + ": " + requestHeader.uri
-    val token = if (playExtension.includeTraceToken) {
-      requestHeader.headers.toSimpleMap.find(_._1 == playExtension.traceTokenHeaderName).map(_._2)
-    } else None
-
-    TraceRecorder.start(defaultTraceName, token)(system)
-
-    //Necessary to force initialization of traceContext when initiating the request.
-    request.traceContext
-  }
-
   @Pointcut("execution(* play.api.GlobalSettings+.doFilter(*)) && args(next)")
   def doFilter(next: EssentialAction): Unit = {}
 
@@ -69,23 +50,38 @@ class RequestInstrumentation {
   }
 
   private[this] val kamonRequestFilter = Filter { (nextFilter, requestHeader) ⇒
-    import scala.concurrent.ExecutionContext.Implicits.global
+    processRequest(requestHeader)
 
     val incomingContext = TraceRecorder.currentContext
 
     nextFilter(requestHeader).map { result ⇒
+
       TraceRecorder.finish()
 
       val simpleResult = incomingContext match {
         case None ⇒ result
-        case Some(traceContext) ⇒ {
+        case Some(traceContext) ⇒
           val playExtension = Kamon(Play)(traceContext.system)
           if (playExtension.includeTraceToken) {
             result.withHeaders(playExtension.traceTokenHeaderName -> traceContext.token)
           } else result
-        }
       }
       simpleResult
     }
+  }
+
+  private[this] def processRequest(requestHeader: RequestHeader): Unit = {
+    val system: ActorSystem = Akka.system()
+    val playExtension = Kamon(Play)(system)
+    val defaultTraceName: String = s"${requestHeader.method}: ${requestHeader.uri}"
+
+    val token = if (playExtension.includeTraceToken) {
+      requestHeader.headers.toSimpleMap.find(_._1 == playExtension.traceTokenHeaderName).map(_._2)
+    } else None
+
+    TraceRecorder.start(defaultTraceName, token)(system)
+
+    //Necessary to force initialization of traceContext when initiating the request.
+    requestHeader.asInstanceOf[TraceContextAware].traceContext
   }
 }

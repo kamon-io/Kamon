@@ -14,7 +14,7 @@
  * limitations under the License.
  * ========================================================== */
 
-package kamon.play.filter
+package kamon.play
 
 import play.api.test._
 import play.api.mvc.{ Results, Action }
