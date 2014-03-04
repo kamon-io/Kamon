@@ -1,5 +1,5 @@
 /* ===================================================
- * Copyright © 2013 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2014 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,15 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  * ========================================================== */
-package kamon.spray
 
-import spray.routing.directives.BasicDirectives
-import spray.routing._
+package kamon.play.action
+
 import kamon.trace.TraceRecorder
+import play.api.mvc._
+import scala.concurrent.Future
 
-trait KamonTraceDirectives extends BasicDirectives {
-  def traceName(name: String): Directive0 = mapRequest { req ⇒
+case class TraceName[A](name: String)(action: Action[A]) extends Action[A] {
+  def apply(request: Request[A]): Future[SimpleResult] = {
     TraceRecorder.rename(name)
-    req
+    action(request)
   }
+  lazy val parser = action.parser
 }
