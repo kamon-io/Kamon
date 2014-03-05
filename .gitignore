@@ -2,6 +2,7 @@
 *.log
 .history
 *.sc
+.pygments-cache
 
 # sbt specific
 dist/*
