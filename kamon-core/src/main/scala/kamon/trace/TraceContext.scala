@@ -18,10 +18,11 @@ package kamon.trace
 
 import akka.actor.ActorSystem
 import kamon.Kamon
-import kamon.metrics.{ MetricGroupRecorder, MetricIdentity, TraceMetrics, Metrics }
+import kamon.metrics._
 import java.util.concurrent.ConcurrentLinkedQueue
 import kamon.trace.TraceContextAware.DefaultTraceContextAware
 import kamon.trace.TraceContext.SegmentIdentity
+import kamon.trace.SegmentData
 
 trait TraceContext {
   def name: String
@@ -97,7 +98,7 @@ class SimpleMetricCollectionContext(@volatile private var _name: String, val tok
     }
   }
 
-  private def drainFinishedSegments(metricRecorder: MetricGroupRecorder): Unit = {
+  private def drainFinishedSegments(metricRecorder: MetricMultiGroupRecorder): Unit = {
     while (!finishedSegments.isEmpty) {
       val segmentData = finishedSegments.poll()
       metricRecorder.record(segmentData.identity, segmentData.duration)

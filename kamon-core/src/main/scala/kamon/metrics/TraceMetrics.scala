@@ -31,7 +31,7 @@ object TraceMetrics extends MetricGroupCategory {
   case class HttpClientRequest(name: String, tag: String) extends MetricIdentity
 
   class TraceMetricRecorder(val elapsedTime: HighDynamicRangeRecorder, private val segmentRecorderFactory: () ⇒ HighDynamicRangeRecorder)
-      extends MetricGroupRecorder {
+      extends MetricMultiGroupRecorder {
 
     private val segments = TrieMap[MetricIdentity, HighDynamicRangeRecorder]()
 

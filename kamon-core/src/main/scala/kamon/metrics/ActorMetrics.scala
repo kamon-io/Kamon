@@ -32,7 +32,7 @@ object ActorMetrics extends MetricGroupCategory {
   case object TimeInMailbox extends MetricIdentity { val name, tag = "TimeInMailbox" }
 
   case class ActorMetricRecorder(processingTime: MetricRecorder, mailboxSize: MetricRecorder, timeInMailbox: MetricRecorder)
-      extends MetricGroupRecorder {
+      extends MetricMultiGroupRecorder {
 
     def record(identity: MetricIdentity, value: Long): Unit = identity match {
       case ProcessingTime ⇒ processingTime.record(value)
