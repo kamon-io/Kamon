@@ -34,9 +34,16 @@ trait MetricIdentity {
   def tag: String
 }
 
-trait MetricGroupRecorder {
-  def record(identity: MetricIdentity, value: Long)
+sealed trait MetricGroupRecorder {
   def collect: MetricGroupSnapshot
+}
+
+trait MetricMultiGroupRecorder extends MetricGroupRecorder {
+  def record(identity: MetricIdentity, value: Long)
+}
+
+trait MetricSingleGroupRecorder extends MetricGroupRecorder {
+  def record(value: Long)
 }
 
 trait MetricGroupSnapshot {
