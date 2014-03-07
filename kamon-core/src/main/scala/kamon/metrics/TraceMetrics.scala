@@ -16,7 +16,7 @@
 
 package kamon.metrics
 
-import org.HdrHistogram.HighDynamicRangeRecorder
+import org.HdrHistogram.HdrRecorder
 import scala.collection.concurrent.TrieMap
 import com.typesafe.config.Config
 
@@ -30,37 +30,36 @@ object TraceMetrics extends MetricGroupCategory {
   case object ElapsedTime extends MetricIdentity { val name, tag = "ElapsedTime" }
   case class HttpClientRequest(name: String, tag: String) extends MetricIdentity
 
-  class TraceMetricRecorder(val elapsedTime: HighDynamicRangeRecorder, private val segmentRecorderFactory: () ⇒ HighDynamicRangeRecorder)
-      extends MetricMultiGroupRecorder {
+  class TraceMetricRecorder(val elapsedTime: HdrRecorder, private val segmentRecorderFactory: () ⇒ HdrRecorder)
+      extends MetricGroupRecorder {
 
-    private val segments = TrieMap[MetricIdentity, HighDynamicRangeRecorder]()
+    private val segments = TrieMap[MetricIdentity, HdrRecorder]()
 
-    def record(identity: MetricIdentity, value: Long): Unit = identity match {
-      case ElapsedTime        ⇒ elapsedTime.record(value)
-      case id: MetricIdentity ⇒ segments.getOrElseUpdate(id, segmentRecorderFactory.apply()).record(value)
-    }
+    def segmentRecorder(segmentIdentity: MetricIdentity): HdrRecorder =
+      segments.getOrElseUpdate(segmentIdentity, segmentRecorderFactory.apply())
 
     def collect: MetricGroupSnapshot = TraceMetricSnapshot(elapsedTime.collect(),
       segments.map { case (identity, recorder) ⇒ (identity, recorder.collect()) }.toMap)
   }
 
-  case class TraceMetricSnapshot(elapsedTime: MetricSnapshot, segments: Map[MetricIdentity, MetricSnapshot])
+  case class TraceMetricSnapshot(elapsedTime: MetricSnapshotLike, segments: Map[MetricIdentity, MetricSnapshotLike])
       extends MetricGroupSnapshot {
 
-    def metrics: Map[MetricIdentity, MetricSnapshot] = segments + (ElapsedTime -> elapsedTime)
+    def metrics: Map[MetricIdentity, MetricSnapshotLike] = segments + (ElapsedTime -> elapsedTime)
   }
 
   val Factory = new MetricGroupFactory {
     type GroupRecorder = TraceMetricRecorder
 
     def create(config: Config): TraceMetricRecorder = {
-      import HighDynamicRangeRecorder.Configuration
 
       val settings = config.getConfig("kamon.metrics.precision.trace")
-      val elapsedTimeHdrConfig = Configuration.fromConfig(settings.getConfig("elapsed-time"))
-      val segmentHdrConfig = Configuration.fromConfig(settings.getConfig("segment"))
+      val elapsedTimeConfig = extractPrecisionConfig(settings.getConfig("elapsed-time"))
+      val segmentConfig = extractPrecisionConfig(settings.getConfig("segment"))
 
-      new TraceMetricRecorder(HighDynamicRangeRecorder(elapsedTimeHdrConfig), () ⇒ HighDynamicRangeRecorder(segmentHdrConfig))
+      new TraceMetricRecorder(
+        HdrRecorder(elapsedTimeConfig.highestTrackableValue, elapsedTimeConfig.significantValueDigits, Scale.Nano),
+        () ⇒ HdrRecorder(segmentConfig.highestTrackableValue, segmentConfig.significantValueDigits, Scale.Nano))
     }
   }
 

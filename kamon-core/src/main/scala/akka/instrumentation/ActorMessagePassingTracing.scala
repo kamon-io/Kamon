@@ -55,7 +55,7 @@ class BehaviourInvokeTracing {
 
     actorMetrics.map { am ⇒
       am.processingTime.record(System.nanoTime() - timestampBeforeProcessing)
-      am.timeInMailbox.record(timestampBeforeProcessing - contextAndTimestamp.captureMark)
+      am.timeInMailbox.record(timestampBeforeProcessing - contextAndTimestamp.captureNanoTime)
       am.mailboxSize.record(cell.numberOfMessages)
     }
   }

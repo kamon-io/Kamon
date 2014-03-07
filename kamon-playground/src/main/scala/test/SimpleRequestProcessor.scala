@@ -26,7 +26,7 @@ import scala.util.Random
 import akka.routing.RoundRobinRouter
 import kamon.trace.TraceRecorder
 import kamon.Kamon
-import kamon.metrics.{ TickMetricSnapshotBuffer, ActorMetrics, TraceMetrics, Metrics }
+import kamon.metrics._
 import spray.http.{ StatusCodes, Uri }
 import kamon.metrics.Subscriptions.TickMetricSnapshot
 import kamon.newrelic.WebTransactionMetrics
@@ -45,9 +45,9 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
     def receive: Actor.Receive = { case any ⇒ sender ! any }
   }), "com")
 
-  val buffer = system.actorOf(TickMetricSnapshotBuffer.props(10 seconds, printer))
+  //val buffer = system.actorOf(TickMetricSnapshotBuffer.props(30 seconds, printer))
 
-  Kamon(Metrics).subscribe(TraceMetrics, "*", buffer, permanently = true)
+  //Kamon(Metrics).subscribe(CustomMetric, "*", buffer, permanently = true)
   //Kamon(Metrics).subscribe(ActorMetrics, "*", printer, permanently = true)
 
   implicit val timeout = Timeout(30 seconds)
@@ -55,6 +55,9 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
   val pipeline = sendReceive
   val replier = system.actorOf(Props[Replier].withRouter(RoundRobinRouter(nrOfInstances = 2)), "replier")
   val random = new Random()
+
+  val requestCountRecorder = Kamon(Metrics).register(CustomMetric("GetCount"), CustomMetric.histogram(10, 3, Scale.Unit))
+
   startServer(interface = "localhost", port = 9090) {
     get {
       path("test") {
@@ -85,6 +88,8 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
         path("ok") {
           traceName("OK") {
             complete {
+              println("Defined: " + requestCountRecorder)
+              requestCountRecorder.map(_.record(1))
               "ok"
             }
           }
@@ -115,6 +120,8 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
 
 class PrintWhatever extends Actor {
   def receive = {
+    case TickMetricSnapshot(from, to, metrics) ⇒
+      println(metrics.map { case (key, value) ⇒ key.name + " => " + value.metrics.mkString(",") }.mkString("|"))
     case anything ⇒ println(anything)
   }
 }

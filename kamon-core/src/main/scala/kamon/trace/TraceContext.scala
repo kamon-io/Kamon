@@ -22,7 +22,7 @@ import kamon.metrics._
 import java.util.concurrent.ConcurrentLinkedQueue
 import kamon.trace.TraceContextAware.DefaultTraceContextAware
 import kamon.trace.TraceContext.SegmentIdentity
-import kamon.trace.SegmentData
+import kamon.metrics.TraceMetrics.TraceMetricRecorder
 
 trait TraceContext {
   def name: String
@@ -50,7 +50,7 @@ case object SimpleTrace extends TracingLevelOfDetail
 case object FullTrace extends TracingLevelOfDetail
 
 trait TraceContextAware {
-  def captureMark: Long
+  def captureNanoTime: Long
   def traceContext: Option[TraceContext]
 }
 
@@ -58,7 +58,7 @@ object TraceContextAware {
   def default: TraceContextAware = new DefaultTraceContextAware
 
   class DefaultTraceContextAware extends TraceContextAware {
-    val captureMark = System.nanoTime()
+    val captureNanoTime = System.nanoTime()
     val traceContext = TraceRecorder.currentContext
   }
 }
@@ -98,10 +98,10 @@ class SimpleMetricCollectionContext(@volatile private var _name: String, val tok
     }
   }
 
-  private def drainFinishedSegments(metricRecorder: MetricMultiGroupRecorder): Unit = {
+  private def drainFinishedSegments(metricRecorder: TraceMetricRecorder): Unit = {
     while (!finishedSegments.isEmpty) {
       val segmentData = finishedSegments.poll()
-      metricRecorder.record(segmentData.identity, segmentData.duration)
+      metricRecorder.segmentRecorder(segmentData.identity).record(segmentData.duration)
     }
   }
 
@@ -119,11 +119,11 @@ class SimpleMetricCollectionContext(@volatile private var _name: String, val tok
     new SimpleMetricCollectionCompletionHandle(identity, metadata)
 
   class SimpleMetricCollectionCompletionHandle(identity: MetricIdentity, startMetadata: Map[String, String]) extends SegmentCompletionHandle {
-    val segmentStartMark = System.nanoTime()
+    val segmentStartNanoTime = System.nanoTime()
 
     def finish(metadata: Map[String, String] = Map.empty): Unit = {
-      val segmentFinishMark = System.nanoTime()
-      finishSegment(identity, (segmentFinishMark - segmentStartMark), startMetadata ++ metadata)
+      val segmentFinishNanoTime = System.nanoTime()
+      finishSegment(identity, (segmentFinishNanoTime - segmentStartNanoTime), startMetadata ++ metadata)
     }
   }
 }

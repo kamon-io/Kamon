@@ -16,9 +16,8 @@
 
 package kamon.metrics.instruments
 
-import org.HdrHistogram.HighDynamicRangeRecorder
-import org.HdrHistogram.HighDynamicRangeRecorder.Configuration
-import kamon.metrics.MetricSnapshot
+import org.HdrHistogram.HdrRecorder
+import kamon.metrics.{ Scale, MetricSnapshotLike }
 
 /**
  *  This recorder keeps track of the last value recoded and automatically adds it after collecting a snapshot. This is
@@ -29,7 +28,9 @@ import kamon.metrics.MetricSnapshot
  *  after a new event is processed.
  *
  */
-class ContinuousHighDynamicRangeRecorder(configuration: Configuration) extends HighDynamicRangeRecorder(configuration) {
+class ContinuousHdrRecorder(highestTrackableValue: Long, significantValueDigits: Int, scale: Scale)
+    extends HdrRecorder(highestTrackableValue, significantValueDigits, scale) {
+
   @volatile private var lastRecordedValue: Long = 0
 
   override def record(value: Long): Unit = {
@@ -37,7 +38,7 @@ class ContinuousHighDynamicRangeRecorder(configuration: Configuration) extends H
     super.record(value)
   }
 
-  override def collect(): MetricSnapshot = {
+  override def collect(): MetricSnapshotLike = {
     val snapshot = super.collect()
     super.record(lastRecordedValue)
 
@@ -45,6 +46,7 @@ class ContinuousHighDynamicRangeRecorder(configuration: Configuration) extends H
   }
 }
 
-object ContinuousHighDynamicRangeRecorder {
-  def apply(configuration: Configuration) = new ContinuousHighDynamicRangeRecorder(configuration)
+object ContinuousHdrRecorder {
+  def apply(highestTrackableValue: Long, significantValueDigits: Int, scale: Scale) =
+    new ContinuousHdrRecorder(highestTrackableValue, significantValueDigits, scale)
 }

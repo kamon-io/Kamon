@@ -16,9 +16,8 @@
 
 package kamon.metrics
 
-import kamon.metrics.instruments.ContinuousHighDynamicRangeRecorder
-import org.HdrHistogram.HighDynamicRangeRecorder.Configuration
-import org.HdrHistogram.HighDynamicRangeRecorder
+import kamon.metrics.instruments.ContinuousHdrRecorder
+import org.HdrHistogram.HdrRecorder
 import com.typesafe.config.Config
 
 case class CustomMetric(name: String) extends MetricGroupIdentity {
@@ -27,25 +26,27 @@ case class CustomMetric(name: String) extends MetricGroupIdentity {
 
 object CustomMetric extends MetricGroupCategory {
   val name = "custom-metric"
-  private val identity = new MetricIdentity { val name, tag = "RecordedValues" }
+  val RecordedValues = new MetricIdentity { val name, tag = "RecordedValues" }
 
-  def withConfig(highestTrackableValue: Long, significantValueDigits: Int, continuous: Boolean = false) = new MetricGroupFactory {
-    type GroupRecorder = CustomMetricRecorder
+  def histogram(highestTrackableValue: Long, significantValueDigits: Int, scale: Scale, continuous: Boolean = false) =
+    new MetricGroupFactory {
 
-    def create(config: Config): CustomMetricRecorder =
-      if (continuous)
-        new CustomMetricRecorder(identity, ContinuousHighDynamicRangeRecorder(Configuration(highestTrackableValue, significantValueDigits)))
-      else
-        new CustomMetricRecorder(identity, HighDynamicRangeRecorder(Configuration(highestTrackableValue, significantValueDigits)))
-  }
+      type GroupRecorder = CustomMetricRecorder
 
-  class CustomMetricRecorder(identity: MetricIdentity, underlyingRecorder: HighDynamicRangeRecorder)
-      extends MetricSingleGroupRecorder {
+      def create(config: Config): CustomMetricRecorder = {
+        val recorder =
+          if (continuous) ContinuousHdrRecorder(highestTrackableValue, significantValueDigits, scale)
+          else HdrRecorder(highestTrackableValue, significantValueDigits, scale)
 
-    def collect: MetricGroupSnapshot = new MetricGroupSnapshot {
-      val metrics: Map[MetricIdentity, MetricSnapshot] = Map((identity, underlyingRecorder.collect()))
+        new CustomMetricRecorder(RecordedValues, recorder)
+      }
     }
 
+  class CustomMetricRecorder(identity: MetricIdentity, underlyingRecorder: HdrRecorder)
+      extends MetricGroupRecorder {
+
     def record(value: Long): Unit = underlyingRecorder.record(value)
+
+    def collect: MetricGroupSnapshot = DefaultMetricGroupSnapshot(Map((identity, underlyingRecorder.collect())))
   }
 }

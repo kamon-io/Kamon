@@ -23,6 +23,7 @@ import scala.concurrent.duration._
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
 import kamon.metrics.Subscriptions.TickMetricSnapshot
+import kamon.metrics.MetricSnapshot.Measurement
 
 class CustomMetricSpec extends TestKitBase with WordSpecLike with Matchers {
   implicit lazy val system: ActorSystem = ActorSystem("actor-metrics-spec", ConfigFactory.parseString(
@@ -41,20 +42,36 @@ class CustomMetricSpec extends TestKitBase with WordSpecLike with Matchers {
 
   "the Kamon custom metrics support" should {
     "allow registering a custom metric with the Metrics extension" in {
-      val recorder = Kamon(Metrics).register(CustomMetric("test/sample-counter"), CustomMetric.withConfig(100, 2))
+      val recorder = Kamon(Metrics).register(CustomMetric("test/sample-counter"), CustomMetric.histogram(100, 2, Scale.Unit))
 
       recorder should be('defined)
     }
 
     "allow subscriptions to custom metrics using the default subscription protocol" in {
-      val recorder = Kamon(Metrics).register(CustomMetric("test/sample-counter"), CustomMetric.withConfig(100, 2))
-      recorder.map(_.record(100))
+      val recorder = Kamon(Metrics).register(CustomMetric("test/sample-counter"), CustomMetric.histogram(100, 2, Scale.Unit))
+
+      recorder.map { r ⇒
+        r.record(100)
+        r.record(15)
+        r.record(0)
+        r.record(50)
+      }
 
       Kamon(Metrics).subscribe(CustomMetric, "test/sample-counter", testActor)
 
-      println(within(5 seconds) {
-        expectMsgType[TickMetricSnapshot]
-      }.metrics(CustomMetric("test/sample-counter")))
+      val recordedValues = within(5 seconds) {
+        val snapshot = expectMsgType[TickMetricSnapshot]
+        snapshot.metrics(CustomMetric("test/sample-counter")).metrics(CustomMetric.RecordedValues)
+      }
+
+      recordedValues.min should equal(0)
+      recordedValues.max should equal(100)
+      recordedValues.numberOfMeasurements should equal(4)
+      recordedValues.measurements should contain allOf (
+        Measurement(0, 1),
+        Measurement(15, 1),
+        Measurement(50, 1),
+        Measurement(100, 1))
     }
   }
 
