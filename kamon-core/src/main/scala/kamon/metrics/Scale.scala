@@ -14,26 +14,18 @@
  * =========================================================================================
  */
 
-package kamon
+package kamon.metrics
 
-import scala.annotation.tailrec
-import com.typesafe.config.Config
+class Scale(val numericValue: Double) extends AnyVal
 
-package object metrics {
+object Scale {
+  val Nano = new Scale(1E-9)
+  val Micro = new Scale(1E-6)
+  val Milli = new Scale(1E-3)
+  val Unit = new Scale(1)
+  val Kilo = new Scale(1E3)
+  val Mega = new Scale(1E6)
+  val Giga = new Scale(1E9)
 
-  case class HdrPrecisionConfig(highestTrackableValue: Long, significantValueDigits: Int)
-
-  def extractPrecisionConfig(config: Config): HdrPrecisionConfig =
-    HdrPrecisionConfig(config.getLong("highest-trackable-value"), config.getInt("significant-value-digits"))
-
-  @tailrec def combineMaps[K, V](left: Map[K, V], right: Map[K, V])(valueMerger: (V, V) ⇒ V): Map[K, V] = {
-    if (right.isEmpty)
-      left
-    else {
-      val (key, rightValue) = right.head
-      val value = left.get(key).map(valueMerger(_, rightValue)).getOrElse(rightValue)
-
-      combineMaps(left.updated(key, value), right.tail)(valueMerger)
-    }
-  }
+  def convert(fromUnit: Scale, toUnit: Scale, value: Long): Double = (value * fromUnit.numericValue) / toUnit.numericValue
 }

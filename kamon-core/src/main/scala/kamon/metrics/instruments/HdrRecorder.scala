@@ -18,23 +18,21 @@ package org.HdrHistogram
 
 import java.util.concurrent.atomic.AtomicLongFieldUpdater
 import scala.annotation.tailrec
-import kamon.metrics.{ DefaultMetricSnapshot, MetricSnapshot, MetricRecorder }
-import com.typesafe.config.Config
-import org.HdrHistogram.HighDynamicRangeRecorder.Configuration
+import kamon.metrics.{ Scale, MetricSnapshot, MetricSnapshotLike, MetricRecorder }
 
 /**
  *  This implementation aims to be used for real time data collection where data snapshots are taken often over time.
  *  The snapshotAndReset() operation extracts all the recorded values from the histogram and resets the counts, but still
  *  leave it in a consistent state even in the case of concurrent modification while the snapshot is being taken.
  */
-class HighDynamicRangeRecorder(configuration: Configuration)
-    extends AtomicHistogram(1L, configuration.highestTrackableValue, configuration.significantValueDigits) with MetricRecorder {
+class HdrRecorder(highestTrackableValue: Long, significantValueDigits: Int, scale: Scale)
+    extends AtomicHistogram(1L, highestTrackableValue, significantValueDigits) with MetricRecorder {
 
-  import HighDynamicRangeRecorder.totalCountUpdater
+  import HdrRecorder.totalCountUpdater
 
   def record(value: Long): Unit = recordValue(value)
 
-  def collect(): MetricSnapshot = {
+  def collect(): MetricSnapshotLike = {
     val entries = Vector.newBuilder[MetricSnapshot.Measurement]
     val countsLength = counts.length()
 
@@ -66,21 +64,15 @@ class HighDynamicRangeRecorder(configuration: Configuration)
 
     while (!tryUpdateTotalCount) {}
 
-    DefaultMetricSnapshot(nrOfRecordings, entries.result())
+    MetricSnapshot(nrOfRecordings, scale, entries.result())
   }
 
 }
 
-object HighDynamicRangeRecorder {
+object HdrRecorder {
   val totalCountUpdater = AtomicLongFieldUpdater.newUpdater(classOf[AtomicHistogram], "totalCount")
 
-  def apply(configuration: Configuration): HighDynamicRangeRecorder = new HighDynamicRangeRecorder(configuration)
+  def apply(highestTrackableValue: Long, significantValueDigits: Int, scale: Scale): HdrRecorder =
+    new HdrRecorder(highestTrackableValue, significantValueDigits, scale)
 
-  case class Configuration(highestTrackableValue: Long, significantValueDigits: Int)
-
-  case object Configuration {
-    def fromConfig(config: Config): Configuration = {
-      Configuration(config.getLong("highest-trackable-value"), config.getInt("significant-value-digits"))
-    }
-  }
 }

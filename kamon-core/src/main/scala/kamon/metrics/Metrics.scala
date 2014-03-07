@@ -34,35 +34,30 @@ trait MetricIdentity {
   def tag: String
 }
 
-sealed trait MetricGroupRecorder {
+trait MetricGroupRecorder {
   def collect: MetricGroupSnapshot
 }
 
-trait MetricMultiGroupRecorder extends MetricGroupRecorder {
-  def record(identity: MetricIdentity, value: Long)
-}
-
-trait MetricSingleGroupRecorder extends MetricGroupRecorder {
-  def record(value: Long)
-}
-
 trait MetricGroupSnapshot {
-  def metrics: Map[MetricIdentity, MetricSnapshot]
+  def metrics: Map[MetricIdentity, MetricSnapshotLike]
 }
+
+case class DefaultMetricGroupSnapshot(metrics: Map[MetricIdentity, MetricSnapshotLike]) extends MetricGroupSnapshot
 
 trait MetricRecorder {
   def record(value: Long)
-  def collect(): MetricSnapshot
+  def collect(): MetricSnapshotLike
 }
 
-trait MetricSnapshot {
+trait MetricSnapshotLike {
   def numberOfMeasurements: Long
-  def measurementLevels: Vector[Measurement]
+  def scale: Scale
+  def measurements: Vector[Measurement]
 
-  def max: Long = measurementLevels.lastOption.map(_.value).getOrElse(0)
-  def min: Long = measurementLevels.headOption.map(_.value).getOrElse(0)
+  def max: Long = measurements.lastOption.map(_.value).getOrElse(0)
+  def min: Long = measurements.headOption.map(_.value).getOrElse(0)
 
-  def merge(that: MetricSnapshot): MetricSnapshot = {
+  def merge(that: MetricSnapshotLike): MetricSnapshotLike = {
     val mergedMeasurements = Vector.newBuilder[Measurement]
 
     @tailrec def go(left: Vector[Measurement], right: Vector[Measurement], totalNrOfMeasurements: Long): Long = {
@@ -96,21 +91,17 @@ trait MetricSnapshot {
       }
     }
 
-    val totalNrOfMeasurements = go(measurementLevels, that.measurementLevels, 0)
-    DefaultMetricSnapshot(totalNrOfMeasurements, mergedMeasurements.result())
+    val totalNrOfMeasurements = go(measurements, that.measurements, 0)
+    MetricSnapshot(totalNrOfMeasurements, scale, mergedMeasurements.result())
   }
 }
+
+case class MetricSnapshot(numberOfMeasurements: Long, scale: Scale, measurements: Vector[MetricSnapshot.Measurement]) extends MetricSnapshotLike
 
 object MetricSnapshot {
   case class Measurement(value: Long, count: Long) {
     def merge(that: Measurement) = Measurement(value, count + that.count)
   }
-}
-
-case class DefaultMetricSnapshot(numberOfMeasurements: Long, measurementLevels: Vector[MetricSnapshot.Measurement]) extends MetricSnapshot
-
-object DefaultMetricSnapshot {
-  val empty = DefaultMetricSnapshot(0, Vector.empty)
 }
 
 trait MetricGroupFactory {

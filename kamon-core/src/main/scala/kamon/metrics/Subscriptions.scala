@@ -22,7 +22,7 @@ import kamon.util.GlobPathFilter
 import scala.concurrent.duration.{ FiniteDuration, Duration }
 import java.util.concurrent.TimeUnit
 import kamon.Kamon
-import kamon.metrics.TickMetricSnapshotBuffer.FlushBuffer
+import kamon.metrics.TickMetricSnapshotBuffer.{ Combined, FlushBuffer }
 
 class Subscriptions extends Actor {
   import context.system
@@ -116,13 +116,13 @@ class TickMetricSnapshotBuffer(flushInterval: FiniteDuration, receiver: ActorRef
     super.postStop()
   }
 
-  def mergeMetricGroup(left: MetricGroupSnapshot, right: MetricGroupSnapshot) = new MetricGroupSnapshot {
-    val metrics = combineMaps(left.metrics, right.metrics)((l, r) ⇒ l.merge(r))
-  }
+  def mergeMetricGroup(left: MetricGroupSnapshot, right: MetricGroupSnapshot) = Combined(combineMaps(left.metrics, right.metrics)((l, r) ⇒ l.merge(r)))
 }
 
 object TickMetricSnapshotBuffer {
   case object FlushBuffer
+
+  case class Combined(metrics: Map[MetricIdentity, MetricSnapshotLike]) extends MetricGroupSnapshot
 
   def props(flushInterval: FiniteDuration, receiver: ActorRef): Props =
     Props[TickMetricSnapshotBuffer](new TickMetricSnapshotBuffer(flushInterval, receiver))

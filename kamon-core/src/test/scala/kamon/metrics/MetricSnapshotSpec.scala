@@ -38,31 +38,30 @@ class MetricSnapshotSpec extends WordSpec with Matchers {
       merged.min should be(1)
       merged.max should be(17)
       merged.numberOfMeasurements should be(200)
-      merged.measurementLevels.map(_.value) should contain inOrderOnly (1, 2, 4, 5, 7, 10, 17)
+      merged.measurements.map(_.value) should contain inOrderOnly (1, 2, 4, 5, 7, 10, 17)
     }
 
     "be able to merge with empty snapshots" in new SnapshotFixtures {
       snapshotA.merge(emptySnapshot) should be(snapshotA)
+      emptySnapshot.merge(snapshotA).merge(emptySnapshot) should be(snapshotA)
     }
 
   }
 
   trait SnapshotFixtures {
-    val emptySnapshot = DefaultMetricSnapshot(0, Vector.empty)
+    val emptySnapshot = MetricSnapshot(0, Scale.Unit, Vector.empty)
 
-    val snapshotA = DefaultMetricSnapshot(100, Vector(
+    val snapshotA = MetricSnapshot(100, Scale.Unit, Vector(
       Measurement(1, 3),
       Measurement(2, 15),
       Measurement(5, 68),
       Measurement(7, 13),
       Measurement(17, 1)))
 
-    val snapshotB = DefaultMetricSnapshot(100, Vector(
+    val snapshotB = MetricSnapshot(100, Scale.Unit, Vector(
       Measurement(2, 6),
       Measurement(4, 48),
       Measurement(5, 39),
       Measurement(10, 7)))
-
   }
-
 }

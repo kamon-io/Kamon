@@ -17,8 +17,8 @@
 package kamon.metrics
 
 import com.typesafe.config.Config
-import kamon.metrics.instruments.ContinuousHighDynamicRangeRecorder
-import org.HdrHistogram.HighDynamicRangeRecorder
+import kamon.metrics.instruments.ContinuousHdrRecorder
+import org.HdrHistogram.HdrRecorder
 
 case class ActorMetrics(name: String) extends MetricGroupIdentity {
   val category = ActorMetrics
@@ -32,23 +32,17 @@ object ActorMetrics extends MetricGroupCategory {
   case object TimeInMailbox extends MetricIdentity { val name, tag = "TimeInMailbox" }
 
   case class ActorMetricRecorder(processingTime: MetricRecorder, mailboxSize: MetricRecorder, timeInMailbox: MetricRecorder)
-      extends MetricMultiGroupRecorder {
-
-    def record(identity: MetricIdentity, value: Long): Unit = identity match {
-      case ProcessingTime ⇒ processingTime.record(value)
-      case MailboxSize    ⇒ mailboxSize.record(value)
-      case TimeInMailbox  ⇒ timeInMailbox.record(value)
-    }
+      extends MetricGroupRecorder {
 
     def collect: MetricGroupSnapshot = {
       ActorMetricSnapshot(processingTime.collect(), mailboxSize.collect(), timeInMailbox.collect())
     }
   }
 
-  case class ActorMetricSnapshot(processingTime: MetricSnapshot, mailboxSize: MetricSnapshot, timeInMailbox: MetricSnapshot)
+  case class ActorMetricSnapshot(processingTime: MetricSnapshotLike, mailboxSize: MetricSnapshotLike, timeInMailbox: MetricSnapshotLike)
       extends MetricGroupSnapshot {
 
-    def metrics: Map[MetricIdentity, MetricSnapshot] = Map(
+    val metrics: Map[MetricIdentity, MetricSnapshotLike] = Map(
       (ProcessingTime -> processingTime),
       (MailboxSize -> mailboxSize),
       (TimeInMailbox -> timeInMailbox))
@@ -58,17 +52,16 @@ object ActorMetrics extends MetricGroupCategory {
     type GroupRecorder = ActorMetricRecorder
 
     def create(config: Config): ActorMetricRecorder = {
-      import HighDynamicRangeRecorder.Configuration
-
       val settings = config.getConfig("kamon.metrics.precision.actor")
-      val processingTimeHdrConfig = Configuration.fromConfig(settings.getConfig("processing-time"))
-      val mailboxSizeHdrConfig = Configuration.fromConfig(settings.getConfig("mailbox-size"))
-      val timeInMailboxHdrConfig = Configuration.fromConfig(settings.getConfig("time-in-mailbox"))
+
+      val processingTimeConfig = extractPrecisionConfig(settings.getConfig("processing-time"))
+      val mailboxSizeConfig = extractPrecisionConfig(settings.getConfig("mailbox-size"))
+      val timeInMailboxConfig = extractPrecisionConfig(settings.getConfig("time-in-mailbox"))
 
       new ActorMetricRecorder(
-        HighDynamicRangeRecorder(processingTimeHdrConfig),
-        ContinuousHighDynamicRangeRecorder(mailboxSizeHdrConfig),
-        HighDynamicRangeRecorder(timeInMailboxHdrConfig))
+        HdrRecorder(processingTimeConfig.highestTrackableValue, processingTimeConfig.significantValueDigits, Scale.Nano),
+        ContinuousHdrRecorder(mailboxSizeConfig.highestTrackableValue, mailboxSizeConfig.significantValueDigits, Scale.Unit),
+        HdrRecorder(timeInMailboxConfig.highestTrackableValue, timeInMailboxConfig.significantValueDigits, Scale.Nano))
     }
   }
 }
