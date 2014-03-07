@@ -16,27 +16,27 @@
 
 package kamon
 
-import kamon.metrics.MetricSnapshot
+import kamon.metrics.{ Scale, MetricSnapshotLike }
 
 package object newrelic {
 
-  def toNewRelicMetric(name: String, scope: Option[String], snapshot: MetricSnapshot): NewRelic.Metric = {
+  def toNewRelicMetric(scale: Scale)(name: String, scope: Option[String], snapshot: MetricSnapshotLike): NewRelic.Metric = {
     var total: Double = 0D
     var sumOfSquares: Double = 0D
 
-    val measurementLevels = snapshot.measurementLevels.iterator
+    val measurementLevels = snapshot.measurements.iterator
     while (measurementLevels.hasNext) {
       val level = measurementLevels.next()
 
       // NewRelic metrics need to be scaled to seconds.
-      val scaledValue = level.value / 1E9D
+      val scaledValue = Scale.convert(snapshot.scale, scale, level.value)
 
       total += scaledValue
       sumOfSquares += scaledValue * scaledValue
     }
 
-    val scaledMin = snapshot.min / 1E9D
-    val scaledMax = snapshot.max / 1E9D
+    val scaledMin = Scale.convert(snapshot.scale, scale, snapshot.min)
+    val scaledMax = Scale.convert(snapshot.scale, scale, snapshot.max)
 
     NewRelic.Metric(name, scope, snapshot.numberOfMeasurements, total, total, scaledMin, scaledMax, sumOfSquares)
   }

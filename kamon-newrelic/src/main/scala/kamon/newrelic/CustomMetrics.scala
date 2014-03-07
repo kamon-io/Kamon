@@ -16,26 +16,18 @@
 
 package kamon.newrelic
 
-import akka.actor.{ Props, ActorRef, Actor }
-import kamon.metrics.Subscriptions.TickMetricSnapshot
-import kamon.newrelic.MetricTranslator.TimeSliceMetrics
+import akka.actor.Actor
+import kamon.metrics._
 
-class MetricTranslator(receiver: ActorRef) extends Actor
-    with WebTransactionMetrics with CustomMetrics {
+trait CustomMetrics {
+  self: Actor ⇒
 
-  def receive = {
-    case TickMetricSnapshot(from, to, metrics) ⇒
-      val fromInSeconds = (from / 1E3).toInt
-      val toInSeconds = (to / 1E3).toInt
-      val allMetrics = collectWebTransactionMetrics(metrics) ++ collectCustomMetrics(metrics)
-
-      receiver ! TimeSliceMetrics(fromInSeconds, toInSeconds, allMetrics)
+  def collectCustomMetrics(metrics: Map[MetricGroupIdentity, MetricGroupSnapshot]): Seq[NewRelic.Metric] = {
+    metrics.collect {
+      case (CustomMetric(name), groupSnapshot) ⇒
+        groupSnapshot.metrics collect {
+          case (_, snapshot) ⇒ toNewRelicMetric(Scale.Unit)(s"Custom/$name", None, snapshot)
+        }
+    }.flatten.toSeq
   }
-
-}
-
-object MetricTranslator {
-  case class TimeSliceMetrics(from: Long, to: Long, metrics: Seq[NewRelic.Metric])
-
-  def props(receiver: ActorRef): Props = Props(new MetricTranslator(receiver))
 }

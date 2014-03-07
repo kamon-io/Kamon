@@ -18,20 +18,21 @@ package kamon.newrelic
 import akka.actor._
 import scala.concurrent.duration._
 import kamon.Kamon
-import kamon.metrics.{ TickMetricSnapshotBuffer, TraceMetrics, Metrics }
+import kamon.metrics.{ CustomMetric, TickMetricSnapshotBuffer, TraceMetrics, Metrics }
 import kamon.metrics.Subscriptions.TickMetricSnapshot
 import akka.actor
 
 class NewRelicExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   val config = system.settings.config.getConfig("kamon.newrelic")
 
-  val manager: ActorRef = system.actorOf(Props[NewRelicManager], "kamon-newrelic")
+  val metricsListener = system.actorOf(Props[NewRelicMetricsListener], "kamon-newrelic")
   val apdexT: Double = config.getMilliseconds("apdexT") / 1E3 // scale to seconds.
 
-  Kamon(Metrics)(system).subscribe(TraceMetrics, "*", manager, permanently = true)
+  Kamon(Metrics)(system).subscribe(TraceMetrics, "*", metricsListener, permanently = true)
+  Kamon(Metrics)(system).subscribe(CustomMetric, "*", metricsListener, permanently = true)
 }
 
-class NewRelicManager extends Actor with ActorLogging {
+class NewRelicMetricsListener extends Actor with ActorLogging {
   log.info("Starting the Kamon(NewRelic) extension")
 
   val agent = context.actorOf(Props[Agent], "agent")

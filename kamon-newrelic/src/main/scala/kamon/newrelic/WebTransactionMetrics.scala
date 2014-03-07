@@ -25,8 +25,10 @@ trait WebTransactionMetrics {
   self: Actor ⇒
 
   def collectWebTransactionMetrics(metrics: Map[MetricGroupIdentity, MetricGroupSnapshot]): Seq[NewRelic.Metric] = {
-    val apdexBuilder = new ApdexBuilder("Apdex", None, (NewRelic)(context.system).apdexT)
-    var accumulatedHttpDispatcher: MetricSnapshot = DefaultMetricSnapshot.empty
+    val apdexBuilder = new ApdexBuilder("Apdex", None, Kamon(NewRelic)(context.system).apdexT)
+
+    // Trace metrics are recorded in nanoseconds.
+    var accumulatedHttpDispatcher: MetricSnapshotLike = MetricSnapshot(0, Scale.Nano, Vector.empty)
 
     val webTransactionMetrics = metrics.collect {
       case (TraceMetrics(name), groupSnapshot) ⇒
@@ -34,14 +36,15 @@ trait WebTransactionMetrics {
         groupSnapshot.metrics collect {
           case (ElapsedTime, snapshot) ⇒
             accumulatedHttpDispatcher = accumulatedHttpDispatcher.merge(snapshot)
-            snapshot.measurementLevels.foreach(level ⇒ apdexBuilder.record(level.value / 1E9D, level.count))
+            snapshot.measurements.foreach(level ⇒
+              apdexBuilder.record(Scale.convert(snapshot.scale, Scale.Unit, level.value), level.count))
 
-            toNewRelicMetric(s"WebTransaction/Custom/$name", None, snapshot)
+            toNewRelicMetric(Scale.Unit)(s"WebTransaction/Custom/$name", None, snapshot)
         }
     }
 
-    val httpDispatcher = toNewRelicMetric("HttpDispatcher", None, accumulatedHttpDispatcher)
-    val webTransaction = toNewRelicMetric("WebTransaction", None, accumulatedHttpDispatcher)
+    val httpDispatcher = toNewRelicMetric(Scale.Unit)("HttpDispatcher", None, accumulatedHttpDispatcher)
+    val webTransaction = toNewRelicMetric(Scale.Unit)("WebTransaction", None, accumulatedHttpDispatcher)
 
     Seq(httpDispatcher, webTransaction, apdexBuilder.build) ++ webTransactionMetrics.flatten.toSeq
   }
