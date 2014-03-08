@@ -3,6 +3,7 @@
 <aspectj>
   <aspects>
     <aspect name="kamon.play.instrumentation.RequestInstrumentation"/>
+    <aspect name="kamon.play.instrumentation.WSInstrumentation"/>
   </aspects>
 
    <weaver options="-verbose -showWeaveInfo">

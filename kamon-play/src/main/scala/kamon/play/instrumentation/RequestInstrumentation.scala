@@ -30,7 +30,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 @Aspect
 class RequestInstrumentation {
 
-  @DeclareMixin("play.api.mvc.Request || play.api.mvc.WrappedRequest || play.api.test.FakeRequest")
+  @DeclareMixin("play.api.mvc.RequestHeader || play.api.test.FakeRequest")
   def mixinContextAwareNewRequest: TraceContextAware = TraceContextAware.default
 
   @Pointcut("execution(* play.api.GlobalSettings+.onStart(*)) && args(application)")

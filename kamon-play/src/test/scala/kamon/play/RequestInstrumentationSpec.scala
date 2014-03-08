@@ -75,7 +75,12 @@ class RequestInstrumentationSpec extends PlaySpecification {
   private val expectedToken = Some(traceTokenValue)
   private val traceTokenHeader = (traceTokenHeaderName -> traceTokenValue)
 
-  "the request instrumentation" should {
+  "the Request instrumentation" should {
+    "respond to the asyncResult action with X-Trace-Token" in new WithServer(appWithRoutes) {
+      val Some(result) = route(FakeRequest(GET, "/asyncResult").withHeaders(traceTokenHeader))
+      header(traceTokenHeaderName, result) must equalTo(expectedToken)
+    }
+
     "respond to the async action with X-Trace-Token" in new WithServer(appWithRoutes) {
       val Some(result) = route(FakeRequest(GET, "/async").withHeaders(traceTokenHeader))
       header(traceTokenHeaderName, result) must equalTo(expectedToken)
