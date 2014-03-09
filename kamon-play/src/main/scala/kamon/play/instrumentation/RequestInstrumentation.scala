@@ -53,16 +53,13 @@ class RequestInstrumentation {
   def onError(request: TraceContextAware, ex: Throwable): Unit = {}
 
   @Around("onError(request, ex)")
-  def aroundOnError(pjp: ProceedingJoinPoint, request: TraceContextAware, ex: Throwable): Any = {
-    val simpleResult = request.traceContext match {
-      case None ⇒ pjp.proceed()
-      case Some(ctx) ⇒ {
-        val actorSystem = ctx.system
-        Kamon(Play)(actorSystem).publishErrorMessage(actorSystem, ex.getMessage, ex)
-        pjp.proceed()
-      }
+  def aroundOnError(pjp: ProceedingJoinPoint, request: TraceContextAware, ex: Throwable): Any = request.traceContext match {
+    case None ⇒ pjp.proceed()
+    case Some(ctx) ⇒ {
+      val actorSystem = ctx.system
+      Kamon(Play)(actorSystem).publishErrorMessage(actorSystem, ex.getMessage, ex)
+      pjp.proceed()
     }
-    simpleResult
   }
 
   private[this] val kamonRequestFilter = Filter { (nextFilter, requestHeader) ⇒
