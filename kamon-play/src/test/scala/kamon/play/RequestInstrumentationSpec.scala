@@ -1,5 +1,5 @@
 /* ===================================================
- * Copyright © 2013 2014 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2014 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -73,7 +73,7 @@ class RequestInstrumentationSpec extends PlaySpecification {
   private val traceTokenValue = "kamon-trace-token-test"
   private val traceTokenHeaderName = "X-Trace-Token"
   private val expectedToken = Some(traceTokenValue)
-  private val traceTokenHeader = (traceTokenHeaderName -> traceTokenValue)
+  private val traceTokenHeader = traceTokenHeaderName -> traceTokenValue
 
   "the Request instrumentation" should {
     "respond to the asyncResult action with X-Trace-Token" in new WithServer(appWithRoutes) {
@@ -81,28 +81,28 @@ class RequestInstrumentationSpec extends PlaySpecification {
       header(traceTokenHeaderName, result) must equalTo(expectedToken)
     }
 
-    "respond to the async action with X-Trace-Token" in new WithServer(appWithRoutes) {
+    "respond to the Async Action with X-Trace-Token" in new WithServer(appWithRoutes) {
       val Some(result) = route(FakeRequest(GET, "/async").withHeaders(traceTokenHeader))
       header(traceTokenHeaderName, result) must equalTo(expectedToken)
     }
 
-    "respond to the notFound action with X-Trace-Token" in new WithServer(appWithRoutes) {
+    "respond to the NotFound Action with X-Trace-Token" in new WithServer(appWithRoutes) {
       val Some(result) = route(FakeRequest(GET, "/notFound").withHeaders(traceTokenHeader))
       header(traceTokenHeaderName, result) must equalTo(expectedToken)
     }
 
-    "respond to the default action with X-Trace-Token" in new WithServer(appWithRoutes) {
+    "respond to the Default Action with X-Trace-Token" in new WithServer(appWithRoutes) {
       val Some(result) = route(FakeRequest(GET, "/default").withHeaders(traceTokenHeader))
       header(traceTokenHeaderName, result) must equalTo(expectedToken)
     }
 
-    "respond to the redirect action with X-Trace-Token" in new WithServer(appWithRoutes) {
+    "respond to the Redirect Action with X-Trace-Token" in new WithServer(appWithRoutes) {
       val Some(result) = route(FakeRequest(GET, "/redirect").withHeaders(traceTokenHeader))
       header("Location", result) must equalTo(Some("/redirected"))
       header(traceTokenHeaderName, result) must equalTo(expectedToken)
     }
 
-    "respond to the async action with X-Trace-Token and the renamed trace" in new WithServer(appWithRoutes) {
+    "respond to the Async Action with X-Trace-Token and the renamed trace" in new WithServer(appWithRoutes) {
       val Some(result) = route(FakeRequest(GET, "/async-renamed").withHeaders(traceTokenHeader))
       header(traceTokenHeaderName, result) must equalTo(expectedToken)
     }

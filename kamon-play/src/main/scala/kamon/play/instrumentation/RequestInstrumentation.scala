@@ -1,5 +1,5 @@
 /* ===================================================
- * Copyright © 2013 2014 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2014 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package kamon.play.instrumentation
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import kamon.trace.{ TraceRecorder, TraceContextAware }
 import kamon.Kamon
 import kamon.play.Play
@@ -25,12 +26,11 @@ import akka.actor.ActorSystem
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
 import scala.Some
-import scala.concurrent.ExecutionContext.Implicits.global
 
 @Aspect
 class RequestInstrumentation {
 
-  @DeclareMixin("play.api.mvc.RequestHeader || play.api.test.FakeRequest")
+  @DeclareMixin("play.api.mvc.RequestHeader")
   def mixinContextAwareNewRequest: TraceContextAware = TraceContextAware.default
 
   @Pointcut("execution(* play.api.GlobalSettings+.onStart(*)) && args(application)")
@@ -47,6 +47,22 @@ class RequestInstrumentation {
   @Around("doFilter(next)")
   def afterDoFilter(pjp: ProceedingJoinPoint, next: EssentialAction): Any = {
     Filters(pjp.proceed(Array(next)).asInstanceOf[EssentialAction], kamonRequestFilter)
+  }
+
+  @Pointcut("execution(* play.api.GlobalSettings+.onError(..)) && args(request, ex)")
+  def onError(request: TraceContextAware, ex: Throwable): Unit = {}
+
+  @Around("onError(request, ex)")
+  def aroundOnError(pjp: ProceedingJoinPoint, request: TraceContextAware, ex: Throwable): Any = {
+    val simpleResult = request.traceContext match {
+      case None ⇒ pjp.proceed()
+      case Some(ctx) ⇒ {
+        val actorSystem = ctx.system
+        Kamon(Play)(actorSystem).publishErrorMessage(actorSystem, ex.getMessage, ex)
+        pjp.proceed()
+      }
+    }
+    simpleResult
   }
 
   private[this] val kamonRequestFilter = Filter { (nextFilter, requestHeader) ⇒

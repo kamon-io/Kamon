@@ -17,25 +17,22 @@
 package kamon.play
 
 import play.api.test._
-import play.api.mvc.{ Results, Action }
+import play.api.mvc.Action
 import play.api.mvc.Results.Ok
 import scala.Some
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 import org.junit.runner.RunWith
 import org.specs2.runner.JUnitRunner
-import play.api.mvc.AsyncResult
 import play.api.test.FakeApplication
-import kamon.play.action.TraceName
 import play.api.libs.ws.WS
 
+import scala.util._
 @RunWith(classOf[JUnitRunner])
 class WSInstrumentationSpec extends PlaySpecification {
 
   System.setProperty("config.file", "./kamon-play/src/test/resources/conf/application.conf")
 
   val appWithRoutes = FakeApplication(withRoutes = {
-
     case ("GET", "/async") ⇒
       Action.async {
         WS.url("http://www.google.com").get().map {
@@ -46,14 +43,13 @@ class WSInstrumentationSpec extends PlaySpecification {
   })
 
   "the WS instrumentation" should {
-    "respond to the async action" in new WithServer(appWithRoutes) {
+    "respond to the Async Action and complete the WS request" in new WithServer(appWithRoutes) {
       val Some(result) = route(FakeRequest(GET, "/async"))
-      println("-902425309-53095-5  " + result)
       result.onComplete {
-        case scala.util.Success(r) ⇒ println(r)
-        case scala.util.Failure(t) ⇒ println(t)
+        case Success(result)    ⇒ result.header.status must equalTo(200)
+        case Failure(throwable) ⇒ failure(throwable.getMessage)
       }
-      Thread.sleep(3000)
+      Thread.sleep(2000) //wait to complete the future
     }
   }
 }

@@ -1,5 +1,5 @@
 /* ===================================================
- * Copyright © 2013 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2014 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,21 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  * ========================================================== */
-package kamon
 
-import akka.actor._
-import akka.event.Logging.{ Info, Error }
+package kamon.play.instrumentation
 
-object Kamon {
-  trait Extension extends akka.actor.Extension {
-    def publishInfoMessage(system: ActorSystem, msg: String): Unit = {
-      system.eventStream.publish(Info("", classOf[Extension], msg))
-    }
-    def publishErrorMessage(system: ActorSystem, msg: String, cause: Throwable): Unit = {
-      system.eventStream.publish(new Error(cause, "", classOf[Extension], msg))
-    }
-  }
+import org.aspectj.lang.annotation.{ DeclareMixin, Aspect }
+import kamon.trace.TraceContextAware
 
-  def apply[T <: Extension](key: ExtensionId[T])(implicit system: ActorSystem): T = key(system)
+@Aspect
+class FakeRequestIntrumentation {
+  @DeclareMixin("play.api.test.FakeRequest")
+  def mixinContextAwareNewRequest: TraceContextAware = TraceContextAware.default
 }
-
