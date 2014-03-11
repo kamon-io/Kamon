@@ -30,7 +30,7 @@ import scala.Some
 @Aspect
 class RequestInstrumentation {
 
-  @DeclareMixin("play.api.mvc.RequestHeader")
+  @DeclareMixin("play.api.mvc.RequestHeader$$anon$4")
   def mixinContextAwareNewRequest: TraceContextAware = TraceContextAware.default
 
   @Pointcut("execution(* play.api.GlobalSettings+.onStart(*)) && args(application)")
