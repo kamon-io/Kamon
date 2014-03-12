@@ -27,12 +27,10 @@ package object newrelic {
     val measurementLevels = snapshot.measurements.iterator
     while (measurementLevels.hasNext) {
       val level = measurementLevels.next()
-
-      // NewRelic metrics need to be scaled to seconds.
       val scaledValue = Scale.convert(snapshot.scale, scale, level.value)
 
-      total += scaledValue
-      sumOfSquares += scaledValue * scaledValue
+      total += scaledValue * level.count
+      sumOfSquares += (scaledValue * scaledValue) * level.count
     }
 
     val scaledMin = Scale.convert(snapshot.scale, scale, snapshot.min)
