@@ -93,8 +93,5 @@ class RequestInstrumentation {
     } else None
 
     TraceRecorder.start(defaultTraceName, token)(system)
-
-    //Necessary to force initialization of traceContext when initiating the request.
-    requestHeader.asInstanceOf[TraceContextAware].traceContext
   }
 }
