@@ -3,37 +3,40 @@ layout: default
 title: Kamon - Tools for Reactive Applications Monitoring
 ---
 
-<div class="jumbotron">
-  <div class="container">
-    <div class="row">
-      <div class="col-sm-3">
-        <img class="img-responsive" src="/assets/img/kamon-verde-256x256.png">
-      </div>
-      <div class="col-sm-7">
-        <h1><strong>Kamon</strong></h1>
-        <p>Kamon is a set of tools that will help you monitor your reactive applications.</p>
-        <p><a type="button" href="/get-started" class="btn btn-success">Get Started</a></p>
-      </div>
+<div class="container">
+    <div class="jumbotron">
+        <div class="container">
+            <div class="row">
+                <div class="col-sm-3">
+                    <img class="img-responsive" src="/assets/img/kamon-verde-256x256.png">
+                </div>
+                <div class="col-sm-7">
+                    <h1><strong>Kamon</strong></h1>
+                    <p>Kamon is a set of tools that helps you to get metrics out of your reactive applications.</p>
+                    <p><a type="button" href="/get-started" class="btn btn-success">Get Started</a></p>
+                </div>
+            </div>
+        </div>
     </div>
 
-
-
+  <div class="row">
+    <p class="alert alert-info"><strong>We need your help!</strong> Our site is under construction, if you came here looking
+    for info and couldn't find what you are looking for please drop us a line on the <a href="https://groups.google.com/forum/#!forum/kamon-user">mailing list</a>,
+    raise a issue on <a href="https://github.com/kamon-io/Kamon">github</a> or just let us know at <a href="https://twitter.com/kamonteam">twitter</a>,
+    we are here to help! Hopefully next time you come there will be more info here :D. </p>
   </div>
-</div>
-
-<div class="container">
   <!-- Example row of columns -->
   <div class="row">
     <div class="col-sm-4">
       <h3><i class="fa fa-users"></i> Akka <small>actors metrics and tracing</small></h3>
 
-      <p>Kamon offers a wide set of metrics related to Akka Toolkit, such as:
+      <p>Be prepared to get metrics of:
           <ul>
-            <li>Messages rates</li>
-            <li>Actor mailbox queue size</li>
-            <li>Thread pools health</li>
-            <li>Actor hierarchies</li>
-            <li>Message Tracing</li>
+            <li>Message processing times</li>
+            <li>Time waiting in mailbox</li>
+            <li>Mailbox sizes</li>
+            <li>Message flow tracing</li>
+            <li>Dispatchers health <span class="label label-info">soon</span></li>
           </ul>
       </p>
 
@@ -42,12 +45,11 @@ title: Kamon - Tools for Reactive Applications Monitoring
 
     <div class="col-sm-4">
       <h3><i class="fa fa-cogs"></i> Spray <small>server/client tracing</small></h3>
-	      <p>The Spray module contains a number of directives that allow do things like obtain in each incoming request the UOW, also offers a set of real time metrics in order to know the status of the application, in summary:
-	<ul>
-	    <li>Directives</li>
-            <li>RPM</li>
-            <li>Request-Response Latency</li>
-            <li>UOW</li>
+	      <p>Kamon already understands when a request starts and ends in a Spray application, you will get:
+	    <ul>
+	        <li>Processing time for incoming requests</li>
+            <li>spray-client request metrics</li>
+            <li>Automatic trace token propagation</li>
         </ul>
       </p>
 
@@ -57,11 +59,13 @@ title: Kamon - Tools for Reactive Applications Monitoring
     <div class="col-sm-4">
       <h3><i class="fa fa-bar-chart-o"></i> NewRelic <small>Reporting</small></h3>
 
-      <p>Through New Relic integration, developers can easily monitor their applications metrics like:
+      <p>If you are using NewRelic, Kamon can get all your metrics there:
         <ul>
-            <li>External Services</li>
-            <li>Errors Rates</li>
-            <li>Apdex Score</li>
+            <li>Web transactions</li>
+            <li>External services <span class="label label-info">soon</span></li>
+            <li>Errors rates</li>
+            <li>Apdex score</li>
+            <li>Custom metrics</li>
         </ul>
       </p>
 
