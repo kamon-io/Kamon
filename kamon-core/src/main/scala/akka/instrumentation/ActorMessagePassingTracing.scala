@@ -22,7 +22,6 @@ import akka.dispatch.{ Envelope, MessageDispatcher }
 import kamon.trace._
 import kamon.metrics.{ ActorMetrics, Metrics }
 import kamon.Kamon
-import kamon.trace.TraceContext
 import kamon.metrics.ActorMetrics.ActorMetricRecorder
 
 @Aspect("perthis(actorCellCreation(*, *, *, *, *))")
@@ -45,7 +44,7 @@ class BehaviourInvokeTracing {
   def invokingActorBehaviourAtActorCell(cell: ActorCell, envelope: Envelope) = {}
 
   @Around("invokingActorBehaviourAtActorCell(cell, envelope)")
-  def aroundBehaviourInvoke(pjp: ProceedingJoinPoint, cell: ActorCell, envelope: Envelope): Unit = {
+  def aroundBehaviourInvoke(pjp: ProceedingJoinPoint, cell: ActorCell, envelope: Envelope): Any = {
     val timestampBeforeProcessing = System.nanoTime()
     val contextAndTimestamp = envelope.asInstanceOf[TraceContextAware]
 

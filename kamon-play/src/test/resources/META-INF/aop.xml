@@ -5,7 +5,7 @@
     <aspect name="kamon.play.instrumentation.FakeRequestIntrumentation"/>
   </aspects>
 
-   <weaver options="-verbose -showWeaveInfo">
+   <weaver>
        <include within="play.api..*"/>
    </weaver>
 </aspectj>

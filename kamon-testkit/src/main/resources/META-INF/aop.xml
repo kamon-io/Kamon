@@ -6,7 +6,7 @@
         <aspect name="akka.testkit.TestProbeInstrumentation"/>
     </aspects>
 
-    <weaver options="-verbose -showWeaveInfo">
+    <weaver>
         <include within="akka..*"/>
     </weaver>
 

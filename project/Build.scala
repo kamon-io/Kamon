@@ -21,7 +21,7 @@ object Build extends Build {
     .settings(aspectJSettings: _*)
     .settings(
       libraryDependencies ++=
-        compile(akkaActor, aspectJ, hdrHistogram) ++
+        compile(akkaActor, aspectJ, aspectjWeaver, hdrHistogram) ++
         provided(logback) ++
         test(scalatest, akkaTestKit, sprayTestkit, akkaSlf4j, logback))
 
@@ -33,7 +33,7 @@ object Build extends Build {
     .settings(
       libraryDependencies ++=
         compile(akkaActor, aspectJ, sprayCan, sprayClient, sprayRouting) ++
-        test(scalatest, akkaTestKit, sprayTestkit))
+        test(scalatest, akkaTestKit, sprayTestkit, slf4Api, slf4nop))
     .dependsOn(kamonCore, kamonTestkit)
 
 
@@ -44,7 +44,7 @@ object Build extends Build {
     .settings(
       libraryDependencies ++=
         compile(aspectJ, sprayCan, sprayClient, sprayRouting, sprayJson, sprayJsonLenses, newrelic, snakeYaml) ++
-        test(scalatest, akkaTestKit, sprayTestkit))
+        test(scalatest, akkaTestKit, sprayTestkit, slf4Api, slf4nop))
     .dependsOn(kamonCore)
 
 
@@ -69,7 +69,7 @@ object Build extends Build {
   lazy val kamonTestkit = Project("kamon-testkit", file("kamon-testkit"))
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
-    .settings(libraryDependencies ++= compile(akkaActor, akkaTestKit))
+    .settings(libraryDependencies ++= compile(akkaActor, akkaTestKit) ++ test(slf4Api, slf4nop))
     .dependsOn(kamonCore)
 
 
@@ -77,7 +77,7 @@ object Build extends Build {
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
     .settings(aspectJSettings: _*)
-    .settings(libraryDependencies ++= compile(playTest, aspectJ) ++ test(playTest))
+    .settings(libraryDependencies ++= compile(playTest, aspectJ) ++ test(playTest, slf4Api))
     .dependsOn(kamonCore)
 
 

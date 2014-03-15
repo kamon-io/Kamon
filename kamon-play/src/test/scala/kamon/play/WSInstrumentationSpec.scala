@@ -25,8 +25,10 @@ import org.junit.runner.RunWith
 import org.specs2.runner.JUnitRunner
 import play.api.test.FakeApplication
 import play.api.libs.ws.WS
-
 import scala.util._
+import scala.concurrent.Await
+import scala.concurrent.duration._
+
 @RunWith(classOf[JUnitRunner])
 class WSInstrumentationSpec extends PlaySpecification {
 
@@ -34,11 +36,19 @@ class WSInstrumentationSpec extends PlaySpecification {
 
   val appWithRoutes = FakeApplication(withRoutes = {
     case ("GET", "/async") ⇒
-      Action.async {
-        WS.url("http://www.google.com").get().map {
-          response ⇒
-            Ok(response.toString())
+      Action {
+        val request = WS.url("http://maps.googleapis.com/maps/api/geocode/json?address=China&sensor=true").get()
+
+        val future = request map {
+          response ⇒ (response.json \\ "location")
         }
+
+        val result = Await.result(future, 10 seconds).asInstanceOf[List[play.api.libs.json.JsObject]]
+
+        val latitude = (result(0) \\ "lat")(0).toString
+        val longitude = (result(0) \\ "lng")(0).toString
+
+        Ok(latitude + " " + longitude)
       }
   })
 

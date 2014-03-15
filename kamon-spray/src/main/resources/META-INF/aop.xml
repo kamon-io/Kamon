@@ -9,7 +9,7 @@
     <aspect name="spray.can.client.ClientRequestInstrumentation"/>
   </aspects>
 
-  <weaver options="-verbose -showWeaveInfo">
+  <weaver>
     <include within="spray.can..*"/>
   </weaver>
 </aspectj>
