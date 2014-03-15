@@ -17,7 +17,7 @@
     <aspect name="akka.instrumentation.AskPatternTracing"/>
   </aspects>
 
-  <weaver options="-verbose -showWeaveInfo">
+  <weaver options="-XmessageHandlerClass:kamon.weaver.logging.KamonWeaverMessageHandler">
     <include within="scala.concurrent..*"/>
     <include within="akka..*"/>
     <include within="spray..*"/>
