@@ -2,8 +2,10 @@
 layout: default
 ---
 <h2>{{ page.title }}</h2>
-<p class="meta">{{ page.date | date_to_string }}</p>
+<small>{{ page.date | date_to_string }}</small>
 
 <div class="post">
+  <hr>
   {{ content }}
 </div>
+{% include disqus.html %}
