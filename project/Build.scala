@@ -84,6 +84,12 @@ object Build extends Build {
   lazy val site = Project("site", file("site"))
     .settings(basicSettings: _*)
     .settings(siteSettings: _*)
+    .settings(aspectJSettings: _*)
+    .dependsOn(kamonCore)
+    .settings(
+      libraryDependencies ++=
+        compile(akkaSlf4j, logback) ++
+        test(scalatest, akkaTestKit))
 
 
   val noPublishing = Seq(publish := (), publishLocal := ())

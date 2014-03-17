@@ -36,6 +36,11 @@ body {
   margin: 10px 0;
 }
 
+.container-fluid {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
 #github-logo {
   padding-bottom: 6px;
 }
@@ -59,4 +64,6 @@ img[alt=newrelic] { width: 100%; }
   background-image: none !important;
 }
 
-
+.highlight table {
+  width: 100%;
+}
