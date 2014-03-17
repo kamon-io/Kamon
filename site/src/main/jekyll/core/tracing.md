@@ -88,8 +88,8 @@ has become a no brainer: each `TraceContext` created by Kamon gets a unique toke
 patterns (the first value between square brackets) and with that small but important piece of information the relation
 between each log line is clear.
 
-Just by logging the trace token you get a lot of information, refer to the logging section to learn how to log the trace
-token in your application.
+Just by logging the trace token you can get a lot of visibility and coherence in the information available on your logs,
+please  refer to the [logging](../logging/) section to learn how to include the trace token in your logs.
 
 
 Rules for `TraceContext` Propagation
