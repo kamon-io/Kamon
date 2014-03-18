@@ -34,8 +34,8 @@ libraryDependencies += "kamon" % "kamon-core" % "0.0.14"
 
 Additionally you can add any modules you want to your app:
 
-- kamon-core
-- kamon-spray
+- kamon-core (only compatible with Akka 2.2.3)
+- kamon-spray (only compatible with Spray 1.2.0)
 - kamon-newrelic
 - kamon-dashboard (coming soon)
 
