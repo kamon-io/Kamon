@@ -1,10 +1,6 @@
 require 'pygments'
 require 'fileutils'
 require 'digest/md5'
-#require 'colorator'
-
-PYGMENTS_CACHE_DIR = File.expand_path('../../.pygments-cache', __FILE__)
-FileUtils.mkdir_p(PYGMENTS_CACHE_DIR)
 
 module Octopress
   module Pygments

@@ -1,15 +1,14 @@
 import sbt._
 import Keys._
 
-object Build extends Build {
+object Projects extends Build {
   import AspectJ._
-  import NewRelic._
   import Settings._
   import Site._
   import Dependencies._
 
   lazy val root = Project("root", file("."))
-    .aggregate(kamonCore, kamonSpray, kamonNewrelic, kamonPlayground, kamonDashboard, kamonTestkit, kamonPlay)
+    .aggregate(kamonCore, kamonSpray, kamonNewrelic, kamonPlayground, kamonDashboard, kamonTestkit, kamonPlay, site)
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
     .settings(noPublishing: _*)
@@ -51,8 +50,6 @@ object Build extends Build {
   lazy val kamonPlayground = Project("kamon-playground", file("kamon-playground"))
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
-    .settings(revolverSettings: _*)
-    .settings(newrelicSettings: _*)
     .settings(noPublishing: _*)
     .settings(
       libraryDependencies ++=

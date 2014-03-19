@@ -3,9 +3,8 @@ import sbt._
 object Dependencies {
 
   val resolutionRepos = Seq(
-              "spray repo"  at "http://repo.spray.io/",
-              "spray nightlies repo"  at "http://nightlies.spray.io",
-              "typesafe repo" at "http://repo.typesafe.com/typesafe/releases/"
+       "spray repo" at "http://repo.spray.io/",
+    "typesafe repo" at "http://repo.typesafe.com/typesafe/releases/"
   )
 
   val sprayVersion    = "1.2.0"
