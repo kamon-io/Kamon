@@ -24,20 +24,20 @@ import kamon.metrics.{ ActorMetrics, Metrics }
 import kamon.Kamon
 import kamon.metrics.ActorMetrics.ActorMetricRecorder
 
-@Aspect("perthis(actorCellCreation(*, *, *, *, *))")
+@Aspect
 class BehaviourInvokeTracing {
-  var metricIdentity: ActorMetrics = _
-  var actorMetrics: Option[ActorMetricRecorder] = None
 
-  @Pointcut("execution(akka.actor.ActorCell.new(..)) && args(system, ref, props, dispatcher, parent)")
-  def actorCellCreation(system: ActorSystem, ref: ActorRef, props: Props, dispatcher: MessageDispatcher, parent: ActorRef): Unit = {}
+  @Pointcut("execution(akka.actor.ActorCell.new(..)) && this(cell) && args(system, ref, props, dispatcher, parent)")
+  def actorCellCreation(cell: ActorCell, system: ActorSystem, ref: ActorRef, props: Props, dispatcher: MessageDispatcher, parent: ActorRef): Unit = {}
 
-  @After("actorCellCreation(system, ref, props, dispatcher, parent)")
-  def afterCreation(system: ActorSystem, ref: ActorRef, props: Props, dispatcher: MessageDispatcher, parent: ActorRef): Unit = {
+  @After("actorCellCreation(cell, system, ref, props, dispatcher, parent)")
+  def afterCreation(cell: ActorCell, system: ActorSystem, ref: ActorRef, props: Props, dispatcher: MessageDispatcher, parent: ActorRef): Unit = {
     val metricsExtension = Kamon(Metrics)(system)
+    val metricIdentity = ActorMetrics(ref.path.elements.mkString("/"))
+    val cellWithMetrics = cell.asInstanceOf[ActorCellMetrics]
 
-    metricIdentity = ActorMetrics(ref.path.elements.mkString("/"))
-    actorMetrics = metricsExtension.register(metricIdentity, ActorMetrics.Factory)
+    cellWithMetrics.metricIdentity = metricIdentity
+    cellWithMetrics.actorMetricsRecorder = metricsExtension.register(metricIdentity, ActorMetrics.Factory)
   }
 
   @Pointcut("(execution(* akka.actor.ActorCell.invoke(*)) || execution(* akka.routing.RoutedActorCell.sendMessage(*))) && this(cell) && args(envelope)")
@@ -47,12 +47,13 @@ class BehaviourInvokeTracing {
   def aroundBehaviourInvoke(pjp: ProceedingJoinPoint, cell: ActorCell, envelope: Envelope): Any = {
     val timestampBeforeProcessing = System.nanoTime()
     val contextAndTimestamp = envelope.asInstanceOf[TraceContextAware]
+    val cellWithMetrics = cell.asInstanceOf[ActorCellMetrics]
 
     TraceRecorder.withTraceContext(contextAndTimestamp.traceContext) {
       pjp.proceed()
     }
 
-    actorMetrics.map { am ⇒
+    cellWithMetrics.actorMetricsRecorder.map { am ⇒
       am.processingTime.record(System.nanoTime() - timestampBeforeProcessing)
       am.timeInMailbox.record(timestampBeforeProcessing - contextAndTimestamp.captureNanoTime)
       am.mailboxSize.record(cell.numberOfMessages)
@@ -60,12 +61,25 @@ class BehaviourInvokeTracing {
   }
 
   @Pointcut("execution(* akka.actor.ActorCell.stop()) && this(cell)")
-  def actorStop(cell: Cell): Unit = {}
+  def actorStop(cell: ActorCell): Unit = {}
 
   @After("actorStop(cell)")
-  def afterStop(cell: Cell): Unit = {
-    actorMetrics.map(p ⇒ Kamon(Metrics)(cell.system).unregister(metricIdentity))
+  def afterStop(cell: ActorCell): Unit = {
+    val cellWithMetrics = cell.asInstanceOf[ActorCellMetrics]
+    cellWithMetrics.actorMetricsRecorder.map(p ⇒ Kamon(Metrics)(cell.system).unregister(cellWithMetrics.metricIdentity))
   }
+}
+
+trait ActorCellMetrics {
+  var metricIdentity: ActorMetrics = _
+  var actorMetricsRecorder: Option[ActorMetricRecorder] = _
+}
+
+@Aspect
+class ActorCellMetricsMixin {
+
+  @DeclareMixin("akka.actor.ActorCell")
+  def mixinActorCellMetricsToActorCell: ActorCellMetrics = new ActorCellMetrics {}
 }
 
 @Aspect
