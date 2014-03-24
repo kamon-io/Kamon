@@ -24,13 +24,28 @@ import spray.http.HttpRequest
 object Spray extends ExtensionId[SprayExtension] with ExtensionIdProvider {
   def lookup(): ExtensionId[_ <: actor.Extension] = Spray
   def createExtension(system: ExtendedActorSystem): SprayExtension = new SprayExtension(system)
+
+}
+
+object ClientSegmentCollectionStrategy {
+  sealed trait Strategy
+  case object Pipelining extends Strategy
+  case object Internal extends Strategy
 }
 
 class SprayExtension(private val system: ExtendedActorSystem) extends Kamon.Extension {
   private val config = system.settings.config.getConfig("kamon.spray")
 
-  val includeTraceToken: Boolean = config.getBoolean("include-trace-token-header")
+  val includeTraceToken: Boolean = config.getBoolean("automatic-trace-token-propagation")
   val traceTokenHeaderName: String = config.getString("trace-token-header-name")
+
+  val clientSegmentCollectionStrategy: ClientSegmentCollectionStrategy.Strategy =
+    config.getString("client.segment-collection-strategy") match {
+      case "pipelining" ⇒ ClientSegmentCollectionStrategy.Pipelining
+      case "internal"   ⇒ ClientSegmentCollectionStrategy.Internal
+      case other ⇒ throw new IllegalArgumentException(s"Configured segment-collection-strategy [$other] is invalid, " +
+        s"only pipelining and internal are valid options.")
+    }
 
   // Later we should expose a way for the user to customize this.
   def assignHttpClientRequestName(request: HttpRequest): String = request.uri.authority.host.address

@@ -1,29 +1,29 @@
-/* ===================================================
+/*
+ * =========================================================================================
  * Copyright © 2013 the kamon project <http://kamon.io/>
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- * ========================================================== */
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the specific language governing permissions
+ * and limitations under the License.
+ * =========================================================================================
+ */
 
 package spray.can.client
 
 import org.aspectj.lang.annotation._
 import org.aspectj.lang.ProceedingJoinPoint
-import spray.http.{ HttpResponse, HttpMessageEnd, HttpRequest }
-import spray.http.HttpHeaders.Host
-import kamon.trace.{ TraceRecorder, SegmentCompletionHandleAware, TraceContextAware }
+import spray.http.{ HttpHeader, HttpResponse, HttpMessageEnd, HttpRequest }
+import spray.http.HttpHeaders.{ RawHeader, Host }
+import kamon.trace.{ TraceRecorder, SegmentCompletionHandleAware }
 import kamon.metrics.TraceMetrics.HttpClientRequest
 import kamon.Kamon
-import kamon.spray.Spray
+import kamon.spray.{ ClientSegmentCollectionStrategy, Spray }
 import akka.actor.ActorRef
 import scala.concurrent.{ Future, ExecutionContext }
 import akka.util.Timeout
@@ -43,14 +43,18 @@ class ClientRequestInstrumentation {
     // The RequestContext will be copied when a request needs to be retried but we are only interested in creating the
     // completion handle the first time we create one.
 
-    // The read to ctx.completionHandle should take care of initializing the aspect timely.
+    // The read to ctx.segmentCompletionHandle should take care of initializing the aspect timely.
     if (ctx.segmentCompletionHandle.isEmpty) {
       TraceRecorder.currentContext.map { traceContext ⇒
-        val requestAttributes = basicRequestAttributes(request)
-        val clientRequestName = Kamon(Spray)(traceContext.system).assignHttpClientRequestName(request)
-        val completionHandle = traceContext.startSegment(HttpClientRequest(clientRequestName, SprayTime), requestAttributes)
+        val sprayExtension = Kamon(Spray)(traceContext.system)
 
-        ctx.segmentCompletionHandle = Some(completionHandle)
+        if (sprayExtension.clientSegmentCollectionStrategy == ClientSegmentCollectionStrategy.Internal) {
+          val requestAttributes = basicRequestAttributes(request)
+          val clientRequestName = sprayExtension.assignHttpClientRequestName(request)
+          val completionHandle = traceContext.startSegment(HttpClientRequest(clientRequestName, SprayTime), requestAttributes)
+
+          ctx.segmentCompletionHandle = Some(completionHandle)
+        }
       }
     }
   }
@@ -92,15 +96,18 @@ class ClientRequestInstrumentation {
 
     (request: HttpRequest) ⇒ {
       val responseFuture = originalSendReceive.apply(request)
-
       TraceRecorder.currentContext.map { traceContext ⇒
-        val requestAttributes = basicRequestAttributes(request)
-        val clientRequestName = Kamon(Spray)(traceContext.system).assignHttpClientRequestName(request)
-        val completionHandle = traceContext.startSegment(HttpClientRequest(clientRequestName, UserTime), requestAttributes)
+        val sprayExtension = Kamon(Spray)(traceContext.system)
 
-        responseFuture.onComplete { result ⇒
-          completionHandle.finish(Map.empty)
-        }(ec)
+        if (sprayExtension.clientSegmentCollectionStrategy == ClientSegmentCollectionStrategy.Pipelining) {
+          val requestAttributes = basicRequestAttributes(request)
+          val clientRequestName = sprayExtension.assignHttpClientRequestName(request)
+          val completionHandle = traceContext.startSegment(HttpClientRequest(clientRequestName, UserTime), requestAttributes)
+
+          responseFuture.onComplete { result ⇒
+            completionHandle.finish(Map.empty)
+          }(ec)
+        }
       }
 
       responseFuture
@@ -113,6 +120,23 @@ class ClientRequestInstrumentation {
       "host" -> request.header[Host].map(_.value).getOrElse("unknown"),
       "path" -> request.uri.path.toString(),
       "method" -> request.method.toString())
+  }
+
+  @Pointcut("call(* spray.http.HttpMessage.withDefaultHeaders(*)) && within(spray.can.client.HttpHostConnector) && args(defaultHeaders)")
+  def includingDefaultHeadersAtHttpHostConnector(defaultHeaders: List[HttpHeader]): Unit = {}
+
+  @Around("includingDefaultHeadersAtHttpHostConnector(defaultHeaders)")
+  def aroundIncludingDefaultHeadersAtHttpHostConnector(pjp: ProceedingJoinPoint, defaultHeaders: List[HttpHeader]): Any = {
+    val modifiedHeaders = TraceRecorder.currentContext map { traceContext ⇒
+      val sprayExtension = Kamon(Spray)(traceContext.system)
+
+      if (sprayExtension.includeTraceToken)
+        RawHeader(sprayExtension.traceTokenHeaderName, traceContext.token) :: defaultHeaders
+      else
+        defaultHeaders
+    } getOrElse defaultHeaders
+
+    pjp.proceed(Array(modifiedHeaders))
   }
 }
 
