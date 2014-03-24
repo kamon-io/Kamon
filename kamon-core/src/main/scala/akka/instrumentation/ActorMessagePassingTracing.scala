@@ -60,6 +60,17 @@ class BehaviourInvokeTracing {
     }
   }
 
+  @Pointcut("execution(* akka.actor.ActorCell.sendMessage(*)) && this(cell)")
+  def sendingMessageToActorCell(cell: ActorCell): Unit = {}
+
+  @After("sendingMessageToActorCell(cell)")
+  def afterSendMessageToActorCell(cell: ActorCell): Unit = {
+    val cellWithMetrics = cell.asInstanceOf[ActorCellMetrics]
+    cellWithMetrics.actorMetricsRecorder.map { am ⇒
+      am.mailboxSize.record(cell.numberOfMessages)
+    }
+  }
+
   @Pointcut("execution(* akka.actor.ActorCell.stop()) && this(cell)")
   def actorStop(cell: ActorCell): Unit = {}
 
