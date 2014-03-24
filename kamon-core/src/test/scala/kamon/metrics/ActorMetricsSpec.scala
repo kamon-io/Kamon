@@ -89,10 +89,20 @@ class ActorMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
       // let the first snapshot pass
       metricsListener.expectMsgType[TickMetricSnapshot]
 
-      val actorMetrics = expectActorMetrics("user/tracked-mailbox-size-queueing-up", metricsListener, 3 seconds)
-      actorMetrics.mailboxSize.numberOfMeasurements should equal(1)
-      actorMetrics.mailboxSize.measurements should contain only (Measurement(9, 1)) // only the automatic last-value recording
-      actorMetrics.mailboxSize.max should equal(9)
+      // process the tick in which the actor is stalled.
+      val stalledTickMetrics = expectActorMetrics("user/tracked-mailbox-size-queueing-up", metricsListener, 2 seconds)
+      stalledTickMetrics.mailboxSize.numberOfMeasurements should equal(1)
+      stalledTickMetrics.mailboxSize.measurements should contain only (Measurement(9, 1)) // only the automatic last-value recording
+      stalledTickMetrics.mailboxSize.max should equal(9)
+      stalledTickMetrics.processingTime.numberOfMeasurements should be(0L)
+      stalledTickMetrics.timeInMailbox.numberOfMeasurements should be(0L)
+
+      // process the tick after the actor is unblocked.
+      val afterStallTickMetrics = expectActorMetrics("user/tracked-mailbox-size-queueing-up", metricsListener, 2 seconds)
+      afterStallTickMetrics.processingTime.numberOfMeasurements should be(10L)
+      afterStallTickMetrics.timeInMailbox.numberOfMeasurements should be(10L)
+      afterStallTickMetrics.processingTime.max should be(2500.milliseconds.toNanos +- 100.milliseconds.toNanos)
+      afterStallTickMetrics.timeInMailbox.max should be(2500.milliseconds.toNanos +- 100.milliseconds.toNanos)
     }
   }
 
