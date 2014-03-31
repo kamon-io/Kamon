@@ -1,9 +1,9 @@
 import sbt._
 import Keys._
-import sbtrelease.ReleasePlugin._
 import com.typesafe.sbt.SbtScalariform
 import com.typesafe.sbt.SbtScalariform.ScalariformKeys
 import Publish.{settings => publishSettings}
+import Release.{settings => releaseSettings}
 import scalariform.formatter.preferences._
 
 object Settings {
