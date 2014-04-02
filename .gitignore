@@ -3,6 +3,7 @@
 .history
 *.sc
 .pygments-cache
+.DS_Store
 
 # sbt specific
 dist/*
