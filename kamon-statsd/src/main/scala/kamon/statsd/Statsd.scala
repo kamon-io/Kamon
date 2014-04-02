@@ -47,7 +47,7 @@ class StatsdMetricsListener(host: String, port: Int, prefix: String) extends Act
 
   val statsdActor = context.actorOf(StatsdMetricsSender.props(prefix, new InetSocketAddress(InetAddress.getByName(host), port)), "statsd-metrics-sender")
   val translator = context.actorOf(StatsdMetricTranslator.props(statsdActor), "statsd-metrics-translator")
-  val buffer = context.actorOf(TickMetricSnapshotBuffer.props(1 minute, translator), "metrics-buffer")
+  val buffer = context.actorOf(TickMetricSnapshotBuffer.props(1 minute, translator), "statsd-metrics-buffer")
 
   def receive = {
     case tick: TickMetricSnapshot ⇒ statsdActor.forward(tick)

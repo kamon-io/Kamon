@@ -43,6 +43,7 @@ class StatsdMetricsSender(statPrefix: String, remote: InetSocketAddress) extends
 object StatsdMetricsSender {
 
   sealed trait StatsdMetric
+  
   case class Counter(key: String, value: Long = 1, suffix: String = "c", samplingRate: Double = 1.0) extends StatsdMetric
   case class Timing(key: String, millis: Long, suffix: String = "ms", samplingRate: Double = 1.0) extends StatsdMetric
   case class Gauge(key: String, value: Long, suffix: String = "g", samplingRate: Double = 1.0) extends StatsdMetric
@@ -63,8 +64,8 @@ object StatsdMetricsSender {
    */
   private[this] def statFor(statPrefix: String, key: String, value: Long, suffix: String, samplingRate: Double): ByteString = {
     samplingRate match {
-      case x if x >= 1.0 ⇒ ByteString(s"${statPrefix}.${key}:${value}|$suffix")
-      case _             ⇒ ByteString(s"${statPrefix}.${key}:${value}|${suffix}|@$samplingRate")
+      case x if x >= 1.0 ⇒ ByteString(s"$statPrefix.$key:$value|$suffix")
+      case _             ⇒ ByteString(s"$statPrefix.$key:$value|$suffix|@$samplingRate")
     }
   }
 }
