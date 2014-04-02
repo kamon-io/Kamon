@@ -20,6 +20,7 @@ import akka.actor._
 import kamon.Kamon
 import kamon.metrics.Subscriptions.TickMetricSnapshot
 import kamon.metrics.{ TickMetricSnapshotBuffer, CustomMetric, TraceMetrics, Metrics }
+import scala.concurrent.duration._
 
 object Statsd extends ExtensionId[StatsdExtension] with ExtensionIdProvider {
   override def lookup(): ExtensionId[_ <: Extension] = Statsd
@@ -50,7 +51,7 @@ class StatsdMetricsListener(host: String, port: Int, prefix: String) extends Act
   val buffer = context.actorOf(TickMetricSnapshotBuffer.props(1 minute, translator), "statsd-metrics-buffer")
 
   def receive = {
-    case tick: TickMetricSnapshot ⇒ statsdActor.forward(tick)
+    case tick: TickMetricSnapshot ⇒ buffer.forward(tick)
   }
 }
 
