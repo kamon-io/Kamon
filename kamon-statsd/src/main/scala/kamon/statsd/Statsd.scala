@@ -19,8 +19,7 @@ package kamon.statsd
 import akka.actor._
 import kamon.Kamon
 import kamon.metrics.Subscriptions.TickMetricSnapshot
-import kamon.metrics.{TickMetricSnapshotBuffer, CustomMetric, TraceMetrics, Metrics}
-import kamon.statsd.StatsdMetricsSender
+import kamon.metrics.{ TickMetricSnapshotBuffer, CustomMetric, TraceMetrics, Metrics }
 
 object Statsd extends ExtensionId[StatsdExtension] with ExtensionIdProvider {
   override def lookup(): ExtensionId[_ <: Extension] = Statsd
@@ -32,8 +31,8 @@ class StatsdExtension(private val system: ExtendedActorSystem) extends Kamon.Ext
   private val config = system.settings.config.getConfig("kamon.statsd")
 
   val hostname = config.getString("hostname")
-  val port     = config.getInt("port")
-  val prefix   = config.getString("prefix")
+  val port = config.getInt("port")
+  val prefix = config.getString("prefix")
 
   val statsdMetricsListener = system.actorOf(Props(new StatsdMetricsListener(hostname, port, prefix)), "kamon-statsd-metrics-listener")
 
@@ -41,12 +40,12 @@ class StatsdExtension(private val system: ExtendedActorSystem) extends Kamon.Ext
   Kamon(Metrics)(system).subscribe(CustomMetric, "*", statsdMetricsListener, permanently = true)
 }
 
-class StatsdMetricsListener(host:String, port:Int, prefix:String) extends Actor with ActorLogging {
-  import java.net.{InetAddress, InetSocketAddress}
+class StatsdMetricsListener(host: String, port: Int, prefix: String) extends Actor with ActorLogging {
+  import java.net.{ InetAddress, InetSocketAddress }
 
   log.info("Starting the Kamon(Statsd) extension")
 
-  val statsdActor =  context.actorOf(StatsdMetricsSender.props(prefix, new InetSocketAddress(InetAddress.getByName(host), port)), "statsd-metrics-sender")
+  val statsdActor = context.actorOf(StatsdMetricsSender.props(prefix, new InetSocketAddress(InetAddress.getByName(host), port)), "statsd-metrics-sender")
   val translator = context.actorOf(StatsdMetricTranslator.props(statsdActor), "statsd-metrics-translator")
   val buffer = context.actorOf(TickMetricSnapshotBuffer.props(1 minute, translator), "metrics-buffer")
 
@@ -54,5 +53,4 @@ class StatsdMetricsListener(host:String, port:Int, prefix:String) extends Actor 
     case tick: TickMetricSnapshot ⇒ statsdActor.forward(tick)
   }
 }
-
 
