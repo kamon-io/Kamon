@@ -14,7 +14,7 @@
  * =========================================================================================
  */
 
-package kamon.statsd.client
+package kamon.statsd
 
 import akka.actor.{ActorLogging, Props, ActorRef, Actor}
 import akka.io.{Udp, IO}
