@@ -12,7 +12,7 @@ class StatsdClient(remote: InetSocketAddress) extends Actor {
 
   def receive = {
     case Udp.SimpleSenderReady =>
-      context.become(ready(sender()))
+      context.become(ready(sender))
   }
 
   def ready(send: ActorRef): Receive = {
