@@ -16,43 +16,43 @@
 
 package kamon.statsd
 
-import akka.actor.{ActorLogging, Props, ActorRef, Actor}
-import akka.io.{Udp, IO}
+import akka.actor.{ ActorLogging, Props, ActorRef, Actor }
+import akka.io.{ Udp, IO }
 import java.net.InetSocketAddress
 import akka.util.ByteString
 
-class StatsdMetricsSender(statPrefix:String, remote: InetSocketAddress) extends Actor with ActorLogging {
+class StatsdMetricsSender(statPrefix: String, remote: InetSocketAddress) extends Actor with ActorLogging {
   import StatsdMetricsSender._
   import context.system
 
   IO(Udp) ! Udp.SimpleSender
 
   def receive = {
-    case Udp.SimpleSenderReady =>
+    case Udp.SimpleSenderReady ⇒
       context.become(ready(sender))
   }
 
   def ready(send: ActorRef): Receive = {
-    case metric: StatsdMetric =>
+    case metric: StatsdMetric ⇒
       send ! Udp.Send(toByteString(statPrefix, metric), remote)
 
-    case _ => log.error("Unknown Metric")
+    case _ ⇒ log.error("Unknown Metric")
   }
 }
 
 object StatsdMetricsSender {
 
   sealed trait StatsdMetric
-  case class Counter(key: String, value: Long = 1, suffix:String = "c", samplingRate: Double = 1.0) extends StatsdMetric
-  case class Timing(key: String, millis: Long, suffix:String = "ms", samplingRate: Double = 1.0) extends StatsdMetric
-  case class Gauge(key: String, value: Long, suffix:String = "g", samplingRate: Double = 1.0) extends StatsdMetric
+  case class Counter(key: String, value: Long = 1, suffix: String = "c", samplingRate: Double = 1.0) extends StatsdMetric
+  case class Timing(key: String, millis: Long, suffix: String = "ms", samplingRate: Double = 1.0) extends StatsdMetric
+  case class Gauge(key: String, value: Long, suffix: String = "g", samplingRate: Double = 1.0) extends StatsdMetric
 
-  def props(statPrefix:String, remote: InetSocketAddress): Props = Props(new StatsdMetricsSender(statPrefix, remote))
+  def props(statPrefix: String, remote: InetSocketAddress): Props = Props(new StatsdMetricsSender(statPrefix, remote))
 
-  def toByteString(statPrefix:String, metric:StatsdMetric) : ByteString = metric match  {
-    case Counter(key, value, suffix, samplingRate) => statFor(statPrefix, key, value, suffix, samplingRate)
-    case Timing(key, value, suffix, samplingRate) => statFor(statPrefix, key, value, suffix, samplingRate)
-    case Gauge(key, value, suffix, samplingRate) => statFor(statPrefix, key, value, suffix, samplingRate)
+  def toByteString(statPrefix: String, metric: StatsdMetric): ByteString = metric match {
+    case Counter(key, value, suffix, samplingRate) ⇒ statFor(statPrefix, key, value, suffix, samplingRate)
+    case Timing(key, value, suffix, samplingRate)  ⇒ statFor(statPrefix, key, value, suffix, samplingRate)
+    case Gauge(key, value, suffix, samplingRate)   ⇒ statFor(statPrefix, key, value, suffix, samplingRate)
   }
 
   /*
@@ -61,10 +61,10 @@ object StatsdMetricsSender {
    * For timing, it provides something like {@code key:millis|ms}.
    * If sampling rate is less than 1, it provides something like {@code key:value|type|@rate}
    */
-  private[this] def statFor(statPrefix:String, key: String, value: Long, suffix: String, samplingRate: Double): ByteString = {
+  private[this] def statFor(statPrefix: String, key: String, value: Long, suffix: String, samplingRate: Double): ByteString = {
     samplingRate match {
-      case x if x >= 1.0 => ByteString(s"${statPrefix}.${key}:${value}|$suffix")
-      case _ => ByteString(s"${statPrefix}.${key}:${value}|${suffix}|@$samplingRate")
+      case x if x >= 1.0 ⇒ ByteString(s"${statPrefix}.${key}:${value}|$suffix")
+      case _             ⇒ ByteString(s"${statPrefix}.${key}:${value}|${suffix}|@$samplingRate")
     }
   }
 }
