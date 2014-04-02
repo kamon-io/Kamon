@@ -22,10 +22,8 @@ import java.net.InetSocketAddress
 import akka.util.ByteString
 
 class StatsdMetricsSender(statPrefix:String, remote: InetSocketAddress) extends Actor with ActorLogging {
-  import context.system
-
   import StatsdMetricsSender._
-  import StatsDProtocol._
+  import context.system
 
   IO(Udp) ! Udp.SimpleSender
 
@@ -43,9 +41,13 @@ class StatsdMetricsSender(statPrefix:String, remote: InetSocketAddress) extends 
 }
 
 object StatsdMetricsSender {
-   import StatsDProtocol._
 
-   def props(statPrefix:String, remote: InetSocketAddress): Props = Props(new StatsdMetricsSender(statPrefix, remote))
+  sealed trait StatsdMetric
+  case class Counter(key: String, value: Long = 1, suffix:String = "c", samplingRate: Double = 1.0) extends StatsdMetric
+  case class Timing(key: String, millis: Long, suffix:String = "ms", samplingRate: Double = 1.0) extends StatsdMetric
+  case class Gauge(key: String, value: Long, suffix:String = "g", samplingRate: Double = 1.0) extends StatsdMetric
+
+  def props(statPrefix:String, remote: InetSocketAddress): Props = Props(new StatsdMetricsSender(statPrefix, remote))
 
   def toByteString(statPrefix:String, metric:StatsdMetric) : ByteString = metric match  {
     case Counter(key, value, suffix, samplingRate) => statFor(statPrefix, key, value, suffix, samplingRate)
@@ -65,13 +67,4 @@ object StatsdMetricsSender {
       case _ => ByteString(s"${statPrefix}.${key}:${value}|${suffix}|@$samplingRate")
     }
   }
-}
-
-
-object StatsDProtocol {
-
-  sealed trait StatsdMetric
-  case class Counter(key: String, value: Long = 1, suffix:String = "c", samplingRate: Double = 1.0) extends StatsdMetric
-  case class Timing(key: String, millis: Long, suffix:String = "ms", samplingRate: Double = 1.0) extends StatsdMetric
-  case class Gauge(key: String, value: Long, suffix:String = "g", samplingRate: Double = 1.0) extends StatsdMetric
 }
