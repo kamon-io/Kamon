@@ -16,8 +16,11 @@
 
 package kamon.statsd
 
-import akka.actor.{ ExtendedActorSystem, Extension, ExtensionIdProvider, ExtensionId }
+import akka.actor._
 import kamon.Kamon
+import kamon.statsd.client.StatsdMetricsSender
+import kamon.metrics.Subscriptions.TickMetricSnapshot
+import kamon.metrics.{CustomMetric, TraceMetrics, Metrics}
 
 object Statsd extends ExtensionId[StatsdExtension] with ExtensionIdProvider {
   override def lookup(): ExtensionId[_ <: Extension] = Statsd
@@ -25,17 +28,29 @@ object Statsd extends ExtensionId[StatsdExtension] with ExtensionIdProvider {
 }
 
 class StatsdExtension(private val system: ExtendedActorSystem) extends Kamon.Extension {
-  publishInfoMessage(system, "Statsd Extension Loaded!!")
 
   private val config = system.settings.config.getConfig("kamon.statsd")
 
-  val prefix   = config.getString("prefix")
   val hostname = config.getString("hostname")
   val port     = config.getInt("port")
+  val prefix   = config.getString("prefix")
+
+  val statsdMetricsListener = system.actorOf(Props(new StatsdMetricsListener(hostname, port, prefix)), "kamon-statsd-metrics-listener")
+
+  Kamon(Metrics)(system).subscribe(TraceMetrics, "*", statsdMetricsListener, permanently = true)
+  Kamon(Metrics)(system).subscribe(CustomMetric, "*", statsdMetricsListener, permanently = true)
 }
 
-object MetricsTypes{
-  case class Counter(key: String, value: Long = 1, samplingRate: Double = 1.0)
-  case class Timing(key: String, millis: Long, samplingRate: Double = 1.0)
-  case class Gauge(key: String, value: Long)
+class StatsdMetricsListener(host:String, port:Int, prefix:String) extends Actor with ActorLogging {
+  import java.net.{InetAddress, InetSocketAddress}
+
+  log.info("Starting the Kamon(Statsd) extension")
+
+  val statsdActor =  context.actorOf(StatsdMetricsSender.props(prefix, new InetSocketAddress(InetAddress.getByName(host), port)), "StatsdSender")
+
+  def receive = {
+    case tick: TickMetricSnapshot ⇒ statsdActor.forward(tick)
+  }
 }
+
+
