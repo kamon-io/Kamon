@@ -18,9 +18,9 @@ package kamon.statsd
 
 import akka.actor._
 import kamon.Kamon
-import kamon.statsd.client.StatsdMetricsSender
 import kamon.metrics.Subscriptions.TickMetricSnapshot
-import kamon.metrics.{CustomMetric, TraceMetrics, Metrics}
+import kamon.metrics.{TickMetricSnapshotBuffer, CustomMetric, TraceMetrics, Metrics}
+import kamon.statsd.StatsdMetricsSender
 
 object Statsd extends ExtensionId[StatsdExtension] with ExtensionIdProvider {
   override def lookup(): ExtensionId[_ <: Extension] = Statsd
@@ -46,7 +46,9 @@ class StatsdMetricsListener(host:String, port:Int, prefix:String) extends Actor 
 
   log.info("Starting the Kamon(Statsd) extension")
 
-  val statsdActor =  context.actorOf(StatsdMetricsSender.props(prefix, new InetSocketAddress(InetAddress.getByName(host), port)), "StatsdSender")
+  val statsdActor =  context.actorOf(StatsdMetricsSender.props(prefix, new InetSocketAddress(InetAddress.getByName(host), port)), "statsd-metrics-sender")
+  val translator = context.actorOf(StatsdMetricTranslator.props(statsdActor), "statsd-metrics-translator")
+  val buffer = context.actorOf(TickMetricSnapshotBuffer.props(1 minute, translator), "metrics-buffer")
 
   def receive = {
     case tick: TickMetricSnapshot ⇒ statsdActor.forward(tick)
