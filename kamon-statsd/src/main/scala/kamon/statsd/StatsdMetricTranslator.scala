@@ -15,10 +15,10 @@
  */
 package kamon.statsd
 
-import akka.actor.{Props, Actor, ActorRef}
+import akka.actor.{ Props, Actor, ActorRef }
 import kamon.metrics.Subscriptions.TickMetricSnapshot
 
-class StatsdMetricTranslator(receiver: ActorRef) extends Actor{
+class StatsdMetricTranslator(receiver: ActorRef) extends Actor {
 
   def receive = {
     case TickMetricSnapshot(from, to, metrics) ⇒
