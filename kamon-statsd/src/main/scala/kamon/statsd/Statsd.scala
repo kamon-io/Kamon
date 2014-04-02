@@ -19,8 +19,9 @@ package kamon.statsd
 import akka.actor._
 import kamon.Kamon
 import kamon.metrics.Subscriptions.TickMetricSnapshot
-import kamon.metrics.{ TickMetricSnapshotBuffer, CustomMetric, TraceMetrics, Metrics }
+import kamon.metrics._
 import scala.concurrent.duration._
+import kamon.metrics.Subscriptions.TickMetricSnapshot
 
 object Statsd extends ExtensionId[StatsdExtension] with ExtensionIdProvider {
   override def lookup(): ExtensionId[_ <: Extension] = Statsd
@@ -39,6 +40,7 @@ class StatsdExtension(private val system: ExtendedActorSystem) extends Kamon.Ext
 
   Kamon(Metrics)(system).subscribe(TraceMetrics, "*", statsdMetricsListener, permanently = true)
   Kamon(Metrics)(system).subscribe(CustomMetric, "*", statsdMetricsListener, permanently = true)
+  Kamon(Metrics)(system).subscribe(ActorMetrics, "*", statsdMetricsListener, permanently = true)
 }
 
 class StatsdMetricsListener(host: String, port: Int, prefix: String) extends Actor with ActorLogging {
