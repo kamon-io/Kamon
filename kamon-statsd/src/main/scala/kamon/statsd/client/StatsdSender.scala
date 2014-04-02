@@ -13,8 +13,29 @@
  * and limitations under the License.
  * =========================================================================================
  */
+
 package kamon.statsd.client
 
-class StatsdClient {
+import akka.actor.{Props, ActorRef, Actor}
+import akka.io.{Udp, IO}
+import java.net.InetSocketAddress
+import akka.util.ByteString
 
+class StatsdSender(remote: InetSocketAddress) extends Actor {
+  import context.system
+
+  IO(Udp) ! Udp.SimpleSender
+
+  def receive = {
+    case Udp.SimpleSenderReady =>
+      context.become(ready(sender))
+  }
+
+  def ready(send: ActorRef): Receive = {
+    case msg: String =>
+      send ! Udp.Send(ByteString(msg), remote)
+  }
+}
+object StatsdSender {
+   def props(remote: InetSocketAddress): Props = Props(new StatsdSender(remote))
 }

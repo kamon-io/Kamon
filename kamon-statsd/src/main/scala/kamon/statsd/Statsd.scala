@@ -34,3 +34,8 @@ class StatsdExtension(private val system: ExtendedActorSystem) extends Kamon.Ext
   val port     = config.getInt("port")
 }
 
+object MetricsTypes{
+  case class Counter(key: String, value: Long = 1, samplingRate: Double = 1.0)
+  case class Timing(key: String, millis: Long, samplingRate: Double = 1.0)
+  case class Gauge(key: String, value: Long)
+}
