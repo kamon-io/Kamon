@@ -29,7 +29,7 @@ class StatsDMetricTranslator extends Actor {
   def receive = {
     case TickMetricSnapshot(from, to, metrics) ⇒
       val translatedMetrics = metrics.collect {
-        case (am @ ActorMetrics(_), snapshot: ActorMetricSnapshot) => transformActorMetric(am, snapshot)
+        case (am @ ActorMetrics(_), snapshot: ActorMetricSnapshot) ⇒ transformActorMetric(am, snapshot)
       }
 
       metricSender ! StatsD.MetricBatch(translatedMetrics.flatten)
@@ -42,9 +42,9 @@ class StatsDMetricTranslator extends Actor {
     roll(timeInMailboxKey, snapshot.timeInMailbox, StatsD.Timing) ++ roll(processingTimeKey, snapshot.processingTime, StatsD.Timing)
   }
 
-  def roll(key: String, snapshot: MetricSnapshotLike, metricBuilder: (String, Double, Double) => StatsD.Metric): Vector[StatsD.Metric] = {
+  def roll(key: String, snapshot: MetricSnapshotLike, metricBuilder: (String, Double, Double) ⇒ StatsD.Metric): Vector[StatsD.Metric] = {
     val builder = Vector.newBuilder[StatsD.Metric]
-    for(measurement <- snapshot.measurements) {
+    for (measurement ← snapshot.measurements) {
       val samplingRate = 1D / measurement.count
       val scaledValue = Scale.convert(snapshot.scale, Scale.Milli, measurement.value)
       builder += metricBuilder.apply(key, scaledValue, samplingRate)
@@ -52,7 +52,6 @@ class StatsDMetricTranslator extends Actor {
 
     builder.result()
   }
-
 
 }
 

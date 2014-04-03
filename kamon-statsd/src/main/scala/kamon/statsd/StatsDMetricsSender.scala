@@ -28,7 +28,6 @@ class StatsDMetricsSender extends Actor with ActorLogging {
 
   val statsDExtension = Kamon(StatsD)
   val remote = new InetSocketAddress(statsDExtension.hostname, statsDExtension.port)
-  val maxPacketSize = 1024
 
   IO(Udp) ! Udp.SimpleSender
 
@@ -38,24 +37,23 @@ class StatsDMetricsSender extends Actor with ActorLogging {
   }
 
   def ready(udpSender: ActorRef): Receive = {
-    case StatsD.MetricBatch(metrics) ⇒ writeDown(metrics, ByteString.empty, udpSender)
+    case StatsD.MetricBatch(metrics) ⇒ sendMetricsToRemote(metrics, ByteString.empty, udpSender)
   }
 
+  @tailrec final def sendMetricsToRemote(metrics: Iterable[StatsD.Metric], buffer: ByteString, udpSender: ActorRef): Unit = {
+    def flushToRemote(data: ByteString, udpSender: ActorRef): Unit = udpSender ! Udp.Send(data, remote)
 
-  def flushToRemote(data: ByteString, udpSender: ActorRef): Unit =  udpSender ! Udp.Send(data, remote)
-
-  @tailrec final def writeDown(metrics: Iterable[StatsD.Metric], buffer: ByteString, udpSender: ActorRef): Unit = {
-    if(metrics.isEmpty)
+    if (metrics.isEmpty)
       flushToRemote(buffer, udpSender)
     else {
-      val headData = metrics.head.toByteString
-      if(buffer.size + headData.size > maxPacketSize) {
-        flushToRemote(buffer, udpSender)
-        writeDown(metrics.tail, headData, udpSender)
-      } else {
-        writeDown(metrics.tail, buffer ++ headData, udpSender)
-      }
+      val headMetricData = metrics.head.toByteString(includeTrailingNewline = true)
 
+      if (buffer.size + headMetricData.size > statsDExtension.maxPacketSize) {
+        flushToRemote(buffer, udpSender)
+        sendMetricsToRemote(metrics.tail, headMetricData, udpSender)
+      } else {
+        sendMetricsToRemote(metrics.tail, buffer ++ headMetricData, udpSender)
+      }
     }
   }
 }
