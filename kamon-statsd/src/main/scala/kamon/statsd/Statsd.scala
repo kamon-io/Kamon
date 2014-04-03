@@ -22,15 +22,21 @@ import kamon.metrics._
 import scala.concurrent.duration._
 import scala.collection.JavaConverters._
 import akka.util.ByteString
+import com.typesafe.config.Config
+import java.lang.management.ManagementFactory
 
 object StatsD extends ExtensionId[StatsDExtension] with ExtensionIdProvider {
   override def lookup(): ExtensionId[_ <: Extension] = StatsD
   override def createExtension(system: ExtendedActorSystem): StatsDExtension = new StatsDExtension(system)
 
 
+  trait MetricKeyGenerator {
+    def generateKey(groupIdentity: MetricGroupIdentity, metricIdentity: MetricIdentity): String
+  }
+
   sealed trait Metric {
     def key: String
-    def value: Long
+    def value: Double
     def suffix: String
     def samplingRate: Double
 
@@ -47,34 +53,34 @@ object StatsD extends ExtensionId[StatsDExtension] with ExtensionIdProvider {
         ByteString(s"$key:$value|$suffix|@$samplingRate")
   }
 
-  case class Counter(key: String, value: Long = 1, samplingRate: Double = 1.0) extends Metric {
+  case class Counter(key: String, value: Double = 1D, samplingRate: Double = 1.0) extends Metric {
     val suffix: String = "c"
   }
 
-  case class Timing(key: String, value: Long, samplingRate: Double = 1.0) extends Metric {
+  case class Timing(key: String, value: Double, samplingRate: Double = 1.0) extends Metric {
     val suffix: String = "ms"
   }
 
-  case class Gauge(key: String, value: Long, samplingRate: Double = 1.0) extends Metric {
+  case class Gauge(key: String, value: Double, samplingRate: Double = 1.0) extends Metric {
     val suffix: String = "g"
   }
 
-  case class MetricBatch(metrics: Vector[Metric])
+  case class MetricBatch(metrics: Iterable[Metric])
 }
 
 
-class StatsDExtension(private val system: ExtendedActorSystem) extends Kamon.Extension {
-  private val config = system.settings.config.getConfig("kamon.statsd")
+class StatsDExtension(system: ExtendedActorSystem) extends Kamon.Extension {
+  private val statsDConfig = system.settings.config.getConfig("kamon.statsd")
 
-  val hostname = config.getString("hostname")
-  val port = config.getInt("port")
-  val prefix = config.getString("prefix")
-  val flushInterval = config.getMilliseconds("flush-interval")
+  val hostname = statsDConfig.getString("hostname")
+  val port = statsDConfig.getInt("port")
+  val flushInterval = statsDConfig.getMilliseconds("flush-interval")
+  val maxPacketSize = statsDConfig.getInt("max-packet-size")
   val tickInterval = system.settings.config.getMilliseconds("kamon.metrics.tick-interval")
 
   val statsDMetricsListener = buildMetricsListener(tickInterval, flushInterval)
 
-  val includedActors = config.getStringList("includes.actor").asScala
+  val includedActors = statsDConfig.getStringList("includes.actor").asScala
   for(actorPathPattern <- includedActors) {
     Kamon(Metrics)(system).subscribe(ActorMetrics, actorPathPattern, statsDMetricsListener, permanently = true)
   }
@@ -91,5 +97,14 @@ class StatsDExtension(private val system: ExtendedActorSystem) extends Kamon.Ext
       system.actorOf(TickMetricSnapshotBuffer.props(flushInterval.toInt.millis, metricsTranslator), "statsd-metrics-buffer")
     }
   }
+}
+
+
+class SimpleMetricKeyGenerator(config: Config) extends StatsD.MetricKeyGenerator {
+  val application = config.getString("kamon.statsd.simple-metric-key-generator.application")
+  val localhostName = ManagementFactory.getRuntimeMXBean.getName.split('@')(1)
+
+  def generateKey(groupIdentity: MetricGroupIdentity, metricIdentity: MetricIdentity): String =
+    application + "." + localhostName + "." + groupIdentity.category.name + "." + groupIdentity.name + "." + metricIdentity.name
 }
 
