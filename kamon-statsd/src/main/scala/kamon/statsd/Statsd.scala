@@ -29,7 +29,6 @@ object StatsD extends ExtensionId[StatsDExtension] with ExtensionIdProvider {
   override def lookup(): ExtensionId[_ <: Extension] = StatsD
   override def createExtension(system: ExtendedActorSystem): StatsDExtension = new StatsDExtension(system)
 
-
   trait MetricKeyGenerator {
     def generateKey(groupIdentity: MetricGroupIdentity, metricIdentity: MetricIdentity): String
   }
@@ -46,8 +45,8 @@ object StatsD extends ExtensionId[StatsDExtension] with ExtensionIdProvider {
      * For timing, it provides something like {@code key:millis|ms}.
      * If sampling rate is less than 1, it provides something like {@code key:value|type|@rate}
      */
-    def toByteString: ByteString =
-      if(samplingRate >= 1D)
+    def toByteString(includeTrailingNewline: Boolean = true): ByteString =
+      if (samplingRate >= 1D)
         ByteString(s"$key:$value|$suffix")
       else
         ByteString(s"$key:$value|$suffix|@$samplingRate")
@@ -68,7 +67,6 @@ object StatsD extends ExtensionId[StatsDExtension] with ExtensionIdProvider {
   case class MetricBatch(metrics: Iterable[Metric])
 }
 
-
 class StatsDExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   private val statsDConfig = system.settings.config.getConfig("kamon.statsd")
 
@@ -81,16 +79,15 @@ class StatsDExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   val statsDMetricsListener = buildMetricsListener(tickInterval, flushInterval)
 
   val includedActors = statsDConfig.getStringList("includes.actor").asScala
-  for(actorPathPattern <- includedActors) {
+  for (actorPathPattern ← includedActors) {
     Kamon(Metrics)(system).subscribe(ActorMetrics, actorPathPattern, statsDMetricsListener, permanently = true)
   }
-
 
   def buildMetricsListener(tickInterval: Long, flushInterval: Long): ActorRef = {
     assert(flushInterval >= tickInterval, "StatsD flush-interval needs to be equal or greater to the tick-interval")
 
     val metricsTranslator = system.actorOf(StatsDMetricTranslator.props, "statsd-metrics-translator")
-    if(flushInterval == tickInterval) {
+    if (flushInterval == tickInterval) {
       // No need to buffer the metrics, let's go straight to the metrics translator.
       metricsTranslator
     } else {
@@ -98,7 +95,6 @@ class StatsDExtension(system: ExtendedActorSystem) extends Kamon.Extension {
     }
   }
 }
-
 
 class SimpleMetricKeyGenerator(config: Config) extends StatsD.MetricKeyGenerator {
   val application = config.getString("kamon.statsd.simple-metric-key-generator.application")
