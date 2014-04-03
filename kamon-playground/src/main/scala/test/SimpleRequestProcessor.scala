@@ -88,7 +88,6 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
         path("ok") {
           traceName("OK") {
             complete {
-              println("Defined: " + requestCountRecorder)
               requestCountRecorder.map(_.record(1))
               "ok"
             }

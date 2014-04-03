@@ -20,9 +20,15 @@ import akka.actor.{ ActorLogging, Props, ActorRef, Actor }
 import akka.io.{ Udp, IO }
 import java.net.InetSocketAddress
 import akka.util.ByteString
+import kamon.Kamon
+import scala.annotation.tailrec
 
-class StatsdMetricsSender(statPrefix: String, remote: InetSocketAddress) extends Actor with ActorLogging {
+class StatsDMetricsSender extends Actor with ActorLogging {
   import context.system
+
+  val statsDExtension = Kamon(StatsD)
+  val remote = new InetSocketAddress(statsDExtension.hostname, statsDExtension.port)
+  val maxPacketSize = 1024
 
   IO(Udp) ! Udp.SimpleSender
 
@@ -31,15 +37,29 @@ class StatsdMetricsSender(statPrefix: String, remote: InetSocketAddress) extends
       context.become(ready(sender))
   }
 
-  def ready(send: ActorRef): Receive = {
-    // TODO: batch writes
-    case metric: StatsD.Metric ⇒
-      send ! Udp.Send(metric.toByteString, remote)
+  def ready(udpSender: ActorRef): Receive = {
+    case StatsD.MetricBatch(metrics) ⇒ writeDown(metrics, ByteString.empty, udpSender)
+  }
 
-    case _ ⇒ log.error("Unknown Metric")
+
+  def flushToRemote(data: ByteString, udpSender: ActorRef): Unit =  udpSender ! Udp.Send(data, remote)
+
+  @tailrec final def writeDown(metrics: Iterable[StatsD.Metric], buffer: ByteString, udpSender: ActorRef): Unit = {
+    if(metrics.isEmpty)
+      flushToRemote(buffer, udpSender)
+    else {
+      val headData = metrics.head.toByteString
+      if(buffer.size + headData.size > maxPacketSize) {
+        flushToRemote(buffer, udpSender)
+        writeDown(metrics.tail, headData, udpSender)
+      } else {
+        writeDown(metrics.tail, buffer ++ headData, udpSender)
+      }
+
+    }
   }
 }
 
-object StatsdMetricsSender {
-  def props(statPrefix: String, remote: InetSocketAddress): Props = Props(new StatsdMetricsSender(statPrefix, remote))
+object StatsDMetricsSender {
+  def props: Props = Props[StatsDMetricsSender]
 }

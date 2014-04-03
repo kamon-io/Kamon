@@ -21,25 +21,33 @@ import kamon.metrics.Subscriptions.TickMetricSnapshot
 import kamon.metrics.ActorMetrics.ActorMetricSnapshot
 
 class StatsDMetricTranslator extends Actor {
-  //val metricsSender =
+  val config = context.system.settings.config
 
+  val metricKeyGenerator = new SimpleMetricKeyGenerator(config)
+  val metricSender = context.actorOf(StatsDMetricsSender.props, "metrics-sender")
 
   def receive = {
     case TickMetricSnapshot(from, to, metrics) ⇒
+      val translatedMetrics = metrics.collect {
+        case (am @ ActorMetrics(_), snapshot: ActorMetricSnapshot) => transformActorMetric(am, snapshot)
+      }
 
-
+      metricSender ! StatsD.MetricBatch(translatedMetrics.flatten)
   }
 
   def transformActorMetric(actorIdentity: ActorMetrics, snapshot: ActorMetricSnapshot): Vector[StatsD.Metric] = {
-    // TODO: Define metrics namespacing.
-    roll(actorIdentity.name, snapshot.timeInMailbox, StatsD.Timing)
+    val timeInMailboxKey = metricKeyGenerator.generateKey(actorIdentity, ActorMetrics.TimeInMailbox)
+    val processingTimeKey = metricKeyGenerator.generateKey(actorIdentity, ActorMetrics.ProcessingTime)
+
+    roll(timeInMailboxKey, snapshot.timeInMailbox, StatsD.Timing) ++ roll(processingTimeKey, snapshot.processingTime, StatsD.Timing)
   }
 
-  def roll(key: String, snapshot: MetricSnapshotLike, metricBuilder: (String, Long, Double) => StatsD.Metric): Vector[StatsD.Metric] = {
+  def roll(key: String, snapshot: MetricSnapshotLike, metricBuilder: (String, Double, Double) => StatsD.Metric): Vector[StatsD.Metric] = {
     val builder = Vector.newBuilder[StatsD.Metric]
     for(measurement <- snapshot.measurements) {
       val samplingRate = 1D / measurement.count
-      builder += metricBuilder.apply(key, measurement.value, samplingRate)
+      val scaledValue = Scale.convert(snapshot.scale, Scale.Milli, measurement.value)
+      builder += metricBuilder.apply(key, scaledValue, samplingRate)
     }
 
     builder.result()
@@ -49,5 +57,5 @@ class StatsDMetricTranslator extends Actor {
 }
 
 object StatsDMetricTranslator {
-  def props: Props = Props(new StatsDMetricTranslator)
+  def props: Props = Props[StatsDMetricTranslator]
 }
