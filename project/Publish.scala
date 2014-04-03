@@ -1,52 +1,22 @@
 import sbt._
 import sbt.Keys._
-import sbt.Project.Initialize
-import java.lang.Boolean.{valueOf => convertToBoolean }
 
 object Publish {
 
   lazy val settings = Seq(
     crossPaths := false,
     pomExtra := kamonPomExtra,
-    publishTo <<= kamonPublish,
-    organization := kamonOrganization,
-    credentials ++= kamonCredentials,
+    publishTo := kamonRepo,
+    organization := "io.kamon",
     pomIncludeRepository := { x => false },
     publishMavenStyle := true,
     publishArtifact in Test := false
   )
 
-  def kamonPublish:Initialize[Option[Resolver]] = {
-    if(convertToBoolean(System.getProperty("publish.to.sonatype"))) sonatypePublishRepository
-    else kamonPublishRepository
-  }
-
-  def sonatypePublishRepository: Initialize[Option[Resolver]] = {
-    version { v: String =>
-      val nexus = "https://oss.sonatype.org/"
-      if (v.trim.endsWith("SNAPSHOT"))
-        Some("snapshots" at nexus + "content/repositories/snapshots")
-      else
-        Some("releases" at nexus + "service/local/staging/deploy/maven2")
-    }
-  }
-
-  def kamonPublishRepository :Initialize[Option[Resolver]] = {
-    version { (v: String) =>
-      if (v.trim.endsWith("SNAPSHOT"))
-        Some(Resolver.sftp("Kamon Snapshots Repository", "snapshots.kamon.io", "/var/local/snapshots-repo"))
-      else
-        Some(Resolver.sftp("Kamon Repository", "repo.kamon.io", "/var/local/releases-repo"))
-    }
-  }
-
-  def kamonOrganization: String = Option(System.getProperty("kamon.publish.organization", "kamon")).get
-
-  def kamonCredentials: Seq[Credentials] =
-    Option(System.getProperty("kamon.publish.credentials", null)) map (f => Credentials(new File(f))) toSeq
+  def kamonRepo = Some(Resolver.sftp("Kamon Snapshots Repository", "snapshots.kamon.io", "/var/local/snapshots-repo"))
 
   def kamonPomExtra = {
-      <url>http://kamon.io</url>
+    <url>http://kamon.io</url>
       <licenses>
         <license>
           <name>Apache 2</name>
