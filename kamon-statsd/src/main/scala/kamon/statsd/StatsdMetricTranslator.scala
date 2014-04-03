@@ -18,20 +18,36 @@ package kamon.statsd
 import akka.actor.{ Props, Actor, ActorRef }
 import kamon.metrics._
 import kamon.metrics.Subscriptions.TickMetricSnapshot
+import kamon.metrics.ActorMetrics.ActorMetricSnapshot
 
-class StatsdMetricTranslator(receiver: ActorRef) extends Actor {
+class StatsDMetricTranslator extends Actor {
+  //val metricsSender =
+
 
   def receive = {
     case TickMetricSnapshot(from, to, metrics) ⇒
-      collectAllMetrics(metrics)
-      receiver ! ""
-  }
 
-  def collectAllMetrics(metrics: Map[MetricGroupIdentity, MetricGroupSnapshot]) = {
 
   }
+
+  def transformActorMetric(actorIdentity: ActorMetrics, snapshot: ActorMetricSnapshot): Vector[StatsD.Metric] = {
+    // TODO: Define metrics namespacing.
+    roll(actorIdentity.name, snapshot.timeInMailbox, StatsD.Timing)
+  }
+
+  def roll(key: String, snapshot: MetricSnapshotLike, metricBuilder: (String, Long, Double) => StatsD.Metric): Vector[StatsD.Metric] = {
+    val builder = Vector.newBuilder[StatsD.Metric]
+    for(measurement <- snapshot.measurements) {
+      val samplingRate = 1D / measurement.count
+      builder += metricBuilder.apply(key, measurement.value, samplingRate)
+    }
+
+    builder.result()
+  }
+
+
 }
 
-object StatsdMetricTranslator {
-  def props(receiver: ActorRef): Props = Props(new StatsdMetricTranslator(receiver))
+object StatsDMetricTranslator {
+  def props: Props = Props(new StatsDMetricTranslator)
 }
