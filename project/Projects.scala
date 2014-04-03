@@ -8,7 +8,7 @@ object Projects extends Build {
   import Dependencies._
 
   lazy val root = Project("root", file("."))
-    .aggregate(kamonCore, kamonSpray, kamonNewrelic, kamonPlayground, kamonDashboard, kamonTestkit, kamonPlay, site)
+    .aggregate(kamonCore, kamonSpray, kamonNewrelic, kamonPlayground, kamonDashboard, kamonTestkit, kamonPlay, kamonStatsd, site)
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
     .settings(noPublishing: _*)
@@ -54,7 +54,7 @@ object Projects extends Build {
     .settings(
       libraryDependencies ++=
         compile(akkaActor, akkaSlf4j, sprayCan, sprayClient, sprayRouting, logback))
-    .dependsOn(kamonSpray, kamonNewrelic)
+    .dependsOn(kamonSpray, kamonNewrelic, kamonStatsd)
 
 
   lazy val kamonDashboard = Project("kamon-dashboard", file("kamon-dashboard"))
@@ -63,12 +63,12 @@ object Projects extends Build {
     .settings(libraryDependencies ++= compile(akkaActor, akkaSlf4j, sprayRouting, sprayCan, sprayJson))
     .dependsOn(kamonCore)
 
+
   lazy val kamonTestkit = Project("kamon-testkit", file("kamon-testkit"))
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
     .settings(libraryDependencies ++= compile(akkaActor, akkaTestKit) ++ test(slf4Api, slf4nop))
     .dependsOn(kamonCore)
-
 
   lazy val kamonPlay = Project("kamon-play", file("kamon-play"))
     .settings(basicSettings: _*)
@@ -77,6 +77,11 @@ object Projects extends Build {
     .settings(libraryDependencies ++= compile(playTest, aspectJ) ++ test(playTest, slf4Api))
     .dependsOn(kamonCore)
 
+  lazy val kamonStatsd = Project("kamon-statsd", file("kamon-statsd"))
+    .settings(basicSettings: _*)
+    .settings(formatSettings: _*)
+    .settings(libraryDependencies ++= compile(akkaActor) ++  test(scalatest, akkaTestKit, slf4Api, slf4nop))
+    .dependsOn(kamonCore)
 
   lazy val site = Project("site", file("site"))
     .settings(basicSettings: _*)
