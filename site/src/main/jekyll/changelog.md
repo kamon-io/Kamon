@@ -6,9 +6,6 @@ layout: default
 Changelog
 ===============
 
-Version 0.0.15 (2014-04-??)
-----------------
-
 Version 0.0.14 (2014-03-17)
 ----------------
 * kamon-core
@@ -17,6 +14,6 @@ Version 0.0.14 (2014-03-17)
     * Support for custom metrics collection (Experimental)
 * kamon-play
     * Initial support (Experimental)
-* kamon-documentation
-    * logging (WIP)
-    * tracing (WIP)
+* site
+    * [logging](../logging/) (WIP)
+    * [tracing](../tracing/) (WIP)
