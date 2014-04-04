@@ -16,14 +16,14 @@
 
 package kamon.statsd
 
-import akka.actor.{ ActorLogging, Props, ActorRef, Actor }
+import akka.actor.{ Props, ActorRef, Actor }
 import akka.io.{ Udp, IO }
 import java.net.InetSocketAddress
 import akka.util.ByteString
 import kamon.Kamon
 import scala.annotation.tailrec
 
-class StatsDMetricsSender extends Actor with ActorLogging {
+class StatsDMetricsSender extends Actor {
   import context.system
 
   val statsDExtension = Kamon(StatsD)
