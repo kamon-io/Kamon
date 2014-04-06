@@ -50,6 +50,7 @@ body {
 }
 
 img[alt=newrelic] { width: 100%; }
+img[alt=statsD] { width: 100%; }
 
 .btn-success {
   background-color: #29b068
