@@ -28,7 +28,7 @@ trait WebTransactionMetrics {
     val apdexBuilder = new ApdexBuilder("Apdex", None, Kamon(NewRelic)(context.system).apdexT)
 
     // Trace metrics are recorded in nanoseconds.
-    var accumulatedHttpDispatcher: MetricSnapshotLike = MetricSnapshot(0, Scale.Nano, Vector.empty)
+    var accumulatedHttpDispatcher: MetricSnapshotLike = MetricSnapshot(InstrumentTypes.Histogram, 0, Scale.Nano, Vector.empty)
 
     val webTransactionMetrics = metrics.collect {
       case (TraceMetrics(name), groupSnapshot) ⇒
