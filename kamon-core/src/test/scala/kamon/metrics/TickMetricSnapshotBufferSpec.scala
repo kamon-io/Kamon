@@ -70,10 +70,10 @@ class TickMetricSnapshotBufferSpec extends TestKit(ActorSystem("tick-metric-snap
     val thirdEmpty = TickMetricSnapshot(3000, 4000, Map.empty)
 
     val firstNonEmpty = TickMetricSnapshot(1000, 2000,
-      Map((CustomMetric("test-metric") -> SimpleGroupSnapshot(Map(CustomMetric.RecordedValues -> MetricSnapshot(20, Scale.Unit, Vector(Measurement(1, 10), Measurement(10, 10))))))))
+      Map((CustomMetric("test-metric") -> SimpleGroupSnapshot(Map(CustomMetric.RecordedValues -> MetricSnapshot(InstrumentTypes.Histogram, 20, Scale.Unit, Vector(Measurement(1, 10), Measurement(10, 10))))))))
 
     val secondNonEmpty = TickMetricSnapshot(1000, 2000,
-      Map((CustomMetric("test-metric") -> SimpleGroupSnapshot(Map(CustomMetric.RecordedValues -> MetricSnapshot(15, Scale.Unit, Vector(Measurement(4, 9), Measurement(10, 6))))))))
+      Map((CustomMetric("test-metric") -> SimpleGroupSnapshot(Map(CustomMetric.RecordedValues -> MetricSnapshot(InstrumentTypes.Histogram, 15, Scale.Unit, Vector(Measurement(4, 9), Measurement(10, 6))))))))
 
   }
 
