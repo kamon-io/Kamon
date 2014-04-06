@@ -19,6 +19,7 @@ package kamon.metrics
 import annotation.tailrec
 import com.typesafe.config.Config
 import kamon.metrics.MetricSnapshot.Measurement
+import kamon.metrics.InstrumentTypes.InstrumentType
 
 trait MetricGroupCategory {
   def name: String
@@ -49,7 +50,15 @@ trait MetricRecorder {
   def collect(): MetricSnapshotLike
 }
 
+object InstrumentTypes {
+  sealed trait InstrumentType
+  case object Histogram extends InstrumentType
+  case object Gauge extends InstrumentType
+  case object Counter extends InstrumentType
+}
+
 trait MetricSnapshotLike {
+  def instrumentType: InstrumentType
   def numberOfMeasurements: Long
   def scale: Scale
   def measurements: Vector[Measurement]
@@ -92,11 +101,12 @@ trait MetricSnapshotLike {
     }
 
     val totalNrOfMeasurements = go(measurements, that.measurements, 0)
-    MetricSnapshot(totalNrOfMeasurements, scale, mergedMeasurements.result())
+    MetricSnapshot(instrumentType, totalNrOfMeasurements, scale, mergedMeasurements.result())
   }
 }
 
-case class MetricSnapshot(numberOfMeasurements: Long, scale: Scale, measurements: Vector[MetricSnapshot.Measurement]) extends MetricSnapshotLike
+case class MetricSnapshot(instrumentType: InstrumentType, numberOfMeasurements: Long, scale: Scale,
+                          measurements: Vector[MetricSnapshot.Measurement]) extends MetricSnapshotLike
 
 object MetricSnapshot {
   case class Measurement(value: Long, count: Long) {

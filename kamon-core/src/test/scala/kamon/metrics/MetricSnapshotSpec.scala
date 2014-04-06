@@ -49,16 +49,16 @@ class MetricSnapshotSpec extends WordSpec with Matchers {
   }
 
   trait SnapshotFixtures {
-    val emptySnapshot = MetricSnapshot(0, Scale.Unit, Vector.empty)
+    val emptySnapshot = MetricSnapshot(InstrumentTypes.Histogram, 0, Scale.Unit, Vector.empty)
 
-    val snapshotA = MetricSnapshot(100, Scale.Unit, Vector(
+    val snapshotA = MetricSnapshot(InstrumentTypes.Histogram, 100, Scale.Unit, Vector(
       Measurement(1, 3),
       Measurement(2, 15),
       Measurement(5, 68),
       Measurement(7, 13),
       Measurement(17, 1)))
 
-    val snapshotB = MetricSnapshot(100, Scale.Unit, Vector(
+    val snapshotB = MetricSnapshot(InstrumentTypes.Histogram, 100, Scale.Unit, Vector(
       Measurement(2, 6),
       Measurement(4, 48),
       Measurement(5, 39),

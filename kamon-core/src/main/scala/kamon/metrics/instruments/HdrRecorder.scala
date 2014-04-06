@@ -18,7 +18,7 @@ package org.HdrHistogram
 
 import java.util.concurrent.atomic.AtomicLongFieldUpdater
 import scala.annotation.tailrec
-import kamon.metrics.{ Scale, MetricSnapshot, MetricSnapshotLike, MetricRecorder }
+import kamon.metrics._
 
 /**
  *  This implementation aims to be used for real time data collection where data snapshots are taken often over time.
@@ -64,7 +64,7 @@ class HdrRecorder(highestTrackableValue: Long, significantValueDigits: Int, scal
 
     while (!tryUpdateTotalCount) {}
 
-    MetricSnapshot(nrOfRecordings, scale, entries.result())
+    MetricSnapshot(InstrumentTypes.Histogram, nrOfRecordings, scale, entries.result())
   }
 
 }
