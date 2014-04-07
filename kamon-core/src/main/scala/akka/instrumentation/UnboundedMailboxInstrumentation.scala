@@ -39,20 +39,20 @@ class UnboundedMailboxInstrumentation {
 
   @After("dequeuePointcut(queue)")
   def afterDequeuePointcut(queue: MessageQueueSizeCounting): Unit = {
-    if (queue.queueSize.get() > 0) queue.queueSize.decrementAndGet()
+    if (queue.internalQueueSize.get() > 0) queue.internalQueueSize.decrementAndGet()
   }
 
   @After("enqueuePointcut(queue)")
   def afterEnqueue(queue: MessageQueueSizeCounting): Unit = {
-    queue.queueSize.incrementAndGet()
+    queue.internalQueueSize.incrementAndGet()
   }
 
   @Around("numberOfMessagesPointcut(queue)")
   def aroundNumberOfMessages(pjp: ProceedingJoinPoint, queue: MessageQueueSizeCounting): Any = {
-    queue.queueSize.get()
+    queue.internalQueueSize.get()
   }
 }
 
 trait MessageQueueSizeCounting {
-  val queueSize = new AtomicInteger
+  val internalQueueSize = new AtomicInteger
 }
