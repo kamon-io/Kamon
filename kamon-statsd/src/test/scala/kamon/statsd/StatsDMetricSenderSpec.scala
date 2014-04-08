@@ -25,6 +25,7 @@ import org.HdrHistogram.HdrRecorder
 import kamon.metrics.Subscriptions.TickMetricSnapshot
 import java.lang.management.ManagementFactory
 import com.typesafe.config.ConfigFactory
+import kamon.Kamon
 
 class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers {
 
@@ -74,6 +75,26 @@ class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers
       val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
 
       data.utf8String should be(s"$testMetricKey:10|ms|@0.5")
+    }
+
+    "flush the packet when the max-packet-size is reached" in new UdpListenerFixture {
+      val testMetricName = "test-metric"
+      val testMetricKey = buildMetricKey(testMetricName)
+      val testRecorder = HdrRecorder(1000L, 3, Scale.Unit)
+
+      var bytes = testMetricKey.length
+      var level = 0
+      while(bytes <= Kamon(StatsD).maxPacketSize) {
+        level += 1
+        testRecorder.record(level)
+        bytes += s":$level|ms".length
+      }
+
+      val udp = setup(Map(testMetricName -> testRecorder.collect()))
+      udp.expectMsgType[Udp.Send] // let the first flush pass
+      val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
+
+      data.utf8String should be(s"$testMetricKey:$level|ms")
     }
 
 
