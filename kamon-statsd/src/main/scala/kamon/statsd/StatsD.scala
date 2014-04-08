@@ -21,7 +21,6 @@ import kamon.Kamon
 import kamon.metrics._
 import scala.concurrent.duration._
 import scala.collection.JavaConverters._
-import akka.util.ByteString
 import com.typesafe.config.Config
 import java.lang.management.ManagementFactory
 
@@ -32,39 +31,6 @@ object StatsD extends ExtensionId[StatsDExtension] with ExtensionIdProvider {
   trait MetricKeyGenerator {
     def generateKey(groupIdentity: MetricGroupIdentity, metricIdentity: MetricIdentity): String
   }
-
-  sealed trait Metric {
-    def key: String
-    def value: Double
-    def suffix: String
-    def samplingRate: Double
-
-    /*
-     * Creates the stats string to send to StatsD.
-     * For counters, it provides something like {@code key:value|c}.
-     * For timing, it provides something like {@code key:millis|ms}.
-     * If sampling rate is less than 1, it provides something like {@code key:value|type|@rate}
-     */
-    def toByteString(includeTrailingNewline: Boolean = true): ByteString =
-      if (samplingRate >= 1D)
-        ByteString(s"$key:$value|$suffix")
-      else
-        ByteString(s"$key:$value|$suffix|@$samplingRate")
-  }
-
-  case class Counter(key: String, value: Double = 1D, samplingRate: Double = 1.0) extends Metric {
-    val suffix: String = "c"
-  }
-
-  case class Timing(key: String, value: Double, samplingRate: Double = 1.0) extends Metric {
-    val suffix: String = "ms"
-  }
-
-  case class Gauge(key: String, value: Double, samplingRate: Double = 1.0) extends Metric {
-    val suffix: String = "g"
-  }
-
-  case class MetricBatch(metrics: Iterable[Metric])
 }
 
 class StatsDExtension(system: ExtendedActorSystem) extends Kamon.Extension {
@@ -86,9 +52,9 @@ class StatsDExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   def buildMetricsListener(tickInterval: Long, flushInterval: Long): ActorRef = {
     assert(flushInterval >= tickInterval, "StatsD flush-interval needs to be equal or greater to the tick-interval")
 
-    val metricsTranslator = system.actorOf(StatsDMetricTranslator.props, "statsd-metrics-translator")
+    val metricsTranslator = system.actorOf(StatsDMetricsSender.props, "statsd-metrics-sender")
     if (flushInterval == tickInterval) {
-      // No need to buffer the metrics, let's go straight to the metrics translator.
+      // No need to buffer the metrics, let's go straight to the metrics sender.
       metricsTranslator
     } else {
       system.actorOf(TickMetricSnapshotBuffer.props(flushInterval.toInt.millis, metricsTranslator), "statsd-metrics-buffer")
