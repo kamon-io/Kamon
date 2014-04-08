@@ -71,7 +71,7 @@ class ActorMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
       val actorMetrics = expectActorMetrics("user/tracked-normal-conditions", metricsListener, 3 seconds)
       // Mailbox size is measured twice, on queue and dequeue, plus the automatic last-value recording.
       actorMetrics.mailboxSize.numberOfMeasurements should be(21)
-      actorMetrics.mailboxSize.max should be < 10L
+      actorMetrics.mailboxSize.max should be <= 10L
 
       actorMetrics.processingTime.numberOfMeasurements should be(10L)
 
