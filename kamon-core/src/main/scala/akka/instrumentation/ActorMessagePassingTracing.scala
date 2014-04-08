@@ -1,5 +1,5 @@
 /* ===================================================
- * Copyright © 2013 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2014 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,11 +18,12 @@ package akka.instrumentation
 import org.aspectj.lang.annotation._
 import org.aspectj.lang.ProceedingJoinPoint
 import akka.actor._
-import akka.dispatch.{ Envelope, MessageDispatcher }
+import akka.dispatch.{Envelope, MessageDispatcher}
 import kamon.trace._
-import kamon.metrics.{ ActorMetrics, Metrics }
+import kamon.metrics.{ActorMetrics, Metrics}
 import kamon.Kamon
 import kamon.metrics.ActorMetrics.ActorMetricRecorder
+import java.util.concurrent.atomic.AtomicInteger
 
 @Aspect
 class BehaviourInvokeTracing {
@@ -49,14 +50,17 @@ class BehaviourInvokeTracing {
     val contextAndTimestamp = envelope.asInstanceOf[TraceContextAware]
     val cellWithMetrics = cell.asInstanceOf[ActorCellMetrics]
 
-    TraceRecorder.withTraceContext(contextAndTimestamp.traceContext) {
-      pjp.proceed()
-    }
-
-    cellWithMetrics.actorMetricsRecorder.map { am ⇒
-      am.processingTime.record(System.nanoTime() - timestampBeforeProcessing)
-      am.timeInMailbox.record(timestampBeforeProcessing - contextAndTimestamp.captureNanoTime)
-      am.mailboxSize.record(cell.numberOfMessages)
+    try {
+      TraceRecorder.withTraceContext(contextAndTimestamp.traceContext) {
+        pjp.proceed()
+      }
+    } finally {
+      cellWithMetrics.actorMetricsRecorder.map {
+        am ⇒
+          am.processingTime.record(System.nanoTime() - timestampBeforeProcessing)
+          am.timeInMailbox.record(timestampBeforeProcessing - contextAndTimestamp.captureNanoTime)
+          am.mailboxSize.record(cellWithMetrics.queueSize.decrementAndGet())
+      }
     }
   }
 
@@ -66,8 +70,9 @@ class BehaviourInvokeTracing {
   @After("sendingMessageToActorCell(cell)")
   def afterSendMessageToActorCell(cell: ActorCell): Unit = {
     val cellWithMetrics = cell.asInstanceOf[ActorCellMetrics]
-    cellWithMetrics.actorMetricsRecorder.map { am ⇒
-      am.mailboxSize.record(cell.numberOfMessages)
+    cellWithMetrics.actorMetricsRecorder.map {
+      am ⇒
+        am.mailboxSize.record(cellWithMetrics.queueSize.incrementAndGet())
     }
   }
 
@@ -84,6 +89,7 @@ class BehaviourInvokeTracing {
 trait ActorCellMetrics {
   var metricIdentity: ActorMetrics = _
   var actorMetricsRecorder: Option[ActorMetricRecorder] = _
+  val queueSize = new AtomicInteger
 }
 
 @Aspect
