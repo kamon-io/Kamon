@@ -24,6 +24,7 @@ import kamon.Kamon
 import kamon.metrics.Subscriptions.TickMetricSnapshot
 import kamon.metrics.MetricSnapshot.Measurement
 import kamon.metrics.InstrumentTypes.{ Counter, Gauge, Histogram, InstrumentType }
+import java.text.DecimalFormat
 
 class StatsDMetricsSender extends Actor with UdpExtensionProvider {
   import context.system
@@ -31,6 +32,8 @@ class StatsDMetricsSender extends Actor with UdpExtensionProvider {
   val statsDExtension = Kamon(StatsD)
   val remote = new InetSocketAddress(statsDExtension.hostname, statsDExtension.port)
   val metricKeyGenerator = new SimpleMetricKeyGenerator(context.system.settings.config)
+  val samplingRateFormat = new DecimalFormat()
+  samplingRateFormat.setMaximumFractionDigits(128) // Absurdly high, let the other end loss precision if it needs to.
 
   udpExtension ! Udp.SimpleSender
 
@@ -64,7 +67,7 @@ class StatsDMetricsSender extends Actor with UdpExtensionProvider {
 
   def encodeMeasurement(measurement: Measurement, instrumentType: InstrumentType): ByteString = {
     def statsDMetricFormat(value: String, metricType: String, samplingRate: Double = 1D): ByteString =
-      ByteString(value + "|" + metricType + (if (samplingRate != 1D) "|@" + samplingRate else ""))
+      ByteString(value + "|" + metricType + (if (samplingRate != 1D) "|@" + samplingRateFormat.format(samplingRate) else ""))
 
     instrumentType match {
       case Histogram ⇒ statsDMetricFormat(measurement.value.toString, "ms", (1D / measurement.count))
