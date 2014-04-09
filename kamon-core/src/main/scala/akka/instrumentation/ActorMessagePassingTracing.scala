@@ -59,7 +59,10 @@ class BehaviourInvokeTracing {
         am ⇒
           am.processingTime.record(System.nanoTime() - timestampBeforeProcessing)
           am.timeInMailbox.record(timestampBeforeProcessing - contextAndTimestamp.captureNanoTime)
-          am.mailboxSize.record(cellWithMetrics.queueSize.decrementAndGet())
+
+          val currentMailboxSize = cellWithMetrics.queueSize.decrementAndGet()
+          if(currentMailboxSize >= 0)
+            am.mailboxSize.record(currentMailboxSize)
       }
     }
   }
@@ -72,7 +75,9 @@ class BehaviourInvokeTracing {
     val cellWithMetrics = cell.asInstanceOf[ActorCellMetrics]
     cellWithMetrics.actorMetricsRecorder.map {
       am ⇒
-        am.mailboxSize.record(cellWithMetrics.queueSize.incrementAndGet())
+        val currentMailboxSize = cellWithMetrics.queueSize.incrementAndGet()
+        if(currentMailboxSize >= 0)
+          am.mailboxSize.record(currentMailboxSize)
     }
   }
 
