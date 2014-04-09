@@ -27,9 +27,9 @@ case class ActorMetrics(name: String) extends MetricGroupIdentity {
 object ActorMetrics extends MetricGroupCategory {
   val name = "actor"
 
-  case object ProcessingTime extends MetricIdentity { val name, tag = "ProcessingTime" }
-  case object MailboxSize extends MetricIdentity { val name, tag = "MailboxSize" }
-  case object TimeInMailbox extends MetricIdentity { val name, tag = "TimeInMailbox" }
+  case object ProcessingTime extends MetricIdentity { val name, tag = "processing-time" }
+  case object MailboxSize extends MetricIdentity { val name, tag = "mailbox-size" }
+  case object TimeInMailbox extends MetricIdentity { val name, tag = "time-in-mailbox" }
 
   case class ActorMetricRecorder(processingTime: MetricRecorder, mailboxSize: MetricRecorder, timeInMailbox: MetricRecorder)
       extends MetricGroupRecorder {
