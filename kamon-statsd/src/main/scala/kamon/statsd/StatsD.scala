@@ -24,6 +24,7 @@ import scala.collection.JavaConverters._
 import com.typesafe.config.Config
 import java.lang.management.ManagementFactory
 import akka.event.Logging
+import java.net.InetSocketAddress
 
 object StatsD extends ExtensionId[StatsDExtension] with ExtensionIdProvider {
   override def lookup(): ExtensionId[_ <: Extension] = StatsD
@@ -40,23 +41,29 @@ class StatsDExtension(system: ExtendedActorSystem) extends Kamon.Extension {
 
   private val statsDConfig = system.settings.config.getConfig("kamon.statsd")
 
-  val hostname = statsDConfig.getString("hostname")
-  val port = statsDConfig.getInt("port")
+  val statsDHost = new InetSocketAddress(statsDConfig.getString("hostname"), statsDConfig.getInt("port"))
   val flushInterval = statsDConfig.getMilliseconds("flush-interval")
   val maxPacketSize = statsDConfig.getInt("max-packet-size")
   val tickInterval = system.settings.config.getMilliseconds("kamon.metrics.tick-interval")
 
   val statsDMetricsListener = buildMetricsListener(tickInterval, flushInterval)
 
+  // Subscribe to Actors
   val includedActors = statsDConfig.getStringList("includes.actor").asScala
   for (actorPathPattern ← includedActors) {
     Kamon(Metrics)(system).subscribe(ActorMetrics, actorPathPattern, statsDMetricsListener, permanently = true)
   }
 
+  // Subscribe to Traces
+  val includedTraces = statsDConfig.getStringList("includes.trace").asScala
+  for (tracePathPattern ← includedTraces) {
+    Kamon(Metrics)(system).subscribe(TraceMetrics, tracePathPattern, statsDMetricsListener, permanently = true)
+  }
+
   def buildMetricsListener(tickInterval: Long, flushInterval: Long): ActorRef = {
     assert(flushInterval >= tickInterval, "StatsD flush-interval needs to be equal or greater to the tick-interval")
 
-    val metricsTranslator = system.actorOf(StatsDMetricsSender.props, "statsd-metrics-sender")
+    val metricsTranslator = system.actorOf(StatsDMetricsSender.props(statsDHost, maxPacketSize), "statsd-metrics-sender")
     if (flushInterval == tickInterval) {
       // No need to buffer the metrics, let's go straight to the metrics sender.
       metricsTranslator

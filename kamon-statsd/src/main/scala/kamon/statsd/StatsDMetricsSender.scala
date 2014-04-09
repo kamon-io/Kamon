@@ -26,11 +26,9 @@ import kamon.metrics.MetricSnapshot.Measurement
 import kamon.metrics.InstrumentTypes.{ Counter, Gauge, Histogram, InstrumentType }
 import java.text.DecimalFormat
 
-class StatsDMetricsSender extends Actor with UdpExtensionProvider {
+class StatsDMetricsSender(remote: InetSocketAddress, maxPacketSize: Int) extends Actor with UdpExtensionProvider {
   import context.system
 
-  val statsDExtension = Kamon(StatsD)
-  val remote = new InetSocketAddress(statsDExtension.hostname, statsDExtension.port)
   val metricKeyGenerator = new SimpleMetricKeyGenerator(context.system.settings.config)
   val samplingRateFormat = new DecimalFormat()
   samplingRateFormat.setMaximumFractionDigits(128) // Absurdly high, let the other end loss precision if it needs to.
@@ -47,7 +45,7 @@ class StatsDMetricsSender extends Actor with UdpExtensionProvider {
   }
 
   def writeMetricsToRemote(tick: TickMetricSnapshot, udpSender: ActorRef): Unit = {
-    val dataBuilder = new MetricDataPacketBuilder(statsDExtension.maxPacketSize, udpSender, remote)
+    val dataBuilder = new MetricDataPacketBuilder(maxPacketSize, udpSender, remote)
 
     for (
       (groupIdentity, groupSnapshot) ← tick.metrics;
@@ -78,7 +76,7 @@ class StatsDMetricsSender extends Actor with UdpExtensionProvider {
 }
 
 object StatsDMetricsSender {
-  def props: Props = Props[StatsDMetricsSender]
+  def props(remote: InetSocketAddress, maxPacketSize: Int): Props = Props(new StatsDMetricsSender(remote, maxPacketSize))
 }
 
 trait UdpExtensionProvider {
