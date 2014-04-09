@@ -69,12 +69,8 @@ class ActorMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
       }
 
       val actorMetrics = expectActorMetrics("user/tracked-normal-conditions", metricsListener, 3 seconds)
-      // Mailbox size is measured twice, on queue and dequeue, plus the automatic last-value recording.
-      actorMetrics.mailboxSize.numberOfMeasurements should be(21)
       actorMetrics.mailboxSize.max should be <= 10L
-
       actorMetrics.processingTime.numberOfMeasurements should be(10L)
-
       actorMetrics.timeInMailbox.numberOfMeasurements should be(10L)
     }
 
@@ -92,8 +88,9 @@ class ActorMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
       // process the tick in which the actor is stalled.
       val stalledTickMetrics = expectActorMetrics("user/tracked-mailbox-size-queueing-up", metricsListener, 2 seconds)
       stalledTickMetrics.mailboxSize.numberOfMeasurements should equal(1)
-      stalledTickMetrics.mailboxSize.measurements should contain only (Measurement(9, 1)) // only the automatic last-value recording
-      stalledTickMetrics.mailboxSize.max should equal(9)
+      // only the automatic last-value recording should be taken, and includes the message being currently processed.
+      stalledTickMetrics.mailboxSize.measurements should contain only (Measurement(10, 1))
+      stalledTickMetrics.mailboxSize.max should equal(10)
       stalledTickMetrics.processingTime.numberOfMeasurements should be(0L)
       stalledTickMetrics.timeInMailbox.numberOfMeasurements should be(0L)
 

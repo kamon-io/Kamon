@@ -18,9 +18,9 @@ package akka.instrumentation
 import org.aspectj.lang.annotation._
 import org.aspectj.lang.ProceedingJoinPoint
 import akka.actor._
-import akka.dispatch.{Envelope, MessageDispatcher}
+import akka.dispatch.{ Envelope, MessageDispatcher }
 import kamon.trace._
-import kamon.metrics.{ActorMetrics, Metrics}
+import kamon.metrics.{ ActorMetrics, Metrics }
 import kamon.Kamon
 import kamon.metrics.ActorMetrics.ActorMetricRecorder
 import java.util.concurrent.atomic.AtomicInteger
@@ -61,7 +61,7 @@ class BehaviourInvokeTracing {
           am.timeInMailbox.record(timestampBeforeProcessing - contextAndTimestamp.captureNanoTime)
 
           val currentMailboxSize = cellWithMetrics.queueSize.decrementAndGet()
-          if(currentMailboxSize >= 0)
+          if (currentMailboxSize >= 0)
             am.mailboxSize.record(currentMailboxSize)
       }
     }
@@ -76,7 +76,7 @@ class BehaviourInvokeTracing {
     cellWithMetrics.actorMetricsRecorder.map {
       am ⇒
         val currentMailboxSize = cellWithMetrics.queueSize.incrementAndGet()
-        if(currentMailboxSize >= 0)
+        if (currentMailboxSize >= 0)
           am.mailboxSize.record(currentMailboxSize)
     }
   }
