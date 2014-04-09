@@ -26,7 +26,7 @@ case class CustomMetric(name: String) extends MetricGroupIdentity {
 
 object CustomMetric extends MetricGroupCategory {
   val name = "custom-metric"
-  val RecordedValues = new MetricIdentity { val name, tag = "RecordedValues" }
+  val RecordedValues = new MetricIdentity { val name, tag = "recorded-values" }
 
   def histogram(highestTrackableValue: Long, significantValueDigits: Int, scale: Scale, continuous: Boolean = false) =
     new MetricGroupFactory {
