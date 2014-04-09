@@ -23,6 +23,7 @@ import scala.concurrent.duration._
 import scala.collection.JavaConverters._
 import com.typesafe.config.Config
 import java.lang.management.ManagementFactory
+import akka.event.Logging
 
 object StatsD extends ExtensionId[StatsDExtension] with ExtensionIdProvider {
   override def lookup(): ExtensionId[_ <: Extension] = StatsD
@@ -34,6 +35,9 @@ object StatsD extends ExtensionId[StatsDExtension] with ExtensionIdProvider {
 }
 
 class StatsDExtension(system: ExtendedActorSystem) extends Kamon.Extension {
+  val log = Logging(system, classOf[StatsDExtension])
+  log.info("Starting the Kamon(StatsD) extension")
+
   private val statsDConfig = system.settings.config.getConfig("kamon.statsd")
 
   val hostname = statsDConfig.getString("hostname")
