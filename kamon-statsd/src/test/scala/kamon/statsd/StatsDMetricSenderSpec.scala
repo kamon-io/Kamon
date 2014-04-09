@@ -16,27 +16,18 @@
 
 package kamon.statsd
 
-import akka.testkit.{TestKitBase, TestProbe}
-import akka.actor.{ActorRef, Props, ActorSystem}
-import org.scalatest.{Matchers, WordSpecLike}
+import akka.testkit.{ TestKit, TestProbe }
+import akka.actor.{ ActorRef, Props, ActorSystem }
+import org.scalatest.{ Matchers, WordSpecLike }
 import kamon.metrics._
 import akka.io.Udp
 import org.HdrHistogram.HdrRecorder
 import kamon.metrics.Subscriptions.TickMetricSnapshot
 import java.lang.management.ManagementFactory
-import com.typesafe.config.ConfigFactory
 import kamon.Kamon
 import java.net.InetSocketAddress
 
-class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers {
-
-  implicit lazy val system: ActorSystem = ActorSystem("statsd-metric-sender-spec", ConfigFactory.parseString(
-    """
-      |kamon.statsd {
-      |  max-packet-size = 256
-      |}
-    """.stripMargin
-  ))
+class StatsDMetricSenderSpec extends TestKit(ActorSystem("statsd-metric-sender-spec")) with WordSpecLike with Matchers {
 
   "the StatsDMetricSender" should {
     "flush the metrics data after processing the tick, even if the max-packet-size is not reached" in new UdpListenerFixture {
@@ -85,7 +76,7 @@ class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers
 
       var bytes = testMetricKey.length
       var level = 0
-      while(bytes <= Kamon(StatsD).maxPacketSize) {
+      while (bytes <= testMaxPacketSize) {
         level += 1
         testRecorder.record(level)
         bytes += s":$level|ms".length
@@ -97,7 +88,6 @@ class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers
 
       data.utf8String should be(s"$testMetricKey:$level|ms")
     }
-
 
     "render multiple keys in the same packet using newline as separator" in new UdpListenerFixture {
       val firstTestMetricName = "first-test-metric"
@@ -123,22 +113,21 @@ class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers
     }
   }
 
-
   trait UdpListenerFixture {
     val localhostName = ManagementFactory.getRuntimeMXBean.getName.split('@')(1)
+    val testMaxPacketSize = 256
 
     def buildMetricKey(metricName: String): String = s"Kamon.$localhostName.test-metric-category.test-group.$metricName"
 
     def setup(metrics: Map[String, MetricSnapshotLike]): TestProbe = {
       val udp = TestProbe()
-      val metricsSender = system.actorOf(Props(new StatsDMetricsSender(new InetSocketAddress(localhostName, 0), 512) {
+      val metricsSender = system.actorOf(Props(new StatsDMetricsSender(new InetSocketAddress(localhostName, 0), testMaxPacketSize) {
         override def udpExtension(implicit system: ActorSystem): ActorRef = udp.ref
       }))
 
       // Setup the SimpleSender
       udp.expectMsgType[Udp.SimpleSender]
       udp.reply(Udp.SimpleSenderReady)
-
 
       val testGroupIdentity = new MetricGroupIdentity {
         val name: String = "test-group"
@@ -147,7 +136,7 @@ class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers
         }
       }
 
-      val testMetrics = for((metricName, snapshot) <- metrics) yield {
+      val testMetrics = for ((metricName, snapshot) ← metrics) yield {
         val testMetricIdentity = new MetricIdentity {
           val name: String = metricName
           val tag: String = ""
