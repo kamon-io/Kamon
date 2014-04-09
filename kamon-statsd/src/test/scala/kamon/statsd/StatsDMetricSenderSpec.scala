@@ -26,6 +26,7 @@ import kamon.metrics.Subscriptions.TickMetricSnapshot
 import java.lang.management.ManagementFactory
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
+import java.net.InetSocketAddress
 
 class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers {
 
@@ -130,7 +131,7 @@ class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers
 
     def setup(metrics: Map[String, MetricSnapshotLike]): TestProbe = {
       val udp = TestProbe()
-      val metricsSender = system.actorOf(Props(new StatsDMetricsSender {
+      val metricsSender = system.actorOf(Props(new StatsDMetricsSender(new InetSocketAddress(localhostName, 0), 512) {
         override def udpExtension(implicit system: ActorSystem): ActorRef = udp.ref
       }))
 
