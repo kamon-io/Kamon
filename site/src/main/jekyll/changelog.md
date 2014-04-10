@@ -5,6 +5,15 @@ layout: default
 
 Changelog
 ===============
+Version 0.0.15 (2014-04-09)
+----------------
+* kamon
+    * prepared to publish in maven central repository
+* kamon-core
+    * control of AspectJ weaving messages through kamon configuration
+* kamon-statsd (Experimental)
+* kamon-play (Experimental)
+
 
 Version 0.0.14 (2014-03-17)
 ----------------
@@ -15,5 +24,5 @@ Version 0.0.14 (2014-03-17)
 * kamon-play
     * Initial support (Experimental)
 * site
-    * [logging](../logging/) (WIP)
-    * [tracing](../tracing/) (WIP)
+    * [logging](/core/logging/) (WIP)
+    * [tracing](/core/tracing/) (WIP)
