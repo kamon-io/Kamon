@@ -117,7 +117,7 @@ class StatsDMetricSenderSpec extends TestKit(ActorSystem("statsd-metric-sender-s
     val localhostName = ManagementFactory.getRuntimeMXBean.getName.split('@')(1)
     val testMaxPacketSize = 256
 
-    def buildMetricKey(metricName: String): String = s"Kamon.$localhostName.test-metric-category.test-group.$metricName"
+    def buildMetricKey(metricName: String): String = s"kamon.$localhostName.test-metric-category.test-group.$metricName"
 
     def setup(metrics: Map[String, MetricSnapshotLike]): TestProbe = {
       val udp = TestProbe()

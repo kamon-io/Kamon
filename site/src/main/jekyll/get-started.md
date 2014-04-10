@@ -6,8 +6,8 @@ layout: default
 Get Started with Kamon
 ======================
 
-Kamon is distributed as a set of libraries that you include in your application classpath. This libraries contain all
-the required pointcuts and advices (yeap, Kamon uses Aspectj!) for instrumenting Akka actors message passing,
+Kamon is distributed as a core and a set of modules that you include in your application classpath. This modules contain
+all the required pointcuts and advices (yeap, Kamon uses Aspectj!) for instrumenting Akka actors message passing,
 dispatchers, futures, Spray components and much more.
 
 To get started just follow this steps:
@@ -16,28 +16,19 @@ To get started just follow this steps:
 First: Include the modules you want in your project.
 ----------------------------------------------------
 
-All Kamon libraries are available through the official Kamon repository:
+All Kamon components are available through Sonatype and Maven Central and no special repositories need to be configured.
+If you are using SBT, you will need to add something like this to your build definition:
 
 ```scala
-    "Kamon Repository" at "http://repo.kamon.io"
+libraryDependencies += "io.kamon" % "kamon-core" % "0.0.15"
 ```
 
-Then, add the libraries to your project. If you are using SBT this minimal build.sbt file should be helpful:
+Then, add any additional module you need:
 
-```scala
-
-resolvers += "Kamon Repository" at "http://repo.kamon.io"
-
-libraryDependencies += "kamon" % "kamon-core" % "0.0.14"
-
-```
-
-Additionally you can add any modules you want to your app:
-
-- kamon-core (only compatible with Akka 2.2.3)
-- kamon-spray (only compatible with Spray 1.2.0)
-- kamon-newrelic
-- kamon-dashboard (coming soon)
+* kamon-core (only compatible with Akka 2.2.x)
+* kamon-spray (only compatible with Spray 1.2.x)
+* kamon-statsd
+* kamon-newrelic
 
 
 Second: Start your app with the AspectJ Weaver
@@ -57,4 +48,6 @@ at the [sbt-aspectj](https://github.com/sbt/sbt-aspectj/) plugin.
 Third: Enjoy!
 -------------
 
-Refer to modules documentation (coming soon) to find out what Kamon is doing for you.
+Refer to module's documentation to find out more about core concepts like [tracing](/core/tracing/),
+[metrics](/core/metrics/) and [logging](/core/logging/), and learn how to report your metrics data to external services
+like [StatsD](/statsd/) and [New Relic](/newrelic/).

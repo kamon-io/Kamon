@@ -3,37 +3,38 @@ title: Kamon | StatsD | Documentation
 layout: default
 ---
 
-What is StatsD?
-=======
+Reporting Metrics to StatsD
+===========================
 <hr>
 
-StatsD is a simple network daemon that continuously receives metrics pushed over UDP and periodically sends aggregate metrics to upstream services
-like Graphite. Because it uses UDP, clients can send metrics to it very fast with little to no overhead.
-This means that a user can capture multiple metrics for every request to a web application, even at a rate of thousands of requests per second.
-Request-level metrics are aggregated over a flush interval (default 10 seconds) and pushed to an upstream metrics service.
+[StatsD](https://github.com/etsy/statsd/) is a simple network daemon that continuously receives metrics over UDP and
+periodically sends aggregate metrics to upstream services like (but not limited to) Graphite. Because it uses UDP,
+sending metrics data to StatsD is very fast with little to no overhead.
 
-
-Getting Started with StatsD
-----------
 
 Installation
--------------
+------------
 
-To use the StatsD module just make sure you put the `kamon-statsd` library in your classpath and start your application the Aspectj Weaver and Newrelic agents. Please refer to our [get started](/get-started) page
-for more info on how to add the AspectJ Weaver.
+To use the StatsD module just add the `kamon-statsd` dependency to your project and start your application using the
+Aspectj Weaver agent. Please refer to our [get started](/get-started) page for more info on how to add dependencies to
+your project and starting your application with the AspectJ Weaver.
 
 
 Configuration
 -------------
 
-Currently you will need to add a few settings to your `application.conf` file for the module to work:
+First, include the Kamon(StatsD) extension under the `akka.extensions` key of your configuration files as shown here:
 
 ```scala
 akka {
-  // Make sure the StatsD extension is loaded with the ActorSystem
   extensions = ["kamon.statsd.StatsD"]
 }
+```
 
+Then, tune the configuration settings according to your needs. Here is the `reference.conf` that ships with kamon-statsd
+which includes a brief explanation of each setting:
+
+```
 kamon {
   statsd {
     # Hostname and port in which your StatsD is running. Remember that StatsD packets are sent using UDP and
@@ -52,26 +53,40 @@ kamon {
     # collection for your desired entities must be activated under the kamon.metrics.filters settings.
     includes {
       actor = [ "*" ]
+      trace = [ "*" ]
     }
 
     simple-metric-key-generator {
       # Application prefix for all metrics pushed to StatsD. The default namespacing scheme for metrics follows
       # this pattern:
       #    application.host.entity.entity-name.metric-name
-      application = "Kamon"
+      application = "kamon"
     }
   }
 }
 ```
-Installing Graphite
-----------
 
-In the Graphite documentation we can find the [Graphite overview](http://graphite.readthedocs.org/en/latest/overview.html#what-graphite-is-and-is-not). It sums up Graphite with these two simple points.
 
-* Graphite stores numeric time-series data.
-* Graphite renders graphs of this data on demand.
+Integration Notes
+-----------------
 
-Show data with [Grafana](http://grafana.org)
-----------
+* Contrary to many StatsD client implementations, we don't flush the metrics data as soon as the measurements are taken
+  but instead, all metrics data is buffered by the `Kamon(StatsD)` extension and flushed periodically using the
+  configured `kamon.statsd.flush-interval` and `kamon.statsd.max-packet-size` settings.
+* Currently only Actor and Trace metrics are being sent to StatsD.
+* All timing measurements are sent in nanoseconds, make sure you correctly set the scale when plotting or using the
+  metrics data.
+* It is advisable to experiment with the `kamon.statsd.flush-interval` and `kamon.statsd.max-packet-size` settings to
+  find the right balance between network bandwidth utilization and granularity on your metrics data.
+
+
+
+Visualization and Fun
+---------------------
+
+StatsD is widely used and there are many integrations available, even alternative implementations that can receive UDP
+messages with the StatsD protocol, you just have to pick the option that best suits you. For our internal testing we
+choose to use [Graphite](http://graphite.wikidot.com/) as the StatsD backend and [Grafana](http://grafana.org) to create
+beautiful dashboards with very useful metrics. Have an idea of how your metrics data might look like in Grafana:
 
 ![statsD](/assets/img/kamon-statsd-grafana.png "Grafana Screenshot")
