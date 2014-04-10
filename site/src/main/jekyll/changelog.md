@@ -5,6 +5,7 @@ layout: default
 
 Changelog
 ===============
+<hr>
 Version 0.0.15 (2014-04-09)
 ----------------
 * kamon
@@ -14,7 +15,7 @@ Version 0.0.15 (2014-04-09)
 * kamon-statsd (Experimental)
 * kamon-play (Experimental)
 
-
+<hr>
 Version 0.0.14 (2014-03-17)
 ----------------
 * kamon-core

@@ -27,5 +27,5 @@ to be happy with it, we hope now that you can try Kamon and let us know what you
 We are currently short on documentation, but feel free to ask anything you need through the mailing list! more docs are
 on the oven.
 
-So, what are you waiting for? go and learn about [tracing in Kamon](/core/traces/) and [get started](/get-started/)
+So, what are you waiting for? go and learn about [tracing in Kamon](/core/tracing/) and [get started](/get-started/)
 right now!

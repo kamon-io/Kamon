@@ -4,7 +4,9 @@ layout: default
 ---
 
 License
-===============
+=================
+<hr>
+<div id="content" class="highlight-license">
 
 ```
 

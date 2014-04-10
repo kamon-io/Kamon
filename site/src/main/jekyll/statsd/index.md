@@ -5,6 +5,7 @@ layout: default
 
 What is StatsD?
 =======
+<hr>
 
 StatsD is a simple network daemon that continuously receives metrics pushed over UDP and periodically sends aggregate metrics to upstream services
 like Graphite. Because it uses UDP, clients can send metrics to it very fast with little to no overhead.

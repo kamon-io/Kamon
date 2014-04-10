@@ -68,3 +68,9 @@ img[alt=statsD] { width: 100%; }
 .highlight table {
   width: 100%;
 }
+
+.highlight-license {
+    width: 700px ;
+    margin-left: auto ;
+    margin-right: auto ;
+}
