@@ -20,6 +20,9 @@ import org.aspectj.bridge.{ IMessage, IMessageHandler }
 import org.slf4j.LoggerFactory
 import com.typesafe.config.ConfigFactory
 
+/**
+ *  Implementation of AspectJ's IMessageHandler interface that routes AspectJ weaving messages and controls them through kamon configuration.
+ */
 class KamonWeaverMessageHandler extends IMessageHandler {
   import IMessage._
 
