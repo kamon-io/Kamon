@@ -78,6 +78,6 @@ class SimpleMetricKeyGenerator(config: Config) extends StatsD.MetricKeyGenerator
   val localhostName = ManagementFactory.getRuntimeMXBean.getName.split('@')(1)
 
   def generateKey(groupIdentity: MetricGroupIdentity, metricIdentity: MetricIdentity): String =
-    application + "." + localhostName + "." + groupIdentity.category.name + "." + groupIdentity.name + "." + metricIdentity.name
+    s"${application}.${localhostName}.${groupIdentity.category.name}.${groupIdentity.name}.${metricIdentity.name}"
 }
 
