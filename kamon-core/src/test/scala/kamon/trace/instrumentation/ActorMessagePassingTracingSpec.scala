@@ -23,7 +23,7 @@ import kamon.trace.TraceRecorder
 import akka.pattern.{ pipe, ask }
 import akka.util.Timeout
 import scala.concurrent.duration._
-import akka.routing.RoundRobinRouter
+import akka.routing.{ RoundRobinPool }
 
 class ActorMessagePassingTracingSpec extends TestKit(ActorSystem("actor-message-passing-tracing-spec")) with WordSpecLike with ImplicitSender {
   implicit val executionContext = system.dispatcher
@@ -73,7 +73,7 @@ class ActorMessagePassingTracingSpec extends TestKit(ActorSystem("actor-message-
   }
 
   trait RoutedEchoActorFixture extends EchoActorFixture {
-    override val ctxEchoActor = system.actorOf(Props[TraceContextEcho].withRouter(RoundRobinRouter(nrOfInstances = 1)))
+    override val ctxEchoActor = system.actorOf(Props[TraceContextEcho].withRouter(RoundRobinPool(nrOfInstances = 1)))
   }
 }
 

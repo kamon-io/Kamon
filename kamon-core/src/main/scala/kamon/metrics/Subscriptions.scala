@@ -28,7 +28,7 @@ class Subscriptions extends Actor {
   import context.system
 
   val config = context.system.settings.config
-  val tickInterval = Duration(config.getNanoseconds("kamon.metrics.tick-interval"), TimeUnit.NANOSECONDS)
+  val tickInterval = Duration(config.getDuration("kamon.metrics.tick-interval", TimeUnit.NANOSECONDS), TimeUnit.NANOSECONDS)
   val flushMetricsSchedule = context.system.scheduler.schedule(tickInterval, tickInterval, self, FlushMetrics)(context.dispatcher)
 
   var lastTick: Long = System.currentTimeMillis()
