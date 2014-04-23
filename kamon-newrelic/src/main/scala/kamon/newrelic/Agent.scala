@@ -79,7 +79,7 @@ class Agent extends Actor with RequestBuilding with ResponseTransformation with 
   val compressedPipeline: HttpRequest ⇒ Future[HttpResponse] = encode(Deflate) ~> sendReceive
   val compressedToJsonPipeline: HttpRequest ⇒ Future[JsValue] = compressedPipeline ~> toJson
 
-  def toJson(response: HttpResponse): JsValue = response.entity.asString.asJson
+  def toJson(response: HttpResponse): JsValue = response.entity.asString.parseJson
 
   def selectCollector: Future[String] = {
     val query = ("method" -> "get_redirect_host") +: baseQuery

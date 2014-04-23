@@ -21,12 +21,13 @@ import kamon.Kamon
 import kamon.metrics.{ CustomMetric, TickMetricSnapshotBuffer, TraceMetrics, Metrics }
 import kamon.metrics.Subscriptions.TickMetricSnapshot
 import akka.actor
+import java.util.concurrent.TimeUnit.MILLISECONDS
 
 class NewRelicExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   val config = system.settings.config.getConfig("kamon.newrelic")
 
   val metricsListener = system.actorOf(Props[NewRelicMetricsListener], "kamon-newrelic")
-  val apdexT: Double = config.getMilliseconds("apdexT") / 1E3 // scale to seconds.
+  val apdexT: Double = config.getDuration("apdexT", MILLISECONDS) / 1E3 // scale to seconds.
 
   Kamon(Metrics)(system).subscribe(TraceMetrics, "*", metricsListener, permanently = true)
   Kamon(Metrics)(system).subscribe(CustomMetric, "*", metricsListener, permanently = true)
