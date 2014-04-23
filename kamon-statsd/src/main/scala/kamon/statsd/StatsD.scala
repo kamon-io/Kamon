@@ -25,6 +25,7 @@ import com.typesafe.config.Config
 import java.lang.management.ManagementFactory
 import akka.event.Logging
 import java.net.InetSocketAddress
+import java.util.concurrent.TimeUnit.MILLISECONDS
 
 object StatsD extends ExtensionId[StatsDExtension] with ExtensionIdProvider {
   override def lookup(): ExtensionId[_ <: Extension] = StatsD
@@ -42,9 +43,9 @@ class StatsDExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   private val statsDConfig = system.settings.config.getConfig("kamon.statsd")
 
   val statsDHost = new InetSocketAddress(statsDConfig.getString("hostname"), statsDConfig.getInt("port"))
-  val flushInterval = statsDConfig.getMilliseconds("flush-interval")
+  val flushInterval = statsDConfig.getDuration("flush-interval", MILLISECONDS)
   val maxPacketSize = statsDConfig.getInt("max-packet-size")
-  val tickInterval = system.settings.config.getMilliseconds("kamon.metrics.tick-interval")
+  val tickInterval = system.settings.config.getDuration("kamon.metrics.tick-interval", MILLISECONDS)
 
   val statsDMetricsListener = buildMetricsListener(tickInterval, flushInterval)
 
