@@ -7,13 +7,13 @@ object Dependencies {
     "typesafe repo" at "http://repo.typesafe.com/typesafe/releases/"
   )
 
-  val sprayVersion    = "1.2.0"
-  val akkaVersion     = "2.2.3"
-  val playVersion     = "2.2.2"
+  val sprayVersion    = "1.3.1"
+  val akkaVersion     = "2.3.2"
+  val playVersion     = "2.3-M1"
   val aspectjVersion  = "1.7.4"
   val slf4jVersion    = "1.7.6"
 
-  val sprayJson       = "io.spray"                  %%  "spray-json"            % "1.2.5"
+  val sprayJson       = "io.spray"                  %%  "spray-json"            % "1.2.6"
   val sprayJsonLenses = "net.virtual-void"          %%  "json-lenses"           % "0.5.3"
   val scalatest       = "org.scalatest"             %   "scalatest_2.10"        % "2.0"
   val logback         = "ch.qos.logback"            %   "logback-classic"       % "1.0.13"
@@ -30,6 +30,7 @@ object Dependencies {
   val akkaSlf4j       = "com.typesafe.akka"         %%  "akka-slf4j"            % akkaVersion
   val akkaTestKit     = "com.typesafe.akka"         %%  "akka-testkit"          % akkaVersion
   val playTest        = "com.typesafe.play"         %%  "play-test"             % playVersion
+  val playWS          = "com.typesafe.play"         %%  "play-ws"               % playVersion
   val slf4Api         = "org.slf4j"                 %   "slf4j-api"             % slf4jVersion
   val slf4nop         = "org.slf4j"                 %   "slf4j-nop"             % slf4jVersion
 
