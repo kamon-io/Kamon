@@ -29,7 +29,7 @@ class AskPatternTracing {
 
   class StackTraceCaptureException extends Throwable
 
-  @Pointcut(value = "execution(* akka.pattern.PromiseActorRef$.apply(..)) && args(provider, *)", argNames = "provider")
+  @Pointcut(value = "execution(* akka.pattern.PromiseActorRef$.apply(..)) && args(provider, *, *)", argNames = "provider")
   def promiseActorRefApply(provider: ActorRefProvider): Unit = {}
 
   @AfterReturning(pointcut = "promiseActorRefApply(provider)", returning = "promiseActor")
