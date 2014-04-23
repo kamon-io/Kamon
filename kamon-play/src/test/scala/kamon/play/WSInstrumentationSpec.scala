@@ -25,6 +25,7 @@ import org.junit.runner.RunWith
 import org.specs2.runner.JUnitRunner
 import play.api.test.FakeApplication
 import play.api.libs.ws.WS
+import play.api.Play.current
 import scala.util._
 import scala.concurrent.Await
 import scala.concurrent.duration._

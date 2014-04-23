@@ -23,13 +23,12 @@ import spray.httpx.RequestBuilding
 import scala.concurrent.{ Await, Future }
 import kamon.spray.KamonTraceDirectives
 import scala.util.Random
-import akka.routing.RoundRobinRouter
+import akka.routing.RoundRobinPool
 import kamon.trace.TraceRecorder
 import kamon.Kamon
 import kamon.metrics._
 import spray.http.{ StatusCodes, Uri }
 import kamon.metrics.Subscriptions.TickMetricSnapshot
-import kamon.newrelic.WebTransactionMetrics
 
 object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuilding with KamonTraceDirectives {
   import scala.concurrent.duration._
@@ -53,7 +52,7 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
   implicit val timeout = Timeout(30 seconds)
 
   val pipeline = sendReceive
-  val replier = system.actorOf(Props[Replier].withRouter(RoundRobinRouter(nrOfInstances = 2)), "replier")
+  val replier = system.actorOf(Props[Replier].withRouter(RoundRobinPool(nrOfInstances = 2)), "replier")
   val random = new Random()
 
   val requestCountRecorder = Kamon(Metrics).register(CustomMetric("GetCount"), CustomMetric.histogram(10, 3, Scale.Unit))

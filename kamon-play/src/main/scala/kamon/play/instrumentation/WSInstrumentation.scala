@@ -20,9 +20,9 @@ import org.aspectj.lang.annotation.{ Around, Pointcut, Aspect }
 import org.aspectj.lang.ProceedingJoinPoint
 import kamon.trace.TraceRecorder
 import kamon.metrics.TraceMetrics.HttpClientRequest
-import play.api.libs.ws.WS.WSRequest
+import play.api.libs.ws.WSRequest
 import scala.concurrent.Future
-import play.api.libs.ws.Response
+import play.api.libs.ws.WSResponse
 import scala.util.{ Failure, Success }
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -38,7 +38,7 @@ class WSInstrumentation {
 
     val completionHandle = TraceRecorder.startSegment(HttpClientRequest(request.url, UserTime), basicRequestAttributes(request))
 
-    val response = pjp.proceed().asInstanceOf[Future[Response]]
+    val response = pjp.proceed().asInstanceOf[Future[WSResponse]]
 
     response.onComplete {
       case Failure(t) ⇒ completionHandle.map(_.finish(Map("completed-with-error" -> t.getMessage)))

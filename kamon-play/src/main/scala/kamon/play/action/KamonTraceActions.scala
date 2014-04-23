@@ -21,7 +21,7 @@ import play.api.mvc._
 import scala.concurrent.Future
 
 case class TraceName[A](name: String)(action: Action[A]) extends Action[A] {
-  def apply(request: Request[A]): Future[SimpleResult] = {
+  def apply(request: Request[A]): Future[Result] = {
     TraceRecorder.rename(name)
     action(request)
   }
