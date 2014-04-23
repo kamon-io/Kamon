@@ -32,7 +32,7 @@ class RequestInstrumentationSpec extends PlaySpecification {
 
   System.setProperty("config.file", "./kamon-play/src/test/resources/conf/application.conf")
 
-  val appWithRoutes = FakeApplication(withRoutes = {
+  def appWithRoutes = FakeApplication(withRoutes = {
     case ("GET", "/async") ⇒
       Action.async {
         Future {
