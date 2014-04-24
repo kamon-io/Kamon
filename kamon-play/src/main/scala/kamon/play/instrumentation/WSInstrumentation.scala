@@ -29,7 +29,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 @Aspect
 class WSInstrumentation {
 
-  @Pointcut("execution(* play.api.libs.ws.WS$WSRequest.execute()) && this(request)")
+  @Pointcut("execution(* play.api.libs.ws.ning.NingWSRequest.execute()) && this(request)")
   def onExecuteRequest(request: WSRequest): Unit = {}
 
   @Around("onExecuteRequest(request)")

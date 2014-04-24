@@ -35,7 +35,7 @@ class WSInstrumentationSpec extends PlaySpecification {
 
   System.setProperty("config.file", "./kamon-play/src/test/resources/conf/application.conf")
 
-  val appWithRoutes = FakeApplication(withRoutes = {
+  def appWithRoutes = FakeApplication(withRoutes = {
     case ("GET", "/async") ⇒
       Action {
         val request = WS.url("http://maps.googleapis.com/maps/api/geocode/json?address=China&sensor=true").get()
@@ -63,4 +63,4 @@ class WSInstrumentationSpec extends PlaySpecification {
       Thread.sleep(2000) //wait to complete the future
     }
   }
-}
+} 
