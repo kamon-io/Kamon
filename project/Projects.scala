@@ -87,6 +87,7 @@ object Projects extends Build {
     .settings(basicSettings: _*)
     .settings(siteSettings: _*)
     .settings(aspectJSettings: _*)
+    .settings(noPublishing: _*)
     .dependsOn(kamonCore)
     .settings(
       libraryDependencies ++=
@@ -94,5 +95,5 @@ object Projects extends Build {
         test(scalatest, akkaTestKit))
 
 
-  val noPublishing = Seq(publish := (), publishLocal := ())
+  val noPublishing = Seq(publish := (), publishLocal := (), publishArtifact := false)
 }
