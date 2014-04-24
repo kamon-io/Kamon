@@ -24,7 +24,6 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import org.junit.runner.RunWith
 import org.specs2.runner.JUnitRunner
-import play.api.mvc.AsyncResult
 import play.api.test.FakeApplication
 import kamon.play.action.TraceName
 
@@ -33,15 +32,7 @@ class RequestInstrumentationSpec extends PlaySpecification {
 
   System.setProperty("config.file", "./kamon-play/src/test/resources/conf/application.conf")
 
-  val appWithRoutes = FakeApplication(withRoutes = {
-    case ("GET", "/asyncResult") ⇒
-      Action {
-        AsyncResult {
-          scala.concurrent.Future {
-            Ok("AsyncResult")
-          }
-        }
-      }
+  def appWithRoutes = FakeApplication(withRoutes = {
     case ("GET", "/async") ⇒
       Action.async {
         Future {
@@ -76,11 +67,6 @@ class RequestInstrumentationSpec extends PlaySpecification {
   private val traceTokenHeader = traceTokenHeaderName -> traceTokenValue
 
   "the Request instrumentation" should {
-    "respond to the asyncResult action with X-Trace-Token" in new WithServer(appWithRoutes) {
-      val Some(result) = route(FakeRequest(GET, "/asyncResult").withHeaders(traceTokenHeader))
-      header(traceTokenHeaderName, result) must equalTo(expectedToken)
-    }
-
     "respond to the Async Action with X-Trace-Token" in new WithServer(appWithRoutes) {
       val Some(result) = route(FakeRequest(GET, "/async").withHeaders(traceTokenHeader))
       header(traceTokenHeaderName, result) must equalTo(expectedToken)
