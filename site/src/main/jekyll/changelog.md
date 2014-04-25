@@ -7,7 +7,15 @@ Changelog
 =========
 
 <hr>
-Version 0.0.15 (2014-04-10)
+Version 0.3.0/0.2.0 <small>(2014-04-24)</small>
+--------------------------------
+
+* Same feature set as 0.0.15 but now available for Akka 2.2 and Akka 2.3:
+   * 0.3.0 is compatible with Akka 2.3, Spray 1.3 and Play 2.3-M1.
+   * 0.2.0 is compatible with Akka 2.2, Spray 1.2 and Play 2.2.
+
+<hr>
+Version 0.0.15 <small>(2014-04-10)</small>
 ---------------------------
 
 * kamon
@@ -28,8 +36,8 @@ Version 0.0.15 (2014-04-10)
 
 
 <hr>
-Version 0.0.14 (2014-03-17)
-----------------
+Version 0.0.14 <small>(2014-03-17)</small>
+---------------------------
 * kamon-core
     * Improved startup times
     * Remake of trace metrics collection

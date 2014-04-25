@@ -20,15 +20,20 @@ All Kamon components are available through Sonatype and Maven Central and no spe
 If you are using SBT, you will need to add something like this to your build definition:
 
 ```scala
-libraryDependencies += "io.kamon" % "kamon-core" % "0.0.15"
+libraryDependencies += "io.kamon" % "kamon-core" % "0.3.0"
 ```
 
 Then, add any additional module you need:
 
-* kamon-core (only compatible with Akka 2.2.x)
-* kamon-spray (only compatible with Spray 1.2.x)
+* kamon-core
+* kamon-spray
 * kamon-statsd
 * kamon-newrelic
+
+### Compatibility Notes: ###
+
+* 0.3.x releases are compatible with Akka 2.3, Spray 1.3 and Play 2.3-M1.
+* 0.2.x releases are compatible with Akka 2.2, Spray 1.2 and Play 2.2.
 
 
 Second: Start your app with the AspectJ Weaver
