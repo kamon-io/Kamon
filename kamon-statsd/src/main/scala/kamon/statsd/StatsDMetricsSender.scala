@@ -20,13 +20,12 @@ import akka.actor.{ ActorSystem, Props, ActorRef, Actor }
 import akka.io.{ Udp, IO }
 import java.net.InetSocketAddress
 import akka.util.ByteString
-import kamon.Kamon
 import kamon.metrics.Subscriptions.TickMetricSnapshot
 import kamon.metrics.MetricSnapshot.Measurement
 import kamon.metrics.InstrumentTypes.{ Counter, Gauge, Histogram, InstrumentType }
 import java.text.DecimalFormat
 
-class StatsDMetricsSender(remote: InetSocketAddress, maxPacketSize: Int) extends Actor with UdpExtensionProvider {
+class StatsDMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long) extends Actor with UdpExtensionProvider {
   import context.system
 
   val metricKeyGenerator = new SimpleMetricKeyGenerator(context.system.settings.config)
@@ -45,7 +44,7 @@ class StatsDMetricsSender(remote: InetSocketAddress, maxPacketSize: Int) extends
   }
 
   def writeMetricsToRemote(tick: TickMetricSnapshot, udpSender: ActorRef): Unit = {
-    val dataBuilder = new MetricDataPacketBuilder(maxPacketSize, udpSender, remote)
+    val dataBuilder = new MetricDataPacketBuilder(maxPacketSizeInBytes, udpSender, remote)
 
     for (
       (groupIdentity, groupSnapshot) ← tick.metrics;
@@ -76,14 +75,14 @@ class StatsDMetricsSender(remote: InetSocketAddress, maxPacketSize: Int) extends
 }
 
 object StatsDMetricsSender {
-  def props(remote: InetSocketAddress, maxPacketSize: Int): Props = Props(new StatsDMetricsSender(remote, maxPacketSize))
+  def props(remote: InetSocketAddress, maxPacketSize: Long): Props = Props(new StatsDMetricsSender(remote, maxPacketSize))
 }
 
 trait UdpExtensionProvider {
   def udpExtension(implicit system: ActorSystem): ActorRef = IO(Udp)
 }
 
-class MetricDataPacketBuilder(maxPacketSize: Int, udpSender: ActorRef, remote: InetSocketAddress) {
+class MetricDataPacketBuilder(maxPacketSizeInBytes: Long, udpSender: ActorRef, remote: InetSocketAddress) {
   val metricSeparator = ByteString("\n")
   val measurementSeparator = ByteString(":")
 
@@ -112,7 +111,7 @@ class MetricDataPacketBuilder(maxPacketSize: Int, udpSender: ActorRef, remote: I
     }
   }
 
-  def fitsOnBuffer(bs: ByteString): Boolean = (buffer.length + bs.length) <= maxPacketSize
+  def fitsOnBuffer(bs: ByteString): Boolean = (buffer.length + bs.length) <= maxPacketSizeInBytes
 
   private def flushToUDP(bytes: ByteString): Unit = udpSender ! Udp.Send(bytes, remote)
 

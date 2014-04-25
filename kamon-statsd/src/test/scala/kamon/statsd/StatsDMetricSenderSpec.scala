@@ -16,7 +16,7 @@
 
 package kamon.statsd
 
-import akka.testkit.{ TestKit, TestProbe }
+import akka.testkit.{ TestKitBase, TestProbe }
 import akka.actor.{ ActorRef, Props, ActorSystem }
 import org.scalatest.{ Matchers, WordSpecLike }
 import kamon.metrics._
@@ -24,10 +24,12 @@ import akka.io.Udp
 import org.HdrHistogram.HdrRecorder
 import kamon.metrics.Subscriptions.TickMetricSnapshot
 import java.lang.management.ManagementFactory
-import kamon.Kamon
 import java.net.InetSocketAddress
+import com.typesafe.config.ConfigFactory
 
-class StatsDMetricSenderSpec extends TestKit(ActorSystem("statsd-metric-sender-spec")) with WordSpecLike with Matchers {
+class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers {
+  implicit lazy val system = ActorSystem("statsd-metric-sender-spec",
+    ConfigFactory.parseString("kamon.statsd.max-packet-size = 256 bytes"))
 
   "the StatsDMetricSender" should {
     "flush the metrics data after processing the tick, even if the max-packet-size is not reached" in new UdpListenerFixture {
@@ -72,7 +74,7 @@ class StatsDMetricSenderSpec extends TestKit(ActorSystem("statsd-metric-sender-s
     "flush the packet when the max-packet-size is reached" in new UdpListenerFixture {
       val testMetricName = "test-metric"
       val testMetricKey = buildMetricKey(testMetricName)
-      val testRecorder = HdrRecorder(1000L, 3, Scale.Unit)
+      val testRecorder = HdrRecorder(testMaxPacketSize, 3, Scale.Unit)
 
       var bytes = testMetricKey.length
       var level = 0
@@ -115,7 +117,7 @@ class StatsDMetricSenderSpec extends TestKit(ActorSystem("statsd-metric-sender-s
 
   trait UdpListenerFixture {
     val localhostName = ManagementFactory.getRuntimeMXBean.getName.split('@')(1)
-    val testMaxPacketSize = 256
+    val testMaxPacketSize = system.settings.config.getBytes("kamon.statsd.max-packet-size")
 
     def buildMetricKey(metricName: String): String = s"kamon.$localhostName.test-metric-category.test-group.$metricName"
 

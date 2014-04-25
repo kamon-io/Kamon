@@ -44,7 +44,7 @@ class StatsDExtension(system: ExtendedActorSystem) extends Kamon.Extension {
 
   val statsDHost = new InetSocketAddress(statsDConfig.getString("hostname"), statsDConfig.getInt("port"))
   val flushInterval = statsDConfig.getDuration("flush-interval", MILLISECONDS)
-  val maxPacketSize = statsDConfig.getInt("max-packet-size")
+  val maxPacketSizeInBytes = statsDConfig.getBytes("max-packet-size")
   val tickInterval = system.settings.config.getDuration("kamon.metrics.tick-interval", MILLISECONDS)
 
   val statsDMetricsListener = buildMetricsListener(tickInterval, flushInterval)
@@ -64,7 +64,7 @@ class StatsDExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   def buildMetricsListener(tickInterval: Long, flushInterval: Long): ActorRef = {
     assert(flushInterval >= tickInterval, "StatsD flush-interval needs to be equal or greater to the tick-interval")
 
-    val metricsTranslator = system.actorOf(StatsDMetricsSender.props(statsDHost, maxPacketSize), "statsd-metrics-sender")
+    val metricsTranslator = system.actorOf(StatsDMetricsSender.props(statsDHost, maxPacketSizeInBytes), "statsd-metrics-sender")
     if (flushInterval == tickInterval) {
       // No need to buffer the metrics, let's go straight to the metrics sender.
       metricsTranslator
