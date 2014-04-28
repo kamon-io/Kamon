@@ -87,6 +87,8 @@ Visualization and Fun
 StatsD is widely used and there are many integrations available, even alternative implementations that can receive UDP
 messages with the StatsD protocol, you just have to pick the option that best suits you. For our internal testing we
 choose to use [Graphite](http://graphite.wikidot.com/) as the StatsD backend and [Grafana](http://grafana.org) to create
-beautiful dashboards with very useful metrics. Have an idea of how your metrics data might look like in Grafana:
+beautiful dashboards with very useful metrics. Have an idea of how your metrics data might look like in Grafana with the
+screenshot bellow or use our [docker image](https://github.com/kamon-io/docker-grafana-graphite) to get up and running
+in a few minutes and see it with your own metrics!
 
 ![statsD](/assets/img/kamon-statsd-grafana.png "Grafana Screenshot")
