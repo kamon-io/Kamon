@@ -51,7 +51,7 @@ class StatsDMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long)
       (metricIdentity, metricSnapshot) ← groupSnapshot.metrics
     ) {
 
-      val key = ByteString(metricKeyGenerator.generateKey(groupIdentity, metricIdentity))
+      val key = metricKeyGenerator.generateKey(groupIdentity, metricIdentity)
 
       for (measurement ← metricSnapshot.measurements) {
         val measurementData = encodeMeasurement(measurement, metricSnapshot.instrumentType)
@@ -62,14 +62,14 @@ class StatsDMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long)
     dataBuilder.flush()
   }
 
-  def encodeMeasurement(measurement: Measurement, instrumentType: InstrumentType): ByteString = {
-    def statsDMetricFormat(value: String, metricType: String, samplingRate: Double = 1D): ByteString =
-      ByteString(value + "|" + metricType + (if (samplingRate != 1D) "|@" + samplingRateFormat.format(samplingRate) else ""))
+  def encodeMeasurement(measurement: Measurement, instrumentType: InstrumentType): String = {
+    def statsDMetricFormat(value: String, metricType: String, samplingRate: Double = 1D): String =
+      value + "|" + metricType + (if (samplingRate != 1D) "|@" + samplingRateFormat.format(samplingRate) else "")
 
     instrumentType match {
       case Histogram ⇒ statsDMetricFormat(measurement.value.toString, "ms", (1D / measurement.count))
       case Gauge     ⇒ statsDMetricFormat(measurement.value.toString, "g")
-      case Counter   ⇒ ByteString.empty // TODO: Need to decide how to report counters, when we have them!
+      case Counter   ⇒ "" // TODO: Need to decide how to report counters, when we have them!
     }
   }
 }
@@ -83,40 +83,42 @@ trait UdpExtensionProvider {
 }
 
 class MetricDataPacketBuilder(maxPacketSizeInBytes: Long, udpSender: ActorRef, remote: InetSocketAddress) {
-  val metricSeparator = ByteString("\n")
-  val measurementSeparator = ByteString(":")
+  val metricSeparator = "\n"
+  val measurementSeparator = ":"
 
-  var lastKey = ByteString.empty
-  var buffer = ByteString.empty
+  var lastKey = ""
+  var buffer = new StringBuilder()
 
-  def appendMeasurement(key: ByteString, measurementData: ByteString): Unit = {
+  def appendMeasurement(key: String, measurementData: String): Unit = {
     if (key == lastKey) {
-      val dataWithoutKey = measurementSeparator ++ measurementData
+      val dataWithoutKey = measurementSeparator + measurementData
       if (fitsOnBuffer(dataWithoutKey))
-        buffer = buffer ++ dataWithoutKey
+        buffer.append(dataWithoutKey)
       else {
-        flushToUDP(buffer)
-        buffer = key ++ dataWithoutKey
+        flushToUDP(buffer.toString())
+        buffer.clear()
+        buffer.append(key).append(dataWithoutKey)
       }
     } else {
       lastKey = key
-      val dataWithoutSeparator = key ++ measurementSeparator ++ measurementData
-      if (fitsOnBuffer(metricSeparator ++ dataWithoutSeparator)) {
-        val mSeparator = if (buffer.length > 0) metricSeparator else ByteString.empty
-        buffer = buffer ++ mSeparator ++ dataWithoutSeparator
+      val dataWithoutSeparator = key + measurementSeparator + measurementData
+      if (fitsOnBuffer(metricSeparator + dataWithoutSeparator)) {
+        val mSeparator = if (buffer.length > 0) metricSeparator else ""
+        buffer.append(mSeparator).append(dataWithoutSeparator)
       } else {
-        flushToUDP(buffer)
-        buffer = dataWithoutSeparator
+        flushToUDP(buffer.toString())
+        buffer.clear()
+        buffer.append(dataWithoutSeparator)
       }
     }
   }
 
-  def fitsOnBuffer(bs: ByteString): Boolean = (buffer.length + bs.length) <= maxPacketSizeInBytes
+  def fitsOnBuffer(data: String): Boolean = (buffer.length + data.length) <= maxPacketSizeInBytes
 
-  private def flushToUDP(bytes: ByteString): Unit = udpSender ! Udp.Send(bytes, remote)
+  private def flushToUDP(data: String): Unit = udpSender ! Udp.Send(ByteString(data), remote)
 
   def flush(): Unit = {
-    flushToUDP(buffer)
-    buffer = ByteString.empty
+    flushToUDP(buffer.toString)
+    buffer.clear()
   }
 }
