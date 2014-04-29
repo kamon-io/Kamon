@@ -15,13 +15,15 @@
  * ========================================================== */
 package kamon.newrelic
 
-import akka.actor.Actor
+import akka.actor.{ActorLogging, Actor}
 import akka.event.Logging.Error
 import akka.event.Logging.{ LoggerInitialized, InitializeLogger }
 import com.newrelic.api.agent.{ NewRelic ⇒ NR }
 import kamon.trace.TraceContextAware
 
-class NewRelicErrorLogger extends Actor {
+class NewRelicErrorLogger extends Actor with ActorLogging {
+  var aspectJMissingAlreadyReported = false
+
   def receive = {
     case InitializeLogger(_)                                ⇒ sender ! LoggerInitialized
     case error @ Error(cause, logSource, logClass, message) ⇒ notifyError(error)
@@ -30,10 +32,16 @@ class NewRelicErrorLogger extends Actor {
 
   def notifyError(error: Error): Unit = {
     val params = new java.util.HashMap[String, String]()
-    val ctx = error.asInstanceOf[TraceContextAware].traceContext
 
-    for (c ← ctx) {
-      params.put("TraceToken", c.token)
+    if (error.isInstanceOf[TraceContextAware]) {
+      val ctx = error.asInstanceOf[TraceContextAware].traceContext
+
+      for (c ← ctx) {
+        params.put("TraceToken", c.token)
+      }
+    } else if (! aspectJMissingAlreadyReported) {
+      log.warning("ASPECTJ WEAVER MISSING. You might have missed to include the java agent")
+      aspectJMissingAlreadyReported = true
     }
 
     if (error.cause == Error.NoCause) {
