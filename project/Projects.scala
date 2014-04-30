@@ -20,7 +20,7 @@ object Projects extends Build {
     .settings(aspectJSettings: _*)
     .settings(
       libraryDependencies ++=
-        compile(akkaActor, aspectJ, aspectjWeaver, hdrHistogram) ++
+        compile(akkaActor, aspectJ, aspectjWeaver, hdrHistogram, jsr166) ++
         provided(logback) ++
         test(scalatest, akkaTestKit, sprayTestkit, akkaSlf4j, logback))
 

@@ -33,7 +33,7 @@ object Dependencies {
   val playWS          = "com.typesafe.play"         %%  "play-ws"               % playVersion
   val slf4Api         = "org.slf4j"                 %   "slf4j-api"             % slf4jVersion
   val slf4nop         = "org.slf4j"                 %   "slf4j-nop"             % slf4jVersion
-
+  val jsr166          = "io.gatling"                %   "jsr166e"               % "1.0"
 
 
   def compile   (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "compile")
