@@ -25,25 +25,28 @@ class MetricSnapshotSpec extends WordSpec with Matchers {
     "support a max operation" in new SnapshotFixtures {
       snapshotA.max should be(17)
       snapshotB.max should be(10)
+      snapshotC.max should be(1)
     }
 
     "support a min operation" in new SnapshotFixtures {
       snapshotA.min should be(1)
       snapshotB.min should be(2)
+      snapshotC.min should be(1)
     }
 
     "be able to merge with other snapshot" in new SnapshotFixtures {
-      val merged = snapshotA.merge(snapshotB)
+      val merged = snapshotA.merge(snapshotB).merge(snapshotC)
 
       merged.min should be(1)
       merged.max should be(17)
-      merged.numberOfMeasurements should be(200)
+      merged.numberOfMeasurements should be(300)
       merged.measurements.map(_.value) should contain inOrderOnly (1, 2, 4, 5, 7, 10, 17)
     }
 
     "be able to merge with empty snapshots" in new SnapshotFixtures {
       snapshotA.merge(emptySnapshot) should be(snapshotA)
       emptySnapshot.merge(snapshotA).merge(emptySnapshot) should be(snapshotA)
+      snapshotC.merge(emptySnapshot) should be(snapshotC)
     }
 
   }
@@ -63,5 +66,7 @@ class MetricSnapshotSpec extends WordSpec with Matchers {
       Measurement(4, 48),
       Measurement(5, 39),
       Measurement(10, 7)))
+
+    val snapshotC = MetricSnapshot(InstrumentTypes.Counter, 100, Scale.Unit, Vector(Measurement(1, 100)))
   }
 }

@@ -63,4 +63,4 @@ class WSInstrumentationSpec extends PlaySpecification {
       Thread.sleep(2000) //wait to complete the future
     }
   }
-} 
+}

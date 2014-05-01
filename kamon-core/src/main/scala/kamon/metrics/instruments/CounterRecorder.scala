@@ -23,7 +23,9 @@ import jsr166e.LongAdder
 class CounterRecorder extends MetricRecorder {
   private val counter = new LongAdder
 
-  def record(value: Long): Unit = counter.add(value)
+  def record(value: Long): Unit = {
+    counter.add(value)
+  }
 
   def collect(): MetricSnapshotLike = {
     val sum = counter.sumThenReset()
