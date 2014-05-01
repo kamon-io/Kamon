@@ -103,6 +103,17 @@ class ActorMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
     }
   }
 
+  "track the number of errors" in new ErrorActorFixture {
+    val (error, metricsListener) = failedActor("tracked-errors")
+
+    for (_ ← 1 to 5) {
+      error ! Error
+    }
+
+    val actorMetrics = expectActorMetrics("user/tracked-errors", metricsListener, 3 seconds)
+    actorMetrics.errorCounter.numberOfMeasurements should be(5L)
+  }
+
   def expectActorMetrics(actorPath: String, listener: TestProbe, waitTime: FiniteDuration): ActorMetricSnapshot = {
     val tickSnapshot = within(waitTime) {
       listener.expectMsgType[TickMetricSnapshot]
@@ -124,6 +135,19 @@ class ActorMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
       (actor, metricsListener)
     }
   }
+
+  trait ErrorActorFixture {
+    def failedActor(name: String): (ActorRef, TestProbe) = {
+      val actor = system.actorOf(Props[FailedActor], name)
+      val metricsListener = TestProbe()
+
+      Kamon(Metrics).subscribe(ActorMetrics, "user/" + name, metricsListener.ref, permanently = true)
+      // Wait for one empty snapshot before proceeding to the test.
+      metricsListener.expectMsgType[TickMetricSnapshot]
+
+      (actor, metricsListener)
+    }
+  }
 }
 
 class DelayableActor extends Actor {
@@ -133,5 +157,12 @@ class DelayableActor extends Actor {
   }
 }
 
+class FailedActor extends Actor {
+  def receive = {
+    case Error   ⇒ 1 / 0
+    case Discard ⇒
+  }
+}
 case object Discard
 case class Delay(time: FiniteDuration)
+case class Error()

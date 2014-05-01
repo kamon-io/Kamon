@@ -24,7 +24,6 @@ import kamon.metrics.{ ActorMetrics, Metrics }
 import kamon.Kamon
 import kamon.metrics.ActorMetrics.ActorMetricRecorder
 import java.util.concurrent.atomic.AtomicInteger
-import kamon.metrics.instruments.Counter
 
 @Aspect
 class BehaviourInvokeTracing {
@@ -33,7 +32,7 @@ class BehaviourInvokeTracing {
   def actorCellCreation(cell: ActorCell, system: ActorSystem, ref: ActorRef, props: Props, dispatcher: MessageDispatcher, parent: ActorRef): Unit = {}
 
   @After("actorCellCreation(cell, system, ref, props, dispatcher, parent)")
-  def afterCreation(cell: ActorCellMetrics, system: ActorSystem, ref: ActorRef, props: Props, dispatcher: MessageDispatcher, parent: ActorRef): Unit = {
+  def afterCreation(cell: ActorCell, system: ActorSystem, ref: ActorRef, props: Props, dispatcher: MessageDispatcher, parent: ActorRef): Unit = {
     val metricsExtension = Kamon(Metrics)(system)
     val metricIdentity = ActorMetrics(ref.path.elements.mkString("/"))
     val cellWithMetrics = cell.asInstanceOf[ActorCellMetrics]
@@ -92,11 +91,13 @@ class BehaviourInvokeTracing {
   }
 
   @Pointcut("execution(* akka.actor.ActorCell.handleInvokeFailure(..)) && this(cell)")
-  def actorInvokeFailure(cell: ActorCellMetrics): Unit = {}
+  def actorInvokeFailure(cell: ActorCell): Unit = {}
 
   @Before("actorInvokeFailure(cell)")
-  def beforeInvokeFailure(cell: ActorCellMetrics): Unit = {
-    cell.actorMetricsRecorder.map {
+  def beforeInvokeFailure(cell: ActorCell): Unit = {
+    val cellWithMetrics = cell.asInstanceOf[ActorCellMetrics]
+
+    cellWithMetrics.actorMetricsRecorder.map {
       am ⇒ am.errorCounter.record(1L)
     }
   }
