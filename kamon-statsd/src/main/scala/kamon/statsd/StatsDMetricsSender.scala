@@ -69,7 +69,7 @@ class StatsDMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long)
     instrumentType match {
       case Histogram ⇒ statsDMetricFormat(measurement.value.toString, "ms", (1D / measurement.count))
       case Gauge     ⇒ statsDMetricFormat(measurement.value.toString, "g")
-      case Counter   ⇒ "" // TODO: Need to decide how to report counters, when we have them!
+      case Counter   ⇒ statsDMetricFormat(measurement.count.toString, "c")
     }
   }
 }
