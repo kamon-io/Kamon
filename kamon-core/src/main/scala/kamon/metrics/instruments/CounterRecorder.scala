@@ -34,5 +34,5 @@ class CounterRecorder extends MetricRecorder {
 }
 
 object CounterRecorder {
-  def apply():CounterRecorder = new CounterRecorder
+  def apply(): CounterRecorder = new CounterRecorder
 }
