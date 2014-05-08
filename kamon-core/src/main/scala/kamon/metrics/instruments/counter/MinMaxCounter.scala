@@ -19,13 +19,7 @@ import java.lang.Math._
 import jsr166e.LongMaxUpdater
 import kamon.util.PaddedAtomicLong
 
-sealed trait Counter {
-  def increment(value: Long = 1L): Unit
-  def decrement(value: Long = 1L): Unit
-  def collect(): (Long, Long, Long)
-}
-
-class MinMaxCounter extends Counter {
+class MinMaxCounter {
   private val min = new LongMaxUpdater
   private val max = new LongMaxUpdater
   private val sum = new PaddedAtomicLong
@@ -53,5 +47,5 @@ class MinMaxCounter extends Counter {
 }
 
 object MinMaxCounter {
-  def apply(): Counter = new MinMaxCounter()
+  def apply() = new MinMaxCounter()
 }

@@ -15,9 +15,9 @@
 
 package kamon.metrics
 
-import org.scalatest.{ WordSpecLike, Matchers }
-import akka.testkit.{ TestProbe, TestKitBase }
-import akka.actor.{ ActorRef, Actor, Props, ActorSystem }
+import org.scalatest.{WordSpecLike, Matchers}
+import akka.testkit.{TestProbe, TestKitBase}
+import akka.actor.{ActorRef, Actor, Props, ActorSystem}
 import com.typesafe.config.ConfigFactory
 import scala.concurrent.duration._
 import kamon.Kamon
@@ -87,9 +87,10 @@ class ActorMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
 
       // process the tick in which the actor is stalled.
       val stalledTickMetrics = expectActorMetrics("user/tracked-mailbox-size-queueing-up", metricsListener, 2 seconds)
-      stalledTickMetrics.mailboxSize.numberOfMeasurements should equal(1)
+      stalledTickMetrics.mailboxSize.numberOfMeasurements should equal(31)
       // only the automatic last-value recording should be taken, and includes the message being currently processed.
-      stalledTickMetrics.mailboxSize.measurements should contain only (Measurement(10, 1))
+      stalledTickMetrics.mailboxSize.measurements should contain only (Measurement(0, 10), Measurement(10, 21))
+      stalledTickMetrics.mailboxSize.min should equal(0)
       stalledTickMetrics.mailboxSize.max should equal(10)
       stalledTickMetrics.processingTime.numberOfMeasurements should be(0L)
       stalledTickMetrics.timeInMailbox.numberOfMeasurements should be(0L)
@@ -101,18 +102,19 @@ class ActorMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
       afterStallTickMetrics.processingTime.max should be(2500.milliseconds.toNanos +- 100.milliseconds.toNanos)
       afterStallTickMetrics.timeInMailbox.max should be(2500.milliseconds.toNanos +- 100.milliseconds.toNanos)
     }
-  }
 
-  "track the number of errors" in new ErrorActorFixture {
-    val (error, metricsListener) = failedActor("tracked-errors")
+    "track the number of errors" in new ErrorActorFixture {
+      val (error, metricsListener) = failedActor("tracked-errors")
 
-    for (_ ← 1 to 5) {
-      error ! Error
+      for (_ ← 1 to 5) {
+        error ! Error
+      }
+
+      val actorMetrics = expectActorMetrics("user/tracked-errors", metricsListener, 3 seconds)
+      actorMetrics.errorCounter.numberOfMeasurements should be(5L)
     }
-
-    val actorMetrics = expectActorMetrics("user/tracked-errors", metricsListener, 3 seconds)
-    actorMetrics.errorCounter.numberOfMeasurements should be(5L)
   }
+
 
   def expectActorMetrics(actorPath: String, listener: TestProbe, waitTime: FiniteDuration): ActorMetricSnapshot = {
     val tickSnapshot = within(waitTime) {
@@ -148,21 +150,25 @@ class ActorMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
       (actor, metricsListener)
     }
   }
+
 }
 
 class DelayableActor extends Actor {
   def receive = {
     case Delay(time) ⇒ Thread.sleep(time.toMillis)
-    case Discard     ⇒
+    case Discard ⇒
   }
 }
 
 class FailedActor extends Actor {
   def receive = {
-    case Error   ⇒ 1 / 0
+    case Error ⇒ 1 / 0
     case Discard ⇒
   }
 }
+
 case object Discard
+
 case class Delay(time: FiniteDuration)
+
 case class Error()

@@ -24,7 +24,7 @@ import kamon.trace._
 import kamon.metrics.{ ActorMetrics, Metrics }
 import kamon.Kamon
 import kamon.metrics.ActorMetrics.ActorMetricRecorder
-import kamon.metrics.instruments.counter.{ Counter, MinMaxCounter }
+import kamon.metrics.instruments.counter.MinMaxCounter
 
 @Aspect
 class BehaviourInvokeTracing {
@@ -114,7 +114,7 @@ class BehaviourInvokeTracing {
 trait ActorCellMetrics {
   var metricIdentity: ActorMetrics = _
   var actorMetricsRecorder: Option[ActorMetricRecorder] = _
-  val queueSize: Counter = MinMaxCounter()
+  val queueSize  = MinMaxCounter()
 }
 
 @Aspect
