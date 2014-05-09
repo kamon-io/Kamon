@@ -44,8 +44,6 @@ class BehaviourInvokeTracing {
     cellWithMetrics.metricIdentity = metricIdentity
     cellWithMetrics.actorMetricsRecorder = metricsExtension.register(metricIdentity, ActorMetrics.Factory)
 
-    val executor = Contexts.lookupExecutionContext(Contexts.kamonDefaultDispatcher)(system)
-
     system.scheduler.schedule(0 milliseconds, 100 milliseconds) {
       cellWithMetrics.actorMetricsRecorder.map {
         am ⇒
@@ -56,7 +54,7 @@ class BehaviourInvokeTracing {
           record(max)
           record(sum)
       }
-    }(executor)
+    }(metricsExtension.defaultDispatcher)
   }
 
   @Pointcut("(execution(* akka.actor.ActorCell.invoke(*)) || execution(* akka.routing.RoutedActorCell.sendMessage(*))) && this(cell) && args(envelope)")

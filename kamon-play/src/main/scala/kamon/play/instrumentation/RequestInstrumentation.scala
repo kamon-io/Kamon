@@ -16,7 +16,6 @@
 
 package kamon.play.instrumentation
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import kamon.trace.{ TraceRecorder, TraceContextAware }
 import kamon.Kamon
 import kamon.play.Play
@@ -26,6 +25,7 @@ import akka.actor.ActorSystem
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
 import scala.Some
+import kamon.util.Contexts
 
 @Aspect
 class RequestInstrumentation {
@@ -63,9 +63,11 @@ class RequestInstrumentation {
   }
 
   private[this] val kamonRequestFilter = Filter { (nextFilter, requestHeader) ⇒
+
     processRequest(requestHeader)
 
     val incomingContext = TraceRecorder.currentContext
+    val executor = Kamon(Play)(Akka.system()).defaultDispatcher
 
     nextFilter(requestHeader).map { result ⇒
 
@@ -80,7 +82,7 @@ class RequestInstrumentation {
           } else result
       }
       simpleResult
-    }
+    }(executor)
   }
 
   private[this] def processRequest(requestHeader: RequestHeader): Unit = {

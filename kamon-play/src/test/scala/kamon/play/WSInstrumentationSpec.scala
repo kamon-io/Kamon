@@ -19,13 +19,45 @@ package kamon.play
 import play.api.mvc.Action
 import play.api.mvc.Results.Ok
 import play.api.libs.ws.WS
-import org.scalatestplus.play.{ OneServerPerSuite, PlaySpec }
+import org.scalatestplus.play.OneServerPerSuite
 import play.api.test._
 import play.api.test.Helpers._
+import akka.actor.ActorSystem
+import akka.testkit.{ TestKitBase, TestProbe }
 
-class WSInstrumentationSpec extends PlaySpec with OneServerPerSuite {
+import com.typesafe.config.ConfigFactory
+import org.scalatest.{ Matchers, WordSpecLike }
+import kamon.Kamon
+import kamon.metrics.{ TraceMetrics, Metrics }
+import kamon.metrics.Subscriptions.TickMetricSnapshot
+import kamon.metrics.TraceMetrics.ElapsedTime
+
+class WSInstrumentationSpec extends TestKitBase with WordSpecLike with Matchers with OneServerPerSuite {
 
   System.setProperty("config.file", "./kamon-play/src/test/resources/conf/application.conf")
+
+  import scala.collection.immutable.StringLike._
+  implicit lazy val system: ActorSystem = ActorSystem("play-ws-instrumentation-spec", ConfigFactory.parseString(
+    """
+      |akka {
+      |  loglevel = ERROR
+      |}
+      |
+      |kamon {
+      |  metrics {
+      |    tick-interval = 2 seconds
+      |
+      |    filters = [
+      |      {
+      |        trace {
+      |          includes = [ "*" ]
+      |          excludes = []
+      |        }
+      |      }
+      |    ]
+      |  }
+      |}
+    """.stripMargin))
 
   implicit override lazy val app = FakeApplication(withRoutes = {
     case ("GET", "/async") ⇒ Action { Ok("ok") }
@@ -33,11 +65,21 @@ class WSInstrumentationSpec extends PlaySpec with OneServerPerSuite {
 
   "the WS instrumentation" should {
     "respond to the Async Action and complete the WS request" in {
+
+      val metricListener = TestProbe()
+      Kamon(Metrics)(system).subscribe(TraceMetrics, "*", metricListener.ref, permanently = true)
+      metricListener.expectMsgType[TickMetricSnapshot]
+
       val response = await(WS.url("http://localhost:19001/async").get())
+      response.status should be(OK)
 
-      response.status mustBe (OK)
-
-      //Thread.sleep(2000) //wait to complete the future
+      //      val tickSnapshot = metricListener.expectMsgType[TickMetricSnapshot]
+      //      val traceMetrics = tickSnapshot.metrics.find { case (k, v) ⇒ k.name.contains("async") } map (_._2.metrics)
+      //      traceMetrics should not be empty
+      //
+      //      traceMetrics map { metrics ⇒
+      //        metrics(ElapsedTime).numberOfMeasurements should be(1L)
+      //      }
     }
   }
 }

@@ -18,6 +18,7 @@ package kamon.play
 
 import akka.actor.{ ExtendedActorSystem, Extension, ExtensionIdProvider, ExtensionId }
 import kamon.Kamon
+import kamon.util.Contexts
 
 object Play extends ExtensionId[PlayExtension] with ExtensionIdProvider {
   override def lookup(): ExtensionId[_ <: Extension] = Play
@@ -29,6 +30,7 @@ class PlayExtension(private val system: ExtendedActorSystem) extends Kamon.Exten
 
   private val config = system.settings.config.getConfig("kamon.play")
 
+  val defaultDispatcher = Contexts.lookupExecutionContext(Contexts.kamonDefaultDispatcher)(system)
   val includeTraceToken: Boolean = config.getBoolean("include-trace-token-header")
   val traceTokenHeaderName: String = config.getString("trace-token-header-name")
 }

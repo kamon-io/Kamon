@@ -55,8 +55,7 @@ object WSInstrumentation {
   def basicRequestAttributes(request: WSRequest): Map[String, String] = {
     Map[String, String](
       "host" -> request.header("host").getOrElse("Unknown"),
-      "path" -> request.method,
-      "method" -> request.method)
+      "path" -> request.method)
   }
 }
 
