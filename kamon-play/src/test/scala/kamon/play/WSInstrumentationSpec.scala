@@ -19,7 +19,7 @@ package kamon.play
 import play.api.mvc.Action
 import play.api.mvc.Results.Ok
 import play.api.libs.ws.WS
-import org.scalatestplus.play.{OneServerPerSuite, PlaySpec}
+import org.scalatestplus.play.{ OneServerPerSuite, PlaySpec }
 import play.api.test._
 import play.api.test.Helpers._
 

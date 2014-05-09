@@ -68,28 +68,28 @@ class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
   "the Request instrumentation" should {
     "respond to the Async Action with X-Trace-Token" in {
       val Some(result) = route(FakeRequest(GET, "/async").withHeaders(traceTokenHeader))
-      header(traceTokenHeaderName, result) must be (expectedToken)
+      header(traceTokenHeaderName, result) must be(expectedToken)
     }
 
     "respond to the NotFound Action with X-Trace-Token" in {
       val Some(result) = route(FakeRequest(GET, "/notFound").withHeaders(traceTokenHeader))
-      header(traceTokenHeaderName, result) must be (expectedToken)
+      header(traceTokenHeaderName, result) must be(expectedToken)
     }
 
-    "respond to the Default Action with X-Trace-Token" in  {
+    "respond to the Default Action with X-Trace-Token" in {
       val Some(result) = route(FakeRequest(GET, "/default").withHeaders(traceTokenHeader))
-      header(traceTokenHeaderName, result) must be (expectedToken)
+      header(traceTokenHeaderName, result) must be(expectedToken)
     }
 
-    "respond to the Redirect Action with X-Trace-Token" in  {
+    "respond to the Redirect Action with X-Trace-Token" in {
       val Some(result) = route(FakeRequest(GET, "/redirect").withHeaders(traceTokenHeader))
-      header("Location", result) must be (Some("/redirected"))
-      header(traceTokenHeaderName, result) must be (expectedToken)
+      header("Location", result) must be(Some("/redirected"))
+      header(traceTokenHeaderName, result) must be(expectedToken)
     }
 
-    "respond to the Async Action with X-Trace-Token and the renamed trace" in  {
+    "respond to the Async Action with X-Trace-Token and the renamed trace" in {
       val Some(result) = route(FakeRequest(GET, "/async-renamed").withHeaders(traceTokenHeader))
-      header(traceTokenHeaderName, result) must be (expectedToken)
+      header(traceTokenHeaderName, result) must be(expectedToken)
     }
   }
 }
