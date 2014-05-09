@@ -54,7 +54,7 @@ object Projects extends Build {
     .settings(
       libraryDependencies ++=
         compile(akkaActor, akkaSlf4j, sprayCan, sprayClient, sprayRouting, logback))
-    .dependsOn(kamonSpray, kamonNewrelic, kamonStatsd)
+    .dependsOn(kamonSpray, kamonNewrelic, kamonStatsd, kamonDatadog)
 
 
   lazy val kamonDashboard = Project("kamon-dashboard", file("kamon-dashboard"))
