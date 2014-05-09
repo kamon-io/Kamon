@@ -62,14 +62,15 @@ class DatadogMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long
     dataBuilder.flush()
   }
 
+
   def encodeMeasurement(measurement: Measurement, instrumentType: InstrumentType): String = {
-    def statsDMetricFormat(value: String, metricType: String, samplingRate: Double = 1D): String =
+    def dataDogDMetricFormat(value: String, metricType: String, samplingRate: Double = 1D): String =
       value + "|" + metricType + (if (samplingRate != 1D) "|@" + samplingRateFormat.format(samplingRate) else "")
 
     instrumentType match {
-      case Histogram ⇒ statsDMetricFormat(measurement.value.toString, "ms", (1D / measurement.count))
-      case Gauge     ⇒ statsDMetricFormat(measurement.value.toString, "g")
-      case Counter   ⇒ "" // TODO: Need to decide how to report counters, when we have them!
+      case Histogram ⇒ dataDogDMetricFormat(measurement.value.toString, "ms", (1D / measurement.count))
+      case Gauge     ⇒ dataDogDMetricFormat(measurement.value.toString, "g")
+      case Counter   ⇒ dataDogDMetricFormat(measurement.count.toString, "c")
     }
   }
 }
