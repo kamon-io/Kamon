@@ -3,13 +3,12 @@ import sbt._
 object Dependencies {
 
   val resolutionRepos = Seq(
-       "spray repo" at "http://repo.spray.io/",
+    "spray repo" at "http://repo.spray.io/",
     "typesafe repo" at "http://repo.typesafe.com/typesafe/releases/"
   )
 
   val sprayVersion    = "1.3.1"
   val akkaVersion     = "2.3.2"
-  val playVersion     = "2.3-M1"
   val aspectjVersion  = "1.7.4"
   val slf4jVersion    = "1.7.6"
 
@@ -29,8 +28,7 @@ object Dependencies {
   val akkaActor       = "com.typesafe.akka"         %%  "akka-actor"            % akkaVersion
   val akkaSlf4j       = "com.typesafe.akka"         %%  "akka-slf4j"            % akkaVersion
   val akkaTestKit     = "com.typesafe.akka"         %%  "akka-testkit"          % akkaVersion
-  val playTest        = "com.typesafe.play"         %%  "play-test"             % playVersion
-  val playWS          = "com.typesafe.play"         %%  "play-ws"               % playVersion
+  val playTest        = "org.scalatestplus"         %%  "play"                  % "1.1.0-RC1"
   val slf4Api         = "org.slf4j"                 %   "slf4j-api"             % slf4jVersion
   val slf4nop         = "org.slf4j"                 %   "slf4j-nop"             % slf4jVersion
   val jsr166          = "io.gatling"                %   "jsr166e"               % "1.0"
