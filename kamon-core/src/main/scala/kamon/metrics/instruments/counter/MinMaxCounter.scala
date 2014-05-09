@@ -39,7 +39,7 @@ class MinMaxCounter {
 
   def collect(): (Long, Long, Long) = {
     val currentValue = sum.get()
-    val result = (abs(min.max()), max.max(), currentValue)
+    val result = (abs(min.maxThenReset()), max.maxThenReset(), currentValue)
     max.update(currentValue)
     min.update(-currentValue)
     result

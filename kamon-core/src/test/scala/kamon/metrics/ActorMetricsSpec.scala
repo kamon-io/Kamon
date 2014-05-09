@@ -15,9 +15,9 @@
 
 package kamon.metrics
 
-import org.scalatest.{WordSpecLike, Matchers}
-import akka.testkit.{TestProbe, TestKitBase}
-import akka.actor.{ActorRef, Actor, Props, ActorSystem}
+import org.scalatest.{ WordSpecLike, Matchers }
+import akka.testkit.{ TestProbe, TestKitBase }
+import akka.actor.{ ActorRef, Actor, Props, ActorSystem }
 import com.typesafe.config.ConfigFactory
 import scala.concurrent.duration._
 import kamon.Kamon
@@ -89,8 +89,8 @@ class ActorMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
       val stalledTickMetrics = expectActorMetrics("user/tracked-mailbox-size-queueing-up", metricsListener, 2 seconds)
       stalledTickMetrics.mailboxSize.numberOfMeasurements should equal(31)
       // only the automatic last-value recording should be taken, and includes the message being currently processed.
-      stalledTickMetrics.mailboxSize.measurements should contain only (Measurement(0, 10), Measurement(10, 21))
-      stalledTickMetrics.mailboxSize.min should equal(0)
+      stalledTickMetrics.mailboxSize.measurements should contain only (Measurement(10, 31))
+      stalledTickMetrics.mailboxSize.min should equal(10)
       stalledTickMetrics.mailboxSize.max should equal(10)
       stalledTickMetrics.processingTime.numberOfMeasurements should be(0L)
       stalledTickMetrics.timeInMailbox.numberOfMeasurements should be(0L)
@@ -114,7 +114,6 @@ class ActorMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
       actorMetrics.errorCounter.numberOfMeasurements should be(5L)
     }
   }
-
 
   def expectActorMetrics(actorPath: String, listener: TestProbe, waitTime: FiniteDuration): ActorMetricSnapshot = {
     val tickSnapshot = within(waitTime) {
@@ -150,19 +149,18 @@ class ActorMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
       (actor, metricsListener)
     }
   }
-
 }
 
 class DelayableActor extends Actor {
   def receive = {
     case Delay(time) ⇒ Thread.sleep(time.toMillis)
-    case Discard ⇒
+    case Discard     ⇒
   }
 }
 
 class FailedActor extends Actor {
   def receive = {
-    case Error ⇒ 1 / 0
+    case Error   ⇒ 1 / 0
     case Discard ⇒
   }
 }

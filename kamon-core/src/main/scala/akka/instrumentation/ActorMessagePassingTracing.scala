@@ -25,6 +25,7 @@ import kamon.metrics.{ ActorMetrics, Metrics }
 import kamon.Kamon
 import kamon.metrics.ActorMetrics.ActorMetricRecorder
 import kamon.metrics.instruments.counter.MinMaxCounter
+import kamon.util.Contexts
 
 @Aspect
 class BehaviourInvokeTracing {
@@ -43,16 +44,17 @@ class BehaviourInvokeTracing {
     cellWithMetrics.metricIdentity = metricIdentity
     cellWithMetrics.actorMetricsRecorder = metricsExtension.register(metricIdentity, ActorMetrics.Factory)
 
-    val executor = system.dispatchers.lookup("kamon.default-dispatcher")
+    val executor = Contexts.lookupExecutionContext(Contexts.kamonDefaultDispatcher)(system)
 
     system.scheduler.schedule(0 milliseconds, 100 milliseconds) {
       cellWithMetrics.actorMetricsRecorder.map {
         am ⇒
+          import am.mailboxSize._
           val (min, max, sum) = cellWithMetrics.queueSize.collect()
 
-          am.mailboxSize.record(min)
-          am.mailboxSize.record(max)
-          am.mailboxSize.record(sum)
+          record(min)
+          record(max)
+          record(sum)
       }
     }(executor)
   }
@@ -114,7 +116,7 @@ class BehaviourInvokeTracing {
 trait ActorCellMetrics {
   var metricIdentity: ActorMetrics = _
   var actorMetricsRecorder: Option[ActorMetricRecorder] = _
-  val queueSize  = MinMaxCounter()
+  val queueSize = MinMaxCounter()
 }
 
 @Aspect
