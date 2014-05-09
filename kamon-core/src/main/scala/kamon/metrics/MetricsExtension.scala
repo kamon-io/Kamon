@@ -19,7 +19,7 @@ package kamon.metrics
 import scala.collection.concurrent.TrieMap
 import akka.actor._
 import com.typesafe.config.Config
-import kamon.util.GlobPathFilter
+import kamon.util.{ Contexts, GlobPathFilter }
 import kamon.Kamon
 import akka.actor
 import kamon.metrics.Metrics.MetricGroupFilter
@@ -76,6 +76,7 @@ class MetricsExtension(system: ExtendedActorSystem) extends Kamon.Extension {
     allFilters.toMap
   }
 
+  val defaultDispatcher = Contexts.lookupExecutionContext(Contexts.kamonDefaultDispatcher)(system)
 }
 
 object Metrics extends ExtensionId[MetricsExtension] with ExtensionIdProvider {
