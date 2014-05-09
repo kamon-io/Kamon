@@ -13,11 +13,10 @@ package kamon.metrics.instrument
  * and limitations under the License.
  * =========================================================================================
  */
-import org.scalatest.{Matchers, WordSpecLike}
+import org.scalatest.{ Matchers, WordSpecLike }
 import kamon.metrics.instruments.counter.MinMaxCounter
 
 class MinMaxCounterSpec extends WordSpecLike with Matchers {
-
 
   "the MinMaxCounter" should {
     "increment" in {
@@ -102,7 +101,7 @@ class MinMaxCounterSpec extends WordSpecLike with Matchers {
 
     counter.increment(200)
 
-    val (_,maxAfterCollectAndAddSomeValues, _) = counter.collect()
+    val (_, maxAfterCollectAndAddSomeValues, _) = counter.collect()
 
     maxAfterCollectAndAddSomeValues should be(350)
   }

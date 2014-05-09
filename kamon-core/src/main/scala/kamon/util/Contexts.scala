@@ -18,7 +18,7 @@ import akka.actor.ActorSystem
  * =========================================================================================
  */
 object Contexts {
-    val kamonDefaultDispatcher =  "kamon.default-dispatcher"
+  val kamonDefaultDispatcher = "kamon.default-dispatcher"
 
-    def lookupExecutionContext(id:String)(implicit system: ActorSystem) = system.dispatchers.lookup(id)
+  def lookupExecutionContext(id: String)(implicit system: ActorSystem) = system.dispatchers.lookup(id)
 }
