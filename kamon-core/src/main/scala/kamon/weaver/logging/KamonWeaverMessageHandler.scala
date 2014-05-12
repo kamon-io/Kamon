@@ -17,8 +17,8 @@
 package kamon.weaver.logging
 
 import org.aspectj.bridge.{ IMessage, IMessageHandler }
-import org.slf4j.LoggerFactory
 import com.typesafe.config.ConfigFactory
+import java.util.logging.Logger
 
 /**
  *  Implementation of AspectJ's IMessageHandler interface that routes AspectJ weaving messages and controls them through kamon configuration.
@@ -26,7 +26,7 @@ import com.typesafe.config.ConfigFactory
 class KamonWeaverMessageHandler extends IMessageHandler {
   import IMessage._
 
-  private val log = LoggerFactory.getLogger("AspectJ Weaver")
+  private val log = Logger.getLogger("AspectJ Weaver")
   private val conf = ConfigFactory.load().getConfig("kamon.weaver")
 
   private val isVerbose = conf.getBoolean("verbose")
@@ -54,7 +54,7 @@ class KamonWeaverMessageHandler extends IMessageHandler {
   }
 
   private def showErrorMessage(msg: IMessage): Boolean = {
-    log.error(msg.getMessage)
+    log.severe(msg.getMessage)
     true
   }
 }
