@@ -62,10 +62,16 @@ class DatadogMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long
     dataBuilder.flush()
   }
 
-
   def encodeMeasurement(measurement: Measurement, instrumentType: InstrumentType): String = {
-    def dataDogDMetricFormat(value: String, metricType: String, samplingRate: Double = 1D): String =
-      value + "|" + metricType + (if (samplingRate != 1D) "|@" + samplingRateFormat.format(samplingRate) else "")
+
+    def processTags(tags: Seq[String]): String = {
+      if (tags.isEmpty) "" else {
+        tags.foldLeft(new StringBuilder("|#")) { (sb, s) ⇒ if (sb.length > 2) sb ++= "," else sb ++= s }.toString()
+      }
+    }
+
+    def dataDogDMetricFormat(value: String, metricType: String, samplingRate: Double = 1D, tags: Seq[String] = Nil): String =
+      value + "|" + metricType + (if (samplingRate != 1D) "|@" + samplingRateFormat.format(samplingRate) else "" + processTags(tags))
 
     instrumentType match {
       case Histogram ⇒ dataDogDMetricFormat(measurement.value.toString, "ms", (1D / measurement.count))
@@ -91,26 +97,15 @@ class MetricDataPacketBuilder(maxPacketSizeInBytes: Long, udpSender: ActorRef, r
   var buffer = new StringBuilder()
 
   def appendMeasurement(key: String, measurementData: String): Unit = {
-    if (key == lastKey) {
-      val dataWithoutKey = measurementSeparator + measurementData
-      if (fitsOnBuffer(dataWithoutKey))
-        buffer.append(dataWithoutKey)
-      else {
-        flushToUDP(buffer.toString())
-        buffer.clear()
-        buffer.append(key).append(dataWithoutKey)
-      }
+    val data = key + measurementSeparator + measurementData
+
+    if (fitsOnBuffer(metricSeparator + data)) {
+      val mSeparator = if (buffer.length > 0) metricSeparator else ""
+      buffer.append(mSeparator).append(data)
     } else {
-      lastKey = key
-      val dataWithoutSeparator = key + measurementSeparator + measurementData
-      if (fitsOnBuffer(metricSeparator + dataWithoutSeparator)) {
-        val mSeparator = if (buffer.length > 0) metricSeparator else ""
-        buffer.append(mSeparator).append(dataWithoutSeparator)
-      } else {
-        flushToUDP(buffer.toString())
-        buffer.clear()
-        buffer.append(dataWithoutSeparator)
-      }
+      flushToUDP(buffer.toString())
+      buffer.clear()
+      buffer.append(data)
     }
   }
 

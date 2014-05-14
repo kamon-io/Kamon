@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * Copyright © 2013 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2014 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -45,20 +45,6 @@ class DatadogMetricSenderSpec extends TestKitBase with WordSpecLike with Matcher
       data.utf8String should be(s"$testMetricKey:10|ms")
     }
 
-    "render several measurements of the same key under a single (key + multiple measurements) packet" in new UdpListenerFixture {
-      val testMetricName = "test-metric"
-      val testMetricKey = buildMetricKey(testMetricName)
-      val testRecorder = HdrRecorder(1000L, 2, Scale.Unit)
-      testRecorder.record(10L)
-      testRecorder.record(11L)
-      testRecorder.record(12L)
-
-      val udp = setup(Map(testMetricName -> testRecorder.collect()))
-      val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
-
-      data.utf8String should be(s"$testMetricKey:10|ms:11|ms:12|ms")
-    }
-
     "include the correspondent sampling rate when rendering multiple occurrences of the same value" in new UdpListenerFixture {
       val testMetricName = "test-metric"
       val testMetricKey = buildMetricKey(testMetricName)
@@ -77,12 +63,12 @@ class DatadogMetricSenderSpec extends TestKitBase with WordSpecLike with Matcher
       val testMetricKey = buildMetricKey(testMetricName)
       val testRecorder = HdrRecorder(testMaxPacketSize, 3, Scale.Unit)
 
-      var bytes = testMetricKey.length
+      var bytes = 0//testMetricKey.length
       var level = 0
       while (bytes <= testMaxPacketSize) {
         level += 1
         testRecorder.record(level)
-        bytes += s":$level|ms".length
+        bytes += s"$testMetricKey:$level|ms".length
       }
 
       val udp = setup(Map(testMetricName -> testRecorder.collect()))
@@ -106,9 +92,7 @@ class DatadogMetricSenderSpec extends TestKitBase with WordSpecLike with Matcher
 
       firstTestRecorder.record(10L)
       firstTestRecorder.record(10L)
-      firstTestRecorder.record(11L)
 
-      secondTestRecorder.record(20L)
       secondTestRecorder.record(21L)
 
       thirdTestRecorder.record(1L)
@@ -116,13 +100,14 @@ class DatadogMetricSenderSpec extends TestKitBase with WordSpecLike with Matcher
       thirdTestRecorder.record(1L)
       thirdTestRecorder.record(1L)
 
+      val t = thirdTestRecorder.collect()
       val udp = setup(Map(
         firstTestMetricName -> firstTestRecorder.collect(),
         secondTestMetricName -> secondTestRecorder.collect(),
-        thirdTestMetricName -> thirdTestRecorder.collect()))
+        thirdTestMetricName -> t))
       val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
 
-      data.utf8String should be(s"$firstTestMetricKey:10|ms|@0.5:11|ms\n$secondTestMetricKey:20|ms:21|ms\n$thirdTestMetricKey:4|c")
+      data.utf8String should be(s"$firstTestMetricKey:10|ms|@0.5\n$secondTestMetricKey:21|ms\n$thirdTestMetricKey:4|c")
     }
   }
 
