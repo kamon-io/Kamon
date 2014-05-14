@@ -26,7 +26,6 @@ import kamon.metrics.Subscriptions.TickMetricSnapshot
 import java.lang.management.ManagementFactory
 import java.net.InetSocketAddress
 import com.typesafe.config.ConfigFactory
-import kamon.metrics.instruments.CounterRecorder
 
 class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers {
   implicit lazy val system = ActorSystem("statsd-metric-sender-spec",
@@ -93,16 +92,13 @@ class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers
     }
 
     "render multiple keys in the same packet using newline as separator" in new UdpListenerFixture {
-      val firstTestMetricName = "first-metric"
+      val firstTestMetricName = "first-test-metric"
       val firstTestMetricKey = buildMetricKey(firstTestMetricName)
-      val secondTestMetricName = "second-metric"
+      val secondTestMetricName = "second-test-metric"
       val secondTestMetricKey = buildMetricKey(secondTestMetricName)
-      val thirdTestMetricName = "third-metric"
-      val thirdTestMetricKey = buildMetricKey(thirdTestMetricName)
 
       val firstTestRecorder = HdrRecorder(1000L, 2, Scale.Unit)
       val secondTestRecorder = HdrRecorder(1000L, 2, Scale.Unit)
-      val thirdTestRecorder = CounterRecorder()
 
       firstTestRecorder.record(10L)
       firstTestRecorder.record(10L)
@@ -111,18 +107,12 @@ class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers
       secondTestRecorder.record(20L)
       secondTestRecorder.record(21L)
 
-      thirdTestRecorder.record(1L)
-      thirdTestRecorder.record(1L)
-      thirdTestRecorder.record(1L)
-      thirdTestRecorder.record(1L)
-
       val udp = setup(Map(
         firstTestMetricName -> firstTestRecorder.collect(),
-        secondTestMetricName -> secondTestRecorder.collect(),
-        thirdTestMetricName -> thirdTestRecorder.collect()))
+        secondTestMetricName -> secondTestRecorder.collect()))
       val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
 
-      data.utf8String should be(s"$firstTestMetricKey:10|ms|@0.5:11|ms\n$secondTestMetricKey:20|ms:21|ms\n$thirdTestMetricKey:4|c")
+      data.utf8String should be(s"$firstTestMetricKey:10|ms|@0.5:11|ms\n$secondTestMetricKey:20|ms:21|ms")
     }
   }
 
