@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * Copyright © 2013 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2014 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -93,11 +93,11 @@ class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers
     }
 
     "render multiple keys in the same packet using newline as separator" in new UdpListenerFixture {
-      val firstTestMetricName = "first-test-metric"
+      val firstTestMetricName = "first-metric"
       val firstTestMetricKey = buildMetricKey(firstTestMetricName)
-      val secondTestMetricName = "second-test-metric"
+      val secondTestMetricName = "second-metric"
       val secondTestMetricKey = buildMetricKey(secondTestMetricName)
-      val thirdTestMetricName = "third-test-metric"
+      val thirdTestMetricName = "third-metric"
       val thirdTestMetricKey = buildMetricKey(thirdTestMetricName)
 
       val firstTestRecorder = HdrRecorder(1000L, 2, Scale.Unit)
@@ -122,7 +122,7 @@ class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers
         thirdTestMetricName -> thirdTestRecorder.collect()))
       val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
 
-      //data.utf8String should be(s"$firstTestMetricKey:10|ms|@0.5:11|ms\n$secondTestMetricKey:20|ms:21|ms\n$thirdTestMetricKey:4|c")
+      data.utf8String should be(s"$firstTestMetricKey:10|ms|@0.5:11|ms\n$secondTestMetricKey:20|ms:21|ms\n$thirdTestMetricKey:4|c")
     }
   }
 
