@@ -53,7 +53,7 @@ object TraceMetrics extends MetricGroupCategory {
 
     def create(config: Config): TraceMetricRecorder = {
 
-      val settings = config.getConfig("kamon.metrics.precision.trace")
+      val settings = config.getConfig("precision.trace")
       val elapsedTimeConfig = extractPrecisionConfig(settings.getConfig("elapsed-time"))
       val segmentConfig = extractPrecisionConfig(settings.getConfig("segment"))
 

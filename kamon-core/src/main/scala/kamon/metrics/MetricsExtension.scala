@@ -24,16 +24,25 @@ import kamon.Kamon
 import akka.actor
 import kamon.metrics.Metrics.MetricGroupFilter
 import kamon.metrics.Subscriptions.Subscribe
+import java.util.concurrent.TimeUnit
 
 class MetricsExtension(system: ExtendedActorSystem) extends Kamon.Extension {
-  val config = system.settings.config
+  val metricsExtConfig = system.settings.config.getConfig("kamon.metrics")
+
+  /** Configured Dispatchers */
+  val metricSubscriptionsDispatcher = system.dispatchers.lookup(metricsExtConfig.getString("dispatchers.metric-subscriptions"))
+  val gaugeRecordingsDispatcher = system.dispatchers.lookup(metricsExtConfig.getString("dispatchers.gauge-recordings"))
+
+  /** Configuration Settings */
+  val gaugeRecordingInterval = metricsExtConfig.getDuration("gauge-recording-interval", TimeUnit.MILLISECONDS)
+
   val storage = TrieMap[MetricGroupIdentity, MetricGroupRecorder]()
-  val filters = loadFilters(config)
+  val filters = loadFilters(metricsExtConfig)
   lazy val subscriptions = system.actorOf(Props[Subscriptions], "kamon-metrics-subscriptions")
 
   def register(identity: MetricGroupIdentity, factory: MetricGroupFactory): Option[factory.GroupRecorder] = {
     if (shouldTrack(identity))
-      Some(storage.getOrElseUpdate(identity, factory.create(config)).asInstanceOf[factory.GroupRecorder])
+      Some(storage.getOrElseUpdate(identity, factory.create(metricsExtConfig)).asInstanceOf[factory.GroupRecorder])
     else
       None
   }
@@ -50,6 +59,14 @@ class MetricsExtension(system: ExtendedActorSystem) extends Kamon.Extension {
     (for ((identity, recorder) ← storage) yield (identity, recorder.collect)).toMap
   }
 
+  def scheduleGaugeRecorder(body: ⇒ Unit): Cancellable = {
+    import scala.concurrent.duration._
+
+    system.scheduler.schedule(gaugeRecordingInterval milliseconds, gaugeRecordingInterval milliseconds) {
+      body
+    }(gaugeRecordingsDispatcher)
+  }
+
   private def shouldTrack(identity: MetricGroupIdentity): Boolean = {
     filters.get(identity.category.name).map(filter ⇒ filter.accept(identity.name)).getOrElse(false)
   }
@@ -57,7 +74,7 @@ class MetricsExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   def loadFilters(config: Config): Map[String, MetricGroupFilter] = {
     import scala.collection.JavaConverters._
 
-    val filters = config.getObjectList("kamon.metrics.filters").asScala
+    val filters = config.getObjectList("filters").asScala
 
     val allFilters =
       for (

@@ -54,7 +54,7 @@ object ActorMetrics extends MetricGroupCategory {
     type GroupRecorder = ActorMetricRecorder
 
     def create(config: Config): ActorMetricRecorder = {
-      val settings = config.getConfig("kamon.metrics.precision.actor")
+      val settings = config.getConfig("precision.actor")
 
       val processingTimeConfig = extractPrecisionConfig(settings.getConfig("processing-time"))
       val mailboxSizeConfig = extractPrecisionConfig(settings.getConfig("mailbox-size"))
