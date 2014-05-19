@@ -25,7 +25,6 @@ import akka.actor.ActorSystem
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
 import scala.Some
-import kamon.util.Contexts
 
 @Aspect
 class RequestInstrumentation {

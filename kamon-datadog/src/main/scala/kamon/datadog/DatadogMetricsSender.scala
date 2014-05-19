@@ -67,7 +67,8 @@ class DatadogMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long
     def processTags(tags: Seq[String]): String = {
       if (tags.isEmpty) "" else {
         tags.foldLeft(new StringBuilder("|#")) {
-          (sb, s) ⇒ if (sb.length > 2) sb ++= ","
+          (sb, s) ⇒
+            if (sb.length > 2) sb ++= ","
             sb ++= s
         }.toString()
       }
