@@ -18,17 +18,17 @@ package kamon.metrics.dispatcher
 
 import scala.concurrent.forkjoin.ForkJoinPool
 import java.util.concurrent.ThreadPoolExecutor
-import akka.dispatch.{ExecutorServiceDelegate, Dispatcher, MessageDispatcher}
+import akka.dispatch.{ ExecutorServiceDelegate, Dispatcher, MessageDispatcher }
 import java.lang.reflect.Method
 
 object DispatcherMetricsCollector {
 
-  private[this] type DispatcherMetrics = (Long, Long, Long, Long)
+  private[this]type DispatcherMetrics = (Long, Long, Long, Long)
 
-  private[this] def collectForkJoinMetrics(pool: ForkJoinPool):DispatcherMetrics = {
+  private[this] def collectForkJoinMetrics(pool: ForkJoinPool): DispatcherMetrics = {
     (pool.getParallelism, pool.getActiveThreadCount, (pool.getQueuedTaskCount + pool.getQueuedSubmissionCount), pool.getPoolSize)
   }
-  private[this] def collectExecutorMetrics(pool: ThreadPoolExecutor):DispatcherMetrics = {
+  private[this] def collectExecutorMetrics(pool: ThreadPoolExecutor): DispatcherMetrics = {
     (pool.getMaximumPoolSize, pool.getActiveCount, pool.getQueue.size(), pool.getPoolSize)
   }
 
@@ -44,13 +44,13 @@ object DispatcherMetricsCollector {
       case x: Dispatcher ⇒ {
         val executor = executorServiceMethod.invoke(x) match {
           case delegate: ExecutorServiceDelegate ⇒ delegate.executor
-          case other ⇒ other
+          case other                             ⇒ other
         }
 
         executor match {
-          case fjp: ForkJoinPool ⇒ collectForkJoinMetrics(fjp)
+          case fjp: ForkJoinPool       ⇒ collectForkJoinMetrics(fjp)
           case tpe: ThreadPoolExecutor ⇒ collectExecutorMetrics(tpe)
-          case anything ⇒ (0L, 0L, 0L, 0L)
+          case anything                ⇒ (0L, 0L, 0L, 0L)
         }
       }
       case _ ⇒ new DispatcherMetrics(0L, 0L, 0L, 0L)
