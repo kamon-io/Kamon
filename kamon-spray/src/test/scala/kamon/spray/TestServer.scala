@@ -21,6 +21,7 @@ import spray.can.Http
 import akka.actor.ActorRef
 import akka.io.IO
 import akka.io.Tcp.Bound
+import scala.concurrent.duration._
 
 trait TestServer {
   self: TestKitBase ⇒
@@ -28,7 +29,9 @@ trait TestServer {
   def buildClientConnectionAndServer: (ActorRef, TestProbe) = {
     val serverHandler = TestProbe()
     IO(Http).tell(Http.Bind(listener = serverHandler.ref, interface = "127.0.0.1", port = 0), serverHandler.ref)
-    val bound = serverHandler.expectMsgType[Bound]
+    val bound = within(10 seconds) {
+      serverHandler.expectMsgType[Bound]
+    }
 
     val client = clientConnection(bound)
     serverHandler.expectMsgType[Http.Connected]
