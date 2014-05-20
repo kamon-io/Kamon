@@ -32,6 +32,8 @@ trait TraceContext {
   def levelOfDetail: TracingLevelOfDetail
   def startSegment(identity: SegmentIdentity, metadata: Map[String, String]): SegmentCompletionHandle
   def finish(metadata: Map[String, String])
+
+  private[kamon] val traceLocalStorage: TraceLocalStorage = new TraceLocalStorage
 }
 
 object TraceContext {
