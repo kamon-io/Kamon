@@ -11,6 +11,10 @@
     <aspect name="akka.instrumentation.BehaviourInvokeTracing"/>
     <aspect name="kamon.instrumentation.ActorLoggingTracing"/>
 
+    <!-- Dispatchers -->
+    <aspect name="akka.instrumentation.DispatcherTracing"/>
+    <aspect name="akka.instrumentation.DispatcherMetricsMixin"/>
+
     <!-- Futures -->
     <aspect name="kamon.instrumentation.FutureTracing"/>
 
