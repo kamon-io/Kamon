@@ -61,6 +61,12 @@ class StatsDExtension(system: ExtendedActorSystem) extends Kamon.Extension {
     Kamon(Metrics)(system).subscribe(TraceMetrics, tracePathPattern, statsDMetricsListener, permanently = true)
   }
 
+  // Subscribe to Dispatchers
+  val includedDispatchers = statsDConfig.getStringList("includes.dispatcher").asScala
+  for (dispatcherPathPattern ← includedDispatchers) {
+    Kamon(Metrics)(system).subscribe(DispatcherMetrics, dispatcherPathPattern, statsDMetricsListener, permanently = true)
+  }
+
   def buildMetricsListener(tickInterval: Long, flushInterval: Long): ActorRef = {
     assert(flushInterval >= tickInterval, "StatsD flush-interval needs to be equal or greater to the tick-interval")
 
