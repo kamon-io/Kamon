@@ -24,7 +24,8 @@ import kamon.trace._
 import kamon.metrics.{ ActorMetrics, Metrics }
 import kamon.Kamon
 import kamon.metrics.ActorMetrics.ActorMetricRecorder
-import kamon.metrics.instruments.counter.MinMaxCounter
+import kamon.metrics.instruments.MinMaxCounter
+import kamon.metrics.instruments.MinMaxCounter.CounterMeasurement
 
 @Aspect
 class BehaviourInvokeTracing {
@@ -46,11 +47,11 @@ class BehaviourInvokeTracing {
       cellWithMetrics.mailboxSizeCollectorCancellable = metricsExtension.scheduleGaugeRecorder {
         cellWithMetrics.actorMetricsRecorder.map { am ⇒
           import am.mailboxSize._
-          val (min, max, sum) = cellWithMetrics.queueSize.collect()
+          val CounterMeasurement(min, max, current) = cellWithMetrics.queueSize.collect()
 
           record(min)
           record(max)
-          record(sum)
+          record(current)
         }
       }
     }

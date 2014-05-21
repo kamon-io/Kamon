@@ -1,4 +1,5 @@
-package kamon.metrics.instruments.counter
+package kamon.metrics.instruments
+
 /*
  * =========================================================================================
  * Copyright © 2013-2014 the kamon project <http://kamon.io/>
@@ -18,6 +19,7 @@ package kamon.metrics.instruments.counter
 import java.lang.Math._
 import jsr166e.LongMaxUpdater
 import kamon.util.PaddedAtomicLong
+import kamon.metrics.instruments.MinMaxCounter.CounterMeasurement
 
 class MinMaxCounter {
   private val min = new LongMaxUpdater
@@ -37,9 +39,9 @@ class MinMaxCounter {
     min.update(-currentValue)
   }
 
-  def collect(): (Long, Long, Long) = {
+  def collect(): CounterMeasurement = {
     val currentValue = sum.get()
-    val result = (abs(min.maxThenReset()), max.maxThenReset(), currentValue)
+    val result = CounterMeasurement(abs(min.maxThenReset()), max.maxThenReset(), currentValue)
     max.update(currentValue)
     min.update(-currentValue)
     result
@@ -48,4 +50,6 @@ class MinMaxCounter {
 
 object MinMaxCounter {
   def apply() = new MinMaxCounter()
+
+  case class CounterMeasurement(min: Long, max: Long, current: Long)
 }
