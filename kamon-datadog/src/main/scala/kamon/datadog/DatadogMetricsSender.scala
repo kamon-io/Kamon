@@ -24,11 +24,12 @@ import kamon.metrics.Subscriptions.TickMetricSnapshot
 import kamon.metrics.MetricSnapshot.Measurement
 import kamon.metrics.InstrumentTypes.{ Counter, Gauge, Histogram, InstrumentType }
 import java.text.DecimalFormat
+import kamon.metrics.{ MetricIdentity, MetricGroupIdentity }
 
-class DatadogMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long) extends Actor with UdpExtensionProvider {
+class DatadogMetricsSender(remote: InetSocketAddress) extends Actor with UdpExtensionProvider {
   import context.system
 
-  val metricKeyGenerator = new SimpleMetricKeyGenerator(context.system.settings.config)
+  val appName = context.system.settings.config.getString("kamon.datadog.application-name")
   val samplingRateFormat = new DecimalFormat()
   samplingRateFormat.setMaximumFractionDigits(128) // Absurdly high, let the other end loss precision if it needs to.
 
@@ -44,38 +45,34 @@ class DatadogMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long
   }
 
   def writeMetricsToRemote(tick: TickMetricSnapshot, udpSender: ActorRef): Unit = {
-    val dataBuilder = new MetricDataPacketBuilder(maxPacketSizeInBytes, udpSender, remote)
+    def flushToUDP(data: String): Unit = udpSender ! Udp.Send(ByteString(data), remote)
 
     for (
       (groupIdentity, groupSnapshot) ← tick.metrics;
       (metricIdentity, metricSnapshot) ← groupSnapshot.metrics
     ) {
 
-      val key = metricKeyGenerator.generateKey(groupIdentity, metricIdentity)
-
       for (measurement ← metricSnapshot.measurements) {
-        val measurementData = encodeMeasurement(measurement, metricSnapshot.instrumentType)
-        dataBuilder.appendMeasurement(key, measurementData)
+        val measurementData = formatMeasurement(groupIdentity, metricIdentity, measurement, metricSnapshot.instrumentType)
+        flushToUDP(measurementData)
       }
     }
-
-    dataBuilder.flush()
   }
 
-  def encodeMeasurement(measurement: Measurement, instrumentType: InstrumentType): String = {
+  def formatMeasurement(groupIdentity: MetricGroupIdentity, metricIdentity: MetricIdentity, measurement: Measurement,
+                        instrumentType: InstrumentType): String = {
 
-    def processTags(tags: Seq[String]): String = {
-      if (tags.isEmpty) "" else {
-        tags.foldLeft(new StringBuilder("|#")) {
-          (sb, s) ⇒
-            if (sb.length > 2) sb ++= ","
-            sb ++= s
-        }.toString()
-      }
-    }
+    StringBuilder.newBuilder
+      .append(buildMetricName(groupIdentity, metricIdentity))
+      .append(":")
+      .append(buildMeasurementData(measurement, instrumentType))
+      .append(buildIdentificationTag(groupIdentity, metricIdentity))
+      .result()
+  }
 
-    def dataDogDMetricFormat(value: String, metricType: String, samplingRate: Double = 1D, tags: Seq[String] = Nil): String =
-      value + "|" + metricType + (if (samplingRate != 1D) "|@" + samplingRateFormat.format(samplingRate) else "" + processTags(tags))
+  def buildMeasurementData(measurement: Measurement, instrumentType: InstrumentType): String = {
+    def dataDogDMetricFormat(value: String, metricType: String, samplingRate: Double = 1D): String =
+      value + "|" + metricType + (if (samplingRate != 1D) "|@" + samplingRateFormat.format(samplingRate) else "")
 
     instrumentType match {
       case Histogram ⇒ dataDogDMetricFormat(measurement.value.toString, "ms", (1D / measurement.count))
@@ -83,42 +80,18 @@ class DatadogMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long
       case Counter   ⇒ dataDogDMetricFormat(measurement.count.toString, "c")
     }
   }
+
+  def buildMetricName(groupIdentity: MetricGroupIdentity, metricIdentity: MetricIdentity): String =
+    appName + "." + groupIdentity.category.name + "." + metricIdentity.name
+
+  def buildIdentificationTag(groupIdentity: MetricGroupIdentity, metricIdentity: MetricIdentity): String =
+    "|#" + groupIdentity.category.name + ":" + groupIdentity.name
 }
 
 object DatadogMetricsSender {
-  def props(remote: InetSocketAddress, maxPacketSize: Long): Props = Props(new DatadogMetricsSender(remote, maxPacketSize))
+  def props(remote: InetSocketAddress): Props = Props(new DatadogMetricsSender(remote))
 }
 
 trait UdpExtensionProvider {
   def udpExtension(implicit system: ActorSystem): ActorRef = IO(Udp)
-}
-
-class MetricDataPacketBuilder(maxPacketSizeInBytes: Long, udpSender: ActorRef, remote: InetSocketAddress) {
-  val metricSeparator = "\n"
-  val measurementSeparator = ":"
-
-  var lastKey = ""
-  var buffer = new StringBuilder()
-
-  def appendMeasurement(key: String, measurementData: String): Unit = {
-    val data = key + measurementSeparator + measurementData
-
-    if (fitsOnBuffer(metricSeparator + data)) {
-      val mSeparator = if (buffer.length > 0) metricSeparator else ""
-      buffer.append(mSeparator).append(data)
-    } else {
-      flushToUDP(buffer.toString())
-      buffer.clear()
-      buffer.append(data)
-    }
-  }
-
-  def fitsOnBuffer(data: String): Boolean = (buffer.length + data.length) <= maxPacketSizeInBytes
-
-  private def flushToUDP(data: String): Unit = udpSender ! Udp.Send(ByteString(data), remote)
-
-  def flush(): Unit = {
-    flushToUDP(buffer.toString)
-    buffer.clear()
-  }
 }
