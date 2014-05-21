@@ -1,4 +1,3 @@
-package kamon.metrics.instrument
 /* =========================================================================================
  * Copyright © 2013-2014 the kamon project <http://kamon.io/>
  *
@@ -13,8 +12,11 @@ package kamon.metrics.instrument
  * and limitations under the License.
  * =========================================================================================
  */
+package kamon.metrics.instrument
+
 import org.scalatest.{ Matchers, WordSpecLike }
-import kamon.metrics.instruments.counter.MinMaxCounter
+import kamon.metrics.instruments.MinMaxCounter
+import kamon.metrics.instruments.MinMaxCounter.CounterMeasurement
 
 class MinMaxCounterSpec extends WordSpecLike with Matchers {
 
@@ -28,9 +30,9 @@ class MinMaxCounterSpec extends WordSpecLike with Matchers {
       counter.increment()
       counter.increment()
 
-      val (_, _, sum) = counter.collect()
+      val CounterMeasurement(_, _, current) = counter.collect()
 
-      sum should be(5)
+      current should be(5)
     }
 
     "decrement" in {
@@ -43,9 +45,9 @@ class MinMaxCounterSpec extends WordSpecLike with Matchers {
       counter.decrement()
       counter.decrement()
 
-      val (_, _, sum) = counter.collect()
+      val CounterMeasurement(_, _, current) = counter.collect()
 
-      sum should be(0)
+      current should be(0)
     }
 
     "reset the min and max with the sum value when the collect method is called" in {
@@ -59,11 +61,11 @@ class MinMaxCounterSpec extends WordSpecLike with Matchers {
 
       counter.collect() //only for check the last value after reset min max
 
-      val (min, max, sum) = counter.collect()
+      val CounterMeasurement(min, max, current) = counter.collect()
 
-      min should be(sum)
-      max should be(sum)
-      sum should be(150)
+      min should be(current)
+      max should be(current)
+      current should be(150)
     }
   }
 
@@ -76,13 +78,13 @@ class MinMaxCounterSpec extends WordSpecLike with Matchers {
     counter.increment(40)
     counter.increment(50)
 
-    val (min, _, _) = counter.collect()
+    val CounterMeasurement(min, _, _) = counter.collect()
 
     min should be(0)
 
     counter.increment(50)
 
-    val (minAfterCollectAndAddSomeValues, _, _) = counter.collect()
+    val CounterMeasurement(minAfterCollectAndAddSomeValues, _, _) = counter.collect()
 
     minAfterCollectAndAddSomeValues should be(150)
   }
@@ -95,13 +97,13 @@ class MinMaxCounterSpec extends WordSpecLike with Matchers {
     counter.increment(40)
     counter.increment(50)
 
-    val (_, max, _) = counter.collect()
+    val CounterMeasurement(_, max, _) = counter.collect()
 
     max should be(150)
 
     counter.increment(200)
 
-    val (_, maxAfterCollectAndAddSomeValues, _) = counter.collect()
+    val CounterMeasurement(_, maxAfterCollectAndAddSomeValues, _) = counter.collect()
 
     maxAfterCollectAndAddSomeValues should be(350)
   }

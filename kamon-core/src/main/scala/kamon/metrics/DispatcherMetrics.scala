@@ -26,7 +26,7 @@ case class DispatcherMetrics(name: String) extends MetricGroupIdentity {
 object DispatcherMetrics extends MetricGroupCategory {
   val name = "dispatcher"
 
-  case object MaximunPoolSize extends MetricIdentity { val name, tag = "maximum-pool-size" }
+  case object MaximumPoolSize extends MetricIdentity { val name, tag = "maximum-pool-size" }
   case object RunningThreadCount extends MetricIdentity { val name, tag = "running-thread-count" }
   case object QueueTaskCount extends MetricIdentity { val name, tag = "queued-task-count" }
   case object PoolSize extends MetricIdentity { val name, tag = "pool-size" }
@@ -43,7 +43,7 @@ object DispatcherMetrics extends MetricGroupCategory {
       extends MetricGroupSnapshot {
 
     val metrics: Map[MetricIdentity, MetricSnapshotLike] = Map(
-      (MaximunPoolSize -> maximumPoolSize),
+      (MaximumPoolSize -> maximumPoolSize),
       (RunningThreadCount -> runningThreadCount),
       (QueueTaskCount -> queueTaskCount),
       (PoolSize -> poolSize))
