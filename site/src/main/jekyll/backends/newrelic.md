@@ -1,6 +1,6 @@
 ---
 title: kamon | NewRelic Module | Documentation
-layout: default
+layout: documentation
 ---
 
 NewRelic Module

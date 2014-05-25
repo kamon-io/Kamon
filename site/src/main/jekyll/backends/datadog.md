@@ -1,22 +1,21 @@
 ---
 title: Kamon | Datadog | Documentation
-layout: default
+layout: documentation
 ---
 
 Reporting Metrics to Datadog
 ===========================
 <hr>
 
-[Datadog](http://www.datadoghq.com/) Datadog is a monitoring service for IT, Operations and Development teams who write
-and run applications at scale, and want to turn the massive amounts of data produced by their apps,
-tools and services into actionable insight.
+[Datadog] is a monitoring service for IT, Operations and Development teams who write and run applications at scale, and
+want to turn the massive amounts of data produced by their apps, tools and services into actionable insight.
 
 Installation
 ------------
 
 To use the Datadog module just add the `kamon-datadog` dependency to your project and start your application using the
-Aspectj Weaver agent. Please refer to our [get started](/get-started) page for more info on how to add dependencies to
-your project and starting your application with the AspectJ Weaver.
+Aspectj Weaver agent. Please refer to our [get started] page for more info on how to add dependencies to your project
+and starting your application with the AspectJ Weaver.
 
 
 Configuration
@@ -83,3 +82,7 @@ Integration Notes
 Visualization and Fun
 ---------------------
 
+
+
+[Datadog]: http://www.datadoghq.com/
+[get started]: /introduction/get-started/

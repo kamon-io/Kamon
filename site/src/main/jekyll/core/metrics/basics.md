@@ -1,6 +1,6 @@
 ---
 title: Kamon | Core | Documentation
-layout: default
+layout: documentation
 ---
 
 Metrics

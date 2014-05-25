@@ -8,7 +8,7 @@ tags: announcement
 
 We are very excited to see people adopting Kamon as their monitoring tool for reactive applications and, of course, we
 want to keep growing both in users base and features. According to our site metrics, the most visited section is the one
-describing our [StatsD module](/statsd/), that made us think, what can we do to make it easier for people to get started
+describing our [StatsD module], that made us think, what can we do to make it easier for people to get started
 with Kamon and StatsD?, well, that's an easy question to answer: build a package containing all the required
 infrastructure and plumping, and let the users just focus on what cares to them, their apps and their metrics. That's
 why today we are publishing a Docker image with all that you need to get started in a few minutes!
@@ -54,3 +54,6 @@ purpose of making your life easier. This should give you an idea of how the dash
 from one of our toy applications:
 
 <img class="img-responsive" src="/assets/img/kamon-statsd-grafana.png">
+
+
+[StatsD module]: /backends/statsd/

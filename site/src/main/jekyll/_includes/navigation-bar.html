@@ -1,51 +1,73 @@
 <div class="navbar navbar-default navbar-fixed-top" role="navigation">
-    <div class="container">
-        <!-- Brand and toggle get grouped for better mobile display -->
-        <div class="navbar-header">
-            <button type="button" class="navbar-toggle" data-toggle="collapse"
-                    data-target="#bs-example-navbar-collapse-1">
-                <span class="sr-only">Toggle navigation</span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-            </button>
-            <a class="navbar-brand kamon-title" href="/"><img src="/assets/img/kamon-verde-120x120.png" width="25"
-                                                              height="25"/> <strong>Kamon</strong></a>
-        </div>
-
-        <!-- Collect the nav links, forms, and other content for toggling -->
-        <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
-            <ul class="nav navbar-nav">
-                <li class="dropdown">
-                    <a class="dropdown-toggle" data-toggle="dropdown" href="#" id="modules">Modules <span
-                            class="caret"></span></a>
-                    <ul class="dropdown-menu" aria-labelledby="download">
-                        <li><a tabindex="-1" href="/spray"><i class="fa fa-gears"></i> Spray</a></li>
-                        <li><a tabindex="-1" href="/statsd"><i class="fa fa-tasks"></i> StatsD</a></li>
-                        <li><a tabindex="-1" href="/datadog"><i class="glyphicon-dog"></i> Datadog</a></li>
-                        <li><a tabindex="-1" href="/newrelic"><i class="fa fa-bar-chart-o"></i> New Relic</a></li>
-                    </ul>
-                </li>
-            </ul>
-            <ul class="nav navbar-nav navbar-right">
-                <li class="dropdown">
-                    <a class="dropdown-toggle" data-toggle="dropdown" href="#" id="contact">Contact <span class="caret"></span></a>
-                    <ul class="dropdown-menu" aria-labelledby="download">
-                        <li><a tabindex="-1" href="https://twitter.com/kamonteam"><i class="fa fa-twitter"></i> Twitter</a></li>
-                        <li><a tabindex="-1" href="https://groups.google.com/forum/#!forum/kamon-user"><i class="fa fa-google-plus"></i> Mailing List</a></li>
-                    </ul>
-                </li>
-                <li class="dropdown">
-                    <a class="dropdown-toggle" data-toggle="dropdown" href="#" id="project-info">Project Info <span class="caret"></span></a>
-                    <ul class="dropdown-menu" aria-labelledby="download">
-                        <li><a tabindex="-1" href="/acknowledgments/"><i class="fa fa-thumbs-up"></i> Acknowledgments</a></li>
-                        <li><a tabindex="-1" href="/changelog/"><i class="fa fa-code-fork"></i> Changelog</a></li>
-                        <li><a tabindex="-1" href="/license/"><i class="fa fa-info-circle"></i> License</a></li>
-                    </ul>
-                </li>
-                <li><a href="/teamblog/">Team Blog</a></li>
-            </ul>
-        </div>
-        <!-- /.navbar-collapse -->
+  <div class="container">
+    <!-- Brand and toggle get grouped for better mobile display -->
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle" data-toggle="collapse"
+              data-target="#bs-example-navbar-collapse-1">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand kamon-title" href="/"><img src="/assets/img/kamon-verde-120x120.png" width="25"
+                                                        height="25"/> <strong>Kamon</strong></a>
     </div>
+
+    <!-- Collect the nav links, forms, and other content for toggling -->
+    <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+      <ul class="nav navbar-nav">
+        <li class="dropdown">
+          <a class="dropdown-toggle" data-toggle="dropdown" href="#" id="modules">Documentation <span class="caret"></span></a>
+          <ul class="dropdown-menu multi-level" role="menu" aria-labelledby="dropdownMenu">
+            <li><a tabindex="-1" href="/introduction/what-is-kamon/"> What is Kamon?</a></li>
+            <li><a tabindex="-1" href="/introduction/get-started/"> Get Started</a></li>
+            <li class="divider"></li>
+            <li class="dropdown-submenu">
+              <a tabindex="-1" href="#">Core Concepts</a>
+              <ul class="dropdown-menu">
+                <li><a tabindex="-1" href="/core/metrics/basics/"> Metrics</a></li>
+                <li><a tabindex="-1" href="/core/metrics/tracing/"> Tracing</a></li>
+              </ul>
+            </li>
+            <li class="dropdown-submenu">
+              <a tabindex="-1" href="#">Integrations</a>
+              <ul class="dropdown-menu">
+                <li><a tabindex="-1" href="/integrations/spray/"><i class="fa fa-gears"></i> Spray</a></li>
+                <li><a tabindex="-1" href="/integrations/play/"><i class="fa fa-gears"></i> Play!</a></li>
+              </ul>
+            </li>
+            <li class="dropdown-submenu">
+              <a tabindex="-1" href="#">Backends</a>
+              <ul class="dropdown-menu">
+                <li><a tabindex="-1" href="/backends/statsd"><i class="fa fa-tasks"></i> StatsD</a></li>
+                <li><a tabindex="-1" href="/backends/datadog"><i class="glyphicon-dog"></i> Datadog</a></li>
+                <li><a tabindex="-1" href="/backends/newrelic"><i class="fa fa-bar-chart-o"></i> New Relic</a></li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+      </ul>
+
+
+      <ul class="nav navbar-nav navbar-right">
+        <li class="dropdown">
+          <a class="dropdown-toggle" data-toggle="dropdown" href="#" id="contact">Contact <span
+              class="caret"></span></a>
+          <ul class="dropdown-menu" aria-labelledby="download">
+            <li><a tabindex="-1" href="https://twitter.com/kamonteam"><i class="fa fa-twitter"></i> Twitter</a></li>
+            <li><a tabindex="-1" href="https://groups.google.com/forum/#!forum/kamon-user"><i class="fa fa-google-plus"></i> Mailing List</a></li>
+          </ul>
+        </li>
+        <li class="dropdown">
+          <a class="dropdown-toggle" data-toggle="dropdown" href="#" id="project-info">Project Info <span class="caret"></span></a>
+          <ul class="dropdown-menu" aria-labelledby="download">
+            <li><a tabindex="-1" href="/project-info/acknowledgments/"><i class="fa fa-thumbs-up"></i> Acknowledgments</a></li>
+            <li><a tabindex="-1" href="/project-info/changelog/"><i class="fa fa-code-fork"></i> Changelog</a></li>
+            <li><a tabindex="-1" href="/project-info/license/"><i class="fa fa-info-circle"></i> License</a></li>
+          </ul>
+        </li>
+        <li><a href="/teamblog/">Team Blog</a></li>
+      </ul>
+    </div>
+  </div>
 </div>

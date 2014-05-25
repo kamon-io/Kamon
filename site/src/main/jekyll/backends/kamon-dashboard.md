@@ -1,7 +1,6 @@
 ---
 title: kamon | Dashboard | Documentation
-layout: default
+layout: documentation
 ---
 Coming soon
---------
-
+-----------

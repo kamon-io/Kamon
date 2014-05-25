@@ -1,6 +1,6 @@
 ---
 title: kamon | Spray | Documentation
-layout: default
+layout: documentation
 ---
 
 Spray Module(TODO)

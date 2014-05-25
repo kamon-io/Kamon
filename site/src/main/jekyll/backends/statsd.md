@@ -1,6 +1,6 @@
 ---
 title: Kamon | StatsD | Documentation
-layout: default
+layout: documentation
 ---
 
 Reporting Metrics to StatsD

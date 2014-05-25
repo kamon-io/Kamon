@@ -1,6 +1,6 @@
 ---
 title: Kamon | Get Started
-layout: default
+layout: documentation
 ---
 
 Get Started with Kamon
@@ -47,12 +47,20 @@ the weaver's file location and you are done:
 ```
 
 In case you want to keep the AspectJ related settings in your build and enjoy using `run` from the console, take a look
-at the [sbt-aspectj](https://github.com/sbt/sbt-aspectj/) plugin.
+at the [sbt-aspectj] plugin.
 
 
 Third: Enjoy!
 -------------
 
-Refer to module's documentation to find out more about core concepts like [tracing](/core/tracing/),
-[metrics](/core/metrics/) and [logging](/core/logging/), and learn how to report your metrics data to external services
-like [StatsD](/statsd/) and [New Relic](/newrelic/).
+Refer to module's documentation to find out more about core concepts like [tracing], [metrics] and [logging], and learn
+how to report your metrics data to external services like [StatsD], [Datadog] and [New Relic].
+
+
+[sbt-aspectj]: https://github.com/sbt/sbt-aspectj/
+[tracing]: /core/tracing/basics/
+[metrics]: /core/metrics/basics/
+[logging]: /core/tracing/logging/
+[StatsD]: /backends/statsd/
+[Datadog]: /backends/datadog/
+[New Relic]: /backends/newrelic/

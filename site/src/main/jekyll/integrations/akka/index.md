@@ -1,6 +1,6 @@
 ---
 title: kamon | Akka Toolkit | Documentation
-layout: default
+layout: documentation
 ---
 
 Akka Module
