@@ -55,13 +55,13 @@ object DispatcherMetrics extends MetricGroupCategory {
     def create(config: Config): DispatcherMetricRecorder = {
       val settings = config.getConfig("precision.dispatcher")
 
-      val threadCountConfig = extractPrecisionConfig(settings.getConfig("maximum-pool-size"))
+      val MaximumPoolSizeConfig = extractPrecisionConfig(settings.getConfig("maximum-pool-size"))
       val RunningThreadCountConfig = extractPrecisionConfig(settings.getConfig("running-thread-count"))
       val QueueTaskCountConfig = extractPrecisionConfig(settings.getConfig("queued-task-count"))
       val PoolSizeConfig = extractPrecisionConfig(settings.getConfig("pool-size"))
 
       new DispatcherMetricRecorder(
-        HdrRecorder(threadCountConfig.highestTrackableValue, threadCountConfig.significantValueDigits, Scale.Unit),
+        HdrRecorder(MaximumPoolSizeConfig.highestTrackableValue, MaximumPoolSizeConfig.significantValueDigits, Scale.Unit),
         HdrRecorder(RunningThreadCountConfig.highestTrackableValue, RunningThreadCountConfig.significantValueDigits, Scale.Unit),
         HdrRecorder(QueueTaskCountConfig.highestTrackableValue, QueueTaskCountConfig.significantValueDigits, Scale.Unit),
         HdrRecorder(PoolSizeConfig.highestTrackableValue, PoolSizeConfig.significantValueDigits, Scale.Unit))
