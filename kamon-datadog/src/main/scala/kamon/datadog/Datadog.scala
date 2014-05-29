@@ -21,8 +21,6 @@ import kamon.Kamon
 import kamon.metric._
 import scala.concurrent.duration._
 import scala.collection.JavaConverters._
-import com.typesafe.config.Config
-import java.lang.management.ManagementFactory
 import akka.event.Logging
 import java.net.InetSocketAddress
 import java.util.concurrent.TimeUnit.MILLISECONDS
