@@ -36,6 +36,9 @@ object Dependencies {
   val slf4nop         = "org.slf4j"                 %   "slf4j-nop"             % slf4jVersion
   val jsr166          = "io.gatling"                %   "jsr166e"               % "1.0"
   val scalaCompiler   = "org.scala-lang"            %   "scala-compiler"        % Settings.ScalaVersion
+  val sigar           = "org.fusesource"            %   "sigar"                 % "1.6.4"
+  val ioCore          = "com.github.scala-incubator.io" %% "scala-io-core" % "0.4.3"
+  val ioFile          = "com.github.scala-incubator.io" %% "scala-io-file" % "0.4.3"
 
   def compile   (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "compile")
   def provided  (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "provided")
