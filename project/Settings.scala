@@ -9,7 +9,7 @@ import scalariform.formatter.preferences._
 object Settings {
 
   lazy val basicSettings = seq(
-    scalaVersion  := "2.10.3",
+    scalaVersion  := "2.11.1",
     resolvers    ++= Dependencies.resolutionRepos,
     fork in run   := true,
     scalacOptions := Seq(
@@ -23,7 +23,7 @@ object Settings {
       "-language:postfixOps",
       "-language:implicitConversions",
       "-Xlog-reflective-calls"
-    )) ++ publishSettings ++ releaseSettings
+    )) ++ publishSettings ++ releaseSettings ++ net.virtualvoid.sbt.graph.Plugin.graphSettings
 
   lazy val formatSettings = SbtScalariform.scalariformSettings ++ Seq(
     ScalariformKeys.preferences in Compile := formattingPreferences,
