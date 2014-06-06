@@ -16,10 +16,10 @@
 
 package kamon.datadog
 
-import akka.testkit.{ TestKitBase, TestProbe }
-import akka.actor.{ Props, ActorRef, ActorSystem }
+import akka.testkit.{TestKitBase, TestProbe}
+import akka.actor.{Props, ActorRef, ActorSystem}
 import kamon.metrics.instruments.CounterRecorder
-import org.scalatest.{ Matchers, WordSpecLike }
+import org.scalatest.{Matchers, WordSpecLike}
 import kamon.metrics._
 import akka.io.Udp
 import org.HdrHistogram.HdrRecorder
@@ -56,20 +56,52 @@ class DatadogMetricSenderSpec extends TestKitBase with WordSpecLike with Matcher
       data.utf8String should be(s"kamon.actor.processing-time:10|ms|@0.5|#actor:user/kamon")
     }
 
-    "send only one packet per measurement" in new UdpListenerFixture {
+    "flush the packet when the max-packet-size is reached" in new UdpListenerFixture {
       val testMetricName = "processing-time"
-      val testRecorder = HdrRecorder(1000L, 2, Scale.Unit)
-      testRecorder.record(10L)
-      testRecorder.record(10L)
-      testRecorder.record(20L)
+      val testRecorder = HdrRecorder(testMaxPacketSize, 3, Scale.Unit)
+
+      var bytes = 0
+      var level = 0
+
+      while (bytes <= testMaxPacketSize) {
+        level += 1
+        testRecorder.record(level)
+        bytes += s"kamon.actor.$testMetricName:$level|ms|#actor:user/kamon".length
+      }
 
       val udp = setup(Map(testMetricName -> testRecorder.collect()))
+      udp.expectMsgType[Udp.Send]// let the first flush pass
 
-      val Udp.Send(data1, _, _) = udp.expectMsgType[Udp.Send]
-      data1.utf8String should be(s"kamon.actor.processing-time:10|ms|@0.5|#actor:user/kamon")
+      val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
+      data.utf8String should be(s"kamon.actor.$testMetricName:$level|ms|#actor:user/kamon")
+    }
 
-      val Udp.Send(data2, _, _) = udp.expectMsgType[Udp.Send]
-      data2.utf8String should be(s"kamon.actor.processing-time:20|ms|#actor:user/kamon")
+    "render multiple keys in the same packet using newline as separator" in new UdpListenerFixture {
+      val firstTestMetricName = "processing-time-1"
+      val secondTestMetricName = "processing-time-2"
+      val thirdTestMetricName = "counter"
+
+      val firstTestRecorder = HdrRecorder(1000L, 2, Scale.Unit)
+      val secondTestRecorder = HdrRecorder(1000L, 2, Scale.Unit)
+      val thirdTestRecorder = CounterRecorder()
+
+      firstTestRecorder.record(10L)
+      firstTestRecorder.record(10L)
+
+      secondTestRecorder.record(21L)
+
+      thirdTestRecorder.record(1L)
+      thirdTestRecorder.record(1L)
+      thirdTestRecorder.record(1L)
+      thirdTestRecorder.record(1L)
+
+      val udp = setup(Map(
+        firstTestMetricName -> firstTestRecorder.collect(),
+        secondTestMetricName -> secondTestRecorder.collect(),
+        thirdTestMetricName -> thirdTestRecorder.collect()))
+      val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
+
+      data.utf8String should be("kamon.actor.processing-time-1:10|ms|@0.5|#actor:user/kamon\nkamon.actor.processing-time-2:21|ms|#actor:user/kamon\nkamon.actor.counter:4|c|#actor:user/kamon")
     }
   }
 
@@ -79,7 +111,7 @@ class DatadogMetricSenderSpec extends TestKitBase with WordSpecLike with Matcher
 
     def setup(metrics: Map[String, MetricSnapshotLike]): TestProbe = {
       val udp = TestProbe()
-      val metricsSender = system.actorOf(Props(new DatadogMetricsSender(new InetSocketAddress(localhostName, 0)) {
+      val metricsSender = system.actorOf(Props(new DatadogMetricsSender(new InetSocketAddress(localhostName, 0), testMaxPacketSize) {
         override def udpExtension(implicit system: ActorSystem): ActorRef = udp.ref
       }))
 
@@ -107,8 +139,8 @@ class DatadogMetricSenderSpec extends TestKitBase with WordSpecLike with Matcher
       metricsSender ! TickMetricSnapshot(0, 0, Map(testGroupIdentity -> new MetricGroupSnapshot {
         val metrics: Map[MetricIdentity, MetricSnapshotLike] = testMetrics.toMap
       }))
-
       udp
     }
   }
+
 }
