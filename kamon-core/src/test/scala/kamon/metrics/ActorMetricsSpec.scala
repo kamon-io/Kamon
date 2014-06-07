@@ -87,9 +87,9 @@ class ActorMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
 
       // process the tick in which the actor is stalled.
       val stalledTickMetrics = expectActorMetrics("user/tracked-mailbox-size-queueing-up", metricsListener, 2 seconds)
-      stalledTickMetrics.mailboxSize.numberOfMeasurements should equal(31)
+      stalledTickMetrics.mailboxSize.numberOfMeasurements should equal(30)
       // only the automatic last-value recording should be taken, and includes the message being currently processed.
-      stalledTickMetrics.mailboxSize.measurements should contain only (Measurement(10, 31))
+      stalledTickMetrics.mailboxSize.measurements should contain only (Measurement(10, 30))
       stalledTickMetrics.mailboxSize.min should equal(10)
       stalledTickMetrics.mailboxSize.max should equal(10)
       stalledTickMetrics.processingTime.numberOfMeasurements should be(0L)
