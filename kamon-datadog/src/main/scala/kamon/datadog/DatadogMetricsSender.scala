@@ -16,15 +16,15 @@
 
 package kamon.datadog
 
-import akka.actor.{ActorSystem, Props, ActorRef, Actor}
-import akka.io.{Udp, IO}
+import akka.actor.{ ActorSystem, Props, ActorRef, Actor }
+import akka.io.{ Udp, IO }
 import java.net.InetSocketAddress
 import akka.util.ByteString
 import kamon.metrics.Subscriptions.TickMetricSnapshot
 import kamon.metrics.MetricSnapshot.Measurement
-import kamon.metrics.InstrumentTypes.{Counter, Gauge, Histogram, InstrumentType}
+import kamon.metrics.InstrumentTypes.{ Counter, Gauge, Histogram, InstrumentType }
 import java.text.DecimalFormat
-import kamon.metrics.{MetricIdentity, MetricGroupIdentity}
+import kamon.metrics.{ MetricIdentity, MetricGroupIdentity }
 
 class DatadogMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long) extends Actor with UdpExtensionProvider {
 
@@ -77,8 +77,8 @@ class DatadogMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long
 
     instrumentType match {
       case Histogram ⇒ dataDogDMetricFormat(measurement.value.toString, "ms", (1D / measurement.count))
-      case Gauge ⇒ dataDogDMetricFormat(measurement.value.toString, "g")
-      case Counter ⇒ dataDogDMetricFormat(measurement.count.toString, "c")
+      case Gauge     ⇒ dataDogDMetricFormat(measurement.value.toString, "g")
+      case Counter   ⇒ dataDogDMetricFormat(measurement.count.toString, "c")
     }
   }
 
