@@ -94,7 +94,6 @@ class DispatcherTracing {
 
     dispatcherWithMetrics.dispatcherMetricsRecorder.map {
       dispatcher ⇒
-        println("dispatcher down => " + dispatcher)
         dispatcherWithMetrics.dispatcherCollectorCancellable.cancel()
         Kamon(Metrics)(dispatcherWithMetrics.actorSystem).unregister(dispatcherWithMetrics.metricIdentity)
     }

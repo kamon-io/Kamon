@@ -20,7 +20,7 @@ object Dependencies {
   val aspectjWeaver   = "org.aspectj"               %   "aspectjweaver"         % aspectjVersion
   val newrelic        = "com.newrelic.agent.java"   %   "newrelic-api"          % "3.1.0"
   val snakeYaml       = "org.yaml"                  %   "snakeyaml"             % "1.13"
-  val hdrHistogram    = "org.hdrhistogram"          %   "HdrHistogram"          % "1.0.8"
+  val hdrHistogram    = "org.hdrhistogram"          %   "HdrHistogram"          % "1.2.1"
   val sprayCan        = "io.spray"                  %   "spray-can"             % sprayVersion
   val sprayRouting    = "io.spray"                  %   "spray-routing"         % sprayVersion
   val sprayTestkit    = "io.spray"                  %   "spray-testkit"         % sprayVersion
