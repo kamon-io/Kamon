@@ -40,7 +40,10 @@ class MinMaxCounter {
   }
 
   def collect(): CounterMeasurement = {
-    val currentValue = if (sum.get() < 0) 0 else sum.get()
+    val currentValue = {
+      val value = sum.get()
+      if (value < 0) 0 else value
+    }
     val result = CounterMeasurement(abs(min.maxThenReset()), max.maxThenReset(), currentValue)
     max.update(currentValue)
     min.update(-currentValue)
