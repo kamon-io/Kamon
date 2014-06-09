@@ -17,7 +17,7 @@
 package kamon.metrics
 
 import com.typesafe.config.Config
-import kamon.metrics.instruments.{ CounterRecorder, ContinuousHdrRecorder }
+import kamon.metrics.instruments.CounterRecorder
 import org.HdrHistogram.HdrRecorder
 
 case class ActorMetrics(name: String) extends MetricGroupIdentity {
@@ -62,7 +62,7 @@ object ActorMetrics extends MetricGroupCategory {
 
       new ActorMetricRecorder(
         HdrRecorder(processingTimeConfig.highestTrackableValue, processingTimeConfig.significantValueDigits, Scale.Nano),
-        ContinuousHdrRecorder(mailboxSizeConfig.highestTrackableValue, mailboxSizeConfig.significantValueDigits, Scale.Unit),
+        HdrRecorder(mailboxSizeConfig.highestTrackableValue, mailboxSizeConfig.significantValueDigits, Scale.Unit),
         HdrRecorder(timeInMailboxConfig.highestTrackableValue, timeInMailboxConfig.significantValueDigits, Scale.Nano),
         CounterRecorder())
     }
