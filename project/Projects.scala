@@ -4,11 +4,10 @@ import Keys._
 object Projects extends Build {
   import AspectJ._
   import Settings._
-  import Site._
   import Dependencies._
 
   lazy val root = Project("root", file("."))
-    .aggregate(kamonCore, kamonSpray, kamonNewrelic, kamonPlayground, kamonDashboard, kamonTestkit, kamonPlay, kamonStatsd, site)
+    .aggregate(kamonCore, kamonSpray, kamonNewrelic, kamonPlayground, kamonDashboard, kamonTestkit, kamonPlay, kamonStatsd)
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
     .settings(noPublishing: _*)
@@ -88,17 +87,6 @@ object Projects extends Build {
     .settings(formatSettings: _*)
     .settings(libraryDependencies ++= compile(akkaActor) ++  test(scalatest, akkaTestKit, slf4Api, slf4nop))
     .dependsOn(kamonCore)
-
-  lazy val site = Project("site", file("site"))
-    .settings(basicSettings: _*)
-    .settings(siteSettings: _*)
-    .settings(aspectJSettings: _*)
-    .settings(noPublishing: _*)
-    .dependsOn(kamonCore)
-    .settings(
-      libraryDependencies ++=
-        compile(akkaSlf4j, logback) ++
-        test(scalatest, akkaTestKit))
 
 
   val noPublishing = Seq(publish := (), publishLocal := (), publishArtifact := false)

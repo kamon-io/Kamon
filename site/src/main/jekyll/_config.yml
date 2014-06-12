@@ -1,6 +1,0 @@
-name: Kamon - Tools for Reactive Applications Monitoring
-markdown: redcarpet
-pygments: true
-permalink: pretty
-code_dir: ../../test/scala
-encoding: utf-8
