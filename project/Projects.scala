@@ -73,7 +73,7 @@ object Projects extends Build {
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
     .settings(aspectJSettings: _*)
-    .settings(libraryDependencies ++= compile(playTest, aspectJ) ++ test(playTest, akkaTestKit, slf4Api))
+    .settings(libraryDependencies ++= compile(play, aspectJ) ++ test(playTest, akkaTestKit, slf4Api))
     .dependsOn(kamonCore)
 
   lazy val kamonStatsd = Project("kamon-statsd", file("kamon-statsd"))
