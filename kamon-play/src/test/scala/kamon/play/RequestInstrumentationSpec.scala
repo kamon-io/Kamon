@@ -16,15 +16,16 @@
 
 package kamon.play
 
-import play.api.test._
-import play.api.test.Helpers._
-import org.scalatestplus.play._
-import play.api.mvc.{ Results, Action }
-import play.api.mvc.Results.Ok
-import scala.Some
-import scala.concurrent.Future
 import kamon.play.action.TraceName
-import kamon.trace.TraceRecorder
+import kamon.trace.{ TraceLocal, TraceRecorder }
+import org.scalatestplus.play._
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.mvc.Results.Ok
+import play.api.mvc._
+import play.api.test.Helpers._
+import play.api.test._
+
+import scala.concurrent.Future
 
 class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
 
@@ -32,7 +33,8 @@ class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
 
   val executor = scala.concurrent.ExecutionContext.Implicits.global
 
-  implicit override lazy val app = FakeApplication(withRoutes = {
+  implicit override lazy val app = FakeApplication(withGlobal = Some(MockGlobalTest), withRoutes = {
+
     case ("GET", "/async") ⇒
       Action.async {
         Future {
@@ -59,16 +61,23 @@ class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
           }(executor)
         }
       }
+    case ("GET", "/retrieve") ⇒
+      Action {
+        Ok("retrieve from TraceLocal")
+      }
   })
 
   private val traceTokenValue = "kamon-trace-token-test"
   private val traceTokenHeaderName = "X-Trace-Token"
   private val expectedToken = Some(traceTokenValue)
   private val traceTokenHeader = traceTokenHeaderName -> traceTokenValue
+  private val traceLocalStorageValue = "localStorageValue"
+  private val traceLocalStorageKey = "localStorageKey"
+  private val traceLocalStorageHeader = traceLocalStorageKey -> traceLocalStorageValue
 
   "the Request instrumentation" should {
     "respond to the Async Action with X-Trace-Token" in {
-      val Some(result) = route(FakeRequest(GET, "/async").withHeaders(traceTokenHeader))
+      val Some(result) = route(FakeRequest(GET, "/async").withHeaders(traceTokenHeader, traceLocalStorageHeader))
       header(traceTokenHeaderName, result) must be(expectedToken)
     }
 
@@ -90,9 +99,34 @@ class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
 
     "respond to the Async Action with X-Trace-Token and the renamed trace" in {
       val Some(result) = route(FakeRequest(GET, "/async-renamed").withHeaders(traceTokenHeader))
-      Thread.sleep(3000)
+      Thread.sleep(500) // wait to complete the future
       TraceRecorder.currentContext.map(_.name) must be(Some("renamed-trace"))
       header(traceTokenHeaderName, result) must be(expectedToken)
     }
+
+    "propagate the TraceContext and LocalStorage through of filters in the current request" in {
+      val Some(result) = route(FakeRequest(GET, "/retrieve").withHeaders(traceTokenHeader, traceLocalStorageHeader))
+      TraceLocal.retrieve(TraceLocalKey).get must be(traceLocalStorageValue)
+    }
+  }
+
+  object MockGlobalTest extends WithFilters(TraceLocalFilter)
+
+  object TraceLocalKey extends TraceLocal.TraceLocalKey {
+    type ValueType = String
+  }
+
+  object TraceLocalFilter extends Filter {
+    override def apply(next: (RequestHeader) ⇒ Future[Result])(header: RequestHeader): Future[Result] = {
+      TraceRecorder.withTraceContext(TraceRecorder.currentContext) {
+
+        TraceLocal.store(TraceLocalKey)(header.headers.get(traceLocalStorageKey).getOrElse("unknown"))
+
+        next(header).map {
+          result ⇒ result.withHeaders((traceLocalStorageKey -> TraceLocal.retrieve(TraceLocalKey).get))
+        }
+      }
+    }
   }
 }
+
