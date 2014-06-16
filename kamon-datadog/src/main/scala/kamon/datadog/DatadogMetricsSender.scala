@@ -23,7 +23,7 @@ import akka.util.ByteString
 import kamon.metrics.Subscriptions.TickMetricSnapshot
 import kamon.metrics.MetricSnapshot.Measurement
 import kamon.metrics.InstrumentTypes.{ Counter, Gauge, Histogram, InstrumentType }
-import java.text.{DecimalFormatSymbols, DecimalFormat}
+import java.text.{ DecimalFormatSymbols, DecimalFormat }
 import kamon.metrics.{ MetricIdentity, MetricGroupIdentity }
 import java.util.Locale
 
@@ -34,7 +34,6 @@ class DatadogMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long
   val appName = context.system.settings.config.getString("kamon.datadog.application-name")
   val symbols = DecimalFormatSymbols.getInstance(Locale.US)
   symbols.setDecimalSeparator('.') // Just in case there is some weird locale config we are not aware of.
-
 
   // Absurdly high number of decimal digits, let the other end lose precision if it needs to.
   val samplingRateFormat = new DecimalFormat("#.################################################################", symbols)
