@@ -23,16 +23,20 @@ import akka.util.ByteString
 import kamon.metrics.Subscriptions.TickMetricSnapshot
 import kamon.metrics.MetricSnapshot.Measurement
 import kamon.metrics.InstrumentTypes.{ Counter, Gauge, Histogram, InstrumentType }
-import java.text.DecimalFormat
+import java.text.{ DecimalFormatSymbols, DecimalFormat }
 import kamon.metrics.{ MetricIdentity, MetricGroupIdentity }
+import java.util.Locale
 
 class DatadogMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long) extends Actor with UdpExtensionProvider {
 
   import context.system
 
   val appName = context.system.settings.config.getString("kamon.datadog.application-name")
-  val samplingRateFormat = new DecimalFormat()
-  samplingRateFormat.setMaximumFractionDigits(128) // Absurdly high, let the other end loss precision if it needs to.
+  val symbols = DecimalFormatSymbols.getInstance(Locale.US)
+  symbols.setDecimalSeparator('.') // Just in case there is some weird locale config we are not aware of.
+
+  // Absurdly high number of decimal digits, let the other end lose precision if it needs to.
+  val samplingRateFormat = new DecimalFormat("#.################################################################", symbols)
 
   udpExtension ! Udp.SimpleSender
 
@@ -49,7 +53,7 @@ class DatadogMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long
     val dataBuilder = new MetricDataPacketBuilder(maxPacketSizeInBytes, udpSender, remote)
 
     for {
-      (groupIdentity, groupSnapshot) ← tick.metrics;
+      (groupIdentity, groupSnapshot) ← tick.metrics
       (metricIdentity, metricSnapshot) ← groupSnapshot.metrics
     } {
 

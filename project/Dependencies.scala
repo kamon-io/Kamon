@@ -11,6 +11,7 @@ object Dependencies {
   val akkaVersion     = "2.3.3"
   val aspectjVersion  = "1.7.4"
   val slf4jVersion    = "1.7.6"
+  val playVersion     = "2.3.0"
 
   val sprayJson       = "io.spray"                  %%  "spray-json"            % "1.2.6"
   val sprayJsonLenses = "net.virtual-void"          %%  "json-lenses"           % "0.5.4"
@@ -28,6 +29,8 @@ object Dependencies {
   val akkaActor       = "com.typesafe.akka"         %%  "akka-actor"            % akkaVersion
   val akkaSlf4j       = "com.typesafe.akka"         %%  "akka-slf4j"            % akkaVersion
   val akkaTestKit     = "com.typesafe.akka"         %%  "akka-testkit"          % akkaVersion
+  val play            = "com.typesafe.play"         %%  "play"                  % playVersion
+  val playWS          = "com.typesafe.play"         %%  "play-ws"               % playVersion
   val playTest        = "org.scalatestplus"         %%  "play"                  % "1.1.0"
   val slf4Api         = "org.slf4j"                 %   "slf4j-api"             % slf4jVersion
   val slf4nop         = "org.slf4j"                 %   "slf4j-nop"             % slf4jVersion
