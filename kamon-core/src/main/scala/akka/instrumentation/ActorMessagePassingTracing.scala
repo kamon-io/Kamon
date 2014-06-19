@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  * ========================================================== */
+
 package akka.instrumentation
 
 import org.aspectj.lang.annotation._
@@ -23,7 +24,8 @@ import kamon.trace._
 import kamon.metrics.{ ActorMetrics, Metrics }
 import kamon.Kamon
 import kamon.metrics.ActorMetrics.ActorMetricRecorder
-import java.util.concurrent.atomic.AtomicInteger
+import kamon.metrics.instruments.MinMaxCounter
+import kamon.metrics.instruments.MinMaxCounter.CounterMeasurement
 
 @Aspect
 class BehaviourInvokeTracing {
@@ -33,12 +35,26 @@ class BehaviourInvokeTracing {
 
   @After("actorCellCreation(cell, system, ref, props, dispatcher, parent)")
   def afterCreation(cell: ActorCell, system: ActorSystem, ref: ActorRef, props: Props, dispatcher: MessageDispatcher, parent: ActorRef): Unit = {
+
     val metricsExtension = Kamon(Metrics)(system)
     val metricIdentity = ActorMetrics(ref.path.elements.mkString("/"))
     val cellWithMetrics = cell.asInstanceOf[ActorCellMetrics]
 
     cellWithMetrics.metricIdentity = metricIdentity
     cellWithMetrics.actorMetricsRecorder = metricsExtension.register(metricIdentity, ActorMetrics.Factory)
+
+    if (cellWithMetrics.actorMetricsRecorder.isDefined) {
+      cellWithMetrics.mailboxSizeCollectorCancellable = metricsExtension.scheduleGaugeRecorder {
+        cellWithMetrics.actorMetricsRecorder.map { am ⇒
+          import am.mailboxSize._
+          val CounterMeasurement(min, max, current) = cellWithMetrics.queueSize.collect()
+
+          record(min)
+          record(max)
+          record(current)
+        }
+      }
+    }
   }
 
   @Pointcut("(execution(* akka.actor.ActorCell.invoke(*)) || execution(* akka.routing.RoutedActorCell.sendMessage(*))) && this(cell) && args(envelope)")
@@ -59,10 +75,7 @@ class BehaviourInvokeTracing {
         am ⇒
           am.processingTime.record(System.nanoTime() - timestampBeforeProcessing)
           am.timeInMailbox.record(timestampBeforeProcessing - contextAndTimestamp.captureNanoTime)
-
-          val currentMailboxSize = cellWithMetrics.queueSize.decrementAndGet()
-          if (currentMailboxSize >= 0)
-            am.mailboxSize.record(currentMailboxSize)
+          cellWithMetrics.queueSize.decrement()
       }
     }
   }
@@ -73,12 +86,7 @@ class BehaviourInvokeTracing {
   @After("sendingMessageToActorCell(cell)")
   def afterSendMessageToActorCell(cell: ActorCell): Unit = {
     val cellWithMetrics = cell.asInstanceOf[ActorCellMetrics]
-    cellWithMetrics.actorMetricsRecorder.map {
-      am ⇒
-        val currentMailboxSize = cellWithMetrics.queueSize.incrementAndGet()
-        if (currentMailboxSize >= 0)
-          am.mailboxSize.record(currentMailboxSize)
-    }
+    cellWithMetrics.actorMetricsRecorder.map(am ⇒ cellWithMetrics.queueSize.increment())
   }
 
   @Pointcut("execution(* akka.actor.ActorCell.stop()) && this(cell)")
@@ -87,14 +95,31 @@ class BehaviourInvokeTracing {
   @After("actorStop(cell)")
   def afterStop(cell: ActorCell): Unit = {
     val cellWithMetrics = cell.asInstanceOf[ActorCellMetrics]
-    cellWithMetrics.actorMetricsRecorder.map(p ⇒ Kamon(Metrics)(cell.system).unregister(cellWithMetrics.metricIdentity))
+
+    cellWithMetrics.actorMetricsRecorder.map { p ⇒
+      cellWithMetrics.mailboxSizeCollectorCancellable.cancel()
+      Kamon(Metrics)(cell.system).unregister(cellWithMetrics.metricIdentity)
+    }
+  }
+
+  @Pointcut("execution(* akka.actor.ActorCell.handleInvokeFailure(..)) && this(cell)")
+  def actorInvokeFailure(cell: ActorCell): Unit = {}
+
+  @Before("actorInvokeFailure(cell)")
+  def beforeInvokeFailure(cell: ActorCell): Unit = {
+    val cellWithMetrics = cell.asInstanceOf[ActorCellMetrics]
+
+    cellWithMetrics.actorMetricsRecorder.map {
+      am ⇒ am.errorCounter.record(1L)
+    }
   }
 }
 
 trait ActorCellMetrics {
   var metricIdentity: ActorMetrics = _
   var actorMetricsRecorder: Option[ActorMetricRecorder] = _
-  val queueSize = new AtomicInteger
+  var mailboxSizeCollectorCancellable: Cancellable = _
+  val queueSize = MinMaxCounter()
 }
 
 @Aspect

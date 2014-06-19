@@ -21,7 +21,7 @@ object Dependencies {
   val aspectjWeaver   = "org.aspectj"               %   "aspectjweaver"         % aspectjVersion
   val newrelic        = "com.newrelic.agent.java"   %   "newrelic-api"          % "3.1.0"
   val snakeYaml       = "org.yaml"                  %   "snakeyaml"             % "1.13"
-  val hdrHistogram    = "org.hdrhistogram"          %   "HdrHistogram"          % "1.0.8"
+  val hdrHistogram    = "org.hdrhistogram"          %   "HdrHistogram"          % "1.2.1"
   val sprayCan        = "io.spray"                  %   "spray-can"             % sprayVersion
   val sprayRouting    = "io.spray"                  %   "spray-routing"         % sprayVersion
   val sprayTestkit    = "io.spray"                  %   "spray-testkit"         % sprayVersion
@@ -29,10 +29,12 @@ object Dependencies {
   val akkaActor       = "com.typesafe.akka"         %%  "akka-actor"            % akkaVersion
   val akkaSlf4j       = "com.typesafe.akka"         %%  "akka-slf4j"            % akkaVersion
   val akkaTestKit     = "com.typesafe.akka"         %%  "akka-testkit"          % akkaVersion
-  val playTest        = "com.typesafe.play"         %%  "play-test"             % playVersion
+  val play            = "com.typesafe.play"         %%  "play"                  % playVersion
+  val playWS          = "com.typesafe.play"         %%  "play-ws"               % playVersion
+  val playTest        = "org.scalatestplus"         %%  "play"                  % "1.0.1"
   val slf4Api         = "org.slf4j"                 %   "slf4j-api"             % slf4jVersion
   val slf4nop         = "org.slf4j"                 %   "slf4j-nop"             % slf4jVersion
-
+  val jsr166          = "io.gatling"                %   "jsr166e"               % "1.0"
 
 
   def compile   (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "compile")

@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * Copyright © 2013 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2014 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -17,7 +17,7 @@
 package kamon.metrics
 
 import com.typesafe.config.Config
-import kamon.metrics.instruments.ContinuousHdrRecorder
+import kamon.metrics.instruments.CounterRecorder
 import org.HdrHistogram.HdrRecorder
 
 case class ActorMetrics(name: String) extends MetricGroupIdentity {
@@ -30,29 +30,31 @@ object ActorMetrics extends MetricGroupCategory {
   case object ProcessingTime extends MetricIdentity { val name, tag = "processing-time" }
   case object MailboxSize extends MetricIdentity { val name, tag = "mailbox-size" }
   case object TimeInMailbox extends MetricIdentity { val name, tag = "time-in-mailbox" }
+  case object ErrorCounter extends MetricIdentity { val name, tag = "errors" }
 
-  case class ActorMetricRecorder(processingTime: MetricRecorder, mailboxSize: MetricRecorder, timeInMailbox: MetricRecorder)
+  case class ActorMetricRecorder(processingTime: MetricRecorder, mailboxSize: MetricRecorder, timeInMailbox: MetricRecorder, errorCounter: MetricRecorder)
       extends MetricGroupRecorder {
 
     def collect: MetricGroupSnapshot = {
-      ActorMetricSnapshot(processingTime.collect(), mailboxSize.collect(), timeInMailbox.collect())
+      ActorMetricSnapshot(processingTime.collect(), mailboxSize.collect(), timeInMailbox.collect(), errorCounter.collect())
     }
   }
 
-  case class ActorMetricSnapshot(processingTime: MetricSnapshotLike, mailboxSize: MetricSnapshotLike, timeInMailbox: MetricSnapshotLike)
+  case class ActorMetricSnapshot(processingTime: MetricSnapshotLike, mailboxSize: MetricSnapshotLike, timeInMailbox: MetricSnapshotLike, errorCounter: MetricSnapshotLike)
       extends MetricGroupSnapshot {
 
     val metrics: Map[MetricIdentity, MetricSnapshotLike] = Map(
       (ProcessingTime -> processingTime),
       (MailboxSize -> mailboxSize),
-      (TimeInMailbox -> timeInMailbox))
+      (TimeInMailbox -> timeInMailbox),
+      (ErrorCounter -> errorCounter))
   }
 
   val Factory = new MetricGroupFactory {
     type GroupRecorder = ActorMetricRecorder
 
     def create(config: Config): ActorMetricRecorder = {
-      val settings = config.getConfig("kamon.metrics.precision.actor")
+      val settings = config.getConfig("precision.actor")
 
       val processingTimeConfig = extractPrecisionConfig(settings.getConfig("processing-time"))
       val mailboxSizeConfig = extractPrecisionConfig(settings.getConfig("mailbox-size"))
@@ -60,8 +62,9 @@ object ActorMetrics extends MetricGroupCategory {
 
       new ActorMetricRecorder(
         HdrRecorder(processingTimeConfig.highestTrackableValue, processingTimeConfig.significantValueDigits, Scale.Nano),
-        ContinuousHdrRecorder(mailboxSizeConfig.highestTrackableValue, mailboxSizeConfig.significantValueDigits, Scale.Unit),
-        HdrRecorder(timeInMailboxConfig.highestTrackableValue, timeInMailboxConfig.significantValueDigits, Scale.Nano))
+        HdrRecorder(mailboxSizeConfig.highestTrackableValue, mailboxSizeConfig.significantValueDigits, Scale.Unit),
+        HdrRecorder(timeInMailboxConfig.highestTrackableValue, timeInMailboxConfig.significantValueDigits, Scale.Nano),
+        CounterRecorder())
     }
   }
 }

@@ -14,11 +14,12 @@
  * =========================================================================================
  */
 
-package kamon.statsd
+package kamon.datadog
 
-import akka.testkit.{ TestKitBase, TestProbe }
-import akka.actor.{ ActorRef, Props, ActorSystem }
-import org.scalatest.{ Matchers, WordSpecLike }
+import akka.testkit.{TestKitBase, TestProbe}
+import akka.actor.{Props, ActorRef, ActorSystem}
+import kamon.metrics.instruments.CounterRecorder
+import org.scalatest.{Matchers, WordSpecLike}
 import kamon.metrics._
 import akka.io.Udp
 import org.HdrHistogram.HdrRecorder
@@ -27,40 +28,24 @@ import java.lang.management.ManagementFactory
 import java.net.InetSocketAddress
 import com.typesafe.config.ConfigFactory
 
-class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers {
-  implicit lazy val system = ActorSystem("statsd-metric-sender-spec",
-    ConfigFactory.parseString("kamon.statsd.max-packet-size = 256 bytes"))
+class DatadogMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers {
+  implicit lazy val system = ActorSystem("datadog-metric-sender-spec",
+    ConfigFactory.parseString("kamon.datadog.max-packet-size = 256 bytes"))
 
-  "the StatsDMetricSender" should {
-    "flush the metrics data after processing the tick, even if the max-packet-size is not reached" in new UdpListenerFixture {
-      val testMetricName = "test-metric"
-      val testMetricKey = buildMetricKey(testMetricName)
+  "the DataDogMetricSender" should {
+    "send latency measurements" in new UdpListenerFixture {
+      val testMetricName = "processing-time"
       val testRecorder = HdrRecorder(1000L, 2, Scale.Unit)
       testRecorder.record(10L)
 
       val udp = setup(Map(testMetricName -> testRecorder.collect()))
       val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
 
-      data.utf8String should be(s"$testMetricKey:10|ms")
+      data.utf8String should be(s"kamon.actor.processing-time:10|ms|#actor:user/kamon")
     }
 
-    "render several measurements of the same key under a single (key + multiple measurements) packet" in new UdpListenerFixture {
-      val testMetricName = "test-metric"
-      val testMetricKey = buildMetricKey(testMetricName)
-      val testRecorder = HdrRecorder(1000L, 2, Scale.Unit)
-      testRecorder.record(10L)
-      testRecorder.record(11L)
-      testRecorder.record(12L)
-
-      val udp = setup(Map(testMetricName -> testRecorder.collect()))
-      val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
-
-      data.utf8String should be(s"$testMetricKey:10|ms:11|ms:12|ms")
-    }
-
-    "include the correspondent sampling rate when rendering multiple occurrences of the same value" in new UdpListenerFixture {
-      val testMetricName = "test-metric"
-      val testMetricKey = buildMetricKey(testMetricName)
+    "include the sampling rate in case of multiple measurements of the same value" in new UdpListenerFixture {
+      val testMetricName = "processing-time"
       val testRecorder = HdrRecorder(1000L, 2, Scale.Unit)
       testRecorder.record(10L)
       testRecorder.record(10L)
@@ -68,63 +53,65 @@ class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers
       val udp = setup(Map(testMetricName -> testRecorder.collect()))
       val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
 
-      data.utf8String should be(s"$testMetricKey:10|ms|@0.5")
+      data.utf8String should be(s"kamon.actor.processing-time:10|ms|@0.5|#actor:user/kamon")
     }
 
     "flush the packet when the max-packet-size is reached" in new UdpListenerFixture {
-      val testMetricName = "test-metric"
-      val testMetricKey = buildMetricKey(testMetricName)
+      val testMetricName = "processing-time"
       val testRecorder = HdrRecorder(testMaxPacketSize, 3, Scale.Unit)
 
-      var bytes = testMetricKey.length
+      var bytes = 0
       var level = 0
+
       while (bytes <= testMaxPacketSize) {
         level += 1
         testRecorder.record(level)
-        bytes += s":$level|ms".length
+        bytes += s"kamon.actor.$testMetricName:$level|ms|#actor:user/kamon".length
       }
 
       val udp = setup(Map(testMetricName -> testRecorder.collect()))
-      udp.expectMsgType[Udp.Send] // let the first flush pass
-      val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
+      udp.expectMsgType[Udp.Send]// let the first flush pass
 
-      data.utf8String should be(s"$testMetricKey:$level|ms")
+      val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
+      data.utf8String should be(s"kamon.actor.$testMetricName:$level|ms|#actor:user/kamon")
     }
 
     "render multiple keys in the same packet using newline as separator" in new UdpListenerFixture {
-      val firstTestMetricName = "first-test-metric"
-      val firstTestMetricKey = buildMetricKey(firstTestMetricName)
-      val secondTestMetricName = "second-test-metric"
-      val secondTestMetricKey = buildMetricKey(secondTestMetricName)
+      val firstTestMetricName = "processing-time-1"
+      val secondTestMetricName = "processing-time-2"
+      val thirdTestMetricName = "counter"
 
       val firstTestRecorder = HdrRecorder(1000L, 2, Scale.Unit)
       val secondTestRecorder = HdrRecorder(1000L, 2, Scale.Unit)
+      val thirdTestRecorder = CounterRecorder()
 
       firstTestRecorder.record(10L)
       firstTestRecorder.record(10L)
-      firstTestRecorder.record(11L)
 
-      secondTestRecorder.record(20L)
       secondTestRecorder.record(21L)
+
+      thirdTestRecorder.record(1L)
+      thirdTestRecorder.record(1L)
+      thirdTestRecorder.record(1L)
+      thirdTestRecorder.record(1L)
 
       val udp = setup(Map(
         firstTestMetricName -> firstTestRecorder.collect(),
-        secondTestMetricName -> secondTestRecorder.collect()))
+        secondTestMetricName -> secondTestRecorder.collect(),
+        thirdTestMetricName -> thirdTestRecorder.collect()))
       val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
 
-      data.utf8String should be(s"$firstTestMetricKey:10|ms|@0.5:11|ms\n$secondTestMetricKey:20|ms:21|ms")
+      data.utf8String should be("kamon.actor.processing-time-1:10|ms|@0.5|#actor:user/kamon\nkamon.actor.processing-time-2:21|ms|#actor:user/kamon\nkamon.actor.counter:4|c|#actor:user/kamon")
     }
   }
 
   trait UdpListenerFixture {
     val localhostName = ManagementFactory.getRuntimeMXBean.getName.split('@')(1)
-    val testMaxPacketSize = system.settings.config.getBytes("kamon.statsd.max-packet-size")
-
-    def buildMetricKey(metricName: String): String = s"kamon.$localhostName.test-metric-category.test-group.$metricName"
+    val testMaxPacketSize = system.settings.config.getBytes("kamon.datadog.max-packet-size")
 
     def setup(metrics: Map[String, MetricSnapshotLike]): TestProbe = {
       val udp = TestProbe()
-      val metricsSender = system.actorOf(Props(new StatsDMetricsSender(new InetSocketAddress(localhostName, 0), testMaxPacketSize) {
+      val metricsSender = system.actorOf(Props(new DatadogMetricsSender(new InetSocketAddress(localhostName, 0), testMaxPacketSize) {
         override def udpExtension(implicit system: ActorSystem): ActorRef = udp.ref
       }))
 
@@ -132,10 +119,11 @@ class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers
       udp.expectMsgType[Udp.SimpleSender]
       udp.reply(Udp.SimpleSenderReady)
 
+      // These names are not intented to match the real actor metrics, it's just about seeing more familiar data in tests.
       val testGroupIdentity = new MetricGroupIdentity {
-        val name: String = "test-group"
+        val name: String = "user/kamon"
         val category: MetricGroupCategory = new MetricGroupCategory {
-          val name: String = "test-metric-category"
+          val name: String = "actor"
         }
       }
 
@@ -151,8 +139,8 @@ class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers
       metricsSender ! TickMetricSnapshot(0, 0, Map(testGroupIdentity -> new MetricGroupSnapshot {
         val metrics: Map[MetricIdentity, MetricSnapshotLike] = testMetrics.toMap
       }))
-
       udp
     }
   }
+
 }

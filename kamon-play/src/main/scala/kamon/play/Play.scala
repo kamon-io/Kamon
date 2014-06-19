@@ -29,6 +29,7 @@ class PlayExtension(private val system: ExtendedActorSystem) extends Kamon.Exten
 
   private val config = system.settings.config.getConfig("kamon.play")
 
+  val defaultDispatcher = system.dispatchers.lookup(config.getString("dispatcher"))
   val includeTraceToken: Boolean = config.getBoolean("include-trace-token-header")
   val traceTokenHeaderName: String = config.getString("trace-token-header-name")
 }

@@ -87,9 +87,10 @@ class ActorMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
 
       // process the tick in which the actor is stalled.
       val stalledTickMetrics = expectActorMetrics("user/tracked-mailbox-size-queueing-up", metricsListener, 2 seconds)
-      stalledTickMetrics.mailboxSize.numberOfMeasurements should equal(1)
+      stalledTickMetrics.mailboxSize.numberOfMeasurements should equal(30)
       // only the automatic last-value recording should be taken, and includes the message being currently processed.
-      stalledTickMetrics.mailboxSize.measurements should contain only (Measurement(10, 1))
+      stalledTickMetrics.mailboxSize.measurements should contain only (Measurement(10, 30))
+      stalledTickMetrics.mailboxSize.min should equal(10)
       stalledTickMetrics.mailboxSize.max should equal(10)
       stalledTickMetrics.processingTime.numberOfMeasurements should be(0L)
       stalledTickMetrics.timeInMailbox.numberOfMeasurements should be(0L)
@@ -100,6 +101,17 @@ class ActorMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
       afterStallTickMetrics.timeInMailbox.numberOfMeasurements should be(10L)
       afterStallTickMetrics.processingTime.max should be(2500.milliseconds.toNanos +- 100.milliseconds.toNanos)
       afterStallTickMetrics.timeInMailbox.max should be(2500.milliseconds.toNanos +- 100.milliseconds.toNanos)
+    }
+
+    "track the number of errors" in new ErrorActorFixture {
+      val (error, metricsListener) = failedActor("tracked-errors")
+
+      for (_ ← 1 to 5) {
+        error ! Error
+      }
+
+      val actorMetrics = expectActorMetrics("user/tracked-errors", metricsListener, 3 seconds)
+      actorMetrics.errorCounter.numberOfMeasurements should be(5L)
     }
   }
 
@@ -124,6 +136,19 @@ class ActorMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
       (actor, metricsListener)
     }
   }
+
+  trait ErrorActorFixture {
+    def failedActor(name: String): (ActorRef, TestProbe) = {
+      val actor = system.actorOf(Props[FailedActor], name)
+      val metricsListener = TestProbe()
+
+      Kamon(Metrics).subscribe(ActorMetrics, "user/" + name, metricsListener.ref, permanently = true)
+      // Wait for one empty snapshot before proceeding to the test.
+      metricsListener.expectMsgType[TickMetricSnapshot]
+
+      (actor, metricsListener)
+    }
+  }
 }
 
 class DelayableActor extends Actor {
@@ -133,5 +158,15 @@ class DelayableActor extends Actor {
   }
 }
 
+class FailedActor extends Actor {
+  def receive = {
+    case Error   ⇒ 1 / 0
+    case Discard ⇒
+  }
+}
+
 case object Discard
+
 case class Delay(time: FiniteDuration)
+
+case class Error()

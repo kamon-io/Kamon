@@ -14,7 +14,7 @@
  * =========================================================================================
  */
 
-package kamon.statsd
+package kamon.datadog
 
 import akka.actor.{ ActorSystem, Props, ActorRef, Actor }
 import akka.io.{ Udp, IO }
@@ -24,12 +24,14 @@ import kamon.metrics.Subscriptions.TickMetricSnapshot
 import kamon.metrics.MetricSnapshot.Measurement
 import kamon.metrics.InstrumentTypes.{ Counter, Gauge, Histogram, InstrumentType }
 import java.text.{ DecimalFormatSymbols, DecimalFormat }
+import kamon.metrics.{ MetricIdentity, MetricGroupIdentity }
 import java.util.Locale
 
-class StatsDMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long) extends Actor with UdpExtensionProvider {
+class DatadogMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long) extends Actor with UdpExtensionProvider {
+
   import context.system
 
-  val metricKeyGenerator = new SimpleMetricKeyGenerator(context.system.settings.config)
+  val appName = context.system.settings.config.getString("kamon.datadog.application-name")
   val symbols = DecimalFormatSymbols.getInstance(Locale.US)
   symbols.setDecimalSeparator('.') // Just in case there is some weird locale config we are not aware of.
 
@@ -50,36 +52,49 @@ class StatsDMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long)
   def writeMetricsToRemote(tick: TickMetricSnapshot, udpSender: ActorRef): Unit = {
     val dataBuilder = new MetricDataPacketBuilder(maxPacketSizeInBytes, udpSender, remote)
 
-    for (
-      (groupIdentity, groupSnapshot) ← tick.metrics;
+    for {
+      (groupIdentity, groupSnapshot) ← tick.metrics
       (metricIdentity, metricSnapshot) ← groupSnapshot.metrics
-    ) {
+    } {
 
-      val key = metricKeyGenerator.generateKey(groupIdentity, metricIdentity)
+      val key = buildMetricName(groupIdentity, metricIdentity)
 
       for (measurement ← metricSnapshot.measurements) {
-        val measurementData = encodeMeasurement(measurement, metricSnapshot.instrumentType)
+        val measurementData = formatMeasurement(groupIdentity, metricIdentity, measurement, metricSnapshot.instrumentType)
         dataBuilder.appendMeasurement(key, measurementData)
       }
     }
-
     dataBuilder.flush()
   }
 
-  def encodeMeasurement(measurement: Measurement, instrumentType: InstrumentType): String = {
-    def statsDMetricFormat(value: String, metricType: String, samplingRate: Double = 1D): String =
-      value + "|" + metricType + (if (samplingRate != 1D) "|@" + samplingRateFormat.format(samplingRate) else "")
+  def formatMeasurement(groupIdentity: MetricGroupIdentity, metricIdentity: MetricIdentity, measurement: Measurement,
+                        instrumentType: InstrumentType): String = {
+
+    StringBuilder.newBuilder.append(buildMeasurementData(measurement, instrumentType))
+      .append(buildIdentificationTag(groupIdentity, metricIdentity))
+      .result()
+  }
+
+  def buildMeasurementData(measurement: Measurement, instrumentType: InstrumentType): String = {
+    def dataDogDMetricFormat(value: String, metricType: String, samplingRate: Double = 1D): String =
+      s"$value|$metricType${(if (samplingRate != 1D) "|@" + samplingRateFormat.format(samplingRate) else "")}"
 
     instrumentType match {
-      case Histogram ⇒ statsDMetricFormat(measurement.value.toString, "ms", (1D / measurement.count))
-      case Gauge     ⇒ statsDMetricFormat(measurement.value.toString, "g")
-      case Counter   ⇒ statsDMetricFormat(measurement.count.toString, "c")
+      case Histogram ⇒ dataDogDMetricFormat(measurement.value.toString, "ms", (1D / measurement.count))
+      case Gauge     ⇒ dataDogDMetricFormat(measurement.value.toString, "g")
+      case Counter   ⇒ dataDogDMetricFormat(measurement.count.toString, "c")
     }
   }
+
+  def buildMetricName(groupIdentity: MetricGroupIdentity, metricIdentity: MetricIdentity): String =
+    s"$appName.${groupIdentity.category.name}.${metricIdentity.name}"
+
+  def buildIdentificationTag(groupIdentity: MetricGroupIdentity, metricIdentity: MetricIdentity): String =
+    s"|#${groupIdentity.category.name}:${groupIdentity.name}"
 }
 
-object StatsDMetricsSender {
-  def props(remote: InetSocketAddress, maxPacketSize: Long): Props = Props(new StatsDMetricsSender(remote, maxPacketSize))
+object DatadogMetricsSender {
+  def props(remote: InetSocketAddress, maxPacketSize: Long): Props = Props(new DatadogMetricsSender(remote, maxPacketSize))
 }
 
 trait UdpExtensionProvider {
@@ -89,31 +104,19 @@ trait UdpExtensionProvider {
 class MetricDataPacketBuilder(maxPacketSizeInBytes: Long, udpSender: ActorRef, remote: InetSocketAddress) {
   val metricSeparator = "\n"
   val measurementSeparator = ":"
-
   var lastKey = ""
   var buffer = new StringBuilder()
 
   def appendMeasurement(key: String, measurementData: String): Unit = {
-    if (key == lastKey) {
-      val dataWithoutKey = measurementSeparator + measurementData
-      if (fitsOnBuffer(dataWithoutKey))
-        buffer.append(dataWithoutKey)
-      else {
-        flushToUDP(buffer.toString())
-        buffer.clear()
-        buffer.append(key).append(dataWithoutKey)
-      }
+    val data = key + measurementSeparator + measurementData
+
+    if (fitsOnBuffer(metricSeparator + data)) {
+      val mSeparator = if (buffer.length > 0) metricSeparator else ""
+      buffer.append(mSeparator).append(data)
     } else {
-      lastKey = key
-      val dataWithoutSeparator = key + measurementSeparator + measurementData
-      if (fitsOnBuffer(metricSeparator + dataWithoutSeparator)) {
-        val mSeparator = if (buffer.length > 0) metricSeparator else ""
-        buffer.append(mSeparator).append(dataWithoutSeparator)
-      } else {
-        flushToUDP(buffer.toString())
-        buffer.clear()
-        buffer.append(dataWithoutSeparator)
-      }
+      flushToUDP(buffer.toString())
+      buffer.clear()
+      buffer.append(data)
     }
   }
 
