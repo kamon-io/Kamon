@@ -21,11 +21,8 @@ import kamon.Kamon
 import kamon.metrics._
 import scala.concurrent.duration._
 import scala.collection.JavaConverters._
-import com.typesafe.config.Config
-import java.lang.management.ManagementFactory
 import akka.event.Logging
 import java.net.InetSocketAddress
-import java.util.concurrent.TimeUnit.MILLISECONDS
 
 object Datadog extends ExtensionId[DatadogExtension] with ExtensionIdProvider {
   override def lookup(): ExtensionId[_ <: Extension] = Datadog
@@ -43,9 +40,9 @@ class DatadogExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   private val datadogConfig = system.settings.config.getConfig("kamon.datadog")
 
   val datadogHost = new InetSocketAddress(datadogConfig.getString("hostname"), datadogConfig.getInt("port"))
-  val flushInterval = datadogConfig.getDuration("flush-interval", MILLISECONDS)
+  val flushInterval = datadogConfig.getMilliseconds("flush-interval")
   val maxPacketSizeInBytes = datadogConfig.getBytes("max-packet-size")
-  val tickInterval = system.settings.config.getDuration("kamon.metrics.tick-interval", MILLISECONDS)
+  val tickInterval = system.settings.config.getMilliseconds("kamon.metrics.tick-interval")
 
   val datadogMetricsListener = buildMetricsListener(tickInterval, flushInterval)
 

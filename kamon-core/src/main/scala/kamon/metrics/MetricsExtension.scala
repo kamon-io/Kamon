@@ -34,7 +34,7 @@ class MetricsExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   val gaugeRecordingsDispatcher = system.dispatchers.lookup(metricsExtConfig.getString("dispatchers.gauge-recordings"))
 
   /** Configuration Settings */
-  val gaugeRecordingInterval = metricsExtConfig.getDuration("gauge-recording-interval", TimeUnit.MILLISECONDS)
+  val gaugeRecordingInterval: Long = metricsExtConfig.getMilliseconds("gauge-recording-interval")
 
   val storage = TrieMap[MetricGroupIdentity, MetricGroupRecorder]()
   val filters = loadFilters(metricsExtConfig)
