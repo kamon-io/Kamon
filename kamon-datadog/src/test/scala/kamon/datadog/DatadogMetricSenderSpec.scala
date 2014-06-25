@@ -16,10 +16,10 @@
 
 package kamon.datadog
 
-import akka.testkit.{TestKitBase, TestProbe}
-import akka.actor.{Props, ActorRef, ActorSystem}
+import akka.testkit.{ TestKitBase, TestProbe }
+import akka.actor.{ Props, ActorRef, ActorSystem }
 import kamon.metrics.instruments.CounterRecorder
-import org.scalatest.{Matchers, WordSpecLike}
+import org.scalatest.{ Matchers, WordSpecLike }
 import kamon.metrics._
 import akka.io.Udp
 import org.HdrHistogram.HdrRecorder
@@ -70,7 +70,7 @@ class DatadogMetricSenderSpec extends TestKitBase with WordSpecLike with Matcher
       }
 
       val udp = setup(Map(testMetricName -> testRecorder.collect()))
-      udp.expectMsgType[Udp.Send]// let the first flush pass
+      udp.expectMsgType[Udp.Send] // let the first flush pass
 
       val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
       data.utf8String should be(s"kamon.actor.$testMetricName:$level|ms|#actor:user/kamon")

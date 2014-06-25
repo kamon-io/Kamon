@@ -14,10 +14,13 @@ object Projects extends Build {
 
 
   lazy val kamonCore = Project("kamon-core", file("kamon-core"))
+    .dependsOn(kamonMacros)
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
     .settings(aspectJSettings: _*)
     .settings(
+      mappings in (Compile, packageBin) ++= mappings.in(kamonMacros, Compile, packageBin).value,
+      mappings in (Compile, packageSrc) ++= mappings.in(kamonMacros, Compile, packageSrc).value,
       libraryDependencies ++=
         compile(akkaActor, aspectJ, aspectjWeaver, hdrHistogram, jsr166) ++
         provided(logback) ++
@@ -81,13 +84,18 @@ object Projects extends Build {
     .settings(formatSettings: _*)
     .settings(libraryDependencies ++= compile(akkaActor) ++  test(scalatest, akkaTestKit, slf4Api, slf4nop))
     .dependsOn(kamonCore)
- 
+
   lazy val kamonDatadog = Project("kamon-datadog", file("kamon-datadog"))
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
     .settings(libraryDependencies ++= compile(akkaActor) ++  test(scalatest, akkaTestKit, slf4Api, slf4nop))
     .dependsOn(kamonCore)
 
+  lazy val kamonMacros = Project("kamon-macros", file("kamon-macros"))
+    .settings(basicSettings: _*)
+    .settings(formatSettings: _*)
+    .settings(noPublishing: _*)
+    .settings(libraryDependencies ++= compile(scalaCompiler))
 
   val noPublishing = Seq(publish := (), publishLocal := (), publishArtifact := false)
 }

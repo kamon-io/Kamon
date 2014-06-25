@@ -39,7 +39,7 @@ class FutureTracing {
 
   @Around("futureRelatedRunnableExecution(runnable)")
   def aroundExecution(pjp: ProceedingJoinPoint, runnable: TraceContextAware): Any = {
-    TraceRecorder.withTraceContext(runnable.traceContext) {
+    TraceRecorder.withInlineTraceContextReplacement(runnable.traceContext) {
       pjp.proceed()
     }
   }

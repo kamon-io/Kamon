@@ -8,8 +8,10 @@ import scalariform.formatter.preferences._
 
 object Settings {
 
-  lazy val basicSettings = seq(
-    scalaVersion  := "2.10.3",
+  val ScalaVersion = "2.10.3"
+
+  lazy val basicSettings = Seq(
+    scalaVersion  := ScalaVersion,
     resolvers    ++= Dependencies.resolutionRepos,
     fork in run   := true,
     scalacOptions := Seq(
