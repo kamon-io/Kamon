@@ -44,14 +44,18 @@ object Gauge {
     fromConfig(config, system)(currentValueCollector)
   }
 
-  def fromConfig(config: Config, system: ActorSystem)(currentValueCollector: CurrentValueCollector): Gauge = {
+  def fromConfig(config: Config, system: ActorSystem, scale: Scale)(currentValueCollector: CurrentValueCollector): Gauge = {
     import scala.concurrent.duration._
 
     val highest = config.getLong("highest-trackable-value")
     val significantDigits = config.getInt("significant-value-digits")
     val refreshInterval = config.getDuration("refresh-interval", TimeUnit.MILLISECONDS)
 
-    Gauge(Histogram.Precision(significantDigits), highest, Scale.Unit, refreshInterval.millis, system)(currentValueCollector)
+    Gauge(Histogram.Precision(significantDigits), highest, scale, refreshInterval.millis, system)(currentValueCollector)
+  }
+
+  def fromConfig(config: Config, system: ActorSystem)(currentValueCollector: CurrentValueCollector): Gauge = {
+    fromConfig(config, system, Scale.Unit)(currentValueCollector)
   }
 
   implicit def functionZeroAsCurrentValueCollector(f: () ⇒ Long): CurrentValueCollector = new CurrentValueCollector {

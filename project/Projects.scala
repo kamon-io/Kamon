@@ -7,7 +7,7 @@ object Projects extends Build {
   import Dependencies._
 
   lazy val root = Project("root", file("."))
-    .aggregate(kamonCore, kamonSpray, kamonNewrelic, kamonPlayground, kamonDashboard, kamonTestkit, kamonPlay, kamonStatsD, kamonDatadog)
+    .aggregate(kamonCore, kamonSpray, kamonNewrelic, kamonPlayground, kamonDashboard, kamonTestkit, kamonPlay, kamonStatsD, kamonDatadog, kamonSystemMetrics)
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
     .settings(noPublishing: _*)
@@ -57,7 +57,7 @@ object Projects extends Build {
     .settings(
       libraryDependencies ++=
         compile(akkaActor, akkaSlf4j, sprayCan, sprayClient, sprayRouting, logback))
-    .dependsOn(kamonSpray, kamonNewrelic, kamonStatsD, kamonDatadog)
+    .dependsOn(kamonSpray, kamonNewrelic, kamonStatsD, kamonDatadog, kamonSystemMetrics)
 
 
   lazy val kamonDashboard = Project("kamon-dashboard", file("kamon-dashboard"))
@@ -85,18 +85,26 @@ object Projects extends Build {
     .settings(formatSettings: _*)
     .settings(libraryDependencies ++= compile(akkaActor) ++  test(scalatest, akkaTestKit, slf4Api, slf4nop))
     .dependsOn(kamonCore)
+    .dependsOn(kamonSystemMetrics % "provided")
  
   lazy val kamonDatadog = Project("kamon-datadog", file("kamon-datadog"))
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
-    .settings(libraryDependencies ++= compile(akkaActor) ++  test(scalatest, akkaTestKit, slf4Api, slf4nop))
+    .settings(libraryDependencies ++= compile(akkaActor) ++ test(scalatest, akkaTestKit, slf4Api, slf4nop))
     .dependsOn(kamonCore)
+    .dependsOn(kamonSystemMetrics % "provided")
 
   lazy val kamonMacros = Project("kamon-macros", file("kamon-macros"))
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
     .settings(noPublishing: _*)
     .settings(libraryDependencies ++= compile(scalaCompiler))
+
+  lazy val kamonSystemMetrics = Project("kamon-system-metrics", file("kamon-system-metrics"))
+      .settings(basicSettings: _*)
+      .settings(formatSettings: _*)
+      .settings(libraryDependencies ++= compile(sigar) ++ test(scalatest, akkaTestKit, slf4Api, slf4nop))
+      .dependsOn(kamonCore)
 
   val noPublishing = Seq(publish := (), publishLocal := (), publishArtifact := false)
 }
