@@ -7,7 +7,7 @@ object Projects extends Build {
   import Dependencies._
 
   lazy val root = Project("root", file("."))
-    .aggregate(kamonCore, kamonSpray, kamonNewrelic, kamonPlayground, kamonDashboard, kamonTestkit, kamonPlay, kamonStatsD, kamonDatadog)
+    .aggregate(kamonCore, kamonSpray, kamonNewrelic, kamonPlayground, kamonDashboard, kamonTestkit, kamonPlay, kamonStatsD, kamonDatadog, kamonSystemMetrics)
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
     .settings(noPublishing: _*)
@@ -97,6 +97,12 @@ object Projects extends Build {
     .settings(formatSettings: _*)
     .settings(noPublishing: _*)
     .settings(libraryDependencies ++= compile(scalaCompiler))
+
+lazy val kamonSystemMetrics = Project("kamon-system-metrics", file("kamon-system-metrics"))
+    .settings(basicSettings: _*)
+    .settings(formatSettings: _*)
+    .settings(libraryDependencies ++= compile(sigar) ++ test(scalatest, slf4Api, slf4nop))
+    .dependsOn(kamonCore)
 
   val noPublishing = Seq(publish := (), publishLocal := (), publishArtifact := false)
 }
