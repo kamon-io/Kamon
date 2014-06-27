@@ -57,7 +57,7 @@ object Projects extends Build {
     .settings(
       libraryDependencies ++=
         compile(akkaActor, akkaSlf4j, sprayCan, sprayClient, sprayRouting, logback))
-    .dependsOn(kamonSpray, kamonNewrelic, kamonStatsD, kamonDatadog)
+    .dependsOn(kamonSpray, kamonNewrelic, kamonStatsD, kamonDatadog, kamonSystemMetrics)
 
 
   lazy val kamonDashboard = Project("kamon-dashboard", file("kamon-dashboard"))
@@ -101,7 +101,7 @@ object Projects extends Build {
 lazy val kamonSystemMetrics = Project("kamon-system-metrics", file("kamon-system-metrics"))
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
-    .settings(libraryDependencies ++= compile(sigar) ++ test(scalatest, slf4Api, slf4nop))
+    .settings(libraryDependencies ++= compile(sigar, ioCore,ioFile) ++ test(scalatest, slf4Api, slf4nop))
     .dependsOn(kamonCore)
 
   val noPublishing = Seq(publish := (), publishLocal := (), publishArtifact := false)

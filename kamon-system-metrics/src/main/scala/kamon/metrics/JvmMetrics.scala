@@ -1,5 +1,3 @@
-package kamon.metrics
-
 /*
  * =========================================================================================
  * Copyright © 2013-2014 the kamon project <http://kamon.io/>
@@ -15,6 +13,7 @@ package kamon.metrics
  * and limitations under the License.
  * =========================================================================================
  */
+package kamon.metrics
 
 import com.typesafe.config.Config
 import org.HdrHistogram.HdrRecorder

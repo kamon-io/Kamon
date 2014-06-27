@@ -14,23 +14,27 @@
  * =========================================================================================
  */
 
-package kamon.system
+package kamon.metrics
 
-import akka.actor.{ ExtendedActorSystem, Extension, ExtensionIdProvider, ExtensionId }
-import kamon.Kamon
-import akka.event.Logging
+import java.lang.management.ManagementFactory
 
-object System extends ExtensionId[SystemExtension] with ExtensionIdProvider {
-  override def lookup(): ExtensionId[_ <: Extension] = System
-  override def createExtension(system: ExtendedActorSystem): SystemExtension = new SystemExtension(system)
+object JvmMetricsCollector extends MetricsCollector {
+  val memory = ManagementFactory.getMemoryMXBean
+  val heap = memory.getHeapMemoryUsage
+  val garbageCollectors = ManagementFactory.getGarbageCollectorMXBeans
+
+  val committedHeap = heap.getCommitted
+  val maxHeap = heap.getMax
+  val usedHeap = heap.getUsed
+
+  override def collect(): MetricsMeasurement = {
+    import scala.collection.JavaConverters._
+
+//    val (totalCounts, totalTime) = for {
+//      gc ← garbageCollectors.asScala if gc.isValid
+//    } yield {
+//      (gc.getCollectionCount, gc.getCollectionTime)
+//    }
+    null.asInstanceOf[MetricsMeasurement]
+  }
 }
-
-class SystemExtension(private val system: ExtendedActorSystem) extends Kamon.Extension {
-  val log = Logging(system, classOf[SystemExtension])
-  log.info("Starting the Kamon(System) extension")
-
-  private val config = system.settings.config.getConfig("kamon.system")
-
-  val defaultDispatcher = system.dispatchers.lookup(config.getString("dispatcher"))
-}
-

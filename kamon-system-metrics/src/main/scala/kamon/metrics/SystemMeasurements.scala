@@ -1,5 +1,3 @@
-package kamon.metrics
-
 /*
  * =========================================================================================
  * Copyright © 2013-2014 the kamon project <http://kamon.io/>
@@ -16,15 +14,12 @@ package kamon.metrics
  * =========================================================================================
  */
 
+package kamon.metrics
+
 sealed trait MetricsMeasurement
 
-case class MemoryMetricsMeasurement(used: Long, total: Long) extends MetricsMeasurement
+case class MemoryMetricsMeasurement(used: Long, free: Long, buffer: Long, cache: Long, swapUsed: Long, swapFree: Long) extends MetricsMeasurement
 
-case class CpuMetricsMeasurement(user: Long, system: Long, combined: Long, idle: Long) extends MetricsMeasurement
+case class CpuMetricsMeasurement(user: Long, sys: Long, cpuWait: Long, idle: Long) extends MetricsMeasurement
 
-case class NetworkMetricsMeasurement(connectionsEstablished: Long,
-                                     connectionResetReceived: Long,
-                                     receivedBytes: Long,
-                                     transferredBytes: Long,
-                                     receivedErrors: Long,
-                                     transferredErrors: Long) extends MetricsMeasurement
+case class NetworkMetricsMeasurement(rxBytes:Long, txBytes:Long, rxErrors:Long, txErrors:Long) extends MetricsMeasurement
