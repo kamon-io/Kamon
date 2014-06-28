@@ -15,23 +15,35 @@
  * ========================================================== */
 package controllers
 
-import play.api.mvc.{Action, Controller}
+import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.mvc.{Action, Controller}
+
 import scala.concurrent._
 
-object NewRelicExample extends Controller {
+/*
+
+curl -i -H 'X-Trace-Token:kamon-test' -H 'MyTraceLocalStorageKey:extra-header' -X GET "http://localhost:9000/helloKamon"
+
+we should get:
+
+HTTP/1.1 200 OK
+Content-Type: text/plain; charset=utf-8
+MyTraceLocalStorageKey: extra-header -> Extra Information
+X-Trace-Token: kamon-test -> default Trace-Token
+Content-Length: 18
+
+Say hello to Kamon
+
+ */
+object KamonPlayExample extends Controller {
+
+  val logger = Logger(this.getClass)
 
   def sayHelloKamon() = Action.async {
     Future {
-      play.Logger.info("Say hello to Kamon")
+      logger.info("Say hello to Kamon")
       Ok("Say hello to Kamon")
-    }
-  }
-
-  def sayHelloNewRelic() = Action.async {
-    Future {
-      play.Logger.info("Say hello to NewRelic")
-      Ok("Say hello to NewRelic")
     }
   }
 }
