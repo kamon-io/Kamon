@@ -15,6 +15,7 @@
  * ========================================================== */
 package controllers
 
+import kamon.play.action.TraceName
 import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc.{Action, Controller}
@@ -40,10 +41,20 @@ object KamonPlayExample extends Controller {
 
   val logger = Logger(this.getClass)
 
-  def sayHelloKamon() = Action.async {
+  def sayHello() = Action.async {
     Future {
       logger.info("Say hello to Kamon")
       Ok("Say hello to Kamon")
+    }
+  }
+
+  //using the Kamon TraceName Action to rename the trace name in metrics
+  def sayHelloWithTraceName() = TraceName("my-trace-name") {
+    Action.async {
+      Future {
+        logger.info("Say hello to Kamon")
+        Ok("Say hello to Kamon")
+      }
     }
   }
 }

@@ -1,2 +1,3 @@
 # Routes
-GET     /helloKamon                      controllers.KamonPlayExample.sayHelloKamon
+GET     /helloKamon                      controllers.KamonPlayExample.sayHello
+GET     /helloKamonWithTraceName         controllers.KamonPlayExample.sayHelloWithTraceName
