@@ -36,9 +36,10 @@ object ApplicationBuild extends Build {
       ))
 
   val dependencies = Seq(
-    "io.kamon" %% "kamon-core" % "0.3.1",
-    "io.kamon" %% "kamon-play" % "0.3.1",
-    "io.kamon" %% "kamon-statsd" % "0.3.1"
+    "io.kamon"    %% "kamon-core"   % "0.3.1",
+    "io.kamon"    %% "kamon-play"   % "0.3.1",
+    "io.kamon"    %% "kamon-statsd" % "0.3.1",
+    "org.aspectj" % "aspectjweaver" % "1.8.1"
     )
 
   val main = Project(appName, file(".")).enablePlugins(play.PlayScala, SbtWeb)
