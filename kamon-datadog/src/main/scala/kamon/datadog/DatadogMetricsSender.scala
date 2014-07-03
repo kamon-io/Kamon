@@ -20,11 +20,10 @@ import akka.actor.{ ActorSystem, Props, ActorRef, Actor }
 import akka.io.{ Udp, IO }
 import java.net.InetSocketAddress
 import akka.util.ByteString
-import kamon.metrics.Subscriptions.TickMetricSnapshot
-import kamon.metrics.MetricSnapshot.Measurement
-import kamon.metrics.InstrumentTypes.{ Counter, Gauge, Histogram, InstrumentType }
+import kamon.metric.Subscriptions.TickMetricSnapshot
 import java.text.{ DecimalFormatSymbols, DecimalFormat }
-import kamon.metrics.{ MetricIdentity, MetricGroupIdentity }
+import kamon.metric.instrument.{ Counter, Histogram }
+import kamon.metric.{ MetricIdentity, MetricGroupIdentity }
 import java.util.Locale
 
 class DatadogMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long) extends Actor with UdpExtensionProvider {
@@ -50,7 +49,7 @@ class DatadogMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long
   }
 
   def writeMetricsToRemote(tick: TickMetricSnapshot, udpSender: ActorRef): Unit = {
-    val dataBuilder = new MetricDataPacketBuilder(maxPacketSizeInBytes, udpSender, remote)
+    val packetBuilder = new MetricDataPacketBuilder(maxPacketSizeInBytes, udpSender, remote)
 
     for {
       (groupIdentity, groupSnapshot) ← tick.metrics
@@ -59,32 +58,34 @@ class DatadogMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long
 
       val key = buildMetricName(groupIdentity, metricIdentity)
 
-      for (measurement ← metricSnapshot.measurements) {
-        val measurementData = formatMeasurement(groupIdentity, metricIdentity, measurement, metricSnapshot.instrumentType)
-        dataBuilder.appendMeasurement(key, measurementData)
+      metricSnapshot match {
+        case hs: Histogram.Snapshot ⇒
+          hs.recordsIterator.foreach { record ⇒
+            val measurementData = formatMeasurement(groupIdentity, metricIdentity, encodeStatsDTimer(record.level, record.count))
+            packetBuilder.appendMeasurement(key, measurementData)
+
+          }
+
+        case cs: Counter.Snapshot ⇒
+          val measurementData = formatMeasurement(groupIdentity, metricIdentity, encodeStatsDCounter(cs.count))
+          packetBuilder.appendMeasurement(key, measurementData)
       }
     }
-    dataBuilder.flush()
+    packetBuilder.flush()
   }
 
-  def formatMeasurement(groupIdentity: MetricGroupIdentity, metricIdentity: MetricIdentity, measurement: Measurement,
-                        instrumentType: InstrumentType): String = {
-
-    StringBuilder.newBuilder.append(buildMeasurementData(measurement, instrumentType))
+  def formatMeasurement(groupIdentity: MetricGroupIdentity, metricIdentity: MetricIdentity, measurementData: String): String =
+    StringBuilder.newBuilder
+      .append(measurementData)
       .append(buildIdentificationTag(groupIdentity, metricIdentity))
       .result()
+
+  def encodeStatsDTimer(level: Long, count: Long): String = {
+    val samplingRate: Double = 1D / count
+    level.toString + "|ms" + (if (samplingRate != 1D) "|@" + samplingRateFormat.format(samplingRate) else "")
   }
 
-  def buildMeasurementData(measurement: Measurement, instrumentType: InstrumentType): String = {
-    def dataDogDMetricFormat(value: String, metricType: String, samplingRate: Double = 1D): String =
-      s"$value|$metricType${(if (samplingRate != 1D) "|@" + samplingRateFormat.format(samplingRate) else "")}"
-
-    instrumentType match {
-      case Histogram ⇒ dataDogDMetricFormat(measurement.value.toString, "ms", (1D / measurement.count))
-      case Gauge     ⇒ dataDogDMetricFormat(measurement.value.toString, "g")
-      case Counter   ⇒ dataDogDMetricFormat(measurement.count.toString, "c")
-    }
-  }
+  def encodeStatsDCounter(count: Long): String = count.toString + "|c"
 
   def buildMetricName(groupIdentity: MetricGroupIdentity, metricIdentity: MetricIdentity): String =
     s"$appName.${groupIdentity.category.name}.${metricIdentity.name}"

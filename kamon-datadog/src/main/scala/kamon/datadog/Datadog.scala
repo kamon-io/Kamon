@@ -18,7 +18,7 @@ package kamon.datadog
 
 import akka.actor._
 import kamon.Kamon
-import kamon.metrics._
+import kamon.metric._
 import scala.concurrent.duration._
 import scala.collection.JavaConverters._
 import com.typesafe.config.Config
