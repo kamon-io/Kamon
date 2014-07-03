@@ -35,7 +35,7 @@ object Dependencies {
   val slf4Api         = "org.slf4j"                 %   "slf4j-api"             % slf4jVersion
   val slf4nop         = "org.slf4j"                 %   "slf4j-nop"             % slf4jVersion
   val jsr166          = "io.gatling"                %   "jsr166e"               % "1.0"
-
+  val scalaCompiler   = "org.scala-lang"            %   "scala-compiler"        % Settings.ScalaVersion
 
   def compile   (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "compile")
   def provided  (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "provided")
