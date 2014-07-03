@@ -14,6 +14,9 @@ object Settings {
     scalaVersion  := ScalaVersion,
     resolvers    ++= Dependencies.resolutionRepos,
     fork in run   := true,
+    javacOptions  := Seq(
+      "-source", "1.6", "-target", "1.6"
+    ),
     scalacOptions := Seq(
       "-encoding",
       "utf8",
