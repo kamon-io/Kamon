@@ -16,7 +16,10 @@
 
 package kamon.trace
 
+import scala.language.experimental.macros
 import java.util.concurrent.atomic.AtomicLong
+import kamon.macros.InlineTraceContextMacro
+
 import scala.util.Try
 import java.net.InetAddress
 import akka.actor.ActorSystem
@@ -65,6 +68,8 @@ object TraceRecorder {
 
     try thunk finally setContext(oldContext)
   }
+
+  def withInlineTraceContextReplacement[T](traceCtx: Option[TraceContext])(thunk: ⇒ T): T = macro InlineTraceContextMacro.withInlineTraceContextImpl[T, Option[TraceContext]]
 
   def finish(metadata: Map[String, String] = Map.empty): Unit = currentContext.map(_.finish(metadata))
 
