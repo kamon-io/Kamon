@@ -17,16 +17,16 @@
 package kamon.newrelic
 
 import akka.actor.Actor
-import kamon.metrics._
+import kamon.metric._
 
 trait CustomMetrics {
   self: Actor ⇒
 
   def collectCustomMetrics(metrics: Map[MetricGroupIdentity, MetricGroupSnapshot]): Seq[NewRelic.Metric] = {
     metrics.collect {
-      case (CustomMetric(name), groupSnapshot) ⇒
+      case (UserMetrics, groupSnapshot) ⇒
         groupSnapshot.metrics collect {
-          case (_, snapshot) ⇒ toNewRelicMetric(Scale.Unit)(s"Custom/$name", None, snapshot)
+          case (name, snapshot) ⇒ toNewRelicMetric(Scale.Unit)(s"Custom/$name", None, snapshot)
         }
     }.flatten.toSeq
   }

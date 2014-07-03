@@ -16,14 +16,14 @@
 
 package kamon.datadog
 
-import akka.testkit.{TestKitBase, TestProbe}
-import akka.actor.{Props, ActorRef, ActorSystem}
-import kamon.metrics.instruments.CounterRecorder
-import org.scalatest.{Matchers, WordSpecLike}
-import kamon.metrics._
+import akka.testkit.{ TestKitBase, TestProbe }
+import akka.actor.{ Props, ActorRef, ActorSystem }
+import kamon.metric.instrument.Histogram.Precision
+import kamon.metric.instrument.{ Counter, Histogram, HdrHistogram, LongAdderCounter }
+import org.scalatest.{ Matchers, WordSpecLike }
+import kamon.metric._
 import akka.io.Udp
-import org.HdrHistogram.HdrRecorder
-import kamon.metrics.Subscriptions.TickMetricSnapshot
+import kamon.metric.Subscriptions.TickMetricSnapshot
 import java.lang.management.ManagementFactory
 import java.net.InetSocketAddress
 import com.typesafe.config.ConfigFactory
@@ -32,13 +32,15 @@ class DatadogMetricSenderSpec extends TestKitBase with WordSpecLike with Matcher
   implicit lazy val system = ActorSystem("datadog-metric-sender-spec",
     ConfigFactory.parseString("kamon.datadog.max-packet-size = 256 bytes"))
 
+  val context = CollectionContext.default
+
   "the DataDogMetricSender" should {
     "send latency measurements" in new UdpListenerFixture {
       val testMetricName = "processing-time"
-      val testRecorder = HdrRecorder(1000L, 2, Scale.Unit)
+      val testRecorder = Histogram(1000L, Precision.Normal, Scale.Unit)
       testRecorder.record(10L)
 
-      val udp = setup(Map(testMetricName -> testRecorder.collect()))
+      val udp = setup(Map(testMetricName -> testRecorder.collect(context)))
       val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
 
       data.utf8String should be(s"kamon.actor.processing-time:10|ms|#actor:user/kamon")
@@ -46,11 +48,11 @@ class DatadogMetricSenderSpec extends TestKitBase with WordSpecLike with Matcher
 
     "include the sampling rate in case of multiple measurements of the same value" in new UdpListenerFixture {
       val testMetricName = "processing-time"
-      val testRecorder = HdrRecorder(1000L, 2, Scale.Unit)
+      val testRecorder = Histogram(1000L, Precision.Normal, Scale.Unit)
       testRecorder.record(10L)
       testRecorder.record(10L)
 
-      val udp = setup(Map(testMetricName -> testRecorder.collect()))
+      val udp = setup(Map(testMetricName -> testRecorder.collect(context)))
       val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
 
       data.utf8String should be(s"kamon.actor.processing-time:10|ms|@0.5|#actor:user/kamon")
@@ -58,7 +60,7 @@ class DatadogMetricSenderSpec extends TestKitBase with WordSpecLike with Matcher
 
     "flush the packet when the max-packet-size is reached" in new UdpListenerFixture {
       val testMetricName = "processing-time"
-      val testRecorder = HdrRecorder(testMaxPacketSize, 3, Scale.Unit)
+      val testRecorder = Histogram(10000L, Precision.Normal, Scale.Unit)
 
       var bytes = 0
       var level = 0
@@ -69,8 +71,8 @@ class DatadogMetricSenderSpec extends TestKitBase with WordSpecLike with Matcher
         bytes += s"kamon.actor.$testMetricName:$level|ms|#actor:user/kamon".length
       }
 
-      val udp = setup(Map(testMetricName -> testRecorder.collect()))
-      udp.expectMsgType[Udp.Send]// let the first flush pass
+      val udp = setup(Map(testMetricName -> testRecorder.collect(context)))
+      udp.expectMsgType[Udp.Send] // let the first flush pass
 
       val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
       data.utf8String should be(s"kamon.actor.$testMetricName:$level|ms|#actor:user/kamon")
@@ -81,24 +83,21 @@ class DatadogMetricSenderSpec extends TestKitBase with WordSpecLike with Matcher
       val secondTestMetricName = "processing-time-2"
       val thirdTestMetricName = "counter"
 
-      val firstTestRecorder = HdrRecorder(1000L, 2, Scale.Unit)
-      val secondTestRecorder = HdrRecorder(1000L, 2, Scale.Unit)
-      val thirdTestRecorder = CounterRecorder()
+      val firstTestRecorder = Histogram(1000L, Precision.Normal, Scale.Unit)
+      val secondTestRecorder = Histogram(1000L, Precision.Normal, Scale.Unit)
+      val thirdTestRecorder = Counter()
 
       firstTestRecorder.record(10L)
       firstTestRecorder.record(10L)
 
       secondTestRecorder.record(21L)
 
-      thirdTestRecorder.record(1L)
-      thirdTestRecorder.record(1L)
-      thirdTestRecorder.record(1L)
-      thirdTestRecorder.record(1L)
+      thirdTestRecorder.increment(4L)
 
       val udp = setup(Map(
-        firstTestMetricName -> firstTestRecorder.collect(),
-        secondTestMetricName -> secondTestRecorder.collect(),
-        thirdTestMetricName -> thirdTestRecorder.collect()))
+        firstTestMetricName -> firstTestRecorder.collect(context),
+        secondTestMetricName -> secondTestRecorder.collect(context),
+        thirdTestMetricName -> thirdTestRecorder.collect(context)))
       val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
 
       data.utf8String should be("kamon.actor.processing-time-1:10|ms|@0.5|#actor:user/kamon\nkamon.actor.processing-time-2:21|ms|#actor:user/kamon\nkamon.actor.counter:4|c|#actor:user/kamon")
@@ -109,7 +108,7 @@ class DatadogMetricSenderSpec extends TestKitBase with WordSpecLike with Matcher
     val localhostName = ManagementFactory.getRuntimeMXBean.getName.split('@')(1)
     val testMaxPacketSize = system.settings.config.getBytes("kamon.datadog.max-packet-size")
 
-    def setup(metrics: Map[String, MetricSnapshotLike]): TestProbe = {
+    def setup(metrics: Map[String, MetricSnapshot]): TestProbe = {
       val udp = TestProbe()
       val metricsSender = system.actorOf(Props(new DatadogMetricsSender(new InetSocketAddress(localhostName, 0), testMaxPacketSize) {
         override def udpExtension(implicit system: ActorSystem): ActorRef = udp.ref
@@ -137,7 +136,10 @@ class DatadogMetricSenderSpec extends TestKitBase with WordSpecLike with Matcher
       }
 
       metricsSender ! TickMetricSnapshot(0, 0, Map(testGroupIdentity -> new MetricGroupSnapshot {
-        val metrics: Map[MetricIdentity, MetricSnapshotLike] = testMetrics.toMap
+        type GroupSnapshotType = Histogram.Snapshot
+        def merge(that: GroupSnapshotType, context: CollectionContext): GroupSnapshotType = ???
+
+        val metrics: Map[MetricIdentity, MetricSnapshot] = testMetrics.toMap
       }))
       udp
     }
