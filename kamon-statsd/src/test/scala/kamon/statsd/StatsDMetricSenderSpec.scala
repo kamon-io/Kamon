@@ -18,11 +18,12 @@ package kamon.statsd
 
 import akka.testkit.{ TestKitBase, TestProbe }
 import akka.actor.{ ActorRef, Props, ActorSystem }
+import kamon.metric.instrument.Histogram.Precision
+import kamon.metric.instrument.{ Histogram, HdrHistogram }
 import org.scalatest.{ Matchers, WordSpecLike }
-import kamon.metrics._
+import kamon.metric._
 import akka.io.Udp
-import org.HdrHistogram.HdrRecorder
-import kamon.metrics.Subscriptions.TickMetricSnapshot
+import kamon.metric.Subscriptions.TickMetricSnapshot
 import java.lang.management.ManagementFactory
 import java.net.InetSocketAddress
 import com.typesafe.config.ConfigFactory
@@ -31,14 +32,16 @@ class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers
   implicit lazy val system = ActorSystem("statsd-metric-sender-spec",
     ConfigFactory.parseString("kamon.statsd.max-packet-size = 256 bytes"))
 
+  val context = CollectionContext.default
+
   "the StatsDMetricSender" should {
     "flush the metrics data after processing the tick, even if the max-packet-size is not reached" in new UdpListenerFixture {
       val testMetricName = "test-metric"
       val testMetricKey = buildMetricKey(testMetricName)
-      val testRecorder = HdrRecorder(1000L, 2, Scale.Unit)
+      val testRecorder = Histogram(1000L, Precision.Normal, Scale.Unit)
       testRecorder.record(10L)
 
-      val udp = setup(Map(testMetricName -> testRecorder.collect()))
+      val udp = setup(Map(testMetricName -> testRecorder.collect(context)))
       val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
 
       data.utf8String should be(s"$testMetricKey:10|ms")
@@ -47,12 +50,12 @@ class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers
     "render several measurements of the same key under a single (key + multiple measurements) packet" in new UdpListenerFixture {
       val testMetricName = "test-metric"
       val testMetricKey = buildMetricKey(testMetricName)
-      val testRecorder = HdrRecorder(1000L, 2, Scale.Unit)
+      val testRecorder = Histogram(1000L, Precision.Normal, Scale.Unit)
       testRecorder.record(10L)
       testRecorder.record(11L)
       testRecorder.record(12L)
 
-      val udp = setup(Map(testMetricName -> testRecorder.collect()))
+      val udp = setup(Map(testMetricName -> testRecorder.collect(context)))
       val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
 
       data.utf8String should be(s"$testMetricKey:10|ms:11|ms:12|ms")
@@ -61,11 +64,11 @@ class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers
     "include the correspondent sampling rate when rendering multiple occurrences of the same value" in new UdpListenerFixture {
       val testMetricName = "test-metric"
       val testMetricKey = buildMetricKey(testMetricName)
-      val testRecorder = HdrRecorder(1000L, 2, Scale.Unit)
+      val testRecorder = Histogram(1000L, Precision.Normal, Scale.Unit)
       testRecorder.record(10L)
       testRecorder.record(10L)
 
-      val udp = setup(Map(testMetricName -> testRecorder.collect()))
+      val udp = setup(Map(testMetricName -> testRecorder.collect(context)))
       val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
 
       data.utf8String should be(s"$testMetricKey:10|ms|@0.5")
@@ -74,7 +77,7 @@ class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers
     "flush the packet when the max-packet-size is reached" in new UdpListenerFixture {
       val testMetricName = "test-metric"
       val testMetricKey = buildMetricKey(testMetricName)
-      val testRecorder = HdrRecorder(testMaxPacketSize, 3, Scale.Unit)
+      val testRecorder = Histogram(10000L, Precision.Normal, Scale.Unit)
 
       var bytes = testMetricKey.length
       var level = 0
@@ -84,7 +87,7 @@ class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers
         bytes += s":$level|ms".length
       }
 
-      val udp = setup(Map(testMetricName -> testRecorder.collect()))
+      val udp = setup(Map(testMetricName -> testRecorder.collect(context)))
       udp.expectMsgType[Udp.Send] // let the first flush pass
       val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
 
@@ -97,8 +100,8 @@ class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers
       val secondTestMetricName = "second-test-metric"
       val secondTestMetricKey = buildMetricKey(secondTestMetricName)
 
-      val firstTestRecorder = HdrRecorder(1000L, 2, Scale.Unit)
-      val secondTestRecorder = HdrRecorder(1000L, 2, Scale.Unit)
+      val firstTestRecorder = Histogram(1000L, Precision.Normal, Scale.Unit)
+      val secondTestRecorder = Histogram(1000L, Precision.Normal, Scale.Unit)
 
       firstTestRecorder.record(10L)
       firstTestRecorder.record(10L)
@@ -108,8 +111,8 @@ class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers
       secondTestRecorder.record(21L)
 
       val udp = setup(Map(
-        firstTestMetricName -> firstTestRecorder.collect(),
-        secondTestMetricName -> secondTestRecorder.collect()))
+        firstTestMetricName -> firstTestRecorder.collect(context),
+        secondTestMetricName -> secondTestRecorder.collect(context)))
       val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
 
       data.utf8String should be(s"$firstTestMetricKey:10|ms|@0.5:11|ms\n$secondTestMetricKey:20|ms:21|ms")
@@ -122,7 +125,7 @@ class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers
 
     def buildMetricKey(metricName: String): String = s"kamon.$localhostName.test-metric-category.test-group.$metricName"
 
-    def setup(metrics: Map[String, MetricSnapshotLike]): TestProbe = {
+    def setup(metrics: Map[String, MetricSnapshot]): TestProbe = {
       val udp = TestProbe()
       val metricsSender = system.actorOf(Props(new StatsDMetricsSender(new InetSocketAddress(localhostName, 0), testMaxPacketSize) {
         override def udpExtension(implicit system: ActorSystem): ActorRef = udp.ref
@@ -149,7 +152,10 @@ class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers
       }
 
       metricsSender ! TickMetricSnapshot(0, 0, Map(testGroupIdentity -> new MetricGroupSnapshot {
-        val metrics: Map[MetricIdentity, MetricSnapshotLike] = testMetrics.toMap
+        type GroupSnapshotType = Histogram.Snapshot
+        def merge(that: GroupSnapshotType, context: CollectionContext): GroupSnapshotType = ???
+
+        val metrics: Map[MetricIdentity, MetricSnapshot] = testMetrics.toMap
       }))
 
       udp
