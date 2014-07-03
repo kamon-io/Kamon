@@ -33,7 +33,7 @@ object TraceRecorder {
   def newToken = "%s-%s".format(hostnamePrefix, tokenCounter.incrementAndGet())
 
   private def newTraceContext(name: String, token: Option[String], metadata: Map[String, String],
-                              system: ActorSystem): TraceContext = {
+    system: ActorSystem): TraceContext = {
 
     // In the future this should select between implementations.
     val finalToken = token.getOrElse(newToken)
@@ -51,7 +51,7 @@ object TraceRecorder {
     traceContextStorage.set(Some(ctx))
   }
 
-  def startSegment(identity: SegmentIdentity, metadata: Map[String, String]): Option[SegmentCompletionHandle] =
+  def startSegment(identity: SegmentIdentity, metadata: Map[String, String] = Map.empty): Option[SegmentCompletionHandle] =
     currentContext.map(_.startSegment(identity, metadata))
 
   def rename(name: String): Unit = currentContext.map(_.rename(name))
