@@ -18,11 +18,11 @@ package kamon.trace
 
 import akka.actor.ActorSystem
 import kamon.Kamon
-import kamon.metrics._
+import kamon.metric._
 import java.util.concurrent.ConcurrentLinkedQueue
 import kamon.trace.TraceContextAware.DefaultTraceContextAware
 import kamon.trace.TraceContext.SegmentIdentity
-import kamon.metrics.TraceMetrics.TraceMetricRecorder
+import kamon.metric.TraceMetrics.TraceMetricRecorder
 
 trait TraceContext {
   def name: String
@@ -41,7 +41,7 @@ object TraceContext {
 }
 
 trait SegmentCompletionHandle {
-  def finish(metadata: Map[String, String])
+  def finish(metadata: Map[String, String] = Map.empty)
 }
 
 case class SegmentData(identity: MetricIdentity, duration: Long, metadata: Map[String, String])
@@ -76,7 +76,7 @@ object SegmentCompletionHandleAware {
 }
 
 class SimpleMetricCollectionContext(@volatile private var _name: String, val token: String, metadata: Map[String, String],
-                                    val system: ActorSystem) extends TraceContext {
+    val system: ActorSystem) extends TraceContext {
   @volatile private var _isOpen = true
   val levelOfDetail = OnlyMetrics
   val startMark = System.nanoTime()

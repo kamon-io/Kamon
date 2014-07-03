@@ -3,23 +3,23 @@
 <aspectj>
   <aspects>
     <!-- Actors -->
-    <aspect name="akka.instrumentation.RepointableActorRefTraceContextMixin"/>
-    <aspect name="akka.instrumentation.SystemMessageTraceContextMixin"/>
-    <aspect name="akka.instrumentation.ActorSystemMessagePassingTracing"/>
-    <aspect name="akka.instrumentation.EnvelopeTraceContextMixin"/>
-    <aspect name="akka.instrumentation.ActorCellMetricsMixin"/>
-    <aspect name="akka.instrumentation.BehaviourInvokeTracing"/>
-    <aspect name="kamon.instrumentation.ActorLoggingTracing"/>
+    <aspect name="akka.instrumentation.TraceContextIntoRepointableActorRefMixin"/>
+    <aspect name="akka.instrumentation.TraceContextIntoSystemMessageMixin"/>
+    <aspect name="akka.instrumentation.ActorSystemMessageInstrumentation"/>
+    <aspect name="akka.instrumentation.TraceContextIntoEnvelopeMixin"/>
+    <aspect name="akka.instrumentation.ActorCellMetricsIntoActorCellMixin"/>
+    <aspect name="akka.instrumentation.ActorCellInstrumentation"/>
+    <aspect name="akka.instrumentation.ActorLoggingInstrumentation"/>
 
     <!-- Dispatchers -->
-    <aspect name="akka.instrumentation.DispatcherTracing"/>
-    <aspect name="akka.instrumentation.DispatcherMetricsMixin"/>
+    <aspect name="akka.instrumentation.DispatcherInstrumentation"/>
+    <aspect name="akka.instrumentation.DispatcherMetricCollectionInfoIntoDispatcherMixin"/>
 
     <!-- Futures -->
-    <aspect name="kamon.instrumentation.FutureTracing"/>
+    <aspect name="kamon.instrumentation.scala.FutureInstrumentation"/>
 
     <!-- Patterns -->
-    <aspect name="akka.instrumentation.AskPatternTracing"/>
+    <aspect name="akka.instrumentation.AskPatternInstrumentation"/>
   </aspects>
 
   <weaver options="-XmessageHandlerClass:kamon.weaver.logging.KamonWeaverMessageHandler">
