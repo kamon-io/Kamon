@@ -20,11 +20,11 @@ import akka.actor.{ ActorSystem, Props, ActorRef, Actor }
 import akka.io.{ Udp, IO }
 import java.net.InetSocketAddress
 import akka.util.ByteString
-import kamon.metrics.Subscriptions.TickMetricSnapshot
-import kamon.metrics.MetricSnapshot.Measurement
-import kamon.metrics.InstrumentTypes.{ Counter, Gauge, Histogram, InstrumentType }
+import kamon.metric.Subscriptions.TickMetricSnapshot
 import java.text.{ DecimalFormatSymbols, DecimalFormat }
 import java.util.Locale
+
+import kamon.metric.instrument.{ Counter, Histogram }
 
 class StatsDMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long) extends Actor with UdpExtensionProvider {
   import context.system
@@ -48,7 +48,7 @@ class StatsDMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long)
   }
 
   def writeMetricsToRemote(tick: TickMetricSnapshot, udpSender: ActorRef): Unit = {
-    val dataBuilder = new MetricDataPacketBuilder(maxPacketSizeInBytes, udpSender, remote)
+    val packetBuilder = new MetricDataPacketBuilder(maxPacketSizeInBytes, udpSender, remote)
 
     for (
       (groupIdentity, groupSnapshot) ← tick.metrics;
@@ -57,25 +57,26 @@ class StatsDMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long)
 
       val key = metricKeyGenerator.generateKey(groupIdentity, metricIdentity)
 
-      for (measurement ← metricSnapshot.measurements) {
-        val measurementData = encodeMeasurement(measurement, metricSnapshot.instrumentType)
-        dataBuilder.appendMeasurement(key, measurementData)
+      metricSnapshot match {
+        case hs: Histogram.Snapshot ⇒
+          hs.recordsIterator.foreach { record ⇒
+            packetBuilder.appendMeasurement(key, encodeStatsDTimer(record.level, record.count))
+          }
+
+        case cs: Counter.Snapshot ⇒
+          packetBuilder.appendMeasurement(key, encodeStatsDCounter(cs.count))
       }
     }
 
-    dataBuilder.flush()
+    packetBuilder.flush()
   }
 
-  def encodeMeasurement(measurement: Measurement, instrumentType: InstrumentType): String = {
-    def statsDMetricFormat(value: String, metricType: String, samplingRate: Double = 1D): String =
-      value + "|" + metricType + (if (samplingRate != 1D) "|@" + samplingRateFormat.format(samplingRate) else "")
-
-    instrumentType match {
-      case Histogram ⇒ statsDMetricFormat(measurement.value.toString, "ms", (1D / measurement.count))
-      case Gauge     ⇒ statsDMetricFormat(measurement.value.toString, "g")
-      case Counter   ⇒ statsDMetricFormat(measurement.count.toString, "c")
-    }
+  def encodeStatsDTimer(level: Long, count: Long): String = {
+    val samplingRate: Double = 1D / count
+    level.toString + "|ms" + (if (samplingRate != 1D) "|@" + samplingRateFormat.format(samplingRate) else "")
   }
+
+  def encodeStatsDCounter(count: Long): String = count.toString + "|c"
 }
 
 object StatsDMetricsSender {

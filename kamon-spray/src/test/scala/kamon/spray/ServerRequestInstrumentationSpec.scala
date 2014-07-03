@@ -24,10 +24,11 @@ import kamon.Kamon
 import org.scalatest.concurrent.{ PatienceConfiguration, ScalaFutures }
 import spray.http.HttpHeaders.RawHeader
 import spray.http.{ HttpResponse, HttpRequest }
-import kamon.metrics.{ TraceMetrics, Metrics }
-import kamon.metrics.Subscriptions.TickMetricSnapshot
+import kamon.metric.{ TraceMetrics, Metrics }
+import kamon.metric.Subscriptions.TickMetricSnapshot
 import com.typesafe.config.ConfigFactory
-import kamon.metrics.TraceMetrics.ElapsedTime
+import kamon.metric.TraceMetrics.ElapsedTime
+import kamon.metric.instrument.Histogram
 
 class ServerRequestInstrumentationSpec extends TestKitBase with WordSpecLike with Matchers with RequestBuilding
     with ScalaFutures with PatienceConfiguration with TestServer {
@@ -122,7 +123,7 @@ class ServerRequestInstrumentationSpec extends TestKitBase with WordSpecLike wit
       traceMetrics should not be empty
 
       traceMetrics map { metrics ⇒
-        metrics(ElapsedTime).numberOfMeasurements should be(1L)
+        metrics(ElapsedTime).asInstanceOf[Histogram.Snapshot].numberOfMeasurements should be(1L)
       }
     }
 

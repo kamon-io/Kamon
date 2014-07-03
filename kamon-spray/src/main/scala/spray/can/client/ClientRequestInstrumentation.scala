@@ -21,7 +21,7 @@ import org.aspectj.lang.ProceedingJoinPoint
 import spray.http.{ HttpHeader, HttpResponse, HttpMessageEnd, HttpRequest }
 import spray.http.HttpHeaders.{ RawHeader, Host }
 import kamon.trace.{ TraceRecorder, SegmentCompletionHandleAware }
-import kamon.metrics.TraceMetrics.HttpClientRequest
+import kamon.metric.TraceMetrics.HttpClientRequest
 import kamon.Kamon
 import kamon.spray.{ ClientSegmentCollectionStrategy, Spray }
 import akka.actor.ActorRef
@@ -30,7 +30,6 @@ import akka.util.Timeout
 
 @Aspect
 class ClientRequestInstrumentation {
-  import ClientRequestInstrumentation._
 
   @DeclareMixin("spray.can.client.HttpHostConnector.RequestContext")
   def mixin: SegmentCompletionHandleAware = SegmentCompletionHandleAware.default
@@ -51,7 +50,7 @@ class ClientRequestInstrumentation {
         if (sprayExtension.clientSegmentCollectionStrategy == ClientSegmentCollectionStrategy.Internal) {
           val requestAttributes = basicRequestAttributes(request)
           val clientRequestName = sprayExtension.assignHttpClientRequestName(request)
-          val completionHandle = traceContext.startSegment(HttpClientRequest(clientRequestName, SprayTime), requestAttributes)
+          val completionHandle = traceContext.startSegment(HttpClientRequest(clientRequestName), requestAttributes)
 
           ctx.segmentCompletionHandle = Some(completionHandle)
         }
@@ -102,7 +101,7 @@ class ClientRequestInstrumentation {
         if (sprayExtension.clientSegmentCollectionStrategy == ClientSegmentCollectionStrategy.Pipelining) {
           val requestAttributes = basicRequestAttributes(request)
           val clientRequestName = sprayExtension.assignHttpClientRequestName(request)
-          val completionHandle = traceContext.startSegment(HttpClientRequest(clientRequestName, UserTime), requestAttributes)
+          val completionHandle = traceContext.startSegment(HttpClientRequest(clientRequestName), requestAttributes)
 
           responseFuture.onComplete { result ⇒
             completionHandle.finish(Map.empty)
@@ -138,9 +137,4 @@ class ClientRequestInstrumentation {
 
     pjp.proceed(Array(modifiedHeaders))
   }
-}
-
-object ClientRequestInstrumentation {
-  val SprayTime = "SprayTime"
-  val UserTime = "UserTime"
 }
