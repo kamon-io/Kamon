@@ -16,8 +16,8 @@
 
 package kamon.newrelic
 
-import kamon.metrics._
-import kamon.metrics.TraceMetrics.ElapsedTime
+import kamon.metric._
+import kamon.metric.TraceMetrics.ElapsedTime
 import akka.actor.Actor
 import kamon.Kamon
 
@@ -27,6 +27,7 @@ trait WebTransactionMetrics {
   def collectWebTransactionMetrics(metrics: Map[MetricGroupIdentity, MetricGroupSnapshot]): Seq[NewRelic.Metric] = {
     val apdexBuilder = new ApdexBuilder("Apdex", None, Kamon(NewRelic)(context.system).apdexT)
 
+    /*
     // Trace metrics are recorded in nanoseconds.
     var accumulatedHttpDispatcher: MetricSnapshotLike = MetricSnapshot(InstrumentTypes.Histogram, 0, Scale.Nano, Vector.empty)
 
@@ -46,7 +47,9 @@ trait WebTransactionMetrics {
     val httpDispatcher = toNewRelicMetric(Scale.Unit)("HttpDispatcher", None, accumulatedHttpDispatcher)
     val webTransaction = toNewRelicMetric(Scale.Unit)("WebTransaction", None, accumulatedHttpDispatcher)
 
-    Seq(httpDispatcher, webTransaction, apdexBuilder.build) ++ webTransactionMetrics.flatten.toSeq
+    Seq(httpDispatcher, webTransaction, apdexBuilder.build) ++ webTransactionMetrics.flatten.toSeq */
+
+    ???
   }
 }
 
