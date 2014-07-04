@@ -14,6 +14,7 @@ class TraceMetricsSpec extends TestKitBase with WordSpecLike with Matchers with 
     """
       |kamon.metrics {
       |  tick-interval = 1 hour
+      |  default-collection-context-buffer-size = 10
       |  filters = [
       |    {
       |      trace {
@@ -87,6 +88,7 @@ class TraceMetricsSpec extends TestKitBase with WordSpecLike with Matchers with 
 
   def takeSnapshotOf(traceName: String): TraceMetricsSnapshot = {
     val recorder = Kamon(Metrics).register(TraceMetrics(traceName), TraceMetrics.Factory)
-    recorder.get.collect(CollectionContext.default)
+    val collectionContext = Kamon(Metrics).buildDefaultCollectionContext
+    recorder.get.collect(collectionContext)
   }
 }

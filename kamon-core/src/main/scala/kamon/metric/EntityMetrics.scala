@@ -38,8 +38,8 @@ trait CollectionContext {
 }
 
 object CollectionContext {
-  def default: CollectionContext = new CollectionContext {
-    val buffer: LongBuffer = LongBuffer.allocate(10000)
+  def apply(longBufferSize: Int): CollectionContext = new CollectionContext {
+    val buffer: LongBuffer = LongBuffer.allocate(longBufferSize)
   }
 }
 

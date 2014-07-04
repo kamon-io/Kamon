@@ -31,6 +31,7 @@ class TickMetricSnapshotBufferSpec extends TestKitBase with WordSpecLike with Ma
     """
       |kamon.metrics {
       |  tick-interval = 1 hour
+      |  default-collection-context-buffer-size = 10
       |  filters = [
       |    {
       |      trace {
@@ -86,7 +87,7 @@ class TickMetricSnapshotBufferSpec extends TestKitBase with WordSpecLike with Ma
   }
 
   trait SnapshotFixtures {
-    val collectionContext = CollectionContext.default
+    val collectionContext = Kamon(Metrics).buildDefaultCollectionContext
     val testTraceIdentity = TraceMetrics("buffer-spec-test-trace")
     val traceRecorder = Kamon(Metrics).register(testTraceIdentity, TraceMetrics.Factory).get
 

@@ -30,6 +30,7 @@ class Subscriptions extends Actor {
   val config = context.system.settings.config
   val tickInterval = Duration(config.getDuration("kamon.metrics.tick-interval", TimeUnit.NANOSECONDS), TimeUnit.NANOSECONDS)
   val flushMetricsSchedule = context.system.scheduler.schedule(tickInterval, tickInterval, self, FlushMetrics)(context.dispatcher)
+  val collectionContext = Kamon(Metrics).buildDefaultCollectionContext
 
   var lastTick: Long = System.currentTimeMillis()
   var subscribedPermanently: Map[MetricGroupFilter, List[ActorRef]] = Map.empty
@@ -55,7 +56,7 @@ class Subscriptions extends Actor {
 
   def flush(): Unit = {
     val currentTick = System.currentTimeMillis()
-    val snapshots = Kamon(Metrics).collect
+    val snapshots = collectAll()
 
     dispatchSelectedMetrics(lastTick, currentTick, subscribedPermanently, snapshots)
     dispatchSelectedMetrics(lastTick, currentTick, subscribedForOneShot, snapshots)
@@ -63,6 +64,9 @@ class Subscriptions extends Actor {
     lastTick = currentTick
     subscribedForOneShot = Map.empty
   }
+
+  def collectAll(): Map[MetricGroupIdentity, MetricGroupSnapshot] =
+    (for ((identity, recorder) ← Kamon(Metrics).storage) yield (identity, recorder.collect(collectionContext))).toMap
 
   def dispatchSelectedMetrics(lastTick: Long, currentTick: Long, subscriptions: Map[MetricGroupFilter, List[ActorRef]],
     snapshots: Map[MetricGroupIdentity, MetricGroupSnapshot]): Unit = {
@@ -90,7 +94,7 @@ object Subscriptions {
 
 class TickMetricSnapshotBuffer(flushInterval: FiniteDuration, receiver: ActorRef) extends Actor {
   val flushSchedule = context.system.scheduler.schedule(flushInterval, flushInterval, self, FlushBuffer)(context.dispatcher)
-  val collectionContext = CollectionContext.default
+  val collectionContext = Kamon(Metrics)(context.system).buildDefaultCollectionContext
 
   def receive = empty
 

@@ -18,6 +18,7 @@ package kamon.datadog
 
 import akka.testkit.{ TestKitBase, TestProbe }
 import akka.actor.{ Props, ActorRef, ActorSystem }
+import kamon.Kamon
 import kamon.metric.instrument.Histogram.Precision
 import kamon.metric.instrument.{ Counter, Histogram, HdrHistogram, LongAdderCounter }
 import org.scalatest.{ Matchers, WordSpecLike }
@@ -32,7 +33,7 @@ class DatadogMetricSenderSpec extends TestKitBase with WordSpecLike with Matcher
   implicit lazy val system = ActorSystem("datadog-metric-sender-spec",
     ConfigFactory.parseString("kamon.datadog.max-packet-size = 256 bytes"))
 
-  val context = CollectionContext.default
+  val collectionContext = Kamon(Metrics).buildDefaultCollectionContext
 
   "the DataDogMetricSender" should {
     "send latency measurements" in new UdpListenerFixture {
@@ -40,7 +41,7 @@ class DatadogMetricSenderSpec extends TestKitBase with WordSpecLike with Matcher
       val testRecorder = Histogram(1000L, Precision.Normal, Scale.Unit)
       testRecorder.record(10L)
 
-      val udp = setup(Map(testMetricName -> testRecorder.collect(context)))
+      val udp = setup(Map(testMetricName -> testRecorder.collect(collectionContext)))
       val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
 
       data.utf8String should be(s"kamon.actor.processing-time:10|ms|#actor:user/kamon")
@@ -52,7 +53,7 @@ class DatadogMetricSenderSpec extends TestKitBase with WordSpecLike with Matcher
       testRecorder.record(10L)
       testRecorder.record(10L)
 
-      val udp = setup(Map(testMetricName -> testRecorder.collect(context)))
+      val udp = setup(Map(testMetricName -> testRecorder.collect(collectionContext)))
       val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
 
       data.utf8String should be(s"kamon.actor.processing-time:10|ms|@0.5|#actor:user/kamon")
@@ -71,7 +72,7 @@ class DatadogMetricSenderSpec extends TestKitBase with WordSpecLike with Matcher
         bytes += s"kamon.actor.$testMetricName:$level|ms|#actor:user/kamon".length
       }
 
-      val udp = setup(Map(testMetricName -> testRecorder.collect(context)))
+      val udp = setup(Map(testMetricName -> testRecorder.collect(collectionContext)))
       udp.expectMsgType[Udp.Send] // let the first flush pass
 
       val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
@@ -95,9 +96,9 @@ class DatadogMetricSenderSpec extends TestKitBase with WordSpecLike with Matcher
       thirdTestRecorder.increment(4L)
 
       val udp = setup(Map(
-        firstTestMetricName -> firstTestRecorder.collect(context),
-        secondTestMetricName -> secondTestRecorder.collect(context),
-        thirdTestMetricName -> thirdTestRecorder.collect(context)))
+        firstTestMetricName -> firstTestRecorder.collect(collectionContext),
+        secondTestMetricName -> secondTestRecorder.collect(collectionContext),
+        thirdTestMetricName -> thirdTestRecorder.collect(collectionContext)))
       val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
 
       data.utf8String should be("kamon.actor.processing-time-1:10|ms|@0.5|#actor:user/kamon\nkamon.actor.processing-time-2:21|ms|#actor:user/kamon\nkamon.actor.counter:4|c|#actor:user/kamon")

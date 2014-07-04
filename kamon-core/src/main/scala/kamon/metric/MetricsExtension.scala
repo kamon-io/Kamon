@@ -57,14 +57,6 @@ class MetricsExtension(system: ExtendedActorSystem) extends Kamon.Extension {
     subscriptions.tell(Subscribe(category, selection, permanently), receiver)
   }
 
-  def collect: Map[MetricGroupIdentity, MetricGroupSnapshot] = {
-    // TODO: Improve the way in which we are getting the context.
-    val context = new CollectionContext {
-      val buffer: LongBuffer = LongBuffer.allocate(50000)
-    }
-    (for ((identity, recorder) ← storage) yield (identity, recorder.collect(context))).toMap
-  }
-
   def scheduleGaugeRecorder(body: ⇒ Unit): Cancellable = {
     import scala.concurrent.duration._
 
@@ -98,6 +90,9 @@ class MetricsExtension(system: ExtendedActorSystem) extends Kamon.Extension {
 
     allFilters.toMap
   }
+
+  def buildDefaultCollectionContext: CollectionContext =
+    CollectionContext(metricsExtConfig.getInt("default-collection-context-buffer-size"))
 }
 
 object Metrics extends ExtensionId[MetricsExtension] with ExtensionIdProvider {

@@ -103,6 +103,8 @@ class HdrHistogram(lowestTrackableValue: Long, highestTrackableValue: Long, sign
     new CompactHdrSnapshot(scale, nrOfMeasurements, measurementsArray, unitMagnitude(), subBucketHalfCount(), subBucketHalfCountMagnitude())
   }
 
+  def getCounts = countsArray().length()
+
   def cleanup: Unit = {}
 
   private def writeSnapshotTo(buffer: LongBuffer): Long = {
