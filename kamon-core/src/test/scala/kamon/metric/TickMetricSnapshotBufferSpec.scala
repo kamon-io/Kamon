@@ -32,6 +32,7 @@ class TickMetricSnapshotBufferSpec extends TestKitBase with WordSpecLike with Ma
       |kamon.metrics {
       |  tick-interval = 1 hour
       |  default-collection-context-buffer-size = 10
+      |
       |  filters = [
       |    {
       |      trace {
