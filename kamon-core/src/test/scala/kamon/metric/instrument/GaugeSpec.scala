@@ -4,15 +4,17 @@ import java.util.concurrent.atomic.AtomicLong
 
 import akka.actor.ActorSystem
 import com.typesafe.config.ConfigFactory
-import kamon.metric.{ Scale, CollectionContext }
+import kamon.Kamon
+import kamon.metric.{ Metrics, Scale, CollectionContext }
 import org.scalatest.{ Matchers, WordSpecLike }
 import scala.concurrent.duration._
 
 class GaugeSpec extends WordSpecLike with Matchers {
-  val system = ActorSystem("gauge-spec", ConfigFactory.parseString(
+  implicit val system = ActorSystem("gauge-spec", ConfigFactory.parseString(
     """
       |kamon.metrics {
       |  flush-interval = 1 hour
+      |  default-collection-context-buffer-size = 10
       |  precision {
       |    default-gauge-precision {
       |      refresh-interval = 100 milliseconds
@@ -50,7 +52,7 @@ class GaugeSpec extends WordSpecLike with Matchers {
 
       Thread.sleep(1.second.toMillis)
       gauge.cleanup
-      val snapshot = gauge.collect(CollectionContext.default)
+      val snapshot = gauge.collect(Kamon(Metrics).buildDefaultCollectionContext)
 
       snapshot.numberOfMeasurements should be(10L +- 1L)
       snapshot.min should be(1)
@@ -61,7 +63,7 @@ class GaugeSpec extends WordSpecLike with Matchers {
       val numberOfValuesRecorded = new AtomicLong(0)
       val gauge = Gauge(Histogram.Precision.Normal, 10000L, Scale.Unit, 1 hour, system)(() ⇒ numberOfValuesRecorded.addAndGet(1))
 
-      val snapshot = gauge.collect(CollectionContext.default)
+      val snapshot = gauge.collect(Kamon(Metrics).buildDefaultCollectionContext)
 
       snapshot.numberOfMeasurements should be(0)
       numberOfValuesRecorded.get() should be(0)

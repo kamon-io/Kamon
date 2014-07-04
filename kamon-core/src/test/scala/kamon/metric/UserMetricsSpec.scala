@@ -15,6 +15,7 @@ class UserMetricsSpec extends TestKitBase with WordSpecLike with Matchers with I
     """
       |kamon.metrics {
       |  flush-interval = 1 hour
+      |  default-collection-context-buffer-size = 10
       |  precision {
       |    default-histogram-precision {
       |      highest-trackable-value = 10000
@@ -111,7 +112,7 @@ class UserMetricsSpec extends TestKitBase with WordSpecLike with Matchers with I
     }
 
     "generate a snapshot containing all the registered user metrics and reset all instruments" in {
-      val context = CollectionContext.default
+      val context = Kamon(Metrics).buildDefaultCollectionContext
       val userMetricsRecorder = Kamon(Metrics).register(UserMetrics, UserMetrics.Factory).get
 
       val histogramWithSettings = Kamon(UserMetrics).registerHistogram("histogram-with-settings", Histogram.Precision.Normal, 10000L)
@@ -219,7 +220,7 @@ class UserMetricsSpec extends TestKitBase with WordSpecLike with Matchers with I
     }
 
     "generate a snapshot that can be merged with another" in {
-      val context = CollectionContext.default
+      val context = Kamon(Metrics).buildDefaultCollectionContext
       val userMetricsRecorder = Kamon(Metrics).register(UserMetrics, UserMetrics.Factory).get
 
       val histogram = Kamon(UserMetrics).registerHistogram("histogram-for-merge")
