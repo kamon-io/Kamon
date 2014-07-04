@@ -28,6 +28,9 @@ class DispatcherMetricsSpec extends TestKitBase with WordSpecLike with Matchers 
   implicit lazy val system: ActorSystem = ActorSystem("dispatcher-metrics-spec", ConfigFactory.parseString(
     """
       |kamon.metrics {
+      |  tick-interval = 1 second
+      |  default-collection-context-buffer-size = 10
+      |
       |  filters = [
       |    {
       |      dispatcher {

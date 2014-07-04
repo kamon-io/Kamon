@@ -16,6 +16,7 @@ class UserMetricsSpec extends TestKitBase with WordSpecLike with Matchers with I
       |kamon.metrics {
       |  flush-interval = 1 hour
       |  default-collection-context-buffer-size = 10
+      |
       |  precision {
       |    default-histogram-precision {
       |      highest-trackable-value = 10000
