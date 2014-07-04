@@ -18,8 +18,9 @@ package kamon.statsd
 
 import akka.testkit.{ TestKitBase, TestProbe }
 import akka.actor.{ ActorRef, Props, ActorSystem }
+import kamon.Kamon
 import kamon.metric.instrument.Histogram.Precision
-import kamon.metric.instrument.{ Histogram, HdrHistogram }
+import kamon.metric.instrument.Histogram
 import org.scalatest.{ Matchers, WordSpecLike }
 import kamon.metric._
 import akka.io.Udp
@@ -32,7 +33,7 @@ class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers
   implicit lazy val system = ActorSystem("statsd-metric-sender-spec",
     ConfigFactory.parseString("kamon.statsd.max-packet-size = 256 bytes"))
 
-  val context = CollectionContext.default
+  val collectionContext = Kamon(Metrics).buildDefaultCollectionContext
 
   "the StatsDMetricSender" should {
     "flush the metrics data after processing the tick, even if the max-packet-size is not reached" in new UdpListenerFixture {
@@ -41,7 +42,7 @@ class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers
       val testRecorder = Histogram(1000L, Precision.Normal, Scale.Unit)
       testRecorder.record(10L)
 
-      val udp = setup(Map(testMetricName -> testRecorder.collect(context)))
+      val udp = setup(Map(testMetricName -> testRecorder.collect(collectionContext)))
       val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
 
       data.utf8String should be(s"$testMetricKey:10|ms")
@@ -55,7 +56,7 @@ class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers
       testRecorder.record(11L)
       testRecorder.record(12L)
 
-      val udp = setup(Map(testMetricName -> testRecorder.collect(context)))
+      val udp = setup(Map(testMetricName -> testRecorder.collect(collectionContext)))
       val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
 
       data.utf8String should be(s"$testMetricKey:10|ms:11|ms:12|ms")
@@ -68,7 +69,7 @@ class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers
       testRecorder.record(10L)
       testRecorder.record(10L)
 
-      val udp = setup(Map(testMetricName -> testRecorder.collect(context)))
+      val udp = setup(Map(testMetricName -> testRecorder.collect(collectionContext)))
       val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
 
       data.utf8String should be(s"$testMetricKey:10|ms|@0.5")
@@ -87,7 +88,7 @@ class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers
         bytes += s":$level|ms".length
       }
 
-      val udp = setup(Map(testMetricName -> testRecorder.collect(context)))
+      val udp = setup(Map(testMetricName -> testRecorder.collect(collectionContext)))
       udp.expectMsgType[Udp.Send] // let the first flush pass
       val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
 
@@ -111,8 +112,8 @@ class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers
       secondTestRecorder.record(21L)
 
       val udp = setup(Map(
-        firstTestMetricName -> firstTestRecorder.collect(context),
-        secondTestMetricName -> secondTestRecorder.collect(context)))
+        firstTestMetricName -> firstTestRecorder.collect(collectionContext),
+        secondTestMetricName -> secondTestRecorder.collect(collectionContext)))
       val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
 
       data.utf8String should be(s"$firstTestMetricKey:10|ms|@0.5:11|ms\n$secondTestMetricKey:20|ms:21|ms")
