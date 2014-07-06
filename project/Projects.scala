@@ -98,11 +98,11 @@ object Projects extends Build {
     .settings(noPublishing: _*)
     .settings(libraryDependencies ++= compile(scalaCompiler))
 
-lazy val kamonSystemMetrics = Project("kamon-system-metrics", file("kamon-system-metrics"))
-    .settings(basicSettings: _*)
-    .settings(formatSettings: _*)
-    .settings(libraryDependencies ++= compile(sigar, ioCore,ioFile) ++ test(scalatest, slf4Api, slf4nop))
-    .dependsOn(kamonCore)
+  lazy val kamonSystemMetrics = Project("kamon-system-metrics", file("kamon-system-metrics"))
+      .settings(basicSettings: _*)
+      .settings(formatSettings: _*)
+      .settings(libraryDependencies ++= compile(sigar, ioCore,ioFile) ++ test(scalatest, slf4Api, slf4nop))
+      .dependsOn(kamonCore)
 
   val noPublishing = Seq(publish := (), publishLocal := (), publishArtifact := false)
 }
