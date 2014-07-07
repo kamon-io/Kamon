@@ -15,14 +15,15 @@
 
 package kamon.play
 
-import ch.qos.logback.classic.AsyncAppender
 import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.classic.{ AsyncAppender, LoggerContext }
 import ch.qos.logback.core.read.ListAppender
 import ch.qos.logback.core.status.NopStatusListener
 import kamon.trace.TraceLocal
 import org.scalatest.BeforeAndAfter
 import org.scalatestplus.play._
-import play.api.Logger
+import org.slf4j
+import play.api.LoggerLike
 import play.api.mvc.Results.Ok
 import play.api.mvc._
 import play.api.test.Helpers._
@@ -30,21 +31,20 @@ import play.api.test._
 
 import scala.concurrent.Future
 
-class LoggerLikeInstrumentationSpec extends PlaySpec with OneServerPerSuite with BeforeAndAfter with Logging {
+class LoggerLikeInstrumentationSpec extends PlaySpec with OneServerPerSuite with BeforeAndAfter {
 
   System.setProperty("config.file", "./kamon-play/src/test/resources/conf/application.conf")
 
   val executor = scala.concurrent.ExecutionContext.Implicits.global
 
   val infoMessage = "Info Message"
-
   val headerValue = "My header value"
   val otherValue = "My other value"
 
-  case class Test(header: String, other: String)
+  case class LocalStorageValue(header: String, other: String)
 
   object TraceLocalKey extends TraceLocal.TraceLocalKey {
-    type ValueType = Test
+    type ValueType = LocalStorageValue
   }
 
   before {
@@ -60,8 +60,8 @@ class LoggerLikeInstrumentationSpec extends PlaySpec with OneServerPerSuite with
     case ("GET", "/logging") ⇒
       Action.async {
         Future {
-          TraceLocal.store(TraceLocalKey)(Test(headerValue, otherValue))
-          logger.info(infoMessage)
+          TraceLocal.store(TraceLocalKey)(LocalStorageValue(headerValue, otherValue))
+          LoggingHandler.info(infoMessage)
           Ok("OK")
         }(executor)
       }
@@ -73,33 +73,30 @@ class LoggerLikeInstrumentationSpec extends PlaySpec with OneServerPerSuite with
 
       val Some(result) = route(FakeRequest(GET, "/logging"))
       Thread.sleep(500) // wait to complete the future
-      TraceLocal.retrieve(TraceLocalKey) must be(Some(Test(headerValue, otherValue)))
+      TraceLocal.retrieve(TraceLocalKey) must be(Some(LocalStorageValue(headerValue, otherValue)))
 
       LoggingHandler.appenderStop()
 
-      //headerValue must be(LoggingHandler.getValueFromMDC("header"))
-      //otherValue must be(LoggingHandler.getValueFromMDC("other"))
+      headerValue must be(LoggingHandler.getValueFromMDC("header"))
+      otherValue must be(LoggingHandler.getValueFromMDC("other"))
     }
   }
 }
 
-trait Logging {
-  val logger = Logger(this.getClass)
-}
+object LoggingHandler extends LoggerLike {
 
-object LoggingHandler {
-
-  val root = play.Logger.of(org.slf4j.Logger.ROOT_LOGGER_NAME)
-  val underlyingLogger = root.underlying().asInstanceOf[ch.qos.logback.classic.Logger]
-  val context = underlyingLogger.getLoggerContext
+  val loggerContext = new LoggerContext()
+  val rootLogger = loggerContext.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME)
   val asyncAppender = new AsyncAppender()
   val listAppender = new ListAppender[ILoggingEvent]()
-  val onConsoleStatusListener = new NopStatusListener()
+  val nopStatusListener = new NopStatusListener()
+
+  override val logger: slf4j.Logger = rootLogger
 
   def startLogging(): Unit = {
-    context.getStatusManager().add(onConsoleStatusListener)
-    asyncAppender.setContext(context)
-    listAppender.setContext(context)
+    loggerContext.getStatusManager().add(nopStatusListener)
+    asyncAppender.setContext(loggerContext)
+    listAppender.setContext(loggerContext)
     listAppender.setName("list")
     listAppender.start()
   }
@@ -111,7 +108,7 @@ object LoggingHandler {
   def appenderStart(): Unit = {
     asyncAppender.addAppender(listAppender)
     asyncAppender.start()
-    underlyingLogger.addAppender(asyncAppender)
+    rootLogger.addAppender(asyncAppender)
   }
 
   def appenderStop(): Unit = {
@@ -119,7 +116,6 @@ object LoggingHandler {
   }
 
   def getValueFromMDC(key: String): String = {
-    println("------------------------->>>>>>>>>>>>>>>>>>>>>>>>>>>" + listAppender.list.get(0).getMDCPropertyMap)
     listAppender.list.get(0).getMDCPropertyMap.get(key)
   }
 }
