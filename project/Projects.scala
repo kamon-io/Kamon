@@ -14,7 +14,7 @@ object Projects extends Build {
 
 
   lazy val kamonCore = Project("kamon-core", file("kamon-core"))
-    .dependsOn(kamonMacros)
+    .dependsOn(kamonMacros % "compile-internal, test-internal")
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
     .settings(aspectJSettings: _*)
