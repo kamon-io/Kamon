@@ -2,6 +2,9 @@
 
 <aspectj>
   <aspects>
+    <!-- Disable AspectJ Weaver not present error -->
+    <aspect name="kamon.instrumentation.AspectJWeaverMissingWarning"/>
+
     <!-- Actors -->
     <aspect name="akka.instrumentation.TraceContextIntoRepointableActorRefMixin"/>
     <aspect name="akka.instrumentation.TraceContextIntoSystemMessageMixin"/>
