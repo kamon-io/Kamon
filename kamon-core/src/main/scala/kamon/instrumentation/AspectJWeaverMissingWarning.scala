@@ -2,7 +2,7 @@ package kamon.instrumentation
 
 import _root_.akka.event.EventStream
 import org.aspectj.lang.ProceedingJoinPoint
-import org.aspectj.lang.annotation.{Around, Pointcut, Aspect}
+import org.aspectj.lang.annotation.{ Around, Pointcut, Aspect }
 
 @Aspect
 class AspectJWeaverMissingWarning {

@@ -35,7 +35,8 @@ object Projects extends Build {
       libraryDependencies ++=
         compile(akkaActor, aspectJ, sprayCan, sprayClient, sprayRouting) ++
         test(scalatest, akkaTestKit, sprayTestkit, slf4Api, slf4nop))
-    .dependsOn(kamonCore, kamonTestkit)
+    .dependsOn(kamonCore)
+    .dependsOn(kamonTestkit % "test")
 
 
   lazy val kamonNewrelic = Project("kamon-newrelic", file("kamon-newrelic"))
