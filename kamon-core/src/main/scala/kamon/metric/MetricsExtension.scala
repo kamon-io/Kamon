@@ -97,7 +97,7 @@ class MetricsExtension(system: ExtendedActorSystem) extends Kamon.Extension {
     CollectionContext(metricsExtConfig.getInt("default-collection-context-buffer-size"))
 
   def printInitializationMessage(eventStream: EventStream, disableWeaverMissingError: Boolean): Unit = {
-    if(!disableWeaverMissingError) {
+    if (!disableWeaverMissingError) {
       val weaverMissingMessage =
         """
           |
