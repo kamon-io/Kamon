@@ -112,6 +112,29 @@ class UserMetricsSpec extends TestKitBase with WordSpecLike with Matchers with I
       }
     }
 
+    "allow unregistering metrics from the extension" in {
+      val userMetricsRecorder = Kamon(Metrics).register(UserMetrics, UserMetrics.Factory).get
+      val counter = Kamon(UserMetrics).registerCounter("counter-for-remove")
+      val histogram = Kamon(UserMetrics).registerHistogram("histogram-for-remove")
+      val minMaxCounter = Kamon(UserMetrics).registerMinMaxCounter("min-max-counter-for-remove")
+      val gauge = Kamon(UserMetrics).registerGauge("gauge-for-remove") { () ⇒ 2L }
+
+      userMetricsRecorder.counters.keys should contain("counter-for-remove")
+      userMetricsRecorder.histograms.keys should contain("histogram-for-remove")
+      userMetricsRecorder.minMaxCounters.keys should contain("min-max-counter-for-remove")
+      userMetricsRecorder.gauges.keys should contain("gauge-for-remove")
+
+      Kamon(UserMetrics).removeCounter("counter-for-remove")
+      Kamon(UserMetrics).removeHistogram("histogram-for-remove")
+      Kamon(UserMetrics).removeMinMaxCounter("min-max-counter-for-remove")
+      Kamon(UserMetrics).removeGauge("gauge-for-remove")
+
+      userMetricsRecorder.counters.keys should not contain ("counter-for-remove")
+      userMetricsRecorder.histograms.keys should not contain ("histogram-for-remove")
+      userMetricsRecorder.minMaxCounters.keys should not contain ("min-max-counter-for-remove")
+      userMetricsRecorder.gauges.keys should not contain ("gauge-for-remove")
+    }
+
     "generate a snapshot containing all the registered user metrics and reset all instruments" in {
       val context = Kamon(Metrics).buildDefaultCollectionContext
       val userMetricsRecorder = Kamon(Metrics).register(UserMetrics, UserMetrics.Factory).get

@@ -35,6 +35,18 @@ class UserMetricsExtension(system: ExtendedActorSystem) extends Kamon.Extension 
   def registerGauge(name: String, precision: Histogram.Precision, highestTrackableValue: Long,
     refreshInterval: FiniteDuration)(currentValueCollector: Gauge.CurrentValueCollector): Gauge =
     userMetricsRecorder.buildGauge(name, precision, highestTrackableValue, refreshInterval, currentValueCollector)
+
+  def removeHistogram(name: String): Unit =
+    userMetricsRecorder.removeHistogram(name)
+
+  def removeCounter(name: String): Unit =
+    userMetricsRecorder.removeCounter(name)
+
+  def removeMinMaxCounter(name: String): Unit =
+    userMetricsRecorder.removeMinMaxCounter(name)
+
+  def removeGauge(name: String): Unit =
+    userMetricsRecorder.removeGauge(name)
 }
 
 object UserMetrics extends ExtensionId[UserMetricsExtension] with ExtensionIdProvider with MetricGroupIdentity {
@@ -85,6 +97,18 @@ object UserMetrics extends ExtensionId[UserMetricsExtension] with ExtensionIdPro
 
     def buildGauge(name: String)(currentValueCollector: Gauge.CurrentValueCollector): Gauge =
       gauges.getOrElseUpdate(name, Gauge.fromConfig(defaultGaugePrecisionConfig, system)(currentValueCollector))
+
+    def removeHistogram(name: String): Unit =
+      histograms.remove(name)
+
+    def removeCounter(name: String): Unit =
+      counters.remove(name)
+
+    def removeMinMaxCounter(name: String): Unit =
+      minMaxCounters.remove(name).map(_.cleanup)
+
+    def removeGauge(name: String): Unit =
+      gauges.remove(name).map(_.cleanup)
 
     def collect(context: CollectionContext): UserMetricsSnapshot = {
       val histogramSnapshots = histograms.map {
