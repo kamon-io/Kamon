@@ -26,10 +26,10 @@ import java.util.Locale
 
 import kamon.metric.instrument.{ Counter, Histogram }
 
-class StatsDMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long) extends Actor with UdpExtensionProvider {
+class StatsDMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long, metricKeyGenerator: StatsD.MetricKeyGenerator)
+    extends Actor with UdpExtensionProvider {
   import context.system
 
-  val metricKeyGenerator = new SimpleMetricKeyGenerator(context.system.settings.config)
   val symbols = DecimalFormatSymbols.getInstance(Locale.US)
   symbols.setDecimalSeparator('.') // Just in case there is some weird locale config we are not aware of.
 
@@ -80,7 +80,8 @@ class StatsDMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long)
 }
 
 object StatsDMetricsSender {
-  def props(remote: InetSocketAddress, maxPacketSize: Long): Props = Props(new StatsDMetricsSender(remote, maxPacketSize))
+  def props(remote: InetSocketAddress, maxPacketSize: Long, metricKeyGenerator: StatsD.MetricKeyGenerator): Props =
+    Props(new StatsDMetricsSender(remote, maxPacketSize, metricKeyGenerator))
 }
 
 trait UdpExtensionProvider {

@@ -30,15 +30,31 @@ import java.net.InetSocketAddress
 import com.typesafe.config.ConfigFactory
 
 class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers {
-  implicit lazy val system = ActorSystem("statsd-metric-sender-spec",
-    ConfigFactory.parseString("kamon.statsd.max-packet-size = 256 bytes"))
+  implicit lazy val system: ActorSystem = ActorSystem("statsd-metric-sender-spec", ConfigFactory.parseString(
+    """
+      |kamon {
+      |  metrics {
+      |    disable-aspectj-weaver-missing-error = true
+      |  }
+      |
+      |  statsd {
+      |    max-packet-size = 256 bytes
+      |  }
+      |}
+      |
+    """.stripMargin))
 
   val collectionContext = Kamon(Metrics).buildDefaultCollectionContext
 
   "the StatsDMetricSender" should {
+    "normalize the group entity name to remove spaces, colons and replace '/' with '_'" in new UdpListenerFixture {
+      val testMetricKey = buildMetricKey("trace", "POST: /kamon/example", "elapsed-time")
+      testMetricKey should be(s"kamon.localhost_local.trace.POST-_kamon_example.elapsed-time")
+    }
+
     "flush the metrics data after processing the tick, even if the max-packet-size is not reached" in new UdpListenerFixture {
-      val testMetricName = "test-metric"
-      val testMetricKey = buildMetricKey(testMetricName)
+      val testMetricName = "processing-time"
+      val testMetricKey = buildMetricKey("actor", "/user/kamon", testMetricName)
       val testRecorder = Histogram(1000L, Precision.Normal, Scale.Unit)
       testRecorder.record(10L)
 
@@ -49,8 +65,8 @@ class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers
     }
 
     "render several measurements of the same key under a single (key + multiple measurements) packet" in new UdpListenerFixture {
-      val testMetricName = "test-metric"
-      val testMetricKey = buildMetricKey(testMetricName)
+      val testMetricName = "processing-time"
+      val testMetricKey = buildMetricKey("actor", "/user/kamon", testMetricName)
       val testRecorder = Histogram(1000L, Precision.Normal, Scale.Unit)
       testRecorder.record(10L)
       testRecorder.record(11L)
@@ -63,8 +79,8 @@ class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers
     }
 
     "include the correspondent sampling rate when rendering multiple occurrences of the same value" in new UdpListenerFixture {
-      val testMetricName = "test-metric"
-      val testMetricKey = buildMetricKey(testMetricName)
+      val testMetricName = "processing-time"
+      val testMetricKey = buildMetricKey("actor", "/user/kamon", testMetricName)
       val testRecorder = Histogram(1000L, Precision.Normal, Scale.Unit)
       testRecorder.record(10L)
       testRecorder.record(10L)
@@ -76,8 +92,8 @@ class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers
     }
 
     "flush the packet when the max-packet-size is reached" in new UdpListenerFixture {
-      val testMetricName = "test-metric"
-      val testMetricKey = buildMetricKey(testMetricName)
+      val testMetricName = "processing-time"
+      val testMetricKey = buildMetricKey("actor", "/user/kamon", testMetricName)
       val testRecorder = Histogram(10000L, Precision.Normal, Scale.Unit)
 
       var bytes = testMetricKey.length
@@ -97,9 +113,9 @@ class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers
 
     "render multiple keys in the same packet using newline as separator" in new UdpListenerFixture {
       val firstTestMetricName = "first-test-metric"
-      val firstTestMetricKey = buildMetricKey(firstTestMetricName)
+      val firstTestMetricKey = buildMetricKey("actor", "/user/kamon", firstTestMetricName)
       val secondTestMetricName = "second-test-metric"
-      val secondTestMetricKey = buildMetricKey(secondTestMetricName)
+      val secondTestMetricKey = buildMetricKey("actor", "/user/kamon", secondTestMetricName)
 
       val firstTestRecorder = Histogram(1000L, Precision.Normal, Scale.Unit)
       val secondTestRecorder = Histogram(1000L, Precision.Normal, Scale.Unit)
@@ -121,14 +137,32 @@ class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers
   }
 
   trait UdpListenerFixture {
-    val localhostName = ManagementFactory.getRuntimeMXBean.getName.split('@')(1)
     val testMaxPacketSize = system.settings.config.getBytes("kamon.statsd.max-packet-size")
+    val metricKeyGenerator = new SimpleMetricKeyGenerator(system.settings.config) {
+      override def normalizedLocalhostName: String = "localhost_local"
+    }
 
-    def buildMetricKey(metricName: String): String = s"kamon.$localhostName.test-metric-category.test-group.$metricName"
+    val testGroupIdentity = new MetricGroupIdentity {
+      val name: String = "/user/kamon"
+      val category: MetricGroupCategory = new MetricGroupCategory {
+        val name: String = "actor"
+      }
+    }
+
+    def buildMetricKey(categoryName: String, entityName: String, metricName: String): String = {
+      val metricIdentity = new MetricIdentity { val name: String = metricName }
+      val groupIdentity = new MetricGroupIdentity {
+        val name: String = entityName
+        val category: MetricGroupCategory = new MetricGroupCategory {
+          val name: String = categoryName
+        }
+      }
+      metricKeyGenerator.generateKey(groupIdentity, metricIdentity)
+    }
 
     def setup(metrics: Map[String, MetricSnapshot]): TestProbe = {
       val udp = TestProbe()
-      val metricsSender = system.actorOf(Props(new StatsDMetricsSender(new InetSocketAddress(localhostName, 0), testMaxPacketSize) {
+      val metricsSender = system.actorOf(Props(new StatsDMetricsSender(new InetSocketAddress("127.0.0.1", 0), testMaxPacketSize, metricKeyGenerator) {
         override def udpExtension(implicit system: ActorSystem): ActorRef = udp.ref
       }))
 
@@ -136,17 +170,9 @@ class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers
       udp.expectMsgType[Udp.SimpleSender]
       udp.reply(Udp.SimpleSenderReady)
 
-      val testGroupIdentity = new MetricGroupIdentity {
-        val name: String = "test-group"
-        val category: MetricGroupCategory = new MetricGroupCategory {
-          val name: String = "test-metric-category"
-        }
-      }
-
       val testMetrics = for ((metricName, snapshot) ← metrics) yield {
         val testMetricIdentity = new MetricIdentity {
           val name: String = metricName
-          val tag: String = ""
         }
 
         (testMetricIdentity, snapshot)
