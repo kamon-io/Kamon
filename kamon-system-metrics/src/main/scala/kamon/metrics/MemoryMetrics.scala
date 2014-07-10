@@ -15,8 +15,10 @@
  */
 package kamon.metrics
 
+import akka.actor.ActorSystem
 import com.typesafe.config.Config
-import org.HdrHistogram.HdrRecorder
+import kamon.metric._
+import kamon.metric.instrument.Histogram
 
 case class MemoryMetrics(name: String) extends MetricGroupIdentity {
   val category = MemoryMetrics
@@ -32,18 +34,26 @@ object MemoryMetrics extends MetricGroupCategory {
   case object SwapUsed extends MetricIdentity { val name, tag = "swap-used" }
   case object SwapFree extends MetricIdentity { val name, tag = "swap-free" }
 
-  case class MemoryMetricRecorder(used: MetricRecorder, free: MetricRecorder, buffer: MetricRecorder, cache: MetricRecorder,swapUsed: MetricRecorder,swapFree: MetricRecorder)
+  case class MemoryMetricRecorder(used: Histogram, free: Histogram, buffer: Histogram, cache: Histogram,swapUsed: Histogram,swapFree: Histogram)
     extends MetricGroupRecorder {
 
-    def collect: MetricGroupSnapshot = {
-      MemoryMetricSnapshot(used.collect(), free.collect(), buffer.collect(), cache.collect(), swapUsed.collect(), swapFree.collect())
+    def collect(context: CollectionContext): MetricGroupSnapshot = {
+      MemoryMetricSnapshot(used.collect(context), free.collect(context), buffer.collect(context), cache.collect(context), swapUsed.collect(context), swapFree.collect(context))
     }
+
+    def cleanup: Unit = {}
   }
 
-  case class MemoryMetricSnapshot(used: MetricSnapshotLike, free: MetricSnapshotLike, buffer: MetricSnapshotLike, cache: MetricSnapshotLike, swapUsed: MetricSnapshotLike, swapFree: MetricSnapshotLike)
+  case class MemoryMetricSnapshot(used: Histogram.Snapshot, free: Histogram.Snapshot, buffer: Histogram.Snapshot, cache: Histogram.Snapshot, swapUsed: Histogram.Snapshot, swapFree: Histogram.Snapshot)
     extends MetricGroupSnapshot {
 
-    val metrics: Map[MetricIdentity, MetricSnapshotLike] = Map(
+    type GroupSnapshotType = MemoryMetricSnapshot
+
+    def merge(that: GroupSnapshotType, context: CollectionContext): GroupSnapshotType = {
+      MemoryMetricSnapshot(used.merge(that.used, context), free.merge(that.free, context), buffer.merge(that.buffer, context), cache.merge(that.cache, context), swapUsed.merge(that.swapUsed, context), swapFree.merge(that.swapFree, context))
+    }
+
+    lazy val metrics: Map[MetricIdentity, MetricSnapshot] = Map(
       (Used -> used),
       (Free -> free),
       (Buffer -> buffer),
@@ -55,23 +65,23 @@ object MemoryMetrics extends MetricGroupCategory {
   val Factory = new MetricGroupFactory {
     type GroupRecorder = MemoryMetricRecorder
 
-    def create(config: Config): MemoryMetricRecorder = {
+    def create(config: Config, system: ActorSystem): GroupRecorder = {
       val settings = config.getConfig("precision.memory")
 
-      val used = extractPrecisionConfig(settings.getConfig("used"))
-      val free = extractPrecisionConfig(settings.getConfig("free"))
-      val buffer = extractPrecisionConfig(settings.getConfig("buffer"))
-      val cache = extractPrecisionConfig(settings.getConfig("cache"))
-      val swapUsed = extractPrecisionConfig(settings.getConfig("swap-used"))
-      val swapFree = extractPrecisionConfig(settings.getConfig("swap-free"))
+      val usedConfig = settings.getConfig("used")
+      val freeConfig = settings.getConfig("free")
+      val bufferConfig = settings.getConfig("buffer")
+      val cacheConfig = settings.getConfig("cache")
+      val swapUsedConfig = settings.getConfig("swap-used")
+      val swapFreeConfig = settings.getConfig("swap-free")
 
       new MemoryMetricRecorder(
-        HdrRecorder(used.highestTrackableValue, used.significantValueDigits, Scale.Mega),
-        HdrRecorder(free.highestTrackableValue, free.significantValueDigits, Scale.Mega),
-        HdrRecorder(buffer.highestTrackableValue, buffer.significantValueDigits, Scale.Mega),
-        HdrRecorder(cache.highestTrackableValue, cache.significantValueDigits, Scale.Mega),
-        HdrRecorder(swapUsed.highestTrackableValue, swapUsed.significantValueDigits, Scale.Mega),
-        HdrRecorder(swapFree.highestTrackableValue, swapFree.significantValueDigits, Scale.Mega))
+        Histogram.fromConfig(usedConfig),
+        Histogram.fromConfig(freeConfig),
+        Histogram.fromConfig(bufferConfig),
+        Histogram.fromConfig(cacheConfig),
+        Histogram.fromConfig(swapUsedConfig),
+        Histogram.fromConfig(swapFreeConfig))
     }
   }
 }

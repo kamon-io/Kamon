@@ -15,8 +15,10 @@
  */
 package kamon.metrics
 
+import akka.actor.ActorSystem
 import com.typesafe.config.Config
-import org.HdrHistogram.HdrRecorder
+import kamon.metric.instrument.Histogram
+import kamon.metric._
 
 case class CpuMetrics(name: String) extends MetricGroupIdentity {
   val category = MemoryMetrics
@@ -30,18 +32,27 @@ object CpuMetrics extends MetricGroupCategory {
   case object Wait extends MetricIdentity { val name, tag = "wait" }
   case object Idle extends MetricIdentity { val name, tag = "idle" }
 
-  case class CpuMetricRecorder(user: MetricRecorder, system: MetricRecorder, cpuWait: MetricRecorder, idle: MetricRecorder)
+  case class CpuMetricRecorder(user: Histogram, system: Histogram, cpuWait: Histogram, idle: Histogram)
     extends MetricGroupRecorder {
 
-    def collect: MetricGroupSnapshot = {
-      CpuMetricSnapshot(user.collect(), system.collect(), cpuWait.collect(), idle.collect())
+    def collect(context: CollectionContext): MetricGroupSnapshot = {
+      CpuMetricSnapshot(user.collect(context), system.collect(context), cpuWait.collect(context), idle.collect(context))
     }
+
+    def cleanup: Unit ={}
   }
 
-  case class CpuMetricSnapshot(user: MetricSnapshotLike, system: MetricSnapshotLike, cpuWait: MetricSnapshotLike, idle: MetricSnapshotLike)
+  case class CpuMetricSnapshot(user: Histogram.Snapshot, system: Histogram.Snapshot, cpuWait: Histogram.Snapshot, idle: Histogram.Snapshot)
     extends MetricGroupSnapshot {
 
-    val metrics: Map[MetricIdentity, MetricSnapshotLike] = Map(
+    type GroupSnapshotType = CpuMetricSnapshot
+
+
+    def merge(that: CpuMetricSnapshot, context: CollectionContext): GroupSnapshotType = {
+      CpuMetricSnapshot(user.merge(that.user, context),system.merge(that.system, context),cpuWait.merge(that.cpuWait, context), idle.merge(that.idle, context))
+    }
+
+    lazy val metrics: Map[MetricIdentity, MetricSnapshot] = Map(
       (User -> user),
       (System -> system),
       (Wait -> cpuWait),
@@ -51,19 +62,20 @@ object CpuMetrics extends MetricGroupCategory {
   val Factory = new MetricGroupFactory {
     type GroupRecorder = CpuMetricRecorder
 
-    def create(config: Config): CpuMetricRecorder = {
+
+    def create(config: Config, system: ActorSystem): GroupRecorder = {
       val settings = config.getConfig("precision.cpu")
 
-      val user = extractPrecisionConfig(settings.getConfig("user"))
-      val system = extractPrecisionConfig(settings.getConfig("system"))
-      val cpuWait = extractPrecisionConfig(settings.getConfig("wait"))
-      val idle = extractPrecisionConfig(settings.getConfig("idle"))
+      val userConfig = settings.getConfig("user")
+      val systemConfig = settings.getConfig("system")
+      val cpuWaitConfig = settings.getConfig("wait")
+      val idleConfig = settings.getConfig("idle")
 
       new CpuMetricRecorder(
-        HdrRecorder(user.highestTrackableValue, user.significantValueDigits, Scale.Nano),
-        HdrRecorder(system.highestTrackableValue, system.significantValueDigits, Scale.Nano),
-        HdrRecorder(cpuWait.highestTrackableValue, cpuWait.significantValueDigits, Scale.Nano),
-        HdrRecorder(idle.highestTrackableValue, idle.significantValueDigits, Scale.Nano))
+        Histogram.fromConfig(userConfig),
+        Histogram.fromConfig(systemConfig),
+        Histogram.fromConfig(cpuWaitConfig),
+        Histogram.fromConfig(idleConfig))
     }
   }
 }

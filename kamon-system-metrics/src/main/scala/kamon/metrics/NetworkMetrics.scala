@@ -15,7 +15,10 @@
  */
 package kamon.metrics
 
+import akka.actor.ActorSystem
 import com.typesafe.config.Config
+import kamon.metric.instrument.Histogram
+import kamon.metric._
 import org.HdrHistogram.HdrRecorder
 
 case class NetworkMetrics(name: String) extends MetricGroupIdentity {
@@ -30,18 +33,26 @@ object NetworkMetrics extends MetricGroupCategory {
   case object RxErrors extends MetricIdentity { val name, tag = "rx-errors" }
   case object TxErrors extends MetricIdentity { val name, tag = "tx-errors" }
 
-  case class NetworkMetricRecorder(rxBytes: MetricRecorder, txBytes: MetricRecorder, rxErrors: MetricRecorder, txErrors: MetricRecorder)
+  case class NetworkMetricRecorder(rxBytes: Histogram, txBytes: Histogram, rxErrors: Histogram, txErrors: Histogram)
     extends MetricGroupRecorder {
 
-    def collect: MetricGroupSnapshot = {
-      NetworkMetricSnapshot(rxBytes.collect(), txBytes.collect(), rxErrors.collect(), txErrors.collect())
+    def collect(context: CollectionContext): MetricGroupSnapshot = {
+      NetworkMetricSnapshot(rxBytes.collect(context), txBytes.collect(context), rxErrors.collect(context), txErrors.collect(context))
     }
+
+    def cleanup: Unit = {}
   }
 
-  case class NetworkMetricSnapshot(rxBytes: MetricSnapshotLike, txBytes: MetricSnapshotLike, rxErrors: MetricSnapshotLike, txErrors: MetricSnapshotLike)
+  case class NetworkMetricSnapshot(rxBytes: Histogram.Snapshot, txBytes: Histogram.Snapshot, rxErrors: Histogram.Snapshot, txErrors: Histogram.Snapshot)
     extends MetricGroupSnapshot {
 
-    val metrics: Map[MetricIdentity, MetricSnapshotLike] = Map(
+    type GroupSnapshotType = NetworkMetricSnapshot
+
+    def merge(that: GroupSnapshotType, context: CollectionContext): GroupSnapshotType = {
+      NetworkMetricSnapshot(rxBytes.merge(that.rxBytes, context), txBytes.merge(that.txBytes, context), rxErrors.merge(that.rxErrors, context), txErrors.merge(that.txErrors, context))
+    }
+
+    val metrics: Map[MetricIdentity, MetricSnapshot] = Map(
       (RxBytes -> rxBytes),
       (TxBytes -> txBytes),
       (RxErrors -> rxErrors),
@@ -51,19 +62,19 @@ object NetworkMetrics extends MetricGroupCategory {
   val Factory = new MetricGroupFactory {
     type GroupRecorder = NetworkMetricRecorder
 
-    def create(config: Config): NetworkMetricRecorder = {
+    def create(config: Config, system: ActorSystem): GroupRecorder = {
       val settings = config.getConfig("precision.network")
 
-      val rxBytes = extractPrecisionConfig(settings.getConfig("rxBytes"))
-      val txBytes = extractPrecisionConfig(settings.getConfig("system"))
-      val rxErrors = extractPrecisionConfig(settings.getConfig("wait"))
-      val txErrors = extractPrecisionConfig(settings.getConfig("idle"))
+      val rxBytesConfig = settings.getConfig("rxBytes")
+      val txBytesConfig = settings.getConfig("system")
+      val rxErrorsConfig = settings.getConfig("wait")
+      val txErrorsConfig = settings.getConfig("idle")
 
       new NetworkMetricRecorder(
-        HdrRecorder(rxBytes.highestTrackableValue, rxBytes.significantValueDigits, Scale.Kilo),
-        HdrRecorder(txBytes.highestTrackableValue, txBytes.significantValueDigits, Scale.Kilo),
-        HdrRecorder(rxErrors.highestTrackableValue, rxErrors.significantValueDigits, Scale.Kilo),
-        HdrRecorder(txErrors.highestTrackableValue, txErrors.significantValueDigits, Scale.Kilo))
+        Histogram.fromConfig(rxBytesConfig),
+        Histogram.fromConfig(txBytesConfig),
+        Histogram.fromConfig(rxErrorsConfig),
+        Histogram.fromConfig(txErrorsConfig))
     }
   }
 }
