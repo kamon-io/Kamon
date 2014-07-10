@@ -30,8 +30,19 @@ import java.net.InetSocketAddress
 import com.typesafe.config.ConfigFactory
 
 class DatadogMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers {
-  implicit lazy val system = ActorSystem("datadog-metric-sender-spec",
-    ConfigFactory.parseString("kamon.datadog.max-packet-size = 256 bytes"))
+  implicit lazy val system: ActorSystem = ActorSystem("datadog-metric-sender-spec", ConfigFactory.parseString(
+    """
+      |kamon {
+      |  metrics {
+      |    disable-aspectj-weaver-missing-error = true
+      |  }
+      |
+      |  datadog {
+      |    max-packet-size = 256 bytes
+      |  }
+      |}
+      |
+    """.stripMargin))
 
   val collectionContext = Kamon(Metrics).buildDefaultCollectionContext
 

@@ -70,12 +70,12 @@ class DatadogExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   def buildMetricsListener(tickInterval: Long, flushInterval: Long): ActorRef = {
     assert(flushInterval >= tickInterval, "Datadog flush-interval needs to be equal or greater to the tick-interval")
 
-    val metricsTranslator = system.actorOf(DatadogMetricsSender.props(datadogHost, maxPacketSizeInBytes), "datadog-metrics-sender")
+    val metricsSender = system.actorOf(DatadogMetricsSender.props(datadogHost, maxPacketSizeInBytes), "datadog-metrics-sender")
     if (flushInterval == tickInterval) {
       // No need to buffer the metrics, let's go straight to the metrics sender.
-      metricsTranslator
+      metricsSender
     } else {
-      system.actorOf(TickMetricSnapshotBuffer.props(flushInterval.toInt.millis, metricsTranslator), "datadog-metrics-buffer")
+      system.actorOf(TickMetricSnapshotBuffer.props(flushInterval.toInt.millis, metricsSender), "datadog-metrics-buffer")
     }
   }
 }
