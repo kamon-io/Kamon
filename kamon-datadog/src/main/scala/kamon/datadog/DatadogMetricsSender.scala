@@ -90,8 +90,11 @@ class DatadogMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long
   def buildMetricName(groupIdentity: MetricGroupIdentity, metricIdentity: MetricIdentity): String =
     s"$appName.${groupIdentity.category.name}.${metricIdentity.name}"
 
-  def buildIdentificationTag(groupIdentity: MetricGroupIdentity, metricIdentity: MetricIdentity): String =
-    s"|#${groupIdentity.category.name}:${groupIdentity.name}"
+  def buildIdentificationTag(groupIdentity: MetricGroupIdentity, metricIdentity: MetricIdentity): String = {
+    // Make the automatic HTTP trace names a bit more friendly
+    val normalizedEntityName = groupIdentity.name.replace(": ", ":")
+    s"|#${groupIdentity.category.name}:${normalizedEntityName}"
+  }
 }
 
 object DatadogMetricsSender {
