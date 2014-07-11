@@ -1,15 +1,20 @@
 package kamon.metrics
 
-import kamon.system.native.SigarExtensionProvider
-import org.hyperic.sigar.{Cpu, Mem, NetInterfaceStat, Swap}
+import org.hyperic.sigar._
 
+sealed trait MetricsMeasurement
 
-trait MetricsCollector extends SigarExtensionProvider {
-  def collect: MetricsMeasurement
-}
+case class MemoryMetricsMeasurement(used: Long, free: Long, buffer: Long, cache: Long, swapUsed: Long, swapFree: Long) extends MetricsMeasurement
+case class CpuMetricsMeasurement(user: Long, sys: Long, cpuWait: Long, idle: Long) extends MetricsMeasurement
+case class ProcessCpuMetricsMeasurement(user: Long, sys: Long) extends MetricsMeasurement
+case class NetworkMetricsMeasurement(rxBytes:Long, txBytes:Long, rxErrors:Long, txErrors:Long) extends MetricsMeasurement
 
 object CpuMetricsCollector {
   def collect(cpu:Cpu):CpuMetricsMeasurement = CpuMetricsMeasurement(cpu.getUser, cpu.getSys, cpu.getWait, cpu.getIdle)
+}
+
+object ProcessCpuMetricsCollector {
+  def collect(cpu:ProcCpu):ProcessCpuMetricsMeasurement= ProcessCpuMetricsMeasurement(cpu.getUser, cpu.getSys)
 }
 
 object MemoryMetricsCollector {
@@ -31,20 +36,15 @@ object MemoryMetricsCollector {
    }
 }
 
-
-//http://linoxide.com/monitoring-2/dstat-monitor-linux-performance/
-object NetWorkMetricsCollector extends MetricsCollector {
-  val interfaces = sigar.getNetInterfaceList.toSet
-  val tcp = sigar.getTcp
-
+object NetWorkMetricsCollector {
   var netRxBytes = 0L
   var netTxBytes = 0L
   var netRxErrors = 0L
   var netTxErrors = 0L
 
-  def collect(): MetricsMeasurement = {
+  def collect(sigar:SigarProxy): MetricsMeasurement = {
     for {
-      interface <- interfaces
+      interface <-  sigar.getNetInterfaceList.toSet
       net: NetInterfaceStat <- sigar.getNetInterfaceStat(interface)
     } {
       netRxBytes += net.getRxBytes

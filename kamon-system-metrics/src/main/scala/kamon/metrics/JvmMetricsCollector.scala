@@ -18,7 +18,7 @@ package kamon.metrics
 
 import java.lang.management.ManagementFactory
 
-object JvmMetricsCollector extends MetricsCollector {
+object JvmMetricsCollector {
   val memory = ManagementFactory.getMemoryMXBean
   val heap = memory.getHeapMemoryUsage
   val garbageCollectors = ManagementFactory.getGarbageCollectorMXBeans
@@ -27,7 +27,7 @@ object JvmMetricsCollector extends MetricsCollector {
   val maxHeap = heap.getMax
   val usedHeap = heap.getUsed
 
-  override def collect(): MetricsMeasurement = {
+  def collect(): MetricsMeasurement = {
     import scala.collection.JavaConverters._
 
 //    val (totalCounts, totalTime) = for {

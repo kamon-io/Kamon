@@ -14,21 +14,18 @@
  * =========================================================================================
  */
 
-
 package kamon.system.native
 
-import kamon.metrics.MetricsCollector
-import org.hyperic.sigar.Sigar
-import org.hyperic.sigar.SigarProxy
 import java.io._
-import scalax.io.JavaConverters._
-import scalax.io._
-
-import Resource._
-
-import scalax.file.Path
 import java.util
+
+import org.hyperic.sigar.{Sigar, SigarProxy}
+
 import scala.collection.JavaConversions._
+import scalax.file.Path
+import scalax.io.JavaConverters._
+import scalax.io.Resource._
+import scalax.io._
 
 
 trait SigarExtensionProvider {

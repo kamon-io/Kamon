@@ -18,46 +18,52 @@ package kamon.system
 import akka.actor._
 import akka.event.Logging
 import kamon.Kamon
+import kamon.metric.Metrics
 import kamon.metrics.CpuMetrics.CpuMetricRecorder
+import kamon.metrics.MemoryMetrics.MemoryMetricRecorder
+import kamon.metrics.NetworkMetrics.NetworkMetricRecorder
+import kamon.metrics.ProcessCpuMetrics.ProcessCpuMetricsRecorder
 import kamon.metrics._
 import kamon.system.native.SigarExtensionProvider
-import org.hyperic.sigar.Cpu
+import org.hyperic.sigar._
 
 object SystemMetrics extends ExtensionId[SystemMetricsExtension] with ExtensionIdProvider {
   override def lookup(): ExtensionId[_ <: Extension] = SystemMetrics
-
   override def createExtension(system: ExtendedActorSystem): SystemMetricsExtension = new SystemMetricsExtension(system)
 }
 
 class SystemMetricsExtension(private val system: ExtendedActorSystem) extends Kamon.Extension with SigarExtensionProvider {
   val log = Logging(system, classOf[SystemMetricsExtension])
+  val pid = sigar.getPid
 
-  log.info("Starting the Kamon(SystemMetrics) extension")
+  log.info(s"Starting the Kamon(SystemMetrics) extension with pid: $pid")
 
   val systemMetricsConfig = system.settings.config.getConfig("kamon.system-metrics")
-  val globalCpuUsage = systemMetricsConfig.getBoolean("cpu.global")
-
   val systemMetricsExtension = Kamon(Metrics)(system)
 
-  if (globalCpuUsage) {
-    val globalCpuMetricsRecorder = systemMetricsExtension.register(CpuMetrics("global-cpu-usage"), CpuMetrics.Factory)
-    systemMetricsExtension.scheduleGaugeRecorder {
-      globalCpuMetricsRecorder.map(recordCpuMetrics(sigar.getCpu))
-    }
-  } else {
-    sigar.getCpuList.zipWithIndex.foreach {
-      case (cpu, id) =>
-        val cpuMetricsRecorder = systemMetricsExtension.register(CpuMetrics(s"cpu:$id"), CpuMetrics.Factory)
+  val cpuMetricsRecorder = systemMetricsExtension.register(CpuMetrics("cpu"), CpuMetrics.Factory)
+  val processCpuMetricsRecorder = systemMetricsExtension.register(ProcessCpuMetrics("process-cpu"), ProcessCpuMetrics.Factory)
+  val networkMetricsRecorder = systemMetricsExtension.register(NetworkMetrics("network"), NetworkMetrics.Factory)
+  val memoryMetricsRecorder = systemMetricsExtension.register(MemoryMetrics("memory"), MemoryMetrics.Factory)
 
-        if (cpuMetricsRecorder.isDefined) {
-          systemMetricsExtension.scheduleGaugeRecorder {
-            cpuMetricsRecorder.map(recordCpuMetrics(cpu))
-          }
-        }
-    }
+
+  systemMetricsExtension.scheduleGaugeRecorder {
+    cpuMetricsRecorder.map(recordCpuMetrics(sigar.getCpu))
   }
 
-  def recordCpuMetrics(cpu: Cpu)(recorder: CpuMetricRecorder) = {
+  systemMetricsExtension.scheduleGaugeRecorder {
+    processCpuMetricsRecorder.map(recordProcessCpuMetrics(sigar.getProcCpu(pid)))
+  }
+
+  systemMetricsExtension.scheduleGaugeRecorder {
+    networkMetricsRecorder.map(recordNetworkMetrics(sigar))
+  }
+
+  systemMetricsExtension.scheduleGaugeRecorder {
+    memoryMetricsRecorder.map(recordMemoryMetrics(sigar.getMem)(sigar.getSwap))
+  }
+
+  private[system] def recordCpuMetrics(cpu: Cpu)(recorder: CpuMetricRecorder) = {
     val CpuMetricsMeasurement(user, system, cpuWait, idle) = CpuMetricsCollector.collect(cpu)
 
     recorder.user.record(user)
@@ -66,55 +72,31 @@ class SystemMetricsExtension(private val system: ExtendedActorSystem) extends Ka
     recorder.idle.record(idle)
   }
 
-  sigar.getNetInterfaceList.toSet.foreach {
-    interface =>
-      val networkMetricsRecorder = systemMetricsExtension.register(NetworkMetrics(interface), NetworkMetrics.Factory)
+  private[system] def recordProcessCpuMetrics(cpu: ProcCpu)(recorder: ProcessCpuMetricsRecorder) = {
+    val ProcessCpuMetricsMeasurement(user, system) = ProcessCpuMetricsCollector.collect(cpu)
 
-      if (networkMetricsRecorder.isDefined) {
-        systemMetricsExtension.scheduleGaugeRecorder {
-          networkMetricsRecorder.map {
-            nr =>
-              val NetworkMetricsMeasurement(rxBytes, txBytes, rxErrors, txErrors) = NetWorkMetricsCollector.collect()
-
-              nr.rxBytes.record(rxBytes)
-              nr.txBytes.record(txBytes)
-              nr.rxErrors.record(rxErrors)
-              nr.txErrors.record(txErrors)
-          }
-        }
-      }
-
+    recorder.user.record(user)
+    recorder.system.record(system)
   }
 
-  val memoryMetricsRecorder = systemMetricsExtension.register(MemoryMetrics("system-memory"), MemoryMetrics.Factory)
+  private[system] def recordNetworkMetrics(sigar: SigarProxy)(recorder: NetworkMetricRecorder) = {
+    val NetworkMetricsMeasurement(rxBytes, txBytes, rxErrors, txErrors) = NetWorkMetricsCollector.collect(sigar)
 
-  systemMetricsExtension.scheduleGaugeRecorder {
-
-    memoryMetricsRecorder.map {
-      mr =>
-        val MemoryMetricsMeasurement(used, free, buffer, cache, swapUsed, swapFree) = MemoryMetricsCollector.collect(sigar.getMem, sigar.getSwap)
-
-        mr.used.record(used)
-        mr.free.record(free)
-        mr.buffer.record(buffer)
-        mr.cache.record(cache)
-        mr.swapUsed.record(swapUsed)
-        mr.swapFree.record(swapFree)
-    }
+    recorder.rxBytes.record(rxBytes)
+    recorder.txBytes.record(txBytes)
+    recorder.rxErrors.record(rxErrors)
+    recorder.txErrors.record(txErrors)
   }
 
-  val pid = sigar.getPid
-  val currentProcCpu = sigar.getProcCpu(pid)
+  private[system] def recordMemoryMetrics(mem: Mem)(swap: Swap)(recorder: MemoryMetricRecorder) = {
+    val MemoryMetricsMeasurement(used, free, buffer, cache, swapUsed, swapFree) = MemoryMetricsCollector.collect(mem, swap)
 
-  val currentProcCpuMetricsRecorder = systemMetricsExtension.register(CpuMetrics("proc-cpu"), CpuMetrics.Factory)
-
-  systemMetricsExtension.scheduleGaugeRecorder {
-    currentProcCpuMetricsRecorder.map {
-      pcpu =>
-        pcpu.system.record(currentProcCpu.getSys)
-        pcpu.user.record(currentProcCpu.getUser)
-    }
+    recorder.used.record(used)
+    recorder.free.record(free)
+    recorder.buffer.record(buffer)
+    recorder.cache.record(cache)
+    recorder.swapUsed.record(swapUsed)
+    recorder.swapFree.record(swapFree)
   }
-
 }
 
