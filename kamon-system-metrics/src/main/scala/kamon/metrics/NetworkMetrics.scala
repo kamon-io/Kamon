@@ -33,7 +33,7 @@ object NetworkMetrics extends MetricGroupCategory {
   case object TxErrors extends MetricIdentity { val name, tag = "tx-errors" }
 
   case class NetworkMetricRecorder(rxBytes: Histogram, txBytes: Histogram, rxErrors: Histogram, txErrors: Histogram)
-    extends MetricGroupRecorder {
+      extends MetricGroupRecorder {
 
     def collect(context: CollectionContext): MetricGroupSnapshot = {
       NetworkMetricSnapshot(rxBytes.collect(context), txBytes.collect(context), rxErrors.collect(context), txErrors.collect(context))
@@ -43,7 +43,7 @@ object NetworkMetrics extends MetricGroupCategory {
   }
 
   case class NetworkMetricSnapshot(rxBytes: Histogram.Snapshot, txBytes: Histogram.Snapshot, rxErrors: Histogram.Snapshot, txErrors: Histogram.Snapshot)
-    extends MetricGroupSnapshot {
+      extends MetricGroupSnapshot {
 
     type GroupSnapshotType = NetworkMetricSnapshot
 

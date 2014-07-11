@@ -34,8 +34,8 @@ object MemoryMetrics extends MetricGroupCategory {
   case object SwapUsed extends MetricIdentity { val name, tag = "swap-used" }
   case object SwapFree extends MetricIdentity { val name, tag = "swap-free" }
 
-  case class MemoryMetricRecorder(used: Histogram, free: Histogram, buffer: Histogram, cache: Histogram,swapUsed: Histogram,swapFree: Histogram)
-    extends MetricGroupRecorder {
+  case class MemoryMetricRecorder(used: Histogram, free: Histogram, buffer: Histogram, cache: Histogram, swapUsed: Histogram, swapFree: Histogram)
+      extends MetricGroupRecorder {
 
     def collect(context: CollectionContext): MetricGroupSnapshot = {
       MemoryMetricSnapshot(used.collect(context), free.collect(context), buffer.collect(context), cache.collect(context), swapUsed.collect(context), swapFree.collect(context))
@@ -45,7 +45,7 @@ object MemoryMetrics extends MetricGroupCategory {
   }
 
   case class MemoryMetricSnapshot(used: Histogram.Snapshot, free: Histogram.Snapshot, buffer: Histogram.Snapshot, cache: Histogram.Snapshot, swapUsed: Histogram.Snapshot, swapFree: Histogram.Snapshot)
-    extends MetricGroupSnapshot {
+      extends MetricGroupSnapshot {
 
     type GroupSnapshotType = MemoryMetricSnapshot
 

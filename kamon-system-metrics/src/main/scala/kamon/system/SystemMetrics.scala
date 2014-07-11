@@ -46,7 +46,6 @@ class SystemMetricsExtension(private val system: ExtendedActorSystem) extends Ka
   val networkMetricsRecorder = systemMetricsExtension.register(NetworkMetrics("network"), NetworkMetrics.Factory)
   val memoryMetricsRecorder = systemMetricsExtension.register(MemoryMetrics("memory"), MemoryMetrics.Factory)
 
-
   systemMetricsExtension.scheduleGaugeRecorder {
     cpuMetricsRecorder.map(recordCpuMetrics(sigar.getCpu))
   }

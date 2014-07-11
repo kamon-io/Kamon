@@ -33,23 +33,22 @@ object CpuMetrics extends MetricGroupCategory {
   case object Idle extends MetricIdentity { val name, tag = "idle" }
 
   case class CpuMetricRecorder(user: Histogram, system: Histogram, cpuWait: Histogram, idle: Histogram)
-    extends MetricGroupRecorder {
+      extends MetricGroupRecorder {
 
     def collect(context: CollectionContext): MetricGroupSnapshot = {
       CpuMetricSnapshot(user.collect(context), system.collect(context), cpuWait.collect(context), idle.collect(context))
     }
 
-    def cleanup: Unit ={}
+    def cleanup: Unit = {}
   }
 
   case class CpuMetricSnapshot(user: Histogram.Snapshot, system: Histogram.Snapshot, cpuWait: Histogram.Snapshot, idle: Histogram.Snapshot)
-    extends MetricGroupSnapshot {
+      extends MetricGroupSnapshot {
 
     type GroupSnapshotType = CpuMetricSnapshot
 
-
     def merge(that: CpuMetricSnapshot, context: CollectionContext): GroupSnapshotType = {
-      CpuMetricSnapshot(user.merge(that.user, context),system.merge(that.system, context),cpuWait.merge(that.cpuWait, context), idle.merge(that.idle, context))
+      CpuMetricSnapshot(user.merge(that.user, context), system.merge(that.system, context), cpuWait.merge(that.cpuWait, context), idle.merge(that.idle, context))
     }
 
     lazy val metrics: Map[MetricIdentity, MetricSnapshot] = Map(
@@ -61,7 +60,6 @@ object CpuMetrics extends MetricGroupCategory {
 
   val Factory = new MetricGroupFactory {
     type GroupRecorder = CpuMetricRecorder
-
 
     def create(config: Config, system: ActorSystem): GroupRecorder = {
       val settings = config.getConfig("precision.cpu")

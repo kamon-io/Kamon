@@ -30,11 +30,11 @@ object JvmMetricsCollector {
   def collect(): MetricsMeasurement = {
     import scala.collection.JavaConverters._
 
-//    val (totalCounts, totalTime) = for {
-//      gc ← garbageCollectors.asScala if gc.isValid
-//    } yield {
-//      (gc.getCollectionCount, gc.getCollectionTime)
-//    }
+    //    val (totalCounts, totalTime) = for {
+    //      gc ← garbageCollectors.asScala if gc.isValid
+    //    } yield {
+    //      (gc.getCollectionCount, gc.getCollectionTime)
+    //    }
     null.asInstanceOf[MetricsMeasurement]
   }
 }

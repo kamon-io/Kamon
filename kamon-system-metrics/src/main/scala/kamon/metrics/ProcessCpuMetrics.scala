@@ -31,23 +31,22 @@ object ProcessCpuMetrics extends MetricGroupCategory {
   case object System extends MetricIdentity { val name, tag = "system" }
 
   case class ProcessCpuMetricsRecorder(user: Histogram, system: Histogram)
-    extends MetricGroupRecorder {
+      extends MetricGroupRecorder {
 
     def collect(context: CollectionContext): MetricGroupSnapshot = {
       ProcessCpuMetricsSnapshot(user.collect(context), system.collect(context))
     }
 
-    def cleanup: Unit ={}
+    def cleanup: Unit = {}
   }
 
   case class ProcessCpuMetricsSnapshot(user: Histogram.Snapshot, system: Histogram.Snapshot)
-    extends MetricGroupSnapshot {
+      extends MetricGroupSnapshot {
 
     type GroupSnapshotType = ProcessCpuMetricsSnapshot
 
-
     def merge(that: ProcessCpuMetricsSnapshot, context: CollectionContext): GroupSnapshotType = {
-      ProcessCpuMetricsSnapshot(user.merge(that.user, context),system.merge(that.system, context))
+      ProcessCpuMetricsSnapshot(user.merge(that.user, context), system.merge(that.system, context))
     }
 
     lazy val metrics: Map[MetricIdentity, MetricSnapshot] = Map(
@@ -58,9 +57,8 @@ object ProcessCpuMetrics extends MetricGroupCategory {
   val Factory = new MetricGroupFactory {
     type GroupRecorder = ProcessCpuMetricsRecorder
 
-
     def create(config: Config, system: ActorSystem): GroupRecorder = {
-      val settings = config.getConfig("precision.cpu")
+      val settings = config.getConfig("precision.process.cpu")
 
       val userConfig = settings.getConfig("user")
       val systemConfig = settings.getConfig("system")

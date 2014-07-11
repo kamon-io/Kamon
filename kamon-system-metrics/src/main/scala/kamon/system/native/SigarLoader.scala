@@ -19,14 +19,13 @@ package kamon.system.native
 import java.io._
 import java.util
 
-import org.hyperic.sigar.{Sigar, SigarProxy}
+import org.hyperic.sigar.{ Sigar, SigarProxy }
 
 import scala.collection.JavaConversions._
 import scalax.file.Path
 import scalax.io.JavaConverters._
 import scalax.io.Resource._
 import scalax.io._
-
 
 trait SigarExtensionProvider {
   lazy val sigar = SigarLoader.init
