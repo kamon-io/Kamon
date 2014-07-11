@@ -17,9 +17,8 @@ package kamon.metrics
 
 import akka.actor.ActorSystem
 import com.typesafe.config.Config
-import kamon.metric.instrument.Histogram
 import kamon.metric._
-import org.HdrHistogram.HdrRecorder
+import kamon.metric.instrument.Histogram
 
 case class NetworkMetrics(name: String) extends MetricGroupIdentity {
   val category = NetworkMetrics
