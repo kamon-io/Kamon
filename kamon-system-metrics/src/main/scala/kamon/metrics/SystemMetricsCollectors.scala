@@ -1,6 +1,7 @@
 package kamon.metrics
 
 import org.hyperic.sigar._
+import java.lang.management.{ GarbageCollectorMXBean, ManagementFactory }
 
 sealed trait MetricsMeasurement
 
@@ -8,6 +9,9 @@ case class MemoryMetricsMeasurement(used: Long, free: Long, buffer: Long, cache:
 case class CpuMetricsMeasurement(user: Long, sys: Long, cpuWait: Long, idle: Long) extends MetricsMeasurement
 case class ProcessCpuMetricsMeasurement(user: Long, sys: Long) extends MetricsMeasurement
 case class NetworkMetricsMeasurement(rxBytes: Long, txBytes: Long, rxErrors: Long, txErrors: Long) extends MetricsMeasurement
+
+case class HeapMetricsMeasurement(used: Long, max: Long, committed: Long) extends MetricsMeasurement
+case class GCMetricsMeasurement(count: Long, time: Long) extends MetricsMeasurement
 
 object CpuMetricsCollector {
   def collect(cpu: Cpu): CpuMetricsMeasurement = CpuMetricsMeasurement(cpu.getUser, cpu.getSys, cpu.getWait, cpu.getIdle)
@@ -54,4 +58,19 @@ object NetWorkMetricsCollector {
     }
     NetworkMetricsMeasurement(netRxBytes, netTxBytes, netRxErrors, netTxErrors)
   }
+}
+
+object HeapMetricsCollector {
+  val memory = ManagementFactory.getMemoryMXBean
+  val heap = memory.getHeapMemoryUsage
+
+  def collect(): MetricsMeasurement = HeapMetricsMeasurement(heap.getUsed, heap.getMax, heap.getCommitted)
+}
+
+object GCMetricsCollector {
+  import scala.collection.JavaConverters._
+
+  val garbageCollectors = ManagementFactory.getGarbageCollectorMXBeans.asScala.filter(_.isValid)
+
+  def collect(gc: GarbageCollectorMXBean) = GCMetricsMeasurement(gc.getCollectionCount, gc.getCollectionTime)
 }

@@ -21,7 +21,7 @@ import kamon.metric.instrument.Histogram
 import kamon.metric._
 
 case class CpuMetrics(name: String) extends MetricGroupIdentity {
-  val category = MemoryMetrics
+  val category = CpuMetrics
 }
 
 object CpuMetrics extends MetricGroupCategory {
