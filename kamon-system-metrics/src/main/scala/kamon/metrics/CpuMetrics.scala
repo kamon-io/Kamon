@@ -62,7 +62,7 @@ object CpuMetrics extends MetricGroupCategory {
     type GroupRecorder = CpuMetricRecorder
 
     def create(config: Config, system: ActorSystem): GroupRecorder = {
-      val settings = config.getConfig("precision.cpu")
+      val settings = config.getConfig("precision.system.cpu")
 
       val userConfig = settings.getConfig("user")
       val systemConfig = settings.getConfig("system")

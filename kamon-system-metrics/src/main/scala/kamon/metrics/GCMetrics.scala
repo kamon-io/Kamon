@@ -58,10 +58,10 @@ object GCMetrics extends MetricGroupCategory {
     type GroupRecorder = GCMetricRecorder
 
     def create(config: Config, system: ActorSystem): GroupRecorder = {
-      val settings = config.getConfig("precision.jvm")
+      val settings = config.getConfig("precision.jvm.gc")
 
-      val countConfig = settings.getConfig("gc-count")
-      val timeConfig = settings.getConfig("gc-time")
+      val countConfig = settings.getConfig("count")
+      val timeConfig = settings.getConfig("time")
 
       new GCMetricRecorder(
         Histogram.fromConfig(countConfig),

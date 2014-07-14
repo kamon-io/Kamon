@@ -122,8 +122,7 @@ object HeapMetricsCollector {
     recorder.max.record(max)
     recorder.committed.record(committed)
   }
-
-  def collect(): MetricsMeasurement = HeapMetricsMeasurement(heap.getUsed, heap.getMax, heap.getCommitted)
+  private def collect(): MetricsMeasurement = HeapMetricsMeasurement(heap.getUsed, heap.getMax, heap.getCommitted)
 }
 
 object GCMetricsCollector {
@@ -131,12 +130,11 @@ object GCMetricsCollector {
 
   val garbageCollectors = ManagementFactory.getGarbageCollectorMXBeans.asScala.filter(_.isValid)
 
-  def collect(gc: GarbageCollectorMXBean) = GCMetricsMeasurement(gc.getCollectionCount, gc.getCollectionTime)
-
   def recordGCMetrics(gc: GarbageCollectorMXBean)(recorder: GCMetricRecorder) = {
     val GCMetricsMeasurement(count, time) = GCMetricsCollector.collect(gc)
 
     recorder.count.record(count)
     recorder.time.record(time)
   }
+  private def collect(gc: GarbageCollectorMXBean) = GCMetricsMeasurement(gc.getCollectionCount, gc.getCollectionTime)
 }

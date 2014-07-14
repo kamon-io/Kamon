@@ -60,11 +60,11 @@ object HeapMetrics extends MetricGroupCategory {
     type GroupRecorder = HeapMetricRecorder
 
     def create(config: Config, system: ActorSystem): GroupRecorder = {
-      val settings = config.getConfig("precision.jvm")
+      val settings = config.getConfig("precision.jvm.heap")
 
-      val usedHeapConfig = settings.getConfig("used-heap")
-      val maxHeapConfig = settings.getConfig("max-heap")
-      val committedHeapConfig = settings.getConfig("committed-heap")
+      val usedHeapConfig = settings.getConfig("used")
+      val maxHeapConfig = settings.getConfig("max")
+      val committedHeapConfig = settings.getConfig("committed")
 
       new HeapMetricRecorder(
         Histogram.fromConfig(usedHeapConfig),

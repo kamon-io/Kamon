@@ -66,7 +66,7 @@ object MemoryMetrics extends MetricGroupCategory {
     type GroupRecorder = MemoryMetricRecorder
 
     def create(config: Config, system: ActorSystem): GroupRecorder = {
-      val settings = config.getConfig("precision.memory")
+      val settings = config.getConfig("precision.system.memory")
 
       val usedConfig = settings.getConfig("used")
       val freeConfig = settings.getConfig("free")

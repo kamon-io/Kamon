@@ -62,12 +62,12 @@ object NetworkMetrics extends MetricGroupCategory {
     type GroupRecorder = NetworkMetricRecorder
 
     def create(config: Config, system: ActorSystem): GroupRecorder = {
-      val settings = config.getConfig("precision.network")
+      val settings = config.getConfig("precision.system.network")
 
-      val rxBytesConfig = settings.getConfig("rxBytes")
-      val txBytesConfig = settings.getConfig("system")
-      val rxErrorsConfig = settings.getConfig("wait")
-      val txErrorsConfig = settings.getConfig("idle")
+      val rxBytesConfig = settings.getConfig("rx-bytes")
+      val txBytesConfig = settings.getConfig("tx-bytes")
+      val rxErrorsConfig = settings.getConfig("rx-errors")
+      val txErrorsConfig = settings.getConfig("tx-errors")
 
       new NetworkMetricRecorder(
         Histogram.fromConfig(rxBytesConfig),
