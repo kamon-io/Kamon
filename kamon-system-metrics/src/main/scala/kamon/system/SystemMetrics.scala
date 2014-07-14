@@ -15,21 +15,11 @@
  */
 package kamon.system
 
-import java.lang.management.GarbageCollectorMXBean
-
 import akka.actor._
 import akka.event.Logging
 import kamon.Kamon
 import kamon.metric.Metrics
-import kamon.metrics.CpuMetrics.CpuMetricRecorder
-import kamon.metrics.GCMetrics.GCMetricRecorder
-import kamon.metrics.HeapMetrics.HeapMetricRecorder
-import kamon.metrics.MemoryMetrics.MemoryMetricRecorder
-import kamon.metrics.NetworkMetrics.NetworkMetricRecorder
-import kamon.metrics.ProcessCpuMetrics.ProcessCpuMetricsRecorder
 import kamon.metrics._
-import kamon.system.native.SigarExtensionProvider
-import org.hyperic.sigar._
 
 object SystemMetrics extends ExtensionId[SystemMetricsExtension] with ExtensionIdProvider {
   override def lookup(): ExtensionId[_ <: Extension] = SystemMetrics
@@ -37,86 +27,44 @@ object SystemMetrics extends ExtensionId[SystemMetricsExtension] with ExtensionI
   override def createExtension(system: ExtendedActorSystem): SystemMetricsExtension = new SystemMetricsExtension(system)
 }
 
-class SystemMetricsExtension(private val system: ExtendedActorSystem) extends Kamon.Extension with SigarExtensionProvider {
-  val log = Logging(system, classOf[SystemMetricsExtension])
-  val pid = sigar.getPid //move this
+class SystemMetricsExtension(private val system: ExtendedActorSystem) extends Kamon.Extension {
+  import kamon.system.SystemMetricsExtension._
 
-  log.info(s"Starting the Kamon(SystemMetrics) extension with pid: $pid")
+  val log = Logging(system, classOf[SystemMetricsExtension])
+
+  log.info(s"Starting the Kamon(SystemMetrics) extension")
 
   val systemMetricsConfig = system.settings.config.getConfig("kamon.system-metrics")
   val systemMetricsExtension = Kamon(Metrics)(system)
 
-  val cpuMetricsRecorder = systemMetricsExtension.register(CpuMetrics("cpu"), CpuMetrics.Factory)
-  val processCpuMetricsRecorder = systemMetricsExtension.register(ProcessCpuMetrics("process-cpu"), ProcessCpuMetrics.Factory)
-  val networkMetricsRecorder = systemMetricsExtension.register(NetworkMetrics("network"), NetworkMetrics.Factory)
-  val memoryMetricsRecorder = systemMetricsExtension.register(MemoryMetrics("memory"), MemoryMetrics.Factory)
-  val heapMetricsRecorder = systemMetricsExtension.register(HeapMetrics("heap"), HeapMetrics.Factory)
+  val cpuMetricsRecorder = systemMetricsExtension.register(CpuMetrics(Cpu), CpuMetrics.Factory)
+  val processCpuMetricsRecorder = systemMetricsExtension.register(ProcessCpuMetrics(ProcessCpu), ProcessCpuMetrics.Factory)
+  val networkMetricsRecorder = systemMetricsExtension.register(NetworkMetrics(Network), NetworkMetrics.Factory)
+  val memoryMetricsRecorder = systemMetricsExtension.register(MemoryMetrics(Memory), MemoryMetrics.Factory)
+  val heapMetricsRecorder = systemMetricsExtension.register(HeapMetrics(Heap), HeapMetrics.Factory)
 
   systemMetricsExtension.scheduleGaugeRecorder {
-    cpuMetricsRecorder.map(recordCpuMetrics(sigar.getCpu))
-    processCpuMetricsRecorder.map(recordProcessCpuMetrics(sigar.getProcCpu(pid)))
-    networkMetricsRecorder.map(recordNetworkMetrics(sigar))
-    memoryMetricsRecorder.map(recordMemoryMetrics(sigar.getMem, sigar.getSwap))
-    heapMetricsRecorder.map(recordHeapMetrics)
+    cpuMetricsRecorder.map(CpuMetricsCollector.recordCpuMetrics)
+    processCpuMetricsRecorder.map(ProcessCpuMetricsCollector.recordProcessCpuMetrics)
+    networkMetricsRecorder.map(NetWorkMetricsCollector.recordNetworkMetrics)
+    memoryMetricsRecorder.map(MemoryMetricsCollector.recordMemoryMetrics)
+    heapMetricsRecorder.map(HeapMetricsCollector.recordHeapMetrics)
   }
 
   GCMetricsCollector.garbageCollectors.map { gc ⇒
     val gcMetricsRecorder = systemMetricsExtension.register(GCMetrics(gc.getName), GCMetrics.Factory)
 
     systemMetricsExtension.scheduleGaugeRecorder {
-      gcMetricsRecorder.map(recordGCMetrics(gc))
+      gcMetricsRecorder.map(GCMetricsCollector.recordGCMetrics(gc))
     }
   }
+}
 
-  private[system] def recordGCMetrics(gc: GarbageCollectorMXBean)(recorder: GCMetricRecorder) = {
-    val GCMetricsMeasurement(count, time) = GCMetricsCollector.collect(gc)
-
-    recorder.count.record(count)
-    recorder.time.record(time)
-  }
-
-  private[system] def recordHeapMetrics(recorder: HeapMetricRecorder) = {
-    val HeapMetricsMeasurement(used, max, committed) = HeapMetricsCollector.collect()
-
-    recorder.used.record(used)
-    recorder.max.record(max)
-    recorder.committed.record(committed)
-  }
-
-  private[system] def recordCpuMetrics(cpu: Cpu)(recorder: CpuMetricRecorder) = {
-    val CpuMetricsMeasurement(user, system, cpuWait, idle) = CpuMetricsCollector.collect(cpu)
-
-    recorder.user.record(user)
-    recorder.system.record(system)
-    recorder.cpuWait.record(cpuWait)
-    recorder.idle.record(idle)
-  }
-
-  private[system] def recordProcessCpuMetrics(cpu: ProcCpu)(recorder: ProcessCpuMetricsRecorder) = {
-    val ProcessCpuMetricsMeasurement(user, system) = ProcessCpuMetricsCollector.collect(cpu)
-
-    recorder.user.record(user)
-    recorder.system.record(system)
-  }
-
-  private[system] def recordNetworkMetrics(sigar: SigarProxy)(recorder: NetworkMetricRecorder) = {
-    val NetworkMetricsMeasurement(rxBytes, txBytes, rxErrors, txErrors) = NetWorkMetricsCollector.collect(sigar)
-
-    recorder.rxBytes.record(rxBytes)
-    recorder.txBytes.record(txBytes)
-    recorder.rxErrors.record(rxErrors)
-    recorder.txErrors.record(txErrors)
-  }
-
-  private[system] def recordMemoryMetrics(mem: Mem, swap: Swap)(recorder: MemoryMetricRecorder) = {
-    val MemoryMetricsMeasurement(used, free, buffer, cache, swapUsed, swapFree) = MemoryMetricsCollector.collect(mem, swap)
-
-    recorder.used.record(used)
-    recorder.free.record(free)
-    recorder.buffer.record(buffer)
-    recorder.cache.record(cache)
-    recorder.swapUsed.record(swapUsed)
-    recorder.swapFree.record(swapFree)
-  }
+object SystemMetricsExtension {
+  val Cpu = "cpu"
+  val ProcessCpu= "process-cpu"
+  val Network = "network"
+  val Memory = "memory"
+  val Heap = "heap"
 }
 
