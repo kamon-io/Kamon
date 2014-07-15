@@ -8,7 +8,6 @@ import kamon.metrics.HeapMetrics.HeapMetricRecorder
 import kamon.metrics.MemoryMetrics.MemoryMetricRecorder
 import kamon.metrics.NetworkMetrics.NetworkMetricRecorder
 import kamon.metrics.ProcessCpuMetrics.ProcessCpuMetricsRecorder
-import kamon.system.native.SigarExtensionProvider
 import org.hyperic.sigar._
 
 sealed trait MetricsMeasurement
@@ -20,6 +19,14 @@ case class NetworkMetricsMeasurement(rxBytes: Long, txBytes: Long, rxErrors: Lon
 
 case class HeapMetricsMeasurement(used: Long, max: Long, committed: Long) extends MetricsMeasurement
 case class GCMetricsMeasurement(count: Long, time: Long) extends MetricsMeasurement
+
+trait SigarExtensionProvider {
+  lazy val sigar =  kamon.system.native.SigarLoader.init
+}
+
+trait JMXExtensionProvider {
+  lazy val jmx  = ManagementFactory
+}
 
 object CpuMetricsCollector extends SigarExtensionProvider {
   val cpu = sigar.getCpu
@@ -111,8 +118,8 @@ object NetWorkMetricsCollector extends SigarExtensionProvider {
   }
 }
 
-object HeapMetricsCollector {
-  val memory = ManagementFactory.getMemoryMXBean
+object HeapMetricsCollector extends JMXExtensionProvider{
+  val memory = jmx.getMemoryMXBean
   val heap = memory.getHeapMemoryUsage
 
   def recordHeapMetrics(recorder: HeapMetricRecorder) = {
@@ -125,10 +132,10 @@ object HeapMetricsCollector {
   private def collect(): MetricsMeasurement = HeapMetricsMeasurement(heap.getUsed, heap.getMax, heap.getCommitted)
 }
 
-object GCMetricsCollector {
+object GCMetricsCollector extends JMXExtensionProvider{
   import scala.collection.JavaConverters._
 
-  val garbageCollectors = ManagementFactory.getGarbageCollectorMXBeans.asScala.filter(_.isValid)
+  val garbageCollectors = jmx.getGarbageCollectorMXBeans.asScala.filter(_.isValid)
 
   def recordGCMetrics(gc: GarbageCollectorMXBean)(recorder: GCMetricRecorder) = {
     val GCMetricsMeasurement(count, time) = GCMetricsCollector.collect(gc)
