@@ -1,6 +1,6 @@
 package kamon.metrics
 
-import java.lang.management.{GarbageCollectorMXBean, ManagementFactory}
+import java.lang.management.{ GarbageCollectorMXBean, ManagementFactory }
 
 import kamon.metrics.CpuMetrics.CpuMetricRecorder
 import kamon.metrics.GCMetrics.GCMetricRecorder
@@ -21,11 +21,7 @@ case class HeapMetricsMeasurement(used: Long, max: Long, committed: Long) extend
 case class GCMetricsMeasurement(count: Long, time: Long) extends MetricsMeasurement
 
 trait SigarExtensionProvider {
-  lazy val sigar =  kamon.system.native.SigarLoader.init
-}
-
-trait JMXExtensionProvider {
-  lazy val jmx  = ManagementFactory
+  lazy val sigar = kamon.system.native.SigarLoader.init
 }
 
 object CpuMetricsCollector extends SigarExtensionProvider {
@@ -58,7 +54,6 @@ object ProcessCpuMetricsCollector extends SigarExtensionProvider {
 object MemoryMetricsCollector extends SigarExtensionProvider {
   val mem = sigar.getMem
   val swap = sigar.getSwap
-
 
   def recordMemoryMetrics(recorder: MemoryMetricRecorder) = {
     val MemoryMetricsMeasurement(used, free, buffer, cache, swapUsed, swapFree) = MemoryMetricsCollector.collect(mem, swap)
@@ -118,8 +113,8 @@ object NetWorkMetricsCollector extends SigarExtensionProvider {
   }
 }
 
-object HeapMetricsCollector extends JMXExtensionProvider{
-  val memory = jmx.getMemoryMXBean
+object HeapMetricsCollector {
+  val memory = ManagementFactory.getMemoryMXBean
   val heap = memory.getHeapMemoryUsage
 
   def recordHeapMetrics(recorder: HeapMetricRecorder) = {
@@ -132,10 +127,10 @@ object HeapMetricsCollector extends JMXExtensionProvider{
   private def collect(): MetricsMeasurement = HeapMetricsMeasurement(heap.getUsed, heap.getMax, heap.getCommitted)
 }
 
-object GCMetricsCollector extends JMXExtensionProvider{
+object GCMetricsCollector {
   import scala.collection.JavaConverters._
 
-  val garbageCollectors = jmx.getGarbageCollectorMXBeans.asScala.filter(_.isValid)
+  val garbageCollectors = ManagementFactory.getGarbageCollectorMXBeans.asScala.filter(_.isValid)
 
   def recordGCMetrics(gc: GarbageCollectorMXBean)(recorder: GCMetricRecorder) = {
     val GCMetricsMeasurement(count, time) = GCMetricsCollector.collect(gc)

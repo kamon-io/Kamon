@@ -62,7 +62,7 @@ class SystemMetricsExtension(private val system: ExtendedActorSystem) extends Ka
 
 object SystemMetricsExtension {
   val Cpu = "cpu"
-  val ProcessCpu= "process-cpu"
+  val ProcessCpu = "process-cpu"
   val Network = "network"
   val Memory = "memory"
   val Heap = "heap"

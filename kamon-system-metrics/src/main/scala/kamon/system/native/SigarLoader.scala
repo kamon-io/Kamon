@@ -1,10 +1,10 @@
-package kamon.sigar.native
+package kamon.system.native
 
 import java.io._
 import java.util
-import java.util.{ArrayList, List}
+import java.util.{ ArrayList, List }
 
-import org.hyperic.sigar.{Sigar, SigarProxy}
+import org.hyperic.sigar.{ Sigar, SigarProxy }
 
 import scala.annotation.tailrec
 import scala.collection.JavaConversions._
@@ -22,16 +22,15 @@ object SigarLoader {
 
   private def init(baseTmp: File): SigarProxy = {
     val tmpDir = createTmpDir(baseTmp)
-    for (lib <- loadIndex) copy(lib, tmpDir)
+    for (lib ← loadIndex) copy(lib, tmpDir)
     attachToLibraryPath(tmpDir)
     try {
 
       val sigar = new Sigar
       sigar.getPid
       sigar
-    }
-    catch {
-      case t: Throwable =>
+    } catch {
+      case t: Throwable ⇒
         throw new RuntimeException("Failed to load sigar", t)
     }
   }
@@ -47,14 +46,14 @@ object SigarLoader {
     System.setProperty(JavaLibraryPath, newLibraryPath(dirAbsolute))
     var paths = usrPathField.get(null).asInstanceOf[Array[String]]
     if (paths == null) paths = new Array[String](0)
-    for (path <- paths) if (path == dirAbsolute) return
+    for (path ← paths) if (path == dirAbsolute) return
     val newPaths = util.Arrays.copyOf(paths, paths.length + 1)
     newPaths(newPaths.length - 1) = dirAbsolute
     usrPathField.set(null, newPaths)
   }
 
   private def newLibraryPath(dirAbsolutePath: String): String = {
-    Option(System.getProperty(JavaLibraryPath)).fold(dirAbsolutePath)(oldValue => s"$dirAbsolutePath${File.pathSeparator}$oldValue")
+    Option(System.getProperty(JavaLibraryPath)).fold(dirAbsolutePath)(oldValue ⇒ s"$dirAbsolutePath${File.pathSeparator}$oldValue")
   }
 
   private def copy(lib: String, tmpDir: File) {
@@ -77,14 +76,14 @@ object SigarLoader {
     val libs = new ArrayList[String]()
     val is = classOf[Loader].getResourceAsStream(IndexFile)
 
-    for (line <- Source.fromInputStream(is).getLines()) {
+    for (line ← Source.fromInputStream(is).getLines()) {
       val currentLine = line.trim()
       libs add currentLine
     }
     libs
   }
 
-  private def write(input: InputStream, to: File)  {
+  private def write(input: InputStream, to: File) {
     val out = new FileOutputStream(to)
     try { transfer(input, out) }
     finally { out.close() }
@@ -95,7 +94,7 @@ object SigarLoader {
 
     @tailrec def transfer() {
       val read = input.read(buffer)
-      if(read >= 0) {
+      if (read >= 0) {
         out.write(buffer, 0, read)
         transfer()
       }
