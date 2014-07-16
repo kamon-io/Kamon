@@ -31,7 +31,7 @@ object SigarLoader {
   val Version = "1.6.4"
   val JavaLibraryPath = "java.library.path"
   val TmpDir = "java.io.tmpdir"
-  val IndexFile = "/kamon/sigar/native/index"
+  val IndexFile = "/kamon/system/native/index"
   val UsrPathField = "usr_paths"
 
   def init(): SigarProxy = init(new File(System.getProperty(TmpDir)))
@@ -120,5 +120,4 @@ object SigarLoader {
   }
 
   class Loader private[native]
-
 }

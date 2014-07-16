@@ -19,9 +19,9 @@ import akka.actor.ActorSystem
 import com.typesafe.config.Config
 import kamon.metric._
 import kamon.metric.instrument.Gauge.CurrentValueCollector
-import kamon.metric.instrument.{ Gauge, Histogram }
+import kamon.metric.instrument.{Gauge, Histogram}
 import kamon.system.SigarExtensionProvider
-import org.hyperic.sigar.{ NetInterfaceStat, SigarProxy, Mem }
+import org.hyperic.sigar.{NetInterfaceStat, SigarProxy}
 
 case class NetworkMetrics(name: String) extends MetricGroupIdentity {
   val category = NetworkMetrics

@@ -34,7 +34,6 @@ class SystemMetricsExtension(private val system: ExtendedActorSystem) extends Ka
 
   log.info(s"Starting the Kamon(SystemMetrics) extension")
 
-  val systemMetricsConfig = system.settings.config.getConfig("kamon.system-metrics")
   val systemMetricsExtension = Kamon(Metrics)(system)
 
   val cpuMetricsRecorder = systemMetricsExtension.register(CpuMetrics(Cpu), CpuMetrics.Factory)
