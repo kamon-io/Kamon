@@ -18,7 +18,10 @@ package kamon.metrics
 import akka.actor.ActorSystem
 import com.typesafe.config.Config
 import kamon.metric._
-import kamon.metric.instrument.Histogram
+import kamon.metric.instrument.Gauge.CurrentValueCollector
+import kamon.metric.instrument.{ Gauge, Histogram }
+import kamon.system.SigarExtensionProvider
+import org.hyperic.sigar.Mem
 
 case class MemoryMetrics(name: String) extends MetricGroupIdentity {
   val category = MemoryMetrics
@@ -34,7 +37,7 @@ object MemoryMetrics extends MetricGroupCategory {
   case object SwapUsed extends MetricIdentity { val name, tag = "swap-used" }
   case object SwapFree extends MetricIdentity { val name, tag = "swap-free" }
 
-  case class MemoryMetricRecorder(used: Histogram, free: Histogram, buffer: Histogram, cache: Histogram, swapUsed: Histogram, swapFree: Histogram)
+  case class MemoryMetricRecorder(used: Gauge, free: Gauge, buffer: Gauge, cache: Gauge, swapUsed: Gauge, swapFree: Gauge)
       extends MetricGroupRecorder {
 
     def collect(context: CollectionContext): MetricGroupSnapshot = {
@@ -62,7 +65,10 @@ object MemoryMetrics extends MetricGroupCategory {
       (SwapFree -> swapFree))
   }
 
-  val Factory = new MetricGroupFactory {
+  val Factory = new MetricGroupFactory with SigarExtensionProvider {
+    val mem = sigar.getMem
+    val swap = sigar.getSwap
+
     type GroupRecorder = MemoryMetricRecorder
 
     def create(config: Config, system: ActorSystem): GroupRecorder = {
@@ -76,13 +82,24 @@ object MemoryMetrics extends MetricGroupCategory {
       val swapFreeConfig = settings.getConfig("swap-free")
 
       new MemoryMetricRecorder(
-        Histogram.fromConfig(usedConfig),
-        Histogram.fromConfig(freeConfig),
-        Histogram.fromConfig(bufferConfig),
-        Histogram.fromConfig(cacheConfig),
-        Histogram.fromConfig(swapUsedConfig),
-        Histogram.fromConfig(swapFreeConfig))
+        Gauge.fromConfig(usedConfig, system)(() ⇒ mem.getUsed),
+        Gauge.fromConfig(freeConfig, system)(() ⇒ mem.getFree),
+        Gauge.fromConfig(bufferConfig, system)(() ⇒ swap.getUsed),
+        Gauge.fromConfig(cacheConfig, system)(() ⇒ swap.getFree),
+        Gauge.fromConfig(swapUsedConfig, system)(collectBuffer(mem)),
+        Gauge.fromConfig(swapFreeConfig, system)(collectCache(mem)))
+    }
+
+    private def collectBuffer(mem: Mem) = new CurrentValueCollector {
+      def currentValue: Long = {
+        if (mem.getUsed() != mem.getActualUsed()) mem.getActualUsed() else 0L
+      }
+    }
+
+    private def collectCache(mem: Mem) = new CurrentValueCollector {
+      def currentValue: Long = {
+        if (mem.getFree() != mem.getActualFree()) mem.getActualFree() else 0L
+      }
     }
   }
 }
-

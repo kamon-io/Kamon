@@ -17,8 +17,9 @@ package kamon.metrics
 
 import akka.actor.ActorSystem
 import com.typesafe.config.Config
-import kamon.metric.instrument.Histogram
+import kamon.metric.instrument.{ Gauge, Histogram }
 import kamon.metric._
+import kamon.system.SigarExtensionProvider
 
 case class ProcessCpuMetrics(name: String) extends MetricGroupIdentity {
   val category = ProcessCpuMetrics
@@ -30,7 +31,7 @@ object ProcessCpuMetrics extends MetricGroupCategory {
   case object User extends MetricIdentity { val name, tag = "user" }
   case object System extends MetricIdentity { val name, tag = "system" }
 
-  case class ProcessCpuMetricsRecorder(user: Histogram, system: Histogram)
+  case class ProcessCpuMetricsRecorder(user: Gauge, system: Gauge)
       extends MetricGroupRecorder {
 
     def collect(context: CollectionContext): MetricGroupSnapshot = {
@@ -54,7 +55,10 @@ object ProcessCpuMetrics extends MetricGroupCategory {
       (System -> system))
   }
 
-  val Factory = new MetricGroupFactory {
+  val Factory = new MetricGroupFactory with SigarExtensionProvider {
+    val pid = sigar.getPid
+    val cpu = sigar.getProcCpu(pid)
+
     type GroupRecorder = ProcessCpuMetricsRecorder
 
     def create(config: Config, system: ActorSystem): GroupRecorder = {
@@ -64,8 +68,8 @@ object ProcessCpuMetrics extends MetricGroupCategory {
       val systemConfig = settings.getConfig("system")
 
       new ProcessCpuMetricsRecorder(
-        Histogram.fromConfig(userConfig),
-        Histogram.fromConfig(systemConfig))
+        Gauge.fromConfig(userConfig, system)(() ⇒ cpu.getUser),
+        Gauge.fromConfig(systemConfig, system)(() ⇒ cpu.getSys))
     }
   }
 }

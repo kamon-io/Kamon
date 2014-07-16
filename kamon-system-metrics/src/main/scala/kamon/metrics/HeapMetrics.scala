@@ -15,10 +15,12 @@
  */
 package kamon.metrics
 
+import java.lang.management.ManagementFactory
+
 import akka.actor.ActorSystem
 import com.typesafe.config.Config
 import kamon.metric._
-import kamon.metric.instrument.Histogram
+import kamon.metric.instrument.{ Gauge, Histogram }
 
 case class HeapMetrics(name: String) extends MetricGroupIdentity {
   val category = GCMetrics
@@ -31,7 +33,7 @@ object HeapMetrics extends MetricGroupCategory {
   case object Max extends MetricIdentity { val name, tag = "max-heap" }
   case object Committed extends MetricIdentity { val name, tag = "committed-heap" }
 
-  case class HeapMetricRecorder(used: Histogram, max: Histogram, committed: Histogram)
+  case class HeapMetricRecorder(used: Gauge, max: Gauge, committed: Gauge)
       extends MetricGroupRecorder {
 
     def collect(context: CollectionContext): MetricGroupSnapshot = {
@@ -57,6 +59,10 @@ object HeapMetrics extends MetricGroupCategory {
   }
 
   val Factory = new MetricGroupFactory {
+
+    val memory = ManagementFactory.getMemoryMXBean
+    val heap = memory.getHeapMemoryUsage
+
     type GroupRecorder = HeapMetricRecorder
 
     def create(config: Config, system: ActorSystem): GroupRecorder = {
@@ -67,9 +73,9 @@ object HeapMetrics extends MetricGroupCategory {
       val committedHeapConfig = settings.getConfig("committed")
 
       new HeapMetricRecorder(
-        Histogram.fromConfig(usedHeapConfig),
-        Histogram.fromConfig(maxHeapConfig),
-        Histogram.fromConfig(committedHeapConfig))
+        Gauge.fromConfig(usedHeapConfig, system)(() ⇒ heap.getUsed),
+        Gauge.fromConfig(maxHeapConfig, system)(() ⇒ heap.getMax),
+        Gauge.fromConfig(committedHeapConfig, system)(() ⇒ heap.getCommitted))
     }
   }
 }

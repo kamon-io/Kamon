@@ -43,21 +43,7 @@ class SystemMetricsExtension(private val system: ExtendedActorSystem) extends Ka
   val memoryMetricsRecorder = systemMetricsExtension.register(MemoryMetrics(Memory), MemoryMetrics.Factory)
   val heapMetricsRecorder = systemMetricsExtension.register(HeapMetrics(Heap), HeapMetrics.Factory)
 
-  systemMetricsExtension.scheduleGaugeRecorder {
-    cpuMetricsRecorder.map(CpuMetricsCollector.recordCpuMetrics)
-    processCpuMetricsRecorder.map(ProcessCpuMetricsCollector.recordProcessCpuMetrics)
-    networkMetricsRecorder.map(NetWorkMetricsCollector.recordNetworkMetrics)
-    memoryMetricsRecorder.map(MemoryMetricsCollector.recordMemoryMetrics)
-    heapMetricsRecorder.map(HeapMetricsCollector.recordHeapMetrics)
-  }
-
-  GCMetricsCollector.garbageCollectors.map { gc ⇒
-    val gcMetricsRecorder = systemMetricsExtension.register(GCMetrics(gc.getName), GCMetrics.Factory)
-
-    systemMetricsExtension.scheduleGaugeRecorder {
-      gcMetricsRecorder.map(GCMetricsCollector.recordGCMetrics(gc))
-    }
-  }
+  GCMetrics.garbageCollectors.map { gc ⇒ systemMetricsExtension.register(GCMetrics(gc.getName), GCMetrics.Factory(gc)) }
 }
 
 object SystemMetricsExtension {
@@ -68,3 +54,6 @@ object SystemMetricsExtension {
   val Heap = "heap"
 }
 
+trait SigarExtensionProvider {
+  lazy val sigar = kamon.system.native.SigarLoader.init
+}

@@ -1,3 +1,19 @@
+/*
+ * =========================================================================================
+ * Copyright © 2013-2014 the kamon project <http://kamon.io/>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the specific language governing permissions
+ * and limitations under the License.
+ * =========================================================================================
+ */
+
 package kamon.system.native
 
 import java.io._
@@ -20,28 +36,26 @@ object SigarLoader {
 
   def init(): SigarProxy = init(new File(System.getProperty(TmpDir)))
 
-  private def init(baseTmp: File): SigarProxy = {
+  private[native] def init(baseTmp: File): SigarProxy = {
     val tmpDir = createTmpDir(baseTmp)
     for (lib ← loadIndex) copy(lib, tmpDir)
     attachToLibraryPath(tmpDir)
     try {
-
       val sigar = new Sigar
       sigar.getPid
       sigar
     } catch {
-      case t: Throwable ⇒
-        throw new RuntimeException("Failed to load sigar", t)
+      case t: Throwable ⇒ throw new RuntimeException("Failed to load sigar", t)
     }
   }
 
-  private val usrPathField = {
+  private[native] val usrPathField = {
     val usrPathField = classOf[ClassLoader].getDeclaredField(UsrPathField)
     usrPathField.setAccessible(true)
     usrPathField
   }
 
-  private def attachToLibraryPath(dir: File): Unit = {
+  private[native] def attachToLibraryPath(dir: File): Unit = {
     val dirAbsolute = dir.getAbsolutePath
     System.setProperty(JavaLibraryPath, newLibraryPath(dirAbsolute))
     var paths = usrPathField.get(null).asInstanceOf[Array[String]]
@@ -52,17 +66,17 @@ object SigarLoader {
     usrPathField.set(null, newPaths)
   }
 
-  private def newLibraryPath(dirAbsolutePath: String): String = {
+  private[native] def newLibraryPath(dirAbsolutePath: String): String = {
     Option(System.getProperty(JavaLibraryPath)).fold(dirAbsolutePath)(oldValue ⇒ s"$dirAbsolutePath${File.pathSeparator}$oldValue")
   }
 
-  private def copy(lib: String, tmpDir: File) {
+  private[native] def copy(lib: String, tmpDir: File) {
     val target = new File(tmpDir, lib)
     if (target.exists()) return
     write(classOf[Loader].getResourceAsStream(lib), target)
   }
 
-  private def createTmpDir(baseTmp: File): File = {
+  private[native] def createTmpDir(baseTmp: File): File = {
     val tmpDir = new File(baseTmp, s"sigar-$Version")
     if (!tmpDir.exists()) {
       if (!tmpDir.mkdirs()) throw new RuntimeException(s"Could not create temp sigar directory: ${tmpDir.getAbsolutePath}")
@@ -72,7 +86,7 @@ object SigarLoader {
     tmpDir
   }
 
-  private def loadIndex(): List[String] = {
+  private[native] def loadIndex(): List[String] = {
     val libs = new ArrayList[String]()
     val is = classOf[Loader].getResourceAsStream(IndexFile)
 
@@ -83,13 +97,16 @@ object SigarLoader {
     libs
   }
 
-  private def write(input: InputStream, to: File) {
+  private[native] def write(input: InputStream, to: File) {
     val out = new FileOutputStream(to)
-    try { transfer(input, out) }
-    finally { out.close() }
+    try {
+      transfer(input, out)
+    } finally {
+      out.close()
+    }
   }
 
-  private def transfer(input: InputStream, out: OutputStream) {
+  private[native] def transfer(input: InputStream, out: OutputStream) {
     val buffer = new Array[Byte](8192)
 
     @tailrec def transfer() {
@@ -101,5 +118,7 @@ object SigarLoader {
     }
     transfer()
   }
-  class Loader private
+
+  class Loader private[native]
+
 }

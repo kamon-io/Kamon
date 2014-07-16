@@ -18,7 +18,10 @@ package kamon.metrics
 import akka.actor.ActorSystem
 import com.typesafe.config.Config
 import kamon.metric._
-import kamon.metric.instrument.Histogram
+import kamon.metric.instrument.Gauge.CurrentValueCollector
+import kamon.metric.instrument.{ Gauge, Histogram }
+import kamon.system.SigarExtensionProvider
+import org.hyperic.sigar.{ NetInterfaceStat, SigarProxy, Mem }
 
 case class NetworkMetrics(name: String) extends MetricGroupIdentity {
   val category = NetworkMetrics
@@ -32,7 +35,7 @@ object NetworkMetrics extends MetricGroupCategory {
   case object RxErrors extends MetricIdentity { val name, tag = "rx-errors" }
   case object TxErrors extends MetricIdentity { val name, tag = "tx-errors" }
 
-  case class NetworkMetricRecorder(rxBytes: Histogram, txBytes: Histogram, rxErrors: Histogram, txErrors: Histogram)
+  case class NetworkMetricRecorder(rxBytes: Gauge, txBytes: Gauge, rxErrors: Gauge, txErrors: Gauge)
       extends MetricGroupRecorder {
 
     def collect(context: CollectionContext): MetricGroupSnapshot = {
@@ -58,7 +61,10 @@ object NetworkMetrics extends MetricGroupCategory {
       (TxErrors -> txErrors))
   }
 
-  val Factory = new MetricGroupFactory {
+  val Factory = new MetricGroupFactory with SigarExtensionProvider {
+
+    val interfaces: Set[String] = sigar.getNetInterfaceList.toSet
+
     type GroupRecorder = NetworkMetricRecorder
 
     def create(config: Config, system: ActorSystem): GroupRecorder = {
@@ -70,11 +76,22 @@ object NetworkMetrics extends MetricGroupCategory {
       val txErrorsConfig = settings.getConfig("tx-errors")
 
       new NetworkMetricRecorder(
-        Histogram.fromConfig(rxBytesConfig),
-        Histogram.fromConfig(txBytesConfig),
-        Histogram.fromConfig(rxErrorsConfig),
-        Histogram.fromConfig(txErrorsConfig))
+        Gauge.fromConfig(rxBytesConfig, system)(collect(sigar, interfaces)(net ⇒ net.getRxBytes)),
+        Gauge.fromConfig(txBytesConfig, system)(collect(sigar, interfaces)(net ⇒ net.getTxBytes)),
+        Gauge.fromConfig(rxErrorsConfig, system)(collect(sigar, interfaces)(net ⇒ net.getRxErrors)),
+        Gauge.fromConfig(txErrorsConfig, system)(collect(sigar, interfaces)(net ⇒ net.getTxErrors)))
+    }
+
+    private def collect(sigar: SigarProxy, interfaces: Set[String])(block: NetInterfaceStat ⇒ Long) = new CurrentValueCollector {
+      override def currentValue: Long = {
+        var totalBytes = 0L
+
+        interfaces.foreach { interface ⇒
+          val net = sigar.getNetInterfaceStat(interface)
+          totalBytes += block(net)
+        }
+        totalBytes
+      }
     }
   }
 }
-

@@ -15,22 +15,28 @@
  */
 package kamon.metrics
 
+import java.lang.management.{ GarbageCollectorMXBean, ManagementFactory }
+
 import akka.actor.ActorSystem
 import com.typesafe.config.Config
 import kamon.metric._
-import kamon.metric.instrument.Histogram
+import kamon.metric.instrument.{ Gauge, Histogram }
 
 case class GCMetrics(name: String) extends MetricGroupIdentity {
   val category = GCMetrics
 }
 
 object GCMetrics extends MetricGroupCategory {
+  import scala.collection.JavaConverters._
+
   val name = "gc"
+
+  val garbageCollectors = ManagementFactory.getGarbageCollectorMXBeans.asScala.filter(_.isValid)
 
   case object CollectionCount extends MetricIdentity { val name, tag = "collection-count" }
   case object CollectionTime extends MetricIdentity { val name, tag = "collection-time" }
 
-  case class GCMetricRecorder(count: Histogram, time: Histogram)
+  case class GCMetricRecorder(count: Gauge, time: Gauge)
       extends MetricGroupRecorder {
 
     def collect(context: CollectionContext): MetricGroupSnapshot = {
@@ -54,7 +60,8 @@ object GCMetrics extends MetricGroupCategory {
       (CollectionTime -> time))
   }
 
-  val Factory = new MetricGroupFactory {
+  def Factory(gc: GarbageCollectorMXBean) = new MetricGroupFactory {
+
     type GroupRecorder = GCMetricRecorder
 
     def create(config: Config, system: ActorSystem): GroupRecorder = {
@@ -64,8 +71,8 @@ object GCMetrics extends MetricGroupCategory {
       val timeConfig = settings.getConfig("time")
 
       new GCMetricRecorder(
-        Histogram.fromConfig(countConfig),
-        Histogram.fromConfig(timeConfig))
+        Gauge.fromConfig(countConfig, system)(() ⇒ gc.getCollectionCount),
+        Gauge.fromConfig(timeConfig, system)(() ⇒ gc.getCollectionTime))
     }
   }
 }
