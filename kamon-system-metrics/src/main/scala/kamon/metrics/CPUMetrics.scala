@@ -22,11 +22,11 @@ import kamon.metric._
 import kamon.system.SigarExtensionProvider
 import org.hyperic.sigar.SigarProxy
 
-case class CpuMetrics(name: String) extends MetricGroupIdentity {
-  val category = CpuMetrics
+case class CPUMetrics(name: String) extends MetricGroupIdentity {
+  val category = CPUMetrics
 }
 
-object CpuMetrics extends MetricGroupCategory {
+object CPUMetrics extends MetricGroupCategory {
   val name = "cpu"
 
   case object User extends MetricIdentity { val name, tag = "user" }
@@ -60,7 +60,7 @@ object CpuMetrics extends MetricGroupCategory {
       (Idle -> idle))
   }
 
-  def Factory = new MetricGroupFactory with SigarExtensionProvider {
+  val Factory = new MetricGroupFactory with SigarExtensionProvider {
     val cpu = sigar.getCpu
 
     type GroupRecorder = CpuMetricRecorder

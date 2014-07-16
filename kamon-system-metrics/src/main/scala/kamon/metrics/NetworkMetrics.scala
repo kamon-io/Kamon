@@ -19,9 +19,9 @@ import akka.actor.ActorSystem
 import com.typesafe.config.Config
 import kamon.metric._
 import kamon.metric.instrument.Gauge.CurrentValueCollector
-import kamon.metric.instrument.{Gauge, Histogram}
+import kamon.metric.instrument.{ Gauge, Histogram }
 import kamon.system.SigarExtensionProvider
-import org.hyperic.sigar.{NetInterfaceStat, SigarProxy}
+import org.hyperic.sigar.{ NetInterfaceStat, SigarProxy }
 
 case class NetworkMetrics(name: String) extends MetricGroupIdentity {
   val category = NetworkMetrics
@@ -84,13 +84,12 @@ object NetworkMetrics extends MetricGroupCategory {
 
     private def collect(sigar: SigarProxy, interfaces: Set[String])(block: NetInterfaceStat ⇒ Long) = new CurrentValueCollector {
       override def currentValue: Long = {
-        var totalBytes = 0L
-
-        interfaces.foreach { interface ⇒
-          val net = sigar.getNetInterfaceStat(interface)
-          totalBytes += block(net)
+        interfaces.foldLeft(0L) { (totalBytes, interface) ⇒
+          {
+            val net = sigar.getNetInterfaceStat(interface)
+            totalBytes + block(net)
+          }
         }
-        totalBytes
       }
     }
   }

@@ -36,11 +36,11 @@ class SystemMetricsExtension(private val system: ExtendedActorSystem) extends Ka
 
   val systemMetricsExtension = Kamon(Metrics)(system)
 
-  val cpuMetricsRecorder = systemMetricsExtension.register(CpuMetrics(Cpu), CpuMetrics.Factory)
-  val processCpuMetricsRecorder = systemMetricsExtension.register(ProcessCpuMetrics(ProcessCpu), ProcessCpuMetrics.Factory)
-  val networkMetricsRecorder = systemMetricsExtension.register(NetworkMetrics(Network), NetworkMetrics.Factory)
-  val memoryMetricsRecorder = systemMetricsExtension.register(MemoryMetrics(Memory), MemoryMetrics.Factory)
-  val heapMetricsRecorder = systemMetricsExtension.register(HeapMetrics(Heap), HeapMetrics.Factory)
+  systemMetricsExtension.register(CPUMetrics(Cpu), CPUMetrics.Factory)
+  systemMetricsExtension.register(ProcessCpuMetrics(ProcessCpu), ProcessCpuMetrics.Factory)
+  systemMetricsExtension.register(NetworkMetrics(Network), NetworkMetrics.Factory)
+  systemMetricsExtension.register(MemoryMetrics(Memory), MemoryMetrics.Factory)
+  systemMetricsExtension.register(HeapMetrics(Heap), HeapMetrics.Factory)
 
   GCMetrics.garbageCollectors.map { gc ⇒ systemMetricsExtension.register(GCMetrics(gc.getName), GCMetrics.Factory(gc)) }
 }
