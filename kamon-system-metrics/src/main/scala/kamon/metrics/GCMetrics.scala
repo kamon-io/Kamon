@@ -15,23 +15,19 @@
  */
 package kamon.metrics
 
-import java.lang.management.{ GarbageCollectorMXBean, ManagementFactory }
+import java.lang.management.GarbageCollectorMXBean
 
 import akka.actor.ActorSystem
 import com.typesafe.config.Config
 import kamon.metric._
-import kamon.metric.instrument.{ Gauge, Histogram }
+import kamon.metric.instrument.{Gauge, Histogram}
 
 case class GCMetrics(name: String) extends MetricGroupIdentity {
   val category = GCMetrics
 }
 
 object GCMetrics extends MetricGroupCategory {
-  import scala.collection.JavaConverters._
-
   val name = "gc"
-
-  val garbageCollectors = ManagementFactory.getGarbageCollectorMXBeans.asScala.filter(_.isValid)
 
   case object CollectionCount extends MetricIdentity { val name, tag = "collection-count" }
   case object CollectionTime extends MetricIdentity { val name, tag = "collection-time" }
@@ -72,7 +68,7 @@ object GCMetrics extends MetricGroupCategory {
 
       new GCMetricRecorder(
         Gauge.fromConfig(countConfig, system)(() ⇒ gc.getCollectionCount),
-        Gauge.fromConfig(timeConfig, system)(() ⇒ gc.getCollectionTime))
+        Gauge.fromConfig(timeConfig, system, Scale.Milli)(() ⇒ gc.getCollectionTime))
     }
   }
 }

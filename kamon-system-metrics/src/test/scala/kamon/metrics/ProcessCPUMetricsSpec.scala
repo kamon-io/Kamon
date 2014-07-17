@@ -42,11 +42,11 @@ class ProcessCPUMetricsSpec extends TestKitBase with WordSpecLike with Matchers 
       |  system {
       |     process-cpu {
       |        user {
-      |            highest-trackable-value = 3600000000000
+      |            highest-trackable-value = 999999999
       |            significant-value-digits = 2
       |        }
       |        system {
-      |            highest-trackable-value = 3600000000000
+      |            highest-trackable-value = 999999999
       |            significant-value-digits = 2
       |        }
       |     }

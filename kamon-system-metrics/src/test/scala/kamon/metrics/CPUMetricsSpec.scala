@@ -41,19 +41,19 @@ class CPUMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
       |  system {
       |     cpu {
       |        user {
-      |            highest-trackable-value = 3600000000000
+      |            highest-trackable-value = 999999999
       |            significant-value-digits = 2
       |        }
       |        system {
-      |            highest-trackable-value = 3600000000000
+      |            highest-trackable-value = 999999999
       |            significant-value-digits = 2
       |        }
       |        wait {
-      |            highest-trackable-value = 3600000000000
+      |            highest-trackable-value = 999999999
       |            significant-value-digits = 2
       |        }
       |        idle {
-      |            highest-trackable-value = 3600000000000
+      |            highest-trackable-value = 999999999
       |            significant-value-digits = 2
       |        }
       |     }

@@ -82,8 +82,7 @@ object NetworkMetrics extends MetricGroupCategory {
         Gauge.fromConfig(txErrorsConfig, system)(collect(sigar, interfaces)(net ⇒ net.getTxErrors)))
     }
 
-    private def collect(sigar: SigarProxy, interfaces: Set[String])(block: NetInterfaceStat ⇒ Long) = new CurrentValueCollector {
-      override def currentValue: Long = {
+    private def collect(sigar: SigarProxy, interfaces: Set[String])(block: NetInterfaceStat ⇒ Long) = () => {
         interfaces.foldLeft(0L) { (totalBytes, interface) ⇒
           {
             val net = sigar.getNetInterfaceStat(interface)
@@ -92,5 +91,4 @@ object NetworkMetrics extends MetricGroupCategory {
         }
       }
     }
-  }
 }

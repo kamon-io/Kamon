@@ -34,7 +34,7 @@ object SigarLoader {
   val IndexFile = "/kamon/system/native/index"
   val UsrPathField = "usr_paths"
 
-  def init(): SigarProxy = init(new File(System.getProperty(TmpDir)))
+  lazy val sigarProxy = init(new File(System.getProperty(TmpDir)))
 
   private[native] def init(baseTmp: File): SigarProxy = {
     val tmpDir = createTmpDir(baseTmp)

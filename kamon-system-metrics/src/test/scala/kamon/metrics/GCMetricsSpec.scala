@@ -16,13 +16,14 @@
 package kamon.metrics
 
 import akka.actor.ActorSystem
-import akka.testkit.{TestKitBase, TestProbe}
+import akka.testkit.{ TestKitBase, TestProbe }
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
 import kamon.metric.Metrics
 import kamon.metric.Subscriptions.TickMetricSnapshot
 import kamon.metrics.GCMetrics.GCMetricSnapshot
-import org.scalatest.{Matchers, WordSpecLike}
+import kamon.system.SystemMetricsExtension
+import org.scalatest.{ Matchers, WordSpecLike }
 
 import scala.concurrent.duration._
 
@@ -67,7 +68,7 @@ class GCMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
       listener.expectMsgType[TickMetricSnapshot]
     }
 
-    val gcMetricsOption = tickSnapshot.metrics.get(GCMetrics(GCMetrics.garbageCollectors(0).getName))
+    val gcMetricsOption = tickSnapshot.metrics.get(GCMetrics(SystemMetricsExtension.garbageCollectors(0).getName))
     gcMetricsOption should not be empty
     gcMetricsOption.get.asInstanceOf[GCMetricSnapshot]
   }

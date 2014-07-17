@@ -15,11 +15,15 @@
  */
 package kamon.system
 
+import java.lang.management.ManagementFactory
+
 import akka.actor._
 import akka.event.Logging
 import kamon.Kamon
 import kamon.metric.Metrics
 import kamon.metrics._
+import kamon.system.native.SigarLoader
+import scala.collection.JavaConverters._
 
 object SystemMetrics extends ExtensionId[SystemMetricsExtension] with ExtensionIdProvider {
   override def lookup(): ExtensionId[_ <: Extension] = SystemMetrics
@@ -42,7 +46,7 @@ class SystemMetricsExtension(private val system: ExtendedActorSystem) extends Ka
   systemMetricsExtension.register(MemoryMetrics(Memory), MemoryMetrics.Factory)
   systemMetricsExtension.register(HeapMetrics(Heap), HeapMetrics.Factory)
 
-  GCMetrics.garbageCollectors.map { gc ⇒ systemMetricsExtension.register(GCMetrics(gc.getName), GCMetrics.Factory(gc)) }
+  garbageCollectors.map { gc ⇒ systemMetricsExtension.register(GCMetrics(gc.getName), GCMetrics.Factory(gc)) }
 }
 
 object SystemMetricsExtension {
@@ -51,8 +55,10 @@ object SystemMetricsExtension {
   val Network = "network"
   val Memory = "memory"
   val Heap = "heap"
+
+  val garbageCollectors = ManagementFactory.getGarbageCollectorMXBeans.asScala.filter(_.isValid)
 }
 
 trait SigarExtensionProvider {
-  lazy val sigar = kamon.system.native.SigarLoader.init
+  lazy val sigar = SigarLoader.sigarProxy
 }
