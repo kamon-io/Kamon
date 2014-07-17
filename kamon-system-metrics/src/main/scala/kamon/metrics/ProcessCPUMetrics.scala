@@ -21,33 +21,33 @@ import kamon.metric.instrument.{ Gauge, Histogram }
 import kamon.metric._
 import kamon.system.SigarExtensionProvider
 
-case class ProcessCpuMetrics(name: String) extends MetricGroupIdentity {
-  val category = ProcessCpuMetrics
+case class ProcessCPUMetrics(name: String) extends MetricGroupIdentity {
+  val category = ProcessCPUMetrics
 }
 
-object ProcessCpuMetrics extends MetricGroupCategory {
+object ProcessCPUMetrics extends MetricGroupCategory {
   val name = "proc-cpu"
 
   case object User extends MetricIdentity { val name, tag = "user" }
   case object System extends MetricIdentity { val name, tag = "system" }
 
-  case class ProcessCpuMetricsRecorder(user: Gauge, system: Gauge)
+  case class ProcessCPUMetricsRecorder(user: Gauge, system: Gauge)
       extends MetricGroupRecorder {
 
     def collect(context: CollectionContext): MetricGroupSnapshot = {
-      ProcessCpuMetricsSnapshot(user.collect(context), system.collect(context))
+      ProcessCPUMetricsSnapshot(user.collect(context), system.collect(context))
     }
 
     def cleanup: Unit = {}
   }
 
-  case class ProcessCpuMetricsSnapshot(user: Histogram.Snapshot, system: Histogram.Snapshot)
+  case class ProcessCPUMetricsSnapshot(user: Histogram.Snapshot, system: Histogram.Snapshot)
       extends MetricGroupSnapshot {
 
-    type GroupSnapshotType = ProcessCpuMetricsSnapshot
+    type GroupSnapshotType = ProcessCPUMetricsSnapshot
 
-    def merge(that: ProcessCpuMetricsSnapshot, context: CollectionContext): GroupSnapshotType = {
-      ProcessCpuMetricsSnapshot(user.merge(that.user, context), system.merge(that.system, context))
+    def merge(that: ProcessCPUMetricsSnapshot, context: CollectionContext): GroupSnapshotType = {
+      ProcessCPUMetricsSnapshot(user.merge(that.user, context), system.merge(that.system, context))
     }
 
     lazy val metrics: Map[MetricIdentity, MetricSnapshot] = Map(
@@ -57,9 +57,9 @@ object ProcessCpuMetrics extends MetricGroupCategory {
 
   val Factory = new MetricGroupFactory with SigarExtensionProvider {
     val pid = sigar.getPid
-    val cpu = sigar.getProcCpu(pid)
+    def cpu = sigar.getProcCpu(pid)
 
-    type GroupRecorder = ProcessCpuMetricsRecorder
+    type GroupRecorder = ProcessCPUMetricsRecorder
 
     def create(config: Config, system: ActorSystem): GroupRecorder = {
       val settings = config.getConfig("precision.system.process-cpu")
@@ -67,7 +67,7 @@ object ProcessCpuMetrics extends MetricGroupCategory {
       val userConfig = settings.getConfig("user")
       val systemConfig = settings.getConfig("system")
 
-      new ProcessCpuMetricsRecorder(
+      new ProcessCPUMetricsRecorder(
         Gauge.fromConfig(userConfig, system)(() ⇒ cpu.getUser),
         Gauge.fromConfig(systemConfig, system)(() ⇒ cpu.getSys))
     }

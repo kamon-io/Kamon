@@ -23,7 +23,7 @@ import kamon.metric._
 import kamon.metric.instrument.{ Gauge, Histogram }
 
 case class HeapMetrics(name: String) extends MetricGroupIdentity {
-  val category = GCMetrics
+  val category = HeapMetrics
 }
 
 object HeapMetrics extends MetricGroupCategory {
@@ -61,7 +61,7 @@ object HeapMetrics extends MetricGroupCategory {
   val Factory = new MetricGroupFactory {
 
     val memory = ManagementFactory.getMemoryMXBean
-    val heap = memory.getHeapMemoryUsage
+    def heap = memory.getHeapMemoryUsage
 
     type GroupRecorder = HeapMetricRecorder
 

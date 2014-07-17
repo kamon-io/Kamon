@@ -66,8 +66,8 @@ object MemoryMetrics extends MetricGroupCategory {
   }
 
   val Factory = new MetricGroupFactory with SigarExtensionProvider {
-    val mem = sigar.getMem
-    val swap = sigar.getSwap
+    def mem = sigar.getMem
+    def swap = sigar.getSwap
 
     type GroupRecorder = MemoryMetricRecorder
 

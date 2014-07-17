@@ -36,8 +36,8 @@ class SystemMetricsExtension(private val system: ExtendedActorSystem) extends Ka
 
   val systemMetricsExtension = Kamon(Metrics)(system)
 
-  systemMetricsExtension.register(CPUMetrics(Cpu), CPUMetrics.Factory)
-  systemMetricsExtension.register(ProcessCpuMetrics(ProcessCpu), ProcessCpuMetrics.Factory)
+  systemMetricsExtension.register(CPUMetrics(CPU), CPUMetrics.Factory)
+  systemMetricsExtension.register(ProcessCPUMetrics(ProcessCPU), ProcessCPUMetrics.Factory)
   systemMetricsExtension.register(NetworkMetrics(Network), NetworkMetrics.Factory)
   systemMetricsExtension.register(MemoryMetrics(Memory), MemoryMetrics.Factory)
   systemMetricsExtension.register(HeapMetrics(Heap), HeapMetrics.Factory)
@@ -46,8 +46,8 @@ class SystemMetricsExtension(private val system: ExtendedActorSystem) extends Ka
 }
 
 object SystemMetricsExtension {
-  val Cpu = "cpu"
-  val ProcessCpu = "process-cpu"
+  val CPU = "cpu"
+  val ProcessCPU = "process-cpu"
   val Network = "network"
   val Memory = "memory"
   val Heap = "heap"

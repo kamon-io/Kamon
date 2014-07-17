@@ -85,12 +85,14 @@ object Projects extends Build {
     .settings(formatSettings: _*)
     .settings(libraryDependencies ++= compile(akkaActor) ++  test(scalatest, akkaTestKit, slf4Api, slf4nop))
     .dependsOn(kamonCore)
+    .dependsOn(kamonSystemMetrics % "provided")
  
   lazy val kamonDatadog = Project("kamon-datadog", file("kamon-datadog"))
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
-    .settings(libraryDependencies ++= compile(akkaActor) ++  test(scalatest, akkaTestKit, slf4Api, slf4nop))
+    .settings(libraryDependencies ++= compile(akkaActor) ++ test(scalatest, akkaTestKit, slf4Api, slf4nop))
     .dependsOn(kamonCore)
+    .dependsOn(kamonSystemMetrics % "provided")
 
   lazy val kamonMacros = Project("kamon-macros", file("kamon-macros"))
     .settings(basicSettings: _*)
@@ -101,7 +103,7 @@ object Projects extends Build {
   lazy val kamonSystemMetrics = Project("kamon-system-metrics", file("kamon-system-metrics"))
       .settings(basicSettings: _*)
       .settings(formatSettings: _*)
-      .settings(libraryDependencies ++= compile(sigar) ++ test(scalatest, slf4Api, slf4nop))
+      .settings(libraryDependencies ++= compile(sigar) ++ test(scalatest, akkaTestKit, slf4Api, slf4nop))
       .dependsOn(kamonCore)
 
   val noPublishing = Seq(publish := (), publishLocal := (), publishArtifact := false)
