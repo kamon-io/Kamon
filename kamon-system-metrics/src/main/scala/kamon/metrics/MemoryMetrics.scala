@@ -90,16 +90,7 @@ object MemoryMetrics extends MetricGroupCategory {
         Gauge.fromConfig(swapFreeConfig, system)(collectCache(mem)))
     }
 
-    private def collectBuffer(mem: Mem) = new CurrentValueCollector {
-      def currentValue: Long = {
-        if (mem.getUsed() != mem.getActualUsed()) mem.getActualUsed() else 0L
-      }
-    }
-
-    private def collectCache(mem: Mem) = new CurrentValueCollector {
-      def currentValue: Long = {
-        if (mem.getFree() != mem.getActualFree()) mem.getActualFree() else 0L
-      }
-    }
+    private def collectBuffer(mem: Mem) = () => if (mem.getUsed() != mem.getActualUsed()) mem.getActualUsed() else 0L
+    private def collectCache(mem: Mem) = () =>  if (mem.getFree() != mem.getActualFree()) mem.getActualFree() else 0L
   }
 }
