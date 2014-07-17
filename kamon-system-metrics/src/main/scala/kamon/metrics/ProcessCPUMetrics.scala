@@ -28,8 +28,8 @@ case class ProcessCPUMetrics(name: String) extends MetricGroupIdentity {
 object ProcessCPUMetrics extends MetricGroupCategory {
   val name = "proc-cpu"
 
-  case object User extends MetricIdentity { val name, tag = "user" }
-  case object System extends MetricIdentity { val name, tag = "system" }
+  case object User extends MetricIdentity { val name = "user" }
+  case object System extends MetricIdentity { val name = "system" }
 
   case class ProcessCPUMetricsRecorder(user: Gauge, system: Gauge)
       extends MetricGroupRecorder {
@@ -51,12 +51,12 @@ object ProcessCPUMetrics extends MetricGroupCategory {
     }
 
     lazy val metrics: Map[MetricIdentity, MetricSnapshot] = Map(
-      (User -> user),
-      (System -> system))
+      User -> user,
+      System -> system)
   }
 
   val Factory = new MetricGroupFactory with SigarExtensionProvider {
-    val pid = sigar.getPid
+    def pid = sigar.getPid
     def cpu = sigar.getProcCpu(pid)
 
     type GroupRecorder = ProcessCPUMetricsRecorder

@@ -20,7 +20,7 @@ import java.lang.management.GarbageCollectorMXBean
 import akka.actor.ActorSystem
 import com.typesafe.config.Config
 import kamon.metric._
-import kamon.metric.instrument.{Gauge, Histogram}
+import kamon.metric.instrument.{ Gauge, Histogram }
 
 case class GCMetrics(name: String) extends MetricGroupIdentity {
   val category = GCMetrics
@@ -29,8 +29,8 @@ case class GCMetrics(name: String) extends MetricGroupIdentity {
 object GCMetrics extends MetricGroupCategory {
   val name = "gc"
 
-  case object CollectionCount extends MetricIdentity { val name, tag = "collection-count" }
-  case object CollectionTime extends MetricIdentity { val name, tag = "collection-time" }
+  case object CollectionCount extends MetricIdentity { val name = "collection-count" }
+  case object CollectionTime extends MetricIdentity { val name = "collection-time" }
 
   case class GCMetricRecorder(count: Gauge, time: Gauge)
       extends MetricGroupRecorder {
@@ -52,8 +52,8 @@ object GCMetrics extends MetricGroupCategory {
     }
 
     lazy val metrics: Map[MetricIdentity, MetricSnapshot] = Map(
-      (CollectionCount -> count),
-      (CollectionTime -> time))
+      CollectionCount -> count,
+      CollectionTime -> time)
   }
 
   def Factory(gc: GarbageCollectorMXBean) = new MetricGroupFactory {

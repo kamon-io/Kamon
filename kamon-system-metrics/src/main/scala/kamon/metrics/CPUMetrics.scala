@@ -29,10 +29,10 @@ case class CPUMetrics(name: String) extends MetricGroupIdentity {
 object CPUMetrics extends MetricGroupCategory {
   val name = "cpu"
 
-  case object User extends MetricIdentity { val name, tag = "user" }
-  case object System extends MetricIdentity { val name, tag = "system" }
-  case object Wait extends MetricIdentity { val name, tag = "wait" }
-  case object Idle extends MetricIdentity { val name, tag = "idle" }
+  case object User extends MetricIdentity { val name = "user" }
+  case object System extends MetricIdentity { val name = "system" }
+  case object Wait extends MetricIdentity { val name = "wait" }
+  case object Idle extends MetricIdentity { val name = "idle" }
 
   case class CPUMetricRecorder(user: Gauge, system: Gauge, cpuWait: Gauge, idle: Gauge)
       extends MetricGroupRecorder {
@@ -54,10 +54,10 @@ object CPUMetrics extends MetricGroupCategory {
     }
 
     lazy val metrics: Map[MetricIdentity, MetricSnapshot] = Map(
-      (User -> user),
-      (System -> system),
-      (Wait -> cpuWait),
-      (Idle -> idle))
+      User -> user,
+      System -> system,
+      Wait -> cpuWait,
+      Idle -> idle)
   }
 
   val Factory = new MetricGroupFactory with SigarExtensionProvider {

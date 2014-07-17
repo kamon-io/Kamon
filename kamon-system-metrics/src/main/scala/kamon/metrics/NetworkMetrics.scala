@@ -30,10 +30,10 @@ case class NetworkMetrics(name: String) extends MetricGroupIdentity {
 object NetworkMetrics extends MetricGroupCategory {
   val name = "network"
 
-  case object RxBytes extends MetricIdentity { val name, tag = "rx-bytes" }
-  case object TxBytes extends MetricIdentity { val name, tag = "tx-bytes" }
-  case object RxErrors extends MetricIdentity { val name, tag = "rx-errors" }
-  case object TxErrors extends MetricIdentity { val name, tag = "tx-errors" }
+  case object RxBytes extends MetricIdentity { val name = "rx-bytes" }
+  case object TxBytes extends MetricIdentity { val name = "tx-bytes" }
+  case object RxErrors extends MetricIdentity { val name = "rx-errors" }
+  case object TxErrors extends MetricIdentity { val name = "tx-errors" }
 
   case class NetworkMetricRecorder(rxBytes: Gauge, txBytes: Gauge, rxErrors: Gauge, txErrors: Gauge)
       extends MetricGroupRecorder {
@@ -55,10 +55,10 @@ object NetworkMetrics extends MetricGroupCategory {
     }
 
     val metrics: Map[MetricIdentity, MetricSnapshot] = Map(
-      (RxBytes -> rxBytes),
-      (TxBytes -> txBytes),
-      (RxErrors -> rxErrors),
-      (TxErrors -> txErrors))
+      RxBytes -> rxBytes,
+      TxBytes -> txBytes,
+      RxErrors -> rxErrors,
+      TxErrors -> txErrors)
   }
 
   val Factory = new MetricGroupFactory with SigarExtensionProvider {
@@ -82,13 +82,13 @@ object NetworkMetrics extends MetricGroupCategory {
         Gauge.fromConfig(txErrorsConfig, system)(collect(sigar, interfaces)(net ⇒ net.getTxErrors)))
     }
 
-    private def collect(sigar: SigarProxy, interfaces: Set[String])(block: NetInterfaceStat ⇒ Long) = () => {
-        interfaces.foldLeft(0L) { (totalBytes, interface) ⇒
-          {
-            val net = sigar.getNetInterfaceStat(interface)
-            totalBytes + block(net)
-          }
+    private def collect(sigar: SigarProxy, interfaces: Set[String])(block: NetInterfaceStat ⇒ Long) = () ⇒ {
+      interfaces.foldLeft(0L) { (totalBytes, interface) ⇒
+        {
+          val net = sigar.getNetInterfaceStat(interface)
+          totalBytes + block(net)
         }
       }
     }
+  }
 }

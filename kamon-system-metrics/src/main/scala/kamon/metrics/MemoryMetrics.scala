@@ -30,12 +30,12 @@ case class MemoryMetrics(name: String) extends MetricGroupIdentity {
 object MemoryMetrics extends MetricGroupCategory {
   val name = "memory"
 
-  case object Used extends MetricIdentity { val name, tag = "used" }
-  case object Free extends MetricIdentity { val name, tag = "free" }
-  case object Buffer extends MetricIdentity { val name, tag = "buffer" }
-  case object Cache extends MetricIdentity { val name, tag = "cache" }
-  case object SwapUsed extends MetricIdentity { val name, tag = "swap-used" }
-  case object SwapFree extends MetricIdentity { val name, tag = "swap-free" }
+  case object Used extends MetricIdentity { val name = "used" }
+  case object Free extends MetricIdentity { val name = "free" }
+  case object Buffer extends MetricIdentity { val name = "buffer" }
+  case object Cache extends MetricIdentity { val name = "cache" }
+  case object SwapUsed extends MetricIdentity { val name = "swap-used" }
+  case object SwapFree extends MetricIdentity { val name = "swap-free" }
 
   case class MemoryMetricRecorder(used: Gauge, free: Gauge, buffer: Gauge, cache: Gauge, swapUsed: Gauge, swapFree: Gauge)
       extends MetricGroupRecorder {
@@ -57,12 +57,12 @@ object MemoryMetrics extends MetricGroupCategory {
     }
 
     lazy val metrics: Map[MetricIdentity, MetricSnapshot] = Map(
-      (Used -> used),
-      (Free -> free),
-      (Buffer -> buffer),
-      (Cache -> cache),
-      (SwapUsed -> swapUsed),
-      (SwapFree -> swapFree))
+      Used -> used,
+      Free -> free,
+      Buffer -> buffer,
+      Cache -> cache,
+      SwapUsed -> swapUsed,
+      SwapFree -> swapFree)
   }
 
   val Factory = new MetricGroupFactory with SigarExtensionProvider {
@@ -90,7 +90,7 @@ object MemoryMetrics extends MetricGroupCategory {
         Gauge.fromConfig(swapFreeConfig, system)(collectCache(mem)))
     }
 
-    private def collectBuffer(mem: Mem) = () => if (mem.getUsed() != mem.getActualUsed()) mem.getActualUsed() else 0L
-    private def collectCache(mem: Mem) = () =>  if (mem.getFree() != mem.getActualFree()) mem.getActualFree() else 0L
+    private def collectBuffer(mem: Mem) = () ⇒ if (mem.getUsed() != mem.getActualUsed()) mem.getActualUsed() else 0L
+    private def collectCache(mem: Mem) = () ⇒ if (mem.getFree() != mem.getActualFree()) mem.getActualFree() else 0L
   }
 }

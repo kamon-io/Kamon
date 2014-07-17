@@ -29,9 +29,9 @@ case class HeapMetrics(name: String) extends MetricGroupIdentity {
 object HeapMetrics extends MetricGroupCategory {
   val name = "heap"
 
-  case object Used extends MetricIdentity { val name, tag = "used-heap" }
-  case object Max extends MetricIdentity { val name, tag = "max-heap" }
-  case object Committed extends MetricIdentity { val name, tag = "committed-heap" }
+  case object Used extends MetricIdentity { val name = "used-heap" }
+  case object Max extends MetricIdentity { val name = "max-heap" }
+  case object Committed extends MetricIdentity { val name = "committed-heap" }
 
   case class HeapMetricRecorder(used: Gauge, max: Gauge, committed: Gauge)
       extends MetricGroupRecorder {
@@ -53,9 +53,9 @@ object HeapMetrics extends MetricGroupCategory {
     }
 
     lazy val metrics: Map[MetricIdentity, MetricSnapshot] = Map(
-      (Used -> used),
-      (Max -> max),
-      (Committed -> committed))
+      Used -> used,
+      Max -> max,
+      Committed -> committed)
   }
 
   val Factory = new MetricGroupFactory {

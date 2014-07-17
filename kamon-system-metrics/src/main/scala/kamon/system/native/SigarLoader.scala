@@ -20,7 +20,7 @@ import java.io._
 import java.util
 import java.util.{ ArrayList, List }
 
-import org.hyperic.sigar.{ Sigar, SigarProxy }
+import org.hyperic.sigar.{ SigarProxy, SigarProxyCache }
 
 import scala.annotation.tailrec
 import scala.collection.JavaConversions._
@@ -34,14 +34,14 @@ object SigarLoader {
   val IndexFile = "/kamon/system/native/index"
   val UsrPathField = "usr_paths"
 
-  lazy val sigarProxy = init(new File(System.getProperty(TmpDir)))
+  def sigarProxy = init(new File(System.getProperty(TmpDir)))
 
   private[native] def init(baseTmp: File): SigarProxy = {
     val tmpDir = createTmpDir(baseTmp)
     for (lib ← loadIndex) copy(lib, tmpDir)
     attachToLibraryPath(tmpDir)
     try {
-      val sigar = new Sigar
+      val sigar = SigarProxyCache.newInstance()
       sigar.getPid
       sigar
     } catch {
