@@ -50,10 +50,10 @@ object SigarLoader {
       sigar.getPid
       sigar
     } catch {
-        case t: Throwable ⇒ {
-          log.severe("Failed to load sigar")
-          throw new RuntimeException(t)
-        }
+      case t: Throwable ⇒ {
+        log.severe("Failed to load sigar")
+        throw new RuntimeException(t)
+      }
     }
   }
 

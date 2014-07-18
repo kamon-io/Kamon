@@ -60,5 +60,5 @@ object SystemMetricsExtension {
 }
 
 trait SigarExtensionProvider {
-  val sigar = SigarLoader.sigarProxy
+  lazy val sigar = SigarLoader.sigarProxy
 }
