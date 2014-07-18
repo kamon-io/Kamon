@@ -18,6 +18,7 @@ package kamon.system.native
 
 import java.io._
 import java.util
+import java.util.logging.Logger
 import java.util.{ ArrayList, List }
 
 import org.hyperic.sigar.{ SigarProxy, SigarProxyCache }
@@ -34,18 +35,25 @@ object SigarLoader {
   val IndexFile = "/kamon/system/native/index"
   val UsrPathField = "usr_paths"
 
+  private val log = Logger.getLogger("SigarLoader")
+
   def sigarProxy = init(new File(System.getProperty(TmpDir)))
 
   private[native] def init(baseTmp: File): SigarProxy = {
     val tmpDir = createTmpDir(baseTmp)
     for (lib ← loadIndex) copy(lib, tmpDir)
+
     attachToLibraryPath(tmpDir)
+
     try {
       val sigar = SigarProxyCache.newInstance()
       sigar.getPid
       sigar
     } catch {
-      case t: Throwable ⇒ throw new RuntimeException("Failed to load sigar", t)
+        case t: Throwable ⇒ {
+          log.severe("Failed to load sigar")
+          throw new RuntimeException(t)
+        }
     }
   }
 
