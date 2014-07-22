@@ -17,10 +17,9 @@ package kamon.metrics
 
 import akka.actor.ActorSystem
 import com.typesafe.config.Config
-import kamon.metric.instrument.{ Gauge, Histogram }
 import kamon.metric._
+import kamon.metric.instrument.{Gauge, Histogram}
 import kamon.system.SigarExtensionProvider
-import org.hyperic.sigar.SigarProxy
 
 case class CPUMetrics(name: String) extends MetricGroupIdentity {
   val category = CPUMetrics
@@ -61,6 +60,7 @@ object CPUMetrics extends MetricGroupCategory {
   }
 
   val Factory = new MetricGroupFactory with SigarExtensionProvider {
+
     def cpu = sigar.getCpu
 
     type GroupRecorder = CPUMetricRecorder

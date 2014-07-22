@@ -21,7 +21,8 @@ import java.util
 import java.util.logging.Logger
 import java.util.{ ArrayList, List }
 
-import org.hyperic.sigar.{ SigarProxy, SigarProxyCache }
+import kamon.system.SynchronizedSigar
+import org.hyperic.sigar.SigarProxy
 
 import scala.annotation.tailrec
 import scala.collection.JavaConversions._
@@ -37,7 +38,7 @@ object SigarLoader {
 
   private val log = Logger.getLogger("SigarLoader")
 
-  def sigarProxy = init(new File(System.getProperty(TmpDir)))
+  lazy val sigarProxy = init(new File(System.getProperty(TmpDir)))
 
   private[native] def init(baseTmp: File): SigarProxy = {
     val tmpDir = createTmpDir(baseTmp)
@@ -46,7 +47,7 @@ object SigarLoader {
     attachToLibraryPath(tmpDir)
 
     try {
-      val sigar = SigarProxyCache.newInstance()
+      val sigar = new SynchronizedSigar()
       sigar.getPid
       sigar
     } catch {
