@@ -82,12 +82,12 @@ object MemoryMetrics extends MetricGroupCategory {
       val swapFreeConfig = settings.getConfig("swap-free")
 
       new MemoryMetricRecorder(
-        Gauge.fromConfig(usedConfig, system)(() ⇒ mem.getUsed),
-        Gauge.fromConfig(freeConfig, system)(() ⇒ mem.getFree),
-        Gauge.fromConfig(bufferConfig, system)(() ⇒ swap.getUsed),
-        Gauge.fromConfig(cacheConfig, system)(() ⇒ swap.getFree),
-        Gauge.fromConfig(swapUsedConfig, system)(collectBuffer(mem)),
-        Gauge.fromConfig(swapFreeConfig, system)(collectCache(mem)))
+        Gauge.fromConfig(usedConfig, system, Scale.Kilo)(() ⇒ mem.getUsed),
+        Gauge.fromConfig(freeConfig, system, Scale.Kilo)(() ⇒ mem.getFree),
+        Gauge.fromConfig(bufferConfig, system, Scale.Kilo)(() ⇒ swap.getUsed),
+        Gauge.fromConfig(cacheConfig, system, Scale.Kilo)(() ⇒ swap.getFree),
+        Gauge.fromConfig(swapUsedConfig, system, Scale.Kilo)(collectBuffer(mem)),
+        Gauge.fromConfig(swapFreeConfig, system, Scale.Kilo)(collectCache(mem)))
     }
 
     private def collectBuffer(mem: Mem) = () ⇒ if (mem.getUsed() != mem.getActualUsed()) mem.getActualUsed() else 0L
