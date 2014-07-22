@@ -76,8 +76,8 @@ object NetworkMetrics extends MetricGroupCategory {
       val txErrorsConfig = settings.getConfig("tx-errors")
 
       new NetworkMetricRecorder(
-        Gauge.fromConfig(rxBytesConfig, system)(collect(sigar, interfaces)(net ⇒ net.getRxBytes)),
-        Gauge.fromConfig(txBytesConfig, system)(collect(sigar, interfaces)(net ⇒ net.getTxBytes)),
+        Gauge.fromConfig(rxBytesConfig, system, Scale.Kilo)(collect(sigar, interfaces)(net ⇒ net.getRxBytes)),
+        Gauge.fromConfig(txBytesConfig, system, Scale.Kilo)(collect(sigar, interfaces)(net ⇒ net.getTxBytes)),
         Gauge.fromConfig(rxErrorsConfig, system)(collect(sigar, interfaces)(net ⇒ net.getRxErrors)),
         Gauge.fromConfig(txErrorsConfig, system)(collect(sigar, interfaces)(net ⇒ net.getTxErrors)))
     }
