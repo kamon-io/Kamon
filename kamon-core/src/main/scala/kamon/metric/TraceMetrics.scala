@@ -54,7 +54,7 @@ object TraceMetrics extends MetricGroupCategory {
     type GroupSnapshotType = TraceMetricsSnapshot
 
     def merge(that: TraceMetricsSnapshot, context: CollectionContext): TraceMetricsSnapshot =
-      TraceMetricsSnapshot(elapsedTime.merge(that.elapsedTime, context), Map.empty)
+      TraceMetricsSnapshot(elapsedTime.merge(that.elapsedTime, context), Map.empty) // TODO: Merge the segments metrics correctly and test it!
 
     def metrics: Map[MetricIdentity, MetricSnapshot] = segments + (ElapsedTime -> elapsedTime)
   }

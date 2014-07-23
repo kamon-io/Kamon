@@ -30,10 +30,10 @@ import com.typesafe.config.ConfigFactory
 import kamon.metric.TraceMetrics.ElapsedTime
 import kamon.metric.instrument.Histogram
 
-class ServerRequestInstrumentationSpec extends TestKitBase with WordSpecLike with Matchers with RequestBuilding
+class SprayServerTracingSpec extends TestKitBase with WordSpecLike with Matchers with RequestBuilding
     with ScalaFutures with PatienceConfiguration with TestServer {
 
-  implicit lazy val system: ActorSystem = ActorSystem("client-pipelining-segment-strategy-instrumentation-spec", ConfigFactory.parseString(
+  implicit lazy val system: ActorSystem = ActorSystem("spray-server-tracing-spec", ConfigFactory.parseString(
     """
       |akka {
       |  loglevel = ERROR
@@ -51,12 +51,6 @@ class ServerRequestInstrumentationSpec extends TestKitBase with WordSpecLike wit
       |        }
       |      }
       |    ]
-      |  }
-      |
-      |  spray {
-      |    client {
-      |      segment-collection-strategy = internal
-      |    }
       |  }
       |}
     """.stripMargin))
@@ -104,29 +98,6 @@ class ServerRequestInstrumentationSpec extends TestKitBase with WordSpecLike wit
 
       response.headers should not contain (RawHeader(Kamon(Spray).traceTokenHeaderName, "propagation-disabled"))
     }
-
-    "open and finish a trace during the lifetime of a request" in {
-      val (connection, server) = buildClientConnectionAndServer
-      val client = TestProbe()
-
-      val metricListener = TestProbe()
-      Kamon(Metrics)(system).subscribe(TraceMetrics, "*", metricListener.ref, permanently = true)
-      metricListener.expectMsgType[TickMetricSnapshot]
-
-      client.send(connection, Get("/open-and-finish"))
-      server.expectMsgType[HttpRequest]
-      server.reply(HttpResponse(entity = "ok"))
-      client.expectMsgType[HttpResponse]
-
-      val tickSnapshot = metricListener.expectMsgType[TickMetricSnapshot]
-      val traceMetrics = tickSnapshot.metrics.find { case (k, v) ⇒ k.name.contains("open-and-finish") } map (_._2.metrics)
-      traceMetrics should not be empty
-
-      traceMetrics map { metrics ⇒
-        metrics(ElapsedTime).asInstanceOf[Histogram.Snapshot].numberOfMeasurements should be(1L)
-      }
-    }
-
   }
 
   def enableAutomaticTraceTokenPropagation(): Unit = setIncludeTraceToken(true)
