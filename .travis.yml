@@ -5,5 +5,6 @@ script:
 scala:
    - 2.10.3
 before_script:
+  - mkdir $TRAVIS_BUILD_DIR/tmp
   - export SBT_OPTS="-Djava.io.tmpdir=$TRAVIS_BUILD_DIR/tmp"
    
