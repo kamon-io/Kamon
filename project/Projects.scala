@@ -104,6 +104,7 @@ object Projects extends Build {
       .settings(basicSettings: _*)
       .settings(formatSettings: _*)
       .settings(libraryDependencies ++= compile(sigar) ++ test(scalatest, akkaTestKit, slf4Api, slf4nop))
+      .settings(fork in Test :=  true)
       .dependsOn(kamonCore)
 
   val noPublishing = Seq(publish := (), publishLocal := (), publishArtifact := false)
