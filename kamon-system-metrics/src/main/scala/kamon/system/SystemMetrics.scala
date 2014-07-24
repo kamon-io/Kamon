@@ -22,7 +22,7 @@ import akka.event.Logging
 import kamon.Kamon
 import kamon.metric.Metrics
 import kamon.metrics._
-import kamon.system.native.SigarLoader
+
 import scala.collection.JavaConverters._
 
 object SystemMetrics extends ExtensionId[SystemMetricsExtension] with ExtensionIdProvider {
@@ -60,6 +60,6 @@ object SystemMetricsExtension {
 }
 
 trait SigarExtensionProvider {
-  lazy val sigar = SigarLoader.sigarProxy
+  lazy val sigar = SigarHolder.instance()
 }
 
