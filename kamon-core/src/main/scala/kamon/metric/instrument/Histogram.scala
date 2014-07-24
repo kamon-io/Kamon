@@ -35,10 +35,14 @@ object Histogram {
     new HdrHistogram(1L, highestTrackableValue, precision.significantDigits, scale)
 
   def fromConfig(config: Config): Histogram = {
+    fromConfig(config, Scale.Unit)
+  }
+
+  def fromConfig(config: Config, scale: Scale): Histogram = {
     val highest = config.getLong("highest-trackable-value")
     val significantDigits = config.getInt("significant-value-digits")
 
-    new HdrHistogram(1L, highest, significantDigits)
+    new HdrHistogram(1L, highest, significantDigits, scale)
   }
 
   object HighestTrackableValue {

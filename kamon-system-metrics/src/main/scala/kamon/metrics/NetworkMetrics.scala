@@ -18,10 +18,7 @@ package kamon.metrics
 import akka.actor.ActorSystem
 import com.typesafe.config.Config
 import kamon.metric._
-import kamon.metric.instrument.Gauge.CurrentValueCollector
-import kamon.metric.instrument.{ Gauge, Histogram }
-import kamon.system.SigarExtensionProvider
-import org.hyperic.sigar.{ NetInterfaceStat, SigarProxy }
+import kamon.metric.instrument.Histogram
 
 case class NetworkMetrics(name: String) extends MetricGroupIdentity {
   val category = NetworkMetrics
@@ -35,7 +32,7 @@ object NetworkMetrics extends MetricGroupCategory {
   case object RxErrors extends MetricIdentity { val name = "rx-errors" }
   case object TxErrors extends MetricIdentity { val name = "tx-errors" }
 
-  case class NetworkMetricRecorder(rxBytes: Gauge, txBytes: Gauge, rxErrors: Gauge, txErrors: Gauge)
+  case class NetworkMetricRecorder(rxBytes: Histogram, txBytes: Histogram, rxErrors: Histogram, txErrors: Histogram)
       extends MetricGroupRecorder {
 
     def collect(context: CollectionContext): MetricGroupSnapshot = {
@@ -61,9 +58,7 @@ object NetworkMetrics extends MetricGroupCategory {
       TxErrors -> txErrors)
   }
 
-  val Factory = new MetricGroupFactory with SigarExtensionProvider {
-
-    val interfaces: Set[String] = sigar.getNetInterfaceList.toSet
+  val Factory = new MetricGroupFactory {
 
     type GroupRecorder = NetworkMetricRecorder
 
@@ -76,19 +71,10 @@ object NetworkMetrics extends MetricGroupCategory {
       val txErrorsConfig = settings.getConfig("tx-errors")
 
       new NetworkMetricRecorder(
-        Gauge.fromConfig(rxBytesConfig, system, Scale.Kilo)(collect(sigar, interfaces)(net ⇒ net.getRxBytes)),
-        Gauge.fromConfig(txBytesConfig, system, Scale.Kilo)(collect(sigar, interfaces)(net ⇒ net.getTxBytes)),
-        Gauge.fromConfig(rxErrorsConfig, system)(collect(sigar, interfaces)(net ⇒ net.getRxErrors)),
-        Gauge.fromConfig(txErrorsConfig, system)(collect(sigar, interfaces)(net ⇒ net.getTxErrors)))
-    }
-
-    private def collect(sigar: SigarProxy, interfaces: Set[String])(block: NetInterfaceStat ⇒ Long) = () ⇒ {
-      interfaces.foldLeft(0L) { (totalBytes, interface) ⇒
-        {
-          val net = sigar.getNetInterfaceStat(interface)
-          totalBytes + block(net)
-        }
-      }
+        Histogram.fromConfig(rxBytesConfig, Scale.Kilo),
+        Histogram.fromConfig(txBytesConfig, Scale.Kilo),
+        Histogram.fromConfig(rxErrorsConfig),
+        Histogram.fromConfig(txErrorsConfig))
     }
   }
 }
