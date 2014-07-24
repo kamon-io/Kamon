@@ -18,7 +18,7 @@ package kamon.metrics
 import akka.actor.ActorSystem
 import com.typesafe.config.Config
 import kamon.metric._
-import kamon.metric.instrument.{Gauge, Histogram}
+import kamon.metric.instrument.{ Gauge, Histogram }
 import kamon.system.SigarExtensionProvider
 
 case class CPUMetrics(name: String) extends MetricGroupIdentity {
