@@ -18,10 +18,7 @@ package kamon.metrics
 import akka.actor.ActorSystem
 import com.typesafe.config.Config
 import kamon.metric._
-import kamon.metric.instrument.Gauge.CurrentValueCollector
-import kamon.metric.instrument.{ Gauge, Histogram }
-import kamon.system.SigarExtensionProvider
-import org.hyperic.sigar.Mem
+import kamon.metric.instrument.Histogram
 
 case class MemoryMetrics(name: String) extends MetricGroupIdentity {
   val category = MemoryMetrics
@@ -37,7 +34,7 @@ object MemoryMetrics extends MetricGroupCategory {
   case object SwapUsed extends MetricIdentity { val name = "swap-used" }
   case object SwapFree extends MetricIdentity { val name = "swap-free" }
 
-  case class MemoryMetricRecorder(used: Gauge, free: Gauge, buffer: Gauge, cache: Gauge, swapUsed: Gauge, swapFree: Gauge)
+  case class MemoryMetricRecorder(used: Histogram, free: Histogram, buffer: Histogram, cache: Histogram, swapUsed: Histogram, swapFree: Histogram)
       extends MetricGroupRecorder {
 
     def collect(context: CollectionContext): MetricGroupSnapshot = {
@@ -65,9 +62,7 @@ object MemoryMetrics extends MetricGroupCategory {
       SwapFree -> swapFree)
   }
 
-  val Factory = new MetricGroupFactory with SigarExtensionProvider {
-    def mem = sigar.getMem
-    def swap = sigar.getSwap
+  val Factory = new MetricGroupFactory {
 
     type GroupRecorder = MemoryMetricRecorder
 
@@ -82,15 +77,12 @@ object MemoryMetrics extends MetricGroupCategory {
       val swapFreeConfig = settings.getConfig("swap-free")
 
       new MemoryMetricRecorder(
-        Gauge.fromConfig(usedConfig, system, Scale.Kilo)(() ⇒ mem.getUsed),
-        Gauge.fromConfig(freeConfig, system, Scale.Kilo)(() ⇒ mem.getFree),
-        Gauge.fromConfig(bufferConfig, system, Scale.Kilo)(() ⇒ swap.getUsed),
-        Gauge.fromConfig(cacheConfig, system, Scale.Kilo)(() ⇒ swap.getFree),
-        Gauge.fromConfig(swapUsedConfig, system, Scale.Kilo)(collectBuffer(mem)),
-        Gauge.fromConfig(swapFreeConfig, system, Scale.Kilo)(collectCache(mem)))
+        Histogram.fromConfig(usedConfig, Scale.Kilo),
+        Histogram.fromConfig(freeConfig, Scale.Kilo),
+        Histogram.fromConfig(swapUsedConfig, Scale.Kilo),
+        Histogram.fromConfig(swapFreeConfig, Scale.Kilo),
+        Histogram.fromConfig(bufferConfig, Scale.Kilo),
+        Histogram.fromConfig(cacheConfig, Scale.Kilo))
     }
-
-    private def collectBuffer(mem: Mem) = () ⇒ if (mem.getUsed() != mem.getActualUsed()) mem.getActualUsed() else 0L
-    private def collectCache(mem: Mem) = () ⇒ if (mem.getFree() != mem.getActualFree()) mem.getActualFree() else 0L
   }
 }

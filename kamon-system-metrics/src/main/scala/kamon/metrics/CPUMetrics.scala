@@ -18,8 +18,7 @@ package kamon.metrics
 import akka.actor.ActorSystem
 import com.typesafe.config.Config
 import kamon.metric._
-import kamon.metric.instrument.{ Gauge, Histogram }
-import kamon.system.SigarExtensionProvider
+import kamon.metric.instrument.Histogram
 
 case class CPUMetrics(name: String) extends MetricGroupIdentity {
   val category = CPUMetrics
@@ -33,7 +32,7 @@ object CPUMetrics extends MetricGroupCategory {
   case object Wait extends MetricIdentity { val name = "wait" }
   case object Idle extends MetricIdentity { val name = "idle" }
 
-  case class CPUMetricRecorder(user: Gauge, system: Gauge, cpuWait: Gauge, idle: Gauge)
+  case class CPUMetricRecorder(user: Histogram, system: Histogram, cpuWait: Histogram, idle: Histogram)
       extends MetricGroupRecorder {
 
     def collect(context: CollectionContext): MetricGroupSnapshot = {
@@ -59,9 +58,7 @@ object CPUMetrics extends MetricGroupCategory {
       Idle -> idle)
   }
 
-  val Factory = new MetricGroupFactory with SigarExtensionProvider {
-
-    def cpu = sigar.getCpu
+  val Factory = new MetricGroupFactory {
 
     type GroupRecorder = CPUMetricRecorder
 
@@ -74,10 +71,10 @@ object CPUMetrics extends MetricGroupCategory {
       val idleConfig = settings.getConfig("idle")
 
       new CPUMetricRecorder(
-        Gauge.fromConfig(userConfig, system)(() ⇒ cpu.getUser),
-        Gauge.fromConfig(systemConfig, system)(() ⇒ cpu.getSys),
-        Gauge.fromConfig(cpuWaitConfig, system)(() ⇒ cpu.getWait),
-        Gauge.fromConfig(idleConfig, system)(() ⇒ cpu.getIdle))
+        Histogram.fromConfig(userConfig),
+        Histogram.fromConfig(systemConfig),
+        Histogram.fromConfig(cpuWaitConfig),
+        Histogram.fromConfig(idleConfig))
     }
   }
 }

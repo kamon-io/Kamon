@@ -151,10 +151,10 @@ class SystemMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
       val metricsListener = subscribeToMetrics()
 
       val CPUMetrics = expectCPUMetrics(metricsListener, 3 seconds)
-      CPUMetrics.user.max should be > 0L
-      CPUMetrics.system.max should be > 0L
-      CPUMetrics.cpuWait.max should be > 0L
-      CPUMetrics.idle.max should be > 0L
+      CPUMetrics.user.max should be >= 0L
+      CPUMetrics.system.max should be >= 0L
+      CPUMetrics.cpuWait.max should be >= 0L
+      CPUMetrics.idle.max should be >= 0L
     }
   }
   "the Kamon GC Metrics" should {
