@@ -13,7 +13,6 @@
  * and limitations under the License.
  * =========================================================================================
  */
-
 package kamon.system;
 
 import kamon.system.sigar.SigarLoader;
