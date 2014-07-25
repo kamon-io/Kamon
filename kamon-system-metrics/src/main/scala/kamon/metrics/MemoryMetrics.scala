@@ -77,12 +77,12 @@ object MemoryMetrics extends MetricGroupCategory {
       val swapFreeConfig = settings.getConfig("swap-free")
 
       new MemoryMetricRecorder(
-        Histogram.fromConfig(usedConfig, Scale.Kilo),
-        Histogram.fromConfig(freeConfig, Scale.Kilo),
-        Histogram.fromConfig(swapUsedConfig, Scale.Kilo),
-        Histogram.fromConfig(swapFreeConfig, Scale.Kilo),
-        Histogram.fromConfig(bufferConfig, Scale.Kilo),
-        Histogram.fromConfig(cacheConfig, Scale.Kilo))
+        Histogram.fromConfig(usedConfig, Scale.Mega),
+        Histogram.fromConfig(freeConfig, Scale.Mega),
+        Histogram.fromConfig(swapUsedConfig, Scale.Mega),
+        Histogram.fromConfig(swapFreeConfig, Scale.Mega),
+        Histogram.fromConfig(bufferConfig, Scale.Mega),
+        Histogram.fromConfig(cacheConfig, Scale.Mega))
     }
   }
 }

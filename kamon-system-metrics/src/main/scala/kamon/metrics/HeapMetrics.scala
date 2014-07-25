@@ -59,6 +59,7 @@ object HeapMetrics extends MetricGroupCategory {
   }
 
   val Factory = new MetricGroupFactory {
+    import kamon.system.SystemMetricsExtension._
 
     val memory = ManagementFactory.getMemoryMXBean
     def heap = memory.getHeapMemoryUsage
@@ -73,9 +74,9 @@ object HeapMetrics extends MetricGroupCategory {
       val committedHeapConfig = settings.getConfig("committed")
 
       new HeapMetricRecorder(
-        Gauge.fromConfig(usedHeapConfig, system)(() ⇒ heap.getUsed),
-        Gauge.fromConfig(maxHeapConfig, system)(() ⇒ heap.getMax),
-        Gauge.fromConfig(committedHeapConfig, system)(() ⇒ heap.getCommitted))
+        Gauge.fromConfig(usedHeapConfig, system,Scale.Mega)(() ⇒ toMB(heap.getUsed)),
+        Gauge.fromConfig(maxHeapConfig, system, Scale.Mega)(() ⇒ toMB(heap.getMax)),
+        Gauge.fromConfig(committedHeapConfig, system, Scale.Mega)(() ⇒ toMB(heap.getCommitted)))
     }
   }
 }

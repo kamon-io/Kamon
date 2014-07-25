@@ -19,10 +19,9 @@ package kamon.system.sigar
 import java.io._
 import java.util
 import java.util.logging.Logger
-import java.util.{ ArrayList, List }
+import java.util.{ArrayList, List}
 
-import kamon.system.SynchronizedSigar
-import org.hyperic.sigar.SigarProxy
+import org.hyperic.sigar.{Sigar, SigarProxy}
 
 import scala.annotation.tailrec
 import scala.collection.JavaConversions._
@@ -47,7 +46,7 @@ object SigarLoader {
     attachToLibraryPath(tmpDir)
 
     try {
-      val sigar = new SynchronizedSigar()
+      val sigar = new Sigar()
       sigar.getPid
       sigar
     } catch {
