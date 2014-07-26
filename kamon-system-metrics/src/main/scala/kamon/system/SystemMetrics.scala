@@ -58,7 +58,7 @@ object SystemMetricsExtension {
 
   val garbageCollectors = ManagementFactory.getGarbageCollectorMXBeans.asScala.filter(_.isValid)
 
-  def toKB(value:Long):Long = (value / 1024)
-  def toMB(value:Long):Long = (value / 1024 / 1024)
-  def toLong(value:Double):Long = math round (value * 100L)
+  def toKB(value: Long): Long = (value / 1024)
+  def toMB(value: Long): Long = (value / 1024 / 1024)
+  def toLong(value: Double): Long = math round (value * 100L)
 }

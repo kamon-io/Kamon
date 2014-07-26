@@ -74,7 +74,7 @@ object HeapMetrics extends MetricGroupCategory {
       val committedHeapConfig = settings.getConfig("committed")
 
       new HeapMetricRecorder(
-        Gauge.fromConfig(usedHeapConfig, system,Scale.Mega)(() ⇒ toMB(heap.getUsed)),
+        Gauge.fromConfig(usedHeapConfig, system, Scale.Mega)(() ⇒ toMB(heap.getUsed)),
         Gauge.fromConfig(maxHeapConfig, system, Scale.Mega)(() ⇒ toMB(heap.getMax)),
         Gauge.fromConfig(committedHeapConfig, system, Scale.Mega)(() ⇒ toMB(heap.getCommitted)))
     }

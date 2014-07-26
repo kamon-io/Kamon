@@ -15,15 +15,15 @@
  */
 package kamon.system
 
-import akka.actor.{Props, Actor}
+import akka.actor.{ Props, Actor }
 import kamon.Kamon
 import kamon.metric.Metrics
 import kamon.metrics.CPUMetrics.CPUMetricRecorder
 import kamon.metrics.MemoryMetrics.MemoryMetricRecorder
 import kamon.metrics.NetworkMetrics.NetworkMetricRecorder
 import kamon.metrics.ProcessCPUMetrics.ProcessCPUMetricsRecorder
-import kamon.metrics.{NetworkMetrics, MemoryMetrics, ProcessCPUMetrics, CPUMetrics}
-import org.hyperic.sigar.{NetInterfaceStat, SigarProxy, Mem}
+import kamon.metrics.{ NetworkMetrics, MemoryMetrics, ProcessCPUMetrics, CPUMetrics }
+import org.hyperic.sigar.{ NetInterfaceStat, SigarProxy, Mem }
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -61,12 +61,12 @@ class SystemMetricsCollector(collectInterval: FiniteDuration) extends Actor with
     cpur.idle.record(toLong(cpu.getIdle))
   }
 
-  private def recordProcessCpu(pcpur:ProcessCPUMetricsRecorder) ={
+  private def recordProcessCpu(pcpur: ProcessCPUMetricsRecorder) = {
     pcpur.user.record(procCpu.getUser)
     pcpur.system.record(procCpu.getSys)
   }
 
-  private def recordMemory(mr:MemoryMetricRecorder) = {
+  private def recordMemory(mr: MemoryMetricRecorder) = {
     mr.used.record(toMB(mem.getUsed))
     mr.free.record(toMB(mem.getFree))
     mr.swapUsed.record(toMB(swap.getUsed))
@@ -78,17 +78,18 @@ class SystemMetricsCollector(collectInterval: FiniteDuration) extends Actor with
     def collectCache(mem: Mem): Long = if (mem.getFree() != mem.getActualFree()) mem.getActualFree() else 0L
   }
 
-  private def recordNetwork(nr:NetworkMetricRecorder) = {
+  private def recordNetwork(nr: NetworkMetricRecorder) = {
     nr.rxBytes.record(collect(sigar, interfaces)(net ⇒ toKB(net.getRxBytes)))
     nr.txBytes.record(collect(sigar, interfaces)(net ⇒ toKB(net.getTxBytes)))
     nr.rxErrors.record(collect(sigar, interfaces)(net ⇒ net.getRxErrors))
     nr.txErrors.record(collect(sigar, interfaces)(net ⇒ net.getTxErrors))
 
     def collect(sigar: SigarProxy, interfaces: Set[String])(block: NetInterfaceStat ⇒ Long): Long = {
-      interfaces.foldLeft(0L) { (totalBytes, interface) ⇒ {
-        val net = sigar.getNetInterfaceStat(interface)
-        totalBytes + block(net)
-      }
+      interfaces.foldLeft(0L) { (totalBytes, interface) ⇒
+        {
+          val net = sigar.getNetInterfaceStat(interface)
+          totalBytes + block(net)
+        }
       }
     }
   }
