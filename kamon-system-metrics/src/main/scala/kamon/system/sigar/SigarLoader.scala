@@ -19,9 +19,9 @@ package kamon.system.sigar
 import java.io._
 import java.util
 import java.util.logging.Logger
-import java.util.{ArrayList, List}
+import java.util.{ ArrayList, List }
 
-import org.hyperic.sigar.{Sigar, SigarProxy}
+import org.hyperic.sigar.{ Sigar, SigarProxy }
 
 import scala.annotation.tailrec
 import scala.collection.JavaConversions._
