@@ -19,13 +19,18 @@ package kamon.system.sigar
 import java.io._
 import java.util
 import java.util.logging.Logger
-import java.util.{ Date, ArrayList, List }
+import java.util.{ ArrayList, Date, List }
 
-import org.hyperic.sigar.{ OperatingSystem, CpuPerc, Sigar, SigarProxy }
+import org.hyperic.sigar.{ OperatingSystem, Sigar, SigarProxy }
 
 import scala.annotation.tailrec
 import scala.collection.JavaConversions._
 import scala.io.Source
+
+object SigarHolder {
+  private lazy val sigarProxy = SigarLoader.sigarProxy
+  def instance() = sigarProxy
+}
 
 object SigarLoader {
 
@@ -138,6 +143,7 @@ object SigarLoader {
       val now = System.currentTimeMillis()
       new Date(now - (uptime.getUptime() * 1000).toLong)
     }
+
     def osInfo() = {
       val NewLine = "\n"
       val os = OperatingSystem.getInstance
@@ -149,17 +155,18 @@ object SigarLoader {
         .toString()
     }
 
-    val message = """
-                    |
-                    |  _____           _                 __  __      _        _          _                     _          _
-                    | / ____|         | |               |  \/  |    | |      (_)        | |                   | |        | |
-                    || (___  _   _ ___| |_ ___ _ __ ___ | \  / | ___| |_ _ __ _  ___ ___| |     ___   __ _  __| | ___  __| |
-                    | \___ \| | | / __| __/ _ \ '_ ` _ \| |\/| |/ _ \ __| '__| |/ __/ __| |    / _ \ / _` |/ _` |/ _ \/ _` |
-                    | ____) | |_| \__ \ ||  __/ | | | | | |  | |  __/ |_| |  | | (__\__ \ |___| (_) | (_| | (_| |  __/ (_| |
-                    ||_____/ \__, |___/\__\___|_| |_| |_|_|  |_|\___|\__|_|  |_|\___|___/______\___/ \__,_|\__,_|\___|\__,_|
-                    |         __/ |
-                    |        |___/
-                  """.stripMargin + s"\nBoot Time: ${uptime(sigar)} \nLoad Average: ${loadAverage(sigar)} \n${osInfo()}"
+    val message =
+      """
+        |
+        |  _____           _                 __  __      _        _          _                     _          _
+        | / ____|         | |               |  \/  |    | |      (_)        | |                   | |        | |
+        || (___  _   _ ___| |_ ___ _ __ ___ | \  / | ___| |_ _ __ _  ___ ___| |     ___   __ _  __| | ___  __| |
+        | \___ \| | | / __| __/ _ \ '_ ` _ \| |\/| |/ _ \ __| '__| |/ __/ __| |    / _ \ / _` |/ _` |/ _ \/ _` |
+        | ____) | |_| \__ \ ||  __/ | | | | | |  | |  __/ |_| |  | | (__\__ \ |___| (_) | (_| | (_| |  __/ (_| |
+        ||_____/ \__, |___/\__\___|_| |_| |_|_|  |_|\___|\__|_|  |_|\___|___/______\___/ \__,_|\__,_|\___|\__,_|
+        |         __/ |
+        |        |___/
+      """.stripMargin + s"\nBoot Time: ${uptime(sigar)} \nLoad Average: ${loadAverage(sigar)} \n${osInfo()}"
     log.info(message)
   }
   class Loader private[sigar]
