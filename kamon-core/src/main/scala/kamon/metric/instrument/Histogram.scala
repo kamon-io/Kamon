@@ -78,6 +78,17 @@ object Histogram {
     def recordsIterator: Iterator[Record]
     def merge(that: Histogram.Snapshot, context: CollectionContext): Histogram.Snapshot
   }
+
+  object Snapshot {
+    def empty(targetScale: Scale) = new Snapshot {
+      override def min: Long = 0L
+      override def max: Long = 0L
+      override def recordsIterator: Iterator[Record] = Iterator.empty
+      override def merge(that: Snapshot, context: CollectionContext): Snapshot = that
+      override def scale: Scale = targetScale
+      override def numberOfMeasurements: Long = 0L
+    }
+  }
 }
 
 /**

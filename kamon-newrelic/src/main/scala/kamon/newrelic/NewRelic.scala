@@ -26,11 +26,12 @@ import java.util.concurrent.TimeUnit.MILLISECONDS
 class NewRelicExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   val config = system.settings.config.getConfig("kamon.newrelic")
 
+  val collectionContext = Kamon(Metrics)(system).buildDefaultCollectionContext
   val metricsListener = system.actorOf(Props[NewRelicMetricsListener], "kamon-newrelic")
   val apdexT: Double = config.getDuration("apdexT", MILLISECONDS) / 1E3 // scale to seconds.
 
   Kamon(Metrics)(system).subscribe(TraceMetrics, "*", metricsListener, permanently = true)
-  //Kamon(Metrics)(system).subscribe(UserMetrics, "*", metricsListener, permanently = true)
+  Kamon(Metrics)(system).subscribe(UserMetrics.category, "*", metricsListener, permanently = true)
 }
 
 class NewRelicMetricsListener extends Actor with ActorLogging {
@@ -61,6 +62,5 @@ object NewRelic extends ExtensionId[NewRelicExtension] with ExtensionIdProvider 
         math.max(max, that.max),
         sumOfSquares + that.sumOfSquares)
     }
-
   }
 }
