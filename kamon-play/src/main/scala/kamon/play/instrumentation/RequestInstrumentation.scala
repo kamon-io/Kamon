@@ -16,7 +16,7 @@
 package kamon.play.instrumentation
 
 import kamon.Kamon
-import kamon.play.Play
+import kamon.play.{ PlayExtension, Play }
 import kamon.trace.{ TraceContextAware, TraceRecorder }
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
@@ -52,11 +52,17 @@ class RequestInstrumentation {
     val essentialAction = (requestHeader: RequestHeader) ⇒ {
 
       val incomingContext = TraceRecorder.currentContext
-      val executor = Kamon(Play)(Akka.system()).defaultDispatcher
+      val playExtension = Kamon(Play)(Akka.system())
+      val executor = playExtension.defaultDispatcher
 
       next(requestHeader).map {
         result ⇒
+          TraceRecorder.currentContext.map { ctx ⇒
+            recordHttpServerMetrics(result, ctx.name, playExtension)
+          }
+
           TraceRecorder.finish()
+
           incomingContext match {
             case None ⇒ result
             case Some(traceContext) ⇒
@@ -69,6 +75,9 @@ class RequestInstrumentation {
     }
     pjp.proceed(Array(EssentialAction(essentialAction)))
   }
+
+  def recordHttpServerMetrics(result: Result, traceName: String, playExtension: PlayExtension): Unit =
+    playExtension.httpServerMetrics.recordResponse(traceName, result.header.status.toString, 1L)
 
   @Around("execution(* play.api.GlobalSettings+.onError(..)) && args(request, ex)")
   def aroundOnError(pjp: ProceedingJoinPoint, request: TraceContextAware, ex: Throwable): Any = request.traceContext match {

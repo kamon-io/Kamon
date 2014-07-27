@@ -15,6 +15,10 @@
 
 package kamon.play
 
+import scala.concurrent.duration._
+import kamon.Kamon
+import kamon.http.HttpServerMetrics
+import kamon.metric.{ CollectionContext, Metrics }
 import kamon.play.action.TraceName
 import kamon.trace.{ TraceLocal, TraceRecorder }
 import org.scalatestplus.play._
@@ -23,8 +27,9 @@ import play.api.mvc.Results.Ok
 import play.api.mvc._
 import play.api.test.Helpers._
 import play.api.test._
+import play.libs.Akka
 
-import scala.concurrent.Future
+import scala.concurrent.{ Await, Future }
 
 class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
 
@@ -106,6 +111,25 @@ class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
     "propagate the TraceContext and LocalStorage through of filters in the current request" in {
       val Some(result) = route(FakeRequest(GET, "/retrieve").withHeaders(traceTokenHeader, traceLocalStorageHeader))
       TraceLocal.retrieve(TraceLocalKey).get must be(traceLocalStorageValue)
+    }
+
+    "record http server metrics for all processed requests" in {
+      val collectionContext = CollectionContext(100)
+      Kamon(Metrics)(Akka.system()).register(HttpServerMetrics, HttpServerMetrics.Factory).get.collect(collectionContext)
+
+      for (repetition ← 1 to 10) {
+        Await.result(route(FakeRequest(GET, "/default").withHeaders(traceTokenHeader)).get, 10 seconds)
+      }
+
+      for (repetition ← 1 to 5) {
+        Await.result(route(FakeRequest(GET, "/notFound").withHeaders(traceTokenHeader)).get, 10 seconds)
+      }
+
+      val snapshot = Kamon(Metrics)(Akka.system()).register(HttpServerMetrics, HttpServerMetrics.Factory).get.collect(collectionContext)
+      snapshot.countsPerTraceAndStatusCode("GET: /default")("200").count must be(10)
+      snapshot.countsPerTraceAndStatusCode("GET: /notFound")("404").count must be(5)
+      snapshot.countsPerStatusCode("200").count must be(10)
+      snapshot.countsPerStatusCode("404").count must be(5)
     }
   }
 
