@@ -19,9 +19,9 @@ package kamon.system.sigar
 import java.io._
 import java.util
 import java.util.logging.Logger
-import java.util.{ ArrayList, List }
+import java.util.{ Date, ArrayList, List }
 
-import org.hyperic.sigar.{ Sigar, SigarProxy }
+import org.hyperic.sigar.{ OperatingSystem, CpuPerc, Sigar, SigarProxy }
 
 import scala.annotation.tailrec
 import scala.collection.JavaConversions._
@@ -47,7 +47,7 @@ object SigarLoader {
 
     try {
       val sigar = new Sigar()
-      sigar.getPid
+      printBanner(sigar)
       sigar
     } catch {
       case t: Throwable ⇒ {
@@ -127,5 +127,40 @@ object SigarLoader {
     transfer()
   }
 
+  private[sigar] def printBanner(sigar: Sigar) = {
+    def loadAverage(sigar: Sigar) = {
+      val average = sigar.getLoadAverage
+      (average(0), average(1), average(2))
+    }
+
+    def uptime(sigar: Sigar) = {
+      val uptime = sigar.getUptime
+      val now = System.currentTimeMillis()
+      new Date(now - (uptime.getUptime() * 1000).toLong)
+    }
+    def osInfo() = {
+      val NewLine = "\n"
+      val os = OperatingSystem.getInstance
+      val osInfo = new StringBuilder("------ OS Information ------").append(NewLine)
+      osInfo.append("Description: ").append(os.getDescription).append(NewLine)
+        .append("Name: ").append(os.getName).append(NewLine)
+        .append("Version: ").append(os.getVersion).append(NewLine)
+        .append("Arch: ").append(os.getArch).append(NewLine)
+        .toString()
+    }
+
+    val message = """
+                    |
+                    |  _____           _                 __  __      _        _          _                     _          _
+                    | / ____|         | |               |  \/  |    | |      (_)        | |                   | |        | |
+                    || (___  _   _ ___| |_ ___ _ __ ___ | \  / | ___| |_ _ __ _  ___ ___| |     ___   __ _  __| | ___  __| |
+                    | \___ \| | | / __| __/ _ \ '_ ` _ \| |\/| |/ _ \ __| '__| |/ __/ __| |    / _ \ / _` |/ _` |/ _ \/ _` |
+                    | ____) | |_| \__ \ ||  __/ | | | | | |  | |  __/ |_| |  | | (__\__ \ |___| (_) | (_| | (_| |  __/ (_| |
+                    ||_____/ \__, |___/\__\___|_| |_| |_|_|  |_|\___|\__|_|  |_|\___|___/______\___/ \__,_|\__,_|\___|\__,_|
+                    |         __/ |
+                    |        |___/
+                  """.stripMargin + s"\nBoot Time: ${uptime(sigar)} \nLoad Average: ${loadAverage(sigar)} \n${osInfo()}"
+    log.info(message)
+  }
   class Loader private[sigar]
 }

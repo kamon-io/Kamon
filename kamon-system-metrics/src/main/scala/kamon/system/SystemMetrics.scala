@@ -36,7 +36,6 @@ class SystemMetricsExtension(private val system: ExtendedActorSystem) extends Ka
   import kamon.system.SystemMetricsExtension._
 
   val log = Logging(system, classOf[SystemMetricsExtension])
-
   log.info(s"Starting the Kamon(SystemMetrics) extension")
 
   val systemMetricsExtension = Kamon(Metrics)(system)
@@ -56,9 +55,9 @@ object SystemMetricsExtension {
   val Memory = "memory"
   val Heap = "heap"
 
-  val garbageCollectors = ManagementFactory.getGarbageCollectorMXBeans.asScala.filter(_.isValid)
-
   def toKB(value: Long): Long = (value / 1024)
   def toMB(value: Long): Long = (value / 1024 / 1024)
   def toLong(value: Double): Long = math round (value * 100L)
+
+  val garbageCollectors = ManagementFactory.getGarbageCollectorMXBeans.asScala.filter(_.isValid)
 }
