@@ -16,14 +16,17 @@
 
 package kamon.datadog
 
-import akka.actor._
-import kamon.Kamon
-import kamon.metric._
-import scala.concurrent.duration._
-import scala.collection.JavaConverters._
-import akka.event.Logging
 import java.net.InetSocketAddress
 import java.util.concurrent.TimeUnit.MILLISECONDS
+
+import akka.actor._
+import akka.event.Logging
+import kamon.Kamon
+import kamon.metric._
+import kamon.metrics._
+
+import scala.collection.JavaConverters._
+import scala.concurrent.duration._
 
 object Datadog extends ExtensionId[DatadogExtension] with ExtensionIdProvider {
   override def lookup(): ExtensionId[_ <: Extension] = Datadog
@@ -63,6 +66,14 @@ class DatadogExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   val includedDispatchers = datadogConfig.getStringList("includes.dispatcher").asScala
   for (dispatcherPathPattern ← includedDispatchers) {
     Kamon(Metrics)(system).subscribe(DispatcherMetrics, dispatcherPathPattern, datadogMetricsListener, permanently = true)
+  }
+
+  // Subscribe to SystemMetrics
+  val includeSystemMetrics = datadogConfig.getBoolean("report-system-metrics")
+  if (includeSystemMetrics) {
+    List(CPUMetrics, ProcessCPUMetrics, MemoryMetrics, NetworkMetrics, GCMetrics, HeapMetrics) foreach { metric ⇒
+      Kamon(Metrics)(system).subscribe(metric, "*", datadogMetricsListener, permanently = true)
+    }
   }
 
   def buildMetricsListener(tickInterval: Long, flushInterval: Long): ActorRef = {
