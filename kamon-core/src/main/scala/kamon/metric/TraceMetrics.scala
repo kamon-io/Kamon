@@ -69,8 +69,8 @@ object TraceMetrics extends MetricGroupCategory {
       val segmentConfig = settings.getConfig("segment")
 
       new TraceMetricRecorder(
-        Histogram.fromConfig(elapsedTimeConfig),
-        () ⇒ Histogram.fromConfig(segmentConfig))
+        Histogram.fromConfig(elapsedTimeConfig, Scale.Nano),
+        () ⇒ Histogram.fromConfig(segmentConfig, Scale.Nano))
     }
   }
 
