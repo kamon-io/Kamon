@@ -19,6 +19,7 @@ package kamon.statsd
 import akka.actor._
 import kamon.Kamon
 import kamon.metric._
+import kamon.metrics._
 import scala.concurrent.duration._
 import scala.collection.JavaConverters._
 import com.typesafe.config.Config
@@ -67,6 +68,14 @@ class StatsDExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   val includedDispatchers = statsDConfig.getStringList("includes.dispatcher").asScala
   for (dispatcherPathPattern ← includedDispatchers) {
     Kamon(Metrics)(system).subscribe(DispatcherMetrics, dispatcherPathPattern, statsDMetricsListener, permanently = true)
+  }
+
+  // Subscribe to SystemMetrics
+  val includeSystemMetrics = statsDConfig.getBoolean("report-system-metrics")
+  if (includeSystemMetrics) {
+    List(CPUMetrics, ProcessCPUMetrics, MemoryMetrics, NetworkMetrics, GCMetrics, HeapMetrics) foreach { metric ⇒
+      Kamon(Metrics)(system).subscribe(metric, "*", statsDMetricsListener, permanently = true)
+    }
   }
 
   def buildMetricsListener(tickInterval: Long, flushInterval: Long): ActorRef = {

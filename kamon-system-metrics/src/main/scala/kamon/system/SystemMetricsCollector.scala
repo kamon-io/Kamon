@@ -15,20 +15,21 @@
  */
 package kamon.system
 
-import akka.actor.{ Props, Actor }
+import akka.actor.{ Actor, Props }
 import kamon.Kamon
 import kamon.metric.Metrics
 import kamon.metrics.CPUMetrics.CPUMetricRecorder
 import kamon.metrics.MemoryMetrics.MemoryMetricRecorder
 import kamon.metrics.NetworkMetrics.NetworkMetricRecorder
 import kamon.metrics.ProcessCPUMetrics.ProcessCPUMetricsRecorder
-import kamon.metrics.{ NetworkMetrics, MemoryMetrics, ProcessCPUMetrics, CPUMetrics }
-import org.hyperic.sigar.{ NetInterfaceStat, SigarProxy, Mem }
+import kamon.metrics.{ CPUMetrics, MemoryMetrics, NetworkMetrics, ProcessCPUMetrics }
+import kamon.system.sigar.SigarHolder
+import org.hyperic.sigar.{ Mem, NetInterfaceStat, SigarProxy }
 
 import scala.concurrent.duration.FiniteDuration
 
 class SystemMetricsCollector(collectInterval: FiniteDuration) extends Actor with SigarExtensionProvider {
-  import SystemMetricsCollector._
+  import kamon.system.SystemMetricsCollector._
   import kamon.system.SystemMetricsExtension._
 
   val collectSchedule = context.system.scheduler.schedule(collectInterval, collectInterval, self, Collect)(context.dispatcher)
