@@ -26,7 +26,7 @@ import kamon.util.GlobPathFilter
 import kamon.Kamon
 import akka.actor
 import kamon.metric.Metrics.MetricGroupFilter
-import kamon.metric.Subscriptions.Subscribe
+import kamon.metric.Subscriptions.{ Unsubscribe, Subscribe }
 import java.util.concurrent.TimeUnit
 
 class MetricsExtension(system: ExtendedActorSystem) extends Kamon.Extension {
@@ -55,9 +55,11 @@ class MetricsExtension(system: ExtendedActorSystem) extends Kamon.Extension {
     storage.remove(identity)
   }
 
-  def subscribe[C <: MetricGroupCategory](category: C, selection: String, receiver: ActorRef, permanently: Boolean = false): Unit = {
-    subscriptions.tell(Subscribe(category, selection, permanently), receiver)
-  }
+  def subscribe[C <: MetricGroupCategory](category: C, selection: String, subscriber: ActorRef, permanently: Boolean = false): Unit =
+    subscriptions.tell(Subscribe(category, selection, subscriber, permanently), subscriber)
+
+  def unsubscribe(subscriber: ActorRef): Unit =
+    subscriptions.tell(Unsubscribe(subscriber), subscriber)
 
   def scheduleGaugeRecorder(body: ⇒ Unit): Cancellable = {
     import scala.concurrent.duration._
