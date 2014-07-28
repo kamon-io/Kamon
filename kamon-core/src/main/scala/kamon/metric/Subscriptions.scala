@@ -16,8 +16,8 @@
 
 package kamon.metric
 
-import akka.actor.{ Props, ActorRef, Actor }
-import kamon.metric.Subscriptions.{ MetricGroupFilter, FlushMetrics, TickMetricSnapshot, Subscribe }
+import akka.actor._
+import kamon.metric.Subscriptions._
 import kamon.util.GlobPathFilter
 import scala.concurrent.duration.{ FiniteDuration, Duration }
 import java.util.concurrent.TimeUnit
@@ -27,65 +27,106 @@ import kamon.metric.TickMetricSnapshotBuffer.FlushBuffer
 class Subscriptions extends Actor {
   import context.system
 
-  val config = context.system.settings.config
-  val tickInterval = Duration(config.getDuration("kamon.metrics.tick-interval", TimeUnit.NANOSECONDS), TimeUnit.NANOSECONDS)
-  val flushMetricsSchedule = context.system.scheduler.schedule(tickInterval, tickInterval, self, FlushMetrics)(context.dispatcher)
+  val flushMetricsSchedule = scheduleFlushMessage()
   val collectionContext = Kamon(Metrics).buildDefaultCollectionContext
 
   var lastTick: Long = System.currentTimeMillis()
-  var subscribedPermanently: Map[MetricGroupFilter, List[ActorRef]] = Map.empty
-  var subscribedForOneShot: Map[MetricGroupFilter, List[ActorRef]] = Map.empty
+  var oneShotSubscriptions: Map[ActorRef, MetricSelectionFilter] = Map.empty
+  var permanentSubscriptions: Map[ActorRef, MetricSelectionFilter] = Map.empty
 
   def receive = {
-    case Subscribe(category, selection, permanent) ⇒ subscribe(category, selection, permanent)
-    case FlushMetrics                              ⇒ flush()
+    case Subscribe(category, selection, subscriber, permanent) ⇒ subscribe(category, selection, subscriber, permanent)
+    case Unsubscribe(subscriber) ⇒ unsubscribe(subscriber)
+    case Terminated(subscriber) ⇒ unsubscribe(subscriber)
+    case FlushMetrics ⇒ flush()
   }
 
-  def subscribe(category: MetricGroupCategory, selection: String, permanent: Boolean): Unit = {
-    val filter = MetricGroupFilter(category, new GlobPathFilter(selection))
+  def subscribe(category: MetricGroupCategory, selection: String, subscriber: ActorRef, permanent: Boolean): Unit = {
+    context.watch(subscriber)
+    val newFilter: MetricSelectionFilter = GroupAndPatternFilter(category, new GlobPathFilter(selection))
+
     if (permanent) {
-      val receivers = subscribedPermanently.get(filter).getOrElse(Nil)
-      subscribedPermanently = subscribedPermanently.updated(filter, sender :: receivers)
-
+      permanentSubscriptions = permanentSubscriptions.updated(subscriber, newFilter combine {
+        permanentSubscriptions.getOrElse(subscriber, MetricSelectionFilter.empty)
+      })
     } else {
-      val receivers = subscribedForOneShot.get(filter).getOrElse(Nil)
-      subscribedForOneShot = subscribedForOneShot.updated(filter, sender :: receivers)
+      oneShotSubscriptions = oneShotSubscriptions.updated(subscriber, newFilter combine {
+        oneShotSubscriptions.getOrElse(subscriber, MetricSelectionFilter.empty)
+      })
     }
+  }
 
+  def unsubscribe(subscriber: ActorRef): Unit = {
+    if (permanentSubscriptions.contains(subscriber))
+      permanentSubscriptions = permanentSubscriptions - subscriber
+
+    if (oneShotSubscriptions.contains(subscriber))
+      oneShotSubscriptions = oneShotSubscriptions - subscriber
   }
 
   def flush(): Unit = {
     val currentTick = System.currentTimeMillis()
     val snapshots = collectAll()
 
-    dispatchSelectedMetrics(lastTick, currentTick, subscribedPermanently, snapshots)
-    dispatchSelectedMetrics(lastTick, currentTick, subscribedForOneShot, snapshots)
+    dispatchSelectedMetrics(lastTick, currentTick, permanentSubscriptions, snapshots)
+    dispatchSelectedMetrics(lastTick, currentTick, oneShotSubscriptions, snapshots)
 
     lastTick = currentTick
-    subscribedForOneShot = Map.empty
+    oneShotSubscriptions = Map.empty
   }
 
-  def collectAll(): Map[MetricGroupIdentity, MetricGroupSnapshot] =
-    (for ((identity, recorder) ← Kamon(Metrics).storage) yield (identity, recorder.collect(collectionContext))).toMap
+  def collectAll(): Map[MetricGroupIdentity, MetricGroupSnapshot] = {
+    val allMetrics = Kamon(Metrics).storage
+    val builder = Map.newBuilder[MetricGroupIdentity, MetricGroupSnapshot]
 
-  def dispatchSelectedMetrics(lastTick: Long, currentTick: Long, subscriptions: Map[MetricGroupFilter, List[ActorRef]],
+    allMetrics.foreach {
+      case (identity, recorder) ⇒ builder += ((identity, recorder.collect(collectionContext)))
+    }
+
+    builder.result()
+  }
+
+  def dispatchSelectedMetrics(lastTick: Long, currentTick: Long, subscriptions: Map[ActorRef, MetricSelectionFilter],
     snapshots: Map[MetricGroupIdentity, MetricGroupSnapshot]): Unit = {
 
-    for ((filter, receivers) ← subscriptions) yield {
+    for ((subscriber, filter) ← subscriptions) {
       val selection = snapshots.filter(group ⇒ filter.accept(group._1))
       val tickMetrics = TickMetricSnapshot(lastTick, currentTick, selection)
 
-      receivers.foreach(_ ! tickMetrics)
+      subscriber ! tickMetrics
     }
+  }
+
+  def scheduleFlushMessage(): Cancellable = {
+    val config = context.system.settings.config
+    val tickInterval = Duration(config.getDuration("kamon.metrics.tick-interval", TimeUnit.NANOSECONDS), TimeUnit.NANOSECONDS)
+    context.system.scheduler.schedule(tickInterval, tickInterval, self, FlushMetrics)(context.dispatcher)
   }
 }
 
 object Subscriptions {
   case object FlushMetrics
-  case class Subscribe(category: MetricGroupCategory, selection: String, permanently: Boolean = false)
+  case class Unsubscribe(subscriber: ActorRef)
+  case class Subscribe(category: MetricGroupCategory, selection: String, subscriber: ActorRef, permanently: Boolean = false)
   case class TickMetricSnapshot(from: Long, to: Long, metrics: Map[MetricGroupIdentity, MetricGroupSnapshot])
 
-  case class MetricGroupFilter(category: MetricGroupCategory, globFilter: GlobPathFilter) {
+  trait MetricSelectionFilter {
+    def accept(identity: MetricGroupIdentity): Boolean
+  }
+
+  object MetricSelectionFilter {
+    val empty = new MetricSelectionFilter {
+      def accept(identity: MetricGroupIdentity): Boolean = false
+    }
+
+    implicit class CombinableMetricSelectionFilter(msf: MetricSelectionFilter) {
+      def combine(that: MetricSelectionFilter): MetricSelectionFilter = new MetricSelectionFilter {
+        def accept(identity: MetricGroupIdentity): Boolean = msf.accept(identity) || that.accept(identity)
+      }
+    }
+  }
+
+  case class GroupAndPatternFilter(category: MetricGroupCategory, globFilter: GlobPathFilter) extends MetricSelectionFilter {
     def accept(identity: MetricGroupIdentity): Boolean = {
       category.equals(identity.category) && globFilter.accept(identity.name)
     }

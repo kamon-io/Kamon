@@ -14,7 +14,7 @@ class UserMetricsSpec extends TestKitBase with WordSpecLike with Matchers with I
   implicit lazy val system: ActorSystem = ActorSystem("actor-metrics-spec", ConfigFactory.parseString(
     """
       |kamon.metrics {
-      |  flush-interval = 1 hour
+      |  tick-interval = 1 hour
       |  default-collection-context-buffer-size = 10
       |
       |  precision {
