@@ -16,7 +16,10 @@
 
 package kamon.trace
 
+import scala.language.experimental.macros
 import java.util.concurrent.atomic.AtomicLong
+import kamon.macros.InlineTraceContextMacro
+
 import scala.util.Try
 import java.net.InetAddress
 import akka.actor.ActorSystem
@@ -33,7 +36,7 @@ object TraceRecorder {
   def newToken = "%s-%s".format(hostnamePrefix, tokenCounter.incrementAndGet())
 
   private def newTraceContext(name: String, token: Option[String], metadata: Map[String, String],
-                              system: ActorSystem): TraceContext = {
+    system: ActorSystem): TraceContext = {
 
     // In the future this should select between implementations.
     val finalToken = token.getOrElse(newToken)
@@ -51,7 +54,7 @@ object TraceRecorder {
     traceContextStorage.set(Some(ctx))
   }
 
-  def startSegment(identity: SegmentIdentity, metadata: Map[String, String]): Option[SegmentCompletionHandle] =
+  def startSegment(identity: SegmentIdentity, metadata: Map[String, String] = Map.empty): Option[SegmentCompletionHandle] =
     currentContext.map(_.startSegment(identity, metadata))
 
   def rename(name: String): Unit = currentContext.map(_.rename(name))
@@ -65,6 +68,8 @@ object TraceRecorder {
 
     try thunk finally setContext(oldContext)
   }
+
+  def withInlineTraceContextReplacement[T](traceCtx: Option[TraceContext])(thunk: ⇒ T): T = macro InlineTraceContextMacro.withInlineTraceContextImpl[T, Option[TraceContext]]
 
   def finish(metadata: Map[String, String] = Map.empty): Unit = currentContext.map(_.finish(metadata))
 

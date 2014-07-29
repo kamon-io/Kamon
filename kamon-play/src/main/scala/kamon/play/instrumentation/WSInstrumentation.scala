@@ -19,7 +19,7 @@ package kamon.play.instrumentation
 import org.aspectj.lang.annotation.{ Around, Pointcut, Aspect }
 import org.aspectj.lang.ProceedingJoinPoint
 import kamon.trace.TraceRecorder
-import kamon.metrics.TraceMetrics.HttpClientRequest
+import kamon.metric.TraceMetrics.HttpClientRequest
 import play.api.libs.ws.WSRequest
 import scala.concurrent.Future
 import play.api.libs.ws.WSResponse
@@ -36,7 +36,7 @@ class WSInstrumentation {
   def aroundExecuteRequest(pjp: ProceedingJoinPoint, request: WSRequest): Any = {
     import WSInstrumentation._
 
-    val completionHandle = TraceRecorder.startSegment(HttpClientRequest(request.url, UserTime), basicRequestAttributes(request))
+    val completionHandle = TraceRecorder.startSegment(HttpClientRequest(request.url), basicRequestAttributes(request))
 
     val response = pjp.proceed().asInstanceOf[Future[WSResponse]]
 
@@ -50,7 +50,6 @@ class WSInstrumentation {
 }
 
 object WSInstrumentation {
-  val UserTime = "UserTime"
 
   def basicRequestAttributes(request: WSRequest): Map[String, String] = {
     Map[String, String](

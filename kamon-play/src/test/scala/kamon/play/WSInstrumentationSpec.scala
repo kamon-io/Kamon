@@ -28,9 +28,9 @@ import akka.testkit.{ TestKitBase, TestProbe }
 import com.typesafe.config.ConfigFactory
 import org.scalatest.{ Matchers, WordSpecLike }
 import kamon.Kamon
-import kamon.metrics.{ TraceMetrics, Metrics }
-import kamon.metrics.Subscriptions.TickMetricSnapshot
-import kamon.metrics.TraceMetrics.ElapsedTime
+import kamon.metric.{ TraceMetrics, Metrics }
+import kamon.metric.Subscriptions.TickMetricSnapshot
+import kamon.metric.TraceMetrics.ElapsedTime
 
 class WSInstrumentationSpec extends TestKitBase with WordSpecLike with Matchers with OneServerPerSuite {
 

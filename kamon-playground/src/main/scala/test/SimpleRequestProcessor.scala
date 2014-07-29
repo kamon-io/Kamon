@@ -26,9 +26,9 @@ import scala.util.Random
 import akka.routing.RoundRobinPool
 import kamon.trace.TraceRecorder
 import kamon.Kamon
-import kamon.metrics._
+import kamon.metric._
 import spray.http.{ StatusCodes, Uri }
-import kamon.metrics.Subscriptions.TickMetricSnapshot
+import kamon.metric.Subscriptions.TickMetricSnapshot
 
 object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuilding with KamonTraceDirectives {
   import scala.concurrent.duration._
@@ -51,11 +51,22 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
 
   implicit val timeout = Timeout(30 seconds)
 
+  val counter = Kamon(UserMetrics).registerCounter("requests")
+  Kamon(UserMetrics).registerCounter("requests-2")
+  Kamon(UserMetrics).registerCounter("requests-3")
+
+  Kamon(UserMetrics).registerHistogram("histogram-1")
+  Kamon(UserMetrics).registerHistogram("histogram-2")
+
+  Kamon(UserMetrics).registerMinMaxCounter("min-max-counter-1")
+  Kamon(UserMetrics).registerMinMaxCounter("min-max-counter-2")
+  Kamon(UserMetrics).registerMinMaxCounter("min-max-counter-3")
+
+  //Kamon(UserMetrics).registerGauge("test-gauge")(() => 10L)
+
   val pipeline = sendReceive
   val replier = system.actorOf(Props[Replier].withRouter(RoundRobinPool(nrOfInstances = 2)), "replier")
   val random = new Random()
-
-  val requestCountRecorder = Kamon(Metrics).register(CustomMetric("GetCount"), CustomMetric.histogram(10, 3, Scale.Unit))
 
   startServer(interface = "localhost", port = 9090) {
     get {
@@ -87,7 +98,6 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
         path("ok") {
           traceName("OK") {
             complete {
-              requestCountRecorder.map(_.record(1))
               "ok"
             }
           }
@@ -95,6 +105,7 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
         path("future") {
           traceName("OK-Future") {
             dynamic {
+              counter.increment()
               complete(Future { "OK" })
             }
           }

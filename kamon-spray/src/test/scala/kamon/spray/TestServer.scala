@@ -29,11 +29,9 @@ trait TestServer {
   def buildClientConnectionAndServer: (ActorRef, TestProbe) = {
     val serverHandler = TestProbe()
     IO(Http).tell(Http.Bind(listener = serverHandler.ref, interface = "127.0.0.1", port = 0), serverHandler.ref)
-    val bound = within(10 seconds) {
-      serverHandler.expectMsgType[Bound]
-    }
-
+    val bound = serverHandler.expectMsgType[Bound](10 seconds)
     val client = clientConnection(bound)
+
     serverHandler.expectMsgType[Http.Connected]
     serverHandler.reply(Http.Register(serverHandler.ref))
 
@@ -50,10 +48,7 @@ trait TestServer {
   def buildSHostConnectorAndServer: (ActorRef, TestProbe) = {
     val serverHandler = TestProbe()
     IO(Http).tell(Http.Bind(listener = serverHandler.ref, interface = "127.0.0.1", port = 0), serverHandler.ref)
-    val bound = within(10 seconds) {
-      serverHandler.expectMsgType[Bound]
-    }
-
+    val bound = serverHandler.expectMsgType[Bound](10 seconds)
     val client = httpHostConnector(bound)
 
     (client, serverHandler)

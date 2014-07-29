@@ -16,28 +16,32 @@
 
 package kamon.newrelic
 
-import kamon.metrics._
-import kamon.metrics.TraceMetrics.ElapsedTime
+import kamon.metric._
+import kamon.metric.TraceMetrics.ElapsedTime
 import akka.actor.Actor
 import kamon.Kamon
+import kamon.metric.instrument.Histogram
 
 trait WebTransactionMetrics {
   self: Actor ⇒
 
   def collectWebTransactionMetrics(metrics: Map[MetricGroupIdentity, MetricGroupSnapshot]): Seq[NewRelic.Metric] = {
-    val apdexBuilder = new ApdexBuilder("Apdex", None, Kamon(NewRelic)(context.system).apdexT)
+    val newRelicExtension = Kamon(NewRelic)(context.system)
+    val apdexBuilder = new ApdexBuilder("Apdex", None, newRelicExtension.apdexT)
+    val collectionContext = newRelicExtension.collectionContext
 
     // Trace metrics are recorded in nanoseconds.
-    var accumulatedHttpDispatcher: MetricSnapshotLike = MetricSnapshot(InstrumentTypes.Histogram, 0, Scale.Nano, Vector.empty)
+    var accumulatedHttpDispatcher: Histogram.Snapshot = Histogram.Snapshot.empty(Scale.Nano)
 
     val webTransactionMetrics = metrics.collect {
       case (TraceMetrics(name), groupSnapshot) ⇒
 
         groupSnapshot.metrics collect {
-          case (ElapsedTime, snapshot) ⇒
-            accumulatedHttpDispatcher = accumulatedHttpDispatcher.merge(snapshot)
-            snapshot.measurements.foreach(level ⇒
-              apdexBuilder.record(Scale.convert(snapshot.scale, Scale.Unit, level.value), level.count))
+          case (ElapsedTime, snapshot: Histogram.Snapshot) ⇒
+            accumulatedHttpDispatcher = accumulatedHttpDispatcher.merge(snapshot, collectionContext)
+            snapshot.recordsIterator.foreach { record ⇒
+              apdexBuilder.record(Scale.convert(snapshot.scale, Scale.Unit, record.level), record.count)
+            }
 
             toNewRelicMetric(Scale.Unit)(s"WebTransaction/Custom/$name", None, snapshot)
         }

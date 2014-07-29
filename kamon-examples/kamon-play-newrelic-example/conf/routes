@@ -1,3 +1,0 @@
-# Routes
-GET     /helloKamon                      controllers.NewRelicExample.sayHelloKamon
-GET     /helloNewRelic                   controllers.NewRelicExample.sayHelloNewRelic

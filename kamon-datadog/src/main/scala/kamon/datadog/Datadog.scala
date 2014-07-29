@@ -16,16 +16,17 @@
 
 package kamon.datadog
 
-import akka.actor._
-import kamon.Kamon
-import kamon.metrics._
-import scala.concurrent.duration._
-import scala.collection.JavaConverters._
-import com.typesafe.config.Config
-import java.lang.management.ManagementFactory
-import akka.event.Logging
 import java.net.InetSocketAddress
 import java.util.concurrent.TimeUnit.MILLISECONDS
+
+import akka.actor._
+import akka.event.Logging
+import kamon.Kamon
+import kamon.metric._
+import kamon.metrics._
+
+import scala.collection.JavaConverters._
+import scala.concurrent.duration._
 
 object Datadog extends ExtensionId[DatadogExtension] with ExtensionIdProvider {
   override def lookup(): ExtensionId[_ <: Extension] = Datadog
@@ -67,15 +68,23 @@ class DatadogExtension(system: ExtendedActorSystem) extends Kamon.Extension {
     Kamon(Metrics)(system).subscribe(DispatcherMetrics, dispatcherPathPattern, datadogMetricsListener, permanently = true)
   }
 
+  // Subscribe to SystemMetrics
+  val includeSystemMetrics = datadogConfig.getBoolean("report-system-metrics")
+  if (includeSystemMetrics) {
+    List(CPUMetrics, ProcessCPUMetrics, MemoryMetrics, NetworkMetrics, GCMetrics, HeapMetrics) foreach { metric ⇒
+      Kamon(Metrics)(system).subscribe(metric, "*", datadogMetricsListener, permanently = true)
+    }
+  }
+
   def buildMetricsListener(tickInterval: Long, flushInterval: Long): ActorRef = {
     assert(flushInterval >= tickInterval, "Datadog flush-interval needs to be equal or greater to the tick-interval")
 
-    val metricsTranslator = system.actorOf(DatadogMetricsSender.props(datadogHost, maxPacketSizeInBytes), "datadog-metrics-sender")
+    val metricsSender = system.actorOf(DatadogMetricsSender.props(datadogHost, maxPacketSizeInBytes), "datadog-metrics-sender")
     if (flushInterval == tickInterval) {
       // No need to buffer the metrics, let's go straight to the metrics sender.
-      metricsTranslator
+      metricsSender
     } else {
-      system.actorOf(TickMetricSnapshotBuffer.props(flushInterval.toInt.millis, metricsTranslator), "datadog-metrics-buffer")
+      system.actorOf(TickMetricSnapshotBuffer.props(flushInterval.toInt.millis, metricsSender), "datadog-metrics-buffer")
     }
   }
 }

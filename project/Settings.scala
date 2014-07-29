@@ -8,10 +8,15 @@ import scalariform.formatter.preferences._
 
 object Settings {
 
-  lazy val basicSettings = seq(
-    scalaVersion  := "2.11.1",
+  val ScalaVersion = "2.11.1"
+
+  lazy val basicSettings = Seq(
+    scalaVersion  := ScalaVersion,
     resolvers    ++= Dependencies.resolutionRepos,
     fork in run   := true,
+    javacOptions  := Seq(
+      "-source", "1.6", "-target", "1.6"
+    ),
     scalacOptions := Seq(
       "-encoding",
       "utf8",
@@ -23,7 +28,7 @@ object Settings {
       "-language:postfixOps",
       "-language:implicitConversions",
       "-Xlog-reflective-calls"
-    )) ++ publishSettings ++ releaseSettings ++ net.virtualvoid.sbt.graph.Plugin.graphSettings
+    )) ++ publishSettings ++ releaseSettings
 
   lazy val formatSettings = SbtScalariform.scalariformSettings ++ Seq(
     ScalariformKeys.preferences in Compile := formattingPreferences,
@@ -33,7 +38,7 @@ object Settings {
   def formattingPreferences =
     FormattingPreferences()
       .setPreference(RewriteArrowSymbols, true)
-      .setPreference(AlignParameters, true)
+      .setPreference(AlignParameters, false)
       .setPreference(AlignSingleLineCaseStatements, true)
       .setPreference(DoubleIndentClassDeclaration, true)
 }

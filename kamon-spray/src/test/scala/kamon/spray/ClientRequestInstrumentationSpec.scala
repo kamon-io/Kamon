@@ -26,13 +26,12 @@ import com.typesafe.config.ConfigFactory
 import spray.can.Http
 import spray.http.HttpHeaders.RawHeader
 import kamon.Kamon
-import kamon.metrics.{ TraceMetrics, Metrics }
+import kamon.metric.{ TraceMetrics, Metrics }
 import spray.client.pipelining
-import kamon.metrics.Subscriptions.TickMetricSnapshot
-import spray.can.client.ClientRequestInstrumentation
+import kamon.metric.Subscriptions.TickMetricSnapshot
 import scala.concurrent.duration._
 import akka.pattern.pipe
-import kamon.metrics.TraceMetrics.TraceMetricSnapshot
+import kamon.metric.TraceMetrics.{ HttpClientRequest, TraceMetricsSnapshot }
 
 class ClientRequestInstrumentationSpec extends TestKitBase with WordSpecLike with Matchers with RequestBuilding with TestServer {
   implicit lazy val system: ActorSystem = ActorSystem("client-request-instrumentation-spec", ConfigFactory.parseString(
@@ -149,7 +148,7 @@ class ClientRequestInstrumentationSpec extends TestKitBase with WordSpecLike wit
         val traceMetrics = expectTraceMetrics("pipelining-strategy-client-request", metricListener, 3 seconds)
         traceMetrics.elapsedTime.numberOfMeasurements should be(1L)
         traceMetrics.segments should not be empty
-        val recordedSegment = traceMetrics.segments.find { case (k, v) ⇒ k.tag == ClientRequestInstrumentation.UserTime } map (_._2)
+        val recordedSegment = traceMetrics.segments.find { case (k, v) ⇒ k.isInstanceOf[HttpClientRequest] } map (_._2)
         recordedSegment should not be empty
         recordedSegment map { segmentMetrics ⇒
           segmentMetrics.numberOfMeasurements should be(1L)
@@ -190,7 +189,7 @@ class ClientRequestInstrumentationSpec extends TestKitBase with WordSpecLike wit
         val traceMetrics = expectTraceMetrics("internal-strategy-client-request", metricListener, 3 seconds)
         traceMetrics.elapsedTime.numberOfMeasurements should be(1L)
         traceMetrics.segments should not be empty
-        val recordedSegment = traceMetrics.segments.find { case (k, v) ⇒ k.tag == ClientRequestInstrumentation.SprayTime } map (_._2)
+        val recordedSegment = traceMetrics.segments.find { case (k, v) ⇒ k.isInstanceOf[HttpClientRequest] } map (_._2)
         recordedSegment should not be empty
         recordedSegment map { segmentMetrics ⇒
           segmentMetrics.numberOfMeasurements should be(1L)
@@ -199,14 +198,14 @@ class ClientRequestInstrumentationSpec extends TestKitBase with WordSpecLike wit
     }
   }
 
-  def expectTraceMetrics(traceName: String, listener: TestProbe, timeout: FiniteDuration): TraceMetricSnapshot = {
+  def expectTraceMetrics(traceName: String, listener: TestProbe, timeout: FiniteDuration): TraceMetricsSnapshot = {
     val tickSnapshot = within(timeout) {
       listener.expectMsgType[TickMetricSnapshot]
     }
 
     val metricsOption = tickSnapshot.metrics.get(TraceMetrics(traceName))
     metricsOption should not be empty
-    metricsOption.get.asInstanceOf[TraceMetricSnapshot]
+    metricsOption.get.asInstanceOf[TraceMetricsSnapshot]
   }
 
   def enableInternalSegmentCollectionStrategy(): Unit = setSegmentCollectionStrategy(ClientSegmentCollectionStrategy.Internal)

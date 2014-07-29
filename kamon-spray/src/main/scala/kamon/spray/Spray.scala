@@ -19,6 +19,8 @@ package kamon.spray
 import akka.actor.{ ExtendedActorSystem, ExtensionIdProvider, ExtensionId }
 import akka.actor
 import kamon.Kamon
+import kamon.http.HttpServerMetrics
+import kamon.metric.Metrics
 import spray.http.HttpRequest
 
 object Spray extends ExtensionId[SprayExtension] with ExtensionIdProvider {
@@ -38,6 +40,8 @@ class SprayExtension(private val system: ExtendedActorSystem) extends Kamon.Exte
 
   val includeTraceToken: Boolean = config.getBoolean("automatic-trace-token-propagation")
   val traceTokenHeaderName: String = config.getString("trace-token-header-name")
+  val httpServerMetrics = Kamon(Metrics)(system).register(HttpServerMetrics, HttpServerMetrics.Factory).get
+  // It's safe to assume that HttpServerMetrics will always exist because there is no particular filter for it.
 
   val clientSegmentCollectionStrategy: ClientSegmentCollectionStrategy.Strategy =
     config.getString("client.segment-collection-strategy") match {
