@@ -51,6 +51,19 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
 
   implicit val timeout = Timeout(30 seconds)
 
+  val counter = Kamon(UserMetrics).registerCounter("requests")
+  Kamon(UserMetrics).registerCounter("requests-2")
+  Kamon(UserMetrics).registerCounter("requests-3")
+
+  Kamon(UserMetrics).registerHistogram("histogram-1")
+  Kamon(UserMetrics).registerHistogram("histogram-2")
+
+  Kamon(UserMetrics).registerMinMaxCounter("min-max-counter-1")
+  Kamon(UserMetrics).registerMinMaxCounter("min-max-counter-2")
+  Kamon(UserMetrics).registerMinMaxCounter("min-max-counter-3")
+
+  //Kamon(UserMetrics).registerGauge("test-gauge")(() => 10L)
+
   val pipeline = sendReceive
   val replier = system.actorOf(Props[Replier].withRouter(RoundRobinPool(nrOfInstances = 2)), "replier")
   val random = new Random()
@@ -92,6 +105,7 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
         path("future") {
           traceName("OK-Future") {
             dynamic {
+              counter.increment()
               complete(Future { "OK" })
             }
           }
