@@ -7,7 +7,7 @@ object Dependencies {
     "typesafe repo" at "http://repo.typesafe.com/typesafe/releases/"
   )
 
-  val sprayVersion    = "1.3.1-20140423"
+  val sprayVersion    = "1.3.1"
   val akkaVersion     = "2.3.3"
   val aspectjVersion  = "1.7.4"
   val slf4jVersion    = "1.7.6"
