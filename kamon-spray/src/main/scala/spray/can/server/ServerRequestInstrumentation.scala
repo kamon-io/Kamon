@@ -22,7 +22,7 @@ import spray.http.{ HttpResponse, HttpMessagePartWrapper, HttpRequest }
 import akka.event.Logging.Warning
 import scala.Some
 import kamon.Kamon
-import kamon.spray.Spray
+import kamon.spray.{ SprayExtension, Spray }
 import org.aspectj.lang.ProceedingJoinPoint
 import spray.http.HttpHeaders.RawHeader
 
@@ -68,20 +68,21 @@ class ServerRequestInstrumentation {
     val storedContext = openRequest.traceContext
 
     verifyTraceContextConsistency(incomingContext, storedContext)
-    val proceedResult = incomingContext match {
+    incomingContext match {
       case None ⇒ pjp.proceed()
       case Some(traceContext) ⇒
         val sprayExtension = Kamon(Spray)(traceContext.system)
 
-        if (sprayExtension.includeTraceToken) {
+        val proceedResult = if (sprayExtension.includeTraceToken) {
           val responseWithHeader = includeTraceTokenIfPossible(response, sprayExtension.traceTokenHeaderName, traceContext.token)
           pjp.proceed(Array(openRequest, responseWithHeader))
 
         } else pjp.proceed
-    }
 
-    TraceRecorder.finish()
-    proceedResult
+        TraceRecorder.finish()
+        recordHttpServerMetrics(response, traceContext.name, sprayExtension)
+        proceedResult
+    }
   }
 
   def verifyTraceContextConsistency(incomingTraceContext: Option[TraceContext], storedTraceContext: Option[TraceContext]): Unit = {
@@ -101,6 +102,12 @@ class ServerRequestInstrumentation {
       system.eventStream.publish(Warning("", classOf[ServerRequestInstrumentation], text))
 
   }
+
+  def recordHttpServerMetrics(response: HttpMessagePartWrapper, traceName: String, sprayExtension: SprayExtension): Unit =
+    response match {
+      case httpResponse: HttpResponse ⇒ sprayExtension.httpServerMetrics.recordResponse(traceName, httpResponse.status.intValue.toString)
+      case other                      ⇒ // Nothing to do then.
+    }
 
   def includeTraceTokenIfPossible(response: HttpMessagePartWrapper, traceTokenHeaderName: String, token: String): HttpMessagePartWrapper =
     response match {

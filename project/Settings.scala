@@ -8,10 +8,15 @@ import scalariform.formatter.preferences._
 
 object Settings {
 
-  lazy val basicSettings = seq(
-    scalaVersion  := "2.10.3",
+  val ScalaVersion = "2.10.4"
+
+  lazy val basicSettings = Seq(
+    scalaVersion  := ScalaVersion,
     resolvers    ++= Dependencies.resolutionRepos,
     fork in run   := true,
+    javacOptions  := Seq(
+      "-source", "1.6", "-target", "1.6"
+    ),
     scalacOptions := Seq(
       "-encoding",
       "utf8",
@@ -33,7 +38,7 @@ object Settings {
   def formattingPreferences =
     FormattingPreferences()
       .setPreference(RewriteArrowSymbols, true)
-      .setPreference(AlignParameters, true)
+      .setPreference(AlignParameters, false)
       .setPreference(AlignSingleLineCaseStatements, true)
       .setPreference(DoubleIndentClassDeclaration, true)
 }

@@ -18,6 +18,7 @@ package kamon.statsd
 
 import akka.actor._
 import kamon.Kamon
+import kamon.metric._
 import kamon.metrics._
 import scala.concurrent.duration._
 import scala.collection.JavaConverters._
@@ -31,6 +32,8 @@ object StatsD extends ExtensionId[StatsDExtension] with ExtensionIdProvider {
   override def createExtension(system: ExtendedActorSystem): StatsDExtension = new StatsDExtension(system)
 
   trait MetricKeyGenerator {
+    def localhostName: String
+    def normalizedLocalhostName: String
     def generateKey(groupIdentity: MetricGroupIdentity, metricIdentity: MetricIdentity): String
   }
 }
@@ -43,7 +46,7 @@ class StatsDExtension(system: ExtendedActorSystem) extends Kamon.Extension {
 
   val statsDHost = new InetSocketAddress(statsDConfig.getString("hostname"), statsDConfig.getInt("port"))
   val flushInterval = statsDConfig.getMilliseconds("flush-interval")
-  val maxPacketSize = statsDConfig.getInt("max-packet-size")
+  val maxPacketSizeInBytes = statsDConfig.getBytes("max-packet-size")
   val tickInterval = system.settings.config.getMilliseconds("kamon.metrics.tick-interval")
 
   val statsDMetricsListener = buildMetricsListener(tickInterval, flushInterval)
@@ -66,24 +69,44 @@ class StatsDExtension(system: ExtendedActorSystem) extends Kamon.Extension {
     Kamon(Metrics)(system).subscribe(DispatcherMetrics, dispatcherPathPattern, statsDMetricsListener, permanently = true)
   }
 
+  // Subscribe to SystemMetrics
+  val includeSystemMetrics = statsDConfig.getBoolean("report-system-metrics")
+  if (includeSystemMetrics) {
+    List(CPUMetrics, ProcessCPUMetrics, MemoryMetrics, NetworkMetrics, GCMetrics, HeapMetrics) foreach { metric ⇒
+      Kamon(Metrics)(system).subscribe(metric, "*", statsDMetricsListener, permanently = true)
+    }
+  }
+
   def buildMetricsListener(tickInterval: Long, flushInterval: Long): ActorRef = {
     assert(flushInterval >= tickInterval, "StatsD flush-interval needs to be equal or greater to the tick-interval")
+    val defaultMetricKeyGenerator = new SimpleMetricKeyGenerator(system.settings.config)
 
-    val metricsTranslator = system.actorOf(StatsDMetricsSender.props(statsDHost, maxPacketSize), "statsd-metrics-sender")
+    val metricsSender = system.actorOf(StatsDMetricsSender.props(
+      statsDHost,
+      maxPacketSizeInBytes,
+      defaultMetricKeyGenerator), "statsd-metrics-sender")
+
     if (flushInterval == tickInterval) {
       // No need to buffer the metrics, let's go straight to the metrics sender.
-      metricsTranslator
+      metricsSender
     } else {
-      system.actorOf(TickMetricSnapshotBuffer.props(flushInterval.toInt.millis, metricsTranslator), "statsd-metrics-buffer")
+      system.actorOf(TickMetricSnapshotBuffer.props(flushInterval.toInt.millis, metricsSender), "statsd-metrics-buffer")
     }
   }
 }
 
 class SimpleMetricKeyGenerator(config: Config) extends StatsD.MetricKeyGenerator {
   val application = config.getString("kamon.statsd.simple-metric-key-generator.application")
-  val localhostName = ManagementFactory.getRuntimeMXBean.getName.split('@')(1)
+  val _localhostName = ManagementFactory.getRuntimeMXBean.getName.split('@')(1)
+  val _normalizedLocalhostName = _localhostName.replace('.', '_')
 
-  def generateKey(groupIdentity: MetricGroupIdentity, metricIdentity: MetricIdentity): String =
-    s"${application}.${localhostName}.${groupIdentity.category.name}.${groupIdentity.name}.${metricIdentity.name}"
+  def localhostName: String = _localhostName
+
+  def normalizedLocalhostName: String = _normalizedLocalhostName
+
+  def generateKey(groupIdentity: MetricGroupIdentity, metricIdentity: MetricIdentity): String = {
+    val normalizedGroupName = groupIdentity.name.replace(": ", "-").replace(" ", "_").replace("/", "_")
+    s"${application}.${normalizedLocalhostName}.${groupIdentity.category.name}.${normalizedGroupName}.${metricIdentity.name}"
+  }
 }
 

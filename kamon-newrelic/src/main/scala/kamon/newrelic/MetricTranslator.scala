@@ -17,7 +17,7 @@
 package kamon.newrelic
 
 import akka.actor.{ Props, ActorRef, Actor }
-import kamon.metrics.Subscriptions.TickMetricSnapshot
+import kamon.metric.Subscriptions.TickMetricSnapshot
 import kamon.newrelic.MetricTranslator.TimeSliceMetrics
 
 class MetricTranslator(receiver: ActorRef) extends Actor

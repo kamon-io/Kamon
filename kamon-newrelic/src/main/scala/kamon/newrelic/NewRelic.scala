@@ -18,18 +18,19 @@ package kamon.newrelic
 import akka.actor._
 import scala.concurrent.duration._
 import kamon.Kamon
-import kamon.metrics.{ CustomMetric, TickMetricSnapshotBuffer, TraceMetrics, Metrics }
-import kamon.metrics.Subscriptions.TickMetricSnapshot
+import kamon.metric.{ UserMetrics, TickMetricSnapshotBuffer, TraceMetrics, Metrics }
+import kamon.metric.Subscriptions.TickMetricSnapshot
 import akka.actor
 
 class NewRelicExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   val config = system.settings.config.getConfig("kamon.newrelic")
 
+  val collectionContext = Kamon(Metrics)(system).buildDefaultCollectionContext
   val metricsListener = system.actorOf(Props[NewRelicMetricsListener], "kamon-newrelic")
   val apdexT: Double = config.getMilliseconds("apdexT") / 1E3 // scale to seconds.
 
   Kamon(Metrics)(system).subscribe(TraceMetrics, "*", metricsListener, permanently = true)
-  Kamon(Metrics)(system).subscribe(CustomMetric, "*", metricsListener, permanently = true)
+  Kamon(Metrics)(system).subscribe(UserMetrics.category, "*", metricsListener, permanently = true)
 }
 
 class NewRelicMetricsListener extends Actor with ActorLogging {
@@ -49,7 +50,7 @@ object NewRelic extends ExtensionId[NewRelicExtension] with ExtensionIdProvider 
   def createExtension(system: ExtendedActorSystem): NewRelicExtension = new NewRelicExtension(system)
 
   case class Metric(name: String, scope: Option[String], callCount: Long, total: Double, totalExclusive: Double,
-                    min: Double, max: Double, sumOfSquares: Double) {
+      min: Double, max: Double, sumOfSquares: Double) {
 
     def merge(that: Metric): Metric = {
       Metric(name, scope,
@@ -60,6 +61,5 @@ object NewRelic extends ExtensionId[NewRelicExtension] with ExtensionIdProvider 
         math.max(max, that.max),
         sumOfSquares + that.sumOfSquares)
     }
-
   }
 }

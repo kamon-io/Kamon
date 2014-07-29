@@ -16,26 +16,30 @@
 
 package kamon
 
-import kamon.metrics.{ Scale, MetricSnapshotLike }
+import kamon.metric.instrument.{ Counter, Histogram }
+import kamon.metric.{ MetricSnapshot, Scale }
 
 package object newrelic {
 
-  def toNewRelicMetric(scale: Scale)(name: String, scope: Option[String], snapshot: MetricSnapshotLike): NewRelic.Metric = {
-    var total: Double = 0D
-    var sumOfSquares: Double = 0D
+  def toNewRelicMetric(scale: Scale)(name: String, scope: Option[String], snapshot: MetricSnapshot): NewRelic.Metric = {
+    snapshot match {
+      case hs: Histogram.Snapshot ⇒
+        var total: Double = 0D
+        var sumOfSquares: Double = 0D
+        val scaledMin = Scale.convert(hs.scale, scale, hs.min)
+        val scaledMax = Scale.convert(hs.scale, scale, hs.max)
 
-    val measurementLevels = snapshot.measurements.iterator
-    while (measurementLevels.hasNext) {
-      val level = measurementLevels.next()
-      val scaledValue = Scale.convert(snapshot.scale, scale, level.value)
+        hs.recordsIterator.foreach { record ⇒
+          val scaledValue = Scale.convert(hs.scale, scale, record.level)
 
-      total += scaledValue * level.count
-      sumOfSquares += (scaledValue * scaledValue) * level.count
+          total += scaledValue * record.count
+          sumOfSquares += (scaledValue * scaledValue) * record.count
+        }
+
+        NewRelic.Metric(name, scope, hs.numberOfMeasurements, total, total, scaledMin, scaledMax, sumOfSquares)
+
+      case cs: Counter.Snapshot ⇒
+        NewRelic.Metric(name, scope, cs.count, cs.count, cs.count, 0, cs.count, cs.count * cs.count)
     }
-
-    val scaledMin = Scale.convert(snapshot.scale, scale, snapshot.min)
-    val scaledMax = Scale.convert(snapshot.scale, scale, snapshot.max)
-
-    NewRelic.Metric(name, scope, snapshot.numberOfMeasurements, total, total, scaledMin, scaledMax, sumOfSquares)
   }
 }
