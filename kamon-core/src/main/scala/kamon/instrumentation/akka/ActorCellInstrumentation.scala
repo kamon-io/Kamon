@@ -82,7 +82,6 @@ class ActorCellInstrumentation {
     val cellWithMetrics = cell.asInstanceOf[ActorCellMetrics]
 
     cellWithMetrics.actorMetricsRecorder.map { p ⇒
-      cellWithMetrics.mailboxSizeCollectorCancellable.cancel()
       Kamon(Metrics)(cell.system).unregister(cellWithMetrics.metricIdentity)
     }
   }
@@ -103,7 +102,6 @@ class ActorCellInstrumentation {
 trait ActorCellMetrics {
   var metricIdentity: ActorMetrics = _
   var actorMetricsRecorder: Option[ActorMetricsRecorder] = _
-  var mailboxSizeCollectorCancellable: Cancellable = _
 }
 
 @Aspect
