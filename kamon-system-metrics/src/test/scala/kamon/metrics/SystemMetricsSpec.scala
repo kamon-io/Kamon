@@ -16,7 +16,7 @@
 package kamon.metric
 
 import akka.actor.ActorSystem
-import akka.testkit.{ TestKitBase, TestProbe }
+import akka.testkit.{TestKitBase, TestProbe}
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
 import kamon.metric.Subscriptions.TickMetricSnapshot
@@ -28,11 +28,10 @@ import kamon.metrics.NetworkMetrics.NetworkMetricSnapshot
 import kamon.metrics.ProcessCPUMetrics.ProcessCPUMetricsSnapshot
 import kamon.metrics._
 import kamon.system.SystemMetricsExtension
-import org.scalatest.{ Ignore, Matchers, WordSpecLike }
+import org.scalatest.{Matchers, WordSpecLike}
 
 import scala.concurrent.duration._
 
-@Ignore
 class SystemMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
   implicit lazy val system: ActorSystem = ActorSystem("system-metrics-spec", ConfigFactory.parseString(
     """
