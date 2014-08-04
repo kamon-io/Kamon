@@ -51,7 +51,7 @@ class ActorMetricsSpec extends TestKitBase with WordSpecLike with Matchers with 
       |    }
       |
       |    default-min-max-counter-precision {
-      |      refresh-interval = 1 second
+      |      refresh-interval = 1 hour
       |      highest-trackable-value = 999999999
       |      significant-value-digits = 2
       |    }
@@ -89,9 +89,9 @@ class ActorMetricsSpec extends TestKitBase with WordSpecLike with Matchers with 
 
       val secondSnapshot = takeSnapshotOf(trackedActorMetrics) // Ensure that the recorders are clean
       secondSnapshot.errors.count should be(0L)
-      secondSnapshot.mailboxSize.numberOfMeasurements should be <= 3L
-      secondSnapshot.processingTime.numberOfMeasurements should be(0L) // 102 examples + Initialize message
-      secondSnapshot.timeInMailbox.numberOfMeasurements should be(0L) // 102 examples + Initialize message
+      secondSnapshot.mailboxSize.numberOfMeasurements should be(3L) // min, max and current
+      secondSnapshot.processingTime.numberOfMeasurements should be(0L)
+      secondSnapshot.timeInMailbox.numberOfMeasurements should be(0L)
     }
 
     "record the processing-time of the receive function" in new ActorMetricsFixtures {
