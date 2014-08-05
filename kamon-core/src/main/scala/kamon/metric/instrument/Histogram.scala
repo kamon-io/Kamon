@@ -145,7 +145,7 @@ class HdrHistogram(lowestTrackableValue: Long, highestTrackableValue: Long, sign
 
   private def reestablishTotalCount(diff: Long): Unit = {
     def tryUpdateTotalCount: Boolean = {
-      val previousTotalCount = getTotalCount
+      val previousTotalCount = totalCountUpdater.get(this)
       val newTotalCount = previousTotalCount - diff
 
       totalCountUpdater.compareAndSet(this, previousTotalCount, newTotalCount)
