@@ -16,6 +16,7 @@
 package kamon.newrelic
 
 import akka.actor._
+import kamon.metric.UserMetrics.{ UserGauges, UserMinMaxCounters, UserCounters, UserHistograms }
 import scala.concurrent.duration._
 import kamon.Kamon
 import kamon.metric.{ UserMetrics, TickMetricSnapshotBuffer, TraceMetrics, Metrics }
@@ -31,7 +32,13 @@ class NewRelicExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   val apdexT: Double = config.getDuration("apdexT", MILLISECONDS) / 1E3 // scale to seconds.
 
   Kamon(Metrics)(system).subscribe(TraceMetrics, "*", metricsListener, permanently = true)
-  Kamon(Metrics)(system).subscribe(UserMetrics.category, "*", metricsListener, permanently = true)
+
+  // Subscribe to all user metrics
+  Kamon(Metrics)(system).subscribe(UserHistograms, "*", metricsListener, permanently = true)
+  Kamon(Metrics)(system).subscribe(UserCounters, "*", metricsListener, permanently = true)
+  Kamon(Metrics)(system).subscribe(UserMinMaxCounters, "*", metricsListener, permanently = true)
+  Kamon(Metrics)(system).subscribe(UserGauges, "*", metricsListener, permanently = true)
+
 }
 
 class NewRelicMetricsListener extends Actor with ActorLogging {
