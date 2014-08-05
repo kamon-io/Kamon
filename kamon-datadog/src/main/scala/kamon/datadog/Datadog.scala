@@ -18,6 +18,7 @@ package kamon.datadog
 
 import akka.actor._
 import kamon.Kamon
+import kamon.metric.UserMetrics.{ UserGauges, UserMinMaxCounters, UserCounters, UserHistograms }
 import kamon.metric._
 import kamon.metrics._
 import kamon.metrics.CPUMetrics
@@ -47,6 +48,12 @@ class DatadogExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   val tickInterval = system.settings.config.getMilliseconds("kamon.metrics.tick-interval")
 
   val datadogMetricsListener = buildMetricsListener(tickInterval, flushInterval)
+
+  // Subscribe to all user metrics
+  Kamon(Metrics)(system).subscribe(UserHistograms, "*", datadogMetricsListener, permanently = true)
+  Kamon(Metrics)(system).subscribe(UserCounters, "*", datadogMetricsListener, permanently = true)
+  Kamon(Metrics)(system).subscribe(UserMinMaxCounters, "*", datadogMetricsListener, permanently = true)
+  Kamon(Metrics)(system).subscribe(UserGauges, "*", datadogMetricsListener, permanently = true)
 
   // Subscribe to Actors
   val includedActors = datadogConfig.getStringList("includes.actor").asScala

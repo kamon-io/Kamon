@@ -1,163 +1,188 @@
 package kamon.metric
 
 import akka.actor
-import akka.actor.{ ActorSystem, ExtendedActorSystem, ExtensionIdProvider, ExtensionId }
-import com.typesafe.config.Config
+import akka.actor.{ ExtendedActorSystem, ExtensionIdProvider, ExtensionId }
 import kamon.Kamon
 import kamon.metric.instrument.{ Gauge, MinMaxCounter, Counter, Histogram }
 
-import scala.collection.concurrent.TrieMap
 import scala.concurrent.duration.FiniteDuration
 
 class UserMetricsExtension(system: ExtendedActorSystem) extends Kamon.Extension {
-  lazy val userMetricsRecorder = Kamon(Metrics)(system).register(UserMetrics, UserMetrics.Factory).get
+  import UserMetrics._
 
-  def registerHistogram(name: String, precision: Histogram.Precision, highestTrackableValue: Long): Histogram =
-    userMetricsRecorder.buildHistogram(name, precision, highestTrackableValue)
+  lazy val metricsExtension = Kamon(Metrics)(system)
+  val precisionConfig = system.settings.config.getConfig("kamon.metrics.precision")
 
-  def registerHistogram(name: String): Histogram =
-    userMetricsRecorder.buildHistogram(name)
+  val defaultHistogramPrecisionConfig = precisionConfig.getConfig("default-histogram-precision")
+  val defaultMinMaxCounterPrecisionConfig = precisionConfig.getConfig("default-min-max-counter-precision")
+  val defaultGaugePrecisionConfig = precisionConfig.getConfig("default-gauge-precision")
 
-  def registerCounter(name: String): Counter =
-    userMetricsRecorder.buildCounter(name)
+  def registerHistogram(name: String, precision: Histogram.Precision, highestTrackableValue: Long): Histogram = {
+    metricsExtension.storage.getOrElseUpdate(UserHistogram(name), {
+      UserHistogramRecorder(Histogram(highestTrackableValue, precision, Scale.Unit))
+    }).asInstanceOf[UserHistogramRecorder].histogram
+  }
+
+  def registerHistogram(name: String): Histogram = {
+    metricsExtension.storage.getOrElseUpdate(UserHistogram(name), {
+      UserHistogramRecorder(Histogram.fromConfig(defaultHistogramPrecisionConfig))
+    }).asInstanceOf[UserHistogramRecorder].histogram
+  }
+
+  def registerCounter(name: String): Counter = {
+    metricsExtension.storage.getOrElseUpdate(UserCounter(name), {
+      UserCounterRecorder(Counter())
+    }).asInstanceOf[UserCounterRecorder].counter
+  }
 
   def registerMinMaxCounter(name: String, precision: Histogram.Precision, highestTrackableValue: Long,
     refreshInterval: FiniteDuration): MinMaxCounter = {
-    userMetricsRecorder.buildMinMaxCounter(name, precision, highestTrackableValue, refreshInterval)
+    metricsExtension.storage.getOrElseUpdate(UserMinMaxCounter(name), {
+      UserMinMaxCounterRecorder(MinMaxCounter(highestTrackableValue, precision, Scale.Unit, refreshInterval, system))
+    }).asInstanceOf[UserMinMaxCounterRecorder].minMaxCounter
   }
 
-  def registerMinMaxCounter(name: String): MinMaxCounter =
-    userMetricsRecorder.buildMinMaxCounter(name)
+  def registerMinMaxCounter(name: String): MinMaxCounter = {
+    metricsExtension.storage.getOrElseUpdate(UserMinMaxCounter(name), {
+      UserMinMaxCounterRecorder(MinMaxCounter.fromConfig(defaultMinMaxCounterPrecisionConfig, system))
+    }).asInstanceOf[UserMinMaxCounterRecorder].minMaxCounter
+  }
 
-  def registerGauge(name: String)(currentValueCollector: Gauge.CurrentValueCollector): Gauge =
-    userMetricsRecorder.buildGauge(name)(currentValueCollector)
+  def registerGauge(name: String)(currentValueCollector: Gauge.CurrentValueCollector): Gauge = {
+    metricsExtension.storage.getOrElseUpdate(UserGauge(name), {
+      UserGaugeRecorder(Gauge.fromConfig(defaultGaugePrecisionConfig, system)(currentValueCollector))
+    }).asInstanceOf[UserGaugeRecorder].gauge
+  }
 
   def registerGauge(name: String, precision: Histogram.Precision, highestTrackableValue: Long,
-    refreshInterval: FiniteDuration)(currentValueCollector: Gauge.CurrentValueCollector): Gauge =
-    userMetricsRecorder.buildGauge(name, precision, highestTrackableValue, refreshInterval, currentValueCollector)
+    refreshInterval: FiniteDuration)(currentValueCollector: Gauge.CurrentValueCollector): Gauge = {
+    metricsExtension.storage.getOrElseUpdate(UserGauge(name), {
+      UserGaugeRecorder(Gauge(precision, highestTrackableValue, Scale.Unit, refreshInterval, system)(currentValueCollector))
+    }).asInstanceOf[UserGaugeRecorder].gauge
+  }
 
   def removeHistogram(name: String): Unit =
-    userMetricsRecorder.removeHistogram(name)
+    metricsExtension.unregister(UserHistogram(name))
 
   def removeCounter(name: String): Unit =
-    userMetricsRecorder.removeCounter(name)
+    metricsExtension.unregister(UserCounter(name))
 
   def removeMinMaxCounter(name: String): Unit =
-    userMetricsRecorder.removeMinMaxCounter(name)
+    metricsExtension.unregister(UserMinMaxCounter(name))
 
   def removeGauge(name: String): Unit =
-    userMetricsRecorder.removeGauge(name)
+    metricsExtension.unregister(UserGauge(name))
 }
 
-object UserMetrics extends ExtensionId[UserMetricsExtension] with ExtensionIdProvider with MetricGroupIdentity {
+object UserMetrics extends ExtensionId[UserMetricsExtension] with ExtensionIdProvider {
   def lookup(): ExtensionId[_ <: actor.Extension] = Metrics
+
   def createExtension(system: ExtendedActorSystem): UserMetricsExtension = new UserMetricsExtension(system)
 
-  val name: String = "user-metrics-recorder"
-  val category = new MetricGroupCategory {
-    val name: String = "user-metrics"
+  sealed trait UserMetricGroup
+  //
+  // Histograms
+  //
+
+  case class UserHistogram(name: String) extends MetricGroupIdentity with UserMetricGroup {
+    val category = UserHistograms
   }
 
-  val Factory = new MetricGroupFactory {
-    type GroupRecorder = UserMetricsRecorder
-    def create(config: Config, system: ActorSystem): UserMetricsRecorder = new UserMetricsRecorder(system)
+  case class UserHistogramRecorder(histogram: Histogram) extends MetricGroupRecorder {
+    def collect(context: CollectionContext): MetricGroupSnapshot =
+      UserHistogramSnapshot(histogram.collect(context))
+
+    def cleanup: Unit = histogram.cleanup
   }
 
-  class UserMetricsRecorder(system: ActorSystem) extends MetricGroupRecorder {
-    val precisionConfig = system.settings.config.getConfig("kamon.metrics.precision")
-    val defaultHistogramPrecisionConfig = precisionConfig.getConfig("default-histogram-precision")
-    val defaultMinMaxCounterPrecisionConfig = precisionConfig.getConfig("default-min-max-counter-precision")
-    val defaultGaugePrecisionConfig = precisionConfig.getConfig("default-gauge-precision")
+  case class UserHistogramSnapshot(histogramSnapshot: Histogram.Snapshot) extends MetricGroupSnapshot {
+    type GroupSnapshotType = UserHistogramSnapshot
 
-    val histograms = TrieMap[String, Histogram]()
-    val counters = TrieMap[String, Counter]()
-    val minMaxCounters = TrieMap[String, MinMaxCounter]()
-    val gauges = TrieMap[String, Gauge]()
+    def merge(that: UserHistogramSnapshot, context: CollectionContext): UserHistogramSnapshot =
+      UserHistogramSnapshot(that.histogramSnapshot.merge(histogramSnapshot, context))
 
-    def buildHistogram(name: String, precision: Histogram.Precision, highestTrackableValue: Long): Histogram =
-      histograms.getOrElseUpdate(name, Histogram(highestTrackableValue, precision, Scale.Unit))
-
-    def buildHistogram(name: String): Histogram =
-      histograms.getOrElseUpdate(name, Histogram.fromConfig(defaultHistogramPrecisionConfig))
-
-    def buildCounter(name: String): Counter =
-      counters.getOrElseUpdate(name, Counter())
-
-    def buildMinMaxCounter(name: String, precision: Histogram.Precision, highestTrackableValue: Long,
-      refreshInterval: FiniteDuration): MinMaxCounter = {
-      minMaxCounters.getOrElseUpdate(name, MinMaxCounter(highestTrackableValue, precision, Scale.Unit, refreshInterval, system))
-    }
-
-    def buildMinMaxCounter(name: String): MinMaxCounter =
-      minMaxCounters.getOrElseUpdate(name, MinMaxCounter.fromConfig(defaultMinMaxCounterPrecisionConfig, system))
-
-    def buildGauge(name: String, precision: Histogram.Precision, highestTrackableValue: Long,
-      refreshInterval: FiniteDuration, currentValueCollector: Gauge.CurrentValueCollector): Gauge =
-      gauges.getOrElseUpdate(name, Gauge(precision, highestTrackableValue, Scale.Unit, refreshInterval, system)(currentValueCollector))
-
-    def buildGauge(name: String)(currentValueCollector: Gauge.CurrentValueCollector): Gauge =
-      gauges.getOrElseUpdate(name, Gauge.fromConfig(defaultGaugePrecisionConfig, system)(currentValueCollector))
-
-    def removeHistogram(name: String): Unit =
-      histograms.remove(name)
-
-    def removeCounter(name: String): Unit =
-      counters.remove(name)
-
-    def removeMinMaxCounter(name: String): Unit =
-      minMaxCounters.remove(name).map(_.cleanup)
-
-    def removeGauge(name: String): Unit =
-      gauges.remove(name).map(_.cleanup)
-
-    def collect(context: CollectionContext): UserMetricsSnapshot = {
-      val histogramSnapshots = histograms.map {
-        case (name, histogram) ⇒
-          (UserHistogram(name), histogram.collect(context))
-      } toMap
-
-      val counterSnapshots = counters.map {
-        case (name, counter) ⇒
-          (UserCounter(name), counter.collect(context))
-      } toMap
-
-      val minMaxCounterSnapshots = minMaxCounters.map {
-        case (name, minMaxCounter) ⇒
-          (UserMinMaxCounter(name), minMaxCounter.collect(context))
-      } toMap
-
-      val gaugeSnapshots = gauges.map {
-        case (name, gauge) ⇒
-          (UserGauge(name), gauge.collect(context))
-      } toMap
-
-      UserMetricsSnapshot(histogramSnapshots, counterSnapshots, minMaxCounterSnapshots, gaugeSnapshots)
-    }
-
-    def cleanup: Unit = {}
+    def metrics: Map[MetricIdentity, MetricSnapshot] = Map((RecordedValues, histogramSnapshot))
   }
 
-  case class UserHistogram(name: String) extends MetricIdentity
-  case class UserCounter(name: String) extends MetricIdentity
-  case class UserMinMaxCounter(name: String) extends MetricIdentity
-  case class UserGauge(name: String) extends MetricIdentity
+  //
+  // Counters
+  //
 
-  case class UserMetricsSnapshot(histograms: Map[UserHistogram, Histogram.Snapshot],
-    counters: Map[UserCounter, Counter.Snapshot],
-    minMaxCounters: Map[UserMinMaxCounter, Histogram.Snapshot],
-    gauges: Map[UserGauge, Histogram.Snapshot])
-      extends MetricGroupSnapshot {
-
-    type GroupSnapshotType = UserMetricsSnapshot
-
-    def merge(that: UserMetricsSnapshot, context: CollectionContext): UserMetricsSnapshot =
-      UserMetricsSnapshot(
-        combineMaps(histograms, that.histograms)((l, r) ⇒ l.merge(r, context)),
-        combineMaps(counters, that.counters)((l, r) ⇒ l.merge(r, context)),
-        combineMaps(minMaxCounters, that.minMaxCounters)((l, r) ⇒ l.merge(r, context)),
-        combineMaps(gauges, that.gauges)((l, r) ⇒ l.merge(r, context)))
-
-    def metrics: Map[MetricIdentity, MetricSnapshot] = histograms ++ counters ++ minMaxCounters ++ gauges
+  case class UserCounter(name: String) extends MetricGroupIdentity with UserMetricGroup {
+    val category = UserCounters
   }
+
+  case class UserCounterRecorder(counter: Counter) extends MetricGroupRecorder {
+    def collect(context: CollectionContext): MetricGroupSnapshot =
+      UserCounterSnapshot(counter.collect(context))
+
+    def cleanup: Unit = counter.cleanup
+  }
+
+  case class UserCounterSnapshot(counterSnapshot: Counter.Snapshot) extends MetricGroupSnapshot {
+    type GroupSnapshotType = UserCounterSnapshot
+
+    def merge(that: UserCounterSnapshot, context: CollectionContext): UserCounterSnapshot =
+      UserCounterSnapshot(that.counterSnapshot.merge(counterSnapshot, context))
+
+    def metrics: Map[MetricIdentity, MetricSnapshot] = Map((Count, counterSnapshot))
+  }
+
+  //
+  // MinMaxCounters
+  //
+
+  case class UserMinMaxCounter(name: String) extends MetricGroupIdentity with UserMetricGroup {
+    val category = UserMinMaxCounters
+  }
+
+  case class UserMinMaxCounterRecorder(minMaxCounter: MinMaxCounter) extends MetricGroupRecorder {
+    def collect(context: CollectionContext): MetricGroupSnapshot =
+      UserMinMaxCounterSnapshot(minMaxCounter.collect(context))
+
+    def cleanup: Unit = minMaxCounter.cleanup
+  }
+
+  case class UserMinMaxCounterSnapshot(minMaxCounterSnapshot: Histogram.Snapshot) extends MetricGroupSnapshot {
+    type GroupSnapshotType = UserMinMaxCounterSnapshot
+
+    def merge(that: UserMinMaxCounterSnapshot, context: CollectionContext): UserMinMaxCounterSnapshot =
+      UserMinMaxCounterSnapshot(that.minMaxCounterSnapshot.merge(minMaxCounterSnapshot, context))
+
+    def metrics: Map[MetricIdentity, MetricSnapshot] = Map((RecordedValues, minMaxCounterSnapshot))
+  }
+
+  //
+  // Gauges
+  //
+
+  case class UserGauge(name: String) extends MetricGroupIdentity with UserMetricGroup {
+    val category = UserGauges
+  }
+
+  case class UserGaugeRecorder(gauge: Gauge) extends MetricGroupRecorder {
+    def collect(context: CollectionContext): MetricGroupSnapshot =
+      UserGaugeSnapshot(gauge.collect(context))
+
+    def cleanup: Unit = gauge.cleanup
+  }
+
+  case class UserGaugeSnapshot(gaugeSnapshot: Histogram.Snapshot) extends MetricGroupSnapshot {
+    type GroupSnapshotType = UserGaugeSnapshot
+
+    def merge(that: UserGaugeSnapshot, context: CollectionContext): UserGaugeSnapshot =
+      UserGaugeSnapshot(that.gaugeSnapshot.merge(gaugeSnapshot, context))
+
+    def metrics: Map[MetricIdentity, MetricSnapshot] = Map((RecordedValues, gaugeSnapshot))
+  }
+
+  case object UserHistograms extends MetricGroupCategory { val name: String = "histogram" }
+  case object UserCounters extends MetricGroupCategory { val name: String = "counter" }
+  case object UserMinMaxCounters extends MetricGroupCategory { val name: String = "min-max-counter" }
+  case object UserGauges extends MetricGroupCategory { val name: String = "gauge" }
+
+  case object RecordedValues extends MetricIdentity { val name: String = "values" }
+  case object Count extends MetricIdentity { val name: String = "count" }
 
 }
+

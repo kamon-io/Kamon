@@ -1,11 +1,12 @@
 package kamon.metric
 
-import akka.actor.ActorSystem
+import akka.actor.{ Props, ActorSystem }
 import akka.testkit.{ ImplicitSender, TestKitBase }
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
-import kamon.metric.UserMetrics.{ UserGauge, UserMinMaxCounter, UserCounter, UserHistogram }
-import kamon.metric.instrument.Histogram
+import kamon.metric.Subscriptions.TickMetricSnapshot
+import kamon.metric.UserMetrics._
+import kamon.metric.instrument.{ Histogram, Counter, MinMaxCounter, Gauge }
 import kamon.metric.instrument.Histogram.MutableRecord
 import org.scalatest.{ Matchers, WordSpecLike }
 import scala.concurrent.duration._
@@ -113,32 +114,34 @@ class UserMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
       }
     }
 
-    "allow unregistering metrics from the extension" in {
-      val userMetricsRecorder = Kamon(Metrics).register(UserMetrics, UserMetrics.Factory).get
-      val counter = Kamon(UserMetrics).registerCounter("counter-for-remove")
-      val histogram = Kamon(UserMetrics).registerHistogram("histogram-for-remove")
-      val minMaxCounter = Kamon(UserMetrics).registerMinMaxCounter("min-max-counter-for-remove")
-      val gauge = Kamon(UserMetrics).registerGauge("gauge-for-remove") { () ⇒ 2L }
+    "allow un-registering user metrics" in {
+      val metricsExtension = Kamon(Metrics)
+      Kamon(UserMetrics).registerCounter("counter-for-remove")
+      Kamon(UserMetrics).registerHistogram("histogram-for-remove")
+      Kamon(UserMetrics).registerMinMaxCounter("min-max-counter-for-remove")
+      Kamon(UserMetrics).registerGauge("gauge-for-remove") { () ⇒ 2L }
 
-      userMetricsRecorder.counters.keys should contain("counter-for-remove")
-      userMetricsRecorder.histograms.keys should contain("histogram-for-remove")
-      userMetricsRecorder.minMaxCounters.keys should contain("min-max-counter-for-remove")
-      userMetricsRecorder.gauges.keys should contain("gauge-for-remove")
+      metricsExtension.storage.keys should contain(UserCounter("counter-for-remove"))
+      metricsExtension.storage.keys should contain(UserHistogram("histogram-for-remove"))
+      metricsExtension.storage.keys should contain(UserMinMaxCounter("min-max-counter-for-remove"))
+      metricsExtension.storage.keys should contain(UserGauge("gauge-for-remove"))
 
       Kamon(UserMetrics).removeCounter("counter-for-remove")
       Kamon(UserMetrics).removeHistogram("histogram-for-remove")
       Kamon(UserMetrics).removeMinMaxCounter("min-max-counter-for-remove")
       Kamon(UserMetrics).removeGauge("gauge-for-remove")
 
-      userMetricsRecorder.counters.keys should not contain ("counter-for-remove")
-      userMetricsRecorder.histograms.keys should not contain ("histogram-for-remove")
-      userMetricsRecorder.minMaxCounters.keys should not contain ("min-max-counter-for-remove")
-      userMetricsRecorder.gauges.keys should not contain ("gauge-for-remove")
+      metricsExtension.storage.keys should not contain (UserCounter("counter-for-remove"))
+      metricsExtension.storage.keys should not contain (UserHistogram("histogram-for-remove"))
+      metricsExtension.storage.keys should not contain (UserMinMaxCounter("min-max-counter-for-remove"))
+      metricsExtension.storage.keys should not contain (UserGauge("gauge-for-remove"))
     }
 
-    "generate a snapshot containing all the registered user metrics and reset all instruments" in {
-      val context = Kamon(Metrics).buildDefaultCollectionContext
-      val userMetricsRecorder = Kamon(Metrics).register(UserMetrics, UserMetrics.Factory).get
+    "include all the registered metrics in the a tick snapshot and reset all recorders" in {
+      Kamon(Metrics).subscribe(UserHistograms, "*", testActor, permanently = true)
+      Kamon(Metrics).subscribe(UserCounters, "*", testActor, permanently = true)
+      Kamon(Metrics).subscribe(UserMinMaxCounters, "*", testActor, permanently = true)
+      Kamon(Metrics).subscribe(UserGauges, "*", testActor, permanently = true)
 
       val histogramWithSettings = Kamon(UserMetrics).registerHistogram("histogram-with-settings", Histogram.Precision.Normal, 10000L)
       val histogramWithDefaultConfiguration = Kamon(UserMetrics).registerHistogram("histogram-with-default-configuration")
@@ -159,94 +162,93 @@ class UserMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
 
       gauge.record(15)
 
-      val firstSnapshot = userMetricsRecorder.collect(context)
+      Kamon(Metrics).subscriptions ! Subscriptions.FlushMetrics
+      val firstSnapshot = expectMsgType[TickMetricSnapshot].metrics
 
-      firstSnapshot.histograms.size should be(2)
-      firstSnapshot.histograms.keys should contain allOf (
+      firstSnapshot.keys should contain allOf (
         UserHistogram("histogram-with-settings"),
         UserHistogram("histogram-with-default-configuration"))
 
-      firstSnapshot.histograms(UserHistogram("histogram-with-settings")).min shouldBe (10)
-      firstSnapshot.histograms(UserHistogram("histogram-with-settings")).max shouldBe (20)
-      firstSnapshot.histograms(UserHistogram("histogram-with-settings")).numberOfMeasurements should be(101)
-      firstSnapshot.histograms(UserHistogram("histogram-with-settings")).recordsIterator.toStream should contain allOf (
+      firstSnapshot(UserHistogram("histogram-with-settings")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].min shouldBe (10)
+      firstSnapshot(UserHistogram("histogram-with-settings")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].max shouldBe (20)
+      firstSnapshot(UserHistogram("histogram-with-settings")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].numberOfMeasurements should be(101)
+      firstSnapshot(UserHistogram("histogram-with-settings")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].recordsIterator.toStream should contain allOf (
         MutableRecord(10, 1),
         MutableRecord(20, 100))
 
-      firstSnapshot.histograms(UserHistogram("histogram-with-default-configuration")).min shouldBe (40)
-      firstSnapshot.histograms(UserHistogram("histogram-with-default-configuration")).max shouldBe (40)
-      firstSnapshot.histograms(UserHistogram("histogram-with-default-configuration")).numberOfMeasurements should be(1)
-      firstSnapshot.histograms(UserHistogram("histogram-with-default-configuration")).recordsIterator.toStream should contain only (
+      firstSnapshot(UserHistogram("histogram-with-default-configuration")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].min shouldBe (40)
+      firstSnapshot(UserHistogram("histogram-with-default-configuration")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].max shouldBe (40)
+      firstSnapshot(UserHistogram("histogram-with-default-configuration")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].numberOfMeasurements should be(1)
+      firstSnapshot(UserHistogram("histogram-with-default-configuration")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].recordsIterator.toStream should contain only (
         MutableRecord(40, 1))
 
-      firstSnapshot.counters(UserCounter("counter")).count should be(17)
+      firstSnapshot(UserCounter("counter")).metrics(Count).asInstanceOf[Counter.Snapshot].count should be(17)
 
-      firstSnapshot.minMaxCounters(UserMinMaxCounter("min-max-counter-with-settings")).min shouldBe (0)
-      firstSnapshot.minMaxCounters(UserMinMaxCounter("min-max-counter-with-settings")).max shouldBe (43)
-      firstSnapshot.minMaxCounters(UserMinMaxCounter("min-max-counter-with-settings")).numberOfMeasurements should be(3)
-      firstSnapshot.minMaxCounters(UserMinMaxCounter("min-max-counter-with-settings")).recordsIterator.toStream should contain allOf (
+      firstSnapshot(UserMinMaxCounter("min-max-counter-with-settings")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].min shouldBe (0)
+      firstSnapshot(UserMinMaxCounter("min-max-counter-with-settings")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].max shouldBe (43)
+      firstSnapshot(UserMinMaxCounter("min-max-counter-with-settings")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].numberOfMeasurements should be(3)
+      firstSnapshot(UserMinMaxCounter("min-max-counter-with-settings")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].recordsIterator.toStream should contain allOf (
         MutableRecord(0, 1), // min
         MutableRecord(42, 1), // current
         MutableRecord(43, 1)) // max
 
-      firstSnapshot.minMaxCounters(UserMinMaxCounter("min-max-counter-with-default-configuration")).min shouldBe (0)
-      firstSnapshot.minMaxCounters(UserMinMaxCounter("min-max-counter-with-default-configuration")).max shouldBe (0)
-      firstSnapshot.minMaxCounters(UserMinMaxCounter("min-max-counter-with-default-configuration")).numberOfMeasurements should be(3)
-      firstSnapshot.minMaxCounters(UserMinMaxCounter("min-max-counter-with-default-configuration")).recordsIterator.toStream should contain only (
+      firstSnapshot(UserMinMaxCounter("min-max-counter-with-default-configuration")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].min shouldBe (0)
+      firstSnapshot(UserMinMaxCounter("min-max-counter-with-default-configuration")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].max shouldBe (0)
+      firstSnapshot(UserMinMaxCounter("min-max-counter-with-default-configuration")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].numberOfMeasurements should be(3)
+      firstSnapshot(UserMinMaxCounter("min-max-counter-with-default-configuration")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].recordsIterator.toStream should contain only (
         MutableRecord(0, 3)) // min, max and current
 
-      firstSnapshot.gauges(UserGauge("gauge-with-default-configuration")).min shouldBe (15)
-      firstSnapshot.gauges(UserGauge("gauge-with-default-configuration")).max shouldBe (15)
-      firstSnapshot.gauges(UserGauge("gauge-with-default-configuration")).numberOfMeasurements should be(1)
-      firstSnapshot.gauges(UserGauge("gauge-with-default-configuration")).recordsIterator.toStream should contain only (
+      firstSnapshot(UserGauge("gauge-with-default-configuration")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].min shouldBe (15)
+      firstSnapshot(UserGauge("gauge-with-default-configuration")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].max shouldBe (15)
+      firstSnapshot(UserGauge("gauge-with-default-configuration")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].numberOfMeasurements should be(1)
+      firstSnapshot(UserGauge("gauge-with-default-configuration")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].recordsIterator.toStream should contain only (
         MutableRecord(15, 1)) // only the manually recorded value
 
-      val secondSnapshot = userMetricsRecorder.collect(context)
+      Kamon(Metrics).subscriptions ! Subscriptions.FlushMetrics
+      val secondSnapshot = expectMsgType[TickMetricSnapshot].metrics
 
-      secondSnapshot.histograms.size should be(2)
-      secondSnapshot.histograms.keys should contain allOf (
+      secondSnapshot.keys should contain allOf (
         UserHistogram("histogram-with-settings"),
         UserHistogram("histogram-with-default-configuration"))
 
-      secondSnapshot.histograms(UserHistogram("histogram-with-settings")).min shouldBe (0)
-      secondSnapshot.histograms(UserHistogram("histogram-with-settings")).max shouldBe (0)
-      secondSnapshot.histograms(UserHistogram("histogram-with-settings")).numberOfMeasurements should be(0)
-      secondSnapshot.histograms(UserHistogram("histogram-with-settings")).recordsIterator.toStream shouldBe empty
+      secondSnapshot(UserHistogram("histogram-with-settings")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].min shouldBe (0)
+      secondSnapshot(UserHistogram("histogram-with-settings")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].max shouldBe (0)
+      secondSnapshot(UserHistogram("histogram-with-settings")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].numberOfMeasurements should be(0)
+      secondSnapshot(UserHistogram("histogram-with-settings")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].recordsIterator.toStream shouldBe empty
 
-      secondSnapshot.histograms(UserHistogram("histogram-with-default-configuration")).min shouldBe (0)
-      secondSnapshot.histograms(UserHistogram("histogram-with-default-configuration")).max shouldBe (0)
-      secondSnapshot.histograms(UserHistogram("histogram-with-default-configuration")).numberOfMeasurements should be(0)
-      secondSnapshot.histograms(UserHistogram("histogram-with-default-configuration")).recordsIterator.toStream shouldBe empty
+      secondSnapshot(UserHistogram("histogram-with-default-configuration")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].min shouldBe (0)
+      secondSnapshot(UserHistogram("histogram-with-default-configuration")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].max shouldBe (0)
+      secondSnapshot(UserHistogram("histogram-with-default-configuration")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].numberOfMeasurements should be(0)
+      secondSnapshot(UserHistogram("histogram-with-default-configuration")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].recordsIterator.toStream shouldBe empty
 
-      secondSnapshot.counters(UserCounter("counter")).count should be(0)
+      secondSnapshot(UserCounter("counter")).metrics(Count).asInstanceOf[Counter.Snapshot].count should be(0)
 
-      secondSnapshot.minMaxCounters.size should be(2)
-      secondSnapshot.minMaxCounters.keys should contain allOf (
-        UserMinMaxCounter("min-max-counter-with-settings"),
-        UserMinMaxCounter("min-max-counter-with-default-configuration"))
+      secondSnapshot(UserMinMaxCounter("min-max-counter-with-settings")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].min shouldBe (42)
+      secondSnapshot(UserMinMaxCounter("min-max-counter-with-settings")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].max shouldBe (42)
+      secondSnapshot(UserMinMaxCounter("min-max-counter-with-settings")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].numberOfMeasurements should be(3)
+      secondSnapshot(UserMinMaxCounter("min-max-counter-with-settings")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].recordsIterator.toStream should contain only (
+        MutableRecord(42, 3)) // max
 
-      secondSnapshot.minMaxCounters(UserMinMaxCounter("min-max-counter-with-settings")).min shouldBe (42)
-      secondSnapshot.minMaxCounters(UserMinMaxCounter("min-max-counter-with-settings")).max shouldBe (42)
-      secondSnapshot.minMaxCounters(UserMinMaxCounter("min-max-counter-with-settings")).numberOfMeasurements should be(3)
-      secondSnapshot.minMaxCounters(UserMinMaxCounter("min-max-counter-with-settings")).recordsIterator.toStream should contain only (
-        MutableRecord(42, 3)) // min, max and current
-
-      secondSnapshot.minMaxCounters(UserMinMaxCounter("min-max-counter-with-default-configuration")).min shouldBe (0)
-      secondSnapshot.minMaxCounters(UserMinMaxCounter("min-max-counter-with-default-configuration")).max shouldBe (0)
-      secondSnapshot.minMaxCounters(UserMinMaxCounter("min-max-counter-with-default-configuration")).numberOfMeasurements should be(3)
-      secondSnapshot.minMaxCounters(UserMinMaxCounter("min-max-counter-with-default-configuration")).recordsIterator.toStream should contain only (
+      secondSnapshot(UserMinMaxCounter("min-max-counter-with-default-configuration")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].min shouldBe (0)
+      secondSnapshot(UserMinMaxCounter("min-max-counter-with-default-configuration")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].max shouldBe (0)
+      secondSnapshot(UserMinMaxCounter("min-max-counter-with-default-configuration")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].numberOfMeasurements should be(3)
+      secondSnapshot(UserMinMaxCounter("min-max-counter-with-default-configuration")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].recordsIterator.toStream should contain only (
         MutableRecord(0, 3)) // min, max and current
 
-      secondSnapshot.gauges(UserGauge("gauge-with-default-configuration")).min shouldBe (0)
-      secondSnapshot.gauges(UserGauge("gauge-with-default-configuration")).max shouldBe (0)
-      secondSnapshot.gauges(UserGauge("gauge-with-default-configuration")).numberOfMeasurements should be(0)
-      secondSnapshot.gauges(UserGauge("gauge-with-default-configuration")).recordsIterator shouldBe empty
+      secondSnapshot(UserGauge("gauge-with-default-configuration")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].min shouldBe (0)
+      secondSnapshot(UserGauge("gauge-with-default-configuration")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].max shouldBe (0)
+      secondSnapshot(UserGauge("gauge-with-default-configuration")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].numberOfMeasurements should be(0)
+      secondSnapshot(UserGauge("gauge-with-default-configuration")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].recordsIterator.toStream shouldBe empty
 
+      Kamon(Metrics).unsubscribe(testActor)
     }
 
     "generate a snapshot that can be merged with another" in {
-      val context = Kamon(Metrics).buildDefaultCollectionContext
-      val userMetricsRecorder = Kamon(Metrics).register(UserMetrics, UserMetrics.Factory).get
+      val buffer = system.actorOf(TickMetricSnapshotBuffer.props(1 hours, testActor))
+      Kamon(Metrics).subscribe(UserHistograms, "*", buffer, permanently = true)
+      Kamon(Metrics).subscribe(UserCounters, "*", buffer, permanently = true)
+      Kamon(Metrics).subscribe(UserMinMaxCounters, "*", buffer, permanently = true)
+      Kamon(Metrics).subscribe(UserGauges, "*", buffer, permanently = true)
 
       val histogram = Kamon(UserMetrics).registerHistogram("histogram-for-merge")
       val counter = Kamon(UserMetrics).registerCounter("counter-for-merge")
@@ -259,7 +261,8 @@ class UserMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
       minMaxCounter.decrement(10)
       gauge.record(50)
 
-      val firstSnapshot = userMetricsRecorder.collect(context)
+      Kamon(Metrics).subscriptions ! Subscriptions.FlushMetrics
+      Thread.sleep(2000) // Make sure that the snapshots are taken before proceeding
 
       val extraCounter = Kamon(UserMetrics).registerCounter("extra-counter")
       histogram.record(200)
@@ -268,37 +271,41 @@ class UserMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
       minMaxCounter.decrement(50)
       gauge.record(70)
 
-      val secondSnapshot = userMetricsRecorder.collect(context)
-      val mergedSnapshot = firstSnapshot.merge(secondSnapshot, context)
+      Kamon(Metrics).subscriptions ! Subscriptions.FlushMetrics
+      Thread.sleep(2000) // Make sure that the metrics are buffered.
+      buffer ! TickMetricSnapshotBuffer.FlushBuffer
+      val snapshot = expectMsgType[TickMetricSnapshot].metrics
 
-      mergedSnapshot.histograms.keys should contain(UserHistogram("histogram-for-merge"))
+      snapshot.keys should contain(UserHistogram("histogram-for-merge"))
 
-      mergedSnapshot.histograms(UserHistogram("histogram-for-merge")).min shouldBe (100)
-      mergedSnapshot.histograms(UserHistogram("histogram-for-merge")).max shouldBe (200)
-      mergedSnapshot.histograms(UserHistogram("histogram-for-merge")).numberOfMeasurements should be(2)
-      mergedSnapshot.histograms(UserHistogram("histogram-for-merge")).recordsIterator.toStream should contain allOf (
+      snapshot(UserHistogram("histogram-for-merge")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].min shouldBe (100)
+      snapshot(UserHistogram("histogram-for-merge")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].max shouldBe (200)
+      snapshot(UserHistogram("histogram-for-merge")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].numberOfMeasurements should be(2)
+      snapshot(UserHistogram("histogram-for-merge")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].recordsIterator.toStream should contain allOf (
         MutableRecord(100, 1),
         MutableRecord(200, 1))
 
-      mergedSnapshot.counters(UserCounter("counter-for-merge")).count should be(10)
-      mergedSnapshot.counters(UserCounter("extra-counter")).count should be(20)
+      snapshot(UserCounter("counter-for-merge")).metrics(Count).asInstanceOf[Counter.Snapshot].count should be(10)
+      snapshot(UserCounter("extra-counter")).metrics(Count).asInstanceOf[Counter.Snapshot].count should be(20)
 
-      mergedSnapshot.minMaxCounters(UserMinMaxCounter("min-max-counter-for-merge")).min shouldBe (0)
-      mergedSnapshot.minMaxCounters(UserMinMaxCounter("min-max-counter-for-merge")).max shouldBe (80)
-      mergedSnapshot.minMaxCounters(UserMinMaxCounter("min-max-counter-for-merge")).numberOfMeasurements should be(6)
-      mergedSnapshot.minMaxCounters(UserMinMaxCounter("min-max-counter-for-merge")).recordsIterator.toStream should contain allOf (
+      snapshot(UserMinMaxCounter("min-max-counter-for-merge")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].min shouldBe (0)
+      snapshot(UserMinMaxCounter("min-max-counter-for-merge")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].max shouldBe (80)
+      snapshot(UserMinMaxCounter("min-max-counter-for-merge")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].numberOfMeasurements should be(6)
+      snapshot(UserMinMaxCounter("min-max-counter-for-merge")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].recordsIterator.toStream should contain allOf (
         MutableRecord(0, 1), // min in first snapshot
         MutableRecord(30, 2), // min and current in second snapshot
         MutableRecord(40, 1), // current in first snapshot
         MutableRecord(50, 1), // max in first snapshot
         MutableRecord(80, 1)) // max in second snapshot
 
-      mergedSnapshot.gauges(UserGauge("gauge-for-merge")).min shouldBe (50)
-      mergedSnapshot.gauges(UserGauge("gauge-for-merge")).max shouldBe (70)
-      mergedSnapshot.gauges(UserGauge("gauge-for-merge")).numberOfMeasurements should be(2)
-      mergedSnapshot.gauges(UserGauge("gauge-for-merge")).recordsIterator.toStream should contain allOf (
+      snapshot(UserGauge("gauge-for-merge")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].min shouldBe (50)
+      snapshot(UserGauge("gauge-for-merge")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].max shouldBe (70)
+      snapshot(UserGauge("gauge-for-merge")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].numberOfMeasurements should be(2)
+      snapshot(UserGauge("gauge-for-merge")).metrics(RecordedValues).asInstanceOf[Histogram.Snapshot].recordsIterator.toStream should contain allOf (
         MutableRecord(50, 1),
         MutableRecord(70, 1))
+
+      Kamon(Metrics).unsubscribe(testActor)
     }
   }
 }

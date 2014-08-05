@@ -18,6 +18,7 @@ package kamon.statsd
 
 import akka.actor._
 import kamon.Kamon
+import kamon.metric.UserMetrics._
 import kamon.metric._
 import kamon.metrics._
 import scala.concurrent.duration._
@@ -50,6 +51,12 @@ class StatsDExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   val tickInterval = system.settings.config.getMilliseconds("kamon.metrics.tick-interval")
 
   val statsDMetricsListener = buildMetricsListener(tickInterval, flushInterval)
+
+  // Subscribe to all user metrics
+  Kamon(Metrics)(system).subscribe(UserHistograms, "*", statsDMetricsListener, permanently = true)
+  Kamon(Metrics)(system).subscribe(UserCounters, "*", statsDMetricsListener, permanently = true)
+  Kamon(Metrics)(system).subscribe(UserMinMaxCounters, "*", statsDMetricsListener, permanently = true)
+  Kamon(Metrics)(system).subscribe(UserGauges, "*", statsDMetricsListener, permanently = true)
 
   // Subscribe to Actors
   val includedActors = statsDConfig.getStringList("includes.actor").asScala
@@ -106,7 +113,16 @@ class SimpleMetricKeyGenerator(config: Config) extends StatsD.MetricKeyGenerator
 
   def generateKey(groupIdentity: MetricGroupIdentity, metricIdentity: MetricIdentity): String = {
     val normalizedGroupName = groupIdentity.name.replace(": ", "-").replace(" ", "_").replace("/", "_")
-    s"${application}.${normalizedLocalhostName}.${groupIdentity.category.name}.${normalizedGroupName}.${metricIdentity.name}"
+
+    if (isUserMetric(groupIdentity))
+      s"${application}.${normalizedLocalhostName}.${groupIdentity.category.name}.${normalizedGroupName}"
+    else
+      s"${application}.${normalizedLocalhostName}.${groupIdentity.category.name}.${normalizedGroupName}.${metricIdentity.name}"
+  }
+
+  def isUserMetric(groupIdentity: MetricGroupIdentity): Boolean = groupIdentity match {
+    case someUserMetric: UserMetricGroup ⇒ true
+    case everythingElse                  ⇒ false
   }
 }
 

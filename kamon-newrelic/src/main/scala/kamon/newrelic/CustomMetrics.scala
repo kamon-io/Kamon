@@ -17,6 +17,7 @@
 package kamon.newrelic
 
 import akka.actor.Actor
+import kamon.metric.UserMetrics.UserMetricGroup
 import kamon.metric._
 
 trait CustomMetrics {
@@ -24,9 +25,9 @@ trait CustomMetrics {
 
   def collectCustomMetrics(metrics: Map[MetricGroupIdentity, MetricGroupSnapshot]): Seq[NewRelic.Metric] = {
     metrics.collect {
-      case (UserMetrics, groupSnapshot) ⇒
+      case (mg: UserMetricGroup, groupSnapshot) ⇒
         groupSnapshot.metrics collect {
-          case (name, snapshot) ⇒ toNewRelicMetric(Scale.Unit)(s"Custom/$name", None, snapshot)
+          case (name, snapshot) ⇒ toNewRelicMetric(Scale.Unit)(s"Custom/${mg.name}", None, snapshot)
         }
     }.flatten.toSeq
   }

@@ -18,6 +18,7 @@ package kamon.metric
 import java.nio.LongBuffer
 
 import akka.instrumentation.ActorCellMetrics
+import kamon.Kamon
 import kamon.metric.ActorMetricsTestActor._
 import org.scalatest.{ WordSpecLike, Matchers }
 import akka.testkit.{ ImplicitSender, TestProbe, TestKitBase }
@@ -37,7 +38,7 @@ class ActorMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
       |  filters = [
       |    {
       |      actor {
-      |        includes = [ "user/tracked-*", "user/measuring-*", "user/clean-after-collect" ]
+      |        includes = [ "user/tracked-*", "user/measuring-*", "user/clean-after-collect", "user/stop" ]
       |        excludes = [ "user/tracked-explicitly-excluded"]
       |      }
       |    }
@@ -49,7 +50,7 @@ class ActorMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
       |    }
       |
       |    default-min-max-counter-precision {
-      |      refresh-interval = 1 second
+      |      refresh-interval = 1 hour
       |      highest-trackable-value = 999999999
       |      significant-value-digits = 2
       |    }
@@ -87,9 +88,9 @@ class ActorMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
 
       val secondSnapshot = takeSnapshotOf(trackedActorMetrics) // Ensure that the recorders are clean
       secondSnapshot.errors.count should be(0L)
-      secondSnapshot.mailboxSize.numberOfMeasurements should be <= 3L
-      secondSnapshot.processingTime.numberOfMeasurements should be(0L) // 102 examples + Initialize message
-      secondSnapshot.timeInMailbox.numberOfMeasurements should be(0L) // 102 examples + Initialize message
+      secondSnapshot.mailboxSize.numberOfMeasurements should be(3L) // min, max and current
+      secondSnapshot.processingTime.numberOfMeasurements should be(0L)
+      secondSnapshot.timeInMailbox.numberOfMeasurements should be(0L)
     }
 
     "record the processing-time of the receive function" in new ActorMetricsFixtures {
@@ -150,6 +151,19 @@ class ActorMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
       snapshot.timeInMailbox.numberOfMeasurements should be(1L)
       snapshot.timeInMailbox.recordsIterator.next().count should be(1L)
       snapshot.timeInMailbox.recordsIterator.next().level should be(timings.approximateTimeInMailbox +- 10.millis.toNanos)
+    }
+
+    "clean up the associated recorder when the actor is stopped" in new ActorMetricsFixtures {
+      val trackedActor = createTestActor("stop")
+      actorMetricsRecorderOf(trackedActor).get // force the actor to be initialized
+      Kamon(Metrics).storage.get(ActorMetrics("user/stop")) should not be empty
+
+      val deathWatcher = TestProbe()
+      deathWatcher.watch(trackedActor)
+      trackedActor ! PoisonPill
+      deathWatcher.expectTerminated(trackedActor)
+
+      Kamon(Metrics).storage.get(ActorMetrics("user/stop")) shouldBe empty
     }
   }
 
