@@ -52,7 +52,7 @@ class MetricsExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   }
 
   def unregister(identity: MetricGroupIdentity): Unit = {
-    storage.remove(identity)
+    storage.remove(identity).map(_.cleanup)
   }
 
   def subscribe[C <: MetricGroupCategory](category: C, selection: String, subscriber: ActorRef, permanently: Boolean = false): Unit =

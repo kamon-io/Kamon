@@ -17,11 +17,12 @@
 package kamon.logreporter
 
 import akka.actor._
+import akka.event.Logging
 import kamon.Kamon
 import kamon.metric.ActorMetrics.ActorMetricSnapshot
 import kamon.metric.Subscriptions.TickMetricSnapshot
 import kamon.metric.TraceMetrics.TraceMetricsSnapshot
-import kamon.metric.UserMetrics.{ UserCounter, UserMetricsSnapshot }
+import kamon.metric.UserMetrics._
 import kamon.metric.instrument.{ Counter, Histogram }
 import kamon.metric._
 
@@ -37,10 +38,18 @@ object LogReporter extends ExtensionId[LogReporterExtension] with ExtensionIdPro
 }
 
 class LogReporterExtension(system: ExtendedActorSystem) extends Kamon.Extension {
+  val log = Logging(system, classOf[LogReporterExtension])
+  log.info("Starting the Kamon(LogReporter) extension")
+
   val subscriber = system.actorOf(Props[LogReporterSubscriber], "kamon-log-reporter")
   Kamon(Metrics)(system).subscribe(TraceMetrics, "*", subscriber, permanently = true)
   Kamon(Metrics)(system).subscribe(ActorMetrics, "*", subscriber, permanently = true)
-  Kamon(Metrics)(system).subscribe(UserMetrics.category, "*", subscriber, permanently = true)
+
+  // Subscribe to all user metrics
+  Kamon(Metrics)(system).subscribe(UserHistograms, "*", subscriber, permanently = true)
+  Kamon(Metrics)(system).subscribe(UserCounters, "*", subscriber, permanently = true)
+  Kamon(Metrics)(system).subscribe(UserMinMaxCounters, "*", subscriber, permanently = true)
+  Kamon(Metrics)(system).subscribe(UserGauges, "*", subscriber, permanently = true)
 
 }
 
@@ -51,10 +60,24 @@ class LogReporterSubscriber extends Actor with ActorLogging {
     case tick: TickMetricSnapshot ⇒ printMetricSnapshot(tick)
   }
 
-  def printMetricSnapshot(tick: TickMetricSnapshot): Unit = tick.metrics foreach {
-    case (identity, ams: ActorMetricSnapshot)  ⇒ logActorMetrics(identity.name, ams)
-    case (identity, tms: TraceMetricsSnapshot) ⇒ logTraceMetrics(identity.name, tms)
-    case (_, ums: UserMetricsSnapshot)         ⇒ logUserMetrics(ums)
+  def printMetricSnapshot(tick: TickMetricSnapshot): Unit = {
+    // Group all the user metrics together.
+    val histograms = Map.newBuilder[MetricGroupIdentity, Histogram.Snapshot]
+    val counters = Map.newBuilder[MetricGroupIdentity, Counter.Snapshot]
+    val minMaxCounters = Map.newBuilder[MetricGroupIdentity, Histogram.Snapshot]
+    val gauges = Map.newBuilder[MetricGroupIdentity, Histogram.Snapshot]
+
+    tick.metrics foreach {
+      case (identity, ams: ActorMetricSnapshot)                 ⇒ logActorMetrics(identity.name, ams)
+      case (identity, tms: TraceMetricsSnapshot)                ⇒ logTraceMetrics(identity.name, tms)
+      case (h: UserHistogram, s: UserHistogramSnapshot)         ⇒ histograms += (h -> s.histogramSnapshot)
+      case (c: UserCounter, s: UserCounterSnapshot)             ⇒ counters += (c -> s.counterSnapshot)
+      case (m: UserMinMaxCounter, s: UserMinMaxCounterSnapshot) ⇒ minMaxCounters += (m -> s.minMaxCounterSnapshot)
+      case (g: UserGauge, s: UserGaugeSnapshot)                 ⇒ gauges += (g -> s.gaugeSnapshot)
+      case ignoreEverythingElse                                 ⇒
+    }
+
+    logUserMetrics(histograms.result(), counters.result(), minMaxCounters.result(), gauges.result())
   }
 
   def logActorMetrics(name: String, ams: ActorMetricSnapshot): Unit = {
@@ -112,7 +135,9 @@ class LogReporterSubscriber extends Actor with ActorLogging {
     log.info(traceMetricsData.toString())
   }
 
-  def logUserMetrics(ums: UserMetricsSnapshot): Unit = {
+  def logUserMetrics(histograms: Map[MetricGroupIdentity, Histogram.Snapshot],
+    counters: Map[MetricGroupIdentity, Counter.Snapshot], minMaxCounters: Map[MetricGroupIdentity, Histogram.Snapshot],
+    gauges: Map[MetricGroupIdentity, Histogram.Snapshot]): Unit = {
     val userMetricsData = StringBuilder.newBuilder
 
     userMetricsData.append(
@@ -123,8 +148,8 @@ class LogReporterSubscriber extends Actor with ActorLogging {
         ||                                       -------------                                              |
         |""".stripMargin)
 
-    ums.counters.toList.sortBy(_._1.name.toLowerCase).foreach {
-      case (counter, snapshot) ⇒ userMetricsData.append(userCounterString(counter, snapshot))
+    counters.toList.sortBy(_._1.name.toLowerCase).foreach {
+      case (counter, snapshot) ⇒ userMetricsData.append(userCounterString(counter.name, snapshot))
     }
 
     userMetricsData.append(
@@ -134,7 +159,7 @@ class LogReporterSubscriber extends Actor with ActorLogging {
         ||                                      ---------------                                             |
         |""".stripMargin)
 
-    ums.histograms.foreach {
+    histograms.foreach {
       case (histogram, snapshot) ⇒
         userMetricsData.append("|  %-40s                                                        |\n".format(histogram.name))
         userMetricsData.append(compactHistogramView(snapshot))
@@ -147,7 +172,7 @@ class LogReporterSubscriber extends Actor with ActorLogging {
         ||                                    -------------------                                           |
         |""".stripMargin)
 
-    ums.minMaxCounters.foreach {
+    minMaxCounters.foreach {
       case (minMaxCounter, snapshot) ⇒
         userMetricsData.append("|  %-40s                                                        |\n".format(minMaxCounter.name))
         userMetricsData.append(simpleHistogramView(snapshot))
@@ -161,7 +186,7 @@ class LogReporterSubscriber extends Actor with ActorLogging {
         |"""
         .stripMargin)
 
-    ums.gauges.foreach {
+    gauges.foreach {
       case (gauge, snapshot) ⇒
         userMetricsData.append("|  %-40s                                                        |\n".format(gauge.name))
         userMetricsData.append(simpleHistogramView(snapshot))
@@ -176,9 +201,9 @@ class LogReporterSubscriber extends Actor with ActorLogging {
     log.info(userMetricsData.toString())
   }
 
-  def userCounterString(counter: UserCounter, snapshot: Counter.Snapshot): String = {
+  def userCounterString(counterName: String, snapshot: Counter.Snapshot): String = {
     "|             %30s  =>  %-12s                                     |\n"
-      .format(counter.name, snapshot.count)
+      .format(counterName, snapshot.count)
   }
 
   def compactHistogramView(histogram: Histogram.Snapshot): String = {

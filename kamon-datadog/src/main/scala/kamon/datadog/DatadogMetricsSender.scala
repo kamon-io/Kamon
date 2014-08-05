@@ -22,6 +22,7 @@ import java.net.InetSocketAddress
 import akka.util.ByteString
 import kamon.metric.Subscriptions.TickMetricSnapshot
 import java.text.{ DecimalFormatSymbols, DecimalFormat }
+import kamon.metric.UserMetrics.UserMetricGroup
 import kamon.metric.instrument.{ Counter, Histogram }
 import kamon.metric.{ MetricIdentity, MetricGroupIdentity }
 import java.util.Locale
@@ -88,12 +89,22 @@ class DatadogMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long
   def encodeStatsDCounter(count: Long): String = count.toString + "|c"
 
   def buildMetricName(groupIdentity: MetricGroupIdentity, metricIdentity: MetricIdentity): String =
-    s"$appName.${groupIdentity.category.name}.${metricIdentity.name}"
+    if (isUserMetric(groupIdentity))
+      s"$appName.${groupIdentity.category.name}.${groupIdentity.name}"
+    else
+      s"$appName.${groupIdentity.category.name}.${metricIdentity.name}"
 
   def buildIdentificationTag(groupIdentity: MetricGroupIdentity, metricIdentity: MetricIdentity): String = {
-    // Make the automatic HTTP trace names a bit more friendly
-    val normalizedEntityName = groupIdentity.name.replace(": ", ":")
-    s"|#${groupIdentity.category.name}:${normalizedEntityName}"
+    if (isUserMetric(groupIdentity)) "" else {
+      // Make the automatic HTTP trace names a bit more friendly
+      val normalizedEntityName = groupIdentity.name.replace(": ", ":")
+      s"|#${groupIdentity.category.name}:${normalizedEntityName}"
+    }
+  }
+
+  def isUserMetric(groupIdentity: MetricGroupIdentity): Boolean = groupIdentity match {
+    case someUserMetric: UserMetricGroup ⇒ true
+    case everythingElse                  ⇒ false
   }
 }
 
