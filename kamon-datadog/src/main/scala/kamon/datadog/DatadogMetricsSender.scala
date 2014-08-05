@@ -89,13 +89,13 @@ class DatadogMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long
   def encodeStatsDCounter(count: Long): String = count.toString + "|c"
 
   def buildMetricName(groupIdentity: MetricGroupIdentity, metricIdentity: MetricIdentity): String =
-    if(isUserMetric(groupIdentity))
+    if (isUserMetric(groupIdentity))
       s"$appName.${groupIdentity.category.name}.${groupIdentity.name}"
     else
       s"$appName.${groupIdentity.category.name}.${metricIdentity.name}"
 
   def buildIdentificationTag(groupIdentity: MetricGroupIdentity, metricIdentity: MetricIdentity): String = {
-    if(isUserMetric(groupIdentity)) "" else {
+    if (isUserMetric(groupIdentity)) "" else {
       // Make the automatic HTTP trace names a bit more friendly
       val normalizedEntityName = groupIdentity.name.replace(": ", ":")
       s"|#${groupIdentity.category.name}:${normalizedEntityName}"
