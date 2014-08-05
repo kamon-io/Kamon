@@ -79,11 +79,12 @@ object UserMetrics extends ExtensionId[UserMetricsExtension] with ExtensionIdPro
 
   def createExtension(system: ExtendedActorSystem): UserMetricsExtension = new UserMetricsExtension(system)
 
+  sealed trait UserMetricGroup
   //
   // Histograms
   //
 
-  case class UserHistogram(name: String) extends MetricGroupIdentity {
+  case class UserHistogram(name: String) extends MetricGroupIdentity with UserMetricGroup {
     val category = UserHistograms
   }
 
@@ -107,7 +108,7 @@ object UserMetrics extends ExtensionId[UserMetricsExtension] with ExtensionIdPro
   // Counters
   //
 
-  case class UserCounter(name: String) extends MetricGroupIdentity {
+  case class UserCounter(name: String) extends MetricGroupIdentity with UserMetricGroup {
     val category = UserCounters
   }
 
@@ -131,7 +132,7 @@ object UserMetrics extends ExtensionId[UserMetricsExtension] with ExtensionIdPro
   // MinMaxCounters
   //
 
-  case class UserMinMaxCounter(name: String) extends MetricGroupIdentity {
+  case class UserMinMaxCounter(name: String) extends MetricGroupIdentity with UserMetricGroup {
     val category = UserMinMaxCounters
   }
 
@@ -155,7 +156,7 @@ object UserMetrics extends ExtensionId[UserMetricsExtension] with ExtensionIdPro
   // Gauges
   //
 
-  case class UserGauge(name: String) extends MetricGroupIdentity {
+  case class UserGauge(name: String) extends MetricGroupIdentity with UserMetricGroup {
     val category = UserGauges
   }
 
@@ -175,29 +176,13 @@ object UserMetrics extends ExtensionId[UserMetricsExtension] with ExtensionIdPro
     def metrics: Map[MetricIdentity, MetricSnapshot] = Map((RecordedValues, gaugeSnapshot))
   }
 
-  case object UserHistograms extends MetricGroupCategory {
-    val name: String = "user-histogram"
-  }
+  case object UserHistograms extends MetricGroupCategory { val name: String = "histogram" }
+  case object UserCounters extends MetricGroupCategory { val name: String = "counter" }
+  case object UserMinMaxCounters extends MetricGroupCategory { val name: String = "min-max-counter" }
+  case object UserGauges extends MetricGroupCategory { val name: String = "gauge" }
 
-  case object UserCounters extends MetricGroupCategory {
-    val name: String = "user-counter"
-  }
-
-  case object UserMinMaxCounters extends MetricGroupCategory {
-    val name: String = "user-min-max-counter"
-  }
-
-  case object UserGauges extends MetricGroupCategory {
-    val name: String = "user-gauge"
-  }
-
-  case object RecordedValues extends MetricIdentity {
-    val name: String = "values"
-  }
-
-  case object Count extends MetricIdentity {
-    val name: String = "count"
-  }
+  case object RecordedValues extends MetricIdentity { val name: String = "values" }
+  case object Count extends MetricIdentity { val name: String = "count" }
 
 }
 
