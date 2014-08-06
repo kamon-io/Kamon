@@ -16,13 +16,10 @@
 package kamon
 
 import akka.actor._
-import akka.event.Logging.{ Info, Error }
+import akka.event.Logging.Error
 
 object Kamon {
   trait Extension extends akka.actor.Extension {
-    def publishInfoMessage(system: ActorSystem, msg: String): Unit = {
-      system.eventStream.publish(Info("", classOf[Extension], msg))
-    }
     def publishErrorMessage(system: ActorSystem, msg: String, cause: Throwable): Unit = {
       system.eventStream.publish(new Error(cause, "", classOf[Extension], msg))
     }
