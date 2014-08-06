@@ -15,15 +15,18 @@
  * ========================================================== */
 package controllers
 
+import kamon.Kamon
+import kamon.metric.UserMetrics
 import kamon.play.action.TraceName
 import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc.{Action, Controller}
+import play.libs.Akka
 
 import scala.concurrent._
 
 /**
- * In order to run the example we need set the -agent parameter to the JVM but Play have some limitations when trying to set an
+ * In order to run the example we need set the -javaagent option to the JVM, but Play have some limitations when trying to set an
  * java agent in Play dev mode (ie, play run) -> https://github.com/playframework/playframework/issues/1372, so we have others options:
  *
  * The first option is set -javaagent: path-to-aspectj-weaver in your IDE or
@@ -51,8 +54,9 @@ import scala.concurrent._
 object KamonPlayExample extends Controller {
 
   val logger = Logger(this.getClass)
+  val counter = Kamon(UserMetrics)(Akka.system()).registerCounter("my-counter")
 
-  def sayHello() = Action.async {
+  def sayHello = Action.async {
     Future {
       logger.info("Say hello to Kamon")
       Ok("Say hello to Kamon")
@@ -60,12 +64,20 @@ object KamonPlayExample extends Controller {
   }
 
   //using the Kamon TraceName Action to rename the trace name in metrics
-  def sayHelloWithTraceName() = TraceName("my-trace-name") {
+  def sayHelloWithTraceName = TraceName("my-trace-name") {
     Action.async {
       Future {
-        logger.info("Say hello to Kamon")
-        Ok("Say hello to Kamon")
+        logger.info("Say hello to Kamon with trace name")
+        Ok("Say hello to Kamon with trace name")
       }
+    }
+  }
+
+  def incrementCounter = Action.async {
+    Future {
+      logger.info("increment")
+      counter.increment()
+      Ok("increment")
     }
   }
 }
