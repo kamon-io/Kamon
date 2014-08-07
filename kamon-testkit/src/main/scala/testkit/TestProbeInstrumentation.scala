@@ -46,7 +46,7 @@ class TestProbeInstrumentation {
       case _                ⇒ None
     }
 
-    TraceRecorder.withInlineTraceContextReplacement(traceContext) {
+    TraceRecorder.withTraceContext(traceContext) {
       pjp.proceed
     }
   }
