@@ -16,7 +16,7 @@
 
 package kamon.metric.instrument
 
-import jsr166e.LongAdder
+import kamon.jsr166.LongAdder
 import kamon.metric.{ CollectionContext, MetricSnapshot, MetricRecorder }
 
 trait Counter extends MetricRecorder {

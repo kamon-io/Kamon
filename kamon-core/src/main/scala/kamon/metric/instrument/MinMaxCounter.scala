@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 import akka.actor.{ ActorSystem, Cancellable }
 import com.typesafe.config.Config
-import jsr166e.LongMaxUpdater
+import kamon.jsr166.LongMaxUpdater
 import kamon.metric.{ Scale, MetricRecorder, CollectionContext }
 import kamon.util.PaddedAtomicLong
 import scala.concurrent.duration.FiniteDuration
