@@ -17,6 +17,7 @@
 package kamon.system.sigar
 
 import java.io._
+import java.text.SimpleDateFormat
 import java.util
 import java.util.logging.Logger
 import java.util.{ ArrayList, Date, List }
@@ -133,26 +134,18 @@ object SigarLoader {
   }
 
   private[sigar] def printBanner(sigar: Sigar) = {
+    val os = OperatingSystem.getInstance
+
     def loadAverage(sigar: Sigar) = {
       val average = sigar.getLoadAverage
       (average(0), average(1), average(2))
     }
 
     def uptime(sigar: Sigar) = {
+      val sdf = new SimpleDateFormat("yyyy-MM-dd")
       val uptime = sigar.getUptime
       val now = System.currentTimeMillis()
-      new Date(now - (uptime.getUptime() * 1000).toLong)
-    }
-
-    def osInfo() = {
-      val NewLine = "\n"
-      val os = OperatingSystem.getInstance
-      val osInfo = new StringBuilder("------ OS Information ------").append(NewLine)
-      osInfo.append("Description: ").append(os.getDescription).append(NewLine)
-        .append("Name: ").append(os.getName).append(NewLine)
-        .append("Version: ").append(os.getVersion).append(NewLine)
-        .append("Arch: ").append(os.getArch).append(NewLine)
-        .toString()
+      sdf.format(new Date(now - (uptime.getUptime() * 1000).toLong))
     }
 
     val message =
@@ -166,7 +159,15 @@ object SigarLoader {
         ||_____/ \__, |___/\__\___|_| |_| |_|_|  |_|\___|\__|_|  |_|\___|___/______\___/ \__,_|\__,_|\___|\__,_|
         |         __/ |
         |        |___/
-      """.stripMargin + s"\nBoot Time: ${uptime(sigar)} \nLoad Average: ${loadAverage(sigar)} \n${osInfo()}"
+        |
+        |              [System Status]                                                    [OS Information]
+        |     |--------------------------------|                             |----------------------------------------|
+        |          Boot Time: %-10s                                           Description: %s
+        |       Load Average: %-16s                                            Name: %s
+        |                                                                              Version: %s
+        |                                                                                 Arch: %s
+        |
+      """.stripMargin.format(uptime(sigar),os.getDescription, loadAverage(sigar), os.getName, os.getVersion, os.getArch)
     log.info(message)
   }
   class Loader private[sigar]

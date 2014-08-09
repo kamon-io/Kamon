@@ -43,6 +43,14 @@ public class LongMaxUpdater extends Striped64 implements Serializable {
     }
 
     /**
+     * Creates a new instance with the given initialValue
+     */
+    public LongMaxUpdater(long initialValue) {
+        base = initialValue;
+    }
+
+
+    /**
      * Updates the maximum to be at least the given value.
      *
      * @param x the value to update

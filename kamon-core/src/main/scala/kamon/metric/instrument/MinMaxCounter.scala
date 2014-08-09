@@ -63,13 +63,10 @@ object MinMaxCounter {
 }
 
 class PaddedMinMaxCounter(underlyingHistogram: Histogram) extends MinMaxCounter {
-  private val min = new LongMaxUpdater
-  private val max = new LongMaxUpdater
+  private val min = new LongMaxUpdater(0L)
+  private val max = new LongMaxUpdater(0L)
   private val sum = new PaddedAtomicLong
   val refreshValuesSchedule = new AtomicReference[Cancellable]()
-
-  min.update(0L)
-  max.update(0L)
 
   def increment(): Unit = increment(1L)
 
