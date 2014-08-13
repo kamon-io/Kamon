@@ -27,8 +27,8 @@ object TraceLocalKey extends TraceLocal.TraceLocalKey {
 }
 
 /*
- By default Kamon spreads the trace-token-header-name but sometimes is necessary pass through the application requests with some infomation like
- extra headers, with kamon it's possible using TraceLocalStorage, in Play applications we can do an Action Filter or using Action Composition,
+ By default kamon spreads the trace-token-header-name, but sometimes is necessary pass through the application requests with some information like
+ extra headers, with kamon it's possible using the TraceLocalStorage, in Play applications we can do an Action Filter or using Action Composition,
  in this example we are using a simple filter where given a Header store the value and then put the value in the result headers..
 
  More detailed usage of TraceLocalStorage: https://github.com/kamon-io/Kamon/blob/b17539d231da923ea854c01d2c69eb02ef1e85b1/kamon-core/src/test/scala/kamon/trace/TraceLocalSpec.scala

@@ -23,16 +23,19 @@ object Projects extends Build {
       mappings in (Compile, packageBin) ++= mappings.in(kamonMacros, Compile, packageBin).value,
       mappings in (Compile, packageSrc) ++= mappings.in(kamonMacros, Compile, packageSrc).value,
       libraryDependencies ++=
-        compile(akkaActor, aspectJ, aspectjWeaver, hdrHistogram, jsr166) ++
-        provided(logback) ++
+        compile(akkaActor, aspectJ, hdrHistogram) ++
+        provided(logback, aspectjWeaver) ++
         test(scalatest, akkaTestKit, sprayTestkit, akkaSlf4j, logback))
 
 
   lazy val kamonSpray = Project("kamon-spray", file("kamon-spray"))
+    .dependsOn(kamonMacros % "compile-internal, test-internal")
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
     .settings(aspectJSettings: _*)
     .settings(
+      mappings in (Compile, packageBin) ++= mappings.in(kamonMacros, Compile, packageBin).value,
+      mappings in (Compile, packageSrc) ++= mappings.in(kamonMacros, Compile, packageSrc).value,
       libraryDependencies ++=
         compile(akkaActor, aspectJ, sprayCan, sprayClient, sprayRouting) ++
         test(scalatest, akkaTestKit, sprayTestkit, slf4Api, slf4nop))
@@ -71,7 +74,7 @@ object Projects extends Build {
   lazy val kamonTestkit = Project("kamon-testkit", file("kamon-testkit"))
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
-    .settings(libraryDependencies ++= compile(akkaActor, akkaTestKit) ++ test(slf4Api, slf4nop))
+    .settings(libraryDependencies ++= compile(akkaActor, akkaTestKit, aspectJ) ++ test(slf4Api, slf4nop))
     .dependsOn(kamonCore)
 
   lazy val kamonPlay = Project("kamon-play", file("kamon-play"))

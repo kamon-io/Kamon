@@ -40,7 +40,7 @@ class ActorLoggingInstrumentation {
 
   @Around("withMdcInvocation(logSource, logEvent, logStatement)")
   def aroundWithMdcInvocation(pjp: ProceedingJoinPoint, logSource: String, logEvent: TraceContextAware, logStatement: () ⇒ _): Unit = {
-    TraceRecorder.withTraceContext(logEvent.traceContext) {
+    TraceRecorder.withInlineTraceContextReplacement(logEvent.traceContext) {
       pjp.proceed()
     }
   }

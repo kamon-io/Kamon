@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 import akka.actor.{ ActorSystem, Cancellable }
 import com.typesafe.config.Config
-import jsr166e.LongMaxUpdater
+import kamon.jsr166.LongMaxUpdater
 import kamon.metric.{ Scale, MetricRecorder, CollectionContext }
 import kamon.util.PaddedAtomicLong
 import scala.concurrent.duration.FiniteDuration
@@ -33,6 +33,7 @@ trait MinMaxCounter extends MetricRecorder {
   def increment(times: Long): Unit
   def decrement()
   def decrement(times: Long)
+  def refreshValues(): Unit
 }
 
 object MinMaxCounter {
@@ -63,13 +64,10 @@ object MinMaxCounter {
 }
 
 class PaddedMinMaxCounter(underlyingHistogram: Histogram) extends MinMaxCounter {
-  private val min = new LongMaxUpdater
-  private val max = new LongMaxUpdater
+  private val min = new LongMaxUpdater(0L)
+  private val max = new LongMaxUpdater(0L)
   private val sum = new PaddedAtomicLong
   val refreshValuesSchedule = new AtomicReference[Cancellable]()
-
-  min.update(0L)
-  max.update(0L)
 
   def increment(): Unit = increment(1L)
 
@@ -98,19 +96,21 @@ class PaddedMinMaxCounter(underlyingHistogram: Histogram) extends MinMaxCounter 
   def refreshValues(): Unit = {
     val currentValue = {
       val value = sum.get()
-      if (value < 0) 0 else value
+      if (value <= 0) 0 else value
     }
 
     val currentMin = {
-      val minAbs = abs(min.maxThenReset())
-      if (minAbs <= currentValue) minAbs else 0
+      val rawMin = min.maxThenReset(-currentValue)
+      if (rawMin >= 0)
+        0
+      else
+        abs(rawMin)
     }
+
+    val currentMax = max.maxThenReset(currentValue)
 
     underlyingHistogram.record(currentValue)
     underlyingHistogram.record(currentMin)
-    underlyingHistogram.record(max.maxThenReset())
-
-    max.update(currentValue)
-    min.update(-currentValue)
+    underlyingHistogram.record(currentMax)
   }
 }
