@@ -33,6 +33,7 @@ trait MinMaxCounter extends MetricRecorder {
   def increment(times: Long): Unit
   def decrement()
   def decrement(times: Long)
+  def refreshValues(): Unit
 }
 
 object MinMaxCounter {
@@ -95,19 +96,21 @@ class PaddedMinMaxCounter(underlyingHistogram: Histogram) extends MinMaxCounter 
   def refreshValues(): Unit = {
     val currentValue = {
       val value = sum.get()
-      if (value < 0) 0 else value
+      if (value <= 0) 0 else value
     }
 
     val currentMin = {
-      val minAbs = abs(min.maxThenReset())
-      if (minAbs <= currentValue) minAbs else 0
+      val rawMin = min.maxThenReset(-currentValue)
+      if (rawMin >= 0)
+        0
+      else
+        abs(rawMin)
     }
+
+    val currentMax = max.maxThenReset(currentValue)
 
     underlyingHistogram.record(currentValue)
     underlyingHistogram.record(currentMin)
-    underlyingHistogram.record(max.maxThenReset())
-
-    max.update(currentValue)
-    min.update(-currentValue)
+    underlyingHistogram.record(currentMax)
   }
 }
