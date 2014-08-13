@@ -114,17 +114,17 @@ public class LongMaxUpdater extends Striped64 implements Serializable {
      *
      * @return the maximum
      */
-    public long maxThenReset() {
+    public long maxThenReset(long newValue) {
         Cell[] as = cells;
         long max = base;
-        base = Long.MIN_VALUE;
+        base = newValue;
         if (as != null) {
             int n = as.length;
             for (int i = 0; i < n; ++i) {
                 Cell a = as[i];
                 if (a != null) {
                     long v = a.value;
-                    a.value = Long.MIN_VALUE;
+                    a.value = newValue;
                     if (v > max)
                         max = v;
                 }
