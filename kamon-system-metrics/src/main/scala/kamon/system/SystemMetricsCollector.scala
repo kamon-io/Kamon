@@ -42,8 +42,7 @@ class SystemMetricsCollector(collectInterval: FiniteDuration) extends Actor with
   val networkRecorder = systemMetricsExtension.register(NetworkMetrics(Network), NetworkMetrics.Factory)
 
   def receive: Receive = {
-    case Collect  ⇒ collectMetrics()
-    case anything ⇒
+    case Collect ⇒ collectMetrics()
   }
 
   override def postStop() = collectSchedule.cancel()
@@ -56,18 +55,24 @@ class SystemMetricsCollector(collectInterval: FiniteDuration) extends Actor with
   }
 
   private def recordCpu(cpur: CPUMetricRecorder) = {
-    cpur.user.record(toLong(cpu.getUser))
-    cpur.system.record(toLong(cpu.getSys))
-    cpur.cpuWait.record(toLong(cpu.getWait()))
-    cpur.idle.record(toLong(cpu.getIdle))
+    val cpuPerc = sigar.getCpuPerc
+    cpur.user.record(toLong(cpuPerc.getUser))
+    cpur.system.record(toLong(cpuPerc.getSys))
+    cpur.cpuWait.record(toLong(cpuPerc.getWait))
+    cpur.idle.record(toLong(cpuPerc.getIdle))
   }
 
   private def recordProcessCpu(pcpur: ProcessCPUMetricsRecorder) = {
+    val procCpu = sigar.getProcCpu(pid)
+
     pcpur.user.record(procCpu.getUser)
     pcpur.system.record(procCpu.getSys)
   }
 
   private def recordMemory(mr: MemoryMetricRecorder) = {
+    val mem = sigar.getMem
+    val swap = sigar.getSwap
+
     mr.used.record(toMB(mem.getUsed))
     mr.free.record(toMB(mem.getFree))
     mr.swapUsed.record(toMB(swap.getUsed))
@@ -106,10 +111,6 @@ trait SigarExtensionProvider {
   lazy val sigar = SigarHolder.instance()
 
   def pid = sigar.getPid
-  def procCpu = sigar.getProcCpu(pid)
-  def cpu = sigar.getCpuPerc
-  def mem = sigar.getMem
-  def swap = sigar.getSwap
 
   val interfaces: Set[String] = sigar.getNetInterfaceList.toSet
 }
