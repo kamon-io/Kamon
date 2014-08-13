@@ -167,7 +167,7 @@ object SigarLoader {
         |                                                                              Version: %s
         |                                                                                 Arch: %s
         |
-      """.stripMargin.format(uptime(sigar),os.getDescription, loadAverage(sigar), os.getName, os.getVersion, os.getArch)
+      """.stripMargin.format(uptime(sigar), os.getDescription, loadAverage(sigar), os.getName, os.getVersion, os.getArch)
     log.info(message)
   }
   class Loader private[sigar]
