@@ -24,10 +24,10 @@ import kamon.metric.Subscriptions.TickMetricSnapshot
 import kamon.metric.TraceMetrics.TraceMetricsSnapshot
 import kamon.metric.UserMetrics._
 import kamon.metric._
-import kamon.metric.instrument.{Counter, Histogram}
+import kamon.metric.instrument.{ Counter, Histogram }
 import kamon.metrics.MemoryMetrics.MemoryMetricSnapshot
 import kamon.metrics.NetworkMetrics.NetworkMetricSnapshot
-import kamon.metrics.{NetworkMetrics, MemoryMetrics, CPUMetrics}
+import kamon.metrics.{ NetworkMetrics, MemoryMetrics, CPUMetrics }
 import kamon.metrics.CPUMetrics.CPUMetricSnapshot
 
 object LogReporter extends ExtensionId[LogReporterExtension] with ExtensionIdProvider {
@@ -45,6 +45,8 @@ class LogReporterExtension(system: ExtendedActorSystem) extends Kamon.Extension 
   val log = Logging(system, classOf[LogReporterExtension])
   log.info("Starting the Kamon(LogReporter) extension")
 
+  val logReporterConfig = system.settings.config.getConfig("kamon.log-reporter")
+
   val subscriber = system.actorOf(Props[LogReporterSubscriber], "kamon-log-reporter")
   Kamon(Metrics)(system).subscribe(TraceMetrics, "*", subscriber, permanently = true)
   Kamon(Metrics)(system).subscribe(ActorMetrics, "*", subscriber, permanently = true)
@@ -55,9 +57,13 @@ class LogReporterExtension(system: ExtendedActorSystem) extends Kamon.Extension 
   Kamon(Metrics)(system).subscribe(UserMinMaxCounters, "*", subscriber, permanently = true)
   Kamon(Metrics)(system).subscribe(UserGauges, "*", subscriber, permanently = true)
 
-  //Subscribe to all system metrics
-  Kamon(Metrics)(system).subscribe(CPUMetrics, "*", subscriber, permanently = true)
-  Kamon(Metrics)(system).subscribe(NetworkMetrics, "*", subscriber, permanently = true)
+  // Subscribe to SystemMetrics
+  val includeSystemMetrics = logReporterConfig.getBoolean("report-system-metrics")
+
+  if (includeSystemMetrics) {
+    Kamon(Metrics)(system).subscribe(CPUMetrics, "*", subscriber, permanently = true)
+    Kamon(Metrics)(system).subscribe(NetworkMetrics, "*", subscriber, permanently = true)
+  }
 
 }
 
@@ -82,8 +88,8 @@ class LogReporterSubscriber extends Actor with ActorLogging {
       case (c: UserCounter, s: UserCounterSnapshot)             ⇒ counters += (c -> s.counterSnapshot)
       case (m: UserMinMaxCounter, s: UserMinMaxCounterSnapshot) ⇒ minMaxCounters += (m -> s.minMaxCounterSnapshot)
       case (g: UserGauge, s: UserGaugeSnapshot)                 ⇒ gauges += (g -> s.gaugeSnapshot)
-      case (_, cms:CPUMetricSnapshot)                           ⇒ logCpuMetrics(cms)
-      case (_, nms:NetworkMetricSnapshot)                       ⇒ logNetworkMetrics(nms)
+      case (_, cms: CPUMetricSnapshot)                          ⇒ logCpuMetrics(cms)
+      case (_, nms: NetworkMetricSnapshot)                      ⇒ logNetworkMetrics(nms)
       case ignoreEverythingElse                                 ⇒
     }
 
@@ -120,7 +126,7 @@ class LogReporterSubscriber extends Actor with ActorLogging {
           ams.processingTime.max, ams.timeInMailbox.max))
   }
 
-  def logCpuMetrics(cms: CPUMetricSnapshot):Unit = {
+  def logCpuMetrics(cms: CPUMetricSnapshot): Unit = {
     import cms._
 
     log.info(
@@ -129,25 +135,17 @@ class LogReporterSubscriber extends Actor with ActorLogging {
         ||                                                                                                  |
         ||    CPU (ALL)                                                                                     |
         ||                                                                                                  |
-        ||    User (percentage)      System (percentage)    Wait (percentage)   Idle (percentage)           |
-        ||              Min: %-3s              Min: %-3s              Min: %-3s             Min: %-3s           |
-        ||        50th Perc: %-3s        50th Perc: %-3s        50th Perc: %-3s       50th Perc: %-3s           |
-        ||        90th Perc: %-3s        90th Perc: %-3s        90th Perc: %-3s       90th Perc: %-3s           |
-        ||        95th Perc: %-3s        95th Perc: %-3s        95th Perc: %-3s       95th Perc: %-3s           |
-        ||        99th Perc: %-3s         9th Perc: %-3s        99th Perc: %-3s       99th Perc: %-3s           |
-        ||      99.9th Perc: %-3s       9.9th Perc: %-3s      99.9th Perc: %-3s     99.9th Perc: %-3s           |
-        ||              Max: %-3s              Max: %-3s              Max: %-3s             Max: %-3s           |
+        ||    User (percentage)       System (percentage)    Wait (percentage)   Idle (percentage)          |
+        ||       Min: %-3s                   Min: %-3s               Min: %-3s           Min: %-3s              |
+        ||       Avg: %-3s                  Avg: %-3s               Avg: %-3s           Avg: %-3s             |
+        ||       Max: %-3s                   Max: %-3s               Max: %-3s           Max: %-3s              |
         ||                                                                                                  |
         ||                                                                                                  |
         |+--------------------------------------------------------------------------------------------------+"""
         .stripMargin.format(
           user.min, system.min, cpuWait.min, idle.min,
-          user.percentile(0.50F), system.percentile(0.50F), cpuWait.percentile(0.50F), cpuWait.percentile(0.50F),
-          user.percentile(0.90F), system.percentile(0.90F), cpuWait.percentile(0.90F), cpuWait.percentile(0.90F),
-          user.percentile(0.95F), system.percentile(0.95F), cpuWait.percentile(0.95F), cpuWait.percentile(0.95F),
-          user.percentile(0.99F), system.percentile(0.99F), cpuWait.percentile(0.99F), cpuWait.percentile(0.99F),
-          user.percentile(0.999F), system.percentile(0.999F), cpuWait.percentile(0.999F), cpuWait.percentile(0.999F),
-          user.max, system.max, cpuWait.max, cpuWait.max))
+          user.average, system.average, cpuWait.average, idle.average,
+          user.max, system.max, cpuWait.max, idle.max))
 
   }
 
@@ -160,26 +158,17 @@ class LogReporterSubscriber extends Actor with ActorLogging {
         ||                                                                                                  |
         ||    Network (ALL)                                                                                 |
         ||                                                                                                  |
-        ||         Rx-Bytes (KB)          Tx-Bytes (KB)            Rx-Errors          Tx-Errors             |
-        ||              Min: %-4s              Min: %-4s          Total: %-8s        Total: %-8s|
-        ||        50th Perc: %-4s        50th Perc: %-4s                                                |
-        ||        90th Perc: %-4s        90th Perc: %-4s                                                |
-        ||        95th Perc: %-4s        95th Perc: %-4s                                                |
-        ||        99th Perc: %-4s         9th Perc: %-4s                                                |
-        ||      99.9th Perc: %-4s      99.9th Perc: %-4s                                                |
-        ||              Max: %-4s              Max: %-4s                                                |
+        ||     Rx-Bytes (KB)                Tx-Bytes (KB)              Rx-Errors            Tx-Errors       |
+        ||      Min: %-4s                  Min: %-4s                 Total: %-8s      Total: %-8s|
+        ||      Avg: %-4s                Avg: %-4s                                                   |
+        ||      Max: %-4s                  Max: %-4s                                                     |
         ||                                                                                                  |
         |+--------------------------------------------------------------------------------------------------+"""
         .stripMargin.format(
-          rxBytes.min, txBytes.min , rxErrors.total, txErrors.total,
-          rxBytes.percentile(0.50F), txBytes.percentile(0.50F),
-          rxBytes.percentile(0.90F), txBytes.percentile(0.90F),
-          rxBytes.percentile(0.95F), txBytes.percentile(0.95F),
-          rxBytes.percentile(0.99F), txBytes.percentile(0.99F),
-          rxBytes.percentile(0.999F), txBytes.percentile(0.999F),
+          rxBytes.min, txBytes.min, rxErrors.total, txErrors.total,
+          rxBytes.average, txBytes.average,
           rxBytes.max, txBytes.max))
   }
-
 
   def logTraceMetrics(name: String, tms: TraceMetricsSnapshot): Unit = {
     val traceMetricsData = StringBuilder.newBuilder
@@ -321,10 +310,11 @@ object LogReporterSubscriber {
     }
 
     def total: Long = {
-      histogram.recordsIterator.foldLeft(0L) { (acc, record) => {
-        acc + record.count * record.level
+      histogram.recordsIterator.foldLeft(0L) { (acc, record) ⇒
+        {
+          acc + (record.count * record.level)
+        }
       }
-    }
     }
   }
 }
