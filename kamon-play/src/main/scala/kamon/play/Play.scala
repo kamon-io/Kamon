@@ -16,7 +16,8 @@
 
 package kamon.play
 
-import akka.actor.{ ExtendedActorSystem, Extension, ExtensionIdProvider, ExtensionId }
+import akka.actor.{ ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProvider }
+import akka.event.Logging
 import kamon.Kamon
 import kamon.http.HttpServerMetrics
 import kamon.metric.Metrics
@@ -27,7 +28,8 @@ object Play extends ExtensionId[PlayExtension] with ExtensionIdProvider {
 }
 
 class PlayExtension(private val system: ExtendedActorSystem) extends Kamon.Extension {
-  publishInfoMessage(system, "Play Extension Loaded!!")
+  val log = Logging(system, classOf[PlayExtension])
+  log.info(s"Starting the Kamon(Play) extension")
 
   private val config = system.settings.config.getConfig("kamon.play")
 

@@ -63,7 +63,7 @@ class ClientRequestInstrumentation {
 
   @Around("copyingRequestContext(old)")
   def aroundCopyingRequestContext(pjp: ProceedingJoinPoint, old: SegmentCompletionHandleAware): Any = {
-    TraceRecorder.withTraceContext(old.traceContext) {
+    TraceRecorder.withInlineTraceContextReplacement(old.traceContext) {
       pjp.proceed()
     }
   }
@@ -75,7 +75,7 @@ class ClientRequestInstrumentation {
   def aroundDispatchToCommander(pjp: ProceedingJoinPoint, requestContext: SegmentCompletionHandleAware, message: Any) = {
     requestContext.traceContext match {
       case ctx @ Some(_) ⇒
-        TraceRecorder.withTraceContext(ctx) {
+        TraceRecorder.withInlineTraceContextReplacement(ctx) {
           if (message.isInstanceOf[HttpMessageEnd])
             requestContext.segmentCompletionHandle.map(_.finish(Map.empty))
 

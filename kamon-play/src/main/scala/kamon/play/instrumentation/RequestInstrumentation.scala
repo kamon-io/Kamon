@@ -16,11 +16,11 @@
 package kamon.play.instrumentation
 
 import kamon.Kamon
-import kamon.play.{ PlayExtension, Play }
+import kamon.play.{ Play, PlayExtension }
 import kamon.trace.{ TraceContextAware, TraceRecorder }
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
-import play.api.mvc._
+import play.api.mvc.{ RequestHeader, EssentialAction, SimpleResult }
 import play.libs.Akka
 
 @Aspect
@@ -52,31 +52,24 @@ class RequestInstrumentation {
     val essentialAction = (requestHeader: RequestHeader) ⇒ {
 
       val incomingContext = TraceRecorder.currentContext
-      val playExtension = Kamon(Play)(Akka.system())
-      val executor = playExtension.defaultDispatcher
+      val executor = Kamon(Play)(Akka.system()).defaultDispatcher
 
       next(requestHeader).map {
         result ⇒
-          TraceRecorder.currentContext.map { ctx ⇒
-            recordHttpServerMetrics(result, ctx.name, playExtension)
-          }
-
           TraceRecorder.finish()
 
-          incomingContext match {
-            case None ⇒ result
-            case Some(traceContext) ⇒
-              val playExtension = Kamon(Play)(traceContext.system)
-              if (playExtension.includeTraceToken) {
-                result.withHeaders(playExtension.traceTokenHeaderName -> traceContext.token)
-              } else result
-          }
+          incomingContext.map { ctx ⇒
+            val playExtension = Kamon(Play)(ctx.system)
+            recordHttpServerMetrics(result, ctx.name, playExtension)
+            if (playExtension.includeTraceToken) result.withHeaders(playExtension.traceTokenHeaderName -> ctx.token)
+            else result
+          }.getOrElse(result)
       }(executor)
     }
     pjp.proceed(Array(EssentialAction(essentialAction)))
   }
 
-  def recordHttpServerMetrics(result: SimpleResult, traceName: String, playExtension: PlayExtension): Unit =
+  private def recordHttpServerMetrics(result: SimpleResult, traceName: String, playExtension: PlayExtension): Unit =
     playExtension.httpServerMetrics.recordResponse(traceName, result.header.status.toString, 1L)
 
   @Around("execution(* play.api.GlobalSettings+.onError(..)) && args(request, ex)")

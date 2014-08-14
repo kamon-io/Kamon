@@ -17,14 +17,15 @@ package kamon.metric.instrument
 
 import java.nio.LongBuffer
 
-import akka.actor.ActorSystem
+import akka.actor._
+import akka.testkit.TestProbe
 import com.typesafe.config.ConfigFactory
 import kamon.metric.CollectionContext
 import kamon.metric.instrument.Histogram.MutableRecord
 import org.scalatest.{ Matchers, WordSpecLike }
 
 class MinMaxCounterSpec extends WordSpecLike with Matchers {
-  val system = ActorSystem("min-max-counter-spec")
+  implicit val system = ActorSystem("min-max-counter-spec")
   val minMaxCounterConfig = ConfigFactory.parseString(
     """
       |refresh-interval = 1 hour
@@ -83,7 +84,7 @@ class MinMaxCounterSpec extends WordSpecLike with Matchers {
         MutableRecord(2, 3)) // min, max and current
     }
 
-    "report zero as the min and current values if they current value fell bellow zero" in new MinMaxCounterFixture {
+    "report zero as the min and current values if the current value fell bellow zero" in new MinMaxCounterFixture {
       mmCounter.decrement(3)
 
       val snapshot = collectCounterSnapshot()
@@ -92,6 +93,22 @@ class MinMaxCounterSpec extends WordSpecLike with Matchers {
       snapshot.max should be(0)
       snapshot.recordsIterator.toStream should contain(
         MutableRecord(0, 3)) // min, max and current (even while current really is -3
+    }
+
+    "never record values bellow zero in very busy situations" in new MinMaxCounterFixture {
+      val monitor = TestProbe()
+      val workers = for (workers ← 1 to 50) yield {
+        system.actorOf(Props(new MinMaxCounterUpdateActor(mmCounter, monitor.ref)))
+      }
+
+      workers foreach (_ ! "increment")
+      for (refresh ← 1 to 1000) {
+        collectCounterSnapshot()
+        Thread.sleep(10)
+      }
+
+      monitor.expectNoMsg()
+      workers foreach (_ ! PoisonPill)
     }
   }
 
@@ -104,5 +121,22 @@ class MinMaxCounterSpec extends WordSpecLike with Matchers {
     mmCounter.cleanup // cancel the refresh schedule
 
     def collectCounterSnapshot(): Histogram.Snapshot = mmCounter.collect(collectionContext)
+  }
+}
+
+class MinMaxCounterUpdateActor(mmc: MinMaxCounter, monitor: ActorRef) extends Actor {
+  val x = Array.ofDim[Int](4)
+  def receive = {
+    case "increment" ⇒
+      mmc.increment()
+      self ! "decrement"
+    case "decrement" ⇒
+      mmc.decrement()
+      self ! "increment"
+      try {
+        mmc.refreshValues()
+      } catch {
+        case _: IndexOutOfBoundsException ⇒ monitor ! "failed"
+      }
   }
 }

@@ -52,7 +52,7 @@ class ActorCellInstrumentation {
     val cellWithMetrics = cell.asInstanceOf[ActorCellMetrics]
 
     try {
-      TraceRecorder.withTraceContext(contextAndTimestamp.traceContext) {
+      TraceRecorder.withInlineTraceContextReplacement(contextAndTimestamp.traceContext) {
         pjp.proceed()
       }
     } finally {

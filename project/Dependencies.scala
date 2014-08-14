@@ -32,7 +32,6 @@ object Dependencies {
   val playTest        = "org.scalatestplus"         %%  "play"                  % "1.0.1"
   val slf4Api         = "org.slf4j"                 %   "slf4j-api"             % slf4jVersion
   val slf4nop         = "org.slf4j"                 %   "slf4j-nop"             % slf4jVersion
-  val jsr166          = "io.gatling"                %   "jsr166e"               % "1.0"
   val scalaCompiler   = "org.scala-lang"            %   "scala-compiler"        % Settings.ScalaVersion
   val sigar           = "org.fusesource"            %   "sigar"                 % "1.6.4"
 

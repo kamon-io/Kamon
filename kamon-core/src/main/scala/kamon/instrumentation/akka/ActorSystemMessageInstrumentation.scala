@@ -31,7 +31,7 @@ class ActorSystemMessageInstrumentation {
   def aroundSystemMessageInvoke(pjp: ProceedingJoinPoint, messages: EarliestFirstSystemMessageList): Any = {
     if (messages.nonEmpty) {
       val ctx = messages.head.asInstanceOf[TraceContextAware].traceContext
-      TraceRecorder.withTraceContext(ctx)(pjp.proceed())
+      TraceRecorder.withInlineTraceContextReplacement(ctx)(pjp.proceed())
 
     } else pjp.proceed()
   }
@@ -73,7 +73,7 @@ class TraceContextIntoRepointableActorRefMixin {
 
   @Around("repointableActorRefCreation(repointableActorRef)")
   def afterRepointableActorRefCreation(pjp: ProceedingJoinPoint, repointableActorRef: TraceContextAware): Any = {
-    TraceRecorder.withTraceContext(repointableActorRef.traceContext) {
+    TraceRecorder.withInlineTraceContextReplacement(repointableActorRef.traceContext) {
       pjp.proceed()
     }
   }
