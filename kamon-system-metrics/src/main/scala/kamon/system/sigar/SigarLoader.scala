@@ -142,10 +142,33 @@ object SigarLoader {
     }
 
     def uptime(sigar: Sigar) = {
-      val sdf = new SimpleDateFormat("yyyy-MM-dd")
+      def formatUptime(uptime: Double): String = {
+        var retval: String = ""
+        val days: Int = uptime.toInt / (60 * 60 * 24)
+        var minutes: Int = 0
+        var hours: Int = 0
+
+        if (days != 0) {
+          retval += s"$days ${(if ((days > 1)) "days" else "day")}, "
+        }
+
+        minutes = uptime.toInt / 60
+        hours = minutes / 60
+        hours %= 24
+        minutes %= 60
+
+        if (hours != 0) {
+          retval += hours + ":" + minutes
+        } else {
+          retval += minutes + " min"
+        }
+        retval
+      }
+
       val uptime = sigar.getUptime
       val now = System.currentTimeMillis()
-      sdf.format(new Date(now - (uptime.getUptime() * 1000).toLong))
+
+      s"up ${formatUptime(uptime.getUptime())}"
     }
 
     val message =
@@ -162,7 +185,7 @@ object SigarLoader {
         |
         |              [System Status]                                                    [OS Information]
         |     |--------------------------------|                             |----------------------------------------|
-        |          Boot Time: %-10s                                           Description: %s
+        |            Up Time: %-10s                                           Description: %s
         |       Load Average: %-16s                                            Name: %s
         |                                                                              Version: %s
         |                                                                                 Arch: %s
