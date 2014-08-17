@@ -205,12 +205,12 @@ class SystemMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
   }
 
   "the Kamon Process CPU Metrics" should {
-    "record user, system metrics" in new ProcessCPUMetricsListenerFixture {
+    "record Cpu Percent, Total ProcessbTime metrics" in new ProcessCPUMetricsListenerFixture {
       val metricsListener = subscribeToMetrics()
 
       val ProcessCPUMetrics = expectProcessCPUMetrics(metricsListener, 3 seconds)
-      ProcessCPUMetrics.user.max should be > 0L
-      ProcessCPUMetrics.system.max should be > 0L
+      ProcessCPUMetrics.cpuPercent.max should be > 0L
+      ProcessCPUMetrics.totalProcessTime.max should be > 0L
     }
   }
 
