@@ -23,6 +23,12 @@ project/plugins/project/
 *.iml
 *.iws
 
+# Eclipse
+.project
+.settings
+.classpath
+.cache
+
 _site
 
 # Ignore Play! working directory #
