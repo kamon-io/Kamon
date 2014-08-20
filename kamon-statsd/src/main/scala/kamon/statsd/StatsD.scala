@@ -105,6 +105,8 @@ class StatsDExtension(system: ExtendedActorSystem) extends Kamon.Extension {
 
 class SimpleMetricKeyGenerator(config: Config) extends StatsD.MetricKeyGenerator {
   val application = config.getString("kamon.statsd.simple-metric-key-generator.application")
+  val includeHostnameInMetrics =
+    config.getBoolean("kamon.statsd.simple-metric-key-generator.include-hostname")
   val _localhostName = ManagementFactory.getRuntimeMXBean.getName.split('@')(1)
   val _normalizedLocalhostName = _localhostName.replace('.', '_')
 
@@ -112,13 +114,16 @@ class SimpleMetricKeyGenerator(config: Config) extends StatsD.MetricKeyGenerator
 
   def normalizedLocalhostName: String = _normalizedLocalhostName
 
+  val baseName: String =
+    if (includeHostnameInMetrics) s"${application}.${normalizedLocalhostName}"
+    else application
+
   def generateKey(groupIdentity: MetricGroupIdentity, metricIdentity: MetricIdentity): String = {
     val normalizedGroupName = groupIdentity.name.replace(": ", "-").replace(" ", "_").replace("/", "_")
+    val key = s"${baseName}.${groupIdentity.category.name}.${normalizedGroupName}"
 
-    if (isUserMetric(groupIdentity))
-      s"${application}.${normalizedLocalhostName}.${groupIdentity.category.name}.${normalizedGroupName}"
-    else
-      s"${application}.${normalizedLocalhostName}.${groupIdentity.category.name}.${normalizedGroupName}.${metricIdentity.name}"
+    if (isUserMetric(groupIdentity)) key
+    else s"${key}.${metricIdentity.name}"
   }
 
   def isUserMetric(groupIdentity: MetricGroupIdentity): Boolean = groupIdentity match {
@@ -126,4 +131,3 @@ class SimpleMetricKeyGenerator(config: Config) extends StatsD.MetricKeyGenerator
     case everythingElse                  ⇒ false
   }
 }
-
