@@ -44,9 +44,51 @@ class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers
       |
     """.stripMargin))
 
+  implicit val metricKeyGenerator = new SimpleMetricKeyGenerator(system.settings.config) {
+    override def normalizedLocalhostName: String = "localhost_local"
+  }
+
   val collectionContext = Kamon(Metrics).buildDefaultCollectionContext
 
   "the StatsDMetricSender" should {
+    "removes host name when attribute 'include-hostname' is set to false" in new UdpListenerFixture {
+      val config = ConfigFactory.parseString(
+        """
+        |kamon {
+        |  statsd {
+        |    simple-metric-key-generator.application = "api"
+        |    simple-metric-key-generator.include-hostname = false
+        |  }
+        |}
+        |
+        """.stripMargin)
+      implicit val metricKeyGenerator = new SimpleMetricKeyGenerator(config) {
+        override def normalizedLocalhostName: String = "localhost_local"
+      }
+
+      val testMetricKey = buildMetricKey("trace", "POST: /kamon/example", "elapsed-time")
+      testMetricKey should be(s"api.trace.POST-_kamon_example.elapsed-time")
+    }
+
+    "uses aplication prefix when present" in new UdpListenerFixture {
+      val config = ConfigFactory.parseString(
+        """
+        |kamon {
+        |  statsd {
+        |    simple-metric-key-generator.application = "api"
+        |    simple-metric-key-generator.include-hostname = true
+        |  }
+        |}
+        |
+        """.stripMargin)
+      implicit val metricKeyGenerator = new SimpleMetricKeyGenerator(config) {
+        override def normalizedLocalhostName: String = "localhost_local"
+      }
+
+      val testMetricKey = buildMetricKey("trace", "POST: /kamon/example", "elapsed-time")
+      testMetricKey should be(s"api.localhost_local.trace.POST-_kamon_example.elapsed-time")
+    }
+
     "normalize the group entity name to remove spaces, colons and replace '/' with '_'" in new UdpListenerFixture {
       val testMetricKey = buildMetricKey("trace", "POST: /kamon/example", "elapsed-time")
       testMetricKey should be(s"kamon.localhost_local.trace.POST-_kamon_example.elapsed-time")
@@ -138,10 +180,6 @@ class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers
 
   trait UdpListenerFixture {
     val testMaxPacketSize = system.settings.config.getBytes("kamon.statsd.max-packet-size")
-    val metricKeyGenerator = new SimpleMetricKeyGenerator(system.settings.config) {
-      override def normalizedLocalhostName: String = "localhost_local"
-    }
-
     val testGroupIdentity = new MetricGroupIdentity {
       val name: String = "/user/kamon"
       val category: MetricGroupCategory = new MetricGroupCategory {
@@ -149,7 +187,7 @@ class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers
       }
     }
 
-    def buildMetricKey(categoryName: String, entityName: String, metricName: String): String = {
+    def buildMetricKey(categoryName: String, entityName: String, metricName: String)(implicit metricKeyGenerator: SimpleMetricKeyGenerator): String = {
       val metricIdentity = new MetricIdentity { val name: String = metricName }
       val groupIdentity = new MetricGroupIdentity {
         val name: String = entityName
