@@ -20,6 +20,7 @@
 
     <!-- Futures -->
     <aspect name="kamon.instrumentation.scala.FutureInstrumentation"/>
+    <aspect name="kamon.instrumentation.scalaz.FutureInstrumentation"/>
 
     <!-- Patterns -->
     <aspect name="akka.instrumentation.AskPatternInstrumentation"/>
@@ -27,6 +28,7 @@
 
   <weaver options="-XmessageHandlerClass:kamon.weaver.logging.KamonWeaverMessageHandler">
     <include within="scala.concurrent..*"/>
+    <include within="scalaz.concurrent..*"/>
     <include within="akka..*"/>
     <include within="spray..*"/>
     <include within="kamon..*"/>
