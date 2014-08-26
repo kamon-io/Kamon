@@ -39,6 +39,7 @@ class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers
       |
       |  statsd {
       |    max-packet-size = 256 bytes
+      |    simple-metric-key-generator.hostname-override = "none"
       |  }
       |}
       |
@@ -51,6 +52,26 @@ class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers
   val collectionContext = Kamon(Metrics).buildDefaultCollectionContext
 
   "the StatsDMetricSender" should {
+    "allows to override the hostname" in new UdpListenerFixture {
+      val config = ConfigFactory.parseString(
+        """
+        |kamon {
+        |  statsd {
+        |    simple-metric-key-generator.application = "api"
+        |    simple-metric-key-generator.hostname-override = "kamonhost"
+        |    simple-metric-key-generator.include-hostname = true
+        |  }
+        |}
+        |
+        """.stripMargin)
+      implicit val metricKeyGenerator = new SimpleMetricKeyGenerator(config) {
+        override def normalizedLocalhostName: String = "localhost_local"
+      }
+
+      val testMetricKey = buildMetricKey("trace", "POST: /kamon/example", "elapsed-time")
+      testMetricKey should be(s"api.kamonhost.trace.POST-_kamon_example.elapsed-time")
+    }
+
     "removes host name when attribute 'include-hostname' is set to false" in new UdpListenerFixture {
       val config = ConfigFactory.parseString(
         """
@@ -58,6 +79,7 @@ class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers
         |  statsd {
         |    simple-metric-key-generator.application = "api"
         |    simple-metric-key-generator.include-hostname = false
+        |    simple-metric-key-generator.hostname-override = "none"
         |  }
         |}
         |
@@ -77,6 +99,7 @@ class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers
         |  statsd {
         |    simple-metric-key-generator.application = "api"
         |    simple-metric-key-generator.include-hostname = true
+        |    simple-metric-key-generator.hostname-override = "none"
         |  }
         |}
         |
