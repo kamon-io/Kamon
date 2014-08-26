@@ -25,7 +25,7 @@ object Projects extends Build {
       libraryDependencies ++=
         compile(akkaActor, aspectJ, hdrHistogram) ++
         provided(logback, aspectjWeaver) ++
-        test(scalatest, akkaTestKit, sprayTestkit, akkaSlf4j, logback))
+        test(scalatest, akkaTestKit, sprayTestkit, akkaSlf4j, logback, scalazConcurrent))
 
 
   lazy val kamonSpray = Project("kamon-spray", file("kamon-spray"))

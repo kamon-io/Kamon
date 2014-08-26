@@ -36,6 +36,7 @@ object Dependencies {
   val slf4nop         = "org.slf4j"                 %   "slf4j-nop"             % slf4jVersion
   val scalaCompiler   = "org.scala-lang"            %   "scala-compiler"        % Settings.ScalaVersion
   val sigar           = "org.fusesource"            %   "sigar"                 % "1.6.4"
+  val scalazConcurrent = "org.scalaz"               %%  "scalaz-concurrent"     % "7.1.0"
 
   def compile   (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "compile")
   def provided  (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "provided")
