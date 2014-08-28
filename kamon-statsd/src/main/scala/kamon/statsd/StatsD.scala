@@ -107,6 +107,9 @@ class SimpleMetricKeyGenerator(config: Config) extends StatsD.MetricKeyGenerator
   val application = config.getString("kamon.statsd.simple-metric-key-generator.application")
   val includeHostnameInMetrics =
     config.getBoolean("kamon.statsd.simple-metric-key-generator.include-hostname")
+  val hostnameOverride =
+    config.getString("kamon.statsd.simple-metric-key-generator.hostname-override")
+
   val _localhostName = ManagementFactory.getRuntimeMXBean.getName.split('@')(1)
   val _normalizedLocalhostName = _localhostName.replace('.', '_')
 
@@ -114,8 +117,12 @@ class SimpleMetricKeyGenerator(config: Config) extends StatsD.MetricKeyGenerator
 
   def normalizedLocalhostName: String = _normalizedLocalhostName
 
+  val hostname: String =
+    if (hostnameOverride == "none") normalizedLocalhostName
+    else hostnameOverride
+
   val baseName: String =
-    if (includeHostnameInMetrics) s"${application}.${normalizedLocalhostName}"
+    if (includeHostnameInMetrics) s"${application}.${hostname}"
     else application
 
   def generateKey(groupIdentity: MetricGroupIdentity, metricIdentity: MetricIdentity): String = {
