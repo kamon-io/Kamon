@@ -23,7 +23,11 @@ import spray.httpx.RequestBuilding
 import scala.concurrent.{ Await, Future }
 import kamon.spray.KamonTraceDirectives
 import scala.util.Random
-import akka.routing.RoundRobinPool
+<<<<<<< Updated upstream
+import akka.routing.{ RoundRobinRoutingLogic, Router, ActorRefRoutee, RoundRobinPool }
+=======
+import akka.routing.{RoundRobinRoutingLogic, Router, ActorRefRoutee, RoundRobinPool}
+>>>>>>> Stashed changes
 import kamon.trace.TraceRecorder
 import kamon.Kamon
 import kamon.metric._
@@ -65,7 +69,15 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
   //Kamon(UserMetrics).registerGauge("test-gauge")(() => 10L)
 
   val pipeline = sendReceive
+<<<<<<< Updated upstream
+  val replier = system.actorOf(Props[Replier].withRouter(RoundRobinPool(nrOfInstances = 4)), "replier")
+  val master = system.actorOf(Props[Replier].withRouter(RoundRobinPool(nrOfInstances = 7)), "master")
+
+=======
   val replier = system.actorOf(Props[Replier].withRouter(RoundRobinPool(nrOfInstances = 2)), "replier")
+  val master = system.actorOf(Props[Master], "Master")
+  master ! Work()
+>>>>>>> Stashed changes
   val random = new Random()
 
   startServer(interface = "localhost", port = 9090) {
@@ -98,7 +110,12 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
         path("ok") {
           traceName("OK") {
             complete {
+<<<<<<< Updated upstream
+              (master ? "Ok").mapTo[String]
+=======
+              master ! Work()
               "ok"
+>>>>>>> Stashed changes
             }
           }
         } ~
@@ -125,6 +142,27 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
     }
   }
 
+}
+
+case class Work()
+class Master extends Actor {
+  var router = {
+    val routees = Vector.fill(5) {
+      val r = context.actorOf(Props[PrintWhatever])
+      context.watch(r)
+      ActorRefRoutee(r)
+    }
+    Router(RoundRobinRoutingLogic(), routees)
+  }
+  def receive = {
+    case w: Work =>
+      router.route(w, sender())
+    case Terminated(a) =>
+      router = router.removeRoutee(a)
+      val r = context.actorOf(Props[PrintWhatever])
+      context watch r
+      router = router.addRoutee(r)
+  }
 }
 
 class PrintWhatever extends Actor {
