@@ -63,6 +63,12 @@ class DatadogExtension(system: ExtendedActorSystem) extends Kamon.Extension {
     Kamon(Metrics)(system).subscribe(ActorMetrics, actorPathPattern, datadogMetricsListener, permanently = true)
   }
 
+  // Subscribe to Routers
+  val includedRouters = datadogConfig.getStringList("includes.router").asScala
+  for (routerPathPattern ← includedRouters) {
+    Kamon(Metrics)(system).subscribe(RouterMetrics, routerPathPattern, datadogMetricsListener, permanently = true)
+  }
+
   // Subscribe to Traces
   val includedTraces = datadogConfig.getStringList("includes.trace").asScala
   for (tracePathPattern ← includedTraces) {
