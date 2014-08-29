@@ -17,11 +17,7 @@ package kamon.metric
 
 import akka.actor.ActorSystem
 import com.typesafe.config.Config
-<<<<<<< Updated upstream
 import kamon.metric.instrument.{ Counter, Histogram }
-=======
-import kamon.metric.instrument.{Counter, Histogram}
->>>>>>> Stashed changes
 
 case class RouterMetrics(name: String) extends MetricGroupIdentity {
   val category = RouterMetrics
@@ -46,12 +42,7 @@ object RouterMetrics extends MetricGroupCategory {
     }
   }
 
-  case class RouterMetricSnapshot(processingTime: Histogram.Snapshot, timeInMailbox: Histogram.Snapshot,
-<<<<<<< Updated upstream
-      errors: Counter.Snapshot) extends MetricGroupSnapshot {
-=======
-                                 errors: Counter.Snapshot) extends MetricGroupSnapshot {
->>>>>>> Stashed changes
+  case class RouterMetricSnapshot(processingTime: Histogram.Snapshot, timeInMailbox: Histogram.Snapshot, errors: Counter.Snapshot) extends MetricGroupSnapshot {
 
     type GroupSnapshotType = RouterMetricSnapshot
 
