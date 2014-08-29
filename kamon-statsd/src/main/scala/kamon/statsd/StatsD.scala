@@ -65,6 +65,12 @@ class StatsDExtension(system: ExtendedActorSystem) extends Kamon.Extension {
     Kamon(Metrics)(system).subscribe(ActorMetrics, actorPathPattern, statsDMetricsListener, permanently = true)
   }
 
+  // Subscribe to Routers
+  val includedRouters = statsDConfig.getStringList("includes.router").asScala
+  for (routerPathPattern ← includedRouters) {
+    Kamon(Metrics)(system).subscribe(RouterMetrics, routerPathPattern, statsDMetricsListener, permanently = true)
+  }
+
   // Subscribe to Traces
   val includedTraces = statsDConfig.getStringList("includes.trace").asScala
   for (tracePathPattern ← includedTraces) {
