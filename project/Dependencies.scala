@@ -29,6 +29,8 @@ object Dependencies {
   val akkaActor       = "com.typesafe.akka"         %%  "akka-actor"            % akkaVersion
   val akkaSlf4j       = "com.typesafe.akka"         %%  "akka-slf4j"            % akkaVersion
   val akkaTestKit     = "com.typesafe.akka"         %%  "akka-testkit"          % akkaVersion
+  val akkaRemote      = "com.typesafe.akka"         %%  "akka-remote"           % akkaVersion
+  val akkaCluster     = "com.typesafe.akka"         %%  "akka-cluster"          % akkaVersion
   val play            = "com.typesafe.play"         %%  "play"                  % playVersion
   val playWS          = "com.typesafe.play"         %%  "play-ws"               % playVersion
   val playTest        = "org.scalatestplus"         %%  "play"                  % "1.1.0"
