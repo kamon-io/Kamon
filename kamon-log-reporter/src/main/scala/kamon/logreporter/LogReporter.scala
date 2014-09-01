@@ -25,9 +25,11 @@ import kamon.metric.TraceMetrics.TraceMetricsSnapshot
 import kamon.metric.UserMetrics._
 import kamon.metric._
 import kamon.metric.instrument.{ Counter, Histogram }
+import kamon.metrics.GCMetrics.GCMetricSnapshot
 import kamon.metrics.MemoryMetrics.MemoryMetricSnapshot
 import kamon.metrics.NetworkMetrics.NetworkMetricSnapshot
-import kamon.metrics.{ NetworkMetrics, MemoryMetrics, CPUMetrics }
+import kamon.metrics.ProcessCPUMetrics.ProcessCPUMetricsSnapshot
+import kamon.metrics._
 import kamon.metrics.CPUMetrics.CPUMetricSnapshot
 
 object LogReporter extends ExtensionId[LogReporterExtension] with ExtensionIdProvider {
@@ -57,11 +59,12 @@ class LogReporterExtension(system: ExtendedActorSystem) extends Kamon.Extension 
   Kamon(Metrics)(system).subscribe(UserMinMaxCounters, "*", subscriber, permanently = true)
   Kamon(Metrics)(system).subscribe(UserGauges, "*", subscriber, permanently = true)
 
-  // Subscribe to SystemMetrics
   val includeSystemMetrics = logReporterConfig.getBoolean("report-system-metrics")
 
   if (includeSystemMetrics) {
+    // Subscribe to SystemMetrics
     Kamon(Metrics)(system).subscribe(CPUMetrics, "*", subscriber, permanently = true)
+    Kamon(Metrics)(system).subscribe(ProcessCPUMetrics, "*", subscriber, permanently = true)
     Kamon(Metrics)(system).subscribe(NetworkMetrics, "*", subscriber, permanently = true)
   }
 
@@ -89,6 +92,7 @@ class LogReporterSubscriber extends Actor with ActorLogging {
       case (m: UserMinMaxCounter, s: UserMinMaxCounterSnapshot) ⇒ minMaxCounters += (m -> s.minMaxCounterSnapshot)
       case (g: UserGauge, s: UserGaugeSnapshot)                 ⇒ gauges += (g -> s.gaugeSnapshot)
       case (_, cms: CPUMetricSnapshot)                          ⇒ logCpuMetrics(cms)
+      case (_, pcms: ProcessCPUMetricsSnapshot)                 ⇒ logProcessCpuMetrics(pcms)
       case (_, nms: NetworkMetricSnapshot)                      ⇒ logNetworkMetrics(nms)
       case ignoreEverythingElse                                 ⇒
     }
@@ -137,7 +141,7 @@ class LogReporterSubscriber extends Actor with ActorLogging {
         ||                                                                                                  |
         ||    User (percentage)       System (percentage)    Wait (percentage)   Idle (percentage)          |
         ||       Min: %-3s                   Min: %-3s               Min: %-3s           Min: %-3s              |
-        ||       Avg: %-3s                  Avg: %-3s               Avg: %-3s           Avg: %-3s             |
+        ||       Avg: %-3s                  Avg: %-3s               Avg: %-3s           Avg: %-3s              |
         ||       Max: %-3s                   Max: %-3s               Max: %-3s           Max: %-3s              |
         ||                                                                                                  |
         ||                                                                                                  |
@@ -168,6 +172,27 @@ class LogReporterSubscriber extends Actor with ActorLogging {
           rxBytes.min, txBytes.min, rxErrors.total, txErrors.total,
           rxBytes.average, txBytes.average,
           rxBytes.max, txBytes.max))
+  }
+
+  def logProcessCpuMetrics(pcms: ProcessCPUMetricsSnapshot): Unit = {
+    import pcms._
+
+    log.info(
+      """
+        |+--------------------------------------------------------------------------------------------------+
+        ||                                                                                                  |
+        ||    Process-CPU                                                                                   |
+        ||                                                                                                  |
+        ||              Cpu-Percentage                           Total-Process-Time                         |
+        ||                Min: %-12s                         Min: %-12s                       |
+        ||                Avg: %-12s                         Avg: %-12s                       |
+        ||                Max: %-12s                         Max: %-12s                       |
+        ||                                                                                                  |
+        |+--------------------------------------------------------------------------------------------------+"""
+        .stripMargin.format(
+          (cpuPercent.min / 100), totalProcessTime.min,
+          (cpuPercent.average / 100), totalProcessTime.average,
+          (cpuPercent.max / 100), totalProcessTime.max))
   }
 
   def logTraceMetrics(name: String, tms: TraceMetricsSnapshot): Unit = {

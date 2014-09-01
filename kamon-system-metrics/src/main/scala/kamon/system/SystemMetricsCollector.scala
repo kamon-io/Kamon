@@ -64,9 +64,10 @@ class SystemMetricsCollector(collectInterval: FiniteDuration) extends Actor with
 
   private def recordProcessCpu(pcpur: ProcessCPUMetricsRecorder) = {
     val procCpu = sigar.getProcCpu(pid)
+    val procTime = sigar.getProcTime(pid)
 
-    pcpur.user.record(procCpu.getUser)
-    pcpur.system.record(procCpu.getSys)
+    pcpur.cpuPercent.record(toLong(procCpu.getPercent))
+    pcpur.totalProcessTime.record(procTime.getTotal) // gives an idea of what is really measured and then interpreted as %
   }
 
   private def recordMemory(mr: MemoryMetricRecorder) = {

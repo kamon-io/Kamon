@@ -14,12 +14,16 @@
     <aspect name="akka.instrumentation.ActorCellInstrumentation"/>
     <aspect name="akka.instrumentation.ActorLoggingInstrumentation"/>
 
+    <!-- Remoting and Cluster -->
+    <aspect name="akka.remote.instrumentation.RemotingInstrumentation"/>
+
     <!-- Dispatchers -->
     <aspect name="akka.instrumentation.DispatcherInstrumentation"/>
     <aspect name="akka.instrumentation.DispatcherMetricCollectionInfoIntoDispatcherMixin"/>
 
     <!-- Futures -->
     <aspect name="kamon.instrumentation.scala.FutureInstrumentation"/>
+    <aspect name="kamon.instrumentation.scalaz.FutureInstrumentation"/>
 
     <!-- Patterns -->
     <aspect name="akka.instrumentation.AskPatternInstrumentation"/>
@@ -27,9 +31,13 @@
 
   <weaver options="-XmessageHandlerClass:kamon.weaver.logging.KamonWeaverMessageHandler">
     <include within="scala.concurrent..*"/>
+    <include within="scalaz.concurrent..*"/>
     <include within="akka..*"/>
     <include within="spray..*"/>
     <include within="kamon..*"/>
+
+    <!-- For some weird reason ByteString produces a java.lang.VerifyError after going through the weaver. -->
+    <exclude within="akka.util.ByteString"/>
   </weaver>
 
 </aspectj>

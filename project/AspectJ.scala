@@ -7,7 +7,7 @@ import com.typesafe.sbt.SbtAspectj.AspectjKeys.{ aspectjVersion, compileOnly, li
 object AspectJ {
 
   lazy val aspectJSettings = aspectjSettings ++ Seq(
-              aspectjVersion    :=  Dependencies.aspectjVersion,
+   aspectjVersion in Aspectj    :=  Dependencies.aspectjVersion,
       compileOnly in Aspectj    :=  true,
                 fork in Test    :=  true,
          javaOptions in Test  <++=  weaverOptions in Aspectj,

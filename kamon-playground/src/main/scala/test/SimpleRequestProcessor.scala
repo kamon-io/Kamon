@@ -17,13 +17,13 @@
 package test
 
 import akka.actor._
+import akka.routing.RoundRobinRouter
 import spray.routing.SimpleRoutingApp
 import akka.util.Timeout
 import spray.httpx.RequestBuilding
 import scala.concurrent.{ Await, Future }
 import kamon.spray.KamonTraceDirectives
 import scala.util.Random
-import akka.routing.RoundRobinRouter
 import kamon.trace.TraceRecorder
 import kamon.Kamon
 import kamon.metric._
@@ -138,8 +138,8 @@ class PrintWhatever extends Actor {
 object Verifier extends App {
 
   def go: Unit = {
-    import scala.concurrent.duration._
     import spray.client.pipelining._
+    import scala.concurrent.duration._
 
     implicit val system = ActorSystem("test")
     import system.dispatcher
