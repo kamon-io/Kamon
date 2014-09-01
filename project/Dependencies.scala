@@ -45,4 +45,5 @@ object Dependencies {
   def test      (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "test")
   def runtime   (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "runtime")
   def container (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "container")
+  def optional  (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "compile,optional")
 }

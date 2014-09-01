@@ -24,7 +24,7 @@ object Projects extends Build {
       mappings in (Compile, packageSrc) ++= mappings.in(kamonMacros, Compile, packageSrc).value,
       libraryDependencies ++=
         compile(akkaActor, aspectJ, hdrHistogram) ++
-        provided(akkaRemote, akkaCluster, logback, aspectjWeaver) ++
+        optional(akkaRemote, akkaCluster, logback, aspectjWeaver) ++
         test(scalatest, akkaTestKit, sprayTestkit, akkaSlf4j, logback, scalazConcurrent))
 
 
