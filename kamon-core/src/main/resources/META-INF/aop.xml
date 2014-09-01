@@ -14,6 +14,9 @@
     <aspect name="akka.instrumentation.ActorCellInstrumentation"/>
     <aspect name="akka.instrumentation.ActorLoggingInstrumentation"/>
 
+    <!-- Remoting and Cluster -->
+    <aspect name="akka.remote.instrumentation.RemotingInstrumentation"/>
+
     <!-- Dispatchers -->
     <aspect name="akka.instrumentation.DispatcherInstrumentation"/>
     <aspect name="akka.instrumentation.DispatcherMetricCollectionInfoIntoDispatcherMixin"/>
@@ -32,6 +35,9 @@
     <include within="akka..*"/>
     <include within="spray..*"/>
     <include within="kamon..*"/>
+
+    <!-- For some weird reason ByteString produces a java.lang.VerifyError after going through the weaver. -->
+    <exclude within="akka.util.ByteString"/>
   </weaver>
 
 </aspectj>
