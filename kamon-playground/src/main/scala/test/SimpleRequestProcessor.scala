@@ -17,26 +17,28 @@
 package test
 
 import akka.actor._
-import spray.routing.SimpleRoutingApp
-import akka.util.Timeout
-import spray.httpx.RequestBuilding
-import scala.concurrent.{ Await, Future }
-import kamon.spray.KamonTraceDirectives
-import scala.util.Random
 import akka.routing.RoundRobinPool
-import kamon.trace.TraceRecorder
+import akka.util.Timeout
 import kamon.Kamon
-import kamon.metric._
-import spray.http.{ StatusCodes, Uri }
 import kamon.metric.Subscriptions.TickMetricSnapshot
+import kamon.metric._
+import kamon.spray.KamonTraceDirectives
+import kamon.trace.TraceRecorder
+import spray.http.{ StatusCodes, Uri }
+import spray.httpx.RequestBuilding
+import spray.routing.SimpleRoutingApp
+
+import scala.concurrent.{ Await, Future }
+import scala.util.Random
 
 object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuilding with KamonTraceDirectives {
-  import scala.concurrent.duration._
-  import spray.client.pipelining._
   import akka.pattern.ask
+  import spray.client.pipelining._
+
+  import scala.concurrent.duration._
 
   implicit val system = ActorSystem("test")
-  import system.dispatcher
+  import test.SimpleRequestProcessor.system.dispatcher
 
   val printer = system.actorOf(Props[PrintWhatever])
 
@@ -65,7 +67,8 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
   //Kamon(UserMetrics).registerGauge("test-gauge")(() => 10L)
 
   val pipeline = sendReceive
-  val replier = system.actorOf(Props[Replier].withRouter(RoundRobinPool(nrOfInstances = 2)), "replier")
+  val replier = system.actorOf(Props[Replier].withRouter(RoundRobinPool(nrOfInstances = 4)), "replier")
+
   val random = new Random()
 
   startServer(interface = "localhost", port = 9090) {
@@ -138,8 +141,9 @@ class PrintWhatever extends Actor {
 object Verifier extends App {
 
   def go: Unit = {
-    import scala.concurrent.duration._
     import spray.client.pipelining._
+
+    import scala.concurrent.duration._
 
     implicit val system = ActorSystem("test")
     import system.dispatcher

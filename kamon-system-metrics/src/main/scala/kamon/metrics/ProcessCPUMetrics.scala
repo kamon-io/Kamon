@@ -27,31 +27,31 @@ case class ProcessCPUMetrics(name: String) extends MetricGroupIdentity {
 object ProcessCPUMetrics extends MetricGroupCategory {
   val name = "proc-cpu"
 
-  case object User extends MetricIdentity { val name = "user" }
-  case object System extends MetricIdentity { val name = "system" }
+  case object CpuPercent extends MetricIdentity { val name = "cpu-percentage" }
+  case object TotalProcessTime extends MetricIdentity { val name = "total-process-time" }
 
-  case class ProcessCPUMetricsRecorder(user: Histogram, system: Histogram)
+  case class ProcessCPUMetricsRecorder(cpuPercent: Histogram, totalProcessTime: Histogram)
       extends MetricGroupRecorder {
 
     def collect(context: CollectionContext): MetricGroupSnapshot = {
-      ProcessCPUMetricsSnapshot(user.collect(context), system.collect(context))
+      ProcessCPUMetricsSnapshot(cpuPercent.collect(context), totalProcessTime.collect(context))
     }
 
     def cleanup: Unit = {}
   }
 
-  case class ProcessCPUMetricsSnapshot(user: Histogram.Snapshot, system: Histogram.Snapshot)
+  case class ProcessCPUMetricsSnapshot(cpuPercent: Histogram.Snapshot, totalProcessTime: Histogram.Snapshot)
       extends MetricGroupSnapshot {
 
     type GroupSnapshotType = ProcessCPUMetricsSnapshot
 
     def merge(that: ProcessCPUMetricsSnapshot, context: CollectionContext): GroupSnapshotType = {
-      ProcessCPUMetricsSnapshot(user.merge(that.user, context), system.merge(that.system, context))
+      ProcessCPUMetricsSnapshot(cpuPercent.merge(that.cpuPercent, context), totalProcessTime.merge(that.totalProcessTime, context))
     }
 
     lazy val metrics: Map[MetricIdentity, MetricSnapshot] = Map(
-      User -> user,
-      System -> system)
+      CpuPercent -> cpuPercent,
+      TotalProcessTime -> totalProcessTime)
   }
 
   val Factory = new MetricGroupFactory {
@@ -61,12 +61,12 @@ object ProcessCPUMetrics extends MetricGroupCategory {
     def create(config: Config, system: ActorSystem): GroupRecorder = {
       val settings = config.getConfig("precision.system.process-cpu")
 
-      val userConfig = settings.getConfig("user")
-      val systemConfig = settings.getConfig("system")
+      val cpuPercentageConfig = settings.getConfig("cpu-percentage")
+      val totalProcessTimeConfig = settings.getConfig("total-process-time")
 
       new ProcessCPUMetricsRecorder(
-        Histogram.fromConfig(userConfig),
-        Histogram.fromConfig(systemConfig))
+        Histogram.fromConfig(cpuPercentageConfig),
+        Histogram.fromConfig(totalProcessTimeConfig))
     }
   }
 }

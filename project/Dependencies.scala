@@ -29,6 +29,8 @@ object Dependencies {
   val akkaActor       = "com.typesafe.akka"         %%  "akka-actor"            % akkaVersion
   val akkaSlf4j       = "com.typesafe.akka"         %%  "akka-slf4j"            % akkaVersion
   val akkaTestKit     = "com.typesafe.akka"         %%  "akka-testkit"          % akkaVersion
+  val akkaRemote      = "com.typesafe.akka"         %%  "akka-remote"           % akkaVersion
+  val akkaCluster     = "com.typesafe.akka"         %%  "akka-cluster"          % akkaVersion
   val play            = "com.typesafe.play"         %%  "play"                  % playVersion
   val playWS          = "com.typesafe.play"         %%  "play-ws"               % playVersion
   val playTest        = "org.scalatestplus"         %%  "play"                  % "1.1.0"
@@ -36,10 +38,12 @@ object Dependencies {
   val slf4nop         = "org.slf4j"                 %   "slf4j-nop"             % slf4jVersion
   val scalaCompiler   = "org.scala-lang"            %   "scala-compiler"        % Settings.ScalaVersion
   val sigar           = "org.fusesource"            %   "sigar"                 % "1.6.4"
+  val scalazConcurrent = "org.scalaz"               %%  "scalaz-concurrent"     % "7.1.0"
 
   def compile   (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "compile")
   def provided  (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "provided")
   def test      (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "test")
   def runtime   (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "runtime")
   def container (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "container")
+  def optional  (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "compile,optional")
 }
