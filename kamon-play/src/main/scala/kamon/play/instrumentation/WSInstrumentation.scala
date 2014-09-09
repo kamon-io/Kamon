@@ -16,15 +16,16 @@
 
 package kamon.play.instrumentation
 
-import org.aspectj.lang.annotation.{ Around, Pointcut, Aspect }
-import org.aspectj.lang.ProceedingJoinPoint
-import kamon.trace.TraceRecorder
 import kamon.metric.TraceMetrics.HttpClientRequest
-import play.api.libs.ws.WSRequest
-import scala.concurrent.Future
-import play.api.libs.ws.WSResponse
-import scala.util.{ Failure, Success }
+import kamon.trace.{ TraceContext, TraceRecorder }
+import org.aspectj.lang.ProceedingJoinPoint
+import org.aspectj.lang.annotation.{ Around, Aspect, Pointcut }
+import play.api.libs.ws.ning.NingWSRequest
+import play.api.libs.ws.{ WSRequest, WSResponse }
+import play.libs.Akka
+
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 @Aspect
 class WSInstrumentation {
@@ -34,27 +35,36 @@ class WSInstrumentation {
 
   @Around("onExecuteRequest(request)")
   def aroundExecuteRequest(pjp: ProceedingJoinPoint, request: WSRequest): Any = {
-    import WSInstrumentation._
 
-    val completionHandle = TraceRecorder.startSegment(HttpClientRequest(request.url), basicRequestAttributes(request))
+    import kamon.play.instrumentation.WSInstrumentation._
 
-    val response = pjp.proceed().asInstanceOf[Future[WSResponse]]
+    withOrNewTraceContext(TraceRecorder.currentContext)(request) {
+      val response = pjp.proceed().asInstanceOf[Future[WSResponse]]
+      val segmentHandle = TraceRecorder.startSegment(HttpClientRequest(request.url), basicRequestAttributes(request))
 
-    response.onComplete {
-      case Failure(t) ⇒ completionHandle.map(_.finish(Map("completed-with-error" -> t.getMessage)))
-      case Success(_) ⇒ completionHandle.map(_.finish(Map.empty))
+      response.map {
+        r ⇒
+          segmentHandle.map(_.finish())
+          TraceRecorder.finish()
+      }
+      response
     }
-
-    response
   }
 }
 
 object WSInstrumentation {
 
+  def uri(request: WSRequest): java.net.URI = request.asInstanceOf[NingWSRequest].builder.build().getURI
+
   def basicRequestAttributes(request: WSRequest): Map[String, String] = {
     Map[String, String](
-      "host" -> request.header("host").getOrElse("Unknown"),
-      "path" -> request.method)
+      "host" -> uri(request).getHost,
+      "path" -> uri(request).getPath,
+      "method" -> request.method)
+  }
+
+  def withOrNewTraceContext[T](context: Option[TraceContext])(request: WSRequest)(thunk: ⇒ T): T = {
+    if (context.isDefined) TraceRecorder.withTraceContext(context) { thunk }
+    else TraceRecorder.withNewTraceContext(request.url, metadata = basicRequestAttributes(request)) { thunk }(Akka.system())
   }
 }
-

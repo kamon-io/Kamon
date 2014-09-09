@@ -15,13 +15,14 @@
 
 package kamon.play
 
-import scala.concurrent.duration._
 import kamon.Kamon
 import kamon.http.HttpServerMetrics
 import kamon.metric.{ CollectionContext, Metrics }
 import kamon.play.action.TraceName
 import kamon.trace.{ TraceLocal, TraceRecorder }
 import org.scalatestplus.play._
+import play.api.DefaultGlobal
+import play.api.http.Writeable
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc.Results.Ok
 import play.api.mvc._
@@ -29,6 +30,7 @@ import play.api.test.Helpers._
 import play.api.test._
 import play.libs.Akka
 
+import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 
 class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
@@ -48,6 +50,11 @@ class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
     case ("GET", "/notFound") ⇒
       Action {
         Results.NotFound
+      }
+    case ("GET", "/error") ⇒
+      Action {
+        throw new Exception("This page generates an error!")
+        Ok("This page will generate an error!")
       }
     case ("GET", "/redirect") ⇒
       Action {
@@ -125,11 +132,17 @@ class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
         Await.result(route(FakeRequest(GET, "/notFound").withHeaders(traceTokenHeader)).get, 10 seconds)
       }
 
+      for (repetition ← 1 to 5) {
+        Await.result(routeWithOnError(FakeRequest(GET, "/error").withHeaders(traceTokenHeader)).get, 10 seconds)
+      }
+
       val snapshot = Kamon(Metrics)(Akka.system()).register(HttpServerMetrics, HttpServerMetrics.Factory).get.collect(collectionContext)
       snapshot.countsPerTraceAndStatusCode("GET: /default")("200").count must be(10)
       snapshot.countsPerTraceAndStatusCode("GET: /notFound")("404").count must be(5)
+      snapshot.countsPerTraceAndStatusCode("GET: /error")("500").count must be(5)
       snapshot.countsPerStatusCode("200").count must be(10)
       snapshot.countsPerStatusCode("404").count must be(5)
+      snapshot.countsPerStatusCode("500").count must be(5)
     }
   }
 
@@ -148,6 +161,14 @@ class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
         next(header).map {
           result ⇒ result.withHeaders((traceLocalStorageKey -> TraceLocal.retrieve(TraceLocalKey).get))
         }
+      }
+    }
+  }
+
+  def routeWithOnError[T](req: Request[T])(implicit w: Writeable[T]): Option[Future[Result]] = {
+    route(req).map { result ⇒
+      result.recoverWith {
+        case t: Throwable ⇒ DefaultGlobal.onError(req, t)
       }
     }
   }

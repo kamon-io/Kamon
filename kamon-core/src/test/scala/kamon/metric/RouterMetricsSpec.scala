@@ -129,8 +129,6 @@ class RouterMetricsSpec extends TestKitBase with WordSpecLike with Matchers with
     }
 
     def createTestRouter(name: String): ActorRef = system.actorOf(RoundRobinPool(5).props(Props[RouterMetricsTestActor]), name)
-
-    def takeSnapshotOf(amr: RouterMetricsRecorder): RouterMetricSnapshot = amr.collect(collectionContext)
   }
 }
 

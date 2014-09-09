@@ -16,70 +16,64 @@
 
 package kamon.play
 
+import kamon.Kamon
+import kamon.metric.TraceMetrics.{ HttpClientRequest, TraceMetricsSnapshot }
+import kamon.metric.{ Metrics, TraceMetrics }
+import org.scalatest.{ Matchers, WordSpecLike }
+import org.scalatestplus.play.OneServerPerSuite
+import play.api.libs.ws.WS
 import play.api.mvc.Action
 import play.api.mvc.Results.Ok
-import play.api.libs.ws.WS
-import org.scalatestplus.play.OneServerPerSuite
-import play.api.test._
 import play.api.test.Helpers._
-import akka.actor.ActorSystem
-import akka.testkit.{ TestKitBase, TestProbe }
+import play.api.test._
+import play.libs.Akka
 
-import com.typesafe.config.ConfigFactory
-import org.scalatest.{ Matchers, WordSpecLike }
-import kamon.Kamon
-import kamon.metric.{ TraceMetrics, Metrics }
-import kamon.metric.Subscriptions.TickMetricSnapshot
-import kamon.metric.TraceMetrics.ElapsedTime
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
-class WSInstrumentationSpec extends TestKitBase with WordSpecLike with Matchers with OneServerPerSuite {
+class WSInstrumentationSpec extends WordSpecLike with Matchers with OneServerPerSuite {
 
   System.setProperty("config.file", "./kamon-play/src/test/resources/conf/application.conf")
 
-  import scala.collection.immutable.StringLike._
-  implicit lazy val system: ActorSystem = ActorSystem("play-ws-instrumentation-spec", ConfigFactory.parseString(
-    """
-      |akka {
-      |  loglevel = ERROR
-      |}
-      |
-      |kamon {
-      |  metrics {
-      |    tick-interval = 2 seconds
-      |
-      |    filters = [
-      |      {
-      |        trace {
-      |          includes = [ "*" ]
-      |          excludes = []
-      |        }
-      |      }
-      |    ]
-      |  }
-      |}
-    """.stripMargin))
-
   implicit override lazy val app = FakeApplication(withRoutes = {
-    case ("GET", "/async") ⇒ Action { Ok("ok") }
+    case ("GET", "/async")   ⇒ Action { Ok("ok") }
+    case ("GET", "/outside") ⇒ Action { Ok("ok") }
+    case ("GET", "/inside")  ⇒ callWSinsideController("http://localhost:19001/async")
   })
 
   "the WS instrumentation" should {
-    "respond to the Async Action and complete the WS request" in {
+    "propagate the TraceContext outside an Action and complete the WS request" in {
+      Await.result(WS.url("http://localhost:19001/outside").get(), 10 seconds)
 
-      val metricListener = TestProbe()
-      Kamon(Metrics)(system).subscribe(TraceMetrics, "*", metricListener.ref, permanently = true)
-      metricListener.expectMsgType[TickMetricSnapshot]
+      val snapshot = takeSnapshotOf("http://localhost:19001/outside")
+      snapshot.elapsedTime.numberOfMeasurements should be(1)
+      snapshot.segments.size should be(1)
+      snapshot.segments(HttpClientRequest("http://localhost:19001/outside")).numberOfMeasurements should be(1)
+    }
 
-      val response = await(WS.url("http://localhost:19001/async").get())
-      response.status should be(OK)
+    "propagate the TraceContext inside an Action and complete the WS request" in {
+      Await.result(route(FakeRequest(GET, "/inside")).get, 10 seconds)
 
-      //      val tickSnapshot = metricListener.expectMsgType[TickMetricSnapshot]
-      //      val traceMetrics = tickSnapshot.metrics.find { case (k, v) ⇒ k.name.contains("async") } map (_._2.metrics)
-      //      traceMetrics should not be empty
-      //
-      //      traceMetrics map { metrics ⇒
-      //        metrics(ElapsedTime).numberOfMeasurements should be(1L)
-      //      }
+      val snapshot = takeSnapshotOf("GET: /inside")
+      snapshot.elapsedTime.numberOfMeasurements should be(2)
+      snapshot.segments.size should be(1)
+      snapshot.segments(HttpClientRequest("http://localhost:19001/async")).numberOfMeasurements should be(1)
+    }
+
+  }
+
+  def takeSnapshotOf(traceName: String): TraceMetricsSnapshot = {
+    val recorder = Kamon(Metrics)(Akka.system()).register(TraceMetrics(traceName), TraceMetrics.Factory)
+    val collectionContext = Kamon(Metrics)(Akka.system()).buildDefaultCollectionContext
+    recorder.get.collect(collectionContext)
+  }
+
+  def callWSinsideController(url: String) = Action.async {
+    import play.api.libs.concurrent.Execution.Implicits.defaultContext
+    import play.api.Play.current
+
+    WS.url(url).get().map { response ⇒
+      Ok("Ok")
     }
   }
 }

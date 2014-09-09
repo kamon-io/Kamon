@@ -20,6 +20,7 @@ import kamon.play.{ Play, PlayExtension }
 import kamon.trace.{ TraceContextAware, TraceRecorder }
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
+import play.api.mvc.Results._
 import play.api.mvc._
 import play.libs.Akka
 
@@ -34,7 +35,7 @@ class RequestInstrumentation {
     Kamon(Play)(Akka.system())
   }
 
-  @Before("execution(* play.api.GlobalSettings+.onRouteRequest(..)) && args(requestHeader)")
+  @Before("call(* play.api.GlobalSettings+.onRouteRequest(..)) && args(requestHeader)")
   def onRouteRequest(requestHeader: RequestHeader): Unit = {
     val system = Akka.system()
     val playExtension = Kamon(Play)(system)
@@ -57,10 +58,9 @@ class RequestInstrumentation {
       next(requestHeader).map {
         result ⇒
           TraceRecorder.finish()
-
           incomingContext.map { ctx ⇒
             val playExtension = Kamon(Play)(ctx.system)
-            recordHttpServerMetrics(result, ctx.name, playExtension)
+            recordHttpServerMetrics(result.header, ctx.name, playExtension)
             if (playExtension.includeTraceToken) result.withHeaders(playExtension.traceTokenHeaderName -> ctx.token)
             else result
           }.getOrElse(result)
@@ -69,16 +69,11 @@ class RequestInstrumentation {
     pjp.proceed(Array(EssentialAction(essentialAction)))
   }
 
-  private def recordHttpServerMetrics(result: Result, traceName: String, playExtension: PlayExtension): Unit =
-    playExtension.httpServerMetrics.recordResponse(traceName, result.header.status.toString, 1L)
-
-  @Around("execution(* play.api.GlobalSettings+.onError(..)) && args(request, ex)")
-  def aroundOnError(pjp: ProceedingJoinPoint, request: TraceContextAware, ex: Throwable): Any = request.traceContext match {
-    case None ⇒ pjp.proceed()
-    case Some(ctx) ⇒ {
-      val actorSystem = ctx.system
-      Kamon(Play)(actorSystem).publishErrorMessage(actorSystem, ex.getMessage, ex)
-      pjp.proceed()
-    }
+  @Before("execution(* play.api.GlobalSettings+.onError(..)) && args(request, ex)")
+  def beforeOnError(request: TraceContextAware, ex: Throwable): Unit = request.traceContext.map {
+    ctx ⇒ recordHttpServerMetrics(InternalServerError.header, ctx.name, Kamon(Play)(ctx.system))
   }
+
+  private def recordHttpServerMetrics(header: ResponseHeader, traceName: String, playExtension: PlayExtension): Unit =
+    playExtension.httpServerMetrics.recordResponse(traceName, header.status.toString)
 }
