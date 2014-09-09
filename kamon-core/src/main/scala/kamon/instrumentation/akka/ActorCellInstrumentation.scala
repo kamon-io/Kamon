@@ -170,7 +170,7 @@ object ActorCellInstrumentation {
   implicit class PimpedActorCellMetrics(cell: ActorCellMetrics) {
     def onRoutedActorCell(block: ActorCellMetrics ⇒ Unit) = cell match {
       case routedActorCell: RoutedActorCell ⇒ block(cell)
-      case everyThingElse                   ⇒
+      case everythingElse                   ⇒
     }
   }
 }
