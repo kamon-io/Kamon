@@ -19,6 +19,7 @@ package kamon.play
 import kamon.Kamon
 import kamon.metric.TraceMetrics.{ HttpClientRequest, TraceMetricsSnapshot }
 import kamon.metric.{ Metrics, TraceMetrics }
+import kamon.trace.TraceRecorder
 import org.scalatest.{ Matchers, WordSpecLike }
 import org.scalatestplus.play.OneServerPerSuite
 import play.api.libs.ws.WS
@@ -42,22 +43,25 @@ class WSInstrumentationSpec extends WordSpecLike with Matchers with OneServerPer
   })
 
   "the WS instrumentation" should {
-    "propagate the TraceContext outside an Action and complete the WS request" in {
-      Await.result(WS.url("http://localhost:19001/outside").get(), 10 seconds)
-
-      val snapshot = takeSnapshotOf("http://localhost:19001/outside")
-      snapshot.elapsedTime.numberOfMeasurements should be(1)
-      snapshot.segments.size should be(1)
-      snapshot.segments(HttpClientRequest("http://localhost:19001/outside")).numberOfMeasurements should be(1)
-    }
-
     "propagate the TraceContext inside an Action and complete the WS request" in {
       Await.result(route(FakeRequest(GET, "/inside")).get, 10 seconds)
 
       val snapshot = takeSnapshotOf("GET: /inside")
-      snapshot.elapsedTime.numberOfMeasurements should be(2)
+      snapshot.elapsedTime.numberOfMeasurements should be(1)
       snapshot.segments.size should be(1)
       snapshot.segments(HttpClientRequest("http://localhost:19001/async")).numberOfMeasurements should be(1)
+    }
+
+    "propagate the TraceContext outside an Action and complete the WS request" in {
+      TraceRecorder.withNewTraceContext("trace-outside-action") {
+        Await.result(WS.url("http://localhost:19001/outside").get(), 10 seconds)
+        TraceRecorder.finish()
+      }(Akka.system())
+
+      val snapshot = takeSnapshotOf("trace-outside-action")
+      snapshot.elapsedTime.numberOfMeasurements should be(1)
+      snapshot.segments.size should be(1)
+      snapshot.segments(HttpClientRequest("http://localhost:19001/outside")).numberOfMeasurements should be(1)
     }
 
   }
@@ -69,8 +73,8 @@ class WSInstrumentationSpec extends WordSpecLike with Matchers with OneServerPer
   }
 
   def callWSinsideController(url: String) = Action.async {
-    import play.api.libs.concurrent.Execution.Implicits.defaultContext
     import play.api.Play.current
+    import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
     WS.url(url).get().map { response ⇒
       Ok("Ok")

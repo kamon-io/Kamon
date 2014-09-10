@@ -16,15 +16,16 @@
 
 package kamon.play.instrumentation
 
+import kamon.Kamon
 import kamon.metric.TraceMetrics.HttpClientRequest
-import kamon.trace.{ TraceContext, TraceRecorder }
+import kamon.play.Play
+import kamon.trace.TraceRecorder
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation.{ Around, Aspect, Pointcut }
 import play.api.libs.ws.ning.NingWSRequest
 import play.api.libs.ws.{ WSRequest, WSResponse }
 import play.libs.Akka
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 @Aspect
@@ -38,16 +39,17 @@ class WSInstrumentation {
 
     import kamon.play.instrumentation.WSInstrumentation._
 
-    withOrNewTraceContext(TraceRecorder.currentContext)(request) {
-      val response = pjp.proceed().asInstanceOf[Future[WSResponse]]
-      val segmentHandle = TraceRecorder.startSegment(HttpClientRequest(request.url), basicRequestAttributes(request))
+    TraceRecorder.currentContext match {
+      case ctx @ Some(_) ⇒
+        TraceRecorder.withTraceContext(ctx) {
+          val executor = Kamon(Play)(Akka.system()).defaultDispatcher
+          val segmentHandle = TraceRecorder.startSegment(HttpClientRequest(request.url), basicRequestAttributes(request))
+          val response = pjp.proceed().asInstanceOf[Future[WSResponse]]
 
-      response.map {
-        r ⇒
-          segmentHandle.map(_.finish())
-          TraceRecorder.finish()
-      }
-      response
+          response.map(result ⇒ segmentHandle.map(_.finish()))(executor)
+          response
+        }
+      case None ⇒ pjp.proceed()
     }
   }
 }
@@ -61,10 +63,5 @@ object WSInstrumentation {
       "host" -> uri(request).getHost,
       "path" -> uri(request).getPath,
       "method" -> request.method)
-  }
-
-  def withOrNewTraceContext[T](context: Option[TraceContext])(request: WSRequest)(thunk: ⇒ T): T = {
-    if (context.isDefined) TraceRecorder.withTraceContext(context) { thunk }
-    else TraceRecorder.withNewTraceContext(request.url, metadata = basicRequestAttributes(request)) { thunk }(Akka.system())
   }
 }
