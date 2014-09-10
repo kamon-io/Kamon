@@ -58,9 +58,8 @@ class WSInstrumentationSpec extends WordSpecLike with Matchers with OneServerPer
         TraceRecorder.finish()
       }(Akka.system())
 
-      Thread.sleep(1000) // wait to complete the future
-
       val snapshot = takeSnapshotOf("trace-outside-action")
+      println(snapshot)
       snapshot.elapsedTime.numberOfMeasurements should be(1)
       snapshot.segments.size should be(1)
       snapshot.segments(HttpClientRequest("http://localhost:19001/outside")).numberOfMeasurements should be(1)
