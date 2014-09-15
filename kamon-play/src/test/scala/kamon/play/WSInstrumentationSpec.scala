@@ -59,7 +59,7 @@ class WSInstrumentationSpec extends WordSpecLike with Matchers with OneServerPer
       }(Akka.system())
 
       val snapshot = takeSnapshotOf("trace-outside-action")
-      println(snapshot)
+      println(snapshot) // force load
       snapshot.elapsedTime.numberOfMeasurements should be(1)
       snapshot.segments.size should be(1)
       snapshot.segments(HttpClientRequest("http://localhost:19001/outside")).numberOfMeasurements should be(1)

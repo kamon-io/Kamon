@@ -17,17 +17,20 @@ package kamon.play
 
 import kamon.Kamon
 import kamon.http.HttpServerMetrics
-import kamon.metric.{ CollectionContext, Metrics }
+import kamon.metric.{ CollectionContext, Metrics, TraceMetrics }
 import kamon.play.action.TraceName
 import kamon.trace.{ TraceLocal, TraceRecorder }
 import org.scalatestplus.play._
 import play.api.DefaultGlobal
 import play.api.http.Writeable
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.ws.WS
 import play.api.mvc.Results.Ok
 import play.api.mvc._
 import play.api.test.Helpers._
 import play.api.test._
+import play.core.Router.{ HandlerDef, Route, Routes }
+import play.core.{ DynamicPart, PathPattern, Router, StaticPart }
 import play.libs.Akka
 
 import scala.concurrent.duration._
@@ -76,7 +79,11 @@ class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
       Action {
         Ok("retrieve from TraceLocal")
       }
-  })
+  }, additionalConfiguration = Map(
+    ("application.router", "kamon.play.Routes"),
+    ("logger.root", "OFF"),
+    ("logger.play", "OFF"),
+    ("logger.application", "OFF")))
 
   private val traceTokenValue = "kamon-trace-token-test"
   private val traceTokenHeaderName = "X-Trace-Token"
@@ -109,15 +116,29 @@ class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
     }
 
     "respond to the Async Action with X-Trace-Token and the renamed trace" in {
-      val Some(result) = route(FakeRequest(GET, "/async-renamed").withHeaders(traceTokenHeader))
-      Thread.sleep(500) // wait to complete the future
+      val result = Await.result(route(FakeRequest(GET, "/async-renamed").withHeaders(traceTokenHeader)).get, 10 seconds)
       TraceRecorder.currentContext.map(_.name) must be(Some("renamed-trace"))
-      header(traceTokenHeaderName, result) must be(expectedToken)
+      Some(result.header.headers(traceTokenHeaderName)) must be(expectedToken)
     }
 
     "propagate the TraceContext and LocalStorage through of filters in the current request" in {
       val Some(result) = route(FakeRequest(GET, "/retrieve").withHeaders(traceTokenHeader, traceLocalStorageHeader))
       TraceLocal.retrieve(TraceLocalKey).get must be(traceLocalStorageValue)
+    }
+
+    "response to the getRouted Action and normalise the current TraceContext name" in {
+      Await.result(WS.url("http://localhost:19001/getRouted").get, 10 seconds)
+      Kamon(Metrics)(Akka.system()).storage.get(TraceMetrics("getRouted.get")) must not be (empty)
+    }
+
+    "response to the postRouted Action and normalise the current TraceContext name" in {
+      Await.result(WS.url("http://localhost:19001/postRouted").post("content"), 10 seconds)
+      Kamon(Metrics)(Akka.system()).storage.get(TraceMetrics("postRouted.post")) must not be (empty)
+    }
+
+    "response to the showRouted Action and normalise the current TraceContext name" in {
+      Await.result(WS.url("http://localhost:19001/showRouted/2").get, 10 seconds)
+      Kamon(Metrics)(Akka.system()).storage.get(TraceMetrics("show.some.id.get")) must not be (empty)
     }
 
     "record http server metrics for all processed requests" in {
@@ -174,3 +195,62 @@ class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
   }
 }
 
+object Routes extends Router.Routes {
+  private var _prefix = "/"
+
+  def setPrefix(prefix: String) {
+    _prefix = prefix
+    List[(String, Routes)]().foreach {
+      case (p, router) ⇒ router.setPrefix(prefix + (if (prefix.endsWith("/")) "" else "/") + p)
+    }
+  }
+
+  def prefix = _prefix
+
+  lazy val defaultPrefix = {
+    if (Routes.prefix.endsWith("/")) "" else "/"
+  }
+  // Gets
+  private[this] lazy val Application_getRouted =
+    Route("GET", PathPattern(List(StaticPart(Routes.prefix), StaticPart(Routes.defaultPrefix), StaticPart("getRouted"))))
+
+  private[this] lazy val Application_show =
+    Route("GET", PathPattern(List(StaticPart(Routes.prefix), StaticPart(Routes.defaultPrefix), StaticPart("showRouted/"), DynamicPart("id", """[^/]+""", true))))
+
+  //Posts
+  private[this] lazy val Application_postRouted =
+    Route("POST", PathPattern(List(StaticPart(Routes.prefix), StaticPart(Routes.defaultPrefix), StaticPart("postRouted"))))
+
+  def documentation = Nil // Documentation not needed for tests
+
+  def routes: PartialFunction[RequestHeader, Handler] = {
+    case Application_getRouted(params) ⇒ call {
+      createInvoker(controllers.Application.getRouted,
+        HandlerDef(this.getClass.getClassLoader, "", "controllers.Application", "getRouted", Nil, "GET", """some comment""", Routes.prefix + """getRouted""")).call(controllers.Application.getRouted)
+    }
+    case Application_postRouted(params) ⇒ call {
+      createInvoker(controllers.Application.postRouted,
+        HandlerDef(this.getClass.getClassLoader, "", "controllers.Application", "postRouted", Nil, "POST", """some comment""", Routes.prefix + """postRouted""")).call(controllers.Application.postRouted)
+    }
+    case Application_show(params) ⇒ call(params.fromPath[Int]("id", None)) { (id) ⇒
+      createInvoker(controllers.Application.showRouted(id),
+        HandlerDef(this.getClass.getClassLoader, "", "controllers.Application", "showRouted", Seq(classOf[Int]), "GET", """""", Routes.prefix + """show/some/$id<[^/]+>""")).call(controllers.Application.showRouted(id))
+    }
+  }
+}
+
+object controllers {
+  import play.api.mvc._
+
+  object Application extends Controller {
+    val postRouted = Action {
+      Ok("invoked postRouted")
+    }
+    val getRouted = Action {
+      Ok("invoked getRouted")
+    }
+    def showRouted(id: Int) = Action {
+      Ok("invoked show with: " + id)
+    }
+  }
+}
