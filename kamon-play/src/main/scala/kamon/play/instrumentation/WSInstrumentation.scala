@@ -24,7 +24,6 @@ import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation.{ Around, Aspect, Pointcut }
 import play.api.libs.ws.ning.NingWSRequest
 import play.api.libs.ws.{ WSRequest, WSResponse }
-import play.libs.Akka
 
 import scala.concurrent.Future
 
@@ -39,18 +38,14 @@ class WSInstrumentation {
 
     import kamon.play.instrumentation.WSInstrumentation._
 
-    TraceRecorder.currentContext match {
-      case ctx @ Some(_) ⇒
-        TraceRecorder.withTraceContext(ctx) {
-          val executor = Kamon(Play)(Akka.system()).defaultDispatcher
-          val segmentHandle = TraceRecorder.startSegment(HttpClientRequest(request.url), basicRequestAttributes(request))
-          val response = pjp.proceed().asInstanceOf[Future[WSResponse]]
+    TraceRecorder.currentContext.map { ctx ⇒
+      val executor = Kamon(Play)(ctx.system).defaultDispatcher
+      val segmentHandle = TraceRecorder.startSegment(HttpClientRequest(request.url), basicRequestAttributes(request))
+      val response = pjp.proceed().asInstanceOf[Future[WSResponse]]
 
-          response.map(result ⇒ segmentHandle.map(_.finish()))(executor)
-          response
-        }
-      case None ⇒ pjp.proceed()
-    }
+      response.map(result ⇒ segmentHandle.map(_.finish()))(executor)
+      response
+    }.getOrElse(pjp.proceed())
   }
 }
 

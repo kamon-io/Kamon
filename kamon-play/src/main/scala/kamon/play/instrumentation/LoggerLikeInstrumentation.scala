@@ -15,15 +15,16 @@
 
 package kamon.play.instrumentation
 
-import kamon.trace.{ TraceContext, TraceContextAware }
+import kamon.trace.{ TraceContext, TraceContextAware, TraceRecorder }
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
 import org.slf4j.MDC
+import play.api.LoggerLike
 
 @Aspect
 class LoggerLikeInstrumentation {
 
-  import LoggerLikeInstrumentation._
+  import kamon.play.instrumentation.LoggerLikeInstrumentation._
 
   @DeclareMixin("play.api.LoggerLike+")
   def mixinContextAwareToLoggerLike: TraceContextAware = TraceContextAware.default
@@ -41,16 +42,17 @@ class LoggerLikeInstrumentation {
   def tracePointcut(): Unit = {}
 
   @Around("(infoPointcut() || warnPointcut() || errorPointcut() || tracePointcut()) && this(logger)")
-  def aroundLog(pjp: ProceedingJoinPoint, logger: TraceContextAware): Any = {
-    withMDC(logger.traceContext) {
+  def aroundLog(pjp: ProceedingJoinPoint, logger: LoggerLike): Any = {
+    withMDC {
       pjp.proceed()
     }
   }
 }
 
 object LoggerLikeInstrumentation {
-  def withMDC[A](currentContext: Option[TraceContext])(block: ⇒ A): A = {
-    val keys = currentContext.map(extractProperties).map(putAndExtractKeys)
+
+  @inline final def withMDC[A](block: ⇒ A): A = {
+    val keys = TraceRecorder.currentContext.map(extractProperties).map(putAndExtractKeys)
 
     try block finally keys.map(k ⇒ k.foreach(MDC.remove(_)))
   }

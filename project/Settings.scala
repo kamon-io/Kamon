@@ -23,6 +23,7 @@ object Settings {
       "-g:vars",
       "-feature",
       "-unchecked",
+      "-optimise",
       "-deprecation",
       "-target:jvm-1.6",
       "-language:postfixOps",

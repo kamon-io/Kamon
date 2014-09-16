@@ -15,8 +15,6 @@
 
 package kamon.play.instrumentation
 
-import java.util.Locale
-
 import kamon.Kamon
 import kamon.play.{ Play, PlayExtension }
 import kamon.trace.{ TraceContextAware, TraceRecorder }
@@ -26,8 +24,6 @@ import play.api.Routes
 import play.api.mvc.Results._
 import play.api.mvc._
 import play.libs.Akka
-
-import scala.collection.concurrent.TrieMap
 
 @Aspect
 class RequestInstrumentation {
@@ -89,6 +85,10 @@ class RequestInstrumentation {
 }
 
 object RequestInstrumentation {
+
+  import java.util.Locale
+  import scala.collection.concurrent.TrieMap
+
   private val cache = TrieMap.empty[String, String]
 
   def normaliseTraceName(requestHeader: RequestHeader): Option[String] = requestHeader.tags.get(Routes.ROUTE_VERB).map({ verb ⇒
