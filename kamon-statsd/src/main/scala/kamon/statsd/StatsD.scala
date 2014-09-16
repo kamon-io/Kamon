@@ -34,8 +34,6 @@ object StatsD extends ExtensionId[StatsDExtension] with ExtensionIdProvider {
   override def createExtension(system: ExtendedActorSystem): StatsDExtension = new StatsDExtension(system)
 
   trait MetricKeyGenerator {
-    def localhostName: String
-    def normalizedLocalhostName: String
     def generateKey(groupIdentity: MetricGroupIdentity, metricIdentity: MetricIdentity): String
   }
 }
@@ -106,41 +104,5 @@ class StatsDExtension(system: ExtendedActorSystem) extends Kamon.Extension {
     } else {
       system.actorOf(TickMetricSnapshotBuffer.props(flushInterval.toInt.millis, metricsSender), "statsd-metrics-buffer")
     }
-  }
-}
-
-class SimpleMetricKeyGenerator(config: Config) extends StatsD.MetricKeyGenerator {
-  val application = config.getString("kamon.statsd.simple-metric-key-generator.application")
-  val includeHostnameInMetrics =
-    config.getBoolean("kamon.statsd.simple-metric-key-generator.include-hostname")
-  val hostnameOverride =
-    config.getString("kamon.statsd.simple-metric-key-generator.hostname-override")
-
-  val _localhostName = ManagementFactory.getRuntimeMXBean.getName.split('@')(1)
-  val _normalizedLocalhostName = _localhostName.replace('.', '_')
-
-  def localhostName: String = _localhostName
-
-  def normalizedLocalhostName: String = _normalizedLocalhostName
-
-  val hostname: String =
-    if (hostnameOverride == "none") normalizedLocalhostName
-    else hostnameOverride
-
-  val baseName: String =
-    if (includeHostnameInMetrics) s"${application}.${hostname}"
-    else application
-
-  def generateKey(groupIdentity: MetricGroupIdentity, metricIdentity: MetricIdentity): String = {
-    val normalizedGroupName = groupIdentity.name.replace(": ", "-").replace(" ", "_").replace("/", "_")
-    val key = s"${baseName}.${groupIdentity.category.name}.${normalizedGroupName}"
-
-    if (isUserMetric(groupIdentity)) key
-    else s"${key}.${metricIdentity.name}"
-  }
-
-  def isUserMetric(groupIdentity: MetricGroupIdentity): Boolean = groupIdentity match {
-    case someUserMetric: UserMetricGroup ⇒ true
-    case everythingElse                  ⇒ false
   }
 }
