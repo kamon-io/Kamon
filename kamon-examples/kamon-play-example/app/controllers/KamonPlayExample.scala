@@ -15,9 +15,11 @@
  * ========================================================== */
 package controllers
 
+import filters.{TraceLocalContainer, TraceLocalKey}
 import kamon.Kamon
 import kamon.metric.UserMetrics
 import kamon.play.action.TraceName
+import kamon.trace.TraceLocal
 import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc.{Action, Controller}
@@ -78,6 +80,14 @@ object KamonPlayExample extends Controller {
       logger.info("increment")
       counter.increment()
       Ok("increment")
+    }
+  }
+
+  def updateTraceLocal = Action.async {
+    Future {
+      TraceLocal.store(TraceLocalKey)(TraceLocalContainer("MyTraceToken","MyImportantHeader"))
+      logger.info("storeInTraceLocal")
+      Ok("storeInTraceLocal")
     }
   }
 }

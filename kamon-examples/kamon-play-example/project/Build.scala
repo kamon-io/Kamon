@@ -36,11 +36,11 @@ object ApplicationBuild extends Build {
       ))
 
   val dependencies = Seq(
-    "io.kamon"    %% "kamon-core"           % "0.3.3",
-    "io.kamon"    %% "kamon-play"           % "0.3.3",
-    "io.kamon"    %% "kamon-statsd"         % "0.3.3",
-    "io.kamon"    %% "kamon-log-reporter"   % "0.3.3",
-    "io.kamon"    %% "kamon-system-metrics" % "0.3.3",
+    "io.kamon"    %% "kamon-core"           % "0.3.4-05453bdeb54f4db8f643185c28fec34a77ef5ca9",
+    "io.kamon"    %% "kamon-play"           % "0.3.4-05453bdeb54f4db8f643185c28fec34a77ef5ca9",
+    "io.kamon"    %% "kamon-statsd"         % "0.3.4-05453bdeb54f4db8f643185c28fec34a77ef5ca9",
+    "io.kamon"    %% "kamon-log-reporter"   % "0.3.4-05453bdeb54f4db8f643185c28fec34a77ef5ca9",
+    "io.kamon"    %% "kamon-system-metrics" % "0.3.4-05453bdeb54f4db8f643185c28fec34a77ef5ca9",
     "org.aspectj" % "aspectjweaver"         % "1.8.1"
     )
 

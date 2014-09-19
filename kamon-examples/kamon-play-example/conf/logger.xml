@@ -1,16 +1,19 @@
 <configuration scan="true">
-    <conversionRule conversionWord="traceToken" converterClass="kamon.trace.logging.LogbackTraceTokenConverter" />
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>%date{HH:mm:ss.SSS} %-5level [%traceToken][%X{akkaSource}] [%thread] %logger{55} - %msg%n</pattern>
+            <pattern>%date{HH:mm:ss.SSS} %-5level [%X{traceToken}][%X{importantHeader}] [%thread] %logger{55} - %msg%n</pattern>
         </encoder>
+    </appender>
+
+    <appender name="ASYNC" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="STDOUT" />
     </appender>
 
     <logger name="play" level="INFO" />
     <logger name="application" level="INFO" />
 
     <root level="INFO">
-        <appender-ref ref="STDOUT" />
+        <appender-ref ref="ASYNC" />
     </root>
 
 </configuration>
