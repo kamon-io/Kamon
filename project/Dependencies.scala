@@ -9,8 +9,8 @@ object Dependencies {
 
   val sprayVersion    = "1.3.1"
   val akkaVersion     = "2.3.3"
-  val aspectjVersion  = "1.7.4"
-  val slf4jVersion    = "1.7.6"
+  val aspectjVersion  = "1.8.2"
+  val slf4jVersion    = "1.7.7"
   val playVersion     = "2.3.0"
 
   val sprayJson       = "io.spray"                  %%  "spray-json"            % "1.2.6"
