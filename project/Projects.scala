@@ -23,9 +23,9 @@ object Projects extends Build {
       mappings in (Compile, packageBin) ++= mappings.in(kamonMacros, Compile, packageBin).value,
       mappings in (Compile, packageSrc) ++= mappings.in(kamonMacros, Compile, packageSrc).value,
       libraryDependencies ++=
-        compile(akkaActor, aspectJ, hdrHistogram) ++
+        compile(akkaActor, aspectJ, hdrHistogram, scalazConcurrent) ++
         optional(akkaRemote, akkaCluster, logback, aspectjWeaver) ++
-        test(scalatest, akkaTestKit, sprayTestkit, akkaSlf4j, logback, scalazConcurrent))
+        test(scalatest, akkaTestKit, sprayTestkit, akkaSlf4j, logback))
 
 
   lazy val kamonSpray = Project("kamon-spray", file("kamon-spray"))
