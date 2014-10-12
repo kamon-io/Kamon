@@ -21,6 +21,7 @@ import akka.routing.RoundRobinPool
 import akka.util.Timeout
 import kamon.Kamon
 import kamon.metric.Subscriptions.TickMetricSnapshot
+import kamon.metric.TraceMetrics.HttpClientRequest
 import kamon.metric._
 import kamon.spray.KamonTraceDirectives
 import kamon.trace.TraceRecorder
@@ -124,6 +125,16 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
             throw new NullPointerException
             "okk"
           }
+        } ~
+        path("segment") {
+          complete {
+            val segment = TraceRecorder.startSegment(HttpClientRequest("hello-world"))
+            (replier ? "hello").mapTo[String].onComplete { t =>
+              segment.get.finish()
+            }
+
+            "segment"
+          }
         }
     }
   }
@@ -166,7 +177,7 @@ class Replier extends Actor with ActorLogging {
       if (TraceRecorder.currentContext.isEmpty)
         log.warning("PROCESSING A MESSAGE WITHOUT CONTEXT")
 
-      log.info("Processing at the Replier, and self is: {}", self)
+      //log.info("Processing at the Replier, and self is: {}", self)
       sender ! anything
   }
 }

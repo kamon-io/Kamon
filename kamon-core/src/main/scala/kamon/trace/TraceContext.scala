@@ -26,6 +26,8 @@ import kamon.trace.TraceContextAware.DefaultTraceContextAware
 import kamon.trace.TraceContext.SegmentIdentity
 import kamon.metric.TraceMetrics.TraceMetricRecorder
 
+import scala.annotation.tailrec
+
 trait TraceContext {
   def name: String
   def token: String
@@ -136,10 +138,12 @@ class SimpleMetricCollectionContext(traceName: String, val token: String, metada
     }
   }
 
-  private def drainFinishedSegments(metricRecorder: TraceMetricRecorder): Unit = {
-    while (!finishedSegments.isEmpty) {
-      val segmentData = finishedSegments.poll()
-      metricRecorder.segmentRecorder(segmentData.identity).record(segmentData.duration)
+  @tailrec private def drainFinishedSegments(metricRecorder: TraceMetricRecorder): Unit = {
+    val segment = finishedSegments.poll()
+    if(segment != null) {
+      metricRecorder.segmentRecorder(segment.identity).record(segment.duration)
+      println("CLOSED")
+      drainFinishedSegments(metricRecorder)
     }
   }
 
