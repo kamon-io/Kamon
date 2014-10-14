@@ -140,9 +140,8 @@ class SimpleMetricCollectionContext(traceName: String, val token: String, metada
 
   @tailrec private def drainFinishedSegments(metricRecorder: TraceMetricRecorder): Unit = {
     val segment = finishedSegments.poll()
-    if(segment != null) {
+    if (segment != null) {
       metricRecorder.segmentRecorder(segment.identity).record(segment.duration)
-      println("CLOSED")
       drainFinishedSegments(metricRecorder)
     }
   }
