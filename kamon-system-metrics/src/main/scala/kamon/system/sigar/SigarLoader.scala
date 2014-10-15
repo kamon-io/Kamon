@@ -22,7 +22,7 @@ import java.util
 import java.util.logging.Logger
 import java.util.{ ArrayList, Date, List }
 
-import org.hyperic.sigar.{ OperatingSystem, Sigar, SigarProxy }
+import org.hyperic.sigar._
 
 import scala.annotation.tailrec
 import scala.collection.JavaConversions._
@@ -137,8 +137,14 @@ object SigarLoader {
     val os = OperatingSystem.getInstance
 
     def loadAverage(sigar: Sigar) = {
-      val average = sigar.getLoadAverage
-      (average(0), average(1), average(2))
+      try {
+        val average = sigar.getLoadAverage
+        (average(0), average(1), average(2))
+      } catch {
+        case s: org.hyperic.sigar.SigarNotImplementedException ⇒ {
+          (0d, 0d, 0d)
+        }
+      }
     }
 
     def uptime(sigar: Sigar) = {
