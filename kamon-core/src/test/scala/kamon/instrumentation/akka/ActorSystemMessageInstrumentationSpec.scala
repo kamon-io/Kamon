@@ -142,7 +142,7 @@ class ActorSystemMessageInstrumentationSpec extends TestKit(ActorSystem("actor-s
 
     class Child extends Actor {
       def receive = {
-        case "fail"    ⇒ 1 / 0
+        case "fail"    ⇒ throw new ArithmeticException("Division by zero.")
         case "context" ⇒ sender ! TraceRecorder.currentContext
       }
 

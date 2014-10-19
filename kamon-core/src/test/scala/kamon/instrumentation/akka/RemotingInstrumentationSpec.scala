@@ -124,7 +124,7 @@ class TraceTokenReplier(creationTraceContextListener: Option[ActorRef]) extends 
 
   def receive = {
     case "fail" ⇒
-      1 / 0
+      throw new ArithmeticException("Division by zero.")
     case "reply-trace-token" ⇒
       log.info("Sending back the TT: " + TraceRecorder.currentContext.map(_.token).getOrElse("unavailable"))
       sender ! currentTraceContextInfo
