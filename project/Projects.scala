@@ -49,8 +49,8 @@ object Projects extends Build {
     .settings(aspectJSettings: _*)
     .settings(
       libraryDependencies ++=
-        compile(aspectJ, sprayCan, sprayClient, sprayRouting, sprayJson, sprayJsonLenses, newrelic, snakeYaml) ++
-        test(scalatest, akkaTestKit, sprayTestkit, slf4Api, slf4nop))
+        compile(aspectJ, sprayCan, sprayClient, sprayRouting, sprayJson, sprayJsonLenses, newrelic, snakeYaml, akkaSlf4j) ++
+        test(scalatest, akkaTestKit, sprayTestkit, slf4Api, akkaSlf4j))
     .dependsOn(kamonCore)
 
 

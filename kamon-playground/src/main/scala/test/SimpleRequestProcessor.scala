@@ -129,7 +129,7 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
         path("segment") {
           complete {
             val segment = TraceRecorder.startSegment(HttpClientRequest("hello-world"))
-            (replier ? "hello").mapTo[String].onComplete { t =>
+            (replier ? "hello").mapTo[String].onComplete { t ⇒
               segment.get.finish()
             }
 
