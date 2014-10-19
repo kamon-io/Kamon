@@ -33,7 +33,7 @@ object AgentJsonProtocol extends DefaultJsonProtocol {
   }
 
   implicit def seqWriter[T: JsonWriter] = new JsonWriter[Seq[T]] {
-    def write(seq: Seq[T]) = JsArray(seq.map(_.toJson).toList)
+    def write(seq: Seq[T]) = JsArray(seq.map(_.toJson).toVector)
   }
 
   implicit object MetricDetailWriter extends JsonWriter[NewRelic.Metric] {
