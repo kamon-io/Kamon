@@ -35,7 +35,11 @@ class MetricTranslator(receiver: ActorRef) extends Actor
 }
 
 object MetricTranslator {
-  case class TimeSliceMetrics(from: Long, to: Long, metrics: Seq[NewRelic.Metric])
+  case class TimeSliceMetrics(from: Long, to: Long, metrics: Seq[NewRelic.Metric]) {
+    def merge(thatMetrics: Option[TimeSliceMetrics]): TimeSliceMetrics = {
+      thatMetrics.map(that ⇒ TimeSliceMetrics(from + that.from, to + that.to, metrics ++ that.metrics)).getOrElse(this)
+    }
+  }
 
   def props(receiver: ActorRef): Props = Props(new MetricTranslator(receiver))
 }
