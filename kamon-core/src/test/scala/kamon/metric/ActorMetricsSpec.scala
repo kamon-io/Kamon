@@ -193,7 +193,7 @@ class ActorMetricsSpec extends TestKitBase with WordSpecLike with Matchers with 
 class ActorMetricsTestActor extends Actor {
   def receive = {
     case Discard ⇒
-    case Fail    ⇒ 1 / 0
+    case Fail    ⇒ throw new ArithmeticException("Division by zero.")
     case Ping    ⇒ sender ! Pong
     case TrackTimings(sendTimestamp, sleep) ⇒ {
       val dequeueTimestamp = System.nanoTime()
