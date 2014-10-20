@@ -54,6 +54,7 @@ object SystemMetricsExtension {
   val Network = "network"
   val Memory = "memory"
   val Heap = "heap"
+  val ContextSwitches = "context-switches"
 
   def toKB(value: Long): Long = (value / 1024)
   def toMB(value: Long): Long = (value / 1024 / 1024)

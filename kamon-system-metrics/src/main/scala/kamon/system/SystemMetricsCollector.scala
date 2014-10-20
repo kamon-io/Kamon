@@ -15,20 +15,24 @@
  */
 package kamon.system
 
-import akka.actor.{ Actor, Props }
+import java.io.IOException
+
+import akka.actor.{ ActorLogging, Actor, Props }
 import kamon.Kamon
 import kamon.metric.Metrics
 import kamon.metrics.CPUMetrics.CPUMetricRecorder
+import kamon.metrics.ContextSwitchesMetrics.ContextSwitchesMetricsRecorder
 import kamon.metrics.MemoryMetrics.MemoryMetricRecorder
 import kamon.metrics.NetworkMetrics.NetworkMetricRecorder
 import kamon.metrics.ProcessCPUMetrics.ProcessCPUMetricsRecorder
-import kamon.metrics.{ CPUMetrics, MemoryMetrics, NetworkMetrics, ProcessCPUMetrics }
+import kamon.metrics._
 import kamon.system.sigar.SigarHolder
 import org.hyperic.sigar.{ Mem, NetInterfaceStat, SigarProxy }
 
 import scala.concurrent.duration.FiniteDuration
+import scala.io.Source
 
-class SystemMetricsCollector(collectInterval: FiniteDuration) extends Actor with SigarExtensionProvider {
+class SystemMetricsCollector(collectInterval: FiniteDuration) extends Actor with ActorLogging with SigarExtensionProvider {
   import kamon.system.SystemMetricsCollector._
   import kamon.system.SystemMetricsExtension._
 
@@ -40,6 +44,7 @@ class SystemMetricsCollector(collectInterval: FiniteDuration) extends Actor with
   val processCpuRecorder = systemMetricsExtension.register(ProcessCPUMetrics(ProcessCPU), ProcessCPUMetrics.Factory)
   val memoryRecorder = systemMetricsExtension.register(MemoryMetrics(Memory), MemoryMetrics.Factory)
   val networkRecorder = systemMetricsExtension.register(NetworkMetrics(Network), NetworkMetrics.Factory)
+  val contextSwitchesRecorder = systemMetricsExtension.register(ContextSwitchesMetrics(ContextSwitches), ContextSwitchesMetrics.Factory)
 
   def receive: Receive = {
     case Collect ⇒ collectMetrics()
@@ -52,6 +57,9 @@ class SystemMetricsCollector(collectInterval: FiniteDuration) extends Actor with
     processCpuRecorder.map(recordProcessCpu)
     memoryRecorder.map(recordMemory)
     networkRecorder.map(recordNetwork)
+
+    if (OsUtils.isLinux)
+      contextSwitchesRecorder.map(recordContextSwitches)
   }
 
   private def recordCpu(cpur: CPUMetricRecorder) = {
@@ -100,10 +108,61 @@ class SystemMetricsCollector(collectInterval: FiniteDuration) extends Actor with
       }
     }
   }
+
+  private def recordContextSwitches(ctxt: ContextSwitchesMetricsRecorder) = {
+    def contextSwitchesByProcess(pid: Long): (Long, Long) = {
+      val filename = s"/proc/$pid/status"
+      var voluntaryContextSwitches = 0L
+      var nonVoluntaryContextSwitches = 0L
+
+      try {
+        for (line ← Source.fromFile(filename).getLines()) {
+          if (line.startsWith("voluntary_ctxt_switches")) {
+            voluntaryContextSwitches = line.substring(line.indexOf(":") + 1).trim.toLong
+          }
+          if (line.startsWith("nonvoluntary_ctxt_switches")) {
+            nonVoluntaryContextSwitches = line.substring(line.indexOf(":") + 1).trim.toLong
+          }
+        }
+      } catch {
+        case ex: IOException ⇒ {
+          log.error("Error trying to read [{}]", filename)
+        }
+      }
+      (voluntaryContextSwitches, nonVoluntaryContextSwitches)
+    }
+
+    def contextSwitches: Long = {
+      val filename = "/proc/stat"
+      var contextSwitches = 0L
+
+      try {
+        for (line ← Source.fromFile(filename).getLines()) {
+          if (line.startsWith("ctxt")) {
+            contextSwitches = line.substring(line.indexOf(" ") + 1).toLong
+          }
+        }
+      } catch {
+        case ex: IOException ⇒ {
+          log.error("Error trying to read [{}]", filename)
+        }
+      }
+      contextSwitches
+    }
+
+    val (perProcessVoluntary, perProcessNonVoluntary) = contextSwitchesByProcess(pid)
+    ctxt.perProcessVoluntary.record(perProcessVoluntary)
+    ctxt.perProcessNonVoluntary.record(perProcessNonVoluntary)
+    ctxt.global.record(contextSwitches)
+  }
 }
 
 object SystemMetricsCollector {
   case object Collect
+
+  object OsUtils {
+    def isLinux: Boolean = System.getProperty("os.name").indexOf("Linux") != -1;
+  }
 
   def props(collectInterval: FiniteDuration): Props = Props[SystemMetricsCollector](new SystemMetricsCollector(collectInterval))
 }
