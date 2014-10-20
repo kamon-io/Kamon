@@ -21,6 +21,7 @@ import com.typesafe.config.ConfigFactory
 import kamon.Kamon
 import kamon.metric.Subscriptions.TickMetricSnapshot
 import kamon.metrics.CPUMetrics.CPUMetricSnapshot
+import kamon.metrics.ContextSwitchesMetrics.ContextSwitchesMetricsSnapshot
 import kamon.metrics.GCMetrics.GCMetricSnapshot
 import kamon.metrics.HeapMetrics.HeapMetricSnapshot
 import kamon.metrics.MemoryMetrics.MemoryMetricSnapshot
@@ -96,6 +97,20 @@ class SystemMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
       |          significant-value-digits = 2
       |        }
       |        swap-free {
+      |          highest-trackable-value = 3600000000000
+      |          significant-value-digits = 2
+      |        }
+      |     }
+      |     context-switches {
+      |        per-process-voluntary {
+      |          highest-trackable-value = 3600000000000
+      |          significant-value-digits = 2
+      |        }
+      |        per-process-non-voluntary {
+      |          highest-trackable-value = 3600000000000
+      |          significant-value-digits = 2
+      |        }
+      |        global {
       |          highest-trackable-value = 3600000000000
       |          significant-value-digits = 2
       |        }
@@ -214,6 +229,17 @@ class SystemMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
     }
   }
 
+  "the Kamon ContextSwitches Metrics" should {
+    "record Context Switches Global, Voluntary and Non Voluntary metrics" in new ContextSwitchesMetricsListenerFixture {
+      val metricsListener = subscribeToMetrics()
+
+      val ContextSwitchesMetrics = expectContextSwitchesMetrics(metricsListener, 3 seconds)
+      ContextSwitchesMetrics.perProcessVoluntary.max should be > 0L
+      ContextSwitchesMetrics.perProcessNonVoluntary.max should be > 0L
+      ContextSwitchesMetrics.global.max should be > 0L
+    }
+  }
+
   def expectCPUMetrics(listener: TestProbe, waitTime: FiniteDuration): CPUMetricSnapshot = {
     val tickSnapshot = within(waitTime) {
       listener.expectMsgType[TickMetricSnapshot]
@@ -323,6 +349,25 @@ class SystemMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
     def subscribeToMetrics(): TestProbe = {
       val metricsListener = TestProbe()
       Kamon(Metrics).subscribe(ProcessCPUMetrics, "*", metricsListener.ref, permanently = true)
+      // Wait for one empty snapshot before proceeding to the test.
+      metricsListener.expectMsgType[TickMetricSnapshot]
+      metricsListener
+    }
+  }
+
+  def expectContextSwitchesMetrics(listener: TestProbe, waitTime: FiniteDuration): ContextSwitchesMetricsSnapshot = {
+    val tickSnapshot = within(waitTime) {
+      listener.expectMsgType[TickMetricSnapshot]
+    }
+    val contextSwitchesMetricsOption = tickSnapshot.metrics.get(ContextSwitchesMetrics(SystemMetricsExtension.ContextSwitches))
+    contextSwitchesMetricsOption should not be empty
+    contextSwitchesMetricsOption.get.asInstanceOf[ContextSwitchesMetricsSnapshot]
+  }
+
+  trait ContextSwitchesMetricsListenerFixture {
+    def subscribeToMetrics(): TestProbe = {
+      val metricsListener = TestProbe()
+      Kamon(Metrics).subscribe(ContextSwitchesMetrics, "*", metricsListener.ref, permanently = true)
       // Wait for one empty snapshot before proceeding to the test.
       metricsListener.expectMsgType[TickMetricSnapshot]
       metricsListener
