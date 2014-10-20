@@ -18,7 +18,6 @@ object Dependencies {
   val scalatest       = "org.scalatest"             %%  "scalatest"             % "2.2.1"
   val logback         = "ch.qos.logback"            %   "logback-classic"       % "1.0.13"
   val aspectJ         = "org.aspectj"               %   "aspectjrt"             % aspectjVersion
-  val aspectjWeaver   = "org.aspectj"               %   "aspectjweaver"         % aspectjVersion
   val newrelic        = "com.newrelic.agent.java"   %   "newrelic-api"          % "3.11.0"
   val snakeYaml       = "org.yaml"                  %   "snakeyaml"             % "1.13"
   val hdrHistogram    = "org.hdrhistogram"          %   "HdrHistogram"          % "1.2.1"
