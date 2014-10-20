@@ -29,7 +29,7 @@
     <aspect name="akka.instrumentation.AskPatternInstrumentation"/>
   </aspects>
 
-  <weaver options="-XmessageHandlerClass:kamon.weaver.logging.KamonWeaverMessageHandler">
+  <weaver>
     <include within="scala.concurrent..*"/>
     <include within="scalaz.concurrent..*"/>
     <include within="akka..*"/>
