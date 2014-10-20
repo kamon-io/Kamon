@@ -57,7 +57,7 @@ class HistogramSpec extends WordSpec with Matchers {
     }
 
     "produce a snapshot" which {
-      "supports min, max and numberOfMeasurements operations" in new HistogramFixture {
+      "supports min, max, percentile, sum and numberOfMeasurements operations" in new HistogramFixture {
         histogram.record(100)
         histogram.record(200, count = 200)
         histogram.record(300)
@@ -67,7 +67,12 @@ class HistogramSpec extends WordSpec with Matchers {
 
         snapshot.min should equal(100L +- 1L)
         snapshot.max should equal(900L +- 9L)
+        snapshot.percentile(50.0D) should be(200)
+        snapshot.percentile(99.5D) should be(300)
+        snapshot.percentile(99.9D) should be(900)
+        snapshot.sum should be(41300)
         snapshot.numberOfMeasurements should be(203)
+
       }
 
       "can be merged with another snapshot" in new MultipleHistogramFixture {

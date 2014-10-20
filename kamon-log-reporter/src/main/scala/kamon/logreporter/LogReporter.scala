@@ -122,11 +122,11 @@ class LogReporterSubscriber extends Actor with ActorLogging {
           name,
           ams.processingTime.numberOfMeasurements, ams.timeInMailbox.numberOfMeasurements, ams.mailboxSize.min,
           ams.processingTime.min, ams.timeInMailbox.min, ams.mailboxSize.average,
-          ams.processingTime.percentile(0.50F), ams.timeInMailbox.percentile(0.50F), ams.mailboxSize.max,
-          ams.processingTime.percentile(0.90F), ams.timeInMailbox.percentile(0.90F),
-          ams.processingTime.percentile(0.95F), ams.timeInMailbox.percentile(0.95F),
-          ams.processingTime.percentile(0.99F), ams.timeInMailbox.percentile(0.99F), ams.errors.count,
-          ams.processingTime.percentile(0.999F), ams.timeInMailbox.percentile(0.999F),
+          ams.processingTime.percentile(50.0D), ams.timeInMailbox.percentile(50.0D), ams.mailboxSize.max,
+          ams.processingTime.percentile(90.0D), ams.timeInMailbox.percentile(90.0D),
+          ams.processingTime.percentile(95.0D), ams.timeInMailbox.percentile(95.0D),
+          ams.processingTime.percentile(99.0D), ams.timeInMailbox.percentile(99.0D), ams.errors.count,
+          ams.processingTime.percentile(99.9D), ams.timeInMailbox.percentile(99.9D),
           ams.processingTime.max, ams.timeInMailbox.max))
   }
 
@@ -169,7 +169,7 @@ class LogReporterSubscriber extends Actor with ActorLogging {
         ||                                                                                                  |
         |+--------------------------------------------------------------------------------------------------+"""
         .stripMargin.format(
-          rxBytes.min, txBytes.min, rxErrors.total, txErrors.total,
+          rxBytes.min, txBytes.min, rxErrors.sum, txErrors.sum,
           rxBytes.average, txBytes.average,
           rxBytes.max, txBytes.max))
   }
@@ -295,9 +295,9 @@ class LogReporterSubscriber extends Actor with ActorLogging {
     val sb = StringBuilder.newBuilder
 
     sb.append("|    Min: %-11s  50th Perc: %-12s   90th Perc: %-12s   95th Perc: %-12s |\n".format(
-      histogram.min, histogram.percentile(0.50F), histogram.percentile(0.90F), histogram.percentile(0.95F)))
+      histogram.min, histogram.percentile(50.0D), histogram.percentile(90.0D), histogram.percentile(95.0D)))
     sb.append("|                      99th Perc: %-12s 99.9th Perc: %-12s         Max: %-12s |".format(
-      histogram.percentile(0.99F), histogram.percentile(0.999F), histogram.max))
+      histogram.percentile(99.0D), histogram.percentile(99.9D), histogram.max))
 
     sb.toString()
   }
@@ -310,36 +310,9 @@ class LogReporterSubscriber extends Actor with ActorLogging {
 object LogReporterSubscriber {
 
   implicit class RichHistogramSnapshot(histogram: Histogram.Snapshot) {
-    def percentile(q: Float): Long = {
-      val records = histogram.recordsIterator
-      val qThreshold = histogram.numberOfMeasurements * q
-      var countToCurrentLevel = 0L
-      var qLevel = 0L
-
-      while (countToCurrentLevel < qThreshold && records.hasNext) {
-        val record = records.next()
-        countToCurrentLevel += record.count
-        qLevel = record.level
-      }
-
-      qLevel
-    }
-
     def average: Double = {
-      var acc = 0L
-      for (record ← histogram.recordsIterator) {
-        acc += record.count * record.level
-      }
-
-      return acc / histogram.numberOfMeasurements
-    }
-
-    def total: Long = {
-      histogram.recordsIterator.foldLeft(0L) { (acc, record) ⇒
-        {
-          acc + (record.count * record.level)
-        }
-      }
+      if(histogram.numberOfMeasurements == 0) 0D
+      else histogram.sum / histogram.numberOfMeasurements
     }
   }
 }
