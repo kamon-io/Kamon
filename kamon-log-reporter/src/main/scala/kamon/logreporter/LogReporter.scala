@@ -311,7 +311,7 @@ object LogReporterSubscriber {
 
   implicit class RichHistogramSnapshot(histogram: Histogram.Snapshot) {
     def average: Double = {
-      if(histogram.numberOfMeasurements == 0) 0D
+      if (histogram.numberOfMeasurements == 0) 0D
       else histogram.sum / histogram.numberOfMeasurements
     }
   }

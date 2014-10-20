@@ -152,7 +152,7 @@ class AgentSpec extends TestKitBase with WordSpecLike with BeforeAndAfterAll {
 
 object AgentSpec {
   def sendDelayedMetric(agent: ActorRef, delay: Int = 1000): Unit = {
-    agent ! TimeSliceMetrics(100000L, 200000L, Seq(NewRelic.Metric("Latency", None, 1000L, 2000D, 3000D, 1D, 100000D, 300D)))
+    agent ! TimeSliceMetrics(100000L, 200000L, Map("Latency" -> NewRelic.Metric("Latency", None, 1000L, 2000D, 3000D, 1D, 100000D, 300D)))
     Thread.sleep(delay)
   }
 }

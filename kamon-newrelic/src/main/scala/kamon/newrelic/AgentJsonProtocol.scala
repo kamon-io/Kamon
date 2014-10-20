@@ -58,6 +58,6 @@ object AgentJsonProtocol extends DefaultJsonProtocol {
         JsNumber(obj.runId),
         JsNumber(obj.timeSliceMetrics.from),
         JsNumber(obj.timeSliceMetrics.to),
-        obj.timeSliceMetrics.metrics.toJson)
+        obj.timeSliceMetrics.metrics.values.toSeq.toJson)
   }
 }
