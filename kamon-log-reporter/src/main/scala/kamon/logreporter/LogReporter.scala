@@ -216,7 +216,7 @@ class LogReporterSubscriber extends Actor with ActorLogging {
         .stripMargin.format(
           global.min, perProcessNonVoluntary.min, perProcessVoluntary.min,
           global.average, perProcessNonVoluntary.average, perProcessVoluntary.average,
-          global.max, perProcessNonVoluntary.max,perProcessVoluntary.max))
+          global.max, perProcessNonVoluntary.max, perProcessVoluntary.max))
 
   }
 
