@@ -234,9 +234,9 @@ class SystemMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
       val metricsListener = subscribeToMetrics()
 
       val ContextSwitchesMetrics = expectContextSwitchesMetrics(metricsListener, 3 seconds)
-      ContextSwitchesMetrics.perProcessVoluntary.max should be > 0L
-      ContextSwitchesMetrics.perProcessNonVoluntary.max should be > 0L
-      ContextSwitchesMetrics.global.max should be > 0L
+      ContextSwitchesMetrics.perProcessVoluntary.max should be >= 0L
+      ContextSwitchesMetrics.perProcessNonVoluntary.max should be >= 0L
+      ContextSwitchesMetrics.global.max should be >= 0L
     }
   }
 
