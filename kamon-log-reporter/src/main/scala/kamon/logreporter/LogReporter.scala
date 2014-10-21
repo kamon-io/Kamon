@@ -25,6 +25,7 @@ import kamon.metric.TraceMetrics.TraceMetricsSnapshot
 import kamon.metric.UserMetrics._
 import kamon.metric._
 import kamon.metric.instrument.{ Counter, Histogram }
+import kamon.metrics.ContextSwitchesMetrics.ContextSwitchesMetricsSnapshot
 import kamon.metrics.GCMetrics.GCMetricSnapshot
 import kamon.metrics.MemoryMetrics.MemoryMetricSnapshot
 import kamon.metrics.NetworkMetrics.NetworkMetricSnapshot
@@ -66,6 +67,7 @@ class LogReporterExtension(system: ExtendedActorSystem) extends Kamon.Extension 
     Kamon(Metrics)(system).subscribe(CPUMetrics, "*", subscriber, permanently = true)
     Kamon(Metrics)(system).subscribe(ProcessCPUMetrics, "*", subscriber, permanently = true)
     Kamon(Metrics)(system).subscribe(NetworkMetrics, "*", subscriber, permanently = true)
+    Kamon(Metrics)(system).subscribe(ContextSwitchesMetrics, "*", subscriber, permanently = true)
   }
 
 }
@@ -94,6 +96,7 @@ class LogReporterSubscriber extends Actor with ActorLogging {
       case (_, cms: CPUMetricSnapshot)                          ⇒ logCpuMetrics(cms)
       case (_, pcms: ProcessCPUMetricsSnapshot)                 ⇒ logProcessCpuMetrics(pcms)
       case (_, nms: NetworkMetricSnapshot)                      ⇒ logNetworkMetrics(nms)
+      case (_, csms: ContextSwitchesMetricsSnapshot)            ⇒ logContextSwitchesMetrics(csms)
       case ignoreEverythingElse                                 ⇒
     }
 
@@ -163,9 +166,9 @@ class LogReporterSubscriber extends Actor with ActorLogging {
         ||    Network (ALL)                                                                                 |
         ||                                                                                                  |
         ||     Rx-Bytes (KB)                Tx-Bytes (KB)              Rx-Errors            Tx-Errors       |
-        ||      Min: %-4s                  Min: %-4s                 Total: %-8s      Total: %-8s|
-        ||      Avg: %-4s                Avg: %-4s                                                   |
-        ||      Max: %-4s                  Max: %-4s                                                     |
+        ||      Min: %-4s                  Min: %-4s                 Total: %-8s      Total: %-8s  |
+        ||      Avg: %-4s                Avg: %-4s                                                     |
+        ||      Max: %-4s                  Max: %-4s                                                       |
         ||                                                                                                  |
         |+--------------------------------------------------------------------------------------------------+"""
         .stripMargin.format(
@@ -193,6 +196,28 @@ class LogReporterSubscriber extends Actor with ActorLogging {
           (cpuPercent.min / 100), totalProcessTime.min,
           (cpuPercent.average / 100), totalProcessTime.average,
           (cpuPercent.max / 100), totalProcessTime.max))
+  }
+
+  def logContextSwitchesMetrics(csms: ContextSwitchesMetricsSnapshot): Unit = {
+    import csms._
+
+    log.info(
+      """
+        |+--------------------------------------------------------------------------------------------------+
+        ||                                                                                                  |
+        ||    Context-Switches                                                                              |
+        ||                                                                                                  |
+        ||        Global                Per-Process-Non-Voluntary            Per-Process-Voluntary          |
+        ||    Min: %-12s                   Min: %-12s                  Min: %-12s      |
+        ||    Avg: %-12s                   Avg: %-12s                  Avg: %-12s      |
+        ||    Max: %-12s                   Max: %-12s                  Max: %-12s      |
+        ||                                                                                                  |
+        |+--------------------------------------------------------------------------------------------------+"""
+        .stripMargin.format(
+          global.min, perProcessNonVoluntary.min, perProcessVoluntary.min,
+          global.average, perProcessNonVoluntary.average, perProcessVoluntary.average,
+          global.max, perProcessNonVoluntary.max,perProcessVoluntary.max))
+
   }
 
   def logTraceMetrics(name: String, tms: TraceMetricsSnapshot): Unit = {
