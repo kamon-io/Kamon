@@ -38,6 +38,8 @@
 
     <!-- For some weird reason ByteString produces a java.lang.VerifyError after going through the weaver. -->
     <exclude within="akka.util.ByteString"/>
+    <!-- Exclude CallingThreadDispatcher, is only for test purposes -->
+    <exclude within="akka.testkit.CallingThreadDispatcher"/>
   </weaver>
 
 </aspectj>
