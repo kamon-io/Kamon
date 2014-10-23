@@ -54,20 +54,23 @@ object ProcessCPUMetrics extends MetricGroupCategory {
       TotalProcessTime -> totalProcessTime)
   }
 
-  val Factory = new MetricGroupFactory {
+  val Factory = ProcessCPUMetricGroupFactory
+}
 
-    type GroupRecorder = ProcessCPUMetricsRecorder
+case object ProcessCPUMetricGroupFactory extends MetricGroupFactory {
+  import ProcessCPUMetrics._
 
-    def create(config: Config, system: ActorSystem): GroupRecorder = {
-      val settings = config.getConfig("precision.system.process-cpu")
+  type GroupRecorder = ProcessCPUMetricsRecorder
 
-      val cpuPercentageConfig = settings.getConfig("cpu-percentage")
-      val totalProcessTimeConfig = settings.getConfig("total-process-time")
+  def create(config: Config, system: ActorSystem): GroupRecorder = {
+    val settings = config.getConfig("precision.system.process-cpu")
 
-      new ProcessCPUMetricsRecorder(
-        Histogram.fromConfig(cpuPercentageConfig),
-        Histogram.fromConfig(totalProcessTimeConfig))
-    }
+    val cpuPercentageConfig = settings.getConfig("cpu-percentage")
+    val totalProcessTimeConfig = settings.getConfig("total-process-time")
+
+    new ProcessCPUMetricsRecorder(
+      Histogram.fromConfig(cpuPercentageConfig),
+      Histogram.fromConfig(totalProcessTimeConfig))
   }
 }
 

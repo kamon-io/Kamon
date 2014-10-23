@@ -58,19 +58,25 @@ object RouterMetrics extends MetricGroupCategory {
       Errors -> errors)
   }
 
-  val Factory = new MetricGroupFactory {
-    type GroupRecorder = RouterMetricsRecorder
+  val Factory = RouterMetricGroupFactory
+}
 
-    def create(config: Config, system: ActorSystem): RouterMetricsRecorder = {
-      val settings = config.getConfig("precision.router")
+case object RouterMetricGroupFactory extends MetricGroupFactory {
 
-      val processingTimeConfig = settings.getConfig("processing-time")
-      val timeInMailboxConfig = settings.getConfig("time-in-mailbox")
+  import RouterMetrics._
 
-      new RouterMetricsRecorder(
-        Histogram.fromConfig(processingTimeConfig),
-        Histogram.fromConfig(timeInMailboxConfig),
-        Counter())
-    }
+  type GroupRecorder = RouterMetricsRecorder
+
+  def create(config: Config, system: ActorSystem): RouterMetricsRecorder = {
+    val settings = config.getConfig("precision.router")
+
+    val processingTimeConfig = settings.getConfig("processing-time")
+    val timeInMailboxConfig = settings.getConfig("time-in-mailbox")
+
+    new RouterMetricsRecorder(
+      Histogram.fromConfig(processingTimeConfig),
+      Histogram.fromConfig(timeInMailboxConfig),
+      Counter())
   }
 }
+

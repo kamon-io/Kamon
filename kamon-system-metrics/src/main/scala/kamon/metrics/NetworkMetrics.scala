@@ -58,23 +58,26 @@ object NetworkMetrics extends MetricGroupCategory {
       TxErrors -> txErrors)
   }
 
-  val Factory = new MetricGroupFactory {
+  val Factory = NetworkMetricGroupFactory
+}
 
-    type GroupRecorder = NetworkMetricRecorder
+case object NetworkMetricGroupFactory extends MetricGroupFactory {
+  import NetworkMetrics._
 
-    def create(config: Config, system: ActorSystem): GroupRecorder = {
-      val settings = config.getConfig("precision.system.network")
+  type GroupRecorder = NetworkMetricRecorder
 
-      val rxBytesConfig = settings.getConfig("rx-bytes")
-      val txBytesConfig = settings.getConfig("tx-bytes")
-      val rxErrorsConfig = settings.getConfig("rx-errors")
-      val txErrorsConfig = settings.getConfig("tx-errors")
+  def create(config: Config, system: ActorSystem): GroupRecorder = {
+    val settings = config.getConfig("precision.system.network")
 
-      new NetworkMetricRecorder(
-        Histogram.fromConfig(rxBytesConfig, Scale.Kilo),
-        Histogram.fromConfig(txBytesConfig, Scale.Kilo),
-        Histogram.fromConfig(rxErrorsConfig),
-        Histogram.fromConfig(txErrorsConfig))
-    }
+    val rxBytesConfig = settings.getConfig("rx-bytes")
+    val txBytesConfig = settings.getConfig("tx-bytes")
+    val rxErrorsConfig = settings.getConfig("rx-errors")
+    val txErrorsConfig = settings.getConfig("tx-errors")
+
+    new NetworkMetricRecorder(
+      Histogram.fromConfig(rxBytesConfig, Scale.Kilo),
+      Histogram.fromConfig(txBytesConfig, Scale.Kilo),
+      Histogram.fromConfig(rxErrorsConfig),
+      Histogram.fromConfig(txErrorsConfig))
   }
 }
