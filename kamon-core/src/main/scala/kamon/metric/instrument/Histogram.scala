@@ -156,7 +156,7 @@ class HdrHistogram(lowestTrackableValue: Long, highestTrackableValue: Long, sign
 
 }
 
-class CompactHdrSnapshot(val scale: Scale, val numberOfMeasurements: Long, compactRecords: Array[Long], unitMagnitude: Int,
+case class CompactHdrSnapshot(val scale: Scale, val numberOfMeasurements: Long, compactRecords: Array[Long], unitMagnitude: Int,
     subBucketHalfCount: Int, subBucketHalfCountMagnitude: Int) extends Histogram.Snapshot {
 
   def min: Long = if (compactRecords.length == 0) 0 else levelFromCompactRecord(compactRecords(0))

@@ -58,24 +58,27 @@ object CPUMetrics extends MetricGroupCategory {
       Idle -> idle)
   }
 
-  val Factory = new MetricGroupFactory {
-
-    type GroupRecorder = CPUMetricRecorder
-
-    def create(config: Config, system: ActorSystem): GroupRecorder = {
-      val settings = config.getConfig("precision.system.cpu")
-
-      val userConfig = settings.getConfig("user")
-      val systemConfig = settings.getConfig("system")
-      val cpuWaitConfig = settings.getConfig("wait")
-      val idleConfig = settings.getConfig("idle")
-
-      new CPUMetricRecorder(
-        Histogram.fromConfig(userConfig),
-        Histogram.fromConfig(systemConfig),
-        Histogram.fromConfig(cpuWaitConfig),
-        Histogram.fromConfig(idleConfig))
-    }
-  }
+  val Factory = CPUMetricGroupFactory
 }
 
+case object CPUMetricGroupFactory extends MetricGroupFactory {
+
+  import CPUMetrics._
+
+  type GroupRecorder = CPUMetricRecorder
+
+  def create(config: Config, system: ActorSystem): GroupRecorder = {
+    val settings = config.getConfig("precision.system.cpu")
+
+    val userConfig = settings.getConfig("user")
+    val systemConfig = settings.getConfig("system")
+    val cpuWaitConfig = settings.getConfig("wait")
+    val idleConfig = settings.getConfig("idle")
+
+    new CPUMetricRecorder(
+      Histogram.fromConfig(userConfig),
+      Histogram.fromConfig(systemConfig),
+      Histogram.fromConfig(cpuWaitConfig),
+      Histogram.fromConfig(idleConfig))
+  }
+}
