@@ -56,20 +56,23 @@ object GCMetrics extends MetricGroupCategory {
       CollectionTime -> time)
   }
 
-  def Factory(gc: GarbageCollectorMXBean) = new MetricGroupFactory {
+  def Factory(gc: GarbageCollectorMXBean) = GCMetricGroupFactory(gc)
+}
 
-    type GroupRecorder = GCMetricRecorder
+case class GCMetricGroupFactory(gc: GarbageCollectorMXBean) extends MetricGroupFactory {
+  import GCMetrics._
 
-    def create(config: Config, system: ActorSystem): GroupRecorder = {
-      val settings = config.getConfig("precision.jvm.gc")
+  type GroupRecorder = GCMetricRecorder
 
-      val countConfig = settings.getConfig("count")
-      val timeConfig = settings.getConfig("time")
+  def create(config: Config, system: ActorSystem): GroupRecorder = {
+    val settings = config.getConfig("precision.jvm.gc")
 
-      new GCMetricRecorder(
-        Gauge.fromConfig(countConfig, system)(() ⇒ gc.getCollectionCount),
-        Gauge.fromConfig(timeConfig, system, Scale.Milli)(() ⇒ gc.getCollectionTime))
-    }
+    val countConfig = settings.getConfig("count")
+    val timeConfig = settings.getConfig("time")
+
+    new GCMetricRecorder(
+      Gauge.fromConfig(countConfig, system)(() ⇒ gc.getCollectionCount),
+      Gauge.fromConfig(timeConfig, system, Scale.Milli)(() ⇒ gc.getCollectionTime))
   }
 }
 
