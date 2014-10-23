@@ -59,19 +59,24 @@ object TraceMetrics extends MetricGroupCategory {
     def metrics: Map[MetricIdentity, MetricSnapshot] = segments + (ElapsedTime -> elapsedTime)
   }
 
-  val Factory = new MetricGroupFactory {
-    type GroupRecorder = TraceMetricRecorder
+  val Factory = TraceMetricGroupFactory
 
-    def create(config: Config, system: ActorSystem): TraceMetricRecorder = {
+}
 
-      val settings = config.getConfig("precision.trace")
-      val elapsedTimeConfig = settings.getConfig("elapsed-time")
-      val segmentConfig = settings.getConfig("segment")
+case object TraceMetricGroupFactory extends MetricGroupFactory {
 
-      new TraceMetricRecorder(
-        Histogram.fromConfig(elapsedTimeConfig, Scale.Nano),
-        () ⇒ Histogram.fromConfig(segmentConfig, Scale.Nano))
-    }
+  import TraceMetrics._
+
+  type GroupRecorder = TraceMetricRecorder
+
+  def create(config: Config, system: ActorSystem): TraceMetricRecorder = {
+
+    val settings = config.getConfig("precision.trace")
+    val elapsedTimeConfig = settings.getConfig("elapsed-time")
+    val segmentConfig = settings.getConfig("segment")
+
+    new TraceMetricRecorder(
+      Histogram.fromConfig(elapsedTimeConfig, Scale.Nano),
+      () ⇒ Histogram.fromConfig(segmentConfig, Scale.Nano))
   }
-
 }
