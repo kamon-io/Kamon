@@ -16,8 +16,6 @@
 
 package kamon.trace
 
-import akka.remote.instrumentation.TraceContextAwareWireFormats.RemoteTraceContext
-
 import scala.language.experimental.macros
 import java.util.concurrent.atomic.AtomicLong
 import kamon.macros.InlineTraceContextMacro
@@ -45,24 +43,15 @@ object TraceRecorder {
     new SimpleMetricCollectionContext(name, finalToken, metadata, TraceContextOrigin.Local, system)
   }
 
-  def joinRemoteTraceContext(remoteTraceContext: RemoteTraceContext, system: ActorSystem): TraceContext = {
+  def joinRemoteTraceContext(traceName: String, traceToken: String, startMilliTime: Long, isOpen: Boolean, system: ActorSystem): TraceContext = {
     new SimpleMetricCollectionContext(
-      remoteTraceContext.getTraceName(),
-      remoteTraceContext.getTraceToken(),
+      traceName,
+      traceToken,
       Map.empty,
       TraceContextOrigin.Remote,
       system,
-      remoteTraceContext.getStartMilliTime(),
-      remoteTraceContext.getIsOpen())
-  }
-
-  def forkTraceContext(context: TraceContext, newName: String): TraceContext = {
-    new SimpleMetricCollectionContext(
-      newName,
-      context.token,
-      Map.empty,
-      TraceContextOrigin.Local,
-      context.system)
+      startMilliTime,
+      isOpen)
   }
 
   def setContext(context: Option[TraceContext]): Unit = traceContextStorage.set(context)
