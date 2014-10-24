@@ -79,9 +79,14 @@ class RemotingInstrumentation {
     val ackAndEnvelope = AckAndTraceContextAwareEnvelopeContainer.parseFrom(bs.toArray)
 
     if (ackAndEnvelope.hasEnvelope && ackAndEnvelope.getEnvelope.hasTraceContext) {
-      val traceContext = ackAndEnvelope.getEnvelope.getTraceContext
+      val remoteTraceContext = ackAndEnvelope.getEnvelope.getTraceContext
       val system = provider.guardian.underlying.system
-      val tc = TraceRecorder.joinRemoteTraceContext(traceContext, system)
+      val tc = TraceRecorder.joinRemoteTraceContext(
+        remoteTraceContext.getTraceName(),
+        remoteTraceContext.getTraceToken(),
+        remoteTraceContext.getStartMilliTime(),
+        remoteTraceContext.getIsOpen(),
+        system)
 
       TraceRecorder.setContext(Some(tc))
     }

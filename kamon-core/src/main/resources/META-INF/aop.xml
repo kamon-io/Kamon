@@ -14,9 +14,6 @@
     <aspect name="akka.instrumentation.ActorCellInstrumentation"/>
     <aspect name="akka.instrumentation.ActorLoggingInstrumentation"/>
 
-    <!-- Remoting and Cluster -->
-    <aspect name="akka.remote.instrumentation.RemotingInstrumentation"/>
-
     <!-- Dispatchers -->
     <aspect name="akka.instrumentation.DispatcherInstrumentation"/>
     <aspect name="akka.instrumentation.DispatcherMetricCollectionInfoIntoDispatcherMixin"/>

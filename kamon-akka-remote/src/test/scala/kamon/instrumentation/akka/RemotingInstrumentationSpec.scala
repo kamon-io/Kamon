@@ -2,6 +2,7 @@ package kamon.instrumentation.akka
 
 import akka.actor.SupervisorStrategy.Resume
 import akka.actor._
+import akka.pattern.{ ask, pipe }
 import akka.remote.RemoteScope
 import akka.routing.RoundRobinGroup
 import akka.testkit.{ ImplicitSender, TestKitBase }
@@ -9,7 +10,7 @@ import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import kamon.trace.TraceRecorder
 import org.scalatest.{ Matchers, WordSpecLike }
-import akka.pattern.{ ask, pipe }
+
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
 
