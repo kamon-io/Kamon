@@ -20,7 +20,7 @@ import org.aspectj.lang.annotation._
 import org.aspectj.lang.ProceedingJoinPoint
 import spray.http.{ HttpHeader, HttpResponse, HttpMessageEnd, HttpRequest }
 import spray.http.HttpHeaders.{ RawHeader, Host }
-import kamon.trace.{ TraceRecorder, SegmentCompletionHandleAware }
+import kamon.trace.{SegmentAware, TraceRecorder, SegmentCompletionHandleAware}
 import kamon.metric.TraceMetrics.HttpClientRequest
 import kamon.Kamon
 import kamon.spray.{ ClientSegmentCollectionStrategy, Spray }
@@ -32,13 +32,13 @@ import akka.util.Timeout
 class ClientRequestInstrumentation {
 
   @DeclareMixin("spray.can.client.HttpHostConnector.RequestContext")
-  def mixin: SegmentCompletionHandleAware = SegmentCompletionHandleAware.default
+  def mixin: SegmentAware = SegmentAware.default
 
   @Pointcut("execution(spray.can.client.HttpHostConnector.RequestContext.new(..)) && this(ctx) && args(request, *, *, *)")
-  def requestContextCreation(ctx: SegmentCompletionHandleAware, request: HttpRequest): Unit = {}
+  def requestContextCreation(ctx: SegmentAware, request: HttpRequest): Unit = {}
 
   @After("requestContextCreation(ctx, request)")
-  def afterRequestContextCreation(ctx: SegmentCompletionHandleAware, request: HttpRequest): Unit = {
+  def afterRequestContextCreation(ctx: SegmentAware, request: HttpRequest): Unit = {
     // The RequestContext will be copied when a request needs to be retried but we are only interested in creating the
     // completion handle the first time we create one.
 
@@ -59,25 +59,25 @@ class ClientRequestInstrumentation {
   }
 
   @Pointcut("execution(* spray.can.client.HttpHostConnector.RequestContext.copy(..)) && this(old)")
-  def copyingRequestContext(old: SegmentCompletionHandleAware): Unit = {}
+  def copyingRequestContext(old: SegmentAware): Unit = {}
 
   @Around("copyingRequestContext(old)")
-  def aroundCopyingRequestContext(pjp: ProceedingJoinPoint, old: SegmentCompletionHandleAware): Any = {
+  def aroundCopyingRequestContext(pjp: ProceedingJoinPoint, old: SegmentAware): Any = {
     TraceRecorder.withInlineTraceContextReplacement(old.traceContext) {
       pjp.proceed()
     }
   }
 
   @Pointcut("execution(* spray.can.client.HttpHostConnectionSlot.dispatchToCommander(..)) && args(requestContext, message)")
-  def dispatchToCommander(requestContext: SegmentCompletionHandleAware, message: Any): Unit = {}
+  def dispatchToCommander(requestContext: SegmentAware, message: Any): Unit = {}
 
   @Around("dispatchToCommander(requestContext, message)")
-  def aroundDispatchToCommander(pjp: ProceedingJoinPoint, requestContext: SegmentCompletionHandleAware, message: Any) = {
+  def aroundDispatchToCommander(pjp: ProceedingJoinPoint, requestContext: SegmentAware, message: Any) = {
     requestContext.traceContext match {
       case ctx @ Some(_) ⇒
         TraceRecorder.withInlineTraceContextReplacement(ctx) {
           if (message.isInstanceOf[HttpMessageEnd])
-            requestContext.segmentCompletionHandle.map(_.finish(Map.empty))
+            requestContext.segment.finish()
 
           pjp.proceed()
         }

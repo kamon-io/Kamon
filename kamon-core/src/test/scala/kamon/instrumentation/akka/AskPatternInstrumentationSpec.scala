@@ -54,7 +54,6 @@ class AskPatternInstrumentationSpec extends TestKitBase with WordSpecLike with M
       }
       val capturedCtx = warn.asInstanceOf[TraceContextAware].traceContext
 
-      capturedCtx should be('defined)
       capturedCtx should equal(testTraceContext)
     }
   }
