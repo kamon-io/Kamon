@@ -57,22 +57,25 @@ object ContextSwitchesMetrics extends MetricGroupCategory {
       Global -> global)
   }
 
-  val Factory = new MetricGroupFactory {
+  val Factory = ContextSwitchesMetricGroupFactory
+}
 
-    type GroupRecorder = ContextSwitchesMetricsRecorder
+case object ContextSwitchesMetricGroupFactory extends MetricGroupFactory {
+  import ContextSwitchesMetrics._
 
-    def create(config: Config, system: ActorSystem): GroupRecorder = {
-      val settings = config.getConfig("precision.system.context-switches")
+  type GroupRecorder = ContextSwitchesMetricsRecorder
 
-      val perProcessVoluntary = settings.getConfig("per-process-voluntary")
-      val perProcessNonVoluntary = settings.getConfig("per-process-non-voluntary")
-      val global = settings.getConfig("global")
+  def create(config: Config, system: ActorSystem): GroupRecorder = {
+    val settings = config.getConfig("precision.system.context-switches")
 
-      new ContextSwitchesMetricsRecorder(
-        Histogram.fromConfig(perProcessVoluntary),
-        Histogram.fromConfig(perProcessNonVoluntary),
-        Histogram.fromConfig(global))
-    }
+    val perProcessVoluntary = settings.getConfig("per-process-voluntary")
+    val perProcessNonVoluntary = settings.getConfig("per-process-non-voluntary")
+    val global = settings.getConfig("global")
+
+    new ContextSwitchesMetricsRecorder(
+      Histogram.fromConfig(perProcessVoluntary),
+      Histogram.fromConfig(perProcessNonVoluntary),
+      Histogram.fromConfig(global))
   }
 }
 
