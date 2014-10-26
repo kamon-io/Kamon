@@ -19,9 +19,8 @@ package spray.can.client
 import org.aspectj.lang.annotation._
 import org.aspectj.lang.ProceedingJoinPoint
 import spray.http.{ HttpHeader, HttpResponse, HttpMessageEnd, HttpRequest }
-import spray.http.HttpHeaders.{ RawHeader, Host }
-import kamon.trace.{SegmentAware, TraceRecorder, SegmentCompletionHandleAware}
-import kamon.metric.TraceMetrics.HttpClientRequest
+import spray.http.HttpHeaders.RawHeader
+import kamon.trace._
 import kamon.Kamon
 import kamon.spray.{ ClientSegmentCollectionStrategy, Spray }
 import akka.actor.ActorRef
@@ -34,26 +33,28 @@ class ClientRequestInstrumentation {
   @DeclareMixin("spray.can.client.HttpHostConnector.RequestContext")
   def mixin: SegmentAware = SegmentAware.default
 
-  @Pointcut("execution(spray.can.client.HttpHostConnector.RequestContext.new(..)) && this(ctx) && args(request, *, *, *)")
-  def requestContextCreation(ctx: SegmentAware, request: HttpRequest): Unit = {}
+  @Pointcut("execution(spray.can.client.HttpHostConnector.RequestContext.new(..)) && this(requestContext) && args(request, *, *, *)")
+  def requestContextCreation(requestContext: SegmentAware, request: HttpRequest): Unit = {}
 
-  @After("requestContextCreation(ctx, request)")
-  def afterRequestContextCreation(ctx: SegmentAware, request: HttpRequest): Unit = {
+  @After("requestContextCreation(requestContext, request)")
+  def afterRequestContextCreation(requestContext: SegmentAware, request: HttpRequest): Unit = {
     // The RequestContext will be copied when a request needs to be retried but we are only interested in creating the
-    // completion handle the first time we create one.
+    // segment the first time we create one.
 
     // The read to ctx.segmentCompletionHandle should take care of initializing the aspect timely.
-    if (ctx.segmentCompletionHandle.isEmpty) {
-      TraceRecorder.currentContext.map { traceContext ⇒
-        val sprayExtension = Kamon(Spray)(traceContext.system)
+    if (requestContext.segment.isEmpty) {
+      TraceRecorder.currentContext match {
+        case ctx: DefaultTraceContext ⇒
+          val sprayExtension = Kamon(Spray)(ctx.system)
 
-        if (sprayExtension.clientSegmentCollectionStrategy == ClientSegmentCollectionStrategy.Internal) {
-          val requestAttributes = basicRequestAttributes(request)
-          val clientRequestName = sprayExtension.assignHttpClientRequestName(request)
-          val completionHandle = traceContext.startSegment(HttpClientRequest(clientRequestName), requestAttributes)
+          if (sprayExtension.clientSegmentCollectionStrategy == ClientSegmentCollectionStrategy.Internal) {
+            val clientRequestName = sprayExtension.assignHttpClientRequestName(request)
+            val segment = ctx.startSegment(clientRequestName, SegmentMetricIdentityLabel.HttpClient)
 
-          ctx.segmentCompletionHandle = Some(completionHandle)
-        }
+            requestContext.segment = segment
+          }
+
+        case EmptyTraceContext ⇒ // Nothing to do here.
       }
     }
   }
@@ -73,17 +74,15 @@ class ClientRequestInstrumentation {
 
   @Around("dispatchToCommander(requestContext, message)")
   def aroundDispatchToCommander(pjp: ProceedingJoinPoint, requestContext: SegmentAware, message: Any) = {
-    requestContext.traceContext match {
-      case ctx @ Some(_) ⇒
-        TraceRecorder.withInlineTraceContextReplacement(ctx) {
-          if (message.isInstanceOf[HttpMessageEnd])
-            requestContext.segment.finish()
+    if (requestContext.traceContext.nonEmpty) {
+      TraceRecorder.withInlineTraceContextReplacement(requestContext.traceContext) {
+        if (message.isInstanceOf[HttpMessageEnd])
+          requestContext.segment.finish()
 
-          pjp.proceed()
-        }
+        pjp.proceed()
+      }
 
-      case None ⇒ pjp.proceed()
-    }
+    } else pjp.proceed()
   }
 
   @Pointcut("execution(* spray.client.pipelining$.sendReceive(akka.actor.ActorRef, *, *)) && args(transport, ec, timeout)")
@@ -95,18 +94,21 @@ class ClientRequestInstrumentation {
 
     (request: HttpRequest) ⇒ {
       val responseFuture = originalSendReceive.apply(request)
-      TraceRecorder.currentContext.map { traceContext ⇒
-        val sprayExtension = Kamon(Spray)(traceContext.system)
 
-        if (sprayExtension.clientSegmentCollectionStrategy == ClientSegmentCollectionStrategy.Pipelining) {
-          val requestAttributes = basicRequestAttributes(request)
-          val clientRequestName = sprayExtension.assignHttpClientRequestName(request)
-          val completionHandle = traceContext.startSegment(HttpClientRequest(clientRequestName), requestAttributes)
+      TraceRecorder.currentContext match {
+        case ctx: DefaultTraceContext ⇒
+          val sprayExtension = Kamon(Spray)(ctx.system)
 
-          responseFuture.onComplete { result ⇒
-            completionHandle.finish(Map.empty)
-          }(ec)
-        }
+          if (sprayExtension.clientSegmentCollectionStrategy == ClientSegmentCollectionStrategy.Pipelining) {
+            val clientRequestName = sprayExtension.assignHttpClientRequestName(request)
+            val segment = ctx.startSegment(clientRequestName, SegmentMetricIdentityLabel.HttpClient)
+
+            responseFuture.onComplete { result ⇒
+              segment.finish()
+            }(ec)
+          }
+
+        case EmptyTraceContext ⇒ // Nothing to do here.
       }
 
       responseFuture
@@ -114,26 +116,22 @@ class ClientRequestInstrumentation {
 
   }
 
-  def basicRequestAttributes(request: HttpRequest): Map[String, String] = {
-    Map[String, String](
-      "host" -> request.header[Host].map(_.value).getOrElse("unknown"),
-      "path" -> request.uri.path.toString(),
-      "method" -> request.method.toString())
-  }
-
   @Pointcut("call(* spray.http.HttpMessage.withDefaultHeaders(*)) && within(spray.can.client.HttpHostConnector) && args(defaultHeaders)")
   def includingDefaultHeadersAtHttpHostConnector(defaultHeaders: List[HttpHeader]): Unit = {}
 
   @Around("includingDefaultHeadersAtHttpHostConnector(defaultHeaders)")
   def aroundIncludingDefaultHeadersAtHttpHostConnector(pjp: ProceedingJoinPoint, defaultHeaders: List[HttpHeader]): Any = {
-    val modifiedHeaders = TraceRecorder.currentContext map { traceContext ⇒
-      val sprayExtension = Kamon(Spray)(traceContext.system)
+    val modifiedHeaders = TraceRecorder.currentContext match {
+      case ctx: DefaultTraceContext ⇒
+        val sprayExtension = Kamon(Spray)(ctx.system)
 
-      if (sprayExtension.includeTraceToken)
-        RawHeader(sprayExtension.traceTokenHeaderName, traceContext.token) :: defaultHeaders
-      else
-        defaultHeaders
-    } getOrElse defaultHeaders
+        if (sprayExtension.includeTraceToken)
+          RawHeader(sprayExtension.traceTokenHeaderName, ctx.token) :: defaultHeaders
+        else
+          defaultHeaders
+
+      case EmptyTraceContext ⇒ defaultHeaders
+    }
 
     pjp.proceed(Array(modifiedHeaders))
   }

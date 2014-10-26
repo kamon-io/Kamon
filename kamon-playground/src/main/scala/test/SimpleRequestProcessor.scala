@@ -21,10 +21,9 @@ import akka.routing.RoundRobinPool
 import akka.util.Timeout
 import kamon.Kamon
 import kamon.metric.Subscriptions.TickMetricSnapshot
-import kamon.metric.TraceMetrics.HttpClientRequest
 import kamon.metric._
 import kamon.spray.KamonTraceDirectives
-import kamon.trace.TraceRecorder
+import kamon.trace.{ SegmentMetricIdentityLabel, TraceRecorder }
 import spray.http.{ StatusCodes, Uri }
 import spray.httpx.RequestBuilding
 import spray.routing.SimpleRoutingApp
@@ -128,9 +127,9 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
         } ~
         path("segment") {
           complete {
-            val segment = TraceRecorder.startSegment(HttpClientRequest("hello-world"))
+            val segment = TraceRecorder.currentContext.startSegment("hello-world", SegmentMetricIdentityLabel.HttpClient)
             (replier ? "hello").mapTo[String].onComplete { t ⇒
-              segment.get.finish()
+              segment.finish()
             }
 
             "segment"

@@ -17,12 +17,10 @@
 package kamon.play.instrumentation
 
 import kamon.Kamon
-import kamon.metric.TraceMetrics.HttpClientRequest
 import kamon.play.Play
-import kamon.trace.TraceRecorder
+import kamon.trace.{ SegmentMetricIdentityLabel, SegmentMetricIdentity, TraceRecorder }
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation.{ Around, Aspect, Pointcut }
-import play.api.libs.ws.ning.NingWSRequest
 import play.api.libs.ws.{ WSRequest, WSResponse }
 
 import scala.concurrent.Future
@@ -35,28 +33,13 @@ class WSInstrumentation {
 
   @Around("onExecuteRequest(request)")
   def aroundExecuteRequest(pjp: ProceedingJoinPoint, request: WSRequest): Any = {
-
-    import kamon.play.instrumentation.WSInstrumentation._
-
-    TraceRecorder.currentContext.map { ctx ⇒
-      val executor = Kamon(Play)(ctx.system).defaultDispatcher
-      val segmentHandle = TraceRecorder.startSegment(HttpClientRequest(request.url), basicRequestAttributes(request))
+    TraceRecorder.withTraceContextAndSystem { (ctx, system) ⇒
+      val executor = Kamon(Play)(system).defaultDispatcher
+      val segment = ctx.startSegment(request.url, SegmentMetricIdentityLabel.HttpClient)
       val response = pjp.proceed().asInstanceOf[Future[WSResponse]]
 
-      response.map(result ⇒ segmentHandle.map(_.finish()))(executor)
+      response.map(result ⇒ segment.finish())(executor)
       response
-    }.getOrElse(pjp.proceed())
-  }
-}
-
-object WSInstrumentation {
-
-  def uri(request: WSRequest): java.net.URI = request.asInstanceOf[NingWSRequest].builder.build().getURI
-
-  def basicRequestAttributes(request: WSRequest): Map[String, String] = {
-    Map[String, String](
-      "host" -> uri(request).getHost,
-      "path" -> uri(request).getPath,
-      "method" -> request.method)
+    } getOrElse (pjp.proceed())
   }
 }

@@ -127,14 +127,13 @@ class TraceTokenReplier(creationTraceContextListener: Option[ActorRef]) extends 
     case "fail" ⇒
       throw new ArithmeticException("Division by zero.")
     case "reply-trace-token" ⇒
-      log.info("Sending back the TT: " + TraceRecorder.currentContext.map(_.token).getOrElse("unavailable"))
+      log.info("Sending back the TT: " + TraceRecorder.currentContext.token)
       sender ! currentTraceContextInfo
   }
 
   def currentTraceContextInfo: String = {
-    TraceRecorder.currentContext.map { context ⇒
-      s"name=${context.name}|token=${context.token}|isOpen=${context.isOpen}"
-    }.getOrElse("unavailable")
+    val ctx = TraceRecorder.currentContext
+    s"name=${ctx.name}|token=${ctx.token}|isOpen=${ctx.isOpen}"
   }
 }
 
@@ -162,8 +161,7 @@ class SupervisorOfRemote(traceContextListener: ActorRef, remoteAddress: Address)
   }
 
   def currentTraceContextInfo: String = {
-    TraceRecorder.currentContext.map { context ⇒
-      s"name=${context.name}|token=${context.token}|isOpen=${context.isOpen}"
-    }.getOrElse("unavailable")
+    val ctx = TraceRecorder.currentContext
+    s"name=${ctx.name}|token=${ctx.token}|isOpen=${ctx.isOpen}"
   }
 }

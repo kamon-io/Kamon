@@ -21,7 +21,7 @@ import akka.actor.ActorSystem
 import org.scalatest.{ Matchers, WordSpecLike }
 import spray.httpx.RequestBuilding
 import spray.http.{ HttpResponse, HttpRequest }
-import kamon.trace.TraceRecorder
+import kamon.trace.{ SegmentMetricIdentity, TraceRecorder }
 import com.typesafe.config.ConfigFactory
 import spray.can.Http
 import spray.http.HttpHeaders.RawHeader
@@ -31,7 +31,7 @@ import spray.client.pipelining
 import kamon.metric.Subscriptions.TickMetricSnapshot
 import scala.concurrent.duration._
 import akka.pattern.pipe
-import kamon.metric.TraceMetrics.{ HttpClientRequest, TraceMetricsSnapshot }
+import kamon.metric.TraceMetrics.TraceMetricsSnapshot
 
 class ClientRequestInstrumentationSpec extends TestKitBase with WordSpecLike with Matchers with RequestBuilding with TestServer {
   implicit lazy val system: ActorSystem = ActorSystem("client-request-instrumentation-spec", ConfigFactory.parseString(
@@ -78,12 +78,12 @@ class ClientRequestInstrumentationSpec extends TestKitBase with WordSpecLike wit
 
         // Receive the request and reply back
         val request = server.expectMsgType[HttpRequest]
-        request.headers should contain(RawHeader(Kamon(Spray).traceTokenHeaderName, testContext.get.token))
+        request.headers should contain(RawHeader(Kamon(Spray).traceTokenHeaderName, testContext.token))
 
         // Finish the request cycle, just to avoid error messages on the logs.
         server.reply(HttpResponse(entity = "ok"))
         client.expectMsgType[HttpResponse]
-        testContext.map(_.finish(Map.empty))
+        testContext.finish()
       }
     }
 
@@ -106,12 +106,12 @@ class ClientRequestInstrumentationSpec extends TestKitBase with WordSpecLike wit
 
         // Receive the request and reply back
         val request = server.expectMsgType[HttpRequest]
-        request.headers should not contain (RawHeader(Kamon(Spray).traceTokenHeaderName, testContext.get.token))
+        request.headers should not contain (RawHeader(Kamon(Spray).traceTokenHeaderName, testContext.token))
 
         // Finish the request cycle, just to avoid error messages on the logs.
         server.reply(HttpResponse(entity = "ok"))
         client.expectMsgType[HttpResponse]
-        testContext.map(_.finish(Map.empty))
+        testContext.finish()
       }
     }
 
@@ -143,12 +143,12 @@ class ClientRequestInstrumentationSpec extends TestKitBase with WordSpecLike wit
         client.expectMsgType[HttpResponse]
 
         // Finish the trace
-        testContext.map(_.finish(Map.empty))
+        testContext.finish()
 
         val traceMetrics = expectTraceMetrics("pipelining-strategy-client-request", metricListener, 3 seconds)
         traceMetrics.elapsedTime.numberOfMeasurements should be(1L)
         traceMetrics.segments should not be empty
-        val recordedSegment = traceMetrics.segments.find { case (k, v) ⇒ k.isInstanceOf[HttpClientRequest] } map (_._2)
+        val recordedSegment = traceMetrics.segments.find { case (k, v) ⇒ k.isInstanceOf[SegmentMetricIdentity] } map (_._2)
         recordedSegment should not be empty
         recordedSegment map { segmentMetrics ⇒
           segmentMetrics.numberOfMeasurements should be(1L)
@@ -184,12 +184,12 @@ class ClientRequestInstrumentationSpec extends TestKitBase with WordSpecLike wit
         client.expectMsgType[HttpResponse]
 
         // Finish the trace
-        testContext.map(_.finish(Map.empty))
+        testContext.finish()
 
         val traceMetrics = expectTraceMetrics("internal-strategy-client-request", metricListener, 3 seconds)
         traceMetrics.elapsedTime.numberOfMeasurements should be(1L)
         traceMetrics.segments should not be empty
-        val recordedSegment = traceMetrics.segments.find { case (k, v) ⇒ k.isInstanceOf[HttpClientRequest] } map (_._2)
+        val recordedSegment = traceMetrics.segments.find { case (k, v) ⇒ k.isInstanceOf[SegmentMetricIdentity] } map (_._2)
         recordedSegment should not be empty
         recordedSegment map { segmentMetrics ⇒
           segmentMetrics.numberOfMeasurements should be(1L)

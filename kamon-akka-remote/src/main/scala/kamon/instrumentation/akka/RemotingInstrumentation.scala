@@ -31,12 +31,15 @@ class RemotingInstrumentation {
     envelopeBuilder.setMessage(serializedMessage)
 
     // Attach the TraceContext info, if available.
-    TraceRecorder.currentContext.foreach { context ⇒
+    if (!TraceRecorder.currentContext.isEmpty) {
+      val context = TraceRecorder.currentContext
+      val relativeStartMilliTime = System.currentTimeMillis - ((System.nanoTime - context.nanoTimestamp) / 1000000)
+
       envelopeBuilder.setTraceContext(RemoteTraceContext.newBuilder()
         .setTraceName(context.name)
         .setTraceToken(context.token)
         .setIsOpen(context.isOpen)
-        .setStartMilliTime(context.startMilliTime)
+        .setStartMilliTime(relativeStartMilliTime)
         .build())
     }
 
@@ -81,14 +84,14 @@ class RemotingInstrumentation {
     if (ackAndEnvelope.hasEnvelope && ackAndEnvelope.getEnvelope.hasTraceContext) {
       val remoteTraceContext = ackAndEnvelope.getEnvelope.getTraceContext
       val system = provider.guardian.underlying.system
-      val tc = TraceRecorder.joinRemoteTraceContext(
+      val ctx = TraceRecorder.joinRemoteTraceContext(
         remoteTraceContext.getTraceName(),
         remoteTraceContext.getTraceToken(),
         remoteTraceContext.getStartMilliTime(),
         remoteTraceContext.getIsOpen(),
         system)
 
-      TraceRecorder.setContext(Some(tc))
+      TraceRecorder.setContext(ctx)
     }
 
     pjp.proceed()
