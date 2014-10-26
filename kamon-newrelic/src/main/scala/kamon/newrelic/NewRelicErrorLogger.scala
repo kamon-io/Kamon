@@ -34,10 +34,7 @@ class NewRelicErrorLogger extends Actor with ActorLogging {
     val params = new java.util.HashMap[String, String]()
 
     val ctx = error.asInstanceOf[TraceContextAware].traceContext
-
-    for (c ← ctx) {
-      params.put("TraceToken", c.token)
-    }
+    params.put("TraceToken", ctx.token)
 
     if (error.cause == Error.NoCause) {
       NR.noticeError(error.message.toString, params)
