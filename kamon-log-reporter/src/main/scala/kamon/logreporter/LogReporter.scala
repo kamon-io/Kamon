@@ -26,8 +26,6 @@ import kamon.metric.UserMetrics._
 import kamon.metric._
 import kamon.metric.instrument.{ Counter, Histogram }
 import kamon.metrics.ContextSwitchesMetrics.ContextSwitchesMetricsSnapshot
-import kamon.metrics.GCMetrics.GCMetricSnapshot
-import kamon.metrics.MemoryMetrics.MemoryMetricSnapshot
 import kamon.metrics.NetworkMetrics.NetworkMetricSnapshot
 import kamon.metrics.ProcessCPUMetrics.ProcessCPUMetricsSnapshot
 import kamon.metrics._
@@ -248,6 +246,12 @@ class LogReporterSubscriber extends Actor with ActorLogging {
   def logUserMetrics(histograms: Map[MetricGroupIdentity, Histogram.Snapshot],
     counters: Map[MetricGroupIdentity, Counter.Snapshot], minMaxCounters: Map[MetricGroupIdentity, Histogram.Snapshot],
     gauges: Map[MetricGroupIdentity, Histogram.Snapshot]): Unit = {
+
+    if (histograms.isEmpty && counters.isEmpty && minMaxCounters.isEmpty && gauges.isEmpty) {
+      log.info("No user metrics reported")
+      return
+    }
+
     val userMetricsData = StringBuilder.newBuilder
 
     userMetricsData.append(
