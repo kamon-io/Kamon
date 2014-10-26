@@ -35,7 +35,9 @@ sealed trait TraceContext {
   def origin: TraceContextOrigin
   def isOpen: Boolean
   def isEmpty: Boolean
+  def nonEmpty: Boolean = !isEmpty
   def startSegment(segmentName: String, label: String): Segment
+  def nanoTimestamp: Long
 }
 
 sealed trait Segment {
@@ -43,6 +45,7 @@ sealed trait Segment {
   def rename(newName: String): Unit
   def label: String
   def finish(): Unit
+  def isEmpty: Boolean
 }
 
 case object EmptyTraceContext extends TraceContext {
@@ -54,23 +57,25 @@ case object EmptyTraceContext extends TraceContext {
   def isOpen: Boolean = false
   def isEmpty: Boolean = true
   def startSegment(segmentName: String, label: String): Segment = EmptySegment
+  def nanoTimestamp: Long = 0L
 
   case object EmptySegment extends Segment {
     val name: String = "empty-segment"
     val label: String = "empty-label"
+    def isEmpty: Boolean = true
     def rename(newName: String): Unit = {}
     def finish: Unit = {}
   }
 }
 
 class DefaultTraceContext(traceName: String, val token: String, izOpen: Boolean, val levelOfDetail: LevelOfDetail,
-    val origin: TraceContextOrigin, startNanoTime: Long)(implicit system: ActorSystem) extends TraceContext {
+    val origin: TraceContextOrigin, nanoTimeztamp: Long, val system: ActorSystem) extends TraceContext {
 
   val isEmpty: Boolean = false
   @volatile private var _name = traceName
   @volatile private var _isOpen = izOpen
 
-  private val _startNanoTime = startNanoTime
+  private val _nanoTimestamp = nanoTimeztamp
   private val finishedSegments = new ConcurrentLinkedQueue[SegmentData]()
   private val metricsExtension = Kamon(Metrics)(system)
   private[kamon] val traceLocalStorage: TraceLocalStorage = new TraceLocalStorage
@@ -80,10 +85,11 @@ class DefaultTraceContext(traceName: String, val token: String, izOpen: Boolean,
     if (isOpen) _name = newName // TODO: log a warning about renaming a closed trace.
 
   def isOpen: Boolean = _isOpen
+  def nanoTimestamp: Long = _nanoTimestamp
 
   def finish(): Unit = {
     _isOpen = false
-    val elapsedNanoTime = System.nanoTime() - _startNanoTime
+    val elapsedNanoTime = System.nanoTime() - _nanoTimestamp
     val metricRecorder = metricsExtension.register(TraceMetrics(name), TraceMetrics.Factory)
 
     metricRecorder.map { traceMetrics ⇒
@@ -119,6 +125,7 @@ class DefaultTraceContext(traceName: String, val token: String, izOpen: Boolean,
 
     def name: String = _segmentName
     def rename(newName: String): Unit = _segmentName = newName
+    def isEmpty: Boolean = false
 
     def finish: Unit = {
       val segmentFinishNanoTime = System.nanoTime()

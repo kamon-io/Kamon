@@ -17,7 +17,7 @@
 package akka.testkit
 
 import org.aspectj.lang.annotation._
-import kamon.trace.{ TraceContextAware, TraceRecorder }
+import kamon.trace.{ EmptyTraceContext, TraceContextAware, TraceRecorder }
 import org.aspectj.lang.ProceedingJoinPoint
 import akka.testkit.TestActor.RealMessage
 
@@ -43,7 +43,7 @@ class TestProbeInstrumentation {
   def aroundTestProbeReply(pjp: ProceedingJoinPoint, testProbe: TestProbe): Any = {
     val traceContext = testProbe.lastMessage match {
       case msg: RealMessage ⇒ msg.asInstanceOf[TraceContextAware].traceContext
-      case _                ⇒ None
+      case _                ⇒ EmptyTraceContext
     }
 
     TraceRecorder.withTraceContext(traceContext) {

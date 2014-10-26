@@ -36,23 +36,25 @@ object TraceRecorder {
 
   private def newTraceContext(name: String, token: Option[String], system: ActorSystem): TraceContext = {
     new DefaultTraceContext(
-      name, token.getOrElse(newToken),
+      name,
+      token.getOrElse(newToken),
       izOpen = true,
       LevelOfDetail.OnlyMetrics,
       TraceContextOrigin.Local,
-      startNanoTime = System.nanoTime)(system)
+      nanoTimeztamp = System.nanoTime,
+      system)
   }
 
   def joinRemoteTraceContext(traceName: String, traceToken: String, startMilliTime: Long, isOpen: Boolean, system: ActorSystem): TraceContext = {
-    /*new SimpleMetricCollectionContext(
+    val equivalentNanotime = System.nanoTime() - ((System.currentTimeMillis() - startMilliTime) * 1000000)
+    new DefaultTraceContext(
       traceName,
       traceToken,
-      Map.empty,
+      isOpen,
+      LevelOfDetail.OnlyMetrics,
       TraceContextOrigin.Remote,
-      system,
-      startMilliTime,
-      isOpen)*/
-    ???
+      equivalentNanotime,
+      system)
   }
 
   def setContext(context: TraceContext): Unit = traceContextStorage.set(context)
@@ -61,10 +63,9 @@ object TraceRecorder {
 
   def currentContext: TraceContext = traceContextStorage.get()
 
-  // TODO: Remove this method.
   def start(name: String, token: Option[String] = None)(implicit system: ActorSystem) = {
-    //val ctx = newTraceContext(name, token, metadata, system)
-    //traceContextStorage.set(Some(ctx))
+    val ctx = newTraceContext(name, token, system)
+    traceContextStorage.set(ctx)
   }
 
   def rename(name: String): Unit = currentContext.rename(name)
@@ -77,6 +78,11 @@ object TraceRecorder {
     setContext(context)
 
     try thunk finally setContext(oldContext)
+  }
+
+  def withTraceContextAndSystem[T](thunk: (TraceContext, ActorSystem) ⇒ T): Option[T] = currentContext match {
+    case ctx: DefaultTraceContext ⇒ Some(thunk(ctx, ctx.system))
+    case EmptyTraceContext        ⇒ None
   }
 
   def withInlineTraceContextReplacement[T](traceCtx: TraceContext)(thunk: ⇒ T): T = macro InlineTraceContextMacro.withInlineTraceContextImpl[T, TraceContext]

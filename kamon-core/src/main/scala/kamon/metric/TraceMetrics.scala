@@ -30,7 +30,6 @@ object TraceMetrics extends MetricGroupCategory {
   val name = "trace"
 
   case object ElapsedTime extends MetricIdentity { val name = "elapsed-time" }
-  case class HttpClientRequest(name: String) extends MetricIdentity
 
   case class TraceMetricRecorder(elapsedTime: Histogram, private val segmentRecorderFactory: () ⇒ Histogram)
       extends MetricGroupRecorder {
