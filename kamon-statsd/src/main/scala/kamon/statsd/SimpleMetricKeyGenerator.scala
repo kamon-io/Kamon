@@ -9,6 +9,8 @@ import kamon.metric.{ MetricIdentity, MetricGroupIdentity }
 class SimpleMetricKeyGenerator(config: Config) extends StatsD.MetricKeyGenerator {
   type Normalizer = String ⇒ String
 
+  val uuidPattern = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+
   val configSettings = config.getConfig("kamon.statsd.simple-metric-key-generator")
   val application = configSettings.getString("application")
   val includeHostname = configSettings.getBoolean("include-hostname")
@@ -37,7 +39,8 @@ class SimpleMetricKeyGenerator(config: Config) extends StatsD.MetricKeyGenerator
 
   def createNormalizer(strategy: String): Normalizer = strategy match {
     case "percent-encode" ⇒ PercentEncoder.encode
-    case "normalize"      ⇒ (s: String) ⇒ s.replace(": ", "-").replace(" ", "_").replace("/", "_").replace(".", "_")
+    case "normalize" ⇒ (s: String) ⇒ s.replace(": ", "-").replace(" ", "_").replace("/", "_").replace(".", "_")
+    case "normalize-uuid" ⇒ (s: String) ⇒ s.replaceAll(uuidPattern, "UUID").replace(": ", "-").replace(" ", "_").replace("/", "_").replace(".", "_")
   }
 }
 
