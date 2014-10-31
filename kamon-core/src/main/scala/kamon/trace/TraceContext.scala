@@ -129,7 +129,7 @@ class DefaultTraceContext(traceName: String, val token: String, izOpen: Boolean,
 
     def finish: Unit = {
       val segmentFinishNanoTime = System.nanoTime()
-      finishSegment(segmentName, label, (segmentFinishNanoTime - _segmentStartNanoTime))
+      finishSegment(name, label, (segmentFinishNanoTime - _segmentStartNanoTime))
     }
   }
 }
@@ -155,7 +155,6 @@ object TraceContextOrigin {
 }
 
 trait TraceContextAware extends Serializable {
-  def captureNanoTime: Long
   def traceContext: TraceContext
 }
 
@@ -163,7 +162,6 @@ object TraceContextAware {
   def default: TraceContextAware = new DefaultTraceContextAware
 
   class DefaultTraceContextAware extends TraceContextAware {
-    @transient val captureNanoTime = System.nanoTime()
     @transient val traceContext = TraceRecorder.currentContext
 
     //
@@ -180,7 +178,17 @@ object TraceContextAware {
   }
 }
 
-trait SegmentAware extends TraceContextAware {
+trait TimestampedTraceContextAware extends TraceContextAware {
+  def captureNanoTime: Long
+}
+
+object TimestampedTraceContextAware {
+  def default: TimestampedTraceContextAware = new DefaultTraceContextAware with TimestampedTraceContextAware {
+    @transient val captureNanoTime = System.nanoTime()
+  }
+}
+
+trait SegmentAware {
   @volatile var segment: Segment = EmptyTraceContext.EmptySegment
 }
 

@@ -39,7 +39,7 @@ class ServerRequestInstrumentation {
     val system: ActorSystem = openRequest.asInstanceOf[OpenRequest].context.actorContext.system
     val sprayExtension = Kamon(Spray)(system)
 
-    val defaultTraceName: String = request.method.value + ": " + request.uri.path
+    val defaultTraceName = sprayExtension.generateTraceName(request)
     val token = if (sprayExtension.includeTraceToken) {
       request.headers.find(_.name == sprayExtension.traceTokenHeaderName).map(_.value)
     } else None
