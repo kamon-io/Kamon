@@ -42,7 +42,7 @@ class RequestInstrumentation {
   def beforeRouteRequest(requestHeader: RequestHeader): Unit = {
     val system = Akka.system()
     val playExtension = Kamon(Play)(system)
-    val defaultTraceName: String = s"${requestHeader.method}: ${requestHeader.uri}"
+    val defaultTraceName = playExtension.generateTraceName(requestHeader)
 
     val token = if (playExtension.includeTraceToken) {
       requestHeader.headers.toSimpleMap.find(_._1 == playExtension.traceTokenHeaderName).map(_._2)

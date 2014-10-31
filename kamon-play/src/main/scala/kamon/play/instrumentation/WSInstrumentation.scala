@@ -34,8 +34,10 @@ class WSInstrumentation {
   @Around("onExecuteRequest(request)")
   def aroundExecuteRequest(pjp: ProceedingJoinPoint, request: WSRequest): Any = {
     TraceRecorder.withTraceContextAndSystem { (ctx, system) ⇒
-      val executor = Kamon(Play)(system).defaultDispatcher
-      val segment = ctx.startSegment(request.url, SegmentMetricIdentityLabel.HttpClient)
+      val playExtension = Kamon(Play)(system)
+      val executor = playExtension.defaultDispatcher
+      val segmentName = playExtension.generateHttpClientSegmentName(request)
+      val segment = ctx.startSegment(segmentName, SegmentMetricIdentityLabel.HttpClient)
       val response = pjp.proceed().asInstanceOf[Future[WSResponse]]
 
       response.map(result ⇒ segment.finish())(executor)
