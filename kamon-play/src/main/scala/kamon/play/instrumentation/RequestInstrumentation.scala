@@ -42,7 +42,7 @@ class RequestInstrumentation {
   def beforeRouteRequest(requestHeader: RequestHeader): Unit = {
     val system = Akka.system()
     val playExtension = Kamon(Play)(system)
-    val defaultTraceName: String = s"${requestHeader.method}: ${requestHeader.uri}"
+    val defaultTraceName = playExtension.generateTraceName(requestHeader)
 
     val token = if (playExtension.includeTraceToken) {
       requestHeader.headers.toSimpleMap.find(_._1 == playExtension.traceTokenHeaderName).map(_._2)
@@ -54,16 +54,23 @@ class RequestInstrumentation {
   @Around("execution(* play.api.GlobalSettings+.doFilter(*)) && args(next)")
   def aroundDoFilter(pjp: ProceedingJoinPoint, next: EssentialAction): Any = {
     val essentialAction = (requestHeader: RequestHeader) ⇒ {
+      // TODO: Move to a Kamon-specific dispatcher.
       val executor = Kamon(Play)(Akka.system()).defaultDispatcher
 
       def onResult(result: Result): Result = {
-        TraceRecorder.finish()
-        TraceRecorder.currentContext.map { ctx ⇒
-          val playExtension = Kamon(Play)(ctx.system)
+
+        TraceRecorder.withTraceContextAndSystem { (ctx, system) ⇒
+          ctx.finish()
+
+          val playExtension = Kamon(Play)(system)
           recordHttpServerMetrics(result.header, ctx.name, playExtension)
-          if (playExtension.includeTraceToken) result.withHeaders(playExtension.traceTokenHeaderName -> ctx.token)
-          else result
-        }.getOrElse(result)
+
+          if (playExtension.includeTraceToken)
+            result.withHeaders(playExtension.traceTokenHeaderName -> ctx.token)
+          else
+            result
+
+        } getOrElse (result)
       }
 
       //override the current trace name
@@ -76,8 +83,8 @@ class RequestInstrumentation {
   }
 
   @Before("execution(* play.api.GlobalSettings+.onError(..)) && args(request, ex)")
-  def beforeOnError(request: TraceContextAware, ex: Throwable): Unit = request.traceContext.map {
-    ctx ⇒ recordHttpServerMetrics(InternalServerError.header, ctx.name, Kamon(Play)(ctx.system))
+  def beforeOnError(request: TraceContextAware, ex: Throwable): Unit = TraceRecorder.withTraceContextAndSystem { (ctx, system) ⇒
+    recordHttpServerMetrics(InternalServerError.header, ctx.name, Kamon(Play)(system))
   }
 
   private def recordHttpServerMetrics(header: ResponseHeader, traceName: String, playExtension: PlayExtension): Unit =

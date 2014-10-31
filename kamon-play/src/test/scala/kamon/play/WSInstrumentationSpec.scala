@@ -17,9 +17,9 @@
 package kamon.play
 
 import kamon.Kamon
-import kamon.metric.TraceMetrics.{ HttpClientRequest, TraceMetricsSnapshot }
+import kamon.metric.TraceMetrics.TraceMetricsSnapshot
 import kamon.metric.{ Metrics, TraceMetrics }
-import kamon.trace.TraceRecorder
+import kamon.trace.{ SegmentMetricIdentityLabel, SegmentMetricIdentity, TraceRecorder }
 import org.scalatest.{ Matchers, WordSpecLike }
 import org.scalatestplus.play.OneServerPerSuite
 import play.api.libs.ws.WS
@@ -49,7 +49,7 @@ class WSInstrumentationSpec extends WordSpecLike with Matchers with OneServerPer
       val snapshot = takeSnapshotOf("GET: /inside")
       snapshot.elapsedTime.numberOfMeasurements should be(1)
       snapshot.segments.size should be(1)
-      snapshot.segments(HttpClientRequest("http://localhost:19001/async")).numberOfMeasurements should be(1)
+      snapshot.segments(SegmentMetricIdentity("http://localhost:19001/async", SegmentMetricIdentityLabel.HttpClient)).numberOfMeasurements should be(1)
     }
 
     "propagate the TraceContext outside an Action and complete the WS request" in {

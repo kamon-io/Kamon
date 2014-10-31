@@ -15,7 +15,7 @@
 
 package kamon.play.instrumentation
 
-import kamon.trace.{ TraceContext, TraceContextAware, TraceRecorder }
+import kamon.trace._
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
 import org.slf4j.MDC
@@ -52,21 +52,24 @@ class LoggerLikeInstrumentation {
 object LoggerLikeInstrumentation {
 
   @inline final def withMDC[A](block: ⇒ A): A = {
-    val keys = TraceRecorder.currentContext.map(extractProperties).map(putAndExtractKeys)
+    val keys = putAndExtractKeys(extractProperties(TraceRecorder.currentContext))
 
-    try block finally keys.map(k ⇒ k.foreach(MDC.remove(_)))
+    try block finally keys.foreach(k ⇒ MDC.remove(k))
   }
 
   def putAndExtractKeys(values: Iterable[Map[String, Any]]): Iterable[String] = values.map {
     value ⇒ value.map { case (key, value) ⇒ MDC.put(key, value.toString); key }
   }.flatten
 
-  def extractProperties(ctx: TraceContext): Iterable[Map[String, Any]] = ctx.traceLocalStorage.underlyingStorage.values.map {
-    case traceLocalValue @ (p: Product) ⇒ {
-      val properties = p.productIterator
-      traceLocalValue.getClass.getDeclaredFields.filter(field ⇒ field.getName != "$outer").map(_.getName -> properties.next).toMap
-    }
-    case anything ⇒ Map.empty[String, Any]
+  def extractProperties(traceContext: TraceContext): Iterable[Map[String, Any]] = traceContext match {
+    case ctx: DefaultTraceContext ⇒
+      ctx.traceLocalStorage.underlyingStorage.values.collect {
+        case traceLocalValue @ (p: Product) ⇒ {
+          val properties = p.productIterator
+          traceLocalValue.getClass.getDeclaredFields.filter(field ⇒ field.getName != "$outer").map(_.getName -> properties.next).toMap
+        }
+      }
+    case EmptyTraceContext ⇒ Iterable.empty[Map[String, Any]]
   }
 }
 

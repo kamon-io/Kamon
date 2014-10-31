@@ -117,7 +117,7 @@ class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
 
     "respond to the Async Action with X-Trace-Token and the renamed trace" in {
       val result = Await.result(route(FakeRequest(GET, "/async-renamed").withHeaders(traceTokenHeader)).get, 10 seconds)
-      TraceRecorder.currentContext.map(_.name) must be(Some("renamed-trace"))
+      TraceRecorder.currentContext.name must be("renamed-trace")
       Some(result.header.headers(traceTokenHeaderName)) must be(expectedToken)
     }
 
