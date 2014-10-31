@@ -65,7 +65,7 @@ trait SprayNameGenerator {
   def generateHostLevelApiSegmentName(request: HttpRequest): String
 }
 
-class SimpleSprayNameGenerator extends SprayNameGenerator {
+class DefaultSprayNameGenerator extends SprayNameGenerator {
   def generateRequestLevelApiSegmentName(request: HttpRequest): String = request.method.value + ": " + request.uri.path
   def generateTraceName(request: HttpRequest): String = request.method.value + ": " + request.uri.path
   def generateHostLevelApiSegmentName(request: HttpRequest): String = request.uri.authority.host.address
