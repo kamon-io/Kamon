@@ -24,18 +24,20 @@ object TraceLocal {
     type ValueType
   }
 
-  def store(key: TraceLocalKey)(value: key.ValueType): Unit =
-    TraceRecorder.currentContext.map(_.traceLocalStorage.store(key)(value))
+  def store(key: TraceLocalKey)(value: key.ValueType): Unit = TraceRecorder.currentContext match {
+    case ctx: DefaultTraceContext ⇒ ctx.traceLocalStorage.store(key)(value)
+    case EmptyTraceContext        ⇒ // Can't store in the empty context.
+  }
 
-  def retrieve(key: TraceLocalKey): Option[key.ValueType] =
-    TraceRecorder.currentContext.flatMap(_.traceLocalStorage.retrieve(key))
-
+  def retrieve(key: TraceLocalKey): Option[key.ValueType] = TraceRecorder.currentContext match {
+    case ctx: DefaultTraceContext ⇒ ctx.traceLocalStorage.retrieve(key)
+    case EmptyTraceContext        ⇒ None // Can't retrieve anything from the empty context.
+  }
 }
 
 class TraceLocalStorage {
   val underlyingStorage = TrieMap[TraceLocal.TraceLocalKey, Any]()
 
   def store(key: TraceLocalKey)(value: key.ValueType): Unit = underlyingStorage.put(key, value)
-
   def retrieve(key: TraceLocalKey): Option[key.ValueType] = underlyingStorage.get(key).map(_.asInstanceOf[key.ValueType])
 }
