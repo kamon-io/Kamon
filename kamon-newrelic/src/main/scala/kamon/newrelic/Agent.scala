@@ -49,7 +49,7 @@ class Agent extends Actor with RequestBuilding with ResponseTransformation with 
 
     // Name has the format of pid@host
     val runtimeName = ManagementFactory.getRuntimeMXBean.getName.split('@')
-    val retryDelay = FiniteDuration(config.getDuration("retry-delay", milliseconds), milliseconds)
+    val retryDelay = FiniteDuration(config.getMilliseconds("retry-delay"), milliseconds)
     val maxRetry = config.getInt("max-retry")
 
     AgentInfo(licenseKey, appName, runtimeName(1), runtimeName(0).toInt, maxRetry, retryDelay)

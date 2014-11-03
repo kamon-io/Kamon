@@ -168,9 +168,9 @@ class TraceContextIntoEnvelopeMixin {
 
 object ActorCellInstrumentation {
   implicit class PimpedActorCellMetrics(cell: ActorCellMetrics) {
-    def onRoutedActorCell(block: ActorCellMetrics ⇒ Unit) = cell match {
-      case routedActorCell: RoutedActorCell ⇒ block(cell)
-      case everythingElse                   ⇒
+    def onRoutedActorCell(block: ActorCellMetrics ⇒ Unit): Unit = {
+      if (cell.isInstanceOf[RoutedActorCell])
+        block(cell)
     }
   }
 }

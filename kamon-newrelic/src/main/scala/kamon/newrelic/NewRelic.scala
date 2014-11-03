@@ -16,6 +16,7 @@
 
 package kamon.newrelic
 
+import akka.actor
 import akka.actor._
 import kamon.Kamon
 import kamon.metric.Subscriptions.TickMetricSnapshot

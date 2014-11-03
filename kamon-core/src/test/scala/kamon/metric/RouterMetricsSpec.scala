@@ -30,7 +30,9 @@ import org.scalatest.{ Matchers, WordSpecLike }
 
 import scala.concurrent.duration._
 
-class RouterMetricsSpec extends TestKitBase with WordSpecLike with Matchers with ImplicitSender {
+class RouterMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
+  implicit def self = testActor
+
   implicit lazy val system: ActorSystem = ActorSystem("router-metrics-spec", ConfigFactory.parseString(
     """
       |kamon.metrics {

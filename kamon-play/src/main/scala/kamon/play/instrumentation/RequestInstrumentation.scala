@@ -21,10 +21,12 @@ import kamon.trace.{ TraceContextAware, TraceRecorder }
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
 import play.api.mvc._
+import play.api.Routes
 import play.libs.Akka
 
 @Aspect
 class RequestInstrumentation {
+  import RequestInstrumentation.normaliseTraceName
 
   @DeclareMixin("play.api.mvc.RequestHeader+")
   def mixinContextAwareNewRequest: TraceContextAware = TraceContextAware.default
@@ -53,7 +55,7 @@ class RequestInstrumentation {
       // TODO: Move to a Kamon-specific dispatcher.
       val executor = Kamon(Play)(Akka.system()).defaultDispatcher
 
-      def onResult(result: Result): Result = {
+      def onResult(result: SimpleResult): Result = {
 
         TraceRecorder.withTraceContextAndSystem { (ctx, system) ⇒
           ctx.finish()
@@ -75,20 +77,14 @@ class RequestInstrumentation {
       // Invoke the action
       next(requestHeader).map(onResult)(executor)
     }
-    pjp.proceed(Array(EssentialAction(essentialAction)))
+
+    pjp.proceed(Array(essentialAction))
   }
 
-  private def recordHttpServerMetrics(result: Result, traceName: String, playExtension: PlayExtension): Unit =
-    playExtension.httpServerMetrics.recordResponse(traceName, result.header.status.toString, 1L)
-
-  @Around("execution(* play.api.GlobalSettings+.onError(..)) && args(request, ex)")
-  def aroundOnError(pjp: ProceedingJoinPoint, request: TraceContextAware, ex: Throwable): Any = request.traceContext match {
-    case None ⇒ pjp.proceed()
-    case Some(ctx) ⇒ {
-      val actorSystem = ctx.system
-      Kamon(Play)(actorSystem).publishErrorMessage(actorSystem, ex.getMessage, ex)
-      pjp.proceed()
-    }
+  @Before("execution(* play.api.GlobalSettings+.onError(..)) && args(request, ex)")
+  def beforeOnError(request: TraceContextAware, ex: Throwable): Unit = TraceRecorder.withTraceContextAndSystem { (ctx, system) ⇒
+    val playExtension = Kamon(Play)(system)
+    playExtension.httpServerMetrics.recordResponse(ctx.name, "505")
   }
 
   private def recordHttpServerMetrics(header: ResponseHeader, traceName: String, playExtension: PlayExtension): Unit =

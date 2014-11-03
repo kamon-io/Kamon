@@ -21,7 +21,7 @@ import akka.event.Logging
 import kamon.Kamon
 import kamon.http.HttpServerMetrics
 import kamon.metric.Metrics
-import play.api.libs.ws.WSRequest
+import play.api.libs.ws.WS.WSRequest
 import play.api.mvc.RequestHeader
 
 object Play extends ExtensionId[PlayExtension] with ExtensionIdProvider {
