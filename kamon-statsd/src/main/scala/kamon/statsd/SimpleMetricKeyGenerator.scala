@@ -6,7 +6,11 @@ import com.typesafe.config.Config
 import kamon.metric.UserMetrics.UserMetricGroup
 import kamon.metric.{ MetricIdentity, MetricGroupIdentity }
 
-class SimpleMetricKeyGenerator(config: Config) extends StatsD.MetricKeyGenerator {
+trait MetricKeyGenerator {
+  def generateKey(groupIdentity: MetricGroupIdentity, metricIdentity: MetricIdentity): String
+}
+
+class SimpleMetricKeyGenerator(config: Config) extends MetricKeyGenerator {
   type Normalizer = String ⇒ String
 
   val configSettings = config.getConfig("kamon.statsd.simple-metric-key-generator")
