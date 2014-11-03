@@ -3,7 +3,7 @@ package kamon.instrumentation.akka
 import akka.actor.SupervisorStrategy.{ Escalate, Restart, Resume, Stop }
 import akka.actor._
 import akka.testkit.{ ImplicitSender, TestKit }
-import kamon.trace.TraceRecorder
+import kamon.trace.{ EmptyTraceContext, TraceRecorder }
 import org.scalatest.WordSpecLike
 
 import scala.concurrent.duration._
@@ -59,7 +59,7 @@ class ActorSystemMessageInstrumentationSpec extends TestKit(ActorSystem("actor-s
 
         // Ensure we didn't tie the actor with the context
         supervisor ! "context"
-        expectMsg(None)
+        expectMsg(EmptyTraceContext)
       }
 
       "the actor is restarted" in {
@@ -76,7 +76,7 @@ class ActorSystemMessageInstrumentationSpec extends TestKit(ActorSystem("actor-s
 
         // Ensure we didn't tie the actor with the context
         supervisor ! "context"
-        expectMsg(None)
+        expectMsg(EmptyTraceContext)
       }
 
       "the actor is stopped" in {
@@ -142,7 +142,7 @@ class ActorSystemMessageInstrumentationSpec extends TestKit(ActorSystem("actor-s
 
     class Child extends Actor {
       def receive = {
-        case "fail"    ⇒ 1 / 0
+        case "fail"    ⇒ throw new ArithmeticException("Division by zero.")
         case "context" ⇒ sender ! TraceRecorder.currentContext
       }
 

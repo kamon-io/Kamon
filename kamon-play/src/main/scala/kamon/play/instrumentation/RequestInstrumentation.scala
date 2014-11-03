@@ -20,7 +20,7 @@ import kamon.play.{ Play, PlayExtension }
 import kamon.trace.{ TraceContextAware, TraceRecorder }
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
-import play.api.mvc.{ RequestHeader, EssentialAction, SimpleResult }
+import play.api.mvc._
 import play.libs.Akka
 
 @Aspect
@@ -38,7 +38,7 @@ class RequestInstrumentation {
   def onRouteRequest(requestHeader: RequestHeader): Unit = {
     val system = Akka.system()
     val playExtension = Kamon(Play)(system)
-    val defaultTraceName: String = s"${requestHeader.method}: ${requestHeader.uri}"
+    val defaultTraceName = playExtension.generateTraceName(requestHeader)
 
     val token = if (playExtension.includeTraceToken) {
       requestHeader.headers.toSimpleMap.find(_._1 == playExtension.traceTokenHeaderName).map(_._2)
@@ -50,26 +50,35 @@ class RequestInstrumentation {
   @Around("execution(* play.api.GlobalSettings+.doFilter(*)) && args(next)")
   def aroundDoFilter(pjp: ProceedingJoinPoint, next: EssentialAction): Any = {
     val essentialAction = (requestHeader: RequestHeader) ⇒ {
-
-      val incomingContext = TraceRecorder.currentContext
+      // TODO: Move to a Kamon-specific dispatcher.
       val executor = Kamon(Play)(Akka.system()).defaultDispatcher
 
-      next(requestHeader).map {
-        result ⇒
-          TraceRecorder.finish()
+      def onResult(result: Result): Result = {
 
-          incomingContext.map { ctx ⇒
-            val playExtension = Kamon(Play)(ctx.system)
-            recordHttpServerMetrics(result, ctx.name, playExtension)
-            if (playExtension.includeTraceToken) result.withHeaders(playExtension.traceTokenHeaderName -> ctx.token)
-            else result
-          }.getOrElse(result)
-      }(executor)
+        TraceRecorder.withTraceContextAndSystem { (ctx, system) ⇒
+          ctx.finish()
+
+          val playExtension = Kamon(Play)(system)
+          recordHttpServerMetrics(result.header, ctx.name, playExtension)
+
+          if (playExtension.includeTraceToken)
+            result.withHeaders(playExtension.traceTokenHeaderName -> ctx.token)
+          else
+            result
+
+        } getOrElse (result)
+      }
+
+      //override the current trace name
+      normaliseTraceName(requestHeader).map(TraceRecorder.rename(_))
+
+      // Invoke the action
+      next(requestHeader).map(onResult)(executor)
     }
     pjp.proceed(Array(EssentialAction(essentialAction)))
   }
 
-  private def recordHttpServerMetrics(result: SimpleResult, traceName: String, playExtension: PlayExtension): Unit =
+  private def recordHttpServerMetrics(result: Result, traceName: String, playExtension: PlayExtension): Unit =
     playExtension.httpServerMetrics.recordResponse(traceName, result.header.status.toString, 1L)
 
   @Around("execution(* play.api.GlobalSettings+.onError(..)) && args(request, ex)")
@@ -81,4 +90,31 @@ class RequestInstrumentation {
       pjp.proceed()
     }
   }
+
+  private def recordHttpServerMetrics(header: ResponseHeader, traceName: String, playExtension: PlayExtension): Unit =
+    playExtension.httpServerMetrics.recordResponse(traceName, header.status.toString)
+}
+
+object RequestInstrumentation {
+
+  import java.util.Locale
+  import scala.collection.concurrent.TrieMap
+
+  private val cache = TrieMap.empty[String, String]
+
+  def normaliseTraceName(requestHeader: RequestHeader): Option[String] = requestHeader.tags.get(Routes.ROUTE_VERB).map({ verb ⇒
+    val path = requestHeader.tags(Routes.ROUTE_PATTERN)
+    cache.getOrElseUpdate(s"$verb$path", {
+      val traceName = {
+        // Convert paths of form GET /foo/bar/$paramname<regexp>/blah to foo.bar.paramname.blah.get
+        val p = path.replaceAll("""\$([^<]+)<[^>]+>""", "$1").replace('/', '.').dropWhile(_ == '.')
+        val normalisedPath = {
+          if (p.lastOption.filter(_ != '.').isDefined) s"$p."
+          else p
+        }
+        s"$normalisedPath${verb.toLowerCase(Locale.ENGLISH)}"
+      }
+      traceName
+    })
+  })
 }

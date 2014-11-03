@@ -59,7 +59,7 @@ class ActorCellInstrumentation {
   def aroundBehaviourInvoke(pjp: ProceedingJoinPoint, cell: ActorCell, envelope: Envelope): Any = {
     val cellWithMetrics = cell.asInstanceOf[ActorCellMetrics]
     val timestampBeforeProcessing = System.nanoTime()
-    val contextAndTimestamp = envelope.asInstanceOf[TraceContextAware]
+    val contextAndTimestamp = envelope.asInstanceOf[TimestampedTraceContextAware]
 
     try {
       TraceRecorder.withInlineTraceContextReplacement(contextAndTimestamp.traceContext) {
@@ -154,13 +154,13 @@ class ActorCellMetricsIntoActorCellMixin {
 class TraceContextIntoEnvelopeMixin {
 
   @DeclareMixin("akka.dispatch.Envelope")
-  def mixinTraceContextAwareToEnvelope: TraceContextAware = TraceContextAware.default
+  def mixinTraceContextAwareToEnvelope: TimestampedTraceContextAware = TimestampedTraceContextAware.default
 
   @Pointcut("execution(akka.dispatch.Envelope.new(..)) && this(ctx)")
-  def envelopeCreation(ctx: TraceContextAware): Unit = {}
+  def envelopeCreation(ctx: TimestampedTraceContextAware): Unit = {}
 
   @After("envelopeCreation(ctx)")
-  def afterEnvelopeCreation(ctx: TraceContextAware): Unit = {
+  def afterEnvelopeCreation(ctx: TimestampedTraceContextAware): Unit = {
     // Necessary to force the initialization of ContextAware at the moment of creation.
     ctx.traceContext
   }
@@ -168,9 +168,9 @@ class TraceContextIntoEnvelopeMixin {
 
 object ActorCellInstrumentation {
   implicit class PimpedActorCellMetrics(cell: ActorCellMetrics) {
-    def onRoutedActorCell(block: ActorCellMetrics ⇒ Unit): Unit = {
-      if (cell.isInstanceOf[RoutedActorCell])
-        block(cell)
+    def onRoutedActorCell(block: ActorCellMetrics ⇒ Unit) = cell match {
+      case routedActorCell: RoutedActorCell ⇒ block(cell)
+      case everythingElse                   ⇒
     }
   }
 }

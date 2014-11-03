@@ -37,85 +37,23 @@ class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers
       |    disable-aspectj-weaver-missing-error = true
       |  }
       |
-      |  statsd {
-      |    max-packet-size = 256 bytes
-      |    simple-metric-key-generator.hostname-override = "none"
+      |  statsd.simple-metric-key-generator {
+      |    application = kamon
+      |    hostname-override = kamon-host
+      |    include-hostname = true
+      |    metric-name-normalization-strategy = normalize
       |  }
       |}
       |
     """.stripMargin))
 
   implicit val metricKeyGenerator = new SimpleMetricKeyGenerator(system.settings.config) {
-    override def normalizedLocalhostName: String = "localhost_local"
+    override def hostName: String = "localhost_local"
   }
 
   val collectionContext = Kamon(Metrics).buildDefaultCollectionContext
 
   "the StatsDMetricSender" should {
-    "allows to override the hostname" in new UdpListenerFixture {
-      val config = ConfigFactory.parseString(
-        """
-        |kamon {
-        |  statsd {
-        |    simple-metric-key-generator.application = "api"
-        |    simple-metric-key-generator.hostname-override = "kamonhost"
-        |    simple-metric-key-generator.include-hostname = true
-        |  }
-        |}
-        |
-        """.stripMargin)
-      implicit val metricKeyGenerator = new SimpleMetricKeyGenerator(config) {
-        override def normalizedLocalhostName: String = "localhost_local"
-      }
-
-      val testMetricKey = buildMetricKey("trace", "POST: /kamon/example", "elapsed-time")
-      testMetricKey should be(s"api.kamonhost.trace.POST-_kamon_example.elapsed-time")
-    }
-
-    "removes host name when attribute 'include-hostname' is set to false" in new UdpListenerFixture {
-      val config = ConfigFactory.parseString(
-        """
-        |kamon {
-        |  statsd {
-        |    simple-metric-key-generator.application = "api"
-        |    simple-metric-key-generator.include-hostname = false
-        |    simple-metric-key-generator.hostname-override = "none"
-        |  }
-        |}
-        |
-        """.stripMargin)
-      implicit val metricKeyGenerator = new SimpleMetricKeyGenerator(config) {
-        override def normalizedLocalhostName: String = "localhost_local"
-      }
-
-      val testMetricKey = buildMetricKey("trace", "POST: /kamon/example", "elapsed-time")
-      testMetricKey should be(s"api.trace.POST-_kamon_example.elapsed-time")
-    }
-
-    "uses aplication prefix when present" in new UdpListenerFixture {
-      val config = ConfigFactory.parseString(
-        """
-        |kamon {
-        |  statsd {
-        |    simple-metric-key-generator.application = "api"
-        |    simple-metric-key-generator.include-hostname = true
-        |    simple-metric-key-generator.hostname-override = "none"
-        |  }
-        |}
-        |
-        """.stripMargin)
-      implicit val metricKeyGenerator = new SimpleMetricKeyGenerator(config) {
-        override def normalizedLocalhostName: String = "localhost_local"
-      }
-
-      val testMetricKey = buildMetricKey("trace", "POST: /kamon/example", "elapsed-time")
-      testMetricKey should be(s"api.localhost_local.trace.POST-_kamon_example.elapsed-time")
-    }
-
-    "normalize the group entity name to remove spaces, colons and replace '/' with '_'" in new UdpListenerFixture {
-      val testMetricKey = buildMetricKey("trace", "POST: /kamon/example", "elapsed-time")
-      testMetricKey should be(s"kamon.localhost_local.trace.POST-_kamon_example.elapsed-time")
-    }
 
     "flush the metrics data after processing the tick, even if the max-packet-size is not reached" in new UdpListenerFixture {
       val testMetricName = "processing-time"

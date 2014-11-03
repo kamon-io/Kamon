@@ -62,27 +62,31 @@ object MemoryMetrics extends MetricGroupCategory {
       SwapFree -> swapFree)
   }
 
-  val Factory = new MetricGroupFactory {
+  val Factory = MemoryMetricGroupFactory
+}
 
-    type GroupRecorder = MemoryMetricRecorder
+case object MemoryMetricGroupFactory extends MetricGroupFactory {
 
-    def create(config: Config, system: ActorSystem): GroupRecorder = {
-      val settings = config.getConfig("precision.system.memory")
+  import MemoryMetrics._
 
-      val usedConfig = settings.getConfig("used")
-      val freeConfig = settings.getConfig("free")
-      val bufferConfig = settings.getConfig("buffer")
-      val cacheConfig = settings.getConfig("cache")
-      val swapUsedConfig = settings.getConfig("swap-used")
-      val swapFreeConfig = settings.getConfig("swap-free")
+  type GroupRecorder = MemoryMetricRecorder
 
-      new MemoryMetricRecorder(
-        Histogram.fromConfig(usedConfig, Scale.Mega),
-        Histogram.fromConfig(freeConfig, Scale.Mega),
-        Histogram.fromConfig(swapUsedConfig, Scale.Mega),
-        Histogram.fromConfig(swapFreeConfig, Scale.Mega),
-        Histogram.fromConfig(bufferConfig, Scale.Mega),
-        Histogram.fromConfig(cacheConfig, Scale.Mega))
-    }
+  def create(config: Config, system: ActorSystem): GroupRecorder = {
+    val settings = config.getConfig("precision.system.memory")
+
+    val usedConfig = settings.getConfig("used")
+    val freeConfig = settings.getConfig("free")
+    val bufferConfig = settings.getConfig("buffer")
+    val cacheConfig = settings.getConfig("cache")
+    val swapUsedConfig = settings.getConfig("swap-used")
+    val swapFreeConfig = settings.getConfig("swap-free")
+
+    new MemoryMetricRecorder(
+      Histogram.fromConfig(usedConfig, Scale.Mega),
+      Histogram.fromConfig(freeConfig, Scale.Mega),
+      Histogram.fromConfig(swapUsedConfig, Scale.Mega),
+      Histogram.fromConfig(swapFreeConfig, Scale.Mega),
+      Histogram.fromConfig(bufferConfig, Scale.Mega),
+      Histogram.fromConfig(cacheConfig, Scale.Mega))
   }
 }

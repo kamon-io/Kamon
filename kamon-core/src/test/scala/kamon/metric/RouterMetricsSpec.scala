@@ -30,9 +30,7 @@ import org.scalatest.{ Matchers, WordSpecLike }
 
 import scala.concurrent.duration._
 
-class RouterMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
-  implicit def self = testActor
-
+class RouterMetricsSpec extends TestKitBase with WordSpecLike with Matchers with ImplicitSender {
   implicit lazy val system: ActorSystem = ActorSystem("router-metrics-spec", ConfigFactory.parseString(
     """
       |kamon.metrics {
@@ -132,15 +130,13 @@ class RouterMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
 
     def createTestRouter(name: String): ActorRef = system.actorOf(Props[RouterMetricsTestActor]
       .withRouter(RoundRobinRouter(nrOfInstances = 5)), name)
-
-    def takeSnapshotOf(amr: RouterMetricsRecorder): RouterMetricSnapshot = amr.collect(collectionContext)
   }
 }
 
 class RouterMetricsTestActor extends Actor {
   def receive = {
     case Discard ⇒
-    case Fail    ⇒ 1 / 0
+    case Fail    ⇒ throw new ArithmeticException("Division by zero.")
     case Ping    ⇒ sender ! Pong
     case RouterTrackTimings(sendTimestamp, sleep) ⇒ {
       val dequeueTimestamp = System.nanoTime()

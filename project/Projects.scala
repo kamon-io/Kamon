@@ -8,7 +8,7 @@ object Projects extends Build {
 
   lazy val root = Project("root", file("."))
     .aggregate(kamonCore, kamonSpray, kamonNewrelic, kamonPlayground, kamonDashboard, kamonTestkit, kamonPlay, kamonStatsD,
-      kamonDatadog, kamonSystemMetrics, kamonLogReporter)
+      kamonDatadog, kamonSystemMetrics, kamonLogReporter, kamonAkkaRemote)
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
     .settings(noPublishing: _*)
@@ -24,8 +24,19 @@ object Projects extends Build {
       mappings in (Compile, packageSrc) ++= mappings.in(kamonMacros, Compile, packageSrc).value,
       libraryDependencies ++=
         compile(akkaActor, aspectJ, hdrHistogram) ++
-        optional(akkaRemote, akkaCluster, logback, aspectjWeaver) ++
-        test(scalatest, akkaTestKit, sprayTestkit, akkaSlf4j, logback, scalazConcurrent))
+        optional(logback, scalazConcurrent) ++
+        test(scalatest, akkaTestKit, sprayTestkit, akkaSlf4j, logback))
+
+
+  lazy val kamonAkkaRemote = Project("kamon-akka-remote", file("kamon-akka-remote"))
+    .dependsOn(kamonCore)
+    .settings(basicSettings: _* )
+    .settings(formatSettings: _*)
+    .settings(aspectJSettings: _*)
+    .settings(
+      libraryDependencies ++=
+        compile(akkaRemote, akkaCluster) ++
+        test(scalatest, akkaTestKit))
 
 
   lazy val kamonSpray = Project("kamon-spray", file("kamon-spray"))
@@ -49,8 +60,8 @@ object Projects extends Build {
     .settings(aspectJSettings: _*)
     .settings(
       libraryDependencies ++=
-        compile(aspectJ, sprayCan, sprayClient, sprayRouting, sprayJson, sprayJsonLenses, newrelic, snakeYaml) ++
-        test(scalatest, akkaTestKit, sprayTestkit, slf4Api, slf4nop))
+        compile(aspectJ, sprayCan, sprayClient, sprayRouting, sprayJson, sprayJsonLenses, newrelic, snakeYaml, akkaSlf4j) ++
+        test(scalatest, akkaTestKit, sprayTestkit, slf4Api, akkaSlf4j))
     .dependsOn(kamonCore)
 
 
@@ -58,6 +69,7 @@ object Projects extends Build {
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
     .settings(noPublishing: _*)
+    .settings(aspectJSettings: _*)
     .settings(
       libraryDependencies ++=
         compile(akkaActor, akkaSlf4j, sprayCan, sprayClient, sprayRouting, logback))

@@ -69,21 +69,25 @@ object ActorMetrics extends MetricGroupCategory {
       (Errors -> errors))
   }
 
-  val Factory = new MetricGroupFactory {
-    type GroupRecorder = ActorMetricsRecorder
+  val Factory = ActorMetricGroupFactory
+}
 
-    def create(config: Config, system: ActorSystem): ActorMetricsRecorder = {
-      val settings = config.getConfig("precision.actor")
+case object ActorMetricGroupFactory extends MetricGroupFactory {
+  import ActorMetrics._
 
-      val processingTimeConfig = settings.getConfig("processing-time")
-      val timeInMailboxConfig = settings.getConfig("time-in-mailbox")
-      val mailboxSizeConfig = settings.getConfig("mailbox-size")
+  type GroupRecorder = ActorMetricsRecorder
 
-      new ActorMetricsRecorder(
-        Histogram.fromConfig(processingTimeConfig),
-        Histogram.fromConfig(timeInMailboxConfig),
-        MinMaxCounter.fromConfig(mailboxSizeConfig, system),
-        Counter())
-    }
+  def create(config: Config, system: ActorSystem): ActorMetricsRecorder = {
+    val settings = config.getConfig("precision.actor")
+
+    val processingTimeConfig = settings.getConfig("processing-time")
+    val timeInMailboxConfig = settings.getConfig("time-in-mailbox")
+    val mailboxSizeConfig = settings.getConfig("mailbox-size")
+
+    new ActorMetricsRecorder(
+      Histogram.fromConfig(processingTimeConfig),
+      Histogram.fromConfig(timeInMailboxConfig),
+      MinMaxCounter.fromConfig(mailboxSizeConfig, system),
+      Counter())
   }
 }

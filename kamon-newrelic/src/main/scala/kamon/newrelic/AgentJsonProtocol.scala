@@ -33,7 +33,7 @@ object AgentJsonProtocol extends DefaultJsonProtocol {
   }
 
   implicit def seqWriter[T: JsonWriter] = new JsonWriter[Seq[T]] {
-    def write(seq: Seq[T]) = JsArray(seq.map(_.toJson).toList)
+    def write(seq: Seq[T]) = JsArray(seq.map(_.toJson).toVector)
   }
 
   implicit object MetricDetailWriter extends JsonWriter[NewRelic.Metric] {
@@ -58,6 +58,6 @@ object AgentJsonProtocol extends DefaultJsonProtocol {
         JsNumber(obj.runId),
         JsNumber(obj.timeSliceMetrics.from),
         JsNumber(obj.timeSliceMetrics.to),
-        obj.timeSliceMetrics.metrics.toJson)
+        obj.timeSliceMetrics.metrics.values.toSeq.toJson)
   }
 }

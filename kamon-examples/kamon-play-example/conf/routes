@@ -2,3 +2,4 @@
 GET     /helloKamon                      controllers.KamonPlayExample.sayHello
 GET     /helloKamonWithTraceName         controllers.KamonPlayExample.sayHelloWithTraceName
 GET     /incrementCounter                controllers.KamonPlayExample.incrementCounter
+GET     /updateTraceLocal                controllers.KamonPlayExample.updateTraceLocal

@@ -30,12 +30,11 @@ object TraceMetrics extends MetricGroupCategory {
   val name = "trace"
 
   case object ElapsedTime extends MetricIdentity { val name = "elapsed-time" }
-  case class HttpClientRequest(name: String) extends MetricIdentity
 
   case class TraceMetricRecorder(elapsedTime: Histogram, private val segmentRecorderFactory: () ⇒ Histogram)
       extends MetricGroupRecorder {
 
-    private val segments = TrieMap[MetricIdentity, Histogram]()
+    val segments = TrieMap[MetricIdentity, Histogram]()
 
     def segmentRecorder(segmentIdentity: MetricIdentity): Histogram =
       segments.getOrElseUpdate(segmentIdentity, segmentRecorderFactory.apply())
@@ -59,19 +58,24 @@ object TraceMetrics extends MetricGroupCategory {
     def metrics: Map[MetricIdentity, MetricSnapshot] = segments + (ElapsedTime -> elapsedTime)
   }
 
-  val Factory = new MetricGroupFactory {
-    type GroupRecorder = TraceMetricRecorder
+  val Factory = TraceMetricGroupFactory
 
-    def create(config: Config, system: ActorSystem): TraceMetricRecorder = {
+}
 
-      val settings = config.getConfig("precision.trace")
-      val elapsedTimeConfig = settings.getConfig("elapsed-time")
-      val segmentConfig = settings.getConfig("segment")
+case object TraceMetricGroupFactory extends MetricGroupFactory {
 
-      new TraceMetricRecorder(
-        Histogram.fromConfig(elapsedTimeConfig, Scale.Nano),
-        () ⇒ Histogram.fromConfig(segmentConfig, Scale.Nano))
-    }
+  import TraceMetrics._
+
+  type GroupRecorder = TraceMetricRecorder
+
+  def create(config: Config, system: ActorSystem): TraceMetricRecorder = {
+
+    val settings = config.getConfig("precision.trace")
+    val elapsedTimeConfig = settings.getConfig("elapsed-time")
+    val segmentConfig = settings.getConfig("segment")
+
+    new TraceMetricRecorder(
+      Histogram.fromConfig(elapsedTimeConfig, Scale.Nano),
+      () ⇒ Histogram.fromConfig(segmentConfig, Scale.Nano))
   }
-
 }

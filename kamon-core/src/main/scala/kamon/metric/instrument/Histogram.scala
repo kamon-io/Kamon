@@ -75,6 +75,8 @@ object Histogram {
     def numberOfMeasurements: Long
     def min: Long
     def max: Long
+    def sum: Long
+    def percentile(percentile: Double): Long
     def recordsIterator: Iterator[Record]
     def merge(that: Histogram.Snapshot, context: CollectionContext): Histogram.Snapshot
   }
@@ -83,6 +85,8 @@ object Histogram {
     def empty(targetScale: Scale) = new Snapshot {
       override def min: Long = 0L
       override def max: Long = 0L
+      override def sum: Long = 0L
+      override def percentile(percentile: Double): Long = 0L
       override def recordsIterator: Iterator[Record] = Iterator.empty
       override def merge(that: Snapshot, context: CollectionContext): Snapshot = that
       override def scale: Scale = targetScale
@@ -156,11 +160,27 @@ class HdrHistogram(lowestTrackableValue: Long, highestTrackableValue: Long, sign
 
 }
 
-class CompactHdrSnapshot(val scale: Scale, val numberOfMeasurements: Long, compactRecords: Array[Long], unitMagnitude: Int,
+case class CompactHdrSnapshot(val scale: Scale, val numberOfMeasurements: Long, compactRecords: Array[Long], unitMagnitude: Int,
     subBucketHalfCount: Int, subBucketHalfCountMagnitude: Int) extends Histogram.Snapshot {
 
   def min: Long = if (compactRecords.length == 0) 0 else levelFromCompactRecord(compactRecords(0))
   def max: Long = if (compactRecords.length == 0) 0 else levelFromCompactRecord(compactRecords(compactRecords.length - 1))
+  def sum: Long = recordsIterator.foldLeft(0L)((a, r) ⇒ a + (r.count * r.level))
+
+  def percentile(p: Double): Long = {
+    val records = recordsIterator
+    val threshold = numberOfMeasurements * (p / 100D)
+    var countToCurrentLevel = 0L
+    var percentileLevel = 0L
+
+    while (countToCurrentLevel < threshold && records.hasNext) {
+      val record = records.next()
+      countToCurrentLevel += record.count
+      percentileLevel = record.level
+    }
+
+    percentileLevel
+  }
 
   def merge(that: Histogram.Snapshot, context: CollectionContext): Histogram.Snapshot = {
     if (that.isEmpty) this else if (this.isEmpty) that else {

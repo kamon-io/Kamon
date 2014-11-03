@@ -66,23 +66,28 @@ object DispatcherMetrics extends MetricGroupCategory {
       (PoolSize -> poolSize))
   }
 
-  val Factory = new MetricGroupFactory {
-    type GroupRecorder = DispatcherMetricRecorder
-
-    def create(config: Config, system: ActorSystem): DispatcherMetricRecorder = {
-      val settings = config.getConfig("precision.dispatcher")
-
-      val maximumPoolSizeConfig = settings.getConfig("maximum-pool-size")
-      val runningThreadCountConfig = settings.getConfig("running-thread-count")
-      val queueTaskCountConfig = settings.getConfig("queued-task-count")
-      val poolSizeConfig = settings.getConfig("pool-size")
-
-      new DispatcherMetricRecorder(
-        Histogram.fromConfig(maximumPoolSizeConfig),
-        Histogram.fromConfig(runningThreadCountConfig),
-        Histogram.fromConfig(queueTaskCountConfig),
-        Histogram.fromConfig(poolSizeConfig))
-    }
-  }
+  val Factory = DispatcherMetricGroupFactory
 }
 
+case object DispatcherMetricGroupFactory extends MetricGroupFactory {
+
+  import DispatcherMetrics._
+
+  type GroupRecorder = DispatcherMetricRecorder
+
+  def create(config: Config, system: ActorSystem): DispatcherMetricRecorder = {
+    val settings = config.getConfig("precision.dispatcher")
+
+    val maximumPoolSizeConfig = settings.getConfig("maximum-pool-size")
+    val runningThreadCountConfig = settings.getConfig("running-thread-count")
+    val queueTaskCountConfig = settings.getConfig("queued-task-count")
+    val poolSizeConfig = settings.getConfig("pool-size")
+
+    new DispatcherMetricRecorder(
+      Histogram.fromConfig(maximumPoolSizeConfig),
+      Histogram.fromConfig(runningThreadCountConfig),
+      Histogram.fromConfig(queueTaskCountConfig),
+      Histogram.fromConfig(poolSizeConfig))
+  }
+
+}

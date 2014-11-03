@@ -21,6 +21,8 @@ import akka.event.Logging
 import kamon.Kamon
 import kamon.http.HttpServerMetrics
 import kamon.metric.Metrics
+import play.api.libs.ws.WSRequest
+import play.api.mvc.RequestHeader
 
 object Play extends ExtensionId[PlayExtension] with ExtensionIdProvider {
   override def lookup(): ExtensionId[_ <: Extension] = Play
@@ -35,7 +37,22 @@ class PlayExtension(private val system: ExtendedActorSystem) extends Kamon.Exten
 
   val httpServerMetrics = Kamon(Metrics)(system).register(HttpServerMetrics, HttpServerMetrics.Factory).get
   val defaultDispatcher = system.dispatchers.lookup(config.getString("dispatcher"))
-  val includeTraceToken: Boolean = config.getBoolean("include-trace-token-header")
+  val includeTraceToken: Boolean = config.getBoolean("automatic-trace-token-propagation")
   val traceTokenHeaderName: String = config.getString("trace-token-header-name")
+
+  private val nameGeneratorFQN = config.getString("name-generator")
+  private val nameGenerator: PlayNameGenerator = system.dynamicAccess.createInstanceFor[PlayNameGenerator](nameGeneratorFQN, Nil).get
+
+  def generateTraceName(requestHeader: RequestHeader): String = nameGenerator.generateTraceName(requestHeader)
+  def generateHttpClientSegmentName(request: WSRequest): String = nameGenerator.generateHttpClientSegmentName(request)
 }
 
+trait PlayNameGenerator {
+  def generateTraceName(requestHeader: RequestHeader): String
+  def generateHttpClientSegmentName(request: WSRequest): String
+}
+
+class DefaultPlayNameGenerator extends PlayNameGenerator {
+  def generateTraceName(requestHeader: RequestHeader): String = requestHeader.method + ": " + requestHeader.uri
+  def generateHttpClientSegmentName(request: WSRequest): String = request.url
+}

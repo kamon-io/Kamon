@@ -82,11 +82,16 @@ object HttpServerMetrics extends MetricGroupIdentity {
     }
   }
 
-  val Factory = new MetricGroupFactory {
-    type GroupRecorder = HttpServerMetricsRecorder
+  val Factory = HttpServerMetricGroupFactory
+}
 
-    def create(config: Config, system: ActorSystem): HttpServerMetricsRecorder =
-      new HttpServerMetricsRecorder()
-  }
+case object HttpServerMetricGroupFactory extends MetricGroupFactory {
+
+  import HttpServerMetrics._
+
+  type GroupRecorder = HttpServerMetricsRecorder
+
+  def create(config: Config, system: ActorSystem): HttpServerMetricsRecorder =
+    new HttpServerMetricsRecorder()
 
 }

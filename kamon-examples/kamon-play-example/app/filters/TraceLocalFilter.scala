@@ -22,8 +22,10 @@ import play.api.mvc.{Result, RequestHeader, Filter}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
 
+case class TraceLocalContainer(traceToken:String, importantHeader:String)
+
 object TraceLocalKey extends TraceLocal.TraceLocalKey {
-  type ValueType = String
+  type ValueType = TraceLocalContainer
 }
 
 /*
@@ -38,15 +40,17 @@ object TraceLocalFilter extends Filter {
   val TraceLocalStorageKey = "MyTraceLocalStorageKey"
 
   override def apply(next: (RequestHeader) ⇒ Future[Result])(header: RequestHeader): Future[Result] = {
-    TraceRecorder.withTraceContext(TraceRecorder.currentContext) {
 
-      TraceLocal.store(TraceLocalKey)(header.headers.get(TraceLocalStorageKey).getOrElse("unknown"))
-
-      next(header).map {
-        val traceTokenValue = TraceLocal.retrieve(TraceLocalKey).getOrElse("unknown")
-        logger.info(s"traceTokenValue: $traceTokenValue")
-        result ⇒ result.withHeaders((TraceLocalStorageKey -> traceTokenValue))
-      }
+    def onResult(result:Result) = {
+        val traceLocalContainer = TraceLocal.retrieve(TraceLocalKey).getOrElse(TraceLocalContainer("unknown","unknown"))
+        logger.info(s"traceTokenValue: ${traceLocalContainer.traceToken}")
+        result.withHeaders((TraceLocalStorageKey -> traceLocalContainer.traceToken))
     }
+
+    //update the TraceLocalStorage
+    TraceLocal.store(TraceLocalKey)(TraceLocalContainer(header.headers.get(TraceLocalStorageKey).getOrElse("unknown"), "unknown"))
+
+    //call the action
+    next(header).map(onResult)
   }
 }

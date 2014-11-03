@@ -43,6 +43,9 @@ class SprayExtension(private val system: ExtendedActorSystem) extends Kamon.Exte
   val httpServerMetrics = Kamon(Metrics)(system).register(HttpServerMetrics, HttpServerMetrics.Factory).get
   // It's safe to assume that HttpServerMetrics will always exist because there is no particular filter for it.
 
+  private val nameGeneratorFQN = config.getString("name-generator")
+  private val nameGenerator: SprayNameGenerator = system.dynamicAccess.createInstanceFor[SprayNameGenerator](nameGeneratorFQN, Nil).get // let's bubble up any problems.
+
   val clientSegmentCollectionStrategy: ClientSegmentCollectionStrategy.Strategy =
     config.getString("client.segment-collection-strategy") match {
       case "pipelining" ⇒ ClientSegmentCollectionStrategy.Pipelining
@@ -51,6 +54,19 @@ class SprayExtension(private val system: ExtendedActorSystem) extends Kamon.Exte
         s"only pipelining and internal are valid options.")
     }
 
-  // Later we should expose a way for the user to customize this.
-  def assignHttpClientRequestName(request: HttpRequest): String = request.uri.authority.host.address
+  def generateTraceName(request: HttpRequest): String = nameGenerator.generateTraceName(request)
+  def generateRequestLevelApiSegmentName(request: HttpRequest): String = nameGenerator.generateRequestLevelApiSegmentName(request)
+  def generateHostLevelApiSegmentName(request: HttpRequest): String = nameGenerator.generateHostLevelApiSegmentName(request)
+}
+
+trait SprayNameGenerator {
+  def generateTraceName(request: HttpRequest): String
+  def generateRequestLevelApiSegmentName(request: HttpRequest): String
+  def generateHostLevelApiSegmentName(request: HttpRequest): String
+}
+
+class DefaultSprayNameGenerator extends SprayNameGenerator {
+  def generateRequestLevelApiSegmentName(request: HttpRequest): String = request.method.value + ": " + request.uri.path
+  def generateTraceName(request: HttpRequest): String = request.method.value + ": " + request.uri.path
+  def generateHostLevelApiSegmentName(request: HttpRequest): String = request.uri.authority.host.address
 }

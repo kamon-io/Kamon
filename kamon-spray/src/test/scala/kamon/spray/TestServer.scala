@@ -45,13 +45,13 @@ trait TestServer {
     probe.sender
   }
 
-  def buildSHostConnectorAndServer: (ActorRef, TestProbe) = {
+  def buildSHostConnectorAndServer: (ActorRef, TestProbe, Http.Bound) = {
     val serverHandler = TestProbe()
     IO(Http).tell(Http.Bind(listener = serverHandler.ref, interface = "127.0.0.1", port = 0), serverHandler.ref)
     val bound = serverHandler.expectMsgType[Bound](10 seconds)
     val client = httpHostConnector(bound)
 
-    (client, serverHandler)
+    (client, serverHandler, bound)
   }
 
   private def httpHostConnector(connectionInfo: Http.Bound): ActorRef = {

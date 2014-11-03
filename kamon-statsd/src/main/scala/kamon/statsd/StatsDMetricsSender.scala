@@ -26,7 +26,7 @@ import java.util.Locale
 
 import kamon.metric.instrument.{ Counter, Histogram }
 
-class StatsDMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long, metricKeyGenerator: StatsD.MetricKeyGenerator)
+class StatsDMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long, metricKeyGenerator: MetricKeyGenerator)
     extends Actor with UdpExtensionProvider {
   import context.system
 
@@ -80,7 +80,7 @@ class StatsDMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long,
 }
 
 object StatsDMetricsSender {
-  def props(remote: InetSocketAddress, maxPacketSize: Long, metricKeyGenerator: StatsD.MetricKeyGenerator): Props =
+  def props(remote: InetSocketAddress, maxPacketSize: Long, metricKeyGenerator: MetricKeyGenerator): Props =
     Props(new StatsDMetricsSender(remote, maxPacketSize, metricKeyGenerator))
 }
 

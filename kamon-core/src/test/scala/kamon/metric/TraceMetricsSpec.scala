@@ -5,8 +5,7 @@ import akka.testkit.{ ImplicitSender, TestKitBase }
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
 import kamon.metric.TraceMetrics.TraceMetricsSnapshot
-import kamon.trace.TraceContext.SegmentIdentity
-import kamon.trace.TraceRecorder
+import kamon.trace.{ SegmentMetricIdentity, TraceRecorder }
 import org.scalatest.{ Matchers, WordSpecLike }
 
 class TraceMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
@@ -55,38 +54,36 @@ class TraceMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
 
     "record the elapsed time for segments that occur inside a given trace" in {
       TraceRecorder.withNewTraceContext("trace-with-segments") {
-        val segmentHandle = TraceRecorder.startSegment(TraceMetricsTestSegment("test-segment"))
-        segmentHandle.get.finish()
+        val segment = TraceRecorder.currentContext.startSegment("test-segment", "test-label")
+        segment.finish()
         TraceRecorder.finish()
       }
 
       val snapshot = takeSnapshotOf("trace-with-segments")
       snapshot.elapsedTime.numberOfMeasurements should be(1)
       snapshot.segments.size should be(1)
-      snapshot.segments(TraceMetricsTestSegment("test-segment")).numberOfMeasurements should be(1)
+      snapshot.segments(SegmentMetricIdentity("test-segment", "test-label")).numberOfMeasurements should be(1)
     }
 
     "record the elapsed time for segments that finish after their correspondent trace has finished" in {
-      val segmentHandle = TraceRecorder.withNewTraceContext("closing-segment-after-trace") {
-        val sh = TraceRecorder.startSegment(TraceMetricsTestSegment("test-segment"))
+      val segment = TraceRecorder.withNewTraceContext("closing-segment-after-trace") {
+        val s = TraceRecorder.currentContext.startSegment("test-segment", "test-label")
         TraceRecorder.finish()
-        sh
+        s
       }
 
       val beforeFinishSegmentSnapshot = takeSnapshotOf("closing-segment-after-trace")
       beforeFinishSegmentSnapshot.elapsedTime.numberOfMeasurements should be(1)
       beforeFinishSegmentSnapshot.segments.size should be(0)
 
-      segmentHandle.get.finish()
+      segment.finish()
 
       val afterFinishSegmentSnapshot = takeSnapshotOf("closing-segment-after-trace")
       afterFinishSegmentSnapshot.elapsedTime.numberOfMeasurements should be(0)
       afterFinishSegmentSnapshot.segments.size should be(1)
-      afterFinishSegmentSnapshot.segments(TraceMetricsTestSegment("test-segment")).numberOfMeasurements should be(1)
+      afterFinishSegmentSnapshot.segments(SegmentMetricIdentity("test-segment", "test-label")).numberOfMeasurements should be(1)
     }
   }
-
-  case class TraceMetricsTestSegment(name: String) extends SegmentIdentity
 
   def takeSnapshotOf(traceName: String): TraceMetricsSnapshot = {
     val recorder = Kamon(Metrics).register(TraceMetrics(traceName), TraceMetrics.Factory)
