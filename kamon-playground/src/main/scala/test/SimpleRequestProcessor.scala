@@ -23,7 +23,7 @@ import kamon.Kamon
 import kamon.metric.Subscriptions.TickMetricSnapshot
 import kamon.metric._
 import kamon.spray.KamonTraceDirectives
-import kamon.trace.TraceRecorder
+import kamon.trace.{ SegmentMetricIdentityLabel, TraceRecorder }
 import spray.http.{ StatusCodes, Uri }
 import spray.httpx.RequestBuilding
 import spray.routing.SimpleRoutingApp
@@ -124,6 +124,16 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
             throw new NullPointerException
             "okk"
           }
+        } ~
+        path("segment") {
+          complete {
+            val segment = TraceRecorder.currentContext.startSegment("hello-world", SegmentMetricIdentityLabel.HttpClient)
+            (replier ? "hello").mapTo[String].onComplete { t ⇒
+              segment.finish()
+            }
+
+            "segment"
+          }
         }
     }
   }
@@ -166,7 +176,7 @@ class Replier extends Actor with ActorLogging {
       if (TraceRecorder.currentContext.isEmpty)
         log.warning("PROCESSING A MESSAGE WITHOUT CONTEXT")
 
-      log.info("Processing at the Replier, and self is: {}", self)
+      //log.info("Processing at the Replier, and self is: {}", self)
       sender ! anything
   }
 }

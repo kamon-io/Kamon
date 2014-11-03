@@ -5,6 +5,7 @@ import com.typesafe.sbt.SbtScalariform.ScalariformKeys
 import Publish.{settings => publishSettings}
 import Release.{settings => releaseSettings}
 import scalariform.formatter.preferences._
+import net.virtualvoid.sbt.graph.Plugin.graphSettings
 
 object Settings {
 
@@ -23,12 +24,13 @@ object Settings {
       "-g:vars",
       "-feature",
       "-unchecked",
+      "-optimise",
       "-deprecation",
       "-target:jvm-1.6",
       "-language:postfixOps",
       "-language:implicitConversions",
       "-Xlog-reflective-calls"
-    )) ++ publishSettings ++ releaseSettings
+    )) ++ publishSettings ++ releaseSettings ++ graphSettings
 
   lazy val formatSettings = SbtScalariform.scalariformSettings ++ Seq(
     ScalariformKeys.preferences in Compile := formattingPreferences,

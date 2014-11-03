@@ -1,0 +1,12 @@
+<!DOCTYPE aspectj PUBLIC "-//AspectJ//DTD//EN" "http://www.eclipse.org/aspectj/dtd/aspectj.dtd">
+
+<aspectj>
+  <aspects>
+    <!-- Remoting and Cluster -->
+    <aspect name="akka.remote.instrumentation.RemotingInstrumentation"/>
+  </aspects>
+
+  <weaver>
+    <include within="akka..*"/>
+  </weaver>
+</aspectj>

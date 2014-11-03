@@ -2,6 +2,7 @@ package kamon.instrumentation.akka
 
 import akka.actor.SupervisorStrategy.Resume
 import akka.actor._
+import akka.pattern.{ ask, pipe }
 import akka.remote.RemoteScope
 import akka.routing.RoundRobinGroup
 import akka.testkit.{ ImplicitSender, TestKitBase }
@@ -9,7 +10,7 @@ import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import kamon.trace.TraceRecorder
 import org.scalatest.{ Matchers, WordSpecLike }
-import akka.pattern.{ ask, pipe }
+
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
 
@@ -124,16 +125,15 @@ class TraceTokenReplier(creationTraceContextListener: Option[ActorRef]) extends 
 
   def receive = {
     case "fail" ⇒
-      1 / 0
+      throw new ArithmeticException("Division by zero.")
     case "reply-trace-token" ⇒
-      log.info("Sending back the TT: " + TraceRecorder.currentContext.map(_.token).getOrElse("unavailable"))
+      log.info("Sending back the TT: " + TraceRecorder.currentContext.token)
       sender ! currentTraceContextInfo
   }
 
   def currentTraceContextInfo: String = {
-    TraceRecorder.currentContext.map { context ⇒
-      s"name=${context.name}|token=${context.token}|isOpen=${context.isOpen}"
-    }.getOrElse("unavailable")
+    val ctx = TraceRecorder.currentContext
+    s"name=${ctx.name}|token=${ctx.token}|isOpen=${ctx.isOpen}"
   }
 }
 
@@ -161,8 +161,7 @@ class SupervisorOfRemote(traceContextListener: ActorRef, remoteAddress: Address)
   }
 
   def currentTraceContextInfo: String = {
-    TraceRecorder.currentContext.map { context ⇒
-      s"name=${context.name}|token=${context.token}|isOpen=${context.isOpen}"
-    }.getOrElse("unavailable")
+    val ctx = TraceRecorder.currentContext
+    s"name=${ctx.name}|token=${ctx.token}|isOpen=${ctx.isOpen}"
   }
 }

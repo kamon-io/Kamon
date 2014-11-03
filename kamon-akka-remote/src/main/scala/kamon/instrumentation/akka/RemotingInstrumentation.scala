@@ -1,20 +1,19 @@
 package akka.remote.instrumentation
 
 import akka.actor.{ ActorRef, Address }
-import akka.dispatch.sysmsg.SystemMessage
 import akka.remote.instrumentation.TraceContextAwareWireFormats.{ TraceContextAwareRemoteEnvelope, RemoteTraceContext, AckAndTraceContextAwareEnvelopeContainer }
-import akka.remote.transport.AkkaPduCodec.Message
 import akka.remote.{ RemoteActorRefProvider, Ack, SeqNo }
 import akka.remote.WireFormats._
 import akka.util.ByteString
-import kamon.trace.{ TraceContextAware, TraceRecorder }
+import kamon.trace.TraceRecorder
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
 
 @Aspect
 class RemotingInstrumentation {
 
-  @Pointcut("execution(* akka.remote.transport.AkkaPduProtobufCodec$.constructMessage(..)) && args(localAddress, recipient, serializedMessage, senderOption, seqOption, ackOption)")
+  @Pointcut("execution(* akka.remote.transport.AkkaPduProtobufCodec$.constructMessage(..)) && " +
+    "args(localAddress, recipient, serializedMessage, senderOption, seqOption, ackOption)")
   def constructAkkaPduMessage(localAddress: Address, recipient: ActorRef, serializedMessage: SerializedMessage,
     senderOption: Option[ActorRef], seqOption: Option[SeqNo], ackOption: Option[Ack]): Unit = {}
 
@@ -32,12 +31,15 @@ class RemotingInstrumentation {
     envelopeBuilder.setMessage(serializedMessage)
 
     // Attach the TraceContext info, if available.
-    TraceRecorder.currentContext.foreach { context ⇒
+    if (!TraceRecorder.currentContext.isEmpty) {
+      val context = TraceRecorder.currentContext
+      val relativeStartMilliTime = System.currentTimeMillis - ((System.nanoTime - context.nanoTimestamp) / 1000000)
+
       envelopeBuilder.setTraceContext(RemoteTraceContext.newBuilder()
         .setTraceName(context.name)
         .setTraceToken(context.token)
         .setIsOpen(context.isOpen)
-        .setStartMilliTime(context.startMilliTime)
+        .setStartMilliTime(relativeStartMilliTime)
         .build())
     }
 
@@ -56,7 +58,8 @@ class RemotingInstrumentation {
   // Copied from akka.remote.transport.AkkaPduProtobufCodec because of private access.
   private def serializeActorRef(defaultAddress: Address, ref: ActorRef): ActorRefData = {
     ActorRefData.newBuilder.setPath(
-      if (ref.path.address.host.isDefined) ref.path.toSerializationFormat else ref.path.toSerializationFormatWithAddress(defaultAddress)).build()
+      if (ref.path.address.host.isDefined) ref.path.toSerializationFormat
+      else ref.path.toSerializationFormatWithAddress(defaultAddress)).build()
   }
 
   // Copied from akka.remote.transport.AkkaPduProtobufCodec because of private access.
@@ -71,19 +74,24 @@ class RemotingInstrumentation {
     case _ ⇒ throw new IllegalArgumentException(s"Address [${address}] could not be serialized: host or port missing.")
   }
 
-  @Pointcut("execution(* akka.remote.transport.AkkaPduProtobufCodec$.decodeMessage(..)) && args(bs, provider, localAddress)") // && args(raw, provider, localAddress)")
-  def decodeRemoteMessage(bs: ByteString, provider: RemoteActorRefProvider, localAddress: Address): Unit = {} //(raw: ByteString, provider: RemoteActorRefProvider, localAddress: Address): Unit = {}
+  @Pointcut("execution(* akka.remote.transport.AkkaPduProtobufCodec$.decodeMessage(..)) && args(bs, provider, localAddress)")
+  def decodeRemoteMessage(bs: ByteString, provider: RemoteActorRefProvider, localAddress: Address): Unit = {}
 
   @Around("decodeRemoteMessage(bs, provider, localAddress)")
   def aroundDecodeRemoteMessage(pjp: ProceedingJoinPoint, bs: ByteString, provider: RemoteActorRefProvider, localAddress: Address): AnyRef = {
     val ackAndEnvelope = AckAndTraceContextAwareEnvelopeContainer.parseFrom(bs.toArray)
 
     if (ackAndEnvelope.hasEnvelope && ackAndEnvelope.getEnvelope.hasTraceContext) {
-      val traceContext = ackAndEnvelope.getEnvelope.getTraceContext
+      val remoteTraceContext = ackAndEnvelope.getEnvelope.getTraceContext
       val system = provider.guardian.underlying.system
-      val tc = TraceRecorder.joinRemoteTraceContext(traceContext, system)
+      val ctx = TraceRecorder.joinRemoteTraceContext(
+        remoteTraceContext.getTraceName(),
+        remoteTraceContext.getTraceToken(),
+        remoteTraceContext.getStartMilliTime(),
+        remoteTraceContext.getIsOpen(),
+        system)
 
-      TraceRecorder.setContext(Some(tc))
+      TraceRecorder.setContext(ctx)
     }
 
     pjp.proceed()

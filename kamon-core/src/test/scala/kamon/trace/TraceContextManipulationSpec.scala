@@ -3,7 +3,6 @@ package kamon.trace
 import akka.actor.ActorSystem
 import akka.testkit.{ ImplicitSender, TestKitBase }
 import com.typesafe.config.ConfigFactory
-import kamon.trace.TraceContext.SegmentIdentity
 import org.scalatest.{ Matchers, WordSpecLike }
 
 class TraceContextManipulationSpec extends TestKitBase with WordSpecLike with Matchers with ImplicitSender {
@@ -38,7 +37,7 @@ class TraceContextManipulationSpec extends TestKitBase with WordSpecLike with Ma
     "allow starting a trace within a specified block of code, and only within that block of code" in {
       val createdContext = TraceRecorder.withNewTraceContext("start-context") {
         TraceRecorder.currentContext should not be empty
-        TraceRecorder.currentContext.get
+        TraceRecorder.currentContext
       }
 
       TraceRecorder.currentContext shouldBe empty
@@ -48,7 +47,7 @@ class TraceContextManipulationSpec extends TestKitBase with WordSpecLike with Ma
     "allow starting a trace within a specified block of code, providing a trace-token and only within that block of code" in {
       val createdContext = TraceRecorder.withNewTraceContext("start-context-with-token", Some("token-1")) {
         TraceRecorder.currentContext should not be empty
-        TraceRecorder.currentContext.get
+        TraceRecorder.currentContext
       }
 
       TraceRecorder.currentContext shouldBe empty
@@ -70,7 +69,7 @@ class TraceContextManipulationSpec extends TestKitBase with WordSpecLike with Ma
     "allow renaming a trace" in {
       val createdContext = TraceRecorder.withNewTraceContext("trace-before-rename") {
         TraceRecorder.rename("renamed-trace")
-        TraceRecorder.currentContext.get
+        TraceRecorder.currentContext
       }
 
       TraceRecorder.currentContext shouldBe empty
@@ -79,17 +78,22 @@ class TraceContextManipulationSpec extends TestKitBase with WordSpecLike with Ma
 
     "allow creating a segment within a trace" in {
       val createdContext = TraceRecorder.withNewTraceContext("trace-with-segments") {
-        val segmentHandle = TraceRecorder.startSegment(TraceManipulationTestSegment("segment-1"))
-
-        TraceRecorder.currentContext.get
+        val segment = TraceRecorder.currentContext.startSegment("segment-1", "segment-1-label")
+        TraceRecorder.currentContext
       }
 
       TraceRecorder.currentContext shouldBe empty
       createdContext.name shouldBe ("trace-with-segments")
+    }
 
+    "allow renaming a segment" in {
+      TraceRecorder.withNewTraceContext("trace-with-renamed-segment") {
+        val segment = TraceRecorder.currentContext.startSegment("original-segment-name", "segment-label")
+        segment.name should be("original-segment-name")
+
+        segment.rename("new-segment-name")
+        segment.name should be("new-segment-name")
+      }
     }
   }
-
-  case class TraceManipulationTestSegment(name: String) extends SegmentIdentity
-
 }

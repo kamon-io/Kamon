@@ -25,8 +25,7 @@ import kamon.metric.TraceMetrics.TraceMetricsSnapshot
 import kamon.metric.UserMetrics._
 import kamon.metric._
 import kamon.metric.instrument.{ Counter, Histogram }
-import kamon.metrics.GCMetrics.GCMetricSnapshot
-import kamon.metrics.MemoryMetrics.MemoryMetricSnapshot
+import kamon.metrics.ContextSwitchesMetrics.ContextSwitchesMetricsSnapshot
 import kamon.metrics.NetworkMetrics.NetworkMetricSnapshot
 import kamon.metrics.ProcessCPUMetrics.ProcessCPUMetricsSnapshot
 import kamon.metrics._
@@ -66,6 +65,7 @@ class LogReporterExtension(system: ExtendedActorSystem) extends Kamon.Extension 
     Kamon(Metrics)(system).subscribe(CPUMetrics, "*", subscriber, permanently = true)
     Kamon(Metrics)(system).subscribe(ProcessCPUMetrics, "*", subscriber, permanently = true)
     Kamon(Metrics)(system).subscribe(NetworkMetrics, "*", subscriber, permanently = true)
+    Kamon(Metrics)(system).subscribe(ContextSwitchesMetrics, "*", subscriber, permanently = true)
   }
 
 }
@@ -94,6 +94,7 @@ class LogReporterSubscriber extends Actor with ActorLogging {
       case (_, cms: CPUMetricSnapshot)                          ⇒ logCpuMetrics(cms)
       case (_, pcms: ProcessCPUMetricsSnapshot)                 ⇒ logProcessCpuMetrics(pcms)
       case (_, nms: NetworkMetricSnapshot)                      ⇒ logNetworkMetrics(nms)
+      case (_, csms: ContextSwitchesMetricsSnapshot)            ⇒ logContextSwitchesMetrics(csms)
       case ignoreEverythingElse                                 ⇒
     }
 
@@ -122,11 +123,11 @@ class LogReporterSubscriber extends Actor with ActorLogging {
           name,
           ams.processingTime.numberOfMeasurements, ams.timeInMailbox.numberOfMeasurements, ams.mailboxSize.min,
           ams.processingTime.min, ams.timeInMailbox.min, ams.mailboxSize.average,
-          ams.processingTime.percentile(0.50F), ams.timeInMailbox.percentile(0.50F), ams.mailboxSize.max,
-          ams.processingTime.percentile(0.90F), ams.timeInMailbox.percentile(0.90F),
-          ams.processingTime.percentile(0.95F), ams.timeInMailbox.percentile(0.95F),
-          ams.processingTime.percentile(0.99F), ams.timeInMailbox.percentile(0.99F), ams.errors.count,
-          ams.processingTime.percentile(0.999F), ams.timeInMailbox.percentile(0.999F),
+          ams.processingTime.percentile(50.0D), ams.timeInMailbox.percentile(50.0D), ams.mailboxSize.max,
+          ams.processingTime.percentile(90.0D), ams.timeInMailbox.percentile(90.0D),
+          ams.processingTime.percentile(95.0D), ams.timeInMailbox.percentile(95.0D),
+          ams.processingTime.percentile(99.0D), ams.timeInMailbox.percentile(99.0D), ams.errors.count,
+          ams.processingTime.percentile(99.9D), ams.timeInMailbox.percentile(99.9D),
           ams.processingTime.max, ams.timeInMailbox.max))
   }
 
@@ -163,13 +164,13 @@ class LogReporterSubscriber extends Actor with ActorLogging {
         ||    Network (ALL)                                                                                 |
         ||                                                                                                  |
         ||     Rx-Bytes (KB)                Tx-Bytes (KB)              Rx-Errors            Tx-Errors       |
-        ||      Min: %-4s                  Min: %-4s                 Total: %-8s      Total: %-8s|
-        ||      Avg: %-4s                Avg: %-4s                                                   |
-        ||      Max: %-4s                  Max: %-4s                                                     |
+        ||      Min: %-4s                  Min: %-4s                 Total: %-8s      Total: %-8s  |
+        ||      Avg: %-4s                Avg: %-4s                                                     |
+        ||      Max: %-4s                  Max: %-4s                                                       |
         ||                                                                                                  |
         |+--------------------------------------------------------------------------------------------------+"""
         .stripMargin.format(
-          rxBytes.min, txBytes.min, rxErrors.total, txErrors.total,
+          rxBytes.min, txBytes.min, rxErrors.sum, txErrors.sum,
           rxBytes.average, txBytes.average,
           rxBytes.max, txBytes.max))
   }
@@ -193,6 +194,28 @@ class LogReporterSubscriber extends Actor with ActorLogging {
           (cpuPercent.min / 100), totalProcessTime.min,
           (cpuPercent.average / 100), totalProcessTime.average,
           (cpuPercent.max / 100), totalProcessTime.max))
+  }
+
+  def logContextSwitchesMetrics(csms: ContextSwitchesMetricsSnapshot): Unit = {
+    import csms._
+
+    log.info(
+      """
+        |+--------------------------------------------------------------------------------------------------+
+        ||                                                                                                  |
+        ||    Context-Switches                                                                              |
+        ||                                                                                                  |
+        ||        Global                Per-Process-Non-Voluntary            Per-Process-Voluntary          |
+        ||    Min: %-12s                   Min: %-12s                  Min: %-12s      |
+        ||    Avg: %-12s                   Avg: %-12s                  Avg: %-12s      |
+        ||    Max: %-12s                   Max: %-12s                  Max: %-12s      |
+        ||                                                                                                  |
+        |+--------------------------------------------------------------------------------------------------+"""
+        .stripMargin.format(
+          global.min, perProcessNonVoluntary.min, perProcessVoluntary.min,
+          global.average, perProcessNonVoluntary.average, perProcessVoluntary.average,
+          global.max, perProcessNonVoluntary.max, perProcessVoluntary.max))
+
   }
 
   def logTraceMetrics(name: String, tms: TraceMetricsSnapshot): Unit = {
@@ -223,6 +246,12 @@ class LogReporterSubscriber extends Actor with ActorLogging {
   def logUserMetrics(histograms: Map[MetricGroupIdentity, Histogram.Snapshot],
     counters: Map[MetricGroupIdentity, Counter.Snapshot], minMaxCounters: Map[MetricGroupIdentity, Histogram.Snapshot],
     gauges: Map[MetricGroupIdentity, Histogram.Snapshot]): Unit = {
+
+    if (histograms.isEmpty && counters.isEmpty && minMaxCounters.isEmpty && gauges.isEmpty) {
+      log.info("No user metrics reported")
+      return
+    }
+
     val userMetricsData = StringBuilder.newBuilder
 
     userMetricsData.append(
@@ -295,9 +324,9 @@ class LogReporterSubscriber extends Actor with ActorLogging {
     val sb = StringBuilder.newBuilder
 
     sb.append("|    Min: %-11s  50th Perc: %-12s   90th Perc: %-12s   95th Perc: %-12s |\n".format(
-      histogram.min, histogram.percentile(0.50F), histogram.percentile(0.90F), histogram.percentile(0.95F)))
+      histogram.min, histogram.percentile(50.0D), histogram.percentile(90.0D), histogram.percentile(95.0D)))
     sb.append("|                      99th Perc: %-12s 99.9th Perc: %-12s         Max: %-12s |".format(
-      histogram.percentile(0.99F), histogram.percentile(0.999F), histogram.max))
+      histogram.percentile(99.0D), histogram.percentile(99.9D), histogram.max))
 
     sb.toString()
   }
@@ -310,36 +339,9 @@ class LogReporterSubscriber extends Actor with ActorLogging {
 object LogReporterSubscriber {
 
   implicit class RichHistogramSnapshot(histogram: Histogram.Snapshot) {
-    def percentile(q: Float): Long = {
-      val records = histogram.recordsIterator
-      val qThreshold = histogram.numberOfMeasurements * q
-      var countToCurrentLevel = 0L
-      var qLevel = 0L
-
-      while (countToCurrentLevel < qThreshold && records.hasNext) {
-        val record = records.next()
-        countToCurrentLevel += record.count
-        qLevel = record.level
-      }
-
-      qLevel
-    }
-
     def average: Double = {
-      var acc = 0L
-      for (record ← histogram.recordsIterator) {
-        acc += record.count * record.level
-      }
-
-      return acc / histogram.numberOfMeasurements
-    }
-
-    def total: Long = {
-      histogram.recordsIterator.foldLeft(0L) { (acc, record) ⇒
-        {
-          acc + (record.count * record.level)
-        }
-      }
+      if (histogram.numberOfMeasurements == 0) 0D
+      else histogram.sum / histogram.numberOfMeasurements
     }
   }
 }

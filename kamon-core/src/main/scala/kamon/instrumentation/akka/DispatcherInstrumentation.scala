@@ -105,7 +105,7 @@ class DispatcherInstrumentation {
 @Aspect
 class DispatcherMetricCollectionInfoIntoDispatcherMixin {
 
-  @DeclareMixin("akka.dispatch.Dispatcher")
+  @DeclareMixin("akka.dispatch.MessageDispatcher")
   def mixinDispatcherMetricsToMessageDispatcher: DispatcherMetricCollectionInfo = new DispatcherMetricCollectionInfo {}
 
   @DeclareMixin("akka.dispatch.Dispatchers")

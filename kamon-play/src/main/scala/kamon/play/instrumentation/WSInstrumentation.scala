@@ -16,15 +16,14 @@
 
 package kamon.play.instrumentation
 
-import org.aspectj.lang.annotation.{ Around, Pointcut, Aspect }
+import kamon.Kamon
+import kamon.play.Play
+import kamon.trace.{ SegmentMetricIdentityLabel, SegmentMetricIdentity, TraceRecorder }
 import org.aspectj.lang.ProceedingJoinPoint
-import kamon.trace.TraceRecorder
-import kamon.metric.TraceMetrics.HttpClientRequest
-import play.api.libs.ws.WSRequest
+import org.aspectj.lang.annotation.{ Around, Aspect, Pointcut }
+import play.api.libs.ws.{ WSRequest, WSResponse }
+
 import scala.concurrent.Future
-import play.api.libs.ws.WSResponse
-import scala.util.{ Failure, Success }
-import scala.concurrent.ExecutionContext.Implicits.global
 
 @Aspect
 class WSInstrumentation {
@@ -34,27 +33,15 @@ class WSInstrumentation {
 
   @Around("onExecuteRequest(request)")
   def aroundExecuteRequest(pjp: ProceedingJoinPoint, request: WSRequest): Any = {
-    import WSInstrumentation._
+    TraceRecorder.withTraceContextAndSystem { (ctx, system) ⇒
+      val playExtension = Kamon(Play)(system)
+      val executor = playExtension.defaultDispatcher
+      val segmentName = playExtension.generateHttpClientSegmentName(request)
+      val segment = ctx.startSegment(segmentName, SegmentMetricIdentityLabel.HttpClient)
+      val response = pjp.proceed().asInstanceOf[Future[WSResponse]]
 
-    val completionHandle = TraceRecorder.startSegment(HttpClientRequest(request.url), basicRequestAttributes(request))
-
-    val response = pjp.proceed().asInstanceOf[Future[WSResponse]]
-
-    response.onComplete {
-      case Failure(t) ⇒ completionHandle.map(_.finish(Map("completed-with-error" -> t.getMessage)))
-      case Success(_) ⇒ completionHandle.map(_.finish(Map.empty))
-    }
-
-    response
+      response.map(result ⇒ segment.finish())(executor)
+      response
+    } getOrElse (pjp.proceed())
   }
 }
-
-object WSInstrumentation {
-
-  def basicRequestAttributes(request: WSRequest): Map[String, String] = {
-    Map[String, String](
-      "host" -> request.header("host").getOrElse("Unknown"),
-      "path" -> request.method)
-  }
-}
-

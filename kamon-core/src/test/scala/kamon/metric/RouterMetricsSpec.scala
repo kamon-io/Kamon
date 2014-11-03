@@ -129,15 +129,13 @@ class RouterMetricsSpec extends TestKitBase with WordSpecLike with Matchers with
     }
 
     def createTestRouter(name: String): ActorRef = system.actorOf(RoundRobinPool(5).props(Props[RouterMetricsTestActor]), name)
-
-    def takeSnapshotOf(amr: RouterMetricsRecorder): RouterMetricSnapshot = amr.collect(collectionContext)
   }
 }
 
 class RouterMetricsTestActor extends Actor {
   def receive = {
     case Discard ⇒
-    case Fail    ⇒ 1 / 0
+    case Fail    ⇒ throw new ArithmeticException("Division by zero.")
     case Ping    ⇒ sender ! Pong
     case RouterTrackTimings(sendTimestamp, sleep) ⇒ {
       val dequeueTimestamp = System.nanoTime()

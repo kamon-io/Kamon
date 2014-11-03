@@ -28,14 +28,21 @@ class MetricTranslator(receiver: ActorRef) extends Actor
       val fromInSeconds = (from / 1E3).toInt
       val toInSeconds = (to / 1E3).toInt
       val allMetrics = collectWebTransactionMetrics(metrics) ++ collectCustomMetrics(metrics)
+      val groupedMetrics: Map[String, NewRelic.Metric] = allMetrics.map(metric ⇒ metric.name -> metric)(collection.breakOut) // avoid intermediate tuple
 
-      receiver ! TimeSliceMetrics(fromInSeconds, toInSeconds, allMetrics)
+      receiver ! TimeSliceMetrics(fromInSeconds, toInSeconds, groupedMetrics)
   }
 
 }
 
 object MetricTranslator {
-  case class TimeSliceMetrics(from: Long, to: Long, metrics: Seq[NewRelic.Metric])
+  case class TimeSliceMetrics(from: Long, to: Long, metrics: Map[String, NewRelic.Metric]) {
+    import kamon.metric._
+
+    def merge(thatMetrics: Option[TimeSliceMetrics]): TimeSliceMetrics = {
+      thatMetrics.map(that ⇒ TimeSliceMetrics(from + that.from, to + that.to, combineMaps(metrics, that.metrics)((l, r) ⇒ l.merge(r)))).getOrElse(this)
+    }
+  }
 
   def props(receiver: ActorRef): Props = Props(new MetricTranslator(receiver))
 }
