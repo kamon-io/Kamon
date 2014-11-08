@@ -81,7 +81,7 @@ class StatsDExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   // Subscribe to SystemMetrics
   val includeSystemMetrics = statsDConfig.getBoolean("report-system-metrics")
   if (includeSystemMetrics) {
-    List(CPUMetrics, ProcessCPUMetrics, MemoryMetrics, NetworkMetrics, GCMetrics, HeapMetrics) foreach { metric ⇒
+    Seq(CPUMetrics, ProcessCPUMetrics, MemoryMetrics, NetworkMetrics, GCMetrics, HeapMetrics, ContextSwitchesMetrics) foreach { metric ⇒
       Kamon(Metrics)(system).subscribe(metric, "*", statsDMetricsListener, permanently = true)
     }
   }
