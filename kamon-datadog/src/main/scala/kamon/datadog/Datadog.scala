@@ -84,7 +84,7 @@ class DatadogExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   // Subscribe to SystemMetrics
   val includeSystemMetrics = datadogConfig.getBoolean("report-system-metrics")
   if (includeSystemMetrics) {
-    List(CPUMetrics, ProcessCPUMetrics, MemoryMetrics, NetworkMetrics, GCMetrics, HeapMetrics) foreach { metric ⇒
+    List(CPUMetrics, ProcessCPUMetrics, MemoryMetrics, NetworkMetrics, GCMetrics, HeapMetrics, ContextSwitchesMetrics) foreach { metric ⇒
       Kamon(Metrics)(system).subscribe(metric, "*", datadogMetricsListener, permanently = true)
     }
   }
