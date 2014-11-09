@@ -34,6 +34,7 @@ sealed trait TraceContext {
   def finish(): Unit
   def origin: TraceContextOrigin
   def isOpen: Boolean
+  def isClosed: Boolean = !isOpen
   def isEmpty: Boolean
   def nonEmpty: Boolean = !isEmpty
   def startSegment(segmentName: String, label: String): Segment
@@ -111,7 +112,7 @@ class DefaultTraceContext(traceName: String, val token: String, izOpen: Boolean,
   private def finishSegment(segmentName: String, label: String, duration: Long): Unit = {
     finishedSegments.add(SegmentData(SegmentMetricIdentity(segmentName, label), duration))
 
-    if (!_isOpen) {
+    if (isClosed) {
       metricsExtension.register(TraceMetrics(name), TraceMetrics.Factory).map { traceMetrics ⇒
         drainFinishedSegments(traceMetrics)
       }
