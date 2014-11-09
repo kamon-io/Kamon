@@ -48,7 +48,7 @@ class MetricsExtension(system: ExtendedActorSystem) extends Kamon.Extension {
 
   def register(identity: MetricGroupIdentity, factory: MetricGroupFactory): Option[factory.GroupRecorder] = {
     if (shouldTrack(identity))
-        Some(storage.atomicGetOrElseUpdate(identity, factory.create(metricsExtConfig, system)).asInstanceOf[factory.GroupRecorder])
+      Some(storage.atomicGetOrElseUpdate(identity, factory.create(metricsExtConfig, system)).asInstanceOf[factory.GroupRecorder])
     else
       None
   }
@@ -135,10 +135,10 @@ object Metrics extends ExtensionId[MetricsExtension] with ExtensionIdProvider {
   }
 
   implicit class AtomicGetOrElseUpdateForTriemap[K, V](trieMap: TrieMap[K, V]) {
-    def atomicGetOrElseUpdate(key: K, op: => V): V =
+    def atomicGetOrElseUpdate(key: K, op: ⇒ V): V =
       trieMap.get(key) match {
-        case Some(v) => v
-        case None => val d = op; trieMap.putIfAbsent(key, d).getOrElse(d)
+        case Some(v) ⇒ v
+        case None    ⇒ val d = op; trieMap.putIfAbsent(key, d).getOrElse(d)
       }
   }
 }

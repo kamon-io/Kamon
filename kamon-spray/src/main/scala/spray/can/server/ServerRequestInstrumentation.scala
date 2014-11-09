@@ -93,10 +93,9 @@ class ServerRequestInstrumentation {
       system.eventStream.publish(Warning("ServerRequestInstrumentation", classOf[ServerRequestInstrumentation], text))
 
     if (incomingTraceContext.nonEmpty) {
-      if(incomingTraceContext.token != storedTraceContext.token)
+      if (incomingTraceContext.token != storedTraceContext.token)
         publishWarning(s"Different trace token found when trying to close a trace, original: [${storedTraceContext.token}] - incoming: [${incomingTraceContext.token}]", system)
-    }
-    else
+    } else
       publishWarning(s"EmptyTraceContext present while closing the trace with token [${storedTraceContext.token}]", system)
   }
 

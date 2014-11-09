@@ -45,7 +45,7 @@ object WebTransactionMetricExtractor extends MetricExtractor {
             Metric.fromKamonMetricSnapshot(snapshot, s"WebTransaction/Custom/$name", None, Scale.Unit)
 
           // Extract all external services.
-          case (SegmentMetricIdentity(segmentName, label), snapshot: Histogram.Snapshot) if label.equals(HttpClient)⇒
+          case (SegmentMetricIdentity(segmentName, label), snapshot: Histogram.Snapshot) if label.equals(HttpClient) ⇒
             accumulatedExternalServices = accumulatedExternalServices.merge(snapshot, collectionContext)
 
             Metric.fromKamonMetricSnapshot(snapshot, s"External/$segmentName/all", None, Scale.Unit)
