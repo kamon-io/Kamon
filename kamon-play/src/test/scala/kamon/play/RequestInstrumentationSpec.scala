@@ -225,16 +225,16 @@ object Routes extends Router.Routes {
 
   def routes: PartialFunction[RequestHeader, Handler] = {
     case Application_getRouted(params) ⇒ call {
-      createInvoker(controllers.Application.getRouted,
-        HandlerDef(this.getClass.getClassLoader, "", "controllers.Application", "getRouted", Nil, "GET", """some comment""", Routes.prefix + """getRouted""")).call(controllers.Application.getRouted)
+      invokeHandler(controllers.Application.getRouted,
+        HandlerDef(this, "controllers.Application", "getRouted", Nil, "GET", """some comment""", Routes.prefix + """getRouted"""))
     }
     case Application_postRouted(params) ⇒ call {
-      createInvoker(controllers.Application.postRouted,
-        HandlerDef(this.getClass.getClassLoader, "", "controllers.Application", "postRouted", Nil, "POST", """some comment""", Routes.prefix + """postRouted""")).call(controllers.Application.postRouted)
+      invokeHandler(controllers.Application.postRouted,
+        HandlerDef(this, "controllers.Application", "postRouted", Nil, "POST", """some comment""", Routes.prefix + """postRouted"""))
     }
     case Application_show(params) ⇒ call(params.fromPath[Int]("id", None)) { (id) ⇒
-      createInvoker(controllers.Application.showRouted(id),
-        HandlerDef(this.getClass.getClassLoader, "", "controllers.Application", "showRouted", Seq(classOf[Int]), "GET", """""", Routes.prefix + """show/some/$id<[^/]+>""")).call(controllers.Application.showRouted(id))
+      invokeHandler(controllers.Application.showRouted(id),
+        HandlerDef(this, "controllers.Application", "showRouted", Seq(classOf[Int]), "GET", """some comment""", Routes.prefix + """show/some/$id<[^/]+>"""))
     }
   }
 }

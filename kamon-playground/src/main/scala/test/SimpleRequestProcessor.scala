@@ -17,7 +17,7 @@
 package test
 
 import akka.actor._
-import akka.routing.RoundRobinPool
+import akka.routing.RoundRobinRouter
 import akka.util.Timeout
 import kamon.Kamon
 import kamon.metric.Subscriptions.TickMetricSnapshot
@@ -67,7 +67,7 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
   //Kamon(UserMetrics).registerGauge("test-gauge")(() => 10L)
 
   val pipeline = sendReceive
-  val replier = system.actorOf(Props[Replier].withRouter(RoundRobinPool(nrOfInstances = 4)), "replier")
+  val replier = system.actorOf(Props[Replier].withRouter(RoundRobinRouter(nrOfInstances = 4)), "replier")
 
   val random = new Random()
 
