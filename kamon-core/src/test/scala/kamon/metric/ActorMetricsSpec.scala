@@ -44,13 +44,18 @@ class ActorMetricsSpec extends TestKitBase with WordSpecLike with Matchers with 
       |      }
       |    }
       |  ]
-      |  precision {
-      |    default-histogram-precision {
+      |  precision.actor {
+      |    processing-time {
       |      highest-trackable-value = 3600000000000
       |      significant-value-digits = 2
       |    }
       |
-      |    default-min-max-counter-precision {
+      |    time-in-mailbox {
+      |      highest-trackable-value = 3600000000000
+      |      significant-value-digits = 2
+      |    }
+      |
+      |    mailbox-size {
       |      refresh-interval = 1 hour
       |      highest-trackable-value = 999999999
       |      significant-value-digits = 2
