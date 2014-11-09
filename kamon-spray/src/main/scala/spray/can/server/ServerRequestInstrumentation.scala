@@ -90,10 +90,12 @@ class ServerRequestInstrumentation {
 
   def verifyTraceContextConsistency(incomingTraceContext: TraceContext, storedTraceContext: TraceContext, system: ActorSystem): Unit = {
     def publishWarning(text: String, system: ActorSystem): Unit =
-      system.eventStream.publish(Warning("", classOf[ServerRequestInstrumentation], text))
+      system.eventStream.publish(Warning("ServerRequestInstrumentation", classOf[ServerRequestInstrumentation], text))
 
-    if (incomingTraceContext.nonEmpty && incomingTraceContext.token != storedTraceContext.token)
-      publishWarning(s"Different trace token found when trying to close a trace, original: [${storedTraceContext.token}] - incoming: [${incomingTraceContext.token}]", system)
+    if (incomingTraceContext.nonEmpty) {
+      if(incomingTraceContext.token != storedTraceContext.token)
+        publishWarning(s"Different trace token found when trying to close a trace, original: [${storedTraceContext.token}] - incoming: [${incomingTraceContext.token}]", system)
+    }
     else
       publishWarning(s"EmptyTraceContext present while closing the trace with token [${storedTraceContext.token}]", system)
   }
