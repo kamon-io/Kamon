@@ -28,6 +28,7 @@ object Spray extends ExtensionId[SprayExtension] with ExtensionIdProvider {
   def lookup(): ExtensionId[_ <: actor.Extension] = Spray
   def createExtension(system: ExtendedActorSystem): SprayExtension = new SprayExtension(system)
 
+  val SegmentLibraryName = "spray-client"
 }
 
 object ClientSegmentCollectionStrategy {

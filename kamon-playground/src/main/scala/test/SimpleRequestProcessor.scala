@@ -23,7 +23,7 @@ import kamon.Kamon
 import kamon.metric.Subscriptions.TickMetricSnapshot
 import kamon.metric._
 import kamon.spray.KamonTraceDirectives
-import kamon.trace.{ SegmentMetricIdentityLabel, TraceRecorder }
+import kamon.trace.{ SegmentCategory, TraceRecorder }
 import spray.http.{ StatusCodes, Uri }
 import spray.httpx.RequestBuilding
 import spray.routing.SimpleRoutingApp
@@ -127,7 +127,7 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
         } ~
         path("segment") {
           complete {
-            val segment = TraceRecorder.currentContext.startSegment("hello-world", SegmentMetricIdentityLabel.HttpClient)
+            val segment = TraceRecorder.currentContext.startSegment("hello-world", SegmentCategory.HttpClient, "none")
             (replier ? "hello").mapTo[String].onComplete { t ⇒
               segment.finish()
             }

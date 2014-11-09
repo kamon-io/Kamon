@@ -78,7 +78,7 @@ class TraceContextManipulationSpec extends TestKitBase with WordSpecLike with Ma
 
     "allow creating a segment within a trace" in {
       val createdContext = TraceRecorder.withNewTraceContext("trace-with-segments") {
-        val segment = TraceRecorder.currentContext.startSegment("segment-1", "segment-1-label")
+        val segment = TraceRecorder.currentContext.startSegment("segment-1", "segment-1-category", "segment-library")
         TraceRecorder.currentContext
       }
 
@@ -88,7 +88,7 @@ class TraceContextManipulationSpec extends TestKitBase with WordSpecLike with Ma
 
     "allow renaming a segment" in {
       TraceRecorder.withNewTraceContext("trace-with-renamed-segment") {
-        val segment = TraceRecorder.currentContext.startSegment("original-segment-name", "segment-label")
+        val segment = TraceRecorder.currentContext.startSegment("original-segment-name", "segment-label", "segment-library")
         segment.name should be("original-segment-name")
 
         segment.rename("new-segment-name")

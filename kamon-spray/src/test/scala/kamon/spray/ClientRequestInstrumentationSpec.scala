@@ -23,7 +23,7 @@ import org.scalatest.time.{ Millis, Seconds, Span }
 import org.scalatest.{ Matchers, WordSpecLike }
 import spray.httpx.RequestBuilding
 import spray.http.{ HttpResponse, HttpRequest }
-import kamon.trace.{ SegmentMetricIdentityLabel, SegmentMetricIdentity, TraceRecorder }
+import kamon.trace.{ SegmentCategory, SegmentMetricIdentity, TraceRecorder }
 import com.typesafe.config.ConfigFactory
 import spray.can.Http
 import spray.http.HttpHeaders.RawHeader
@@ -144,7 +144,8 @@ class ClientRequestInstrumentationSpec extends TestKitBase with WordSpecLike wit
 
         val traceMetricsSnapshot = takeSnapshotOf("assign-name-to-segment-with-request-level-api")
         traceMetricsSnapshot.elapsedTime.numberOfMeasurements should be(1)
-        traceMetricsSnapshot.segments(SegmentMetricIdentity("request-level /request-level-api-segment", SegmentMetricIdentityLabel.HttpClient)).numberOfMeasurements should be(1)
+        traceMetricsSnapshot.segments(SegmentMetricIdentity("request-level /request-level-api-segment",
+          SegmentCategory.HttpClient, Spray.SegmentLibraryName)).numberOfMeasurements should be(1)
       }
 
       "rename a request level api segment once it reaches the relevant host connector" in {
@@ -174,7 +175,8 @@ class ClientRequestInstrumentationSpec extends TestKitBase with WordSpecLike wit
 
         val traceMetricsSnapshot = takeSnapshotOf("rename-segment-with-request-level-api")
         traceMetricsSnapshot.elapsedTime.numberOfMeasurements should be(1)
-        traceMetricsSnapshot.segments(SegmentMetricIdentity("host-level /request-level-api-segment", SegmentMetricIdentityLabel.HttpClient)).numberOfMeasurements should be(1)
+        traceMetricsSnapshot.segments(SegmentMetricIdentity("host-level /request-level-api-segment",
+          SegmentCategory.HttpClient, Spray.SegmentLibraryName)).numberOfMeasurements should be(1)
       }
     }
 
@@ -261,7 +263,8 @@ class ClientRequestInstrumentationSpec extends TestKitBase with WordSpecLike wit
 
         val traceMetricsSnapshot = takeSnapshotOf("create-segment-with-host-level-api")
         traceMetricsSnapshot.elapsedTime.numberOfMeasurements should be(1)
-        traceMetricsSnapshot.segments(SegmentMetricIdentity("host-level /host-level-api-segment", SegmentMetricIdentityLabel.HttpClient)).numberOfMeasurements should be(1)
+        traceMetricsSnapshot.segments(SegmentMetricIdentity("host-level /host-level-api-segment",
+          SegmentCategory.HttpClient, Spray.SegmentLibraryName)).numberOfMeasurements should be(1)
       }
     }
   }
