@@ -106,7 +106,7 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
           }
         } ~
         path("future") {
-          traceName("OK-Future") {
+          traceName("OKFuture") {
             dynamic {
               counter.increment()
               complete(Future { "OK" })

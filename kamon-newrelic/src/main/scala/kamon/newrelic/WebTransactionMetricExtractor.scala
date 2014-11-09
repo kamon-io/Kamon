@@ -18,39 +18,46 @@ package kamon.newrelic
 
 import kamon.metric._
 import kamon.metric.TraceMetrics.ElapsedTime
-import akka.actor.Actor
-import kamon.Kamon
 import kamon.metric.instrument.Histogram
+import kamon.trace.SegmentMetricIdentityLabel.HttpClient
+import kamon.trace.SegmentMetricIdentity
 
-trait WebTransactionMetrics {
-  self: Actor ⇒
+object WebTransactionMetricExtractor extends MetricExtractor {
 
-  def collectWebTransactionMetrics(metrics: Map[MetricGroupIdentity, MetricGroupSnapshot]): Seq[NewRelic.Metric] = {
-    val newRelicExtension = Kamon(NewRelic)(context.system)
-    val apdexBuilder = new ApdexBuilder("Apdex", None, newRelicExtension.apdexT)
-    val collectionContext = newRelicExtension.collectionContext
+  def extract(settings: Agent.Settings, collectionContext: CollectionContext, metrics: Map[MetricGroupIdentity, MetricGroupSnapshot]): Map[MetricID, MetricData] = {
+    val apdexBuilder = new ApdexBuilder("Apdex", None, settings.apdexT)
 
     // Trace metrics are recorded in nanoseconds.
     var accumulatedHttpDispatcher: Histogram.Snapshot = Histogram.Snapshot.empty(Scale.Nano)
+    var accumulatedExternalServices: Histogram.Snapshot = Histogram.Snapshot.empty(Scale.Nano)
 
-    val webTransactionMetrics = metrics.collect {
+    val transactionMetrics = metrics.collect {
       case (TraceMetrics(name), groupSnapshot) ⇒
 
         groupSnapshot.metrics collect {
+          // Extract WebTransaction metrics and accumulate HttpDispatcher
           case (ElapsedTime, snapshot: Histogram.Snapshot) ⇒
             accumulatedHttpDispatcher = accumulatedHttpDispatcher.merge(snapshot, collectionContext)
             snapshot.recordsIterator.foreach { record ⇒
               apdexBuilder.record(Scale.convert(snapshot.scale, Scale.Unit, record.level), record.count)
             }
 
-            toNewRelicMetric(Scale.Unit)(s"WebTransaction/Custom/$name", None, snapshot)
+            Metric.fromKamonMetricSnapshot(snapshot, s"WebTransaction/Custom/$name", None, Scale.Unit)
+
+          // Extract all external services.
+          case (SegmentMetricIdentity(segmentName, label), snapshot: Histogram.Snapshot) if label.equals(HttpClient) ⇒
+            accumulatedExternalServices = accumulatedExternalServices.merge(snapshot, collectionContext)
+
+            Metric.fromKamonMetricSnapshot(snapshot, s"External/$segmentName/all", None, Scale.Unit)
         }
     }
 
-    val httpDispatcher = toNewRelicMetric(Scale.Unit)("HttpDispatcher", None, accumulatedHttpDispatcher)
-    val webTransaction = toNewRelicMetric(Scale.Unit)("WebTransaction", None, accumulatedHttpDispatcher)
+    val httpDispatcher = Metric.fromKamonMetricSnapshot(accumulatedHttpDispatcher, "HttpDispatcher", None, Scale.Unit)
+    val webTransaction = Metric.fromKamonMetricSnapshot(accumulatedHttpDispatcher, "WebTransaction", None, Scale.Unit)
+    val external = Metric.fromKamonMetricSnapshot(accumulatedExternalServices, "External", None, Scale.Unit)
+    val externalAllWeb = Metric.fromKamonMetricSnapshot(accumulatedExternalServices, "External/allWeb", None, Scale.Unit)
 
-    Seq(httpDispatcher, webTransaction, apdexBuilder.build) ++ webTransactionMetrics.flatten.toSeq
+    Map(httpDispatcher, webTransaction, external, externalAllWeb, apdexBuilder.build) ++ transactionMetrics.flatten.toMap
   }
 }
 
@@ -70,5 +77,5 @@ class ApdexBuilder(name: String, scope: Option[String], apdexT: Double) {
       frustrating += count
 
   // NewRelic reuses the same metric structure for recording the Apdex.. weird, but that's how it works.
-  def build: NewRelic.Metric = NewRelic.Metric(name, scope, satisfying, tolerating, frustrating, apdexT, apdexT, 0)
+  def build: Metric = (MetricID(name, scope), MetricData(satisfying, tolerating, frustrating, apdexT, apdexT, 0))
 }

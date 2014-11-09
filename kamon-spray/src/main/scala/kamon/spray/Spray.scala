@@ -21,6 +21,7 @@ import akka.actor
 import kamon.Kamon
 import kamon.http.HttpServerMetrics
 import kamon.metric.Metrics
+import spray.http.HttpHeaders.Host
 import spray.http.HttpRequest
 
 object Spray extends ExtensionId[SprayExtension] with ExtensionIdProvider {
@@ -66,7 +67,14 @@ trait SprayNameGenerator {
 }
 
 class DefaultSprayNameGenerator extends SprayNameGenerator {
-  def generateRequestLevelApiSegmentName(request: HttpRequest): String = request.method.value + ": " + request.uri.path
+  def hostFromHeaders(request: HttpRequest): Option[String] = request.header[Host].map(_.host)
+
+  def generateRequestLevelApiSegmentName(request: HttpRequest): String = {
+    val uriAddress = request.uri.authority.host.address
+    if (uriAddress.equals("")) hostFromHeaders(request).getOrElse("unknown-host") else uriAddress
+  }
+
+  def generateHostLevelApiSegmentName(request: HttpRequest): String = hostFromHeaders(request).getOrElse("unknown-host")
+
   def generateTraceName(request: HttpRequest): String = request.method.value + ": " + request.uri.path
-  def generateHostLevelApiSegmentName(request: HttpRequest): String = request.uri.authority.host.address
 }

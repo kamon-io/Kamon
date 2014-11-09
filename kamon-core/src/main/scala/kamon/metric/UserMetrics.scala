@@ -8,6 +8,7 @@ import kamon.metric.instrument.{ Gauge, MinMaxCounter, Counter, Histogram }
 import scala.concurrent.duration.FiniteDuration
 
 class UserMetricsExtension(system: ExtendedActorSystem) extends Kamon.Extension {
+  import Metrics.AtomicGetOrElseUpdateForTriemap
   import UserMetrics._
 
   lazy val metricsExtension = Kamon(Metrics)(system)
@@ -18,45 +19,45 @@ class UserMetricsExtension(system: ExtendedActorSystem) extends Kamon.Extension 
   val defaultGaugePrecisionConfig = precisionConfig.getConfig("default-gauge-precision")
 
   def registerHistogram(name: String, precision: Histogram.Precision, highestTrackableValue: Long): Histogram = {
-    metricsExtension.storage.getOrElseUpdate(UserHistogram(name), {
+    metricsExtension.storage.atomicGetOrElseUpdate(UserHistogram(name), {
       UserHistogramRecorder(Histogram(highestTrackableValue, precision, Scale.Unit))
     }).asInstanceOf[UserHistogramRecorder].histogram
   }
 
   def registerHistogram(name: String): Histogram = {
-    metricsExtension.storage.getOrElseUpdate(UserHistogram(name), {
+    metricsExtension.storage.atomicGetOrElseUpdate(UserHistogram(name), {
       UserHistogramRecorder(Histogram.fromConfig(defaultHistogramPrecisionConfig))
     }).asInstanceOf[UserHistogramRecorder].histogram
   }
 
   def registerCounter(name: String): Counter = {
-    metricsExtension.storage.getOrElseUpdate(UserCounter(name), {
+    metricsExtension.storage.atomicGetOrElseUpdate(UserCounter(name), {
       UserCounterRecorder(Counter())
     }).asInstanceOf[UserCounterRecorder].counter
   }
 
   def registerMinMaxCounter(name: String, precision: Histogram.Precision, highestTrackableValue: Long,
     refreshInterval: FiniteDuration): MinMaxCounter = {
-    metricsExtension.storage.getOrElseUpdate(UserMinMaxCounter(name), {
+    metricsExtension.storage.atomicGetOrElseUpdate(UserMinMaxCounter(name), {
       UserMinMaxCounterRecorder(MinMaxCounter(highestTrackableValue, precision, Scale.Unit, refreshInterval, system))
     }).asInstanceOf[UserMinMaxCounterRecorder].minMaxCounter
   }
 
   def registerMinMaxCounter(name: String): MinMaxCounter = {
-    metricsExtension.storage.getOrElseUpdate(UserMinMaxCounter(name), {
+    metricsExtension.storage.atomicGetOrElseUpdate(UserMinMaxCounter(name), {
       UserMinMaxCounterRecorder(MinMaxCounter.fromConfig(defaultMinMaxCounterPrecisionConfig, system))
     }).asInstanceOf[UserMinMaxCounterRecorder].minMaxCounter
   }
 
   def registerGauge(name: String)(currentValueCollector: Gauge.CurrentValueCollector): Gauge = {
-    metricsExtension.storage.getOrElseUpdate(UserGauge(name), {
+    metricsExtension.storage.atomicGetOrElseUpdate(UserGauge(name), {
       UserGaugeRecorder(Gauge.fromConfig(defaultGaugePrecisionConfig, system)(currentValueCollector))
     }).asInstanceOf[UserGaugeRecorder].gauge
   }
 
   def registerGauge(name: String, precision: Histogram.Precision, highestTrackableValue: Long,
     refreshInterval: FiniteDuration)(currentValueCollector: Gauge.CurrentValueCollector): Gauge = {
-    metricsExtension.storage.getOrElseUpdate(UserGauge(name), {
+    metricsExtension.storage.atomicGetOrElseUpdate(UserGauge(name), {
       UserGaugeRecorder(Gauge(precision, highestTrackableValue, Scale.Unit, refreshInterval, system)(currentValueCollector))
     }).asInstanceOf[UserGaugeRecorder].gauge
   }
