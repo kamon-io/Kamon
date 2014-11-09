@@ -30,6 +30,8 @@ import kamon.metric.Subscriptions.{ Unsubscribe, Subscribe }
 import java.util.concurrent.TimeUnit
 
 class MetricsExtension(system: ExtendedActorSystem) extends Kamon.Extension {
+  import Metrics.AtomicGetOrElseUpdateForTriemap
+
   val metricsExtConfig = system.settings.config.getConfig("kamon.metrics")
   printInitializationMessage(system.eventStream, metricsExtConfig.getBoolean("disable-aspectj-weaver-missing-error"))
 
@@ -46,7 +48,7 @@ class MetricsExtension(system: ExtendedActorSystem) extends Kamon.Extension {
 
   def register(identity: MetricGroupIdentity, factory: MetricGroupFactory): Option[factory.GroupRecorder] = {
     if (shouldTrack(identity))
-      Some(storage.getOrElseUpdate(identity, factory.create(metricsExtConfig, system)).asInstanceOf[factory.GroupRecorder])
+      Some(storage.atomicGetOrElseUpdate(identity, factory.create(metricsExtConfig, system)).asInstanceOf[factory.GroupRecorder])
     else
       None
   }
@@ -130,5 +132,13 @@ object Metrics extends ExtensionId[MetricsExtension] with ExtensionIdProvider {
 
   case class MetricGroupFilter(includes: List[GlobPathFilter], excludes: List[GlobPathFilter]) {
     def accept(name: String): Boolean = includes.exists(_.accept(name)) && !excludes.exists(_.accept(name))
+  }
+
+  implicit class AtomicGetOrElseUpdateForTriemap[K, V](trieMap: TrieMap[K, V]) {
+    def atomicGetOrElseUpdate(key: K, op: ⇒ V): V =
+      trieMap.get(key) match {
+        case Some(v) ⇒ v
+        case None    ⇒ val d = op; trieMap.putIfAbsent(key, d).getOrElse(d)
+      }
   }
 }
