@@ -180,7 +180,7 @@ class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
         TraceLocal.store(TraceLocalKey)(header.headers.get(traceLocalStorageKey).getOrElse("unknown"))
 
         next(header).map {
-          result ⇒ result.withHeaders((traceLocalStorageKey -> TraceLocal.retrieve(TraceLocalKey).get))
+          result ⇒ result.withHeaders(traceLocalStorageKey -> TraceLocal.retrieve(TraceLocalKey).get)
         }
       }
     }

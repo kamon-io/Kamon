@@ -55,36 +55,30 @@ class RequestInstrumentation {
       // TODO: Move to a Kamon-specific dispatcher.
       val executor = Kamon(Play)(Akka.system()).defaultDispatcher
 
-      def onResult(result: SimpleResult): Result = {
-
+      def onResult(result: SimpleResult): SimpleResult = {
         TraceRecorder.withTraceContextAndSystem { (ctx, system) ⇒
           ctx.finish()
 
           val playExtension = Kamon(Play)(system)
           recordHttpServerMetrics(result.header, ctx.name, playExtension)
 
-          if (playExtension.includeTraceToken)
-            result.withHeaders(playExtension.traceTokenHeaderName -> ctx.token)
-          else
-            result
-
-        } getOrElse (result)
+          if (playExtension.includeTraceToken) result.withHeaders(playExtension.traceTokenHeaderName -> ctx.token)
+          else result
+        } getOrElse result
       }
-
       //override the current trace name
-      normaliseTraceName(requestHeader).map(TraceRecorder.rename(_))
+      normaliseTraceName(requestHeader).map(TraceRecorder.rename)
 
       // Invoke the action
       next(requestHeader).map(onResult)(executor)
     }
-
-    pjp.proceed(Array(essentialAction))
+    pjp.proceed(Array(EssentialAction(essentialAction)))
   }
 
   @Before("execution(* play.api.GlobalSettings+.onError(..)) && args(request, ex)")
   def beforeOnError(request: TraceContextAware, ex: Throwable): Unit = TraceRecorder.withTraceContextAndSystem { (ctx, system) ⇒
     val playExtension = Kamon(Play)(system)
-    playExtension.httpServerMetrics.recordResponse(ctx.name, "505")
+    playExtension.httpServerMetrics.recordResponse(ctx.name, "500")
   }
 
   private def recordHttpServerMetrics(header: ResponseHeader, traceName: String, playExtension: PlayExtension): Unit =
