@@ -18,10 +18,10 @@ package kamon.newrelic
 import spray.json._
 import kamon.newrelic.Agent._
 
-object AgentJsonProtocol extends DefaultJsonProtocol {
+object JsonProtocol extends DefaultJsonProtocol {
 
-  implicit object ConnectJsonWriter extends RootJsonWriter[AgentInfo] {
-    def write(obj: AgentInfo): JsValue =
+  implicit object ConnectJsonWriter extends RootJsonWriter[Settings] {
+    def write(obj: Settings): JsValue =
       JsArray(
         JsObject(
           "agent_version" -> JsString("3.1.0"),
@@ -36,28 +36,30 @@ object AgentJsonProtocol extends DefaultJsonProtocol {
     def write(seq: Seq[T]) = JsArray(seq.map(_.toJson).toVector)
   }
 
-  implicit object MetricDetailWriter extends JsonWriter[NewRelic.Metric] {
-    def write(obj: NewRelic.Metric): JsValue = {
+  implicit object MetricDetailWriter extends JsonWriter[Metric] {
+    def write(obj: Metric): JsValue = {
+      val (metricID, metricData) = obj
+
       JsArray(
         JsObject(
-          "name" -> JsString(obj.name) // TODO Include scope
+          "name" -> JsString(metricID.name) // TODO Include scope
           ),
         JsArray(
-          JsNumber(obj.callCount),
-          JsNumber(obj.total),
-          JsNumber(obj.totalExclusive),
-          JsNumber(obj.min),
-          JsNumber(obj.max),
-          JsNumber(obj.sumOfSquares)))
+          JsNumber(metricData.callCount),
+          JsNumber(metricData.total),
+          JsNumber(metricData.totalExclusive),
+          JsNumber(metricData.min),
+          JsNumber(metricData.max),
+          JsNumber(metricData.sumOfSquares)))
     }
   }
 
-  implicit object MetricDataWriter extends RootJsonWriter[MetricData] {
-    def write(obj: MetricData): JsValue =
+  implicit object MetricBatchWriter extends RootJsonWriter[MetricBatch] {
+    def write(obj: MetricBatch): JsValue =
       JsArray(
-        JsNumber(obj.runId),
+        JsNumber(obj.runID),
         JsNumber(obj.timeSliceMetrics.from),
         JsNumber(obj.timeSliceMetrics.to),
-        obj.timeSliceMetrics.metrics.values.toSeq.toJson)
+        obj.timeSliceMetrics.metrics.toSeq.toJson)
   }
 }

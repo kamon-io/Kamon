@@ -16,19 +16,18 @@
 
 package kamon.newrelic
 
-import akka.actor.Actor
 import kamon.metric.UserMetrics.UserMetricGroup
 import kamon.metric._
+import kamon.newrelic.Agent.Settings
 
-trait CustomMetrics {
-  self: Actor ⇒
+object CustomMetricExtractor extends MetricExtractor {
 
-  def collectCustomMetrics(metrics: Map[MetricGroupIdentity, MetricGroupSnapshot]): Seq[NewRelic.Metric] = {
+  def extract(settings: Settings, collectionContext: CollectionContext, metrics: Map[MetricGroupIdentity, MetricGroupSnapshot]): Map[MetricID, MetricData] = {
     metrics.collect {
       case (mg: UserMetricGroup, groupSnapshot) ⇒
         groupSnapshot.metrics collect {
-          case (name, snapshot) ⇒ toNewRelicMetric(Scale.Unit)(s"Custom/${mg.name}", None, snapshot)
+          case (name, snapshot) ⇒ Metric.fromKamonMetricSnapshot(snapshot, s"Custom/${mg.name}", None, Scale.Unit)
         }
-    }.flatten.toSeq
+    }.flatten.toMap
   }
 }
