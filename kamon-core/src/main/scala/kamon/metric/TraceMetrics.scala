@@ -39,7 +39,7 @@ object TraceMetrics extends MetricGroupCategory {
     val segments = TrieMap[MetricIdentity, Histogram]()
 
     def segmentRecorder(segmentIdentity: MetricIdentity): Histogram =
-        segments.atomicGetOrElseUpdate(segmentIdentity, segmentRecorderFactory.apply())
+      segments.atomicGetOrElseUpdate(segmentIdentity, segmentRecorderFactory.apply())
 
     def collect(context: CollectionContext): TraceMetricsSnapshot =
       TraceMetricsSnapshot(
@@ -55,7 +55,7 @@ object TraceMetrics extends MetricGroupCategory {
     type GroupSnapshotType = TraceMetricsSnapshot
 
     def merge(that: TraceMetricsSnapshot, context: CollectionContext): TraceMetricsSnapshot =
-      TraceMetricsSnapshot(elapsedTime.merge(that.elapsedTime, context), combineMaps(segments, that.segments)((l, r) => l.merge(r, context)))
+      TraceMetricsSnapshot(elapsedTime.merge(that.elapsedTime, context), combineMaps(segments, that.segments)((l, r) ⇒ l.merge(r, context)))
 
     def metrics: Map[MetricIdentity, MetricSnapshot] = segments + (ElapsedTime -> elapsedTime)
   }
