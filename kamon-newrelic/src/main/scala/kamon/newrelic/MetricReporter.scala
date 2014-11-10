@@ -34,7 +34,7 @@ class MetricReporter(settings: Agent.Settings, runID: Long, baseUri: Uri) extend
   val collectorClient = compressedPipeline(IO(Http)(context.system))
 
   val subscriber = {
-    val tickInterval = context.system.settings.config.getDuration("kamon.metrics.tick-interval", TimeUnit.MILLISECONDS)
+    val tickInterval = context.system.settings.config.getMilliseconds("kamon.metrics.tick-interval")
     if (tickInterval == 60000)
       self
     else

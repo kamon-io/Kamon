@@ -85,8 +85,10 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
         path("site") {
           traceName("FinalGetSite-3") {
             complete {
-              for (f1 <- pipeline(Get("http://127.0.0.1:9090/ok"));
-                   f2 <- pipeline(Get("http://www.google.com/search?q=mkyong"))) yield "Ok Double Future"
+              for (
+                f1 ← pipeline(Get("http://127.0.0.1:9090/ok"));
+                f2 ← pipeline(Get("http://www.google.com/search?q=mkyong"))
+              ) yield "Ok Double Future"
             }
           }
         } ~

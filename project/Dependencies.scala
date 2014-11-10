@@ -30,7 +30,7 @@ object Dependencies {
   val akkaRemote      = "com.typesafe.akka"         %%  "akka-remote"           % akkaVersion
   val akkaCluster     = "com.typesafe.akka"         %%  "akka-cluster"          % akkaVersion
   val play            = "com.typesafe.play"         %%  "play"                  % playVersion
-  val playTest        = "org.scalatestplus"         %%  "play"                  % "1.2.0"
+  val playTest        = "org.scalatestplus"         %%  "play"                  % "1.3.0"
   val slf4Api         = "org.slf4j"                 %   "slf4j-api"             % slf4jVersion
   val slf4nop         = "org.slf4j"                 %   "slf4j-nop"             % slf4jVersion
   val scalaCompiler   = "org.scala-lang"            %   "scala-compiler"        % Settings.ScalaVersion

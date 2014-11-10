@@ -38,7 +38,7 @@ class WSInstrumentation {
       val playExtension = Kamon(Play)(system)
       val executor = playExtension.defaultDispatcher
       val segmentName = playExtension.generateHttpClientSegmentName(request)
-      val segment = ctx.startSegment(segmentName, SegmentMetricIdentityLabel.HttpClient, Play.SegmentLibraryName)
+      val segment = ctx.startSegment(segmentName, SegmentCategory.HttpClient, Play.SegmentLibraryName)
       val response = pjp.proceed().asInstanceOf[Future[Response]]
 
       response.map(result ⇒ segment.finish())(executor)
