@@ -16,20 +16,23 @@
 
 package kamon.newrelic
 
+import java.lang.management.ManagementFactory
+
 import akka.actor.{ ActorRef, ActorSystem, Props }
 import akka.io.IO
-import akka.testkit.TestActor.{ AutoPilot, KeepRunning }
 import akka.testkit._
 import com.typesafe.config.ConfigFactory
 import kamon.AkkaExtensionSwap
-import kamon.newrelic.MetricTranslator.TimeSliceMetrics
 import org.scalatest.{ BeforeAndAfterAll, WordSpecLike }
 import spray.can.Http
-import spray.http.{ HttpRequest, HttpResponse, _ }
+import spray.http._
+import spray.httpx.encoding.Deflate
+import spray.httpx.{ SprayJsonSupport, RequestBuilding }
+import spray.json.JsArray
+import spray.json._
 
-class AgentSpec extends TestKitBase with WordSpecLike with BeforeAndAfterAll {
-
-  import kamon.newrelic.AgentSpec._
+class AgentSpec extends TestKitBase with WordSpecLike with BeforeAndAfterAll with RequestBuilding with SprayJsonSupport {
+  import JsonProtocol._
 
   implicit lazy val system: ActorSystem = ActorSystem("Agent-Spec", ConfigFactory.parseString(
     """
@@ -39,120 +42,180 @@ class AgentSpec extends TestKitBase with WordSpecLike with BeforeAndAfterAll {
       |}
       |kamon {
       |  newrelic {
-      |    retry-delay = 1 second
-      |    max-retry = 3
+      |    app-name = kamon
+      |    license-key = 1111111111
+      |    initialize-retry-delay = 1 second
+      |    max-initialize-retries = 3
       |  }
       |}
       |
     """.stripMargin))
 
-  var agent: ActorRef = _
+  "the New Relic Agent" should {
+    "try to establish a connection to the collector upon creation" in {
+      val httpManager = setHttpManager(TestProbe())
+      val agent = system.actorOf(Props[Agent])
 
-  setupFakeHttpManager
+      // Request NR for a collector
+      httpManager.expectMsg(Deflate.encode {
+        Post(rawMethodUri("collector.newrelic.com", "get_redirect_host"), JsArray())
+      })
 
-  "the Newrelic Agent" should {
-    "try to connect upon creation, retry to connect if an error occurs" in {
-      EventFilter.info(message = "Initialization failed: Unexpected response from HTTP transport: None, retrying in 1 seconds", occurrences = 3).intercept {
-        system.actorOf(Props[Agent])
-        Thread.sleep(1000)
-      }
-    }
+      // Receive the assigned collector
+      httpManager.reply(jsonResponse(
+        """
+          | {
+          |   "return_value": "collector-8.newrelic.com"
+          | }
+          | """.stripMargin))
 
-    "when everything is fine should select a NewRelic collector" in {
+      // Connect to the collector
+      val (host, pid) = getHostAndPid()
+      httpManager.expectMsg(Deflate.encode {
+        Post(rawMethodUri("collector-8.newrelic.com", "connect"),
+          s"""
+          | [
+          |   {
+          |     "agent_version": "3.1.0",
+          |     "app_name": [ "kamon" ],
+          |     "host": "$host",
+          |     "identifier": "java:kamon",
+          |     "language": "java",
+          |     "pid": $pid
+          |   }
+          | ]
+        """.stripMargin.parseJson)(sprayJsonMarshaller(JsValueFormat))
+      })
+
+      // Receive the runID
       EventFilter.info(message = "Agent initialized with runID: [161221111] and collector: [collector-8.newrelic.com]", occurrences = 1).intercept {
-        system.actorOf(Props[Agent])
+        httpManager.reply(jsonResponse(
+          """
+          | {
+          |   "return_value": {
+          |     "agent_run_id": 161221111
+          |   }
+          | }
+          | """.stripMargin))
       }
     }
 
-    "merge the metrics if not possible send them and do it in the next post" in {
-      EventFilter.info(pattern = "Trying to send metrics to NewRelic collector, attempt.*", occurrences = 2).intercept {
-        agent = system.actorOf(Props[Agent].withDispatcher(CallingThreadDispatcher.Id))
+    "retry the connection in case it fails" in {
+      val httpManager = setHttpManager(TestProbe())
+      val agent = system.actorOf(Props[Agent])
 
-        for (_ ← 1 to 3) {
-          sendDelayedMetric(agent)
+      // Request NR for a collector
+      val request = httpManager.expectMsg(Deflate.encode {
+        Post(rawMethodUri("collector.newrelic.com", "get_redirect_host"), JsArray())
+      })
+
+      // Fail the request.
+      EventFilter[RuntimeException](start = "Initialization failed, retrying in 1 seconds", occurrences = 1).intercept {
+        httpManager.reply(Timedout(request))
+      }
+
+      // Request NR for a collector, second attempt
+      httpManager.expectMsg(Deflate.encode {
+        Post(rawMethodUri("collector.newrelic.com", "get_redirect_host"), JsArray())
+      })
+
+      // Receive the assigned collector
+      httpManager.reply(jsonResponse(
+        """
+          | {
+          |   "return_value": "collector-8.newrelic.com"
+          | }
+          | """.stripMargin))
+
+      // Connect to the collector
+      val (host, pid) = getHostAndPid()
+      httpManager.expectMsg(Deflate.encode {
+        Post(rawMethodUri("collector-8.newrelic.com", "connect"),
+          s"""
+          | [
+          |   {
+          |     "agent_version": "3.1.0",
+          |     "app_name": [ "kamon" ],
+          |     "host": "$host",
+          |     "identifier": "java:kamon",
+          |     "language": "java",
+          |     "pid": $pid
+          |   }
+          | ]
+        """.stripMargin.parseJson)(sprayJsonMarshaller(JsValueFormat))
+      })
+
+      // Receive the runID
+      EventFilter.info(
+        message = "Agent initialized with runID: [161221112] and collector: [collector-8.newrelic.com]", occurrences = 1).intercept {
+
+          httpManager.reply(jsonResponse(
+            """
+            | {
+            |   "return_value": {
+            |     "agent_run_id": 161221112
+            |   }
+            | }
+            | """.stripMargin))
+        }
+    }
+
+    "give up the connection after max-initialize-retries" in {
+      val httpManager = setHttpManager(TestProbe())
+      val agent = system.actorOf(Props[Agent])
+
+      // First attempt and two retries
+      for (_ ← 1 to 3) {
+
+        // Request NR for a collector
+        val request = httpManager.expectMsg(Deflate.encode {
+          Post(rawMethodUri("collector.newrelic.com", "get_redirect_host"), JsArray())
+        })
+
+        // Fail the request.
+        EventFilter[RuntimeException](start = "Initialization failed, retrying in 1 seconds", occurrences = 1).intercept {
+          httpManager.reply(Timedout(request))
         }
       }
-    }
 
-    "when the connection is re-established, the metrics should be send" in {
-      EventFilter.info(message = "Sending metrics to NewRelic collector", occurrences = 2).intercept {
-        sendDelayedMetric(agent)
+      // Final retry. Request NR for a collector
+      val request = httpManager.expectMsg(Deflate.encode {
+        Post(rawMethodUri("collector.newrelic.com", "get_redirect_host"), JsArray())
+      })
+
+      // Give up on connecting.
+      EventFilter[RuntimeException](message = "Giving up while trying to set up a connection with the New Relic collector.", occurrences = 1).intercept {
+        httpManager.reply(Timedout(request))
       }
     }
   }
 
-  def setupFakeHttpManager: Unit = {
-    val ConnectionAttempts = 3 // an arbitrary value only for testing purposes
-    val PostAttempts = 3 // if the number is achieved, the metrics should be discarded
-    val fakeHttpManager = TestProbe()
-    var attemptsToConnect: Int = 0 // should retry grab an NewRelic collector after retry-delay
-    var attemptsToSendMetrics: Int = 0
-
-    fakeHttpManager.setAutoPilot(new TestActor.AutoPilot {
-      def run(sender: ActorRef, msg: Any): AutoPilot = {
-        msg match {
-          case HttpRequest(_, uri, _, _, _) if rawMethodIs("get_redirect_host", uri) ⇒
-            if (attemptsToConnect == ConnectionAttempts) {
-              sender ! jsonResponse(
-                """
-                | {
-                |   "return_value": "collector-8.newrelic.com"
-                | }
-                | """.stripMargin)
-              system.log.info("Selecting Collector")
-
-            } else {
-              sender ! None
-              attemptsToConnect += 1
-              system.log.info("Network Error or Connection Refuse")
-            }
-
-          case HttpRequest(_, uri, _, _, _) if rawMethodIs("connect", uri) ⇒
-            sender ! jsonResponse(
-              """
-                | {
-                |   "return_value": {
-                |     "agent_run_id": 161221111
-                |   }
-                | }
-                | """.stripMargin)
-            system.log.info("Connecting")
-
-          case HttpRequest(_, uri, _, _, _) if rawMethodIs("metric_data", uri) ⇒
-            if (attemptsToSendMetrics < PostAttempts) {
-              sender ! None
-              attemptsToSendMetrics += 1
-              system.log.info("Error when trying to send metrics to NewRelic collector, the metrics will be merged")
-            } else {
-              system.log.info("Sending metrics to NewRelic collector")
-            }
-        }
-        KeepRunning
-      }
-
-      def jsonResponse(json: String): HttpResponse = {
-        HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, json))
-      }
-
-      def rawMethodIs(method: String, uri: Uri): Boolean = {
-        uri.query.get("method").filter(_ == method).isDefined
-      }
-    })
-
+  def setHttpManager(probe: TestProbe): TestProbe = {
     AkkaExtensionSwap.swap(system, Http, new IO.Extension {
-      def manager: ActorRef = fakeHttpManager.ref
+      def manager: ActorRef = probe.ref
     })
+    probe
   }
 
-  override def afterAll() {
-    super.afterAll()
-    system.shutdown()
+  def rawMethodUri(host: String, methodName: String): Uri = {
+    Uri(s"http://$host/agent_listener/invoke_raw_method").withQuery(
+      "method" -> methodName,
+      "license_key" -> "1111111111",
+      "marshal_format" -> "json",
+      "protocol_version" -> "12")
   }
-}
 
-object AgentSpec {
-  def sendDelayedMetric(agent: ActorRef, delay: Int = 1000): Unit = {
-    agent ! TimeSliceMetrics(100000L, 200000L, Map("Latency" -> NewRelic.Metric("Latency", None, 1000L, 2000D, 3000D, 1D, 100000D, 300D)))
-    Thread.sleep(delay)
+  def jsonResponse(json: String): HttpResponse = {
+    HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, json))
+  }
+
+  def getHostAndPid(): (String, String) = {
+    val runtimeName = ManagementFactory.getRuntimeMXBean.getName.split('@')
+    (runtimeName(1), runtimeName(0))
+  }
+
+  implicit def JsValueFormat = new RootJsonFormat[JsValue] {
+    def write(value: JsValue) = value
+    def read(value: JsValue) = value
   }
 }

@@ -16,13 +16,21 @@
 
 package kamon.newrelic
 
+import java.util
+
 import akka.actor.{ Actor, ActorLogging }
 import akka.event.Logging.{ Error, InitializeLogger, LoggerInitialized }
 import com.newrelic.api.agent.{ NewRelic ⇒ NR }
-import kamon.trace.TraceContextAware
+import kamon.trace.{ TraceRecorder, TraceContextAware }
 
-class NewRelicErrorLogger extends Actor with ActorLogging {
-  var aspectJMissingAlreadyReported = false
+trait CustomParamsSupport {
+  this: NewRelicErrorLogger ⇒
+
+  def customParams: Map[String, String]
+}
+
+class NewRelicErrorLogger extends Actor with ActorLogging with CustomParamsSupport {
+  override def customParams: Map[String, String] = Map.empty
 
   def receive = {
     case InitializeLogger(_)                                ⇒ sender ! LoggerInitialized
@@ -30,17 +38,21 @@ class NewRelicErrorLogger extends Actor with ActorLogging {
     case anythingElse                                       ⇒
   }
 
-  def notifyError(error: Error): Unit = {
-    val params = new java.util.HashMap[String, String]()
-
+  def notifyError(error: Error): Unit = runInFakeTransaction {
+    val params = new util.HashMap[String, String]()
     val ctx = error.asInstanceOf[TraceContextAware].traceContext
-    params.put("TraceToken", ctx.token)
 
-    if (error.cause == Error.NoCause) {
-      NR.noticeError(error.message.toString, params)
-    } else {
-      NR.noticeError(error.cause, params)
-    }
+    params put ("TraceToken", ctx.token)
+    customParams foreach { case (k, v) ⇒ params.put(k, v) }
 
+    if (error.cause == Error.NoCause) NR.noticeError(error.message.toString, params)
+    else NR.noticeError(error.cause, params)
+  }
+
+  //Really ugly, but temporal hack until next release...
+  def runInFakeTransaction[T](thunk: ⇒ T): T = {
+    val oldName = Thread.currentThread.getName
+    Thread.currentThread.setName(TraceRecorder.currentContext.name)
+    try thunk finally Thread.currentThread.setName(oldName)
   }
 }

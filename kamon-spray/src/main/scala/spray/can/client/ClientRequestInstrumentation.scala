@@ -53,7 +53,7 @@ class ClientRequestInstrumentation {
       if (sprayExtension.clientSegmentCollectionStrategy == ClientSegmentCollectionStrategy.Internal) {
         if (requestContext.segment.isEmpty) {
           val clientRequestName = sprayExtension.generateHostLevelApiSegmentName(request)
-          val segment = ctx.startSegment(clientRequestName, SegmentMetricIdentityLabel.HttpClient)
+          val segment = ctx.startSegment(clientRequestName, SegmentCategory.HttpClient, Spray.SegmentLibraryName)
           requestContext.segment = segment
         }
 
@@ -116,7 +116,7 @@ class ClientRequestInstrumentation {
         val sprayExtension = Kamon(Spray)(system)
         val segment =
           if (sprayExtension.clientSegmentCollectionStrategy == ClientSegmentCollectionStrategy.Pipelining)
-            ctx.startSegment(sprayExtension.generateRequestLevelApiSegmentName(request), SegmentMetricIdentityLabel.HttpClient)
+            ctx.startSegment(sprayExtension.generateRequestLevelApiSegmentName(request), SegmentCategory.HttpClient, Spray.SegmentLibraryName)
           else
             EmptyTraceContext.EmptySegment
 
