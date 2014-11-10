@@ -32,18 +32,46 @@ object JsonProtocol extends DefaultJsonProtocol {
           "pid" -> JsNumber(obj.pid)))
   }
 
-  implicit def seqWriter[T: JsonWriter] = new JsonWriter[Seq[T]] {
+  implicit def seqWriter[T: JsonFormat] = new JsonFormat[Seq[T]] {
+    def read(value: JsValue): Seq[T] = value match {
+      case JsArray(elements) ⇒ elements.map(_.convertTo[T])(collection.breakOut)
+      case x                 ⇒ deserializationError("Expected Seq as JsArray, but got " + x)
+    }
+
     def write(seq: Seq[T]) = JsArray(seq.map(_.toJson).toVector)
   }
 
-  implicit object MetricDetailWriter extends JsonWriter[Metric] {
+  implicit object MetricDetailWriter extends JsonFormat[Metric] {
+    def read(json: JsValue): (MetricID, MetricData) = json match {
+      case JsArray(elements) ⇒
+        val metricID = elements(0) match {
+          case JsObject(fields) ⇒ MetricID(fields("name").convertTo[String], fields.get("scope").map(_.convertTo[String]))
+          case x                ⇒ deserializationError("Expected MetricID as JsObject, but got " + x)
+        }
+
+        val metricData = elements(1) match {
+          case JsArray(dataElements) ⇒
+            MetricData(
+              dataElements(0).convertTo[Long],
+              dataElements(1).convertTo[Double],
+              dataElements(2).convertTo[Double],
+              dataElements(3).convertTo[Double],
+              dataElements(4).convertTo[Double],
+              dataElements(5).convertTo[Double])
+          case x ⇒ deserializationError("Expected MetricData as JsArray, but got " + x)
+        }
+
+        (metricID, metricData)
+
+      case x ⇒ deserializationError("Expected Metric as JsArray, but got " + x)
+    }
+
     def write(obj: Metric): JsValue = {
       val (metricID, metricData) = obj
+      val nameAndScope = metricID.scope.foldLeft(Map("name" -> JsString(metricID.name)))((m, scope) ⇒ m + ("scope" -> JsString(scope)))
 
       JsArray(
-        JsObject(
-          "name" -> JsString(metricID.name) // TODO Include scope
-          ),
+        JsObject(nameAndScope),
         JsArray(
           JsNumber(metricData.callCount),
           JsNumber(metricData.total),
@@ -54,7 +82,20 @@ object JsonProtocol extends DefaultJsonProtocol {
     }
   }
 
-  implicit object MetricBatchWriter extends RootJsonWriter[MetricBatch] {
+  implicit object MetricBatchWriter extends RootJsonFormat[MetricBatch] {
+
+    def read(json: JsValue): MetricBatch = json match {
+      case JsArray(elements) ⇒
+        val runID = elements(0).convertTo[Long]
+        val timeSliceFrom = elements(1).convertTo[Long]
+        val timeSliceTo = elements(2).convertTo[Long]
+        val metrics = elements(3).convertTo[Seq[Metric]]
+
+        MetricBatch(runID, TimeSliceMetrics(timeSliceFrom, timeSliceTo, metrics.toMap))
+
+      case x ⇒ deserializationError("Expected Array as JsArray, but got " + x)
+    }
+
     def write(obj: MetricBatch): JsValue =
       JsArray(
         JsNumber(obj.runID),

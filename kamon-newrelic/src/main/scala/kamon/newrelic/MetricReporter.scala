@@ -14,8 +14,6 @@ import kamon.newrelic.MetricReporter.{ UnexpectedStatusCodeException, PostFailed
 import spray.can.Http
 import spray.http.Uri
 import spray.httpx.SprayJsonSupport
-import spray.json.CompactPrinter
-
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.control.NoStackTrace
@@ -76,7 +74,7 @@ class MetricReporter(settings: Agent.Settings, runID: Long, baseUri: Uri) extend
     log.debug("Sending [{}] metrics to New Relic for the time slice between {} and {}.", slice.metrics.size, slice.from, slice.to)
 
     collectorClient {
-      Post(metricDataUri, MetricBatch(runID, slice))(sprayJsonMarshaller(MetricBatchWriter, CompactPrinter))
+      Post(metricDataUri, MetricBatch(runID, slice))(sprayJsonMarshaller(MetricBatchWriter, NewRelicJsonPrinter))
 
     } map { response ⇒
       if (response.status.isSuccess)
