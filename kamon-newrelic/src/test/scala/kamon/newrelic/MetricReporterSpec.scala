@@ -23,15 +23,16 @@ import com.typesafe.config.ConfigFactory
 import kamon.metric.{ TraceMetrics, Metrics }
 import kamon.{ Kamon, AkkaExtensionSwap }
 import kamon.metric.Subscriptions.TickMetricSnapshot
-import org.scalatest.WordSpecLike
+import org.scalatest.{ Matchers, WordSpecLike }
 import spray.can.Http
 import spray.http.Uri.Query
 import spray.http._
 import spray.httpx.encoding.Deflate
 import spray.httpx.{ RequestBuilding, SprayJsonSupport }
 import scala.concurrent.duration._
+import spray.json._
 
-class MetricReporterSpec extends TestKitBase with WordSpecLike with RequestBuilding with SprayJsonSupport {
+class MetricReporterSpec extends TestKitBase with WordSpecLike with Matchers with RequestBuilding with SprayJsonSupport {
   import kamon.newrelic.JsonProtocol._
 
   implicit lazy val system: ActorSystem = ActorSystem("metric-reporter-spec", ConfigFactory.parseString(
@@ -61,21 +62,21 @@ class MetricReporterSpec extends TestKitBase with WordSpecLike with RequestBuild
       val metricReporter = system.actorOf(MetricReporter.props(agentSettings, 9999, baseCollectorUri))
 
       metricReporter ! firstSnapshot
-      httpManager.expectMsg(Deflate.encode {
-        HttpRequest(method = HttpMethods.POST, uri = rawMethodUri("collector-1.newrelic.com", "metric_data"), entity = compactJsonEntity(
-          s"""
-          |[9999,0,0,
-          |[
-          |  [{"name":"Apdex"},[3,0.0,0.0,1.0,1.0,0.0]],
-          |  [{"name":"WebTransaction"},[3,0.005996544,0.005996544,0.000999424,0.002998272,0.000013983876644864]],
-          |  [{"name":"External"}, [0, 0.0, 0.0, 0.0, 0.0, 0.0]],
-          |  [{"name":"WebTransaction/Custom/example-trace"},[3,0.005996544,0.005996544,0.000999424,0.002998272,0.000013983876644864]],
-          |  [{"name":"HttpDispatcher"},[3,0.005996544,0.005996544,0.000999424,0.002998272,0.000013983876644864]],
-          |  [{"name":"External/allWeb"}, [0, 0.0, 0.0, 0.0, 0.0, 0.0]]
-          |]
-          |]
-        """.stripMargin))
-      })
+      val metricPost = httpManager.expectMsgType[HttpRequest]
+
+      metricPost.method should be(HttpMethods.POST)
+      metricPost.uri should be(rawMethodUri("collector-1.newrelic.com", "metric_data"))
+      metricPost.encoding should be(HttpEncodings.deflate)
+
+      val postedBatch = Deflate.decode(metricPost).entity.asString.parseJson.convertTo[MetricBatch]
+      postedBatch.runID should be(9999)
+      postedBatch.timeSliceMetrics.from should be(1415587618)
+      postedBatch.timeSliceMetrics.to should be(1415587678)
+
+      val metrics = postedBatch.timeSliceMetrics.metrics
+      metrics(MetricID("Apdex", None)).callCount should be(3)
+      metrics(MetricID("WebTransaction", None)).callCount should be(3)
+      metrics(MetricID("HttpDispatcher", None)).callCount should be(3)
     }
 
     "accumulate metrics if posting fails" in new FakeTickSnapshotsFixture {
@@ -87,31 +88,23 @@ class MetricReporterSpec extends TestKitBase with WordSpecLike with RequestBuild
       httpManager.reply(Timedout(request))
 
       metricReporter ! secondSnapshot
-      httpManager.expectMsg(Deflate.encode {
-        HttpRequest(method = HttpMethods.POST, uri = rawMethodUri("collector-1.newrelic.com", "metric_data"), entity = compactJsonEntity(
-          s"""
-          |[9999,0,0,
-          |[
-          |  [{"name":"Apdex"},[6,0.0,0.0,1.0,1.0,0.0]],
-          |  [{"name":"WebTransaction"},[6,0.02097152,0.02097152,0.000999424,0.005996544,0.000090731720998912]],
-          |  [{"name": "External"}, [0, 0.0, 0.0, 0.0, 0.0, 0.0]],
-          |  [{"name":"WebTransaction/Custom/example-trace"},[6,0.02097152,0.02097152,0.000999424,0.005996544,0.000090731720998912]],
-          |  [{"name":"HttpDispatcher"},[6,0.02097152,0.02097152,0.000999424,0.005996544,0.000090731720998912]],
-          |  [{"name": "External/allWeb"}, [0, 0.0, 0.0, 0.0, 0.0, 0.0]]
-          |]
-          |]
-        """.stripMargin))
-      })
+      val metricPost = httpManager.expectMsgType[HttpRequest]
+
+      metricPost.method should be(HttpMethods.POST)
+      metricPost.uri should be(rawMethodUri("collector-1.newrelic.com", "metric_data"))
+      metricPost.encoding should be(HttpEncodings.deflate)
+
+      val postedBatch = Deflate.decode(metricPost).entity.asString.parseJson.convertTo[MetricBatch]
+      postedBatch.runID should be(9999)
+      postedBatch.timeSliceMetrics.from should be(1415587618)
+      postedBatch.timeSliceMetrics.to should be(1415587738)
+
+      val metrics = postedBatch.timeSliceMetrics.metrics
+      metrics(MetricID("Apdex", None)).callCount should be(6)
+      metrics(MetricID("WebTransaction", None)).callCount should be(6)
+      metrics(MetricID("HttpDispatcher", None)).callCount should be(6)
     }
   }
-  /*
-    [9999, 0, 0, [
-  [{"name": "Apdex"}, [6, 0.0, 0.0, 1.0, 1.0, 0.0]],
-  [{"name": "WebTransaction"}, [6, 0.02097152, 0.02097152, 0.000999424, 0.005996544, 0.000090731720998912]],
-  [{"name": "External"}, [0, 0.0, 0.0, 0.0, 0.0, 0.0]],
-  [{"name": "WebTransaction/Custom/example-trace"}, [6, 0.02097152, 0.02097152, 0.000999424, 0.005996544, 0.000090731720998912]],
-  [{"name": "HttpDispatcher"}, [6, 0.02097152, 0.02097152, 0.000999424, 0.005996544, 0.000090731720998912]],
-  [{"name": "External/allWeb"}, [0, 0.0, 0.0, 0.0, 0.0, 0.0]]]]*/
 
   def setHttpManager(probe: TestProbe): TestProbe = {
     AkkaExtensionSwap.swap(system, Http, new IO.Extension {
@@ -146,11 +139,11 @@ class MetricReporterSpec extends TestKitBase with WordSpecLike with RequestBuild
     recorder.elapsedTime.record(1000000)
     recorder.elapsedTime.record(2000000)
     recorder.elapsedTime.record(3000000)
-    val firstSnapshot = TickMetricSnapshot(1, 100, Map(testTraceID -> collectRecorder))
+    val firstSnapshot = TickMetricSnapshot(1415587618000L, 1415587678000L, Map(testTraceID -> collectRecorder))
 
     recorder.elapsedTime.record(6000000)
     recorder.elapsedTime.record(5000000)
     recorder.elapsedTime.record(4000000)
-    val secondSnapshot = TickMetricSnapshot(100, 200, Map(testTraceID -> collectRecorder))
+    val secondSnapshot = TickMetricSnapshot(1415587678000L, 1415587738000L, Map(testTraceID -> collectRecorder))
   }
 }
