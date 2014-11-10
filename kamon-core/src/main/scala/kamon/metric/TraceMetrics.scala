@@ -27,6 +27,8 @@ case class TraceMetrics(name: String) extends MetricGroupIdentity {
 }
 
 object TraceMetrics extends MetricGroupCategory {
+  import Metrics.AtomicGetOrElseUpdateForTriemap
+
   val name = "trace"
 
   case object ElapsedTime extends MetricIdentity { val name = "elapsed-time" }
@@ -37,7 +39,7 @@ object TraceMetrics extends MetricGroupCategory {
     val segments = TrieMap[MetricIdentity, Histogram]()
 
     def segmentRecorder(segmentIdentity: MetricIdentity): Histogram =
-      segments.getOrElseUpdate(segmentIdentity, segmentRecorderFactory.apply())
+      segments.atomicGetOrElseUpdate(segmentIdentity, segmentRecorderFactory.apply())
 
     def collect(context: CollectionContext): TraceMetricsSnapshot =
       TraceMetricsSnapshot(
@@ -53,7 +55,7 @@ object TraceMetrics extends MetricGroupCategory {
     type GroupSnapshotType = TraceMetricsSnapshot
 
     def merge(that: TraceMetricsSnapshot, context: CollectionContext): TraceMetricsSnapshot =
-      TraceMetricsSnapshot(elapsedTime.merge(that.elapsedTime, context), Map.empty) // TODO: Merge the segments metrics correctly and test it!
+      TraceMetricsSnapshot(elapsedTime.merge(that.elapsedTime, context), combineMaps(segments, that.segments)((l, r) ⇒ l.merge(r, context)))
 
     def metrics: Map[MetricIdentity, MetricSnapshot] = segments + (ElapsedTime -> elapsedTime)
   }
@@ -69,7 +71,6 @@ case object TraceMetricGroupFactory extends MetricGroupFactory {
   type GroupRecorder = TraceMetricRecorder
 
   def create(config: Config, system: ActorSystem): TraceMetricRecorder = {
-
     val settings = config.getConfig("precision.trace")
     val elapsedTimeConfig = settings.getConfig("elapsed-time")
     val segmentConfig = settings.getConfig("segment")

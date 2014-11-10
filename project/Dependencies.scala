@@ -9,7 +9,7 @@ object Dependencies {
 
   val sprayVersion    = "1.2.2"
   val akkaVersion     = "2.2.4"
-  val aspectjVersion  = "1.8.1"
+  val aspectjVersion  = "1.8.4"
   val slf4jVersion    = "1.7.6"
   val playVersion     = "2.2.5"
 
@@ -17,9 +17,8 @@ object Dependencies {
   val sprayJsonLenses = "net.virtual-void"          %%  "json-lenses"           % "0.5.4"
   val scalatest       = "org.scalatest"             %%  "scalatest"             % "2.2.1"
   val logback         = "ch.qos.logback"            %   "logback-classic"       % "1.0.13"
-  val aspectJ         = "org.aspectj"               %   "aspectjrt"             % aspectjVersion
+  val aspectJ         = "org.aspectj"               %   "aspectjweaver"         % aspectjVersion
   val newrelic        = "com.newrelic.agent.java"   %   "newrelic-api"          % "3.11.0"
-  val snakeYaml       = "org.yaml"                  %   "snakeyaml"             % "1.13"
   val hdrHistogram    = "org.hdrhistogram"          %   "HdrHistogram"          % "1.2.1"
   val sprayCan        = "io.spray"                  %   "spray-can"             % sprayVersion
   val sprayRouting    = "io.spray"                  %   "spray-routing"         % sprayVersion
@@ -30,7 +29,8 @@ object Dependencies {
   val akkaTestKit     = "com.typesafe.akka"         %%  "akka-testkit"          % akkaVersion
   val akkaRemote      = "com.typesafe.akka"         %%  "akka-remote"           % akkaVersion
   val akkaCluster     = "com.typesafe.akka"         %%  "akka-cluster"          % akkaVersion
-  val playTest        = "org.scalatestplus"         %%  "play"                  % "1.3.0"
+  val play            = "com.typesafe.play"         %%  "play"                  % playVersion
+  val playTest        = "org.scalatestplus"         %%  "play"                  % "1.2.0"
   val slf4Api         = "org.slf4j"                 %   "slf4j-api"             % slf4jVersion
   val slf4nop         = "org.slf4j"                 %   "slf4j-nop"             % slf4jVersion
   val scalaCompiler   = "org.scala-lang"            %   "scala-compiler"        % Settings.ScalaVersion

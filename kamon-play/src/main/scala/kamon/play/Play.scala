@@ -27,6 +27,8 @@ import play.api.mvc.RequestHeader
 object Play extends ExtensionId[PlayExtension] with ExtensionIdProvider {
   override def lookup(): ExtensionId[_ <: Extension] = Play
   override def createExtension(system: ExtendedActorSystem): PlayExtension = new PlayExtension(system)
+
+  val SegmentLibraryName = "WS-client"
 }
 
 class PlayExtension(private val system: ExtendedActorSystem) extends Kamon.Extension {

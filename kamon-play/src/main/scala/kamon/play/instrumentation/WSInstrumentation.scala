@@ -18,7 +18,7 @@ package kamon.play.instrumentation
 
 import kamon.Kamon
 import kamon.play.Play
-import kamon.trace.SegmentMetricIdentityLabel
+import kamon.trace.{ SegmentCategory, SegmentMetricIdentity }
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation.{ Around, Aspect, Pointcut }
 import kamon.trace.TraceRecorder
@@ -38,7 +38,7 @@ class WSInstrumentation {
       val playExtension = Kamon(Play)(system)
       val executor = playExtension.defaultDispatcher
       val segmentName = playExtension.generateHttpClientSegmentName(request)
-      val segment = ctx.startSegment(segmentName, SegmentMetricIdentityLabel.HttpClient)
+      val segment = ctx.startSegment(segmentName, SegmentMetricIdentityLabel.HttpClient, Play.SegmentLibraryName)
       val response = pjp.proceed().asInstanceOf[Future[Response]]
 
       response.map(result ⇒ segment.finish())(executor)

@@ -34,16 +34,18 @@ sealed trait TraceContext {
   def finish(): Unit
   def origin: TraceContextOrigin
   def isOpen: Boolean
+  def isClosed: Boolean = !isOpen
   def isEmpty: Boolean
   def nonEmpty: Boolean = !isEmpty
-  def startSegment(segmentName: String, label: String): Segment
+  def startSegment(segmentName: String, category: String, library: String): Segment
   def nanoTimestamp: Long
 }
 
 sealed trait Segment {
   def name: String
   def rename(newName: String): Unit
-  def label: String
+  def category: String
+  def library: String
   def finish(): Unit
   def isEmpty: Boolean
 }
@@ -56,12 +58,13 @@ case object EmptyTraceContext extends TraceContext {
   def origin: TraceContextOrigin = TraceContextOrigin.Local
   def isOpen: Boolean = false
   def isEmpty: Boolean = true
-  def startSegment(segmentName: String, label: String): Segment = EmptySegment
+  def startSegment(segmentName: String, category: String, library: String): Segment = EmptySegment
   def nanoTimestamp: Long = 0L
 
   case object EmptySegment extends Segment {
     val name: String = "empty-segment"
-    val label: String = "empty-label"
+    val category: String = "empty-category"
+    val library: String = "empty-library"
     def isEmpty: Boolean = true
     def rename(newName: String): Unit = {}
     def finish: Unit = {}
@@ -98,7 +101,7 @@ class DefaultTraceContext(traceName: String, val token: String, izOpen: Boolean,
     }
   }
 
-  def startSegment(segmentName: String, segmentLabel: String): Segment = new DefaultSegment(segmentName, segmentLabel)
+  def startSegment(segmentName: String, category: String, library: String): Segment = new DefaultSegment(segmentName, category, library)
 
   @tailrec private def drainFinishedSegments(metricRecorder: TraceMetricRecorder): Unit = {
     val segment = finishedSegments.poll()
@@ -108,17 +111,17 @@ class DefaultTraceContext(traceName: String, val token: String, izOpen: Boolean,
     }
   }
 
-  private def finishSegment(segmentName: String, label: String, duration: Long): Unit = {
-    finishedSegments.add(SegmentData(SegmentMetricIdentity(segmentName, label), duration))
+  private def finishSegment(segmentName: String, category: String, library: String, duration: Long): Unit = {
+    finishedSegments.add(SegmentData(SegmentMetricIdentity(segmentName, category, library), duration))
 
-    if (!_isOpen) {
+    if (isClosed) {
       metricsExtension.register(TraceMetrics(name), TraceMetrics.Factory).map { traceMetrics ⇒
         drainFinishedSegments(traceMetrics)
       }
     }
   }
 
-  class DefaultSegment(segmentName: String, val label: String) extends Segment {
+  class DefaultSegment(segmentName: String, val category: String, val library: String) extends Segment {
     private val _segmentStartNanoTime = System.nanoTime()
     @volatile private var _segmentName = segmentName
     @volatile private var _isOpen = true
@@ -129,15 +132,15 @@ class DefaultTraceContext(traceName: String, val token: String, izOpen: Boolean,
 
     def finish: Unit = {
       val segmentFinishNanoTime = System.nanoTime()
-      finishSegment(name, label, (segmentFinishNanoTime - _segmentStartNanoTime))
+      finishSegment(name, category, library, (segmentFinishNanoTime - _segmentStartNanoTime))
     }
   }
 }
 
-case class SegmentMetricIdentity(name: String, label: String) extends MetricIdentity
+case class SegmentMetricIdentity(name: String, category: String, library: String) extends MetricIdentity
 case class SegmentData(identity: SegmentMetricIdentity, duration: Long)
 
-object SegmentMetricIdentityLabel {
+object SegmentCategory {
   val HttpClient = "http-client"
 }
 

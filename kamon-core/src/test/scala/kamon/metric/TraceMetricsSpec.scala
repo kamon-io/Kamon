@@ -54,7 +54,7 @@ class TraceMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
 
     "record the elapsed time for segments that occur inside a given trace" in {
       TraceRecorder.withNewTraceContext("trace-with-segments") {
-        val segment = TraceRecorder.currentContext.startSegment("test-segment", "test-label")
+        val segment = TraceRecorder.currentContext.startSegment("test-segment", "test-category", "test-library")
         segment.finish()
         TraceRecorder.finish()
       }
@@ -62,12 +62,12 @@ class TraceMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
       val snapshot = takeSnapshotOf("trace-with-segments")
       snapshot.elapsedTime.numberOfMeasurements should be(1)
       snapshot.segments.size should be(1)
-      snapshot.segments(SegmentMetricIdentity("test-segment", "test-label")).numberOfMeasurements should be(1)
+      snapshot.segments(SegmentMetricIdentity("test-segment", "test-category", "test-library")).numberOfMeasurements should be(1)
     }
 
     "record the elapsed time for segments that finish after their correspondent trace has finished" in {
       val segment = TraceRecorder.withNewTraceContext("closing-segment-after-trace") {
-        val s = TraceRecorder.currentContext.startSegment("test-segment", "test-label")
+        val s = TraceRecorder.currentContext.startSegment("test-segment", "test-category", "test-library")
         TraceRecorder.finish()
         s
       }
@@ -81,7 +81,7 @@ class TraceMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
       val afterFinishSegmentSnapshot = takeSnapshotOf("closing-segment-after-trace")
       afterFinishSegmentSnapshot.elapsedTime.numberOfMeasurements should be(0)
       afterFinishSegmentSnapshot.segments.size should be(1)
-      afterFinishSegmentSnapshot.segments(SegmentMetricIdentity("test-segment", "test-label")).numberOfMeasurements should be(1)
+      afterFinishSegmentSnapshot.segments(SegmentMetricIdentity("test-segment", "test-category", "test-library")).numberOfMeasurements should be(1)
     }
   }
 

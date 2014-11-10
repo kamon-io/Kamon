@@ -23,7 +23,7 @@ import kamon.Kamon
 import kamon.metric.Subscriptions.TickMetricSnapshot
 import kamon.metric._
 import kamon.spray.KamonTraceDirectives
-import kamon.trace.{ SegmentMetricIdentityLabel, TraceRecorder }
+import kamon.trace.{ SegmentCategory, TraceRecorder }
 import spray.http.{ StatusCodes, Uri }
 import spray.httpx.RequestBuilding
 import spray.routing.SimpleRoutingApp
@@ -83,8 +83,11 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
         }
       } ~
         path("site") {
-          complete {
-            pipeline(Get("http://localhost:9090/site-redirect"))
+          traceName("FinalGetSite-3") {
+            complete {
+              for (f1 <- pipeline(Get("http://127.0.0.1:9090/ok"));
+                   f2 <- pipeline(Get("http://www.google.com/search?q=mkyong"))) yield "Ok Double Future"
+            }
           }
         } ~
         path("site-redirect") {
@@ -99,14 +102,14 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
           }
         } ~
         path("ok") {
-          traceName("OK") {
+          traceName("RespondWithOK-3") {
             complete {
               "ok"
             }
           }
         } ~
         path("future") {
-          traceName("OK-Future") {
+          traceName("OKFuture") {
             dynamic {
               counter.increment()
               complete(Future { "OK" })
@@ -127,7 +130,7 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
         } ~
         path("segment") {
           complete {
-            val segment = TraceRecorder.currentContext.startSegment("hello-world", SegmentMetricIdentityLabel.HttpClient)
+            val segment = TraceRecorder.currentContext.startSegment("hello-world", SegmentCategory.HttpClient, "none")
             (replier ? "hello").mapTo[String].onComplete { t ⇒
               segment.finish()
             }

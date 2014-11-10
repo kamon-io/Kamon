@@ -62,13 +62,13 @@ class DatadogMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long
       metricSnapshot match {
         case hs: Histogram.Snapshot ⇒
           hs.recordsIterator.foreach { record ⇒
-            val measurementData = formatMeasurement(groupIdentity, metricIdentity, encodeStatsDTimer(record.level, record.count))
+            val measurementData = formatMeasurement(groupIdentity, metricIdentity, encodeDatadogTimer(record.level, record.count))
             packetBuilder.appendMeasurement(key, measurementData)
 
           }
 
         case cs: Counter.Snapshot ⇒
-          val measurementData = formatMeasurement(groupIdentity, metricIdentity, encodeStatsDCounter(cs.count))
+          val measurementData = formatMeasurement(groupIdentity, metricIdentity, encodeDatadogCounter(cs.count))
           packetBuilder.appendMeasurement(key, measurementData)
       }
     }
@@ -81,12 +81,12 @@ class DatadogMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long
       .append(buildIdentificationTag(groupIdentity, metricIdentity))
       .result()
 
-  def encodeStatsDTimer(level: Long, count: Long): String = {
+  def encodeDatadogTimer(level: Long, count: Long): String = {
     val samplingRate: Double = 1D / count
     level.toString + "|ms" + (if (samplingRate != 1D) "|@" + samplingRateFormat.format(samplingRate) else "")
   }
 
-  def encodeStatsDCounter(count: Long): String = count.toString + "|c"
+  def encodeDatadogCounter(count: Long): String = count.toString + "|c"
 
   def buildMetricName(groupIdentity: MetricGroupIdentity, metricIdentity: MetricIdentity): String =
     if (isUserMetric(groupIdentity))

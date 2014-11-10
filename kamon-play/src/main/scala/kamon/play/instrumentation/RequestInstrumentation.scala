@@ -86,7 +86,7 @@ class RequestInstrumentation {
 }
 
 object RequestInstrumentation {
-
+  import kamon.metric.Metrics.AtomicGetOrElseUpdateForTriemap
   import java.util.Locale
   import scala.collection.concurrent.TrieMap
 
@@ -94,7 +94,7 @@ object RequestInstrumentation {
 
   def normaliseTraceName(requestHeader: RequestHeader): Option[String] = requestHeader.tags.get(Routes.ROUTE_VERB).map({ verb ⇒
     val path = requestHeader.tags(Routes.ROUTE_PATTERN)
-    cache.getOrElseUpdate(s"$verb$path", {
+    cache.atomicGetOrElseUpdate(s"$verb$path", {
       val traceName = {
         // Convert paths of form GET /foo/bar/$paramname<regexp>/blah to foo.bar.paramname.blah.get
         val p = path.replaceAll("""\$([^<]+)<[^>]+>""", "$1").replace('/', '.').dropWhile(_ == '.')
