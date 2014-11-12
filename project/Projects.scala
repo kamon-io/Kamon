@@ -20,6 +20,7 @@ object Projects extends Build {
     .settings(formatSettings: _*)
     .settings(aspectJSettings: _*)
     .settings(
+      javacOptions  in Compile ++= Seq("-XDignore.symbol.file"),
       mappings in (Compile, packageBin) ++= mappings.in(kamonMacros, Compile, packageBin).value,
       mappings in (Compile, packageSrc) ++= mappings.in(kamonMacros, Compile, packageSrc).value,
       libraryDependencies ++=

@@ -14,7 +14,7 @@
  * =========================================================================================
  */
 
-package akka.instrumentation
+package akka.kamon.instrumentation
 
 import kamon.trace.{ TraceContextAware, TraceRecorder }
 import org.aspectj.lang.ProceedingJoinPoint

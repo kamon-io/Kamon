@@ -14,7 +14,7 @@
  * =========================================================================================
  */
 
-package akka.instrumentation
+package akka.kamon.instrumentation
 
 import akka.dispatch.sysmsg.EarliestFirstSystemMessageList
 import kamon.trace.{ TraceContextAware, TraceRecorder }

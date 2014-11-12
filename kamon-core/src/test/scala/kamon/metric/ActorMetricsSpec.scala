@@ -17,7 +17,7 @@ package kamon.metric
 
 import java.nio.LongBuffer
 
-import akka.instrumentation.ActorCellMetrics
+import akka.kamon.instrumentation.ActorCellMetrics
 import kamon.Kamon
 import kamon.metric.ActorMetricsTestActor._
 import kamon.metric.instrument.Histogram.MutableRecord

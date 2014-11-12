@@ -16,6 +16,7 @@ object Settings {
     resolvers    ++= Dependencies.resolutionRepos,
     fork in run   := true,
     javacOptions  := Seq(
+      "-Xlint:-options",
       "-source", "1.6", "-target", "1.6"
     ),
     scalacOptions := Seq(
