@@ -14,7 +14,7 @@
  * =========================================================================================
  */
 
-package akka.instrumentation
+package akka.kamon.instrumentation
 
 import akka.actor._
 import akka.dispatch.{ Envelope, MessageDispatcher }
