@@ -9,15 +9,20 @@ import net.virtualvoid.sbt.graph.Plugin.graphSettings
 
 object Settings {
 
-  val ScalaVersion = "2.10.4"
+  val JavaVersion = "1.6"
 
+  val ScalaVersion = "2.10.4"
+  
   lazy val basicSettings = Seq(
     scalaVersion  := ScalaVersion,
     resolvers    ++= Dependencies.resolutionRepos,
     fork in run   := true,
-    javacOptions  := Seq(
+    javacOptions in compile := Seq(
       "-Xlint:-options",
-      "-source", "1.6", "-target", "1.6"
+      "-source", JavaVersion, "-target", JavaVersion
+    ),
+    javacOptions in doc  := Seq(
+      "-source", JavaVersion
     ),
     scalacOptions := Seq(
       "-encoding",
