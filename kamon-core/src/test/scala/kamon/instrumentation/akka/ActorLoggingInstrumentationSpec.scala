@@ -20,7 +20,7 @@ import akka.event.Logging.LogEvent
 import akka.testkit.TestKit
 import kamon.trace.TraceLocal.AvailableToMdc
 import kamon.trace.logging.MdcKeysSupport
-import kamon.trace.{TraceLocal, TraceContextAware, TraceRecorder}
+import kamon.trace.{ TraceLocal, TraceContextAware, TraceRecorder }
 import org.scalatest.{ Inspectors, Matchers, WordSpecLike }
 import org.slf4j.MDC
 
