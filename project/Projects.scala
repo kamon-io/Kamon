@@ -156,6 +156,7 @@ object Projects extends Build {
           compile(sigar) ++
           test(scalatest, akkaTestKit, slf4Api, slf4nop))
       .dependsOn(kamonCore)
+      .dependsOn(kamonSigar)
 
   lazy val kamonSigar = Project("kamon-sigar", file("kamon-sigar"))
     .settings(basicSettings: _*)

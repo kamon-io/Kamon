@@ -17,134 +17,33 @@
 package kamon.system.sigar
 
 import java.io._
-import java.text.SimpleDateFormat
-import java.util
 import java.util.logging.Logger
-import java.util.{ ArrayList, Date, List }
-
+import kamon.sigar.SigarAgent
 import org.hyperic.sigar._
-
-import scala.annotation.tailrec
-import scala.collection.JavaConversions._
-import scala.io.Source
-
-object SigarHolder {
-  private lazy val sigarProxy = SigarLoader.sigarProxy
-  def instance() = sigarProxy
-}
+import scala.util.control.{ NoStackTrace, NonFatal }
 
 object SigarLoader {
-
-  val Version = "1.6.4"
-  val JavaLibraryPath = "java.library.path"
-  val TmpDir = "java.io.tmpdir"
-  val IndexFile = "/kamon/system/sigar/index"
-  val UsrPathField = "usr_paths"
-
   private val log = Logger.getLogger("SigarLoader")
 
-  def sigarProxy = init(new File(System.getProperty(TmpDir)))
+  lazy val instance = init(new File(System.getProperty("java.io.tmpdir")))
 
-  private[sigar] def init(baseTmp: File): SigarProxy = {
-    val tmpDir = createTmpDir(baseTmp)
-    for (lib ← loadIndex) copy(lib, tmpDir)
-
-    attachToLibraryPath(tmpDir)
-
-    try {
-      val sigar = new Sigar()
-      printBanner(sigar)
-      sigar
-    } catch {
-      case t: Throwable ⇒ {
-        log.severe("Failed to load sigar")
-        throw new RuntimeException(t)
-      }
-    }
-  }
-
-  private[sigar] val usrPathField = {
-    val usrPathField = classOf[ClassLoader].getDeclaredField(UsrPathField)
-    usrPathField.setAccessible(true)
-    usrPathField
-  }
-
-  private[sigar] def attachToLibraryPath(dir: File): Unit = {
-    val dirAbsolute = dir.getAbsolutePath
-    System.setProperty(JavaLibraryPath, newLibraryPath(dirAbsolute))
-    var paths = usrPathField.get(null).asInstanceOf[Array[String]]
-    if (paths == null) paths = new Array[String](0)
-    for (path ← paths) if (path == dirAbsolute) return
-    val newPaths = util.Arrays.copyOf(paths, paths.length + 1)
-    newPaths(newPaths.length - 1) = dirAbsolute
-    usrPathField.set(null, newPaths)
-  }
-
-  private[sigar] def newLibraryPath(dirAbsolutePath: String): String = {
-    Option(System.getProperty(JavaLibraryPath)).fold(dirAbsolutePath)(oldValue ⇒ s"$dirAbsolutePath${File.pathSeparator}$oldValue")
-  }
-
-  private[sigar] def copy(lib: String, tmpDir: File) {
-    val target = new File(tmpDir, lib)
-    if (target.exists()) return
-    write(classOf[Loader].getResourceAsStream(lib), target)
-  }
-
-  private[sigar] def createTmpDir(baseTmp: File): File = {
-    val tmpDir = new File(baseTmp, s"sigar-$Version")
-    if (!tmpDir.exists()) {
-      if (!tmpDir.mkdirs()) throw new RuntimeException(s"Could not create temp sigar directory: ${tmpDir.getAbsolutePath}")
-    }
-    if (!tmpDir.isDirectory) throw new RuntimeException(s"sigar temp directory path is not a directory: ${tmpDir.getAbsolutePath}")
-    if (!tmpDir.canWrite()) throw new RuntimeException(s"sigar temp directory not writeable: ${tmpDir.getAbsolutePath}")
-    tmpDir
-  }
-
-  private[sigar] def loadIndex(): List[String] = {
-    val libs = new ArrayList[String]()
-    val is = classOf[Loader].getResourceAsStream(IndexFile)
-
-    for (line ← Source.fromInputStream(is).getLines()) {
-      val currentLine = line.trim()
-      libs add currentLine
-    }
-    libs
-  }
-
-  private[sigar] def write(input: InputStream, to: File) {
-    val out = new FileOutputStream(to)
-    try {
-      transfer(input, out)
-    } finally {
-      out.close()
-    }
-  }
-
-  private[sigar] def transfer(input: InputStream, out: OutputStream) {
-    val buffer = new Array[Byte](8192)
-
-    @tailrec def transfer() {
-      val read = input.read(buffer)
-      if (read >= 0) {
-        out.write(buffer, 0, read)
-        transfer()
-      }
-    }
-    transfer()
+  private[sigar] def init(baseTmp: File): SigarProxy = try {
+    SigarAgent.provision(baseTmp)
+    val sigar = new Sigar()
+    printBanner(sigar)
+    sigar
+  } catch {
+    case NonFatal(t) ⇒ throw new UnexpectedSigarException("Failed to load sigar")
   }
 
   private[sigar] def printBanner(sigar: Sigar) = {
     val os = OperatingSystem.getInstance
 
-    def loadAverage(sigar: Sigar) = {
-      try {
-        val average = sigar.getLoadAverage
-        (average(0), average(1), average(2))
-      } catch {
-        case s: org.hyperic.sigar.SigarNotImplementedException ⇒ {
-          (0d, 0d, 0d)
-        }
-      }
+    def loadAverage(sigar: Sigar) = try {
+      val average = sigar.getLoadAverage
+      (average(0), average(1), average(2))
+    } catch {
+      case s: org.hyperic.sigar.SigarNotImplementedException ⇒ (0d, 0d, 0d)
     }
 
     def uptime(sigar: Sigar) = {
@@ -155,7 +54,7 @@ object SigarLoader {
         var hours: Int = 0
 
         if (days != 0) {
-          retval += s"$days ${(if ((days > 1)) "days" else "day")}, "
+          retval += s"$days ${if (days > 1) "days" else "day"}, "
         }
 
         minutes = uptime.toInt / 60
@@ -174,7 +73,7 @@ object SigarLoader {
       val uptime = sigar.getUptime
       val now = System.currentTimeMillis()
 
-      s"up ${formatUptime(uptime.getUptime())}"
+      s"up ${formatUptime(uptime.getUptime)}"
     }
 
     val message =
@@ -199,5 +98,5 @@ object SigarLoader {
       """.stripMargin.format(uptime(sigar), os.getDescription, loadAverage(sigar), os.getName, os.getVersion, os.getArch)
     log.info(message)
   }
-  class Loader private[sigar]
+  class UnexpectedSigarException(message: String) extends RuntimeException(message) with NoStackTrace
 }
