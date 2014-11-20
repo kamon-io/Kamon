@@ -17,7 +17,7 @@ package kamon.system
 
 import java.io.IOException
 
-import akka.actor.{ ActorLogging, Actor, Props }
+import akka.actor.{ Actor, ActorLogging, Props }
 import kamon.Kamon
 import kamon.metric.Metrics
 import kamon.metrics.CPUMetrics.CPUMetricRecorder
@@ -26,7 +26,7 @@ import kamon.metrics.MemoryMetrics.MemoryMetricRecorder
 import kamon.metrics.NetworkMetrics.NetworkMetricRecorder
 import kamon.metrics.ProcessCPUMetrics.ProcessCPUMetricsRecorder
 import kamon.metrics._
-import kamon.system.sigar.SigarHolder
+import kamon.system.sigar.SigarLoader
 import org.hyperic.sigar.{ Mem, NetInterfaceStat, SigarProxy }
 
 import scala.concurrent.duration.FiniteDuration
@@ -89,8 +89,8 @@ class SystemMetricsCollector(collectInterval: FiniteDuration) extends Actor with
     mr.buffer.record(toMB(collectBuffer(mem)))
     mr.cache.record(toMB(collectCache(mem)))
 
-    def collectBuffer(mem: Mem): Long = if (mem.getUsed() != mem.getActualUsed()) mem.getActualUsed() else 0L
-    def collectCache(mem: Mem): Long = if (mem.getFree() != mem.getActualFree()) mem.getActualFree() else 0L
+    def collectBuffer(mem: Mem): Long = if (mem.getUsed != mem.getActualUsed) mem.getActualUsed else 0L
+    def collectCache(mem: Mem): Long = if (mem.getFree != mem.getActualFree) mem.getActualFree else 0L
   }
 
   private def recordNetwork(nr: NetworkMetricRecorder) = {
@@ -109,7 +109,7 @@ class SystemMetricsCollector(collectInterval: FiniteDuration) extends Actor with
     }
   }
 
-  private def recordContextSwitches(ctxt: ContextSwitchesMetricsRecorder) = {
+  private def recordContextSwitches(rcs: ContextSwitchesMetricsRecorder) = {
     def contextSwitchesByProcess(pid: Long): (Long, Long) = {
       val filename = s"/proc/$pid/status"
       var voluntaryContextSwitches = 0L
@@ -125,9 +125,7 @@ class SystemMetricsCollector(collectInterval: FiniteDuration) extends Actor with
           }
         }
       } catch {
-        case ex: IOException ⇒ {
-          log.error("Error trying to read [{}]", filename)
-        }
+        case ex: IOException ⇒ log.error("Error trying to read [{}]", filename)
       }
       (voluntaryContextSwitches, nonVoluntaryContextSwitches)
     }
@@ -138,22 +136,20 @@ class SystemMetricsCollector(collectInterval: FiniteDuration) extends Actor with
 
       try {
         for (line ← Source.fromFile(filename).getLines()) {
-          if (line.startsWith("ctxt")) {
+          if (line.startsWith("rcs")) {
             contextSwitches = line.substring(line.indexOf(" ") + 1).toLong
           }
         }
       } catch {
-        case ex: IOException ⇒ {
-          log.error("Error trying to read [{}]", filename)
-        }
+        case ex: IOException ⇒ log.error("Error trying to read [{}]", filename)
       }
       contextSwitches
     }
 
     val (perProcessVoluntary, perProcessNonVoluntary) = contextSwitchesByProcess(pid)
-    ctxt.perProcessVoluntary.record(perProcessVoluntary)
-    ctxt.perProcessNonVoluntary.record(perProcessNonVoluntary)
-    ctxt.global.record(contextSwitches)
+    rcs.perProcessVoluntary.record(perProcessVoluntary)
+    rcs.perProcessNonVoluntary.record(perProcessNonVoluntary)
+    rcs.global.record(contextSwitches)
   }
 }
 
@@ -161,14 +157,14 @@ object SystemMetricsCollector {
   case object Collect
 
   object OsUtils {
-    def isLinux: Boolean = System.getProperty("os.name").indexOf("Linux") != -1;
+    def isLinux: Boolean = System.getProperty("os.name").indexOf("Linux") != -1
   }
 
   def props(collectInterval: FiniteDuration): Props = Props[SystemMetricsCollector](new SystemMetricsCollector(collectInterval))
 }
 
 trait SigarExtensionProvider {
-  lazy val sigar = SigarHolder.instance()
+  lazy val sigar = SigarLoader.instance
 
   def pid = sigar.getPid
 
