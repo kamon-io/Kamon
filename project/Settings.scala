@@ -35,6 +35,7 @@ object Settings {
       "-target:jvm-1.6",
       "-language:postfixOps",
       "-language:implicitConversions",
+      "-Yinline-warnings",
       "-Xlog-reflective-calls"
     )) ++ publishSettings ++ releaseSettings ++ graphSettings
 

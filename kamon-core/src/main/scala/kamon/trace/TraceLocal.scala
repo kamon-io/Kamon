@@ -16,12 +16,26 @@
 
 package kamon.trace
 
-import scala.collection.concurrent.TrieMap
 import kamon.trace.TraceLocal.TraceLocalKey
 
+import scala.collection.concurrent.TrieMap
+
 object TraceLocal {
+
   trait TraceLocalKey {
     type ValueType
+  }
+
+  trait AvailableToMdc extends TraceLocalKey {
+    override type ValueType = String
+    def mdcKey: String
+  }
+
+  object AvailableToMdc {
+    case class DefaultKeyAvailableToMdc(mdcKey: String) extends AvailableToMdc
+
+    def fromKey(mdcKey: String): AvailableToMdc = DefaultKeyAvailableToMdc(mdcKey)
+    def apply(mdcKey: String): AvailableToMdc = fromKey(mdcKey)
   }
 
   def store(key: TraceLocalKey)(value: key.ValueType): Unit = TraceRecorder.currentContext match {
@@ -33,6 +47,8 @@ object TraceLocal {
     case ctx: DefaultTraceContext ⇒ ctx.traceLocalStorage.retrieve(key)
     case EmptyTraceContext        ⇒ None // Can't retrieve anything from the empty context.
   }
+
+  def storeForMdc(key: String, value: String): Unit = store(AvailableToMdc.fromKey(key))(value)
 }
 
 class TraceLocalStorage {

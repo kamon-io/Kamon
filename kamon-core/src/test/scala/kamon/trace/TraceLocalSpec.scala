@@ -16,13 +16,18 @@
 
 package kamon.trace
 
-import akka.testkit.TestKit
 import akka.actor.ActorSystem
-import org.scalatest.{ OptionValues, Matchers, WordSpecLike }
+import akka.testkit.TestKit
+import kamon.trace.TraceLocal.AvailableToMdc
+import kamon.trace.logging.MdcKeysSupport
 import org.scalatest.concurrent.PatienceConfiguration
+import org.scalatest.{Matchers, OptionValues, WordSpecLike}
+import org.slf4j.MDC
 
 class TraceLocalSpec extends TestKit(ActorSystem("trace-local-spec")) with WordSpecLike with Matchers
-    with PatienceConfiguration with OptionValues {
+    with PatienceConfiguration with OptionValues with MdcKeysSupport {
+
+  val SampleTraceLocalKeyAvailableToMDC = AvailableToMdc("someKey")
 
   object SampleTraceLocalKey extends TraceLocal.TraceLocalKey { type ValueType = String }
 
@@ -59,6 +64,32 @@ class TraceLocalSpec extends TestKit(ActorSystem("trace-local-spec")) with WordS
 
       TraceRecorder.withTraceContext(testContext) {
         TraceLocal.retrieve(SampleTraceLocalKey).value should equal(testString)
+      }
+    }
+
+    "allow retrieve a value from the MDC when was created a key with AvailableToMdc(cool-key)" in {
+      TraceRecorder.withNewTraceContext("store-and-retrieve-trace-local-and-copy-to-mdc") {
+        val testString = "Hello MDC"
+
+        TraceLocal.store(SampleTraceLocalKeyAvailableToMDC)(testString)
+        TraceLocal.retrieve(SampleTraceLocalKeyAvailableToMDC).value should equal(testString)
+
+        withMdc {
+          MDC.get("someKey") should equal(testString)
+        }
+      }
+    }
+
+    "allow retrieve a value from the MDC when was created a key with AvailableToMdc.storeForMdc(String, String)" in {
+      TraceRecorder.withNewTraceContext("store-and-retrieve-trace-local-and-copy-to-mdc") {
+        val testString = "Hello MDC"
+
+        TraceLocal.storeForMdc("someKey", testString)
+        TraceLocal.retrieve(SampleTraceLocalKeyAvailableToMDC).value should equal(testString)
+
+        withMdc {
+          MDC.get("someKey") should equal(testString)
+        }
       }
     }
   }

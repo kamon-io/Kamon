@@ -18,11 +18,14 @@ package kamon.instrumentation.akka
 import akka.actor.{ Actor, ActorLogging, ActorSystem, Props }
 import akka.event.Logging.LogEvent
 import akka.testkit.TestKit
-import kamon.trace.{ TraceContextAware, TraceRecorder }
+import kamon.trace.TraceLocal.AvailableToMdc
+import kamon.trace.logging.MdcKeysSupport
+import kamon.trace.{TraceLocal, TraceContextAware, TraceRecorder}
 import org.scalatest.{ Inspectors, Matchers, WordSpecLike }
+import org.slf4j.MDC
 
 class ActorLoggingInstrumentationSpec extends TestKit(ActorSystem("actor-logging-instrumentation-spec")) with WordSpecLike
-    with Matchers with Inspectors {
+    with Matchers with Inspectors with MdcKeysSupport {
 
   "the ActorLogging instrumentation" should {
     "attach the TraceContext (if available) to log events" in {
@@ -40,6 +43,24 @@ class ActorLoggingInstrumentationSpec extends TestKit(ActorSystem("actor-logging
           ctxInEvent === testTraceContext
 
         case event: LogEvent ⇒ false
+      }
+    }
+
+    "allow retrieve a value from the MDC when was created a key of type AvailableToMdc" in {
+      val testString = "Hello World"
+      val SampleTraceLocalKeyAvailableToMDC = AvailableToMdc("some-cool-key")
+
+      val loggerActor = system.actorOf(Props[LoggerActor])
+      system.eventStream.subscribe(testActor, classOf[LogEvent])
+
+      TraceRecorder.withNewTraceContext("logging-with-mdc") {
+        TraceLocal.store(SampleTraceLocalKeyAvailableToMDC)(testString)
+
+        loggerActor ! "info"
+
+        withMdc {
+          MDC.get("some-cool-key") should equal(testString)
+        }
       }
     }
   }
