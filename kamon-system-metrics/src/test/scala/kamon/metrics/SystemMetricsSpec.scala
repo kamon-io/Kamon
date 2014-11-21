@@ -64,6 +64,10 @@ class SystemMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
       |            highest-trackable-value = 999999999
       |            significant-value-digits = 2
       |        }
+      |        stolen {
+      |            highest-trackable-value = 999999999
+      |            significant-value-digits = 2
+      |        }
       |     }
       |     process-cpu {
       |        user {
@@ -162,7 +166,7 @@ class SystemMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
     """.stripMargin))
 
   "the Kamon  CPU Metrics" should {
-    "record user, system, wait, idle metrics" in new CPUMetricsListenerFixture {
+    "record user, system, wait, idle, stolen metrics" in new CPUMetricsListenerFixture {
       val metricsListener = subscribeToMetrics()
 
       val CPUMetrics = expectCPUMetrics(metricsListener, 3 seconds)
@@ -170,6 +174,7 @@ class SystemMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
       CPUMetrics.system.max should be >= 0L
       CPUMetrics.cpuWait.max should be >= 0L
       CPUMetrics.idle.max should be >= 0L
+      CPUMetrics.stolen.max should be >= 0L
     }
   }
   "the Kamon GC Metrics" should {

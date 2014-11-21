@@ -68,6 +68,7 @@ class SystemMetricsCollector(collectInterval: FiniteDuration) extends Actor with
     cpur.system.record(toLong(cpuPerc.getSys))
     cpur.cpuWait.record(toLong(cpuPerc.getWait))
     cpur.idle.record(toLong(cpuPerc.getIdle))
+    cpur.stolen.record(toLong(cpuPerc.getStolen))
   }
 
   private def recordProcessCpu(pcpur: ProcessCPUMetricsRecorder) = {
