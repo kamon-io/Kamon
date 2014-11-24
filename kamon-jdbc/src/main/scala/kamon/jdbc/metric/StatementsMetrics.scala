@@ -43,19 +43,19 @@ object StatementsMetrics extends MetricGroupCategory {
     def cleanup: Unit = {}
   }
 
-  case class StatementsMetricsSnapshot(writes: Histogram.Snapshot, reads: Histogram.Snapshot, slow: Counter.Snapshot, errors: Counter.Snapshot)
+  case class StatementsMetricsSnapshot(writes: Histogram.Snapshot, reads: Histogram.Snapshot, slows: Counter.Snapshot, errors: Counter.Snapshot)
       extends MetricGroupSnapshot {
 
     type GroupSnapshotType = StatementsMetricsSnapshot
 
     def merge(that: StatementsMetricsSnapshot, context: CollectionContext): GroupSnapshotType = {
-      StatementsMetricsSnapshot(writes.merge(that.writes, context), reads.merge(that.reads, context), slow.merge(that.slow, context), errors.merge(that.errors, context))
+      StatementsMetricsSnapshot(writes.merge(that.writes, context), reads.merge(that.reads, context), slows.merge(that.slows, context), errors.merge(that.errors, context))
     }
 
     lazy val metrics: Map[MetricIdentity, MetricSnapshot] = Map(
       Writes -> writes,
       Reads -> reads,
-      Slows -> slow,
+      Slows -> slows,
       Reads -> errors)
   }
 

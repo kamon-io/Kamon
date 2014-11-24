@@ -5,7 +5,7 @@
     <aspect name="kamon.jdbc.instrumentation.StatementInstrumentation"/>
   </aspects>
 
-    <weaver options="-verbose">
+    <weaver>
        <include within="java.sql.Statement+..*"/>
        <include within="java.sql.Connection+..*"/>
    </weaver>
