@@ -16,7 +16,7 @@
 package kamon.jdbc.instrumentation
 
 import java.sql.SQLException
-
+import java.util.concurrent.TimeUnit.{ NANOSECONDS ⇒ nanos }
 import akka.actor.ActorSystem
 import kamon.Kamon
 import kamon.jdbc.Jdbc
@@ -48,11 +48,11 @@ class StatementInstrumentation {
   def aroundExecuteStatement(pjp: ProceedingJoinPoint, sql: String): Any = {
     TraceRecorder.withTraceContextAndSystem { (ctx, system) ⇒
 
-      if (statementRecorder.nonEmpty) {
-        statementRecorder = Kamon(Metrics)(system).register(StatementsMetrics("Statements"), StatementsMetrics.Factory)
+      if (statementRecorder.isEmpty) {
+        statementRecorder = Kamon(Metrics)(system).register(StatementsMetrics(Statements), StatementsMetrics.Factory)
       }
 
-      sql.replaceAll(CommentPattern, "") match {
+      sql.replaceAll(CommentPattern, Empty) match {
         case SelectStatement(_) ⇒ recordRead(pjp, sql)(system)
         case InsertStatement(_) | UpdateStatement(_) | DeleteStatement(_) ⇒ recordWrite(pjp)
         case anythingElse ⇒
@@ -63,7 +63,7 @@ class StatementInstrumentation {
   }
 
   @AfterThrowing(pointcut = "onExecuteStatement(sql) || onExecutePreparedStatement(sql) || onExecutePreparedCall(sql)", throwing = "ex")
-  def onError(sql: String, ex:SQLException): Unit = {
+  def onError(sql: String, ex: SQLException): Unit = {
     log.error(s"the query [$sql] failed with exception [${ex.getMessage}]")
     statementRecorder.map(stmr ⇒ stmr.errors.increment())
   }
@@ -74,20 +74,21 @@ class StatementInstrumentation {
   }
 
   def recordRead(pjp: ProceedingJoinPoint, sql: String)(system: ActorSystem): Any = {
-    withTimeSpent(pjp.proceed()) {
-      timeSpent ⇒
-        statementRecorder.map(stmr ⇒ stmr.reads.record(timeSpent))
+    withTimeSpent(pjp.proceed()) { timeSpent ⇒
+      statementRecorder.map(stmr ⇒ stmr.reads.record(timeSpent))
 
-        if (timeSpent >= Jdbc(system).slowQueryThreshold) {
-          statementRecorder.map(stmr ⇒ stmr.slow.increment())
-          Jdbc(system).processSlowQuery(sql, timeSpent)
-        }
+      val timeSpentInMillis = nanos.toMillis(timeSpent)
+
+      if (timeSpentInMillis >= Jdbc(system).slowQueryThreshold) {
+        statementRecorder.map(stmr ⇒ stmr.slow.increment())
+        Jdbc(system).processSlowQuery(sql, timeSpentInMillis)
+      }
     }
   }
 
   def recordWrite(pjp: ProceedingJoinPoint): Any = {
-    withTimeSpent(pjp.proceed()) {
-      timeSpent ⇒ statementRecorder.map(stmr ⇒ stmr.writes.record(timeSpent))
+    withTimeSpent(pjp.proceed()) { timeSpent ⇒
+      statementRecorder.map(stmr ⇒ stmr.writes.record(timeSpent))
     }
   }
 }
@@ -100,5 +101,7 @@ object StatementInstrumentation {
   val UpdateStatement = "(?i)^\\s*update\\s+([^\\s,;]*).*".r
   val DeleteStatement = "(?i)^\\s*delete\\s+from\\s+([^\\s,(;]*).*".r
   val CommentPattern = "/\\*.*?\\*/" //for now only removes comments of kind / * anything * /
+  val Empty = ""
+  val Statements = "jdbc-statements"
 }
 
