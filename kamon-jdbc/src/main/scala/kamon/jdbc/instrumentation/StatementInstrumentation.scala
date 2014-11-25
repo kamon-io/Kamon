@@ -17,6 +17,7 @@ package kamon.jdbc.instrumentation
 
 import java.sql.SQLException
 import java.util.concurrent.TimeUnit.{ NANOSECONDS ⇒ nanos }
+
 import akka.actor.ActorSystem
 import kamon.Kamon
 import kamon.jdbc.Jdbc
@@ -59,8 +60,8 @@ class StatementInstrumentation {
           log.debug(s"Unable to parse sql [$sql]")
           pjp.proceed()
       }
-    } getOrElse pjp.proceed()
-  }
+    }
+  } getOrElse pjp.proceed()
 
   @AfterThrowing(pointcut = "onExecuteStatement(sql) || onExecutePreparedStatement(sql) || onExecutePreparedCall(sql)", throwing = "ex")
   def onError(sql: String, ex: SQLException): Unit = {
@@ -94,7 +95,7 @@ class StatementInstrumentation {
 }
 
 object StatementInstrumentation {
-  val log = LoggerFactory.getLogger("StatementInstrumentation")
+  val log = LoggerFactory.getLogger(classOf[StatementInstrumentation])
 
   val SelectStatement = "(?i)^\\s*select.*?\\sfrom[\\s\\[]+([^\\]\\s,)(;]*).*".r
   val InsertStatement = "(?i)^\\s*insert(?:\\s+ignore)?\\s+into\\s+([^\\s(,;]*).*".r
