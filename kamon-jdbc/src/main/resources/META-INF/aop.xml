@@ -6,7 +6,7 @@
   </aspects>
 
     <weaver>
-       <include within="java.sql.Statement+..*"/>
-       <include within="java.sql.Connection+..*"/>
+       <include within="java.sql.Statement..*"/>
+       <include within="java.sql.Connection..*"/>
    </weaver>
 </aspectj>
