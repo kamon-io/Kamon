@@ -36,13 +36,13 @@ class StatementInstrumentation {
 
   @volatile var statementRecorder: Option[StatementsMetricsRecorder] = Option.empty
 
-  @Pointcut("execution(* java.sql.Statement.execute*(..)) && args(sql)")
+  @Pointcut("call(* java.sql.Statement.execute*(..)) && args(sql)")
   def onExecuteStatement(sql: String): Unit = {}
 
-  @Pointcut("execution(* java.sql.Connection.prepareStatement(..)) && args(sql)")
+  @Pointcut("call(* java.sql.Connection.prepareStatement(..)) && args(sql)")
   def onExecutePreparedStatement(sql: String): Unit = {}
 
-  @Pointcut("execution(* java.sql.Connection.prepareCall(..)) && args(sql)")
+  @Pointcut("call(* java.sql.Connection.prepareCall(..)) && args(sql)")
   def onExecutePreparedCall(sql: String): Unit = {}
 
   @Around("onExecuteStatement(sql) || onExecutePreparedStatement(sql) || onExecutePreparedCall(sql)")
