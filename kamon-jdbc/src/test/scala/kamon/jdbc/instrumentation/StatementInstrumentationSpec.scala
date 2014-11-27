@@ -21,7 +21,7 @@ import akka.actor.ActorSystem
 import akka.testkit.{ TestKitBase, TestProbe }
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
-import kamon.jdbc.SlowQueryProcessor
+import kamon.jdbc.{ SqlErrorProcessor, SlowQueryProcessor }
 import kamon.jdbc.metric.StatementsMetrics
 import kamon.jdbc.metric.StatementsMetrics.StatementsMetricsSnapshot
 import kamon.metric.Metrics
@@ -41,6 +41,9 @@ class StatementInstrumentationSpec extends TestKitBase with WordSpecLike with Ma
       |
       |     # Fully qualified name of the implementation of kamon.jdbc.SlowQueryProcessor.
       |     slow-query-processor = kamon.jdbc.instrumentation.NOPSlowQueryProcessor
+      |
+      |     # Fully qualified name of the implementation of kamon.jdbc.SqlErrorProcessor.
+      |     sql-error-processor = kamon.jdbc.instrumentation.NOPSqlErrorProcessor
       |   }
       |}
     """.stripMargin))
@@ -180,5 +183,9 @@ class StatementInstrumentationSpec extends TestKitBase with WordSpecLike with Ma
 
 class NOPSlowQueryProcessor extends SlowQueryProcessor {
   override def process(sql: String, executionTimeInMillis: Long, queryThresholdInMillis: Long): Unit = { /*do nothing!!!*/ }
+}
+
+class NOPSqlErrorProcessor extends SqlErrorProcessor {
+  override def process(sql: String, ex: Throwable): Unit = { /*do nothing!!!*/ }
 }
 
