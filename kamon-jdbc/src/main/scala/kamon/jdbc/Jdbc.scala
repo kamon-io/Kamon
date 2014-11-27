@@ -27,22 +27,41 @@ object Jdbc extends ExtensionId[JdbcExtension] with ExtensionIdProvider {
 
 class JdbcExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   private val config = system.settings.config.getConfig("kamon.jdbc")
+
   private val slowQueryProcessorClass = config.getString("slow-query-processor")
   private val slowQueryProcessor: SlowQueryProcessor = system.dynamicAccess.createInstanceFor[SlowQueryProcessor](slowQueryProcessorClass, Nil).get
+
+  private val sqlErrorProcessorClass = config.getString("sql-error-processor")
+  private val sqlErrorProcessor: SqlErrorProcessor = system.dynamicAccess.createInstanceFor[SqlErrorProcessor](sqlErrorProcessorClass, Nil).get
 
   val slowQueryThreshold = config.getDuration("slow-query-threshold", milliseconds)
 
   def processSlowQuery(sql: String, executionTime: Long) = slowQueryProcessor.process(sql, executionTime, slowQueryThreshold)
+  def processSqlError(sql: String, ex: Throwable) = sqlErrorProcessor.process(sql, ex)
 }
 
 trait SlowQueryProcessor {
   def process(sql: String, executionTime: Long, queryThreshold: Long): Unit
 }
 
+trait SqlErrorProcessor {
+  def process(sql: String, ex: Throwable): Unit
+}
+
+class DefaultSqlErrorProcessor extends SqlErrorProcessor {
+  import org.slf4j.LoggerFactory
+
+  val log = LoggerFactory.getLogger(classOf[DefaultSqlErrorProcessor])
+
+  override def process(sql: String, cause: Throwable): Unit = {
+    log.error(s"the query [$sql] failed with exception [${cause.getMessage}]")
+  }
+}
+
 class DefaultSlowQueryProcessor extends SlowQueryProcessor {
   import org.slf4j.LoggerFactory
 
-  val log = LoggerFactory.getLogger("slow-query-processor")
+  val log = LoggerFactory.getLogger(classOf[DefaultSlowQueryProcessor])
 
   override def process(sql: String, executionTimeInMillis: Long, queryThresholdInMillis: Long): Unit = {
     log.warn(s"The query [$sql] took $executionTimeInMillis ms and the slow query threshold is $queryThresholdInMillis ms")
