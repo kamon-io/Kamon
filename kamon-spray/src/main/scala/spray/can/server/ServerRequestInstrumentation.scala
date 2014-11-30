@@ -15,6 +15,7 @@
  * ========================================================== */
 package spray.can.server
 
+import kamon.trace.TraceLocal.{ HttpContext, HttpContextKey }
 import org.aspectj.lang.annotation._
 import kamon.trace._
 import akka.actor.ActorSystem
@@ -27,6 +28,8 @@ import spray.http.HttpHeaders.RawHeader
 
 @Aspect
 class ServerRequestInstrumentation {
+
+  import ServerRequestInstrumentation._
 
   @DeclareMixin("spray.can.server.OpenRequestComponent.DefaultOpenRequest")
   def mixinContextAwareToOpenRequest: TraceContextAware = TraceContextAware.default
@@ -83,7 +86,12 @@ class ServerRequestInstrumentation {
       } else pjp.proceed
 
       TraceRecorder.finish()
+
       recordHttpServerMetrics(response, incomingContext.name, sprayExtension)
+
+      //store in TraceLocal useful data to diagnose errors
+      storeDiagnosticData(openRequest)
+
       proceedResult
     }
   }
@@ -110,4 +118,19 @@ class ServerRequestInstrumentation {
       case response: HttpResponse ⇒ response.withHeaders(response.headers ::: RawHeader(traceTokenHeaderName, token) :: Nil)
       case other                  ⇒ other
     }
+
+  def storeDiagnosticData(currentContext: TraceContextAware): Unit = {
+    val request = currentContext.asInstanceOf[OpenRequest].request
+    val headers = request.headers.map(header ⇒ header.name -> header.value).toMap
+    val agent = headers.getOrElse(UserAgent, Unknown)
+    val forwarded = headers.getOrElse(XForwardedFor, Unknown)
+
+    TraceLocal.store(HttpContextKey)(HttpContext(agent, request.uri.toRelative.toString(), forwarded))
+  }
+}
+
+object ServerRequestInstrumentation {
+  val UserAgent = "User-Agent"
+  val XForwardedFor = "X-Forwarded-For"
+  val Unknown = "unknown"
 }

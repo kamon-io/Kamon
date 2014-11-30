@@ -19,7 +19,9 @@ import kamon.Kamon
 import kamon.http.HttpServerMetrics
 import kamon.metric.{ CollectionContext, Metrics, TraceMetrics }
 import kamon.play.action.TraceName
+import kamon.trace.TraceLocal.HttpContextKey
 import kamon.trace.{ TraceLocal, TraceRecorder }
+import org.scalatest.Matchers
 import org.scalatestplus.play._
 import play.api.DefaultGlobal
 import play.api.http.Writeable
@@ -127,7 +129,7 @@ class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
     }
 
     "response to the getRouted Action and normalise the current TraceContext name" in {
-      Await.result(WS.url("http://localhost:19001/getRouted").get, 10 seconds)
+      Await.result(WS.url("http://localhost:19001/getRouted").get(), 10 seconds)
       Kamon(Metrics)(Akka.system()).storage.get(TraceMetrics("getRouted.get")) must not be (empty)
     }
 
@@ -137,8 +139,18 @@ class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
     }
 
     "response to the showRouted Action and normalise the current TraceContext name" in {
-      Await.result(WS.url("http://localhost:19001/showRouted/2").get, 10 seconds)
+      Await.result(WS.url("http://localhost:19001/showRouted/2").get(), 10 seconds)
       Kamon(Metrics)(Akka.system()).storage.get(TraceMetrics("show.some.id.get")) must not be (empty)
+    }
+
+    "include HttpContext information for help to diagnose possible errors" in {
+      Await.result(WS.url("http://localhost:19001/getRouted").get(), 10 seconds)
+      route(FakeRequest(GET, "/default").withHeaders("User-Agent" -> "Fake-Agent"))
+
+      val httpCtx = TraceLocal.retrieve(HttpContextKey).get
+      httpCtx.agent must be("Fake-Agent")
+      httpCtx.uri must be("/default")
+      httpCtx.xforwarded must be("unknown")
     }
 
     "record http server metrics for all processed requests" in {
@@ -180,7 +192,10 @@ class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
         TraceLocal.store(TraceLocalKey)(header.headers.get(traceLocalStorageKey).getOrElse("unknown"))
 
         next(header).map {
-          result ⇒ result.withHeaders((traceLocalStorageKey -> TraceLocal.retrieve(TraceLocalKey).get))
+          result ⇒
+            {
+              result.withHeaders(traceLocalStorageKey -> TraceLocal.retrieve(TraceLocalKey).get)
+            }
         }
       }
     }

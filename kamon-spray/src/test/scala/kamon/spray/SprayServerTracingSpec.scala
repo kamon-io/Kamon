@@ -24,11 +24,7 @@ import kamon.Kamon
 import org.scalatest.concurrent.{ PatienceConfiguration, ScalaFutures }
 import spray.http.HttpHeaders.RawHeader
 import spray.http.{ HttpResponse, HttpRequest }
-import kamon.metric.{ TraceMetrics, Metrics }
-import kamon.metric.Subscriptions.TickMetricSnapshot
 import com.typesafe.config.ConfigFactory
-import kamon.metric.TraceMetrics.ElapsedTime
-import kamon.metric.instrument.Histogram
 
 class SprayServerTracingSpec extends TestKitBase with WordSpecLike with Matchers with RequestBuilding
     with ScalaFutures with PatienceConfiguration with TestServer {
@@ -81,7 +77,7 @@ class SprayServerTracingSpec extends TestKitBase with WordSpecLike with Matchers
       server.reply(HttpResponse(entity = "ok"))
       val response = client.expectMsgType[HttpResponse]
 
-      response.headers.filter(_.name == Kamon(Spray).traceTokenHeaderName).size should be(1)
+      response.headers.count(_.name == Kamon(Spray).traceTokenHeaderName) should be(1)
 
     }
 
@@ -96,7 +92,7 @@ class SprayServerTracingSpec extends TestKitBase with WordSpecLike with Matchers
       server.reply(HttpResponse(entity = "ok"))
       val response = client.expectMsgType[HttpResponse]
 
-      response.headers should not contain (RawHeader(Kamon(Spray).traceTokenHeaderName, "propagation-disabled"))
+      response.headers should not contain RawHeader(Kamon(Spray).traceTokenHeaderName, "propagation-disabled")
     }
   }
 
