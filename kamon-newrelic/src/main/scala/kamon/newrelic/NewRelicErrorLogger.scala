@@ -21,7 +21,8 @@ import java.util
 import akka.actor.{ Actor, ActorLogging }
 import akka.event.Logging.{ Error, InitializeLogger, LoggerInitialized }
 import com.newrelic.api.agent.{ NewRelic ⇒ NR }
-import kamon.trace.{ TraceRecorder, TraceContextAware }
+import kamon.trace.TraceLocal.{ HttpContext, HttpContextKey }
+import kamon.trace.{ TraceLocal, TraceRecorder, TraceContextAware }
 
 trait CustomParamsSupport {
   this: NewRelicErrorLogger ⇒
@@ -41,8 +42,16 @@ class NewRelicErrorLogger extends Actor with ActorLogging with CustomParamsSuppo
   def notifyError(error: Error): Unit = runInFakeTransaction {
     val params = new util.HashMap[String, String]()
     val ctx = error.asInstanceOf[TraceContextAware].traceContext
+    val httpContext = TraceLocal.retrieve(HttpContextKey)
 
     params put ("TraceToken", ctx.token)
+
+    httpContext.map { httpCtx ⇒
+      params put ("User-Agent", httpCtx.agent)
+      params put ("X-Forwarded-For", httpCtx.xforwarded)
+      params put ("Request-URI", httpCtx.uri)
+    }
+
     customParams foreach { case (k, v) ⇒ params.put(k, v) }
 
     if (error.cause == Error.NoCause) NR.noticeError(error.message.toString, params)
