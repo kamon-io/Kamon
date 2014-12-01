@@ -14,29 +14,17 @@
  * =========================================================================================
  */
 
-package kamon.system.sigar
+package kamon.system
 
-import java.io._
-import java.util.logging.Logger
-import kamon.sigar.SigarAgent
+import akka.actor.ActorLogging
 import org.hyperic.sigar._
-import scala.util.control.{ NoStackTrace, NonFatal }
 
-object SigarLoader {
-  private val log = Logger.getLogger("SigarLoader")
+import scala.util.control.NoStackTrace
 
-  lazy val instance = init(new File(System.getProperty("java.io.tmpdir")))
+trait SystemMetricsBanner {
+  self: ActorLogging ⇒
 
-  private[sigar] def init(baseTmp: File): SigarProxy = try {
-    SigarAgent.provision(baseTmp)
-    val sigar = new Sigar()
-    printBanner(sigar)
-    sigar
-  } catch {
-    case NonFatal(t) ⇒ throw new UnexpectedSigarException("Failed to load sigar")
-  }
-
-  private[sigar] def printBanner(sigar: Sigar) = {
+  def printBanner(sigar: Sigar) = {
     val os = OperatingSystem.getInstance
 
     def loadAverage(sigar: Sigar) = try {
@@ -98,5 +86,6 @@ object SigarLoader {
       """.stripMargin.format(uptime(sigar), os.getDescription, loadAverage(sigar), os.getName, os.getVersion, os.getArch)
     log.info(message)
   }
+
   class UnexpectedSigarException(message: String) extends RuntimeException(message) with NoStackTrace
 }

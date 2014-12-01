@@ -23,7 +23,7 @@ object Projects extends Build {
 
   lazy val root = Project("root", file("."))
     .aggregate(kamonCore, kamonSpray, kamonNewrelic, kamonPlayground, kamonDashboard, kamonTestkit, kamonPlay, kamonStatsD,
-      kamonDatadog, kamonSystemMetrics, kamonLogReporter, kamonAkkaRemote, kamonSigar)
+      kamonDatadog, kamonSystemMetrics, kamonLogReporter, kamonAkkaRemote)
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
     .settings(noPublishing: _*)
@@ -168,15 +168,9 @@ object Projects extends Build {
       .settings(fork in Test :=  true)
       .settings(
         libraryDependencies ++=
-          compile(sigar) ++
+          compile(sigarLoader) ++
           test(scalatest, akkaTestKit, slf4Api, slf4nop))
       .dependsOn(kamonCore)
-      .dependsOn(kamonSigar)
-
-  lazy val kamonSigar = Project("kamon-sigar", file("kamon-sigar"))
-    .settings(basicSettings: _*)
-    .settings(formatSettings: _*)
-    .settings(Sigar.settings: _*)
 
   val noPublishing = Seq(publish := (), publishLocal := (), publishArtifact := false)
 }

@@ -15,7 +15,7 @@
  */
 package kamon.system
 
-import java.io.IOException
+import java.io.{ File, IOException }
 
 import akka.actor.{ Actor, ActorLogging, Props }
 import kamon.Kamon
@@ -26,19 +26,24 @@ import kamon.metrics.MemoryMetrics.MemoryMetricRecorder
 import kamon.metrics.NetworkMetrics.NetworkMetricRecorder
 import kamon.metrics.ProcessCPUMetrics.ProcessCPUMetricsRecorder
 import kamon.metrics._
-import kamon.system.sigar.SigarLoader
-import org.hyperic.sigar.{ Mem, NetInterfaceStat, SigarProxy }
+import kamon.sigar.SigarProvisioner
+import org.hyperic.sigar.{ Sigar, Mem, NetInterfaceStat, SigarProxy }
 
 import scala.concurrent.duration.FiniteDuration
 import scala.io.Source
+import scala.util.control.NonFatal
 
-class SystemMetricsCollector(collectInterval: FiniteDuration) extends Actor with ActorLogging with SigarExtensionProvider {
+class SystemMetricsCollector(collectInterval: FiniteDuration) extends Actor with ActorLogging with SystemMetricsBanner {
   import kamon.system.SystemMetricsCollector._
   import kamon.system.SystemMetricsExtension._
 
-  val collectSchedule = context.system.scheduler.schedule(collectInterval, collectInterval, self, Collect)(context.dispatcher)
+  lazy val sigar = createSigarInstance
+  def pid = sigar.getPid
+
+  val interfaces: Set[String] = sigar.getNetInterfaceList.toSet
 
   val systemMetricsExtension = Kamon(Metrics)(context.system)
+  val collectSchedule = context.system.scheduler.schedule(collectInterval, collectInterval, self, Collect)(context.dispatcher)
 
   val cpuRecorder = systemMetricsExtension.register(CPUMetrics(CPU), CPUMetrics.Factory)
   val processCpuRecorder = systemMetricsExtension.register(ProcessCPUMetrics(ProcessCPU), ProcessCPUMetrics.Factory)
@@ -152,6 +157,19 @@ class SystemMetricsCollector(collectInterval: FiniteDuration) extends Actor with
     rcs.perProcessNonVoluntary.record(perProcessNonVoluntary)
     rcs.global.record(contextSwitches)
   }
+
+  def createSigarInstance: SigarProxy = {
+    val tempFolder = new File(System.getProperty("java.io.tmpdir"))
+
+    try {
+      SigarProvisioner.provision(tempFolder)
+      val sigar = new Sigar()
+      printBanner(sigar)
+      sigar
+    } catch {
+      case NonFatal(t) ⇒ throw new UnexpectedSigarException("Failed to load sigar")
+    }
+  }
 }
 
 object SystemMetricsCollector {
@@ -162,12 +180,4 @@ object SystemMetricsCollector {
   }
 
   def props(collectInterval: FiniteDuration): Props = Props[SystemMetricsCollector](new SystemMetricsCollector(collectInterval))
-}
-
-trait SigarExtensionProvider {
-  lazy val sigar = SigarLoader.instance
-
-  def pid = sigar.getPid
-
-  val interfaces: Set[String] = sigar.getNetInterfaceList.toSet
 }

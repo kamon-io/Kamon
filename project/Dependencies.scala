@@ -27,7 +27,6 @@ object Dependencies {
   val aspectjVersion  = "1.8.4"
   val slf4jVersion    = "1.7.6"
   val playVersion     = "2.3.5"
-  val sigarVersion    = "1.6.5.132"
 
   val sprayJson       = "io.spray"                  %%  "spray-json"            % "1.3.0"
   val sprayJsonLenses = "net.virtual-void"          %%  "json-lenses"           % "0.5.4"
@@ -51,13 +50,8 @@ object Dependencies {
   val slf4Api         = "org.slf4j"                 %   "slf4j-api"             % slf4jVersion
   val slf4nop         = "org.slf4j"                 %   "slf4j-nop"             % slf4jVersion
   val scalaCompiler   = "org.scala-lang"            %   "scala-compiler"        % Settings.ScalaVersion
-  val sigar           = "org.fusesource"            %   "sigar"                 % "1.6.4" // TODO remove
   val scalazConcurrent = "org.scalaz"               %%  "scalaz-concurrent"     % "7.1.0"
-  //
-  val sigarJar        = "org.hyperic"               %   "sigar"                 % sigarVersion withSources() withJavadoc()
-  val sigarZip        = "org.hyperic"               %   "sigar-dist"            % sigarVersion
-  val junit           = "junit"                     %   "junit"                 % "4.11"
-  val junitInterface  = "com.novocode"              %   "junit-interface"       % "0.11"
+  val sigarLoader     = "io.kamon"                  %   "sigar-loader"          % "1.6.5-rev001"
 
   def compile   (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "compile")
   def provided  (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "provided")
