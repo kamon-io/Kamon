@@ -40,10 +40,10 @@ class StatementInstrumentationSpec extends TestKitBase with WordSpecLike with Ma
       |     slow-query-threshold = 100 milliseconds
       |
       |     # Fully qualified name of the implementation of kamon.jdbc.SlowQueryProcessor.
-      |     slow-query-processor = kamon.jdbc.instrumentation.NOPSlowQueryProcessor
+      |     slow-query-processor = kamon.jdbc.instrumentation.NoOpSlowQueryProcessor
       |
       |     # Fully qualified name of the implementation of kamon.jdbc.SqlErrorProcessor.
-      |     sql-error-processor = kamon.jdbc.instrumentation.NOPSqlErrorProcessor
+      |     sql-error-processor = kamon.jdbc.instrumentation.NoOpSqlErrorProcessor
       |   }
       |}
     """.stripMargin))
@@ -181,11 +181,11 @@ class StatementInstrumentationSpec extends TestKitBase with WordSpecLike with Ma
   }
 }
 
-class NOPSlowQueryProcessor extends SlowQueryProcessor {
+class NoOpSlowQueryProcessor extends SlowQueryProcessor {
   override def process(sql: String, executionTimeInMillis: Long, queryThresholdInMillis: Long): Unit = { /*do nothing!!!*/ }
 }
 
-class NOPSqlErrorProcessor extends SqlErrorProcessor {
+class NoOpSqlErrorProcessor extends SqlErrorProcessor {
   override def process(sql: String, ex: Throwable): Unit = { /*do nothing!!!*/ }
 }
 
