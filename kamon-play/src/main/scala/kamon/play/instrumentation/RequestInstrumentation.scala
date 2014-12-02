@@ -55,7 +55,7 @@ class RequestInstrumentation {
   @Around("call(* play.api.GlobalSettings.doFilter(*)) && args(next)")
   def aroundDoFilter(pjp: ProceedingJoinPoint, next: EssentialAction): Any = {
     val essentialAction = (requestHeader: RequestHeader) ⇒ {
-      // TODO: Move to a Kamon-specific dispatcher.
+
       val executor = Kamon(Play)(Akka.system()).defaultDispatcher
 
       def onResult(result: Result): Result = {

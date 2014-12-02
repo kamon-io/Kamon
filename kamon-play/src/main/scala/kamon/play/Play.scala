@@ -55,6 +55,6 @@ trait PlayNameGenerator {
 }
 
 class DefaultPlayNameGenerator extends PlayNameGenerator {
-  def generateTraceName(requestHeader: RequestHeader): String = requestHeader.method + ": " + requestHeader.uri
+  def generateTraceName(requestHeader: RequestHeader): String = s"${requestHeader.method}: ${requestHeader.uri}"
   def generateHttpClientSegmentName(request: WSRequest): String = request.url
 }

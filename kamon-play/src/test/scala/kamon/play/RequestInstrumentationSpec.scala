@@ -21,7 +21,6 @@ import kamon.metric.{ CollectionContext, Metrics, TraceMetrics }
 import kamon.play.action.TraceName
 import kamon.trace.TraceLocal.HttpContextKey
 import kamon.trace.{ TraceLocal, TraceRecorder }
-import org.scalatest.Matchers
 import org.scalatestplus.play._
 import play.api.DefaultGlobal
 import play.api.http.Writeable
@@ -124,23 +123,23 @@ class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
     }
 
     "propagate the TraceContext and LocalStorage through of filters in the current request" in {
-      val Some(result) = route(FakeRequest(GET, "/retrieve").withHeaders(traceTokenHeader, traceLocalStorageHeader))
+      route(FakeRequest(GET, "/retrieve").withHeaders(traceTokenHeader, traceLocalStorageHeader))
       TraceLocal.retrieve(TraceLocalKey).get must be(traceLocalStorageValue)
     }
 
     "response to the getRouted Action and normalise the current TraceContext name" in {
       Await.result(WS.url("http://localhost:19001/getRouted").get(), 10 seconds)
-      Kamon(Metrics)(Akka.system()).storage.get(TraceMetrics("getRouted.get")) must not be (empty)
+      Kamon(Metrics)(Akka.system()).storage.get(TraceMetrics("getRouted.get")) must not be empty
     }
 
     "response to the postRouted Action and normalise the current TraceContext name" in {
       Await.result(WS.url("http://localhost:19001/postRouted").post("content"), 10 seconds)
-      Kamon(Metrics)(Akka.system()).storage.get(TraceMetrics("postRouted.post")) must not be (empty)
+      Kamon(Metrics)(Akka.system()).storage.get(TraceMetrics("postRouted.post")) must not be empty
     }
 
     "response to the showRouted Action and normalise the current TraceContext name" in {
       Await.result(WS.url("http://localhost:19001/showRouted/2").get(), 10 seconds)
-      Kamon(Metrics)(Akka.system()).storage.get(TraceMetrics("show.some.id.get")) must not be (empty)
+      Kamon(Metrics)(Akka.system()).storage.get(TraceMetrics("show.some.id.get")) must not be empty
     }
 
     "include HttpContext information for help to diagnose possible errors" in {
@@ -230,7 +229,7 @@ object Routes extends Router.Routes {
     Route("GET", PathPattern(List(StaticPart(Routes.prefix), StaticPart(Routes.defaultPrefix), StaticPart("getRouted"))))
 
   private[this] lazy val Application_show =
-    Route("GET", PathPattern(List(StaticPart(Routes.prefix), StaticPart(Routes.defaultPrefix), StaticPart("showRouted/"), DynamicPart("id", """[^/]+""", true))))
+    Route("GET", PathPattern(List(StaticPart(Routes.prefix), StaticPart(Routes.defaultPrefix), StaticPart("showRouted/"), DynamicPart("id", """[^/]+""", encodeable = true))))
 
   //Posts
   private[this] lazy val Application_postRouted =

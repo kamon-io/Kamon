@@ -18,7 +18,7 @@ package kamon.play.instrumentation
 
 import kamon.Kamon
 import kamon.play.Play
-import kamon.trace.{ SegmentCategory, SegmentMetricIdentity, TraceRecorder }
+import kamon.trace.{ SegmentCategory, TraceRecorder }
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation.{ Around, Aspect, Pointcut }
 import play.api.libs.ws.{ WSRequest, WSResponse }
@@ -42,6 +42,6 @@ class WSInstrumentation {
 
       response.map(result ⇒ segment.finish())(executor)
       response
-    } getOrElse (pjp.proceed())
+    } getOrElse pjp.proceed()
   }
 }
