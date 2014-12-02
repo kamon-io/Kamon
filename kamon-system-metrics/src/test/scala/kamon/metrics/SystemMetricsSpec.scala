@@ -229,8 +229,8 @@ class SystemMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
       val metricsListener = subscribeToMetrics()
 
       val ProcessCPUMetrics = expectProcessCPUMetrics(metricsListener, 3 seconds)
-      ProcessCPUMetrics.cpuPercent.max should be > 0L
-      ProcessCPUMetrics.totalProcessTime.max should be > 0L
+      ProcessCPUMetrics.cpuPercent.max should be >= 0L
+      ProcessCPUMetrics.totalProcessTime.max should be >= 0L
     }
   }
 
