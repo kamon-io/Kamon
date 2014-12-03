@@ -27,7 +27,7 @@ import kamon.metric.TraceMetrics.TraceMetricRecorder
 
 import scala.annotation.tailrec
 
-sealed trait TraceContext {
+trait TraceContext {
   def name: String
   def token: String
   def rename(name: String): Unit
@@ -39,15 +39,23 @@ sealed trait TraceContext {
   def nonEmpty: Boolean = !isEmpty
   def startSegment(segmentName: String, category: String, library: String): Segment
   def nanoTimestamp: Long
+  def addMetadata(key: String, value: String)
+
+  protected def elapsedNanoTime: Long
 }
 
-sealed trait Segment {
+trait Segment {
   def name: String
   def rename(newName: String): Unit
   def category: String
   def library: String
   def finish(): Unit
+  def isOpen: Boolean
+  def isClosed: Boolean = !isOpen
   def isEmpty: Boolean
+  def addMetadata(key: String, value: String)
+
+  protected def elapsedNanoTime: Long
 }
 
 case object EmptyTraceContext extends TraceContext {
@@ -60,85 +68,24 @@ case object EmptyTraceContext extends TraceContext {
   def isEmpty: Boolean = true
   def startSegment(segmentName: String, category: String, library: String): Segment = EmptySegment
   def nanoTimestamp: Long = 0L
+  def addMetadata(key: String, value: String): Unit = {}
+  def elapsedNanoTime: Long = 0L
 
   case object EmptySegment extends Segment {
     val name: String = "empty-segment"
     val category: String = "empty-category"
     val library: String = "empty-library"
     def isEmpty: Boolean = true
+    def isOpen: Boolean = false
     def rename(newName: String): Unit = {}
     def finish: Unit = {}
-  }
-}
-
-class DefaultTraceContext(traceName: String, val token: String, izOpen: Boolean, val levelOfDetail: LevelOfDetail,
-    val origin: TraceContextOrigin, nanoTimeztamp: Long, val system: ActorSystem) extends TraceContext {
-
-  val isEmpty: Boolean = false
-  @volatile private var _name = traceName
-  @volatile private var _isOpen = izOpen
-
-  private val _nanoTimestamp = nanoTimeztamp
-  private val finishedSegments = new ConcurrentLinkedQueue[SegmentData]()
-  private val metricsExtension = Kamon(Metrics)(system)
-  private[kamon] val traceLocalStorage: TraceLocalStorage = new TraceLocalStorage
-
-  def name: String = _name
-  def rename(newName: String): Unit =
-    if (isOpen) _name = newName // TODO: log a warning about renaming a closed trace.
-
-  def isOpen: Boolean = _isOpen
-  def nanoTimestamp: Long = _nanoTimestamp
-
-  def finish(): Unit = {
-    _isOpen = false
-    val elapsedNanoTime = System.nanoTime() - _nanoTimestamp
-    val metricRecorder = metricsExtension.register(TraceMetrics(name), TraceMetrics.Factory)
-
-    metricRecorder.map { traceMetrics ⇒
-      traceMetrics.elapsedTime.record(elapsedNanoTime)
-      drainFinishedSegments(traceMetrics)
-    }
-  }
-
-  def startSegment(segmentName: String, category: String, library: String): Segment = new DefaultSegment(segmentName, category, library)
-
-  @tailrec private def drainFinishedSegments(metricRecorder: TraceMetricRecorder): Unit = {
-    val segment = finishedSegments.poll()
-    if (segment != null) {
-      metricRecorder.segmentRecorder(segment.identity).record(segment.duration)
-      drainFinishedSegments(metricRecorder)
-    }
-  }
-
-  private def finishSegment(segmentName: String, category: String, library: String, duration: Long): Unit = {
-    finishedSegments.add(SegmentData(SegmentMetricIdentity(segmentName, category, library), duration))
-
-    if (isClosed) {
-      metricsExtension.register(TraceMetrics(name), TraceMetrics.Factory).map { traceMetrics ⇒
-        drainFinishedSegments(traceMetrics)
-      }
-    }
-  }
-
-  class DefaultSegment(segmentName: String, val category: String, val library: String) extends Segment {
-    private val _segmentStartNanoTime = System.nanoTime()
-    @volatile private var _segmentName = segmentName
-    @volatile private var _isOpen = true
-
-    def name: String = _segmentName
-    def rename(newName: String): Unit = _segmentName = newName
-    def isEmpty: Boolean = false
-
-    def finish: Unit = {
-      val segmentFinishNanoTime = System.nanoTime()
-      finishSegment(name, category, library, (segmentFinishNanoTime - _segmentStartNanoTime))
-    }
+    def addMetadata(key: String, value: String): Unit = {}
+    def elapsedNanoTime: Long = 0L
   }
 }
 
 case class SegmentMetricIdentity(name: String, category: String, library: String) extends MetricIdentity
-case class SegmentData(identity: SegmentMetricIdentity, duration: Long)
+case class SegmentLatencyData(identity: SegmentMetricIdentity, duration: Long)
 
 object SegmentCategory {
   val HttpClient = "http-client"
@@ -146,7 +93,7 @@ object SegmentCategory {
 
 sealed trait LevelOfDetail
 object LevelOfDetail {
-  case object OnlyMetrics extends LevelOfDetail
+  case object MetricsOnly extends LevelOfDetail
   case object SimpleTrace extends LevelOfDetail
   case object FullTrace extends LevelOfDetail
 }
