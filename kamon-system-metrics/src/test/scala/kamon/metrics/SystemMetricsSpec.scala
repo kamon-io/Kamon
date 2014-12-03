@@ -33,7 +33,7 @@ import org.scalatest.{ Matchers, WordSpecLike }
 
 import scala.concurrent.duration._
 
-class SystemMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
+class SystemMetricsSpec extends TestKitBase with WordSpecLike with Matchers with RedirectLogging {
   implicit lazy val system: ActorSystem = ActorSystem("system-metrics-spec", ConfigFactory.parseString(
     """
       |akka {
