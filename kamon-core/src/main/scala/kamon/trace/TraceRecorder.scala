@@ -40,16 +40,8 @@ object TraceRecorder {
     Kamon(Trace)(system).newTraceContext(name, token.getOrElse(newToken), true, TraceContextOrigin.Local, System.nanoTime(), system)
 
   def joinRemoteTraceContext(traceName: String, traceToken: String, startMilliTime: Long, isOpen: Boolean, system: ActorSystem): TraceContext = {
-    val equivalentNanotime = System.nanoTime() - ((System.currentTimeMillis() - startMilliTime) * 1000000)
-    /*new MetricsOnlyContext(
-      traceName,
-      traceToken,
-      isOpen,
-      LevelOfDetail.MetricsOnly,
-      TraceContextOrigin.Remote,
-      equivalentNanotime,
-      system)*/
-    ???
+    val equivalentNanoTime = System.nanoTime() - ((System.currentTimeMillis() - startMilliTime) * 1000000)
+    Kamon(Trace)(system).newTraceContext(traceName, traceToken, isOpen, TraceContextOrigin.Remote, equivalentNanoTime, system)
   }
 
   def setContext(context: TraceContext): Unit = traceContextStorage.set(context)

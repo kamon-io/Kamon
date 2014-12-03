@@ -50,7 +50,7 @@ class TraceExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   def newTraceContext(traceName: String, token: String, isOpen: Boolean, origin: TraceContextOrigin, nanoTimestamp: Long, system: ActorSystem): TraceContext = {
     def newMetricsOnlyContext = new MetricsOnlyContext(traceName, token, true, detailLevel, origin, nanoTimestamp, log, metricsExtension, system)
 
-    if (detailLevel == LevelOfDetail.MetricsOnly)
+    if (detailLevel == LevelOfDetail.MetricsOnly || origin == TraceContextOrigin.Remote)
       newMetricsOnlyContext
     else {
       if (!sampler.shouldTrace)
