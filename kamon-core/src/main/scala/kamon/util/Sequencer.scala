@@ -18,7 +18,7 @@ package kamon.util
 
 /**
  * This class implements an extremely efficient, thread-safe way to generate a
- * simple incrementing sequence of Longs with a simple Long overflow protection.
+ * incrementing sequence of Longs with a simple Long overflow protection.
  */
 class Sequencer {
   private val CloseToOverflow = Long.MaxValue - 1000000000

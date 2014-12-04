@@ -3,6 +3,7 @@ package kamon.trace
 import java.util.concurrent.atomic.AtomicLong
 
 import kamon.NanoInterval
+import kamon.util.Sequencer
 import scala.concurrent.forkjoin.ThreadLocalRandom
 
 trait Sampler {
@@ -31,9 +32,9 @@ class RandomSampler(chance: Int) extends Sampler {
 class OrderedSampler(interval: Int) extends Sampler {
   require(interval > 0, "kamon.trace.ordered-sampler.interval cannot be <= 0")
 
-  private val counter = new AtomicLong(0L)
-  def shouldTrace: Boolean = counter.incrementAndGet() % interval == 0
-  // TODO: find a more efficient way to do this, protect from long overflow.
+  private val sequencer = Sequencer()
+
+  def shouldTrace: Boolean = sequencer.next() % interval == 0
   def shouldReport(traceElapsedTime: NanoInterval): Boolean = true
 }
 
