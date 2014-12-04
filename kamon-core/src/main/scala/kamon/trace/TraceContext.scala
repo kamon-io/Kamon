@@ -85,6 +85,7 @@ case class SegmentLatencyData(identity: SegmentMetricIdentity, duration: NanoInt
 
 object SegmentCategory {
   val HttpClient = "http-client"
+  val Database = "database"
 }
 
 sealed trait LevelOfDetail

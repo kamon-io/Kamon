@@ -23,10 +23,15 @@ import kamon.Kamon
 object Jdbc extends ExtensionId[JdbcExtension] with ExtensionIdProvider {
   override def lookup(): ExtensionId[_ <: Extension] = Jdbc
   override def createExtension(system: ExtendedActorSystem): JdbcExtension = new JdbcExtension(system)
+
+  val SegmentLibraryName = "jdbc"
 }
 
 class JdbcExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   private val config = system.settings.config.getConfig("kamon.jdbc")
+
+  private val nameGeneratorFQN = config.getString("name-generator")
+  private val nameGenerator: JdbcNameGenerator = system.dynamicAccess.createInstanceFor[JdbcNameGenerator](nameGeneratorFQN, Nil).get
 
   private val slowQueryProcessorClass = config.getString("slow-query-processor")
   private val slowQueryProcessor: SlowQueryProcessor = system.dynamicAccess.createInstanceFor[SlowQueryProcessor](slowQueryProcessorClass, Nil).get
@@ -38,6 +43,7 @@ class JdbcExtension(system: ExtendedActorSystem) extends Kamon.Extension {
 
   def processSlowQuery(sql: String, executionTime: Long) = slowQueryProcessor.process(sql, executionTime, slowQueryThreshold)
   def processSqlError(sql: String, ex: Throwable) = sqlErrorProcessor.process(sql, ex)
+  def generateJdbcSegmentName(statement: String): String = nameGenerator.generateJdbcSegmentName(statement)
 }
 
 trait SlowQueryProcessor {
@@ -46,6 +52,14 @@ trait SlowQueryProcessor {
 
 trait SqlErrorProcessor {
   def process(sql: String, ex: Throwable): Unit
+}
+
+trait JdbcNameGenerator {
+  def generateJdbcSegmentName(statement: String): String
+}
+
+class DefaultJdbcNameGenerator extends JdbcNameGenerator {
+  def generateJdbcSegmentName(statement: String): String = s"Jdbc[$statement]"
 }
 
 class DefaultSqlErrorProcessor extends SqlErrorProcessor {
