@@ -17,59 +17,55 @@
 package kamon.trace
 
 import java.io.ObjectStreamException
-
 import akka.actor.ActorSystem
-import kamon.Kamon
+import kamon._
 import kamon.metric._
-import java.util.concurrent.ConcurrentLinkedQueue
 import kamon.trace.TraceContextAware.DefaultTraceContextAware
-import kamon.metric.TraceMetrics.TraceMetricRecorder
-
-import scala.annotation.tailrec
 
 trait TraceContext {
   def name: String
   def token: String
-  def rename(name: String): Unit
-  def finish(): Unit
   def origin: TraceContextOrigin
-  def isOpen: Boolean
-  def isClosed: Boolean = !isOpen
   def isEmpty: Boolean
   def nonEmpty: Boolean = !isEmpty
-  def startSegment(segmentName: String, category: String, library: String): Segment
-  def nanoTimestamp: Long
-  def addMetadata(key: String, value: String)
+  def isOpen: Boolean
+  def isClosed: Boolean = !isOpen
+  def system: ActorSystem
 
-  protected def elapsedNanoTime: Long
+  def finish(): Unit
+  def rename(newName: String): Unit
+  def startSegment(segmentName: String, category: String, library: String): Segment
+  def addMetadata(key: String, value: String)
+  def startRelativeTimestamp: RelativeNanoTimestamp
 }
 
 trait Segment {
   def name: String
-  def rename(newName: String): Unit
   def category: String
   def library: String
-  def finish(): Unit
+  def isEmpty: Boolean
+  def nonEmpty: Boolean = !isEmpty
   def isOpen: Boolean
   def isClosed: Boolean = !isOpen
-  def isEmpty: Boolean
-  def addMetadata(key: String, value: String)
 
-  protected def elapsedNanoTime: Long
+  def finish(): Unit
+  def rename(newName: String): Unit
+  def addMetadata(key: String, value: String)
 }
 
 case object EmptyTraceContext extends TraceContext {
   def name: String = "empty-trace"
   def token: String = ""
-  def rename(name: String): Unit = {}
-  def finish(): Unit = {}
   def origin: TraceContextOrigin = TraceContextOrigin.Local
-  def isOpen: Boolean = false
   def isEmpty: Boolean = true
+  def isOpen: Boolean = false
+  def system: ActorSystem = sys.error("Can't obtain a ActorSystem from a EmptyTraceContext.")
+
+  def finish(): Unit = {}
+  def rename(name: String): Unit = {}
   def startSegment(segmentName: String, category: String, library: String): Segment = EmptySegment
-  def nanoTimestamp: Long = 0L
   def addMetadata(key: String, value: String): Unit = {}
-  def elapsedNanoTime: Long = 0L
+  def startRelativeTimestamp = new RelativeNanoTimestamp(0L)
 
   case object EmptySegment extends Segment {
     val name: String = "empty-segment"
@@ -77,15 +73,15 @@ case object EmptyTraceContext extends TraceContext {
     val library: String = "empty-library"
     def isEmpty: Boolean = true
     def isOpen: Boolean = false
-    def rename(newName: String): Unit = {}
+
     def finish: Unit = {}
+    def rename(newName: String): Unit = {}
     def addMetadata(key: String, value: String): Unit = {}
-    def elapsedNanoTime: Long = 0L
   }
 }
 
 case class SegmentMetricIdentity(name: String, category: String, library: String) extends MetricIdentity
-case class SegmentLatencyData(identity: SegmentMetricIdentity, duration: Long)
+case class SegmentLatencyData(identity: SegmentMetricIdentity, duration: NanoInterval)
 
 object SegmentCategory {
   val HttpClient = "http-client"
