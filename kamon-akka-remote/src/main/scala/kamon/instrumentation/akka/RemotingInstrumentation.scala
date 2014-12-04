@@ -5,6 +5,7 @@ import akka.remote.instrumentation.TraceContextAwareWireFormats.{ TraceContextAw
 import akka.remote.{ RemoteActorRefProvider, Ack, SeqNo }
 import akka.remote.WireFormats._
 import akka.util.ByteString
+import kamon.MilliTimestamp
 import kamon.trace.TraceRecorder
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
@@ -33,7 +34,7 @@ class RemotingInstrumentation {
     // Attach the TraceContext info, if available.
     if (!TraceRecorder.currentContext.isEmpty) {
       val context = TraceRecorder.currentContext
-      val relativeStartMilliTime = System.currentTimeMillis - ((System.nanoTime - context.nanoTimestamp) / 1000000)
+      val relativeStartMilliTime = System.currentTimeMillis - ((System.nanoTime - context.startRelativeTimestamp.nanos) / 1000000)
 
       envelopeBuilder.setTraceContext(RemoteTraceContext.newBuilder()
         .setTraceName(context.name)
@@ -87,7 +88,7 @@ class RemotingInstrumentation {
       val ctx = TraceRecorder.joinRemoteTraceContext(
         remoteTraceContext.getTraceName(),
         remoteTraceContext.getTraceToken(),
-        remoteTraceContext.getStartMilliTime(),
+        new MilliTimestamp(remoteTraceContext.getStartMilliTime()),
         remoteTraceContext.getIsOpen(),
         system)
 

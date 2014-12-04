@@ -43,13 +43,13 @@ object TraceLocal {
   object HttpContextKey extends TraceLocal.TraceLocalKey { type ValueType = HttpContext }
 
   def store(key: TraceLocalKey)(value: key.ValueType): Unit = TraceRecorder.currentContext match {
-    case ctx: DefaultTraceContext ⇒ ctx.traceLocalStorage.store(key)(value)
-    case EmptyTraceContext        ⇒ // Can't store in the empty context.
+    case ctx: MetricsOnlyContext ⇒ ctx.traceLocalStorage.store(key)(value)
+    case EmptyTraceContext       ⇒ // Can't store in the empty context.
   }
 
   def retrieve(key: TraceLocalKey): Option[key.ValueType] = TraceRecorder.currentContext match {
-    case ctx: DefaultTraceContext ⇒ ctx.traceLocalStorage.retrieve(key)
-    case EmptyTraceContext        ⇒ None // Can't retrieve anything from the empty context.
+    case ctx: MetricsOnlyContext ⇒ ctx.traceLocalStorage.retrieve(key)
+    case EmptyTraceContext       ⇒ None // Can't retrieve anything from the empty context.
   }
 
   def storeForMdc(key: String, value: String): Unit = store(AvailableToMdc.fromKey(key))(value)

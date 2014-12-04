@@ -70,7 +70,7 @@ class ServerRequestInstrumentation {
     val storedContext = openRequest.traceContext
 
     // The stored context is always a DefaultTraceContext if the instrumentation is running
-    val system = storedContext.asInstanceOf[DefaultTraceContext].system
+    val system = storedContext.system
 
     verifyTraceContextConsistency(incomingContext, storedContext, system)
 

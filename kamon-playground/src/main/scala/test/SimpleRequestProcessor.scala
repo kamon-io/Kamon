@@ -23,7 +23,7 @@ import kamon.Kamon
 import kamon.metric.Subscriptions.TickMetricSnapshot
 import kamon.metric._
 import kamon.spray.KamonTraceDirectives
-import kamon.trace.{ SegmentCategory, TraceRecorder }
+import kamon.trace.{ Trace, SegmentCategory, TraceRecorder }
 import spray.http.{ StatusCodes, Uri }
 import spray.httpx.RequestBuilding
 import spray.routing.SimpleRoutingApp
@@ -46,6 +46,7 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
     def receive: Actor.Receive = { case any ⇒ sender ! any }
   }), "com")
 
+  Kamon(Trace).subscribe(printer)
   //val buffer = system.actorOf(TickMetricSnapshotBuffer.props(30 seconds, printer))
 
   //Kamon(Metrics).subscribe(CustomMetric, "*", buffer, permanently = true)

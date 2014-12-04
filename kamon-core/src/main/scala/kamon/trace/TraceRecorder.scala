@@ -16,6 +16,8 @@
 
 package kamon.trace
 
+import kamon.{ MilliTimestamp, RelativeNanoTimestamp, Kamon }
+
 import scala.language.experimental.macros
 import java.util.concurrent.atomic.AtomicLong
 import kamon.macros.InlineTraceContextMacro
@@ -34,27 +36,12 @@ object TraceRecorder {
 
   def newToken: String = hostnamePrefix + "-" + String.valueOf(tokenCounter.incrementAndGet())
 
-  private def newTraceContext(name: String, token: Option[String], system: ActorSystem): TraceContext = {
-    new DefaultTraceContext(
-      name,
-      token.getOrElse(newToken),
-      izOpen = true,
-      LevelOfDetail.OnlyMetrics,
-      TraceContextOrigin.Local,
-      nanoTimeztamp = System.nanoTime,
-      system)
-  }
+  private def newTraceContext(name: String, token: Option[String], system: ActorSystem): TraceContext =
+    Kamon(Trace)(system).newTraceContext(name, token.getOrElse(newToken), TraceContextOrigin.Local, system)
 
-  def joinRemoteTraceContext(traceName: String, traceToken: String, startMilliTime: Long, isOpen: Boolean, system: ActorSystem): TraceContext = {
-    val equivalentNanotime = System.nanoTime() - ((System.currentTimeMillis() - startMilliTime) * 1000000)
-    new DefaultTraceContext(
-      traceName,
-      traceToken,
-      isOpen,
-      LevelOfDetail.OnlyMetrics,
-      TraceContextOrigin.Remote,
-      equivalentNanotime,
-      system)
+  def joinRemoteTraceContext(traceName: String, traceToken: String, startTimestamp: MilliTimestamp, isOpen: Boolean, system: ActorSystem): TraceContext = {
+    val equivalentStartTimestamp = RelativeNanoTimestamp.relativeTo(startTimestamp)
+    Kamon(Trace)(system).newTraceContext(traceName, traceToken, isOpen, TraceContextOrigin.Remote, equivalentStartTimestamp, system)
   }
 
   def setContext(context: TraceContext): Unit = traceContextStorage.set(context)
@@ -81,8 +68,8 @@ object TraceRecorder {
   }
 
   def withTraceContextAndSystem[T](thunk: (TraceContext, ActorSystem) ⇒ T): Option[T] = currentContext match {
-    case ctx: DefaultTraceContext ⇒ Some(thunk(ctx, ctx.system))
-    case EmptyTraceContext        ⇒ None
+    case ctx: MetricsOnlyContext ⇒ Some(thunk(ctx, ctx.system))
+    case EmptyTraceContext       ⇒ None
   }
 
   def withInlineTraceContextReplacement[T](traceCtx: TraceContext)(thunk: ⇒ T): T = macro InlineTraceContextMacro.withInlineTraceContextImpl[T, TraceContext]
