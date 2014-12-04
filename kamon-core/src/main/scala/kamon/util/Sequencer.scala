@@ -16,10 +16,25 @@
 
 package kamon.util
 
-import java.util.concurrent.atomic.AtomicLong
+/**
+ * This class implements an extremely efficient, thread-safe way to generate a
+ * simple incrementing sequence of Longs with a simple Long overflow protection.
+ */
+class Sequencer {
+  private val CloseToOverflow = Long.MaxValue - 1000000000
+  private val sequenceNumber = new PaddedAtomicLong(1L)
 
-class PaddedAtomicLong(value: Long = 0) extends AtomicLong(value) {
-  @volatile var p1, p2, p3, p4, p5, p6 = 7L
+  def next(): Long = {
+    val current = sequenceNumber.getAndIncrement
 
-  protected def sumPaddingToPreventOptimisation() = p1 + p2 + p3 + p4 + p5 + p6
+    // check if this value is getting close to overflow?
+    if (current > CloseToOverflow) {
+      sequenceNumber.set(current - CloseToOverflow) // we need maintain the order
+    }
+    current
+  }
+}
+
+object Sequencer {
+  def apply(): Sequencer = new Sequencer()
 }
