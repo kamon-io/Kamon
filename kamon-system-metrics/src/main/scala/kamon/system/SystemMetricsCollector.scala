@@ -158,16 +158,34 @@ class SystemMetricsCollector(collectInterval: FiniteDuration) extends Actor with
     rcs.global.record(contextSwitches)
   }
 
-  def createSigarInstance: SigarProxy = {
-    val tempFolder = new File(System.getProperty("java.io.tmpdir"))
+  def verifiedSigarInstance: SigarProxy = {
+    val sigar = new Sigar()
+    printBanner(sigar)
+    sigar
+  }
 
+  def provisionSigarLibrary: Unit = {
+    val folder = context.system.settings.config.getString("kamon.sigar.folder")
+    SigarProvisioner.provision(new File(folder))
+  }
+
+  def createSigarInstance: SigarProxy = {
+
+    // 1) Assume that library is already provisioned.
     try {
-      SigarProvisioner.provision(tempFolder)
-      val sigar = new Sigar()
-      printBanner(sigar)
-      sigar
+      return verifiedSigarInstance
     } catch {
-      case NonFatal(t) ⇒ throw new UnexpectedSigarException("Failed to load sigar")
+      // Not using [[Try]] - any error is non-fatal in this case.
+      case e: Throwable ⇒ log.info(s"Sigar is not yet provisioned: ${e}")
+    }
+
+    // 2) Attempt to provision library via sigar-loader.
+    try {
+      provisionSigarLibrary
+      return verifiedSigarInstance
+    } catch {
+      // Not using [[Try]] - any error is non-fatal in this case.
+      case e: Throwable ⇒ throw new UnexpectedSigarException(s"Failed to load Sigar: ${e}")
     }
   }
 }

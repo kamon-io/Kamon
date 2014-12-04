@@ -42,7 +42,7 @@ object Projects extends Build {
         compile(akkaActor, hdrHistogram) ++
         provided(aspectJ) ++
         optional(logback, scalazConcurrent) ++
-        test(scalatest, akkaTestKit, akkaSlf4j, logback))
+        test(scalatest, akkaTestKit, akkaSlf4j, slf4Jul, slf4Log4j, logback))
 
 
   lazy val kamonAkkaRemote = Project("kamon-akka-remote", file("kamon-akka-remote"))
@@ -169,7 +169,7 @@ object Projects extends Build {
       .settings(
         libraryDependencies ++=
           compile(sigarLoader) ++
-          test(scalatest, akkaTestKit, slf4Api, slf4nop))
+          test(scalatest, akkaTestKit, slf4Api, slf4Jul, slf4Log4j, logback))
       .dependsOn(kamonCore)
   
   lazy val kamonJdbc = Project("kamon-jdbc", file("kamon-jdbc"))
