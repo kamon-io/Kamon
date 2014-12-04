@@ -23,7 +23,7 @@ import kamon.jdbc.Jdbc
 import kamon.jdbc.metric.StatementsMetrics
 import kamon.jdbc.metric.StatementsMetricsGroupFactory.GroupRecorder
 import kamon.metric.Metrics
-import kamon.trace.TraceRecorder
+import kamon.trace.{ TraceContext, SegmentCategory, TraceRecorder }
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation.{ Around, Aspect, Pointcut }
 import org.slf4j.LoggerFactory
@@ -51,8 +51,10 @@ class StatementInstrumentation {
       implicit val statementRecorder: Option[GroupRecorder] = Kamon(Metrics)(system).register(StatementsMetrics(Statements), StatementsMetrics.Factory)
 
       sql.replaceAll(CommentPattern, Empty) match {
-        case SelectStatement(_) ⇒ recordRead(pjp, sql, system)
-        case InsertStatement(_) | UpdateStatement(_) | DeleteStatement(_) ⇒ recordWrite(pjp, sql, system)
+        case SelectStatement(_) ⇒ withSegment(ctx, system, Select)(recordRead(pjp, sql, system))
+        case InsertStatement(_) ⇒ withSegment(ctx, system, Insert)(recordWrite(pjp, sql, system))
+        case UpdateStatement(_) ⇒ withSegment(ctx, system, Update)(recordWrite(pjp, sql, system))
+        case DeleteStatement(_) ⇒ withSegment(ctx, system, Delete)(recordWrite(pjp, sql, system))
         case anythingElse ⇒
           log.debug(s"Unable to parse sql [$sql]")
           pjp.proceed()
@@ -63,6 +65,12 @@ class StatementInstrumentation {
   def withTimeSpent[A](thunk: ⇒ A)(timeSpent: Long ⇒ Unit): A = {
     val start = System.nanoTime()
     try thunk finally timeSpent(System.nanoTime() - start)
+  }
+
+  def withSegment[A](ctx: TraceContext, system: ActorSystem, statement: String)(thunk: ⇒ A): A = {
+    val segmentName = Jdbc(system).generateJdbcSegmentName(statement)
+    val segment = ctx.startSegment(segmentName, SegmentCategory.Database, Jdbc.SegmentLibraryName)
+    try thunk finally segment.finish()
   }
 
   def recordRead(pjp: ProceedingJoinPoint, sql: String, system: ActorSystem)(implicit statementRecorder: Option[GroupRecorder]): Any = {
@@ -95,6 +103,10 @@ object StatementInstrumentation {
   val CommentPattern = "/\\*.*?\\*/" //for now only removes comments of kind / * anything * /
   val Empty = ""
   val Statements = "jdbc-statements"
+  val Select = "Select"
+  val Insert = "Insert"
+  val Update = "Update"
+  val Delete = "Delete"
 
   implicit class PimpedProceedingJoinPoint(pjp: ProceedingJoinPoint) {
     def proceedWithErrorHandler(sql: String, system: ActorSystem)(implicit statementRecorder: Option[GroupRecorder]): Any = {

@@ -21,12 +21,13 @@ import akka.actor.ActorSystem
 import akka.testkit.{ TestKitBase, TestProbe }
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
-import kamon.jdbc.{ SqlErrorProcessor, SlowQueryProcessor }
+import kamon.jdbc.{ Jdbc, JdbcNameGenerator, SqlErrorProcessor, SlowQueryProcessor }
 import kamon.jdbc.metric.StatementsMetrics
 import kamon.jdbc.metric.StatementsMetrics.StatementsMetricsSnapshot
-import kamon.metric.Metrics
+import kamon.metric.{ TraceMetrics, Metrics }
 import kamon.metric.Subscriptions.TickMetricSnapshot
-import kamon.trace.TraceRecorder
+import kamon.metric.TraceMetrics.TraceMetricsSnapshot
+import kamon.trace.{ SegmentCategory, SegmentMetricIdentity, TraceRecorder }
 import org.scalatest.{ BeforeAndAfterAll, Matchers, WordSpecLike }
 
 import scala.concurrent.duration._
@@ -44,6 +45,9 @@ class StatementInstrumentationSpec extends TestKitBase with WordSpecLike with Ma
       |
       |     # Fully qualified name of the implementation of kamon.jdbc.SqlErrorProcessor.
       |     sql-error-processor = kamon.jdbc.instrumentation.NoOpSqlErrorProcessor
+      |
+      |     # Fully qualified name of the implementation of kamon.jdbc.JdbcNameGenerator
+      |     name-generator = kamon.jdbc.instrumentation.NoOpJdbcNameGenerator
       |   }
       |}
     """.stripMargin))
@@ -76,7 +80,14 @@ class StatementInstrumentationSpec extends TestKitBase with WordSpecLike with Ma
 
         val StatementMetrics = expectStatementsMetrics(metricsListener, 3 seconds)
         StatementMetrics.writes.numberOfMeasurements should be(100)
+
+        TraceRecorder.finish()
       }
+
+      val snapshot = takeSnapshotOf("jdbc-trace-insert")
+      snapshot.elapsedTime.numberOfMeasurements should be(1)
+      snapshot.segments.size should be(1)
+      snapshot.segments(SegmentMetricIdentity("Jdbc[Insert]", SegmentCategory.Database, Jdbc.SegmentLibraryName)).numberOfMeasurements should be(100)
     }
 
     "record the execution time of SELECT operation" in new StatementsMetricsListenerFixture {
@@ -92,7 +103,14 @@ class StatementInstrumentationSpec extends TestKitBase with WordSpecLike with Ma
 
         val StatementMetrics = expectStatementsMetrics(metricsListener, 3 seconds)
         StatementMetrics.reads.numberOfMeasurements should be(100)
+
+        TraceRecorder.finish()
       }
+
+      val snapshot = takeSnapshotOf("jdbc-trace-select")
+      snapshot.elapsedTime.numberOfMeasurements should be(1)
+      snapshot.segments.size should be(1)
+      snapshot.segments(SegmentMetricIdentity("Jdbc[Select]", SegmentCategory.Database, Jdbc.SegmentLibraryName)).numberOfMeasurements should be(100)
     }
 
     "record the execution time of UPDATE operation" in new StatementsMetricsListenerFixture {
@@ -108,7 +126,13 @@ class StatementInstrumentationSpec extends TestKitBase with WordSpecLike with Ma
 
         val StatementMetrics = expectStatementsMetrics(metricsListener, 3 seconds)
         StatementMetrics.writes.numberOfMeasurements should be(100)
+        TraceRecorder.finish()
       }
+
+      val snapshot = takeSnapshotOf("jdbc-trace-update")
+      snapshot.elapsedTime.numberOfMeasurements should be(1)
+      snapshot.segments.size should be(1)
+      snapshot.segments(SegmentMetricIdentity("Jdbc[Update]", SegmentCategory.Database, Jdbc.SegmentLibraryName)).numberOfMeasurements should be(100)
     }
 
     "record the execution time of DELETE operation" in new StatementsMetricsListenerFixture {
@@ -124,7 +148,13 @@ class StatementInstrumentationSpec extends TestKitBase with WordSpecLike with Ma
 
         val StatementMetrics = expectStatementsMetrics(metricsListener, 3 seconds)
         StatementMetrics.writes.numberOfMeasurements should be(100)
+        TraceRecorder.finish()
       }
+
+      val snapshot = takeSnapshotOf("jdbc-trace-delete")
+      snapshot.elapsedTime.numberOfMeasurements should be(1)
+      snapshot.segments.size should be(1)
+      snapshot.segments(SegmentMetricIdentity("Jdbc[Delete]", SegmentCategory.Database, Jdbc.SegmentLibraryName)).numberOfMeasurements should be(100)
     }
 
     "record the execution time of SLOW QUERIES based on the kamon.jdbc.slow-query-threshold" in new StatementsMetricsListenerFixture {
@@ -179,6 +209,12 @@ class StatementInstrumentationSpec extends TestKitBase with WordSpecLike with Ma
     statementsMetricsOption should not be empty
     statementsMetricsOption.get.asInstanceOf[StatementsMetricsSnapshot]
   }
+
+  def takeSnapshotOf(traceName: String): TraceMetricsSnapshot = {
+    val recorder = Kamon(Metrics)(system).register(TraceMetrics(traceName), TraceMetrics.Factory)
+    val collectionContext = Kamon(Metrics)(system).buildDefaultCollectionContext
+    recorder.get.collect(collectionContext)
+  }
 }
 
 class NoOpSlowQueryProcessor extends SlowQueryProcessor {
@@ -189,3 +225,6 @@ class NoOpSqlErrorProcessor extends SqlErrorProcessor {
   override def process(sql: String, ex: Throwable): Unit = { /*do nothing!!!*/ }
 }
 
+class NoOpJdbcNameGenerator extends JdbcNameGenerator {
+  override def generateJdbcSegmentName(statement: String): String = s"Jdbc[$statement]"
+}
