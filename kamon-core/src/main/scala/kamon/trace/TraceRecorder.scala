@@ -16,7 +16,7 @@
 
 package kamon.trace
 
-import kamon.Kamon
+import kamon.{ MilliTimestamp, RelativeNanoTimestamp, Kamon }
 
 import scala.language.experimental.macros
 import java.util.concurrent.atomic.AtomicLong
@@ -37,11 +37,11 @@ object TraceRecorder {
   def newToken: String = hostnamePrefix + "-" + String.valueOf(tokenCounter.incrementAndGet())
 
   private def newTraceContext(name: String, token: Option[String], system: ActorSystem): TraceContext =
-    Kamon(Trace)(system).newTraceContext(name, token.getOrElse(newToken), true, TraceContextOrigin.Local, System.nanoTime(), system)
+    Kamon(Trace)(system).newTraceContext(name, token.getOrElse(newToken), TraceContextOrigin.Local, system)
 
-  def joinRemoteTraceContext(traceName: String, traceToken: String, startMilliTime: Long, isOpen: Boolean, system: ActorSystem): TraceContext = {
-    val equivalentNanoTime = System.nanoTime() - ((System.currentTimeMillis() - startMilliTime) * 1000000)
-    Kamon(Trace)(system).newTraceContext(traceName, traceToken, isOpen, TraceContextOrigin.Remote, equivalentNanoTime, system)
+  def joinRemoteTraceContext(traceName: String, traceToken: String, startTimestamp: MilliTimestamp, isOpen: Boolean, system: ActorSystem): TraceContext = {
+    val equivalentStartTimestamp = RelativeNanoTimestamp.relativeTo(startTimestamp)
+    Kamon(Trace)(system).newTraceContext(traceName, traceToken, isOpen, TraceContextOrigin.Remote, equivalentStartTimestamp, system)
   }
 
   def setContext(context: TraceContext): Unit = traceContextStorage.set(context)

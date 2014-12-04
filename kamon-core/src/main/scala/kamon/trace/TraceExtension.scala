@@ -19,9 +19,9 @@ package kamon.trace
 import akka.actor._
 import akka.actor
 import akka.event.Logging
+import kamon._
 import kamon.metric.Metrics
 import kamon.util.GlobPathFilter
-import kamon.Kamon
 
 class TraceExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   val config = system.settings.config.getConfig("kamon.trace")
@@ -44,11 +44,15 @@ class TraceExtension(system: ExtendedActorSystem) extends Kamon.Extension {
 
   val log = Logging(system, "TraceExtension")
   val subscriptions = system.actorOf(Props[TraceSubscriptions], "trace-subscriptions")
-  val incubator = system.actorOf(Incubator.props(subscriptions, 10000000000L))
+  val incubator = system.actorOf(Incubator.props(subscriptions))
   val metricsExtension = Kamon(Metrics)(system)
 
-  def newTraceContext(traceName: String, token: String, isOpen: Boolean, origin: TraceContextOrigin, nanoTimestamp: Long, system: ActorSystem): TraceContext = {
-    def newMetricsOnlyContext = new MetricsOnlyContext(traceName, token, true, detailLevel, origin, nanoTimestamp, log, metricsExtension, system)
+  def newTraceContext(traceName: String, token: String, origin: TraceContextOrigin, system: ActorSystem): TraceContext =
+    newTraceContext(traceName, token, true, origin, RelativeNanoTimestamp.now, system)
+
+  def newTraceContext(traceName: String, token: String, isOpen: Boolean, origin: TraceContextOrigin,
+    startTimestamp: RelativeNanoTimestamp, system: ActorSystem): TraceContext = {
+    def newMetricsOnlyContext = new MetricsOnlyContext(traceName, token, isOpen, detailLevel, origin, startTimestamp, log, metricsExtension, system)
 
     if (detailLevel == LevelOfDetail.MetricsOnly || origin == TraceContextOrigin.Remote)
       newMetricsOnlyContext
@@ -56,20 +60,19 @@ class TraceExtension(system: ExtendedActorSystem) extends Kamon.Extension {
       if (!sampler.shouldTrace)
         newMetricsOnlyContext
       else
-        new TracingContext(traceName, token, true, detailLevel, origin, nanoTimestamp, log, this, metricsExtension, system)
+        new TracingContext(traceName, token, true, detailLevel, origin, startTimestamp, log, metricsExtension, this, system)
     }
-  }
-
-  def report(trace: TracingContext): Unit = if (sampler.shouldReport(trace.elapsedNanoTime)) {
-    if (trace.shouldIncubate)
-      incubator ! trace
-    else
-      trace.generateTraceInfo.map(subscriptions ! _)
   }
 
   def subscribe(subscriber: ActorRef): Unit = subscriptions ! TraceSubscriptions.Subscribe(subscriber)
   def unsubscribe(subscriber: ActorRef): Unit = subscriptions ! TraceSubscriptions.Unsubscribe(subscriber)
 
+  private[kamon] def dispatchTracingContext(trace: TracingContext): Unit =
+    if (sampler.shouldReport(trace.elapsedTime))
+      if (trace.shouldIncubate)
+        incubator ! trace
+      else
+        subscriptions ! trace.generateTraceInfo
 }
 
 object Trace extends ExtensionId[TraceExtension] with ExtensionIdProvider {
@@ -81,5 +84,5 @@ object Trace extends ExtensionId[TraceExtension] with ExtensionIdProvider {
   }
 }
 
-case class TraceInfo(name: String, token: String, startMilliTime: Long, startNanoTime: Long, elapsedNanoTime: Long, metadata: Map[String, String], segments: List[SegmentInfo])
-case class SegmentInfo(name: String, category: String, library: String, startNanoTime: Long, elapsedNanoTime: Long, metadata: Map[String, String])
+case class TraceInfo(name: String, token: String, timestamp: NanoTimestamp, elapsedTime: NanoInterval, metadata: Map[String, String], segments: List[SegmentInfo])
+case class SegmentInfo(name: String, category: String, library: String, timestamp: NanoTimestamp, elapsedTime: NanoInterval, metadata: Map[String, String])

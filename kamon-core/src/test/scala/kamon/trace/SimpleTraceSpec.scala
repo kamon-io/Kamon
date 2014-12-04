@@ -88,13 +88,15 @@ class SimpleTraceSpec extends TestKitBase with WordSpecLike with Matchers with I
       expectNoMsg(2 seconds)
       secondSegment.finish()
 
-      val traceInfo = expectMsgType[TraceInfo]
-      Kamon(Trace)(system).unsubscribe(testActor)
+      within(10 seconds) {
+        val traceInfo = expectMsgType[TraceInfo]
+        Kamon(Trace)(system).unsubscribe(testActor)
 
-      traceInfo.name should be("simple-trace-without-segments")
-      traceInfo.segments.size should be(2)
-      traceInfo.segments.find(_.name == "segment-one") should be('defined)
-      traceInfo.segments.find(_.name == "segment-two") should be('defined)
+        traceInfo.name should be("simple-trace-without-segments")
+        traceInfo.segments.size should be(2)
+        traceInfo.segments.find(_.name == "segment-one") should be('defined)
+        traceInfo.segments.find(_.name == "segment-two") should be('defined)
+      }
     }
 
   }
