@@ -42,7 +42,6 @@ class ApiMethodClient(host: String, val runID: Option[Long], agentSettings: Agen
         case CollectorErrors.`ForceShutdown` ⇒ throw AgentShutdownRequiredException
         case anyOtherError ⇒
           val errorMessage = jsResponse.extract[String]('exception / 'message.?).getOrElse("no message")
-          println("Error occured: " + anyOtherError + " - " + errorMessage)
           throw NewRelicException(anyOtherError, errorMessage)
       })
 
