@@ -54,6 +54,7 @@ object WebTransactionMetricExtractor extends MetricExtractor {
             externalScopedByHostAndLibrarySnapshots.update((segmentName, library, traceName),
               snapshot :: externalScopedByHostAndLibrarySnapshots.getOrElse((segmentName, library, traceName), Nil))
 
+          case otherSegments => // Ignore other kinds of segments.
         }
 
         accumulatedHttpDispatcher = accumulatedHttpDispatcher.merge(tms.elapsedTime, collectionContext)
