@@ -18,7 +18,7 @@ package kamon.datadog
 
 import akka.testkit.{ TestKitBase, TestProbe }
 import akka.actor.{ Props, ActorRef, ActorSystem }
-import kamon.Kamon
+import kamon.{MilliTimestamp, Kamon}
 import kamon.metric.instrument.Histogram.Precision
 import kamon.metric.instrument.{ Counter, Histogram, HdrHistogram, LongAdderCounter }
 import org.scalatest.{ Matchers, WordSpecLike }
@@ -147,7 +147,7 @@ class DatadogMetricSenderSpec extends TestKitBase with WordSpecLike with Matcher
         (testMetricIdentity, snapshot)
       }
 
-      metricsSender ! TickMetricSnapshot(0, 0, Map(testGroupIdentity -> new MetricGroupSnapshot {
+      metricsSender ! TickMetricSnapshot(new MilliTimestamp(0), new MilliTimestamp(0), Map(testGroupIdentity -> new MetricGroupSnapshot {
         type GroupSnapshotType = Histogram.Snapshot
         def merge(that: GroupSnapshotType, context: CollectionContext): GroupSnapshotType = ???
 
