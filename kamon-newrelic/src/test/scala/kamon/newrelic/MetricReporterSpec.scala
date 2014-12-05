@@ -19,9 +19,10 @@ package kamon.newrelic
 import akka.actor.{ ActorRef, ActorSystem }
 import akka.io.IO
 import akka.testkit._
+import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import kamon.metric.{ TraceMetrics, Metrics }
-import kamon.{ Kamon, AkkaExtensionSwap }
+import kamon.{ MilliTimestamp, Kamon, AkkaExtensionSwap }
 import kamon.metric.Subscriptions.TickMetricSnapshot
 import org.scalatest.{ Matchers, WordSpecLike }
 import spray.can.Http
@@ -49,7 +50,7 @@ class MetricReporterSpec extends TestKitBase with WordSpecLike with Matchers wit
       |
     """.stripMargin))
 
-  val agentSettings = Agent.Settings("1111111111", "kamon", "test-host", 1, 1, 30 seconds, 1D)
+  val agentSettings = AgentSettings("1111111111", "kamon", "test-host", 1, Timeout(5 seconds), 1, 30 seconds, 1D)
   val baseQuery = Query(
     "license_key" -> agentSettings.licenseKey,
     "marshal_format" -> "json",
@@ -59,8 +60,9 @@ class MetricReporterSpec extends TestKitBase with WordSpecLike with Matchers wit
   "the MetricReporter" should {
     "report metrics to New Relic upon arrival" in new FakeTickSnapshotsFixture {
       val httpManager = setHttpManager(TestProbe())
-      val metricReporter = system.actorOf(MetricReporter.props(agentSettings, 9999, baseCollectorUri))
+      val metricReporter = system.actorOf(MetricReporter.props(agentSettings))
 
+      metricReporter ! Agent.Configure("collector-1.newrelic.com", 9999)
       metricReporter ! firstSnapshot
       val metricPost = httpManager.expectMsgType[HttpRequest]
 
@@ -70,8 +72,8 @@ class MetricReporterSpec extends TestKitBase with WordSpecLike with Matchers wit
 
       val postedBatch = Deflate.decode(metricPost).entity.asString.parseJson.convertTo[MetricBatch]
       postedBatch.runID should be(9999)
-      postedBatch.timeSliceMetrics.from should be(1415587618)
-      postedBatch.timeSliceMetrics.to should be(1415587678)
+      postedBatch.timeSliceMetrics.from.seconds should be(1415587618)
+      postedBatch.timeSliceMetrics.to.seconds should be(1415587678)
 
       val metrics = postedBatch.timeSliceMetrics.metrics
       metrics(MetricID("Apdex", None)).callCount should be(3)
@@ -81,8 +83,9 @@ class MetricReporterSpec extends TestKitBase with WordSpecLike with Matchers wit
 
     "accumulate metrics if posting fails" in new FakeTickSnapshotsFixture {
       val httpManager = setHttpManager(TestProbe())
-      val metricReporter = system.actorOf(MetricReporter.props(agentSettings, 9999, baseCollectorUri))
+      val metricReporter = system.actorOf(MetricReporter.props(agentSettings))
 
+      metricReporter ! Agent.Configure("collector-1.newrelic.com", 9999)
       metricReporter ! firstSnapshot
       val request = httpManager.expectMsgType[HttpRequest]
       httpManager.reply(Timedout(request))
@@ -96,8 +99,8 @@ class MetricReporterSpec extends TestKitBase with WordSpecLike with Matchers wit
 
       val postedBatch = Deflate.decode(metricPost).entity.asString.parseJson.convertTo[MetricBatch]
       postedBatch.runID should be(9999)
-      postedBatch.timeSliceMetrics.from should be(1415587618)
-      postedBatch.timeSliceMetrics.to should be(1415587738)
+      postedBatch.timeSliceMetrics.from.seconds should be(1415587618)
+      postedBatch.timeSliceMetrics.to.seconds should be(1415587738)
 
       val metrics = postedBatch.timeSliceMetrics.metrics
       metrics(MetricID("Apdex", None)).callCount should be(6)
@@ -139,11 +142,11 @@ class MetricReporterSpec extends TestKitBase with WordSpecLike with Matchers wit
     recorder.elapsedTime.record(1000000)
     recorder.elapsedTime.record(2000000)
     recorder.elapsedTime.record(3000000)
-    val firstSnapshot = TickMetricSnapshot(1415587618000L, 1415587678000L, Map(testTraceID -> collectRecorder))
+    val firstSnapshot = TickMetricSnapshot(new MilliTimestamp(1415587618000L), new MilliTimestamp(1415587678000L), Map(testTraceID -> collectRecorder))
 
     recorder.elapsedTime.record(6000000)
     recorder.elapsedTime.record(5000000)
     recorder.elapsedTime.record(4000000)
-    val secondSnapshot = TickMetricSnapshot(1415587678000L, 1415587738000L, Map(testTraceID -> collectRecorder))
+    val secondSnapshot = TickMetricSnapshot(new MilliTimestamp(1415587678000L), new MilliTimestamp(1415587738000L), Map(testTraceID -> collectRecorder))
   }
 }

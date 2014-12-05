@@ -18,11 +18,10 @@ package kamon.newrelic
 
 import kamon.metric.UserMetrics.UserMetricGroup
 import kamon.metric._
-import kamon.newrelic.Agent.Settings
 
 object CustomMetricExtractor extends MetricExtractor {
 
-  def extract(settings: Settings, collectionContext: CollectionContext, metrics: Map[MetricGroupIdentity, MetricGroupSnapshot]): Map[MetricID, MetricData] = {
+  def extract(settings: AgentSettings, collectionContext: CollectionContext, metrics: Map[MetricGroupIdentity, MetricGroupSnapshot]): Map[MetricID, MetricData] = {
     metrics.collect {
       case (mg: UserMetricGroup, groupSnapshot) ⇒
         groupSnapshot.metrics collect {
