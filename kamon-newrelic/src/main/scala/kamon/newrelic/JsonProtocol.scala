@@ -15,18 +15,18 @@
  * ========================================================== */
 package kamon.newrelic
 
+import kamon.Timestamp
 import spray.json._
-import kamon.newrelic.Agent._
 
 object JsonProtocol extends DefaultJsonProtocol {
 
-  implicit object ConnectJsonWriter extends RootJsonWriter[Settings] {
-    def write(obj: Settings): JsValue =
+  implicit object ConnectJsonWriter extends RootJsonWriter[AgentSettings] {
+    def write(obj: AgentSettings): JsValue =
       JsArray(
         JsObject(
           "agent_version" -> JsString("3.1.0"),
           "app_name" -> JsArray(JsString(obj.appName)),
-          "host" -> JsString(obj.host),
+          "host" -> JsString(obj.hostname),
           "identifier" -> JsString(s"java:${obj.appName}"),
           "language" -> JsString("java"),
           "pid" -> JsNumber(obj.pid)))
@@ -87,8 +87,8 @@ object JsonProtocol extends DefaultJsonProtocol {
     def read(json: JsValue): MetricBatch = json match {
       case JsArray(elements) ⇒
         val runID = elements(0).convertTo[Long]
-        val timeSliceFrom = elements(1).convertTo[Long]
-        val timeSliceTo = elements(2).convertTo[Long]
+        val timeSliceFrom = new Timestamp(elements(1).convertTo[Long])
+        val timeSliceTo = new Timestamp(elements(2).convertTo[Long])
         val metrics = elements(3).convertTo[Seq[Metric]]
 
         MetricBatch(runID, TimeSliceMetrics(timeSliceFrom, timeSliceTo, metrics.toMap))
@@ -99,8 +99,8 @@ object JsonProtocol extends DefaultJsonProtocol {
     def write(obj: MetricBatch): JsValue =
       JsArray(
         JsNumber(obj.runID),
-        JsNumber(obj.timeSliceMetrics.from),
-        JsNumber(obj.timeSliceMetrics.to),
+        JsNumber(obj.timeSliceMetrics.from.seconds),
+        JsNumber(obj.timeSliceMetrics.to.seconds),
         obj.timeSliceMetrics.metrics.toSeq.toJson)
   }
 }

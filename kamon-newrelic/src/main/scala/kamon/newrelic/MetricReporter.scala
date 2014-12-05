@@ -5,99 +5,113 @@ import java.util.concurrent.TimeUnit
 import akka.actor.{ Props, ActorLogging, Actor }
 import akka.pattern.pipe
 import akka.io.IO
-import akka.util.Timeout
 import kamon.Kamon
 import kamon.metric.Subscriptions.TickMetricSnapshot
 import kamon.metric.UserMetrics.{ UserGauges, UserMinMaxCounters, UserCounters, UserHistograms }
 import kamon.metric._
-import kamon.newrelic.MetricReporter.{ UnexpectedStatusCodeException, PostFailed, PostSucceeded, MetricDataPostResult }
+import kamon.newrelic.ApiMethodClient.{ AgentShutdownRequiredException, AgentRestartRequiredException }
+import kamon.newrelic.MetricReporter.{ PostFailed, PostSucceeded }
 import spray.can.Http
-import spray.http.Uri
 import spray.httpx.SprayJsonSupport
-import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.util.control.NoStackTrace
+import JsonProtocol._
 
-class MetricReporter(settings: Agent.Settings, runID: Long, baseUri: Uri) extends Actor
-    with ClientPipelines with ActorLogging with SprayJsonSupport {
-
-  import JsonProtocol._
-  import MetricReporter.Extractors
+class MetricReporter(settings: AgentSettings) extends Actor with ActorLogging with SprayJsonSupport {
   import context.dispatcher
 
-  val metricDataQuery = ("method" -> "metric_data") +: ("run_id" -> runID.toString) +: baseUri.query
-  val metricDataUri = baseUri.withQuery(metricDataQuery)
-
-  implicit val operationTimeout = Timeout(30 seconds)
   val metricsExtension = Kamon(Metrics)(context.system)
   val collectionContext = metricsExtension.buildDefaultCollectionContext
-  val collectorClient = compressedPipeline(IO(Http)(context.system))
-
-  val subscriber = {
+  val metricsSubscriber = {
     val tickInterval = context.system.settings.config.getDuration("kamon.metrics.tick-interval", TimeUnit.MILLISECONDS)
-    if (tickInterval == 60000)
-      self
-    else
-      context.actorOf(TickMetricSnapshotBuffer.props(1 minute, self), "metric-buffer")
+
+    // Metrics are always sent to New Relic in 60 seconds intervals.
+    if (tickInterval == 60000) self
+    else context.actorOf(TickMetricSnapshotBuffer.props(1 minute, self), "metric-buffer")
   }
 
-  // Subscribe to Trace Metrics
-  metricsExtension.subscribe(TraceMetrics, "*", subscriber, permanently = true)
+  subscribeToMetrics()
 
-  // Subscribe to all User Metrics
-  metricsExtension.subscribe(UserHistograms, "*", subscriber, permanently = true)
-  metricsExtension.subscribe(UserCounters, "*", subscriber, permanently = true)
-  metricsExtension.subscribe(UserMinMaxCounters, "*", subscriber, permanently = true)
-  metricsExtension.subscribe(UserGauges, "*", subscriber, permanently = true)
+  def receive = awaitingConfiguration(None)
 
-  def receive = reporting(None)
-
-  def reporting(pendingMetrics: Option[TimeSliceMetrics]): Receive = {
-    case TickMetricSnapshot(from, to, metrics) ⇒
-      val fromInSeconds = (from / 1E3).toInt
-      val toInSeconds = (to / 1E3).toInt
-      val extractedMetrics = Extractors.flatMap(_.extract(settings, collectionContext, metrics)).toMap
-      val tickMetrics = TimeSliceMetrics(fromInSeconds, toInSeconds, extractedMetrics)
-
-      val metricsToReport = pendingMetrics.foldLeft(tickMetrics)((p, n) ⇒ p.merge(n))
-      context become reporting(Some(metricsToReport))
-      pipe(sendMetricData(metricsToReport)) to self
-
-    case PostSucceeded ⇒
-      context become (reporting(None))
-
-    case PostFailed(reason) ⇒
-      log.error(reason, "Metric POST to the New Relic collector failed, metrics will be accumulated with the next tick.")
+  def awaitingConfiguration(bufferedMetrics: Option[TimeSliceMetrics]): Receive = {
+    case Agent.Configure(collector, runID) ⇒ startReporting(collector, runID, bufferedMetrics)
+    case Agent.ResetConfiguration          ⇒ // Stay waiting.
+    case tickSnapshot: TickMetricSnapshot  ⇒ keepWaitingForConfig(tickSnapshot, bufferedMetrics)
+    case PostSucceeded                     ⇒ // Ignore
+    case PostFailed(reason)                ⇒ // Ignore any problems until we get a new configuration
   }
 
-  def sendMetricData(slice: TimeSliceMetrics): Future[MetricDataPostResult] = {
-    log.debug("Sending [{}] metrics to New Relic for the time slice between {} and {}.", slice.metrics.size, slice.from, slice.to)
+  def reporting(apiClient: ApiMethodClient, bufferedMetrics: Option[TimeSliceMetrics]): Receive = {
+    case tick: TickMetricSnapshot ⇒ sendMetricData(apiClient, tick, bufferedMetrics)
+    case PostSucceeded            ⇒ context become reporting(apiClient, None)
+    case PostFailed(reason)       ⇒ processCollectorFailure(reason)
+    case Agent.ResetConfiguration ⇒ context become awaitingConfiguration(bufferedMetrics)
+  }
 
-    collectorClient {
-      Post(metricDataUri, MetricBatch(runID, slice))(sprayJsonMarshaller(MetricBatchWriter, NewRelicJsonPrinter))
+  def sendMetricData(apiClient: ApiMethodClient, tick: TickMetricSnapshot, bufferedMetrics: Option[TimeSliceMetrics]): Unit = {
+    val metricsToReport = merge(convertToTimeSliceMetrics(tick), bufferedMetrics)
+    val customMarshaller = sprayJsonMarshaller(MetricBatchWriter, NewRelicJsonPrinter)
 
-    } map { response ⇒
-      if (response.status.isSuccess)
-        PostSucceeded
-      else
-        PostFailed(new UnexpectedStatusCodeException(s"Received unsuccessful status code [${response.status.value}] from collector."))
-    } recover { case t: Throwable ⇒ PostFailed(t) }
+    if (log.isDebugEnabled)
+      log.debug("Sending [{}] metrics to New Relic for the time slice between {} and {}.", metricsToReport.metrics.size,
+        metricsToReport.from, metricsToReport.to)
+
+    pipe {
+      apiClient.invokeMethod(RawMethods.MetricData, MetricBatch(apiClient.runID.get, metricsToReport))(customMarshaller)
+        .map { _ ⇒ PostSucceeded }
+        .recover { case error ⇒ PostFailed(error) }
+    } to self
+
+    context become reporting(apiClient, Some(metricsToReport))
+  }
+
+  def processCollectorFailure(failureReason: Throwable): Unit = failureReason match {
+    case AgentRestartRequiredException  ⇒ context.parent ! Agent.Reconnect
+    case AgentShutdownRequiredException ⇒ context.parent ! Agent.Shutdown
+    case anyOtherFailure ⇒
+      log.error(anyOtherFailure, "Metric POST to the New Relic collector failed, metrics will be accumulated with the next tick.")
+  }
+
+  def startReporting(collector: String, runID: Long, bufferedMetrics: Option[TimeSliceMetrics]): Unit = {
+    val apiClient = new ApiMethodClient(collector, Some(runID), settings, IO(Http)(context.system))
+    context become reporting(apiClient, bufferedMetrics)
+  }
+
+  def keepWaitingForConfig(tickSnapshot: TickMetricSnapshot, bufferedMetrics: Option[TimeSliceMetrics]): Unit = {
+    val timeSliceMetrics = convertToTimeSliceMetrics(tickSnapshot)
+    context become awaitingConfiguration(Some(merge(timeSliceMetrics, bufferedMetrics)))
+  }
+
+  def merge(tsm: TimeSliceMetrics, buffered: Option[TimeSliceMetrics]): TimeSliceMetrics =
+    buffered.foldLeft(tsm)((p, n) ⇒ p.merge(n))
+
+  def convertToTimeSliceMetrics(tick: TickMetricSnapshot): TimeSliceMetrics = {
+    val extractedMetrics = MetricReporter.MetricExtractors.flatMap(_.extract(settings, collectionContext, tick.metrics)).toMap
+    TimeSliceMetrics(tick.from.toTimestamp, tick.to.toTimestamp, extractedMetrics)
+  }
+
+  def subscribeToMetrics(): Unit = {
+    // Subscribe to Trace Metrics
+    metricsExtension.subscribe(TraceMetrics, "*", metricsSubscriber, permanently = true)
+
+    // Subscribe to all User Metrics
+    metricsExtension.subscribe(UserHistograms, "*", metricsSubscriber, permanently = true)
+    metricsExtension.subscribe(UserCounters, "*", metricsSubscriber, permanently = true)
+    metricsExtension.subscribe(UserMinMaxCounters, "*", metricsSubscriber, permanently = true)
+    metricsExtension.subscribe(UserGauges, "*", metricsSubscriber, permanently = true)
   }
 }
 
 object MetricReporter {
-  val Extractors: List[MetricExtractor] = WebTransactionMetricExtractor :: CustomMetricExtractor :: Nil
-
-  def props(settings: Agent.Settings, runID: Long, baseUri: Uri): Props =
-    Props(new MetricReporter(settings, runID, baseUri))
+  def props(settings: AgentSettings): Props = Props(new MetricReporter(settings))
 
   sealed trait MetricDataPostResult
   case object PostSucceeded extends MetricDataPostResult
   case class PostFailed(reason: Throwable) extends MetricDataPostResult
 
-  class UnexpectedStatusCodeException(message: String) extends RuntimeException(message) with NoStackTrace
+  val MetricExtractors: List[MetricExtractor] = WebTransactionMetricExtractor :: CustomMetricExtractor :: Nil
 }
 
 trait MetricExtractor {
-  def extract(settings: Agent.Settings, collectionContext: CollectionContext, metrics: Map[MetricGroupIdentity, MetricGroupSnapshot]): Map[MetricID, MetricData]
+  def extract(settings: AgentSettings, collectionContext: CollectionContext, metrics: Map[MetricGroupIdentity, MetricGroupSnapshot]): Map[MetricID, MetricData]
 }

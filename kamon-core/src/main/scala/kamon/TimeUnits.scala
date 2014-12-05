@@ -1,10 +1,30 @@
 package kamon
 
 /**
+ *  Epoch time stamp in seconds.
+ */
+class Timestamp(val seconds: Long) extends AnyVal {
+  def <(that: Timestamp): Boolean = this.seconds < that.seconds
+  def >(that: Timestamp): Boolean = this.seconds > that.seconds
+  def ==(that: Timestamp): Boolean = this.seconds == that.seconds
+  def >=(that: Timestamp): Boolean = this.seconds >= that.seconds
+  def <=(that: Timestamp): Boolean = this.seconds <= that.seconds
+
+  override def toString: String = String.valueOf(seconds) + ".seconds"
+}
+
+object Timestamp {
+  def now: Timestamp = new Timestamp(System.currentTimeMillis() / 1000)
+  def earlier(l: Timestamp, r: Timestamp): Timestamp = if (l <= r) l else r
+  def later(l: Timestamp, r: Timestamp): Timestamp = if (l >= r) l else r
+}
+
+/**
  *  Epoch time stamp in milliseconds.
  */
 class MilliTimestamp(val millis: Long) extends AnyVal {
   override def toString: String = String.valueOf(millis) + ".millis"
+  def toTimestamp: Timestamp = new Timestamp(millis / 1000)
 }
 
 object MilliTimestamp {

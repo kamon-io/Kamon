@@ -16,16 +16,16 @@
 
 package kamon.newrelic
 
-import scala.collection.mutable;
+import scala.collection.mutable
 import kamon.metric._
-import kamon.metric.TraceMetrics.{ TraceMetricsSnapshot, ElapsedTime }
+import kamon.metric.TraceMetrics.TraceMetricsSnapshot
 import kamon.metric.instrument.Histogram
 import kamon.trace.SegmentCategory.HttpClient
 import kamon.trace.SegmentMetricIdentity
 
 object WebTransactionMetricExtractor extends MetricExtractor {
 
-  def extract(settings: Agent.Settings, collectionContext: CollectionContext, metrics: Map[MetricGroupIdentity, MetricGroupSnapshot]): Map[MetricID, MetricData] = {
+  def extract(settings: AgentSettings, collectionContext: CollectionContext, metrics: Map[MetricGroupIdentity, MetricGroupSnapshot]): Map[MetricID, MetricData] = {
     val apdexBuilder = new ApdexBuilder("Apdex", None, settings.apdexT)
 
     // Trace metrics are recorded in nanoseconds.

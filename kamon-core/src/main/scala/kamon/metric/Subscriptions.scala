@@ -21,7 +21,7 @@ import kamon.metric.Subscriptions._
 import kamon.util.GlobPathFilter
 import scala.concurrent.duration.{ FiniteDuration, Duration }
 import java.util.concurrent.TimeUnit
-import kamon.Kamon
+import kamon.{ MilliTimestamp, Kamon }
 import kamon.metric.TickMetricSnapshotBuffer.FlushBuffer
 
 class Subscriptions extends Actor {
@@ -30,7 +30,7 @@ class Subscriptions extends Actor {
   val flushMetricsSchedule = scheduleFlushMessage()
   val collectionContext = Kamon(Metrics).buildDefaultCollectionContext
 
-  var lastTick: Long = System.currentTimeMillis()
+  var lastTick: MilliTimestamp = MilliTimestamp.now
   var oneShotSubscriptions: Map[ActorRef, MetricSelectionFilter] = Map.empty
   var permanentSubscriptions: Map[ActorRef, MetricSelectionFilter] = Map.empty
 
@@ -65,7 +65,7 @@ class Subscriptions extends Actor {
   }
 
   def flush(): Unit = {
-    val currentTick = System.currentTimeMillis()
+    val currentTick = MilliTimestamp.now
     val snapshots = collectAll()
 
     dispatchSelectedMetrics(lastTick, currentTick, permanentSubscriptions, snapshots)
@@ -86,7 +86,7 @@ class Subscriptions extends Actor {
     builder.result()
   }
 
-  def dispatchSelectedMetrics(lastTick: Long, currentTick: Long, subscriptions: Map[ActorRef, MetricSelectionFilter],
+  def dispatchSelectedMetrics(lastTick: MilliTimestamp, currentTick: MilliTimestamp, subscriptions: Map[ActorRef, MetricSelectionFilter],
     snapshots: Map[MetricGroupIdentity, MetricGroupSnapshot]): Unit = {
 
     for ((subscriber, filter) ← subscriptions) {
@@ -108,7 +108,7 @@ object Subscriptions {
   case object FlushMetrics
   case class Unsubscribe(subscriber: ActorRef)
   case class Subscribe(category: MetricGroupCategory, selection: String, subscriber: ActorRef, permanently: Boolean = false)
-  case class TickMetricSnapshot(from: Long, to: Long, metrics: Map[MetricGroupIdentity, MetricGroupSnapshot])
+  case class TickMetricSnapshot(from: MilliTimestamp, to: MilliTimestamp, metrics: Map[MetricGroupIdentity, MetricGroupSnapshot])
 
   trait MetricSelectionFilter {
     def accept(identity: MetricGroupIdentity): Boolean

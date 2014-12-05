@@ -1,5 +1,6 @@
 package kamon.newrelic
 
+import kamon.Timestamp
 import kamon.metric.instrument.{ Counter, Histogram }
 import kamon.metric.{ MetricSnapshot, Scale }
 
@@ -40,12 +41,12 @@ object Metric {
   }
 }
 
-case class TimeSliceMetrics(from: Long, to: Long, metrics: Map[MetricID, MetricData]) {
+case class TimeSliceMetrics(from: Timestamp, to: Timestamp, metrics: Map[MetricID, MetricData]) {
   import kamon.metric.combineMaps
 
   def merge(that: TimeSliceMetrics): TimeSliceMetrics = {
-    val mergedFrom = math.min(from, that.from)
-    val mergedTo = math.max(to, that.to)
+    val mergedFrom = Timestamp.earlier(from, that.from)
+    val mergedTo = Timestamp.later(to, that.to)
     val mergedMetrics = combineMaps(metrics, that.metrics)((l, r) ⇒ l.merge(r))
 
     TimeSliceMetrics(mergedFrom, mergedTo, mergedMetrics)

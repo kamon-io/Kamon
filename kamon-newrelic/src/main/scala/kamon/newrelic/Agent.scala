@@ -18,113 +18,127 @@ package kamon.newrelic
 
 import java.util.concurrent.TimeUnit.{ MILLISECONDS ⇒ milliseconds }
 
-import akka.actor.{ ActorSystem, ActorLogging, Actor }
-import akka.event.LoggingAdapter
+import akka.actor.{ ActorLogging, Actor }
 import akka.io.IO
 import akka.util.Timeout
-import kamon.Kamon
-import kamon.metric.{ CollectionContext, Metrics }
+import com.typesafe.config.Config
 import spray.can.Http
 import spray.json._
-import scala.concurrent.{ ExecutionContext, Future }
-import spray.httpx.{ SprayJsonSupport, ResponseTransformation }
-import spray.http._
+import scala.concurrent.Future
+import spray.httpx.SprayJsonSupport
 import spray.json.lenses.JsonLenses._
 import java.lang.management.ManagementFactory
-import spray.http.Uri.Query
 import scala.concurrent.duration._
 import Agent._
-
+import JsonProtocol._
 import akka.pattern.pipe
 
-// TODO: Setup a proper host connector with custom timeout configuration for use with this.
-class Agent extends Actor with ClientPipelines with ResponseTransformation with SprayJsonSupport with ActorLogging {
-  import JsonProtocol._
+class Agent extends Actor with SprayJsonSupport with ActorLogging {
   import context.dispatcher
 
-  implicit val operationTimeout = Timeout(30 seconds)
-  val collectorClient = compressedToJsonPipeline(IO(Http)(context.system))
-  val settings = buildAgentSettings(context.system)
-  val baseQuery = Query(
-    "license_key" -> settings.licenseKey,
-    "marshal_format" -> "json",
-    "protocol_version" -> "12")
+  val agentSettings = AgentSettings.fromConfig(context.system.settings.config)
+
+  // Start the reporters
+  context.actorOf(MetricReporter.props(agentSettings), "metric-reporter")
 
   // Start the connection to the New Relic collector.
-  self ! Initialize
+  self ! Connect
 
-  def receive: Receive = uninitialized(settings.maxRetries)
+  def receive: Receive = disconnected(agentSettings.maxConnectionRetries)
 
-  def uninitialized(attemptsLeft: Int): Receive = {
-    case Initialize ⇒ pipe(connectToCollector) to self
-    case Initialized(runID, collector) ⇒
-      log.info("Agent initialized with runID: [{}] and collector: [{}]", runID, collector)
-
-      val baseCollectorUri = Uri(s"http://$collector/agent_listener/invoke_raw_method").withQuery(baseQuery)
-      context.actorOf(MetricReporter.props(settings, runID, baseCollectorUri), "metric-reporter")
-
-    case InitializationFailed(reason) if (attemptsLeft > 0) ⇒
-      log.error(reason, "Initialization failed, retrying in {} seconds", settings.retryDelay.toSeconds)
-      context.system.scheduler.scheduleOnce(settings.retryDelay, self, Initialize)
-      context become (uninitialized(attemptsLeft - 1))
-
-    case InitializationFailed(reason) ⇒
-      log.error(reason, "Giving up while trying to set up a connection with the New Relic collector.")
-      context.stop(self)
+  def disconnected(attemptsLeft: Int): Receive = {
+    case Connect                                     ⇒ pipe(connectToCollector) to self
+    case Connected(collector, runID)                 ⇒ configureChildren(collector, runID)
+    case ConnectFailed(reason) if (attemptsLeft > 0) ⇒ scheduleReconnection(reason, attemptsLeft)
+    case ConnectFailed(reason)                       ⇒ giveUpConnection()
   }
 
-  def connectToCollector: Future[InitResult] = {
+  def connected: Receive = {
+    case Reconnect ⇒ reconnect()
+    case Shutdown  ⇒ shutdown()
+  }
+
+  def reconnect(): Unit = {
+    log.warning("New Relic request the agent to restart the connection, all reporters will be paused until a new connection is available.")
+    self ! Connect
+    context.children.foreach(_ ! ResetConfiguration)
+    context become disconnected(agentSettings.maxConnectionRetries)
+  }
+
+  def shutdown(): Unit = {
+    log.error("New Relic requested the agent to be stopped, no metrics will be reported after this point.")
+    context stop self
+  }
+
+  def configureChildren(collector: String, runID: Long): Unit = {
+    log.info("Configuring New Relic reporters to use runID: [{}] and collector: [{}]", runID, collector)
+    context.children.foreach(_ ! Configure(collector, runID))
+    context become connected
+  }
+
+  def scheduleReconnection(connectionFailureReason: Throwable, attemptsLeft: Int): Unit = {
+    log.error(connectionFailureReason, "Initialization failed, retrying in {} seconds", agentSettings.retryDelay.toSeconds)
+    context.system.scheduler.scheduleOnce(agentSettings.retryDelay, self, Connect)
+    context become (disconnected(attemptsLeft - 1))
+  }
+
+  def giveUpConnection(): Unit = {
+    log.error("Giving up while trying to set up a connection with the New Relic collector. The New Relic module is shutting down itself.")
+    context.stop(self)
+  }
+
+  def connectToCollector: Future[ConnectResult] = {
     (for {
       collector ← selectCollector
-      runId ← connect(collector, settings)
-    } yield Initialized(runId, collector)) recover { case error ⇒ InitializationFailed(error) }
+      runID ← connect(collector, agentSettings)
+    } yield Connected(collector, runID)) recover { case error ⇒ ConnectFailed(error) }
   }
 
   def selectCollector: Future[String] = {
-    val query = ("method" -> "get_redirect_host") +: baseQuery
-    val getRedirectHostUri = Uri("http://collector.newrelic.com/agent_listener/invoke_raw_method").withQuery(query)
-
-    collectorClient {
-      Post(getRedirectHostUri, JsArray())
-
-    } map { json ⇒
+    val apiClient = new ApiMethodClient("collector.newrelic.com", None, agentSettings, IO(Http)(context.system))
+    apiClient.invokeMethod(RawMethods.GetRedirectHost, JsArray()) map { json ⇒
       json.extract[String]('return_value)
     }
   }
 
-  def connect(collectorHost: String, connect: Settings): Future[Long] = {
-    log.debug("Connecting to NewRelic Collector [{}]", collectorHost)
-
-    val query = ("method" -> "connect") +: baseQuery
-    val connectUri = Uri(s"http://$collectorHost/agent_listener/invoke_raw_method").withQuery(query)
-
-    collectorClient {
-      Post(connectUri, connect)
-
-    } map { json ⇒
+  def connect(collectorHost: String, connect: AgentSettings): Future[Long] = {
+    val apiClient = new ApiMethodClient(collectorHost, None, agentSettings, IO(Http)(context.system))
+    apiClient.invokeMethod(RawMethods.Connect, connect) map { json ⇒
       json.extract[Long]('return_value / 'agent_run_id)
     }
   }
 }
 
 object Agent {
-  case object Initialize
-  sealed trait InitResult
-  case class Initialized(runId: Long, collector: String) extends InitResult
-  case class InitializationFailed(reason: Throwable) extends InitResult
-  case class Settings(licenseKey: String, appName: String, host: String, pid: Int, maxRetries: Int, retryDelay: FiniteDuration, apdexT: Double)
+  case object Connect
+  case object Reconnect
+  case object Shutdown
+  case object ResetConfiguration
+  case class Configure(collector: String, runID: Long)
 
-  def buildAgentSettings(system: ActorSystem) = {
-    val config = system.settings.config.getConfig("kamon.newrelic")
-    val appName = config.getString("app-name")
-    val licenseKey = config.getString("license-key")
-    val maxRetries = config.getInt("max-initialize-retries")
-    val retryDelay = FiniteDuration(config.getDuration("initialize-retry-delay", milliseconds), milliseconds)
-    val apdexT: Double = config.getDuration("apdexT", MILLISECONDS) / 1E3 // scale to seconds.
+  sealed trait ConnectResult
+  case class Connected(collector: String, runID: Long) extends ConnectResult
+  case class ConnectFailed(reason: Throwable) extends ConnectResult
+}
 
+case class AgentSettings(licenseKey: String, appName: String, hostname: String, pid: Int, operationTimeout: Timeout,
+  maxConnectionRetries: Int, retryDelay: FiniteDuration, apdexT: Double)
+
+object AgentSettings {
+
+  def fromConfig(config: Config) = {
     // Name has the format of 'pid'@'host'
     val runtimeName = ManagementFactory.getRuntimeMXBean.getName.split('@')
+    val newRelicConfig = config.getConfig("kamon.newrelic")
 
-    Agent.Settings(licenseKey, appName, runtimeName(1), runtimeName(0).toInt, maxRetries, retryDelay, apdexT)
+    AgentSettings(
+      newRelicConfig.getString("license-key"),
+      newRelicConfig.getString("app-name"),
+      runtimeName(1),
+      runtimeName(0).toInt,
+      Timeout(newRelicConfig.getDuration("operation-timeout", milliseconds).millis),
+      newRelicConfig.getInt("max-connect-retries"),
+      FiniteDuration(newRelicConfig.getDuration("connect-retry-delay", milliseconds), milliseconds),
+      newRelicConfig.getDuration("apdexT", milliseconds) / 1E3D)
   }
 }

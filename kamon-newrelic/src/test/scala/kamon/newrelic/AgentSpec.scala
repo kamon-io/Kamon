@@ -44,8 +44,8 @@ class AgentSpec extends TestKitBase with WordSpecLike with BeforeAndAfterAll wit
       |  newrelic {
       |    app-name = kamon
       |    license-key = 1111111111
-      |    initialize-retry-delay = 1 second
-      |    max-initialize-retries = 3
+      |    connect-retry-delay = 1 second
+      |    max-connect-retries = 3
       |  }
       |}
       |
@@ -88,7 +88,7 @@ class AgentSpec extends TestKitBase with WordSpecLike with BeforeAndAfterAll wit
       })
 
       // Receive the runID
-      EventFilter.info(message = "Agent initialized with runID: [161221111] and collector: [collector-8.newrelic.com]", occurrences = 1).intercept {
+      EventFilter.info(message = "Configuring New Relic reporters to use runID: [161221111] and collector: [collector-8.newrelic.com]", occurrences = 1).intercept {
         httpManager.reply(jsonResponse(
           """
           | {
@@ -147,7 +147,7 @@ class AgentSpec extends TestKitBase with WordSpecLike with BeforeAndAfterAll wit
 
       // Receive the runID
       EventFilter.info(
-        message = "Agent initialized with runID: [161221112] and collector: [collector-8.newrelic.com]", occurrences = 1).intercept {
+        message = "Configuring New Relic reporters to use runID: [161221112] and collector: [collector-8.newrelic.com]", occurrences = 1).intercept {
 
           httpManager.reply(jsonResponse(
             """
@@ -184,7 +184,7 @@ class AgentSpec extends TestKitBase with WordSpecLike with BeforeAndAfterAll wit
       })
 
       // Give up on connecting.
-      EventFilter[RuntimeException](message = "Giving up while trying to set up a connection with the New Relic collector.", occurrences = 1).intercept {
+      EventFilter.error(message = "Giving up while trying to set up a connection with the New Relic collector. The New Relic module is shutting down itself.", occurrences = 1).intercept {
         httpManager.reply(Timedout(request))
       }
     }
