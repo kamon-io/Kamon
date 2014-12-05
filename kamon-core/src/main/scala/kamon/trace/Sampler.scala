@@ -57,7 +57,7 @@ class OrderedSampler(interval: Int) extends Sampler {
 
 object OrderedSampler {
   implicit class EnhancedInt(i: Int) {
-    def isPowerOfTwo = !((i & (i - 1)) == 0)
+    def isPowerOfTwo = (i & (i - 1)) == 0
   }
 
   implicit class EnhancedLong(dividend: Long) {
