@@ -55,8 +55,8 @@ class TickMetricSnapshotBufferSpec extends TestKitBase with WordSpecLike with Ma
       within(2 seconds)(expectNoMsg())
       val mergedSnapshot = expectMsgType[TickMetricSnapshot]
 
-      mergedSnapshot.from should equal(1000)
-      mergedSnapshot.to should equal(4000)
+      mergedSnapshot.from.millis should equal(1000)
+      mergedSnapshot.to.millis should equal(4000)
       mergedSnapshot.metrics should be('empty)
     }
 
@@ -70,8 +70,8 @@ class TickMetricSnapshotBufferSpec extends TestKitBase with WordSpecLike with Ma
       within(2 seconds)(expectNoMsg())
       val mergedSnapshot = expectMsgType[TickMetricSnapshot]
 
-      mergedSnapshot.from should equal(1000)
-      mergedSnapshot.to should equal(4000)
+      mergedSnapshot.from.millis should equal(1000)
+      mergedSnapshot.to.millis should equal(4000)
       mergedSnapshot.metrics should not be ('empty)
 
       val testMetricSnapshot = mergedSnapshot.metrics(testTraceIdentity).metrics(TraceMetrics.ElapsedTime).asInstanceOf[Histogram.Snapshot]
