@@ -44,12 +44,25 @@ class RandomSampler(chance: Int) extends Sampler {
 }
 
 class OrderedSampler(interval: Int) extends Sampler {
+  import OrderedSampler._
+
   require(interval > 0, "kamon.trace.ordered-sampler.interval cannot be <= 0")
+  assume(interval isPowerOfTwo, "kamon.trace.ordered-sampler.interval must be power of two")
 
   private val sequencer = Sequencer()
 
-  def shouldTrace: Boolean = sequencer.next() % interval == 0
+  def shouldTrace: Boolean = (sequencer.next() fastMod interval) == 0
   def shouldReport(traceElapsedTime: NanoInterval): Boolean = true
+}
+
+object OrderedSampler {
+  implicit class EnhancedInt(i: Int) {
+    def isPowerOfTwo = !((i & (i - 1)) == 0)
+  }
+
+  implicit class EnhancedLong(dividend: Long) {
+    def fastMod(divisor: Int) = dividend & (divisor - 1)
+  }
 }
 
 class ThresholdSampler(thresholdInNanoseconds: Long) extends Sampler {
