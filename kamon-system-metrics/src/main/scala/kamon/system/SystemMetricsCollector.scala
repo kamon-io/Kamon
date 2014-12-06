@@ -104,6 +104,8 @@ class SystemMetricsCollector(collectInterval: FiniteDuration) extends Actor with
     nr.txBytes.record(collect(sigar, interfaces)(net ⇒ toKB(net.getTxBytes)))
     nr.rxErrors.record(collect(sigar, interfaces)(net ⇒ net.getRxErrors))
     nr.txErrors.record(collect(sigar, interfaces)(net ⇒ net.getTxErrors))
+    nr.rxDropped.record(collect(sigar, interfaces)(net ⇒ net.getRxDropped))
+    nr.txDropped.record(collect(sigar, interfaces)(net ⇒ net.getTxDropped))
 
     def collect(sigar: SigarProxy, interfaces: Set[String])(block: NetInterfaceStat ⇒ Long): Long = {
       interfaces.foldLeft(0L) { (totalBytes, interface) ⇒
@@ -197,5 +199,5 @@ object SystemMetricsCollector {
     def isLinux: Boolean = System.getProperty("os.name").indexOf("Linux") != -1
   }
 
-  def props(collectInterval: FiniteDuration): Props = Props[SystemMetricsCollector](new SystemMetricsCollector(collectInterval))
+  def props(collectInterval: FiniteDuration): Props = Props(classOf[SystemMetricsCollector], collectInterval)
 }
