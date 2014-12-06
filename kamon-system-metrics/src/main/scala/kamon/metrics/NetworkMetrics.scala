@@ -31,31 +31,35 @@ object NetworkMetrics extends MetricGroupCategory {
   case object TxBytes extends MetricIdentity { val name = "tx-bytes" }
   case object RxErrors extends MetricIdentity { val name = "rx-errors" }
   case object TxErrors extends MetricIdentity { val name = "tx-errors" }
+  case object RxDropped extends MetricIdentity { val name = "rx-dropped" }
+  case object TxDropped extends MetricIdentity { val name = "tx-dropped" }
 
-  case class NetworkMetricRecorder(rxBytes: Histogram, txBytes: Histogram, rxErrors: Histogram, txErrors: Histogram)
+  case class NetworkMetricRecorder(rxBytes: Histogram, txBytes: Histogram, rxErrors: Histogram, txErrors: Histogram, rxDropped: Histogram, txDropped: Histogram)
       extends MetricGroupRecorder {
 
     def collect(context: CollectionContext): MetricGroupSnapshot = {
-      NetworkMetricSnapshot(rxBytes.collect(context), txBytes.collect(context), rxErrors.collect(context), txErrors.collect(context))
+      NetworkMetricSnapshot(rxBytes.collect(context), txBytes.collect(context), rxErrors.collect(context), txErrors.collect(context), rxDropped.collect(context), txDropped.collect(context))
     }
 
     def cleanup: Unit = {}
   }
 
-  case class NetworkMetricSnapshot(rxBytes: Histogram.Snapshot, txBytes: Histogram.Snapshot, rxErrors: Histogram.Snapshot, txErrors: Histogram.Snapshot)
+  case class NetworkMetricSnapshot(rxBytes: Histogram.Snapshot, txBytes: Histogram.Snapshot, rxErrors: Histogram.Snapshot, txErrors: Histogram.Snapshot, rxDropped: Histogram.Snapshot, txDropped: Histogram.Snapshot)
       extends MetricGroupSnapshot {
 
     type GroupSnapshotType = NetworkMetricSnapshot
 
     def merge(that: GroupSnapshotType, context: CollectionContext): GroupSnapshotType = {
-      NetworkMetricSnapshot(rxBytes.merge(that.rxBytes, context), txBytes.merge(that.txBytes, context), rxErrors.merge(that.rxErrors, context), txErrors.merge(that.txErrors, context))
+      NetworkMetricSnapshot(rxBytes.merge(that.rxBytes, context), txBytes.merge(that.txBytes, context), rxErrors.merge(that.rxErrors, context), txErrors.merge(that.txErrors, context), rxDropped.merge(that.rxDropped, context), txDropped.merge(that.txDropped, context))
     }
 
     val metrics: Map[MetricIdentity, MetricSnapshot] = Map(
       RxBytes -> rxBytes,
       TxBytes -> txBytes,
       RxErrors -> rxErrors,
-      TxErrors -> txErrors)
+      TxErrors -> txErrors,
+      RxDropped -> rxDropped,
+      TxDropped -> txDropped)
   }
 
   val Factory = NetworkMetricGroupFactory
@@ -73,11 +77,15 @@ case object NetworkMetricGroupFactory extends MetricGroupFactory {
     val txBytesConfig = settings.getConfig("tx-bytes")
     val rxErrorsConfig = settings.getConfig("rx-errors")
     val txErrorsConfig = settings.getConfig("tx-errors")
+    val rxDroppedConfig = settings.getConfig("rx-dropped")
+    val txDroppedConfig = settings.getConfig("tx-dropped")
 
     new NetworkMetricRecorder(
       Histogram.fromConfig(rxBytesConfig, Scale.Kilo),
       Histogram.fromConfig(txBytesConfig, Scale.Kilo),
       Histogram.fromConfig(rxErrorsConfig),
-      Histogram.fromConfig(txErrorsConfig))
+      Histogram.fromConfig(txErrorsConfig),
+      Histogram.fromConfig(rxDroppedConfig),
+      Histogram.fromConfig(txDroppedConfig))
   }
 }

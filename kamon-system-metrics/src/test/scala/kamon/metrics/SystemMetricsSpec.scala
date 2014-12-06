@@ -136,6 +136,14 @@ class SystemMetricsSpec extends TestKitBase with WordSpecLike with Matchers with
       |            highest-trackable-value = 3600000000000
       |            significant-value-digits = 2
       |        }
+      |        rx-dropped {
+      |            highest-trackable-value = 3600000000000
+      |            significant-value-digits = 2
+      |        }
+      |        tx-dropped {
+      |            highest-trackable-value = 3600000000000
+      |            significant-value-digits = 2
+      |        }
       |     }
       |     heap {
       |        used {
@@ -213,7 +221,7 @@ class SystemMetricsSpec extends TestKitBase with WordSpecLike with Matchers with
   }
 
   "the Kamon Network Metrics" should {
-    "record rxBytes, txBytes, rxErrors, txErrors metrics" in new NetworkMetricsListenerFixture {
+    "record rxBytes, txBytes, rxErrors, txErrors, rxDropped, txDropped metrics" in new NetworkMetricsListenerFixture {
       val metricsListener = subscribeToMetrics()
 
       val NetworkMetrics = expectNetworkMetrics(metricsListener, 3 seconds)
@@ -221,6 +229,8 @@ class SystemMetricsSpec extends TestKitBase with WordSpecLike with Matchers with
       NetworkMetrics.txBytes.max should be >= 0L
       NetworkMetrics.rxErrors.max should be >= 0L
       NetworkMetrics.txErrors.max should be >= 0L
+      NetworkMetrics.rxDropped.max should be >= 0L
+      NetworkMetrics.txDropped.max should be >= 0L
     }
   }
 
