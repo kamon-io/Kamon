@@ -51,3 +51,9 @@ server.pid
 
 # Default sigar library provision location.
 native/
+
+# Ignore all the tooling and processed assets from kamon-dashboard's angular side
+kamon-dashboard/src/main/angular/vendor/*
+!kamon-dashboard/src/main/angular/vendor/readme.md
+kamon-dashboard/src/main/angular/tools/dist
+kamon-dashboard/src/main/angular/tools/node_modules
