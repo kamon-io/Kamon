@@ -16,6 +16,8 @@
 
 package kamon.trace
 
+import java.util.concurrent.TimeUnit
+
 import akka.actor._
 import akka.actor
 import akka.event.Logging
@@ -39,7 +41,7 @@ class TraceExtension(system: ExtendedActorSystem) extends Kamon.Extension {
       case "all"       ⇒ SampleAll
       case "random"    ⇒ new RandomSampler(config.getInt("random-sampler.chance"))
       case "ordered"   ⇒ new OrderedSampler(config.getInt("ordered-sampler.interval"))
-      case "threshold" ⇒ new RandomSampler(config.getInt("threshold-sampler.threshold"))
+      case "threshold" ⇒ new ThresholdSampler(config.getDuration("threshold-sampler.minimum-elapsed-time", TimeUnit.NANOSECONDS))
     }
 
   val log = Logging(system, "TraceExtension")
