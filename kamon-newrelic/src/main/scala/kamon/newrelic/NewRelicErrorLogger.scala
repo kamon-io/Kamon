@@ -41,15 +41,18 @@ class NewRelicErrorLogger extends Actor with ActorLogging with CustomParamsSuppo
 
   def notifyError(error: Error): Unit = runInFakeTransaction {
     val params = new util.HashMap[String, String]()
-    val ctx = error.asInstanceOf[TraceContextAware].traceContext
-    val httpContext = TraceLocal.retrieve(HttpContextKey)
 
-    params put ("TraceToken", ctx.token)
+    if(error.isInstanceOf[TraceContextAware]) {
+      val ctx = error.asInstanceOf[TraceContextAware].traceContext
+      val httpContext = TraceLocal.retrieve(HttpContextKey)
 
-    httpContext.map { httpCtx ⇒
-      params put ("User-Agent", httpCtx.agent)
-      params put ("X-Forwarded-For", httpCtx.xforwarded)
-      params put ("Request-URI", httpCtx.uri)
+      params put ("TraceToken", ctx.token)
+
+      httpContext.map { httpCtx ⇒
+        params put ("User-Agent", httpCtx.agent)
+        params put ("X-Forwarded-For", httpCtx.xforwarded)
+        params put ("Request-URI", httpCtx.uri)
+      }
     }
 
     customParams foreach { case (k, v) ⇒ params.put(k, v) }
