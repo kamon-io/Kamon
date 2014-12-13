@@ -41,7 +41,7 @@ class AskPatternInstrumentationSpec extends TestKitBase with WordSpecLike with M
     "log a warning with a stack trace and TraceContext taken from the moment the ask was triggered" in {
       implicit val ec = system.dispatcher
       implicit val timeout = Timeout(10 milliseconds)
-      val noReply = system.actorOf(Props[NoReply])
+      val noReply = system.actorOf(Props[NoReply], "NoReply")
       system.eventStream.subscribe(testActor, classOf[Warning])
 
       val testTraceContext = TraceRecorder.withNewTraceContext("ask-timeout-warning") {

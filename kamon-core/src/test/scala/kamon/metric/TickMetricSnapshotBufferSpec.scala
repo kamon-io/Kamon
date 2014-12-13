@@ -17,7 +17,7 @@
 package kamon.metric
 
 import com.typesafe.config.ConfigFactory
-import kamon.{MilliTimestamp, Kamon}
+import kamon.{ MilliTimestamp, Kamon }
 import kamon.metric.instrument.Histogram
 import kamon.metric.instrument.Histogram.MutableRecord
 import org.scalatest.{ Matchers, WordSpecLike }
