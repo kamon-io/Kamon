@@ -31,8 +31,8 @@ class AskPatternInstrumentationSpec extends TestKitBase with WordSpecLike with M
   implicit lazy val system: ActorSystem = ActorSystem("ask-pattern-tracing-spec", ConfigFactory.parseString(
     """
       |kamon {
-      |  trace {
-      |    ask-pattern-tracing = heavyweight
+      |  akka {
+      |     ask-pattern-timeout-warning = heavyweight
       |  }
       |}
     """.stripMargin))

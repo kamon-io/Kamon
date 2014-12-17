@@ -17,7 +17,8 @@
 package akka.kamon.instrumentation
 
 import kamon.Kamon
-import kamon.trace.{ Trace, TraceContextAware }
+import kamon.extension.akka.Akka
+import kamon.trace.TraceContextAware
 import akka.actor.{ ActorSystem, ActorRef }
 import akka.event.Logging.Warning
 import akka.pattern.AskTimeoutException
@@ -41,17 +42,18 @@ class AskPatternInstrumentation {
   @Around("askableActorRefAsk(ctx, actor)")
   def hookAskTimeoutWarning(pjp: ProceedingJoinPoint, ctx: TraceContextAware, actor: ActorRef): AnyRef = {
     implicit val system = ctx.traceContext.system
-    val traceExtension = Kamon(Trace)(system)
+    val akkaExtension = Kamon(Akka)(system)
 
     val future = pjp.proceed().asInstanceOf[Future[AnyRef]]
 
-    val handler = traceExtension.askPatternTracing match {
-      case "off"         ⇒ errorHandler()
-      case "lightweight" ⇒ errorHandler(callInfo = Some(CallInfo(s"${actor.path.name} ?", pjp.getSourceLocation)))
-      case "heavyweight" ⇒ errorHandler(stack = Some(new StackTraceCaptureException))
+    val handler = akkaExtension.askPatternTimeoutWarning match {
+      case "off"         ⇒ None
+      case "lightweight" ⇒ Some(errorHandler(callInfo = Some(CallInfo(s"${actor.path.name} ?", pjp.getSourceLocation))))
+      case "heavyweight" ⇒ Some(errorHandler(stack = Some(new StackTraceCaptureException)))
     }
 
-    future.onFailure(handler)(traceExtension.defaultDispatcher)
+    handler.map(h ⇒ future.onFailure(h)(akkaExtension.dispatcher))
+
     future
   }
 
@@ -64,10 +66,9 @@ class AskPatternInstrumentation {
       publish(message)
   }
 
-  def publish(message: Option[String])(implicit system: ActorSystem) = message map {
-    msg ⇒
-      system.eventStream.publish(Warning("AskPatternTracing", classOf[AskPatternInstrumentation],
-        s"Timeout triggered for ask pattern registered at: $msg"))
+  def publish(message: Option[String])(implicit system: ActorSystem) = message map { msg ⇒
+    system.eventStream.publish(Warning("AskPatternTracing", classOf[AskPatternInstrumentation],
+      s"Timeout triggered for ask pattern registered at: $msg"))
   }
 }
 
