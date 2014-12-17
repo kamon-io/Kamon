@@ -18,7 +18,7 @@ package kamon.statsd
 
 import akka.testkit.{ TestKitBase, TestProbe }
 import akka.actor.{ ActorRef, Props, ActorSystem }
-import kamon.{MilliTimestamp, Kamon}
+import kamon.{ MilliTimestamp, Kamon }
 import kamon.metric.instrument.Histogram.Precision
 import kamon.metric.instrument.Histogram
 import org.scalatest.{ Matchers, WordSpecLike }
