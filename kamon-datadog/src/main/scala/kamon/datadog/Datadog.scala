@@ -22,6 +22,7 @@ import java.util.concurrent.TimeUnit.MILLISECONDS
 import akka.actor._
 import akka.event.Logging
 import kamon.Kamon
+import kamon.http.HttpServerMetrics
 import kamon.metric.UserMetrics.{ UserGauges, UserMinMaxCounters, UserCounters, UserHistograms }
 import kamon.metric._
 import kamon.metrics._
@@ -56,6 +57,9 @@ class DatadogExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   Kamon(Metrics)(system).subscribe(UserCounters, "*", datadogMetricsListener, permanently = true)
   Kamon(Metrics)(system).subscribe(UserMinMaxCounters, "*", datadogMetricsListener, permanently = true)
   Kamon(Metrics)(system).subscribe(UserGauges, "*", datadogMetricsListener, permanently = true)
+
+  // Subscribe to server metrics
+  Kamon(Metrics)(system).subscribe(HttpServerMetrics.category, "*", datadogMetricsListener, permanently = true)
 
   // Subscribe to Actors
   val includedActors = datadogConfig.getStringList("includes.actor").asScala
