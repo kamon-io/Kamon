@@ -18,6 +18,7 @@ package kamon.statsd
 
 import akka.actor._
 import kamon.Kamon
+import kamon.http.HttpServerMetrics
 import kamon.metric.UserMetrics._
 import kamon.metric._
 import kamon.metrics._
@@ -53,6 +54,9 @@ class StatsDExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   Kamon(Metrics)(system).subscribe(UserCounters, "*", statsDMetricsListener, permanently = true)
   Kamon(Metrics)(system).subscribe(UserMinMaxCounters, "*", statsDMetricsListener, permanently = true)
   Kamon(Metrics)(system).subscribe(UserGauges, "*", statsDMetricsListener, permanently = true)
+
+  // Subscribe to server metrics
+  Kamon(Metrics)(system).subscribe(HttpServerMetrics.category, "*", statsDMetricsListener, permanently = true)
 
   // Subscribe to Actors
   val includedActors = statsDConfig.getStringList("includes.actor").asScala
