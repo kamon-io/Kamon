@@ -27,7 +27,7 @@ import kamon.util.GlobPathFilter
 
 class TraceExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   val config = system.settings.config.getConfig("kamon.trace")
-  val enableAskPatternTracing = config.getBoolean("ask-pattern-tracing")
+  val askPatternTracing = config.getString("ask-pattern-tracing")
   val defaultDispatcher = system.dispatchers.lookup(config.getString("dispatcher"))
 
   val detailLevel: LevelOfDetail = config.getString("level") match {

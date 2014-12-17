@@ -32,7 +32,7 @@ class AskPatternInstrumentationSpec extends TestKitBase with WordSpecLike with M
     """
       |kamon {
       |  trace {
-      |    ask-pattern-tracing = on
+      |    ask-pattern-tracing = heavyweight
       |  }
       |}
     """.stripMargin))

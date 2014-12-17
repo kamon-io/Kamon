@@ -18,7 +18,7 @@ package kamon.datadog
 
 import akka.testkit.{ TestKitBase, TestProbe }
 import akka.actor.{ Props, ActorRef, ActorSystem }
-import kamon.{MilliTimestamp, Kamon}
+import kamon.{ MilliTimestamp, Kamon }
 import kamon.metric.instrument.Histogram.Precision
 import kamon.metric.instrument.{ Counter, Histogram, HdrHistogram, LongAdderCounter }
 import org.scalatest.{ Matchers, WordSpecLike }

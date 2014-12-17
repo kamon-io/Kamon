@@ -18,47 +18,69 @@ package akka.kamon.instrumentation
 
 import kamon.Kamon
 import kamon.trace.{ Trace, TraceContextAware }
-import akka.actor.ActorRef
+import akka.actor.{ ActorSystem, ActorRef }
 import akka.event.Logging.Warning
 import akka.pattern.AskTimeoutException
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
 import org.aspectj.lang.reflect.SourceLocation
 import scala.concurrent.Future
+import scala.compat.Platform.EOL
 
 @Aspect
 class AskPatternInstrumentation {
 
+  import AskPatternInstrumentation._
+
   @DeclareMixin("akka.pattern.AskableActorRef$")
   def mixinContextAwareToAskableActorRef: TraceContextAware = TraceContextAware.default
 
-  @Pointcut("call(* akka.pattern.AskableActorRef$.$qmark$extension(..)) && target(traceContext) && args(actor, *, *)")
-  def askableActorRefAsk(traceContext: TraceContextAware, actor: ActorRef): Unit = {}
+  @Pointcut("call(* akka.pattern.AskableActorRef$.$qmark$extension(..)) && target(ctx) && args(actor, *, *)")
+  def askableActorRefAsk(ctx: TraceContextAware, actor: ActorRef): Unit = {}
 
-  @Around("askableActorRefAsk(traceContext,actor)")
-  def hookAskTimeoutWarning(pjp: ProceedingJoinPoint, traceContext: TraceContextAware, actor: ActorRef): AnyRef = {
-    val callInfo = CallInfo(s"${actor.path.name} ?", pjp.getSourceLocation)
-    val system = traceContext.traceContext.system
+  @Around("askableActorRefAsk(ctx, actor)")
+  def hookAskTimeoutWarning(pjp: ProceedingJoinPoint, ctx: TraceContextAware, actor: ActorRef): AnyRef = {
+    implicit val system = ctx.traceContext.system
     val traceExtension = Kamon(Trace)(system)
 
     val future = pjp.proceed().asInstanceOf[Future[AnyRef]]
 
-    if (traceExtension.enableAskPatternTracing) {
-      future.onFailure {
-        case timeout: AskTimeoutException ⇒
-          system.eventStream.publish(Warning("AskPatternTracing", classOf[AskPatternInstrumentation],
-            s"Timeout triggered for ask pattern registered at: ${callInfo.getMessage}"))
-      }(traceExtension.defaultDispatcher)
+    val handler = traceExtension.askPatternTracing match {
+      case "off"         ⇒ errorHandler()
+      case "lightweight" ⇒ errorHandler(callInfo = Some(CallInfo(s"${actor.path.name} ?", pjp.getSourceLocation)))
+      case "heavyweight" ⇒ errorHandler(stack = Some(new StackTraceCaptureException))
     }
+
+    future.onFailure(handler)(traceExtension.defaultDispatcher)
     future
   }
 
+  def errorHandler(callInfo: Option[CallInfo] = None, stack: Option[StackTraceCaptureException] = None)(implicit system: ActorSystem): ErrorHandler = {
+    case e: AskTimeoutException ⇒
+      val message = {
+        if (stack.isDefined) stack.map(s ⇒ s.getStackTrace.drop(3).mkString("", EOL, EOL))
+        else callInfo.map(_.message)
+      }
+      publish(message)
+  }
+
+  def publish(message: Option[String])(implicit system: ActorSystem) = message map {
+    msg ⇒
+      system.eventStream.publish(Warning("AskPatternTracing", classOf[AskPatternInstrumentation],
+        s"Timeout triggered for ask pattern registered at: $msg"))
+  }
+}
+
+object AskPatternInstrumentation {
+  type ErrorHandler = PartialFunction[Throwable, Unit]
+
+  class StackTraceCaptureException extends Throwable
+
   case class CallInfo(name: String, sourceLocation: SourceLocation) {
-    def getMessage: String = {
+    def message: String = {
       def locationInfo: String = Option(sourceLocation).map(location ⇒ s"${location.getFileName}:${location.getLine}").getOrElse("<unknown position>")
       def line: String = s"$name @ $locationInfo"
       s"$line"
     }
   }
 }
-//"""Timeout triggered for actor [actor-que-pregunta] asking [actor-al-que-le-pregunta] @ [source location]"?"""
