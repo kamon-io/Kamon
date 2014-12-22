@@ -22,22 +22,33 @@ class GlobPathFilterSpec extends WordSpecLike with Matchers {
   "The GlobPathFilter" should {
 
     "match a single expression" in {
-      val filter = GlobPathFilter("/user/actor")
+      val filter = new GlobPathFilter("/user/actor")
 
-      filter.accept("/user/actor") should be (true)
+      filter.accept("/user/actor") shouldBe true
 
-      filter.accept("/user/actor/something") should be (false)
-      filter.accept("/user/actor/somethingElse") should be (false)
+      filter.accept("/user/actor/something") shouldBe false
+      filter.accept("/user/actor/somethingElse") shouldBe false
     }
 
     "match all expressions in the same level" in {
-      val filter = GlobPathFilter("/user/*")
+      val filter = new GlobPathFilter("/user/*")
 
-      filter.accept("/user/actor") should be (true)
-      filter.accept("/user/otherActor") should be (true)
+      filter.accept("/user/actor") shouldBe true
+      filter.accept("/user/otherActor") shouldBe true
 
-      filter.accept("/user/something/actor") should be (false)
-      filter.accept("/user/something/otherActor") should be (false)
+      filter.accept("/user/something/actor") shouldBe false
+      filter.accept("/user/something/otherActor") shouldBe false
+    }
+
+    "match all expressions in all levels" in {
+      val filter =  new GlobPathFilter("/user/actor-**")
+
+      filter.accept("/user/actor-") shouldBe true
+      filter.accept("/user/actor-one") shouldBe true
+      filter.accept("/user/actor-one/other") shouldBe true
+
+      filter.accept("/user/something/actor") shouldBe false
+      filter.accept("/user/something/otherActor")shouldBe false
     }
   }
 }
