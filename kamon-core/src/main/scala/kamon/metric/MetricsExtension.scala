@@ -88,8 +88,8 @@ class MetricsExtension(system: ExtendedActorSystem) extends Kamon.Extension {
         val key = entry.getKey
         val keyBasedConfig = entry.getValue.atKey(key)
 
-        val includes = keyBasedConfig.getStringList(s"$key.includes").asScala.map(inc ⇒ GlobPathFilter(inc)).toList
-        val excludes = keyBasedConfig.getStringList(s"$key.excludes").asScala.map(exc ⇒ GlobPathFilter(exc)).toList
+        val includes = keyBasedConfig.getStringList(s"$key.includes").asScala.map(inc ⇒ new GlobPathFilter(inc)).toList
+        val excludes = keyBasedConfig.getStringList(s"$key.excludes").asScala.map(exc ⇒ new GlobPathFilter(exc)).toList
 
         (key, MetricGroupFilter(includes, excludes))
       }
