@@ -85,9 +85,21 @@ class StatsDExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   // Subscribe to SystemMetrics
   val includeSystemMetrics = statsDConfig.getBoolean("report-system-metrics")
   if (includeSystemMetrics) {
-    Seq(CPUMetrics, ProcessCPUMetrics, MemoryMetrics, NetworkMetrics, GCMetrics, HeapMetrics, ContextSwitchesMetrics) foreach { metric ⇒
-      Kamon(Metrics)(system).subscribe(metric, "*", statsDMetricsListener, permanently = true)
-    }
+    //OS
+    Kamon(Metrics)(system).subscribe(CPUMetrics, "*", statsDMetricsListener, permanently = true)
+    Kamon(Metrics)(system).subscribe(ProcessCPUMetrics, "*", statsDMetricsListener, permanently = true)
+    Kamon(Metrics)(system).subscribe(MemoryMetrics, "*", statsDMetricsListener, permanently = true)
+    Kamon(Metrics)(system).subscribe(NetworkMetrics, "*", statsDMetricsListener, permanently = true)
+    Kamon(Metrics)(system).subscribe(DiskMetrics, "*", statsDMetricsListener, permanently = true)
+    Kamon(Metrics)(system).subscribe(ContextSwitchesMetrics, "*", statsDMetricsListener, permanently = true)
+    Kamon(Metrics)(system).subscribe(LoadAverageMetrics, "*", statsDMetricsListener, permanently = true)
+
+    //JVM
+    Kamon(Metrics)(system).subscribe(HeapMetrics, "*", statsDMetricsListener, permanently = true)
+    Kamon(Metrics)(system).subscribe(NonHeapMetrics, "*", statsDMetricsListener, permanently = true)
+    Kamon(Metrics)(system).subscribe(ThreadMetrics, "*", statsDMetricsListener, permanently = true)
+    Kamon(Metrics)(system).subscribe(ClassLoadingMetrics, "*", statsDMetricsListener, permanently = true)
+    Kamon(Metrics)(system).subscribe(GCMetrics, "*", statsDMetricsListener, permanently = true)
   }
 
   def buildMetricsListener(tickInterval: Long, flushInterval: Long, keyGeneratorFQCN: String, config: Config): ActorRef = {
