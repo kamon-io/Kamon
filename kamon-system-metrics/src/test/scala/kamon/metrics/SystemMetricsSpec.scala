@@ -21,12 +21,17 @@ import com.typesafe.config.ConfigFactory
 import kamon.Kamon
 import kamon.metric.Subscriptions.TickMetricSnapshot
 import kamon.metrics.CPUMetrics.CPUMetricSnapshot
+import kamon.metrics.ClassLoadingMetrics.ClassLoadingMetricSnapshot
 import kamon.metrics.ContextSwitchesMetrics.ContextSwitchesMetricsSnapshot
+import kamon.metrics.DiskMetrics.DiskMetricsSnapshot
 import kamon.metrics.GCMetrics.GCMetricSnapshot
 import kamon.metrics.HeapMetrics.HeapMetricSnapshot
+import kamon.metrics.LoadAverageMetrics.LoadAverageMetricsSnapshot
 import kamon.metrics.MemoryMetrics.MemoryMetricSnapshot
 import kamon.metrics.NetworkMetrics.NetworkMetricSnapshot
+import kamon.metrics.NonHeapMetrics.NonHeapMetricSnapshot
 import kamon.metrics.ProcessCPUMetrics.ProcessCPUMetricsSnapshot
+import kamon.metrics.ThreadMetrics.ThreadMetricSnapshot
 import kamon.metrics._
 import kamon.system.SystemMetricsExtension
 import org.scalatest.{ Matchers, WordSpecLike }
@@ -41,135 +46,8 @@ class SystemMetricsSpec extends TestKitBase with WordSpecLike with Matchers with
       |}
       |
       |kamon.metrics {
-      |
       |  disable-aspectj-weaver-missing-error = true
-      |
       |  tick-interval = 1 second
-      |
-      |  system {
-      |     cpu {
-      |        user {
-      |            highest-trackable-value = 999999999
-      |            significant-value-digits = 2
-      |        }
-      |        system {
-      |            highest-trackable-value = 999999999
-      |            significant-value-digits = 2
-      |        }
-      |        wait {
-      |            highest-trackable-value = 999999999
-      |            significant-value-digits = 2
-      |        }
-      |        idle {
-      |            highest-trackable-value = 999999999
-      |            significant-value-digits = 2
-      |        }
-      |        stolen {
-      |            highest-trackable-value = 999999999
-      |            significant-value-digits = 2
-      |        }
-      |     }
-      |     process-cpu {
-      |        user {
-      |            highest-trackable-value = 999999999
-      |            significant-value-digits = 2
-      |        }
-      |        system {
-      |            highest-trackable-value = 999999999
-      |            significant-value-digits = 2
-      |        }
-      |     }
-      |     memory {
-      |        used {
-      |          highest-trackable-value = 3600000000000
-      |          significant-value-digits = 2
-      |        }
-      |        free {
-      |          highest-trackable-value = 3600000000000
-      |          significant-value-digits = 2
-      |        }
-      |        buffer {
-      |          highest-trackable-value = 3600000000000
-      |          significant-value-digits = 2
-      |        }
-      |        cache {
-      |          highest-trackable-value = 3600000000000
-      |          significant-value-digits = 2
-      |        }
-      |        swap-used {
-      |          highest-trackable-value = 3600000000000
-      |          significant-value-digits = 2
-      |        }
-      |        swap-free {
-      |          highest-trackable-value = 3600000000000
-      |          significant-value-digits = 2
-      |        }
-      |     }
-      |     context-switches {
-      |        per-process-voluntary {
-      |          highest-trackable-value = 3600000000000
-      |          significant-value-digits = 2
-      |        }
-      |        per-process-non-voluntary {
-      |          highest-trackable-value = 3600000000000
-      |          significant-value-digits = 2
-      |        }
-      |        global {
-      |          highest-trackable-value = 3600000000000
-      |          significant-value-digits = 2
-      |        }
-      |     }
-      |     network {
-      |        rx-bytes {
-      |            highest-trackable-value = 3600000000000
-      |            significant-value-digits = 2
-      |        }
-      |        tx-bytes {
-      |            highest-trackable-value = 3600000000000
-      |            significant-value-digits = 2
-      |        }
-      |        rx-errors {
-      |            highest-trackable-value = 3600000000000
-      |            significant-value-digits = 2
-      |        }
-      |        tx-errors {
-      |            highest-trackable-value = 3600000000000
-      |            significant-value-digits = 2
-      |        }
-      |        rx-dropped {
-      |            highest-trackable-value = 3600000000000
-      |            significant-value-digits = 2
-      |        }
-      |        tx-dropped {
-      |            highest-trackable-value = 3600000000000
-      |            significant-value-digits = 2
-      |        }
-      |     }
-      |     heap {
-      |        used {
-      |            highest-trackable-value = 3600000000000
-      |            significant-value-digits = 2
-      |        }
-      |        max {
-      |            highest-trackable-value = 3600000000000
-      |            significant-value-digits = 2
-      |        }
-      |        committed {
-      |            highest-trackable-value = 3600000000000
-      |            significant-value-digits = 2
-      |        }
-      |     }
-      |     gc {
-      |        count {
-      |            highest-trackable-value = 3600000000000
-      |            significant-value-digits = 2
-      |        }
-      |        time {
-      |            highest-trackable-value = 3600000000000
-      |            significant-value-digits = 2
-      |        }
-      |     }
-      |  }
       |}
     """.stripMargin))
 
@@ -190,8 +68,8 @@ class SystemMetricsSpec extends TestKitBase with WordSpecLike with Matchers with
       val metricsListener = subscribeToMetrics()
 
       val GCMetrics = expectGCMetrics(metricsListener, 3 seconds)
-      GCMetrics.count.max should be > 0L
-      GCMetrics.time.max should be > 0L
+      GCMetrics.count.max should be >= 0L
+      GCMetrics.time.max should be >= 0L
     }
   }
 
@@ -203,6 +81,62 @@ class SystemMetricsSpec extends TestKitBase with WordSpecLike with Matchers with
       HeapMetrics.used.max should be >= 0L
       HeapMetrics.max.max should be >= 0L
       HeapMetrics.committed.max should be >= 0L
+    }
+  }
+
+  "the Kamon Non-Heap Metrics" should {
+    "record used, max, commited metrics" in new NonHeapMetricsListenerFixture {
+      val metricsListener = subscribeToMetrics()
+
+      val NonHeapMetrics = expectNonHeapMetrics(metricsListener, 3 seconds)
+      NonHeapMetrics.used.max should be >= 0L
+      NonHeapMetrics.max.max should be >= 0L
+      NonHeapMetrics.committed.max should be >= 0L
+    }
+  }
+
+  "the Kamon Thread Metrics" should {
+    "record daemon, count, peak metrics" in new ThreadMetricsListenerFixture {
+      val metricsListener = subscribeToMetrics()
+
+      val ThreadMetrics = expectThreadMetrics(metricsListener, 3 seconds)
+      ThreadMetrics.daemon.max should be >= 0L
+      ThreadMetrics.count.max should be >= 0L
+      ThreadMetrics.peak.max should be >= 0L
+    }
+  }
+
+  "the Kamon ClassLoading Metrics" should {
+    "record loaded, unloaded, current metrics" in new ClassLoadingMetricsListenerFixture {
+      val metricsListener = subscribeToMetrics()
+
+      val ClassLoadingMetrics = expectClassLoadingMetrics(metricsListener, 3 seconds)
+      ClassLoadingMetrics.loaded.max should be >= 0L
+      ClassLoadingMetrics.unloaded.max should be >= 0L
+      ClassLoadingMetrics.current.max should be >= 0L
+    }
+  }
+
+  "the Kamon Disk Metrics" should {
+    "record reads, writes, queue, service time metrics" in new DiskMetricsListenerFixture {
+      val metricsListener = subscribeToMetrics()
+
+      val DiskMetrics = expectDiskMetrics(metricsListener, 3 seconds)
+      DiskMetrics.reads.max should be >= 0L
+      DiskMetrics.writes.max should be >= 0L
+      DiskMetrics.queue.max should be >= 0L
+      DiskMetrics.serviceTime.max should be >= 0L
+    }
+  }
+
+  "the Kamon Load Average Metrics" should {
+    "record 1 minute, 5 minutes and 15 minutes metrics" in new LoadAverageMetricsListenerFixture {
+      val metricsListener = subscribeToMetrics()
+
+      val LoadAverageMetrics = expectLoadAverageMetrics(metricsListener, 3 seconds)
+      LoadAverageMetrics.one.max should be >= 0L
+      LoadAverageMetrics.five.max should be >= 0L
+      LoadAverageMetrics.fifteen.max should be >= 0L
     }
   }
 
@@ -279,7 +213,7 @@ class SystemMetricsSpec extends TestKitBase with WordSpecLike with Matchers with
       listener.expectMsgType[TickMetricSnapshot]
     }
 
-    val gcMetricsOption = tickSnapshot.metrics.get(GCMetrics(SystemMetricsExtension.garbageCollectors(0).getName))
+    val gcMetricsOption = tickSnapshot.metrics.get(GCMetrics(SystemMetricsExtension.garbageCollectors(0).getName.replaceAll("""[^\w]""", "-")))
     gcMetricsOption should not be empty
     gcMetricsOption.get.asInstanceOf[GCMetricSnapshot]
   }
@@ -311,6 +245,101 @@ class SystemMetricsSpec extends TestKitBase with WordSpecLike with Matchers with
       metricsListener.expectMsgType[TickMetricSnapshot]
       metricsListener
     }
+  }
+
+  trait NonHeapMetricsListenerFixture {
+    def subscribeToMetrics(): TestProbe = {
+      val metricsListener = TestProbe()
+      Kamon(Metrics).subscribe(NonHeapMetrics, "*", metricsListener.ref, permanently = true)
+      // Wait for one empty snapshot before proceeding to the test.
+      metricsListener.expectMsgType[TickMetricSnapshot]
+      metricsListener
+    }
+  }
+
+  def expectNonHeapMetrics(listener: TestProbe, waitTime: FiniteDuration): NonHeapMetricSnapshot = {
+    val tickSnapshot = within(waitTime) {
+      listener.expectMsgType[TickMetricSnapshot]
+    }
+    val nonHeapMetricsOption = tickSnapshot.metrics.get(NonHeapMetrics(SystemMetricsExtension.NonHeap))
+    nonHeapMetricsOption should not be empty
+    nonHeapMetricsOption.get.asInstanceOf[NonHeapMetricSnapshot]
+  }
+
+  trait ThreadMetricsListenerFixture {
+    def subscribeToMetrics(): TestProbe = {
+      val metricsListener = TestProbe()
+      Kamon(Metrics).subscribe(ThreadMetrics, "*", metricsListener.ref, permanently = true)
+      // Wait for one empty snapshot before proceeding to the test.
+      metricsListener.expectMsgType[TickMetricSnapshot]
+      metricsListener
+    }
+  }
+
+  def expectThreadMetrics(listener: TestProbe, waitTime: FiniteDuration): ThreadMetricSnapshot = {
+    val tickSnapshot = within(waitTime) {
+      listener.expectMsgType[TickMetricSnapshot]
+    }
+    val threadMetricsOption = tickSnapshot.metrics.get(ThreadMetrics(SystemMetricsExtension.Threads))
+    threadMetricsOption should not be empty
+    threadMetricsOption.get.asInstanceOf[ThreadMetricSnapshot]
+  }
+
+  trait ClassLoadingMetricsListenerFixture {
+    def subscribeToMetrics(): TestProbe = {
+      val metricsListener = TestProbe()
+      Kamon(Metrics).subscribe(ClassLoadingMetrics, "*", metricsListener.ref, permanently = true)
+      // Wait for one empty snapshot before proceeding to the test.
+      metricsListener.expectMsgType[TickMetricSnapshot]
+      metricsListener
+    }
+  }
+
+  def expectClassLoadingMetrics(listener: TestProbe, waitTime: FiniteDuration): ClassLoadingMetricSnapshot = {
+    val tickSnapshot = within(waitTime) {
+      listener.expectMsgType[TickMetricSnapshot]
+    }
+    val classLoadingMetricsOption = tickSnapshot.metrics.get(ClassLoadingMetrics(SystemMetricsExtension.Classes))
+    classLoadingMetricsOption should not be empty
+    classLoadingMetricsOption.get.asInstanceOf[ClassLoadingMetricSnapshot]
+  }
+
+  trait DiskMetricsListenerFixture {
+    def subscribeToMetrics(): TestProbe = {
+      val metricsListener = TestProbe()
+      Kamon(Metrics).subscribe(DiskMetrics, "*", metricsListener.ref, permanently = true)
+      // Wait for one empty snapshot before proceeding to the test.
+      metricsListener.expectMsgType[TickMetricSnapshot]
+      metricsListener
+    }
+  }
+
+  def expectDiskMetrics(listener: TestProbe, waitTime: FiniteDuration): DiskMetricsSnapshot = {
+    val tickSnapshot = within(waitTime) {
+      listener.expectMsgType[TickMetricSnapshot]
+    }
+    val diskMetricsOption = tickSnapshot.metrics.get(DiskMetrics(SystemMetricsExtension.Disk))
+    diskMetricsOption should not be empty
+    diskMetricsOption.get.asInstanceOf[DiskMetricsSnapshot]
+  }
+
+  trait LoadAverageMetricsListenerFixture {
+    def subscribeToMetrics(): TestProbe = {
+      val metricsListener = TestProbe()
+      Kamon(Metrics).subscribe(LoadAverageMetrics, "*", metricsListener.ref, permanently = true)
+      // Wait for one empty snapshot before proceeding to the test.
+      metricsListener.expectMsgType[TickMetricSnapshot]
+      metricsListener
+    }
+  }
+
+  def expectLoadAverageMetrics(listener: TestProbe, waitTime: FiniteDuration): LoadAverageMetricsSnapshot = {
+    val tickSnapshot = within(waitTime) {
+      listener.expectMsgType[TickMetricSnapshot]
+    }
+    val loadAverageMetricsOption = tickSnapshot.metrics.get(LoadAverageMetrics(SystemMetricsExtension.LoadAverage))
+    loadAverageMetricsOption should not be empty
+    loadAverageMetricsOption.get.asInstanceOf[LoadAverageMetricsSnapshot]
   }
 
   def expectMemoryMetrics(listener: TestProbe, waitTime: FiniteDuration): MemoryMetricSnapshot = {
