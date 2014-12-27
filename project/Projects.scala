@@ -21,7 +21,7 @@ object Projects extends Build {
   import Settings._
   import Dependencies._
 
-  lazy val root = Project("root", file("."))
+  lazy val kamon = Project("kamon", file("."))
     .aggregate(kamonCore, kamonSpray, kamonNewrelic, kamonPlayground, kamonDashboard, kamonTestkit, kamonPlay, kamonStatsD,
       kamonDatadog, kamonSystemMetrics, kamonLogReporter, kamonAkkaRemote, kamonJdbc)
     .settings(basicSettings: _*)
