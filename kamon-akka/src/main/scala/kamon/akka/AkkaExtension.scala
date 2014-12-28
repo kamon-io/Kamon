@@ -13,8 +13,8 @@
  * and limitations under the License.
  * =========================================================================================
  */
-//
-package kamon.extension.akka
+
+package kamon.akka
 
 import akka.actor
 import akka.actor._

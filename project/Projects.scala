@@ -21,7 +21,7 @@ object Projects extends Build {
   import Settings._
   import Dependencies._
 
-  lazy val root = Project("root", file("."))
+  lazy val kamon = Project("kamon", file("."))
     .aggregate(kamonCore, kamonSpray, kamonNewrelic, kamonPlayground, kamonDashboard, kamonTestkit, kamonPlay, kamonStatsD,
       kamonDatadog, kamonSystemMetrics, kamonLogReporter, kamonAkkaRemote, kamonJdbc)
     .settings(basicSettings: _*)
@@ -45,8 +45,21 @@ object Projects extends Build {
         test(scalatest, akkaTestKit, akkaSlf4j, slf4Jul, slf4Log4j, logback))
 
 
-  lazy val kamonAkkaRemote = Project("kamon-akka-remote", file("kamon-akka-remote"))
+  lazy val kamonAkka = Project("kamon-akka", file("kamon-akka"))
     .dependsOn(kamonCore)
+    .dependsOn(kamonMacros % "compile-internal, test-internal")
+    .settings(basicSettings: _* )
+    .settings(formatSettings: _*)
+    .settings(aspectJSettings: _*)
+    .settings(
+      libraryDependencies ++=
+        compile(akkaActor) ++
+        provided(aspectJ) ++
+        optional(logback) ++
+        test(scalatest, akkaTestKit, akkaSlf4j, slf4Jul, slf4Log4j, logback))
+
+  lazy val kamonAkkaRemote = Project("kamon-akka-remote", file("kamon-akka-remote"))
+    .dependsOn(kamonAkka)
     .settings(basicSettings: _* )
     .settings(formatSettings: _*)
     .settings(aspectJSettings: _*)

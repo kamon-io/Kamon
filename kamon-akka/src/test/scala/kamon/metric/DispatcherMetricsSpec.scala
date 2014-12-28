@@ -15,14 +15,16 @@
 
 package kamon.metric
 
-import org.scalatest.{ WordSpecLike, Matchers }
-import akka.testkit.{ TestProbe, TestKitBase }
-import akka.actor.{ ActorRef, Props, ActorSystem }
+import akka.actor.{ ActorRef, ActorSystem, Props }
+import akka.testkit.{ TestKitBase, TestProbe }
 import com.typesafe.config.ConfigFactory
-import scala.concurrent.duration._
 import kamon.Kamon
+import kamon.akka.DispatcherMetrics
+import DispatcherMetrics.DispatcherMetricSnapshot
 import kamon.metric.Subscriptions.TickMetricSnapshot
-import kamon.metric.DispatcherMetrics.DispatcherMetricSnapshot
+import org.scalatest.{ Matchers, WordSpecLike }
+
+import scala.concurrent.duration._
 
 class DispatcherMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
   implicit lazy val system: ActorSystem = ActorSystem("dispatcher-metrics-spec", ConfigFactory.parseString(
