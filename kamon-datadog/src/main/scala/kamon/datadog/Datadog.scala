@@ -22,6 +22,7 @@ import java.util.concurrent.TimeUnit.MILLISECONDS
 import akka.actor._
 import akka.event.Logging
 import kamon.Kamon
+import kamon.akka.{RouterMetrics, DispatcherMetrics, ActorMetrics}
 import kamon.http.HttpServerMetrics
 import kamon.metric.UserMetrics.{ UserGauges, UserMinMaxCounters, UserCounters, UserHistograms }
 import kamon.metric._
