@@ -1,0 +1,34 @@
+<!DOCTYPE aspectj PUBLIC "-//AspectJ//DTD//EN" "http://www.eclipse.org/aspectj/dtd/aspectj.dtd">
+
+<aspectj>
+  <aspects>
+
+    <!-- Actors -->
+    <aspect name="akka.kamon.instrumentation.TraceContextIntoRepointableActorRefMixin"/>
+    <aspect name="akka.kamon.instrumentation.TraceContextIntoSystemMessageMixin"/>
+    <aspect name="akka.kamon.instrumentation.ActorSystemMessageInstrumentation"/>
+    <aspect name="akka.kamon.instrumentation.TraceContextIntoEnvelopeMixin"/>
+    <aspect name="akka.kamon.instrumentation.MetricsIntoActorCellsMixin"/>
+    <aspect name="akka.kamon.instrumentation.ActorCellInstrumentation"/>
+    <aspect name="akka.kamon.instrumentation.RoutedActorCellInstrumentation"/>
+    <aspect name="akka.kamon.instrumentation.ActorLoggingInstrumentation"/>
+
+    <!-- Dispatchers -->
+    <aspect name="akka.kamon.instrumentation.DispatcherInstrumentation"/>
+    <aspect name="akka.kamon.instrumentation.DispatcherMetricCollectionInfoIntoDispatcherMixin"/>
+
+    <!-- Patterns -->
+    <aspect name="akka.kamon.instrumentation.AskPatternInstrumentation"/>
+  </aspects>
+
+  <weaver>
+    <include within="akka..*"/>
+
+    <!-- For some weird reason ByteString produces a java.lang.VerifyError after going through the weaver. -->
+    <exclude within="akka.util.ByteString"/>
+
+    <!-- Exclude CallingThreadDispatcher, is only for test purposes -->
+    <exclude within="akka.testkit.CallingThreadDispatcher"/>
+  </weaver>
+
+</aspectj>
