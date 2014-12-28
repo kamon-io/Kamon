@@ -17,8 +17,8 @@
 package akka.kamon.instrumentation
 
 import kamon.Kamon
-import kamon.extension.akka.Akka
-import kamon.trace.{ TraceContext, EmptyTraceContext, TraceContextAware }
+import kamon.akka.Akka
+import kamon.trace.{ TraceRecorder, TraceContext, EmptyTraceContext, TraceContextAware }
 import akka.actor.{ ActorSystem, ActorRef }
 import akka.event.Logging.Warning
 import akka.pattern.AskTimeoutException
@@ -33,30 +33,25 @@ class AskPatternInstrumentation {
 
   import AskPatternInstrumentation._
 
-  @DeclareMixin("akka.pattern.AskableActorRef$")
-  def mixinContextAwareToAskableActorRef: TraceContextAware = TraceContextAware.default
+  @Pointcut("call(* akka.pattern.AskableActorRef$.$qmark$extension(..)) && args(actor, *, *)")
+  def askableActorRefAsk(actor: ActorRef): Unit = {}
 
-  @Pointcut("call(* akka.pattern.AskableActorRef$.$qmark$extension(..)) && target(ctx) && args(actor, *, *)")
-  def askableActorRefAsk(ctx: TraceContextAware, actor: ActorRef): Unit = {}
-
-  @Around("askableActorRefAsk(ctx, actor)")
-  def hookAskTimeoutWarning(pjp: ProceedingJoinPoint, ctx: TraceContextAware, actor: ActorRef): AnyRef = ctx.traceContext match {
-    case EmptyTraceContext ⇒ pjp.proceed()
-    case ctx: TraceContext ⇒
-      implicit val system = ctx.system
+  @Around("askableActorRefAsk(actor)")
+  def hookAskTimeoutWarning(pjp: ProceedingJoinPoint, actor: ActorRef): AnyRef =
+    TraceRecorder.withTraceContextAndSystem { (ctx, system) ⇒
       val akkaExtension = Kamon(Akka)(system)
-
       val future = pjp.proceed().asInstanceOf[Future[AnyRef]]
 
       val handler = akkaExtension.askPatternTimeoutWarning match {
         case "off"         ⇒ None
-        case "lightweight" ⇒ Some(errorHandler(callInfo = Some(CallInfo(s"${actor.path.name} ?", pjp.getSourceLocation))))
-        case "heavyweight" ⇒ Some(errorHandler(stack = Some(new StackTraceCaptureException)))
+        case "lightweight" ⇒ Some(errorHandler(callInfo = Some(CallInfo(s"${actor.path.name} ?", pjp.getSourceLocation)))(system))
+        case "heavyweight" ⇒ Some(errorHandler(stack = Some(new StackTraceCaptureException))(system))
       }
 
       handler.map(future.onFailure(_)(akkaExtension.dispatcher))
       future
-  }
+
+    } getOrElse (pjp.proceed())
 
   def errorHandler(callInfo: Option[CallInfo] = None, stack: Option[StackTraceCaptureException] = None)(implicit system: ActorSystem): ErrorHandler = {
     case e: AskTimeoutException ⇒

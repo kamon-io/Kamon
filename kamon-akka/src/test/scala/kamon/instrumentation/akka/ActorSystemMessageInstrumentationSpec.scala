@@ -2,15 +2,19 @@ package kamon.instrumentation.akka
 
 import akka.actor.SupervisorStrategy.{ Escalate, Restart, Resume, Stop }
 import akka.actor._
-import akka.testkit.{ ImplicitSender, TestKit }
+import akka.testkit.{ TestKitBase, ImplicitSender }
+import com.typesafe.config.ConfigFactory
 import kamon.trace.{ EmptyTraceContext, TraceRecorder }
 import org.scalatest.WordSpecLike
 
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
 
-class ActorSystemMessageInstrumentationSpec extends TestKit(ActorSystem("actor-system-message-instrumentation-spec"))
-    with WordSpecLike with ImplicitSender {
+class ActorSystemMessageInstrumentationSpec extends TestKitBase with WordSpecLike with ImplicitSender {
+  implicit lazy val system: ActorSystem = ActorSystem("actor-system-message-instrumentation-spec", ConfigFactory.parseString(
+    """
+      |akka.loglevel = OFF
+    """.stripMargin))
 
   implicit val executionContext = system.dispatcher
 

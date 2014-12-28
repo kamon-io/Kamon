@@ -18,6 +18,7 @@ package kamon.statsd
 
 import akka.actor._
 import kamon.Kamon
+import kamon.akka.{RouterMetrics, DispatcherMetrics, ActorMetrics}
 import kamon.http.HttpServerMetrics
 import kamon.metric.UserMetrics._
 import kamon.metric._
