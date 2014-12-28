@@ -22,34 +22,34 @@ import com.typesafe.config.Config
 import kamon.metric._
 import kamon.metric.instrument.{ Gauge, Histogram }
 
-case class HeapMetrics(name: String) extends MetricGroupIdentity {
-  val category = HeapMetrics
+case class NonHeapMetrics(name: String) extends MetricGroupIdentity {
+  val category = NonHeapMetrics
 }
 
-object HeapMetrics extends MetricGroupCategory {
-  val name = "heap"
+object NonHeapMetrics extends MetricGroupCategory {
+  val name = "non-heap"
 
   case object Used extends MetricIdentity { val name = "used" }
   case object Max extends MetricIdentity { val name = "max" }
   case object Committed extends MetricIdentity { val name = "committed" }
 
-  case class HeapMetricRecorder(used: Gauge, max: Gauge, committed: Gauge)
+  case class NonHeapMetricRecorder(used: Gauge, max: Gauge, committed: Gauge)
       extends MetricGroupRecorder {
 
     def collect(context: CollectionContext): MetricGroupSnapshot = {
-      HeapMetricSnapshot(used.collect(context), max.collect(context), committed.collect(context))
+      NonHeapMetricSnapshot(used.collect(context), max.collect(context), committed.collect(context))
     }
 
     def cleanup: Unit = {}
   }
 
-  case class HeapMetricSnapshot(used: Histogram.Snapshot, max: Histogram.Snapshot, committed: Histogram.Snapshot)
+  case class NonHeapMetricSnapshot(used: Histogram.Snapshot, max: Histogram.Snapshot, committed: Histogram.Snapshot)
       extends MetricGroupSnapshot {
 
-    type GroupSnapshotType = HeapMetricSnapshot
+    type GroupSnapshotType = NonHeapMetricSnapshot
 
     def merge(that: GroupSnapshotType, context: CollectionContext): GroupSnapshotType = {
-      HeapMetricSnapshot(used.merge(that.used, context), max.merge(that.max, context), committed.merge(that.committed, context))
+      NonHeapMetricSnapshot(used.merge(that.used, context), max.merge(that.max, context), committed.merge(that.committed, context))
     }
 
     lazy val metrics: Map[MetricIdentity, MetricSnapshot] = Map(
@@ -58,30 +58,29 @@ object HeapMetrics extends MetricGroupCategory {
       Committed -> committed)
   }
 
-  val Factory = HeapMetricGroupFactory
+  val Factory = NonHeapMetricGroupFactory
 }
 
-case object HeapMetricGroupFactory extends MetricGroupFactory {
+case object NonHeapMetricGroupFactory extends MetricGroupFactory {
 
-  import HeapMetrics._
+  import NonHeapMetrics._
   import kamon.system.SystemMetricsExtension._
 
-  def heap = ManagementFactory.getMemoryMXBean.getHeapMemoryUsage
+  def nonHeap = ManagementFactory.getMemoryMXBean.getNonHeapMemoryUsage
 
-  type GroupRecorder = HeapMetricRecorder
+  type GroupRecorder = NonHeapMetricRecorder
 
   def create(config: Config, system: ActorSystem): GroupRecorder = {
-    val settings = config.getConfig("precision.jvm.heap")
+    val settings = config.getConfig("precision.jvm.non-heap")
 
-    val usedHeapConfig = settings.getConfig("used")
-    val maxHeapConfig = settings.getConfig("max")
-    val committedHeapConfig = settings.getConfig("committed")
+    val usedNonHeapConfig = settings.getConfig("used")
+    val maxNonHeapConfig = settings.getConfig("max")
+    val committedNonHeapConfig = settings.getConfig("committed")
 
-    new HeapMetricRecorder(
-      Gauge.fromConfig(usedHeapConfig, system, Scale.Mega)(() ⇒ toMB(heap.getUsed)),
-      Gauge.fromConfig(maxHeapConfig, system, Scale.Mega)(() ⇒ toMB(heap.getMax)),
-      Gauge.fromConfig(committedHeapConfig, system, Scale.Mega)(() ⇒ toMB(heap.getCommitted)))
+    new NonHeapMetricRecorder(
+      Gauge.fromConfig(usedNonHeapConfig, system, Scale.Mega)(() ⇒ toMB(nonHeap.getUsed)),
+      Gauge.fromConfig(maxNonHeapConfig, system, Scale.Mega)(() ⇒ toMB(nonHeap.getMax)),
+      Gauge.fromConfig(committedNonHeapConfig, system, Scale.Mega)(() ⇒ toMB(nonHeap.getCommitted)))
   }
-
 }
 

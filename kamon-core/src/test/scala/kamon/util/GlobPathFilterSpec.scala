@@ -16,7 +16,7 @@
 
 package kamon.util
 
-import org.scalatest.{Matchers, WordSpecLike}
+import org.scalatest.{ Matchers, WordSpecLike }
 
 class GlobPathFilterSpec extends WordSpecLike with Matchers {
   "The GlobPathFilter" should {
@@ -41,18 +41,18 @@ class GlobPathFilterSpec extends WordSpecLike with Matchers {
     }
 
     "match all expressions and crosses the path boundaries" in {
-      val filter =  new GlobPathFilter("/user/actor-**")
+      val filter = new GlobPathFilter("/user/actor-**")
 
       filter.accept("/user/actor-") shouldBe true
       filter.accept("/user/actor-one") shouldBe true
       filter.accept("/user/actor-one/other") shouldBe true
 
       filter.accept("/user/something/actor") shouldBe false
-      filter.accept("/user/something/otherActor")shouldBe false
+      filter.accept("/user/something/otherActor") shouldBe false
     }
 
     "match exactly one characterr" in {
-      val filter =  new GlobPathFilter("/user/actor-?")
+      val filter = new GlobPathFilter("/user/actor-?")
 
       filter.accept("/user/actor-1") shouldBe true
       filter.accept("/user/actor-2") shouldBe true
