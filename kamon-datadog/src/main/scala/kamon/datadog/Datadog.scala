@@ -88,9 +88,21 @@ class DatadogExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   // Subscribe to SystemMetrics
   val includeSystemMetrics = datadogConfig.getBoolean("report-system-metrics")
   if (includeSystemMetrics) {
-    List(CPUMetrics, ProcessCPUMetrics, MemoryMetrics, NetworkMetrics, GCMetrics, HeapMetrics, ContextSwitchesMetrics) foreach { metric ⇒
-      Kamon(Metrics)(system).subscribe(metric, "*", datadogMetricsListener, permanently = true)
-    }
+    //OS
+    Kamon(Metrics)(system).subscribe(CPUMetrics, "*", datadogMetricsListener, permanently = true)
+    Kamon(Metrics)(system).subscribe(ProcessCPUMetrics, "*", datadogMetricsListener, permanently = true)
+    Kamon(Metrics)(system).subscribe(MemoryMetrics, "*", datadogMetricsListener, permanently = true)
+    Kamon(Metrics)(system).subscribe(NetworkMetrics, "*", datadogMetricsListener, permanently = true)
+    Kamon(Metrics)(system).subscribe(DiskMetrics, "*", datadogMetricsListener, permanently = true)
+    Kamon(Metrics)(system).subscribe(ContextSwitchesMetrics, "*", datadogMetricsListener, permanently = true)
+    Kamon(Metrics)(system).subscribe(LoadAverageMetrics, "*", datadogMetricsListener, permanently = true)
+
+    //JVM
+    Kamon(Metrics)(system).subscribe(HeapMetrics, "*", datadogMetricsListener, permanently = true)
+    Kamon(Metrics)(system).subscribe(NonHeapMetrics, "*", datadogMetricsListener, permanently = true)
+    Kamon(Metrics)(system).subscribe(ThreadMetrics, "*", datadogMetricsListener, permanently = true)
+    Kamon(Metrics)(system).subscribe(ClassLoadingMetrics, "*", datadogMetricsListener, permanently = true)
+    Kamon(Metrics)(system).subscribe(GCMetrics, "*", datadogMetricsListener, permanently = true)
   }
 
   def buildMetricsListener(tickInterval: Long, flushInterval: Long): ActorRef = {
