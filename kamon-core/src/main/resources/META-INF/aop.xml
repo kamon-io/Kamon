@@ -5,38 +5,17 @@
     <!-- Disable AspectJ Weaver not present error -->
     <aspect name="kamon.instrumentation.AspectJWeaverMissingWarning"/>
 
-    <!-- Actors -->
-    <aspect name="akka.kamon.instrumentation.TraceContextIntoRepointableActorRefMixin"/>
-    <aspect name="akka.kamon.instrumentation.TraceContextIntoSystemMessageMixin"/>
-    <aspect name="akka.kamon.instrumentation.ActorSystemMessageInstrumentation"/>
-    <aspect name="akka.kamon.instrumentation.TraceContextIntoEnvelopeMixin"/>
-    <aspect name="akka.kamon.instrumentation.ActorCellMetricsIntoActorCellMixin"/>
-    <aspect name="akka.kamon.instrumentation.ActorCellInstrumentation"/>
-    <aspect name="akka.kamon.instrumentation.ActorLoggingInstrumentation"/>
-
-    <!-- Dispatchers -->
-    <aspect name="akka.kamon.instrumentation.DispatcherInstrumentation"/>
-    <aspect name="akka.kamon.instrumentation.DispatcherMetricCollectionInfoIntoDispatcherMixin"/>
-
     <!-- Futures -->
     <aspect name="kamon.instrumentation.scala.FutureInstrumentation"/>
     <aspect name="kamon.instrumentation.scalaz.FutureInstrumentation"/>
 
-    <!-- Patterns -->
-    <aspect name="akka.kamon.instrumentation.AskPatternInstrumentation"/>
   </aspects>
 
   <weaver>
     <include within="scala.concurrent..*"/>
     <include within="scalaz.concurrent..*"/>
-    <include within="akka..*"/>
     <include within="spray..*"/>
     <include within="kamon..*"/>
-
-    <!-- For some weird reason ByteString produces a java.lang.VerifyError after going through the weaver. -->
-    <exclude within="akka.util.ByteString"/>
-    <!-- Exclude CallingThreadDispatcher, is only for test purposes -->
-    <exclude within="akka.testkit.CallingThreadDispatcher"/>
   </weaver>
 
 </aspectj>

@@ -14,11 +14,12 @@
  * =========================================================================================
  */
 
-package kamon.metric
+package kamon.akka
 
 import akka.actor.ActorSystem
 import com.typesafe.config.Config
-import kamon.metric.instrument.{ MinMaxCounter, Counter, Histogram }
+import kamon.metric._
+import kamon.metric.instrument.{ Counter, Histogram, MinMaxCounter }
 
 case class ActorMetrics(name: String) extends MetricGroupIdentity {
   val category = ActorMetrics
@@ -73,7 +74,7 @@ object ActorMetrics extends MetricGroupCategory {
 }
 
 case object ActorMetricGroupFactory extends MetricGroupFactory {
-  import ActorMetrics._
+  import kamon.akka.ActorMetrics._
 
   type GroupRecorder = ActorMetricsRecorder
 

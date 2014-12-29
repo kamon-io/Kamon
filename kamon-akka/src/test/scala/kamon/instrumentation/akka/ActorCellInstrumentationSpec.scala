@@ -17,17 +17,17 @@ package kamon.instrumentation.akka
 
 import akka.actor.{ Actor, ActorSystem, Props }
 import akka.pattern.{ ask, pipe }
-import akka.routing.RoundRobinPool
-import akka.testkit.{ ImplicitSender, TestKit }
+import akka.routing._
+import akka.testkit.{ TestKitBase, ImplicitSender, TestKit }
 import akka.util.Timeout
+import com.typesafe.config.ConfigFactory
 import kamon.trace.TraceRecorder
-import org.scalatest.WordSpecLike
+import org.scalatest.{ BeforeAndAfterAll, WordSpecLike }
 
 import scala.concurrent.duration._
 
-class ActorCellInstrumentationSpec extends TestKit(ActorSystem("actor-cell-instrumentation-spec")) with WordSpecLike
-    with ImplicitSender {
-
+class ActorCellInstrumentationSpec extends TestKitBase with WordSpecLike with ImplicitSender with BeforeAndAfterAll {
+  implicit lazy val system: ActorSystem = ActorSystem("actor-cell-instrumentation-spec")
   implicit val executionContext = system.dispatcher
 
   "the message passing instrumentation" should {
@@ -60,9 +60,27 @@ class ActorCellInstrumentationSpec extends TestKit(ActorSystem("actor-cell-instr
       expectMsg(testTraceContext)
     }
 
-    "propagate the TraceContext to actors behind a router" in new RoutedEchoActorFixture {
+    "propagate the TraceContext to actors behind a simple router" in new EchoSimpleRouterFixture {
       val testTraceContext = TraceRecorder.withNewTraceContext("router-reply") {
-        ctxEchoActor ! "test"
+        router.route("test", testActor)
+        TraceRecorder.currentContext
+      }
+
+      expectMsg(testTraceContext)
+    }
+
+    "propagate the TraceContext to actors behind a pool router" in new EchoPoolRouterFixture {
+      val testTraceContext = TraceRecorder.withNewTraceContext("router-reply") {
+        pool ! "test"
+        TraceRecorder.currentContext
+      }
+
+      expectMsg(testTraceContext)
+    }
+
+    "propagate the TraceContext to actors behind a group router" in new EchoGroupRouterFixture {
+      val testTraceContext = TraceRecorder.withNewTraceContext("router-reply") {
+        group ! "test"
         TraceRecorder.currentContext
       }
 
@@ -70,12 +88,32 @@ class ActorCellInstrumentationSpec extends TestKit(ActorSystem("actor-cell-instr
     }
   }
 
+  override protected def afterAll(): Unit = shutdown()
+
   trait EchoActorFixture {
     val ctxEchoActor = system.actorOf(Props[TraceContextEcho])
   }
 
-  trait RoutedEchoActorFixture extends EchoActorFixture {
-    override val ctxEchoActor = system.actorOf(Props[TraceContextEcho].withRouter(RoundRobinPool(nrOfInstances = 1)))
+  trait EchoSimpleRouterFixture {
+    val router = {
+      val routees = Vector.fill(5) {
+        val r = system.actorOf(Props[TraceContextEcho])
+        ActorRefRoutee(r)
+      }
+      Router(RoundRobinRoutingLogic(), routees)
+    }
+  }
+
+  trait EchoPoolRouterFixture {
+    val pool = system.actorOf(RoundRobinPool(nrOfInstances = 5).props(Props[TraceContextEcho]), "pool-router")
+  }
+
+  trait EchoGroupRouterFixture {
+    val routees = Vector.fill(5) {
+      system.actorOf(Props[TraceContextEcho])
+    }
+
+    val group = system.actorOf(RoundRobinGroup(routees.map(_.path.toStringWithoutAddress)).props(), "group-router")
   }
 }
 

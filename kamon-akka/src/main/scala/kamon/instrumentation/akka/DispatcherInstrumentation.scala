@@ -23,8 +23,9 @@ import akka.actor.{ ActorSystemImpl, Cancellable }
 import akka.dispatch.{ Dispatcher, Dispatchers, ExecutorServiceDelegate, MessageDispatcher }
 import akka.kamon.instrumentation.DispatcherMetricsCollector.DispatcherMetricsMeasurement
 import kamon.Kamon
-import kamon.metric.DispatcherMetrics.DispatcherMetricRecorder
-import kamon.metric.{ DispatcherMetrics, Metrics }
+import kamon.akka.DispatcherMetrics
+import DispatcherMetrics.DispatcherMetricRecorder
+import kamon.metric.Metrics
 import org.aspectj.lang.annotation._
 
 import scala.concurrent.forkjoin.ForkJoinPool

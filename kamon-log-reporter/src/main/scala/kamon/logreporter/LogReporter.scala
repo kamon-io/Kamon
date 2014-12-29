@@ -19,7 +19,8 @@ package kamon.logreporter
 import akka.actor._
 import akka.event.Logging
 import kamon.Kamon
-import kamon.metric.ActorMetrics.ActorMetricSnapshot
+import kamon.akka.ActorMetrics
+import ActorMetrics.ActorMetricSnapshot
 import kamon.metric.Subscriptions.TickMetricSnapshot
 import kamon.metric.TraceMetrics.TraceMetricsSnapshot
 import kamon.metric.UserMetrics._

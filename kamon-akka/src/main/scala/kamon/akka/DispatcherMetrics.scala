@@ -14,11 +14,12 @@
  * =========================================================================================
  */
 
-package kamon.metric
+package kamon.akka
 
 import akka.actor.ActorSystem
 import com.typesafe.config.Config
-import kamon.metric.instrument.{ Histogram, HdrHistogram }
+import kamon.metric._
+import kamon.metric.instrument.Histogram
 
 case class DispatcherMetrics(name: String) extends MetricGroupIdentity {
   val category = DispatcherMetrics
@@ -71,7 +72,7 @@ object DispatcherMetrics extends MetricGroupCategory {
 
 case object DispatcherMetricGroupFactory extends MetricGroupFactory {
 
-  import DispatcherMetrics._
+  import kamon.akka.DispatcherMetrics._
 
   type GroupRecorder = DispatcherMetricRecorder
 
