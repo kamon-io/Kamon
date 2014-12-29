@@ -14,10 +14,11 @@
  */
 package kamon
 
-import akka.actor._
+import _root_.akka.actor
+import _root_.akka.actor._
 
 object Kamon {
-  trait Extension extends akka.actor.Extension
+  trait Extension extends actor.Extension
   def apply[T <: Extension](key: ExtensionId[T])(implicit system: ActorSystem): T = key(system)
 }
 
