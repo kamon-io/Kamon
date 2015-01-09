@@ -16,6 +16,8 @@
 package kamon.system
 
 import java.io.{ File, IOException }
+import java.nio.charset.StandardCharsets
+import java.nio.file.{Paths, Files}
 
 import akka.actor.{ Actor, ActorLogging, Props }
 import kamon.Kamon
@@ -33,8 +35,9 @@ import org.hyperic.sigar._
 
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.duration.FiniteDuration
-import scala.io.Source
 import scala.collection.mutable
+import scala.collection.JavaConverters.iterableAsScalaIterableConverter
+
 
 class SystemMetricsCollector(collectInterval: FiniteDuration) extends Actor with ActorLogging with SystemMetricsBanner {
   import kamon.system.SystemMetricsCollector._
@@ -169,7 +172,7 @@ class SystemMetricsCollector(collectInterval: FiniteDuration) extends Actor with
       var nonVoluntaryContextSwitches = 0L
 
       try {
-        for (line ← Source.fromFile(filename).getLines()) {
+        for (line <- Files.readAllLines(Paths.get(filename), StandardCharsets.US_ASCII).asScala.toList) {
           if (line.startsWith("voluntary_ctxt_switches")) {
             voluntaryContextSwitches = line.substring(line.indexOf(":") + 1).trim.toLong
           }
@@ -188,7 +191,7 @@ class SystemMetricsCollector(collectInterval: FiniteDuration) extends Actor with
       var contextSwitches = 0L
 
       try {
-        for (line ← Source.fromFile(filename).getLines()) {
+        for (line <- Files.readAllLines(Paths.get(filename), StandardCharsets.US_ASCII).asScala.toList) {
           if (line.startsWith("rcs")) {
             contextSwitches = line.substring(line.indexOf(" ") + 1).toLong
           }
