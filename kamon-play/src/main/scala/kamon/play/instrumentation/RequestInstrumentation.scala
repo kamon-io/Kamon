@@ -18,7 +18,7 @@ package kamon.play.instrumentation
 import kamon.Kamon
 import kamon.play.{ Play, PlayExtension }
 import kamon.trace.TraceLocal.{ HttpContextKey, HttpContext }
-import kamon.trace.{ TraceLocal, TraceContextAware, TraceRecorder }
+import kamon.trace._
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
 import play.api.Routes
@@ -41,15 +41,17 @@ class RequestInstrumentation {
 
   @Before("call(* play.api.GlobalSettings.onRouteRequest(..)) && args(requestHeader)")
   def beforeRouteRequest(requestHeader: RequestHeader): Unit = {
-    val system = Akka.system()
-    val playExtension = Kamon(Play)(system)
-    val defaultTraceName = playExtension.generateTraceName(requestHeader)
+    implicit val system = Akka.system()
+    val playExtension = Kamon(Play)
+    val tracer = Kamon(Tracer)
 
+    val defaultTraceName = playExtension.generateTraceName(requestHeader)
     val token = if (playExtension.includeTraceToken) {
       requestHeader.headers.toSimpleMap.find(_._1 == playExtension.traceTokenHeaderName).map(_._2)
     } else None
 
-    TraceRecorder.start(defaultTraceName, token)(system)
+    val newContext = token.map(t ⇒ tracer.newContext(defaultTraceName, t)).getOrElse(tracer.newContext(defaultTraceName))
+    TraceContext.setCurrentContext(newContext)
   }
 
   @Around("call(* play.api.GlobalSettings.doFilter(*)) && args(next)")
@@ -59,11 +61,10 @@ class RequestInstrumentation {
       val executor = Kamon(Play)(Akka.system()).defaultDispatcher
 
       def onResult(result: Result): Result = {
-        TraceRecorder.withTraceContextAndSystem { (ctx, system) ⇒
+        TraceContext.map { ctx ⇒
           ctx.finish()
 
-          val playExtension = Kamon(Play)(system)
-
+          val playExtension = ctx.lookupExtension(Play)
           recordHttpServerMetrics(result.header, ctx.name, playExtension)
 
           if (playExtension.includeTraceToken) result.withHeaders(playExtension.traceTokenHeaderName -> ctx.token)
@@ -75,7 +76,7 @@ class RequestInstrumentation {
       storeDiagnosticData(requestHeader)
 
       //override the current trace name
-      normaliseTraceName(requestHeader).map(TraceRecorder.rename)
+      normaliseTraceName(requestHeader).map(TraceContext.currentContext.rename)
 
       // Invoke the action
       next(requestHeader).map(onResult)(executor)
@@ -85,8 +86,8 @@ class RequestInstrumentation {
 
   @Before("call(* play.api.GlobalSettings.onError(..)) && args(request, ex)")
   def beforeOnError(request: TraceContextAware, ex: Throwable): Unit = {
-    TraceRecorder.withTraceContextAndSystem { (ctx, system) ⇒
-      recordHttpServerMetrics(InternalServerError.header, ctx.name, Kamon(Play)(system))
+    TraceContext.map { ctx ⇒
+      recordHttpServerMetrics(InternalServerError.header, ctx.name, ctx.lookupExtension(Play))
     }
   }
 
@@ -102,7 +103,7 @@ class RequestInstrumentation {
 }
 
 object RequestInstrumentation {
-  import kamon.metric.Metrics.AtomicGetOrElseUpdateForTriemap
+  import kamon.util.TriemapAtomicGetOrElseUpdate.Syntax
   import java.util.Locale
   import scala.collection.concurrent.TrieMap
 

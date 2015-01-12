@@ -20,7 +20,7 @@ import akka.actor.{ ActorSystem, Props, ActorRef, Actor }
 import akka.io.{ Udp, IO }
 import java.net.InetSocketAddress
 import akka.util.ByteString
-import kamon.metric.Subscriptions.TickMetricSnapshot
+import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 import java.text.{ DecimalFormatSymbols, DecimalFormat }
 import java.util.Locale
 
@@ -51,11 +51,11 @@ class StatsDMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long,
     val packetBuilder = new MetricDataPacketBuilder(maxPacketSizeInBytes, udpSender, remote)
 
     for (
-      (groupIdentity, groupSnapshot) ← tick.metrics;
-      (metricIdentity, metricSnapshot) ← groupSnapshot.metrics
+      (entity, snapshot) ← tick.metrics;
+      (metricKey, metricSnapshot) ← snapshot.metrics
     ) {
 
-      val key = metricKeyGenerator.generateKey(groupIdentity, metricIdentity)
+      val key = metricKeyGenerator.generateKey(entity, metricKey)
 
       metricSnapshot match {
         case hs: Histogram.Snapshot ⇒

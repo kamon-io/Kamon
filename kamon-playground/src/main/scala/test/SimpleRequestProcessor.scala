@@ -20,10 +20,10 @@ import akka.actor._
 import akka.routing.RoundRobinPool
 import akka.util.Timeout
 import kamon.Kamon
-import kamon.metric.Subscriptions.TickMetricSnapshot
+import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 import kamon.metric._
 import kamon.spray.KamonTraceDirectives
-import kamon.trace.{ Trace, SegmentCategory, TraceRecorder }
+import kamon.trace.{ TraceContext, SegmentCategory }
 import spray.http.{ StatusCodes, Uri }
 import spray.httpx.RequestBuilding
 import spray.routing.SimpleRoutingApp
@@ -46,27 +46,9 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
     def receive: Actor.Receive = { case any ⇒ sender ! any }
   }), "com")
 
-  Kamon(Trace).subscribe(printer)
-  //val buffer = system.actorOf(TickMetricSnapshotBuffer.props(30 seconds, printer))
-
-  //Kamon(Metrics).subscribe(CustomMetric, "*", buffer, permanently = true)
-  //Kamon(Metrics).subscribe(ActorMetrics, "*", printer, permanently = true)
-
   implicit val timeout = Timeout(30 seconds)
 
-  val counter = Kamon(UserMetrics).registerCounter("requests")
-  Kamon(UserMetrics).registerCounter("requests-2")
-  Kamon(UserMetrics).registerCounter("requests-3")
-
-  Kamon(UserMetrics).registerHistogram("histogram-1")
-  Kamon(UserMetrics).registerHistogram("histogram-2")
-
-  Kamon(UserMetrics).registerMinMaxCounter("min-max-counter-1")
-  Kamon(UserMetrics).registerMinMaxCounter("min-max-counter-2")
-  Kamon(UserMetrics).registerMinMaxCounter("min-max-counter-3")
-
-  //Kamon(UserMetrics).registerGauge("test-gauge")(() => 10L)
-
+  val counter = Kamon(UserMetrics).counter("requests")
   val pipeline = sendReceive
   val replier = system.actorOf(Props[Replier].withRouter(RoundRobinPool(nrOfInstances = 4)), "replier")
 
@@ -133,7 +115,7 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
         } ~
         path("segment") {
           complete {
-            val segment = TraceRecorder.currentContext.startSegment("hello-world", SegmentCategory.HttpClient, "none")
+            val segment = TraceContext.currentContext.startSegment("hello-world", SegmentCategory.HttpClient, "none")
             (replier ? "hello").mapTo[String].onComplete { t ⇒
               segment.finish()
             }
@@ -179,7 +161,7 @@ object Verifier extends App {
 class Replier extends Actor with ActorLogging {
   def receive = {
     case anything ⇒
-      if (TraceRecorder.currentContext.isEmpty)
+      if (TraceContext.currentContext.isEmpty)
         log.warning("PROCESSING A MESSAGE WITHOUT CONTEXT")
 
       //log.info("Processing at the Replier, and self is: {}", self)

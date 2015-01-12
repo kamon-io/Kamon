@@ -20,11 +20,10 @@ import akka.actor.{ ActorSystem, Props, ActorRef, Actor }
 import akka.io.{ Udp, IO }
 import java.net.InetSocketAddress
 import akka.util.ByteString
-import kamon.metric.Subscriptions.TickMetricSnapshot
+import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 import java.text.{ DecimalFormatSymbols, DecimalFormat }
-import kamon.metric.UserMetrics.UserMetricGroup
 import kamon.metric.instrument.{ Counter, Histogram }
-import kamon.metric.{ MetricIdentity, MetricGroupIdentity }
+import kamon.metric.{ MetricKey, Entity }
 import java.util.Locale
 
 class DatadogMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long) extends Actor with UdpExtensionProvider {
@@ -68,17 +67,19 @@ class DatadogMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long
           }
 
         case cs: Counter.Snapshot ⇒
-          val measurementData = formatMeasurement(groupIdentity, metricIdentity, encodeDatadogCounter(cs.count))
-          packetBuilder.appendMeasurement(key, measurementData)
+          if (cs.count > 0) {
+            val measurementData = formatMeasurement(groupIdentity, metricIdentity, encodeDatadogCounter(cs.count))
+            packetBuilder.appendMeasurement(key, measurementData)
+          }
       }
     }
     packetBuilder.flush()
   }
 
-  def formatMeasurement(groupIdentity: MetricGroupIdentity, metricIdentity: MetricIdentity, measurementData: String): String =
+  def formatMeasurement(entity: Entity, metricKey: MetricKey, measurementData: String): String =
     StringBuilder.newBuilder
       .append(measurementData)
-      .append(buildIdentificationTag(groupIdentity, metricIdentity))
+      .append(buildIdentificationTag(entity, metricKey))
       .result()
 
   def encodeDatadogTimer(level: Long, count: Long): String = {
@@ -88,23 +89,12 @@ class DatadogMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long
 
   def encodeDatadogCounter(count: Long): String = count.toString + "|c"
 
-  def buildMetricName(groupIdentity: MetricGroupIdentity, metricIdentity: MetricIdentity): String =
-    if (isUserMetric(groupIdentity))
-      s"$appName.${groupIdentity.category.name}.${groupIdentity.name}"
-    else
-      s"$appName.${groupIdentity.category.name}.${metricIdentity.name}"
+  def buildMetricName(entity: Entity, metricKey: MetricKey): String =
+    s"$appName.${entity.category}.${metricKey.name}"
 
-  def buildIdentificationTag(groupIdentity: MetricGroupIdentity, metricIdentity: MetricIdentity): String = {
-    if (isUserMetric(groupIdentity)) "" else {
-      // Make the automatic HTTP trace names a bit more friendly
-      val normalizedEntityName = groupIdentity.name.replace(": ", ":")
-      s"|#${groupIdentity.category.name}:${normalizedEntityName}"
-    }
-  }
-
-  def isUserMetric(groupIdentity: MetricGroupIdentity): Boolean = groupIdentity match {
-    case someUserMetric: UserMetricGroup ⇒ true
-    case everythingElse                  ⇒ false
+  def buildIdentificationTag(entity: Entity, metricKey: MetricKey): String = {
+    val normalizedEntityName = entity.name.replace(": ", ":")
+    s"|#${entity.category}:${normalizedEntityName}"
   }
 }
 

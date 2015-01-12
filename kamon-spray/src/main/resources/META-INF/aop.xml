@@ -2,14 +2,16 @@
 
 <aspectj>
   <aspects>
+
     <!-- Spray Server -->
-    <aspect name="spray.can.server.ServerRequestInstrumentation"/>
+    <aspect name="spray.can.server.instrumentation.ServerRequestInstrumentation"/>
 
     <!-- Spray Client -->
     <aspect name="spray.can.client.ClientRequestInstrumentation"/>
+
   </aspects>
 
   <weaver>
-    <include within="spray.can..*"/>
+    <include within="spray..*"/>
   </weaver>
 </aspectj>

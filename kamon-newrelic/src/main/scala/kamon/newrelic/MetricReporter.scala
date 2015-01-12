@@ -6,9 +6,9 @@ import akka.actor.{ Props, ActorLogging, Actor }
 import akka.pattern.pipe
 import akka.io.IO
 import kamon.Kamon
-import kamon.metric.Subscriptions.TickMetricSnapshot
-import kamon.metric.UserMetrics.{ UserGauges, UserMinMaxCounters, UserCounters, UserHistograms }
+import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 import kamon.metric._
+import kamon.metric.instrument.CollectionContext
 import kamon.newrelic.ApiMethodClient.{ AgentShutdownRequiredException, AgentRestartRequiredException }
 import kamon.newrelic.MetricReporter.{ PostFailed, PostSucceeded }
 import spray.can.Http
@@ -22,7 +22,7 @@ class MetricReporter(settings: AgentSettings) extends Actor with ActorLogging wi
   val metricsExtension = Kamon(Metrics)(context.system)
   val collectionContext = metricsExtension.buildDefaultCollectionContext
   val metricsSubscriber = {
-    val tickInterval = context.system.settings.config.getDuration("kamon.metrics.tick-interval", TimeUnit.MILLISECONDS)
+    val tickInterval = context.system.settings.config.getDuration("kamon.metric.tick-interval", TimeUnit.MILLISECONDS)
 
     // Metrics are always sent to New Relic in 60 seconds intervals.
     if (tickInterval == 60000) self
@@ -91,14 +91,8 @@ class MetricReporter(settings: AgentSettings) extends Actor with ActorLogging wi
   }
 
   def subscribeToMetrics(): Unit = {
-    // Subscribe to Trace Metrics
-    metricsExtension.subscribe(TraceMetrics, "*", metricsSubscriber, permanently = true)
-
-    // Subscribe to all User Metrics
-    metricsExtension.subscribe(UserHistograms, "*", metricsSubscriber, permanently = true)
-    metricsExtension.subscribe(UserCounters, "*", metricsSubscriber, permanently = true)
-    metricsExtension.subscribe(UserMinMaxCounters, "*", metricsSubscriber, permanently = true)
-    metricsExtension.subscribe(UserGauges, "*", metricsSubscriber, permanently = true)
+    metricsExtension.subscribe("trace", "*", metricsSubscriber, permanently = true)
+    metricsExtension.subscribe("user-metrics", "*", metricsSubscriber, permanently = true)
   }
 }
 
@@ -113,5 +107,5 @@ object MetricReporter {
 }
 
 trait MetricExtractor {
-  def extract(settings: AgentSettings, collectionContext: CollectionContext, metrics: Map[MetricGroupIdentity, MetricGroupSnapshot]): Map[MetricID, MetricData]
+  def extract(settings: AgentSettings, collectionContext: CollectionContext, metrics: Map[Entity, EntitySnapshot]): Map[MetricID, MetricData]
 }

@@ -18,17 +18,13 @@ package kamon.metric
 import java.nio.LongBuffer
 
 import akka.actor._
-import akka.kamon.instrumentation.ActorCellMetrics
 import akka.routing._
 import akka.testkit.{ ImplicitSender, TestKitBase, TestProbe }
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
-import kamon.akka.{ RouterMetrics, ActorMetrics }
-import ActorMetrics.{ ActorMetricSnapshot, ActorMetricsRecorder }
-import RouterMetrics._
+import kamon.akka.RouterMetrics
 import kamon.metric.RouterMetricsTestActor._
-import kamon.metric.Subscriptions.TickMetricSnapshot
-import kamon.metric.instrument.{ Counter, Histogram }
+import kamon.metric.instrument.CollectionContext
 import org.scalatest.{ BeforeAndAfterAll, Matchers, WordSpecLike }
 
 import scala.concurrent.duration._
@@ -36,22 +32,14 @@ import scala.concurrent.duration._
 class RouterMetricsSpec extends TestKitBase with WordSpecLike with Matchers with ImplicitSender with BeforeAndAfterAll {
   implicit lazy val system: ActorSystem = ActorSystem("router-metrics-spec", ConfigFactory.parseString(
     """
-      |kamon.metrics {
+      |kamon.metric {
       |  tick-interval = 1 hour
       |  default-collection-context-buffer-size = 10
       |
-      |  filters = [
-      |    {
-      |      router {
-      |        includes = [ "user/tracked-*", "user/measuring-*", "user/stop-*" ]
-      |        excludes = [ "user/tracked-explicitly-excluded-*"]
-      |      }
-      |    }
-      |  ]
-      |  precision {
-      |    default-histogram-precision {
-      |      highest-trackable-value = 3600000000000
-      |      significant-value-digits = 2
+      |  filters = {
+      |    akka-router {
+      |      includes = [ "user/tracked-*", "user/measuring-*", "user/stop-*" ]
+      |      excludes = [ "user/tracked-explicitly-excluded-*"]
       |    }
       |  }
       |}
@@ -85,7 +73,7 @@ class RouterMetricsSpec extends TestKitBase with WordSpecLike with Matchers with
       listener.expectMsg(Pong)
       val routerSnapshot = collectMetricsOf("user/measuring-routing-time-in-pool-router").get
 
-      routerSnapshot.routingTime.numberOfMeasurements should be(1L)
+      routerSnapshot.histogram("routing-time").get.numberOfMeasurements should be(1L)
     }
 
     "record the routing-time of the receive function for group routers" in new RouterMetricsFixtures {
@@ -96,7 +84,7 @@ class RouterMetricsSpec extends TestKitBase with WordSpecLike with Matchers with
       listener.expectMsg(Pong)
       val routerSnapshot = collectMetricsOf("user/measuring-routing-time-in-group-router").get
 
-      routerSnapshot.routingTime.numberOfMeasurements should be(1L)
+      routerSnapshot.histogram("routing-time").get.numberOfMeasurements should be(1L)
     }
 
     "record the processing-time of the receive function for pool routers" in new RouterMetricsFixtures {
@@ -107,9 +95,9 @@ class RouterMetricsSpec extends TestKitBase with WordSpecLike with Matchers with
       val timings = timingsListener.expectMsgType[RouterTrackedTimings]
       val routerSnapshot = collectMetricsOf("user/measuring-processing-time-in-pool-router").get
 
-      routerSnapshot.processingTime.numberOfMeasurements should be(1L)
-      routerSnapshot.processingTime.recordsIterator.next().count should be(1L)
-      routerSnapshot.processingTime.recordsIterator.next().level should be(timings.approximateProcessingTime +- 10.millis.toNanos)
+      routerSnapshot.histogram("processing-time").get.numberOfMeasurements should be(1L)
+      routerSnapshot.histogram("processing-time").get.recordsIterator.next().count should be(1L)
+      routerSnapshot.histogram("processing-time").get.recordsIterator.next().level should be(timings.approximateProcessingTime +- 10.millis.toNanos)
     }
 
     "record the processing-time of the receive function for group routers" in new RouterMetricsFixtures {
@@ -120,9 +108,9 @@ class RouterMetricsSpec extends TestKitBase with WordSpecLike with Matchers with
       val timings = timingsListener.expectMsgType[RouterTrackedTimings]
       val routerSnapshot = collectMetricsOf("user/measuring-processing-time-in-group-router").get
 
-      routerSnapshot.processingTime.numberOfMeasurements should be(1L)
-      routerSnapshot.processingTime.recordsIterator.next().count should be(1L)
-      routerSnapshot.processingTime.recordsIterator.next().level should be(timings.approximateProcessingTime +- 10.millis.toNanos)
+      routerSnapshot.histogram("processing-time").get.numberOfMeasurements should be(1L)
+      routerSnapshot.histogram("processing-time").get.recordsIterator.next().count should be(1L)
+      routerSnapshot.histogram("processing-time").get.recordsIterator.next().level should be(timings.approximateProcessingTime +- 10.millis.toNanos)
     }
 
     "record the number of errors for pool routers" in new RouterMetricsFixtures {
@@ -137,7 +125,7 @@ class RouterMetricsSpec extends TestKitBase with WordSpecLike with Matchers with
       listener.expectMsg(Pong)
 
       val routerSnapshot = collectMetricsOf("user/measuring-errors-in-pool-router").get
-      routerSnapshot.errors.count should be(10L)
+      routerSnapshot.counter("errors").get.count should be(10L)
     }
 
     "record the number of errors for group routers" in new RouterMetricsFixtures {
@@ -152,7 +140,7 @@ class RouterMetricsSpec extends TestKitBase with WordSpecLike with Matchers with
       listener.expectMsg(Pong)
 
       val routerSnapshot = collectMetricsOf("user/measuring-errors-in-group-router").get
-      routerSnapshot.errors.count should be(10L)
+      routerSnapshot.counter("errors").get.count should be(10L)
     }
 
     "record the time-in-mailbox for pool routers" in new RouterMetricsFixtures {
@@ -163,9 +151,9 @@ class RouterMetricsSpec extends TestKitBase with WordSpecLike with Matchers with
       val timings = timingsListener.expectMsgType[RouterTrackedTimings]
       val routerSnapshot = collectMetricsOf("user/measuring-time-in-mailbox-in-pool-router").get
 
-      routerSnapshot.timeInMailbox.numberOfMeasurements should be(1L)
-      routerSnapshot.timeInMailbox.recordsIterator.next().count should be(1L)
-      routerSnapshot.timeInMailbox.recordsIterator.next().level should be(timings.approximateTimeInMailbox +- 10.millis.toNanos)
+      routerSnapshot.histogram("time-in-mailbox").get.numberOfMeasurements should be(1L)
+      routerSnapshot.histogram("time-in-mailbox").get.recordsIterator.next().count should be(1L)
+      routerSnapshot.histogram("time-in-mailbox").get.recordsIterator.next().level should be(timings.approximateTimeInMailbox +- 10.millis.toNanos)
     }
 
     "record the time-in-mailbox for group routers" in new RouterMetricsFixtures {
@@ -176,33 +164,35 @@ class RouterMetricsSpec extends TestKitBase with WordSpecLike with Matchers with
       val timings = timingsListener.expectMsgType[RouterTrackedTimings]
       val routerSnapshot = collectMetricsOf("user/measuring-time-in-mailbox-in-group-router").get
 
-      routerSnapshot.timeInMailbox.numberOfMeasurements should be(1L)
-      routerSnapshot.timeInMailbox.recordsIterator.next().count should be(1L)
-      routerSnapshot.timeInMailbox.recordsIterator.next().level should be(timings.approximateTimeInMailbox +- 10.millis.toNanos)
+      routerSnapshot.histogram("time-in-mailbox").get.numberOfMeasurements should be(1L)
+      routerSnapshot.histogram("time-in-mailbox").get.recordsIterator.next().count should be(1L)
+      routerSnapshot.histogram("time-in-mailbox").get.recordsIterator.next().level should be(timings.approximateTimeInMailbox +- 10.millis.toNanos)
     }
 
     "clean up the associated recorder when the pool router is stopped" in new RouterMetricsFixtures {
       val trackedRouter = createTestPoolRouter("stop-in-pool-router")
-      routerMetricsRecorderOf("user/stop-in-pool-router") should not be empty
+      val firstRecorder = routerMetricsRecorderOf("user/stop-in-pool-router").get
 
+      // Killing the router should remove it's RouterMetrics and registering again bellow should create a new one.
       val deathWatcher = TestProbe()
       deathWatcher.watch(trackedRouter)
       trackedRouter ! PoisonPill
       deathWatcher.expectTerminated(trackedRouter)
 
-      routerMetricsRecorderOf("user/stop-in-pool-router") shouldBe empty
+      routerMetricsRecorderOf("user/stop-in-pool-router").get shouldNot be theSameInstanceAs (firstRecorder)
     }
 
     "clean up the associated recorder when the group router is stopped" in new RouterMetricsFixtures {
       val trackedRouter = createTestPoolRouter("stop-in-group-router")
-      routerMetricsRecorderOf("user/stop-in-group-router") should not be empty
+      val firstRecorder = routerMetricsRecorderOf("user/stop-in-group-router").get
 
+      // Killing the router should remove it's RouterMetrics and registering again bellow should create a new one.
       val deathWatcher = TestProbe()
       deathWatcher.watch(trackedRouter)
       trackedRouter ! PoisonPill
       deathWatcher.expectTerminated(trackedRouter)
 
-      routerMetricsRecorderOf("user/stop-in-group-router") shouldBe empty
+      routerMetricsRecorderOf("user/stop-in-group-router").get shouldNot be theSameInstanceAs (firstRecorder)
     }
   }
 
@@ -213,10 +203,10 @@ class RouterMetricsSpec extends TestKitBase with WordSpecLike with Matchers with
       val buffer: LongBuffer = LongBuffer.allocate(10000)
     }
 
-    def routerMetricsRecorderOf(routerName: String): Option[RouterMetricsRecorder] =
-      Kamon(Metrics)(system).storage.get(RouterMetrics(routerName)).map(_.asInstanceOf[RouterMetricsRecorder])
+    def routerMetricsRecorderOf(routerName: String): Option[RouterMetrics] =
+      Kamon(Metrics)(system).register(RouterMetrics, routerName).map(_.recorder)
 
-    def collectMetricsOf(routerName: String): Option[RouterMetricSnapshot] = {
+    def collectMetricsOf(routerName: String): Option[EntitySnapshot] = {
       Thread.sleep(5) // Just in case the test advances a bit faster than the actor being tested.
       routerMetricsRecorderOf(routerName).map(_.collect(collectionContext))
     }
@@ -254,16 +244,6 @@ class RouterMetricsSpec extends TestKitBase with WordSpecLike with Matchers with
 
       router
     }
-  }
-
-  trait ActorMetricsFixtures {
-    val collectionContext = new CollectionContext {
-      val buffer: LongBuffer = LongBuffer.allocate(10000)
-    }
-
-    def createTestActor(name: String): ActorRef = system.actorOf(Props[ActorMetricsTestActor], name)
-
-    def takeSnapshotOf(amr: ActorMetricsRecorder): ActorMetricSnapshot = amr.collect(collectionContext)
   }
 }
 
