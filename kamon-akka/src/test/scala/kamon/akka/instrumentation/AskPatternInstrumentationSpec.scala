@@ -21,21 +21,26 @@ import java.util.concurrent.atomic.AtomicInteger
 import akka.actor._
 import akka.event.Logging.Warning
 import akka.pattern.ask
-import akka.testkit.{ TestProbe, TestKitBase }
+import akka.testkit.TestProbe
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
 import kamon.akka.Akka
-import kamon.trace.{ TraceContext, TraceContextAware, TraceRecorder }
-import org.scalatest.{ BeforeAndAfterAll, Matchers, WordSpecLike }
+import kamon.testkit.BaseKamonSpec
+import kamon.trace.{ TraceContext, TraceContextAware }
 
 import scala.concurrent.duration._
 
-class AskPatternInstrumentationSpec extends TestKitBase with WordSpecLike with Matchers with BeforeAndAfterAll {
-  implicit lazy val system: ActorSystem = ActorSystem("ask-pattern-tracing-spec",
-    ConfigFactory.parseString("""akka.loggers = ["akka.event.slf4j.Slf4jLogger"]"""))
+class AskPatternInstrumentationSpec extends BaseKamonSpec("ask-pattern-tracing-spec") {
+  override lazy val config =
+    ConfigFactory.parseString(
+      """
+        |akka {
+        |  loglevel = OFF
+        |}
+      """.stripMargin)
 
-  implicit val ec = system.dispatcher
+  implicit lazy val ec = system.dispatcher
   implicit val askTimeout = Timeout(10 millis)
 
   // TODO: Make this work with ActorSelections
@@ -46,9 +51,9 @@ class AskPatternInstrumentationSpec extends TestKitBase with WordSpecLike with M
         setAskPatternTimeoutWarningMode("heavyweight")
 
         expectTimeoutWarning() {
-          TraceRecorder.withNewTraceContext("ask-timeout-warning") {
+          TraceContext.withContext(newContext("ask-timeout-warning")) {
             noReplyActorRef ? "hello"
-            TraceRecorder.currentContext
+            TraceContext.currentContext
           }
         }
       }
@@ -59,9 +64,9 @@ class AskPatternInstrumentationSpec extends TestKitBase with WordSpecLike with M
         setAskPatternTimeoutWarningMode("lightweight")
 
         expectTimeoutWarning(messageSizeLimit = Some(1)) {
-          TraceRecorder.withNewTraceContext("ask-timeout-warning") {
+          TraceContext.withContext(newContext("ask-timeout-warning")) {
             noReplyActorRef ? "hello"
-            TraceRecorder.currentContext
+            TraceContext.currentContext
           }
         }
       }
@@ -72,9 +77,9 @@ class AskPatternInstrumentationSpec extends TestKitBase with WordSpecLike with M
         setAskPatternTimeoutWarningMode("off")
 
         expectTimeoutWarning(expectWarning = false) {
-          TraceRecorder.withNewTraceContext("ask-timeout-warning") {
+          TraceContext.withContext(newContext("ask-timeout-warning")) {
             noReplyActorRef ? "hello"
-            TraceRecorder.currentContext
+            TraceContext.currentContext
           }
         }
       }

@@ -19,11 +19,8 @@ package akka.kamon.instrumentation
 import akka.actor._
 import akka.dispatch.{ Envelope, MessageDispatcher }
 import akka.routing.RoutedActorCell
-import kamon.Kamon
 import kamon.akka.{ RouterMetrics, ActorMetrics }
-import ActorMetrics.ActorMetricsRecorder
-import RouterMetrics.RouterMetricsRecorder
-import kamon.metric.Metrics
+import kamon.metric.{ Metrics, Entity }
 import kamon.trace._
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
@@ -36,12 +33,13 @@ class ActorCellInstrumentation {
 
   @After("actorCellCreation(cell, system, ref, props, dispatcher, parent)")
   def afterCreation(cell: ActorCell, system: ActorSystem, ref: ActorRef, props: Props, dispatcher: MessageDispatcher, parent: ActorRef): Unit = {
-    val metricsExtension = Kamon(Metrics)(system)
-    val metricIdentity = ActorMetrics(ref.path.elements.mkString("/"))
-    val cellMetrics = cell.asInstanceOf[ActorCellMetrics]
+    Metrics.get(system).register(ActorMetrics, ref.path.elements.mkString("/")).map { registration ⇒
+      val cellMetrics = cell.asInstanceOf[ActorCellMetrics]
 
-    cellMetrics.actorMetricIdentity = metricIdentity
-    cellMetrics.actorMetricsRecorder = metricsExtension.register(metricIdentity, ActorMetrics.Factory)
+      cellMetrics.entity = registration.entity
+      cellMetrics.recorder = Some(registration.recorder)
+    }
+
   }
 
   @Pointcut("execution(* akka.actor.ActorCell.invoke(*)) && this(cell) && args(envelope)")
@@ -54,11 +52,11 @@ class ActorCellInstrumentation {
     val contextAndTimestamp = envelope.asInstanceOf[TimestampedTraceContextAware]
 
     try {
-      TraceRecorder.withInlineTraceContextReplacement(contextAndTimestamp.traceContext) {
+      TraceContext.withContext(contextAndTimestamp.traceContext) {
         pjp.proceed()
       }
     } finally {
-      cellMetrics.actorMetricsRecorder.map { am ⇒
+      cellMetrics.recorder.map { am ⇒
         val processingTime = System.nanoTime() - timestampBeforeProcessing
         val timeInMailbox = timestampBeforeProcessing - contextAndTimestamp.captureNanoTime
 
@@ -81,7 +79,7 @@ class ActorCellInstrumentation {
   @After("sendMessageInActorCell(cell, envelope)")
   def afterSendMessageInActorCell(cell: ActorCell, envelope: Envelope): Unit = {
     val cellMetrics = cell.asInstanceOf[ActorCellMetrics]
-    cellMetrics.actorMetricsRecorder.map(_.mailboxSize.increment())
+    cellMetrics.recorder.map(_.mailboxSize.increment())
   }
 
   @Pointcut("execution(* akka.actor.ActorCell.stop()) && this(cell)")
@@ -90,15 +88,15 @@ class ActorCellInstrumentation {
   @After("actorStop(cell)")
   def afterStop(cell: ActorCell): Unit = {
     val cellMetrics = cell.asInstanceOf[ActorCellMetrics]
-    cellMetrics.actorMetricsRecorder.map { _ ⇒
-      Kamon(Metrics)(cell.system).unregister(cellMetrics.actorMetricIdentity)
+    cellMetrics.recorder.map { _ ⇒
+      Metrics.get(cell.system).unregister(cellMetrics.entity)
     }
 
     // The Stop can't be captured from the RoutedActorCell so we need to put this piece of cleanup here.
     if (cell.isInstanceOf[RoutedActorCell]) {
       val routedCellMetrics = cell.asInstanceOf[RoutedActorCellMetrics]
-      routedCellMetrics.routerMetricsRecorder.map { _ ⇒
-        Kamon(Metrics)(cell.system).unregister(routedCellMetrics.routerMetricIdentity)
+      routedCellMetrics.routerRecorder.map { _ ⇒
+        Metrics.get(cell.system).unregister(routedCellMetrics.routerEntity)
       }
     }
   }
@@ -109,7 +107,7 @@ class ActorCellInstrumentation {
   @Before("actorInvokeFailure(cell)")
   def beforeInvokeFailure(cell: ActorCell): Unit = {
     val cellWithMetrics = cell.asInstanceOf[ActorCellMetrics]
-    cellWithMetrics.actorMetricsRecorder.map(_.errors.increment())
+    cellWithMetrics.recorder.map(_.errors.increment())
 
     // In case that this actor is behind a router, count the errors for the router as well.
     val envelope = cell.currentMessage.asInstanceOf[RouterAwareEnvelope]
@@ -125,12 +123,12 @@ class RoutedActorCellInstrumentation {
 
   @After("routedActorCellCreation(cell, system, ref, props, dispatcher, routeeProps, supervisor)")
   def afterRoutedActorCellCreation(cell: RoutedActorCell, system: ActorSystem, ref: ActorRef, props: Props, dispatcher: MessageDispatcher, routeeProps: Props, supervisor: ActorRef): Unit = {
-    val metricsExtension = Kamon(Metrics)(system)
-    val metricIdentity = RouterMetrics(ref.path.elements.mkString("/"))
-    val cellMetrics = cell.asInstanceOf[RoutedActorCellMetrics]
+    Metrics.get(system).register(RouterMetrics, ref.path.elements.mkString("/")).map { registration ⇒
+      val cellMetrics = cell.asInstanceOf[RoutedActorCellMetrics]
 
-    cellMetrics.routerMetricIdentity = metricIdentity
-    cellMetrics.routerMetricsRecorder = metricsExtension.register(metricIdentity, RouterMetrics.Factory)
+      cellMetrics.routerEntity = registration.entity
+      cellMetrics.routerRecorder = Some(registration.recorder)
+    }
   }
 
   @Pointcut("execution(* akka.routing.RoutedActorCell.sendMessage(*)) && this(cell) && args(envelope)")
@@ -143,15 +141,15 @@ class RoutedActorCellInstrumentation {
     val contextAndTimestamp = envelope.asInstanceOf[TimestampedTraceContextAware]
 
     try {
-      TraceRecorder.withInlineTraceContextReplacement(contextAndTimestamp.traceContext) {
+      TraceContext.withContext(contextAndTimestamp.traceContext) {
 
         // The router metrics recorder will only be picked up if the message is sent from a tracked router.
-        RouterAwareEnvelope.dynamicRouterMetricsRecorder.withValue(cellMetrics.routerMetricsRecorder) {
+        RouterAwareEnvelope.dynamicRouterMetricsRecorder.withValue(cellMetrics.routerRecorder) {
           pjp.proceed()
         }
       }
     } finally {
-      cellMetrics.routerMetricsRecorder map { routerRecorder ⇒
+      cellMetrics.routerRecorder map { routerRecorder ⇒
         routerRecorder.routingTime.record(System.nanoTime() - timestampBeforeProcessing)
       }
     }
@@ -159,25 +157,25 @@ class RoutedActorCellInstrumentation {
 }
 
 trait ActorCellMetrics {
-  var actorMetricIdentity: ActorMetrics = _
-  var actorMetricsRecorder: Option[ActorMetricsRecorder] = _
+  var entity: Entity = _
+  var recorder: Option[ActorMetrics] = None
 }
 
 trait RoutedActorCellMetrics {
-  var routerMetricIdentity: RouterMetrics = _
-  var routerMetricsRecorder: Option[RouterMetricsRecorder] = _
+  var routerEntity: Entity = _
+  var routerRecorder: Option[RouterMetrics] = None
 }
 
 trait RouterAwareEnvelope {
-  def routerMetricsRecorder: Option[RouterMetricsRecorder]
+  def routerMetricsRecorder: Option[RouterMetrics]
 }
 
 object RouterAwareEnvelope {
   import scala.util.DynamicVariable
-  private[kamon] val dynamicRouterMetricsRecorder = new DynamicVariable[Option[RouterMetricsRecorder]](None)
+  private[kamon] val dynamicRouterMetricsRecorder = new DynamicVariable[Option[RouterMetrics]](None)
 
   def default: RouterAwareEnvelope = new RouterAwareEnvelope {
-    val routerMetricsRecorder: Option[RouterMetricsRecorder] = dynamicRouterMetricsRecorder.value
+    val routerMetricsRecorder: Option[RouterMetrics] = dynamicRouterMetricsRecorder.value
   }
 }
 

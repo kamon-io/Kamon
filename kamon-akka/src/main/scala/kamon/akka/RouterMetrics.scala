@@ -15,75 +15,26 @@
  */
 package kamon.akka
 
-import akka.actor.ActorSystem
-import com.typesafe.config.Config
 import kamon.metric._
-import kamon.metric.instrument.{ Counter, Histogram }
+import kamon.metric.instrument.{ Time, InstrumentFactory }
 
-case class RouterMetrics(name: String) extends MetricGroupIdentity {
-  val category = RouterMetrics
+/**
+ *  Entity recorder for Akka Routers. The metrics being tracked are:
+ *
+ *    - routing-time: Time taken for the router to process the routing logic.
+ *    - time-in-mailbox: Time spent from the instant when a message is enqueued in a actor's mailbox to the instant when
+ *      that message is dequeued for processing.
+ *    - processing-time: Time taken for the actor to process the receive function.
+ *    - errors: Number or errors seen by the actor's supervision mechanism.
+ */
+class RouterMetrics(instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) {
+  val routingTime = histogram("routing-time", Time.Nanoseconds)
+  val timeInMailbox = histogram("time-in-mailbox", Time.Nanoseconds)
+  val processingTime = histogram("processing-time", Time.Nanoseconds)
+  val errors = counter("errors")
 }
 
-object RouterMetrics extends MetricGroupCategory {
-  val name = "router"
-
-  case object RoutingTime extends MetricIdentity { val name = "routing-time" }
-  case object ProcessingTime extends MetricIdentity { val name = "processing-time" }
-  case object TimeInMailbox extends MetricIdentity { val name = "time-in-mailbox" }
-  case object Errors extends MetricIdentity { val name = "errors" }
-
-  case class RouterMetricsRecorder(routingTime: Histogram, processingTime: Histogram, timeInMailbox: Histogram, errors: Counter) extends MetricGroupRecorder {
-
-    def collect(context: CollectionContext): RouterMetricSnapshot =
-      RouterMetricSnapshot(routingTime.collect(context), processingTime.collect(context), timeInMailbox.collect(context), errors.collect(context))
-
-    def cleanup: Unit = {
-      routingTime.cleanup
-      processingTime.cleanup
-      timeInMailbox.cleanup
-      errors.cleanup
-    }
-  }
-
-  case class RouterMetricSnapshot(routingTime: Histogram.Snapshot, processingTime: Histogram.Snapshot, timeInMailbox: Histogram.Snapshot, errors: Counter.Snapshot) extends MetricGroupSnapshot {
-
-    type GroupSnapshotType = RouterMetricSnapshot
-
-    def merge(that: RouterMetricSnapshot, context: CollectionContext): RouterMetricSnapshot =
-      RouterMetricSnapshot(
-        routingTime.merge(that.routingTime, context),
-        processingTime.merge(that.processingTime, context),
-        timeInMailbox.merge(that.timeInMailbox, context),
-        errors.merge(that.errors, context))
-
-    lazy val metrics: Map[MetricIdentity, MetricSnapshot] = Map(
-      RoutingTime -> routingTime,
-      ProcessingTime -> processingTime,
-      TimeInMailbox -> timeInMailbox,
-      Errors -> errors)
-  }
-
-  val Factory = RouterMetricGroupFactory
+object RouterMetrics extends EntityRecorderFactory[RouterMetrics] {
+  def category: String = "akka-router"
+  def createRecorder(instrumentFactory: InstrumentFactory): RouterMetrics = new RouterMetrics(instrumentFactory)
 }
-
-case object RouterMetricGroupFactory extends MetricGroupFactory {
-
-  import kamon.akka.RouterMetrics._
-
-  type GroupRecorder = RouterMetricsRecorder
-
-  def create(config: Config, system: ActorSystem): RouterMetricsRecorder = {
-    val settings = config.getConfig("precision.router")
-
-    val routingTimeConfig = settings.getConfig("routing-time")
-    val processingTimeConfig = settings.getConfig("processing-time")
-    val timeInMailboxConfig = settings.getConfig("time-in-mailbox")
-
-    new RouterMetricsRecorder(
-      Histogram.fromConfig(routingTimeConfig),
-      Histogram.fromConfig(processingTimeConfig),
-      Histogram.fromConfig(timeInMailboxConfig),
-      Counter())
-  }
-}
-

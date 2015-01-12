@@ -16,40 +16,49 @@
 
 package akka.kamon.instrumentation
 
+import akka.util.Timeout
 import kamon.Kamon
 import kamon.akka.Akka
-import kamon.trace.{ TraceRecorder, TraceContext, EmptyTraceContext, TraceContextAware }
-import akka.actor.{ ActorSystem, ActorRef }
+import kamon.trace.{ TraceContext, EmptyTraceContext, TraceContextAware }
+import akka.actor.{ InternalActorRef, ActorSystem, ActorRef }
 import akka.event.Logging.Warning
-import akka.pattern.AskTimeoutException
+import akka.pattern.{ PromiseActorRef, AskTimeoutException }
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
 import org.aspectj.lang.reflect.SourceLocation
 import scala.concurrent.Future
 import scala.compat.Platform.EOL
+import scala.concurrent.duration.FiniteDuration
 
 @Aspect
 class AskPatternInstrumentation {
 
   import AskPatternInstrumentation._
 
-  @Pointcut("call(* akka.pattern.AskableActorRef$.$qmark$extension(..)) && args(actor, *, *)")
-  def askableActorRefAsk(actor: ActorRef): Unit = {}
+  @Pointcut("call(* akka.pattern.AskableActorRef$.$qmark$extension(..)) && args(actor, *, timeout)")
+  def askableActorRefAsk(actor: ActorRef, timeout: Timeout): Unit = {}
 
-  @Around("askableActorRefAsk(actor)")
-  def hookAskTimeoutWarning(pjp: ProceedingJoinPoint, actor: ActorRef): AnyRef =
-    TraceRecorder.withTraceContextAndSystem { (ctx, system) ⇒
-      val akkaExtension = Kamon(Akka)(system)
-      val future = pjp.proceed().asInstanceOf[Future[AnyRef]]
+  @Around("askableActorRefAsk(actor, timeout)")
+  def hookAskTimeoutWarning(pjp: ProceedingJoinPoint, actor: ActorRef, timeout: Timeout): AnyRef =
+    TraceContext.map { ctx ⇒
+      actor match {
+        // the AskPattern will only work for InternalActorRef's with these conditions.
+        case ref: InternalActorRef if !ref.isTerminated && timeout.duration.length > 0 ⇒
+          val akkaExtension = ctx.lookupExtension(Akka)
+          val future = pjp.proceed().asInstanceOf[Future[AnyRef]]
+          val system = ref.provider.guardian.underlying.system
 
-      val handler = akkaExtension.askPatternTimeoutWarning match {
-        case "off"         ⇒ None
-        case "lightweight" ⇒ Some(errorHandler(callInfo = Some(CallInfo(s"${actor.path.name} ?", pjp.getSourceLocation)))(system))
-        case "heavyweight" ⇒ Some(errorHandler(stack = Some(new StackTraceCaptureException))(system))
+          val handler = akkaExtension.askPatternTimeoutWarning match {
+            case "off"         ⇒ None
+            case "lightweight" ⇒ Some(errorHandler(callInfo = Some(CallInfo(s"${actor.path.name} ?", pjp.getSourceLocation)))(system))
+            case "heavyweight" ⇒ Some(errorHandler(stack = Some(new StackTraceCaptureException))(system))
+          }
+
+          handler.map(future.onFailure(_)(akkaExtension.dispatcher))
+          future
+
+        case _ ⇒ pjp.proceed() //
       }
-
-      handler.map(future.onFailure(_)(akkaExtension.dispatcher))
-      future
 
     } getOrElse (pjp.proceed())
 

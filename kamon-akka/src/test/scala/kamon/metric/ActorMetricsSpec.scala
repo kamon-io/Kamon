@@ -20,44 +20,29 @@ import java.nio.LongBuffer
 import kamon.Kamon
 import kamon.akka.ActorMetrics
 import kamon.metric.ActorMetricsTestActor._
+import kamon.metric.instrument.CollectionContext
 import org.scalatest.{ BeforeAndAfterAll, WordSpecLike, Matchers }
 import akka.testkit.{ ImplicitSender, TestProbe, TestKitBase }
 import akka.actor._
 import com.typesafe.config.ConfigFactory
 import scala.concurrent.duration._
-import ActorMetrics.{ ActorMetricsRecorder, ActorMetricSnapshot }
 
 class ActorMetricsSpec extends TestKitBase with WordSpecLike with Matchers with ImplicitSender with BeforeAndAfterAll {
   implicit lazy val system: ActorSystem = ActorSystem("actor-metrics-spec", ConfigFactory.parseString(
     """
-      |kamon.metrics {
+      |kamon.metric {
       |  tick-interval = 1 hour
       |  default-collection-context-buffer-size = 10
       |
-      |  filters = [
-      |    {
-      |      actor {
-      |        includes = [ "user/tracked-*", "user/measuring-*", "user/clean-after-collect", "user/stop" ]
-      |        excludes = [ "user/tracked-explicitly-excluded"]
-      |      }
+      |  filters {
+      |    akka-actor {
+      |      includes = [ "user/tracked-*", "user/measuring-*", "user/clean-after-collect", "user/stop" ]
+      |      excludes = [ "user/tracked-explicitly-excluded", "user/non-tracked-actor" ]
       |    }
-      |  ]
-      |  precision.actor {
-      |    processing-time {
-      |      highest-trackable-value = 3600000000000
-      |      significant-value-digits = 2
-      |    }
+      |  }
       |
-      |    time-in-mailbox {
-      |      highest-trackable-value = 3600000000000
-      |      significant-value-digits = 2
-      |    }
-      |
-      |    mailbox-size {
-      |      refresh-interval = 1 hour
-      |      highest-trackable-value = 999999999
-      |      significant-value-digits = 2
-      |    }
+      |  instrument-settings {
+      |    akka-actor.mailbox-size.refresh-interval = 1 hour
       |  }
       |}
       |
@@ -89,16 +74,16 @@ class ActorMetricsSpec extends TestKitBase with WordSpecLike with Matchers with 
         expectMsg(Pong)
 
         val firstSnapshot = collectMetricsOf(trackedActor).get
-        firstSnapshot.errors.count should be(1L)
-        firstSnapshot.mailboxSize.numberOfMeasurements should be > 0L
-        firstSnapshot.processingTime.numberOfMeasurements should be(102L) // 102 examples
-        firstSnapshot.timeInMailbox.numberOfMeasurements should be(102L) // 102 examples
+        firstSnapshot.counter("errors").get.count should be(1L)
+        firstSnapshot.minMaxCounter("mailbox-size").get.numberOfMeasurements should be > 0L
+        firstSnapshot.histogram("processing-time").get.numberOfMeasurements should be(102L) // 102 examples
+        firstSnapshot.histogram("time-in-mailbox").get.numberOfMeasurements should be(102L) // 102 examples
 
         val secondSnapshot = collectMetricsOf(trackedActor).get // Ensure that the recorders are clean
-        secondSnapshot.errors.count should be(0L)
-        secondSnapshot.mailboxSize.numberOfMeasurements should be(3L) // min, max and current
-        secondSnapshot.processingTime.numberOfMeasurements should be(0L)
-        secondSnapshot.timeInMailbox.numberOfMeasurements should be(0L)
+        secondSnapshot.counter("errors").get.count should be(0L)
+        secondSnapshot.minMaxCounter("mailbox-size").get.numberOfMeasurements should be(3L) // min, max and current
+        secondSnapshot.histogram("processing-time").get.numberOfMeasurements should be(0L)
+        secondSnapshot.histogram("time-in-mailbox").get.numberOfMeasurements should be(0L)
       }
     }
 
@@ -109,9 +94,9 @@ class ActorMetricsSpec extends TestKitBase with WordSpecLike with Matchers with 
       val timings = expectMsgType[TrackedTimings]
       val snapshot = collectMetricsOf(trackedActor).get
 
-      snapshot.processingTime.numberOfMeasurements should be(1L)
-      snapshot.processingTime.recordsIterator.next().count should be(1L)
-      snapshot.processingTime.recordsIterator.next().level should be(timings.approximateProcessingTime +- 10.millis.toNanos)
+      snapshot.histogram("processing-time").get.numberOfMeasurements should be(1L)
+      snapshot.histogram("processing-time").get.recordsIterator.next().count should be(1L)
+      snapshot.histogram("processing-time").get.recordsIterator.next().level should be(timings.approximateProcessingTime +- 10.millis.toNanos)
     }
 
     "record the number of errors" in new ActorMetricsFixtures {
@@ -122,7 +107,7 @@ class ActorMetricsSpec extends TestKitBase with WordSpecLike with Matchers with 
       expectMsg(Pong)
       val snapshot = collectMetricsOf(trackedActor).get
 
-      snapshot.errors.count should be(10)
+      snapshot.counter("errors").get.count should be(10)
     }
 
     "record the mailbox-size" in new ActorMetricsFixtures {
@@ -138,8 +123,8 @@ class ActorMetricsSpec extends TestKitBase with WordSpecLike with Matchers with 
       expectMsg(Pong)
       val snapshot = collectMetricsOf(trackedActor).get
 
-      snapshot.mailboxSize.min should be(0L)
-      snapshot.mailboxSize.max should be(11L +- 1L)
+      snapshot.minMaxCounter("mailbox-size").get.min should be(0L)
+      snapshot.minMaxCounter("mailbox-size").get.max should be(11L +- 1L)
     }
 
     "record the time-in-mailbox" in new ActorMetricsFixtures {
@@ -149,20 +134,22 @@ class ActorMetricsSpec extends TestKitBase with WordSpecLike with Matchers with 
       val timings = expectMsgType[TrackedTimings]
       val snapshot = collectMetricsOf(trackedActor).get
 
-      snapshot.timeInMailbox.numberOfMeasurements should be(1L)
-      snapshot.timeInMailbox.recordsIterator.next().count should be(1L)
-      snapshot.timeInMailbox.recordsIterator.next().level should be(timings.approximateTimeInMailbox +- 10.millis.toNanos)
+      snapshot.histogram("time-in-mailbox").get.numberOfMeasurements should be(1L)
+      snapshot.histogram("time-in-mailbox").get.recordsIterator.next().count should be(1L)
+      snapshot.histogram("time-in-mailbox").get.recordsIterator.next().level should be(timings.approximateTimeInMailbox +- 10.millis.toNanos)
     }
 
     "clean up the associated recorder when the actor is stopped" in new ActorMetricsFixtures {
       val trackedActor = createTestActor("stop")
+      val firstRecorder = actorMetricsRecorderOf(trackedActor).get
 
+      // Killing the actor should remove it's ActorMetrics and registering again bellow should create a new one.
       val deathWatcher = TestProbe()
       deathWatcher.watch(trackedActor)
       trackedActor ! PoisonPill
       deathWatcher.expectTerminated(trackedActor)
 
-      actorMetricsRecorderOf(trackedActor) shouldBe empty
+      actorMetricsRecorderOf(trackedActor).get shouldNot be theSameInstanceAs (firstRecorder)
     }
   }
 
@@ -175,10 +162,10 @@ class ActorMetricsSpec extends TestKitBase with WordSpecLike with Matchers with 
 
     def actorRecorderName(ref: ActorRef): String = ref.path.elements.mkString("/")
 
-    def actorMetricsRecorderOf(ref: ActorRef): Option[ActorMetricsRecorder] =
-      Kamon(Metrics)(system).storage.get(ActorMetrics(actorRecorderName(ref))).map(_.asInstanceOf[ActorMetricsRecorder])
+    def actorMetricsRecorderOf(ref: ActorRef): Option[ActorMetrics] =
+      Kamon(Metrics)(system).register(ActorMetrics, actorRecorderName(ref)).map(_.recorder)
 
-    def collectMetricsOf(ref: ActorRef): Option[ActorMetricSnapshot] = {
+    def collectMetricsOf(ref: ActorRef): Option[EntitySnapshot] = {
       Thread.sleep(5) // Just in case the test advances a bit faster than the actor being tested.
       actorMetricsRecorderOf(ref).map(_.collect(collectionContext))
     }

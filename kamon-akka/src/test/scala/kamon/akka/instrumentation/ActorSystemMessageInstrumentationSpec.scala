@@ -2,49 +2,53 @@ package kamon.instrumentation.akka
 
 import akka.actor.SupervisorStrategy.{ Escalate, Restart, Resume, Stop }
 import akka.actor._
-import akka.testkit.{ TestKitBase, ImplicitSender }
+import akka.testkit.ImplicitSender
 import com.typesafe.config.ConfigFactory
-import kamon.trace.{ EmptyTraceContext, TraceRecorder }
+import kamon.testkit.BaseKamonSpec
+import kamon.trace.{ EmptyTraceContext, TraceContext }
 import org.scalatest.WordSpecLike
 
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
 
-class ActorSystemMessageInstrumentationSpec extends TestKitBase with WordSpecLike with ImplicitSender {
-  implicit lazy val system: ActorSystem = ActorSystem("actor-system-message-instrumentation-spec", ConfigFactory.parseString(
-    """
-      |akka.loglevel = OFF
-    """.stripMargin))
+class ActorSystemMessageInstrumentationSpec extends BaseKamonSpec("actor-system-message-instrumentation-spec") with WordSpecLike with ImplicitSender {
+  override lazy val config =
+    ConfigFactory.parseString(
+      """
+        |akka {
+        |  loglevel = OFF
+        |}
+      """.stripMargin)
 
-  implicit val executionContext = system.dispatcher
+  implicit lazy val executionContext = system.dispatcher
 
   "the system message passing instrumentation" should {
     "keep the TraceContext while processing the Create message in top level actors" in {
-      val testTraceContext = TraceRecorder.withNewTraceContext("creating-top-level-actor") {
+      val testTraceContext = TraceContext.withContext(newContext("creating-top-level-actor")) {
         system.actorOf(Props(new Actor {
-          testActor ! TraceRecorder.currentContext
+          testActor ! TraceContext.currentContext
           def receive: Actor.Receive = { case any ⇒ }
         }))
 
-        TraceRecorder.currentContext
+        TraceContext.currentContext
       }
 
       expectMsg(testTraceContext)
     }
 
     "keep the TraceContext while processing the Create message in non top level actors" in {
-      val testTraceContext = TraceRecorder.withNewTraceContext("creating-non-top-level-actor") {
+      val testTraceContext = TraceContext.withContext(newContext("creating-non-top-level-actor")) {
         system.actorOf(Props(new Actor {
           def receive: Actor.Receive = {
             case any ⇒
               context.actorOf(Props(new Actor {
-                testActor ! TraceRecorder.currentContext
+                testActor ! TraceContext.currentContext
                 def receive: Actor.Receive = { case any ⇒ }
               }))
           }
         })) ! "any"
 
-        TraceRecorder.currentContext
+        TraceContext.currentContext
       }
 
       expectMsg(testTraceContext)
@@ -54,9 +58,9 @@ class ActorSystemMessageInstrumentationSpec extends TestKitBase with WordSpecLik
       "the actor is resumed" in {
         val supervisor = supervisorWithDirective(Resume)
 
-        val testTraceContext = TraceRecorder.withNewTraceContext("fail-and-resume") {
+        val testTraceContext = TraceContext.withContext(newContext("fail-and-resume")) {
           supervisor ! "fail"
-          TraceRecorder.currentContext
+          TraceContext.currentContext
         }
 
         expectMsg(testTraceContext) // From the parent executing the supervision strategy
@@ -69,9 +73,9 @@ class ActorSystemMessageInstrumentationSpec extends TestKitBase with WordSpecLik
       "the actor is restarted" in {
         val supervisor = supervisorWithDirective(Restart, sendPreRestart = true, sendPostRestart = true)
 
-        val testTraceContext = TraceRecorder.withNewTraceContext("fail-and-restart") {
+        val testTraceContext = TraceContext.withContext(newContext("fail-and-restart")) {
           supervisor ! "fail"
-          TraceRecorder.currentContext
+          TraceContext.currentContext
         }
 
         expectMsg(testTraceContext) // From the parent executing the supervision strategy
@@ -86,9 +90,9 @@ class ActorSystemMessageInstrumentationSpec extends TestKitBase with WordSpecLik
       "the actor is stopped" in {
         val supervisor = supervisorWithDirective(Stop, sendPostStop = true)
 
-        val testTraceContext = TraceRecorder.withNewTraceContext("fail-and-stop") {
+        val testTraceContext = TraceContext.withContext(newContext("fail-and-stop")) {
           supervisor ! "fail"
-          TraceRecorder.currentContext
+          TraceContext.currentContext
         }
 
         expectMsg(testTraceContext) // From the parent executing the supervision strategy
@@ -99,9 +103,9 @@ class ActorSystemMessageInstrumentationSpec extends TestKitBase with WordSpecLik
       "the failure is escalated" in {
         val supervisor = supervisorWithDirective(Escalate, sendPostStop = true)
 
-        val testTraceContext = TraceRecorder.withNewTraceContext("fail-and-escalate") {
+        val testTraceContext = TraceContext.withContext(newContext("fail-and-escalate")) {
           supervisor ! "fail"
-          TraceRecorder.currentContext
+          TraceContext.currentContext
         }
 
         expectMsg(testTraceContext) // From the parent executing the supervision strategy
@@ -119,7 +123,7 @@ class ActorSystemMessageInstrumentationSpec extends TestKitBase with WordSpecLik
       val child = context.actorOf(Props(new Parent))
 
       override def supervisorStrategy: SupervisorStrategy = OneForOneStrategy() {
-        case NonFatal(throwable) ⇒ testActor ! TraceRecorder.currentContext; Stop
+        case NonFatal(throwable) ⇒ testActor ! TraceContext.currentContext; Stop
       }
 
       def receive = {
@@ -131,7 +135,7 @@ class ActorSystemMessageInstrumentationSpec extends TestKitBase with WordSpecLik
       val child = context.actorOf(Props(new Child))
 
       override def supervisorStrategy: SupervisorStrategy = OneForOneStrategy() {
-        case NonFatal(throwable) ⇒ testActor ! TraceRecorder.currentContext; directive
+        case NonFatal(throwable) ⇒ testActor ! TraceContext.currentContext; directive
       }
 
       def receive: Actor.Receive = {
@@ -139,7 +143,7 @@ class ActorSystemMessageInstrumentationSpec extends TestKitBase with WordSpecLik
       }
 
       override def postStop(): Unit = {
-        if (sendPostStop) testActor ! TraceRecorder.currentContext
+        if (sendPostStop) testActor ! TraceContext.currentContext
         super.postStop()
       }
     }
@@ -147,26 +151,26 @@ class ActorSystemMessageInstrumentationSpec extends TestKitBase with WordSpecLik
     class Child extends Actor {
       def receive = {
         case "fail"    ⇒ throw new ArithmeticException("Division by zero.")
-        case "context" ⇒ sender ! TraceRecorder.currentContext
+        case "context" ⇒ sender ! TraceContext.currentContext
       }
 
       override def preRestart(reason: Throwable, message: Option[Any]): Unit = {
-        if (sendPreRestart) testActor ! TraceRecorder.currentContext
+        if (sendPreRestart) testActor ! TraceContext.currentContext
         super.preRestart(reason, message)
       }
 
       override def postRestart(reason: Throwable): Unit = {
-        if (sendPostRestart) testActor ! TraceRecorder.currentContext
+        if (sendPostRestart) testActor ! TraceContext.currentContext
         super.postRestart(reason)
       }
 
       override def postStop(): Unit = {
-        if (sendPostStop) testActor ! TraceRecorder.currentContext
+        if (sendPostStop) testActor ! TraceContext.currentContext
         super.postStop()
       }
 
       override def preStart(): Unit = {
-        if (sendPreStart) testActor ! TraceRecorder.currentContext
+        if (sendPreStart) testActor ! TraceContext.currentContext
         super.preStart()
       }
     }
