@@ -18,17 +18,14 @@ package kamon.statsd
 
 import akka.actor._
 import kamon.Kamon
-import kamon.akka.{RouterMetrics, DispatcherMetrics, ActorMetrics}
-import kamon.http.HttpServerMetrics
-import kamon.metric.UserMetrics._
 import kamon.metric._
-import kamon.metrics._
+import kamon.util.ConfigTools.Syntax
 import scala.concurrent.duration._
-import scala.collection.JavaConverters._
 import com.typesafe.config.Config
 import akka.event.Logging
 import java.net.InetSocketAddress
 import java.util.concurrent.TimeUnit.MILLISECONDS
+import scala.collection.JavaConverters._
 
 object StatsD extends ExtensionId[StatsDExtension] with ExtensionIdProvider {
   override def lookup(): ExtensionId[_ <: Extension] = StatsD
@@ -36,6 +33,8 @@ object StatsD extends ExtensionId[StatsDExtension] with ExtensionIdProvider {
 }
 
 class StatsDExtension(system: ExtendedActorSystem) extends Kamon.Extension {
+  implicit val as = system
+
   val log = Logging(system, classOf[StatsDExtension])
   log.info("Starting the Kamon(StatsD) extension")
 
@@ -50,57 +49,11 @@ class StatsDExtension(system: ExtendedActorSystem) extends Kamon.Extension {
 
   val statsDMetricsListener = buildMetricsListener(tickInterval, flushInterval, keyGeneratorFQCN, config)
 
-  // Subscribe to all user metrics
-  Kamon(Metrics)(system).subscribe(UserHistograms, "*", statsDMetricsListener, permanently = true)
-  Kamon(Metrics)(system).subscribe(UserCounters, "*", statsDMetricsListener, permanently = true)
-  Kamon(Metrics)(system).subscribe(UserMinMaxCounters, "*", statsDMetricsListener, permanently = true)
-  Kamon(Metrics)(system).subscribe(UserGauges, "*", statsDMetricsListener, permanently = true)
-
-  // Subscribe to server metrics
-  Kamon(Metrics)(system).subscribe(HttpServerMetrics.category, "*", statsDMetricsListener, permanently = true)
-
-  // Subscribe to Actors
-  val includedActors = statsDConfig.getStringList("includes.actor").asScala
-  for (actorPathPattern ← includedActors) {
-    Kamon(Metrics)(system).subscribe(ActorMetrics, actorPathPattern, statsDMetricsListener, permanently = true)
-  }
-
-  // Subscribe to Routers
-  val includedRouters = statsDConfig.getStringList("includes.router").asScala
-  for (routerPathPattern ← includedRouters) {
-    Kamon(Metrics)(system).subscribe(RouterMetrics, routerPathPattern, statsDMetricsListener, permanently = true)
-  }
-
-  // Subscribe to Traces
-  val includedTraces = statsDConfig.getStringList("includes.trace").asScala
-  for (tracePathPattern ← includedTraces) {
-    Kamon(Metrics)(system).subscribe(TraceMetrics, tracePathPattern, statsDMetricsListener, permanently = true)
-  }
-
-  // Subscribe to Dispatchers
-  val includedDispatchers = statsDConfig.getStringList("includes.dispatcher").asScala
-  for (dispatcherPathPattern ← includedDispatchers) {
-    Kamon(Metrics)(system).subscribe(DispatcherMetrics, dispatcherPathPattern, statsDMetricsListener, permanently = true)
-  }
-
-  // Subscribe to SystemMetrics
-  val includeSystemMetrics = statsDConfig.getBoolean("report-system-metrics")
-  if (includeSystemMetrics) {
-    //OS
-    Kamon(Metrics)(system).subscribe(CPUMetrics, "*", statsDMetricsListener, permanently = true)
-    Kamon(Metrics)(system).subscribe(ProcessCPUMetrics, "*", statsDMetricsListener, permanently = true)
-    Kamon(Metrics)(system).subscribe(MemoryMetrics, "*", statsDMetricsListener, permanently = true)
-    Kamon(Metrics)(system).subscribe(NetworkMetrics, "*", statsDMetricsListener, permanently = true)
-    Kamon(Metrics)(system).subscribe(DiskMetrics, "*", statsDMetricsListener, permanently = true)
-    Kamon(Metrics)(system).subscribe(ContextSwitchesMetrics, "*", statsDMetricsListener, permanently = true)
-    Kamon(Metrics)(system).subscribe(LoadAverageMetrics, "*", statsDMetricsListener, permanently = true)
-
-    //JVM
-    Kamon(Metrics)(system).subscribe(HeapMetrics, "*", statsDMetricsListener, permanently = true)
-    Kamon(Metrics)(system).subscribe(NonHeapMetrics, "*", statsDMetricsListener, permanently = true)
-    Kamon(Metrics)(system).subscribe(ThreadMetrics, "*", statsDMetricsListener, permanently = true)
-    Kamon(Metrics)(system).subscribe(ClassLoadingMetrics, "*", statsDMetricsListener, permanently = true)
-    Kamon(Metrics)(system).subscribe(GCMetrics, "*", statsDMetricsListener, permanently = true)
+  val subscriptions = statsDConfig.getConfig("subscriptions")
+  subscriptions.firstLevelKeys.map { subscriptionCategory ⇒
+    subscriptions.getStringList(subscriptionCategory).asScala.foreach { pattern ⇒
+      Kamon(Metrics).subscribe(subscriptionCategory, pattern, statsDMetricsListener, permanently = true)
+    }
   }
 
   def buildMetricsListener(tickInterval: Long, flushInterval: Long, keyGeneratorFQCN: String, config: Config): ActorRef = {
