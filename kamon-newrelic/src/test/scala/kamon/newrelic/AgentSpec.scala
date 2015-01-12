@@ -22,7 +22,6 @@ import akka.actor.{ ActorRef, ActorSystem, Props }
 import akka.io.IO
 import akka.testkit._
 import com.typesafe.config.ConfigFactory
-import kamon.AkkaExtensionSwap
 import org.scalatest.{ BeforeAndAfterAll, WordSpecLike }
 import spray.can.Http
 import spray.http._
@@ -30,6 +29,7 @@ import spray.httpx.encoding.Deflate
 import spray.httpx.{ SprayJsonSupport, RequestBuilding }
 import spray.json.JsArray
 import spray.json._
+import testkit.AkkaExtensionSwap
 
 class AgentSpec extends TestKitBase with WordSpecLike with BeforeAndAfterAll with RequestBuilding with SprayJsonSupport {
   import JsonProtocol._
