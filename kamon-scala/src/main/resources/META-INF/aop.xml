@@ -1,0 +1,17 @@
+<!DOCTYPE aspectj PUBLIC "-//AspectJ//DTD//EN" "http://www.eclipse.org/aspectj/dtd/aspectj.dtd">
+
+<aspectj>
+  <aspects>
+
+    <!-- Futures -->
+    <aspect name="kamon.scala.instrumentation.FutureInstrumentation"/>
+    <aspect name="kamon.scalaz.instrumentation.FutureInstrumentation"/>
+
+  </aspects>
+
+  <weaver>
+    <include within="scala.concurrent..*"/>
+    <include within="scalaz.concurrent..*"/>
+  </weaver>
+
+</aspectj>
