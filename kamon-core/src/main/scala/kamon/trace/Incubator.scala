@@ -19,8 +19,8 @@ package kamon.trace
 import java.util.concurrent.TimeUnit
 
 import akka.actor.{ ActorLogging, Props, Actor, ActorRef }
-import kamon.{ NanoInterval, RelativeNanoTimestamp }
 import kamon.trace.Incubator.{ CheckForCompletedTraces, IncubatingTrace }
+import kamon.util.{ NanoInterval, RelativeNanoTimestamp }
 import scala.annotation.tailrec
 import scala.collection.immutable.Queue
 import scala.concurrent.duration._

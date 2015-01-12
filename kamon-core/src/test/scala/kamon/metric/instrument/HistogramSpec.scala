@@ -18,21 +18,12 @@ package kamon.metric.instrument
 
 import java.nio.LongBuffer
 
-import com.typesafe.config.ConfigFactory
-import kamon.metric.CollectionContext
+import kamon.metric.instrument.Histogram.DynamicRange
 import org.scalatest.{ Matchers, WordSpec }
 
 import scala.util.Random
 
 class HistogramSpec extends WordSpec with Matchers {
-
-  val histogramConfig = ConfigFactory.parseString(
-    """
-      |
-      |highest-trackable-value = 100000
-      |significant-value-digits = 2
-      |
-    """.stripMargin)
 
   "a Histogram" should {
     "allow record values within the configured range" in new HistogramFixture {
@@ -109,7 +100,7 @@ class HistogramSpec extends WordSpec with Matchers {
       val buffer: LongBuffer = LongBuffer.allocate(10000)
     }
 
-    val histogram = Histogram.fromConfig(histogramConfig)
+    val histogram = Histogram(DynamicRange(1, 100000, 2))
 
     def takeSnapshot(): Histogram.Snapshot = histogram.collect(collectionContext)
   }
@@ -119,17 +110,20 @@ class HistogramSpec extends WordSpec with Matchers {
       val buffer: LongBuffer = LongBuffer.allocate(10000)
     }
 
-    val controlHistogram = Histogram.fromConfig(histogramConfig)
-    val histogramA = Histogram.fromConfig(histogramConfig)
-    val histogramB = Histogram.fromConfig(histogramConfig)
+    val controlHistogram = Histogram(DynamicRange(1, 100000, 2))
+    val histogramA = Histogram(DynamicRange(1, 100000, 2))
+    val histogramB = Histogram(DynamicRange(1, 100000, 2))
 
-    def takeSnapshotFrom(histogram: Histogram): Histogram.Snapshot = histogram.collect(collectionContext)
+    def takeSnapshotFrom(histogram: Histogram): InstrumentSnapshot = histogram.collect(collectionContext)
 
-    def assertEquals(left: Histogram.Snapshot, right: Histogram.Snapshot): Unit = {
-      left.numberOfMeasurements should equal(right.numberOfMeasurements)
-      left.min should equal(right.min)
-      left.max should equal(right.max)
-      left.recordsIterator.toStream should contain theSameElementsAs (right.recordsIterator.toStream)
+    def assertEquals(left: InstrumentSnapshot, right: InstrumentSnapshot): Unit = {
+      val leftSnapshot = left.asInstanceOf[Histogram.Snapshot]
+      val rightSnapshot = right.asInstanceOf[Histogram.Snapshot]
+
+      leftSnapshot.numberOfMeasurements should equal(rightSnapshot.numberOfMeasurements)
+      leftSnapshot.min should equal(rightSnapshot.min)
+      leftSnapshot.max should equal(rightSnapshot.max)
+      leftSnapshot.recordsIterator.toStream should contain theSameElementsAs (rightSnapshot.recordsIterator.toStream)
     }
   }
 }

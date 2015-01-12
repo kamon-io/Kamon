@@ -21,14 +21,15 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import akka.actor.ActorSystem
 import akka.event.LoggingAdapter
-import kamon.{ NanoInterval, NanoTimestamp, RelativeNanoTimestamp }
+import kamon.util.{ NanoInterval, RelativeNanoTimestamp, NanoTimestamp }
 import kamon.metric.MetricsExtension
 
 import scala.collection.concurrent.TrieMap
 
-private[trace] class TracingContext(traceName: String, token: String, izOpen: Boolean, levelOfDetail: LevelOfDetail, origin: TraceContextOrigin,
-  startTimeztamp: RelativeNanoTimestamp, log: LoggingAdapter, metricsExtension: MetricsExtension, traceExtension: TraceExtension, system: ActorSystem)
-    extends MetricsOnlyContext(traceName, token, izOpen, levelOfDetail, origin, startTimeztamp, log, metricsExtension, system) {
+private[trace] class TracingContext(traceName: String, token: String, izOpen: Boolean, levelOfDetail: LevelOfDetail,
+  isLocal: Boolean, startTimeztamp: RelativeNanoTimestamp, log: LoggingAdapter, metricsExtension: MetricsExtension,
+  traceExtension: TracerExtensionImpl, system: ActorSystem, traceInfoSink: TracingContext ⇒ Unit)
+    extends MetricsOnlyContext(traceName, token, izOpen, levelOfDetail, startTimeztamp, log, metricsExtension, system) {
 
   private val _openSegments = new AtomicInteger(0)
   private val _startTimestamp = NanoTimestamp.now
@@ -46,7 +47,7 @@ private[trace] class TracingContext(traceName: String, token: String, izOpen: Bo
 
   override def finish(): Unit = {
     super.finish()
-    traceExtension.dispatchTracingContext(this)
+    traceInfoSink(this)
   }
 
   override def finishSegment(segmentName: String, category: String, library: String, duration: NanoInterval): Unit = {
@@ -66,7 +67,7 @@ private[trace] class TracingContext(traceName: String, token: String, izOpen: Bo
     while (currentSegments.hasNext()) {
       val segment = currentSegments.next()
       if (segment.isClosed)
-        segmentsInfo += segment.createSegmentInfo(_startTimestamp, startRelativeTimestamp)
+        segmentsInfo += segment.createSegmentInfo(_startTimestamp, startTimestamp)
       else
         log.warning("Segment [{}] will be left out of TraceInfo because it was still open.", segment.name)
     }

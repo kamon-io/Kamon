@@ -1,7 +1,7 @@
-package kamon
+package kamon.util
 
 /**
- *  Epoch time stamp in seconds.
+ *  Epoch time stamp.
  */
 class Timestamp(val seconds: Long) extends AnyVal {
   def <(that: Timestamp): Boolean = this.seconds < that.seconds
@@ -24,7 +24,12 @@ object Timestamp {
  */
 class MilliTimestamp(val millis: Long) extends AnyVal {
   override def toString: String = String.valueOf(millis) + ".millis"
+
   def toTimestamp: Timestamp = new Timestamp(millis / 1000)
+  def toRelativeNanoTimestamp: RelativeNanoTimestamp = {
+    val diff = (System.currentTimeMillis() - millis) * 1000000
+    new RelativeNanoTimestamp(System.nanoTime() - diff)
+  }
 }
 
 object MilliTimestamp {
@@ -50,6 +55,9 @@ object NanoTimestamp {
  */
 class RelativeNanoTimestamp(val nanos: Long) extends AnyVal {
   override def toString: String = String.valueOf(nanos) + ".nanos"
+
+  def toMilliTimestamp: MilliTimestamp =
+    new MilliTimestamp(System.currentTimeMillis - ((System.nanoTime - nanos) / 1000000))
 }
 
 object RelativeNanoTimestamp {

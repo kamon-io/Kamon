@@ -1,189 +1,193 @@
 package kamon.metric
 
 import akka.actor
-import akka.actor.{ ExtendedActorSystem, ExtensionIdProvider, ExtensionId }
+import akka.actor.{ ActorSystem, ExtendedActorSystem, ExtensionIdProvider, ExtensionId }
 import kamon.Kamon
-import kamon.metric.instrument.{ Gauge, MinMaxCounter, Counter, Histogram }
+import kamon.metric.instrument.Gauge.CurrentValueCollector
+import kamon.metric.instrument.Histogram.DynamicRange
+import kamon.metric.instrument._
 
 import scala.concurrent.duration.FiniteDuration
 
-class UserMetricsExtension(system: ExtendedActorSystem) extends Kamon.Extension {
-  import Metrics.AtomicGetOrElseUpdateForTriemap
-  import UserMetrics._
-
-  lazy val metricsExtension = Kamon(Metrics)(system)
-  val precisionConfig = system.settings.config.getConfig("kamon.metrics.precision")
-
-  val defaultHistogramPrecisionConfig = precisionConfig.getConfig("default-histogram-precision")
-  val defaultMinMaxCounterPrecisionConfig = precisionConfig.getConfig("default-min-max-counter-precision")
-  val defaultGaugePrecisionConfig = precisionConfig.getConfig("default-gauge-precision")
-
-  def registerHistogram(name: String, precision: Histogram.Precision, highestTrackableValue: Long): Histogram = {
-    metricsExtension.storage.atomicGetOrElseUpdate(UserHistogram(name), {
-      UserHistogramRecorder(Histogram(highestTrackableValue, precision, Scale.Unit))
-    }).asInstanceOf[UserHistogramRecorder].histogram
-  }
-
-  def registerHistogram(name: String): Histogram = {
-    metricsExtension.storage.atomicGetOrElseUpdate(UserHistogram(name), {
-      UserHistogramRecorder(Histogram.fromConfig(defaultHistogramPrecisionConfig))
-    }).asInstanceOf[UserHistogramRecorder].histogram
-  }
-
-  def registerCounter(name: String): Counter = {
-    metricsExtension.storage.atomicGetOrElseUpdate(UserCounter(name), {
-      UserCounterRecorder(Counter())
-    }).asInstanceOf[UserCounterRecorder].counter
-  }
-
-  def registerMinMaxCounter(name: String, precision: Histogram.Precision, highestTrackableValue: Long,
-    refreshInterval: FiniteDuration): MinMaxCounter = {
-    metricsExtension.storage.atomicGetOrElseUpdate(UserMinMaxCounter(name), {
-      UserMinMaxCounterRecorder(MinMaxCounter(highestTrackableValue, precision, Scale.Unit, refreshInterval, system))
-    }).asInstanceOf[UserMinMaxCounterRecorder].minMaxCounter
-  }
-
-  def registerMinMaxCounter(name: String): MinMaxCounter = {
-    metricsExtension.storage.atomicGetOrElseUpdate(UserMinMaxCounter(name), {
-      UserMinMaxCounterRecorder(MinMaxCounter.fromConfig(defaultMinMaxCounterPrecisionConfig, system))
-    }).asInstanceOf[UserMinMaxCounterRecorder].minMaxCounter
-  }
-
-  def registerGauge(name: String)(currentValueCollector: Gauge.CurrentValueCollector): Gauge = {
-    metricsExtension.storage.atomicGetOrElseUpdate(UserGauge(name), {
-      UserGaugeRecorder(Gauge.fromConfig(defaultGaugePrecisionConfig, system)(currentValueCollector))
-    }).asInstanceOf[UserGaugeRecorder].gauge
-  }
-
-  def registerGauge(name: String, precision: Histogram.Precision, highestTrackableValue: Long,
-    refreshInterval: FiniteDuration)(currentValueCollector: Gauge.CurrentValueCollector): Gauge = {
-    metricsExtension.storage.atomicGetOrElseUpdate(UserGauge(name), {
-      UserGaugeRecorder(Gauge(precision, highestTrackableValue, Scale.Unit, refreshInterval, system)(currentValueCollector))
-    }).asInstanceOf[UserGaugeRecorder].gauge
-  }
-
-  def removeHistogram(name: String): Unit =
-    metricsExtension.unregister(UserHistogram(name))
-
-  def removeCounter(name: String): Unit =
-    metricsExtension.unregister(UserCounter(name))
-
-  def removeMinMaxCounter(name: String): Unit =
-    metricsExtension.unregister(UserMinMaxCounter(name))
-
-  def removeGauge(name: String): Unit =
-    metricsExtension.unregister(UserGauge(name))
-}
-
 object UserMetrics extends ExtensionId[UserMetricsExtension] with ExtensionIdProvider {
-  def lookup(): ExtensionId[_ <: actor.Extension] = Metrics
+  override def get(system: ActorSystem): UserMetricsExtension = super.get(system)
+  def lookup(): ExtensionId[_ <: actor.Extension] = UserMetrics
+  def createExtension(system: ExtendedActorSystem): UserMetricsExtension = {
+    val metricsExtension = Metrics.get(system)
+    val instrumentFactory = metricsExtension.instrumentFactory(entity.category)
+    val userMetricsExtension = new UserMetricsExtensionImpl(instrumentFactory)
 
-  def createExtension(system: ExtendedActorSystem): UserMetricsExtension = new UserMetricsExtension(system)
-
-  sealed trait UserMetricGroup
-  //
-  // Histograms
-  //
-
-  case class UserHistogram(name: String) extends MetricGroupIdentity with UserMetricGroup {
-    val category = UserHistograms
+    metricsExtension.register(entity, userMetricsExtension).recorder
   }
 
-  case class UserHistogramRecorder(histogram: Histogram) extends MetricGroupRecorder {
-    def collect(context: CollectionContext): MetricGroupSnapshot =
-      UserHistogramSnapshot(histogram.collect(context))
+  val entity = Entity("user-metric", "user-metric")
+}
 
-    def cleanup: Unit = histogram.cleanup
-  }
+trait UserMetricsExtension extends Kamon.Extension {
+  def histogram(name: String): Histogram
+  def histogram(name: String, dynamicRange: DynamicRange): Histogram
+  def histogram(name: String, unitOfMeasurement: UnitOfMeasurement): Histogram
+  def histogram(name: String, dynamicRange: DynamicRange, unitOfMeasurement: UnitOfMeasurement): Histogram
+  def histogram(key: HistogramKey): Histogram
+  def histogram(key: HistogramKey, dynamicRange: DynamicRange): Histogram
+  def removeHistogram(name: String): Unit
+  def removeHistogram(key: HistogramKey): Unit
 
-  case class UserHistogramSnapshot(histogramSnapshot: Histogram.Snapshot) extends MetricGroupSnapshot {
-    type GroupSnapshotType = UserHistogramSnapshot
+  def minMaxCounter(name: String): MinMaxCounter
+  def minMaxCounter(name: String, dynamicRange: DynamicRange): MinMaxCounter
+  def minMaxCounter(name: String, refreshInterval: FiniteDuration): MinMaxCounter
+  def minMaxCounter(name: String, unitOfMeasurement: UnitOfMeasurement): MinMaxCounter
+  def minMaxCounter(name: String, dynamicRange: DynamicRange, refreshInterval: FiniteDuration): MinMaxCounter
+  def minMaxCounter(name: String, dynamicRange: DynamicRange, unitOfMeasurement: UnitOfMeasurement): MinMaxCounter
+  def minMaxCounter(name: String, refreshInterval: FiniteDuration, unitOfMeasurement: UnitOfMeasurement): MinMaxCounter
+  def minMaxCounter(name: String, dynamicRange: DynamicRange, refreshInterval: FiniteDuration, unitOfMeasurement: UnitOfMeasurement): MinMaxCounter
+  def minMaxCounter(key: MinMaxCounterKey): MinMaxCounter
+  def minMaxCounter(key: MinMaxCounterKey, dynamicRange: DynamicRange): MinMaxCounter
+  def minMaxCounter(key: MinMaxCounterKey, refreshInterval: FiniteDuration): MinMaxCounter
+  def minMaxCounter(key: MinMaxCounterKey, dynamicRange: DynamicRange, refreshInterval: FiniteDuration): MinMaxCounter
+  def removeMinMaxCounter(name: String): Unit
+  def removeMinMaxCounter(key: MinMaxCounterKey): Unit
 
-    def merge(that: UserHistogramSnapshot, context: CollectionContext): UserHistogramSnapshot =
-      UserHistogramSnapshot(that.histogramSnapshot.merge(histogramSnapshot, context))
+  def gauge(name: String, valueCollector: CurrentValueCollector): Gauge
+  def gauge(name: String, dynamicRange: DynamicRange, valueCollector: CurrentValueCollector): Gauge
+  def gauge(name: String, refreshInterval: FiniteDuration, valueCollector: CurrentValueCollector): Gauge
+  def gauge(name: String, unitOfMeasurement: UnitOfMeasurement, valueCollector: CurrentValueCollector): Gauge
+  def gauge(name: String, dynamicRange: DynamicRange, refreshInterval: FiniteDuration, valueCollector: CurrentValueCollector): Gauge
+  def gauge(name: String, dynamicRange: DynamicRange, unitOfMeasurement: UnitOfMeasurement, valueCollector: CurrentValueCollector): Gauge
+  def gauge(name: String, refreshInterval: FiniteDuration, unitOfMeasurement: UnitOfMeasurement, valueCollector: CurrentValueCollector): Gauge
+  def gauge(name: String, dynamicRange: DynamicRange, refreshInterval: FiniteDuration, unitOfMeasurement: UnitOfMeasurement, valueCollector: CurrentValueCollector): Gauge
+  def gauge(key: GaugeKey, valueCollector: CurrentValueCollector): Gauge
+  def gauge(key: GaugeKey, dynamicRange: DynamicRange, valueCollector: CurrentValueCollector): Gauge
+  def gauge(key: GaugeKey, refreshInterval: FiniteDuration, valueCollector: CurrentValueCollector): Gauge
+  def gauge(key: GaugeKey, dynamicRange: DynamicRange, refreshInterval: FiniteDuration, valueCollector: CurrentValueCollector): Gauge
+  def removeGauge(name: String): Unit
+  def removeGauge(key: GaugeKey): Unit
 
-    def metrics: Map[MetricIdentity, MetricSnapshot] = Map((RecordedValues, histogramSnapshot))
-  }
-
-  //
-  // Counters
-  //
-
-  case class UserCounter(name: String) extends MetricGroupIdentity with UserMetricGroup {
-    val category = UserCounters
-  }
-
-  case class UserCounterRecorder(counter: Counter) extends MetricGroupRecorder {
-    def collect(context: CollectionContext): MetricGroupSnapshot =
-      UserCounterSnapshot(counter.collect(context))
-
-    def cleanup: Unit = counter.cleanup
-  }
-
-  case class UserCounterSnapshot(counterSnapshot: Counter.Snapshot) extends MetricGroupSnapshot {
-    type GroupSnapshotType = UserCounterSnapshot
-
-    def merge(that: UserCounterSnapshot, context: CollectionContext): UserCounterSnapshot =
-      UserCounterSnapshot(that.counterSnapshot.merge(counterSnapshot, context))
-
-    def metrics: Map[MetricIdentity, MetricSnapshot] = Map((Count, counterSnapshot))
-  }
-
-  //
-  // MinMaxCounters
-  //
-
-  case class UserMinMaxCounter(name: String) extends MetricGroupIdentity with UserMetricGroup {
-    val category = UserMinMaxCounters
-  }
-
-  case class UserMinMaxCounterRecorder(minMaxCounter: MinMaxCounter) extends MetricGroupRecorder {
-    def collect(context: CollectionContext): MetricGroupSnapshot =
-      UserMinMaxCounterSnapshot(minMaxCounter.collect(context))
-
-    def cleanup: Unit = minMaxCounter.cleanup
-  }
-
-  case class UserMinMaxCounterSnapshot(minMaxCounterSnapshot: Histogram.Snapshot) extends MetricGroupSnapshot {
-    type GroupSnapshotType = UserMinMaxCounterSnapshot
-
-    def merge(that: UserMinMaxCounterSnapshot, context: CollectionContext): UserMinMaxCounterSnapshot =
-      UserMinMaxCounterSnapshot(that.minMaxCounterSnapshot.merge(minMaxCounterSnapshot, context))
-
-    def metrics: Map[MetricIdentity, MetricSnapshot] = Map((RecordedValues, minMaxCounterSnapshot))
-  }
-
-  //
-  // Gauges
-  //
-
-  case class UserGauge(name: String) extends MetricGroupIdentity with UserMetricGroup {
-    val category = UserGauges
-  }
-
-  case class UserGaugeRecorder(gauge: Gauge) extends MetricGroupRecorder {
-    def collect(context: CollectionContext): MetricGroupSnapshot =
-      UserGaugeSnapshot(gauge.collect(context))
-
-    def cleanup: Unit = gauge.cleanup
-  }
-
-  case class UserGaugeSnapshot(gaugeSnapshot: Histogram.Snapshot) extends MetricGroupSnapshot {
-    type GroupSnapshotType = UserGaugeSnapshot
-
-    def merge(that: UserGaugeSnapshot, context: CollectionContext): UserGaugeSnapshot =
-      UserGaugeSnapshot(that.gaugeSnapshot.merge(gaugeSnapshot, context))
-
-    def metrics: Map[MetricIdentity, MetricSnapshot] = Map((RecordedValues, gaugeSnapshot))
-  }
-
-  case object UserHistograms extends MetricGroupCategory { val name: String = "histogram" }
-  case object UserCounters extends MetricGroupCategory { val name: String = "counter" }
-  case object UserMinMaxCounters extends MetricGroupCategory { val name: String = "min-max-counter" }
-  case object UserGauges extends MetricGroupCategory { val name: String = "gauge" }
-
-  case object RecordedValues extends MetricIdentity { val name: String = "values" }
-  case object Count extends MetricIdentity { val name: String = "count" }
+  def counter(name: String): Counter
+  def counter(key: CounterKey): Counter
+  def removeCounter(name: String): Unit
+  def removeCounter(key: CounterKey): Unit
 
 }
 
+class UserMetricsExtensionImpl(instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) with UserMetricsExtension {
+  override def histogram(name: String): Histogram =
+    super.histogram(name)
+
+  override def histogram(name: String, dynamicRange: DynamicRange): Histogram =
+    super.histogram(name, dynamicRange)
+
+  override def histogram(name: String, unitOfMeasurement: UnitOfMeasurement): Histogram =
+    super.histogram(name, unitOfMeasurement)
+
+  override def histogram(name: String, dynamicRange: DynamicRange, unitOfMeasurement: UnitOfMeasurement): Histogram =
+    super.histogram(name, dynamicRange, unitOfMeasurement)
+
+  override def histogram(key: HistogramKey): Histogram =
+    super.histogram(key)
+
+  override def histogram(key: HistogramKey, dynamicRange: DynamicRange): Histogram =
+    super.histogram(key, dynamicRange)
+
+  override def removeHistogram(name: String): Unit =
+    super.removeHistogram(name)
+
+  override def removeHistogram(key: HistogramKey): Unit =
+    super.removeHistogram(key)
+
+  override def minMaxCounter(name: String): MinMaxCounter =
+    super.minMaxCounter(name)
+
+  override def minMaxCounter(name: String, dynamicRange: DynamicRange): MinMaxCounter =
+    super.minMaxCounter(name, dynamicRange)
+
+  override def minMaxCounter(name: String, refreshInterval: FiniteDuration): MinMaxCounter =
+    super.minMaxCounter(name, refreshInterval)
+
+  override def minMaxCounter(name: String, unitOfMeasurement: UnitOfMeasurement): MinMaxCounter =
+    super.minMaxCounter(name, unitOfMeasurement)
+
+  override def minMaxCounter(name: String, dynamicRange: DynamicRange, refreshInterval: FiniteDuration): MinMaxCounter =
+    super.minMaxCounter(name, dynamicRange, refreshInterval)
+
+  override def minMaxCounter(name: String, dynamicRange: DynamicRange, unitOfMeasurement: UnitOfMeasurement): MinMaxCounter =
+    super.minMaxCounter(name, dynamicRange, unitOfMeasurement)
+
+  override def minMaxCounter(name: String, refreshInterval: FiniteDuration, unitOfMeasurement: UnitOfMeasurement): MinMaxCounter =
+    super.minMaxCounter(name, refreshInterval, unitOfMeasurement)
+
+  override def minMaxCounter(name: String, dynamicRange: DynamicRange, refreshInterval: FiniteDuration, unitOfMeasurement: UnitOfMeasurement): MinMaxCounter =
+    super.minMaxCounter(name, dynamicRange, refreshInterval, unitOfMeasurement)
+
+  override def minMaxCounter(key: MinMaxCounterKey): MinMaxCounter =
+    super.minMaxCounter(key)
+
+  override def minMaxCounter(key: MinMaxCounterKey, dynamicRange: DynamicRange): MinMaxCounter =
+    super.minMaxCounter(key, dynamicRange)
+
+  override def minMaxCounter(key: MinMaxCounterKey, refreshInterval: FiniteDuration): MinMaxCounter =
+    super.minMaxCounter(key, refreshInterval)
+
+  override def minMaxCounter(key: MinMaxCounterKey, dynamicRange: DynamicRange, refreshInterval: FiniteDuration): MinMaxCounter =
+    super.minMaxCounter(key, dynamicRange, refreshInterval)
+
+  override def removeMinMaxCounter(name: String): Unit =
+    super.removeMinMaxCounter(name)
+
+  override def removeMinMaxCounter(key: MinMaxCounterKey): Unit =
+    super.removeMinMaxCounter(key)
+
+  override def gauge(name: String, valueCollector: CurrentValueCollector): Gauge =
+    super.gauge(name, valueCollector)
+
+  override def gauge(name: String, dynamicRange: DynamicRange, valueCollector: CurrentValueCollector): Gauge =
+    super.gauge(name, dynamicRange, valueCollector)
+
+  override def gauge(name: String, refreshInterval: FiniteDuration, valueCollector: CurrentValueCollector): Gauge =
+    super.gauge(name, refreshInterval, valueCollector)
+
+  override def gauge(name: String, unitOfMeasurement: UnitOfMeasurement, valueCollector: CurrentValueCollector): Gauge =
+    super.gauge(name, unitOfMeasurement, valueCollector)
+
+  override def gauge(name: String, dynamicRange: DynamicRange, refreshInterval: FiniteDuration, valueCollector: CurrentValueCollector): Gauge =
+    super.gauge(name, dynamicRange, refreshInterval, valueCollector)
+
+  override def gauge(name: String, dynamicRange: DynamicRange, unitOfMeasurement: UnitOfMeasurement, valueCollector: CurrentValueCollector): Gauge =
+    super.gauge(name, dynamicRange, unitOfMeasurement, valueCollector)
+
+  override def gauge(name: String, refreshInterval: FiniteDuration, unitOfMeasurement: UnitOfMeasurement, valueCollector: CurrentValueCollector): Gauge =
+    super.gauge(name, refreshInterval, unitOfMeasurement, valueCollector)
+
+  override def gauge(name: String, dynamicRange: DynamicRange, refreshInterval: FiniteDuration, unitOfMeasurement: UnitOfMeasurement, valueCollector: CurrentValueCollector): Gauge =
+    super.gauge(name, dynamicRange, refreshInterval, unitOfMeasurement, valueCollector)
+
+  override def gauge(key: GaugeKey, valueCollector: CurrentValueCollector): Gauge =
+    super.gauge(key, valueCollector)
+
+  override def gauge(key: GaugeKey, dynamicRange: DynamicRange, valueCollector: CurrentValueCollector): Gauge =
+    super.gauge(key, dynamicRange, valueCollector)
+
+  override def gauge(key: GaugeKey, refreshInterval: FiniteDuration, valueCollector: CurrentValueCollector): Gauge =
+    super.gauge(key, refreshInterval, valueCollector)
+
+  override def gauge(key: GaugeKey, dynamicRange: DynamicRange, refreshInterval: FiniteDuration, valueCollector: CurrentValueCollector): Gauge =
+    super.gauge(key, dynamicRange, refreshInterval, valueCollector)
+
+  override def removeGauge(name: String): Unit =
+    super.removeGauge(name)
+
+  override def removeGauge(key: GaugeKey): Unit =
+    super.removeGauge(key)
+
+  override def counter(name: String): Counter =
+    super.counter(name)
+
+  override def counter(key: CounterKey): Counter =
+    super.counter(key)
+
+  override def removeCounter(name: String): Unit =
+    super.removeCounter(name)
+
+  override def removeCounter(key: CounterKey): Unit =
+    super.removeCounter(key)
+}

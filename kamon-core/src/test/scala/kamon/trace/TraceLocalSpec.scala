@@ -16,24 +16,21 @@
 
 package kamon.trace
 
-import akka.actor.ActorSystem
-import akka.testkit.TestKit
+import kamon.testkit.BaseKamonSpec
 import kamon.trace.TraceLocal.AvailableToMdc
 import kamon.trace.logging.MdcKeysSupport
 import org.scalatest.concurrent.PatienceConfiguration
-import org.scalatest.{ Matchers, OptionValues, WordSpecLike }
+import org.scalatest.OptionValues
 import org.slf4j.MDC
 
-class TraceLocalSpec extends TestKit(ActorSystem("trace-local-spec")) with WordSpecLike with Matchers
-    with PatienceConfiguration with OptionValues with MdcKeysSupport {
-
+class TraceLocalSpec extends BaseKamonSpec("trace-local-spec") with PatienceConfiguration with OptionValues with MdcKeysSupport {
   val SampleTraceLocalKeyAvailableToMDC = AvailableToMdc("someKey")
 
   object SampleTraceLocalKey extends TraceLocal.TraceLocalKey { type ValueType = String }
 
   "the TraceLocal storage" should {
     "allow storing and retrieving values" in {
-      TraceRecorder.withNewTraceContext("store-and-retrieve-trace-local") {
+      TraceContext.withContext(newContext("store-and-retrieve-trace-local")) {
         val testString = "Hello World"
 
         TraceLocal.store(SampleTraceLocalKey)(testString)
@@ -42,7 +39,7 @@ class TraceLocalSpec extends TestKit(ActorSystem("trace-local-spec")) with WordS
     }
 
     "return None when retrieving a non existent key" in {
-      TraceRecorder.withNewTraceContext("non-existent-key") {
+      TraceContext.withContext(newContext("non-existent-key")) {
         TraceLocal.retrieve(SampleTraceLocalKey) should equal(None)
       }
     }
@@ -53,22 +50,22 @@ class TraceLocalSpec extends TestKit(ActorSystem("trace-local-spec")) with WordS
 
     "be attached to the TraceContext when it is propagated" in {
       val testString = "Hello World"
-      val testContext = TraceRecorder.withNewTraceContext("manually-propagated-trace-local") {
+      val testContext = TraceContext.withContext(newContext("manually-propagated-trace-local")) {
         TraceLocal.store(SampleTraceLocalKey)(testString)
         TraceLocal.retrieve(SampleTraceLocalKey).value should equal(testString)
-        TraceRecorder.currentContext
+        TraceContext.currentContext
       }
 
       /** No TraceLocal should be available here */
       TraceLocal.retrieve(SampleTraceLocalKey) should equal(None)
 
-      TraceRecorder.withTraceContext(testContext) {
+      TraceContext.withContext(testContext) {
         TraceLocal.retrieve(SampleTraceLocalKey).value should equal(testString)
       }
     }
 
     "allow retrieve a value from the MDC when was created a key with AvailableToMdc(cool-key)" in {
-      TraceRecorder.withNewTraceContext("store-and-retrieve-trace-local-and-copy-to-mdc") {
+      TraceContext.withContext(newContext("store-and-retrieve-trace-local-and-copy-to-mdc")) {
         val testString = "Hello MDC"
 
         TraceLocal.store(SampleTraceLocalKeyAvailableToMDC)(testString)
@@ -81,7 +78,7 @@ class TraceLocalSpec extends TestKit(ActorSystem("trace-local-spec")) with WordS
     }
 
     "allow retrieve a value from the MDC when was created a key with AvailableToMdc.storeForMdc(String, String)" in {
-      TraceRecorder.withNewTraceContext("store-and-retrieve-trace-local-and-copy-to-mdc") {
+      TraceContext.withContext(newContext("store-and-retrieve-trace-local-and-copy-to-mdc")) {
         val testString = "Hello MDC"
 
         TraceLocal.storeForMdc("someKey", testString)

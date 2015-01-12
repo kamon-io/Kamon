@@ -16,67 +16,29 @@
 
 package kamon.metric
 
-import akka.actor.ActorSystem
-import kamon.metric.instrument.{ Histogram }
+import kamon.metric.instrument.{ Time, InstrumentFactory, Histogram }
 
-import scala.collection.concurrent.TrieMap
-import com.typesafe.config.Config
+class TraceMetrics(instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) {
+  import TraceMetrics.segmentKey
 
-case class TraceMetrics(name: String) extends MetricGroupIdentity {
-  val category = TraceMetrics
-}
+  /**
+   *  Records blah blah
+   */
+  val ElapsedTime = histogram("elapsed-time", unitOfMeasurement = Time.Nanoseconds)
 
-object TraceMetrics extends MetricGroupCategory {
-  import Metrics.AtomicGetOrElseUpdateForTriemap
-
-  val name = "trace"
-
-  case object ElapsedTime extends MetricIdentity { val name = "elapsed-time" }
-
-  case class TraceMetricRecorder(elapsedTime: Histogram, private val segmentRecorderFactory: () ⇒ Histogram)
-      extends MetricGroupRecorder {
-
-    val segments = TrieMap[MetricIdentity, Histogram]()
-
-    def segmentRecorder(segmentIdentity: MetricIdentity): Histogram =
-      segments.atomicGetOrElseUpdate(segmentIdentity, segmentRecorderFactory.apply())
-
-    def collect(context: CollectionContext): TraceMetricsSnapshot =
-      TraceMetricsSnapshot(
-        elapsedTime.collect(context),
-        segments.map { case (identity, recorder) ⇒ (identity, recorder.collect(context)) }.toMap)
-
-    def cleanup: Unit = {}
-  }
-
-  case class TraceMetricsSnapshot(elapsedTime: Histogram.Snapshot, segments: Map[MetricIdentity, Histogram.Snapshot])
-      extends MetricGroupSnapshot {
-
-    type GroupSnapshotType = TraceMetricsSnapshot
-
-    def merge(that: TraceMetricsSnapshot, context: CollectionContext): TraceMetricsSnapshot =
-      TraceMetricsSnapshot(elapsedTime.merge(that.elapsedTime, context), combineMaps(segments, that.segments)((l, r) ⇒ l.merge(r, context)))
-
-    def metrics: Map[MetricIdentity, MetricSnapshot] = segments + (ElapsedTime -> elapsedTime)
-  }
-
-  val Factory = TraceMetricGroupFactory
+  /**
+   *  Records Blah Blah.
+   *
+   */
+  def segment(name: String, category: String, library: String): Histogram =
+    histogram(segmentKey(name, category, library))
 
 }
 
-case object TraceMetricGroupFactory extends MetricGroupFactory {
+object TraceMetrics extends EntityRecorderFactory[TraceMetrics] {
+  def category: String = "trace"
+  def createRecorder(instrumentFactory: InstrumentFactory): TraceMetrics = new TraceMetrics(instrumentFactory)
 
-  import TraceMetrics._
-
-  type GroupRecorder = TraceMetricRecorder
-
-  def create(config: Config, system: ActorSystem): TraceMetricRecorder = {
-    val settings = config.getConfig("precision.trace")
-    val elapsedTimeConfig = settings.getConfig("elapsed-time")
-    val segmentConfig = settings.getConfig("segment")
-
-    new TraceMetricRecorder(
-      Histogram.fromConfig(elapsedTimeConfig, Scale.Nano),
-      () ⇒ Histogram.fromConfig(segmentConfig, Scale.Nano))
-  }
+  def segmentKey(name: String, category: String, library: String): HistogramKey =
+    HistogramKey(name, Time.Nanoseconds, Map("category" -> category, "library" -> library))
 }
