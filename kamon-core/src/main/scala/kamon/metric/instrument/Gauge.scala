@@ -56,13 +56,7 @@ class DifferentialValueCollector(wrappedValueCollector: CurrentValueCollector) e
   def currentValue: Long = {
     if (_readAtLeastOnce) {
       val wrappedCurrent = wrappedValueCollector.currentValue
-      val d = wrappedCurrent - _lastObservedValue.getAndSet(wrappedCurrent)
-
-      if (d < 0)
-        println("HUBO MENOR QUE CERO")
-
-      d
-
+      wrappedCurrent - _lastObservedValue.getAndSet(wrappedCurrent)
     } else {
       _lastObservedValue.set(wrappedValueCollector.currentValue)
       _readAtLeastOnce = true
@@ -96,11 +90,8 @@ class HistogramBackedGauge(underlyingHistogram: Histogram, currentValueCollector
       automaticValueCollectorSchedule.get().cancel()
   }
 
-  def refreshValue(): Unit = {
-    val a = currentValueCollector.currentValue
-    if (a < 0)
-      println("RECORDING FROM GAUGE => " + a + " - " + currentValueCollector.getClass)
-    underlyingHistogram.record(a)
-  }
+  def refreshValue(): Unit =
+    underlyingHistogram.record(currentValueCollector.currentValue)
+
 }
 
