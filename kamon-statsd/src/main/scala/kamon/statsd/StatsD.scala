@@ -40,10 +40,11 @@ class StatsDExtension(system: ExtendedActorSystem) extends Kamon.Extension {
 
   private val config = system.settings.config
   private val statsDConfig = config.getConfig("kamon.statsd")
+  val metricsExtension = Kamon(Metrics)
 
-  val tickInterval = config.getDuration("kamon.metrics.tick-interval", MILLISECONDS)
+  val tickInterval = metricsExtension.settings.tickInterval
   val statsDHost = new InetSocketAddress(statsDConfig.getString("hostname"), statsDConfig.getInt("port"))
-  val flushInterval = statsDConfig.getDuration("flush-interval", MILLISECONDS)
+  val flushInterval = statsDConfig.getFiniteDuration("flush-interval")
   val maxPacketSizeInBytes = statsDConfig.getBytes("max-packet-size")
   val keyGeneratorFQCN = statsDConfig.getString("metric-key-generator")
 
@@ -52,11 +53,11 @@ class StatsDExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   val subscriptions = statsDConfig.getConfig("subscriptions")
   subscriptions.firstLevelKeys.map { subscriptionCategory ⇒
     subscriptions.getStringList(subscriptionCategory).asScala.foreach { pattern ⇒
-      Kamon(Metrics).subscribe(subscriptionCategory, pattern, statsDMetricsListener, permanently = true)
+      metricsExtension.subscribe(subscriptionCategory, pattern, statsDMetricsListener, permanently = true)
     }
   }
 
-  def buildMetricsListener(tickInterval: Long, flushInterval: Long, keyGeneratorFQCN: String, config: Config): ActorRef = {
+  def buildMetricsListener(tickInterval: FiniteDuration, flushInterval: FiniteDuration, keyGeneratorFQCN: String, config: Config): ActorRef = {
     assert(flushInterval >= tickInterval, "StatsD flush-interval needs to be equal or greater to the tick-interval")
     val keyGenerator = system.dynamicAccess.createInstanceFor[MetricKeyGenerator](keyGeneratorFQCN, (classOf[Config], config) :: Nil).get
 
@@ -69,7 +70,7 @@ class StatsDExtension(system: ExtendedActorSystem) extends Kamon.Extension {
       // No need to buffer the metrics, let's go straight to the metrics sender.
       metricsSender
     } else {
-      system.actorOf(TickMetricSnapshotBuffer.props(flushInterval.toInt.millis, metricsSender), "statsd-metrics-buffer")
+      system.actorOf(TickMetricSnapshotBuffer.props(flushInterval, metricsSender), "statsd-metrics-buffer")
     }
   }
 }
