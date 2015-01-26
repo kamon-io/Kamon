@@ -70,7 +70,7 @@ class MetricsExtensionImpl(system: ExtendedActorSystem) extends MetricsExtension
   private val _trackedEntities = TrieMap.empty[Entity, EntityRecorder]
   private val _collectionContext = buildDefaultCollectionContext
   private val _metricsCollectionDispatcher = system.dispatchers.lookup(settings.metricCollectionDispatcher)
-  private val _subscriptions = ModuleSupervisor.get(system).createModule("subscriptions-dispatcher",
+  private lazy val _subscriptions = ModuleSupervisor.get(system).createModule("subscriptions-dispatcher",
     SubscriptionsDispatcher.props(settings.tickInterval, collectSnapshots).withDispatcher(settings.metricCollectionDispatcher))
 
   def shouldTrack(entity: Entity): Boolean =
