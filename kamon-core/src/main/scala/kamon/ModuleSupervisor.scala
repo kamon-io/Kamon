@@ -21,7 +21,7 @@ trait ModuleSupervisorExtension extends actor.Extension {
 
 class ModuleSupervisorExtensionImpl(system: ExtendedActorSystem) extends ModuleSupervisorExtension {
   import system.dispatcher
-  private lazy val supervisor = system.actorOf(Props[ModuleSupervisor], "kamon")
+  private val supervisor = system.actorOf(Props[ModuleSupervisor], "kamon")
 
   def createModule(name: String, props: Props): Future[ActorRef] = Future {} flatMap { _: Unit ⇒
     val modulePromise = Promise[ActorRef]()
@@ -37,6 +37,7 @@ class ModuleSupervisor extends Actor with ActorLogging {
   }
 
   def createChildModule(name: String, props: Props, childPromise: Promise[ActorRef]): Unit = {
+
     context.child(name).map { alreadyAvailableModule ⇒
       log.warning("Received a request to create module [{}] but the module is already available, returning the existent one.")
       childPromise.complete(Success(alreadyAvailableModule))
