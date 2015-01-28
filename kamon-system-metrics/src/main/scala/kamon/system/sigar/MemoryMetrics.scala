@@ -22,7 +22,7 @@ class MemoryMetrics(instrumentFactory: InstrumentFactory) extends GenericEntityR
   def update(sigar: Sigar): Unit = {
     val mem = sigar.getMem
     val swap = sigar.getSwap
-    val cachedMemory = if(mem.getActualFree > mem.getFree) mem.getActualFree - mem.getFree else 0L
+    val cachedMemory = if (mem.getActualFree > mem.getFree) mem.getActualFree - mem.getFree else 0L
 
     used.record(mem.getActualUsed)
     free.record(mem.getActualFree)
