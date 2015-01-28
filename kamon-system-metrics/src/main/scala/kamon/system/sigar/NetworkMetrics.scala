@@ -3,6 +3,7 @@ package kamon.system.sigar
 import kamon.metric.GenericEntityRecorder
 import kamon.metric.instrument._
 import org.hyperic.sigar.{ NetInterfaceStat, Sigar }
+import scala.util.Try
 
 class NetworkMetrics(instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) with SigarMetric {
   val receivedBytes = DiffRecordingHistogram(histogram("rx-bytes", Memory.Bytes))
@@ -12,10 +13,11 @@ class NetworkMetrics(instrumentFactory: InstrumentFactory) extends GenericEntity
   val receiveDrops = DiffRecordingHistogram(histogram("rx-dropped"))
   val transmitDrops = DiffRecordingHistogram(histogram("tx-dropped"))
 
-  def sumOfAllInterfaces(sigar: Sigar, thunk: NetInterfaceStat ⇒ Long): Long = {
+  def sumOfAllInterfaces(sigar: Sigar, thunk: NetInterfaceStat ⇒ Long): Long = Try {
     val interfaces = sigar.getNetInterfaceList.toList.filter(_ != "lo")
     interfaces.map(i ⇒ thunk(sigar.getNetInterfaceStat(i))).fold(0L)(_ + _)
-  }
+
+  } getOrElse (0L)
 
   def update(sigar: Sigar): Unit = {
     receivedBytes.record(sumOfAllInterfaces(sigar, _.getRxBytes))
