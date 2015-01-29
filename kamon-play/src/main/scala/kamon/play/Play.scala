@@ -20,7 +20,7 @@ import akka.actor.{ ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProv
 import akka.event.Logging
 import kamon.Kamon
 import kamon.http.HttpServerMetrics
-import kamon.metric.Metrics
+import kamon.metric.{ Entity, Metrics }
 import play.api.libs.ws.WSRequest
 import play.api.mvc.RequestHeader
 
@@ -36,8 +36,14 @@ class PlayExtension(private val system: ExtendedActorSystem) extends Kamon.Exten
   log.info(s"Starting the Kamon(Play) extension")
 
   private val config = system.settings.config.getConfig("kamon.play")
+  val httpServerMetrics = {
+    val metricsExtension = Metrics.get(system)
+    val factory = metricsExtension.instrumentFactory(HttpServerMetrics.category)
+    val entity = Entity("play-server", HttpServerMetrics.category)
 
-  val httpServerMetrics = Kamon(Metrics)(system).register(HttpServerMetrics, HttpServerMetrics.Factory).get
+    Metrics.get(system).register(entity, new HttpServerMetrics(factory)).recorder
+  }
+
   val defaultDispatcher = system.dispatchers.lookup(config.getString("dispatcher"))
   val includeTraceToken: Boolean = config.getBoolean("automatic-trace-token-propagation")
   val traceTokenHeaderName: String = config.getString("trace-token-header-name")

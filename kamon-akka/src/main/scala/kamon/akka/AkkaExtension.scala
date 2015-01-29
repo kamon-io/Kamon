@@ -16,8 +16,8 @@
 
 package kamon.akka
 
-import akka.actor
-import akka.actor._
+import _root_.akka.actor
+import _root_.akka.actor._
 import kamon._
 
 class AkkaExtension(system: ExtendedActorSystem) extends Kamon.Extension {
@@ -29,4 +29,6 @@ class AkkaExtension(system: ExtendedActorSystem) extends Kamon.Extension {
 object Akka extends ExtensionId[AkkaExtension] with ExtensionIdProvider {
   def lookup(): ExtensionId[_ <: actor.Extension] = Akka
   def createExtension(system: ExtendedActorSystem): AkkaExtension = new AkkaExtension(system)
+
 }
+

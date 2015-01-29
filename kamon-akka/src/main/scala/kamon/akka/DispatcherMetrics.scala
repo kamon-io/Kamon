@@ -16,79 +16,71 @@
 
 package kamon.akka
 
-import akka.actor.ActorSystem
-import com.typesafe.config.Config
+import java.util.concurrent.ThreadPoolExecutor
+
+import _root_.akka.dispatch.ForkJoinExecutorConfigurator.AkkaForkJoinPool
 import kamon.metric._
-import kamon.metric.instrument.Histogram
+import kamon.metric.instrument.{ DifferentialValueCollector, InstrumentFactory }
 
-case class DispatcherMetrics(name: String) extends MetricGroupIdentity {
-  val category = DispatcherMetrics
+class ForkJoinPoolDispatcherMetrics(fjp: AkkaForkJoinPool, instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) {
+  val paralellism = minMaxCounter("parallelism")
+  paralellism.increment(fjp.getParallelism) // Steady value.
+
+  val poolSize = gauge("pool-size", () ⇒ {
+    fjp.getPoolSize.toLong
+  })
+
+  val activeThreads = gauge("active-threads", () ⇒ {
+    fjp.getActiveThreadCount.toLong
+  })
+
+  val runningThreads = gauge("running-threads", () ⇒ {
+    fjp.getRunningThreadCount.toLong
+  })
+
+  val queuedTaskCount = gauge("queued-task-count", () ⇒ {
+    fjp.getQueuedTaskCount
+  })
 }
 
-object DispatcherMetrics extends MetricGroupCategory {
-  val name = "dispatcher"
+object ForkJoinPoolDispatcherMetrics {
 
-  case object MaximumPoolSize extends MetricIdentity { val name = "maximum-pool-size" }
-  case object RunningThreadCount extends MetricIdentity { val name = "running-thread-count" }
-  case object QueueTaskCount extends MetricIdentity { val name = "queued-task-count" }
-  case object PoolSize extends MetricIdentity { val name = "pool-size" }
-
-  case class DispatcherMetricRecorder(maximumPoolSize: Histogram, runningThreadCount: Histogram,
-    queueTaskCount: Histogram, poolSize: Histogram)
-      extends MetricGroupRecorder {
-
-    def collect(context: CollectionContext): MetricGroupSnapshot =
-      DispatcherMetricSnapshot(
-        maximumPoolSize.collect(context),
-        runningThreadCount.collect(context),
-        queueTaskCount.collect(context),
-        poolSize.collect(context))
-
-    def cleanup: Unit = {}
-
+  def factory(fjp: AkkaForkJoinPool) = new EntityRecorderFactory[ForkJoinPoolDispatcherMetrics] {
+    def category: String = AkkaDispatcherMetrics.Category
+    def createRecorder(instrumentFactory: InstrumentFactory) = new ForkJoinPoolDispatcherMetrics(fjp, instrumentFactory)
   }
-
-  case class DispatcherMetricSnapshot(maximumPoolSize: Histogram.Snapshot, runningThreadCount: Histogram.Snapshot,
-      queueTaskCount: Histogram.Snapshot, poolSize: Histogram.Snapshot) extends MetricGroupSnapshot {
-
-    type GroupSnapshotType = DispatcherMetricSnapshot
-
-    def merge(that: DispatcherMetricSnapshot, context: CollectionContext): DispatcherMetricSnapshot =
-      DispatcherMetricSnapshot(
-        maximumPoolSize.merge(that.maximumPoolSize, context),
-        runningThreadCount.merge(that.runningThreadCount, context),
-        queueTaskCount.merge(that.queueTaskCount, context),
-        poolSize.merge(that.poolSize, context))
-
-    lazy val metrics: Map[MetricIdentity, MetricSnapshot] = Map(
-      (MaximumPoolSize -> maximumPoolSize),
-      (RunningThreadCount -> runningThreadCount),
-      (QueueTaskCount -> queueTaskCount),
-      (PoolSize -> poolSize))
-  }
-
-  val Factory = DispatcherMetricGroupFactory
 }
 
-case object DispatcherMetricGroupFactory extends MetricGroupFactory {
+class ThreadPoolExecutorDispatcherMetrics(tpe: ThreadPoolExecutor, instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) {
+  val corePoolSize = gauge("core-pool-size", () ⇒ {
+    tpe.getCorePoolSize.toLong
+  })
 
-  import kamon.akka.DispatcherMetrics._
+  val maxPoolSize = gauge("max-pool-size", () ⇒ {
+    tpe.getMaximumPoolSize.toLong
+  })
 
-  type GroupRecorder = DispatcherMetricRecorder
+  val poolSize = gauge("pool-size", () ⇒ {
+    tpe.getPoolSize.toLong
+  })
 
-  def create(config: Config, system: ActorSystem): DispatcherMetricRecorder = {
-    val settings = config.getConfig("precision.dispatcher")
+  val activeThreads = gauge("active-threads", () ⇒ {
+    tpe.getActiveCount.toLong
+  })
 
-    val maximumPoolSizeConfig = settings.getConfig("maximum-pool-size")
-    val runningThreadCountConfig = settings.getConfig("running-thread-count")
-    val queueTaskCountConfig = settings.getConfig("queued-task-count")
-    val poolSizeConfig = settings.getConfig("pool-size")
+  val processedTasks = gauge("processed-tasks", DifferentialValueCollector(() ⇒ {
+    tpe.getTaskCount
+  }))
+}
 
-    new DispatcherMetricRecorder(
-      Histogram.fromConfig(maximumPoolSizeConfig),
-      Histogram.fromConfig(runningThreadCountConfig),
-      Histogram.fromConfig(queueTaskCountConfig),
-      Histogram.fromConfig(poolSizeConfig))
+object ThreadPoolExecutorDispatcherMetrics {
+
+  def factory(tpe: ThreadPoolExecutor) = new EntityRecorderFactory[ThreadPoolExecutorDispatcherMetrics] {
+    def category: String = AkkaDispatcherMetrics.Category
+    def createRecorder(instrumentFactory: InstrumentFactory) = new ThreadPoolExecutorDispatcherMetrics(tpe, instrumentFactory)
   }
+}
 
+object AkkaDispatcherMetrics {
+  val Category = "akka-dispatcher"
 }

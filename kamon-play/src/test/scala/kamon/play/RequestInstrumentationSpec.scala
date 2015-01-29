@@ -17,10 +17,11 @@ package kamon.play
 
 import kamon.Kamon
 import kamon.http.HttpServerMetrics
-import kamon.metric.{ CollectionContext, Metrics, TraceMetrics }
+import kamon.metric.{ Metrics, TraceMetrics }
+import kamon.metric.instrument.CollectionContext
 import kamon.play.action.TraceName
 import kamon.trace.TraceLocal.HttpContextKey
-import kamon.trace.{ TraceLocal, TraceRecorder }
+import kamon.trace.{ TraceLocal, TraceContext }
 import org.scalatestplus.play._
 import play.api.DefaultGlobal
 import play.api.http.Writeable
@@ -118,7 +119,7 @@ class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
 
     "respond to the Async Action with X-Trace-Token and the renamed trace" in {
       val result = Await.result(route(FakeRequest(GET, "/async-renamed").withHeaders(traceTokenHeader)).get, 10 seconds)
-      TraceRecorder.currentContext.name must be("renamed-trace")
+      TraceContext.currentContext.name must be("renamed-trace")
       Some(result.header.headers(traceTokenHeaderName)) must be(expectedToken)
     }
 
@@ -129,17 +130,17 @@ class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
 
     "response to the getRouted Action and normalise the current TraceContext name" in {
       Await.result(WS.url("http://localhost:19001/getRouted").get(), 10 seconds)
-      Kamon(Metrics)(Akka.system()).storage.get(TraceMetrics("getRouted.get")) must not be empty
+      Kamon(Metrics)(Akka.system()).find("getRouted.get", "trace") must not be empty
     }
 
     "response to the postRouted Action and normalise the current TraceContext name" in {
       Await.result(WS.url("http://localhost:19001/postRouted").post("content"), 10 seconds)
-      Kamon(Metrics)(Akka.system()).storage.get(TraceMetrics("postRouted.post")) must not be empty
+      Kamon(Metrics)(Akka.system()).find("postRouted.post", "trace") must not be empty
     }
 
     "response to the showRouted Action and normalise the current TraceContext name" in {
       Await.result(WS.url("http://localhost:19001/showRouted/2").get(), 10 seconds)
-      Kamon(Metrics)(Akka.system()).storage.get(TraceMetrics("show.some.id.get")) must not be empty
+      Kamon(Metrics)(Akka.system()).find("show.some.id.get", "trace") must not be empty
     }
 
     "include HttpContext information for help to diagnose possible errors" in {
@@ -154,7 +155,7 @@ class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
 
     "record http server metrics for all processed requests" in {
       val collectionContext = CollectionContext(100)
-      Kamon(Metrics)(Akka.system()).register(HttpServerMetrics, HttpServerMetrics.Factory).get.collect(collectionContext)
+      Kamon(Metrics)(Akka.system()).find("play-server", "http-server").get.collect(collectionContext)
 
       for (repetition ← 1 to 10) {
         Await.result(route(FakeRequest(GET, "/default").withHeaders(traceTokenHeader)).get, 10 seconds)
@@ -168,13 +169,13 @@ class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
         Await.result(routeWithOnError(FakeRequest(GET, "/error").withHeaders(traceTokenHeader)).get, 10 seconds)
       }
 
-      val snapshot = Kamon(Metrics)(Akka.system()).register(HttpServerMetrics, HttpServerMetrics.Factory).get.collect(collectionContext)
-      snapshot.countsPerTraceAndStatusCode("GET: /default")("200").count must be(10)
-      snapshot.countsPerTraceAndStatusCode("GET: /notFound")("404").count must be(5)
-      snapshot.countsPerTraceAndStatusCode("GET: /error")("500").count must be(5)
-      snapshot.countsPerStatusCode("200").count must be(10)
-      snapshot.countsPerStatusCode("404").count must be(5)
-      snapshot.countsPerStatusCode("500").count must be(5)
+      val snapshot = Kamon(Metrics)(Akka.system()).find("play-server", "http-server").get.collect(collectionContext)
+      snapshot.counter("GET: /default_200").get.count must be(10)
+      snapshot.counter("GET: /notFound_404").get.count must be(5)
+      snapshot.counter("GET: /error_500").get.count must be(5)
+      snapshot.counter("200").get.count must be(10)
+      snapshot.counter("404").get.count must be(5)
+      snapshot.counter("500").get.count must be(5)
     }
   }
 
@@ -186,7 +187,7 @@ class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
 
   object TraceLocalFilter extends Filter {
     override def apply(next: (RequestHeader) ⇒ Future[Result])(header: RequestHeader): Future[Result] = {
-      TraceRecorder.withTraceContext(TraceRecorder.currentContext) {
+      TraceContext.withContext(TraceContext.currentContext) {
 
         TraceLocal.store(TraceLocalKey)(header.headers.get(traceLocalStorageKey).getOrElse("unknown"))
 

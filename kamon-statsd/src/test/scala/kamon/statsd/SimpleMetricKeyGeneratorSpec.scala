@@ -1,7 +1,8 @@
 package kamon.statsd
 
 import com.typesafe.config.ConfigFactory
-import kamon.metric.{ MetricGroupCategory, MetricGroupIdentity, MetricIdentity }
+import kamon.metric.instrument.UnitOfMeasurement
+import kamon.metric._
 import org.scalatest.{ Matchers, WordSpec }
 
 class SimpleMetricKeyGeneratorSpec extends WordSpec with Matchers {
@@ -68,13 +69,8 @@ class SimpleMetricKeyGeneratorSpec extends WordSpec with Matchers {
   }
 
   def buildMetricKey(categoryName: String, entityName: String, metricName: String)(implicit metricKeyGenerator: SimpleMetricKeyGenerator): String = {
-    val metricIdentity = new MetricIdentity { val name: String = metricName }
-    val groupIdentity = new MetricGroupIdentity {
-      val name: String = entityName
-      val category: MetricGroupCategory = new MetricGroupCategory {
-        val name: String = categoryName
-      }
-    }
-    metricKeyGenerator.generateKey(groupIdentity, metricIdentity)
+    val metric = HistogramKey(metricName, UnitOfMeasurement.Unknown, Map.empty)
+    val entity = Entity(entityName, categoryName)
+    metricKeyGenerator.generateKey(entity, metric)
   }
 }

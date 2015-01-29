@@ -18,16 +18,16 @@ package kamon.trace
 
 import java.util.concurrent.ConcurrentLinkedQueue
 
-import akka.actor.ActorSystem
+import akka.actor.{ ExtensionId, ActorSystem }
 import akka.event.LoggingAdapter
-import kamon.{ RelativeNanoTimestamp, NanoInterval }
-import kamon.metric.TraceMetrics.TraceMetricRecorder
+import kamon.Kamon.Extension
 import kamon.metric.{ MetricsExtension, TraceMetrics }
+import kamon.util.{ NanoInterval, RelativeNanoTimestamp }
 
 import scala.annotation.tailrec
 
-private[trace] class MetricsOnlyContext(traceName: String, val token: String, izOpen: Boolean, val levelOfDetail: LevelOfDetail, val origin: TraceContextOrigin,
-  val startRelativeTimestamp: RelativeNanoTimestamp, log: LoggingAdapter, metricsExtension: MetricsExtension, val system: ActorSystem)
+private[kamon] class MetricsOnlyContext(traceName: String, val token: String, izOpen: Boolean, val levelOfDetail: LevelOfDetail,
+  val startTimestamp: RelativeNanoTimestamp, log: LoggingAdapter, metricsExtension: MetricsExtension, val actorSystem: ActorSystem)
     extends TraceContext {
 
   @volatile private var _name = traceName
@@ -48,35 +48,36 @@ private[trace] class MetricsOnlyContext(traceName: String, val token: String, iz
   def isOpen: Boolean = _isOpen
   def addMetadata(key: String, value: String): Unit = {}
 
+  def lookupExtension[T <: Extension](id: ExtensionId[T]): T = id(actorSystem)
+
   def finish(): Unit = {
     _isOpen = false
-    val traceElapsedTime = NanoInterval.since(startRelativeTimestamp)
+    val traceElapsedTime = NanoInterval.since(startTimestamp)
     _elapsedTime = traceElapsedTime
 
-    val metricRecorder = metricsExtension.register(TraceMetrics(name), TraceMetrics.Factory)
-    metricRecorder.map { traceMetrics ⇒
-      traceMetrics.elapsedTime.record(traceElapsedTime.nanos)
-      drainFinishedSegments(traceMetrics)
+    metricsExtension.register(TraceMetrics, name).map { registration ⇒
+      registration.recorder.ElapsedTime.record(traceElapsedTime.nanos)
+      drainFinishedSegments(registration.recorder)
     }
   }
 
   def startSegment(segmentName: String, category: String, library: String): Segment =
     new MetricsOnlySegment(segmentName, category, library)
 
-  @tailrec private def drainFinishedSegments(metricRecorder: TraceMetricRecorder): Unit = {
+  @tailrec private def drainFinishedSegments(recorder: TraceMetrics): Unit = {
     val segment = _finishedSegments.poll()
     if (segment != null) {
-      metricRecorder.segmentRecorder(segment.identity).record(segment.duration.nanos)
-      drainFinishedSegments(metricRecorder)
+      recorder.segment(segment.name, segment.category, segment.library).record(segment.duration.nanos)
+      drainFinishedSegments(recorder)
     }
   }
 
   protected def finishSegment(segmentName: String, category: String, library: String, duration: NanoInterval): Unit = {
-    _finishedSegments.add(SegmentLatencyData(SegmentMetricIdentity(segmentName, category, library), duration))
+    _finishedSegments.add(SegmentLatencyData(segmentName, category, library, duration))
 
     if (isClosed) {
-      metricsExtension.register(TraceMetrics(name), TraceMetrics.Factory).map { traceMetrics ⇒
-        drainFinishedSegments(traceMetrics)
+      metricsExtension.register(TraceMetrics, name).map { registration ⇒
+        drainFinishedSegments(registration.recorder)
       }
     }
   }
@@ -119,3 +120,5 @@ private[trace] class MetricsOnlyContext(traceName: String, val token: String, iz
     def startTimestamp: RelativeNanoTimestamp = _startTimestamp
   }
 }
+
+case class SegmentLatencyData(name: String, category: String, library: String, duration: NanoInterval)

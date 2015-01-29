@@ -40,6 +40,13 @@ class GlobPathFilterSpec extends WordSpecLike with Matchers {
       filter.accept("/user/something/otherActor") shouldBe false
     }
 
+    "match all expressions in the same levelss" in {
+      val filter = new GlobPathFilter("**")
+
+      filter.accept("GET: /ping") shouldBe true
+      filter.accept("GET: /ping/pong") shouldBe true
+    }
+
     "match all expressions and crosses the path boundaries" in {
       val filter = new GlobPathFilter("/user/actor-**")
 
@@ -51,7 +58,7 @@ class GlobPathFilterSpec extends WordSpecLike with Matchers {
       filter.accept("/user/something/otherActor") shouldBe false
     }
 
-    "match exactly one characterr" in {
+    "match exactly one character" in {
       val filter = new GlobPathFilter("/user/actor-?")
 
       filter.accept("/user/actor-1") shouldBe true

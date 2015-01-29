@@ -17,39 +17,15 @@
 package kamon.spray
 
 import _root_.spray.httpx.RequestBuilding
-import akka.testkit.{ TestKitBase, TestProbe }
-import akka.actor.ActorSystem
-import org.scalatest.{ Matchers, WordSpecLike }
+import akka.testkit.TestProbe
+import kamon.testkit.BaseKamonSpec
 import kamon.Kamon
 import org.scalatest.concurrent.{ PatienceConfiguration, ScalaFutures }
 import spray.http.HttpHeaders.RawHeader
 import spray.http.{ HttpResponse, HttpRequest }
-import com.typesafe.config.ConfigFactory
 
-class SprayServerTracingSpec extends TestKitBase with WordSpecLike with Matchers with RequestBuilding
-    with ScalaFutures with PatienceConfiguration with TestServer {
-
-  implicit lazy val system: ActorSystem = ActorSystem("spray-server-tracing-spec", ConfigFactory.parseString(
-    """
-      |akka {
-      |  loglevel = ERROR
-      |}
-      |
-      |kamon {
-      |  metrics {
-      |    tick-interval = 2 seconds
-      |
-      |    filters = [
-      |      {
-      |        trace {
-      |          includes = [ "*" ]
-      |          excludes = []
-      |        }
-      |      }
-      |    ]
-      |  }
-      |}
-    """.stripMargin))
+class SprayServerTracingSpec extends BaseKamonSpec("spray-server-tracing-spec") with RequestBuilding with ScalaFutures
+    with PatienceConfiguration with TestServer {
 
   "the spray server request tracing instrumentation" should {
     "include the trace-token header in responses when the automatic-trace-token-propagation is enabled" in {
@@ -58,12 +34,12 @@ class SprayServerTracingSpec extends TestKitBase with WordSpecLike with Matchers
       val (connection, server) = buildClientConnectionAndServer
       val client = TestProbe()
 
-      client.send(connection, Get("/").withHeaders(RawHeader(Kamon(Spray).traceTokenHeaderName, "propagation-enabled")))
+      client.send(connection, Get("/").withHeaders(traceTokenHeader("propagation-enabled")))
       server.expectMsgType[HttpRequest]
       server.reply(HttpResponse(entity = "ok"))
       val response = client.expectMsgType[HttpResponse]
 
-      response.headers should contain(RawHeader(Kamon(Spray).traceTokenHeaderName, "propagation-enabled"))
+      response.headers should contain(traceTokenHeader("propagation-enabled"))
     }
 
     "reply back with an automatically assigned trace token if none was provided with the request and automatic-trace-token-propagation is enabled" in {
@@ -77,7 +53,7 @@ class SprayServerTracingSpec extends TestKitBase with WordSpecLike with Matchers
       server.reply(HttpResponse(entity = "ok"))
       val response = client.expectMsgType[HttpResponse]
 
-      response.headers.count(_.name == Kamon(Spray).traceTokenHeaderName) should be(1)
+      response.headers.count(_.name == Kamon(Spray).settings.traceTokenHeaderName) should be(1)
 
     }
 
@@ -87,21 +63,24 @@ class SprayServerTracingSpec extends TestKitBase with WordSpecLike with Matchers
       val (connection, server) = buildClientConnectionAndServer
       val client = TestProbe()
 
-      client.send(connection, Get("/").withHeaders(RawHeader(Kamon(Spray).traceTokenHeaderName, "propagation-disabled")))
+      client.send(connection, Get("/").withHeaders(traceTokenHeader("propagation-disabled")))
       server.expectMsgType[HttpRequest]
       server.reply(HttpResponse(entity = "ok"))
       val response = client.expectMsgType[HttpResponse]
 
-      response.headers should not contain RawHeader(Kamon(Spray).traceTokenHeaderName, "propagation-disabled")
+      response.headers should not contain traceTokenHeader("propagation-disabled")
     }
   }
+
+  def traceTokenHeader(token: String): RawHeader =
+    RawHeader(Kamon(Spray).settings.traceTokenHeaderName, token)
 
   def enableAutomaticTraceTokenPropagation(): Unit = setIncludeTraceToken(true)
   def disableAutomaticTraceTokenPropagation(): Unit = setIncludeTraceToken(false)
 
   def setIncludeTraceToken(include: Boolean): Unit = {
-    val target = Kamon(Spray)(system)
-    val field = target.getClass.getDeclaredField("includeTraceToken")
+    val target = Kamon(Spray)(system).settings
+    val field = target.getClass.getDeclaredField("includeTraceTokenHeader")
     field.setAccessible(true)
     field.set(target, include)
   }

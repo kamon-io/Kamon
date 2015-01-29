@@ -21,15 +21,17 @@ import akka.io.IO
 import akka.testkit._
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
-import kamon.metric.{ TraceMetrics, Metrics }
-import kamon.{ MilliTimestamp, Kamon, AkkaExtensionSwap }
-import kamon.metric.Subscriptions.TickMetricSnapshot
+import kamon.metric.{ Entity, Metrics, TraceMetrics }
+import kamon.util.MilliTimestamp
+import kamon.Kamon
+import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 import org.scalatest.{ Matchers, WordSpecLike }
 import spray.can.Http
 import spray.http.Uri.Query
 import spray.http._
 import spray.httpx.encoding.Deflate
 import spray.httpx.{ RequestBuilding, SprayJsonSupport }
+import testkit.AkkaExtensionSwap
 import scala.concurrent.duration._
 import spray.json._
 
@@ -133,20 +135,20 @@ class MetricReporterSpec extends TestKitBase with WordSpecLike with Matchers wit
   }
 
   trait FakeTickSnapshotsFixture {
-    val testTraceID = TraceMetrics("example-trace")
-    val recorder = Kamon(Metrics).register(testTraceID, TraceMetrics.Factory).get
+    val testTraceID = Entity("example-trace", "trace")
+    val recorder = Kamon(Metrics).register(TraceMetrics, testTraceID.name).get.recorder
     val collectionContext = Kamon(Metrics).buildDefaultCollectionContext
 
     def collectRecorder = recorder.collect(collectionContext)
 
-    recorder.elapsedTime.record(1000000)
-    recorder.elapsedTime.record(2000000)
-    recorder.elapsedTime.record(3000000)
+    recorder.ElapsedTime.record(1000000)
+    recorder.ElapsedTime.record(2000000)
+    recorder.ElapsedTime.record(3000000)
     val firstSnapshot = TickMetricSnapshot(new MilliTimestamp(1415587618000L), new MilliTimestamp(1415587678000L), Map(testTraceID -> collectRecorder))
 
-    recorder.elapsedTime.record(6000000)
-    recorder.elapsedTime.record(5000000)
-    recorder.elapsedTime.record(4000000)
+    recorder.ElapsedTime.record(6000000)
+    recorder.ElapsedTime.record(5000000)
+    recorder.ElapsedTime.record(4000000)
     val secondSnapshot = TickMetricSnapshot(new MilliTimestamp(1415587678000L), new MilliTimestamp(1415587738000L), Map(testTraceID -> collectRecorder))
   }
 }

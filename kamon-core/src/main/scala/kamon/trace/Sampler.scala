@@ -16,8 +16,7 @@
 
 package kamon.trace
 
-import kamon.NanoInterval
-import kamon.util.Sequencer
+import kamon.util.{ NanoInterval, Sequencer }
 import scala.concurrent.forkjoin.ThreadLocalRandom
 
 trait Sampler {

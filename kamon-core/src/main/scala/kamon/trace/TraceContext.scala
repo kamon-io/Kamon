@@ -17,26 +17,60 @@
 package kamon.trace
 
 import java.io.ObjectStreamException
-import akka.actor.ActorSystem
+import akka.actor.{ ExtensionId, ActorSystem }
+import kamon.Kamon.Extension
 import kamon._
 import kamon.metric._
 import kamon.trace.TraceContextAware.DefaultTraceContextAware
+import kamon.util.{ NanoInterval, RelativeNanoTimestamp }
 
 trait TraceContext {
   def name: String
   def token: String
-  def origin: TraceContextOrigin
   def isEmpty: Boolean
   def nonEmpty: Boolean = !isEmpty
   def isOpen: Boolean
   def isClosed: Boolean = !isOpen
-  def system: ActorSystem
 
   def finish(): Unit
   def rename(newName: String): Unit
+
   def startSegment(segmentName: String, category: String, library: String): Segment
   def addMetadata(key: String, value: String)
-  def startRelativeTimestamp: RelativeNanoTimestamp
+
+  def startTimestamp: RelativeNanoTimestamp
+
+  def lookupExtension[T <: Kamon.Extension](id: ExtensionId[T]): T
+}
+
+object TraceContext {
+  private[kamon] val _traceContextStorage = new ThreadLocal[TraceContext] {
+    override def initialValue(): TraceContext = EmptyTraceContext
+  }
+
+  def currentContext: TraceContext =
+    _traceContextStorage.get()
+
+  def setCurrentContext(context: TraceContext): Unit =
+    _traceContextStorage.set(context)
+
+  def clearCurrentContext: Unit =
+    _traceContextStorage.remove()
+
+  def withContext[T](context: TraceContext)(code: ⇒ T): T = {
+    val oldContext = _traceContextStorage.get()
+    _traceContextStorage.set(context)
+
+    try code finally _traceContextStorage.set(oldContext)
+  }
+
+  def map[T](f: TraceContext ⇒ T): Option[T] = {
+    val current = currentContext
+    if (current.nonEmpty)
+      Some(f(current))
+    else None
+  }
+
 }
 
 trait Segment {
@@ -56,16 +90,17 @@ trait Segment {
 case object EmptyTraceContext extends TraceContext {
   def name: String = "empty-trace"
   def token: String = ""
-  def origin: TraceContextOrigin = TraceContextOrigin.Local
   def isEmpty: Boolean = true
   def isOpen: Boolean = false
-  def system: ActorSystem = sys.error("Can't obtain a ActorSystem from a EmptyTraceContext.")
 
   def finish(): Unit = {}
   def rename(name: String): Unit = {}
   def startSegment(segmentName: String, category: String, library: String): Segment = EmptySegment
   def addMetadata(key: String, value: String): Unit = {}
-  def startRelativeTimestamp = new RelativeNanoTimestamp(0L)
+  def startTimestamp = new RelativeNanoTimestamp(0L)
+
+  override def lookupExtension[T <: Extension](id: ExtensionId[T]): T =
+    sys.error("Can't lookup extensions on a EmptyTraceContext.")
 
   case object EmptySegment extends Segment {
     val name: String = "empty-segment"
@@ -80,12 +115,15 @@ case object EmptyTraceContext extends TraceContext {
   }
 }
 
-case class SegmentMetricIdentity(name: String, category: String, library: String) extends MetricIdentity
-case class SegmentLatencyData(identity: SegmentMetricIdentity, duration: NanoInterval)
-
 object SegmentCategory {
   val HttpClient = "http-client"
   val Database = "database"
+}
+
+class LOD private[trace] (val level: Int) extends AnyVal
+object LOD {
+  val MetricsOnly = new LOD(1)
+  val SimpleTrace = new LOD(2)
 }
 
 sealed trait LevelOfDetail
@@ -93,12 +131,6 @@ object LevelOfDetail {
   case object MetricsOnly extends LevelOfDetail
   case object SimpleTrace extends LevelOfDetail
   case object FullTrace extends LevelOfDetail
-}
-
-sealed trait TraceContextOrigin
-object TraceContextOrigin {
-  case object Local extends TraceContextOrigin
-  case object Remote extends TraceContextOrigin
 }
 
 trait TraceContextAware extends Serializable {
@@ -109,7 +141,7 @@ object TraceContextAware {
   def default: TraceContextAware = new DefaultTraceContextAware
 
   class DefaultTraceContextAware extends TraceContextAware {
-    @transient val traceContext = TraceRecorder.currentContext
+    @transient val traceContext = TraceContext.currentContext
 
     //
     // Beware of this hack, it might bite us in the future!

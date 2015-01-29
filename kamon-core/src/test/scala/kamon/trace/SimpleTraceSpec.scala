@@ -16,58 +16,40 @@
 
 package kamon.trace
 
-import akka.actor.ActorSystem
-import akka.testkit.{ ImplicitSender, TestKitBase }
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
-import org.scalatest.{ Matchers, WordSpecLike }
+import kamon.testkit.BaseKamonSpec
 import scala.concurrent.duration._
 
-class SimpleTraceSpec extends TestKitBase with WordSpecLike with Matchers with ImplicitSender {
-  implicit lazy val system: ActorSystem = ActorSystem("simple-trace-spec", ConfigFactory.parseString(
-    """
-      |kamon.metrics {
-      |  tick-interval = 1 hour
-      |  filters = [
-      |    {
-      |      trace {
-      |        includes = [ "*" ]
-      |        excludes = [ "non-tracked-trace"]
-      |      }
-      |    }
-      |  ]
-      |  precision {
-      |    default-histogram-precision {
-      |      highest-trackable-value = 3600000000000
-      |      significant-value-digits = 2
-      |    }
-      |
-      |    default-min-max-counter-precision {
-      |      refresh-interval = 1 second
-      |      highest-trackable-value = 999999999
-      |      significant-value-digits = 2
-      |    }
-      |  }
-      |}
-      |
-      |kamon.trace {
-      |  level = simple-trace
-      |  sampling = all
-      |}
-    """.stripMargin))
+class SimpleTraceSpec extends BaseKamonSpec("simple-trace-spec") {
+
+  override lazy val config =
+    ConfigFactory.parseString(
+      """
+        |kamon {
+        |  metric {
+        |    tick-interval = 1 hour
+        |  }
+        |
+        |  trace {
+        |    level-of-detail = simple-trace
+        |    sampling = all
+        |  }
+        |}
+      """.stripMargin)
 
   "the simple tracing" should {
     "send a TraceInfo when the trace has finished and all segments are finished" in {
-      Kamon(Trace)(system).subscribe(testActor)
+      Kamon(Tracer)(system).subscribe(testActor)
 
-      TraceRecorder.withNewTraceContext("simple-trace-without-segments") {
-        TraceRecorder.currentContext.startSegment("segment-one", "test-segment", "test").finish()
-        TraceRecorder.currentContext.startSegment("segment-two", "test-segment", "test").finish()
-        TraceRecorder.finish()
+      TraceContext.withContext(newContext("simple-trace-without-segments")) {
+        TraceContext.currentContext.startSegment("segment-one", "test-segment", "test").finish()
+        TraceContext.currentContext.startSegment("segment-two", "test-segment", "test").finish()
+        TraceContext.currentContext.finish()
       }
 
       val traceInfo = expectMsgType[TraceInfo]
-      Kamon(Trace)(system).unsubscribe(testActor)
+      Kamon(Tracer)(system).unsubscribe(testActor)
 
       traceInfo.name should be("simple-trace-without-segments")
       traceInfo.segments.size should be(2)
@@ -76,12 +58,12 @@ class SimpleTraceSpec extends TestKitBase with WordSpecLike with Matchers with I
     }
 
     "incubate the tracing context if there are open segments after finishing" in {
-      Kamon(Trace)(system).subscribe(testActor)
+      Kamon(Tracer)(system).subscribe(testActor)
 
-      val secondSegment = TraceRecorder.withNewTraceContext("simple-trace-without-segments") {
-        TraceRecorder.currentContext.startSegment("segment-one", "test-segment", "test").finish()
-        val segment = TraceRecorder.currentContext.startSegment("segment-two", "test-segment", "test")
-        TraceRecorder.finish()
+      val secondSegment = TraceContext.withContext(newContext("simple-trace-without-segments")) {
+        TraceContext.currentContext.startSegment("segment-one", "test-segment", "test").finish()
+        val segment = TraceContext.currentContext.startSegment("segment-two", "test-segment", "test")
+        TraceContext.currentContext.finish()
         segment
       }
 
@@ -90,7 +72,7 @@ class SimpleTraceSpec extends TestKitBase with WordSpecLike with Matchers with I
 
       within(10 seconds) {
         val traceInfo = expectMsgType[TraceInfo]
-        Kamon(Trace)(system).unsubscribe(testActor)
+        Kamon(Tracer)(system).unsubscribe(testActor)
 
         traceInfo.name should be("simple-trace-without-segments")
         traceInfo.segments.size should be(2)

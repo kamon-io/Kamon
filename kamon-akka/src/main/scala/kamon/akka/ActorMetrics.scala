@@ -16,79 +16,26 @@
 
 package kamon.akka
 
-import akka.actor.ActorSystem
-import com.typesafe.config.Config
-import kamon.metric._
-import kamon.metric.instrument.{ Counter, Histogram, MinMaxCounter }
+import kamon.metric.{ EntityRecorderFactory, GenericEntityRecorder }
+import kamon.metric.instrument.{ Time, InstrumentFactory }
 
-case class ActorMetrics(name: String) extends MetricGroupIdentity {
-  val category = ActorMetrics
+/**
+ *  Entity recorder for Akka Actors. The metrics being tracked are:
+ *
+ *    - time-in-mailbox: Time spent from the instant when a message is enqueued in a actor's mailbox to the instant when
+ *      that message is dequeued for processing.
+ *    - processing-time: Time taken for the actor to process the receive function.
+ *    - mailbox-size: Size of the actor's mailbox.
+ *    - errors: Number or errors seen by the actor's supervision mechanism.
+ */
+class ActorMetrics(instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) {
+  val timeInMailbox = histogram("time-in-mailbox", Time.Nanoseconds)
+  val processingTime = histogram("processing-time", Time.Nanoseconds)
+  val mailboxSize = minMaxCounter("mailbox-size")
+  val errors = counter("errors")
 }
 
-object ActorMetrics extends MetricGroupCategory {
-  val name = "actor"
-
-  case object ProcessingTime extends MetricIdentity { val name = "processing-time" }
-  case object MailboxSize extends MetricIdentity { val name = "mailbox-size" }
-  case object TimeInMailbox extends MetricIdentity { val name = "time-in-mailbox" }
-  case object Errors extends MetricIdentity { val name = "errors" }
-
-  case class ActorMetricsRecorder(processingTime: Histogram, timeInMailbox: Histogram, mailboxSize: MinMaxCounter,
-      errors: Counter) extends MetricGroupRecorder {
-
-    def collect(context: CollectionContext): ActorMetricSnapshot =
-      ActorMetricSnapshot(
-        processingTime.collect(context),
-        timeInMailbox.collect(context),
-        mailboxSize.collect(context),
-        errors.collect(context))
-
-    def cleanup: Unit = {
-      processingTime.cleanup
-      mailboxSize.cleanup
-      timeInMailbox.cleanup
-      errors.cleanup
-    }
-  }
-
-  case class ActorMetricSnapshot(processingTime: Histogram.Snapshot, timeInMailbox: Histogram.Snapshot,
-      mailboxSize: Histogram.Snapshot, errors: Counter.Snapshot) extends MetricGroupSnapshot {
-
-    type GroupSnapshotType = ActorMetricSnapshot
-
-    def merge(that: ActorMetricSnapshot, context: CollectionContext): ActorMetricSnapshot =
-      ActorMetricSnapshot(
-        processingTime.merge(that.processingTime, context),
-        timeInMailbox.merge(that.timeInMailbox, context),
-        mailboxSize.merge(that.mailboxSize, context),
-        errors.merge(that.errors, context))
-
-    lazy val metrics: Map[MetricIdentity, MetricSnapshot] = Map(
-      (ProcessingTime -> processingTime),
-      (MailboxSize -> mailboxSize),
-      (TimeInMailbox -> timeInMailbox),
-      (Errors -> errors))
-  }
-
-  val Factory = ActorMetricGroupFactory
-}
-
-case object ActorMetricGroupFactory extends MetricGroupFactory {
-  import kamon.akka.ActorMetrics._
-
-  type GroupRecorder = ActorMetricsRecorder
-
-  def create(config: Config, system: ActorSystem): ActorMetricsRecorder = {
-    val settings = config.getConfig("precision.actor")
-
-    val processingTimeConfig = settings.getConfig("processing-time")
-    val timeInMailboxConfig = settings.getConfig("time-in-mailbox")
-    val mailboxSizeConfig = settings.getConfig("mailbox-size")
-
-    new ActorMetricsRecorder(
-      Histogram.fromConfig(processingTimeConfig),
-      Histogram.fromConfig(timeInMailboxConfig),
-      MinMaxCounter.fromConfig(mailboxSizeConfig, system),
-      Counter())
-  }
+object ActorMetrics extends EntityRecorderFactory[ActorMetrics] {
+  def category: String = "akka-actor"
+  def createRecorder(instrumentFactory: InstrumentFactory): ActorMetrics = new ActorMetrics(instrumentFactory)
 }

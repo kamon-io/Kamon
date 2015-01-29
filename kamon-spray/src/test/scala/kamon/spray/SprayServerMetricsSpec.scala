@@ -1,46 +1,27 @@
 package kamon.spray
 
-import akka.actor.ActorSystem
-import akka.testkit.{ TestProbe, TestKitBase }
+import akka.testkit.TestProbe
 import com.typesafe.config.ConfigFactory
-import kamon.Kamon
-import kamon.http.HttpServerMetrics
-import kamon.metric._
+import kamon.testkit.BaseKamonSpec
 import org.scalatest.concurrent.{ PatienceConfiguration, ScalaFutures }
-import org.scalatest.{ Matchers, WordSpecLike }
 import spray.http.{ StatusCodes, HttpResponse, HttpRequest }
 import spray.httpx.RequestBuilding
 
-class SprayServerMetricsSpec extends TestKitBase with WordSpecLike with Matchers with RequestBuilding
-    with ScalaFutures with PatienceConfiguration with TestServer {
+class SprayServerMetricsSpec extends BaseKamonSpec("spray-server-metrics-spec") with RequestBuilding with ScalaFutures
+    with PatienceConfiguration with TestServer {
 
-  val collectionContext = CollectionContext(100)
-
-  implicit lazy val system: ActorSystem = ActorSystem("spray-server-metrics-spec", ConfigFactory.parseString(
-    """
-      |akka {
-      |  loglevel = ERROR
-      |}
-      |
-      |kamon {
-      |  metrics {
-      |    tick-interval = 1 hour
-      |
-      |    filters = [
-      |      {
-      |        trace {
-      |          includes = [ "*" ]
-      |          excludes = []
-      |        }
-      |      }
-      |    ]
-      |  }
-      |}
-    """.stripMargin))
+  override lazy val config =
+    ConfigFactory.parseString(
+      """
+        |kamon.metric {
+        |  tick-interval = 1 hour
+        |}
+        |
+        |akka.loggers = ["akka.event.slf4j.Slf4jLogger"]
+      """.stripMargin)
 
   "the Spray Server metrics instrumentation" should {
-    "record trace metrics for requests received" in {
-      Kamon(Metrics)(system).register(TraceMetrics("GET: /record-trace-metrics"), TraceMetrics.Factory).get.collect(collectionContext)
+    "record trace metrics for processed requests" in {
       val (connection, server) = buildClientConnectionAndServer
       val client = TestProbe()
 
@@ -58,14 +39,16 @@ class SprayServerMetricsSpec extends TestKitBase with WordSpecLike with Matchers
         client.expectMsgType[HttpResponse]
       }
 
-      val snapshot = Kamon(Metrics)(system).register(TraceMetrics("GET: /record-trace-metrics"), TraceMetrics.Factory).get.collect(collectionContext)
-      snapshot.elapsedTime.numberOfMeasurements should be(15)
+      val snapshot = takeSnapshotOf("GET: /record-trace-metrics", "trace")
+      snapshot.histogram("elapsed-time").get.numberOfMeasurements should be(15)
     }
 
-    "record http serve metrics for all the requests" in {
-      Kamon(Metrics)(system).register(HttpServerMetrics, HttpServerMetrics.Factory).get.collect(collectionContext)
+    "record http server metrics for all the requests" in {
       val (connection, server) = buildClientConnectionAndServer
       val client = TestProbe()
+
+      // Erase metrics recorder from previous tests.
+      takeSnapshotOf("spray-server", "http-server")
 
       for (repetition ← 1 to 10) {
         client.send(connection, Get("/record-http-metrics"))
@@ -81,11 +64,11 @@ class SprayServerMetricsSpec extends TestKitBase with WordSpecLike with Matchers
         client.expectMsgType[HttpResponse]
       }
 
-      val snapshot = Kamon(Metrics)(system).register(HttpServerMetrics, HttpServerMetrics.Factory).get.collect(collectionContext)
-      snapshot.countsPerTraceAndStatusCode("GET: /record-http-metrics")("200").count should be(10)
-      snapshot.countsPerTraceAndStatusCode("GET: /record-http-metrics")("400").count should be(5)
-      snapshot.countsPerStatusCode("200").count should be(10)
-      snapshot.countsPerStatusCode("400").count should be(5)
+      val snapshot = takeSnapshotOf("spray-server", "http-server")
+      snapshot.counter("GET: /record-http-metrics_200").get.count should be(10)
+      snapshot.counter("GET: /record-http-metrics_400").get.count should be(5)
+      snapshot.counter("200").get.count should be(10)
+      snapshot.counter("400").get.count should be(5)
     }
   }
 }
