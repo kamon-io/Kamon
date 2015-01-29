@@ -17,16 +17,14 @@ package kamon.metric.instrument
  */
 
 import java.lang.Math.abs
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
-import akka.actor.{ ActorSystem, Cancellable }
-import com.typesafe.config.Config
+import akka.actor.Cancellable
 import kamon.jsr166.LongMaxUpdater
-import kamon.metric.{ Scale, MetricRecorder, CollectionContext }
+import kamon.metric.instrument.Histogram.DynamicRange
 import kamon.util.PaddedAtomicLong
 import scala.concurrent.duration.FiniteDuration
 
-trait MinMaxCounter extends MetricRecorder {
+trait MinMaxCounter extends Instrument {
   override type SnapshotType = Histogram.Snapshot
 
   def increment(): Unit
@@ -38,29 +36,20 @@ trait MinMaxCounter extends MetricRecorder {
 
 object MinMaxCounter {
 
-  def apply(highestTrackableValue: Long, precision: Histogram.Precision, scale: Scale, refreshInterval: FiniteDuration,
-    system: ActorSystem): MinMaxCounter = {
-
-    val underlyingHistogram = Histogram(highestTrackableValue, precision, scale)
+  def apply(dynamicRange: DynamicRange, refreshInterval: FiniteDuration, scheduler: RefreshScheduler): MinMaxCounter = {
+    val underlyingHistogram = Histogram(dynamicRange)
     val minMaxCounter = new PaddedMinMaxCounter(underlyingHistogram)
-
-    val refreshValuesSchedule = system.scheduler.schedule(refreshInterval, refreshInterval) {
+    val refreshValuesSchedule = scheduler.schedule(refreshInterval, () ⇒ {
       minMaxCounter.refreshValues()
-    }(system.dispatcher) // TODO: Move this to Kamon dispatchers
+    })
 
     minMaxCounter.refreshValuesSchedule.set(refreshValuesSchedule)
     minMaxCounter
   }
 
-  def fromConfig(config: Config, system: ActorSystem): MinMaxCounter = {
-    import scala.concurrent.duration._
+  def create(dynamicRange: DynamicRange, refreshInterval: FiniteDuration, scheduler: RefreshScheduler): MinMaxCounter =
+    apply(dynamicRange, refreshInterval, scheduler)
 
-    val highest = config.getLong("highest-trackable-value")
-    val significantDigits = config.getInt("significant-value-digits")
-    val refreshInterval = config.getDuration("refresh-interval", TimeUnit.MILLISECONDS)
-
-    apply(highest, Histogram.Precision(significantDigits), Scale.Unit, refreshInterval.millis, system)
-  }
 }
 
 class PaddedMinMaxCounter(underlyingHistogram: Histogram) extends MinMaxCounter {

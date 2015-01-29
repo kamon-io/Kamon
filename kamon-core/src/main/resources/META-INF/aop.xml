@@ -2,19 +2,13 @@
 
 <aspectj>
   <aspects>
+
     <!-- Disable AspectJ Weaver not present error -->
     <aspect name="kamon.instrumentation.AspectJWeaverMissingWarning"/>
-
-    <!-- Futures -->
-    <aspect name="kamon.instrumentation.scala.FutureInstrumentation"/>
-    <aspect name="kamon.instrumentation.scalaz.FutureInstrumentation"/>
 
   </aspects>
 
   <weaver>
-    <include within="scala.concurrent..*"/>
-    <include within="scalaz.concurrent..*"/>
-    <include within="spray..*"/>
     <include within="kamon..*"/>
   </weaver>
 

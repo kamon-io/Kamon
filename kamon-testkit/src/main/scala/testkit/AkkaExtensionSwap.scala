@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * Copyright © 2013 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2014 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -14,18 +14,18 @@
  * =========================================================================================
  */
 
-package kamon.metric
+package testkit
 
-class Scale(val numericValue: Double) extends AnyVal
+import java.util.concurrent.ConcurrentHashMap
 
-object Scale {
-  val Nano = new Scale(1E-9)
-  val Micro = new Scale(1E-6)
-  val Milli = new Scale(1E-3)
-  val Unit = new Scale(1)
-  val Kilo = new Scale(1E3)
-  val Mega = new Scale(1E6)
-  val Giga = new Scale(1E9)
+import akka.actor.{ ActorSystem, Extension, ExtensionId }
 
-  def convert(fromUnit: Scale, toUnit: Scale, value: Long): Double = (value * fromUnit.numericValue) / toUnit.numericValue
+object AkkaExtensionSwap {
+  def swap(system: ActorSystem, key: ExtensionId[_], value: Extension): Unit = {
+    val extensionsField = system.getClass.getDeclaredField("extensions")
+    extensionsField.setAccessible(true)
+
+    val extensions = extensionsField.get(system).asInstanceOf[ConcurrentHashMap[ExtensionId[_], AnyRef]]
+    extensions.put(key, value)
+  }
 }

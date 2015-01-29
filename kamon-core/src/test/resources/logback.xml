@@ -1,17 +1,17 @@
 <configuration scan="true">
+  <contextListener class="ch.qos.logback.classic.jul.LevelChangePropagator">
+    <resetJUL>true</resetJUL>
+  </contextListener>
 
-    <contextListener class="ch.qos.logback.classic.jul.LevelChangePropagator">
-        <resetJUL>true</resetJUL>
-    </contextListener>
+  <conversionRule conversionWord="traceToken" converterClass="kamon.trace.logging.LogbackTraceTokenConverter"/>
 
-    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
-        <encoder>
-            <pattern>%date{HH:mm:ss.SSS} %-5level [%X{uow}][%X{requestId}] [%thread] %logger{55} - %msg%n</pattern>
-        </encoder>
-    </appender>
+  <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      <pattern>%date{HH:mm:ss.SSS} %-5level [%traceToken][%thread] %logger{55} - %msg%n</pattern>
+    </encoder>
+  </appender>
 
-    <root level="debug">
-        <appender-ref ref="STDOUT" />
-    </root>
-
+  <root level="error">
+    <appender-ref ref="STDOUT"/>
+  </root>
 </configuration>

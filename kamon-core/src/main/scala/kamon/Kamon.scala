@@ -16,9 +16,26 @@ package kamon
 
 import _root_.akka.actor
 import _root_.akka.actor._
+import com.typesafe.config.Config
+import kamon.metric._
+import kamon.trace.{ Tracer, TracerExtension }
+
+class Kamon(val actorSystem: ActorSystem) {
+  val metrics: MetricsExtension = Metrics.get(actorSystem)
+  val tracer: TracerExtension = Tracer.get(actorSystem)
+  val userMetrics: UserMetricsExtension = UserMetrics.get(actorSystem)
+}
 
 object Kamon {
   trait Extension extends actor.Extension
   def apply[T <: Extension](key: ExtensionId[T])(implicit system: ActorSystem): T = key(system)
-}
 
+  def apply(actorSystemName: String): Kamon =
+    apply(ActorSystem(actorSystemName))
+
+  def apply(actorSystemName: String, config: Config): Kamon =
+    apply(ActorSystem(actorSystemName, config))
+
+  def apply(system: ActorSystem): Kamon =
+    new Kamon(system)
+}
