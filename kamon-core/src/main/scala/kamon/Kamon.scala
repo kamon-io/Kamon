@@ -24,11 +24,17 @@ class Kamon(val actorSystem: ActorSystem) {
   val metrics: MetricsExtension = Metrics.get(actorSystem)
   val tracer: TracerExtension = Tracer.get(actorSystem)
   val userMetrics: UserMetricsExtension = UserMetrics.get(actorSystem)
+
+  def shutdown: Unit =
+    actorSystem.shutdown()
 }
 
 object Kamon {
   trait Extension extends actor.Extension
   def apply[T <: Extension](key: ExtensionId[T])(implicit system: ActorSystem): T = key(system)
+
+  def apply(): Kamon =
+    apply("kamon")
 
   def apply(actorSystemName: String): Kamon =
     apply(ActorSystem(actorSystemName))
@@ -38,4 +44,17 @@ object Kamon {
 
   def apply(system: ActorSystem): Kamon =
     new Kamon(system)
+
+  def create(): Kamon =
+    apply()
+
+  def create(actorSystemName: String): Kamon =
+    apply(ActorSystem(actorSystemName))
+
+  def create(actorSystemName: String, config: Config): Kamon =
+    apply(ActorSystem(actorSystemName, config))
+
+  def create(system: ActorSystem): Kamon =
+    new Kamon(system)
+
 }
