@@ -56,11 +56,14 @@ class DifferentialValueCollector(wrappedValueCollector: CurrentValueCollector) e
   def currentValue: Long = {
     if (_readAtLeastOnce) {
       val wrappedCurrent = wrappedValueCollector.currentValue
-      wrappedCurrent - _lastObservedValue.getAndSet(wrappedCurrent)
+      val diff = wrappedCurrent - _lastObservedValue.getAndSet(wrappedCurrent)
+
+      if(diff >= 0) diff else 0L
+
     } else {
       _lastObservedValue.set(wrappedValueCollector.currentValue)
       _readAtLeastOnce = true
-      0
+      0L
     }
 
   }
