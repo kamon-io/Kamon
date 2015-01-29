@@ -4,14 +4,14 @@ import kamon.metric.GenericEntityRecorder
 import kamon.metric.instrument.InstrumentFactory
 import org.hyperic.sigar.{ ProcCpu, Sigar }
 
-class ProcessCpuMetrics(instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) with SigarMetric {
+class ProcessCpuMetrics(sigar: Sigar, instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) with SigarMetric {
   val processUserCpu = histogram("process-user-cpu")
   val processSystemCpu = histogram("process-system-cpu")
   val processTotalCpu = histogram("process-cpu")
 
   var lastProcCpu: Option[ProcCpu] = None
 
-  def update(sigar: Sigar): Unit = {
+  def update(): Unit = {
     val pid = sigar.getPid
     val procCpu = sigar.getProcCpu(pid)
 
@@ -34,6 +34,6 @@ class ProcessCpuMetrics(instrumentFactory: InstrumentFactory) extends GenericEnt
 
 object ProcessCpuMetrics extends SigarMetricRecorderCompanion("process-cpu") {
 
-  def apply(instrumentFactory: InstrumentFactory): ProcessCpuMetrics =
-    new ProcessCpuMetrics(instrumentFactory)
+  def apply(sigar: Sigar, instrumentFactory: InstrumentFactory): ProcessCpuMetrics =
+    new ProcessCpuMetrics(sigar, instrumentFactory)
 }

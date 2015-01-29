@@ -14,12 +14,12 @@ class SigarMetricsUpdater(refreshInterval: FiniteDuration) extends Actor {
   val metricsExtension = Kamon(Metrics)(context.system)
 
   val sigarMetrics = List(
-    CpuMetrics.register(metricsExtension),
-    FileSystemMetrics.register(metricsExtension),
-    LoadAverageMetrics.register(metricsExtension),
-    MemoryMetrics.register(metricsExtension),
-    NetworkMetrics.register(metricsExtension),
-    ProcessCpuMetrics.register(metricsExtension))
+    CpuMetrics.register(sigar, metricsExtension),
+    FileSystemMetrics.register(sigar, metricsExtension),
+    LoadAverageMetrics.register(sigar, metricsExtension),
+    MemoryMetrics.register(sigar, metricsExtension),
+    NetworkMetrics.register(sigar, metricsExtension),
+    ProcessCpuMetrics.register(sigar, metricsExtension))
 
   val refreshSchedule = context.system.scheduler.schedule(refreshInterval, refreshInterval, self, UpdateSigarMetrics)(context.dispatcher)
 
@@ -28,7 +28,7 @@ class SigarMetricsUpdater(refreshInterval: FiniteDuration) extends Actor {
   }
 
   def updateMetrics(): Unit = {
-    sigarMetrics.foreach(_.update(sigar))
+    sigarMetrics.foreach(_.update())
   }
 
   override def postStop(): Unit = {
@@ -45,15 +45,15 @@ object SigarMetricsUpdater {
 }
 
 trait SigarMetric extends EntityRecorder {
-  def update(sigar: Sigar): Unit
+  def update(): Unit
 }
 
 abstract class SigarMetricRecorderCompanion(metricName: String) {
-  def register(metricsExtension: MetricsExtension): SigarMetric = {
+  def register(sigar: Sigar, metricsExtension: MetricsExtension): SigarMetric = {
     val instrumentFactory = metricsExtension.instrumentFactory("system-metric")
-    metricsExtension.register(Entity(metricName, "system-metric"), apply(instrumentFactory)).recorder
+    metricsExtension.register(Entity(metricName, "system-metric"), apply(sigar, instrumentFactory)).recorder
   }
 
-  def apply(instrumentFactory: InstrumentFactory): SigarMetric
+  def apply(sigar: Sigar, instrumentFactory: InstrumentFactory): SigarMetric
 }
 
