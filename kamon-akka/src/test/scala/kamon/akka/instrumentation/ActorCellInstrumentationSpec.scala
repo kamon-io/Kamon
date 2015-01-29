@@ -15,35 +15,32 @@
  * ========================================================== */
 package kamon.instrumentation.akka
 
-import akka.actor.{ Actor, ActorSystem, Props }
+import akka.actor.{ Actor, Props }
 import akka.pattern.{ ask, pipe }
 import akka.routing._
-import akka.testkit.{ TestKitBase, ImplicitSender, TestKit }
 import akka.util.Timeout
-import com.typesafe.config.ConfigFactory
-import kamon.trace.TraceRecorder
-import org.scalatest.{ BeforeAndAfterAll, WordSpecLike }
+import kamon.testkit.BaseKamonSpec
+import kamon.trace.TraceContext
 
 import scala.concurrent.duration._
 
-class ActorCellInstrumentationSpec extends TestKitBase with WordSpecLike with ImplicitSender with BeforeAndAfterAll {
-  implicit lazy val system: ActorSystem = ActorSystem("actor-cell-instrumentation-spec")
-  implicit val executionContext = system.dispatcher
+class ActorCellInstrumentationSpec extends BaseKamonSpec("actor-cell-instrumentation-spec") {
+  implicit lazy val executionContext = system.dispatcher
 
   "the message passing instrumentation" should {
     "propagate the TraceContext using bang" in new EchoActorFixture {
-      val testTraceContext = TraceRecorder.withNewTraceContext("bang-reply") {
+      val testTraceContext = TraceContext.withContext(newContext("bang-reply")) {
         ctxEchoActor ! "test"
-        TraceRecorder.currentContext
+        TraceContext.currentContext
       }
 
       expectMsg(testTraceContext)
     }
 
     "propagate the TraceContext using tell" in new EchoActorFixture {
-      val testTraceContext = TraceRecorder.withNewTraceContext("tell-reply") {
+      val testTraceContext = TraceContext.withContext(newContext("tell-reply")) {
         ctxEchoActor.tell("test", testActor)
-        TraceRecorder.currentContext
+        TraceContext.currentContext
       }
 
       expectMsg(testTraceContext)
@@ -51,37 +48,37 @@ class ActorCellInstrumentationSpec extends TestKitBase with WordSpecLike with Im
 
     "propagate the TraceContext using ask" in new EchoActorFixture {
       implicit val timeout = Timeout(1 seconds)
-      val testTraceContext = TraceRecorder.withNewTraceContext("ask-reply") {
+      val testTraceContext = TraceContext.withContext(newContext("ask-reply")) {
         // The pipe pattern use Futures internally, so FutureTracing test should cover the underpinnings of it.
         (ctxEchoActor ? "test") pipeTo (testActor)
-        TraceRecorder.currentContext
+        TraceContext.currentContext
       }
 
       expectMsg(testTraceContext)
     }
 
     "propagate the TraceContext to actors behind a simple router" in new EchoSimpleRouterFixture {
-      val testTraceContext = TraceRecorder.withNewTraceContext("router-reply") {
+      val testTraceContext = TraceContext.withContext(newContext("router-reply")) {
         router.route("test", testActor)
-        TraceRecorder.currentContext
+        TraceContext.currentContext
       }
 
       expectMsg(testTraceContext)
     }
 
     "propagate the TraceContext to actors behind a pool router" in new EchoPoolRouterFixture {
-      val testTraceContext = TraceRecorder.withNewTraceContext("router-reply") {
+      val testTraceContext = TraceContext.withContext(newContext("router-reply")) {
         pool ! "test"
-        TraceRecorder.currentContext
+        TraceContext.currentContext
       }
 
       expectMsg(testTraceContext)
     }
 
     "propagate the TraceContext to actors behind a group router" in new EchoGroupRouterFixture {
-      val testTraceContext = TraceRecorder.withNewTraceContext("router-reply") {
+      val testTraceContext = TraceContext.withContext(newContext("router-reply")) {
         group ! "test"
-        TraceRecorder.currentContext
+        TraceContext.currentContext
       }
 
       expectMsg(testTraceContext)
@@ -119,7 +116,7 @@ class ActorCellInstrumentationSpec extends TestKitBase with WordSpecLike with Im
 
 class TraceContextEcho extends Actor {
   def receive = {
-    case msg: String ⇒ sender ! TraceRecorder.currentContext
+    case msg: String ⇒ sender ! TraceContext.currentContext
   }
 }
 

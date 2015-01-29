@@ -15,28 +15,33 @@
  * ========================================================== */
 package kamon.instrumentation.akka
 
-import akka.actor.{ Actor, ActorLogging, ActorSystem, Props }
+import akka.actor.{ Actor, ActorLogging, Props }
 import akka.event.Logging.LogEvent
-import akka.testkit.TestKitBase
 import com.typesafe.config.ConfigFactory
+import kamon.testkit.BaseKamonSpec
 import kamon.trace.TraceLocal.AvailableToMdc
 import kamon.trace.logging.MdcKeysSupport
-import kamon.trace.{ TraceContextAware, TraceLocal, TraceRecorder }
-import org.scalatest.{ BeforeAndAfterAll, Inspectors, Matchers, WordSpecLike }
+import kamon.trace.{ TraceContextAware, TraceLocal, TraceContext }
+import org.scalatest.Inspectors
 import org.slf4j.MDC
 
-class ActorLoggingInstrumentationSpec extends TestKitBase with WordSpecLike with Matchers with Inspectors with MdcKeysSupport with BeforeAndAfterAll {
-  implicit lazy val system: ActorSystem = ActorSystem("actor-logging-instrumentation-spec",
-    ConfigFactory.parseString("""akka.loggers = ["akka.event.slf4j.Slf4jLogger"]"""))
+class ActorLoggingInstrumentationSpec extends BaseKamonSpec("actor-logging-instrumentation-spec") with Inspectors with MdcKeysSupport {
+  override lazy val config =
+    ConfigFactory.parseString(
+      """
+        |akka {
+        |  loggers = ["akka.event.slf4j.Slf4jLogger"]
+        |}
+      """.stripMargin)
 
   "the ActorLogging instrumentation" should {
     "attach the TraceContext (if available) to log events" in {
       val loggerActor = system.actorOf(Props[LoggerActor])
       system.eventStream.subscribe(testActor, classOf[LogEvent])
 
-      val testTraceContext = TraceRecorder.withNewTraceContext("logging") {
+      val testTraceContext = TraceContext.withContext(newContext("logging")) {
         loggerActor ! "info"
-        TraceRecorder.currentContext
+        TraceContext.currentContext
       }
 
       fishForMessage() {
@@ -50,7 +55,7 @@ class ActorLoggingInstrumentationSpec extends TestKitBase with WordSpecLike with
 
     "allow retrieve a value from the MDC when was created a key of type AvailableToMdc" in {
       val testString = "Hello World"
-      TraceRecorder.withNewTraceContext("logging-with-mdc") {
+      TraceContext.withContext(newContext("logging-with-mdc")) {
         TraceLocal.store(AvailableToMdc("some-cool-key"))(testString)
 
         withMdc {
@@ -66,6 +71,6 @@ class ActorLoggingInstrumentationSpec extends TestKitBase with WordSpecLike with
 
 class LoggerActor extends Actor with ActorLogging {
   def receive = {
-    case "info" ⇒ log.info("TraceContext(name = {}, token = {})", TraceRecorder.currentContext.name, TraceRecorder.currentContext.token)
+    case "info" ⇒ log.info("TraceContext(name = {}, token = {})", TraceContext.currentContext.name, TraceContext.currentContext.token)
   }
 }
