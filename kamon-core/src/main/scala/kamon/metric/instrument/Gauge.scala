@@ -58,7 +58,7 @@ class DifferentialValueCollector(wrappedValueCollector: CurrentValueCollector) e
       val wrappedCurrent = wrappedValueCollector.currentValue
       val diff = wrappedCurrent - _lastObservedValue.getAndSet(wrappedCurrent)
 
-      if(diff >= 0) diff else 0L
+      if (diff >= 0) diff else 0L
 
     } else {
       _lastObservedValue.set(wrappedValueCollector.currentValue)
