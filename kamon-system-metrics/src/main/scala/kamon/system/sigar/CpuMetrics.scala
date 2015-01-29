@@ -4,14 +4,14 @@ import kamon.metric.GenericEntityRecorder
 import kamon.metric.instrument.InstrumentFactory
 import org.hyperic.sigar.Sigar
 
-class CpuMetrics(instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) with SigarMetric {
+class CpuMetrics(sigar: Sigar, instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) with SigarMetric {
   val user = histogram("cpu-user")
   val system = histogram("cpu-system")
   val Wait = histogram("cpu-wait")
   val idle = histogram("cpu-idle")
   val stolen = histogram("cpu-stolen")
 
-  def update(sigar: Sigar): Unit = {
+  def update(): Unit = {
     val cpuPerc = sigar.getCpuPerc
 
     user.record((cpuPerc.getUser * 100L).toLong)
@@ -24,6 +24,6 @@ class CpuMetrics(instrumentFactory: InstrumentFactory) extends GenericEntityReco
 
 object CpuMetrics extends SigarMetricRecorderCompanion("cpu") {
 
-  def apply(instrumentFactory: InstrumentFactory): CpuMetrics =
-    new CpuMetrics(instrumentFactory)
+  def apply(sigar: Sigar, instrumentFactory: InstrumentFactory): CpuMetrics =
+    new CpuMetrics(sigar, instrumentFactory)
 }

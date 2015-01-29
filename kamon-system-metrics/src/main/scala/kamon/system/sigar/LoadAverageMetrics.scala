@@ -4,12 +4,12 @@ import kamon.metric.GenericEntityRecorder
 import kamon.metric.instrument.InstrumentFactory
 import org.hyperic.sigar.Sigar
 
-class LoadAverageMetrics(instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) with SigarMetric {
+class LoadAverageMetrics(sigar: Sigar, instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) with SigarMetric {
   val oneMinute = histogram("one-minute")
   val fiveMinutes = histogram("five-minutes")
   val fifteenMinutes = histogram("fifteen-minutes")
 
-  def update(sigar: Sigar): Unit = {
+  def update(): Unit = {
     val loadAverage = sigar.getLoadAverage
 
     oneMinute.record(loadAverage(0).toLong)
@@ -20,6 +20,6 @@ class LoadAverageMetrics(instrumentFactory: InstrumentFactory) extends GenericEn
 
 object LoadAverageMetrics extends SigarMetricRecorderCompanion("load-average") {
 
-  def apply(instrumentFactory: InstrumentFactory): LoadAverageMetrics =
-    new LoadAverageMetrics(instrumentFactory)
+  def apply(sigar: Sigar, instrumentFactory: InstrumentFactory): LoadAverageMetrics =
+    new LoadAverageMetrics(sigar, instrumentFactory)
 }
