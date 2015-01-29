@@ -15,7 +15,7 @@
  * ========================================================== */
 package kamon.newrelic
 
-import kamon.Timestamp
+import kamon.util.Timestamp
 import spray.json._
 
 object JsonProtocol extends DefaultJsonProtocol {

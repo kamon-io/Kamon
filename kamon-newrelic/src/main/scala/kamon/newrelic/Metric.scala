@@ -1,8 +1,8 @@
 package kamon.newrelic
 
-import kamon.Timestamp
-import kamon.metric.instrument.{ Counter, Histogram }
-import kamon.metric.{ MetricSnapshot, Scale }
+import kamon.metric.instrument._
+import kamon.metric.MetricKey
+import kamon.util.{ MapMerge, Timestamp }
 
 case class MetricID(name: String, scope: Option[String])
 case class MetricData(callCount: Long, total: Double, totalExclusive: Double, min: Double, max: Double, sumOfSquares: Double) {
@@ -18,16 +18,23 @@ case class MetricData(callCount: Long, total: Double, totalExclusive: Double, mi
 
 object Metric {
 
-  def fromKamonMetricSnapshot(snapshot: MetricSnapshot, name: String, scope: Option[String], targetScale: Scale): Metric = {
+  def scaleFunction(uom: UnitOfMeasurement): Long ⇒ Double = uom match {
+    case time: Time ⇒ time.scale(Time.Seconds)
+    case other      ⇒ _.toDouble
+  }
+
+  def apply(snapshot: InstrumentSnapshot, snapshotUnit: UnitOfMeasurement, name: String, scope: Option[String]): Metric = {
     snapshot match {
       case hs: Histogram.Snapshot ⇒
         var total: Double = 0D
         var sumOfSquares: Double = 0D
-        val scaledMin = Scale.convert(hs.scale, targetScale, hs.min)
-        val scaledMax = Scale.convert(hs.scale, targetScale, hs.max)
+        val scaler = scaleFunction(snapshotUnit)
+
+        val scaledMin = scaler(hs.min)
+        val scaledMax = scaler(hs.max)
 
         hs.recordsIterator.foreach { record ⇒
-          val scaledValue = Scale.convert(hs.scale, targetScale, record.level)
+          val scaledValue = scaler(record.level)
 
           total += scaledValue * record.count
           sumOfSquares += (scaledValue * scaledValue) * record.count
@@ -42,12 +49,12 @@ object Metric {
 }
 
 case class TimeSliceMetrics(from: Timestamp, to: Timestamp, metrics: Map[MetricID, MetricData]) {
-  import kamon.metric.combineMaps
+  import MapMerge.Syntax
 
   def merge(that: TimeSliceMetrics): TimeSliceMetrics = {
     val mergedFrom = Timestamp.earlier(from, that.from)
     val mergedTo = Timestamp.later(to, that.to)
-    val mergedMetrics = combineMaps(metrics, that.metrics)((l, r) ⇒ l.merge(r))
+    val mergedMetrics = metrics.merge(that.metrics, (l, r) ⇒ l.merge(r))
 
     TimeSliceMetrics(mergedFrom, mergedTo, mergedMetrics)
   }
