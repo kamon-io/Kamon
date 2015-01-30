@@ -18,8 +18,9 @@ package kamon.metric
 
 import akka.actor
 import kamon.metric.SubscriptionsDispatcher.{ Unsubscribe, Subscribe }
-import kamon.{ ModuleSupervisor, Kamon }
+import kamon.Kamon
 import kamon.metric.instrument.{ InstrumentFactory, CollectionContext }
+import kamon.supervisor.ModuleSupervisor
 
 import scala.collection.concurrent.TrieMap
 import akka.actor._
@@ -127,30 +128,5 @@ class MetricsExtensionImpl(system: ExtendedActorSystem) extends MetricsExtension
 
     builder.result()
   }
-
-  /*  def printInitializationMessage(eventStream: EventStream, disableWeaverMissingError: Boolean): Unit = {
-    if (!disableWeaverMissingError) {
-      val weaverMissingMessage =
-        """
-          |
-          |  ___                           _      ___   _    _                                 ___  ___ _            _
-          | / _ \                         | |    |_  | | |  | |                                |  \/  |(_)          (_)
-          |/ /_\ \ ___  _ __    ___   ___ | |_     | | | |  | |  ___   __ _ __   __ ___  _ __  | .  . | _  ___  ___  _  _ __    __ _
-          ||  _  |/ __|| '_ \  / _ \ / __|| __|    | | | |/\| | / _ \ / _` |\ \ / // _ \| '__| | |\/| || |/ __|/ __|| || '_ \  / _` |
-          || | | |\__ \| |_) ||  __/| (__ | |_ /\__/ / \  /\  /|  __/| (_| | \ V /|  __/| |    | |  | || |\__ \\__ \| || | | || (_| |
-          |\_| |_/|___/| .__/  \___| \___| \__|\____/   \/  \/  \___| \__,_|  \_/  \___||_|    \_|  |_/|_||___/|___/|_||_| |_| \__, |
-          |            | |                                                                                                      __/ |
-          |            |_|                                                                                                     |___/
-          |
-          | It seems like your application wasn't started with the -javaagent:/path-to-aspectj-weaver.jar option. Without that Kamon might
-          | not work properly, if you need help on setting up the weaver go to http://kamon.io/introduction/get-started/ for more info. If
-          | you are sure that you don't need the weaver (e.g. you are only using KamonStandalone) then you can disable this error message
-          | by changing the kamon.metrics.disable-aspectj-weaver-missing-error setting in your configuration file.
-          |
-        """.stripMargin
-
-      eventStream.publish(Error("MetricsExtension", classOf[MetricsExtension], weaverMissingMessage))
-    }
-  }*/
 }
 

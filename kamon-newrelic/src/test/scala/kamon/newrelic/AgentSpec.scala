@@ -47,6 +47,8 @@ class AgentSpec extends TestKitBase with WordSpecLike with BeforeAndAfterAll wit
       |    connect-retry-delay = 1 second
       |    max-connect-retries = 3
       |  }
+      |
+      |  modules.kamon-newrelic.auto-start = no
       |}
       |
     """.stripMargin))
