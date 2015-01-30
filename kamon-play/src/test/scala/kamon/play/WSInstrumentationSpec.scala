@@ -47,8 +47,8 @@ class WSInstrumentationSpec extends WordSpecLike with Matchers with OneServerPer
 
       val snapshot = takeSnapshotOf("GET: /inside")
       snapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
-      //      snapshot.segments.size should be(1)
-      //      snapshot.segment("http://localhost:19001/async", SegmentCategory.HttpClient, Play.SegmentLibraryName).numberOfMeasurements should be(1)
+      snapshot.segments.size should be(1)
+      snapshot.segment("http://localhost:19001/async", SegmentCategory.HttpClient, Play.SegmentLibraryName).numberOfMeasurements should be(1)
     }
 
     "propagate the TraceContext outside an Action and complete the WS request" in {

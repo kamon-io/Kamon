@@ -36,7 +36,7 @@ class ProcessCpuMetrics(sigar: Sigar, instrumentFactory: InstrumentFactory) exte
    * while CPU usage time doesn't update. But supposing that it could be zero load for a process for some time,
    * We used an arbitrary duration of 2000 milliseconds, after which the same CPU usage time value become legal, and it is supposed that the load is really zero.
    *
-   * @see [[http://stackoverflow.com/questions/19323364/using-sigar-api-to-get-jvm-cpu-usage "Stack Overflow: Using Sigar API to get JVM Cpu usage"]]
+   * @see [[http://stackoverflow.com/questions/19323364/using-sigar-api-to-get-jvm-cpu-usage "StackOverflow: Using Sigar API to get JVM Cpu usage"]]
    */
   def update(): Unit = {
     val currentProcCpu = sigar.getProcCpu(pid)
