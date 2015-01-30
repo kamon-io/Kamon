@@ -43,7 +43,7 @@ class DatadogExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   val datadogHost = new InetSocketAddress(datadogConfig.getString("hostname"), datadogConfig.getInt("port"))
   val flushInterval = datadogConfig.getDuration("flush-interval", MILLISECONDS)
   val maxPacketSizeInBytes = datadogConfig.getBytes("max-packet-size")
-  val tickInterval = system.settings.config.getDuration("kamon.metrics.tick-interval", MILLISECONDS)
+  val tickInterval = system.settings.config.getDuration("kamon.metric.tick-interval", MILLISECONDS)
 
   val datadogMetricsListener = buildMetricsListener(tickInterval, flushInterval)
 
