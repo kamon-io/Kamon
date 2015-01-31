@@ -48,6 +48,8 @@ class MetricReporterSpec extends TestKitBase with WordSpecLike with Matchers wit
       |  metric {
       |    tick-interval = 1 hour
       |  }
+      |
+      |  modules.kamon-newrelic.auto-start = no
       |}
       |
     """.stripMargin))
