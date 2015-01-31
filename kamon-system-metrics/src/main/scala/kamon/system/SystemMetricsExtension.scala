@@ -18,9 +18,10 @@ package kamon.system
 import java.io.File
 import akka.actor._
 import akka.event.Logging
+import kamon.supervisor.ModuleSupervisor
 import kamon.system.custom.{ ContextSwitchesUpdater, ContextSwitchesMetrics }
 import kamon.system.jmx._
-import kamon.{ ModuleSupervisor, Kamon }
+import kamon.Kamon
 import kamon.metric._
 import kamon.sigar.SigarProvisioner
 import kamon.system.sigar.SigarMetricsUpdater
