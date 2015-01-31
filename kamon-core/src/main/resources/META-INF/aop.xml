@@ -3,8 +3,8 @@
 <aspectj>
   <aspects>
 
-    <!-- Disable AspectJ Weaver not present error -->
-    <aspect name="kamon.instrumentation.AspectJWeaverMissingWarning"/>
+    <!-- Notify that AspectJ is present -->
+    <aspect name="kamon.supervisor.AspectJPresent"/>
 
   </aspects>
 

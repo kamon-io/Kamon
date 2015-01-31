@@ -18,6 +18,7 @@ import _root_.akka.actor
 import _root_.akka.actor._
 import com.typesafe.config.Config
 import kamon.metric._
+import kamon.supervisor.ModuleSupervisor
 import kamon.trace.{ Tracer, TracerExtension }
 
 class Kamon(val actorSystem: ActorSystem) {
@@ -25,7 +26,10 @@ class Kamon(val actorSystem: ActorSystem) {
   val tracer: TracerExtension = Tracer.get(actorSystem)
   val userMetrics: UserMetricsExtension = UserMetrics.get(actorSystem)
 
-  def shutdown: Unit =
+  // This will cause all auto-start modules to initiate.
+  ModuleSupervisor.get(actorSystem)
+
+  def shutdown(): Unit =
     actorSystem.shutdown()
 }
 
