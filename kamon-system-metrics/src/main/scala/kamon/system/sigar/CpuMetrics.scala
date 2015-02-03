@@ -20,6 +20,14 @@ import kamon.metric.GenericEntityRecorder
 import kamon.metric.instrument.InstrumentFactory
 import org.hyperic.sigar.Sigar
 
+/**
+ *  Cpu usage metrics, as reported by Sigar:
+ *    - user: Total percentage of system cpu user time.
+ *    - system: Total percentage of system cpu kernel time.
+ *    - wait: Total percentage of system cpu io wait time.
+ *    - idle:  Total percentage of system cpu idle time
+ *    - stolen: Total percentage of system cpu involuntary wait time. @see [[https://www.datadoghq.com/2013/08/understanding-aws-stolen-cpu-and-how-it-affects-your-apps/ "Understanding Stolen Cpu"]]
+ */
 class CpuMetrics(sigar: Sigar, instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) with SigarMetric {
   val user = histogram("cpu-user")
   val system = histogram("cpu-system")

@@ -22,6 +22,10 @@ import kamon.metric.{ Entity, MetricsExtension, GenericEntityRecorder }
 import kamon.metric.instrument.{ DifferentialValueCollector, Time, InstrumentFactory }
 import scala.collection.JavaConverters._
 
+/**
+ *  Garbage Collection metrics, as reported by JMX:
+ *    - @see [[http://docs.oracle.com/javase/7/docs/api/java/lang/management/GarbageCollectorMXBean.html "GarbageCollectorMXBean"]]
+ */
 class GarbageCollectionMetrics(gc: GarbageCollectorMXBean, instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) {
 
   gauge("garbage-collection-count", DifferentialValueCollector(() ⇒ {

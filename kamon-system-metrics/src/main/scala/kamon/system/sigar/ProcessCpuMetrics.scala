@@ -20,6 +20,12 @@ import kamon.metric.GenericEntityRecorder
 import kamon.metric.instrument.InstrumentFactory
 import org.hyperic.sigar.{ ProcCpu, Sigar }
 
+/**
+ *  Process Cpu usage metrics, as reported by Sigar:
+ *    - user:  Process cpu user time.
+ *    - total: Process cpu time (sum of User and Sys).
+ *    - system: Process cpu kernel time.
+ */
 class ProcessCpuMetrics(sigar: Sigar, instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) with SigarMetric {
   val processUserCpu = histogram("process-user-cpu")
   val processSystemCpu = histogram("process-system-cpu")

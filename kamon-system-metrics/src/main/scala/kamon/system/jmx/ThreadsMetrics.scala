@@ -21,6 +21,10 @@ import java.lang.management.ManagementFactory
 import kamon.metric.GenericEntityRecorder
 import kamon.metric.instrument.InstrumentFactory
 
+/**
+ *  Threads metrics, as reported by JMX:
+ *    - @see [[http://docs.oracle.com/javase/7/docs/api/java/lang/management/ThreadMXBean.html "ThreadMXBean"]]
+ */
 class ThreadsMetrics(instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) {
   val threadsBean = ManagementFactory.getThreadMXBean
 
