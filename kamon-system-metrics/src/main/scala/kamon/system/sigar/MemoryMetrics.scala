@@ -24,7 +24,7 @@ import org.hyperic.sigar.Sigar
  *  System memory usage metrics, as reported by Sigar:
  *    - used: Total used system memory.
  *    - free: Total free system memory (e.g. Linux plus cached).
- *    - swap-used: Total used system swap..
+ *    - swap-used: Total used system swap.
  *    - swap-free: Total free system swap.
  */
 class MemoryMetrics(sigar: Sigar, instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) with SigarMetric {

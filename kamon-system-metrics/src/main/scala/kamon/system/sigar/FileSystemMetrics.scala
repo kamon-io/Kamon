@@ -21,6 +21,11 @@ import kamon.metric.instrument.{ Memory, InstrumentFactory }
 import org.hyperic.sigar.{ DiskUsage, FileSystem, Sigar }
 import scala.util.Try
 
+/**
+ *  Disk usage metrics, as reported by Sigar:
+ *    - readBytes: Total number of physical disk bytes written.
+ *    - writesBytes:  Total number of physical disk writes.
+ */
 class FileSystemMetrics(sigar: Sigar, instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) with SigarMetric {
   val reads = DiffRecordingHistogram(histogram("file-system-reads", Memory.Bytes))
   val writes = DiffRecordingHistogram(histogram("file-system-writes", Memory.Bytes))
@@ -29,7 +34,7 @@ class FileSystemMetrics(sigar: Sigar, instrumentFactory: InstrumentFactory) exte
 
   def sumOfAllFileSystems(sigar: Sigar, thunk: DiskUsage ⇒ Long): Long = Try {
     fileSystems.map(i ⇒ thunk(sigar.getDiskUsage(i))).fold(0L)(_ + _)
-  } getOrElse (0L)
+  } getOrElse 0L
 
   def update(): Unit = {
     reads.record(sumOfAllFileSystems(sigar, _.getReadBytes))

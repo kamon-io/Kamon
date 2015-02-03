@@ -21,6 +21,15 @@ import kamon.metric.instrument._
 import org.hyperic.sigar.{ NetInterfaceStat, Sigar }
 import scala.util.Try
 
+/**
+ *  Network metrics, as reported by Sigar:
+ *    - rxBytes: Total number of received packets in bytes.
+ *    - txBytes: Total number of transmitted packets in bytes.
+ *    - rxErrors: Total number of packets received with errors. This includes too-long-frames errors, ring-buffer overflow errors, etc.
+ *    - txErrors: Total number of errors encountered while transmitting packets. This list includes errors due to the transmission being aborted, errors due to the carrier, etc.
+ *    - rxDropped: Total number of incoming packets dropped.
+ *    - txDropped: Total number of outgoing packets dropped.
+ */
 class NetworkMetrics(sigar: Sigar, instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) with SigarMetric {
   val receivedBytes = DiffRecordingHistogram(histogram("rx-bytes", Memory.Bytes))
   val transmittedBytes = DiffRecordingHistogram(histogram("tx-bytes", Memory.Bytes))
@@ -34,7 +43,7 @@ class NetworkMetrics(sigar: Sigar, instrumentFactory: InstrumentFactory) extends
   def sumOfAllInterfaces(sigar: Sigar, thunk: NetInterfaceStat ⇒ Long): Long = Try {
     interfaces.map(i ⇒ thunk(sigar.getNetInterfaceStat(i))).fold(0L)(_ + _)
 
-  } getOrElse (0L)
+  } getOrElse 0L
 
   def update(): Unit = {
     receivedBytes.record(sumOfAllInterfaces(sigar, _.getRxBytes))

@@ -20,6 +20,10 @@ import kamon.metric.GenericEntityRecorder
 import kamon.metric.instrument.InstrumentFactory
 import org.hyperic.sigar.Sigar
 
+/**
+ *  Load Average metrics, as reported by Sigar:
+ *    - The system load averages for the past 1, 5, and 15 minutes.
+ */
 class LoadAverageMetrics(sigar: Sigar, instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) with SigarMetric {
   val oneMinute = histogram("one-minute")
   val fiveMinutes = histogram("five-minutes")

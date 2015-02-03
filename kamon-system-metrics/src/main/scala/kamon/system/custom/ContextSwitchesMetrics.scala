@@ -30,6 +30,12 @@ import org.hyperic.sigar.Sigar
 import scala.collection.JavaConverters.iterableAsScalaIterableConverter
 import scala.concurrent.duration.FiniteDuration
 
+/**
+ *  Context Switches metrics:
+ *    - perProcessVoluntary: Total number of voluntary context switches related to the current process (one thread explicitly yield the CPU to another).
+ *    - perProcessNonVoluntary: Total number of involuntary context switches related to the current process (the system scheduler suspends and active thread, and switches control to a different thread).
+ *    - global:  Total number of context switches across all CPUs.
+ */
 class ContextSwitchesMetrics(pid: Long, log: LoggingAdapter, instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) {
   val perProcessVoluntary = histogram("context-switches-process-voluntary")
   val perProcessNonVoluntary = histogram("context-switches-process-non-voluntary")
@@ -62,7 +68,7 @@ class ContextSwitchesMetrics(pid: Long, log: LoggingAdapter, instrumentFactory: 
 
       try {
         for (line ← Files.readAllLines(Paths.get(filename), StandardCharsets.US_ASCII).asScala.toList) {
-          if (line.startsWith("rcs")) {
+          if (line.startsWith("ctxt")) {
             contextSwitches = line.substring(line.indexOf(" ") + 1).toLong
           }
         }

@@ -21,6 +21,10 @@ import java.lang.management.ManagementFactory
 import kamon.metric.GenericEntityRecorder
 import kamon.metric.instrument.{ Memory, InstrumentFactory }
 
+/**
+ *  Class Loading metrics, as reported by JMX:
+ *    - @see [[http://docs.oracle.com/javase/7/docs/api/java/lang/management/ClassLoadingMXBean.html "ClassLoadingMXBean"]]
+ */
 class ClassLoadingMetrics(instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) {
   val classLoadingBean = ManagementFactory.getClassLoadingMXBean
 
