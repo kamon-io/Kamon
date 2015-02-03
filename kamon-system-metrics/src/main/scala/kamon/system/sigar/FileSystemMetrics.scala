@@ -23,7 +23,7 @@ import scala.util.Try
 
 /**
  *  Disk usage metrics, as reported by Sigar:
- *    - readBytes: Total number of physical disk bytes written.
+ *    - readBytes: Total number of physical disk reads.
  *    - writesBytes:  Total number of physical disk writes.
  */
 class FileSystemMetrics(sigar: Sigar, instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) with SigarMetric {
