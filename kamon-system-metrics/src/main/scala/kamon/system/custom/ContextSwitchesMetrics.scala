@@ -32,8 +32,8 @@ import scala.concurrent.duration.FiniteDuration
 
 /**
  *  Context Switches metrics:
- *    - perProcessVoluntary: Total number of voluntary context switches related to the current process (one thread explicitly yield the CPU to another).
- *    - perProcessNonVoluntary: Total number of involuntary context switches related to the current process (the system scheduler suspends and active thread, and switches control to a different thread).
+ *    - process-voluntary: Total number of voluntary context switches related to the current process (one thread explicitly yield the CPU to another).
+ *    - process-non-voluntary: Total number of involuntary context switches related to the current process (the system scheduler suspends and active thread, and switches control to a different thread).
  *    - global:  Total number of context switches across all CPUs.
  */
 class ContextSwitchesMetrics(pid: Long, log: LoggingAdapter, instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) {
