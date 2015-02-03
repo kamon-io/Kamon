@@ -30,8 +30,12 @@ class DiffRecordingHistogram(wrappedHistogram: Histogram) extends Histogram {
   private val _lastObservedValue = new AtomicLong(0)
 
   private def processRecording(value: Long, count: Long): Unit = {
-    if (_recordedAtLeastOnce)
-      wrappedHistogram.record(value - _lastObservedValue.getAndSet(value), count)
+    if (_recordedAtLeastOnce) {
+      val diff = value - _lastObservedValue.getAndSet(value)
+      val current = if(diff >= 0) diff else 0L
+      
+      wrappedHistogram.record(current, count)
+    }
     else {
       _lastObservedValue.set(value)
       _recordedAtLeastOnce = true
