@@ -86,14 +86,18 @@ class MetricsExtensionImpl(system: ExtendedActorSystem) extends MetricsExtension
 
     if (shouldTrack(entity)) {
       val instrumentFactory = settings.instrumentFactories.get(recorderFactory.category).getOrElse(settings.defaultInstrumentFactory)
-      val recorder = _trackedEntities.atomicGetOrElseUpdate(entity, recorderFactory.createRecorder(instrumentFactory)).asInstanceOf[T]
+      val recorder = _trackedEntities.atomicGetOrElseUpdate(entity, recorderFactory.createRecorder(instrumentFactory), _.cleanup).asInstanceOf[T]
+
       Some(EntityRegistration(entity, recorder))
     } else None
   }
 
   def register[T <: EntityRecorder](entity: Entity, recorder: T): EntityRegistration[T] = {
-    import TriemapAtomicGetOrElseUpdate.Syntax
-    EntityRegistration(entity, _trackedEntities.atomicGetOrElseUpdate(entity, recorder).asInstanceOf[T])
+    _trackedEntities.put(entity, recorder).map { oldRecorder ⇒
+      oldRecorder.cleanup
+    }
+
+    EntityRegistration(entity, recorder)
   }
 
   def unregister(entity: Entity): Unit =
