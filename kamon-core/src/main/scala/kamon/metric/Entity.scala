@@ -49,4 +49,10 @@ object Entity {
 
   def apply(name: String, category: String, metadata: Map[String, String]): Entity =
     new Entity(name, category, metadata)
+
+  def create(name: String, category: String): Entity =
+    apply(name, category, Map.empty)
+
+  def create(name: String, category: String, metadata: Map[String, String]): Entity =
+    new Entity(name, category, metadata)
 }
