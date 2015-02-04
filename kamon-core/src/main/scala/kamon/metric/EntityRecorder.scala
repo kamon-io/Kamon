@@ -38,7 +38,7 @@ abstract class GenericEntityRecorder(instrumentFactory: InstrumentFactory) exten
 
   private val _instruments = TrieMap.empty[MetricKey, Instrument]
   private def register[T <: Instrument](key: MetricKey, instrument: ⇒ T): T =
-    _instruments.atomicGetOrElseUpdate(key, instrument).asInstanceOf[T]
+    _instruments.atomicGetOrElseUpdate(key, instrument, _.cleanup).asInstanceOf[T]
 
   protected def histogram(name: String): Histogram =
     register(HistogramKey(name), instrumentFactory.createHistogram(name))

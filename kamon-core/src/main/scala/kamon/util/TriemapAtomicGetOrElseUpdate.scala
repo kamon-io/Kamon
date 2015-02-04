@@ -24,10 +24,22 @@ object TriemapAtomicGetOrElseUpdate {
    *  why this is necessary can be found at [[https://issues.scala-lang.org/browse/SI-7943]].
    */
   implicit class Syntax[K, V](val trieMap: TrieMap[K, V]) extends AnyVal {
+
     def atomicGetOrElseUpdate(key: K, op: ⇒ V): V =
+      atomicGetOrElseUpdate(key, op, { v: V ⇒ Unit })
+
+    def atomicGetOrElseUpdate(key: K, op: ⇒ V, cleanup: V ⇒ Unit): V =
       trieMap.get(key) match {
         case Some(v) ⇒ v
-        case None    ⇒ val d = op; trieMap.putIfAbsent(key, d).getOrElse(d)
+        case None ⇒
+          val d = op
+          trieMap.putIfAbsent(key, d).map { oldValue ⇒
+            // If there was an old value then `d` was never added
+            // and thus need to be cleanup.
+            cleanup(d)
+            oldValue
+
+          } getOrElse (d)
       }
   }
 }
