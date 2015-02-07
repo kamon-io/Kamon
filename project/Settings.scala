@@ -27,7 +27,7 @@ object Settings {
 
   val JavaVersion = "1.6"
   val ScalaVersion = "2.11.5"
-  
+
   lazy val basicSettings = Seq(
     scalaVersion            := ScalaVersion,
     resolvers              ++= Dependencies.resolutionRepos,
