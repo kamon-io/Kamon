@@ -47,7 +47,7 @@ object HistogramKey {
     apply(name, unitOfMeasurement, Map.empty)
 
   def apply(name: String, metadata: Map[String, String]): HistogramKey =
-    apply(name, UnitOfMeasurement.Unknown, Map.empty)
+    apply(name, UnitOfMeasurement.Unknown, metadata)
 
   /**
    *  Java friendly versions:
@@ -81,7 +81,7 @@ object MinMaxCounterKey {
     apply(name, unitOfMeasurement, Map.empty)
 
   def apply(name: String, metadata: Map[String, String]): MinMaxCounterKey =
-    apply(name, UnitOfMeasurement.Unknown, Map.empty)
+    apply(name, UnitOfMeasurement.Unknown, metadata)
 
   /**
    *  Java friendly versions:
@@ -115,7 +115,7 @@ object GaugeKey {
     apply(name, unitOfMeasurement, Map.empty)
 
   def apply(name: String, metadata: Map[String, String]): GaugeKey =
-    apply(name, UnitOfMeasurement.Unknown, Map.empty)
+    apply(name, UnitOfMeasurement.Unknown, metadata)
 
   /**
    *  Java friendly versions:
@@ -149,7 +149,7 @@ object CounterKey {
     apply(name, unitOfMeasurement, Map.empty)
 
   def apply(name: String, metadata: Map[String, String]): CounterKey =
-    apply(name, UnitOfMeasurement.Unknown, Map.empty)
+    apply(name, UnitOfMeasurement.Unknown, metadata)
 
   /**
    *  Java friendly versions:
