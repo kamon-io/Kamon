@@ -23,7 +23,7 @@ object Projects extends Build {
 
   lazy val kamon = Project("kamon", file("."))
     .aggregate(kamonCore, kamonSpray, kamonNewrelic, kamonPlayground, kamonDashboard, kamonTestkit, kamonPlay, kamonStatsD,
-      kamonDatadog, kamonSystemMetrics, kamonLogReporter, kamonAkkaRemote, kamonJdbc)
+      kamonDatadog, kamonSystemMetrics, kamonLogReporter, kamonAkkaRemote, kamonJdbc, kamonAnnotation)
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
     .settings(noPublishing: _*)
@@ -192,6 +192,16 @@ object Projects extends Build {
       libraryDependencies ++=
         test(h2,scalatest, akkaTestKit, slf4Api) ++
         provided(aspectJ))
+
+  lazy val kamonAnnotation = Project("kamon-annotation", file("kamon-annotation"))
+      .settings(basicSettings: _*)
+      .settings(formatSettings: _*)
+      .settings(aspectJSettings: _*)
+      .settings(
+        libraryDependencies ++=
+          test(scalatest, akkaTestKit, slf4Api) ++
+          provided(aspectJ))
+      .dependsOn(kamonCore % "compile->compile;test->test")
 
   val noPublishing = Seq(publish := (), publishLocal := (), publishArtifact := false)
 }
