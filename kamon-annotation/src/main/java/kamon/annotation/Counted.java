@@ -14,12 +14,9 @@
  * =========================================================================================
  */
 
-
 package kamon.annotation;
 
 import java.lang.annotation.*;
-
-enum CounterType { Counter, MinMaxCounter}
 
 /**
  * An annotation for marking a method of an annotated object as counted.

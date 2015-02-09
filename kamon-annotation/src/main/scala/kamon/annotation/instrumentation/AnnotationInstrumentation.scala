@@ -16,8 +16,11 @@
 
 package kamon.annotation.instrumentation
 
+import akka.actor.ActorSystem
+import com.typesafe.config.ConfigFactory
 import kamon.Kamon
 import kamon.annotation.Counted
+import kamon.annotation.CounterType.{MinMaxCounter, Counter}
 import kamon.annotation._
 import kamon.metric.{ GaugeKey, HistogramKey, UserMetrics }
 import kamon.trace.{ TraceContext, Tracer }
@@ -51,15 +54,13 @@ class AnnotationInstrumentation {
   @Around("execution(@kamon.annotation.Timed * *(..)) && @annotation(timed) && this(obj)")
   def timed(pjp: ProceedingJoinPoint, timed: Timed, obj: AnyRef): AnyRef = {
     val histogram = Kamon(UserMetrics).histogram(HistogramKey(timed.name()))
-    Latency.measure(histogram) {
-      pjp.proceed()
-    }
+    Latency.measure(histogram)(pjp.proceed)
   }
 
   @After("execution(@kamon.annotation.Counted * *(..)) && @annotation(counted) && this(obj)")
   def count(counted: Counted, obj: AnyRef): Unit = counted.`type`() match {
-    case CounterType.Counter       ⇒ Kamon(UserMetrics).counter(counted.name()).increment()
-    case CounterType.MinMaxCounter ⇒ Kamon(UserMetrics).minMaxCounter(counted.name()).increment()
+    case Counter       ⇒ Kamon(UserMetrics).counter(counted.name()).increment()
+    case MinMaxCounter ⇒ Kamon(UserMetrics).minMaxCounter(counted.name()).increment()
   }
 
   @AfterReturning(pointcut = "execution(@kamon.annotation.Gauge * *(..)) && @annotation(gauge) && this(obj)", returning = "result")
@@ -67,4 +68,13 @@ class AnnotationInstrumentation {
     case number: Number ⇒ Kamon(UserMetrics).gauge(GaugeKey(gauge.name()), gauge.collector().newInstance()).record(number.longValue())
     case anythingElse   ⇒ // do nothing
   }
+}
+
+object AnnotationBla {
+  val system: ActorSystem = ActorSystem("annotations-spec", ConfigFactory.parseString(
+    """
+      |kamon.metrics {
+      |  default-collection-context-buffer-size = 100
+      |}
+    """.stripMargin))
 }

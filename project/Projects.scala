@@ -199,6 +199,7 @@ object Projects extends Build {
       .settings(aspectJSettings: _*)
       .settings(
         libraryDependencies ++=
+          compile(el) ++
           test(scalatest, akkaTestKit, slf4Api) ++
           provided(aspectJ))
       .dependsOn(kamonCore % "compile->compile;test->test")

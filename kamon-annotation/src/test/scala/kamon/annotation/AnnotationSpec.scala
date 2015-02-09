@@ -25,7 +25,7 @@ import org.scalatest.{Matchers, WordSpecLike}
 class AnnotationSpec extends WordSpecLike with Matchers {
 
   implicit lazy val system: ActorSystem = AnnotationBla.system
-
+  /*
   "The AnnotationSpec" should {
     "blablabla trace" in {
       val a = new Annotated
@@ -72,4 +72,6 @@ class Annotated {
 
   @Gauge(name = "gauge")
   def getSomeValue():Int = 15
+}
+*/
 }
