@@ -19,17 +19,19 @@ package kamon.annotation.instrumentation
 import akka.actor.ActorSystem
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
-import kamon.annotation.Counted
-import kamon.annotation.CounterType.{MinMaxCounter, Counter}
-import kamon.annotation._
-import kamon.metric.{ GaugeKey, HistogramKey, UserMetrics }
+import kamon.annotation.util.ELProcessorPool
+import kamon.annotation.{ Counted, _ }
+import kamon.metric._
+import kamon.metric.instrument.Gauge.CurrentValueCollector
+import kamon.metric.instrument.{ Counter, MinMaxCounter }
 import kamon.trace.{ TraceContext, Tracer }
 import kamon.util.Latency
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation.{ After, AfterReturning, Around, Aspect }
 
 @Aspect
-class AnnotationInstrumentation {
+class AnnotationInstrumentation extends InstrumentsAware {
+
   implicit lazy val system = AnnotationBla.system
 
   @Around("execution(@kamon.annotation.Trace * *(..)) && @annotation(trace)")
@@ -53,21 +55,32 @@ class AnnotationInstrumentation {
 
   @Around("execution(@kamon.annotation.Timed * *(..)) && @annotation(timed) && this(obj)")
   def timed(pjp: ProceedingJoinPoint, timed: Timed, obj: AnyRef): AnyRef = {
-    val histogram = Kamon(UserMetrics).histogram(HistogramKey(timed.name()))
-    Latency.measure(histogram)(pjp.proceed)
+    Latency.measure(histogram(timed.name(), timed.metadata())(obj))(pjp.proceed)
   }
 
   @After("execution(@kamon.annotation.Counted * *(..)) && @annotation(counted) && this(obj)")
-  def count(counted: Counted, obj: AnyRef): Unit = counted.`type`() match {
-    case Counter       ⇒ Kamon(UserMetrics).counter(counted.name()).increment()
-    case MinMaxCounter ⇒ Kamon(UserMetrics).minMaxCounter(counted.name()).increment()
+  def counted(counted: Counted, obj: AnyRef): Unit = counted.`type`() match {
+    case CounterType.Counter       ⇒ counter(counted.name(), counted.metadata())(obj).increment()
+    case CounterType.MinMaxCounter ⇒ minMaxCounter(counted.name(), counted.metadata())(obj).increment()
   }
 
-  @AfterReturning(pointcut = "execution(@kamon.annotation.Gauge * *(..)) && @annotation(gauge) && this(obj)", returning = "result")
-  def gauge(gauge: Gauge, result: AnyRef, obj: AnyRef): Unit = result match {
-    case number: Number ⇒ Kamon(UserMetrics).gauge(GaugeKey(gauge.name()), gauge.collector().newInstance()).record(number.longValue())
+  @AfterReturning(pointcut = "execution(@kamon.annotation.Gauge * *(..)) && @annotation(g) && this(obj)", returning = "result")
+  def gauge(g: Gauge, result: AnyRef, obj: AnyRef): Unit = result match {
+    case number: Number ⇒ gauge(g.name(), g.collector().newInstance(), g.metadata())(obj).record(number.longValue())
     case anythingElse   ⇒ // do nothing
   }
+}
+
+trait InstrumentsAware {
+  this: AnnotationInstrumentation ⇒
+
+  def counter(name: String, metadata: String)(obj: AnyRef): Counter = Kamon(UserMetrics).counter(CounterKey(resolveName(name, obj), resolveMetadata(metadata)))
+  def minMaxCounter(name: String, metadata: String)(obj: AnyRef): MinMaxCounter = Kamon(UserMetrics).minMaxCounter(MinMaxCounterKey(resolveName(name, obj), resolveMetadata(metadata)))
+  def gauge(name: String, valueCollector: CurrentValueCollector, metadata: String)(obj: AnyRef): instrument.Gauge = Kamon(UserMetrics).gauge(GaugeKey(resolveName(name, obj), resolveMetadata(metadata)), valueCollector)
+  def histogram(name: String, metadata: String)(obj: AnyRef): instrument.Histogram = Kamon(UserMetrics).histogram(HistogramKey(resolveName(name, obj), resolveMetadata(metadata)))
+
+  private def resolveName(name: String, obj: AnyRef): String = ELProcessorPool.useWithObject(obj)(processor ⇒ processor.evalToString(name))
+  private def resolveMetadata(expression: String): Map[String, String] = ELProcessorPool.use(processor ⇒ processor.evalToMap(expression)).toMap
 }
 
 object AnnotationBla {

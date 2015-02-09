@@ -23,40 +23,42 @@ import kamon.annotation.util.FastObjectPool.PoolFactory
 
 import scala.collection.mutable
 
-
-class WrappedProcessor(val processor:ELProcessor) extends AnyVal {
+class WrappedProcessor(val processor: ELProcessor) extends AnyVal {
   import scala.collection.JavaConverters._
   import WrappedProcessor._
 
-  def evalToString(expression:String): String = sanitize(expression) map(processor.eval(_).asInstanceOf[String]) getOrElse expression
+  def evalToString(expression: String): String = sanitize(expression) map (processor.eval(_).toString) getOrElse expression
 
-  def evalToMap(expression:String): mutable.Map[String, String] = {
-    sanitize(expression) map (processor.eval(_).asInstanceOf[java.util.Map[String,String]].asScala) getOrElse mutable.Map.empty
+  def evalToMap(expression: String): mutable.Map[String, String] = {
+    sanitize(expression) map (e ⇒ processor.eval(s"{$e}").asInstanceOf[java.util.Map[String, String]].asScala) getOrElse mutable.Map.empty
   }
 }
 
 object WrappedProcessor {
   val Pattern = """[#|$]\{(.*)\}""".r
 
-  def sanitize(expression:String):Option[String] = expression match {
-    case Pattern(ex) => Some(ex)
-    case _ => None
+  def sanitize(expression: String): Option[String] = expression match {
+    case Pattern(ex) ⇒ Some(ex)
+    case _           ⇒ None
   }
 }
 
 object ELProcessorPool {
   private val pool = new FastObjectPool[ELProcessor](ELPoolFactory(), 5)
 
-  def withObject(obj:AnyRef)(closure: WrappedProcessor => Unit): Unit = {
+  def use[A](closure: WrappedProcessor ⇒ A): A = use(None)(closure)
+  def useWithObject[A](obj: AnyRef)(closure: WrappedProcessor ⇒ A): A = use(Some(obj))(closure)
+
+  private def use[A](obj: Option[AnyRef])(closure: WrappedProcessor ⇒ A): A = {
     val holder = pool.take()
     val processor = holder.getValue
-    processor.defineBean("this", obj)
+    obj.map(processor.defineBean("this", _))
 
     try closure(new WrappedProcessor(processor)) finally pool.release(holder)
   }
 }
 
-case class ELPoolFactory() extends PoolFactory[ELProcessor] {
+private case class ELPoolFactory() extends PoolFactory[ELProcessor] {
   override def create(): ELProcessor = {
     val processor = new ELProcessor()
     processor.getELManager.addELResolver(new PrivateFieldELResolver())

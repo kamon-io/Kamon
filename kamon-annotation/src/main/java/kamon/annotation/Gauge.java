@@ -14,23 +14,16 @@
  * =========================================================================================
  */
 
-
 package kamon.annotation;
 
 import java.lang.annotation.*;
 import kamon.metric.instrument.Gauge.CurrentValueCollector;
-
-class DefaultValueCollector implements CurrentValueCollector {
-    @Override
-    public long currentValue() {
-        return 1;
-    }
-}
 
 @Documented
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Gauge {
     String name();
+    String metadata() default "";
     Class<? extends CurrentValueCollector> collector() default DefaultValueCollector.class;
 }

@@ -16,26 +16,11 @@
 
 package kamon.annotation;
 
-import java.lang.annotation.*;
+import kamon.metric.instrument.Gauge;
 
-/**
- * An annotation for marking a method of an annotated object as counted.
- *
- * <p/>
- * Given a method like this:
- * <pre><code>
- *     {@literal @}Counted(name = "fancyName")
- *     public String fancyName(String name) {
- *         return "Sir Captain " + name;
- *     }
- * </code></pre>
- * <p/>
- */
-@Documented
-@Target(ElementType.METHOD)
-@Retention(RetentionPolicy.RUNTIME)
-public @interface Counted {
-    String name();
-    String metadata() default "";
-    CounterType type() default CounterType.Counter;
+public class DefaultValueCollector implements Gauge.CurrentValueCollector {
+    @Override
+    public long currentValue() {
+        return 1;
+    }
 }
