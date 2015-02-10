@@ -19,23 +19,47 @@ package kamon.annotation;
 import java.lang.annotation.*;
 
 /**
- * An annotation for marking a method of an annotated object as counted.
+ * A marker annotation to define a method as a counter.
  *
  * <p/>
  * Given a method like this:
  * <pre><code>
- *     {@literal @}Counted(name = "fancyName")
- *     public String fancyName(String name) {
- *         return "Sir Captain " + name;
+ *     {@literal @}Counted(name = "coolName", tags="""${{'my-cool-tag':'my-cool-value'}}""", type=CounterType.MinMaxCounter)
+ *     public String coolName(String name) {
+ *         return "Hello " + name;
  *     }
  * </code></pre>
  * <p/>
+ *
+ * A counter for the defining method with the name {@code coolName} will be created and each time the
+ * {@code #coolName(String)} method is invoked, the counter will be incremented.
  */
 @Documented
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Counted {
+
+    /**
+     * @return The counter's name.
+     */
     String name();
-    String metadata() default "";
+
+    /**
+     * Tags are a way of adding dimensions to metrics,
+     * these are constructed using EL syntax e.g. """${{'algorithm':'1','env':'production'}}"""
+     *
+     * @return the tags associated to the counter
+     */
+    String tags() default "";
+
+
+    /**
+     * Specifies the backed counter type, there are two types:
+     *
+     * @see CounterType#Counter
+     * @see CounterType#MinMaxCounter
+     *
+     * @return the backed counter type
+     */
     CounterType type() default CounterType.Counter;
 }

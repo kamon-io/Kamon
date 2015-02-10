@@ -14,16 +14,27 @@
  * =========================================================================================
  */
 
-package kamon.annotation;
+package kamon.annotation.util
 
-import kamon.metric.instrument.Gauge;
+import javax.el.ELProcessor
+import scala.collection.mutable
 
-/**
- * Default implementation of CurrentValueCollector
- */
-public class DefaultValueCollector implements Gauge.CurrentValueCollector {
-    @Override
-    public long currentValue() {
-        return 1;
-    }
+class WrappedProcessor(val processor: ELProcessor) extends AnyVal {
+  import scala.collection.JavaConverters._
+  import WrappedProcessor._
+
+  def evalToString(expression: String): String = sanitize(expression) map (processor.eval(_).toString) getOrElse expression
+
+  def evalToMap(expression: String): mutable.Map[String, String] = {
+    sanitize(expression) map (processor.eval(_).asInstanceOf[java.util.Map[String, String]].asScala) getOrElse mutable.Map.empty
+  }
+}
+
+object WrappedProcessor {
+  val Pattern = """[#|$]\{(.*)\}""".r
+
+  def sanitize(expression: String): Option[String] = expression match {
+    case Pattern(ex) ⇒ Some(ex)
+    case _           ⇒ None
+  }
 }

@@ -33,24 +33,4 @@ class AnnotationExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   private val config = system.settings.config.getConfig("kamon.annotation")
 }
 
-case class Employee(name: String)
-
-object Main extends App {
-  val s = Pattern.compile("[#|$]\\{(.*)\\}")
-
-  private val pool: ExecutorService = Executors.newFixedThreadPool(4)
-  for (_ ← 0 to 100000000) {
-    Thread.sleep(100)
-    pool.submit(new Runnable {
-      override def run(): Unit = {
-        ELProcessorPool.useWithObject(new Employee("Charlie Brown")) { elp ⇒
-          println(elp.evalToString("#{this.name}") + ":" + Thread.currentThread().getName)
-        }
-        ELProcessorPool.use { elp ⇒
-          println(elp.evalToMap("""${'a':'b','c':'d'}"""))
-        }
-      }
-    })
-  }
-}
 

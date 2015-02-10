@@ -19,15 +19,15 @@ package kamon.annotation.instrumentation
 import akka.actor.ActorSystem
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
+import kamon.annotation._
 import kamon.annotation.util.ELProcessorPool
-import kamon.annotation.{ Counted, _ }
 import kamon.metric._
 import kamon.metric.instrument.Gauge.CurrentValueCollector
-import kamon.metric.instrument.{ Counter, MinMaxCounter }
-import kamon.trace.{ TraceContext, Tracer }
+import kamon.metric.instrument.{Counter, MinMaxCounter}
+import kamon.trace.{TraceContext, Tracer}
 import kamon.util.Latency
 import org.aspectj.lang.ProceedingJoinPoint
-import org.aspectj.lang.annotation.{ After, AfterReturning, Around, Aspect }
+import org.aspectj.lang.annotation.{After, AfterReturning, Around, Aspect}
 
 @Aspect
 class AnnotationInstrumentation extends InstrumentsAware {
@@ -55,18 +55,18 @@ class AnnotationInstrumentation extends InstrumentsAware {
 
   @Around("execution(@kamon.annotation.Timed * *(..)) && @annotation(timed) && this(obj)")
   def timed(pjp: ProceedingJoinPoint, timed: Timed, obj: AnyRef): AnyRef = {
-    Latency.measure(histogram(timed.name(), timed.metadata())(obj))(pjp.proceed)
+    Latency.measure(histogram(timed.name(), timed.tags())(obj))(pjp.proceed)
   }
 
   @After("execution(@kamon.annotation.Counted * *(..)) && @annotation(counted) && this(obj)")
   def counted(counted: Counted, obj: AnyRef): Unit = counted.`type`() match {
-    case CounterType.Counter       ⇒ counter(counted.name(), counted.metadata())(obj).increment()
-    case CounterType.MinMaxCounter ⇒ minMaxCounter(counted.name(), counted.metadata())(obj).increment()
+    case CounterType.Counter       ⇒ counter(counted.name(), counted.tags())(obj).increment()
+    case CounterType.MinMaxCounter ⇒ minMaxCounter(counted.name(), counted.tags())(obj).increment()
   }
 
   @AfterReturning(pointcut = "execution(@kamon.annotation.Gauge * *(..)) && @annotation(g) && this(obj)", returning = "result")
   def gauge(g: Gauge, result: AnyRef, obj: AnyRef): Unit = result match {
-    case number: Number ⇒ gauge(g.name(), g.collector().newInstance(), g.metadata())(obj).record(number.longValue())
+    case number: Number ⇒ gauge(g.name(), g.collector().newInstance(), g.tags())(obj).record(number.longValue())
     case anythingElse   ⇒ // do nothing
   }
 }
@@ -87,6 +87,7 @@ object AnnotationBla {
   val system: ActorSystem = ActorSystem("annotations-spec", ConfigFactory.parseString(
     """
       |kamon.metrics {
+      | tick-interval = 1 hour
       |  default-collection-context-buffer-size = 100
       |}
     """.stripMargin))

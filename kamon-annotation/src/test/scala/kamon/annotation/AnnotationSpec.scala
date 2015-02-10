@@ -25,7 +25,7 @@ import org.scalatest.{Matchers, WordSpecLike}
 
 class AnnotationSpec extends BaseKamonSpec("trace-metrics-spec") with WordSpecLike with Matchers {
 
-//  implicit lazy val system: ActorSystem = AnnotationBla.system
+  override implicit lazy val system: ActorSystem = AnnotationBla.system
 
   "The AnnotationSpec" should {
     "blablabla trace" in {
@@ -33,9 +33,9 @@ class AnnotationSpec extends BaseKamonSpec("trace-metrics-spec") with WordSpecLi
       for(_ <- 1 to 100) {
         a.greeting()
       }
-      val snapshot = takeSnapshotOf("greeting","trace")
-//      snapshot.elapsedTime.numberOfMeasurements should be(100)
-//      snapshot.segments shouldBe empty
+
+      val snapshot = takeSnapshotOf("greeting", "trace")
+      snapshot.histogram("elapsed-time").get.numberOfMeasurements should be(10)
     }
 
     "blablabla counter" in {
@@ -64,8 +64,11 @@ class Annotated(val a:Int = 1) {
   @Trace("greeting")
   def greeting():Unit ={}
 
-  @Counted(name = "#{this.a}", metadata = """#{'a':'b'}""")
+  @Counted(name = "#{this.a}", tags = """#{{'a':'b'}}""")
   def count():Unit = {}
+
+  @Counted(name = "#{this.a}", tags = """#{{'a':'b', 'c','c'}}""", `type` = CounterType.MinMaxCounter)
+  def countMin():Unit = {}
 
   @Counted(name = "my-counter")
   def count2():Unit = {}

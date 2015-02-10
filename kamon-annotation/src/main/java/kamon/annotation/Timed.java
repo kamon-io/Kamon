@@ -22,9 +22,36 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+
+/**
+ * A marker annotation to define a method as a timed.
+ *
+ * <p/>
+ * Given a method like this:
+ * <pre><code>
+ *     {@literal @}Timed(name = "coolName", tags="""${{'my-cool-tag':'my-cool-value'}}""")
+ *     public String coolName(String name) {
+ *         return "Hello " + name;
+ *     }
+ * </code></pre>
+ * <p/>
+ *
+ * A histogram for the defining method with the name {@code coolName} will be created and each time the
+ * {@code #coolName(String)} method is invoked, the latency of execution will be recorded.
+ */
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Timed {
+    /**
+     * @return The histogram's name.
+     */
     String name();
-    String metadata() default "";
+
+    /**
+     * Tags are a way of adding dimensions to metrics,
+     * these are constructed using EL syntax e.g. """${{'algorithm':'1','env':'production'}}"""
+     *
+     * @return the tags associated to the histogram
+     */
+    String tags() default "";
 }

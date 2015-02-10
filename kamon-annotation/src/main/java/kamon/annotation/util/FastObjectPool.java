@@ -10,6 +10,8 @@
  * either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
  * =========================================================================================
+ *
+ * For details, see: http://ashkrit.blogspot.com.ar/2013/05/lock-less-java-object-pool.html
  */
 
 package kamon.annotation.util;

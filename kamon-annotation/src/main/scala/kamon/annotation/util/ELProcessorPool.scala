@@ -21,28 +21,9 @@ import javax.el.ELProcessor
 import kamon.annotation.resolver.PrivateFieldELResolver
 import kamon.annotation.util.FastObjectPool.PoolFactory
 
-import scala.collection.mutable
-
-class WrappedProcessor(val processor: ELProcessor) extends AnyVal {
-  import scala.collection.JavaConverters._
-  import WrappedProcessor._
-
-  def evalToString(expression: String): String = sanitize(expression) map (processor.eval(_).toString) getOrElse expression
-
-  def evalToMap(expression: String): mutable.Map[String, String] = {
-    sanitize(expression) map (e ⇒ processor.eval(s"{$e}").asInstanceOf[java.util.Map[String, String]].asScala) getOrElse mutable.Map.empty
-  }
-}
-
-object WrappedProcessor {
-  val Pattern = """[#|$]\{(.*)\}""".r
-
-  def sanitize(expression: String): Option[String] = expression match {
-    case Pattern(ex) ⇒ Some(ex)
-    case _           ⇒ None
-  }
-}
-
+/**
+ * Convenient pool of @see ELProcessor, since it is not thread safe.
+ */
 object ELProcessorPool {
   private val pool = new FastObjectPool[ELProcessor](ELPoolFactory(), 5)
 
@@ -58,10 +39,14 @@ object ELProcessorPool {
   }
 }
 
-private case class ELPoolFactory() extends PoolFactory[ELProcessor] {
+private class ELPoolFactory() extends PoolFactory[ELProcessor] {
   override def create(): ELProcessor = {
     val processor = new ELProcessor()
     processor.getELManager.addELResolver(new PrivateFieldELResolver())
     processor
   }
+}
+
+private object ELPoolFactory {
+  def apply():ELPoolFactory = new ELPoolFactory()
 }
