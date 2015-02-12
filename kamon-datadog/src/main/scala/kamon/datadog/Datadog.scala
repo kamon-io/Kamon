@@ -50,7 +50,7 @@ class DatadogExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   val subscriptions = datadogConfig.getConfig("subscriptions")
   subscriptions.firstLevelKeys.map { subscriptionCategory ⇒
     subscriptions.getStringList(subscriptionCategory).asScala.foreach { pattern ⇒
-      Kamon(Metrics).subscribe(subscriptionCategory, pattern, datadogMetricsListener, permanently = true)
+      Kamon.metrics.subscribe(subscriptionCategory, pattern, datadogMetricsListener, permanently = true)
     }
   }
 
