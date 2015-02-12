@@ -18,16 +18,14 @@ package kamon.trace
 
 import java.util.concurrent.ConcurrentLinkedQueue
 
-import akka.actor.{ ExtensionId, ActorSystem }
 import akka.event.LoggingAdapter
-import kamon.Kamon.Extension
 import kamon.metric.{ MetricsExtension, TraceMetrics }
 import kamon.util.{ NanoInterval, RelativeNanoTimestamp }
 
 import scala.annotation.tailrec
 
 private[kamon] class MetricsOnlyContext(traceName: String, val token: String, izOpen: Boolean, val levelOfDetail: LevelOfDetail,
-  val startTimestamp: RelativeNanoTimestamp, log: LoggingAdapter, metricsExtension: MetricsExtension, val actorSystem: ActorSystem)
+  val startTimestamp: RelativeNanoTimestamp, log: LoggingAdapter, metricsExtension: MetricsExtension)
     extends TraceContext {
 
   @volatile private var _name = traceName
@@ -47,8 +45,6 @@ private[kamon] class MetricsOnlyContext(traceName: String, val token: String, iz
   def isEmpty: Boolean = false
   def isOpen: Boolean = _isOpen
   def addMetadata(key: String, value: String): Unit = {}
-
-  def lookupExtension[T <: Extension](id: ExtensionId[T]): T = id(actorSystem)
 
   def finish(): Unit = {
     _isOpen = false

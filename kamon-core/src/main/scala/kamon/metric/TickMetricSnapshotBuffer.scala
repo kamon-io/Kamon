@@ -29,7 +29,7 @@ class TickMetricSnapshotBuffer(flushInterval: FiniteDuration, receiver: ActorRef
   import MapMerge.Syntax
 
   val flushSchedule = context.system.scheduler.schedule(flushInterval, flushInterval, self, FlushBuffer)(context.dispatcher)
-  val collectionContext: CollectionContext = Kamon(Metrics)(context.system).buildDefaultCollectionContext
+  val collectionContext: CollectionContext = Kamon.metrics.buildDefaultCollectionContext
 
   def receive = empty
 

@@ -19,7 +19,6 @@ package kamon.trace
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
 
-import akka.actor.ActorSystem
 import akka.event.LoggingAdapter
 import kamon.util.{ NanoInterval, RelativeNanoTimestamp, NanoTimestamp }
 import kamon.metric.MetricsExtension
@@ -28,8 +27,8 @@ import scala.collection.concurrent.TrieMap
 
 private[trace] class TracingContext(traceName: String, token: String, izOpen: Boolean, levelOfDetail: LevelOfDetail,
   isLocal: Boolean, startTimeztamp: RelativeNanoTimestamp, log: LoggingAdapter, metricsExtension: MetricsExtension,
-  traceExtension: TracerExtensionImpl, system: ActorSystem, traceInfoSink: TracingContext ⇒ Unit)
-    extends MetricsOnlyContext(traceName, token, izOpen, levelOfDetail, startTimeztamp, log, metricsExtension, system) {
+  traceExtension: TracerExtensionImpl, traceInfoSink: TracingContext ⇒ Unit)
+    extends MetricsOnlyContext(traceName, token, izOpen, levelOfDetail, startTimeztamp, log, metricsExtension) {
 
   private val _openSegments = new AtomicInteger(0)
   private val _startTimestamp = NanoTimestamp.now

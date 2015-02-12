@@ -16,49 +16,61 @@ package kamon
 
 import _root_.akka.actor
 import _root_.akka.actor._
-import com.typesafe.config.Config
+import com.typesafe.config.{ ConfigFactory, Config }
 import kamon.metric._
-import kamon.supervisor.ModuleSupervisor
-import kamon.trace.{ Tracer, TracerExtension }
-
-class Kamon(val actorSystem: ActorSystem) {
-  val metrics: MetricsExtension = Metrics.get(actorSystem)
-  val tracer: TracerExtension = Tracer.get(actorSystem)
-  val userMetrics: UserMetricsExtension = UserMetrics.get(actorSystem)
-
-  // This will cause all auto-start modules to initiate.
-  ModuleSupervisor.get(actorSystem)
-
-  def shutdown(): Unit =
-    actorSystem.shutdown()
-}
+import kamon.trace.{ TracerExtensionImpl, TracerExtension }
 
 object Kamon {
   trait Extension extends actor.Extension
-  def apply[T <: Extension](key: ExtensionId[T])(implicit system: ActorSystem): T = key(system)
 
-  def apply(): Kamon =
-    apply("kamon")
+  private case class KamonCoreComponents(
+    metrics: MetricsExtension,
+    tracer: TracerExtension,
+    userMetrics: UserMetricsExtension)
 
-  def apply(actorSystemName: String): Kamon =
-    apply(ActorSystem(actorSystemName))
+  @volatile private var _system: ActorSystem = _
+  @volatile private var _coreComponents: Option[KamonCoreComponents] = None
 
-  def apply(actorSystemName: String, config: Config): Kamon =
-    apply(ActorSystem(actorSystemName, config))
+  def start(config: Config): Unit = synchronized {
+    if (_coreComponents.isEmpty) {
+      val metrics = MetricsExtensionImpl(config)
+      val simpleMetrics = UserMetricsExtensionImpl(metrics)
+      val tracer = TracerExtensionImpl(metrics, config)
 
-  def apply(system: ActorSystem): Kamon =
-    new Kamon(system)
+      _coreComponents = Some(KamonCoreComponents(metrics, tracer, simpleMetrics))
+      _system = ActorSystem("kamon", config)
 
-  def create(): Kamon =
-    apply()
+      metrics.start(_system)
+      tracer.start(_system)
 
-  def create(actorSystemName: String): Kamon =
-    apply(ActorSystem(actorSystemName))
+    } else sys.error("Kamon has already been started.")
+  }
 
-  def create(actorSystemName: String, config: Config): Kamon =
-    apply(ActorSystem(actorSystemName, config))
+  def start(): Unit =
+    start(ConfigFactory.load)
 
-  def create(system: ActorSystem): Kamon =
-    new Kamon(system)
+  def metrics: MetricsExtension =
+    ifStarted(_.metrics)
+
+  def tracer: TracerExtension =
+    ifStarted(_.tracer)
+
+  def userMetrics: UserMetricsExtension =
+    ifStarted(_.userMetrics)
+
+  def apply[T <: Kamon.Extension](key: ExtensionId[T]): T =
+    ifStarted { _ ⇒
+      if (_system ne null)
+        key(_system)
+      else
+        sys.error("Cannot retrieve extensions while Kamon is being initialized.")
+    }
+
+  def extension[T <: Kamon.Extension](key: ExtensionId[T]): T =
+    apply(key)
+
+  private def ifStarted[T](thunk: KamonCoreComponents ⇒ T): T =
+    _coreComponents.map(thunk(_)) getOrElse (sys.error("Kamon has not been started yet."))
 
 }
+

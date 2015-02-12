@@ -24,11 +24,12 @@ import scala.concurrent.duration.FiniteDuration
 /**
  *  Manages subscriptions to metrics and dispatch snapshots on every tick to all subscribers.
  */
-private[kamon] class SubscriptionsDispatcher(interval: FiniteDuration, collector: () ⇒ Map[Entity, EntitySnapshot]) extends Actor {
+private[kamon] class SubscriptionsDispatcher(interval: FiniteDuration, metricsExtension: MetricsExtensionImpl) extends Actor {
   var lastTick = MilliTimestamp.now
   var oneShotSubscriptions = Map.empty[ActorRef, SubscriptionFilter]
   var permanentSubscriptions = Map.empty[ActorRef, SubscriptionFilter]
   val tickSchedule = context.system.scheduler.schedule(interval, interval, self, Tick)(context.dispatcher)
+  val collectionContext = metricsExtension.buildDefaultCollectionContext
 
   def receive = {
     case Tick                                       ⇒ processTick()
@@ -38,7 +39,7 @@ private[kamon] class SubscriptionsDispatcher(interval: FiniteDuration, collector
   }
 
   def processTick(): Unit =
-    dispatch(collector())
+    dispatch(metricsExtension.collectSnapshots(collectionContext))
 
   def subscribe(filter: SubscriptionFilter, subscriber: ActorRef, permanent: Boolean): Unit = {
     def addSubscription(storage: Map[ActorRef, SubscriptionFilter]): Map[ActorRef, SubscriptionFilter] =
@@ -80,8 +81,8 @@ private[kamon] class SubscriptionsDispatcher(interval: FiniteDuration, collector
 }
 
 object SubscriptionsDispatcher {
-  def props(interval: FiniteDuration, collector: () ⇒ Map[Entity, EntitySnapshot]): Props =
-    Props(new SubscriptionsDispatcher(interval, collector))
+  def props(interval: FiniteDuration, metricsExtension: MetricsExtensionImpl): Props =
+    Props(new SubscriptionsDispatcher(interval, metricsExtension))
 
   case object Tick
   case class Unsubscribe(subscriber: ActorRef)

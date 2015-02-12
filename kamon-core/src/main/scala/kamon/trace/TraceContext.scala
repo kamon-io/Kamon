@@ -17,12 +17,8 @@
 package kamon.trace
 
 import java.io.ObjectStreamException
-import akka.actor.{ ExtensionId, ActorSystem }
-import kamon.Kamon.Extension
-import kamon._
-import kamon.metric._
 import kamon.trace.TraceContextAware.DefaultTraceContextAware
-import kamon.util.{ NanoInterval, RelativeNanoTimestamp }
+import kamon.util.RelativeNanoTimestamp
 
 trait TraceContext {
   def name: String
@@ -39,8 +35,6 @@ trait TraceContext {
   def addMetadata(key: String, value: String)
 
   def startTimestamp: RelativeNanoTimestamp
-
-  def lookupExtension[T <: Kamon.Extension](id: ExtensionId[T]): T
 }
 
 object TraceContext {
@@ -98,9 +92,6 @@ case object EmptyTraceContext extends TraceContext {
   def startSegment(segmentName: String, category: String, library: String): Segment = EmptySegment
   def addMetadata(key: String, value: String): Unit = {}
   def startTimestamp = new RelativeNanoTimestamp(0L)
-
-  override def lookupExtension[T <: Extension](id: ExtensionId[T]): T =
-    sys.error("Can't lookup extensions on a EmptyTraceContext.")
 
   case object EmptySegment extends Segment {
     val name: String = "empty-segment"

@@ -16,30 +16,13 @@
 
 package kamon.metric
 
-import akka.actor
-import akka.actor.{ ActorSystem, ExtendedActorSystem, ExtensionIdProvider, ExtensionId }
-import kamon.Kamon
 import kamon.metric.instrument.Gauge.CurrentValueCollector
 import kamon.metric.instrument.Histogram.DynamicRange
 import kamon.metric.instrument._
 
 import scala.concurrent.duration.FiniteDuration
 
-object UserMetrics extends ExtensionId[UserMetricsExtension] with ExtensionIdProvider {
-  override def get(system: ActorSystem): UserMetricsExtension = super.get(system)
-  def lookup(): ExtensionId[_ <: actor.Extension] = UserMetrics
-  def createExtension(system: ExtendedActorSystem): UserMetricsExtension = {
-    val metricsExtension = Metrics.get(system)
-    val instrumentFactory = metricsExtension.instrumentFactory(entity.category)
-    val userMetricsExtension = new UserMetricsExtensionImpl(instrumentFactory)
-
-    metricsExtension.register(entity, userMetricsExtension).recorder
-  }
-
-  val entity = Entity("user-metric", "user-metric")
-}
-
-trait UserMetricsExtension extends Kamon.Extension {
+trait UserMetricsExtension {
   def histogram(name: String): Histogram
   def histogram(name: String, dynamicRange: DynamicRange): Histogram
   def histogram(name: String, unitOfMeasurement: UnitOfMeasurement): Histogram
@@ -86,7 +69,7 @@ trait UserMetricsExtension extends Kamon.Extension {
 
 }
 
-class UserMetricsExtensionImpl(instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) with UserMetricsExtension {
+private[kamon] class UserMetricsExtensionImpl(instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) with UserMetricsExtension {
   override def histogram(name: String): Histogram =
     super.histogram(name)
 
@@ -206,4 +189,16 @@ class UserMetricsExtensionImpl(instrumentFactory: InstrumentFactory) extends Gen
 
   override def removeCounter(key: CounterKey): Unit =
     super.removeCounter(key)
+}
+
+private[kamon] object UserMetricsExtensionImpl {
+  val UserMetricEntity = Entity("user-metric", "user-metric")
+
+  def apply(metricsExtension: MetricsExtension): UserMetricsExtensionImpl = {
+    val instrumentFactory = metricsExtension.instrumentFactory(UserMetricEntity.category)
+    val userMetricsExtension = new UserMetricsExtensionImpl(instrumentFactory)
+
+    metricsExtension.register(UserMetricEntity, userMetricsExtension).recorder
+  }
+
 }

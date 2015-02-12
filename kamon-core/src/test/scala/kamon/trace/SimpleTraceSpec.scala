@@ -40,7 +40,7 @@ class SimpleTraceSpec extends BaseKamonSpec("simple-trace-spec") {
 
   "the simple tracing" should {
     "send a TraceInfo when the trace has finished and all segments are finished" in {
-      Kamon(Tracer)(system).subscribe(testActor)
+      Kamon.tracer.subscribe(testActor)
 
       TraceContext.withContext(newContext("simple-trace-without-segments")) {
         TraceContext.currentContext.startSegment("segment-one", "test-segment", "test").finish()
@@ -49,7 +49,7 @@ class SimpleTraceSpec extends BaseKamonSpec("simple-trace-spec") {
       }
 
       val traceInfo = expectMsgType[TraceInfo]
-      Kamon(Tracer)(system).unsubscribe(testActor)
+      Kamon.tracer.unsubscribe(testActor)
 
       traceInfo.name should be("simple-trace-without-segments")
       traceInfo.segments.size should be(2)
@@ -58,7 +58,7 @@ class SimpleTraceSpec extends BaseKamonSpec("simple-trace-spec") {
     }
 
     "incubate the tracing context if there are open segments after finishing" in {
-      Kamon(Tracer)(system).subscribe(testActor)
+      Kamon.tracer.subscribe(testActor)
 
       val secondSegment = TraceContext.withContext(newContext("simple-trace-without-segments")) {
         TraceContext.currentContext.startSegment("segment-one", "test-segment", "test").finish()
@@ -72,7 +72,7 @@ class SimpleTraceSpec extends BaseKamonSpec("simple-trace-spec") {
 
       within(10 seconds) {
         val traceInfo = expectMsgType[TraceInfo]
-        Kamon(Tracer)(system).unsubscribe(testActor)
+        Kamon.tracer.unsubscribe(testActor)
 
         traceInfo.name should be("simple-trace-without-segments")
         traceInfo.segments.size should be(2)

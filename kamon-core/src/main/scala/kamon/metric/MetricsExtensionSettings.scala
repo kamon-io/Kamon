@@ -16,9 +16,8 @@
 
 package kamon.metric
 
-import akka.actor.ExtendedActorSystem
 import com.typesafe.config.Config
-import kamon.metric.instrument.{ RefreshScheduler, InstrumentFactory, DefaultInstrumentSettings, InstrumentCustomSettings }
+import kamon.metric.instrument._
 import kamon.util.GlobPathFilter
 
 import scala.concurrent.duration.FiniteDuration
@@ -27,15 +26,19 @@ import scala.concurrent.duration.FiniteDuration
  *  Configuration settings for the Metrics extension, as read from the `kamon.metric` configuration key.
  */
 case class MetricsExtensionSettings(
-  tickInterval: FiniteDuration,
-  defaultCollectionContextBufferSize: Int,
-  trackUnmatchedEntities: Boolean,
-  entityFilters: Map[String, EntityFilter],
-  instrumentFactories: Map[String, InstrumentFactory],
-  defaultInstrumentFactory: InstrumentFactory,
-  metricCollectionDispatcher: String,
-  refreshSchedulerDispatcher: String,
-  refreshScheduler: RefreshScheduler)
+    tickInterval: FiniteDuration,
+    defaultCollectionContextBufferSize: Int,
+    trackUnmatchedEntities: Boolean,
+    entityFilters: Map[String, EntityFilter],
+    instrumentFactories: Map[String, InstrumentFactory],
+    defaultInstrumentFactory: InstrumentFactory,
+    refreshScheduler: RefreshScheduler) {
+
+  private[kamon] def pointScheduler(targetScheduler: RefreshScheduler): Unit = refreshScheduler match {
+    case lrs: LazyRefreshScheduler ⇒ lrs.point(targetScheduler)
+    case others                    ⇒
+  }
+}
 
 /**
  *
@@ -49,23 +52,21 @@ object MetricsExtensionSettings {
   import kamon.util.ConfigTools.Syntax
   import scala.concurrent.duration._
 
-  def apply(system: ExtendedActorSystem): MetricsExtensionSettings = {
-    val metricConfig = system.settings.config.getConfig("kamon.metric")
+  def apply(config: Config): MetricsExtensionSettings = {
+    val metricConfig = config.getConfig("kamon.metric")
 
     val tickInterval = metricConfig.getFiniteDuration("tick-interval")
     val collectBufferSize = metricConfig.getInt("default-collection-context-buffer-size")
     val trackUnmatchedEntities = metricConfig.getBoolean("track-unmatched-entities")
     val entityFilters = loadFilters(metricConfig.getConfig("filters"))
     val defaultInstrumentSettings = DefaultInstrumentSettings.fromConfig(metricConfig.getConfig("default-instrument-settings"))
-    val metricCollectionDispatcher = metricConfig.getString("dispatchers.metric-collection")
-    val refreshSchedulerDispatcher = metricConfig.getString("dispatchers.refresh-scheduler")
 
-    val refreshScheduler = RefreshScheduler(system.scheduler, system.dispatchers.lookup(refreshSchedulerDispatcher))
+    val refreshScheduler = new LazyRefreshScheduler
     val instrumentFactories = loadInstrumentFactories(metricConfig.getConfig("instrument-settings"), defaultInstrumentSettings, refreshScheduler)
     val defaultInstrumentFactory = new InstrumentFactory(Map.empty, defaultInstrumentSettings, refreshScheduler)
 
     MetricsExtensionSettings(tickInterval, collectBufferSize, trackUnmatchedEntities, entityFilters, instrumentFactories,
-      defaultInstrumentFactory, metricCollectionDispatcher, refreshSchedulerDispatcher, refreshScheduler)
+      defaultInstrumentFactory, refreshScheduler)
   }
 
   /**

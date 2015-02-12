@@ -51,22 +51,3 @@ object CollectionContext {
   }
 }
 
-trait RefreshScheduler {
-  def schedule(interval: FiniteDuration, refresh: () ⇒ Unit): Cancellable
-}
-
-object RefreshScheduler {
-  val NoopScheduler = new RefreshScheduler {
-    def schedule(interval: FiniteDuration, refresh: () ⇒ Unit): Cancellable = new Cancellable {
-      override def isCancelled: Boolean = true
-      override def cancel(): Boolean = true
-    }
-  }
-
-  def apply(scheduler: Scheduler, dispatcher: MessageDispatcher): RefreshScheduler = new RefreshScheduler {
-    def schedule(interval: FiniteDuration, refresh: () ⇒ Unit): Cancellable =
-      scheduler.schedule(interval, interval)(refresh.apply())(dispatcher)
-  }
-
-  def create(scheduler: Scheduler, dispatcher: MessageDispatcher): RefreshScheduler = apply(scheduler, dispatcher)
-}
