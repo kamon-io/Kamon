@@ -13,40 +13,41 @@
  * =========================================================================================
  */
 
-package kamon.metric
+package kamon.akka
 
 import java.nio.LongBuffer
 
 import akka.actor._
 import akka.routing._
-import akka.testkit.{ ImplicitSender, TestKitBase, TestProbe }
+import akka.testkit.TestProbe
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
-import kamon.akka.RouterMetrics
-import kamon.metric.RouterMetricsTestActor._
+import kamon.akka.RouterMetricsTestActor._
+import kamon.metric.EntitySnapshot
 import kamon.metric.instrument.CollectionContext
-import org.scalatest.{ BeforeAndAfterAll, Matchers, WordSpecLike }
+import kamon.testkit.BaseKamonSpec
 
 import scala.concurrent.duration._
 
-class RouterMetricsSpec extends TestKitBase with WordSpecLike with Matchers with ImplicitSender with BeforeAndAfterAll {
-  implicit lazy val system: ActorSystem = ActorSystem("router-metrics-spec", ConfigFactory.parseString(
-    """
-      |kamon.metric {
-      |  tick-interval = 1 hour
-      |  default-collection-context-buffer-size = 10
-      |
-      |  filters = {
-      |    akka-router {
-      |      includes = [ "user/tracked-*", "user/measuring-*", "user/stop-*" ]
-      |      excludes = [ "user/tracked-explicitly-excluded-*"]
-      |    }
-      |  }
-      |}
-      |
-      |akka.loglevel = OFF
-      |
-    """.stripMargin))
+class RouterMetricsSpec extends BaseKamonSpec("router-metrics-spec") {
+  override lazy val config =
+    ConfigFactory.parseString(
+      """
+        |kamon.metric {
+        |  tick-interval = 1 hour
+        |  default-collection-context-buffer-size = 10
+        |
+        |  filters = {
+        |    akka-router {
+        |      includes = [ "user/tracked-*", "user/measuring-*", "user/stop-*" ]
+        |      excludes = [ "user/tracked-explicitly-excluded-*"]
+        |    }
+        |  }
+        |}
+        |
+        |akka.loglevel = OFF
+        |
+      """.stripMargin)
 
   "the Kamon router metrics" should {
     "respect the configured include and exclude filters" in new RouterMetricsFixtures {
@@ -204,7 +205,7 @@ class RouterMetricsSpec extends TestKitBase with WordSpecLike with Matchers with
     }
 
     def routerMetricsRecorderOf(routerName: String): Option[RouterMetrics] =
-      Kamon(Metrics)(system).register(RouterMetrics, routerName).map(_.recorder)
+      Kamon.metrics.register(RouterMetrics, routerName).map(_.recorder)
 
     def collectMetricsOf(routerName: String): Option[EntitySnapshot] = {
       Thread.sleep(5) // Just in case the test advances a bit faster than the actor being tested.

@@ -13,72 +13,73 @@
  * =========================================================================================
  */
 
-package kamon.metric
+package kamon.akka
 
 import java.nio.LongBuffer
 
-import akka.actor.{ PoisonPill, Props, ActorRef, ActorSystem }
+import akka.actor.{ ActorRef, ActorSystem }
 import akka.dispatch.MessageDispatcher
 import akka.testkit.{ TestKitBase, TestProbe }
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
-import kamon.akka.{ ForkJoinPoolDispatcherMetrics, ThreadPoolExecutorDispatcherMetrics }
-import kamon.metric.ActorMetricsTestActor.{ Pong, Ping }
 import kamon.metric.instrument.CollectionContext
+import kamon.metric.{ EntityRecorder, EntitySnapshot }
+import kamon.testkit.BaseKamonSpec
 import org.scalatest.{ BeforeAndAfterAll, Matchers, WordSpecLike }
 
-import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration._
+import scala.concurrent.{ Await, Future }
 
-class DispatcherMetricsSpec extends TestKitBase with WordSpecLike with Matchers with BeforeAndAfterAll {
-  implicit lazy val system: ActorSystem = ActorSystem("dispatcher-metrics-spec", ConfigFactory.parseString(
-    """
-      |kamon.metric {
-      |  tick-interval = 1 hour
-      |  default-collection-context-buffer-size = 10
-      |
-      |  filters = {
-      |    akka-dispatcher {
-      |      includes = [ "*" ]
-      |      excludes = [ "explicitly-excluded" ]
-      |    }
-      |  }
-      |
-      |  default-instrument-settings {
-      |    gauge.refresh-interval = 1 hour
-      |    min-max-counter.refresh-interval = 1 hour
-      |  }
-      |}
-      |
-      |explicitly-excluded {
-      |  type = "Dispatcher"
-      |  executor = "fork-join-executor"
-      |}
-      |
-      |tracked-fjp {
-      |  type = "Dispatcher"
-      |  executor = "fork-join-executor"
-      |
-      |  fork-join-executor {
-      |    parallelism-min = 8
-      |    parallelism-factor = 100.0
-      |    parallelism-max = 22
-      |  }
-      |}
-      |
-      |tracked-tpe {
-      |  type = "Dispatcher"
-      |  executor = "thread-pool-executor"
-      |
-      |  thread-pool-executor {
-      |    core-pool-size-min = 7
-      |    core-pool-size-factor = 100.0
-      |    max-pool-size-factor  = 100.0
-      |    max-pool-size-max = 21
-      |  }
-      |}
-      |
-    """.stripMargin))
+class DispatcherMetricsSpec extends BaseKamonSpec("dispatcher-metrics-spec") {
+  override lazy val config =
+    ConfigFactory.parseString(
+      """
+        |kamon.metric {
+        |  tick-interval = 1 hour
+        |  default-collection-context-buffer-size = 10
+        |
+        |  filters = {
+        |    akka-dispatcher {
+        |      includes = [ "*" ]
+        |      excludes = [ "explicitly-excluded" ]
+        |    }
+        |  }
+        |
+        |  default-instrument-settings {
+        |    gauge.refresh-interval = 1 hour
+        |    min-max-counter.refresh-interval = 1 hour
+        |  }
+        |}
+        |
+        |explicitly-excluded {
+        |  type = "Dispatcher"
+        |  executor = "fork-join-executor"
+        |}
+        |
+        |tracked-fjp {
+        |  type = "Dispatcher"
+        |  executor = "fork-join-executor"
+        |
+        |  fork-join-executor {
+        |    parallelism-min = 8
+        |    parallelism-factor = 100.0
+        |    parallelism-max = 22
+        |  }
+        |}
+        |
+        |tracked-tpe {
+        |  type = "Dispatcher"
+        |  executor = "thread-pool-executor"
+        |
+        |  thread-pool-executor {
+        |    core-pool-size-min = 7
+        |    core-pool-size-factor = 100.0
+        |    max-pool-size-factor  = 100.0
+        |    max-pool-size-max = 21
+        |  }
+        |}
+        |
+      """.stripMargin)
 
   "the Kamon dispatcher metrics" should {
     "respect the configured include and exclude filters" in {
@@ -95,6 +96,7 @@ class DispatcherMetricsSpec extends TestKitBase with WordSpecLike with Matchers 
 
     "record metrics for a dispatcher with thread-pool-executor" in {
       implicit val tpeDispatcher = system.dispatchers.lookup("tracked-tpe")
+      refreshDispatcherInstruments(tpeDispatcher)
       collectDispatcherMetrics(tpeDispatcher)
 
       Await.result({
@@ -156,14 +158,10 @@ class DispatcherMetricsSpec extends TestKitBase with WordSpecLike with Matchers 
 
   }
 
-  val collectionContext = new CollectionContext {
-    val buffer: LongBuffer = LongBuffer.allocate(10000)
-  }
-
   def actorRecorderName(ref: ActorRef): String = ref.path.elements.mkString("/")
 
   def findDispatcherRecorder(dispatcher: MessageDispatcher): Option[EntityRecorder] =
-    Kamon(Metrics)(system).find(dispatcher.id, "akka-dispatcher")
+    Kamon.metrics.find(dispatcher.id, "akka-dispatcher")
 
   def collectDispatcherMetrics(dispatcher: MessageDispatcher): EntitySnapshot =
     findDispatcherRecorder(dispatcher).map(_.collect(collectionContext)).get

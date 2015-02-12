@@ -44,7 +44,7 @@ class AskPatternInstrumentation {
       actor match {
         // the AskPattern will only work for InternalActorRef's with these conditions.
         case ref: InternalActorRef if !ref.isTerminated && timeout.duration.length > 0 ⇒
-          val akkaExtension = ctx.lookupExtension(Akka)
+          val akkaExtension = Kamon.extension(Akka)
           val future = pjp.proceed().asInstanceOf[Future[AnyRef]]
           val system = ref.provider.guardian.underlying.system
 
