@@ -36,14 +36,13 @@ class RequestInstrumentation {
 
   @After("call(* play.api.GlobalSettings.onStart(*)) && args(application)")
   def afterApplicationStart(application: play.api.Application): Unit = {
-    Kamon(Play)(Akka.system())
+    Kamon(Play)
   }
 
   @Before("call(* play.api.GlobalSettings.onRouteRequest(..)) && args(requestHeader)")
   def beforeRouteRequest(requestHeader: RequestHeader): Unit = {
-    implicit val system = Akka.system()
+    import Kamon.tracer
     val playExtension = Kamon(Play)
-    val tracer = Kamon(Tracer)
 
     val defaultTraceName = playExtension.generateTraceName(requestHeader)
     val token = if (playExtension.includeTraceToken) {
@@ -58,14 +57,14 @@ class RequestInstrumentation {
   def aroundDoFilter(pjp: ProceedingJoinPoint, next: EssentialAction): Any = {
     val essentialAction = (requestHeader: RequestHeader) ⇒ {
 
-      val executor = Kamon(Play)(Akka.system()).defaultDispatcher
+      val playExtension = Kamon(Play)
+      val executor = playExtension.defaultDispatcher
 
       def onResult(result: Result): Result = {
         TraceContext.map { ctx ⇒
           ctx.finish()
 
-          val playExtension = ctx.lookupExtension(Play)
-          recordHttpServerMetrics(result.header, ctx.name, playExtension)
+          recordHttpServerMetrics(result.header, ctx.name)
 
           if (playExtension.includeTraceToken) result.withHeaders(playExtension.traceTokenHeaderName -> ctx.token)
           else result
@@ -87,12 +86,12 @@ class RequestInstrumentation {
   @Before("call(* play.api.GlobalSettings.onError(..)) && args(request, ex)")
   def beforeOnError(request: TraceContextAware, ex: Throwable): Unit = {
     TraceContext.map { ctx ⇒
-      recordHttpServerMetrics(InternalServerError.header, ctx.name, ctx.lookupExtension(Play))
+      recordHttpServerMetrics(InternalServerError.header, ctx.name)
     }
   }
 
-  def recordHttpServerMetrics(header: ResponseHeader, traceName: String, playExtension: PlayExtension): Unit =
-    playExtension.httpServerMetrics.recordResponse(traceName, header.status.toString)
+  def recordHttpServerMetrics(header: ResponseHeader, traceName: String): Unit =
+    Kamon(Play).httpServerMetrics.recordResponse(traceName, header.status.toString)
 
   def storeDiagnosticData(request: RequestHeader): Unit = {
     val agent = request.headers.get(UserAgent).getOrElse(Unknown)

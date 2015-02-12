@@ -114,7 +114,7 @@ class AskPatternInstrumentationSpec extends BaseKamonSpec("ask-pattern-tracing-s
   }
 
   def setAskPatternTimeoutWarningMode(mode: String): Unit = {
-    val target = Kamon(Akka)(system)
+    val target = Kamon(Akka)
     val field = target.getClass.getDeclaredField("askPatternTimeoutWarning")
     field.setAccessible(true)
     field.set(target, mode)

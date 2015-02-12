@@ -16,6 +16,7 @@
 
 package spray.can.client
 
+import kamon.Kamon
 import org.aspectj.lang.annotation._
 import org.aspectj.lang.ProceedingJoinPoint
 import spray.http._
@@ -47,7 +48,7 @@ class ClientRequestInstrumentation {
     requestContext.traceContext
 
     TraceContext.map { ctx ⇒
-      val sprayExtension = ctx.lookupExtension(Spray)
+      val sprayExtension = Kamon.extension(Spray)
 
       if (sprayExtension.settings.clientInstrumentationLevel == ClientInstrumentationLevel.HostLevelAPI) {
         if (requestContext.segment.isEmpty) {
@@ -112,7 +113,7 @@ class ClientRequestInstrumentation {
 
     (request: HttpRequest) ⇒ {
       TraceContext.map { ctx ⇒
-        val sprayExtension = ctx.lookupExtension(Spray)
+        val sprayExtension = Kamon.extension(Spray)
         val segment =
           if (sprayExtension.settings.clientInstrumentationLevel == ClientInstrumentationLevel.RequestLevelAPI)
             ctx.startSegment(sprayExtension.generateRequestLevelApiSegmentName(request), SegmentCategory.HttpClient, Spray.SegmentLibraryName)
@@ -139,7 +140,7 @@ class ClientRequestInstrumentation {
   def aroundIncludingDefaultHeadersAtHttpHostConnector(pjp: ProceedingJoinPoint, request: HttpMessage, defaultHeaders: List[HttpHeader]): Any = {
 
     val modifiedHeaders = TraceContext.map { ctx ⇒
-      val sprayExtension = ctx.lookupExtension(Spray)
+      val sprayExtension = Kamon.extension(Spray)
       if (sprayExtension.settings.includeTraceTokenHeader)
         RawHeader(sprayExtension.settings.traceTokenHeaderName, ctx.token) :: defaultHeaders
       else

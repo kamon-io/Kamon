@@ -20,7 +20,7 @@ import akka.actor.{ ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProv
 import akka.event.Logging
 import kamon.Kamon
 import kamon.http.HttpServerMetrics
-import kamon.metric.{ Entity, Metrics }
+import kamon.metric.Entity
 import play.api.libs.ws.WSRequest
 import play.api.mvc.RequestHeader
 
@@ -37,11 +37,11 @@ class PlayExtension(private val system: ExtendedActorSystem) extends Kamon.Exten
 
   private val config = system.settings.config.getConfig("kamon.play")
   val httpServerMetrics = {
-    val metricsExtension = Metrics.get(system)
+    val metricsExtension = Kamon.metrics
     val factory = metricsExtension.instrumentFactory(HttpServerMetrics.category)
     val entity = Entity("play-server", HttpServerMetrics.category)
 
-    Metrics.get(system).register(entity, new HttpServerMetrics(factory)).recorder
+    metricsExtension.register(entity, new HttpServerMetrics(factory)).recorder
   }
 
   val defaultDispatcher = system.dispatchers.lookup(config.getString("dispatcher"))

@@ -22,8 +22,9 @@ import akka.actor.{ ActorSystem, ActorSystemImpl }
 import akka.dispatch.ForkJoinExecutorConfigurator.AkkaForkJoinPool
 import akka.dispatch._
 import akka.kamon.instrumentation.LookupDataAware.LookupData
+import kamon.Kamon
 import kamon.akka.{ AkkaDispatcherMetrics, ThreadPoolExecutorDispatcherMetrics, ForkJoinPoolDispatcherMetrics }
-import kamon.metric.{ Metrics, Entity }
+import kamon.metric.Entity
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
 
@@ -58,10 +59,10 @@ class DispatcherInstrumentation {
   private def registerDispatcher(dispatcherName: String, executorService: ExecutorService, system: ActorSystem): Unit =
     executorService match {
       case fjp: AkkaForkJoinPool ⇒
-        Metrics.get(system).register(ForkJoinPoolDispatcherMetrics.factory(fjp), dispatcherName)
+        Kamon.metrics.register(ForkJoinPoolDispatcherMetrics.factory(fjp), dispatcherName)
 
       case tpe: ThreadPoolExecutor ⇒
-        Metrics.get(system).register(ThreadPoolExecutorDispatcherMetrics.factory(tpe), dispatcherName)
+        Kamon.metrics.register(ThreadPoolExecutorDispatcherMetrics.factory(tpe), dispatcherName)
 
       case others ⇒ // Currently not interested in other kinds of dispatchers.
     }
@@ -119,7 +120,7 @@ class DispatcherInstrumentation {
     import lazyExecutor.lookupData
 
     if (lookupData.actorSystem != null)
-      Metrics.get(lookupData.actorSystem).unregister(Entity(lookupData.dispatcherName, AkkaDispatcherMetrics.Category))
+      Kamon.metrics.unregister(Entity(lookupData.dispatcherName, AkkaDispatcherMetrics.Category))
   }
 
 }

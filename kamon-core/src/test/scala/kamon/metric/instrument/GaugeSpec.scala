@@ -17,6 +17,7 @@
 package kamon.metric.instrument
 
 import java.util.concurrent.atomic.AtomicLong
+import kamon.Kamon
 import kamon.metric.instrument.Histogram.DynamicRange
 import kamon.testkit.BaseKamonSpec
 import scala.concurrent.duration._
@@ -48,7 +49,7 @@ class GaugeSpec extends BaseKamonSpec("gauge-spec") {
 
       Thread.sleep(1.second.toMillis)
       gauge.cleanup
-      val snapshot = gauge.collect(kamon.metrics.buildDefaultCollectionContext)
+      val snapshot = gauge.collect(Kamon.metrics.buildDefaultCollectionContext)
 
       snapshot.numberOfMeasurements should be(10L +- 1L)
       snapshot.min should be(1)
@@ -58,7 +59,7 @@ class GaugeSpec extends BaseKamonSpec("gauge-spec") {
     "not record the current value when doing a collection" in new GaugeFixture {
       val (numberOfValuesRecorded, gauge) = createGauge(10 seconds)
 
-      val snapshot = gauge.collect(kamon.metrics.buildDefaultCollectionContext)
+      val snapshot = gauge.collect(Kamon.metrics.buildDefaultCollectionContext)
       snapshot.numberOfMeasurements should be(0)
       numberOfValuesRecorded.get() should be(0)
     }
@@ -67,7 +68,7 @@ class GaugeSpec extends BaseKamonSpec("gauge-spec") {
   trait GaugeFixture {
     def createGauge(refreshInterval: FiniteDuration = 100 millis): (AtomicLong, Gauge) = {
       val recordedValuesCounter = new AtomicLong(0)
-      val gauge = Gauge(DynamicRange(1, 100, 2), refreshInterval, kamon.metrics.settings.refreshScheduler, {
+      val gauge = Gauge(DynamicRange(1, 100, 2), refreshInterval, Kamon.metrics.settings.refreshScheduler, {
         () ⇒ recordedValuesCounter.addAndGet(1)
       })
 

@@ -19,6 +19,7 @@ package kamon.metric
 import akka.actor._
 import akka.testkit.{ TestProbe, ImplicitSender }
 import com.typesafe.config.ConfigFactory
+import kamon.Kamon
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 import kamon.testkit.BaseKamonSpec
 import scala.concurrent.duration._
@@ -32,7 +33,7 @@ class SubscriptionsProtocolSpec extends BaseKamonSpec("subscriptions-protocol-sp
         |}
       """.stripMargin)
 
-  val metricsModule = kamon.metrics
+  lazy val metricsModule = Kamon.metrics
   import metricsModule.{ register, subscribe, unsubscribe }
 
   "the Subscriptions messaging protocol" should {

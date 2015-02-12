@@ -19,6 +19,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.classic.{ AsyncAppender, LoggerContext }
 import ch.qos.logback.core.read.ListAppender
 import ch.qos.logback.core.status.NopStatusListener
+import kamon.Kamon
 import kamon.trace.TraceLocal
 import kamon.trace.TraceLocal.AvailableToMdc
 import org.scalatest.BeforeAndAfter
@@ -34,7 +35,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 
 class LoggerLikeInstrumentationSpec extends PlaySpec with OneServerPerSuite with BeforeAndAfter {
-
+  Kamon.start()
   System.setProperty("config.file", "./kamon-play/src/test/resources/conf/application.conf")
 
   val executor = scala.concurrent.ExecutionContext.Implicits.global

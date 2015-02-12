@@ -18,13 +18,13 @@ package kamon.trace
 
 import java.util.concurrent.TimeUnit
 
-import akka.actor.ActorSystem
+import com.typesafe.config.Config
 
 case class TraceSettings(levelOfDetail: LevelOfDetail, sampler: Sampler)
 
 object TraceSettings {
-  def apply(system: ActorSystem): TraceSettings = {
-    val tracerConfig = system.settings.config.getConfig("kamon.trace")
+  def apply(config: Config): TraceSettings = {
+    val tracerConfig = config.getConfig("kamon.trace")
 
     val detailLevel: LevelOfDetail = tracerConfig.getString("level-of-detail") match {
       case "metrics-only" ⇒ LevelOfDetail.MetricsOnly

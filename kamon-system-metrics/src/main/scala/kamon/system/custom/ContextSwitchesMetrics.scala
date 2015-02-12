@@ -88,7 +88,7 @@ class ContextSwitchesMetrics(pid: Long, log: LoggingAdapter, instrumentFactory: 
 object ContextSwitchesMetrics {
 
   def register(system: ActorSystem, refreshInterval: FiniteDuration): ContextSwitchesMetrics = {
-    val metricsExtension = Kamon(Metrics)(system)
+    val metricsExtension = Kamon.metrics
     val log = Logging(system, "ContextSwitchesMetrics")
     val pid = (new Sigar).getPid
 

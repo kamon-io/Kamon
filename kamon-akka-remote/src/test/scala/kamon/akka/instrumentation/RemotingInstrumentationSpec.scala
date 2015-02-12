@@ -16,23 +16,27 @@ import scala.concurrent.duration._
 import scala.util.control.NonFatal
 
 class RemotingInstrumentationSpec extends TestKitBase with WordSpecLike with Matchers with ImplicitSender {
-  implicit lazy val system: ActorSystem = ActorSystem("remoting-spec-local-system", ConfigFactory.parseString(
-    """
-      |akka {
-      |  loggers = ["akka.event.slf4j.Slf4jLogger"]
-      |
-      |  actor {
-      |    provider = "akka.remote.RemoteActorRefProvider"
-      |  }
-      |  remote {
-      |    enabled-transports = ["akka.remote.netty.tcp"]
-      |    netty.tcp {
-      |      hostname = "127.0.0.1"
-      |      port = 2552
-      |    }
-      |  }
-      |}
-    """.stripMargin))
+
+  implicit lazy val system: ActorSystem = {
+    Kamon.start()
+    ActorSystem("remoting-spec-local-system", ConfigFactory.parseString(
+      """
+        |akka {
+        |  loggers = ["akka.event.slf4j.Slf4jLogger"]
+        |
+        |  actor {
+        |    provider = "akka.remote.RemoteActorRefProvider"
+        |  }
+        |  remote {
+        |    enabled-transports = ["akka.remote.netty.tcp"]
+        |    netty.tcp {
+        |      hostname = "127.0.0.1"
+        |      port = 2552
+        |    }
+        |  }
+        |}
+      """.stripMargin))
+  }
 
   val remoteSystem: ActorSystem = ActorSystem("remoting-spec-remote-system", ConfigFactory.parseString(
     """
@@ -52,13 +56,12 @@ class RemotingInstrumentationSpec extends TestKitBase with WordSpecLike with Mat
       |}
     """.stripMargin))
 
-  lazy val kamon = Kamon(system)
   val RemoteSystemAddress = AddressFromURIString("akka.tcp://remoting-spec-remote-system@127.0.0.1:2553")
-  import kamon.tracer.newContext
+  import Kamon.tracer
 
   "The Remoting instrumentation" should {
     "propagate the TraceContext when creating a new remote actor" in {
-      TraceContext.withContext(newContext("deploy-remote-actor", "deploy-remote-actor-1")) {
+      TraceContext.withContext(tracer.newContext("deploy-remote-actor", "deploy-remote-actor-1")) {
         system.actorOf(TraceTokenReplier.remoteProps(Some(testActor), RemoteSystemAddress), "remote-deploy-fixture")
       }
 
@@ -68,7 +71,7 @@ class RemotingInstrumentationSpec extends TestKitBase with WordSpecLike with Mat
     "propagate the TraceContext when sending a message to a remotely deployed actor" in {
       val remoteRef = system.actorOf(TraceTokenReplier.remoteProps(None, RemoteSystemAddress), "remote-message-fixture")
 
-      TraceContext.withContext(newContext("message-remote-actor", "message-remote-actor-1")) {
+      TraceContext.withContext(tracer.newContext("message-remote-actor", "message-remote-actor-1")) {
         remoteRef ! "reply-trace-token"
       }
 
@@ -80,7 +83,7 @@ class RemotingInstrumentationSpec extends TestKitBase with WordSpecLike with Mat
       implicit val askTimeout = Timeout(10 seconds)
       val remoteRef = system.actorOf(TraceTokenReplier.remoteProps(None, RemoteSystemAddress), "remote-ask-and-pipe-fixture")
 
-      TraceContext.withContext(newContext("ask-and-pipe-remote-actor", "ask-and-pipe-remote-actor-1")) {
+      TraceContext.withContext(tracer.newContext("ask-and-pipe-remote-actor", "ask-and-pipe-remote-actor-1")) {
         (remoteRef ? "reply-trace-token") pipeTo (testActor)
       }
 
@@ -92,7 +95,7 @@ class RemotingInstrumentationSpec extends TestKitBase with WordSpecLike with Mat
       remoteSystem.actorOf(TraceTokenReplier.props(None), "actor-selection-target-b")
       val selection = system.actorSelection(RemoteSystemAddress + "/user/actor-selection-target-*")
 
-      TraceContext.withContext(newContext("message-remote-actor-selection", "message-remote-actor-selection-1")) {
+      TraceContext.withContext(tracer.newContext("message-remote-actor-selection", "message-remote-actor-selection-1")) {
         selection ! "reply-trace-token"
       }
 
@@ -104,7 +107,7 @@ class RemotingInstrumentationSpec extends TestKitBase with WordSpecLike with Mat
     "propagate the TraceContext a remotely supervised child fails" in {
       val supervisor = system.actorOf(Props(new SupervisorOfRemote(testActor, RemoteSystemAddress)))
 
-      TraceContext.withContext(newContext("remote-supervision", "remote-supervision-1")) {
+      TraceContext.withContext(tracer.newContext("remote-supervision", "remote-supervision-1")) {
         supervisor ! "fail"
       }
 
@@ -115,7 +118,7 @@ class RemotingInstrumentationSpec extends TestKitBase with WordSpecLike with Mat
       remoteSystem.actorOf(TraceTokenReplier.props(None), "remote-routee")
       val router = system.actorOf(RoundRobinGroup(List(RemoteSystemAddress + "/user/actor-selection-target-*")).props(), "router")
 
-      TraceContext.withContext(newContext("remote-routee", "remote-routee-1")) {
+      TraceContext.withContext(tracer.newContext("remote-routee", "remote-routee-1")) {
         router ! "reply-trace-token"
       }
 

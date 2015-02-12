@@ -5,7 +5,8 @@ import akka.remote.instrumentation.TraceContextAwareWireFormats.{ TraceContextAw
 import akka.remote.{ RemoteActorRefProvider, Ack, SeqNo }
 import akka.remote.WireFormats._
 import akka.util.ByteString
-import kamon.trace.{ Tracer, TraceContext }
+import kamon.Kamon
+import kamon.trace.TraceContext
 import kamon.util.MilliTimestamp
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
@@ -83,7 +84,7 @@ class RemotingInstrumentation {
     if (ackAndEnvelope.hasEnvelope && ackAndEnvelope.getEnvelope.hasTraceContext) {
       val remoteTraceContext = ackAndEnvelope.getEnvelope.getTraceContext
       val system = provider.guardian.underlying.system
-      val tracer = Tracer.get(system)
+      val tracer = Kamon.tracer
 
       val ctx = tracer.newContext(
         remoteTraceContext.getTraceName,

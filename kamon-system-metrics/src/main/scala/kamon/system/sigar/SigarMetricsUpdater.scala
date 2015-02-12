@@ -19,7 +19,7 @@ package kamon.system.sigar
 import akka.actor.{ Props, Actor }
 import kamon.Kamon
 import kamon.metric.instrument.InstrumentFactory
-import kamon.metric.{ Entity, EntityRecorder, MetricsExtension, Metrics }
+import kamon.metric.{ Entity, EntityRecorder, MetricsExtension }
 import kamon.system.sigar.SigarMetricsUpdater.UpdateSigarMetrics
 import org.hyperic.sigar.Sigar
 
@@ -27,7 +27,7 @@ import scala.concurrent.duration.FiniteDuration
 
 class SigarMetricsUpdater(refreshInterval: FiniteDuration) extends Actor {
   val sigar = new Sigar
-  val metricsExtension = Kamon(Metrics)(context.system)
+  val metricsExtension = Kamon.metrics
 
   val sigarMetrics = List(
     CpuMetrics.register(sigar, metricsExtension),

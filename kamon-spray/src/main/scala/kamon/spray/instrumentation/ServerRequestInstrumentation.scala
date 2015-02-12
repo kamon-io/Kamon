@@ -39,9 +39,8 @@ class ServerRequestInstrumentation {
 
   @After("openRequestInit(openRequest, request)")
   def afterInit(openRequest: TraceContextAware, request: HttpRequest): Unit = {
-    val system: ActorSystem = openRequest.asInstanceOf[OpenRequest].context.actorContext.system
-    val tracer = Tracer.get(system)
-    val sprayExtension = Kamon(Spray)(system)
+    import Kamon.tracer
+    val sprayExtension = Kamon(Spray)
 
     val defaultTraceName = sprayExtension.generateTraceName(request)
     val token = if (sprayExtension.settings.includeTraceTokenHeader) {
@@ -77,7 +76,7 @@ class ServerRequestInstrumentation {
     if (incomingContext.isEmpty)
       pjp.proceed()
     else {
-      val sprayExtension = incomingContext.lookupExtension(Spray)
+      val sprayExtension = Kamon(Spray)
 
       val proceedResult = if (sprayExtension.settings.includeTraceTokenHeader) {
         val responseWithHeader = includeTraceTokenIfPossible(response, sprayExtension.settings.traceTokenHeaderName, incomingContext.token)
@@ -98,7 +97,7 @@ class ServerRequestInstrumentation {
 
   def verifyTraceContextConsistency(incomingTraceContext: TraceContext, storedTraceContext: TraceContext): Unit = {
     def publishWarning(text: String): Unit =
-      storedTraceContext.lookupExtension(Spray).log.warning(text)
+      Kamon(Spray).log.warning(text)
 
     if (incomingTraceContext.nonEmpty) {
       if (incomingTraceContext.token != storedTraceContext.token)

@@ -16,6 +16,7 @@
 
 package kamon.play.instrumentation
 
+import kamon.Kamon
 import kamon.play.Play
 import kamon.trace.{ TraceContext, SegmentCategory }
 import org.aspectj.lang.ProceedingJoinPoint
@@ -33,7 +34,7 @@ class WSInstrumentation {
   @Around("onExecuteRequest(request)")
   def aroundExecuteRequest(pjp: ProceedingJoinPoint, request: WSRequest): Any = {
     TraceContext.map { ctx ⇒
-      val playExtension = ctx.lookupExtension(Play)
+      val playExtension = Kamon(Play)
       val executor = playExtension.defaultDispatcher
       val segmentName = playExtension.generateHttpClientSegmentName(request)
       val segment = ctx.startSegment(segmentName, SegmentCategory.HttpClient, Play.SegmentLibraryName)

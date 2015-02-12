@@ -79,7 +79,7 @@ class SprayServerTracingSpec extends BaseKamonSpec("spray-server-tracing-spec") 
   def disableAutomaticTraceTokenPropagation(): Unit = setIncludeTraceToken(false)
 
   def setIncludeTraceToken(include: Boolean): Unit = {
-    val target = Kamon(Spray)(system).settings
+    val target = Kamon(Spray).settings
     val field = target.getClass.getDeclaredField("includeTraceTokenHeader")
     field.setAccessible(true)
     field.set(target, include)

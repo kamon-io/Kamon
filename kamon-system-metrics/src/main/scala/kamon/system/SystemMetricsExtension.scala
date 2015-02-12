@@ -42,7 +42,7 @@ class SystemMetricsExtension(system: ExtendedActorSystem) extends Kamon.Extensio
   val sigarFolder = config.getString("sigar-native-folder")
   val sigarRefreshInterval = config.getFiniteDuration("sigar-metrics-refresh-interval")
   val contextSwitchesRefreshInterval = config.getFiniteDuration("context-switches-refresh-interval")
-  val metricsExtension = Kamon(Metrics)(system)
+  val metricsExtension = Kamon.metrics
 
   // Sigar-based metrics
   SigarProvisioner.provision(new File(sigarFolder))

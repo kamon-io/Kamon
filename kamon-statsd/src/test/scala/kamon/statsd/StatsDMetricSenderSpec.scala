@@ -20,6 +20,7 @@ import akka.testkit.{ TestKitBase, TestProbe }
 import akka.actor.{ ActorRef, Props, ActorSystem }
 import kamon.Kamon
 import kamon.metric.instrument.{ InstrumentFactory, UnitOfMeasurement }
+import kamon.testkit.BaseKamonSpec
 import kamon.util.MilliTimestamp
 import org.scalatest.{ Matchers, WordSpecLike }
 import kamon.metric._
@@ -28,28 +29,26 @@ import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 import java.net.InetSocketAddress
 import com.typesafe.config.ConfigFactory
 
-class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers {
-  implicit lazy val system: ActorSystem = ActorSystem("statsd-metric-sender-spec", ConfigFactory.parseString(
-    """
-      |kamon {
-      |  statsd.simple-metric-key-generator {
-      |    application = kamon
-      |    hostname-override = kamon-host
-      |    include-hostname = true
-      |    metric-name-normalization-strategy = normalize
-      |  }
-      |}
-      |
-    """.stripMargin))
+class StatsDMetricSenderSpec extends BaseKamonSpec("statsd-metric-sender-spec") {
+  override lazy val config =
+    ConfigFactory.parseString(
+      """
+        |kamon {
+        |  statsd.simple-metric-key-generator {
+        |    application = kamon
+        |    hostname-override = kamon-host
+        |    include-hostname = true
+        |    metric-name-normalization-strategy = normalize
+        |  }
+        |}
+        |
+      """.stripMargin)
 
   implicit val metricKeyGenerator = new SimpleMetricKeyGenerator(system.settings.config) {
     override def hostName: String = "localhost_local"
   }
 
-  val collectionContext = Kamon(Metrics).buildDefaultCollectionContext
-
   "the StatsDMetricSender" should {
-
     "flush the metrics data after processing the tick, even if the max-packet-size is not reached" in new UdpListenerFixture {
       val testMetricKey = buildMetricKey(testEntity, "metric-one")
       val testRecorder = buildRecorder("user/kamon")
@@ -134,7 +133,7 @@ class StatsDMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers
     }
 
     def buildRecorder(name: String): TestEntityRecorder = {
-      Kamon(Metrics).register(TestEntityRecorder, name).get.recorder
+      Kamon.metrics.register(TestEntityRecorder, name).get.recorder
     }
 
     def setup(metrics: Map[Entity, EntitySnapshot]): TestProbe = {

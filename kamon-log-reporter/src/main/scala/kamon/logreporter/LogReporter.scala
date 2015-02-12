@@ -35,13 +35,13 @@ class LogReporterExtension(system: ExtendedActorSystem) extends Kamon.Extension 
   val logReporterConfig = system.settings.config.getConfig("kamon.log-reporter")
   val subscriber = system.actorOf(Props[LogReporterSubscriber], "kamon-log-reporter")
 
-  Kamon(Metrics)(system).subscribe("trace", "**", subscriber, permanently = true)
-  Kamon(Metrics)(system).subscribe("actor", "**", subscriber, permanently = true)
-  Kamon(Metrics)(system).subscribe("user-metrics", "**", subscriber, permanently = true)
+  Kamon.metrics.subscribe("trace", "**", subscriber, permanently = true)
+  Kamon.metrics.subscribe("actor", "**", subscriber, permanently = true)
+  Kamon.metrics.subscribe("user-metrics", "**", subscriber, permanently = true)
 
   val includeSystemMetrics = logReporterConfig.getBoolean("report-system-metrics")
   if (includeSystemMetrics) {
-    Kamon(Metrics)(system).subscribe("system-metric", "**", subscriber, permanently = true)
+    Kamon.metrics.subscribe("system-metric", "**", subscriber, permanently = true)
   }
 
 }

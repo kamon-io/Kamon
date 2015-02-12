@@ -264,14 +264,14 @@ class ClientRequestInstrumentationSpec extends BaseKamonSpec("client-request-ins
   def disableAutomaticTraceTokenPropagation(): Unit = setIncludeTraceToken(false)
 
   def setSegmentCollectionStrategy(strategy: ClientInstrumentationLevel.Level): Unit = {
-    val target = Kamon(Spray)(system).settings
+    val target = Kamon(Spray).settings
     val field = target.getClass.getDeclaredField("clientInstrumentationLevel")
     field.setAccessible(true)
     field.set(target, strategy)
   }
 
   def setIncludeTraceToken(include: Boolean): Unit = {
-    val target = Kamon(Spray)(system).settings
+    val target = Kamon(Spray).settings
     val field = target.getClass.getDeclaredField("includeTraceTokenHeader")
     field.setAccessible(true)
     field.set(target, include)

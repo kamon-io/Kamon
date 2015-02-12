@@ -13,42 +13,44 @@
  * =========================================================================================
  */
 
-package kamon.metric
+package kamon.akka
 
 import java.nio.LongBuffer
 
-import kamon.Kamon
-import kamon.akka.ActorMetrics
-import kamon.metric.ActorMetricsTestActor._
-import kamon.metric.instrument.CollectionContext
-import org.scalatest.{ BeforeAndAfterAll, WordSpecLike, Matchers }
-import akka.testkit.{ ImplicitSender, TestProbe, TestKitBase }
 import akka.actor._
+import akka.testkit.TestProbe
 import com.typesafe.config.ConfigFactory
+import kamon.Kamon
+import kamon.akka.ActorMetricsTestActor._
+import kamon.metric.EntitySnapshot
+import kamon.metric.instrument.CollectionContext
+import kamon.testkit.BaseKamonSpec
+
 import scala.concurrent.duration._
 
-class ActorMetricsSpec extends TestKitBase with WordSpecLike with Matchers with ImplicitSender with BeforeAndAfterAll {
-  implicit lazy val system: ActorSystem = ActorSystem("actor-metrics-spec", ConfigFactory.parseString(
-    """
-      |kamon.metric {
-      |  tick-interval = 1 hour
-      |  default-collection-context-buffer-size = 10
-      |
-      |  filters {
-      |    akka-actor {
-      |      includes = [ "user/tracked-*", "user/measuring-*", "user/clean-after-collect", "user/stop" ]
-      |      excludes = [ "user/tracked-explicitly-excluded", "user/non-tracked-actor" ]
-      |    }
-      |  }
-      |
-      |  instrument-settings {
-      |    akka-actor.mailbox-size.refresh-interval = 1 hour
-      |  }
-      |}
-      |
-      |akka.loglevel = OFF
-      |
-    """.stripMargin))
+class ActorMetricsSpec extends BaseKamonSpec("actor-metrics-spec") {
+  override lazy val config =
+    ConfigFactory.parseString(
+      """
+        |kamon.metric {
+        |  tick-interval = 1 hour
+        |  default-collection-context-buffer-size = 10
+        |
+        |  filters {
+        |    akka-actor {
+        |      includes = [ "user/tracked-*", "user/measuring-*", "user/clean-after-collect", "user/stop" ]
+        |      excludes = [ "user/tracked-explicitly-excluded", "user/non-tracked-actor" ]
+        |    }
+        |  }
+        |
+        |  instrument-settings {
+        |    akka-actor.mailbox-size.refresh-interval = 1 hour
+        |  }
+        |}
+        |
+        |akka.loglevel = OFF
+        |
+      """.stripMargin)
 
   "the Kamon actor metrics" should {
     "respect the configured include and exclude filters" in new ActorMetricsFixtures {
@@ -163,7 +165,7 @@ class ActorMetricsSpec extends TestKitBase with WordSpecLike with Matchers with 
     def actorRecorderName(ref: ActorRef): String = ref.path.elements.mkString("/")
 
     def actorMetricsRecorderOf(ref: ActorRef): Option[ActorMetrics] =
-      Kamon(Metrics)(system).register(ActorMetrics, actorRecorderName(ref)).map(_.recorder)
+      Kamon.metrics.register(ActorMetrics, actorRecorderName(ref)).map(_.recorder)
 
     def collectMetricsOf(ref: ActorRef): Option[EntitySnapshot] = {
       Thread.sleep(5) // Just in case the test advances a bit faster than the actor being tested.

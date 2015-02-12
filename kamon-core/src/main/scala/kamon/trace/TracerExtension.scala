@@ -20,20 +20,13 @@ import java.net.InetAddress
 import java.util.concurrent.atomic.AtomicLong
 
 import akka.actor._
-import akka.actor
-import kamon.Kamon
-import kamon.metric.{ Metrics, MetricsExtension }
-import kamon.util.{ NanoInterval, RelativeNanoTimestamp, NanoTimestamp, GlobPathFilter }
+import com.typesafe.config.Config
+import kamon.metric.MetricsExtension
+import kamon.util._
 
 import scala.util.Try
 
-object Tracer extends ExtensionId[TracerExtension] with ExtensionIdProvider {
-  override def get(system: ActorSystem): TracerExtension = super.get(system)
-  def lookup(): ExtensionId[_ <: actor.Extension] = Tracer
-  def createExtension(system: ExtendedActorSystem): TracerExtension = new TracerExtensionImpl(system)
-}
-
-trait TracerExtension extends Kamon.Extension {
+trait TracerExtension {
   def newContext(name: String): TraceContext
   def newContext(name: String, token: String): TraceContext
   def newContext(name: String, token: String, timestamp: RelativeNanoTimestamp, isOpen: Boolean, isLocal: Boolean): TraceContext
@@ -42,14 +35,13 @@ trait TracerExtension extends Kamon.Extension {
   def unsubscribe(subscriber: ActorRef): Unit
 }
 
-class TracerExtensionImpl(system: ExtendedActorSystem) extends TracerExtension {
-  private val _settings = TraceSettings(system)
-  private val _metricsExtension = Metrics.get(system)
-
+private[kamon] class TracerExtensionImpl(metricsExtension: MetricsExtension, config: Config) extends TracerExtension {
+  private val _settings = TraceSettings(config)
   private val _hostnamePrefix = Try(InetAddress.getLocalHost.getHostName).getOrElse("unknown-localhost")
   private val _tokenCounter = new AtomicLong
-  private val _subscriptions = system.actorOf(Props[TraceSubscriptions], "trace-subscriptions")
-  private val _incubator = system.actorOf(Incubator.props(_subscriptions))
+
+  private val _subscriptions = new LazyActorRef
+  private val _incubator = new LazyActorRef
 
   private def newToken: String =
     _hostnamePrefix + "-" + String.valueOf(_tokenCounter.incrementAndGet())
@@ -66,7 +58,7 @@ class TracerExtensionImpl(system: ExtendedActorSystem) extends TracerExtension {
   private def createTraceContext(traceName: String, token: String = newToken, startTimestamp: RelativeNanoTimestamp = RelativeNanoTimestamp.now,
     isOpen: Boolean = true, isLocal: Boolean = true): TraceContext = {
 
-    def newMetricsOnlyContext = new MetricsOnlyContext(traceName, token, isOpen, _settings.levelOfDetail, startTimestamp, null, _metricsExtension, system)
+    def newMetricsOnlyContext = new MetricsOnlyContext(traceName, token, isOpen, _settings.levelOfDetail, startTimestamp, null, metricsExtension)
 
     if (_settings.levelOfDetail == LevelOfDetail.MetricsOnly || !isLocal)
       newMetricsOnlyContext
@@ -74,20 +66,44 @@ class TracerExtensionImpl(system: ExtendedActorSystem) extends TracerExtension {
       if (!_settings.sampler.shouldTrace)
         newMetricsOnlyContext
       else
-        new TracingContext(traceName, token, true, _settings.levelOfDetail, isLocal, startTimestamp, null, _metricsExtension, this, system, dispatchTracingContext)
+        new TracingContext(traceName, token, true, _settings.levelOfDetail, isLocal, startTimestamp, null, metricsExtension, this, dispatchTracingContext)
     }
   }
 
-  def subscribe(subscriber: ActorRef): Unit = _subscriptions ! TraceSubscriptions.Subscribe(subscriber)
-  def unsubscribe(subscriber: ActorRef): Unit = _subscriptions ! TraceSubscriptions.Unsubscribe(subscriber)
+  def subscribe(subscriber: ActorRef): Unit =
+    _subscriptions.tell(TraceSubscriptions.Subscribe(subscriber))
+
+  def unsubscribe(subscriber: ActorRef): Unit =
+    _subscriptions.tell(TraceSubscriptions.Unsubscribe(subscriber))
 
   private[kamon] def dispatchTracingContext(trace: TracingContext): Unit =
     if (_settings.sampler.shouldReport(trace.elapsedTime))
       if (trace.shouldIncubate)
-        _incubator ! trace
+        _incubator.tell(trace)
       else
-        _subscriptions ! trace.generateTraceInfo
+        _subscriptions.tell(trace.generateTraceInfo)
 
+  /**
+   *  Tracer Extension initialization.
+   */
+  private var _system: ActorSystem = null
+  private lazy val _start = {
+    val subscriptions = _system.actorOf(Props[TraceSubscriptions], "trace-subscriptions")
+    _subscriptions.point(subscriptions)
+    _incubator.point(_system.actorOf(Incubator.props(subscriptions)))
+  }
+
+  def start(system: ActorSystem): Unit = synchronized {
+    _system = system
+    _start
+    _system = null
+  }
+}
+
+private[kamon] object TracerExtensionImpl {
+
+  def apply(metricsExtension: MetricsExtension, config: Config) =
+    new TracerExtensionImpl(metricsExtension, config)
 }
 
 case class TraceInfo(name: String, token: String, timestamp: NanoTimestamp, elapsedTime: NanoInterval, metadata: Map[String, String], segments: List[SegmentInfo])

@@ -38,7 +38,7 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
   import scala.concurrent.duration._
 
   implicit val system = ActorSystem("test")
-  val kamon = Kamon(system)
+  Kamon.start()
   import test.SimpleRequestProcessor.system.dispatcher
 
   val printer = system.actorOf(Props[PrintWhatever])
@@ -49,7 +49,7 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
 
   implicit val timeout = Timeout(30 seconds)
 
-  val counter = Kamon(UserMetrics).counter("requests")
+  val counter = Kamon.userMetrics.counter("requests")
   val pipeline = sendReceive
   val replier = system.actorOf(Props[Replier].withRouter(RoundRobinPool(nrOfInstances = 4)), "replier")
 
@@ -179,6 +179,6 @@ object PingPong extends App {
     def receive: Actor.Receive = { case "ping" ⇒ sender ! "pong" }
   }))
 
-  pinger.tell("pong", ponger)
+  //pinger.tell("pong", ponger)
 
 }

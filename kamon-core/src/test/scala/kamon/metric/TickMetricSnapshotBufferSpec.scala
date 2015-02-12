@@ -17,6 +17,7 @@
 package kamon.metric
 
 import com.typesafe.config.ConfigFactory
+import kamon.Kamon
 import kamon.metric.instrument.Histogram.MutableRecord
 import kamon.testkit.BaseKamonSpec
 import kamon.util.MilliTimestamp
@@ -85,9 +86,9 @@ class TickMetricSnapshotBufferSpec extends BaseKamonSpec("trace-metrics-spec") w
   }
 
   trait SnapshotFixtures {
-    val collectionContext = kamon.metrics.buildDefaultCollectionContext
+    val collectionContext = Kamon.metrics.buildDefaultCollectionContext
     val testTraceIdentity = Entity("buffer-spec-test-trace", "trace")
-    val traceRecorder = kamon.metrics.register(TraceMetrics, "buffer-spec-test-trace").get.recorder
+    val traceRecorder = Kamon.metrics.register(TraceMetrics, "buffer-spec-test-trace").get.recorder
 
     val firstEmpty = TickMetricSnapshot(new MilliTimestamp(1000), new MilliTimestamp(2000), Map.empty)
     val secondEmpty = TickMetricSnapshot(new MilliTimestamp(2000), new MilliTimestamp(3000), Map.empty)

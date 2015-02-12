@@ -17,8 +17,8 @@
 package kamon.play
 
 import kamon.Kamon
-import kamon.metric.{ Metrics, EntitySnapshot, TraceMetrics }
-import kamon.trace.{ Tracer, TraceContext, SegmentCategory }
+import kamon.metric.{ EntitySnapshot, TraceMetrics }
+import kamon.trace.{ TraceContext, SegmentCategory }
 import org.scalatest.{ Matchers, WordSpecLike }
 import org.scalatestplus.play.OneServerPerSuite
 import play.api.libs.ws.WS
@@ -26,12 +26,12 @@ import play.api.mvc.Action
 import play.api.mvc.Results.Ok
 import play.api.test.Helpers._
 import play.api.test._
-import play.libs.Akka
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
 class WSInstrumentationSpec extends WordSpecLike with Matchers with OneServerPerSuite {
+  Kamon.start()
   import kamon.metric.TraceMetricsSpec.SegmentSyntax
   System.setProperty("config.file", "./kamon-play/src/test/resources/conf/application.conf")
 
@@ -66,11 +66,11 @@ class WSInstrumentationSpec extends WordSpecLike with Matchers with OneServerPer
   }
 
   def newContext(name: String): TraceContext =
-    Kamon(Tracer)(Akka.system).newContext(name)
+    Kamon.tracer.newContext(name)
 
   def takeSnapshotOf(traceName: String): EntitySnapshot = {
-    val recorder = Kamon(Metrics)(Akka.system()).register(TraceMetrics, traceName).get.recorder
-    val collectionContext = Kamon(Metrics)(Akka.system()).buildDefaultCollectionContext
+    val recorder = Kamon.metrics.register(TraceMetrics, traceName).get.recorder
+    val collectionContext = Kamon.metrics.buildDefaultCollectionContext
     recorder.collect(collectionContext)
   }
 

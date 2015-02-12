@@ -22,29 +22,39 @@ import com.typesafe.config.{ Config, ConfigFactory }
 import kamon.Kamon
 import kamon.metric.{ SubscriptionsDispatcher, EntitySnapshot, MetricsExtensionImpl }
 import kamon.trace.TraceContext
+import kamon.util.LazyActorRef
 import org.scalatest.{ BeforeAndAfterAll, Matchers, WordSpecLike }
 
+import scala.reflect.ClassTag
+
 abstract class BaseKamonSpec(actorSystemName: String) extends TestKitBase with WordSpecLike with Matchers with ImplicitSender with BeforeAndAfterAll {
-  lazy val kamon = Kamon(actorSystemName, config)
-  lazy val collectionContext = kamon.metrics.buildDefaultCollectionContext
-  implicit lazy val system: ActorSystem = kamon.actorSystem
+  lazy val collectionContext = Kamon.metrics.buildDefaultCollectionContext
+  implicit lazy val system: ActorSystem = {
+    Kamon.start(config.withFallback(ConfigFactory.load()))
+    ActorSystem(actorSystemName, config)
+  }
 
   def config: Config =
-    ConfigFactory.load()
+    ConfigFactory.empty()
 
   def newContext(name: String): TraceContext =
-    kamon.tracer.newContext(name)
+    Kamon.tracer.newContext(name)
 
   def newContext(name: String, token: String): TraceContext =
-    kamon.tracer.newContext(name, token)
+    Kamon.tracer.newContext(name, token)
 
   def takeSnapshotOf(name: String, category: String): EntitySnapshot = {
-    val recorder = kamon.metrics.find(name, category).get
+    val recorder = Kamon.metrics.find(name, category).get
     recorder.collect(collectionContext)
   }
 
-  def flushSubscriptions(): Unit =
-    system.actorSelection("/user/kamon/subscriptions-dispatcher") ! SubscriptionsDispatcher.Tick
+  def flushSubscriptions(): Unit = {
+    val subscriptionsField = Kamon.metrics.getClass.getDeclaredField("_subscriptions")
+    subscriptionsField.setAccessible(true)
+    val subscriptions = subscriptionsField.get(Kamon.metrics).asInstanceOf[LazyActorRef]
+
+    subscriptions.tell(SubscriptionsDispatcher.Tick)
+  }
 
   override protected def afterAll(): Unit = system.shutdown()
 }

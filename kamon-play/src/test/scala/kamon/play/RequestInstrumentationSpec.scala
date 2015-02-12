@@ -16,8 +16,6 @@
 package kamon.play
 
 import kamon.Kamon
-import kamon.http.HttpServerMetrics
-import kamon.metric.{ Metrics, TraceMetrics }
 import kamon.metric.instrument.CollectionContext
 import kamon.play.action.TraceName
 import kamon.trace.TraceLocal.HttpContextKey
@@ -33,13 +31,12 @@ import play.api.test.Helpers._
 import play.api.test._
 import play.core.Router.{ HandlerDef, Route, Routes }
 import play.core.{ DynamicPart, PathPattern, Router, StaticPart }
-import play.libs.Akka
 
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 
 class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
-
+  Kamon.start()
   System.setProperty("config.file", "./kamon-play/src/test/resources/conf/application.conf")
 
   val executor = scala.concurrent.ExecutionContext.Implicits.global
@@ -130,17 +127,17 @@ class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
 
     "response to the getRouted Action and normalise the current TraceContext name" in {
       Await.result(WS.url("http://localhost:19001/getRouted").get(), 10 seconds)
-      Kamon(Metrics)(Akka.system()).find("getRouted.get", "trace") must not be empty
+      Kamon.metrics.find("getRouted.get", "trace") must not be empty
     }
 
     "response to the postRouted Action and normalise the current TraceContext name" in {
       Await.result(WS.url("http://localhost:19001/postRouted").post("content"), 10 seconds)
-      Kamon(Metrics)(Akka.system()).find("postRouted.post", "trace") must not be empty
+      Kamon.metrics.find("postRouted.post", "trace") must not be empty
     }
 
     "response to the showRouted Action and normalise the current TraceContext name" in {
       Await.result(WS.url("http://localhost:19001/showRouted/2").get(), 10 seconds)
-      Kamon(Metrics)(Akka.system()).find("show.some.id.get", "trace") must not be empty
+      Kamon.metrics.find("show.some.id.get", "trace") must not be empty
     }
 
     "include HttpContext information for help to diagnose possible errors" in {
@@ -155,7 +152,7 @@ class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
 
     "record http server metrics for all processed requests" in {
       val collectionContext = CollectionContext(100)
-      Kamon(Metrics)(Akka.system()).find("play-server", "http-server").get.collect(collectionContext)
+      Kamon.metrics.find("play-server", "http-server").get.collect(collectionContext)
 
       for (repetition ← 1 to 10) {
         Await.result(route(FakeRequest(GET, "/default").withHeaders(traceTokenHeader)).get, 10 seconds)
@@ -169,7 +166,7 @@ class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
         Await.result(routeWithOnError(FakeRequest(GET, "/error").withHeaders(traceTokenHeader)).get, 10 seconds)
       }
 
-      val snapshot = Kamon(Metrics)(Akka.system()).find("play-server", "http-server").get.collect(collectionContext)
+      val snapshot = Kamon.metrics.find("play-server", "http-server").get.collect(collectionContext)
       snapshot.counter("GET: /default_200").get.count must be(10)
       snapshot.counter("GET: /notFound_404").get.count must be(5)
       snapshot.counter("GET: /error_500").get.count must be(5)

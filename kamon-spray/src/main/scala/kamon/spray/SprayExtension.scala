@@ -21,7 +21,7 @@ import akka.actor
 import akka.event.{ Logging, LoggingAdapter }
 import kamon.Kamon
 import kamon.http.HttpServerMetrics
-import kamon.metric.{ Entity, Metrics }
+import kamon.metric.Entity
 import spray.http.HttpHeaders.Host
 import spray.http.HttpRequest
 
@@ -46,11 +46,11 @@ class SprayExtensionImpl(system: ExtendedActorSystem) extends SprayExtension {
   val log = Logging(system, "SprayExtension")
 
   val httpServerMetrics = {
-    val metricsExtension = Metrics.get(system)
+    val metricsExtension = Kamon.metrics
     val factory = metricsExtension.instrumentFactory(HttpServerMetrics.category)
     val entity = Entity("spray-server", HttpServerMetrics.category)
 
-    Metrics.get(system).register(entity, new HttpServerMetrics(factory)).recorder
+    metricsExtension.register(entity, new HttpServerMetrics(factory)).recorder
   }
 
   def generateTraceName(request: HttpRequest): String =

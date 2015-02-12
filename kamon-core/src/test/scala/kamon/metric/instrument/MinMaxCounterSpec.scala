@@ -19,6 +19,7 @@ import java.nio.LongBuffer
 
 import akka.actor._
 import akka.testkit.TestProbe
+import kamon.Kamon
 import kamon.metric.instrument.Histogram.{ DynamicRange, MutableRecord }
 import kamon.testkit.BaseKamonSpec
 import scala.concurrent.duration._
@@ -109,7 +110,7 @@ class MinMaxCounterSpec extends BaseKamonSpec("min-max-counter-spec") {
       val buffer: LongBuffer = LongBuffer.allocate(64)
     }
 
-    val mmCounter = MinMaxCounter(DynamicRange(1, 1000, 2), 1 hour, kamon.metrics.settings.refreshScheduler)
+    val mmCounter = MinMaxCounter(DynamicRange(1, 1000, 2), 1 hour, Kamon.metrics.settings.refreshScheduler)
     mmCounter.cleanup // cancel the refresh schedule
 
     def collectCounterSnapshot(): Histogram.Snapshot = mmCounter.collect(collectionContext)

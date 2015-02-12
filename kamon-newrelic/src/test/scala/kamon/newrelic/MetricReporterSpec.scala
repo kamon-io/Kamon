@@ -16,43 +16,44 @@
 
 package kamon.newrelic
 
-import akka.actor.{ ActorRef, ActorSystem }
+import akka.actor.ActorRef
 import akka.io.IO
 import akka.testkit._
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
-import kamon.metric.{ Entity, Metrics, TraceMetrics }
+import kamon.metric.{ Entity, TraceMetrics }
+import kamon.testkit.BaseKamonSpec
 import kamon.util.MilliTimestamp
 import kamon.Kamon
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
-import org.scalatest.{ Matchers, WordSpecLike }
 import spray.can.Http
 import spray.http.Uri.Query
 import spray.http._
 import spray.httpx.encoding.Deflate
-import spray.httpx.{ RequestBuilding, SprayJsonSupport }
+import spray.httpx.SprayJsonSupport
 import testkit.AkkaExtensionSwap
 import scala.concurrent.duration._
 import spray.json._
 
-class MetricReporterSpec extends TestKitBase with WordSpecLike with Matchers with RequestBuilding with SprayJsonSupport {
+class MetricReporterSpec extends BaseKamonSpec("metric-reporter-spec") with SprayJsonSupport {
   import kamon.newrelic.JsonProtocol._
 
-  implicit lazy val system: ActorSystem = ActorSystem("metric-reporter-spec", ConfigFactory.parseString(
-    """
-      |akka {
-      |  loggers = ["akka.testkit.TestEventListener"]
-      |  loglevel = "INFO"
-      |}
-      |kamon {
-      |  metric {
-      |    tick-interval = 1 hour
-      |  }
-      |
-      |  modules.kamon-newrelic.auto-start = no
-      |}
-      |
-    """.stripMargin))
+  override lazy val config =
+    ConfigFactory.parseString(
+      """
+        |akka {
+        |  loggers = ["akka.testkit.TestEventListener"]
+        |  loglevel = "INFO"
+        |}
+        |kamon {
+        |  metric {
+        |    tick-interval = 1 hour
+        |  }
+        |
+        |  modules.kamon-newrelic.auto-start = no
+        |}
+        |
+      """.stripMargin)
 
   val agentSettings = AgentSettings("1111111111", "kamon", "test-host", 1, Timeout(5 seconds), 1, 30 seconds, 1D)
   val baseQuery = Query(
@@ -138,8 +139,8 @@ class MetricReporterSpec extends TestKitBase with WordSpecLike with Matchers wit
 
   trait FakeTickSnapshotsFixture {
     val testTraceID = Entity("example-trace", "trace")
-    val recorder = Kamon(Metrics).register(TraceMetrics, testTraceID.name).get.recorder
-    val collectionContext = Kamon(Metrics).buildDefaultCollectionContext
+    val recorder = Kamon.metrics.register(TraceMetrics, testTraceID.name).get.recorder
+    val collectionContext = Kamon.metrics.buildDefaultCollectionContext
 
     def collectRecorder = recorder.collect(collectionContext)
 

@@ -20,6 +20,7 @@ import akka.testkit.{ TestKitBase, TestProbe }
 import akka.actor.{ Props, ActorRef, ActorSystem }
 import kamon.Kamon
 import kamon.metric.instrument._
+import kamon.testkit.BaseKamonSpec
 import kamon.util.MilliTimestamp
 import org.scalatest.{ Matchers, WordSpecLike }
 import kamon.metric._
@@ -29,22 +30,21 @@ import java.lang.management.ManagementFactory
 import java.net.InetSocketAddress
 import com.typesafe.config.ConfigFactory
 
-class DatadogMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers {
-  implicit lazy val system: ActorSystem = ActorSystem("datadog-metric-sender-spec", ConfigFactory.parseString(
-    """
-      |kamon {
-      |  metrics {
-      |    disable-aspectj-weaver-missing-error = true
-      |  }
-      |
-      |  datadog {
-      |    max-packet-size = 256 bytes
-      |  }
-      |}
-      |
-    """.stripMargin))
-
-  val collectionContext = Kamon(Metrics).buildDefaultCollectionContext
+class DatadogMetricSenderSpec extends BaseKamonSpec("datadog-metric-sender-spec") {
+  override lazy val config =
+    ConfigFactory.parseString(
+      """
+        |kamon {
+        |  metrics {
+        |    disable-aspectj-weaver-missing-error = true
+        |  }
+        |
+        |  datadog {
+        |    max-packet-size = 256 bytes
+        |  }
+        |}
+        |
+      """.stripMargin)
 
   "the DataDogMetricSender" should {
     "send latency measurements" in new UdpListenerFixture {
@@ -106,7 +106,7 @@ class DatadogMetricSenderSpec extends TestKitBase with WordSpecLike with Matcher
     val testMaxPacketSize = system.settings.config.getBytes("kamon.datadog.max-packet-size")
 
     def buildRecorder(name: String): (Entity, TestEntityRecorder) = {
-      val registration = Kamon(Metrics).register(TestEntityRecorder, name).get
+      val registration = Kamon.metrics.register(TestEntityRecorder, name).get
       (registration.entity, registration.recorder)
     }
 

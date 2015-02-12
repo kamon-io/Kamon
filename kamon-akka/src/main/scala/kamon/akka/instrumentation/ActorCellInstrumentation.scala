@@ -19,8 +19,9 @@ package akka.kamon.instrumentation
 import akka.actor._
 import akka.dispatch.{ Envelope, MessageDispatcher }
 import akka.routing.RoutedActorCell
+import kamon.Kamon
 import kamon.akka.{ RouterMetrics, ActorMetrics }
-import kamon.metric.{ Metrics, Entity }
+import kamon.metric.Entity
 import kamon.trace._
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
@@ -33,7 +34,7 @@ class ActorCellInstrumentation {
 
   @After("actorCellCreation(cell, system, ref, props, dispatcher, parent)")
   def afterCreation(cell: ActorCell, system: ActorSystem, ref: ActorRef, props: Props, dispatcher: MessageDispatcher, parent: ActorRef): Unit = {
-    Metrics.get(system).register(ActorMetrics, ref.path.elements.mkString("/")).map { registration ⇒
+    Kamon.metrics.register(ActorMetrics, ref.path.elements.mkString("/")).map { registration ⇒
       val cellMetrics = cell.asInstanceOf[ActorCellMetrics]
 
       cellMetrics.entity = registration.entity
@@ -89,14 +90,14 @@ class ActorCellInstrumentation {
   def afterStop(cell: ActorCell): Unit = {
     val cellMetrics = cell.asInstanceOf[ActorCellMetrics]
     cellMetrics.recorder.map { _ ⇒
-      Metrics.get(cell.system).unregister(cellMetrics.entity)
+      Kamon.metrics.unregister(cellMetrics.entity)
     }
 
     // The Stop can't be captured from the RoutedActorCell so we need to put this piece of cleanup here.
     if (cell.isInstanceOf[RoutedActorCell]) {
       val routedCellMetrics = cell.asInstanceOf[RoutedActorCellMetrics]
       routedCellMetrics.routerRecorder.map { _ ⇒
-        Metrics.get(cell.system).unregister(routedCellMetrics.routerEntity)
+        Kamon.metrics.unregister(routedCellMetrics.routerEntity)
       }
     }
   }
@@ -123,7 +124,7 @@ class RoutedActorCellInstrumentation {
 
   @After("routedActorCellCreation(cell, system, ref, props, dispatcher, routeeProps, supervisor)")
   def afterRoutedActorCellCreation(cell: RoutedActorCell, system: ActorSystem, ref: ActorRef, props: Props, dispatcher: MessageDispatcher, routeeProps: Props, supervisor: ActorRef): Unit = {
-    Metrics.get(system).register(RouterMetrics, ref.path.elements.mkString("/")).map { registration ⇒
+    Kamon.metrics.register(RouterMetrics, ref.path.elements.mkString("/")).map { registration ⇒
       val cellMetrics = cell.asInstanceOf[RoutedActorCellMetrics]
 
       cellMetrics.routerEntity = registration.entity
