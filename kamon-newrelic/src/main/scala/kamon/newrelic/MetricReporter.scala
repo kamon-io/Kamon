@@ -19,7 +19,7 @@ import JsonProtocol._
 class MetricReporter(settings: AgentSettings) extends Actor with ActorLogging with SprayJsonSupport {
   import context.dispatcher
 
-  val metricsExtension = Kamon(Metrics)(context.system)
+  val metricsExtension = Kamon.metrics
   val collectionContext = metricsExtension.buildDefaultCollectionContext
   val metricsSubscriber = {
     val tickInterval = context.system.settings.config.getDuration("kamon.metric.tick-interval", TimeUnit.MILLISECONDS)
