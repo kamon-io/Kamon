@@ -40,7 +40,7 @@ class StatsDExtension(system: ExtendedActorSystem) extends Kamon.Extension {
 
   private val config = system.settings.config
   private val statsDConfig = config.getConfig("kamon.statsd")
-  val metricsExtension = Kamon(Metrics)
+  val metricsExtension = Kamon.metrics
 
   val tickInterval = metricsExtension.settings.tickInterval
   val statsDHost = new InetSocketAddress(statsDConfig.getString("hostname"), statsDConfig.getInt("port"))
