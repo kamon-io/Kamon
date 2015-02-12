@@ -17,9 +17,9 @@ package kamon.jdbc.instrumentation
 
 import java.util.concurrent.TimeUnit.{ NANOSECONDS ⇒ nanos }
 
+import kamon.Kamon
 import kamon.jdbc.{ JdbcExtension, Jdbc }
 import kamon.jdbc.metric.StatementsMetrics
-import kamon.metric.Metrics
 import kamon.trace.{ TraceContext, SegmentCategory }
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation.{ Around, Aspect, Pointcut }
@@ -44,8 +44,8 @@ class StatementInstrumentation {
   @Around("onExecuteStatement(sql) || onExecutePreparedStatement(sql) || onExecutePreparedCall(sql)")
   def aroundExecuteStatement(pjp: ProceedingJoinPoint, sql: String): Any = {
     TraceContext.map { ctx ⇒
-      val metricsExtension = ctx.lookupExtension(Metrics)
-      val jdbcExtension = ctx.lookupExtension(Jdbc)
+      val metricsExtension = Kamon.metrics
+      val jdbcExtension = Kamon(Jdbc)
       implicit val statementRecorder = metricsExtension.register(StatementsMetrics, "jdbc-statements").map(_.recorder)
 
       sql.replaceAll(CommentPattern, Empty) match {
