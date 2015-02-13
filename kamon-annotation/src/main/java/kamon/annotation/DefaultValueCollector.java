@@ -24,6 +24,6 @@ import kamon.metric.instrument.Gauge;
 public class DefaultValueCollector implements Gauge.CurrentValueCollector {
     @Override
     public long currentValue() {
-        return 1;
+        return 0;
     }
 }

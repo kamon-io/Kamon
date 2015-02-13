@@ -16,36 +16,54 @@
 
 package kamon.annotation;
 
-
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-
+import java.lang.annotation.*;
 
 /**
- * A marker annotation to define a method as a timed.
+ * A marker annotation to define a method as a histogram.
  *
  * <p/>
  * Given a method like this:
  * <pre><code>
- *     {@literal @}Timed(name = "coolName", tags="""${{'my-cool-tag':'my-cool-value'}}""")
- *     public String coolName(String name) {
- *         return "Hello " + name;
+ *     {@literal @}0Histogram(name = "coolName", tags="""${{'my-cool-tag':'my-cool-value'}}""")
+ *     public (Long|Double|Float|Integer)coolName() {
+ *         return someComputation();
  *     }
  * </code></pre>
  * <p/>
  *
- * A histogram for the defining method with the name {@code coolName} will be created and each time the
- * {@code #coolName(String)} method is invoked, the latency of execution will be recorded.
+ * A histogram for the defining method with the name {@code coolName}  will be created which uses the
+ * annotated method's return as its value.
  */
+@Documented
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface Timed {
+public @interface Histogram {
+
     /**
      * @return The histogram's name.
      */
+
     String name();
+
+    /**
+     * The lowest value that can be discerned (distinguished from 0) by the histogram.Must be a positive integer that
+     * is >= 1. May be internally rounded down to nearest power of 2.
+     */
+    long lowestDiscernibleValue() default 1;
+
+
+    /**
+     * The highest value to be tracked by the histogram. Must be a positive integer that is >= (2 * lowestDiscernibleValue).
+     * Must not be larger than (Long.MAX_VALUE/2).
+     */
+    long highestTrackableValue() default 3600000000000L;
+
+    /**
+     * The number of significant decimal digits to which the histogram will maintain value resolution and separation.
+     * Must be a non-negative integer between 1 and 3.
+     */
+    int  precision() default 2;
+
 
     /**
      * Tags are a way of adding dimensions to metrics,

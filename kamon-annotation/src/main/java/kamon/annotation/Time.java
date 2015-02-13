@@ -16,31 +16,34 @@
 
 package kamon.annotation;
 
-import java.lang.annotation.*;
-import kamon.metric.instrument.Gauge.CurrentValueCollector;
+
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
 
 /**
- * A marker annotation to define a method as a gauge.
+ * A marker annotation to define a method as a timed.
  *
  * <p/>
  * Given a method like this:
  * <pre><code>
- *     {@literal @}Gauge(name = "coolName", tags="""${{'my-cool-tag':'my-cool-value'}}""")
- *     public Integer coolName() {
- *         return someComputation();
+ *     {@literal @}Timed(name = "coolName", tags="""${{'my-cool-tag':'my-cool-value'}}""")
+ *     public String coolName(String name) {
+ *         return "Hello " + name;
  *     }
  * </code></pre>
  * <p/>
  *
- * A gauge for the defining method with the name {@code coolName} will be created which uses the
- * annotated method's return as its value.
+ * A histogram for the defining method with the name {@code coolName} will be created and each time the
+ * {@code #coolName(String)} method is invoked, the latency of execution will be recorded.
  */
-@Documented
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface Gauge {
+public @interface Time {
     /**
-     * @return The gauge's name.
+     * @return The histogram's name.
      */
     String name();
 
@@ -48,14 +51,7 @@ public @interface Gauge {
      * Tags are a way of adding dimensions to metrics,
      * these are constructed using EL syntax e.g. """${{'algorithm':'1','env':'production'}}"""
      *
-     * @return the tags associated to the gauge
+     * @return the tags associated to the histogram
      */
     String tags() default "";
-
-    /**
-     * Specifies the gauge value collector @see CurrentValueCollector
-     *
-     * @return the current value collector
-     */
-    Class<? extends CurrentValueCollector> collector() default DefaultValueCollector.class;
 }

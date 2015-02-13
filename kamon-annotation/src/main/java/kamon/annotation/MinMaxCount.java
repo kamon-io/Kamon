@@ -24,7 +24,7 @@ import java.lang.annotation.*;
  * <p/>
  * Given a method like this:
  * <pre><code>
- *     {@literal @}Counted(name = "coolName", tags="""${{'my-cool-tag':'my-cool-value'}}""", type=CounterType.MinMaxCounter)
+ *     {@literal @}MinMaxCount(name = "coolName", tags="""${{'my-cool-tag':'my-cool-value'}}""", type=CounterType.MinMaxCounter)
  *     public String coolName(String name) {
  *         return "Hello " + name;
  *     }
@@ -37,7 +37,7 @@ import java.lang.annotation.*;
 @Documented
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface Counted {
+public @interface MinMaxCount {
 
     /**
      * @return The counter's name.
@@ -51,15 +51,4 @@ public @interface Counted {
      * @return the tags associated to the counter
      */
     String tags() default "";
-
-
-    /**
-     * Specifies the backed counter type, there are two types:
-     *
-     * @see CounterType#Counter
-     * @see CounterType#MinMaxCounter
-     *
-     * @return the backed counter type
-     */
-    CounterType type() default CounterType.Counter;
 }

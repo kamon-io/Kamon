@@ -27,15 +27,15 @@ import kamon.annotation.util.FastObjectPool.PoolFactory
 object ELProcessorPool {
   private val pool = new FastObjectPool[ELProcessor](ELPoolFactory(), 5)
 
-  def use[A](closure: WrappedProcessor ⇒ A): A = use(None)(closure)
-  def useWithObject[A](obj: AnyRef)(closure: WrappedProcessor ⇒ A): A = use(Some(obj))(closure)
+  def use[A](closure: ELProcessor ⇒ A): A = use(None)(closure)
+  def useWithObject[A](obj: AnyRef)(closure: ELProcessor ⇒ A): A = use(Some(obj))(closure)
 
-  private def use[A](obj: Option[AnyRef])(closure: WrappedProcessor ⇒ A): A = {
+  private def use[A](obj: Option[AnyRef])(closure: ELProcessor ⇒ A): A = {
     val holder = pool.take()
     val processor = holder.getValue
     obj.map(processor.defineBean("this", _))
 
-    try closure(new WrappedProcessor(processor)) finally pool.release(holder)
+    try closure(processor) finally pool.release(holder)
   }
 }
 
@@ -48,5 +48,5 @@ private class ELPoolFactory() extends PoolFactory[ELProcessor] {
 }
 
 private object ELPoolFactory {
-  def apply():ELPoolFactory = new ELPoolFactory()
+  def apply(): ELPoolFactory = new ELPoolFactory()
 }
