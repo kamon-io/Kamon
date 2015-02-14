@@ -17,9 +17,8 @@
 package kamon.play
 
 import kamon.Kamon
-import kamon.metric.TraceMetrics.TraceMetricsSnapshot
-import kamon.metric.{ Metrics, TraceMetrics }
-import kamon.trace.{ SegmentCategory, SegmentMetricIdentity, TraceRecorder }
+import kamon.metric.{ EntitySnapshot, TraceMetrics }
+import kamon.trace.{ TraceContext, SegmentCategory }
 import org.scalatest.{ Matchers, WordSpecLike }
 import org.scalatestplus.play.OneServerPerSuite
 import play.api.libs.ws.WS
@@ -27,19 +26,20 @@ import play.api.mvc.Action
 import play.api.mvc.Results.Ok
 import play.api.test.Helpers._
 import play.api.test._
-import play.libs.Akka
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
 class WSInstrumentationSpec extends WordSpecLike with Matchers with OneServerPerSuite {
-
+  Kamon.start()
+  import kamon.metric.TraceMetricsSpec.SegmentSyntax
   System.setProperty("config.file", "./kamon-play/src/test/resources/conf/application.conf")
 
+  override lazy val port: Port = 19003
   implicit override lazy val app = FakeApplication(withRoutes = {
     case ("GET", "/async")   ⇒ Action { Ok("ok") }
     case ("GET", "/outside") ⇒ Action { Ok("ok") }
-    case ("GET", "/inside")  ⇒ callWSinsideController("http://localhost:19001/async")
+    case ("GET", "/inside")  ⇒ callWSinsideController(s"http://localhost:$port/async")
   })
 
   "the WS instrumentation" should {
@@ -47,29 +47,34 @@ class WSInstrumentationSpec extends WordSpecLike with Matchers with OneServerPer
       Await.result(route(FakeRequest(GET, "/inside")).get, 10 seconds)
 
       val snapshot = takeSnapshotOf("GET: /inside")
-      snapshot.elapsedTime.numberOfMeasurements should be(1)
+      snapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
       snapshot.segments.size should be(1)
-      snapshot.segments(SegmentMetricIdentity("http://localhost:19001/async", SegmentCategory.HttpClient, Play.SegmentLibraryName)).numberOfMeasurements should be(1)
+      snapshot.segment(s"http://localhost:$port/async", SegmentCategory.HttpClient, Play.SegmentLibraryName).numberOfMeasurements should be(1)
     }
 
     "propagate the TraceContext outside an Action and complete the WS request" in {
-      TraceRecorder.withNewTraceContext("trace-outside-action") {
-        Await.result(WS.url("http://localhost:19001/outside").get(), 10 seconds)
-        TraceRecorder.finish()
-      }(Akka.system())
+      TraceContext.withContext(newContext("trace-outside-action")) {
+        Await.result(WS.url(s"http://localhost:$port/outside").get(), 10 seconds)
+        TraceContext.currentContext.finish()
+      }
 
       val snapshot = takeSnapshotOf("trace-outside-action")
-      //snapshot.elapsedTime.numberOfMeasurements should be(1) disabled for fail in travis
-      //snapshot.segments.size should be(1) disabled for fail in travis
-      //snapshot.segments(HttpClientRequest("http://localhost:19001/outside")).numberOfMeasurements should be(1) disabled for fail in travis
+      snapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
+      snapshot.segments.size should be(1)
+      snapshot.segment(s"http://localhost:$port/outside", SegmentCategory.HttpClient, Play.SegmentLibraryName).numberOfMeasurements should be(1)
     }
 
   }
 
-  def takeSnapshotOf(traceName: String): TraceMetricsSnapshot = {
-    val recorder = Kamon(Metrics)(Akka.system()).register(TraceMetrics(traceName), TraceMetrics.Factory)
-    val collectionContext = Kamon(Metrics)(Akka.system()).buildDefaultCollectionContext
-    recorder.get.collect(collectionContext)
+  def newContext(name: String): TraceContext =
+    Kamon.tracer.newContext(name)
+
+  def takeSnapshotOf(traceName: String): EntitySnapshot = {
+    // Give some time for async segments to finish.
+    Thread.sleep(300)
+    val recorder = Kamon.metrics.register(TraceMetrics, traceName).get.recorder
+    val collectionContext = Kamon.metrics.buildDefaultCollectionContext
+    recorder.collect(collectionContext)
   }
 
   def callWSinsideController(url: String) = Action.async {

@@ -1,4 +1,3 @@
-package kamon.util
 /*
  * =========================================================================================
  * Copyright © 2013-2014 the kamon project <http://kamon.io/>
@@ -14,6 +13,8 @@ package kamon.util
  * and limitations under the License.
  * =========================================================================================
  */
+
+package kamon.util
 
 import java.util.concurrent.atomic.AtomicLong
 

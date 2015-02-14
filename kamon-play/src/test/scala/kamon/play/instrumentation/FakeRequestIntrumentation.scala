@@ -21,6 +21,7 @@ import kamon.trace.TraceContextAware
 
 @Aspect
 class FakeRequestIntrumentation {
+
   @DeclareMixin("play.api.test.FakeRequest")
   def mixinContextAwareNewRequest: TraceContextAware = TraceContextAware.default
 }

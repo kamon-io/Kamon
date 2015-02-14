@@ -16,18 +16,17 @@
 
 package kamon.newrelic
 
-import kamon.metric.UserMetrics.UserMetricGroup
-import kamon.metric._
-import kamon.newrelic.Agent.Settings
+import kamon.metric.{ UserMetricsExtensionImpl, EntitySnapshot, Entity }
+import kamon.metric.instrument.CollectionContext
 
 object CustomMetricExtractor extends MetricExtractor {
 
-  def extract(settings: Settings, collectionContext: CollectionContext, metrics: Map[MetricGroupIdentity, MetricGroupSnapshot]): Map[MetricID, MetricData] = {
-    metrics.collect {
-      case (mg: UserMetricGroup, groupSnapshot) ⇒
-        groupSnapshot.metrics collect {
-          case (name, snapshot) ⇒ Metric.fromKamonMetricSnapshot(snapshot, s"Custom/${mg.name}", None, Scale.Unit)
-        }
-    }.flatten.toMap
+  def extract(settings: AgentSettings, collectionContext: CollectionContext, metrics: Map[Entity, EntitySnapshot]): Map[MetricID, MetricData] = {
+    metrics.get(UserMetricsExtensionImpl.UserMetricEntity).map { allUserMetrics ⇒
+      allUserMetrics.metrics.map {
+        case (key, snapshot) ⇒ Metric(snapshot, key.unitOfMeasurement, s"Custom/${key.name}", None)
+      }
+
+    } getOrElse (Map.empty)
   }
 }

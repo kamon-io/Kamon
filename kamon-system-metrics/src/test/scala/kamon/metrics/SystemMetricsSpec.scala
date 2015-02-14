@@ -15,362 +15,140 @@
 
 package kamon.metric
 
-import akka.actor.ActorSystem
-import akka.testkit.{ TestKitBase, TestProbe }
+import java.lang.management.ManagementFactory
+
 import com.typesafe.config.ConfigFactory
-import kamon.Kamon
-import kamon.metric.Subscriptions.TickMetricSnapshot
-import kamon.metrics.CPUMetrics.CPUMetricSnapshot
-import kamon.metrics.ContextSwitchesMetrics.ContextSwitchesMetricsSnapshot
-import kamon.metrics.GCMetrics.GCMetricSnapshot
-import kamon.metrics.HeapMetrics.HeapMetricSnapshot
-import kamon.metrics.MemoryMetrics.MemoryMetricSnapshot
-import kamon.metrics.NetworkMetrics.NetworkMetricSnapshot
-import kamon.metrics.ProcessCPUMetrics.ProcessCPUMetricsSnapshot
-import kamon.metrics._
-import kamon.system.SystemMetricsExtension
-import org.scalatest.{ Matchers, WordSpecLike }
+import kamon.system.jmx.GarbageCollectionMetrics
+import kamon.testkit.BaseKamonSpec
+import scala.collection.JavaConverters._
 
-import scala.concurrent.duration._
+class SystemMetricsSpec extends BaseKamonSpec("system-metrics-spec") with RedirectLogging {
 
-class SystemMetricsSpec extends TestKitBase with WordSpecLike with Matchers {
-  implicit lazy val system: ActorSystem = ActorSystem("system-metrics-spec", ConfigFactory.parseString(
-    """
-      |akka {
-      |  extensions = ["kamon.system.SystemMetrics"]
-      |}
-      |
-      |kamon.metrics {
-      |
-      |  disable-aspectj-weaver-missing-error = true
-      |
-      |  tick-interval = 1 second
-      |
-      |  system {
-      |     cpu {
-      |        user {
-      |            highest-trackable-value = 999999999
-      |            significant-value-digits = 2
-      |        }
-      |        system {
-      |            highest-trackable-value = 999999999
-      |            significant-value-digits = 2
-      |        }
-      |        wait {
-      |            highest-trackable-value = 999999999
-      |            significant-value-digits = 2
-      |        }
-      |        idle {
-      |            highest-trackable-value = 999999999
-      |            significant-value-digits = 2
-      |        }
-      |     }
-      |     process-cpu {
-      |        user {
-      |            highest-trackable-value = 999999999
-      |            significant-value-digits = 2
-      |        }
-      |        system {
-      |            highest-trackable-value = 999999999
-      |            significant-value-digits = 2
-      |        }
-      |     }
-      |     memory {
-      |        used {
-      |          highest-trackable-value = 3600000000000
-      |          significant-value-digits = 2
-      |        }
-      |        free {
-      |          highest-trackable-value = 3600000000000
-      |          significant-value-digits = 2
-      |        }
-      |        buffer {
-      |          highest-trackable-value = 3600000000000
-      |          significant-value-digits = 2
-      |        }
-      |        cache {
-      |          highest-trackable-value = 3600000000000
-      |          significant-value-digits = 2
-      |        }
-      |        swap-used {
-      |          highest-trackable-value = 3600000000000
-      |          significant-value-digits = 2
-      |        }
-      |        swap-free {
-      |          highest-trackable-value = 3600000000000
-      |          significant-value-digits = 2
-      |        }
-      |     }
-      |     context-switches {
-      |        per-process-voluntary {
-      |          highest-trackable-value = 3600000000000
-      |          significant-value-digits = 2
-      |        }
-      |        per-process-non-voluntary {
-      |          highest-trackable-value = 3600000000000
-      |          significant-value-digits = 2
-      |        }
-      |        global {
-      |          highest-trackable-value = 3600000000000
-      |          significant-value-digits = 2
-      |        }
-      |     }
-      |     network {
-      |        rx-bytes {
-      |            highest-trackable-value = 3600000000000
-      |            significant-value-digits = 2
-      |        }
-      |        tx-bytes {
-      |            highest-trackable-value = 3600000000000
-      |            significant-value-digits = 2
-      |        }
-      |        rx-errors {
-      |            highest-trackable-value = 3600000000000
-      |            significant-value-digits = 2
-      |        }
-      |        tx-errors {
-      |            highest-trackable-value = 3600000000000
-      |            significant-value-digits = 2
-      |        }
-      |     }
-      |     heap {
-      |        used {
-      |            highest-trackable-value = 3600000000000
-      |            significant-value-digits = 2
-      |        }
-      |        max {
-      |            highest-trackable-value = 3600000000000
-      |            significant-value-digits = 2
-      |        }
-      |        committed {
-      |            highest-trackable-value = 3600000000000
-      |            significant-value-digits = 2
-      |        }
-      |     }
-      |     gc {
-      |        count {
-      |            highest-trackable-value = 3600000000000
-      |            significant-value-digits = 2
-      |        }
-      |        time {
-      |            highest-trackable-value = 3600000000000
-      |            significant-value-digits = 2
-      |        }
-      |     }
-      |  }
-      |}
-    """.stripMargin))
+  override lazy val config =
+    ConfigFactory.parseString(
+      """
+        |kamon.metric {
+        |  tick-interval = 1 hour
+        |}
+        |
+        |akka {
+        |  extensions = ["kamon.system.SystemMetrics"]
+        |}
+      """.stripMargin)
 
-  "the Kamon  CPU Metrics" should {
-    "record user, system, wait, idle metrics" in new CPUMetricsListenerFixture {
-      val metricsListener = subscribeToMetrics()
+  override protected def beforeAll(): Unit =
+    Thread.sleep(2000) // Give some room to the recorders to store some values.
 
-      val CPUMetrics = expectCPUMetrics(metricsListener, 3 seconds)
-      CPUMetrics.user.max should be >= 0L
-      CPUMetrics.system.max should be >= 0L
-      CPUMetrics.cpuWait.max should be >= 0L
-      CPUMetrics.idle.max should be >= 0L
+  "the Kamon System Metrics module" should {
+    "record user, system, wait, idle and stolen CPU metrics" in {
+      val cpuMetrics = takeSnapshotOf("cpu", "system-metric")
+
+      cpuMetrics.histogram("cpu-user").get.numberOfMeasurements should be > 0L
+      cpuMetrics.histogram("cpu-system").get.numberOfMeasurements should be > 0L
+      cpuMetrics.histogram("cpu-wait").get.numberOfMeasurements should be > 0L
+      cpuMetrics.histogram("cpu-idle").get.numberOfMeasurements should be > 0L
+      cpuMetrics.histogram("cpu-stolen").get.numberOfMeasurements should be > 0L
     }
-  }
-  "the Kamon GC Metrics" should {
-    "record count, time metrics" in new GCMetricsListenerFixture {
-      val metricsListener = subscribeToMetrics()
 
-      val GCMetrics = expectGCMetrics(metricsListener, 3 seconds)
-      GCMetrics.count.max should be > 0L
-      GCMetrics.time.max should be > 0L
+    "record count and time garbage collection metrics" in {
+      val availableGarbageCollectors = ManagementFactory.getGarbageCollectorMXBeans.asScala.filter(_.isValid)
+
+      for (collectorName ← availableGarbageCollectors) {
+        val sanitizedName = GarbageCollectionMetrics.sanitizeCollectorName(collectorName.getName)
+        val collectorMetrics = takeSnapshotOf(s"$sanitizedName-garbage-collector", "system-metric")
+
+        collectorMetrics.gauge("garbage-collection-count").get.numberOfMeasurements should be > 0L
+        collectorMetrics.gauge("garbage-collection-time").get.numberOfMeasurements should be > 0L
+      }
+    }
+
+    "record used, max and committed heap metrics" in {
+      val heapMetrics = takeSnapshotOf("heap-memory", "system-metric")
+
+      heapMetrics.gauge("heap-used").get.numberOfMeasurements should be > 0L
+      heapMetrics.gauge("heap-max").get.numberOfMeasurements should be > 0L
+      heapMetrics.gauge("heap-committed").get.numberOfMeasurements should be > 0L
+    }
+
+    "record used, max and committed non-heap metrics" in {
+      val nonHeapMetrics = takeSnapshotOf("non-heap-memory", "system-metric")
+
+      nonHeapMetrics.gauge("non-heap-used").get.numberOfMeasurements should be > 0L
+      nonHeapMetrics.gauge("non-heap-max").get.numberOfMeasurements should be > 0L
+      nonHeapMetrics.gauge("non-heap-committed").get.numberOfMeasurements should be > 0L
+    }
+
+    "record daemon, count and peak jvm threads metrics" in {
+      val threadsMetrics = takeSnapshotOf("threads", "system-metric")
+
+      threadsMetrics.gauge("daemon-thread-count").get.numberOfMeasurements should be > 0L
+      threadsMetrics.gauge("peak-thread-count").get.numberOfMeasurements should be > 0L
+      threadsMetrics.gauge("thread-count").get.numberOfMeasurements should be > 0L
+    }
+
+    "record loaded, unloaded and current class loading metrics" in {
+      val classLoadingMetrics = takeSnapshotOf("class-loading", "system-metric")
+
+      classLoadingMetrics.gauge("classes-loaded").get.numberOfMeasurements should be > 0L
+      classLoadingMetrics.gauge("classes-unloaded").get.numberOfMeasurements should be > 0L
+      classLoadingMetrics.gauge("classes-currently-loaded").get.numberOfMeasurements should be > 0L
+    }
+
+    "record reads, writes, queue time and service time file system metrics" in {
+      val fileSystemMetrics = takeSnapshotOf("file-system", "system-metric")
+
+      fileSystemMetrics.histogram("file-system-reads").get.numberOfMeasurements should be > 0L
+      fileSystemMetrics.histogram("file-system-writes").get.numberOfMeasurements should be > 0L
+    }
+
+    "record 1 minute, 5 minutes and 15 minutes metrics load average metrics" in {
+      val loadAverage = takeSnapshotOf("load-average", "system-metric")
+
+      loadAverage.histogram("one-minute").get.numberOfMeasurements should be > 0L
+      loadAverage.histogram("five-minutes").get.numberOfMeasurements should be > 0L
+      loadAverage.histogram("fifteen-minutes").get.numberOfMeasurements should be > 0L
+    }
+
+    "record used, free, swap used, swap free system memory metrics" in {
+      val memoryMetrics = takeSnapshotOf("memory", "system-metric")
+
+      memoryMetrics.histogram("memory-used").get.numberOfMeasurements should be > 0L
+      memoryMetrics.histogram("memory-free").get.numberOfMeasurements should be > 0L
+      memoryMetrics.histogram("swap-used").get.numberOfMeasurements should be > 0L
+      memoryMetrics.histogram("swap-free").get.numberOfMeasurements should be > 0L
+    }
+
+    "record rxBytes, txBytes, rxErrors, txErrors, rxDropped, txDropped network metrics" in {
+      val networkMetrics = takeSnapshotOf("network", "system-metric")
+
+      networkMetrics.histogram("tx-bytes").get.numberOfMeasurements should be > 0L
+      networkMetrics.histogram("rx-bytes").get.numberOfMeasurements should be > 0L
+      networkMetrics.histogram("tx-errors").get.numberOfMeasurements should be > 0L
+      networkMetrics.histogram("rx-errors").get.numberOfMeasurements should be > 0L
+      networkMetrics.histogram("tx-dropped").get.numberOfMeasurements should be > 0L
+      networkMetrics.histogram("rx-dropped").get.numberOfMeasurements should be > 0L
+    }
+
+    "record system and user CPU percentage for the application process" in {
+      val processCpuMetrics = takeSnapshotOf("process-cpu", "system-metric")
+
+      processCpuMetrics.histogram("process-user-cpu").get.numberOfMeasurements should be > 0L
+      processCpuMetrics.histogram("process-system-cpu").get.numberOfMeasurements should be > 0L
+      processCpuMetrics.histogram("process-cpu").get.numberOfMeasurements should be > 0L
+    }
+
+    "record Context Switches Global, Voluntary and Non Voluntary metrics when running on Linux" in {
+      if (isLinux) {
+        val contextSwitchesMetrics = takeSnapshotOf("context-switches", "system-metric")
+
+        contextSwitchesMetrics.histogram("context-switches-process-voluntary").get.numberOfMeasurements should be > 0L
+        contextSwitchesMetrics.histogram("context-switches-process-non-voluntary").get.numberOfMeasurements should be > 0L
+        contextSwitchesMetrics.histogram("context-switches-global").get.numberOfMeasurements should be > 0L
+      }
     }
   }
 
-  "the Kamon Heap Metrics" should {
-    "record used, max, commited metrics" in new HeapMetricsListenerFixture {
-      val metricsListener = subscribeToMetrics()
+  def isLinux: Boolean =
+    System.getProperty("os.name").indexOf("Linux") != -1
 
-      val HeapMetrics = expectHeapMetrics(metricsListener, 3 seconds)
-      HeapMetrics.used.max should be >= 0L
-      HeapMetrics.max.max should be >= 0L
-      HeapMetrics.committed.max should be >= 0L
-    }
-  }
-
-  "the Kamon Memory Metrics" should {
-    "record used, free, buffer, cache, swap used, swap free metrics" in new MemoryMetricsListenerFixture {
-      val metricsListener = subscribeToMetrics()
-
-      val MemoryMetrics = expectMemoryMetrics(metricsListener, 3 seconds)
-      MemoryMetrics.used.max should be >= 0L
-      MemoryMetrics.free.max should be >= 0L
-      MemoryMetrics.buffer.max should be >= 0L
-      MemoryMetrics.cache.max should be >= 0L
-      MemoryMetrics.swapUsed.max should be >= 0L
-      MemoryMetrics.swapFree.max should be >= 0L
-    }
-  }
-
-  "the Kamon Network Metrics" should {
-    "record rxBytes, txBytes, rxErrors, txErrors metrics" in new NetworkMetricsListenerFixture {
-      val metricsListener = subscribeToMetrics()
-
-      val NetworkMetrics = expectNetworkMetrics(metricsListener, 3 seconds)
-      NetworkMetrics.rxBytes.max should be >= 0L
-      NetworkMetrics.txBytes.max should be >= 0L
-      NetworkMetrics.rxErrors.max should be >= 0L
-      NetworkMetrics.txErrors.max should be >= 0L
-    }
-  }
-
-  "the Kamon Process CPU Metrics" should {
-    "record Cpu Percent, Total Process Time metrics" in new ProcessCPUMetricsListenerFixture {
-      val metricsListener = subscribeToMetrics()
-
-      val ProcessCPUMetrics = expectProcessCPUMetrics(metricsListener, 3 seconds)
-      ProcessCPUMetrics.cpuPercent.max should be > 0L
-      ProcessCPUMetrics.totalProcessTime.max should be > 0L
-    }
-  }
-
-  "the Kamon ContextSwitches Metrics" should {
-    "record Context Switches Global, Voluntary and Non Voluntary metrics" in new ContextSwitchesMetricsListenerFixture {
-      val metricsListener = subscribeToMetrics()
-
-      val ContextSwitchesMetrics = expectContextSwitchesMetrics(metricsListener, 3 seconds)
-      ContextSwitchesMetrics.perProcessVoluntary.max should be >= 0L
-      ContextSwitchesMetrics.perProcessNonVoluntary.max should be >= 0L
-      ContextSwitchesMetrics.global.max should be >= 0L
-    }
-  }
-
-  def expectCPUMetrics(listener: TestProbe, waitTime: FiniteDuration): CPUMetricSnapshot = {
-    val tickSnapshot = within(waitTime) {
-      listener.expectMsgType[TickMetricSnapshot]
-    }
-    val cpuMetricsOption = tickSnapshot.metrics.get(CPUMetrics(SystemMetricsExtension.CPU))
-    cpuMetricsOption should not be empty
-    cpuMetricsOption.get.asInstanceOf[CPUMetricSnapshot]
-  }
-
-  trait CPUMetricsListenerFixture {
-    def subscribeToMetrics(): TestProbe = {
-      val metricsListener = TestProbe()
-      Kamon(Metrics).subscribe(CPUMetrics, "*", metricsListener.ref, permanently = true)
-      // Wait for one empty snapshot before proceeding to the test.
-      metricsListener.expectMsgType[TickMetricSnapshot]
-      metricsListener
-    }
-  }
-
-  def expectGCMetrics(listener: TestProbe, waitTime: FiniteDuration): GCMetricSnapshot = {
-    val tickSnapshot = within(waitTime) {
-      listener.expectMsgType[TickMetricSnapshot]
-    }
-
-    val gcMetricsOption = tickSnapshot.metrics.get(GCMetrics(SystemMetricsExtension.garbageCollectors(0).getName))
-    gcMetricsOption should not be empty
-    gcMetricsOption.get.asInstanceOf[GCMetricSnapshot]
-  }
-
-  trait GCMetricsListenerFixture {
-    def subscribeToMetrics(): TestProbe = {
-      val metricsListener = TestProbe()
-      Kamon(Metrics).subscribe(GCMetrics, "*", metricsListener.ref, permanently = true)
-      // Wait for one empty snapshot before proceeding to the test.
-      metricsListener.expectMsgType[TickMetricSnapshot]
-      metricsListener
-    }
-  }
-
-  def expectHeapMetrics(listener: TestProbe, waitTime: FiniteDuration): HeapMetricSnapshot = {
-    val tickSnapshot = within(waitTime) {
-      listener.expectMsgType[TickMetricSnapshot]
-    }
-    val heapMetricsOption = tickSnapshot.metrics.get(HeapMetrics(SystemMetricsExtension.Heap))
-    heapMetricsOption should not be empty
-    heapMetricsOption.get.asInstanceOf[HeapMetricSnapshot]
-  }
-
-  trait HeapMetricsListenerFixture {
-    def subscribeToMetrics(): TestProbe = {
-      val metricsListener = TestProbe()
-      Kamon(Metrics).subscribe(HeapMetrics, "*", metricsListener.ref, permanently = true)
-      // Wait for one empty snapshot before proceeding to the test.
-      metricsListener.expectMsgType[TickMetricSnapshot]
-      metricsListener
-    }
-  }
-
-  def expectMemoryMetrics(listener: TestProbe, waitTime: FiniteDuration): MemoryMetricSnapshot = {
-    val tickSnapshot = within(waitTime) {
-      listener.expectMsgType[TickMetricSnapshot]
-    }
-    val memoryMetricsOption = tickSnapshot.metrics.get(MemoryMetrics(SystemMetricsExtension.Memory))
-    memoryMetricsOption should not be empty
-    memoryMetricsOption.get.asInstanceOf[MemoryMetricSnapshot]
-  }
-
-  trait MemoryMetricsListenerFixture {
-    def subscribeToMetrics(): TestProbe = {
-      val metricsListener = TestProbe()
-      Kamon(Metrics).subscribe(MemoryMetrics, "*", metricsListener.ref, permanently = true)
-      // Wait for one empty snapshot before proceeding to the test.
-      metricsListener.expectMsgType[TickMetricSnapshot]
-      metricsListener
-    }
-  }
-
-  def expectNetworkMetrics(listener: TestProbe, waitTime: FiniteDuration): NetworkMetricSnapshot = {
-    val tickSnapshot = within(waitTime) {
-      listener.expectMsgType[TickMetricSnapshot]
-    }
-    val networkMetricsOption = tickSnapshot.metrics.get(NetworkMetrics(SystemMetricsExtension.Network))
-    networkMetricsOption should not be empty
-    networkMetricsOption.get.asInstanceOf[NetworkMetricSnapshot]
-  }
-
-  trait NetworkMetricsListenerFixture {
-    def subscribeToMetrics(): TestProbe = {
-      val metricsListener = TestProbe()
-      Kamon(Metrics).subscribe(NetworkMetrics, "*", metricsListener.ref, permanently = true)
-      // Wait for one empty snapshot before proceeding to the test.
-      metricsListener.expectMsgType[TickMetricSnapshot]
-      metricsListener
-    }
-  }
-
-  def expectProcessCPUMetrics(listener: TestProbe, waitTime: FiniteDuration): ProcessCPUMetricsSnapshot = {
-    val tickSnapshot = within(waitTime) {
-      listener.expectMsgType[TickMetricSnapshot]
-    }
-    val processCPUMetricsOption = tickSnapshot.metrics.get(ProcessCPUMetrics(SystemMetricsExtension.ProcessCPU))
-    processCPUMetricsOption should not be empty
-    processCPUMetricsOption.get.asInstanceOf[ProcessCPUMetricsSnapshot]
-  }
-
-  trait ProcessCPUMetricsListenerFixture {
-    def subscribeToMetrics(): TestProbe = {
-      val metricsListener = TestProbe()
-      Kamon(Metrics).subscribe(ProcessCPUMetrics, "*", metricsListener.ref, permanently = true)
-      // Wait for one empty snapshot before proceeding to the test.
-      metricsListener.expectMsgType[TickMetricSnapshot]
-      metricsListener
-    }
-  }
-
-  def expectContextSwitchesMetrics(listener: TestProbe, waitTime: FiniteDuration): ContextSwitchesMetricsSnapshot = {
-    val tickSnapshot = within(waitTime) {
-      listener.expectMsgType[TickMetricSnapshot]
-    }
-    val contextSwitchesMetricsOption = tickSnapshot.metrics.get(ContextSwitchesMetrics(SystemMetricsExtension.ContextSwitches))
-    contextSwitchesMetricsOption should not be empty
-    contextSwitchesMetricsOption.get.asInstanceOf[ContextSwitchesMetricsSnapshot]
-  }
-
-  trait ContextSwitchesMetricsListenerFixture {
-    def subscribeToMetrics(): TestProbe = {
-      val metricsListener = TestProbe()
-      Kamon(Metrics).subscribe(ContextSwitchesMetrics, "*", metricsListener.ref, permanently = true)
-      // Wait for one empty snapshot before proceeding to the test.
-      metricsListener.expectMsgType[TickMetricSnapshot]
-      metricsListener
-    }
-  }
 }

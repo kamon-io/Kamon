@@ -19,19 +19,12 @@ import java.nio.LongBuffer
 
 import akka.actor._
 import akka.testkit.TestProbe
-import com.typesafe.config.ConfigFactory
-import kamon.metric.CollectionContext
-import kamon.metric.instrument.Histogram.MutableRecord
-import org.scalatest.{ Matchers, WordSpecLike }
+import kamon.Kamon
+import kamon.metric.instrument.Histogram.{ DynamicRange, MutableRecord }
+import kamon.testkit.BaseKamonSpec
+import scala.concurrent.duration._
 
-class MinMaxCounterSpec extends WordSpecLike with Matchers {
-  implicit val system = ActorSystem("min-max-counter-spec")
-  val minMaxCounterConfig = ConfigFactory.parseString(
-    """
-      |refresh-interval = 1 hour
-      |highest-trackable-value = 1000
-      |significant-value-digits = 2
-    """.stripMargin)
+class MinMaxCounterSpec extends BaseKamonSpec("min-max-counter-spec") {
 
   "the MinMaxCounter" should {
     "track ascending tendencies" in new MinMaxCounterFixture {
@@ -104,7 +97,7 @@ class MinMaxCounterSpec extends WordSpecLike with Matchers {
       workers foreach (_ ! "increment")
       for (refresh ← 1 to 1000) {
         collectCounterSnapshot()
-        Thread.sleep(10)
+        Thread.sleep(1)
       }
 
       monitor.expectNoMsg()
@@ -117,7 +110,7 @@ class MinMaxCounterSpec extends WordSpecLike with Matchers {
       val buffer: LongBuffer = LongBuffer.allocate(64)
     }
 
-    val mmCounter = MinMaxCounter.fromConfig(minMaxCounterConfig, system).asInstanceOf[PaddedMinMaxCounter]
+    val mmCounter = MinMaxCounter(DynamicRange(1, 1000, 2), 1 hour, Kamon.metrics.settings.refreshScheduler)
     mmCounter.cleanup // cancel the refresh schedule
 
     def collectCounterSnapshot(): Histogram.Snapshot = mmCounter.collect(collectionContext)

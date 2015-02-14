@@ -17,7 +17,8 @@ package kamon.play.instrumentation
 
 import kamon.Kamon
 import kamon.play.{ Play, PlayExtension }
-import kamon.trace.{ TraceContextAware, TraceRecorder }
+import kamon.trace.TraceLocal.{ HttpContextKey, HttpContext }
+import kamon.trace._
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
 import play.api.mvc._
@@ -26,48 +27,49 @@ import play.libs.Akka
 
 @Aspect
 class RequestInstrumentation {
-  import RequestInstrumentation.normaliseTraceName
+
+  import RequestInstrumentation._
 
   @DeclareMixin("play.api.mvc.RequestHeader+")
   def mixinContextAwareNewRequest: TraceContextAware = TraceContextAware.default
 
-  @After("execution(* play.api.GlobalSettings+.onStart(*)) && args(application)")
-  def afterApplicationStart(application: play.api.Application): Unit = {
-    Kamon(Play)(Akka.system())
-  }
+  @Before("call(* play.api.GlobalSettings.onRouteRequest(..)) && args(requestHeader)")
+  def beforeRouteRequest(requestHeader: RequestHeader): Unit = {
+    import Kamon.tracer
+    val playExtension = Kamon(Play)
 
-  @Before("execution(* play.api.GlobalSettings+.onRouteRequest(..)) && args(requestHeader)")
-  def onRouteRequest(requestHeader: RequestHeader): Unit = {
-    val system = Akka.system()
-    val playExtension = Kamon(Play)(system)
     val defaultTraceName = playExtension.generateTraceName(requestHeader)
-
     val token = if (playExtension.includeTraceToken) {
       requestHeader.headers.toSimpleMap.find(_._1 == playExtension.traceTokenHeaderName).map(_._2)
     } else None
 
-    TraceRecorder.start(defaultTraceName, token)(system)
+    val newContext = token.map(t ⇒ tracer.newContext(defaultTraceName, t)).getOrElse(tracer.newContext(defaultTraceName))
+    TraceContext.setCurrentContext(newContext)
   }
 
-  @Around("execution(* play.api.GlobalSettings+.doFilter(*)) && args(next)")
+  @Around("call(* play.api.GlobalSettings.doFilter(*)) && args(next)")
   def aroundDoFilter(pjp: ProceedingJoinPoint, next: EssentialAction): Any = {
     val essentialAction = (requestHeader: RequestHeader) ⇒ {
-      // TODO: Move to a Kamon-specific dispatcher.
-      val executor = Kamon(Play)(Akka.system()).defaultDispatcher
+
+      val playExtension = Kamon(Play)
+      val executor = playExtension.defaultDispatcher
 
       def onResult(result: SimpleResult): SimpleResult = {
-        TraceRecorder.withTraceContextAndSystem { (ctx, system) ⇒
+        TraceContext.map { ctx ⇒
           ctx.finish()
 
-          val playExtension = Kamon(Play)(system)
-          recordHttpServerMetrics(result.header, ctx.name, playExtension)
+          recordHttpServerMetrics(result.header.status.toString, ctx.name)
 
           if (playExtension.includeTraceToken) result.withHeaders(playExtension.traceTokenHeaderName -> ctx.token)
           else result
         } getOrElse result
       }
+
+      //store in TraceLocal useful data to diagnose errors
+      storeDiagnosticData(requestHeader)
+
       //override the current trace name
-      normaliseTraceName(requestHeader).map(TraceRecorder.rename)
+      normaliseTraceName(requestHeader).map(TraceContext.currentContext.rename)
 
       // Invoke the action
       next(requestHeader).map(onResult)(executor)
@@ -75,20 +77,32 @@ class RequestInstrumentation {
     pjp.proceed(Array(EssentialAction(essentialAction)))
   }
 
-  @Before("execution(* play.api.GlobalSettings+.onError(..)) && args(request, ex)")
-  def beforeOnError(request: TraceContextAware, ex: Throwable): Unit = TraceRecorder.withTraceContextAndSystem { (ctx, system) ⇒
-    val playExtension = Kamon(Play)(system)
-    playExtension.httpServerMetrics.recordResponse(ctx.name, "500")
+  @Before("call(* play.api.GlobalSettings.onError(..)) && args(request, ex)")
+  def beforeOnError(request: TraceContextAware, ex: Throwable): Unit = {
+    TraceContext.map { ctx ⇒
+      recordHttpServerMetrics("500", ctx.name)
+    }
   }
 
-  private def recordHttpServerMetrics(header: ResponseHeader, traceName: String, playExtension: PlayExtension): Unit =
-    playExtension.httpServerMetrics.recordResponse(traceName, header.status.toString)
+  def recordHttpServerMetrics(status: String, traceName: String): Unit =
+    Kamon(Play).httpServerMetrics.recordResponse(traceName, status)
+
+  def storeDiagnosticData(request: RequestHeader): Unit = {
+    val agent = request.headers.get(UserAgent).getOrElse(Unknown)
+    val forwarded = request.headers.get(XForwardedFor).getOrElse(Unknown)
+
+    TraceLocal.store(HttpContextKey)(HttpContext(agent, request.uri, forwarded))
+  }
 }
 
 object RequestInstrumentation {
-  import kamon.metric.Metrics.AtomicGetOrElseUpdateForTriemap
+  import kamon.util.TriemapAtomicGetOrElseUpdate.Syntax
   import java.util.Locale
   import scala.collection.concurrent.TrieMap
+
+  val UserAgent = "User-Agent"
+  val XForwardedFor = "X-Forwarded-For"
+  val Unknown = "unknown"
 
   private val cache = TrieMap.empty[String, String]
 

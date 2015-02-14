@@ -1,0 +1,12 @@
+<!DOCTYPE aspectj PUBLIC "-//AspectJ//DTD//EN" "http://www.eclipse.org/aspectj/dtd/aspectj.dtd">
+
+<aspectj>
+  <aspects>
+    <aspect name="kamon.jdbc.instrumentation.StatementInstrumentation"/>
+  </aspects>
+
+    <weaver>
+       <include within="java.sql.Statement..*"/>
+       <include within="java.sql.Connection..*"/>
+   </weaver>
+</aspectj>

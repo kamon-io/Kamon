@@ -22,7 +22,6 @@ import akka.actor.{ ActorRef, ActorSystem, Props }
 import akka.io.IO
 import akka.testkit._
 import com.typesafe.config.ConfigFactory
-import kamon.AkkaExtensionSwap
 import org.scalatest.{ BeforeAndAfterAll, WordSpecLike }
 import spray.can.Http
 import spray.http._
@@ -30,6 +29,7 @@ import spray.httpx.encoding.Deflate
 import spray.httpx.{ SprayJsonSupport, RequestBuilding }
 import spray.json.JsArray
 import spray.json._
+import testkit.AkkaExtensionSwap
 
 class AgentSpec extends TestKitBase with WordSpecLike with BeforeAndAfterAll with RequestBuilding with SprayJsonSupport {
   import JsonProtocol._
@@ -44,9 +44,11 @@ class AgentSpec extends TestKitBase with WordSpecLike with BeforeAndAfterAll wit
       |  newrelic {
       |    app-name = kamon
       |    license-key = 1111111111
-      |    initialize-retry-delay = 1 second
-      |    max-initialize-retries = 3
+      |    connect-retry-delay = 1 second
+      |    max-connect-retries = 3
       |  }
+      |
+      |  modules.kamon-newrelic.auto-start = no
       |}
       |
     """.stripMargin))
@@ -88,7 +90,7 @@ class AgentSpec extends TestKitBase with WordSpecLike with BeforeAndAfterAll wit
       })
 
       // Receive the runID
-      EventFilter.info(message = "Agent initialized with runID: [161221111] and collector: [collector-8.newrelic.com]", occurrences = 1).intercept {
+      EventFilter.info(message = "Configuring New Relic reporters to use runID: [161221111] and collector: [collector-8.newrelic.com]", occurrences = 1).intercept {
         httpManager.reply(jsonResponse(
           """
           | {
@@ -147,7 +149,7 @@ class AgentSpec extends TestKitBase with WordSpecLike with BeforeAndAfterAll wit
 
       // Receive the runID
       EventFilter.info(
-        message = "Agent initialized with runID: [161221112] and collector: [collector-8.newrelic.com]", occurrences = 1).intercept {
+        message = "Configuring New Relic reporters to use runID: [161221112] and collector: [collector-8.newrelic.com]", occurrences = 1).intercept {
 
           httpManager.reply(jsonResponse(
             """
@@ -184,7 +186,7 @@ class AgentSpec extends TestKitBase with WordSpecLike with BeforeAndAfterAll wit
       })
 
       // Give up on connecting.
-      EventFilter[RuntimeException](message = "Giving up while trying to set up a connection with the New Relic collector.", occurrences = 1).intercept {
+      EventFilter.error(message = "Giving up while trying to set up a connection with the New Relic collector. The New Relic module is shutting down itself.", occurrences = 1).intercept {
         httpManager.reply(Timedout(request))
       }
     }

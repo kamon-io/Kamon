@@ -17,9 +17,8 @@
 package kamon.metric.instrument
 
 import kamon.jsr166.LongAdder
-import kamon.metric.{ CollectionContext, MetricSnapshot, MetricRecorder }
 
-trait Counter extends MetricRecorder {
+trait Counter extends Instrument {
   type SnapshotType = Counter.Snapshot
 
   def increment(): Unit
@@ -29,12 +28,11 @@ trait Counter extends MetricRecorder {
 object Counter {
 
   def apply(): Counter = new LongAdderCounter
+  def create(): Counter = apply()
 
-  trait Snapshot extends MetricSnapshot {
-    type SnapshotType = Counter.Snapshot
-
+  trait Snapshot extends InstrumentSnapshot {
     def count: Long
-    def merge(that: Counter.Snapshot, context: CollectionContext): Counter.Snapshot
+    def merge(that: InstrumentSnapshot, context: CollectionContext): Counter.Snapshot
   }
 }
 
@@ -55,5 +53,8 @@ class LongAdderCounter extends Counter {
 }
 
 case class CounterSnapshot(count: Long) extends Counter.Snapshot {
-  def merge(that: Counter.Snapshot, context: CollectionContext): Counter.Snapshot = CounterSnapshot(count + that.count)
+  def merge(that: InstrumentSnapshot, context: CollectionContext): Counter.Snapshot = that match {
+    case CounterSnapshot(thatCount) ⇒ CounterSnapshot(count + thatCount)
+    case other                      ⇒ sys.error(s"Cannot merge a CounterSnapshot with the incompatible [${other.getClass.getName}] type.")
+  }
 }

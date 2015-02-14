@@ -3,7 +3,7 @@
 <aspectj>
   <aspects>
     <!-- Remoting and Cluster -->
-    <aspect name="akka.remote.instrumentation.RemotingInstrumentation"/>
+    <aspect name="akka.kamon.instrumentation.RemotingInstrumentation"/>
   </aspects>
 
   <weaver>

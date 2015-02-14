@@ -1,99 +1,41 @@
+/*
+ * =========================================================================================
+ * Copyright © 2013-2015 the kamon project <http://kamon.io/>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the specific language governing permissions
+ * and limitations under the License.
+ * =========================================================================================
+ */
+
 package kamon.http
 
-import akka.actor.ActorSystem
-import com.typesafe.config.Config
-import kamon.metric.instrument.Counter
-import kamon.metric._
+import kamon.metric.{ EntityRecorderFactory, GenericEntityRecorder }
+import kamon.metric.instrument.InstrumentFactory
 
-import scala.collection.concurrent.TrieMap
+/**
+ *  Counts HTTP response status codes into per status code and per trace name + status counters. If recording a HTTP
+ *  response with status 500 for the trace "GetUser", the counter with name "500" as well as the counter with name
+ *  "GetUser_500" will be incremented.
+ */
+class HttpServerMetrics(instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) {
 
-object HttpServerMetrics extends MetricGroupIdentity {
-  import Metrics.AtomicGetOrElseUpdateForTriemap
+  def recordResponse(statusCode: String): Unit =
+    counter(statusCode).increment()
 
-  val name: String = "http-server-metrics-recorder"
-  val category = new MetricGroupCategory {
-    val name: String = "http-server"
+  def recordResponse(traceName: String, statusCode: String): Unit = {
+    recordResponse(statusCode)
+    counter(traceName + "_" + statusCode).increment()
   }
-
-  type TraceName = String
-  type StatusCode = String
-
-  case class CountPerStatusCode(statusCode: String) extends MetricIdentity {
-    def name: String = statusCode
-  }
-
-  case class TraceCountPerStatus(traceName: TraceName, statusCode: StatusCode) extends MetricIdentity {
-    def name: String = traceName + "_" + statusCode
-  }
-
-  class HttpServerMetricsRecorder extends MetricGroupRecorder {
-
-    private val counters = TrieMap[StatusCode, Counter]()
-    private val countersPerTrace = TrieMap[TraceName, TrieMap[StatusCode, Counter]]()
-
-    def recordResponse(statusCode: StatusCode): Unit = recordResponse(statusCode, 1L)
-
-    def recordResponse(statusCode: StatusCode, count: Long): Unit =
-      counters.atomicGetOrElseUpdate(statusCode, Counter()).increment(count)
-
-    def recordResponse(traceName: TraceName, statusCode: StatusCode): Unit = recordResponse(traceName, statusCode, 1L)
-
-    def recordResponse(traceName: TraceName, statusCode: StatusCode, count: Long): Unit = {
-      recordResponse(statusCode, count)
-      countersPerTrace.atomicGetOrElseUpdate(traceName, TrieMap()).atomicGetOrElseUpdate(statusCode, Counter()).increment(count)
-    }
-
-    def collect(context: CollectionContext): HttpServerMetricsSnapshot = {
-      val countsPerStatusCode = counters.map {
-        case (statusCode, counter) ⇒ (statusCode, counter.collect(context))
-      }.toMap
-
-      val countsPerTraceAndStatus = countersPerTrace.map {
-        case (traceName, countsPerStatus) ⇒
-          (traceName, countsPerStatus.map { case (statusCode, counter) ⇒ (statusCode, counter.collect(context)) }.toMap)
-      }.toMap
-
-      HttpServerMetricsSnapshot(countsPerStatusCode, countsPerTraceAndStatus)
-    }
-
-    def cleanup: Unit = {}
-  }
-
-  case class HttpServerMetricsSnapshot(countsPerStatusCode: Map[StatusCode, Counter.Snapshot],
-      countsPerTraceAndStatusCode: Map[TraceName, Map[StatusCode, Counter.Snapshot]]) extends MetricGroupSnapshot {
-
-    type GroupSnapshotType = HttpServerMetricsSnapshot
-
-    def merge(that: HttpServerMetricsSnapshot, context: CollectionContext): HttpServerMetricsSnapshot = {
-      val combinedCountsPerStatus = combineMaps(countsPerStatusCode, that.countsPerStatusCode)((l, r) ⇒ l.merge(r, context))
-      val combinedCountsPerTraceAndStatus = combineMaps(countsPerTraceAndStatusCode, that.countsPerTraceAndStatusCode) {
-        (leftCounts, rightCounts) ⇒ combineMaps(leftCounts, rightCounts)((l, r) ⇒ l.merge(r, context))
-      }
-      HttpServerMetricsSnapshot(combinedCountsPerStatus, combinedCountsPerTraceAndStatus)
-    }
-
-    def metrics: Map[MetricIdentity, MetricSnapshot] = {
-      countsPerStatusCode.map {
-        case (statusCode, count) ⇒ (CountPerStatusCode(statusCode), count)
-      } ++ {
-        for (
-          (traceName, countsPerStatus) ← countsPerTraceAndStatusCode;
-          (statusCode, count) ← countsPerStatus
-        ) yield (TraceCountPerStatus(traceName, statusCode), count)
-      }
-    }
-  }
-
-  val Factory = HttpServerMetricGroupFactory
 }
 
-case object HttpServerMetricGroupFactory extends MetricGroupFactory {
-
-  import HttpServerMetrics._
-
-  type GroupRecorder = HttpServerMetricsRecorder
-
-  def create(config: Config, system: ActorSystem): HttpServerMetricsRecorder =
-    new HttpServerMetricsRecorder()
-
+object HttpServerMetrics extends EntityRecorderFactory[HttpServerMetrics] {
+  def category: String = "http-server"
+  def createRecorder(instrumentFactory: InstrumentFactory): HttpServerMetrics = new HttpServerMetrics(instrumentFactory)
 }

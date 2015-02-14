@@ -2,41 +2,14 @@
 
 <aspectj>
   <aspects>
-    <!-- Disable AspectJ Weaver not present error -->
-    <aspect name="kamon.instrumentation.AspectJWeaverMissingWarning"/>
 
-    <!-- Actors -->
-    <aspect name="akka.instrumentation.TraceContextIntoRepointableActorRefMixin"/>
-    <aspect name="akka.instrumentation.TraceContextIntoSystemMessageMixin"/>
-    <aspect name="akka.instrumentation.ActorSystemMessageInstrumentation"/>
-    <aspect name="akka.instrumentation.TraceContextIntoEnvelopeMixin"/>
-    <aspect name="akka.instrumentation.ActorCellMetricsIntoActorCellMixin"/>
-    <aspect name="akka.instrumentation.ActorCellInstrumentation"/>
-    <aspect name="akka.instrumentation.ActorLoggingInstrumentation"/>
+    <!-- Notify that AspectJ is present -->
+    <aspect name="kamon.supervisor.AspectJPresent"/>
 
-    <!-- Dispatchers -->
-    <aspect name="akka.instrumentation.DispatcherInstrumentation"/>
-    <aspect name="akka.instrumentation.DispatcherMetricCollectionInfoIntoDispatcherMixin"/>
-
-    <!-- Futures -->
-    <aspect name="kamon.instrumentation.scala.FutureInstrumentation"/>
-    <aspect name="kamon.instrumentation.scalaz.FutureInstrumentation"/>
-
-    <!-- Patterns -->
-    <aspect name="akka.instrumentation.AskPatternInstrumentation"/>
   </aspects>
 
   <weaver>
-    <include within="scala.concurrent..*"/>
-    <include within="scalaz.concurrent..*"/>
-    <include within="akka..*"/>
-    <include within="spray..*"/>
     <include within="kamon..*"/>
-
-    <!-- For some weird reason ByteString produces a java.lang.VerifyError after going through the weaver. -->
-    <exclude within="akka.util.ByteString"/>
-    <!-- Exclude CallingThreadDispatcher, is only for test purposes -->
-    <exclude within="akka.testkit.CallingThreadDispatcher"/>
   </weaver>
 
 </aspectj>

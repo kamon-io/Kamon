@@ -14,10 +14,72 @@
  */
 package kamon
 
-import akka.actor._
+import _root_.akka.actor
+import _root_.akka.actor._
+import com.typesafe.config.{ ConfigFactory, Config }
+import kamon.metric._
+import kamon.trace.{ TracerExtensionImpl, TracerExtension }
 
 object Kamon {
-  trait Extension extends akka.actor.Extension
-  def apply[T <: Extension](key: ExtensionId[T])(implicit system: ActorSystem): T = key(system)
+  trait Extension extends actor.Extension
+
+  private case class KamonCoreComponents(
+    metrics: MetricsExtension,
+    tracer: TracerExtension,
+    userMetrics: UserMetricsExtension)
+
+  @volatile private var _system: ActorSystem = _
+  @volatile private var _coreComponents: Option[KamonCoreComponents] = None
+
+  def start(config: Config): Unit = synchronized {
+    def resolveInternalConfig: Config = {
+      val internalConfig = config.getConfig("kamon.internal-config")
+
+      config
+        .withoutPath("akka")
+        .withoutPath("spray")
+        .withFallback(internalConfig)
+    }
+
+    if (_coreComponents.isEmpty) {
+      val metrics = MetricsExtensionImpl(config)
+      val simpleMetrics = UserMetricsExtensionImpl(metrics)
+      val tracer = TracerExtensionImpl(metrics, config)
+
+      _coreComponents = Some(KamonCoreComponents(metrics, tracer, simpleMetrics))
+      _system = ActorSystem("kamon", resolveInternalConfig)
+
+      metrics.start(_system)
+      tracer.start(_system)
+
+    } else sys.error("Kamon has already been started.")
+  }
+
+  def start(): Unit =
+    start(ConfigFactory.load)
+
+  def metrics: MetricsExtension =
+    ifStarted(_.metrics)
+
+  def tracer: TracerExtension =
+    ifStarted(_.tracer)
+
+  def userMetrics: UserMetricsExtension =
+    ifStarted(_.userMetrics)
+
+  def apply[T <: Kamon.Extension](key: ExtensionId[T]): T =
+    ifStarted { _ ⇒
+      if (_system ne null)
+        key(_system)
+      else
+        sys.error("Cannot retrieve extensions while Kamon is being initialized.")
+    }
+
+  def extension[T <: Kamon.Extension](key: ExtensionId[T]): T =
+    apply(key)
+
+  private def ifStarted[T](thunk: KamonCoreComponents ⇒ T): T =
+    _coreComponents.map(thunk(_)) getOrElse (sys.error("Kamon has not been started yet."))
+
 }
 

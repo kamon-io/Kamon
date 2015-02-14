@@ -19,7 +19,9 @@ import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.classic.{ AsyncAppender, LoggerContext }
 import ch.qos.logback.core.read.ListAppender
 import ch.qos.logback.core.status.NopStatusListener
+import kamon.Kamon
 import kamon.trace.TraceLocal
+import kamon.trace.TraceLocal.AvailableToMdc
 import org.scalatest.BeforeAndAfter
 import org.scalatestplus.play._
 import org.slf4j
@@ -28,11 +30,12 @@ import play.api.mvc.Results.Ok
 import play.api.mvc._
 import play.api.test.Helpers._
 import play.api.test._
+import scala.concurrent.duration._
 
-import scala.concurrent.Future
+import scala.concurrent.{ Await, Future }
 
 class LoggerLikeInstrumentationSpec extends PlaySpec with OneServerPerSuite with BeforeAndAfter {
-
+  Kamon.start()
   System.setProperty("config.file", "./kamon-play/src/test/resources/conf/application.conf")
 
   val executor = scala.concurrent.ExecutionContext.Implicits.global
@@ -41,11 +44,8 @@ class LoggerLikeInstrumentationSpec extends PlaySpec with OneServerPerSuite with
   val headerValue = "My header value"
   val otherValue = "My other value"
 
-  case class LocalStorageValue(header: String, other: String)
-
-  object TraceLocalKey extends TraceLocal.TraceLocalKey {
-    type ValueType = LocalStorageValue
-  }
+  val TraceLocalHeaderKey = AvailableToMdc("header")
+  val TraceLocalOtherKey = AvailableToMdc("other")
 
   before {
     LoggingHandler.startLogging()
@@ -60,7 +60,8 @@ class LoggerLikeInstrumentationSpec extends PlaySpec with OneServerPerSuite with
     case ("GET", "/logging") ⇒
       Action.async {
         Future {
-          TraceLocal.store(TraceLocalKey)(LocalStorageValue(headerValue, otherValue))
+          TraceLocal.store(TraceLocalHeaderKey)(headerValue)
+          TraceLocal.store(TraceLocalOtherKey)(otherValue)
           LoggingHandler.info(infoMessage)
           Ok("OK")
         }(executor)
@@ -68,12 +69,13 @@ class LoggerLikeInstrumentationSpec extends PlaySpec with OneServerPerSuite with
   })
 
   "the LoggerLike instrumentation" should {
-    "be put the properties of TraceLocal into the MDC as key -> value in a request" in {
+    "allow retrieve a value from the MDC when was created a key of type AvailableToMdc in the current request" in {
       LoggingHandler.appenderStart()
 
-      val Some(result) = route(FakeRequest(GET, "/logging"))
-      Thread.sleep(500) // wait to complete the future
-      TraceLocal.retrieve(TraceLocalKey) must be(Some(LocalStorageValue(headerValue, otherValue)))
+      Await.result(route(FakeRequest(GET, "/logging")).get, 500 millis)
+
+      TraceLocal.retrieve(TraceLocalHeaderKey) must be(Some(headerValue))
+      TraceLocal.retrieve(TraceLocalOtherKey) must be(Some(otherValue))
 
       LoggingHandler.appenderStop()
 

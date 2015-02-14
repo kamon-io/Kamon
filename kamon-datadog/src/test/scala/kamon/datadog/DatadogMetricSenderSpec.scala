@@ -19,108 +19,98 @@ package kamon.datadog
 import akka.testkit.{ TestKitBase, TestProbe }
 import akka.actor.{ Props, ActorRef, ActorSystem }
 import kamon.Kamon
-import kamon.metric.instrument.Histogram.Precision
-import kamon.metric.instrument.{ Counter, Histogram, HdrHistogram, LongAdderCounter }
+import kamon.metric.instrument._
+import kamon.testkit.BaseKamonSpec
+import kamon.util.MilliTimestamp
 import org.scalatest.{ Matchers, WordSpecLike }
 import kamon.metric._
 import akka.io.Udp
-import kamon.metric.Subscriptions.TickMetricSnapshot
+import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 import java.lang.management.ManagementFactory
 import java.net.InetSocketAddress
 import com.typesafe.config.ConfigFactory
 
-class DatadogMetricSenderSpec extends TestKitBase with WordSpecLike with Matchers {
-  implicit lazy val system: ActorSystem = ActorSystem("datadog-metric-sender-spec", ConfigFactory.parseString(
-    """
-      |kamon {
-      |  metrics {
-      |    disable-aspectj-weaver-missing-error = true
-      |  }
-      |
-      |  datadog {
-      |    max-packet-size = 256 bytes
-      |  }
-      |}
-      |
-    """.stripMargin))
-
-  val collectionContext = Kamon(Metrics).buildDefaultCollectionContext
+class DatadogMetricSenderSpec extends BaseKamonSpec("datadog-metric-sender-spec") {
+  override lazy val config =
+    ConfigFactory.parseString(
+      """
+        |kamon {
+        |  metrics {
+        |    disable-aspectj-weaver-missing-error = true
+        |  }
+        |
+        |  datadog {
+        |    max-packet-size = 256 bytes
+        |  }
+        |}
+        |
+      """.stripMargin)
 
   "the DataDogMetricSender" should {
     "send latency measurements" in new UdpListenerFixture {
-      val testMetricName = "processing-time"
-      val testRecorder = Histogram(1000L, Precision.Normal, Scale.Unit)
-      testRecorder.record(10L)
+      val (entity, testRecorder) = buildRecorder("datadog")
+      testRecorder.metricOne.record(10L)
 
-      val udp = setup(Map(testMetricName -> testRecorder.collect(collectionContext)))
+      val udp = setup(Map(entity -> testRecorder.collect(collectionContext)))
       val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
 
-      data.utf8String should be(s"kamon.actor.processing-time:10|ms|#actor:user/kamon")
+      data.utf8String should be(s"kamon.category.metric-one:10|ms|#category:datadog")
     }
 
     "include the sampling rate in case of multiple measurements of the same value" in new UdpListenerFixture {
-      val testMetricName = "processing-time"
-      val testRecorder = Histogram(1000L, Precision.Normal, Scale.Unit)
-      testRecorder.record(10L)
-      testRecorder.record(10L)
+      val (entity, testRecorder) = buildRecorder("datadog")
+      testRecorder.metricTwo.record(10L, 2)
 
-      val udp = setup(Map(testMetricName -> testRecorder.collect(collectionContext)))
+      val udp = setup(Map(entity -> testRecorder.collect(collectionContext)))
       val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
 
-      data.utf8String should be(s"kamon.actor.processing-time:10|ms|@0.5|#actor:user/kamon")
+      data.utf8String should be(s"kamon.category.metric-two:10|ms|@0.5|#category:datadog")
     }
 
     "flush the packet when the max-packet-size is reached" in new UdpListenerFixture {
-      val testMetricName = "processing-time"
-      val testRecorder = Histogram(10000L, Precision.Normal, Scale.Unit)
+      val (entity, testRecorder) = buildRecorder("datadog")
 
       var bytes = 0
       var level = 0
 
       while (bytes <= testMaxPacketSize) {
         level += 1
-        testRecorder.record(level)
-        bytes += s"kamon.actor.$testMetricName:$level|ms|#actor:user/kamon".length
+        testRecorder.metricOne.record(level)
+        bytes += s"kamon.category.metric-one:$level|ms|#category:datadog".length
       }
 
-      val udp = setup(Map(testMetricName -> testRecorder.collect(collectionContext)))
+      val udp = setup(Map(entity -> testRecorder.collect(collectionContext)))
       udp.expectMsgType[Udp.Send] // let the first flush pass
 
       val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
-      data.utf8String should be(s"kamon.actor.$testMetricName:$level|ms|#actor:user/kamon")
+      data.utf8String should be(s"kamon.category.metric-one:$level|ms|#category:datadog")
     }
 
     "render multiple keys in the same packet using newline as separator" in new UdpListenerFixture {
-      val firstTestMetricName = "processing-time-1"
-      val secondTestMetricName = "processing-time-2"
-      val thirdTestMetricName = "counter"
+      val (entity, testRecorder) = buildRecorder("datadog")
 
-      val firstTestRecorder = Histogram(1000L, Precision.Normal, Scale.Unit)
-      val secondTestRecorder = Histogram(1000L, Precision.Normal, Scale.Unit)
-      val thirdTestRecorder = Counter()
+      testRecorder.metricOne.record(10L, 2)
+      testRecorder.metricTwo.record(21L)
+      testRecorder.counterOne.increment(4L)
 
-      firstTestRecorder.record(10L)
-      firstTestRecorder.record(10L)
-
-      secondTestRecorder.record(21L)
-
-      thirdTestRecorder.increment(4L)
-
-      val udp = setup(Map(
-        firstTestMetricName -> firstTestRecorder.collect(collectionContext),
-        secondTestMetricName -> secondTestRecorder.collect(collectionContext),
-        thirdTestMetricName -> thirdTestRecorder.collect(collectionContext)))
+      val udp = setup(Map(entity -> testRecorder.collect(collectionContext)))
       val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
 
-      data.utf8String should be("kamon.actor.processing-time-1:10|ms|@0.5|#actor:user/kamon\nkamon.actor.processing-time-2:21|ms|#actor:user/kamon\nkamon.actor.counter:4|c|#actor:user/kamon")
+      data.utf8String should be("kamon.category.metric-one:10|ms|@0.5|#category:datadog\nkamon.category.counter:4|c|#category:datadog\nkamon.category.metric-two:21|ms|#category:datadog")
     }
+
   }
 
   trait UdpListenerFixture {
     val localhostName = ManagementFactory.getRuntimeMXBean.getName.split('@')(1)
     val testMaxPacketSize = system.settings.config.getBytes("kamon.datadog.max-packet-size")
 
-    def setup(metrics: Map[String, MetricSnapshot]): TestProbe = {
+    def buildRecorder(name: String): (Entity, TestEntityRecorder) = {
+      val registration = Kamon.metrics.register(TestEntityRecorder, name).get
+      (registration.entity, registration.recorder)
+    }
+
+    def setup(metrics: Map[Entity, EntitySnapshot]): TestProbe = {
       val udp = TestProbe()
       val metricsSender = system.actorOf(Props(new DatadogMetricsSender(new InetSocketAddress(localhostName, 0), testMaxPacketSize) {
         override def udpExtension(implicit system: ActorSystem): ActorRef = udp.ref
@@ -130,31 +120,21 @@ class DatadogMetricSenderSpec extends TestKitBase with WordSpecLike with Matcher
       udp.expectMsgType[Udp.SimpleSender]
       udp.reply(Udp.SimpleSenderReady)
 
-      // These names are not intented to match the real actor metrics, it's just about seeing more familiar data in tests.
-      val testGroupIdentity = new MetricGroupIdentity {
-        val name: String = "user/kamon"
-        val category: MetricGroupCategory = new MetricGroupCategory {
-          val name: String = "actor"
-        }
-      }
-
-      val testMetrics = for ((metricName, snapshot) ← metrics) yield {
-        val testMetricIdentity = new MetricIdentity {
-          val name: String = metricName
-          val tag: String = ""
-        }
-
-        (testMetricIdentity, snapshot)
-      }
-
-      metricsSender ! TickMetricSnapshot(0, 0, Map(testGroupIdentity -> new MetricGroupSnapshot {
-        type GroupSnapshotType = Histogram.Snapshot
-        def merge(that: GroupSnapshotType, context: CollectionContext): GroupSnapshotType = ???
-
-        val metrics: Map[MetricIdentity, MetricSnapshot] = testMetrics.toMap
-      }))
+      val fakeSnapshot = TickMetricSnapshot(MilliTimestamp.now, MilliTimestamp.now, metrics)
+      metricsSender ! fakeSnapshot
       udp
     }
   }
 
+}
+
+class TestEntityRecorder(instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) {
+  val metricOne = histogram("metric-one")
+  val metricTwo = histogram("metric-two")
+  val counterOne = counter("counter")
+}
+
+object TestEntityRecorder extends EntityRecorderFactory[TestEntityRecorder] {
+  def category: String = "category"
+  def createRecorder(instrumentFactory: InstrumentFactory): TestEntityRecorder = new TestEntityRecorder(instrumentFactory)
 }

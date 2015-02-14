@@ -1,61 +1,55 @@
+/*
+ * =========================================================================================
+ * Copyright © 2013-2015 the kamon project <http://kamon.io/>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the specific language governing permissions
+ * and limitations under the License.
+ * =========================================================================================
+ */
+
 package kamon.metric.instrument
 
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.atomic.{ AtomicLong, AtomicLongFieldUpdater, AtomicReference }
 
-import akka.actor.{ Cancellable, ActorSystem }
-import com.typesafe.config.Config
-import kamon.metric.{ CollectionContext, Scale, MetricRecorder }
+import akka.actor.Cancellable
+import kamon.metric.instrument.Gauge.CurrentValueCollector
+import kamon.metric.instrument.Histogram.DynamicRange
 
 import scala.concurrent.duration.FiniteDuration
 
-trait Gauge extends MetricRecorder {
+trait Gauge extends Instrument {
   type SnapshotType = Histogram.Snapshot
 
-  def record(value: Long)
-  def record(value: Long, count: Long)
+  def record(value: Long): Unit
+  def record(value: Long, count: Long): Unit
+  def refreshValue(): Unit
 }
 
 object Gauge {
 
-  trait CurrentValueCollector {
-    def currentValue: Long
-  }
-
-  def apply(precision: Histogram.Precision, highestTrackableValue: Long, scale: Scale, refreshInterval: FiniteDuration,
-    system: ActorSystem)(currentValueCollector: CurrentValueCollector): Gauge = {
-
-    val underlyingHistogram = Histogram(highestTrackableValue, precision, scale)
-    val gauge = new HistogramBackedGauge(underlyingHistogram, currentValueCollector)
-
-    val refreshValuesSchedule = system.scheduler.schedule(refreshInterval, refreshInterval) {
+  def apply(dynamicRange: DynamicRange, refreshInterval: FiniteDuration, scheduler: RefreshScheduler, valueCollector: CurrentValueCollector): Gauge = {
+    val underlyingHistogram = Histogram(dynamicRange)
+    val gauge = new HistogramBackedGauge(underlyingHistogram, valueCollector)
+    val refreshValuesSchedule = scheduler.schedule(refreshInterval, () ⇒ {
       gauge.refreshValue()
-    }(system.dispatcher) // TODO: Move this to Kamon dispatchers
+    })
 
-    gauge.refreshValuesSchedule.set(refreshValuesSchedule)
+    gauge.automaticValueCollectorSchedule.set(refreshValuesSchedule)
     gauge
   }
 
-  def fromDefaultConfig(system: ActorSystem)(currentValueCollectorFunction: () ⇒ Long): Gauge =
-    fromDefaultConfig(system, functionZeroAsCurrentValueCollector(currentValueCollectorFunction))
+  def create(dynamicRange: DynamicRange, refreshInterval: FiniteDuration, scheduler: RefreshScheduler, valueCollector: CurrentValueCollector): Gauge =
+    apply(dynamicRange, refreshInterval, scheduler, valueCollector)
 
-  def fromDefaultConfig(system: ActorSystem, currentValueCollector: CurrentValueCollector): Gauge = {
-    val config = system.settings.config.getConfig("kamon.metrics.precision.default-gauge-precision")
-    fromConfig(config, system)(currentValueCollector)
-  }
-
-  def fromConfig(config: Config, system: ActorSystem, scale: Scale)(currentValueCollector: CurrentValueCollector): Gauge = {
-    import scala.concurrent.duration._
-
-    val highest = config.getLong("highest-trackable-value")
-    val significantDigits = config.getInt("significant-value-digits")
-    val refreshInterval = config.getMilliseconds("refresh-interval").toInt
-
-    Gauge(Histogram.Precision(significantDigits), highest, scale, refreshInterval.millis, system)(currentValueCollector)
-  }
-
-  def fromConfig(config: Config, system: ActorSystem)(currentValueCollector: CurrentValueCollector): Gauge = {
-    fromConfig(config, system, Scale.Unit)(currentValueCollector)
+  trait CurrentValueCollector {
+    def currentValue: Long
   }
 
   implicit def functionZeroAsCurrentValueCollector(f: () ⇒ Long): CurrentValueCollector = new CurrentValueCollector {
@@ -63,8 +57,46 @@ object Gauge {
   }
 }
 
+/**
+ *  Helper for cases in which a gauge shouldn't store the current value of a observed value but the difference between
+ *  the current observed value and the previously observed value. Should only be used if the observed value is always
+ *  increasing or staying steady, but is never able to decrease.
+ *
+ *  Note: The first time a value is collected, this wrapper will always return zero, afterwards, the difference between
+ *        the current value and the last value will be returned.
+ */
+class DifferentialValueCollector(wrappedValueCollector: CurrentValueCollector) extends CurrentValueCollector {
+  @volatile private var _readAtLeastOnce = false
+  private val _lastObservedValue = new AtomicLong(0)
+
+  def currentValue: Long = {
+    if (_readAtLeastOnce) {
+      val wrappedCurrent = wrappedValueCollector.currentValue
+      val diff = wrappedCurrent - _lastObservedValue.getAndSet(wrappedCurrent)
+
+      if (diff >= 0) diff else 0L
+
+    } else {
+      _lastObservedValue.set(wrappedValueCollector.currentValue)
+      _readAtLeastOnce = true
+      0L
+    }
+
+  }
+}
+
+object DifferentialValueCollector {
+  def apply(wrappedValueCollector: CurrentValueCollector): CurrentValueCollector =
+    new DifferentialValueCollector(wrappedValueCollector)
+
+  def apply(wrappedValueCollector: ⇒ Long): CurrentValueCollector =
+    new DifferentialValueCollector(new CurrentValueCollector {
+      def currentValue: Long = wrappedValueCollector
+    })
+}
+
 class HistogramBackedGauge(underlyingHistogram: Histogram, currentValueCollector: Gauge.CurrentValueCollector) extends Gauge {
-  val refreshValuesSchedule = new AtomicReference[Cancellable]()
+  private[kamon] val automaticValueCollectorSchedule = new AtomicReference[Cancellable]()
 
   def record(value: Long): Unit = underlyingHistogram.record(value)
 
@@ -73,10 +105,12 @@ class HistogramBackedGauge(underlyingHistogram: Histogram, currentValueCollector
   def collect(context: CollectionContext): Histogram.Snapshot = underlyingHistogram.collect(context)
 
   def cleanup: Unit = {
-    if (refreshValuesSchedule.get() != null)
-      refreshValuesSchedule.get().cancel()
+    if (automaticValueCollectorSchedule.get() != null)
+      automaticValueCollectorSchedule.get().cancel()
   }
 
-  def refreshValue(): Unit = underlyingHistogram.record(currentValueCollector.currentValue)
+  def refreshValue(): Unit =
+    underlyingHistogram.record(currentValueCollector.currentValue)
+
 }
 
