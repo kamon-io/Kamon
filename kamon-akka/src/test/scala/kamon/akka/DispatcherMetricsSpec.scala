@@ -15,17 +15,14 @@
 
 package kamon.akka
 
-import java.nio.LongBuffer
 
-import akka.actor.{ ActorRef, ActorSystem }
+import akka.actor.ActorRef
 import akka.dispatch.MessageDispatcher
-import akka.testkit.{ TestKitBase, TestProbe }
+import akka.testkit.TestProbe
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
-import kamon.metric.instrument.CollectionContext
 import kamon.metric.{ EntityRecorder, EntitySnapshot }
 import kamon.testkit.BaseKamonSpec
-import org.scalatest.{ BeforeAndAfterAll, Matchers, WordSpecLike }
 
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
