@@ -32,13 +32,22 @@ object Kamon {
   @volatile private var _coreComponents: Option[KamonCoreComponents] = None
 
   def start(config: Config): Unit = synchronized {
+    def resolveInternalConfig: Config = {
+      val internalConfig = config.getConfig("kamon.internal-config")
+
+      config
+        .withoutPath("akka")
+        .withoutPath("spray")
+        .withFallback(internalConfig)
+    }
+
     if (_coreComponents.isEmpty) {
       val metrics = MetricsExtensionImpl(config)
       val simpleMetrics = UserMetricsExtensionImpl(metrics)
       val tracer = TracerExtensionImpl(metrics, config)
 
       _coreComponents = Some(KamonCoreComponents(metrics, tracer, simpleMetrics))
-      _system = ActorSystem("kamon", config)
+      _system = ActorSystem("kamon", resolveInternalConfig)
 
       metrics.start(_system)
       tracer.start(_system)

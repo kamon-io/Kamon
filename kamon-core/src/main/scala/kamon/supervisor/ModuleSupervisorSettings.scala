@@ -19,7 +19,7 @@ package kamon.supervisor
 import akka.actor.ActorSystem
 
 case class AvailableModuleInfo(name: String, extensionClass: String, requiresAspectJ: Boolean, autoStart: Boolean)
-case class ModuleSupervisorSettings(disableAspectJMissingWarning: Boolean, availableModules: List[AvailableModuleInfo]) {
+case class ModuleSupervisorSettings(showAspectJMissingWarning: Boolean, availableModules: List[AvailableModuleInfo]) {
   val modulesRequiringAspectJ = availableModules.filter(_.requiresAspectJ)
 }
 
@@ -29,7 +29,7 @@ object ModuleSupervisorSettings {
     import kamon.util.ConfigTools.Syntax
 
     val config = system.settings.config.getConfig("kamon.modules")
-    val disableAspectJMissingWarning = system.settings.config.getBoolean("kamon.disable-aspectj-missing-warning")
+    val showAspectJMissingWarning = system.settings.config.getBoolean("kamon.show-aspectj-missing-warning")
 
     val modules = config.firstLevelKeys
     val availableModules = modules.map { moduleName ⇒
@@ -43,7 +43,7 @@ object ModuleSupervisorSettings {
 
     } toList
 
-    ModuleSupervisorSettings(disableAspectJMissingWarning, availableModules)
+    ModuleSupervisorSettings(showAspectJMissingWarning, availableModules)
   }
 
 }
