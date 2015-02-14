@@ -23,7 +23,7 @@ import kamon._
 class AkkaExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   val config = system.settings.config.getConfig("kamon.akka")
   val askPatternTimeoutWarning = config.getString("ask-pattern-timeout-warning")
-  val dispatcher = system.dispatchers.lookup(config.getString("dispatcher"))
+  val dispatcher = system.dispatcher
 }
 
 object Akka extends ExtensionId[AkkaExtension] with ExtensionIdProvider {

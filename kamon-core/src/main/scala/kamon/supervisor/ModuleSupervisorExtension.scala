@@ -62,7 +62,7 @@ class KamonSupervisor(settings: ModuleSupervisorSettings, dynamicAccess: Dynamic
     } getOrElse (childPromise.complete(Success(context.actorOf(props, name))))
 
   def init(): Unit = {
-    if (settings.modulesRequiringAspectJ.nonEmpty && !isAspectJPresent && !settings.disableAspectJMissingWarning)
+    if (settings.modulesRequiringAspectJ.nonEmpty && !isAspectJPresent && settings.showAspectJMissingWarning)
       logAspectJWeaverMissing(settings.modulesRequiringAspectJ)
 
     // Force initialization of all modules marked with auto-start.
@@ -106,7 +106,7 @@ class KamonSupervisor(settings: ModuleSupervisorSettings, dynamicAccess: Dynamic
         |
         | If you need help on setting up the aspectj weaver go to http://kamon.io/introduction/get-started/ for more info. On the
         | other hand, if you are sure that you do not need or do not want to use the weaver then you can disable this error message
-        | by changing the kamon.disable-aspectj-missing-warning setting in your configuration file.
+        | by changing the kamon.show-aspectj-missing-warning setting in your configuration file.
         |
       """.stripMargin
 
