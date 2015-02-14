@@ -13,11 +13,10 @@
  * =========================================================================================
  */
 
-import com.typesafe.sbt.SbtAspectj.AspectjKeys._
 import sbt.Tests.{SubProcess, Group}
 import sbt._
 import Keys._
-import com.typesafe.sbt.{SbtAspectj, SbtScalariform}
+import com.typesafe.sbt.SbtScalariform
 import com.typesafe.sbt.SbtScalariform.ScalariformKeys
 import Publish.{settings => publishSettings}
 import Release.{settings => releaseSettings}
@@ -35,6 +34,7 @@ object Settings {
     resolvers              ++= Dependencies.resolutionRepos,
     fork in run             := true,
     testGrouping in Test    := singleTests((definedTests in Test).value, (javaOptions in Test).value),
+    moduleName              := moduleName.value + "_akka-2.2",
     javacOptions in compile := Seq(
       "-Xlint:-options",
       "-source", JavaVersion, "-target", JavaVersion
