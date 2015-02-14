@@ -39,6 +39,7 @@ class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
   Kamon.start()
   System.setProperty("config.file", "./kamon-play/src/test/resources/conf/application.conf")
 
+  override lazy val port: Port = 19002
   val executor = scala.concurrent.ExecutionContext.Implicits.global
 
   implicit override lazy val app = FakeApplication(withGlobal = Some(MockGlobalTest), withRoutes = {
@@ -126,22 +127,22 @@ class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
     }
 
     "response to the getRouted Action and normalise the current TraceContext name" in {
-      Await.result(WS.url("http://localhost:19001/getRouted").get(), 10 seconds)
+      Await.result(WS.url(s"http://localhost:$port/getRouted").get(), 10 seconds)
       Kamon.metrics.find("getRouted.get", "trace") must not be empty
     }
 
     "response to the postRouted Action and normalise the current TraceContext name" in {
-      Await.result(WS.url("http://localhost:19001/postRouted").post("content"), 10 seconds)
+      Await.result(WS.url(s"http://localhost:$port/postRouted").post("content"), 10 seconds)
       Kamon.metrics.find("postRouted.post", "trace") must not be empty
     }
 
     "response to the showRouted Action and normalise the current TraceContext name" in {
-      Await.result(WS.url("http://localhost:19001/showRouted/2").get(), 10 seconds)
+      Await.result(WS.url(s"http://localhost:$port/showRouted/2").get(), 10 seconds)
       Kamon.metrics.find("show.some.id.get", "trace") must not be empty
     }
 
     "include HttpContext information for help to diagnose possible errors" in {
-      Await.result(WS.url("http://localhost:19001/getRouted").get(), 10 seconds)
+      Await.result(WS.url(s"http://localhost:$port/getRouted").get(), 10 seconds)
       route(FakeRequest(GET, "/default").withHeaders("User-Agent" -> "Fake-Agent"))
 
       val httpCtx = TraceLocal.retrieve(HttpContextKey).get

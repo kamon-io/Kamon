@@ -34,11 +34,6 @@ class RequestInstrumentation {
   @DeclareMixin("play.api.mvc.RequestHeader+")
   def mixinContextAwareNewRequest: TraceContextAware = TraceContextAware.default
 
-  @After("call(* play.api.GlobalSettings.onStart(*)) && args(application)")
-  def afterApplicationStart(application: play.api.Application): Unit = {
-    Kamon(Play)
-  }
-
   @Before("call(* play.api.GlobalSettings.onRouteRequest(..)) && args(requestHeader)")
   def beforeRouteRequest(requestHeader: RequestHeader): Unit = {
     import Kamon.tracer

@@ -35,10 +35,11 @@ class WSInstrumentationSpec extends WordSpecLike with Matchers with OneServerPer
   import kamon.metric.TraceMetricsSpec.SegmentSyntax
   System.setProperty("config.file", "./kamon-play/src/test/resources/conf/application.conf")
 
+  override lazy val port: Port = 19003
   implicit override lazy val app = FakeApplication(withRoutes = {
     case ("GET", "/async")   ⇒ Action { Ok("ok") }
     case ("GET", "/outside") ⇒ Action { Ok("ok") }
-    case ("GET", "/inside")  ⇒ callWSinsideController("http://localhost:19001/async")
+    case ("GET", "/inside")  ⇒ callWSinsideController(s"http://localhost:$port/async")
   })
 
   "the WS instrumentation" should {
@@ -48,19 +49,19 @@ class WSInstrumentationSpec extends WordSpecLike with Matchers with OneServerPer
       val snapshot = takeSnapshotOf("GET: /inside")
       snapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
       snapshot.segments.size should be(1)
-      snapshot.segment("http://localhost:19001/async", SegmentCategory.HttpClient, Play.SegmentLibraryName).numberOfMeasurements should be(1)
+      snapshot.segment(s"http://localhost:$port/async", SegmentCategory.HttpClient, Play.SegmentLibraryName).numberOfMeasurements should be(1)
     }
 
     "propagate the TraceContext outside an Action and complete the WS request" in {
       TraceContext.withContext(newContext("trace-outside-action")) {
-        Await.result(WS.url("http://localhost:19001/outside").get(), 10 seconds)
+        Await.result(WS.url(s"http://localhost:$port/outside").get(), 10 seconds)
         TraceContext.currentContext.finish()
       }
 
       val snapshot = takeSnapshotOf("trace-outside-action")
       snapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
       snapshot.segments.size should be(1)
-      snapshot.segment("http://localhost:19001/outside", SegmentCategory.HttpClient, Play.SegmentLibraryName).numberOfMeasurements should be(1)
+      snapshot.segment(s"http://localhost:$port/outside", SegmentCategory.HttpClient, Play.SegmentLibraryName).numberOfMeasurements should be(1)
     }
 
   }
@@ -69,6 +70,8 @@ class WSInstrumentationSpec extends WordSpecLike with Matchers with OneServerPer
     Kamon.tracer.newContext(name)
 
   def takeSnapshotOf(traceName: String): EntitySnapshot = {
+    // Give some time for async segments to finish.
+    Thread.sleep(300)
     val recorder = Kamon.metrics.register(TraceMetrics, traceName).get.recorder
     val collectionContext = Kamon.metrics.buildDefaultCollectionContext
     recorder.collect(collectionContext)
