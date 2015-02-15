@@ -18,6 +18,8 @@ package kamon.annotation.util
 
 import javax.el.ELProcessor
 
+import kamon.Kamon
+import kamon.annotation.Annotation
 import kamon.annotation.resolver.PrivateFieldELResolver
 import kamon.annotation.util.FastObjectPool.PoolFactory
 
@@ -25,7 +27,7 @@ import kamon.annotation.util.FastObjectPool.PoolFactory
  * Convenient pool of @see ELProcessor, since it is not thread safe.
  */
 object ELProcessorPool {
-  private val pool = new FastObjectPool[ELProcessor](ELPoolFactory(), 5)
+  private val pool = new FastObjectPool[ELProcessor](ELPoolFactory(), 10) //Kamon(Annotation).poolSize
 
   def use[A](closure: ELProcessor ⇒ A): A = use(None)(closure)
   def useWithObject[A](obj: AnyRef)(closure: ELProcessor ⇒ A): A = use(Some(obj))(closure)

@@ -15,14 +15,9 @@
 
 package kamon.annotation
 
-import java.util.concurrent.{ Executors, ExecutorService }
-import java.util.regex.{ Matcher, Pattern }
-import javax.el.ELProcessor
-
-import akka.actor.{ ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProvider }
+import akka.actor.{ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProvider}
+import akka.event.Logging
 import kamon.Kamon
-import kamon.annotation.resolver.PrivateFieldELResolver
-import kamon.annotation.util.ELProcessorPool
 
 object Annotation extends ExtensionId[AnnotationExtension] with ExtensionIdProvider {
   override def lookup(): ExtensionId[_ <: Extension] = Annotation
@@ -30,28 +25,10 @@ object Annotation extends ExtensionId[AnnotationExtension] with ExtensionIdProvi
 }
 
 class AnnotationExtension(system: ExtendedActorSystem) extends Kamon.Extension {
-//  private val config = system.settings.config.getConfig("kamon.annotation")
-}
+  val log = Logging(system, classOf[AnnotationExtension])
+  log.info(s"Starting the Kamon(Annotation) extension")
 
-case class Employee(name: String)
-
-object Main extends App {
-  import kamon.annotation.util.EnhancedELProcessor.Syntax
-  //  val s = Pattern.compile("[#|$]\\{(.*)\\}")
-
-  private val pool: ExecutorService = Executors.newFixedThreadPool(4)
-  for (_ ← 0 to 100000000) {
-    Thread.sleep(100)
-    pool.submit(new Runnable {
-      override def run(): Unit = {
-        ELProcessorPool.useWithObject(new Employee("Charlie Brown")) { elp ⇒
-          println(elp.evalToString("""#{'name:' += this.name}""") + ":" + Thread.currentThread().getName)
-        }
-        ELProcessorPool.use { elp ⇒
-          println(elp.evalToMap("""#{{'a':'b','c':'d'}}"""))
-        }
-      }
-    })
-  }
+  val config = system.settings.config.getConfig("kamon.annotation")
+  val poolSize = config.getInt("el-processor-pool-size")
 }
 

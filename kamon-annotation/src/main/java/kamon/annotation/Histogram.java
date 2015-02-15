@@ -19,19 +19,19 @@ package kamon.annotation;
 import java.lang.annotation.*;
 
 /**
- * A marker annotation to define a method as a histogram.
+ * A marker annotation to define a method as a Histogram.
  *
  * <p/>
  * Given a method like this:
  * <pre><code>
- *     {@literal @}0Histogram(name = "coolName", tags="""${{'my-cool-tag':'my-cool-value'}}""")
- *     public (Long|Double|Float|Integer)coolName() {
+ *     {@literal @}0Histogram(name = "coolName", tags="${'my-cool-tag':'my-cool-value'}")
+ *     public (Long|Double|Float|Integer) coolName() {
  *         return someComputation();
  *     }
  * </code></pre>
  * <p/>
  *
- * A histogram for the defining method with the name {@code coolName}  will be created which uses the
+ * A {@link kamon.metric.instrument.Histogram Histogram} for the defining method with the name {@code coolName}  will be created which uses the
  * annotated method's return as its value.
  */
 @Documented
@@ -40,9 +40,24 @@ import java.lang.annotation.*;
 public @interface Histogram {
 
     /**
+     *
      * @return The histogram's name.
+     *
+     * Also, the Metric name can be resolved with an EL expression that evaluates to a String:
+     *
+     * <pre>
+     * {@code
+     * class ClassWithHistogram  {
+     *        private long id;
+     *
+     *        public long getId() { return id; }
+     *
+     *        {@literal @}Histogram (name = "${'histoID:' += this.id}")
+     *        void countedMethod() {} // create a histogram with name => histoID:[id]
+     *   }
+     *}
+     *</pre>
      */
-
     String name();
 
     /**
@@ -67,7 +82,7 @@ public @interface Histogram {
 
     /**
      * Tags are a way of adding dimensions to metrics,
-     * these are constructed using EL syntax e.g. """${{'algorithm':'1','env':'production'}}"""
+     * these are constructed using EL syntax e.g. "${{'algorithm':'1','env':'production'}}"
      *
      * @return the tags associated to the histogram
      */

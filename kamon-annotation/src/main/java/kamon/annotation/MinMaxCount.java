@@ -19,20 +19,21 @@ package kamon.annotation;
 import java.lang.annotation.*;
 
 /**
- * A marker annotation to define a method as a counter.
+ * A marker annotation to define a method as a MinMaxCounter.
  *
  * <p/>
  * Given a method like this:
  * <pre><code>
- *     {@literal @}MinMaxCount(name = "coolName", tags="""${{'my-cool-tag':'my-cool-value'}}""", type=CounterType.MinMaxCounter)
+ *     {@literal @}MinMaxCount(name = "coolName", tags="${'my-cool-tag':'my-cool-value'}")
  *     public String coolName(String name) {
  *         return "Hello " + name;
  *     }
  * </code></pre>
  * <p/>
  *
- * A counter for the defining method with the name {@code coolName} will be created and each time the
- * {@code #coolName(String)} method is invoked, the counter will be incremented.
+ * A {@link kamon.metric.instrument.MinMaxCounter MinMaxCounter} for the defining method with the name {@code coolName} will be created and each time the
+ * {@code #coolName(String)} method is invoked the counter is decremented when the method returns,
+ * counting current invocations of the annotated method.
  */
 @Documented
 @Target(ElementType.METHOD)
@@ -40,13 +41,29 @@ import java.lang.annotation.*;
 public @interface MinMaxCount {
 
     /**
-     * @return The counter's name.
+     * @return The MinMaxCounter's name.
+     *
+     * Also, the Metric name can be resolved with an EL expression that evaluates to a String:
+     *
+     * <pre>
+     * {@code
+     *  class MinMaxCounted  {
+     *        private long id;
+     *
+     *        public long getId() { return id; }
+     *
+     *        {@literal @}MinMaxCount (name = "${'counterID:' += this.id}")
+     *        void countedMethod() {} // create a counter with name => counterID:[id]
+     *    }
+     * }
+     * </pre>
      */
+
     String name();
 
     /**
      * Tags are a way of adding dimensions to metrics,
-     * these are constructed using EL syntax e.g. """${{'algorithm':'1','env':'production'}}"""
+     * these are constructed using EL syntax e.g. "${'algorithm':'1','env':'production'}"
      *
      * @return the tags associated to the counter
      */

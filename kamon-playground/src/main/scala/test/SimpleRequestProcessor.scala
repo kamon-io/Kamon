@@ -38,7 +38,6 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
   import scala.concurrent.duration._
 
 
-  AgentLoader.attachAgentToJVM(classOf[org.aspectj.weaver.loadtime.Agent])
   implicit val system = ActorSystem("test")
   Kamon.start()
   import test.SimpleRequestProcessor.system.dispatcher

@@ -20,81 +20,83 @@ import akka.actor.ActorSystem
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
 import kamon.annotation._
-import kamon.annotation.util.{ EnhancedELProcessor, ELProcessorPool }
+import kamon.annotation.util.{EnhancedELProcessor, ELProcessorPool}
 import kamon.metric._
-import kamon.metric.instrument.Gauge.CurrentValueCollector
 import kamon.metric.instrument.Histogram.DynamicRange
-import kamon.metric.instrument.{ Counter, MinMaxCounter }
-import kamon.trace.{ TraceContext, Tracer }
+import kamon.trace.{TraceContext, Tracer}
 import kamon.util.Latency
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
 
-import scala.runtime.BoxedUnit
-import scala.util.control.NonFatal
-
 @Aspect
-class AnnotationInstrumentation extends InstrumentsAware {
+class AnnotationInstrumentation {
+
+  import EnhancedELProcessor.Syntax
 
   implicit val system = AnnotationBla.system
 
-  @Around("execution(@kamon.annotation.Trace * *(..)) && @annotation(trace)")
-  def trace(pjp: ProceedingJoinPoint, trace: Trace): AnyRef = {
-    TraceContext.withContext(Kamon(Tracer).newContext(trace.value())) {
+  @Around("execution(@kamon.annotation.Trace * *(..)) && @annotation(trace) && this(obj)")
+  def trace(pjp: ProceedingJoinPoint, trace: Trace, obj: AnyRef): AnyRef = {
+    val name = eval(trace.value(),obj)
+    TraceContext.withContext(Kamon(Tracer).newContext(name)) {
       val result = pjp.proceed()
       TraceContext.currentContext.finish()
       result
     }
   }
 
-  @Around("execution(@kamon.annotation.Segment * *(..)) && @annotation(segment)")
-  def segment(pjp: ProceedingJoinPoint, segment: Segment): AnyRef = {
+  @Around("execution(@kamon.annotation.Segment * *(..)) && @annotation(segment) && this(obj)")
+  def segment(pjp: ProceedingJoinPoint, segment: Segment, obj: AnyRef): AnyRef = {
     TraceContext.map { ctx ⇒
-      val current = ctx.startSegment(segment.name(), segment.category, segment.library)
+      val name = eval(segment.name(), obj)
+      val category = eval(segment.category(), obj)
+      val library = eval(segment.library(), obj)
+      val currentSegment = ctx.startSegment(name, category, library)
       val result = pjp.proceed()
-      current.finish()
+      currentSegment.finish()
       result
     } getOrElse pjp.proceed()
   }
 
   @Around("execution(@kamon.annotation.Time * *(..)) && @annotation(time) && this(obj)")
   def time(pjp: ProceedingJoinPoint, time: Time, obj: AnyRef): AnyRef = {
-    Latency.measure(histogram(time.name(), time.tags())(obj))(pjp.proceed)
+    val name = eval(time.name(),obj)
+    val metadata = tags(time.tags())
+    val histogram = Kamon(UserMetrics).histogram(HistogramKey(name,metadata))
+    Latency.measure(histogram)(pjp.proceed)
   }
 
   @Around("execution(@kamon.annotation.Count * *(..)) && @annotation(count) && this(obj)")
   def count(pjp: ProceedingJoinPoint, count: Count, obj: AnyRef): AnyRef = {
-    val currentCounter = counter(count.name(), count.tags())(obj)
+    val name = eval(count.name(), obj)
+    val metadata = tags(count.tags())
+    val currentCounter = Kamon(UserMetrics).counter(CounterKey(name, metadata))
     try pjp.proceed() finally currentCounter.increment()
   }
 
   @Around("execution(@kamon.annotation.MinMaxCount * *(..)) && @annotation(minMax) && this(obj)")
   def minMax(pjp: ProceedingJoinPoint, minMax: MinMaxCount, obj: AnyRef): AnyRef = {
-    val currentMinMax = minMaxCounter(minMax.name(), minMax.tags())(obj)
+    val name = eval(minMax.name(),obj)
+    val metadata = tags(minMax.tags())
+    val currentMinMax = Kamon(UserMetrics).minMaxCounter(MinMaxCounterKey(name, metadata))
     currentMinMax.increment()
     try pjp.proceed() finally currentMinMax.decrement()
   }
 
-  @AfterReturning(pointcut = "execution(@kamon.annotation.Histogram (int || long || double || float) *(..)) && @annotation(h) && this(obj)", returning = "result")
-  def histogram(h: Histogram, obj: AnyRef, result: AnyRef): Unit = {
-    histogram(h.name(), DynamicRange(h.lowestDiscernibleValue(), h.highestTrackableValue(), h.precision()), h.tags())(obj).record(result.asInstanceOf[Number].longValue())
+  @AfterReturning(pointcut = "execution(@kamon.annotation.Histogram (int || long || double || float) *(..)) && @annotation(histogram) && this(obj)", returning = "result")
+  def histogram(histogram: Histogram, obj: AnyRef, result: AnyRef): Unit = {
+    val name = eval(histogram.name(), obj)
+    val metadata = tags(histogram.tags())
+    val dynamicRange = DynamicRange(histogram.lowestDiscernibleValue(), histogram.highestTrackableValue(), histogram.precision())
+    val currentHistogram = Kamon(UserMetrics).histogram(HistogramKey(name, metadata), dynamicRange)
+    currentHistogram.record(result.asInstanceOf[Number].longValue())
   }
+
+  private def eval(name: String, obj: AnyRef): String =  ELProcessorPool.useWithObject(obj)(processor ⇒ processor.evalToString(name))
+  private def tags(expression: String): Map[String, String] = ELProcessorPool.use(processor ⇒ processor.evalToMap(expression))
 }
 
-trait InstrumentsAware {
-  this: AnnotationInstrumentation ⇒
-
-  import EnhancedELProcessor.Syntax
-
-  def counter(name: String, metadata: String)(obj: AnyRef): Counter = Kamon(UserMetrics).counter(CounterKey(resolveName(name, obj), resolveTags(metadata)))
-  def minMaxCounter(name: String, metadata: String)(obj: AnyRef): MinMaxCounter = Kamon(UserMetrics).minMaxCounter(MinMaxCounterKey(resolveName(name, obj), resolveTags(metadata)))
-  def histogram(name: String, metadata: String)(obj: AnyRef): instrument.Histogram = Kamon(UserMetrics).histogram(HistogramKey(resolveName(name, obj), resolveTags(metadata)))
-  def histogram(name: String, dynamicRange: DynamicRange, metadata: String)(obj: AnyRef): instrument.Histogram = Kamon(UserMetrics).histogram(HistogramKey(resolveName(name, obj), resolveTags(metadata)), dynamicRange)
-
-  private def resolveName(name: String, obj: AnyRef): String = ELProcessorPool.useWithObject(obj)(processor ⇒ processor.evalToString(name))
-  private def resolveTags(expression: String): Map[String, String] = ELProcessorPool.use(processor ⇒ processor.evalToMap(expression)).toMap
-}
-
+//TODO:Remove
 object AnnotationBla {
 
   lazy val kamon = Kamon("bla", ConfigFactory.parseString(
