@@ -58,6 +58,12 @@ object Kamon {
   def start(): Unit =
     start(ConfigFactory.load)
 
+  def shutdown(): Unit = {
+    _coreComponents = None
+    _system.shutdown()
+    _system = null
+  }
+
   def metrics: MetricsExtension =
     ifStarted(_.metrics)
 
