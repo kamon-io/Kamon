@@ -53,7 +53,7 @@ class ActorCellInstrumentation {
     val contextAndTimestamp = envelope.asInstanceOf[TimestampedTraceContextAware]
 
     try {
-      TraceContext.withContext(contextAndTimestamp.traceContext) {
+      Tracer.withContext(contextAndTimestamp.traceContext) {
         pjp.proceed()
       }
     } finally {
@@ -142,7 +142,7 @@ class RoutedActorCellInstrumentation {
     val contextAndTimestamp = envelope.asInstanceOf[TimestampedTraceContextAware]
 
     try {
-      TraceContext.withContext(contextAndTimestamp.traceContext) {
+      Tracer.withContext(contextAndTimestamp.traceContext) {
 
         // The router metrics recorder will only be picked up if the message is sent from a tracked router.
         RouterAwareEnvelope.dynamicRouterMetricsRecorder.withValue(cellMetrics.routerRecorder) {

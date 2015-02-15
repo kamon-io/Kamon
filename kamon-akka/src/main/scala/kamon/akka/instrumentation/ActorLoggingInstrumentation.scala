@@ -17,7 +17,7 @@
 package akka.kamon.instrumentation
 
 import kamon.trace.logging.MdcKeysSupport
-import kamon.trace.{ TraceContext, TraceContextAware }
+import kamon.trace.{ Tracer, TraceContextAware }
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
 
@@ -41,7 +41,7 @@ class ActorLoggingInstrumentation extends MdcKeysSupport {
 
   @Around("withMdcInvocation(logSource, logEvent, logStatement)")
   def aroundWithMdcInvocation(pjp: ProceedingJoinPoint, logSource: String, logEvent: TraceContextAware, logStatement: () ⇒ _): Unit = {
-    TraceContext.withContext(logEvent.traceContext) {
+    Tracer.withContext(logEvent.traceContext) {
       withMdc {
         pjp.proceed()
       }

@@ -19,16 +19,15 @@ package akka.kamon.instrumentation
 import akka.util.Timeout
 import kamon.Kamon
 import kamon.akka.Akka
-import kamon.trace.{ TraceContext, EmptyTraceContext, TraceContextAware }
+import kamon.trace.Tracer
 import akka.actor.{ InternalActorRef, ActorSystem, ActorRef }
 import akka.event.Logging.Warning
-import akka.pattern.{ PromiseActorRef, AskTimeoutException }
+import akka.pattern.AskTimeoutException
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
 import org.aspectj.lang.reflect.SourceLocation
 import scala.concurrent.Future
 import scala.compat.Platform.EOL
-import scala.concurrent.duration.FiniteDuration
 
 @Aspect
 class AskPatternInstrumentation {
@@ -40,7 +39,7 @@ class AskPatternInstrumentation {
 
   @Around("askableActorRefAsk(actor, timeout)")
   def hookAskTimeoutWarning(pjp: ProceedingJoinPoint, actor: ActorRef, timeout: Timeout): AnyRef =
-    TraceContext.map { ctx ⇒
+    Tracer.currentContext.collect { ctx ⇒
       actor match {
         // the AskPattern will only work for InternalActorRef's with these conditions.
         case ref: InternalActorRef if !ref.isTerminated && timeout.duration.length > 0 ⇒
