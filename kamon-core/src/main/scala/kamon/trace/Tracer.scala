@@ -21,12 +21,12 @@ import java.util.concurrent.atomic.AtomicLong
 
 import akka.actor._
 import com.typesafe.config.Config
-import kamon.metric.MetricsExtension
+import kamon.metric.Metrics
 import kamon.util._
 
 import scala.util.Try
 
-trait TracerExtension {
+trait Tracer {
   def newContext(name: String): TraceContext
   def newContext(name: String, token: String): TraceContext
   def newContext(name: String, token: String, timestamp: RelativeNanoTimestamp, isOpen: Boolean, isLocal: Boolean): TraceContext
@@ -35,7 +35,7 @@ trait TracerExtension {
   def unsubscribe(subscriber: ActorRef): Unit
 }
 
-private[kamon] class TracerExtensionImpl(metricsExtension: MetricsExtension, config: Config) extends TracerExtension {
+private[kamon] class TracerImpl(metricsExtension: Metrics, config: Config) extends Tracer {
   private val _settings = TraceSettings(config)
   private val _hostnamePrefix = Try(InetAddress.getLocalHost.getHostName).getOrElse("unknown-localhost")
   private val _tokenCounter = new AtomicLong
@@ -100,10 +100,10 @@ private[kamon] class TracerExtensionImpl(metricsExtension: MetricsExtension, con
   }
 }
 
-private[kamon] object TracerExtensionImpl {
+private[kamon] object TracerImpl {
 
-  def apply(metricsExtension: MetricsExtension, config: Config) =
-    new TracerExtensionImpl(metricsExtension, config)
+  def apply(metricsExtension: Metrics, config: Config) =
+    new TracerImpl(metricsExtension, config)
 }
 
 case class TraceInfo(name: String, token: String, timestamp: NanoTimestamp, elapsedTime: NanoInterval, metadata: Map[String, String], segments: List[SegmentInfo])

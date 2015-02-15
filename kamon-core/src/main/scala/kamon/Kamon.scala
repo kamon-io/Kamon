@@ -18,15 +18,15 @@ import _root_.akka.actor
 import _root_.akka.actor._
 import com.typesafe.config.{ ConfigFactory, Config }
 import kamon.metric._
-import kamon.trace.{ TracerExtensionImpl, TracerExtension }
+import kamon.trace.{ TracerImpl, Tracer }
 
 object Kamon {
   trait Extension extends actor.Extension
 
   private case class KamonCoreComponents(
-    metrics: MetricsExtension,
-    tracer: TracerExtension,
-    simpleMetrics: SimpleMetricsExtension)
+    metrics: Metrics,
+    tracer: Tracer,
+    simpleMetrics: SimpleMetrics)
 
   @volatile private var _system: ActorSystem = _
   @volatile private var _coreComponents: Option[KamonCoreComponents] = None
@@ -42,9 +42,9 @@ object Kamon {
     }
 
     if (_coreComponents.isEmpty) {
-      val metrics = MetricsExtensionImpl(config)
-      val simpleMetrics = SimpleMetricsExtensionImpl(metrics)
-      val tracer = TracerExtensionImpl(metrics, config)
+      val metrics = MetricsImpl(config)
+      val simpleMetrics = SimpleMetricsImpl(metrics)
+      val tracer = TracerImpl(metrics, config)
 
       _coreComponents = Some(KamonCoreComponents(metrics, tracer, simpleMetrics))
       _system = ActorSystem("kamon", resolveInternalConfig)
@@ -64,13 +64,13 @@ object Kamon {
     _system = null
   }
 
-  def metrics: MetricsExtension =
+  def metrics: Metrics =
     ifStarted(_.metrics)
 
-  def tracer: TracerExtension =
+  def tracer: Tracer =
     ifStarted(_.tracer)
 
-  def simpleMetrics: SimpleMetricsExtension =
+  def simpleMetrics: SimpleMetrics =
     ifStarted(_.simpleMetrics)
 
   def apply[T <: Kamon.Extension](key: ExtensionId[T]): T =
