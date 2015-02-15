@@ -16,13 +16,12 @@
 
 package kamon.trace
 
+import kamon.util.ConfigTools.Syntax
 import com.typesafe.config.Config
 
 case class TraceSettings(levelOfDetail: LevelOfDetail, sampler: Sampler)
 
 object TraceSettings {
-  import kamon.util.ConfigTools.Syntax
-
   def apply(config: Config): TraceSettings = {
     val tracerConfig = config.getConfig("kamon.trace")
 

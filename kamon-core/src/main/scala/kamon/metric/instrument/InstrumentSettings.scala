@@ -4,7 +4,6 @@ import java.util.concurrent.TimeUnit
 
 import com.typesafe.config.Config
 import kamon.metric.instrument.Histogram.DynamicRange
-import kamon.util.ConfigTools.Syntax
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -21,6 +20,7 @@ case class InstrumentCustomSettings(lowestDiscernibleValue: Option[Long], highes
 }
 
 object InstrumentCustomSettings {
+  import kamon.util.ConfigTools.Syntax
 
   def fromConfig(config: Config): InstrumentCustomSettings =
     InstrumentCustomSettings(
@@ -54,6 +54,8 @@ case class DefaultInstrumentSettings(histogram: InstrumentSettings, minMaxCounte
 object DefaultInstrumentSettings {
 
   def fromConfig(config: Config): DefaultInstrumentSettings = {
+    import kamon.util.ConfigTools.Syntax
+
     val histogramSettings = InstrumentSettings(InstrumentSettings.readDynamicRange(config.getConfig("histogram")), None)
     val minMaxCounterSettings = InstrumentSettings(InstrumentSettings.readDynamicRange(config.getConfig("min-max-counter")),
       Some(config.getFiniteDuration("min-max-counter.refresh-interval")))

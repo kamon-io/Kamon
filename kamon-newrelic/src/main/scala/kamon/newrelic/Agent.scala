@@ -16,8 +16,6 @@
 
 package kamon.newrelic
 
-import java.util.concurrent.TimeUnit.{ MILLISECONDS ⇒ milliseconds }
-
 import akka.actor.{ ActorLogging, Actor }
 import akka.io.IO
 import akka.util.Timeout
@@ -28,10 +26,12 @@ import scala.concurrent.Future
 import spray.httpx.SprayJsonSupport
 import spray.json.lenses.JsonLenses._
 import java.lang.management.ManagementFactory
-import scala.concurrent.duration._
+import kamon.util.ConfigTools.Syntax
 import Agent._
 import JsonProtocol._
 import akka.pattern.pipe
+
+import scala.concurrent.duration.FiniteDuration
 
 class Agent extends Actor with SprayJsonSupport with ActorLogging {
   import context.dispatcher

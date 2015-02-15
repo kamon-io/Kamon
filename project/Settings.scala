@@ -26,14 +26,13 @@ import net.virtualvoid.sbt.graph.Plugin.graphSettings
 object Settings {
 
   val JavaVersion = "1.6"
-
   val ScalaVersion = "2.10.4"
   
   lazy val basicSettings = Seq(
     scalaVersion            := ScalaVersion,
     resolvers              ++= Dependencies.resolutionRepos,
     fork in run             := true,
-    testGrouping in Test    := singleTests((definedTests in Test).value, (javaOptions in Test).value),
+    testGrouping in Test    := singleTestPerJvm((definedTests in Test).value, (javaOptions in Test).value),
     moduleName              := moduleName.value + "_akka-2.2",
     javacOptions in compile := Seq(
       "-Xlint:-options",
@@ -58,7 +57,7 @@ object Settings {
     )) ++ publishSettings ++ releaseSettings ++ graphSettings
 
 
-  def singleTests(tests: Seq[TestDefinition], jvmSettings: Seq[String]): Seq[Group] =
+  def singleTestPerJvm(tests: Seq[TestDefinition], jvmSettings: Seq[String]): Seq[Group] =
     tests map { test =>
       new Group(
         name = test.name,

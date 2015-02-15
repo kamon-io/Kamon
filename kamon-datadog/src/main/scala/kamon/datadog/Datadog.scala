@@ -17,7 +17,6 @@
 package kamon.datadog
 
 import java.net.InetSocketAddress
-import java.util.concurrent.TimeUnit.MILLISECONDS
 
 import akka.actor._
 import akka.event.Logging

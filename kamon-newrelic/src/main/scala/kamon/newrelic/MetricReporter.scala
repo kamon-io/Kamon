@@ -20,10 +20,10 @@ class MetricReporter(settings: AgentSettings) extends Actor with ActorLogging wi
   val metricsExtension = Kamon.metrics
   val collectionContext = metricsExtension.buildDefaultCollectionContext
   val metricsSubscriber = {
-    val tickInterval = Kamon.metrics.settings.tickInterval.toMillis
+    val tickInterval = Kamon.metrics.settings.tickInterval
 
     // Metrics are always sent to New Relic in 60 seconds intervals.
-    if (tickInterval == 60000) self
+    if (tickInterval == 60.seconds) self
     else context.actorOf(TickMetricSnapshotBuffer.props(1 minute, self), "metric-buffer")
   }
 

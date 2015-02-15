@@ -15,9 +15,10 @@
 
 package kamon.jdbc
 
+import kamon.util.ConfigTools.Syntax
+
 import akka.actor.{ ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProvider }
 import kamon.Kamon
-import kamon.util.ConfigTools.Syntax
 
 object Jdbc extends ExtensionId[JdbcExtension] with ExtensionIdProvider {
   override def lookup(): ExtensionId[_ <: Extension] = Jdbc
