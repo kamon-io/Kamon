@@ -24,7 +24,7 @@ import scala.concurrent.duration.FiniteDuration
 /**
  *  Manages subscriptions to metrics and dispatch snapshots on every tick to all subscribers.
  */
-private[kamon] class SubscriptionsDispatcher(interval: FiniteDuration, metricsExtension: MetricsExtensionImpl) extends Actor {
+private[kamon] class SubscriptionsDispatcher(interval: FiniteDuration, metricsExtension: MetricsImpl) extends Actor {
   var lastTick = MilliTimestamp.now
   var oneShotSubscriptions = Map.empty[ActorRef, SubscriptionFilter]
   var permanentSubscriptions = Map.empty[ActorRef, SubscriptionFilter]
@@ -81,7 +81,7 @@ private[kamon] class SubscriptionsDispatcher(interval: FiniteDuration, metricsEx
 }
 
 object SubscriptionsDispatcher {
-  def props(interval: FiniteDuration, metricsExtension: MetricsExtensionImpl): Props =
+  def props(interval: FiniteDuration, metricsExtension: MetricsImpl): Props =
     Props(new SubscriptionsDispatcher(interval, metricsExtension))
 
   case object Tick

@@ -19,13 +19,13 @@ package kamon.trace
 import java.util.concurrent.ConcurrentLinkedQueue
 
 import akka.event.LoggingAdapter
-import kamon.metric.{ MetricsExtension, TraceMetrics }
+import kamon.metric.{ Metrics, TraceMetrics }
 import kamon.util.{ NanoInterval, RelativeNanoTimestamp }
 
 import scala.annotation.tailrec
 
 private[kamon] class MetricsOnlyContext(traceName: String, val token: String, izOpen: Boolean, val levelOfDetail: LevelOfDetail,
-  val startTimestamp: RelativeNanoTimestamp, log: LoggingAdapter, metricsExtension: MetricsExtension)
+  val startTimestamp: RelativeNanoTimestamp, log: LoggingAdapter, metricsExtension: Metrics)
     extends TraceContext {
 
   @volatile private var _name = traceName

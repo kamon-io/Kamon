@@ -20,7 +20,7 @@ import akka.testkit.{ ImplicitSender, TestKitBase }
 import akka.actor.ActorSystem
 import com.typesafe.config.{ Config, ConfigFactory }
 import kamon.Kamon
-import kamon.metric.{ SubscriptionsDispatcher, EntitySnapshot, MetricsExtensionImpl }
+import kamon.metric.{ SubscriptionsDispatcher, EntitySnapshot, MetricsImpl }
 import kamon.trace.TraceContext
 import kamon.util.LazyActorRef
 import org.scalatest.{ BeforeAndAfterAll, Matchers, WordSpecLike }

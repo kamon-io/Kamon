@@ -26,8 +26,8 @@ import kamon.util.{ LazyActorRef, TriemapAtomicGetOrElseUpdate }
 
 case class EntityRegistration[T <: EntityRecorder](entity: Entity, recorder: T)
 
-trait MetricsExtension {
-  def settings: MetricsExtensionSettings
+trait Metrics {
+  def settings: MetricsSettings
   def shouldTrack(entity: Entity): Boolean
   def shouldTrack(entityName: String, category: String): Boolean =
     shouldTrack(Entity(entityName, category))
@@ -55,11 +55,11 @@ trait MetricsExtension {
   def instrumentFactory(category: String): InstrumentFactory
 }
 
-private[kamon] class MetricsExtensionImpl(config: Config) extends MetricsExtension {
+private[kamon] class MetricsImpl(config: Config) extends Metrics {
   private val _trackedEntities = TrieMap.empty[Entity, EntityRecorder]
   private val _subscriptions = new LazyActorRef
 
-  val settings = MetricsExtensionSettings(config)
+  val settings = MetricsSettings(config)
 
   def shouldTrack(entity: Entity): Boolean =
     settings.entityFilters.get(entity.category).map {
@@ -133,9 +133,9 @@ private[kamon] class MetricsExtensionImpl(config: Config) extends MetricsExtensi
   }
 }
 
-private[kamon] object MetricsExtensionImpl {
+private[kamon] object MetricsImpl {
 
   def apply(config: Config) =
-    new MetricsExtensionImpl(config)
+    new MetricsImpl(config)
 }
 
