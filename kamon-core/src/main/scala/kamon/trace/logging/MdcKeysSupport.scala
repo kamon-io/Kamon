@@ -17,14 +17,14 @@
 package kamon.trace.logging
 
 import kamon.trace.TraceLocal.AvailableToMdc
-import kamon.trace.{ EmptyTraceContext, MetricsOnlyContext, TraceContext }
+import kamon.trace.{ Tracer, EmptyTraceContext, MetricsOnlyContext, TraceContext }
 
 import org.slf4j.MDC
 
 trait MdcKeysSupport {
 
   def withMdc[A](thunk: ⇒ A): A = {
-    val keys = copyToMdc(TraceContext.currentContext)
+    val keys = copyToMdc(Tracer.currentContext)
     try thunk finally keys.foreach(key ⇒ MDC.remove(key))
   }
 

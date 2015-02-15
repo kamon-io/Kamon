@@ -35,6 +35,28 @@ trait Tracer {
   def unsubscribe(subscriber: ActorRef): Unit
 }
 
+object Tracer {
+  private[kamon] val _traceContextStorage = new ThreadLocal[TraceContext] {
+    override def initialValue(): TraceContext = EmptyTraceContext
+  }
+
+  def currentContext: TraceContext =
+    _traceContextStorage.get()
+
+  def setCurrentContext(context: TraceContext): Unit =
+    _traceContextStorage.set(context)
+
+  def clearCurrentContext: Unit =
+    _traceContextStorage.remove()
+
+  def withContext[T](context: TraceContext)(code: ⇒ T): T = {
+    val oldContext = _traceContextStorage.get()
+    _traceContextStorage.set(context)
+
+    try code finally _traceContextStorage.set(oldContext)
+  }
+}
+
 private[kamon] class TracerImpl(metricsExtension: Metrics, config: Config) extends Tracer {
   private val _settings = TraceSettings(config)
   private val _hostnamePrefix = Try(InetAddress.getLocalHost.getHostName).getOrElse("unknown-localhost")

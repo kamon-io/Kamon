@@ -42,10 +42,10 @@ class SimpleTraceSpec extends BaseKamonSpec("simple-trace-spec") {
     "send a TraceInfo when the trace has finished and all segments are finished" in {
       Kamon.tracer.subscribe(testActor)
 
-      TraceContext.withContext(newContext("simple-trace-without-segments")) {
-        TraceContext.currentContext.startSegment("segment-one", "test-segment", "test").finish()
-        TraceContext.currentContext.startSegment("segment-two", "test-segment", "test").finish()
-        TraceContext.currentContext.finish()
+      Tracer.withContext(newContext("simple-trace-without-segments")) {
+        Tracer.currentContext.startSegment("segment-one", "test-segment", "test").finish()
+        Tracer.currentContext.startSegment("segment-two", "test-segment", "test").finish()
+        Tracer.currentContext.finish()
       }
 
       val traceInfo = expectMsgType[TraceInfo]
@@ -60,10 +60,10 @@ class SimpleTraceSpec extends BaseKamonSpec("simple-trace-spec") {
     "incubate the tracing context if there are open segments after finishing" in {
       Kamon.tracer.subscribe(testActor)
 
-      val secondSegment = TraceContext.withContext(newContext("simple-trace-without-segments")) {
-        TraceContext.currentContext.startSegment("segment-one", "test-segment", "test").finish()
-        val segment = TraceContext.currentContext.startSegment("segment-two", "test-segment", "test")
-        TraceContext.currentContext.finish()
+      val secondSegment = Tracer.withContext(newContext("simple-trace-without-segments")) {
+        Tracer.currentContext.startSegment("segment-one", "test-segment", "test").finish()
+        val segment = Tracer.currentContext.startSegment("segment-two", "test-segment", "test")
+        Tracer.currentContext.finish()
         segment
       }
 

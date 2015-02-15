@@ -19,7 +19,7 @@ package kamon.metric
 import akka.testkit.ImplicitSender
 import com.typesafe.config.ConfigFactory
 import kamon.testkit.BaseKamonSpec
-import kamon.trace.TraceContext
+import kamon.trace.Tracer
 import kamon.metric.instrument.Histogram
 
 class TraceMetricsSpec extends BaseKamonSpec("trace-metrics-spec") with ImplicitSender {
@@ -44,8 +44,8 @@ class TraceMetricsSpec extends BaseKamonSpec("trace-metrics-spec") with Implicit
   "the TraceMetrics" should {
     "record the elapsed time between a trace creation and finish" in {
       for (repetitions ← 1 to 10) {
-        TraceContext.withContext(newContext("record-elapsed-time")) {
-          TraceContext.currentContext.finish()
+        Tracer.withContext(newContext("record-elapsed-time")) {
+          Tracer.currentContext.finish()
         }
       }
 
@@ -54,10 +54,10 @@ class TraceMetricsSpec extends BaseKamonSpec("trace-metrics-spec") with Implicit
     }
 
     "record the elapsed time for segments that occur inside a given trace" in {
-      TraceContext.withContext(newContext("trace-with-segments")) {
-        val segment = TraceContext.currentContext.startSegment("test-segment", "test-category", "test-library")
+      Tracer.withContext(newContext("trace-with-segments")) {
+        val segment = Tracer.currentContext.startSegment("test-segment", "test-category", "test-library")
         segment.finish()
-        TraceContext.currentContext.finish()
+        Tracer.currentContext.finish()
       }
 
       val snapshot = takeSnapshotOf("trace-with-segments", "trace")
@@ -67,9 +67,9 @@ class TraceMetricsSpec extends BaseKamonSpec("trace-metrics-spec") with Implicit
     }
 
     "record the elapsed time for segments that finish after their correspondent trace has finished" in {
-      val segment = TraceContext.withContext(newContext("closing-segment-after-trace")) {
-        val s = TraceContext.currentContext.startSegment("test-segment", "test-category", "test-library")
-        TraceContext.currentContext.finish()
+      val segment = Tracer.withContext(newContext("closing-segment-after-trace")) {
+        val s = Tracer.currentContext.startSegment("test-segment", "test-category", "test-library")
+        Tracer.currentContext.finish()
         s
       }
 
