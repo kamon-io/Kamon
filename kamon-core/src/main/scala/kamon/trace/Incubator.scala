@@ -16,24 +16,22 @@
 
 package kamon.trace
 
-import java.util.concurrent.TimeUnit
-
 import akka.actor.{ ActorLogging, Props, Actor, ActorRef }
 import kamon.trace.Incubator.{ CheckForCompletedTraces, IncubatingTrace }
 import kamon.util.{ NanoInterval, RelativeNanoTimestamp }
 import scala.annotation.tailrec
 import scala.collection.immutable.Queue
-import scala.concurrent.duration._
+import kamon.util.ConfigTools.Syntax
 
 class Incubator(subscriptions: ActorRef) extends Actor with ActorLogging {
   import context.dispatcher
   val config = context.system.settings.config.getConfig("kamon.trace.incubator")
 
-  val minIncubationTime = new NanoInterval(config.getDuration("min-incubation-time", TimeUnit.NANOSECONDS))
-  val maxIncubationTime = new NanoInterval(config.getDuration("max-incubation-time", TimeUnit.NANOSECONDS))
-  val checkInterval = config.getDuration("check-interval", TimeUnit.MILLISECONDS)
+  val minIncubationTime = new NanoInterval(config.getFiniteDuration("min-incubation-time").toNanos)
+  val maxIncubationTime = new NanoInterval(config.getFiniteDuration("max-incubation-time").toNanos)
+  val checkInterval = config.getFiniteDuration("check-interval")
 
-  val checkSchedule = context.system.scheduler.schedule(checkInterval.millis, checkInterval.millis, self, CheckForCompletedTraces)
+  val checkSchedule = context.system.scheduler.schedule(checkInterval, checkInterval, self, CheckForCompletedTraces)
   var waitingForMinimumIncubation = Queue.empty[IncubatingTrace]
   var waitingForIncubationFinish = List.empty[IncubatingTrace]
 

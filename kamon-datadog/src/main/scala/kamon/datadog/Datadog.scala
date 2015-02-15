@@ -17,7 +17,6 @@
 package kamon.datadog
 
 import java.net.InetSocketAddress
-import java.util.concurrent.TimeUnit.MILLISECONDS
 
 import akka.actor._
 import akka.event.Logging
@@ -41,9 +40,9 @@ class DatadogExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   private val datadogConfig = system.settings.config.getConfig("kamon.datadog")
 
   val datadogHost = new InetSocketAddress(datadogConfig.getString("hostname"), datadogConfig.getInt("port"))
-  val flushInterval = datadogConfig.getDuration("flush-interval", MILLISECONDS)
+  val flushInterval = datadogConfig.getFiniteDuration("flush-interval")
   val maxPacketSizeInBytes = datadogConfig.getBytes("max-packet-size")
-  val tickInterval = system.settings.config.getDuration("kamon.metric.tick-interval", MILLISECONDS)
+  val tickInterval = Kamon.metrics.settings.tickInterval
 
   val datadogMetricsListener = buildMetricsListener(tickInterval, flushInterval)
 
@@ -54,7 +53,7 @@ class DatadogExtension(system: ExtendedActorSystem) extends Kamon.Extension {
     }
   }
 
-  def buildMetricsListener(tickInterval: Long, flushInterval: Long): ActorRef = {
+  def buildMetricsListener(tickInterval: FiniteDuration, flushInterval: FiniteDuration): ActorRef = {
     assert(flushInterval >= tickInterval, "Datadog flush-interval needs to be equal or greater to the tick-interval")
 
     val metricsSender = system.actorOf(DatadogMetricsSender.props(datadogHost, maxPacketSizeInBytes), "datadog-metrics-sender")
@@ -62,7 +61,7 @@ class DatadogExtension(system: ExtendedActorSystem) extends Kamon.Extension {
       // No need to buffer the metrics, let's go straight to the metrics sender.
       metricsSender
     } else {
-      system.actorOf(TickMetricSnapshotBuffer.props(flushInterval.toInt.millis, metricsSender), "datadog-metrics-buffer")
+      system.actorOf(TickMetricSnapshotBuffer.props(flushInterval, metricsSender), "datadog-metrics-buffer")
     }
   }
 }

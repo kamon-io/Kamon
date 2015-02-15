@@ -15,7 +15,7 @@
 
 package kamon.jdbc
 
-import java.util.concurrent.TimeUnit.{ MILLISECONDS ⇒ milliseconds }
+import kamon.util.ConfigTools.Syntax
 
 import akka.actor.{ ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProvider }
 import kamon.Kamon
@@ -39,7 +39,7 @@ class JdbcExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   private val sqlErrorProcessorClass = config.getString("sql-error-processor")
   private val sqlErrorProcessor: SqlErrorProcessor = system.dynamicAccess.createInstanceFor[SqlErrorProcessor](sqlErrorProcessorClass, Nil).get
 
-  val slowQueryThreshold = config.getDuration("slow-query-threshold", milliseconds)
+  val slowQueryThreshold = config.getFiniteDuration("slow-query-threshold").toMillis
 
   def processSlowQuery(sql: String, executionTime: Long) = slowQueryProcessor.process(sql, executionTime, slowQueryThreshold)
   def processSqlError(sql: String, ex: Throwable) = sqlErrorProcessor.process(sql, ex)
