@@ -22,7 +22,7 @@ import kamon.metric.instrument._
 
 import scala.concurrent.duration.FiniteDuration
 
-trait UserMetricsExtension {
+trait SimpleMetricsExtension {
   def histogram(name: String): Histogram
   def histogram(name: String, dynamicRange: DynamicRange): Histogram
   def histogram(name: String, unitOfMeasurement: UnitOfMeasurement): Histogram
@@ -69,7 +69,7 @@ trait UserMetricsExtension {
 
 }
 
-private[kamon] class UserMetricsExtensionImpl(instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) with UserMetricsExtension {
+private[kamon] class SimpleMetricsExtensionImpl(instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) with SimpleMetricsExtension {
   override def histogram(name: String): Histogram =
     super.histogram(name)
 
@@ -191,14 +191,14 @@ private[kamon] class UserMetricsExtensionImpl(instrumentFactory: InstrumentFacto
     super.removeCounter(key)
 }
 
-private[kamon] object UserMetricsExtensionImpl {
-  val UserMetricEntity = Entity("user-metric", "user-metric")
+private[kamon] object SimpleMetricsExtensionImpl {
+  val SimpleMetricsEntity = Entity("simple-metric", "simple-metric")
 
-  def apply(metricsExtension: MetricsExtension): UserMetricsExtensionImpl = {
-    val instrumentFactory = metricsExtension.instrumentFactory(UserMetricEntity.category)
-    val userMetricsExtension = new UserMetricsExtensionImpl(instrumentFactory)
+  def apply(metricsExtension: MetricsExtension): SimpleMetricsExtensionImpl = {
+    val instrumentFactory = metricsExtension.instrumentFactory(SimpleMetricsEntity.category)
+    val simpleMetricsExtension = new SimpleMetricsExtensionImpl(instrumentFactory)
 
-    metricsExtension.register(UserMetricEntity, userMetricsExtension).recorder
+    metricsExtension.register(SimpleMetricsEntity, simpleMetricsExtension).recorder
   }
 
 }

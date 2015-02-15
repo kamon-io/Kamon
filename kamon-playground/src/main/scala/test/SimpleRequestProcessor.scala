@@ -49,7 +49,7 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
 
   implicit val timeout = Timeout(30 seconds)
 
-  val counter = Kamon.userMetrics.counter("requests")
+  val counter = Kamon.simpleMetrics.counter("requests")
   val pipeline = sendReceive
   val replier = system.actorOf(Props[Replier].withRouter(RoundRobinPool(nrOfInstances = 4)), "replier")
 

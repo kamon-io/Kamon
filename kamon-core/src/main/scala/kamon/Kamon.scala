@@ -26,7 +26,7 @@ object Kamon {
   private case class KamonCoreComponents(
     metrics: MetricsExtension,
     tracer: TracerExtension,
-    userMetrics: UserMetricsExtension)
+    simpleMetrics: SimpleMetricsExtension)
 
   @volatile private var _system: ActorSystem = _
   @volatile private var _coreComponents: Option[KamonCoreComponents] = None
@@ -43,7 +43,7 @@ object Kamon {
 
     if (_coreComponents.isEmpty) {
       val metrics = MetricsExtensionImpl(config)
-      val simpleMetrics = UserMetricsExtensionImpl(metrics)
+      val simpleMetrics = SimpleMetricsExtensionImpl(metrics)
       val tracer = TracerExtensionImpl(metrics, config)
 
       _coreComponents = Some(KamonCoreComponents(metrics, tracer, simpleMetrics))
@@ -70,8 +70,8 @@ object Kamon {
   def tracer: TracerExtension =
     ifStarted(_.tracer)
 
-  def userMetrics: UserMetricsExtension =
-    ifStarted(_.userMetrics)
+  def simpleMetrics: SimpleMetricsExtension =
+    ifStarted(_.simpleMetrics)
 
   def apply[T <: Kamon.Extension](key: ExtensionId[T]): T =
     ifStarted { _ ⇒

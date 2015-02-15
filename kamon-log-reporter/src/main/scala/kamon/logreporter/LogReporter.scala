@@ -57,7 +57,7 @@ class LogReporterSubscriber extends Actor with ActorLogging {
     tick.metrics foreach {
       case (entity, snapshot) if entity.category == "actor"         ⇒ logActorMetrics(entity.name, snapshot)
       case (entity, snapshot) if entity.category == "trace"         ⇒ logTraceMetrics(entity.name, snapshot)
-      case (entity, snapshot) if entity.category == "user-metric"   ⇒ logUserMetrics(snapshot)
+      case (entity, snapshot) if entity.category == "simple-metric" ⇒ logSimpleMetrics(snapshot)
       case (entity, snapshot) if entity.category == "system-metric" ⇒ logSystemMetrics(entity.name, snapshot)
       case ignoreEverythingElse                                     ⇒
     }
@@ -253,59 +253,59 @@ class LogReporterSubscriber extends Actor with ActorLogging {
     }
   }
 
-  def logUserMetrics(userMetrics: EntitySnapshot): Unit = {
-    val histograms = userMetrics.histograms
-    val minMaxCounters = userMetrics.minMaxCounters
-    val gauges = userMetrics.gauges
-    val counters = userMetrics.counters
+  def logSimpleMetrics(simpleMetrics: EntitySnapshot): Unit = {
+    val histograms = simpleMetrics.histograms
+    val minMaxCounters = simpleMetrics.minMaxCounters
+    val gauges = simpleMetrics.gauges
+    val counters = simpleMetrics.counters
 
     if (histograms.isEmpty && counters.isEmpty && minMaxCounters.isEmpty && gauges.isEmpty) {
       log.info("No user metrics reported")
       return
     }
 
-    val userMetricsData = StringBuilder.newBuilder
+    val simpleMetricsData = StringBuilder.newBuilder
 
-    userMetricsData.append(
+    simpleMetricsData.append(
       """
         |+--------------------------------------------------------------------------------------------------+
         ||                                                                                                  |
-        ||                                       User Counters                                              |
+        ||                                      Simple Counters                                             |
         ||                                       -------------                                              |
         |""".stripMargin)
 
     counters.toList.sortBy(_._1.name.toLowerCase).foreach {
-      case (counter, snapshot) ⇒ userMetricsData.append(userCounterString(counter.name, snapshot))
+      case (counter, snapshot) ⇒ simpleMetricsData.append(userCounterString(counter.name, snapshot))
     }
 
-    userMetricsData.append(
+    simpleMetricsData.append(
       """||                                                                                                  |
         ||                                                                                                  |
-        ||                                      User Histograms                                             |
+        ||                                     Simple Histograms                                            |
         ||                                      ---------------                                             |
         |""".stripMargin)
 
     histograms.foreach {
       case (histogram, snapshot) ⇒
-        userMetricsData.append("|  %-40s                                                        |\n".format(histogram.name))
-        userMetricsData.append(compactHistogramView(snapshot))
-        userMetricsData.append("\n|                                                                                                  |\n")
+        simpleMetricsData.append("|  %-40s                                                        |\n".format(histogram.name))
+        simpleMetricsData.append(compactHistogramView(snapshot))
+        simpleMetricsData.append("\n|                                                                                                  |\n")
     }
 
-    userMetricsData.append(
+    simpleMetricsData.append(
       """||                                                                                                  |
-        ||                                    User MinMaxCounters                                           |
+        ||                                   Simple MinMaxCounters                                           |
         ||                                    -------------------                                           |
         |""".stripMargin)
 
     minMaxCounters.foreach {
       case (minMaxCounter, snapshot) ⇒
-        userMetricsData.append("|  %-40s                                                        |\n".format(minMaxCounter.name))
-        userMetricsData.append(simpleHistogramView(snapshot))
-        userMetricsData.append("\n|                                                                                                  |\n")
+        simpleMetricsData.append("|  %-40s                                                        |\n".format(minMaxCounter.name))
+        simpleMetricsData.append(simpleHistogramView(snapshot))
+        simpleMetricsData.append("\n|                                                                                                  |\n")
     }
 
-    userMetricsData.append(
+    simpleMetricsData.append(
       """||                                                                                                  |
         ||                                        User Gauges                                               |
         ||                                        -----------                                               |
@@ -314,17 +314,17 @@ class LogReporterSubscriber extends Actor with ActorLogging {
 
     gauges.foreach {
       case (gauge, snapshot) ⇒
-        userMetricsData.append("|  %-40s                                                        |\n".format(gauge.name))
-        userMetricsData.append(simpleHistogramView(snapshot))
-        userMetricsData.append("\n|                                                                                                  |\n")
+        simpleMetricsData.append("|  %-40s                                                        |\n".format(gauge.name))
+        simpleMetricsData.append(simpleHistogramView(snapshot))
+        simpleMetricsData.append("\n|                                                                                                  |\n")
     }
 
-    userMetricsData.append(
+    simpleMetricsData.append(
       """||                                                                                                  |
         |+--------------------------------------------------------------------------------------------------+"""
         .stripMargin)
 
-    log.info(userMetricsData.toString())
+    log.info(simpleMetricsData.toString())
   }
 
   def userCounterString(counterName: String, snapshot: Counter.Snapshot): String = {
