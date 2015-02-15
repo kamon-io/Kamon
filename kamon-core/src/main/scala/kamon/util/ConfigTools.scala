@@ -28,7 +28,7 @@ object ConfigTools {
     // versions of Akka using older typesafe-config versions.
 
     def getFiniteDuration(path: String): FiniteDuration =
-      FiniteDuration(config.getNanoseconds(path), TimeUnit.NANOSECONDS)
+      FiniteDuration(config.getDuration(path, TimeUnit.NANOSECONDS), TimeUnit.NANOSECONDS)
 
     def firstLevelKeys: Set[String] = {
       import scala.collection.JavaConverters._

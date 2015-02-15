@@ -20,14 +20,14 @@ case class InstrumentCustomSettings(lowestDiscernibleValue: Option[Long], highes
 }
 
 object InstrumentCustomSettings {
-  import scala.concurrent.duration._
+  import kamon.util.ConfigTools.Syntax
 
   def fromConfig(config: Config): InstrumentCustomSettings =
     InstrumentCustomSettings(
       if (config.hasPath("lowest-discernible-value")) Some(config.getLong("lowest-discernible-value")) else None,
       if (config.hasPath("highest-trackable-value")) Some(config.getLong("highest-trackable-value")) else None,
       if (config.hasPath("precision")) Some(InstrumentSettings.parsePrecision(config.getString("precision"))) else None,
-      if (config.hasPath("refresh-interval")) Some(config.getDuration("refresh-interval", TimeUnit.NANOSECONDS).nanos) else None)
+      if (config.hasPath("refresh-interval")) Some(config.getFiniteDuration("refresh-interval")) else None)
 
 }
 
@@ -54,13 +54,13 @@ case class DefaultInstrumentSettings(histogram: InstrumentSettings, minMaxCounte
 object DefaultInstrumentSettings {
 
   def fromConfig(config: Config): DefaultInstrumentSettings = {
-    import scala.concurrent.duration._
+    import kamon.util.ConfigTools.Syntax
 
     val histogramSettings = InstrumentSettings(InstrumentSettings.readDynamicRange(config.getConfig("histogram")), None)
     val minMaxCounterSettings = InstrumentSettings(InstrumentSettings.readDynamicRange(config.getConfig("min-max-counter")),
-      Some(config.getDuration("min-max-counter.refresh-interval", TimeUnit.NANOSECONDS).nanos))
+      Some(config.getFiniteDuration("min-max-counter.refresh-interval")))
     val gaugeSettings = InstrumentSettings(InstrumentSettings.readDynamicRange(config.getConfig("gauge")),
-      Some(config.getDuration("gauge.refresh-interval", TimeUnit.NANOSECONDS).nanos))
+      Some(config.getFiniteDuration("gauge.refresh-interval")))
 
     DefaultInstrumentSettings(histogramSettings, minMaxCounterSettings, gaugeSettings)
   }
