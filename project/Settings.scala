@@ -13,11 +13,10 @@
  * =========================================================================================
  */
 
-import com.typesafe.sbt.SbtAspectj.AspectjKeys._
 import sbt.Tests.{SubProcess, Group}
 import sbt._
 import Keys._
-import com.typesafe.sbt.{SbtAspectj, SbtScalariform}
+import com.typesafe.sbt.SbtScalariform
 import com.typesafe.sbt.SbtScalariform.ScalariformKeys
 import Publish.{settings => publishSettings}
 import Release.{settings => releaseSettings}
@@ -27,8 +26,7 @@ import net.virtualvoid.sbt.graph.Plugin.graphSettings
 object Settings {
 
   val JavaVersion = "1.6"
-
-  val ScalaVersion = "2.10.4"
+  val ScalaVersion = "2.11.5"
   
   lazy val basicSettings = Seq(
     scalaVersion            := ScalaVersion,
