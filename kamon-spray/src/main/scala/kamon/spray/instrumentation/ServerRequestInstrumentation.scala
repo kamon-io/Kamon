@@ -18,7 +18,6 @@ package spray.can.server.instrumentation
 import kamon.trace.TraceLocal.{ HttpContext, HttpContextKey }
 import org.aspectj.lang.annotation._
 import kamon.trace._
-import akka.actor.ActorSystem
 import spray.can.server.OpenRequest
 import spray.http.{ HttpResponse, HttpMessagePartWrapper, HttpRequest }
 import kamon.Kamon
@@ -48,7 +47,7 @@ class ServerRequestInstrumentation {
     } else None
 
     val newContext = token.map(customToken ⇒ tracer.newContext(defaultTraceName, customToken)) getOrElse (tracer.newContext(defaultTraceName))
-    TraceContext.setCurrentContext(newContext)
+    Tracer.setCurrentContext(newContext)
 
     // Necessary to force initialization of traceContext when initiating the request.
     openRequest.traceContext
@@ -59,7 +58,7 @@ class ServerRequestInstrumentation {
 
   @After("openNewRequest()")
   def afterOpenNewRequest(): Unit = {
-    TraceContext.clearCurrentContext
+    Tracer.clearCurrentContext
   }
 
   @Pointcut("execution(* spray.can.server.OpenRequestComponent$DefaultOpenRequest.handleResponseEndAndReturnNextOpenRequest(..)) && target(openRequest) && args(response)")
@@ -67,7 +66,7 @@ class ServerRequestInstrumentation {
 
   @Around("openRequestCreation(openRequest, response)")
   def afterFinishingRequest(pjp: ProceedingJoinPoint, openRequest: TraceContextAware, response: HttpMessagePartWrapper): Any = {
-    val incomingContext = TraceContext.currentContext
+    val incomingContext = Tracer.currentContext
     val storedContext = openRequest.traceContext
 
     // The stored context is always a DefaultTraceContext if the instrumentation is running
@@ -84,7 +83,7 @@ class ServerRequestInstrumentation {
 
       } else pjp.proceed
 
-      TraceContext.currentContext.finish()
+      Tracer.currentContext.finish()
 
       recordHttpServerMetrics(response, incomingContext.name, sprayExtension)
 

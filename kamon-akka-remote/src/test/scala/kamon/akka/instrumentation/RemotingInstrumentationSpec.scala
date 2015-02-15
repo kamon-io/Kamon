@@ -9,7 +9,7 @@ import akka.testkit.{ ImplicitSender, TestKitBase }
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
-import kamon.trace.TraceContext
+import kamon.trace.Tracer
 import org.scalatest.{ Matchers, WordSpecLike }
 
 import scala.concurrent.duration._
@@ -61,7 +61,7 @@ class RemotingInstrumentationSpec extends TestKitBase with WordSpecLike with Mat
 
   "The Remoting instrumentation" should {
     "propagate the TraceContext when creating a new remote actor" in {
-      TraceContext.withContext(tracer.newContext("deploy-remote-actor", "deploy-remote-actor-1")) {
+      Tracer.withContext(tracer.newContext("deploy-remote-actor", "deploy-remote-actor-1")) {
         system.actorOf(TraceTokenReplier.remoteProps(Some(testActor), RemoteSystemAddress), "remote-deploy-fixture")
       }
 
@@ -71,7 +71,7 @@ class RemotingInstrumentationSpec extends TestKitBase with WordSpecLike with Mat
     "propagate the TraceContext when sending a message to a remotely deployed actor" in {
       val remoteRef = system.actorOf(TraceTokenReplier.remoteProps(None, RemoteSystemAddress), "remote-message-fixture")
 
-      TraceContext.withContext(tracer.newContext("message-remote-actor", "message-remote-actor-1")) {
+      Tracer.withContext(tracer.newContext("message-remote-actor", "message-remote-actor-1")) {
         remoteRef ! "reply-trace-token"
       }
 
@@ -83,7 +83,7 @@ class RemotingInstrumentationSpec extends TestKitBase with WordSpecLike with Mat
       implicit val askTimeout = Timeout(10 seconds)
       val remoteRef = system.actorOf(TraceTokenReplier.remoteProps(None, RemoteSystemAddress), "remote-ask-and-pipe-fixture")
 
-      TraceContext.withContext(tracer.newContext("ask-and-pipe-remote-actor", "ask-and-pipe-remote-actor-1")) {
+      Tracer.withContext(tracer.newContext("ask-and-pipe-remote-actor", "ask-and-pipe-remote-actor-1")) {
         (remoteRef ? "reply-trace-token") pipeTo (testActor)
       }
 
@@ -95,7 +95,7 @@ class RemotingInstrumentationSpec extends TestKitBase with WordSpecLike with Mat
       remoteSystem.actorOf(TraceTokenReplier.props(None), "actor-selection-target-b")
       val selection = system.actorSelection(RemoteSystemAddress + "/user/actor-selection-target-*")
 
-      TraceContext.withContext(tracer.newContext("message-remote-actor-selection", "message-remote-actor-selection-1")) {
+      Tracer.withContext(tracer.newContext("message-remote-actor-selection", "message-remote-actor-selection-1")) {
         selection ! "reply-trace-token"
       }
 
@@ -107,7 +107,7 @@ class RemotingInstrumentationSpec extends TestKitBase with WordSpecLike with Mat
     "propagate the TraceContext a remotely supervised child fails" in {
       val supervisor = system.actorOf(Props(new SupervisorOfRemote(testActor, RemoteSystemAddress)))
 
-      TraceContext.withContext(tracer.newContext("remote-supervision", "remote-supervision-1")) {
+      Tracer.withContext(tracer.newContext("remote-supervision", "remote-supervision-1")) {
         supervisor ! "fail"
       }
 
@@ -118,7 +118,7 @@ class RemotingInstrumentationSpec extends TestKitBase with WordSpecLike with Mat
       remoteSystem.actorOf(TraceTokenReplier.props(None), "remote-routee")
       val router = system.actorOf(RoundRobinGroup(List(RemoteSystemAddress + "/user/actor-selection-target-*")).props(), "router")
 
-      TraceContext.withContext(tracer.newContext("remote-routee", "remote-routee-1")) {
+      Tracer.withContext(tracer.newContext("remote-routee", "remote-routee-1")) {
         router ! "reply-trace-token"
       }
 
@@ -141,7 +141,7 @@ class TraceTokenReplier(creationTraceContextListener: Option[ActorRef]) extends 
   }
 
   def currentTraceContextInfo: String = {
-    val ctx = TraceContext.currentContext
+    val ctx = Tracer.currentContext
     s"name=${ctx.name}|token=${ctx.token}|isOpen=${ctx.isOpen}"
   }
 }
@@ -170,7 +170,7 @@ class SupervisorOfRemote(traceContextListener: ActorRef, remoteAddress: Address)
   }
 
   def currentTraceContextInfo: String = {
-    val ctx = TraceContext.currentContext
+    val ctx = Tracer.currentContext
     s"name=${ctx.name}|token=${ctx.token}|isOpen=${ctx.isOpen}"
   }
 }

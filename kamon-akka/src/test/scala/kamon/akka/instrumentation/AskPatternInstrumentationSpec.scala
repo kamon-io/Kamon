@@ -27,7 +27,7 @@ import com.typesafe.config.ConfigFactory
 import kamon.Kamon
 import kamon.akka.Akka
 import kamon.testkit.BaseKamonSpec
-import kamon.trace.{ TraceContext, TraceContextAware }
+import kamon.trace.{Tracer, TraceContext, TraceContextAware}
 
 import scala.concurrent.duration._
 
@@ -51,9 +51,9 @@ class AskPatternInstrumentationSpec extends BaseKamonSpec("ask-pattern-tracing-s
         setAskPatternTimeoutWarningMode("heavyweight")
 
         expectTimeoutWarning() {
-          TraceContext.withContext(newContext("ask-timeout-warning")) {
+          Tracer.withContext(newContext("ask-timeout-warning")) {
             noReplyActorRef ? "hello"
-            TraceContext.currentContext
+            Tracer.currentContext
           }
         }
       }
@@ -64,9 +64,9 @@ class AskPatternInstrumentationSpec extends BaseKamonSpec("ask-pattern-tracing-s
         setAskPatternTimeoutWarningMode("lightweight")
 
         expectTimeoutWarning(messageSizeLimit = Some(1)) {
-          TraceContext.withContext(newContext("ask-timeout-warning")) {
+          Tracer.withContext(newContext("ask-timeout-warning")) {
             noReplyActorRef ? "hello"
-            TraceContext.currentContext
+            Tracer.currentContext
           }
         }
       }
@@ -77,9 +77,9 @@ class AskPatternInstrumentationSpec extends BaseKamonSpec("ask-pattern-tracing-s
         setAskPatternTimeoutWarningMode("off")
 
         expectTimeoutWarning(expectWarning = false) {
-          TraceContext.withContext(newContext("ask-timeout-warning")) {
+          Tracer.withContext(newContext("ask-timeout-warning")) {
             noReplyActorRef ? "hello"
-            TraceContext.currentContext
+            Tracer.currentContext
           }
         }
       }

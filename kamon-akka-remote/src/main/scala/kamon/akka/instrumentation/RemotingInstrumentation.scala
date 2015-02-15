@@ -6,7 +6,7 @@ import akka.remote.{ RemoteActorRefProvider, Ack, SeqNo }
 import akka.remote.WireFormats._
 import akka.util.ByteString
 import kamon.Kamon
-import kamon.trace.TraceContext
+import kamon.trace.{ Tracer, TraceContext }
 import kamon.util.MilliTimestamp
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
@@ -33,7 +33,7 @@ class RemotingInstrumentation {
     envelopeBuilder.setMessage(serializedMessage)
 
     // Attach the TraceContext info, if available.
-    TraceContext.map { context ⇒
+    Tracer.currentContext.collect { context ⇒
 
       envelopeBuilder.setTraceContext(RemoteTraceContext.newBuilder()
         .setTraceName(context.name)
@@ -93,7 +93,7 @@ class RemotingInstrumentation {
         remoteTraceContext.getIsOpen,
         isLocal = false)
 
-      TraceContext.setCurrentContext(ctx)
+      Tracer.setCurrentContext(ctx)
     }
 
     pjp.proceed()

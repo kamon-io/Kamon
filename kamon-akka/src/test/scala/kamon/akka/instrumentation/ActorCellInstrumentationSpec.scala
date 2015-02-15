@@ -20,7 +20,7 @@ import akka.pattern.{ ask, pipe }
 import akka.routing._
 import akka.util.Timeout
 import kamon.testkit.BaseKamonSpec
-import kamon.trace.TraceContext
+import kamon.trace.Tracer
 
 import scala.concurrent.duration._
 
@@ -29,18 +29,18 @@ class ActorCellInstrumentationSpec extends BaseKamonSpec("actor-cell-instrumenta
 
   "the message passing instrumentation" should {
     "propagate the TraceContext using bang" in new EchoActorFixture {
-      val testTraceContext = TraceContext.withContext(newContext("bang-reply")) {
+      val testTraceContext = Tracer.withContext(newContext("bang-reply")) {
         ctxEchoActor ! "test"
-        TraceContext.currentContext
+        Tracer.currentContext
       }
 
       expectMsg(testTraceContext)
     }
 
     "propagate the TraceContext using tell" in new EchoActorFixture {
-      val testTraceContext = TraceContext.withContext(newContext("tell-reply")) {
+      val testTraceContext = Tracer.withContext(newContext("tell-reply")) {
         ctxEchoActor.tell("test", testActor)
-        TraceContext.currentContext
+        Tracer.currentContext
       }
 
       expectMsg(testTraceContext)
@@ -48,37 +48,37 @@ class ActorCellInstrumentationSpec extends BaseKamonSpec("actor-cell-instrumenta
 
     "propagate the TraceContext using ask" in new EchoActorFixture {
       implicit val timeout = Timeout(1 seconds)
-      val testTraceContext = TraceContext.withContext(newContext("ask-reply")) {
+      val testTraceContext = Tracer.withContext(newContext("ask-reply")) {
         // The pipe pattern use Futures internally, so FutureTracing test should cover the underpinnings of it.
         (ctxEchoActor ? "test") pipeTo (testActor)
-        TraceContext.currentContext
+        Tracer.currentContext
       }
 
       expectMsg(testTraceContext)
     }
 
     "propagate the TraceContext to actors behind a simple router" in new EchoSimpleRouterFixture {
-      val testTraceContext = TraceContext.withContext(newContext("router-reply")) {
+      val testTraceContext = Tracer.withContext(newContext("router-reply")) {
         router.route("test", testActor)
-        TraceContext.currentContext
+        Tracer.currentContext
       }
 
       expectMsg(testTraceContext)
     }
 
     "propagate the TraceContext to actors behind a pool router" in new EchoPoolRouterFixture {
-      val testTraceContext = TraceContext.withContext(newContext("router-reply")) {
+      val testTraceContext = Tracer.withContext(newContext("router-reply")) {
         pool ! "test"
-        TraceContext.currentContext
+        Tracer.currentContext
       }
 
       expectMsg(testTraceContext)
     }
 
     "propagate the TraceContext to actors behind a group router" in new EchoGroupRouterFixture {
-      val testTraceContext = TraceContext.withContext(newContext("router-reply")) {
+      val testTraceContext = Tracer.withContext(newContext("router-reply")) {
         group ! "test"
-        TraceContext.currentContext
+        Tracer.currentContext
       }
 
       expectMsg(testTraceContext)
@@ -116,7 +116,7 @@ class ActorCellInstrumentationSpec extends BaseKamonSpec("actor-cell-instrumenta
 
 class TraceContextEcho extends Actor {
   def receive = {
-    case msg: String ⇒ sender ! TraceContext.currentContext
+    case msg: String ⇒ sender ! Tracer.currentContext
   }
 }
 

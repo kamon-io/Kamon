@@ -30,7 +30,7 @@ class TraceLocalSpec extends BaseKamonSpec("trace-local-spec") with PatienceConf
 
   "the TraceLocal storage" should {
     "allow storing and retrieving values" in {
-      TraceContext.withContext(newContext("store-and-retrieve-trace-local")) {
+      Tracer.withContext(newContext("store-and-retrieve-trace-local")) {
         val testString = "Hello World"
 
         TraceLocal.store(SampleTraceLocalKey)(testString)
@@ -39,7 +39,7 @@ class TraceLocalSpec extends BaseKamonSpec("trace-local-spec") with PatienceConf
     }
 
     "return None when retrieving a non existent key" in {
-      TraceContext.withContext(newContext("non-existent-key")) {
+      Tracer.withContext(newContext("non-existent-key")) {
         TraceLocal.retrieve(SampleTraceLocalKey) should equal(None)
       }
     }
@@ -50,22 +50,22 @@ class TraceLocalSpec extends BaseKamonSpec("trace-local-spec") with PatienceConf
 
     "be attached to the TraceContext when it is propagated" in {
       val testString = "Hello World"
-      val testContext = TraceContext.withContext(newContext("manually-propagated-trace-local")) {
+      val testContext = Tracer.withContext(newContext("manually-propagated-trace-local")) {
         TraceLocal.store(SampleTraceLocalKey)(testString)
         TraceLocal.retrieve(SampleTraceLocalKey).value should equal(testString)
-        TraceContext.currentContext
+        Tracer.currentContext
       }
 
       /** No TraceLocal should be available here */
       TraceLocal.retrieve(SampleTraceLocalKey) should equal(None)
 
-      TraceContext.withContext(testContext) {
+      Tracer.withContext(testContext) {
         TraceLocal.retrieve(SampleTraceLocalKey).value should equal(testString)
       }
     }
 
     "allow retrieve a value from the MDC when was created a key with AvailableToMdc(cool-key)" in {
-      TraceContext.withContext(newContext("store-and-retrieve-trace-local-and-copy-to-mdc")) {
+      Tracer.withContext(newContext("store-and-retrieve-trace-local-and-copy-to-mdc")) {
         val testString = "Hello MDC"
 
         TraceLocal.store(SampleTraceLocalKeyAvailableToMDC)(testString)
@@ -78,7 +78,7 @@ class TraceLocalSpec extends BaseKamonSpec("trace-local-spec") with PatienceConf
     }
 
     "allow retrieve a value from the MDC when was created a key with AvailableToMdc.storeForMdc(String, String)" in {
-      TraceContext.withContext(newContext("store-and-retrieve-trace-local-and-copy-to-mdc")) {
+      Tracer.withContext(newContext("store-and-retrieve-trace-local-and-copy-to-mdc")) {
         val testString = "Hello MDC"
 
         TraceLocal.storeForMdc("someKey", testString)

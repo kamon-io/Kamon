@@ -21,7 +21,7 @@ import com.typesafe.config.ConfigFactory
 import kamon.testkit.BaseKamonSpec
 import kamon.trace.TraceLocal.AvailableToMdc
 import kamon.trace.logging.MdcKeysSupport
-import kamon.trace.{ TraceContextAware, TraceLocal, TraceContext }
+import kamon.trace.{Tracer, TraceContextAware, TraceLocal}
 import org.scalatest.Inspectors
 import org.slf4j.MDC
 
@@ -39,9 +39,9 @@ class ActorLoggingInstrumentationSpec extends BaseKamonSpec("actor-logging-instr
       val loggerActor = system.actorOf(Props[LoggerActor])
       system.eventStream.subscribe(testActor, classOf[LogEvent])
 
-      val testTraceContext = TraceContext.withContext(newContext("logging")) {
+      val testTraceContext = Tracer.withContext(newContext("logging")) {
         loggerActor ! "info"
-        TraceContext.currentContext
+        Tracer.currentContext
       }
 
       fishForMessage() {
@@ -55,7 +55,7 @@ class ActorLoggingInstrumentationSpec extends BaseKamonSpec("actor-logging-instr
 
     "allow retrieve a value from the MDC when was created a key of type AvailableToMdc" in {
       val testString = "Hello World"
-      TraceContext.withContext(newContext("logging-with-mdc")) {
+      Tracer.withContext(newContext("logging-with-mdc")) {
         TraceLocal.store(AvailableToMdc("some-cool-key"))(testString)
 
         withMdc {
@@ -71,6 +71,6 @@ class ActorLoggingInstrumentationSpec extends BaseKamonSpec("actor-logging-instr
 
 class LoggerActor extends Actor with ActorLogging {
   def receive = {
-    case "info" ⇒ log.info("TraceContext(name = {}, token = {})", TraceContext.currentContext.name, TraceContext.currentContext.token)
+    case "info" ⇒ log.info("TraceContext(name = {}, token = {})", Tracer.currentContext.name, Tracer.currentContext.token)
   }
 }

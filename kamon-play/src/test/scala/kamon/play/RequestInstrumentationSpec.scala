@@ -19,7 +19,7 @@ import kamon.Kamon
 import kamon.metric.instrument.CollectionContext
 import kamon.play.action.TraceName
 import kamon.trace.TraceLocal.HttpContextKey
-import kamon.trace.{ TraceLocal, TraceContext }
+import kamon.trace.{ Tracer, TraceLocal, TraceContext }
 import org.scalatestplus.play._
 import play.api.DefaultGlobal
 import play.api.http.Writeable
@@ -117,7 +117,7 @@ class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
 
     "respond to the Async Action with X-Trace-Token and the renamed trace" in {
       val result = Await.result(route(FakeRequest(GET, "/async-renamed").withHeaders(traceTokenHeader)).get, 10 seconds)
-      TraceContext.currentContext.name must be("renamed-trace")
+      Tracer.currentContext.name must be("renamed-trace")
       Some(result.header.headers(traceTokenHeaderName)) must be(expectedToken)
     }
 
@@ -185,7 +185,7 @@ class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
 
   object TraceLocalFilter extends Filter {
     override def apply(next: (RequestHeader) ⇒ Future[Result])(header: RequestHeader): Future[Result] = {
-      TraceContext.withContext(TraceContext.currentContext) {
+      Tracer.withContext(Tracer.currentContext) {
 
         TraceLocal.store(TraceLocalKey)(header.headers.get(traceLocalStorageKey).getOrElse("unknown"))
 

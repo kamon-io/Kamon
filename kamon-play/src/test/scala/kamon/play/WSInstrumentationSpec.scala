@@ -18,7 +18,7 @@ package kamon.play
 
 import kamon.Kamon
 import kamon.metric.{ EntitySnapshot, TraceMetrics }
-import kamon.trace.{ TraceContext, SegmentCategory }
+import kamon.trace.{ Tracer, TraceContext, SegmentCategory }
 import org.scalatest.{ Matchers, WordSpecLike }
 import org.scalatestplus.play.OneServerPerSuite
 import play.api.libs.ws.WS
@@ -53,9 +53,9 @@ class WSInstrumentationSpec extends WordSpecLike with Matchers with OneServerPer
     }
 
     "propagate the TraceContext outside an Action and complete the WS request" in {
-      TraceContext.withContext(newContext("trace-outside-action")) {
+      Tracer.withContext(newContext("trace-outside-action")) {
         Await.result(WS.url(s"http://localhost:$port/outside").get(), 10 seconds)
-        TraceContext.currentContext.finish()
+        Tracer.currentContext.finish()
       }
 
       val snapshot = takeSnapshotOf("trace-outside-action")

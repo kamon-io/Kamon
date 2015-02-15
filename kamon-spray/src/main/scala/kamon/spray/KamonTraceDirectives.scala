@@ -17,11 +17,11 @@ package kamon.spray
 
 import spray.routing.directives.BasicDirectives
 import spray.routing._
-import kamon.trace.TraceContext
+import kamon.trace.Tracer
 
 trait KamonTraceDirectives extends BasicDirectives {
   def traceName(name: String): Directive0 = mapRequest { req ⇒
-    TraceContext.currentContext.rename(name)
+    Tracer.currentContext.rename(name)
     req
   }
 }

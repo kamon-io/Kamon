@@ -16,7 +16,7 @@
 package kamon.play.instrumentation
 
 import kamon.Kamon
-import kamon.play.{ Play, PlayExtension }
+import kamon.play.Play
 import kamon.trace.TraceLocal.{ HttpContextKey, HttpContext }
 import kamon.trace._
 import org.aspectj.lang.ProceedingJoinPoint
@@ -24,7 +24,6 @@ import org.aspectj.lang.annotation._
 import play.api.Routes
 import play.api.mvc.Results._
 import play.api.mvc._
-import play.libs.Akka
 
 @Aspect
 class RequestInstrumentation {
@@ -45,7 +44,7 @@ class RequestInstrumentation {
     } else None
 
     val newContext = token.map(t ⇒ tracer.newContext(defaultTraceName, t)).getOrElse(tracer.newContext(defaultTraceName))
-    TraceContext.setCurrentContext(newContext)
+    Tracer.setCurrentContext(newContext)
   }
 
   @Around("call(* play.api.GlobalSettings.doFilter(*)) && args(next)")
@@ -56,7 +55,7 @@ class RequestInstrumentation {
       val executor = playExtension.defaultDispatcher
 
       def onResult(result: Result): Result = {
-        TraceContext.map { ctx ⇒
+        Tracer.currentContext.collect { ctx ⇒
           ctx.finish()
 
           recordHttpServerMetrics(result.header, ctx.name)
@@ -70,7 +69,7 @@ class RequestInstrumentation {
       storeDiagnosticData(requestHeader)
 
       //override the current trace name
-      normaliseTraceName(requestHeader).map(TraceContext.currentContext.rename)
+      normaliseTraceName(requestHeader).map(Tracer.currentContext.rename)
 
       // Invoke the action
       next(requestHeader).map(onResult)(executor)
@@ -80,7 +79,7 @@ class RequestInstrumentation {
 
   @Before("call(* play.api.GlobalSettings.onError(..)) && args(request, ex)")
   def beforeOnError(request: TraceContextAware, ex: Throwable): Unit = {
-    TraceContext.map { ctx ⇒
+    Tracer.currentContext.collect { ctx ⇒
       recordHttpServerMetrics(InternalServerError.header, ctx.name)
     }
   }

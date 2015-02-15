@@ -22,7 +22,7 @@ import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{ Millis, Seconds, Span }
 import spray.httpx.RequestBuilding
 import spray.http.{ HttpResponse, HttpRequest }
-import kamon.trace.{ TraceContext, SegmentCategory }
+import kamon.trace.{ Tracer, SegmentCategory }
 import com.typesafe.config.ConfigFactory
 import spray.can.Http
 import spray.http.HttpHeaders.RawHeader
@@ -57,12 +57,12 @@ class ClientRequestInstrumentationSpec extends BaseKamonSpec("client-request-ins
         val (_, server, bound) = buildSHostConnectorAndServer
 
         // Initiate a request within the context of a trace
-        val (testContext, responseFuture) = TraceContext.withContext(newContext("include-trace-token-header-at-request-level-api")) {
+        val (testContext, responseFuture) = Tracer.withContext(newContext("include-trace-token-header-at-request-level-api")) {
           val rF = sendReceive(system, ec) {
             Get(s"http://${bound.localAddress.getHostName}:${bound.localAddress.getPort}/dummy-path")
           }
 
-          (TraceContext.currentContext, rF)
+          (Tracer.currentContext, rF)
         }
 
         // Accept the connection at the server side
@@ -84,12 +84,12 @@ class ClientRequestInstrumentationSpec extends BaseKamonSpec("client-request-ins
         val (_, server, bound) = buildSHostConnectorAndServer
 
         // Initiate a request within the context of a trace
-        val (testContext, responseFuture) = TraceContext.withContext(newContext("do-not-include-trace-token-header-at-request-level-api")) {
+        val (testContext, responseFuture) = Tracer.withContext(newContext("do-not-include-trace-token-header-at-request-level-api")) {
           val rF = sendReceive(system, ec) {
             Get(s"http://${bound.localAddress.getHostName}:${bound.localAddress.getPort}/dummy-path")
           }
 
-          (TraceContext.currentContext, rF)
+          (Tracer.currentContext, rF)
         }
 
         // Accept the connection at the server side
@@ -114,12 +114,12 @@ class ClientRequestInstrumentationSpec extends BaseKamonSpec("client-request-ins
         val (_, _, bound) = buildSHostConnectorAndServer
 
         // Initiate a request within the context of a trace
-        val (testContext, responseFuture) = TraceContext.withContext(newContext("assign-name-to-segment-with-request-level-api")) {
+        val (testContext, responseFuture) = Tracer.withContext(newContext("assign-name-to-segment-with-request-level-api")) {
           val rF = sendReceive(transport.ref)(ec, 10.seconds) {
             Get(s"http://${bound.localAddress.getHostName}:${bound.localAddress.getPort}/request-level-api-segment")
           }
 
-          (TraceContext.currentContext, rF)
+          (Tracer.currentContext, rF)
         }
 
         // Receive the request and reply back
@@ -141,12 +141,12 @@ class ClientRequestInstrumentationSpec extends BaseKamonSpec("client-request-ins
         val (_, server, bound) = buildSHostConnectorAndServer
 
         // Initiate a request within the context of a trace
-        val (testContext, responseFuture) = TraceContext.withContext(newContext("rename-segment-with-request-level-api")) {
+        val (testContext, responseFuture) = Tracer.withContext(newContext("rename-segment-with-request-level-api")) {
           val rF = sendReceive(system, ec) {
             Get(s"http://${bound.localAddress.getHostName}:${bound.localAddress.getPort}/request-level-api-segment")
           }
 
-          (TraceContext.currentContext, rF)
+          (Tracer.currentContext, rF)
         }
 
         // Accept the connection at the server side
@@ -175,9 +175,9 @@ class ClientRequestInstrumentationSpec extends BaseKamonSpec("client-request-ins
         val client = TestProbe()
 
         // Initiate a request within the context of a trace
-        val testContext = TraceContext.withContext(newContext("include-trace-token-header-on-http-client-request")) {
+        val testContext = Tracer.withContext(newContext("include-trace-token-header-on-http-client-request")) {
           client.send(hostConnector, Get("/dummy-path"))
-          TraceContext.currentContext
+          Tracer.currentContext
         }
 
         // Accept the connection at the server side
@@ -202,9 +202,9 @@ class ClientRequestInstrumentationSpec extends BaseKamonSpec("client-request-ins
         val client = TestProbe()
 
         // Initiate a request within the context of a trace
-        val testContext = TraceContext.withContext(newContext("not-include-trace-token-header-on-http-client-request")) {
+        val testContext = Tracer.withContext(newContext("not-include-trace-token-header-on-http-client-request")) {
           client.send(hostConnector, Get("/dummy-path"))
-          TraceContext.currentContext
+          Tracer.currentContext
         }
 
         // Accept the connection at the server side
@@ -229,9 +229,9 @@ class ClientRequestInstrumentationSpec extends BaseKamonSpec("client-request-ins
         val client = TestProbe()
 
         // Initiate a request within the context of a trace
-        val testContext = TraceContext.withContext(newContext("create-segment-with-host-level-api")) {
+        val testContext = Tracer.withContext(newContext("create-segment-with-host-level-api")) {
           client.send(hostConnector, Get("/host-level-api-segment"))
-          TraceContext.currentContext
+          Tracer.currentContext
         }
 
         // Accept the connection at the server side

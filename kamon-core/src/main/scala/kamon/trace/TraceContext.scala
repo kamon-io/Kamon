@@ -17,6 +17,7 @@
 package kamon.trace
 
 import java.io.ObjectStreamException
+import java.util.function.Function
 import kamon.trace.TraceContextAware.DefaultTraceContextAware
 import kamon.util.RelativeNanoTimestamp
 
@@ -35,36 +36,16 @@ trait TraceContext {
   def addMetadata(key: String, value: String)
 
   def startTimestamp: RelativeNanoTimestamp
-}
 
-object TraceContext {
-  private[kamon] val _traceContextStorage = new ThreadLocal[TraceContext] {
-    override def initialValue(): TraceContext = EmptyTraceContext
-  }
-
-  def currentContext: TraceContext =
-    _traceContextStorage.get()
-
-  def setCurrentContext(context: TraceContext): Unit =
-    _traceContextStorage.set(context)
-
-  def clearCurrentContext: Unit =
-    _traceContextStorage.remove()
-
-  def withContext[T](context: TraceContext)(code: ⇒ T): T = {
-    val oldContext = _traceContextStorage.get()
-    _traceContextStorage.set(context)
-
-    try code finally _traceContextStorage.set(oldContext)
-  }
-
-  def map[T](f: TraceContext ⇒ T): Option[T] = {
-    val current = currentContext
-    if (current.nonEmpty)
-      Some(f(current))
+  def collect[T](f: TraceContext ⇒ T): Option[T] =
+    if (nonEmpty)
+      Some(f(this))
     else None
-  }
 
+  def collect[T](f: Function[TraceContext, T]): Option[T] =
+    if (nonEmpty)
+      Some(f(this))
+    else None
 }
 
 trait Segment {
@@ -132,7 +113,7 @@ object TraceContextAware {
   def default: TraceContextAware = new DefaultTraceContextAware
 
   class DefaultTraceContextAware extends TraceContextAware {
-    @transient val traceContext = TraceContext.currentContext
+    @transient val traceContext = Tracer.currentContext
 
     //
     // Beware of this hack, it might bite us in the future!

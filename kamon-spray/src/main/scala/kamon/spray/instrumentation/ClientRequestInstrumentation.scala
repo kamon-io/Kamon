@@ -47,7 +47,7 @@ class ClientRequestInstrumentation {
     // This read to requestContext.traceContext takes care of initializing the aspect timely.
     requestContext.traceContext
 
-    TraceContext.map { ctx ⇒
+    Tracer.currentContext.collect { ctx ⇒
       val sprayExtension = Kamon.extension(Spray)
 
       if (sprayExtension.settings.clientInstrumentationLevel == ClientInstrumentationLevel.HostLevelAPI) {
@@ -74,7 +74,7 @@ class ClientRequestInstrumentation {
 
   @Around("copyingRequestContext(old)")
   def aroundCopyingRequestContext(pjp: ProceedingJoinPoint, old: TraceContextAware): Any = {
-    TraceContext.withContext(old.traceContext) {
+    Tracer.withContext(old.traceContext) {
       pjp.proceed()
     }
   }
@@ -85,7 +85,7 @@ class ClientRequestInstrumentation {
   @Around("dispatchToCommander(requestContext, message)")
   def aroundDispatchToCommander(pjp: ProceedingJoinPoint, requestContext: TraceContextAware, message: Any): Any = {
     if (requestContext.traceContext.nonEmpty) {
-      TraceContext.withContext(requestContext.traceContext) {
+      Tracer.withContext(requestContext.traceContext) {
         if (message.isInstanceOf[HttpMessageEnd])
           requestContext.asInstanceOf[SegmentAware].segment.finish()
 
@@ -112,7 +112,7 @@ class ClientRequestInstrumentation {
     val originalSendReceive = pjp.proceed().asInstanceOf[HttpRequest ⇒ Future[HttpResponse]]
 
     (request: HttpRequest) ⇒ {
-      TraceContext.map { ctx ⇒
+      Tracer.currentContext.collect { ctx ⇒
         val sprayExtension = Kamon.extension(Spray)
         val segment =
           if (sprayExtension.settings.clientInstrumentationLevel == ClientInstrumentationLevel.RequestLevelAPI)
@@ -139,7 +139,7 @@ class ClientRequestInstrumentation {
   @Around("includingDefaultHeadersAtHttpHostConnector(request, defaultHeaders)")
   def aroundIncludingDefaultHeadersAtHttpHostConnector(pjp: ProceedingJoinPoint, request: HttpMessage, defaultHeaders: List[HttpHeader]): Any = {
 
-    val modifiedHeaders = TraceContext.map { ctx ⇒
+    val modifiedHeaders = Tracer.currentContext.collect { ctx ⇒
       val sprayExtension = Kamon.extension(Spray)
       if (sprayExtension.settings.includeTraceTokenHeader)
         RawHeader(sprayExtension.settings.traceTokenHeaderName, ctx.token) :: defaultHeaders
