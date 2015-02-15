@@ -16,13 +16,13 @@
 
 package kamon.newrelic
 
-import kamon.metric.{ SimpleMetricsExtensionImpl, EntitySnapshot, Entity }
+import kamon.metric.{ SimpleMetricsImpl, EntitySnapshot, Entity }
 import kamon.metric.instrument.CollectionContext
 
 object CustomMetricExtractor extends MetricExtractor {
 
   def extract(settings: AgentSettings, collectionContext: CollectionContext, metrics: Map[Entity, EntitySnapshot]): Map[MetricID, MetricData] = {
-    metrics.get(SimpleMetricsExtensionImpl.SimpleMetricsEntity).map { allSimpleMetrics ⇒
+    metrics.get(SimpleMetricsImpl.SimpleMetricsEntity).map { allSimpleMetrics ⇒
       allSimpleMetrics.metrics.map {
         case (key, snapshot) ⇒ Metric(snapshot, key.unitOfMeasurement, s"Custom/${key.name}", None)
       }
