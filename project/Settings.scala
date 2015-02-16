@@ -35,7 +35,6 @@ object Settings {
     testGrouping in Test    := singleTestPerJvm((definedTests in Test).value, (javaOptions in Test).value),
     javacOptions in compile := Seq(
       "-Xlint:-options",
-      "-Xlint:-unchecked",
       "-source", JavaVersion, "-target", JavaVersion
     ),
     javacOptions in doc     := Seq(

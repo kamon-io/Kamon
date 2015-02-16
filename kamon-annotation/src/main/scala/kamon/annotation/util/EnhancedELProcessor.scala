@@ -25,7 +25,6 @@ object EnhancedELProcessor {
         Try(processor.eval(s"{$str}").asInstanceOf[java.util.HashMap[String, String]].asScala.toMap) match {
           case Success(value) ⇒ value
           case Failure(cause) ⇒
-            println(cause.getMessage)
             Kamon(Annotation).log.error(cause.getMessage)
             Map.empty[String, String]
         }

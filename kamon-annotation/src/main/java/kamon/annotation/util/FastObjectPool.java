@@ -20,7 +20,7 @@ import scala.concurrent.util.Unsafe;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 
-
+@SuppressWarnings("unchecked")
 public class FastObjectPool<T> {
 
     private Holder<T>[] objects;

@@ -16,12 +16,22 @@
 
 package kamon.annotation
 
+import com.typesafe.config.ConfigFactory
 import kamon.metric._
 import kamon.testkit.BaseKamonSpec
 import org.scalatest.Matchers
 
 class AnnotationSpec extends BaseKamonSpec("annotation-spec") {
   import TraceMetricsSpec.SegmentSyntax
+
+  override lazy val config =
+    ConfigFactory.parseString(
+      """
+        |kamon.metric {
+        |  tick-interval = 1 hour
+        |  default-collection-context-buffer-size = 100
+        |}
+      """.stripMargin)
 
   "the Kamon Annotation module" should {
     "create a new trace when is invoked a method annotated with @Trace" in {
@@ -60,14 +70,14 @@ class AnnotationSpec extends BaseKamonSpec("annotation-spec") {
     "count the invocations of a method annotated with @Count" in {
       for (id ← 1 to 10) Annotated(id).count()
 
-      val snapshot = takeSnapshotOf("user-metric", "user-metric")
+      val snapshot = takeSnapshotOf("simple-metric", "simple-metric")
       snapshot.counter("count").get.count should be(10)
     }
 
     "count the invocations of a method annotated with @Count and evaluate EL expressions" in {
       for (id ← 1 to 2) Annotated(id).countWithEL()
 
-      val snapshot = takeSnapshotOf("user-metric", "user-metric")
+      val snapshot = takeSnapshotOf("simple-metric", "simple-metric")
       snapshot.counter("count:1").get.count should be(1)
       snapshot.counter("count:2").get.count should be(1)
 
@@ -80,14 +90,14 @@ class AnnotationSpec extends BaseKamonSpec("annotation-spec") {
     "count the current invocations of a method annotated with @MinMaxCount" in {
       for (id ← 1 to 10) Annotated(id).countMinMax()
 
-      val snapshot = takeSnapshotOf("user-metric", "user-metric")
+      val snapshot = takeSnapshotOf("simple-metric", "simple-metric")
       snapshot.minMaxCounter("minMax").get.sum should be(1)
     }
 
     "count the current invocations of a method annotated with @MinMaxCount and evaluate EL expressions" in {
       for (id ← 1 to 10) Annotated(id).countMinMaxWithEL()
 
-      val snapshot = takeSnapshotOf("user-metric", "user-metric")
+      val snapshot = takeSnapshotOf("simple-metric", "simple-metric")
       snapshot.minMaxCounter("minMax:1").get.sum should be(1)
       snapshot.minMaxCounter("minMax:2").get.sum should be(1)
 
@@ -100,14 +110,14 @@ class AnnotationSpec extends BaseKamonSpec("annotation-spec") {
     "measure the time spent in the execution of a method annotated with @Time" in {
       for (id ← 1 to 1) Annotated(id).time()
 
-      val snapshot = takeSnapshotOf("user-metric", "user-metric")
+      val snapshot = takeSnapshotOf("simple-metric", "simple-metric")
       snapshot.histogram("time").get.numberOfMeasurements should be(1)
     }
 
     "measure the time spent in the execution of a method annotated with @Time and evaluate EL expressions" in {
       for (id ← 1 to 1) Annotated(id).timeWithEL()
 
-      val snapshot = takeSnapshotOf("user-metric", "user-metric")
+      val snapshot = takeSnapshotOf("simple-metric", "simple-metric")
       snapshot.histogram("time:1").get.numberOfMeasurements should be(1)
 
       val histogramKey = (name: String) ⇒ (key: HistogramKey) ⇒ key.name == name
@@ -118,7 +128,7 @@ class AnnotationSpec extends BaseKamonSpec("annotation-spec") {
     "record the value returned by a method annotated with @Histogram" in {
       for (value ← 1 to 5) Annotated().histogram(value)
 
-      val snapshot = takeSnapshotOf("user-metric", "user-metric")
+      val snapshot = takeSnapshotOf("simple-metric", "simple-metric")
       snapshot.histogram("histogram").get.numberOfMeasurements should be(5)
       snapshot.histogram("histogram").get.min should be(1)
       snapshot.histogram("histogram").get.max should be(5)
@@ -128,7 +138,7 @@ class AnnotationSpec extends BaseKamonSpec("annotation-spec") {
     "record the value returned by a method annotated with @Histogram and evaluate EL expressions" in {
       for (value ← 1 to 2) Annotated(value).histogramWithEL(value)
 
-      val snapshot = takeSnapshotOf("user-metric", "user-metric")
+      val snapshot = takeSnapshotOf("simple-metric", "simple-metric")
       snapshot.histogram("histogram:1").get.numberOfMeasurements should be(1)
       snapshot.histogram("histogram:1").get.min should be(1)
       snapshot.histogram("histogram:1").get.max should be(1)
