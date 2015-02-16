@@ -34,7 +34,7 @@ public class FastObjectPool<T> {
     private final long ASHIFT;
 
     public ReentrantLock lock = new ReentrantLock();
-    private ThreadLocal<Holder<T>> localValue = new ThreadLocal<>();
+    private ThreadLocal<Holder<T>> localValue = new ThreadLocal<Holder<T>>();
 
     public FastObjectPool(PoolFactory<T> factory, int size) {
 
@@ -48,7 +48,7 @@ public class FastObjectPool<T> {
         objects = new Holder[size];
 
         for (int x = 0; x < size; x++) {
-            objects[x] = new Holder<>(factory.create());
+            objects[x] = new Holder<T>(factory.create());
         }
 
         mask = size - 1;

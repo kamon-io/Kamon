@@ -5,7 +5,7 @@ import javax.el.ELProcessor
 import kamon.Kamon
 import kamon.annotation.Annotation
 
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 
 /**
  * Pimp ELProcessor injecting some useful methods.
@@ -21,13 +21,13 @@ object EnhancedELProcessor {
     }
 
     def evalToMap(expression: String): Map[String, String] = {
-      extract(expression) map { str =>
+      extract(expression) map { str ⇒
         Try(processor.eval(s"{$str}").asInstanceOf[java.util.HashMap[String, String]].asScala.toMap) match {
-          case Success(value) => value
-          case Failure(cause) =>
+          case Success(value) ⇒ value
+          case Failure(cause) ⇒
             println(cause.getMessage)
-//            Kamon(Annotation).log.error(cause.getMessage)
-            Map.empty[String,String]
+            Kamon(Annotation).log.error(cause.getMessage)
+            Map.empty[String, String]
         }
       } getOrElse Map.empty
     }

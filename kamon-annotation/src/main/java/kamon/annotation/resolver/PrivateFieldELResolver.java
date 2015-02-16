@@ -41,7 +41,7 @@ public class PrivateFieldELResolver extends ELResolver {
         } catch (NoSuchFieldException exc) {
             context.setPropertyResolved(false);
             return null;
-        } catch (IllegalArgumentException | IllegalAccessException exc) {
+        } catch (Exception exc) {
             throw new ELException(exc);
         }
     }
@@ -83,7 +83,7 @@ public class PrivateFieldELResolver extends ELResolver {
             getField(base, (String) property).set(base, value);
         } catch (NoSuchFieldException exc) {
             context.setPropertyResolved(false);
-        } catch (IllegalArgumentException | IllegalAccessException exc) {
+        } catch (Exception exc) {
             throw new ELException(exc);
         }
     }

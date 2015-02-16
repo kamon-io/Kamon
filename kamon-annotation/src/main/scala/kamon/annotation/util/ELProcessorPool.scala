@@ -27,7 +27,7 @@ import kamon.annotation.util.FastObjectPool.PoolFactory
  * Convenient pool of @see ELProcessor, since it is not thread safe.
  */
 object ELProcessorPool {
-  private val pool = new FastObjectPool[ELProcessor](ELPoolFactory(), 10) //Kamon(Annotation).poolSize
+  private val pool = new FastObjectPool[ELProcessor](ELPoolFactory(), Kamon(Annotation).poolSize)
 
   def use[A](closure: ELProcessor ⇒ A): A = use(None)(closure)
   def useWithObject[A](obj: AnyRef)(closure: ELProcessor ⇒ A): A = use(Some(obj))(closure)

@@ -27,7 +27,7 @@ object Settings {
 
   val JavaVersion = "1.6"
   val ScalaVersion = "2.11.5"
-  
+
   lazy val basicSettings = Seq(
     scalaVersion            := ScalaVersion,
     resolvers              ++= Dependencies.resolutionRepos,
@@ -35,6 +35,7 @@ object Settings {
     testGrouping in Test    := singleTestPerJvm((definedTests in Test).value, (javaOptions in Test).value),
     javacOptions in compile := Seq(
       "-Xlint:-options",
+      "-Xlint:-unchecked",
       "-source", JavaVersion, "-target", JavaVersion
     ),
     javacOptions in doc     := Seq(

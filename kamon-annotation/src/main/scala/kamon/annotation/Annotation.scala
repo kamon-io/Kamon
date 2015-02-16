@@ -15,7 +15,7 @@
 
 package kamon.annotation
 
-import akka.actor.{ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProvider}
+import akka.actor.{ ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProvider }
 import akka.event.Logging
 import kamon.Kamon
 
