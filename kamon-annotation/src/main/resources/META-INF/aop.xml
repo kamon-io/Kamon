@@ -2,6 +2,7 @@
 
 <aspectj>
   <aspects>
+      <aspect name="kamon.annotation.instrumentation.ClassToProfiledMixin"/>
       <aspect name="kamon.annotation.instrumentation.AnnotationInstrumentation"/>
   </aspects>
 </aspectj>

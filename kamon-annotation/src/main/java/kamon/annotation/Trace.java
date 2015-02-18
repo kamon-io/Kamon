@@ -23,4 +23,5 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Trace {
     String value();
+    String tags() default "";
 }

@@ -25,4 +25,5 @@ public @interface Segment {
     String name();
     String category();
     String library();
+    String tags() default "";
 }

@@ -16,78 +16,91 @@
 
 package kamon.annotation.instrumentation
 
-import kamon.Kamon
-import kamon.annotation._
-import kamon.annotation.util.{ ELProcessorPool, EnhancedELProcessor }
-import kamon.metric._
-import kamon.metric.instrument.Histogram.DynamicRange
+import kamon.annotation.util.{ EnhancedELProcessor, ELProcessorPool }
 import kamon.trace.Tracer
 import kamon.util.Latency
-import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
+import org.aspectj.lang.reflect.MethodSignature
+import org.aspectj.lang.{ JoinPoint, ProceedingJoinPoint }
+import java.lang.reflect.Modifier
 
 @Aspect
-class AnnotationInstrumentation {
+class AnnotationInstrumentation extends BaseAnnotationInstrumentation {
 
-  import EnhancedELProcessor.Syntax
+  @After("execution((@kamon.annotation.Metrics Profiled+).new(..)) && this(profiled)")
+  def creation(profiled: Profiled): Unit = {
 
-  @Around("execution(@kamon.annotation.Trace * *(..)) && @annotation(trace) && this(obj)")
-  def trace(pjp: ProceedingJoinPoint, trace: Trace, obj: AnyRef): AnyRef = {
-    val name = eval(trace.value(), obj)
-    Tracer.withContext(Kamon.tracer.newContext(name)) {
-      val result = pjp.proceed()
-      Tracer.currentContext.finish()
-      result
+    import EnhancedELProcessor.Syntax
+
+    val stringEvaluator: StringEvaluator = (str: String) ⇒ ELProcessorPool.useWithObject(profiled)(_.evalToString(str))
+    val tagsEvaluator: TagsEvaluator = (str: String) ⇒ ELProcessorPool.use(_.evalToMap(str))
+
+    profiled.getClass.getDeclaredMethods.filterNot(method ⇒ Modifier.isStatic(method.getModifiers)).foreach {
+      method ⇒
+        registerTrace(method, profiled.traces, stringEvaluator, tagsEvaluator)
+        registerSegment(method, profiled.segments, stringEvaluator, tagsEvaluator)
+        registerCounter(method, profiled.counters, stringEvaluator, tagsEvaluator)
+        registerMinMaxCounter(method, profiled.minMaxCounters, stringEvaluator, tagsEvaluator)
+        registerHistogram(method, profiled.histograms, stringEvaluator, tagsEvaluator)
+        registerTime(method, profiled.histograms, stringEvaluator, tagsEvaluator)
     }
   }
 
-  @Around("execution(@kamon.annotation.Segment * *(..)) && @annotation(segment) && this(obj)")
-  def segment(pjp: ProceedingJoinPoint, segment: Segment, obj: AnyRef): AnyRef = {
-    Tracer.currentContext.collect { ctx ⇒
-      val name = eval(segment.name(), obj)
-      val category = eval(segment.category(), obj)
-      val library = eval(segment.library(), obj)
-      val currentSegment = ctx.startSegment(name, category, library)
-      val result = pjp.proceed()
-      currentSegment.finish()
-      result
+  @Around("execution(@kamon.annotation.Trace !static * (@kamon.annotation.Metrics Profiled+).*(..)) && this(obj)")
+  def trace(pjp: ProceedingJoinPoint, obj: Profiled): AnyRef = {
+    val name = pjp.getStaticPart.getSignature.asInstanceOf[MethodSignature].getMethod.getName
+    val trace = obj.traces.get(name)
+    trace.map { traceContext ⇒
+      Tracer.withContext(traceContext) {
+        val result = pjp.proceed()
+        Tracer.currentContext.finish()
+        result
+      }
     } getOrElse pjp.proceed()
   }
 
-  @Around("execution(@kamon.annotation.Time * *(..)) && @annotation(time) && this(obj)")
-  def time(pjp: ProceedingJoinPoint, time: Time, obj: AnyRef): AnyRef = {
-    val name = eval(time.name(), obj)
-    val metadata = tags(time.tags())
-    val histogram = Kamon.simpleMetrics.histogram(HistogramKey(name, metadata))
-    Latency.measure(histogram)(pjp.proceed)
+  @Around("execution(@kamon.annotation.Segment !static * (@kamon.annotation.Metrics Profiled+).*(..)) && this(obj)")
+  def segment(pjp: ProceedingJoinPoint, obj: Profiled): AnyRef = {
+    val name = pjp.getStaticPart.getSignature.asInstanceOf[MethodSignature].getMethod.getName
+    val internalSegment = obj.segments.get(name)
+
+    internalSegment.map { segment ⇒
+      Tracer.currentContext.collect { ctx ⇒
+        val currentSegment = ctx.startSegment(segment.name, segment.category, segment.library)
+        segment.tags.foreach { case (key, value) ⇒ currentSegment.addMetadata(key, value) }
+        val result = pjp.proceed()
+        currentSegment.finish()
+        result
+      } getOrElse pjp.proceed()
+    } getOrElse pjp.proceed()
   }
 
-  @Around("execution(@kamon.annotation.Count * *(..)) && @annotation(count) && this(obj)")
-  def count(pjp: ProceedingJoinPoint, count: Count, obj: AnyRef): AnyRef = {
-    val name = eval(count.name(), obj)
-    val metadata = tags(count.tags())
-    val currentCounter = Kamon.simpleMetrics.counter(CounterKey(name, metadata))
-    try pjp.proceed() finally currentCounter.increment()
+  @Around("execution(@kamon.annotation.Time !static * (@kamon.annotation.Metrics Profiled+).*(..)) && this(obj)")
+  def time(pjp: ProceedingJoinPoint, obj: Profiled): AnyRef = {
+    val name = pjp.getStaticPart.getSignature.asInstanceOf[MethodSignature].getMethod.getName
+    val histogram = obj.histograms.get(name)
+    histogram.map(Latency.measure(_)(pjp.proceed)).getOrElse(pjp.proceed())
   }
 
-  @Around("execution(@kamon.annotation.MinMaxCount * *(..)) && @annotation(minMax) && this(obj)")
-  def minMax(pjp: ProceedingJoinPoint, minMax: MinMaxCount, obj: AnyRef): AnyRef = {
-    val name = eval(minMax.name(), obj)
-    val metadata = tags(minMax.tags())
-    val currentMinMax = Kamon.simpleMetrics.minMaxCounter(MinMaxCounterKey(name, metadata))
-    currentMinMax.increment()
-    try pjp.proceed() finally currentMinMax.decrement()
+  @Around("execution(@kamon.annotation.Count !static * (@kamon.annotation.Metrics Profiled+).*(..)) && this(obj)")
+  def count(pjp: ProceedingJoinPoint, obj: Profiled): AnyRef = {
+    val name = pjp.getStaticPart.getSignature.asInstanceOf[MethodSignature].getMethod.getName
+    val counter = obj.counters.get(name)
+    try pjp.proceed() finally counter.map(_.increment())
   }
 
-  @AfterReturning(pointcut = "execution(@kamon.annotation.Histogram (int || long || double || float) *(..)) && @annotation(histogram) && this(obj)", returning = "result")
-  def histogram(histogram: Histogram, obj: AnyRef, result: AnyRef): Unit = {
-    val name = eval(histogram.name(), obj)
-    val metadata = tags(histogram.tags())
-    val dynamicRange = DynamicRange(histogram.lowestDiscernibleValue(), histogram.highestTrackableValue(), histogram.precision())
-    val currentHistogram = Kamon.simpleMetrics.histogram(HistogramKey(name, metadata), dynamicRange)
-    currentHistogram.record(result.asInstanceOf[Number].longValue())
+  @Around("execution(@kamon.annotation.MinMaxCount !static * (@kamon.annotation.Metrics Profiled+).*(..)) && this(obj)")
+  def minMax(pjp: ProceedingJoinPoint, obj: Profiled): AnyRef = {
+    val name = pjp.getStaticPart.getSignature.asInstanceOf[MethodSignature].getMethod.getName
+    val minMaxCounter = obj.minMaxCounters.get(name)
+    minMaxCounter.map(_.increment())
+    try pjp.proceed() finally minMaxCounter.map(_.decrement())
   }
 
-  private def eval(name: String, obj: AnyRef): String = ELProcessorPool.useWithObject(obj)(processor ⇒ processor.evalToString(name))
-  private def tags(expression: String): Map[String, String] = ELProcessorPool.use(processor ⇒ processor.evalToMap(expression))
+  @AfterReturning(pointcut = "execution(@kamon.annotation.Histogram !static (int || long || double || float) (@kamon.annotation.Metrics Profiled+).*(..)) && this(obj)", returning = "result")
+  def histogram(jp: JoinPoint, obj: Profiled, result: AnyRef): Unit = {
+    val name = jp.getStaticPart.getSignature.asInstanceOf[MethodSignature].getMethod.getName
+    val histogram = obj.histograms.get(name)
+    histogram.map(_.record(result.asInstanceOf[Number].longValue()))
+  }
 }

@@ -16,6 +16,8 @@
 
 package kamon.annotation
 
+import java.util.concurrent.TimeUnit
+
 import com.typesafe.config.ConfigFactory
 import kamon.metric._
 import kamon.testkit.BaseKamonSpec
@@ -88,7 +90,11 @@ class AnnotationSpec extends BaseKamonSpec("annotation-spec") {
     }
 
     "count the current invocations of a method annotated with @MinMaxCount" in {
-      for (id ← 1 to 10) Annotated(id).countMinMax()
+      for (id ← 1 to 10) {
+        Annotated(id).countMinMax()
+      }
+
+      TimeUnit.MILLISECONDS.sleep(150) //wait a little in order to complete the compute of the counter
 
       val snapshot = takeSnapshotOf("simple-metric", "simple-metric")
       snapshot.minMaxCounter("minMax").get.sum should be(1)
@@ -158,6 +164,7 @@ class AnnotationSpec extends BaseKamonSpec("annotation-spec") {
   }
 }
 
+@Metrics
 case class Annotated(id: Long) {
 
   @Trace("trace")

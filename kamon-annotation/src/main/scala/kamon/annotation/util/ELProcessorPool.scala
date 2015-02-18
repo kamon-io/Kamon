@@ -29,14 +29,19 @@ import kamon.annotation.util.FastObjectPool.PoolFactory
 object ELProcessorPool {
   private val pool = new FastObjectPool[ELProcessor](ELPoolFactory(), Kamon(Annotation).poolSize)
 
-  def use[A](closure: ELProcessor ⇒ A): A = use(None)(closure)
-  def useWithObject[A](obj: AnyRef)(closure: ELProcessor ⇒ A): A = use(Some(obj))(closure)
+  def useWithObject[A](obj: AnyRef)(closure: ELProcessor ⇒ A): A = use { processor ⇒
+    processor.defineBean("this", obj)
+    closure(processor)
+  }
 
-  private def use[A](obj: Option[AnyRef])(closure: ELProcessor ⇒ A): A = {
+  def useWithClass[A](clazz: Class[_])(closure: ELProcessor ⇒ A): A = use { processor ⇒
+    processor.getELManager.importClass(clazz.getName)
+    closure(processor)
+  }
+
+  def use[A](closure: ELProcessor ⇒ A): A = {
     val holder = pool.take()
     val processor = holder.getValue
-    obj.map(processor.defineBean("this", _))
-
     try closure(processor) finally pool.release(holder)
   }
 }
