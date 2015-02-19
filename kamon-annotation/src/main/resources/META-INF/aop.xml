@@ -4,5 +4,6 @@
   <aspects>
       <aspect name="kamon.annotation.instrumentation.ClassToProfiledMixin"/>
       <aspect name="kamon.annotation.instrumentation.AnnotationInstrumentation"/>
+      <aspect name="kamon.annotation.instrumentation.StaticAnnotationInstrumentation"/>
   </aspects>
 </aspectj>

@@ -16,13 +16,11 @@
 
 package kamon.annotation.instrumentation
 
-import kamon.annotation.util.{ EnhancedELProcessor, ELProcessorPool }
-import kamon.trace.Tracer
-import kamon.util.Latency
-import org.aspectj.lang.annotation._
-import org.aspectj.lang.reflect.MethodSignature
-import org.aspectj.lang.{ JoinPoint, ProceedingJoinPoint }
 import java.lang.reflect.Modifier
+
+import kamon.annotation.util.{ EnhancedELProcessor, ELProcessorPool }
+import org.aspectj.lang.annotation._
+import org.aspectj.lang.{ JoinPoint, ProceedingJoinPoint }
 
 @Aspect
 class AnnotationInstrumentation extends BaseAnnotationInstrumentation {
@@ -47,60 +45,20 @@ class AnnotationInstrumentation extends BaseAnnotationInstrumentation {
   }
 
   @Around("execution(@kamon.annotation.Trace !static * (@kamon.annotation.Metrics Profiled+).*(..)) && this(obj)")
-  def trace(pjp: ProceedingJoinPoint, obj: Profiled): AnyRef = {
-    val name = pjp.getStaticPart.getSignature.asInstanceOf[MethodSignature].getMethod.getName
-    val trace = obj.traces.get(name)
-    trace.map { traceContext ⇒
-      Tracer.withContext(traceContext) {
-        val result = pjp.proceed()
-        Tracer.currentContext.finish()
-        result
-      }
-    } getOrElse pjp.proceed()
-  }
+  def trace(pjp: ProceedingJoinPoint, obj: Profiled): AnyRef = processTrace(obj.traces, pjp)
 
   @Around("execution(@kamon.annotation.Segment !static * (@kamon.annotation.Metrics Profiled+).*(..)) && this(obj)")
-  def segment(pjp: ProceedingJoinPoint, obj: Profiled): AnyRef = {
-    val name = pjp.getStaticPart.getSignature.asInstanceOf[MethodSignature].getMethod.getName
-    val internalSegment = obj.segments.get(name)
-
-    internalSegment.map { segment ⇒
-      Tracer.currentContext.collect { ctx ⇒
-        val currentSegment = ctx.startSegment(segment.name, segment.category, segment.library)
-        segment.tags.foreach { case (key, value) ⇒ currentSegment.addMetadata(key, value) }
-        val result = pjp.proceed()
-        currentSegment.finish()
-        result
-      } getOrElse pjp.proceed()
-    } getOrElse pjp.proceed()
-  }
+  def segment(pjp: ProceedingJoinPoint, obj: Profiled): AnyRef = processSegment(obj.segments, pjp)
 
   @Around("execution(@kamon.annotation.Time !static * (@kamon.annotation.Metrics Profiled+).*(..)) && this(obj)")
-  def time(pjp: ProceedingJoinPoint, obj: Profiled): AnyRef = {
-    val name = pjp.getStaticPart.getSignature.asInstanceOf[MethodSignature].getMethod.getName
-    val histogram = obj.histograms.get(name)
-    histogram.map(Latency.measure(_)(pjp.proceed)).getOrElse(pjp.proceed())
-  }
+  def time(pjp: ProceedingJoinPoint, obj: Profiled): AnyRef = processTime(obj.histograms, pjp)
 
   @Around("execution(@kamon.annotation.Count !static * (@kamon.annotation.Metrics Profiled+).*(..)) && this(obj)")
-  def count(pjp: ProceedingJoinPoint, obj: Profiled): AnyRef = {
-    val name = pjp.getStaticPart.getSignature.asInstanceOf[MethodSignature].getMethod.getName
-    val counter = obj.counters.get(name)
-    try pjp.proceed() finally counter.map(_.increment())
-  }
+  def count(pjp: ProceedingJoinPoint, obj: Profiled): AnyRef = processCount(obj.counters, pjp)
 
   @Around("execution(@kamon.annotation.MinMaxCount !static * (@kamon.annotation.Metrics Profiled+).*(..)) && this(obj)")
-  def minMax(pjp: ProceedingJoinPoint, obj: Profiled): AnyRef = {
-    val name = pjp.getStaticPart.getSignature.asInstanceOf[MethodSignature].getMethod.getName
-    val minMaxCounter = obj.minMaxCounters.get(name)
-    minMaxCounter.map(_.increment())
-    try pjp.proceed() finally minMaxCounter.map(_.decrement())
-  }
+  def minMax(pjp: ProceedingJoinPoint, obj: Profiled): AnyRef = processMinMax(obj.minMaxCounters, pjp)
 
   @AfterReturning(pointcut = "execution(@kamon.annotation.Histogram !static (int || long || double || float) (@kamon.annotation.Metrics Profiled+).*(..)) && this(obj)", returning = "result")
-  def histogram(jp: JoinPoint, obj: Profiled, result: AnyRef): Unit = {
-    val name = jp.getStaticPart.getSignature.asInstanceOf[MethodSignature].getMethod.getName
-    val histogram = obj.histograms.get(name)
-    histogram.map(_.record(result.asInstanceOf[Number].longValue()))
-  }
+  def histogram(jps: JoinPoint.StaticPart, obj: Profiled, result: AnyRef): Unit = processHistogram(obj.histograms, result, jps)
 }

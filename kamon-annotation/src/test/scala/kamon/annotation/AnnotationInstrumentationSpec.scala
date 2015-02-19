@@ -16,15 +16,12 @@
 
 package kamon.annotation
 
-import java.util.concurrent.TimeUnit
-
 import com.typesafe.config.ConfigFactory
 import kamon.metric._
 import kamon.testkit.BaseKamonSpec
-import org.scalatest.Matchers
 
-class AnnotationSpec extends BaseKamonSpec("annotation-spec") {
-  import TraceMetricsSpec.SegmentSyntax
+class AnnotationInstrumentationSpec extends BaseKamonSpec("annotation-instrumentation-spec") {
+  import kamon.metric.TraceMetricsSpec.SegmentSyntax
 
   override lazy val config =
     ConfigFactory.parseString(
@@ -94,10 +91,8 @@ class AnnotationSpec extends BaseKamonSpec("annotation-spec") {
         Annotated(id).countMinMax()
       }
 
-      TimeUnit.MILLISECONDS.sleep(150) //wait a little in order to complete the compute of the counter
-
       val snapshot = takeSnapshotOf("simple-metric", "simple-metric")
-      snapshot.minMaxCounter("minMax").get.sum should be(1)
+      snapshot.minMaxCounter("minMax").get.max should be(1)
     }
 
     "count the current invocations of a method annotated with @MinMaxCount and evaluate EL expressions" in {
