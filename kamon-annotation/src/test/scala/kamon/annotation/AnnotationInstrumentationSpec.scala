@@ -62,7 +62,7 @@ class AnnotationInstrumentationSpec extends BaseKamonSpec("annotation-instrument
       snapshot.segment("segment:1", "segments", "segment") should not be empty
       snapshot.segment("inner-segment", "inner", "segment") should not be empty
 
-      snapshot.segment("segment:1", "segments", "segment") should not be empty
+      snapshot.segment("segment:2", "segments", "segment") should not be empty
       snapshot.segment("inner-segment", "inner", "segment") should not be empty
     }
 

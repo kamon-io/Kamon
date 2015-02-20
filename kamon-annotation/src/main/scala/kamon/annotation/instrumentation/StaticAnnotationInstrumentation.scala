@@ -32,17 +32,17 @@ class StaticAnnotationInstrumentation extends BaseAnnotationInstrumentation {
 
     val clazz = jps.getSignature.getDeclaringType
 
-    val stringEvaluator: StringEvaluator = (str: String) ⇒ ELProcessorPool.useWithClass(clazz)(_.evalToString(str))
-    val tagsEvaluator: TagsEvaluator = (str: String) ⇒ ELProcessorPool.use(_.evalToMap(str))
+    implicit val stringEvaluator = StringEvaluator { str ⇒ ELProcessorPool.useWithClass(clazz)(_.evalToString(str)) }
+    implicit val tagsEvaluator = TagsEvaluator { str ⇒ ELProcessorPool.use(_.evalToMap(str)) }
 
     clazz.getDeclaredMethods.filter(method ⇒ Modifier.isStatic(method.getModifiers) && !method.isSynthetic).foreach {
       method ⇒
-        registerTrace(method, StaticAnnotationInstrumentation.traces, stringEvaluator, tagsEvaluator)
-        registerSegment(method, StaticAnnotationInstrumentation.segments, stringEvaluator, tagsEvaluator)
-        registerCounter(method, StaticAnnotationInstrumentation.counters, stringEvaluator, tagsEvaluator)
-        registerMinMaxCounter(method, StaticAnnotationInstrumentation.minMaxCounters, stringEvaluator, tagsEvaluator)
-        registerHistogram(method, StaticAnnotationInstrumentation.histograms, stringEvaluator, tagsEvaluator)
-        registerTime(method, StaticAnnotationInstrumentation.histograms, stringEvaluator, tagsEvaluator)
+        registerTrace(method, StaticAnnotationInstrumentation.traces)
+        registerSegment(method, StaticAnnotationInstrumentation.segments)
+        registerCounter(method, StaticAnnotationInstrumentation.counters)
+        registerMinMaxCounter(method, StaticAnnotationInstrumentation.minMaxCounters)
+        registerHistogram(method, StaticAnnotationInstrumentation.histograms)
+        registerTime(method, StaticAnnotationInstrumentation.histograms)
     }
   }
 

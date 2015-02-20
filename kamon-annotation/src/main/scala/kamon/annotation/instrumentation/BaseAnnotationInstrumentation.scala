@@ -33,10 +33,7 @@ import scala.collection.concurrent.TrieMap
 
 class BaseAnnotationInstrumentation {
 
-  type TagsEvaluator = String ⇒ Map[String, String]
-  type StringEvaluator = String ⇒ String
-
-  @inline final def registerTime(method: Method, histograms: TrieMap[String, instrument.Histogram], eval: StringEvaluator, tags: TagsEvaluator): Any = {
+  @inline final def registerTime(method: Method, histograms: TrieMap[String, instrument.Histogram])(implicit eval: StringEvaluator, tags: TagsEvaluator): Any = {
     if (method.isAnnotationPresent(classOf[Time])) {
       val time = method.getAnnotation(classOf[Time])
       val name = eval(time.name())
@@ -46,7 +43,7 @@ class BaseAnnotationInstrumentation {
     }
   }
 
-  @inline final def registerHistogram(method: Method, histograms: TrieMap[String, instrument.Histogram], eval: StringEvaluator, tags: TagsEvaluator): Unit = {
+  @inline final def registerHistogram(method: Method, histograms: TrieMap[String, instrument.Histogram])(implicit eval: StringEvaluator, tags: TagsEvaluator): Unit = {
     if (method.isAnnotationPresent(classOf[Histogram])) {
       val histogram = method.getAnnotation(classOf[Histogram])
       val name = eval(histogram.name())
@@ -57,7 +54,7 @@ class BaseAnnotationInstrumentation {
     }
   }
 
-  @inline final def registerMinMaxCounter(method: Method, minMaxCounters: TrieMap[String, MinMaxCounter], eval: StringEvaluator, tags: TagsEvaluator): Unit = {
+  @inline final def registerMinMaxCounter(method: Method, minMaxCounters: TrieMap[String, MinMaxCounter])(implicit eval: StringEvaluator, tags: TagsEvaluator): Unit = {
     if (method.isAnnotationPresent(classOf[MinMaxCount])) {
       val minMaxCount = method.getAnnotation(classOf[MinMaxCount])
       val name = eval(minMaxCount.name())
@@ -67,7 +64,7 @@ class BaseAnnotationInstrumentation {
     }
   }
 
-  @inline final def registerCounter(method: Method, counters: TrieMap[String, Counter], eval: StringEvaluator, tags: TagsEvaluator): Unit = {
+  @inline final def registerCounter(method: Method, counters: TrieMap[String, Counter])(implicit eval: StringEvaluator, tags: TagsEvaluator): Unit = {
     if (method.isAnnotationPresent(classOf[Count])) {
       val count = method.getAnnotation(classOf[Count])
       val name = eval(count.name())
@@ -77,7 +74,7 @@ class BaseAnnotationInstrumentation {
     }
   }
 
-  @inline final def registerTrace(method: Method, traces: TrieMap[String, TraceContext], eval: StringEvaluator, tags: TagsEvaluator): Unit = {
+  @inline final def registerTrace(method: Method, traces: TrieMap[String, TraceContext])(implicit eval: StringEvaluator, tags: TagsEvaluator): Unit = {
     if (method.isAnnotationPresent(classOf[Trace])) {
       val count = method.getAnnotation(classOf[Trace])
       val name = eval(count.value())
@@ -88,7 +85,7 @@ class BaseAnnotationInstrumentation {
     }
   }
 
-  @inline final def registerSegment(method: Method, segments: TrieMap[String, SegmentInfo], eval: StringEvaluator, tags: TagsEvaluator): Unit = {
+  @inline final def registerSegment(method: Method, segments: TrieMap[String, SegmentInfo])(implicit eval: StringEvaluator, tags: TagsEvaluator): Unit = {
     if (method.isAnnotationPresent(classOf[Segment])) {
       val segment = method.getAnnotation(classOf[Segment])
       val name = eval(segment.name())
@@ -165,3 +162,19 @@ trait Profiled {
 }
 
 case class SegmentInfo(name: String, category: String, library: String, tags: Map[String, String])
+
+trait StringEvaluator extends (String ⇒ String)
+
+object StringEvaluator {
+  def apply(thunk: String ⇒ String) = new StringEvaluator {
+    def apply(str: String) = thunk(str)
+  }
+}
+
+trait TagsEvaluator extends (String ⇒ Map[String, String])
+
+object TagsEvaluator {
+  def apply(thunk: String ⇒ Map[String, String]) = new TagsEvaluator {
+    def apply(str: String) = thunk(str)
+  }
+}

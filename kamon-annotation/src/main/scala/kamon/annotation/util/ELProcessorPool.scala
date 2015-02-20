@@ -24,12 +24,13 @@ import kamon.annotation.resolver.PrivateFieldELResolver
 import kamon.annotation.util.FastObjectPool.PoolFactory
 
 /**
- * Convenient pool of @see ELProcessor, since it is not thread safe.
+ * Convenient pool of @see ELProcessor, since it is not thread safe and the creation is expensive.
  */
 object ELProcessorPool {
   private val pool = new FastObjectPool[ELProcessor](ELPoolFactory(), Kamon(Annotation).poolSize)
 
   def useWithObject[A](obj: AnyRef)(closure: ELProcessor ⇒ A): A = use { processor ⇒
+    processor.getELManager.importClass(obj.getClass.getName)
     processor.defineBean("this", obj)
     closure(processor)
   }

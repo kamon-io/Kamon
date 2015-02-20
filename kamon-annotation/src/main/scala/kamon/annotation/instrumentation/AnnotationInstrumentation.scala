@@ -30,17 +30,17 @@ class AnnotationInstrumentation extends BaseAnnotationInstrumentation {
 
     import EnhancedELProcessor.Syntax
 
-    val stringEvaluator: StringEvaluator = (str: String) ⇒ ELProcessorPool.useWithObject(profiled)(_.evalToString(str))
-    val tagsEvaluator: TagsEvaluator = (str: String) ⇒ ELProcessorPool.use(_.evalToMap(str))
+    implicit val stringEvaluator = StringEvaluator { str ⇒ ELProcessorPool.useWithObject(profiled)(_.evalToString(str)) }
+    implicit val tagsEvaluator = TagsEvaluator { str ⇒ ELProcessorPool.use(_.evalToMap(str)) }
 
     profiled.getClass.getDeclaredMethods.filterNot(method ⇒ Modifier.isStatic(method.getModifiers)).foreach {
       method ⇒
-        registerTrace(method, profiled.traces, stringEvaluator, tagsEvaluator)
-        registerSegment(method, profiled.segments, stringEvaluator, tagsEvaluator)
-        registerCounter(method, profiled.counters, stringEvaluator, tagsEvaluator)
-        registerMinMaxCounter(method, profiled.minMaxCounters, stringEvaluator, tagsEvaluator)
-        registerHistogram(method, profiled.histograms, stringEvaluator, tagsEvaluator)
-        registerTime(method, profiled.histograms, stringEvaluator, tagsEvaluator)
+        registerTrace(method, profiled.traces)
+        registerSegment(method, profiled.segments)
+        registerCounter(method, profiled.counters)
+        registerMinMaxCounter(method, profiled.minMaxCounters)
+        registerHistogram(method, profiled.histograms)
+        registerTime(method, profiled.histograms)
     }
   }
 
