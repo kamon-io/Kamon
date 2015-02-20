@@ -33,7 +33,6 @@ class StaticAnnotationInstrumentation extends BaseAnnotationInstrumentation {
     val clazz = jps.getSignature.getDeclaringType
 
     implicit val stringEvaluator = StringEvaluator { str ⇒ ELProcessorPool.useWithClass(clazz)(_.evalToString(str)) }
-    implicit val tagsEvaluator = TagsEvaluator { str ⇒ ELProcessorPool.use(_.evalToMap(str)) }
 
     clazz.getDeclaredMethods.filter(method ⇒ Modifier.isStatic(method.getModifiers) && !method.isSynthetic).foreach {
       method ⇒

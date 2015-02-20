@@ -31,7 +31,6 @@ class AnnotationInstrumentation extends BaseAnnotationInstrumentation {
     import EnhancedELProcessor.Syntax
 
     implicit val stringEvaluator = StringEvaluator { str ⇒ ELProcessorPool.useWithObject(profiled)(_.evalToString(str)) }
-    implicit val tagsEvaluator = TagsEvaluator { str ⇒ ELProcessorPool.use(_.evalToMap(str)) }
 
     profiled.getClass.getDeclaredMethods.filterNot(method ⇒ Modifier.isStatic(method.getModifiers)).foreach {
       method ⇒

@@ -19,6 +19,7 @@ package kamon.annotation.instrumentation
 import java.lang.reflect.Method
 
 import kamon.Kamon
+import kamon.annotation.util.{ EnhancedELProcessor, ELProcessorPool }
 import kamon.annotation.{ Histogram, _ }
 import kamon.metric.instrument.Histogram.DynamicRange
 import kamon.metric.instrument.{ Counter, MinMaxCounter }
@@ -33,66 +34,68 @@ import scala.collection.concurrent.TrieMap
 
 class BaseAnnotationInstrumentation {
 
-  @inline final def registerTime(method: Method, histograms: TrieMap[String, instrument.Histogram])(implicit eval: StringEvaluator, tags: TagsEvaluator): Any = {
+  import EnhancedELProcessor.Syntax
+
+  @inline final def registerTime(method: Method, histograms: TrieMap[String, instrument.Histogram])(implicit evalString: StringEvaluator): Any = {
     if (method.isAnnotationPresent(classOf[Time])) {
       val time = method.getAnnotation(classOf[Time])
-      val name = eval(time.name())
-      val metadata = tags(time.tags())
-      val currentHistogram = Kamon.simpleMetrics.histogram(HistogramKey(name, metadata))
+      val name = evalString(time.name())
+      val tags = evalTags(time.tags())
+      val currentHistogram = Kamon.simpleMetrics.histogram(HistogramKey(name, tags))
       histograms.put(methodName(method), currentHistogram)
     }
   }
 
-  @inline final def registerHistogram(method: Method, histograms: TrieMap[String, instrument.Histogram])(implicit eval: StringEvaluator, tags: TagsEvaluator): Unit = {
+  @inline final def registerHistogram(method: Method, histograms: TrieMap[String, instrument.Histogram])(implicit eval: StringEvaluator): Unit = {
     if (method.isAnnotationPresent(classOf[Histogram])) {
       val histogram = method.getAnnotation(classOf[Histogram])
       val name = eval(histogram.name())
-      val metadata = tags(histogram.tags())
+      val tags = evalTags(histogram.tags())
       val dynamicRange = DynamicRange(histogram.lowestDiscernibleValue(), histogram.highestTrackableValue(), histogram.precision())
-      val currentHistogram = Kamon.simpleMetrics.histogram(HistogramKey(name, metadata), dynamicRange)
+      val currentHistogram = Kamon.simpleMetrics.histogram(HistogramKey(name, tags), dynamicRange)
       histograms.put(methodName(method), currentHistogram)
     }
   }
 
-  @inline final def registerMinMaxCounter(method: Method, minMaxCounters: TrieMap[String, MinMaxCounter])(implicit eval: StringEvaluator, tags: TagsEvaluator): Unit = {
+  @inline final def registerMinMaxCounter(method: Method, minMaxCounters: TrieMap[String, MinMaxCounter])(implicit eval: StringEvaluator): Unit = {
     if (method.isAnnotationPresent(classOf[MinMaxCount])) {
       val minMaxCount = method.getAnnotation(classOf[MinMaxCount])
       val name = eval(minMaxCount.name())
-      val metadata = tags(minMaxCount.tags())
-      val minMaxCounter = Kamon.simpleMetrics.minMaxCounter(MinMaxCounterKey(name, metadata))
+      val tags = evalTags(minMaxCount.tags())
+      val minMaxCounter = Kamon.simpleMetrics.minMaxCounter(MinMaxCounterKey(name, tags))
       minMaxCounters.put(methodName(method), minMaxCounter)
     }
   }
 
-  @inline final def registerCounter(method: Method, counters: TrieMap[String, Counter])(implicit eval: StringEvaluator, tags: TagsEvaluator): Unit = {
+  @inline final def registerCounter(method: Method, counters: TrieMap[String, Counter])(implicit eval: StringEvaluator): Unit = {
     if (method.isAnnotationPresent(classOf[Count])) {
       val count = method.getAnnotation(classOf[Count])
       val name = eval(count.name())
-      val metadata = tags(count.tags())
-      val counter = Kamon.simpleMetrics.counter(CounterKey(name, metadata))
+      val tags = evalTags(count.tags())
+      val counter = Kamon.simpleMetrics.counter(CounterKey(name, tags))
       counters.put(methodName(method), counter)
     }
   }
 
-  @inline final def registerTrace(method: Method, traces: TrieMap[String, TraceContext])(implicit eval: StringEvaluator, tags: TagsEvaluator): Unit = {
+  @inline final def registerTrace(method: Method, traces: TrieMap[String, TraceContext])(implicit eval: StringEvaluator): Unit = {
     if (method.isAnnotationPresent(classOf[Trace])) {
       val count = method.getAnnotation(classOf[Trace])
       val name = eval(count.value())
-      val metadata = tags(count.tags())
+      val tags = evalTags(count.tags())
       val trace = Kamon.tracer.newContext(name)
-      metadata.foreach { case (key, value) ⇒ trace.addMetadata(key, value) }
+      tags.foreach { case (key, value) ⇒ trace.addMetadata(key, value) }
       traces.put(methodName(method), trace)
     }
   }
 
-  @inline final def registerSegment(method: Method, segments: TrieMap[String, SegmentInfo])(implicit eval: StringEvaluator, tags: TagsEvaluator): Unit = {
+  @inline final def registerSegment(method: Method, segments: TrieMap[String, SegmentInfo])(implicit eval: StringEvaluator): Unit = {
     if (method.isAnnotationPresent(classOf[Segment])) {
       val segment = method.getAnnotation(classOf[Segment])
       val name = eval(segment.name())
       val category = eval(segment.category())
       val library = eval(segment.library())
-      val metadata = tags(segment.tags())
-      segments.put(methodName(method), SegmentInfo(name, category, library, metadata))
+      val tags = evalTags(segment.tags())
+      segments.put(methodName(method), SegmentInfo(name, category, library, tags))
     }
   }
 
@@ -145,6 +148,7 @@ class BaseAnnotationInstrumentation {
   }
 
   private[this] def methodName(method: Method): String = method.toString.replace(" ", "-").toLowerCase
+  private[this] def evalTags(str: String): Map[String, String] = ELProcessorPool.use(_.evalToMap(str))
 }
 
 @Aspect
@@ -167,14 +171,6 @@ trait StringEvaluator extends (String ⇒ String)
 
 object StringEvaluator {
   def apply(thunk: String ⇒ String) = new StringEvaluator {
-    def apply(str: String) = thunk(str)
-  }
-}
-
-trait TagsEvaluator extends (String ⇒ Map[String, String])
-
-object TagsEvaluator {
-  def apply(thunk: String ⇒ Map[String, String]) = new TagsEvaluator {
     def apply(str: String) = thunk(str)
   }
 }
