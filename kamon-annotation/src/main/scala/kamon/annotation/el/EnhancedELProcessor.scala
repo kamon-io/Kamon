@@ -1,4 +1,4 @@
-package kamon.annotation.util
+package kamon.annotation.el
 
 import javax.el.ELProcessor
 

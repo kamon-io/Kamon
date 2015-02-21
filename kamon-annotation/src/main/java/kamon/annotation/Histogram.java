@@ -82,7 +82,7 @@ public @interface Histogram {
 
     /**
      * Tags are a way of adding dimensions to metrics,
-     * these are constructed using EL syntax e.g. "${{'algorithm':'1','env':'production'}}"
+     * these are constructed using EL syntax e.g. "${'algorithm':'1','env':'production'}"
      *
      * @return the tags associated to the histogram
      */

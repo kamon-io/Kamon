@@ -40,26 +40,24 @@ class StaticAnnotationInstrumentationJavaSpec extends BaseKamonSpec("static-anno
       snapshot.histogram("elapsed-time").get.numberOfMeasurements should be(10)
       snapshot.segments.size should be(0)
     }
-    "create a segment when is invoked a static method annotated with @Trace and @Segment" in {
+    "create a segment when is invoked a static method annotated with @Segment" in {
       for (id ← 1 to 10) AnnotatedJavaClass.segment()
 
       val snapshot = takeSnapshotOf("trace-with-segment", "trace")
       snapshot.histogram("elapsed-time").get.numberOfMeasurements should be(10)
 
-      snapshot.segments.size should be(2)
-      snapshot.segment("segment", "segments", "segment") should not be empty
+      snapshot.segments.size should be(1)
       snapshot.segment("inner-segment", "inner", "segment") should not be empty
     }
 
-    "create a segment when is invoked a static method annotated with @Trace and @Segment and evaluate EL expressions" in {
+    "create a segment when is invoked a static method annotated with @Segment and evaluate EL expressions" in {
       for (id ← 1 to 10) AnnotatedJavaClass.segmentWithEL()
 
       val snapshot = takeSnapshotOf("trace-with-segment-el", "trace")
       snapshot.histogram("elapsed-time").get.numberOfMeasurements should be(10)
 
-      snapshot.segments.size should be(2)
-      snapshot.segment("segment:10", "segments", "segment") should not be empty
-      snapshot.segment("inner-segment", "inner", "segment") should not be empty
+      snapshot.segments.size should be(1)
+      snapshot.segment("inner-segment:10", "segments", "segment") should not be empty
     }
 
     "count the invocations of a static method annotated with @Count" in {

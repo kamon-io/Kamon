@@ -14,7 +14,7 @@
  * =========================================================================================
  */
 
-package kamon.annotation.resolver;
+package kamon.annotation.el.resolver;
 
 import java.beans.FeatureDescriptor;
 import java.lang.reflect.Field;

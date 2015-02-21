@@ -18,21 +18,23 @@ package kamon.annotation.instrumentation
 
 import java.lang.reflect.Modifier
 
-import kamon.annotation.util.{ EnhancedELProcessor, ELProcessorPool }
+import kamon.annotation.el.{ ELProcessorFactory, EnhancedELProcessor }
 import org.aspectj.lang.annotation.{ After, AfterReturning, Around, Aspect }
 import org.aspectj.lang.{ JoinPoint, ProceedingJoinPoint }
 
 @Aspect
 class StaticAnnotationInstrumentation extends BaseAnnotationInstrumentation {
 
-  @After("staticinitialization(@kamon.annotation.Metrics *)")
+  @After("staticinitialization(@kamon.annotation.EnableKamonAnnotations *)")
   def creation(jps: JoinPoint.StaticPart): Unit = {
 
     import EnhancedELProcessor.Syntax
 
     val clazz = jps.getSignature.getDeclaringType
+    val elProcessor = ELProcessorFactory.withClass(clazz)
 
-    implicit val stringEvaluator = StringEvaluator { str ⇒ ELProcessorPool.useWithClass(clazz)(_.evalToString(str)) }
+    implicit val stringEvaluator = StringEvaluator { str ⇒ elProcessor.evalToString(str) }
+    implicit val tagsEvaluator = TagsEvaluator { str ⇒ elProcessor.evalToMap(str) }
 
     clazz.getDeclaredMethods.filter(method ⇒ Modifier.isStatic(method.getModifiers) && !method.isSynthetic).foreach {
       method ⇒
@@ -45,23 +47,23 @@ class StaticAnnotationInstrumentation extends BaseAnnotationInstrumentation {
     }
   }
 
-  @Around("execution(@kamon.annotation.Trace static * (@kamon.annotation.Metrics *).*(..))")
+  @Around("execution(@kamon.annotation.Trace static * (@kamon.annotation.EnableKamonAnnotations *).*(..))")
   def trace(pjp: ProceedingJoinPoint): AnyRef = processTrace(StaticAnnotationInstrumentation.traces, pjp)
 
-  @Around("execution(@kamon.annotation.Segment static * (@kamon.annotation.Metrics *).*(..))")
+  @Around("execution(@kamon.annotation.Segment static * (@kamon.annotation.EnableKamonAnnotations *).*(..))")
   def segment(pjp: ProceedingJoinPoint): AnyRef = processSegment(StaticAnnotationInstrumentation.segments, pjp)
 
-  @Around("execution(@kamon.annotation.Time static * (@kamon.annotation.Metrics *).*(..))")
+  @Around("execution(@kamon.annotation.Time static * (@kamon.annotation.EnableKamonAnnotations *).*(..))")
   def time(pjp: ProceedingJoinPoint): AnyRef = processTime(StaticAnnotationInstrumentation.histograms, pjp)
 
-  @Around("execution(@kamon.annotation.Count static * (@kamon.annotation.Metrics *).*(..))")
+  @Around("execution(@kamon.annotation.Count static * (@kamon.annotation.EnableKamonAnnotations *).*(..))")
   def count(pjp: ProceedingJoinPoint): AnyRef = processCount(StaticAnnotationInstrumentation.counters, pjp)
 
-  @Around("execution(@kamon.annotation.MinMaxCount static * (@kamon.annotation.Metrics *).*(..))")
+  @Around("execution(@kamon.annotation.MinMaxCount static * (@kamon.annotation.EnableKamonAnnotations *).*(..))")
   def minMax(pjp: ProceedingJoinPoint): AnyRef = processMinMax(StaticAnnotationInstrumentation.minMaxCounters, pjp)
 
-  @AfterReturning(pointcut = "execution(@kamon.annotation.Histogram static (int || long || double || float) (@kamon.annotation.Metrics *).*(..))", returning = "result")
+  @AfterReturning(pointcut = "execution(@kamon.annotation.Histogram static (int || long || double || float) (@kamon.annotation.EnableKamonAnnotations *).*(..))", returning = "result")
   def histogram(jps: JoinPoint.StaticPart, result: AnyRef): Unit = processHistogram(StaticAnnotationInstrumentation.histograms, result, jps)
 }
 
-case object StaticAnnotationInstrumentation extends Profiled
+case object StaticAnnotationInstrumentation extends AnnotationInstruments

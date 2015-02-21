@@ -16,7 +16,7 @@
 
 package kamon.annotation;
 
-@Metrics
+@EnableKamonAnnotations
 public class AnnotatedJavaClass {
 
     public static String ID = "10";
@@ -25,15 +25,13 @@ public class AnnotatedJavaClass {
     public static void trace() {}
 
     @Trace("trace-with-segment")
-    @Segment(name = "segment", category = "segments", library = "segment")
     public static void segment() {
         inner(); // method annotated with @Segment
     }
 
     @Trace("trace-with-segment-el")
-    @Segment(name = "#{'segment:' += AnnotatedJavaClass.ID}", category = "segments", library = "segment")
     public static void segmentWithEL() {
-        inner(); // method annotated with @Segment
+        innerWithEL(); // method annotated with @Segment
     }
 
     @Count(name = "count")
@@ -62,4 +60,7 @@ public class AnnotatedJavaClass {
 
     @Segment(name = "inner-segment", category = "inner", library = "segment")
     private static void inner() {}
+
+    @Segment(name = "#{'inner-segment:' += AnnotatedJavaClass.ID}", category = "segments", library = "segment")
+    private static void innerWithEL() {}
 }

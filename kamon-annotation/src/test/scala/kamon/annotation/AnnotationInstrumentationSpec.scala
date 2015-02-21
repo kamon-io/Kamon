@@ -41,29 +41,24 @@ class AnnotationInstrumentationSpec extends BaseKamonSpec("annotation-instrument
       snapshot.segments.size should be(0)
     }
 
-    "create a segment when is invoked a method annotated with @Trace and @Segment" in {
+    "create a segment when is invoked a method annotated with @Segment" in {
       for (id ← 1 to 10) Annotated().segment()
 
       val snapshot = takeSnapshotOf("trace-with-segment", "trace")
       snapshot.histogram("elapsed-time").get.numberOfMeasurements should be(10)
 
-      snapshot.segments.size should be(2)
-      snapshot.segment("segment", "segments", "segment") should not be empty
+      snapshot.segments.size should be(1)
       snapshot.segment("inner-segment", "inner", "segment") should not be empty
     }
 
-    "create a segment when is invoked a method annotated with @Trace and @Segment and evaluate EL expressions" in {
+    "create a segment when is invoked a method annotated with @Segment and evaluate EL expressions" in {
       for (id ← 1 to 10) Annotated(id).segmentWithEL()
 
       val snapshot = takeSnapshotOf("trace-with-segment-el", "trace")
       snapshot.histogram("elapsed-time").get.numberOfMeasurements should be(10)
 
-      snapshot.segments.size should be(11)
-      snapshot.segment("segment:1", "segments", "segment") should not be empty
-      snapshot.segment("inner-segment", "inner", "segment") should not be empty
-
-      snapshot.segment("segment:2", "segments", "segment") should not be empty
-      snapshot.segment("inner-segment", "inner", "segment") should not be empty
+      snapshot.segments.size should be(10)
+      snapshot.segment("inner-segment:1", "inner", "segment") should not be empty
     }
 
     "count the invocations of a method annotated with @Count" in {
@@ -159,22 +154,20 @@ class AnnotationInstrumentationSpec extends BaseKamonSpec("annotation-instrument
   }
 }
 
-@Metrics
+@EnableKamonAnnotations
 case class Annotated(id: Long) {
 
   @Trace("trace")
   def trace(): Unit = {}
 
   @Trace("trace-with-segment")
-  @Segment(name = "segment", category = "segments", library = "segment")
   def segment(): Unit = {
     inner() // method annotated with @Segment
   }
 
   @Trace("trace-with-segment-el")
-  @Segment(name = "#{'segment:' += this.id}", category = "segments", library = "segment")
   def segmentWithEL(): Unit = {
-    inner() // method annotated with @Segment
+    innerWithEL() // method annotated with @Segment
   }
 
   @Count(name = "count")
@@ -203,6 +196,9 @@ case class Annotated(id: Long) {
 
   @Segment(name = "inner-segment", category = "inner", library = "segment")
   private def inner(): Unit = {}
+
+  @Segment(name = "#{'inner-segment:' += this.id}", category = "inner", library = "segment")
+  private def innerWithEL(): Unit = {}
 }
 
 object Annotated {
