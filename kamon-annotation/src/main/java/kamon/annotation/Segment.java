@@ -18,12 +18,55 @@ package kamon.annotation;
 
 import java.lang.annotation.*;
 
+/**
+ * A marker annotation to start a new Segment.
+ *
+ * <p/>
+ * Given a method like this:
+ * <pre><code>
+ *     {@literal @}Segment("coolSegmentName", tags="${'my-cool-tag':'my-cool-value'}")
+ *     public String coolName(String name) {
+ *         return "Hello " + name;
+ *     }
+ * </code></pre>
+ * <p/>
+ *
+ * A new Segment will be created only if in the moment of the method execution exist a TraceContext.
+ */
 @Documented
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Segment {
-    String name();
-    String category();
-    String library();
-    String tags() default "";
+
+  /**
+   * @return The Segment's name.
+   *
+   *  Also, the Segment name can be resolved with an EL expression that evaluates to a String:
+   *
+   * <pre>
+   * {@code
+   *  class Segment {
+   *        private long id;
+   *
+   *        public long getId() { return id; }
+   *
+   *        {@literal @}Segment (name = "${'segmentID:' += this.id}")
+   *        void segment() {} // create a Segment with name => segmentID:[id]
+   *    }
+   * }
+   * </pre>
+   */
+   String name();
+
+   String category();
+
+   String library();
+
+  /**
+   * Tags are a way of adding dimensions to metrics,
+   * these are constructed using EL syntax e.g. "${'algorithm':'1','env':'production'}"
+   *
+   * @return the tags associated to the segment
+   */
+   String tags() default "";
 }

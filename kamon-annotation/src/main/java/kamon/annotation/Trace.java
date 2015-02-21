@@ -18,10 +18,52 @@ package kamon.annotation;
 
 import java.lang.annotation.*;
 
+/**
+ * A marker annotation to start a new Trace.
+ *
+ * <p/>
+ * Given a method like this:
+ * <pre><code>
+ *     {@literal @}Trace("coolTraceName", tags="${'my-cool-tag':'my-cool-value'}")
+ *     public String coolName(String name) {
+ *         return "Hello " + name;
+ *     }
+ * </code></pre>
+ * <p/>
+ *
+ * A new Trace will be created for the defining method with the name each time the
+ * {@code #coolName(String)} method is invoked.
+ */
+
 @Documented
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Trace {
-    String value();
-    String tags() default "";
+  /**
+   * @return The Trace's name.
+   *
+   *  Also, the Trace name can be resolved with an EL expression that evaluates to a String:
+   *
+   * <pre>
+   * {@code
+   *  class Traced  {
+   *        private long id;
+   *
+   *        public long getId() { return id; }
+   *
+   *        {@literal @}Trace (name = "${'traceID:' += this.id}")
+   *        void countedMethod() {} // create a Trace with name => traceID:[id]
+   *    }
+   * }
+   * </pre>
+   */
+   String value();
+
+   /**
+    * Tags are a way of adding dimensions to metrics,
+    * these are constructed using EL syntax e.g. "${'algorithm':'1','env':'production'}"
+    *
+    * @return the tags associated to the trace
+    */
+   String tags() default "";
 }

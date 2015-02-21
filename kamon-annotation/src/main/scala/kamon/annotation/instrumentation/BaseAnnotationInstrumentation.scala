@@ -148,7 +148,7 @@ class BaseAnnotationInstrumentation {
 }
 
 @Aspect
-class ClassToProfiledMixin {
+class ClassToAnnotationInstrumentsMixin {
   @DeclareMixin("(@kamon.annotation.EnableKamonAnnotations *)")
   def mixinClassToAnnotationInstruments: AnnotationInstruments = new AnnotationInstruments {}
 }
