@@ -20,8 +20,8 @@ import java.lang.annotation.*;
 
 /**
  * A marker annotation to define a method as a MinMaxCounter.
- *
- * <p/>
+ * <p>
+ * <p>
  * Given a method like this:
  * <pre><code>
  *     {@literal @}MinMaxCount(name = "coolName", tags="${'my-cool-tag':'my-cool-value'}")
@@ -29,8 +29,8 @@ import java.lang.annotation.*;
  *         return "Hello " + name;
  *     }
  * </code></pre>
- * <p/>
- *
+ * <p>
+ * <p>
  * A {@link kamon.metric.instrument.MinMaxCounter MinMaxCounter} for the defining method with the name {@code coolName} will be created and each time the
  * {@code #coolName(String)} method is invoked the counter is decremented when the method returns,
  * counting current invocations of the annotated method.
@@ -42,9 +42,9 @@ public @interface MinMaxCount {
 
     /**
      * @return The MinMaxCounter's name.
-     *
+     * <p>
      * Also, the Metric name can be resolved with an EL expression that evaluates to a String:
-     *
+     * <p>
      * <pre>
      * {@code
      *  class MinMaxCounted  {

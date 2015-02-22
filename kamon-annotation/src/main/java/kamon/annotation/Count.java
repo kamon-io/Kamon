@@ -20,8 +20,8 @@ import java.lang.annotation.*;
 
 /**
  * A marker annotation to define a method as a Counter.
- *
- * <p/>
+ * <p>
+ * <p>
  * Given a method like this:
  * <pre><code>
  *     {@literal @}Count(name = "coolName", tags="${'my-cool-tag':'my-cool-value'}")
@@ -29,8 +29,8 @@ import java.lang.annotation.*;
  *         return "Hello " + name;
  *     }
  * </code></pre>
- * <p/>
- *
+ * <p>
+ * <p>
  * A {@link kamon.metric.instrument.Counter Counter} for the defining method with the name {@code coolName} will be created and each time the
  * {@code #coolName(String)} method is invoked, the counter will be incremented.
  */
@@ -41,9 +41,9 @@ public @interface Count {
 
     /**
      * @return The counter's name.
-     *
-     *  Also, the Metric name can be resolved with an EL expression that evaluates to a String:
-     *
+     * <p>
+     * Also, the Metric name can be resolved with an EL expression that evaluates to a String:
+     * <p>
      * <pre>
      * {@code
      *  class Counted  {

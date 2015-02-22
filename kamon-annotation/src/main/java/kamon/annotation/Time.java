@@ -25,8 +25,8 @@ import java.lang.annotation.Target;
 
 /**
  * A marker annotation to define a method as a timed.
- *
- * <p/>
+ * <p>
+ * <p>
  * Given a method like this:
  * <pre><code>
  *     {@literal @}Timed(name = "coolName", tags="""${{'my-cool-tag':'my-cool-value'}}""")
@@ -34,8 +34,8 @@ import java.lang.annotation.Target;
  *         return "Hello " + name;
  *     }
  * </code></pre>
- * <p/>
- *
+ * <p>
+ * <p>
  * A histogram for the defining method with the name {@code coolName} will be created and each time the
  * {@code #coolName(String)} method is invoked, the latency of execution will be recorded.
  */

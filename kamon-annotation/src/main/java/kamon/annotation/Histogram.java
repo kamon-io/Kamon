@@ -20,8 +20,8 @@ import java.lang.annotation.*;
 
 /**
  * A marker annotation to define a method as a Histogram.
- *
- * <p/>
+ * <p>
+ * <p>
  * Given a method like this:
  * <pre><code>
  *     {@literal @}0Histogram(name = "coolName", tags="${'my-cool-tag':'my-cool-value'}")
@@ -29,8 +29,8 @@ import java.lang.annotation.*;
  *         return someComputation();
  *     }
  * </code></pre>
- * <p/>
- *
+ * <p>
+ * <p>
  * A {@link kamon.metric.instrument.Histogram Histogram} for the defining method with the name {@code coolName}  will be created which uses the
  * annotated method's return as its value.
  */
@@ -40,11 +40,10 @@ import java.lang.annotation.*;
 public @interface Histogram {
 
     /**
-     *
      * @return The histogram's name.
-     *
+     * <p>
      * Also, the Metric name can be resolved with an EL expression that evaluates to a String:
-     *
+     * <p>
      * <pre>
      * {@code
      * class ClassWithHistogram  {
@@ -55,8 +54,8 @@ public @interface Histogram {
      *        {@literal @}Histogram (name = "${'histoID:' += this.id}")
      *        void countedMethod() {} // create a histogram with name => histoID:[id]
      *   }
-     *}
-     *</pre>
+     * }
+     * </pre>
      */
     String name();
 
@@ -77,7 +76,7 @@ public @interface Histogram {
      * The number of significant decimal digits to which the histogram will maintain value resolution and separation.
      * Must be a non-negative integer between 1 and 3.
      */
-    int  precision() default 2;
+    int precision() default 2;
 
 
     /**
