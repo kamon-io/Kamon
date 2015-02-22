@@ -144,7 +144,6 @@ class BaseAnnotationInstrumentation {
   }
 
   private[this] def methodName(method: Method): String = method.toString.replace(" ", "-").toLowerCase
-  //  private[this] def evalTags(str: String): Map[String, String] = ELProcessorPool.use(_.evalToMap(str))
 }
 
 @Aspect
