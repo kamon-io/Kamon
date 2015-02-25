@@ -106,12 +106,14 @@ object RequestInstrumentation {
 
   private val cache = TrieMap.empty[String, String]
 
+  private val normalizePattern = """\$([^<]+)<[^>]+>""".r
+
   def normaliseTraceName(requestHeader: RequestHeader): Option[String] = requestHeader.tags.get(Routes.ROUTE_VERB).map({ verb ⇒
     val path = requestHeader.tags(Routes.ROUTE_PATTERN)
     cache.atomicGetOrElseUpdate(s"$verb$path", {
       val traceName = {
         // Convert paths of form GET /foo/bar/$paramname<regexp>/blah to foo.bar.paramname.blah.get
-        val p = path.replaceAll("""\$([^<]+)<[^>]+>""", "$1").replace('/', '.').dropWhile(_ == '.')
+        val p = normalizePattern.replaceAllIn(path, "$1").replace('/', '.').dropWhile(_ == '.')
         val normalisedPath = {
           if (p.lastOption.filter(_ != '.').isDefined) s"$p."
           else p
