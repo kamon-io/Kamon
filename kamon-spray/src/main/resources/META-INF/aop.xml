@@ -11,7 +11,7 @@
 
   </aspects>
 
-  <weaver>
+  <weaver options="-XaddSerialVersionUID">
     <include within="spray..*"/>
   </weaver>
 </aspectj>
