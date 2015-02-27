@@ -154,7 +154,7 @@ class AnnotationInstrumentationSpec extends BaseKamonSpec("annotation-instrument
   }
 }
 
-@EnableKamonAnnotations
+@EnableKamon
 case class Annotated(id: Long) {
 
   @Trace("trace")

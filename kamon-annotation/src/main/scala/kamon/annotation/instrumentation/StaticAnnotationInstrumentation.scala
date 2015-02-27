@@ -16,54 +16,85 @@
 
 package kamon.annotation.instrumentation
 
-import java.lang.reflect.Modifier
+import java.util.concurrent.atomic.AtomicReferenceArray
 
-import kamon.annotation.el.{ ELProcessorFactory, EnhancedELProcessor }
-import org.aspectj.lang.annotation.{ After, AfterReturning, Around, Aspect }
+import kamon.Kamon
+import kamon.annotation.Annotation
+import kamon.metric.instrument
+import kamon.metric.instrument.{ Counter, MinMaxCounter }
+import org.aspectj.lang.annotation.{ AfterReturning, Around, Aspect }
 import org.aspectj.lang.{ JoinPoint, ProceedingJoinPoint }
 
 @Aspect
 class StaticAnnotationInstrumentation extends BaseAnnotationInstrumentation {
 
-  @After("staticinitialization(@kamon.annotation.EnableKamonAnnotations *)")
-  def creation(jps: JoinPoint.StaticPart): Unit = {
-
-    import EnhancedELProcessor.Syntax
-
-    val clazz = jps.getSignature.getDeclaringType
-    val elProcessor = ELProcessorFactory.withClass(clazz)
-
-    implicit val stringEvaluator = StringEvaluator { str ⇒ elProcessor.evalToString(str) }
-    implicit val tagsEvaluator = TagsEvaluator { str ⇒ elProcessor.evalToMap(str) }
-
-    clazz.getDeclaredMethods.filter(method ⇒ Modifier.isStatic(method.getModifiers) && !method.isSynthetic).foreach {
-      method ⇒
-        registerTrace(method, StaticAnnotationInstrumentation.traces)
-        registerSegment(method, StaticAnnotationInstrumentation.segments)
-        registerCounter(method, StaticAnnotationInstrumentation.counters)
-        registerMinMaxCounter(method, StaticAnnotationInstrumentation.minMaxCounters)
-        registerHistogram(method, StaticAnnotationInstrumentation.histograms)
-        registerTime(method, StaticAnnotationInstrumentation.histograms)
+  @Around("execution(@kamon.annotation.Trace static * (@kamon.annotation.EnableKamon *).*(..))")
+  def trace(pjp: ProceedingJoinPoint): AnyRef = {
+    var traceInfo = StaticAnnotationInstrumentation.traces.get(pjp.getStaticPart.getId)
+    if (traceInfo == null) {
+      val clazz = declaringType(pjp.getSignature)
+      traceInfo = registerTrace(pjp.getStaticPart, StaticAnnotationInstrumentation.traces, StringEvaluator(clazz), TagsEvaluator(clazz))
     }
+    processTrace(traceInfo, pjp)
   }
 
-  @Around("execution(@kamon.annotation.Trace static * (@kamon.annotation.EnableKamonAnnotations *).*(..))")
-  def trace(pjp: ProceedingJoinPoint): AnyRef = processTrace(StaticAnnotationInstrumentation.traces, pjp)
+  @Around("execution(@kamon.annotation.Segment static * (@kamon.annotation.EnableKamon *).*(..))")
+  def segment(pjp: ProceedingJoinPoint): AnyRef = {
+    var segmentInfo = StaticAnnotationInstrumentation.segments.get(pjp.getStaticPart.getId)
+    if (segmentInfo == null) {
+      val clazz = declaringType(pjp.getSignature)
+      segmentInfo = registerSegment(pjp.getStaticPart, StaticAnnotationInstrumentation.segments, StringEvaluator(clazz), TagsEvaluator(clazz))
+    }
+    processSegment(segmentInfo, pjp)
+  }
 
-  @Around("execution(@kamon.annotation.Segment static * (@kamon.annotation.EnableKamonAnnotations *).*(..))")
-  def segment(pjp: ProceedingJoinPoint): AnyRef = processSegment(StaticAnnotationInstrumentation.segments, pjp)
+  @Around("execution(@kamon.annotation.Time static * (@kamon.annotation.EnableKamon *).*(..))")
+  def time(pjp: ProceedingJoinPoint): AnyRef = {
+    var histogram = StaticAnnotationInstrumentation.histograms.get(pjp.getStaticPart.getId)
+    if (histogram == null) {
+      val clazz = declaringType(pjp.getSignature)
+      histogram = registerTime(pjp.getStaticPart, StaticAnnotationInstrumentation.histograms, StringEvaluator(clazz), TagsEvaluator(clazz))
+    }
+    processTime(histogram, pjp)
+  }
 
-  @Around("execution(@kamon.annotation.Time static * (@kamon.annotation.EnableKamonAnnotations *).*(..))")
-  def time(pjp: ProceedingJoinPoint): AnyRef = processTime(StaticAnnotationInstrumentation.histograms, pjp)
+  @Around("execution(@kamon.annotation.Count static * (@kamon.annotation.EnableKamon *).*(..))")
+  def count(pjp: ProceedingJoinPoint): AnyRef = {
+    var counter = StaticAnnotationInstrumentation.counters.get(pjp.getStaticPart.getId)
+    if (counter == null) {
+      val clazz = declaringType(pjp.getSignature)
+      counter = registerCounter(pjp.getStaticPart, StaticAnnotationInstrumentation.counters, StringEvaluator(clazz), TagsEvaluator(clazz))
+    }
+    processCount(counter, pjp)
+  }
 
-  @Around("execution(@kamon.annotation.Count static * (@kamon.annotation.EnableKamonAnnotations *).*(..))")
-  def count(pjp: ProceedingJoinPoint): AnyRef = processCount(StaticAnnotationInstrumentation.counters, pjp)
+  @Around("execution(@kamon.annotation.MinMaxCount static * (@kamon.annotation.EnableKamon *).*(..))")
+  def minMax(pjp: ProceedingJoinPoint): AnyRef = {
+    var minMax = StaticAnnotationInstrumentation.minMaxCounters.get(pjp.getStaticPart.getId)
+    if (minMax == null) {
+      val clazz = declaringType(pjp.getSignature)
+      minMax = registerMinMaxCounter(pjp.getStaticPart, StaticAnnotationInstrumentation.minMaxCounters, StringEvaluator(clazz), TagsEvaluator(clazz))
+    }
+    processMinMax(minMax, pjp)
+  }
 
-  @Around("execution(@kamon.annotation.MinMaxCount static * (@kamon.annotation.EnableKamonAnnotations *).*(..))")
-  def minMax(pjp: ProceedingJoinPoint): AnyRef = processMinMax(StaticAnnotationInstrumentation.minMaxCounters, pjp)
+  @AfterReturning(pointcut = "execution(@kamon.annotation.Histogram static (int || long || double || float) (@kamon.annotation.EnableKamon *).*(..))", returning = "result")
+  def histogram(jps: JoinPoint.StaticPart, result: AnyRef): Unit = {
+    var histogram = StaticAnnotationInstrumentation.histograms.get(jps.getId)
+    if (histogram == null) {
+      val clazz = declaringType(jps.getSignature)
+      histogram = registerHistogram(jps, StaticAnnotationInstrumentation.histograms, StringEvaluator(clazz), TagsEvaluator(clazz))
+    }
+    processHistogram(histogram, result, jps)
+  }
 
-  @AfterReturning(pointcut = "execution(@kamon.annotation.Histogram static (int || long || double || float) (@kamon.annotation.EnableKamonAnnotations *).*(..))", returning = "result")
-  def histogram(jps: JoinPoint.StaticPart, result: AnyRef): Unit = processHistogram(StaticAnnotationInstrumentation.histograms, result, jps)
 }
 
-case object StaticAnnotationInstrumentation extends AnnotationInstruments
+case object StaticAnnotationInstrumentation extends AnnotationInstruments {
+  private val size = Kamon(Annotation).arraySize
+  traces = new AtomicReferenceArray[TraceContextInfo](size)
+  segments = new AtomicReferenceArray[SegmentInfo](size)
+  counters = new AtomicReferenceArray[Counter](size)
+  minMaxCounters = new AtomicReferenceArray[MinMaxCounter](size)
+  histograms = new AtomicReferenceArray[instrument.Histogram](size)
+}

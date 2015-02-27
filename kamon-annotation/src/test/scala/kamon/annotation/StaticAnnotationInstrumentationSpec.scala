@@ -143,7 +143,7 @@ class StaticAnnotationInstrumentationSpec extends BaseKamonSpec("static-annotati
   }
 }
 
-@EnableKamonAnnotations
+@EnableKamon
 object AnnotatedObject {
 
   val Id = "10"

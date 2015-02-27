@@ -16,51 +16,66 @@
 
 package kamon.annotation.instrumentation
 
-import java.lang.reflect.Modifier
-
-import kamon.annotation.el.{ ELProcessorFactory, EnhancedELProcessor }
+import kamon.Kamon
+import kamon.annotation._
+import kamon.metric.instrument
+import kamon.metric.instrument.{ MinMaxCounter, Counter }
 import org.aspectj.lang.annotation._
 import org.aspectj.lang.{ JoinPoint, ProceedingJoinPoint }
+import java.util.concurrent.atomic.AtomicReferenceArray
 
 @Aspect
 class AnnotationInstrumentation extends BaseAnnotationInstrumentation {
 
-  @After("execution((@kamon.annotation.EnableKamonAnnotations AnnotationInstruments+).new(..)) && this(obj)")
-  def creation(obj: AnnotationInstruments): Unit = {
-
-    import EnhancedELProcessor.Syntax
-
-    val elProcessor = ELProcessorFactory.withObject(obj)
-
-    implicit val stringEvaluator = StringEvaluator { str ⇒ elProcessor.evalToString(str) }
-    implicit val tagsEvaluator = TagsEvaluator { str ⇒ elProcessor.evalToMap(str) }
-
-    obj.getClass.getDeclaredMethods.filterNot(method ⇒ Modifier.isStatic(method.getModifiers)).foreach {
-      method ⇒
-        registerTrace(method, obj.traces)
-        registerSegment(method, obj.segments)
-        registerCounter(method, obj.counters)
-        registerMinMaxCounter(method, obj.minMaxCounters)
-        registerHistogram(method, obj.histograms)
-        registerTime(method, obj.histograms)
-    }
+  @After("execution((@kamon.annotation.EnableKamon AnnotationInstruments+).new(..)) && this(obj)")
+  def creation(jps: JoinPoint.StaticPart, obj: AnnotationInstruments): Unit = {
+    val size = Kamon(Annotation).arraySize
+    obj.traces = new AtomicReferenceArray[TraceContextInfo](size)
+    obj.segments = new AtomicReferenceArray[SegmentInfo](size)
+    obj.counters = new AtomicReferenceArray[Counter](size)
+    obj.minMaxCounters = new AtomicReferenceArray[MinMaxCounter](size)
+    obj.histograms = new AtomicReferenceArray[instrument.Histogram](size)
   }
 
-  @Around("execution(@kamon.annotation.Trace !static * (@kamon.annotation.EnableKamonAnnotations AnnotationInstruments+).*(..)) && this(obj)")
-  def trace(pjp: ProceedingJoinPoint, obj: AnnotationInstruments): AnyRef = processTrace(obj.traces, pjp)
+  @Around("execution(@kamon.annotation.Trace !static * (@kamon.annotation.EnableKamon AnnotationInstruments+).*(..)) && this(obj)")
+  def trace(pjp: ProceedingJoinPoint, obj: AnnotationInstruments): AnyRef = {
+    var traceInfo = obj.traces.get(pjp.getStaticPart.getId)
+    if (traceInfo == null) traceInfo = registerTrace(pjp.getStaticPart, obj.traces, StringEvaluator(obj), TagsEvaluator(obj))
+    processTrace(traceInfo, pjp)
+  }
 
-  @Around("execution(@kamon.annotation.Segment !static * (@kamon.annotation.EnableKamonAnnotations AnnotationInstruments+).*(..)) && this(obj)")
-  def segment(pjp: ProceedingJoinPoint, obj: AnnotationInstruments): AnyRef = processSegment(obj.segments, pjp)
+  @Around("execution(@kamon.annotation.Segment !static * (@kamon.annotation.EnableKamon AnnotationInstruments+).*(..)) && this(obj)")
+  def segment(pjp: ProceedingJoinPoint, obj: AnnotationInstruments): AnyRef = {
+    var segmentInfo = obj.segments.get(pjp.getStaticPart.getId)
+    if (segmentInfo == null) segmentInfo = registerSegment(pjp.getStaticPart, obj.segments, StringEvaluator(obj), TagsEvaluator(obj))
+    processSegment(segmentInfo, pjp)
+  }
 
-  @Around("execution(@kamon.annotation.Time !static * (@kamon.annotation.EnableKamonAnnotations AnnotationInstruments+).*(..)) && this(obj)")
-  def time(pjp: ProceedingJoinPoint, obj: AnnotationInstruments): AnyRef = processTime(obj.histograms, pjp)
+  @Around("execution(@kamon.annotation.Time !static * (@kamon.annotation.EnableKamon AnnotationInstruments+).*(..)) && this(obj)")
+  def time(pjp: ProceedingJoinPoint, obj: AnnotationInstruments): AnyRef = {
+    var histogram = obj.histograms.get(pjp.getStaticPart.getId)
+    if (histogram == null) histogram = registerTime(pjp.getStaticPart, obj.histograms, StringEvaluator(obj), TagsEvaluator(obj))
+    processTime(histogram, pjp)
+  }
 
-  @Around("execution(@kamon.annotation.Count !static * (@kamon.annotation.EnableKamonAnnotations AnnotationInstruments+).*(..)) && this(obj)")
-  def count(pjp: ProceedingJoinPoint, obj: AnnotationInstruments): AnyRef = processCount(obj.counters, pjp)
+  @Around("execution(@kamon.annotation.Count !static * (@kamon.annotation.EnableKamon AnnotationInstruments+).*(..)) && this(obj)")
+  def count(pjp: ProceedingJoinPoint, obj: AnnotationInstruments): AnyRef = {
+    var counter = obj.counters.get(pjp.getStaticPart.getId)
+    if (counter == null) counter = registerCounter(pjp.getStaticPart, obj.counters, StringEvaluator(obj), TagsEvaluator(obj))
+    processCount(counter, pjp)
+  }
 
-  @Around("execution(@kamon.annotation.MinMaxCount !static * (@kamon.annotation.EnableKamonAnnotations AnnotationInstruments+).*(..)) && this(obj)")
-  def minMax(pjp: ProceedingJoinPoint, obj: AnnotationInstruments): AnyRef = processMinMax(obj.minMaxCounters, pjp)
+  @Around("execution(@kamon.annotation.MinMaxCount !static * (@kamon.annotation.EnableKamon AnnotationInstruments+).*(..)) && this(obj)")
+  def minMax(pjp: ProceedingJoinPoint, obj: AnnotationInstruments): AnyRef = {
+    var minMax = obj.minMaxCounters.get(pjp.getStaticPart.getId)
+    if (minMax == null) minMax = registerMinMaxCounter(pjp.getStaticPart, obj.minMaxCounters, StringEvaluator(obj), TagsEvaluator(obj))
+    processMinMax(minMax, pjp)
+  }
 
-  @AfterReturning(pointcut = "execution(@kamon.annotation.Histogram !static (int || long || double || float) (@kamon.annotation.EnableKamonAnnotations AnnotationInstruments+).*(..)) && this(obj)", returning = "result")
-  def histogram(jps: JoinPoint.StaticPart, obj: AnnotationInstruments, result: AnyRef): Unit = processHistogram(obj.histograms, result, jps)
+  @AfterReturning(pointcut = "execution(@kamon.annotation.Histogram !static (int || long || double || float) (@kamon.annotation.EnableKamon AnnotationInstruments+).*(..)) && this(obj)", returning = "result")
+  def histogram(jps: JoinPoint.StaticPart, obj: AnnotationInstruments, result: AnyRef): Unit = {
+    var histogram = obj.histograms.get(jps.getId)
+    if (histogram == null) histogram = registerHistogram(jps, obj.histograms, StringEvaluator(obj), TagsEvaluator(obj))
+    processHistogram(histogram, result, jps)
+  }
 }

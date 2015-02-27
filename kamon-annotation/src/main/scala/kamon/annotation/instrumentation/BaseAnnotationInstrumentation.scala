@@ -16,9 +16,11 @@
 
 package kamon.annotation.instrumentation
 
-import java.lang.reflect.Method
+import java.util.concurrent.atomic.AtomicReferenceArray
+import javax.el.ELProcessor
 
 import kamon.Kamon
+import kamon.annotation.el.{ EnhancedELProcessor, ELProcessorFactory }
 import kamon.annotation.{ Histogram, _ }
 import kamon.metric.instrument.Histogram.DynamicRange
 import kamon.metric.instrument.{ Counter, MinMaxCounter }
@@ -28,75 +30,74 @@ import kamon.util.Latency
 import org.aspectj.lang.{ JoinPoint, ProceedingJoinPoint }
 import org.aspectj.lang.annotation.{ Aspect, DeclareMixin }
 import org.aspectj.lang.reflect.MethodSignature
-import scala.collection.concurrent.TrieMap
+import EnhancedELProcessor.Syntax
 
-class BaseAnnotationInstrumentation {
+abstract class BaseAnnotationInstrumentation {
 
-  @inline final def registerTime(method: Method, histograms: TrieMap[String, instrument.Histogram])(implicit evalString: StringEvaluator, evalTags: TagsEvaluator): Any = {
-    if (method.isAnnotationPresent(classOf[Time])) {
-      val time = method.getAnnotation(classOf[Time])
-      val name = evalString(time.name())
-      val tags = evalTags(time.tags())
-      val currentHistogram = Kamon.simpleMetrics.histogram(HistogramKey(name, tags))
-      histograms.put(methodName(method), currentHistogram)
-    }
+  @inline final def registerTime(jps: JoinPoint.StaticPart, histograms: AtomicReferenceArray[instrument.Histogram], evalString: StringEvaluator, evalTags: TagsEvaluator): instrument.Histogram = {
+    val method = jps.getSignature.asInstanceOf[MethodSignature].getMethod
+    val time = method.getAnnotation(classOf[Time])
+    val name = evalString(time.name())
+    val tags = evalTags(time.tags())
+    val currentHistogram = Kamon.simpleMetrics.histogram(HistogramKey(name, tags))
+    histograms.set(jps.getId, currentHistogram)
+    currentHistogram
   }
 
-  @inline final def registerHistogram(method: Method, histograms: TrieMap[String, instrument.Histogram])(implicit eval: StringEvaluator, evalTags: TagsEvaluator): Unit = {
-    if (method.isAnnotationPresent(classOf[Histogram])) {
-      val histogram = method.getAnnotation(classOf[Histogram])
-      val name = eval(histogram.name())
-      val tags = evalTags(histogram.tags())
-      val dynamicRange = DynamicRange(histogram.lowestDiscernibleValue(), histogram.highestTrackableValue(), histogram.precision())
-      val currentHistogram = Kamon.simpleMetrics.histogram(HistogramKey(name, tags), dynamicRange)
-      histograms.put(methodName(method), currentHistogram)
-    }
+  @inline final def registerHistogram(jps: JoinPoint.StaticPart, histograms: AtomicReferenceArray[instrument.Histogram], evalString: StringEvaluator, evalTags: TagsEvaluator): instrument.Histogram = {
+    val method = jps.getSignature.asInstanceOf[MethodSignature].getMethod
+    val histogram = method.getAnnotation(classOf[Histogram])
+    val name = evalString(histogram.name())
+    val tags = evalTags(histogram.tags())
+    val dynamicRange = DynamicRange(histogram.lowestDiscernibleValue(), histogram.highestTrackableValue(), histogram.precision())
+    val currentHistogram = Kamon.simpleMetrics.histogram(HistogramKey(name, tags), dynamicRange)
+    histograms.set(jps.getId, currentHistogram)
+    currentHistogram
   }
 
-  @inline final def registerMinMaxCounter(method: Method, minMaxCounters: TrieMap[String, MinMaxCounter])(implicit eval: StringEvaluator, evalTags: TagsEvaluator): Unit = {
-    if (method.isAnnotationPresent(classOf[MinMaxCount])) {
-      val minMaxCount = method.getAnnotation(classOf[MinMaxCount])
-      val name = eval(minMaxCount.name())
-      val tags = evalTags(minMaxCount.tags())
-      val minMaxCounter = Kamon.simpleMetrics.minMaxCounter(MinMaxCounterKey(name, tags))
-      minMaxCounters.put(methodName(method), minMaxCounter)
-    }
+  @inline final def registerMinMaxCounter(jps: JoinPoint.StaticPart, minMaxCounters: AtomicReferenceArray[MinMaxCounter], evalString: StringEvaluator, evalTags: TagsEvaluator): instrument.MinMaxCounter = {
+    val method = jps.getSignature.asInstanceOf[MethodSignature].getMethod
+    val minMaxCount = method.getAnnotation(classOf[MinMaxCount])
+    val name = evalString(minMaxCount.name())
+    val tags = evalTags(minMaxCount.tags())
+    val minMaxCounter = Kamon.simpleMetrics.minMaxCounter(MinMaxCounterKey(name, tags))
+    minMaxCounters.set(jps.getId, minMaxCounter)
+    minMaxCounter
   }
 
-  @inline final def registerCounter(method: Method, counters: TrieMap[String, Counter])(implicit eval: StringEvaluator, evalTags: TagsEvaluator): Unit = {
-    if (method.isAnnotationPresent(classOf[Count])) {
-      val count = method.getAnnotation(classOf[Count])
-      val name = eval(count.name())
-      val tags = evalTags(count.tags())
-      val counter = Kamon.simpleMetrics.counter(CounterKey(name, tags))
-      counters.put(methodName(method), counter)
-    }
+  @inline final def registerCounter(jps: JoinPoint.StaticPart, counters: AtomicReferenceArray[Counter], evalString: StringEvaluator, evalTags: TagsEvaluator): instrument.Counter = {
+    val method = jps.getSignature.asInstanceOf[MethodSignature].getMethod
+    val count = method.getAnnotation(classOf[Count])
+    val name = evalString(count.name())
+    val tags = evalTags(count.tags())
+    val counter = Kamon.simpleMetrics.counter(CounterKey(name, tags))
+    counters.set(jps.getId, counter)
+    counter
   }
 
-  @inline final def registerTrace(method: Method, traces: TrieMap[String, TraceContextInfo])(implicit eval: StringEvaluator, evalTags: TagsEvaluator): Unit = {
-    if (method.isAnnotationPresent(classOf[Trace])) {
-      val count = method.getAnnotation(classOf[Trace])
-      val name = eval(count.value())
-      val tags = evalTags(count.tags())
-      traces.put(methodName(method), TraceContextInfo(name, tags))
-    }
+  @inline final def registerTrace(jps: JoinPoint.StaticPart, traces: AtomicReferenceArray[TraceContextInfo], evalString: StringEvaluator, evalTags: TagsEvaluator): TraceContextInfo = {
+    val method = jps.getSignature.asInstanceOf[MethodSignature].getMethod
+    val trace = method.getAnnotation(classOf[Trace])
+    val name = evalString(trace.value())
+    val tags = evalTags(trace.tags())
+    val traceContextInfo = TraceContextInfo(name, tags)
+    traces.set(jps.getId, traceContextInfo)
+    traceContextInfo
   }
 
-  @inline final def registerSegment(method: Method, segments: TrieMap[String, SegmentInfo])(implicit eval: StringEvaluator, evalTags: TagsEvaluator): Unit = {
-    if (method.isAnnotationPresent(classOf[Segment])) {
-      val segment = method.getAnnotation(classOf[Segment])
-      val name = eval(segment.name())
-      val category = eval(segment.category())
-      val library = eval(segment.library())
-      val tags = evalTags(segment.tags())
-      segments.put(methodName(method), SegmentInfo(name, category, library, tags))
-    }
+  @inline final def registerSegment(jps: JoinPoint.StaticPart, segments: AtomicReferenceArray[SegmentInfo], evalString: StringEvaluator, evalTags: TagsEvaluator): SegmentInfo = {
+    val method = jps.getSignature.asInstanceOf[MethodSignature].getMethod
+    val segment = method.getAnnotation(classOf[Segment])
+    val name = evalString(segment.name())
+    val category = evalString(segment.category())
+    val library = evalString(segment.library())
+    val tags = evalTags(segment.tags())
+    val segmentInfo = SegmentInfo(name, category, library, tags)
+    segments.set(jps.getId, segmentInfo)
+    segmentInfo
   }
 
-  @inline final def processTrace(traces: TrieMap[String, TraceContextInfo], pjp: ProceedingJoinPoint): AnyRef = {
-    val name = methodName(pjp.getStaticPart.getSignature.asInstanceOf[MethodSignature].getMethod)
-    val traceInfo = traces(name)
-
+  @inline final def processTrace(traceInfo: TraceContextInfo, pjp: ProceedingJoinPoint): AnyRef = {
     Tracer.withContext(Kamon.tracer.newContext(traceInfo.name)) {
       traceInfo.tags.foreach { case (key, value) ⇒ Tracer.currentContext.addMetadata(key, value) }
       val result = pjp.proceed()
@@ -105,76 +106,73 @@ class BaseAnnotationInstrumentation {
     }
   }
 
-  @inline final def processSegment(segments: TrieMap[String, SegmentInfo], pjp: ProceedingJoinPoint): AnyRef = {
-    val name = methodName(pjp.getStaticPart.getSignature.asInstanceOf[MethodSignature].getMethod)
-    val segment = segments(name)
-
+  @inline final def processSegment(segmentInfo: SegmentInfo, pjp: ProceedingJoinPoint): AnyRef = {
     Tracer.currentContext.collect { ctx ⇒
-      val currentSegment = ctx.startSegment(segment.name, segment.category, segment.library)
-      segment.tags.foreach { case (key, value) ⇒ currentSegment.addMetadata(key, value) }
+      val currentSegment = ctx.startSegment(segmentInfo.name, segmentInfo.category, segmentInfo.library)
+      segmentInfo.tags.foreach { case (key, value) ⇒ currentSegment.addMetadata(key, value) }
       val result = pjp.proceed()
       currentSegment.finish()
       result
     } getOrElse pjp.proceed()
   }
 
-  @inline final def processTime(histograms: TrieMap[String, kamon.metric.instrument.Histogram], pjp: ProceedingJoinPoint): AnyRef = {
-    val name = methodName(pjp.getStaticPart.getSignature.asInstanceOf[MethodSignature].getMethod)
-    val histogram = histograms(name)
+  @inline final def processTime(histogram: instrument.Histogram, pjp: ProceedingJoinPoint): AnyRef = {
     Latency.measure(histogram)(pjp.proceed)
   }
 
-  @inline final def processHistogram(histograms: TrieMap[String, kamon.metric.instrument.Histogram], result: AnyRef, jps: JoinPoint.StaticPart): Unit = {
-    val name = methodName(jps.getSignature.asInstanceOf[MethodSignature].getMethod)
-    val histogram = histograms(name)
+  @inline final def processHistogram(histogram: instrument.Histogram, result: AnyRef, jps: JoinPoint.StaticPart): Unit = {
     histogram.record(result.asInstanceOf[Number].longValue())
   }
 
-  final def processCount(counters: TrieMap[String, kamon.metric.instrument.Counter], pjp: ProceedingJoinPoint): AnyRef = {
-    val name = methodName(pjp.getStaticPart.getSignature.asInstanceOf[MethodSignature].getMethod)
-    val counter = counters(name)
+  final def processCount(counter: instrument.Counter, pjp: ProceedingJoinPoint): AnyRef = {
     try pjp.proceed() finally counter.increment()
   }
 
-  final def processMinMax(minMaxCounters: TrieMap[String, kamon.metric.instrument.MinMaxCounter], pjp: ProceedingJoinPoint): AnyRef = {
-    val name = methodName(pjp.getStaticPart.getSignature.asInstanceOf[MethodSignature].getMethod)
-    val minMaxCounter = minMaxCounters(name)
+  final def processMinMax(minMaxCounter: instrument.MinMaxCounter, pjp: ProceedingJoinPoint): AnyRef = {
     minMaxCounter.increment()
     try pjp.proceed() finally minMaxCounter.decrement()
   }
 
-  private[this] def methodName(method: Method): String = method.toString.replace(" ", "-").toLowerCase
+  private[annotation] def declaringType(signature: org.aspectj.lang.Signature) = signature.getDeclaringType
 }
 
 @Aspect
 class ClassToAnnotationInstrumentsMixin {
-  @DeclareMixin("(@kamon.annotation.EnableKamonAnnotations *)")
+  @DeclareMixin("(@kamon.annotation.EnableKamon *)")
   def mixinClassToAnnotationInstruments: AnnotationInstruments = new AnnotationInstruments {}
 }
 
 trait AnnotationInstruments {
-  val traces = TrieMap[String, TraceContextInfo]()
-  val segments = TrieMap[String, SegmentInfo]()
-  val counters = TrieMap[String, Counter]()
-  val minMaxCounters = TrieMap[String, MinMaxCounter]()
-  val histograms = TrieMap[String, instrument.Histogram]()
+  var traces: AtomicReferenceArray[TraceContextInfo] = _
+  var segments: AtomicReferenceArray[SegmentInfo] = _
+  var histograms: AtomicReferenceArray[instrument.Histogram] = _
+  var counters: AtomicReferenceArray[Counter] = _
+  var minMaxCounters: AtomicReferenceArray[MinMaxCounter] = _
 }
 
 case class SegmentInfo(name: String, category: String, library: String, tags: Map[String, String])
 case class TraceContextInfo(name: String, tags: Map[String, String])
 
-trait StringEvaluator extends (String ⇒ String)
+abstract class StringEvaluator(val processor: ELProcessor) extends (String ⇒ String)
 
 object StringEvaluator {
-  def apply(thunk: String ⇒ String) = new StringEvaluator {
-    def apply(str: String) = thunk(str)
+  def apply(obj: AnyRef) = new StringEvaluator(ELProcessorFactory.withObject(obj)) {
+    def apply(str: String) = processor.evalToString(str)
+  }
+
+  def apply(clazz: Class[_]) = new StringEvaluator(ELProcessorFactory.withClass(clazz)) {
+    def apply(str: String) = processor.evalToString(str)
   }
 }
 
-trait TagsEvaluator extends (String ⇒ Map[String, String])
+abstract class TagsEvaluator(val processor: ELProcessor) extends (String ⇒ Map[String, String])
 
 object TagsEvaluator {
-  def apply(thunk: String ⇒ Map[String, String]) = new TagsEvaluator {
-    def apply(str: String) = thunk(str)
+  def apply(obj: AnyRef) = new TagsEvaluator(ELProcessorFactory.withObject(obj)) {
+    def apply(str: String) = processor.evalToMap(str)
+  }
+
+  def apply(clazz: Class[_]) = new TagsEvaluator(ELProcessorFactory.withClass(clazz)) {
+    def apply(str: String) = processor.evalToMap(str)
   }
 }

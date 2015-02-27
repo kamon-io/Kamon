@@ -27,5 +27,8 @@ object Annotation extends ExtensionId[AnnotationExtension] with ExtensionIdProvi
 class AnnotationExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   val log = Logging(system, classOf[AnnotationExtension])
   log.info(s"Starting the Kamon(Annotation) extension")
+
+  val config = system.settings.config.getConfig("kamon.annotation")
+  val arraySize = config.getInt("instruments-array-size")
 }
 

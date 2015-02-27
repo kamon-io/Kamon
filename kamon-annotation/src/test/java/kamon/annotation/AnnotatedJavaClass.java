@@ -16,7 +16,7 @@
 
 package kamon.annotation;
 
-@EnableKamonAnnotations
+@EnableKamon
 public class AnnotatedJavaClass {
 
     public static String ID = "10";
