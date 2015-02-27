@@ -32,7 +32,7 @@ import org.aspectj.lang.annotation.{ Aspect, DeclareMixin }
 import org.aspectj.lang.reflect.MethodSignature
 import EnhancedELProcessor.Syntax
 
-abstract class BaseAnnotationInstrumentation {
+class BaseAnnotationInstrumentation {
 
   @inline final def registerTime(jps: JoinPoint.StaticPart, histograms: AtomicReferenceArray[instrument.Histogram], evalString: StringEvaluator, evalTags: TagsEvaluator): instrument.Histogram = {
     val method = jps.getSignature.asInstanceOf[MethodSignature].getMethod
