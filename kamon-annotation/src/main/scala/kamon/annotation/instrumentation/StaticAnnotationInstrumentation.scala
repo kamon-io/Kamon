@@ -25,9 +25,10 @@ import kamon.metric.instrument.{ Counter, MinMaxCounter }
 import org.aspectj.lang.annotation.{ After, AfterReturning, Around, Aspect }
 import org.aspectj.lang.{ JoinPoint, ProceedingJoinPoint }
 
-@Aspect("pertypewithin(kamon.annotation.instrumentation.AnnotationInstruments+)")
+@Aspect("pertypewithin(kamon.annotation.instrumentation.AnnotationInstruments+ && !kamon.annotation.instrumentation.*)")
 class StaticAnnotationInstrumentation extends BaseAnnotationInstrumentation with AnnotationInstruments {
 
+  println("statics")
   @After("staticinitialization(*) && !within(kamon.annotation.instrumentation.*)")
   def creation(jps: JoinPoint.StaticPart): Unit = {
     val size = Kamon(Annotation).arraySize
@@ -97,14 +98,4 @@ class StaticAnnotationInstrumentation extends BaseAnnotationInstrumentation with
     }
     processHistogram(histogram, result, jps)
   }
-
 }
-
-//case object StaticAnnotationInstrumentation extends AnnotationInstruments {
-//  private val size = Kamon(Annotation).arraySize
-//  traces = new AtomicReferenceArray[TraceContextInfo](size)
-//  segments = new AtomicReferenceArray[SegmentInfo](size)
-//  counters = new AtomicReferenceArray[Counter](size)
-//  minMaxCounters = new AtomicReferenceArray[MinMaxCounter](size)
-//  histograms = new AtomicReferenceArray[instrument.Histogram](size)
-//}
