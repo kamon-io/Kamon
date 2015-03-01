@@ -28,7 +28,6 @@ import org.aspectj.lang.{ JoinPoint, ProceedingJoinPoint }
 @Aspect("pertypewithin(kamon.annotation.instrumentation.AnnotationInstruments+ && !kamon.annotation.instrumentation.*)")
 class StaticAnnotationInstrumentation extends BaseAnnotationInstrumentation with AnnotationInstruments {
 
-  println("statics")
   @After("staticinitialization(*) && !within(kamon.annotation.instrumentation.*)")
   def creation(jps: JoinPoint.StaticPart): Unit = {
     val size = Kamon(Annotation).arraySize
