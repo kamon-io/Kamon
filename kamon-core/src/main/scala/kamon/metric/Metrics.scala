@@ -18,26 +18,195 @@ package kamon.metric
 
 import com.typesafe.config.Config
 import kamon.metric.SubscriptionsDispatcher.{ Unsubscribe, Subscribe }
-import kamon.metric.instrument.{ DefaultRefreshScheduler, InstrumentFactory, CollectionContext }
+import kamon.metric.instrument.Gauge.CurrentValueCollector
+import kamon.metric.instrument.Histogram.DynamicRange
+import kamon.metric.instrument._
 
 import scala.collection.concurrent.TrieMap
 import akka.actor._
-import kamon.util.{ LazyActorRef, TriemapAtomicGetOrElseUpdate }
+import kamon.util.{ Supplier, LazyActorRef, TriemapAtomicGetOrElseUpdate }
+
+import scala.concurrent.duration.FiniteDuration
 
 case class EntityRegistration[T <: EntityRecorder](entity: Entity, recorder: T)
 
 trait Metrics {
   def settings: MetricsSettings
+
   def shouldTrack(entity: Entity): Boolean
+
   def shouldTrack(entityName: String, category: String): Boolean =
     shouldTrack(Entity(entityName, category))
 
-  def register[T <: EntityRecorder](recorderFactory: EntityRecorderFactory[T], entityName: String): Option[EntityRegistration[T]]
-  def register[T <: EntityRecorder](entity: Entity, recorder: T): EntityRegistration[T]
-  def unregister(entity: Entity): Unit
+  //
+  // Histograms registration and removal
+  //
+
+  def histogram(name: String): Histogram =
+    registerHistogram(name)
+
+  def histogram(name: String, unitOfMeasurement: UnitOfMeasurement): Histogram =
+    registerHistogram(name, unitOfMeasurement = Some(unitOfMeasurement))
+
+  def histogram(name: String, dynamicRange: DynamicRange): Histogram =
+    registerHistogram(name, dynamicRange = Some(dynamicRange))
+
+  def histogram(name: String, unitOfMeasurement: UnitOfMeasurement, dynamicRange: DynamicRange): Histogram =
+    registerHistogram(name, unitOfMeasurement = Some(unitOfMeasurement), dynamicRange = Some(dynamicRange))
+
+  def histogram(name: String, tags: Map[String, String]): Histogram =
+    registerHistogram(name, tags)
+
+  def histogram(name: String, tags: Map[String, String], unitOfMeasurement: UnitOfMeasurement): Histogram =
+    registerHistogram(name, tags, Some(unitOfMeasurement))
+
+  def histogram(name: String, tags: Map[String, String], dynamicRange: DynamicRange): Histogram =
+    registerHistogram(name, tags, dynamicRange = Some(dynamicRange))
+
+  def histogram(name: String, tags: Map[String, String], unitOfMeasurement: UnitOfMeasurement, dynamicRange: DynamicRange): Histogram =
+    registerHistogram(name, tags, Some(unitOfMeasurement), Some(dynamicRange))
+
+  def removeHistogram(name: String): Boolean =
+    removeHistogram(name, Map.empty)
+
+  def registerHistogram(name: String, tags: Map[String, String] = Map.empty, unitOfMeasurement: Option[UnitOfMeasurement] = None,
+    dynamicRange: Option[DynamicRange] = None): Histogram
+
+  def removeHistogram(name: String, tags: Map[String, String]): Boolean
+
+  //
+  // MinMaxCounter registration and removal
+  //
+
+  def minMaxCounter(name: String): MinMaxCounter =
+    registerMinMaxCounter(name)
+
+  def minMaxCounter(name: String, unitOfMeasurement: UnitOfMeasurement): MinMaxCounter =
+    registerMinMaxCounter(name, unitOfMeasurement = Some(unitOfMeasurement))
+
+  def minMaxCounter(name: String, dynamicRange: DynamicRange): MinMaxCounter =
+    registerMinMaxCounter(name, dynamicRange = Some(dynamicRange))
+
+  def minMaxCounter(name: String, refreshInterval: FiniteDuration): MinMaxCounter =
+    registerMinMaxCounter(name, refreshInterval = Some(refreshInterval))
+
+  def minMaxCounter(name: String, dynamicRange: DynamicRange, refreshInterval: FiniteDuration): MinMaxCounter =
+    registerMinMaxCounter(name, dynamicRange = Some(dynamicRange), refreshInterval = Some(refreshInterval))
+
+  def minMaxCounter(name: String, unitOfMeasurement: UnitOfMeasurement, dynamicRange: DynamicRange): MinMaxCounter =
+    registerMinMaxCounter(name, unitOfMeasurement = Some(unitOfMeasurement), dynamicRange = Some(dynamicRange))
+
+  def minMaxCounter(name: String, tags: Map[String, String]): MinMaxCounter =
+    registerMinMaxCounter(name, tags)
+
+  def minMaxCounter(name: String, tags: Map[String, String], unitOfMeasurement: UnitOfMeasurement): MinMaxCounter =
+    registerMinMaxCounter(name, tags, Some(unitOfMeasurement))
+
+  def minMaxCounter(name: String, tags: Map[String, String], dynamicRange: DynamicRange): MinMaxCounter =
+    registerMinMaxCounter(name, tags, dynamicRange = Some(dynamicRange))
+
+  def minMaxCounter(name: String, tags: Map[String, String], unitOfMeasurement: UnitOfMeasurement, dynamicRange: DynamicRange): MinMaxCounter =
+    registerMinMaxCounter(name, tags, Some(unitOfMeasurement), Some(dynamicRange))
+
+  def removeMinMaxCounter(name: String): Boolean =
+    removeMinMaxCounter(name, Map.empty)
+
+  def removeMinMaxCounter(name: String, tags: Map[String, String]): Boolean
+
+  def registerMinMaxCounter(name: String, tags: Map[String, String] = Map.empty, unitOfMeasurement: Option[UnitOfMeasurement] = None,
+    dynamicRange: Option[DynamicRange] = None, refreshInterval: Option[FiniteDuration] = None): MinMaxCounter
+
+  //
+  // Gauge registration and removal
+  //
+
+  def gauge(name: String)(valueCollector: CurrentValueCollector): Gauge =
+    registerGauge(name, valueCollector)
+
+  def gauge(name: String, unitOfMeasurement: UnitOfMeasurement)(valueCollector: CurrentValueCollector): Gauge =
+    registerGauge(name, valueCollector, unitOfMeasurement = Some(unitOfMeasurement))
+
+  def gauge(name: String, dynamicRange: DynamicRange)(valueCollector: CurrentValueCollector): Gauge =
+    registerGauge(name, valueCollector, dynamicRange = Some(dynamicRange))
+
+  def gauge(name: String, refreshInterval: FiniteDuration)(valueCollector: CurrentValueCollector): Gauge =
+    registerGauge(name, valueCollector, refreshInterval = Some(refreshInterval))
+
+  def gauge(name: String, dynamicRange: DynamicRange, refreshInterval: FiniteDuration)(valueCollector: CurrentValueCollector): Gauge =
+    registerGauge(name, valueCollector, dynamicRange = Some(dynamicRange), refreshInterval = Some(refreshInterval))
+
+  def gauge(name: String, unitOfMeasurement: UnitOfMeasurement, dynamicRange: DynamicRange)(valueCollector: CurrentValueCollector): Gauge =
+    registerGauge(name, valueCollector, unitOfMeasurement = Some(unitOfMeasurement), dynamicRange = Some(dynamicRange))
+
+  def gauge(name: String, tags: Map[String, String])(valueCollector: CurrentValueCollector): Gauge =
+    registerGauge(name, valueCollector, tags)
+
+  def gauge(name: String, tags: Map[String, String], unitOfMeasurement: UnitOfMeasurement)(valueCollector: CurrentValueCollector): Gauge =
+    registerGauge(name, valueCollector, tags, Some(unitOfMeasurement))
+
+  def gauge(name: String, tags: Map[String, String], dynamicRange: DynamicRange)(valueCollector: CurrentValueCollector): Gauge =
+    registerGauge(name, valueCollector, tags, dynamicRange = Some(dynamicRange))
+
+  def gauge(name: String, tags: Map[String, String], unitOfMeasurement: UnitOfMeasurement, dynamicRange: DynamicRange)(valueCollector: CurrentValueCollector): Gauge =
+    registerGauge(name, valueCollector, tags, Some(unitOfMeasurement), Some(dynamicRange))
+
+  def removeGauge(name: String): Boolean =
+    removeGauge(name, Map.empty)
+
+  def removeGauge(name: String, tags: Map[String, String]): Boolean
+
+  def registerGauge(name: String, valueCollector: CurrentValueCollector, tags: Map[String, String] = Map.empty,
+    unitOfMeasurement: Option[UnitOfMeasurement] = None, dynamicRange: Option[DynamicRange] = None,
+    refreshInterval: Option[FiniteDuration] = None): Gauge
+
+  //
+  // Counters registration and removal
+  //
+
+  def counter(name: String): Counter =
+    registerCounter(name)
+
+  def counter(name: String, unitOfMeasurement: UnitOfMeasurement): Counter =
+    registerCounter(name, unitOfMeasurement = Some(unitOfMeasurement))
+
+  def counter(name: String, tags: Map[String, String]): Counter =
+    registerCounter(name, tags)
+
+  def counter(name: String, tags: Map[String, String], unitOfMeasurement: UnitOfMeasurement): Counter =
+    registerCounter(name, tags, Some(unitOfMeasurement))
+
+  def removeCounter(name: String): Boolean =
+    removeCounter(name, Map.empty)
+
+  def removeCounter(name: String, tags: Map[String, String]): Boolean
+
+  def registerCounter(name: String, tags: Map[String, String] = Map.empty, unitOfMeasurement: Option[UnitOfMeasurement] = None,
+    dynamicRange: Option[DynamicRange] = None): Counter
+
+  //
+  // Entities registration and removal
+  //
+
+  def entity[T <: EntityRecorder](recorderFactory: EntityRecorderFactory[T], name: String): T =
+    entity(recorderFactory, Entity(name, recorderFactory.category))
+
+  def entity[T <: EntityRecorder](recorderFactory: EntityRecorderFactory[T], name: String, tags: Map[String, String]): T =
+    entity(recorderFactory, Entity(name, recorderFactory.category, tags))
+
+  def removeEntity(name: String, category: String): Boolean =
+    removeEntity(Entity(name, category, Map.empty))
+
+  def removeEntity(name: String, category: String, tags: Map[String, String]): Boolean =
+    removeEntity(Entity(name, category, tags))
+
+  def removeEntity(entity: Entity): Boolean
+
+  def entity[T <: EntityRecorder](recorderFactory: EntityRecorderFactory[T], entity: Entity): T
+
+  def find(name: String, category: String): Option[EntityRecorder] =
+    find(Entity(name, category))
 
   def find(entity: Entity): Option[EntityRecorder]
-  def find(name: String, category: String): Option[EntityRecorder]
 
   def subscribe(filter: SubscriptionFilter, subscriber: ActorRef): Unit =
     subscribe(filter, subscriber, permanently = false)
@@ -51,11 +220,15 @@ trait Metrics {
   def subscribe(filter: SubscriptionFilter, subscriber: ActorRef, permanently: Boolean): Unit
 
   def unsubscribe(subscriber: ActorRef): Unit
+
   def buildDefaultCollectionContext: CollectionContext
+
   def instrumentFactory(category: String): InstrumentFactory
 }
 
 private[kamon] class MetricsImpl(config: Config) extends Metrics {
+  import TriemapAtomicGetOrElseUpdate.Syntax
+
   private val _trackedEntities = TrieMap.empty[Entity, EntityRecorder]
   private val _subscriptions = new LazyActorRef
 
@@ -67,34 +240,82 @@ private[kamon] class MetricsImpl(config: Config) extends Metrics {
 
     } getOrElse (settings.trackUnmatchedEntities)
 
-  def register[T <: EntityRecorder](recorderFactory: EntityRecorderFactory[T], entityName: String): Option[EntityRegistration[T]] = {
-    import TriemapAtomicGetOrElseUpdate.Syntax
-    val entity = Entity(entityName, recorderFactory.category)
+  def registerHistogram(name: String, tags: Map[String, String], unitOfMeasurement: Option[UnitOfMeasurement],
+    dynamicRange: Option[DynamicRange]): Histogram = {
 
-    if (shouldTrack(entity)) {
-      val instrumentFactory = settings.instrumentFactories.get(recorderFactory.category).getOrElse(settings.defaultInstrumentFactory)
-      val recorder = _trackedEntities.atomicGetOrElseUpdate(entity, recorderFactory.createRecorder(instrumentFactory), _.cleanup).asInstanceOf[T]
+    val histogramEntity = Entity(name, "histogram", tags)
+    val recorder = _trackedEntities.atomicGetOrElseUpdate(histogramEntity, {
+      val factory = instrumentFactory(histogramEntity.category)
+      HistogramRecorder(HistogramKey(histogramEntity.category, unitOfMeasurement.getOrElse(UnitOfMeasurement.Unknown)),
+        factory.createHistogram(name, dynamicRange))
+    }, _.cleanup)
 
-      Some(EntityRegistration(entity, recorder))
-    } else None
+    recorder.asInstanceOf[HistogramRecorder].instrument
   }
 
-  def register[T <: EntityRecorder](entity: Entity, recorder: T): EntityRegistration[T] = {
-    _trackedEntities.put(entity, recorder).map { oldRecorder ⇒
-      oldRecorder.cleanup
-    }
+  def removeHistogram(name: String, tags: Map[String, String]): Boolean =
+    _trackedEntities.remove(Entity(name, "histogram", tags)).isDefined
 
-    EntityRegistration(entity, recorder)
+  def registerMinMaxCounter(name: String, tags: Map[String, String], unitOfMeasurement: Option[UnitOfMeasurement], dynamicRange: Option[DynamicRange],
+    refreshInterval: Option[FiniteDuration]): MinMaxCounter = {
+
+    val minMaxCounterEntity = Entity(name, "min-max-counter", tags)
+    val recorder = _trackedEntities.atomicGetOrElseUpdate(minMaxCounterEntity, {
+      val factory = instrumentFactory(minMaxCounterEntity.category)
+      MinMaxCounterRecorder(MinMaxCounterKey(minMaxCounterEntity.category, unitOfMeasurement.getOrElse(UnitOfMeasurement.Unknown)),
+        factory.createMinMaxCounter(name, dynamicRange, refreshInterval))
+    }, _.cleanup)
+
+    recorder.asInstanceOf[MinMaxCounterRecorder].instrument
   }
 
-  def unregister(entity: Entity): Unit =
-    _trackedEntities.remove(entity).map(_.cleanup)
+  def removeMinMaxCounter(name: String, tags: Map[String, String]): Boolean =
+    _trackedEntities.remove(Entity(name, "min-max-counter", tags)).isDefined
+
+  def registerGauge(name: String, valueCollector: CurrentValueCollector, tags: Map[String, String] = Map.empty,
+    unitOfMeasurement: Option[UnitOfMeasurement] = None, dynamicRange: Option[DynamicRange] = None,
+    refreshInterval: Option[FiniteDuration] = None): Gauge = {
+
+    val gaugeEntity = Entity(name, "gauge", tags)
+    val recorder = _trackedEntities.atomicGetOrElseUpdate(gaugeEntity, {
+      val factory = instrumentFactory(gaugeEntity.category)
+      GaugeRecorder(MinMaxCounterKey(gaugeEntity.category, unitOfMeasurement.getOrElse(UnitOfMeasurement.Unknown)),
+        factory.createGauge(name, dynamicRange, refreshInterval, valueCollector))
+    }, _.cleanup)
+
+    recorder.asInstanceOf[GaugeRecorder].instrument
+  }
+
+  def removeGauge(name: String, tags: Map[String, String]): Boolean =
+    _trackedEntities.remove(Entity(name, "gauge", tags)).isDefined
+
+  def registerCounter(name: String, tags: Map[String, String] = Map.empty, unitOfMeasurement: Option[UnitOfMeasurement] = None,
+    dynamicRange: Option[DynamicRange] = None): Counter = {
+
+    val counterEntity = Entity(name, "counter", tags)
+    val recorder = _trackedEntities.atomicGetOrElseUpdate(counterEntity, {
+      val factory = instrumentFactory(counterEntity.category)
+      CounterRecorder(CounterKey(counterEntity.category, unitOfMeasurement.getOrElse(UnitOfMeasurement.Unknown)),
+        factory.createCounter())
+    }, _.cleanup)
+
+    recorder.asInstanceOf[CounterRecorder].instrument
+  }
+
+  def removeCounter(name: String, tags: Map[String, String]): Boolean =
+    _trackedEntities.remove(Entity(name, "counter", tags)).isDefined
+
+  def entity[T <: EntityRecorder](recorderFactory: EntityRecorderFactory[T], entity: Entity): T = {
+    _trackedEntities.atomicGetOrElseUpdate(entity, {
+      recorderFactory.createRecorder(instrumentFactory(recorderFactory.category))
+    }, _.cleanup).asInstanceOf[T]
+  }
+
+  def removeEntity(entity: Entity): Boolean =
+    _trackedEntities.remove(entity).isDefined
 
   def find(entity: Entity): Option[EntityRecorder] =
     _trackedEntities.get(entity)
-
-  def find(name: String, category: String): Option[EntityRecorder] =
-    find(Entity(name, category))
 
   def subscribe(filter: SubscriptionFilter, subscriber: ActorRef, permanent: Boolean): Unit =
     _subscriptions.tell(Subscribe(filter, subscriber, permanent))
