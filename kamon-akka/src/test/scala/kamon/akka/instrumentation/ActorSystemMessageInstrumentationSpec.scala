@@ -21,7 +21,7 @@ import akka.actor._
 import akka.testkit.ImplicitSender
 import com.typesafe.config.ConfigFactory
 import kamon.testkit.BaseKamonSpec
-import kamon.trace.{Tracer, EmptyTraceContext}
+import kamon.trace.{ Tracer, EmptyTraceContext }
 import org.scalatest.WordSpecLike
 
 import scala.concurrent.duration._
