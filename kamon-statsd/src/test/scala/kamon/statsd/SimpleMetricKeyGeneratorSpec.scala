@@ -69,7 +69,7 @@ class SimpleMetricKeyGeneratorSpec extends WordSpec with Matchers {
   }
 
   def buildMetricKey(categoryName: String, entityName: String, metricName: String)(implicit metricKeyGenerator: SimpleMetricKeyGenerator): String = {
-    val metric = HistogramKey(metricName, UnitOfMeasurement.Unknown, Map.empty)
+    val metric = HistogramKey(metricName, UnitOfMeasurement.Unknown)
     val entity = Entity(entityName, categoryName)
     metricKeyGenerator.generateKey(entity, metric)
   }

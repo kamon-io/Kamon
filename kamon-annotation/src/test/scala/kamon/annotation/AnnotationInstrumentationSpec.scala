@@ -19,10 +19,9 @@ package kamon.annotation
 import com.typesafe.config.ConfigFactory
 import kamon.metric._
 import kamon.testkit.BaseKamonSpec
+import kamon.trace.SegmentCategory
 
 class AnnotationInstrumentationSpec extends BaseKamonSpec("annotation-instrumentation-spec") {
-  import kamon.metric.TraceMetricsSpec.SegmentSyntax
-
   override lazy val config =
     ConfigFactory.parseString(
       """
@@ -38,7 +37,6 @@ class AnnotationInstrumentationSpec extends BaseKamonSpec("annotation-instrument
 
       val snapshot = takeSnapshotOf("trace", "trace")
       snapshot.histogram("elapsed-time").get.numberOfMeasurements should be(10)
-      snapshot.segments.size should be(0)
     }
 
     "create a segment when is invoked a method annotated with @Segment" in {
@@ -47,8 +45,13 @@ class AnnotationInstrumentationSpec extends BaseKamonSpec("annotation-instrument
       val snapshot = takeSnapshotOf("trace-with-segment", "trace")
       snapshot.histogram("elapsed-time").get.numberOfMeasurements should be(10)
 
-      snapshot.segments.size should be(1)
-      snapshot.segment("inner-segment", "inner", "segment") should not be empty
+      val segmentMetricsSnapshot = takeSnapshotOf("inner-segment", "trace-segment",
+        tags = Map(
+          "trace" -> "trace-with-segment",
+          "category" -> "inner",
+          "library" -> "segment"))
+
+      segmentMetricsSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(10)
     }
 
     "create a segment when is invoked a method annotated with @Segment and evaluate EL expressions" in {
@@ -57,28 +60,30 @@ class AnnotationInstrumentationSpec extends BaseKamonSpec("annotation-instrument
       val snapshot = takeSnapshotOf("trace-with-segment-el", "trace")
       snapshot.histogram("elapsed-time").get.numberOfMeasurements should be(10)
 
-      snapshot.segments.size should be(10)
-      snapshot.segment("inner-segment:1", "inner", "segment") should not be empty
+      val segmentMetricsSnapshot = takeSnapshotOf("inner-segment:1", "trace-segment",
+        tags = Map(
+          "trace" -> "trace-with-segment-el",
+          "category" -> "inner",
+          "library" -> "segment"))
+
+      segmentMetricsSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
     }
 
     "count the invocations of a method annotated with @Count" in {
       for (id ← 1 to 10) Annotated(id).count()
 
-      val snapshot = takeSnapshotOf("simple-metric", "simple-metric")
-      snapshot.counter("count").get.count should be(10)
+      val snapshot = takeSnapshotOf("count", "counter")
+      snapshot.counter("counter").get.count should be(10)
     }
 
     "count the invocations of a method annotated with @Count and evaluate EL expressions" in {
       for (id ← 1 to 2) Annotated(id).countWithEL()
 
-      val snapshot = takeSnapshotOf("simple-metric", "simple-metric")
-      snapshot.counter("count:1").get.count should be(1)
-      snapshot.counter("count:2").get.count should be(1)
+      val counter1Snapshot = takeSnapshotOf("count:1", "counter", Map("counter" -> "1", "env" -> "prod"))
+      counter1Snapshot.counter("counter").get.count should be(1)
 
-      val counterKey = (name: String) ⇒ (key: CounterKey) ⇒ key.name == name
-
-      snapshot.counters.keys.find(counterKey("count:1")).get.metadata should be(Map("counter" -> "1", "env" -> "prod"))
-      snapshot.counters.keys.find(counterKey("count:2")).get.metadata should be(Map("counter" -> "1", "env" -> "prod"))
+      val counter2Snapshot = takeSnapshotOf("count:2", "counter", Map("counter" -> "1", "env" -> "prod"))
+      counter2Snapshot.counter("counter").get.count should be(1)
     }
 
     "count the current invocations of a method annotated with @MinMaxCount" in {
@@ -86,45 +91,38 @@ class AnnotationInstrumentationSpec extends BaseKamonSpec("annotation-instrument
         Annotated(id).countMinMax()
       }
 
-      val snapshot = takeSnapshotOf("simple-metric", "simple-metric")
-      snapshot.minMaxCounter("minMax").get.max should be(1)
+      val snapshot = takeSnapshotOf("minMax", "min-max-counter")
+      snapshot.minMaxCounter("min-max-counter").get.max should be(1)
     }
 
     "count the current invocations of a method annotated with @MinMaxCount and evaluate EL expressions" in {
       for (id ← 1 to 10) Annotated(id).countMinMaxWithEL()
 
-      val snapshot = takeSnapshotOf("simple-metric", "simple-metric")
-      snapshot.minMaxCounter("minMax:1").get.sum should be(1)
-      snapshot.minMaxCounter("minMax:2").get.sum should be(1)
+      val minMaxCounter1Snapshot = takeSnapshotOf("minMax:1", "min-max-counter", tags = Map("minMax" -> "1", "env" -> "dev"))
+      minMaxCounter1Snapshot.minMaxCounter("min-max-counter").get.sum should be(1)
 
-      val minMaxKey = (name: String) ⇒ (key: MinMaxCounterKey) ⇒ key.name == name
-
-      snapshot.minMaxCounters.keys.find(minMaxKey("minMax:1")).get.metadata should be(Map("minMax" -> "1", "env" -> "dev"))
-      snapshot.minMaxCounters.keys.find(minMaxKey("minMax:2")).get.metadata should be(Map("minMax" -> "1", "env" -> "dev"))
+      val minMaxCounter2Snapshot = takeSnapshotOf("minMax:2", "min-max-counter", tags = Map("minMax" -> "1", "env" -> "dev"))
+      minMaxCounter2Snapshot.minMaxCounter("min-max-counter").get.sum should be(1)
     }
 
     "measure the time spent in the execution of a method annotated with @Time" in {
       for (id ← 1 to 1) Annotated(id).time()
 
-      val snapshot = takeSnapshotOf("simple-metric", "simple-metric")
-      snapshot.histogram("time").get.numberOfMeasurements should be(1)
+      val snapshot = takeSnapshotOf("time", "histogram")
+      snapshot.histogram("histogram").get.numberOfMeasurements should be(1)
     }
 
     "measure the time spent in the execution of a method annotated with @Time and evaluate EL expressions" in {
       for (id ← 1 to 1) Annotated(id).timeWithEL()
 
-      val snapshot = takeSnapshotOf("simple-metric", "simple-metric")
-      snapshot.histogram("time:1").get.numberOfMeasurements should be(1)
-
-      val histogramKey = (name: String) ⇒ (key: HistogramKey) ⇒ key.name == name
-
-      snapshot.histograms.keys.find(histogramKey("time:1")).get.metadata should be(Map("slow-service" -> "service", "env" -> "prod"))
+      val snapshot = takeSnapshotOf("time:1", "histogram", tags = Map("slow-service" -> "service", "env" -> "prod"))
+      snapshot.histogram("histogram").get.numberOfMeasurements should be(1)
     }
 
     "record the value returned by a method annotated with @Histogram" in {
       for (value ← 1 to 5) Annotated().histogram(value)
 
-      val snapshot = takeSnapshotOf("simple-metric", "simple-metric")
+      val snapshot = takeSnapshotOf("histogram", "histogram")
       snapshot.histogram("histogram").get.numberOfMeasurements should be(5)
       snapshot.histogram("histogram").get.min should be(1)
       snapshot.histogram("histogram").get.max should be(5)
@@ -134,23 +132,18 @@ class AnnotationInstrumentationSpec extends BaseKamonSpec("annotation-instrument
     "record the value returned by a method annotated with @Histogram and evaluate EL expressions" in {
       for (value ← 1 to 2) Annotated(value).histogramWithEL(value)
 
-      val snapshot = takeSnapshotOf("simple-metric", "simple-metric")
-      snapshot.histogram("histogram:1").get.numberOfMeasurements should be(1)
-      snapshot.histogram("histogram:1").get.min should be(1)
-      snapshot.histogram("histogram:1").get.max should be(1)
-      snapshot.histogram("histogram:1").get.sum should be(1)
+      val snapshot1 = takeSnapshotOf("histogram:1", "histogram", tags = Map("histogram" -> "hdr", "env" -> "prod"))
+      snapshot1.histogram("histogram").get.numberOfMeasurements should be(1)
+      snapshot1.histogram("histogram").get.min should be(1)
+      snapshot1.histogram("histogram").get.max should be(1)
+      snapshot1.histogram("histogram").get.sum should be(1)
 
-      snapshot.histogram("histogram:2").get.numberOfMeasurements should be(1)
-      snapshot.histogram("histogram:2").get.min should be(2)
-      snapshot.histogram("histogram:2").get.max should be(2)
-      snapshot.histogram("histogram:2").get.sum should be(2)
-
-      val histogramKey = (name: String) ⇒ (key: HistogramKey) ⇒ key.name == name
-
-      snapshot.histograms.keys.find(histogramKey("histogram:1")).get.metadata should be(Map("histogram" -> "hdr", "env" -> "prod"))
-      snapshot.histograms.keys.find(histogramKey("histogram:2")).get.metadata should be(Map("histogram" -> "hdr", "env" -> "prod"))
+      val snapshot2 = takeSnapshotOf("histogram:2", "histogram", tags = Map("histogram" -> "hdr", "env" -> "prod"))
+      snapshot2.histogram("histogram").get.numberOfMeasurements should be(1)
+      snapshot2.histogram("histogram").get.min should be(2)
+      snapshot2.histogram("histogram").get.max should be(2)
+      snapshot2.histogram("histogram").get.sum should be(2)
     }
-
   }
 }
 

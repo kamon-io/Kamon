@@ -18,15 +18,13 @@ import _root_.akka.actor
 import _root_.akka.actor._
 import com.typesafe.config.{ ConfigFactory, Config }
 import kamon.metric._
+import kamon.metric.instrument.Gauge
 import kamon.trace.{ TracerImpl, Tracer }
 
 object Kamon {
   trait Extension extends actor.Extension
 
-  private case class KamonCoreComponents(
-    metrics: Metrics,
-    tracer: Tracer,
-    simpleMetrics: SimpleMetrics)
+  private case class KamonCoreComponents(metrics: Metrics, tracer: Tracer)
 
   @volatile private var _system: ActorSystem = _
   @volatile private var _coreComponents: Option[KamonCoreComponents] = None
@@ -43,10 +41,9 @@ object Kamon {
 
     if (_coreComponents.isEmpty) {
       val metrics = MetricsImpl(config)
-      val simpleMetrics = SimpleMetricsImpl(metrics)
       val tracer = TracerImpl(metrics, config)
 
-      _coreComponents = Some(KamonCoreComponents(metrics, tracer, simpleMetrics))
+      _coreComponents = Some(KamonCoreComponents(metrics, tracer))
       _system = ActorSystem("kamon", resolveInternalConfig)
 
       metrics.start(_system)
@@ -69,9 +66,6 @@ object Kamon {
 
   def tracer: Tracer =
     ifStarted(_.tracer)
-
-  def simpleMetrics: SimpleMetrics =
-    ifStarted(_.simpleMetrics)
 
   def apply[T <: Kamon.Extension](key: ExtensionId[T]): T =
     ifStarted { _ ⇒

@@ -46,11 +46,8 @@ class SprayExtensionImpl(system: ExtendedActorSystem) extends SprayExtension {
   val log = Logging(system, "SprayExtension")
 
   val httpServerMetrics = {
-    val metricsExtension = Kamon.metrics
-    val factory = metricsExtension.instrumentFactory(HttpServerMetrics.category)
     val entity = Entity("spray-server", HttpServerMetrics.category)
-
-    metricsExtension.register(entity, new HttpServerMetrics(factory)).recorder
+    Kamon.metrics.entity(HttpServerMetrics, entity)
   }
 
   def generateTraceName(request: HttpRequest): String =

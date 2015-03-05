@@ -44,9 +44,8 @@ class StatementInstrumentation {
   @Around("onExecuteStatement(sql) || onExecutePreparedStatement(sql) || onExecutePreparedCall(sql)")
   def aroundExecuteStatement(pjp: ProceedingJoinPoint, sql: String): Any = {
     Tracer.currentContext.collect { ctx ⇒
-      val metricsExtension = Kamon.metrics
       val jdbcExtension = Kamon(Jdbc)
-      implicit val statementRecorder = metricsExtension.register(StatementsMetrics, "jdbc-statements").map(_.recorder)
+      implicit val statementRecorder = Kamon.metrics.entity(StatementsMetrics, "jdbc-statements")
 
       sql.replaceAll(CommentPattern, Empty) match {
         case SelectStatement(_) ⇒ withSegment(ctx, Select, jdbcExtension)(recordRead(pjp, sql, jdbcExtension))
@@ -71,22 +70,22 @@ class StatementInstrumentation {
     try thunk finally segment.finish()
   }
 
-  def recordRead(pjp: ProceedingJoinPoint, sql: String, jdbcExtension: JdbcExtension)(implicit statementRecorder: Option[StatementsMetrics]): Any = {
+  def recordRead(pjp: ProceedingJoinPoint, sql: String, jdbcExtension: JdbcExtension)(implicit statementRecorder: StatementsMetrics): Any = {
     withTimeSpent(pjp.proceedWithErrorHandler(sql, jdbcExtension)) { timeSpent ⇒
-      statementRecorder.map(stmr ⇒ stmr.reads.record(timeSpent))
+      statementRecorder.reads.record(timeSpent)
 
       val timeSpentInMillis = nanos.toMillis(timeSpent)
 
       if (timeSpentInMillis >= jdbcExtension.slowQueryThreshold) {
-        statementRecorder.map(stmr ⇒ stmr.slows.increment())
+        statementRecorder.slows.increment()
         jdbcExtension.processSlowQuery(sql, timeSpentInMillis)
       }
     }
   }
 
-  def recordWrite(pjp: ProceedingJoinPoint, sql: String, jdbcExtension: JdbcExtension)(implicit statementRecorder: Option[StatementsMetrics]): Any = {
+  def recordWrite(pjp: ProceedingJoinPoint, sql: String, jdbcExtension: JdbcExtension)(implicit statementRecorder: StatementsMetrics): Any = {
     withTimeSpent(pjp.proceedWithErrorHandler(sql, jdbcExtension)) { timeSpent ⇒
-      statementRecorder.map(stmr ⇒ stmr.writes.record(timeSpent))
+      statementRecorder.writes.record(timeSpent)
     }
   }
 }
@@ -107,13 +106,13 @@ object StatementInstrumentation {
   val Delete = "Delete"
 
   implicit class PimpedProceedingJoinPoint(pjp: ProceedingJoinPoint) {
-    def proceedWithErrorHandler(sql: String, jdbcExtension: JdbcExtension)(implicit statementRecorder: Option[StatementsMetrics]): Any = {
+    def proceedWithErrorHandler(sql: String, jdbcExtension: JdbcExtension)(implicit statementRecorder: StatementsMetrics): Any = {
       try {
         pjp.proceed()
       } catch {
         case NonFatal(cause) ⇒
           jdbcExtension.processSqlError(sql, cause)
-          statementRecorder.map(stmr ⇒ stmr.errors.increment())
+          statementRecorder.errors.increment()
           throw cause
       }
     }

@@ -23,7 +23,7 @@ import akka.util.ByteString
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 import java.text.{ DecimalFormatSymbols, DecimalFormat }
 import kamon.metric.instrument.{ Counter, Histogram }
-import kamon.metric.{ MetricKey, Entity }
+import kamon.metric.{ SingleInstrumentEntityRecorder, MetricKey, Entity }
 import java.util.Locale
 
 class DatadogMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long) extends Actor with UdpExtensionProvider {
@@ -90,11 +90,18 @@ class DatadogMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long
   def encodeDatadogCounter(count: Long): String = count.toString + "|c"
 
   def buildMetricName(entity: Entity, metricKey: MetricKey): String =
-    s"$appName.${entity.category}.${metricKey.name}"
+    if (SingleInstrumentEntityRecorder.AllCategories.contains(entity.category))
+      s"$appName.${entity.category}"
+    else
+      s"$appName.${entity.category}.${metricKey.name}"
 
   def buildIdentificationTag(entity: Entity, metricKey: MetricKey): String = {
-    val normalizedEntityName = entity.name.replace(": ", ":")
-    s"|#${entity.category}:${normalizedEntityName}"
+    val normalizedEntityName = entity.name.replace(" ", "")
+    if (entity.tags.nonEmpty) {
+      val tagsString = entity.tags.map { case (k, v) ⇒ k + ":" + v } mkString ","
+      s"|#${entity.category}:${normalizedEntityName},$tagsString"
+    } else
+      s"|#${entity.category}:${normalizedEntityName}"
   }
 }
 

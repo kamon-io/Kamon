@@ -39,7 +39,7 @@ class BaseAnnotationInstrumentation {
     val time = method.getAnnotation(classOf[Time])
     val name = evalString(time.name())
     val tags = evalTags(time.tags())
-    val currentHistogram = Kamon.simpleMetrics.histogram(HistogramKey(name, tags))
+    val currentHistogram = Kamon.metrics.histogram(name, tags)
     histograms.set(jps.getId, currentHistogram)
     currentHistogram
   }
@@ -50,7 +50,7 @@ class BaseAnnotationInstrumentation {
     val name = evalString(histogram.name())
     val tags = evalTags(histogram.tags())
     val dynamicRange = DynamicRange(histogram.lowestDiscernibleValue(), histogram.highestTrackableValue(), histogram.precision())
-    val currentHistogram = Kamon.simpleMetrics.histogram(HistogramKey(name, tags), dynamicRange)
+    val currentHistogram = Kamon.metrics.histogram(name, tags, dynamicRange)
     histograms.set(jps.getId, currentHistogram)
     currentHistogram
   }
@@ -60,7 +60,7 @@ class BaseAnnotationInstrumentation {
     val minMaxCount = method.getAnnotation(classOf[MinMaxCount])
     val name = evalString(minMaxCount.name())
     val tags = evalTags(minMaxCount.tags())
-    val minMaxCounter = Kamon.simpleMetrics.minMaxCounter(MinMaxCounterKey(name, tags))
+    val minMaxCounter = Kamon.metrics.minMaxCounter(name, tags)
     minMaxCounters.set(jps.getId, minMaxCounter)
     minMaxCounter
   }
@@ -70,7 +70,7 @@ class BaseAnnotationInstrumentation {
     val count = method.getAnnotation(classOf[Count])
     val name = evalString(count.name())
     val tags = evalTags(count.tags())
-    val counter = Kamon.simpleMetrics.counter(CounterKey(name, tags))
+    val counter = Kamon.metrics.counter(name, tags)
     counters.set(jps.getId, counter)
     counter
   }

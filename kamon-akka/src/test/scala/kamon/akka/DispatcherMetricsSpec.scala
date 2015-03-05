@@ -15,7 +15,6 @@
 
 package kamon.akka
 
-
 import akka.actor.ActorRef
 import akka.dispatch.MessageDispatcher
 import akka.testkit.TestProbe

@@ -151,7 +151,7 @@ class ActorMetricsSpec extends BaseKamonSpec("actor-metrics-spec") {
       trackedActor ! PoisonPill
       deathWatcher.expectTerminated(trackedActor)
 
-      actorMetricsRecorderOf(trackedActor).get shouldNot be theSameInstanceAs (firstRecorder)
+      actorMetricsRecorderOf(trackedActor) shouldBe empty
     }
   }
 
@@ -165,7 +165,7 @@ class ActorMetricsSpec extends BaseKamonSpec("actor-metrics-spec") {
     def actorRecorderName(ref: ActorRef): String = ref.path.elements.mkString("/")
 
     def actorMetricsRecorderOf(ref: ActorRef): Option[ActorMetrics] =
-      Kamon.metrics.register(ActorMetrics, actorRecorderName(ref)).map(_.recorder)
+      Kamon.metrics.find(actorRecorderName(ref), ActorMetrics.category).map(_.asInstanceOf[ActorMetrics])
 
     def collectMetricsOf(ref: ActorRef): Option[EntitySnapshot] = {
       Thread.sleep(5) // Just in case the test advances a bit faster than the actor being tested.

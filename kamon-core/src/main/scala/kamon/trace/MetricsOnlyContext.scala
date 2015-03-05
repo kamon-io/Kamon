@@ -19,13 +19,14 @@ package kamon.trace
 import java.util.concurrent.ConcurrentLinkedQueue
 
 import akka.event.LoggingAdapter
-import kamon.metric.{ Metrics, TraceMetrics }
+import kamon.Kamon
+import kamon.metric.{ SegmentMetrics, Metrics, TraceMetrics }
 import kamon.util.{ NanoInterval, RelativeNanoTimestamp }
 
 import scala.annotation.tailrec
 
 private[kamon] class MetricsOnlyContext(traceName: String, val token: String, izOpen: Boolean, val levelOfDetail: LevelOfDetail,
-  val startTimestamp: RelativeNanoTimestamp, log: LoggingAdapter, metricsExtension: Metrics)
+  val startTimestamp: RelativeNanoTimestamp, log: LoggingAdapter)
     extends TraceContext {
 
   @volatile private var _name = traceName
@@ -51,20 +52,23 @@ private[kamon] class MetricsOnlyContext(traceName: String, val token: String, iz
     val traceElapsedTime = NanoInterval.since(startTimestamp)
     _elapsedTime = traceElapsedTime
 
-    metricsExtension.register(TraceMetrics, name).map { registration ⇒
-      registration.recorder.ElapsedTime.record(traceElapsedTime.nanos)
-      drainFinishedSegments(registration.recorder)
-    }
+    Kamon.metrics.entity(TraceMetrics, name).elapsedTime.record(traceElapsedTime.nanos)
+    drainFinishedSegments()
   }
 
   def startSegment(segmentName: String, category: String, library: String): Segment =
     new MetricsOnlySegment(segmentName, category, library)
 
-  @tailrec private def drainFinishedSegments(recorder: TraceMetrics): Unit = {
+  @tailrec private def drainFinishedSegments(): Unit = {
     val segment = _finishedSegments.poll()
     if (segment != null) {
-      recorder.segment(segment.name, segment.category, segment.library).record(segment.duration.nanos)
-      drainFinishedSegments(recorder)
+      val segmentTags = Map(
+        "trace" -> name,
+        "category" -> segment.category,
+        "library" -> segment.library)
+
+      Kamon.metrics.entity(SegmentMetrics, segment.name, segmentTags).elapsedTime.record(segment.duration.nanos)
+      drainFinishedSegments()
     }
   }
 
@@ -72,9 +76,7 @@ private[kamon] class MetricsOnlyContext(traceName: String, val token: String, iz
     _finishedSegments.add(SegmentLatencyData(segmentName, category, library, duration))
 
     if (isClosed) {
-      metricsExtension.register(TraceMetrics, name).map { registration ⇒
-        drainFinishedSegments(registration.recorder)
-      }
+      drainFinishedSegments()
     }
   }
 
