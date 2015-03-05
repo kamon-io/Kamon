@@ -19,7 +19,7 @@ package kamon.system.sigar
 import akka.actor.{ Props, Actor }
 import kamon.Kamon
 import kamon.metric.instrument.InstrumentFactory
-import kamon.metric.{ Entity, EntityRecorder, Metrics }
+import kamon.metric.{ EntityRecorderFactory, Entity, EntityRecorder, Metrics }
 import kamon.system.sigar.SigarMetricsUpdater.UpdateSigarMetrics
 import org.hyperic.sigar.Sigar
 
@@ -65,10 +65,8 @@ trait SigarMetric extends EntityRecorder {
 }
 
 abstract class SigarMetricRecorderCompanion(metricName: String) {
-  def register(sigar: Sigar, metricsExtension: Metrics): SigarMetric = {
-    val instrumentFactory = metricsExtension.instrumentFactory("system-metric")
-    metricsExtension.register(Entity(metricName, "system-metric"), apply(sigar, instrumentFactory)).recorder
-  }
+  def register(sigar: Sigar, metricsExtension: Metrics): SigarMetric =
+    metricsExtension.entity(EntityRecorderFactory("system-metric", apply(sigar, _)), metricName)
 
   def apply(sigar: Sigar, instrumentFactory: InstrumentFactory): SigarMetric
 }

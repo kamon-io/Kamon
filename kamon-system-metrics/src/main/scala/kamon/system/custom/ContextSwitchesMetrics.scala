@@ -88,12 +88,10 @@ class ContextSwitchesMetrics(pid: Long, log: LoggingAdapter, instrumentFactory: 
 object ContextSwitchesMetrics {
 
   def register(system: ActorSystem, refreshInterval: FiniteDuration): ContextSwitchesMetrics = {
-    val metricsExtension = Kamon.metrics
     val log = Logging(system, "ContextSwitchesMetrics")
     val pid = (new Sigar).getPid
 
-    val instrumentFactory = metricsExtension.instrumentFactory("system-metric")
-    metricsExtension.register(Entity("context-switches", "system-metric"), new ContextSwitchesMetrics(pid, log, instrumentFactory)).recorder
+    Kamon.metrics.entity(EntityRecorderFactory("system-metric", new ContextSwitchesMetrics(pid, log, _)), "context-switches")
   }
 }
 
