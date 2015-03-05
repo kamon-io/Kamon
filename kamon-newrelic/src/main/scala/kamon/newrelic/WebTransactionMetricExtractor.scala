@@ -17,6 +17,7 @@
 package kamon.newrelic
 
 import kamon.metric.{ EntitySnapshot, Entity }
+import kamon.trace.SegmentCategory
 
 import scala.collection.mutable
 import kamon.metric.instrument.{ Time, CollectionContext, Histogram }
@@ -35,38 +36,36 @@ object WebTransactionMetricExtractor extends MetricExtractor {
     val externalScopedByHostAndLibrarySnapshots = mutable.Map.empty[(String, String, String), List[Histogram.Snapshot]]
 
     val transactionMetrics = metrics.filterKeys(_.category == "trace").map {
-      case (entity: Entity, es: EntitySnapshot) ⇒
-        // Trace metrics only have elapsed-time and segments and all of them are Histograms.
-        es.histograms.foreach {
-          case (key, segmentSnapshot) if key.metadata.get("category").filter(_ == "http-client").nonEmpty ⇒
-            val library = key.metadata("library")
-            accumulatedExternalServices = accumulatedExternalServices.merge(segmentSnapshot, collectionContext)
-
-            // Accumulate externals by host
-            externalByHostSnapshots.update(key.name, segmentSnapshot :: externalByHostSnapshots.getOrElse(key.name, Nil))
-
-            // Accumulate externals by host and library
-            externalByHostAndLibrarySnapshots.update((key.name, library),
-              segmentSnapshot :: externalByHostAndLibrarySnapshots.getOrElse((key.name, library), Nil))
-
-            // Accumulate externals by host and library, including the transaction as scope.
-            externalScopedByHostAndLibrarySnapshots.update((key.name, library, entity.name),
-              segmentSnapshot :: externalScopedByHostAndLibrarySnapshots.getOrElse((key.name, library, entity.name), Nil))
-
-          case otherSegments ⇒
-
+      case (entity, entitySnapshot) ⇒
+        val elapsedTime = entitySnapshot.histogram("elapsed-time").get
+        accumulatedHttpDispatcher = accumulatedHttpDispatcher.merge(elapsedTime, collectionContext)
+        elapsedTime.recordsIterator.foreach { record ⇒
+          apdexBuilder.record(Time.Nanoseconds.scale(Time.Seconds)(record.level), record.count)
         }
 
-        es.histograms.collect {
-          case (key, elapsedTime) if key.name == "elapsed-time" ⇒
-            accumulatedHttpDispatcher = accumulatedHttpDispatcher.merge(elapsedTime, collectionContext)
-            elapsedTime.recordsIterator.foreach { record ⇒
-              apdexBuilder.record(Time.Nanoseconds.scale(Time.Seconds)(record.level), record.count)
-            }
+        Metric(elapsedTime, Time.Nanoseconds, "WebTransaction/Custom/" + entity.name, None)
+    }
 
-            Metric(elapsedTime, key.unitOfMeasurement, "WebTransaction/Custom/" + entity.name, None)
-        }
-    } flatten
+    // Accumulate all segment metrics
+    metrics.filterKeys(_.category == "trace-segment").map {
+      case (entity, entitySnapshot) if entity.tags("category") == SegmentCategory.HttpClient ⇒
+        val library = entity.tags("library")
+        val trace = entity.tags("trace")
+        val elapsedTime = entitySnapshot.histogram("elapsed-time").get
+
+        accumulatedExternalServices = accumulatedExternalServices.merge(elapsedTime, collectionContext)
+
+        // Accumulate externals by host
+        externalByHostSnapshots.update(entity.name, elapsedTime :: externalByHostSnapshots.getOrElse(entity.name, Nil))
+
+        // Accumulate externals by host and library
+        externalByHostAndLibrarySnapshots.update((entity.name, library),
+          elapsedTime :: externalByHostAndLibrarySnapshots.getOrElse((entity.name, library), Nil))
+
+        // Accumulate externals by host and library, including the transaction as scope.
+        externalScopedByHostAndLibrarySnapshots.update((entity.name, library, trace),
+          elapsedTime :: externalScopedByHostAndLibrarySnapshots.getOrElse((entity.name, library, trace), Nil))
+    }
 
     val httpDispatcher = Metric(accumulatedHttpDispatcher, Time.Seconds, "HttpDispatcher", None)
     val webTransaction = httpDispatcher.copy(MetricID("WebTransaction", None))
