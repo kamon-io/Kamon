@@ -24,8 +24,6 @@ import kamon.testkit.BaseKamonSpec
 import kamon.trace.{ Tracer, SegmentCategory }
 
 class StatementInstrumentationSpec extends BaseKamonSpec("jdbc-spec") {
-  import TraceMetricsSpec.SegmentSyntax
-
   override lazy val config =
     ConfigFactory.parseString(
       """
@@ -76,8 +74,14 @@ class StatementInstrumentationSpec extends BaseKamonSpec("jdbc-spec") {
 
       val traceSnapshot = takeSnapshotOf("jdbc-trace-insert", "trace")
       traceSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
-      traceSnapshot.segments.size should be(1)
-      traceSnapshot.segment("Jdbc[Insert]", SegmentCategory.Database, Jdbc.SegmentLibraryName).numberOfMeasurements should be(100)
+
+      val segmentSnapshot = takeSnapshotOf("Jdbc[Insert]", "trace-segment",
+        tags = Map(
+          "trace" -> "jdbc-trace-insert",
+          "category" -> SegmentCategory.Database,
+          "library" -> Jdbc.SegmentLibraryName))
+
+      segmentSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(100)
     }
 
     "record the execution time of SELECT operation" in {
@@ -96,8 +100,14 @@ class StatementInstrumentationSpec extends BaseKamonSpec("jdbc-spec") {
 
       val traceSnapshot = takeSnapshotOf("jdbc-trace-select", "trace")
       traceSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
-      traceSnapshot.segments.size should be(1)
-      traceSnapshot.segment("Jdbc[Select]", SegmentCategory.Database, Jdbc.SegmentLibraryName).numberOfMeasurements should be(100)
+
+      val segmentSnapshot = takeSnapshotOf("Jdbc[Select]", "trace-segment",
+        tags = Map(
+          "trace" -> "jdbc-trace-select",
+          "category" -> SegmentCategory.Database,
+          "library" -> Jdbc.SegmentLibraryName))
+
+      segmentSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(100)
     }
 
     "record the execution time of UPDATE operation" in {
@@ -116,8 +126,14 @@ class StatementInstrumentationSpec extends BaseKamonSpec("jdbc-spec") {
 
       val traceSnapshot = takeSnapshotOf("jdbc-trace-update", "trace")
       traceSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
-      traceSnapshot.segments.size should be(1)
-      traceSnapshot.segment("Jdbc[Update]", SegmentCategory.Database, Jdbc.SegmentLibraryName).numberOfMeasurements should be(100)
+
+      val segmentSnapshot = takeSnapshotOf("Jdbc[Update]", "trace-segment",
+        tags = Map(
+          "trace" -> "jdbc-trace-update",
+          "category" -> SegmentCategory.Database,
+          "library" -> Jdbc.SegmentLibraryName))
+
+      segmentSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(100)
     }
 
     "record the execution time of DELETE operation" in {
@@ -136,8 +152,14 @@ class StatementInstrumentationSpec extends BaseKamonSpec("jdbc-spec") {
 
       val traceSnapshot = takeSnapshotOf("jdbc-trace-delete", "trace")
       traceSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
-      traceSnapshot.segments.size should be(1)
-      traceSnapshot.segment("Jdbc[Delete]", SegmentCategory.Database, Jdbc.SegmentLibraryName).numberOfMeasurements should be(100)
+
+      val segmentSnapshot = takeSnapshotOf("Jdbc[Delete]", "trace-segment",
+        tags = Map(
+          "trace" -> "jdbc-trace-delete",
+          "category" -> SegmentCategory.Database,
+          "library" -> Jdbc.SegmentLibraryName))
+
+      segmentSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(100)
 
     }
 
