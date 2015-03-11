@@ -21,8 +21,6 @@ import kamon.metric.{ HistogramKey, MinMaxCounterKey, CounterKey }
 import kamon.testkit.BaseKamonSpec
 
 class StaticAnnotationInstrumentationJavaSpec extends BaseKamonSpec("static-annotation-instrumentation-java-spec") {
-  import kamon.metric.TraceMetricsSpec.SegmentSyntax
-
   override lazy val config =
     ConfigFactory.parseString(
       """
@@ -38,16 +36,17 @@ class StaticAnnotationInstrumentationJavaSpec extends BaseKamonSpec("static-anno
 
       val snapshot = takeSnapshotOf("trace", "trace")
       snapshot.histogram("elapsed-time").get.numberOfMeasurements should be(10)
-      snapshot.segments.size should be(0)
     }
     "create a segment when is invoked a static method annotated with @Segment" in {
-      for (id ← 1 to 10) AnnotatedJavaClass.segment()
+      for (id ← 1 to 7) AnnotatedJavaClass.segment()
 
-      val snapshot = takeSnapshotOf("trace-with-segment", "trace")
-      snapshot.histogram("elapsed-time").get.numberOfMeasurements should be(10)
+      val segmentMetricsSnapshot = takeSnapshotOf("inner-segment", "trace-segment",
+        tags = Map(
+          "trace" -> "trace-with-segment",
+          "category" -> "inner",
+          "library" -> "segment"))
 
-      snapshot.segments.size should be(1)
-      snapshot.segment("inner-segment", "inner", "segment") should not be empty
+      segmentMetricsSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(7)
     }
 
     "create a segment when is invoked a static method annotated with @Segment and evaluate EL expressions" in {
@@ -56,26 +55,27 @@ class StaticAnnotationInstrumentationJavaSpec extends BaseKamonSpec("static-anno
       val snapshot = takeSnapshotOf("trace-with-segment-el", "trace")
       snapshot.histogram("elapsed-time").get.numberOfMeasurements should be(10)
 
-      snapshot.segments.size should be(1)
-      snapshot.segment("inner-segment:10", "segments", "segment") should not be empty
+      val segmentMetricsSnapshot = takeSnapshotOf("inner-segment:10", "trace-segment",
+        tags = Map(
+          "trace" -> "trace-with-segment-el",
+          "category" -> "segments",
+          "library" -> "segment"))
+
+      segmentMetricsSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(10)
     }
 
     "count the invocations of a static method annotated with @Count" in {
       for (id ← 1 to 10) AnnotatedJavaClass.count()
 
-      val snapshot = takeSnapshotOf("simple-metric", "simple-metric")
-      snapshot.counter("count").get.count should be(10)
+      val snapshot = takeSnapshotOf("count", "counter")
+      snapshot.counter("counter").get.count should be(10)
     }
 
     "count the invocations of a static method annotated with @Count and evaluate EL expressions" in {
       for (id ← 1 to 2) AnnotatedJavaClass.countWithEL()
 
-      val snapshot = takeSnapshotOf("simple-metric", "simple-metric")
-      snapshot.counter("count:10").get.count should be(2)
-
-      val counterKey = (name: String) ⇒ (key: CounterKey) ⇒ key.name == name
-
-      snapshot.counters.keys.find(counterKey("count:10")).get.metadata should be(Map("counter" -> "1", "env" -> "prod"))
+      val snapshot = takeSnapshotOf("count:10", "counter", tags = Map("counter" -> "1", "env" -> "prod"))
+      snapshot.counter("counter").get.count should be(2)
     }
 
     "count the current invocations of a static method annotated with @MinMaxCount" in {
@@ -83,43 +83,35 @@ class StaticAnnotationInstrumentationJavaSpec extends BaseKamonSpec("static-anno
         AnnotatedJavaClass.countMinMax()
       }
 
-      val snapshot = takeSnapshotOf("simple-metric", "simple-metric")
-      snapshot.minMaxCounter("minMax").get.max should be(1)
+      val snapshot = takeSnapshotOf("minMax", "min-max-counter")
+      snapshot.minMaxCounter("min-max-counter").get.max should be(1)
     }
 
     "count the current invocations of a static method annotated with @MinMaxCount and evaluate EL expressions" in {
       for (id ← 1 to 10) AnnotatedJavaClass.countMinMaxWithEL()
 
-      val snapshot = takeSnapshotOf("simple-metric", "simple-metric")
-      snapshot.minMaxCounter("minMax:10").get.max should be(1)
-
-      val minMaxKey = (name: String) ⇒ (key: MinMaxCounterKey) ⇒ key.name == name
-
-      snapshot.minMaxCounters.keys.find(minMaxKey("minMax:10")).get.metadata should be(Map("minMax" -> "1", "env" -> "dev"))
+      val snapshot = takeSnapshotOf("minMax:10", "min-max-counter", tags = Map("minMax" -> "1", "env" -> "dev"))
+      snapshot.minMaxCounter("min-max-counter").get.max should be(1)
     }
 
     "measure the time spent in the execution of a static method annotated with @Time" in {
       for (id ← 1 to 1) AnnotatedJavaClass.time()
 
-      val snapshot = takeSnapshotOf("simple-metric", "simple-metric")
-      snapshot.histogram("time").get.numberOfMeasurements should be(1)
+      val snapshot = takeSnapshotOf("time", "histogram")
+      snapshot.histogram("histogram").get.numberOfMeasurements should be(1)
     }
 
     "measure the time spent in the execution of a static method annotated with @Time and evaluate EL expressions" in {
       for (id ← 1 to 1) AnnotatedJavaClass.timeWithEL()
 
-      val snapshot = takeSnapshotOf("simple-metric", "simple-metric")
-      snapshot.histogram("time:10").get.numberOfMeasurements should be(1)
-
-      val histogramKey = (name: String) ⇒ (key: HistogramKey) ⇒ key.name == name
-
-      snapshot.histograms.keys.find(histogramKey("time:10")).get.metadata should be(Map("slow-service" -> "service", "env" -> "prod"))
+      val snapshot = takeSnapshotOf("time:10", "histogram", tags = Map("slow-service" -> "service", "env" -> "prod"))
+      snapshot.histogram("histogram").get.numberOfMeasurements should be(1)
     }
 
     "record the value returned by a static method annotated with @Histogram" in {
       for (value ← 1 to 5) AnnotatedJavaClass.histogram(value.toLong)
 
-      val snapshot = takeSnapshotOf("simple-metric", "simple-metric")
+      val snapshot = takeSnapshotOf("histogram", "histogram")
       snapshot.histogram("histogram").get.numberOfMeasurements should be(5)
       snapshot.histogram("histogram").get.min should be(1)
       snapshot.histogram("histogram").get.max should be(5)
@@ -129,14 +121,10 @@ class StaticAnnotationInstrumentationJavaSpec extends BaseKamonSpec("static-anno
     "record the value returned by a static method annotated with @Histogram and evaluate EL expressions" in {
       for (value ← 1 to 2) AnnotatedJavaClass.histogramWithEL(value.toLong)
 
-      val snapshot = takeSnapshotOf("simple-metric", "simple-metric")
-      snapshot.histogram("histogram:10").get.numberOfMeasurements should be(2)
-      snapshot.histogram("histogram:10").get.min should be(1)
-      snapshot.histogram("histogram:10").get.max should be(2)
-
-      val histogramKey = (name: String) ⇒ (key: HistogramKey) ⇒ key.name == name
-
-      snapshot.histograms.keys.find(histogramKey("histogram:10")).get.metadata should be(Map("histogram" -> "hdr", "env" -> "prod"))
+      val snapshot = takeSnapshotOf("histogram:10", "histogram", tags = Map("histogram" -> "hdr", "env" -> "prod"))
+      snapshot.histogram("histogram").get.numberOfMeasurements should be(2)
+      snapshot.histogram("histogram").get.min should be(1)
+      snapshot.histogram("histogram").get.max should be(2)
     }
   }
 }
