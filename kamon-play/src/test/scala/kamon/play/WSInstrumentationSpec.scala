@@ -17,7 +17,7 @@
 package kamon.play
 
 import kamon.Kamon
-import kamon.metric.{ EntitySnapshot, TraceMetrics }
+import kamon.metric.{ Entity, EntitySnapshot, TraceMetrics }
 import kamon.trace.{ Tracer, TraceContext, SegmentCategory }
 import org.scalatest.{ Matchers, WordSpecLike }
 import org.scalatestplus.play.OneServerPerSuite
@@ -32,7 +32,7 @@ import scala.concurrent.duration._
 
 class WSInstrumentationSpec extends WordSpecLike with Matchers with OneServerPerSuite {
   Kamon.start()
-  import kamon.metric.TraceMetricsSpec.SegmentSyntax
+
   System.setProperty("config.file", "./kamon-play/src/test/resources/conf/application.conf")
 
   override lazy val port: Port = 19003
@@ -46,10 +46,16 @@ class WSInstrumentationSpec extends WordSpecLike with Matchers with OneServerPer
     "propagate the TraceContext inside an Action and complete the WS request" in {
       Await.result(route(FakeRequest(GET, "/inside")).get, 10 seconds)
 
-      val snapshot = takeSnapshotOf("GET: /inside")
+      val snapshot = takeSnapshotOf("GET: /inside", "trace")
       snapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
-      snapshot.segments.size should be(1)
-      snapshot.segment(s"http://localhost:$port/async", SegmentCategory.HttpClient, Play.SegmentLibraryName).numberOfMeasurements should be(1)
+
+      val segmentMetricsSnapshot = takeSnapshotOf(s"http://localhost:$port/async", "trace-segment",
+        tags = Map(
+          "trace" -> "GET: /inside",
+          "category" -> SegmentCategory.HttpClient,
+          "library" -> Play.SegmentLibraryName))
+
+      segmentMetricsSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
     }
 
     "propagate the TraceContext outside an Action and complete the WS request" in {
@@ -58,22 +64,26 @@ class WSInstrumentationSpec extends WordSpecLike with Matchers with OneServerPer
         Tracer.currentContext.finish()
       }
 
-      val snapshot = takeSnapshotOf("trace-outside-action")
+      val snapshot = takeSnapshotOf("trace-outside-action", "trace")
       snapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
-      snapshot.segments.size should be(1)
-      snapshot.segment(s"http://localhost:$port/outside", SegmentCategory.HttpClient, Play.SegmentLibraryName).numberOfMeasurements should be(1)
-    }
 
+      val segmentMetricsSnapshot = takeSnapshotOf(s"http://localhost:$port/outside", "trace-segment",
+        tags = Map(
+          "trace" -> "trace-outside-action",
+          "category" -> SegmentCategory.HttpClient,
+          "library" -> Play.SegmentLibraryName))
+
+      segmentMetricsSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
+    }
   }
+
+  lazy val collectionContext = Kamon.metrics.buildDefaultCollectionContext
 
   def newContext(name: String): TraceContext =
     Kamon.tracer.newContext(name)
 
-  def takeSnapshotOf(traceName: String): EntitySnapshot = {
-    // Give some time for async segments to finish.
-    Thread.sleep(300)
-    val recorder = Kamon.metrics.register(TraceMetrics, traceName).get.recorder
-    val collectionContext = Kamon.metrics.buildDefaultCollectionContext
+  def takeSnapshotOf(name: String, category: String, tags: Map[String, String] = Map.empty): EntitySnapshot = {
+    val recorder = Kamon.metrics.find(Entity(name, category, tags)).get
     recorder.collect(collectionContext)
   }
 

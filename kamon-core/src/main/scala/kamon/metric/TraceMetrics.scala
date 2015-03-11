@@ -16,29 +16,30 @@
 
 package kamon.metric
 
-import kamon.metric.instrument.{ Time, InstrumentFactory, Histogram }
+import kamon.metric.instrument.{ Time, InstrumentFactory }
 
 class TraceMetrics(instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) {
-  import TraceMetrics.segmentKey
 
   /**
    *  Records blah blah
    */
-  val ElapsedTime = histogram("elapsed-time", unitOfMeasurement = Time.Nanoseconds)
-
-  /**
-   *  Records Blah Blah.
-   *
-   */
-  def segment(name: String, category: String, library: String): Histogram =
-    histogram(segmentKey(name, category, library))
-
+  val elapsedTime = histogram("elapsed-time", unitOfMeasurement = Time.Nanoseconds)
 }
 
 object TraceMetrics extends EntityRecorderFactory[TraceMetrics] {
   def category: String = "trace"
   def createRecorder(instrumentFactory: InstrumentFactory): TraceMetrics = new TraceMetrics(instrumentFactory)
+}
 
-  def segmentKey(name: String, category: String, library: String): HistogramKey =
-    HistogramKey(name, Time.Nanoseconds, Map("category" -> category, "library" -> library))
+class SegmentMetrics(instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) {
+
+  /**
+   *  Records blah blah
+   */
+  val elapsedTime = histogram("elapsed-time", unitOfMeasurement = Time.Nanoseconds)
+}
+
+object SegmentMetrics extends EntityRecorderFactory[SegmentMetrics] {
+  def category: String = "trace-segment"
+  def createRecorder(instrumentFactory: InstrumentFactory): SegmentMetrics = new SegmentMetrics(instrumentFactory)
 }

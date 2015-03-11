@@ -32,6 +32,7 @@ object Settings {
     scalaVersion            := ScalaVersion,
     resolvers              ++= Dependencies.resolutionRepos,
     fork in run             := true,
+    parallelExecution in Test := false,
     testGrouping in Test    := singleTestPerJvm((definedTests in Test).value, (javaOptions in Test).value),
     javacOptions in compile := Seq(
       "-Xlint:-options",

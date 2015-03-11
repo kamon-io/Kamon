@@ -34,8 +34,6 @@ import scala.concurrent.duration._
 class ClientRequestInstrumentationSpec extends BaseKamonSpec("client-request-instrumentation-spec") with ScalaFutures
     with RequestBuilding with TestServer {
 
-  import TraceMetricsSpec.SegmentSyntax
-
   override lazy val config =
     ConfigFactory.parseString(
       """
@@ -130,8 +128,14 @@ class ClientRequestInstrumentationSpec extends BaseKamonSpec("client-request-ins
 
         val traceMetricsSnapshot = takeSnapshotOf("assign-name-to-segment-with-request-level-api", "trace")
         traceMetricsSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
-        traceMetricsSnapshot.segment("request-level /request-level-api-segment", SegmentCategory.HttpClient, Spray.SegmentLibraryName)
-          .numberOfMeasurements should be(1)
+
+        val segmentMetricsSnapshot = takeSnapshotOf("request-level /request-level-api-segment", "trace-segment",
+          tags = Map(
+            "trace" -> "assign-name-to-segment-with-request-level-api",
+            "category" -> SegmentCategory.HttpClient,
+            "library" -> Spray.SegmentLibraryName))
+
+        segmentMetricsSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
       }
 
       "rename a request level api segment once it reaches the relevant host connector" in {
@@ -161,8 +165,14 @@ class ClientRequestInstrumentationSpec extends BaseKamonSpec("client-request-ins
 
         val traceMetricsSnapshot = takeSnapshotOf("rename-segment-with-request-level-api", "trace")
         traceMetricsSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
-        traceMetricsSnapshot.segment("host-level /request-level-api-segment", SegmentCategory.HttpClient, Spray.SegmentLibraryName)
-          .numberOfMeasurements should be(1)
+
+        val segmentMetricsSnapshot = takeSnapshotOf("host-level /request-level-api-segment", "trace-segment",
+          tags = Map(
+            "trace" -> "rename-segment-with-request-level-api",
+            "category" -> SegmentCategory.HttpClient,
+            "library" -> Spray.SegmentLibraryName))
+
+        segmentMetricsSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
       }
     }
 
@@ -249,8 +259,14 @@ class ClientRequestInstrumentationSpec extends BaseKamonSpec("client-request-ins
 
         val traceMetricsSnapshot = takeSnapshotOf("create-segment-with-host-level-api", "trace")
         traceMetricsSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
-        traceMetricsSnapshot.segment("host-level /host-level-api-segment", SegmentCategory.HttpClient, Spray.SegmentLibraryName)
-          .numberOfMeasurements should be(1)
+
+        val segmentMetricsSnapshot = takeSnapshotOf("host-level /host-level-api-segment", "trace-segment",
+          tags = Map(
+            "trace" -> "create-segment-with-host-level-api",
+            "category" -> SegmentCategory.HttpClient,
+            "library" -> Spray.SegmentLibraryName))
+
+        segmentMetricsSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
       }
     }
   }

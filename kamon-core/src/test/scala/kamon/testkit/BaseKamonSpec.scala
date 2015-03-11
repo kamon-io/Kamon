@@ -20,7 +20,7 @@ import akka.testkit.{ ImplicitSender, TestKitBase }
 import akka.actor.ActorSystem
 import com.typesafe.config.{ Config, ConfigFactory }
 import kamon.Kamon
-import kamon.metric.{ SubscriptionsDispatcher, EntitySnapshot, MetricsImpl }
+import kamon.metric.{ Entity, SubscriptionsDispatcher, EntitySnapshot, MetricsImpl }
 import kamon.trace.TraceContext
 import kamon.util.LazyActorRef
 import org.scalatest.{ BeforeAndAfterAll, Matchers, WordSpecLike }
@@ -45,6 +45,11 @@ abstract class BaseKamonSpec(actorSystemName: String) extends TestKitBase with W
 
   def takeSnapshotOf(name: String, category: String): EntitySnapshot = {
     val recorder = Kamon.metrics.find(name, category).get
+    recorder.collect(collectionContext)
+  }
+
+  def takeSnapshotOf(name: String, category: String, tags: Map[String, String]): EntitySnapshot = {
+    val recorder = Kamon.metrics.find(Entity(name, category, tags)).get
     recorder.collect(collectionContext)
   }
 

@@ -23,36 +23,15 @@ package kamon.metric
  *
  *  // TODO: Find a better word for `thing`.
  */
-class Entity(val name: String, val category: String, val metadata: Map[String, String]) {
-
-  override def equals(o: Any): Boolean = {
-    if (this eq o.asInstanceOf[AnyRef])
-      true
-    else if ((o.asInstanceOf[AnyRef] eq null) || !o.isInstanceOf[Entity])
-      false
-    else {
-      val thatAsEntity = o.asInstanceOf[Entity]
-      category == thatAsEntity.category && name == thatAsEntity.name
-    }
-  }
-
-  override def hashCode: Int = {
-    var result: Int = name.hashCode
-    result = 31 * result + category.hashCode
-    return result
-  }
-}
+case class Entity(name: String, category: String, tags: Map[String, String])
 
 object Entity {
   def apply(name: String, category: String): Entity =
     apply(name, category, Map.empty)
 
-  def apply(name: String, category: String, metadata: Map[String, String]): Entity =
-    new Entity(name, category, metadata)
-
   def create(name: String, category: String): Entity =
     apply(name, category, Map.empty)
 
-  def create(name: String, category: String, metadata: Map[String, String]): Entity =
-    new Entity(name, category, metadata)
+  def create(name: String, category: String, tags: Map[String, String]): Entity =
+    new Entity(name, category, tags)
 }

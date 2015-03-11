@@ -96,7 +96,20 @@ class DatadogMetricSenderSpec extends BaseKamonSpec("datadog-metric-sender-spec"
       val udp = setup(Map(entity -> testRecorder.collect(collectionContext)))
       val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
 
-      data.utf8String should be("kamon.category.metric-one:10|ms|@0.5|#category:datadog\nkamon.category.counter:4|c|#category:datadog\nkamon.category.metric-two:21|ms|#category:datadog")
+      data.utf8String.split("\n") should contain allOf (
+        "kamon.category.metric-one:10|ms|@0.5|#category:datadog",
+        "kamon.category.metric-two:21|ms|#category:datadog",
+        "kamon.category.counter:4|c|#category:datadog")
+    }
+
+    "include all entity tags, if available in the metric packet" in new UdpListenerFixture {
+      val (entity, testRecorder) = buildRecorder("datadog", tags = Map("my-cool-tag" -> "some-value"))
+      testRecorder.metricTwo.record(10L, 2)
+
+      val udp = setup(Map(entity -> testRecorder.collect(collectionContext)))
+      val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
+
+      data.utf8String should be(s"kamon.category.metric-two:10|ms|@0.5|#category:datadog,my-cool-tag:some-value")
     }
 
   }
@@ -105,9 +118,10 @@ class DatadogMetricSenderSpec extends BaseKamonSpec("datadog-metric-sender-spec"
     val localhostName = ManagementFactory.getRuntimeMXBean.getName.split('@')(1)
     val testMaxPacketSize = system.settings.config.getBytes("kamon.datadog.max-packet-size")
 
-    def buildRecorder(name: String): (Entity, TestEntityRecorder) = {
-      val registration = Kamon.metrics.register(TestEntityRecorder, name).get
-      (registration.entity, registration.recorder)
+    def buildRecorder(name: String, tags: Map[String, String] = Map.empty): (Entity, TestEntityRecorder) = {
+      val entity = Entity(name, TestEntityRecorder.category, tags)
+      val recorder = Kamon.metrics.entity(TestEntityRecorder, entity)
+      (entity, recorder)
     }
 
     def setup(metrics: Map[Entity, EntitySnapshot]): TestProbe = {

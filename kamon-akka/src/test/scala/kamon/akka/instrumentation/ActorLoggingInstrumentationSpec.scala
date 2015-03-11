@@ -21,7 +21,7 @@ import com.typesafe.config.ConfigFactory
 import kamon.testkit.BaseKamonSpec
 import kamon.trace.TraceLocal.AvailableToMdc
 import kamon.trace.logging.MdcKeysSupport
-import kamon.trace.{Tracer, TraceContextAware, TraceLocal}
+import kamon.trace.{ Tracer, TraceContextAware, TraceLocal }
 import org.scalatest.Inspectors
 import org.slf4j.MDC
 
