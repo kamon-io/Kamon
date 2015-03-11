@@ -180,7 +180,7 @@ class RouterMetricsSpec extends BaseKamonSpec("router-metrics-spec") {
       trackedRouter ! PoisonPill
       deathWatcher.expectTerminated(trackedRouter)
 
-      routerMetricsRecorderOf("user/stop-in-pool-router").get shouldNot be theSameInstanceAs (firstRecorder)
+      routerMetricsRecorderOf("user/stop-in-pool-router") shouldBe empty
     }
 
     "clean up the associated recorder when the group router is stopped" in new RouterMetricsFixtures {
@@ -193,7 +193,7 @@ class RouterMetricsSpec extends BaseKamonSpec("router-metrics-spec") {
       trackedRouter ! PoisonPill
       deathWatcher.expectTerminated(trackedRouter)
 
-      routerMetricsRecorderOf("user/stop-in-group-router").get shouldNot be theSameInstanceAs (firstRecorder)
+      routerMetricsRecorderOf("user/stop-in-group-router") shouldBe empty
     }
   }
 
@@ -205,7 +205,7 @@ class RouterMetricsSpec extends BaseKamonSpec("router-metrics-spec") {
     }
 
     def routerMetricsRecorderOf(routerName: String): Option[RouterMetrics] =
-      Kamon.metrics.register(RouterMetrics, routerName).map(_.recorder)
+      Kamon.metrics.find(routerName, RouterMetrics.category).map(_.asInstanceOf[RouterMetrics])
 
     def collectMetricsOf(routerName: String): Option[EntitySnapshot] = {
       Thread.sleep(5) // Just in case the test advances a bit faster than the actor being tested.

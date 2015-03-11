@@ -27,7 +27,7 @@ import com.typesafe.config.ConfigFactory
 import kamon.Kamon
 import kamon.akka.Akka
 import kamon.testkit.BaseKamonSpec
-import kamon.trace.{Tracer, TraceContext, TraceContextAware}
+import kamon.trace.{ Tracer, TraceContext, TraceContextAware }
 
 import scala.concurrent.duration._
 

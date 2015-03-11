@@ -34,11 +34,14 @@ class ActorCellInstrumentation {
 
   @After("actorCellCreation(cell, system, ref, props, dispatcher, parent)")
   def afterCreation(cell: ActorCell, system: ActorSystem, ref: ActorRef, props: Props, dispatcher: MessageDispatcher, parent: ActorRef): Unit = {
-    Kamon.metrics.register(ActorMetrics, ref.path.elements.mkString("/")).map { registration ⇒
+    val actorEntity = Entity(ref.path.elements.mkString("/"), ActorMetrics.category)
+
+    if (Kamon.metrics.shouldTrack(actorEntity)) {
+      val actorMetricsRecorder = Kamon.metrics.entity(ActorMetrics, actorEntity)
       val cellMetrics = cell.asInstanceOf[ActorCellMetrics]
 
-      cellMetrics.entity = registration.entity
-      cellMetrics.recorder = Some(registration.recorder)
+      cellMetrics.entity = actorEntity
+      cellMetrics.recorder = Some(actorMetricsRecorder)
     }
 
   }
@@ -90,14 +93,14 @@ class ActorCellInstrumentation {
   def afterStop(cell: ActorCell): Unit = {
     val cellMetrics = cell.asInstanceOf[ActorCellMetrics]
     cellMetrics.recorder.map { _ ⇒
-      Kamon.metrics.unregister(cellMetrics.entity)
+      Kamon.metrics.removeEntity(cellMetrics.entity)
     }
 
     // The Stop can't be captured from the RoutedActorCell so we need to put this piece of cleanup here.
     if (cell.isInstanceOf[RoutedActorCell]) {
       val routedCellMetrics = cell.asInstanceOf[RoutedActorCellMetrics]
       routedCellMetrics.routerRecorder.map { _ ⇒
-        Kamon.metrics.unregister(routedCellMetrics.routerEntity)
+        Kamon.metrics.removeEntity(routedCellMetrics.routerEntity)
       }
     }
   }
@@ -124,11 +127,13 @@ class RoutedActorCellInstrumentation {
 
   @After("routedActorCellCreation(cell, system, ref, props, dispatcher, routeeProps, supervisor)")
   def afterRoutedActorCellCreation(cell: RoutedActorCell, system: ActorSystem, ref: ActorRef, props: Props, dispatcher: MessageDispatcher, routeeProps: Props, supervisor: ActorRef): Unit = {
-    Kamon.metrics.register(RouterMetrics, ref.path.elements.mkString("/")).map { registration ⇒
+    val routerEntity = Entity(ref.path.elements.mkString("/"), RouterMetrics.category)
+
+    if (Kamon.metrics.shouldTrack(routerEntity)) {
       val cellMetrics = cell.asInstanceOf[RoutedActorCellMetrics]
 
-      cellMetrics.routerEntity = registration.entity
-      cellMetrics.routerRecorder = Some(registration.recorder)
+      cellMetrics.routerEntity = routerEntity
+      cellMetrics.routerRecorder = Some(Kamon.metrics.entity(RouterMetrics, routerEntity))
     }
   }
 
