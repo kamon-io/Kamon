@@ -128,12 +128,12 @@ class StatsDMetricSenderSpec extends BaseKamonSpec("statsd-metric-sender-spec") 
     val testEntity = Entity("user/kamon", "test")
 
     def buildMetricKey(entity: Entity, metricName: String)(implicit metricKeyGenerator: SimpleMetricKeyGenerator): String = {
-      val metricKey = HistogramKey(metricName, UnitOfMeasurement.Unknown, Map.empty)
+      val metricKey = HistogramKey(metricName, UnitOfMeasurement.Unknown)
       metricKeyGenerator.generateKey(entity, metricKey)
     }
 
     def buildRecorder(name: String): TestEntityRecorder = {
-      Kamon.metrics.register(TestEntityRecorder, name).get.recorder
+      Kamon.metrics.entity(TestEntityRecorder, name)
     }
 
     def setup(metrics: Map[Entity, EntitySnapshot]): TestProbe = {
