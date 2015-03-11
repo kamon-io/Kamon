@@ -80,7 +80,7 @@ private[kamon] class TracerImpl(metricsExtension: Metrics, config: Config) exten
   private def createTraceContext(traceName: String, token: String = newToken, startTimestamp: RelativeNanoTimestamp = RelativeNanoTimestamp.now,
     isOpen: Boolean = true, isLocal: Boolean = true): TraceContext = {
 
-    def newMetricsOnlyContext = new MetricsOnlyContext(traceName, token, isOpen, _settings.levelOfDetail, startTimestamp, null, metricsExtension)
+    def newMetricsOnlyContext = new MetricsOnlyContext(traceName, token, isOpen, _settings.levelOfDetail, startTimestamp, null)
 
     if (_settings.levelOfDetail == LevelOfDetail.MetricsOnly || !isLocal)
       newMetricsOnlyContext
@@ -88,7 +88,7 @@ private[kamon] class TracerImpl(metricsExtension: Metrics, config: Config) exten
       if (!_settings.sampler.shouldTrace)
         newMetricsOnlyContext
       else
-        new TracingContext(traceName, token, true, _settings.levelOfDetail, isLocal, startTimestamp, null, metricsExtension, this, dispatchTracingContext)
+        new TracingContext(traceName, token, true, _settings.levelOfDetail, isLocal, startTimestamp, null, dispatchTracingContext)
     }
   }
 

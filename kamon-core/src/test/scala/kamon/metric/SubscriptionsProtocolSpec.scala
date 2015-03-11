@@ -34,12 +34,12 @@ class SubscriptionsProtocolSpec extends BaseKamonSpec("subscriptions-protocol-sp
       """.stripMargin)
 
   lazy val metricsModule = Kamon.metrics
-  import metricsModule.{ register, subscribe, unsubscribe }
+  import metricsModule.{ entity, subscribe, unsubscribe }
 
   "the Subscriptions messaging protocol" should {
     "allow subscribing for a single tick" in {
       val subscriber = TestProbe()
-      register(TraceMetrics, "one-shot")
+      entity(TraceMetrics, "one-shot")
       subscribe("trace", "one-shot", subscriber.ref, permanently = false)
 
       flushSubscriptions()
@@ -54,7 +54,7 @@ class SubscriptionsProtocolSpec extends BaseKamonSpec("subscriptions-protocol-sp
 
     "allow subscribing permanently to a metric" in {
       val subscriber = TestProbe()
-      register(TraceMetrics, "permanent")
+      entity(TraceMetrics, "permanent")
       subscribe("trace", "permanent", subscriber.ref, permanently = true)
 
       for (repetition ← 1 to 5) {
@@ -68,9 +68,9 @@ class SubscriptionsProtocolSpec extends BaseKamonSpec("subscriptions-protocol-sp
 
     "allow subscribing to metrics matching a glob pattern" in {
       val subscriber = TestProbe()
-      register(TraceMetrics, "include-one")
-      register(TraceMetrics, "exclude-two")
-      register(TraceMetrics, "include-three")
+      entity(TraceMetrics, "include-one")
+      entity(TraceMetrics, "exclude-two")
+      entity(TraceMetrics, "include-three")
       subscribe("trace", "include-*", subscriber.ref, permanently = true)
 
       for (repetition ← 1 to 5) {
@@ -85,9 +85,9 @@ class SubscriptionsProtocolSpec extends BaseKamonSpec("subscriptions-protocol-sp
 
     "send a single TickMetricSnapshot to each subscriber, even if subscribed multiple times" in {
       val subscriber = TestProbe()
-      register(TraceMetrics, "include-one")
-      register(TraceMetrics, "exclude-two")
-      register(TraceMetrics, "include-three")
+      entity(TraceMetrics, "include-one")
+      entity(TraceMetrics, "exclude-two")
+      entity(TraceMetrics, "include-three")
       subscribe("trace", "include-one", subscriber.ref, permanently = true)
       subscribe("trace", "include-three", subscriber.ref, permanently = true)
 
@@ -103,7 +103,7 @@ class SubscriptionsProtocolSpec extends BaseKamonSpec("subscriptions-protocol-sp
 
     "allow un-subscribing a subscriber" in {
       val subscriber = TestProbe()
-      register(TraceMetrics, "one-shot")
+      entity(TraceMetrics, "one-shot")
       subscribe("trace", "one-shot", subscriber.ref, permanently = true)
 
       flushSubscriptions()

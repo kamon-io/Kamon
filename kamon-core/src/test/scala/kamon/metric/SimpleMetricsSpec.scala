@@ -35,93 +35,81 @@ class SimpleMetricsSpec extends BaseKamonSpec("simple-metrics-spec") {
   "the SimpleMetrics extension" should {
 
     "allow registering a fully configured Histogram and get the same Histogram if registering again" in {
-      val histogramA = Kamon.simpleMetrics.histogram("histogram-with-settings", DynamicRange(1, 10000, 2))
-      val histogramB = Kamon.simpleMetrics.histogram("histogram-with-settings", DynamicRange(1, 10000, 2))
+      val histogramA = Kamon.metrics.histogram("histogram-with-settings", DynamicRange(1, 10000, 2))
+      val histogramB = Kamon.metrics.histogram("histogram-with-settings", DynamicRange(1, 10000, 2))
 
       histogramA shouldBe theSameInstanceAs(histogramB)
     }
 
     "return the original Histogram when registering a fully configured Histogram for second time but with different settings" in {
-      val histogramA = Kamon.simpleMetrics.histogram("histogram-with-settings", DynamicRange(1, 10000, 2))
-      val histogramB = Kamon.simpleMetrics.histogram("histogram-with-settings", DynamicRange(1, 50000, 2))
+      val histogramA = Kamon.metrics.histogram("histogram-with-settings", DynamicRange(1, 10000, 2))
+      val histogramB = Kamon.metrics.histogram("histogram-with-settings", DynamicRange(1, 50000, 2))
 
       histogramA shouldBe theSameInstanceAs(histogramB)
     }
 
     "allow registering a Histogram that takes the default configuration from the kamon.metrics.precision settings" in {
-      Kamon.simpleMetrics.histogram("histogram-with-default-configuration")
+      Kamon.metrics.histogram("histogram-with-default-configuration")
     }
 
     "allow registering a Counter and get the same Counter if registering again" in {
-      val counterA = Kamon.simpleMetrics.counter("counter")
-      val counterB = Kamon.simpleMetrics.counter("counter")
+      val counterA = Kamon.metrics.counter("counter")
+      val counterB = Kamon.metrics.counter("counter")
 
       counterA shouldBe theSameInstanceAs(counterB)
     }
 
     "allow registering a fully configured MinMaxCounter and get the same MinMaxCounter if registering again" in {
-      val minMaxCounterA = Kamon.simpleMetrics.minMaxCounter("min-max-counter-with-settings", DynamicRange(1, 10000, 2), 1 second)
-      val minMaxCounterB = Kamon.simpleMetrics.minMaxCounter("min-max-counter-with-settings", DynamicRange(1, 10000, 2), 1 second)
+      val minMaxCounterA = Kamon.metrics.minMaxCounter("min-max-counter-with-settings", DynamicRange(1, 10000, 2), 1 second)
+      val minMaxCounterB = Kamon.metrics.minMaxCounter("min-max-counter-with-settings", DynamicRange(1, 10000, 2), 1 second)
 
       minMaxCounterA shouldBe theSameInstanceAs(minMaxCounterB)
     }
 
     "return the original MinMaxCounter when registering a fully configured MinMaxCounter for second time but with different settings" in {
-      val minMaxCounterA = Kamon.simpleMetrics.minMaxCounter("min-max-counter-with-settings", DynamicRange(1, 10000, 2), 1 second)
-      val minMaxCounterB = Kamon.simpleMetrics.minMaxCounter("min-max-counter-with-settings", DynamicRange(1, 50000, 2), 1 second)
+      val minMaxCounterA = Kamon.metrics.minMaxCounter("min-max-counter-with-settings", DynamicRange(1, 10000, 2), 1 second)
+      val minMaxCounterB = Kamon.metrics.minMaxCounter("min-max-counter-with-settings", DynamicRange(1, 50000, 2), 1 second)
 
       minMaxCounterA shouldBe theSameInstanceAs(minMaxCounterB)
     }
 
     "allow registering a MinMaxCounter that takes the default configuration from the kamon.metrics.precision settings" in {
-      Kamon.simpleMetrics.minMaxCounter("min-max-counter-with-default-configuration")
+      Kamon.metrics.minMaxCounter("min-max-counter-with-default-configuration")
     }
 
     "allow registering a fully configured Gauge and get the same Gauge if registering again" in {
-      val gaugeA = Kamon.simpleMetrics.gauge("gauge-with-settings", DynamicRange(1, 10000, 2), 1 second, {
-        () ⇒ 1L
-      })
-
-      val gaugeB = Kamon.simpleMetrics.gauge("gauge-with-settings", DynamicRange(1, 10000, 2), 1 second, {
-        () ⇒ 1L
-      })
+      val gaugeA = Kamon.metrics.gauge("gauge-with-settings", DynamicRange(1, 10000, 2), 1 second)(1L)
+      val gaugeB = Kamon.metrics.gauge("gauge-with-settings", DynamicRange(1, 10000, 2), 1 second)(1L)
 
       gaugeA shouldBe theSameInstanceAs(gaugeB)
     }
 
     "return the original Gauge when registering a fully configured Gauge for second time but with different settings" in {
-      val gaugeA = Kamon.simpleMetrics.gauge("gauge-with-settings", DynamicRange(1, 10000, 2), 1 second, {
-        () ⇒ 1L
-      })
-
-      val gaugeB = Kamon.simpleMetrics.gauge("gauge-with-settings", DynamicRange(1, 10000, 2), 1 second, {
-        () ⇒ 1L
-      })
+      val gaugeA = Kamon.metrics.gauge("gauge-with-settings", DynamicRange(1, 10000, 2), 1 second)(1L)
+      val gaugeB = Kamon.metrics.gauge("gauge-with-settings", DynamicRange(1, 10000, 2), 1 second)(1L)
 
       gaugeA shouldBe theSameInstanceAs(gaugeB)
     }
 
     "allow registering a Gauge that takes the default configuration from the kamon.metrics.precision settings" in {
-      Kamon.simpleMetrics.gauge("gauge-with-default-configuration", {
-        () ⇒ 2L
-      })
+      Kamon.metrics.gauge("gauge-with-default-configuration")(2L)
     }
 
     "allow un-registering user metrics" in {
-      val counter = Kamon.simpleMetrics.counter("counter-for-remove")
-      val histogram = Kamon.simpleMetrics.histogram("histogram-for-remove")
-      val minMaxCounter = Kamon.simpleMetrics.minMaxCounter("min-max-counter-for-remove")
-      val gauge = Kamon.simpleMetrics.gauge("gauge-for-remove", { () ⇒ 2L })
+      val counter = Kamon.metrics.counter("counter-for-remove")
+      val histogram = Kamon.metrics.histogram("histogram-for-remove")
+      val minMaxCounter = Kamon.metrics.minMaxCounter("min-max-counter-for-remove")
+      val gauge = Kamon.metrics.gauge("gauge-for-remove")(2L)
 
-      Kamon.simpleMetrics.removeCounter("counter-for-remove")
-      Kamon.simpleMetrics.removeHistogram("histogram-for-remove")
-      Kamon.simpleMetrics.removeMinMaxCounter("min-max-counter-for-remove")
-      Kamon.simpleMetrics.removeGauge("gauge-for-remove")
+      Kamon.metrics.removeCounter("counter-for-remove")
+      Kamon.metrics.removeHistogram("histogram-for-remove")
+      Kamon.metrics.removeMinMaxCounter("min-max-counter-for-remove")
+      Kamon.metrics.removeGauge("gauge-for-remove")
 
-      counter should not be (theSameInstanceAs(Kamon.simpleMetrics.counter("counter-for-remove")))
-      histogram should not be (theSameInstanceAs(Kamon.simpleMetrics.histogram("histogram-for-remove")))
-      minMaxCounter should not be (theSameInstanceAs(Kamon.simpleMetrics.minMaxCounter("min-max-counter-for-remove")))
-      gauge should not be (theSameInstanceAs(Kamon.simpleMetrics.gauge("gauge-for-remove", { () ⇒ 2L })))
+      counter should not be (theSameInstanceAs(Kamon.metrics.counter("counter-for-remove")))
+      histogram should not be (theSameInstanceAs(Kamon.metrics.histogram("histogram-for-remove")))
+      minMaxCounter should not be (theSameInstanceAs(Kamon.metrics.minMaxCounter("min-max-counter-for-remove")))
+      gauge should not be (theSameInstanceAs(Kamon.metrics.gauge("gauge-for-remove")(2L)))
     }
   }
 }

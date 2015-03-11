@@ -19,6 +19,7 @@ package kamon.metric
 import kamon.metric.instrument.Gauge.CurrentValueCollector
 import kamon.metric.instrument.Histogram.DynamicRange
 import kamon.metric.instrument._
+import kamon.util.Function
 
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.duration.FiniteDuration
@@ -33,6 +34,64 @@ trait EntityRecorderFactory[T <: EntityRecorder] {
   def createRecorder(instrumentFactory: InstrumentFactory): T
 }
 
+object EntityRecorderFactory {
+  def apply[T <: EntityRecorder](entityCategory: String, factory: InstrumentFactory ⇒ T): EntityRecorderFactory[T] =
+    new EntityRecorderFactory[T] {
+      def category: String = entityCategory
+      def createRecorder(instrumentFactory: InstrumentFactory): T = factory(instrumentFactory)
+    }
+
+  def create[T <: EntityRecorder](entityCategory: String, factory: Function[InstrumentFactory, T]): EntityRecorderFactory[T] =
+    new EntityRecorderFactory[T] {
+      def category: String = entityCategory
+      def createRecorder(instrumentFactory: InstrumentFactory): T = factory(instrumentFactory)
+    }
+}
+
+private[kamon] sealed trait SingleInstrumentEntityRecorder extends EntityRecorder {
+  def key: MetricKey
+  def instrument: Instrument
+
+  def collect(collectionContext: CollectionContext): EntitySnapshot =
+    new DefaultEntitySnapshot(Map(key -> instrument.collect(collectionContext)))
+
+  def cleanup: Unit = instrument.cleanup
+}
+
+object SingleInstrumentEntityRecorder {
+  val Histogram = "histogram"
+  val MinMaxCounter = "min-max-counter"
+  val Gauge = "gauge"
+  val Counter = "counter"
+
+  val AllCategories = List("histogram", "gauge", "counter", "min-max-counter")
+}
+
+/**
+ *  Entity recorder for a single Counter instrument.
+ */
+case class CounterRecorder(key: MetricKey, instrument: Counter) extends SingleInstrumentEntityRecorder
+
+/**
+ *  Entity recorder for a single Histogram instrument.
+ */
+case class HistogramRecorder(key: MetricKey, instrument: Histogram) extends SingleInstrumentEntityRecorder
+
+/**
+ *  Entity recorder for a single MinMaxCounter instrument.
+ */
+case class MinMaxCounterRecorder(key: MetricKey, instrument: MinMaxCounter) extends SingleInstrumentEntityRecorder
+
+/**
+ *  Entity recorder for a single Gauge instrument.
+ */
+case class GaugeRecorder(key: MetricKey, instrument: Gauge) extends SingleInstrumentEntityRecorder
+
+/**
+ *  Base class with plenty of utility methods to facilitate the creation of [[EntityRecorder]] implementations.
+ *  It is not required to use this base class for defining custom a custom [[EntityRecorder]], but it is certainly
+ *  the most convenient way to do it and the preferred approach throughout the Kamon codebase.
+ */
 abstract class GenericEntityRecorder(instrumentFactory: InstrumentFactory) extends EntityRecorder {
   import kamon.util.TriemapAtomicGetOrElseUpdate.Syntax
 
@@ -41,10 +100,10 @@ abstract class GenericEntityRecorder(instrumentFactory: InstrumentFactory) exten
     _instruments.atomicGetOrElseUpdate(key, instrument, _.cleanup).asInstanceOf[T]
 
   protected def histogram(name: String): Histogram =
-    register(HistogramKey(name), instrumentFactory.createHistogram(name))
+    register(HistogramKey(name, UnitOfMeasurement.Unknown), instrumentFactory.createHistogram(name))
 
   protected def histogram(name: String, dynamicRange: DynamicRange): Histogram =
-    register(HistogramKey(name), instrumentFactory.createHistogram(name, Some(dynamicRange)))
+    register(HistogramKey(name, UnitOfMeasurement.Unknown), instrumentFactory.createHistogram(name, Some(dynamicRange)))
 
   protected def histogram(name: String, unitOfMeasurement: UnitOfMeasurement): Histogram =
     register(HistogramKey(name, unitOfMeasurement), instrumentFactory.createHistogram(name))
@@ -52,32 +111,26 @@ abstract class GenericEntityRecorder(instrumentFactory: InstrumentFactory) exten
   protected def histogram(name: String, dynamicRange: DynamicRange, unitOfMeasurement: UnitOfMeasurement): Histogram =
     register(HistogramKey(name, unitOfMeasurement), instrumentFactory.createHistogram(name, Some(dynamicRange)))
 
-  protected def histogram(key: HistogramKey): Histogram =
-    register(key, instrumentFactory.createHistogram(key.name))
-
-  protected def histogram(key: HistogramKey, dynamicRange: DynamicRange): Histogram =
-    register(key, instrumentFactory.createHistogram(key.name, Some(dynamicRange)))
-
   protected def removeHistogram(name: String): Unit =
-    _instruments.remove(HistogramKey(name))
+    _instruments.remove(HistogramKey(name, UnitOfMeasurement.Unknown))
 
-  protected def removeHistogram(key: HistogramKey): Unit =
-    _instruments.remove(key)
+  protected def removeHistogram(name: String, unitOfMeasurement: UnitOfMeasurement): Unit =
+    _instruments.remove(HistogramKey(name, unitOfMeasurement))
 
   protected def minMaxCounter(name: String): MinMaxCounter =
-    register(MinMaxCounterKey(name), instrumentFactory.createMinMaxCounter(name))
+    register(MinMaxCounterKey(name, UnitOfMeasurement.Unknown), instrumentFactory.createMinMaxCounter(name))
 
   protected def minMaxCounter(name: String, dynamicRange: DynamicRange): MinMaxCounter =
-    register(MinMaxCounterKey(name), instrumentFactory.createMinMaxCounter(name, Some(dynamicRange)))
+    register(MinMaxCounterKey(name, UnitOfMeasurement.Unknown), instrumentFactory.createMinMaxCounter(name, Some(dynamicRange)))
 
   protected def minMaxCounter(name: String, refreshInterval: FiniteDuration): MinMaxCounter =
-    register(MinMaxCounterKey(name), instrumentFactory.createMinMaxCounter(name, refreshInterval = Some(refreshInterval)))
+    register(MinMaxCounterKey(name, UnitOfMeasurement.Unknown), instrumentFactory.createMinMaxCounter(name, refreshInterval = Some(refreshInterval)))
 
   protected def minMaxCounter(name: String, unitOfMeasurement: UnitOfMeasurement): MinMaxCounter =
     register(MinMaxCounterKey(name, unitOfMeasurement), instrumentFactory.createMinMaxCounter(name))
 
   protected def minMaxCounter(name: String, dynamicRange: DynamicRange, refreshInterval: FiniteDuration): MinMaxCounter =
-    register(MinMaxCounterKey(name), instrumentFactory.createMinMaxCounter(name, Some(dynamicRange), Some(refreshInterval)))
+    register(MinMaxCounterKey(name, UnitOfMeasurement.Unknown), instrumentFactory.createMinMaxCounter(name, Some(dynamicRange), Some(refreshInterval)))
 
   protected def minMaxCounter(name: String, dynamicRange: DynamicRange, unitOfMeasurement: UnitOfMeasurement): MinMaxCounter =
     register(MinMaxCounterKey(name, unitOfMeasurement), instrumentFactory.createMinMaxCounter(name, Some(dynamicRange)))
@@ -86,7 +139,7 @@ abstract class GenericEntityRecorder(instrumentFactory: InstrumentFactory) exten
     register(MinMaxCounterKey(name, unitOfMeasurement), instrumentFactory.createMinMaxCounter(name, refreshInterval = Some(refreshInterval)))
 
   protected def minMaxCounter(name: String, dynamicRange: DynamicRange, refreshInterval: FiniteDuration, unitOfMeasurement: UnitOfMeasurement): MinMaxCounter =
-    register(MinMaxCounterKey(name), instrumentFactory.createMinMaxCounter(name, Some(dynamicRange), Some(refreshInterval)))
+    register(MinMaxCounterKey(name, UnitOfMeasurement.Unknown), instrumentFactory.createMinMaxCounter(name, Some(dynamicRange), Some(refreshInterval)))
 
   protected def minMaxCounter(key: MinMaxCounterKey): MinMaxCounter =
     register(key, instrumentFactory.createMinMaxCounter(key.name))
@@ -101,31 +154,31 @@ abstract class GenericEntityRecorder(instrumentFactory: InstrumentFactory) exten
     register(key, instrumentFactory.createMinMaxCounter(key.name, Some(dynamicRange), Some(refreshInterval)))
 
   protected def removeMinMaxCounter(name: String): Unit =
-    _instruments.remove(MinMaxCounterKey(name))
+    _instruments.remove(MinMaxCounterKey(name, UnitOfMeasurement.Unknown))
 
   protected def removeMinMaxCounter(key: MinMaxCounterKey): Unit =
     _instruments.remove(key)
 
   protected def gauge(name: String, valueCollector: CurrentValueCollector): Gauge =
-    register(GaugeKey(name), instrumentFactory.createGauge(name, valueCollector = valueCollector))
+    register(GaugeKey(name, UnitOfMeasurement.Unknown), instrumentFactory.createGauge(name, valueCollector = valueCollector))
 
   protected def gauge(name: String, dynamicRange: DynamicRange, valueCollector: CurrentValueCollector): Gauge =
-    register(GaugeKey(name), instrumentFactory.createGauge(name, Some(dynamicRange), valueCollector = valueCollector))
+    register(GaugeKey(name, UnitOfMeasurement.Unknown), instrumentFactory.createGauge(name, Some(dynamicRange), valueCollector = valueCollector))
 
   protected def gauge(name: String, refreshInterval: FiniteDuration, valueCollector: CurrentValueCollector): Gauge =
-    register(GaugeKey(name), instrumentFactory.createGauge(name, refreshInterval = Some(refreshInterval), valueCollector = valueCollector))
+    register(GaugeKey(name, UnitOfMeasurement.Unknown), instrumentFactory.createGauge(name, refreshInterval = Some(refreshInterval), valueCollector = valueCollector))
 
   protected def gauge(name: String, unitOfMeasurement: UnitOfMeasurement, valueCollector: CurrentValueCollector): Gauge =
     register(GaugeKey(name, unitOfMeasurement), instrumentFactory.createGauge(name, valueCollector = valueCollector))
 
   protected def gauge(name: String, dynamicRange: DynamicRange, refreshInterval: FiniteDuration, valueCollector: CurrentValueCollector): Gauge =
-    register(GaugeKey(name), instrumentFactory.createGauge(name, Some(dynamicRange), Some(refreshInterval), valueCollector = valueCollector))
+    register(GaugeKey(name, UnitOfMeasurement.Unknown), instrumentFactory.createGauge(name, Some(dynamicRange), Some(refreshInterval), valueCollector = valueCollector))
 
   protected def gauge(name: String, dynamicRange: DynamicRange, unitOfMeasurement: UnitOfMeasurement, valueCollector: CurrentValueCollector): Gauge =
     register(GaugeKey(name, unitOfMeasurement), instrumentFactory.createGauge(name, Some(dynamicRange), valueCollector = valueCollector))
 
   protected def gauge(name: String, refreshInterval: FiniteDuration, unitOfMeasurement: UnitOfMeasurement, valueCollector: CurrentValueCollector): Gauge =
-    register(GaugeKey(name), instrumentFactory.createGauge(name, refreshInterval = Some(refreshInterval), valueCollector = valueCollector))
+    register(GaugeKey(name, UnitOfMeasurement.Unknown), instrumentFactory.createGauge(name, refreshInterval = Some(refreshInterval), valueCollector = valueCollector))
 
   protected def gauge(name: String, dynamicRange: DynamicRange, refreshInterval: FiniteDuration, unitOfMeasurement: UnitOfMeasurement, valueCollector: CurrentValueCollector): Gauge =
     register(GaugeKey(name, unitOfMeasurement), instrumentFactory.createGauge(name, Some(dynamicRange), Some(refreshInterval), valueCollector))
@@ -143,19 +196,19 @@ abstract class GenericEntityRecorder(instrumentFactory: InstrumentFactory) exten
     register(key, instrumentFactory.createGauge(key.name, Some(dynamicRange), Some(refreshInterval), valueCollector = valueCollector))
 
   protected def removeGauge(name: String): Unit =
-    _instruments.remove(GaugeKey(name))
+    _instruments.remove(GaugeKey(name, UnitOfMeasurement.Unknown))
 
   protected def removeGauge(key: GaugeKey): Unit =
     _instruments.remove(key)
 
   protected def counter(name: String): Counter =
-    register(CounterKey(name), instrumentFactory.createCounter())
+    register(CounterKey(name, UnitOfMeasurement.Unknown), instrumentFactory.createCounter())
 
   protected def counter(key: CounterKey): Counter =
     register(key, instrumentFactory.createCounter())
 
   protected def removeCounter(name: String): Unit =
-    _instruments.remove(CounterKey(name))
+    _instruments.remove(CounterKey(name, UnitOfMeasurement.Unknown))
 
   protected def removeCounter(key: CounterKey): Unit =
     _instruments.remove(key)
