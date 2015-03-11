@@ -139,19 +139,19 @@ class MetricReporterSpec extends BaseKamonSpec("metric-reporter-spec") with Spra
 
   trait FakeTickSnapshotsFixture {
     val testTraceID = Entity("example-trace", "trace")
-    val recorder = Kamon.metrics.register(TraceMetrics, testTraceID.name).get.recorder
+    val recorder = Kamon.metrics.entity(TraceMetrics, testTraceID.name)
     val collectionContext = Kamon.metrics.buildDefaultCollectionContext
 
     def collectRecorder = recorder.collect(collectionContext)
 
-    recorder.ElapsedTime.record(1000000)
-    recorder.ElapsedTime.record(2000000)
-    recorder.ElapsedTime.record(3000000)
+    recorder.elapsedTime.record(1000000)
+    recorder.elapsedTime.record(2000000)
+    recorder.elapsedTime.record(3000000)
     val firstSnapshot = TickMetricSnapshot(new MilliTimestamp(1415587618000L), new MilliTimestamp(1415587678000L), Map(testTraceID -> collectRecorder))
 
-    recorder.ElapsedTime.record(6000000)
-    recorder.ElapsedTime.record(5000000)
-    recorder.ElapsedTime.record(4000000)
+    recorder.elapsedTime.record(6000000)
+    recorder.elapsedTime.record(5000000)
+    recorder.elapsedTime.record(4000000)
     val secondSnapshot = TickMetricSnapshot(new MilliTimestamp(1415587678000L), new MilliTimestamp(1415587738000L), Map(testTraceID -> collectRecorder))
   }
 }
