@@ -48,6 +48,7 @@ object Kamon {
 
       metrics.start(_system)
       tracer.start(_system)
+      _system.registerExtension(ModuleLoader)
 
     } else sys.error("Kamon has already been started.")
   }
