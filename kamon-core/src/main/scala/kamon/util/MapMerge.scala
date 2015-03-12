@@ -19,7 +19,7 @@ package kamon.util
 object MapMerge {
 
   /**
-   *  Merge to immutable maps with the same key and value types, using the provided valueMerge function.
+   *  Merge two immutable maps with the same key and value types, using the provided valueMerge function.
    */
   implicit class Syntax[K, V](val map: Map[K, V]) extends AnyVal {
     def merge(that: Map[K, V], valueMerge: (V, V) ⇒ V): Map[K, V] = {

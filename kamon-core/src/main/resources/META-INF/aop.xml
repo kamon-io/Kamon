@@ -4,7 +4,7 @@
   <aspects>
 
     <!-- Notify that AspectJ is present -->
-    <aspect name="kamon.supervisor.AspectJPresent"/>
+    <aspect name="kamon.AspectJPresent"/>
 
   </aspects>
 
