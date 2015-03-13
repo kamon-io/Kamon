@@ -127,16 +127,18 @@ class LogReporterSubscriber extends Actor with ActorLogging {
           ||                                                                                                  |
           ||  Dispatcher: %-83s |
           ||                                                                                                  |
-          ||       Paralellism       Pool Size     Active Threads      Running Threads     Queue Task Count   |
-          || Min      %-4s              %-4s             %-4s                %-4s                 %-4s        |
-          || Avg      %-4s              %-4s             %-4s                %-4s                 %-4s        |
-          || Max      %-4s              %-4s             %-4s                %-4s                 %-4s        |
+          ||  Paralellism: %-4s                                                                               |
+          ||                                                                                                  |
+          ||                 Pool Size       Active Threads     Running Threads     Queue Task Count          |
+          ||      Min           %-4s              %-4s                %-4s                %-4s                |
+          ||      Avg           %-4s              %-4s                %-4s                %-4s                |
+          ||      Max           %-4s              %-4s                %-4s                %-4s                |
           ||                                                                                                  |
           |+--------------------------------------------------------------------------------------------------+"""
           .stripMargin.format(name,
-            paralellism.min, poolSize.min, activeThreads.min, runningThreads.min, queuedTaskCount.min,
-            paralellism.average, poolSize.average, activeThreads.average, runningThreads.average, queuedTaskCount.average,
-            paralellism.max, poolSize.max, activeThreads.max, runningThreads.max, queuedTaskCount.max))
+            paralellism.max, poolSize.min, activeThreads.min, runningThreads.min, queuedTaskCount.min,
+                             poolSize.average, activeThreads.average, runningThreads.average, queuedTaskCount.average,
+                             poolSize.max, activeThreads.max, runningThreads.max, queuedTaskCount.max))
     }
   }
 
@@ -156,16 +158,22 @@ class LogReporterSubscriber extends Actor with ActorLogging {
           ||                                                                                                  |
           ||  Dispatcher: %-83s |
           ||                                                                                                  |
-          ||      Core Pool Size    Max Pool Size      Pool Size        Active Threads        Processed Task  |
-          || Min      %-4s              %-4s             %-4s                %-4s                 %-4s        |
-          || Avg      %-4s              %-4s             %-4s                %-4s                 %-4s        |
-          || Max      %-4s              %-4s             %-4s                %-4s                 %-4s        |
+          ||  Core Pool Size: %-4s                                                                            |
+          ||  Max  Pool Size: %-4s                                                                            |
+          ||                                                                                                  |
+          ||                                                                                                  |
+          ||                         Pool Size        Active Threads          Processed Task                  |
+          ||           Min              %-4s                %-4s                   %-4s                       |
+          ||           Avg              %-4s                %-4s                   %-4s                       |
+          ||           Max              %-4s                %-4s                   %-4s                       |
           ||                                                                                                  |
           |+--------------------------------------------------------------------------------------------------+"""
           .stripMargin.format(name,
-            corePoolSize.min, maxPoolSize.min, poolSize.min, activeThreads.min, processedTasks.min,
-            corePoolSize.average, maxPoolSize.average, poolSize.average, activeThreads.average, processedTasks.average,
-            corePoolSize.max, maxPoolSize.max, poolSize.max, activeThreads.max, processedTasks.max))
+            corePoolSize.max,
+            maxPoolSize.max,
+            poolSize.min, activeThreads.min, processedTasks.min,
+            poolSize.average, activeThreads.average, processedTasks.average,
+            poolSize.max, activeThreads.max, processedTasks.max))
     }
 
   }
