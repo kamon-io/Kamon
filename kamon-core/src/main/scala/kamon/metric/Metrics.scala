@@ -16,16 +16,15 @@
 
 package kamon.metric
 
+import akka.actor._
 import com.typesafe.config.Config
-import kamon.metric.SubscriptionsDispatcher.{ Unsubscribe, Subscribe }
+import kamon.metric.SubscriptionsDispatcher.{ Subscribe, Unsubscribe }
 import kamon.metric.instrument.Gauge.CurrentValueCollector
 import kamon.metric.instrument.Histogram.DynamicRange
 import kamon.metric.instrument._
+import kamon.util.LazyActorRef
 
 import scala.collection.concurrent.TrieMap
-import akka.actor._
-import kamon.util.{ Supplier, LazyActorRef, TriemapAtomicGetOrElseUpdate }
-
 import scala.concurrent.duration.FiniteDuration
 
 case class EntityRegistration[T <: EntityRecorder](entity: Entity, recorder: T)
@@ -227,7 +226,7 @@ trait Metrics {
 }
 
 private[kamon] class MetricsImpl(config: Config) extends Metrics {
-  import TriemapAtomicGetOrElseUpdate.Syntax
+  import kamon.util.TriemapAtomicGetOrElseUpdate.Syntax
 
   private val _trackedEntities = TrieMap.empty[Entity, EntityRecorder]
   private val _subscriptions = new LazyActorRef
