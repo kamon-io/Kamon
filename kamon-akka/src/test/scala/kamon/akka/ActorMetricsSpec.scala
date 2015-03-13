@@ -38,7 +38,7 @@ class ActorMetricsSpec extends BaseKamonSpec("actor-metrics-spec") {
         |
         |  filters {
         |    akka-actor {
-        |      includes = [ "*/user/tracked-*", "*/user/measuring-*", "*/user/clean-after-collect", "*/user/stop" ]
+        |      includes = [ "*/user/tracked-*", "*/user/measuring-*", "*/user/clean-after-collect", "*/user/stop", "*/" ]
         |      excludes = [ "*/user/tracked-explicitly-excluded", "*/user/non-tracked-actor" ]
         |    }
         |  }
@@ -62,6 +62,10 @@ class ActorMetricsSpec extends BaseKamonSpec("actor-metrics-spec") {
 
       val trackedButExplicitlyExcluded = createTestActor("tracked-explicitly-excluded")
       actorMetricsRecorderOf(trackedButExplicitlyExcluded) shouldBe empty
+    }
+
+    "not pick up the root supervisor" in {
+      Kamon.metrics.find("actor-metrics-spec/", ActorMetrics.category) shouldBe empty
     }
 
     "reset all recording instruments after taking a snapshot" in new ActorMetricsFixtures {
