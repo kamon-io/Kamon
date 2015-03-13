@@ -253,11 +253,10 @@ class LogReporterSubscriber extends Actor with ActorLogging {
         ||                Max: %-12s                         Max: %-12s                       |
         ||                                                                                                  |
         |+--------------------------------------------------------------------------------------------------+"""
-          .stripMargin.
-          format(
-            (user.min, total.min,
-              user.average, total.average,
-              user.max, total.max)))
+          .stripMargin.format(
+            user.min, total.min,
+            user.average, total.average,
+            user.max, total.max))
     }
 
   }
