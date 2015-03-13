@@ -34,16 +34,18 @@ class ActorCellInstrumentation {
 
   @After("actorCellCreation(cell, system, ref, props, dispatcher, parent)")
   def afterCreation(cell: ActorCell, system: ActorSystem, ref: ActorRef, props: Props, dispatcher: MessageDispatcher, parent: ActorRef): Unit = {
-    val actorEntity = Entity(system.name + "/" + ref.path.elements.mkString("/"), ActorMetrics.category)
+    def isRootSupervisor(path: String): Boolean = path.length == 0 || path == "user" || path == "system"
 
-    if (Kamon.metrics.shouldTrack(actorEntity)) {
+    val pathString = ref.path.elements.mkString("/")
+    val actorEntity = Entity(system.name + "/" + pathString, ActorMetrics.category)
+
+    if (!isRootSupervisor(pathString) && Kamon.metrics.shouldTrack(actorEntity)) {
       val actorMetricsRecorder = Kamon.metrics.entity(ActorMetrics, actorEntity)
       val cellMetrics = cell.asInstanceOf[ActorCellMetrics]
 
       cellMetrics.entity = actorEntity
       cellMetrics.recorder = Some(actorMetricsRecorder)
     }
-
   }
 
   @Pointcut("execution(* akka.actor.ActorCell.invoke(*)) && this(cell) && args(envelope)")
