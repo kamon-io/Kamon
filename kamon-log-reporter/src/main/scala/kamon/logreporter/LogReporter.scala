@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * Copyright © 2013-2014 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2015 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -36,8 +36,9 @@ class LogReporterExtension(system: ExtendedActorSystem) extends Kamon.Extension 
   val subscriber = system.actorOf(Props[LogReporterSubscriber], "kamon-log-reporter")
 
   Kamon.metrics.subscribe("trace", "**", subscriber, permanently = true)
-  Kamon.metrics.subscribe("actor", "**", subscriber, permanently = true)
-  Kamon.metrics.subscribe("user-metrics", "**", subscriber, permanently = true)
+  Kamon.metrics.subscribe("akka-actor", "**", subscriber, permanently = true)
+  Kamon.metrics.subscribe("akka-dispatcher", "**", subscriber, permanently = true)
+  Kamon.metrics.subscribe("metrics", "**", subscriber, permanently = true)
 
   val includeSystemMetrics = logReporterConfig.getBoolean("report-system-metrics")
   if (includeSystemMetrics) {
@@ -47,6 +48,7 @@ class LogReporterExtension(system: ExtendedActorSystem) extends Kamon.Extension 
 }
 
 class LogReporterSubscriber extends Actor with ActorLogging {
+
   import kamon.logreporter.LogReporterSubscriber.RichHistogramSnapshot
 
   def receive = {
@@ -55,11 +57,12 @@ class LogReporterSubscriber extends Actor with ActorLogging {
 
   def printMetricSnapshot(tick: TickMetricSnapshot): Unit = {
     tick.metrics foreach {
-      case (entity, snapshot) if entity.category == "actor"         ⇒ logActorMetrics(entity.name, snapshot)
-      case (entity, snapshot) if entity.category == "trace"         ⇒ logTraceMetrics(entity.name, snapshot)
-      case (entity, snapshot) if entity.category == "simple-metric" ⇒ logSimpleMetrics(snapshot)
-      case (entity, snapshot) if entity.category == "system-metric" ⇒ logSystemMetrics(entity.name, snapshot)
-      case ignoreEverythingElse                                     ⇒
+      case (entity, snapshot) if entity.category == "akka-actor"      ⇒ logActorMetrics(entity.name, snapshot)
+      case (entity, snapshot) if entity.category == "akka-dispatcher" ⇒ logDispatcherMetrics(entity, snapshot)
+      case (entity, snapshot) if entity.category == "trace"           ⇒ logTraceMetrics(entity.name, snapshot)
+      case (entity, snapshot) if entity.category == "metrics"         ⇒ logMetrics(snapshot)
+      case (entity, snapshot) if entity.category == "system-metric"   ⇒ logSystemMetrics(entity.name, snapshot)
+      case ignoreEverythingElse                                       ⇒
     }
   }
 
@@ -98,6 +101,71 @@ class LogReporterSubscriber extends Actor with ActorLogging {
             processingTime.percentile(99.0D), timeInMailbox.percentile(99.0D), errors.count,
             processingTime.percentile(99.9D), timeInMailbox.percentile(99.9D),
             processingTime.max, timeInMailbox.max))
+    }
+
+  }
+
+  def logDispatcherMetrics(entity: Entity, snapshot: EntitySnapshot): Unit = entity.tags.get("dispatcher-type") match {
+    case Some("fork-join-pool")       ⇒ logForkJoinPool(entity.name, snapshot)
+    case Some("thread-pool-executor") ⇒ logThreadPoolExecutor(entity.name, snapshot)
+    case ignoreOthers                 ⇒
+  }
+
+  def logForkJoinPool(name: String, forkJoinMetrics: EntitySnapshot): Unit = {
+    for {
+      paralellism ← forkJoinMetrics.minMaxCounter("parallelism")
+      poolSize ← forkJoinMetrics.gauge("pool-size")
+      activeThreads ← forkJoinMetrics.gauge("active-threads")
+      runningThreads ← forkJoinMetrics.gauge("running-threads")
+      queuedTaskCount ← forkJoinMetrics.gauge("queued-task-count")
+
+    } {
+      log.info(
+        """
+          |+--------------------------------------------------------------------------------------------------+
+          ||  Fork-Join-Pool                                                                                  |
+          ||                                                                                                  |
+          ||  Dispatcher: %-83s |
+          ||                                                                                                  |
+          ||       Paralellism       Pool Size     Active Threads      Running Threads     Queue Task Count   |
+          || Min      %-4s              %-4s             %-4s                %-4s                 %-4s        |
+          || Avg      %-4s              %-4s             %-4s                %-4s                 %-4s        |
+          || Max      %-4s              %-4s             %-4s                %-4s                 %-4s        |
+          ||                                                                                                  |
+          |+--------------------------------------------------------------------------------------------------+"""
+          .stripMargin.format(name,
+            paralellism.min, poolSize.min, activeThreads.min, runningThreads.min, queuedTaskCount.min,
+            paralellism.average, poolSize.average, activeThreads.average, runningThreads.average, queuedTaskCount.average,
+            paralellism.max, poolSize.max, activeThreads.max, runningThreads.max, queuedTaskCount.max))
+    }
+  }
+
+  def logThreadPoolExecutor(name: String, threadPoolMetrics: EntitySnapshot): Unit = {
+    for {
+      corePoolSize ← threadPoolMetrics.gauge("core-pool-size")
+      maxPoolSize ← threadPoolMetrics.gauge("max-pool-size")
+      poolSize ← threadPoolMetrics.gauge("pool-size")
+      activeThreads ← threadPoolMetrics.gauge("active-threads")
+      processedTasks ← threadPoolMetrics.gauge("processed-tasks")
+    } {
+
+      log.info(
+        """
+          |+--------------------------------------------------------------------------------------------------+
+          ||  Thread-Pool-Executor                                                                            |
+          ||                                                                                                  |
+          ||  Dispatcher: %-83s |
+          ||                                                                                                  |
+          ||      Core Pool Size    Max Pool Size      Pool Size        Active Threads        Processed Task  |
+          || Min      %-4s              %-4s             %-4s                %-4s                 %-4s        |
+          || Avg      %-4s              %-4s             %-4s                %-4s                 %-4s        |
+          || Max      %-4s              %-4s             %-4s                %-4s                 %-4s        |
+          ||                                                                                                  |
+          |+--------------------------------------------------------------------------------------------------+"""
+          .stripMargin.format(name,
+            corePoolSize.min, maxPoolSize.min, poolSize.min, activeThreads.min, processedTasks.min,
+            corePoolSize.average, maxPoolSize.average, poolSize.average, activeThreads.average, processedTasks.average,
+            corePoolSize.max, maxPoolSize.max, poolSize.max, activeThreads.max, processedTasks.max))
     }
 
   }
@@ -253,7 +321,7 @@ class LogReporterSubscriber extends Actor with ActorLogging {
     }
   }
 
-  def logSimpleMetrics(simpleMetrics: EntitySnapshot): Unit = {
+  def logMetrics(simpleMetrics: EntitySnapshot): Unit = {
     val histograms = simpleMetrics.histograms
     val minMaxCounters = simpleMetrics.minMaxCounters
     val gauges = simpleMetrics.gauges

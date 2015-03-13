@@ -62,13 +62,13 @@ class DispatcherInstrumentation {
         val dispatcherEntity = Entity(dispatcherName, AkkaDispatcherMetrics.Category)
 
         if (Kamon.metrics.shouldTrack(dispatcherEntity))
-          Kamon.metrics.entity(ForkJoinPoolDispatcherMetrics.factory(fjp), dispatcherName)
+          Kamon.metrics.entity(ForkJoinPoolDispatcherMetrics.factory(fjp), dispatcherName, Map("dispatcher-type" -> "fork-join-pool"))
 
       case tpe: ThreadPoolExecutor ⇒
         val dispatcherEntity = Entity(dispatcherName, AkkaDispatcherMetrics.Category)
 
         if (Kamon.metrics.shouldTrack(dispatcherEntity))
-          Kamon.metrics.entity(ThreadPoolExecutorDispatcherMetrics.factory(tpe), dispatcherName)
+          Kamon.metrics.entity(ThreadPoolExecutorDispatcherMetrics.factory(tpe), dispatcherName, Map("dispatcher-type" -> "thread-pool-executor"))
 
       case others ⇒ // Currently not interested in other kinds of dispatchers.
     }

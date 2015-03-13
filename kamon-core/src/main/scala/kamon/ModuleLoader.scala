@@ -20,8 +20,7 @@ import _root_.akka.actor
 import _root_.akka.actor._
 import _root_.akka.event.Logging
 import org.aspectj.lang.ProceedingJoinPoint
-import org.aspectj.lang.annotation.{Around, Pointcut, Aspect}
-
+import org.aspectj.lang.annotation.{ Around, Pointcut, Aspect }
 
 private[kamon] object ModuleLoader extends ExtensionId[ModuleLoaderExtension] with ExtensionIdProvider {
   def lookup(): ExtensionId[_ <: actor.Extension] = ModuleLoader
@@ -31,7 +30,6 @@ private[kamon] object ModuleLoader extends ExtensionId[ModuleLoaderExtension] wi
 private[kamon] class ModuleLoaderExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   val log = Logging(system, "ModuleLoader")
   val settings = ModuleLoaderSettings(system)
-
 
   if (settings.modulesRequiringAspectJ.nonEmpty && !isAspectJPresent && settings.showAspectJMissingWarning)
     logAspectJWeaverMissing(settings.modulesRequiringAspectJ)

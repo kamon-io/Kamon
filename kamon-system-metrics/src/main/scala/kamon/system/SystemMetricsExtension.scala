@@ -67,7 +67,7 @@ class SystemMetricsSupervisor(sigarRefreshInterval: FiniteDuration, contextSwitc
   if (isLinux) {
     val contextSwitchesRecorder = ContextSwitchesMetrics.register(context.system, contextSwitchesRefreshInterval)
     context.actorOf(ContextSwitchesUpdater.props(contextSwitchesRecorder, sigarRefreshInterval)
-        .withDispatcher("kamon.system-metrics.context-switches-dispatcher"), "context-switches-metrics-recorder")
+      .withDispatcher("kamon.system-metrics.context-switches-dispatcher"), "context-switches-metrics-recorder")
   }
 
   def isLinux: Boolean =
@@ -76,7 +76,7 @@ class SystemMetricsSupervisor(sigarRefreshInterval: FiniteDuration, contextSwitc
   def receive = Actor.emptyBehavior
 
   override def supervisorStrategy: SupervisorStrategy = OneForOneStrategy() {
-    case anyException => Restart
+    case anyException ⇒ Restart
   }
 }
 
