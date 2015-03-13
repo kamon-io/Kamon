@@ -36,8 +36,8 @@ class DispatcherMetricsSpec extends BaseKamonSpec("dispatcher-metrics-spec") {
         |
         |  filters = {
         |    akka-dispatcher {
-        |      includes = [ "*" ]
-        |      excludes = [ "explicitly-excluded" ]
+        |      includes = [ "**" ]
+        |      excludes = [ "*/explicitly-excluded" ]
         |    }
         |  }
         |
@@ -84,16 +84,16 @@ class DispatcherMetricsSpec extends BaseKamonSpec("dispatcher-metrics-spec") {
       val tpeDispatcher = forceInit(system.dispatchers.lookup("tracked-tpe"))
       val excludedDispatcher = forceInit(system.dispatchers.lookup("explicitly-excluded"))
 
-      findDispatcherRecorder(defaultDispatcher) shouldNot be(empty)
-      findDispatcherRecorder(fjpDispatcher) shouldNot be(empty)
-      findDispatcherRecorder(tpeDispatcher) shouldNot be(empty)
-      findDispatcherRecorder(excludedDispatcher) should be(empty)
+      findDispatcherRecorder(defaultDispatcher, "fork-join-pool") shouldNot be(empty)
+      findDispatcherRecorder(fjpDispatcher, "fork-join-pool") shouldNot be(empty)
+      findDispatcherRecorder(tpeDispatcher, "thread-pool-executor") shouldNot be(empty)
+      findDispatcherRecorder(excludedDispatcher, "fork-join-pool") should be(empty)
     }
 
     "record metrics for a dispatcher with thread-pool-executor" in {
       implicit val tpeDispatcher = system.dispatchers.lookup("tracked-tpe")
-      refreshDispatcherInstruments(tpeDispatcher)
-      collectDispatcherMetrics(tpeDispatcher)
+      refreshDispatcherInstruments(tpeDispatcher, "thread-pool-executor")
+      collectDispatcherMetrics(tpeDispatcher, "thread-pool-executor")
 
       Await.result({
         Future.sequence {
@@ -101,8 +101,8 @@ class DispatcherMetricsSpec extends BaseKamonSpec("dispatcher-metrics-spec") {
         }
       }, 5 seconds)
 
-      refreshDispatcherInstruments(tpeDispatcher)
-      val snapshot = collectDispatcherMetrics(tpeDispatcher)
+      refreshDispatcherInstruments(tpeDispatcher, "thread-pool-executor")
+      val snapshot = collectDispatcherMetrics(tpeDispatcher, "thread-pool-executor")
 
       snapshot.gauge("active-threads") should not be empty
       snapshot.gauge("pool-size").get.min should be >= 7L
@@ -112,13 +112,13 @@ class DispatcherMetricsSpec extends BaseKamonSpec("dispatcher-metrics-spec") {
       snapshot.gauge("processed-tasks").get.max should be(102L +- 5L)
 
       // The processed tasks should be reset to 0 if no more tasks are submitted.
-      val secondSnapshot = collectDispatcherMetrics(tpeDispatcher)
+      val secondSnapshot = collectDispatcherMetrics(tpeDispatcher, "thread-pool-executor")
       secondSnapshot.gauge("processed-tasks").get.max should be(0)
     }
 
     "record metrics for a dispatcher with fork-join-executor" in {
       implicit val fjpDispatcher = system.dispatchers.lookup("tracked-fjp")
-      collectDispatcherMetrics(fjpDispatcher)
+      collectDispatcherMetrics(fjpDispatcher, "fork-join-pool")
 
       Await.result({
         Future.sequence {
@@ -126,8 +126,8 @@ class DispatcherMetricsSpec extends BaseKamonSpec("dispatcher-metrics-spec") {
         }
       }, 5 seconds)
 
-      refreshDispatcherInstruments(fjpDispatcher)
-      val snapshot = collectDispatcherMetrics(fjpDispatcher)
+      refreshDispatcherInstruments(fjpDispatcher, "fork-join-pool")
+      val snapshot = collectDispatcherMetrics(fjpDispatcher, "fork-join-pool")
 
       snapshot.minMaxCounter("parallelism").get.max should be(22)
       snapshot.gauge("pool-size").get.min should be >= 0L
@@ -142,28 +142,28 @@ class DispatcherMetricsSpec extends BaseKamonSpec("dispatcher-metrics-spec") {
       implicit val tpeDispatcher = system.dispatchers.lookup("tracked-tpe")
       implicit val fjpDispatcher = system.dispatchers.lookup("tracked-fjp")
 
-      findDispatcherRecorder(fjpDispatcher) shouldNot be(empty)
-      findDispatcherRecorder(tpeDispatcher) shouldNot be(empty)
+      findDispatcherRecorder(fjpDispatcher, "fork-join-pool") shouldNot be(empty)
+      findDispatcherRecorder(tpeDispatcher, "thread-pool-executor") shouldNot be(empty)
 
       shutdownDispatcher(tpeDispatcher)
       shutdownDispatcher(fjpDispatcher)
 
-      findDispatcherRecorder(fjpDispatcher) should be(empty)
-      findDispatcherRecorder(tpeDispatcher) should be(empty)
+      findDispatcherRecorder(fjpDispatcher, "fork-join-pool") should be(empty)
+      findDispatcherRecorder(tpeDispatcher, "thread-pool-executor") should be(empty)
     }
 
   }
 
   def actorRecorderName(ref: ActorRef): String = ref.path.elements.mkString("/")
 
-  def findDispatcherRecorder(dispatcher: MessageDispatcher): Option[EntityRecorder] =
-    Kamon.metrics.find(dispatcher.id, "akka-dispatcher")
+  def findDispatcherRecorder(dispatcher: MessageDispatcher, dispatcherType: String): Option[EntityRecorder] =
+    Kamon.metrics.find(system.name + "/" + dispatcher.id, "akka-dispatcher", tags = Map("dispatcher-type" -> dispatcherType))
 
-  def collectDispatcherMetrics(dispatcher: MessageDispatcher): EntitySnapshot =
-    findDispatcherRecorder(dispatcher).map(_.collect(collectionContext)).get
+  def collectDispatcherMetrics(dispatcher: MessageDispatcher, dispatcherType: String): EntitySnapshot =
+    findDispatcherRecorder(dispatcher, dispatcherType).map(_.collect(collectionContext)).get
 
-  def refreshDispatcherInstruments(dispatcher: MessageDispatcher): Unit = {
-    findDispatcherRecorder(dispatcher) match {
+  def refreshDispatcherInstruments(dispatcher: MessageDispatcher, dispatcherType: String): Unit = {
+    findDispatcherRecorder(dispatcher, dispatcherType) match {
       case Some(tpe: ThreadPoolExecutorDispatcherMetrics) ⇒
         tpe.processedTasks.refreshValue()
         tpe.activeThreads.refreshValue()

@@ -34,7 +34,7 @@ class ActorCellInstrumentation {
 
   @After("actorCellCreation(cell, system, ref, props, dispatcher, parent)")
   def afterCreation(cell: ActorCell, system: ActorSystem, ref: ActorRef, props: Props, dispatcher: MessageDispatcher, parent: ActorRef): Unit = {
-    val actorEntity = Entity(ref.path.elements.mkString("/"), ActorMetrics.category)
+    val actorEntity = Entity(system.name + "/" + ref.path.elements.mkString("/"), ActorMetrics.category)
 
     if (Kamon.metrics.shouldTrack(actorEntity)) {
       val actorMetricsRecorder = Kamon.metrics.entity(ActorMetrics, actorEntity)
@@ -60,19 +60,19 @@ class ActorCellInstrumentation {
         pjp.proceed()
       }
     } finally {
-      cellMetrics.recorder.map { am ⇒
-        val processingTime = System.nanoTime() - timestampBeforeProcessing
-        val timeInMailbox = timestampBeforeProcessing - contextAndTimestamp.captureNanoTime
+      val processingTime = System.nanoTime() - timestampBeforeProcessing
+      val timeInMailbox = timestampBeforeProcessing - contextAndTimestamp.captureNanoTime
 
+      cellMetrics.recorder.map { am ⇒
         am.processingTime.record(processingTime)
         am.timeInMailbox.record(timeInMailbox)
         am.mailboxSize.decrement()
+      }
 
-        // In case that this actor is behind a router, record the metrics for the router.
-        envelope.asInstanceOf[RouterAwareEnvelope].routerMetricsRecorder.map { rm ⇒
-          rm.processingTime.record(processingTime)
-          rm.timeInMailbox.record(timeInMailbox)
-        }
+      // In case that this actor is behind a router, record the metrics for the router.
+      envelope.asInstanceOf[RouterAwareEnvelope].routerMetricsRecorder.map { rm ⇒
+        rm.processingTime.record(processingTime)
+        rm.timeInMailbox.record(timeInMailbox)
       }
     }
   }
@@ -127,7 +127,7 @@ class RoutedActorCellInstrumentation {
 
   @After("routedActorCellCreation(cell, system, ref, props, dispatcher, routeeProps, supervisor)")
   def afterRoutedActorCellCreation(cell: RoutedActorCell, system: ActorSystem, ref: ActorRef, props: Props, dispatcher: MessageDispatcher, routeeProps: Props, supervisor: ActorRef): Unit = {
-    val routerEntity = Entity(ref.path.elements.mkString("/"), RouterMetrics.category)
+    val routerEntity = Entity(system.name + "/" + ref.path.elements.mkString("/"), RouterMetrics.category)
 
     if (Kamon.metrics.shouldTrack(routerEntity)) {
       val cellMetrics = cell.asInstanceOf[RoutedActorCellMetrics]

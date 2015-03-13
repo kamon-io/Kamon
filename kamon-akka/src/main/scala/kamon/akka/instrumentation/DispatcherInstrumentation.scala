@@ -59,16 +59,16 @@ class DispatcherInstrumentation {
   private def registerDispatcher(dispatcherName: String, executorService: ExecutorService, system: ActorSystem): Unit =
     executorService match {
       case fjp: AkkaForkJoinPool ⇒
-        val dispatcherEntity = Entity(dispatcherName, AkkaDispatcherMetrics.Category)
+        val dispatcherEntity = Entity(system.name + "/" + dispatcherName, AkkaDispatcherMetrics.Category, tags = Map("dispatcher-type" -> "fork-join-pool"))
 
         if (Kamon.metrics.shouldTrack(dispatcherEntity))
-          Kamon.metrics.entity(ForkJoinPoolDispatcherMetrics.factory(fjp), dispatcherName, Map("dispatcher-type" -> "fork-join-pool"))
+          Kamon.metrics.entity(ForkJoinPoolDispatcherMetrics.factory(fjp), dispatcherEntity)
 
       case tpe: ThreadPoolExecutor ⇒
-        val dispatcherEntity = Entity(dispatcherName, AkkaDispatcherMetrics.Category)
+        val dispatcherEntity = Entity(system.name + "/" + dispatcherName, AkkaDispatcherMetrics.Category, tags = Map("dispatcher-type" -> "thread-pool-executor"))
 
         if (Kamon.metrics.shouldTrack(dispatcherEntity))
-          Kamon.metrics.entity(ThreadPoolExecutorDispatcherMetrics.factory(tpe), dispatcherName, Map("dispatcher-type" -> "thread-pool-executor"))
+          Kamon.metrics.entity(ThreadPoolExecutorDispatcherMetrics.factory(tpe), dispatcherEntity)
 
       case others ⇒ // Currently not interested in other kinds of dispatchers.
     }
@@ -126,7 +126,17 @@ class DispatcherInstrumentation {
     import lazyExecutor.lookupData
 
     if (lookupData.actorSystem != null)
-      Kamon.metrics.removeEntity(Entity(lookupData.dispatcherName, AkkaDispatcherMetrics.Category))
+      lazyExecutor.asInstanceOf[ExecutorServiceDelegate].executor match {
+        case fjp: AkkaForkJoinPool ⇒
+          Kamon.metrics.removeEntity(Entity(lookupData.actorSystem.name + "/" + lookupData.dispatcherName,
+            AkkaDispatcherMetrics.Category, tags = Map("dispatcher-type" -> "fork-join-pool")))
+
+        case tpe: ThreadPoolExecutor ⇒
+          Kamon.metrics.removeEntity(Entity(lookupData.actorSystem.name + "/" + lookupData.dispatcherName,
+            AkkaDispatcherMetrics.Category, tags = Map("dispatcher-type" -> "thread-pool-executor")))
+
+        case other ⇒ // nothing to remove.
+      }
   }
 
 }
