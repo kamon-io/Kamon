@@ -205,6 +205,9 @@ trait Metrics {
   def find(name: String, category: String): Option[EntityRecorder] =
     find(Entity(name, category))
 
+  def find(name: String, category: String, tags: Map[String, String]): Option[EntityRecorder] =
+    find(Entity(name, category, tags))
+
   def find(entity: Entity): Option[EntityRecorder]
 
   def subscribe(filter: SubscriptionFilter, subscriber: ActorRef): Unit =
