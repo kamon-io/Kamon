@@ -39,8 +39,8 @@ class RouterMetricsSpec extends BaseKamonSpec("router-metrics-spec") {
         |
         |  filters = {
         |    akka-router {
-        |      includes = [ "user/tracked-*", "user/measuring-*", "user/stop-*" ]
-        |      excludes = [ "user/tracked-explicitly-excluded-*"]
+        |      includes = [ "*/user/tracked-*", "*/user/measuring-*", "*/user/stop-*" ]
+        |      excludes = [ "*/user/tracked-explicitly-excluded-*"]
         |    }
         |  }
         |}
@@ -205,7 +205,7 @@ class RouterMetricsSpec extends BaseKamonSpec("router-metrics-spec") {
     }
 
     def routerMetricsRecorderOf(routerName: String): Option[RouterMetrics] =
-      Kamon.metrics.find(routerName, RouterMetrics.category).map(_.asInstanceOf[RouterMetrics])
+      Kamon.metrics.find(system.name + "/" + routerName, RouterMetrics.category).map(_.asInstanceOf[RouterMetrics])
 
     def collectMetricsOf(routerName: String): Option[EntitySnapshot] = {
       Thread.sleep(5) // Just in case the test advances a bit faster than the actor being tested.

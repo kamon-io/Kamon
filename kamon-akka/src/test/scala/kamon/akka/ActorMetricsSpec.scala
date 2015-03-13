@@ -38,8 +38,8 @@ class ActorMetricsSpec extends BaseKamonSpec("actor-metrics-spec") {
         |
         |  filters {
         |    akka-actor {
-        |      includes = [ "user/tracked-*", "user/measuring-*", "user/clean-after-collect", "user/stop" ]
-        |      excludes = [ "user/tracked-explicitly-excluded", "user/non-tracked-actor" ]
+        |      includes = [ "*/user/tracked-*", "*/user/measuring-*", "*/user/clean-after-collect", "*/user/stop" ]
+        |      excludes = [ "*/user/tracked-explicitly-excluded", "*/user/non-tracked-actor" ]
         |    }
         |  }
         |
@@ -162,7 +162,7 @@ class ActorMetricsSpec extends BaseKamonSpec("actor-metrics-spec") {
       val buffer: LongBuffer = LongBuffer.allocate(10000)
     }
 
-    def actorRecorderName(ref: ActorRef): String = ref.path.elements.mkString("/")
+    def actorRecorderName(ref: ActorRef): String = system.name + "/" + ref.path.elements.mkString("/")
 
     def actorMetricsRecorderOf(ref: ActorRef): Option[ActorMetrics] =
       Kamon.metrics.find(actorRecorderName(ref), ActorMetrics.category).map(_.asInstanceOf[ActorMetrics])
