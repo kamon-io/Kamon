@@ -347,13 +347,13 @@ class LogReporterSubscriber extends Actor with ActorLogging {
     gauges: Map[String, Option[Histogram.Snapshot]]): Unit = {
 
     if (histograms.isEmpty && counters.isEmpty && minMaxCounters.isEmpty && gauges.isEmpty) {
-      log.info("No user metrics reported")
+      log.info("No metrics reported")
       return
     }
 
-    val simpleMetricsData = StringBuilder.newBuilder
+    val metricsData = StringBuilder.newBuilder
 
-    simpleMetricsData.append(
+    metricsData.append(
       """
         |+--------------------------------------------------------------------------------------------------+
         ||                                                                                                  |
@@ -361,9 +361,9 @@ class LogReporterSubscriber extends Actor with ActorLogging {
         ||                                       -------------                                              |
         |""".stripMargin)
 
-    counters.foreach { case (name, snapshot) ⇒ simpleMetricsData.append(userCounterString(name, snapshot.get)) }
+    counters.foreach { case (name, snapshot) ⇒ metricsData.append(userCounterString(name, snapshot.get)) }
 
-    simpleMetricsData.append(
+    metricsData.append(
       """||                                                                                                  |
         ||                                                                                                  |
         ||                                        Histograms                                                |
@@ -372,12 +372,12 @@ class LogReporterSubscriber extends Actor with ActorLogging {
 
     histograms.foreach {
       case (name, snapshot) ⇒
-        simpleMetricsData.append("|  %-40s                                                        |\n".format(name))
-        simpleMetricsData.append(compactHistogramView(snapshot.get))
-        simpleMetricsData.append("\n|                                                                                                  |\n")
+        metricsData.append("|  %-40s                                                        |\n".format(name))
+        metricsData.append(compactHistogramView(snapshot.get))
+        metricsData.append("\n|                                                                                                  |\n")
     }
 
-    simpleMetricsData.append(
+    metricsData.append(
       """||                                                                                                  |
         ||                                      MinMaxCounters                                              |
         ||                                    -----------------                                             |
@@ -385,31 +385,31 @@ class LogReporterSubscriber extends Actor with ActorLogging {
 
     minMaxCounters.foreach {
       case (name, snapshot) ⇒
-        simpleMetricsData.append("|  %-40s                                                        |\n".format(name))
-        simpleMetricsData.append(simpleHistogramView(snapshot.get))
-        simpleMetricsData.append("\n|                                                                                                  |\n")
+        metricsData.append("|  %-40s                                                        |\n".format(name))
+        metricsData.append(histogramView(snapshot.get))
+        metricsData.append("\n|                                                                                                  |\n")
     }
 
-    simpleMetricsData.append(
+    metricsData.append(
       """||                                                                                                  |
         ||                                          Gauges                                                  |
-        ||                                        ---------                                                 |
+        ||                                        ----------                                                |
         |"""
         .stripMargin)
 
     gauges.foreach {
       case (name, snapshot) ⇒
-        simpleMetricsData.append("|  %-40s                                                        |\n".format(name))
-        simpleMetricsData.append(simpleHistogramView(snapshot.get))
-        simpleMetricsData.append("\n|                                                                                                  |\n")
+        metricsData.append("|  %-40s                                                        |\n".format(name))
+        metricsData.append(histogramView(snapshot.get))
+        metricsData.append("\n|                                                                                                  |\n")
     }
 
-    simpleMetricsData.append(
+    metricsData.append(
       """||                                                                                                  |
         |+--------------------------------------------------------------------------------------------------+"""
         .stripMargin)
 
-    log.info(simpleMetricsData.toString())
+    log.info(metricsData.toString())
   }
 
   def userCounterString(counterName: String, snapshot: Counter.Snapshot): String = {
@@ -428,7 +428,7 @@ class LogReporterSubscriber extends Actor with ActorLogging {
     sb.toString()
   }
 
-  def simpleHistogramView(histogram: Histogram.Snapshot): String =
+  def histogramView(histogram: Histogram.Snapshot): String =
     "|          Min: %-12s           Average: %-12s                Max: %-12s      |"
       .format(histogram.min, histogram.average, histogram.max)
 }
