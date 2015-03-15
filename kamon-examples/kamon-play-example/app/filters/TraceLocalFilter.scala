@@ -16,7 +16,7 @@
 
 package filters
 
-import kamon.trace.{TraceRecorder, TraceLocal}
+import kamon.trace.TraceLocal
 import play.api.Logger
 import play.api.mvc.{Result, RequestHeader, Filter}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
