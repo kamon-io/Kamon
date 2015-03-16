@@ -3,7 +3,7 @@ package kamon.statsd
 import java.lang.management.ManagementFactory
 
 import com.typesafe.config.Config
-import kamon.metric.{ MetricKey, Entity }
+import kamon.metric.{ SingleInstrumentEntityRecorder, MetricKey, Entity }
 
 trait MetricKeyGenerator {
   def generateKey(entity: Entity, metricKey: MetricKey): String
@@ -28,7 +28,10 @@ class SimpleMetricKeyGenerator(config: Config) extends MetricKeyGenerator {
 
   def generateKey(entity: Entity, metricKey: MetricKey): String = {
     val normalizedGroupName = normalizer(entity.name)
-    s"${baseName}.${entity.category}.${normalizedGroupName}.${metricKey.name}"
+    if (SingleInstrumentEntityRecorder.AllCategories.contains(entity.category))
+      s"${baseName}.${entity.category}.${normalizedGroupName}"
+    else
+      s"${baseName}.${entity.category}.${normalizedGroupName}.${metricKey.name}"
   }
 
   def hostName: String = ManagementFactory.getRuntimeMXBean.getName.split('@')(1)
