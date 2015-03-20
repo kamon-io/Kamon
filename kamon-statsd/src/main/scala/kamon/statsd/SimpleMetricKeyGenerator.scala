@@ -26,12 +26,16 @@ class SimpleMetricKeyGenerator(config: Config) extends MetricKeyGenerator {
     if (includeHostname) s"$application.$normalizedHostname"
     else application
 
-  def generateKey(entity: Entity, metricKey: MetricKey): String = {
-    val normalizedGroupName = normalizer(entity.name)
-    if (SingleInstrumentEntityRecorder.AllCategories.contains(entity.category))
-      s"${baseName}.${entity.category}.${normalizedGroupName}"
-    else
-      s"${baseName}.${entity.category}.${normalizedGroupName}.${metricKey.name}"
+  def generateKey(entity: Entity, metricKey: MetricKey): String = entity.category match {
+    case "trace-segment" ⇒
+      s"${baseName}.trace.${normalizer(entity.tags("trace"))}.segments.${normalizer(entity.name)}.${metricKey.name}"
+
+    case _ if SingleInstrumentEntityRecorder.AllCategories.contains(entity.category) ⇒
+      s"${baseName}.${entity.category}.${normalizer(entity.name)}"
+
+    case _ ⇒
+      s"${baseName}.${entity.category}.${normalizer(entity.name)}.${metricKey.name}"
+
   }
 
   def hostName: String = ManagementFactory.getRuntimeMXBean.getName.split('@')(1)
