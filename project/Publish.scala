@@ -19,7 +19,7 @@ import sbt.Keys._
 object Publish {
 
   lazy val settings = Seq(
-    crossPaths := false,
+    crossPaths := true,
     pomExtra := kamonPomExtra,
     publishTo := kamonRepo,
     organization := "io.kamon",

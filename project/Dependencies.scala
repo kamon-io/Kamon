@@ -52,7 +52,6 @@ object Dependencies {
   val slf4nop           = "org.slf4j"                 %   "slf4j-nop"             % slf4jVersion
   val slf4Jul           = "org.slf4j"                 %   "jul-to-slf4j"          % slf4jVersion
   val slf4Log4j         = "org.slf4j"                 %   "log4j-over-slf4j"      % slf4jVersion
-  val scalaCompiler     = "org.scala-lang"            %   "scala-compiler"        % Settings.ScalaVersion
   val scalazConcurrent  = "org.scalaz"                %%  "scalaz-concurrent"     % "7.1.0"
   val sigarLoader       = "io.kamon"                  %   "sigar-loader"          % "1.6.5-rev001"
   val h2                = "com.h2database"            %   "h2"                    % "1.4.182"
