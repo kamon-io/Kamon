@@ -20,7 +20,7 @@ object ApplicationBuild extends Build {
     )
 
   val defaultSettings = Seq(
-      scalaVersion := "2.10.4",
+      scalaVersion := "2.11.5",
       resolvers ++= resolutionRepos,
       scalacOptions := Seq(
         "-encoding",
@@ -35,7 +35,7 @@ object ApplicationBuild extends Build {
         "-Xlog-reflective-calls"
       ))
 
-  val kamonVersion = "0.3.4"
+  val kamonVersion = "0.3.6-125bee567e0b18ea5ec10f3a1fe76409673011d9"
 
   val dependencies = Seq(
     "io.kamon"    %% "kamon-core"           % kamonVersion,

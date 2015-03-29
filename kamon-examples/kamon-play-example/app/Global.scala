@@ -16,5 +16,11 @@
 
 import filters.TraceLocalFilter
 import play.api.mvc.WithFilters
+import play.api.Application
+import kamon.Kamon
 
-object Global extends WithFilters(TraceLocalFilter)
+object Global extends WithFilters(TraceLocalFilter) {
+  override def onStart(app: Application) {
+    Kamon.start()
+  }
+}

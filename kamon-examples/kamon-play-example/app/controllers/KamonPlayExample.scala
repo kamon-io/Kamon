@@ -17,7 +17,6 @@ package controllers
 
 import filters.{TraceLocalContainer, TraceLocalKey}
 import kamon.Kamon
-import kamon.metric.UserMetrics
 import kamon.play.action.TraceName
 import kamon.trace.TraceLocal
 import play.api.Logger
@@ -56,7 +55,7 @@ import scala.concurrent._
 object KamonPlayExample extends Controller {
 
   val logger = Logger(this.getClass)
-  val counter = Kamon(UserMetrics)(Akka.system()).registerCounter("my-counter")
+  val counter = Kamon.metrics.counter("my-counter")
 
   def sayHello = Action.async {
     Future {
