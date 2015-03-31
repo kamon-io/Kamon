@@ -29,6 +29,9 @@ class TraceMetrics(instrumentFactory: InstrumentFactory) extends GenericEntityRe
 object TraceMetrics extends EntityRecorderFactory[TraceMetrics] {
   def category: String = "trace"
   def createRecorder(instrumentFactory: InstrumentFactory): TraceMetrics = new TraceMetrics(instrumentFactory)
+
+  // Java API.
+  def factory: EntityRecorderFactory[TraceMetrics] = this
 }
 
 class SegmentMetrics(instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) {
@@ -42,4 +45,7 @@ class SegmentMetrics(instrumentFactory: InstrumentFactory) extends GenericEntity
 object SegmentMetrics extends EntityRecorderFactory[SegmentMetrics] {
   def category: String = "trace-segment"
   def createRecorder(instrumentFactory: InstrumentFactory): SegmentMetrics = new SegmentMetrics(instrumentFactory)
+
+  // Java API.
+  def factory: EntityRecorderFactory[SegmentMetrics] = this
 }
