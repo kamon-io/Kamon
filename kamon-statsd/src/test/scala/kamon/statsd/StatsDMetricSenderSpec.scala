@@ -138,7 +138,7 @@ class StatsDMetricSenderSpec extends BaseKamonSpec("statsd-metric-sender-spec") 
 
     def setup(metrics: Map[Entity, EntitySnapshot]): TestProbe = {
       val udp = TestProbe()
-      val metricsSender = system.actorOf(Props(new StatsDMetricsSender(new InetSocketAddress("127.0.0.1", 0), testMaxPacketSize, metricKeyGenerator) {
+      val metricsSender = system.actorOf(Props(new StatsDMetricsSender("127.0.0.1", 0, testMaxPacketSize, metricKeyGenerator) {
         override def udpExtension(implicit system: ActorSystem): ActorRef = udp.ref
       }))
 
