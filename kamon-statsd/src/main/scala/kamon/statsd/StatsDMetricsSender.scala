@@ -26,7 +26,7 @@ import java.util.Locale
 
 import kamon.metric.instrument.{ Counter, Histogram }
 
-class StatsDMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long, metricKeyGenerator: MetricKeyGenerator)
+class StatsDMetricsSender(statsDHost: String, statsDPort: Int, maxPacketSizeInBytes: Long, metricKeyGenerator: MetricKeyGenerator)
     extends Actor with UdpExtensionProvider {
   import context.system
 
@@ -38,6 +38,8 @@ class StatsDMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long,
 
   udpExtension ! Udp.SimpleSender
 
+  def newSocketAddress = new InetSocketAddress(statsDHost, statsDPort)
+
   def receive = {
     case Udp.SimpleSenderReady ⇒
       context.become(ready(sender))
@@ -48,7 +50,7 @@ class StatsDMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long,
   }
 
   def writeMetricsToRemote(tick: TickMetricSnapshot, udpSender: ActorRef): Unit = {
-    val packetBuilder = new MetricDataPacketBuilder(maxPacketSizeInBytes, udpSender, remote)
+    val packetBuilder = new MetricDataPacketBuilder(maxPacketSizeInBytes, udpSender, newSocketAddress)
 
     for (
       (entity, snapshot) ← tick.metrics;
@@ -80,8 +82,8 @@ class StatsDMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long,
 }
 
 object StatsDMetricsSender {
-  def props(remote: InetSocketAddress, maxPacketSize: Long, metricKeyGenerator: MetricKeyGenerator): Props =
-    Props(new StatsDMetricsSender(remote, maxPacketSize, metricKeyGenerator))
+  def props(statsDHost: String, statsDPort: Int, maxPacketSize: Long, metricKeyGenerator: MetricKeyGenerator): Props =
+    Props(new StatsDMetricsSender(statsDHost, statsDPort, maxPacketSize, metricKeyGenerator))
 }
 
 trait UdpExtensionProvider {

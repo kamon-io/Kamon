@@ -43,7 +43,6 @@ class StatsDExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   val metricsExtension = Kamon.metrics
 
   val tickInterval = metricsExtension.settings.tickInterval
-  val statsDHost = new InetSocketAddress(statsDConfig.getString("hostname"), statsDConfig.getInt("port"))
   val flushInterval = statsDConfig.getFiniteDuration("flush-interval")
   val maxPacketSizeInBytes = statsDConfig.getBytes("max-packet-size")
   val keyGeneratorFQCN = statsDConfig.getString("metric-key-generator")
@@ -62,7 +61,8 @@ class StatsDExtension(system: ExtendedActorSystem) extends Kamon.Extension {
     val keyGenerator = system.dynamicAccess.createInstanceFor[MetricKeyGenerator](keyGeneratorFQCN, (classOf[Config], config) :: Nil).get
 
     val metricsSender = system.actorOf(StatsDMetricsSender.props(
-      statsDHost,
+      statsDConfig.getString("hostname"),
+      statsDConfig.getInt("port"),
       maxPacketSizeInBytes,
       keyGenerator), "statsd-metrics-sender")
 
