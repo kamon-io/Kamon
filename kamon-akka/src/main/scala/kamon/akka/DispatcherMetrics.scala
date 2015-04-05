@@ -26,21 +26,10 @@ class ForkJoinPoolDispatcherMetrics(fjp: AkkaForkJoinPool, instrumentFactory: In
   val paralellism = minMaxCounter("parallelism")
   paralellism.increment(fjp.getParallelism) // Steady value.
 
-  val poolSize = gauge("pool-size", () ⇒ {
-    fjp.getPoolSize.toLong
-  })
-
-  val activeThreads = gauge("active-threads", () ⇒ {
-    fjp.getActiveThreadCount.toLong
-  })
-
-  val runningThreads = gauge("running-threads", () ⇒ {
-    fjp.getRunningThreadCount.toLong
-  })
-
-  val queuedTaskCount = gauge("queued-task-count", () ⇒ {
-    fjp.getQueuedTaskCount
-  })
+  val poolSize = gauge("pool-size", fjp.getPoolSize.toLong)
+  val activeThreads = gauge("active-threads", fjp.getActiveThreadCount.toLong)
+  val runningThreads = gauge("running-threads", fjp.getRunningThreadCount.toLong)
+  val queuedTaskCount = gauge("queued-task-count", fjp.getQueuedTaskCount)
 }
 
 object ForkJoinPoolDispatcherMetrics {
@@ -52,29 +41,16 @@ object ForkJoinPoolDispatcherMetrics {
 }
 
 class ThreadPoolExecutorDispatcherMetrics(tpe: ThreadPoolExecutor, instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) {
-  val corePoolSize = gauge("core-pool-size", () ⇒ {
-    tpe.getCorePoolSize.toLong
-  })
-
-  val maxPoolSize = gauge("max-pool-size", () ⇒ {
-    tpe.getMaximumPoolSize.toLong
-  })
-
-  val poolSize = gauge("pool-size", () ⇒ {
-    tpe.getPoolSize.toLong
-  })
-
-  val activeThreads = gauge("active-threads", () ⇒ {
-    tpe.getActiveCount.toLong
-  })
-
+  val corePoolSize = gauge("core-pool-size", tpe.getCorePoolSize.toLong)
+  val maxPoolSize = gauge("max-pool-size", tpe.getMaximumPoolSize.toLong)
+  val poolSize = gauge("pool-size", tpe.getPoolSize.toLong)
+  val activeThreads = gauge("active-threads", tpe.getActiveCount.toLong)
   val processedTasks = gauge("processed-tasks", DifferentialValueCollector(() ⇒ {
     tpe.getTaskCount
   }))
 }
 
 object ThreadPoolExecutorDispatcherMetrics {
-
   def factory(tpe: ThreadPoolExecutor) = new EntityRecorderFactory[ThreadPoolExecutorDispatcherMetrics] {
     def category: String = AkkaDispatcherMetrics.Category
     def createRecorder(instrumentFactory: InstrumentFactory) = new ThreadPoolExecutorDispatcherMetrics(tpe, instrumentFactory)
