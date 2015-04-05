@@ -16,42 +16,32 @@
 
 package kamon.metric
 
-import kamon.metric.instrument.{ InstrumentTypes, InstrumentType, UnitOfMeasurement }
+import kamon.metric.instrument.UnitOfMeasurement
 
 /**
- *  MetricKeys are used to identify a given metric in entity recorders and snapshots. MetricKeys can be used to encode
- *  additional metadata for a metric being recorded, as well as the unit of measurement of the data being recorder.
+ *  MetricKeys are used to identify a given metric in entity recorders and snapshots.
  */
 sealed trait MetricKey {
   def name: String
   def unitOfMeasurement: UnitOfMeasurement
-  def instrumentType: InstrumentType
 }
 
 /**
  *  MetricKey for all Histogram-based metrics.
  */
-private[kamon] case class HistogramKey(name: String, unitOfMeasurement: UnitOfMeasurement) extends MetricKey {
-  val instrumentType = InstrumentTypes.Histogram
-}
+private[kamon] case class HistogramKey(name: String, unitOfMeasurement: UnitOfMeasurement) extends MetricKey
 
 /**
  *  MetricKey for all MinMaxCounter-based metrics.
  */
-case class MinMaxCounterKey(name: String, unitOfMeasurement: UnitOfMeasurement) extends MetricKey {
-  val instrumentType = InstrumentTypes.MinMaxCounter
-}
+private[kamon] case class MinMaxCounterKey(name: String, unitOfMeasurement: UnitOfMeasurement) extends MetricKey
 
 /**
  *  MetricKey for all Gauge-based metrics.
  */
-case class GaugeKey(name: String, unitOfMeasurement: UnitOfMeasurement) extends MetricKey {
-  val instrumentType = InstrumentTypes.Gauge
-}
+private[kamon] case class GaugeKey(name: String, unitOfMeasurement: UnitOfMeasurement) extends MetricKey
 
 /**
  *  MetricKey for all Counter-based metrics.
  */
-case class CounterKey(name: String, unitOfMeasurement: UnitOfMeasurement) extends MetricKey {
-  val instrumentType = InstrumentTypes.Counter
-}
+private[kamon] case class CounterKey(name: String, unitOfMeasurement: UnitOfMeasurement) extends MetricKey

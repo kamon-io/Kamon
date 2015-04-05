@@ -245,7 +245,7 @@ private[kamon] class MetricsImpl(config: Config) extends Metrics {
   def registerHistogram(name: String, tags: Map[String, String], unitOfMeasurement: Option[UnitOfMeasurement],
     dynamicRange: Option[DynamicRange]): Histogram = {
 
-    val histogramEntity = Entity(name, "histogram", tags)
+    val histogramEntity = Entity(name, SingleInstrumentEntityRecorder.Histogram, tags)
     val recorder = _trackedEntities.atomicGetOrElseUpdate(histogramEntity, {
       val factory = instrumentFactory(histogramEntity.category)
       HistogramRecorder(HistogramKey(histogramEntity.category, unitOfMeasurement.getOrElse(UnitOfMeasurement.Unknown)),
@@ -256,12 +256,12 @@ private[kamon] class MetricsImpl(config: Config) extends Metrics {
   }
 
   def removeHistogram(name: String, tags: Map[String, String]): Boolean =
-    _trackedEntities.remove(Entity(name, "histogram", tags)).isDefined
+    _trackedEntities.remove(Entity(name, SingleInstrumentEntityRecorder.Histogram, tags)).isDefined
 
   def registerMinMaxCounter(name: String, tags: Map[String, String], unitOfMeasurement: Option[UnitOfMeasurement], dynamicRange: Option[DynamicRange],
     refreshInterval: Option[FiniteDuration]): MinMaxCounter = {
 
-    val minMaxCounterEntity = Entity(name, "min-max-counter", tags)
+    val minMaxCounterEntity = Entity(name, SingleInstrumentEntityRecorder.MinMaxCounter, tags)
     val recorder = _trackedEntities.atomicGetOrElseUpdate(minMaxCounterEntity, {
       val factory = instrumentFactory(minMaxCounterEntity.category)
       MinMaxCounterRecorder(MinMaxCounterKey(minMaxCounterEntity.category, unitOfMeasurement.getOrElse(UnitOfMeasurement.Unknown)),
@@ -272,13 +272,13 @@ private[kamon] class MetricsImpl(config: Config) extends Metrics {
   }
 
   def removeMinMaxCounter(name: String, tags: Map[String, String]): Boolean =
-    _trackedEntities.remove(Entity(name, "min-max-counter", tags)).isDefined
+    _trackedEntities.remove(Entity(name, SingleInstrumentEntityRecorder.MinMaxCounter, tags)).isDefined
 
   def registerGauge(name: String, valueCollector: CurrentValueCollector, tags: Map[String, String] = Map.empty,
     unitOfMeasurement: Option[UnitOfMeasurement] = None, dynamicRange: Option[DynamicRange] = None,
     refreshInterval: Option[FiniteDuration] = None): Gauge = {
 
-    val gaugeEntity = Entity(name, "gauge", tags)
+    val gaugeEntity = Entity(name, SingleInstrumentEntityRecorder.Gauge, tags)
     val recorder = _trackedEntities.atomicGetOrElseUpdate(gaugeEntity, {
       val factory = instrumentFactory(gaugeEntity.category)
       GaugeRecorder(MinMaxCounterKey(gaugeEntity.category, unitOfMeasurement.getOrElse(UnitOfMeasurement.Unknown)),
@@ -289,12 +289,12 @@ private[kamon] class MetricsImpl(config: Config) extends Metrics {
   }
 
   def removeGauge(name: String, tags: Map[String, String]): Boolean =
-    _trackedEntities.remove(Entity(name, "gauge", tags)).isDefined
+    _trackedEntities.remove(Entity(name, SingleInstrumentEntityRecorder.Gauge, tags)).isDefined
 
   def registerCounter(name: String, tags: Map[String, String] = Map.empty, unitOfMeasurement: Option[UnitOfMeasurement] = None,
     dynamicRange: Option[DynamicRange] = None): Counter = {
 
-    val counterEntity = Entity(name, "counter", tags)
+    val counterEntity = Entity(name, SingleInstrumentEntityRecorder.Counter, tags)
     val recorder = _trackedEntities.atomicGetOrElseUpdate(counterEntity, {
       val factory = instrumentFactory(counterEntity.category)
       CounterRecorder(CounterKey(counterEntity.category, unitOfMeasurement.getOrElse(UnitOfMeasurement.Unknown)),
@@ -305,7 +305,7 @@ private[kamon] class MetricsImpl(config: Config) extends Metrics {
   }
 
   def removeCounter(name: String, tags: Map[String, String]): Boolean =
-    _trackedEntities.remove(Entity(name, "counter", tags)).isDefined
+    _trackedEntities.remove(Entity(name, SingleInstrumentEntityRecorder.Counter, tags)).isDefined
 
   def entity[T <: EntityRecorder](recorderFactory: EntityRecorderFactory[T], entity: Entity): T = {
     _trackedEntities.atomicGetOrElseUpdate(entity, {

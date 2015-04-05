@@ -16,17 +16,20 @@
 
 package kamon.metric.instrument
 
+/**
+ *  A UnitOfMeasurement implementation describes the magnitude of a quantity being measured, such as Time and computer
+ *  Memory space. Kamon uses UnitOfMeasurement implementations just as a informative companion to metrics inside entity
+ *  recorders and might be used to scale certain kinds of measurements in metric backends.
+ */
 trait UnitOfMeasurement {
   def name: String
   def label: String
-  def factor: Double
 }
 
 object UnitOfMeasurement {
   case object Unknown extends UnitOfMeasurement {
     val name = "unknown"
     val label = "unknown"
-    val factor = 1D
   }
 
   def isUnknown(uom: UnitOfMeasurement): Boolean =
@@ -35,19 +38,18 @@ object UnitOfMeasurement {
   def isTime(uom: UnitOfMeasurement): Boolean =
     uom.isInstanceOf[Time]
 
+  def isMemory(uom: UnitOfMeasurement): Boolean =
+    uom.isInstanceOf[Memory]
+
 }
 
+/**
+ *  UnitOfMeasurement representing time.
+ */
 case class Time(factor: Double, label: String) extends UnitOfMeasurement {
   val name = "time"
 
-  /**
-   *  Scale a value from this scale factor to a different scale factor.
-   *
-   * @param toUnit Time unit of the expected result.
-   * @param value Value to scale.
-   * @return Equivalent of value on the target time unit.
-   */
-  def scale(toUnit: Time)(value: Long): Double =
+  def scale(toUnit: Time)(value: Double): Double =
     (value * factor) / toUnit.factor
 }
 
@@ -58,8 +60,14 @@ object Time {
   val Seconds = Time(1, "s")
 }
 
+/**
+ *  UnitOfMeasurement representing computer memory space.
+ */
 case class Memory(factor: Double, label: String) extends UnitOfMeasurement {
   val name = "bytes"
+
+  def scale(toUnit: Memory)(value: Double): Double =
+    (value * factor) / toUnit.factor
 }
 
 object Memory {
