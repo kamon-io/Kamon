@@ -33,14 +33,6 @@ trait InstrumentSnapshot {
   def merge(that: InstrumentSnapshot, context: CollectionContext): InstrumentSnapshot
 }
 
-class InstrumentType private[kamon] (val id: Int) extends AnyVal
-object InstrumentTypes {
-  val Histogram = new InstrumentType(1)
-  val MinMaxCounter = new InstrumentType(2)
-  val Gauge = new InstrumentType(3)
-  val Counter = new InstrumentType(4)
-}
-
 trait CollectionContext {
   def buffer: LongBuffer
 }
@@ -51,3 +43,11 @@ object CollectionContext {
   }
 }
 
+sealed trait InstrumentType
+
+object InstrumentTypes {
+  case object Histogram extends InstrumentType
+  case object MinMaxCounter extends InstrumentType
+  case object Gauge extends InstrumentType
+  case object Counter extends InstrumentType
+}
