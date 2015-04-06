@@ -211,13 +211,13 @@ trait Metrics {
   def find(entity: Entity): Option[EntityRecorder]
 
   def subscribe(filter: SubscriptionFilter, subscriber: ActorRef): Unit =
-    subscribe(filter, subscriber, permanently = false)
+    subscribe(filter, subscriber, permanently = true)
 
   def subscribe(category: String, selection: String, subscriber: ActorRef, permanently: Boolean): Unit =
     subscribe(SubscriptionFilter(category, selection), subscriber, permanently)
 
   def subscribe(category: String, selection: String, subscriber: ActorRef): Unit =
-    subscribe(SubscriptionFilter(category, selection), subscriber, permanently = false)
+    subscribe(SubscriptionFilter(category, selection), subscriber, permanently = true)
 
   def subscribe(filter: SubscriptionFilter, subscriber: ActorRef, permanently: Boolean): Unit
 
