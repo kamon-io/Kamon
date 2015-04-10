@@ -34,13 +34,9 @@ object Settings {
     fork in run             := true,
     parallelExecution in Test := false,
     testGrouping in Test    := singleTestPerJvm((definedTests in Test).value, (javaOptions in Test).value),
-    javacOptions in compile := Seq(
+    javacOptions            := Seq(
       "-Xlint:-options",
-      "-source", JavaVersion, "-target", JavaVersion
-    ),
-    javacOptions in doc     := Seq(
-      "-source", JavaVersion
-    ),
+      "-source", JavaVersion, "-target", JavaVersion),
     scalacOptions           := Seq(
       "-encoding",
       "utf8",
