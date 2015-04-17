@@ -17,9 +17,8 @@
 package kamon.trace
 
 import java.io.ObjectStreamException
-import java.util.function.Function
 import kamon.trace.TraceContextAware.DefaultTraceContextAware
-import kamon.util.RelativeNanoTimestamp
+import kamon.util.{ Function, RelativeNanoTimestamp }
 
 trait TraceContext {
   def name: String
