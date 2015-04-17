@@ -37,7 +37,7 @@ trait TracerModule {
 }
 
 object Tracer {
-  private val _traceContextStorage = new ThreadLocal[TraceContext] {
+  private[kamon] val _traceContextStorage = new ThreadLocal[TraceContext] {
     override def initialValue(): TraceContext = EmptyTraceContext
   }
 
