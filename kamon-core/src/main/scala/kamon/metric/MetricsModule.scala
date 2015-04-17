@@ -29,7 +29,7 @@ import scala.concurrent.duration.FiniteDuration
 
 case class EntityRegistration[T <: EntityRecorder](entity: Entity, recorder: T)
 
-trait Metrics {
+trait MetricsModule {
   def settings: MetricsSettings
 
   def shouldTrack(entity: Entity): Boolean
@@ -228,7 +228,7 @@ trait Metrics {
   def instrumentFactory(category: String): InstrumentFactory
 }
 
-private[kamon] class MetricsImpl(config: Config) extends Metrics {
+private[kamon] class MetricsModuleImpl(config: Config) extends MetricsModule {
   import kamon.util.TriemapAtomicGetOrElseUpdate.Syntax
 
   private val _trackedEntities = TrieMap.empty[Entity, EntityRecorder]
@@ -356,9 +356,9 @@ private[kamon] class MetricsImpl(config: Config) extends Metrics {
   }
 }
 
-private[kamon] object MetricsImpl {
+private[kamon] object MetricsModuleImpl {
 
   def apply(config: Config) =
-    new MetricsImpl(config)
+    new MetricsModuleImpl(config)
 }
 

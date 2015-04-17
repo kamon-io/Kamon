@@ -20,7 +20,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 
 import akka.event.LoggingAdapter
 import kamon.Kamon
-import kamon.metric.{ SegmentMetrics, Metrics, TraceMetrics }
+import kamon.metric.{ SegmentMetrics, MetricsModule, TraceMetrics }
 import kamon.util.{ NanoInterval, RelativeNanoTimestamp }
 
 import scala.annotation.tailrec
