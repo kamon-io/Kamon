@@ -43,7 +43,7 @@ class RequestInstrumentation {
       requestHeader.headers.toSimpleMap.find(_._1 == playExtension.traceTokenHeaderName).map(_._2)
     } else None
 
-    val newContext = token.map(t ⇒ tracer.newContext(defaultTraceName, t)).getOrElse(tracer.newContext(defaultTraceName))
+    val newContext = tracer.newContext(defaultTraceName, token)
     Tracer.setCurrentContext(newContext)
   }
 

@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import akka.event.LoggingAdapter
 import kamon.util.{ NanoInterval, RelativeNanoTimestamp, NanoTimestamp }
-import kamon.metric.Metrics
+import kamon.metric.MetricsModule
 
 import scala.collection.concurrent.TrieMap
 

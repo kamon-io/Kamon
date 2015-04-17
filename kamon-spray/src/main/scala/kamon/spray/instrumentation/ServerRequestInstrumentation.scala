@@ -46,7 +46,7 @@ class ServerRequestInstrumentation {
       request.headers.find(_.name == sprayExtension.settings.traceTokenHeaderName).map(_.value)
     } else None
 
-    val newContext = token.map(customToken ⇒ tracer.newContext(defaultTraceName, customToken)) getOrElse (tracer.newContext(defaultTraceName))
+    val newContext = tracer.newContext(defaultTraceName, token)
     Tracer.setCurrentContext(newContext)
 
     // Necessary to force initialization of traceContext when initiating the request.

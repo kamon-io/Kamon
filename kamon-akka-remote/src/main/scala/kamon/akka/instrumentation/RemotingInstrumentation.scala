@@ -88,7 +88,7 @@ class RemotingInstrumentation {
 
       val ctx = tracer.newContext(
         remoteTraceContext.getTraceName,
-        remoteTraceContext.getTraceToken,
+        Option(remoteTraceContext.getTraceToken),
         new MilliTimestamp(remoteTraceContext.getStartMilliTime()).toRelativeNanoTimestamp,
         remoteTraceContext.getIsOpen,
         isLocal = false)
