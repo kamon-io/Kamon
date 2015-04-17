@@ -18,7 +18,9 @@ package kamon.trace
 
 import java.io.ObjectStreamException
 import kamon.trace.TraceContextAware.DefaultTraceContextAware
-import kamon.util.{ Function, RelativeNanoTimestamp }
+import kamon.util.{ SameThreadExecutionContext, Supplier, Function, RelativeNanoTimestamp }
+
+import scala.concurrent.Future
 
 trait TraceContext {
   def name: String
@@ -45,6 +47,23 @@ trait TraceContext {
     if (nonEmpty)
       Some(f(this))
     else None
+
+  def withNewSegment[T](segmentName: String, category: String, library: String)(code: ⇒ T): T = {
+    val segment = startSegment(segmentName, category, library)
+    try code finally segment.finish()
+  }
+
+  // Java variant.
+  def withNewSegment[T](segmentName: String, category: String, library: String, code: Supplier[T]): T =
+    withNewSegment(segmentName, category, library)(code.get)
+
+  def withNewAsyncSegment[T](segmentName: String, category: String, library: String)(code: ⇒ Future[T]): Future[T] = {
+    val segment = startSegment(segmentName, category, library)
+    val result = code
+    code.onComplete(_ ⇒ segment.finish())(SameThreadExecutionContext)
+    result
+  }
+
 }
 
 trait Segment {
