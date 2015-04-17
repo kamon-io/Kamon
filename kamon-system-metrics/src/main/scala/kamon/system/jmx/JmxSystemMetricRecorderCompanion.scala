@@ -17,10 +17,10 @@
 package kamon.system.jmx
 
 import kamon.metric.instrument.InstrumentFactory
-import kamon.metric.{ EntityRecorderFactory, EntityRecorder, Metrics }
+import kamon.metric.{ MetricsModule, EntityRecorderFactory, EntityRecorder }
 
 abstract class JmxSystemMetricRecorderCompanion(metricName: String) {
-  def register(metricsExtension: Metrics): EntityRecorder =
+  def register(metricsExtension: MetricsModule): EntityRecorder =
     metricsExtension.entity(EntityRecorderFactory("system-metric", apply(_)), metricName)
 
   def apply(instrumentFactory: InstrumentFactory): EntityRecorder
