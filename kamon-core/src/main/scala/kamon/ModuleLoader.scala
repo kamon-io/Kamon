@@ -37,7 +37,7 @@ private[kamon] class ModuleLoaderExtension(system: ExtendedActorSystem) extends 
   // Force initialization of all modules marked with auto-start.
   settings.availableModules.filter(_.autoStart).foreach { module ⇒
     if (module.extensionClass == "none")
-      log.debug("Ignoring auto start of the [{}] module with no extension class.")
+      log.debug("Ignoring auto start of the [{}] module with no extension class.", module.name)
     else
       system.dynamicAccess.getObjectFor[ExtensionId[Kamon.Extension]](module.extensionClass).map { moduleID ⇒
         log.debug("Auto starting the [{}] module.", module.name)
