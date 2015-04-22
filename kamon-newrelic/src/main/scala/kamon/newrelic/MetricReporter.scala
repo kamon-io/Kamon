@@ -1,8 +1,28 @@
+/*
+ * =========================================================================================
+ * Copyright © 2013-2014 the kamon project <http://kamon.io/>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the specific language governing permissions
+ * and limitations under the License.
+ * =========================================================================================
+ */
+
 package kamon.newrelic
 
-import akka.actor.{ Props, ActorLogging, Actor }
-import akka.pattern.pipe
+import java.util
+
+import akka.actor._
+import akka.event.LoggingAdapter
 import akka.io.IO
+import akka.pattern.pipe
+import com.typesafe.config.{ ConfigException, Config }
 import kamon.Kamon
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 import kamon.metric._
@@ -14,7 +34,7 @@ import spray.httpx.SprayJsonSupport
 import scala.concurrent.duration._
 import JsonProtocol._
 
-class MetricReporter(settings: AgentSettings) extends Actor with ActorLogging with SprayJsonSupport {
+class MetricReporter(settings: AgentSettings) extends Actor with ActorLogging with SprayJsonSupport with MetricsSubscription {
   import context.dispatcher
 
   val metricsExtension = Kamon.metrics
@@ -27,7 +47,7 @@ class MetricReporter(settings: AgentSettings) extends Actor with ActorLogging wi
     else context.actorOf(TickMetricSnapshotBuffer.props(1 minute, self), "metric-buffer")
   }
 
-  subscribeToMetrics()
+  subscribeToMetrics(context.system.settings.config, metricsSubscriber, metricsExtension)
 
   def receive = awaitingConfiguration(None)
 
@@ -88,10 +108,29 @@ class MetricReporter(settings: AgentSettings) extends Actor with ActorLogging wi
     TimeSliceMetrics(tick.from.toTimestamp, tick.to.toTimestamp, extractedMetrics)
   }
 
-  def subscribeToMetrics(): Unit = {
-    metricsExtension.subscribe("trace", "*", metricsSubscriber, permanently = true)
-    metricsExtension.subscribe("user-metrics", "*", metricsSubscriber, permanently = true)
-  }
+}
+
+/**
+ * @since 21.04.2015
+ */
+trait MetricsSubscription {
+  import scala.util.control.Exception._
+  import scala.collection.JavaConversions._
+
+  def log: LoggingAdapter
+
+  def subscriptions(config: Config) = catching(classOf[ConfigException]) opt {
+    config getConfig "kamon.newrelic" getObject "metrics"
+  } getOrElse {
+    log.error("Could not find any metrics to subscribe to. No NewRelic metrics will be reported.")
+    com.typesafe.config.ConfigValueFactory.fromMap(util.Collections.emptyMap())
+  } entrySet
+
+  def subscribeToMetrics(config: Config, metricsSubscriber: ActorRef, metrics: MetricsModule): Unit =
+    subscriptions(config) foreach { metric ⇒
+      log.debug("Subscribing NewRelic reporting for {} : {}", metric.getKey, metric.getValue.unwrapped)
+      metrics.subscribe(metric.getKey, metric.getValue.unwrapped.toString, metricsSubscriber, permanently = true)
+    }
 }
 
 object MetricReporter {
@@ -101,7 +140,8 @@ object MetricReporter {
   case object PostSucceeded extends MetricDataPostResult
   case class PostFailed(reason: Throwable) extends MetricDataPostResult
 
-  val MetricExtractors: List[MetricExtractor] = WebTransactionMetricExtractor :: CustomMetricExtractor :: Nil
+  val MetricExtractors =
+    WebTransactionMetricExtractor :: CustomMetricExtractor :: AkkaMetricExtractor :: Nil
 }
 
 trait MetricExtractor {
