@@ -146,6 +146,7 @@ trait AnnotationInstruments {
   var traces: AtomicReferenceArray[TraceContextInfo] = _
   var segments: AtomicReferenceArray[SegmentInfo] = _
   var histograms: AtomicReferenceArray[instrument.Histogram] = _
+  var timeHistograms: AtomicReferenceArray[instrument.Histogram] = _
   var counters: AtomicReferenceArray[Counter] = _
   var minMaxCounters: AtomicReferenceArray[MinMaxCounter] = _
 }
