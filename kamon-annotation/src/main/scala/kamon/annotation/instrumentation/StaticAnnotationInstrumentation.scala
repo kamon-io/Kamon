@@ -36,6 +36,7 @@ class StaticAnnotationInstrumentation extends BaseAnnotationInstrumentation with
     counters = new AtomicReferenceArray[Counter](size)
     minMaxCounters = new AtomicReferenceArray[MinMaxCounter](size)
     histograms = new AtomicReferenceArray[instrument.Histogram](size)
+    timeHistograms = new AtomicReferenceArray[instrument.Histogram](size)
   }
 
   @Around("execution(@kamon.annotation.Trace static * (@kamon.annotation.EnableKamon *).*(..))")
@@ -60,10 +61,10 @@ class StaticAnnotationInstrumentation extends BaseAnnotationInstrumentation with
 
   @Around("execution(@kamon.annotation.Time static * (@kamon.annotation.EnableKamon *).*(..))")
   def time(pjp: ProceedingJoinPoint): AnyRef = {
-    var histogram = histograms.get(pjp.getStaticPart.getId)
+    var histogram = timeHistograms.get(pjp.getStaticPart.getId)
     if (histogram == null) {
       val clazz = declaringType(pjp.getSignature)
-      histogram = registerTime(pjp.getStaticPart, histograms, StringEvaluator(clazz), TagsEvaluator(clazz))
+      histogram = registerTime(pjp.getStaticPart, timeHistograms, StringEvaluator(clazz), TagsEvaluator(clazz))
     }
     processTime(histogram, pjp)
   }
