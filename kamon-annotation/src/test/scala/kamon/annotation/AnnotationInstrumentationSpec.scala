@@ -73,17 +73,17 @@ class AnnotationInstrumentationSpec extends BaseKamonSpec("annotation-instrument
       for (id ← 1 to 10) Annotated(id).count()
 
       val snapshot = takeSnapshotOf("count", "counter")
-      snapshot.counter("counter").get.count should be(10)
+      snapshot.counter("counter.count").get.count should be(10)
     }
 
     "count the invocations of a method annotated with @Count and evaluate EL expressions" in {
       for (id ← 1 to 2) Annotated(id).countWithEL()
 
       val counter1Snapshot = takeSnapshotOf("count:1", "counter", Map("counter" -> "1", "env" -> "prod"))
-      counter1Snapshot.counter("counter").get.count should be(1)
+      counter1Snapshot.counter("counter.count:1").get.count should be(1)
 
       val counter2Snapshot = takeSnapshotOf("count:2", "counter", Map("counter" -> "1", "env" -> "prod"))
-      counter2Snapshot.counter("counter").get.count should be(1)
+      counter2Snapshot.counter("counter.count:2").get.count should be(1)
     }
 
     "count the current invocations of a method annotated with @MinMaxCount" in {
@@ -92,57 +92,57 @@ class AnnotationInstrumentationSpec extends BaseKamonSpec("annotation-instrument
       }
 
       val snapshot = takeSnapshotOf("minMax", "min-max-counter")
-      snapshot.minMaxCounter("min-max-counter").get.max should be(1)
+      snapshot.minMaxCounter("min-max-counter.minMax").get.max should be(1)
     }
 
     "count the current invocations of a method annotated with @MinMaxCount and evaluate EL expressions" in {
       for (id ← 1 to 10) Annotated(id).countMinMaxWithEL()
 
       val minMaxCounter1Snapshot = takeSnapshotOf("minMax:1", "min-max-counter", tags = Map("minMax" -> "1", "env" -> "dev"))
-      minMaxCounter1Snapshot.minMaxCounter("min-max-counter").get.sum should be(1)
+      minMaxCounter1Snapshot.minMaxCounter("min-max-counter.minMax:1").get.sum should be(1)
 
       val minMaxCounter2Snapshot = takeSnapshotOf("minMax:2", "min-max-counter", tags = Map("minMax" -> "1", "env" -> "dev"))
-      minMaxCounter2Snapshot.minMaxCounter("min-max-counter").get.sum should be(1)
+      minMaxCounter2Snapshot.minMaxCounter("min-max-counter.minMax:2").get.sum should be(1)
     }
 
     "measure the time spent in the execution of a method annotated with @Time" in {
       for (id ← 1 to 1) Annotated(id).time()
 
       val snapshot = takeSnapshotOf("time", "histogram")
-      snapshot.histogram("histogram").get.numberOfMeasurements should be(1)
+      snapshot.histogram("histogram.time").get.numberOfMeasurements should be(1)
     }
 
     "measure the time spent in the execution of a method annotated with @Time and evaluate EL expressions" in {
       for (id ← 1 to 1) Annotated(id).timeWithEL()
 
       val snapshot = takeSnapshotOf("time:1", "histogram", tags = Map("slow-service" -> "service", "env" -> "prod"))
-      snapshot.histogram("histogram").get.numberOfMeasurements should be(1)
+      snapshot.histogram("histogram.time:1").get.numberOfMeasurements should be(1)
     }
 
     "record the value returned by a method annotated with @Histogram" in {
       for (value ← 1 to 5) Annotated().histogram(value)
 
       val snapshot = takeSnapshotOf("histogram", "histogram")
-      snapshot.histogram("histogram").get.numberOfMeasurements should be(5)
-      snapshot.histogram("histogram").get.min should be(1)
-      snapshot.histogram("histogram").get.max should be(5)
-      snapshot.histogram("histogram").get.sum should be(15)
+      snapshot.histogram("histogram.histogram").get.numberOfMeasurements should be(5)
+      snapshot.histogram("histogram.histogram").get.min should be(1)
+      snapshot.histogram("histogram.histogram").get.max should be(5)
+      snapshot.histogram("histogram.histogram").get.sum should be(15)
     }
 
     "record the value returned by a method annotated with @Histogram and evaluate EL expressions" in {
       for (value ← 1 to 2) Annotated(value).histogramWithEL(value)
 
       val snapshot1 = takeSnapshotOf("histogram:1", "histogram", tags = Map("histogram" -> "hdr", "env" -> "prod"))
-      snapshot1.histogram("histogram").get.numberOfMeasurements should be(1)
-      snapshot1.histogram("histogram").get.min should be(1)
-      snapshot1.histogram("histogram").get.max should be(1)
-      snapshot1.histogram("histogram").get.sum should be(1)
+      snapshot1.histogram("histogram.histogram:1").get.numberOfMeasurements should be(1)
+      snapshot1.histogram("histogram.histogram:1").get.min should be(1)
+      snapshot1.histogram("histogram.histogram:1").get.max should be(1)
+      snapshot1.histogram("histogram.histogram:1").get.sum should be(1)
 
       val snapshot2 = takeSnapshotOf("histogram:2", "histogram", tags = Map("histogram" -> "hdr", "env" -> "prod"))
-      snapshot2.histogram("histogram").get.numberOfMeasurements should be(1)
-      snapshot2.histogram("histogram").get.min should be(2)
-      snapshot2.histogram("histogram").get.max should be(2)
-      snapshot2.histogram("histogram").get.sum should be(2)
+      snapshot2.histogram("histogram.histogram:2").get.numberOfMeasurements should be(1)
+      snapshot2.histogram("histogram.histogram:2").get.min should be(2)
+      snapshot2.histogram("histogram.histogram:2").get.max should be(2)
+      snapshot2.histogram("histogram.histogram:2").get.sum should be(2)
     }
   }
 }

@@ -248,7 +248,7 @@ private[kamon] class MetricsModuleImpl(config: Config) extends MetricsModule {
     val histogramEntity = Entity(name, SingleInstrumentEntityRecorder.Histogram, tags)
     val recorder = _trackedEntities.atomicGetOrElseUpdate(histogramEntity, {
       val factory = instrumentFactory(histogramEntity.category)
-      HistogramRecorder(HistogramKey(histogramEntity.category, unitOfMeasurement.getOrElse(UnitOfMeasurement.Unknown)),
+      HistogramRecorder(HistogramKey(s"${histogramEntity.category}.${histogramEntity.name}", unitOfMeasurement.getOrElse(UnitOfMeasurement.Unknown)),
         factory.createHistogram(name, dynamicRange))
     }, _.cleanup)
 
@@ -264,7 +264,7 @@ private[kamon] class MetricsModuleImpl(config: Config) extends MetricsModule {
     val minMaxCounterEntity = Entity(name, SingleInstrumentEntityRecorder.MinMaxCounter, tags)
     val recorder = _trackedEntities.atomicGetOrElseUpdate(minMaxCounterEntity, {
       val factory = instrumentFactory(minMaxCounterEntity.category)
-      MinMaxCounterRecorder(MinMaxCounterKey(minMaxCounterEntity.category, unitOfMeasurement.getOrElse(UnitOfMeasurement.Unknown)),
+      MinMaxCounterRecorder(MinMaxCounterKey(s"${minMaxCounterEntity.category}.${minMaxCounterEntity.name}", unitOfMeasurement.getOrElse(UnitOfMeasurement.Unknown)),
         factory.createMinMaxCounter(name, dynamicRange, refreshInterval))
     }, _.cleanup)
 
@@ -281,7 +281,7 @@ private[kamon] class MetricsModuleImpl(config: Config) extends MetricsModule {
     val gaugeEntity = Entity(name, SingleInstrumentEntityRecorder.Gauge, tags)
     val recorder = _trackedEntities.atomicGetOrElseUpdate(gaugeEntity, {
       val factory = instrumentFactory(gaugeEntity.category)
-      GaugeRecorder(MinMaxCounterKey(gaugeEntity.category, unitOfMeasurement.getOrElse(UnitOfMeasurement.Unknown)),
+      GaugeRecorder(MinMaxCounterKey(s"${gaugeEntity.category}.${gaugeEntity.name}", unitOfMeasurement.getOrElse(UnitOfMeasurement.Unknown)),
         factory.createGauge(name, dynamicRange, refreshInterval, valueCollector))
     }, _.cleanup)
 
@@ -297,7 +297,7 @@ private[kamon] class MetricsModuleImpl(config: Config) extends MetricsModule {
     val counterEntity = Entity(name, SingleInstrumentEntityRecorder.Counter, tags)
     val recorder = _trackedEntities.atomicGetOrElseUpdate(counterEntity, {
       val factory = instrumentFactory(counterEntity.category)
-      CounterRecorder(CounterKey(counterEntity.category, unitOfMeasurement.getOrElse(UnitOfMeasurement.Unknown)),
+      CounterRecorder(CounterKey(s"${counterEntity.category}.${counterEntity.name}", unitOfMeasurement.getOrElse(UnitOfMeasurement.Unknown)),
         factory.createCounter())
     }, _.cleanup)
 
