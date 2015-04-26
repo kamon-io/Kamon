@@ -77,7 +77,7 @@ class DefaultSprayNameGenerator extends SprayNameGenerator {
     hostFromHeaders(request).getOrElse("unknown-host")
 
   def generateTraceName(request: HttpRequest): String =
-    request.method.value + ": " + request.uri.path
+    "UnnamedTrace"
 
   private def hostFromHeaders(request: HttpRequest): Option[String] =
     request.header[Host].map(_.host)
