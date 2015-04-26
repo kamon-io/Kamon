@@ -67,7 +67,7 @@ private[kamon] class ModuleLoaderExtension(system: ExtendedActorSystem) extends 
         |            |_|                                                                                                     |___/
         |
         | It seems like your application was not started with the -javaagent:/path-to-aspectj-weaver.jar option but Kamon detected
-        | the following modules which require AspecJ to work properly:
+        | the following modules which require AspectJ to work properly:
         |
       """.stripMargin + moduleNames +
         """
