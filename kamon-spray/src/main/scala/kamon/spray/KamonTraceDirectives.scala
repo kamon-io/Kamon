@@ -25,3 +25,5 @@ trait KamonTraceDirectives extends BasicDirectives {
     req
   }
 }
+
+object KamonTraceDirectives extends KamonTraceDirectives
