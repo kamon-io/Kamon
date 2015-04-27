@@ -60,13 +60,13 @@ class SprayExtensionImpl(system: ExtendedActorSystem) extends SprayExtension {
     settings.nameGenerator.generateHostLevelApiSegmentName(request)
 }
 
-trait SprayNameGenerator {
+trait NameGenerator {
   def generateTraceName(request: HttpRequest): String
   def generateRequestLevelApiSegmentName(request: HttpRequest): String
   def generateHostLevelApiSegmentName(request: HttpRequest): String
 }
 
-class DefaultSprayNameGenerator extends SprayNameGenerator {
+class DefaultNameGenerator extends NameGenerator {
 
   def generateRequestLevelApiSegmentName(request: HttpRequest): String = {
     val uriAddress = request.uri.authority.host.address

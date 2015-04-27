@@ -294,7 +294,7 @@ class ClientRequestInstrumentationSpec extends BaseKamonSpec("client-request-ins
   }
 }
 
-class TestSprayNameGenerator extends SprayNameGenerator {
+class TestNameGenerator extends NameGenerator {
   def generateTraceName(request: HttpRequest): String = request.uri.path.toString()
   def generateRequestLevelApiSegmentName(request: HttpRequest): String = "request-level " + request.uri.path.toString()
   def generateHostLevelApiSegmentName(request: HttpRequest): String = "host-level " + request.uri.path.toString()

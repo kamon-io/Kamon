@@ -5,7 +5,7 @@ import akka.actor.ExtendedActorSystem
 case class SprayExtensionSettings(
   includeTraceTokenHeader: Boolean,
   traceTokenHeaderName: String,
-  nameGenerator: SprayNameGenerator,
+  nameGenerator: NameGenerator,
   clientInstrumentationLevel: ClientInstrumentationLevel.Level)
 
 object SprayExtensionSettings {
@@ -16,7 +16,7 @@ object SprayExtensionSettings {
     val traceTokenHeaderName: String = config.getString("trace-token-header-name")
 
     val nameGeneratorFQN = config.getString("name-generator")
-    val nameGenerator: SprayNameGenerator = system.dynamicAccess.createInstanceFor[SprayNameGenerator](nameGeneratorFQN, Nil).get // let's bubble up any problems.
+    val nameGenerator: NameGenerator = system.dynamicAccess.createInstanceFor[NameGenerator](nameGeneratorFQN, Nil).get // let's bubble up any problems.
 
     val clientInstrumentationLevel: ClientInstrumentationLevel.Level = config.getString("client.instrumentation-level") match {
       case "request-level" ⇒ ClientInstrumentationLevel.RequestLevelAPI
