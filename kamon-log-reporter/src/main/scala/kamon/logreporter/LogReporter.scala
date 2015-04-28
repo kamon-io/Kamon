@@ -42,12 +42,7 @@ class LogReporterExtension(system: ExtendedActorSystem) extends Kamon.Extension 
   Kamon.metrics.subscribe("histogram", "**", subscriber, permanently = true)
   Kamon.metrics.subscribe("min-max-counter", "**", subscriber, permanently = true)
   Kamon.metrics.subscribe("gauge", "**", subscriber, permanently = true)
-
-  val includeSystemMetrics = logReporterConfig.getBoolean("report-system-metrics")
-  if (includeSystemMetrics) {
-    Kamon.metrics.subscribe("system-metric", "**", subscriber, permanently = true)
-  }
-
+  Kamon.metrics.subscribe("system-metric", "**", subscriber, permanently = true)
 }
 
 class LogReporterSubscriber extends Actor with ActorLogging {
