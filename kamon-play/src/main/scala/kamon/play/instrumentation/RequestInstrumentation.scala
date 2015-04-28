@@ -19,6 +19,7 @@ import kamon.Kamon
 import kamon.play.Play
 import kamon.trace.TraceLocal.{ HttpContextKey, HttpContext }
 import kamon.trace._
+import kamon.util.SameThreadExecutionContext
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
 import play.api.Routes
@@ -36,6 +37,7 @@ class RequestInstrumentation {
   @Before("call(* play.api.GlobalSettings.onRouteRequest(..)) && args(requestHeader)")
   def beforeRouteRequest(requestHeader: RequestHeader): Unit = {
     import Kamon.tracer
+
     val playExtension = Kamon(Play)
 
     val defaultTraceName = playExtension.generateTraceName(requestHeader)
@@ -52,7 +54,6 @@ class RequestInstrumentation {
     val essentialAction = (requestHeader: RequestHeader) ⇒ {
 
       val playExtension = Kamon(Play)
-      val executor = playExtension.defaultDispatcher
 
       def onResult(result: Result): Result = {
         Tracer.currentContext.collect { ctx ⇒
@@ -72,8 +73,9 @@ class RequestInstrumentation {
       normaliseTraceName(requestHeader).map(Tracer.currentContext.rename)
 
       // Invoke the action
-      next(requestHeader).map(onResult)(executor)
+      next(requestHeader).map(onResult)(SameThreadExecutionContext)
     }
+
     pjp.proceed(Array(EssentialAction(essentialAction)))
   }
 
