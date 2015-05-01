@@ -18,6 +18,7 @@ package kamon.trace.logging
 
 import kamon.trace.TraceLocal.AvailableToMdc
 import kamon.trace.{ Tracer, EmptyTraceContext, MetricsOnlyContext, TraceContext }
+import kamon.util.Supplier
 
 import org.slf4j.MDC
 
@@ -28,6 +29,9 @@ trait MdcKeysSupport {
     try thunk finally keys.foreach(key ⇒ MDC.remove(key))
   }
 
+  // Java variant.
+  def withMdc[A](thunk:Supplier[A]): A = withMdc(thunk.get)
+
   private[this] def copyToMdc(traceContext: TraceContext): Iterable[String] = traceContext match {
     case ctx: MetricsOnlyContext ⇒
       ctx.traceLocalStorage.underlyingStorage.collect {
@@ -37,3 +41,5 @@ trait MdcKeysSupport {
     case EmptyTraceContext ⇒ Iterable.empty[String]
   }
 }
+
+object MdcKeysSupport extends MdcKeysSupport
