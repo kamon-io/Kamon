@@ -17,6 +17,7 @@
 package spray.can.client
 
 import kamon.Kamon
+import kamon.util.SameThreadExecutionContext
 import org.aspectj.lang.annotation._
 import org.aspectj.lang.ProceedingJoinPoint
 import spray.http._
@@ -123,13 +124,10 @@ class ClientRequestInstrumentation {
         request.asInstanceOf[SegmentAware].segment = segment
 
         val responseFuture = originalSendReceive.apply(request)
-        responseFuture.onComplete { result ⇒
-          segment.finish()
-        }(ec)
-
+        responseFuture.map(result ⇒ segment.finish())(SameThreadExecutionContext)
         responseFuture
 
-      } getOrElse (originalSendReceive.apply(request))
+      } getOrElse originalSendReceive.apply(request)
     }
   }
 
