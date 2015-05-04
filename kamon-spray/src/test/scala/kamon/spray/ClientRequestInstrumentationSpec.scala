@@ -39,7 +39,7 @@ class ClientRequestInstrumentationSpec extends BaseKamonSpec("client-request-ins
       """
         |kamon {
         |  metric.tick-interval = 1 hour
-        |  spray.name-generator = kamon.spray.TestSprayNameGenerator
+        |  spray.name-generator = kamon.spray.TestNameGenerator
         |}
         |
         |akka.loggers = ["akka.event.slf4j.Slf4jLogger"]
