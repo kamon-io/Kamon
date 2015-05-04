@@ -30,7 +30,7 @@ trait MdcKeysSupport {
   }
 
   // Java variant.
-  def withMdc[A](thunk:Supplier[A]): A = withMdc(thunk.get)
+  def withMdc[A](thunk: Supplier[A]): A = withMdc(thunk.get)
 
   private[this] def copyToMdc(traceContext: TraceContext): Iterable[String] = traceContext match {
     case ctx: MetricsOnlyContext ⇒
