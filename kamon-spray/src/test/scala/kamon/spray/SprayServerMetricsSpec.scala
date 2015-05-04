@@ -39,7 +39,7 @@ class SprayServerMetricsSpec extends BaseKamonSpec("spray-server-metrics-spec") 
         client.expectMsgType[HttpResponse]
       }
 
-      val snapshot = takeSnapshotOf("GET: /record-trace-metrics", "trace")
+      val snapshot = takeSnapshotOf("UnnamedTrace", "trace")
       snapshot.histogram("elapsed-time").get.numberOfMeasurements should be(15)
     }
 
@@ -65,8 +65,8 @@ class SprayServerMetricsSpec extends BaseKamonSpec("spray-server-metrics-spec") 
       }
 
       val snapshot = takeSnapshotOf("spray-server", "http-server")
-      snapshot.counter("GET: /record-http-metrics_200").get.count should be(10)
-      snapshot.counter("GET: /record-http-metrics_400").get.count should be(5)
+      snapshot.counter("UnnamedTrace_200").get.count should be(10)
+      snapshot.counter("UnnamedTrace_400").get.count should be(5)
       snapshot.counter("200").get.count should be(10)
       snapshot.counter("400").get.count should be(5)
     }
