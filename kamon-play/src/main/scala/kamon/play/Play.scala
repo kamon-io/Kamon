@@ -42,18 +42,18 @@ class PlayExtension(private val system: ExtendedActorSystem) extends Kamon.Exten
   val traceTokenHeaderName: String = config.getString("trace-token-header-name")
 
   private val nameGeneratorFQN = config.getString("name-generator")
-  private val nameGenerator: PlayNameGenerator = system.dynamicAccess.createInstanceFor[PlayNameGenerator](nameGeneratorFQN, Nil).get
+  private val nameGenerator: NameGenerator = system.dynamicAccess.createInstanceFor[NameGenerator](nameGeneratorFQN, Nil).get
 
   def generateTraceName(requestHeader: RequestHeader): String = nameGenerator.generateTraceName(requestHeader)
   def generateHttpClientSegmentName(request: WSRequest): String = nameGenerator.generateHttpClientSegmentName(request)
 }
 
-trait PlayNameGenerator {
+trait NameGenerator {
   def generateTraceName(requestHeader: RequestHeader): String
   def generateHttpClientSegmentName(request: WSRequest): String
 }
 
-class DefaultPlayNameGenerator extends PlayNameGenerator {
+class DefaultNameGenerator extends NameGenerator {
   def generateTraceName(requestHeader: RequestHeader): String = s"${requestHeader.method}: ${requestHeader.uri}"
   def generateHttpClientSegmentName(request: WSRequest): String = request.url
 }
