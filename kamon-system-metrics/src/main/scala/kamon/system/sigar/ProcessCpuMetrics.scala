@@ -20,6 +20,8 @@ import kamon.metric.GenericEntityRecorder
 import kamon.metric.instrument.InstrumentFactory
 import org.hyperic.sigar.{ ProcCpu, Sigar }
 
+import scala.util.Try
+
 /**
  *  Process Cpu usage metrics, as reported by Sigar:
  *    - user:  Process cpu user time.
@@ -51,7 +53,7 @@ class ProcessCpuMetrics(sigar: Sigar, instrumentFactory: InstrumentFactory) exte
     val systemDiff = currentProcCpu.getSys - lastProcCpu.getSys
     val timeDiff = currentProcCpu.getLastTime - lastProcCpu.getLastTime
 
-    def percentUsage(delta: Long): Long = 100 * delta / timeDiff / totalCores
+    def percentUsage(delta: Long): Long = Try(100 * delta / timeDiff / totalCores).getOrElse(0L)
 
     if (totalDiff == 0) {
       if (timeDiff > 2000) currentLoad = 0
