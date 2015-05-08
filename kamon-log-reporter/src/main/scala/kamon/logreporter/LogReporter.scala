@@ -32,7 +32,6 @@ class LogReporterExtension(system: ExtendedActorSystem) extends Kamon.Extension 
   val log = Logging(system, classOf[LogReporterExtension])
   log.info("Starting the Kamon(LogReporter) extension")
 
-  val logReporterConfig = system.settings.config.getConfig("kamon.log-reporter")
   val subscriber = system.actorOf(Props[LogReporterSubscriber], "kamon-log-reporter")
 
   Kamon.metrics.subscribe("trace", "**", subscriber, permanently = true)
