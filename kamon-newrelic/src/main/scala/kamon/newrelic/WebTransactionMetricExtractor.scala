@@ -67,29 +67,29 @@ object WebTransactionMetricExtractor extends MetricExtractor {
           elapsedTime :: externalScopedByHostAndLibrarySnapshots.getOrElse((entity.name, library, trace), Nil))
     }
 
-    val httpDispatcher = Metric(accumulatedHttpDispatcher, Time.Seconds, "HttpDispatcher", None)
+    val httpDispatcher = Metric(accumulatedHttpDispatcher, Time.Nanoseconds, "HttpDispatcher", None)
     val webTransaction = httpDispatcher.copy(MetricID("WebTransaction", None))
     val webTransactionTotal = httpDispatcher.copy(MetricID("WebTransactionTotalTime", None))
 
-    val externalAllWeb = Metric(accumulatedExternalServices, Time.Seconds, "External/allWeb", None)
+    val externalAllWeb = Metric(accumulatedExternalServices, Time.Nanoseconds, "External/allWeb", None)
     val externalAll = externalAllWeb.copy(MetricID("External/all", None))
 
     val externalByHost = externalByHostSnapshots.map {
       case (host, snapshots) ⇒
         val mergedSnapshots = snapshots.foldLeft(Histogram.Snapshot.empty)(_.merge(_, collectionContext))
-        Metric(mergedSnapshots, Time.Seconds, s"External/$host/all", None)
+        Metric(mergedSnapshots, Time.Nanoseconds, s"External/$host/all", None)
     }
 
     val externalByHostAndLibrary = externalByHostAndLibrarySnapshots.map {
       case ((host, library), snapshots) ⇒
         val mergedSnapshots = snapshots.foldLeft(Histogram.Snapshot.empty)(_.merge(_, collectionContext))
-        Metric(mergedSnapshots, Time.Seconds, s"External/$host/$library", None)
+        Metric(mergedSnapshots, Time.Nanoseconds, s"External/$host/$library", None)
     }
 
     val externalScopedByHostAndLibrary = externalScopedByHostAndLibrarySnapshots.map {
       case ((host, library, traceName), snapshots) ⇒
         val mergedSnapshots = snapshots.foldLeft(Histogram.Snapshot.empty)(_.merge(_, collectionContext))
-        Metric(mergedSnapshots, Time.Seconds, s"External/$host/$library", Some("WebTransaction/Custom/" + traceName))
+        Metric(mergedSnapshots, Time.Nanoseconds, s"External/$host/$library", Some("WebTransaction/Custom/" + traceName))
     }
 
     Map(httpDispatcher, webTransaction, webTransactionTotal, externalAllWeb, externalAll, apdexBuilder.build) ++
