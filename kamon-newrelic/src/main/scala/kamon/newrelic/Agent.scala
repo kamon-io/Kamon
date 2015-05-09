@@ -132,9 +132,11 @@ object AgentSettings {
     // Name has the format of 'pid'@'host'
     val runtimeName = ManagementFactory.getRuntimeMXBean.getName.split('@')
     val newRelicConfig = config.getConfig("kamon.newrelic")
+    val licenseKey = newRelicConfig.getString("license-key")
+    assert(licenseKey != "<put-your-key-here>", "You forgot to include your New Relic license key in the configuration settings!")
 
     AgentSettings(
-      newRelicConfig.getString("license-key"),
+      licenseKey,
       newRelicConfig.getString("app-name"),
       runtimeName(1),
       runtimeName(0).toInt,

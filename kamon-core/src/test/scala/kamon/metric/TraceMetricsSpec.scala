@@ -16,14 +16,13 @@
 
 package kamon.metric
 
+import akka.testkit.ImplicitSender
 import com.typesafe.config.ConfigFactory
 import kamon.testkit.BaseKamonSpec
-import kamon.trace.TraceContext
+import kamon.trace.Tracer
 import kamon.metric.instrument.Histogram
 
 class TraceMetricsSpec extends BaseKamonSpec("trace-metrics-spec") {
-  import TraceMetricsSpec.SegmentSyntax
-
   override lazy val config =
     ConfigFactory.parseString(
       """
@@ -43,8 +42,8 @@ class TraceMetricsSpec extends BaseKamonSpec("trace-metrics-spec") {
   "the TraceMetrics" should {
     "record the elapsed time between a trace creation and finish" in {
       for (repetitions ← 1 to 10) {
-        TraceContext.withContext(newContext("record-elapsed-time")) {
-          TraceContext.currentContext.finish()
+        Tracer.withContext(newContext("record-elapsed-time")) {
+          Tracer.currentContext.finish()
         }
       }
 
@@ -53,46 +52,50 @@ class TraceMetricsSpec extends BaseKamonSpec("trace-metrics-spec") {
     }
 
     "record the elapsed time for segments that occur inside a given trace" in {
-      TraceContext.withContext(newContext("trace-with-segments")) {
-        val segment = TraceContext.currentContext.startSegment("test-segment", "test-category", "test-library")
+      Tracer.withContext(newContext("trace-with-segments")) {
+        val segment = Tracer.currentContext.startSegment("test-segment", "test-category", "test-library")
         segment.finish()
-        TraceContext.currentContext.finish()
+        Tracer.currentContext.finish()
       }
 
-      val snapshot = takeSnapshotOf("trace-with-segments", "trace")
+      val snapshot = takeSnapshotOf("test-segment", "trace-segment",
+        tags = Map(
+          "trace" -> "trace-with-segments",
+          "category" -> "test-category",
+          "library" -> "test-library"))
+
       snapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
-      snapshot.segments.size should be(1)
-      snapshot.segment("test-segment", "test-category", "test-library").numberOfMeasurements should be(1)
     }
 
     "record the elapsed time for segments that finish after their correspondent trace has finished" in {
-      val segment = TraceContext.withContext(newContext("closing-segment-after-trace")) {
-        val s = TraceContext.currentContext.startSegment("test-segment", "test-category", "test-library")
-        TraceContext.currentContext.finish()
+      val segment = Tracer.withContext(newContext("closing-segment-after-trace")) {
+        val s = Tracer.currentContext.startSegment("test-segment", "test-category", "test-library")
+        Tracer.currentContext.finish()
         s
       }
 
       val beforeFinishSegmentSnapshot = takeSnapshotOf("closing-segment-after-trace", "trace")
       beforeFinishSegmentSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
-      beforeFinishSegmentSnapshot.segments.size should be(0)
+
+      intercept[NoSuchElementException] {
+        // The segment metric should not exist before we it has finished.
+
+        takeSnapshotOf("test-segment", "trace-segment",
+          tags = Map(
+            "trace" -> "closing-segment-after-trace",
+            "category" -> "test-category",
+            "library" -> "test-library"))
+      }
 
       segment.finish()
 
-      val afterFinishSegmentSnapshot = takeSnapshotOf("closing-segment-after-trace", "trace")
-      afterFinishSegmentSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(0)
-      afterFinishSegmentSnapshot.segments.size should be(1)
-      afterFinishSegmentSnapshot.segment("test-segment", "test-category", "test-library").numberOfMeasurements should be(1)
-    }
-  }
-}
+      val afterFinishSegmentSnapshot = takeSnapshotOf("test-segment", "trace-segment",
+        tags = Map(
+          "trace" -> "closing-segment-after-trace",
+          "category" -> "test-category",
+          "library" -> "test-library"))
 
-object TraceMetricsSpec {
-  implicit class SegmentSyntax(val entitySnapshot: EntitySnapshot) extends AnyVal {
-    def segments: Map[HistogramKey, Histogram.Snapshot] = {
-      entitySnapshot.histograms.filterKeys(_.metadata.contains("category"))
+      afterFinishSegmentSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
     }
-
-    def segment(name: String, category: String, library: String): Histogram.Snapshot =
-      segments(TraceMetrics.segmentKey(name, category, library))
   }
 }

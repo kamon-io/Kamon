@@ -16,13 +16,15 @@
 package kamon.play.instrumentation
 
 import kamon.Kamon
-import kamon.play.{ Play, PlayExtension }
+import kamon.play.Play
 import kamon.trace.TraceLocal.{ HttpContextKey, HttpContext }
 import kamon.trace._
+import kamon.util.SameThreadExecutionContext
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
-import play.api.mvc._
 import play.api.Routes
+import play.api.mvc.Results._
+import play.api.mvc._
 import play.libs.Akka
 
 @Aspect
@@ -36,6 +38,7 @@ class RequestInstrumentation {
   @Before("call(* play.api.GlobalSettings.onRouteRequest(..)) && args(requestHeader)")
   def beforeRouteRequest(requestHeader: RequestHeader): Unit = {
     import Kamon.tracer
+
     val playExtension = Kamon(Play)
 
     val defaultTraceName = playExtension.generateTraceName(requestHeader)
@@ -43,8 +46,8 @@ class RequestInstrumentation {
       requestHeader.headers.toSimpleMap.find(_._1 == playExtension.traceTokenHeaderName).map(_._2)
     } else None
 
-    val newContext = token.map(t ⇒ tracer.newContext(defaultTraceName, t)).getOrElse(tracer.newContext(defaultTraceName))
-    TraceContext.setCurrentContext(newContext)
+    val newContext = tracer.newContext(defaultTraceName, token)
+    Tracer.setCurrentContext(newContext)
   }
 
   @Around("call(* play.api.GlobalSettings.doFilter(*)) && args(next)")
@@ -52,10 +55,9 @@ class RequestInstrumentation {
     val essentialAction = (requestHeader: RequestHeader) ⇒ {
 
       val playExtension = Kamon(Play)
-      val executor = playExtension.defaultDispatcher
 
       def onResult(result: SimpleResult): SimpleResult = {
-        TraceContext.map { ctx ⇒
+        Tracer.currentContext.collect { ctx ⇒
           ctx.finish()
 
           recordHttpServerMetrics(result.header.status.toString, ctx.name)
@@ -64,22 +66,22 @@ class RequestInstrumentation {
           else result
         } getOrElse result
       }
-
       //store in TraceLocal useful data to diagnose errors
       storeDiagnosticData(requestHeader)
 
       //override the current trace name
-      normaliseTraceName(requestHeader).map(TraceContext.currentContext.rename)
+      normaliseTraceName(requestHeader).map(Tracer.currentContext.rename)
 
       // Invoke the action
-      next(requestHeader).map(onResult)(executor)
+      next(requestHeader).map(onResult)(SameThreadExecutionContext)
     }
+
     pjp.proceed(Array(EssentialAction(essentialAction)))
   }
 
   @Before("call(* play.api.GlobalSettings.onError(..)) && args(request, ex)")
   def beforeOnError(request: TraceContextAware, ex: Throwable): Unit = {
-    TraceContext.map { ctx ⇒
+    Tracer.currentContext.collect { ctx ⇒
       recordHttpServerMetrics("500", ctx.name)
     }
   }
@@ -106,12 +108,14 @@ object RequestInstrumentation {
 
   private val cache = TrieMap.empty[String, String]
 
+  private val normalizePattern = """\$([^<]+)<[^>]+>""".r
+
   def normaliseTraceName(requestHeader: RequestHeader): Option[String] = requestHeader.tags.get(Routes.ROUTE_VERB).map({ verb ⇒
     val path = requestHeader.tags(Routes.ROUTE_PATTERN)
     cache.atomicGetOrElseUpdate(s"$verb$path", {
       val traceName = {
         // Convert paths of form GET /foo/bar/$paramname<regexp>/blah to foo.bar.paramname.blah.get
-        val p = path.replaceAll("""\$([^<]+)<[^>]+>""", "$1").replace('/', '.').dropWhile(_ == '.')
+        val p = normalizePattern.replaceAllIn(path, "$1").replace('/', '.').dropWhile(_ == '.')
         val normalisedPath = {
           if (p.lastOption.filter(_ != '.').isDefined) s"$p."
           else p

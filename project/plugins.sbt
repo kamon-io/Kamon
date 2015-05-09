@@ -4,7 +4,7 @@ resolvers += "Kamon Releases" at "http://repo.kamon.io"
 
 addSbtPlugin("com.github.mpeltonen" % "sbt-idea" % "1.6.0")
 
-addSbtPlugin("com.typesafe.sbt" % "sbt-aspectj" % "0.10.0")
+addSbtPlugin("com.typesafe.sbt" % "sbt-aspectj" % "0.10.1")
 
 addSbtPlugin("com.github.gseitz" % "sbt-release" % "0.8.2")
 

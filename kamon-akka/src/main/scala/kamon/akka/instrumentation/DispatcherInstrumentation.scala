@@ -59,10 +59,16 @@ class DispatcherInstrumentation {
   private def registerDispatcher(dispatcherName: String, executorService: ExecutorService, system: ActorSystem): Unit =
     executorService match {
       case fjp: AkkaForkJoinPool ⇒
-        Kamon.metrics.register(ForkJoinPoolDispatcherMetrics.factory(fjp), dispatcherName)
+        val dispatcherEntity = Entity(system.name + "/" + dispatcherName, AkkaDispatcherMetrics.Category, tags = Map("dispatcher-type" -> "fork-join-pool"))
+
+        if (Kamon.metrics.shouldTrack(dispatcherEntity))
+          Kamon.metrics.entity(ForkJoinPoolDispatcherMetrics.factory(fjp), dispatcherEntity)
 
       case tpe: ThreadPoolExecutor ⇒
-        Kamon.metrics.register(ThreadPoolExecutorDispatcherMetrics.factory(tpe), dispatcherName)
+        val dispatcherEntity = Entity(system.name + "/" + dispatcherName, AkkaDispatcherMetrics.Category, tags = Map("dispatcher-type" -> "thread-pool-executor"))
+
+        if (Kamon.metrics.shouldTrack(dispatcherEntity))
+          Kamon.metrics.entity(ThreadPoolExecutorDispatcherMetrics.factory(tpe), dispatcherEntity)
 
       case others ⇒ // Currently not interested in other kinds of dispatchers.
     }
@@ -120,7 +126,17 @@ class DispatcherInstrumentation {
     import lazyExecutor.lookupData
 
     if (lookupData.actorSystem != null)
-      Kamon.metrics.unregister(Entity(lookupData.dispatcherName, AkkaDispatcherMetrics.Category))
+      lazyExecutor.asInstanceOf[ExecutorServiceDelegate].executor match {
+        case fjp: AkkaForkJoinPool ⇒
+          Kamon.metrics.removeEntity(Entity(lookupData.actorSystem.name + "/" + lookupData.dispatcherName,
+            AkkaDispatcherMetrics.Category, tags = Map("dispatcher-type" -> "fork-join-pool")))
+
+        case tpe: ThreadPoolExecutor ⇒
+          Kamon.metrics.removeEntity(Entity(lookupData.actorSystem.name + "/" + lookupData.dispatcherName,
+            AkkaDispatcherMetrics.Category, tags = Map("dispatcher-type" -> "thread-pool-executor")))
+
+        case other ⇒ // nothing to remove.
+      }
   }
 
 }

@@ -18,15 +18,12 @@ import _root_.akka.actor
 import _root_.akka.actor._
 import com.typesafe.config.{ ConfigFactory, Config }
 import kamon.metric._
-import kamon.trace.{ TracerExtensionImpl, TracerExtension }
+import kamon.trace.{ TracerModuleImpl, TracerModule }
 
 object Kamon {
   trait Extension extends actor.Extension
 
-  private case class KamonCoreComponents(
-    metrics: MetricsExtension,
-    tracer: TracerExtension,
-    userMetrics: UserMetricsExtension)
+  private case class KamonCoreComponents(metrics: MetricsModule, tracer: TracerModule)
 
   @volatile private var _system: ActorSystem = _
   @volatile private var _coreComponents: Option[KamonCoreComponents] = None
@@ -42,15 +39,15 @@ object Kamon {
     }
 
     if (_coreComponents.isEmpty) {
-      val metrics = MetricsExtensionImpl(config)
-      val simpleMetrics = UserMetricsExtensionImpl(metrics)
-      val tracer = TracerExtensionImpl(metrics, config)
+      val metrics = MetricsModuleImpl(config)
+      val tracer = TracerModuleImpl(metrics, config)
 
-      _coreComponents = Some(KamonCoreComponents(metrics, tracer, simpleMetrics))
+      _coreComponents = Some(KamonCoreComponents(metrics, tracer))
       _system = ActorSystem("kamon", resolveInternalConfig)
 
       metrics.start(_system)
       tracer.start(_system)
+      _system.registerExtension(ModuleLoader)
 
     } else sys.error("Kamon has already been started.")
   }
@@ -58,14 +55,17 @@ object Kamon {
   def start(): Unit =
     start(ConfigFactory.load)
 
-  def metrics: MetricsExtension =
+  def shutdown(): Unit = {
+    _coreComponents = None
+    _system.shutdown()
+    _system = null
+  }
+
+  def metrics: MetricsModule =
     ifStarted(_.metrics)
 
-  def tracer: TracerExtension =
+  def tracer: TracerModule =
     ifStarted(_.tracer)
-
-  def userMetrics: UserMetricsExtension =
-    ifStarted(_.userMetrics)
 
   def apply[T <: Kamon.Extension](key: ExtensionId[T]): T =
     ifStarted { _ ⇒

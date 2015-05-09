@@ -16,7 +16,7 @@
 package kamon.scala.instrumentation
 
 import kamon.testkit.BaseKamonSpec
-import kamon.trace.TraceContext
+import kamon.trace.Tracer
 import org.scalatest.OptionValues
 import org.scalatest.concurrent.{ PatienceConfiguration, ScalaFutures }
 
@@ -31,10 +31,10 @@ class FutureInstrumentationSpec extends BaseKamonSpec("future-instrumentation-sp
     "capture the TraceContext available when created" which {
       "must be available when executing the future's body" in {
 
-        val (future, testTraceContext) = TraceContext.withContext(newContext("future-body")) {
-          val future = Future(TraceContext.currentContext)
+        val (future, testTraceContext) = Tracer.withContext(newContext("future-body")) {
+          val future = Future(Tracer.currentContext)
 
-          (future, TraceContext.currentContext)
+          (future, Tracer.currentContext)
         }
 
         whenReady(future)(ctxInFuture ⇒
@@ -43,14 +43,14 @@ class FutureInstrumentationSpec extends BaseKamonSpec("future-instrumentation-sp
 
       "must be available when executing callbacks on the future" in {
 
-        val (future, testTraceContext) = TraceContext.withContext(newContext("future-body")) {
+        val (future, testTraceContext) = Tracer.withContext(newContext("future-body")) {
           val future = Future("Hello Kamon!")
             // The TraceContext is expected to be available during all intermediate processing.
             .map(_.length)
             .flatMap(len ⇒ Future(len.toString))
-            .map(s ⇒ TraceContext.currentContext)
+            .map(s ⇒ Tracer.currentContext)
 
-          (future, TraceContext.currentContext)
+          (future, Tracer.currentContext)
         }
 
         whenReady(future)(ctxInFuture ⇒

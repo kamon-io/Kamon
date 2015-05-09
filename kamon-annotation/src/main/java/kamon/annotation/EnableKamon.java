@@ -14,20 +14,21 @@
  * =========================================================================================
  */
 
-package kamon.instrumentation
+package kamon.annotation;
 
-import _root_.akka.event.EventStream
-import org.aspectj.lang.ProceedingJoinPoint
-import org.aspectj.lang.annotation.{ Around, Pointcut, Aspect }
+import java.lang.annotation.*;
 
-@Aspect
-class AspectJWeaverMissingWarning {
+/**
+* A marker annotation for enable the Kamon instrumentation.
+* <p/>
+* The AspectJ Weaver will scan all the declared methods of the annotated class that are annotated with
+* some Kamon annotations, then create and register the corresponding instruments instances and finally weave
+* its aspects around these methods, so that at runtime, these instruments instances get called according
+* to the Kamon annotations specification.
+ */
 
-  @Pointcut("execution(* kamon.metric.MetricsExtension.printInitializationMessage(..)) && args(eventStream, *)")
-  def printInitializationMessage(eventStream: EventStream): Unit = {}
-
-  @Around("printInitializationMessage(eventStream)")
-  def aroundPrintInitializationMessage(pjp: ProceedingJoinPoint, eventStream: EventStream): Unit = {
-    pjp.proceed(Array[AnyRef](eventStream, Boolean.box(true)))
-  }
-}
+@Documented
+@Inherited
+@Retention(RetentionPolicy.RUNTIME)
+@Target({ElementType.TYPE})
+public @interface EnableKamon {}

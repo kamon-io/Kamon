@@ -34,13 +34,18 @@ class ActorCellInstrumentation {
 
   @After("actorCellCreation(cell, system, ref, props, dispatcher, parent)")
   def afterCreation(cell: ActorCell, system: ActorSystem, ref: ActorRef, props: Props, dispatcher: MessageDispatcher, parent: ActorRef): Unit = {
-    Kamon.metrics.register(ActorMetrics, ref.path.elements.mkString("/")).map { registration ⇒
+    def isRootSupervisor(path: String): Boolean = path.length == 0 || path == "user" || path == "system"
+
+    val pathString = ref.path.elements.mkString("/")
+    val actorEntity = Entity(system.name + "/" + pathString, ActorMetrics.category)
+
+    if (!isRootSupervisor(pathString) && Kamon.metrics.shouldTrack(actorEntity)) {
+      val actorMetricsRecorder = Kamon.metrics.entity(ActorMetrics, actorEntity)
       val cellMetrics = cell.asInstanceOf[ActorCellMetrics]
 
-      cellMetrics.entity = registration.entity
-      cellMetrics.recorder = Some(registration.recorder)
+      cellMetrics.entity = actorEntity
+      cellMetrics.recorder = Some(actorMetricsRecorder)
     }
-
   }
 
   @Pointcut("execution(* akka.actor.ActorCell.invoke(*)) && this(cell) && args(envelope)")
@@ -53,23 +58,23 @@ class ActorCellInstrumentation {
     val contextAndTimestamp = envelope.asInstanceOf[TimestampedTraceContextAware]
 
     try {
-      TraceContext.withContext(contextAndTimestamp.traceContext) {
+      Tracer.withContext(contextAndTimestamp.traceContext) {
         pjp.proceed()
       }
     } finally {
-      cellMetrics.recorder.map { am ⇒
-        val processingTime = System.nanoTime() - timestampBeforeProcessing
-        val timeInMailbox = timestampBeforeProcessing - contextAndTimestamp.captureNanoTime
+      val processingTime = System.nanoTime() - timestampBeforeProcessing
+      val timeInMailbox = timestampBeforeProcessing - contextAndTimestamp.captureNanoTime
 
+      cellMetrics.recorder.map { am ⇒
         am.processingTime.record(processingTime)
         am.timeInMailbox.record(timeInMailbox)
         am.mailboxSize.decrement()
+      }
 
-        // In case that this actor is behind a router, record the metrics for the router.
-        envelope.asInstanceOf[RouterAwareEnvelope].routerMetricsRecorder.map { rm ⇒
-          rm.processingTime.record(processingTime)
-          rm.timeInMailbox.record(timeInMailbox)
-        }
+      // In case that this actor is behind a router, record the metrics for the router.
+      envelope.asInstanceOf[RouterAwareEnvelope].routerMetricsRecorder.map { rm ⇒
+        rm.processingTime.record(processingTime)
+        rm.timeInMailbox.record(timeInMailbox)
       }
     }
   }
@@ -90,14 +95,14 @@ class ActorCellInstrumentation {
   def afterStop(cell: ActorCell): Unit = {
     val cellMetrics = cell.asInstanceOf[ActorCellMetrics]
     cellMetrics.recorder.map { _ ⇒
-      Kamon.metrics.unregister(cellMetrics.entity)
+      Kamon.metrics.removeEntity(cellMetrics.entity)
     }
 
     // The Stop can't be captured from the RoutedActorCell so we need to put this piece of cleanup here.
     if (cell.isInstanceOf[RoutedActorCell]) {
       val routedCellMetrics = cell.asInstanceOf[RoutedActorCellMetrics]
       routedCellMetrics.routerRecorder.map { _ ⇒
-        Kamon.metrics.unregister(routedCellMetrics.routerEntity)
+        Kamon.metrics.removeEntity(routedCellMetrics.routerEntity)
       }
     }
   }
@@ -112,7 +117,12 @@ class ActorCellInstrumentation {
 
     // In case that this actor is behind a router, count the errors for the router as well.
     val envelope = cell.currentMessage.asInstanceOf[RouterAwareEnvelope]
-    envelope.routerMetricsRecorder.map(_.errors.increment())
+    if (envelope ne null) {
+      // The ActorCell.handleInvokeFailure(..) method is also called when a failure occurs
+      // while processing a system message, in which case ActorCell.currentMessage is always
+      // null.
+      envelope.routerMetricsRecorder.map(_.errors.increment())
+    }
   }
 }
 
@@ -124,11 +134,13 @@ class RoutedActorCellInstrumentation {
 
   @After("routedActorCellCreation(cell, system, ref, props, dispatcher, routeeProps, supervisor)")
   def afterRoutedActorCellCreation(cell: RoutedActorCell, system: ActorSystem, ref: ActorRef, props: Props, dispatcher: MessageDispatcher, routeeProps: Props, supervisor: ActorRef): Unit = {
-    Kamon.metrics.register(RouterMetrics, ref.path.elements.mkString("/")).map { registration ⇒
+    val routerEntity = Entity(system.name + "/" + ref.path.elements.mkString("/"), RouterMetrics.category)
+
+    if (Kamon.metrics.shouldTrack(routerEntity)) {
       val cellMetrics = cell.asInstanceOf[RoutedActorCellMetrics]
 
-      cellMetrics.routerEntity = registration.entity
-      cellMetrics.routerRecorder = Some(registration.recorder)
+      cellMetrics.routerEntity = routerEntity
+      cellMetrics.routerRecorder = Some(Kamon.metrics.entity(RouterMetrics, routerEntity))
     }
   }
 
@@ -142,7 +154,7 @@ class RoutedActorCellInstrumentation {
     val contextAndTimestamp = envelope.asInstanceOf[TimestampedTraceContextAware]
 
     try {
-      TraceContext.withContext(contextAndTimestamp.traceContext) {
+      Tracer.withContext(contextAndTimestamp.traceContext) {
 
         // The router metrics recorder will only be picked up if the message is sent from a tracked router.
         RouterAwareEnvelope.dynamicRouterMetricsRecorder.withValue(cellMetrics.routerRecorder) {

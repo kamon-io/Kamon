@@ -72,7 +72,7 @@ class LoggerLikeInstrumentationSpec extends PlaySpec with OneServerPerSuite with
     "allow retrieve a value from the MDC when was created a key of type AvailableToMdc in the current request" in {
       LoggingHandler.appenderStart()
 
-      Await.result(route(FakeRequest(GET, "/logging")).get, 500 millis)
+      Await.result(route(FakeRequest(GET, "/logging")).get, 2 seconds)
 
       TraceLocal.retrieve(TraceLocalHeaderKey) must be(Some(headerValue))
       TraceLocal.retrieve(TraceLocalOtherKey) must be(Some(otherValue))

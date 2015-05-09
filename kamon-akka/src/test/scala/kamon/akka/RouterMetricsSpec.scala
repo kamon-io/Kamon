@@ -39,8 +39,8 @@ class RouterMetricsSpec extends BaseKamonSpec("router-metrics-spec") {
         |
         |  filters = {
         |    akka-router {
-        |      includes = [ "user/tracked-*", "user/measuring-*", "user/stop-*" ]
-        |      excludes = [ "user/tracked-explicitly-excluded-*"]
+        |      includes = [ "*/user/tracked-*", "*/user/measuring-*", "*/user/stop-*" ]
+        |      excludes = [ "*/user/tracked-explicitly-excluded-*"]
         |    }
         |  }
         |}
@@ -122,7 +122,7 @@ class RouterMetricsSpec extends BaseKamonSpec("router-metrics-spec") {
       trackedRouter ! PoisonPill
       deathWatcher.expectTerminated(trackedRouter)
 
-      routerMetricsRecorderOf("user/stop-in-router").get shouldNot be theSameInstanceAs (firstRecorder)
+      routerMetricsRecorderOf("user/stop-in-router") shouldBe empty
     }
   }
 
@@ -132,7 +132,7 @@ class RouterMetricsSpec extends BaseKamonSpec("router-metrics-spec") {
     }
 
     def routerMetricsRecorderOf(routerName: String): Option[RouterMetrics] =
-      Kamon.metrics.register(RouterMetrics, routerName).map(_.recorder)
+      Kamon.metrics.find(system.name + "/" + routerName, RouterMetrics.category).map(_.asInstanceOf[RouterMetrics])
 
     def collectMetricsOf(routerName: String): Option[EntitySnapshot] = {
       Thread.sleep(5) // Just in case the test advances a bit faster than the actor being tested.

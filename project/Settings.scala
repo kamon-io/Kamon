@@ -32,15 +32,12 @@ object Settings {
     scalaVersion            := ScalaVersion,
     resolvers              ++= Dependencies.resolutionRepos,
     fork in run             := true,
+    parallelExecution in Test := false,
     testGrouping in Test    := singleTestPerJvm((definedTests in Test).value, (javaOptions in Test).value),
     moduleName              := moduleName.value + "_akka-2.2",
-    javacOptions in compile := Seq(
+    javacOptions            := Seq(
       "-Xlint:-options",
-      "-source", JavaVersion, "-target", JavaVersion
-    ),
-    javacOptions in doc     := Seq(
-      "-source", JavaVersion
-    ),
+      "-source", JavaVersion, "-target", JavaVersion),
     scalacOptions           := Seq(
       "-encoding",
       "utf8",

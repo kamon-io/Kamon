@@ -55,6 +55,10 @@ object Gauge {
   implicit def functionZeroAsCurrentValueCollector(f: () ⇒ Long): CurrentValueCollector = new CurrentValueCollector {
     def currentValue: Long = f.apply()
   }
+
+  implicit def callByNameLongAsCurrentValueCollector(f: ⇒ Long): CurrentValueCollector = new CurrentValueCollector {
+    def currentValue: Long = f
+  }
 }
 
 /**

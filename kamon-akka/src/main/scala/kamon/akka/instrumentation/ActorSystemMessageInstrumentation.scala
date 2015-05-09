@@ -17,7 +17,7 @@
 package akka.kamon.instrumentation
 
 import akka.dispatch.sysmsg.EarliestFirstSystemMessageList
-import kamon.trace.{ TraceContext, TraceContextAware }
+import kamon.trace.{ Tracer, TraceContextAware }
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
 
@@ -31,7 +31,7 @@ class ActorSystemMessageInstrumentation {
   def aroundSystemMessageInvoke(pjp: ProceedingJoinPoint, messages: EarliestFirstSystemMessageList): Any = {
     if (messages.nonEmpty) {
       val ctx = messages.head.asInstanceOf[TraceContextAware].traceContext
-      TraceContext.withContext(ctx)(pjp.proceed())
+      Tracer.withContext(ctx)(pjp.proceed())
 
     } else pjp.proceed()
   }
@@ -73,7 +73,7 @@ class TraceContextIntoRepointableActorRefMixin {
 
   @Around("repointableActorRefCreation(repointableActorRef)")
   def afterRepointableActorRefCreation(pjp: ProceedingJoinPoint, repointableActorRef: TraceContextAware): Any = {
-    TraceContext.withContext(repointableActorRef.traceContext) {
+    Tracer.withContext(repointableActorRef.traceContext) {
       pjp.proceed()
     }
   }

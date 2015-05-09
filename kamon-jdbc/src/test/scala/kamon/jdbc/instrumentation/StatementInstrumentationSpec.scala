@@ -21,11 +21,9 @@ import com.typesafe.config.ConfigFactory
 import kamon.jdbc.{ Jdbc, JdbcNameGenerator, SqlErrorProcessor, SlowQueryProcessor }
 import kamon.metric.TraceMetricsSpec
 import kamon.testkit.BaseKamonSpec
-import kamon.trace.{ SegmentCategory, TraceContext }
+import kamon.trace.{ Tracer, SegmentCategory }
 
 class StatementInstrumentationSpec extends BaseKamonSpec("jdbc-spec") {
-  import TraceMetricsSpec.SegmentSyntax
-
   override lazy val config =
     ConfigFactory.parseString(
       """
@@ -61,14 +59,14 @@ class StatementInstrumentationSpec extends BaseKamonSpec("jdbc-spec") {
 
   "the StatementInstrumentation" should {
     "record the execution time of INSERT operation" in {
-      TraceContext.withContext(newContext("jdbc-trace-insert")) {
+      Tracer.withContext(newContext("jdbc-trace-insert")) {
         for (id ← 1 to 100) {
           val insert = s"INSERT INTO Address (Nr, Name) VALUES($id, 'foo')"
           val insertStatement = connection.prepareStatement(insert)
           insertStatement.execute()
         }
 
-        TraceContext.currentContext.finish()
+        Tracer.currentContext.finish()
       }
 
       val jdbcSnapshot = takeSnapshotOf("jdbc-statements", "jdbc-statements")
@@ -76,19 +74,25 @@ class StatementInstrumentationSpec extends BaseKamonSpec("jdbc-spec") {
 
       val traceSnapshot = takeSnapshotOf("jdbc-trace-insert", "trace")
       traceSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
-      traceSnapshot.segments.size should be(1)
-      traceSnapshot.segment("Jdbc[Insert]", SegmentCategory.Database, Jdbc.SegmentLibraryName).numberOfMeasurements should be(100)
+
+      val segmentSnapshot = takeSnapshotOf("Jdbc[Insert]", "trace-segment",
+        tags = Map(
+          "trace" -> "jdbc-trace-insert",
+          "category" -> SegmentCategory.Database,
+          "library" -> Jdbc.SegmentLibraryName))
+
+      segmentSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(100)
     }
 
     "record the execution time of SELECT operation" in {
-      TraceContext.withContext(newContext("jdbc-trace-select")) {
+      Tracer.withContext(newContext("jdbc-trace-select")) {
         for (id ← 1 to 100) {
           val select = s"SELECT * FROM Address where Nr = $id"
           val selectStatement = connection.createStatement()
           selectStatement.execute(select)
         }
 
-        TraceContext.currentContext.finish()
+        Tracer.currentContext.finish()
       }
 
       val jdbcSnapshot = takeSnapshotOf("jdbc-statements", "jdbc-statements")
@@ -96,19 +100,25 @@ class StatementInstrumentationSpec extends BaseKamonSpec("jdbc-spec") {
 
       val traceSnapshot = takeSnapshotOf("jdbc-trace-select", "trace")
       traceSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
-      traceSnapshot.segments.size should be(1)
-      traceSnapshot.segment("Jdbc[Select]", SegmentCategory.Database, Jdbc.SegmentLibraryName).numberOfMeasurements should be(100)
+
+      val segmentSnapshot = takeSnapshotOf("Jdbc[Select]", "trace-segment",
+        tags = Map(
+          "trace" -> "jdbc-trace-select",
+          "category" -> SegmentCategory.Database,
+          "library" -> Jdbc.SegmentLibraryName))
+
+      segmentSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(100)
     }
 
     "record the execution time of UPDATE operation" in {
-      TraceContext.withContext(newContext("jdbc-trace-update")) {
+      Tracer.withContext(newContext("jdbc-trace-update")) {
         for (id ← 1 to 100) {
           val update = s"UPDATE Address SET Name = 'bar$id' where Nr = $id"
           val updateStatement = connection.prepareStatement(update)
           updateStatement.execute()
         }
 
-        TraceContext.currentContext.finish()
+        Tracer.currentContext.finish()
       }
 
       val jdbcSnapshot = takeSnapshotOf("jdbc-statements", "jdbc-statements")
@@ -116,19 +126,25 @@ class StatementInstrumentationSpec extends BaseKamonSpec("jdbc-spec") {
 
       val traceSnapshot = takeSnapshotOf("jdbc-trace-update", "trace")
       traceSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
-      traceSnapshot.segments.size should be(1)
-      traceSnapshot.segment("Jdbc[Update]", SegmentCategory.Database, Jdbc.SegmentLibraryName).numberOfMeasurements should be(100)
+
+      val segmentSnapshot = takeSnapshotOf("Jdbc[Update]", "trace-segment",
+        tags = Map(
+          "trace" -> "jdbc-trace-update",
+          "category" -> SegmentCategory.Database,
+          "library" -> Jdbc.SegmentLibraryName))
+
+      segmentSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(100)
     }
 
     "record the execution time of DELETE operation" in {
-      TraceContext.withContext(newContext("jdbc-trace-delete")) {
+      Tracer.withContext(newContext("jdbc-trace-delete")) {
         for (id ← 1 to 100) {
           val delete = s"DELETE FROM Address where Nr = $id"
           val deleteStatement = connection.createStatement()
           deleteStatement.execute(delete)
         }
 
-        TraceContext.currentContext.finish()
+        Tracer.currentContext.finish()
       }
 
       val jdbcSnapshot = takeSnapshotOf("jdbc-statements", "jdbc-statements")
@@ -136,20 +152,26 @@ class StatementInstrumentationSpec extends BaseKamonSpec("jdbc-spec") {
 
       val traceSnapshot = takeSnapshotOf("jdbc-trace-delete", "trace")
       traceSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
-      traceSnapshot.segments.size should be(1)
-      traceSnapshot.segment("Jdbc[Delete]", SegmentCategory.Database, Jdbc.SegmentLibraryName).numberOfMeasurements should be(100)
+
+      val segmentSnapshot = takeSnapshotOf("Jdbc[Delete]", "trace-segment",
+        tags = Map(
+          "trace" -> "jdbc-trace-delete",
+          "category" -> SegmentCategory.Database,
+          "library" -> Jdbc.SegmentLibraryName))
+
+      segmentSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(100)
 
     }
 
     "record the execution time of SLOW QUERIES based on the kamon.jdbc.slow-query-threshold" in {
-      TraceContext.withContext(newContext("jdbc-trace-slow")) {
+      Tracer.withContext(newContext("jdbc-trace-slow")) {
         for (id ← 1 to 2) {
           val select = s"SELECT * FROM Address; CALL SLEEP(100)"
           val selectStatement = connection.createStatement()
           selectStatement.execute(select)
         }
 
-        TraceContext.currentContext.finish()
+        Tracer.currentContext.finish()
       }
 
       val jdbcSnapshot = takeSnapshotOf("jdbc-statements", "jdbc-statements")
@@ -158,7 +180,7 @@ class StatementInstrumentationSpec extends BaseKamonSpec("jdbc-spec") {
     }
 
     "count all SQL ERRORS" in {
-      TraceContext.withContext(newContext("jdbc-trace-errors")) {
+      Tracer.withContext(newContext("jdbc-trace-errors")) {
         for (_ ← 1 to 10) {
           intercept[SQLException] {
             val error = "SELECT * FROM NO_EXISTENT_TABLE"
@@ -167,7 +189,7 @@ class StatementInstrumentationSpec extends BaseKamonSpec("jdbc-spec") {
           }
         }
 
-        TraceContext.currentContext.finish()
+        Tracer.currentContext.finish()
       }
 
       val jdbcSnapshot = takeSnapshotOf("jdbc-statements", "jdbc-statements")

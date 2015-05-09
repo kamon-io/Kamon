@@ -16,16 +16,14 @@
 
 package kamon.testkit
 
-import akka.testkit.{ ImplicitSender, TestKitBase }
+import akka.testkit.TestKitBase
 import akka.actor.ActorSystem
 import com.typesafe.config.{ Config, ConfigFactory }
 import kamon.Kamon
-import kamon.metric.{ SubscriptionsDispatcher, EntitySnapshot, MetricsExtensionImpl }
+import kamon.metric.{ Entity, SubscriptionsDispatcher, EntitySnapshot }
 import kamon.trace.TraceContext
 import kamon.util.LazyActorRef
 import org.scalatest.{ BeforeAndAfterAll, Matchers, WordSpecLike }
-
-import scala.reflect.ClassTag
 
 abstract class BaseKamonSpec(actorSystemName: String) extends TestKitBase with WordSpecLike with Matchers with BeforeAndAfterAll {
   lazy val collectionContext = Kamon.metrics.buildDefaultCollectionContext
@@ -43,10 +41,15 @@ abstract class BaseKamonSpec(actorSystemName: String) extends TestKitBase with W
     Kamon.tracer.newContext(name)
 
   def newContext(name: String, token: String): TraceContext =
-    Kamon.tracer.newContext(name, token)
+    Kamon.tracer.newContext(name, Option(token))
 
   def takeSnapshotOf(name: String, category: String): EntitySnapshot = {
     val recorder = Kamon.metrics.find(name, category).get
+    recorder.collect(collectionContext)
+  }
+
+  def takeSnapshotOf(name: String, category: String, tags: Map[String, String]): EntitySnapshot = {
+    val recorder = Kamon.metrics.find(Entity(name, category, tags)).get
     recorder.collect(collectionContext)
   }
 

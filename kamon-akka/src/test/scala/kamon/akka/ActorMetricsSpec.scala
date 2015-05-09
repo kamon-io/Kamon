@@ -38,8 +38,8 @@ class ActorMetricsSpec extends BaseKamonSpec("actor-metrics-spec") {
         |
         |  filters {
         |    akka-actor {
-        |      includes = [ "user/tracked-*", "user/measuring-*", "user/clean-after-collect", "user/stop" ]
-        |      excludes = [ "user/tracked-explicitly-excluded", "user/non-tracked-actor" ]
+        |      includes = [ "*/user/tracked-*", "*/user/measuring-*", "*/user/clean-after-collect", "*/user/stop", "*/" ]
+        |      excludes = [ "*/user/tracked-explicitly-excluded", "*/user/non-tracked-actor" ]
         |    }
         |  }
         |
@@ -62,6 +62,10 @@ class ActorMetricsSpec extends BaseKamonSpec("actor-metrics-spec") {
 
       val trackedButExplicitlyExcluded = createTestActor("tracked-explicitly-excluded")
       actorMetricsRecorderOf(trackedButExplicitlyExcluded) shouldBe empty
+    }
+
+    "not pick up the root supervisor" in {
+      Kamon.metrics.find("actor-metrics-spec/", ActorMetrics.category) shouldBe empty
     }
 
     "reset all recording instruments after taking a snapshot" in new ActorMetricsFixtures {
@@ -151,7 +155,7 @@ class ActorMetricsSpec extends BaseKamonSpec("actor-metrics-spec") {
       trackedActor ! PoisonPill
       deathWatcher.expectTerminated(trackedActor)
 
-      actorMetricsRecorderOf(trackedActor).get shouldNot be theSameInstanceAs (firstRecorder)
+      actorMetricsRecorderOf(trackedActor) shouldBe empty
     }
   }
 
@@ -160,10 +164,10 @@ class ActorMetricsSpec extends BaseKamonSpec("actor-metrics-spec") {
       val buffer: LongBuffer = LongBuffer.allocate(10000)
     }
 
-    def actorRecorderName(ref: ActorRef): String = ref.path.elements.mkString("/")
+    def actorRecorderName(ref: ActorRef): String = system.name + "/" + ref.path.elements.mkString("/")
 
     def actorMetricsRecorderOf(ref: ActorRef): Option[ActorMetrics] =
-      Kamon.metrics.register(ActorMetrics, actorRecorderName(ref)).map(_.recorder)
+      Kamon.metrics.find(actorRecorderName(ref), ActorMetrics.category).map(_.asInstanceOf[ActorMetrics])
 
     def collectMetricsOf(ref: ActorRef): Option[EntitySnapshot] = {
       Thread.sleep(5) // Just in case the test advances a bit faster than the actor being tested.

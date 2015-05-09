@@ -17,6 +17,7 @@
 package spray.can.client
 
 import kamon.Kamon
+import kamon.util.SameThreadExecutionContext
 import org.aspectj.lang.annotation._
 import org.aspectj.lang.ProceedingJoinPoint
 import spray.http._
@@ -47,7 +48,7 @@ class ClientRequestInstrumentation {
     // This read to requestContext.traceContext takes care of initializing the aspect timely.
     requestContext.traceContext
 
-    TraceContext.map { ctx ⇒
+    Tracer.currentContext.collect { ctx ⇒
       val sprayExtension = Kamon.extension(Spray)
 
       if (sprayExtension.settings.clientInstrumentationLevel == ClientInstrumentationLevel.HostLevelAPI) {
@@ -74,7 +75,7 @@ class ClientRequestInstrumentation {
 
   @Around("copyingRequestContext(old)")
   def aroundCopyingRequestContext(pjp: ProceedingJoinPoint, old: TraceContextAware): Any = {
-    TraceContext.withContext(old.traceContext) {
+    Tracer.withContext(old.traceContext) {
       pjp.proceed()
     }
   }
@@ -85,7 +86,7 @@ class ClientRequestInstrumentation {
   @Around("dispatchToCommander(requestContext, message)")
   def aroundDispatchToCommander(pjp: ProceedingJoinPoint, requestContext: TraceContextAware, message: Any): Any = {
     if (requestContext.traceContext.nonEmpty) {
-      TraceContext.withContext(requestContext.traceContext) {
+      Tracer.withContext(requestContext.traceContext) {
         if (message.isInstanceOf[HttpMessageEnd])
           requestContext.asInstanceOf[SegmentAware].segment.finish()
 
@@ -112,7 +113,7 @@ class ClientRequestInstrumentation {
     val originalSendReceive = pjp.proceed().asInstanceOf[HttpRequest ⇒ Future[HttpResponse]]
 
     (request: HttpRequest) ⇒ {
-      TraceContext.map { ctx ⇒
+      Tracer.currentContext.collect { ctx ⇒
         val sprayExtension = Kamon.extension(Spray)
         val segment =
           if (sprayExtension.settings.clientInstrumentationLevel == ClientInstrumentationLevel.RequestLevelAPI)
@@ -123,13 +124,10 @@ class ClientRequestInstrumentation {
         request.asInstanceOf[SegmentAware].segment = segment
 
         val responseFuture = originalSendReceive.apply(request)
-        responseFuture.onComplete { result ⇒
-          segment.finish()
-        }(ec)
-
+        responseFuture.map(result ⇒ segment.finish())(SameThreadExecutionContext)
         responseFuture
 
-      } getOrElse (originalSendReceive.apply(request))
+      } getOrElse originalSendReceive.apply(request)
     }
   }
 
@@ -139,7 +137,7 @@ class ClientRequestInstrumentation {
   @Around("includingDefaultHeadersAtHttpHostConnector(request, defaultHeaders)")
   def aroundIncludingDefaultHeadersAtHttpHostConnector(pjp: ProceedingJoinPoint, request: HttpMessage, defaultHeaders: List[HttpHeader]): Any = {
 
-    val modifiedHeaders = TraceContext.map { ctx ⇒
+    val modifiedHeaders = Tracer.currentContext.collect { ctx ⇒
       val sprayExtension = Kamon.extension(Spray)
       if (sprayExtension.settings.includeTraceTokenHeader)
         RawHeader(sprayExtension.settings.traceTokenHeaderName, ctx.token) :: defaultHeaders

@@ -18,7 +18,8 @@ package kamon.system.jmx
 
 import java.lang.management.{ GarbageCollectorMXBean, ManagementFactory }
 
-import kamon.metric.{ Entity, MetricsExtension, GenericEntityRecorder }
+import kamon.Kamon
+import kamon.metric._
 import kamon.metric.instrument.{ DifferentialValueCollector, Time, InstrumentFactory }
 import scala.collection.JavaConverters._
 
@@ -43,12 +44,10 @@ object GarbageCollectionMetrics {
   def sanitizeCollectorName(name: String): String =
     name.replaceAll("""[^\w]""", "-").toLowerCase
 
-  def register(metricsExtension: MetricsExtension): Unit = {
-
-    val instrumentFactory = metricsExtension.instrumentFactory("system-metric")
+  def register(metricsExtension: MetricsModule): Unit = {
     ManagementFactory.getGarbageCollectorMXBeans.asScala.filter(_.isValid) map { gc ⇒
       val gcName = sanitizeCollectorName(gc.getName)
-      metricsExtension.register(Entity(s"$gcName-garbage-collector", "system-metric"), new GarbageCollectionMetrics(gc, instrumentFactory))
+      Kamon.metrics.entity(EntityRecorderFactory("system-metric", new GarbageCollectionMetrics(gc, _)), s"$gcName-garbage-collector")
     }
   }
 }

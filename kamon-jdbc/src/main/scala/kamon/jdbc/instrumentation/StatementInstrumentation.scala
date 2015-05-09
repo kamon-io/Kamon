@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit.{ NANOSECONDS ⇒ nanos }
 import kamon.Kamon
 import kamon.jdbc.{ JdbcExtension, Jdbc }
 import kamon.jdbc.metric.StatementsMetrics
-import kamon.trace.{ TraceContext, SegmentCategory }
+import kamon.trace.{ Tracer, TraceContext, SegmentCategory }
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation.{ Around, Aspect, Pointcut }
 import org.slf4j.LoggerFactory
@@ -43,10 +43,9 @@ class StatementInstrumentation {
 
   @Around("onExecuteStatement(sql) || onExecutePreparedStatement(sql) || onExecutePreparedCall(sql)")
   def aroundExecuteStatement(pjp: ProceedingJoinPoint, sql: String): Any = {
-    TraceContext.map { ctx ⇒
-      val metricsExtension = Kamon.metrics
+    Tracer.currentContext.collect { ctx ⇒
       val jdbcExtension = Kamon(Jdbc)
-      implicit val statementRecorder = metricsExtension.register(StatementsMetrics, "jdbc-statements").map(_.recorder)
+      implicit val statementRecorder = Kamon.metrics.entity(StatementsMetrics, "jdbc-statements")
 
       sql.replaceAll(CommentPattern, Empty) match {
         case SelectStatement(_) ⇒ withSegment(ctx, Select, jdbcExtension)(recordRead(pjp, sql, jdbcExtension))
@@ -71,22 +70,22 @@ class StatementInstrumentation {
     try thunk finally segment.finish()
   }
 
-  def recordRead(pjp: ProceedingJoinPoint, sql: String, jdbcExtension: JdbcExtension)(implicit statementRecorder: Option[StatementsMetrics]): Any = {
+  def recordRead(pjp: ProceedingJoinPoint, sql: String, jdbcExtension: JdbcExtension)(implicit statementRecorder: StatementsMetrics): Any = {
     withTimeSpent(pjp.proceedWithErrorHandler(sql, jdbcExtension)) { timeSpent ⇒
-      statementRecorder.map(stmr ⇒ stmr.reads.record(timeSpent))
+      statementRecorder.reads.record(timeSpent)
 
       val timeSpentInMillis = nanos.toMillis(timeSpent)
 
       if (timeSpentInMillis >= jdbcExtension.slowQueryThreshold) {
-        statementRecorder.map(stmr ⇒ stmr.slows.increment())
+        statementRecorder.slows.increment()
         jdbcExtension.processSlowQuery(sql, timeSpentInMillis)
       }
     }
   }
 
-  def recordWrite(pjp: ProceedingJoinPoint, sql: String, jdbcExtension: JdbcExtension)(implicit statementRecorder: Option[StatementsMetrics]): Any = {
+  def recordWrite(pjp: ProceedingJoinPoint, sql: String, jdbcExtension: JdbcExtension)(implicit statementRecorder: StatementsMetrics): Any = {
     withTimeSpent(pjp.proceedWithErrorHandler(sql, jdbcExtension)) { timeSpent ⇒
-      statementRecorder.map(stmr ⇒ stmr.writes.record(timeSpent))
+      statementRecorder.writes.record(timeSpent)
     }
   }
 }
@@ -107,13 +106,13 @@ object StatementInstrumentation {
   val Delete = "Delete"
 
   implicit class PimpedProceedingJoinPoint(pjp: ProceedingJoinPoint) {
-    def proceedWithErrorHandler(sql: String, jdbcExtension: JdbcExtension)(implicit statementRecorder: Option[StatementsMetrics]): Any = {
+    def proceedWithErrorHandler(sql: String, jdbcExtension: JdbcExtension)(implicit statementRecorder: StatementsMetrics): Any = {
       try {
         pjp.proceed()
       } catch {
         case NonFatal(cause) ⇒
           jdbcExtension.processSqlError(sql, cause)
-          statementRecorder.map(stmr ⇒ stmr.errors.increment())
+          statementRecorder.errors.increment()
           throw cause
       }
     }

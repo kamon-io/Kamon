@@ -22,7 +22,7 @@ import akka.actor.{ Actor, ActorLogging }
 import akka.event.Logging.{ Error, InitializeLogger, LoggerInitialized }
 import com.newrelic.api.agent.{ NewRelic ⇒ NR }
 import kamon.trace.TraceLocal.HttpContextKey
-import kamon.trace.{ TraceContext, TraceLocal, TraceContextAware }
+import kamon.trace.{ Tracer, TraceLocal, TraceContextAware }
 
 trait CustomParamsSupport {
   this: NewRelicErrorLogger ⇒
@@ -64,7 +64,7 @@ class NewRelicErrorLogger extends Actor with ActorLogging with CustomParamsSuppo
   //Really ugly, but temporal hack until next release...
   def runInFakeTransaction[T](thunk: ⇒ T): T = {
     val oldName = Thread.currentThread.getName
-    Thread.currentThread.setName(TraceContext.currentContext.name)
+    Thread.currentThread.setName(Tracer.currentContext.name)
     try thunk finally Thread.currentThread.setName(oldName)
   }
 }

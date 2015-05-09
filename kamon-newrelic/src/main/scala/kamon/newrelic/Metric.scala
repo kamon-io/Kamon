@@ -18,9 +18,9 @@ case class MetricData(callCount: Long, total: Double, totalExclusive: Double, mi
 
 object Metric {
 
-  def scaleFunction(uom: UnitOfMeasurement): Long ⇒ Double = uom match {
+  def scaleFunction(uom: UnitOfMeasurement): Double ⇒ Double = uom match {
     case time: Time ⇒ time.scale(Time.Seconds)
-    case other      ⇒ _.toDouble
+    case other      ⇒ a ⇒ a
   }
 
   def apply(snapshot: InstrumentSnapshot, snapshotUnit: UnitOfMeasurement, name: String, scope: Option[String]): Metric = {

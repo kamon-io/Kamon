@@ -16,7 +16,7 @@
 
 package kamon.scala.instrumentation
 
-import kamon.trace.{ TraceContext, TraceContextAware }
+import kamon.trace.{ Tracer, TraceContextAware }
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
 
@@ -40,7 +40,7 @@ class FutureInstrumentation {
 
   @Around("futureRelatedRunnableExecution(runnable)")
   def aroundExecution(pjp: ProceedingJoinPoint, runnable: TraceContextAware): Any = {
-    TraceContext.withContext(runnable.traceContext) {
+    Tracer.withContext(runnable.traceContext) {
       pjp.proceed()
     }
   }

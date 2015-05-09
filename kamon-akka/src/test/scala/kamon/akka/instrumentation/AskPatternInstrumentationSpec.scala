@@ -16,18 +16,16 @@
 
 package kamon.instrumentation.akka
 
-import java.util.concurrent.atomic.AtomicInteger
-
 import akka.actor._
-import akka.event.Logging.Warning
 import akka.pattern.ask
-import akka.testkit.TestProbe
+import akka.testkit.EventFilter
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
-import kamon.akka.Akka
+import kamon.akka.AskPatternTimeoutWarningSettings.{ Off, Lightweight, Heavyweight }
+import kamon.akka.{ AskPatternTimeoutWarningSetting, Akka }
 import kamon.testkit.BaseKamonSpec
-import kamon.trace.{ TraceContext, TraceContextAware }
+import kamon.trace.Tracer
 
 import scala.concurrent.duration._
 
@@ -37,6 +35,7 @@ class AskPatternInstrumentationSpec extends BaseKamonSpec("ask-pattern-tracing-s
       """
         |akka {
         |  loglevel = OFF
+        |  loggers = [akka.testkit.TestEventListener]
         |}
       """.stripMargin)
 
@@ -47,86 +46,55 @@ class AskPatternInstrumentationSpec extends BaseKamonSpec("ask-pattern-tracing-s
 
   "the AskPatternInstrumentation" when {
     "configured in heavyweight mode" should {
-      "log a warning with a full stack trace and the TraceContext taken from the moment the ask was triggered for a actor" in new NoReplyFixture {
-        setAskPatternTimeoutWarningMode("heavyweight")
+      "log a warning with a full stack trace and the TraceContext taken from the moment the ask was triggered for a actor" in {
+        val noReplyActorRef = system.actorOf(Props[NoReply], "no-reply-1")
+        setAskPatternTimeoutWarningMode(Heavyweight)
 
-        expectTimeoutWarning() {
-          TraceContext.withContext(newContext("ask-timeout-warning")) {
+        EventFilter.warning(start = "Timeout triggered for ask pattern to actor [no-reply-1] at").intercept {
+          Tracer.withContext(newContext("ask-timeout-warning")) {
             noReplyActorRef ? "hello"
-            TraceContext.currentContext
+            Tracer.currentContext
           }
         }
       }
     }
 
     "configured in lightweight mode" should {
-      "log a warning with a short source location description and the TraceContext taken from the moment the ask was triggered for a actor" in new NoReplyFixture {
-        setAskPatternTimeoutWarningMode("lightweight")
+      "log a warning with a short source location description and the TraceContext taken from the moment the ask was triggered for a actor" in {
+        val noReplyActorRef = system.actorOf(Props[NoReply], "no-reply-2")
+        setAskPatternTimeoutWarningMode(Lightweight)
 
-        expectTimeoutWarning(messageSizeLimit = Some(1)) {
-          TraceContext.withContext(newContext("ask-timeout-warning")) {
+        EventFilter.warning(start = "Timeout triggered for ask pattern to actor [no-reply-2] at").intercept {
+          Tracer.withContext(newContext("ask-timeout-warning")) {
             noReplyActorRef ? "hello"
-            TraceContext.currentContext
+            Tracer.currentContext
           }
         }
       }
     }
 
     "configured in off mode" should {
-      "should not log any warning messages" in new NoReplyFixture {
-        setAskPatternTimeoutWarningMode("off")
+      "should not log any warning messages" in {
+        val noReplyActorRef = system.actorOf(Props[NoReply], "no-reply-3")
+        setAskPatternTimeoutWarningMode(Off)
 
-        expectTimeoutWarning(expectWarning = false) {
-          TraceContext.withContext(newContext("ask-timeout-warning")) {
-            noReplyActorRef ? "hello"
-            TraceContext.currentContext
+        intercept[AssertionError] { // No message will be logged and the event filter will fail.
+          EventFilter.warning(start = "Timeout triggered for ask pattern to actor", occurrences = 1).intercept {
+            Tracer.withContext(newContext("ask-timeout-warning")) {
+              noReplyActorRef ? "hello"
+              Tracer.currentContext
+            }
           }
         }
       }
     }
   }
 
-  def expectTimeoutWarning(messageSizeLimit: Option[Int] = None, expectWarning: Boolean = true)(thunk: ⇒ TraceContext): Unit = {
-    val listener = warningListener()
-    val testTraceContext = thunk
-
-    if (expectWarning) {
-      val warning = listener.fishForMessage() {
-        case Warning(_, _, msg) if msg.toString.startsWith("Timeout triggered for ask pattern registered at") ⇒ true
-        case others ⇒ false
-      }.asInstanceOf[Warning]
-
-      warning.asInstanceOf[TraceContextAware].traceContext should equal(testTraceContext)
-      messageSizeLimit.map { messageLimit ⇒
-        warning.message.toString.lines.size should be(messageLimit)
-      }
-    } else {
-      listener.expectNoMsg()
-    }
-  }
-
-  def warningListener(): TestProbe = {
-    val listener = TestProbe()
-    system.eventStream.subscribe(listener.ref, classOf[Warning])
-    listener
-  }
-
-  def setAskPatternTimeoutWarningMode(mode: String): Unit = {
+  def setAskPatternTimeoutWarningMode(mode: AskPatternTimeoutWarningSetting): Unit = {
     val target = Kamon(Akka)
     val field = target.getClass.getDeclaredField("askPatternTimeoutWarning")
     field.setAccessible(true)
     field.set(target, mode)
-  }
-
-  val fixtureCounter = new AtomicInteger(0)
-
-  trait NoReplyFixture {
-    def noReplyActorRef: ActorRef = system.actorOf(Props[NoReply], "no-reply-" + fixtureCounter.incrementAndGet())
-
-    def noReplyActorSelection: ActorSelection = {
-      val target = noReplyActorRef
-      system.actorSelection(target.path)
-    }
   }
 }
 

@@ -16,17 +16,18 @@
 package kamon.system
 
 import java.io.File
+import akka.actor.SupervisorStrategy.Restart
 import akka.actor._
 import akka.event.Logging
-import kamon.supervisor.ModuleSupervisor
 import kamon.system.custom.{ ContextSwitchesUpdater, ContextSwitchesMetrics }
 import kamon.system.jmx._
 import kamon.Kamon
-import kamon.metric._
 import kamon.sigar.SigarProvisioner
 import kamon.system.sigar.SigarMetricsUpdater
 
 import kamon.util.ConfigTools.Syntax
+
+import scala.concurrent.duration.FiniteDuration
 
 object SystemMetrics extends ExtensionId[SystemMetricsExtension] with ExtensionIdProvider {
   override def lookup(): ExtensionId[_ <: Extension] = SystemMetrics
@@ -44,10 +45,9 @@ class SystemMetricsExtension(system: ExtendedActorSystem) extends Kamon.Extensio
   val contextSwitchesRefreshInterval = config.getFiniteDuration("context-switches-refresh-interval")
   val metricsExtension = Kamon.metrics
 
-  // Sigar-based metrics
   SigarProvisioner.provision(new File(sigarFolder))
-  val sigarMetricsRecorder = ModuleSupervisor.get(system).createModule("sigar-metrics-recorder",
-    SigarMetricsUpdater.props(sigarRefreshInterval).withDispatcher("kamon.system-metrics.sigar-dispatcher"))
+
+  val supervisor = system.actorOf(SystemMetricsSupervisor.props(sigarRefreshInterval, contextSwitchesRefreshInterval), "kamon-system-metrics")
 
   // JMX Metrics
   ClassLoadingMetrics.register(metricsExtension)
@@ -55,17 +55,32 @@ class SystemMetricsExtension(system: ExtendedActorSystem) extends Kamon.Extensio
   HeapMemoryMetrics.register(metricsExtension)
   NonHeapMemoryMetrics.register(metricsExtension)
   ThreadsMetrics.register(metricsExtension)
+}
+
+class SystemMetricsSupervisor(sigarRefreshInterval: FiniteDuration, contextSwitchesRefreshInterval: FiniteDuration) extends Actor {
+
+  // Sigar metrics recorder
+  context.actorOf(SigarMetricsUpdater.props(sigarRefreshInterval)
+    .withDispatcher("kamon.system-metrics.sigar-dispatcher"), "sigar-metrics-recorder")
 
   // If we are in Linux, add ContextSwitchesMetrics as well.
   if (isLinux) {
-    val contextSwitchesRecorder = ContextSwitchesMetrics.register(system, contextSwitchesRefreshInterval)
-
-    ModuleSupervisor.get(system).createModule("context-switches-metrics-recorder",
-      ContextSwitchesUpdater.props(contextSwitchesRecorder, sigarRefreshInterval)
-        .withDispatcher("kamon.system-metrics.context-switches-dispatcher"))
+    val contextSwitchesRecorder = ContextSwitchesMetrics.register(context.system, contextSwitchesRefreshInterval)
+    context.actorOf(ContextSwitchesUpdater.props(contextSwitchesRecorder, sigarRefreshInterval)
+      .withDispatcher("kamon.system-metrics.context-switches-dispatcher"), "context-switches-metrics-recorder")
   }
 
   def isLinux: Boolean =
     System.getProperty("os.name").indexOf("Linux") != -1
 
+  def receive = Actor.emptyBehavior
+
+  override def supervisorStrategy: SupervisorStrategy = OneForOneStrategy() {
+    case anyException ⇒ Restart
+  }
+}
+
+object SystemMetricsSupervisor {
+  def props(sigarRefreshInterval: FiniteDuration, contextSwitchesRefreshInterval: FiniteDuration): Props =
+    Props(new SystemMetricsSupervisor(sigarRefreshInterval, contextSwitchesRefreshInterval))
 }

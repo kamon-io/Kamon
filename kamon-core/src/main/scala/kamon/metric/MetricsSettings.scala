@@ -25,7 +25,7 @@ import scala.concurrent.duration.FiniteDuration
 /**
  *  Configuration settings for the Metrics extension, as read from the `kamon.metric` configuration key.
  */
-case class MetricsExtensionSettings(
+case class MetricsSettings(
     tickInterval: FiniteDuration,
     defaultCollectionContextBufferSize: Int,
     trackUnmatchedEntities: Boolean,
@@ -48,11 +48,10 @@ case class EntityFilter(includes: List[GlobPathFilter], excludes: List[GlobPathF
     includes.exists(_.accept(name)) && !excludes.exists(_.accept(name))
 }
 
-object MetricsExtensionSettings {
+object MetricsSettings {
   import kamon.util.ConfigTools.Syntax
-  import scala.concurrent.duration._
 
-  def apply(config: Config): MetricsExtensionSettings = {
+  def apply(config: Config): MetricsSettings = {
     val metricConfig = config.getConfig("kamon.metric")
 
     val tickInterval = metricConfig.getFiniteDuration("tick-interval")
@@ -65,7 +64,7 @@ object MetricsExtensionSettings {
     val instrumentFactories = loadInstrumentFactories(metricConfig.getConfig("instrument-settings"), defaultInstrumentSettings, refreshScheduler)
     val defaultInstrumentFactory = new InstrumentFactory(Map.empty, defaultInstrumentSettings, refreshScheduler)
 
-    MetricsExtensionSettings(tickInterval, collectBufferSize, trackUnmatchedEntities, entityFilters, instrumentFactories,
+    MetricsSettings(tickInterval, collectBufferSize, trackUnmatchedEntities, entityFilters, instrumentFactories,
       defaultInstrumentFactory, refreshScheduler)
   }
 

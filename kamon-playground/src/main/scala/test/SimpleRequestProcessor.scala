@@ -23,7 +23,7 @@ import kamon.Kamon
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 import kamon.metric._
 import kamon.spray.KamonTraceDirectives
-import kamon.trace.{ TraceContext, SegmentCategory }
+import kamon.trace.{ Tracer, TraceContext, SegmentCategory }
 import spray.http.{ StatusCodes, Uri }
 import spray.httpx.RequestBuilding
 import spray.routing.SimpleRoutingApp
@@ -37,8 +37,8 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
 
   import scala.concurrent.duration._
 
-  implicit val system = ActorSystem("test")
   Kamon.start()
+  implicit val system = ActorSystem("test")
   import test.SimpleRequestProcessor.system.dispatcher
 
   val printer = system.actorOf(Props[PrintWhatever])
@@ -49,7 +49,7 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
 
   implicit val timeout = Timeout(30 seconds)
 
-  val counter = Kamon.userMetrics.counter("requests")
+  val counter = Kamon.metrics.counter("requests")
   val pipeline = sendReceive
   val replier = system.actorOf(Props[Replier].withRouter(RoundRobinRouter(nrOfInstances = 4)), "replier")
 
@@ -116,7 +116,7 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
         } ~
         path("segment") {
           complete {
-            val segment = TraceContext.currentContext.startSegment("hello-world", SegmentCategory.HttpClient, "none")
+            val segment = Tracer.currentContext.startSegment("hello-world", SegmentCategory.HttpClient, "none")
             (replier ? "hello").mapTo[String].onComplete { t ⇒
               segment.finish()
             }
@@ -162,7 +162,7 @@ object Verifier extends App {
 class Replier extends Actor with ActorLogging {
   def receive = {
     case anything ⇒
-      if (TraceContext.currentContext.isEmpty)
+      if (Tracer.currentContext.isEmpty)
         log.warning("PROCESSING A MESSAGE WITHOUT CONTEXT")
 
       //log.info("Processing at the Replier, and self is: {}", self)
