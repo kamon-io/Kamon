@@ -89,19 +89,29 @@ class DatadogMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long
 
   def encodeDatadogCounter(count: Long): String = count.toString + "|c"
 
+  def isSingleInstrumentEntity(entity: Entity): Boolean =
+    SingleInstrumentEntityRecorder.AllCategories.contains(entity.category)
+
   def buildMetricName(entity: Entity, metricKey: MetricKey): String =
-    if (SingleInstrumentEntityRecorder.AllCategories.contains(entity.category))
-      s"$appName.${entity.category}"
+    if (isSingleInstrumentEntity(entity))
+      s"$appName.${entity.category}.${entity.name}"
     else
       s"$appName.${entity.category}.${metricKey.name}"
 
   def buildIdentificationTag(entity: Entity, metricKey: MetricKey): String = {
-    val normalizedEntityName = entity.name.replace(" ", "")
-    if (entity.tags.nonEmpty) {
-      val tagsString = entity.tags.map { case (k, v) ⇒ k + ":" + v } mkString ","
-      s"|#${entity.category}:${normalizedEntityName},$tagsString"
-    } else
-      s"|#${entity.category}:${normalizedEntityName}"
+    def tagsString: String = entity.tags.map { case (k, v) ⇒ k + ":" + v } mkString ","
+
+    if (isSingleInstrumentEntity(entity)) {
+      if (entity.tags.nonEmpty) "|#" + tagsString else ""
+
+    } else {
+      val normalizedEntityName = entity.name.replace(" ", "")
+
+      if (entity.tags.nonEmpty) {
+        s"|#${entity.category}:${normalizedEntityName},$tagsString"
+      } else
+        s"|#${entity.category}:${normalizedEntityName}"
+    }
   }
 }
 
