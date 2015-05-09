@@ -112,6 +112,16 @@ class DatadogMetricSenderSpec extends BaseKamonSpec("datadog-metric-sender-spec"
       data.utf8String should be(s"kamon.category.metric-two:10|ms|@0.5|#category:datadog,my-cool-tag:some-value")
     }
 
+    "not include the entity-category:entity:name identification tag for single instrument entities" in new UdpListenerFixture {
+      val (entity, testRecorder) = buildSimpleCounter("example-counter", tags = Map("my-cool-tag" -> "some-value"))
+      testRecorder.instrument.increment(17)
+
+      val udp = setup(Map(entity -> testRecorder.collect(collectionContext)))
+      val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
+
+      data.utf8String should be(s"kamon.counter.example-counter:17|c|#my-cool-tag:some-value")
+    }
+
   }
 
   trait UdpListenerFixture {
@@ -121,6 +131,13 @@ class DatadogMetricSenderSpec extends BaseKamonSpec("datadog-metric-sender-spec"
     def buildRecorder(name: String, tags: Map[String, String] = Map.empty): (Entity, TestEntityRecorder) = {
       val entity = Entity(name, TestEntityRecorder.category, tags)
       val recorder = Kamon.metrics.entity(TestEntityRecorder, entity)
+      (entity, recorder)
+    }
+
+    def buildSimpleCounter(name: String, tags: Map[String, String] = Map.empty): (Entity, CounterRecorder) = {
+      val entity = Entity(name, SingleInstrumentEntityRecorder.Counter, tags)
+      val counter = Kamon.metrics.counter(name, tags)
+      val recorder = CounterRecorder(CounterKey("counter", UnitOfMeasurement.Unknown), counter)
       (entity, recorder)
     }
 
