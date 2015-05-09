@@ -90,6 +90,7 @@ class MetricReporter(settings: AgentSettings) extends Actor with ActorLogging wi
 
   def subscribeToMetrics(): Unit = {
     metricsExtension.subscribe("trace", "*", metricsSubscriber, permanently = true)
+    metricsExtension.subscribe("trace-segment", "*", metricsSubscriber, permanently = true)
     metricsExtension.subscribe("user-metrics", "*", metricsSubscriber, permanently = true)
   }
 }
