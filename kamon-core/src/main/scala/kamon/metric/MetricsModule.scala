@@ -281,7 +281,7 @@ private[kamon] class MetricsModuleImpl(config: Config) extends MetricsModule {
     val gaugeEntity = Entity(name, SingleInstrumentEntityRecorder.Gauge, tags)
     val recorder = _trackedEntities.atomicGetOrElseUpdate(gaugeEntity, {
       val factory = instrumentFactory(gaugeEntity.category)
-      GaugeRecorder(MinMaxCounterKey(gaugeEntity.category, unitOfMeasurement.getOrElse(UnitOfMeasurement.Unknown)),
+      GaugeRecorder(GaugeKey(gaugeEntity.category, unitOfMeasurement.getOrElse(UnitOfMeasurement.Unknown)),
         factory.createGauge(name, dynamicRange, refreshInterval, valueCollector))
     }, _.cleanup)
 
