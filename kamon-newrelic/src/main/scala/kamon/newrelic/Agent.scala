@@ -21,6 +21,7 @@ import akka.io.IO
 import akka.util.Timeout
 import com.typesafe.config.Config
 import kamon.Kamon
+import kamon.metric.TickMetricSnapshotBuffer
 import spray.can.Http
 import spray.json._
 import scala.concurrent.Future
@@ -31,7 +32,7 @@ import kamon.util.ConfigTools.Syntax
 import Agent._
 import JsonProtocol._
 import akka.pattern.pipe
-
+import scala.concurrent.duration._
 import scala.concurrent.duration.FiniteDuration
 
 class Agent extends Actor with SprayJsonSupport with ActorLogging with MetricsSubscription {
@@ -44,7 +45,15 @@ class Agent extends Actor with SprayJsonSupport with ActorLogging with MetricsSu
   // Start the reporters
   private val reporter = context.actorOf(MetricReporter.props(agentSettings), "metric-reporter")
 
-  subscribeToMetrics(config, reporter, Kamon.metrics)
+  val metricsSubscriber = {
+    val tickInterval = Kamon.metrics.settings.tickInterval
+
+    // Metrics are always sent to New Relic in 60 seconds intervals.
+    if (tickInterval == 60.seconds) reporter
+    else context.actorOf(TickMetricSnapshotBuffer.props(1 minute, reporter), "metric-buffer")
+  }
+
+  subscribeToMetrics(config, metricsSubscriber, Kamon.metrics)
 
   // Start the connection to the New Relic collector.
   self ! Connect
