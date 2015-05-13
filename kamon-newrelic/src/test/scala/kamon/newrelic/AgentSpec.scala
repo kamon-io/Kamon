@@ -22,6 +22,7 @@ import akka.actor.{ ActorRef, ActorSystem, Props }
 import akka.io.IO
 import akka.testkit._
 import com.typesafe.config.ConfigFactory
+import kamon.testkit.BaseKamonSpec
 import org.scalatest.{ BeforeAndAfterAll, WordSpecLike }
 import spray.can.Http
 import spray.http._
@@ -31,27 +32,28 @@ import spray.json.JsArray
 import spray.json._
 import testkit.AkkaExtensionSwap
 
-class AgentSpec extends TestKitBase with WordSpecLike with BeforeAndAfterAll with RequestBuilding with SprayJsonSupport {
+class AgentSpec extends BaseKamonSpec("metric-reporter-spec") with RequestBuilding with SprayJsonSupport {
   import JsonProtocol._
 
-  implicit lazy val system: ActorSystem = ActorSystem("Agent-Spec", ConfigFactory.parseString(
-    """
-      |akka {
-      |  loggers = ["akka.testkit.TestEventListener"]
-      |  loglevel = "INFO"
-      |}
-      |kamon {
-      |  newrelic {
-      |    app-name = kamon
-      |    license-key = 1111111111
-      |    connect-retry-delay = 1 second
-      |    max-connect-retries = 3
-      |  }
-      |
-      |  modules.kamon-newrelic.auto-start = no
-      |}
-      |
-    """.stripMargin))
+  override lazy val config =
+    ConfigFactory.parseString(
+      """
+        |akka {
+        |  loggers = ["akka.testkit.TestEventListener"]
+        |  loglevel = "INFO"
+        |}
+        |kamon {
+        |  newrelic {
+        |    app-name = kamon
+        |    license-key = 1111111111
+        |    connect-retry-delay = 1 second
+        |    max-connect-retries = 3
+        |  }
+        |
+        |  modules.kamon-newrelic.auto-start = no
+        |}
+        |
+      """.stripMargin)
 
   "the New Relic Agent" should {
     "try to establish a connection to the collector upon creation" in {

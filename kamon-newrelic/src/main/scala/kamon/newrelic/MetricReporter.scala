@@ -89,9 +89,9 @@ class MetricReporter(settings: AgentSettings) extends Actor with ActorLogging wi
   }
 
   def subscribeToMetrics(): Unit = {
-    metricsExtension.subscribe("trace", "*", metricsSubscriber, permanently = true)
-    metricsExtension.subscribe("trace-segment", "*", metricsSubscriber, permanently = true)
-    metricsExtension.subscribe("user-metrics", "*", metricsSubscriber, permanently = true)
+    ("trace" :: "trace-segment" :: "counter" :: "histogram" :: "min-max-counter" :: "gauge" :: Nil).foreach { category ⇒
+      metricsExtension.subscribe(category, "**", metricsSubscriber, permanently = true)
+    }
   }
 }
 
