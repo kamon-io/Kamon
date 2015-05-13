@@ -16,10 +16,13 @@
 
 package kamon.newrelic
 
-import akka.actor.{ ActorLogging, Actor }
+import akka.actor.{ ActorRef, ActorLogging, Actor }
+import akka.event.LoggingAdapter
 import akka.io.IO
 import akka.util.Timeout
 import com.typesafe.config.Config
+import kamon.Kamon
+import kamon.metric.{ MetricsModule, TickMetricSnapshotBuffer }
 import spray.can.Http
 import spray.json._
 import scala.concurrent.Future
@@ -30,16 +33,28 @@ import kamon.util.ConfigTools.Syntax
 import Agent._
 import JsonProtocol._
 import akka.pattern.pipe
-
+import scala.concurrent.duration._
 import scala.concurrent.duration.FiniteDuration
 
-class Agent extends Actor with SprayJsonSupport with ActorLogging {
+class Agent extends Actor with SprayJsonSupport with ActorLogging with MetricsSubscription {
   import context.dispatcher
 
-  val agentSettings = AgentSettings.fromConfig(context.system.settings.config)
+  private val config = context.system.settings.config
+
+  val agentSettings = AgentSettings.fromConfig(config)
 
   // Start the reporters
-  context.actorOf(MetricReporter.props(agentSettings), "metric-reporter")
+  private val reporter = context.actorOf(MetricReporter.props(agentSettings), "metric-reporter")
+
+  val metricsSubscriber = {
+    val tickInterval = Kamon.metrics.settings.tickInterval
+
+    // Metrics are always sent to New Relic in 60 seconds intervals.
+    if (tickInterval == 60.seconds) reporter
+    else context.actorOf(TickMetricSnapshotBuffer.props(1 minute, reporter), "metric-buffer")
+  }
+
+  subscribeToMetrics(config, metricsSubscriber, Kamon.metrics)
 
   // Start the connection to the New Relic collector.
   self ! Connect
@@ -143,4 +158,21 @@ object AgentSettings {
       newRelicConfig.getFiniteDuration("connect-retry-delay"),
       newRelicConfig.getFiniteDuration("apdexT").toMillis / 1E3D)
   }
+}
+
+trait MetricsSubscription {
+  import kamon.util.ConfigTools.Syntax
+  import scala.collection.JavaConverters._
+
+  def log: LoggingAdapter
+
+  def subscriptions(config: Config) = config getConfig "kamon.newrelic" getConfig "subscriptions"
+
+  def subscribeToMetrics(config: Config, metricsSubscriber: ActorRef, extension: MetricsModule): Unit =
+    subscriptions(config).firstLevelKeys foreach { subscriptionCategory ⇒
+      subscriptions(config).getStringList(subscriptionCategory).asScala foreach { pattern ⇒
+        log.debug("Subscribing NewRelic reporting for {} : {}", subscriptionCategory, pattern)
+        extension.subscribe(subscriptionCategory, pattern, metricsSubscriber)
+      }
+    }
 }

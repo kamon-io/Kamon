@@ -16,22 +16,31 @@
 
 package kamon.newrelic
 
-import kamon.metric.{ EntitySnapshot, Entity }
+import kamon.metric.{ MetricKey, EntitySnapshot, Entity }
 import kamon.metric.instrument.CollectionContext
 
 object CustomMetricExtractor extends MetricExtractor {
 
   def extract(settings: AgentSettings, collectionContext: CollectionContext, metrics: Map[Entity, EntitySnapshot]): Map[MetricID, MetricData] = {
-    def onlySimpleMetrics(kv: (Entity, EntitySnapshot)): Boolean =
-      kamon.metric.SingleInstrumentEntityRecorder.AllCategories.contains(kv._1.category)
-
-    def toNewRelicMetric(kv: (Entity, EntitySnapshot)): (MetricID, MetricData) = {
-      val (entity, entitySnapshot) = kv
-      val (metricKey, instrumentSnapshot) = entitySnapshot.metrics.head
-
-      Metric(instrumentSnapshot, metricKey.unitOfMeasurement, s"Custom/${entity.name}", None)
-    }
-
-    metrics.filter(onlySimpleMetrics).map(toNewRelicMetric)
+    val (simple, complex) = metrics.partition(simpleMetrics)
+    simple.map(toNewRelicMetric(simpleName)) ++ complex.map(toNewRelicMetric(complexName))
   }
+
+  def simpleName(entity: Entity, metricKey: MetricKey) = s"Custom/${entity.category}/${normalize(entity.name)}"
+
+  def complexName(entity: Entity, metricKey: MetricKey) = s"${simpleName(entity, metricKey)}/${metricKey.name}"
+
+  def normalize(name: String) = name.replace('/', '\\').replaceAll("""[\]\[\|\*]""", "_")
+
+  def simpleMetrics(kv: (Entity, EntitySnapshot)): Boolean =
+    kamon.metric.SingleInstrumentEntityRecorder.AllCategories.contains(kv._1.category)
+
+  def toNewRelicMetric(name: (Entity, MetricKey) ⇒ String)(kv: (Entity, EntitySnapshot)): (MetricID, MetricData) = {
+    val (entity, entitySnapshot) = kv
+    val (metricKey, instrumentSnapshot) = entitySnapshot.metrics.head
+    val nameStr = name(entity, metricKey)
+
+    Metric(instrumentSnapshot, metricKey.unitOfMeasurement, nameStr, None)
+  }
+
 }
