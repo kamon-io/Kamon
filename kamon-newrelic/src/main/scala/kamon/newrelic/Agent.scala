@@ -20,6 +20,7 @@ import akka.actor.{ ActorLogging, Actor }
 import akka.io.IO
 import akka.util.Timeout
 import com.typesafe.config.Config
+import kamon.Kamon
 import spray.can.Http
 import spray.json._
 import scala.concurrent.Future
@@ -33,13 +34,17 @@ import akka.pattern.pipe
 
 import scala.concurrent.duration.FiniteDuration
 
-class Agent extends Actor with SprayJsonSupport with ActorLogging {
+class Agent extends Actor with SprayJsonSupport with ActorLogging with MetricsSubscription {
   import context.dispatcher
 
-  val agentSettings = AgentSettings.fromConfig(context.system.settings.config)
+  private val config = context.system.settings.config
+
+  val agentSettings = AgentSettings.fromConfig(config)
 
   // Start the reporters
-  context.actorOf(MetricReporter.props(agentSettings), "metric-reporter")
+  private val reporter = context.actorOf(MetricReporter.props(agentSettings), "metric-reporter")
+
+  subscribeToMetrics(config, reporter, Kamon.metrics)
 
   // Start the connection to the New Relic collector.
   self ! Connect
