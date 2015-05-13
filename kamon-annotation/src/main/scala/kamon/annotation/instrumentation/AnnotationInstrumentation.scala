@@ -35,6 +35,7 @@ class AnnotationInstrumentation extends BaseAnnotationInstrumentation {
     obj.counters = new AtomicReferenceArray[Counter](size)
     obj.minMaxCounters = new AtomicReferenceArray[MinMaxCounter](size)
     obj.histograms = new AtomicReferenceArray[instrument.Histogram](size)
+    obj.timeHistograms = new AtomicReferenceArray[instrument.Histogram](size)
   }
 
   @Around("execution(@kamon.annotation.Trace !static * (@kamon.annotation.EnableKamon AnnotationInstruments+).*(..)) && this(obj)")
@@ -53,8 +54,8 @@ class AnnotationInstrumentation extends BaseAnnotationInstrumentation {
 
   @Around("execution(@kamon.annotation.Time !static * (@kamon.annotation.EnableKamon AnnotationInstruments+).*(..)) && this(obj)")
   def time(pjp: ProceedingJoinPoint, obj: AnnotationInstruments): AnyRef = {
-    var histogram = obj.histograms.get(pjp.getStaticPart.getId)
-    if (histogram == null) histogram = registerTime(pjp.getStaticPart, obj.histograms, StringEvaluator(obj), TagsEvaluator(obj))
+    var histogram = obj.timeHistograms.get(pjp.getStaticPart.getId)
+    if (histogram == null) histogram = registerTime(pjp.getStaticPart, obj.timeHistograms, StringEvaluator(obj), TagsEvaluator(obj))
     processTime(histogram, pjp)
   }
 

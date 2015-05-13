@@ -117,7 +117,12 @@ class ActorCellInstrumentation {
 
     // In case that this actor is behind a router, count the errors for the router as well.
     val envelope = cell.currentMessage.asInstanceOf[RouterAwareEnvelope]
-    envelope.routerMetricsRecorder.map(_.errors.increment())
+    if (envelope ne null) {
+      // The ActorCell.handleInvokeFailure(..) method is also called when a failure occurs
+      // while processing a system message, in which case ActorCell.currentMessage is always
+      // null.
+      envelope.routerMetricsRecorder.map(_.errors.increment())
+    }
   }
 }
 

@@ -39,7 +39,7 @@ class ClientRequestInstrumentationSpec extends BaseKamonSpec("client-request-ins
       """
         |kamon {
         |  metric.tick-interval = 1 hour
-        |  spray.name-generator = kamon.spray.TestSprayNameGenerator
+        |  spray.name-generator = kamon.spray.TestNameGenerator
         |}
         |
         |akka.loggers = ["akka.event.slf4j.Slf4jLogger"]
@@ -294,7 +294,7 @@ class ClientRequestInstrumentationSpec extends BaseKamonSpec("client-request-ins
   }
 }
 
-class TestSprayNameGenerator extends SprayNameGenerator {
+class TestNameGenerator extends NameGenerator {
   def generateTraceName(request: HttpRequest): String = request.uri.path.toString()
   def generateRequestLevelApiSegmentName(request: HttpRequest): String = "request-level " + request.uri.path.toString()
   def generateHostLevelApiSegmentName(request: HttpRequest): String = "host-level " + request.uri.path.toString()
