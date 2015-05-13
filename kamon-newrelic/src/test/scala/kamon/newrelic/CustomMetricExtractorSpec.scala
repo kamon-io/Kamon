@@ -16,7 +16,7 @@
 
 package kamon.newrelic
 
-import org.scalatest.{Matchers, WordSpecLike}
+import org.scalatest.{ Matchers, WordSpecLike }
 
 /**
  * @since 21.04.2015

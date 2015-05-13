@@ -16,13 +16,13 @@
 
 package kamon.newrelic
 
-import akka.actor.{ActorRef, ActorLogging, Actor}
+import akka.actor.{ ActorRef, ActorLogging, Actor }
 import akka.event.LoggingAdapter
 import akka.io.IO
 import akka.util.Timeout
 import com.typesafe.config.Config
 import kamon.Kamon
-import kamon.metric.{MetricsModule, TickMetricSnapshotBuffer}
+import kamon.metric.{ MetricsModule, TickMetricSnapshotBuffer }
 import spray.can.Http
 import spray.json._
 import scala.concurrent.Future

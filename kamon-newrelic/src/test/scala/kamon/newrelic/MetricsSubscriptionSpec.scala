@@ -35,7 +35,7 @@ class MetricsSubscriptionSpec extends WordSpecLike with Matchers {
   val metricsStr = metrics map { m ⇒ m._1 + " = \"" + "*" * (m._2 + 1) + "\"" } mkString "\n"
   val fullConfig = ConfigFactory.parseString(s"kamon.newrelic.subscriptions { $metricsStr }")
 
-   "the MetricsSubscription" should {
+  "the MetricsSubscription" should {
 
     "read correct subscriptions from full configuration" in {
       val cfg = instance.subscriptions(fullConfig)
