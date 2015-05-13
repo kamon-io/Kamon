@@ -16,12 +16,13 @@
 
 package kamon.newrelic
 
-import akka.actor.{ ActorLogging, Actor }
+import akka.actor.{ActorRef, ActorLogging, Actor}
+import akka.event.LoggingAdapter
 import akka.io.IO
 import akka.util.Timeout
 import com.typesafe.config.Config
 import kamon.Kamon
-import kamon.metric.TickMetricSnapshotBuffer
+import kamon.metric.{MetricsModule, TickMetricSnapshotBuffer}
 import spray.can.Http
 import spray.json._
 import scala.concurrent.Future
@@ -157,4 +158,21 @@ object AgentSettings {
       newRelicConfig.getFiniteDuration("connect-retry-delay"),
       newRelicConfig.getFiniteDuration("apdexT").toMillis / 1E3D)
   }
+}
+
+trait MetricsSubscription {
+  import kamon.util.ConfigTools.Syntax
+  import scala.collection.JavaConverters._
+
+  def log: LoggingAdapter
+
+  def subscriptions(config: Config) = config getConfig "kamon.newrelic" getConfig "subscriptions"
+
+  def subscribeToMetrics(config: Config, metricsSubscriber: ActorRef, extension: MetricsModule): Unit =
+    subscriptions(config).firstLevelKeys foreach { subscriptionCategory ⇒
+      subscriptions(config).getStringList(subscriptionCategory).asScala foreach { pattern ⇒
+        log.debug("Subscribing NewRelic reporting for {} : {}", subscriptionCategory, pattern)
+        extension.subscribe(subscriptionCategory, pattern, metricsSubscriber)
+      }
+    }
 }

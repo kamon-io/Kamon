@@ -17,10 +17,8 @@
 package kamon.newrelic
 
 import akka.actor._
-import akka.event.LoggingAdapter
 import akka.io.IO
 import akka.pattern.pipe
-import com.typesafe.config.Config
 import kamon.Kamon
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 import kamon.metric._
@@ -98,23 +96,6 @@ class MetricReporter(settings: AgentSettings) extends Actor with ActorLogging wi
 
 }
 
-trait MetricsSubscription {
-  import kamon.util.ConfigTools.Syntax
-  import scala.collection.JavaConverters._
-
-  def log: LoggingAdapter
-
-  def subscriptions(config: Config) = config getConfig "kamon.newrelic" getConfig "subscriptions"
-
-  def subscribeToMetrics(config: Config, metricsSubscriber: ActorRef, extension: MetricsModule): Unit =
-    subscriptions(config).firstLevelKeys foreach { subscriptionCategory ⇒
-      subscriptions(config).getStringList(subscriptionCategory).asScala foreach { pattern ⇒
-        log.debug("Subscribing NewRelic reporting for {} : {}", subscriptionCategory, pattern)
-        extension.subscribe(subscriptionCategory, pattern, metricsSubscriber)
-      }
-    }
-}
-
 object MetricReporter {
   def props(settings: AgentSettings): Props = Props(new MetricReporter(settings))
 
@@ -122,7 +103,7 @@ object MetricReporter {
   case object PostSucceeded extends MetricDataPostResult
   case class PostFailed(reason: Throwable) extends MetricDataPostResult
 
-  val MetricExtractors = WebTransactionMetricExtractor :: CustomMetricExtractor :: Nil
+  val MetricExtractors: List[MetricExtractor] = WebTransactionMetricExtractor :: CustomMetricExtractor :: Nil
 }
 
 trait MetricExtractor {

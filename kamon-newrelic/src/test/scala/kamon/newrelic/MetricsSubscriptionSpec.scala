@@ -16,10 +16,8 @@
 
 package kamon.newrelic
 
-import akka.actor.ActorRef
 import akka.event.NoLogging
 import com.typesafe.config.ConfigFactory
-import kamon.metric._
 import org.scalatest._
 
 import scala.collection.JavaConversions._
