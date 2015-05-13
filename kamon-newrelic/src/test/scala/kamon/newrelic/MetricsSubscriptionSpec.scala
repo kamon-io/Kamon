@@ -35,41 +35,17 @@ class MetricsSubscriptionSpec extends WordSpecLike with Matchers {
 
   val metrics = Seq("user-metrics", "trace", "akka-dispatcher", "akka-actor").zipWithIndex
   val metricsStr = metrics map { m ⇒ m._1 + " = \"" + "*" * (m._2 + 1) + "\"" } mkString "\n"
-  val fullConfig = ConfigFactory.parseString(s"kamon.newrelic.metrics { $metricsStr }")
-  val emptyConfig = ConfigFactory.parseString("kamon.newrelic { foo = bar }")
+  val fullConfig = ConfigFactory.parseString(s"kamon.newrelic.subscriptions { $metricsStr }")
 
-  // this could be replaced with a mock as soon the project has mocking framework as a dependency
-  class FakeMetricsModule extends MetricsModuleImpl(ConfigFactory.load()) {
-    var callCounter = 0
-    override def subscribe(filter: SubscriptionFilter, subscriber: ActorRef, permanently: Boolean): Unit = {
-      callCounter = callCounter + 1
-    }
-  }
-
-  "the MetricsSubscription" should {
+   "the MetricsSubscription" should {
 
     "read correct subscriptions from full configuration" in {
       val cfg = instance.subscriptions(fullConfig)
-      cfg.size should be(4)
-      cfg foreach { metric ⇒
+      cfg.entrySet().size should be(4)
+      cfg.entrySet().foreach { metric ⇒
         val idx = metrics.indexWhere(_._1 == metric.getKey)
         metric.getValue.unwrapped().toString should be("*" * (idx + 1))
       }
-      cfg.contains()
     }
-    "read no subscriptions from empty configuration" in {
-      instance.subscriptions(emptyConfig).isEmpty should be(right = true)
-    }
-    "subscribe to correct categories" in {
-      val metricsModule = new FakeMetricsModule
-      instance.subscribeToMetrics(fullConfig, null, metricsModule)
-      metricsModule.callCounter should be(4)
-    }
-    "subscribe to no categories" in {
-      val metricsModule = new FakeMetricsModule
-      instance.subscribeToMetrics(emptyConfig, null, metricsModule)
-      metricsModule.callCounter should be(0)
-    }
-
   }
 }
