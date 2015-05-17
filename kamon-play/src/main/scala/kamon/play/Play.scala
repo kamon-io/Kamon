@@ -20,7 +20,6 @@ import akka.actor.{ ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProv
 import akka.event.Logging
 import kamon.Kamon
 import kamon.http.HttpServerMetrics
-import kamon.metric.Entity
 import play.api.libs.ws.WSRequest
 import play.api.mvc.RequestHeader
 
@@ -54,6 +53,29 @@ trait NameGenerator {
 }
 
 class DefaultNameGenerator extends NameGenerator {
-  def generateTraceName(requestHeader: RequestHeader): String = s"${requestHeader.method}: ${requestHeader.uri}"
+  import scala.collection.concurrent.TrieMap
+  import play.api.Routes
+  import java.util.Locale
+  import kamon.util.TriemapAtomicGetOrElseUpdate.Syntax
+
+  private val cache = TrieMap.empty[String, String]
+  private val normalizePattern = """\$([^<]+)<[^>]+>""".r
+
+  def generateTraceName(requestHeader: RequestHeader): String = requestHeader.tags.get(Routes.ROUTE_VERB).map { verb ⇒
+    val path = requestHeader.tags(Routes.ROUTE_PATTERN)
+    cache.atomicGetOrElseUpdate(s"$verb$path", {
+      val traceName = {
+        // Convert paths of form GET /foo/bar/$paramname<regexp>/blah to foo.bar.paramname.blah.get
+        val p = normalizePattern.replaceAllIn(path, "$1").replace('/', '.').dropWhile(_ == '.')
+        val normalisedPath = {
+          if (p.lastOption.filter(_ != '.').isDefined) s"$p."
+          else p
+        }
+        s"$normalisedPath${verb.toLowerCase(Locale.ENGLISH)}"
+      }
+      traceName
+    })
+  } getOrElse s"${requestHeader.method}: ${requestHeader.uri}"
+
   def generateHttpClientSegmentName(request: WSRequest): String = request.url
 }
