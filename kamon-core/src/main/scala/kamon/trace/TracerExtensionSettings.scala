@@ -16,7 +16,6 @@
 
 package kamon.trace
 
-import java.util.concurrent.TimeUnit
 import kamon.util.ConfigTools.Syntax
 import com.typesafe.config.Config
 
@@ -37,7 +36,7 @@ object TraceSettings {
       else tracerConfig.getString("sampling") match {
         case "all"       ⇒ SampleAll
         case "random"    ⇒ new RandomSampler(tracerConfig.getInt("random-sampler.chance"))
-        case "ordered"   ⇒ new OrderedSampler(tracerConfig.getInt("ordered-sampler.interval"))
+        case "ordered"   ⇒ new OrderedSampler(tracerConfig.getInt("ordered-sampler.sample-interval"))
         case "threshold" ⇒ new ThresholdSampler(tracerConfig.getFiniteDuration("threshold-sampler.minimum-elapsed-time").toNanos)
       }
 
