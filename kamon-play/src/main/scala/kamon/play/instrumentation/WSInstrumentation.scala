@@ -39,7 +39,7 @@ class WSInstrumentation {
       val segment = ctx.startSegment(segmentName, SegmentCategory.HttpClient, Play.SegmentLibraryName)
       val response = pjp.proceed().asInstanceOf[Future[WSResponse]]
 
-      response.map(result ⇒ segment.finish())(SameThreadExecutionContext)
+      response.onComplete(result ⇒ segment.finish())(SameThreadExecutionContext)
       response
     } getOrElse pjp.proceed()
   }
