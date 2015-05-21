@@ -24,7 +24,7 @@ import spray.http._
 import spray.http.HttpHeaders.RawHeader
 import kamon.trace._
 import kamon.spray.{ ClientInstrumentationLevel, Spray }
-import akka.actor.ActorRef
+import akka.actor.{ ActorRef, Status }
 import scala.concurrent.{ Future, ExecutionContext }
 import akka.util.Timeout
 
@@ -87,7 +87,7 @@ class ClientRequestInstrumentation {
   def aroundDispatchToCommander(pjp: ProceedingJoinPoint, requestContext: TraceContextAware, message: Any): Any = {
     if (requestContext.traceContext.nonEmpty) {
       Tracer.withContext(requestContext.traceContext) {
-        if (message.isInstanceOf[HttpMessageEnd])
+        if (message.isInstanceOf[HttpMessageEnd] || message.isInstanceOf[Status.Failure])
           requestContext.asInstanceOf[SegmentAware].segment.finish()
 
         pjp.proceed()
@@ -124,7 +124,7 @@ class ClientRequestInstrumentation {
         request.asInstanceOf[SegmentAware].segment = segment
 
         val responseFuture = originalSendReceive.apply(request)
-        responseFuture.map(result ⇒ segment.finish())(SameThreadExecutionContext)
+        responseFuture.onComplete(_ ⇒ segment.finish())(SameThreadExecutionContext)
         responseFuture
 
       } getOrElse originalSendReceive.apply(request)
