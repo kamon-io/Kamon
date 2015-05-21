@@ -60,7 +60,7 @@ trait TraceContext {
   def withNewAsyncSegment[T](segmentName: String, category: String, library: String)(code: ⇒ Future[T]): Future[T] = {
     val segment = startSegment(segmentName, category, library)
     val result = code
-    code.onComplete(_ ⇒ segment.finish())(SameThreadExecutionContext)
+    result.onComplete(_ ⇒ segment.finish())(SameThreadExecutionContext)
     result
   }
 
