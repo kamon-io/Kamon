@@ -1,4 +1,4 @@
-Kamon     [![Build Status](https://api.travis-ci.org/kamon-io/Kamon.png)](https://api.travis-ci.org/kamon-io/Kamon.png)
+Kamon     [![Build Status](https://api.travis-ci.org/kamon-io/Kamon.png)](https://travis-ci.org/kamon-io/Kamon/builds)
 =========  
 Kamon is a set of tools for monitoring applications running on the JVM.
 
