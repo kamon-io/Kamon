@@ -6,6 +6,3 @@ Kamon is a set of tools for monitoring applications running on the JVM.
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-core_2.11/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-core_2.11)
 
 
-![First Implementation of Kamon in Action!!!](kamon-dashboard/kamon-dashboard-screenshot.png)
-
-
