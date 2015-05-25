@@ -179,9 +179,7 @@ class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
 
   object MockGlobalTest extends WithFilters(TraceLocalFilter)
 
-  object TraceLocalKey extends TraceLocal.TraceLocalKey {
-    type ValueType = String
-  }
+  object TraceLocalKey extends TraceLocal.TraceLocalKey[String]
 
   object TraceLocalFilter extends Filter {
     override def apply(next: (RequestHeader) ⇒ Future[Result])(header: RequestHeader): Future[Result] = {
