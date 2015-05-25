@@ -17,17 +17,14 @@
 package kamon.trace
 
 import kamon.trace.TraceLocal.TraceLocalKey
-
+import kamon.util.Supplier
 import scala.collection.concurrent.TrieMap
 
 object TraceLocal {
 
-  trait TraceLocalKey {
-    type ValueType
-  }
+  trait TraceLocalKey[T]
 
-  trait AvailableToMdc extends TraceLocalKey {
-    override type ValueType = String
+  trait AvailableToMdc extends TraceLocalKey[String] {
     def mdcKey: String
   }
 
@@ -40,24 +37,32 @@ object TraceLocal {
 
   case class HttpContext(agent: String, uri: String, xforwarded: String)
 
-  object HttpContextKey extends TraceLocal.TraceLocalKey { type ValueType = HttpContext }
+  object HttpContextKey extends TraceLocal.TraceLocalKey[HttpContext]
 
-  def store(key: TraceLocalKey)(value: key.ValueType): Unit = Tracer.currentContext match {
+  def store[T](key: TraceLocalKey[T])(value: Any): Unit = Tracer.currentContext match {
     case ctx: MetricsOnlyContext ⇒ ctx.traceLocalStorage.store(key)(value)
     case EmptyTraceContext       ⇒ // Can't store in the empty context.
   }
 
-  def retrieve(key: TraceLocalKey): Option[key.ValueType] = Tracer.currentContext match {
+  def retrieve[T](key: TraceLocalKey[T]): Option[T] = Tracer.currentContext match {
     case ctx: MetricsOnlyContext ⇒ ctx.traceLocalStorage.retrieve(key)
     case EmptyTraceContext       ⇒ None // Can't retrieve anything from the empty context.
   }
 
+  // Java variant
+  @throws(classOf[NoSuchElementException])
+  def get[T](key: TraceLocalKey[T]): T = retrieve(key).get
+
+  def getOrElse[T](key: TraceLocalKey[T], code: Supplier[T]): T = retrieve(key).getOrElse(code.get)
+
   def storeForMdc(key: String, value: String): Unit = store(AvailableToMdc.fromKey(key))(value)
+
+  def newTraceLocalKey[T]: TraceLocalKey[T] = new TraceLocalKey[T] {}
 }
 
 class TraceLocalStorage {
-  val underlyingStorage = TrieMap[TraceLocal.TraceLocalKey, Any]()
+  val underlyingStorage = TrieMap[TraceLocalKey[_], Any]()
 
-  def store(key: TraceLocalKey)(value: key.ValueType): Unit = underlyingStorage.put(key, value)
-  def retrieve(key: TraceLocalKey): Option[key.ValueType] = underlyingStorage.get(key).map(_.asInstanceOf[key.ValueType])
+  def store[T](key: TraceLocalKey[T])(value: Any): Unit = underlyingStorage.put(key, value)
+  def retrieve[T](key: TraceLocalKey[T]): Option[T] = underlyingStorage.get(key).map(_.asInstanceOf[T])
 }

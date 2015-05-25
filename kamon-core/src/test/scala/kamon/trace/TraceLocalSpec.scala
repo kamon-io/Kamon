@@ -19,6 +19,7 @@ package kamon.trace
 import kamon.testkit.BaseKamonSpec
 import kamon.trace.TraceLocal.AvailableToMdc
 import kamon.trace.logging.MdcKeysSupport
+import kamon.util.Supplier
 import org.scalatest.concurrent.PatienceConfiguration
 import org.scalatest.OptionValues
 import org.slf4j.MDC
@@ -26,7 +27,7 @@ import org.slf4j.MDC
 class TraceLocalSpec extends BaseKamonSpec("trace-local-spec") with PatienceConfiguration with OptionValues with MdcKeysSupport {
   val SampleTraceLocalKeyAvailableToMDC = AvailableToMdc("someKey")
 
-  object SampleTraceLocalKey extends TraceLocal.TraceLocalKey { type ValueType = String }
+  object SampleTraceLocalKey extends TraceLocal.TraceLocalKey[String]
 
   "the TraceLocal storage" should {
     "allow storing and retrieving values" in {
@@ -41,6 +42,20 @@ class TraceLocalSpec extends BaseKamonSpec("trace-local-spec") with PatienceConf
     "return None when retrieving a non existent key" in {
       Tracer.withContext(newContext("non-existent-key")) {
         TraceLocal.retrieve(SampleTraceLocalKey) should equal(None)
+      }
+    }
+
+    "throws an exception when trying to get a non existent key" in {
+      Tracer.withContext(newContext("non-existent-key")) {
+        intercept[NoSuchElementException] {
+          TraceLocal.get(SampleTraceLocalKey)
+        }
+      }
+    }
+
+    "return the given value when retrieving a non existent key" in {
+      Tracer.withContext(newContext("non-existent-key")) {
+        TraceLocal.getOrElse(SampleTraceLocalKey, new Supplier[String] { def get = "optionalValue" }) should equal("optionalValue")
       }
     }
 
