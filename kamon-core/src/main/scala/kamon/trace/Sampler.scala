@@ -45,8 +45,8 @@ class RandomSampler(chance: Int) extends Sampler {
 class OrderedSampler(interval: Int) extends Sampler {
   import OrderedSampler._
 
-  require(interval > 0, "kamon.trace.ordered-sampler.interval cannot be <= 0")
-  assume(interval isPowerOfTwo, "kamon.trace.ordered-sampler.interval must be power of two")
+  require(interval > 0, "kamon.trace.ordered-sampler.sample-interval cannot be <= 0")
+  assume(interval isPowerOfTwo, "kamon.trace.ordered-sampler.sample-interval must be power of two")
 
   private val sequencer = Sequencer()
 

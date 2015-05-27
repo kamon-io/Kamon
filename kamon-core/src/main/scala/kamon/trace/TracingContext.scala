@@ -66,7 +66,7 @@ private[trace] class TracingContext(traceName: String, token: String, izOpen: Bo
       val segment = currentSegments.next()
       if (segment.isClosed)
         segmentsInfo += segment.createSegmentInfo(_startTimestamp, startTimestamp)
-      else
+      else if (log != null)
         log.warning("Segment [{}] will be left out of TraceInfo because it was still open.", segment.name)
     }
 
