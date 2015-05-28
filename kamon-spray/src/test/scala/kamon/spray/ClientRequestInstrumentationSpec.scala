@@ -17,6 +17,7 @@
 package kamon.spray
 
 import akka.testkit.TestProbe
+import akka.actor.Status
 import kamon.testkit.BaseKamonSpec
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{ Millis, Seconds, Span }
@@ -124,6 +125,41 @@ class ClientRequestInstrumentationSpec extends BaseKamonSpec("client-request-ins
         transport.expectMsgType[HttpRequest]
         transport.reply(HttpResponse(entity = "ok"))
         responseFuture.futureValue.entity.asString should be("ok")
+        testContext.finish()
+
+        val traceMetricsSnapshot = takeSnapshotOf("assign-name-to-segment-with-request-level-api", "trace")
+        traceMetricsSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
+
+        val segmentMetricsSnapshot = takeSnapshotOf("request-level /request-level-api-segment", "trace-segment",
+          tags = Map(
+            "trace" -> "assign-name-to-segment-with-request-level-api",
+            "category" -> SegmentCategory.HttpClient,
+            "library" -> Spray.SegmentLibraryName))
+
+        segmentMetricsSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
+      }
+
+      "start and finish a segment in case of error" in {
+        enableAutomaticTraceTokenPropagation()
+        enablePipeliningSegmentCollectionStrategy()
+
+        val transport = TestProbe()
+        val (_, _, bound) = buildSHostConnectorAndServer
+
+        // Initiate a request within the context of a trace
+        val (testContext, responseFuture) = Tracer.withContext(newContext("assign-name-to-segment-with-request-level-api")) {
+          val rF = sendReceive(transport.ref)(ec, 10.seconds) {
+            Get(s"http://${bound.localAddress.getHostName}:${bound.localAddress.getPort}/request-level-api-segment")
+          }
+
+          (Tracer.currentContext, rF)
+        }
+
+        // Receive the request and reply back
+        transport.expectMsgType[HttpRequest]
+        transport.reply(Status.Failure(new Exception("An Error Ocurred")))
+        responseFuture.failed.futureValue.getMessage() should be("An Error Ocurred")
+
         testContext.finish()
 
         val traceMetricsSnapshot = takeSnapshotOf("assign-name-to-segment-with-request-level-api", "trace")
