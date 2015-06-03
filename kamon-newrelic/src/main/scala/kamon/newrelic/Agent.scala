@@ -22,7 +22,7 @@ import akka.io.IO
 import akka.util.Timeout
 import com.typesafe.config.Config
 import kamon.Kamon
-import kamon.metric.{SegmentMetrics, TraceMetrics, MetricsModule, TickMetricSnapshotBuffer}
+import kamon.metric.{ SegmentMetrics, TraceMetrics, MetricsModule, TickMetricSnapshotBuffer }
 import spray.can.Http
 import spray.json._
 import scala.concurrent.Future
@@ -163,20 +163,41 @@ object AgentSettings {
 trait MetricsSubscription {
   import kamon.util.ConfigTools.Syntax
   import scala.collection.JavaConverters._
+  import MetricsSubscription._
 
   def log: LoggingAdapter
 
-  def subscriptions(config: Config) = config getConfig "kamon.newrelic" getConfig "subscriptions"
-
-  def traceOrSegmentMetric(name: String) = name == TraceMetrics.category || name == SegmentMetrics.category
+  def subscriptions(config: Config) = config getConfig "kamon.newrelic" getConfig "custom-metric-subscriptions"
 
   def subscriptionKeys(config: Config) = subscriptions(config).firstLevelKeys filterNot traceOrSegmentMetric
 
-  def subscribeToMetrics(config: Config, metricsSubscriber: ActorRef, extension: MetricsModule): Unit =
+  def subscribeToMetrics(config: Config, metricsSubscriber: ActorRef, extension: MetricsModule): Unit = {
+    subscribeToCustomMetrics(config, metricsSubscriber, extension)
+    subscribeToTransactionMetrics(metricsSubscriber, extension)
+  }
+
+  def subscribeToCustomMetrics(config: Config, metricsSubscriber: ActorRef, extension: MetricsModule): Unit =
     subscriptionKeys(config) foreach { subscriptionCategory ⇒
       subscriptions(config).getStringList(subscriptionCategory).asScala foreach { pattern ⇒
-        log.debug("Subscribing NewRelic reporting for {} : {}", subscriptionCategory, pattern)
+        log.debug("Subscribing NewRelic reporting for custom metric '{}' : {}", subscriptionCategory, pattern)
         extension.subscribe(subscriptionCategory, pattern, metricsSubscriber)
       }
     }
+
+  def subscribeToTransactionMetrics(metricsSubscriber: ActorRef, extension: MetricsModule): Unit =
+    traceAndSegmentMetrics foreach { subscriptionCategory ⇒
+      log.debug("Subscribing NewRelic reporting for transaction metric '{}' : {}", subscriptionCategory, defaultPattern)
+      extension.subscribe(subscriptionCategory, defaultPattern, metricsSubscriber)
+    }
+
+}
+
+object MetricsSubscription {
+
+  private val defaultPattern = "**"
+
+  private val traceAndSegmentMetrics = Seq(TraceMetrics.category, SegmentMetrics.category)
+
+  def traceOrSegmentMetric(name: String) = traceAndSegmentMetrics contains name
+
 }

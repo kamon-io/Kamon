@@ -22,25 +22,28 @@ import kamon.metric.instrument.CollectionContext
 object CustomMetricExtractor extends MetricExtractor {
 
   def extract(settings: AgentSettings, collectionContext: CollectionContext, metrics: Map[Entity, EntitySnapshot]): Map[MetricID, MetricData] = {
-    val (simple, complex) = metrics.partition(simpleMetrics)
-    simple.map(toNewRelicMetric(simpleName)) ++ complex.map(toNewRelicMetric(complexName))
+    val (simple, complex) = metrics filter customMetric partition simpleMetrics
+    simple.flatMap(toNewRelicMetric(simpleName)) ++ complex.flatMap(toNewRelicMetric(complexName))
   }
 
   def simpleName(entity: Entity, metricKey: MetricKey) = s"Custom/${entity.category}/${normalize(entity.name)}"
 
   def complexName(entity: Entity, metricKey: MetricKey) = s"${simpleName(entity, metricKey)}/${metricKey.name}"
 
-  def normalize(name: String) = name.replace('/', '\\').replaceAll("""[\]\[\|\*]""", "_")
+  def normalize(name: String) = name.replace('/', '#').replaceAll("""[\]\[\|\*]""", "_")
+
+  def customMetric(kv: (Entity, EntitySnapshot)): Boolean =
+    !MetricsSubscription.traceOrSegmentMetric(kv._1.category)
 
   def simpleMetrics(kv: (Entity, EntitySnapshot)): Boolean =
     kamon.metric.SingleInstrumentEntityRecorder.AllCategories.contains(kv._1.category)
 
-  def toNewRelicMetric(name: (Entity, MetricKey) ⇒ String)(kv: (Entity, EntitySnapshot)): (MetricID, MetricData) = {
+  def toNewRelicMetric(name: (Entity, MetricKey) ⇒ String)(kv: (Entity, EntitySnapshot)) = {
     val (entity, entitySnapshot) = kv
-    val (metricKey, instrumentSnapshot) = entitySnapshot.metrics.head
-    val nameStr = name(entity, metricKey)
-
-    Metric(instrumentSnapshot, metricKey.unitOfMeasurement, nameStr, None)
+    for {
+      (metricKey, instrumentSnapshot) ← entitySnapshot.metrics
+      nameStr = name(entity, metricKey)
+    } yield Metric(instrumentSnapshot, metricKey.unitOfMeasurement, nameStr, None)
   }
 
 }

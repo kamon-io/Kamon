@@ -31,10 +31,10 @@ class CustomMetricExtractorSpec extends WordSpecLike with Matchers {
         cme.normalize("") should be("")
       }
       "is ok with normal '/'" in {
-        cme.normalize("akka/dispatcher/string") should be("akka\\dispatcher\\string")
+        cme.normalize("akka/dispatcher/string") should be("akka#dispatcher#string")
       }
       "is ok with multiple '//'" in {
-        cme.normalize("akka///dispatcher//string") should be("akka\\\\\\dispatcher\\\\string")
+        cme.normalize("akka///dispatcher//string") should be("akka###dispatcher##string")
       }
       "is ok with other special symbols" in {
         cme.normalize("][|*akka*dispatcher|string[") should be("____akka_dispatcher_string_")
