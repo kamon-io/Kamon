@@ -1,5 +1,5 @@
 /* =========================================================================================
- * Copyright © 2013-2014 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2015 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -23,7 +23,7 @@ object Projects extends Build {
 
   lazy val kamon = Project("kamon", file("."))
     .aggregate(kamonCore, kamonScala, kamonAkka, kamonSpray, kamonNewrelic, kamonPlayground, kamonTestkit,
-      kamonPlay, kamonStatsD, kamonDatadog, kamonSystemMetrics, kamonLogReporter, kamonAkkaRemote, kamonJdbc, kamonAnnotation)
+      kamonStatsD, kamonDatadog, kamonSystemMetrics, kamonLogReporter, kamonAkkaRemote, kamonJdbc, kamonAnnotation, kamonPlay24)
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
     .settings(noPublishing: _*)
@@ -36,7 +36,7 @@ object Projects extends Build {
     .settings(
       javacOptions in Compile ++= Seq("-XDignore.symbol.file"),
       libraryDependencies ++=
-        compile(akkaActor, hdrHistogram) ++
+        compile(akkaActor, hdrHistogram, typesafeConfig) ++
         provided(aspectJ) ++
         optional(logback) ++
         test(scalatest, akkaTestKit, akkaSlf4j, slf4Jul, slf4Log4j, logback))
@@ -124,16 +124,27 @@ object Projects extends Build {
         provided(aspectJ) ++
         test(slf4Api, slf4nop))
 
-  lazy val kamonPlay = Project("kamon-play", file("kamon-play"))
+//  lazy val kamonPlay = Project("kamon-play", file("kamon-play"))
+//    .dependsOn(kamonCore % "compile->compile;test->test", kamonScala, kamonAkka)
+//    .settings(basicSettings: _*)
+//    .settings(formatSettings: _*)
+//    .settings(aspectJSettings: _*)
+//    .settings(
+//      libraryDependencies ++=
+//        compile(play, playWS) ++
+//        provided(aspectJ) ++
+//        test(playTest, akkaTestKit, slf4Api))
+
+  lazy val kamonPlay24 = Project("kamon-play-24x", file("kamon-play-2.4.x"))
     .dependsOn(kamonCore % "compile->compile;test->test", kamonScala, kamonAkka)
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
     .settings(aspectJSettings: _*)
     .settings(
       libraryDependencies ++=
-        compile(play, playWS) ++
+        compile(play24, playWS24, typesafeConfig) ++
         provided(aspectJ) ++
-        test(playTest, akkaTestKit, slf4Api))
+        test(playTest24, akkaTestKit, slf4Api))
 
   lazy val kamonStatsD = Project("kamon-statsd", file("kamon-statsd"))
     .dependsOn(kamonCore % "compile->compile;test->test")

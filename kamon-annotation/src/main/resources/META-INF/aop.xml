@@ -7,8 +7,6 @@
       <aspect name="kamon.annotation.instrumentation.StaticAnnotationInstrumentation"/>
   </aspects>
       <weaver options="-warn:none">
-      <!--  include all -->
-      <include within="*"/>
       <!--  exclude some commons packages -->
       <exclude within="org.apache.commons..*"/>
       <exclude within="org.apache.log4j..*"/>
