@@ -65,14 +65,14 @@ class ActorCellInstrumentation {
       val processingTime = System.nanoTime() - timestampBeforeProcessing
       val timeInMailbox = timestampBeforeProcessing - contextAndTimestamp.captureNanoTime
 
-      cellMetrics.recorder.map { am ⇒
+      cellMetrics.recorder.foreach { am ⇒
         am.processingTime.record(processingTime)
         am.timeInMailbox.record(timeInMailbox)
         am.mailboxSize.decrement()
       }
 
       // In case that this actor is behind a router, record the metrics for the router.
-      envelope.asInstanceOf[RouterAwareEnvelope].routerMetricsRecorder.map { rm ⇒
+      envelope.asInstanceOf[RouterAwareEnvelope].routerMetricsRecorder.foreach { rm ⇒
         rm.processingTime.record(processingTime)
         rm.timeInMailbox.record(timeInMailbox)
       }
@@ -85,7 +85,9 @@ class ActorCellInstrumentation {
   @After("sendMessageInActorCell(cell, envelope)")
   def afterSendMessageInActorCell(cell: ActorCell, envelope: Envelope): Unit = {
     val cellMetrics = cell.asInstanceOf[ActorCellMetrics]
-    cellMetrics.recorder.map(_.mailboxSize.increment())
+    cellMetrics.recorder.foreach { am ⇒
+      am.mailboxSize.increment()
+    }
   }
 
   @Pointcut("execution(* akka.actor.ActorCell.stop()) && this(cell)")
@@ -94,14 +96,14 @@ class ActorCellInstrumentation {
   @After("actorStop(cell)")
   def afterStop(cell: ActorCell): Unit = {
     val cellMetrics = cell.asInstanceOf[ActorCellMetrics]
-    cellMetrics.recorder.map { _ ⇒
+    cellMetrics.recorder.foreach { _ ⇒
       Kamon.metrics.removeEntity(cellMetrics.entity)
     }
 
     // The Stop can't be captured from the RoutedActorCell so we need to put this piece of cleanup here.
     if (cell.isInstanceOf[RoutedActorCell]) {
       val routedCellMetrics = cell.asInstanceOf[RoutedActorCellMetrics]
-      routedCellMetrics.routerRecorder.map { _ ⇒
+      routedCellMetrics.routerRecorder.foreach { _ ⇒
         Kamon.metrics.removeEntity(routedCellMetrics.routerEntity)
       }
     }
@@ -112,8 +114,10 @@ class ActorCellInstrumentation {
 
   @Before("actorInvokeFailure(cell)")
   def beforeInvokeFailure(cell: ActorCell): Unit = {
-    val cellWithMetrics = cell.asInstanceOf[ActorCellMetrics]
-    cellWithMetrics.recorder.map(_.errors.increment())
+    val cellMetrics = cell.asInstanceOf[ActorCellMetrics]
+    cellMetrics.recorder.foreach { am ⇒
+      am.errors.increment()
+    }
 
     // In case that this actor is behind a router, count the errors for the router as well.
     val envelope = cell.currentMessage.asInstanceOf[RouterAwareEnvelope]
@@ -121,7 +125,9 @@ class ActorCellInstrumentation {
       // The ActorCell.handleInvokeFailure(..) method is also called when a failure occurs
       // while processing a system message, in which case ActorCell.currentMessage is always
       // null.
-      envelope.routerMetricsRecorder.map(_.errors.increment())
+      envelope.routerMetricsRecorder.foreach { rm ⇒
+        rm.errors.increment()
+      }
     }
   }
 }
@@ -162,7 +168,7 @@ class RoutedActorCellInstrumentation {
         }
       }
     } finally {
-      cellMetrics.routerRecorder map { routerRecorder ⇒
+      cellMetrics.routerRecorder.foreach { routerRecorder ⇒
         routerRecorder.routingTime.record(System.nanoTime() - timestampBeforeProcessing)
       }
     }
