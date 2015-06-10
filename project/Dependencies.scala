@@ -45,6 +45,9 @@ object Dependencies {
   val akkaTestKit       = "com.typesafe.akka"         %%  "akka-testkit"          % akkaVersion
   val akkaRemote        = "com.typesafe.akka"         %%  "akka-remote"           % akkaVersion
   val akkaCluster       = "com.typesafe.akka"         %%  "akka-cluster"          % akkaVersion
+  val akkaStreams       = "com.typesafe.akka"         %%  "akka-stream-experimental"    % "1.0-RC3"
+  val akkaHttpCore      = "com.typesafe.akka"         %%  "akka-http-core-experimental" % "1.0-RC3"
+  val akkaHttp          = "com.typesafe.akka"         %%  "akka-http-experimental"      % "1.0-RC3"
   val play              = "com.typesafe.play"         %%  "play"                  % playVersion
   val playWS            = "com.typesafe.play"         %%  "play-ws"               % playVersion
   val playTest          = "org.scalatestplus"         %%  "play"                  % "1.2.0"
