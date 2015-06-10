@@ -38,13 +38,15 @@ class HttpRequestInstrumentation extends ServerInstrumentationUtils {
   @After("httpRequestCreation(request)")
   def afterHttpRequestCreation(request: HttpRequest with TraceContextAware): Unit = {
     val akkaHttpServerExtension = Kamon(AkkaHttpServer)
-    val serverMetrics = akkaHttpServerExtension.serverMetrics
+    val incomingContext = Tracer.currentContext
 
-    val defaultTraceName = akkaHttpServerExtension.generateTraceName(request)
-    val token = request.headers.find(_.name == akkaHttpServerExtension.settings.traceTokenHeaderName).map(_.value)
+    if (incomingContext.isEmpty) {
+      val defaultTraceName = akkaHttpServerExtension.generateTraceName(request)
+      val token = request.headers.find(_.name == akkaHttpServerExtension.settings.traceTokenHeaderName).map(_.value)
 
-    val newContext = Kamon.tracer.newContext(defaultTraceName, token)
-    Tracer.setCurrentContext(newContext)
+      val newContext = Kamon.tracer.newContext(defaultTraceName, token)
+      Tracer.setCurrentContext(newContext)
+    }
 
     request.traceContext
 
