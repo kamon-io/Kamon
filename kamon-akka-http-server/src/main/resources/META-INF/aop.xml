@@ -1,0 +1,15 @@
+<!DOCTYPE aspectj PUBLIC "-//AspectJ//DTD//EN" "http://www.eclipse.org/aspectj/dtd/aspectj.dtd">
+
+<aspectj>
+  <aspects>
+    <!-- Server -->
+    <aspect name="kamon.akka.http.server.instrumentation.HttpRequestInstrumentation"/>
+    <aspect name="kamon.akka.http.server.instrumentation.RequestContextInstrumentation"/>
+    <aspect name="kamon.akka.http.server.instrumentation.HttpResponseInstrumentation"/>
+    <aspect name="kamon.akka.http.server.instrumentation.ServerInstrumentation"/>
+  </aspects>
+
+  <weaver>
+    <include within="akka..*"/>
+  </weaver>
+</aspectj>
