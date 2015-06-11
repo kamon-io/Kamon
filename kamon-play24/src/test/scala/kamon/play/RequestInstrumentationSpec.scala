@@ -39,7 +39,6 @@ import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 
 class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
-  Kamon.start()
   System.setProperty("config.file", "./kamon-play/src/test/resources/conf/application.conf")
 
   override lazy val port: Port = 19002
@@ -146,16 +145,6 @@ class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
       Kamon.metrics.find("show.some.id.get", "trace") must not be empty
     }
 
-    "include HttpContext information for help to diagnose possible errors" in {
-      Await.result(WS.url(s"http://localhost:$port/getRouted").get(), 10 seconds)
-      route(FakeRequest(GET, "/default").withHeaders("User-Agent" -> "Fake-Agent"))
-
-      val httpCtx = TraceLocal.retrieve(HttpContextKey).get
-      httpCtx.agent must be("Fake-Agent")
-      httpCtx.uri must be("/default")
-      httpCtx.xforwarded must be("unknown")
-    }
-
     "record http server metrics for all processed requests" in {
       val collectionContext = CollectionContext(100)
       Kamon.metrics.find("play-server", "http-server").get.collect(collectionContext)
@@ -196,6 +185,7 @@ object TraceLocalKey extends TraceLocal.TraceLocalKey {
 }
 
 class TraceLocalFilter extends Filter {
+
   val traceLocalStorageValue = "localStorageValue"
   val traceLocalStorageKey = "localStorageKey"
   val traceLocalStorageHeader = traceLocalStorageKey -> traceLocalStorageValue
@@ -253,8 +243,8 @@ class Routes @Inject() (application: controllers.Application) extends GeneratedR
   }
 
   override def errorHandler: HttpErrorHandler = new HttpErrorHandler() {
-    override def onClientError(request: RequestHeader, statusCode: Int, message: String): Future[Result] = ???
-    override def onServerError(request: RequestHeader, exception: Throwable): Future[Result] = ???
+    override def onClientError(request: RequestHeader, statusCode: Int, message: String): Future[Result] = Future.successful(Results.InternalServerError)
+    override def onServerError(request: RequestHeader, exception: Throwable): Future[Result] = Future.successful(Results.InternalServerError)
   }
 }
 

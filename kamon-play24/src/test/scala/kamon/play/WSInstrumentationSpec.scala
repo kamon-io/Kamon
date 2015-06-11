@@ -16,7 +16,6 @@
 
 package kamon.play
 
-import kamon.Kamon
 import kamon.metric.{ Entity, EntitySnapshot, TraceMetrics }
 import kamon.trace.{ Tracer, TraceContext, SegmentCategory }
 import org.scalatest.{ Matchers, WordSpecLike }
@@ -31,8 +30,6 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 
 class WSInstrumentationSpec extends WordSpecLike with Matchers with OneServerPerSuite {
-  Kamon.start()
-
   System.setProperty("config.file", "./kamon-play/src/test/resources/conf/application.conf")
 
   override lazy val port: Port = 19003

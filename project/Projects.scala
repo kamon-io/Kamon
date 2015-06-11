@@ -125,7 +125,7 @@ object Projects extends Build {
         test(slf4Api, slf4nop))
 
 //  lazy val kamonPlay = Project("kamon-play", file("kamon-play"))
-//    .dependsOn(kamonCore % "compile->compile;test->test", kamonScala, kamonAkka)
+//    .dependsOn(kamonCore % "compile->compile;test->test", kamonScala)
 //    .settings(basicSettings: _*)
 //    .settings(formatSettings: _*)
 //    .settings(aspectJSettings: _*)
@@ -135,8 +135,8 @@ object Projects extends Build {
 //        provided(aspectJ) ++
 //        test(playTest, akkaTestKit, slf4Api))
 
-  lazy val kamonPlay24 = Project("kamon-play-24x", file("kamon-play-2.4.x"))
-    .dependsOn(kamonCore % "compile->compile;test->test", kamonScala, kamonAkka)
+  lazy val kamonPlay24 = Project("kamon-play24", file("kamon-play24"))
+    .dependsOn(kamonCore % "compile->compile;test->test", kamonScala)
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
     .settings(aspectJSettings: _*)

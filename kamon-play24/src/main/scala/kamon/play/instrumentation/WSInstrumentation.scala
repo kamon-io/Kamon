@@ -24,6 +24,7 @@ import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation.{ Around, Aspect, Pointcut }
 import play.api.libs.ws.{ WSRequest, WSResponse }
 import scala.concurrent.Future
+import scala.util.Try
 
 @Aspect
 class WSInstrumentation {
