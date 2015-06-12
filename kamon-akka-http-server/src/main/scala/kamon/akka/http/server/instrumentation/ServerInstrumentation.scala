@@ -150,7 +150,7 @@ trait ServerInstrumentationUtils {
   }
 
   def attachTraceTokenHeader(response: HttpResponse, traceTokenHeaderName: String, traceToken: String): HttpResponse =
-    response.withHeaders(response.headers :+ RawHeader(traceTokenHeaderName, traceToken))
+    response.withHeaders(response.headers.filterNot(_.name == traceTokenHeaderName) :+ RawHeader(traceTokenHeaderName, traceToken))
 }
 
 object ServerInstrumentationUtils extends ServerInstrumentationUtils
