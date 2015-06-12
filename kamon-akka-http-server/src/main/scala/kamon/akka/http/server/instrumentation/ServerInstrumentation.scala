@@ -90,7 +90,7 @@ class HttpResponseInstrumentation extends ServerInstrumentationUtils {
     val response: HttpResponse = pjp.proceed().asInstanceOf[HttpResponse]
 
     val proceed =
-      if (akkaHttpServerExtension.settings.includeTraceTokenHeader) {
+      if (!incomingContext.isEmpty && akkaHttpServerExtension.settings.includeTraceTokenHeader) {
         val responseWithTraceTokenHeader =
           attachTraceTokenHeader(
             response,
@@ -101,7 +101,9 @@ class HttpResponseInstrumentation extends ServerInstrumentationUtils {
         response
       }
 
-    incomingContext.finish()
+    if (incomingContext.isOpen) {
+      incomingContext.finish()
+    }
 
     recordAkkaHttpServerMetrics(response, incomingContext.name, akkaHttpServerExtension)
 
