@@ -10,6 +10,6 @@
   </aspects>
 
   <weaver>
-    <include within="akka..*"/>
+    <include within="*"/>
   </weaver>
 </aspectj>
