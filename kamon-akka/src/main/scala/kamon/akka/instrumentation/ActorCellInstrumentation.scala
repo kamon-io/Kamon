@@ -21,7 +21,7 @@ import akka.dispatch.{ Envelope, MessageDispatcher }
 import akka.routing.RoutedActorCell
 import kamon.Kamon
 import kamon.akka.{ RouterMetrics, ActorMetrics }
-import kamon.metric.Entity
+import kamon.metric.{ MetricsModule, Entity }
 import kamon.trace._
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
@@ -45,6 +45,7 @@ class ActorCellInstrumentation {
 
       cellMetrics.entity = actorEntity
       cellMetrics.recorder = Some(actorMetricsRecorder)
+      cellMetrics.metrics = Kamon.metrics
     }
   }
 
@@ -94,17 +95,18 @@ class ActorCellInstrumentation {
   def actorStop(cell: ActorCell): Unit = {}
 
   @After("actorStop(cell)")
-  def afterStop(cell: ActorCell): Unit = {
+  def afterActorStop(cell: ActorCell): Unit = {
+
     val cellMetrics = cell.asInstanceOf[ActorCellMetrics]
     cellMetrics.recorder.foreach { _ ⇒
-      Kamon.metrics.removeEntity(cellMetrics.entity)
+      cellMetrics.metrics.removeEntity(cellMetrics.entity)
     }
 
     // The Stop can't be captured from the RoutedActorCell so we need to put this piece of cleanup here.
     if (cell.isInstanceOf[RoutedActorCell]) {
       val routedCellMetrics = cell.asInstanceOf[RoutedActorCellMetrics]
       routedCellMetrics.routerRecorder.foreach { _ ⇒
-        Kamon.metrics.removeEntity(routedCellMetrics.routerEntity)
+        cellMetrics.metrics.removeEntity(routedCellMetrics.routerEntity)
       }
     }
   }
@@ -145,6 +147,7 @@ class RoutedActorCellInstrumentation {
     if (Kamon.metrics.shouldTrack(routerEntity)) {
       val cellMetrics = cell.asInstanceOf[RoutedActorCellMetrics]
 
+      cellMetrics.metrics = Kamon.metrics
       cellMetrics.routerEntity = routerEntity
       cellMetrics.routerRecorder = Some(Kamon.metrics.entity(RouterMetrics, routerEntity))
     }
@@ -175,12 +178,16 @@ class RoutedActorCellInstrumentation {
   }
 }
 
-trait ActorCellMetrics {
+trait ActorCellMetricModule {
+  var metrics: MetricsModule = _
+}
+
+trait ActorCellMetrics extends ActorCellMetricModule {
   var entity: Entity = _
   var recorder: Option[ActorMetrics] = None
 }
 
-trait RoutedActorCellMetrics {
+trait RoutedActorCellMetrics extends ActorCellMetricModule {
   var routerEntity: Entity = _
   var routerRecorder: Option[RouterMetrics] = None
 }
@@ -206,7 +213,6 @@ class MetricsIntoActorCellsMixin {
 
   @DeclareMixin("akka.routing.RoutedActorCell")
   def mixinActorCellMetricsToRoutedActorCell: RoutedActorCellMetrics = new RoutedActorCellMetrics {}
-
 }
 
 @Aspect
