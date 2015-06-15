@@ -90,14 +90,16 @@ class ActorCellInstrumentation {
     }
   }
 
-  @Pointcut("execution(* akka.actor.ActorCell.stop()) && this(cell)")
-  def actorStop(cell: ActorCell): Unit = {}
+  @Pointcut("execution(* akka.actor.ActorCell.stop()) && this(cell) && args(lookupDataAware)")
+  def actorStop(cell: ActorCell, lookupDataAware: LookupDataAware): Unit = {}
 
-  @After("actorStop(cell)")
-  def afterStop(cell: ActorCell): Unit = {
+  @After("actorStop(cell, lookupDataAware)")
+  def afterStop(cell: ActorCell, lookupDataAware: LookupDataAware): Unit = {
+    import lookupDataAware.lookupData
+
     val cellMetrics = cell.asInstanceOf[ActorCellMetrics]
     cellMetrics.recorder.foreach { _ ⇒
-      Kamon.metrics.removeEntity(cellMetrics.entity)
+      lookupData.metrics.removeEntity(cellMetrics.entity)
     }
 
     // The Stop can't be captured from the RoutedActorCell so we need to put this piece of cleanup here.
