@@ -20,8 +20,8 @@ import akka.actor._
 import akka.dispatch.{ Envelope, MessageDispatcher }
 import akka.routing.RoutedActorCell
 import kamon.Kamon
-import kamon.akka.{ RouterMetrics, ActorMetrics }
-import kamon.metric.Entity
+import kamon.akka.{ ActorMetrics, RouterMetrics }
+import kamon.metric.{ Entity, MetricsModule }
 import kamon.trace._
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
@@ -45,6 +45,7 @@ class ActorCellInstrumentation {
 
       cellMetrics.entity = actorEntity
       cellMetrics.recorder = Some(actorMetricsRecorder)
+      cellMetrics.metrics = Kamon.metrics
     }
   }
 
@@ -96,16 +97,12 @@ class ActorCellInstrumentation {
   @After("actorStop(cell)")
   def afterStop(cell: ActorCell): Unit = {
     val cellMetrics = cell.asInstanceOf[ActorCellMetrics]
-    cellMetrics.recorder.foreach { _ ⇒
-      Kamon.metrics.removeEntity(cellMetrics.entity)
-    }
+    cellMetrics.unsubscribe()
 
     // The Stop can't be captured from the RoutedActorCell so we need to put this piece of cleanup here.
     if (cell.isInstanceOf[RoutedActorCell]) {
       val routedCellMetrics = cell.asInstanceOf[RoutedActorCellMetrics]
-      routedCellMetrics.routerRecorder.foreach { _ ⇒
-        Kamon.metrics.removeEntity(routedCellMetrics.routerEntity)
-      }
+      routedCellMetrics.unsubscribe()
     }
   }
 
@@ -145,6 +142,7 @@ class RoutedActorCellInstrumentation {
     if (Kamon.metrics.shouldTrack(routerEntity)) {
       val cellMetrics = cell.asInstanceOf[RoutedActorCellMetrics]
 
+      cellMetrics.metrics = Kamon.metrics
       cellMetrics.routerEntity = routerEntity
       cellMetrics.routerRecorder = Some(Kamon.metrics.entity(RouterMetrics, routerEntity))
     }
@@ -175,14 +173,31 @@ class RoutedActorCellInstrumentation {
   }
 }
 
-trait ActorCellMetrics {
-  var entity: Entity = _
-  var recorder: Option[ActorMetrics] = None
+trait WithMetricModule {
+  var metrics: MetricsModule = _
 }
 
-trait RoutedActorCellMetrics {
+trait ActorCellMetrics extends WithMetricModule {
+
+  var entity: Entity = _
+  var recorder: Option[ActorMetrics] = None
+
+  def unsubscribe() = {
+    recorder.foreach { _ ⇒
+      metrics.removeEntity(entity)
+    }
+  }
+}
+
+trait RoutedActorCellMetrics extends WithMetricModule {
   var routerEntity: Entity = _
   var routerRecorder: Option[RouterMetrics] = None
+
+  def unsubscribe() = {
+    routerRecorder.foreach { _ ⇒
+      metrics.removeEntity(routerEntity)
+    }
+  }
 }
 
 trait RouterAwareEnvelope {
