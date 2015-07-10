@@ -313,8 +313,11 @@ private[kamon] class MetricsModuleImpl(config: Config) extends MetricsModule {
     }, _.cleanup).asInstanceOf[T]
   }
 
-  def removeEntity(entity: Entity): Boolean =
-    _trackedEntities.remove(entity).isDefined
+  def removeEntity(entity: Entity): Boolean = {
+    val removedEntity = _trackedEntities.remove(entity)
+    removedEntity.foreach(_.cleanup)
+    removedEntity.isDefined
+  }
 
   def find(entity: Entity): Option[EntityRecorder] =
     _trackedEntities.get(entity)
