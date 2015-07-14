@@ -16,16 +16,11 @@
 
 package kamon.trace
 
-import java.net.InetAddress
-import java.util.concurrent.atomic.AtomicLong
-
 import akka.actor._
 import com.typesafe.config.Config
 import kamon.Kamon
 import kamon.metric.MetricsModule
 import kamon.util._
-
-import scala.util.Try
 
 trait TracerModule {
   def newContext(name: String): TraceContext
@@ -96,14 +91,13 @@ object Tracer {
 
 private[kamon] class TracerModuleImpl(metricsExtension: MetricsModule, config: Config) extends TracerModule {
   private val _settings = TraceSettings(config)
-  private val _hostnamePrefix = Try(InetAddress.getLocalHost.getHostName).getOrElse("unknown-localhost")
-  private val _tokenCounter = new AtomicLong
 
   private val _subscriptions = new LazyActorRef
   private val _incubator = new LazyActorRef
+  private val _dynamic = new akka.actor.ReflectiveDynamicAccess(getClass.getClassLoader)
+  private val _tokenGenerator = _dynamic.createInstanceFor[Function0[String]](_settings.tokenGeneratorFQN, Nil).get // let's bubble up any problems.
 
-  private def newToken: String =
-    _hostnamePrefix + "-" + String.valueOf(_tokenCounter.incrementAndGet())
+  private def newToken: String = _tokenGenerator()
 
   def newContext(name: String): TraceContext =
     createTraceContext(name, None)

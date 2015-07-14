@@ -16,8 +16,13 @@
 
 package kamon.trace
 
+import java.net.InetAddress
+import java.util.concurrent.atomic.AtomicLong
+
 import kamon.util.{ NanoInterval, Sequencer }
 import scala.concurrent.forkjoin.ThreadLocalRandom
+
+import scala.util.Try
 
 trait Sampler {
   def shouldTrace: Boolean
@@ -69,5 +74,14 @@ class ThresholdSampler(thresholdInNanoseconds: Long) extends Sampler {
 
   def shouldTrace: Boolean = true
   def shouldReport(traceElapsedTime: NanoInterval): Boolean = traceElapsedTime.nanos >= thresholdInNanoseconds
+}
+
+class DefaultTokenGenerator extends Function0[String] {
+  private val _hostnamePrefix = Try(InetAddress.getLocalHost.getHostName).getOrElse("unknown-localhost")
+  private val _tokenCounter = new AtomicLong
+
+  def apply(): String = {
+    _hostnamePrefix + "-" + String.valueOf(_tokenCounter.incrementAndGet())
+  }
 }
 
