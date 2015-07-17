@@ -16,6 +16,7 @@ package kamon
 
 import _root_.akka.actor
 import _root_.akka.actor._
+import _root_.akka.event.Logging
 import com.typesafe.config.{ ConfigFactory, Config }
 import kamon.metric._
 import kamon.trace.{ TracerModuleImpl, TracerModule }
@@ -25,10 +26,14 @@ object Kamon {
 
   private case class KamonCoreComponents(metrics: MetricsModule, tracer: TracerModule)
 
+  private val shouldAutoStart = isSystemPropertyEnabled("kamon.auto-start")
+  private val shouldWarnOnDuplicateStart = !isSystemPropertyEnabled("kamon.disable-duplicate-start-warning")
+
   @volatile private var _system: ActorSystem = _
   @volatile private var _coreComponents: Option[KamonCoreComponents] = None
 
   def start(config: Config): Unit = synchronized {
+
     def resolveInternalConfig: Config = {
       val internalConfig = config.getConfig("kamon.internal-config")
 
@@ -49,8 +54,14 @@ object Kamon {
       tracer.start(_system)
       _system.registerExtension(ModuleLoader)
 
-    } else sys.error("Kamon has already been started.")
+    } else if (shouldWarnOnDuplicateStart) {
+      val logger = Logging(_system, "Kamon")
+      logger.warning("An attempt to start Kamon has been made, but Kamon has already been started.")
+    }
   }
+
+  private def isSystemPropertyEnabled(propertyName: String): Boolean =
+    sys.props.get(propertyName).map(_.equals("true")).getOrElse(false)
 
   def start(): Unit =
     start(ConfigFactory.load)
@@ -79,7 +90,14 @@ object Kamon {
     apply(key)
 
   private def ifStarted[T](thunk: KamonCoreComponents ⇒ T): T =
-    _coreComponents.map(thunk(_)) getOrElse (sys.error("Kamon has not been started yet."))
+    _coreComponents.map(thunk(_)) getOrElse {
+      if (shouldAutoStart) {
+        start()
+        thunk(_coreComponents.get)
+
+      } else sys.error("Kamon has not been started yet. You must either explicitlt call Kamon.start(...) or enable " +
+        "automatic startup by adding -Dkamon.auto-start=true to your JVM options.")
+    }
 
 }
 

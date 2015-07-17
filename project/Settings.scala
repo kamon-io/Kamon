@@ -32,8 +32,10 @@ object Settings {
     crossScalaVersions      := Seq("2.10.5", "2.11.6"),
     resolvers              ++= Dependencies.resolutionRepos,
     fork in run             := true,
-    parallelExecution in Test := false,
-    testGrouping in Test    := singleTestPerJvm((definedTests in Test).value, (javaOptions in Test).value),
+    //parallelExecution in Test := false,
+    //testGrouping in Test    := singleTestPerJvm((definedTests in Test).value, (javaOptions in Test).value),
+    javaOptions in Test     := Seq(
+      "-Dkamon.auto-start=true"),
     javacOptions            := Seq(
       "-Xlint:-options",
       "-source", JavaVersion, "-target", JavaVersion),
