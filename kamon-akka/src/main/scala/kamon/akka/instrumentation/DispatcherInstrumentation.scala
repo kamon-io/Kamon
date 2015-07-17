@@ -24,7 +24,7 @@ import akka.dispatch._
 import akka.kamon.instrumentation.LookupDataAware.LookupData
 import kamon.Kamon
 import kamon.akka.{ AkkaDispatcherMetrics, ThreadPoolExecutorDispatcherMetrics, ForkJoinPoolDispatcherMetrics }
-import kamon.metric.{MetricsModule, Entity}
+import kamon.metric.{ MetricsModule, Entity }
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
 
@@ -121,7 +121,6 @@ class DispatcherInstrumentation {
   @Pointcut("execution(* akka.dispatch.Dispatcher.LazyExecutorServiceDelegate.shutdown()) && this(lazyExecutor)")
   def lazyExecutorShutdown(lazyExecutor: LookupDataAware): Unit = {}
 
-
   @After("lazyExecutorShutdown(lazyExecutor)")
   def afterLazyExecutorShutdown(lazyExecutor: LookupDataAware): Unit = {
     import lazyExecutor.lookupData
@@ -130,16 +129,15 @@ class DispatcherInstrumentation {
       lazyExecutor.asInstanceOf[ExecutorServiceDelegate].executor match {
         case fjp: AkkaForkJoinPool ⇒
           lookupData.metrics.removeEntity(Entity(lookupData.actorSystem.name + "/" + lookupData.dispatcherName,
-          AkkaDispatcherMetrics.Category, tags = Map("dispatcher-type" -> "fork-join-pool")))
+            AkkaDispatcherMetrics.Category, tags = Map("dispatcher-type" -> "fork-join-pool")))
 
         case tpe: ThreadPoolExecutor ⇒
           lookupData.metrics.removeEntity(Entity(lookupData.actorSystem.name + "/" + lookupData.dispatcherName,
-          AkkaDispatcherMetrics.Category, tags = Map("dispatcher-type" -> "thread-pool-executor")))
+            AkkaDispatcherMetrics.Category, tags = Map("dispatcher-type" -> "thread-pool-executor")))
 
         case other ⇒ // nothing to remove.
       }
   }
-
 
 }
 
@@ -169,7 +167,7 @@ trait LookupDataAware {
 }
 
 object LookupDataAware {
-  case class LookupData(dispatcherName: String, actorSystem: ActorSystem, metrics:MetricsModule = Kamon.metrics)
+  case class LookupData(dispatcherName: String, actorSystem: ActorSystem, metrics: MetricsModule = Kamon.metrics)
 
   private val _currentDispatcherLookupData = new ThreadLocal[LookupData]
 
