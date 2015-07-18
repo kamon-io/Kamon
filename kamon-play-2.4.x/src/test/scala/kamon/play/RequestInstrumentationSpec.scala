@@ -177,9 +177,7 @@ class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
   }
 }
 
-object TraceLocalKey extends TraceLocal.TraceLocalKey {
-  type ValueType = String
-}
+object TraceLocalKey extends TraceLocal.TraceLocalKey[String]
 
 class TraceLocalFilter extends Filter {
 
