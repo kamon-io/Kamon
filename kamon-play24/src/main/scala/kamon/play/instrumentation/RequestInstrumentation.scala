@@ -32,7 +32,7 @@ class RequestInstrumentation {
   def mixinContextAwareNewRequest: TraceContextAware = TraceContextAware.default
 
   @Before("call(* play.api.http.DefaultHttpRequestHandler.routeRequest(..)) && args(requestHeader)")
-  def beforeRouteRequest(requestHeader: RequestHeader): Unit = {
+  def routeRequest(requestHeader: RequestHeader): Unit = {
     val playExtension = Kamon(Play)
 
     val token = if (playExtension.includeTraceToken) {
@@ -45,27 +45,24 @@ class RequestInstrumentation {
   @Around("call(* play.api.http.HttpFilters.filters(..))")
   def filters(pjp: ProceedingJoinPoint): Any = {
     val filter = new EssentialFilter {
-      def apply(next: EssentialAction): EssentialAction = {
-        val action = (requestHeader: RequestHeader) ⇒ {
-          val playExtension = Kamon(Play)
+      def apply(next: EssentialAction) = EssentialAction((requestHeader) ⇒ {
+        val playExtension = Kamon(Play)
 
-          def onResult(result: Result): Result = {
-            Tracer.currentContext.collect { ctx ⇒
-              ctx.finish()
-              playExtension.httpServerMetrics.recordResponse(ctx.name, result.header.status.toString)
+        def onResult(result: Result): Result = {
+          Tracer.currentContext.collect { ctx ⇒
+            ctx.finish()
+            playExtension.httpServerMetrics.recordResponse(ctx.name, result.header.status.toString)
 
-              if (playExtension.includeTraceToken) result.withHeaders(playExtension.traceTokenHeaderName -> ctx.token)
-              else result
+            if (playExtension.includeTraceToken) result.withHeaders(playExtension.traceTokenHeaderName -> ctx.token)
+            else result
 
-            } getOrElse result
-          }
-          //override the current trace name
-          Tracer.currentContext.rename(playExtension.generateTraceName(requestHeader))
-          // Invoke the action
-          next(requestHeader).map(onResult)(SameThreadExecutionContext)
+          } getOrElse result
         }
-        EssentialAction(action)
-      }
+        //override the current trace name
+        Tracer.currentContext.rename(playExtension.generateTraceName(requestHeader))
+        // Invoke the action
+        next(requestHeader).map(onResult)(SameThreadExecutionContext)
+      })
     }
     pjp.proceed().asInstanceOf[Seq[EssentialFilter]] :+ filter
   }

@@ -16,6 +16,7 @@
 
 package kamon.play
 
+import kamon.Kamon
 import kamon.metric.{ Entity, EntitySnapshot, TraceMetrics }
 import kamon.trace.{ Tracer, TraceContext, SegmentCategory }
 import org.scalatest.{ Matchers, WordSpecLike }

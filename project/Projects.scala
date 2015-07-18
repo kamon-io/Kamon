@@ -23,7 +23,7 @@ object Projects extends Build {
 
   lazy val kamon = Project("kamon", file("."))
     .aggregate(kamonCore, kamonScala, kamonAkka, kamonSpray, kamonNewrelic, kamonPlayground, kamonTestkit,
-      kamonStatsD, kamonDatadog, kamonSystemMetrics, kamonLogReporter, kamonAkkaRemote, kamonJdbc, kamonAnnotation, kamonPlay24)
+      kamonStatsD, kamonDatadog, kamonSystemMetrics, kamonLogReporter, kamonAkkaRemote, kamonJdbc, kamonAnnotation, kamonPlay24, kamonPlay)
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
     .settings(noPublishing: _*)
@@ -124,16 +124,16 @@ object Projects extends Build {
         provided(aspectJ) ++
         test(slf4Api, slf4nop))
 
-//  lazy val kamonPlay = Project("kamon-play", file("kamon-play"))
-//    .dependsOn(kamonCore % "compile->compile;test->test", kamonScala)
-//    .settings(basicSettings: _*)
-//    .settings(formatSettings: _*)
-//    .settings(aspectJSettings: _*)
-//    .settings(
-//      libraryDependencies ++=
-//        compile(play, playWS) ++
-//        provided(aspectJ) ++
-//        test(playTest, akkaTestKit, slf4Api))
+  lazy val kamonPlay = Project("kamon-play", file("kamon-play"))
+    .dependsOn(kamonCore % "compile->compile;test->test", kamonScala)
+    .settings(basicSettings: _*)
+    .settings(formatSettings: _*)
+    .settings(aspectJSettings: _*)
+    .settings(
+      libraryDependencies ++=
+        compile(play, playWS) ++
+        provided(aspectJ) ++
+        test(playTest, akkaTestKit, slf4Api))
 
   lazy val kamonPlay24 = Project("kamon-play24", file("kamon-play24"))
     .dependsOn(kamonCore % "compile->compile;test->test", kamonScala)

@@ -20,11 +20,10 @@ import javax.inject.Inject
 import kamon.Kamon
 import kamon.metric.instrument.CollectionContext
 import kamon.play.action.TraceName
-import kamon.trace.TraceLocal.HttpContextKey
-import kamon.trace.{ Tracer, TraceLocal }
+import kamon.trace.{ TraceLocal, Tracer }
 import org.scalatestplus.play._
 import play.api.DefaultGlobal
-import play.api.http.{ HttpErrorHandler, Writeable }
+import play.api.http.{ HttpErrorHandler, HttpFilters, Writeable }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.ws.WS
 import play.api.mvc.Results.Ok
@@ -33,7 +32,6 @@ import play.api.routing.SimpleRouter
 import play.api.test.Helpers._
 import play.api.test._
 import play.core.routing._
-import play.api.http.HttpFilters
 
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
@@ -45,7 +43,6 @@ class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
   val executor = scala.concurrent.ExecutionContext.Implicits.global
 
   implicit override lazy val app = FakeApplication(withRoutes = {
-
     case ("GET", "/async") ⇒
       Action.async {
         Future {
