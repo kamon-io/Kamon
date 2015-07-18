@@ -25,7 +25,7 @@ import net.virtualvoid.sbt.graph.Plugin.graphSettings
 
 object Settings {
 
-  val JavaVersion = "1.6"
+  val JavaVersion = "1.8"
   val ScalaVersion = "2.11.6"
 
   lazy val basicSettings = Seq(

@@ -31,7 +31,9 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 
 class WSInstrumentationSpec extends WordSpecLike with Matchers with OneServerPerSuite {
-  System.setProperty("config.file", "./kamon-play/src/test/resources/conf/application.conf")
+  Kamon.start()
+
+  System.setProperty("config.file", "./kamon-play-2.3.x/src/test/resources/conf/application.conf")
 
   override lazy val port: Port = 19003
   implicit override lazy val app = FakeApplication(withRoutes = {

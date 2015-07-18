@@ -34,7 +34,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 
 class LoggerLikeInstrumentationSpec extends PlaySpec with OneServerPerSuite with BeforeAndAfter {
-  System.setProperty("config.file", "./kamon-play/src/test/resources/conf/application.conf")
+  System.setProperty("config.file", "./kamon-play-2.4.x/src/test/resources/conf/application.conf")
 
   val executor = scala.concurrent.ExecutionContext.Implicits.global
 

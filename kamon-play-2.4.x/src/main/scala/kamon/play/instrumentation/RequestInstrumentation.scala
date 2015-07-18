@@ -29,7 +29,7 @@ import play.api.mvc._
 class RequestInstrumentation {
 
   @DeclareMixin("play.api.mvc.RequestHeader+")
-  def mixinContextAwareNewRequest: TraceContextAware = TraceContextAware.default
+  def mixinContextAwareToRequestHeader: TraceContextAware = TraceContextAware.default
 
   @Before("call(* play.api.http.DefaultHttpRequestHandler.routeRequest(..)) && args(requestHeader)")
   def routeRequest(requestHeader: RequestHeader): Unit = {

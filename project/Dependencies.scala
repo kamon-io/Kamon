@@ -26,7 +26,8 @@ object Dependencies {
   val akkaVersion       = "2.3.10"
   val aspectjVersion    = "1.8.5"
   val slf4jVersion      = "1.7.7"
-  val playVersion       = "2.3.9"
+  val play23Version     = "2.3.9"
+  val play24Version     = "2.4.2"
   val sigarVersion      = "1.6.5.132"
 
   val sprayJson         = "io.spray"                  %%  "spray-json"            % "1.3.1"
@@ -45,9 +46,6 @@ object Dependencies {
   val akkaTestKit       = "com.typesafe.akka"         %%  "akka-testkit"          % akkaVersion
   val akkaRemote        = "com.typesafe.akka"         %%  "akka-remote"           % akkaVersion
   val akkaCluster       = "com.typesafe.akka"         %%  "akka-cluster"          % akkaVersion
-  val play              = "com.typesafe.play"         %%  "play"                  % playVersion
-  val playWS            = "com.typesafe.play"         %%  "play-ws"               % playVersion
-  val playTest          = "org.scalatestplus"         %%  "play"                  % "1.2.0"
   val slf4Api           = "org.slf4j"                 %   "slf4j-api"             % slf4jVersion
   val slf4nop           = "org.slf4j"                 %   "slf4j-nop"             % slf4jVersion
   val slf4Jul           = "org.slf4j"                 %   "jul-to-slf4j"          % slf4jVersion
@@ -57,10 +55,14 @@ object Dependencies {
   val h2                = "com.h2database"            %   "h2"                    % "1.4.182"
   val el                = "org.glassfish"             %   "javax.el"              % "3.0.0"
 
+  //play 2.3.x
+  val play23            = "com.typesafe.play"         %%  "play"                  % play23Version
+  val playWS23          = "com.typesafe.play"         %%  "play-ws"               % play23Version
+  val playTest23        = "org.scalatestplus"         %%  "play"                  % "1.2.0"
 
   //play 2.4.x
-  val play24            = "com.typesafe.play"         %%  "play"                  % "2.4.2"
-  val playWS24          = "com.typesafe.play"         %%  "play-ws"               % "2.4.2"
+  val play24            = "com.typesafe.play"         %%  "play"                  % play24Version
+  val playWS24          = "com.typesafe.play"         %%  "play-ws"               % play24Version
   val playTest24        = "org.scalatestplus"         %%  "play"                  % "1.4.0-M2"
   val typesafeConfig    = "com.typesafe"              %   "config"                % "1.3.0"
 

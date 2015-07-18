@@ -15,34 +15,35 @@
 
 package kamon.play
 
-import javax.inject.Inject
-
 import kamon.Kamon
 import kamon.metric.instrument.CollectionContext
 import kamon.play.action.TraceName
-import kamon.trace.{ TraceLocal, Tracer }
+import kamon.trace.TraceLocal.HttpContextKey
+import kamon.trace.{ Tracer, TraceLocal, TraceContext }
 import org.scalatestplus.play._
 import play.api.DefaultGlobal
-import play.api.http.{ HttpErrorHandler, HttpFilters, Writeable }
+import play.api.http.Writeable
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.ws.WS
 import play.api.mvc.Results.Ok
 import play.api.mvc._
-import play.api.routing.SimpleRouter
 import play.api.test.Helpers._
 import play.api.test._
-import play.core.routing._
+import play.core.Router.{ HandlerDef, Route, Routes }
+import play.core.{ DynamicPart, PathPattern, Router, StaticPart }
 
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 
 class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
-  System.setProperty("config.file", "./kamon-play/src/test/resources/conf/application.conf")
+  Kamon.start()
+  System.setProperty("config.file", "./kamon-play-2.3.x/src/test/resources/conf/application.conf")
 
   override lazy val port: Port = 19002
   val executor = scala.concurrent.ExecutionContext.Implicits.global
 
-  implicit override lazy val app = FakeApplication(withRoutes = {
+  implicit override lazy val app = FakeApplication(withGlobal = Some(MockGlobalTest), withRoutes = {
+
     case ("GET", "/async") ⇒
       Action.async {
         Future {
@@ -80,19 +81,17 @@ class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
       }
   }, additionalConfiguration = Map(
     ("application.router", "kamon.play.Routes"),
-    ("play.http.filters", "kamon.play.TestHttpFilters"),
-    ("play.http.requestHandler", "play.api.http.DefaultHttpRequestHandler"),
     ("logger.root", "OFF"),
     ("logger.play", "OFF"),
     ("logger.application", "OFF")))
 
-  val traceTokenValue = "kamon-trace-token-test"
-  val traceTokenHeaderName = "X-Trace-Token"
-  val expectedToken = Some(traceTokenValue)
-  val traceTokenHeader = traceTokenHeaderName -> traceTokenValue
-  val traceLocalStorageValue = "localStorageValue"
-  val traceLocalStorageKey = "localStorageKey"
-  val traceLocalStorageHeader = traceLocalStorageKey -> traceLocalStorageValue
+  private val traceTokenValue = "kamon-trace-token-test"
+  private val traceTokenHeaderName = "X-Trace-Token"
+  private val expectedToken = Some(traceTokenValue)
+  private val traceTokenHeader = traceTokenHeaderName -> traceTokenValue
+  private val traceLocalStorageValue = "localStorageValue"
+  private val traceLocalStorageKey = "localStorageKey"
+  private val traceLocalStorageHeader = traceLocalStorageKey -> traceLocalStorageValue
 
   "the Request instrumentation" should {
     "respond to the Async Action with X-Trace-Token" in {
@@ -142,6 +141,16 @@ class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
       Kamon.metrics.find("show.some.id.get", "trace") must not be empty
     }
 
+    "include HttpContext information for help to diagnose possible errors" in {
+      Await.result(WS.url(s"http://localhost:$port/getRouted").get(), 10 seconds)
+      route(FakeRequest(GET, "/default").withHeaders("User-Agent" -> "Fake-Agent"))
+
+      val httpCtx = TraceLocal.retrieve(HttpContextKey).get
+      httpCtx.agent must be("Fake-Agent")
+      httpCtx.uri must be("/default")
+      httpCtx.xforwarded must be("unknown")
+    }
+
     "record http server metrics for all processed requests" in {
       val collectionContext = CollectionContext(100)
       Kamon.metrics.find("play-server", "http-server").get.collect(collectionContext)
@@ -168,6 +177,26 @@ class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
     }
   }
 
+  object MockGlobalTest extends WithFilters(TraceLocalFilter)
+
+  object TraceLocalKey extends TraceLocal.TraceLocalKey[String]
+
+  object TraceLocalFilter extends Filter {
+    override def apply(next: (RequestHeader) ⇒ Future[Result])(header: RequestHeader): Future[Result] = {
+      Tracer.withContext(Tracer.currentContext) {
+
+        TraceLocal.store(TraceLocalKey)(header.headers.get(traceLocalStorageKey).getOrElse("unknown"))
+
+        next(header).map {
+          result ⇒
+            {
+              result.withHeaders(traceLocalStorageKey -> TraceLocal.retrieve(TraceLocalKey).get)
+            }
+        }
+      }
+    }
+  }
+
   def routeWithOnError[T](req: Request[T])(implicit w: Writeable[T]): Option[Future[Result]] = {
     route(req).map { result ⇒
       result.recoverWith {
@@ -177,78 +206,54 @@ class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
   }
 }
 
-object TraceLocalKey extends TraceLocal.TraceLocalKey {
-  type ValueType = String
-}
+object Routes extends Router.Routes {
+  private var _prefix = "/"
 
-class TraceLocalFilter extends Filter {
-
-  val traceLocalStorageValue = "localStorageValue"
-  val traceLocalStorageKey = "localStorageKey"
-  val traceLocalStorageHeader = traceLocalStorageKey -> traceLocalStorageValue
-
-  override def apply(next: (RequestHeader) ⇒ Future[Result])(header: RequestHeader): Future[Result] = {
-    Tracer.withContext(Tracer.currentContext) {
-
-      TraceLocal.store(TraceLocalKey)(header.headers.get(traceLocalStorageKey).getOrElse("unknown"))
-
-      next(header).map {
-        result ⇒
-          {
-            result.withHeaders(traceLocalStorageKey -> TraceLocal.retrieve(TraceLocalKey).get)
-          }
-      }
+  def setPrefix(prefix: String) {
+    _prefix = prefix
+    List[(String, Routes)]().foreach {
+      case (p, router) ⇒ router.setPrefix(prefix + (if (prefix.endsWith("/")) "" else "/") + p)
     }
   }
-}
 
-class TestHttpFilters @Inject() (traceLocalFilter: TraceLocalFilter) extends HttpFilters {
-  val filters = Seq(traceLocalFilter)
-}
-
-class Routes @Inject() (application: controllers.Application) extends GeneratedRouter with SimpleRouter {
-  val prefix = "/"
+  def prefix = _prefix
 
   lazy val defaultPrefix = {
-    if (prefix.endsWith("/")) "" else "/"
+    if (Routes.prefix.endsWith("/")) "" else "/"
   }
-
   // Gets
   private[this] lazy val Application_getRouted =
-    Route("GET", PathPattern(List(StaticPart(prefix), StaticPart(defaultPrefix), StaticPart("getRouted"))))
+    Route("GET", PathPattern(List(StaticPart(Routes.prefix), StaticPart(Routes.defaultPrefix), StaticPart("getRouted"))))
 
   private[this] lazy val Application_show =
-    Route("GET", PathPattern(List(StaticPart(prefix), StaticPart(defaultPrefix), StaticPart("showRouted/"), DynamicPart("id", """[^/]+""", encodeable = true))))
+    Route("GET", PathPattern(List(StaticPart(Routes.prefix), StaticPart(Routes.defaultPrefix), StaticPart("showRouted/"), DynamicPart("id", """[^/]+""", encodeable = true))))
 
   //Posts
   private[this] lazy val Application_postRouted =
-    Route("POST", PathPattern(List(StaticPart(prefix), StaticPart(defaultPrefix), StaticPart("postRouted"))))
+    Route("POST", PathPattern(List(StaticPart(Routes.prefix), StaticPart(Routes.defaultPrefix), StaticPart("postRouted"))))
+
+  def documentation = Nil // Documentation not needed for tests
 
   def routes: PartialFunction[RequestHeader, Handler] = {
     case Application_getRouted(params) ⇒ call {
-      createInvoker(application.getRouted,
-        HandlerDef(this.getClass.getClassLoader, "", "controllers.Application", "getRouted", Nil, "GET", """some comment""", prefix + """getRouted""")).call(application.getRouted)
+      createInvoker(controllers.Application.getRouted,
+        HandlerDef(this.getClass.getClassLoader, "", "controllers.Application", "getRouted", Nil, "GET", """some comment""", Routes.prefix + """getRouted""")).call(controllers.Application.getRouted)
     }
     case Application_postRouted(params) ⇒ call {
-      createInvoker(application.postRouted,
-        HandlerDef(this.getClass.getClassLoader, "", "controllers.Application", "postRouted", Nil, "POST", """some comment""", prefix + """postRouted""")).call(application.postRouted)
+      createInvoker(controllers.Application.postRouted,
+        HandlerDef(this.getClass.getClassLoader, "", "controllers.Application", "postRouted", Nil, "POST", """some comment""", Routes.prefix + """postRouted""")).call(controllers.Application.postRouted)
     }
     case Application_show(params) ⇒ call(params.fromPath[Int]("id", None)) { (id) ⇒
-      createInvoker(application.showRouted(id),
-        HandlerDef(this.getClass.getClassLoader, "", "controllers.Application", "showRouted", Seq(classOf[Int]), "GET", """""", prefix + """show/some/$id<[^/]+>""")).call(application.showRouted(id))
+      createInvoker(controllers.Application.showRouted(id),
+        HandlerDef(this.getClass.getClassLoader, "", "controllers.Application", "showRouted", Seq(classOf[Int]), "GET", """""", Routes.prefix + """show/some/$id<[^/]+>""")).call(controllers.Application.showRouted(id))
     }
-  }
-
-  override def errorHandler: HttpErrorHandler = new HttpErrorHandler() {
-    override def onClientError(request: RequestHeader, statusCode: Int, message: String): Future[Result] = Future.successful(Results.InternalServerError)
-    override def onServerError(request: RequestHeader, exception: Throwable): Future[Result] = Future.successful(Results.InternalServerError)
   }
 }
 
 object controllers {
   import play.api.mvc._
 
-  class Application extends Controller {
+  object Application extends Controller {
     val postRouted = Action {
       Ok("invoked postRouted")
     }
