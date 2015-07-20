@@ -36,7 +36,7 @@ import scala.concurrent._
  *
  * 1- play stage
  * 2- cd target/universal/stage
- * 3- java -cp ".:lib/*" -javaagent:lib/org.aspectj.aspectjweaver-1.8.1.jar play.core.server.NettyServer
+ * 3- java -cp ".:lib/*" -javaagent:lib/org.aspectj.aspectjweaver-1.8.6.jar play.core.server.NettyServer
  *
  * and finally for test:
  *

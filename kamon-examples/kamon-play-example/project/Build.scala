@@ -20,7 +20,7 @@ object ApplicationBuild extends Build {
     )
 
   val defaultSettings = Seq(
-      scalaVersion := "2.11.5",
+      scalaVersion := "2.11.7",
       resolvers ++= resolutionRepos,
       scalacOptions := Seq(
         "-encoding",
@@ -35,7 +35,7 @@ object ApplicationBuild extends Build {
         "-Xlog-reflective-calls"
       ))
 
-  val kamonVersion = "0.3.6-125bee567e0b18ea5ec10f3a1fe76409673011d9"
+  val kamonVersion = "0.4.0"
 
   val dependencies = Seq(
     "io.kamon"    %% "kamon-core"           % kamonVersion,
@@ -43,7 +43,7 @@ object ApplicationBuild extends Build {
     "io.kamon"    %% "kamon-statsd"         % kamonVersion,
     "io.kamon"    %% "kamon-log-reporter"   % kamonVersion,
     "io.kamon"    %% "kamon-system-metrics" % kamonVersion,
-    "org.aspectj" % "aspectjweaver"         % "1.8.1"
+    "org.aspectj" % "aspectjweaver"         % "1.8.6"
     )
 
   val main = Project(appName, file(".")).enablePlugins(play.PlayScala, SbtWeb)

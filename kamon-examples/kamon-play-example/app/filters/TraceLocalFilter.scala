@@ -17,6 +17,7 @@
 package filters
 
 import kamon.trace.TraceLocal
+import kamon.trace.TraceLocal.{AvailableToMdc, TraceLocalKey}
 import play.api.Logger
 import play.api.mvc.{Result, RequestHeader, Filter}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -39,16 +40,21 @@ object TraceLocalFilter extends Filter {
   val logger = Logger(this.getClass)
   val TraceLocalStorageKey = "MyTraceLocalStorageKey"
 
+  val userAgentHeader = "User-Agent"
+
+  //this value will be available in the MDC at the moment to call  to Logger.*()s
+  val UserAgentHeaderAvailableToMDC = AvailableToMdc(userAgentHeader)
+
   override def apply(next: (RequestHeader) ⇒ Future[Result])(header: RequestHeader): Future[Result] = {
 
     def onResult(result:Result) = {
         val traceLocalContainer = TraceLocal.retrieve(TraceLocalKey).getOrElse(TraceLocalContainer("unknown","unknown"))
-        logger.info(s"traceTokenValue: ${traceLocalContainer.traceToken}")
         result.withHeaders((TraceLocalStorageKey -> traceLocalContainer.traceToken))
     }
 
     //update the TraceLocalStorage
     TraceLocal.store(TraceLocalKey)(TraceLocalContainer(header.headers.get(TraceLocalStorageKey).getOrElse("unknown"), "unknown"))
+    TraceLocal.store(UserAgentHeaderAvailableToMDC)(header.headers.get(userAgentHeader).getOrElse("unknown"))
 
     //call the action
     next(header).map(onResult)

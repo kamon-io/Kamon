@@ -23,4 +23,8 @@ object Global extends WithFilters(TraceLocalFilter) {
   override def onStart(app: Application) {
     Kamon.start()
   }
+
+  override def onStop(app: Application) {
+    Kamon.shutdown()
+  }
 }
