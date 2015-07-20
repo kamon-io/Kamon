@@ -16,13 +16,12 @@
 package controllers
 
 import filters.{TraceLocalContainer, TraceLocalKey}
-import kamon.Kamon
 import kamon.play.action.TraceName
+import kamon.play.di.Kamon
 import kamon.trace.TraceLocal
 import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc.{Action, Controller}
-import play.libs.Akka
 import javax.inject._
 
 import scala.concurrent._
@@ -36,8 +35,8 @@ import scala.concurrent._
  * Run the following commands from console:
  *
  * 1- play stage
- * 2- cd target/universal/stage
- * 3- java -cp ".:lib/*" -javaagent:lib/org.aspectj.aspectjweaver-1.8.1.jar play.core.server.NettyServer
+ * 2- cd target/universal/stage/bin
+ * 3- ./kamon-play-example -J-javaagent:../lib/org.aspectj.aspectjweaver-1.8.6.jar
  *
  * and finally for test:
  *
@@ -50,13 +49,13 @@ import scala.concurrent._
  * X-Trace-Token: kamon-test -> default Trace-Token
  *
  * Say hello to Kamon
- */*/
+ **/
 
 
-class KamonPlayExample extends Controller {
+class KamonPlayExample @Inject() (kamon: Kamon) extends Controller {
 
   val logger = Logger(this.getClass)
-  val counter = Kamon.metrics.counter("my-counter")
+  val counter = kamon.metrics.counter("my-counter")
 
   def sayHello = Action.async {
     Future {
@@ -83,7 +82,7 @@ class KamonPlayExample extends Controller {
     }
   }
 
-  def updateTraceLocal = Action.async {
+  def updateTraceLocal() = Action.async {
     Future {
       TraceLocal.store(TraceLocalKey)(TraceLocalContainer("MyTraceToken","MyImportantHeader"))
       logger.info("storeInTraceLocal")
