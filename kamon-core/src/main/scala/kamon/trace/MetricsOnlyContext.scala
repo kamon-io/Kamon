@@ -39,7 +39,7 @@ private[kamon] class MetricsOnlyContext(traceName: String, val token: String, iz
   def rename(newName: String): Unit =
     if (isOpen)
       _name = newName
-    else if (log.isWarningEnabled)
+    else
       log.warning("Can't rename trace from [{}] to [{}] because the trace is already closed.", name, newName)
 
   def name: String = _name
@@ -101,7 +101,7 @@ private[kamon] class MetricsOnlyContext(traceName: String, val token: String, iz
     def rename(newName: String): Unit =
       if (isOpen)
         _segmentName = newName
-      else if (log.isWarningEnabled)
+      else
         log.warning("Can't rename segment from [{}] to [{}] because the segment is already closed.", name, newName)
 
     def finish: Unit = {
