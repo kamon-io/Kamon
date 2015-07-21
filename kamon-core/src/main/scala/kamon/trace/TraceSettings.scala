@@ -16,9 +16,9 @@
 
 package kamon.trace
 
-import java.util.concurrent.TimeUnit
 import kamon.util.ConfigTools.Syntax
 import com.typesafe.config.Config
+import kamon.util.NanoInterval
 
 case class TraceSettings(levelOfDetail: LevelOfDetail, sampler: Sampler, tokenGeneratorFQN: String)
 
@@ -37,8 +37,9 @@ object TraceSettings {
       else tracerConfig.getString("sampling") match {
         case "all"       ⇒ SampleAll
         case "random"    ⇒ new RandomSampler(tracerConfig.getInt("random-sampler.chance"))
-        case "ordered"   ⇒ new OrderedSampler(tracerConfig.getInt("ordered-sampler.interval"))
-        case "threshold" ⇒ new ThresholdSampler(tracerConfig.getFiniteDuration("threshold-sampler.minimum-elapsed-time").toNanos)
+        case "ordered"   ⇒ new OrderedSampler(tracerConfig.getInt("ordered-sampler.sample-interval"))
+        case "threshold" ⇒ new ThresholdSampler(new NanoInterval(tracerConfig.getFiniteDuration("threshold-sampler.minimum-elapsed-time").toNanos))
+        case "clock"     ⇒ new ClockSampler(new NanoInterval(tracerConfig.getFiniteDuration("clock-sampler.pause").toNanos))
       }
 
     val tokenGeneratorFQN = tracerConfig.getString("token-generator")

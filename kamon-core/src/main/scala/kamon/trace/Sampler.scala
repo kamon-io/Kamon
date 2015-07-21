@@ -18,8 +18,7 @@ package kamon.trace
 
 import java.net.InetAddress
 import java.util.concurrent.atomic.AtomicLong
-
-import kamon.util.{ NanoInterval, Sequencer }
+import kamon.util.{ NanoTimestamp, NanoInterval, Sequencer }
 import scala.concurrent.forkjoin.ThreadLocalRandom
 
 import scala.util.Try
@@ -50,8 +49,8 @@ class RandomSampler(chance: Int) extends Sampler {
 class OrderedSampler(interval: Int) extends Sampler {
   import OrderedSampler._
 
-  require(interval > 0, "kamon.trace.ordered-sampler.interval cannot be <= 0")
-  assume(interval isPowerOfTwo, "kamon.trace.ordered-sampler.interval must be power of two")
+  require(interval > 0, "kamon.trace.ordered-sampler.sample-interval cannot be <= 0")
+  assume(interval isPowerOfTwo, "kamon.trace.ordered-sampler.sample-interval must be power of two")
 
   private val sequencer = Sequencer()
 
@@ -69,11 +68,27 @@ object OrderedSampler {
   }
 }
 
-class ThresholdSampler(thresholdInNanoseconds: Long) extends Sampler {
-  require(thresholdInNanoseconds > 0, "kamon.trace.threshold-sampler.minimum-elapsed-time cannot be <= 0")
+class ThresholdSampler(thresholdInNanoseconds: NanoInterval) extends Sampler {
+  require(thresholdInNanoseconds.nanos > 0, "kamon.trace.threshold-sampler.minimum-elapsed-time cannot be <= 0")
 
   def shouldTrace: Boolean = true
-  def shouldReport(traceElapsedTime: NanoInterval): Boolean = traceElapsedTime.nanos >= thresholdInNanoseconds
+  def shouldReport(traceElapsedTime: NanoInterval): Boolean = traceElapsedTime >= thresholdInNanoseconds
+}
+
+class ClockSampler(pauseInNanoseconds: NanoInterval) extends Sampler {
+  require(pauseInNanoseconds.nanos > 0, "kamon.trace.clock-sampler.pause cannot be <= 0")
+
+  private val timer: AtomicLong = new AtomicLong(0L)
+
+  def shouldTrace: Boolean = {
+    val now = NanoTimestamp.now.nanos
+    val lastTimer = timer.get()
+    if ((lastTimer + pauseInNanoseconds.nanos) < now)
+      timer.compareAndSet(lastTimer, now)
+    else
+      false
+  }
+  def shouldReport(traceElapsedTime: NanoInterval): Boolean = true
 }
 
 class DefaultTokenGenerator extends Function0[String] {
@@ -84,4 +99,3 @@ class DefaultTokenGenerator extends Function0[String] {
     _hostnamePrefix + "-" + String.valueOf(_tokenCounter.incrementAndGet())
   }
 }
-
