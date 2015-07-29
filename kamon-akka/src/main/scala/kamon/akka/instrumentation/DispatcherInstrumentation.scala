@@ -18,7 +18,7 @@ package akka.kamon.instrumentation
 
 import java.util.concurrent.{ ExecutorService, ThreadPoolExecutor }
 
-import akka.actor.{ ActorSystem, ActorSystemImpl }
+import akka.actor.{ ActorContext, Props, ActorSystem, ActorSystemImpl }
 import akka.dispatch.ForkJoinExecutorConfigurator.AkkaForkJoinPool
 import akka.dispatch._
 import akka.kamon.instrumentation.LookupDataAware.LookupData
@@ -139,6 +139,18 @@ class DispatcherInstrumentation {
       }
   }
 
+  @Pointcut("execution(* akka.routing.BalancingPool.newRoutee(..)) && args(props, context)")
+  def createNewRouteeOnBalancingPool(props: Props, context: ActorContext): Unit = {}
+
+  @Around("createNewRouteeOnBalancingPool(props, context)")
+  def aroundCreateNewRouteeOnBalancingPool(pjp: ProceedingJoinPoint, props: Props, context: ActorContext): Any = {
+    val deployPath = context.self.path.elements.drop(1).mkString("/", "/", "")
+    val dispatcherId = s"BalancingPool-$deployPath"
+
+    LookupDataAware.withLookupData(LookupData(dispatcherId, context.system)) {
+      pjp.proceed()
+    }
+  }
 }
 
 @Aspect
