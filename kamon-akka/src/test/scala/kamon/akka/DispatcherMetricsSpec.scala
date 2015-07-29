@@ -15,11 +15,13 @@
 
 package kamon.akka
 
-import akka.actor.ActorRef
+import akka.actor.{ Props, ActorRef }
 import akka.dispatch.MessageDispatcher
+import akka.routing.BalancingPool
 import akka.testkit.TestProbe
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
+import kamon.akka.RouterMetricsTestActor.{ Pong, Ping }
 import kamon.metric.{ EntityRecorder, EntitySnapshot }
 import kamon.testkit.BaseKamonSpec
 
@@ -152,12 +154,24 @@ class DispatcherMetricsSpec extends BaseKamonSpec("dispatcher-metrics-spec") {
       findDispatcherRecorder(tpeDispatcher, "thread-pool-executor") should be(empty)
     }
 
+    "play nicely when dispatchers are looked up from a BalancingPool router" in {
+      val balancingPoolRouter = system.actorOf(BalancingPool(5).props(Props[RouterMetricsTestActor]), "test-balancing-pool")
+
+      balancingPoolRouter ! Ping
+      expectMsg(Pong)
+
+      findDispatcherRecorder("BalancingPool-/test-balancing-pool", "fork-join-pool") shouldNot be(empty)
+    }
+
   }
 
   def actorRecorderName(ref: ActorRef): String = ref.path.elements.mkString("/")
 
   def findDispatcherRecorder(dispatcher: MessageDispatcher, dispatcherType: String): Option[EntityRecorder] =
     Kamon.metrics.find(system.name + "/" + dispatcher.id, "akka-dispatcher", tags = Map("dispatcher-type" -> dispatcherType))
+
+  def findDispatcherRecorder(dispatcherID: String, dispatcherType: String): Option[EntityRecorder] =
+    Kamon.metrics.find(system.name + "/" + dispatcherID, "akka-dispatcher", tags = Map("dispatcher-type" -> dispatcherType))
 
   def collectDispatcherMetrics(dispatcher: MessageDispatcher, dispatcherType: String): EntitySnapshot =
     findDispatcherRecorder(dispatcher, dispatcherType).map(_.collect(collectionContext)).get
