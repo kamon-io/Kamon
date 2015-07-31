@@ -36,6 +36,7 @@ class LogReporterExtension(system: ExtendedActorSystem) extends Kamon.Extension 
 
   Kamon.metrics.subscribe("trace", "**", subscriber, permanently = true)
   Kamon.metrics.subscribe("akka-actor", "**", subscriber, permanently = true)
+  Kamon.metrics.subscribe("akka-http-server", "**", subscriber, permanently = true)
   Kamon.metrics.subscribe("akka-dispatcher", "**", subscriber, permanently = true)
   Kamon.metrics.subscribe("counter", "**", subscriber, permanently = true)
   Kamon.metrics.subscribe("histogram", "**", subscriber, permanently = true)
@@ -60,15 +61,16 @@ class LogReporterSubscriber extends Actor with ActorLogging {
     val gauges = Map.newBuilder[String, Option[Histogram.Snapshot]]
 
     tick.metrics foreach {
-      case (entity, snapshot) if entity.category == "akka-actor"      ⇒ logActorMetrics(entity.name, snapshot)
-      case (entity, snapshot) if entity.category == "akka-dispatcher" ⇒ logDispatcherMetrics(entity, snapshot)
-      case (entity, snapshot) if entity.category == "trace"           ⇒ logTraceMetrics(entity.name, snapshot)
-      case (entity, snapshot) if entity.category == "histogram"       ⇒ histograms += (entity.name -> snapshot.histogram("histogram"))
-      case (entity, snapshot) if entity.category == "counter"         ⇒ counters += (entity.name -> snapshot.counter("counter"))
-      case (entity, snapshot) if entity.category == "min-max-counter" ⇒ minMaxCounters += (entity.name -> snapshot.minMaxCounter("min-max-counter"))
-      case (entity, snapshot) if entity.category == "gauge"           ⇒ gauges += (entity.name -> snapshot.gauge("gauge"))
-      case (entity, snapshot) if entity.category == "system-metric"   ⇒ logSystemMetrics(entity.name, snapshot)
-      case ignoreEverythingElse                                       ⇒
+      case (entity, snapshot) if entity.category == "akka-actor"       ⇒ logActorMetrics(entity.name, snapshot)
+      case (entity, snapshot) if entity.category == "akka-dispatcher"  ⇒ logDispatcherMetrics(entity, snapshot)
+      case (entity, snapshot) if entity.category == "akka-http-server" ⇒ logHttpServerMetrics(entity, snapshot)
+      case (entity, snapshot) if entity.category == "trace"            ⇒ logTraceMetrics(entity.name, snapshot)
+      case (entity, snapshot) if entity.category == "histogram"        ⇒ histograms += (entity.name -> snapshot.histogram("histogram"))
+      case (entity, snapshot) if entity.category == "counter"          ⇒ counters += (entity.name -> snapshot.counter("counter"))
+      case (entity, snapshot) if entity.category == "min-max-counter"  ⇒ minMaxCounters += (entity.name -> snapshot.minMaxCounter("min-max-counter"))
+      case (entity, snapshot) if entity.category == "gauge"            ⇒ gauges += (entity.name -> snapshot.gauge("gauge"))
+      case (entity, snapshot) if entity.category == "system-metric"    ⇒ logSystemMetrics(entity.name, snapshot)
+      case ignoreEverythingElse                                        ⇒
     }
 
     logMetrics(histograms.result(), counters.result(), minMaxCounters.result(), gauges.result())
@@ -117,6 +119,55 @@ class LogReporterSubscriber extends Actor with ActorLogging {
     case Some("fork-join-pool")       ⇒ logForkJoinPool(entity.name, snapshot)
     case Some("thread-pool-executor") ⇒ logThreadPoolExecutor(entity.name, snapshot)
     case ignoreOthers                 ⇒
+  }
+
+  def logHttpServerMetrics(entity: Entity, snapshot: EntitySnapshot): Unit = {
+    val metricsData = StringBuilder.newBuilder
+
+    val connectionCounts = snapshot.counters.filter(_._1.name.startsWith("/"))
+    val openConnections = snapshot.minMaxCounter("open-connections")
+
+    metricsData.append(
+      """
+        |+--------------------------------------------------------------------------------------------------+
+        ||                                                                                                  |
+        ||  Connection Counts:                                                                              |
+        ||                                                                                                  |"""
+        .stripMargin)
+
+    connectionCounts.foreach {
+      case (counterKey, counterSnapshot) ⇒
+        metricsData.append(
+          """
+            ||    %-30s : %-5d                                                        |"""
+            .stripMargin.format(
+              counterKey.name,
+              counterSnapshot.count))
+    }
+
+    openConnections.foreach {
+      case histogramSnapshot ⇒
+        metricsData.append(
+          """
+            ||                                                                                                  |
+            ||              Open Connections                                                                    |
+            ||      Min           %-4d                                                                          |
+            ||      Avg           %-4d                                                                          |
+            ||      Max           %-4d                                                                          |"""
+            .stripMargin.format(
+              histogramSnapshot.min,
+              histogramSnapshot.average.toInt,
+              histogramSnapshot.max))
+    }
+
+    metricsData.append(
+      """
+        ||                                                                                                  |
+        |+--------------------------------------------------------------------------------------------------+
+        |"""
+        .stripMargin)
+
+    log.info(metricsData.toString())
   }
 
   def logForkJoinPool(name: String, forkJoinMetrics: EntitySnapshot): Unit = {
