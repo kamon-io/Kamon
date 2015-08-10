@@ -25,7 +25,7 @@ import org.scalatestplus.play._
 import play.api.DefaultGlobal
 import play.api.http.{ HttpErrorHandler, HttpFilters, Writeable }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.ws.WS
+import play.api.libs.ws.{ WSRequest, WS }
 import play.api.mvc.Results.Ok
 import play.api.mvc._
 import play.api.routing.SimpleRouter
@@ -257,4 +257,32 @@ object controllers {
       Ok("invoked show with: " + id)
     }
   }
+}
+
+class TestNameGenerator extends NameGenerator {
+  import scala.collection.concurrent.TrieMap
+  import play.api.routing.Router
+  import java.util.Locale
+  import kamon.util.TriemapAtomicGetOrElseUpdate.Syntax
+
+  private val cache = TrieMap.empty[String, String]
+  private val normalizePattern = """\$([^<]+)<[^>]+>""".r
+
+  def generateTraceName(requestHeader: RequestHeader): String = requestHeader.tags.get(Router.Tags.RouteVerb).map { verb ⇒
+    val path = requestHeader.tags(Router.Tags.RoutePattern)
+    cache.atomicGetOrElseUpdate(s"$verb$path", {
+      val traceName = {
+        // Convert paths of form GET /foo/bar/$paramname<regexp>/blah to foo.bar.paramname.blah.get
+        val p = normalizePattern.replaceAllIn(path, "$1").replace('/', '.').dropWhile(_ == '.')
+        val normalisedPath = {
+          if (p.lastOption.exists(_ != '.')) s"$p."
+          else p
+        }
+        s"$normalisedPath${verb.toLowerCase(Locale.ENGLISH)}"
+      }
+      traceName
+    })
+  } getOrElse s"${requestHeader.method}: ${requestHeader.uri}"
+
+  def generateHttpClientSegmentName(request: WSRequest): String = request.url
 }
