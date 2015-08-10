@@ -42,19 +42,25 @@ class SystemMetricsExtension(system: ExtendedActorSystem) extends Kamon.Extensio
   val config = system.settings.config.getConfig("kamon.system-metrics")
   val sigarFolder = config.getString("sigar-native-folder")
   val sigarRefreshInterval = config.getFiniteDuration("sigar-metrics-refresh-interval")
+  val sigarEnabled = config.getBoolean("sigar-enabled")
+  val jmxEnabled = config.getBoolean("jmx-enabled")
   val contextSwitchesRefreshInterval = config.getFiniteDuration("context-switches-refresh-interval")
   val metricsExtension = Kamon.metrics
 
-  SigarProvisioner.provision(new File(sigarFolder))
-
-  val supervisor = system.actorOf(SystemMetricsSupervisor.props(sigarRefreshInterval, contextSwitchesRefreshInterval), "kamon-system-metrics")
+  // OS Metrics collected with Sigar
+  if (sigarEnabled) {
+    SigarProvisioner.provision(new File(sigarFolder))
+    system.actorOf(SystemMetricsSupervisor.props(sigarRefreshInterval, contextSwitchesRefreshInterval), "kamon-system-metrics")
+  }
 
   // JMX Metrics
-  ClassLoadingMetrics.register(metricsExtension)
-  GarbageCollectionMetrics.register(metricsExtension)
-  HeapMemoryMetrics.register(metricsExtension)
-  NonHeapMemoryMetrics.register(metricsExtension)
-  ThreadsMetrics.register(metricsExtension)
+  if (jmxEnabled) {
+    ClassLoadingMetrics.register(metricsExtension)
+    GarbageCollectionMetrics.register(metricsExtension)
+    HeapMemoryMetrics.register(metricsExtension)
+    NonHeapMemoryMetrics.register(metricsExtension)
+    ThreadsMetrics.register(metricsExtension)
+  }
 }
 
 class SystemMetricsSupervisor(sigarRefreshInterval: FiniteDuration, contextSwitchesRefreshInterval: FiniteDuration) extends Actor {
