@@ -19,12 +19,12 @@ import kamon.Kamon
 import kamon.metric.instrument.CollectionContext
 import kamon.play.action.TraceName
 import kamon.trace.TraceLocal.HttpContextKey
-import kamon.trace.{ Tracer, TraceLocal, TraceContext }
+import kamon.trace.{ Tracer, TraceLocal }
 import org.scalatestplus.play._
 import play.api.DefaultGlobal
 import play.api.http.Writeable
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.ws.WS
+import play.api.libs.ws.{ WSRequest, WS }
 import play.api.mvc.Results.Ok
 import play.api.mvc._
 import play.api.test.Helpers._
@@ -36,8 +36,9 @@ import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 
 class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
-  Kamon.start()
   System.setProperty("config.file", "./kamon-play-2.3.x/src/test/resources/conf/application.conf")
+
+  Kamon.start()
 
   override lazy val port: Port = 19002
   val executor = scala.concurrent.ExecutionContext.Implicits.global
@@ -264,4 +265,32 @@ object controllers {
       Ok("invoked show with: " + id)
     }
   }
+}
+
+class TestNameGenerator extends NameGenerator {
+  import scala.collection.concurrent.TrieMap
+  import play.api.{ Routes ⇒ PlayRoutes }
+  import java.util.Locale
+  import kamon.util.TriemapAtomicGetOrElseUpdate.Syntax
+
+  private val cache = TrieMap.empty[String, String]
+  private val normalizePattern = """\$([^<]+)<[^>]+>""".r
+
+  def generateTraceName(requestHeader: RequestHeader): String = requestHeader.tags.get(PlayRoutes.ROUTE_VERB).map { verb ⇒
+    val path = requestHeader.tags(PlayRoutes.ROUTE_PATTERN)
+    cache.atomicGetOrElseUpdate(s"$verb$path", {
+      val traceName = {
+        // Convert paths of form GET /foo/bar/$paramname<regexp>/blah to foo.bar.paramname.blah.get
+        val p = normalizePattern.replaceAllIn(path, "$1").replace('/', '.').dropWhile(_ == '.')
+        val normalisedPath = {
+          if (p.lastOption.exists(_ != '.')) s"$p."
+          else p
+        }
+        s"$normalisedPath${verb.toLowerCase(Locale.ENGLISH)}"
+      }
+      traceName
+    })
+  } getOrElse s"${requestHeader.method}: ${requestHeader.uri}"
+
+  def generateHttpClientSegmentName(request: WSRequest): String = request.url
 }
