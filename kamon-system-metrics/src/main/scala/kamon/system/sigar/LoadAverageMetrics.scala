@@ -16,6 +16,7 @@
 
 package kamon.system.sigar
 
+import akka.event.LoggingAdapter
 import kamon.metric.GenericEntityRecorder
 import kamon.metric.instrument.InstrumentFactory
 import org.hyperic.sigar.Sigar
@@ -24,13 +25,15 @@ import org.hyperic.sigar.Sigar
  *  Load Average metrics, as reported by Sigar:
  *    - The system load averages for the past 1, 5, and 15 minutes.
  */
-class LoadAverageMetrics(sigar: Sigar, instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) with SigarMetric {
+class LoadAverageMetrics(sigar: Sigar, instrumentFactory: InstrumentFactory, logger: LoggingAdapter) extends GenericEntityRecorder(instrumentFactory) with SigarMetric {
+  import SigarSafeRunner._
+
   val oneMinute = histogram("one-minute")
   val fiveMinutes = histogram("five-minutes")
   val fifteenMinutes = histogram("fifteen-minutes")
 
   def update(): Unit = {
-    val loadAverage = sigar.getLoadAverage
+    val loadAverage = runSafe(sigar.getLoadAverage, Array(0D, 0D, 0D), "load-average", logger)
 
     oneMinute.record(loadAverage(0).toLong)
     fiveMinutes.record(loadAverage(1).toLong)
@@ -40,6 +43,6 @@ class LoadAverageMetrics(sigar: Sigar, instrumentFactory: InstrumentFactory) ext
 
 object LoadAverageMetrics extends SigarMetricRecorderCompanion("load-average") {
 
-  def apply(sigar: Sigar, instrumentFactory: InstrumentFactory): LoadAverageMetrics =
-    new LoadAverageMetrics(sigar, instrumentFactory)
+  def apply(sigar: Sigar, instrumentFactory: InstrumentFactory, logger: LoggingAdapter): LoadAverageMetrics =
+    new LoadAverageMetrics(sigar, instrumentFactory, logger)
 }

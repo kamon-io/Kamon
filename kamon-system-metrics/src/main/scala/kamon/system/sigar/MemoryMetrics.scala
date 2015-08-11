@@ -16,6 +16,7 @@
 
 package kamon.system.sigar
 
+import akka.event.LoggingAdapter
 import kamon.metric.GenericEntityRecorder
 import kamon.metric.instrument.{ Memory, InstrumentFactory }
 import org.hyperic.sigar.Sigar
@@ -27,7 +28,9 @@ import org.hyperic.sigar.Sigar
  *    - swap-used: Total used system swap.
  *    - swap-free: Total free system swap.
  */
-class MemoryMetrics(sigar: Sigar, instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) with SigarMetric {
+class MemoryMetrics(sigar: Sigar, instrumentFactory: InstrumentFactory, logger: LoggingAdapter) extends GenericEntityRecorder(instrumentFactory) with SigarMetric {
+  import SigarSafeRunner._
+
   val used = histogram("memory-used", Memory.Bytes)
   val cached = histogram("memory-cache-and-buffer", Memory.Bytes)
   val free = histogram("memory-free", Memory.Bytes)
@@ -36,22 +39,33 @@ class MemoryMetrics(sigar: Sigar, instrumentFactory: InstrumentFactory) extends 
   val swapFree = histogram("swap-free", Memory.Bytes)
 
   def update(): Unit = {
-    val mem = sigar.getMem
-    val swap = sigar.getSwap
-    val cachedMemory = if (mem.getActualFree > mem.getFree) mem.getActualFree - mem.getFree else 0L
+    def mem = {
+      val mem = sigar.getMem
+      (mem.getActualUsed, mem.getActualFree, mem.getFree, mem.getTotal)
+    }
 
-    used.record(mem.getActualUsed)
-    free.record(mem.getActualFree)
+    def swap = {
+      val swap = sigar.getSwap
+      (swap.getUsed, swap.getFree)
+    }
+
+    val (memActualUsed, memActualFree, memFree, memTotal) = runSafe(mem, (0L, 0L, 0L, 0L), "memory", logger)
+    val (memSwapUsed, memSwapFree) = runSafe(swap, (0L, 0L), "swap", logger)
+
+    def cachedMemory = if (memActualFree > memFree) memActualFree - memFree else 0L
+
+    used.record(memActualUsed)
+    free.record(memActualFree)
     cached.record(cachedMemory)
-    total.record(mem.getTotal)
-    swapUsed.record(swap.getUsed)
-    swapFree.record(swap.getFree)
+    total.record(memTotal)
+    swapUsed.record(memSwapUsed)
+    swapFree.record(memSwapFree)
   }
 }
 
 object MemoryMetrics extends SigarMetricRecorderCompanion("memory") {
 
-  def apply(sigar: Sigar, instrumentFactory: InstrumentFactory): MemoryMetrics =
-    new MemoryMetrics(sigar, instrumentFactory)
+  def apply(sigar: Sigar, instrumentFactory: InstrumentFactory, logger: LoggingAdapter): MemoryMetrics =
+    new MemoryMetrics(sigar, instrumentFactory, logger)
 }
 
