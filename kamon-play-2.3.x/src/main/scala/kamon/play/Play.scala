@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * Copyright © 2013-2014 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2015 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -75,7 +75,7 @@ class DefaultNameGenerator extends NameGenerator {
       }
       traceName
     })
-  } getOrElse "UntaggedTraces"
+  } getOrElse "UntaggedTrace"
 
   def generateHttpClientSegmentName(request: WSRequest): String = request.url
 }
