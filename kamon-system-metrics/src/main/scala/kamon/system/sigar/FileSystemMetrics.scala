@@ -16,6 +16,7 @@
 
 package kamon.system.sigar
 
+import akka.event.LoggingAdapter
 import kamon.metric.GenericEntityRecorder
 import kamon.metric.instrument.{ Memory, InstrumentFactory }
 import org.hyperic.sigar.{ DiskUsage, FileSystem, Sigar }
@@ -26,11 +27,13 @@ import scala.util.Try
  *    - readBytes: Total number of physical disk reads.
  *    - writesBytes:  Total number of physical disk writes.
  */
-class FileSystemMetrics(sigar: Sigar, instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) with SigarMetric {
+class FileSystemMetrics(sigar: Sigar, instrumentFactory: InstrumentFactory, logger: LoggingAdapter) extends GenericEntityRecorder(instrumentFactory) with SigarMetric {
+  import kamon.system.sigar.SigarSafeRunner._
+
   val reads = DiffRecordingHistogram(histogram("file-system-reads", Memory.Bytes))
   val writes = DiffRecordingHistogram(histogram("file-system-writes", Memory.Bytes))
 
-  val fileSystems = sigar.getFileSystemList.filter(_.getType == FileSystem.TYPE_LOCAL_DISK).map(_.getDevName).toSet
+  val fileSystems = runSafe(sigar.getFileSystemList.filter(_.getType == FileSystem.TYPE_LOCAL_DISK).map(_.getDevName).toSet, Set.empty[String], "file-system", logger)
 
   def sumOfAllFileSystems(sigar: Sigar, thunk: DiskUsage ⇒ Long): Long = Try {
     fileSystems.map(i ⇒ thunk(sigar.getDiskUsage(i))).fold(0L)(_ + _)
@@ -43,6 +46,6 @@ class FileSystemMetrics(sigar: Sigar, instrumentFactory: InstrumentFactory) exte
 }
 
 object FileSystemMetrics extends SigarMetricRecorderCompanion("file-system") {
-  def apply(sigar: Sigar, instrumentFactory: InstrumentFactory): FileSystemMetrics =
-    new FileSystemMetrics(sigar, instrumentFactory)
+  def apply(sigar: Sigar, instrumentFactory: InstrumentFactory, logger: LoggingAdapter): FileSystemMetrics =
+    new FileSystemMetrics(sigar, instrumentFactory, logger)
 }
