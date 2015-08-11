@@ -79,7 +79,7 @@ object Kamon {
     apply(key)
 
   private def ifStarted[T](thunk: KamonCoreComponents ⇒ T): T =
-    _coreComponents.map(thunk(_)) getOrElse (sys.error("Kamon has not been started yet."))
+    _coreComponents.map(thunk(_)) getOrElse sys.error("Kamon has not been started yet.")
 
 }
 
