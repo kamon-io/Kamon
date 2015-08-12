@@ -36,7 +36,7 @@ object Dependencies {
   val logback           = "ch.qos.logback"            %   "logback-classic"       % "1.0.13"
   val aspectJ           = "org.aspectj"               %   "aspectjweaver"         % aspectjVersion
   val newrelic          = "com.newrelic.agent.java"   %   "newrelic-api"          % "3.11.0"
-  val hdrHistogram      = "org.hdrhistogram"          %   "HdrHistogram"          % "2.1.4"
+  val hdrHistogram      = "org.hdrhistogram"          %   "HdrHistogram"          % "2.1.6"
   val sprayCan          = "io.spray"                  %%  "spray-can"             % sprayVersion
   val sprayRouting      = "io.spray"                  %%  "spray-routing"         % sprayVersion
   val sprayTestkit      = "io.spray"                  %%  "spray-testkit"         % sprayVersion
@@ -51,7 +51,7 @@ object Dependencies {
   val slf4Jul           = "org.slf4j"                 %   "jul-to-slf4j"          % slf4jVersion
   val slf4Log4j         = "org.slf4j"                 %   "log4j-over-slf4j"      % slf4jVersion
   val scalazConcurrent  = "org.scalaz"                %%  "scalaz-concurrent"     % "7.1.0"
-  val sigarLoader       = "io.kamon"                  %   "sigar-loader"          % "1.6.6"
+  val sigarLoader       = "io.kamon"                  %   "sigar-loader"          % "1.6.5-rev002"
   val h2                = "com.h2database"            %   "h2"                    % "1.4.182"
   val el                = "org.glassfish"             %   "javax.el"              % "3.0.0"
 
