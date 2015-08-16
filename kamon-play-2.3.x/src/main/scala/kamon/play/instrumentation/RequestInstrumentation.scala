@@ -17,7 +17,6 @@ package kamon.play.instrumentation
 
 import kamon.Kamon
 import kamon.play.Play
-import kamon.trace.TraceLocal.{ HttpContext, HttpContextKey }
 import kamon.trace._
 import kamon.util.SameThreadExecutionContext
 import org.aspectj.lang.ProceedingJoinPoint
@@ -27,8 +26,6 @@ import play.api.mvc._
 
 @Aspect
 class RequestInstrumentation {
-
-  import RequestInstrumentation._
 
   @DeclareMixin("play.api.mvc.RequestHeader+")
   def mixinContextAwareNewRequest: TraceContextAware = TraceContextAware.default
@@ -63,16 +60,11 @@ class RequestInstrumentation {
 
         } getOrElse result
       }
-      //store in TraceLocal useful data to diagnose errors
-      storeDiagnosticData(requestHeader)
-
       //override the current trace name
       Tracer.currentContext.rename(playExtension.generateTraceName(requestHeader))
-
       // Invoke the action
       next(requestHeader).map(onResult)(SameThreadExecutionContext)
     }
-
     pjp.proceed(Array(EssentialAction(essentialAction)))
   }
 
@@ -85,17 +77,4 @@ class RequestInstrumentation {
 
   def recordHttpServerMetrics(header: ResponseHeader, traceName: String): Unit =
     Kamon(Play).httpServerMetrics.recordResponse(traceName, header.status.toString)
-
-  def storeDiagnosticData(request: RequestHeader): Unit = {
-    val agent = request.headers.get(UserAgent).getOrElse(Unknown)
-    val forwarded = request.headers.get(XForwardedFor).getOrElse(Unknown)
-
-    TraceLocal.store(HttpContextKey)(HttpContext(agent, request.uri, forwarded))
-  }
-}
-
-object RequestInstrumentation {
-  val UserAgent = "User-Agent"
-  val XForwardedFor = "X-Forwarded-For"
-  val Unknown = "unknown"
 }
