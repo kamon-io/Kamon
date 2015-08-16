@@ -35,10 +35,6 @@ object TraceLocal {
     def apply(mdcKey: String): AvailableToMdc = fromKey(mdcKey)
   }
 
-  case class HttpContext(agent: String, uri: String, xforwarded: String)
-
-  object HttpContextKey extends TraceLocal.TraceLocalKey[HttpContext]
-
   def store[T](key: TraceLocalKey[T])(value: Any): Unit = Tracer.currentContext match {
     case ctx: MetricsOnlyContext ⇒ ctx.traceLocalStorage.store(key)(value)
     case EmptyTraceContext       ⇒ // Can't store in the empty context.
