@@ -64,7 +64,7 @@ object Dependencies {
   val play24            = "com.typesafe.play"         %%  "play"                  % play24Version
   val playWS24          = "com.typesafe.play"         %%  "play-ws"               % play24Version
   val playTest24        = "org.scalatestplus"         %%  "play"                  % "1.4.0-M2"
-  val typesafeConfig    = "com.typesafe"              %   "config"                % "1.3.0"
+  val typesafeConfig    = "com.typesafe"              %   "config"                % "1.2.1"
 
   def compile   (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "compile")
   def provided  (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "provided")
