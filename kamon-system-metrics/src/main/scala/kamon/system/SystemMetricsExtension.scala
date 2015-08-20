@@ -55,6 +55,7 @@ class SystemMetricsExtension(system: ExtendedActorSystem) extends Kamon.Extensio
 
   // JMX Metrics
   if (jmxEnabled) {
+    MemoryPoolMetrics.register(metricsExtension)
     ClassLoadingMetrics.register(metricsExtension)
     GarbageCollectionMetrics.register(metricsExtension)
     HeapMemoryMetrics.register(metricsExtension)
