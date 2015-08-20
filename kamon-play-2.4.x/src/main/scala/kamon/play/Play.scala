@@ -19,7 +19,7 @@ package kamon.play
 import akka.actor.{ ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProvider }
 import akka.event.Logging
 import kamon.Kamon
-import kamon.http.HttpServerMetrics
+import kamon.util.http.HttpServerMetrics
 import play.api.libs.ws.WSRequest
 import play.api.mvc.RequestHeader
 

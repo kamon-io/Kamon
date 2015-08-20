@@ -23,7 +23,8 @@ import akka.dispatch.ForkJoinExecutorConfigurator.AkkaForkJoinPool
 import akka.dispatch._
 import akka.kamon.instrumentation.LookupDataAware.LookupData
 import kamon.Kamon
-import kamon.akka.{ AkkaDispatcherMetrics, ThreadPoolExecutorDispatcherMetrics, ForkJoinPoolDispatcherMetrics }
+import kamon.util.executors.{ ForkJoinPoolMetrics, ThreadPoolExecutorMetrics }
+
 import kamon.metric.{ MetricsModule, Entity }
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
@@ -62,13 +63,13 @@ class DispatcherInstrumentation {
         val dispatcherEntity = Entity(system.name + "/" + dispatcherName, AkkaDispatcherMetrics.Category, tags = Map("dispatcher-type" -> "fork-join-pool"))
 
         if (Kamon.metrics.shouldTrack(dispatcherEntity))
-          Kamon.metrics.entity(ForkJoinPoolDispatcherMetrics.factory(fjp), dispatcherEntity)
+          Kamon.metrics.entity(ForkJoinPoolMetrics.factory(fjp, AkkaDispatcherMetrics.Category), dispatcherEntity)
 
       case tpe: ThreadPoolExecutor ⇒
         val dispatcherEntity = Entity(system.name + "/" + dispatcherName, AkkaDispatcherMetrics.Category, tags = Map("dispatcher-type" -> "thread-pool-executor"))
 
         if (Kamon.metrics.shouldTrack(dispatcherEntity))
-          Kamon.metrics.entity(ThreadPoolExecutorDispatcherMetrics.factory(tpe), dispatcherEntity)
+          Kamon.metrics.entity(ThreadPoolExecutorMetrics.factory(tpe, AkkaDispatcherMetrics.Category), dispatcherEntity)
 
       case others ⇒ // Currently not interested in other kinds of dispatchers.
     }
@@ -194,4 +195,8 @@ object LookupDataAware {
 
     result
   }
+}
+
+object AkkaDispatcherMetrics {
+  val Category = "akka-dispatcher"
 }

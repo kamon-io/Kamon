@@ -1,5 +1,5 @@
 /* =========================================================================================
- * Copyright © 2013-2014 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2015 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -24,6 +24,7 @@ import kamon.Kamon
 import kamon.akka.RouterMetricsTestActor.{ Pong, Ping }
 import kamon.metric.{ EntityRecorder, EntitySnapshot }
 import kamon.testkit.BaseKamonSpec
+import kamon.util.executors.{ ForkJoinPoolMetrics, ThreadPoolExecutorMetrics }
 
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
@@ -178,14 +179,14 @@ class DispatcherMetricsSpec extends BaseKamonSpec("dispatcher-metrics-spec") {
 
   def refreshDispatcherInstruments(dispatcher: MessageDispatcher, dispatcherType: String): Unit = {
     findDispatcherRecorder(dispatcher, dispatcherType) match {
-      case Some(tpe: ThreadPoolExecutorDispatcherMetrics) ⇒
+      case Some(tpe: ThreadPoolExecutorMetrics) ⇒
         tpe.processedTasks.refreshValue()
         tpe.activeThreads.refreshValue()
         tpe.maxPoolSize.refreshValue()
         tpe.poolSize.refreshValue()
         tpe.corePoolSize.refreshValue()
 
-      case Some(fjp: ForkJoinPoolDispatcherMetrics) ⇒
+      case Some(fjp: ForkJoinPoolMetrics) ⇒
         fjp.activeThreads.refreshValue()
         fjp.poolSize.refreshValue()
         fjp.queuedTaskCount.refreshValue()
