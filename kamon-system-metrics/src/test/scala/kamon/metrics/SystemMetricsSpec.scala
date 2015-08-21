@@ -62,20 +62,16 @@ class SystemMetricsSpec extends BaseKamonSpec("system-metrics-spec") with Redire
       }
     }
 
-    "record used, max and committed heap metrics" in {
-      val heapMetrics = takeSnapshotOf("heap-memory", "system-metric")
+    "record used, max and committed heap and non-heap metrics" in {
+      val memoryMetrics = takeSnapshotOf("jmx-memory", "system-metric")
 
-      heapMetrics.gauge("heap-used").get.numberOfMeasurements should be > 0L
-      heapMetrics.gauge("heap-max").get.numberOfMeasurements should be > 0L
-      heapMetrics.gauge("heap-committed").get.numberOfMeasurements should be > 0L
-    }
+      memoryMetrics.gauge("heap-used").get.numberOfMeasurements should be > 0L
+      memoryMetrics.gauge("heap-max").get.numberOfMeasurements should be > 0L
+      memoryMetrics.gauge("heap-committed").get.numberOfMeasurements should be > 0L
 
-    "record used, max and committed non-heap metrics" in {
-      val nonHeapMetrics = takeSnapshotOf("non-heap-memory", "system-metric")
-
-      nonHeapMetrics.gauge("non-heap-used").get.numberOfMeasurements should be > 0L
-      nonHeapMetrics.gauge("non-heap-max").get.numberOfMeasurements should be > 0L
-      nonHeapMetrics.gauge("non-heap-committed").get.numberOfMeasurements should be > 0L
+      memoryMetrics.gauge("non-heap-used").get.numberOfMeasurements should be > 0L
+      memoryMetrics.gauge("non-heap-max").get.numberOfMeasurements should be > 0L
+      memoryMetrics.gauge("non-heap-committed").get.numberOfMeasurements should be > 0L
     }
 
     "record daemon, count and peak jvm threads metrics" in {
