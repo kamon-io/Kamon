@@ -77,5 +77,5 @@ class DefaultNameGenerator extends NameGenerator {
     })
   } getOrElse "UntaggedTrace"
 
-  def generateHttpClientSegmentName(request: WSRequest): String = request.url
+  def generateHttpClientSegmentName(request: WSRequest): String = request.uri.getAuthority
 }
