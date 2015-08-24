@@ -31,7 +31,7 @@ class ExecutorServiceMetricsSpec extends BaseKamonSpec("executor-service-metrics
       findExecutorRecorder("single-thread-pool") should not be empty
 
       ExecutorServiceMetrics.remove("single-thread-pool")
-      findExecutorRecorder("single-thread-pool") should be (empty)
+      findExecutorRecorder("single-thread-pool") should be(empty)
     }
 
     "register a ThreadPoolExecutor, collect their metrics and remove it" in {
@@ -40,7 +40,7 @@ class ExecutorServiceMetricsSpec extends BaseKamonSpec("executor-service-metrics
       findExecutorRecorder("thread-pool-executor") should not be empty
 
       ExecutorServiceMetrics.remove("thread-pool-executor")
-      findExecutorRecorder("thread-pool-executor") should be (empty)
+      findExecutorRecorder("thread-pool-executor") should be(empty)
     }
 
     "register a ScheduledThreadPoolExecutor, collect their metrics and remove it" in {
@@ -49,7 +49,7 @@ class ExecutorServiceMetricsSpec extends BaseKamonSpec("executor-service-metrics
       findExecutorRecorder("scheduled-thread-pool-executor") should not be empty
 
       ExecutorServiceMetrics.remove("scheduled-thread-pool-executor")
-      findExecutorRecorder("scheduled-thread-pool-executor") should be (empty)
+      findExecutorRecorder("scheduled-thread-pool-executor") should be(empty)
     }
 
     "register a Java ForkJoinPool, collect their metrics and remove it" in {
@@ -58,7 +58,7 @@ class ExecutorServiceMetricsSpec extends BaseKamonSpec("executor-service-metrics
       findExecutorRecorder("java-fork-join-pool") should not be empty
 
       ExecutorServiceMetrics.remove("java-fork-join-pool")
-      findExecutorRecorder("java-fork-join-pool") should be (empty)
+      findExecutorRecorder("java-fork-join-pool") should be(empty)
     }
 
     "register a Scala ForkJoinPool, collect their metrics and remove it" in {
@@ -67,7 +67,7 @@ class ExecutorServiceMetricsSpec extends BaseKamonSpec("executor-service-metrics
       findExecutorRecorder("scala-fork-join-pool") should not be empty
 
       ExecutorServiceMetrics.remove("scala-fork-join-pool")
-      findExecutorRecorder("scala-fork-join-pool") should be (empty)
+      findExecutorRecorder("scala-fork-join-pool") should be(empty)
     }
 
     def findExecutorRecorder(name: String): Option[EntityRecorder] =
