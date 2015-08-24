@@ -45,7 +45,7 @@ object ExecutorServiceMetrics {
    * Register the [[http://docs.oracle.com/javase/7/docs/api/java/util/concurrent/ThreadPoolExecutor.html ThreadPoolExecutor]] to Monitor.
    *
    * @param name The name of the [[ThreadPoolExecutor]]
-     * @param threadPool The intance of the [[ThreadPoolExecutor]]
+   * @param threadPool The intance of the [[ThreadPoolExecutor]]
    * @param tags The tags associated to the [[ThreadPoolExecutor]]
    */
   private def registerThreadPool(name: String, threadPool: ThreadPoolExecutor, tags: Map[String, String]): Unit = {

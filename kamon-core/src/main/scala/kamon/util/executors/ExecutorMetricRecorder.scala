@@ -16,7 +16,6 @@
 
 package kamon.util.executors
 
-import akka.dispatch.ForkJoinExecutorConfigurator.AkkaForkJoinPool
 import kamon.metric.{ EntityRecorderFactory, GenericEntityRecorder }
 import kamon.metric.instrument.{ Gauge, MinMaxCounter, DifferentialValueCollector, InstrumentFactory }
 import java.util.concurrent.{ ForkJoinPool ⇒ JavaForkJoinPool, ThreadPoolExecutor }
@@ -48,15 +47,6 @@ object ForkJoinPools {
     def getRunningThreadCount(fjp: JavaForkJoinPool) = fjp.getActiveThreadCount.toLong
     def getActiveThreadCount(fjp: JavaForkJoinPool) = fjp.getRunningThreadCount.toLong
     def getQueuedTaskCount(fjp: JavaForkJoinPool) = fjp.getQueuedTaskCount
-
-  }
-
-  implicit object AkkaForkJoin extends ForkJoinMetrics[AkkaForkJoinPool] {
-    def getParallelism(fjp: AkkaForkJoinPool) = fjp.getParallelism
-    def getPoolSize(fjp: AkkaForkJoinPool) = fjp.getPoolSize.toLong
-    def getRunningThreadCount(fjp: AkkaForkJoinPool) = fjp.getActiveThreadCount.toLong
-    def getActiveThreadCount(fjp: AkkaForkJoinPool) = fjp.getRunningThreadCount.toLong
-    def getQueuedTaskCount(fjp: AkkaForkJoinPool) = fjp.getQueuedTaskCount
 
   }
 }
