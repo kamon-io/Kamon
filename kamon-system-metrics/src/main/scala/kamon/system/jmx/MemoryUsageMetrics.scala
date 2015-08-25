@@ -16,29 +16,29 @@
 
 package kamon.system.jmx
 
-import java.lang.management.{ ManagementFactory, MemoryPoolMXBean }
+import java.lang.management.{ MemoryUsage, MemoryMXBean, ManagementFactory, MemoryPoolMXBean }
 
 import kamon.metric.GenericEntityRecorder
-import kamon.metric.instrument.{ InstrumentFactory, Memory }
+import kamon.metric.instrument.{ Memory, InstrumentFactory }
 
 import scala.collection.convert.WrapAsScala
 
 /**
- * Generic memory pool stat recorder.
- * Records the amount of used, max, and committed memory in bytes for each passed MemoryPoolMXBean.
+ * Generic memory usage stat recorder.
+ * Records the amount of used, max, and committed memory in bytes for each passed MemoryUsage.
  * @param instrumentFactory Helpers for metric recording.
  * @param beansWithNames Data sources with metric name prefixes.
  */
-class MemoryPoolMetrics(instrumentFactory: InstrumentFactory,
-    beansWithNames: Iterable[MemoryBeanWithMetricName]) extends GenericEntityRecorder(instrumentFactory) {
+class MemoryUsageMetrics(instrumentFactory: InstrumentFactory,
+    beansWithNames: Iterable[MemoryUsageWithMetricName]) extends GenericEntityRecorder(instrumentFactory) {
   beansWithNames.foreach {
-    case MemoryBeanWithMetricName(name, bean) ⇒
+    case MemoryUsageWithMetricName(name, bean) ⇒
       gauge(name + "-used", Memory.Bytes, () ⇒ {
-        bean.getUsage.getUsed
+        bean.getUsed
       })
 
       gauge(name + "-max", Memory.Bytes, () ⇒ {
-        val max = bean.getUsage.getMax
+        val max = bean.getMax
 
         // .getMax can return -1 if the max is not defined.
         if (max >= 0) max
@@ -46,17 +46,17 @@ class MemoryPoolMetrics(instrumentFactory: InstrumentFactory,
       })
 
       gauge(name + "-committed", Memory.Bytes, () ⇒ {
-        bean.getUsage.getCommitted
+        bean.getCommitted
       })
   }
 }
 
 /**
- * Objects of this kind may be passed to [[MemoryPoolMetrics]] for data collection.
- * @param metricName The sanitized name of a [[MemoryPoolMXBean]].
+ * Objects of this kind may be passed to instances of [[MemoryUsageMetrics]] for data collection.
+ * @param metricName The sanitized name for a metric.
  * @param bean The data source for metrics.
  */
-private[jmx] final case class MemoryBeanWithMetricName(metricName: String, bean: MemoryPoolMXBean)
+private[jmx] final case class MemoryUsageWithMetricName(metricName: String, bean: MemoryUsage)
 
 /**
  *  Memory Pool metrics, as reported by JMX:
@@ -64,17 +64,22 @@ private[jmx] final case class MemoryBeanWithMetricName(metricName: String, bean:
  *  Pools in HotSpot Java 8:
  *  code-cache, metaspace, compressed-class-space, ps-eden-space, ps-survivor-space, ps-old-gen
  */
-object MemoryPoolMetrics extends JmxSystemMetricRecorderCompanion("memory-pool") with WrapAsScala {
+object MemoryUsageMetrics extends JmxSystemMetricRecorderCompanion("jmx-memory") with WrapAsScala {
 
   private val invalidChars = """[^a-z0-9]""".r
 
   private def sanitizedName(memoryPoolMXBean: MemoryPoolMXBean) =
     invalidChars.replaceAllIn(memoryPoolMXBean.getName.toLowerCase, "-")
 
-  private val beansWithNames = ManagementFactory.getMemoryPoolMXBeans.toIterable.map { bean ⇒
-    MemoryBeanWithMetricName(sanitizedName(bean), bean)
+  private val usagesWithNames = ManagementFactory.getMemoryPoolMXBeans.toList.map { bean ⇒
+    MemoryUsageWithMetricName(sanitizedName(bean), bean.getUsage)
   }
 
-  def apply(instrumentFactory: InstrumentFactory): MemoryPoolMetrics =
-    new MemoryPoolMetrics(instrumentFactory, beansWithNames)
+  private val memoryMXBean: MemoryMXBean = ManagementFactory.getMemoryMXBean
+
+  def apply(instrumentFactory: InstrumentFactory): MemoryUsageMetrics =
+    new MemoryUsageMetrics(instrumentFactory,
+      MemoryUsageWithMetricName("non-heap", memoryMXBean.getNonHeapMemoryUsage) ::
+        MemoryUsageWithMetricName("heap", memoryMXBean.getHeapMemoryUsage) ::
+        usagesWithNames)
 }
