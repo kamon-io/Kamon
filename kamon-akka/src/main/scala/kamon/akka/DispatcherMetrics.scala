@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * Copyright © 2013-2014 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2015 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -20,40 +20,20 @@ import java.util.concurrent.ThreadPoolExecutor
 
 import _root_.akka.dispatch.ForkJoinExecutorConfigurator.AkkaForkJoinPool
 import kamon.metric._
-import kamon.metric.instrument.{ DifferentialValueCollector, InstrumentFactory }
-
-class ForkJoinPoolDispatcherMetrics(fjp: AkkaForkJoinPool, instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) {
-  val paralellism = minMaxCounter("parallelism")
-  paralellism.increment(fjp.getParallelism) // Steady value.
-
-  val poolSize = gauge("pool-size", fjp.getPoolSize.toLong)
-  val activeThreads = gauge("active-threads", fjp.getActiveThreadCount.toLong)
-  val runningThreads = gauge("running-threads", fjp.getRunningThreadCount.toLong)
-  val queuedTaskCount = gauge("queued-task-count", fjp.getQueuedTaskCount)
-}
+import kamon.metric.instrument.InstrumentFactory
+import kamon.util.executors.{ ForkJoinPoolMetrics, ThreadPoolExecutorMetrics }
 
 object ForkJoinPoolDispatcherMetrics {
-
-  def factory(fjp: AkkaForkJoinPool) = new EntityRecorderFactory[ForkJoinPoolDispatcherMetrics] {
+  def factory(fjp: AkkaForkJoinPool) = new EntityRecorderFactory[ForkJoinPoolMetrics] {
     def category: String = AkkaDispatcherMetrics.Category
-    def createRecorder(instrumentFactory: InstrumentFactory) = new ForkJoinPoolDispatcherMetrics(fjp, instrumentFactory)
+    def createRecorder(instrumentFactory: InstrumentFactory) = new ForkJoinPoolMetrics(fjp, instrumentFactory)
   }
 }
 
-class ThreadPoolExecutorDispatcherMetrics(tpe: ThreadPoolExecutor, instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) {
-  val corePoolSize = gauge("core-pool-size", tpe.getCorePoolSize.toLong)
-  val maxPoolSize = gauge("max-pool-size", tpe.getMaximumPoolSize.toLong)
-  val poolSize = gauge("pool-size", tpe.getPoolSize.toLong)
-  val activeThreads = gauge("active-threads", tpe.getActiveCount.toLong)
-  val processedTasks = gauge("processed-tasks", DifferentialValueCollector(() ⇒ {
-    tpe.getTaskCount
-  }))
-}
-
 object ThreadPoolExecutorDispatcherMetrics {
-  def factory(tpe: ThreadPoolExecutor) = new EntityRecorderFactory[ThreadPoolExecutorDispatcherMetrics] {
+  def factory(tpe: ThreadPoolExecutor) = new EntityRecorderFactory[ThreadPoolExecutorMetrics] {
     def category: String = AkkaDispatcherMetrics.Category
-    def createRecorder(instrumentFactory: InstrumentFactory) = new ThreadPoolExecutorDispatcherMetrics(tpe, instrumentFactory)
+    def createRecorder(instrumentFactory: InstrumentFactory) = new ThreadPoolExecutorMetrics(tpe, instrumentFactory)
   }
 }
 

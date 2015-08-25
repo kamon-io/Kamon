@@ -14,7 +14,7 @@
  * =========================================================================================
  */
 
-package kamon.http
+package kamon.util.http
 
 import kamon.metric.{ EntityRecorderFactory, GenericEntityRecorder }
 import kamon.metric.instrument.InstrumentFactory
