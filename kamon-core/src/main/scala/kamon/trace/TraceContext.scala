@@ -158,7 +158,7 @@ object TimestampedTraceContextAware {
 }
 
 trait SegmentAware {
-  @volatile var segment: Segment = EmptyTraceContext.EmptySegment
+  @volatile @transient var segment: Segment = EmptyTraceContext.EmptySegment
 }
 
 object SegmentAware {
