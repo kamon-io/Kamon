@@ -16,22 +16,11 @@
 
 package kamon.akka
 
-import _root_.akka.actor
-import _root_.akka.actor._
-import _root_.akka.event.Logging
 import com.typesafe.config.Config
-import kamon._
+import kamon.Kamon
 
-class AkkaExtension(system: ExtendedActorSystem) extends Kamon.Extension {
-  val log = Logging(system, classOf[AkkaExtension])
-  val config = system.settings.config.getConfig("kamon.akka")
-
-  val askPatternTimeoutWarning = AskPatternTimeoutWarningSettings.fromConfig(config)
-}
-
-object Akka extends ExtensionId[AkkaExtension] with ExtensionIdProvider {
-  def lookup(): ExtensionId[_ <: actor.Extension] = Akka
-  def createExtension(system: ExtendedActorSystem): AkkaExtension = new AkkaExtension(system)
+object AkkaExtension {
+  val askPatternTimeoutWarning = AskPatternTimeoutWarningSettings.fromConfig(Kamon.config.getConfig("kamon.akka"))
 }
 
 sealed trait AskPatternTimeoutWarningSetting

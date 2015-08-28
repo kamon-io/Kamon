@@ -1,0 +1,13 @@
+<configuration scan="true" debug="false">
+    <conversionRule conversionWord="traceToken" converterClass="kamon.trace.logging.LogbackTraceTokenConverter"/>
+
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%date{HH:mm:ss.SSS} %-5level [%traceToken][%thread] %logger{55} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <root level="off">
+        <appender-ref ref="STDOUT"/>
+    </root>
+</configuration>

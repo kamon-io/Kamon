@@ -20,7 +20,6 @@ import java.nio.LongBuffer
 import akka.actor._
 import akka.routing._
 import akka.testkit.TestProbe
-import com.typesafe.config.ConfigFactory
 import kamon.Kamon
 import kamon.akka.RouterMetricsTestActor._
 import kamon.metric.EntitySnapshot
@@ -30,24 +29,6 @@ import kamon.testkit.BaseKamonSpec
 import scala.concurrent.duration._
 
 class RouterMetricsSpec extends BaseKamonSpec("router-metrics-spec") {
-  override lazy val config =
-    ConfigFactory.parseString(
-      """
-        |kamon.metric {
-        |  tick-interval = 1 hour
-        |  default-collection-context-buffer-size = 10
-        |
-        |  filters = {
-        |    akka-router {
-        |      includes = [ "*/user/tracked-*", "*/user/measuring-*", "*/user/stop-*" ]
-        |      excludes = [ "*/user/tracked-explicitly-excluded-*"]
-        |    }
-        |  }
-        |}
-        |
-        |akka.loglevel = OFF
-        |
-      """.stripMargin)
 
   "the Kamon router metrics" should {
     "respect the configured include and exclude filters" in new RouterMetricsFixtures {

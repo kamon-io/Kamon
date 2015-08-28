@@ -28,14 +28,6 @@ import scala.concurrent.duration._
 import scala.util.control.NonFatal
 
 class ActorSystemMessageInstrumentationSpec extends BaseKamonSpec("actor-system-message-instrumentation-spec") with WordSpecLike with ImplicitSender {
-  override lazy val config =
-    ConfigFactory.parseString(
-      """
-        |akka {
-        |  loglevel = OFF
-        |}
-      """.stripMargin)
-
   implicit lazy val executionContext = system.dispatcher
 
   "the system message passing instrumentation" should {
