@@ -23,21 +23,6 @@ import kamon.trace.Tracer
 import kamon.metric.instrument.Histogram
 
 class TraceMetricsSpec extends BaseKamonSpec("trace-metrics-spec") with ImplicitSender {
-  override lazy val config =
-    ConfigFactory.parseString(
-      """
-        |kamon.metric {
-        |  tick-interval = 1 hour
-        |  default-collection-context-buffer-size = 10
-        |
-        |  filters {
-        |    trace {
-        |      includes = [ "*" ]
-        |      excludes = [ "non-tracked-trace"]
-        |    }
-        |  }
-        |}
-      """.stripMargin)
 
   "the TraceMetrics" should {
     "record the elapsed time between a trace creation and finish" in {

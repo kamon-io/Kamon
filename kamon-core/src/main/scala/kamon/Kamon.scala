@@ -20,84 +20,62 @@ import _root_.akka.event.Logging
 import com.typesafe.config.{ ConfigFactory, Config }
 import kamon.metric._
 import kamon.trace.{ TracerModuleImpl, TracerModule }
+import org.slf4j.LoggerFactory
+
+import _root_.scala.util.Try
 
 object Kamon {
+  private val log = LoggerFactory.getLogger(getClass)
+
   trait Extension extends actor.Extension
 
-  private case class KamonCoreComponents(metrics: MetricsModule, tracer: TracerModule)
+  val config = resolveConfiguration
+  val metrics = MetricsModuleImpl(config)
+  val tracer = TracerModuleImpl(metrics, config)
 
-  private val shouldAutoStart = isSystemPropertyEnabled("kamon.auto-start")
-  private val shouldWarnOnDuplicateStart = !isSystemPropertyEnabled("kamon.disable-duplicate-start-warning")
+  private lazy val _system = {
+    val internalConfig = config.getConfig("kamon.internal-config")
+    val patchedConfig = config
+      .withoutPath("akka")
+      .withoutPath("spray")
+      .withFallback(internalConfig)
 
-  @volatile private var _system: ActorSystem = _
-  @volatile private var _coreComponents: Option[KamonCoreComponents] = None
+    log.info("Initializing KAMON DUUUDEEE")
 
-  def start(config: Config): Unit = synchronized {
-
-    def resolveInternalConfig: Config = {
-      val internalConfig = config.getConfig("kamon.internal-config")
-
-      config
-        .withoutPath("akka")
-        .withoutPath("spray")
-        .withFallback(internalConfig)
-    }
-
-    if (_coreComponents.isEmpty) {
-      val metrics = MetricsModuleImpl(config)
-      val tracer = TracerModuleImpl(metrics, config)
-
-      _coreComponents = Some(KamonCoreComponents(metrics, tracer))
-      _system = ActorSystem("kamon", resolveInternalConfig)
-
-      metrics.start(_system)
-      tracer.start(_system)
-      _system.registerExtension(ModuleLoader)
-
-    } else if (shouldWarnOnDuplicateStart) {
-      val logger = Logging(_system, "Kamon")
-      logger.warning("An attempt to start Kamon has been made, but Kamon has already been started.")
-    }
+    ActorSystem("kamon", patchedConfig)
   }
 
-  private def isSystemPropertyEnabled(propertyName: String): Boolean =
-    sys.props.get(propertyName).map(_.equals("true")).getOrElse(false)
+  private lazy val _start = {
+    metrics.start(_system)
+    tracer.start(_system)
+    _system.registerExtension(ModuleLoader)
+  }
 
-  def start(): Unit =
-    start(ConfigFactory.load)
+  def start(): Unit = _start
 
   def shutdown(): Unit = {
-    _coreComponents = None
-    _system.shutdown()
-    _system = null
+    // TODO: Define what a proper shutdown should be like.
   }
 
-  def metrics: MetricsModule =
-    ifStarted(_.metrics)
-
-  def tracer: TracerModule =
-    ifStarted(_.tracer)
-
-  def apply[T <: Kamon.Extension](key: ExtensionId[T]): T =
-    ifStarted { _ ⇒
-      if (_system ne null)
-        key(_system)
-      else
-        sys.error("Cannot retrieve extensions while Kamon is being initialized.")
-    }
+  /*  def apply[T <: Kamon.Extension](key: ExtensionId[T]): T =
+    key(_system)
 
   def extension[T <: Kamon.Extension](key: ExtensionId[T]): T =
-    apply(key)
+    apply(key)*/
 
-  private def ifStarted[T](thunk: KamonCoreComponents ⇒ T): T =
-    _coreComponents.map(thunk(_)) getOrElse {
-      if (shouldAutoStart) {
-        start()
-        thunk(_coreComponents.get)
+  private def resolveConfiguration: Config = {
+    val defaultConfig = ConfigFactory.load()
 
-      } else sys.error("Kamon has not been started yet. You must either explicitlt call Kamon.start(...) or enable " +
-        "automatic startup by adding -Dkamon.auto-start=true to your JVM options.")
+    defaultConfig.getString("kamon.config-provider") match {
+      case "default" ⇒ defaultConfig
+      case fqcn ⇒
+        val dynamic = new ReflectiveDynamicAccess(getClass.getClassLoader)
+        dynamic.createInstanceFor[ConfigProvider](fqcn, Nil).get.config
     }
+  }
+}
 
+trait ConfigProvider {
+  def config: Config
 }
 

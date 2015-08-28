@@ -16,21 +16,12 @@
 
 package kamon.metric
 
-import com.typesafe.config.ConfigFactory
 import kamon.Kamon
 import kamon.metric.instrument.Histogram.DynamicRange
 import kamon.testkit.BaseKamonSpec
 import scala.concurrent.duration._
 
 class SimpleMetricsSpec extends BaseKamonSpec("simple-metrics-spec") {
-  override lazy val config =
-    ConfigFactory.parseString(
-      """
-        |kamon.metric {
-        |  tick-interval = 1 hour
-        |  default-collection-context-buffer-size = 10
-        |}
-      """.stripMargin)
 
   "the SimpleMetrics extension" should {
 

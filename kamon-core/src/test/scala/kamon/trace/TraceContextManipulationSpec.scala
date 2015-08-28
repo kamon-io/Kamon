@@ -20,20 +20,6 @@ import com.typesafe.config.ConfigFactory
 import kamon.testkit.BaseKamonSpec
 
 class TraceContextManipulationSpec extends BaseKamonSpec("trace-metrics-spec") {
-  override lazy val config =
-    ConfigFactory.parseString(
-      """
-        |kamon.metric {
-        |  tick-interval = 1 hour
-        |
-        |  filters {
-        |    trace {
-        |      includes = [ "*" ]
-        |      excludes = [ "non-tracked-trace"]
-        |    }
-        |  }
-        |}
-      """.stripMargin)
 
   "the TraceContext api" should {
     "allow starting a trace within a specified block of code, and only within that block of code" in {
