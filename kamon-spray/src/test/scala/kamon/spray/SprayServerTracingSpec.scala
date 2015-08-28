@@ -19,7 +19,6 @@ package kamon.spray
 import _root_.spray.httpx.RequestBuilding
 import akka.testkit.TestProbe
 import kamon.testkit.BaseKamonSpec
-import kamon.Kamon
 import org.scalatest.concurrent.{ PatienceConfiguration, ScalaFutures }
 import spray.http.HttpHeaders.RawHeader
 import spray.http.{ HttpResponse, HttpRequest }
@@ -53,7 +52,7 @@ class SprayServerTracingSpec extends BaseKamonSpec("spray-server-tracing-spec") 
       server.reply(HttpResponse(entity = "ok"))
       val response = client.expectMsgType[HttpResponse]
 
-      response.headers.count(_.name == Kamon(Spray).settings.traceTokenHeaderName) should be(1)
+      response.headers.count(_.name == SprayExtension.settings.traceTokenHeaderName) should be(1)
 
     }
 
@@ -73,13 +72,13 @@ class SprayServerTracingSpec extends BaseKamonSpec("spray-server-tracing-spec") 
   }
 
   def traceTokenHeader(token: String): RawHeader =
-    RawHeader(Kamon(Spray).settings.traceTokenHeaderName, token)
+    RawHeader(SprayExtension.settings.traceTokenHeaderName, token)
 
   def enableAutomaticTraceTokenPropagation(): Unit = setIncludeTraceToken(true)
   def disableAutomaticTraceTokenPropagation(): Unit = setIncludeTraceToken(false)
 
   def setIncludeTraceToken(include: Boolean): Unit = {
-    val target = Kamon(Spray).settings
+    val target = SprayExtension.settings
     val field = target.getClass.getDeclaredField("includeTraceTokenHeader")
     field.setAccessible(true)
     field.set(target, include)

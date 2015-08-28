@@ -30,56 +30,6 @@ import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 
 class DispatcherMetricsSpec extends BaseKamonSpec("dispatcher-metrics-spec") {
-  override lazy val config =
-    ConfigFactory.parseString(
-      """
-        |kamon.metric {
-        |  tick-interval = 1 hour
-        |  default-collection-context-buffer-size = 10
-        |
-        |  filters = {
-        |    akka-dispatcher {
-        |      includes = [ "**" ]
-        |      excludes = [ "*/explicitly-excluded" ]
-        |    }
-        |  }
-        |
-        |  default-instrument-settings {
-        |    gauge.refresh-interval = 1 hour
-        |    min-max-counter.refresh-interval = 1 hour
-        |  }
-        |}
-        |
-        |explicitly-excluded {
-        |  type = "Dispatcher"
-        |  executor = "fork-join-executor"
-        |}
-        |
-        |tracked-fjp {
-        |  type = "Dispatcher"
-        |  executor = "fork-join-executor"
-        |
-        |  fork-join-executor {
-        |    parallelism-min = 8
-        |    parallelism-factor = 100.0
-        |    parallelism-max = 22
-        |  }
-        |}
-        |
-        |tracked-tpe {
-        |  type = "Dispatcher"
-        |  executor = "thread-pool-executor"
-        |
-        |  thread-pool-executor {
-        |    core-pool-size-min = 7
-        |    core-pool-size-factor = 100.0
-        |    max-pool-size-factor  = 100.0
-        |    max-pool-size-max = 21
-        |  }
-        |}
-        |
-      """.stripMargin)
-
   "the Kamon dispatcher metrics" should {
     "respect the configured include and exclude filters" in {
       val defaultDispatcher = forceInit(system.dispatchers.lookup("akka.actor.default-dispatcher"))

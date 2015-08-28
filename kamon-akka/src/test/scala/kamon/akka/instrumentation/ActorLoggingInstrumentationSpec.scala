@@ -26,13 +26,6 @@ import org.scalatest.Inspectors
 import org.slf4j.MDC
 
 class ActorLoggingInstrumentationSpec extends BaseKamonSpec("actor-logging-instrumentation-spec") with Inspectors with MdcKeysSupport {
-  override lazy val config =
-    ConfigFactory.parseString(
-      """
-        |akka {
-        |  loggers = ["akka.event.slf4j.Slf4jLogger"]
-        |}
-      """.stripMargin)
 
   "the ActorLogging instrumentation" should {
     "attach the TraceContext (if available) to log events" in {

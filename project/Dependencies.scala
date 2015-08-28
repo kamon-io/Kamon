@@ -46,10 +46,10 @@ object Dependencies {
   val akkaTestKit       = "com.typesafe.akka"         %%  "akka-testkit"          % akkaVersion
   val akkaRemote        = "com.typesafe.akka"         %%  "akka-remote"           % akkaVersion
   val akkaCluster       = "com.typesafe.akka"         %%  "akka-cluster"          % akkaVersion
-  val slf4Api           = "org.slf4j"                 %   "slf4j-api"             % slf4jVersion
-  val slf4nop           = "org.slf4j"                 %   "slf4j-nop"             % slf4jVersion
-  val slf4Jul           = "org.slf4j"                 %   "jul-to-slf4j"          % slf4jVersion
-  val slf4Log4j         = "org.slf4j"                 %   "log4j-over-slf4j"      % slf4jVersion
+  val slf4jApi          = "org.slf4j"                 %   "slf4j-api"             % slf4jVersion
+  val slf4jnop          = "org.slf4j"                 %   "slf4j-nop"             % slf4jVersion
+  val slf4jJul          = "org.slf4j"                 %   "jul-to-slf4j"          % slf4jVersion
+  val slf4jLog4j        = "org.slf4j"                 %   "log4j-over-slf4j"      % slf4jVersion
   val scalazConcurrent  = "org.scalaz"                %%  "scalaz-concurrent"     % "7.1.0"
   val sigarLoader       = "io.kamon"                  %   "sigar-loader"          % "1.6.5-rev002"
   val h2                = "com.h2database"            %   "h2"                    % "1.4.182"

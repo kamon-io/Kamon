@@ -23,21 +23,6 @@ import scala.concurrent.duration._
 
 class SimpleTraceSpec extends BaseKamonSpec("simple-trace-spec") {
 
-  override lazy val config =
-    ConfigFactory.parseString(
-      """
-        |kamon {
-        |  metric {
-        |    tick-interval = 1 hour
-        |  }
-        |
-        |  trace {
-        |    level-of-detail = simple-trace
-        |    sampling = all
-        |  }
-        |}
-      """.stripMargin)
-
   "the simple tracing" should {
     "send a TraceInfo when the trace has finished and all segments are finished" in {
       Kamon.tracer.subscribe(testActor)

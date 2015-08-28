@@ -16,14 +16,13 @@
 
 package spray.can.client
 
-import kamon.Kamon
 import kamon.util.SameThreadExecutionContext
 import org.aspectj.lang.annotation._
 import org.aspectj.lang.ProceedingJoinPoint
 import spray.http._
 import spray.http.HttpHeaders.RawHeader
 import kamon.trace._
-import kamon.spray.{ ClientInstrumentationLevel, Spray }
+import kamon.spray.{ SprayExtension, ClientInstrumentationLevel }
 import akka.actor.{ ActorRef, Status }
 import scala.concurrent.{ Future, ExecutionContext }
 import akka.util.Timeout
@@ -49,12 +48,10 @@ class ClientRequestInstrumentation {
     requestContext.traceContext
 
     Tracer.currentContext.collect { ctx ⇒
-      val sprayExtension = Kamon.extension(Spray)
-
-      if (sprayExtension.settings.clientInstrumentationLevel == ClientInstrumentationLevel.HostLevelAPI) {
+      if (SprayExtension.settings.clientInstrumentationLevel == ClientInstrumentationLevel.HostLevelAPI) {
         if (requestContext.segment.isEmpty) {
-          val clientRequestName = sprayExtension.generateHostLevelApiSegmentName(request)
-          val segment = ctx.startSegment(clientRequestName, SegmentCategory.HttpClient, Spray.SegmentLibraryName)
+          val clientRequestName = SprayExtension.generateHostLevelApiSegmentName(request)
+          val segment = ctx.startSegment(clientRequestName, SegmentCategory.HttpClient, SprayExtension.SegmentLibraryName)
           requestContext.segment = segment
         }
 
@@ -64,7 +61,7 @@ class ClientRequestInstrumentation {
         // name again here is that when the request was initially sent it might not have the Host information available
         // and it might be important to decide a proper segment name.
 
-        val clientRequestName = sprayExtension.generateHostLevelApiSegmentName(request)
+        val clientRequestName = SprayExtension.generateHostLevelApiSegmentName(request)
         request.asInstanceOf[SegmentAware].segment.rename(clientRequestName)
       }
     }
@@ -114,10 +111,9 @@ class ClientRequestInstrumentation {
 
     (request: HttpRequest) ⇒ {
       Tracer.currentContext.collect { ctx ⇒
-        val sprayExtension = Kamon.extension(Spray)
         val segment =
-          if (sprayExtension.settings.clientInstrumentationLevel == ClientInstrumentationLevel.RequestLevelAPI)
-            ctx.startSegment(sprayExtension.generateRequestLevelApiSegmentName(request), SegmentCategory.HttpClient, Spray.SegmentLibraryName)
+          if (SprayExtension.settings.clientInstrumentationLevel == ClientInstrumentationLevel.RequestLevelAPI)
+            ctx.startSegment(SprayExtension.generateRequestLevelApiSegmentName(request), SegmentCategory.HttpClient, SprayExtension.SegmentLibraryName)
           else
             EmptyTraceContext.EmptySegment
 
@@ -138,9 +134,8 @@ class ClientRequestInstrumentation {
   def aroundIncludingDefaultHeadersAtHttpHostConnector(pjp: ProceedingJoinPoint, request: HttpMessage, defaultHeaders: List[HttpHeader]): Any = {
 
     val modifiedHeaders = Tracer.currentContext.collect { ctx ⇒
-      val sprayExtension = Kamon.extension(Spray)
-      if (sprayExtension.settings.includeTraceTokenHeader)
-        RawHeader(sprayExtension.settings.traceTokenHeaderName, ctx.token) :: defaultHeaders
+      if (SprayExtension.settings.includeTraceTokenHeader)
+        RawHeader(SprayExtension.settings.traceTokenHeaderName, ctx.token) :: defaultHeaders
       else
         defaultHeaders
 

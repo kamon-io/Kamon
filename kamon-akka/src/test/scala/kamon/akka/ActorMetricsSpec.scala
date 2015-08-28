@@ -29,28 +29,6 @@ import kamon.testkit.BaseKamonSpec
 import scala.concurrent.duration._
 
 class ActorMetricsSpec extends BaseKamonSpec("actor-metrics-spec") {
-  override lazy val config =
-    ConfigFactory.parseString(
-      """
-        |kamon.metric {
-        |  tick-interval = 1 hour
-        |  default-collection-context-buffer-size = 10
-        |
-        |  filters {
-        |    akka-actor {
-        |      includes = [ "*/user/tracked-*", "*/user/measuring-*", "*/user/clean-after-collect", "*/user/stop", "*/" ]
-        |      excludes = [ "*/user/tracked-explicitly-excluded", "*/user/non-tracked-actor" ]
-        |    }
-        |  }
-        |
-        |  instrument-settings {
-        |    akka-actor.mailbox-size.refresh-interval = 1 hour
-        |  }
-        |}
-        |
-        |akka.loglevel = OFF
-        |
-      """.stripMargin)
 
   "the Kamon actor metrics" should {
     "respect the configured include and exclude filters" in new ActorMetricsFixtures {

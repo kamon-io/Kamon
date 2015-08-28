@@ -26,21 +26,6 @@ import scala.concurrent.duration._
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 
 class TickMetricSnapshotBufferSpec extends BaseKamonSpec("trace-metrics-spec") with ImplicitSender {
-  override lazy val config =
-    ConfigFactory.parseString(
-      """
-        |kamon.metric {
-        |  tick-interval = 1 hour
-        |  default-collection-context-buffer-size = 10
-        |
-        |  filters {
-        |    trace {
-        |      includes = [ "*" ]
-        |      excludes = [ "non-tracked-trace" ]
-        |    }
-        |  }
-        |}
-      """.stripMargin)
 
   "the TickMetricSnapshotBuffer" should {
     "merge TickMetricSnapshots received until the flush timeout is reached and fix the from/to fields" in new SnapshotFixtures {

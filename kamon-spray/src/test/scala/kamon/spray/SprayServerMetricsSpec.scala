@@ -10,16 +10,6 @@ import spray.httpx.RequestBuilding
 class SprayServerMetricsSpec extends BaseKamonSpec("spray-server-metrics-spec") with RequestBuilding with ScalaFutures
     with PatienceConfiguration with TestServer {
 
-  override lazy val config =
-    ConfigFactory.parseString(
-      """
-        |kamon.metric {
-        |  tick-interval = 1 hour
-        |}
-        |
-        |akka.loggers = ["akka.event.slf4j.Slf4jLogger"]
-      """.stripMargin)
-
   "the Spray Server metrics instrumentation" should {
     "record trace metrics for processed requests" in {
       val (connection, server) = buildClientConnectionAndServer

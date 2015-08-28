@@ -1,6 +1,7 @@
 package kamon.spray
 
-import akka.actor.ExtendedActorSystem
+import akka.actor.ReflectiveDynamicAccess
+import com.typesafe.config.Config
 
 case class SprayExtensionSettings(
   includeTraceTokenHeader: Boolean,
@@ -9,16 +10,17 @@ case class SprayExtensionSettings(
   clientInstrumentationLevel: ClientInstrumentationLevel.Level)
 
 object SprayExtensionSettings {
-  def apply(system: ExtendedActorSystem): SprayExtensionSettings = {
-    val config = system.settings.config.getConfig("kamon.spray")
+  def apply(config: Config): SprayExtensionSettings = {
+    val sprayConfig = config.getConfig("kamon.spray")
 
-    val includeTraceTokenHeader: Boolean = config.getBoolean("automatic-trace-token-propagation")
-    val traceTokenHeaderName: String = config.getString("trace-token-header-name")
+    val includeTraceTokenHeader: Boolean = sprayConfig.getBoolean("automatic-trace-token-propagation")
+    val traceTokenHeaderName: String = sprayConfig.getString("trace-token-header-name")
 
-    val nameGeneratorFQN = config.getString("name-generator")
-    val nameGenerator: NameGenerator = system.dynamicAccess.createInstanceFor[NameGenerator](nameGeneratorFQN, Nil).get // let's bubble up any problems.
+    val nameGeneratorFQN = sprayConfig.getString("name-generator")
+    val nameGenerator: NameGenerator = new ReflectiveDynamicAccess(getClass.getClassLoader)
+      .createInstanceFor[NameGenerator](nameGeneratorFQN, Nil).get // let's bubble up any problems.
 
-    val clientInstrumentationLevel: ClientInstrumentationLevel.Level = config.getString("client.instrumentation-level") match {
+    val clientInstrumentationLevel: ClientInstrumentationLevel.Level = sprayConfig.getString("client.instrumentation-level") match {
       case "request-level" ⇒ ClientInstrumentationLevel.RequestLevelAPI
       case "host-level"    ⇒ ClientInstrumentationLevel.HostLevelAPI
       case other           ⇒ sys.error(s"Invalid client instrumentation level [$other] found in configuration.")

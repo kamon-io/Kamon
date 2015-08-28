@@ -22,28 +22,14 @@ import akka.event.{ Logging, LoggingAdapter }
 import kamon.Kamon
 import kamon.util.http.HttpServerMetrics
 import kamon.metric.Entity
+import org.slf4j.LoggerFactory
 import spray.http.HttpHeaders.Host
 import spray.http.HttpRequest
 
-object Spray extends ExtensionId[SprayExtension] with ExtensionIdProvider {
-  def lookup(): ExtensionId[_ <: actor.Extension] = Spray
-  def createExtension(system: ExtendedActorSystem): SprayExtension = new SprayExtensionImpl(system)
-
+object SprayExtension {
+  val log = LoggerFactory.getLogger("kamon.spray.SprayExtension")
+  val settings = SprayExtensionSettings(Kamon.config)
   val SegmentLibraryName = "spray-client"
-}
-
-trait SprayExtension extends Kamon.Extension {
-  def settings: SprayExtensionSettings
-  def log: LoggingAdapter
-  def httpServerMetrics: HttpServerMetrics
-  def generateTraceName(request: HttpRequest): String
-  def generateRequestLevelApiSegmentName(request: HttpRequest): String
-  def generateHostLevelApiSegmentName(request: HttpRequest): String
-}
-
-class SprayExtensionImpl(system: ExtendedActorSystem) extends SprayExtension {
-  val settings = SprayExtensionSettings(system)
-  val log = Logging(system, "SprayExtension")
 
   val httpServerMetrics = {
     val entity = Entity("spray-server", HttpServerMetrics.category)

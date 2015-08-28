@@ -20,25 +20,14 @@ import akka.actor._
 import akka.pattern.ask
 import akka.testkit.EventFilter
 import akka.util.Timeout
-import com.typesafe.config.ConfigFactory
-import kamon.Kamon
 import kamon.akka.AskPatternTimeoutWarningSettings.{ Off, Lightweight, Heavyweight }
-import kamon.akka.{ AskPatternTimeoutWarningSetting, Akka }
+import kamon.akka.{ AkkaExtension, AskPatternTimeoutWarningSetting }
 import kamon.testkit.BaseKamonSpec
 import kamon.trace.Tracer
 
 import scala.concurrent.duration._
 
 class AskPatternInstrumentationSpec extends BaseKamonSpec("ask-pattern-tracing-spec") {
-  override lazy val config =
-    ConfigFactory.parseString(
-      """
-        |akka {
-        |  loglevel = OFF
-        |  loggers = [akka.testkit.TestEventListener]
-        |}
-      """.stripMargin)
-
   implicit lazy val ec = system.dispatcher
   implicit val askTimeout = Timeout(10 millis)
 
@@ -93,10 +82,9 @@ class AskPatternInstrumentationSpec extends BaseKamonSpec("ask-pattern-tracing-s
   override protected def afterAll(): Unit = shutdown()
 
   def setAskPatternTimeoutWarningMode(mode: AskPatternTimeoutWarningSetting): Unit = {
-    val target = Kamon(Akka)
-    val field = target.getClass.getDeclaredField("askPatternTimeoutWarning")
+    val field = AkkaExtension.getClass.getDeclaredField("askPatternTimeoutWarning")
     field.setAccessible(true)
-    field.set(target, mode)
+    field.set(AkkaExtension, mode)
   }
 }
 

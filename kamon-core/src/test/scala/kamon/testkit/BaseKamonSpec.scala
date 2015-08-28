@@ -28,12 +28,12 @@ import org.scalatest.{ BeforeAndAfterAll, Matchers, WordSpecLike }
 abstract class BaseKamonSpec(actorSystemName: String) extends TestKitBase with WordSpecLike with Matchers with ImplicitSender with BeforeAndAfterAll {
   lazy val collectionContext = Kamon.metrics.buildDefaultCollectionContext
   implicit lazy val system: ActorSystem = {
-    Kamon.start(config.withFallback(ConfigFactory.load()))
+    Kamon.start()
     ActorSystem(actorSystemName, config)
   }
 
   def config: Config =
-    ConfigFactory.empty()
+    Kamon.config
 
   def newContext(name: String): TraceContext =
     Kamon.tracer.newContext(name)

@@ -19,7 +19,7 @@ import org.aspectj.lang.annotation._
 import kamon.trace._
 import spray.http.{ HttpResponse, HttpMessagePartWrapper, HttpRequest }
 import kamon.Kamon
-import kamon.spray.{ SprayExtension, Spray }
+import kamon.spray.SprayExtension
 import org.aspectj.lang.ProceedingJoinPoint
 import spray.http.HttpHeaders.RawHeader
 
@@ -35,11 +35,10 @@ class ServerRequestInstrumentation {
   @After("openRequestInit(openRequest, request)")
   def afterInit(openRequest: TraceContextAware, request: HttpRequest): Unit = {
     import Kamon.tracer
-    val sprayExtension = Kamon(Spray)
 
-    val defaultTraceName = sprayExtension.generateTraceName(request)
-    val token = if (sprayExtension.settings.includeTraceTokenHeader) {
-      request.headers.find(_.name == sprayExtension.settings.traceTokenHeaderName).map(_.value)
+    val defaultTraceName = SprayExtension.generateTraceName(request)
+    val token = if (SprayExtension.settings.includeTraceTokenHeader) {
+      request.headers.find(_.name == SprayExtension.settings.traceTokenHeaderName).map(_.value)
     } else None
 
     val newContext = tracer.newContext(defaultTraceName, token)
@@ -71,17 +70,15 @@ class ServerRequestInstrumentation {
     if (incomingContext.isEmpty)
       pjp.proceed()
     else {
-      val sprayExtension = Kamon(Spray)
-
-      val proceedResult = if (sprayExtension.settings.includeTraceTokenHeader) {
-        val responseWithHeader = includeTraceTokenIfPossible(response, sprayExtension.settings.traceTokenHeaderName, incomingContext.token)
+      val proceedResult = if (SprayExtension.settings.includeTraceTokenHeader) {
+        val responseWithHeader = includeTraceTokenIfPossible(response, SprayExtension.settings.traceTokenHeaderName, incomingContext.token)
         pjp.proceed(Array(openRequest, responseWithHeader))
 
       } else pjp.proceed
 
       Tracer.currentContext.finish()
 
-      recordHttpServerMetrics(response, incomingContext.name, sprayExtension)
+      recordHttpServerMetrics(response, incomingContext.name)
 
       proceedResult
     }
@@ -89,7 +86,7 @@ class ServerRequestInstrumentation {
 
   def verifyTraceContextConsistency(incomingTraceContext: TraceContext, storedTraceContext: TraceContext): Unit = {
     def publishWarning(text: String): Unit =
-      Kamon(Spray).log.warning(text)
+      SprayExtension.log.warn(text)
 
     if (incomingTraceContext.nonEmpty) {
       if (incomingTraceContext.token != storedTraceContext.token)
@@ -98,9 +95,9 @@ class ServerRequestInstrumentation {
       publishWarning(s"EmptyTraceContext present while closing the trace with token [${storedTraceContext.token}]")
   }
 
-  def recordHttpServerMetrics(response: HttpMessagePartWrapper, traceName: String, sprayExtension: SprayExtension): Unit =
+  def recordHttpServerMetrics(response: HttpMessagePartWrapper, traceName: String): Unit =
     response match {
-      case httpResponse: HttpResponse ⇒ sprayExtension.httpServerMetrics.recordResponse(traceName, httpResponse.status.intValue.toString)
+      case httpResponse: HttpResponse ⇒ SprayExtension.httpServerMetrics.recordResponse(traceName, httpResponse.status.intValue.toString)
       case other                      ⇒ // Nothing to do then.
     }
 
