@@ -30,20 +30,6 @@ import java.net.InetSocketAddress
 import com.typesafe.config.ConfigFactory
 
 class StatsDMetricSenderSpec extends BaseKamonSpec("statsd-metric-sender-spec") {
-  override lazy val config =
-    ConfigFactory.parseString(
-      """
-        |kamon {
-        |  statsd.simple-metric-key-generator {
-        |    application = kamon
-        |    hostname-override = kamon-host
-        |    include-hostname = true
-        |    metric-name-normalization-strategy = normalize
-        |  }
-        |}
-        |
-      """.stripMargin)
-
   implicit val metricKeyGenerator = new SimpleMetricKeyGenerator(system.settings.config) {
     override def hostName: String = "localhost_local"
   }
