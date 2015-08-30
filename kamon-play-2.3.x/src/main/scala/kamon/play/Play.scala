@@ -16,32 +16,27 @@
 
 package kamon.play
 
-import akka.actor.{ ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProvider }
-import akka.event.Logging
+import akka.actor._
 import kamon.Kamon
 import kamon.util.http.HttpServerMetrics
+import org.slf4j.LoggerFactory
 import play.api.libs.ws.WSRequest
 import play.api.mvc.RequestHeader
 
-object Play extends ExtensionId[PlayExtension] with ExtensionIdProvider {
-  override def lookup(): ExtensionId[_ <: Extension] = Play
-  override def createExtension(system: ExtendedActorSystem): PlayExtension = new PlayExtension(system)
-
+object PlayExtension {
   val SegmentLibraryName = "WS-client"
-}
 
-class PlayExtension(private val system: ExtendedActorSystem) extends Kamon.Extension {
-  val log = Logging(system, classOf[PlayExtension])
-  log.info(s"Starting the Kamon(Play) extension")
+  val log = LoggerFactory.getLogger("kamon.play.PlayExtension")
+  private val dynamic = new ReflectiveDynamicAccess(getClass.getClassLoader)
 
-  private val config = system.settings.config.getConfig("kamon.play")
+  private val config = Kamon.config.getConfig("kamon.play")
   val httpServerMetrics = Kamon.metrics.entity(HttpServerMetrics, "play-server")
 
   val includeTraceToken: Boolean = config.getBoolean("automatic-trace-token-propagation")
   val traceTokenHeaderName: String = config.getString("trace-token-header-name")
 
   private val nameGeneratorFQN = config.getString("name-generator")
-  private val nameGenerator: NameGenerator = system.dynamicAccess.createInstanceFor[NameGenerator](nameGeneratorFQN, Nil).get
+  private val nameGenerator: NameGenerator = dynamic.createInstanceFor[NameGenerator](nameGeneratorFQN, Nil).get
 
   def generateTraceName(requestHeader: RequestHeader): String = nameGenerator.generateTraceName(requestHeader)
   def generateHttpClientSegmentName(request: WSRequest): String = nameGenerator.generateHttpClientSegmentName(request)

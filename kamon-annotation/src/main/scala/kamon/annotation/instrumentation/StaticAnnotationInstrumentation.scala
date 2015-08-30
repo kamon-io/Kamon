@@ -18,8 +18,7 @@ package kamon.annotation.instrumentation
 
 import java.util.concurrent.atomic.AtomicReferenceArray
 
-import kamon.Kamon
-import kamon.annotation.Annotation
+import kamon.annotation.AnnotationExtension
 import kamon.metric.instrument
 import kamon.metric.instrument.{ Counter, MinMaxCounter }
 import org.aspectj.lang.annotation.{ After, AfterReturning, Around, Aspect }
@@ -30,7 +29,7 @@ class StaticAnnotationInstrumentation extends BaseAnnotationInstrumentation with
 
   @After("staticinitialization(*) && !within(kamon.annotation.instrumentation.*)")
   def creation(jps: JoinPoint.StaticPart): Unit = {
-    val size = Kamon(Annotation).arraySize
+    val size = AnnotationExtension.arraySize
     traces = new AtomicReferenceArray[TraceContextInfo](size)
     segments = new AtomicReferenceArray[SegmentInfo](size)
     counters = new AtomicReferenceArray[Counter](size)

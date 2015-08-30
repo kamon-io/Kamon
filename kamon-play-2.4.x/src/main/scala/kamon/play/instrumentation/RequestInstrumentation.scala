@@ -17,7 +17,7 @@ package kamon.play.instrumentation
 
 import kamon.Kamon
 import kamon.Kamon.tracer
-import kamon.play.Play
+import kamon.play.PlayExtension
 import kamon.trace._
 import kamon.util.SameThreadExecutionContext
 import org.aspectj.lang.ProceedingJoinPoint
@@ -33,10 +33,8 @@ class RequestInstrumentation {
 
   @Before("call(* play.api.http.DefaultHttpRequestHandler.routeRequest(..)) && args(requestHeader)")
   def routeRequest(requestHeader: RequestHeader): Unit = {
-    val playExtension = Kamon(Play)
-
-    val token = if (playExtension.includeTraceToken) {
-      requestHeader.headers.get(playExtension.traceTokenHeaderName)
+    val token = if (PlayExtension.includeTraceToken) {
+      requestHeader.headers.get(PlayExtension.traceTokenHeaderName)
     } else None
 
     Tracer.setCurrentContext(tracer.newContext("UnnamedTrace", token))
@@ -46,20 +44,18 @@ class RequestInstrumentation {
   def filters(pjp: ProceedingJoinPoint): Any = {
     val filter = new EssentialFilter {
       def apply(next: EssentialAction) = EssentialAction((requestHeader) ⇒ {
-        val playExtension = Kamon(Play)
-
         def onResult(result: Result): Result = {
           Tracer.currentContext.collect { ctx ⇒
             ctx.finish()
-            playExtension.httpServerMetrics.recordResponse(ctx.name, result.header.status.toString)
+            PlayExtension.httpServerMetrics.recordResponse(ctx.name, result.header.status.toString)
 
-            if (playExtension.includeTraceToken) result.withHeaders(playExtension.traceTokenHeaderName -> ctx.token)
+            if (PlayExtension.includeTraceToken) result.withHeaders(PlayExtension.traceTokenHeaderName -> ctx.token)
             else result
 
           } getOrElse result
         }
         //override the current trace name
-        Tracer.currentContext.rename(playExtension.generateTraceName(requestHeader))
+        Tracer.currentContext.rename(PlayExtension.generateTraceName(requestHeader))
         // Invoke the action
         next(requestHeader).map(onResult)(SameThreadExecutionContext)
       })
@@ -70,14 +66,14 @@ class RequestInstrumentation {
   @Before("call(* play.api.http.HttpErrorHandler.onClientServerError(..)) && args(requestContextAware, statusCode, *)")
   def onClientError(requestContextAware: TraceContextAware, statusCode: Int): Unit = {
     requestContextAware.traceContext.collect { ctx ⇒
-      Kamon(Play).httpServerMetrics.recordResponse(ctx.name, statusCode.toString)
+      PlayExtension.httpServerMetrics.recordResponse(ctx.name, statusCode.toString)
     }
   }
 
   @Before("call(* play.api.http.HttpErrorHandler.onServerError(..)) && args(requestContextAware, ex)")
   def onServerError(requestContextAware: TraceContextAware, ex: Throwable): Unit = {
     requestContextAware.traceContext.collect { ctx ⇒
-      Kamon(Play).httpServerMetrics.recordResponse(ctx.name, InternalServerError.header.status.toString)
+      PlayExtension.httpServerMetrics.recordResponse(ctx.name, InternalServerError.header.status.toString)
     }
   }
 }

@@ -29,7 +29,7 @@ class AnnotationInstrumentation extends BaseAnnotationInstrumentation {
 
   @After("execution((@kamon.annotation.EnableKamon AnnotationInstruments+).new(..)) && this(obj)")
   def creation(jps: JoinPoint.StaticPart, obj: AnnotationInstruments): Unit = {
-    val size = Kamon(Annotation).arraySize
+    val size = AnnotationExtension.arraySize
     obj.traces = new AtomicReferenceArray[TraceContextInfo](size)
     obj.segments = new AtomicReferenceArray[SegmentInfo](size)
     obj.counters = new AtomicReferenceArray[Counter](size)

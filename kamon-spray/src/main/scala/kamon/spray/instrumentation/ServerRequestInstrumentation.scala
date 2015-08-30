@@ -85,14 +85,11 @@ class ServerRequestInstrumentation {
   }
 
   def verifyTraceContextConsistency(incomingTraceContext: TraceContext, storedTraceContext: TraceContext): Unit = {
-    def publishWarning(text: String): Unit =
-      SprayExtension.log.warn(text)
-
     if (incomingTraceContext.nonEmpty) {
       if (incomingTraceContext.token != storedTraceContext.token)
-        publishWarning(s"Different trace token found when trying to close a trace, original: [${storedTraceContext.token}] - incoming: [${incomingTraceContext.token}]")
+        SprayExtension.log.warn(s"Different trace token found when trying to close a trace, original: [${storedTraceContext.token}] - incoming: [${incomingTraceContext.token}]")
     } else
-      publishWarning(s"EmptyTraceContext present while closing the trace with token [${storedTraceContext.token}]")
+      SprayExtension.log.warn(s"EmptyTraceContext present while closing the trace with token [${storedTraceContext.token}]")
   }
 
   def recordHttpServerMetrics(response: HttpMessagePartWrapper, traceName: String): Unit =

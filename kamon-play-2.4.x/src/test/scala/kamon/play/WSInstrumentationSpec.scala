@@ -51,7 +51,7 @@ class WSInstrumentationSpec extends WordSpecLike with Matchers with OneServerPer
         tags = Map(
           "trace" -> "GET: /inside",
           "category" -> SegmentCategory.HttpClient,
-          "library" -> Play.SegmentLibraryName))
+          "library" -> PlayExtension.SegmentLibraryName))
 
       segmentMetricsSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
     }
@@ -69,7 +69,7 @@ class WSInstrumentationSpec extends WordSpecLike with Matchers with OneServerPer
         tags = Map(
           "trace" -> "trace-outside-action",
           "category" -> SegmentCategory.HttpClient,
-          "library" -> Play.SegmentLibraryName))
+          "library" -> PlayExtension.SegmentLibraryName))
 
       segmentMetricsSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
     }
