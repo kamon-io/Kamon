@@ -18,17 +18,12 @@ package kamon.annotation
 import akka.actor.{ ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProvider }
 import akka.event.Logging
 import kamon.Kamon
+import org.slf4j.LoggerFactory
 
-object Annotation extends ExtensionId[AnnotationExtension] with ExtensionIdProvider {
-  override def lookup(): ExtensionId[_ <: Extension] = Annotation
-  override def createExtension(system: ExtendedActorSystem): AnnotationExtension = new AnnotationExtension(system)
-}
+object AnnotationExtension {
+  val log = LoggerFactory.getLogger("kamon.annotation.Annotation")
 
-class AnnotationExtension(system: ExtendedActorSystem) extends Kamon.Extension {
-  val log = Logging(system, classOf[AnnotationExtension])
-  log.info(s"Starting the Kamon(Annotation) extension")
-
-  val config = system.settings.config.getConfig("kamon.annotation")
+  val config = Kamon.config.getConfig("kamon.annotation")
   val arraySize = config.getInt("instruments-array-size")
 }
 
