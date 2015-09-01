@@ -47,8 +47,8 @@ object WebTransactionMetricExtractor extends MetricExtractor {
     }
 
     // Accumulate all segment metrics
-    metrics.filterKeys(_.category == "trace-segment").map {
-      case (entity, entitySnapshot) if entity.tags("category") == SegmentCategory.HttpClient ⇒
+    metrics.filterKeys(isHttpClientSegment).map {
+      case (entity, entitySnapshot) ⇒
         val library = entity.tags("library")
         val trace = entity.tags("trace")
         val elapsedTime = entitySnapshot.histogram("elapsed-time").get
@@ -95,6 +95,9 @@ object WebTransactionMetricExtractor extends MetricExtractor {
     Map(httpDispatcher, webTransaction, webTransactionTotal, externalAllWeb, externalAll, apdexBuilder.build) ++
       transactionMetrics ++ externalByHost ++ externalByHostAndLibrary ++ externalScopedByHostAndLibrary
   }
+
+  def isHttpClientSegment(entity: Entity): Boolean =
+    entity.category == "trace-segment" && entity.tags.get("category").filter(_ == SegmentCategory.HttpClient).isDefined
 }
 
 class ApdexBuilder(name: String, scope: Option[String], apdexT: Double) {
