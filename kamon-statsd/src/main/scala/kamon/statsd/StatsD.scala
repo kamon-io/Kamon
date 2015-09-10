@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * Copyright © 2013-2014 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2015 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -23,8 +23,6 @@ import kamon.util.ConfigTools.Syntax
 import scala.concurrent.duration._
 import com.typesafe.config.Config
 import akka.event.Logging
-import java.net.InetSocketAddress
-import java.util.concurrent.TimeUnit.MILLISECONDS
 import scala.collection.JavaConverters._
 
 object StatsD extends ExtensionId[StatsDExtension] with ExtensionIdProvider {
@@ -44,10 +42,10 @@ class StatsDExtension(system: ExtendedActorSystem) extends Kamon.Extension {
 
   val tickInterval = metricsExtension.settings.tickInterval
   val flushInterval = statsDConfig.getFiniteDuration("flush-interval")
-  val maxPacketSizeInBytes = statsDConfig.getBytes("max-packet-size")
   val keyGeneratorFQCN = statsDConfig.getString("metric-key-generator")
+  val senderFactoryFQCN = statsDConfig.getString("metric-sender-factory")
 
-  val statsDMetricsListener = buildMetricsListener(tickInterval, flushInterval, keyGeneratorFQCN, config)
+  val statsDMetricsListener = buildMetricsListener(tickInterval, flushInterval, keyGeneratorFQCN, senderFactoryFQCN, config)
 
   val subscriptions = statsDConfig.getConfig("subscriptions")
   subscriptions.firstLevelKeys.map { subscriptionCategory ⇒
@@ -56,15 +54,13 @@ class StatsDExtension(system: ExtendedActorSystem) extends Kamon.Extension {
     }
   }
 
-  def buildMetricsListener(tickInterval: FiniteDuration, flushInterval: FiniteDuration, keyGeneratorFQCN: String, config: Config): ActorRef = {
+  def buildMetricsListener(tickInterval: FiniteDuration, flushInterval: FiniteDuration,
+    keyGeneratorFQCN: String, senderFactoryFQCN: String, config: Config): ActorRef = {
     assert(flushInterval >= tickInterval, "StatsD flush-interval needs to be equal or greater to the tick-interval")
     val keyGenerator = system.dynamicAccess.createInstanceFor[MetricKeyGenerator](keyGeneratorFQCN, (classOf[Config], config) :: Nil).get
+    val senderFactory = system.dynamicAccess.getObjectFor[StatsDMetricsSenderFactory](senderFactoryFQCN).get
 
-    val metricsSender = system.actorOf(StatsDMetricsSender.props(
-      statsDConfig.getString("hostname"),
-      statsDConfig.getInt("port"),
-      maxPacketSizeInBytes,
-      keyGenerator), "statsd-metrics-sender")
+    val metricsSender = system.actorOf(senderFactory.props(statsDConfig, keyGenerator), "statsd-metrics-sender")
 
     if (flushInterval == tickInterval) {
       // No need to buffer the metrics, let's go straight to the metrics sender.
