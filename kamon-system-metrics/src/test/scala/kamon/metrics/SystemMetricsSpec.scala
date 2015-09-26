@@ -74,6 +74,20 @@ class SystemMetricsSpec extends BaseKamonSpec("system-metrics-spec") with Redire
       memoryMetrics.gauge("non-heap-committed").get.numberOfMeasurements should be > 0L
     }
 
+    "record correctly updatable values for heap metrics" in {
+      Thread.sleep(3000)
+
+      val data = new Array[Byte](20 * 1024 * 1024) // 20 Mb of data
+
+      Thread.sleep(3000)
+
+      val memoryMetrics = takeSnapshotOf("jmx-memory", "system-metric")
+      val heapUsed = memoryMetrics.gauge("heap-used").get
+
+      heapUsed.max should be > heapUsed.min
+      data.size should be > 0 // Just for data usage
+    }
+
     "record daemon, count and peak jvm threads metrics" in {
       val threadsMetrics = takeSnapshotOf("threads", "system-metric")
 
