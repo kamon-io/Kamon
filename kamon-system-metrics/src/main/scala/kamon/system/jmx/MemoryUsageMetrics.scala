@@ -32,13 +32,13 @@ import scala.collection.convert.WrapAsScala
 class MemoryUsageMetrics(instrumentFactory: InstrumentFactory,
     beansWithNames: Iterable[MemoryUsageWithMetricName]) extends GenericEntityRecorder(instrumentFactory) {
   beansWithNames.foreach {
-    case MemoryUsageWithMetricName(name, bean) ⇒
+    case MemoryUsageWithMetricName(name, beanFun) ⇒
       gauge(name + "-used", Memory.Bytes, () ⇒ {
-        bean.getUsed
+        beanFun().getUsed
       })
 
       gauge(name + "-max", Memory.Bytes, () ⇒ {
-        val max = bean.getMax
+        val max = beanFun().getMax
 
         // .getMax can return -1 if the max is not defined.
         if (max >= 0) max
@@ -46,7 +46,7 @@ class MemoryUsageMetrics(instrumentFactory: InstrumentFactory,
       })
 
       gauge(name + "-committed", Memory.Bytes, () ⇒ {
-        bean.getCommitted
+        beanFun().getCommitted
       })
   }
 }
@@ -54,9 +54,9 @@ class MemoryUsageMetrics(instrumentFactory: InstrumentFactory,
 /**
  * Objects of this kind may be passed to instances of [[MemoryUsageMetrics]] for data collection.
  * @param metricName The sanitized name for a metric.
- * @param bean The data source for metrics.
+ * @param beanFun Function returning the data source for metrics.
  */
-private[jmx] final case class MemoryUsageWithMetricName(metricName: String, bean: MemoryUsage)
+private[jmx] final case class MemoryUsageWithMetricName(metricName: String, beanFun: () ⇒ MemoryUsage)
 
 /**
  *  Memory Pool metrics, as reported by JMX:
@@ -79,7 +79,7 @@ object MemoryUsageMetrics extends JmxSystemMetricRecorderCompanion("jmx-memory")
 
   def apply(instrumentFactory: InstrumentFactory): MemoryUsageMetrics =
     new MemoryUsageMetrics(instrumentFactory,
-      MemoryUsageWithMetricName("non-heap", memoryMXBean.getNonHeapMemoryUsage) ::
-        MemoryUsageWithMetricName("heap", memoryMXBean.getHeapMemoryUsage) ::
+      MemoryUsageWithMetricName("non-heap", () ⇒ memoryMXBean.getNonHeapMemoryUsage) ::
+        MemoryUsageWithMetricName("heap", () ⇒ memoryMXBean.getHeapMemoryUsage) ::
         usagesWithNames)
 }
