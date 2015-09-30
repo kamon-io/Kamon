@@ -95,7 +95,7 @@ object Kamon {
         start()
         thunk(_coreComponents.get)
 
-      } else sys.error("Kamon has not been started yet. You must either explicitlt call Kamon.start(...) or enable " +
+      } else sys.error("Kamon has not been started yet. You must either explicitly call Kamon.start(...) or enable " +
         "automatic startup by adding -Dkamon.auto-start=true to your JVM options.")
     }
 
