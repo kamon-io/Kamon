@@ -68,8 +68,10 @@ object Kamon {
 
   def shutdown(): Unit = {
     _coreComponents = None
-    _system.shutdown()
-    _system = null
+    if (_system ne null) {
+      _system.shutdown()
+      _system = null
+    }
   }
 
   def metrics: MetricsModule =
