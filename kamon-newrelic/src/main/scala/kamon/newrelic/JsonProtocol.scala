@@ -21,15 +21,17 @@ import spray.json._
 object JsonProtocol extends DefaultJsonProtocol {
 
   implicit object ConnectJsonWriter extends RootJsonWriter[AgentSettings] {
-    def write(obj: AgentSettings): JsValue =
+    def write(obj: AgentSettings): JsValue = {
+      val appNames = obj.appName.split(";")
       JsArray(
         JsObject(
           "agent_version" -> JsString("3.1.0"),
-          "app_name" -> JsArray(JsString(obj.appName)),
+          "app_name" -> JsArray(appNames.map(n ⇒ JsString(n)).toVector),
           "host" -> JsString(obj.hostname),
-          "identifier" -> JsString(s"java:${obj.appName}"),
+          "identifier" -> JsString(s"java:${appNames(0)}"),
           "language" -> JsString("java"),
           "pid" -> JsNumber(obj.pid)))
+    }
   }
 
   implicit def seqWriter[T: JsonFormat] = new JsonFormat[Seq[T]] {
