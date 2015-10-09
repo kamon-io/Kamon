@@ -34,7 +34,7 @@ class ConnectJsonWriterSpec extends WordSpecLike with Matchers {
     }
   }
 
-  def agentSettings(appName: String) = AgentSettings("1111111111", appName, "test-host", 1, Timeout(5 seconds), 1, 30 seconds, 1D)
+  def agentSettings(appName: String) = AgentSettings("1111111111", appName, "test-host", 1, Timeout(5 seconds), 1, 30 seconds, 1D, false)
 
-  def expectedJson(appName: String) = s"""[{"identifier":"java:app1","agent_version":"3.1.0","host":"test-host","pid":1,"language":"java","app_name":[$appName]}]"""
+  def expectedJson(appName: String) = s"""[{"identifier":"java:app1","agent_version":"3.1.0","host":"test-host","ssl":"false","pid":1,"language":"java","app_name":[$appName]}]"""
 }
