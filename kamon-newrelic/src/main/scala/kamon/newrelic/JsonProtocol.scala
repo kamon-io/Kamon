@@ -30,6 +30,7 @@ object JsonProtocol extends DefaultJsonProtocol {
           "host" -> JsString(obj.hostname),
           "identifier" -> JsString(s"java:${appNames(0)}"),
           "language" -> JsString("java"),
+          "ssl" -> JsString(obj.ssl.toString),
           "pid" -> JsNumber(obj.pid)))
     }
   }
