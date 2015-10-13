@@ -31,7 +31,8 @@ class ApiMethodClient(host: String, val runID: Option[Long], agentSettings: Agen
   }
 
   val httpClient = encode(Deflate) ~> sendReceive(httpTransport) ~> decode(Deflate) ~> unmarshal[JsValue]
-  val baseCollectorUri = Uri("/agent_listener/invoke_raw_method").withHost(host).withScheme("http")
+  val scheme = if (agentSettings.ssl) "https" else "http"
+  val baseCollectorUri = Uri("/agent_listener/invoke_raw_method").withHost(host).withScheme(scheme)
 
   def invokeMethod[T: Marshaller](method: String, payload: T): Future[JsValue] = {
     val methodQuery = ("method" -> method) +: baseQuery
