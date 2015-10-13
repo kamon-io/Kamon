@@ -19,9 +19,8 @@ package kamon.newrelic
 import java.util
 import akka.actor.{ Actor, ActorLogging }
 import akka.event.Logging.{ Error, InitializeLogger, LoggerInitialized }
-import com.newrelic.agent.errors.{ HttpTracedError, ThrowableError, TracedError }
+import com.newrelic.agent.errors.{ ThrowableError }
 import com.newrelic.agent.service.ServiceFactory
-import com.newrelic.api.agent.{ NewRelic ⇒ NR }
 import kamon.trace.{ Tracer, TraceContextAware }
 import scala.util.control.NoStackTrace
 
@@ -47,7 +46,8 @@ class NewRelicErrorLogger extends Actor with ActorLogging with CustomParamsSuppo
     params.put("LogSource", error.logSource)
     params.put("LogClass", error.logClass.toString)
     error match {
-      case e: TraceContextAware ⇒ params put ("TraceToken", e.traceContext.token)
+      case e: TraceContextAware ⇒ params.put("TraceToken", e.traceContext.token)
+      case _                    ⇒
     }
 
     if (error.cause == Error.NoCause)
@@ -57,20 +57,20 @@ class NewRelicErrorLogger extends Actor with ActorLogging with CustomParamsSuppo
   }
 
   def loggedMessage(message: String, params: util.HashMap[String, String]) =
-    loggedException("", LoggedError(message), params)
+    loggedException("", LoggedMessage(message), params)
 
   def loggedException(message: String, cause: Throwable, params: util.HashMap[String, String]) = {
     if (null != message && message.length > 0) params.put("ErrorMessage", message)
+    val uri = s"/${Tracer.currentContext.name}"
+    val transaction = s"WebTransaction/Uri$uri"
     LoggedException(cause, params, transaction, uri);
   }
 
-  def reportError(error: TracedError) = ServiceFactory.getRPMService().getErrorService().reportError(error)
+  def reportError(error: ThrowableError) = ServiceFactory.getRPMService().getErrorService().reportError(error)
 
-  def uri = s"/${Tracer.currentContext.name}"
-
-  def transaction = s"WebTransaction/Uri$uri"
 }
 
-case class LoggedError(message: String) extends Throwable(message) with NoStackTrace
+case class LoggedMessage(message: String) extends Throwable(message) with NoStackTrace
+
 case class LoggedException(cause: Throwable, params: util.HashMap[String, String], transaction: String, uri: String)
   extends ThrowableError(null, transaction, cause, uri, System.currentTimeMillis(), null, null, null, params, null)
