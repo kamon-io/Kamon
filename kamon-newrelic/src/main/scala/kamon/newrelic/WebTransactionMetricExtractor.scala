@@ -43,7 +43,7 @@ object WebTransactionMetricExtractor extends MetricExtractor {
           apdexBuilder.record(Time.Nanoseconds.scale(Time.Seconds)(record.level), record.count)
         }
 
-        Metric(elapsedTime, Time.Nanoseconds, "WebTransaction/Custom/" + entity.name, None)
+        Metric(elapsedTime, Time.Nanoseconds, "WebTransaction/Uri/" + entity.name, None)
     }
 
     // Accumulate all segment metrics
@@ -89,7 +89,7 @@ object WebTransactionMetricExtractor extends MetricExtractor {
     val externalScopedByHostAndLibrary = externalScopedByHostAndLibrarySnapshots.map {
       case ((host, library, traceName), snapshots) ⇒
         val mergedSnapshots = snapshots.foldLeft(Histogram.Snapshot.empty)(_.merge(_, collectionContext))
-        Metric(mergedSnapshots, Time.Nanoseconds, s"External/$host/$library", Some("WebTransaction/Custom/" + traceName))
+        Metric(mergedSnapshots, Time.Nanoseconds, s"External/$host/$library", Some("WebTransaction/Uri/" + traceName))
     }
 
     Map(httpDispatcher, webTransaction, webTransactionTotal, externalAllWeb, externalAll, apdexBuilder.build) ++
