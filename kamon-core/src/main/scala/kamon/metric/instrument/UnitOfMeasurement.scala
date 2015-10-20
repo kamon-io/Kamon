@@ -58,6 +58,12 @@ object Time {
   val Microseconds = Time(1E-6, "µs")
   val Milliseconds = Time(1E-3, "ms")
   val Seconds = Time(1, "s")
+
+  val units = List(Nanoseconds, Microseconds, Milliseconds, Seconds)
+
+  def apply(time: String): Time = units.find(_.label.toLowerCase == time.toLowerCase) getOrElse {
+    throw new IllegalArgumentException(s"Can't recognize time unit '$time'")
+  }
 }
 
 /**
@@ -73,7 +79,12 @@ case class Memory(factor: Double, label: String) extends UnitOfMeasurement {
 object Memory {
   val Bytes = Memory(1, "b")
   val KiloBytes = Memory(1024, "Kb")
-  val MegaBytes = Memory(1024E2, "Mb")
-  val GigaBytes = Memory(1024E3, "Gb")
-}
+  val MegaBytes = Memory(1024 * 1024, "Mb")
+  val GigaBytes = Memory(1024 * 1024 * 1024, "Gb")
 
+  val units = List(Bytes, KiloBytes, MegaBytes, GigaBytes)
+
+  def apply(memory: String): Memory = units.find(_.label.toLowerCase == memory.toLowerCase) getOrElse {
+    throw new IllegalArgumentException(s"Can't recognize memory unit '$memory'")
+  }
+}
