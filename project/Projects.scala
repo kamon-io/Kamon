@@ -100,7 +100,7 @@ object Projects extends Build {
     .settings(
       libraryDependencies ++=
         compile(sprayCan, sprayClient, sprayRouting, sprayJson, sprayJsonLenses, newrelic, akkaSlf4j) ++
-        provided(aspectJ) ++
+        provided(aspectJ, newrelic) ++
         test(scalatest, akkaTestKit, sprayTestkit, slf4Api, akkaSlf4j))
 
 
@@ -214,7 +214,7 @@ object Projects extends Build {
     .settings(formatSettings: _*)
     .settings(
       libraryDependencies ++=
-        compile(sprayCan, sprayClient, sprayRouting, sprayJson, sprayJsonLenses, newrelic, akkaSlf4j) ++
+        compile(sprayCan, sprayClient, sprayRouting, sprayJson, sprayJsonLenses, akkaSlf4j) ++
         test(scalatest, akkaTestKit, slf4Api, slf4nop))
 
   lazy val kamonJMXReporter = Project("kamon-jmx", file("kamon-jmx"))
