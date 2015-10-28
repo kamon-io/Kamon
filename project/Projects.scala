@@ -23,7 +23,8 @@ object Projects extends Build {
 
   lazy val kamon = Project("kamon", file("."))
     .aggregate(kamonCore, kamonScala, kamonAkka, kamonSpray, kamonNewrelic, kamonPlayground, kamonTestkit,
-      kamonStatsD, kamonDatadog, kamonSPM, kamonSystemMetrics, kamonLogReporter, kamonAkkaRemote, kamonJdbc, kamonAnnotation, kamonPlay23, kamonPlay24)
+      kamonStatsD, kamonDatadog, kamonSPM, kamonSystemMetrics, kamonLogReporter, kamonAkkaRemote, kamonJdbc,
+      kamonAnnotation, kamonPlay23, kamonPlay24, kamonJMXReporter)
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
     .settings(noPublishing: _*)
@@ -99,12 +100,13 @@ object Projects extends Build {
     .settings(
       libraryDependencies ++=
         compile(sprayCan, sprayClient, sprayRouting, sprayJson, sprayJsonLenses, newrelic, akkaSlf4j) ++
-        provided(aspectJ) ++
+        provided(aspectJ, newrelic) ++
         test(scalatest, akkaTestKit, sprayTestkit, slf4Api, akkaSlf4j))
 
 
   lazy val kamonPlayground = Project("kamon-playground", file("kamon-playground"))
-    .dependsOn(kamonSpray, kamonNewrelic, kamonStatsD, kamonDatadog, kamonLogReporter, kamonSystemMetrics)
+    .dependsOn(kamonSpray, kamonNewrelic, kamonStatsD, kamonDatadog, kamonLogReporter, kamonSystemMetrics,
+      kamonJMXReporter)
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
     .settings(noPublishing: _*)
@@ -212,8 +214,17 @@ object Projects extends Build {
     .settings(formatSettings: _*)
     .settings(
       libraryDependencies ++=
-        compile(sprayCan, sprayClient, sprayRouting, sprayJson, sprayJsonLenses, newrelic, akkaSlf4j) ++
+        compile(sprayCan, sprayClient, sprayRouting, sprayJson, sprayJsonLenses, akkaSlf4j) ++
         test(scalatest, akkaTestKit, slf4Api, slf4nop))
+
+  lazy val kamonJMXReporter = Project("kamon-jmx", file("kamon-jmx"))
+    .dependsOn(kamonCore)
+    .settings(basicSettings: _*)
+    .settings(formatSettings: _*)
+    .settings(
+      libraryDependencies ++=
+        compile(akkaActor) ++
+          test(scalatest, akkaTestKit, slf4Api, slf4nop))
 
   val noPublishing = Seq(publish := (), publishLocal := (), publishArtifact := false)
 }
