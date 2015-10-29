@@ -24,7 +24,7 @@ object Projects extends Build {
   lazy val kamon = Project("kamon", file("."))
     .aggregate(kamonCore, kamonScala, kamonAkka, kamonSpray, kamonNewrelic, kamonPlayground, kamonTestkit,
       kamonStatsD, kamonDatadog, kamonSPM, kamonSystemMetrics, kamonLogReporter, kamonAkkaRemote, kamonJdbc,
-      kamonAnnotation, kamonPlay23, kamonPlay24, kamonJMXReporter)
+      kamonAnnotation, kamonPlay23, kamonPlay24, kamonJMXReporter, kamonFluentd)
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
     .settings(noPublishing: _*)
@@ -225,6 +225,15 @@ object Projects extends Build {
       libraryDependencies ++=
         compile(akkaActor) ++
           test(scalatest, akkaTestKit, slf4Api, slf4nop))
+
+  lazy val kamonFluentd = Project("kamon-fluentd", file("kamon-fluentd"))
+    .dependsOn(kamonCore % "compile->compile;test->test")
+    .settings(basicSettings: _*)
+    .settings(formatSettings: _*)
+    .settings(
+      libraryDependencies ++=
+        compile(akkaActor) ++ compile(fluentdLogger) ++
+          test(scalatest, akkaTestKit, easyMock, slf4Api, slf4nop))
 
   val noPublishing = Seq(publish := (), publishLocal := (), publishArtifact := false)
 }
