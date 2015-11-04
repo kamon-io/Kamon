@@ -93,7 +93,7 @@ object Projects extends Build {
         test(scalatest, akkaTestKit, sprayTestkit, akkaSlf4j, slf4Jul, slf4Log4j, logback))
 
   lazy val kamonNewrelic = Project("kamon-newrelic", file("kamon-newrelic"))
-    .dependsOn(kamonCore % "compile->compile;test->test", kamonTestkit % "test->test")
+    .dependsOn(kamonCore % "compile->compile;test->test", kamonAkka, kamonTestkit % "test->test")
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
     .settings(aspectJSettings: _*)
