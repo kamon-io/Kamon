@@ -19,9 +19,10 @@ package kamon.newrelic
 import java.util
 import akka.actor.{ Actor, ActorLogging }
 import akka.event.Logging.{ Error, InitializeLogger, LoggerInitialized }
-import com.newrelic.agent.errors.{ ThrowableError }
+import com.newrelic.agent.errors.{ ErrorService, ThrowableError }
 import com.newrelic.agent.service.ServiceFactory
 import kamon.trace.{ Tracer, TraceContextAware }
+import scala.util.Try
 import scala.util.control.NoStackTrace
 
 trait CustomParamsSupport {
@@ -32,6 +33,10 @@ trait CustomParamsSupport {
 
 class NewRelicErrorLogger extends Actor with ActorLogging with CustomParamsSupport {
   override def customParams: Map[String, String] = Map.empty
+  private val errorService: Option[ErrorService] = Try(ServiceFactory.getRPMService).map(_.getErrorService).toOption
+
+  if (errorService.isEmpty)
+    log.warning("Not sending errors to New Relic as the New Relic Agent is not started")
 
   def receive = {
     case InitializeLogger(_)                                ⇒ sender ! LoggerInitialized
@@ -44,33 +49,45 @@ class NewRelicErrorLogger extends Actor with ActorLogging with CustomParamsSuppo
     customParams foreach { case (k, v) ⇒ params.put(k, v) }
 
     params.put("LogSource", error.logSource)
-    params.put("LogClass", error.logClass.toString)
+    params.put("LogClass", error.logClass.getCanonicalName)
     error match {
-      case e: TraceContextAware ⇒ params.put("TraceToken", e.traceContext.token)
-      case _                    ⇒
+      case e: TraceContextAware if e.traceContext.token.length > 0 ⇒
+        params.put("TraceToken", e.traceContext.token)
+      case _ ⇒
     }
 
     if (error.cause == Error.NoCause)
-      reportError(loggedMessage(error.message.toString, params))
+      reportError(loggedMessage(error.message, params))
     else
-      reportError(loggedException(error.message.toString, error.cause, params))
+      reportError(loggedException(error.message, error.cause, params))
   }
 
-  def loggedMessage(message: String, params: util.HashMap[String, String]) =
-    loggedException("", LoggedMessage(message), params)
+  def loggedMessage(message: Any, params: util.HashMap[String, String]) =
+    loggedException(null, LoggedMessage(message), params)
 
-  def loggedException(message: String, cause: Throwable, params: util.HashMap[String, String]) = {
-    if (null != message && message.length > 0) params.put("ErrorMessage", message)
+  def loggedException(message: Any, cause: Throwable, params: util.HashMap[String, String]) = {
+    if (Option(message).isDefined) params.put("ErrorMessage", message.toString)
     val uri = s"/${Tracer.currentContext.name}"
     val transaction = s"WebTransaction/Uri$uri"
-    LoggedException(cause, params, transaction, uri);
+    LoggedException(cause, params, transaction, uri)
   }
 
-  def reportError(error: ThrowableError) = ServiceFactory.getRPMService().getErrorService().reportError(error)
-
+  def reportError(error: ThrowableError) = errorService.foreach(_.reportError(error))
 }
 
-case class LoggedMessage(message: String) extends Throwable(message) with NoStackTrace
+case class LoggedMessage(message: Any) extends Throwable(message match { case null ⇒ "" case s ⇒ s.toString }) with NoStackTrace
 
 case class LoggedException(cause: Throwable, params: util.HashMap[String, String], transaction: String, uri: String)
-  extends ThrowableError(null, transaction, cause, uri, System.currentTimeMillis(), null, null, null, params, null)
+    extends ThrowableError(null, transaction, cause, uri, System.currentTimeMillis(), null, null, null, params, null) {
+
+  //ThrowableError has some funky equals method which gives false positives in tests
+  override def equals(any: Any): Boolean = {
+    any match {
+      case that: LoggedException ⇒
+        that.cause == this.cause && that.params == this.params && that.transaction == this.transaction && that.uri == this.uri
+      case _ ⇒ false
+    }
+  }
+  //
+  override def toString = s"${this.getClass.getSimpleName}: cause=$cause transaction=$transaction uri=$uri params=$params"
+}
