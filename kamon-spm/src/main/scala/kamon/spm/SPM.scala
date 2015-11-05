@@ -44,8 +44,8 @@ class SPMExtension(system: ExtendedActorSystem) extends Kamon.Extension {
 
   val config = system.settings.config.getConfig("kamon.spm")
   val maxQueueSize = config.getInt("max-queue-size")
-  val retryInterval: FiniteDuration = config.getDuration("retry-interval", TimeUnit.MILLISECONDS) millis
-  val sendTimeout: FiniteDuration = config.getDuration("send-timeout", TimeUnit.MILLISECONDS) millis
+  val retryInterval: FiniteDuration = config.getFiniteDuration("retry-interval")
+  val sendTimeout: FiniteDuration = config.getFiniteDuration("send-timeout")
   val url = config.getString("receiver-url")
   val token = config.getString("token")
   val hostname = if (config.hasPath("hostname-alias")) {
