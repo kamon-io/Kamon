@@ -16,12 +16,9 @@
 
 package kamon.spray
 
-import akka.actor.{ ExtendedActorSystem, ExtensionIdProvider, ExtensionId }
-import akka.actor
-import akka.event.{ Logging, LoggingAdapter }
 import kamon.Kamon
-import kamon.util.http.HttpServerMetrics
 import kamon.metric.Entity
+import kamon.util.http.HttpServerMetrics
 import org.slf4j.LoggerFactory
 import spray.http.HttpHeaders.Host
 import spray.http.HttpRequest

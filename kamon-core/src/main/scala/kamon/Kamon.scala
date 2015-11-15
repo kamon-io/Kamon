@@ -16,13 +16,10 @@ package kamon
 
 import _root_.akka.actor
 import _root_.akka.actor._
-import _root_.akka.event.Logging
-import com.typesafe.config.{ ConfigFactory, Config }
+import com.typesafe.config.{ Config, ConfigFactory }
 import kamon.metric._
-import kamon.trace.{ TracerModuleImpl, TracerModule }
+import kamon.trace.TracerModuleImpl
 import org.slf4j.LoggerFactory
-
-import _root_.scala.util.Try
 
 object Kamon {
   private val log = LoggerFactory.getLogger(getClass)

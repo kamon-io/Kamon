@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * Copyright © 2013-2014 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2015 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -16,41 +16,34 @@
 
 package kamon.statsd
 
-import akka.actor.{ ActorSystem, Props, ActorRef, Actor }
-import akka.io.{ Udp, IO }
-import java.net.InetSocketAddress
-import akka.util.ByteString
+import akka.actor.Props
+import com.typesafe.config.Config
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
-import java.text.{ DecimalFormatSymbols, DecimalFormat }
-import java.util.Locale
-
 import kamon.metric.instrument.{ Counter, Histogram }
 
-class StatsDMetricsSender(statsDHost: String, statsDPort: Int, maxPacketSizeInBytes: Long, metricKeyGenerator: MetricKeyGenerator)
-    extends Actor with UdpExtensionProvider {
-  import context.system
+/**
+ * Factory for [[BatchStatsDMetricsSender]].
+ * Use FQCN of the object in "kamon.statsd.statsd-metrics-sender"
+ * to select [[BatchStatsDMetricsSender]] as your sender
+ */
+object BatchStatsDMetricsSender extends StatsDMetricsSenderFactory {
+  override def props(statsDConfig: Config, metricKeyGenerator: MetricKeyGenerator): Props =
+    Props(new BatchStatsDMetricsSender(statsDConfig, metricKeyGenerator))
+}
 
-  val symbols = DecimalFormatSymbols.getInstance(Locale.US)
-  symbols.setDecimalSeparator('.') // Just in case there is some weird locale config we are not aware of.
+/**
+ * StatsD sender which sends a UDP packet every "kamon.statsd.flush-interval" or
+ * as long as "kamon.statsd.batch-metric-sender.max-packet-size" is reached.
+ * @param statsDConfig Config to read settings specific to this sender
+ * @param metricKeyGenerator Key generator for all metrics sent by this sender
+ */
+class BatchStatsDMetricsSender(statsDConfig: Config, metricKeyGenerator: MetricKeyGenerator)
+    extends UDPBasedStatsDMetricsSender(statsDConfig, metricKeyGenerator) {
 
-  // Absurdly high number of decimal digits, let the other end lose precision if it needs to.
-  val samplingRateFormat = new DecimalFormat("#.################################################################", symbols)
+  val maxPacketSizeInBytes = statsDConfig.getBytes("batch-metric-sender.max-packet-size")
 
-  udpExtension ! Udp.SimpleSender
-
-  def newSocketAddress = new InetSocketAddress(statsDHost, statsDPort)
-
-  def receive = {
-    case Udp.SimpleSenderReady ⇒
-      context.become(ready(sender))
-  }
-
-  def ready(udpSender: ActorRef): Receive = {
-    case tick: TickMetricSnapshot ⇒ writeMetricsToRemote(tick, udpSender)
-  }
-
-  def writeMetricsToRemote(tick: TickMetricSnapshot, udpSender: ActorRef): Unit = {
-    val packetBuilder = new MetricDataPacketBuilder(maxPacketSizeInBytes, udpSender, newSocketAddress)
+  def writeMetricsToRemote(tick: TickMetricSnapshot, flushToUDP: String ⇒ Unit): Unit = {
+    val packetBuilder = new MetricDataPacketBuilder(maxPacketSizeInBytes, flushToUDP)
 
     for (
       (entity, snapshot) ← tick.metrics;
@@ -72,25 +65,9 @@ class StatsDMetricsSender(statsDHost: String, statsDPort: Int, maxPacketSizeInBy
 
     packetBuilder.flush()
   }
-
-  def encodeStatsDTimer(level: Long, count: Long): String = {
-    val samplingRate: Double = 1D / count
-    level.toString + "|ms" + (if (samplingRate != 1D) "|@" + samplingRateFormat.format(samplingRate) else "")
-  }
-
-  def encodeStatsDCounter(count: Long): String = count.toString + "|c"
 }
 
-object StatsDMetricsSender {
-  def props(statsDHost: String, statsDPort: Int, maxPacketSize: Long, metricKeyGenerator: MetricKeyGenerator): Props =
-    Props(new StatsDMetricsSender(statsDHost, statsDPort, maxPacketSize, metricKeyGenerator))
-}
-
-trait UdpExtensionProvider {
-  def udpExtension(implicit system: ActorSystem): ActorRef = IO(Udp)
-}
-
-class MetricDataPacketBuilder(maxPacketSizeInBytes: Long, udpSender: ActorRef, remote: InetSocketAddress) {
+class MetricDataPacketBuilder(maxPacketSizeInBytes: Long, flushToUDP: String ⇒ Unit) {
   val metricSeparator = "\n"
   val measurementSeparator = ":"
 
@@ -103,8 +80,7 @@ class MetricDataPacketBuilder(maxPacketSizeInBytes: Long, udpSender: ActorRef, r
       if (fitsOnBuffer(dataWithoutKey))
         buffer.append(dataWithoutKey)
       else {
-        flushToUDP(buffer.toString())
-        buffer.clear()
+        flush()
         buffer.append(key).append(dataWithoutKey)
       }
     } else {
@@ -114,16 +90,13 @@ class MetricDataPacketBuilder(maxPacketSizeInBytes: Long, udpSender: ActorRef, r
         val mSeparator = if (buffer.length > 0) metricSeparator else ""
         buffer.append(mSeparator).append(dataWithoutSeparator)
       } else {
-        flushToUDP(buffer.toString())
-        buffer.clear()
+        flush()
         buffer.append(dataWithoutSeparator)
       }
     }
   }
 
   def fitsOnBuffer(data: String): Boolean = (buffer.length + data.length) <= maxPacketSizeInBytes
-
-  private def flushToUDP(data: String): Unit = udpSender ! Udp.Send(ByteString(data), remote)
 
   def flush(): Unit = {
     flushToUDP(buffer.toString)

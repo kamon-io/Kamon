@@ -48,6 +48,7 @@ class AgentSpec extends BaseKamonSpec("metric-reporter-spec") with RequestBuildi
         |    license-key = 1111111111
         |    connect-retry-delay = 1 second
         |    max-connect-retries = 3
+        |    ssl = true
         |  }
         |
         |  modules.kamon-newrelic.auto-start = no
@@ -85,14 +86,15 @@ class AgentSpec extends BaseKamonSpec("metric-reporter-spec") with RequestBuildi
           |     "host": "$host",
           |     "identifier": "java:kamon",
           |     "language": "java",
-          |     "pid": $pid
+          |     "pid": $pid,
+          |     "ssl": "true"
           |   }
           | ]
         """.stripMargin.parseJson)(sprayJsonMarshaller(JsValueFormat))
       })
 
       // Receive the runID
-      EventFilter.info(message = "Configuring New Relic reporters to use runID: [161221111] and collector: [collector-8.newrelic.com]", occurrences = 1).intercept {
+      EventFilter.info(message = "Configuring New Relic reporters to use runID: [161221111] and collector: [collector-8.newrelic.com] over: [https]", occurrences = 1).intercept {
         httpManager.reply(jsonResponse(
           """
           | {
@@ -143,7 +145,8 @@ class AgentSpec extends BaseKamonSpec("metric-reporter-spec") with RequestBuildi
           |     "host": "$host",
           |     "identifier": "java:kamon",
           |     "language": "java",
-          |     "pid": $pid
+          |     "pid": $pid,
+          |     "ssl": "true"
           |   }
           | ]
         """.stripMargin.parseJson)(sprayJsonMarshaller(JsValueFormat))
@@ -151,7 +154,7 @@ class AgentSpec extends BaseKamonSpec("metric-reporter-spec") with RequestBuildi
 
       // Receive the runID
       EventFilter.info(
-        message = "Configuring New Relic reporters to use runID: [161221112] and collector: [collector-8.newrelic.com]", occurrences = 1).intercept {
+        message = "Configuring New Relic reporters to use runID: [161221112] and collector: [collector-8.newrelic.com] over: [https]", occurrences = 1).intercept {
 
           httpManager.reply(jsonResponse(
             """
@@ -202,7 +205,7 @@ class AgentSpec extends BaseKamonSpec("metric-reporter-spec") with RequestBuildi
   }
 
   def rawMethodUri(host: String, methodName: String): Uri = {
-    Uri(s"http://$host/agent_listener/invoke_raw_method").withQuery(
+    Uri(s"https://$host/agent_listener/invoke_raw_method").withQuery(
       "method" -> methodName,
       "license_key" -> "1111111111",
       "marshal_format" -> "json",

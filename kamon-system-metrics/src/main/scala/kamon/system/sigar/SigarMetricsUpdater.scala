@@ -37,7 +37,8 @@ class SigarMetricsUpdater(refreshInterval: FiniteDuration) extends Actor {
     LoadAverageMetrics.register(sigar, metricsExtension, logger),
     MemoryMetrics.register(sigar, metricsExtension, logger),
     NetworkMetrics.register(sigar, metricsExtension, logger),
-    ProcessCpuMetrics.register(sigar, metricsExtension, logger))
+    ProcessCpuMetrics.register(sigar, metricsExtension, logger),
+    ULimitMetrics.register(sigar, metricsExtension, logger))
 
   val refreshSchedule = context.system.scheduler.schedule(refreshInterval, refreshInterval, self, UpdateSigarMetrics)(context.dispatcher)
 
