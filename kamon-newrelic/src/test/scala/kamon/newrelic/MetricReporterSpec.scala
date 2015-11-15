@@ -55,7 +55,7 @@ class MetricReporterSpec extends BaseKamonSpec("metric-reporter-spec") with Spra
         |
       """.stripMargin)
 
-  val agentSettings = AgentSettings("1111111111", "kamon", "test-host", 1, Timeout(5 seconds), 1, 30 seconds, 1D)
+  val agentSettings = AgentSettings("1111111111", "kamon", "test-host", 1, Timeout(5 seconds), 1, 30 seconds, 1D, false)
   val baseQuery = Query(
     "license_key" -> agentSettings.licenseKey,
     "marshal_format" -> "json",
