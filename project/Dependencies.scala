@@ -32,7 +32,7 @@ object Dependencies {
 
   val sprayJson         = "io.spray"                  %%  "spray-json"            % "1.3.1"
   val sprayJsonLenses   = "net.virtual-void"          %%  "json-lenses"           % "0.6.0"
-  val scalatest         = "org.scalatest"             %%  "scalatest"             % "2.2.1"
+  val scalatest         = "org.scalatest"             %%  "scalatest"             % "2.2.4"
   val logback           = "ch.qos.logback"            %   "logback-classic"       % "1.0.13"
   val aspectJ           = "org.aspectj"               %   "aspectjweaver"         % aspectjVersion
   val newrelic          = "com.newrelic.agent.java"   %   "newrelic-agent"        % "3.11.0"
