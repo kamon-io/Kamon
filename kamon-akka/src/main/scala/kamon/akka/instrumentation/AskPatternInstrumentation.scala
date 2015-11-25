@@ -23,16 +23,16 @@ import akka.actor.{ InternalActorRef, ActorRef }
 import akka.pattern.AskTimeoutException
 import kamon.trace.Tracer
 import kamon.util.SameThreadExecutionContext
+import kamon.util.logger.LazyLogger
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
 import org.aspectj.lang.reflect.SourceLocation
-import org.slf4j.LoggerFactory
 import scala.concurrent.Future
 import scala.compat.Platform.EOL
 
 @Aspect
 class AskPatternInstrumentation {
-  private val log = LoggerFactory.getLogger(getClass)
+  private val log = LazyLogger(getClass)
 
   import AskPatternInstrumentation._
 

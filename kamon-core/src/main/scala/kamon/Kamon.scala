@@ -1,5 +1,5 @@
 /* =========================================================================================
- * Copyright © 2013-2014 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2015 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -19,10 +19,10 @@ import _root_.akka.actor._
 import com.typesafe.config.{ Config, ConfigFactory }
 import kamon.metric._
 import kamon.trace.TracerModuleImpl
-import org.slf4j.LoggerFactory
+import kamon.util.logger.LazyLogger
 
 object Kamon {
-  private val log = LoggerFactory.getLogger(getClass)
+  private val log = LazyLogger(getClass)
 
   trait Extension extends actor.Extension
 
@@ -32,12 +32,13 @@ object Kamon {
 
   private lazy val _system = {
     val internalConfig = config.getConfig("kamon.internal-config")
+
     val patchedConfig = config
       .withoutPath("akka")
       .withoutPath("spray")
       .withFallback(internalConfig)
 
-    log.info("Initializing KAMON DUUUDEEE")
+    log.info("Initializing Kamon...")
 
     ActorSystem("kamon", patchedConfig)
   }
@@ -52,13 +53,8 @@ object Kamon {
 
   def shutdown(): Unit = {
     // TODO: Define what a proper shutdown should be like.
+    _system.shutdown()
   }
-
-  /*  def apply[T <: Kamon.Extension](key: ExtensionId[T]): T =
-    key(_system)
-
-  def extension[T <: Kamon.Extension](key: ExtensionId[T]): T =
-    apply(key)*/
 
   private def resolveConfiguration: Config = {
     val defaultConfig = ConfigFactory.load()

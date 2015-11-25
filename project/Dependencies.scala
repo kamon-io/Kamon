@@ -28,7 +28,6 @@ object Dependencies {
   val slf4jVersion      = "1.7.7"
   val play23Version     = "2.3.10"
   val play24Version     = "2.4.3"
-  val sigarVersion      = "1.6.5.132"
 
   val sprayJson         = "io.spray"                  %%  "spray-json"            % "1.3.1"
   val sprayJsonLenses   = "net.virtual-void"          %%  "json-lenses"           % "0.6.0"

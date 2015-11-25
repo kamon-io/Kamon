@@ -1,12 +1,12 @@
 package akka.kamon.instrumentation
 
 import akka.actor.{ ActorRef, Address }
-import akka.remote.instrumentation.TraceContextAwareWireFormats.{ TraceContextAwareRemoteEnvelope, RemoteTraceContext, AckAndTraceContextAwareEnvelopeContainer }
-import akka.remote.{ RemoteActorRefProvider, Ack, SeqNo }
 import akka.remote.WireFormats._
+import akka.remote.instrumentation.TraceContextAwareWireFormats.{ AckAndTraceContextAwareEnvelopeContainer, RemoteTraceContext, TraceContextAwareRemoteEnvelope }
+import akka.remote.{ Ack, RemoteActorRefProvider, SeqNo }
 import akka.util.ByteString
 import kamon.Kamon
-import kamon.trace.{ Tracer, TraceContext }
+import kamon.trace.Tracer
 import kamon.util.MilliTimestamp
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
@@ -71,7 +71,7 @@ class RemotingInstrumentation {
         .setSystem(system)
         .setProtocol(protocol)
         .build()
-    case _ ⇒ throw new IllegalArgumentException(s"Address [${address}] could not be serialized: host or port missing.")
+    case _ ⇒ throw new IllegalArgumentException(s"Address [$address] could not be serialized: host or port missing.")
   }
 
   @Pointcut("execution(* akka.remote.transport.AkkaPduProtobufCodec$.decodeMessage(..)) && args(bs, provider, localAddress)")
@@ -89,7 +89,7 @@ class RemotingInstrumentation {
       val ctx = tracer.newContext(
         remoteTraceContext.getTraceName,
         Option(remoteTraceContext.getTraceToken),
-        new MilliTimestamp(remoteTraceContext.getStartMilliTime()).toRelativeNanoTimestamp,
+        new MilliTimestamp(remoteTraceContext.getStartMilliTime).toRelativeNanoTimestamp,
         remoteTraceContext.getIsOpen,
         isLocal = false)
 

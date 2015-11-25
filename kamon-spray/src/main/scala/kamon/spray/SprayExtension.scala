@@ -19,12 +19,12 @@ package kamon.spray
 import kamon.Kamon
 import kamon.metric.Entity
 import kamon.util.http.HttpServerMetrics
-import org.slf4j.LoggerFactory
+import kamon.util.logger.LazyLogger
 import spray.http.HttpHeaders.Host
 import spray.http.HttpRequest
 
 object SprayExtension {
-  val log = LoggerFactory.getLogger("kamon.spray.SprayExtension")
+  val log = LazyLogger("kamon.spray.SprayExtension")
   val settings = SprayExtensionSettings(Kamon.config)
   val SegmentLibraryName = "spray-client"
 
