@@ -15,13 +15,11 @@
 
 package kamon.annotation
 
-import akka.actor.{ ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProvider }
-import akka.event.Logging
 import kamon.Kamon
-import org.slf4j.LoggerFactory
+import kamon.util.logger.LazyLogger
 
 object AnnotationExtension {
-  val log = LoggerFactory.getLogger("kamon.annotation.Annotation")
+  val log = LazyLogger("kamon.annotation.Annotation")
 
   val config = Kamon.config.getConfig("kamon.annotation")
   val arraySize = config.getInt("instruments-array-size")
