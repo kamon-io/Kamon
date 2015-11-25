@@ -18,10 +18,9 @@ package kamon
 
 import _root_.akka.actor
 import _root_.akka.actor._
-import _root_.akka.event.Logging
+import kamon.util.logger.LazyLogger
 import org.aspectj.lang.ProceedingJoinPoint
-import org.aspectj.lang.annotation.{ Around, Pointcut, Aspect }
-import org.slf4j.LoggerFactory
+import org.aspectj.lang.annotation.{Around, Aspect, Pointcut}
 
 private[kamon] object ModuleLoader extends ExtensionId[ModuleLoaderExtension] with ExtensionIdProvider {
   def lookup(): ExtensionId[_ <: actor.Extension] = ModuleLoader
@@ -29,7 +28,7 @@ private[kamon] object ModuleLoader extends ExtensionId[ModuleLoaderExtension] wi
 }
 
 private[kamon] class ModuleLoaderExtension(system: ExtendedActorSystem) extends Kamon.Extension {
-  val log = LoggerFactory.getLogger(getClass)
+  val log = LazyLogger(getClass)
   val settings = ModuleLoaderSettings(system)
 
   if (settings.modulesRequiringAspectJ.nonEmpty && !isAspectJPresent && settings.showAspectJMissingWarning)
@@ -42,7 +41,7 @@ private[kamon] class ModuleLoaderExtension(system: ExtendedActorSystem) extends 
       system.dynamicAccess.getObjectFor[ExtensionId[Kamon.Extension]](extensionClass).map { moduleID ⇒
         log.debug(s"Auto starting the [$name] module.")
         moduleID.get(system)
-
+  
       } recover {
         case th: Throwable ⇒ log.error(s"Failed to auto start the [$name] module.", th)
       }
