@@ -19,14 +19,14 @@ package kamon.play
 import akka.actor._
 import kamon.Kamon
 import kamon.util.http.HttpServerMetrics
-import org.slf4j.LoggerFactory
+import kamon.util.logger.LazyLogger
 import play.api.libs.ws.WSRequest
 import play.api.mvc.RequestHeader
 
 object PlayExtension {
   val SegmentLibraryName = "WS-client"
 
-  val log = LoggerFactory.getLogger("kamon.play.PlayExtension")
+  val log = LazyLogger("kamon.play.PlayExtension")
 
   private val config = Kamon.config.getConfig("kamon.play")
   private val dynamic = new ReflectiveDynamicAccess(getClass.getClassLoader)
