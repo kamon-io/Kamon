@@ -1,7 +1,6 @@
 language: scala
 script:
-  - sbt ++$TRAVIS_SCALA_VERSION 'set concurrentRestrictions in Global += Tags.limit(Tags.Compile, 2)' compile test:compile
-  - sbt ++$TRAVIS_SCALA_VERSION -Dakka.test.timefactor=1.5 'set concurrentRestrictions in Global += Tags.limit(Tags.Test, 1)' test
+  - ./travis-test.sh
 scala:
    - 2.11.5
 jdk:
