@@ -37,7 +37,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 
 class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
-  System.setProperty("config.file", "./kamon-play-2.4.x/src/test/resources/conf/application.conf")
+  System.setProperty("config.file", "./kamon-play/src/test/resources/conf/application.conf")
 
   override lazy val port: Port = 19002
   val executor = scala.concurrent.ExecutionContext.Implicits.global
@@ -263,14 +263,13 @@ class TestNameGenerator extends NameGenerator {
   import scala.collection.concurrent.TrieMap
   import play.api.routing.Router
   import java.util.Locale
-  import kamon.util.TriemapAtomicGetOrElseUpdate.Syntax
 
   private val cache = TrieMap.empty[String, String]
   private val normalizePattern = """\$([^<]+)<[^>]+>""".r
 
   def generateTraceName(requestHeader: RequestHeader): String = requestHeader.tags.get(Router.Tags.RouteVerb).map { verb ⇒
     val path = requestHeader.tags(Router.Tags.RoutePattern)
-    cache.atomicGetOrElseUpdate(s"$verb$path", {
+    cache.getOrElseUpdate(s"$verb$path", {
       val traceName = {
         // Convert paths of form GET /foo/bar/$paramname<regexp>/blah to foo.bar.paramname.blah.get
         val p = normalizePattern.replaceAllIn(path, "$1").replace('/', '.').dropWhile(_ == '.')

@@ -19,17 +19,17 @@ package kamon.play
 import akka.actor._
 import kamon.Kamon
 import kamon.util.http.HttpServerMetrics
-import org.slf4j.LoggerFactory
+import kamon.util.logger.LazyLogger
 import play.api.libs.ws.WSRequest
 import play.api.mvc.RequestHeader
 
 object PlayExtension {
   val SegmentLibraryName = "WS-client"
 
-  val log = LoggerFactory.getLogger("kamon.play.PlayExtension")
-  private val dynamic = new ReflectiveDynamicAccess(getClass.getClassLoader)
+  val log = LazyLogger("kamon.play.PlayExtension")
 
   private val config = Kamon.config.getConfig("kamon.play")
+  private val dynamic = new ReflectiveDynamicAccess(getClass.getClassLoader)
   val httpServerMetrics = Kamon.metrics.entity(HttpServerMetrics, "play-server")
 
   val includeTraceToken: Boolean = config.getBoolean("automatic-trace-token-propagation")
@@ -49,16 +49,15 @@ trait NameGenerator {
 
 class DefaultNameGenerator extends NameGenerator {
   import scala.collection.concurrent.TrieMap
-  import play.api.Routes
+  import play.api.routing.Router
   import java.util.Locale
-  import kamon.util.TriemapAtomicGetOrElseUpdate.Syntax
 
   private val cache = TrieMap.empty[String, String]
   private val normalizePattern = """\$([^<]+)<[^>]+>""".r
 
-  def generateTraceName(requestHeader: RequestHeader): String = requestHeader.tags.get(Routes.ROUTE_VERB).map { verb ⇒
-    val path = requestHeader.tags(Routes.ROUTE_PATTERN)
-    cache.atomicGetOrElseUpdate(s"$verb$path", {
+  def generateTraceName(requestHeader: RequestHeader): String = requestHeader.tags.get(Router.Tags.RouteVerb).map { verb ⇒
+    val path = requestHeader.tags(Router.Tags.RoutePattern)
+    cache.getOrElseUpdate(s"$verb$path", {
       val traceName = {
         // Convert paths of form GET /foo/bar/$paramname<regexp>/blah to foo.bar.paramname.blah.get
         val p = normalizePattern.replaceAllIn(path, "$1").replace('/', '.').dropWhile(_ == '.')
@@ -72,5 +71,5 @@ class DefaultNameGenerator extends NameGenerator {
     })
   } getOrElse "UntaggedTrace"
 
-  def generateHttpClientSegmentName(request: WSRequest): String = request.url
+  def generateHttpClientSegmentName(request: WSRequest): String = request.uri.getAuthority
 }

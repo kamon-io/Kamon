@@ -93,11 +93,10 @@ case class GaugeRecorder(key: MetricKey, instrument: Gauge) extends SingleInstru
  *  the most convenient way to do it and the preferred approach throughout the Kamon codebase.
  */
 abstract class GenericEntityRecorder(instrumentFactory: InstrumentFactory) extends EntityRecorder {
-  import kamon.util.TriemapAtomicGetOrElseUpdate.Syntax
 
   private val _instruments = TrieMap.empty[MetricKey, Instrument]
   private def register[T <: Instrument](key: MetricKey, instrument: ⇒ T): T =
-    _instruments.atomicGetOrElseUpdate(key, instrument, _.cleanup).asInstanceOf[T]
+    _instruments.getOrElseUpdate(key, instrument).asInstanceOf[T]
 
   protected def histogram(name: String): Histogram =
     register(HistogramKey(name, UnitOfMeasurement.Unknown), instrumentFactory.createHistogram(name))

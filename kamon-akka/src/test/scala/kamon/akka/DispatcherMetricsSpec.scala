@@ -167,6 +167,6 @@ class DispatcherMetricsSpec extends BaseKamonSpec("dispatcher-metrics-spec") {
     shutdownMethod.invoke(dispatcher)
   }
 
-  override protected def afterAll(): Unit = system.shutdown()
+  override protected def afterAll(): Unit = system.terminate()
 }
 

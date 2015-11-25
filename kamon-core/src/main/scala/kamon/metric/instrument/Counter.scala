@@ -16,7 +16,7 @@
 
 package kamon.metric.instrument
 
-import kamon.jsr166.LongAdder
+import java.util.concurrent.atomic.LongAdder
 
 trait Counter extends Instrument {
   type SnapshotType = Counter.Snapshot

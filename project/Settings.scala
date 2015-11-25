@@ -25,14 +25,15 @@ import net.virtualvoid.sbt.graph.Plugin.graphSettings
 
 object Settings {
 
-  val JavaVersion = "1.6"
-  val ScalaVersion = "2.11.6"
+  val JavaVersion = "1.8"
+  val ScalaVersion = "2.11.7"
 
   lazy val basicSettings = Seq(
     ivyScala := ivyScala.value map { _.copy(overrideScalaVersion = true) },
-    crossScalaVersions              := Seq("2.10.5", "2.11.6"),
+    crossScalaVersions              := Seq("2.11.7", "2.12.0-M3"),
     resolvers                       ++= Dependencies.resolutionRepos,
     fork in run                     := true,
+    scalaVersion                    := ScalaVersion,
     parallelExecution in Global     := false,
     testGrouping in Test            := singleTestPerJvm((definedTests in Test).value, (javaOptions in Test).value),
     javacOptions                    := Seq(
@@ -46,7 +47,7 @@ object Settings {
       "-unchecked",
       "-optimise",
       "-deprecation",
-      "-target:jvm-1.6",
+      "-target:jvm-1.8",
       "-language:postfixOps",
       "-language:implicitConversions",
       "-Yinline-warnings",
