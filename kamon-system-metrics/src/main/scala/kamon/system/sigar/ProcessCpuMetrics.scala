@@ -49,21 +49,27 @@ class ProcessCpuMetrics(sigar: Sigar, instrumentFactory: InstrumentFactory, logg
    * @see [[http://stackoverflow.com/questions/19323364/using-sigar-api-to-get-jvm-cpu-usage "StackOverflow: Using Sigar API to get JVM Cpu usage"]]
    */
   def update(): Unit = {
+
+    def percentUsage(delta: Long, timeDiff: Long): Long = Try(100 * delta / timeDiff / totalCores).getOrElse(0L)
+
+    def positiveSubtraction(left: Long, right: Long): Long = {
+      val result = left - right
+      if (result < 0L) 0L else result
+    }
+
     val currentProcCpu = sigar.getProcCpu(pid)
-    val totalDiff = currentProcCpu.getTotal - lastProcCpu.getTotal
-    val userDiff = currentProcCpu.getUser - lastProcCpu.getUser
-    val systemDiff = currentProcCpu.getSys - lastProcCpu.getSys
-    val timeDiff = currentProcCpu.getLastTime - lastProcCpu.getLastTime
+    val totalDiff = positiveSubtraction(currentProcCpu.getTotal, lastProcCpu.getTotal)
+    val userDiff = positiveSubtraction(currentProcCpu.getUser, lastProcCpu.getUser)
+    val systemDiff = positiveSubtraction(currentProcCpu.getSys, lastProcCpu.getSys)
+    val timeDiff = positiveSubtraction(currentProcCpu.getLastTime, lastProcCpu.getLastTime)
 
-    def percentUsage(delta: Long): Long = Try(100 * delta / timeDiff / totalCores).getOrElse(0L)
-
-    if (totalDiff == 0) {
-      if (timeDiff > 2000) currentLoad = 0
-      if (currentLoad == 0) lastProcCpu = currentProcCpu
+    if (totalDiff == 0L) {
+      if (timeDiff > 2000L) currentLoad = 0L
+      if (currentLoad == 0L) lastProcCpu = currentProcCpu
     } else {
-      val totalPercent = percentUsage(totalDiff)
-      val userPercent = percentUsage(userDiff)
-      val systemPercent = percentUsage(systemDiff)
+      val totalPercent = percentUsage(totalDiff, timeDiff)
+      val userPercent = percentUsage(userDiff, timeDiff)
+      val systemPercent = percentUsage(systemDiff, timeDiff)
 
       processUserCpu.record(userPercent)
       processSystemCpu.record(systemPercent)
