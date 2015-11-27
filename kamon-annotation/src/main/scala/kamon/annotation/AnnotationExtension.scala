@@ -19,7 +19,7 @@ import kamon.Kamon
 import kamon.util.logger.LazyLogger
 
 object AnnotationExtension {
-  val log = LazyLogger("kamon.annotation.Annotation")
+  val log = LazyLogger("kamon.annotation.AnnotationExtension")
 
   val config = Kamon.config.getConfig("kamon.annotation")
   val arraySize = config.getInt("instruments-array-size")
