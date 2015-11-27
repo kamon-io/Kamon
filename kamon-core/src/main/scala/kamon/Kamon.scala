@@ -52,8 +52,7 @@ object Kamon {
   def start(): Unit = _start
 
   def shutdown(): Unit = {
-    // TODO: Define what a proper shutdown should be like.
-    _system.terminate()
+    _system.shutdown()
   }
 
   private def resolveConfiguration: Config = {
