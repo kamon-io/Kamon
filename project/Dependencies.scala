@@ -22,12 +22,12 @@ object Dependencies {
     "typesafe repo" at "http://repo.typesafe.com/typesafe/releases/"
   )
 
-  val sprayVersion      = "1.3.2"
+  val sprayVersion      = "1.3.3"
   val akkaVersion       = "2.3.14"
   val aspectjVersion    = "1.8.7"
   val slf4jVersion      = "1.7.7"
   val play23Version     = "2.3.10"
-  val play24Version     = "2.4.3"
+  val play24Version     = "2.4.4"
 
   val sprayJson         = "io.spray"                  %%  "spray-json"            % "1.3.1"
   val sprayJsonLenses   = "net.virtual-void"          %%  "json-lenses"           % "0.6.0"

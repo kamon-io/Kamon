@@ -15,12 +15,12 @@
 
 package kamon.akka
 
-import akka.actor.{ ActorSystem, Props, ActorRef }
+import akka.actor.{ ActorRef, Props }
 import akka.dispatch.MessageDispatcher
 import akka.routing.BalancingPool
 import akka.testkit.TestProbe
 import kamon.Kamon
-import kamon.akka.RouterMetricsTestActor.{ Pong, Ping }
+import kamon.akka.RouterMetricsTestActor.{ Ping, Pong }
 import kamon.metric.{ EntityRecorder, EntitySnapshot }
 import kamon.testkit.BaseKamonSpec
 import kamon.util.executors.{ ForkJoinPoolMetrics, ThreadPoolExecutorMetrics }
@@ -34,15 +34,11 @@ class DispatcherMetricsSpec extends BaseKamonSpec("dispatcher-metrics-spec") {
       val defaultDispatcher = forceInit(system.dispatchers.lookup("akka.actor.default-dispatcher"))
       val fjpDispatcher = forceInit(system.dispatchers.lookup("tracked-fjp"))
       val tpeDispatcher = forceInit(system.dispatchers.lookup("tracked-tpe"))
-      val customForkJoinPoolBasedDispatcher = forceInit(system.dispatchers.lookup("custom-fjp-based-dispatcher"))
-      val customThreadPoolExecutorBasedDispatcher = forceInit(system.dispatchers.lookup("custom-tpe-based-dispatcher"))
       val excludedDispatcher = forceInit(system.dispatchers.lookup("explicitly-excluded"))
 
       findDispatcherRecorder(defaultDispatcher, "fork-join-pool") shouldNot be(empty)
       findDispatcherRecorder(fjpDispatcher, "fork-join-pool") shouldNot be(empty)
       findDispatcherRecorder(tpeDispatcher, "thread-pool-executor") shouldNot be(empty)
-      findDispatcherRecorder(customForkJoinPoolBasedDispatcher, "fork-join-pool") shouldNot be(empty)
-      findDispatcherRecorder(customThreadPoolExecutorBasedDispatcher, "thread-pool-executor") shouldNot be(empty)
       findDispatcherRecorder(excludedDispatcher, "fork-join-pool") should be(empty)
     }
 
@@ -115,76 +111,6 @@ class DispatcherMetricsSpec extends BaseKamonSpec("dispatcher-metrics-spec") {
       expectMsg(Pong)
 
       findDispatcherRecorder("BalancingPool-/test-balancing-pool", "fork-join-pool") shouldNot be(empty)
-    }
-
-    "record metrics for a custom dispatcher with a based fork-join-executor" in {
-      implicit val fjpDispatcher = system.dispatchers.lookup("custom-fjp-based-dispatcher")
-      collectDispatcherMetrics(fjpDispatcher, "fork-join-pool")
-
-      Await.result({
-        Future.sequence {
-          for (_ ← 1 to 100) yield submit(fjpDispatcher)
-        }
-      }, 5 seconds)
-
-      refreshDispatcherInstruments(fjpDispatcher, "fork-join-pool")
-      val snapshot = collectDispatcherMetrics(fjpDispatcher, "fork-join-pool")
-
-      snapshot.minMaxCounter("parallelism").get.max should be(10)
-      snapshot.gauge("pool-size").get.min should be >= 0L
-      snapshot.gauge("pool-size").get.max should be <= 10L
-      snapshot.gauge("active-threads").get.max should be >= 0L
-      snapshot.gauge("running-threads").get.max should be >= 0L
-      snapshot.gauge("queued-task-count").get.max should be(0)
-
-    }
-
-    "record metrics for a custom dispatcher with a based thread-pool-executor" in {
-      implicit val tpeDispatcher = system.dispatchers.lookup("custom-tpe-based-dispatcher")
-      refreshDispatcherInstruments(tpeDispatcher, "thread-pool-executor")
-      collectDispatcherMetrics(tpeDispatcher, "thread-pool-executor")
-
-      Await.result({
-        Future.sequence {
-          for (_ ← 1 to 100) yield submit(tpeDispatcher)
-        }
-      }, 5 seconds)
-
-      refreshDispatcherInstruments(tpeDispatcher, "thread-pool-executor")
-      val snapshot = collectDispatcherMetrics(tpeDispatcher, "thread-pool-executor")
-
-      snapshot.gauge("active-threads") should not be empty
-      snapshot.gauge("pool-size").get.min should be >= 7L
-      snapshot.gauge("pool-size").get.max should be <= 21L
-      snapshot.gauge("max-pool-size").get.max should be(21)
-      snapshot.gauge("core-pool-size").get.max should be(21)
-      snapshot.gauge("processed-tasks").get.max should be(102L +- 5L)
-
-      // The processed tasks should be reset to 0 if no more tasks are submitted.
-      val secondSnapshot = collectDispatcherMetrics(tpeDispatcher, "thread-pool-executor")
-      secondSnapshot.gauge("processed-tasks").get.max should be(0)
-    }
-
-    "record metrics for a custom default dispatcher with a based fork-join-pool" in {
-      implicit val fjpDispatcher = ActorSystem("system-with-fjp-based-dispatcher", config.getConfig("actor-system-with-default-custom-fjp-based-dispatcher")).dispatcher.asInstanceOf[MessageDispatcher]
-      collectDispatcherMetrics(fjpDispatcher, "fork-join-pool")
-
-      Await.result({
-        Future.sequence {
-          for (_ ← 1 to 100) yield submit(fjpDispatcher)
-        }
-      }, 5 seconds)
-
-      refreshDispatcherInstruments(fjpDispatcher, "fork-join-pool")
-      val snapshot = collectDispatcherMetrics(fjpDispatcher, "fork-join-pool")
-
-      snapshot.minMaxCounter("parallelism").get.max should be(12)
-      snapshot.gauge("pool-size").get.min should be >= 0L
-      snapshot.gauge("pool-size").get.max should be <= 10L
-      snapshot.gauge("active-threads").get.max should be >= 0L
-      snapshot.gauge("running-threads").get.max should be >= 0L
-      snapshot.gauge("queued-task-count").get.max should be(0)
-
     }
   }
 
