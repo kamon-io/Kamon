@@ -52,7 +52,7 @@ object Kamon {
   def start(): Unit = _start
 
   def shutdown(): Unit = {
-    _system.shutdown()
+    _system.terminate()
   }
 
   private def resolveConfiguration: Config = {
