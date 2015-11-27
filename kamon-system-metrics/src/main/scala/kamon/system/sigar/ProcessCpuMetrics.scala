@@ -61,7 +61,7 @@ class ProcessCpuMetrics(sigar: Sigar, instrumentFactory: InstrumentFactory, logg
     val totalDiff = positiveSubtraction(currentProcCpu.getTotal, lastProcCpu.getTotal)
     val userDiff = positiveSubtraction(currentProcCpu.getUser, lastProcCpu.getUser)
     val systemDiff = positiveSubtraction(currentProcCpu.getSys, lastProcCpu.getSys)
-    val timeDiff = positiveSubtraction(currentProcCpu.getLastTime, lastProcCpu.getLastTime)
+    val timeDiff = currentProcCpu.getLastTime - lastProcCpu.getLastTime
 
     if (totalDiff == 0L) {
       if (timeDiff > 2000L) currentLoad = 0L
