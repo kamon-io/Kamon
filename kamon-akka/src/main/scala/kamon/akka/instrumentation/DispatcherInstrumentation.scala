@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * Copyright © 2013-2014 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2015 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -16,6 +16,7 @@
 
 package akka.kamon.instrumentation
 
+import java.lang.reflect.Method
 import java.util.concurrent.{ ExecutorService, ThreadPoolExecutor }
 
 import akka.actor.{ ActorContext, Props, ActorSystem, ActorSystemImpl }
@@ -47,15 +48,26 @@ class DispatcherInstrumentation {
 
     // Yes, reflection sucks, but this piece of code is only executed once on ActorSystem's startup.
     val defaultDispatcher = system.dispatcher
-    val executorServiceDelegateField = defaultDispatcher.getClass.getDeclaredField("executorServiceDelegate")
-    executorServiceDelegateField.setAccessible(true)
-
-    val lazyExecutorServiceDelegate = executorServiceDelegateField.get(defaultDispatcher)
-    val executorField = lazyExecutorServiceDelegate.getClass.getMethod("executor")
-    executorField.setAccessible(true)
-
-    val defaultDispatcherExecutor = executorField.invoke(lazyExecutorServiceDelegate).asInstanceOf[ExecutorService]
+    val defaultDispatcherExecutor = extractExecutor(defaultDispatcher.asInstanceOf[MessageDispatcher])
     registerDispatcher(Dispatchers.DefaultDispatcherId, defaultDispatcherExecutor, system)
+  }
+
+  private def extractExecutor(dispatcher: MessageDispatcher): ExecutorService = {
+    val executorServiceMethod: Method = {
+      // executorService is protected
+      val method = classOf[Dispatcher].getDeclaredMethod("executorService")
+      method.setAccessible(true)
+      method
+    }
+
+    dispatcher match {
+      case x: Dispatcher ⇒
+        val executor = executorServiceMethod.invoke(x) match {
+          case delegate: ExecutorServiceDelegate ⇒ delegate.executor
+          case other                             ⇒ other
+        }
+        executor.asInstanceOf[ExecutorService]
+    }
   }
 
   private def registerDispatcher(dispatcherName: String, executorService: ExecutorService, system: ActorSystem): Unit =
