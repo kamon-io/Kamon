@@ -23,7 +23,6 @@ import kamon.jdbc.metric.StatementsMetrics
 import kamon.trace.{ Tracer, TraceContext, SegmentCategory }
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation.{ Around, Aspect, Pointcut }
-import org.slf4j.LoggerFactory
 
 import scala.util.control.NonFatal
 
@@ -52,7 +51,7 @@ class StatementInstrumentation {
         case UpdateStatement(_) ⇒ withSegment(ctx, Update)(recordWrite(pjp, sql))
         case DeleteStatement(_) ⇒ withSegment(ctx, Delete)(recordWrite(pjp, sql))
         case anythingElse ⇒
-          log.debug(s"Unable to parse sql [$sql]")
+          JdbcExtension.log.debug(s"Unable to parse sql [$sql]")
           pjp.proceed()
       }
     }
@@ -90,7 +89,6 @@ class StatementInstrumentation {
 }
 
 object StatementInstrumentation {
-  val log = LoggerFactory.getLogger(classOf[StatementInstrumentation])
 
   val SelectStatement = "(?i)^\\s*select.*?\\sfrom[\\s\\[]+([^\\]\\s,)(;]*).*".r
   val InsertStatement = "(?i)^\\s*insert(?:\\s+ignore)?\\s+into\\s+([^\\s(,;]*).*".r
