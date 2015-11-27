@@ -19,8 +19,11 @@ import kamon.util.ConfigTools.Syntax
 
 import akka.actor._
 import kamon.Kamon
+import kamon.util.logger.LazyLogger
 
 object JdbcExtension {
+  val log = LazyLogger("kamon.jdbc.JdbcExtension")
+
   val SegmentLibraryName = "jdbc"
 
   private val config = Kamon.config.getConfig("kamon.jdbc")
@@ -59,9 +62,7 @@ class DefaultJdbcNameGenerator extends JdbcNameGenerator {
 }
 
 class DefaultSqlErrorProcessor extends SqlErrorProcessor {
-  import org.slf4j.LoggerFactory
-
-  val log = LoggerFactory.getLogger(classOf[DefaultSqlErrorProcessor])
+  val log = LazyLogger(classOf[DefaultSqlErrorProcessor])
 
   override def process(sql: String, cause: Throwable): Unit = {
     log.error(s"the query [$sql] failed with exception [${cause.getMessage}]")
@@ -69,9 +70,7 @@ class DefaultSqlErrorProcessor extends SqlErrorProcessor {
 }
 
 class DefaultSlowQueryProcessor extends SlowQueryProcessor {
-  import org.slf4j.LoggerFactory
-
-  val log = LoggerFactory.getLogger(classOf[DefaultSlowQueryProcessor])
+  val log = LazyLogger(classOf[DefaultSlowQueryProcessor])
 
   override def process(sql: String, executionTimeInMillis: Long, queryThresholdInMillis: Long): Unit = {
     log.warn(s"The query [$sql] took $executionTimeInMillis ms and the slow query threshold is $queryThresholdInMillis ms")
