@@ -16,13 +16,14 @@ package kamon
 
 import _root_.akka.actor
 import _root_.akka.actor._
+import _root_.scala.util.{ Success, Failure, Try }
 import com.typesafe.config.{ Config, ConfigFactory }
 import kamon.metric._
 import kamon.trace.TracerModuleImpl
 import kamon.util.logger.LazyLogger
 
 object Kamon {
-  private val log = LazyLogger(getClass)
+  private val log = LazyLogger("Kamon")
 
   trait Extension extends actor.Extension
 
@@ -40,6 +41,8 @@ object Kamon {
 
     log.info("Initializing Kamon...")
 
+    tryLoadAutoweaveModule()
+
     ActorSystem("kamon", patchedConfig)
   }
 
@@ -53,6 +56,19 @@ object Kamon {
 
   def shutdown(): Unit = {
     _system.terminate()
+  }
+
+  private def tryLoadAutoweaveModule(): Unit = {
+    val color = (msg:String) =>  s"""\u001B[32m${msg}\u001B[0m"""
+
+    log.info("Trying to load kamon-autoweave...")
+
+    Try(Class.forName("kamon.autoweave.Autoweave$")) match {
+      case Success(_) ⇒
+        log.info(color("Kamon-autoweave has been successfully loaded."))
+        log.info(color("The AspectJ loadtime weaving agent is now attached to the JVM (you don't need to use -javaagent)."))
+      case Failure(reason) ⇒ log.info(s"Kamon-autoweave failed to load. Reason: we have not found the ${reason.getMessage} class in the classpath.")
+    }
   }
 
   private def resolveConfiguration: Config = {

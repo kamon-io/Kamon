@@ -24,7 +24,7 @@ object Projects extends Build {
   lazy val kamon = Project("kamon", file("."))
     .aggregate(kamonCore, kamonScala, kamonAkka, kamonSpray, kamonNewrelic, kamonPlayground, kamonTestkit,
       kamonStatsD, kamonDatadog, kamonSPM, kamonSystemMetrics, kamonLogReporter, kamonAkkaRemote, kamonJdbc,
-      kamonAnnotation, kamonPlay, kamonJMXReporter, kamonFluentd)
+      kamonAnnotation, kamonPlay23, kamonPlay24, kamonJMXReporter, kamonFluentd, kamonAutoweave)
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
     .settings(noPublishing: _*)
@@ -106,7 +106,7 @@ object Projects extends Build {
 
   lazy val kamonPlayground = Project("kamon-playground", file("kamon-playground"))
     .dependsOn(kamonSpray, kamonNewrelic, kamonStatsD, kamonDatadog, kamonLogReporter, kamonSystemMetrics,
-      kamonJMXReporter)
+      kamonJMXReporter,kamonAutoweave,kamonJdbc)
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
     .settings(noPublishing: _*)
@@ -185,6 +185,15 @@ object Projects extends Build {
       libraryDependencies ++=
         test(h2,scalatest, akkaTestKit, slf4jApi) ++
         provided(aspectJ))
+
+  lazy val kamonAutoweave = Project("kamon-autoweave", file("kamon-autoweave"))
+    .dependsOn(kamonCore % "compile->compile;test->test")
+    .settings(basicSettings: _*)
+    .settings(formatSettings: _*)
+    .settings(
+      libraryDependencies ++=
+        test(scalatest, slf4jApi) ++
+        compile(aspectJ))
 
   lazy val kamonAnnotation = Project("kamon-annotation", file("kamon-annotation"))
     .dependsOn(kamonCore % "compile->compile;test->test")
