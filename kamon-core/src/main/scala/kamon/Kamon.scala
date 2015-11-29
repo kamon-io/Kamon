@@ -61,7 +61,7 @@ object Kamon {
   private def tryToLoadAutoweaveModule(): Unit = {
     log.info("Trying to load kamon-autoweave...")
 
-    Try(Class.forName("kamon.autoweave.Autoweaveee")) match {
+    Try(Class.forName("kamon.autoweave.Autoweave")) match {
       case Success(_) ⇒
         val infoMessage =
           """\u001B[32m
