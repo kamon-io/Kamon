@@ -66,8 +66,7 @@ object Kamon {
         val infoMessage =
           """\u001B[32m
             |Kamon-autoweave has been successfully loaded.
-            |The AspectJ loadtime weaving agent can now be dynamically attached to a JVM after it has started (you don't need to use -javaagent).
-            |This offers extra flexibility but obviously any classes loaded before attachment will not be woven.
+            |The AspectJ loadtime weaving agent is now attached to the JVM (you don't need to use -javaagent).
             |\u001B[0m
           """.stripMargin
         log.info(infoMessage)

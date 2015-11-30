@@ -201,8 +201,6 @@ object Projects extends Build {
     .dependsOn(kamonCore % "compile->compile;test->test")
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
-    .settings(aspectJSettings: _*)
-    .settings(unmanagedJars in Compile ~= {uj =>Seq(Attributed.blank(file(System.getProperty("java.home").dropRight(3)+"lib/tools.jar"))) ++ uj })
     .settings(
       libraryDependencies ++=
         test(scalatest, slf4jApi) ++

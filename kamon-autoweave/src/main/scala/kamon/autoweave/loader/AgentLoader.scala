@@ -1,11 +1,17 @@
 package kamon.autoweave.loader
 
-import java.io.{ File, FileOutputStream, InputStream }
+import java.io.{File, FileOutputStream, InputStream}
 import java.lang.management.ManagementFactory
+import java.util
 import java.util.jar.Attributes.Name
-import java.util.jar.{ JarEntry, JarOutputStream, Manifest }
+import java.util.jar.{JarEntry, JarOutputStream, Manifest}
 
-import com.sun.tools.attach.VirtualMachine
+import com.sun.tools.attach.spi.AttachProvider
+import com.sun.tools.attach.{VirtualMachine, VirtualMachineDescriptor}
+import sun.tools.attach._
+
+import scala.util.control.NoStackTrace
+import scala.util.{Failure, Success, Try}
 
 object AgentLoader {
 
@@ -28,7 +34,7 @@ object AgentLoader {
    * @param resources Array of classes to be included with agent.
    */
   def attachAgentToJVM(agent: Class[_], resources: Seq[Class[_]] = Seq.empty): Unit = {
-    val vm = VirtualMachine.attach(getPidFromRuntimeMBean)
+    val vm = attachToRunningJVM()
     vm.loadAgent(generateAgentJar(agent, resources).getAbsolutePath)
     vm.detach()
   }
@@ -78,16 +84,57 @@ object AgentLoader {
   }
 
   /**
-   * Gets bytes from InputStream
+   * Gets bytes from InputStream.
    *
    * @param stream
-   * The InputStream
+   * The InputStream.
    * @return
-   * Returns a byte[] representation of given stream
+   * Returns a byte[] representation of given stream.
    */
   private def getBytesFromStream(stream: InputStream): Array[Byte] = {
     Stream.continually(stream.read).takeWhile(_ != -1).map(_.toByte).toArray
   }
 
   private def unqualify(clazz: Class[_]): String = clazz.getName.replace('.', '/') + ".class"
+
+  /**
+    * Gets the current HotSpotVirtualMachine implementation otherwise a failure.
+    *
+    * @return
+    * Returns the HotSpotVirtualMachine implementation of the running JVM.
+    */
+  private def findVirtualMachineImplementation(): Try[Class[_ <: HotSpotVirtualMachine]] = System.getProperty("os.name") match  {
+    case os if os.startsWith("Windows")  => Success(classOf[WindowsVirtualMachine])
+    case os if os.startsWith("Mac OS X") => Success(classOf[BsdVirtualMachine])
+    case os if os.startsWith("Solaris") => Success(classOf[SolarisVirtualMachine])
+    case os if os.startsWith("Linux") || os.startsWith("LINUX") => Success(classOf[LinuxVirtualMachine])
+    case other => Failure(new RuntimeException(s"Cannot use Attach API on unknown OS: $other") with NoStackTrace)
+  }
+
+  /**
+    * Attach to the running JVM.
+    *
+    * @return
+    * Returns the attached VirtualMachine
+    */
+  private def attachToRunningJVM(): VirtualMachine = {
+    val AttachProvider = new AttachProvider() {
+      override def name(): String = null
+      override def `type`(): String = null
+      override def attachVirtualMachine(id: String): VirtualMachine = null
+      override def listVirtualMachines(): util.List[VirtualMachineDescriptor] = null
+    }
+
+    findVirtualMachineImplementation() match {
+      case Success(vmClass) =>
+        val pid = getPidFromRuntimeMBean
+        // This is only done with Reflection to avoid the JVM pre-loading all the XyzVirtualMachine classes.
+        val vmConstructor = vmClass.getConstructor(classOf[AttachProvider], classOf[String])
+        val newVM = vmConstructor.newInstance(AttachProvider, pid)
+        newVM.asInstanceOf[VirtualMachine]
+      case Failure(reason) => throw reason
+    }
+  }
 }
+
+
