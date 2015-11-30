@@ -41,7 +41,7 @@ object Kamon {
 
     log.info("Initializing Kamon...")
 
-    tryToLoadAutoweaveModule()
+    tryLoadAutoweaveModule()
 
     ActorSystem("kamon", patchedConfig)
   }
@@ -58,7 +58,7 @@ object Kamon {
     _system.shutdown()
   }
 
-  private def tryToLoadAutoweaveModule(): Unit = {
+  private def tryLoadAutoweaveModule(): Unit = {
     log.info("Trying to load kamon-autoweave...")
 
     Try(Class.forName("kamon.autoweave.Autoweave")) match {
