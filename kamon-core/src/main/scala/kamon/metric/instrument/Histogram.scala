@@ -17,9 +17,9 @@
 package kamon.metric.instrument
 
 import java.nio.LongBuffer
-import org.HdrHistogram.AtomicHistogramFieldsAccessor
-import kamon.metric.instrument.Histogram.{ Snapshot, DynamicRange }
-import org.HdrHistogram.AtomicHistogram
+
+import kamon.metric.instrument.Histogram.{ DynamicRange, Snapshot }
+import org.HdrHistogram.ModifiedAtomicHistogram
 
 trait Histogram extends Instrument {
   type SnapshotType = Histogram.Snapshot
@@ -54,11 +54,9 @@ object Histogram {
    * @param lowestDiscernibleValue
    *    The lowest value that can be discerned (distinguished from 0) by the histogram.Must be a positive integer that
    *    is >= 1. May be internally rounded down to nearest power of 2.
-   *
    * @param highestTrackableValue
    *    The highest value to be tracked by the histogram. Must be a positive integer that is >= (2 * lowestDiscernibleValue).
    *    Must not be larger than (Long.MAX_VALUE/2).
-   *
    * @param precision
    *    The number of significant decimal digits to which the histogram will maintain value resolution and separation.
    *    Must be a non-negative integer between 1 and 3.
@@ -108,9 +106,8 @@ object Histogram {
  *  The collect(..) operation extracts all the recorded values from the histogram and resets the counts, but still
  *  leave it in a consistent state even in the case of concurrent modification while the snapshot is being taken.
  */
-class HdrHistogram(dynamicRange: DynamicRange) extends AtomicHistogram(dynamicRange.lowestDiscernibleValue,
-  dynamicRange.highestTrackableValue, dynamicRange.precision) with Histogram with AtomicHistogramFieldsAccessor {
-  import AtomicHistogramFieldsAccessor.totalCountUpdater
+class HdrHistogram(dynamicRange: DynamicRange) extends ModifiedAtomicHistogram(dynamicRange.lowestDiscernibleValue,
+  dynamicRange.highestTrackableValue, dynamicRange.precision) with Histogram {
 
   def record(value: Long): Unit = recordValue(value)
 
@@ -125,7 +122,7 @@ class HdrHistogram(dynamicRange: DynamicRange) extends AtomicHistogram(dynamicRa
 
     val measurementsArray = Array.ofDim[Long](buffer.limit())
     buffer.get(measurementsArray, 0, measurementsArray.length)
-    new CompactHdrSnapshot(nrOfMeasurements, measurementsArray, unitMagnitude(), subBucketHalfCount(), subBucketHalfCountMagnitude())
+    new CompactHdrSnapshot(nrOfMeasurements, measurementsArray, protectedUnitMagnitude(), protectedSubBucketHalfCount(), protectedSubBucketHalfCountMagnitude())
   }
 
   def getCounts = countsArray().length()
@@ -148,22 +145,8 @@ class HdrHistogram(dynamicRange: DynamicRange) extends AtomicHistogram(dynamicRa
 
       index += 1
     }
-
-    reestablishTotalCount(nrOfMeasurements)
     nrOfMeasurements
   }
-
-  private def reestablishTotalCount(diff: Long): Unit = {
-    def tryUpdateTotalCount: Boolean = {
-      val previousTotalCount = totalCountUpdater.get(this)
-      val newTotalCount = previousTotalCount - diff
-
-      totalCountUpdater.compareAndSet(this, previousTotalCount, newTotalCount)
-    }
-
-    while (!tryUpdateTotalCount) {}
-  }
-
 }
 
 case class CompactHdrSnapshot(val numberOfMeasurements: Long, compactRecords: Array[Long], unitMagnitude: Int,

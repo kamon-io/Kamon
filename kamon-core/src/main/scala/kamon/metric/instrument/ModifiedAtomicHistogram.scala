@@ -16,20 +16,16 @@
 
 package org.HdrHistogram
 
-import java.util.concurrent.atomic.{ AtomicLongArray, AtomicLongFieldUpdater }
+import java.util.concurrent.atomic.AtomicLongArray
 
-trait AtomicHistogramFieldsAccessor {
-  self: AtomicHistogram ⇒
+abstract class ModifiedAtomicHistogram(low: Long, high: Long, precision: Int)
+    extends AtomicHistogram(low, high, precision) { self ⇒
 
-  def countsArray(): AtomicLongArray = self.counts
+  override def incrementTotalCount(): Unit = {}
+  override def addToTotalCount(value: Long): Unit = {}
 
-  def unitMagnitude(): Int = self.unitMagnitude
-
-  def subBucketHalfCount(): Int = self.subBucketHalfCount
-
-  def subBucketHalfCountMagnitude(): Int = self.subBucketHalfCountMagnitude
-}
-
-object AtomicHistogramFieldsAccessor {
-  def totalCountUpdater(): AtomicLongFieldUpdater[AtomicHistogram] = AtomicHistogram.totalCountUpdater
+  def countsArray(): AtomicLongArray = counts
+  def protectedUnitMagnitude(): Int = unitMagnitude
+  def protectedSubBucketHalfCount(): Int = subBucketHalfCount
+  def protectedSubBucketHalfCountMagnitude(): Int = subBucketHalfCountMagnitude
 }
