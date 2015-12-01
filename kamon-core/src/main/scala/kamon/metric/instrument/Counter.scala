@@ -33,6 +33,7 @@ object Counter {
   trait Snapshot extends InstrumentSnapshot {
     def count: Long
     def merge(that: InstrumentSnapshot, context: CollectionContext): Counter.Snapshot
+    def scale(from: UnitOfMeasurement, to: UnitOfMeasurement): Counter.Snapshot
   }
 }
 
@@ -57,4 +58,8 @@ case class CounterSnapshot(count: Long) extends Counter.Snapshot {
     case CounterSnapshot(thatCount) ⇒ CounterSnapshot(count + thatCount)
     case other                      ⇒ sys.error(s"Cannot merge a CounterSnapshot with the incompatible [${other.getClass.getName}] type.")
   }
+
+  override def scale(from: UnitOfMeasurement, to: UnitOfMeasurement): Counter.Snapshot =
+    CounterSnapshot(from.tryScale(to)(count).toLong)
+
 }
