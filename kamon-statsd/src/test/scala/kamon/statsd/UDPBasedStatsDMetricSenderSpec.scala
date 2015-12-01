@@ -21,7 +21,7 @@ import akka.io.Udp
 import akka.testkit.TestProbe
 import kamon.Kamon
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
-import kamon.metric.instrument.{ InstrumentFactory, UnitOfMeasurement }
+import kamon.metric.instrument.{ Memory, Time, InstrumentFactory, UnitOfMeasurement }
 import kamon.metric._
 import kamon.testkit.BaseKamonSpec
 import kamon.util.MilliTimestamp
@@ -61,14 +61,20 @@ abstract class UDPBasedStatsDMetricSenderSpec(actorSystemName: String) extends B
     }
 
     def expectUDPPacket(expected: String, udp: TestProbe): Unit = {
+      expectUDPPacket(udp) should be(expected)
+    }
+
+    def expectUDPPacket(udp: TestProbe): String = {
       val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
-      data.utf8String should be(expected)
+      data.utf8String
     }
   }
 
   class TestEntityRecorder(instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) {
     val metricOne = histogram("metric-one")
     val metricTwo = histogram("metric-two")
+    val nanoMetric = histogram("nano-metric", Time.Nanoseconds)
+    val byteMetric = histogram("byte-metric", Memory.Bytes)
   }
 
   object TestEntityRecorder extends EntityRecorderFactory[TestEntityRecorder] {

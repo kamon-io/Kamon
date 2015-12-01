@@ -51,11 +51,13 @@ class SimpleStatsDMetricsSender(statsDConfig: Config, metricKeyGenerator: Metric
       metricSnapshot match {
         case hs: Histogram.Snapshot ⇒
           hs.recordsIterator.foreach { record ⇒
-            flushToUDP(keyPrefix + encodeStatsDTimer(record.level, record.count))
+            val scaled: Long = scaler.scale(metricKey.unitOfMeasurement, record.level)
+            flushToUDP(keyPrefix + encodeStatsDTimer(scaled, record.count))
           }
 
         case cs: Counter.Snapshot ⇒
-          flushToUDP(keyPrefix + encodeStatsDCounter(cs.count))
+          val scaled: Long = scaler.scale(metricKey.unitOfMeasurement, cs.count)
+          flushToUDP(keyPrefix + encodeStatsDCounter(scaled))
       }
     }
   }

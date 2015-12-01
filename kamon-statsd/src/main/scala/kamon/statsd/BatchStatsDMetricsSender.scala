@@ -55,11 +55,13 @@ class BatchStatsDMetricsSender(statsDConfig: Config, metricKeyGenerator: MetricK
       metricSnapshot match {
         case hs: Histogram.Snapshot ⇒
           hs.recordsIterator.foreach { record ⇒
-            packetBuilder.appendMeasurement(key, encodeStatsDTimer(record.level, record.count))
+            val scaled: Long = scaler.scale(metricKey.unitOfMeasurement, record.level)
+            packetBuilder.appendMeasurement(key, encodeStatsDTimer(scaled, record.count))
           }
 
         case cs: Counter.Snapshot ⇒
-          packetBuilder.appendMeasurement(key, encodeStatsDCounter(cs.count))
+          val scaled: Long = scaler.scale(metricKey.unitOfMeasurement, cs.count)
+          packetBuilder.appendMeasurement(key, encodeStatsDCounter(scaled))
       }
     }
 

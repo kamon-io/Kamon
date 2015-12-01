@@ -29,6 +29,8 @@ class BatchStatsDMetricSenderSpec extends UDPBasedStatsDMetricSenderSpec("batch-
         |  statsd {
         |    hostname = "127.0.0.1"
         |    port = 0
+        |    time-units = "ms"
+        |    memory-units = "kb"
         |    simple-metric-key-generator {
         |      application = kamon
         |      hostname-override = kamon-host
@@ -115,6 +117,32 @@ class BatchStatsDMetricSenderSpec extends UDPBasedStatsDMetricSenderSpec("batch-
 
       val udp = setup(Map(testEntity -> testRecorder.collect(collectionContext)))
       expectUDPPacket(s"$testMetricKey1:10|ms|@0.5:11|ms\n$testMetricKey2:20|ms:21|ms", udp)
+    }
+
+    "scale time metrics according to config " in new BatchSenderFixture {
+      val testRecorder: TestEntityRecorder = buildRecorder("user/kamon")
+      val nanoMetricKey = buildMetricKey(testEntity, "nano-metric")
+      val nanoPattern = s"$nanoMetricKey:(\\d+)\\|ms".r
+
+      testRecorder.nanoMetric.record(1000000000L)
+
+      val udp = setup(Map(testEntity -> testRecorder.collect(collectionContext)))
+
+      val nanoPattern(nanoToMilli) = expectUDPPacket(udp)
+      nanoToMilli.toLong should be(1000L +- 10)
+    }
+
+    "scale memory metrics according to config " in new BatchSenderFixture {
+      val testRecorder: TestEntityRecorder = buildRecorder("user/kamon")
+      val byteMetricKey = buildMetricKey(testEntity, "byte-metric")
+      val bytePattern = s"$byteMetricKey:(\\d+)\\|ms".r
+
+      testRecorder.byteMetric.record(1024000L)
+
+      val udp = setup(Map(testEntity -> testRecorder.collect(collectionContext)))
+
+      val bytePattern(byteToKilobyte) = expectUDPPacket(udp)
+      byteToKilobyte.toLong should be(1000L +- 10)
     }
   }
 }
