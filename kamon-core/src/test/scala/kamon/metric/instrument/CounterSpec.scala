@@ -56,6 +56,15 @@ class CounterSpec extends WordSpec with Matchers {
       counterBSnapshot.merge(counterASnapshot, collectionContext).count should be(300)
     }
 
+    "produce a snapshot that can be scaled" in new CounterFixture {
+      counter.increment(100)
+
+      val counterSnapshot = takeSnapshotFrom(counter)
+
+      val scaledSnapshot = counterSnapshot.scale(Time.Milliseconds, Time.Microseconds)
+      scaledSnapshot.count should be(100000)
+    }
+
   }
 
   trait CounterFixture {

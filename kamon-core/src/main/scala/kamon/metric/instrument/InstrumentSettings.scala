@@ -1,7 +1,5 @@
 package kamon.metric.instrument
 
-import java.util.concurrent.TimeUnit
-
 import com.typesafe.config.Config
 import kamon.metric.instrument.Histogram.DynamicRange
 
