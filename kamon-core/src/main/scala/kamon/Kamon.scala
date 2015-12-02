@@ -59,17 +59,14 @@ object Kamon {
   }
 
   private def tryLoadAutoweaveModule(): Unit = {
+    val color = (msg:String) =>  s"""\u001B[32m${msg}\u001B[0m"""
+
     log.info("Trying to load kamon-autoweave...")
 
     Try(Class.forName("kamon.autoweave.Autoweave")) match {
       case Success(_) ⇒
-        val infoMessage =
-          """\u001B[32m
-            |Kamon-autoweave has been successfully loaded.
-            |The AspectJ loadtime weaving agent is now attached to the JVM (you don't need to use -javaagent).
-            |\u001B[0m
-          """.stripMargin
-        log.info(infoMessage)
+        log.info(color("Kamon-autoweave has been successfully loaded."))
+        log.info(color("The AspectJ loadtime weaving agent is now attached to the JVM (you don't need to use -javaagent)."))
       case Failure(reason) ⇒ log.info(s"Kamon-autoweave failed to load. Reason: we have not found the ${reason.getMessage} class in the classpath.")
     }
   }
