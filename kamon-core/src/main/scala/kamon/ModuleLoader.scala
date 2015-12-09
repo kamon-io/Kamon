@@ -20,7 +20,7 @@ import _root_.akka.actor
 import _root_.akka.actor._
 import kamon.util.logger.LazyLogger
 import org.aspectj.lang.ProceedingJoinPoint
-import org.aspectj.lang.annotation.{Around, Aspect, Pointcut}
+import org.aspectj.lang.annotation.{ Around, Aspect, Pointcut }
 
 private[kamon] object ModuleLoader extends ExtensionId[ModuleLoaderExtension] with ExtensionIdProvider {
   def lookup(): ExtensionId[_ <: actor.Extension] = ModuleLoader
@@ -41,7 +41,7 @@ private[kamon] class ModuleLoaderExtension(system: ExtendedActorSystem) extends 
       system.dynamicAccess.getObjectFor[ExtensionId[Kamon.Extension]](extensionClass).map { moduleID ⇒
         log.debug(s"Auto starting the [$name] module.")
         moduleID.get(system)
-  
+
       } recover {
         case th: Throwable ⇒ log.error(s"Failed to auto start the [$name] module.", th)
       }

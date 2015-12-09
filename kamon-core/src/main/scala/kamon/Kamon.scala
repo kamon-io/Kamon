@@ -59,7 +59,7 @@ object Kamon {
   }
 
   private def tryLoadAutoweaveModule(): Unit = {
-    val color = (msg:String) =>  s"""\u001B[32m${msg}\u001B[0m"""
+    val color = (msg: String) ⇒ s"""\u001B[32m${msg}\u001B[0m"""
 
     log.info("Trying to load kamon-autoweave...")
 

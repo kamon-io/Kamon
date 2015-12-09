@@ -16,7 +16,7 @@
 
 package kamon.jmx
 
-import javax.management.{JMException, JMRuntimeException}
+import javax.management.{ JMException, JMRuntimeException }
 
 import akka.actor._
 import akka.event.Logging
@@ -64,7 +64,7 @@ private trait ActorJMXSupervisor extends Actor with ActorLogging {
         Stop
       case t ⇒
         // Use the default supervisor strategy otherwise.
-        super.supervisorStrategy.decider.applyOrElse(t, (_: Any) => Escalate)
+        super.supervisorStrategy.decider.applyOrElse(t, (_: Any) ⇒ Escalate)
     }
 }
 
