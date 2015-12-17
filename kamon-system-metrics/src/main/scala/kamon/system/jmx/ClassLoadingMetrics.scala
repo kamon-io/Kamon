@@ -28,15 +28,15 @@ import kamon.metric.instrument.{ Memory, InstrumentFactory }
 class ClassLoadingMetrics(instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) {
   val classLoadingBean = ManagementFactory.getClassLoadingMXBean
 
-  gauge("classes-loaded", Memory.Bytes, () ⇒ {
+  gauge("classes-loaded", () ⇒ {
     classLoadingBean.getTotalLoadedClassCount
   })
 
-  gauge("classes-unloaded", Memory.Bytes, () ⇒ {
+  gauge("classes-unloaded", () ⇒ {
     classLoadingBean.getUnloadedClassCount
   })
 
-  gauge("classes-currently-loaded", Memory.Bytes, () ⇒ {
+  gauge("classes-currently-loaded", () ⇒ {
     classLoadingBean.getLoadedClassCount.toLong
   })
 
