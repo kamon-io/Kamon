@@ -19,14 +19,13 @@ import kamon.Kamon
 import kamon.autoweave.loader.AgentLoader
 import org.aspectj.weaver.loadtime.Agent
 
-
 object Autoweave {
-    val config = Kamon.config.getConfig("kamon.autowave.options")
-    val verbose = config.getBoolean("verbose")
-    val showWeaveInfo = config.getBoolean("showWeaveInfo")
+  val config = Kamon.config.getConfig("kamon.autowave.options")
+  val verbose = config.getBoolean("verbose")
+  val showWeaveInfo = config.getBoolean("showWeaveInfo")
 
-    System.setProperty("aj.weaving.verbose", verbose.toString)
-    System.setProperty("org.aspectj.weaver.showWeaveInfo", showWeaveInfo.toString)
+  System.setProperty("aj.weaving.verbose", verbose.toString)
+  System.setProperty("org.aspectj.weaver.showWeaveInfo", showWeaveInfo.toString)
 
-    AgentLoader.attachAgentToJVM(classOf[Agent])
-  }
+  AgentLoader.attachAgentToJVM(classOf[Agent])
+}

@@ -19,9 +19,9 @@ package kamon.jmx
 import java.lang.management.ManagementFactory
 import javax.management._
 
-import akka.actor.{Actor, Props}
+import akka.actor.{ Actor, Props }
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
-import kamon.metric.instrument.{Counter, Histogram, InstrumentSnapshot}
+import kamon.metric.instrument.{ Counter, Histogram, InstrumentSnapshot }
 import kamon.util.logger.LazyLogger
 
 import scala.collection.concurrent.TrieMap
@@ -145,7 +145,7 @@ private object MBeanManager {
       try {
         mbs.unregisterMBean(name)
       } catch {
-        case e: InstanceNotFoundException ⇒ if (log.isTraceEnabled) log.trace(s"Error unregistering $name", e)
+        case e: InstanceNotFoundException  ⇒ if (log.isTraceEnabled) log.trace(s"Error unregistering $name", e)
         case e: MBeanRegistrationException ⇒ if (log.isDebugEnabled) log.debug(s"Error unregistering $name", e)
       })
     registeredMBeans.clear()
@@ -197,7 +197,7 @@ private class JMXReporterActor extends Actor {
       } {
         metricSnapshot match {
           case hs: Histogram.Snapshot ⇒
-            updateHystogramMetrics(entity.category,  entity.name + "." + metricKey.name, hs)
+            updateHystogramMetrics(entity.category, entity.name + "." + metricKey.name, hs)
           case cs: Counter.Snapshot ⇒
             updateCounterMetrics(entity.category, entity.name + "." + metricKey.name, cs)
         }
