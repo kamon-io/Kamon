@@ -25,6 +25,9 @@ class LoggerLikeInstrumentation extends MdcKeysSupport {
   @Pointcut("execution(* play.api.LoggerLike+.info(..))")
   def infoPointcut(): Unit = {}
 
+  @Pointcut("execution(* play.api.LoggerLike+.debug(..))")
+  def debugPointcut(): Unit = {}
+
   @Pointcut("execution(* play.api.LoggerLike+.warn(..))")
   def warnPointcut(): Unit = {}
 
@@ -34,7 +37,7 @@ class LoggerLikeInstrumentation extends MdcKeysSupport {
   @Pointcut("execution(* play.api.LoggerLike+.trace(..))")
   def tracePointcut(): Unit = {}
 
-  @Around("(infoPointcut() || warnPointcut() || errorPointcut() || tracePointcut())")
+  @Around("(infoPointcut() || debugPointcut() || warnPointcut() || errorPointcut() || tracePointcut())")
   def aroundLog(pjp: ProceedingJoinPoint): Any = withMdc {
     pjp.proceed()
   }
