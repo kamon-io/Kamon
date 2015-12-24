@@ -19,11 +19,29 @@ package kamon.statsd
 import java.net.InetSocketAddress
 import java.text.{ DecimalFormat, DecimalFormatSymbols }
 import java.util.Locale
+
 import akka.actor.{ Actor, ActorRef, ActorSystem }
 import akka.io.{ IO, Udp }
 import akka.util.ByteString
 import com.typesafe.config.Config
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
+
+trait StatsDValueFormatters {
+
+  val symbols = DecimalFormatSymbols.getInstance(Locale.US)
+  symbols.setDecimalSeparator('.')
+  // Just in case there is some weird locale config we are not aware of.
+
+  // Absurdly high number of decimal digits, let the other end lose precision if it needs to.
+  val samplingRateFormat = new DecimalFormat("#.################################################################", symbols)
+
+  def encodeStatsDTimer(level: Long, count: Long): String = {
+    val samplingRate: Double = 1D / count
+    level.toString + "|ms" + (if (samplingRate != 1D) "|@" + samplingRateFormat.format(samplingRate) else "")
+  }
+
+  def encodeStatsDCounter(count: Long): String = count.toString + "|c"
+}
 
 /**
  * Base class for different StatsD senders utilizing UDP protocol. It implies use of one statsd server.
@@ -31,18 +49,12 @@ import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
  * @param metricKeyGenerator Key generator for all metrics sent by this sender
  */
 abstract class UDPBasedStatsDMetricsSender(statsDConfig: Config, metricKeyGenerator: MetricKeyGenerator)
-    extends Actor with UdpExtensionProvider {
+    extends Actor with UdpExtensionProvider with StatsDValueFormatters {
 
   import context.system
 
   val statsDHost = statsDConfig.getString("hostname")
   val statsDPort = statsDConfig.getInt("port")
-
-  val symbols = DecimalFormatSymbols.getInstance(Locale.US)
-  symbols.setDecimalSeparator('.') // Just in case there is some weird locale config we are not aware of.
-
-  // Absurdly high number of decimal digits, let the other end lose precision if it needs to.
-  val samplingRateFormat = new DecimalFormat("#.################################################################", symbols)
 
   udpExtension ! Udp.SimpleSender
 
@@ -60,13 +72,6 @@ abstract class UDPBasedStatsDMetricsSender(statsDConfig: Config, metricKeyGenera
   }
 
   def writeMetricsToRemote(tick: TickMetricSnapshot, flushToUDP: String ⇒ Unit): Unit
-
-  def encodeStatsDTimer(level: Long, count: Long): String = {
-    val samplingRate: Double = 1D / count
-    level.toString + "|ms" + (if (samplingRate != 1D) "|@" + samplingRateFormat.format(samplingRate) else "")
-  }
-
-  def encodeStatsDCounter(count: Long): String = count.toString + "|c"
 
 }
 
