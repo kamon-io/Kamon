@@ -85,6 +85,39 @@ object Histogram {
     def recordsIterator: Iterator[Record]
     def merge(that: InstrumentSnapshot, context: CollectionContext): InstrumentSnapshot
     def merge(that: Histogram.Snapshot, context: CollectionContext): Histogram.Snapshot
+
+    override def scale(from: UnitOfMeasurement, to: UnitOfMeasurement): Histogram.Snapshot =
+      new ScaledSnapshot(from, to, this)
+  }
+
+  class ScaledSnapshot(from: UnitOfMeasurement, to: UnitOfMeasurement, snapshot: Snapshot) extends Snapshot {
+    private def doScale(v: Long) = from.tryScale(to)(v).toLong
+    override def numberOfMeasurements: Long = snapshot.numberOfMeasurements
+
+    override def max: Long = doScale(snapshot.max)
+
+    override def merge(that: InstrumentSnapshot, context: CollectionContext): InstrumentSnapshot = snapshot.merge(that, context)
+
+    override def merge(that: Snapshot, context: CollectionContext): Snapshot = snapshot.merge(that, context)
+
+    override def percentile(percentile: Double): Long = doScale(snapshot.percentile(percentile))
+
+    override def min: Long = doScale(snapshot.min)
+
+    override def sum: Long = doScale(snapshot.sum)
+
+    override def recordsIterator: Iterator[Record] = {
+      snapshot.recordsIterator.map(record ⇒ new Record {
+        override def count: Long = record.count
+
+        override def level: Long = doScale(record.level)
+
+        override private[kamon] def rawCompactRecord: Long = record.rawCompactRecord
+      })
+    }
+
+    override def scale(from: UnitOfMeasurement, to: UnitOfMeasurement): Histogram.Snapshot =
+      if (this.from == from && this.to == to) this else super.scale(from, to)
   }
 
   object Snapshot {
@@ -97,6 +130,7 @@ object Histogram {
       override def merge(that: InstrumentSnapshot, context: CollectionContext): InstrumentSnapshot = that
       override def merge(that: Histogram.Snapshot, context: CollectionContext): Histogram.Snapshot = that
       override def numberOfMeasurements: Long = 0L
+      override def scale(from: UnitOfMeasurement, to: UnitOfMeasurement): Histogram.Snapshot = this
     }
   }
 }
