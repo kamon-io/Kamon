@@ -22,6 +22,8 @@ import com.typesafe.config.Config
 
 import scala.concurrent.duration.FiniteDuration
 
+import kamon.metric.instrument.{ Memory, Time }
+
 object ConfigTools {
   implicit class Syntax(val config: Config) extends AnyVal {
     // We are using the deprecated .getNanoseconds option to keep Kamon source code compatible with
@@ -37,6 +39,10 @@ object ConfigTools {
         case entry ⇒ entry.getKey.takeWhile(_ != '.')
       } toSet
     }
+
+    def time(path: String): Time = Time(config.getString(path))
+
+    def memory(path: String): Memory = Memory(config.getString(path))
   }
 
 }

@@ -16,14 +16,16 @@
 
 package kamon.statsd
 
+import scala.collection.JavaConverters._
+import scala.concurrent.duration._
+
 import akka.actor._
+import akka.event.Logging
+import com.typesafe.config.Config
 import kamon.Kamon
 import kamon.metric._
 import kamon.util.ConfigTools.Syntax
-import scala.concurrent.duration._
-import com.typesafe.config.Config
-import akka.event.Logging
-import scala.collection.JavaConverters._
+import kamon.util.NeedToScale
 
 object StatsD extends ExtensionId[StatsDExtension] with ExtensionIdProvider {
   override def lookup(): ExtensionId[_ <: Extension] = StatsD
@@ -62,11 +64,17 @@ class StatsDExtension(system: ExtendedActorSystem) extends Kamon.Extension {
 
     val metricsSender = system.actorOf(senderFactory.props(statsDConfig, keyGenerator), "statsd-metrics-sender")
 
+    val decoratedSender = statsDConfig match {
+      case NeedToScale(scaleTimeTo, scaleMemoryTo) =>
+        system.actorOf(MetricScaleDecorator.props(scaleTimeTo, scaleMemoryTo, metricsSender), "statsd-metric-scale-decorator")
+      case _ => metricsSender
+    }
+
     if (flushInterval == tickInterval) {
       // No need to buffer the metrics, let's go straight to the metrics sender.
-      metricsSender
+      decoratedSender
     } else {
-      system.actorOf(TickMetricSnapshotBuffer.props(flushInterval, metricsSender), "statsd-metrics-buffer")
+      system.actorOf(TickMetricSnapshotBuffer.props(flushInterval, decoratedSender), "statsd-metrics-buffer")
     }
   }
 }
