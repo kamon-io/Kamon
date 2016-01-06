@@ -69,7 +69,7 @@ object Projects extends Build {
         optional(scalazConcurrent) ++
         test(scalatest, akkaTestKit, akkaSlf4j, slf4jJul, slf4jLog4j, logback))
 
-  lazy val kamonAkkaRemote = Project("kamon-akka-remote_akka-24", file("kamon-akka-remote"))
+  lazy val kamonAkkaRemote = Project("kamon-akka-remote", file("kamon-akka-remote"))
     .dependsOn(kamonAkka)
     .settings(basicSettings: _* )
     .settings(formatSettings: _*)

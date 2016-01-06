@@ -36,6 +36,7 @@ object Settings {
     scalaVersion                    := ScalaVersion,
     parallelExecution in Global     := false,
     testGrouping in Test            := singleTestPerJvm((definedTests in Test).value, (javaOptions in Test).value),
+    moduleName              	    := moduleName.value + "_akka-2.4",
     javacOptions                    := Seq(
       "-Xlint:-options",
       "-source", JavaVersion, "-target", JavaVersion),
