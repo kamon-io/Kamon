@@ -61,9 +61,9 @@ class DatadogExtension(system: ExtendedActorSystem) extends Kamon.Extension {
     val metricsSender = system.actorOf(DatadogMetricsSender.props(datadogHost, maxPacketSizeInBytes), "datadog-metrics-sender")
 
     val decoratedSender = datadogConfig match {
-      case NeedToScale(scaleTimeTo, scaleMemoryTo) =>
+      case NeedToScale(scaleTimeTo, scaleMemoryTo) ⇒
         system.actorOf(MetricScaleDecorator.props(scaleTimeTo, scaleMemoryTo, metricsSender), "datadog-metric-scale-decorator")
-      case _ => metricsSender
+      case _ ⇒ metricsSender
     }
 
     if (flushInterval == tickInterval) {
