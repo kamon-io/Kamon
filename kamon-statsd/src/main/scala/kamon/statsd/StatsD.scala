@@ -65,9 +65,9 @@ class StatsDExtension(system: ExtendedActorSystem) extends Kamon.Extension {
     val metricsSender = system.actorOf(senderFactory.props(statsDConfig, keyGenerator), "statsd-metrics-sender")
 
     val decoratedSender = statsDConfig match {
-      case NeedToScale(scaleTimeTo, scaleMemoryTo) =>
+      case NeedToScale(scaleTimeTo, scaleMemoryTo) ⇒
         system.actorOf(MetricScaleDecorator.props(scaleTimeTo, scaleMemoryTo, metricsSender), "statsd-metric-scale-decorator")
-      case _ => metricsSender
+      case _ ⇒ metricsSender
     }
 
     if (flushInterval == tickInterval) {
