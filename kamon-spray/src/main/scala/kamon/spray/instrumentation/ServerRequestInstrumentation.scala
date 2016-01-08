@@ -38,7 +38,7 @@ class ServerRequestInstrumentation {
 
     val defaultTraceName = SprayExtension.generateTraceName(request)
     val token = if (SprayExtension.settings.includeTraceTokenHeader) {
-      request.headers.find(_.name == SprayExtension.settings.traceTokenHeaderName).map(_.value)
+      request.headers.find(_.name.equalsIgnoreCase(SprayExtension.settings.traceTokenHeaderName)).map(_.value)
     } else None
 
     val newContext = tracer.newContext(defaultTraceName, token)
