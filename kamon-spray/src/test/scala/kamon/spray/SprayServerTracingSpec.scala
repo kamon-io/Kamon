@@ -69,6 +69,20 @@ class SprayServerTracingSpec extends BaseKamonSpec("spray-server-tracing-spec") 
 
       response.headers should not contain traceTokenHeader("propagation-disabled")
     }
+
+    "check for the trace-token header in a case-insensitive manner" in {
+      enableAutomaticTraceTokenPropagation()
+
+      val (connection, server) = buildClientConnectionAndServer
+      val client = TestProbe()
+
+      client.send(connection, Get("/").withHeaders(RawHeader(SprayExtension.settings.traceTokenHeaderName.toLowerCase, "case-insensitive")))
+      server.expectMsgType[HttpRequest]
+      server.reply(HttpResponse(entity = "ok"))
+      val response = client.expectMsgType[HttpResponse]
+
+      response.headers should contain(traceTokenHeader("case-insensitive"))
+    }
   }
 
   def traceTokenHeader(token: String): RawHeader =
