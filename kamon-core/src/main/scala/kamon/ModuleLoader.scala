@@ -35,7 +35,7 @@ private[kamon] class ModuleLoaderExtension(system: ExtendedActorSystem) extends 
     logAspectJWeaverMissing(settings.modulesRequiringAspectJ)
 
   // Force initialization of all modules marked with auto-start.
-  settings.availableModules.filter(_.startInfo.nonEmpty).foreach {
+  settings.availableModules.foreach {
     case AvailableModuleInfo(name, requiresAJ, Some(ModuleStartInfo(autoStart, extensionClass))) if autoStart ⇒
 
       system.dynamicAccess.getObjectFor[ExtensionId[Kamon.Extension]](extensionClass).map { moduleID ⇒
@@ -45,6 +45,8 @@ private[kamon] class ModuleLoaderExtension(system: ExtendedActorSystem) extends 
       } recover {
         case th: Throwable ⇒ log.error(s"Failed to auto start the [$name] module.", th)
       }
+
+    case _ ⇒ //ignore
 
   }
 
