@@ -38,7 +38,7 @@ class SigarMetricsUpdater(refreshInterval: FiniteDuration) extends Actor {
     MemoryMetrics.register(sigar, metricsExtension, logger),
     NetworkMetrics.register(sigar, metricsExtension, logger),
     ProcessCpuMetrics.register(sigar, metricsExtension, logger),
-    ULimitMetrics.register(sigar, metricsExtension, logger))
+    ULimitMetrics.register(sigar, metricsExtension, logger)).flatten
 
   val refreshSchedule = context.system.scheduler.schedule(refreshInterval, refreshInterval, self, UpdateSigarMetrics)(context.dispatcher)
 
@@ -83,8 +83,11 @@ object SigarSafeRunner {
 }
 
 abstract class SigarMetricRecorderCompanion(metricName: String) {
-  def register(sigar: Sigar, metricsExtension: MetricsModule, logger: LoggingAdapter = NoLogging): SigarMetric =
-    metricsExtension.entity(EntityRecorderFactory("system-metric", apply(sigar, _)), metricName)
+  def register(sigar: Sigar, metricsExtension: MetricsModule, logger: LoggingAdapter = NoLogging): Option[SigarMetric] =
+    if (metricsExtension.shouldTrack(metricName, "system-metric"))
+      Some(metricsExtension.entity(EntityRecorderFactory("system-metric", apply(sigar, _)), metricName))
+    else
+      None
 
   def apply(sigar: Sigar, instrumentFactory: InstrumentFactory, logger: LoggingAdapter = NoLogging): SigarMetric
 }

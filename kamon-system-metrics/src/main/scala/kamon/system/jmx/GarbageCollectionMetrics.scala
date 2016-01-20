@@ -45,9 +45,11 @@ object GarbageCollectionMetrics {
     name.replaceAll("""[^\w]""", "-").toLowerCase
 
   def register(metricsExtension: MetricsModule): Unit = {
-    ManagementFactory.getGarbageCollectorMXBeans.asScala.filter(_.isValid) map { gc ⇒
+    ManagementFactory.getGarbageCollectorMXBeans.asScala.filter(_.isValid) foreach { gc ⇒
       val gcName = sanitizeCollectorName(gc.getName)
-      Kamon.metrics.entity(EntityRecorderFactory("system-metric", new GarbageCollectionMetrics(gc, _)), s"$gcName-garbage-collector")
+      val metricName = s"$gcName-garbage-collector"
+      if (metricsExtension.shouldTrack(metricName, "system-metric"))
+        Kamon.metrics.entity(EntityRecorderFactory("system-metric", new GarbageCollectionMetrics(gc, _)), metricName)
     }
   }
 }
