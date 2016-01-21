@@ -154,7 +154,7 @@ object AgentLoader {
   }
 
   /**
-    * `BsdVirtualMachine` has the constructor as `protected` (no modifier defined), so `AgentLoader` can not instance it,
+    * `BsdVirtualMachine` has the constructor without modifier (by default is `package-private`), so `AgentLoader` can not instance it,
     * for that reason we need to set accessible that constructor via reflection.
     *
     * @param vmClass
