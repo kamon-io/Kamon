@@ -15,18 +15,20 @@
 
 package kamon.autoweave.loader
 
-import java.io.{ File, FileOutputStream, InputStream }
+import java.io.{File, FileOutputStream, InputStream}
 import java.lang.management.ManagementFactory
+import java.lang.reflect.Constructor
 import java.util
 import java.util.jar.Attributes.Name
-import java.util.jar.{ JarEntry, JarOutputStream, Manifest }
+import java.util.jar.{JarEntry, JarOutputStream, Manifest}
 
 import com.sun.tools.attach.spi.AttachProvider
-import com.sun.tools.attach.{ VirtualMachine, VirtualMachineDescriptor }
+import com.sun.tools.attach.{VirtualMachine, VirtualMachineDescriptor}
+import kamon.autoweave.loader.resolver.OsResolver._
 import sun.tools.attach._
 
 import scala.util.control.NoStackTrace
-import scala.util.{ Failure, Success, Try }
+import scala.util.{Failure, Success, Try}
 
 object AgentLoader {
 
@@ -118,12 +120,13 @@ object AgentLoader {
    * @return
    * Returns the HotSpotVirtualMachine implementation of the running JVM.
    */
-  private def findVirtualMachineImplementation(): Try[Class[_ <: HotSpotVirtualMachine]] = System.getProperty("os.name") match {
-    case os if os.startsWith("Windows") ⇒ Success(classOf[WindowsVirtualMachine])
-    case os if os.startsWith("Mac OS X") ⇒ Success(classOf[BsdVirtualMachine])
-    case os if os.startsWith("Solaris") ⇒ Success(classOf[SolarisVirtualMachine])
-    case os if os.startsWith("Linux") || os.startsWith("LINUX") ⇒ Success(classOf[LinuxVirtualMachine])
-    case other ⇒ Failure(new RuntimeException(s"Cannot use Attach API on unknown OS: $other") with NoStackTrace)
+  private def findVirtualMachineImplementation(): Try[Class[_ <: HotSpotVirtualMachine]] = currentOs match {
+    case Windows(_, _, _) ⇒ Success(classOf[WindowsVirtualMachine])
+    case Mac(_, _, _) ⇒ Success(classOf[BsdVirtualMachine])
+    case Solaris(_, _, _) ⇒ Success(classOf[SolarisVirtualMachine])
+    case Linux(_, _, _) ⇒ Success(classOf[LinuxVirtualMachine])
+    case UnknownOs(name, arch, version) ⇒
+      Failure(new RuntimeException(s"Cannot use Attach API on unknown OS: $name Arch: $arch Version: $version") with NoStackTrace)
   }
 
   /**
@@ -144,11 +147,69 @@ object AgentLoader {
       case Success(vmClass) ⇒
         val pid = getPidFromRuntimeMBean
         // This is only done with Reflection to avoid the JVM pre-loading all the XyzVirtualMachine classes.
-        val vmConstructor = vmClass.getConstructor(classOf[AttachProvider], classOf[String])
-        val newVM = vmConstructor.newInstance(AttachProvider, pid)
+        val newVM = vmConstructor(vmClass).newInstance(AttachProvider, pid)
         newVM.asInstanceOf[VirtualMachine]
       case Failure(reason) ⇒ throw reason
     }
   }
+
+  /**
+    * Why this dirty method? For some reason `BsdVirtualMachine` for MacOS doesn't return the public constructors when
+    * the `getConstructor` is invoked via reflection, however `getDeclaredConstructors` works properly (this constructor
+    * should marked as public then). Probably this thing could be a bug in the JDK, pending to raise an issue there.
+    *
+    * @param vmClass
+    * @return
+    */
+  private def vmConstructor(vmClass: Class[_ <: HotSpotVirtualMachine]): Constructor[_] = {
+    currentOs match {
+      case Mac(_, _, _) ⇒
+        val vmC = vmClass.getDeclaredConstructor(classOf[AttachProvider], classOf[String])
+        vmC.setAccessible(true)
+        vmC
+
+      case _ ⇒ vmClass.getConstructor(classOf[AttachProvider], classOf[String])
+    }
+  }
 }
 
+package object resolver {
+
+  /* OS RESOLVERS */
+  private[loader] object OsResolver {
+    private[resolver] trait OsIdentifiable {
+      def name: String
+      def arch: String
+      def version: String
+    }
+
+    private[loader] case class Windows(name: String, arch: String, version: String) extends OsIdentifiable
+    private[loader] case class Mac(name: String, arch: String, version: String) extends OsIdentifiable
+    private[loader] case class Solaris(name: String, arch: String, version: String) extends OsIdentifiable
+    private[loader] case class Linux(name: String, arch: String, version: String) extends OsIdentifiable
+    private[loader] case class UnknownOs(name: String, arch: String, version: String) extends OsIdentifiable
+
+    private[resolver] val osName = System.getProperty("os.name")
+    private[resolver] val osArch = System.getProperty("os.arch")
+    private[resolver] val osVersion = System.getProperty("os.version")
+
+    private[this] val defaultWindowsName = "Windows"
+    private[this] val defaultMacName = "Mac OS X"
+    private[this] val defaultSolarisName = "Solaris"
+    private[this] val defaultLinuxName = "Linux"
+    private[this] val defaultLinuxUpperCaseName = defaultLinuxName.toUpperCase
+
+    /**
+      * Resolver OS based on java properties.
+      */
+    val currentOs: OsIdentifiable = osName match {
+      case os if os.startsWith(defaultWindowsName) ⇒ Windows(os, osArch, osVersion)
+      case os if os.startsWith(defaultMacName) ⇒ Mac(os, osArch, osVersion)
+      case os if os.startsWith(defaultSolarisName) ⇒ Solaris(os, osArch, osVersion)
+      case os if os.startsWith(defaultLinuxName) || os.startsWith(defaultLinuxUpperCaseName) ⇒ Linux(os, osArch, osVersion)
+      case other ⇒ UnknownOs(other, osArch, osVersion)
+    }
+  }
+  /* OS RESOLVERS */
+
+}
