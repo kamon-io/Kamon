@@ -52,7 +52,8 @@ private[kamon] class MetricsOnlyContext(traceName: String, val token: String, iz
     val traceElapsedTime = NanoInterval.since(startTimestamp)
     _elapsedTime = traceElapsedTime
 
-    Kamon.metrics.entity(TraceMetrics, name).elapsedTime.record(traceElapsedTime.nanos)
+    if (Kamon.metrics.shouldTrack(name, TraceMetrics.category))
+      Kamon.metrics.entity(TraceMetrics, name).elapsedTime.record(traceElapsedTime.nanos)
     drainFinishedSegments()
   }
 
@@ -67,7 +68,8 @@ private[kamon] class MetricsOnlyContext(traceName: String, val token: String, iz
         "category" -> segment.category,
         "library" -> segment.library)
 
-      Kamon.metrics.entity(SegmentMetrics, segment.name, segmentTags).elapsedTime.record(segment.duration.nanos)
+      if (Kamon.metrics.shouldTrack(segment.name, SegmentMetrics.category))
+        Kamon.metrics.entity(SegmentMetrics, segment.name, segmentTags).elapsedTime.record(segment.duration.nanos)
       drainFinishedSegments()
     }
   }
