@@ -154,9 +154,8 @@ object AgentLoader {
   }
 
   /**
-    * Why this dirty method? For some reason `BsdVirtualMachine` for MacOS doesn't return the public constructors when
-    * the `getConstructor` is invoked via reflection, however `getDeclaredConstructors` works properly (this constructor
-    * should marked as public then). Probably this thing could be a bug in the JDK, pending to raise an issue there.
+    * `BsdVirtualMachine` has the constructor as `protected` (no modifier defined), so `AgentLoader` can not instance it,
+    * for that reason we need to set accessible that constructor via reflection.
     *
     * @param vmClass
     * @return
