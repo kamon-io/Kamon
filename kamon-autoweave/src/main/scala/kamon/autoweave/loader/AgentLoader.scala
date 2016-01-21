@@ -154,8 +154,9 @@ object AgentLoader {
   }
 
   /**
-    * `BsdVirtualMachine` has the constructor without modifier (by default is `package-private`), so `AgentLoader` can not instance it,
-    * for that reason we need to set accessible that constructor via reflection.
+    * `BsdVirtualMachine`, used when your platform is Mac - vmClass parameter, has the constructor
+    * without modifier (by default is `package-private`), so `AgentLoader` can not instance it, for that reason
+    * we need to set accessible that constructor via reflection.
     *
     * @param vmClass
     * @return
