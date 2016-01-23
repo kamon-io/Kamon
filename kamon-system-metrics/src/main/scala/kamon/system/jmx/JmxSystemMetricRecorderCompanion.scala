@@ -20,8 +20,10 @@ import kamon.metric.instrument.InstrumentFactory
 import kamon.metric.{ MetricsModule, EntityRecorderFactory, EntityRecorder }
 
 abstract class JmxSystemMetricRecorderCompanion(metricName: String) {
-  def register(metricsExtension: MetricsModule): EntityRecorder =
-    metricsExtension.entity(EntityRecorderFactory("system-metric", apply(_)), metricName)
+  def register(metricsExtension: MetricsModule): Unit = {
+    if (metricsExtension.shouldTrack(metricName, "system-metric"))
+      metricsExtension.entity(EntityRecorderFactory("system-metric", apply(_)), metricName)
+  }
 
   def apply(instrumentFactory: InstrumentFactory): EntityRecorder
 }
