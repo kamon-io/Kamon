@@ -36,6 +36,7 @@ class LogReporterExtension(system: ExtendedActorSystem) extends Kamon.Extension 
 
   Kamon.metrics.subscribe("trace", "**", subscriber, permanently = true)
   Kamon.metrics.subscribe("akka-actor", "**", subscriber, permanently = true)
+  Kamon.metrics.subscribe("akka-router", "**", subscriber, permanently = true)
   Kamon.metrics.subscribe("akka-dispatcher", "**", subscriber, permanently = true)
   Kamon.metrics.subscribe("counter", "**", subscriber, permanently = true)
   Kamon.metrics.subscribe("histogram", "**", subscriber, permanently = true)
@@ -61,6 +62,7 @@ class LogReporterSubscriber extends Actor with ActorLogging {
 
     tick.metrics foreach {
       case (entity, snapshot) if entity.category == "akka-actor"      ⇒ logActorMetrics(entity.name, snapshot)
+      case (entity, snapshot) if entity.category == "akka-router"     ⇒ logRouterMetrics(entity.name, snapshot)
       case (entity, snapshot) if entity.category == "akka-dispatcher" ⇒ logDispatcherMetrics(entity, snapshot)
       case (entity, snapshot) if entity.category == "trace"           ⇒ logTraceMetrics(entity.name, snapshot)
       case (entity, snapshot) if entity.category == "histogram"       ⇒ histograms += (entity.name -> snapshot.histogram("histogram"))
@@ -109,6 +111,48 @@ class LogReporterSubscriber extends Actor with ActorLogging {
             processingTime.percentile(99.0D), timeInMailbox.percentile(99.0D), errors.count,
             processingTime.percentile(99.9D), timeInMailbox.percentile(99.9D),
             processingTime.max, timeInMailbox.max))
+    }
+
+  }
+
+  def logRouterMetrics(name: String, actorSnapshot: EntitySnapshot): Unit = {
+    for {
+      processingTime ← actorSnapshot.histogram("processing-time")
+      timeInMailbox ← actorSnapshot.histogram("time-in-mailbox")
+      routingTime ← actorSnapshot.histogram("routing-time")
+      errors ← actorSnapshot.counter("errors")
+    } {
+
+      log.info(
+        """
+        |+--------------------------------------------------------------------------------------------------+
+        ||                                                                                                  |
+        ||    Router: %-83s   |
+        ||                                                                                                  |
+        ||   Processing Time (nanoseconds)    Time in Mailbox (nanoseconds)    Routing Time (nanoseconds)   |
+        ||    Msg Count: %-12s             Msg Count: %-12s       Msg Count: %-12s     |
+        ||          Min: %-12s                   Min: %-12s             Min: %-12s     |
+        ||    50th Perc: %-12s             50th Perc: %-12s       50th Perc: %-12s     |
+        ||    90th Perc: %-12s             90th Perc: %-12s       90th Perc: %-12s     |
+        ||    95th Perc: %-12s             95th Perc: %-12s       95th Perc: %-12s     |
+        ||    99th Perc: %-12s             99th Perc: %-12s       99th Perc: %-12s     |
+        ||  99.9th Perc: %-12s           99.9th Perc: %-12s     99.9th Perc: %-12s     |
+        ||          Max: %-12s                   Max: %-12s             Max: %-12s     |
+        ||                                                                                                  |
+        ||  Error Count: %-6s                                                                             |
+        ||                                                                                                  |
+        |+--------------------------------------------------------------------------------------------------+"""
+          .stripMargin.format(
+            name,
+            processingTime.numberOfMeasurements, timeInMailbox.numberOfMeasurements, routingTime.numberOfMeasurements,
+            processingTime.min, timeInMailbox.min, routingTime.min,
+            processingTime.percentile(50.0D), timeInMailbox.percentile(50.0D), routingTime.percentile(50.0D),
+            processingTime.percentile(90.0D), timeInMailbox.percentile(90.0D), routingTime.percentile(90.0D),
+            processingTime.percentile(95.0D), timeInMailbox.percentile(95.0D), routingTime.percentile(95.0D),
+            processingTime.percentile(99.0D), timeInMailbox.percentile(99.0D), routingTime.percentile(99.0D),
+            processingTime.percentile(99.9D), timeInMailbox.percentile(99.9D), routingTime.percentile(99.9D),
+            processingTime.max, timeInMailbox.max, routingTime.max,
+            errors.count))
     }
 
   }
