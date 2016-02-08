@@ -15,20 +15,12 @@
 
 package kamon.autoweave.loader
 
-import java.io.{File, FileOutputStream, InputStream}
+import java.io.{ File, FileOutputStream, InputStream }
 import java.lang.management.ManagementFactory
-import java.lang.reflect.Constructor
-import java.util
 import java.util.jar.Attributes.Name
-import java.util.jar.{JarEntry, JarOutputStream, Manifest}
-
-import com.sun.tools.attach.spi.AttachProvider
-import com.sun.tools.attach.{VirtualMachine, VirtualMachineDescriptor}
-import kamon.autoweave.loader.resolver.OsResolver._
-import sun.tools.attach._
+import java.util.jar.{ JarEntry, JarOutputStream, Manifest }
 
 import scala.util.control.NoStackTrace
-import scala.util.{Failure, Success, Try}
 
 object AgentLoader {
 
@@ -47,14 +39,10 @@ object AgentLoader {
   /**
    * Loads an agent into a JVM.
    *
-   * @param agent The main agent class.
+   * @param agent     The main agent class.
    * @param resources Array of classes to be included with agent.
    */
-  def attachAgentToJVM(agent: Class[_], resources: Seq[Class[_]] = Seq.empty): Unit = {
-    val vm = attachToRunningJVM()
-    vm.loadAgent(generateAgentJar(agent, resources).getAbsolutePath)
-    vm.detach()
-  }
+  def attachAgentToJVM(agent: Class[_], resources: Seq[Class[_]] = Seq.empty): Unit = attachToRunningJVM(agent, resources)
 
   /**
    * Java variant
@@ -81,6 +69,7 @@ object AgentLoader {
     mainAttributes.put(new Name("Agent-Class"), agent.getName)
     mainAttributes.put(new Name("Can-Retransform-Classes"), "true")
     mainAttributes.put(new Name("Can-Redefine-Classes"), "true")
+    mainAttributes.put(new Name("Can-Set-Native-Method-Prefix"), "true")
 
     val jos = new JarOutputStream(new FileOutputStream(jarFile), manifest)
 
@@ -101,6 +90,23 @@ object AgentLoader {
   }
 
   /**
+   * Attach to the running JVM.
+   *
+   * @return
+   * Returns the attached VirtualMachine
+   */
+  private def attachToRunningJVM(agent: Class[_], resources: Seq[Class[_]]): Unit = {
+    AttachmentProviders.resolve() match {
+      case Some(virtualMachine) ⇒
+        val virtualMachineInstance = virtualMachine.getDeclaredMethod("attach", classOf[String]).invoke(null, getPidFromRuntimeMBean)
+        virtualMachine.getDeclaredMethod("loadAgent", classOf[String], classOf[String])
+          .invoke(virtualMachineInstance, generateAgentJar(agent, resources).getAbsolutePath, "")
+        virtualMachine.getDeclaredMethod("detach").invoke(virtualMachineInstance)
+      case None ⇒ throw new RuntimeException(s"Error trying to use Attach API") with NoStackTrace
+    }
+  }
+
+  /**
    * Gets bytes from InputStream.
    *
    * @param stream
@@ -113,103 +119,5 @@ object AgentLoader {
   }
 
   private def unqualify(clazz: Class[_]): String = clazz.getName.replace('.', '/') + ".class"
-
-  /**
-   * Gets the current HotSpotVirtualMachine implementation otherwise a failure.
-   *
-   * @return
-   * Returns the HotSpotVirtualMachine implementation of the running JVM.
-   */
-  private def findVirtualMachineImplementation(): Try[Class[_ <: HotSpotVirtualMachine]] = currentOs match {
-    case Windows(_, _, _) ⇒ Success(classOf[WindowsVirtualMachine])
-    case Mac(_, _, _) ⇒ Success(classOf[BsdVirtualMachine])
-    case Solaris(_, _, _) ⇒ Success(classOf[SolarisVirtualMachine])
-    case Linux(_, _, _) ⇒ Success(classOf[LinuxVirtualMachine])
-    case UnknownOs(name, arch, version) ⇒
-      Failure(new RuntimeException(s"Cannot use Attach API on unknown OS: $name Arch: $arch Version: $version") with NoStackTrace)
-  }
-
-  /**
-   * Attach to the running JVM.
-   *
-   * @return
-   * Returns the attached VirtualMachine
-   */
-  private def attachToRunningJVM(): VirtualMachine = {
-    val AttachProvider = new AttachProvider() {
-      override def name(): String = null
-      override def `type`(): String = null
-      override def attachVirtualMachine(id: String): VirtualMachine = null
-      override def listVirtualMachines(): util.List[VirtualMachineDescriptor] = null
-    }
-
-    findVirtualMachineImplementation() match {
-      case Success(vmClass) ⇒
-        val pid = getPidFromRuntimeMBean
-        // This is only done with Reflection to avoid the JVM pre-loading all the XyzVirtualMachine classes.
-        val newVM = vmConstructor(vmClass).newInstance(AttachProvider, pid)
-        newVM.asInstanceOf[VirtualMachine]
-      case Failure(reason) ⇒ throw reason
-    }
-  }
-
-  /**
-    * `BsdVirtualMachine`, used when your platform is Mac - vmClass parameter, has the constructor
-    * without modifier (by default is `package-private`), so `AgentLoader` can not instance it, for that reason
-    * we need to set accessible that constructor via reflection.
-    *
-    * @param vmClass
-    * @return
-    */
-  private def vmConstructor(vmClass: Class[_ <: HotSpotVirtualMachine]): Constructor[_] = {
-    currentOs match {
-      case Mac(_, _, _) ⇒
-        val vmC = vmClass.getDeclaredConstructor(classOf[AttachProvider], classOf[String])
-        vmC.setAccessible(true)
-        vmC
-
-      case _ ⇒ vmClass.getConstructor(classOf[AttachProvider], classOf[String])
-    }
-  }
 }
 
-package object resolver {
-
-  /* OS RESOLVERS */
-  private[loader] object OsResolver {
-    private[resolver] trait OsIdentifiable {
-      def name: String
-      def arch: String
-      def version: String
-    }
-
-    private[loader] case class Windows(name: String, arch: String, version: String) extends OsIdentifiable
-    private[loader] case class Mac(name: String, arch: String, version: String) extends OsIdentifiable
-    private[loader] case class Solaris(name: String, arch: String, version: String) extends OsIdentifiable
-    private[loader] case class Linux(name: String, arch: String, version: String) extends OsIdentifiable
-    private[loader] case class UnknownOs(name: String, arch: String, version: String) extends OsIdentifiable
-
-    private[resolver] val osName = System.getProperty("os.name")
-    private[resolver] val osArch = System.getProperty("os.arch")
-    private[resolver] val osVersion = System.getProperty("os.version")
-
-    private[this] val defaultWindowsName = "Windows"
-    private[this] val defaultMacName = "Mac OS X"
-    private[this] val defaultSolarisName = "Solaris"
-    private[this] val defaultLinuxName = "Linux"
-    private[this] val defaultLinuxUpperCaseName = defaultLinuxName.toUpperCase
-
-    /**
-      * Resolver OS based on java properties.
-      */
-    val currentOs: OsIdentifiable = osName match {
-      case os if os.startsWith(defaultWindowsName) ⇒ Windows(os, osArch, osVersion)
-      case os if os.startsWith(defaultMacName) ⇒ Mac(os, osArch, osVersion)
-      case os if os.startsWith(defaultSolarisName) ⇒ Solaris(os, osArch, osVersion)
-      case os if os.startsWith(defaultLinuxName) || os.startsWith(defaultLinuxUpperCaseName) ⇒ Linux(os, osArch, osVersion)
-      case other ⇒ UnknownOs(other, osArch, osVersion)
-    }
-  }
-  /* OS RESOLVERS */
-
-}

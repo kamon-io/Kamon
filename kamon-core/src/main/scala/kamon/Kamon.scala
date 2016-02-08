@@ -67,7 +67,7 @@ object Kamon {
       case Success(_) ⇒
         log.info(color("Kamon-autoweave has been successfully loaded."))
         log.info(color("The AspectJ loadtime weaving agent is now attached to the JVM (you don't need to use -javaagent)."))
-      case Failure(reason) ⇒ log.info(s"Kamon-autoweave failed to load. Reason: we have not found the ${reason.getMessage} class in the classpath.")
+      case Failure(reason) ⇒ log.debug(s"Kamon-autoweave failed to load. Reason: we have not found the ${reason.getMessage} class in the classpath.")
     }
   }
 
