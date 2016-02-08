@@ -37,7 +37,7 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
 
   import scala.concurrent.duration._
 
-  //Kamon.start()
+  Kamon.start()
   implicit val system = ActorSystem("test")
   import test.SimpleRequestProcessor.system.dispatcher
 
