@@ -72,6 +72,10 @@ class SystemMetricsSpec extends BaseKamonSpec("system-metrics-spec") with Redire
       memoryMetrics.gauge("non-heap-used").get.numberOfMeasurements should be > 0L
       memoryMetrics.gauge("non-heap-max").get.numberOfMeasurements should be > 0L
       memoryMetrics.gauge("non-heap-committed").get.numberOfMeasurements should be > 0L
+
+      memoryMetrics.gauge("direct-buffer-pool-count").get.numberOfMeasurements should be > 0L
+      memoryMetrics.gauge("direct-buffer-pool-used").get.numberOfMeasurements should be > 0L
+      memoryMetrics.gauge("direct-buffer-pool-capacity").get.numberOfMeasurements should be > 0L
     }
 
     "record correctly updatable values for heap metrics" in {
