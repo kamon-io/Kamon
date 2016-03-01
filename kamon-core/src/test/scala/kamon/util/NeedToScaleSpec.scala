@@ -17,8 +17,8 @@
 package kamon.util
 
 import com.typesafe.config.ConfigFactory
-import kamon.metric.instrument.{Memory, Time}
-import org.scalatest.{Matchers, WordSpec}
+import kamon.metric.instrument.{ Memory, Time }
+import org.scalatest.{ Matchers, WordSpec }
 
 class NeedToScaleSpec extends WordSpec with Matchers {
 
@@ -30,7 +30,7 @@ class NeedToScaleSpec extends WordSpec with Matchers {
         """.stripMargin)
 
       config match {
-        case NeedToScale(timeUnits, memoryUnits) =>
+        case NeedToScale(timeUnits, memoryUnits) ⇒
           timeUnits should be(Some(Time.Milliseconds))
           memoryUnits should be(None)
       }
@@ -42,7 +42,7 @@ class NeedToScaleSpec extends WordSpec with Matchers {
         """.stripMargin)
 
       config match {
-        case NeedToScale(timeUnits, memoryUnits) =>
+        case NeedToScale(timeUnits, memoryUnits) ⇒
           timeUnits should be(None)
           memoryUnits should be(Some(Memory.KiloBytes))
       }
@@ -54,9 +54,9 @@ class NeedToScaleSpec extends WordSpec with Matchers {
         """.stripMargin)
 
       config match {
-        case NeedToScale(timeUnits, memoryUnits) =>
+        case NeedToScale(timeUnits, memoryUnits) ⇒
           fail("Should not match")
-        case _ =>
+        case _ ⇒
       }
     }
   }

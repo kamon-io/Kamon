@@ -23,7 +23,7 @@ object Dependencies {
   )
 
   val sprayVersion      = "1.3.3"
-  val akkaVersion       = "2.4.1"
+  val akkaVersion       = "2.4.2"
   val aspectjVersion    = "1.8.7"
   val slf4jVersion      = "1.7.7"
   val play24Version     = "2.4.4"

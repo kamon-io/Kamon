@@ -18,7 +18,7 @@ package kamon.metric
 
 import kamon.Kamon
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
-import kamon.metric.instrument.{InstrumentFactory, Memory, Time, UnitOfMeasurement}
+import kamon.metric.instrument.{ InstrumentFactory, Memory, Time, UnitOfMeasurement }
 import kamon.testkit.BaseKamonSpec
 import kamon.util.MilliTimestamp
 import org.scalatest.OptionValues._
@@ -62,10 +62,10 @@ class MetricScaleDecoratorSpec extends BaseKamonSpec("metrics-scale-decorator-sp
 }
 
 trait SnapshotFixtures {
-  self: BaseKamonSpec =>
+  self: BaseKamonSpec ⇒
 
   class ScaleDecoratorTestMetrics(instrumentFactory: InstrumentFactory)
-    extends GenericEntityRecorder(instrumentFactory) {
+      extends GenericEntityRecorder(instrumentFactory) {
     val nanoTime = histogram("nano-time", Time.Nanoseconds)
     val microTime = counter("micro-time", Time.Microseconds)
     val byteMemory = histogram("byte-memory", Memory.Bytes)
