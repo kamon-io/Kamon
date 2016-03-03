@@ -64,8 +64,8 @@ class HistogramSpec extends WordSpec with Matchers {
         snapshot.sum should be(41300)
         snapshot.numberOfMeasurements should be(203)
 
-        val records = snapshot.recordsIterator.map(r => r.level -> r.count).toSeq
-        records.size should be (4)
+        val records = snapshot.recordsIterator.map(r ⇒ r.level -> r.count).toSeq
+        records.size should be(4)
         records(0) should be(100 -> 1)
         records(1) should be(200 -> 200)
         records(2) should be(300 -> 1)
@@ -88,8 +88,8 @@ class HistogramSpec extends WordSpec with Matchers {
         snapshot.sum should be(41300000)
         snapshot.numberOfMeasurements should be(203)
 
-        val records = snapshot.recordsIterator.map(r => r.level -> r.count).toSeq
-        records.size should be (4)
+        val records = snapshot.recordsIterator.map(r ⇒ r.level -> r.count).toSeq
+        records.size should be(4)
         records(0) should be(100000 -> 1)
         records(1) should be(200000 -> 200)
         records(2) should be(300000 -> 1)

@@ -10,7 +10,9 @@ class ULimitMetrics(sigar: Sigar, instrumentFactory: InstrumentFactory, logger: 
   val openFiles = histogram("open-files")
 
   def update(): Unit = {
-    openFiles.record(sigar.getProcFd(pid).getTotal)
+    import SigarSafeRunner._
+
+    openFiles.record(runSafe(sigar.getProcFd(pid).getTotal, 0L, "open-files", logger))
   }
 }
 

@@ -151,6 +151,12 @@ class SystemMetricsSpec extends BaseKamonSpec("system-metrics-spec") with Redire
       processCpuMetrics.histogram("process-cpu").get.numberOfMeasurements should be > 0L
     }
 
+    "record the open files for the application process" in {
+      val openFilesMetrics = takeSnapshotOf("ulimit", "system-metric")
+
+      openFilesMetrics.histogram("open-files").get.numberOfMeasurements should be > 0L
+    }
+
     "record Context Switches Global, Voluntary and Non Voluntary metrics when running on Linux" in {
       if (isLinux) {
         val contextSwitchesMetrics = takeSnapshotOf("context-switches", "system-metric")

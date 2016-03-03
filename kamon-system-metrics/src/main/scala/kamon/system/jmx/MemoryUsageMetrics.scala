@@ -32,8 +32,7 @@ import scala.collection.convert.WrapAsScala
 class MemoryUsageMetrics(
     instrumentFactory: InstrumentFactory,
     memoryUsageBeansWithNames: Iterable[MemoryUsageWithMetricName],
-    bufferPoolBeansWithNames: Iterable[BufferPoolWithMetricName]
-) extends GenericEntityRecorder(instrumentFactory) {
+    bufferPoolBeansWithNames: Iterable[BufferPoolWithMetricName]) extends GenericEntityRecorder(instrumentFactory) {
   memoryUsageBeansWithNames.foreach {
     case MemoryUsageWithMetricName(name, beanFun) ⇒
       gauge(name + "-used", Memory.Bytes, () ⇒ {
@@ -112,6 +111,5 @@ object MemoryUsageMetrics extends JmxSystemMetricRecorderCompanion("jmx-memory")
       MemoryUsageWithMetricName("non-heap", () ⇒ memoryMXBean.getNonHeapMemoryUsage) ::
         MemoryUsageWithMetricName("heap", () ⇒ memoryMXBean.getHeapMemoryUsage) ::
         usagesWithNames,
-      bufferPoolsWithNames
-    )
+      bufferPoolsWithNames)
 }
