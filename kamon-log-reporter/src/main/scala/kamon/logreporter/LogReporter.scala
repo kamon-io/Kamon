@@ -43,6 +43,7 @@ class LogReporterExtension(system: ExtendedActorSystem) extends Kamon.Extension 
   Kamon.metrics.subscribe("min-max-counter", "**", subscriber, permanently = true)
   Kamon.metrics.subscribe("gauge", "**", subscriber, permanently = true)
   Kamon.metrics.subscribe("system-metric", "**", subscriber, permanently = true)
+  Kamon.metrics.subscribe("executor-service", "**", subscriber, permanently = true)
 }
 
 class LogReporterSubscriber extends Actor with ActorLogging {
@@ -61,16 +62,17 @@ class LogReporterSubscriber extends Actor with ActorLogging {
     val gauges = Map.newBuilder[String, Option[Histogram.Snapshot]]
 
     tick.metrics foreach {
-      case (entity, snapshot) if entity.category == "akka-actor"      ⇒ logActorMetrics(entity.name, snapshot)
-      case (entity, snapshot) if entity.category == "akka-router"     ⇒ logRouterMetrics(entity.name, snapshot)
-      case (entity, snapshot) if entity.category == "akka-dispatcher" ⇒ logDispatcherMetrics(entity, snapshot)
-      case (entity, snapshot) if entity.category == "trace"           ⇒ logTraceMetrics(entity.name, snapshot)
-      case (entity, snapshot) if entity.category == "histogram"       ⇒ histograms += (entity.name -> snapshot.histogram("histogram"))
-      case (entity, snapshot) if entity.category == "counter"         ⇒ counters += (entity.name -> snapshot.counter("counter"))
-      case (entity, snapshot) if entity.category == "min-max-counter" ⇒ minMaxCounters += (entity.name -> snapshot.minMaxCounter("min-max-counter"))
-      case (entity, snapshot) if entity.category == "gauge"           ⇒ gauges += (entity.name -> snapshot.gauge("gauge"))
-      case (entity, snapshot) if entity.category == "system-metric"   ⇒ logSystemMetrics(entity.name, snapshot)
-      case ignoreEverythingElse                                       ⇒
+      case (entity, snapshot) if entity.category == "akka-actor"       ⇒ logActorMetrics(entity.name, snapshot)
+      case (entity, snapshot) if entity.category == "akka-router"      ⇒ logRouterMetrics(entity.name, snapshot)
+      case (entity, snapshot) if entity.category == "akka-dispatcher"  ⇒ logDispatcherMetrics(entity, snapshot)
+      case (entity, snapshot) if entity.category == "executor-service" ⇒ logExecutorMetrics(entity, snapshot)
+      case (entity, snapshot) if entity.category == "trace"            ⇒ logTraceMetrics(entity.name, snapshot)
+      case (entity, snapshot) if entity.category == "histogram"        ⇒ histograms += (entity.name -> snapshot.histogram("histogram"))
+      case (entity, snapshot) if entity.category == "counter"          ⇒ counters += (entity.name -> snapshot.counter("counter"))
+      case (entity, snapshot) if entity.category == "min-max-counter"  ⇒ minMaxCounters += (entity.name -> snapshot.minMaxCounter("min-max-counter"))
+      case (entity, snapshot) if entity.category == "gauge"            ⇒ gauges += (entity.name -> snapshot.gauge("gauge"))
+      case (entity, snapshot) if entity.category == "system-metric"    ⇒ logSystemMetrics(entity.name, snapshot)
+      case ignoreEverythingElse                                        ⇒
     }
 
     logMetrics(histograms.result(), counters.result(), minMaxCounters.result(), gauges.result())
@@ -158,6 +160,12 @@ class LogReporterSubscriber extends Actor with ActorLogging {
   }
 
   def logDispatcherMetrics(entity: Entity, snapshot: EntitySnapshot): Unit = entity.tags.get("dispatcher-type") match {
+    case Some("fork-join-pool")       ⇒ logForkJoinPool(entity.name, snapshot)
+    case Some("thread-pool-executor") ⇒ logThreadPoolExecutor(entity.name, snapshot)
+    case ignoreOthers                 ⇒
+  }
+
+  def logExecutorMetrics(entity: Entity, snapshot: EntitySnapshot): Unit = entity.tags.get("executor-type") match {
     case Some("fork-join-pool")       ⇒ logForkJoinPool(entity.name, snapshot)
     case Some("thread-pool-executor") ⇒ logThreadPoolExecutor(entity.name, snapshot)
     case ignoreOthers                 ⇒
