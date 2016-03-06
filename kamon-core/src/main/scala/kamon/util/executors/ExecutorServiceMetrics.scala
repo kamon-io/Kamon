@@ -16,10 +16,10 @@
 
 package kamon.util.executors
 
+import java.util.concurrent.{ ExecutorService, ForkJoinPool ⇒ JavaForkJoinPool, ThreadPoolExecutor }
+
 import kamon.Kamon
 import kamon.metric.Entity
-import java.util.concurrent.{ ForkJoinPool ⇒ JavaForkJoinPool }
-import java.util.concurrent.{ ExecutorService, ThreadPoolExecutor }
 
 import scala.concurrent.forkjoin.ForkJoinPool
 import scala.util.control.NoStackTrace
@@ -48,8 +48,10 @@ object ExecutorServiceMetrics {
    * @param threadPool The intance of the [[ThreadPoolExecutor]]
    * @param tags The tags associated to the [[ThreadPoolExecutor]]
    */
-  private def registerThreadPool(name: String, threadPool: ThreadPoolExecutor, tags: Map[String, String]): Unit = {
-    Kamon.metrics.entity(ThreadPoolExecutorMetrics.factory(threadPool, Category), Entity(name, Category, tags))
+  @inline private def registerThreadPool(name: String, threadPool: ThreadPoolExecutor, tags: Map[String, String]): Entity = {
+    val threadPoolEntity = Entity(name, Category, tags + ("executor-type" -> "thread-pool-executor"))
+    Kamon.metrics.entity(ThreadPoolExecutorMetrics.factory(threadPool, Category), threadPoolEntity)
+    threadPoolEntity
   }
 
   /**
@@ -60,8 +62,10 @@ object ExecutorServiceMetrics {
    * @param forkJoinPool The instance of the [[ForkJoinPool]]
    * @param tags The tags associated to the [[ForkJoinPool]]
    */
-  private def registerScalaForkJoin(name: String, forkJoinPool: ForkJoinPool, tags: Map[String, String] = Map.empty): Unit = {
-    Kamon.metrics.entity(ForkJoinPoolMetrics.factory(forkJoinPool, Category), Entity(name, Category, tags))
+  @inline private def registerScalaForkJoin(name: String, forkJoinPool: ForkJoinPool, tags: Map[String, String]): Entity = {
+    val forkJoinEntity = Entity(name, Category, tags + ("executor-type" -> "fork-join-pool"))
+    Kamon.metrics.entity(ForkJoinPoolMetrics.factory(forkJoinPool, Category), forkJoinEntity)
+    forkJoinEntity
   }
 
   /**
@@ -72,8 +76,10 @@ object ExecutorServiceMetrics {
    * @param forkJoinPool The instance of the [[JavaForkJoinPool]]
    * @param tags The tags associated to the [[JavaForkJoinPool]]
    */
-  private def registerJavaForkJoin(name: String, forkJoinPool: JavaForkJoinPool, tags: Map[String, String] = Map.empty): Unit = {
-    Kamon.metrics.entity(ForkJoinPoolMetrics.factory(forkJoinPool, Category), Entity(name, Category, tags))
+  @inline private def registerJavaForkJoin(name: String, forkJoinPool: JavaForkJoinPool, tags: Map[String, String]): Entity = {
+    val forkJoinEntity = Entity(name, Category, tags + ("executor-type" -> "fork-join-pool"))
+    Kamon.metrics.entity(ForkJoinPoolMetrics.factory(forkJoinPool, Category), forkJoinEntity)
+    forkJoinEntity
   }
 
   /**
@@ -84,7 +90,7 @@ object ExecutorServiceMetrics {
    * @param executorService The instance of the [[ExecutorService]]
    * @param tags The tags associated to the [[ExecutorService]]
    */
-  def register(name: String, executorService: ExecutorService, tags: Map[String, String]): Unit = executorService match {
+  def register(name: String, executorService: ExecutorService, tags: Map[String, String]): Entity = executorService match {
     case threadPoolExecutor: ThreadPoolExecutor ⇒ registerThreadPool(name, threadPoolExecutor, tags)
     case scalaForkJoinPool: ForkJoinPool if scalaForkJoinPool.getClass.isAssignableFrom(ScalaForkJoinPool) ⇒ registerScalaForkJoin(name, scalaForkJoinPool, tags)
     case javaForkJoinPool: JavaForkJoinPool if javaForkJoinPool.getClass.isAssignableFrom(JavaForkJoinPool) ⇒ registerJavaForkJoin(name, javaForkJoinPool, tags)
@@ -94,36 +100,24 @@ object ExecutorServiceMetrics {
     case other ⇒ throw new NotSupportedException(s"The ExecutorService $name is not supported.")
   }
 
-  //Java variants
-  def register(name: String, executorService: ExecutorService): Unit = {
-    register(name, executorService, Map.empty[String, String])
-  }
-
-  def register(name: String, executorService: ExecutorService, tags: java.util.Map[String, String]): Unit = {
+  //Java variant
+  def register(name: String, executorService: ExecutorService, tags: java.util.Map[String, String]): Entity = {
     import scala.collection.JavaConverters._
     register(name, executorService, tags.asScala.toMap)
   }
 
   /**
    *
-   * Remove the [[https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/ExecutorService.html ExecutorService]] to Monitor.
+   * Register the [[https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/ExecutorService.html ExecutorService]] to Monitor.
    *
    * @param name The name of the [[ExecutorService]]
-   * @param tags The tags associated to the [[ExecutorService]]
+   * @param executorService The instance of the [[ExecutorService]]
    */
-  def remove(name: String, tags: Map[String, String]): Unit = {
-    Kamon.metrics.removeEntity(name, Category, tags)
+  def register(name: String, executorService: ExecutorService): Entity = {
+    register(name, executorService, Map.empty[String, String])
   }
 
-  //Java variants
-  def remove(name: String): Unit = {
-    remove(name, Map.empty[String, String])
-  }
-
-  def remove(name: String, tags: java.util.Map[String, String]): Unit = {
-    import scala.collection.JavaConverters._
-    remove(name, tags.asScala.toMap)
-  }
+  def remove(entity: Entity): Unit = Kamon.metrics.removeEntity(entity)
 
   /**
    * INTERNAL USAGE ONLY
