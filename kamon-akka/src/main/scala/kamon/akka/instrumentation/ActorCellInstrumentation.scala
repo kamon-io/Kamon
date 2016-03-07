@@ -20,7 +20,7 @@ import akka.actor._
 import akka.dispatch.{ Envelope, MessageDispatcher }
 import akka.routing.RoutedActorCell
 import kamon.Kamon
-import kamon.akka.{ ActorMetrics, RouterMetrics }
+import kamon.akka._
 import kamon.metric.{ Entity, MetricsModule }
 import kamon.trace._
 import org.aspectj.lang.ProceedingJoinPoint
@@ -37,15 +37,16 @@ class ActorCellInstrumentation {
     def isRootSupervisor(path: String): Boolean = path.length == 0 || path == "user" || path == "system"
 
     val pathString = ref.path.elements.mkString("/")
-    val actorEntity = Entity(system.name + "/" + pathString, ActorMetrics.category)
+    if (!isRootSupervisor(pathString)) {
+      val actorEntity = AkkaExtension.actorEntityFactory.build(system, ref)
+      if (Kamon.metrics.shouldTrack(actorEntity)) {
+        val actorMetricsRecorder = Kamon.metrics.entity(ActorMetrics, actorEntity)
+        val cellMetrics = cell.asInstanceOf[ActorCellMetrics]
 
-    if (!isRootSupervisor(pathString) && Kamon.metrics.shouldTrack(actorEntity)) {
-      val actorMetricsRecorder = Kamon.metrics.entity(ActorMetrics, actorEntity)
-      val cellMetrics = cell.asInstanceOf[ActorCellMetrics]
-
-      cellMetrics.entity = actorEntity
-      cellMetrics.recorder = Some(actorMetricsRecorder)
-      cellMetrics.metrics = Kamon.metrics
+        cellMetrics.entity = actorEntity
+        cellMetrics.recorder = Some(actorMetricsRecorder)
+        cellMetrics.metrics = Kamon.metrics
+      }
     }
   }
 

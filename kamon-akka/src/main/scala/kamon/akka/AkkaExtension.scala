@@ -16,11 +16,40 @@
 
 package kamon.akka
 
+import _root_.akka.actor._
 import com.typesafe.config.Config
-import kamon.Kamon
+import kamon._
+import kamon.metric.Entity
+
+import _root_.scala.util.{ Failure, Success, Try }
 
 object AkkaExtension {
-  val askPatternTimeoutWarning = AskPatternTimeoutWarningSettings.fromConfig(Kamon.config.getConfig("kamon.akka"))
+  val config = Kamon.config.getConfig("kamon.akka")
+
+  val askPatternTimeoutWarning = AskPatternTimeoutWarningSettings.fromConfig(config)
+
+  val actorEntityFactory: ActorEntityFactory = if (config.hasPath("actor-entity-factory")) {
+    Try(Class.forName(config.getString("actor-entity-factory")).newInstance()) match {
+      case Success(f: ActorEntityFactory) ⇒ f
+      case Success(_) ⇒
+        throw new IllegalArgumentException("actor-entity-factory must extend trait kamon.akka.ActorEntityFactory")
+      case Failure(reason) ⇒
+        throw new RuntimeException(s"Failed to create an instance of entity factory defined by actor-entity-factory")
+    }
+  } else {
+    DefaultActorEntityFactory
+  }
+}
+
+trait ActorEntityFactory {
+  def build(system: ActorSystem, ref: ActorRef): Entity
+}
+
+object DefaultActorEntityFactory extends ActorEntityFactory {
+  override def build(system: ActorSystem, ref: ActorRef): Entity = {
+    val pathString = ref.path.elements.mkString("/")
+    Entity(system.name + "/" + pathString, ActorMetrics.category)
+  }
 }
 
 sealed trait AskPatternTimeoutWarningSetting
