@@ -20,7 +20,10 @@ import com.typesafe.config.Config
 import kamon.Kamon
 
 object AkkaExtension {
-  val askPatternTimeoutWarning = AskPatternTimeoutWarningSettings.fromConfig(Kamon.config.getConfig("kamon.akka"))
+  private val akkaConfig = Kamon.config.getConfig("kamon.akka")
+
+  val askPatternTimeoutWarning = AskPatternTimeoutWarningSettings.fromConfig(akkaConfig)
+  val traceContextPropagation = TraceContextPropagationSettings.fromConfig(akkaConfig)
 }
 
 sealed trait AskPatternTimeoutWarningSetting
@@ -29,11 +32,27 @@ object AskPatternTimeoutWarningSettings {
   case object Lightweight extends AskPatternTimeoutWarningSetting
   case object Heavyweight extends AskPatternTimeoutWarningSetting
 
-  def fromConfig(config: Config): AskPatternTimeoutWarningSetting = config.getString("ask-pattern-timeout-warning") match {
-    case "off"         ⇒ Off
-    case "lightweight" ⇒ Lightweight
-    case "heavyweight" ⇒ Heavyweight
-    case other         ⇒ sys.error(s"Unrecognized option [$other] for the kamon.akka.ask-pattern-timeout-warning config.")
-  }
+  def fromConfig(config: Config): AskPatternTimeoutWarningSetting =
+    config.getString("ask-pattern-timeout-warning") match {
+      case "off"         ⇒ Off
+      case "lightweight" ⇒ Lightweight
+      case "heavyweight" ⇒ Heavyweight
+      case other         ⇒ sys.error(s"Unrecognized option [$other] for the kamon.akka.ask-pattern-timeout-warning config.")
+    }
+}
+
+sealed trait TraceContextPropagationSetting
+object TraceContextPropagationSettings {
+  case object Off extends TraceContextPropagationSetting
+  case object MonitoredActorsOnly extends TraceContextPropagationSetting
+  case object Always extends TraceContextPropagationSetting
+
+  def fromConfig(config: Config): TraceContextPropagationSetting =
+    config.getString("automatic-trace-context-propagation") match {
+      case "off"                   ⇒ Off
+      case "monitored-actors-only" ⇒ MonitoredActorsOnly
+      case "always"                ⇒ Always
+      case other                   ⇒ sys.error(s"Unrecognized option [$other] for the kamon.akka.automatic-trace-context-propagation config.")
+    }
 }
 

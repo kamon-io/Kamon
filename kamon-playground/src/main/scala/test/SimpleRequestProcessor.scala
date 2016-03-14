@@ -17,7 +17,7 @@
 package test
 
 import akka.actor._
-import akka.routing.RoundRobinPool
+import akka.routing.{ BalancingPool, RoundRobinPool }
 import akka.util.Timeout
 import kamon.Kamon
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
@@ -37,7 +37,7 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
 
   import scala.concurrent.duration._
 
-  //Kamon.start()
+  Kamon.start()
   implicit val system = ActorSystem("test")
   import test.SimpleRequestProcessor.system.dispatcher
 
@@ -130,11 +130,34 @@ object SimpleRequestProcessor extends App with SimpleRoutingApp with RequestBuil
 
 }
 
+object RouterExample extends App {
+  Kamon.start()
+  val system = ActorSystem("system")
+  val router = system.actorOf(RoundRobinPool(5).props(Props[PrintWhatever]), "test-round-robin")
+
+  Kamon.metrics.subscribe("**", "**", system.actorOf(Props[PrintAllMetrics], "printer"))
+
+  while (true) {
+    router ! "Test"
+    Thread.sleep(5000)
+  }
+}
+
+class PrintAllMetrics extends Actor {
+  def receive = {
+    case TickMetricSnapshot(from, to, metrics) ⇒
+      println("================================================================================")
+      println(metrics.map({
+        case (entity, snapshot) ⇒ entity.category.padTo(20, ' ') + " > " + entity.name + "   " + entity.tags
+      }).toList.sorted.mkString("\n"))
+  }
+}
+
 class PrintWhatever extends Actor {
   def receive = {
     case TickMetricSnapshot(from, to, metrics) ⇒
       println(metrics.map { case (key, value) ⇒ key.name + " => " + value.metrics.mkString(",") }.mkString("|"))
-    case anything ⇒ println(anything)
+    case anything ⇒ //println(anything)
   }
 }
 

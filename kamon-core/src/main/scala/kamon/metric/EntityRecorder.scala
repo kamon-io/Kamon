@@ -34,6 +34,12 @@ trait EntityRecorderFactory[T <: EntityRecorder] {
   def createRecorder(instrumentFactory: InstrumentFactory): T
 }
 
+abstract class EntityRecorderFactoryCompanion[T <: EntityRecorder](val category: String, builder: (InstrumentFactory) => T)
+    extends EntityRecorderFactory[T] {
+
+  def createRecorder(instrumentFactory: InstrumentFactory): T = builder(instrumentFactory)
+}
+
 object EntityRecorderFactory {
   def apply[T <: EntityRecorder](entityCategory: String, factory: InstrumentFactory ⇒ T): EntityRecorderFactory[T] =
     new EntityRecorderFactory[T] {
