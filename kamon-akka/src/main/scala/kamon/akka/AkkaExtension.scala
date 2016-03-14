@@ -23,7 +23,6 @@ object AkkaExtension {
   private val akkaConfig = Kamon.config.getConfig("kamon.akka")
 
   val askPatternTimeoutWarning = AskPatternTimeoutWarningSettings.fromConfig(akkaConfig)
-  val traceContextPropagation = TraceContextPropagationSettings.fromConfig(akkaConfig)
 }
 
 sealed trait AskPatternTimeoutWarningSetting
@@ -40,19 +39,3 @@ object AskPatternTimeoutWarningSettings {
       case other         ⇒ sys.error(s"Unrecognized option [$other] for the kamon.akka.ask-pattern-timeout-warning config.")
     }
 }
-
-sealed trait TraceContextPropagationSetting
-object TraceContextPropagationSettings {
-  case object Off extends TraceContextPropagationSetting
-  case object MonitoredActorsOnly extends TraceContextPropagationSetting
-  case object Always extends TraceContextPropagationSetting
-
-  def fromConfig(config: Config): TraceContextPropagationSetting =
-    config.getString("automatic-trace-context-propagation") match {
-      case "off"                   ⇒ Off
-      case "monitored-actors-only" ⇒ MonitoredActorsOnly
-      case "always"                ⇒ Always
-      case other                   ⇒ sys.error(s"Unrecognized option [$other] for the kamon.akka.automatic-trace-context-propagation config.")
-    }
-}
-
