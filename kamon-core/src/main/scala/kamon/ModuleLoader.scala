@@ -46,6 +46,8 @@ private[kamon] class ModuleLoaderExtension(system: ExtendedActorSystem) extends 
         case th: Throwable ⇒ log.error(s"Failed to auto start the [$name] module.", th)
       }
 
+    case other =>
+
   }
 
   // When AspectJ is present the kamon.supervisor.AspectJPresent aspect will make this return true.
