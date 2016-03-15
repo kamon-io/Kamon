@@ -41,12 +41,12 @@ private[kamon] class ModuleLoaderExtension(system: ExtendedActorSystem) extends 
       system.dynamicAccess.getObjectFor[ExtensionId[Kamon.Extension]](extensionClass).map { moduleID ⇒
         log.debug(s"Auto starting the [$name] module.")
         moduleID.get(system)
-  
+
       } recover {
         case th: Throwable ⇒ log.error(s"Failed to auto start the [$name] module.", th)
       }
 
-    case other =>
+    case other ⇒
 
   }
 
