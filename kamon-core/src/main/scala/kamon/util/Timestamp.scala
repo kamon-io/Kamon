@@ -59,6 +59,8 @@ object MilliTimestamp {
  *  timestamp in nanoseconds.
  */
 class NanoTimestamp(val nanos: Long) extends AnyVal {
+  def -(that: NanoTimestamp) = new NanoTimestamp(nanos - that.nanos)
+  def +(that: NanoTimestamp) = new NanoTimestamp(nanos + that.nanos)
   override def toString: String = String.valueOf(nanos) + ".nanos"
 }
 
@@ -70,6 +72,8 @@ object NanoTimestamp {
  *  Number of nanoseconds between a arbitrary origin timestamp provided by the JVM via System.nanoTime()
  */
 class RelativeNanoTimestamp(val nanos: Long) extends AnyVal {
+  def -(that: RelativeNanoTimestamp) = new RelativeNanoTimestamp(nanos - that.nanos)
+  def +(that: RelativeNanoTimestamp) = new RelativeNanoTimestamp(nanos + that.nanos)
   override def toString: String = String.valueOf(nanos) + ".nanos"
 
   def toMilliTimestamp: MilliTimestamp =
@@ -77,6 +81,8 @@ class RelativeNanoTimestamp(val nanos: Long) extends AnyVal {
 }
 
 object RelativeNanoTimestamp {
+  val zero = new RelativeNanoTimestamp(0L)
+
   def now: RelativeNanoTimestamp = new RelativeNanoTimestamp(System.nanoTime())
   def relativeTo(milliTimestamp: MilliTimestamp): RelativeNanoTimestamp =
     new RelativeNanoTimestamp(now.nanos - (MilliTimestamp.now.millis - milliTimestamp.millis) * 1000000)
