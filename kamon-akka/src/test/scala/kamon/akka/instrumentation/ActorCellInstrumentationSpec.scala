@@ -38,12 +38,16 @@ class ActorCellInstrumentationSpec extends BaseKamonSpec("actor-cell-instrumenta
     }
 
     "propagate the TraceContext using tell" in new EchoActorFixture {
-      val testTraceContext = Tracer.withContext(newContext("tell-reply")) {
-        ctxEchoActor.tell("test", testActor)
-        Tracer.currentContext
-      }
+      for (i ← 1 to 10000) {
+        val ta = system.actorOf(Props[TraceContextEcho])
+        val testTraceContext = Tracer.withContext(newContext("tell-reply", i.toString)) {
+          ta.tell("test", testActor)
+          Tracer.currentContext
+        }
 
-      expectMsg(testTraceContext)
+        expectMsg(testTraceContext)
+        system.stop(ta)
+      }
     }
 
     "propagate the TraceContext using ask" in new EchoActorFixture {
@@ -116,7 +120,8 @@ class ActorCellInstrumentationSpec extends BaseKamonSpec("actor-cell-instrumenta
 
 class TraceContextEcho extends Actor {
   def receive = {
-    case msg: String ⇒ sender ! Tracer.currentContext
+    case msg: String ⇒
+      sender ! Tracer.currentContext
   }
 }
 
