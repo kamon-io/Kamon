@@ -206,6 +206,17 @@ object Projects extends Build {
         test(scalatest, slf4jApi) ++
         compile(aspectJ))
 
+  lazy val kamonElasticsearch = Project("kamon-elasticsearch", file("kamon-elasticsearch"))
+    .dependsOn(kamonCore % "compile->compile;test->test")
+    .settings(basicSettings: _*)
+    .settings(formatSettings: _*)
+    .settings(aspectJSettings: _*)
+    .settings(
+      libraryDependencies ++=
+        compile(elasticsearch) ++
+        test(scalatest, akkaTestKit, slf4jApi) ++
+        provided(aspectJ))
+
   lazy val kamonAnnotation = Project("kamon-annotation", file("kamon-annotation"))
     .dependsOn(kamonCore % "compile->compile;test->test")
     .settings(basicSettings: _*)
