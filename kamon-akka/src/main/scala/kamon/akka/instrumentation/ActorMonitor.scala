@@ -5,7 +5,7 @@ import akka.kamon.instrumentation.ActorMonitors.{ TrackedRoutee, TrackedActor }
 import kamon.Kamon
 import kamon.akka.{ RouterMetrics, ActorMetrics }
 import kamon.metric.Entity
-import kamon.trace.{ TraceContext, EmptyTraceContext, Tracer }
+import kamon.trace.{ EmptyTraceContext, Tracer }
 import kamon.util.RelativeNanoTimestamp
 import org.aspectj.lang.ProceedingJoinPoint
 
@@ -22,7 +22,7 @@ object ActorMonitor {
     val cellInfo = CellInfo.cellInfoFor(cell, system, ref, parent)
 
     if (cellInfo.isRouter)
-      ActorMonitors.NoOp
+      ActorMonitors.ContextPropagationOnly
     else {
       if (cellInfo.isRoutee)
         createRouteeMonitor(cellInfo)
@@ -49,12 +49,6 @@ object ActorMonitor {
 }
 
 object ActorMonitors {
-  val NoOp = new ActorMonitor {
-    override def captureEnvelopeContext(): EnvelopeContext = EnvelopeContext(RelativeNanoTimestamp.zero, EmptyTraceContext)
-    override def processMessage(pjp: ProceedingJoinPoint, envelopeContext: EnvelopeContext): AnyRef = pjp.proceed()
-    override def processFailure(failure: Throwable): Unit = {}
-    override def cleanup(): Unit = {}
-  }
 
   val ContextPropagationOnly = new ActorMonitor {
     def captureEnvelopeContext(): EnvelopeContext =
