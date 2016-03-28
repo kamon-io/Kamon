@@ -1,7 +1,7 @@
 package akka.kamon.instrumentation
 
 import akka.actor.{ Cell, ActorRef, ActorSystem }
-import akka.routing.{ RoutedActorRef, RoutedActorCell }
+import akka.routing.{ NoRouter, RoutedActorRef, RoutedActorCell }
 import kamon.Kamon
 import kamon.akka.{ ActorMetrics, RouterMetrics }
 import kamon.metric.Entity
@@ -15,10 +15,11 @@ object CellInfo {
 
   def cellInfoFor(cell: Cell, system: ActorSystem, ref: ActorRef, parent: ActorRef): CellInfo = {
     import kamon.metric.Entity
+    def hasRouterProps(cell: Cell): Boolean = cell.props.deploy.routerConfig != NoRouter
 
     val pathString = ref.path.elements.mkString("/")
     val isRootSupervisor = pathString.length == 0 || pathString == "user" || pathString == "system"
-    val isRouter = cell.isInstanceOf[RoutedActorCell]
+    val isRouter = hasRouterProps(cell)
     val isRoutee = parent.isInstanceOf[RoutedActorRef]
 
     val name = if (isRoutee) cellName(system, parent) else cellName(system, ref)
