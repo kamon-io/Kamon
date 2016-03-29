@@ -58,7 +58,7 @@ class SimpleMetricKeyGenerator(config: Config) extends MetricKeyGenerator {
 
   def createNormalizer(strategy: String): Normalizer = strategy match {
     case "percent-encode" ⇒ PercentEncoder.encode
-    case "normalize"      ⇒ (s: String) ⇒ s.replace(": ", "-").replace(" ", "_").replace("/", "_").replace(".", "_")
+    case "normalize"      ⇒ (s: String) ⇒ s.replace(": ", "-").replace(":", "-").replace(" ", "_").replace("/", "_").replace(".", "_")
   }
 }
 
