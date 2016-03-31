@@ -28,6 +28,7 @@ object Dependencies {
   val slf4jVersion      = "1.7.7"
   val play23Version     = "2.3.10"
   val play24Version     = "2.4.4"
+  val elasticsearchVersion = "2.1.0"
 
   val sprayJson         = "io.spray"                  %%  "spray-json"            % "1.3.1"
   val sprayJsonLenses   = "net.virtual-void"          %%  "json-lenses"           % "0.6.0"
@@ -66,6 +67,8 @@ object Dependencies {
   val playWS24          = "com.typesafe.play"         %%  "play-ws"               % play24Version
   val playTest24        = "org.scalatestplus"         %%  "play"                  % "1.4.0-M2"
   val typesafeConfig    = "com.typesafe"              %   "config"                % "1.2.1"
+
+  val elasticsearch     = "org.elasticsearch"         %   "elasticsearch"         % elasticsearchVersion
 
   def compile   (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "compile")
   def provided  (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "provided")
