@@ -34,7 +34,7 @@ object Dependencies {
   val scalatest         = "org.scalatest"             %%  "scalatest"             % "2.2.4"
   val logback           = "ch.qos.logback"            %   "logback-classic"       % "1.0.13"
   val aspectJ           = "org.aspectj"               %   "aspectjweaver"         % aspectjVersion
-  val newrelic          = "com.newrelic.agent.java"   %   "newrelic-agent"        % "3.11.0"
+  val newrelic          = "com.newrelic.agent.java"   %   "newrelic-agent"        % "3.26.1"
   val hdrHistogram      = "org.hdrhistogram"          %   "HdrHistogram"          % "2.1.7"
   val sprayCan          = "io.spray"                  %%  "spray-can"             % sprayVersion
   val sprayRouting      = "io.spray"                  %%  "spray-routing"         % sprayVersion
