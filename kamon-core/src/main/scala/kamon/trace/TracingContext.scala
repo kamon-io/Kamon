@@ -25,9 +25,9 @@ import kamon.metric.MetricsModule
 
 import scala.collection.concurrent.TrieMap
 
-private[trace] class TracingContext(traceName: String, token: String, izOpen: Boolean, levelOfDetail: LevelOfDetail,
+private[trace] class TracingContext(traceName: String, token: String, tags: Map[String, String], izOpen: Boolean, levelOfDetail: LevelOfDetail,
   isLocal: Boolean, startTimeztamp: RelativeNanoTimestamp, log: LoggingAdapter, traceInfoSink: TracingContext ⇒ Unit)
-    extends MetricsOnlyContext(traceName, token, izOpen, levelOfDetail, startTimeztamp, log) {
+    extends MetricsOnlyContext(traceName, token, tags, izOpen, levelOfDetail, startTimeztamp, log) {
 
   private val _openSegments = new AtomicInteger(0)
   private val _startTimestamp = NanoTimestamp.now
