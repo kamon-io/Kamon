@@ -61,7 +61,7 @@ class TraceContextManipulationSpec extends BaseKamonSpec("trace-metrics-spec") {
       }
 
       Tracer.currentContext shouldBe empty
-      createdContext.name shouldBe ("renamed-trace")
+      createdContext.name shouldBe "renamed-trace"
     }
 
     "allow creating a segment within a trace" in {
@@ -71,7 +71,7 @@ class TraceContextManipulationSpec extends BaseKamonSpec("trace-metrics-spec") {
       }
 
       Tracer.currentContext shouldBe empty
-      createdContext.name shouldBe ("trace-with-segments")
+      createdContext.name shouldBe "trace-with-segments"
     }
 
     "allow renaming a segment" in {

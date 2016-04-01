@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * Copyright © 2013-2015 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2016 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -21,6 +21,8 @@ import com.typesafe.config.ConfigFactory
 import kamon.testkit.BaseKamonSpec
 import kamon.trace.Tracer
 import kamon.metric.instrument.Histogram
+
+import scala.util.control.NoStackTrace
 
 class TraceMetricsSpec extends BaseKamonSpec("trace-metrics-spec") with ImplicitSender {
 
@@ -81,6 +83,35 @@ class TraceMetricsSpec extends BaseKamonSpec("trace-metrics-spec") with Implicit
           "library" -> "test-library"))
 
       afterFinishSegmentSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
+    }
+
+    "record the elapsed time between a trace creation and finish with an error" in {
+      for (repetitions ← 1 to 10) {
+        Tracer.withContext(newContext("record-elapsed-time-with-error")) {
+          Tracer.currentContext.finishWithError(new RuntimeException("awesome-trace-error") with NoStackTrace)
+        }
+      }
+
+      val snapshot = takeSnapshotOf("record-elapsed-time-with-error", "trace")
+      snapshot.histogram("elapsed-time").get.numberOfMeasurements should be(10)
+      snapshot.counter("trace-errors").get.count should be(10)
+    }
+
+    "record the elapsed time for segments that finish with an error and that occur inside a given trace" in {
+      Tracer.withContext(newContext("trace-with-segments")) {
+        val segment = Tracer.currentContext.startSegment("test-segment-with-error", "test-category", "test-library")
+        segment.finishWithError(new RuntimeException("awesome-segment-error") with NoStackTrace)
+        Tracer.currentContext.finish()
+      }
+
+      val snapshot = takeSnapshotOf("test-segment-with-error", "trace-segment",
+        tags = Map(
+          "trace" -> "trace-with-segments",
+          "category" -> "test-category",
+          "library" -> "test-library"))
+
+      snapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
+      snapshot.counter("segment-errors").get.count should be(1)
     }
   }
 }

@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * Copyright © 2013 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2016 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -24,6 +24,7 @@ class TraceMetrics(instrumentFactory: InstrumentFactory) extends GenericEntityRe
    *  Records blah blah
    */
   val elapsedTime = histogram("elapsed-time", unitOfMeasurement = Time.Nanoseconds)
+  val traceErrors = counter("trace-errors")
 }
 
 object TraceMetrics extends EntityRecorderFactory[TraceMetrics] {
@@ -40,6 +41,7 @@ class SegmentMetrics(instrumentFactory: InstrumentFactory) extends GenericEntity
    *  Records blah blah
    */
   val elapsedTime = histogram("elapsed-time", unitOfMeasurement = Time.Nanoseconds)
+  val segmentErrors = counter("segment-errors")
 }
 
 object SegmentMetrics extends EntityRecorderFactory[SegmentMetrics] {

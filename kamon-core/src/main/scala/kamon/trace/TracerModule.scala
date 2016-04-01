@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * Copyright © 2013 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2016 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -17,7 +17,7 @@
 package kamon.trace
 
 import akka.actor._
-import akka.event.{ LoggingAdapter, Logging }
+import akka.event.{ Logging, LoggingAdapter }
 import com.typesafe.config.Config
 import kamon.Kamon
 import kamon.metric.MetricsModule
@@ -96,7 +96,7 @@ private[kamon] class TracerModuleImpl(metricsExtension: MetricsModule, config: C
   private val _subscriptions = new LazyActorRef
   private val _incubator = new LazyActorRef
   private val _dynamic = new akka.actor.ReflectiveDynamicAccess(getClass.getClassLoader)
-  private val _tokenGenerator = _dynamic.createInstanceFor[Function0[String]](_settings.tokenGeneratorFQN, Nil).get // let's bubble up any problems.
+  private val _tokenGenerator = _dynamic.createInstanceFor[() ⇒ String](_settings.tokenGeneratorFQN, Nil).get // let's bubble up any problems.
 
   private def newToken: String = _tokenGenerator()
 

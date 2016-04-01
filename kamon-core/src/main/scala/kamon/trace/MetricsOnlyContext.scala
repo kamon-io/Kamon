@@ -20,7 +20,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 
 import akka.event.LoggingAdapter
 import kamon.Kamon
-import kamon.metric.{ SegmentMetrics, MetricsModule, TraceMetrics }
+import kamon.metric.{ SegmentMetrics, TraceMetrics }
 import kamon.util.{ NanoInterval, RelativeNanoTimestamp }
 
 import scala.annotation.tailrec
@@ -31,6 +31,7 @@ private[kamon] class MetricsOnlyContext(traceName: String, val token: String, iz
 
   @volatile private var _name = traceName
   @volatile private var _isOpen = izOpen
+  @volatile private var _isFinishedWithError = false
   @volatile protected var _elapsedTime = NanoInterval.default
 
   private val _finishedSegments = new ConcurrentLinkedQueue[SegmentLatencyData]()
@@ -45,6 +46,7 @@ private[kamon] class MetricsOnlyContext(traceName: String, val token: String, iz
   def name: String = _name
   def isEmpty: Boolean = false
   def isOpen: Boolean = _isOpen
+  def isFinishedWithError: Boolean = _isFinishedWithError
   def addMetadata(key: String, value: String): Unit = {}
 
   def finish(): Unit = {
@@ -52,9 +54,19 @@ private[kamon] class MetricsOnlyContext(traceName: String, val token: String, iz
     val traceElapsedTime = NanoInterval.since(startTimestamp)
     _elapsedTime = traceElapsedTime
 
-    if (Kamon.metrics.shouldTrack(name, TraceMetrics.category))
-      Kamon.metrics.entity(TraceMetrics, name).elapsedTime.record(traceElapsedTime.nanos)
+    if (Kamon.metrics.shouldTrack(name, TraceMetrics.category)) {
+      val traceEntity = Kamon.metrics.entity(TraceMetrics, name)
+      traceEntity.elapsedTime.record(traceElapsedTime.nanos)
+      if (isFinishedWithError) traceEntity.traceErrors.increment()
+    }
+
     drainFinishedSegments()
+  }
+
+  def finishWithError(cause: Throwable): Unit = {
+    //we should do something with the Throwable in a near future
+    _isFinishedWithError = true
+    finish()
   }
 
   def startSegment(segmentName: String, category: String, library: String): Segment =
@@ -68,14 +80,17 @@ private[kamon] class MetricsOnlyContext(traceName: String, val token: String, iz
         "category" -> segment.category,
         "library" -> segment.library)
 
-      if (Kamon.metrics.shouldTrack(segment.name, SegmentMetrics.category))
-        Kamon.metrics.entity(SegmentMetrics, segment.name, segmentTags).elapsedTime.record(segment.duration.nanos)
+      if (Kamon.metrics.shouldTrack(segment.name, SegmentMetrics.category)) {
+        val segmentEntity = Kamon.metrics.entity(SegmentMetrics, segment.name, segmentTags)
+        segmentEntity.elapsedTime.record(segment.duration.nanos)
+        if (segment.isFinishedWithError) segmentEntity.segmentErrors.increment()
+      }
       drainFinishedSegments()
     }
   }
 
-  protected def finishSegment(segmentName: String, category: String, library: String, duration: NanoInterval): Unit = {
-    _finishedSegments.add(SegmentLatencyData(segmentName, category, library, duration))
+  protected def finishSegment(segmentName: String, category: String, library: String, duration: NanoInterval, isFinishedWithError: Boolean = false): Unit = {
+    _finishedSegments.add(SegmentLatencyData(segmentName, category, library, duration, isFinishedWithError))
 
     if (isClosed) {
       drainFinishedSegments()
@@ -94,11 +109,13 @@ private[kamon] class MetricsOnlyContext(traceName: String, val token: String, iz
     @volatile private var _segmentName = segmentName
     @volatile private var _elapsedTime = NanoInterval.default
     @volatile private var _isOpen = true
+    @volatile private var _isFinishedWithError = false
 
     def name: String = _segmentName
     def isEmpty: Boolean = false
     def addMetadata(key: String, value: String): Unit = {}
     def isOpen: Boolean = _isOpen
+    def isFinishedWithError: Boolean = _isFinishedWithError
 
     def rename(newName: String): Unit =
       if (isOpen)
@@ -106,12 +123,18 @@ private[kamon] class MetricsOnlyContext(traceName: String, val token: String, iz
       else
         log.warning("Can't rename segment from [{}] to [{}] because the segment is already closed.", name, newName)
 
+    def finishWithError(cause: Throwable): Unit = {
+      //we should do something with the Throwable in a near future
+      _isFinishedWithError = true
+      finish
+    }
+
     def finish: Unit = {
       _isOpen = false
       val segmentElapsedTime = NanoInterval.since(_startTimestamp)
       _elapsedTime = segmentElapsedTime
 
-      finishSegment(name, category, library, segmentElapsedTime)
+      finishSegment(name, category, library, segmentElapsedTime, isFinishedWithError)
     }
 
     // Handle with care and make sure that the segment is closed before calling this method, otherwise
@@ -121,4 +144,4 @@ private[kamon] class MetricsOnlyContext(traceName: String, val token: String, iz
   }
 }
 
-case class SegmentLatencyData(name: String, category: String, library: String, duration: NanoInterval)
+case class SegmentLatencyData(name: String, category: String, library: String, duration: NanoInterval, isFinishedWithError: Boolean)

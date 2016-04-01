@@ -48,9 +48,9 @@ private[trace] class TracingContext(traceName: String, token: String, izOpen: Bo
     traceInfoSink(this)
   }
 
-  override def finishSegment(segmentName: String, category: String, library: String, duration: NanoInterval): Unit = {
+  override def finishSegment(segmentName: String, category: String, library: String, duration: NanoInterval, isFinishedWithError: Boolean = false): Unit = {
     _openSegments.decrementAndGet()
-    super.finishSegment(segmentName, category, library, duration)
+    super.finishSegment(segmentName, category, library, duration, isFinishedWithError)
   }
 
   def shouldIncubate: Boolean = isOpen || _openSegments.get() > 0
@@ -62,7 +62,7 @@ private[trace] class TracingContext(traceName: String, token: String, izOpen: Bo
     val currentSegments = _allSegments.iterator()
     var segmentsInfo = List.newBuilder[SegmentInfo]
 
-    while (currentSegments.hasNext()) {
+    while (currentSegments.hasNext) {
       val segment = currentSegments.next()
       if (segment.isClosed)
         segmentsInfo += segment.createSegmentInfo(_startTimestamp, startTimestamp)

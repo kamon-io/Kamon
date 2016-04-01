@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * Copyright © 2013 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2016 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -17,8 +17,9 @@
 package kamon.trace
 
 import java.io.ObjectStreamException
+
 import kamon.trace.TraceContextAware.DefaultTraceContextAware
-import kamon.util.{ SameThreadExecutionContext, Supplier, Function, RelativeNanoTimestamp }
+import kamon.util.{ Function, RelativeNanoTimestamp, SameThreadExecutionContext, Supplier }
 
 import scala.concurrent.Future
 
@@ -28,11 +29,13 @@ trait TraceContext {
   def isEmpty: Boolean
   def nonEmpty: Boolean = !isEmpty
   def isOpen: Boolean
+  def isFinishedWithError: Boolean
   def isClosed: Boolean = !isOpen
 
   def finish(): Unit
-  def rename(newName: String): Unit
+  def finishWithError(cause: Throwable): Unit
 
+  def rename(newName: String): Unit
   def startSegment(segmentName: String, category: String, library: String): Segment
   def addMetadata(key: String, value: String)
 
@@ -74,8 +77,10 @@ trait Segment {
   def nonEmpty: Boolean = !isEmpty
   def isOpen: Boolean
   def isClosed: Boolean = !isOpen
+  def isFinishedWithError: Boolean
 
   def finish(): Unit
+  def finishWithError(cause: Throwable): Unit
   def rename(newName: String): Unit
   def addMetadata(key: String, value: String)
 }
@@ -85,8 +90,11 @@ case object EmptyTraceContext extends TraceContext {
   def token: String = ""
   def isEmpty: Boolean = true
   def isOpen: Boolean = false
+  def isFinishedWithError: Boolean = false
 
   def finish(): Unit = {}
+  def finishWithError(cause: Throwable): Unit = {}
+
   def rename(name: String): Unit = {}
   def startSegment(segmentName: String, category: String, library: String): Segment = EmptySegment
   def addMetadata(key: String, value: String): Unit = {}
@@ -98,11 +106,15 @@ case object EmptyTraceContext extends TraceContext {
     val library: String = "empty-library"
     def isEmpty: Boolean = true
     def isOpen: Boolean = false
+    def isFinishedWithError: Boolean = false
 
     def finish: Unit = {}
+    def finishWithError(cause: Throwable): Unit = {}
     def rename(newName: String): Unit = {}
     def addMetadata(key: String, value: String): Unit = {}
+
   }
+
 }
 
 object SegmentCategory {
