@@ -25,7 +25,7 @@ import kamon.util.{ NanoInterval, RelativeNanoTimestamp }
 
 import scala.annotation.tailrec
 
-private[kamon] class MetricsOnlyContext(traceName: String, val token: String, izOpen: Boolean, val levelOfDetail: LevelOfDetail,
+private[kamon] class MetricsOnlyContext(traceName: String, val token: String, tags: Map[String, String], izOpen: Boolean, val levelOfDetail: LevelOfDetail,
   val startTimestamp: RelativeNanoTimestamp, log: LoggingAdapter)
     extends TraceContext {
 
@@ -53,7 +53,7 @@ private[kamon] class MetricsOnlyContext(traceName: String, val token: String, iz
     _elapsedTime = traceElapsedTime
 
     if (Kamon.metrics.shouldTrack(name, TraceMetrics.category))
-      Kamon.metrics.entity(TraceMetrics, name).elapsedTime.record(traceElapsedTime.nanos)
+      Kamon.metrics.entity(TraceMetrics, name, tags).elapsedTime.record(traceElapsedTime.nanos)
     drainFinishedSegments()
   }
 
