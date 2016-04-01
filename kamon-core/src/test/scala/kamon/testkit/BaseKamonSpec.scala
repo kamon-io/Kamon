@@ -16,12 +16,12 @@
 
 package kamon.testkit
 
-import akka.testkit.{ ImplicitSender, TestKitBase }
 import akka.actor.ActorSystem
-import com.typesafe.config.{ Config, ConfigFactory }
+import akka.testkit.{ ImplicitSender, TestKitBase }
+import com.typesafe.config.Config
 import kamon.Kamon
 import kamon.metric.{ Entity, EntitySnapshot, SubscriptionsDispatcher }
-import kamon.trace.{ TraceContext, Tracer }
+import kamon.trace.TraceContext
 import kamon.util.LazyActorRef
 import org.scalatest.{ BeforeAndAfterAll, Matchers, WordSpecLike }
 
