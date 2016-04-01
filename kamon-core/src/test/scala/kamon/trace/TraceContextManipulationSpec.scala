@@ -16,7 +16,6 @@
 
 package kamon.trace
 
-import com.typesafe.config.ConfigFactory
 import kamon.testkit.BaseKamonSpec
 
 class TraceContextManipulationSpec extends BaseKamonSpec("trace-metrics-spec") {
