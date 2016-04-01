@@ -20,8 +20,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
 
 import akka.event.LoggingAdapter
-import kamon.util.{ NanoInterval, RelativeNanoTimestamp, NanoTimestamp }
-import kamon.metric.MetricsModule
+import kamon.util.{ NanoInterval, NanoTimestamp, RelativeNanoTimestamp }
 
 import scala.collection.concurrent.TrieMap
 
@@ -37,8 +36,12 @@ private[trace] class TracingContext(traceName: String, token: String, tags: Map[
   override def addMetadata(key: String, value: String): Unit = _metadata.put(key, value)
 
   override def startSegment(segmentName: String, category: String, library: String): Segment = {
+    startSegment(segmentName, category, library, Map.empty[String, String])
+  }
+
+  override def startSegment(segmentName: String, category: String, library: String, tags: Map[String, String]): Segment = {
     _openSegments.incrementAndGet()
-    val newSegment = new TracingSegment(segmentName, category, library)
+    val newSegment = new TracingSegment(segmentName, category, library, tags)
     _allSegments.add(newSegment)
     newSegment
   }
@@ -48,9 +51,9 @@ private[trace] class TracingContext(traceName: String, token: String, tags: Map[
     traceInfoSink(this)
   }
 
-  override def finishSegment(segmentName: String, category: String, library: String, duration: NanoInterval): Unit = {
+  override def finishSegment(segmentName: String, category: String, library: String, duration: NanoInterval, tags: Map[String, String]): Unit = {
     _openSegments.decrementAndGet()
-    super.finishSegment(segmentName, category, library, duration)
+    super.finishSegment(segmentName, category, library, duration, tags)
   }
 
   def shouldIncubate: Boolean = isOpen || _openSegments.get() > 0
@@ -62,7 +65,7 @@ private[trace] class TracingContext(traceName: String, token: String, tags: Map[
     val currentSegments = _allSegments.iterator()
     var segmentsInfo = List.newBuilder[SegmentInfo]
 
-    while (currentSegments.hasNext()) {
+    while (currentSegments.hasNext) {
       val segment = currentSegments.next()
       if (segment.isClosed)
         segmentsInfo += segment.createSegmentInfo(_startTimestamp, startTimestamp)
@@ -73,7 +76,7 @@ private[trace] class TracingContext(traceName: String, token: String, tags: Map[
     TraceInfo(name, token, _startTimestamp, elapsedTime, _metadata.toMap, segmentsInfo.result())
   }
 
-  class TracingSegment(segmentName: String, category: String, library: String) extends MetricsOnlySegment(segmentName, category, library) {
+  class TracingSegment(segmentName: String, category: String, library: String, tags: Map[String, String]) extends MetricsOnlySegment(segmentName, category, library, tags) {
     private val metadata = TrieMap.empty[String, String]
     override def addMetadata(key: String, value: String): Unit = metadata.put(key, value)
 
@@ -85,7 +88,7 @@ private[trace] class TracingContext(traceName: String, token: String, tags: Map[
       // expensive and inaccurate, but we can do that once for the trace and calculate all the segments relative to it.
       val segmentStartTimestamp = new NanoTimestamp((this.startTimestamp.nanos - traceRelativeTimestamp.nanos) + traceStartTimestamp.nanos)
 
-      SegmentInfo(this.name, category, library, segmentStartTimestamp, this.elapsedTime, metadata.toMap)
+      SegmentInfo(this.name, category, library, segmentStartTimestamp, this.elapsedTime, metadata.toMap, _tags.toMap)
     }
   }
 }
