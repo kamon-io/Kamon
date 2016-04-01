@@ -32,10 +32,8 @@ class HistogramSpec extends WordSpec with Matchers {
       histogram.record(10000)
     }
 
-    "fail when recording values higher than the highest trackable value" in new HistogramFixture {
-      intercept[IndexOutOfBoundsException] {
-        histogram.record(1000000)
-      }
+    "not fail when recording values higher than the highest trackable value" in new HistogramFixture {
+      histogram.record(Long.MaxValue)
     }
 
     "reset all recorded levels to zero after a snapshot collection" in new HistogramFixture {
