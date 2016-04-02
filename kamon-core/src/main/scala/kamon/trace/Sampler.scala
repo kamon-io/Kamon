@@ -25,7 +25,7 @@ import scala.util.Try
 
 trait Sampler {
   def shouldTrace: Boolean
-  def shouldReport(traceElapsedTime: NanoInterval): Boolean
+  def shouldReport(traceElapsedTime: NanoI  nterval): Boolean
 }
 
 object NoSampling extends Sampler {

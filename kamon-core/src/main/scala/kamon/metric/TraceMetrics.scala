@@ -24,7 +24,7 @@ class TraceMetrics(instrumentFactory: InstrumentFactory) extends GenericEntityRe
    *  Records blah blah
    */
   val elapsedTime = histogram("elapsed-time", unitOfMeasurement = Time.Nanoseconds)
-  val traceErrors = counter("trace-errors")
+  val errors = counter("errors")
 }
 
 object TraceMetrics extends EntityRecorderFactory[TraceMetrics] {
@@ -41,7 +41,7 @@ class SegmentMetrics(instrumentFactory: InstrumentFactory) extends GenericEntity
    *  Records blah blah
    */
   val elapsedTime = histogram("elapsed-time", unitOfMeasurement = Time.Nanoseconds)
-  val segmentErrors = counter("segment-errors")
+  val errors = counter("errors")
 }
 
 object SegmentMetrics extends EntityRecorderFactory[SegmentMetrics] {

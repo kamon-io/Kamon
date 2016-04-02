@@ -94,7 +94,7 @@ class TraceMetricsSpec extends BaseKamonSpec("trace-metrics-spec") with Implicit
 
       val snapshot = takeSnapshotOf("record-elapsed-time-with-error", "trace")
       snapshot.histogram("elapsed-time").get.numberOfMeasurements should be(10)
-      snapshot.counter("trace-errors").get.count should be(10)
+      snapshot.counter("errors").get.count should be(10)
     }
 
     "record the elapsed time for segments that finish with an error and that occur inside a given trace" in {
@@ -111,7 +111,7 @@ class TraceMetricsSpec extends BaseKamonSpec("trace-metrics-spec") with Implicit
           "library" -> "test-library"))
 
       snapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
-      snapshot.counter("segment-errors").get.count should be(1)
+      snapshot.counter("errors").get.count should be(1)
     }
   }
 }
