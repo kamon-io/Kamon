@@ -29,7 +29,6 @@ trait TraceContext {
   def isEmpty: Boolean
   def nonEmpty: Boolean = !isEmpty
   def isOpen: Boolean
-  def isFinishedWithError: Boolean
   def isClosed: Boolean = !isOpen
 
   def finish(): Unit
@@ -77,7 +76,6 @@ trait Segment {
   def nonEmpty: Boolean = !isEmpty
   def isOpen: Boolean
   def isClosed: Boolean = !isOpen
-  def isFinishedWithError: Boolean
 
   def finish(): Unit
   def finishWithError(cause: Throwable): Unit
@@ -90,7 +88,6 @@ case object EmptyTraceContext extends TraceContext {
   def token: String = ""
   def isEmpty: Boolean = true
   def isOpen: Boolean = false
-  def isFinishedWithError: Boolean = false
 
   def finish(): Unit = {}
   def finishWithError(cause: Throwable): Unit = {}
@@ -106,7 +103,6 @@ case object EmptyTraceContext extends TraceContext {
     val library: String = "empty-library"
     def isEmpty: Boolean = true
     def isOpen: Boolean = false
-    def isFinishedWithError: Boolean = false
 
     def finish: Unit = {}
     def finishWithError(cause: Throwable): Unit = {}

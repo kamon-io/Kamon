@@ -31,7 +31,6 @@ private[kamon] class MetricsOnlyContext(traceName: String, val token: String, iz
 
   @volatile private var _name = traceName
   @volatile private var _isOpen = izOpen
-  @volatile private var _isFinishedWithError = false
   @volatile protected var _elapsedTime = NanoInterval.default
 
   private val _finishedSegments = new ConcurrentLinkedQueue[SegmentLatencyData]()
@@ -46,10 +45,9 @@ private[kamon] class MetricsOnlyContext(traceName: String, val token: String, iz
   def name: String = _name
   def isEmpty: Boolean = false
   def isOpen: Boolean = _isOpen
-  def isFinishedWithError: Boolean = _isFinishedWithError
   def addMetadata(key: String, value: String): Unit = {}
 
-  def finish(): Unit = {
+  def finish(withError: Boolean): Unit = {
     _isOpen = false
     val traceElapsedTime = NanoInterval.since(startTimestamp)
     _elapsedTime = traceElapsedTime
@@ -57,16 +55,17 @@ private[kamon] class MetricsOnlyContext(traceName: String, val token: String, iz
     if (Kamon.metrics.shouldTrack(name, TraceMetrics.category)) {
       val traceEntity = Kamon.metrics.entity(TraceMetrics, name)
       traceEntity.elapsedTime.record(traceElapsedTime.nanos)
-      if (isFinishedWithError) traceEntity.traceErrors.increment()
+      if (withError) traceEntity.errors.increment()
     }
 
     drainFinishedSegments()
   }
 
+  def finish(): Unit = finish(withError = false)
+
   def finishWithError(cause: Throwable): Unit = {
     //we should do something with the Throwable in a near future
-    _isFinishedWithError = true
-    finish()
+    finish(withError = true)
   }
 
   def startSegment(segmentName: String, category: String, library: String): Segment =
@@ -83,13 +82,13 @@ private[kamon] class MetricsOnlyContext(traceName: String, val token: String, iz
       if (Kamon.metrics.shouldTrack(segment.name, SegmentMetrics.category)) {
         val segmentEntity = Kamon.metrics.entity(SegmentMetrics, segment.name, segmentTags)
         segmentEntity.elapsedTime.record(segment.duration.nanos)
-        if (segment.isFinishedWithError) segmentEntity.segmentErrors.increment()
+        if (segment.isFinishedWithError) segmentEntity.errors.increment()
       }
       drainFinishedSegments()
     }
   }
 
-  protected def finishSegment(segmentName: String, category: String, library: String, duration: NanoInterval, isFinishedWithError: Boolean = false): Unit = {
+  protected def finishSegment(segmentName: String, category: String, library: String, duration: NanoInterval, isFinishedWithError: Boolean): Unit = {
     _finishedSegments.add(SegmentLatencyData(segmentName, category, library, duration, isFinishedWithError))
 
     if (isClosed) {
@@ -106,16 +105,15 @@ private[kamon] class MetricsOnlyContext(traceName: String, val token: String, iz
 
   class MetricsOnlySegment(segmentName: String, val category: String, val library: String) extends Segment {
     private val _startTimestamp = RelativeNanoTimestamp.now
+
     @volatile private var _segmentName = segmentName
     @volatile private var _elapsedTime = NanoInterval.default
     @volatile private var _isOpen = true
-    @volatile private var _isFinishedWithError = false
 
     def name: String = _segmentName
     def isEmpty: Boolean = false
     def addMetadata(key: String, value: String): Unit = {}
     def isOpen: Boolean = _isOpen
-    def isFinishedWithError: Boolean = _isFinishedWithError
 
     def rename(newName: String): Unit =
       if (isOpen)
@@ -123,19 +121,20 @@ private[kamon] class MetricsOnlyContext(traceName: String, val token: String, iz
       else
         log.warning("Can't rename segment from [{}] to [{}] because the segment is already closed.", name, newName)
 
-    def finishWithError(cause: Throwable): Unit = {
-      //we should do something with the Throwable in a near future
-      _isFinishedWithError = true
-      finish
-    }
-
-    def finish: Unit = {
+    def finish(withError: Boolean): Unit = {
       _isOpen = false
       val segmentElapsedTime = NanoInterval.since(_startTimestamp)
       _elapsedTime = segmentElapsedTime
 
-      finishSegment(name, category, library, segmentElapsedTime, isFinishedWithError)
+      finishSegment(name, category, library, segmentElapsedTime, withError)
     }
+
+    def finishWithError(cause: Throwable): Unit = {
+      //we should do something with the Throwable in a near future
+      finish(withError = true)
+    }
+
+    def finish(): Unit = finish(withError = false)
 
     // Handle with care and make sure that the segment is closed before calling this method, otherwise
     // NanoInterval.default will be returned.

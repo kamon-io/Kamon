@@ -66,7 +66,7 @@ class TraceContextManipulationSpec extends BaseKamonSpec("trace-metrics-spec") {
 
     "allow creating a segment within a trace" in {
       val createdContext = Tracer.withContext(newContext("trace-with-segments")) {
-        val segment = Tracer.currentContext.startSegment("segment-1", "segment-1-category", "segment-library")
+        Tracer.currentContext.startSegment("segment-1", "segment-1-category", "segment-library")
         Tracer.currentContext
       }
 
