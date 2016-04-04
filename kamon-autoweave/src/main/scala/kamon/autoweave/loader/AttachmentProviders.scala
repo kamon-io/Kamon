@@ -50,20 +50,6 @@ object AttachmentProviders extends {
     override def run(): ClassLoader = new URLClassLoader(Array[URL](toolsJar.toURI.toURL), null)
   }
 
-  def resolve(): Option[Class[_]] = {
-    import scala.util.control.Breaks._
-
-    var vmClazz: Option[Class[_]] = None
-
-    breakable {
-      for (provider ← providers) {
-        val vmClass = provider.resolve()
-        if (vmClass.isDefined) {
-          vmClazz = vmClass
-          break
-        }
-      }
-    }
-    vmClazz
-  }
+  def resolve(): Option[Class[_]] =
+    providers.iterator.map(_.resolve()).collectFirst { case Some(clazz) ⇒ clazz }
 }
