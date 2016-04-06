@@ -24,7 +24,7 @@ object Projects extends Build {
   lazy val kamon = Project("kamon", file("."))
     .aggregate(kamonCore, kamonScala, kamonAkka, kamonSpray, kamonNewrelic, kamonPlayground, kamonTestkit,
       kamonStatsD, kamonDatadog, kamonSPM, kamonSystemMetrics, kamonLogReporter, kamonAkkaRemote, kamonJdbc,
-      kamonAnnotation, kamonPlay, kamonJMXReporter, kamonFluentd, kamonAutoweave)
+      kamonAnnotation, kamonPlay, kamonJMXReporter, kamonFluentd, kamonAutoweave, kamonAkkaSharding)
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
     .settings(noPublishing: _*)
@@ -232,6 +232,17 @@ object Projects extends Build {
       libraryDependencies ++=
         compile(akkaActor) ++ compile(fluentdLogger) ++
           test(scalatest, akkaTestKit, easyMock, slf4jApi, slf4jnop))
+
+  lazy val kamonAkkaSharding = Project("kamon-akka-sharding", file("kamon-akka-sharding"))
+    .dependsOn(kamonAkka)
+    .settings(basicSettings: _* )
+    .settings(formatSettings: _*)
+    .settings(aspectJSettings: _*)
+    .settings(
+      libraryDependencies ++=
+        compile(akkaClusterSharding) ++
+          provided(aspectJ) ++
+          test(scalatest, akkaTestKit, akkaSlf4j, slf4jJul, slf4jLog4j, logback, akkaDistributedData))
 
   val noPublishing = Seq(publish := (), publishLocal := (), publishArtifact := false)
 }

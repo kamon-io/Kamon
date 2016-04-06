@@ -44,6 +44,8 @@ object Dependencies {
   val akkaTestKit       = "com.typesafe.akka"         %%  "akka-testkit"          % akkaVersion
   val akkaRemote        = "com.typesafe.akka"         %%  "akka-remote"           % akkaVersion
   val akkaCluster       = "com.typesafe.akka"         %%  "akka-cluster"          % akkaVersion
+  val akkaClusterSharding = "com.typesafe.akka"       %%  "akka-cluster-sharding" % akkaVersion
+  val akkaDistributedData = "com.typesafe.akka"       %%  "akka-distributed-data-experimental"  % akkaVersion
   val play              = "com.typesafe.play"         %%  "play"                  % play24Version
   val playWS            = "com.typesafe.play"         %%  "play-ws"               % play24Version
   val playTest          = "org.scalatestplus"         %%  "play"                  % "1.4.0-M4"
