@@ -1,17 +1,16 @@
 package kamon.akka.sharding
 
 import akka.actor.{ Actor, ActorSystem, Props }
-import akka.cluster.sharding.{ ClusterSharding, ClusterShardingSettings, ShardRegion }
+import akka.cluster.sharding.{ ClusterSharding, ClusterShardingSettings, HandOffHelper, ShardRegion }
 import akka.testkit.{ ImplicitSender, TestKitBase }
 import kamon.Kamon
 import kamon.akka.sharding.ShardedActor.{ Ping, Pong }
-import kamon.akka.sharding.metrics.AkkaShardMetrics$
-import kamon.metric.{ Entity, EntitySnapshot }
+import kamon.metric.Entity
 import org.scalatest.concurrent.Eventually._
 import org.scalatest.time.{ Millis, Seconds, Span }
 import org.scalatest.{ Matchers, WordSpecLike }
 
-class AkkaShardingMetricsSpec extends TestKitBase with WordSpecLike with Matchers with ImplicitSender {
+class AkkaShardingMetricsSpec extends TestKitBase with WordSpecLike with Matchers with ImplicitSender with HandOffHelper {
 
   lazy val collectionContext = Kamon.metrics.buildDefaultCollectionContext
 
@@ -21,7 +20,7 @@ class AkkaShardingMetricsSpec extends TestKitBase with WordSpecLike with Matcher
   }
 
   implicit val patienceConfig =
-    PatienceConfig(timeout = scaled(Span(5, Seconds)), interval = scaled(Span(500, Millis)))
+    PatienceConfig(timeout = scaled(Span(10, Seconds)), interval = scaled(Span(500, Millis)))
 
   "the Kamon akka sharding metrics" should {
 
@@ -55,6 +54,37 @@ class AkkaShardingMetricsSpec extends TestKitBase with WordSpecLike with Matcher
         val entitiesShard2 = snapshot.gauge("number-of-entities-shard-2")
         numShards.get.max shouldBe 2
         entitiesShard1.get.max shouldBe 1
+        entitiesShard2.get.max shouldBe 1
+      }
+    }
+
+    "remove gauges from removed shards" in {
+      val shardRegion = ClusterSharding(system).start("tracked-shard", Props(new ShardedActor), ClusterShardingSettings(system), ShardedActor.extractEntityId, ShardedActor.extractShardId)
+      shardRegion ! Ping(1)
+      expectMsg(Pong())
+      shardRegion ! Ping(2)
+      expectMsg(Pong())
+      eventually {
+        val entity = Kamon.metrics.find(Entity("sharding-system/tracked-shard", "akka-sharding"))
+        val snapshot = entity.get.collect(collectionContext)
+        val numShards = snapshot.gauge("number-of-shards")
+        val entitiesShard1 = snapshot.gauge("number-of-entities-shard-1")
+        val entitiesShard2 = snapshot.gauge("number-of-entities-shard-2")
+        numShards.get.max shouldBe 2
+        entitiesShard1.get.max shouldBe 1
+        entitiesShard2.get.max shouldBe 1
+      }
+
+      shardRegion ! handOff("1")
+
+      eventually {
+        val entity = Kamon.metrics.find(Entity("sharding-system/tracked-shard", "akka-sharding"))
+        val snapshot = entity.get.collect(collectionContext)
+        val numShards = snapshot.gauge("number-of-shards")
+        val entitiesShard1 = snapshot.gauge("number-of-entities-shard-1")
+        val entitiesShard2 = snapshot.gauge("number-of-entities-shard-2")
+        numShards.get.max shouldBe 1
+        entitiesShard1 shouldBe empty
         entitiesShard2.get.max shouldBe 1
       }
     }
