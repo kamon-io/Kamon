@@ -19,8 +19,8 @@ package kamon.metric.instrument
 import java.nio.LongBuffer
 
 import kamon.metric.instrument.Histogram.{ DynamicRange, Snapshot }
+import kamon.util.logger.LazyLogger
 import org.HdrHistogram.ModifiedAtomicHistogram
-import org.slf4j.LoggerFactory
 
 trait Histogram extends Instrument {
   type SnapshotType = Histogram.Snapshot
@@ -137,7 +137,7 @@ object Histogram {
 }
 
 object HdrHistogram {
-  private val log = LoggerFactory.getLogger(classOf[HdrHistogram])
+  private val log = LazyLogger(classOf[HdrHistogram])
 }
 
 /**
