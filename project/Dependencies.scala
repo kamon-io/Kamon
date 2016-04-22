@@ -24,10 +24,10 @@ object Dependencies {
 
   val sprayVersion      = "1.3.3"
   val akkaVersion       = "2.3.14"
-  val aspectjVersion    = "1.8.7"
+  val aspectjVersion    = "1.8.9"
   val slf4jVersion      = "1.7.7"
   val play23Version     = "2.3.10"
-  val play24Version     = "2.4.4"
+  val play24Version     = "2.4.6"
   val elasticsearchVersion = "2.1.0"
 
   val sprayJson         = "io.spray"                  %%  "spray-json"            % "1.3.1"
@@ -36,7 +36,7 @@ object Dependencies {
   val logback           = "ch.qos.logback"            %   "logback-classic"       % "1.0.13"
   val aspectJ           = "org.aspectj"               %   "aspectjweaver"         % aspectjVersion
   val newrelic          = "com.newrelic.agent.java"   %   "newrelic-agent"        % "3.26.1"
-  val hdrHistogram      = "org.hdrhistogram"          %   "HdrHistogram"          % "2.1.7"
+  val hdrHistogram      = "org.hdrhistogram"          %   "HdrHistogram"          % "2.1.8"
   val sprayCan          = "io.spray"                  %%  "spray-can"             % sprayVersion
   val sprayRouting      = "io.spray"                  %%  "spray-routing"         % sprayVersion
   val sprayTestkit      = "io.spray"                  %%  "spray-testkit"         % sprayVersion
