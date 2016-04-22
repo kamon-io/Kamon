@@ -63,14 +63,12 @@ object Kamon {
   private def tryLoadAutoweaveModule(): Unit = {
     val color = (msg: String) ⇒ s"""\u001B[32m${msg}\u001B[0m"""
 
+    log.info("Trying to load kamon-autoweave...")
+
     Try {
 
-      log.info("Trying to load kamon-autoweave...")
-
       val autoweave = Class.forName("kamon.autoweave.Autoweave")
-      val instance = autoweave.newInstance()
-
-      autoweave.getDeclaredMethod("attach").invoke(instance)
+      autoweave.getDeclaredMethod("attach").invoke(autoweave.newInstance())
 
     } match {
       case Success(_) ⇒

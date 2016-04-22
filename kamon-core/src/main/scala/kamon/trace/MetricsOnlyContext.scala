@@ -72,13 +72,13 @@ private[kamon] class MetricsOnlyContext(traceName: String, val token: String, tr
   @tailrec private def drainFinishedSegments(): Unit = {
     val segment = _finishedSegments.poll()
     if (segment != null) {
-      val deefaultTags = Map(
+      val defaultTags = Map(
         "trace" -> name,
         "category" -> segment.category,
         "library" -> segment.library)
 
       if (Kamon.metrics.shouldTrack(segment.name, SegmentMetrics.category))
-        Kamon.metrics.entity(SegmentMetrics, segment.name, deefaultTags ++ segment.tags).elapsedTime.record(segment.duration.nanos)
+        Kamon.metrics.entity(SegmentMetrics, segment.name, defaultTags ++ segment.tags).elapsedTime.record(segment.duration.nanos)
       drainFinishedSegments()
     }
   }
