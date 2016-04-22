@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * Copyright © 2013 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2016 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -17,8 +17,10 @@
 package kamon.trace
 
 import java.io.ObjectStreamException
+import java.util
+
 import kamon.trace.TraceContextAware.DefaultTraceContextAware
-import kamon.util.{ SameThreadExecutionContext, Supplier, Function, RelativeNanoTimestamp }
+import kamon.util.{ Function, RelativeNanoTimestamp, SameThreadExecutionContext, Supplier }
 
 import scala.concurrent.Future
 
@@ -34,7 +36,11 @@ trait TraceContext {
   def rename(newName: String): Unit
 
   def startSegment(segmentName: String, category: String, library: String): Segment
+  def startSegment(segmentName: String, category: String, library: String, tags: Map[String, String]): Segment
   def addMetadata(key: String, value: String)
+
+  def addTag(key: String, value: String): Unit
+  def removeTag(key: String, value: String): Boolean
 
   def startTimestamp: RelativeNanoTimestamp
 
@@ -49,21 +55,33 @@ trait TraceContext {
     else None
 
   def withNewSegment[T](segmentName: String, category: String, library: String)(code: ⇒ T): T = {
-    val segment = startSegment(segmentName, category, library)
+    withNewSegment(segmentName, category, library, Map.empty[String, String])(code)
+  }
+
+  def withNewSegment[T](segmentName: String, category: String, library: String, tags: Map[String, String])(code: ⇒ T): T = {
+    val segment = startSegment(segmentName, category, library, tags)
     try code finally segment.finish()
+  }
+
+  def withNewAsyncSegment[T](segmentName: String, category: String, library: String)(code: ⇒ Future[T]): Future[T] = {
+    withNewAsyncSegment(segmentName, category, library, Map.empty[String, String])(code)
+  }
+
+  def withNewAsyncSegment[T](segmentName: String, category: String, library: String, tags: Map[String, String])(code: ⇒ Future[T]): Future[T] = {
+    val segment = startSegment(segmentName, category, library, tags)
+    val result = code
+    result.onComplete(_ ⇒ segment.finish())(SameThreadExecutionContext)
+    result
   }
 
   // Java variant.
   def withNewSegment[T](segmentName: String, category: String, library: String, code: Supplier[T]): T =
     withNewSegment(segmentName, category, library)(code.get)
 
-  def withNewAsyncSegment[T](segmentName: String, category: String, library: String)(code: ⇒ Future[T]): Future[T] = {
-    val segment = startSegment(segmentName, category, library)
-    val result = code
-    result.onComplete(_ ⇒ segment.finish())(SameThreadExecutionContext)
-    result
+  def withNewSegment[T](segmentName: String, category: String, library: String, tags: util.Map[String, String], code: Supplier[T]): T = {
+    import scala.collection.JavaConverters._
+    withNewSegment(segmentName, category, library, tags.asScala.toMap)(code.get)
   }
-
 }
 
 trait Segment {
@@ -77,7 +95,10 @@ trait Segment {
 
   def finish(): Unit
   def rename(newName: String): Unit
-  def addMetadata(key: String, value: String)
+  def addMetadata(key: String, value: String): Unit
+
+  def addTag(key: String, value: String): Unit
+  def removeTag(key: String, value: String): Boolean
 }
 
 case object EmptyTraceContext extends TraceContext {
@@ -89,8 +110,13 @@ case object EmptyTraceContext extends TraceContext {
   def finish(): Unit = {}
   def rename(name: String): Unit = {}
   def startSegment(segmentName: String, category: String, library: String): Segment = EmptySegment
+  def startSegment(segmentName: String, category: String, library: String, tags: Map[String, String]): Segment = EmptySegment
   def addMetadata(key: String, value: String): Unit = {}
   def startTimestamp = new RelativeNanoTimestamp(0L)
+  def addTags(tags: Map[String, String]): Unit = {}
+  def addTag(key: String, value: String): Unit = {}
+  def removeTags(tags: Map[String, String]): Unit = {}
+  def removeTag(key: String, value: String): Boolean = false
 
   case object EmptySegment extends Segment {
     val name: String = "empty-segment"
@@ -102,6 +128,8 @@ case object EmptyTraceContext extends TraceContext {
     def finish: Unit = {}
     def rename(newName: String): Unit = {}
     def addMetadata(key: String, value: String): Unit = {}
+    def addTag(key: String, value: String): Unit = {}
+    def removeTag(key: String, value: String): Boolean = false
   }
 }
 

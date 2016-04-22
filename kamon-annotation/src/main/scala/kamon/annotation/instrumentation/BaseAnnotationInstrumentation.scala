@@ -99,7 +99,7 @@ class BaseAnnotationInstrumentation {
 
   @inline final def processTrace(traceInfo: TraceContextInfo, pjp: ProceedingJoinPoint): AnyRef = {
     Tracer.withContext(Kamon.tracer.newContext(traceInfo.name)) {
-      traceInfo.tags.foreach { case (key, value) ⇒ Tracer.currentContext.addMetadata(key, value) }
+      traceInfo.tags.foreach { case (key, value) ⇒ Tracer.currentContext.addTag(key, value) }
       val result = pjp.proceed()
       Tracer.currentContext.finish()
       result

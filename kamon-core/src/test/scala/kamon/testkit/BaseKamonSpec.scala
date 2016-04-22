@@ -16,11 +16,11 @@
 
 package kamon.testkit
 
-import akka.testkit.{ ImplicitSender, TestKitBase }
 import akka.actor.ActorSystem
-import com.typesafe.config.{ Config, ConfigFactory }
+import akka.testkit.{ ImplicitSender, TestKitBase }
+import com.typesafe.config.Config
 import kamon.Kamon
-import kamon.metric.{ Entity, SubscriptionsDispatcher, EntitySnapshot }
+import kamon.metric.{ Entity, EntitySnapshot, SubscriptionsDispatcher }
 import kamon.trace.TraceContext
 import kamon.util.LazyActorRef
 import org.scalatest.{ BeforeAndAfterAll, Matchers, WordSpecLike }
@@ -40,6 +40,9 @@ abstract class BaseKamonSpec(actorSystemName: String) extends TestKitBase with W
 
   def newContext(name: String, token: String): TraceContext =
     Kamon.tracer.newContext(name, Option(token))
+
+  def newContext(name: String, token: String, tags: Map[String, String]): TraceContext =
+    Kamon.tracer.newContext(name, Option(token), tags)
 
   def takeSnapshotOf(name: String, category: String): EntitySnapshot = {
     val recorder = Kamon.metrics.find(name, category).get
