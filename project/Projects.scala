@@ -23,7 +23,7 @@ object Projects extends Build {
 
   lazy val kamon = Project("kamon", file("."))
     .aggregate(kamonCore, kamonScala, kamonAkka, kamonSpray, kamonNewrelic, kamonPlayground, kamonTestkit,
-      kamonStatsD, kamonDatadog, kamonSPM, kamonSystemMetrics, kamonLogReporter, kamonAkkaRemote, kamonJdbc,
+      kamonStatsD, kamonRiemann, kamonDatadog, kamonSPM, kamonSystemMetrics, kamonLogReporter, kamonAkkaRemote, kamonJdbc,
       kamonAnnotation, kamonPlay23, kamonPlay24, kamonJMXReporter, kamonFluentd, kamonAutoweave)
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
@@ -156,6 +156,15 @@ object Projects extends Build {
       libraryDependencies ++=
         compile(akkaActor) ++
         test(scalatest, akkaTestKit, slf4jApi, slf4jnop))
+
+  lazy val kamonRiemann = Project("kamon-riemann", file("kamon-riemann"))
+    .dependsOn(kamonCore % "compile->compile;test->test")
+    .settings(basicSettings: _*)
+    .settings(formatSettings: _*)
+    .settings(
+      libraryDependencies ++=
+        compile(akkaActor) ++ compile(riemannClient) ++
+          test(scalatest, akkaTestKit, slf4jApi, slf4jnop))
 
   lazy val kamonDatadog = Project("kamon-datadog", file("kamon-datadog"))
     .dependsOn(kamonCore % "compile->compile;test->test")

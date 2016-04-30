@@ -19,7 +19,8 @@ object Dependencies {
 
   val resolutionRepos = Seq(
     "spray repo" at "http://repo.spray.io/",
-    "typesafe repo" at "http://repo.typesafe.com/typesafe/releases/"
+    "typesafe repo" at "http://repo.typesafe.com/typesafe/releases/",
+    "clojars repo" at "http://clojars.org/repo/"
   )
 
   val sprayVersion      = "1.3.3"
@@ -56,6 +57,7 @@ object Dependencies {
   val el                = "org.glassfish"             %   "javax.el"              % "3.0.0"
   val fluentdLogger     = "org.fluentd"               %%  "fluent-logger-scala"   % "0.5.1"
   val easyMock          = "org.easymock"              %   "easymock"              % "3.2"
+  val riemannClient     = "com.aphyr"                 %   "riemann-java-client"   % "0.4.1"
 
   //play 2.3.x
   val play23            = "com.typesafe.play"         %%  "play"                  % play23Version
