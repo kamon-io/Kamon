@@ -82,8 +82,7 @@ class RiemannExtension(system: ExtendedActorSystem) extends Kamon.Extension {
     val metricsSender = system.actorOf(senderFactory.props(
       riemannConfig.getString("hostname"),
       riemannConfig.getInt("port"),
-      metricsMapper
-    ), senderFactory.name)
+      metricsMapper), senderFactory.name)
 
     if (flushInterval == tickInterval) {
       // No need to buffer the metrics, let's go straight to the metrics sender.

@@ -39,8 +39,7 @@ abstract class MetricSenderSpec(actorSystemName: String) extends BaseKamonSpec(a
         |    port = 0
         |  }
         |}
-      """.stripMargin
-    )
+      """.stripMargin)
 
   val riemannConfig = config.getConfig("kamon.riemann")
   val riemannHost = riemannConfig.getString("hostname")

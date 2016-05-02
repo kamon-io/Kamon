@@ -24,7 +24,7 @@ object Projects extends Build {
   lazy val kamon = Project("kamon", file("."))
     .aggregate(kamonCore, kamonScala, kamonAkka, kamonSpray, kamonNewrelic, kamonPlayground, kamonTestkit,
       kamonStatsD, kamonRiemann, kamonDatadog, kamonSPM, kamonSystemMetrics, kamonLogReporter, kamonAkkaRemote, kamonJdbc,
-      kamonAnnotation, kamonPlay23, kamonPlay24, kamonJMXReporter, kamonFluentd, kamonAutoweave)
+      kamonAnnotation, kamonPlay23, kamonPlay24, kamonJMXReporter, kamonFluentd, kamonAutoweave, kamonInfluxDB)
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
     .settings(noPublishing: _*)
@@ -147,6 +147,15 @@ object Projects extends Build {
         compile(play24, playWS24) ++
         provided(aspectJ, typesafeConfig) ++
         test(playTest24, akkaTestKit, slf4jApi))
+
+  lazy val kamonInfluxDB = Project("kamon-influxdb", file("kamon-influxdb"))
+    .dependsOn(kamonCore % "compile->compile;test->test")
+    .settings(basicSettings: _*)
+    .settings(formatSettings: _*)
+    .settings(
+      libraryDependencies ++=
+        compile(sprayCan, sprayClient, sprayRouting, akkaSlf4j, akkaActor, typesafeConfig) ++
+        test(scalatest, sprayCan, sprayClient, akkaTestKit, slf4jApi, slf4jnop, typesafeConfig))
 
   lazy val kamonStatsD = Project("kamon-statsd", file("kamon-statsd"))
     .dependsOn(kamonCore % "compile->compile;test->test")
