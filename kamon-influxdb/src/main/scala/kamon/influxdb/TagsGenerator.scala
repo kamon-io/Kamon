@@ -26,8 +26,17 @@ import collection.JavaConversions._
 trait TagsGenerator {
   protected val config: Config
 
-  protected val hostName = ManagementFactory.getRuntimeMXBean.getName.split('@')(1)
   protected val application = config.getString("application-name")
+
+  val hostname = {
+    val hostnameOverride = config.getString("hostname-override")
+
+    if (hostnameOverride.equals("none")) {
+      ManagementFactory.getRuntimeMXBean.getName.split('@')(1)
+    } else {
+      hostnameOverride
+    }
+  }
 
   protected val percentiles = config.getDoubleList("percentiles").toList
 
@@ -37,13 +46,13 @@ trait TagsGenerator {
         Map(
           "category" -> normalize(entity.tags("trace")),
           "entity" -> normalize(entity.name),
-          "hostname" -> normalize(hostName),
+          "hostname" -> normalize(hostname),
           "metric" -> normalize(metricKey.name))
       case _ ⇒
         Map(
           "category" -> normalize(entity.category),
           "entity" -> normalize(entity.name),
-          "hostname" -> normalize(hostName),
+          "hostname" -> normalize(hostname),
           "metric" -> normalize(metricKey.name))
     }
 
