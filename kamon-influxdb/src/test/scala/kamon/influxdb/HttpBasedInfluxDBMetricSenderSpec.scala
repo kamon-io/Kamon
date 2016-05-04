@@ -54,6 +54,20 @@ class HttpBasedInfluxDBMetricSenderSpec extends BaseKamonSpec("udp-based-influxd
   "the HttpSender" should {
     val influxDBConfig = config.getConfig("kamon.influxdb")
     val configWithAuthAndRetention = config.getConfig("kamon.influx-with-auth-and-rp")
+    val configWithHostnameOverride = config.getConfig("kamon.influxdb-hostname-override")
+
+    "use the overriden hostname, if provided" in new HttpSenderFixture(configWithHostnameOverride) {
+      val testrecorder = buildRecorder("user/kamon")
+      testrecorder.counter.increment()
+
+      val http = setup(Map(testEntity -> testrecorder.collect(collectionContext)))
+      val expectedMessage = s"kamon-counters,category=test,entity=user-kamon,hostname=overridden,metric=metric-two value=1 ${from.millis * 1000000}"
+
+      val request = getHttpRequest(http)
+      val requestData = request.entity.asString.split("\n")
+
+      requestData should contain(expectedMessage)
+    }
 
     "connect to the correct database" in new HttpSenderFixture(influxDBConfig) {
       val testrecorder = buildRecorder("user/kamon")
