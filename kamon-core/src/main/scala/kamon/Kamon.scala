@@ -14,24 +14,29 @@
  */
 package kamon
 
+import java.util.concurrent.atomic.AtomicReference
+
 import _root_.akka.actor
 import _root_.akka.actor._
-import com.typesafe.config.{ Config, ConfigFactory }
+import com.typesafe.config.{Config, ConfigFactory}
 import kamon.metric._
 import kamon.trace.TracerModuleImpl
 import kamon.util.logger.LazyLogger
 
 import _root_.scala.util.control.NonFatal
-import _root_.scala.util.{ Failure, Success, Try }
+import _root_.scala.util.{Failure, Success, Try}
 
 object Kamon {
+
   private val log = LazyLogger("Kamon")
 
   trait Extension extends actor.Extension
 
-  val config = resolveConfiguration
-  val metrics = MetricsModuleImpl(config)
-  val tracer = TracerModuleImpl(metrics, config)
+  val optionalConfig = new AtomicReference[Option[Config]](None)
+
+  lazy val config = optionalConfig.get().getOrElse(resolveConfiguration)
+  lazy val metrics = MetricsModuleImpl(config)
+  lazy val tracer = TracerModuleImpl(metrics, config)
 
   private lazy val _system = {
     val internalConfig = config.getConfig("kamon.internal-config")
@@ -56,25 +61,27 @@ object Kamon {
 
   def start(): Unit = _start
 
+  def start(configuration: Config): Unit = {
+    if (optionalConfig.compareAndSet(None, Some(configuration))) {
+      start()
+    }
+  }
+
   def shutdown(): Unit = {
     _system.shutdown()
   }
 
   private def tryLoadAutoweaveModule(): Unit = {
-    val color = (msg: String) ⇒ s"""\u001B[32m${msg}\u001B[0m"""
-
-    log.info("Trying to load kamon-autoweave...")
-
     Try {
-
       val autoweave = Class.forName("kamon.autoweave.Autoweave")
       autoweave.getDeclaredMethod("attach").invoke(autoweave.newInstance())
-
     } match {
       case Success(_) ⇒
+        val color = (msg: String) ⇒ s"""\u001B[32m${msg}\u001B[0m"""
+        log.info("Trying to load kamon-autoweave...")
         log.info(color("Kamon-autoweave has been successfully loaded."))
         log.info(color("The AspectJ loadtime weaving agent is now attached to the JVM (you don't need to use -javaagent)."))
-      case Failure(NonFatal(reason)) ⇒ log.debug(s"Kamon-autoweave failed to load. Reason: ${reason.getCause}.")
+      case Failure(NonFatal(reason)) ⇒ log.debug(s"Kamon-autoweave failed to load. Reason: ${reason.getMessage}.")
     }
   }
 
