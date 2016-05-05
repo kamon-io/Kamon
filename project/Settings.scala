@@ -29,14 +29,14 @@ object Settings {
   val ScalaVersion = "2.11.7"
 
   lazy val basicSettings = Seq(
-    ivyScala := ivyScala.value map { _.copy(overrideScalaVersion = true) },
+    ivyScala                        := ivyScala.value map { _.copy(overrideScalaVersion = true) },
     crossScalaVersions              := Seq("2.11.7"),
     resolvers                       ++= Dependencies.resolutionRepos,
     fork in run                     := true,
     scalaVersion                    := ScalaVersion,
     parallelExecution in Global     := false,
     testGrouping in Test            := singleTestPerJvm((definedTests in Test).value, (javaOptions in Test).value),
-    moduleName              	    := moduleName.value + "_akka-2.4",
+    moduleName              	      := { if(moduleName.value == "kamon-akka-remote") moduleName.value + "_akka-2.4" else moduleName.value },
     javacOptions                    := Seq(
       "-Xlint:-options",
       "-source", JavaVersion, "-target", JavaVersion),
