@@ -70,13 +70,13 @@ object Projects extends Build {
         test(scalatest, akkaTestKit, akkaSlf4j, slf4jJul, slf4jLog4j, logback))
 
   lazy val kamonAkkaRemote = Project("kamon-akka-remote", file("kamon-akka-remote"))
-    .dependsOn(kamonAkka)
+//    .dependsOn(kamonAkka)
     .settings(basicSettings: _* )
     .settings(formatSettings: _*)
     .settings(aspectJSettings: _*)
     .settings(
       libraryDependencies ++=
-        compile(akkaRemote, akkaCluster) ++
+        compile(akkaRemote, akkaCluster, kamonAkka23) ++
         provided(aspectJ) ++
         test(scalatest, akkaTestKit, akkaSlf4j, slf4jJul, slf4jLog4j, logback))
 

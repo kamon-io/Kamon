@@ -19,7 +19,8 @@ object Dependencies {
 
   val resolutionRepos = Seq(
     "spray repo" at "http://repo.spray.io/",
-    "typesafe repo" at "http://repo.typesafe.com/typesafe/releases/"
+    "typesafe repo" at "http://repo.typesafe.com/typesafe/releases/",
+    "Kamon Repository Snapshots" at "http://snapshots.kamon.io"
   )
 
   val sprayVersion      = "1.3.3"
@@ -57,6 +58,8 @@ object Dependencies {
   val el                = "org.glassfish"             %   "javax.el"              % "3.0.0"
   val fluentdLogger     = "org.fluentd"               %%  "fluent-logger-scala"   % "0.5.1"
   val easyMock          = "org.easymock"              %   "easymock"              % "3.2"
+
+  val kamonAkka23       = "io.kamon"                  %%  "kamon-akka"            % "0.6.2-b10b1cf2013460c791d5e3f7600fc654145f3d4e"
 
   def compile   (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "compile")
   def provided  (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "provided")

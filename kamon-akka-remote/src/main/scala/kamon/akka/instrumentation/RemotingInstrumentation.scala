@@ -83,12 +83,12 @@ class RemotingInstrumentation {
 
     if (ackAndEnvelope.hasEnvelope && ackAndEnvelope.getEnvelope.hasTraceContext) {
       val remoteTraceContext = ackAndEnvelope.getEnvelope.getTraceContext
-      val system = provider.guardian.underlying.system
       val tracer = Kamon.tracer
 
       val ctx = tracer.newContext(
         remoteTraceContext.getTraceName,
         Option(remoteTraceContext.getTraceToken),
+        tags = Map.empty,
         new MilliTimestamp(remoteTraceContext.getStartMilliTime).toRelativeNanoTimestamp,
         remoteTraceContext.getIsOpen,
         isLocal = false)
