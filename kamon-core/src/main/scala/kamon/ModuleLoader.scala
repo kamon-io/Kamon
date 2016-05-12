@@ -58,14 +58,7 @@ private[kamon] class ModuleLoaderExtension(system: ExtendedActorSystem) extends 
     val weaverMissingMessage =
       """
         |
-        |  ___                           _      ___   _    _                                 ___  ___ _            _
-        | / _ \                         | |    |_  | | |  | |                                |  \/  |(_)          (_)
-        |/ /_\ \ ___  _ __    ___   ___ | |_     | | | |  | |  ___   __ _ __   __ ___  _ __  | .  . | _  ___  ___  _  _ __    __ _
-        ||  _  |/ __|| '_ \  / _ \ / __|| __|    | | | |/\| | / _ \ / _` |\ \ / // _ \| '__| | |\/| || |/ __|/ __|| || '_ \  / _` |
-        || | | |\__ \| |_) ||  __/| (__ | |_ /\__/ / \  /\  /|  __/| (_| | \ V /|  __/| |    | |  | || |\__ \\__ \| || | | || (_| |
-        |\_| |_/|___/| .__/  \___| \___| \__|\____/   \/  \/  \___| \__,_|  \_/  \___||_|    \_|  |_/|_||___/|___/|_||_| |_| \__, |
-        |            | |                                                                                                      __/ |
-        |            |_|                                                                                                     |___/
+        | AspectJ Weaver Missing!
         |
         | It seems like your application was not started with the -javaagent:/path-to-aspectj-weaver.jar option but Kamon detected
         | the following modules which require AspectJ to work properly:
