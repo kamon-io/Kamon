@@ -18,13 +18,13 @@ import java.util.concurrent.atomic.AtomicReference
 
 import _root_.akka.actor
 import _root_.akka.actor._
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.{ Config, ConfigFactory }
 import kamon.metric._
 import kamon.trace.TracerModuleImpl
 import kamon.util.logger.LazyLogger
 
 import _root_.scala.util.control.NonFatal
-import _root_.scala.util.{Failure, Success, Try}
+import _root_.scala.util.{ Failure, Success, Try }
 
 object Kamon {
 
