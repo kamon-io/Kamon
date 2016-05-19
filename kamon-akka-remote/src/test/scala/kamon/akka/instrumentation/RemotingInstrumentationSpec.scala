@@ -9,7 +9,7 @@ import akka.testkit.{ ImplicitSender, TestKitBase }
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
-import kamon.trace.Tracer
+import kamon.trace.{ States, Tracer }
 import org.scalatest.{ Matchers, WordSpecLike }
 
 import scala.concurrent.duration._
@@ -84,7 +84,7 @@ class RemotingInstrumentationSpec extends TestKitBase with WordSpecLike with Mat
       val remoteRef = system.actorOf(TraceTokenReplier.remoteProps(None, RemoteSystemAddress), "remote-ask-and-pipe-fixture")
 
       Tracer.withContext(tracer.newContext("ask-and-pipe-remote-actor", Some("ask-and-pipe-remote-actor-1"))) {
-        (remoteRef ? "reply-trace-token") pipeTo (testActor)
+        (remoteRef ? "reply-trace-token") pipeTo testActor
       }
 
       expectMsg("name=ask-and-pipe-remote-actor|token=ask-and-pipe-remote-actor-1|isOpen=true")
@@ -129,7 +129,7 @@ class RemotingInstrumentationSpec extends TestKitBase with WordSpecLike with Mat
 }
 
 class TraceTokenReplier(creationTraceContextListener: Option[ActorRef]) extends Actor with ActorLogging {
-  creationTraceContextListener map { recipient ⇒
+  creationTraceContextListener foreach { recipient ⇒
     recipient ! currentTraceContextInfo
   }
 
@@ -142,7 +142,7 @@ class TraceTokenReplier(creationTraceContextListener: Option[ActorRef]) extends 
 
   def currentTraceContextInfo: String = {
     val ctx = Tracer.currentContext
-    s"name=${ctx.name}|token=${ctx.token}|isOpen=${ctx.isOpen}"
+    s"name=${ctx.name}|token=${ctx.token}|isOpen=${States.Open == ctx.status}"
   }
 }
 
@@ -171,6 +171,6 @@ class SupervisorOfRemote(traceContextListener: ActorRef, remoteAddress: Address)
 
   def currentTraceContextInfo: String = {
     val ctx = Tracer.currentContext
-    s"name=${ctx.name}|token=${ctx.token}|isOpen=${ctx.isOpen}"
+    s"name=${ctx.name}|token=${ctx.token}|isOpen=${States.Open == ctx.status}"
   }
 }

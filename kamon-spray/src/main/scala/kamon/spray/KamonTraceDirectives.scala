@@ -20,7 +20,8 @@ import spray.routing._
 import kamon.trace.Tracer
 
 trait KamonTraceDirectives extends BasicDirectives {
-  def traceName(name: String): Directive0 = mapRequest { req ⇒
+  def traceName(name: String, tags: Map[String, String] = Map.empty): Directive0 = mapRequest { req ⇒
+    tags.foreach { case (key, value) ⇒ Tracer.currentContext.addTag(key, value) }
     Tracer.currentContext.rename(name)
     req
   }

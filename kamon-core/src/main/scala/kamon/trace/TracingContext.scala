@@ -20,14 +20,14 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
 
 import akka.event.LoggingAdapter
-import kamon.util.{ NanoInterval, RelativeNanoTimestamp, NanoTimestamp }
-import kamon.metric.MetricsModule
+import kamon.trace.States.Status
+import kamon.util.{ NanoInterval, NanoTimestamp, RelativeNanoTimestamp }
 
 import scala.collection.concurrent.TrieMap
 
-private[trace] class TracingContext(traceName: String, token: String, izOpen: Boolean, levelOfDetail: LevelOfDetail,
+private[trace] class TracingContext(traceName: String, token: String, tags: Map[String, String], currentStatus: Status, levelOfDetail: LevelOfDetail,
   isLocal: Boolean, startTimeztamp: RelativeNanoTimestamp, log: LoggingAdapter, traceInfoSink: TracingContext ⇒ Unit)
-    extends MetricsOnlyContext(traceName, token, izOpen, levelOfDetail, startTimeztamp, log) {
+    extends MetricsOnlyContext(traceName, token, tags, currentStatus, levelOfDetail, startTimeztamp, log) {
 
   private val _openSegments = new AtomicInteger(0)
   private val _startTimestamp = NanoTimestamp.now
@@ -37,8 +37,12 @@ private[trace] class TracingContext(traceName: String, token: String, izOpen: Bo
   override def addMetadata(key: String, value: String): Unit = _metadata.put(key, value)
 
   override def startSegment(segmentName: String, category: String, library: String): Segment = {
+    startSegment(segmentName, category, library, Map.empty[String, String])
+  }
+
+  override def startSegment(segmentName: String, category: String, library: String, tags: Map[String, String]): Segment = {
     _openSegments.incrementAndGet()
-    val newSegment = new TracingSegment(segmentName, category, library)
+    val newSegment = new TracingSegment(segmentName, category, library, tags)
     _allSegments.add(newSegment)
     newSegment
   }
@@ -48,12 +52,12 @@ private[trace] class TracingContext(traceName: String, token: String, izOpen: Bo
     traceInfoSink(this)
   }
 
-  override def finishSegment(segmentName: String, category: String, library: String, duration: NanoInterval, isFinishedWithError: Boolean = false): Unit = {
+  override def finishSegment(segmentName: String, category: String, library: String, duration: NanoInterval, tags: Map[String, String], isFinishedWithError: Boolean = false): Unit = {
     _openSegments.decrementAndGet()
-    super.finishSegment(segmentName, category, library, duration, isFinishedWithError)
+    super.finishSegment(segmentName, category, library, duration, tags, isFinishedWithError)
   }
 
-  def shouldIncubate: Boolean = isOpen || _openSegments.get() > 0
+  def shouldIncubate: Boolean = (States.Open == status) || _openSegments.get() > 0
 
   // Handle with care, should only be used after a trace is finished.
   def generateTraceInfo: TraceInfo = {
@@ -73,7 +77,7 @@ private[trace] class TracingContext(traceName: String, token: String, izOpen: Bo
     TraceInfo(name, token, _startTimestamp, elapsedTime, _metadata.toMap, segmentsInfo.result())
   }
 
-  class TracingSegment(segmentName: String, category: String, library: String) extends MetricsOnlySegment(segmentName, category, library) {
+  class TracingSegment(segmentName: String, category: String, library: String, tags: Map[String, String]) extends MetricsOnlySegment(segmentName, category, library, tags) {
     private val metadata = TrieMap.empty[String, String]
     override def addMetadata(key: String, value: String): Unit = metadata.put(key, value)
 
@@ -85,7 +89,7 @@ private[trace] class TracingContext(traceName: String, token: String, izOpen: Bo
       // expensive and inaccurate, but we can do that once for the trace and calculate all the segments relative to it.
       val segmentStartTimestamp = new NanoTimestamp((this.startTimestamp.nanos - traceRelativeTimestamp.nanos) + traceStartTimestamp.nanos)
 
-      SegmentInfo(this.name, category, library, segmentStartTimestamp, this.elapsedTime, metadata.toMap)
+      SegmentInfo(this.name, category, library, segmentStartTimestamp, this.elapsedTime, metadata.toMap, _tags.toMap)
     }
   }
 }

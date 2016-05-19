@@ -1,5 +1,5 @@
 /* =========================================================================================
- * Copyright © 2013-2015 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2016 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -19,13 +19,15 @@ import kamon.Kamon
 import kamon.autoweave.loader.AgentLoader
 import org.aspectj.weaver.loadtime.Agent
 
-object Autoweave {
+class Autoweave {
   val config = Kamon.config.getConfig("kamon.autowave.options")
   val verbose = config.getBoolean("verbose")
   val showWeaveInfo = config.getBoolean("showWeaveInfo")
 
-  System.setProperty("aj.weaving.verbose", verbose.toString)
-  System.setProperty("org.aspectj.weaver.showWeaveInfo", showWeaveInfo.toString)
+  def attach(): Unit = {
+    System.setProperty("aj.weaving.verbose", verbose.toString)
+    System.setProperty("org.aspectj.weaver.showWeaveInfo", showWeaveInfo.toString)
 
-  AgentLoader.attachAgentToJVM(classOf[Agent])
+    AgentLoader.attachAgentToJVM(classOf[Agent])
+  }
 }

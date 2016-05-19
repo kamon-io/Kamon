@@ -19,6 +19,7 @@ package kamon.metric.instrument
 import java.nio.LongBuffer
 
 import kamon.metric.instrument.Histogram.{ DynamicRange, Snapshot }
+import kamon.util.logger.LazyLogger
 import org.HdrHistogram.ModifiedAtomicHistogram
 
 trait Histogram extends Instrument {
@@ -135,6 +136,10 @@ object Histogram {
   }
 }
 
+object HdrHistogram {
+  private val log = LazyLogger(classOf[HdrHistogram])
+}
+
 /**
  *  This implementation is meant to be used for real time data collection where data snapshots are taken often over time.
  *  The collect(..) operation extracts all the recorded values from the histogram and resets the counts, but still
@@ -142,10 +147,20 @@ object Histogram {
  */
 class HdrHistogram(dynamicRange: DynamicRange) extends ModifiedAtomicHistogram(dynamicRange.lowestDiscernibleValue,
   dynamicRange.highestTrackableValue, dynamicRange.precision) with Histogram {
+  import HdrHistogram.log
 
-  def record(value: Long): Unit = recordValue(value)
+  def record(value: Long): Unit = tryRecord(value, 1L)
 
-  def record(value: Long, count: Long): Unit = recordValueWithCount(value, count)
+  def record(value: Long, count: Long): Unit = tryRecord(value, count)
+
+  private def tryRecord(value: Long, count: Long): Unit = {
+    try {
+      recordValueWithCount(value, count)
+    } catch {
+      case anyException: Throwable ⇒
+        log.warn(s"Failed to store value $value in HdrHistogram, please review your range configuration.")
+    }
+  }
 
   def collect(context: CollectionContext): Histogram.Snapshot = {
     import context.buffer

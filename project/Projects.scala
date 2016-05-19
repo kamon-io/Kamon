@@ -23,8 +23,8 @@ object Projects extends Build {
 
   lazy val kamon = Project("kamon", file("."))
     .aggregate(kamonCore, kamonScala, kamonAkka, kamonSpray, kamonNewrelic, kamonPlayground, kamonTestkit,
-      kamonStatsD, kamonDatadog, kamonSPM, kamonSystemMetrics, kamonLogReporter, kamonAkkaRemote, kamonJdbc,
-      kamonAnnotation, kamonPlay23, kamonPlay24, kamonJMXReporter, kamonFluentd, kamonAutoweave)
+      kamonStatsD, kamonRiemann, kamonDatadog, kamonSPM, kamonSystemMetrics, kamonLogReporter, kamonAkkaRemote, kamonJdbc,
+      kamonAnnotation, kamonPlay23, kamonPlay24, kamonJMXReporter, kamonFluentd, kamonAutoweave, kamonInfluxDB)
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
     .settings(noPublishing: _*)
@@ -148,6 +148,15 @@ object Projects extends Build {
         provided(aspectJ, typesafeConfig) ++
         test(playTest24, akkaTestKit, slf4jApi))
 
+  lazy val kamonInfluxDB = Project("kamon-influxdb", file("kamon-influxdb"))
+    .dependsOn(kamonCore % "compile->compile;test->test")
+    .settings(basicSettings: _*)
+    .settings(formatSettings: _*)
+    .settings(
+      libraryDependencies ++=
+        compile(sprayCan, sprayClient, sprayRouting, akkaSlf4j, akkaActor, typesafeConfig) ++
+        test(scalatest, sprayCan, sprayClient, akkaTestKit, slf4jApi, slf4jnop, typesafeConfig))
+
   lazy val kamonStatsD = Project("kamon-statsd", file("kamon-statsd"))
     .dependsOn(kamonCore % "compile->compile;test->test")
     .settings(basicSettings: _*)
@@ -156,6 +165,15 @@ object Projects extends Build {
       libraryDependencies ++=
         compile(akkaActor) ++
         test(scalatest, akkaTestKit, slf4jApi, slf4jnop))
+
+  lazy val kamonRiemann = Project("kamon-riemann", file("kamon-riemann"))
+    .dependsOn(kamonCore % "compile->compile;test->test")
+    .settings(basicSettings: _*)
+    .settings(formatSettings: _*)
+    .settings(
+      libraryDependencies ++=
+        compile(akkaActor) ++ compile(riemannClient) ++
+          test(scalatest, akkaTestKit, slf4jApi, slf4jnop))
 
   lazy val kamonDatadog = Project("kamon-datadog", file("kamon-datadog"))
     .dependsOn(kamonCore % "compile->compile;test->test")
