@@ -1,5 +1,5 @@
 /* =========================================================================================
- * Copyright © 2013-2015 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2016 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -13,8 +13,6 @@
  * =========================================================================================
  */
 package kamon
-
-import java.util.concurrent.atomic.AtomicReference
 
 import _root_.akka.actor
 import _root_.akka.actor._
@@ -32,11 +30,9 @@ object Kamon {
 
   trait Extension extends actor.Extension
 
-  val optionalConfig = new AtomicReference[Option[Config]](None)
-
-  lazy val config = optionalConfig.get().getOrElse(resolveConfiguration)
-  lazy val metrics = MetricsModuleImpl(config)
-  lazy val tracer = TracerModuleImpl(metrics, config)
+  val config = resolveConfiguration
+  val metrics = MetricsModuleImpl(config)
+  val tracer = TracerModuleImpl(metrics, config)
 
   private lazy val _system = {
     val internalConfig = config.getConfig("kamon.internal-config")
@@ -61,12 +57,6 @@ object Kamon {
 
   def start(): Unit = _start
 
-  def start(configuration: Config): Unit = {
-    if (optionalConfig.compareAndSet(None, Some(configuration))) {
-      start()
-    }
-  }
-
   def shutdown(): Unit = {
     _system.shutdown()
   }
@@ -78,7 +68,6 @@ object Kamon {
     } match {
       case Success(_) ⇒
         val color = (msg: String) ⇒ s"""\u001B[32m${msg}\u001B[0m"""
-        log.info("Trying to load kamon-autoweave...")
         log.info(color("Kamon-autoweave has been successfully loaded."))
         log.info(color("The AspectJ loadtime weaving agent is now attached to the JVM (you don't need to use -javaagent)."))
       case Failure(NonFatal(reason)) ⇒ log.debug(s"Kamon-autoweave failed to load. Reason: ${reason.getMessage}.")
