@@ -2,97 +2,89 @@ package kamon.akka.http.instrumentation
 
 import akka.NotUsed
 import akka.http.scaladsl.model.headers.RawHeader
-import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
+import akka.http.scaladsl.model.{ HttpRequest, HttpResponse }
 import akka.stream._
-import akka.stream.scaladsl.{BidiFlow, Flow}
-import akka.stream.stage.{AbstractInHandler, AbstractOutHandler, GraphStage, GraphStageLogic}
+import akka.stream.scaladsl.{ BidiFlow, Flow }
+import akka.stream.stage._
 import kamon.Kamon
 import kamon.akka.http.AkkaHttpExtension
 import kamon.trace.Tracer
 import kamon.util.logger.LazyLogger
 
 /**
-  * Wraps an {@code Flow[HttpRequest,HttpResponse]} with the necessary steps to output
-  * the http metrics defined in AkkaHttpServerMetrics.
-  * taken from: http://pastebin.com/DHVb54iK @jypma
-  */
-class FlowWrapper extends GraphStage[BidiShape[HttpRequest, HttpRequest, HttpResponse, HttpResponse]] {
-  val requestIn = Inlet.create[HttpRequest]("request.in")
-  val requestOut = Outlet.create[HttpRequest]("request.out")
-  val responseIn = Inlet.create[HttpResponse]("response.in")
-  val responseOut = Outlet.create[HttpResponse]("response.out")
-  val bidiShape = BidiShape.of(requestIn, requestOut, responseIn, responseOut)
-
-  override def shape: BidiShape[HttpRequest, HttpRequest, HttpResponse, HttpResponse] = bidiShape
-
-  override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = {
-    new KamonGraphStageLogic(requestIn, requestOut, responseIn, responseOut, shape)
-  }
-}
-
+ * Wraps an {@code Flow[HttpRequest,HttpResponse]} with the necessary steps to output
+ * the http metrics defined in AkkaHttpServerMetrics.
+ * taken from: http://pastebin.com/DHVb54iK @jypma
+ */
 object FlowWrapper {
-  def apply(flow:Flow[HttpRequest, HttpResponse, NotUsed]): Flow[HttpRequest, HttpResponse, NotUsed] = BidiFlow.fromGraph(new FlowWrapper).join(flow)
-}
 
-// Since the Flow is materialized once per HTTP connection, this GraphStageLogic will be as well.
-// However, all connections log to the same kamon metrics instance.
-class KamonGraphStageLogic(requestIn:Inlet[HttpRequest], requestOut:Outlet[HttpRequest], responseIn:Inlet[HttpResponse], responseOut:Outlet[HttpResponse], shape: Shape) extends GraphStageLogic(shape) {
-  import KamonGraphStageLogic._
+  val log = LazyLogger("FlowWrapper")
+  val metrics = AkkaHttpExtension.metrics
 
-    setHandler(requestIn, new AbstractInHandler {
-      override def onPush(): Unit = {
-        val request = grab(requestIn)
+  def wrap() = new GraphStage[BidiShape[HttpRequest, HttpRequest, HttpResponse, HttpResponse]] {
 
-        val defaultTraceName = AkkaHttpExtension.generateTraceName(request)
+    val requestIn = Inlet.create[HttpRequest]("request.in")
+    val requestOut = Outlet.create[HttpRequest]("request.out")
+    val responseIn = Inlet.create[HttpResponse]("response.in")
+    val responseOut = Outlet.create[HttpResponse]("response.out")
 
-        val token = if (AkkaHttpExtension.settings.includeTraceTokenHeader) {
-          request.headers.find(_.name.equalsIgnoreCase(AkkaHttpExtension.settings.traceTokenHeaderName)).map(_.value)
-        } else None
+    override val shape = BidiShape(requestIn, requestOut, responseIn, responseOut)
 
-        val newContext = Kamon.tracer.newContext(defaultTraceName, token)
-        Tracer.setCurrentContext(newContext)
+    override def createLogic(inheritedAttributes: Attributes) = new GraphStageLogic(shape) {
 
-        metrics.recordRequest()
-        push(requestOut, request)
-      }
-    })
+      setHandler(requestIn, new InHandler {
+        override def onPush(): Unit = {
+          val request = grab(requestIn)
 
-    setHandler(requestOut, new AbstractOutHandler {
-      override def onPull(): Unit = pull(requestIn)
-    })
+          val defaultTraceName = AkkaHttpExtension.generateTraceName(request)
 
-    setHandler(responseIn, new AbstractInHandler {
-      override def onPush(): Unit = {
-        val response =  Tracer.currentContext.collect { ctx =>
-          ctx.finish()
+          val token = if (AkkaHttpExtension.settings.includeTraceTokenHeader) {
+            request.headers.find(_.name.equalsIgnoreCase(AkkaHttpExtension.settings.traceTokenHeaderName)).map(_.value)
+          } else None
 
-          val response = grab(responseIn)
+          val newContext = Kamon.tracer.newContext(defaultTraceName, token)
+          Tracer.setCurrentContext(newContext)
 
-          if (AkkaHttpExtension.settings.includeTraceTokenHeader)
-            includeTraceToken(response, AkkaHttpExtension.settings.traceTokenHeaderName, ctx.token)
-          else response
+          metrics.recordRequest()
+          push(requestOut, request)
+        }
+      })
 
-        } getOrElse grab(responseIn)
+      setHandler(requestOut, new OutHandler {
+        override def onPull(): Unit = pull(requestIn)
+      })
 
-        metrics.recordResponse(response)
+      setHandler(responseIn, new InHandler {
+        override def onPush(): Unit = {
+          val response = Tracer.currentContext.collect { ctx ⇒
+            ctx.finish()
 
-        push(responseOut, response)
-      }
-    })
+            val response = grab(responseIn)
 
-    setHandler(responseOut, new AbstractOutHandler {
-      override def onPull(): Unit = pull(responseIn)
-    })
+            metrics.recordResponse(response, ctx.name)
 
-    override def preStart(): Unit = metrics.recordConnectionOpened()
-    override def postStop(): Unit = metrics.recordConnectionClosed()
+            if (AkkaHttpExtension.settings.includeTraceTokenHeader)
+              includeTraceToken(response, AkkaHttpExtension.settings.traceTokenHeaderName, ctx.token)
+            else response
+
+          } getOrElse grab(responseIn)
+
+          push(responseOut, response)
+        }
+      })
+
+      setHandler(responseOut, new OutHandler {
+        override def onPull(): Unit = pull(responseIn)
+      })
+
+      override def preStart(): Unit = metrics.recordConnectionOpened()
+      override def postStop(): Unit = metrics.recordConnectionClosed()
+    }
   }
 
-object KamonGraphStageLogic {
-  val log = LazyLogger(classOf[KamonGraphStageLogic])
-  val metrics  = AkkaHttpExtension.metrics
+  def apply(flow: Flow[HttpRequest, HttpResponse, NotUsed]): Flow[HttpRequest, HttpResponse, NotUsed] = BidiFlow.fromGraph(wrap()).join(flow)
 
-  def includeTraceToken(response: HttpResponse, traceTokenHeaderName: String, token: String): HttpResponse =
+  private def includeTraceToken(response: HttpResponse, traceTokenHeaderName: String, token: String): HttpResponse =
     response match {
       case response: HttpResponse ⇒ response.withHeaders(response.headers ++ Seq(RawHeader(traceTokenHeaderName, token)))
       case other                  ⇒ other

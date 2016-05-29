@@ -2,7 +2,7 @@ package kamon.akka.http
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
+import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpRequest}
 import akka.http.scaladsl.server.Directives._
 import akka.stream.ActorMaterializer
 import kamon.akka.http.KamonTraceDirectives._
@@ -19,6 +19,7 @@ object WebServer extends App {
     traceName("awesome-trace") {
       path("hello") {
         get {
+          Http().singleRequest(HttpRequest(uri = "http://akka.io"))
           complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, "<h1>Say hello to akka-http</h1>"))
         }
       }

@@ -14,7 +14,6 @@
  * =========================================================================================
  */
 
-
 package kamon.akka.http
 
 import akka.actor.ReflectiveDynamicAccess

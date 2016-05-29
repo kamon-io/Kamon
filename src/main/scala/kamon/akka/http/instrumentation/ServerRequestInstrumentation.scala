@@ -19,34 +19,25 @@ package kamon.akka.http.instrumentation
 import akka.NotUsed
 import akka.event.LoggingAdapter
 import akka.http.scaladsl.ConnectionContext
-import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
+import akka.http.scaladsl.model.{ HttpRequest, HttpResponse }
 import akka.http.scaladsl.settings.ServerSettings
 import akka.stream.Materializer
 import akka.stream.scaladsl.Flow
 import org.aspectj.lang.ProceedingJoinPoint
-import org.aspectj.lang.annotation.{Around, Aspect, Pointcut}
+import org.aspectj.lang.annotation.{ Around, Aspect }
 
 @Aspect
 class ServerRequestInstrumentation {
 
-  @Pointcut("execution(* akka.http.scaladsl.HttpExt.bindAndHandle(..)) && args(handler, interface, port, connectionContext, settings, log, materializer)")
-  def openRequestInit(handler: Flow[HttpRequest, HttpResponse, Any],
-         interface: String,
-         port:Int,
-         connectionContext: ConnectionContext,
-         settings: ServerSettings,
-         log: LoggingAdapter,
-         materializer:Materializer):Unit  = {}
-
-  @Around("openRequestInit(handler, interface, port, connectionContext, settings, log, materializer)")
-  def around(pjp:ProceedingJoinPoint,
-             handler: Flow[HttpRequest, HttpResponse, Any],
-             interface: String,
-             port:AnyRef,
-             connectionContext: ConnectionContext,
-             settings: ServerSettings,
-             log: LoggingAdapter,
-             materializer:Materializer):AnyRef = {
+  @Around("execution(* akka.http.scaladsl.HttpExt.bindAndHandle(..)) && args(handler, interface, port, connectionContext, settings, log, materializer)")
+  def onBindAndHandle(pjp: ProceedingJoinPoint,
+    handler: Flow[HttpRequest, HttpResponse, Any],
+    interface: String,
+    port: AnyRef,
+    connectionContext: ConnectionContext,
+    settings: ServerSettings,
+    log: LoggingAdapter,
+    materializer: Materializer): AnyRef = {
 
     pjp.proceed(Array(FlowWrapper(handler.asInstanceOf[Flow[HttpRequest, HttpResponse, NotUsed]]), interface, port, connectionContext, settings, log, materializer))
   }

@@ -26,5 +26,6 @@ object Build extends Build {
     .settings(formatSettings: _*)
     .settings(libraryDependencies ++=
       compile(httpExperimental,httpCore, kamonCore, kamonScala) ++
+      test(httpTestKit, scalatest) ++
       provided(aspectJ))
 }
