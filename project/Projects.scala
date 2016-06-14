@@ -15,6 +15,7 @@
 
 import sbt._
 import Keys._
+import sbtdoge._
 
 object Projects extends Build {
   import AspectJ._
@@ -22,9 +23,10 @@ object Projects extends Build {
   import Dependencies._
 
   lazy val kamon = Project("kamon", file("."))
+    .enablePlugins(CrossPerProjectPlugin)
     .aggregate(kamonCore, kamonScala, kamonAkka, kamonSpray, kamonNewrelic, kamonPlayground, kamonTestkit,
       kamonStatsD, kamonRiemann, kamonDatadog, kamonSPM, kamonSystemMetrics, kamonLogReporter, kamonAkkaRemote, kamonJdbc,
-      kamonAnnotation, kamonPlay23, kamonPlay24, kamonJMXReporter, kamonFluentd, kamonAutoweave, kamonInfluxDB)
+      kamonAnnotation, kamonPlay23, kamonPlay24, kamonPlay25, kamonJMXReporter, kamonFluentd, kamonAutoweave, kamonInfluxDB)
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
     .settings(noPublishing: _*)
@@ -147,6 +149,18 @@ object Projects extends Build {
         compile(play24, playWS24) ++
         provided(aspectJ, typesafeConfig) ++
         test(playTest24, akkaTestKit, slf4jApi))
+
+  lazy val kamonPlay25 = Project("kamon-play-25", file("kamon-play-2.5.x"))
+    .dependsOn(kamonCore % "compile->compile;test->test", kamonScala)
+    .settings(basicSettings: _*)
+    .settings(formatSettings: _*)
+    .settings(aspectJSettings: _*)
+    .settings(
+      crossScalaVersions := Seq(ScalaVersion),
+      libraryDependencies ++=
+        compile(play25, playWS25) ++
+        provided(aspectJ, typesafeConfig) ++
+        test(playTest25, akkaTestKit, slf4jApi))
 
   lazy val kamonInfluxDB = Project("kamon-influxdb", file("kamon-influxdb"))
     .dependsOn(kamonCore % "compile->compile;test->test")

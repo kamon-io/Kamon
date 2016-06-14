@@ -29,7 +29,8 @@ object Settings {
 
   lazy val basicSettings = Seq(
     ivyScala := ivyScala.value map { _.copy(overrideScalaVersion = true) },
-    crossScalaVersions              := Seq("2.10.5", "2.11.6"),
+    scalaVersion                    := ScalaVersion,
+    crossScalaVersions              := Seq("2.10.5", ScalaVersion),
     resolvers                       ++= Dependencies.resolutionRepos,
     fork in run                     := true,
     parallelExecution in Global     := false,

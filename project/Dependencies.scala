@@ -29,6 +29,7 @@ object Dependencies {
   val slf4jVersion      = "1.7.7"
   val play23Version     = "2.3.10"
   val play24Version     = "2.4.6"
+  val play25Version     = "2.5.4"
   val elasticsearchVersion = "2.1.0"
 
   val sprayJson         = "io.spray"                  %%  "spray-json"            % "1.3.1"
@@ -69,6 +70,11 @@ object Dependencies {
   val playWS24          = "com.typesafe.play"         %%  "play-ws"               % play24Version
   val playTest24        = "org.scalatestplus"         %%  "play"                  % "1.4.0-M2"
   val typesafeConfig    = "com.typesafe"              %   "config"                % "1.2.1"
+
+  //play 2.5.x
+  val play25            = "com.typesafe.play"         %%  "play"                  % play25Version
+  val playWS25          = "com.typesafe.play"         %%  "play-ws"               % play25Version
+  val playTest25        = "org.scalatestplus.play"    %%  "scalatestplus-play"    % "1.5.0"
 
   val elasticsearch     = "org.elasticsearch"         %   "elasticsearch"         % elasticsearchVersion
 
