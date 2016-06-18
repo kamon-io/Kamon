@@ -17,12 +17,17 @@
 package kamon.trace.logging
 
 import kamon.trace.TraceLocal.AvailableToMdc
-import kamon.trace.{ Tracer, EmptyTraceContext, MetricsOnlyContext, TraceContext }
+import kamon.trace.{ EmptyTraceContext, MetricsOnlyContext, TraceContext, Tracer }
 import kamon.util.Supplier
-
 import org.slf4j.MDC
 
 trait MdcKeysSupport {
+
+  val traceTokenKey = "traceToken"
+
+  val traceNameKey = "traceName"
+
+  private val defaultKeys = Seq(traceTokenKey, traceNameKey)
 
   def withMdc[A](thunk: ⇒ A): A = {
     val keys = copyToMdc(Tracer.currentContext)
@@ -34,7 +39,12 @@ trait MdcKeysSupport {
 
   private[this] def copyToMdc(traceContext: TraceContext): Iterable[String] = traceContext match {
     case ctx: MetricsOnlyContext ⇒
-      ctx.traceLocalStorage.underlyingStorage.collect {
+
+      // Add the default key value pairs for the trace token and trace name.
+      MDC.put(traceTokenKey, ctx.token)
+      MDC.put(traceNameKey, ctx.name)
+
+      defaultKeys ++ ctx.traceLocalStorage.underlyingStorage.collect {
         case (available: AvailableToMdc, value) ⇒ Map(available.mdcKey -> String.valueOf(value))
       }.map { value ⇒ value.map { case (k, v) ⇒ MDC.put(k, v); k } }.flatten
 
