@@ -99,10 +99,9 @@ object AgentLoader {
     AttachmentProviders.resolve() match {
       case Some(virtualMachine) ⇒
         val virtualMachineInstance = virtualMachine.getDeclaredMethod("attach", classOf[String]).invoke(null, getPidFromRuntimeMBean)
-        virtualMachine.getDeclaredMethod("loadAgent", classOf[String], classOf[String])
-          .invoke(virtualMachineInstance, generateAgentJar(agent, resources).getAbsolutePath, "")
+        virtualMachine.getDeclaredMethod("loadAgent", classOf[String], classOf[String]).invoke(virtualMachineInstance, generateAgentJar(agent, resources).getAbsolutePath, "")
         virtualMachine.getDeclaredMethod("detach").invoke(virtualMachineInstance)
-      case None ⇒ throw new RuntimeException(s"Error trying to use Attach API") with NoStackTrace
+      case None ⇒ throw new IllegalStateException("Cannot read the virtual machine type...") with NoStackTrace
     }
   }
 

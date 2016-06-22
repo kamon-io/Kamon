@@ -70,6 +70,7 @@ object Kamon {
         val color = (msg: String) ⇒ s"""\u001B[32m${msg}\u001B[0m"""
         log.info(color("Kamon-autoweave has been successfully loaded."))
         log.info(color("The AspectJ loadtime weaving agent is now attached to the JVM (you don't need to use -javaagent)."))
+        log.info(color("This offers extra flexibility but obviously any classes loaded before attachment will not be woven."))
       case Failure(NonFatal(reason)) ⇒ log.debug(s"Kamon-autoweave failed to load. Reason: ${reason.getMessage}.")
     }
   }
