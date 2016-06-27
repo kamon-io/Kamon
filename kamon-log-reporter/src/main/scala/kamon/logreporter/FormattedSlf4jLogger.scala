@@ -1,12 +1,16 @@
 package kamon.logreporter
 
+import akka.actor.Actor
+import akka.util.Helpers
 import kamon.metric.instrument.{ Counter, Histogram }
 import net.logstash.logback.marker.Markers._
-import org.slf4j.Logger
+import org.slf4j.{ Logger, MDC }
 
 import scala.collection.JavaConverters._
 
 trait FormattedSlf4jLogger {
+  this: Actor ⇒
+
   import kamon.logreporter.LogReporterSubscriber.RichHistogramSnapshot
 
   val slf4jLog: Logger
@@ -15,7 +19,18 @@ trait FormattedSlf4jLogger {
     val newMap = Map("kamon" -> true,
       "kamon.type" -> kamonType) ++ map.map { case (k, v) ⇒ s"kamon.$k" -> v }
 
-    slf4jLog.info(appendEntries(newMap.asJava), kamonType)
+    try {
+      MDC.put("sourceThread", Thread.currentThread().getName)
+      MDC.put("akkaSource", this.self.path.toString)
+      MDC.put("sourceActorSystem", context.system.name)
+      MDC.put("akkaTimestamp", Helpers.currentTimeMillisToUTCString(System.currentTimeMillis()))
+      slf4jLog.info(appendEntries(newMap.asJava), kamonType)
+    } finally {
+      MDC.remove("sourceThread")
+      MDC.remove("akkaSource")
+      MDC.remove("sourceActorSystem")
+      MDC.remove("akkaTimestamp")
+    }
   }
 
   def printFormattedActorMetrics(name: String, processingTime: Histogram.Snapshot, timeInMailbox: Histogram.Snapshot, mailboxSize: Histogram.Snapshot, errors: Counter.Snapshot) = {
