@@ -22,6 +22,9 @@ import kamon.Kamon
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 import kamon.metric._
 import kamon.metric.instrument.{ Counter, Histogram }
+import org.slf4j.LoggerFactory
+
+import scala.util.Try
 
 object LogReporter extends ExtensionId[LogReporterExtension] with ExtensionIdProvider {
   override def lookup(): ExtensionId[_ <: Extension] = LogReporter
@@ -46,9 +49,12 @@ class LogReporterExtension(system: ExtendedActorSystem) extends Kamon.Extension 
   Kamon.metrics.subscribe("executor-service", "**", subscriber, permanently = true)
 }
 
-class LogReporterSubscriber extends Actor with ActorLogging {
+class LogReporterSubscriber extends Actor with ActorLogging with PrettyLogger with FormattedSlf4jLogger {
+  private val logreporterConfig = context.system.settings.config
+  val useFormattedSlf4j = Try(logreporterConfig.getBoolean("kamon.logreporter.formatted-slf4j")).getOrElse(false)
+  val usePrettyPrintLog = Try(logreporterConfig.getBoolean("kamon.logreporter.prettyprint-log")).getOrElse(true)
 
-  import kamon.logreporter.LogReporterSubscriber.RichHistogramSnapshot
+  lazy val slf4jLog = LoggerFactory.getLogger(this.getClass)
 
   def receive = {
     case tick: TickMetricSnapshot ⇒ printMetricSnapshot(tick)
@@ -85,36 +91,9 @@ class LogReporterSubscriber extends Actor with ActorLogging {
       mailboxSize ← actorSnapshot.minMaxCounter("mailbox-size")
       errors ← actorSnapshot.counter("errors")
     } {
-
-      log.info(
-        """
-        |+--------------------------------------------------------------------------------------------------+
-        ||                                                                                                  |
-        ||    Actor: %-83s    |
-        ||                                                                                                  |
-        ||   Processing Time (nanoseconds)      Time in Mailbox (nanoseconds)         Mailbox Size          |
-        ||    Msg Count: %-12s               Msg Count: %-12s             Min: %-8s       |
-        ||          Min: %-12s                     Min: %-12s            Avg.: %-8s       |
-        ||    50th Perc: %-12s               50th Perc: %-12s             Max: %-8s       |
-        ||    90th Perc: %-12s               90th Perc: %-12s                                 |
-        ||    95th Perc: %-12s               95th Perc: %-12s                                 |
-        ||    99th Perc: %-12s               99th Perc: %-12s           Error Count: %-6s   |
-        ||  99.9th Perc: %-12s             99.9th Perc: %-12s                                 |
-        ||          Max: %-12s                     Max: %-12s                                 |
-        ||                                                                                                  |
-        |+--------------------------------------------------------------------------------------------------+"""
-          .stripMargin.format(
-            name,
-            processingTime.numberOfMeasurements, timeInMailbox.numberOfMeasurements, mailboxSize.min,
-            processingTime.min, timeInMailbox.min, mailboxSize.average,
-            processingTime.percentile(50.0D), timeInMailbox.percentile(50.0D), mailboxSize.max,
-            processingTime.percentile(90.0D), timeInMailbox.percentile(90.0D),
-            processingTime.percentile(95.0D), timeInMailbox.percentile(95.0D),
-            processingTime.percentile(99.0D), timeInMailbox.percentile(99.0D), errors.count,
-            processingTime.percentile(99.9D), timeInMailbox.percentile(99.9D),
-            processingTime.max, timeInMailbox.max))
+      if (useFormattedSlf4j) printFormattedActorMetrics(name, processingTime, timeInMailbox, mailboxSize, errors)
+      if (usePrettyPrintLog) printActorMetrics(name, processingTime, timeInMailbox, mailboxSize, errors)
     }
-
   }
 
   def logRouterMetrics(name: String, actorSnapshot: EntitySnapshot): Unit = {
@@ -124,39 +103,9 @@ class LogReporterSubscriber extends Actor with ActorLogging {
       routingTime ← actorSnapshot.histogram("routing-time")
       errors ← actorSnapshot.counter("errors")
     } {
-
-      log.info(
-        """
-        |+--------------------------------------------------------------------------------------------------+
-        ||                                                                                                  |
-        ||    Router: %-83s   |
-        ||                                                                                                  |
-        ||   Processing Time (nanoseconds)    Time in Mailbox (nanoseconds)    Routing Time (nanoseconds)   |
-        ||    Msg Count: %-12s             Msg Count: %-12s       Msg Count: %-12s     |
-        ||          Min: %-12s                   Min: %-12s             Min: %-12s     |
-        ||    50th Perc: %-12s             50th Perc: %-12s       50th Perc: %-12s     |
-        ||    90th Perc: %-12s             90th Perc: %-12s       90th Perc: %-12s     |
-        ||    95th Perc: %-12s             95th Perc: %-12s       95th Perc: %-12s     |
-        ||    99th Perc: %-12s             99th Perc: %-12s       99th Perc: %-12s     |
-        ||  99.9th Perc: %-12s           99.9th Perc: %-12s     99.9th Perc: %-12s     |
-        ||          Max: %-12s                   Max: %-12s             Max: %-12s     |
-        ||                                                                                                  |
-        ||  Error Count: %-6s                                                                             |
-        ||                                                                                                  |
-        |+--------------------------------------------------------------------------------------------------+"""
-          .stripMargin.format(
-            name,
-            processingTime.numberOfMeasurements, timeInMailbox.numberOfMeasurements, routingTime.numberOfMeasurements,
-            processingTime.min, timeInMailbox.min, routingTime.min,
-            processingTime.percentile(50.0D), timeInMailbox.percentile(50.0D), routingTime.percentile(50.0D),
-            processingTime.percentile(90.0D), timeInMailbox.percentile(90.0D), routingTime.percentile(90.0D),
-            processingTime.percentile(95.0D), timeInMailbox.percentile(95.0D), routingTime.percentile(95.0D),
-            processingTime.percentile(99.0D), timeInMailbox.percentile(99.0D), routingTime.percentile(99.0D),
-            processingTime.percentile(99.9D), timeInMailbox.percentile(99.9D), routingTime.percentile(99.9D),
-            processingTime.max, timeInMailbox.max, routingTime.max,
-            errors.count))
+      if (useFormattedSlf4j) printFormattedRouterMetrics(name, processingTime, timeInMailbox, routingTime, errors)
+      if (usePrettyPrintLog) printRouterMetrics(name, processingTime, timeInMailbox, routingTime, errors)
     }
-
   }
 
   def logDispatcherMetrics(entity: Entity, snapshot: EntitySnapshot): Unit = entity.tags.get("dispatcher-type") match {
@@ -180,25 +129,8 @@ class LogReporterSubscriber extends Actor with ActorLogging {
       queuedTaskCount ← forkJoinMetrics.gauge("queued-task-count")
 
     } {
-      log.info(
-        """
-          |+--------------------------------------------------------------------------------------------------+
-          ||  Fork-Join-Pool                                                                                  |
-          ||                                                                                                  |
-          ||  Dispatcher: %-83s |
-          ||                                                                                                  |
-          ||  Paralellism: %-4s                                                                               |
-          ||                                                                                                  |
-          ||                 Pool Size       Active Threads     Running Threads     Queue Task Count          |
-          ||      Min           %-4s              %-4s                %-4s                %-4s                |
-          ||      Avg           %-4s              %-4s                %-4s                %-4s                |
-          ||      Max           %-4s              %-4s                %-4s                %-4s                |
-          ||                                                                                                  |
-          |+--------------------------------------------------------------------------------------------------+"""
-          .stripMargin.format(name,
-            paralellism.max, poolSize.min, activeThreads.min, runningThreads.min, queuedTaskCount.min,
-            poolSize.average, activeThreads.average, runningThreads.average, queuedTaskCount.average,
-            poolSize.max, activeThreads.max, runningThreads.max, queuedTaskCount.max))
+      if (useFormattedSlf4j) printFormattedForkJoinPool(name, paralellism, poolSize, activeThreads, runningThreads, queuedTaskCount)
+      if (usePrettyPrintLog) printForkJoinPool(name, paralellism, poolSize, activeThreads, runningThreads, queuedTaskCount)
     }
   }
 
@@ -210,32 +142,9 @@ class LogReporterSubscriber extends Actor with ActorLogging {
       activeThreads ← threadPoolMetrics.gauge("active-threads")
       processedTasks ← threadPoolMetrics.gauge("processed-tasks")
     } {
-
-      log.info(
-        """
-          |+--------------------------------------------------------------------------------------------------+
-          ||  Thread-Pool-Executor                                                                            |
-          ||                                                                                                  |
-          ||  Dispatcher: %-83s |
-          ||                                                                                                  |
-          ||  Core Pool Size: %-4s                                                                            |
-          ||  Max  Pool Size: %-4s                                                                            |
-          ||                                                                                                  |
-          ||                                                                                                  |
-          ||                         Pool Size        Active Threads          Processed Task                  |
-          ||           Min              %-4s                %-4s                   %-4s                       |
-          ||           Avg              %-4s                %-4s                   %-4s                       |
-          ||           Max              %-4s                %-4s                   %-4s                       |
-          ||                                                                                                  |
-          |+--------------------------------------------------------------------------------------------------+"""
-          .stripMargin.format(name,
-            corePoolSize.max,
-            maxPoolSize.max,
-            poolSize.min, activeThreads.min, processedTasks.min,
-            poolSize.average, activeThreads.average, processedTasks.average,
-            poolSize.max, activeThreads.max, processedTasks.max))
+      if (useFormattedSlf4j) printFormattedThreadPoolExecutor(name, corePoolSize, maxPoolSize, poolSize, activeThreads, processedTasks)
+      if (usePrettyPrintLog) printThreadPoolExecutor(name, corePoolSize, maxPoolSize, poolSize, activeThreads, processedTasks)
     }
-
   }
 
   def logSystemMetrics(metric: String, snapshot: EntitySnapshot): Unit = metric match {
@@ -253,26 +162,9 @@ class LogReporterSubscriber extends Actor with ActorLogging {
       cpuWait ← cpuMetrics.histogram("cpu-wait")
       idle ← cpuMetrics.histogram("cpu-idle")
     } {
-
-      log.info(
-        """
-        |+--------------------------------------------------------------------------------------------------+
-        ||                                                                                                  |
-        ||    CPU (ALL)                                                                                     |
-        ||                                                                                                  |
-        ||    User (percentage)       System (percentage)    Wait (percentage)   Idle (percentage)          |
-        ||       Min: %-3s                   Min: %-3s               Min: %-3s           Min: %-3s              |
-        ||       Avg: %-3s                   Avg: %-3s               Avg: %-3s           Avg: %-3s              |
-        ||       Max: %-3s                   Max: %-3s               Max: %-3s           Max: %-3s              |
-        ||                                                                                                  |
-        ||                                                                                                  |
-        |+--------------------------------------------------------------------------------------------------+"""
-          .stripMargin.format(
-            user.min, system.min, cpuWait.min, idle.min,
-            user.average, system.average, cpuWait.average, idle.average,
-            user.max, system.max, cpuWait.max, idle.max))
+      if (useFormattedSlf4j) printFormattedCpuMetrics(user, system, cpuWait, idle)
+      if (usePrettyPrintLog) printCpuMetrics(user, system, cpuWait, idle)
     }
-
   }
 
   def logNetworkMetrics(networkMetrics: EntitySnapshot): Unit = {
@@ -282,24 +174,8 @@ class LogReporterSubscriber extends Actor with ActorLogging {
       rxErrors ← networkMetrics.histogram("rx-errors")
       txErrors ← networkMetrics.histogram("tx-errors")
     } {
-
-      log.info(
-        """
-        |+--------------------------------------------------------------------------------------------------+
-        ||                                                                                                  |
-        ||    Network (ALL)                                                                                 |
-        ||                                                                                                  |
-        ||     Rx-Bytes (KB)                Tx-Bytes (KB)              Rx-Errors            Tx-Errors       |
-        ||      Min: %-4s                  Min: %-4s                 Total: %-8s      Total: %-8s  |
-        ||      Avg: %-4s                Avg: %-4s                                                     |
-        ||      Max: %-4s                  Max: %-4s                                                       |
-        ||                                                                                                  |
-        |+--------------------------------------------------------------------------------------------------+"""
-          .stripMargin.
-          format(
-            rxBytes.min, txBytes.min, rxErrors.sum, txErrors.sum,
-            rxBytes.average, txBytes.average,
-            rxBytes.max, txBytes.max))
+      if (useFormattedSlf4j) printFormattedNetworkMetrics(rxBytes, txBytes, rxErrors, txErrors)
+      if (usePrettyPrintLog) printNetworkMetrics(rxBytes, txBytes, rxErrors, txErrors)
     }
   }
 
@@ -308,25 +184,9 @@ class LogReporterSubscriber extends Actor with ActorLogging {
       user ← processCpuMetrics.histogram("process-user-cpu")
       total ← processCpuMetrics.histogram("process-cpu")
     } {
-
-      log.info(
-        """
-        |+--------------------------------------------------------------------------------------------------+
-        ||                                                                                                  |
-        ||    Process-CPU                                                                                   |
-        ||                                                                                                  |
-        ||             User-Percentage                           Total-Percentage                           |
-        ||                Min: %-12s                         Min: %-12s                       |
-        ||                Avg: %-12s                         Avg: %-12s                       |
-        ||                Max: %-12s                         Max: %-12s                       |
-        ||                                                                                                  |
-        |+--------------------------------------------------------------------------------------------------+"""
-          .stripMargin.format(
-            user.min, total.min,
-            user.average, total.average,
-            user.max, total.max))
+      if (useFormattedSlf4j) printFormattedProcessCpuMetrics(user, total)
+      if (usePrettyPrintLog) printProcessCpuMetrics(user, total)
     }
-
   }
 
   def logContextSwitchesMetrics(contextSwitchMetrics: EntitySnapshot): Unit = {
@@ -335,56 +195,17 @@ class LogReporterSubscriber extends Actor with ActorLogging {
       perProcessNonVoluntary ← contextSwitchMetrics.histogram("context-switches-process-non-voluntary")
       global ← contextSwitchMetrics.histogram("context-switches-global")
     } {
-
-      log.info(
-        """
-        |+--------------------------------------------------------------------------------------------------+
-        ||                                                                                                  |
-        ||    Context-Switches                                                                              |
-        ||                                                                                                  |
-        ||        Global                Per-Process-Non-Voluntary            Per-Process-Voluntary          |
-        ||    Min: %-12s                   Min: %-12s                  Min: %-12s      |
-        ||    Avg: %-12s                   Avg: %-12s                  Avg: %-12s      |
-        ||    Max: %-12s                   Max: %-12s                  Max: %-12s      |
-        ||                                                                                                  |
-        |+--------------------------------------------------------------------------------------------------+"""
-          .stripMargin.
-          format(
-            global.min, perProcessNonVoluntary.min, perProcessVoluntary.min,
-            global.average, perProcessNonVoluntary.average, perProcessVoluntary.average,
-            global.max, perProcessNonVoluntary.max, perProcessVoluntary.max))
+      if (useFormattedSlf4j) printFormattedContextSwitchesMetrics(perProcessVoluntary, perProcessNonVoluntary, global)
+      if (usePrettyPrintLog) printContextSwitchesMetrics(perProcessVoluntary, perProcessNonVoluntary, global)
     }
-
   }
 
   def logTraceMetrics(name: String, traceSnapshot: EntitySnapshot): Unit = {
-    val traceMetricsData = StringBuilder.newBuilder
-
     for {
       elapsedTime ← traceSnapshot.histogram("elapsed-time")
     } {
-
-      traceMetricsData.append(
-        """
-        |+--------------------------------------------------------------------------------------------------+
-        ||                                                                                                  |
-        ||    Trace: %-83s    |
-        ||    Count: %-8s                                                                               |
-        ||                                                                                                  |
-        ||  Elapsed Time (nanoseconds):                                                                     |
-        |"""
-          .stripMargin.format(
-            name, elapsedTime.numberOfMeasurements))
-
-      traceMetricsData.append(compactHistogramView(elapsedTime))
-      traceMetricsData.append(
-        """
-          ||                                                                                                  |
-          |+--------------------------------------------------------------------------------------------------+"""
-          .
-          stripMargin)
-
-      log.info(traceMetricsData.toString())
+      if (useFormattedSlf4j) printFormattedTraceMetrics(name, elapsedTime)
+      if (usePrettyPrintLog) printTraceMetrics(name, elapsedTime)
     }
   }
 
@@ -396,87 +217,9 @@ class LogReporterSubscriber extends Actor with ActorLogging {
       log.info("No metrics reported")
       return
     }
-
-    val metricsData = StringBuilder.newBuilder
-
-    metricsData.append(
-      """
-        |+--------------------------------------------------------------------------------------------------+
-        ||                                                                                                  |
-        ||                                         Counters                                                 |
-        ||                                       -------------                                              |
-        |""".stripMargin)
-
-    counters.foreach { case (name, snapshot) ⇒ metricsData.append(userCounterString(name, snapshot.get)) }
-
-    metricsData.append(
-      """||                                                                                                  |
-        ||                                                                                                  |
-        ||                                        Histograms                                                |
-        ||                                      --------------                                              |
-        |""".stripMargin)
-
-    histograms.foreach {
-      case (name, snapshot) ⇒
-        metricsData.append("|  %-40s                                                        |\n".format(name))
-        metricsData.append(compactHistogramView(snapshot.get))
-        metricsData.append("\n|                                                                                                  |\n")
-    }
-
-    metricsData.append(
-      """||                                                                                                  |
-        ||                                      MinMaxCounters                                              |
-        ||                                    -----------------                                             |
-        |""".stripMargin)
-
-    minMaxCounters.foreach {
-      case (name, snapshot) ⇒
-        metricsData.append("|  %-40s                                                        |\n".format(name))
-        metricsData.append(histogramView(snapshot.get))
-        metricsData.append("\n|                                                                                                  |\n")
-    }
-
-    metricsData.append(
-      """||                                                                                                  |
-        ||                                          Gauges                                                  |
-        ||                                        ----------                                                |
-        |"""
-        .stripMargin)
-
-    gauges.foreach {
-      case (name, snapshot) ⇒
-        metricsData.append("|  %-40s                                                        |\n".format(name))
-        metricsData.append(histogramView(snapshot.get))
-        metricsData.append("\n|                                                                                                  |\n")
-    }
-
-    metricsData.append(
-      """||                                                                                                  |
-        |+--------------------------------------------------------------------------------------------------+"""
-        .stripMargin)
-
-    log.info(metricsData.toString())
+    if (useFormattedSlf4j) printFormattedMetrics(histograms, counters, minMaxCounters, gauges)
+    if (usePrettyPrintLog) printMetrics(histograms, counters, minMaxCounters, gauges)
   }
-
-  def userCounterString(counterName: String, snapshot: Counter.Snapshot): String = {
-    "|             %30s  =>  %-12s                                     |\n"
-      .format(counterName, snapshot.count)
-  }
-
-  def compactHistogramView(histogram: Histogram.Snapshot): String = {
-    val sb = StringBuilder.newBuilder
-
-    sb.append("|    Min: %-11s  50th Perc: %-12s   90th Perc: %-12s   95th Perc: %-12s |\n".format(
-      histogram.min, histogram.percentile(50.0D), histogram.percentile(90.0D), histogram.percentile(95.0D)))
-    sb.append("|                      99th Perc: %-12s 99.9th Perc: %-12s         Max: %-12s |".format(
-      histogram.percentile(99.0D), histogram.percentile(99.9D), histogram.max))
-
-    sb.toString()
-  }
-
-  def histogramView(histogram: Histogram.Snapshot): String =
-    "|          Min: %-12s           Average: %-12s                Max: %-12s      |"
-      .format(histogram.min, histogram.average, histogram.max)
 }
 
 object LogReporterSubscriber {

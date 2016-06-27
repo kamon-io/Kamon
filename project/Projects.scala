@@ -206,6 +206,7 @@ object Projects extends Build {
     .settings(
       libraryDependencies ++=
         compile(akkaActor) ++
+        optional(logstashLogback) ++
         test(scalatest, akkaTestKit, slf4jApi, slf4jnop))
 
 
