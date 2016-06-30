@@ -41,7 +41,12 @@ public class Log4j2TraceTokenConverter extends LogEventPatternConverter {
     }
 
     protected String traceToken() {
-        return Tracer.currentContext().collect((Function<TraceContext, String>) TraceContext::token).getOrElse(new AbstractFunction0<String>() {
+        return Tracer.currentContext().collect(new Function<TraceContext, String>() {
+            @Override
+            public String apply(TraceContext t) {
+                return t.token();
+            }
+        }).getOrElse(new AbstractFunction0<String>() {
             @Override
             public String apply() {
                 return "undefined";
