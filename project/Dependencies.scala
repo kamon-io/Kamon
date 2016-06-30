@@ -36,6 +36,7 @@ object Dependencies {
   val sprayJsonLenses   = "net.virtual-void"          %%  "json-lenses"           % "0.6.0"
   val scalatest         = "org.scalatest"             %%  "scalatest"             % "2.2.4"
   val logback           = "ch.qos.logback"            %   "logback-classic"       % "1.0.13"
+  val log4j2            = "org.apache.logging.log4j"  % "log4j-core"              % "2.6.1"
   val aspectJ           = "org.aspectj"               %   "aspectjweaver"         % aspectjVersion
   val newrelic          = "com.newrelic.agent.java"   %   "newrelic-agent"        % "3.26.1"
   val hdrHistogram      = "org.hdrhistogram"          %   "HdrHistogram"          % "2.1.8"
