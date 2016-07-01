@@ -39,8 +39,8 @@ object Projects extends Build {
     .settings(
       javacOptions in Compile ++= Seq("-XDignore.symbol.file"),
       libraryDependencies ++=
-        compile(akkaActor, hdrHistogram, typesafeConfig, slf4jApi) ++
-        provided(aspectJ, log4j2) ++
+        compile(akkaActor, hdrHistogram, typesafeConfig, slf4jApi, log4j2) ++
+        provided(aspectJ) ++
         optional(logback) ++
         test(scalatest, akkaTestKit, akkaSlf4j, slf4jJul, slf4jLog4j, logback))
 
