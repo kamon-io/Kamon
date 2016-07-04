@@ -266,7 +266,7 @@ object Projects extends Build {
     .settings(formatSettings: _*)
     .settings(
       libraryDependencies ++=
-        compile(sprayCan, sprayClient, sprayRouting, sprayJson, sprayJsonLenses, akkaSlf4j) ++
+        compile(sprayCan, sprayClient, sprayRouting, sprayJson, sprayJsonLenses, akkaSlf4j, libThrift) ++
         test(scalatest, akkaTestKit, slf4jApi, slf4jnop))
 
   lazy val kamonJMXReporter = Project("kamon-jmx", file("kamon-jmx"))
