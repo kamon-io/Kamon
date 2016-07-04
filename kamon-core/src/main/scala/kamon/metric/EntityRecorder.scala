@@ -34,6 +34,12 @@ trait EntityRecorderFactory[T <: EntityRecorder] {
   def createRecorder(instrumentFactory: InstrumentFactory): T
 }
 
+abstract class EntityRecorderFactoryCompanion[T <: EntityRecorder](val category: String, builder: (InstrumentFactory) ⇒ T)
+    extends EntityRecorderFactory[T] {
+
+  def createRecorder(instrumentFactory: InstrumentFactory): T = builder(instrumentFactory)
+}
+
 object EntityRecorderFactory {
   def apply[T <: EntityRecorder](entityCategory: String, factory: InstrumentFactory ⇒ T): EntityRecorderFactory[T] =
     new EntityRecorderFactory[T] {
@@ -89,7 +95,7 @@ case class GaugeRecorder(key: MetricKey, instrument: Gauge) extends SingleInstru
 
 /**
  *  Base class with plenty of utility methods to facilitate the creation of [[EntityRecorder]] implementations.
- *  It is not required to use this base class for defining custom a custom [[EntityRecorder]], but it is certainly
+ *  It is not required to use this base class for defining a custom [[EntityRecorder]], but it is certainly
  *  the most convenient way to do it and the preferred approach throughout the Kamon codebase.
  */
 abstract class GenericEntityRecorder(instrumentFactory: InstrumentFactory) extends EntityRecorder {

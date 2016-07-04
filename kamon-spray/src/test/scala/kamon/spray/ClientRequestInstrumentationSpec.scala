@@ -35,17 +35,6 @@ import scala.concurrent.duration._
 class ClientRequestInstrumentationSpec extends BaseKamonSpec("client-request-instrumentation-spec") with ScalaFutures
     with RequestBuilding with TestServer {
 
-  override lazy val config =
-    ConfigFactory.parseString(
-      """
-        |kamon {
-        |  metric.tick-interval = 1 hour
-        |  spray.name-generator = kamon.spray.TestNameGenerator
-        |}
-        |
-        |akka.loggers = ["akka.event.slf4j.Slf4jLogger"]
-      """.stripMargin)
-
   implicit def ec = system.dispatcher
   implicit val defaultPatience = PatienceConfig(timeout = Span(10, Seconds), interval = Span(5, Millis))
 
@@ -134,7 +123,7 @@ class ClientRequestInstrumentationSpec extends BaseKamonSpec("client-request-ins
           tags = Map(
             "trace" -> "assign-name-to-segment-with-request-level-api",
             "category" -> SegmentCategory.HttpClient,
-            "library" -> Spray.SegmentLibraryName))
+            "library" -> SprayExtension.SegmentLibraryName))
 
         segmentMetricsSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
       }
@@ -169,7 +158,7 @@ class ClientRequestInstrumentationSpec extends BaseKamonSpec("client-request-ins
           tags = Map(
             "trace" -> "assign-name-to-segment-with-request-level-api",
             "category" -> SegmentCategory.HttpClient,
-            "library" -> Spray.SegmentLibraryName))
+            "library" -> SprayExtension.SegmentLibraryName))
 
         segmentMetricsSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
       }
@@ -206,7 +195,7 @@ class ClientRequestInstrumentationSpec extends BaseKamonSpec("client-request-ins
           tags = Map(
             "trace" -> "rename-segment-with-request-level-api",
             "category" -> SegmentCategory.HttpClient,
-            "library" -> Spray.SegmentLibraryName))
+            "library" -> SprayExtension.SegmentLibraryName))
 
         segmentMetricsSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
       }
@@ -300,7 +289,7 @@ class ClientRequestInstrumentationSpec extends BaseKamonSpec("client-request-ins
           tags = Map(
             "trace" -> "create-segment-with-host-level-api",
             "category" -> SegmentCategory.HttpClient,
-            "library" -> Spray.SegmentLibraryName))
+            "library" -> SprayExtension.SegmentLibraryName))
 
         segmentMetricsSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
       }
@@ -308,7 +297,7 @@ class ClientRequestInstrumentationSpec extends BaseKamonSpec("client-request-ins
   }
 
   def traceTokenHeader(token: String): RawHeader =
-    RawHeader(Kamon(Spray).settings.traceTokenHeaderName, token)
+    RawHeader(SprayExtension.settings.traceTokenHeaderName, token)
 
   def enableInternalSegmentCollectionStrategy(): Unit = setSegmentCollectionStrategy(ClientInstrumentationLevel.HostLevelAPI)
   def enablePipeliningSegmentCollectionStrategy(): Unit = setSegmentCollectionStrategy(ClientInstrumentationLevel.RequestLevelAPI)
@@ -316,14 +305,14 @@ class ClientRequestInstrumentationSpec extends BaseKamonSpec("client-request-ins
   def disableAutomaticTraceTokenPropagation(): Unit = setIncludeTraceToken(false)
 
   def setSegmentCollectionStrategy(strategy: ClientInstrumentationLevel.Level): Unit = {
-    val target = Kamon(Spray).settings
+    val target = SprayExtension.settings
     val field = target.getClass.getDeclaredField("clientInstrumentationLevel")
     field.setAccessible(true)
     field.set(target, strategy)
   }
 
   def setIncludeTraceToken(include: Boolean): Unit = {
-    val target = Kamon(Spray).settings
+    val target = SprayExtension.settings
     val field = target.getClass.getDeclaredField("includeTraceTokenHeader")
     field.setAccessible(true)
     field.set(target, include)
@@ -331,7 +320,7 @@ class ClientRequestInstrumentationSpec extends BaseKamonSpec("client-request-ins
 }
 
 class TestNameGenerator extends NameGenerator {
-  def generateTraceName(request: HttpRequest): String = request.uri.path.toString()
+  def generateTraceName(request: HttpRequest): String = "UnnamedTrace"
   def generateRequestLevelApiSegmentName(request: HttpRequest): String = "request-level " + request.uri.path.toString()
   def generateHostLevelApiSegmentName(request: HttpRequest): String = "host-level " + request.uri.path.toString()
 }

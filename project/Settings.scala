@@ -21,24 +21,24 @@ import com.typesafe.sbt.SbtScalariform.ScalariformKeys
 import Publish.{settings => publishSettings}
 import Release.{settings => releaseSettings}
 import scalariform.formatter.preferences._
-import net.virtualvoid.sbt.graph.Plugin.graphSettings
 
 object Settings {
 
-  val JavaVersion = "1.8"
+  val JavaVersion = "1.6"
   val ScalaVersion = "2.11.6"
 
   lazy val basicSettings = Seq(
     ivyScala := ivyScala.value map { _.copy(overrideScalaVersion = true) },
-    crossScalaVersions      := Seq("2.10.5", "2.11.6"),
-    resolvers              ++= Dependencies.resolutionRepos,
-    fork in run             := true,
-    parallelExecution in Test := false,
-    testGrouping in Test    := singleTestPerJvm((definedTests in Test).value, (javaOptions in Test).value),
-    javacOptions            := Seq(
+    scalaVersion                    := ScalaVersion,
+    crossScalaVersions              := Seq("2.10.5", ScalaVersion),
+    resolvers                       ++= Dependencies.resolutionRepos,
+    fork in run                     := true,
+    parallelExecution in Global     := false,
+    testGrouping in Test            := singleTestPerJvm((definedTests in Test).value, (javaOptions in Test).value),
+    javacOptions                    := Seq(
       "-Xlint:-options",
       "-source", JavaVersion, "-target", JavaVersion),
-    scalacOptions           := Seq(
+    scalacOptions                   := Seq(
       "-encoding",
       "utf8",
       "-g:vars",
@@ -51,7 +51,7 @@ object Settings {
       "-language:implicitConversions",
       "-Yinline-warnings",
       "-Xlog-reflective-calls"
-    )) ++ publishSettings ++ releaseSettings ++ graphSettings
+    )) ++ publishSettings ++ releaseSettings
 
 
   def singleTestPerJvm(tests: Seq[TestDefinition], jvmSettings: Seq[String]): Seq[Group] =

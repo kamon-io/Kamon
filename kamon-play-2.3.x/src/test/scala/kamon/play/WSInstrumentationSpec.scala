@@ -1,5 +1,5 @@
 /* ===================================================
- * Copyright © 2013-2014 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2015 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -53,7 +53,7 @@ class WSInstrumentationSpec extends WordSpecLike with Matchers with OneServerPer
         tags = Map(
           "trace" -> "GET: /inside",
           "category" -> SegmentCategory.HttpClient,
-          "library" -> Play.SegmentLibraryName))
+          "library" -> PlayExtension.SegmentLibraryName))
 
       segmentMetricsSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
     }
@@ -71,7 +71,7 @@ class WSInstrumentationSpec extends WordSpecLike with Matchers with OneServerPer
         tags = Map(
           "trace" -> "trace-outside-action",
           "category" -> SegmentCategory.HttpClient,
-          "library" -> Play.SegmentLibraryName))
+          "library" -> PlayExtension.SegmentLibraryName))
 
       segmentMetricsSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
     }

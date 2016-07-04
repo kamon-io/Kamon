@@ -1,5 +1,5 @@
 /* =========================================================================================
- * Copyright © 2013-2014 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2015 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -18,7 +18,6 @@ package kamon.play
 import kamon.Kamon
 import kamon.metric.instrument.CollectionContext
 import kamon.play.action.TraceName
-import kamon.trace.TraceLocal.HttpContextKey
 import kamon.trace.{ Tracer, TraceLocal }
 import org.scalatestplus.play._
 import play.api.DefaultGlobal
@@ -40,7 +39,7 @@ class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
 
   Kamon.start()
 
-  override lazy val port: Port = 19002
+  override lazy val port: Port = 19001
   val executor = scala.concurrent.ExecutionContext.Implicits.global
 
   implicit override lazy val app = FakeApplication(withGlobal = Some(MockGlobalTest), withRoutes = {
@@ -140,16 +139,6 @@ class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
     "response to the showRouted Action and normalise the current TraceContext name" in {
       Await.result(WS.url(s"http://localhost:$port/showRouted/2").get(), 10 seconds)
       Kamon.metrics.find("show.some.id.get", "trace") must not be empty
-    }
-
-    "include HttpContext information for help to diagnose possible errors" in {
-      Await.result(WS.url(s"http://localhost:$port/getRouted").get(), 10 seconds)
-      route(FakeRequest(GET, "/default").withHeaders("User-Agent" -> "Fake-Agent"))
-
-      val httpCtx = TraceLocal.retrieve(HttpContextKey).get
-      httpCtx.agent must be("Fake-Agent")
-      httpCtx.uri must be("/default")
-      httpCtx.xforwarded must be("unknown")
     }
 
     "record http server metrics for all processed requests" in {

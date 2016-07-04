@@ -36,12 +36,14 @@ class LogReporterExtension(system: ExtendedActorSystem) extends Kamon.Extension 
 
   Kamon.metrics.subscribe("trace", "**", subscriber, permanently = true)
   Kamon.metrics.subscribe("akka-actor", "**", subscriber, permanently = true)
+  Kamon.metrics.subscribe("akka-router", "**", subscriber, permanently = true)
   Kamon.metrics.subscribe("akka-dispatcher", "**", subscriber, permanently = true)
   Kamon.metrics.subscribe("counter", "**", subscriber, permanently = true)
   Kamon.metrics.subscribe("histogram", "**", subscriber, permanently = true)
   Kamon.metrics.subscribe("min-max-counter", "**", subscriber, permanently = true)
   Kamon.metrics.subscribe("gauge", "**", subscriber, permanently = true)
   Kamon.metrics.subscribe("system-metric", "**", subscriber, permanently = true)
+  Kamon.metrics.subscribe("executor-service", "**", subscriber, permanently = true)
 }
 
 class LogReporterSubscriber extends Actor with ActorLogging {
@@ -60,15 +62,17 @@ class LogReporterSubscriber extends Actor with ActorLogging {
     val gauges = Map.newBuilder[String, Option[Histogram.Snapshot]]
 
     tick.metrics foreach {
-      case (entity, snapshot) if entity.category == "akka-actor"      ⇒ logActorMetrics(entity.name, snapshot)
-      case (entity, snapshot) if entity.category == "akka-dispatcher" ⇒ logDispatcherMetrics(entity, snapshot)
-      case (entity, snapshot) if entity.category == "trace"           ⇒ logTraceMetrics(entity.name, snapshot)
-      case (entity, snapshot) if entity.category == "histogram"       ⇒ histograms += (entity.name -> snapshot.histogram("histogram"))
-      case (entity, snapshot) if entity.category == "counter"         ⇒ counters += (entity.name -> snapshot.counter("counter"))
-      case (entity, snapshot) if entity.category == "min-max-counter" ⇒ minMaxCounters += (entity.name -> snapshot.minMaxCounter("min-max-counter"))
-      case (entity, snapshot) if entity.category == "gauge"           ⇒ gauges += (entity.name -> snapshot.gauge("gauge"))
-      case (entity, snapshot) if entity.category == "system-metric"   ⇒ logSystemMetrics(entity.name, snapshot)
-      case ignoreEverythingElse                                       ⇒
+      case (entity, snapshot) if entity.category == "akka-actor"       ⇒ logActorMetrics(entity.name, snapshot)
+      case (entity, snapshot) if entity.category == "akka-router"      ⇒ logRouterMetrics(entity.name, snapshot)
+      case (entity, snapshot) if entity.category == "akka-dispatcher"  ⇒ logDispatcherMetrics(entity, snapshot)
+      case (entity, snapshot) if entity.category == "executor-service" ⇒ logExecutorMetrics(entity, snapshot)
+      case (entity, snapshot) if entity.category == "trace"            ⇒ logTraceMetrics(entity.name, snapshot)
+      case (entity, snapshot) if entity.category == "histogram"        ⇒ histograms += (entity.name -> snapshot.histogram("histogram"))
+      case (entity, snapshot) if entity.category == "counter"          ⇒ counters += (entity.name -> snapshot.counter("counter"))
+      case (entity, snapshot) if entity.category == "min-max-counter"  ⇒ minMaxCounters += (entity.name -> snapshot.minMaxCounter("min-max-counter"))
+      case (entity, snapshot) if entity.category == "gauge"            ⇒ gauges += (entity.name -> snapshot.gauge("gauge"))
+      case (entity, snapshot) if entity.category == "system-metric"    ⇒ logSystemMetrics(entity.name, snapshot)
+      case ignoreEverythingElse                                        ⇒
     }
 
     logMetrics(histograms.result(), counters.result(), minMaxCounters.result(), gauges.result())
@@ -113,7 +117,55 @@ class LogReporterSubscriber extends Actor with ActorLogging {
 
   }
 
+  def logRouterMetrics(name: String, actorSnapshot: EntitySnapshot): Unit = {
+    for {
+      processingTime ← actorSnapshot.histogram("processing-time")
+      timeInMailbox ← actorSnapshot.histogram("time-in-mailbox")
+      routingTime ← actorSnapshot.histogram("routing-time")
+      errors ← actorSnapshot.counter("errors")
+    } {
+
+      log.info(
+        """
+        |+--------------------------------------------------------------------------------------------------+
+        ||                                                                                                  |
+        ||    Router: %-83s   |
+        ||                                                                                                  |
+        ||   Processing Time (nanoseconds)    Time in Mailbox (nanoseconds)    Routing Time (nanoseconds)   |
+        ||    Msg Count: %-12s             Msg Count: %-12s       Msg Count: %-12s     |
+        ||          Min: %-12s                   Min: %-12s             Min: %-12s     |
+        ||    50th Perc: %-12s             50th Perc: %-12s       50th Perc: %-12s     |
+        ||    90th Perc: %-12s             90th Perc: %-12s       90th Perc: %-12s     |
+        ||    95th Perc: %-12s             95th Perc: %-12s       95th Perc: %-12s     |
+        ||    99th Perc: %-12s             99th Perc: %-12s       99th Perc: %-12s     |
+        ||  99.9th Perc: %-12s           99.9th Perc: %-12s     99.9th Perc: %-12s     |
+        ||          Max: %-12s                   Max: %-12s             Max: %-12s     |
+        ||                                                                                                  |
+        ||  Error Count: %-6s                                                                             |
+        ||                                                                                                  |
+        |+--------------------------------------------------------------------------------------------------+"""
+          .stripMargin.format(
+            name,
+            processingTime.numberOfMeasurements, timeInMailbox.numberOfMeasurements, routingTime.numberOfMeasurements,
+            processingTime.min, timeInMailbox.min, routingTime.min,
+            processingTime.percentile(50.0D), timeInMailbox.percentile(50.0D), routingTime.percentile(50.0D),
+            processingTime.percentile(90.0D), timeInMailbox.percentile(90.0D), routingTime.percentile(90.0D),
+            processingTime.percentile(95.0D), timeInMailbox.percentile(95.0D), routingTime.percentile(95.0D),
+            processingTime.percentile(99.0D), timeInMailbox.percentile(99.0D), routingTime.percentile(99.0D),
+            processingTime.percentile(99.9D), timeInMailbox.percentile(99.9D), routingTime.percentile(99.9D),
+            processingTime.max, timeInMailbox.max, routingTime.max,
+            errors.count))
+    }
+
+  }
+
   def logDispatcherMetrics(entity: Entity, snapshot: EntitySnapshot): Unit = entity.tags.get("dispatcher-type") match {
+    case Some("fork-join-pool")       ⇒ logForkJoinPool(entity.name, snapshot)
+    case Some("thread-pool-executor") ⇒ logThreadPoolExecutor(entity.name, snapshot)
+    case ignoreOthers                 ⇒
+  }
+
+  def logExecutorMetrics(entity: Entity, snapshot: EntitySnapshot): Unit = entity.tags.get("executor-type") match {
     case Some("fork-join-pool")       ⇒ logForkJoinPool(entity.name, snapshot)
     case Some("thread-pool-executor") ⇒ logThreadPoolExecutor(entity.name, snapshot)
     case ignoreOthers                 ⇒

@@ -16,6 +16,7 @@
 
 package kamon.system.sigar
 
+import akka.event.LoggingAdapter
 import kamon.metric.GenericEntityRecorder
 import kamon.metric.instrument._
 import org.hyperic.sigar.{ NetInterfaceStat, Sigar }
@@ -30,7 +31,9 @@ import scala.util.Try
  *    - rxDropped: Total number of incoming packets dropped.
  *    - txDropped: Total number of outgoing packets dropped.
  */
-class NetworkMetrics(sigar: Sigar, instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) with SigarMetric {
+class NetworkMetrics(sigar: Sigar, instrumentFactory: InstrumentFactory, logger: LoggingAdapter) extends GenericEntityRecorder(instrumentFactory) with SigarMetric {
+  import SigarSafeRunner._
+
   val receivedBytes = DiffRecordingHistogram(histogram("rx-bytes", Memory.Bytes))
   val transmittedBytes = DiffRecordingHistogram(histogram("tx-bytes", Memory.Bytes))
   val receiveErrors = DiffRecordingHistogram(histogram("rx-errors"))
@@ -38,7 +41,7 @@ class NetworkMetrics(sigar: Sigar, instrumentFactory: InstrumentFactory) extends
   val receiveDrops = DiffRecordingHistogram(histogram("rx-dropped"))
   val transmitDrops = DiffRecordingHistogram(histogram("tx-dropped"))
 
-  val interfaces = sigar.getNetInterfaceList.toList.filter(_ != "lo")
+  val interfaces = runSafe(sigar.getNetInterfaceList.toList.filter(_ != "lo"), List.empty[String], "network", logger)
 
   def sumOfAllInterfaces(sigar: Sigar, thunk: NetInterfaceStat ⇒ Long): Long = Try {
     interfaces.map(i ⇒ thunk(sigar.getNetInterfaceStat(i))).fold(0L)(_ + _)
@@ -56,6 +59,6 @@ class NetworkMetrics(sigar: Sigar, instrumentFactory: InstrumentFactory) extends
 }
 
 object NetworkMetrics extends SigarMetricRecorderCompanion("network") {
-  def apply(sigar: Sigar, instrumentFactory: InstrumentFactory): NetworkMetrics =
-    new NetworkMetrics(sigar, instrumentFactory)
+  def apply(sigar: Sigar, instrumentFactory: InstrumentFactory, logger: LoggingAdapter): NetworkMetrics =
+    new NetworkMetrics(sigar, instrumentFactory, logger)
 }

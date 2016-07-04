@@ -43,12 +43,12 @@ object WebTransactionMetricExtractor extends MetricExtractor {
           apdexBuilder.record(Time.Nanoseconds.scale(Time.Seconds)(record.level), record.count)
         }
 
-        Metric(elapsedTime, Time.Nanoseconds, "WebTransaction/Custom/" + entity.name, None)
+        Metric(elapsedTime, Time.Nanoseconds, "WebTransaction/Uri/" + entity.name, None)
     }
 
     // Accumulate all segment metrics
-    metrics.filterKeys(_.category == "trace-segment").map {
-      case (entity, entitySnapshot) if entity.tags("category") == SegmentCategory.HttpClient ⇒
+    metrics.filterKeys(isHttpClientSegment).map {
+      case (entity, entitySnapshot) ⇒
         val library = entity.tags("library")
         val trace = entity.tags("trace")
         val elapsedTime = entitySnapshot.histogram("elapsed-time").get
@@ -89,12 +89,15 @@ object WebTransactionMetricExtractor extends MetricExtractor {
     val externalScopedByHostAndLibrary = externalScopedByHostAndLibrarySnapshots.map {
       case ((host, library, traceName), snapshots) ⇒
         val mergedSnapshots = snapshots.foldLeft(Histogram.Snapshot.empty)(_.merge(_, collectionContext))
-        Metric(mergedSnapshots, Time.Nanoseconds, s"External/$host/$library", Some("WebTransaction/Custom/" + traceName))
+        Metric(mergedSnapshots, Time.Nanoseconds, s"External/$host/$library", Some("WebTransaction/Uri/" + traceName))
     }
 
     Map(httpDispatcher, webTransaction, webTransactionTotal, externalAllWeb, externalAll, apdexBuilder.build) ++
       transactionMetrics ++ externalByHost ++ externalByHostAndLibrary ++ externalScopedByHostAndLibrary
   }
+
+  def isHttpClientSegment(entity: Entity): Boolean =
+    entity.category == "trace-segment" && entity.tags.get("category").filter(_ == SegmentCategory.HttpClient).isDefined
 }
 
 class ApdexBuilder(name: String, scope: Option[String], apdexT: Double) {

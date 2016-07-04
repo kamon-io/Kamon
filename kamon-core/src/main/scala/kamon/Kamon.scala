@@ -1,5 +1,5 @@
 /* =========================================================================================
- * Copyright © 2013-2014 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2016 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -16,70 +16,78 @@ package kamon
 
 import _root_.akka.actor
 import _root_.akka.actor._
-import com.typesafe.config.{ ConfigFactory, Config }
+import com.typesafe.config.{ Config, ConfigFactory }
 import kamon.metric._
-import kamon.trace.{ TracerModuleImpl, TracerModule }
+import kamon.trace.TracerModuleImpl
+import kamon.util.logger.LazyLogger
+
+import _root_.scala.util.control.NonFatal
+import _root_.scala.util.{ Failure, Success, Try }
 
 object Kamon {
+
+  private val log = LazyLogger("Kamon")
+
   trait Extension extends actor.Extension
 
-  private case class KamonCoreComponents(metrics: MetricsModule, tracer: TracerModule)
+  val config = resolveConfiguration
+  val metrics = MetricsModuleImpl(config)
+  val tracer = TracerModuleImpl(metrics, config)
 
-  @volatile private var _system: ActorSystem = _
-  @volatile private var _coreComponents: Option[KamonCoreComponents] = None
+  private lazy val _system = {
+    val internalConfig = config.getConfig("kamon.internal-config")
 
-  def start(config: Config): Unit = synchronized {
-    def resolveInternalConfig: Config = {
-      val internalConfig = config.getConfig("kamon.internal-config")
+    val patchedConfig = config
+      .withoutPath("akka")
+      .withoutPath("spray")
+      .withFallback(internalConfig)
 
-      config
-        .withoutPath("akka")
-        .withoutPath("spray")
-        .withFallback(internalConfig)
-    }
+    log.info("Initializing Kamon...")
 
-    if (_coreComponents.isEmpty) {
-      val metrics = MetricsModuleImpl(config)
-      val tracer = TracerModuleImpl(metrics, config)
+    tryLoadAutoweaveModule()
 
-      _coreComponents = Some(KamonCoreComponents(metrics, tracer))
-      _system = ActorSystem("kamon", resolveInternalConfig)
-
-      metrics.start(_system)
-      tracer.start(_system)
-      _system.registerExtension(ModuleLoader)
-
-    } else sys.error("Kamon has already been started.")
+    ActorSystem("kamon", patchedConfig)
   }
 
-  def start(): Unit =
-    start(ConfigFactory.load)
+  private lazy val _start = {
+    metrics.start(_system)
+    tracer.start(_system)
+    _system.registerExtension(ModuleLoader)
+  }
+
+  def start(): Unit = _start
 
   def shutdown(): Unit = {
-    _coreComponents = None
     _system.shutdown()
-    _system = null
   }
 
-  def metrics: MetricsModule =
-    ifStarted(_.metrics)
-
-  def tracer: TracerModule =
-    ifStarted(_.tracer)
-
-  def apply[T <: Kamon.Extension](key: ExtensionId[T]): T =
-    ifStarted { _ ⇒
-      if (_system ne null)
-        key(_system)
-      else
-        sys.error("Cannot retrieve extensions while Kamon is being initialized.")
+  private def tryLoadAutoweaveModule(): Unit = {
+    Try {
+      val autoweave = Class.forName("kamon.autoweave.Autoweave")
+      autoweave.getDeclaredMethod("attach").invoke(autoweave.newInstance())
+    } match {
+      case Success(_) ⇒
+        val color = (msg: String) ⇒ s"""\u001B[32m${msg}\u001B[0m"""
+        log.info(color("Kamon-autoweave has been successfully loaded."))
+        log.info(color("The AspectJ loadtime weaving agent is now attached to the JVM (you don't need to use -javaagent)."))
+        log.info(color("This offers extra flexibility but obviously any classes loaded before attachment will not be woven."))
+      case Failure(NonFatal(reason)) ⇒ log.debug(s"Kamon-autoweave failed to load. Reason: ${reason.getMessage}.")
     }
+  }
 
-  def extension[T <: Kamon.Extension](key: ExtensionId[T]): T =
-    apply(key)
+  private def resolveConfiguration: Config = {
+    val defaultConfig = ConfigFactory.load()
 
-  private def ifStarted[T](thunk: KamonCoreComponents ⇒ T): T =
-    _coreComponents.map(thunk(_)) getOrElse (sys.error("Kamon has not been started yet."))
+    defaultConfig.getString("kamon.config-provider") match {
+      case "default" ⇒ defaultConfig
+      case fqcn ⇒
+        val dynamic = new ReflectiveDynamicAccess(getClass.getClassLoader)
+        dynamic.createInstanceFor[ConfigProvider](fqcn, Nil).get.config
+    }
+  }
+}
 
+trait ConfigProvider {
+  def config: Config
 }
 

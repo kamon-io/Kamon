@@ -25,9 +25,7 @@ import scala.concurrent.Future
 
 case class TraceLocalContainer(traceToken:String, importantHeader:String)
 
-object TraceLocalKey extends TraceLocal.TraceLocalKey {
-  type ValueType = TraceLocalContainer
-}
+object TraceLocalKey extends TraceLocal.TraceLocalKey[TraceLocalContainer]
 
 /*
  By default kamon spreads the trace-token-header-name, but sometimes is necessary pass through the application requests with some information like

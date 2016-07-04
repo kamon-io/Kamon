@@ -18,12 +18,11 @@ package kamon.jdbc.instrumentation
 import java.util.concurrent.TimeUnit.{ NANOSECONDS ⇒ nanos }
 
 import kamon.Kamon
-import kamon.jdbc.{ JdbcExtension, Jdbc }
+import kamon.jdbc.JdbcExtension
 import kamon.jdbc.metric.StatementsMetrics
 import kamon.trace.{ Tracer, TraceContext, SegmentCategory }
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation.{ Around, Aspect, Pointcut }
-import org.slf4j.LoggerFactory
 
 import scala.util.control.NonFatal
 
@@ -44,16 +43,15 @@ class StatementInstrumentation {
   @Around("onExecuteStatement(sql) || onExecutePreparedStatement(sql) || onExecutePreparedCall(sql)")
   def aroundExecuteStatement(pjp: ProceedingJoinPoint, sql: String): Any = {
     Tracer.currentContext.collect { ctx ⇒
-      val jdbcExtension = Kamon(Jdbc)
       implicit val statementRecorder = Kamon.metrics.entity(StatementsMetrics, "jdbc-statements")
 
       sql.replaceAll(CommentPattern, Empty) match {
-        case SelectStatement(_) ⇒ withSegment(ctx, Select, jdbcExtension)(recordRead(pjp, sql, jdbcExtension))
-        case InsertStatement(_) ⇒ withSegment(ctx, Insert, jdbcExtension)(recordWrite(pjp, sql, jdbcExtension))
-        case UpdateStatement(_) ⇒ withSegment(ctx, Update, jdbcExtension)(recordWrite(pjp, sql, jdbcExtension))
-        case DeleteStatement(_) ⇒ withSegment(ctx, Delete, jdbcExtension)(recordWrite(pjp, sql, jdbcExtension))
+        case SelectStatement(_) ⇒ withSegment(ctx, Select)(recordRead(pjp, sql))
+        case InsertStatement(_) ⇒ withSegment(ctx, Insert)(recordWrite(pjp, sql))
+        case UpdateStatement(_) ⇒ withSegment(ctx, Update)(recordWrite(pjp, sql))
+        case DeleteStatement(_) ⇒ withSegment(ctx, Delete)(recordWrite(pjp, sql))
         case anythingElse ⇒
-          log.debug(s"Unable to parse sql [$sql]")
+          JdbcExtension.log.debug(s"Unable to parse sql [$sql]")
           pjp.proceed()
       }
     }
@@ -64,34 +62,33 @@ class StatementInstrumentation {
     try thunk finally timeSpent(System.nanoTime() - start)
   }
 
-  def withSegment[A](ctx: TraceContext, statement: String, jdbcExtension: JdbcExtension)(thunk: ⇒ A): A = {
-    val segmentName = jdbcExtension.generateJdbcSegmentName(statement)
-    val segment = ctx.startSegment(segmentName, SegmentCategory.Database, Jdbc.SegmentLibraryName)
+  def withSegment[A](ctx: TraceContext, statement: String)(thunk: ⇒ A): A = {
+    val segmentName = JdbcExtension.generateJdbcSegmentName(statement)
+    val segment = ctx.startSegment(segmentName, SegmentCategory.Database, JdbcExtension.SegmentLibraryName)
     try thunk finally segment.finish()
   }
 
-  def recordRead(pjp: ProceedingJoinPoint, sql: String, jdbcExtension: JdbcExtension)(implicit statementRecorder: StatementsMetrics): Any = {
-    withTimeSpent(pjp.proceedWithErrorHandler(sql, jdbcExtension)) { timeSpent ⇒
+  def recordRead(pjp: ProceedingJoinPoint, sql: String)(implicit statementRecorder: StatementsMetrics): Any = {
+    withTimeSpent(pjp.proceedWithErrorHandler(sql)) { timeSpent ⇒
       statementRecorder.reads.record(timeSpent)
 
       val timeSpentInMillis = nanos.toMillis(timeSpent)
 
-      if (timeSpentInMillis >= jdbcExtension.slowQueryThreshold) {
+      if (timeSpentInMillis >= JdbcExtension.slowQueryThreshold) {
         statementRecorder.slows.increment()
-        jdbcExtension.processSlowQuery(sql, timeSpentInMillis)
+        JdbcExtension.processSlowQuery(sql, timeSpentInMillis)
       }
     }
   }
 
-  def recordWrite(pjp: ProceedingJoinPoint, sql: String, jdbcExtension: JdbcExtension)(implicit statementRecorder: StatementsMetrics): Any = {
-    withTimeSpent(pjp.proceedWithErrorHandler(sql, jdbcExtension)) { timeSpent ⇒
+  def recordWrite(pjp: ProceedingJoinPoint, sql: String)(implicit statementRecorder: StatementsMetrics): Any = {
+    withTimeSpent(pjp.proceedWithErrorHandler(sql)) { timeSpent ⇒
       statementRecorder.writes.record(timeSpent)
     }
   }
 }
 
 object StatementInstrumentation {
-  val log = LoggerFactory.getLogger(classOf[StatementInstrumentation])
 
   val SelectStatement = "(?i)^\\s*select.*?\\sfrom[\\s\\[]+([^\\]\\s,)(;]*).*".r
   val InsertStatement = "(?i)^\\s*insert(?:\\s+ignore)?\\s+into\\s+([^\\s(,;]*).*".r
@@ -106,12 +103,12 @@ object StatementInstrumentation {
   val Delete = "Delete"
 
   implicit class PimpedProceedingJoinPoint(pjp: ProceedingJoinPoint) {
-    def proceedWithErrorHandler(sql: String, jdbcExtension: JdbcExtension)(implicit statementRecorder: StatementsMetrics): Any = {
+    def proceedWithErrorHandler(sql: String)(implicit statementRecorder: StatementsMetrics): Any = {
       try {
         pjp.proceed()
       } catch {
         case NonFatal(cause) ⇒
-          jdbcExtension.processSqlError(sql, cause)
+          JdbcExtension.processSqlError(sql, cause)
           statementRecorder.errors.increment()
           throw cause
       }

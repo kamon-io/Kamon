@@ -16,22 +16,13 @@
 
 package kamon.akka
 
-import _root_.akka.actor
-import _root_.akka.actor._
-import _root_.akka.event.Logging
 import com.typesafe.config.Config
-import kamon._
+import kamon.Kamon
 
-class AkkaExtension(system: ExtendedActorSystem) extends Kamon.Extension {
-  val log = Logging(system, classOf[AkkaExtension])
-  val config = system.settings.config.getConfig("kamon.akka")
+object AkkaExtension {
+  private val akkaConfig = Kamon.config.getConfig("kamon.akka")
 
-  val askPatternTimeoutWarning = AskPatternTimeoutWarningSettings.fromConfig(config)
-}
-
-object Akka extends ExtensionId[AkkaExtension] with ExtensionIdProvider {
-  def lookup(): ExtensionId[_ <: actor.Extension] = Akka
-  def createExtension(system: ExtendedActorSystem): AkkaExtension = new AkkaExtension(system)
+  val askPatternTimeoutWarning = AskPatternTimeoutWarningSettings.fromConfig(akkaConfig)
 }
 
 sealed trait AskPatternTimeoutWarningSetting
@@ -40,11 +31,11 @@ object AskPatternTimeoutWarningSettings {
   case object Lightweight extends AskPatternTimeoutWarningSetting
   case object Heavyweight extends AskPatternTimeoutWarningSetting
 
-  def fromConfig(config: Config): AskPatternTimeoutWarningSetting = config.getString("ask-pattern-timeout-warning") match {
-    case "off"         ⇒ Off
-    case "lightweight" ⇒ Lightweight
-    case "heavyweight" ⇒ Heavyweight
-    case other         ⇒ sys.error(s"Unrecognized option [$other] for the kamon.akka.ask-pattern-timeout-warning config.")
-  }
+  def fromConfig(config: Config): AskPatternTimeoutWarningSetting =
+    config.getString("ask-pattern-timeout-warning") match {
+      case "off"         ⇒ Off
+      case "lightweight" ⇒ Lightweight
+      case "heavyweight" ⇒ Heavyweight
+      case other         ⇒ sys.error(s"Unrecognized option [$other] for the kamon.akka.ask-pattern-timeout-warning config.")
+    }
 }
-

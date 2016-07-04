@@ -22,7 +22,7 @@ import akka.util.Timeout
 import spray.http.Uri.Query
 import spray.http.{ HttpEntity, HttpResponse, Uri }
 import spray.httpx.RequestBuilding._
-import spray.json.{ DefaultJsonProtocol, _ }
+import spray.json._
 
 import scala.annotation.tailrec
 import scala.collection.immutable.{ Map, Queue }
@@ -103,7 +103,7 @@ class SPMMetricsSender(io: ActorRef, retryInterval: FiniteDuration, sendTimeout:
       post(metrics)
     }
     case resp: HttpResponse if resp.status.isFailure ⇒ {
-      log.warning("Metrics can't be sent. Response status: ${resp.status}. Scheduling retry.")
+      log.warning(s"Metrics can't be sent. Response status: ${resp.status}. Scheduling retry.")
       context.system.scheduler.scheduleOnce(retryInterval, self, Retry)
     }
     case ScheduleRetry ⇒ {

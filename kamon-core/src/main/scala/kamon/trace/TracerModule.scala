@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * Copyright © 2013 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2016 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -16,17 +16,21 @@
 
 package kamon.trace
 
+import java.util
+
 import akka.actor._
-import akka.event.{ LoggingAdapter, Logging }
+import akka.event.{ Logging, LoggingAdapter }
 import com.typesafe.config.Config
 import kamon.Kamon
 import kamon.metric.MetricsModule
 import kamon.util._
+import scala.collection.JavaConverters._
 
 trait TracerModule {
   def newContext(name: String): TraceContext
   def newContext(name: String, token: Option[String]): TraceContext
-  def newContext(name: String, token: Option[String], timestamp: RelativeNanoTimestamp, isOpen: Boolean, isLocal: Boolean): TraceContext
+  def newContext(name: String, token: Option[String], tags: Map[String, String]): TraceContext
+  def newContext(name: String, token: Option[String], tags: Map[String, String], timestamp: RelativeNanoTimestamp, isOpen: Boolean, isLocal: Boolean): TraceContext
 
   def subscribe(subscriber: ActorRef): Unit
   def unsubscribe(subscriber: ActorRef): Unit
@@ -57,8 +61,8 @@ object Tracer {
   def withContext[T](context: TraceContext, code: Supplier[T]): T =
     withContext(context)(code.get)
 
-  def withNewContext[T](traceName: String, traceToken: Option[String], autoFinish: Boolean)(code: ⇒ T): T = {
-    withContext(Kamon.tracer.newContext(traceName, traceToken)) {
+  def withNewContext[T](traceName: String, traceToken: Option[String], tags: Map[String, String], autoFinish: Boolean)(code: ⇒ T): T = {
+    withContext(Kamon.tracer.newContext(traceName, traceToken, tags)) {
       val codeResult = code
       if (autoFinish)
         currentContext.finish()
@@ -68,26 +72,47 @@ object Tracer {
   }
 
   def withNewContext[T](traceName: String)(code: ⇒ T): T =
-    withNewContext(traceName, None, false)(code)
+    withNewContext(traceName, None)(code)
+
+  def withNewContext[T](traceName: String, tags: Map[String, String])(code: ⇒ T): T =
+    withNewContext(traceName, None, tags)(code)
 
   def withNewContext[T](traceName: String, traceToken: Option[String])(code: ⇒ T): T =
-    withNewContext(traceName, traceToken, false)(code)
+    withNewContext(traceName, traceToken, Map.empty[String, String])(code)
+
+  def withNewContext[T](traceName: String, traceToken: Option[String], tags: Map[String, String])(code: ⇒ T): T =
+    withNewContext(traceName, traceToken, tags, autoFinish = false)(code)
 
   def withNewContext[T](traceName: String, autoFinish: Boolean)(code: ⇒ T): T =
-    withNewContext(traceName, None, autoFinish)(code)
+    withNewContext(traceName, None, Map.empty[String, String], autoFinish)(code)
+
+  def withNewContext[T](traceName: String, tags: Map[String, String], autoFinish: Boolean)(code: ⇒ T): T =
+    withNewContext(traceName, None, tags, autoFinish)(code)
 
   // Java variants.
   def withNewContext[T](traceName: String, traceToken: Option[String], autoFinish: Boolean, code: Supplier[T]): T =
-    withNewContext(traceName, traceToken, autoFinish)(code.get)
+    withNewContext(traceName, traceToken, Map.empty[String, String], autoFinish)(code.get)
+
+  def withNewContext[T](traceName: String, traceToken: Option[String], tags: util.Map[String, String], autoFinish: Boolean, code: Supplier[T]): T =
+    withNewContext(traceName, traceToken, tags.asScala.toMap, autoFinish)(code.get)
 
   def withNewContext[T](traceName: String, code: Supplier[T]): T =
-    withNewContext(traceName, None, false)(code.get)
+    withNewContext(traceName, None, Map.empty[String, String], autoFinish = false)(code.get)
+
+  def withNewContext[T](traceName: String, tags: util.Map[String, String], code: Supplier[T]): T =
+    withNewContext(traceName, None, tags.asScala.toMap, autoFinish = false)(code.get)
 
   def withNewContext[T](traceName: String, traceToken: Option[String], code: Supplier[T]): T =
-    withNewContext(traceName, traceToken, false)(code.get)
+    withNewContext(traceName, traceToken, Map.empty[String, String], autoFinish = false)(code.get)
+
+  def withNewContext[T](traceName: String, traceToken: Option[String], tags: util.Map[String, String], code: Supplier[T]): T =
+    withNewContext(traceName, traceToken, tags.asScala.toMap, autoFinish = false)(code.get)
 
   def withNewContext[T](traceName: String, autoFinish: Boolean, code: Supplier[T]): T =
-    withNewContext(traceName, None, autoFinish)(code.get)
+    withNewContext(traceName, None, Map.empty[String, String], autoFinish)(code.get)
+
+  def withNewContext[T](traceName: String, tags: util.Map[String, String], autoFinish: Boolean, code: Supplier[T]): T =
+    withNewContext(traceName, None, tags.asScala.toMap, autoFinish)(code.get)
 }
 
 private[kamon] class TracerModuleImpl(metricsExtension: MetricsModule, config: Config) extends TracerModule {
@@ -96,7 +121,7 @@ private[kamon] class TracerModuleImpl(metricsExtension: MetricsModule, config: C
   private val _subscriptions = new LazyActorRef
   private val _incubator = new LazyActorRef
   private val _dynamic = new akka.actor.ReflectiveDynamicAccess(getClass.getClassLoader)
-  private val _tokenGenerator = _dynamic.createInstanceFor[Function0[String]](_settings.tokenGeneratorFQN, Nil).get // let's bubble up any problems.
+  private val _tokenGenerator = _dynamic.createInstanceFor[() ⇒ String](_settings.tokenGeneratorFQN, Nil).get // let's bubble up any problems.
 
   private def newToken: String = _tokenGenerator()
 
@@ -106,14 +131,17 @@ private[kamon] class TracerModuleImpl(metricsExtension: MetricsModule, config: C
   def newContext(name: String, token: Option[String]): TraceContext =
     createTraceContext(name, token)
 
-  def newContext(name: String, token: Option[String], timestamp: RelativeNanoTimestamp, isOpen: Boolean, isLocal: Boolean): TraceContext =
-    createTraceContext(name, token, timestamp, isOpen, isLocal)
+  def newContext(name: String, token: Option[String], tags: Map[String, String]): TraceContext =
+    createTraceContext(name, token, tags)
 
-  private def createTraceContext(traceName: String, token: Option[String], startTimestamp: RelativeNanoTimestamp = RelativeNanoTimestamp.now,
+  def newContext(name: String, token: Option[String], tags: Map[String, String], timestamp: RelativeNanoTimestamp, isOpen: Boolean, isLocal: Boolean): TraceContext =
+    createTraceContext(name, token, tags, timestamp, isOpen, isLocal)
+
+  private def createTraceContext(traceName: String, token: Option[String], tags: Map[String, String] = Map.empty, startTimestamp: RelativeNanoTimestamp = RelativeNanoTimestamp.now,
     isOpen: Boolean = true, isLocal: Boolean = true): TraceContext = {
 
     def newMetricsOnlyContext(token: String): TraceContext =
-      new MetricsOnlyContext(traceName, token, isOpen, _settings.levelOfDetail, startTimestamp, _logger)
+      new MetricsOnlyContext(traceName, token, tags, isOpen, _settings.levelOfDetail, startTimestamp, _logger)
 
     val traceToken = token.getOrElse(newToken)
 
@@ -123,7 +151,7 @@ private[kamon] class TracerModuleImpl(metricsExtension: MetricsModule, config: C
       case _ if !isLocal || !_settings.sampler.shouldTrace ⇒
         newMetricsOnlyContext(traceToken)
       case _ ⇒
-        new TracingContext(traceName, traceToken, true, _settings.levelOfDetail, isLocal, startTimestamp, _logger, dispatchTracingContext)
+        new TracingContext(traceName, traceToken, tags, izOpen = true, _settings.levelOfDetail, isLocal, startTimestamp, _logger, dispatchTracingContext)
     }
   }
 
@@ -166,4 +194,4 @@ private[kamon] object TracerModuleImpl {
 }
 
 case class TraceInfo(name: String, token: String, timestamp: NanoTimestamp, elapsedTime: NanoInterval, metadata: Map[String, String], segments: List[SegmentInfo])
-case class SegmentInfo(name: String, category: String, library: String, timestamp: NanoTimestamp, elapsedTime: NanoInterval, metadata: Map[String, String])
+case class SegmentInfo(name: String, category: String, library: String, timestamp: NanoTimestamp, elapsedTime: NanoInterval, metadata: Map[String, String], tags: Map[String, String])

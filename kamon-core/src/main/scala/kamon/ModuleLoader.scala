@@ -18,9 +18,9 @@ package kamon
 
 import _root_.akka.actor
 import _root_.akka.actor._
-import _root_.akka.event.Logging
+import kamon.util.logger.LazyLogger
 import org.aspectj.lang.ProceedingJoinPoint
-import org.aspectj.lang.annotation.{ Around, Pointcut, Aspect }
+import org.aspectj.lang.annotation.{ Around, Aspect, Pointcut }
 
 private[kamon] object ModuleLoader extends ExtensionId[ModuleLoaderExtension] with ExtensionIdProvider {
   def lookup(): ExtensionId[_ <: actor.Extension] = ModuleLoader
@@ -28,24 +28,25 @@ private[kamon] object ModuleLoader extends ExtensionId[ModuleLoaderExtension] wi
 }
 
 private[kamon] class ModuleLoaderExtension(system: ExtendedActorSystem) extends Kamon.Extension {
-  val log = Logging(system, "ModuleLoader")
+  val log = LazyLogger(getClass)
   val settings = ModuleLoaderSettings(system)
 
   if (settings.modulesRequiringAspectJ.nonEmpty && !isAspectJPresent && settings.showAspectJMissingWarning)
     logAspectJWeaverMissing(settings.modulesRequiringAspectJ)
 
   // Force initialization of all modules marked with auto-start.
-  settings.availableModules.filter(_.autoStart).foreach { module ⇒
-    if (module.extensionClass == "none")
-      log.debug("Ignoring auto start of the [{}] module with no extension class.", module.name)
-    else
-      system.dynamicAccess.getObjectFor[ExtensionId[Kamon.Extension]](module.extensionClass).map { moduleID ⇒
-        log.debug("Auto starting the [{}] module.", module.name)
+  settings.availableModules.filter(_.startInfo.nonEmpty).foreach {
+    case AvailableModuleInfo(name, requiresAJ, Some(ModuleStartInfo(autoStart, extensionClass))) if autoStart ⇒
+
+      system.dynamicAccess.getObjectFor[ExtensionId[Kamon.Extension]](extensionClass).map { moduleID ⇒
+        log.debug(s"Auto starting the [$name] module.")
         moduleID.get(system)
 
       } recover {
-        case th: Throwable ⇒ log.error(th, "Failed to auto start the [{}] module.", module.name)
+        case th: Throwable ⇒ log.error(s"Failed to auto start the [$name] module.", th)
       }
+
+    case other ⇒
 
   }
 
@@ -82,7 +83,8 @@ private[kamon] class ModuleLoaderExtension(system: ExtendedActorSystem) extends 
   }
 }
 
-private[kamon] case class AvailableModuleInfo(name: String, extensionClass: String, requiresAspectJ: Boolean, autoStart: Boolean)
+private[kamon] case class AvailableModuleInfo(name: String, requiresAspectJ: Boolean, startInfo: Option[ModuleStartInfo])
+private[kamon] case class ModuleStartInfo(autoStart: Boolean, extensionClass: String)
 private[kamon] case class ModuleLoaderSettings(showAspectJMissingWarning: Boolean, availableModules: List[AvailableModuleInfo]) {
   val modulesRequiringAspectJ = availableModules.filter(_.requiresAspectJ)
 }
@@ -98,12 +100,15 @@ private[kamon] object ModuleLoaderSettings {
     val modules = config.firstLevelKeys
     val availableModules = modules.map { moduleName ⇒
       val moduleConfig = config.getConfig(moduleName)
+      val requiresAspectJ = moduleConfig.getBoolean("requires-aspectj")
 
-      AvailableModuleInfo(
-        moduleName,
-        moduleConfig.getString("extension-id"),
-        moduleConfig.getBoolean("requires-aspectj"),
-        moduleConfig.getBoolean("auto-start"))
+      val startInfo =
+        if (moduleConfig.hasPath("auto-start") && moduleConfig.hasPath("extension-class"))
+          Some(ModuleStartInfo(moduleConfig.getBoolean("auto-start"), moduleConfig.getString("extension-class")))
+        else
+          None
+
+      AvailableModuleInfo(moduleName, requiresAspectJ, startInfo)
 
     } toList
 

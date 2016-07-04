@@ -18,8 +18,7 @@ package kamon.annotation.el
 
 import javax.el.ELProcessor
 
-import kamon.Kamon
-import kamon.annotation.Annotation
+import kamon.annotation.AnnotationExtension
 
 import scala.util.{ Failure, Success, Try }
 
@@ -36,7 +35,7 @@ object EnhancedELProcessor {
       eval[String](str) match {
         case Success(value) ⇒ value
         case Failure(cause) ⇒
-          Kamon(Annotation).log.error(s"${cause.getMessage} -> we will complete the operation with 'unknown' string")
+          AnnotationExtension.log.error(s"${cause.getMessage} -> we will complete the operation with 'unknown' string")
           "unknown"
       }
     } getOrElse expression
@@ -45,7 +44,7 @@ object EnhancedELProcessor {
       eval[Map[String, String]](s"{$str}") match {
         case Success(value) ⇒ value.asInstanceOf[java.util.HashMap[String, String]].asScala.toMap
         case Failure(cause) ⇒
-          Kamon(Annotation).log.error(s"${cause.getMessage} -> we will complete the operation with an empty map")
+          AnnotationExtension.log.error(s"${cause.getMessage} -> we will complete the operation with an empty map")
           Map.empty[String, String]
       }
     } getOrElse Map.empty[String, String]

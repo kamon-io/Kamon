@@ -12,6 +12,8 @@ lib_managed/
 src_managed/
 project/boot/
 project/plugins/project/
+.ensime
+.ensime_cache
 
 # Scala-IDE specific
 .scala_dependencies
@@ -28,6 +30,8 @@ project/plugins/project/
 .settings
 .classpath
 .cache
+.cache-main
+.cache-tests
 bin/
 
 _site

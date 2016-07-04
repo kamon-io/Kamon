@@ -16,14 +16,14 @@
 
 package kamon.util
 
+import kamon.util.logger.LazyLogger
 import scala.concurrent.ExecutionContext
-import org.slf4j.LoggerFactory
 
 /**
  * For small code blocks that don't need to be run on a separate thread.
  */
 object SameThreadExecutionContext extends ExecutionContext {
-  val logger = LoggerFactory.getLogger("SameThreadExecutionContext")
+  val logger = LazyLogger("SameThreadExecutionContext")
 
   override def execute(runnable: Runnable): Unit = runnable.run
   override def reportFailure(t: Throwable): Unit = logger.error(t.getMessage, t)

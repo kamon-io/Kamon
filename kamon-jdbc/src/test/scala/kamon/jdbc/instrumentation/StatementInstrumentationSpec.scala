@@ -18,31 +18,11 @@ package kamon.jdbc.instrumentation
 import java.sql.{ DriverManager, SQLException }
 
 import com.typesafe.config.ConfigFactory
-import kamon.jdbc.{ Jdbc, JdbcNameGenerator, SqlErrorProcessor, SlowQueryProcessor }
-import kamon.metric.TraceMetricsSpec
+import kamon.jdbc.{ JdbcExtension, JdbcNameGenerator, SqlErrorProcessor, SlowQueryProcessor }
 import kamon.testkit.BaseKamonSpec
 import kamon.trace.{ Tracer, SegmentCategory }
 
 class StatementInstrumentationSpec extends BaseKamonSpec("jdbc-spec") {
-  override lazy val config =
-    ConfigFactory.parseString(
-      """
-        |kamon {
-        |   jdbc {
-        |     slow-query-threshold = 100 milliseconds
-        |
-        |     # Fully qualified name of the implementation of kamon.jdbc.SlowQueryProcessor.
-        |     slow-query-processor = kamon.jdbc.instrumentation.NoOpSlowQueryProcessor
-        |
-        |     # Fully qualified name of the implementation of kamon.jdbc.SqlErrorProcessor.
-        |     sql-error-processor = kamon.jdbc.instrumentation.NoOpSqlErrorProcessor
-        |
-        |     # Fully qualified name of the implementation of kamon.jdbc.JdbcNameGenerator
-        |     name-generator = kamon.jdbc.instrumentation.NoOpJdbcNameGenerator
-        |   }
-        |}
-      """.stripMargin)
-
   val connection = DriverManager.getConnection("jdbc:h2:mem:jdbc-spec", "SA", "")
 
   override protected def beforeAll(): Unit = {
@@ -79,7 +59,7 @@ class StatementInstrumentationSpec extends BaseKamonSpec("jdbc-spec") {
         tags = Map(
           "trace" -> "jdbc-trace-insert",
           "category" -> SegmentCategory.Database,
-          "library" -> Jdbc.SegmentLibraryName))
+          "library" -> JdbcExtension.SegmentLibraryName))
 
       segmentSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(100)
     }
@@ -105,7 +85,7 @@ class StatementInstrumentationSpec extends BaseKamonSpec("jdbc-spec") {
         tags = Map(
           "trace" -> "jdbc-trace-select",
           "category" -> SegmentCategory.Database,
-          "library" -> Jdbc.SegmentLibraryName))
+          "library" -> JdbcExtension.SegmentLibraryName))
 
       segmentSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(100)
     }
@@ -131,7 +111,7 @@ class StatementInstrumentationSpec extends BaseKamonSpec("jdbc-spec") {
         tags = Map(
           "trace" -> "jdbc-trace-update",
           "category" -> SegmentCategory.Database,
-          "library" -> Jdbc.SegmentLibraryName))
+          "library" -> JdbcExtension.SegmentLibraryName))
 
       segmentSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(100)
     }
@@ -157,7 +137,7 @@ class StatementInstrumentationSpec extends BaseKamonSpec("jdbc-spec") {
         tags = Map(
           "trace" -> "jdbc-trace-delete",
           "category" -> SegmentCategory.Database,
-          "library" -> Jdbc.SegmentLibraryName))
+          "library" -> JdbcExtension.SegmentLibraryName))
 
       segmentSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(100)
 

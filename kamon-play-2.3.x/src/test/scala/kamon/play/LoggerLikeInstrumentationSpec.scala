@@ -1,5 +1,5 @@
 /* =========================================================================================
- * Copyright © 2013-2014 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2015 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License") you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -72,7 +72,7 @@ class LoggerLikeInstrumentationSpec extends PlaySpec with OneServerPerSuite with
     "allow retrieve a value from the MDC when was created a key of type AvailableToMdc in the current request" in {
       LoggingHandler.appenderStart()
 
-      Await.result(route(FakeRequest(GET, "/logging")).get, 500 millis)
+      Await.result(route(FakeRequest(GET, "/logging")).get, 1 second)
 
       TraceLocal.retrieve(TraceLocalHeaderKey) must be(Some(headerValue))
       TraceLocal.retrieve(TraceLocalOtherKey) must be(Some(otherValue))

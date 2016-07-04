@@ -16,20 +16,19 @@
 
 package kamon.annotation.instrumentation
 
-import kamon.Kamon
+import java.util.concurrent.atomic.AtomicReferenceArray
 import kamon.annotation._
 import kamon.metric.instrument
-import kamon.metric.instrument.{ MinMaxCounter, Counter }
+import kamon.metric.instrument.{ Counter, MinMaxCounter }
 import org.aspectj.lang.annotation._
 import org.aspectj.lang.{ JoinPoint, ProceedingJoinPoint }
-import java.util.concurrent.atomic.AtomicReferenceArray
 
 @Aspect
 class AnnotationInstrumentation extends BaseAnnotationInstrumentation {
 
   @After("execution((@kamon.annotation.EnableKamon AnnotationInstruments+).new(..)) && this(obj)")
   def creation(jps: JoinPoint.StaticPart, obj: AnnotationInstruments): Unit = {
-    val size = Kamon(Annotation).arraySize
+    val size = AnnotationExtension.arraySize
     obj.traces = new AtomicReferenceArray[TraceContextInfo](size)
     obj.segments = new AtomicReferenceArray[SegmentInfo](size)
     obj.counters = new AtomicReferenceArray[Counter](size)

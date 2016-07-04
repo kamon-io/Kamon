@@ -1,5 +1,5 @@
 /* =========================================================================================
- * Copyright © 2013-2014 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2015 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -25,6 +25,9 @@ class LoggerLikeInstrumentation extends MdcKeysSupport {
   @Pointcut("execution(* play.api.LoggerLike+.info(..))")
   def infoPointcut(): Unit = {}
 
+  @Pointcut("execution(* play.api.LoggerLike+.debug(..))")
+  def debugPointcut(): Unit = {}
+
   @Pointcut("execution(* play.api.LoggerLike+.warn(..))")
   def warnPointcut(): Unit = {}
 
@@ -34,7 +37,7 @@ class LoggerLikeInstrumentation extends MdcKeysSupport {
   @Pointcut("execution(* play.api.LoggerLike+.trace(..))")
   def tracePointcut(): Unit = {}
 
-  @Around("(infoPointcut() || warnPointcut() || errorPointcut() || tracePointcut())")
+  @Around("(infoPointcut() || debugPointcut() || warnPointcut() || errorPointcut() || tracePointcut())")
   def aroundLog(pjp: ProceedingJoinPoint): Any = withMdc {
     pjp.proceed()
   }

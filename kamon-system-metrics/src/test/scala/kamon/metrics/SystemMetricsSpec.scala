@@ -62,20 +62,34 @@ class SystemMetricsSpec extends BaseKamonSpec("system-metrics-spec") with Redire
       }
     }
 
-    "record used, max and committed heap metrics" in {
-      val heapMetrics = takeSnapshotOf("heap-memory", "system-metric")
+    "record used, max and committed heap and non-heap metrics" in {
+      val memoryMetrics = takeSnapshotOf("jmx-memory", "system-metric")
 
-      heapMetrics.gauge("heap-used").get.numberOfMeasurements should be > 0L
-      heapMetrics.gauge("heap-max").get.numberOfMeasurements should be > 0L
-      heapMetrics.gauge("heap-committed").get.numberOfMeasurements should be > 0L
+      memoryMetrics.gauge("heap-used").get.numberOfMeasurements should be > 0L
+      memoryMetrics.gauge("heap-max").get.numberOfMeasurements should be > 0L
+      memoryMetrics.gauge("heap-committed").get.numberOfMeasurements should be > 0L
+
+      memoryMetrics.gauge("non-heap-used").get.numberOfMeasurements should be > 0L
+      memoryMetrics.gauge("non-heap-max").get.numberOfMeasurements should be > 0L
+      memoryMetrics.gauge("non-heap-committed").get.numberOfMeasurements should be > 0L
+
+      memoryMetrics.gauge("direct-buffer-pool-count").get.numberOfMeasurements should be > 0L
+      memoryMetrics.gauge("direct-buffer-pool-used").get.numberOfMeasurements should be > 0L
+      memoryMetrics.gauge("direct-buffer-pool-capacity").get.numberOfMeasurements should be > 0L
     }
 
-    "record used, max and committed non-heap metrics" in {
-      val nonHeapMetrics = takeSnapshotOf("non-heap-memory", "system-metric")
+    "record correctly updatable values for heap metrics" in {
+      Thread.sleep(3000)
 
-      nonHeapMetrics.gauge("non-heap-used").get.numberOfMeasurements should be > 0L
-      nonHeapMetrics.gauge("non-heap-max").get.numberOfMeasurements should be > 0L
-      nonHeapMetrics.gauge("non-heap-committed").get.numberOfMeasurements should be > 0L
+      val data = new Array[Byte](20 * 1024 * 1024) // 20 Mb of data
+
+      Thread.sleep(3000)
+
+      val memoryMetrics = takeSnapshotOf("jmx-memory", "system-metric")
+      val heapUsed = memoryMetrics.gauge("heap-used").get
+
+      heapUsed.max should be > heapUsed.min
+      data.size should be > 0 // Just for data usage
     }
 
     "record daemon, count and peak jvm threads metrics" in {
@@ -135,6 +149,12 @@ class SystemMetricsSpec extends BaseKamonSpec("system-metrics-spec") with Redire
       processCpuMetrics.histogram("process-user-cpu").get.numberOfMeasurements should be > 0L
       processCpuMetrics.histogram("process-system-cpu").get.numberOfMeasurements should be > 0L
       processCpuMetrics.histogram("process-cpu").get.numberOfMeasurements should be > 0L
+    }
+
+    "record the open files for the application process" in {
+      val openFilesMetrics = takeSnapshotOf("ulimit", "system-metric")
+
+      openFilesMetrics.histogram("open-files").get.numberOfMeasurements should be > 0L
     }
 
     "record Context Switches Global, Voluntary and Non Voluntary metrics when running on Linux" in {

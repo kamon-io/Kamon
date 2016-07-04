@@ -18,10 +18,6 @@ package kamon.metric.instrument
 
 import java.nio.LongBuffer
 
-import akka.actor.{ Scheduler, Cancellable }
-import akka.dispatch.MessageDispatcher
-import scala.concurrent.duration.FiniteDuration
-
 private[kamon] trait Instrument {
   type SnapshotType <: InstrumentSnapshot
 
@@ -31,6 +27,8 @@ private[kamon] trait Instrument {
 
 trait InstrumentSnapshot {
   def merge(that: InstrumentSnapshot, context: CollectionContext): InstrumentSnapshot
+
+  def scale(from: UnitOfMeasurement, to: UnitOfMeasurement): InstrumentSnapshot
 }
 
 trait CollectionContext {

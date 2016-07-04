@@ -1,5 +1,5 @@
 /* =========================================================================================
- * Copyright © 2013-2014 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2015 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -15,70 +15,20 @@
 
 package kamon.akka
 
-import akka.actor.{ Props, ActorRef }
+import akka.actor.{ ActorRef, Props }
 import akka.dispatch.MessageDispatcher
 import akka.routing.BalancingPool
 import akka.testkit.TestProbe
-import com.typesafe.config.ConfigFactory
 import kamon.Kamon
-import kamon.akka.RouterMetricsTestActor.{ Pong, Ping }
+import kamon.akka.RouterMetricsTestActor.{ Ping, Pong }
 import kamon.metric.{ EntityRecorder, EntitySnapshot }
 import kamon.testkit.BaseKamonSpec
+import kamon.util.executors.{ ForkJoinPoolMetrics, ThreadPoolExecutorMetrics }
 
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 
 class DispatcherMetricsSpec extends BaseKamonSpec("dispatcher-metrics-spec") {
-  override lazy val config =
-    ConfigFactory.parseString(
-      """
-        |kamon.metric {
-        |  tick-interval = 1 hour
-        |  default-collection-context-buffer-size = 10
-        |
-        |  filters = {
-        |    akka-dispatcher {
-        |      includes = [ "**" ]
-        |      excludes = [ "*/explicitly-excluded" ]
-        |    }
-        |  }
-        |
-        |  default-instrument-settings {
-        |    gauge.refresh-interval = 1 hour
-        |    min-max-counter.refresh-interval = 1 hour
-        |  }
-        |}
-        |
-        |explicitly-excluded {
-        |  type = "Dispatcher"
-        |  executor = "fork-join-executor"
-        |}
-        |
-        |tracked-fjp {
-        |  type = "Dispatcher"
-        |  executor = "fork-join-executor"
-        |
-        |  fork-join-executor {
-        |    parallelism-min = 8
-        |    parallelism-factor = 100.0
-        |    parallelism-max = 22
-        |  }
-        |}
-        |
-        |tracked-tpe {
-        |  type = "Dispatcher"
-        |  executor = "thread-pool-executor"
-        |
-        |  thread-pool-executor {
-        |    core-pool-size-min = 7
-        |    core-pool-size-factor = 100.0
-        |    max-pool-size-factor  = 100.0
-        |    max-pool-size-max = 21
-        |  }
-        |}
-        |
-      """.stripMargin)
-
   "the Kamon dispatcher metrics" should {
     "respect the configured include and exclude filters" in {
       val defaultDispatcher = forceInit(system.dispatchers.lookup("akka.actor.default-dispatcher"))
@@ -140,7 +90,7 @@ class DispatcherMetricsSpec extends BaseKamonSpec("dispatcher-metrics-spec") {
 
     }
 
-    "clean up the metrics recorders after a dispatcher is shut down" in {
+    "clean up the metrics recorders after a dispatcher is shutdown" in {
       implicit val tpeDispatcher = system.dispatchers.lookup("tracked-tpe")
       implicit val fjpDispatcher = system.dispatchers.lookup("tracked-fjp")
 
@@ -162,7 +112,6 @@ class DispatcherMetricsSpec extends BaseKamonSpec("dispatcher-metrics-spec") {
 
       findDispatcherRecorder("BalancingPool-/test-balancing-pool", "fork-join-pool") shouldNot be(empty)
     }
-
   }
 
   def actorRecorderName(ref: ActorRef): String = ref.path.elements.mkString("/")
@@ -178,14 +127,14 @@ class DispatcherMetricsSpec extends BaseKamonSpec("dispatcher-metrics-spec") {
 
   def refreshDispatcherInstruments(dispatcher: MessageDispatcher, dispatcherType: String): Unit = {
     findDispatcherRecorder(dispatcher, dispatcherType) match {
-      case Some(tpe: ThreadPoolExecutorDispatcherMetrics) ⇒
+      case Some(tpe: ThreadPoolExecutorMetrics) ⇒
         tpe.processedTasks.refreshValue()
         tpe.activeThreads.refreshValue()
         tpe.maxPoolSize.refreshValue()
         tpe.poolSize.refreshValue()
         tpe.corePoolSize.refreshValue()
 
-      case Some(fjp: ForkJoinPoolDispatcherMetrics) ⇒
+      case Some(fjp: ForkJoinPoolMetrics) ⇒
         fjp.activeThreads.refreshValue()
         fjp.poolSize.refreshValue()
         fjp.queuedTaskCount.refreshValue()

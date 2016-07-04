@@ -27,6 +27,8 @@ import kamon.metric._
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 
+import kamon.util.NeedToScale
+
 object Datadog extends ExtensionId[DatadogExtension] with ExtensionIdProvider {
   override def lookup(): ExtensionId[_ <: Extension] = Datadog
   override def createExtension(system: ExtendedActorSystem): DatadogExtension = new DatadogExtension(system)
@@ -57,11 +59,18 @@ class DatadogExtension(system: ExtendedActorSystem) extends Kamon.Extension {
     assert(flushInterval >= tickInterval, "Datadog flush-interval needs to be equal or greater to the tick-interval")
 
     val metricsSender = system.actorOf(DatadogMetricsSender.props(datadogHost, maxPacketSizeInBytes), "datadog-metrics-sender")
+
+    val decoratedSender = datadogConfig match {
+      case NeedToScale(scaleTimeTo, scaleMemoryTo) ⇒
+        system.actorOf(MetricScaleDecorator.props(scaleTimeTo, scaleMemoryTo, metricsSender), "datadog-metric-scale-decorator")
+      case _ ⇒ metricsSender
+    }
+
     if (flushInterval == tickInterval) {
       // No need to buffer the metrics, let's go straight to the metrics sender.
-      metricsSender
+      decoratedSender
     } else {
-      system.actorOf(TickMetricSnapshotBuffer.props(flushInterval, metricsSender), "datadog-metrics-buffer")
+      system.actorOf(TickMetricSnapshotBuffer.props(flushInterval, decoratedSender), "datadog-metrics-buffer")
     }
   }
 }

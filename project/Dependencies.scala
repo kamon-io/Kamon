@@ -19,24 +19,26 @@ object Dependencies {
 
   val resolutionRepos = Seq(
     "spray repo" at "http://repo.spray.io/",
-    "typesafe repo" at "http://repo.typesafe.com/typesafe/releases/"
+    "typesafe repo" at "http://repo.typesafe.com/typesafe/releases/",
+    "clojars repo" at "http://clojars.org/repo/"
   )
 
-  val sprayVersion      = "1.3.2"
-  val akkaVersion       = "2.3.10"
-  val aspectjVersion    = "1.8.5"
+  val sprayVersion      = "1.3.3"
+  val akkaVersion       = "2.3.14"
+  val aspectjVersion    = "1.8.9"
   val slf4jVersion      = "1.7.7"
-  val play23Version     = "2.3.9"
-  val play24Version     = "2.4.2"
-  val sigarVersion      = "1.6.5.132"
+  val play23Version     = "2.3.10"
+  val play24Version     = "2.4.6"
+  val play25Version     = "2.5.4"
+  val elasticsearchVersion = "2.1.0"
 
   val sprayJson         = "io.spray"                  %%  "spray-json"            % "1.3.1"
   val sprayJsonLenses   = "net.virtual-void"          %%  "json-lenses"           % "0.6.0"
-  val scalatest         = "org.scalatest"             %%  "scalatest"             % "2.2.1"
+  val scalatest         = "org.scalatest"             %%  "scalatest"             % "2.2.4"
   val logback           = "ch.qos.logback"            %   "logback-classic"       % "1.0.13"
   val aspectJ           = "org.aspectj"               %   "aspectjweaver"         % aspectjVersion
-  val newrelic          = "com.newrelic.agent.java"   %   "newrelic-api"          % "3.11.0"
-  val hdrHistogram      = "org.hdrhistogram"          %   "HdrHistogram"          % "2.1.4"
+  val newrelic          = "com.newrelic.agent.java"   %   "newrelic-agent"        % "3.26.1"
+  val hdrHistogram      = "org.hdrhistogram"          %   "HdrHistogram"          % "2.1.8"
   val sprayCan          = "io.spray"                  %%  "spray-can"             % sprayVersion
   val sprayRouting      = "io.spray"                  %%  "spray-routing"         % sprayVersion
   val sprayTestkit      = "io.spray"                  %%  "spray-testkit"         % sprayVersion
@@ -46,14 +48,17 @@ object Dependencies {
   val akkaTestKit       = "com.typesafe.akka"         %%  "akka-testkit"          % akkaVersion
   val akkaRemote        = "com.typesafe.akka"         %%  "akka-remote"           % akkaVersion
   val akkaCluster       = "com.typesafe.akka"         %%  "akka-cluster"          % akkaVersion
-  val slf4Api           = "org.slf4j"                 %   "slf4j-api"             % slf4jVersion
-  val slf4nop           = "org.slf4j"                 %   "slf4j-nop"             % slf4jVersion
-  val slf4Jul           = "org.slf4j"                 %   "jul-to-slf4j"          % slf4jVersion
-  val slf4Log4j         = "org.slf4j"                 %   "log4j-over-slf4j"      % slf4jVersion
+  val slf4jApi          = "org.slf4j"                 %   "slf4j-api"             % slf4jVersion
+  val slf4jnop          = "org.slf4j"                 %   "slf4j-nop"             % slf4jVersion
+  val slf4jJul          = "org.slf4j"                 %   "jul-to-slf4j"          % slf4jVersion
+  val slf4jLog4j        = "org.slf4j"                 %   "log4j-over-slf4j"      % slf4jVersion
   val scalazConcurrent  = "org.scalaz"                %%  "scalaz-concurrent"     % "7.1.0"
-  val sigarLoader       = "io.kamon"                  %   "sigar-loader"          % "1.6.6"
+  val sigarLoader       = "io.kamon"                  %   "sigar-loader"          % "1.6.5-rev002"
   val h2                = "com.h2database"            %   "h2"                    % "1.4.182"
   val el                = "org.glassfish"             %   "javax.el"              % "3.0.0"
+  val fluentdLogger     = "org.fluentd"               %%  "fluent-logger-scala"   % "0.5.1"
+  val easyMock          = "org.easymock"              %   "easymock"              % "3.2"
+  val riemannClient     = "com.aphyr"                 %   "riemann-java-client"   % "0.4.1"
 
   //play 2.3.x
   val play23            = "com.typesafe.play"         %%  "play"                  % play23Version
@@ -64,7 +69,14 @@ object Dependencies {
   val play24            = "com.typesafe.play"         %%  "play"                  % play24Version
   val playWS24          = "com.typesafe.play"         %%  "play-ws"               % play24Version
   val playTest24        = "org.scalatestplus"         %%  "play"                  % "1.4.0-M2"
-  val typesafeConfig    = "com.typesafe"              %   "config"                % "1.3.0"
+  val typesafeConfig    = "com.typesafe"              %   "config"                % "1.2.1"
+
+  //play 2.5.x
+  val play25            = "com.typesafe.play"         %%  "play"                  % play25Version
+  val playWS25          = "com.typesafe.play"         %%  "play-ws"               % play25Version
+  val playTest25        = "org.scalatestplus.play"    %%  "scalatestplus-play"    % "1.5.0"
+
+  val elasticsearch     = "org.elasticsearch"         %   "elasticsearch"         % elasticsearchVersion
 
   def compile   (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "compile")
   def provided  (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "provided")

@@ -63,7 +63,7 @@ class Agent extends Actor with SprayJsonSupport with ActorLogging with MetricsSu
 
   def disconnected(attemptsLeft: Int): Receive = {
     case Connect                                     ⇒ pipe(connectToCollector) to self
-    case Connected(collector, runID)                 ⇒ configureChildren(collector, runID)
+    case Connected(collector, runID, scheme)         ⇒ configureChildren(collector, runID, scheme)
     case ConnectFailed(reason) if (attemptsLeft > 0) ⇒ scheduleReconnection(reason, attemptsLeft)
     case ConnectFailed(reason)                       ⇒ giveUpConnection()
   }
@@ -85,8 +85,8 @@ class Agent extends Actor with SprayJsonSupport with ActorLogging with MetricsSu
     context stop self
   }
 
-  def configureChildren(collector: String, runID: Long): Unit = {
-    log.info("Configuring New Relic reporters to use runID: [{}] and collector: [{}]", runID, collector)
+  def configureChildren(collector: String, runID: Long, scheme: String): Unit = {
+    log.info("Configuring New Relic reporters to use runID: [{}] and collector: [{}] over: [{}]", runID, collector, scheme)
     context.children.foreach(_ ! Configure(collector, runID))
     context become connected
   }
@@ -105,8 +105,8 @@ class Agent extends Actor with SprayJsonSupport with ActorLogging with MetricsSu
   def connectToCollector: Future[ConnectResult] = {
     (for {
       collector ← selectCollector
-      runID ← connect(collector, agentSettings)
-    } yield Connected(collector, runID)) recover { case error ⇒ ConnectFailed(error) }
+      (runID, scheme) ← connect(collector, agentSettings)
+    } yield Connected(collector, runID, scheme)) recover { case error ⇒ ConnectFailed(error) }
   }
 
   def selectCollector: Future[String] = {
@@ -116,10 +116,10 @@ class Agent extends Actor with SprayJsonSupport with ActorLogging with MetricsSu
     }
   }
 
-  def connect(collectorHost: String, connect: AgentSettings): Future[Long] = {
+  def connect(collectorHost: String, connect: AgentSettings): Future[(Long, String)] = {
     val apiClient = new ApiMethodClient(collectorHost, None, agentSettings, IO(Http)(context.system))
     apiClient.invokeMethod(RawMethods.Connect, connect) map { json ⇒
-      json.extract[Long]('return_value / 'agent_run_id)
+      (json.extract[Long]('return_value / 'agent_run_id), apiClient.scheme)
     }
   }
 }
@@ -132,12 +132,12 @@ object Agent {
   case class Configure(collector: String, runID: Long)
 
   sealed trait ConnectResult
-  case class Connected(collector: String, runID: Long) extends ConnectResult
+  case class Connected(collector: String, runID: Long, scheme: String) extends ConnectResult
   case class ConnectFailed(reason: Throwable) extends ConnectResult
 }
 
 case class AgentSettings(licenseKey: String, appName: String, hostname: String, pid: Int, operationTimeout: Timeout,
-  maxConnectionRetries: Int, retryDelay: FiniteDuration, apdexT: Double)
+  maxConnectionRetries: Int, retryDelay: FiniteDuration, apdexT: Double, ssl: Boolean)
 
 object AgentSettings {
 
@@ -147,6 +147,7 @@ object AgentSettings {
     val newRelicConfig = config.getConfig("kamon.newrelic")
     val licenseKey = newRelicConfig.getString("license-key")
     assert(licenseKey != "<put-your-key-here>", "You forgot to include your New Relic license key in the configuration settings!")
+    val ssl = newRelicConfig.getBoolean("ssl")
 
     AgentSettings(
       licenseKey,
@@ -156,7 +157,8 @@ object AgentSettings {
       Timeout(newRelicConfig.getFiniteDuration("operation-timeout")),
       newRelicConfig.getInt("max-connect-retries"),
       newRelicConfig.getFiniteDuration("connect-retry-delay"),
-      newRelicConfig.getFiniteDuration("apdexT").toMillis / 1E3D)
+      newRelicConfig.getFiniteDuration("apdexT").toMillis / 1E3D,
+      ssl)
   }
 }
 

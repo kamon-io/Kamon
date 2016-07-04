@@ -15,20 +15,16 @@
  * ========================================================== */
 package spray.can.server.instrumentation
 
-import kamon.trace.TraceLocal.{ HttpContext, HttpContextKey }
 import org.aspectj.lang.annotation._
 import kamon.trace._
-import spray.can.server.OpenRequest
 import spray.http.{ HttpResponse, HttpMessagePartWrapper, HttpRequest }
 import kamon.Kamon
-import kamon.spray.{ SprayExtension, Spray }
+import kamon.spray.SprayExtension
 import org.aspectj.lang.ProceedingJoinPoint
 import spray.http.HttpHeaders.RawHeader
 
 @Aspect
 class ServerRequestInstrumentation {
-
-  import ServerRequestInstrumentation._
 
   @DeclareMixin("spray.can.server.OpenRequestComponent.DefaultOpenRequest")
   def mixinContextAwareToOpenRequest: TraceContextAware = TraceContextAware.default
@@ -39,11 +35,10 @@ class ServerRequestInstrumentation {
   @After("openRequestInit(openRequest, request)")
   def afterInit(openRequest: TraceContextAware, request: HttpRequest): Unit = {
     import Kamon.tracer
-    val sprayExtension = Kamon(Spray)
 
-    val defaultTraceName = sprayExtension.generateTraceName(request)
-    val token = if (sprayExtension.settings.includeTraceTokenHeader) {
-      request.headers.find(_.name == sprayExtension.settings.traceTokenHeaderName).map(_.value)
+    val defaultTraceName = SprayExtension.generateTraceName(request)
+    val token = if (SprayExtension.settings.includeTraceTokenHeader) {
+      request.headers.find(_.name.equalsIgnoreCase(SprayExtension.settings.traceTokenHeaderName)).map(_.value)
     } else None
 
     val newContext = tracer.newContext(defaultTraceName, token)
@@ -75,39 +70,31 @@ class ServerRequestInstrumentation {
     if (incomingContext.isEmpty)
       pjp.proceed()
     else {
-      val sprayExtension = Kamon(Spray)
-
-      val proceedResult = if (sprayExtension.settings.includeTraceTokenHeader) {
-        val responseWithHeader = includeTraceTokenIfPossible(response, sprayExtension.settings.traceTokenHeaderName, incomingContext.token)
+      val proceedResult = if (SprayExtension.settings.includeTraceTokenHeader) {
+        val responseWithHeader = includeTraceTokenIfPossible(response, SprayExtension.settings.traceTokenHeaderName, incomingContext.token)
         pjp.proceed(Array(openRequest, responseWithHeader))
 
       } else pjp.proceed
 
       Tracer.currentContext.finish()
 
-      recordHttpServerMetrics(response, incomingContext.name, sprayExtension)
-
-      //store in TraceLocal useful data to diagnose errors
-      storeDiagnosticData(openRequest)
+      recordHttpServerMetrics(response, incomingContext.name)
 
       proceedResult
     }
   }
 
   def verifyTraceContextConsistency(incomingTraceContext: TraceContext, storedTraceContext: TraceContext): Unit = {
-    def publishWarning(text: String): Unit =
-      Kamon(Spray).log.warning(text)
-
     if (incomingTraceContext.nonEmpty) {
       if (incomingTraceContext.token != storedTraceContext.token)
-        publishWarning(s"Different trace token found when trying to close a trace, original: [${storedTraceContext.token}] - incoming: [${incomingTraceContext.token}]")
+        SprayExtension.log.warn(s"Different trace token found when trying to close a trace, original: [${storedTraceContext.token}] - incoming: [${incomingTraceContext.token}]")
     } else
-      publishWarning(s"EmptyTraceContext present while closing the trace with token [${storedTraceContext.token}]")
+      SprayExtension.log.warn(s"EmptyTraceContext present while closing the trace with token [${storedTraceContext.token}]")
   }
 
-  def recordHttpServerMetrics(response: HttpMessagePartWrapper, traceName: String, sprayExtension: SprayExtension): Unit =
+  def recordHttpServerMetrics(response: HttpMessagePartWrapper, traceName: String): Unit =
     response match {
-      case httpResponse: HttpResponse ⇒ sprayExtension.httpServerMetrics.recordResponse(traceName, httpResponse.status.intValue.toString)
+      case httpResponse: HttpResponse ⇒ SprayExtension.httpServerMetrics.recordResponse(traceName, httpResponse.status.intValue.toString)
       case other                      ⇒ // Nothing to do then.
     }
 
@@ -116,19 +103,4 @@ class ServerRequestInstrumentation {
       case response: HttpResponse ⇒ response.withHeaders(response.headers ::: RawHeader(traceTokenHeaderName, token) :: Nil)
       case other                  ⇒ other
     }
-
-  def storeDiagnosticData(currentContext: TraceContextAware): Unit = {
-    val request = currentContext.asInstanceOf[OpenRequest].request
-    val headers = request.headers.map(header ⇒ header.name -> header.value).toMap
-    val agent = headers.getOrElse(UserAgent, Unknown)
-    val forwarded = headers.getOrElse(XForwardedFor, Unknown)
-
-    TraceLocal.store(HttpContextKey)(HttpContext(agent, request.uri.toRelative.toString(), forwarded))
-  }
-}
-
-object ServerRequestInstrumentation {
-  val UserAgent = "User-Agent"
-  val XForwardedFor = "X-Forwarded-For"
-  val Unknown = "unknown"
 }

@@ -17,9 +17,10 @@
 package kamon.metric.instrument
 
 import java.nio.LongBuffer
-import org.HdrHistogram.AtomicHistogramFieldsAccessor
-import kamon.metric.instrument.Histogram.{ Snapshot, DynamicRange }
-import org.HdrHistogram.AtomicHistogram
+
+import kamon.metric.instrument.Histogram.{ DynamicRange, Snapshot }
+import kamon.util.logger.LazyLogger
+import org.HdrHistogram.ModifiedAtomicHistogram
 
 trait Histogram extends Instrument {
   type SnapshotType = Histogram.Snapshot
@@ -54,11 +55,9 @@ object Histogram {
    * @param lowestDiscernibleValue
    *    The lowest value that can be discerned (distinguished from 0) by the histogram.Must be a positive integer that
    *    is >= 1. May be internally rounded down to nearest power of 2.
-   *
    * @param highestTrackableValue
    *    The highest value to be tracked by the histogram. Must be a positive integer that is >= (2 * lowestDiscernibleValue).
    *    Must not be larger than (Long.MAX_VALUE/2).
-   *
    * @param precision
    *    The number of significant decimal digits to which the histogram will maintain value resolution and separation.
    *    Must be a non-negative integer between 1 and 3.
@@ -87,6 +86,39 @@ object Histogram {
     def recordsIterator: Iterator[Record]
     def merge(that: InstrumentSnapshot, context: CollectionContext): InstrumentSnapshot
     def merge(that: Histogram.Snapshot, context: CollectionContext): Histogram.Snapshot
+
+    override def scale(from: UnitOfMeasurement, to: UnitOfMeasurement): Histogram.Snapshot =
+      new ScaledSnapshot(from, to, this)
+  }
+
+  class ScaledSnapshot(from: UnitOfMeasurement, to: UnitOfMeasurement, snapshot: Snapshot) extends Snapshot {
+    private def doScale(v: Long) = from.tryScale(to)(v).toLong
+    override def numberOfMeasurements: Long = snapshot.numberOfMeasurements
+
+    override def max: Long = doScale(snapshot.max)
+
+    override def merge(that: InstrumentSnapshot, context: CollectionContext): InstrumentSnapshot = snapshot.merge(that, context)
+
+    override def merge(that: Snapshot, context: CollectionContext): Snapshot = snapshot.merge(that, context)
+
+    override def percentile(percentile: Double): Long = doScale(snapshot.percentile(percentile))
+
+    override def min: Long = doScale(snapshot.min)
+
+    override def sum: Long = doScale(snapshot.sum)
+
+    override def recordsIterator: Iterator[Record] = {
+      snapshot.recordsIterator.map(record ⇒ new Record {
+        override def count: Long = record.count
+
+        override def level: Long = doScale(record.level)
+
+        override private[kamon] def rawCompactRecord: Long = record.rawCompactRecord
+      })
+    }
+
+    override def scale(from: UnitOfMeasurement, to: UnitOfMeasurement): Histogram.Snapshot =
+      if (this.from == from && this.to == to) this else super.scale(from, to)
   }
 
   object Snapshot {
@@ -99,8 +131,13 @@ object Histogram {
       override def merge(that: InstrumentSnapshot, context: CollectionContext): InstrumentSnapshot = that
       override def merge(that: Histogram.Snapshot, context: CollectionContext): Histogram.Snapshot = that
       override def numberOfMeasurements: Long = 0L
+      override def scale(from: UnitOfMeasurement, to: UnitOfMeasurement): Histogram.Snapshot = this
     }
   }
+}
+
+object HdrHistogram {
+  private val log = LazyLogger(classOf[HdrHistogram])
 }
 
 /**
@@ -108,13 +145,22 @@ object Histogram {
  *  The collect(..) operation extracts all the recorded values from the histogram and resets the counts, but still
  *  leave it in a consistent state even in the case of concurrent modification while the snapshot is being taken.
  */
-class HdrHistogram(dynamicRange: DynamicRange) extends AtomicHistogram(dynamicRange.lowestDiscernibleValue,
-  dynamicRange.highestTrackableValue, dynamicRange.precision) with Histogram with AtomicHistogramFieldsAccessor {
-  import AtomicHistogramFieldsAccessor.totalCountUpdater
+class HdrHistogram(dynamicRange: DynamicRange) extends ModifiedAtomicHistogram(dynamicRange.lowestDiscernibleValue,
+  dynamicRange.highestTrackableValue, dynamicRange.precision) with Histogram {
+  import HdrHistogram.log
 
-  def record(value: Long): Unit = recordValue(value)
+  def record(value: Long): Unit = tryRecord(value, 1L)
 
-  def record(value: Long, count: Long): Unit = recordValueWithCount(value, count)
+  def record(value: Long, count: Long): Unit = tryRecord(value, count)
+
+  private def tryRecord(value: Long, count: Long): Unit = {
+    try {
+      recordValueWithCount(value, count)
+    } catch {
+      case anyException: Throwable ⇒
+        log.warn(s"Failed to store value $value in HdrHistogram, please review your range configuration.")
+    }
+  }
 
   def collect(context: CollectionContext): Histogram.Snapshot = {
     import context.buffer
@@ -125,7 +171,7 @@ class HdrHistogram(dynamicRange: DynamicRange) extends AtomicHistogram(dynamicRa
 
     val measurementsArray = Array.ofDim[Long](buffer.limit())
     buffer.get(measurementsArray, 0, measurementsArray.length)
-    new CompactHdrSnapshot(nrOfMeasurements, measurementsArray, unitMagnitude(), subBucketHalfCount(), subBucketHalfCountMagnitude())
+    new CompactHdrSnapshot(nrOfMeasurements, measurementsArray, protectedUnitMagnitude(), protectedSubBucketHalfCount(), protectedSubBucketHalfCountMagnitude())
   }
 
   def getCounts = countsArray().length()
@@ -148,22 +194,8 @@ class HdrHistogram(dynamicRange: DynamicRange) extends AtomicHistogram(dynamicRa
 
       index += 1
     }
-
-    reestablishTotalCount(nrOfMeasurements)
     nrOfMeasurements
   }
-
-  private def reestablishTotalCount(diff: Long): Unit = {
-    def tryUpdateTotalCount: Boolean = {
-      val previousTotalCount = totalCountUpdater.get(this)
-      val newTotalCount = previousTotalCount - diff
-
-      totalCountUpdater.compareAndSet(this, previousTotalCount, newTotalCount)
-    }
-
-    while (!tryUpdateTotalCount) {}
-  }
-
 }
 
 case class CompactHdrSnapshot(val numberOfMeasurements: Long, compactRecords: Array[Long], unitMagnitude: Int,

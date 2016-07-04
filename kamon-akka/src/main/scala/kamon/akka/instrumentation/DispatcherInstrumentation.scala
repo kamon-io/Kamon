@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * Copyright © 2013-2014 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2015 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -16,17 +16,20 @@
 
 package akka.kamon.instrumentation
 
+import java.lang.reflect.Method
 import java.util.concurrent.{ ExecutorService, ThreadPoolExecutor }
 
 import akka.actor.{ ActorContext, Props, ActorSystem, ActorSystemImpl }
-import akka.dispatch.ForkJoinExecutorConfigurator.AkkaForkJoinPool
 import akka.dispatch._
 import akka.kamon.instrumentation.LookupDataAware.LookupData
 import kamon.Kamon
-import kamon.akka.{ AkkaDispatcherMetrics, ThreadPoolExecutorDispatcherMetrics, ForkJoinPoolDispatcherMetrics }
+import kamon.util.executors.{ ForkJoinPoolMetrics, ThreadPoolExecutorMetrics }
+
 import kamon.metric.{ MetricsModule, Entity }
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
+
+import scala.concurrent.forkjoin.ForkJoinPool
 
 @Aspect
 class DispatcherInstrumentation {
@@ -45,30 +48,41 @@ class DispatcherInstrumentation {
 
     // Yes, reflection sucks, but this piece of code is only executed once on ActorSystem's startup.
     val defaultDispatcher = system.dispatcher
-    val executorServiceDelegateField = defaultDispatcher.getClass.getDeclaredField("executorServiceDelegate")
-    executorServiceDelegateField.setAccessible(true)
-
-    val lazyExecutorServiceDelegate = executorServiceDelegateField.get(defaultDispatcher)
-    val executorField = lazyExecutorServiceDelegate.getClass.getMethod("executor")
-    executorField.setAccessible(true)
-
-    val defaultDispatcherExecutor = executorField.invoke(lazyExecutorServiceDelegate).asInstanceOf[ExecutorService]
+    val defaultDispatcherExecutor = extractExecutor(defaultDispatcher.asInstanceOf[MessageDispatcher])
     registerDispatcher(Dispatchers.DefaultDispatcherId, defaultDispatcherExecutor, system)
+  }
+
+  private def extractExecutor(dispatcher: MessageDispatcher): ExecutorService = {
+    val executorServiceMethod: Method = {
+      // executorService is protected
+      val method = classOf[Dispatcher].getDeclaredMethod("executorService")
+      method.setAccessible(true)
+      method
+    }
+
+    dispatcher match {
+      case x: Dispatcher ⇒
+        val executor = executorServiceMethod.invoke(x) match {
+          case delegate: ExecutorServiceDelegate ⇒ delegate.executor
+          case other                             ⇒ other
+        }
+        executor.asInstanceOf[ExecutorService]
+    }
   }
 
   private def registerDispatcher(dispatcherName: String, executorService: ExecutorService, system: ActorSystem): Unit =
     executorService match {
-      case fjp: AkkaForkJoinPool ⇒
+      case fjp: ForkJoinPool ⇒
         val dispatcherEntity = Entity(system.name + "/" + dispatcherName, AkkaDispatcherMetrics.Category, tags = Map("dispatcher-type" -> "fork-join-pool"))
 
         if (Kamon.metrics.shouldTrack(dispatcherEntity))
-          Kamon.metrics.entity(ForkJoinPoolDispatcherMetrics.factory(fjp), dispatcherEntity)
+          Kamon.metrics.entity(ForkJoinPoolMetrics.factory(fjp, AkkaDispatcherMetrics.Category), dispatcherEntity)
 
       case tpe: ThreadPoolExecutor ⇒
         val dispatcherEntity = Entity(system.name + "/" + dispatcherName, AkkaDispatcherMetrics.Category, tags = Map("dispatcher-type" -> "thread-pool-executor"))
 
         if (Kamon.metrics.shouldTrack(dispatcherEntity))
-          Kamon.metrics.entity(ThreadPoolExecutorDispatcherMetrics.factory(tpe), dispatcherEntity)
+          Kamon.metrics.entity(ThreadPoolExecutorMetrics.factory(tpe, AkkaDispatcherMetrics.Category), dispatcherEntity)
 
       case others ⇒ // Currently not interested in other kinds of dispatchers.
     }
@@ -127,7 +141,7 @@ class DispatcherInstrumentation {
 
     if (lookupData.actorSystem != null)
       lazyExecutor.asInstanceOf[ExecutorServiceDelegate].executor match {
-        case fjp: AkkaForkJoinPool ⇒
+        case fjp: ForkJoinPool ⇒
           lookupData.metrics.removeEntity(Entity(lookupData.actorSystem.name + "/" + lookupData.dispatcherName,
             AkkaDispatcherMetrics.Category, tags = Map("dispatcher-type" -> "fork-join-pool")))
 
@@ -194,4 +208,8 @@ object LookupDataAware {
 
     result
   }
+}
+
+object AkkaDispatcherMetrics {
+  val Category = "akka-dispatcher"
 }

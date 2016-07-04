@@ -17,6 +17,7 @@
 package kamon.system.sigar
 
 import akka.actor.{ Props, Actor }
+import akka.event.{ Logging, NoLogging, LoggingAdapter }
 import kamon.Kamon
 import kamon.metric.instrument.InstrumentFactory
 import kamon.metric._
@@ -28,14 +29,16 @@ import scala.concurrent.duration.FiniteDuration
 class SigarMetricsUpdater(refreshInterval: FiniteDuration) extends Actor {
   val sigar = new Sigar
   val metricsExtension = Kamon.metrics
+  val logger = Logging(context.system, this)
 
   val sigarMetrics = List(
-    CpuMetrics.register(sigar, metricsExtension),
-    FileSystemMetrics.register(sigar, metricsExtension),
-    LoadAverageMetrics.register(sigar, metricsExtension),
-    MemoryMetrics.register(sigar, metricsExtension),
-    NetworkMetrics.register(sigar, metricsExtension),
-    ProcessCpuMetrics.register(sigar, metricsExtension))
+    CpuMetrics.register(sigar, metricsExtension, logger),
+    FileSystemMetrics.register(sigar, metricsExtension, logger),
+    LoadAverageMetrics.register(sigar, metricsExtension, logger),
+    MemoryMetrics.register(sigar, metricsExtension, logger),
+    NetworkMetrics.register(sigar, metricsExtension, logger),
+    ProcessCpuMetrics.register(sigar, metricsExtension, logger),
+    ULimitMetrics.register(sigar, metricsExtension, logger)).flatten
 
   val refreshSchedule = context.system.scheduler.schedule(refreshInterval, refreshInterval, self, UpdateSigarMetrics)(context.dispatcher)
 
@@ -55,7 +58,7 @@ class SigarMetricsUpdater(refreshInterval: FiniteDuration) extends Actor {
 
 object SigarMetricsUpdater {
   def props(refreshInterval: FiniteDuration): Props =
-    Props(new SigarMetricsUpdater((refreshInterval)))
+    Props(new SigarMetricsUpdater(refreshInterval))
 
   case object UpdateSigarMetrics
 }
@@ -64,10 +67,27 @@ trait SigarMetric extends EntityRecorder {
   def update(): Unit
 }
 
-abstract class SigarMetricRecorderCompanion(metricName: String) {
-  def register(sigar: Sigar, metricsExtension: MetricsModule): SigarMetric =
-    metricsExtension.entity(EntityRecorderFactory("system-metric", apply(sigar, _)), metricName)
+object SigarSafeRunner {
+  private val errorLogged = scala.collection.mutable.Set[String]()
 
-  def apply(sigar: Sigar, instrumentFactory: InstrumentFactory): SigarMetric
+  def runSafe[T](thunk: ⇒ T, defaultValue: ⇒ T, error: String, logger: LoggingAdapter): T = {
+    try thunk catch {
+      case e: Exception ⇒
+        if (!errorLogged.contains(error)) {
+          errorLogged += error
+          logger.warning("Couldn't get the metric [{}]. Due to [{}]", error, e.getMessage)
+        }
+        defaultValue
+    }
+  }
 }
 
+abstract class SigarMetricRecorderCompanion(metricName: String) {
+  def register(sigar: Sigar, metricsExtension: MetricsModule, logger: LoggingAdapter = NoLogging): Option[SigarMetric] =
+    if (metricsExtension.shouldTrack(metricName, "system-metric"))
+      Some(metricsExtension.entity(EntityRecorderFactory("system-metric", apply(sigar, _)), metricName))
+    else
+      None
+
+  def apply(sigar: Sigar, instrumentFactory: InstrumentFactory, logger: LoggingAdapter = NoLogging): SigarMetric
+}

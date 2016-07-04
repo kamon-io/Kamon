@@ -1,5 +1,5 @@
 /* ===================================================
- * Copyright © 2013-2014 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2015 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,13 @@
 
 package kamon.play.instrumentation
 
-import kamon.Kamon
-import kamon.play.Play
+import kamon.play.PlayExtension
 import kamon.trace.{ Tracer, SegmentCategory }
 import kamon.util.SameThreadExecutionContext
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation.{ Around, Aspect, Pointcut }
 import play.api.libs.ws.{ WSRequest, WSResponse }
 import scala.concurrent.Future
-import scala.util.Try
 
 @Aspect
 class WSInstrumentation {
@@ -35,9 +33,8 @@ class WSInstrumentation {
   @Around("onExecuteRequest(request)")
   def aroundExecuteRequest(pjp: ProceedingJoinPoint, request: WSRequest): Any = {
     Tracer.currentContext.collect { ctx ⇒
-      val playExtension = Kamon(Play)
-      val segmentName = playExtension.generateHttpClientSegmentName(request)
-      val segment = ctx.startSegment(segmentName, SegmentCategory.HttpClient, Play.SegmentLibraryName)
+      val segmentName = PlayExtension.generateHttpClientSegmentName(request)
+      val segment = ctx.startSegment(segmentName, SegmentCategory.HttpClient, PlayExtension.SegmentLibraryName)
       val response = pjp.proceed().asInstanceOf[Future[WSResponse]]
 
       response.onComplete(result ⇒ segment.finish())(SameThreadExecutionContext)

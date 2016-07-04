@@ -22,15 +22,6 @@ import kamon.testkit.BaseKamonSpec
 import kamon.trace.SegmentCategory
 
 class AnnotationInstrumentationSpec extends BaseKamonSpec("annotation-instrumentation-spec") {
-  override lazy val config =
-    ConfigFactory.parseString(
-      """
-        |kamon.metric {
-        |  tick-interval = 1 hour
-        |  default-collection-context-buffer-size = 100
-        |}
-      """.stripMargin)
-
   "the Kamon Annotation module" should {
     "create a new trace when is invoked a method annotated with @Trace" in {
       for (id ← 1 to 10) Annotated(id).trace()
