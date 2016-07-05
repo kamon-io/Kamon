@@ -68,7 +68,7 @@ object Projects extends Build {
       libraryDependencies ++=
         compile() ++
         provided(aspectJ) ++
-        optional(scalazConcurrent) ++
+        optional(scalazConcurrent, twitterUtilCore) ++
         test(scalatest, akkaTestKit, akkaSlf4j, slf4jJul, slf4jLog4j, logback))
 
   lazy val kamonAkkaRemote = Project("kamon-akka-remote", file("kamon-akka-remote"))

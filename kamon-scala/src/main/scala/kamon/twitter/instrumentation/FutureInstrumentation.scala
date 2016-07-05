@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * Copyright © 2013-2014 the kamon project <http://kamon.io/>
+ * Copyright © 2016 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -14,20 +14,20 @@
  * =========================================================================================
  */
 
-package kamon.scala.instrumentation
+package kamon.twitter.instrumentation
 
-import kamon.trace.{ Tracer, TraceContextAware }
+import kamon.trace.{ TraceContextAware, Tracer }
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
 
 @Aspect
 class FutureInstrumentation {
 
-  @DeclareMixin("scala.concurrent.impl.CallbackRunnable || scala.concurrent.impl.Future.PromiseCompletingRunnable")
+  @DeclareMixin("com.twitter.util..* && java.lang.Runnable+")
   def mixinTraceContextAwareToFutureRelatedRunnable: TraceContextAware =
     TraceContextAware.default
 
-  @Pointcut("execution((scala.concurrent.impl.CallbackRunnable || scala.concurrent.impl.Future.PromiseCompletingRunnable).new(..)) && this(runnable)")
+  @Pointcut("execution((com.twitter.util..* && java.lang.Runnable+).new(..)) && this(runnable)")
   def futureRelatedRunnableCreation(runnable: TraceContextAware): Unit = {}
 
   @After("futureRelatedRunnableCreation(runnable)")
@@ -36,7 +36,7 @@ class FutureInstrumentation {
     runnable.traceContext
   }
 
-  @Pointcut("execution(* (scala.concurrent.impl.CallbackRunnable || scala.concurrent.impl.Future.PromiseCompletingRunnable).run()) && this(runnable)")
+  @Pointcut("execution(* (com.twitter.util..* && java.lang.Runnable+).run()) && this(runnable)")
   def futureRelatedRunnableExecution(runnable: TraceContextAware) = {}
 
   @Around("futureRelatedRunnableExecution(runnable)")

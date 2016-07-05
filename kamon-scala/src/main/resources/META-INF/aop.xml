@@ -6,12 +6,14 @@
     <!-- Futures -->
     <aspect name="kamon.scala.instrumentation.FutureInstrumentation"/>
     <aspect name="kamon.scalaz.instrumentation.FutureInstrumentation"/>
+    <aspect name="kamon.twitter.instrumentation.FutureInstrumentation"/>
 
   </aspects>
 
   <weaver>
     <include within="scala.concurrent..*"/>
     <include within="scalaz.concurrent..*"/>
+    <include within="com.twitter.util..*"/>
   </weaver>
 
 </aspectj>
