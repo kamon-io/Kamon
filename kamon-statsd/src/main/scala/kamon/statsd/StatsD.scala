@@ -50,7 +50,7 @@ class StatsDExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   val statsDMetricsListener = buildMetricsListener(tickInterval, flushInterval, keyGeneratorFQCN, senderFactoryFQCN, config)
 
   val subscriptions = statsDConfig.getConfig("subscriptions")
-  subscriptions.firstLevelKeys.map { subscriptionCategory ⇒
+  subscriptions.firstLevelKeys.foreach { subscriptionCategory ⇒
     subscriptions.getStringList(subscriptionCategory).asScala.foreach { pattern ⇒
       metricsExtension.subscribe(subscriptionCategory, pattern, statsDMetricsListener, permanently = true)
     }

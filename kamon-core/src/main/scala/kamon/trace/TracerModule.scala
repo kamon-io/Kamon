@@ -23,14 +23,16 @@ import akka.event.{ Logging, LoggingAdapter }
 import com.typesafe.config.Config
 import kamon.Kamon
 import kamon.metric.MetricsModule
+import kamon.trace.States.Status
 import kamon.util._
+
 import scala.collection.JavaConverters._
 
 trait TracerModule {
   def newContext(name: String): TraceContext
   def newContext(name: String, token: Option[String]): TraceContext
   def newContext(name: String, token: Option[String], tags: Map[String, String]): TraceContext
-  def newContext(name: String, token: Option[String], tags: Map[String, String], timestamp: RelativeNanoTimestamp, isOpen: Boolean, isLocal: Boolean): TraceContext
+  def newContext(name: String, token: Option[String], tags: Map[String, String], timestamp: RelativeNanoTimestamp, state: Status, isLocal: Boolean): TraceContext
 
   def subscribe(subscriber: ActorRef): Unit
   def unsubscribe(subscriber: ActorRef): Unit
@@ -134,14 +136,14 @@ private[kamon] class TracerModuleImpl(metricsExtension: MetricsModule, config: C
   def newContext(name: String, token: Option[String], tags: Map[String, String]): TraceContext =
     createTraceContext(name, token, tags)
 
-  def newContext(name: String, token: Option[String], tags: Map[String, String], timestamp: RelativeNanoTimestamp, isOpen: Boolean, isLocal: Boolean): TraceContext =
-    createTraceContext(name, token, tags, timestamp, isOpen, isLocal)
+  def newContext(name: String, token: Option[String], tags: Map[String, String], timestamp: RelativeNanoTimestamp, status: Status, isLocal: Boolean): TraceContext =
+    createTraceContext(name, token, tags, timestamp, status, isLocal)
 
   private def createTraceContext(traceName: String, token: Option[String], tags: Map[String, String] = Map.empty, startTimestamp: RelativeNanoTimestamp = RelativeNanoTimestamp.now,
-    isOpen: Boolean = true, isLocal: Boolean = true): TraceContext = {
+    status: Status = States.Open, isLocal: Boolean = true): TraceContext = {
 
     def newMetricsOnlyContext(token: String): TraceContext =
-      new MetricsOnlyContext(traceName, token, tags, isOpen, _settings.levelOfDetail, startTimestamp, _logger)
+      new MetricsOnlyContext(traceName, token, tags, status, _settings.levelOfDetail, startTimestamp, _logger)
 
     val traceToken = token.getOrElse(newToken)
 
@@ -151,7 +153,7 @@ private[kamon] class TracerModuleImpl(metricsExtension: MetricsModule, config: C
       case _ if !isLocal || !_settings.sampler.shouldTrace ⇒
         newMetricsOnlyContext(traceToken)
       case _ ⇒
-        new TracingContext(traceName, traceToken, tags, izOpen = true, _settings.levelOfDetail, isLocal, startTimestamp, _logger, dispatchTracingContext)
+        new TracingContext(traceName, traceToken, tags, currentStatus = States.Open, _settings.levelOfDetail, isLocal, startTimestamp, _logger, dispatchTracingContext)
     }
   }
 

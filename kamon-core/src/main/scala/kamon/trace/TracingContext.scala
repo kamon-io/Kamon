@@ -20,13 +20,14 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
 
 import akka.event.LoggingAdapter
+import kamon.trace.States.Status
 import kamon.util.{ NanoInterval, NanoTimestamp, RelativeNanoTimestamp }
 
 import scala.collection.concurrent.TrieMap
 
-private[trace] class TracingContext(traceName: String, token: String, tags: Map[String, String], izOpen: Boolean, levelOfDetail: LevelOfDetail,
+private[trace] class TracingContext(traceName: String, token: String, tags: Map[String, String], currentStatus: Status, levelOfDetail: LevelOfDetail,
   isLocal: Boolean, startTimeztamp: RelativeNanoTimestamp, log: LoggingAdapter, traceInfoSink: TracingContext ⇒ Unit)
-    extends MetricsOnlyContext(traceName, token, tags, izOpen, levelOfDetail, startTimeztamp, log) {
+    extends MetricsOnlyContext(traceName, token, tags, currentStatus, levelOfDetail, startTimeztamp, log) {
 
   private val _openSegments = new AtomicInteger(0)
   private val _startTimestamp = NanoTimestamp.now
@@ -51,12 +52,12 @@ private[trace] class TracingContext(traceName: String, token: String, tags: Map[
     traceInfoSink(this)
   }
 
-  override def finishSegment(segmentName: String, category: String, library: String, duration: NanoInterval, tags: Map[String, String]): Unit = {
+  override def finishSegment(segmentName: String, category: String, library: String, duration: NanoInterval, tags: Map[String, String], isFinishedWithError: Boolean = false): Unit = {
     _openSegments.decrementAndGet()
-    super.finishSegment(segmentName, category, library, duration, tags)
+    super.finishSegment(segmentName, category, library, duration, tags, isFinishedWithError)
   }
 
-  def shouldIncubate: Boolean = isOpen || _openSegments.get() > 0
+  def shouldIncubate: Boolean = (States.Open == status) || _openSegments.get() > 0
 
   // Handle with care, should only be used after a trace is finished.
   def generateTraceInfo: TraceInfo = {
