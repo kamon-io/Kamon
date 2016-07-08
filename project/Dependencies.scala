@@ -53,6 +53,7 @@ object Dependencies {
   val slf4jJul          = "org.slf4j"                 %   "jul-to-slf4j"          % slf4jVersion
   val slf4jLog4j        = "org.slf4j"                 %   "log4j-over-slf4j"      % slf4jVersion
   val scalazConcurrent  = "org.scalaz"                %%  "scalaz-concurrent"     % "7.1.0"
+  val twitterUtilCore   = "com.twitter"               %%  "util-core"             % "6.34.0"
   val sigarLoader       = "io.kamon"                  %   "sigar-loader"          % "1.6.5-rev002"
   val h2                = "com.h2database"            %   "h2"                    % "1.4.182"
   val el                = "org.glassfish"             %   "javax.el"              % "3.0.0"
