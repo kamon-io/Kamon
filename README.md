@@ -15,3 +15,20 @@ This WIP currently supports:
 [Traces]: https://github.com/kamon-io/kamon-akka-http/blob/master/src/main/scala/kamon/akka/http/instrumentation/FlowWrapper.scala#L36-L49
 [HttpServerMetrics]:https://github.com/kamon-io/Kamon/blob/master/kamon-core/src/main/scala/kamon/util/http/HttpServerMetrics.scala#L27
 [Segments]:https://github.com/kamon-io/kamon-akka-http/blob/master/src/main/scala/kamon/akka/http/instrumentation/ClientRequestInstrumentation.scala#L32-L45
+
+
+*Configuration*
+```scala
+kamon {
+  metric {
+    filters {
+      trace.includes = [ "**" ]
+    }
+  }
+  
+  subscriptions {
+      trace                = [ "**" ]
+      trace-segment        = [ "**" ]
+      akka-http-server     = [ "**" ]
+    }
+```
