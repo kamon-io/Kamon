@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * Copyright © 2013-2014 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2016 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -24,7 +24,6 @@ import org.slf4j.MDC
 trait MdcKeysSupport {
 
   val traceTokenKey = "traceToken"
-
   val traceNameKey = "traceName"
 
   private val defaultKeys = Seq(traceTokenKey, traceNameKey)
@@ -37,7 +36,7 @@ trait MdcKeysSupport {
   // Java variant.
   def withMdc[A](thunk: Supplier[A]): A = withMdc(thunk.get)
 
-  private[this] def copyToMdc(traceContext: TraceContext): Iterable[String] = traceContext match {
+  private[kamon] def copyToMdc(traceContext: TraceContext): Iterable[String] = traceContext match {
     case ctx: MetricsOnlyContext ⇒
 
       // Add the default key value pairs for the trace token and trace name.
@@ -46,7 +45,7 @@ trait MdcKeysSupport {
 
       defaultKeys ++ ctx.traceLocalStorage.underlyingStorage.collect {
         case (available: AvailableToMdc, value) ⇒ Map(available.mdcKey -> String.valueOf(value))
-      }.map { value ⇒ value.map { case (k, v) ⇒ MDC.put(k, v); k } }.flatten
+      }.flatMap { value ⇒ value.map { case (k, v) ⇒ MDC.put(k, v); k } }
 
     case EmptyTraceContext ⇒ Iterable.empty[String]
   }

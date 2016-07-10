@@ -23,7 +23,6 @@ import akka.event.{ Logging, LoggingAdapter }
 import com.typesafe.config.Config
 import kamon.Kamon
 import kamon.metric.MetricsModule
-import kamon.trace.States.Status
 import kamon.util._
 
 import scala.collection.JavaConverters._
@@ -140,7 +139,7 @@ private[kamon] class TracerModuleImpl(metricsExtension: MetricsModule, config: C
     createTraceContext(name, token, tags, timestamp, status, isLocal)
 
   private def createTraceContext(traceName: String, token: Option[String], tags: Map[String, String] = Map.empty, startTimestamp: RelativeNanoTimestamp = RelativeNanoTimestamp.now,
-    status: Status = States.Open, isLocal: Boolean = true): TraceContext = {
+    status: Status = Status.Open, isLocal: Boolean = true): TraceContext = {
 
     def newMetricsOnlyContext(token: String): TraceContext =
       new MetricsOnlyContext(traceName, token, tags, status, _settings.levelOfDetail, startTimestamp, _logger)
@@ -153,7 +152,7 @@ private[kamon] class TracerModuleImpl(metricsExtension: MetricsModule, config: C
       case _ if !isLocal || !_settings.sampler.shouldTrace ⇒
         newMetricsOnlyContext(traceToken)
       case _ ⇒
-        new TracingContext(traceName, traceToken, tags, currentStatus = States.Open, _settings.levelOfDetail, isLocal, startTimestamp, _logger, dispatchTracingContext)
+        new TracingContext(traceName, traceToken, tags, currentStatus = Status.Open, _settings.levelOfDetail, isLocal, startTimestamp, _logger, dispatchTracingContext)
     }
   }
 

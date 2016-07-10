@@ -6,7 +6,7 @@ import akka.remote.instrumentation.TraceContextAwareWireFormats.{ AckAndTraceCon
 import akka.remote.{ Ack, RemoteActorRefProvider, SeqNo }
 import akka.util.ByteString
 import kamon.Kamon
-import kamon.trace.{ States, Tracer }
+import kamon.trace.{ Status, Tracer }
 import kamon.util.MilliTimestamp
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
@@ -38,7 +38,7 @@ class RemotingInstrumentation {
       envelopeBuilder.setTraceContext(RemoteTraceContext.newBuilder()
         .setTraceName(context.name)
         .setTraceToken(context.token)
-        .setIsOpen(States.Open == context.status)
+        .setIsOpen(Status.Open == context.status)
         .setStartMilliTime(context.startTimestamp.toMilliTimestamp.millis)
         .build())
     }
@@ -91,7 +91,7 @@ class RemotingInstrumentation {
         Option(remoteTraceContext.getTraceToken),
         tags = Map.empty,
         new MilliTimestamp(remoteTraceContext.getStartMilliTime).toRelativeNanoTimestamp,
-        if (remoteTraceContext.getIsOpen) States.Open else States.Closed,
+        if (remoteTraceContext.getIsOpen) Status.Open else Status.Closed,
         isLocal = false)
 
       Tracer.setCurrentContext(ctx)

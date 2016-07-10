@@ -9,7 +9,7 @@ import akka.testkit.{ ImplicitSender, TestKitBase }
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
-import kamon.trace.{ States, Tracer }
+import kamon.trace.{ Status, Tracer }
 import org.scalatest.{ Matchers, WordSpecLike }
 
 import scala.concurrent.duration._
@@ -142,7 +142,7 @@ class TraceTokenReplier(creationTraceContextListener: Option[ActorRef]) extends 
 
   def currentTraceContextInfo: String = {
     val ctx = Tracer.currentContext
-    s"name=${ctx.name}|token=${ctx.token}|isOpen=${States.Open == ctx.status}"
+    s"name=${ctx.name}|token=${ctx.token}|isOpen=${Status.Open == ctx.status}"
   }
 }
 
@@ -171,6 +171,6 @@ class SupervisorOfRemote(traceContextListener: ActorRef, remoteAddress: Address)
 
   def currentTraceContextInfo: String = {
     val ctx = Tracer.currentContext
-    s"name=${ctx.name}|token=${ctx.token}|isOpen=${States.Open == ctx.status}"
+    s"name=${ctx.name}|token=${ctx.token}|isOpen=${Status.Open == ctx.status}"
   }
 }

@@ -19,7 +19,7 @@ package kamon.trace
 import java.io.ObjectStreamException
 import java.util
 
-import kamon.trace.States.{ Closed, Status }
+import kamon.trace.Status.Closed
 import kamon.trace.TraceContextAware.DefaultTraceContextAware
 import kamon.util.{ Function, RelativeNanoTimestamp, SameThreadExecutionContext, Supplier }
 
@@ -30,7 +30,7 @@ trait TraceContext {
   def token: String
   def isEmpty: Boolean
   def nonEmpty: Boolean = !isEmpty
-  def isClosed: Boolean = !(States.Open == status)
+  def isClosed: Boolean = !(Status.Open == status)
   def status: Status
   def finish(): Unit
   def finishWithError(cause: Throwable): Unit
@@ -88,7 +88,7 @@ trait Segment {
   def library: String
   def isEmpty: Boolean
   def nonEmpty: Boolean = !isEmpty
-  def isClosed: Boolean = !(States.Open == status)
+  def isClosed: Boolean = !(Status.Open == status)
   def status: Status
   def finish(): Unit
   def finishWithError(cause: Throwable): Unit
@@ -148,8 +148,8 @@ object LevelOfDetail {
   case object FullTrace extends LevelOfDetail
 }
 
-object States {
-  sealed trait Status
+sealed trait Status
+object Status {
   case object Open extends Status
   case object Closed extends Status
   case object FinishedWithError extends Status
