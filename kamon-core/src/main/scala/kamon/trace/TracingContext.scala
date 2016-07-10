@@ -20,14 +20,19 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
 
 import akka.event.LoggingAdapter
-import kamon.trace.States.Status
 import kamon.util.{ NanoInterval, NanoTimestamp, RelativeNanoTimestamp }
 
 import scala.collection.concurrent.TrieMap
 
-private[trace] class TracingContext(traceName: String, token: String, tags: Map[String, String], currentStatus: Status, levelOfDetail: LevelOfDetail,
-  isLocal: Boolean, startTimeztamp: RelativeNanoTimestamp, log: LoggingAdapter, traceInfoSink: TracingContext ⇒ Unit)
-    extends MetricsOnlyContext(traceName, token, tags, currentStatus, levelOfDetail, startTimeztamp, log) {
+private[trace] class TracingContext(traceName: String,
+    token: String,
+    tags: Map[String, String],
+    currentStatus: Status,
+    levelOfDetail: LevelOfDetail,
+    isLocal: Boolean,
+    startTimeztamp: RelativeNanoTimestamp,
+    log: LoggingAdapter,
+    traceInfoSink: TracingContext ⇒ Unit) extends MetricsOnlyContext(traceName, token, tags, currentStatus, levelOfDetail, startTimeztamp, log) {
 
   private val _openSegments = new AtomicInteger(0)
   private val _startTimestamp = NanoTimestamp.now
@@ -57,7 +62,7 @@ private[trace] class TracingContext(traceName: String, token: String, tags: Map[
     super.finishSegment(segmentName, category, library, duration, tags, isFinishedWithError)
   }
 
-  def shouldIncubate: Boolean = (States.Open == status) || _openSegments.get() > 0
+  def shouldIncubate: Boolean = (Status.Open == status) || _openSegments.get() > 0
 
   // Handle with care, should only be used after a trace is finished.
   def generateTraceInfo: TraceInfo = {
@@ -77,7 +82,11 @@ private[trace] class TracingContext(traceName: String, token: String, tags: Map[
     TraceInfo(name, token, _startTimestamp, elapsedTime, _metadata.toMap, segmentsInfo.result())
   }
 
-  class TracingSegment(segmentName: String, category: String, library: String, tags: Map[String, String]) extends MetricsOnlySegment(segmentName, category, library, tags) {
+  class TracingSegment(segmentName: String,
+      category: String,
+      library: String,
+      tags: Map[String, String]) extends MetricsOnlySegment(segmentName, category, library, tags) {
+
     private val metadata = TrieMap.empty[String, String]
     override def addMetadata(key: String, value: String): Unit = metadata.put(key, value)
 
