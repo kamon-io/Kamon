@@ -47,6 +47,7 @@ class SPMExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   val retryInterval: FiniteDuration = config.getFiniteDuration("retry-interval")
   val sendTimeout: FiniteDuration = config.getFiniteDuration("send-timeout")
   val url = config.getString("receiver-url")
+  val tracingUrl = config.getString("tracing-receiver-url")
   val token = config.getString("token")
   val hostname = if (config.hasPath("hostname-alias")) {
     config.getString("hostname-alias")
@@ -61,8 +62,9 @@ class SPMExtension(system: ExtendedActorSystem) extends Kamon.Extension {
     }
   }.toList
 
-  val sender = system.actorOf(SPMMetricsSender.props(IO(Http), retryInterval, Timeout(sendTimeout), maxQueueSize, url, hostname, token), "spm-metrics-sender")
+  val sender = system.actorOf(SPMMetricsSender.props(IO(Http), retryInterval, Timeout(sendTimeout), maxQueueSize, url, tracingUrl, hostname, token), "spm-metrics-sender")
+
   var subscriber = system.actorOf(SPMMetricsSubscriber.props(sender, 50 seconds, subscriptions), "spm-metrics-subscriber")
 
-  log.info(s"kamon-spm extension started. Hostname = ${hostname}, url = ${url}.")
+  log.info(s"kamon-spm extension started. Hostname = ${hostname}, url = ${url}. Tracing url=${tracingUrl}")
 }

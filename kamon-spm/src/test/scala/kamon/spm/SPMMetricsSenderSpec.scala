@@ -41,7 +41,7 @@ class SPMMetricsSenderSpec extends BaseKamonSpec("spm-metrics-sender-spec") {
     "send metrics to receiver" in {
       val io = TestProbe()
 
-      val sender = system.actorOf(SPMMetricsSender.props(io.ref, 5 seconds, Timeout(5 seconds), 100, "http://localhost:1234", "host-1", "1234"))
+      val sender = system.actorOf(SPMMetricsSender.props(io.ref, 5 seconds, Timeout(5 seconds), 100, "http://localhost:1234", "http://localhost:1234", "host-1", "1234"))
       sender ! Send(testMetrics())
 
       val request = io.expectMsgPF(1 second) {
@@ -59,7 +59,7 @@ class SPMMetricsSenderSpec extends BaseKamonSpec("spm-metrics-sender-spec") {
     "resend metrics in case of exception or failure response status" in {
       val io = TestProbe()
 
-      val sender = system.actorOf(SPMMetricsSender.props(io.ref, 2 seconds, Timeout(5 seconds), 100, "http://localhost:1234", "host-1", "1234"))
+      val sender = system.actorOf(SPMMetricsSender.props(io.ref, 2 seconds, Timeout(5 seconds), 100, "http://localhost:1234", "http://localhost:1234", "host-1", "1234"))
       sender ! Send(testMetrics())
 
       io.expectMsgClass(classOf[HttpRequest])
@@ -80,7 +80,7 @@ class SPMMetricsSenderSpec extends BaseKamonSpec("spm-metrics-sender-spec") {
     "ignore new metrics in case when send queue is full" in {
       val io = TestProbe()
 
-      val sender = system.actorOf(SPMMetricsSender.props(io.ref, 2 seconds, Timeout(5 seconds), 5, "http://localhost:1234", "host-1", "1234"))
+      val sender = system.actorOf(SPMMetricsSender.props(io.ref, 2 seconds, Timeout(5 seconds), 5, "http://localhost:1234", "http://localhost:1234", "host-1", "1234"))
 
       (0 until 5).foreach(_ ⇒ sender ! Send(testMetrics()))
 

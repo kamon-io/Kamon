@@ -16,6 +16,9 @@
 
 package kamon.spm
 
+import java.io.ByteArrayOutputStream
+import java.nio.ByteBuffer
+
 import akka.actor._
 import akka.pattern.{ ask, pipe }
 import akka.util.Timeout
@@ -28,7 +31,7 @@ import scala.annotation.tailrec
 import scala.collection.immutable.{ Map, Queue }
 import scala.concurrent.duration._
 
-class SPMMetricsSender(io: ActorRef, retryInterval: FiniteDuration, sendTimeout: Timeout, maxQueueSize: Int, url: String, host: String, token: String) extends Actor with ActorLogging {
+class SPMMetricsSender(io: ActorRef, retryInterval: FiniteDuration, sendTimeout: Timeout, maxQueueSize: Int, url: String, tracingUrl: String, host: String, token: String) extends Actor with ActorLogging {
   import context._
   import kamon.spm.SPMMetricsSender._
 
@@ -41,6 +44,16 @@ class SPMMetricsSender(io: ActorRef, retryInterval: FiniteDuration, sendTimeout:
       case t: Throwable ⇒ {
         log.error(t, "Can't post metrics.")
         ScheduleRetry
+      }
+    }.pipeTo(self)
+  }
+
+  private def postTraces(metrics: List[SPMMetric]): Unit = {
+    val query = Query("host" -> host, "token" -> token)
+    val entity = HttpEntity(encodeTraceBody(metrics, token))
+    (io ? Post(Uri(tracingUrl).withQuery(query)).withEntity(entity)).mapTo[HttpResponse].recover {
+      case t: Throwable ⇒ {
+        log.error(t, "Can't post trace metrics.")
       }
     }.pipeTo(self)
   }
@@ -66,6 +79,17 @@ class SPMMetricsSender(io: ActorRef, retryInterval: FiniteDuration, sendTimeout:
 
   def idle: Receive = {
     case Send(metrics) if metrics.nonEmpty ⇒ {
+      try {
+        val tracingMetrics = metrics.filter(metric ⇒ (metric.category == "trace" && SPMMetric.isTraceToStore(metric)))
+        if (tracingMetrics.size > 0) {
+          val tracingBatches = fragment(tracingMetrics)
+          postTraces(tracingBatches.head)
+        }
+      } catch {
+        case e: Throwable ⇒ {
+          log.error(e, "Something went wrong while trace metrics sending.")
+        }
+      }
       try {
         val batches = fragment(metrics)
         post(batches.head)
@@ -119,8 +143,8 @@ object SPMMetricsSender {
 
   case class Send(metrics: List[SPMMetric])
 
-  def props(io: ActorRef, retryInterval: FiniteDuration, sendTimeout: Timeout, maxQueueSize: Int, url: String, host: String, token: String) =
-    Props(classOf[SPMMetricsSender], io, retryInterval, sendTimeout, maxQueueSize, url, host, token)
+  def props(io: ActorRef, retryInterval: FiniteDuration, sendTimeout: Timeout, maxQueueSize: Int, url: String, tracingUrl: String, host: String, token: String) =
+    Props(classOf[SPMMetricsSender], io, retryInterval, sendTimeout, maxQueueSize, url, tracingUrl, host, token)
 
   private val IndexTypeHeader = Map("index" -> Map("_type" -> "log", "_index" -> "spm-receiver"))
 
@@ -133,5 +157,15 @@ object SPMMetricsSender {
       Map("body" -> SPMMetric.format(metric)).toJson
     }.toList
     (IndexTypeHeader.toJson :: body).mkString("\n")
+  }
+
+  private def encodeTraceBody(metrics: List[SPMMetric], token: String): Array[Byte] = {
+    val baos = new ByteArrayOutputStream()
+    metrics.foreach { metric ⇒
+      val trace = SPMMetric.traceFormat(metric, token)
+      baos.write(ByteBuffer.allocate(4).putInt(trace.size).array())
+      baos.write(trace)
+    }
+    baos.toByteArray
   }
 }

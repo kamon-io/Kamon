@@ -79,6 +79,8 @@ object Dependencies {
 
   val elasticsearch     = "org.elasticsearch"         %   "elasticsearch"         % elasticsearchVersion
 
+  val libThrift         = "org.apache.thrift"         %   "libthrift"             % "0.9.2"
+
   def compile   (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "compile")
   def provided  (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "provided")
   def test      (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "test")
