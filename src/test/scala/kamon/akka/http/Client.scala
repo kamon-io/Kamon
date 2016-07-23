@@ -20,7 +20,7 @@ object Client extends App {
   StdIn.readLine() // let it run until user presses return
   responseFuture // trigger unbinding from the port
     .onComplete(a ⇒ {
-    println(a)
-    system.terminate()
-  }) // and shutdown when done
+      println(a)
+      system.terminate()
+    }) // and shutdown when done
 }

@@ -19,6 +19,8 @@ import Keys._
 import com.typesafe.sbt.SbtScalariform
 import com.typesafe.sbt.SbtScalariform.ScalariformKeys
 import scalariform.formatter.preferences._
+import Publish.{settings => publishSettings}
+import Release.{settings => releaseSettings }
 
 object Settings {
 
@@ -46,7 +48,7 @@ object Settings {
       "-Yinline-warnings",
       "-Xlog-reflective-calls"
     )
-  )
+  ) ++ publishSettings ++ releaseSettings
 
   lazy val formatSettings = SbtScalariform.scalariformSettings ++ Seq(
     ScalariformKeys.preferences in Compile := formattingPreferences,

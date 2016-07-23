@@ -17,7 +17,7 @@
 package kamon.akka.http
 
 import akka.actor.ActorSystem
-import akka.http.scaladsl.model.StatusCodes.{BadRequest, OK}
+import akka.http.scaladsl.model.StatusCodes.{ BadRequest, OK }
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import kamon.Kamon
@@ -27,14 +27,14 @@ import org.scalatest.Matchers
 class AkkaHttpServerMetricsSpec extends BaseKamonSpec with ScalatestRouteTest with Matchers {
 
   override protected def beforeAll(): Unit = {
-        Kamon.start()
+    Kamon.start()
 
   }
 
   //  override def system: ActorSystem = {
-//    Kamon.start()
-//    ActorSystem("")
-//  }
+  //    Kamon.start()
+  //    ActorSystem("")
+  //  }
 
   val routes =
     get {
@@ -55,10 +55,10 @@ class AkkaHttpServerMetricsSpec extends BaseKamonSpec with ScalatestRouteTest wi
   "the Akka Http Server metrics instrumentation" should {
     "record trace metrics for processed requests" in {
       for (repetition ← 1 to 10) {
-      Get("/record-trace-metrics-ok") ~> routes ~> check {
-        status shouldBe OK
+        Get("/record-trace-metrics-ok") ~> routes ~> check {
+          status shouldBe OK
+        }
       }
-    }
 
       for (repetition ← 1 to 5) {
         Get("/record-trace-metrics-bad-request") ~> routes ~> check {

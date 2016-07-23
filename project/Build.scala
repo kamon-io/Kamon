@@ -17,13 +17,16 @@
 import sbt._
 import sbt.Keys._
 
+
 object Build extends Build {
   import Dependencies._
   import Settings._
+  import AspectJ._
 
   lazy val kamonAkkaHttp = Project("kamon-akka-http",file("."))
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
+    .settings(aspectJSettings: _*)
     .settings(libraryDependencies ++=
       compile(httpExperimental,httpCore, kamonCore, kamonScala) ++
       test(httpTestKit, scalatest) ++

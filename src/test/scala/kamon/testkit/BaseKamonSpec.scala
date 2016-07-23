@@ -19,10 +19,10 @@ package kamon.testkit
 import akka.actor.ActorSystem
 import com.typesafe.config.Config
 import kamon.Kamon
-import kamon.metric.{Entity, EntitySnapshot, SubscriptionsDispatcher}
+import kamon.metric.{ Entity, EntitySnapshot, SubscriptionsDispatcher }
 import kamon.trace.TraceContext
 import kamon.util.LazyActorRef
-import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
+import org.scalatest.{ BeforeAndAfterAll, Matchers, WordSpecLike }
 
 abstract class BaseKamonSpec extends WordSpecLike with Matchers with BeforeAndAfterAll {
   lazy val collectionContext = Kamon.metrics.buildDefaultCollectionContext
@@ -55,5 +55,5 @@ abstract class BaseKamonSpec extends WordSpecLike with Matchers with BeforeAndAf
   }
 
   override protected def beforeAll(): Unit = {}
-//  override protected def afterAll(): Unit = system.terminate()
+  //  override protected def afterAll(): Unit = system.terminate()
 }
