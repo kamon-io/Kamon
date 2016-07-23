@@ -60,6 +60,7 @@ object Dependencies {
   val fluentdLogger     = "org.fluentd"               %%  "fluent-logger-scala"   % "0.5.1"
   val easyMock          = "org.easymock"              %   "easymock"              % "3.2"
   val riemannClient     = "com.aphyr"                 %   "riemann-java-client"   % "0.4.1"
+  val khronusClient     = "com.despegar"              %   "khronus-java-client"   % "0.0.5"
 
   //play 2.3.x
   val play23            = "com.typesafe.play"         %%  "play"                  % play23Version
