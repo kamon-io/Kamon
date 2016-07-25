@@ -24,7 +24,7 @@ object Dependencies {
   )
 
   val sprayVersion      = "1.3.3"
-  val akkaVersion       = "2.4.2"
+  val akkaVersion       = "2.4.8"
   val aspectjVersion    = "1.8.7"
   val slf4jVersion      = "1.7.7"
   val play24Version     = "2.4.4"
@@ -59,7 +59,7 @@ object Dependencies {
   val fluentdLogger     = "org.fluentd"               %%  "fluent-logger-scala"   % "0.5.1"
   val easyMock          = "org.easymock"              %   "easymock"              % "3.2"
 
-  val kamonAkka23       = "io.kamon"                  %%  "kamon-akka"            % "0.6.2-b10b1cf2013460c791d5e3f7600fc654145f3d4e"
+  val kamonAkka23       = "io.kamon"                  %%  "kamon-akka"            % "0.6.2"
 
   def compile   (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "compile")
   def provided  (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "provided")
