@@ -110,9 +110,7 @@ case object EmptyTraceContext extends TraceContext {
   def startSegment(segmentName: String, category: String, library: String, tags: Map[String, String]): Segment = EmptySegment
   def addMetadata(key: String, value: String): Unit = {}
   def startTimestamp = new RelativeNanoTimestamp(0L)
-  def addTags(tags: Map[String, String]): Unit = {}
   def addTag(key: String, value: String): Unit = {}
-  def removeTags(tags: Map[String, String]): Unit = {}
   def removeTag(key: String, value: String): Boolean = false
 
   case object EmptySegment extends Segment {
