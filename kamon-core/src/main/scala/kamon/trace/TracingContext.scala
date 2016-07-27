@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * Copyright © 2013-2014 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2016 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -57,6 +57,11 @@ private[trace] class TracingContext(traceName: String,
     traceInfoSink(this)
   }
 
+  override def finishWithError(cause: Throwable): Unit = {
+    super.finishWithError(cause)
+    traceInfoSink(this)
+  }
+
   override def finishSegment(segmentName: String, category: String, library: String, duration: NanoInterval, tags: Map[String, String], isFinishedWithError: Boolean = false): Unit = {
     _openSegments.decrementAndGet()
     super.finishSegment(segmentName, category, library, duration, tags, isFinishedWithError)
@@ -79,7 +84,7 @@ private[trace] class TracingContext(traceName: String,
         log.warning("Segment [{}] will be left out of TraceInfo because it was still open.", segment.name)
     }
 
-    TraceInfo(name, token, _startTimestamp, elapsedTime, _metadata.toMap, segmentsInfo.result())
+    TraceInfo(name, token, _startTimestamp, elapsedTime, _metadata.toMap, tags, segmentsInfo.result(), status)
   }
 
   class TracingSegment(segmentName: String,
@@ -98,7 +103,7 @@ private[trace] class TracingContext(traceName: String,
       // expensive and inaccurate, but we can do that once for the trace and calculate all the segments relative to it.
       val segmentStartTimestamp = new NanoTimestamp((this.startTimestamp.nanos - traceRelativeTimestamp.nanos) + traceStartTimestamp.nanos)
 
-      SegmentInfo(this.name, category, library, segmentStartTimestamp, this.elapsedTime, metadata.toMap, _tags.toMap)
+      SegmentInfo(this.name, category, library, segmentStartTimestamp, this.elapsedTime, metadata.toMap, tags, status)
     }
   }
 }
