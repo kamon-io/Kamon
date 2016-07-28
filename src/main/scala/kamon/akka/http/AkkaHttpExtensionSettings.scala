@@ -19,24 +19,23 @@ package kamon.akka.http
 import akka.actor.ReflectiveDynamicAccess
 import com.typesafe.config.Config
 
-case class AkkaHttpExtensionSettings(
-  includeTraceTokenHeader: Boolean,
+case class AkkaHttpExtensionSettings(includeTraceTokenHeader: Boolean,
   traceTokenHeaderName: String,
   nameGenerator: NameGenerator,
   clientInstrumentationLevel: ClientInstrumentationLevel.Level)
 
 object AkkaHttpExtensionSettings {
   def apply(config: Config): AkkaHttpExtensionSettings = {
-    val sprayConfig = config.getConfig("kamon.akka-http")
+    val akkaHttpConfig = config.getConfig("kamon.akka-http")
 
-    val includeTraceTokenHeader: Boolean = sprayConfig.getBoolean("automatic-trace-token-propagation")
-    val traceTokenHeaderName: String = sprayConfig.getString("trace-token-header-name")
+    val includeTraceTokenHeader: Boolean = akkaHttpConfig.getBoolean("automatic-trace-token-propagation")
+    val traceTokenHeaderName: String = akkaHttpConfig.getString("trace-token-header-name")
 
-    val nameGeneratorFQN = sprayConfig.getString("name-generator")
+    val nameGeneratorFQN = akkaHttpConfig.getString("name-generator")
     val nameGenerator: NameGenerator = new ReflectiveDynamicAccess(getClass.getClassLoader)
       .createInstanceFor[NameGenerator](nameGeneratorFQN, Nil).get // let's bubble up any problems.
 
-    val clientInstrumentationLevel: ClientInstrumentationLevel.Level = sprayConfig.getString("client.instrumentation-level") match {
+    val clientInstrumentationLevel: ClientInstrumentationLevel.Level = akkaHttpConfig.getString("client.instrumentation-level") match {
       case "request-level" ⇒ ClientInstrumentationLevel.RequestLevelAPI
       case "host-level"    ⇒ ClientInstrumentationLevel.HostLevelAPI
       case other           ⇒ sys.error(s"Invalid client instrumentation level [$other] found in configuration.")

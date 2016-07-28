@@ -9,7 +9,7 @@
     <aspect name="kamon.akka.http.instrumentation.ClientRequestInstrumentation"/>
   </aspects>
 
-  <weaver>
+  <weaver options="-warn:none">
     <include within="akka.http..*"/>
   </weaver>
 </aspectj>

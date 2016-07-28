@@ -36,6 +36,10 @@ abstract class BaseKamonSpec extends WordSpecLike with Matchers with BeforeAndAf
   def newContext(name: String, token: String): TraceContext =
     Kamon.tracer.newContext(name, Option(token))
 
+  def clean(name: String, category: String): Unit = {
+    Kamon.metrics.find(name, category).foreach(_.collect(collectionContext))
+  }
+
   def takeSnapshotOf(name: String, category: String): EntitySnapshot = {
     val recorder = Kamon.metrics.find(name, category).get
     recorder.collect(collectionContext)
