@@ -1,6 +1,6 @@
 language: scala
 script:
-  - sbt ++$TRAVIS_SCALA_VERSION compile publish-local
+  - sbt ++$TRAVIS_SCALA_VERSION test publish-local
 scala:
    - 2.11.8
 jdk:
