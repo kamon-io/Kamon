@@ -27,8 +27,8 @@ import kamon.Kamon
 import kamon.testkit.{ BaseKamonSpec, WebServer, WebServerSupport }
 import kamon.trace.{ SegmentCategory, TraceContext, Tracer }
 
-import scala.concurrent.{ Future, _ }
 import scala.concurrent.duration._
+import scala.concurrent.{ Future, _ }
 
 class AkkaHttpClientInstrumentationSpec extends BaseKamonSpec {
 

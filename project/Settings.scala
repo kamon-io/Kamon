@@ -19,8 +19,8 @@ import Keys._
 import com.typesafe.sbt.SbtScalariform
 import com.typesafe.sbt.SbtScalariform.ScalariformKeys
 import scalariform.formatter.preferences._
-import Publish.{settings => publishSettings}
-import Release.{settings => releaseSettings }
+import Publish.{ settings => publishSettings }
+import Release.{ settings => releaseSettings }
 
 object Settings {
 

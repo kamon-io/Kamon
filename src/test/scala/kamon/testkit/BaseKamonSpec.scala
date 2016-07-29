@@ -16,7 +16,6 @@
 
 package kamon.testkit
 
-import akka.actor.ActorSystem
 import com.typesafe.config.Config
 import kamon.Kamon
 import kamon.metric.{ Entity, EntitySnapshot, SubscriptionsDispatcher }
