@@ -25,13 +25,15 @@ import Release.{settings => releaseSettings }
 object Settings {
 
   val JavaVersion = "1.8"
-  val ScalaVersion = "2.11.7"
+  val ScalaVersion = "2.11.8"
 
   lazy val basicSettings: Seq[Setting[_]] = Seq(
     scalaVersion := ScalaVersion,
     ivyScala := ivyScala.value map { _.copy(overrideScalaVersion = true) },
     resolvers ++= Dependencies.resolutionRepos,
     version <<= version in ThisBuild,
+    moduleName := s"${moduleName.value}-experimental",
+    parallelExecution in Global     := false,
     javacOptions                    := Seq(
       "-Xlint:-options",
       "-source", JavaVersion, "-target", JavaVersion),
