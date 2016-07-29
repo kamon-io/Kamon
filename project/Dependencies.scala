@@ -24,6 +24,7 @@ object Dependencies {
   val aspectjVersion    = "1.8.9"
   val AkkaVersion       = "2.4.8"
   val KamonVersion      = "0.6.1"
+  val slf4jVersion      = "1.7.7"
 
   val aspectJ           = "org.aspectj"          % "aspectjweaver"          % aspectjVersion
   val httpCore          = "com.typesafe.akka"   %% "akka-http-core"         % AkkaVersion
@@ -31,6 +32,9 @@ object Dependencies {
   val httpTestKit       = "com.typesafe.akka"   %% "akka-http-testkit"      % AkkaVersion
   val kamonCore         = "io.kamon"            %% "kamon-core"             % KamonVersion
   val kamonScala        = "io.kamon"            %% "kamon-scala"            % KamonVersion
+  val kamonAkka         = "io.kamon"            %% "kamon-akka"             % KamonVersion
+  val slf4jApi          = "org.slf4j"            % "slf4j-api"              % slf4jVersion
+  val slf4jnop          = "org.slf4j"            % "slf4j-nop"              % slf4jVersion
   val scalatest         = "org.scalatest"       %% "scalatest"              % "2.2.6"
 
   def compile   (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "compile")
