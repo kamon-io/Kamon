@@ -1,6 +1,6 @@
-WIP: Kamon Akka-Http
+Kamon Akka-Http [![Build Status](https://api.travis-ci.org/kamon-io/kamon-akka-http.png)](https://travis-ci.org/kamon-io/kamon-akka-http/builds)
 --------------------
-A temporary implementation of the Kamon Akka-Http(based on @jypma http://pastebin.com/DHVb54iK and kamon-spray module) module.
+A temporary implementation of the Kamon Akka-Http module.
 
 This WIP currently supports: 
 * [Traces] in the server side and allow configure the ```X-Trace-Context``` in order to  pass into the current request request.]
