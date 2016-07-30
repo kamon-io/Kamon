@@ -1,7 +1,7 @@
-Kamon akka-http 
+Kamon akka-http
 --------------------
 [![Build Status](https://api.travis-ci.org/kamon-io/kamon-akka-http.png)](https://travis-ci.org/kamon-io/kamon-akka-http/builds)
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-akka-http/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-akka-http)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-akka-http-experimental/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-akka-http-experimental)
 
 An early implementation of the Kamon Akka-Http module.
 
@@ -11,13 +11,13 @@ This module is marked as experimental, which means that is in early access mode.
 
 *Kamon Akka Http* module provides bytecode instrumentation to gather metrics and perform automatic TraceContext propagation on your behalf, both on the client and server side.
 
-##This WIP currently supports: 
+##This WIP currently supports:
 * [Traces] in the server side and allow configure the ```X-Trace-Context``` in order to pass into the current request.
 * [HttpServerMetrics] that gather metrics with status code and categories + request-active and connection-open (as your snippet)
-* [Segments] for client-side requests 
+* [Segments] for client-side requests
 
 ##Get started
- 
+
 ###Configure
 
 The following is an example of a configuration to provide metrics to a server, such as Statsd.
@@ -29,7 +29,7 @@ kamon {
       trace.includes = [ "**" ]
     }
   }
-  
+
   subscriptions {
     trace                = [ "**" ]
     trace-segment        = [ "**" ]
