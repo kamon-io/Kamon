@@ -1,5 +1,8 @@
-Kamon Akka-Http [![Build Status](https://api.travis-ci.org/kamon-io/kamon-akka-http.png)](https://travis-ci.org/kamon-io/kamon-akka-http/builds)
+Kamon akka-http 
 --------------------
+[![Build Status](https://api.travis-ci.org/kamon-io/kamon-akka-http.png)](https://travis-ci.org/kamon-io/kamon-akka-http/builds)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-akka-http/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-akka-http)
+
 An early implementation of the Kamon Akka-Http module.
 
 This module is marked as experimental, which means that is in early access mode. We hope to can improve it based on your suggestions and feedback.
@@ -74,13 +77,14 @@ To achieve it quickly you can use the [sbt-aspectj-runner] plugin.
 Coming soon!
 
 ##Naming HTTP Client Segments
-By default, the name generator bundled with the *kamon-akka-http* module will use the Host header available in the request to assign a name to the automatically generated segment. Currently, the only way to override that name would be to provide your own implementation of kamon.akka.http.AkkaHttpNameGenerator which is used to assign names both on the server and client sides of our instrumentation.
+By default, the name generator bundled with the *kamon-akka-http* module will use the Host header available in the request to assign a name to the automatically generated segment. Currently, the only way to override that name would be to provide your own implementation of `kamon.akka.http.AkkaHttpNameGenerator` which is used to assign names both on the server and client sides of our instrumentation.
 
 ##Backlog
 * Connection-Level Client-Side API
 * Host-Level Client-Side API support
-* Tests
+* Take some ideas from [spray-kamon-metrics]
 
+[spray-kamon-metrics]: http://engineering.monsanto.com/2015/09/24/better-spray-metrics-with-kamon/
 [Traces]: https://github.com/kamon-io/kamon-akka-http/blob/master/src/main/scala/kamon/akka/http/instrumentation/FlowWrapper.scala#L36-L49
 [HttpServerMetrics]:https://github.com/kamon-io/Kamon/blob/master/kamon-core/src/main/scala/kamon/util/http/HttpServerMetrics.scala#L27
 [Segments]:https://github.com/kamon-io/kamon-akka-http/blob/master/src/main/scala/kamon/akka/http/instrumentation/ClientRequestInstrumentation.scala#L32-L45
