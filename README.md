@@ -1,7 +1,7 @@
 Kamon akka-http
 --------------------
 [![Build Status](https://api.travis-ci.org/kamon-io/kamon-akka-http.png)](https://travis-ci.org/kamon-io/kamon-akka-http/builds)
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-akka-http-experimental/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-akka-http-experimental)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-akka-http-experimental_2.11/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-akka-http-experimental_2.11)
 
 An early implementation of the Kamon Akka-Http module.
 
@@ -20,9 +20,15 @@ This module is marked as experimental, which means that is in early access mode.
 
 ###Configure
 
+The artifact is available on Maven Central.
+
+```
+  io.kamon" %% "kamon-akka-http-experimental" % "0.6.2"
+```
+
 The following is an example of a configuration to provide metrics to a server, such as Statsd.
 
-```scala
+```
 kamon {
   metric {
     filters {
@@ -40,7 +46,7 @@ kamon {
 
 You can also provide some settings to this module. Currently the default config is:
 
-```scala
+```
 kamon {
   akka-http {
 
