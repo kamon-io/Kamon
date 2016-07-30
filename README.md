@@ -1,5 +1,6 @@
 Kamon akka-http
 --------------------
+[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/kamon-io/Kamon?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Build Status](https://api.travis-ci.org/kamon-io/kamon-akka-http.png)](https://travis-ci.org/kamon-io/kamon-akka-http/builds)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-akka-http-experimental_2.11/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-akka-http-experimental_2.11)
 
