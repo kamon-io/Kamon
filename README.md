@@ -24,7 +24,7 @@ This module is marked as experimental, which means that is in early access mode.
 The artifact is available on Maven Central.
 
 ```
-  io.kamon" %% "kamon-akka-http-experimental" % "0.6.2"
+  "io.kamon" %% "kamon-akka-http-experimental" % "0.6.2"
 ```
 
 The following is an example of a configuration to provide metrics to a server, such as Statsd.
