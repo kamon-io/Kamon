@@ -24,7 +24,8 @@ import org.aspectj.lang.annotation._
 class FutureInstrumentation {
 
   @DeclareMixin("scala.concurrent.impl.CallbackRunnable || scala.concurrent.impl.Future.PromiseCompletingRunnable")
-  def mixinTraceContextAwareToFutureRelatedRunnable: TraceContextAware = TraceContextAware.default
+  def mixinTraceContextAwareToFutureRelatedRunnable: TraceContextAware =
+    TraceContextAware.default
 
   @Pointcut("execution((scala.concurrent.impl.CallbackRunnable || scala.concurrent.impl.Future.PromiseCompletingRunnable).new(..)) && this(runnable)")
   def futureRelatedRunnableCreation(runnable: TraceContextAware): Unit = {}

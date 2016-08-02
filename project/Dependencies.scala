@@ -32,34 +32,36 @@ object Dependencies {
   val play25Version     = "2.5.4"
   val elasticsearchVersion = "2.1.0"
 
-  val sprayJson         = "io.spray"                  %%  "spray-json"                 % "1.3.1"
-  val sprayJsonLenses   = "net.virtual-void"          %%  "json-lenses"                % "0.6.0"
-  val scalatest         = "org.scalatest"             %%  "scalatest"                  % "2.2.4"
-  val logback           = "ch.qos.logback"            %   "logback-classic"            % "1.0.13"
-  val logstashLogback   = "net.logstash.logback"      %   "logstash-logback-encoder"   % "4.6"
-  val aspectJ           = "org.aspectj"               %   "aspectjweaver"              % aspectjVersion
-  val newrelic          = "com.newrelic.agent.java"   %   "newrelic-agent"             % "3.26.1"
-  val hdrHistogram      = "org.hdrhistogram"          %   "HdrHistogram"               % "2.1.8"
-  val sprayCan          = "io.spray"                  %%  "spray-can"                  % sprayVersion
-  val sprayRouting      = "io.spray"                  %%  "spray-routing"              % sprayVersion
-  val sprayTestkit      = "io.spray"                  %%  "spray-testkit"              % sprayVersion
-  val sprayClient       = "io.spray"                  %%  "spray-client"               % sprayVersion
-  val akkaActor         = "com.typesafe.akka"         %%  "akka-actor"                 % akkaVersion
-  val akkaSlf4j         = "com.typesafe.akka"         %%  "akka-slf4j"                 % akkaVersion
-  val akkaTestKit       = "com.typesafe.akka"         %%  "akka-testkit"               % akkaVersion
-  val akkaRemote        = "com.typesafe.akka"         %%  "akka-remote"                % akkaVersion
-  val akkaCluster       = "com.typesafe.akka"         %%  "akka-cluster"               % akkaVersion
-  val slf4jApi          = "org.slf4j"                 %   "slf4j-api"                  % slf4jVersion
-  val slf4jnop          = "org.slf4j"                 %   "slf4j-nop"                  % slf4jVersion
-  val slf4jJul          = "org.slf4j"                 %   "jul-to-slf4j"               % slf4jVersion
-  val slf4jLog4j        = "org.slf4j"                 %   "log4j-over-slf4j"           % slf4jVersion
-  val scalazConcurrent  = "org.scalaz"                %%  "scalaz-concurrent"          % "7.1.0"
-  val sigarLoader       = "io.kamon"                  %   "sigar-loader"               % "1.6.5-rev002"
-  val h2                = "com.h2database"            %   "h2"                         % "1.4.182"
-  val el                = "org.glassfish"             %   "javax.el"                   % "3.0.0"
-  val fluentdLogger     = "org.fluentd"               %%  "fluent-logger-scala"        % "0.5.1"
-  val easyMock          = "org.easymock"              %   "easymock"                   % "3.2"
-  val riemannClient     = "com.aphyr"                 %   "riemann-java-client"        % "0.4.1"
+  val sprayJson         = "io.spray"                  %%  "spray-json"            % "1.3.1"
+  val sprayJsonLenses   = "net.virtual-void"          %%  "json-lenses"           % "0.6.0"
+  val scalatest         = "org.scalatest"             %%  "scalatest"             % "2.2.4"
+  val logback           = "ch.qos.logback"            %   "logback-classic"       % "1.0.13"
+  val logstashLogback   = "net.logstash.logback"      %   "logstash-logback-encoder"   % "4.7"
+  val aspectJ           = "org.aspectj"               %   "aspectjweaver"         % aspectjVersion
+  val newrelic          = "com.newrelic.agent.java"   %   "newrelic-agent"        % "3.26.1"
+  val hdrHistogram      = "org.hdrhistogram"          %   "HdrHistogram"          % "2.1.8"
+  val sprayCan          = "io.spray"                  %%  "spray-can"             % sprayVersion
+  val sprayRouting      = "io.spray"                  %%  "spray-routing"         % sprayVersion
+  val sprayTestkit      = "io.spray"                  %%  "spray-testkit"         % sprayVersion
+  val sprayClient       = "io.spray"                  %%  "spray-client"          % sprayVersion
+  val akkaActor         = "com.typesafe.akka"         %%  "akka-actor"            % akkaVersion
+  val akkaSlf4j         = "com.typesafe.akka"         %%  "akka-slf4j"            % akkaVersion
+  val akkaTestKit       = "com.typesafe.akka"         %%  "akka-testkit"          % akkaVersion
+  val akkaRemote        = "com.typesafe.akka"         %%  "akka-remote"           % akkaVersion
+  val akkaCluster       = "com.typesafe.akka"         %%  "akka-cluster"          % akkaVersion
+  val slf4jApi          = "org.slf4j"                 %   "slf4j-api"             % slf4jVersion
+  val slf4jnop          = "org.slf4j"                 %   "slf4j-nop"             % slf4jVersion
+  val slf4jJul          = "org.slf4j"                 %   "jul-to-slf4j"          % slf4jVersion
+  val slf4jLog4j        = "org.slf4j"                 %   "log4j-over-slf4j"      % slf4jVersion
+  val scalazConcurrent  = "org.scalaz"                %%  "scalaz-concurrent"     % "7.1.0"
+  val twitterUtilCore   = "com.twitter"               %%  "util-core"             % "6.34.0"
+  val sigarLoader       = "io.kamon"                  %   "sigar-loader"          % "1.6.5-rev002"
+  val h2                = "com.h2database"            %   "h2"                    % "1.4.182"
+  val el                = "org.glassfish"             %   "javax.el"              % "3.0.0"
+  val fluentdLogger     = "org.fluentd"               %%  "fluent-logger-scala"   % "0.5.1"
+  val easyMock          = "org.easymock"              %   "easymock"              % "3.2"
+  val riemannClient     = "com.aphyr"                 %   "riemann-java-client"   % "0.4.1"
+  val khronusClient     = "com.despegar"              %   "khronus-java-client"   % "0.0.5"
 
   //play 2.3.x
   val play23            = "com.typesafe.play"         %%  "play"                       % play23Version
@@ -78,6 +80,8 @@ object Dependencies {
   val playTest25        = "org.scalatestplus.play"    %%  "scalatestplus-play"         % "1.5.0"
 
   val elasticsearch     = "org.elasticsearch"         %   "elasticsearch"              % elasticsearchVersion
+
+  val libThrift         = "org.apache.thrift"         %   "libthrift"             % "0.9.2"
 
   def compile   (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "compile")
   def provided  (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "provided")

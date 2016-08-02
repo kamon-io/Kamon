@@ -19,7 +19,7 @@ package kamon.util
 /**
  *  Epoch time stamp.
  */
-class Timestamp(val seconds: Long) extends AnyVal {
+case class Timestamp(seconds: Long) extends AnyVal {
   def <(that: Timestamp): Boolean = this.seconds < that.seconds
   def >(that: Timestamp): Boolean = this.seconds > that.seconds
   def ==(that: Timestamp): Boolean = this.seconds == that.seconds
@@ -38,7 +38,7 @@ object Timestamp {
 /**
  *  Epoch time stamp in milliseconds.
  */
-class MilliTimestamp(val millis: Long) extends AnyVal {
+case class MilliTimestamp(millis: Long) extends AnyVal {
   override def toString: String = String.valueOf(millis) + ".millis"
 
   def toTimestamp: Timestamp = new Timestamp(millis / 1000)
@@ -58,7 +58,7 @@ object MilliTimestamp {
  *  NOTE: This doesn't have any better precision than MilliTimestamp, it is just a convenient way to get a epoch
  *  timestamp in nanoseconds.
  */
-class NanoTimestamp(val nanos: Long) extends AnyVal {
+case class NanoTimestamp(nanos: Long) extends AnyVal {
   def -(that: NanoTimestamp) = new NanoTimestamp(nanos - that.nanos)
   def +(that: NanoTimestamp) = new NanoTimestamp(nanos + that.nanos)
   override def toString: String = String.valueOf(nanos) + ".nanos"
@@ -71,7 +71,7 @@ object NanoTimestamp {
 /**
  *  Number of nanoseconds between a arbitrary origin timestamp provided by the JVM via System.nanoTime()
  */
-class RelativeNanoTimestamp(val nanos: Long) extends AnyVal {
+case class RelativeNanoTimestamp(nanos: Long) extends AnyVal {
   def -(that: RelativeNanoTimestamp) = new RelativeNanoTimestamp(nanos - that.nanos)
   def +(that: RelativeNanoTimestamp) = new RelativeNanoTimestamp(nanos + that.nanos)
   override def toString: String = String.valueOf(nanos) + ".nanos"
@@ -91,7 +91,7 @@ object RelativeNanoTimestamp {
 /**
  *  Number of nanoseconds that passed between two points in time.
  */
-class NanoInterval(val nanos: Long) extends AnyVal {
+case class NanoInterval(nanos: Long) extends AnyVal {
   def <(that: NanoInterval): Boolean = this.nanos < that.nanos
   def >(that: NanoInterval): Boolean = this.nanos > that.nanos
   def ==(that: NanoInterval): Boolean = this.nanos == that.nanos

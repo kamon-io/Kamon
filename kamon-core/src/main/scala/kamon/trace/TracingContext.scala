@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * Copyright © 2013-2014 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2016 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -24,9 +24,15 @@ import kamon.util.{ NanoInterval, NanoTimestamp, RelativeNanoTimestamp }
 
 import scala.collection.concurrent.TrieMap
 
-private[trace] class TracingContext(traceName: String, token: String, tags: Map[String, String], izOpen: Boolean, levelOfDetail: LevelOfDetail,
-  isLocal: Boolean, startTimeztamp: RelativeNanoTimestamp, log: LoggingAdapter, traceInfoSink: TracingContext ⇒ Unit)
-    extends MetricsOnlyContext(traceName, token, tags, izOpen, levelOfDetail, startTimeztamp, log) {
+private[trace] class TracingContext(traceName: String,
+    token: String,
+    tags: Map[String, String],
+    currentStatus: Status,
+    levelOfDetail: LevelOfDetail,
+    isLocal: Boolean,
+    startTimeztamp: RelativeNanoTimestamp,
+    log: LoggingAdapter,
+    traceInfoSink: TracingContext ⇒ Unit) extends MetricsOnlyContext(traceName, token, tags, currentStatus, levelOfDetail, startTimeztamp, log) {
 
   private val _openSegments = new AtomicInteger(0)
   private val _startTimestamp = NanoTimestamp.now
@@ -51,12 +57,17 @@ private[trace] class TracingContext(traceName: String, token: String, tags: Map[
     traceInfoSink(this)
   }
 
-  override def finishSegment(segmentName: String, category: String, library: String, duration: NanoInterval, tags: Map[String, String]): Unit = {
-    _openSegments.decrementAndGet()
-    super.finishSegment(segmentName, category, library, duration, tags)
+  override def finishWithError(cause: Throwable): Unit = {
+    super.finishWithError(cause)
+    traceInfoSink(this)
   }
 
-  def shouldIncubate: Boolean = isOpen || _openSegments.get() > 0
+  override def finishSegment(segmentName: String, category: String, library: String, duration: NanoInterval, tags: Map[String, String], isFinishedWithError: Boolean = false): Unit = {
+    _openSegments.decrementAndGet()
+    super.finishSegment(segmentName, category, library, duration, tags, isFinishedWithError)
+  }
+
+  def shouldIncubate: Boolean = (Status.Open == status) || _openSegments.get() > 0
 
   // Handle with care, should only be used after a trace is finished.
   def generateTraceInfo: TraceInfo = {
@@ -73,10 +84,14 @@ private[trace] class TracingContext(traceName: String, token: String, tags: Map[
         log.warning("Segment [{}] will be left out of TraceInfo because it was still open.", segment.name)
     }
 
-    TraceInfo(name, token, _startTimestamp, elapsedTime, _metadata.toMap, segmentsInfo.result())
+    TraceInfo(name, token, _startTimestamp, elapsedTime, _metadata.toMap, tags, segmentsInfo.result(), status)
   }
 
-  class TracingSegment(segmentName: String, category: String, library: String, tags: Map[String, String]) extends MetricsOnlySegment(segmentName, category, library, tags) {
+  class TracingSegment(segmentName: String,
+      category: String,
+      library: String,
+      tags: Map[String, String]) extends MetricsOnlySegment(segmentName, category, library, tags) {
+
     private val metadata = TrieMap.empty[String, String]
     override def addMetadata(key: String, value: String): Unit = metadata.put(key, value)
 
@@ -88,7 +103,7 @@ private[trace] class TracingContext(traceName: String, token: String, tags: Map[
       // expensive and inaccurate, but we can do that once for the trace and calculate all the segments relative to it.
       val segmentStartTimestamp = new NanoTimestamp((this.startTimestamp.nanos - traceRelativeTimestamp.nanos) + traceStartTimestamp.nanos)
 
-      SegmentInfo(this.name, category, library, segmentStartTimestamp, this.elapsedTime, metadata.toMap, _tags.toMap)
+      SegmentInfo(this.name, category, library, segmentStartTimestamp, this.elapsedTime, metadata.toMap, tags, status)
     }
   }
 }

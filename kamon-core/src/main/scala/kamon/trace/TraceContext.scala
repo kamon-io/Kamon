@@ -19,6 +19,7 @@ package kamon.trace
 import java.io.ObjectStreamException
 import java.util
 
+import kamon.trace.Status.Closed
 import kamon.trace.TraceContextAware.DefaultTraceContextAware
 import kamon.util.{ Function, RelativeNanoTimestamp, SameThreadExecutionContext, Supplier }
 
@@ -29,19 +30,16 @@ trait TraceContext {
   def token: String
   def isEmpty: Boolean
   def nonEmpty: Boolean = !isEmpty
-  def isOpen: Boolean
-  def isClosed: Boolean = !isOpen
-
+  def isClosed: Boolean = !(Status.Open == status)
+  def status: Status
   def finish(): Unit
+  def finishWithError(cause: Throwable): Unit
   def rename(newName: String): Unit
-
   def startSegment(segmentName: String, category: String, library: String): Segment
   def startSegment(segmentName: String, category: String, library: String, tags: Map[String, String]): Segment
   def addMetadata(key: String, value: String)
-
   def addTag(key: String, value: String): Unit
   def removeTag(key: String, value: String): Boolean
-
   def startTimestamp: RelativeNanoTimestamp
 
   def collect[T](f: TraceContext ⇒ T): Option[T] =
@@ -90,13 +88,12 @@ trait Segment {
   def library: String
   def isEmpty: Boolean
   def nonEmpty: Boolean = !isEmpty
-  def isOpen: Boolean
-  def isClosed: Boolean = !isOpen
-
+  def isClosed: Boolean = !(Status.Open == status)
+  def status: Status
   def finish(): Unit
+  def finishWithError(cause: Throwable): Unit
   def rename(newName: String): Unit
   def addMetadata(key: String, value: String): Unit
-
   def addTag(key: String, value: String): Unit
   def removeTag(key: String, value: String): Boolean
 }
@@ -105,17 +102,15 @@ case object EmptyTraceContext extends TraceContext {
   def name: String = "empty-trace"
   def token: String = ""
   def isEmpty: Boolean = true
-  def isOpen: Boolean = false
-
+  def status: Status = Closed
   def finish(): Unit = {}
+  def finishWithError(cause: Throwable): Unit = {}
   def rename(name: String): Unit = {}
   def startSegment(segmentName: String, category: String, library: String): Segment = EmptySegment
   def startSegment(segmentName: String, category: String, library: String, tags: Map[String, String]): Segment = EmptySegment
   def addMetadata(key: String, value: String): Unit = {}
   def startTimestamp = new RelativeNanoTimestamp(0L)
-  def addTags(tags: Map[String, String]): Unit = {}
   def addTag(key: String, value: String): Unit = {}
-  def removeTags(tags: Map[String, String]): Unit = {}
   def removeTag(key: String, value: String): Boolean = false
 
   case object EmptySegment extends Segment {
@@ -123,9 +118,9 @@ case object EmptyTraceContext extends TraceContext {
     val category: String = "empty-category"
     val library: String = "empty-library"
     def isEmpty: Boolean = true
-    def isOpen: Boolean = false
-
-    def finish: Unit = {}
+    def status: Status = Closed
+    def finish(): Unit = {}
+    def finishWithError(cause: Throwable): Unit = {}
     def rename(newName: String): Unit = {}
     def addMetadata(key: String, value: String): Unit = {}
     def addTag(key: String, value: String): Unit = {}
@@ -149,6 +144,14 @@ object LevelOfDetail {
   case object MetricsOnly extends LevelOfDetail
   case object SimpleTrace extends LevelOfDetail
   case object FullTrace extends LevelOfDetail
+}
+
+sealed trait Status
+object Status {
+  case object Open extends Status
+  case object Closed extends Status
+  case object FinishedWithError extends Status
+  case object FinishedSuccessfully extends Status
 }
 
 trait TraceContextAware extends Serializable {
