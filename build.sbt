@@ -49,6 +49,5 @@ releaseProcess := Seq[ReleaseStep](
   tagRelease,                             // : ReleaseStep
   releaseStepTask(publishSigned),         // : ReleaseStep, checks whether `publishTo` is properly set up
   setNextVersion,                         // : ReleaseStep
-  commitNextVersion,                      // : ReleaseStep
-  pushChanges                             // : ReleaseStep, also checks that an upstream branch is properly configured
+  commitNextVersion                       // : ReleaseStep
 )
