@@ -48,7 +48,7 @@ class GraphiteExtension(system: ExtendedActorSystem) extends Kamon.Extension {
 trait MetricPacking {
 
   private def sanitize(value: String): String =
-    value.replace('/', '_')
+    value.replace('/', '_').replace('.', '_')
 
   private def baseName(prefix: String, entity: Entity, key: MetricKey): String =
     new java.lang.StringBuilder()
@@ -144,6 +144,7 @@ class GraphiteClient(host: String, port: Int, connectionRetryDelay: FiniteDurati
     case c @ Connected(remote, local) =>
       val connection = sender()
       connection ! Register(self)
+      log.info("Connected to Graphite")
       context.become(sending(connection))
   }
 
@@ -168,35 +169,19 @@ class GraphiteClient(host: String, port: Int, connectionRetryDelay: FiniteDurati
     }
 
     def dispatchHistograms(entity: Entity, histograms: Map[HistogramKey, Histogram.Snapshot]): Unit = histograms foreach {
-      case (histogramKey, snapshot) => {
-        val histogramData = packHistogram(metricPrefix, entity, histogramKey, snapshot, timestamp)
-        log.info("Dispatching Histogram: [{}]", histogramData)
-        connection ! Write(histogramData)
-      }
+      case (histogramKey, snapshot) => connection ! Write(packHistogram(metricPrefix, entity, histogramKey, snapshot, timestamp))
     }
 
     def dispatchGauges(entity: Entity, gauges: Map[GaugeKey, Histogram.Snapshot]): Unit = gauges foreach {
-      case (histogramKey, snapshot) => {
-        val histogramData = packGauge(metricPrefix, entity, histogramKey, snapshot, timestamp)
-        log.info("Dispatching Gauge: [{}]", histogramData)
-        connection ! Write(histogramData)
-      }
+      case (gaugeKey, snapshot) => connection ! Write(packGauge(metricPrefix, entity, gaugeKey, snapshot, timestamp))
     }
 
     def dispatchMinMaxCounters(entity: Entity, minMaxCounters: Map[MinMaxCounterKey, Histogram.Snapshot]): Unit = minMaxCounters foreach {
-      case (minMaxCounterKey, snapshot) => {
-        val histogramData = packMinMaxCounter(metricPrefix, entity, minMaxCounterKey, snapshot, timestamp)
-        log.info("Dispatching MinMaxCounter: [{}]", histogramData)
-        connection ! Write(histogramData)
-      }
+      case (minMaxCounterKey, snapshot) => connection ! Write(packMinMaxCounter(metricPrefix, entity, minMaxCounterKey, snapshot, timestamp))
     }
 
     def dispatchCounters(entity: Entity, counters: Map[CounterKey, Counter.Snapshot]): Unit = counters foreach {
-      case (counterKey, snapshot) => {
-        val histogramData = packCounter(metricPrefix, entity, counterKey, snapshot, timestamp)
-        log.info("Dispatching Counter: [{}]", histogramData)
-        connection ! Write(histogramData)
-      }
+      case (counterKey, snapshot) => connection ! Write(packCounter(metricPrefix, entity, counterKey, snapshot, timestamp))
     }
   }
 }
