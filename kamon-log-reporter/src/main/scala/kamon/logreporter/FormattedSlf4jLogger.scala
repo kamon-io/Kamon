@@ -189,9 +189,15 @@ trait FormattedSlf4jLogger {
     sendMap("Context-Switches", map)
   }
 
-  def printFormattedTraceMetrics(name: String, elapsedTime: Histogram.Snapshot) = {
+  def printFormattedTraceMetrics(name: String, elapsedTime: Histogram.Snapshot) =
+    printFormattedTraceOrTraceSegmentMetrics("Trace", name, elapsedTime)
+
+  def printFormattedTraceSegmentMetrics(name: String, elapsedTime: Histogram.Snapshot) =
+    printFormattedTraceOrTraceSegmentMetrics("Trace-Segment", name, elapsedTime)
+
+  private def printFormattedTraceOrTraceSegmentMetrics(entityName: String, name: String, elapsedTime: Histogram.Snapshot) = {
     val map = Map(
-      "trace" -> name,
+      entityName.toLowerCase -> name,
       "elapsedTime.min" -> elapsedTime.min,
       "elapsedTime.50thPerc" -> elapsedTime.percentile(50.0D),
       "elapsedTime.90thPerc" -> elapsedTime.percentile(90.0D),
@@ -201,7 +207,7 @@ trait FormattedSlf4jLogger {
       "elapsedTime.max" -> elapsedTime.max,
       "count" -> elapsedTime.numberOfMeasurements)
 
-    sendMap("Trace", map)
+    sendMap(entityName, map)
   }
 
   def printFormattedMetrics(histograms: Map[String, Option[Histogram.Snapshot]],

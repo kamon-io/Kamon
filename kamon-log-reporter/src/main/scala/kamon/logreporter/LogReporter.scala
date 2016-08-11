@@ -38,6 +38,7 @@ class LogReporterExtension(system: ExtendedActorSystem) extends Kamon.Extension 
   val subscriber = system.actorOf(Props[LogReporterSubscriber], "kamon-log-reporter")
 
   Kamon.metrics.subscribe("trace", "**", subscriber, permanently = true)
+  Kamon.metrics.subscribe("trace-segment", "**", subscriber, permanently = true)
   Kamon.metrics.subscribe("akka-actor", "**", subscriber, permanently = true)
   Kamon.metrics.subscribe("akka-router", "**", subscriber, permanently = true)
   Kamon.metrics.subscribe("akka-dispatcher", "**", subscriber, permanently = true)
@@ -73,6 +74,7 @@ class LogReporterSubscriber extends Actor with ActorLogging with PrettyLogger wi
       case (entity, snapshot) if entity.category == "akka-dispatcher"  ⇒ logDispatcherMetrics(entity, snapshot)
       case (entity, snapshot) if entity.category == "executor-service" ⇒ logExecutorMetrics(entity, snapshot)
       case (entity, snapshot) if entity.category == "trace"            ⇒ logTraceMetrics(entity.name, snapshot)
+      case (entity, snapshot) if entity.category == "trace-segment"    ⇒ logTraceSegmentMetrics(entity.name, snapshot)
       case (entity, snapshot) if entity.category == "histogram"        ⇒ histograms += (entity.name -> snapshot.histogram("histogram"))
       case (entity, snapshot) if entity.category == "counter"          ⇒ counters += (entity.name -> snapshot.counter("counter"))
       case (entity, snapshot) if entity.category == "min-max-counter"  ⇒ minMaxCounters += (entity.name -> snapshot.minMaxCounter("min-max-counter"))
@@ -206,6 +208,15 @@ class LogReporterSubscriber extends Actor with ActorLogging with PrettyLogger wi
     } {
       if (useFormattedSlf4j) printFormattedTraceMetrics(name, elapsedTime)
       if (usePrettyPrintLog) printTraceMetrics(name, elapsedTime)
+    }
+  }
+
+  def logTraceSegmentMetrics(name: String, traceSegmentSnapshot: EntitySnapshot): Unit = {
+    for {
+      elapsedTime ← traceSegmentSnapshot.histogram("elapsed-time")
+    } {
+      if (useFormattedSlf4j) printFormattedTraceSegmentMetrics(name, elapsedTime)
+      if (usePrettyPrintLog) printTraceSegmentMetrics(name, elapsedTime)
     }
   }
 

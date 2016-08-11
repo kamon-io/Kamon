@@ -190,14 +190,20 @@ trait PrettyLogger {
           global.average, perProcessNonVoluntary.average, perProcessVoluntary.average,
           global.max, perProcessNonVoluntary.max, perProcessVoluntary.max))
 
-  def printTraceMetrics(name: String, elapsedTime: Histogram.Snapshot) = {
+  def printTraceMetrics(name: String, elapsedTime: Histogram.Snapshot) =
+    printTraceOrTraceSegmentMetrics("||    Trace: %-83s    |", name, elapsedTime)
+
+  def printTraceSegmentMetrics(name: String, elapsedTime: Histogram.Snapshot) =
+    printTraceOrTraceSegmentMetrics("||    Trace-Segment: %-75s    |", name, elapsedTime)
+
+  private def printTraceOrTraceSegmentMetrics(firstLine: String, name: String, elapsedTime: Histogram.Snapshot) = {
     val traceMetricsData = StringBuilder.newBuilder
 
     traceMetricsData.append(
-      """
+      s"""
         |+--------------------------------------------------------------------------------------------------+
         ||                                                                                                  |
-        ||    Trace: %-83s    |
+        $firstLine
         ||    Count: %-8s                                                                               |
         ||                                                                                                  |
         ||  Elapsed Time (nanoseconds):                                                                     |
