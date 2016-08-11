@@ -13,10 +13,11 @@
  * =========================================================================================
  */
 
+import com.typesafe.sbt.SbtAspectj
 import sbt._
 import sbt.Keys._
-import com.typesafe.sbt.SbtAspectj.{ Aspectj, defaultAspectjSettings }
-import com.typesafe.sbt.SbtAspectj.AspectjKeys.{ aspectjVersion, compileOnly, lintProperties, weaverOptions }
+import com.typesafe.sbt.SbtAspectj.{Aspectj, defaultAspectjSettings}
+import com.typesafe.sbt.SbtAspectj.AspectjKeys.{aspectjVersion, compileOnly, lintProperties, weaverOptions}
 
 
 object AspectJ {
@@ -28,6 +29,13 @@ object AspectJ {
     javaOptions in Test  <++=  weaverOptions in Aspectj,
     javaOptions in run  <++=  weaverOptions in Aspectj,
     lintProperties in Aspectj    +=  "invalidAbsoluteTypeName = ignore"
+  )
+
+  lazy val aspectjSettingsInRun = SbtAspectj.aspectjSettings ++ Seq(
+    // fork the run so that javaagent option can be added
+    fork in run := true,
+    // add the aspectj weaver javaagent option
+    javaOptions in run <++= weaverOptions in Aspectj
   )
 
   def aspectjDependencySettings = Seq(

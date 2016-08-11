@@ -14,22 +14,13 @@
  * =========================================================================================
  */
 
-import sbt._
-import sbt.Keys._
+package playground
 
+import akka.http.scaladsl.model.HttpRequest
+import kamon.akka.http.NameGenerator
 
-object Build extends Build {
-  import Dependencies._
-  import Settings._
-  import AspectJ._
-
-  lazy val kamonAkkaHttp = Project("kamon-akka-http",file("."))
-    .settings(basicSettings: _*)
-    .settings(formatSettings: _*)
-    .settings(aspectJSettings: _*)
-    .settings(libraryDependencies ++=
-      compile(httpExperimental,httpCore, kamonCore, kamonAkka) ++
-      test(httpTestKit, scalatest, slf4jApi, slf4jnop) ++
-
-  provided(aspectJ))
+class AkkaHttpNameGenerator extends NameGenerator {
+  def generateTraceName(request: HttpRequest): String = request.getUri().path()
+  def generateRequestLevelApiSegmentName(request: HttpRequest): String = "request-level " + request.uri.path.toString()
+  def generateHostLevelApiSegmentName(request: HttpRequest): String = "host-level " + request.uri.path.toString()
 }
