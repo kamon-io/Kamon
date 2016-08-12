@@ -63,6 +63,20 @@ class TraceContextManipulationSpec extends BaseKamonSpec("trace-metrics-spec") {
       createdContext.name shouldBe "renamed-trace"
     }
 
+    "allow tagging and untagging a trace" in {
+      val createdContext = Tracer.withContext(newContext("trace-before-rename")) {
+        Tracer.currentContext.addTag("trace-tag", "tag-1")
+        Tracer.currentContext
+      }
+
+      Tracer.currentContext shouldBe empty
+      createdContext.tags shouldBe Map("trace-tag" -> "tag-1")
+
+      createdContext.removeTag("trace-tag", "tag-1")
+
+      createdContext.tags shouldBe Map.empty
+    }
+
     "allow creating a segment within a trace" in {
       val createdContext = Tracer.withContext(newContext("trace-with-segments")) {
         Tracer.currentContext.startSegment("segment-1", "segment-1-category", "segment-library")
@@ -80,6 +94,19 @@ class TraceContextManipulationSpec extends BaseKamonSpec("trace-metrics-spec") {
 
         segment.rename("new-segment-name")
         segment.name should be("new-segment-name")
+      }
+    }
+
+    "allow tagging and untagging a segment" in {
+      Tracer.withContext(newContext("trace-with-renamed-segment")) {
+        val segment = Tracer.currentContext.startSegment("segment-name", "segment-label", "segment-library")
+        segment.tags should be(Map.empty)
+
+        segment.addTag("segment-tag", "tag-1")
+        segment.tags should be(Map("segment-tag" -> "tag-1"))
+
+        segment.removeTag("segment-tag", "tag-1")
+        segment.tags should be(Map.empty)
       }
     }
   }
