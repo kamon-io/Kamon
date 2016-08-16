@@ -26,7 +26,8 @@ object Projects extends Build {
     .enablePlugins(CrossPerProjectPlugin)
     .aggregate(kamonCore, kamonScala, kamonAkka, kamonSpray, kamonNewrelic, kamonPlayground, kamonTestkit,
       kamonStatsD, kamonRiemann, kamonDatadog, kamonSPM, kamonSystemMetrics, kamonLogReporter, kamonAkkaRemote, kamonJdbc,
-      kamonAnnotation, kamonPlay23, kamonPlay24, kamonPlay25, kamonJMXReporter, kamonFluentd, kamonAutoweave, kamonInfluxDB)
+      kamonAnnotation, kamonPlay23, kamonPlay24, kamonPlay25, kamonJMXReporter, kamonFluentd, kamonKhronus,
+      kamonAutoweave, kamonInfluxDB)
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
     .settings(noPublishing: _*)
@@ -266,7 +267,7 @@ object Projects extends Build {
     .settings(formatSettings: _*)
     .settings(
       libraryDependencies ++=
-        compile(sprayCan, sprayClient, sprayRouting, sprayJson, sprayJsonLenses, akkaSlf4j) ++
+        compile(sprayCan, sprayClient, sprayRouting, sprayJson, sprayJsonLenses, akkaSlf4j, libThrift) ++
         test(scalatest, akkaTestKit, slf4jApi, slf4jnop))
 
   lazy val kamonJMXReporter = Project("kamon-jmx", file("kamon-jmx"))
@@ -286,6 +287,15 @@ object Projects extends Build {
       libraryDependencies ++=
         compile(akkaActor) ++ compile(fluentdLogger) ++
           test(scalatest, akkaTestKit, easyMock, slf4jApi, slf4jnop))
+
+  lazy val kamonKhronus = Project("kamon-khronus", file("kamon-khronus"))
+    .dependsOn(kamonCore % "compile->compile;test->test")
+    .settings(basicSettings: _*)
+    .settings(formatSettings: _*)
+    .settings(
+      libraryDependencies ++=
+        compile(khronusClient) ++
+          test(scalatest, easyMock))
 
   val noPublishing = Seq(publish := (), publishLocal := (), publishArtifact := false)
 }

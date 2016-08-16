@@ -61,7 +61,7 @@ private[kamon] class MetricsOnlyContext(traceName: String,
     _elapsedTime = traceElapsedTime
 
     if (Kamon.metrics.shouldTrack(name, TraceMetrics.category)) {
-      val traceEntity = Kamon.metrics.entity(TraceMetrics, name)
+      val traceEntity = Kamon.metrics.entity(TraceMetrics, name, _tags.toMap)
       traceEntity.elapsedTime.record(traceElapsedTime.nanos)
       if (withError) traceEntity.errors.increment()
     }
@@ -125,7 +125,7 @@ private[kamon] class MetricsOnlyContext(traceName: String,
       segmentTags: Map[String, String]) extends Segment {
 
     private val _startTimestamp = RelativeNanoTimestamp.now
-    protected val _tags = TrieMap.empty[String, String] ++= segmentTags
+    private val _tags = TrieMap.empty[String, String] ++= segmentTags
 
     @volatile private var _segmentName = segmentName
     @volatile private var _elapsedTime = NanoInterval.default

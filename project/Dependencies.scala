@@ -60,6 +60,7 @@ object Dependencies {
   val fluentdLogger     = "org.fluentd"               %%  "fluent-logger-scala"   % "0.5.1"
   val easyMock          = "org.easymock"              %   "easymock"              % "3.2"
   val riemannClient     = "com.aphyr"                 %   "riemann-java-client"   % "0.4.1"
+  val khronusClient     = "com.despegar"              %   "khronus-java-client"   % "0.0.5"
 
   //play 2.3.x
   val play23            = "com.typesafe.play"         %%  "play"                  % play23Version
@@ -78,6 +79,8 @@ object Dependencies {
   val playTest25        = "org.scalatestplus.play"    %%  "scalatestplus-play"    % "1.5.0"
 
   val elasticsearch     = "org.elasticsearch"         %   "elasticsearch"         % elasticsearchVersion
+
+  val libThrift         = "org.apache.thrift"         %   "libthrift"             % "0.9.2"
 
   def compile   (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "compile")
   def provided  (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "provided")
