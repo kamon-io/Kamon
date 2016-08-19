@@ -16,7 +16,7 @@
 
 package kamon.spm
 
-import akka.actor.{ ActorLogging, Props, Actor, ActorRef }
+import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
 import kamon.Kamon
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 import kamon.metric.TickMetricSnapshotBuffer
@@ -40,7 +40,7 @@ class SPMMetricsSubscriber(sender: ActorRef, flushInterval: FiniteDuration, subs
         case (entry, snap) ⇒
           snap.metrics.toList.map {
             case (key, snap) ⇒
-              SPMMetric(tick.to, entry.category, entry.name, key.name, key.unitOfMeasurement, snap)
+              SPMMetric(tick.to, entry.category, entry.name, key.name, entry.tags, key.unitOfMeasurement, snap)
           }
       }
 

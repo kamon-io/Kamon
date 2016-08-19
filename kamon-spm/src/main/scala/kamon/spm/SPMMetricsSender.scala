@@ -31,7 +31,7 @@ import scala.annotation.tailrec
 import scala.collection.immutable.{ Map, Queue }
 import scala.concurrent.duration._
 
-class SPMMetricsSender(io: ActorRef, retryInterval: FiniteDuration, sendTimeout: Timeout, maxQueueSize: Int, url: String, tracingUrl: String, host: String, token: String) extends Actor with ActorLogging {
+class SPMMetricsSender(io: ActorRef, retryInterval: FiniteDuration, sendTimeout: Timeout, maxQueueSize: Int, url: String, tracingUrl: String, host: String, token: String, traceDurationThreshold: Int, maxTraceErrorsCount: Int) extends Actor with ActorLogging {
   import context._
   import kamon.spm.SPMMetricsSender._
 
@@ -48,9 +48,9 @@ class SPMMetricsSender(io: ActorRef, retryInterval: FiniteDuration, sendTimeout:
     }.pipeTo(self)
   }
 
-  private def postTraces(metrics: List[SPMMetric]): Unit = {
+  private def postTraces(metrics: List[SPMMetric], segments: List[SPMMetric]): Unit = {
     val query = Query("host" -> host, "token" -> token)
-    val entity = HttpEntity(encodeTraceBody(metrics, token))
+    val entity = HttpEntity(encodeTraceBody(metrics, segments, token))
     (io ? Post(Uri(tracingUrl).withQuery(query)).withEntity(entity)).mapTo[HttpResponse].recover {
       case t: Throwable ⇒ {
         log.error(t, "Can't post trace metrics.")
@@ -58,6 +58,20 @@ class SPMMetricsSender(io: ActorRef, retryInterval: FiniteDuration, sendTimeout:
     }.pipeTo(self)
   }
 
+  private def preprocessMetrics(metrics: List[SPMMetric]): List[SPMMetric] = {
+    val allFilteredMetrics = metrics.filter(metric ⇒ ((metric.category != "http-server" || metric.instrumentName.matches(".*[_]\\d\\d\\d"))))
+    allFilteredMetrics
+  }
+
+  private def preprocessTraceMetrics(metrics: List[SPMMetric]): List[SPMMetric] = {
+    val (errorMetrics, otherMetrics) = metrics.partition(filteredMetric ⇒ (filteredMetric.instrumentName == "errors"))
+    if (errorMetrics.size > maxTraceErrorsCount) {
+      log.warning("Trace error metrics were truncated")
+      errorMetrics.take(maxTraceErrorsCount) ++ otherMetrics
+    } else {
+      metrics
+    }
+  }
   private def fragment(metrics: List[SPMMetric]): List[List[SPMMetric]] = {
     @tailrec
     def partition(batch: List[SPMMetric], batches: List[List[SPMMetric]]): List[List[SPMMetric]] = {
@@ -80,10 +94,11 @@ class SPMMetricsSender(io: ActorRef, retryInterval: FiniteDuration, sendTimeout:
   def idle: Receive = {
     case Send(metrics) if metrics.nonEmpty ⇒ {
       try {
-        val tracingMetrics = metrics.filter(metric ⇒ (metric.category == "trace" && SPMMetric.isTraceToStore(metric)))
-        if (tracingMetrics.size > 0) {
-          val tracingBatches = fragment(tracingMetrics)
-          postTraces(tracingBatches.head)
+        val processedMetrics = preprocessTraceMetrics(metrics.filter(metric ⇒ ((metric.category == "trace") && SPMMetric.isTraceToStore(metric, traceDurationThreshold))))
+        val traceSegmentMetrics = processedMetrics.filter(metric ⇒ ((metric.category == "trace-segment")))
+        if (processedMetrics.size > 0) {
+          val tracingBatches = fragment(processedMetrics)
+          postTraces(tracingBatches.head, traceSegmentMetrics)
         }
       } catch {
         case e: Throwable ⇒ {
@@ -91,7 +106,8 @@ class SPMMetricsSender(io: ActorRef, retryInterval: FiniteDuration, sendTimeout:
         }
       }
       try {
-        val batches = fragment(metrics)
+        val processedMetrics = preprocessMetrics(metrics)
+        val batches = fragment(processedMetrics)
         post(batches.head)
         become(sending(Queue(batches: _*)))
       } catch {
@@ -143,8 +159,8 @@ object SPMMetricsSender {
 
   case class Send(metrics: List[SPMMetric])
 
-  def props(io: ActorRef, retryInterval: FiniteDuration, sendTimeout: Timeout, maxQueueSize: Int, url: String, tracingUrl: String, host: String, token: String) =
-    Props(classOf[SPMMetricsSender], io, retryInterval, sendTimeout, maxQueueSize, url, tracingUrl, host, token)
+  def props(io: ActorRef, retryInterval: FiniteDuration, sendTimeout: Timeout, maxQueueSize: Int, url: String, tracingUrl: String, host: String, token: String, traceDurationThreshold: Int, maxTraceErrorsCount: Int) =
+    Props(classOf[SPMMetricsSender], io, retryInterval, sendTimeout, maxQueueSize, url, tracingUrl, host, token, traceDurationThreshold, maxTraceErrorsCount)
 
   private val IndexTypeHeader = Map("index" -> Map("_type" -> "log", "_index" -> "spm-receiver"))
 
@@ -159,10 +175,10 @@ object SPMMetricsSender {
     (IndexTypeHeader.toJson :: body).mkString("\n")
   }
 
-  private def encodeTraceBody(metrics: List[SPMMetric], token: String): Array[Byte] = {
+  private def encodeTraceBody(metrics: List[SPMMetric], traceSegments: List[SPMMetric], token: String): Array[Byte] = {
     val baos = new ByteArrayOutputStream()
     metrics.foreach { metric ⇒
-      val trace = SPMMetric.traceFormat(metric, token)
+      val trace = SPMMetric.traceFormat(metric, token, traceSegments)
       baos.write(ByteBuffer.allocate(4).putInt(trace.size).array())
       baos.write(trace)
     }
