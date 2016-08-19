@@ -28,6 +28,7 @@ import scala.concurrent.Future
 trait TraceContext {
   def name: String
   def token: String
+  def tags: Map[String, String]
   def isEmpty: Boolean
   def nonEmpty: Boolean = !isEmpty
   def isClosed: Boolean = !(Status.Open == status)
@@ -86,6 +87,7 @@ trait Segment {
   def name: String
   def category: String
   def library: String
+  def tags: Map[String, String]
   def isEmpty: Boolean
   def nonEmpty: Boolean = !isEmpty
   def isClosed: Boolean = !(Status.Open == status)
@@ -101,6 +103,7 @@ trait Segment {
 case object EmptyTraceContext extends TraceContext {
   def name: String = "empty-trace"
   def token: String = ""
+  def tags: Map[String, String] = Map.empty
   def isEmpty: Boolean = true
   def status: Status = Closed
   def finish(): Unit = {}
@@ -117,6 +120,7 @@ case object EmptyTraceContext extends TraceContext {
     val name: String = "empty-segment"
     val category: String = "empty-category"
     val library: String = "empty-library"
+    def tags: Map[String, String] = Map.empty
     def isEmpty: Boolean = true
     def status: Status = Closed
     def finish(): Unit = {}

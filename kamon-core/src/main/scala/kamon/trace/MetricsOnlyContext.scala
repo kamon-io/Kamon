@@ -49,6 +49,7 @@ private[kamon] class MetricsOnlyContext(traceName: String,
       log.warning("Can't rename trace from [{}] to [{}] because the trace is already closed.", name, newName)
 
   def name: String = _name
+  def tags: Map[String, String] = _tags.toMap
   def isEmpty: Boolean = false
   def status: Status = _status
   def addMetadata(key: String, value: String): Unit = {}
@@ -132,6 +133,7 @@ private[kamon] class MetricsOnlyContext(traceName: String,
     @volatile private var _status: Status = Status.Open
 
     def name: String = _segmentName
+    def tags: Map[String, String] = _tags.toMap
     def isEmpty: Boolean = false
     def status: Status = _status
     def addMetadata(key: String, value: String): Unit = {}
