@@ -52,6 +52,11 @@ object Settings {
     )
   ) ++ publishSettings ++ releaseSettings
 
+  lazy val settingsForPlayground: Seq[Setting[_]] = Seq(
+    connectInput in run := true,
+    cancelable in Global := true
+  )
+
   lazy val formatSettings = SbtScalariform.scalariformSettings ++ Seq(
     ScalariformKeys.preferences in Compile := formattingPreferences,
     ScalariformKeys.preferences in Test := formattingPreferences
