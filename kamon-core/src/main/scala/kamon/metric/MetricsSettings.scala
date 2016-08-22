@@ -18,7 +18,9 @@ package kamon.metric
 
 import com.typesafe.config.Config
 import kamon.metric.instrument._
+import kamon.util.PathFilter
 import kamon.util.GlobPathFilter
+import kamon.util.RegexPathFilter
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -43,7 +45,7 @@ case class MetricsSettings(
 /**
  *
  */
-case class EntityFilter(includes: List[GlobPathFilter], excludes: List[GlobPathFilter]) {
+case class EntityFilter(includes: List[PathFilter], excludes: List[PathFilter]) {
   def accept(name: String): Boolean =
     includes.exists(_.accept(name)) && !excludes.exists(_.accept(name))
 }
@@ -71,7 +73,7 @@ object MetricsSettings {
   /**
    *  Load all the default filters configured under the `kamon.metric.filters` configuration key. All filters are
    *  defined with the entity category as a sub-key of the `kamon.metric.filters` key and two sub-keys to it: includes
-   *  and excludes with lists of string glob patterns as values. Example:
+   *  and excludes with lists of string glob or regex patterns as values ('asRegex' defaults to false). Example:
    *
    *  {{{
    *
@@ -79,6 +81,7 @@ object MetricsSettings {
    *      actor {
    *        includes = ["user/test-actor", "user/service/worker-*"]
    *        excludes = ["user/IO-*"]
+   *        asRegex  = false
    *      }
    *    }
    *
@@ -90,8 +93,11 @@ object MetricsSettings {
     import scala.collection.JavaConverters._
 
     filtersConfig.firstLevelKeys map { category: String ⇒
-      val includes = filtersConfig.getStringList(s"$category.includes").asScala.map(inc ⇒ new GlobPathFilter(inc)).toList
-      val excludes = filtersConfig.getStringList(s"$category.excludes").asScala.map(exc ⇒ new GlobPathFilter(exc)).toList
+      val asRegex = if (filtersConfig.hasPath(s"$category.asRegex")) filtersConfig.getBoolean(s"$category.asRegex") else false
+      val includes = filtersConfig.getStringList(s"$category.includes").asScala.map(inc ⇒
+        if (asRegex) RegexPathFilter(inc) else new GlobPathFilter(inc)).toList
+      val excludes = filtersConfig.getStringList(s"$category.excludes").asScala.map(exc ⇒
+        if (asRegex) RegexPathFilter(exc) else new GlobPathFilter(exc)).toList
 
       (category, EntityFilter(includes, excludes))
     } toMap
