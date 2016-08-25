@@ -6,7 +6,7 @@ import org.springframework.boot.SpringApplication;
 
 public class KamonSpringApplication {
 	public static void main(String... args) {
-	  SpringApplication.run(new Object[] {KamonController.class, PingPong.class}, args);
 		Kamon.start();
+	  SpringApplication.run(new Object[] {KamonController.class, PingPong.class}, args);
 	}
 }
