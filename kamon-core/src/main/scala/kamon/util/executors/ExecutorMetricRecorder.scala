@@ -30,6 +30,7 @@ object ForkJoinPools {
     def getActiveThreadCount(fjp: T): Long
     def getRunningThreadCount(fjp: T): Long
     def getQueuedTaskCount(fjp: T): Long
+    def getQueuedSubmissionCount(fjp: T): Long
   }
 
   implicit object ScalaForkJoin extends ForkJoinMetrics[ForkJoinPool] {
@@ -38,6 +39,7 @@ object ForkJoinPools {
     def getRunningThreadCount(fjp: ForkJoinPool) = fjp.getActiveThreadCount.toLong
     def getActiveThreadCount(fjp: ForkJoinPool) = fjp.getRunningThreadCount.toLong
     def getQueuedTaskCount(fjp: ForkJoinPool) = fjp.getQueuedTaskCount
+    def getQueuedSubmissionCount(fjp: ForkJoinPool) = fjp.getQueuedSubmissionCount
 
   }
 
@@ -47,6 +49,7 @@ object ForkJoinPools {
     def getRunningThreadCount(fjp: JavaForkJoinPool) = fjp.getActiveThreadCount.toLong
     def getActiveThreadCount(fjp: JavaForkJoinPool) = fjp.getRunningThreadCount.toLong
     def getQueuedTaskCount(fjp: JavaForkJoinPool) = fjp.getQueuedTaskCount
+    def getQueuedSubmissionCount(fjp: JavaForkJoinPool) = fjp.getQueuedSubmissionCount
 
   }
 }
@@ -57,6 +60,7 @@ abstract class ForkJoinPoolMetrics(instrumentFactory: InstrumentFactory) extends
   def activeThreads: Gauge
   def runningThreads: Gauge
   def queuedTaskCount: Gauge
+  def queuedSubmissionCount: Gauge
 }
 
 object ForkJoinPoolMetrics {
@@ -72,6 +76,7 @@ object ForkJoinPoolMetrics {
       val activeThreads = gauge("active-threads", forkJoinMetrics.getActiveThreadCount(fjp))
       val runningThreads = gauge("running-threads", forkJoinMetrics.getRunningThreadCount(fjp))
       val queuedTaskCount = gauge("queued-task-count", forkJoinMetrics.getQueuedTaskCount(fjp))
+      val queuedSubmissionCount = gauge("queued-submission-count", forkJoinMetrics.getQueuedSubmissionCount(fjp))
     }
   }
 }

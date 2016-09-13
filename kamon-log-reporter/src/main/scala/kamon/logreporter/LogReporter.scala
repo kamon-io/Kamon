@@ -178,27 +178,28 @@ class LogReporterSubscriber extends Actor with ActorLogging {
       activeThreads ← forkJoinMetrics.gauge("active-threads")
       runningThreads ← forkJoinMetrics.gauge("running-threads")
       queuedTaskCount ← forkJoinMetrics.gauge("queued-task-count")
+      queuedSubmissionCount ← forkJoinMetrics.gauge("queued-submission-count")
 
     } {
       log.info(
         """
-          |+--------------------------------------------------------------------------------------------------+
-          ||  Fork-Join-Pool                                                                                  |
-          ||                                                                                                  |
-          ||  Dispatcher: %-83s |
-          ||                                                                                                  |
-          ||  Paralellism: %-4s                                                                               |
-          ||                                                                                                  |
-          ||                 Pool Size       Active Threads     Running Threads     Queue Task Count          |
-          ||      Min           %-4s              %-4s                %-4s                %-4s                |
-          ||      Avg           %-4s              %-4s                %-4s                %-4s                |
-          ||      Max           %-4s              %-4s                %-4s                %-4s                |
-          ||                                                                                                  |
-          |+--------------------------------------------------------------------------------------------------+"""
+          |+-------------------------------------------------------------------------------------------------------------------------+
+          ||  Fork-Join-Pool                                                                                                         |
+          ||                                                                                                                         |
+          ||  Dispatcher: %-106s |
+          ||                                                                                                                         |
+          ||  Paralellism: %-4s                                                                                                      |
+          ||                                                                                                                         |
+          ||                 Pool Size       Active Threads     Running Threads     Queue Task Count     Queued Submission Count     |
+          ||      Min           %-4s              %-4s                %-4s                %-4s                     %-8s          |
+          ||      Avg           %-4s              %-4s                %-4s                %-4s                     %-8s          |
+          ||      Max           %-4s              %-4s                %-4s                %-4s                     %-8s          |
+          ||                                                                                                                         |
+          |+-------------------------------------------------------------------------------------------------------------------------+"""
           .stripMargin.format(name,
-            paralellism.max, poolSize.min, activeThreads.min, runningThreads.min, queuedTaskCount.min,
-            poolSize.average, activeThreads.average, runningThreads.average, queuedTaskCount.average,
-            poolSize.max, activeThreads.max, runningThreads.max, queuedTaskCount.max))
+            paralellism.max, poolSize.min, activeThreads.min, runningThreads.min, queuedTaskCount.min, queuedSubmissionCount.min,
+            poolSize.average, activeThreads.average, runningThreads.average, queuedTaskCount.average, queuedSubmissionCount.average,
+            poolSize.max, activeThreads.max, runningThreads.max, queuedTaskCount.max, queuedSubmissionCount.max))
     }
   }
 
