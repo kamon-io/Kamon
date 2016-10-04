@@ -151,6 +151,21 @@ public class LongAdder extends Striped64 implements Serializable {
         return sum;
     }
 
+    public long sumAndReset() {
+        long sum = getAndSetBase(0L);
+        Cell[] as = cells;
+        if (as != null) {
+            int n = as.length;
+            for (int i = 0; i < n; ++i) {
+                Cell a = as[i];
+                if (a != null) {
+                    sum += a.getAndSet(0L);
+                }
+            }
+        }
+        return sum;
+    }
+
     /**
      * Returns the String representation of the {@link #sum}.
      * @return the String representation of the {@link #sum}

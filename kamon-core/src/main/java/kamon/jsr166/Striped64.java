@@ -105,6 +105,14 @@ abstract class Striped64 extends Number {
             return UNSAFE.compareAndSwapLong(this, valueOffset, cmp, val);
         }
 
+        final long getAndSet(long val) {
+            long v;
+            do {
+                v = UNSAFE.getLongVolatile(this, valueOffset);
+            } while (!UNSAFE.compareAndSwapLong(this, valueOffset, v, val));
+            return v;
+        }
+
         // Unsafe mechanics
         private static final sun.misc.Unsafe UNSAFE;
         private static final long valueOffset;
@@ -179,6 +187,17 @@ abstract class Striped64 extends Number {
      */
     final boolean casBase(long cmp, long val) {
         return UNSAFE.compareAndSwapLong(this, baseOffset, cmp, val);
+    }
+
+    /**
+     * CASes the base field.
+     */
+    final long getAndSetBase(long val) {
+        long v;
+        do {
+            v = UNSAFE.getLongVolatile(this, baseOffset);
+        } while (!UNSAFE.compareAndSwapLong(this, baseOffset, v, val));
+        return v;
     }
 
     /**
