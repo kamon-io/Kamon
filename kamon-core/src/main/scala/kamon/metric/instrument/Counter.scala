@@ -48,7 +48,7 @@ class LongAdderCounter extends Counter {
     counter.add(times)
   }
 
-  def collect(context: CollectionContext): Counter.Snapshot = CounterSnapshot(counter.sumThenReset())
+  def collect(context: CollectionContext): Counter.Snapshot = CounterSnapshot(counter.sumAndReset())
 
   def cleanup: Unit = {}
 }
