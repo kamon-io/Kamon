@@ -22,8 +22,8 @@ object Dependencies {
   )
 
   val aspectjVersion    = "1.8.9"
-  val AkkaVersion       = "2.4.8"
-  val KamonVersion      = "0.6.2"
+  val AkkaVersion       = "2.4.11"
+  val KamonVersion      = "0.6.3"
   val slf4jVersion      = "1.7.7"
 
   val aspectJ           = "org.aspectj"          % "aspectjweaver"          % aspectjVersion
