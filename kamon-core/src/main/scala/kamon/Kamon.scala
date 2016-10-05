@@ -24,23 +24,59 @@ import kamon.util.logger.LazyLogger
 import _root_.scala.util.control.NonFatal
 import _root_.scala.util.{ Failure, Success, Try }
 
+trait ConfigProvider {
+  def config: Config
+
+  final def patchedConfig: Config = {
+    val internalConfig = config.getConfig("kamon.internal-config")
+    config
+      .withoutPath("akka")
+      .withoutPath("spray")
+      .withFallback(internalConfig)
+  }
+}
+
 object Kamon {
 
   private val log = LazyLogger("Kamon")
 
   trait Extension extends actor.Extension
 
-  val config = resolveConfiguration
-  val metrics = MetricsModuleImpl(config)
-  val tracer = TracerModuleImpl(metrics, config)
+  class KamonDefaultConfigProvider extends ConfigProvider {
+    def config = resolveConfiguration
+
+    private def resolveConfiguration: Config = {
+      val defaultConfig = ConfigFactory.load()
+
+      defaultConfig.getString("kamon.config-provider") match {
+        case "default" ⇒ defaultConfig
+        case fqcn ⇒
+          val dynamic = new ReflectiveDynamicAccess(getClass.getClassLoader)
+          dynamic.createInstanceFor[ConfigProvider](fqcn, Nil).get.config
+      }
+    }
+  }
+
+  class KamonConfigProvider(_config: Config) extends ConfigProvider {
+    def config = _config
+  }
+
+  private[kamon] var configProvider: Option[ConfigProvider] = None
+  def config: Config =
+    configProvider match {
+      case Some(provider) ⇒ provider.config
+      case None           ⇒ throw new Exception("Kamon.start() not called yet")
+    }
+  lazy val metrics = MetricsModuleImpl(config)
+  lazy val tracer = TracerModuleImpl(metrics, config)
 
   private lazy val _system = {
-    val internalConfig = config.getConfig("kamon.internal-config")
-
-    val patchedConfig = config
-      .withoutPath("akka")
-      .withoutPath("spray")
-      .withFallback(internalConfig)
+    val patchedConfig =
+      configProvider match {
+        case Some(provider) ⇒ provider.patchedConfig
+        case None ⇒
+          throw new Exception("Kamon.start() not called yet")
+      }
 
     log.info("Initializing Kamon...")
 
@@ -55,7 +91,20 @@ object Kamon {
     _system.registerExtension(ModuleLoader)
   }
 
-  def start(): Unit = _start
+  def start(): Unit = {
+    configProvider = Some(new KamonDefaultConfigProvider())
+    _start
+  }
+
+  def start(conf: Config): Unit = {
+    configProvider = Some(new KamonConfigProvider(conf))
+    _start
+  }
+
+  def start(provider: ConfigProvider): Unit = {
+    configProvider = Some(provider)
+    _start
+  }
 
   def shutdown(): Unit = {
     _system.shutdown()
@@ -74,20 +123,5 @@ object Kamon {
       case Failure(NonFatal(reason)) ⇒ log.debug(s"Kamon-autoweave failed to load. Reason: ${reason.getMessage}.")
     }
   }
-
-  private def resolveConfiguration: Config = {
-    val defaultConfig = ConfigFactory.load()
-
-    defaultConfig.getString("kamon.config-provider") match {
-      case "default" ⇒ defaultConfig
-      case fqcn ⇒
-        val dynamic = new ReflectiveDynamicAccess(getClass.getClassLoader)
-        dynamic.createInstanceFor[ConfigProvider](fqcn, Nil).get.config
-    }
-  }
-}
-
-trait ConfigProvider {
-  def config: Config
 }
 
