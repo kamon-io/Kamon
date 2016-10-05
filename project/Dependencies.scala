@@ -59,7 +59,7 @@ object Dependencies {
   val fluentdLogger     = "org.fluentd"               %%  "fluent-logger-scala"   % "0.5.1"
   val easyMock          = "org.easymock"              %   "easymock"              % "3.2"
 
-  val kamonAkka23       = "io.kamon"                  %%  "kamon-akka"            % "0.6.2"
+  val kamonAkka23       = "io.kamon"                  %%  "kamon-akka"            % "0.6.3"
 
   def compile   (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "compile")
   def provided  (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "provided")
