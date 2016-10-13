@@ -196,7 +196,7 @@ class MetricReporterSubscriber extends Actor with ActorLogging {
       pushSnapshot("cpu-system", system)
       pushSnapshot("cpu-wait", cpuWait)
       pushSnapshot("cpu-idle", idle)
-      pushSnapshot("cpu-stoler", stolen)
+      pushSnapshot("cpu-stolen", stolen)
     }
   }
 
