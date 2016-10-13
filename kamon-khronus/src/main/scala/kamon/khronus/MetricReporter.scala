@@ -41,7 +41,9 @@ class MetricReporterExtension(system: ExtendedActorSystem) extends Kamon.Extensi
   Kamon.metrics.subscribe("counter", "**", subscriber, permanently = true)
   Kamon.metrics.subscribe("gauge", "**", subscriber, permanently = true)
   Kamon.metrics.subscribe("trace", "**", subscriber, permanently = true)
+  Kamon.metrics.subscribe("trace-segment", "**", subscriber, permanently = true)
   Kamon.metrics.subscribe("executor-service", "**", subscriber, permanently = true)
+  Kamon.metrics.subscribe("system-metric", "**", subscriber, permanently = true)
 }
 
 class MetricReporterSubscriber extends Actor with ActorLogging {
@@ -79,6 +81,7 @@ class MetricReporterSubscriber extends Actor with ActorLogging {
     // Group all the user metrics together.
     val histograms = Map.newBuilder[String, Option[Histogram.Snapshot]]
     val traces = Map.newBuilder[String, Option[Histogram.Snapshot]]
+    val segments = Map.newBuilder[String, Option[Histogram.Snapshot]]
     val counters = Map.newBuilder[String, Option[Counter.Snapshot]]
     val gauges = Map.newBuilder[String, Option[Histogram.Snapshot]]
 
@@ -87,17 +90,20 @@ class MetricReporterSubscriber extends Actor with ActorLogging {
       case (entity, snapshot) if entity.category == "counter"          ⇒ counters += (entity.name -> snapshot.counter("counter"))
       case (entity, snapshot) if entity.category == "gauge"            ⇒ gauges += (entity.name -> snapshot.gauge("gauge"))
       case (entity, snapshot) if entity.category == "trace"            ⇒ traces += (entity.name -> snapshot.histogram("elapsed-time"))
+      case (entity, snapshot) if entity.category == "trace-segment"    ⇒ segments += (entity.name -> snapshot.histogram("elapsed-time"))
       case (entity, snapshot) if entity.category == "executor-service" ⇒ pushExecutorMetrics(entity, snapshot)
+      case (entity, snapshot) if entity.category == "system-metric"    ⇒ pushSystemMetrics(entity.name, snapshot)
       case ignoreEverythingElse                                        ⇒
     }
 
-    pushToKhronus(histograms.result(), counters.result(), gauges.result(), traces.result())
+    pushToKhronus(histograms.result(), counters.result(), gauges.result(), traces.result(), segments.result())
   }
 
   def pushToKhronus(histograms: Map[String, Option[Histogram.Snapshot]],
     counters: Map[String, Option[Counter.Snapshot]],
     gauges: Map[String, Option[Histogram.Snapshot]],
-    traces: Map[String, Option[Histogram.Snapshot]]): Unit = {
+    traces: Map[String, Option[Histogram.Snapshot]],
+    segments: Map[String, Option[Histogram.Snapshot]]): Unit = {
 
     counters.foreach {
       case (name, Some(snapshot)) ⇒
@@ -123,6 +129,11 @@ class MetricReporterSubscriber extends Actor with ActorLogging {
       case _ ⇒
     }
 
+    segments.foreach {
+      case (name, Some(snapshot)) ⇒
+        pushSnapshot(name, snapshot)
+      case _ ⇒
+    }
   }
 
   def pushExecutorMetrics(entity: Entity, snapshot: EntitySnapshot): Unit = entity.tags.get("executor-type") match {
@@ -138,12 +149,14 @@ class MetricReporterSubscriber extends Actor with ActorLogging {
       activeThreads ← forkJoinMetrics.gauge("active-threads")
       runningThreads ← forkJoinMetrics.gauge("running-threads")
       queuedTaskCount ← forkJoinMetrics.gauge("queued-task-count")
+      queuedSubmissionCount ← forkJoinMetrics.gauge("queued-submission-count")
     } {
       pushSnapshot(s"$name.parallelism", paralellism)
       pushSnapshot(s"$name.pool-size", poolSize)
       pushSnapshot(s"$name.active-threads", activeThreads)
       pushSnapshot(s"$name.running-threads", runningThreads)
       pushSnapshot(s"$name.queued-task-count", queuedTaskCount)
+      pushSnapshot(s"$name.queued-submission-count", queuedSubmissionCount)
     }
   }
 
@@ -160,6 +173,66 @@ class MetricReporterSubscriber extends Actor with ActorLogging {
       pushSnapshot(s"$name.pool-size", poolSize)
       pushSnapshot(s"$name.active-threads", activeThreads)
       pushSnapshot(s"$name.processed-tasks", processedTasks)
+    }
+  }
+
+  def pushSystemMetrics(metric: String, snapshot: EntitySnapshot): Unit = metric match {
+    case "cpu"              ⇒ pushCpuMetrics(snapshot)
+    case "network"          ⇒ pushNetworkMetrics(snapshot)
+    case "process-cpu"      ⇒ pushProcessCpuMetrics(snapshot)
+    case "context-switches" ⇒ pushContextSwitchesMetrics(snapshot)
+    case ignoreOthers       ⇒
+  }
+
+  def pushCpuMetrics(cpuMetrics: EntitySnapshot): Unit = {
+    for {
+      user ← cpuMetrics.histogram("cpu-user")
+      system ← cpuMetrics.histogram("cpu-system")
+      cpuWait ← cpuMetrics.histogram("cpu-wait")
+      idle ← cpuMetrics.histogram("cpu-idle")
+      stolen ← cpuMetrics.histogram("cpu-stolen")
+    } {
+      pushSnapshot("cpu-user", user)
+      pushSnapshot("cpu-system", system)
+      pushSnapshot("cpu-wait", cpuWait)
+      pushSnapshot("cpu-idle", idle)
+      pushSnapshot("cpu-stoler", stolen)
+    }
+  }
+
+  def pushNetworkMetrics(networkMetrics: EntitySnapshot): Unit = {
+    for {
+      rxBytes ← networkMetrics.histogram("rx-bytes")
+      txBytes ← networkMetrics.histogram("tx-bytes")
+      rxErrors ← networkMetrics.histogram("rx-errors")
+      txErrors ← networkMetrics.histogram("tx-errors")
+    } {
+      pushSnapshot("rx-bytes", rxBytes)
+      pushSnapshot("tx-bytes", txBytes)
+      pushSnapshot("rx-errors", rxErrors)
+      pushSnapshot("tx-errors", txErrors)
+    }
+  }
+
+  def pushProcessCpuMetrics(processCpuMetrics: EntitySnapshot): Unit = {
+    for {
+      user ← processCpuMetrics.histogram("process-user-cpu")
+      total ← processCpuMetrics.histogram("process-cpu")
+    } {
+      pushSnapshot("process-user-cpu", user)
+      pushSnapshot("process-cpu", total)
+    }
+  }
+
+  def pushContextSwitchesMetrics(contextSwitchMetrics: EntitySnapshot): Unit = {
+    for {
+      perProcessVoluntary ← contextSwitchMetrics.histogram("context-switches-process-voluntary")
+      perProcessNonVoluntary ← contextSwitchMetrics.histogram("context-switches-process-non-voluntary")
+      global ← contextSwitchMetrics.histogram("context-switches-global")
+    } {
+      pushSnapshot("context-switches-process-voluntary", perProcessVoluntary)
+      pushSnapshot("context-switches-process-non-voluntary", perProcessNonVoluntary)
+      pushSnapshot("context-switches-global", global)
     }
   }
 
@@ -186,5 +259,4 @@ class MetricReporterSubscriber extends Actor with ActorLogging {
       kc.recordGauge(name, snapshot.count)
     }
   }
-
 }
