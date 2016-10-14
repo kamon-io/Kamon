@@ -19,11 +19,14 @@ package kamon.khronus
 import akka.actor._
 import akka.event.Logging
 import com.despegar.khronus.jclient.KhronusClient
+import com.typesafe.config.Config
 import kamon.Kamon
-import kamon.metric.{ Entity, EntitySnapshot }
+import kamon.metric.{ Entity, MetricKey, SingleInstrumentEntityRecorder }
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 import kamon.metric.instrument.{ Counter, Histogram }
+import kamon.util.ConfigTools.Syntax
 
+import scala.collection.JavaConverters._
 import scala.util.Try
 
 object MetricReporter extends ExtensionId[MetricReporterExtension] with ExtensionIdProvider {
@@ -35,22 +38,25 @@ class MetricReporterExtension(system: ExtendedActorSystem) extends Kamon.Extensi
   val log = Logging(system, classOf[MetricReporterExtension])
 
   log.info("Starting the Kamon(Khronus) extension")
-  val subscriber = system.actorOf(Props[MetricReporterSubscriber], "kamon-khronus")
 
-  Kamon.metrics.subscribe("histogram", "**", subscriber, permanently = true)
-  Kamon.metrics.subscribe("counter", "**", subscriber, permanently = true)
-  Kamon.metrics.subscribe("gauge", "**", subscriber, permanently = true)
-  Kamon.metrics.subscribe("trace", "**", subscriber, permanently = true)
-  Kamon.metrics.subscribe("executor-service", "**", subscriber, permanently = true)
+  val khronusConfig = system.settings.config.getConfig("kamon.khronus")
+  val khronusMetricsListener = system.actorOf(MetricReporterSubscriber.props(khronusConfig), "kamon-khronus")
+  val subscriptions = khronusConfig.getConfig("subscriptions")
+
+  subscriptions.firstLevelKeys.foreach { subscriptionCategory ⇒
+    subscriptions.getStringList(subscriptionCategory).asScala.foreach { pattern ⇒
+      Kamon.metrics.subscribe(subscriptionCategory, pattern, khronusMetricsListener, permanently = true)
+    }
+  }
 }
 
-class MetricReporterSubscriber extends Actor with ActorLogging {
+class MetricReporterSubscriber(khronusConfig: Config) extends Actor with ActorLogging {
   import context._
 
   lazy val khronusClient: Try[KhronusClient] = {
     val kc =
       for {
-        config ← Try(Kamon.config.getConfig("kamon.khronus"))
+        config ← Try(khronusConfig)
         host ← Try(config.getString("host"))
         appName ← Try(config.getString("app-name"))
         interval ← Try(config.getLong("interval"))
@@ -75,92 +81,22 @@ class MetricReporterSubscriber extends Actor with ActorLogging {
   }
 
   def reportMetrics(tick: TickMetricSnapshot): Unit = {
-
-    // Group all the user metrics together.
-    val histograms = Map.newBuilder[String, Option[Histogram.Snapshot]]
-    val traces = Map.newBuilder[String, Option[Histogram.Snapshot]]
-    val counters = Map.newBuilder[String, Option[Counter.Snapshot]]
-    val gauges = Map.newBuilder[String, Option[Histogram.Snapshot]]
-
-    tick.metrics foreach {
-      case (entity, snapshot) if entity.category == "histogram"        ⇒ histograms += (entity.name -> snapshot.histogram("histogram"))
-      case (entity, snapshot) if entity.category == "counter"          ⇒ counters += (entity.name -> snapshot.counter("counter"))
-      case (entity, snapshot) if entity.category == "gauge"            ⇒ gauges += (entity.name -> snapshot.gauge("gauge"))
-      case (entity, snapshot) if entity.category == "trace"            ⇒ traces += (entity.name -> snapshot.histogram("elapsed-time"))
-      case (entity, snapshot) if entity.category == "executor-service" ⇒ pushExecutorMetrics(entity, snapshot)
-      case ignoreEverythingElse                                        ⇒
-    }
-
-    pushToKhronus(histograms.result(), counters.result(), gauges.result(), traces.result())
-  }
-
-  def pushToKhronus(histograms: Map[String, Option[Histogram.Snapshot]],
-    counters: Map[String, Option[Counter.Snapshot]],
-    gauges: Map[String, Option[Histogram.Snapshot]],
-    traces: Map[String, Option[Histogram.Snapshot]]): Unit = {
-
-    counters.foreach {
-      case (name, Some(snapshot)) ⇒
-        pushCounter(name, snapshot)
-      case _ ⇒
-    }
-
-    gauges.foreach {
-      case (name, Some(snapshot)) ⇒
-        pushGauge(name, snapshot)
-      case _ ⇒
-    }
-
-    histograms.foreach {
-      case (name, Some(snapshot)) ⇒
-        pushSnapshot(name, snapshot)
-      case _ ⇒
-    }
-
-    traces.foreach {
-      case (name, Some(snapshot)) ⇒
-        pushSnapshot(name, snapshot)
-      case _ ⇒
-    }
-
-  }
-
-  def pushExecutorMetrics(entity: Entity, snapshot: EntitySnapshot): Unit = entity.tags.get("executor-type") match {
-    case Some("fork-join-pool")       ⇒ pushForkJoinPoolMetrics(entity.name, snapshot)
-    case Some("thread-pool-executor") ⇒ pushThreadPoolExecutorMetrics(entity.name, snapshot)
-    case ignoreOthers                 ⇒
-  }
-
-  def pushForkJoinPoolMetrics(name: String, forkJoinMetrics: EntitySnapshot): Unit = {
     for {
-      paralellism ← forkJoinMetrics.minMaxCounter("parallelism")
-      poolSize ← forkJoinMetrics.gauge("pool-size")
-      activeThreads ← forkJoinMetrics.gauge("active-threads")
-      runningThreads ← forkJoinMetrics.gauge("running-threads")
-      queuedTaskCount ← forkJoinMetrics.gauge("queued-task-count")
+      (entity, snapshot) ← tick.metrics
+      (metricKey, metricSnapshot) ← snapshot.metrics
     } {
-      pushSnapshot(s"$name.parallelism", paralellism)
-      pushSnapshot(s"$name.pool-size", poolSize)
-      pushSnapshot(s"$name.active-threads", activeThreads)
-      pushSnapshot(s"$name.running-threads", runningThreads)
-      pushSnapshot(s"$name.queued-task-count", queuedTaskCount)
+      metricSnapshot match {
+        case cs: Counter.Snapshot                                 ⇒ pushCounter(generateKey(entity, metricKey), cs)
+        case gs: Histogram.Snapshot if entity.category == "gauge" ⇒ pushGauge(generateKey(entity, metricKey), gs)
+        case hs: Histogram.Snapshot                               ⇒ pushSnapshot(generateKey(entity, metricKey), hs)
+      }
     }
   }
 
-  def pushThreadPoolExecutorMetrics(name: String, threadPoolMetrics: EntitySnapshot): Unit = {
-    for {
-      corePoolSize ← threadPoolMetrics.gauge("core-pool-size")
-      maxPoolSize ← threadPoolMetrics.gauge("max-pool-size")
-      poolSize ← threadPoolMetrics.gauge("pool-size")
-      activeThreads ← threadPoolMetrics.gauge("active-threads")
-      processedTasks ← threadPoolMetrics.gauge("processed-tasks")
-    } {
-      pushSnapshot(s"$name.core-pool-size", corePoolSize)
-      pushSnapshot(s"$name.max-pool-size", maxPoolSize)
-      pushSnapshot(s"$name.pool-size", poolSize)
-      pushSnapshot(s"$name.active-threads", activeThreads)
-      pushSnapshot(s"$name.processed-tasks", processedTasks)
-    }
+  def generateKey(entity: Entity, metricKey: MetricKey): String = entity.category match {
+    case "trace-segment" ⇒ s"trace.${entity.tags("trace")}.segments.${entity.name}.${metricKey.name}"
+    case _ if SingleInstrumentEntityRecorder.AllCategories.contains(entity.category) ⇒ s"${entity.category}.${entity.name}"
+    case _ ⇒ s"${entity.category}.${entity.name}.${metricKey.name}"
   }
 
   def pushSnapshot(name: String, snapshot: Histogram.Snapshot): Unit = {
@@ -186,5 +122,8 @@ class MetricReporterSubscriber extends Actor with ActorLogging {
       kc.recordGauge(name, snapshot.count)
     }
   }
+}
 
+object MetricReporterSubscriber {
+  def props(khronusConfig: Config): Props = Props(new MetricReporterSubscriber(khronusConfig))
 }
