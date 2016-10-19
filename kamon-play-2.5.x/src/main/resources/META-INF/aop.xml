@@ -5,7 +5,7 @@
     <aspect name="kamon.play.instrumentation.RequestInstrumentation"/>
     <aspect name="kamon.play.instrumentation.WSInstrumentation"/>
     <aspect name="kamon.play.instrumentation.LoggerLikeInstrumentation"/>
-    <aspect name="kamon.play.instrumentation.ALoggerInstrumentation"/>
+    <aspect name="kamon.play.instrumentation.JavaLoggerInstrumentation"/>
   </aspects>
 
    <weaver>
