@@ -1,3 +1,18 @@
+/*
+ * =========================================================================================
+ * Copyright © 2013-2015 the kamon project <http://kamon.io/>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the specific language governing permissions
+ * and limitations under the License.
+ * =========================================================================================
+*/
 
 package kamon.jmx.extension
 
@@ -35,15 +50,15 @@ case object MetricDefinition {
   }
 
   // gets a kamon dynamic range from a config
-  def getDynamicRange(metricConfig: Map[String, Any]): DynamicRange =
+  def getDynamicRange(metricConfig: Map[String, Any]): Option[DynamicRange] =
     if (metricConfig.contains("lowest") && metricConfig.contains("highest") &&
       metricConfig.contains("precision")) {
-      DynamicRange(
+      Some(DynamicRange(
         metricConfig("lowest").asInstanceOf[Long],
         metricConfig("highest").asInstanceOf[Long],
-        metricConfig("precision").asInstanceOf[Int])
+        metricConfig("precision").asInstanceOf[Int]))
     } else {
-      null
+      None
     }
 
   // gets a unit of measure from a config
@@ -66,12 +81,14 @@ case object MetricDefinition {
     }
 
   // gets a duration from a config
-  def getFiniteDuration(metricConfig: Map[String, Any]): FiniteDuration =
+  def getFiniteDuration(
+    metricConfig: Map[String, Any]): Option[FiniteDuration] =
+
     if (metricConfig.contains("interval")) {
       val millis: Long = metricConfig("interval").asInstanceOf[Long]
-      new FiniteDuration(millis, TimeUnit.MILLISECONDS)
+      Some(new FiniteDuration(millis, TimeUnit.MILLISECONDS))
     } else {
-      null
+      None
     }
 }
 
@@ -84,11 +101,11 @@ import kamon.jmx.extension.MetricDefinition._
  * in a config file.
  */
 case class MetricDefinition(
-    val metricType: MetricTypeEnum.MetricType, val name: String,
+    metricType: MetricTypeEnum.MetricType, name: String,
     unitOfMeasure: UnitOfMeasurement, // = UnitOfMeasurement.Unknown,
-    range: DynamicRange = null,
-    refreshInterval: FiniteDuration = null,
-    valueCollector: CurrentValueCollector = null) {
+    range: Option[DynamicRange] = None,
+    refreshInterval: Option[FiniteDuration] = None,
+    valueCollector: Option[CurrentValueCollector] = None) {
 
   /**
    * constructor that works from the values extracted from a config file
@@ -99,11 +116,11 @@ case class MetricDefinition(
    * to get values from the instrumentation class (ie mbean)
    */
   def this(
-    metricConfig: Map[String, Any], name: String,
-    valueCollector: CurrentValueCollector) =
+    metricConfig: Map[String, Any], name: Option[String],
+    valueCollector: Option[CurrentValueCollector]) =
     this(
       toMetricType(metricConfig("type").asInstanceOf[String]),
-      if (name != null) name else metricConfig("name").asInstanceOf[String],
+      name.getOrElse(metricConfig("name").asInstanceOf[String]),
       getUnitOfMeasure(metricConfig),
       getDynamicRange(metricConfig),
       getFiniteDuration(metricConfig),

@@ -1,3 +1,18 @@
+/*
+ * =========================================================================================
+ * Copyright © 2013-2015 the kamon project <http://kamon.io/>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the specific language governing permissions
+ * and limitations under the License.
+ * =========================================================================================
+*/
 
 package kamon.jmx.extension
 
@@ -180,11 +195,11 @@ class ExportedMBeanQuery(
           if ("gauge".equalsIgnoreCase(
             config("type").asInstanceOf[String])) {
             new MetricDefinition(
-              config, null, new CurrentValueCollector {
+              config, None, Some(new CurrentValueCollector {
                 def currentValue: Long = attr.getValue().asInstanceOf[Long]
-              })
+              }))
           } else {
-            new MetricDefinition(config, null, null)
+            new MetricDefinition(config, None, None)
           }
       }.toSeq
 
@@ -272,11 +287,13 @@ class ExportedMBean(
   protected def makeCounter(mdef: MetricDefinition): Counter = {
     require(mdef.metricType == MetricTypeEnum.COUNTER)
     require(mdef.name != null, "a metric should have a name")
-    require(null == mdef.range, "a counter can't define a range")
+    require(!mdef.range.isDefined, "a counter can't define a range")
     require(
-      null == mdef.refreshInterval, "a counter can't define a refresh interval")
+      !mdef.refreshInterval.isDefined,
+      "a counter can't define a refresh interval")
     require(
-      null == mdef.valueCollector, "a counter can't define a value collector")
+      !mdef.valueCollector.isDefined,
+      "a counter can't define a value collector")
     counter(mdef.name, mdef.unitOfMeasure)
   }
 
@@ -284,13 +301,15 @@ class ExportedMBean(
     require(mdef.metricType == MetricTypeEnum.HISTOGRAM)
     require(mdef.name != null, "a histogram should have a name")
     require(
-      null == mdef.refreshInterval, "a histogram can't have a refresh interval")
+      !mdef.refreshInterval.isDefined,
+      "a histogram can't have a refresh interval")
     require(
-      null == mdef.valueCollector, "a histogram can't have a value collector")
-    if (null == mdef.range) {
+      !mdef.valueCollector.isDefined,
+      "a histogram can't have a value collector")
+    if (!mdef.range.isDefined) {
       histogram(mdef.name, mdef.unitOfMeasure)
     } else {
-      histogram(mdef.name, mdef.range, mdef.unitOfMeasure)
+      histogram(mdef.name, mdef.range.get, mdef.unitOfMeasure)
     }
   }
 
@@ -298,36 +317,38 @@ class ExportedMBean(
     require(mdef.metricType == MetricTypeEnum.MIN_MAX_COUNTER)
     require(mdef.name != null, "a min-max counter must have a name")
     require(
-      null == mdef.valueCollector,
+      !mdef.valueCollector.isDefined,
       "a min-max counter can't define a value collector")
-    if (null == mdef.range && null == mdef.refreshInterval) {
+    if (!mdef.range.isDefined && !mdef.refreshInterval.isDefined) {
       minMaxCounter(mdef.name, mdef.unitOfMeasure)
-    } else if (null == mdef.refreshInterval) {
-      minMaxCounter(mdef.name, mdef.range, mdef.unitOfMeasure)
-    } else if (null == mdef.range) {
-      minMaxCounter(mdef.name, mdef.refreshInterval, mdef.unitOfMeasure)
+    } else if (!mdef.refreshInterval.isDefined) {
+      minMaxCounter(mdef.name, mdef.range.get, mdef.unitOfMeasure)
+    } else if (!mdef.range.isDefined) {
+      minMaxCounter(mdef.name, mdef.refreshInterval.get, mdef.unitOfMeasure)
     } else {
       minMaxCounter(
-        mdef.name, mdef.range, mdef.refreshInterval, mdef.unitOfMeasure)
+        mdef.name, mdef.range.get, mdef.refreshInterval.get, mdef.unitOfMeasure)
     }
   }
 
   protected def makeGauge(mdef: MetricDefinition): Gauge = {
     require(mdef.metricType == MetricTypeEnum.GAUGE)
     require(mdef.name != null, "a gauge must have a name")
-    require(mdef.valueCollector != null, "a gauge must have a value collector")
-    if (null == mdef.range && null == mdef.refreshInterval) {
-      gauge(mdef.name, mdef.unitOfMeasure, mdef.valueCollector)
-    } else if (null == mdef.range) {
+    require(
+      mdef.valueCollector.isDefined, "a gauge must have a value collector")
+    if (mdef.range.isDefined && !mdef.refreshInterval.isDefined) {
+      gauge(mdef.name, mdef.unitOfMeasure, mdef.valueCollector.get)
+    } else if (!mdef.range.isDefined) {
       gauge(
-        mdef.name, mdef.refreshInterval, mdef.unitOfMeasure,
-        mdef.valueCollector)
-    } else if (null == mdef.refreshInterval) {
-      gauge(mdef.name, mdef.range, mdef.unitOfMeasure, mdef.valueCollector)
+        mdef.name, mdef.refreshInterval.get, mdef.unitOfMeasure,
+        mdef.valueCollector.get)
+    } else if (!mdef.refreshInterval.isDefined) {
+      gauge(
+        mdef.name, mdef.range.get, mdef.unitOfMeasure, mdef.valueCollector.get)
     } else {
       gauge(
-        mdef.name, mdef.range, mdef.refreshInterval, mdef.unitOfMeasure,
-        mdef.valueCollector)
+        mdef.name, mdef.range.get, mdef.refreshInterval.get, mdef.unitOfMeasure,
+        mdef.valueCollector.get)
     }
   }
 
