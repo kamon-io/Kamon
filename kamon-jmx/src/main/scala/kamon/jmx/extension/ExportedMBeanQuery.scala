@@ -126,7 +126,9 @@ object ExportedMBeanQuery {
 
 /**
  * Uses a jmx query to find dynamic mbeans and registers them to be listened
- * to by kamon
+ * to by kamon.  This is the object that actually moves metrics from JMX
+ * into Kamon.
+ * 
  * @param system actor system used by kamon
  * @param jmxQuery query to use to look for new dynamic mbeans
  * @param attributeConfig configuration of each metric for this kind of
