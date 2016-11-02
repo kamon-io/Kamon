@@ -16,7 +16,7 @@ package kamon
 
 import _root_.akka.actor
 import _root_.akka.actor._
-import com.typesafe.config.{ Config, ConfigFactory }
+import com.typesafe.config.{ Config, ConfigFactory, ConfigParseOptions, ConfigResolveOptions }
 import kamon.metric._
 import kamon.trace.TracerModuleImpl
 import kamon.util.logger.LazyLogger
@@ -76,10 +76,10 @@ object Kamon {
   }
 
   private def resolveConfiguration: Config = {
-    val defaultConfig = ConfigFactory.load()
+    val defaultConfig = ConfigFactory.load(this.getClass.getClassLoader, ConfigParseOptions.defaults(), ConfigResolveOptions.defaults().setAllowUnresolved(true))
 
     defaultConfig.getString("kamon.config-provider") match {
-      case "default" ⇒ defaultConfig
+      case "default" ⇒ defaultConfig.resolve()
       case fqcn ⇒
         val dynamic = new ReflectiveDynamicAccess(getClass.getClassLoader)
         dynamic.createInstanceFor[ConfigProvider](fqcn, Nil).get.config
