@@ -39,11 +39,15 @@ object JMXMetricImporter
  * A Kamon extension for reading metrics from JMX dynamic mbeans
  */
 class JMXMetricsExtension(system: ExtendedActorSystem) extends Kamon.Extension {
-  val log = Logging(system, getClass)
-  log.info(s"Starting the Kamon(JMXMetrics) extension")
+  try {
+    val log = Logging(system, getClass)
+    log.info("Starting the Kamon(JMXMetrics) extension")
 
-  val config = system.settings.config.getConfig("kamon.kamon-mxbeans")
-  val metricsExtension = Kamon.metrics
+    val config = system.settings.config.getConfig("kamon.kamon-mxbeans")
+    val metricsExtension = Kamon.metrics
 
-  ExportedMBeanQuery.register(system, metricsExtension, config)
+    ExportedMBeanQuery.register(system, metricsExtension, config)
+  } catch {
+    case t: Throwable ⇒ t.printStackTrace()
+  }
 }

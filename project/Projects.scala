@@ -271,7 +271,7 @@ object Projects extends Build {
         test(scalatest, akkaTestKit, slf4jApi, slf4jnop))
 
   lazy val kamonJMXReporter = Project("kamon-jmx", file("kamon-jmx"))
-    .dependsOn(kamonCore)
+    .dependsOn(kamonCore % "compile->compile;test->test")
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
     .settings(

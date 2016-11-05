@@ -65,6 +65,7 @@ object ExportedMBeanQuery {
     system: ExtendedActorSystem, metricsExtension: MetricsModule,
     config: Config): Unit = {
 
+    println("registering jmx exporter")
     Thread.currentThread().setName("JMX exporting thread")
     import collection.JavaConverters._
     val identifyDelayInterval: Long =
@@ -128,7 +129,7 @@ object ExportedMBeanQuery {
  * Uses a jmx query to find dynamic mbeans and registers them to be listened
  * to by kamon.  This is the object that actually moves metrics from JMX
  * into Kamon.
- * 
+ *
  * @param system actor system used by kamon
  * @param jmxQuery query to use to look for new dynamic mbeans
  * @param attributeConfig configuration of each metric for this kind of
@@ -198,7 +199,7 @@ class ExportedMBeanQuery(
             config("type").asInstanceOf[String])) {
             new MetricDefinition(
               config, None, Some(new CurrentValueCollector {
-                def currentValue: Long = attr.getValue().asInstanceOf[Long]
+                def currentValue: Long = ExportedMBean.toLong(attr.getValue())
               }))
           } else {
             new MetricDefinition(config, None, None)
@@ -247,6 +248,8 @@ class ExportedMBean(
     implicit ec: ExecutionContext)
     extends GenericEntityRecorder(instrumentFactory) {
 
+  import ExportedMBean._
+
   val log = Logging(system, getClass)
   import kamon.jmx.extension.ExportedMBeanQuery.server
 
@@ -272,11 +275,11 @@ class ExportedMBean(
       attrList.asList().asScala.foreach { attr ⇒
         val attrName: String = attr.getName()
         if (counters.contains(attrName)) {
-          counters(attrName).increment(attr.getValue().asInstanceOf[Long])
+          counters(attrName).increment(toLong(attr.getValue()))
         } else if (histograms.contains(attrName)) {
-          histogram(attrName).record(attr.getValue().asInstanceOf[Long])
+          histogram(attrName).record(toLong(attr.getValue()))
         } else if (minMaxCounters.contains(attrName)) {
-          val value: Long = attr.getValue().asInstanceOf[Long]
+          val value: Long = toLong(attr.getValue())
           minMaxCounters(attrName).increment(value)
         }
       }
@@ -364,6 +367,12 @@ class ExportedMBean(
 }
 
 object ExportedMBean {
+
+  protected[extension] def toLong(v: Any): Long = v match {
+    case x: Long   ⇒ x
+    case n: Number ⇒ n.asInstanceOf[Number].longValue
+    case _         ⇒ throw new IllegalArgumentException(s"$v is not a number.")
+  }
 
   /**
    * @param system actor system used by kamon
