@@ -25,7 +25,7 @@ import java.util.regex.Pattern;
  * @author John E. Bailey
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public final class GlobPathFilter  {
+public final class GlobPathFilter implements PathFilter  {
     private static final Pattern GLOB_PATTERN = Pattern.compile("(\\*\\*?)|(\\?)|(\\\\.)|(/+)|([^*?]+)");
 
     private final String glob;
