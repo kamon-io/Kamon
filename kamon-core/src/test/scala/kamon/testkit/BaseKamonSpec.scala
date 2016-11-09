@@ -32,7 +32,7 @@ abstract class BaseKamonSpec(actorSystemName: String) extends TestKitBase with W
     ActorSystem(actorSystemName, mergedConfig)
   }
 
-  def config: Config = ConfigFactory.load()
+  def config: Config = Kamon.defaultConfig
 
   def mergedConfig: Config = ConfigFactory.load().withFallback(config)
 

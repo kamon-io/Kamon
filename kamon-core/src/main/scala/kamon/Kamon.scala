@@ -42,14 +42,16 @@ object Kamon {
 
   trait Extension extends actor.Extension
 
+  def defaultConfig = ConfigFactory.load(this.getClass.getClassLoader, ConfigParseOptions.defaults(), ConfigResolveOptions.defaults().setAllowUnresolved(true))
+
   class KamonDefaultConfigProvider extends ConfigProvider {
     def config = resolveConfiguration
 
     private def resolveConfiguration: Config = {
-      val defaultConfig = ConfigFactory.load(this.getClass.getClassLoader, ConfigParseOptions.defaults(), ConfigResolveOptions.defaults().setAllowUnresolved(true))
+      val defaultConf = defaultConfig
 
-      defaultConfig.getString("kamon.config-provider") match {
-        case "default" ⇒ defaultConfig
+      defaultConf.getString("kamon.config-provider") match {
+        case "default" ⇒ defaultConf
         case fqcn ⇒
           val dynamic = new ReflectiveDynamicAccess(getClass.getClassLoader)
           dynamic.createInstanceFor[ConfigProvider](fqcn, Nil).get.config
