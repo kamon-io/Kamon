@@ -8,7 +8,8 @@ trait PrettyLogger {
 
   def log: LoggingAdapter
 
-  def printActorMetrics(name: String, processingTime: Histogram.Snapshot, timeInMailbox: Histogram.Snapshot, mailboxSize: Histogram.Snapshot, errors: Counter.Snapshot) =
+  def printActorMetrics(name: String, processingTime: Histogram.Snapshot, timeInMailbox: Histogram.Snapshot,
+    mailboxSize: Histogram.Snapshot, errors: Counter.Snapshot) =
     log.info(
       """
         |+--------------------------------------------------------------------------------------------------+
@@ -37,7 +38,8 @@ trait PrettyLogger {
           processingTime.percentile(99.9D), timeInMailbox.percentile(99.9D),
           processingTime.max, timeInMailbox.max))
 
-  def printRouterMetrics(name: String, processingTime: Histogram.Snapshot, timeInMailbox: Histogram.Snapshot, routingTime: Histogram.Snapshot, errors: Counter.Snapshot) =
+  def printRouterMetrics(name: String, processingTime: Histogram.Snapshot, timeInMailbox: Histogram.Snapshot,
+    routingTime: Histogram.Snapshot, errors: Counter.Snapshot) =
     log.info(
       """
         |+--------------------------------------------------------------------------------------------------+
@@ -69,28 +71,32 @@ trait PrettyLogger {
           processingTime.max, timeInMailbox.max, routingTime.max,
           errors.count))
 
-  def printForkJoinPool(name: String, paralellism: Histogram.Snapshot, poolSize: Histogram.Snapshot, activeThreads: Histogram.Snapshot, runningThreads: Histogram.Snapshot, queuedTaskCount: Histogram.Snapshot) =
+  def printForkJoinPool(name: String, paralellism: Histogram.Snapshot, poolSize: Histogram.Snapshot,
+    activeThreads: Histogram.Snapshot, runningThreads: Histogram.Snapshot,
+    queuedTaskCount: Histogram.Snapshot, queuedSubmissionCount: Histogram.Snapshot) =
     log.info(
       """
-        |+--------------------------------------------------------------------------------------------------+
-        ||  Fork-Join-Pool                                                                                  |
-        ||                                                                                                  |
-        ||  Dispatcher: %-83s |
-        ||                                                                                                  |
-        ||  Paralellism: %-4s                                                                               |
-        ||                                                                                                  |
-        ||                 Pool Size       Active Threads     Running Threads     Queue Task Count          |
-        ||      Min           %-4s              %-4s                %-4s                %-4s                |
-        ||      Avg           %-4s              %-4s                %-4s                %-4s                |
-        ||      Max           %-4s              %-4s                %-4s                %-4s                |
-        ||                                                                                                  |
-        |+--------------------------------------------------------------------------------------------------+"""
+        |+-------------------------------------------------------------------------------------------------------------------------+
+        ||  Fork-Join-Pool                                                                                                         |
+        ||                                                                                                                         |
+        ||  Dispatcher: %-106s |
+        ||                                                                                                                         |
+        ||  Paralellism: %-4s                                                                                                      |
+        ||                                                                                                                         |
+        ||                 Pool Size       Active Threads     Running Threads     Queue Task Count     Queued Submission Count     |
+        ||      Min           %-4s              %-4s                %-4s                %-4s                     %-8s          |
+        ||      Avg           %-4s              %-4s                %-4s                %-4s                     %-8s          |
+        ||      Max           %-4s              %-4s                %-4s                %-4s                     %-8s          |
+        ||                                                                                                                         |
+        |+-------------------------------------------------------------------------------------------------------------------------+"""
         .stripMargin.format(name,
-          paralellism.max, poolSize.min, activeThreads.min, runningThreads.min, queuedTaskCount.min,
-          poolSize.average, activeThreads.average, runningThreads.average, queuedTaskCount.average,
-          poolSize.max, activeThreads.max, runningThreads.max, queuedTaskCount.max))
+          paralellism.max, poolSize.min, activeThreads.min, runningThreads.min, queuedTaskCount.min, queuedSubmissionCount.min,
+          poolSize.average, activeThreads.average, runningThreads.average, queuedTaskCount.average, queuedSubmissionCount.average,
+          poolSize.max, activeThreads.max, runningThreads.max, queuedTaskCount.max, queuedSubmissionCount.max))
 
-  def printThreadPoolExecutor(name: String, corePoolSize: Histogram.Snapshot, maxPoolSize: Histogram.Snapshot, poolSize: Histogram.Snapshot, activeThreads: Histogram.Snapshot, processedTasks: Histogram.Snapshot) =
+  def printThreadPoolExecutor(name: String, corePoolSize: Histogram.Snapshot, maxPoolSize: Histogram.Snapshot,
+    poolSize: Histogram.Snapshot, activeThreads: Histogram.Snapshot,
+    processedTasks: Histogram.Snapshot) =
     log.info(
       """
         |+--------------------------------------------------------------------------------------------------+
@@ -171,7 +177,8 @@ trait PrettyLogger {
           user.average, total.average,
           user.max, total.max))
 
-  def printContextSwitchesMetrics(perProcessVoluntary: Histogram.Snapshot, perProcessNonVoluntary: Histogram.Snapshot, global: Histogram.Snapshot) =
+  def printContextSwitchesMetrics(perProcessVoluntary: Histogram.Snapshot, perProcessNonVoluntary: Histogram.Snapshot,
+    global: Histogram.Snapshot) =
     log.info(
       """
         |+--------------------------------------------------------------------------------------------------+

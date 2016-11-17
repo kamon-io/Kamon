@@ -33,7 +33,7 @@ class SPMMetricsSenderSpec extends BaseKamonSpec("spm-metrics-sender-spec") {
     (0 until 2).map { i ⇒
       val histo = Kamon.metrics.histogram(s"histo-$i")
       histo.record(1)
-      SPMMetric(new MilliTimestamp(123L), "histogram", s"${prefix}-entry-$i", s"histo-$i", Time.Milliseconds, histo.collect(collectionContext))
+      SPMMetric(new MilliTimestamp(123L), "histogram", s"${prefix}-entry-$i", s"histo-$i", Map(), Time.Milliseconds, histo.collect(collectionContext))
     }.toList
   }
 
@@ -41,7 +41,7 @@ class SPMMetricsSenderSpec extends BaseKamonSpec("spm-metrics-sender-spec") {
     "send metrics to receiver" in {
       val io = TestProbe()
 
-      val sender = system.actorOf(SPMMetricsSender.props(io.ref, 5 seconds, Timeout(5 seconds), 100, "http://localhost:1234", "http://localhost:1234", "host-1", "1234"))
+      val sender = system.actorOf(SPMMetricsSender.props(io.ref, 5 seconds, Timeout(5 seconds), 100, "http://localhost:1234", "http://localhost:1234", "host-1", "1234", 10, 10))
       sender ! Send(testMetrics())
 
       val request = io.expectMsgPF(1 second) {
@@ -59,7 +59,7 @@ class SPMMetricsSenderSpec extends BaseKamonSpec("spm-metrics-sender-spec") {
     "resend metrics in case of exception or failure response status" in {
       val io = TestProbe()
 
-      val sender = system.actorOf(SPMMetricsSender.props(io.ref, 2 seconds, Timeout(5 seconds), 100, "http://localhost:1234", "http://localhost:1234", "host-1", "1234"))
+      val sender = system.actorOf(SPMMetricsSender.props(io.ref, 2 seconds, Timeout(5 seconds), 100, "http://localhost:1234", "http://localhost:1234", "host-1", "1234", 10, 10))
       sender ! Send(testMetrics())
 
       io.expectMsgClass(classOf[HttpRequest])
@@ -80,7 +80,7 @@ class SPMMetricsSenderSpec extends BaseKamonSpec("spm-metrics-sender-spec") {
     "ignore new metrics in case when send queue is full" in {
       val io = TestProbe()
 
-      val sender = system.actorOf(SPMMetricsSender.props(io.ref, 2 seconds, Timeout(5 seconds), 5, "http://localhost:1234", "http://localhost:1234", "host-1", "1234"))
+      val sender = system.actorOf(SPMMetricsSender.props(io.ref, 2 seconds, Timeout(5 seconds), 5, "http://localhost:1234", "http://localhost:1234", "host-1", "1234", 10, 10))
 
       (0 until 5).foreach(_ ⇒ sender ! Send(testMetrics()))
 

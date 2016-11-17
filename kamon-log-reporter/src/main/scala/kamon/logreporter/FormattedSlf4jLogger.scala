@@ -33,7 +33,8 @@ trait FormattedSlf4jLogger {
     }
   }
 
-  def printFormattedActorMetrics(name: String, processingTime: Histogram.Snapshot, timeInMailbox: Histogram.Snapshot, mailboxSize: Histogram.Snapshot, errors: Counter.Snapshot) = {
+  def printFormattedActorMetrics(name: String, processingTime: Histogram.Snapshot, timeInMailbox: Histogram.Snapshot,
+    mailboxSize: Histogram.Snapshot, errors: Counter.Snapshot) = {
     val map = Map(
       "actor" -> name,
       "processingTime.msgCount" -> processingTime.numberOfMeasurements,
@@ -60,7 +61,8 @@ trait FormattedSlf4jLogger {
     sendMap("Actor", map)
   }
 
-  def printFormattedRouterMetrics(name: String, processingTime: Histogram.Snapshot, timeInMailbox: Histogram.Snapshot, routingTime: Histogram.Snapshot, errors: Counter.Snapshot) = {
+  def printFormattedRouterMetrics(name: String, processingTime: Histogram.Snapshot, timeInMailbox: Histogram.Snapshot,
+    routingTime: Histogram.Snapshot, errors: Counter.Snapshot) = {
     val map = Map(
       "router" -> name,
       "processingTime.msgCount" -> processingTime.numberOfMeasurements,
@@ -92,7 +94,9 @@ trait FormattedSlf4jLogger {
     sendMap("Router", map)
   }
 
-  def printFormattedForkJoinPool(name: String, paralellism: Histogram.Snapshot, poolSize: Histogram.Snapshot, activeThreads: Histogram.Snapshot, runningThreads: Histogram.Snapshot, queuedTaskCount: Histogram.Snapshot) = {
+  def printFormattedForkJoinPool(name: String, paralellism: Histogram.Snapshot, poolSize: Histogram.Snapshot,
+    activeThreads: Histogram.Snapshot, runningThreads: Histogram.Snapshot,
+    queuedTaskCount: Histogram.Snapshot, queuedSubmissionCount: Histogram.Snapshot) = {
     val map = Map(
       "dispatcher" -> name,
       "paralellism" -> paralellism.max,
@@ -107,12 +111,17 @@ trait FormattedSlf4jLogger {
       "runningThreads.max" -> runningThreads.max,
       "queuedTaskCount.min" -> queuedTaskCount.min,
       "queuedTaskCount.avg" -> queuedTaskCount.average,
-      "queuedTaskCount.max" -> queuedTaskCount.max)
+      "queuedTaskCount.max" -> queuedTaskCount.max,
+      "queuedSubmissionCount.min" -> queuedSubmissionCount.min,
+      "queuedSubmissionCount.avg" -> queuedSubmissionCount.average,
+      "queuedSubmissionCount.max" -> queuedSubmissionCount.max)
 
     sendMap("Fork-Join-Pool", map)
   }
 
-  def printFormattedThreadPoolExecutor(name: String, corePoolSize: Histogram.Snapshot, maxPoolSize: Histogram.Snapshot, poolSize: Histogram.Snapshot, activeThreads: Histogram.Snapshot, processedTasks: Histogram.Snapshot) = {
+  def printFormattedThreadPoolExecutor(name: String, corePoolSize: Histogram.Snapshot, maxPoolSize: Histogram.Snapshot,
+    poolSize: Histogram.Snapshot, activeThreads: Histogram.Snapshot,
+    processedTasks: Histogram.Snapshot) = {
     val map = Map(
       "dispatcher" -> name,
       "corePoolSize" -> corePoolSize.max,
@@ -130,7 +139,8 @@ trait FormattedSlf4jLogger {
     sendMap("Thread-Pool-Executor", map)
   }
 
-  def printFormattedCpuMetrics(user: Histogram.Snapshot, system: Histogram.Snapshot, cpuWait: Histogram.Snapshot, idle: Histogram.Snapshot) = {
+  def printFormattedCpuMetrics(user: Histogram.Snapshot, system: Histogram.Snapshot, cpuWait: Histogram.Snapshot,
+    idle: Histogram.Snapshot) = {
     val map = Map(
       "userPerc.min" -> user.min,
       "userPerc.avg" -> user.average,
@@ -148,7 +158,8 @@ trait FormattedSlf4jLogger {
     sendMap("CPU (ALL)", map)
   }
 
-  def printFormattedNetworkMetrics(rxBytes: Histogram.Snapshot, txBytes: Histogram.Snapshot, rxErrors: Histogram.Snapshot, txErrors: Histogram.Snapshot) = {
+  def printFormattedNetworkMetrics(rxBytes: Histogram.Snapshot, txBytes: Histogram.Snapshot,
+    rxErrors: Histogram.Snapshot, txErrors: Histogram.Snapshot) = {
     val map = Map(
       "rxBytes.min" -> rxBytes.min,
       "rxBytes.avg" -> rxBytes.average,
@@ -174,7 +185,8 @@ trait FormattedSlf4jLogger {
     sendMap("Process-CPU", map)
   }
 
-  def printFormattedContextSwitchesMetrics(perProcessVoluntary: Histogram.Snapshot, perProcessNonVoluntary: Histogram.Snapshot, global: Histogram.Snapshot) = {
+  def printFormattedContextSwitchesMetrics(perProcessVoluntary: Histogram.Snapshot,
+    perProcessNonVoluntary: Histogram.Snapshot, global: Histogram.Snapshot) = {
     val map = Map(
       "global.min" -> global.min,
       "global.avg" -> global.average,

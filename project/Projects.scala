@@ -25,7 +25,7 @@ object Projects extends Build {
   lazy val kamon = Project("kamon", file("."))
     .enablePlugins(CrossPerProjectPlugin)
     .aggregate(kamonCore, kamonScala, kamonAkka, kamonSpray, kamonNewrelic, kamonPlayground, kamonTestkit,
-      kamonStatsD, kamonRiemann, kamonDatadog, kamonSPM, kamonSystemMetrics, kamonLogReporter, kamonAkkaRemote, kamonJdbc,
+      kamonStatsD, kamonRiemann, kamonDatadog, kamonSPM, kamonSystemMetrics, kamonLogReporter, kamonAkkaRemote, kamonJdbc, kamonElasticsearch,
       kamonAnnotation, kamonPlay23, kamonPlay24, kamonPlay25, kamonJMXReporter, kamonFluentd, kamonKhronus,
       kamonAutoweave, kamonInfluxDB)
     .settings(basicSettings: _*)
@@ -272,7 +272,7 @@ object Projects extends Build {
         test(scalatest, akkaTestKit, slf4jApi, slf4jnop))
 
   lazy val kamonJMXReporter = Project("kamon-jmx", file("kamon-jmx"))
-    .dependsOn(kamonCore)
+    .dependsOn(kamonCore % "compile->compile;test->test")
     .settings(basicSettings: _*)
     .settings(formatSettings: _*)
     .settings(

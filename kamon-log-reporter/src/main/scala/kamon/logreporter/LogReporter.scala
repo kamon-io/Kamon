@@ -127,10 +127,11 @@ class LogReporterSubscriber extends Actor with ActorLogging with PrettyLogger wi
       activeThreads ← forkJoinMetrics.gauge("active-threads")
       runningThreads ← forkJoinMetrics.gauge("running-threads")
       queuedTaskCount ← forkJoinMetrics.gauge("queued-task-count")
+      queuedSubmissionCount ← forkJoinMetrics.gauge("queued-submission-count")
 
     } {
-      if (useFormattedSlf4j) printFormattedForkJoinPool(name, paralellism, poolSize, activeThreads, runningThreads, queuedTaskCount)
-      if (usePrettyPrintLog) printForkJoinPool(name, paralellism, poolSize, activeThreads, runningThreads, queuedTaskCount)
+      if (useFormattedSlf4j) printFormattedForkJoinPool(name, paralellism, poolSize, activeThreads, runningThreads, queuedTaskCount, queuedSubmissionCount)
+      if (usePrettyPrintLog) printForkJoinPool(name, paralellism, poolSize, activeThreads, runningThreads, queuedTaskCount, queuedSubmissionCount)
     }
   }
 

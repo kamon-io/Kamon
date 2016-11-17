@@ -158,7 +158,7 @@ class HdrHistogram(dynamicRange: DynamicRange) extends ModifiedAtomicHistogram(d
       recordValueWithCount(value, count)
     } catch {
       case anyException: Throwable ⇒
-        log.warn(s"Failed to store value $value in HdrHistogram, please review your range configuration.")
+        log.warn(s"Failed to store value $value in HdrHistogram, please review your range configuration.", anyException)
     }
   }
 

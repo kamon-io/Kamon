@@ -17,7 +17,6 @@
 package kamon.spm
 
 import java.net.InetAddress
-import java.util.concurrent.TimeUnit
 
 import akka.actor._
 import akka.event.Logging
@@ -49,6 +48,9 @@ class SPMExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   val url = config.getString("receiver-url")
   val tracingUrl = config.getString("tracing-receiver-url")
   val token = config.getString("token")
+  val traceDurationThreshold = config.getString("trace-duration-threshhold")
+  val maxTraceErrorsCount = config.getString("max-trace-errors-count")
+
   val hostname = if (config.hasPath("hostname-alias")) {
     config.getString("hostname-alias")
   } else {
@@ -62,7 +64,7 @@ class SPMExtension(system: ExtendedActorSystem) extends Kamon.Extension {
     }
   }.toList
 
-  val sender = system.actorOf(SPMMetricsSender.props(IO(Http), retryInterval, Timeout(sendTimeout), maxQueueSize, url, tracingUrl, hostname, token), "spm-metrics-sender")
+  val sender = system.actorOf(SPMMetricsSender.props(IO(Http), retryInterval, Timeout(sendTimeout), maxQueueSize, url, tracingUrl, hostname, token, traceDurationThreshold.toInt, maxTraceErrorsCount.toInt), "spm-metrics-sender")
 
   var subscriber = system.actorOf(SPMMetricsSubscriber.props(sender, 50 seconds, subscriptions), "spm-metrics-subscriber")
 
