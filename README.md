@@ -1,10 +1,12 @@
-[Play Framework Integration]   [![Build Status](https://api.travis-ci.org/kamon-io/kamon-play)](https://travis-ci.org/kamon-io/kamon-play/builds)
+Play Framework Integration  [![Build Status](https://api.travis-ci.org/kamon-io/kamon-play)](https://travis-ci.org/kamon-io/kamon-play/builds)
 ==========================
 
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/kamon-io/Kamon?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 ***kamon-play-23*** [![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-play-23_2.11/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-play-23_2.11)
+
 ***kamon-play-24*** [![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-play-24_2.11/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-play-24_2.11)
+
 ***kamon-play-25*** [![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-play-25_2.11/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-play-25_2.11)
 
 
@@ -18,10 +20,9 @@ The <b>kamon-play</b> module requires you to start your application using the As
 at startup if you failed to do so.
 
 
-Since Kamon 0.5.0 we support both Play Framework 2.3 and 2.4, but bringing support for Play! 2.4 required us
+Since Kamon 0.5.0 we support both Play Framework 2.3, 2.4 and 2.5, but bringing support for Play! 2.4 and 2.5 required us
 to ship different modules for each Play! version. Please make sure you add either <b>kamon-play-23</b>, <b>kamon-play-24</b> or
-<b>kamon-play-24</b> to your project's classpath.
+<b>kamon-play-25</b> to your project's classpath.
 
 
 [base functionality]: http://kamon.io/integrations/web-and-http-toolkits/base-functionality/
-[Play Framework Integration]: http://kamon.io/integrations/web-and-http-toolkits/play/
