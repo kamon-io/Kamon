@@ -25,4 +25,5 @@ to ship different modules for each Play! version. Please make sure you add eithe
 <b>kamon-play-25</b> to your project's classpath.
 
 
+
 [base functionality]: http://kamon.io/integrations/web-and-http-toolkits/base-functionality/
