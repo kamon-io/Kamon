@@ -24,3 +24,8 @@ convention as described in the [event based threading model section].
 * __[Ask Pattern Timeout Warning]__: A utility that logs a warning with additional information when a usage of the Ask
 Pattern timesout.
 
+
+[event based threading model section]: /core/tracing/threading-model-considerations/
+[Ask Pattern Timeout Warning]: /integrations/akka/ask-pattern-timeout-warning/
+[Actor, Router and Dispatcher Metrics]: /integrations/akka/actor-router-and-dispatcher-metrics/
+[Automatic TraceContext Propagation]: /integrations/akka/automatic-trace-context-propagation/
