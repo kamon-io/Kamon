@@ -1,4 +1,4 @@
-System Metrics   ![Build Status](https://api.travis-ci.org/kamon-io/kamon-system-metrics)](https://travis-ci.org/kamon-io/kamon-scala/builds)
+System Metrics   ![Build Status](https://travis-ci.org/kamon-io/kamon-system-metrics.svg?branch=master)
 ==========================
 
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/kamon-io/Kamon?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
