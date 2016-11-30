@@ -1,0 +1,12 @@
+language: scala
+script:
+  - ./travis-test.sh
+scala:
+   - 2.11.8
+jdk:
+   - oraclejdk8
+before_script:
+  - mkdir $TRAVIS_BUILD_DIR/tmp
+  - export SBT_OPTS="-Djava.io.tmpdir=$TRAVIS_BUILD_DIR/tmp"
+sudo: false
+  
