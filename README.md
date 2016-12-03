@@ -92,7 +92,7 @@ Integration Notes
 * It is advisable to experiment with the `kamon.datadog.flush-interval` and `kamon.datadog.max-packet-size` settings to
   find the right balance between network bandwidth utilisation and granularity on your metrics data.
 
-<img class="img-responsive" src="/assets/img/datadog-scaling-metrics.png">
+<img class="img-responsive" src="http://kamon.io/assets/img/datadog-scaling-metrics.png">
 
 
 Visualization and Fun
@@ -102,7 +102,7 @@ Creating a dashboard in the Datadog user interface is really simple, just start 
 default) in the metric selector and all metric names will start to show up. You can also break it down based on the entity
 names. Here is a very simple example of a dashboard created with metrics reported by Kamon:
 
-<img class="img-responsive" src="kamon.io/assets/img/datadog-dashboard.png">
+<img class="img-responsive" src="http://kamon.io/assets/img/datadog-dashboard.png">
 
 [Datadog]: http://www.datadoghq.com/
 [get started]: /introduction/get-started/
