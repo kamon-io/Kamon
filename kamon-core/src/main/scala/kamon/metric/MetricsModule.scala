@@ -18,7 +18,7 @@ package kamon.metric
 
 import akka.actor._
 import com.typesafe.config.Config
-import kamon.metric.SubscriptionsDispatcher.{ Subscribe, Unsubscribe }
+import kamon.metric.SubscriptionsDispatcher.{Subscribe, Unsubscribe}
 import kamon.metric.instrument.Gauge.CurrentValueCollector
 import kamon.metric.instrument.Histogram.DynamicRange
 import kamon.metric.instrument._
@@ -248,8 +248,10 @@ private[kamon] class MetricsModuleImpl(config: Config) extends MetricsModule {
     val histogramEntity = Entity(name, SingleInstrumentEntityRecorder.Histogram, tags)
     val recorder = _trackedEntities.atomicGetOrElseUpdate(histogramEntity, {
       val factory = instrumentFactory(histogramEntity.category)
-      HistogramRecorder(HistogramKey(histogramEntity.category, unitOfMeasurement.getOrElse(UnitOfMeasurement.Unknown)),
-        factory.createHistogram(name, dynamicRange))
+      HistogramRecorder(
+        HistogramKey(histogramEntity.category, unitOfMeasurement.getOrElse(UnitOfMeasurement.Unknown)),
+        factory.createHistogram(name, dynamicRange)
+      )
     }, _.cleanup)
 
     recorder.asInstanceOf[HistogramRecorder].instrument
@@ -264,8 +266,10 @@ private[kamon] class MetricsModuleImpl(config: Config) extends MetricsModule {
     val minMaxCounterEntity = Entity(name, SingleInstrumentEntityRecorder.MinMaxCounter, tags)
     val recorder = _trackedEntities.atomicGetOrElseUpdate(minMaxCounterEntity, {
       val factory = instrumentFactory(minMaxCounterEntity.category)
-      MinMaxCounterRecorder(MinMaxCounterKey(minMaxCounterEntity.category, unitOfMeasurement.getOrElse(UnitOfMeasurement.Unknown)),
-        factory.createMinMaxCounter(name, dynamicRange, refreshInterval))
+      MinMaxCounterRecorder(
+        MinMaxCounterKey(minMaxCounterEntity.category, unitOfMeasurement.getOrElse(UnitOfMeasurement.Unknown)),
+        factory.createMinMaxCounter(name, dynamicRange, refreshInterval)
+      )
     }, _.cleanup)
 
     recorder.asInstanceOf[MinMaxCounterRecorder].instrument
@@ -281,8 +285,10 @@ private[kamon] class MetricsModuleImpl(config: Config) extends MetricsModule {
     val gaugeEntity = Entity(name, SingleInstrumentEntityRecorder.Gauge, tags)
     val recorder = _trackedEntities.atomicGetOrElseUpdate(gaugeEntity, {
       val factory = instrumentFactory(gaugeEntity.category)
-      GaugeRecorder(GaugeKey(gaugeEntity.category, unitOfMeasurement.getOrElse(UnitOfMeasurement.Unknown)),
-        factory.createGauge(name, dynamicRange, refreshInterval, valueCollector))
+      GaugeRecorder(
+        GaugeKey(gaugeEntity.category, unitOfMeasurement.getOrElse(UnitOfMeasurement.Unknown)),
+        factory.createGauge(name, dynamicRange, refreshInterval, valueCollector)
+      )
     }, _.cleanup)
 
     recorder.asInstanceOf[GaugeRecorder].instrument
@@ -297,8 +303,10 @@ private[kamon] class MetricsModuleImpl(config: Config) extends MetricsModule {
     val counterEntity = Entity(name, SingleInstrumentEntityRecorder.Counter, tags)
     val recorder = _trackedEntities.atomicGetOrElseUpdate(counterEntity, {
       val factory = instrumentFactory(counterEntity.category)
-      CounterRecorder(CounterKey(counterEntity.category, unitOfMeasurement.getOrElse(UnitOfMeasurement.Unknown)),
-        factory.createCounter())
+      CounterRecorder(
+        CounterKey(counterEntity.category, unitOfMeasurement.getOrElse(UnitOfMeasurement.Unknown)),
+        factory.createCounter()
+      )
     }, _.cleanup)
 
     recorder.asInstanceOf[CounterRecorder].instrument

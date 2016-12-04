@@ -19,7 +19,7 @@ package kamon.util
 import java.util
 import java.util.concurrent.ConcurrentLinkedQueue
 
-import akka.actor.{ Actor, ActorRef }
+import akka.actor.{Actor, ActorRef}
 import org.HdrHistogram.WriterReaderPhaser
 
 import scala.annotation.tailrec

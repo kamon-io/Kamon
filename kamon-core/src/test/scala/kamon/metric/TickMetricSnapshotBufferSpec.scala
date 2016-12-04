@@ -65,7 +65,8 @@ class TickMetricSnapshotBufferSpec extends BaseKamonSpec("trace-metrics-spec") w
         MutableRecord(10, 3),
         MutableRecord(20, 1),
         MutableRecord(30, 1),
-        MutableRecord(300, 1))
+        MutableRecord(300, 1)
+      )
 
     }
   }
@@ -83,12 +84,14 @@ class TickMetricSnapshotBufferSpec extends BaseKamonSpec("trace-metrics-spec") w
     traceRecorder.elapsedTime.record(20L)
     traceRecorder.elapsedTime.record(30L)
     val firstNonEmpty = TickMetricSnapshot(new MilliTimestamp(1000), new MilliTimestamp(2000), Map(
-      (testTraceIdentity -> traceRecorder.collect(collectionContext))))
+      (testTraceIdentity → traceRecorder.collect(collectionContext))
+    ))
 
     traceRecorder.elapsedTime.record(10L)
     traceRecorder.elapsedTime.record(10L)
     traceRecorder.elapsedTime.record(300L)
     val secondNonEmpty = TickMetricSnapshot(new MilliTimestamp(1000), new MilliTimestamp(2000), Map(
-      (testTraceIdentity -> traceRecorder.collect(collectionContext))))
+      (testTraceIdentity → traceRecorder.collect(collectionContext))
+    ))
   }
 }

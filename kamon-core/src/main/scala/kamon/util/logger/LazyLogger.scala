@@ -15,7 +15,7 @@
 
 package kamon.util.logger
 
-import org.slf4j.{ Logger ⇒ SLF4JLogger }
+import org.slf4j.{Logger ⇒ SLF4JLogger}
 
 class LazyLogger(val logger: SLF4JLogger) {
 
@@ -41,7 +41,7 @@ class LazyLogger(val logger: SLF4JLogger) {
 }
 
 object LazyLogger {
-  import scala.reflect.{ classTag, ClassTag }
+  import scala.reflect.{classTag, ClassTag}
 
   def apply(name: String): LazyLogger = new LazyLogger(org.slf4j.LoggerFactory.getLogger(name))
   def apply(cls: Class[_]): LazyLogger = apply(cls.getName)

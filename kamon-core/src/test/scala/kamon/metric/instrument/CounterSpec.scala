@@ -18,7 +18,7 @@ package kamon.metric.instrument
 
 import java.nio.LongBuffer
 
-import org.scalatest.{ Matchers, WordSpec }
+import org.scalatest.{Matchers, WordSpec}
 
 class CounterSpec extends WordSpec with Matchers {
 

@@ -1,7 +1,7 @@
 package kamon.trace.logging
 
 import kamon.testkit.BaseKamonSpec
-import kamon.trace.{ EmptyTraceContext, Tracer }
+import kamon.trace.{EmptyTraceContext, Tracer}
 import org.slf4j.MDC
 
 class MdcKeysSupportSpec extends BaseKamonSpec("mdc-keys-support-spec") {

@@ -18,7 +18,7 @@ package kamon.metric
 
 import akka.actor._
 import kamon.metric.SubscriptionsDispatcher._
-import kamon.util.{ MilliTimestamp, GlobPathFilter }
+import kamon.util.{MilliTimestamp, GlobPathFilter}
 import scala.concurrent.duration.FiniteDuration
 
 /**

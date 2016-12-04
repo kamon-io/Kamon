@@ -16,7 +16,7 @@
 
 package kamon.metric
 
-import kamon.metric.instrument.{ Counter, Histogram, CollectionContext, InstrumentSnapshot }
+import kamon.metric.instrument.{Counter, Histogram, CollectionContext, InstrumentSnapshot}
 import kamon.util.MapMerge
 import scala.reflect.ClassTag
 

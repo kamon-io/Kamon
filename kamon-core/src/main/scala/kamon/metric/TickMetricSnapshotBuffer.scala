@@ -16,7 +16,7 @@
 
 package kamon.metric
 
-import akka.actor.{ Props, Actor, ActorRef }
+import akka.actor.{Props, Actor, ActorRef}
 import kamon.Kamon
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 import kamon.metric.TickMetricSnapshotBuffer.FlushBuffer

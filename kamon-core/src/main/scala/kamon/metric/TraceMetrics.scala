@@ -16,7 +16,7 @@
 
 package kamon.metric
 
-import kamon.metric.instrument.{ Time, InstrumentFactory }
+import kamon.metric.instrument.{Time, InstrumentFactory}
 
 class TraceMetrics(instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) {
 

@@ -21,7 +21,7 @@ import java.util
 
 import kamon.trace.Status.Closed
 import kamon.trace.TraceContextAware.DefaultTraceContextAware
-import kamon.util.{ Function, RelativeNanoTimestamp, SameThreadExecutionContext, Supplier }
+import kamon.util.{Function, RelativeNanoTimestamp, SameThreadExecutionContext, Supplier}
 
 import scala.concurrent.Future
 
@@ -38,7 +38,7 @@ trait TraceContext {
   def rename(newName: String): Unit
   def startSegment(segmentName: String, category: String, library: String): Segment
   def startSegment(segmentName: String, category: String, library: String, tags: Map[String, String]): Segment
-  def addMetadata(key: String, value: String)
+  def addMetadata(key: String, value: String): Unit
   def addTag(key: String, value: String): Unit
   def removeTag(key: String, value: String): Boolean
   def startTimestamp: RelativeNanoTimestamp

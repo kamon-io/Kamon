@@ -16,7 +16,7 @@
 
 package kamon.trace
 
-import akka.actor.{ Terminated, ActorRef, Actor }
+import akka.actor.{Terminated, ActorRef, Actor}
 
 class TraceSubscriptions extends Actor {
   import TraceSubscriptions._

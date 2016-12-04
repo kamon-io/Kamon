@@ -17,7 +17,7 @@
 package kamon.metric
 
 import akka.actor._
-import akka.testkit.{ TestProbe, ImplicitSender }
+import akka.testkit.{TestProbe, ImplicitSender}
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
@@ -31,10 +31,11 @@ class SubscriptionsProtocolSpec extends BaseKamonSpec("subscriptions-protocol-sp
         |kamon.metric {
         |  tick-interval = 1 hour
         |}
-      """.stripMargin)
+      """.stripMargin
+    )
 
   lazy val metricsModule = Kamon.metrics
-  import metricsModule.{ entity, subscribe, unsubscribe }
+  import metricsModule.{entity, subscribe, unsubscribe}
 
   "the Subscriptions messaging protocol" should {
     "allow subscribing for a single tick" in {

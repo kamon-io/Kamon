@@ -34,7 +34,8 @@ case class MetricsSettings(
     entityFilters: Map[String, EntityFilter],
     instrumentFactories: Map[String, InstrumentFactory],
     defaultInstrumentFactory: InstrumentFactory,
-    refreshScheduler: RefreshScheduler) {
+    refreshScheduler: RefreshScheduler
+) {
 
   private[kamon] def pointScheduler(targetScheduler: RefreshScheduler): Unit = refreshScheduler match {
     case lrs: LazyRefreshScheduler ⇒ lrs.point(targetScheduler)

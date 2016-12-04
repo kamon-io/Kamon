@@ -15,10 +15,10 @@
 
 package kamon.autoweave.loader
 
-import java.io.{ File, FileOutputStream, InputStream }
+import java.io.{File, FileOutputStream, InputStream}
 import java.lang.management.ManagementFactory
 import java.util.jar.Attributes.Name
-import java.util.jar.{ JarEntry, JarOutputStream, Manifest }
+import java.util.jar.{JarEntry, JarOutputStream, Manifest}
 
 import scala.util.control.NoStackTrace
 

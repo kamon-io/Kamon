@@ -20,7 +20,7 @@ import _root_.akka.actor
 import _root_.akka.actor._
 import kamon.util.logger.LazyLogger
 import org.aspectj.lang.ProceedingJoinPoint
-import org.aspectj.lang.annotation.{ Around, Aspect, Pointcut }
+import org.aspectj.lang.annotation.{Around, Aspect, Pointcut}
 
 private[kamon] object ModuleLoader extends ExtensionId[ModuleLoaderExtension] with ExtensionIdProvider {
   def lookup(): ExtensionId[_ <: actor.Extension] = ModuleLoader

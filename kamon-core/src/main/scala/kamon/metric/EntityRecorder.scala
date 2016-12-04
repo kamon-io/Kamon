@@ -59,7 +59,7 @@ private[kamon] sealed trait SingleInstrumentEntityRecorder extends EntityRecorde
   def instrument: Instrument
 
   def collect(collectionContext: CollectionContext): EntitySnapshot =
-    new DefaultEntitySnapshot(Map(key -> instrument.collect(collectionContext)))
+    new DefaultEntitySnapshot(Map(key → instrument.collect(collectionContext)))
 
   def cleanup: Unit = instrument.cleanup
 }
@@ -225,7 +225,7 @@ abstract class GenericEntityRecorder(instrumentFactory: InstrumentFactory) exten
   def collect(collectionContext: CollectionContext): EntitySnapshot = {
     val snapshots = Map.newBuilder[MetricKey, InstrumentSnapshot]
     _instruments.foreach {
-      case (key, instrument) ⇒ snapshots += key -> instrument.collect(collectionContext)
+      case (key, instrument) ⇒ snapshots += key → instrument.collect(collectionContext)
     }
 
     new DefaultEntitySnapshot(snapshots.result())

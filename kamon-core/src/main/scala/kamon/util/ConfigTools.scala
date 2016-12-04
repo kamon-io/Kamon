@@ -22,7 +22,7 @@ import com.typesafe.config.Config
 
 import scala.concurrent.duration.FiniteDuration
 
-import kamon.metric.instrument.{ Memory, Time }
+import kamon.metric.instrument.{Memory, Time}
 
 object ConfigTools {
   implicit class Syntax(val config: Config) extends AnyVal {

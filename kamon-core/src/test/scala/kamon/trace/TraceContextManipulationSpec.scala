@@ -70,7 +70,7 @@ class TraceContextManipulationSpec extends BaseKamonSpec("trace-metrics-spec") {
       }
 
       Tracer.currentContext shouldBe empty
-      createdContext.tags shouldBe Map("trace-tag" -> "tag-1")
+      createdContext.tags shouldBe Map("trace-tag" → "tag-1")
 
       createdContext.removeTag("trace-tag", "tag-1")
 
@@ -103,7 +103,7 @@ class TraceContextManipulationSpec extends BaseKamonSpec("trace-metrics-spec") {
         segment.tags should be(Map.empty)
 
         segment.addTag("segment-tag", "tag-1")
-        segment.tags should be(Map("segment-tag" -> "tag-1"))
+        segment.tags should be(Map("segment-tag" → "tag-1"))
 
         segment.removeTag("segment-tag", "tag-1")
         segment.tags should be(Map.empty)

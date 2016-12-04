@@ -16,13 +16,13 @@ package kamon
 
 import _root_.akka.actor
 import _root_.akka.actor._
-import com.typesafe.config.{ Config, ConfigFactory, ConfigParseOptions, ConfigResolveOptions }
+import com.typesafe.config.{Config, ConfigFactory, ConfigParseOptions, ConfigResolveOptions}
 import kamon.metric._
 import kamon.trace.TracerModuleImpl
 import kamon.util.logger.LazyLogger
 
 import _root_.scala.util.control.NonFatal
-import _root_.scala.util.{ Failure, Success, Try }
+import _root_.scala.util.{Failure, Success, Try}
 
 object Kamon {
 

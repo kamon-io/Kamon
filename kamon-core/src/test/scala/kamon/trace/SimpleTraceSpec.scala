@@ -88,9 +88,9 @@ class SimpleTraceSpec extends BaseKamonSpec("simple-trace-spec") {
     "send a TraceInfo when the trace has finished and all segments are finished and both contains tags" in {
       Kamon.tracer.subscribe(testActor)
 
-      Tracer.withContext(newContext("simple-trace-without-segments", "awesome-token", Map("environment" -> "production"))) {
-        Tracer.currentContext.startSegment("segment-one", "test-segment", "test", Map("segment-one-info" -> "info")).finish()
-        Tracer.currentContext.startSegment("segment-two", "test-segment", "test", Map("segment-two-info" -> "info")).finish()
+      Tracer.withContext(newContext("simple-trace-without-segments", "awesome-token", Map("environment" → "production"))) {
+        Tracer.currentContext.startSegment("segment-one", "test-segment", "test", Map("segment-one-info" → "info")).finish()
+        Tracer.currentContext.startSegment("segment-two", "test-segment", "test", Map("segment-two-info" → "info")).finish()
         Tracer.currentContext.finish()
       }
 
@@ -98,14 +98,14 @@ class SimpleTraceSpec extends BaseKamonSpec("simple-trace-spec") {
       Kamon.tracer.unsubscribe(testActor)
 
       traceInfo.name should be("simple-trace-without-segments")
-      traceInfo.tags should be(Map("environment" -> "production"))
+      traceInfo.tags should be(Map("environment" → "production"))
       traceInfo.segments.size should be(2)
 
       val segmentOne = traceInfo.segments.find(_.name == "segment-one")
       val segmentTwo = traceInfo.segments.find(_.name == "segment-two")
 
-      segmentOne.get.tags should be(Map("segment-one-info" -> "info"))
-      segmentTwo.get.tags should be(Map("segment-two-info" -> "info"))
+      segmentOne.get.tags should be(Map("segment-one-info" → "info"))
+      segmentTwo.get.tags should be(Map("segment-two-info" → "info"))
     }
 
     "incubate the tracing context if there are open segments after finishing" in {

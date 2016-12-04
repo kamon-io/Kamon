@@ -20,7 +20,7 @@ import java.nio.LongBuffer
 import akka.actor._
 import akka.testkit.TestProbe
 import kamon.Kamon
-import kamon.metric.instrument.Histogram.{ DynamicRange, MutableRecord }
+import kamon.metric.instrument.Histogram.{DynamicRange, MutableRecord}
 import kamon.testkit.BaseKamonSpec
 import scala.concurrent.duration._
 
@@ -38,7 +38,8 @@ class MinMaxCounterSpec extends BaseKamonSpec("min-max-counter-spec") {
       snapshot.max should be(5)
       snapshot.recordsIterator.toStream should contain allOf (
         MutableRecord(0, 1), // min
-        MutableRecord(5, 2)) // max and current
+        MutableRecord(5, 2)
+      ) // max and current
     }
 
     "track descending tendencies" in new MinMaxCounterFixture {
@@ -53,7 +54,8 @@ class MinMaxCounterSpec extends BaseKamonSpec("min-max-counter-spec") {
       snapshot.max should be(5)
       snapshot.recordsIterator.toStream should contain allOf (
         MutableRecord(0, 2), // min and current
-        MutableRecord(5, 1)) // max
+        MutableRecord(5, 1)
+      ) // max
     }
 
     "reset the min and max to the current value after taking a snapshot" in new MinMaxCounterFixture {
@@ -67,14 +69,16 @@ class MinMaxCounterSpec extends BaseKamonSpec("min-max-counter-spec") {
       firstSnapshot.recordsIterator.toStream should contain allOf (
         MutableRecord(0, 1), // min
         MutableRecord(2, 1), // current
-        MutableRecord(5, 1)) // max
+        MutableRecord(5, 1)
+      ) // max
 
       val secondSnapshot = collectCounterSnapshot()
 
       secondSnapshot.min should be(2)
       secondSnapshot.max should be(2)
       secondSnapshot.recordsIterator.toStream should contain(
-        MutableRecord(2, 3)) // min, max and current
+        MutableRecord(2, 3)
+      ) // min, max and current
     }
 
     "report zero as the min and current values if the current value fell bellow zero" in new MinMaxCounterFixture {
@@ -85,7 +89,8 @@ class MinMaxCounterSpec extends BaseKamonSpec("min-max-counter-spec") {
       snapshot.min should be(0)
       snapshot.max should be(0)
       snapshot.recordsIterator.toStream should contain(
-        MutableRecord(0, 3)) // min, max and current (even while current really is -3
+        MutableRecord(0, 3)
+      ) // min, max and current (even while current really is -3
     }
 
     "never record values bellow zero in very busy situations" in new MinMaxCounterFixture {

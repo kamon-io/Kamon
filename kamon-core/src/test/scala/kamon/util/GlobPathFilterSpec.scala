@@ -16,7 +16,7 @@
 
 package kamon.util
 
-import org.scalatest.{ Matchers, WordSpecLike }
+import org.scalatest.{Matchers, WordSpecLike}
 
 class GlobPathFilterSpec extends WordSpecLike with Matchers {
   "The GlobPathFilter" should {

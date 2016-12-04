@@ -13,8 +13,10 @@ case class InstrumentCustomSettings(lowestDiscernibleValue: Option[Long], highes
       DynamicRange(
         lowestDiscernibleValue.getOrElse(that.dynamicRange.lowestDiscernibleValue),
         highestTrackableValue.getOrElse(that.dynamicRange.highestTrackableValue),
-        precision.getOrElse(that.dynamicRange.precision)),
-      refreshInterval.orElse(that.refreshInterval))
+        precision.getOrElse(that.dynamicRange.precision)
+      ),
+      refreshInterval.orElse(that.refreshInterval)
+    )
 }
 
 object InstrumentCustomSettings {
@@ -25,7 +27,8 @@ object InstrumentCustomSettings {
       if (config.hasPath("lowest-discernible-value")) Some(config.getLong("lowest-discernible-value")) else None,
       if (config.hasPath("highest-trackable-value")) Some(config.getLong("highest-trackable-value")) else None,
       if (config.hasPath("precision")) Some(InstrumentSettings.parsePrecision(config.getString("precision"))) else None,
-      if (config.hasPath("refresh-interval")) Some(config.getFiniteDuration("refresh-interval")) else None)
+      if (config.hasPath("refresh-interval")) Some(config.getFiniteDuration("refresh-interval")) else None
+    )
 
 }
 
@@ -37,7 +40,8 @@ object InstrumentSettings {
     DynamicRange(
       config.getLong("lowest-discernible-value"),
       config.getLong("highest-trackable-value"),
-      parsePrecision(config.getString("precision")))
+      parsePrecision(config.getString("precision"))
+    )
 
   def parsePrecision(stringValue: String): Int = stringValue match {
     case "low"    ⇒ 1
@@ -55,10 +59,14 @@ object DefaultInstrumentSettings {
     import kamon.util.ConfigTools.Syntax
 
     val histogramSettings = InstrumentSettings(InstrumentSettings.readDynamicRange(config.getConfig("histogram")), None)
-    val minMaxCounterSettings = InstrumentSettings(InstrumentSettings.readDynamicRange(config.getConfig("min-max-counter")),
-      Some(config.getFiniteDuration("min-max-counter.refresh-interval")))
-    val gaugeSettings = InstrumentSettings(InstrumentSettings.readDynamicRange(config.getConfig("gauge")),
-      Some(config.getFiniteDuration("gauge.refresh-interval")))
+    val minMaxCounterSettings = InstrumentSettings(
+      InstrumentSettings.readDynamicRange(config.getConfig("min-max-counter")),
+      Some(config.getFiniteDuration("min-max-counter.refresh-interval"))
+    )
+    val gaugeSettings = InstrumentSettings(
+      InstrumentSettings.readDynamicRange(config.getConfig("gauge")),
+      Some(config.getFiniteDuration("gauge.refresh-interval"))
+    )
 
     DefaultInstrumentSettings(histogramSettings, minMaxCounterSettings, gaugeSettings)
   }

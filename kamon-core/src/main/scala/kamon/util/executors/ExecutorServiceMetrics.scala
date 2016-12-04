@@ -16,7 +16,7 @@
 
 package kamon.util.executors
 
-import java.util.concurrent.{ ExecutorService, ForkJoinPool ⇒ JavaForkJoinPool, ThreadPoolExecutor }
+import java.util.concurrent.{ExecutorService, ForkJoinPool ⇒ JavaForkJoinPool, ThreadPoolExecutor}
 
 import kamon.Kamon
 import kamon.metric.Entity
@@ -49,7 +49,7 @@ object ExecutorServiceMetrics {
    * @param tags The tags associated to the [[ThreadPoolExecutor]]
    */
   @inline private def registerThreadPool(name: String, threadPool: ThreadPoolExecutor, tags: Map[String, String]): Entity = {
-    val threadPoolEntity = Entity(name, Category, tags + ("executor-type" -> "thread-pool-executor"))
+    val threadPoolEntity = Entity(name, Category, tags + ("executor-type" → "thread-pool-executor"))
     Kamon.metrics.entity(ThreadPoolExecutorMetrics.factory(threadPool, Category), threadPoolEntity)
     threadPoolEntity
   }
@@ -63,7 +63,7 @@ object ExecutorServiceMetrics {
    * @param tags The tags associated to the [[ForkJoinPool]]
    */
   @inline private def registerScalaForkJoin(name: String, forkJoinPool: ForkJoinPool, tags: Map[String, String]): Entity = {
-    val forkJoinEntity = Entity(name, Category, tags + ("executor-type" -> "fork-join-pool"))
+    val forkJoinEntity = Entity(name, Category, tags + ("executor-type" → "fork-join-pool"))
     Kamon.metrics.entity(ForkJoinPoolMetrics.factory(forkJoinPool, Category), forkJoinEntity)
     forkJoinEntity
   }
@@ -77,7 +77,7 @@ object ExecutorServiceMetrics {
    * @param tags The tags associated to the [[JavaForkJoinPool]]
    */
   @inline private def registerJavaForkJoin(name: String, forkJoinPool: JavaForkJoinPool, tags: Map[String, String]): Entity = {
-    val forkJoinEntity = Entity(name, Category, tags + ("executor-type" -> "fork-join-pool"))
+    val forkJoinEntity = Entity(name, Category, tags + ("executor-type" → "fork-join-pool"))
     Kamon.metrics.entity(ForkJoinPoolMetrics.factory(forkJoinPool, Category), forkJoinEntity)
     forkJoinEntity
   }
@@ -97,7 +97,7 @@ object ExecutorServiceMetrics {
     case delegatedExecutor: ExecutorService if delegatedExecutor.getClass.isAssignableFrom(DelegatedExecutor) ⇒ registerDelegatedExecutor(name, delegatedExecutor, tags)
     case delegatedScheduledExecutor: ExecutorService if delegatedScheduledExecutor.getClass.isAssignableFrom(DelegateScheduled) ⇒ registerDelegatedExecutor(name, delegatedScheduledExecutor, tags)
     case finalizableDelegatedExecutor: ExecutorService if finalizableDelegatedExecutor.getClass.isAssignableFrom(FinalizableDelegated) ⇒ registerDelegatedExecutor(name, finalizableDelegatedExecutor, tags)
-    case other ⇒ throw new NotSupportedException(s"The ExecutorService $name is not supported.")
+    case other ⇒ throw NotSupportedException(s"The ExecutorService $name is not supported.")
   }
 
   //Java variant

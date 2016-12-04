@@ -17,7 +17,7 @@
 package kamon.trace.logging
 
 import kamon.trace.TraceLocal.AvailableToMdc
-import kamon.trace.{ EmptyTraceContext, MetricsOnlyContext, TraceContext, Tracer }
+import kamon.trace.{EmptyTraceContext, MetricsOnlyContext, TraceContext, Tracer}
 import kamon.util.Supplier
 import org.slf4j.MDC
 
@@ -44,7 +44,7 @@ trait MdcKeysSupport {
       MDC.put(traceNameKey, ctx.name)
 
       defaultKeys ++ ctx.traceLocalStorage.underlyingStorage.collect {
-        case (available: AvailableToMdc, value) ⇒ Map(available.mdcKey -> String.valueOf(value))
+        case (available: AvailableToMdc, value) ⇒ Map(available.mdcKey → String.valueOf(value))
       }.flatMap { value ⇒ value.map { case (k, v) ⇒ MDC.put(k, v); k } }
 
     case EmptyTraceContext ⇒ Iterable.empty[String]

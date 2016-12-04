@@ -16,11 +16,11 @@
 package kamon.autoweave.loader
 
 import java.io.File
-import java.net.{ URL, URLClassLoader }
-import java.security.{ AccessController, PrivilegedAction }
+import java.net.{URL, URLClassLoader}
+import java.security.{AccessController, PrivilegedAction}
 
 import scala.util.control.NonFatal
-import scala.util.{ Failure, Success, Try }
+import scala.util.{Failure, Success, Try}
 
 object AttachmentProviders {
 

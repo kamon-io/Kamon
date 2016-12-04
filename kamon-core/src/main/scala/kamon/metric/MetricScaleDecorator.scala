@@ -16,7 +16,7 @@
 
 package kamon.metric
 
-import akka.actor.{ Actor, ActorRef, Props }
+import akka.actor.{Actor, ActorRef, Props}
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 import kamon.metric.instrument._
 
@@ -28,8 +28,10 @@ import kamon.metric.instrument._
  * @param receiver Receiver of scaled metrics snapshot, usually a backend sender
  */
 class MetricScaleDecorator(timeUnits: Option[Time], memoryUnits: Option[Memory], receiver: ActorRef) extends Actor {
-  require(timeUnits.isDefined || memoryUnits.isDefined,
-    "Use MetricScaleDecorator only when any of units is defined")
+  require(
+    timeUnits.isDefined || memoryUnits.isDefined,
+    "Use MetricScaleDecorator only when any of units is defined"
+  )
 
   override def receive: Receive = {
     case tick: TickMetricSnapshot ⇒
@@ -41,7 +43,7 @@ class MetricScaleDecorator(timeUnits: Option[Time], memoryUnits: Option[Memory],
               case (memory: Memory, _, Some(to)) ⇒ metricSnapshot.scale(memory, to)
               case _                             ⇒ metricSnapshot
             }
-            metricKey -> scaledSnapshot
+            metricKey → scaledSnapshot
         })
       })
       receiver forward scaled

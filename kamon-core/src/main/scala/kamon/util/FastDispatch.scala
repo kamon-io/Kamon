@@ -18,7 +18,7 @@ package kamon.util
 
 import akka.actor.ActorRef
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 
 /**
  *  Extension for Future[ActorRef]. Try to dispatch a message to a Future[ActorRef] in the same thread if it has already

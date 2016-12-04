@@ -16,9 +16,9 @@
 
 package kamon.util.executors
 
-import kamon.metric.{ EntityRecorderFactory, GenericEntityRecorder }
-import kamon.metric.instrument.{ Gauge, MinMaxCounter, DifferentialValueCollector, InstrumentFactory }
-import java.util.concurrent.{ ForkJoinPool ⇒ JavaForkJoinPool, ThreadPoolExecutor }
+import kamon.metric.{EntityRecorderFactory, GenericEntityRecorder}
+import kamon.metric.instrument.{Gauge, MinMaxCounter, DifferentialValueCollector, InstrumentFactory}
+import java.util.concurrent.{ForkJoinPool ⇒ JavaForkJoinPool, ThreadPoolExecutor}
 import kamon.util.executors.ForkJoinPools.ForkJoinMetrics
 
 import scala.concurrent.forkjoin.ForkJoinPool

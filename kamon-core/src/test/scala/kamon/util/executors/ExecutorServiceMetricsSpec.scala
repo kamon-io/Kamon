@@ -19,7 +19,7 @@ package kamon.util.executors
 import java.util.concurrent.Executors
 
 import kamon.Kamon
-import kamon.metric.{ Entity, EntityRecorder }
+import kamon.metric.{Entity, EntityRecorder}
 import kamon.testkit.BaseKamonSpec
 
 class ExecutorServiceMetricsSpec extends BaseKamonSpec("executor-service-metrics-spec") {

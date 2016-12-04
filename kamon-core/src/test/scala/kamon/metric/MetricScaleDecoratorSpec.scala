@@ -18,7 +18,7 @@ package kamon.metric
 
 import kamon.Kamon
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
-import kamon.metric.instrument.{ InstrumentFactory, Memory, Time, UnitOfMeasurement }
+import kamon.metric.instrument.{InstrumentFactory, Memory, Time, UnitOfMeasurement}
 import kamon.testkit.BaseKamonSpec
 import kamon.util.MilliTimestamp
 import org.scalatest.OptionValues._
@@ -28,7 +28,8 @@ class MetricScaleDecoratorSpec extends BaseKamonSpec("metrics-scale-decorator-sp
     "receives a snapshot" which {
 
       val scaleDecorator = system.actorOf(MetricScaleDecorator.props(
-        Some(Time.Milliseconds), Some(Memory.KiloBytes), testActor))
+        Some(Time.Milliseconds), Some(Memory.KiloBytes), testActor
+      ))
       "is empty" should {
         "do nothing for empty snapshots" in {
           scaleDecorator ! emptySnapshot
@@ -94,7 +95,8 @@ trait SnapshotFixtures {
   recorder.kbyteMemory.increment(100L)
 
   val nonEmptySnapshot = TickMetricSnapshot(new MilliTimestamp(1000), new MilliTimestamp(2000), Map(
-    (testEntity -> recorder.collect(collectionContext))))
+    (testEntity → recorder.collect(collectionContext))
+  ))
 
 }
 

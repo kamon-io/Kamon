@@ -29,8 +29,8 @@ trait MinMaxCounter extends Instrument {
 
   def increment(): Unit
   def increment(times: Long): Unit
-  def decrement()
-  def decrement(times: Long)
+  def decrement(): Unit
+  def decrement(times: Long): Unit
   def refreshValues(): Unit
 }
 

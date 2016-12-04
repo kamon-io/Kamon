@@ -47,9 +47,10 @@ class TraceMetricsSpec extends BaseKamonSpec("trace-metrics-spec") with Implicit
 
       val snapshot = takeSnapshotOf("test-segment", "trace-segment",
         tags = Map(
-          "trace" -> "trace-with-segments",
-          "category" -> "test-category",
-          "library" -> "test-library"))
+          "trace" → "trace-with-segments",
+          "category" → "test-category",
+          "library" → "test-library"
+        ))
 
       snapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
     }
@@ -69,18 +70,20 @@ class TraceMetricsSpec extends BaseKamonSpec("trace-metrics-spec") with Implicit
 
         takeSnapshotOf("test-segment", "trace-segment",
           tags = Map(
-            "trace" -> "closing-segment-after-trace",
-            "category" -> "test-category",
-            "library" -> "test-library"))
+            "trace" → "closing-segment-after-trace",
+            "category" → "test-category",
+            "library" → "test-library"
+          ))
       }
 
       segment.finish()
 
       val afterFinishSegmentSnapshot = takeSnapshotOf("test-segment", "trace-segment",
         tags = Map(
-          "trace" -> "closing-segment-after-trace",
-          "category" -> "test-category",
-          "library" -> "test-library"))
+          "trace" → "closing-segment-after-trace",
+          "category" → "test-category",
+          "library" → "test-library"
+        ))
 
       afterFinishSegmentSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
     }
@@ -106,9 +109,10 @@ class TraceMetricsSpec extends BaseKamonSpec("trace-metrics-spec") with Implicit
 
       val snapshot = takeSnapshotOf("test-segment-with-error", "trace-segment",
         tags = Map(
-          "trace" -> "trace-with-segments",
-          "category" -> "test-category",
-          "library" -> "test-library"))
+          "trace" → "trace-with-segments",
+          "category" → "test-category",
+          "library" → "test-library"
+        ))
 
       snapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
       snapshot.counter("errors").get.count should be(1)

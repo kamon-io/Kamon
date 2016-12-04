@@ -16,7 +16,7 @@
 
 package kamon.metric.instrument
 
-import akka.actor.{ Scheduler, Cancellable }
+import akka.actor.{Scheduler, Cancellable}
 import org.HdrHistogram.WriterReaderPhaser
 
 import scala.collection.concurrent.TrieMap

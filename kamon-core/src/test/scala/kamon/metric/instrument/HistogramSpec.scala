@@ -19,7 +19,7 @@ package kamon.metric.instrument
 import java.nio.LongBuffer
 
 import kamon.metric.instrument.Histogram.DynamicRange
-import org.scalatest.{ Matchers, WordSpec }
+import org.scalatest.{Matchers, WordSpec}
 
 import scala.util.Random
 
@@ -62,12 +62,12 @@ class HistogramSpec extends WordSpec with Matchers {
         snapshot.sum should be(41300)
         snapshot.numberOfMeasurements should be(203)
 
-        val records = snapshot.recordsIterator.map(r ⇒ r.level -> r.count).toSeq
+        val records = snapshot.recordsIterator.map(r ⇒ r.level → r.count).toSeq
         records.size should be(4)
-        records(0) should be(100 -> 1)
-        records(1) should be(200 -> 200)
-        records(2) should be(300 -> 1)
-        records(3) should be(900 -> 1)
+        records(0) should be(100 → 1)
+        records(1) should be(200 → 200)
+        records(2) should be(300 → 1)
+        records(3) should be(900 → 1)
       }
 
       "can be scaled" in new HistogramFixture {
@@ -86,12 +86,12 @@ class HistogramSpec extends WordSpec with Matchers {
         snapshot.sum should be(41300000)
         snapshot.numberOfMeasurements should be(203)
 
-        val records = snapshot.recordsIterator.map(r ⇒ r.level -> r.count).toSeq
+        val records = snapshot.recordsIterator.map(r ⇒ r.level → r.count).toSeq
         records.size should be(4)
-        records(0) should be(100000 -> 1)
-        records(1) should be(200000 -> 200)
-        records(2) should be(300000 -> 1)
-        records(3) should be(900000 -> 1)
+        records(0) should be(100000 → 1)
+        records(1) should be(200000 → 200)
+        records(2) should be(300000 → 1)
+        records(3) should be(900000 → 1)
       }
 
       "can be merged with another snapshot" in new MultipleHistogramFixture {

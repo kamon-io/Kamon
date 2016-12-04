@@ -18,15 +18,15 @@ package kamon.metric.instrument
 
 import java.nio.LongBuffer
 
-import kamon.metric.instrument.Histogram.{ DynamicRange, Snapshot }
+import kamon.metric.instrument.Histogram.{DynamicRange, Snapshot}
 import kamon.util.logger.LazyLogger
 import org.HdrHistogram.ModifiedAtomicHistogram
 
 trait Histogram extends Instrument {
   type SnapshotType = Histogram.Snapshot
 
-  def record(value: Long)
-  def record(value: Long, count: Long)
+  def record(value: Long): Unit
+  def record(value: Long, count: Long): Unit
 }
 
 object Histogram {
@@ -145,8 +145,10 @@ object HdrHistogram {
  *  The collect(..) operation extracts all the recorded values from the histogram and resets the counts, but still
  *  leave it in a consistent state even in the case of concurrent modification while the snapshot is being taken.
  */
-class HdrHistogram(dynamicRange: DynamicRange) extends ModifiedAtomicHistogram(dynamicRange.lowestDiscernibleValue,
-  dynamicRange.highestTrackableValue, dynamicRange.precision) with Histogram {
+class HdrHistogram(dynamicRange: DynamicRange) extends ModifiedAtomicHistogram(
+  dynamicRange.lowestDiscernibleValue,
+  dynamicRange.highestTrackableValue, dynamicRange.precision
+) with Histogram {
   import HdrHistogram.log
 
   def record(value: Long): Unit = tryRecord(value, 1L)

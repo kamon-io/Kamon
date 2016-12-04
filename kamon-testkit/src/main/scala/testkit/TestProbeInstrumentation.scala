@@ -17,7 +17,7 @@
 package akka.testkit
 
 import org.aspectj.lang.annotation._
-import kamon.trace.{ Tracer, EmptyTraceContext, TraceContextAware }
+import kamon.trace.{Tracer, EmptyTraceContext, TraceContextAware}
 import org.aspectj.lang.ProceedingJoinPoint
 import akka.testkit.TestActor.RealMessage
 

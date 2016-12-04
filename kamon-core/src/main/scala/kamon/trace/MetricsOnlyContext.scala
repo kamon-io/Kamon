@@ -20,19 +20,21 @@ import java.util.concurrent.ConcurrentLinkedQueue
 
 import akka.event.LoggingAdapter
 import kamon.Kamon
-import kamon.metric.{ SegmentMetrics, TraceMetrics }
-import kamon.util.{ NanoInterval, RelativeNanoTimestamp }
+import kamon.metric.{SegmentMetrics, TraceMetrics}
+import kamon.util.{NanoInterval, RelativeNanoTimestamp}
 
 import scala.annotation.tailrec
 import scala.collection.concurrent.TrieMap
 
-private[kamon] class MetricsOnlyContext(traceName: String,
+private[kamon] class MetricsOnlyContext(
+    traceName: String,
     val token: String,
     traceTags: Map[String, String],
     currentStatus: Status,
     val levelOfDetail: LevelOfDetail,
     val startTimestamp: RelativeNanoTimestamp,
-    log: LoggingAdapter) extends TraceContext {
+    log: LoggingAdapter
+) extends TraceContext {
 
   @volatile private var _name = traceName
   @volatile private var _status = currentStatus
@@ -86,9 +88,10 @@ private[kamon] class MetricsOnlyContext(traceName: String,
     val segment = _finishedSegments.poll()
     if (segment != null) {
       val defaultTags = Map(
-        "trace" -> name,
-        "category" -> segment.category,
-        "library" -> segment.library)
+        "trace" → name,
+        "category" → segment.category,
+        "library" → segment.library
+      )
 
       if (Kamon.metrics.shouldTrack(segment.name, SegmentMetrics.category)) {
         val segmentEntity = Kamon.metrics.entity(SegmentMetrics, segment.name, defaultTags ++ segment.tags)
@@ -99,12 +102,14 @@ private[kamon] class MetricsOnlyContext(traceName: String,
     }
   }
 
-  protected def finishSegment(segmentName: String,
+  protected def finishSegment(
+    segmentName: String,
     category: String,
     library: String,
     duration: NanoInterval,
     segmentTags: Map[String, String],
-    isFinishedWithError: Boolean): Unit = {
+    isFinishedWithError: Boolean
+  ): Unit = {
 
     _finishedSegments.add(SegmentLatencyData(segmentName, category, library, duration, segmentTags, isFinishedWithError))
 
@@ -120,10 +125,12 @@ private[kamon] class MetricsOnlyContext(traceName: String,
   // will be returned.
   def elapsedTime: NanoInterval = _elapsedTime
 
-  class MetricsOnlySegment(segmentName: String,
+  class MetricsOnlySegment(
+      segmentName: String,
       val category: String,
       val library: String,
-      segmentTags: Map[String, String]) extends Segment {
+      segmentTags: Map[String, String]
+  ) extends Segment {
 
     private val _startTimestamp = RelativeNanoTimestamp.now
     private val _tags = TrieMap.empty[String, String] ++= segmentTags
@@ -169,9 +176,11 @@ private[kamon] class MetricsOnlyContext(traceName: String,
   }
 }
 
-case class SegmentLatencyData(name: String,
+case class SegmentLatencyData(
+  name: String,
   category: String,
   library: String,
   duration: NanoInterval,
   tags: Map[String, String],
-  isFinishedWithError: Boolean)
+  isFinishedWithError: Boolean
+)

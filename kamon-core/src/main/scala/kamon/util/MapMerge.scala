@@ -28,7 +28,7 @@ object MapMerge {
       map.foreach {
         case (key, value) ⇒
           val mergedValue = that.get(key).map(v ⇒ valueMerge(value, v)).getOrElse(value)
-          merged += key -> mergedValue
+          merged += key → mergedValue
       }
 
       that.foreach {

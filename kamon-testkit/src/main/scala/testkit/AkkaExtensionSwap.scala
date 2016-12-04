@@ -18,7 +18,7 @@ package testkit
 
 import java.util.concurrent.ConcurrentHashMap
 
-import akka.actor.{ ActorSystem, Extension, ExtensionId }
+import akka.actor.{ActorSystem, Extension, ExtensionId}
 
 object AkkaExtensionSwap {
   def swap(system: ActorSystem, key: ExtensionId[_], value: Extension): Unit = {

@@ -17,7 +17,7 @@
 package kamon.util
 
 import com.typesafe.config.Config
-import kamon.metric.instrument.{ Memory, Time }
+import kamon.metric.instrument.{Memory, Time}
 import kamon.util.ConfigTools._
 
 object NeedToScale {
@@ -30,7 +30,7 @@ object NeedToScale {
 
     val scaleMemoryTo: Option[Memory] =
       if (config.hasPath(MemoryUnits)) Some(config.memory(MemoryUnits)) else None
-    if (scaleTimeTo.isDefined || scaleMemoryTo.isDefined) Some(scaleTimeTo -> scaleMemoryTo)
+    if (scaleTimeTo.isDefined || scaleMemoryTo.isDefined) Some(scaleTimeTo → scaleMemoryTo)
     else None
   }
 }

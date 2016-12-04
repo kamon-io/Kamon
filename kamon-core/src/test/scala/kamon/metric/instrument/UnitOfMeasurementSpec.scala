@@ -17,7 +17,7 @@
 package kamon.metric.instrument
 
 import kamon.metric.instrument.UnitOfMeasurement.Unknown
-import org.scalatest.{ Matchers, WordSpec }
+import org.scalatest.{Matchers, WordSpec}
 
 class UnitOfMeasurementSpec extends WordSpec with Matchers {
 

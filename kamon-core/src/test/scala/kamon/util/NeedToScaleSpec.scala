@@ -17,8 +17,8 @@
 package kamon.util
 
 import com.typesafe.config.ConfigFactory
-import kamon.metric.instrument.{ Memory, Time }
-import org.scalatest.{ Matchers, WordSpec }
+import kamon.metric.instrument.{Memory, Time}
+import org.scalatest.{Matchers, WordSpec}
 
 class NeedToScaleSpec extends WordSpec with Matchers {
 
@@ -27,7 +27,8 @@ class NeedToScaleSpec extends WordSpec with Matchers {
       val config = ConfigFactory.parseString(
         """
           |time-units = "ms"
-        """.stripMargin)
+        """.stripMargin
+      )
 
       config match {
         case NeedToScale(timeUnits, memoryUnits) ⇒
@@ -39,7 +40,8 @@ class NeedToScaleSpec extends WordSpec with Matchers {
       val config = ConfigFactory.parseString(
         """
           |memory-units = "kb"
-        """.stripMargin)
+        """.stripMargin
+      )
 
       config match {
         case NeedToScale(timeUnits, memoryUnits) ⇒
@@ -51,7 +53,8 @@ class NeedToScaleSpec extends WordSpec with Matchers {
       val config = ConfigFactory.parseString(
         """
           |some-other-key = "value"
-        """.stripMargin)
+        """.stripMargin
+      )
 
       config match {
         case NeedToScale(timeUnits, memoryUnits) ⇒
