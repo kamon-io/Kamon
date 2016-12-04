@@ -52,7 +52,8 @@ object Settings {
     "-Xlog-reflective-calls"
 //    "-Yno-adapted-args",
 //    "-Ywarn-dead-code",
-//    "-Ywarn-numeric-widen",
+//  "-Ywarn-unused-import"
+  //    "-Ywarn-numeric-widen",
 //    "-Ywarn-value-discard",
   )
 

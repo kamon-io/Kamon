@@ -11,29 +11,59 @@ Modules
 ============
 
 [Play Framework] ![Build Status](https://travis-ci.org/kamon-io/kamon-play.svg?branch=master)
+
 [Spray]  ![Build Status](https://travis-ci.org/kamon-io/kamon-spray.svg?branch=master)
+
 [Akka]  ![Build Status](https://travis-ci.org/kamon-io/kamon-akka.svg?branch=master)
+
 [Akka Remote]  ![Build Status](https://travis-ci.org/kamon-io/kamon-akka-remote.svg?branch=master)
+
 [Akka Http]  ![Build Status](https://travis-ci.org/kamon-io/kamon-akka-http.svg?branch=master)
+
 [Scala]  ![Build Status](https://travis-ci.org/kamon-io/kamon-scala.svg?branch=master)
+
 [Annotation]  ![Build Status](https://travis-ci.org/kamon-io/kamon-annotation.svg?branch=master)
+
 [System Metrics]  ![Build Status](https://travis-ci.org/kamon-io/kamon-system-metrics.svg?branch=master)
+
 [JDBC]  ![Build Status](https://travis-ci.org/kamon-io/kamon-jdbc.svg?branch=master)
+
 [Elasticsearch]  ![Build Status](https://travis-ci.org/kamon-io/kamon-elasticsearch.svg?branch=master)
 
 Backends
 ========
 
 [Log Reporter]  ![Build Status](https://travis-ci.org/kamon-io/kamon-log-reporter.svg?branch=master)
+
 [StatsD]  ![Build Status](https://travis-ci.org/kamon-io/kamon-statsd.svg?branch=master)
+
 [Datadog]  ![Build Status](https://travis-ci.org/kamon-io/kamon-datadog.svg?branch=master)
+
 [SPM] ![Build Status](https://travis-ci.org/kamon-io/kamon-spm.svg?branch=master)
+
 [InfluxDB]  ![Build Status](https://travis-ci.org/kamon-io/kamon-influxdb.svg?branch=master)
+
 [New Relic]  ![Build Status](https://travis-ci.org/kamon-io/kamon-newrelic.svg?branch=master)
+
 [FluentD]  ![Build Status](https://travis-ci.org/kamon-io/kamon-fluentd.svg?branch=master)
+
 [JMX]  ![Build Status](https://travis-ci.org/kamon-io/kamon-jmx.svg?branch=master)
+
 [Riemann]  ![Build Status](https://travis-ci.org/kamon-io/kamon-riemann.svg?branch=master)
+
 [Krhonus]  ![Build Status](https://travis-ci.org/kamon-io/kamon-khronus.svg?branch=master)
+
+
+### Projects using Kamon ###
+
+If you have a project you'd like to include in this list, either open a PR or let us know in [the gitter channel](https://gitter.im/kamon-io/Kamon) and we'll add a link to it here.
+
+* [kamon-prometheus](https://github.com/MonsantoCo/kamon-prometheus): A Kamon backend to support Prometheus
+* [spray-kamon-metrics](https://github.com/MonsantoCo/spray-kamon-metrics): Better Kamon metrics for Spray services
+* [camel-kamon](https://github.com/osinka/camel-kamon): Kamon metrics and traces for Apache Camel routes, processors
+* [kamon-play-extensions](https://github.com/agiledigital/kamon-play-extensions): Kamon extensions for use in Play2 applications.
+
+
 
 
 [Play Framework]: https://github.com/kamon-io/kamon-play
@@ -57,4 +87,5 @@ Backends
 [Krhonus]: https://github.com/kamon-io/kamon-khronus 
 [New Relic]: https://github.com/kamon-io/kamon-newrelic
 [InfluxDB]: https://github.com/kamon-io/kamon-influxdb
+
 
