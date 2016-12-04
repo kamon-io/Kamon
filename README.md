@@ -7,6 +7,17 @@ Kamon is a set of tools for monitoring applications running on the JVM.
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-core_2.11/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-core_2.11)
 
 
+### Getting Started
+
+Kamon is currently available for Scala 2.10, 2.11 and 2.12.
+
+To get started with SBT, simply add the following to your `build.sbt`
+file:
+
+```scala
+libraryDependencies += "kamon.io" %% "kamon-core" % "0.6.3"
+```
+
 ### Modules ###
 
 * [Play Framework]
