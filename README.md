@@ -9,29 +9,29 @@ Kamon is a set of tools for monitoring applications running on the JVM.
 
 ### Modules ###
 
-* [Play Framework]![Build Status](https://travis-ci.org/kamon-io/kamon-play.svg?branch=master)
-* [Spray]  ![Build Status](https://travis-ci.org/kamon-io/kamon-spray.svg?branch=master)
-* [Akka]  ![Build Status](https://travis-ci.org/kamon-io/kamon-akka.svg?branch=master)
-* [Akka Remote]  ![Build Status](https://travis-ci.org/kamon-io/kamon-akka-remote.svg?branch=master)
-* [Akka Http]  ![Build Status](https://travis-ci.org/kamon-io/kamon-akka-http.svg?branch=master)
-* [Scala]  ![Build Status](https://travis-ci.org/kamon-io/kamon-scala.svg?branch=master)
-* [Annotation]  ![Build Status](https://travis-ci.org/kamon-io/kamon-annotation.svg?branch=master)
-* [System Metrics]  ![Build Status](https://travis-ci.org/kamon-io/kamon-system-metrics.svg?branch=master)
-* [JDBC]  ![Build Status](https://travis-ci.org/kamon-io/kamon-jdbc.svg?branch=master)
-* [Elasticsearch]  ![Build Status](https://travis-ci.org/kamon-io/kamon-elasticsearch.svg?branch=master)
+* [Play Framework]
+* [Spray]  
+* [Akka] 
+* [Akka Remote]
+* [Akka Http]  
+* [Scala]  
+* [Annotation]
+* [System Metrics] 
+* [JDBC]  
+* [Elasticsearch]
 
 ### Backends ###
 
-* [Log Reporter]  ![Build Status](https://travis-ci.org/kamon-io/kamon-log-reporter.svg?branch=master)
-* [StatsD]  ![Build Status](https://travis-ci.org/kamon-io/kamon-statsd.svg?branch=master)
-* [Datadog]  ![Build Status](https://travis-ci.org/kamon-io/kamon-datadog.svg?branch=master)
-* [SPM] ![Build Status](https://travis-ci.org/kamon-io/kamon-spm.svg?branch=master)
-* [InfluxDB]  ![Build Status](https://travis-ci.org/kamon-io/kamon-influxdb.svg?branch=master)
-* [New Relic]  ![Build Status](https://travis-ci.org/kamon-io/kamon-newrelic.svg?branch=master)
-* [FluentD]  ![Build Status](https://travis-ci.org/kamon-io/kamon-fluentd.svg?branch=master)
-* [JMX]  ![Build Status](https://travis-ci.org/kamon-io/kamon-jmx.svg?branch=master)
-* [Riemann]  ![Build Status](https://travis-ci.org/kamon-io/kamon-riemann.svg?branch=master)
-* [Krhonus]  ![Build Status](https://travis-ci.org/kamon-io/kamon-khronus.svg?branch=master)
+* [Log Reporter]
+* [StatsD] 
+* [Datadog] 
+* [SPM]
+* [InfluxDB] 
+* [New Relic]  
+* [FluentD] 
+* [JMX] 
+* [Riemann]  
+* [Krhonus]  
 
 
 ### Projects using Kamon ###
