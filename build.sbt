@@ -22,7 +22,7 @@ lazy val kamon = (project in file("."))
   .settings(basicSettings: _*)
   .settings(formatSettings: _*)
   .settings(noPublishing: _*)
-  .aggregate(core, autoweave, testkit)
+  .aggregate(core, autoweave, testkit, bench)
 
 
 lazy val core = (project in file("kamon-core"))
@@ -55,6 +55,13 @@ lazy val testkit = (project in file("kamon-testkit"))
           compileScope(akkaActor, akkaTestKit) ++
           providedScope(aspectJ) ++
           testScope(slf4jApi, slf4jnop))
+
+lazy val bench = (project in file("kamon-bench"))
+  .dependsOn(core)
+  .settings(basicSettings: _*)
+  .settings(formatSettings: _*)
+  .settings(noPublishing: _*)
+  .enablePlugins(JmhPlugin)
 
 
 lazy val noPublishing = Seq(publish := (), publishLocal := (), publishArtifact := false)

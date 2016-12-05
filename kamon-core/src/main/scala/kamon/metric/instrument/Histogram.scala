@@ -200,7 +200,7 @@ class HdrHistogram(dynamicRange: DynamicRange) extends ModifiedAtomicHistogram(
   }
 }
 
-case class CompactHdrSnapshot(val numberOfMeasurements: Long, compactRecords: Array[Long], unitMagnitude: Int,
+case class CompactHdrSnapshot(numberOfMeasurements: Long, compactRecords: Array[Long], unitMagnitude: Int,
     subBucketHalfCount: Int, subBucketHalfCountMagnitude: Int) extends Histogram.Snapshot {
 
   def min: Long = if (compactRecords.length == 0) 0 else levelFromCompactRecord(compactRecords(0))

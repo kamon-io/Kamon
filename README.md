@@ -18,6 +18,11 @@ file:
 libraryDependencies += "kamon.io" %% "kamon-core" % "0.6.3"
 ```
 
+### Documentation
+
+Kamon information and documentation is available on the
+[website](http://kamon.io).
+
 ### Modules ###
 
 * [Play Framework]
