@@ -80,7 +80,7 @@ If you have a project you'd like to include in this list, either open a PR or le
 [JMX]: https://github.com/kamon-io/kamon-jmx
 [StatsD]: https://github.com/kamon-io/kamon-statsd
 [Riemann]: https://github.com/kamon-io/kamon-riemann 
-[Krhonus]: https://github.com/kamon-io/kamon-khronus 
+[Khronus]: https://github.com/kamon-io/kamon-khronus 
 [New Relic]: https://github.com/kamon-io/kamon-newrelic
 [InfluxDB]: https://github.com/kamon-io/kamon-influxdb
 
