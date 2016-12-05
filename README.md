@@ -47,7 +47,7 @@ Kamon information and documentation is available on the
 * [FluentD] 
 * [JMX] 
 * [Riemann]  
-* [Krhonus]  
+* [Khronus]  
 
 
 ### Projects using Kamon ###
