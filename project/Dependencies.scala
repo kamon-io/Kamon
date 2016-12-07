@@ -24,7 +24,10 @@ object Dependencies {
   )
 
   val sprayVersion      = "1.3.3"
-  val akkaVersion       = "2.3.14"
+  def akkaVersion(scalaVersion: String) = scalaVersion match {
+    case "2.11.6" => "2.3.14"
+    case "2.12.1" => "2.4.14"
+  }
   val aspectjVersion    = "1.8.9"
   val slf4jVersion      = "1.7.7"
   val play23Version     = "2.3.10"
@@ -32,9 +35,9 @@ object Dependencies {
   val play25Version     = "2.5.4"
   val elasticsearchVersion = "2.1.0"
 
-  val sprayJson         = "io.spray"                  %%  "spray-json"            % "1.3.1"
-  val sprayJsonLenses   = "net.virtual-void"          %%  "json-lenses"           % "0.6.0"
-  val scalatest         = "org.scalatest"             %%  "scalatest"             % "2.2.4"
+  val sprayJson         = "io.spray"                  %%  "spray-json"            % "1.3.2"
+  val sprayJsonLenses   = "net.virtual-void"          %%  "json-lenses"           % "0.6.2-SNAPSHOT"
+  val scalatest         = "org.scalatest"             %%  "scalatest"             % "3.0.1"
   val logback           = "ch.qos.logback"            %   "logback-classic"       % "1.0.13"
   val aspectJ           = "org.aspectj"               %   "aspectjweaver"         % aspectjVersion
   val newrelic          = "com.newrelic.agent.java"   %   "newrelic-agent"        % "3.26.1"
@@ -43,17 +46,17 @@ object Dependencies {
   val sprayRouting      = "io.spray"                  %%  "spray-routing"         % sprayVersion
   val sprayTestkit      = "io.spray"                  %%  "spray-testkit"         % sprayVersion
   val sprayClient       = "io.spray"                  %%  "spray-client"          % sprayVersion
-  val akkaActor         = "com.typesafe.akka"         %%  "akka-actor"            % akkaVersion
-  val akkaSlf4j         = "com.typesafe.akka"         %%  "akka-slf4j"            % akkaVersion
-  val akkaTestKit       = "com.typesafe.akka"         %%  "akka-testkit"          % akkaVersion
-  val akkaRemote        = "com.typesafe.akka"         %%  "akka-remote"           % akkaVersion
-  val akkaCluster       = "com.typesafe.akka"         %%  "akka-cluster"          % akkaVersion
+  def akkaActor(v: String)   = "com.typesafe.akka"    %%  "akka-actor"            % akkaVersion(v)
+  def akkaSlf4j(v: String)   = "com.typesafe.akka"    %%  "akka-slf4j"            % akkaVersion(v)
+  def akkaTestKit(v: String) = "com.typesafe.akka"    %%  "akka-testkit"          % akkaVersion(v)
+  def akkaRemote(v: String)  = "com.typesafe.akka"    %%  "akka-remote"           % akkaVersion(v)
+  def akkaCluster(v: String) = "com.typesafe.akka"    %%  "akka-cluster"          % akkaVersion(v)
   val slf4jApi          = "org.slf4j"                 %   "slf4j-api"             % slf4jVersion
   val slf4jnop          = "org.slf4j"                 %   "slf4j-nop"             % slf4jVersion
   val slf4jJul          = "org.slf4j"                 %   "jul-to-slf4j"          % slf4jVersion
   val slf4jLog4j        = "org.slf4j"                 %   "log4j-over-slf4j"      % slf4jVersion
-  val scalazConcurrent  = "org.scalaz"                %%  "scalaz-concurrent"     % "7.1.0"
-  val twitterUtilCore   = "com.twitter"               %%  "util-core"             % "6.34.0"
+  val scalazConcurrent  = "org.scalaz"                %%  "scalaz-concurrent"     % "7.1.11"
+  val twitterUtilCore   = "com.twitter"               %%  "util-core"             % "6.39.0"
   val sigarLoader       = "io.kamon"                  %   "sigar-loader"          % "1.6.5-rev002"
   val h2                = "com.h2database"            %   "h2"                    % "1.4.182"
   val el                = "org.glassfish"             %   "javax.el"              % "3.0.0"
@@ -61,6 +64,7 @@ object Dependencies {
   val easyMock          = "org.easymock"              %   "easymock"              % "3.2"
   val riemannClient     = "com.aphyr"                 %   "riemann-java-client"   % "0.4.1"
   val khronusClient     = "com.despegar"              %   "khronus-java-client"   % "0.0.5"
+  val protoBuf          = "com.google.protobuf"       % "protobuf-java"           % "2.5.0"
 
   //play 2.3.x
   val play23            = "com.typesafe.play"         %%  "play"                  % play23Version

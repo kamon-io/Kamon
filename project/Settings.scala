@@ -24,13 +24,13 @@ import scalariform.formatter.preferences._
 
 object Settings {
 
-  val JavaVersion = "1.6"
+  val JavaVersion = "1.8"
   val ScalaVersion = "2.11.6"
 
   lazy val basicSettings = Seq(
     ivyScala := ivyScala.value map { _.copy(overrideScalaVersion = true) },
     scalaVersion                    := ScalaVersion,
-    crossScalaVersions              := Seq("2.10.5", ScalaVersion),
+    crossScalaVersions              := Seq("2.10.5", ScalaVersion, "2.12.1"),
     resolvers                       ++= Dependencies.resolutionRepos,
     fork in run                     := true,
     parallelExecution in Global     := false,
@@ -49,7 +49,7 @@ object Settings {
       "-target:jvm-1.6",
       "-language:postfixOps",
       "-language:implicitConversions",
-      "-Yinline-warnings",
+      //"-Yinline-warnings",
       "-Xlog-reflective-calls"
     )) ++ publishSettings ++ releaseSettings
 
