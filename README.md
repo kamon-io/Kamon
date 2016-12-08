@@ -1,15 +1,22 @@
-Kamon     [![Build Status](https://travis-ci.org/kamon-io/Kamon.svg?branch=master)](https://travis-ci.org/kamon-io/Kamon)
-=========  
-
-Kamon is a set of tools for monitoring applications running on the JVM.
-
+# Kamon
+<img align="right" src="https://cdn.rawgit.com/kamon-io/Kamon/master/kamon-logo.svg" height="150px" style="padding-left: 20px"/>
+[![Build Status](https://travis-ci.org/kamon-io/Kamon.svg?branch=master)](https://travis-ci.org/kamon-io/Kamon)
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/kamon-io/Kamon?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-core_2.11/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-core_2.11)
 
+Kamon is a set of tools for monitoring applications running on the JVM.
 
 ### Getting Started
 
 Kamon is currently available for Scala 2.10, 2.11 and 2.12.
+
+Supported releases and dependencies are shown below.
+
+| kamon  | status | jdk  | scala            | akka   |
+|:------:|:------:|:----:|------------------|:------:|
+|  0.7.0 | stable | 1.8+ | 2.11, 2.12       | 2.4.x  |
+|  0.6.4 | stable | 1.7+ | 2.10, 2.11       | 2.3.x  |
+
 
 To get started with SBT, simply add the following to your `build.sbt`
 file:
