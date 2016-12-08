@@ -23,12 +23,12 @@ import scalariform.formatter.preferences._
 
 object Settings {
 
-  val JavaVersion = "1.6"
+  val JavaVersion = "1.7"
   val SVersion = "2.11.8"
 
   lazy val basicSettings = Seq(
     scalaVersion                    := SVersion,
-    crossScalaVersions              := Seq("2.10.5", SVersion, "2.12.0"),
+    crossScalaVersions              := Seq("2.10.5", SVersion),
     resolvers                       ++= Dependencies.resolutionRepos,
     fork in run                     := true,
     parallelExecution in Global     := false,
@@ -50,11 +50,6 @@ object Settings {
     "-language:postfixOps",
     "-language:implicitConversions",
     "-Xlog-reflective-calls"
-//    "-Yno-adapted-args",
-//    "-Ywarn-dead-code",
-//  "-Ywarn-unused-import"
-  //    "-Ywarn-numeric-widen",
-//    "-Ywarn-value-discard",
   )
 
   lazy val formatSettings = SbtScalariform.scalariformSettings ++ Seq(

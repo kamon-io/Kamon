@@ -22,7 +22,7 @@ object Dependencies {
     "Kamon Repository Snapshots" at "http://snapshots.kamon.io"
   )
 
-  val akkaVersion       = "2.4.12"
+  val akkaVersion       = "2.3.15"
   val slf4jVersion      = "1.7.7"
 
   val akkaSlf4j         = "com.typesafe.akka"         %%  "akka-slf4j"            % akkaVersion
