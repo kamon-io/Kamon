@@ -19,7 +19,7 @@ package kamon.trace
 import java.net.InetAddress
 import java.util.concurrent.atomic.AtomicLong
 import kamon.util.{NanoTimestamp, NanoInterval, Sequencer}
-import scala.concurrent.forkjoin.ThreadLocalRandom
+import java.util.concurrent.ThreadLocalRandom
 
 import scala.util.Try
 

@@ -17,10 +17,8 @@
 package kamon.metric
 
 import akka.testkit.ImplicitSender
-import com.typesafe.config.ConfigFactory
 import kamon.testkit.BaseKamonSpec
 import kamon.trace.Tracer
-import kamon.metric.instrument.Histogram
 
 import scala.util.control.NoStackTrace
 
@@ -28,7 +26,7 @@ class TraceMetricsSpec extends BaseKamonSpec("trace-metrics-spec") with Implicit
 
   "the TraceMetrics" should {
     "record the elapsed time between a trace creation and finish" in {
-      for (repetitions ← 1 to 10) {
+      for (_ ← 1 to 10) {
         Tracer.withContext(newContext("record-elapsed-time")) {
           Tracer.currentContext.finish()
         }

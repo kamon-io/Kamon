@@ -16,7 +16,6 @@
 
 package kamon.metric
 
-import com.typesafe.config.ConfigFactory
 import kamon.Kamon
 import kamon.metric.instrument.Histogram.MutableRecord
 import kamon.testkit.BaseKamonSpec

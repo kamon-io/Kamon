@@ -16,7 +16,7 @@
 
 package kamon.metric.instrument
 
-import java.util.concurrent.atomic.{AtomicLong, AtomicLongFieldUpdater, AtomicReference}
+import java.util.concurrent.atomic.{AtomicLong, AtomicReference}
 
 import akka.actor.Cancellable
 import kamon.metric.instrument.Gauge.CurrentValueCollector

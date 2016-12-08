@@ -8,7 +8,7 @@ object JavaTags {
    *  creating them directly from Java is quite verbose.
    */
   def tagsFromMap(tags: java.util.Map[String, String]): Map[String, String] = {
-    import scala.collection.JavaConversions._
-    tags.toMap
+    import scala.collection.JavaConverters._
+    tags.asScala.toMap
   }
 }

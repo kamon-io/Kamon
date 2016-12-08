@@ -23,7 +23,7 @@ import kamon.util.executors.ForkJoinPools.ForkJoinMetrics
 
 import scala.concurrent.forkjoin.ForkJoinPool
 
-object ForkJoinPools {
+object ForkJoinPools extends ForkJoinLowPriority {
   trait ForkJoinMetrics[T] {
     def getParallelism(fjp: T): Long
     def getPoolSize(fjp: T): Long
@@ -33,16 +33,6 @@ object ForkJoinPools {
     def getQueuedSubmissionCount(fjp: T): Long
   }
 
-  implicit object ScalaForkJoin extends ForkJoinMetrics[ForkJoinPool] {
-    def getParallelism(fjp: ForkJoinPool) = fjp.getParallelism
-    def getPoolSize(fjp: ForkJoinPool) = fjp.getPoolSize.toLong
-    def getRunningThreadCount(fjp: ForkJoinPool) = fjp.getActiveThreadCount.toLong
-    def getActiveThreadCount(fjp: ForkJoinPool) = fjp.getRunningThreadCount.toLong
-    def getQueuedTaskCount(fjp: ForkJoinPool) = fjp.getQueuedTaskCount
-    def getQueuedSubmissionCount(fjp: ForkJoinPool) = fjp.getQueuedSubmissionCount
-
-  }
-
   implicit object JavaForkJoin extends ForkJoinMetrics[JavaForkJoinPool] {
     def getParallelism(fjp: JavaForkJoinPool) = fjp.getParallelism
     def getPoolSize(fjp: JavaForkJoinPool) = fjp.getPoolSize.toLong
@@ -50,7 +40,17 @@ object ForkJoinPools {
     def getActiveThreadCount(fjp: JavaForkJoinPool) = fjp.getRunningThreadCount.toLong
     def getQueuedTaskCount(fjp: JavaForkJoinPool) = fjp.getQueuedTaskCount
     def getQueuedSubmissionCount(fjp: JavaForkJoinPool) = fjp.getQueuedSubmissionCount
+  }
+}
 
+trait ForkJoinLowPriority {
+  implicit object ScalaForkJoin extends ForkJoinMetrics[ForkJoinPool] {
+    def getParallelism(fjp: ForkJoinPool) = fjp.getParallelism
+    def getPoolSize(fjp: ForkJoinPool) = fjp.getPoolSize.toLong
+    def getRunningThreadCount(fjp: ForkJoinPool) = fjp.getActiveThreadCount.toLong
+    def getActiveThreadCount(fjp: ForkJoinPool) = fjp.getRunningThreadCount.toLong
+    def getQueuedTaskCount(fjp: ForkJoinPool) = fjp.getQueuedTaskCount
+    def getQueuedSubmissionCount(fjp: ForkJoinPool) = fjp.getQueuedSubmissionCount
   }
 }
 

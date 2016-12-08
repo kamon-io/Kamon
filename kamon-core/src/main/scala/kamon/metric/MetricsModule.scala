@@ -229,7 +229,6 @@ trait MetricsModule {
 }
 
 private[kamon] class MetricsModuleImpl(config: Config) extends MetricsModule {
-  import kamon.util.TriemapAtomicGetOrElseUpdate.Syntax
 
   private val _trackedEntities = TrieMap.empty[Entity, EntityRecorder]
   private val _subscriptions = new LazyActorRef
@@ -240,20 +239,19 @@ private[kamon] class MetricsModuleImpl(config: Config) extends MetricsModule {
     settings.entityFilters.get(entity.category).map {
       filter ⇒ filter.accept(entity.name)
 
-    } getOrElse (settings.trackUnmatchedEntities)
+    } getOrElse settings.trackUnmatchedEntities
 
   def registerHistogram(name: String, tags: Map[String, String], unitOfMeasurement: Option[UnitOfMeasurement],
     dynamicRange: Option[DynamicRange]): Histogram = {
 
     val histogramEntity = Entity(name, SingleInstrumentEntityRecorder.Histogram, tags)
-    val recorder = _trackedEntities.atomicGetOrElseUpdate(histogramEntity, {
+    val recorder = _trackedEntities.getOrElseUpdate(histogramEntity, {
       val factory = instrumentFactory(histogramEntity.category)
       HistogramRecorder(
         HistogramKey(histogramEntity.category, unitOfMeasurement.getOrElse(UnitOfMeasurement.Unknown)),
         factory.createHistogram(name, dynamicRange)
       )
-    }, _.cleanup)
-
+    })
     recorder.asInstanceOf[HistogramRecorder].instrument
   }
 
@@ -264,14 +262,13 @@ private[kamon] class MetricsModuleImpl(config: Config) extends MetricsModule {
     refreshInterval: Option[FiniteDuration]): MinMaxCounter = {
 
     val minMaxCounterEntity = Entity(name, SingleInstrumentEntityRecorder.MinMaxCounter, tags)
-    val recorder = _trackedEntities.atomicGetOrElseUpdate(minMaxCounterEntity, {
+    val recorder = _trackedEntities.getOrElseUpdate(minMaxCounterEntity, {
       val factory = instrumentFactory(minMaxCounterEntity.category)
       MinMaxCounterRecorder(
         MinMaxCounterKey(minMaxCounterEntity.category, unitOfMeasurement.getOrElse(UnitOfMeasurement.Unknown)),
         factory.createMinMaxCounter(name, dynamicRange, refreshInterval)
       )
-    }, _.cleanup)
-
+    })
     recorder.asInstanceOf[MinMaxCounterRecorder].instrument
   }
 
@@ -283,13 +280,13 @@ private[kamon] class MetricsModuleImpl(config: Config) extends MetricsModule {
     refreshInterval: Option[FiniteDuration] = None): Gauge = {
 
     val gaugeEntity = Entity(name, SingleInstrumentEntityRecorder.Gauge, tags)
-    val recorder = _trackedEntities.atomicGetOrElseUpdate(gaugeEntity, {
+    val recorder = _trackedEntities.getOrElseUpdate(gaugeEntity, {
       val factory = instrumentFactory(gaugeEntity.category)
       GaugeRecorder(
         GaugeKey(gaugeEntity.category, unitOfMeasurement.getOrElse(UnitOfMeasurement.Unknown)),
         factory.createGauge(name, dynamicRange, refreshInterval, valueCollector)
       )
-    }, _.cleanup)
+    })
 
     recorder.asInstanceOf[GaugeRecorder].instrument
   }
@@ -301,13 +298,13 @@ private[kamon] class MetricsModuleImpl(config: Config) extends MetricsModule {
     dynamicRange: Option[DynamicRange] = None): Counter = {
 
     val counterEntity = Entity(name, SingleInstrumentEntityRecorder.Counter, tags)
-    val recorder = _trackedEntities.atomicGetOrElseUpdate(counterEntity, {
+    val recorder = _trackedEntities.getOrElseUpdate(counterEntity, {
       val factory = instrumentFactory(counterEntity.category)
       CounterRecorder(
         CounterKey(counterEntity.category, unitOfMeasurement.getOrElse(UnitOfMeasurement.Unknown)),
         factory.createCounter()
       )
-    }, _.cleanup)
+    })
 
     recorder.asInstanceOf[CounterRecorder].instrument
   }
@@ -316,9 +313,9 @@ private[kamon] class MetricsModuleImpl(config: Config) extends MetricsModule {
     _trackedEntities.remove(Entity(name, SingleInstrumentEntityRecorder.Counter, tags)).isDefined
 
   def entity[T <: EntityRecorder](recorderFactory: EntityRecorderFactory[T], entity: Entity): T = {
-    _trackedEntities.atomicGetOrElseUpdate(entity, {
+    _trackedEntities.getOrElseUpdate(entity, {
       recorderFactory.createRecorder(instrumentFactory(recorderFactory.category))
-    }, _.cleanup).asInstanceOf[T]
+    }).asInstanceOf[T]
   }
 
   def removeEntity(entity: Entity): Boolean = {
