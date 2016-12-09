@@ -19,7 +19,6 @@ package kamon.metric
 import kamon.metric.instrument.Gauge.CurrentValueCollector
 import kamon.metric.instrument.Histogram.DynamicRange
 import kamon.metric.instrument._
-import kamon.util.Function
 
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.duration.FiniteDuration

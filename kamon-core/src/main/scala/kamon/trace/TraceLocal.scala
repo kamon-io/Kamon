@@ -16,8 +16,10 @@
 
 package kamon.trace
 
+import java.util.function.Supplier
+
 import kamon.trace.TraceLocal.TraceLocalKey
-import kamon.util.Supplier
+
 import scala.collection.concurrent.TrieMap
 
 object TraceLocal {

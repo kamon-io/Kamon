@@ -17,6 +17,7 @@
 package kamon.trace
 
 import java.util
+import java.util.function.Supplier
 
 import akka.actor._
 import akka.event.{Logging, LoggingAdapter}

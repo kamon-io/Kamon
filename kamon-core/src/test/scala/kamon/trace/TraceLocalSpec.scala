@@ -16,10 +16,11 @@
 
 package kamon.trace
 
+import java.util.function.Supplier
+
 import kamon.testkit.BaseKamonSpec
 import kamon.trace.TraceLocal.AvailableToMdc
 import kamon.trace.logging.MdcKeysSupport
-import kamon.util.Supplier
 import org.scalatest.concurrent.PatienceConfiguration
 import org.scalatest.OptionValues
 import org.slf4j.MDC
