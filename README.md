@@ -66,8 +66,6 @@ If you have a project you'd like to include in this list, either open a PR or le
 * [camel-kamon](https://github.com/osinka/camel-kamon): Kamon metrics and traces for Apache Camel routes, processors
 * [kamon-play-extensions](https://github.com/agiledigital/kamon-play-extensions): Kamon extensions for use in Play2 applications.
 
-----
-
 ## License
 
 This software is licensed under the Apache 2 license, quoted below.
