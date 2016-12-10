@@ -1,5 +1,5 @@
 # Kamon
-<img align="right" src="https://rawgit.com/kamon-io/Kamon/kamon-0.6.3.x/kamon-logo.svg" height="150px" style="padding-left: 20px"/>
+<img align="right" src="https://rawgit.com/kamon-io/Kamon/series/0.6.x/kamon-logo.svg" height="150px" style="padding-left: 20px"/>
 [![Build Status](https://travis-ci.org/kamon-io/Kamon.svg?branch=kamon-0.6.3x)](https://travis-ci.org/kamon-io/Kamon)
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/kamon-io/Kamon?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-core_2.10/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-core_2.10)
