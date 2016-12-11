@@ -17,23 +17,24 @@
 package kamon.testkit
 
 import akka.actor.ActorSystem
-import akka.testkit.{ImplicitSender, TestKitBase}
+import akka.testkit.{ ImplicitSender, TestKitBase }
 import com.typesafe.config.Config
 import kamon.Kamon
-import kamon.metric.{Entity, EntitySnapshot, SubscriptionsDispatcher}
+import kamon.metric.{ Entity, EntitySnapshot, SubscriptionsDispatcher }
 import kamon.trace.TraceContext
 import kamon.util.LazyActorRef
-import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
+import org.scalatest.{ BeforeAndAfterAll, Matchers, WordSpecLike }
 
 abstract class BaseKamonSpec(actorSystemName: String) extends TestKitBase with WordSpecLike with Matchers with ImplicitSender with BeforeAndAfterAll {
   lazy val collectionContext = Kamon.metrics.buildDefaultCollectionContext
   implicit lazy val system: ActorSystem = {
-    Kamon.start()
-    ActorSystem(actorSystemName, config)
+    Kamon.start(mergedConfig)
+    ActorSystem(actorSystemName, mergedConfig)
   }
 
-  def config: Config =
-    Kamon.config
+  def config: Config = Kamon.defaultConfig
+
+  def mergedConfig: Config = config.withFallback(Kamon.defaultConfig)
 
   def newContext(name: String): TraceContext =
     Kamon.tracer.newContext(name)
