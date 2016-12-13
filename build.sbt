@@ -56,7 +56,7 @@ lazy val testkit = (project in file("kamon-testkit"))
   .settings(formatSettings: _*)
   .settings(
         libraryDependencies ++=
-          compileScope(akkaActor, akkaDependency("testkit").value) ++
+          compileScope(akkaDependency("actor").value, akkaDependency("testkit").value) ++
           providedScope(aspectJ) ++
           testScope(slf4jApi, slf4jnop))
 

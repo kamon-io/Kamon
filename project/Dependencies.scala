@@ -23,21 +23,11 @@ object Dependencies {
     "Kamon Repository Snapshots" at "http://snapshots.kamon.io"
   )
 
-  val akkaVersion       = "2.3.15"
-  val slf4jVersion      = "1.7.7"
-
-  val akkaSlf4j         = "com.typesafe.akka"         %%  "akka-slf4j"            % akkaVersion
-  val akkaTestKit       = "com.typesafe.akka"         %%  "akka-testkit"          % akkaVersion
-  val akkaActor         = "com.typesafe.akka"         %%  "akka-actor"            % akkaVersion
-
-  val aspectJ           = "org.aspectj"               %   "aspectjweaver"         % "1.8.9"
+  val aspectJ           = "org.aspectj"               %   "aspectjweaver"         % "1.8.10"
   val hdrHistogram      = "org.hdrhistogram"          %   "HdrHistogram"          % "2.1.9"
-
-  val slf4jApi          = "org.slf4j"                 %   "slf4j-api"             % slf4jVersion
-  val slf4jnop          = "org.slf4j"                 %   "slf4j-nop"             % slf4jVersion
-
+  val slf4jApi          = "org.slf4j"                 %   "slf4j-api"             % "1.7.7"
+  val slf4jnop          = "org.slf4j"                 %   "slf4j-nop"             % "1.7.7"
   val logback           = "ch.qos.logback"            %   "logback-classic"       % "1.0.13"
-
   val scalatest         = "org.scalatest"             %%  "scalatest"             % "3.0.1"
 
   def akkaDependency(moduleName: String) = Def.setting {
