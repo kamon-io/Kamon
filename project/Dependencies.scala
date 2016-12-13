@@ -14,6 +14,7 @@
  */
 
 import sbt._
+import Keys._
 
 object Dependencies {
 
@@ -38,6 +39,13 @@ object Dependencies {
   val logback           = "ch.qos.logback"            %   "logback-classic"       % "1.0.13"
 
   val scalatest         = "org.scalatest"             %%  "scalatest"             % "3.0.1"
+
+  def akkaDependency(moduleName: String) = Def.setting {
+    scalaBinaryVersion.value match {
+      case "2.10" | "2.11"  => "com.typesafe.akka" %% s"akka-$moduleName" % "2.3.15"
+      case "2.12"           => "com.typesafe.akka" %% s"akka-$moduleName" % "2.4.14"
+    }
+  }
 
   def compileScope   (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "compile")
   def testScope      (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "test")

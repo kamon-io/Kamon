@@ -1,0 +1,27 @@
+<configuration scan="true">
+
+    <!--
+    if we use the AsyncAppender this value will not be available at the moment of log,
+    because the operation is executed in another ThreadPool,
+    in that case we need put the value the MDC like the [%X{User-Agent}]
+    -->
+    <conversionRule conversionWord="traceToken" converterClass="kamon.trace.logging.LogbackTraceTokenConverter" />
+
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%date{HH:mm:ss.SSS} %-5level [%traceToken][%X{User-Agent}] [%thread] %logger{55} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="ASYNC" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="STDOUT" />
+    </appender>
+
+    <logger name="play" level="INFO" />
+    <logger name="application" level="INFO" />
+
+    <root level="INFO">
+        <appender-ref ref="STDOUT" />
+    </root>
+
+</configuration>

@@ -23,12 +23,12 @@ import scalariform.formatter.preferences._
 
 object Settings {
 
-  val JavaVersion = "1.7"
-  val SVersion = "2.11.8"
+  val SVersion = "2.12.1"
 
   lazy val basicSettings = Seq(
+    ivyScala := ivyScala.value map { _.copy(overrideScalaVersion = true) },
     scalaVersion                    := SVersion,
-    crossScalaVersions              := Seq("2.10.5", SVersion),
+    crossScalaVersions              := Seq("2.10.6", "2.11.8", "2.12.1"),
     resolvers                       ++= Dependencies.resolutionRepos,
     fork in run                     := true,
     parallelExecution in Global     := false,
@@ -36,9 +36,7 @@ object Settings {
     javacOptions                    := commonJavaOptions
   ) ++ publishSettings ++ releaseSettings
 
-  lazy val commonJavaOptions = Seq(
-    "-Xlint:-options",
-    "-source", JavaVersion, "-target", JavaVersion)
+  lazy val commonJavaOptions = Seq("-Xlint:-options")
 
   lazy val commonScalacOptions = Seq(
     "-encoding",
@@ -49,7 +47,8 @@ object Settings {
     "-deprecation",
     "-language:postfixOps",
     "-language:implicitConversions",
-    "-Xlog-reflective-calls"
+    "-Xlog-reflective-calls",
+    "-Ywarn-dead-code"
   )
 
   lazy val formatSettings = SbtScalariform.scalariformSettings ++ Seq(
