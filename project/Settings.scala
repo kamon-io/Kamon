@@ -23,7 +23,6 @@ import scalariform.formatter.preferences._
 
 object Settings {
 
-  val JavaVersion = "1.7"
   val SVersion = "2.12.1"
 
   lazy val basicSettings = Seq(
