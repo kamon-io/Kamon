@@ -1,8 +1,8 @@
 # Kamon
 <img align="right" src="https://rawgit.com/kamon-io/Kamon/master/kamon-logo.svg" height="150px" style="padding-left: 20px"/>
-[![Build Status](https://travis-ci.org/kamon-io/Kamon.svg?branch=kamon-0.6.3x)](https://travis-ci.org/kamon-io/Kamon)
+[![Build Status](https://travis-ci.org/kamon-io/Kamon.svg?branch=master)](https://travis-ci.org/kamon-io/Kamon)
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/kamon-io/Kamon?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-core_2.10/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-core_2.10)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-core_2.12/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-core_2.12)
 
 Kamon is a set of tools for monitoring applications running on the JVM.
 
