@@ -20,7 +20,7 @@ To get started with SBT, simply add the following to your `build.sbt`
 file:
 
 ```scala
-libraryDependencies += "kamon.io" %% "kamon-core" % "0.6.4"
+libraryDependencies += "kamon.io" %% "kamon-core" % "0.6.5"
 ```
 
 ### Documentation
@@ -32,25 +32,25 @@ Kamon information and documentation is available on the
 
 * [Play Framework]
 * [Spray]  
-* [Akka] 
+* [Akka]
 * [Akka Remote]
 * [Akka Http]  
 * [Scala]  
 * [Annotation]
-* [System Metrics] 
+* [System Metrics]
 * [JDBC]  
 * [Elasticsearch]
 
 ### Backends ###
 
 * [Log Reporter]
-* [StatsD] 
-* [Datadog] 
+* [StatsD]
+* [Datadog]
 * [SPM]
-* [InfluxDB] 
+* [InfluxDB]
 * [New Relic]  
-* [FluentD] 
-* [JMX] 
+* [FluentD]
+* [JMX]
 * [Riemann]  
 * [Khronus]  
 
@@ -88,8 +88,8 @@ the License.
 [Akka]:https://github.com/kamon-io/kamon-akka                                          
 [Akka Remote]: https://github.com/kamon-io/kamon-akka-remote
 [Akka Http]: https://github.com/kamon-io/kamon-akka-http
-[Scala]: https://github.com/kamon-io/kamon-scala 
-[Annotation]: https://github.com/kamon-io/kamon-annotation 
+[Scala]: https://github.com/kamon-io/kamon-scala
+[Annotation]: https://github.com/kamon-io/kamon-annotation
 [System Metrics]: https://github.com/kamon-io/kamon-system-metrics
 [JDBC]: https://github.com/kamon-io/kamon-jdbc
 [Elasticsearch]: https://github.com/kamon-io/kamon-elasticsearch
@@ -100,9 +100,7 @@ the License.
 [FluentD]: https://github.com/kamon-io/kamon-fluentd
 [JMX]: https://github.com/kamon-io/kamon-jmx
 [StatsD]: https://github.com/kamon-io/kamon-statsd
-[Riemann]: https://github.com/kamon-io/kamon-riemann 
-[Khronus]: https://github.com/kamon-io/kamon-khronus 
+[Riemann]: https://github.com/kamon-io/kamon-riemann
+[Khronus]: https://github.com/kamon-io/kamon-khronus
 [New Relic]: https://github.com/kamon-io/kamon-newrelic
 [InfluxDB]: https://github.com/kamon-io/kamon-influxdb
-
-
