@@ -26,11 +26,12 @@ class Autoweave {
   val config = Kamon.config.getConfig("kamon.autowave.options")
   val verbose = config.getBoolean("verbose")
   val showWeaveInfo = config.getBoolean("showWeaveInfo")
-
-  def attach(): Unit = {
+  val shouldStart = config.getBoolean("shouldStart")
+  
+  def attach(): Unit = if (shouldStart) {
     Try(Agent.getInstrumentation) match {
-      case Success(_) => throw new RuntimeException("AspectJ weaving agent was started via '-javaagent'") with NoStackTrace
-      case Failure(NonFatal(_)) =>
+      case Success(_) ⇒ throw new RuntimeException("AspectJ weaving agent was started via '-javaagent'") with NoStackTrace
+      case Failure(NonFatal(_)) ⇒
         System.setProperty("aj.weaving.verbose", verbose.toString)
         System.setProperty("org.aspectj.weaver.showWeaveInfo", showWeaveInfo.toString)
 
