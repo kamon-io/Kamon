@@ -32,9 +32,9 @@ abstract class BaseKamonSpec(actorSystemName: String) extends TestKitBase with W
     ActorSystem(actorSystemName, mergedConfig)
   }
 
-  def config: Config = Kamon.defaultConfig
+  def config: Config = Kamon.config
 
-  def mergedConfig: Config = config.withFallback(Kamon.defaultConfig)
+  def mergedConfig: Config = config.withFallback(Kamon.config)
 
   def newContext(name: String): TraceContext =
     Kamon.tracer.newContext(name)

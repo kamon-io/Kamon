@@ -20,7 +20,7 @@ import kamon.util.ConfigTools.Syntax
 import com.typesafe.config.Config
 import kamon.util.NanoInterval
 
-case class TraceSettings(levelOfDetail: LevelOfDetail, sampler: Sampler, tokenGeneratorFQN: String)
+case class TraceSettings(levelOfDetail: LevelOfDetail, sampler: Sampler, tokenGenerator: () ⇒ String)
 
 object TraceSettings {
   def apply(config: Config): TraceSettings = {
@@ -42,8 +42,10 @@ object TraceSettings {
         case "clock"     ⇒ new ClockSampler(new NanoInterval(tracerConfig.getFiniteDuration("clock-sampler.pause").toNanos))
       }
 
+    val dynamic = new akka.actor.ReflectiveDynamicAccess(getClass.getClassLoader)
     val tokenGeneratorFQN = tracerConfig.getString("token-generator")
+    val tokenGenerator = dynamic.createInstanceFor[() ⇒ String](tokenGeneratorFQN, Nil).get // let's bubble up any problems.
 
-    TraceSettings(detailLevel, sampler, tokenGeneratorFQN)
+    TraceSettings(detailLevel, sampler, tokenGenerator)
   }
 }
