@@ -24,7 +24,7 @@ import scala.util.control.{NoStackTrace, NonFatal}
 import scala.util.{Failure, Success, Try}
 
 class Autoweave {
-  val log = LazyLogger(classOf[Agent])
+  val log = LazyLogger(classOf[Autoweave])
   val config = Kamon.config.getConfig("kamon.autowave.options")
   val verbose = config.getBoolean("verbose")
   val showWeaveInfo = config.getBoolean("show-weave-info")
