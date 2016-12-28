@@ -1,6 +1,6 @@
-Akka Integration   ![Build Status](https://travis-ci.org/kamon-io/kamon-akka.svg?branch=master)
-==========================
+# Akka Integration
 
+[![Build Status](https://travis-ci.org/kamon-io/kamon-akka.svg?branch=master)](https://travis-ci.org/kamon-io/kamon-akka)
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/kamon-io/Kamon?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 ***kamon-akka-2.3.x*** [![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-akka-23_2.11/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-akka_2.11)
