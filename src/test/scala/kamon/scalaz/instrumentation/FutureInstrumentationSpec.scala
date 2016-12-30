@@ -34,12 +34,12 @@ class FutureInstrumentationSpec extends BaseKamonSpec("future-instrumentation-sp
       "must be available when executing the future's body" in {
 
         val (future, testTraceContext) = Tracer.withContext(newContext("future-body")) {
-          val future = Future(Tracer.currentContext).start
+          val future = Future(Tracer.currentContext).unsafeStart
 
           (future, Tracer.currentContext)
         }
 
-        val ctxInFuture = future.run
+        val ctxInFuture = future.unsafePerformSync
         ctxInFuture should equal(testTraceContext)
       }
 
@@ -52,10 +52,10 @@ class FutureInstrumentationSpec extends BaseKamonSpec("future-instrumentation-sp
             .flatMap(len ⇒ Future(len.toString))
             .map(s ⇒ Tracer.currentContext)
 
-          (future.start, Tracer.currentContext)
+          (future.unsafeStart, Tracer.currentContext)
         }
 
-        val ctxInFuture = future.run
+        val ctxInFuture = future.unsafePerformSync
         ctxInFuture should equal(testTraceContext)
       }
     }
