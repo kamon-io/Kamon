@@ -1,15 +1,13 @@
-Scala Integration   ![Build Status](https://travis-ci.org/kamon-io/kamon-scala.svg?branch=master)
-==========================
+# Scala Integration   
 
+[![Build Status](https://travis-ci.org/kamon-io/kamon-scala.svg?branch=master)](https://travis-ci.org/kamon-io/kamon-scala)
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/kamon-io/Kamon?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-scala_2.11/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-scala_2.11)
 
-***kamon-scala*** [![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-play-25_2.11/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-scala_2.11)
-
-Automatic TraceContext Propagation with Futures
-===============================================
+## Automatic TraceContext Propagation with Futures
 
 The `kamon-scala` module provides bytecode instrumentation for both Scala, Scalaz and Twitter Futures that automatically
-propagates the `TraceContext` across the asynchronous operations that might be schedulede for a given `Future`.
+propagates the `TraceContext` across the asynchronous operations that might be scheduled for a given `Future`.
 
 The <b>kamon-scala</b> module require you to start your application using the AspectJ Weaver Agent. Kamon will warn you
 at startup if you failed to do so.
