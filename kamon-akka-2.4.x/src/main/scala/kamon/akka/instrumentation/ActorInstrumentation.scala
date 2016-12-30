@@ -11,6 +11,7 @@ import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
 
 import scala.collection.immutable
+import scala.util.Properties
 
 @Aspect
 class ActorCellInstrumentation {
@@ -74,7 +75,13 @@ class ActorCellInstrumentation {
   def aroundReplaceWithInRepointableActorRef(pjp: ProceedingJoinPoint, unStartedCell: UnstartedCell, cell: Cell): Unit = {
     // TODO: Find a way to do this without resorting to reflection and, even better, without copy/pasting the Akka Code!
     val unstartedCellClass = classOf[UnstartedCell]
-    val queueField = unstartedCellClass.getDeclaredField("akka$actor$UnstartedCell$$queue")
+
+    val queueFieldName = Properties.versionNumberString.split("\\.").take(2).mkString(".") match {
+      case _@ "2.11" ⇒ "akka$actor$UnstartedCell$$queue"
+      case _@ "2.12" ⇒ "queue"
+      case v         ⇒ throw new IllegalStateException(s"Incompatible Scala version: $v")
+    }
+    val queueField = unstartedCellClass.getDeclaredField(queueFieldName)
     queueField.setAccessible(true)
 
     val lockField = unstartedCellClass.getDeclaredField("lock")

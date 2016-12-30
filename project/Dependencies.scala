@@ -14,6 +14,7 @@
  */
 
 import sbt._
+import sbt.Keys._
 
 object Dependencies {
 
@@ -22,17 +23,16 @@ object Dependencies {
     "Kamon Repository Snapshots" at "http://snapshots.kamon.io"
   )
 
-  val kamonVersion      = "0.6.3"
-  val aspectjVersion    = "1.8.9"
+  val aspectjVersion      = "1.8.10"
+  val kamonVersion        = "0.6.5"
 
-  val akka23Version       = "2.3.13"
+  val akka23Version       = "2.3.16"
   val akka24Version       = "2.4.14"
 
   val aspectJ             = "org.aspectj"                 %   "aspectjweaver"         % aspectjVersion
 
   val kamonCore           = "io.kamon"                    %%  "kamon-core"            % kamonVersion
   val kamonScala          = "io.kamon"                    %%  "kamon-scala"           % kamonVersion
-  val kamonTestkit        = "io.kamon"                    %%  "kamon-testkit"         % kamonVersion
 
   val akkaActor23         = "com.typesafe.akka"           %%  "akka-actor"            % akka23Version
   val akkaSlf4j23         = "com.typesafe.akka"           %%  "akka-slf4j"            % akka23Version
@@ -42,8 +42,8 @@ object Dependencies {
   val akkaSlf4j24         = "com.typesafe.akka"           %%  "akka-slf4j"            % akka24Version
   val akkaTestKit24       = "com.typesafe.akka"           %%  "akka-testkit"          % akka24Version
 
-  val scalatest           = "org.scalatest"               %%  "scalatest"             % "2.2.4"
-  val logback             = "ch.qos.logback"              %   "logback-classic"       % "1.0.13"
+  val scalatest           = "org.scalatest"               %%  "scalatest"             % "3.0.1"
+  val logback             = "ch.qos.logback"              %   "logback-classic"       % "1.1.8"
 
   def compileScope   (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "compile")
   def providedScope  (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "provided")
