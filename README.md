@@ -2,8 +2,7 @@ System Metrics   ![Build Status](https://travis-ci.org/kamon-io/kamon-system-met
 ==========================
 
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/kamon-io/Kamon?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-
-***kamon-system-metrics*** [![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-system-metrics_2.11/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-system-metrics.11)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-system-metrics_2.11/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-system-metrics.11)
 
 Our `kamon-system-metrics` module registers a number of entities with the metrics module that track the performance
 indicators of both the host machine and the JVM where your application is running.
@@ -12,6 +11,24 @@ This module doesn't have any bytecode instrumentation requirement, and its only 
 the appropriate [Sigar] native library is correctly loaded. To do so, the `kamon-system-metrics` module makes use of the
 [sigar-loader] library. If your application uses Sigar for other purposes, it is advisable that you take a look at
 [sigar-loader] to simplify the sigar native library provisioning process.
+
+
+### Getting Started
+
+Kamon sytem-metrics module is currently available for Scala 2.10, 2.11 and 2.12.
+
+Supported releases and dependencies are shown below.
+
+| kamon-system-metrics  | status | jdk  | scala            | akka   |
+|:------:|:------:|:----:|------------------|:------:|
+|  0.6.5 | stable | 1.7+, 1.8+ | 2.10, 2.11, 2.12  | 2.3.x, 2.4.x |
+
+To get started with SBT, simply add the following to your `build.sbt`
+file:
+
+```scala
+libraryDependencies += "kamon.io" %% "kamon-system-metrics" % "0.6.5"
+``` 
 
 As you might expect, you and any other module can subscribe to all the metrics that are reported by this module using
 the `system-metric` category and the entity recorder names described bellow.
