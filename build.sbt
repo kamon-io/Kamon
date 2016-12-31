@@ -24,4 +24,4 @@ lazy val root = (project in file("."))
   .settings(
       libraryDependencies ++=
         compileScope(kamonCore, sigarLoader) ++
-        testScope(scalatest, akkaTestKit, akkaSlf4j, logback, slf4jJul))
+        testScope(scalatest, akkaDependency("testkit").value, akkaDependency("slf4j").value, logback, slf4jJul))
