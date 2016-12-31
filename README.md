@@ -4,6 +4,24 @@
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/kamon-io/Kamon?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-scala_2.11/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-scala_2.11)
 
+### Getting Started
+
+Kamon scala module is currently available for Scala 2.10, 2.11 and 2.12.
+
+Supported releases and dependencies are shown below.
+
+| kamon-scala  | status | jdk  | scala            | akka   |
+|:------:|:------:|:----:|------------------|:------:|
+|  0.6.5 | stable | 1.7+, 1.8+ | 2.10, 2.11, 2.12  | 2.3.x, 2.4.x |
+
+To get started with SBT, simply add the following to your `build.sbt`
+file:
+
+```scala
+libraryDependencies += "kamon.io" %% "kamon-scala" % "0.6.5"
+```
+
+
 ## Automatic TraceContext Propagation with Futures
 
 The `kamon-scala` module provides bytecode instrumentation for both Scala, Scalaz and Twitter Futures that automatically
