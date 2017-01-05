@@ -2,8 +2,7 @@ StatsD Integration    ![Build Status](https://travis-ci.org/kamon-io/kamon-stats
 ==========================
 
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/kamon-io/Kamon?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-
-***kamon-statsd*** [![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-statsd_2.11/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-statsd_2.11)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-statsd_2.11/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-statsd_2.11)
 
 Reporting Metrics to StatsD
 ===========================
@@ -13,15 +12,22 @@ to upstream services like (but not limited to) Graphite. Because it uses UDP, se
 fast with little to no overhead.
 
 
-Installation
-------------
+### Getting Started
 
-Add the `kamon-statsd` dependency to your project and ensure that it is in your classpath at runtime, that's it.
-Kamon's module loader will detect that the StatsD module is in the classpath and automatically start it.
+Kamon scala module is currently available for Scala 2.10, 2.11 and 2.12.
 
-Please note that even while the Datadog Agent uses a StatsD-like protocol, the protocol features used by this module are
-not compatible with Datadog's implementation. If you need to send data to Datadog then use our [Datadog Module].
+Supported releases and dependencies are shown below.
 
+| kamon-statsd  | status | jdk  | scala            | akka   |
+|:------:|:------:|:----:|------------------|:------:|
+|  0.6.5 | stable | 1.7+, 1.8+ | 2.10, 2.11, 2.12  | 2.3.x, 2.4.x |
+
+To get started with SBT, simply add the following to your `build.sbt`
+file:
+
+```scala
+libraryDependencies += "kamon.io" %% "kamon-statsd" % "0.6.5"
+```
 
 Configuration
 -------------

@@ -23,5 +23,5 @@ lazy val root = (project in file("."))
   .settings(formatSettings: _*)
   .settings(
       libraryDependencies ++=
-        compileScope(kamonCore, akkaActor) ++
-        testScope(scalatest, akkaTestKit, slf4jApi, slf4jnop))
+        compileScope(kamonCore, akkaDependency("actor").value) ++
+        testScope(scalatest, akkaDependency("testkit").value, slf4jApi, slf4jnop))
