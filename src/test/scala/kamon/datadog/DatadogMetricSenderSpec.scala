@@ -16,13 +16,13 @@
 
 package kamon.datadog
 
-import akka.testkit.{ TestKitBase, TestProbe }
-import akka.actor.{ Props, ActorRef, ActorSystem }
+import akka.testkit.{TestKitBase, TestProbe}
+import akka.actor.{Props, ActorRef, ActorSystem}
 import kamon.Kamon
 import kamon.metric.instrument._
 import kamon.testkit.BaseKamonSpec
 import kamon.util.MilliTimestamp
-import org.scalatest.{ Matchers, WordSpecLike }
+import org.scalatest.{Matchers, WordSpecLike}
 import kamon.metric._
 import akka.io.Udp
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
@@ -37,7 +37,7 @@ class DatadogMetricSenderSpec extends BaseKamonSpec("datadog-metric-sender-spec"
       val (entity, testRecorder) = buildRecorder("datadog")
       testRecorder.metricOne.record(10L)
 
-      val udp = setup(Map(entity -> testRecorder.collect(collectionContext)))
+      val udp = setup(Map(entity → testRecorder.collect(collectionContext)))
       val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
 
       data.utf8String should be(s"kamon.category.metric-one:10|ms|#category:datadog")
@@ -47,7 +47,7 @@ class DatadogMetricSenderSpec extends BaseKamonSpec("datadog-metric-sender-spec"
       val (entity, testRecorder) = buildRecorder("datadog")
       testRecorder.metricTwo.record(10L, 2)
 
-      val udp = setup(Map(entity -> testRecorder.collect(collectionContext)))
+      val udp = setup(Map(entity → testRecorder.collect(collectionContext)))
       val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
 
       data.utf8String should be(s"kamon.category.metric-two:10|ms|@0.5|#category:datadog")
@@ -65,7 +65,7 @@ class DatadogMetricSenderSpec extends BaseKamonSpec("datadog-metric-sender-spec"
         bytes += s"kamon.category.metric-one:$level|ms|#category:datadog".length
       }
 
-      val udp = setup(Map(entity -> testRecorder.collect(collectionContext)))
+      val udp = setup(Map(entity → testRecorder.collect(collectionContext)))
       udp.expectMsgType[Udp.Send] // let the first flush pass
 
       val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
@@ -79,30 +79,31 @@ class DatadogMetricSenderSpec extends BaseKamonSpec("datadog-metric-sender-spec"
       testRecorder.metricTwo.record(21L)
       testRecorder.counterOne.increment(4L)
 
-      val udp = setup(Map(entity -> testRecorder.collect(collectionContext)))
+      val udp = setup(Map(entity → testRecorder.collect(collectionContext)))
       val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
 
       data.utf8String.split("\n") should contain allOf (
         "kamon.category.metric-one:10|ms|@0.5|#category:datadog",
         "kamon.category.metric-two:21|ms|#category:datadog",
-        "kamon.category.counter:4|c|#category:datadog")
+        "kamon.category.counter:4|c|#category:datadog"
+      )
     }
 
     "include all entity tags, if available in the metric packet" in new UdpListenerFixture {
-      val (entity, testRecorder) = buildRecorder("datadog", tags = Map("my-cool-tag" -> "some-value"))
+      val (entity, testRecorder) = buildRecorder("datadog", tags = Map("my-cool-tag" → "some-value"))
       testRecorder.metricTwo.record(10L, 2)
 
-      val udp = setup(Map(entity -> testRecorder.collect(collectionContext)))
+      val udp = setup(Map(entity → testRecorder.collect(collectionContext)))
       val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
 
       data.utf8String should be(s"kamon.category.metric-two:10|ms|@0.5|#category:datadog,my-cool-tag:some-value")
     }
 
     "not include the entity-category:entity:name identification tag for single instrument entities" in new UdpListenerFixture {
-      val (entity, testRecorder) = buildSimpleCounter("example-counter", tags = Map("my-cool-tag" -> "some-value"))
+      val (entity, testRecorder) = buildSimpleCounter("example-counter", tags = Map("my-cool-tag" → "some-value"))
       testRecorder.instrument.increment(17)
 
-      val udp = setup(Map(entity -> testRecorder.collect(collectionContext)))
+      val udp = setup(Map(entity → testRecorder.collect(collectionContext)))
       val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
 
       data.utf8String should be(s"kamon.counter.example-counter:17|c|#my-cool-tag:some-value")

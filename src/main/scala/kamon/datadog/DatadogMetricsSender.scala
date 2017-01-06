@@ -16,14 +16,14 @@
 
 package kamon.datadog
 
-import akka.actor.{ ActorSystem, Props, ActorRef, Actor }
-import akka.io.{ Udp, IO }
+import akka.actor.{ActorSystem, Props, ActorRef, Actor}
+import akka.io.{Udp, IO}
 import java.net.InetSocketAddress
 import akka.util.ByteString
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
-import java.text.{ DecimalFormatSymbols, DecimalFormat }
-import kamon.metric.instrument.{ Counter, Histogram }
-import kamon.metric.{ SingleInstrumentEntityRecorder, MetricKey, Entity }
+import java.text.{DecimalFormatSymbols, DecimalFormat}
+import kamon.metric.instrument.{Counter, Histogram}
+import kamon.metric.{SingleInstrumentEntityRecorder, MetricKey, Entity}
 import java.util.Locale
 
 class DatadogMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long) extends Actor with UdpExtensionProvider {
