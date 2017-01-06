@@ -129,9 +129,10 @@ class AkkaHttpClientInstrumentationSpec extends BaseKamonSpec {
         val httpResponse = Await.result(responseFut, timeoutTest)
 
         httpResponse.status should be(InternalServerError)
-        testContext.finish()
+        testContext.finishWithError(new Exception("An Error Ocurred"))
 
         val traceMetricsSnapshot = takeSnapshotOf("assign-name-to-segment-with-request-level-api", "trace")
+        traceMetricsSnapshot.counter("errors").get.count should be(1)
         traceMetricsSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
 
         val segmentMetricsSnapshot = takeSnapshotOf(s"request-level /$dummyPathError", "trace-segment",

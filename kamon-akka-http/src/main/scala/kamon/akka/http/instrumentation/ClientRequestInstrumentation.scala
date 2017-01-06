@@ -25,6 +25,7 @@ import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
 
 import scala.concurrent.Future
+import scala.util._
 
 @Aspect
 class ClientRequestInstrumentation {
@@ -39,7 +40,10 @@ class ClientRequestInstrumentation {
         } else EmptyTraceContext.EmptySegment
 
       val responseFuture = pjp.proceed().asInstanceOf[Future[HttpResponse]]
-      responseFuture.onComplete(_ ⇒ segment.finish())(SameThreadExecutionContext)
+      responseFuture.onComplete {
+        case Success(_) ⇒ segment.finish()
+        case Failure(t) ⇒ segment.finishWithError(t)
+      }(SameThreadExecutionContext)
       responseFuture
     } getOrElse pjp.proceed()
   }
