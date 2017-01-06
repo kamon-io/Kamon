@@ -12,7 +12,7 @@ want to turn the massive amounts of data produced by their apps, tools and servi
 
 ### Getting Started
 
-Kamon scala module is currently available for Scala 2.10, 2.11 and 2.12.
+Kamon datadog module is currently available for Scala 2.10, 2.11 and 2.12.
 
 Supported releases and dependencies are shown below.
 
