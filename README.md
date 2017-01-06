@@ -14,7 +14,7 @@ fast with little to no overhead.
 
 ### Getting Started
 
-Kamon scala module is currently available for Scala 2.10, 2.11 and 2.12.
+Kamon statsd module is currently available for Scala 2.10, 2.11 and 2.12.
 
 Supported releases and dependencies are shown below.
 
@@ -37,7 +37,7 @@ keys to ensure your data is being sent to wherever your StatsD instance is runni
 the metric categories to which this module will subscribe using the `kamon.statsd.subscriptions` key. By default, the
 following subscriptions are included:
 
-```typesafeconfig 
+```typesafeconfig
 kamon.statsd {
   subscriptions {
     histogram       = [ "**" ]
@@ -102,7 +102,7 @@ gb - gigabytes
 ```
 For example,
 ```
-kamon.statsd.time-units = "ms" 
+kamon.statsd.time-units = "ms"
 ```
 will scale all timing measurements to milliseconds right before sending to StatsD.
 
