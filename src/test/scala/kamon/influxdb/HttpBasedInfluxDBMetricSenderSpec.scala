@@ -16,39 +16,61 @@
 
 package kamon.influxdb
 
-import akka.actor.{ ActorRef, Props }
-import akka.io.{ IO, Udp }
-import akka.testkit.TestProbe
+import akka.actor.Props
 import com.typesafe.config.{ Config, ConfigFactory }
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 import kamon.metric.{ Entity, EntitySnapshot }
 import kamon.testkit.BaseKamonSpec
-import spray.http.HttpRequest
-import spray.httpx.RequestBuilding.Post
-import spray.httpx.encoding.Deflate
+
+import scala.collection.mutable
+import scala.concurrent.duration._
+import scala.concurrent.{ Await, Promise }
+import scala.util.Success
+
+case class RequestData(uri: String, payload: String)
+
+class MockHttpClient extends HttpClient {
+  var requests: mutable.Queue[RequestData] = mutable.Queue()
+  val ready = Promise[Boolean]()
+
+  override def post(uri: String, payload: String): Unit = {
+    requests.enqueue(RequestData(uri, payload))
+    ready.complete(Success(true))
+  }
+}
 
 class HttpBasedInfluxDBMetricSenderSpec extends BaseKamonSpec("udp-based-influxdb-metric-sender-spec") {
   override lazy val config = ConfigFactory.load("http_test")
 
   class HttpSenderFixture(influxDBConfig: Config) extends SenderFixture {
-    def setup(metrics: Map[Entity, EntitySnapshot]): TestProbe = {
-      val http = TestProbe()
+    def setup(metrics: Map[Entity, EntitySnapshot]): MockHttpClient = {
+      val http = new MockHttpClient()
       val metricsSender = system.actorOf(newSender(http))
 
       val fakeSnapshot = TickMetricSnapshot(from, to, metrics)
       metricsSender ! fakeSnapshot
+      Await.result(http.ready.future, 2 seconds)
+
       http
     }
 
-    def getHttpRequest(http: TestProbe): HttpRequest = {
-      http.expectMsgType[HttpRequest]
-    }
+    def getHttpRequest(http: MockHttpClient): RequestData = http.requests.dequeue()
 
-    def newSender(httpProbe: TestProbe) =
+    def newSender(mockClient: MockHttpClient) =
       Props(new BatchInfluxDBMetricsPacker(influxDBConfig) {
-        override protected def httpRef: ActorRef = httpProbe.ref
+        override protected def httpClient: HttpClient = mockClient
         override def timestamp = from.millis
       })
+  }
+
+  def getQueryParameters(uri: String): Map[String, String] = {
+    uri.split('?') match {
+      case Array(_, query) ⇒ query.split('&').foldLeft(Map[String, String]())({ (acc, item) ⇒
+        val Array(key: String, value: String) = item.split('=')
+        acc ++ Map(key -> value)
+      })
+      case _ ⇒ Map()
+    }
   }
 
   "the HttpSender" should {
@@ -64,7 +86,7 @@ class HttpBasedInfluxDBMetricSenderSpec extends BaseKamonSpec("udp-based-influxd
       val expectedMessage = s"kamon-counters,category=test,entity=user-kamon,hostname=overridden,metric=metric-two value=1 ${from.millis * 1000000}"
 
       val request = getHttpRequest(http)
-      val requestData = request.entity.asString.split("\n")
+      val requestData = request.payload.split("\n")
 
       requestData should contain(expectedMessage)
     }
@@ -74,7 +96,7 @@ class HttpBasedInfluxDBMetricSenderSpec extends BaseKamonSpec("udp-based-influxd
       val http = setup(Map(testEntity -> testrecorder.collect(collectionContext)))
       val request = getHttpRequest(http)
 
-      val query = request.uri.query.toMap
+      val query = getQueryParameters(request.uri)
 
       query("db") shouldBe influxDBConfig.getString("database")
     }
@@ -84,7 +106,7 @@ class HttpBasedInfluxDBMetricSenderSpec extends BaseKamonSpec("udp-based-influxd
       val http = setup(Map(testEntity -> testrecorder.collect(collectionContext)))
       val request = getHttpRequest(http)
 
-      val query = request.uri.query.toMap
+      val query = getQueryParameters(request.uri)
 
       query("u") shouldBe configWithAuthAndRetention.getString("authentication.user")
       query("p") shouldBe configWithAuthAndRetention.getString("authentication.password")
@@ -99,7 +121,7 @@ class HttpBasedInfluxDBMetricSenderSpec extends BaseKamonSpec("udp-based-influxd
       val expectedMessage = s"kamon-counters,category=test,entity=user-kamon,hostname=$hostName,metric=metric-two value=3 ${from.millis * 1000000}"
 
       val request = getHttpRequest(http)
-      val requestData = request.entity.asString.split("\n")
+      val requestData = request.payload.split("\n")
 
       requestData should contain(expectedMessage)
     }
@@ -114,7 +136,7 @@ class HttpBasedInfluxDBMetricSenderSpec extends BaseKamonSpec("udp-based-influxd
       val expectedMessage = s"kamon-timers,category=test,entity=user-kamon,hostname=$hostName,metric=metric-one mean=7.5,lower=5,upper=10,p70.5=10,p50=5 ${from.millis * 1000000}"
 
       val request = getHttpRequest(http)
-      val requestData = request.entity.asString.split("\n")
+      val requestData = request.payload.split("\n")
 
       requestData should contain(expectedMessage)
     }
