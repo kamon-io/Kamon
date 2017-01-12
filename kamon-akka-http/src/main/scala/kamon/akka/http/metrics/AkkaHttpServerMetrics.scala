@@ -35,7 +35,7 @@ class AkkaHttpServerMetrics(instrumentFactory: InstrumentFactory) extends HttpSe
 
   def recordResponse(response: HttpResponse, traceName: String): Unit = {
     requestActive.decrement()
-    super.recordResponse(response.status.intValue.toString, traceName)
+    super.recordResponse(traceName, response.status.intValue.toString)
   }
 
   def recordConnectionOpened(): Unit = connectionOpen.increment()
