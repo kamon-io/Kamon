@@ -87,7 +87,7 @@ class AkkaHttpServerMetricsSpec extends BaseKamonSpec with Matchers {
         Http().outgoingConnection("localhost", port)
 
       // Erase metrics recorder from previous tests.
-      clean("akka-http-server", "akka-http-server")
+      clean("akka-http-server", "http-server")
 
       val okResponsesFut = for (repetition ← 1 to 10) yield {
         Source.single(HttpRequest(uri = metricsOk.withSlash))
@@ -103,7 +103,7 @@ class AkkaHttpServerMetricsSpec extends BaseKamonSpec with Matchers {
 
       Await.result(Future.sequence(okResponsesFut ++ badRequestResponsesFut), timeoutStartUpServer)
 
-      val snapshot = takeSnapshotOf("akka-http-server", "akka-http-server")
+      val snapshot = takeSnapshotOf("akka-http-server", "http-server")
       snapshot.counter("UnnamedTrace_200").get.count should be(10)
       snapshot.counter("UnnamedTrace_400").get.count should be(5)
       snapshot.counter("200").get.count should be(10)

@@ -42,4 +42,4 @@ class AkkaHttpServerMetrics(instrumentFactory: InstrumentFactory) extends HttpSe
   def recordConnectionClosed(): Unit = connectionOpen.decrement()
 }
 
-object AkkaHttpServerMetrics extends EntityRecorderFactoryCompanion[AkkaHttpServerMetrics]("akka-http-server", new AkkaHttpServerMetrics(_))
+object AkkaHttpServerMetrics extends EntityRecorderFactoryCompanion[AkkaHttpServerMetrics]("http-server", new AkkaHttpServerMetrics(_))
