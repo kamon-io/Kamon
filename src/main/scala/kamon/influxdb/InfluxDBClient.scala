@@ -18,29 +18,42 @@ package kamon.influxdb
 
 import java.net.InetSocketAddress
 
-import akka.actor.{ Actor, ActorContext, ActorRef, ActorSystem }
-import akka.event.Logging
-import akka.io.{ IO, Udp }
+import akka.actor._
+import akka.event.{ Logging, LoggingAdapter }
+import akka.io.Udp
 import akka.util.ByteString
-import com.typesafe.config.{ Config, ConfigFactory }
-import spray.can.Http
-import spray.client.pipelining._
-import spray.http._
-import spray.httpx.encoding.Deflate
+import com.typesafe.config.Config
+import org.asynchttpclient._
 
 import scala.concurrent.duration._
-import scala.util.{ Failure, Success }
+
+trait HttpClient {
+  def post(uri: String, payload: String): Unit
+}
+
+class AsyncHttpClient(logger: LoggingAdapter) extends HttpClient {
+  protected val aclient = new DefaultAsyncHttpClient()
+
+  override def post(uri: String, payload: String) =
+    aclient.preparePost(uri).setBody(payload).execute(
+      new AsyncCompletionHandler[Response] {
+        override def onCompleted(response: Response): Response = {
+          logger.debug(s"${response.getStatusCode} ${response.getStatusText}")
+          response
+        }
+
+        override def onThrowable(t: Throwable): Unit =
+          logger.error(t, s"Unable to send metrics to InfluxDB: ${t.getMessage}")
+      })
+}
 
 trait InfluxDBClient extends Actor {
   implicit protected val as = context.system
 }
 
-class InfluxDBHttpClient(config: Config, clientRef: ActorRef) extends InfluxDBClient {
-  import scala.concurrent.ExecutionContext.Implicits.global
-
+class InfluxDBHttpClient(config: Config, httpClient: HttpClient) extends InfluxDBClient {
   implicit protected val to = akka.util.Timeout(5 seconds)
   protected val logger = Logging(context.system, classOf[InfluxDBHttpClient])
-  protected lazy val httpClient = encode(Deflate) ~> sendReceive(clientRef) ~> decode(Deflate)
 
   protected val databaseUri = {
     val baseConfig = Map("db" -> config.getString("database"))
@@ -61,19 +74,16 @@ class InfluxDBHttpClient(config: Config, clientRef: ActorRef) extends InfluxDBCl
       withAuth
     }
 
-    Uri("/write").
-      withHost(config.getString("hostname")).
-      withPort(config.getInt("port")).
-      withScheme(config.getString("protocol")).
-      withQuery(query)
+    val queryString = query.map { case (key, value) ⇒ s"$key=$value" } match {
+      case Nil ⇒ ""
+      case xs  ⇒ s"?${xs.mkString("&")}"
+    }
+
+    s"${config.getString("protocol")}://${config.getString("hostname")}:${config.getString("port")}/write$queryString"
   }
 
   def receive = {
-    case payload: String ⇒
-      httpClient(Post(databaseUri, payload.getBytes)).onComplete {
-        case Success(response) ⇒ logger.info(response.status.toString())
-        case Failure(error)    ⇒ logger.error(error, s"Unable to send metrics to InfluxDB: ${error.getMessage}")
-      }
+    case payload: String ⇒ httpClient.post(databaseUri, payload)
   }
 }
 
