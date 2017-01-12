@@ -63,6 +63,7 @@ If you have a project you'd like to include in this list, either open a PR or le
 * [spray-kamon-metrics](https://github.com/MonsantoCo/spray-kamon-metrics): Better Kamon metrics for Spray services
 * [camel-kamon](https://github.com/osinka/camel-kamon): Kamon metrics and traces for Apache Camel routes, processors
 * [kamon-play-extensions](https://github.com/agiledigital/kamon-play-extensions): Kamon extensions for use in Play2 applications.
+* [kamon-logstash](https://github.com/darienmt/kamon-logstash): Kamon-logstash backend module.
 
 ## License
 
