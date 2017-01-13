@@ -76,14 +76,14 @@ object Kamon {
 
     def shutdown(): Unit = {
       if (started) {
-        actorSystem.terminate()
+        actorSystem.shutdown()
       }
     }
 
     private def defaultConfig = {
       patchConfiguration(
         ConfigFactory.load(
-          this.getClass.getClassLoader,
+          Thread.currentThread().getContextClassLoader(),
           ConfigParseOptions.defaults(),
           ConfigResolveOptions.defaults().setAllowUnresolved(true)
         )
