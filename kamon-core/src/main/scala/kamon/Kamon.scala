@@ -24,105 +24,92 @@ import kamon.util.logger.LazyLogger
 import _root_.scala.util.control.NonFatal
 import _root_.scala.util.{Failure, Success, Try}
 
-trait ConfigProvider {
-  def config: Config
-
-  final def patchedConfig: Config = {
-    val internalConfig = config.getConfig("kamon.internal-config")
-    config
-      .withoutPath("akka")
-      .withoutPath("spray")
-      .withFallback(internalConfig)
-  }
-}
-
 object Kamon {
-
-  private val log = LazyLogger("Kamon")
-
   trait Extension extends actor.Extension
 
-  def defaultConfig = ConfigFactory.load(this.getClass.getClassLoader, ConfigParseOptions.defaults(), ConfigResolveOptions.defaults().setAllowUnresolved(true))
+  @volatile private var kamonInstance = new Instance()
 
-  class KamonDefaultConfigProvider extends ConfigProvider {
-    def config = resolveConfiguration
+  def config = kamonInstance.config
+  def metrics = kamonInstance.metrics
+  def tracer = kamonInstance.tracer
 
-    private def resolveConfiguration: Config = {
-      val defaultConf = defaultConfig
+  def start(): Unit = synchronized {
+    kamonInstance.start()
+  }
 
-      defaultConf.getString("kamon.config-provider") match {
-        case "default" ⇒ defaultConf
-        case fqcn ⇒
-          val dynamic = new ReflectiveDynamicAccess(getClass.getClassLoader)
-          dynamic.createInstanceFor[ConfigProvider](fqcn, Nil).get.config
+  def start(conf: Config): Unit = synchronized {
+    kamonInstance.start(conf)
+  }
+
+  def shutdown(): Unit = synchronized {
+    kamonInstance.shutdown()
+    kamonInstance = new Instance()
+  }
+
+  private class Instance() {
+    private val log = LazyLogger(classOf[Instance])
+    private var actorSystem: ActorSystem = _
+
+    var started = false
+    var config: Config = defaultConfig
+    val metrics = MetricsModuleImpl(config)
+    val tracer = TracerModuleImpl(metrics, config)
+
+    private lazy val _start = {
+      log.info("Initializing Kamon...")
+      tryLoadAutoweaveModule()
+      actorSystem = ActorSystem("kamon", config)
+      metrics.start(actorSystem, config)
+      tracer.start(actorSystem, config)
+      actorSystem.registerExtension(ModuleLoader)
+      started = true
+    }
+
+    def start(): Unit = {
+      _start
+    }
+
+    def start(conf: Config): Unit = {
+      config = patchConfiguration(conf)
+      _start
+    }
+
+    def shutdown(): Unit = {
+      if (started) {
+        actorSystem.shutdown()
       }
     }
-  }
 
-  class KamonConfigProvider(_config: Config) extends ConfigProvider {
-    def config = _config
-  }
-
-  private[kamon] var configProvider: Option[ConfigProvider] = None
-  def config: Config =
-    configProvider match {
-      case Some(provider) ⇒ provider.config
-      case None           ⇒ throw new Exception("Kamon.start() not called yet")
+    private def defaultConfig = {
+      patchConfiguration(
+        ConfigFactory.load(
+          Thread.currentThread().getContextClassLoader(),
+          ConfigParseOptions.defaults(),
+          ConfigResolveOptions.defaults().setAllowUnresolved(true)
+        )
+      )
     }
-  lazy val metrics = MetricsModuleImpl(config)
-  lazy val tracer = TracerModuleImpl(metrics, config)
 
-  private lazy val _system = {
-    val patchedConfig =
-      configProvider match {
-        case Some(provider) ⇒ provider.patchedConfig
-        case None ⇒
-          throw new Exception("Kamon.start() not called yet")
+    private def patchConfiguration(config: Config): Config = {
+      val internalConfig = config.getConfig("kamon.internal-config")
+      config
+        .withoutPath("akka")
+        .withoutPath("spray")
+        .withFallback(internalConfig)
+    }
+
+    private def tryLoadAutoweaveModule(): Unit = {
+      Try {
+        val autoweave = Class.forName("kamon.autoweave.Autoweave")
+        autoweave.getDeclaredMethod("attach").invoke(autoweave.newInstance())
+      } match {
+        case Success(_) ⇒
+          val color = (msg: String) ⇒ s"""\u001B[32m${msg}\u001B[0m"""
+          log.info(color("Kamon-autoweave has been successfully loaded."))
+          log.info(color("The AspectJ load time weaving agent is now attached to the JVM (you don't need to use -javaagent)."))
+          log.info(color("This offers extra flexibility but obviously any classes loaded before attachment will not be woven."))
+        case Failure(NonFatal(reason)) ⇒ log.debug(s"Kamon-autoweave failed to load. Reason: ${reason.getMessage}.")
       }
-
-    log.info("Initializing Kamon...")
-
-    tryLoadAutoweaveModule()
-
-    ActorSystem("kamon", patchedConfig)
-  }
-
-  private lazy val _start = {
-    metrics.start(_system)
-    tracer.start(_system)
-    _system.registerExtension(ModuleLoader)
-  }
-
-  def start(): Unit = {
-    configProvider = Some(new KamonDefaultConfigProvider())
-    _start
-  }
-
-  def start(conf: Config): Unit = {
-    configProvider = Some(new KamonConfigProvider(conf))
-    _start
-  }
-
-  def start(provider: ConfigProvider): Unit = {
-    configProvider = Some(provider)
-    _start
-  }
-
-  def shutdown(): Unit = {
-    _system.shutdown()
-  }
-
-  private def tryLoadAutoweaveModule(): Unit = {
-    Try {
-      val autoweave = Class.forName("kamon.autoweave.Autoweave")
-      autoweave.getDeclaredMethod("attach").invoke(autoweave.newInstance())
-    } match {
-      case Success(_) ⇒
-        val color = (msg: String) ⇒ s"""\u001B[32m${msg}\u001B[0m"""
-        log.info(color("Kamon-autoweave has been successfully loaded."))
-        log.info(color("The AspectJ load time weaving agent is now attached to the JVM (you don't need to use -javaagent)."))
-        log.info(color("This offers extra flexibility but obviously any classes loaded before attachment will not be woven."))
-      case Failure(NonFatal(reason)) ⇒ log.debug(s"Kamon-autoweave failed to load. Reason: ${reason.getMessage}.")
     }
   }
 }

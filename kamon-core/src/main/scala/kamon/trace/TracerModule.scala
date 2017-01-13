@@ -117,14 +117,12 @@ object Tracer {
 }
 
 private[kamon] class TracerModuleImpl(metricsExtension: MetricsModule, config: Config) extends TracerModule {
-  private val _settings = TraceSettings(config)
+  @volatile private var _settings = TraceSettings(config)
 
   private val _subscriptions = new LazyActorRef
   private val _incubator = new LazyActorRef
-  private val _dynamic = new akka.actor.ReflectiveDynamicAccess(getClass.getClassLoader)
-  private val _tokenGenerator = _dynamic.createInstanceFor[() ⇒ String](_settings.tokenGeneratorFQN, Nil).get // let's bubble up any problems.
 
-  private def newToken: String = _tokenGenerator()
+  private def newToken: String = _settings.tokenGenerator()
 
   def newContext(name: String): TraceContext =
     createTraceContext(name, None)
@@ -180,7 +178,8 @@ private[kamon] class TracerModuleImpl(metricsExtension: MetricsModule, config: C
     _incubator.point(_system.actorOf(Incubator.props(subscriptions)))
   }
 
-  def start(system: ActorSystem): Unit = synchronized {
+  def start(system: ActorSystem, newConfig: Config): Unit = synchronized {
+    _settings = TraceSettings(newConfig)
     _system = system
     _logger = Logging(_system, "TracerModule")
     _start

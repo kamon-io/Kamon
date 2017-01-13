@@ -234,7 +234,7 @@ private[kamon] class MetricsModuleImpl(config: Config) extends MetricsModule {
   private val _trackedEntities = TrieMap.empty[Entity, EntityRecorder]
   private val _subscriptions = new LazyActorRef
 
-  val settings = MetricsSettings(config)
+  @volatile var settings = MetricsSettings(config)
 
   def shouldTrack(entity: Entity): Boolean =
     settings.entityFilters.get(entity.category).map {
@@ -360,7 +360,8 @@ private[kamon] class MetricsModuleImpl(config: Config) extends MetricsModule {
     settings.pointScheduler(DefaultRefreshScheduler(_system.scheduler, _system.dispatcher))
   }
 
-  def start(system: ActorSystem): Unit = synchronized {
+  def start(system: ActorSystem, newConfig: Config): Unit = synchronized {
+    settings = MetricsSettings(newConfig)
     _system = system
     _start
     _system = null
