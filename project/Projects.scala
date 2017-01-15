@@ -34,7 +34,7 @@ object Projects extends Build {
     .settings(formatSettings: _*)
     .settings(aspectJSettings: _*)
     .settings(libraryDependencies ++=
-      compile(httpExperimental, httpCore, kamonCore, kamonAkka) ++
+      compile(http, kamonCore, kamonAkka) ++
       test(httpTestKit, scalatest, slf4jApi, slf4jnop) ++
       provided(aspectJ))
 
@@ -44,7 +44,7 @@ object Projects extends Build {
     .settings(formatSettings: _*)
     .settings(aspectjSettingsInRun: _*)
     .settings(libraryDependencies ++=
-      compile(httpExperimental, httpCore, kamonLogReporter) ++
+      compile(http, kamonLogReporter) ++
       test(httpTestKit, scalatest, slf4jApi, slf4jnop) ++
       provided(aspectJ))
     .settings(noPublishing: _*)
