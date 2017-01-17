@@ -14,35 +14,26 @@
  */
 
 
-import Settings._
-import Dependencies._
-
 lazy val kamon = (project in file("."))
   .settings(moduleName := "root")
-  .settings(basicSettings: _*)
-  .settings(formatSettings: _*)
   .settings(noPublishing: _*)
   .aggregate(core, autoweave, testkit, bench)
 
 
 lazy val core = (project in file("kamon-core"))
   .settings(moduleName := "kamon-core")
-  .settings(basicSettings: _*)
-  .settings(formatSettings: _*)
   .settings(
         libraryDependencies ++=
           compileScope(akkaDependency("actor").value, hdrHistogram, slf4jApi) ++
           providedScope(aspectJ) ++
-          optionalScope(logback) ++
-          testScope(scalatest, akkaDependency("testkit").value, akkaDependency("slf4j").value, logback))
+          optionalScope(logbackClassic) ++
+          testScope(scalatest, akkaDependency("testkit").value, akkaDependency("slf4j").value, logbackClassic))
 
 
 
 lazy val autoweave = (project in file("kamon-autoweave"))
   .dependsOn(core)
   .settings(moduleName := "kamon-autoweave")
-  .settings(basicSettings: _*)
-  .settings(formatSettings: _*)
   .settings(
         libraryDependencies ++=
           compileScope(aspectJ) ++
@@ -52,8 +43,6 @@ lazy val autoweave = (project in file("kamon-autoweave"))
 lazy val testkit = (project in file("kamon-testkit"))
   .dependsOn(core)
   .settings(moduleName := "kamon-testkit")
-  .settings(basicSettings: _*)
-  .settings(formatSettings: _*)
   .settings(
         libraryDependencies ++=
           compileScope(akkaDependency("actor").value, akkaDependency("testkit").value) ++
@@ -63,10 +52,5 @@ lazy val testkit = (project in file("kamon-testkit"))
 lazy val bench = (project in file("kamon-bench"))
   .dependsOn(core)
   .settings(moduleName := "kamon-bench")
-  .settings(basicSettings: _*)
-  .settings(formatSettings: _*)
   .settings(noPublishing: _*)
   .enablePlugins(JmhPlugin)
-
-
-lazy val noPublishing = Seq(publish := (), publishLocal := (), publishArtifact := false)
