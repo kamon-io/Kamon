@@ -2,10 +2,7 @@
 
 [![Build Status](https://travis-ci.org/kamon-io/kamon-akka.svg?branch=master)](https://travis-ci.org/kamon-io/kamon-akka)
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/kamon-io/Kamon?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-
-***kamon-akka-2.3.x*** [![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-akka-23_2.11/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-akka_2.11)
-
-***kamon-akka-2.4.x*** [![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-akka-24_2.11/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-akka_2.11)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-akka-2.4_2.12/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-akka-2.4_2.12)
 
 Kamon's integration with Akka comes in the form of two modules: `kamon-akka` and `kamon-akka-remote` that bring bytecode
 instrumentation to gather metrics and perform automatic `TraceContext` propagation on your behalf.
