@@ -12,9 +12,28 @@ instrumentation to gather metrics and perform automatic `TraceContext` propagati
 
 The <b>kamon-akka</b> module require you to start your application using the AspectJ Weaver Agent. Kamon will warn you at startup if you failed to do so.
 
-Here is a quick list of the functionalities included on each module:
+### Getting Started
 
-### kamon-akka ###
+Kamon akka module is currently available for Scala 2.10, 2.11 and 2.12.
+
+Supported releases and dependencies are shown below.
+
+| kamon-akka-2.3  | status | jdk  | scala            | akka   |
+|:------:|:------:|:----:|------------------|:------:|
+|  0.6.5 | stable | 1.7+, 1.8+ | 2.10, 2.11  | 2.3.x |
+
+| kamon-akka-2.4  | status | jdk  | scala            | akka   |
+|:------:|:------:|:----:|------------------|:------:|
+|  0.6.5 | stable | 1.7+, 1.8+ | 2.11, 2.12  | 2.4.x |
+
+To get started with SBT, simply add the following to your `build.sbt`
+file:
+
+```scala
+libraryDependencies += "kamon.io" %% "kamon-akka-2.4" % "0.6.5"
+```
+
+Here is a quick list of the functionalities included in the module:
 
 * __[Actor, Router and Dispatcher Metrics]__: This module hooks into Akka's heart to give you a robust set of metrics
 based on the concepts already exposed by our metrics module.
