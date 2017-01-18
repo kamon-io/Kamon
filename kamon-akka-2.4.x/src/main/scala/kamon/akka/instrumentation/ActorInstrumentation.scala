@@ -73,22 +73,10 @@ class ActorCellInstrumentation {
 
   @Around("replaceWithInRepointableActorRef(unStartedCell, cell)")
   def aroundReplaceWithInRepointableActorRef(pjp: ProceedingJoinPoint, unStartedCell: UnstartedCell, cell: Cell): Unit = {
+    import ActorCellInstrumentation._
     // TODO: Find a way to do this without resorting to reflection and, even better, without copy/pasting the Akka Code!
-    val unstartedCellClass = classOf[UnstartedCell]
-
-    val queueFieldName = Properties.versionNumberString.split("\\.").take(2).mkString(".") match {
-      case _@ "2.11" ⇒ "akka$actor$UnstartedCell$$queue"
-      case _@ "2.12" ⇒ "queue"
-      case v         ⇒ throw new IllegalStateException(s"Incompatible Scala version: $v")
-    }
-    val queueField = unstartedCellClass.getDeclaredField(queueFieldName)
-    queueField.setAccessible(true)
-
-    val lockField = unstartedCellClass.getDeclaredField("lock")
-    lockField.setAccessible(true)
-
-    val queue = queueField.get(unStartedCell).asInstanceOf[java.util.LinkedList[_]]
-    val lock = lockField.get(unStartedCell).asInstanceOf[ReentrantLock]
+    val queue = unstartedCellQueueField.get(unStartedCell).asInstanceOf[java.util.LinkedList[_]]
+    val lock = unstartedCellLockField.get(unStartedCell).asInstanceOf[ReentrantLock]
 
     def locked[T](body: ⇒ T): T = {
       lock.lock()
@@ -136,6 +124,26 @@ class ActorCellInstrumentation {
   def beforeInvokeFailure(cell: ActorCell, childrenNotToSuspend: immutable.Iterable[ActorRef], failure: Throwable): Unit = {
     actorInstrumentation(cell).processFailure(failure)
   }
+}
+
+object ActorCellInstrumentation {
+  private val (unstartedCellQueueField, unstartedCellLockField) = {
+    val unstartedCellClass = classOf[UnstartedCell]
+    val queueFieldName = Properties.versionNumberString.split("\\.").take(2).mkString(".") match {
+      case _@ "2.11" ⇒ "akka$actor$UnstartedCell$$queue"
+      case _@ "2.12" ⇒ "queue"
+      case v         ⇒ throw new IllegalStateException(s"Incompatible Scala version: $v")
+    }
+
+    val queueField = unstartedCellClass.getDeclaredField(queueFieldName)
+    queueField.setAccessible(true)
+
+    val lockField = unstartedCellClass.getDeclaredField("lock")
+    lockField.setAccessible(true)
+
+    (queueField, lockField)
+  }
+
 }
 
 trait ActorInstrumentationAware {
