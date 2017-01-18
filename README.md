@@ -41,7 +41,7 @@ convention as described in the [event based threading model section].
 Pattern timesout.
 
 
-[event based threading model section]: /core/tracing/threading-model-considerations/
-[Ask Pattern Timeout Warning]: /integrations/akka/ask-pattern-timeout-warning/
-[Actor, Router and Dispatcher Metrics]: /integrations/akka/actor-router-and-dispatcher-metrics/
-[Automatic TraceContext Propagation]: /integrations/akka/automatic-trace-context-propagation/
+[event based threading model section]: http://kamon.io/core/tracing/threading-model-considerations/
+[Ask Pattern Timeout Warning]: http://kamon.io/integrations/akka/ask-pattern-timeout-warning/
+[Actor, Router and Dispatcher Metrics]: http://kamon.io/integrations/akka/actor-router-and-dispatcher-metrics/
+[Automatic TraceContext Propagation]: http://kamon.io/integrations/akka/automatic-trace-context-propagation/
