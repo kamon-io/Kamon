@@ -13,32 +13,35 @@
  * =========================================================================================
  */
 
-import AspectJ._
-import Settings._
-import Dependencies._
+
+val kamonCore = "io.kamon" %% "kamon-core" % "0.6.5"
+val kamonScala = "io.kamon" %% "kamon-scala" % "0.6.5"
+
+lazy val `kamon-akka` = (project in file("."))
+    .settings(noPublishing: _*)
+    .aggregate(kamonAkka23, kamonAkka24)
+
 
 lazy val kamonAkka23 = Project("kamon-akka-23", file("kamon-akka-2.3.x"))
-  .settings(basicSettings: _* )
-  .settings(crossScalaVersions := crossVersionAkka23)
-  .settings(formatSettings: _*)
+  .settings(Seq(
+    scalaVersion := "2.11.8",
+    crossScalaVersions := Seq("2.10.6", "2.11.8")))
   .settings(aspectJSettings: _*)
   .settings(
-      libraryDependencies ++=
-        compileScope(akkaActor23, kamonCore, kamonScala) ++
-        providedScope(aspectJ) ++
-        optionalScope(logback) ++
-        testScope(scalatest, akkaTestKit23, akkaSlf4j23, logback))
+    libraryDependencies ++=
+      compileScope(akkaDependency("actor").value, kamonCore, kamonScala) ++
+      providedScope(aspectJ) ++
+      optionalScope(logbackClassic) ++
+      testScope(scalatest, akkaDependency("testkit").value, akkaDependency("slf4j").value, logbackClassic))
 
 lazy val kamonAkka24 = Project("kamon-akka-24", file("kamon-akka-2.4.x"))
-  .settings(basicSettings: _* )
-  .settings(crossScalaVersions := crossVersionAkka24)
-  .settings(formatSettings: _*)
+  .settings(Seq(
+    scalaVersion := "2.12.1",
+    crossScalaVersions := Seq("2.11.8", "2.12.1")))
   .settings(aspectJSettings: _*)
   .settings(
-      libraryDependencies ++=
-        compileScope(akkaActor24, kamonCore, kamonScala) ++
-        providedScope(aspectJ) ++
-        optionalScope(logback) ++
-        testScope(scalatest, akkaTestKit24, akkaSlf4j24, logback))
-
-def noPublishing = Seq(publish := (), publishLocal := (), publishArtifact := false)
+    libraryDependencies ++=
+      compileScope(akkaDependency("actor").value, kamonCore, kamonScala) ++
+      providedScope(aspectJ) ++
+      optionalScope(logbackClassic) ++
+      testScope(scalatest, akkaDependency("testkit").value, akkaDependency("slf4j").value, logbackClassic))
