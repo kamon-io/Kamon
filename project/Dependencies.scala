@@ -22,7 +22,7 @@ object Dependencies {
     "Kamon Repository Snapshots" at "http://snapshots.kamon.io"
   )
 
-  val kamonVersion      = "0.6.3"
+  val kamonVersion      = "0.6.5"
   val aspectjVersion    = "1.8.9"
   val play23Version     = "2.3.10"
   val play24Version     = "2.4.8"
