@@ -45,6 +45,11 @@ class GraphiteExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   }
 }
 
+trait MetricPacket {
+  def append(metricName: String, value: Long): MetricPacket
+  def byteString(): ByteString
+}
+
 trait MetricPacking {
 
   private def sanitize(value: String): String =
@@ -61,7 +66,7 @@ trait MetricPacking {
       .append(sanitize(key.name))
       .toString()
 
-  private def newMetricPacket(baseName: String, timestamp: Long) = new {
+  private def newMetricPacket(baseName: String, timestamp: Long) = new MetricPacket {
     private val builder = new java.lang.StringBuilder()
 
     def append(metricName: String, value: Long): this.type = {
