@@ -3,7 +3,7 @@
 # Adapted from https://github.com/paulp/psp-std/blob/master/bin/test
 
 runTests () {
-  sbt "project kamon-play-23" test && sbt "project kamon-play-24" test && sbt "project kamon-play-25" test || exit 1
+  sbt "project kamon-play-23" +test && sbt "project kamon-play-24" +test && sbt "project kamon-play-25" +test || exit 1
   echo "[info] $(date) - finished sbt test"
 }
 

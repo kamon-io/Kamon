@@ -13,18 +13,41 @@
  * =========================================================================================
  */
 
+val play23Version     = "2.3.10"
+val play24Version     = "2.4.8"
+val play25Version     = "2.5.4"
 
-import AspectJ._
-import Settings._
-import Dependencies._
+val kamonCore         = "io.kamon"                  %%  "kamon-core"            % "0.6.6"
+val kamonScala        = "io.kamon"                  %%  "kamon-scala"           % "0.6.5"
+
+//play 2.3.x
+val play23            = "com.typesafe.play"         %%  "play"                  % play23Version
+val playWS23          = "com.typesafe.play"         %%  "play-ws"               % play23Version
+val playTest23        = "org.scalatestplus"         %%  "play"                  % "1.2.0"
+
+//play 2.4.x
+val play24            = "com.typesafe.play"         %%  "play"                  % play24Version
+val playWS24          = "com.typesafe.play"         %%  "play-ws"               % play24Version
+val playTest24        = "org.scalatestplus"         %%  "play"                  % "1.4.0-M2"
+val typesafeConfig    = "com.typesafe"              %   "config"                % "1.2.1"
+
+//play 2.5.x
+val play25            = "com.typesafe.play"         %%  "play"                  % play25Version
+val playWS25          = "com.typesafe.play"         %%  "play-ws"               % play25Version
+val playTest25        = "org.scalatestplus.play"    %%  "scalatestplus-play"    % "1.5.0"
+
+
 
 lazy val kamonPlay = Project("kamon-play", file("."))
-  .enablePlugins(CrossPerProjectPlugin)
   .settings(noPublishing: _*)
+  .aggregate(kamonPlay23, kamonPlay24, kamonPlay25)
 
 lazy val kamonPlay23 = Project("kamon-play-23", file("kamon-play-2.3.x"))
-  .settings(basicSettings: _*)
-  .settings(formatSettings: _*)
+  .settings(Seq(
+      moduleName := "kamon-play-2.3",
+      scalaVersion := "2.11.8",
+      crossScalaVersions := Seq("2.10.6", "2.11.8"),
+      testGrouping in Test := singleTestPerJvm((definedTests in Test).value, (javaOptions in Test).value)))
   .settings(aspectJSettings: _*)
   .settings(
     libraryDependencies ++=
@@ -33,8 +56,11 @@ lazy val kamonPlay23 = Project("kamon-play-23", file("kamon-play-2.3.x"))
       testScope(playTest23))
 
 lazy val kamonPlay24 = Project("kamon-play-24", file("kamon-play-2.4.x"))
-  .settings(basicSettings: _*)
-  .settings(formatSettings: _*)
+  .settings(Seq(
+      moduleName := "kamon-play-2.4",
+      scalaVersion := "2.11.8",
+      crossScalaVersions := Seq("2.10.6", "2.11.8"),
+    testGrouping in Test := singleTestPerJvm((definedTests in Test).value, (javaOptions in Test).value)))
   .settings(aspectJSettings: _*)
   .settings(
     libraryDependencies ++=
@@ -43,14 +69,23 @@ lazy val kamonPlay24 = Project("kamon-play-24", file("kamon-play-2.4.x"))
       testScope(playTest24))
 
 lazy val kamonPlay25 = Project("kamon-play-25", file("kamon-play-2.5.x"))
-  .settings(basicSettings: _*)
-  .settings(formatSettings: _*)
+  .settings(Seq(
+      moduleName := "kamon-play-2.5",
+      scalaVersion := "2.11.8",
+      crossScalaVersions := Seq("2.11.8"),
+      testGrouping in Test := singleTestPerJvm((definedTests in Test).value, (javaOptions in Test).value)))
   .settings(aspectJSettings: _*)
   .settings(
-    crossScalaVersions := Seq(SVersion),
     libraryDependencies ++=
       compileScope(play25, playWS25, kamonCore, kamonScala) ++
       providedScope(aspectJ, typesafeConfig) ++
       testScope(playTest25))
 
-def noPublishing = Seq(publish := (), publishLocal := (), publishArtifact := false)
+import sbt.Tests._
+def singleTestPerJvm(tests: Seq[TestDefinition], jvmSettings: Seq[String]): Seq[Group] =
+  tests map { test =>
+    Group(
+      name = test.name,
+      tests = Seq(test),
+      runPolicy = SubProcess(ForkOptions(runJVMOptions = jvmSettings)))
+  }
