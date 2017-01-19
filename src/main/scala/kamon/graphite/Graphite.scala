@@ -88,6 +88,7 @@ trait MetricPacking {
 
   def packHistogram(prefix: String, entity: Entity, histogramKey: HistogramKey, snapshot: Histogram.Snapshot, timestamp: Long): ByteString = {
     newMetricPacket(baseName(prefix, entity, histogramKey), timestamp)
+      .append("count", snapshot.numberOfMeasurements)
       .append("min", snapshot.min)
       .append("max", snapshot.max)
       .append("p50", snapshot.percentile(50D))
