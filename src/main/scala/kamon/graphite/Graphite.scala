@@ -94,6 +94,7 @@ trait MetricPacking {
       .append("p50", snapshot.percentile(50D))
       .append("p90", snapshot.percentile(90D))
       .append("p99", snapshot.percentile(99D))
+      .append("sum", snapshot.sum)
       .byteString()
   }
 
@@ -101,6 +102,7 @@ trait MetricPacking {
     newMetricPacket(baseName(prefix, entity, histogramKey), timestamp)
       .append("min", snapshot.min)
       .append("max", snapshot.max)
+      .append("sum", snapshot.sum)
       .append("avg", (snapshot.sum / snapshot.numberOfMeasurements))
       .byteString()
   }
