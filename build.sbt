@@ -21,7 +21,7 @@ val kamonLogReporter = "io.kamon" %% "kamon-log-reporter"    % "0.6.5"
 val http         = "com.typesafe.akka" %% "akka-http"          % "10.0.1"
 val httpTestKit  = "com.typesafe.akka" %% "akka-http-testkit"  % "10.0.1"
 
-lazy val kamonAkkaHttpRoot = (project in file("."))
+lazy val root = (project in file("."))
   .aggregate(kamonAkkaHttp, kamonAkkaHttpPlayground)
   .settings(noPublishing: _*)
 
