@@ -13,14 +13,21 @@ Kamon akka-http
 * [HttpServerMetrics] that gather metrics with status code and categories + request-active and connection-open (as your snippet)
 * [Segments] for client-side requests
 
-##Get started
+### Getting Started
 
-###Configure
+Kamon akka-http module is currently available for Scala 2.11 and 2.12.
 
-The artifact is available on Maven Central.
+Supported releases and dependencies are shown below.
 
-```
-  "io.kamon" %% "kamon-akka-http" % "0.6.6"
+| kamon-akka-http  | status | jdk  | scala            | akka   |
+|:------:|:------:|:----:|------------------|:------:|
+|  0.6.5 | stable | 1.8+ |  2.11, 2.12  | 2.4.x |
+
+To get started with SBT, simply add the following to your `build.sbt`
+file:
+
+```scala
+libraryDependencies += "kamon.io" %% "kamon-akka-http" % "0.6.5"
 ```
 
 The following is an example of a configuration to provide metrics to a server, such as Statsd.
