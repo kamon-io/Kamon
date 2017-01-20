@@ -39,7 +39,7 @@ class AkkaHttpClientInstrumentationSpec extends BaseKamonSpec {
   implicit private val materializer = ActorMaterializer()
 
   val timeoutTest: FiniteDuration = 5 second
-  val interface = "0.0.0.0"
+  val interface = "127.0.0.1"
   val port = 8080
 
   val webServer = WebServer(interface, port)

@@ -56,7 +56,4 @@ abstract class BaseKamonSpec extends WordSpecLike with Matchers with BeforeAndAf
 
     subscriptions.tell(SubscriptionsDispatcher.Tick)
   }
-
-  override protected def beforeAll(): Unit = {}
-  //  override protected def afterAll(): Unit = system.terminate()
 }
