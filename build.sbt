@@ -27,7 +27,6 @@ lazy val root = (project in file("."))
 
 lazy val kamonAkkaHttp = Project("kamon-akka-http", file("kamon-akka-http"))
   .settings(name := "kamon-akka-http")
-  .settings(resolvers ++=  resolutionRepos)
   .settings(aspectJSettings: _*)
   .settings(Seq(
     scalaVersion := "2.12.1",
@@ -43,7 +42,6 @@ lazy val kamonAkkaHttpPlayground = Project("kamon-akka-http-playground", file("k
   .settings(Seq(
     scalaVersion := "2.12.1",
     crossScalaVersions := Seq("2.11.8", "2.12.1")))
-  .settings(resolvers ++=  resolutionRepos)
   .settings(noPublishing: _*)
   .settings(settingsForPlayground: _*)
   .settings(libraryDependencies ++=
@@ -55,8 +53,6 @@ lazy val settingsForPlayground: Seq[Setting[_]] = Seq(
   connectInput in run := true,
   cancelable in Global := true
 )
-
-lazy val resolutionRepos = Seq(Resolver.bintrayIvyRepo("kamon-io", "sbt-plugins"))
 
 import sbt.Tests._
 def singleTestPerJvm(tests: Seq[TestDefinition], jvmSettings: Seq[String]): Seq[Group] =
