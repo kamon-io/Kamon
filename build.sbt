@@ -13,6 +13,7 @@
  * =========================================================================================
  */
 
+parallelExecution in Test in Global := false
 
 lazy val kamon = (project in file("."))
   .settings(moduleName := "root")

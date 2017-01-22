@@ -63,5 +63,8 @@ abstract class BaseKamonSpec(actorSystemName: String) extends TestKitBase with W
     subscriptions.tell(SubscriptionsDispatcher.Tick)
   }
 
-  override protected def afterAll(): Unit = system.shutdown()
+  override protected def afterAll(): Unit = {
+    Kamon.shutdown()
+    system.shutdown()
+  }
 }
