@@ -47,3 +47,5 @@ lazy val kamonAkka24 = Project("kamon-akka-24", file("kamon-akka-2.4.x"))
       providedScope(aspectJ) ++
       optionalScope(logbackClassic) ++
       testScope(scalatest, akkaDependency("testkit").value, akkaDependency("slf4j").value, logbackClassic))
+
+enableProperCrossScalaVersionTasks
