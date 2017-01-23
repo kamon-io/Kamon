@@ -39,8 +39,8 @@ object Publish {
         </license>
       </licenses>
       <scm>
-        <url>git://github.com/kamon-io/Kamon.git</url>
-        <connection>scm:git:git@github.com:kamon-io/Kamon.git</connection>
+        <url>git://github.com/kamon-io/kamon-scala.git</url>
+        <connection>scm:git:git@github.com:kamon-io/kamon-scala.git</connection>
       </scm>
       <developers>
         <developer><id>ivantopo</id><name>Ivan Topolnjak</name><url>https://twitter.com/ivantopo</url></developer>

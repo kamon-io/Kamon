@@ -6,7 +6,7 @@ runTests () {
   sbt -Dakka.test.timefactor=1.5                                                                              \
       'set concurrentRestrictions in Global += Tags.limit(Tags.Compile, 2)'                                   \
       'set testOptions in test in Global := Seq(Tests.Argument(TestFrameworks.ScalaTest, "-oUNCXHELPOQRM"))'  \
-      test || exit 1
+      +test || exit 1
 
   echo "[info] $(date) - finished sbt test"
 }
