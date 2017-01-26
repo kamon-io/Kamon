@@ -16,13 +16,17 @@
 
 package kamon.play.instrumentation
 
+import kamon.metric.{ EntityRecorderFactory, GenericEntityRecorder }
+import kamon.metric.instrument.InstrumentFactory
 import kamon.play.PlayExtension
-import kamon.trace.{ Tracer, SegmentCategory }
+import kamon.trace.{ SegmentCategory, Tracer }
 import kamon.util.SameThreadExecutionContext
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation.{ Around, Aspect, Pointcut }
 import play.api.libs.ws.{ WSRequest, WSResponse }
+
 import scala.concurrent.Future
+import scala.util.{ Failure, Success }
 
 @Aspect
 class WSInstrumentation {
@@ -37,8 +41,36 @@ class WSInstrumentation {
       val segment = ctx.startSegment(segmentName, SegmentCategory.HttpClient, PlayExtension.SegmentLibraryName)
       val response = pjp.proceed().asInstanceOf[Future[WSResponse]]
 
-      response.onComplete(result ⇒ segment.finish())(SameThreadExecutionContext)
+      response.onComplete {
+        case Success(result) ⇒
+          PlayExtension.httpClientMetrics.recordResponse(segmentName, result.status.toString)
+          segment.finish()
+        case Failure(error) ⇒
+          segment.finishWithError(error)
+      }(SameThreadExecutionContext)
       response
     } getOrElse pjp.proceed()
   }
+}
+
+/**
+ *  Counts HTTP response status codes into per status code and per trace name + status counters. If recording a HTTP
+ *  response with status 500 for the trace "http://localhost:9000/badoutside_200", the counter with name "500" as
+  *  well as the counter with name "http://localhost:9000/badoutside_500" will be incremented.
+ */
+class HttpClientMetrics(instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) {
+
+  def recordResponse(statusCode: String): Unit = {
+    counter(statusCode).increment()
+  }
+
+  def recordResponse(traceName: String, statusCode: String): Unit = {
+    recordResponse(statusCode)
+    counter(traceName + "_" + statusCode).increment()
+  }
+}
+
+object HttpClientMetrics extends EntityRecorderFactory[HttpClientMetrics] {
+  def category: String = "http-client"
+  def createRecorder(instrumentFactory: InstrumentFactory): HttpClientMetrics = new HttpClientMetrics(instrumentFactory)
 }

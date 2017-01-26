@@ -18,6 +18,7 @@ package kamon.play
 
 import akka.actor._
 import kamon.Kamon
+import kamon.play.instrumentation.HttpClientMetrics
 import kamon.util.http.HttpServerMetrics
 import kamon.util.logger.LazyLogger
 import play.api.libs.ws.WSRequest
@@ -31,6 +32,8 @@ object PlayExtension {
   private val config = Kamon.config.getConfig("kamon.play")
   private val dynamic = new ReflectiveDynamicAccess(getClass.getClassLoader)
   val httpServerMetrics = Kamon.metrics.entity(HttpServerMetrics, "play-server")
+
+  val httpClientMetrics = Kamon.metrics.entity(HttpClientMetrics, "ws-client")
 
   val includeTraceToken: Boolean = config.getBoolean("automatic-trace-token-propagation")
   val traceTokenHeaderName: String = config.getString("trace-token-header-name")
