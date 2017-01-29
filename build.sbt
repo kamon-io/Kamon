@@ -1,5 +1,5 @@
 /* =========================================================================================
- * Copyright © 2013-2016 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2017 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -13,15 +13,15 @@
  * =========================================================================================
  */
 
+val kamonCore         = "io.kamon"                  %%  "kamon-core"            % "0.6.6"
+val asyncHttpClient   = "org.asynchttpclient"       %   "async-http-client"     % "2.0.24"
 
-import Settings._
-import Dependencies._
+name := "kamon-influxdb"
 
-lazy val root = (project in file("."))
-  .settings(name := "kamon-influxdb")
-  .settings(basicSettings: _*)
-  .settings(formatSettings: _*)
-  .settings(
-      libraryDependencies ++=
-        compileScope(kamonCore, akkaSlf4j, asyncHttpClient) ++
-        testScope(scalatest, akkaTestKit, slf4jApi, slf4jnop))
+parallelExecution in Test in Global := false
+
+libraryDependencies ++=
+    compileScope(kamonCore, akkaDependency("slf4j").value, asyncHttpClient) ++
+    testScope(scalatest, akkaDependency("testkit").value, slf4jApi, slf4jnop)
+
+resolvers += Resolver.bintrayRepo("kamon-io", "releases")
