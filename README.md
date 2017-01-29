@@ -33,7 +33,7 @@ To get started with SBT, simply add the following to your `build.sbt`
 file:
 
 ```scala
-libraryDependencies += "kamon.io" %% "kamon-spm" % "0.6.5"
+libraryDependencies += "kamon.io" %% "kamon-influxdb" % "0.6.5"
 ```
 
 
