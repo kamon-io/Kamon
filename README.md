@@ -24,7 +24,7 @@ To get started with SBT, simply add the following to your `build.sbt`
 file:
 
 ```scala
-libraryDependencies += "kamon.io" %% "kamon-datadog" % "0.6.5"
+libraryDependencies += "io.kamon" %% "kamon-datadog" % "0.6.5"
 ```
 
 Configuration
