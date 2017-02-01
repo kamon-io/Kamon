@@ -27,7 +27,7 @@ To get started with SBT, simply add the following to your `build.sbt`
 file:
 
 ```scala
-libraryDependencies += "kamon.io" %% "kamon-akka-http" % "0.6.5"
+libraryDependencies += "io.kamon" %% "kamon-akka-http" % "0.6.5"
 ```
 
 The following is an example of a configuration to provide metrics to a server, such as Statsd.
