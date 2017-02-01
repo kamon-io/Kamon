@@ -1,5 +1,5 @@
 /* =========================================================================================
- * Copyright © 2013-2016 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2017 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -14,14 +14,15 @@
  */
 
 
-import Settings._
-import Dependencies._
+val kamonCore         = "io.kamon"                  %%  "kamon-core"            % "0.6.6"
+val sigarLoader       = "io.kamon"                  %   "sigar-loader"          % "1.6.5-rev002"
+val logback           = "ch.qos.logback"            %   "logback-classic"       % "1.0.13"
+val slf4jJul          = "org.slf4j"                 %   "jul-to-slf4j"          % "1.7.7"
 
-lazy val root = (project in file("."))
-  .settings(name := "kamon-system-metrics")
-  .settings(basicSettings: _*)
-  .settings(formatSettings: _*)
-  .settings(
-      libraryDependencies ++=
-        compileScope(kamonCore, sigarLoader) ++
-        testScope(scalatest, akkaDependency("testkit").value, akkaDependency("slf4j").value, logback, slf4jJul))
+name := "kamon-system-metrics"
+
+libraryDependencies ++=
+  compileScope(kamonCore, sigarLoader) ++
+  testScope(scalatest, akkaDependency("testkit").value, akkaDependency("slf4j").value, logback, slf4jJul)
+
+resolvers += Resolver.bintrayRepo("kamon-io", "releases")

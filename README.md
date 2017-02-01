@@ -21,14 +21,14 @@ Supported releases and dependencies are shown below.
 
 | kamon-system-metrics  | status | jdk  | scala            | akka   |
 |:------:|:------:|:----:|------------------|:------:|
-|  0.6.5 | stable | 1.7+, 1.8+ | 2.10, 2.11, 2.12  | 2.3.x, 2.4.x |
+|  0.6.6 | stable | 1.7+, 1.8+ | 2.10, 2.11, 2.12  | 2.3.x, 2.4.x |
 
 To get started with SBT, simply add the following to your `build.sbt`
 file:
 
 ```scala
-libraryDependencies += "kamon.io" %% "kamon-system-metrics" % "0.6.5"
-``` 
+libraryDependencies += "io.kamon" %% "kamon-system-metrics" % "0.6.5"
+```
 
 As you might expect, you and any other module can subscribe to all the metrics that are reported by this module using
 the `system-metric` category and the entity recorder names described bellow.
