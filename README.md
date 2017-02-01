@@ -27,7 +27,7 @@ To get started with SBT, simply add the following to your `build.sbt`
 file:
 
 ```scala
-libraryDependencies += "kamon.io" %% "kamon-system-metrics" % "0.6.5"
+libraryDependencies += "io.kamon" %% "kamon-system-metrics" % "0.6.5"
 ``` 
 
 As you might expect, you and any other module can subscribe to all the metrics that are reported by this module using
