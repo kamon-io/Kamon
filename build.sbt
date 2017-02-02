@@ -16,6 +16,12 @@
 
 val kamonCore = "io.kamon" %% "kamon-core" % "0.6.5"
 val kamonScala = "io.kamon" %% "kamon-scala" % "0.6.5"
+val `akka-2.3` = "2.3.13"
+val `akka-2.4` = "2.4.16"
+
+def akkaDependency(name: String, version: String) = {
+  "com.typesafe.akka" %% s"akka-$name" % version
+}
 
 lazy val `kamon-akka` = (project in file("."))
     .settings(noPublishing: _*)
@@ -24,30 +30,32 @@ lazy val `kamon-akka` = (project in file("."))
 
 lazy val kamonAkka23 = Project("kamon-akka-23", file("kamon-akka-2.3.x"))
   .settings(Seq(
-    bintrayPackage := "kamon-akka",
-    moduleName := "kamon-akka-2.3",
-    scalaVersion := "2.11.8",
-    crossScalaVersions := Seq("2.10.6", "2.11.8")))
+      bintrayPackage := "kamon-akka",
+      moduleName := "kamon-akka-2.3",
+      scalaVersion := "2.11.8",
+      crossScalaVersions := Seq("2.10.6", "2.11.8")))
   .settings(aspectJSettings: _*)
   .settings(
     libraryDependencies ++=
-      compileScope(akkaDependency("actor").value, kamonCore, kamonScala) ++
+      compileScope(akkaDependency("actor", `akka-2.3`), kamonCore, kamonScala) ++
       providedScope(aspectJ) ++
       optionalScope(logbackClassic) ++
-      testScope(scalatest, akkaDependency("testkit").value, akkaDependency("slf4j").value, logbackClassic))
+      testScope(scalatest, akkaDependency("testkit", `akka-2.3`), akkaDependency("slf4j", `akka-2.3`), logbackClassic))
+
 
 lazy val kamonAkka24 = Project("kamon-akka-24", file("kamon-akka-2.4.x"))
   .settings(Seq(
-    bintrayPackage := "kamon-akka",
-    moduleName := "kamon-akka-2.4",
-    scalaVersion := "2.12.1",
-    crossScalaVersions := Seq("2.11.8", "2.12.1")))
+      bintrayPackage := "kamon-akka",
+      moduleName := "kamon-akka-2.4",
+      scalaVersion := "2.12.1",
+      crossScalaVersions := Seq("2.11.8", "2.12.1")))
   .settings(aspectJSettings: _*)
   .settings(
     libraryDependencies ++=
-      compileScope(akkaDependency("actor").value, kamonCore, kamonScala) ++
+      compileScope(akkaDependency("actor", `akka-2.4`), kamonCore, kamonScala) ++
       providedScope(aspectJ) ++
       optionalScope(logbackClassic) ++
-      testScope(scalatest, akkaDependency("testkit").value, akkaDependency("slf4j").value, logbackClassic))
+      testScope(scalatest, akkaDependency("testkit", `akka-2.4`), akkaDependency("slf4j", `akka-2.4`), logbackClassic))
+
 
 enableProperCrossScalaVersionTasks
