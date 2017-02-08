@@ -12,6 +12,7 @@ import kamon.metric._
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 import kamon.util.ConfigTools.Syntax
 import kamon.metric.instrument.{Counter, Histogram}
+import kamon.util.NeedToScale
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
@@ -35,7 +36,12 @@ class GraphiteExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   val port = graphiteConfig.getInt("port")
   val metricPrefix = graphiteConfig.getString("metric-name-prefix")
 
-  val graphiteClient = system.actorOf(Props(new GraphiteClient(hostname, port, 10 seconds, metricPrefix)), "kamon-graphite")
+  val metricsSender = system.actorOf(Props(new GraphiteClient(hostname, port, 10 seconds, metricPrefix)), "kamon-graphite")
+  val graphiteClient = graphiteConfig match {
+    case NeedToScale(scaleTimeTo, scaleMemoryTo) ⇒
+      system.actorOf(MetricScaleDecorator.props(scaleTimeTo, scaleMemoryTo, metricsSender), "graphite-metric-scale-decorator")
+    case _ ⇒ metricsSender
+  }
 
   val subscriptions = graphiteConfig.getConfig("subscriptions")
   subscriptions.firstLevelKeys.map { subscriptionCategory ⇒
