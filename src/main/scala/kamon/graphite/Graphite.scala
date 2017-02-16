@@ -103,7 +103,7 @@ trait MetricPacking {
       .append("min", snapshot.min)
       .append("max", snapshot.max)
       .append("sum", snapshot.sum)
-      .append("avg", (snapshot.sum / snapshot.numberOfMeasurements))
+      .append("avg", average(snapshot))
       .byteString()
   }
 
@@ -111,7 +111,7 @@ trait MetricPacking {
     newMetricPacket(baseName(prefix, entity, minMaxCounterKey), timestamp)
       .append("min", snapshot.min)
       .append("max", snapshot.max)
-      .append("avg", (snapshot.sum / snapshot.numberOfMeasurements))
+      .append("avg", average(snapshot))
       .byteString()
   }
 
@@ -120,6 +120,9 @@ trait MetricPacking {
       .append("count", snapshot.count)
       .byteString()
   }
+
+  private def average(snapshot: Histogram.Snapshot): Long =
+    if(snapshot.numberOfMeasurements > 0) snapshot.sum / snapshot.numberOfMeasurements else 0
 
 }
 
