@@ -8,10 +8,12 @@
 
 
   <weaver>
-    <include within="com.zaxxer.hikari..*"/>
-    <exclude within="com.zaxxer.hikari.pool.ProxyPreparedStatement"/>
+    <include within="com.zaxxer.hikari.pool.HikariPool"/>
+    <include within="com.zaxxer.hikari.pool.ProxyConnection"/>
 
     <!-- JDBC Drivers -->
     <include within="org.h2..*"/>
+    <include within="org.postgresql.jdbc4..*"/>
+    <include within="com.microsoft.sqlserver.jdbc..*"/>
   </weaver>
 </aspectj>

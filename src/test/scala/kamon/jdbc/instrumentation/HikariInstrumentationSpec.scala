@@ -108,11 +108,11 @@ class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually w
       Await.result(Future.sequence(operations), 10 seconds)
 
       val poolSnapshot = takeSnapshotOf("track-metrics", "hikari-pool")
-      poolSnapshot.histogram("generic-execute").get.numberOfMeasurements should be(40)
-      poolSnapshot.histogram("queries").get.numberOfMeasurements should be(20)
-      poolSnapshot.histogram("updates").get.numberOfMeasurements should be(20)
-      poolSnapshot.histogram("batches").get.numberOfMeasurements should be(20)
-      poolSnapshot.counter("errors").get.count should be(20)
+      poolSnapshot.histogram("generic-execute").get.numberOfMeasurements should be(20)
+      poolSnapshot.histogram("queries").get.numberOfMeasurements should be(10)
+      poolSnapshot.histogram("updates").get.numberOfMeasurements should be(10)
+      poolSnapshot.histogram("batches").get.numberOfMeasurements should be(10)
+      poolSnapshot.counter("errors").get.count should be(10)
     }
 
   }

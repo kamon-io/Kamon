@@ -15,14 +15,15 @@
 
 package kamon.jdbc.instrumentation
 
-import java.sql.{ PreparedStatement, Statement }
-import java.util.concurrent.TimeUnit.{ NANOSECONDS ⇒ nanos }
+import java.sql.{PreparedStatement, Statement}
+import java.util.concurrent.TimeUnit.{NANOSECONDS => nanos}
 
 import kamon.jdbc.JdbcExtension
-import kamon.metric.instrument.{ Counter, Histogram, MinMaxCounter }
-import kamon.trace.{ SegmentCategory, TraceContext, Tracer }
+import kamon.jdbc.instrumentation.StatementInstrumentation.StatementTypes
+import kamon.metric.instrument.{Counter, Histogram, MinMaxCounter}
+import kamon.trace.{SegmentCategory, TraceContext, Tracer}
 import org.aspectj.lang.ProceedingJoinPoint
-import org.aspectj.lang.annotation.{ Around, Aspect, DeclareMixin, Pointcut }
+import org.aspectj.lang.annotation.{Around, Aspect, DeclareMixin, Pointcut}
 
 import scala.util.control.NonFatal
 
@@ -30,7 +31,7 @@ import scala.util.control.NonFatal
 class StatementInstrumentation {
 
   @DeclareMixin("java.sql.Statement+")
-  def mixinHasConnectionPoolTrackerToStatement: HasConnectionPoolTracker = HasConnectionPoolTracker()
+  def mixinHasConnectionPoolTrackerToStatement: HasStatementMetrics.Mixin = HasStatementMetrics()
 
   /**
    *   Calls to java.sql.Statement+.execute(..)
@@ -98,28 +99,16 @@ class StatementInstrumentation {
     track(pjp, statement, "not-available", StatementTypes.Batch)
 
   def track(pjp: ProceedingJoinPoint, target: Any, sql: String, statementType: String): Any = {
-    val tracker = target.asInstanceOf[HasConnectionPoolTracker].connectionPoolTracker
-    if (tracker != null) {
-      import tracker.recorder
-      val latencyRecorder = statementType match {
-        case StatementTypes.Query          ⇒ recorder.queries
-        case StatementTypes.Update         ⇒ recorder.updates
-        case StatementTypes.Batch          ⇒ recorder.batches
-        case StatementTypes.GenericExecute ⇒ recorder.genericExecute
-      }
-
-      trackExecution(pjp, sql, statementType, latencyRecorder, recorder.inFlightStatements, recorder.errors, recorder.slowStatements)
-    } else {
-      import JdbcExtension.defaultTracker
-      val latencyRecorder = statementType match {
-        case StatementTypes.Query          ⇒ defaultTracker.queries
-        case StatementTypes.Update         ⇒ defaultTracker.updates
-        case StatementTypes.Batch          ⇒ defaultTracker.batches
-        case StatementTypes.GenericExecute ⇒ defaultTracker.genericExecute
-      }
-
-      trackExecution(pjp, sql, statementType, latencyRecorder, defaultTracker.inFlightStatements, defaultTracker.errors, defaultTracker.slowStatements)
+    val customRecorder = target.asInstanceOf[HasStatementMetrics.Mixin].statementMetrics
+    val entityRecorder = if(customRecorder != null) customRecorder else JdbcExtension.defaultTracker
+    val latencyRecorder = statementType match {
+      case StatementTypes.Query           ⇒ entityRecorder.queries
+      case StatementTypes.Update          ⇒ entityRecorder.updates
+      case StatementTypes.Batch           ⇒ entityRecorder.batches
+      case StatementTypes.GenericExecute  ⇒ entityRecorder.genericExecute
     }
+
+    trackExecution(pjp, sql, statementType, latencyRecorder, entityRecorder.inFlightStatements, entityRecorder.errors, entityRecorder.slowStatements)
   }
 
   def trackExecution(pjp: ProceedingJoinPoint, sql: String, statementType: String, latencyHistogram: Histogram,
@@ -129,7 +118,6 @@ class StatementInstrumentation {
     val startedAt = System.nanoTime()
 
     try {
-
       if (Tracer.currentContext.nonEmpty && JdbcExtension.shouldGenerateSegments)
         withSegment(Tracer.currentContext, statementType, sql)(pjp.proceed())
       else
@@ -161,9 +149,12 @@ class StatementInstrumentation {
   }
 }
 
-object StatementTypes {
-  val Query = "query"
-  val Update = "update"
-  val Batch = "batch"
-  val GenericExecute = "generic-execute"
+object StatementInstrumentation {
+  object StatementTypes {
+    val Query = "query"
+    val Update = "update"
+    val Batch = "batch"
+    val GenericExecute = "generic-execute"
+  }
 }
+

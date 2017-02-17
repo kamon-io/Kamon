@@ -26,12 +26,12 @@ import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.SpanSugar
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.Try
 
 class StatementInstrumentationSpec extends WordSpec with Matchers with Eventually with SpanSugar with BeforeAndAfterAll {
   val connection = DriverManager.getConnection("jdbc:h2:mem:jdbc-spec;MULTI_THREADED=1", "SA", "")
-  val parallelQueriesExecutor = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(10))
+  implicit val parallelQueriesExecutor = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(10))
 
   override protected def beforeAll(): Unit = {
     connection
@@ -47,18 +47,17 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
 
   "the StatementInstrumentation" should {
     "track in-flight operations" in {
-      for (id ← 1 to 10) {
+      val operations = for (id ← 1 to 10) yield {
         Future {
           DriverManager
             .getConnection("jdbc:h2:mem:jdbc-spec", "SA", "")
             .prepareStatement(s"SELECT * FROM Address where Nr = $id; CALL SLEEP(500)")
             .execute()
-        }(parallelQueriesExecutor)
+        }
       }
 
-      eventually(timeout(2 seconds), interval(100 millis)) {
-        takeSnapshotOf("non-pooled", "jdbc-statement").minMaxCounter("in-flight").get.max should be(10)
-      }
+      Await.result(Future.sequence(operations), 2 seconds)
+      takeSnapshotOf("non-pooled", "jdbc-statement").minMaxCounter("in-flight").get.max should be(10)
     }
 
     "track calls to .execute(..) in statements" in {
@@ -136,8 +135,10 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
     }
 
     "record the execution time of SLOW QUERIES based on the kamon.jdbc.slow-query-threshold setting" in {
+      takeSnapshotOf("non-pooled", "jdbc-statement")
+
       for (id ← 1 to 2) {
-        val select = s"SELECT * FROM Address; CALL SLEEP(101)"
+        val select = s"SELECT * FROM Address; CALL SLEEP(500)"
         connection.createStatement().execute(select)
       }
 

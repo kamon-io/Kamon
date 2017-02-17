@@ -35,16 +35,9 @@ object StatementMetrics extends EntityRecorderFactory[StatementMetrics] {
   def createRecorder(instrumentFactory: InstrumentFactory): StatementMetrics = new StatementMetrics(instrumentFactory)
 }
 
-class ConnectionPoolMetrics(instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) {
+class ConnectionPoolMetrics(instrumentFactory: InstrumentFactory) extends StatementMetrics(instrumentFactory) {
   val openConnections = minMaxCounter("open-connections")
   val borrowedConnections = minMaxCounter("borrowed-connections")
-  val inFlightStatements = minMaxCounter("in-flight")
-  val queries = histogram("queries")
-  val updates = histogram("updates")
-  val batches = histogram("batches")
-  val genericExecute = histogram("generic-execute")
-  val slowStatements = counter("slows-statements")
-  val errors = counter("errors")
 }
 
 object ConnectionPoolMetrics {
