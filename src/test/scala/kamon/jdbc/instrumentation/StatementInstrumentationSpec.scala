@@ -18,16 +18,18 @@ package kamon.jdbc.instrumentation
 import java.sql.DriverManager
 import java.util.concurrent.Executors
 
-import kamon.jdbc.{ JdbcExtension, SlowQueryProcessor, SqlErrorProcessor }
-import kamon.testkit.BaseKamonSpec
-import kamon.trace.{ SegmentCategory, Tracer }
+import kamon.Kamon
+import kamon.jdbc.{JdbcExtension, SlowQueryProcessor, SqlErrorProcessor}
+import kamon.metric.EntitySnapshot
+import kamon.trace.{SegmentCategory, Tracer}
+import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.SpanSugar
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
-class StatementInstrumentationSpec extends BaseKamonSpec("jdbc-spec") with Eventually with SpanSugar {
+class StatementInstrumentationSpec extends WordSpec with Matchers with Eventually with SpanSugar with BeforeAndAfterAll {
   val connection = DriverManager.getConnection("jdbc:h2:mem:jdbc-spec;MULTI_THREADED=1", "SA", "")
   val parallelQueriesExecutor = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(10))
 
@@ -144,7 +146,7 @@ class StatementInstrumentationSpec extends BaseKamonSpec("jdbc-spec") with Event
     }
 
     "generate segments when DB access is made within a Trace" in {
-      Tracer.withContext(newContext("jdbc-trace-with-segments")) {
+      Tracer.withNewContext("jdbc-trace-with-segments") {
         for (id ← 1 to 100) {
           val insert = s"INSERT INTO Address (Nr, Name) VALUES($id, 'foo')"
           val select = s"SELECT * FROM Address where Nr = $id"
@@ -168,6 +170,11 @@ class StatementInstrumentationSpec extends BaseKamonSpec("jdbc-spec") with Event
         segmentSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(100)
       }
     }
+  }
+
+  def takeSnapshotOf(name: String, category: String, tags: Map[String, String] = Map.empty): EntitySnapshot = {
+    val recorder = Kamon.metrics.find(name, category, tags).get
+    recorder.collect(Kamon.metrics.buildDefaultCollectionContext)
   }
 }
 

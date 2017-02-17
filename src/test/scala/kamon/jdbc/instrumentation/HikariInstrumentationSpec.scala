@@ -4,7 +4,6 @@ import java.util.concurrent.Executors
 
 import com.zaxxer.hikari.{ HikariConfig, HikariDataSource }
 import kamon.Kamon
-import kamon.jdbc.metric.ConnectionPoolMetrics
 import kamon.metric.EntitySnapshot
 import org.scalatest.{ Matchers, WordSpec }
 import org.scalatest.concurrent.Eventually
