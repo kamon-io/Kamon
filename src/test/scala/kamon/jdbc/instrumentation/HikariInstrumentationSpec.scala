@@ -1,15 +1,16 @@
 package kamon.jdbc.instrumentation
 
+import java.sql.SQLException
 import java.util.concurrent.Executors
 
-import com.zaxxer.hikari.{ HikariConfig, HikariDataSource }
+import com.zaxxer.hikari.{HikariConfig, HikariDataSource}
 import kamon.Kamon
 import kamon.metric.EntitySnapshot
-import org.scalatest.{ Matchers, WordSpec }
+import org.scalatest.{Matchers, WordSpec}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.SpanSugar
 
-import scala.concurrent.{ Await, ExecutionContext, Future }
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.Try
 
 class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually with SpanSugar {
@@ -36,7 +37,7 @@ class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually w
       }
 
       val openConnections = takeSnapshotOf("track-open-connections", "hikari-pool").minMaxCounter("open-connections").get
-      openConnections.min shouldBe (0)
+      openConnections.min shouldBe (1)
       openConnections.max shouldBe (10)
 
       connections.foreach(_.close())
@@ -71,6 +72,30 @@ class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually w
       pool.close()
     }
 
+    "track the time it takes to borrow a connection" in {
+      val pool = createPool("track-borrow-time", 5)
+      for (id ← 1 to 5) {
+        pool.getConnection()
+      }
+
+      takeSnapshotOf("track-borrow-time", "hikari-pool").histogram("borrow-time").get.numberOfMeasurements shouldBe(5)
+    }
+
+    "track timeout errors when borrowing a connection" in {
+      val pool = createPool("track-borrow-timeouts", 5)
+      for (id ← 1 to 5) {
+        pool.getConnection()
+      }
+
+      intercept[SQLException] {
+        pool.getConnection()
+      }
+
+      val poolMetrics = takeSnapshotOf("track-borrow-timeouts", "hikari-pool")
+      poolMetrics.histogram("borrow-time").get.max shouldBe ((3 seconds).toNanos +- (100 milliseconds).toNanos)
+      poolMetrics.counter("borrow-timeouts").get.count shouldBe(1)
+    }
+
     "track the number of in-flight operations in connections from the pool" in {
       val pool = createPool("track-in-flight", 16)
       for (id ← 1 to 10) {
@@ -88,8 +113,6 @@ class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually w
 
     "track standard metrics for statements executed with connection from the pool" in {
       val pool = createPool("track-metrics", 10)
-      takeSnapshotOf("track-metrics", "hikari-pool")
-
       val operations = for (id ← 1 to 10) yield {
         Future {
           val connection = pool.getConnection()
@@ -127,6 +150,7 @@ class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually w
     config.setPassword("")
     config.setMinimumIdle(1)
     config.setMaximumPoolSize(size)
+    config.setConnectionTimeout(3000)
     config.setIdleTimeout(10000) // If this setting is lower than 10 seconds it will be overridden by Hikari.
 
     val hikariPool = new HikariDataSource(config)
@@ -138,6 +162,8 @@ class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually w
         """.stripMargin)
       .executeUpdate()
     setupConnection.close()
+
+    takeSnapshotOf(name, "hikari-pool")
 
     hikariPool
   }

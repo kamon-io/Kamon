@@ -38,6 +38,8 @@ object StatementMetrics extends EntityRecorderFactory[StatementMetrics] {
 class ConnectionPoolMetrics(instrumentFactory: InstrumentFactory) extends StatementMetrics(instrumentFactory) {
   val openConnections = minMaxCounter("open-connections")
   val borrowedConnections = minMaxCounter("borrowed-connections")
+  val borrowTime = histogram("borrow-time", Time.Nanoseconds)
+  val borrowTimeouts = counter("borrow-timeouts")
 }
 
 object ConnectionPoolMetrics {

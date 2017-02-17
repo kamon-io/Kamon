@@ -1,11 +1,12 @@
 package kamon.jdbc.instrumentation
 
-import java.sql.{ PreparedStatement, Statement }
+import java.sql.{Connection, PreparedStatement, Statement}
 
 import com.zaxxer.hikari.HikariConfig
-import com.zaxxer.hikari.pool.{ HikariPool, HikariProxyConnection, ProxyConnection }
+import com.zaxxer.hikari.pool.{HikariPool, HikariProxyConnection, ProxyConnection}
 import kamon.Kamon
 import kamon.jdbc.metric.ConnectionPoolMetrics
+import kamon.util.{NanoInterval, RelativeNanoTimestamp}
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
 
@@ -57,12 +58,33 @@ class HikariInstrumentation {
   @Pointcut("execution(* com.zaxxer.hikari.pool.HikariPool.getConnection(*)) && this(hikariPool)")
   def hikariPoolGetConnection(hikariPool: HikariPool): Unit = {}
 
-  @AfterReturning(value = "hikariPoolGetConnection(hikariPool)", returning = "proxyConnection")
-  def aroundHikariPoolGetConnection(hikariPool: HikariPool, proxyConnection: ProxyConnection): Unit = {
+  @Around("hikariPoolGetConnection(hikariPool)")
+  def aroundHikariPoolGetConnection(pjp: ProceedingJoinPoint, hikariPool: HikariPool): Any = {
     val poolMetrics = hikariPool.asInstanceOf[HasConnectionPoolMetrics.Mixin].connectionPoolMetrics
-    poolMetrics.borrowedConnections.increment()
+    val startTime = RelativeNanoTimestamp.now
+    var connection: Any = null
 
-    proxyConnection.asInstanceOf[HasConnectionPoolMetrics.Mixin].setConnectionPoolMetrics(poolMetrics)
+    try {
+      connection = pjp.proceed()
+      poolMetrics.borrowedConnections.increment()
+
+      connection
+        .asInstanceOf[HasConnectionPoolMetrics.Mixin]
+        .setConnectionPoolMetrics(poolMetrics)
+
+    } finally {
+      poolMetrics.borrowTime.record(NanoInterval.since(startTime).nanos)
+    }
+
+    connection
+  }
+
+  @Pointcut("execution(* com.zaxxer.hikari.pool.HikariPool.createTimeoutException(..)) && this(hikariPool)")
+  def createTimeoutException(hikariPool: HikariPool): Unit = {}
+
+  @After("createTimeoutException(hikariPool)")
+  def afterCreateTimeoutException(hikariPool: HikariPool): Unit = {
+    hikariPool.asInstanceOf[HasConnectionPoolMetrics.Mixin].connectionPoolMetrics.borrowTimeouts.increment()
   }
 
   @Pointcut("execution(* com.zaxxer.hikari.pool.ProxyConnection.close()) && this(proxyConnection)")
