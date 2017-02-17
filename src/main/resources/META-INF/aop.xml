@@ -3,10 +3,15 @@
 <aspectj>
   <aspects>
     <aspect name="kamon.jdbc.instrumentation.StatementInstrumentation"/>
+    <aspect name="kamon.jdbc.instrumentation.HikariInstrumentation"/>
   </aspects>
 
-    <weaver>
-       <include within="java.sql.Statement..*"/>
-       <include within="java.sql.Connection..*"/>
-   </weaver>
+
+  <weaver>
+    <include within="com.zaxxer.hikari..*"/>
+    <exclude within="com.zaxxer.hikari.pool.ProxyPreparedStatement"/>
+
+    <!-- JDBC Drivers -->
+    <include within="org.h2..*"/>
+  </weaver>
 </aspectj>

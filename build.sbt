@@ -18,6 +18,9 @@ import AspectJ._
 import Settings._
 import Dependencies._
 
+val hikariCP = "com.zaxxer" % "HikariCP" % "2.6.0"
+
+
 lazy val root = (project in file("."))
   .settings(name := "kamon-jdbc")
   .settings(basicSettings: _*)
@@ -26,5 +29,5 @@ lazy val root = (project in file("."))
   .settings(
       libraryDependencies ++=
         compileScope(kamonCore) ++
-        providedScope(aspectJ) ++
-        testScope(h2, scalatest, akkaDependency("testkit").value, slf4jApi))
+        providedScope(aspectJ, hikariCP) ++
+        testScope(h2, scalatest, akkaDependency("testkit").value, slf4jApi, logback))
