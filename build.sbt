@@ -14,20 +14,16 @@
  */
 
 
-import AspectJ._
-import Settings._
-import Dependencies._
-
+val kamonCore  = "io.kamon" %% "kamon-core" % "0.6.6"
+val h2                = "com.h2database"            %   "h2"                    % "1.4.182"
 val hikariCP = "com.zaxxer" % "HikariCP" % "2.6.0"
 
 
 lazy val root = (project in file("."))
   .settings(name := "kamon-jdbc")
-  .settings(basicSettings: _*)
-  .settings(formatSettings: _*)
   .settings(aspectJSettings: _*)
   .settings(
       libraryDependencies ++=
         compileScope(kamonCore) ++
         providedScope(aspectJ, hikariCP) ++
-        testScope(h2, scalatest, akkaDependency("testkit").value, slf4jApi, logback))
+        testScope(h2, scalatest, slf4jApi, logbackClassic))
