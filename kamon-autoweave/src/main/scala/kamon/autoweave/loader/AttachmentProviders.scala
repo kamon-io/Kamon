@@ -40,7 +40,7 @@ object AttachmentProviders {
      * Returns the HotSpotVirtualMachine implementation of the running JVM.
      */
     def resolve(): Option[Class[_]] = {
-      val toolsJar = new File(System.getProperty("java.home").replace('\\', '/') + "/../" + toolsJarPath)
+      val toolsJar = new File(System.getProperty("java.home").replace('\\', '/') + "/" + toolsJarPath)
       if (toolsJar.isFile && toolsJar.canRead) {
         Try(AccessController.doPrivileged(new ClassLoaderCreationAction(toolsJar)).loadClass(VirtualMachineTyeName)) match {
           case Success(vm)          ⇒ Some(vm)
