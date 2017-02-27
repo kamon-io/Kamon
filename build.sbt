@@ -16,16 +16,29 @@
 parallelExecution in Test in Global := false
 
 lazy val kamon = (project in file("."))
+  .enablePlugins(SbtOsgi)
   .settings(moduleName := "root")
   .settings(noPublishing: _*)
   .aggregate(core, autoweave, testkit, bench)
 
 
 lazy val core = (project in file("kamon-core"))
+  .enablePlugins(SbtOsgi)
+  .settings(osgiSettings)
+  .settings(OsgiKeys.exportPackage := Seq("kamon.*", "org.HdrHistogram;-split-package:=merge-first"))
+  .settings(OsgiKeys.importPackage := Seq(
+          "kamon.autoweave;resolution:=optional",
+          "org.aspectj.lang;resolution:=optional",
+          "org.aspectj.lang.annotation;resolution:=optional",
+          "javax.xml.bind;resolution:=optional",
+          "sun.misc;resolution:=optional",
+          "ch.qos.logback.classic.pattern;resolution:=optional",
+          "ch.qos.logback.classic.spi;resolution:=optional",
+          "*"))
   .settings(moduleName := "kamon-core")
   .settings(
         libraryDependencies ++=
-          compileScope(akkaDependency("actor").value, hdrHistogram, slf4jApi) ++
+          compileScope(akkaDependency("actor").value, akkaDependency("osgi").value, hdrHistogram, slf4jApi) ++
           providedScope(aspectJ) ++
           optionalScope(logbackClassic) ++
           testScope(scalatest, akkaDependency("testkit").value, akkaDependency("slf4j").value, logbackClassic))

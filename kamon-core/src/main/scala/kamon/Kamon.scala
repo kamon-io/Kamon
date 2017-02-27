@@ -16,10 +16,12 @@ package kamon
 
 import _root_.akka.actor
 import _root_.akka.actor._
+import akka.osgi.OsgiActorSystemFactory
 import com.typesafe.config.{Config, ConfigFactory, ConfigParseOptions, ConfigResolveOptions}
 import kamon.metric._
 import kamon.trace.TracerModuleImpl
 import kamon.util.logger.LazyLogger
+import org.osgi.framework.BundleContext
 
 import _root_.scala.util.control.NonFatal
 import _root_.scala.util.{Failure, Success, Try}
@@ -34,11 +36,19 @@ object Kamon {
   def tracer = kamonInstance.tracer
 
   def start(): Unit = synchronized {
-    kamonInstance.start()
+    kamonInstance.start(None)
   }
 
   def start(conf: Config): Unit = synchronized {
-    kamonInstance.start(conf)
+    kamonInstance.start(conf, None)
+  }
+
+  def startWithinOsgi(context: BundleContext): Unit = synchronized {
+    kamonInstance.start(Some(context))
+  }
+
+  def startWithinOsgi(conf: Config, context: BundleContext): Unit = synchronized {
+    kamonInstance.start(config, Some(context))
   }
 
   def shutdown(): Unit = synchronized {
@@ -51,25 +61,35 @@ object Kamon {
     private var actorSystem: ActorSystem = _
 
     var started = false
-    var config: Config = defaultConfig
-    val metrics = MetricsModuleImpl(config)
-    val tracer = TracerModuleImpl(metrics, config)
+    var config: Config = _
+    var metrics: MetricsModuleImpl = _
+    var tracer: TracerModuleImpl = _
+    var bundleContext: Option[BundleContext] = None
 
     private lazy val _start = {
       log.info("Initializing Kamon...")
       tryLoadAutoweaveModule()
-      actorSystem = ActorSystem("kamon", config)
+      val actorSystemName = "kamon"
+      actorSystem = bundleContext match {
+        case Some(context) ⇒ OsgiActorSystemFactory(context, config).createActorSystem(actorSystemName)
+        case None ⇒ ActorSystem(actorSystemName, config)
+      }
+      metrics = MetricsModuleImpl(config)
+      tracer = TracerModuleImpl(metrics, config)
       metrics.start(actorSystem, config)
       tracer.start(actorSystem, config)
       actorSystem.registerExtension(ModuleLoader)
       started = true
     }
 
-    def start(): Unit = {
+    def start(context: Option[BundleContext]): Unit = {
+      bundleContext = context
+      config = defaultConfig(context)
       _start
     }
 
-    def start(conf: Config): Unit = {
+    def start(conf: Config, context: Option[BundleContext]): Unit = {
+      bundleContext = context
       config = patchConfiguration(conf)
       _start
     }
@@ -80,14 +100,22 @@ object Kamon {
       }
     }
 
-    private def defaultConfig = {
+    private def defaultConfig(bundleContext: Option[BundleContext]): Config = {
       patchConfiguration(
         ConfigFactory.load(
-          Thread.currentThread().getContextClassLoader(),
+          getClassLoader(bundleContext),
           ConfigParseOptions.defaults(),
           ConfigResolveOptions.defaults().setAllowUnresolved(true)
         )
       )
+    }
+
+    private def getClassLoader(bundleContext: Option[BundleContext]): ClassLoader = {
+      bundleContext match {
+//        case Some(context) ⇒ context.getBundle().adapt(classOf[BundleWiring]).getClassLoader
+        case Some(_) ⇒ this.getClass.getClassLoader
+        case None ⇒ Thread.currentThread().getContextClassLoader()
+      }
     }
 
     private def patchConfiguration(config: Config): Config = {
