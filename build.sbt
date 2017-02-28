@@ -13,14 +13,10 @@
  * =========================================================================================
  */
 
-
-import Settings._
-import Dependencies._
+val kamonCore = "io.kamon" %% "kamon-core" % "0.6.6"
 
 lazy val root = (project in file("."))
   .settings(name := "kamon-datadog")
-  .settings(basicSettings: _*)
-  .settings(formatSettings: _*)
   .settings(
       libraryDependencies ++=
         compileScope(kamonCore, akkaDependency("actor").value) ++
