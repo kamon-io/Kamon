@@ -13,18 +13,14 @@
  * =========================================================================================
  */
 
-
-import AspectJ._
-import Settings._
-import Dependencies._
+val kamonCore = "io.kamon" %% "kamon-core" % "0.6.6"
+val el = "org.glassfish" % "javax.el" % "3.0.0"
 
 lazy val root = (project in file("."))
   .settings(name := "kamon-annotation")
-  .settings(basicSettings: _*)
-  .settings(formatSettings: _*)
   .settings(aspectJSettings: _*)
   .settings(
     libraryDependencies ++=
       compileScope(el, kamonCore) ++
-      testScope(scalatest, akkaTestKit, slf4jApi, logback) ++
+      testScope(scalatest, akkaDependency("testkit").value, slf4jApi, logbackClassic) ++
       providedScope(aspectJ))

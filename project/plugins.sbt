@@ -1,20 +1,2 @@
-resolvers += "Sonatype snapshots" at "http://oss.sonatype.org/content/repositories/snapshots/"
-
-resolvers += "Kamon Releases" at "http://repo.kamon.io"
-
-addSbtPlugin("com.github.mpeltonen" % "sbt-idea" % "1.6.0")
-
-addSbtPlugin("com.typesafe.sbt" % "sbt-aspectj" % "0.10.1")
-
-addSbtPlugin("com.github.gseitz" % "sbt-release" % "0.8.2")
-
-addSbtPlugin("com.typesafe.sbt" % "sbt-scalariform" % "1.3.0")
-
-addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "0.2.1")
-
-addSbtPlugin("com.typesafe.sbt" % "sbt-pgp" % "0.8.1")
-
-addSbtPlugin("net.virtual-void" % "sbt-dependency-graph" % "0.8.1")
-
-addSbtPlugin("com.eed3si9n" % "sbt-doge" % "0.1.5")
-
+lazy val root: Project = project.in(file(".")).dependsOn(latestSbtUmbrella)
+lazy val latestSbtUmbrella = uri("git://github.com/kamon-io/kamon-sbt-umbrella.git")
