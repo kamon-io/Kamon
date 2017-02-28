@@ -1,5 +1,5 @@
 /* =========================================================================================
- * Copyright © 2013-2016 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2017 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -13,15 +13,21 @@
  * =========================================================================================
  */
 
+ val kamonCore         = "io.kamon"                  %%  "kamon-core"            % "0.6.6"
 
-import Settings._
-import Dependencies._
+name := "kamon-statsd"
 
-lazy val root = (project in file("."))
-  .settings(name := "kamon-statsd")
-  .settings(basicSettings: _*)
-  .settings(formatSettings: _*)
-  .settings(
-      libraryDependencies ++=
-        compileScope(kamonCore, akkaDependency("actor").value) ++
-        testScope(scalatest, akkaDependency("testkit").value, slf4jApi, slf4jnop))
+libraryDependencies ++=
+  compileScope(kamonCore, akkaDependency("actor").value) ++
+  testScope(scalatest, akkaDependency("testkit").value, slf4jApi, slf4jnop)
+
+testGrouping in Test := singleTestPerJvm((definedTests in Test).value, (javaOptions in Test).value)
+
+import sbt.Tests._
+def singleTestPerJvm(tests: Seq[TestDefinition], jvmSettings: Seq[String]): Seq[Group] =
+  tests map { test =>
+    Group(
+      name = test.name,
+      tests = Seq(test),
+      runPolicy = SubProcess(ForkOptions(runJVMOptions = jvmSettings)))
+  }

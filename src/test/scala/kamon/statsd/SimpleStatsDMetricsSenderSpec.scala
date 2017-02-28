@@ -16,7 +16,7 @@
 
 package kamon.statsd
 
-import akka.actor.{ ActorSystem, Props, ActorRef }
+import akka.actor.{ActorSystem, Props, ActorRef}
 import akka.testkit.TestProbe
 import com.typesafe.config.ConfigFactory
 
@@ -38,7 +38,8 @@ class SimpleStatsDMetricsSenderSpec extends UDPBasedStatsDMetricSenderSpec("simp
         |  }
         |}
         |
-      """.stripMargin)
+      """.stripMargin
+    )
 
   trait SimpleSenderFixture extends UdpListenerFixture {
     override def newSender(udpProbe: TestProbe) =
@@ -57,7 +58,7 @@ class SimpleStatsDMetricsSenderSpec extends UDPBasedStatsDMetricSenderSpec("simp
       testRecorder.metricOne.record(30L)
       testRecorder.metricTwo.record(20L)
 
-      val udp = setup(Map(testEntity -> testRecorder.collect(collectionContext)))
+      val udp = setup(Map(testEntity → testRecorder.collect(collectionContext)))
       expectUDPPacket(s"$testMetricKey1:10|ms", udp)
       expectUDPPacket(s"$testMetricKey1:30|ms", udp)
       expectUDPPacket(s"$testMetricKey2:20|ms", udp)
@@ -69,7 +70,7 @@ class SimpleStatsDMetricsSenderSpec extends UDPBasedStatsDMetricSenderSpec("simp
       testRecorder.metricOne.record(10L)
       testRecorder.metricOne.record(10L)
 
-      val udp = setup(Map(testEntity -> testRecorder.collect(collectionContext)))
+      val udp = setup(Map(testEntity → testRecorder.collect(collectionContext)))
       expectUDPPacket(s"$testMetricKey:10|ms|@0.5", udp)
     }
   }

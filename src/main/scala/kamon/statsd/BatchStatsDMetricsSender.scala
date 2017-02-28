@@ -19,7 +19,7 @@ package kamon.statsd
 import akka.actor.Props
 import com.typesafe.config.Config
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
-import kamon.metric.instrument.{ Counter, Histogram }
+import kamon.metric.instrument.{Counter, Histogram}
 
 /**
  * Factory for [[BatchStatsDMetricsSender]].

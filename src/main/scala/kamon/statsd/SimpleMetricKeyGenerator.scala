@@ -19,7 +19,7 @@ package kamon.statsd
 import java.lang.management.ManagementFactory
 
 import com.typesafe.config.Config
-import kamon.metric.{ SingleInstrumentEntityRecorder, MetricKey, Entity }
+import kamon.metric.{SingleInstrumentEntityRecorder, MetricKey, Entity}
 
 trait MetricKeyGenerator {
   def generateKey(entity: Entity, metricKey: MetricKey): String

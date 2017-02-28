@@ -19,7 +19,7 @@ package kamon.statsd
 import com.typesafe.config.ConfigFactory
 import kamon.metric.instrument.UnitOfMeasurement
 import kamon.metric._
-import org.scalatest.{ Matchers, WordSpec }
+import org.scalatest.{Matchers, WordSpec}
 
 class SimpleMetricKeyGeneratorSpec extends WordSpec with Matchers {
 
@@ -31,7 +31,8 @@ class SimpleMetricKeyGeneratorSpec extends WordSpec with Matchers {
       |  include-hostname = true
       |  metric-name-normalization-strategy = normalize
       |}
-    """.stripMargin)
+    """.stripMargin
+  )
 
   "the SimpleMetricKeyGenerator" should {
     "generate metric names that follow the application.host.entity.entity-name.metric-name pattern by default" in {

@@ -21,7 +21,7 @@ import akka.io.Udp
 import akka.testkit.TestProbe
 import kamon.Kamon
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
-import kamon.metric.instrument.{ InstrumentFactory, UnitOfMeasurement }
+import kamon.metric.instrument.{InstrumentFactory, UnitOfMeasurement}
 import kamon.metric._
 import kamon.testkit.BaseKamonSpec
 import kamon.util.MilliTimestamp

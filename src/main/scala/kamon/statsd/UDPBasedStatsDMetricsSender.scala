@@ -17,11 +17,11 @@
 package kamon.statsd
 
 import java.net.InetSocketAddress
-import java.text.{ DecimalFormat, DecimalFormatSymbols }
+import java.text.{DecimalFormat, DecimalFormatSymbols}
 import java.util.Locale
 
-import akka.actor.{ Actor, ActorRef, ActorSystem }
-import akka.io.{ IO, Udp }
+import akka.actor.{Actor, ActorRef, ActorSystem}
+import akka.io.{IO, Udp}
 import akka.util.ByteString
 import com.typesafe.config.Config
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
@@ -67,8 +67,10 @@ abstract class UDPBasedStatsDMetricsSender(statsDConfig: Config, metricKeyGenera
 
   def ready(udpSender: ActorRef): Receive = {
     case tick: TickMetricSnapshot ⇒
-      writeMetricsToRemote(tick,
-        (data: String) ⇒ udpSender ! Udp.Send(ByteString(data), socketAddress))
+      writeMetricsToRemote(
+        tick,
+        (data: String) ⇒ udpSender ! Udp.Send(ByteString(data), socketAddress)
+      )
   }
 
   def writeMetricsToRemote(tick: TickMetricSnapshot, flushToUDP: String ⇒ Unit): Unit

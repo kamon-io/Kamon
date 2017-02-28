@@ -17,7 +17,7 @@
 package kamon.statsd
 
 import akka.testkit.TestProbe
-import akka.actor.{ ActorRef, Props, ActorSystem }
+import akka.actor.{ActorRef, Props, ActorSystem}
 import akka.io.Udp
 import com.typesafe.config.ConfigFactory
 
@@ -39,7 +39,8 @@ class BatchStatsDMetricSenderSpec extends UDPBasedStatsDMetricSenderSpec("batch-
         |  }
         |}
         |
-      """.stripMargin)
+      """.stripMargin
+    )
 
   val testMaxPacketSize = statsDConfig.getBytes("batch-metric-sender.max-packet-size")
 
@@ -56,7 +57,7 @@ class BatchStatsDMetricSenderSpec extends UDPBasedStatsDMetricSenderSpec("batch-
       val testRecorder = buildRecorder("user/kamon")
       testRecorder.metricOne.record(10L)
 
-      val udp = setup(Map(testEntity -> testRecorder.collect(collectionContext)))
+      val udp = setup(Map(testEntity → testRecorder.collect(collectionContext)))
 
       expectUDPPacket(s"$testMetricKey:10|ms", udp)
     }
@@ -68,7 +69,7 @@ class BatchStatsDMetricSenderSpec extends UDPBasedStatsDMetricSenderSpec("batch-
       testRecorder.metricOne.record(11L)
       testRecorder.metricOne.record(12L)
 
-      val udp = setup(Map(testEntity -> testRecorder.collect(collectionContext)))
+      val udp = setup(Map(testEntity → testRecorder.collect(collectionContext)))
 
       expectUDPPacket(s"$testMetricKey:10|ms:11|ms:12|ms", udp)
     }
@@ -79,7 +80,7 @@ class BatchStatsDMetricSenderSpec extends UDPBasedStatsDMetricSenderSpec("batch-
       testRecorder.metricOne.record(10L)
       testRecorder.metricOne.record(10L)
 
-      val udp = setup(Map(testEntity -> testRecorder.collect(collectionContext)))
+      val udp = setup(Map(testEntity → testRecorder.collect(collectionContext)))
 
       expectUDPPacket(s"$testMetricKey:10|ms|@0.5", udp)
     }
@@ -96,7 +97,7 @@ class BatchStatsDMetricSenderSpec extends UDPBasedStatsDMetricSenderSpec("batch-
         bytes += s":$level|ms".length
       }
 
-      val udp = setup(Map(testEntity -> testRecorder.collect(collectionContext)))
+      val udp = setup(Map(testEntity → testRecorder.collect(collectionContext)))
       udp.expectMsgType[Udp.Send] // let the first flush pass
       expectUDPPacket(s"$testMetricKey:$level|ms", udp)
     }
@@ -113,7 +114,7 @@ class BatchStatsDMetricSenderSpec extends UDPBasedStatsDMetricSenderSpec("batch-
       testRecorder.metricTwo.record(20L)
       testRecorder.metricTwo.record(21L)
 
-      val udp = setup(Map(testEntity -> testRecorder.collect(collectionContext)))
+      val udp = setup(Map(testEntity → testRecorder.collect(collectionContext)))
       expectUDPPacket(s"$testMetricKey1:10|ms|@0.5:11|ms\n$testMetricKey2:20|ms:21|ms", udp)
     }
   }
