@@ -15,8 +15,8 @@
  */
 
 val kamonCore        = "io.kamon" %% "kamon-core"            % "0.6.6"
-val kamonAkka        = "io.kamon" %% "kamon-akka-2.4"        % "0.6.5"
-val kamonLogReporter = "io.kamon" %% "kamon-log-reporter"    % "0.6.5"
+val kamonAkka        = "io.kamon" %% "kamon-akka-2.4"        % "0.6.6"
+val kamonLogReporter = "io.kamon" %% "kamon-log-reporter"    % "0.6.6"
 
 val http         = "com.typesafe.akka" %% "akka-http"          % "10.0.1"
 val httpTestKit  = "com.typesafe.akka" %% "akka-http-testkit"  % "10.0.1"
@@ -24,6 +24,7 @@ val httpTestKit  = "com.typesafe.akka" %% "akka-http-testkit"  % "10.0.1"
 lazy val root = (project in file("."))
   .aggregate(kamonAkkaHttp, kamonAkkaHttpPlayground)
   .settings(noPublishing: _*)
+  .settings(Seq(crossScalaVersions := Seq("2.11.8", "2.12.1")))
 
 lazy val kamonAkkaHttp = Project("kamon-akka-http", file("kamon-akka-http"))
   .settings(name := "kamon-akka-http")
