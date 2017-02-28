@@ -13,19 +13,29 @@
  * =========================================================================================
  */
 
-
-import AspectJ._
-import Settings._
-import Dependencies._
+val kamonCore  = "io.kamon" %% "kamon-core" % "0.6.6"
+val scalazConcurrent  = "org.scalaz" %% "scalaz-concurrent" % "7.2.8"
 
 lazy val root = (project in file("."))
   .settings(name := "kamon-scala")
-  .settings(basicSettings: _*)
-  .settings(formatSettings: _*)
   .settings(aspectJSettings: _*)
   .settings(
       libraryDependencies ++=
         compileScope(kamonCore) ++
         providedScope(aspectJ) ++
         optionalScope(scalazConcurrent, twitterDependency("core").value) ++
-        testScope(scalatest, akkaDependency("testkit").value, akkaDependency("slf4j").value, logback))
+        testScope(scalatest, akkaDependency("testkit").value, akkaDependency("slf4j").value, logbackClassic))
+
+def twitterDependency(moduleName: String) = Def.setting {
+  scalaBinaryVersion.value match {
+    case "2.10"           => "com.twitter" %% s"util-$moduleName" % "6.34.0"
+    case "2.11" | "2.12"  => "com.twitter" %% s"util-$moduleName" % "6.40.0"
+  }
+}
+
+def akkaDependency(moduleName: String) = Def.setting {
+  scalaBinaryVersion.value match {
+    case "2.10"           => "com.typesafe.akka" %% s"akka-$moduleName" % "2.3.16"
+    case "2.11" | "2.12"  => "com.typesafe.akka" %% s"akka-$moduleName" % "2.4.16"
+  }
+}
