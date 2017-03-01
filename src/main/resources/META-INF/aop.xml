@@ -3,10 +3,19 @@
 <aspectj>
   <aspects>
     <aspect name="kamon.jdbc.instrumentation.StatementInstrumentation"/>
+    <aspect name="kamon.jdbc.instrumentation.HikariInstrumentation"/>
   </aspects>
 
-    <weaver>
-       <include within="java.sql.Statement..*"/>
-       <include within="java.sql.Connection..*"/>
-   </weaver>
+
+  <weaver>
+    <include within="com.zaxxer.hikari.pool.HikariPool"/>
+    <include within="com.zaxxer.hikari.pool.ProxyConnection"/>
+
+    <!-- JDBC Drivers -->
+    <include within="org.h2..*"/>
+    <include within="com.mysql.jdbc..*"/>
+    <include within="org.mariadb.jdbc..*"/>
+    <include within="org.postgresql.jdbc4..*"/>
+    <include within="com.microsoft.sqlserver.jdbc..*"/>
+  </weaver>
 </aspectj>

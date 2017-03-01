@@ -15,104 +15,146 @@
 
 package kamon.jdbc.instrumentation
 
-import java.util.concurrent.TimeUnit.{ NANOSECONDS ⇒ nanos }
+import java.sql.{PreparedStatement, Statement}
+import java.util.concurrent.TimeUnit.{NANOSECONDS => nanos}
 
-import kamon.Kamon
 import kamon.jdbc.JdbcExtension
-import kamon.jdbc.metric.StatementsMetrics
-import kamon.trace.{ Tracer, TraceContext, SegmentCategory }
+import kamon.jdbc.instrumentation.StatementInstrumentation.StatementTypes
+import kamon.metric.instrument.{Counter, Histogram, MinMaxCounter}
+import kamon.trace.{SegmentCategory, TraceContext, Tracer}
 import org.aspectj.lang.ProceedingJoinPoint
-import org.aspectj.lang.annotation.{ Around, Aspect, Pointcut }
+import org.aspectj.lang.annotation.{Around, Aspect, DeclareMixin, Pointcut}
 
 import scala.util.control.NonFatal
 
 @Aspect
 class StatementInstrumentation {
 
-  import StatementInstrumentation._
+  @DeclareMixin("java.sql.Statement+")
+  def mixinHasConnectionPoolTrackerToStatement: HasStatementMetrics.Mixin = HasStatementMetrics()
 
-  @Pointcut("call(* java.sql.Statement.execute*(..)) && args(sql)")
-  def onExecuteStatement(sql: String): Unit = {}
+  /**
+   *   Calls to java.sql.Statement+.execute(..)
+   */
 
-  @Pointcut("call(* java.sql.Connection.prepareStatement(..)) && args(sql)")
-  def onExecutePreparedStatement(sql: String): Unit = {}
+  @Pointcut("execution(* java.sql.Statement+.execute(..)) && args(sql) && this(statement)")
+  def statementExecuteWithArguments(sql: String, statement: Statement): Unit = {}
 
-  @Pointcut("call(* java.sql.Connection.prepareCall(..)) && args(sql)")
-  def onExecutePreparedCall(sql: String): Unit = {}
+  @Pointcut("execution(* java.sql.PreparedStatement+.execute()) && this(statement)")
+  def statementExecuteWithoutArguments(statement: PreparedStatement): Unit = {}
 
-  @Around("onExecuteStatement(sql) || onExecutePreparedStatement(sql) || onExecutePreparedCall(sql)")
-  def aroundExecuteStatement(pjp: ProceedingJoinPoint, sql: String): Any = {
-    Tracer.currentContext.collect { ctx ⇒
-      implicit val statementRecorder = Kamon.metrics.entity(StatementsMetrics, "jdbc-statements")
+  @Around("statementExecuteWithArguments(sql, statement)")
+  def aroundStatementExecuteWithArguments(pjp: ProceedingJoinPoint, sql: String, statement: Statement): Any =
+    track(pjp, statement, sql, StatementTypes.GenericExecute)
 
-      sql.replaceAll(CommentPattern, Empty) match {
-        case SelectStatement(_) ⇒ withSegment(ctx, Select)(recordRead(pjp, sql))
-        case InsertStatement(_) ⇒ withSegment(ctx, Insert)(recordWrite(pjp, sql))
-        case UpdateStatement(_) ⇒ withSegment(ctx, Update)(recordWrite(pjp, sql))
-        case DeleteStatement(_) ⇒ withSegment(ctx, Delete)(recordWrite(pjp, sql))
-        case anythingElse ⇒
-          JdbcExtension.log.debug(s"Unable to parse sql [$sql]")
-          pjp.proceed()
-      }
+  @Around("statementExecuteWithoutArguments(statement)")
+  def aroundStatementExecuteWithoutArguments(pjp: ProceedingJoinPoint, statement: PreparedStatement): Any =
+    track(pjp, statement, "not-available", StatementTypes.GenericExecute)
+
+  /**
+   *   Calls to java.sql.Statement+.executeQuery(..)
+   */
+
+  @Pointcut("execution(* java.sql.Statement+.executeQuery(..)) && args(sql) && this(statement)")
+  def statementExecuteQueryWithArguments(sql: String, statement: Statement): Unit = {}
+
+  @Pointcut("execution(* java.sql.PreparedStatement+.executeQuery()) && this(statement)")
+  def statementExecuteQueryWithoutArguments(statement: PreparedStatement): Unit = {}
+
+  @Around("statementExecuteQueryWithArguments(sql, statement)")
+  def aroundStatementExecuteQueryWithArguments(pjp: ProceedingJoinPoint, sql: String, statement: Statement): Any =
+    track(pjp, statement, sql, StatementTypes.Query)
+
+  @Around("statementExecuteQueryWithoutArguments(statement)")
+  def aroundStatementExecuteQueryWithoutArguments(pjp: ProceedingJoinPoint, statement: PreparedStatement): Any =
+    track(pjp, statement, "not-available", StatementTypes.Query)
+
+  /**
+   *   Calls to java.sql.Statement+.executeUpdate(..)
+   */
+
+  @Pointcut("execution(* java.sql.Statement+.executeUpdate(..)) && args(sql) && this(statement)")
+  def statementExecuteUpdateWithArguments(sql: String, statement: Statement): Unit = {}
+
+  @Pointcut("execution(* java.sql.PreparedStatement+.executeUpdate()) && this(statement)")
+  def statementExecuteUpdateWithoutArguments(statement: PreparedStatement): Unit = {}
+
+  @Around("statementExecuteUpdateWithArguments(sql, statement)")
+  def aroundStatementExecuteUpdateWithArguments(pjp: ProceedingJoinPoint, sql: String, statement: Statement): Any =
+    track(pjp, statement, sql, StatementTypes.Update)
+
+  @Around("statementExecuteUpdateWithoutArguments(statement)")
+  def aroundStatementExecuteUpdateWithoutArguments(pjp: ProceedingJoinPoint, statement: PreparedStatement): Any =
+    track(pjp, statement, "not-available", StatementTypes.Update)
+
+  /**
+   *   Calls to java.sql.Statement+.executeBatch() and java.sql.Statement+.executeLargeBatch()
+   */
+
+  @Pointcut("(execution(* java.sql.Statement+.executeBatch()) || execution(* java.sql.Statement+.executeLargeBatch()))  && this(statement)")
+  def statementExecuteBatch(statement: Statement): Unit = {}
+
+  @Around("statementExecuteBatch(statement)")
+  def aroundStatementExecuteBatch(pjp: ProceedingJoinPoint, statement: Statement): Any =
+    track(pjp, statement, "not-available", StatementTypes.Batch)
+
+  def track(pjp: ProceedingJoinPoint, target: Any, sql: String, statementType: String): Any = {
+    val customRecorder = target.asInstanceOf[HasStatementMetrics.Mixin].statementMetrics
+    val entityRecorder = if(customRecorder != null) customRecorder else JdbcExtension.defaultTracker
+    val latencyRecorder = statementType match {
+      case StatementTypes.Query           ⇒ entityRecorder.queries
+      case StatementTypes.Update          ⇒ entityRecorder.updates
+      case StatementTypes.Batch           ⇒ entityRecorder.batches
+      case StatementTypes.GenericExecute  ⇒ entityRecorder.genericExecute
     }
-  } getOrElse pjp.proceed()
 
-  def withTimeSpent[A](thunk: ⇒ A)(timeSpent: Long ⇒ Unit): A = {
-    val start = System.nanoTime()
-    try thunk finally timeSpent(System.nanoTime() - start)
+    trackExecution(pjp, sql, statementType, latencyRecorder, entityRecorder.inFlightStatements, entityRecorder.errors, entityRecorder.slowStatements)
   }
 
-  def withSegment[A](ctx: TraceContext, statement: String)(thunk: ⇒ A): A = {
-    val segmentName = JdbcExtension.generateJdbcSegmentName(statement)
-    val segment = ctx.startSegment(segmentName, SegmentCategory.Database, JdbcExtension.SegmentLibraryName)
-    try thunk finally segment.finish()
-  }
+  def trackExecution(pjp: ProceedingJoinPoint, sql: String, statementType: String, latencyHistogram: Histogram,
+    inFlightCounter: MinMaxCounter, errorCounter: Counter, slowStatementsCounter: Counter): Any = {
 
-  def recordRead(pjp: ProceedingJoinPoint, sql: String)(implicit statementRecorder: StatementsMetrics): Any = {
-    withTimeSpent(pjp.proceedWithErrorHandler(sql)) { timeSpent ⇒
-      statementRecorder.reads.record(timeSpent)
+    inFlightCounter.increment()
+    val startedAt = System.nanoTime()
+
+    try {
+      if (Tracer.currentContext.nonEmpty && JdbcExtension.shouldGenerateSegments)
+        withSegment(Tracer.currentContext, statementType, sql)(pjp.proceed())
+      else
+        pjp.proceed()
+
+    } catch {
+      case NonFatal(throwable) ⇒ {
+        JdbcExtension.processSqlError(sql, throwable)
+        errorCounter.increment()
+        throw throwable
+      }
+    } finally {
+      val timeSpent = System.nanoTime() - startedAt
+      latencyHistogram.record(timeSpent)
+      inFlightCounter.decrement()
 
       val timeSpentInMillis = nanos.toMillis(timeSpent)
-
       if (timeSpentInMillis >= JdbcExtension.slowQueryThreshold) {
-        statementRecorder.slows.increment()
+        slowStatementsCounter.increment()
         JdbcExtension.processSlowQuery(sql, timeSpentInMillis)
       }
     }
   }
 
-  def recordWrite(pjp: ProceedingJoinPoint, sql: String)(implicit statementRecorder: StatementsMetrics): Any = {
-    withTimeSpent(pjp.proceedWithErrorHandler(sql)) { timeSpent ⇒
-      statementRecorder.writes.record(timeSpent)
-    }
+  def withSegment[A](ctx: TraceContext, statementType: String, statement: String)(thunk: ⇒ A): A = {
+    val segmentName = JdbcExtension.generateJdbcSegmentName(statementType, statement)
+    val segment = ctx.startSegment(segmentName, SegmentCategory.Database, JdbcExtension.SegmentLibraryName)
+    try thunk finally segment.finish()
   }
 }
 
 object StatementInstrumentation {
-
-  val SelectStatement = "(?i)^\\s*select.*?\\sfrom[\\s\\[]+([^\\]\\s,)(;]*).*".r
-  val InsertStatement = "(?i)^\\s*insert(?:\\s+ignore)?\\s+into\\s+([^\\s(,;]*).*".r
-  val UpdateStatement = "(?i)^\\s*update\\s+([^\\s,;]*).*".r
-  val DeleteStatement = "(?i)^\\s*delete\\s+from\\s+([^\\s,(;]*).*".r
-  val CommentPattern = "/\\*.*?\\*/" //for now only removes comments of kind / * anything * /
-  val Empty = ""
-  val Statements = "jdbc-statements"
-  val Select = "Select"
-  val Insert = "Insert"
-  val Update = "Update"
-  val Delete = "Delete"
-
-  implicit class PimpedProceedingJoinPoint(pjp: ProceedingJoinPoint) {
-    def proceedWithErrorHandler(sql: String)(implicit statementRecorder: StatementsMetrics): Any = {
-      try {
-        pjp.proceed()
-      } catch {
-        case NonFatal(cause) ⇒
-          JdbcExtension.processSqlError(sql, cause)
-          statementRecorder.errors.increment()
-          throw cause
-      }
-    }
+  object StatementTypes {
+    val Query = "query"
+    val Update = "update"
+    val Batch = "batch"
+    val GenericExecute = "generic-execute"
   }
 }
 

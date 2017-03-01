@@ -15,166 +15,167 @@
 
 package kamon.jdbc.instrumentation
 
-import java.sql.{ DriverManager, SQLException }
+import java.sql.DriverManager
+import java.util.concurrent.Executors
 
-import com.typesafe.config.ConfigFactory
-import kamon.jdbc.{ JdbcExtension, JdbcNameGenerator, SqlErrorProcessor, SlowQueryProcessor }
-import kamon.testkit.BaseKamonSpec
-import kamon.trace.{ Tracer, SegmentCategory }
+import kamon.Kamon
+import kamon.jdbc.{JdbcExtension, SlowQueryProcessor, SqlErrorProcessor}
+import kamon.metric.EntitySnapshot
+import kamon.trace.{SegmentCategory, Tracer}
+import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
+import org.scalatest.concurrent.Eventually
+import org.scalatest.time.SpanSugar
 
-class StatementInstrumentationSpec extends BaseKamonSpec("jdbc-spec") {
-  val connection = DriverManager.getConnection("jdbc:h2:mem:jdbc-spec", "SA", "")
+import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.util.Try
+
+class StatementInstrumentationSpec extends WordSpec with Matchers with Eventually with SpanSugar with BeforeAndAfterAll {
+  val connection = DriverManager.getConnection("jdbc:h2:mem:jdbc-spec;MULTI_THREADED=1", "SA", "")
+  implicit val parallelQueriesExecutor = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(10))
 
   override protected def beforeAll(): Unit = {
-    connection should not be null
+    connection
+      .prepareStatement("CREATE TABLE Address (Nr INTEGER, Name VARCHAR(128));")
+      .executeUpdate()
 
-    val create = "CREATE TABLE Address (Nr INTEGER, Name VARCHAR(128));"
-    val createStatement = connection.createStatement()
-    createStatement.executeUpdate(create)
+    connection
+      .prepareStatement("CREATE ALIAS SLEEP FOR \"java.lang.Thread.sleep(long)\"")
+      .executeUpdate()
 
-    val sleep = "CREATE ALIAS SLEEP FOR \"java.lang.Thread.sleep(long)\""
-    val sleepStatement = connection.createStatement()
-    sleepStatement.executeUpdate(sleep)
+    takeSnapshotOf("non-pooled", "jdbc-statement")
   }
 
   "the StatementInstrumentation" should {
-    "record the execution time of INSERT operation" in {
-      Tracer.withContext(newContext("jdbc-trace-insert")) {
+    "track in-flight operations" in {
+      val operations = for (id ← 1 to 10) yield {
+        Future {
+          DriverManager
+            .getConnection("jdbc:h2:mem:jdbc-spec", "SA", "")
+            .prepareStatement(s"SELECT * FROM Address where Nr = $id; CALL SLEEP(500)")
+            .execute()
+        }
+      }
+
+      Await.result(Future.sequence(operations), 2 seconds)
+      takeSnapshotOf("non-pooled", "jdbc-statement").minMaxCounter("in-flight").get.max should be(10)
+    }
+
+    "track calls to .execute(..) in statements" in {
+      for (id ← 1 to 100) {
+        val select = s"SELECT * FROM Address where Nr = $id"
+        connection.prepareStatement(select).execute()
+        connection.createStatement().execute(select)
+      }
+
+      val jdbcSnapshot = takeSnapshotOf("non-pooled", "jdbc-statement")
+      jdbcSnapshot.histogram("generic-execute").get.numberOfMeasurements should be(200)
+      jdbcSnapshot.histogram("queries").get.numberOfMeasurements should be(0)
+      jdbcSnapshot.histogram("updates").get.numberOfMeasurements should be(0)
+      jdbcSnapshot.histogram("batches").get.numberOfMeasurements should be(0)
+    }
+
+    "track calls to .executeQuery(..) in statements" in {
+      for (id ← 1 to 100) {
+        val select = s"SELECT * FROM Address where Nr = $id"
+        connection.prepareStatement(select).executeQuery()
+        connection.createStatement().executeQuery(select)
+      }
+
+      val jdbcSnapshot = takeSnapshotOf("non-pooled", "jdbc-statement")
+      jdbcSnapshot.histogram("queries").get.numberOfMeasurements should be(200)
+      jdbcSnapshot.histogram("updates").get.numberOfMeasurements should be(0)
+      jdbcSnapshot.histogram("batches").get.numberOfMeasurements should be(0)
+      jdbcSnapshot.histogram("generic-execute").get.numberOfMeasurements should be(0)
+    }
+
+    "track calls to .executeUpdate(..) in statements" in {
+      for (id ← 1 to 100) {
+        val insert = s"INSERT INTO Address (Nr, Name) VALUES($id, 'foo')"
+        connection.prepareStatement(insert).executeUpdate()
+        connection.createStatement().executeUpdate(insert)
+      }
+
+      val jdbcSnapshot = takeSnapshotOf("non-pooled", "jdbc-statement")
+      jdbcSnapshot.histogram("updates").get.numberOfMeasurements should be(200)
+      jdbcSnapshot.histogram("queries").get.numberOfMeasurements should be(0)
+      jdbcSnapshot.histogram("batches").get.numberOfMeasurements should be(0)
+      jdbcSnapshot.histogram("generic-execute").get.numberOfMeasurements should be(0)
+    }
+
+    "track calls to .executeBatch() in statements" in {
+      for (id ← 1 to 100) {
+        val statement = connection.prepareStatement("INSERT INTO Address (Nr, Name) VALUES(?, 'foo')")
+        statement.setInt(1, id)
+        statement.addBatch()
+
+        statement.setInt(1, id)
+        statement.addBatch()
+        statement.executeBatch()
+      }
+
+      val jdbcSnapshot = takeSnapshotOf("non-pooled", "jdbc-statement")
+      jdbcSnapshot.histogram("batches").get.numberOfMeasurements should be(100)
+      jdbcSnapshot.histogram("updates").get.numberOfMeasurements should be(0)
+      jdbcSnapshot.histogram("queries").get.numberOfMeasurements should be(0)
+      jdbcSnapshot.histogram("generic-execute").get.numberOfMeasurements should be(0)
+    }
+
+    "track errors when executing statements" in {
+      for (id ← 1 to 100) {
+        val insert = s"INSERT INTO NotATable (Nr, Name) VALUES($id, 'foo')"
+        val select = s"SELECT * FROM NotATable where Nr = $id"
+
+        Try(connection.createStatement().execute(select))
+        Try(connection.createStatement().executeQuery(select))
+        Try(connection.createStatement().executeUpdate(insert))
+      }
+
+      val jdbcSnapshot = takeSnapshotOf("non-pooled", "jdbc-statement")
+      jdbcSnapshot.counter("errors").get.count should be(300)
+    }
+
+    "record the execution time of SLOW QUERIES based on the kamon.jdbc.slow-query-threshold setting" in {
+      takeSnapshotOf("non-pooled", "jdbc-statement")
+
+      for (id ← 1 to 2) {
+        val select = s"SELECT * FROM Address; CALL SLEEP(500)"
+        connection.createStatement().execute(select)
+      }
+
+      val jdbcSnapshot = takeSnapshotOf("non-pooled", "jdbc-statement")
+      jdbcSnapshot.counter("slows-statements").get.count should be(2)
+    }
+
+    "generate segments when DB access is made within a Trace" in {
+      Tracer.withNewContext("jdbc-trace-with-segments") {
         for (id ← 1 to 100) {
           val insert = s"INSERT INTO Address (Nr, Name) VALUES($id, 'foo')"
-          val insertStatement = connection.prepareStatement(insert)
-          insertStatement.execute()
-        }
-
-        Tracer.currentContext.finish()
-      }
-
-      val jdbcSnapshot = takeSnapshotOf("jdbc-statements", "jdbc-statements")
-      jdbcSnapshot.histogram("writes").get.numberOfMeasurements should be(100)
-
-      val traceSnapshot = takeSnapshotOf("jdbc-trace-insert", "trace")
-      traceSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
-
-      val segmentSnapshot = takeSnapshotOf("Jdbc[Insert]", "trace-segment",
-        tags = Map(
-          "trace" -> "jdbc-trace-insert",
-          "category" -> SegmentCategory.Database,
-          "library" -> JdbcExtension.SegmentLibraryName))
-
-      segmentSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(100)
-    }
-
-    "record the execution time of SELECT operation" in {
-      Tracer.withContext(newContext("jdbc-trace-select")) {
-        for (id ← 1 to 100) {
           val select = s"SELECT * FROM Address where Nr = $id"
-          val selectStatement = connection.createStatement()
-          selectStatement.execute(select)
+
+          connection.createStatement().execute(select)
+          connection.createStatement().executeQuery(select)
+          connection.createStatement().executeUpdate(insert)
+          connection.prepareStatement(insert).executeBatch()
         }
 
         Tracer.currentContext.finish()
       }
 
-      val jdbcSnapshot = takeSnapshotOf("jdbc-statements", "jdbc-statements")
-      jdbcSnapshot.histogram("reads").get.numberOfMeasurements should be(100)
+      Seq("query", "update", "batch", "generic-execute").foreach { segmentType ⇒
+        val segmentSnapshot = takeSnapshotOf("jdbc-" + segmentType, "trace-segment",
+          tags = Map(
+            "trace" -> "jdbc-trace-with-segments",
+            "category" -> SegmentCategory.Database,
+            "library" -> JdbcExtension.SegmentLibraryName))
 
-      val traceSnapshot = takeSnapshotOf("jdbc-trace-select", "trace")
-      traceSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
-
-      val segmentSnapshot = takeSnapshotOf("Jdbc[Select]", "trace-segment",
-        tags = Map(
-          "trace" -> "jdbc-trace-select",
-          "category" -> SegmentCategory.Database,
-          "library" -> JdbcExtension.SegmentLibraryName))
-
-      segmentSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(100)
-    }
-
-    "record the execution time of UPDATE operation" in {
-      Tracer.withContext(newContext("jdbc-trace-update")) {
-        for (id ← 1 to 100) {
-          val update = s"UPDATE Address SET Name = 'bar$id' where Nr = $id"
-          val updateStatement = connection.prepareStatement(update)
-          updateStatement.execute()
-        }
-
-        Tracer.currentContext.finish()
+        segmentSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(100)
       }
-
-      val jdbcSnapshot = takeSnapshotOf("jdbc-statements", "jdbc-statements")
-      jdbcSnapshot.histogram("writes").get.numberOfMeasurements should be(100)
-
-      val traceSnapshot = takeSnapshotOf("jdbc-trace-update", "trace")
-      traceSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
-
-      val segmentSnapshot = takeSnapshotOf("Jdbc[Update]", "trace-segment",
-        tags = Map(
-          "trace" -> "jdbc-trace-update",
-          "category" -> SegmentCategory.Database,
-          "library" -> JdbcExtension.SegmentLibraryName))
-
-      segmentSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(100)
     }
+  }
 
-    "record the execution time of DELETE operation" in {
-      Tracer.withContext(newContext("jdbc-trace-delete")) {
-        for (id ← 1 to 100) {
-          val delete = s"DELETE FROM Address where Nr = $id"
-          val deleteStatement = connection.createStatement()
-          deleteStatement.execute(delete)
-        }
-
-        Tracer.currentContext.finish()
-      }
-
-      val jdbcSnapshot = takeSnapshotOf("jdbc-statements", "jdbc-statements")
-      jdbcSnapshot.histogram("writes").get.numberOfMeasurements should be(100)
-
-      val traceSnapshot = takeSnapshotOf("jdbc-trace-delete", "trace")
-      traceSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
-
-      val segmentSnapshot = takeSnapshotOf("Jdbc[Delete]", "trace-segment",
-        tags = Map(
-          "trace" -> "jdbc-trace-delete",
-          "category" -> SegmentCategory.Database,
-          "library" -> JdbcExtension.SegmentLibraryName))
-
-      segmentSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(100)
-
-    }
-
-    "record the execution time of SLOW QUERIES based on the kamon.jdbc.slow-query-threshold" in {
-      Tracer.withContext(newContext("jdbc-trace-slow")) {
-        for (id ← 1 to 2) {
-          val select = s"SELECT * FROM Address; CALL SLEEP(100)"
-          val selectStatement = connection.createStatement()
-          selectStatement.execute(select)
-        }
-
-        Tracer.currentContext.finish()
-      }
-
-      val jdbcSnapshot = takeSnapshotOf("jdbc-statements", "jdbc-statements")
-      jdbcSnapshot.counter("slows").get.count should be(2)
-
-    }
-
-    "count all SQL ERRORS" in {
-      Tracer.withContext(newContext("jdbc-trace-errors")) {
-        for (_ ← 1 to 10) {
-          intercept[SQLException] {
-            val error = "SELECT * FROM NO_EXISTENT_TABLE"
-            val errorStatement = connection.createStatement()
-            errorStatement.execute(error)
-          }
-        }
-
-        Tracer.currentContext.finish()
-      }
-
-      val jdbcSnapshot = takeSnapshotOf("jdbc-statements", "jdbc-statements")
-      jdbcSnapshot.counter("errors").get.count should be(10)
-    }
+  def takeSnapshotOf(name: String, category: String, tags: Map[String, String] = Map.empty): EntitySnapshot = {
+    val recorder = Kamon.metrics.find(name, category, tags).get
+    recorder.collect(Kamon.metrics.buildDefaultCollectionContext)
   }
 }
 
@@ -184,8 +185,4 @@ class NoOpSlowQueryProcessor extends SlowQueryProcessor {
 
 class NoOpSqlErrorProcessor extends SqlErrorProcessor {
   override def process(sql: String, ex: Throwable): Unit = { /*do nothing!!!*/ }
-}
-
-class NoOpJdbcNameGenerator extends JdbcNameGenerator {
-  override def generateJdbcSegmentName(statement: String): String = s"Jdbc[$statement]"
 }

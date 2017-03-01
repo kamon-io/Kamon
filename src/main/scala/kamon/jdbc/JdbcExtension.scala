@@ -16,9 +16,9 @@
 package kamon.jdbc
 
 import kamon.util.ConfigTools.Syntax
-
 import akka.actor._
 import kamon.Kamon
+import kamon.jdbc.metric.StatementMetrics
 import kamon.util.logger.LazyLogger
 
 object JdbcExtension {
@@ -39,10 +39,18 @@ object JdbcExtension {
   private val sqlErrorProcessor: SqlErrorProcessor = dynamic.createInstanceFor[SqlErrorProcessor](sqlErrorProcessorClass, Nil).get
 
   val slowQueryThreshold = config.getFiniteDuration("slow-query-threshold").toMillis
+  val shouldGenerateSegments = config.getBoolean("generate-segments")
 
-  def processSlowQuery(sql: String, executionTime: Long) = slowQueryProcessor.process(sql, executionTime, slowQueryThreshold)
-  def processSqlError(sql: String, ex: Throwable) = sqlErrorProcessor.process(sql, ex)
-  def generateJdbcSegmentName(statement: String): String = nameGenerator.generateJdbcSegmentName(statement)
+  val defaultTracker = Kamon.metrics.entity(StatementMetrics, "non-pooled")
+
+  def processSlowQuery(sql: String, executionTime: Long) =
+    slowQueryProcessor.process(sql, executionTime, slowQueryThreshold)
+
+  def processSqlError(sql: String, ex: Throwable) =
+    sqlErrorProcessor.process(sql, ex)
+
+  def generateJdbcSegmentName(statementType: String, statement: String): String =
+    nameGenerator.generateJdbcSegmentName(statementType, statement)
 }
 
 trait SlowQueryProcessor {
@@ -54,11 +62,11 @@ trait SqlErrorProcessor {
 }
 
 trait JdbcNameGenerator {
-  def generateJdbcSegmentName(statement: String): String
+  def generateJdbcSegmentName(statementType: String, statement: String): String
 }
 
 class DefaultJdbcNameGenerator extends JdbcNameGenerator {
-  def generateJdbcSegmentName(statement: String): String = s"Jdbc[$statement]"
+  def generateJdbcSegmentName(statementType: String, statement: String): String = s"jdbc-$statementType"
 }
 
 class DefaultSqlErrorProcessor extends SqlErrorProcessor {
