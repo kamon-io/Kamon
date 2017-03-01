@@ -1,5 +1,5 @@
 /* =========================================================================================
- * Copyright © 2013-2016 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2017 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -18,7 +18,7 @@ val play24Version     = "2.4.8"
 val play25Version     = "2.5.4"
 
 val kamonCore         = "io.kamon"                  %%  "kamon-core"            % "0.6.6"
-val kamonScala        = "io.kamon"                  %%  "kamon-scala"           % "0.6.5"
+val kamonScala        = "io.kamon"                  %%  "kamon-scala"           % "0.6.6"
 
 //play 2.3.x
 val play23            = "com.typesafe.play"         %%  "play"                  % play23Version
@@ -36,7 +36,7 @@ val play25            = "com.typesafe.play"         %%  "play"                  
 val playWS25          = "com.typesafe.play"         %%  "play-ws"               % play25Version
 val playTest25        = "org.scalatestplus.play"    %%  "scalatestplus-play"    % "1.5.0"
 
-
+val resolutionRepos = Seq("typesafe repo" at "http://repo.typesafe.com/typesafe/releases/")
 
 lazy val kamonPlay = Project("kamon-play", file("."))
   .settings(noPublishing: _*)
@@ -50,6 +50,7 @@ lazy val kamonPlay23 = Project("kamon-play-23", file("kamon-play-2.3.x"))
       crossScalaVersions := Seq("2.10.6", "2.11.8"),
       testGrouping in Test := singleTestPerJvm((definedTests in Test).value, (javaOptions in Test).value)))
   .settings(aspectJSettings: _*)
+  .settings(resolvers ++= resolutionRepos)
   .settings(
     libraryDependencies ++=
       compileScope(play23, playWS23, kamonCore, kamonScala) ++
@@ -64,6 +65,7 @@ lazy val kamonPlay24 = Project("kamon-play-24", file("kamon-play-2.4.x"))
       crossScalaVersions := Seq("2.10.6", "2.11.8"),
     testGrouping in Test := singleTestPerJvm((definedTests in Test).value, (javaOptions in Test).value)))
   .settings(aspectJSettings: _*)
+  .settings(resolvers ++= resolutionRepos)
   .settings(
     libraryDependencies ++=
       compileScope(play24, playWS24, kamonCore, kamonScala) ++
@@ -78,6 +80,7 @@ lazy val kamonPlay25 = Project("kamon-play-25", file("kamon-play-2.5.x"))
       crossScalaVersions := Seq("2.11.8"),
       testGrouping in Test := singleTestPerJvm((definedTests in Test).value, (javaOptions in Test).value)))
   .settings(aspectJSettings: _*)
+  .settings(resolvers ++= resolutionRepos)
   .settings(
     libraryDependencies ++=
       compileScope(play25, playWS25, kamonCore, kamonScala) ++
