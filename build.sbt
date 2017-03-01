@@ -44,6 +44,7 @@ lazy val kamonPlay = Project("kamon-play", file("."))
 
 lazy val kamonPlay23 = Project("kamon-play-23", file("kamon-play-2.3.x"))
   .settings(Seq(
+      bintrayPackage := "kamon-play",
       moduleName := "kamon-play-2.3",
       scalaVersion := "2.11.8",
       crossScalaVersions := Seq("2.10.6", "2.11.8"),
@@ -57,6 +58,7 @@ lazy val kamonPlay23 = Project("kamon-play-23", file("kamon-play-2.3.x"))
 
 lazy val kamonPlay24 = Project("kamon-play-24", file("kamon-play-2.4.x"))
   .settings(Seq(
+      bintrayPackage := "kamon-play",
       moduleName := "kamon-play-2.4",
       scalaVersion := "2.11.8",
       crossScalaVersions := Seq("2.10.6", "2.11.8"),
@@ -70,6 +72,7 @@ lazy val kamonPlay24 = Project("kamon-play-24", file("kamon-play-2.4.x"))
 
 lazy val kamonPlay25 = Project("kamon-play-25", file("kamon-play-2.5.x"))
   .settings(Seq(
+      bintrayPackage := "kamon-play",
       moduleName := "kamon-play-2.5",
       scalaVersion := "2.11.8",
       crossScalaVersions := Seq("2.11.8"),
@@ -89,3 +92,5 @@ def singleTestPerJvm(tests: Seq[TestDefinition], jvmSettings: Seq[String]): Seq[
       tests = Seq(test),
       runPolicy = SubProcess(ForkOptions(runJVMOptions = jvmSettings)))
   }
+
+enableProperCrossScalaVersionTasks
