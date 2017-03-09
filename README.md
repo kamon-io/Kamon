@@ -3,11 +3,11 @@ Play Framework Integration  ![Build Status](https://travis-ci.org/kamon-io/kamon
 
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/kamon-io/Kamon?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-***kamon-play-23*** [![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-play-23_2.11/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-play-23_2.11)
+***kamon-play-23*** [![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-play-23_2.11/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-play-2.3_2.11)
 
-***kamon-play-24*** [![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-play-24_2.11/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-play-24_2.11)
+***kamon-play-24*** [![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-play-24_2.11/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-play-2.4_2.11)
 
-***kamon-play-25*** [![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-play-25_2.11/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-play-25_2.11)
+***kamon-play-25*** [![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-play-25_2.11/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-play-2.5_2.11)
 
 
 The `kamon-play` module ships with bytecode instrumentation that brings automatic traces and segments management and
