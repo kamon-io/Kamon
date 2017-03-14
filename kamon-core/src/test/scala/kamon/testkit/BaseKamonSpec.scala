@@ -19,7 +19,7 @@ package kamon.testkit
 import akka.actor.ActorSystem
 import akka.testkit.{ImplicitSender, TestKitBase}
 import com.typesafe.config.Config
-import kamon.Kamon
+import kamon.{ActorSystemTools, Kamon}
 import kamon.metric.{Entity, EntitySnapshot, SubscriptionsDispatcher}
 import kamon.trace.TraceContext
 import kamon.util.LazyActorRef
@@ -27,7 +27,7 @@ import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 
 abstract class BaseKamonSpec(actorSystemName: String) extends TestKitBase with WordSpecLike with Matchers with ImplicitSender with BeforeAndAfterAll {
   lazy val collectionContext = Kamon.metrics.buildDefaultCollectionContext
-  implicit lazy val system: ActorSystem = {
+  override implicit lazy val system: ActorSystem = {
     Kamon.start(mergedConfig)
     ActorSystem(actorSystemName, mergedConfig)
   }
@@ -65,6 +65,6 @@ abstract class BaseKamonSpec(actorSystemName: String) extends TestKitBase with W
 
   override protected def afterAll(): Unit = {
     Kamon.shutdown()
-    system.shutdown()
+    ActorSystemTools.terminateActorSystem(system)
   }
 }

@@ -76,7 +76,7 @@ object Kamon {
 
     def shutdown(): Unit = {
       if (started) {
-        actorSystem.shutdown()
+        ActorSystemTools.terminateActorSystem(actorSystem)
       }
     }
 
