@@ -25,7 +25,7 @@ class ApiMethodClient(host: String, val runID: Option[Long], agentSettings: Agen
     ("protocol_version" -> "12"))
 
   // New Relic responses contain JSON but with text/plain content type :(.
-  implicit val JsValueUnmarshaller = Unmarshaller[JsValue](MediaTypes.`application/json`, MediaTypes.`text/plain`) {
+  implicit val JsValueUnmarshaller = Unmarshaller[JsValue](MediaType.custom("text/json"), MediaTypes.`application/json`, MediaTypes.`text/plain`) {
     case x: HttpEntity.NonEmpty ⇒
       JsonParser(x.asString(defaultCharset = HttpCharsets.`UTF-8`))
   }
