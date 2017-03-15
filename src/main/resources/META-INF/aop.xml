@@ -15,7 +15,7 @@
     <include within="org.h2..*"/>
     <include within="com.mysql.jdbc..*"/>
     <include within="org.mariadb.jdbc..*"/>
-    <include within="org.postgresql.jdbc4..*"/>
+    <include within="org.postgresql.jdbc..*"/>
     <include within="com.microsoft.sqlserver.jdbc..*"/>
     <include within="oracle.jdbc..*"/>
     <include within="net.sf.log4jdbc..*"/>
