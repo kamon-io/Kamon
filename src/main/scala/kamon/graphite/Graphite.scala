@@ -4,6 +4,7 @@ import java.net.InetSocketAddress
 
 import scala.collection.JavaConverters._
 import akka.actor.{Actor, ActorRef, ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProvider, Props}
+import akka.io.Tcp.SO.KeepAlive
 import akka.io.Tcp._
 import akka.io.{IO, Tcp}
 import akka.util.ByteString
@@ -31,12 +32,12 @@ class GraphiteExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   private val graphiteConfig = config.getConfig("kamon.graphite")
 
   val tickInterval = Kamon.metrics.settings.tickInterval
-  val flushInterval = graphiteConfig.getFiniteDuration("flush-interval")
   val hostname = graphiteConfig.getString("hostname")
   val port = graphiteConfig.getInt("port")
   val metricPrefix = graphiteConfig.getString("metric-name-prefix")
+  val retryBufferSize = graphiteConfig.getInt("write-retry-buffer-size")
 
-  val metricsSender = system.actorOf(Props(new GraphiteClient(hostname, port, 10 seconds, metricPrefix)), "kamon-graphite")
+  val metricsSender = system.actorOf(Props(new GraphiteClient(hostname, port, 10 seconds, 10 seconds, retryBufferSize, metricPrefix)), "kamon-graphite")
   val graphiteClient = graphiteConfig match {
     case NeedToScale(scaleTimeTo, scaleMemoryTo) ⇒
       system.actorOf(MetricScaleDecorator.props(scaleTimeTo, scaleMemoryTo, metricsSender), "graphite-metric-scale-decorator")
@@ -132,25 +133,56 @@ trait MetricPacking {
 
 }
 
-class GraphiteClient(host: String, port: Int, connectionRetryDelay: FiniteDuration, metricPrefix: String) extends Actor with MetricPacking {
-  import context.dispatcher
-  val log = LoggerFactory.getLogger(classOf[GraphiteClient])
+class GraphiteClient(
+    host: String,
+    port: Int,
+    connectionTimeout: FiniteDuration,
+    connectionRetryDelay: FiniteDuration,
+    writeRetryBufferSize: Int,
+    metricPrefix: String)
+  extends Actor with MetricPacking {
 
-  override def receive: Receive = dormant
+  import context.dispatcher
+  private val log = LoggerFactory.getLogger(classOf[GraphiteClient])
+  private var failedWrites = Seq.empty[Write]
+
+  override def receive: Receive = disconnected
 
   override def preStart(): Unit = {
     self ! GraphiteClient.InitiateConnection
   }
 
-  def dormant: Actor.Receive = discardSnapshots orElse {
+  def disconnected: Actor.Receive = discardSnapshots orElse {
     case GraphiteClient.InitiateConnection =>
-      IO(Tcp)(context.system) ! Connect(new InetSocketAddress(host, port))
+      IO(Tcp)(context.system) ! Connect(
+        remoteAddress = new InetSocketAddress(host, port),
+        timeout = Some(connectionTimeout),
+        options = List(KeepAlive(on = true))
+      )
       context.become(connecting)
+
+    case CommandFailed(write: Write) =>
+      bufferFailedWrite(write)
   }
 
   def discardSnapshots: Actor.Receive = {
     case snapshot: TickMetricSnapshot =>
       log.warn("Connection with Graphite is not established yet, discarding TickMetricSnapshot")
+  }
+
+  def bufferFailedWrite(write: Write): Unit = {
+    if(failedWrites.size >= writeRetryBufferSize) {
+      log.info("The retry buffer is full, discarding a failed write command")
+      failedWrites = failedWrites.tail
+    }
+
+    failedWrites = failedWrites :+ write
+  }
+
+  def flushFailedWrites(connection: ActorRef): Unit = {
+    log.info("Flushing {} writes from the retry buffer", failedWrites.size)
+    failedWrites.foreach(w => connection ! w)
+    failedWrites = Seq.empty[Write]
   }
 
   def connecting: Actor.Receive = discardSnapshots orElse {
@@ -162,16 +194,31 @@ class GraphiteClient(host: String, port: Int, connectionRetryDelay: FiniteDurati
       val connection = sender()
       connection ! Register(self)
       log.info("Connected to Graphite")
+      flushFailedWrites(connection)
       context.become(sending(connection))
+
+    case CommandFailed(write: Write) =>
+      log.warn("Write command to Graphite failed, adding the command to the retry buffer")
+      bufferFailedWrite(write)
   }
 
   def sending(connection: ActorRef): Actor.Receive = {
-    case snapshot: TickMetricSnapshot => dispatchSnapshot(connection, snapshot)
-    case _: ConnectionClosed          => startReconnecting()
+    case snapshot: TickMetricSnapshot =>
+      dispatchSnapshot(connection, snapshot)
+
+    case _: ConnectionClosed =>
+      log.warn("Disconnected from Graphite, trying to reconnect in {}", connectionRetryDelay)
+      startReconnecting()
+
+    case CommandFailed(write: Write) =>
+      log.warn("Write command to Graphite failed, adding the command to the retry buffer")
+      bufferFailedWrite(write)
+      connection ! Close
+      startReconnecting()
   }
 
   def startReconnecting(): Unit = {
-    context.become(dormant)
+    context.become(disconnected)
     context.system.scheduler.scheduleOnce(connectionRetryDelay, self, GraphiteClient.InitiateConnection)
   }
 
