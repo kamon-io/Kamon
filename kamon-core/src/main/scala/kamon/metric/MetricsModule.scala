@@ -16,14 +16,17 @@
 
 package kamon.metric
 
+import java.util.Map.Entry
+
 import akka.actor._
-import com.typesafe.config.Config
+import com.typesafe.config.{Config, ConfigValue, ConfigValueType}
 import kamon.metric.SubscriptionsDispatcher.{Subscribe, Unsubscribe}
 import kamon.metric.instrument.Gauge.CurrentValueCollector
 import kamon.metric.instrument.Histogram.DynamicRange
 import kamon.metric.instrument._
 import kamon.util.LazyActorRef
 
+import scala.collection.JavaConverters._
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.duration.FiniteDuration
 
@@ -236,6 +239,21 @@ private[kamon] class MetricsModuleImpl(config: Config) extends MetricsModule {
 
   @volatile var settings = MetricsSettings(config)
 
+  val defaultTags: Map[String, String] = if (config.hasPath("kamon.default-tags")) {
+    config.getConfig("kamon.default-tags").resolve().entrySet().asScala
+      .collect {
+        case e: Entry[String, ConfigValue] if e.getValue.valueType() == ConfigValueType.STRING =>
+          (e.getKey, e.getValue.unwrapped().asInstanceOf[String])
+        case e: Entry[String, ConfigValue] if e.getValue.valueType() == ConfigValueType.NUMBER =>
+          (e.getKey, e.getValue.unwrapped().asInstanceOf[Int].toString)
+        case e: Entry[String, ConfigValue] if e.getValue.valueType() == ConfigValueType.BOOLEAN =>
+          (e.getKey, e.getValue.unwrapped().asInstanceOf[Boolean].toString)
+      }.toMap
+  }
+  else {
+    Map.empty
+  }
+
   def shouldTrack(entity: Entity): Boolean =
     settings.entityFilters.get(entity.category).map {
       filter ⇒ filter.accept(entity.name)
@@ -245,7 +263,7 @@ private[kamon] class MetricsModuleImpl(config: Config) extends MetricsModule {
   def registerHistogram(name: String, tags: Map[String, String], unitOfMeasurement: Option[UnitOfMeasurement],
     dynamicRange: Option[DynamicRange]): Histogram = {
 
-    val histogramEntity = Entity(name, SingleInstrumentEntityRecorder.Histogram, tags)
+    val histogramEntity = Entity(name, SingleInstrumentEntityRecorder.Histogram, tags ++ defaultTags)
     val recorder = _trackedEntities.atomicGetOrElseUpdate(histogramEntity, {
       val factory = instrumentFactory(histogramEntity.category)
       HistogramRecorder(
@@ -258,12 +276,12 @@ private[kamon] class MetricsModuleImpl(config: Config) extends MetricsModule {
   }
 
   def removeHistogram(name: String, tags: Map[String, String]): Boolean =
-    _trackedEntities.remove(Entity(name, SingleInstrumentEntityRecorder.Histogram, tags)).isDefined
+    _trackedEntities.remove(Entity(name, SingleInstrumentEntityRecorder.Histogram, tags ++ defaultTags)).isDefined
 
   def registerMinMaxCounter(name: String, tags: Map[String, String], unitOfMeasurement: Option[UnitOfMeasurement], dynamicRange: Option[DynamicRange],
     refreshInterval: Option[FiniteDuration]): MinMaxCounter = {
 
-    val minMaxCounterEntity = Entity(name, SingleInstrumentEntityRecorder.MinMaxCounter, tags)
+    val minMaxCounterEntity = Entity(name, SingleInstrumentEntityRecorder.MinMaxCounter, tags ++ defaultTags)
     val recorder = _trackedEntities.atomicGetOrElseUpdate(minMaxCounterEntity, {
       val factory = instrumentFactory(minMaxCounterEntity.category)
       MinMaxCounterRecorder(
@@ -276,13 +294,13 @@ private[kamon] class MetricsModuleImpl(config: Config) extends MetricsModule {
   }
 
   def removeMinMaxCounter(name: String, tags: Map[String, String]): Boolean =
-    _trackedEntities.remove(Entity(name, SingleInstrumentEntityRecorder.MinMaxCounter, tags)).isDefined
+    _trackedEntities.remove(Entity(name, SingleInstrumentEntityRecorder.MinMaxCounter, tags ++ defaultTags)).isDefined
 
   def registerGauge(name: String, valueCollector: CurrentValueCollector, tags: Map[String, String] = Map.empty,
     unitOfMeasurement: Option[UnitOfMeasurement] = None, dynamicRange: Option[DynamicRange] = None,
     refreshInterval: Option[FiniteDuration] = None): Gauge = {
 
-    val gaugeEntity = Entity(name, SingleInstrumentEntityRecorder.Gauge, tags)
+    val gaugeEntity = Entity(name, SingleInstrumentEntityRecorder.Gauge, tags ++ defaultTags)
     val recorder = _trackedEntities.atomicGetOrElseUpdate(gaugeEntity, {
       val factory = instrumentFactory(gaugeEntity.category)
       GaugeRecorder(
@@ -295,12 +313,12 @@ private[kamon] class MetricsModuleImpl(config: Config) extends MetricsModule {
   }
 
   def removeGauge(name: String, tags: Map[String, String]): Boolean =
-    _trackedEntities.remove(Entity(name, SingleInstrumentEntityRecorder.Gauge, tags)).isDefined
+    _trackedEntities.remove(Entity(name, SingleInstrumentEntityRecorder.Gauge, tags ++ defaultTags)).isDefined
 
   def registerCounter(name: String, tags: Map[String, String] = Map.empty, unitOfMeasurement: Option[UnitOfMeasurement] = None,
     dynamicRange: Option[DynamicRange] = None): Counter = {
 
-    val counterEntity = Entity(name, SingleInstrumentEntityRecorder.Counter, tags)
+    val counterEntity = Entity(name, SingleInstrumentEntityRecorder.Counter, tags ++ defaultTags)
     val recorder = _trackedEntities.atomicGetOrElseUpdate(counterEntity, {
       val factory = instrumentFactory(counterEntity.category)
       CounterRecorder(
@@ -313,22 +331,22 @@ private[kamon] class MetricsModuleImpl(config: Config) extends MetricsModule {
   }
 
   def removeCounter(name: String, tags: Map[String, String]): Boolean =
-    _trackedEntities.remove(Entity(name, SingleInstrumentEntityRecorder.Counter, tags)).isDefined
+    _trackedEntities.remove(Entity(name, SingleInstrumentEntityRecorder.Counter, tags ++ defaultTags)).isDefined
 
   def entity[T <: EntityRecorder](recorderFactory: EntityRecorderFactory[T], entity: Entity): T = {
-    _trackedEntities.atomicGetOrElseUpdate(entity, {
+    _trackedEntities.atomicGetOrElseUpdate(entity.copy(tags = entity.tags ++ defaultTags), {
       recorderFactory.createRecorder(instrumentFactory(recorderFactory.category))
     }, _.cleanup).asInstanceOf[T]
   }
 
   def removeEntity(entity: Entity): Boolean = {
-    val removedEntity = _trackedEntities.remove(entity)
+    val removedEntity = _trackedEntities.remove(entity.copy(tags = entity.tags ++ defaultTags))
     removedEntity.foreach(_.cleanup)
     removedEntity.isDefined
   }
 
   def find(entity: Entity): Option[EntityRecorder] =
-    _trackedEntities.get(entity)
+    _trackedEntities.get(entity.copy(tags = entity.tags ++ defaultTags))
 
   def subscribe(filter: SubscriptionFilter, subscriber: ActorRef, permanent: Boolean): Unit =
     _subscriptions.tell(Subscribe(filter, subscriber, permanent))
