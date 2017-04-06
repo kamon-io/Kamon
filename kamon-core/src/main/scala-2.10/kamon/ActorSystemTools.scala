@@ -19,12 +19,7 @@ import scala.util.control.NonFatal
 import akka.actor.ActorSystem
 
 object ActorSystemTools {
-  //first try akka 2.4 system terminate() and then failover to akka 2.3 system shutdown()
   private[kamon] def terminateActorSystem(system: ActorSystem): Unit = {
-    try {
-      system.terminate()
-    } catch {
-      case NonFatal(e) => system.shutdown()
-    }
+    system.shutdown()
   }
 }
