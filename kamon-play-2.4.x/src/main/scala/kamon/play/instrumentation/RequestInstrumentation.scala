@@ -42,7 +42,7 @@ class RequestInstrumentation {
   }
 
   @Around("call(* play.api.http.HttpFilters.filters(..))")
-  def filters(pjp: ProceedingJoinPoint): Any = pjp.proceed().asInstanceOf[Seq[EssentialFilter]] :+ filter
+  def filters(pjp: ProceedingJoinPoint): Any = filter +: pjp.proceed().asInstanceOf[Seq[EssentialFilter]]
 
   @Before("call(* play.api.http.HttpErrorHandler.onClientServerError(..)) && args(requestContextAware, statusCode, *)")
   def onClientError(requestContextAware: TraceContextAware, statusCode: Int): Unit = {

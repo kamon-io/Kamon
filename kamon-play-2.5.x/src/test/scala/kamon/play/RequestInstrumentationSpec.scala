@@ -20,10 +20,11 @@ import javax.inject.Inject
 import kamon.Kamon
 import kamon.metric.instrument.CollectionContext
 import kamon.play.action.TraceName
-import kamon.trace.{ TraceLocal, Tracer }
+import kamon.trace.{ MetricsOnlyContext, TraceLocal, Tracer, Status }
 import org.scalatestplus.play._
+import org.scalatest.Inside
 import play.api.DefaultGlobal
-import play.api.http.{ HttpErrorHandler, HttpFilters, Writeable }
+import play.api.http.{HttpErrorHandler, HttpFilters, Writeable}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.ws.{ WSRequest, WS }
 import play.api.mvc.Results.Ok
@@ -37,7 +38,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 import akka.stream.Materializer
 
-class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
+class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite with Inside {
   System.setProperty("config.file", "./kamon-play-2.5.x/src/test/resources/conf/application.conf")
 
   override lazy val port: Port = 19002
@@ -128,19 +129,28 @@ class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
       TraceLocal.retrieve(TraceLocalKey).get must be(traceLocalStorageValue)
     }
 
+    "propagate metadata generated in the async filters" in {
+      route(FakeRequest(GET, "/retrieve"))
+      Tracer.currentContext mustBe 'closed
+      inside(Tracer.currentContext) {
+        case ctx: MetricsOnlyContext =>
+          ctx.tags must contain("filter" -> "async")
+      }
+    }
+
     "response to the getRouted Action and normalise the current TraceContext name" in {
       Await.result(WS.url(s"http://localhost:$port/getRouted").get(), 10 seconds)
-      Kamon.metrics.find("getRouted.get", "trace") must not be empty
+      Kamon.metrics.find("getRouted.get", "trace", Map("filter" -> "async")) must not be empty
     }
 
     "response to the postRouted Action and normalise the current TraceContext name" in {
       Await.result(WS.url(s"http://localhost:$port/postRouted").post("content"), 10 seconds)
-      Kamon.metrics.find("postRouted.post", "trace") must not be empty
+      Kamon.metrics.find("postRouted.post", "trace", Map("filter" -> "async")) must not be empty
     }
 
     "response to the showRouted Action and normalise the current TraceContext name" in {
       Await.result(WS.url(s"http://localhost:$port/showRouted/2").get(), 10 seconds)
-      Kamon.metrics.find("show.some.id.get", "trace") must not be empty
+      Kamon.metrics.find("show.some.id.get", "trace", Map("filter" -> "async")) must not be empty
     }
 
     "record http server metrics for all processed requests" in {
@@ -201,8 +211,21 @@ class TraceLocalFilter @Inject() (implicit val mat: Materializer) extends Filter
   }
 }
 
-class TestHttpFilters @Inject() (traceLocalFilter: TraceLocalFilter) extends HttpFilters {
-  val filters = Seq(traceLocalFilter)
+class TraceAsyncFilter @Inject() extends EssentialFilter {
+  override def apply(next: EssentialAction): EssentialAction = EssentialAction { requestHeader =>
+    def onResult(result: Result): Result = {
+      if (Tracer.currentContext.status == Status.Open)
+        Tracer.currentContext.addTag("filter", "async")
+      result
+    }
+
+    val nextAccumulator = next(requestHeader)
+    nextAccumulator.map(onResult)
+  }
+}
+
+class TestHttpFilters @Inject() (traceLocalFilter: TraceLocalFilter, traceAsyncFilter: TraceAsyncFilter) extends HttpFilters {
+  val filters = Seq(traceLocalFilter, traceAsyncFilter)
 }
 
 class Routes @Inject() (application: controllers.Application) extends GeneratedRouter with SimpleRouter {
