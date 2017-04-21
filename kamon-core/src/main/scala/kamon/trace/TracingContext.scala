@@ -27,14 +27,14 @@ import scala.collection.concurrent.TrieMap
 private[trace] class TracingContext(
     traceName: String,
     token: String,
-    tags: Map[String, String],
+    traceTags: Map[String, String],
     currentStatus: Status,
     levelOfDetail: LevelOfDetail,
     isLocal: Boolean,
     startTimeztamp: RelativeNanoTimestamp,
     log: LoggingAdapter,
     traceInfoSink: TracingContext ⇒ Unit
-) extends MetricsOnlyContext(traceName, token, tags, currentStatus, levelOfDetail, startTimeztamp, log) {
+) extends MetricsOnlyContext(traceName, token, traceTags, currentStatus, levelOfDetail, startTimeztamp, log) {
 
   private val _openSegments = new AtomicInteger(0)
   private val _startTimestamp = NanoTimestamp.now
@@ -93,8 +93,8 @@ private[trace] class TracingContext(
       segmentName: String,
       category: String,
       library: String,
-      tags: Map[String, String]
-  ) extends MetricsOnlySegment(segmentName, category, library, tags) {
+      segmentTags: Map[String, String]
+  ) extends MetricsOnlySegment(segmentName, category, library, segmentTags) {
 
     private val metadata = TrieMap.empty[String, String]
     override def addMetadata(key: String, value: String): Unit = metadata.put(key, value)
