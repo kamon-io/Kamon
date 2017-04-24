@@ -16,42 +16,27 @@
 parallelExecution in Test in Global := false
 
 lazy val kamon = (project in file("."))
-  .settings(moduleName := "root")
+  .settings(moduleName := "kamon")
   .settings(noPublishing: _*)
-  .aggregate(core, autoweave, testkit, bench)
+  .aggregate(core, testkit)
 
 
 lazy val core = (project in file("kamon-core"))
   .settings(moduleName := "kamon-core")
   .settings(
-        libraryDependencies ++=
-          compileScope(akkaDependency("actor").value, hdrHistogram, slf4jApi) ++
-          providedScope(aspectJ) ++
-          optionalScope(logbackClassic) ++
-          testScope(scalatest, akkaDependency("testkit").value, akkaDependency("slf4j").value, logbackClassic))
+    libraryDependencies ++=
+      compileScope(akkaDependency("actor").value, hdrHistogram, slf4jApi) ++
+      providedScope(aspectJ) ++
+      optionalScope(logbackClassic) ++
+      testScope(scalatest, akkaDependency("testkit").value, akkaDependency("slf4j").value, logbackClassic))
 
-
-
-lazy val autoweave = (project in file("kamon-autoweave"))
-  .dependsOn(core)
-  .settings(moduleName := "kamon-autoweave")
-  .settings(
-        libraryDependencies ++=
-          compileScope(aspectJ) ++
-          testScope(scalatest, slf4jApi))
 
 
 lazy val testkit = (project in file("kamon-testkit"))
   .dependsOn(core)
   .settings(moduleName := "kamon-testkit")
   .settings(
-        libraryDependencies ++=
-          compileScope(akkaDependency("actor").value, akkaDependency("testkit").value) ++
-          providedScope(aspectJ) ++
-          testScope(slf4jApi, slf4jnop))
-
-lazy val bench = (project in file("kamon-bench"))
-  .dependsOn(core)
-  .settings(moduleName := "kamon-bench")
-  .settings(noPublishing: _*)
-  .enablePlugins(JmhPlugin)
+    libraryDependencies ++=
+      compileScope(akkaDependency("actor").value, akkaDependency("testkit").value) ++
+      providedScope(aspectJ) ++
+      testScope(slf4jApi, slf4jnop))
