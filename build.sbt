@@ -13,8 +13,6 @@
  * =========================================================================================
  */
 
-parallelExecution in Test in Global := false
-
 lazy val kamon = (project in file("."))
   .settings(moduleName := "kamon")
   .settings(noPublishing: _*)
@@ -24,17 +22,22 @@ lazy val kamon = (project in file("."))
 lazy val core = (project in file("kamon-core"))
   .settings(moduleName := "kamon-core")
   .settings(
-    libraryDependencies ++=
-      compileScope(akkaDependency("actor").value, hdrHistogram, slf4jApi) ++
-      providedScope(aspectJ) ++
-      optionalScope(logbackClassic) ++
-      testScope(scalatest, akkaDependency("testkit").value, akkaDependency("slf4j").value, logbackClassic))
+    scalaVersion := "2.12.1",
+    resolvers += Resolver.mavenLocal,
+    libraryDependencies ++= Seq(
+      "com.typesafe"     % "config"          % "1.3.1",
+      "org.slf4j"        % "slf4j-api"       % "1.7.7",
+      "org.hdrhistogram" % "HdrHistogram"    % "2.1.9",
+      "io.opentracing"   % "opentracing-api" % "0.21.1-SNAPSHOT",
 
+      "org.scalatest" %% "scalatest" % "3.0.1" % "test"
+    )
+)
 
 
 lazy val testkit = (project in file("kamon-testkit"))
   .dependsOn(core)
-  .settings(moduleName := "kamon-testkit")
+  .settings(moduleName := "kamon-testkit", resolvers += Resolver.mavenLocal)
   .settings(
     libraryDependencies ++=
       compileScope(akkaDependency("actor").value, akkaDependency("testkit").value) ++
