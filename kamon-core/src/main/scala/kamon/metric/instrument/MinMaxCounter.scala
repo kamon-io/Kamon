@@ -3,10 +3,12 @@ package kamon.metric.instrument
 import java.time.Duration
 
 import kamon.metric.Entity
+import kamon.util.MeasurementUnit
 
 trait MinMaxCounter {
   def dynamicRange: DynamicRange
   def sampleInterval: Duration
+  def measurementUnit: MeasurementUnit
 
   def increment(): Unit
   def increment(times: Long): Unit
@@ -16,6 +18,9 @@ trait MinMaxCounter {
 
 object MinMaxCounter {
   def apply(entity: Entity, name: String, dynamicRange2: DynamicRange, sampleInterval2: Duration): MinMaxCounter = new MinMaxCounter {
+
+    override def measurementUnit: MeasurementUnit = ???
+
     override def sampleInterval: Duration = sampleInterval2
     override def increment(): Unit = ???
     override def increment(times: Long): Unit = ???

@@ -1,8 +1,11 @@
 package kamon.metric.instrument
 
 import kamon.metric.Entity
+import kamon.util.MeasurementUnit
 
 trait Gauge {
+  def measurementUnit: MeasurementUnit
+
   def increment(): Unit
   def increment(times: Long): Unit
   def decrement(): Unit

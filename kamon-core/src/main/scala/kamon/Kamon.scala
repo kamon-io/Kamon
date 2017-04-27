@@ -1,7 +1,8 @@
 package kamon
 
 import com.typesafe.config.Config
-import kamon.metric.Metrics
+import kamon.metric.instrument.Histogram
+import kamon.metric.{Entity, EntityRecorder, Metrics}
 import kamon.trace.Tracer
 
 /**
@@ -24,6 +25,10 @@ trait Kamon {
   def reconfigure(config: Config): Unit
 
 
+}
+
+object Kamon {
+  def getHistogram: Histogram = ???
 }
 
 

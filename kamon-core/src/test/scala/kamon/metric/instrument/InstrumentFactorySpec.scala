@@ -68,7 +68,7 @@ class InstrumentFactorySpec extends WordSpec with Matchers{
           |     modified-histogram {
           |       lowest-discernible-value = 99
           |       highest-trackable-value = 999
-          |       significant-value-digits = 7
+          |       significant-value-digits = 4
           |     }
           |
           |     modified-mm-counter {
@@ -92,7 +92,7 @@ class InstrumentFactorySpec extends WordSpec with Matchers{
 
       modifiedHistogram.dynamicRange.lowestDiscernibleValue shouldBe(99)
       modifiedHistogram.dynamicRange.highestTrackableValue shouldBe(999)
-      modifiedHistogram.dynamicRange.significantValueDigits shouldBe(7)
+      modifiedHistogram.dynamicRange.significantValueDigits shouldBe(4)
 
 
       val defaultMMCounter = factory.buildMinMaxCounter(customEntity, "default-mm-counter")

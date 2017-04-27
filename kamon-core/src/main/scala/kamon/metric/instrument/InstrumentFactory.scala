@@ -6,31 +6,42 @@ import java.time.Duration
 
 import com.typesafe.config.Config
 import kamon.metric.instrument.InstrumentFactory.CustomInstrumentSettings
+import kamon.util.MeasurementUnit
 
 
-private[kamon] class InstrumentFactory private (
+private[metric] class InstrumentFactory private (
     defaultHistogramDynamicRange: DynamicRange,
     defaultMMCounterDynamicRange: DynamicRange,
     defaultMMCounterSampleRate: Duration,
     customSettings: Map[(String, String), CustomInstrumentSettings]) {
 
-  def buildHistogram(entity: Entity, name: String, dynamicRange: DynamicRange = defaultHistogramDynamicRange): Histogram =
-    Histogram(entity, name, instrumentDynamicRange(entity, name, dynamicRange))
+  def buildHistogram(entity: Entity, name: String, dynamicRange: DynamicRange = defaultHistogramDynamicRange,
+      measurementUnit: MeasurementUnit = MeasurementUnit.none): Histogram = {
+
+    new HdrHistogram(
+      entity,
+      name,
+      measurementUnit,
+      instrumentDynamicRange(entity, name, dynamicRange)
+    )
+  }
 
   def buildMinMaxCounter(entity: Entity, name: String, dynamicRange: DynamicRange = defaultMMCounterDynamicRange,
-      sampleInterval: Duration = defaultMMCounterSampleRate): MinMaxCounter =
+      sampleInterval: Duration = defaultMMCounterSampleRate, measurementUnit: MeasurementUnit = MeasurementUnit.none): MinMaxCounter = {
+
     MinMaxCounter(
       entity,
       name,
       instrumentDynamicRange(entity, name, dynamicRange),
       instrumentSampleInterval(entity, name, sampleInterval)
     )
+  }
 
-  def buildGauge(entity: Entity, name: String): Gauge =
+  def buildGauge(entity: Entity, name: String, measurementUnit: MeasurementUnit = MeasurementUnit.none): Gauge =
     Gauge(entity, name)
 
-  def buildCounter(entity: Entity, name: String): Counter =
-    Counter(entity, name)
+  def buildCounter(entity: Entity, name: String, measurementUnit: MeasurementUnit = MeasurementUnit.none): Counter with SingleValueSnapshotInstrument =
+    new LongAdderCounter(entity, name, measurementUnit)
 
 
   private def instrumentDynamicRange(entity: Entity, instrumentName: String, dynamicRange: DynamicRange): DynamicRange =
@@ -51,9 +62,9 @@ private[kamon] class InstrumentFactory private (
     )
 }
 
-object InstrumentFactory {
+private[kamon] object InstrumentFactory {
 
-  def apply(config: Config): InstrumentFactory = {
+  private[kamon] def apply(config: Config): InstrumentFactory = {
     val histogramDynamicRange = readDynamicRange(config.getConfig("default-settings.histogram"))
     val mmCounterDynamicRange = readDynamicRange(config.getConfig("default-settings.min-max-counter"))
     val mmCounterSampleInterval = config.getDuration("default-settings.min-max-counter.sample-interval")

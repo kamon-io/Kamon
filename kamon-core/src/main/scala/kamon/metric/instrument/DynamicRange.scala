@@ -17,17 +17,17 @@ object DynamicRange {
     * Provides a range from 0 to 3.6e+12 (one hour in nanoseconds) with a value precision of 1 significant digit (10%)
     * across that range.
     */
-  val Loose = DynamicRange(0L, oneHourInNanoseconds, 1)
+  val Loose = DynamicRange(1L, oneHourInNanoseconds, 1)
 
   /**
     * Provides a range from 0 to 3.6e+12 (one hour in nanoseconds) with a value precision of 2 significant digit (1%)
     * across that range.
     */
-  val Default = DynamicRange(0L, oneHourInNanoseconds, 2)
+  val Default = DynamicRange(1L, oneHourInNanoseconds, 2)
 
   /**
     * Provides a range from 0 to 3.6e+12 (one hour in nanoseconds) with a value precision of 3 significant digit (0.1%)
     * across that range.
     */
-  val Fine = DynamicRange(0L, oneHourInNanoseconds, 3)
+  val Fine = DynamicRange(1L, oneHourInNanoseconds, 3)
 }

@@ -7,7 +7,7 @@ package object kamon {
 
 
   /**
-    *  Workaround to the non thread-safe [[scala.collection.concurrent.TrieMap#getOrElseUpdate]] method. More details on
+    *  Workaround to the non thread-safe [[scala.collection.concurrent.TrieMap#getOrElseUpdate()]] method. More details on
     *  why this is necessary can be found at [[https://issues.scala-lang.org/browse/SI-7943]].
     */
   implicit class AtomicGetOrElseUpdateOnTrieMap[K, V](val trieMap: TrieMap[K, V]) extends AnyVal {
