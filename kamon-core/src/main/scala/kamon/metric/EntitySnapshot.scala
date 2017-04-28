@@ -1,6 +1,5 @@
-package kamon.metric.snapshot
+package kamon.metric
 
-import kamon.metric.Entity
 import kamon.metric.instrument.{DistributionSnapshot, SingleValueSnapshot}
 
 trait EntitySnapshot {

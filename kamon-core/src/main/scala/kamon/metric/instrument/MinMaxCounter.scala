@@ -1,7 +1,10 @@
 package kamon.metric.instrument
 
+import java.lang.Math.abs
 import java.time.Duration
+import java.util.concurrent.atomic.{AtomicLong, AtomicReference}
 
+import kamon.jsr166.LongMaxUpdater
 import kamon.metric.Entity
 import kamon.util.MeasurementUnit
 
@@ -14,18 +17,60 @@ trait MinMaxCounter {
   def increment(times: Long): Unit
   def decrement(): Unit
   def decrement(times: Long): Unit
+  def sample(): Unit
 }
 
-object MinMaxCounter {
-  def apply(entity: Entity, name: String, dynamicRange2: DynamicRange, sampleInterval2: Duration): MinMaxCounter = new MinMaxCounter {
 
-    override def measurementUnit: MeasurementUnit = ???
+class PaddedMinMaxCounter(entity: Entity, name: String, underlyingHistogram: Histogram with DistributionSnapshotInstrument,
+    val sampleInterval: Duration) extends MinMaxCounter with DistributionSnapshotInstrument {
 
-    override def sampleInterval: Duration = sampleInterval2
-    override def increment(): Unit = ???
-    override def increment(times: Long): Unit = ???
-    override def decrement(): Unit = ???
-    override def decrement(times: Long): Unit = ???
-    override def dynamicRange: DynamicRange = dynamicRange2
+  private val min = new LongMaxUpdater(0L)
+  private val max = new LongMaxUpdater(0L)
+  private val sum = new AtomicLong()
+
+  def dynamicRange: DynamicRange =
+    underlyingHistogram.dynamicRange
+
+  def measurementUnit: MeasurementUnit =
+    underlyingHistogram.measurementUnit
+
+  private[kamon] def snapshot(): DistributionSnapshot =
+    underlyingHistogram.snapshot()
+
+  def increment(): Unit =
+    increment(1L)
+
+  def increment(times: Long): Unit = {
+    val currentValue = sum.addAndGet(times)
+    max.update(currentValue)
+  }
+
+  def decrement(): Unit =
+    decrement(1L)
+
+  def decrement(times: Long): Unit = {
+    val currentValue = sum.addAndGet(-times)
+    min.update(-currentValue)
+  }
+
+  def sample(): Unit = {
+    val currentValue = {
+      val value = sum.get()
+      if (value <= 0) 0 else value
+    }
+
+    val currentMin = {
+      val rawMin = min.maxThenReset(-currentValue)
+      if (rawMin >= 0)
+        0
+      else
+        abs(rawMin)
+    }
+
+    val currentMax = max.maxThenReset(currentValue)
+
+    underlyingHistogram.record(currentValue)
+    underlyingHistogram.record(currentMin)
+    underlyingHistogram.record(currentMax)
   }
 }

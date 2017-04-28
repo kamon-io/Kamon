@@ -2,20 +2,17 @@ package kamon.metric.instrument
 
 import kamon.util.MeasurementUnit
 
-
+/**
+  * Snapshot for instruments that internally track a single value. Meant to be used for counters and gauges.
+  *
+  */
 case class SingleValueSnapshot(name: String, measurementUnit: MeasurementUnit, value: Long)
 
+/**
+  * Snapshot for instruments that internally the distribution of values in a defined dynamic range. Meant to be used
+  * with histograms and min max counters.
+  */
 case class DistributionSnapshot(name: String, measurementUnit: MeasurementUnit, dynamicRange: DynamicRange, distribution: Distribution)
-
-trait DistributionSnapshotInstrument {
-  def snapshot(): DistributionSnapshot
-}
-
-trait SingleValueSnapshotInstrument {
-  def snapshot(): SingleValueSnapshot
-}
-
-
 
 
 trait Distribution {
@@ -41,4 +38,13 @@ trait Percentile {
   def quantile: Double
   def value: Long
   def countUnderQuantile: Long
+}
+
+
+trait DistributionSnapshotInstrument {
+  private[kamon] def snapshot(): DistributionSnapshot
+}
+
+trait SingleValueSnapshotInstrument {
+  private[kamon] def snapshot(): SingleValueSnapshot
 }

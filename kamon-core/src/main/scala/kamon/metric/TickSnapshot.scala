@@ -1,4 +1,4 @@
-package kamon.metric.snapshot
+package kamon.metric
 
 import java.time.Instant
 

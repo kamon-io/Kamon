@@ -16,7 +16,7 @@ private[metric] class InstrumentFactory private (
     customSettings: Map[(String, String), CustomInstrumentSettings]) {
 
   def buildHistogram(entity: Entity, name: String, dynamicRange: DynamicRange = defaultHistogramDynamicRange,
-      measurementUnit: MeasurementUnit = MeasurementUnit.none): Histogram = {
+      measurementUnit: MeasurementUnit = MeasurementUnit.none): Histogram with DistributionSnapshotInstrument = {
 
     new HdrHistogram(
       entity,
@@ -29,16 +29,17 @@ private[metric] class InstrumentFactory private (
   def buildMinMaxCounter(entity: Entity, name: String, dynamicRange: DynamicRange = defaultMMCounterDynamicRange,
       sampleInterval: Duration = defaultMMCounterSampleRate, measurementUnit: MeasurementUnit = MeasurementUnit.none): MinMaxCounter = {
 
-    MinMaxCounter(
+    val underlyingHistogram = buildHistogram(entity, name, dynamicRange, measurementUnit)
+    new PaddedMinMaxCounter(
       entity,
       name,
-      instrumentDynamicRange(entity, name, dynamicRange),
+      underlyingHistogram,
       instrumentSampleInterval(entity, name, sampleInterval)
     )
   }
 
-  def buildGauge(entity: Entity, name: String, measurementUnit: MeasurementUnit = MeasurementUnit.none): Gauge =
-    Gauge(entity, name)
+  def buildGauge(entity: Entity, name: String, measurementUnit: MeasurementUnit = MeasurementUnit.none): Gauge with SingleValueSnapshotInstrument =
+    new AtomicLongGauge(entity, name, measurementUnit)
 
   def buildCounter(entity: Entity, name: String, measurementUnit: MeasurementUnit = MeasurementUnit.none): Counter with SingleValueSnapshotInstrument =
     new LongAdderCounter(entity, name, measurementUnit)
