@@ -1,5 +1,7 @@
 package kamon
 
+import java.util.concurrent.ScheduledExecutorService
+
 import com.typesafe.config.Config
 
 trait Environment {
@@ -7,4 +9,5 @@ trait Environment {
   def host: String
   def application: String
   def config: Config
+  def scheduler: ScheduledExecutorService
 }

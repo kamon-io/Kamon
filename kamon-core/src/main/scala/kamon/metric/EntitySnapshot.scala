@@ -2,10 +2,10 @@ package kamon.metric
 
 import kamon.metric.instrument.{DistributionSnapshot, SingleValueSnapshot}
 
-trait EntitySnapshot {
-  def entity: Entity
-  def histograms: Seq[DistributionSnapshot]
-  def minMaxCounters: Seq[DistributionSnapshot]
-  def gauges: Seq[SingleValueSnapshot]
-  def counters: Seq[SingleValueSnapshot]
-}
+class EntitySnapshot(
+  val entity: Entity,
+  val histograms: Seq[DistributionSnapshot],
+  val minMaxCounters: Seq[DistributionSnapshot],
+  val gauges: Seq[SingleValueSnapshot],
+  val counters: Seq[SingleValueSnapshot]
+)

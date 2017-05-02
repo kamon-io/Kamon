@@ -1,8 +1,8 @@
 package kamon
 
-import com.typesafe.config.Config
+import com.typesafe.config.{Config, ConfigFactory}
 import kamon.metric.instrument.Histogram
-import kamon.metric.{Entity, EntityRecorder, Metrics}
+import kamon.metric.{Entity, EntityRecorder, RecorderRegistry, RecorderRegistryImpl}
 import kamon.trace.Tracer
 
 /**
@@ -13,10 +13,10 @@ import kamon.trace.Tracer
   *
   */
 trait Kamon {
-  def metrics: Metrics
+  def metrics: RecorderRegistry
   def tracer: Tracer
 
-  def subscriptions: Subscriptions
+  def subscriptions: Reporters
   def util: Util
 
   def environment: Environment
@@ -28,7 +28,10 @@ trait Kamon {
 }
 
 object Kamon {
-  def getHistogram: Histogram = ???
+  val metricsModule = new RecorderRegistryImpl(ConfigFactory.load())
+  val reports = new ReportersRegistry(metricsModule)
+
+  def metrics: RecorderRegistry = metricsModule
 }
 
 

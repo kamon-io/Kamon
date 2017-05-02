@@ -27,7 +27,7 @@ private[metric] class InstrumentFactory private (
   }
 
   def buildMinMaxCounter(entity: Entity, name: String, dynamicRange: DynamicRange = defaultMMCounterDynamicRange,
-      sampleInterval: Duration = defaultMMCounterSampleRate, measurementUnit: MeasurementUnit = MeasurementUnit.none): MinMaxCounter = {
+      sampleInterval: Duration = defaultMMCounterSampleRate, measurementUnit: MeasurementUnit = MeasurementUnit.none): MinMaxCounter with DistributionSnapshotInstrument = {
 
     val underlyingHistogram = buildHistogram(entity, name, dynamicRange, measurementUnit)
     new PaddedMinMaxCounter(
