@@ -12,26 +12,25 @@ import kamon.trace.Tracer
   *
   *
   */
-trait Kamon {
-  def metrics: RecorderRegistry
-  def tracer: Tracer
-
-  def subscriptions: Reporters
-  def util: Util
-
-  def environment: Environment
-  def diagnose: Diagnostic
-
-  def reconfigure(config: Config): Unit
-
-
-}
-
 object Kamon {
-  val metricsModule = new RecorderRegistryImpl(ConfigFactory.load())
-  val reports = new ReportersRegistry(metricsModule)
+  private val recorderRegistry = new RecorderRegistryImpl(ConfigFactory.load())
+  private val reporterRegistry = new ReporterRegistryImpl(recorderRegistry, ConfigFactory.load())
 
-  def metrics: RecorderRegistry = metricsModule
+  def metrics: RecorderRegistry = recorderRegistry
+  def reporters: ReporterRegistry = reporterRegistry
+
+  def reconfigure(config: Config): Unit = synchronized {
+    recorderRegistry.reconfigure(config)
+    reporterRegistry.reconfigure(config)
+  }
+
+
+  def tracer: Tracer = ???
+  def environment: Environment = ???
+  def diagnose: Diagnostic = ???
+  def util: Util = ???
+
+
 }
 
 
