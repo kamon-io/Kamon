@@ -9,7 +9,7 @@ import kamon.metric.instrument.InstrumentFactory.CustomInstrumentSettings
 import kamon.util.MeasurementUnit
 
 
-private[metric] class InstrumentFactory private (
+private[kamon] class InstrumentFactory private (
     defaultHistogramDynamicRange: DynamicRange,
     defaultMMCounterDynamicRange: DynamicRange,
     defaultMMCounterSampleRate: Duration,

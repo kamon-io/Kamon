@@ -23,11 +23,11 @@ class RecorderRegistryImpl(initialConfig: Config) extends RecorderRegistry {
 
   reconfigure(initialConfig)
 
-  override def getRecorder(entity: Entity): EntityRecorder = {
+  override def getRecorder(entity: Entity): EntityRecorder =
     entities.atomicGetOrElseUpdate(entity, new DefaultEntityRecorder(entity, instrumentFactory.get()))
-  }
 
-  override def getRecorder(name: String, category: String, tags: Map[String, String]): EntityRecorder = ???
+  override def getRecorder(name: String, category: String, tags: Map[String, String]): EntityRecorder =
+    getRecorder(Entity(name, category, tags))
 
   override def removeRecorder(entity: Entity): Boolean = ???
 

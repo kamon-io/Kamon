@@ -1,8 +1,7 @@
 package kamon
 
 import com.typesafe.config.{Config, ConfigFactory}
-import kamon.metric.instrument.Histogram
-import kamon.metric.{Entity, EntityRecorder, RecorderRegistry, RecorderRegistryImpl}
+import kamon.metric.{RecorderRegistry, RecorderRegistryImpl}
 import kamon.trace.Tracer
 
 /**
@@ -15,7 +14,9 @@ import kamon.trace.Tracer
 object Kamon {
   private val recorderRegistry = new RecorderRegistryImpl(ConfigFactory.load())
   private val reporterRegistry = new ReporterRegistryImpl(recorderRegistry, ConfigFactory.load())
+  private val kamonTracer = new Tracer(recorderRegistry, reporterRegistry)
 
+  def tracer: io.opentracing.Tracer = kamonTracer
   def metrics: RecorderRegistry = recorderRegistry
   def reporters: ReporterRegistry = reporterRegistry
 
@@ -24,13 +25,9 @@ object Kamon {
     reporterRegistry.reconfigure(config)
   }
 
-
-  def tracer: Tracer = ???
   def environment: Environment = ???
   def diagnose: Diagnostic = ???
   def util: Util = ???
-
-
 }
 
 
