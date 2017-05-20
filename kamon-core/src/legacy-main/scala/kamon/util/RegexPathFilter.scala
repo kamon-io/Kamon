@@ -16,7 +16,9 @@
 
 package kamon.util
 
-case class RegexPathFilter(path: String) extends PathFilter {
+import kamon.metric.NameFilter
+
+case class RegexPathFilter(path: String) extends NameFilter {
   private val pathRegex = path.r
   override def accept(path: String): Boolean = {
     path match {

@@ -1,7 +1,7 @@
 package kamon
 package trace
 
-import kamon.metric.RecorderRegistry
+import kamon.metric.{Entity, RecorderRegistry}
 import kamon.metric.instrument.DynamicRange
 
 import scala.collection.JavaConverters._
@@ -167,7 +167,8 @@ class Span(spanContext: SpanContext, initialOperationName: String, startTimestam
 
   private def recordSpanMetrics(): Unit = {
     val elapsedTime = endTimestampMicros - startTimestampMicros
-    val recorder = recorderRegistry.getRecorder(operationName, Span.MetricCategory, metricTags)
+    val entity = Entity(operationName, Span.MetricCategory, metricTags)
+    val recorder = recorderRegistry.getRecorder(entity)
 
     recorder
       .histogram(Span.LatencyMetricName, MeasurementUnit.time.microseconds, DynamicRange.Default)
@@ -178,6 +179,5 @@ class Span(spanContext: SpanContext, initialOperationName: String, startTimestam
         recorder.counter(Span.ErrorMetricName).increment()
       }
     }
-
   }
 }

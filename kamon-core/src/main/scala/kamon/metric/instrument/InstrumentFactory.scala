@@ -63,14 +63,15 @@ private[kamon] class InstrumentFactory private (
     )
 }
 
-private[kamon] object InstrumentFactory {
+object InstrumentFactory {
 
-  private[kamon] def apply(config: Config): InstrumentFactory = {
-    val histogramDynamicRange = readDynamicRange(config.getConfig("default-settings.histogram"))
-    val mmCounterDynamicRange = readDynamicRange(config.getConfig("default-settings.min-max-counter"))
-    val mmCounterSampleInterval = config.getDuration("default-settings.min-max-counter.sample-interval")
+  def fromConfig(config: Config): InstrumentFactory = {
+    val factoryConfig = config.getConfig("kamon.metric.instrument-factory")
+    val histogramDynamicRange = readDynamicRange(factoryConfig.getConfig("default-settings.histogram"))
+    val mmCounterDynamicRange = readDynamicRange(factoryConfig.getConfig("default-settings.min-max-counter"))
+    val mmCounterSampleInterval = factoryConfig.getDuration("default-settings.min-max-counter.sample-interval")
 
-    val customSettings = config.getConfig("custom-settings")
+    val customSettings = factoryConfig.getConfig("custom-settings")
       .configurations
       .filter(nonEmptyCategories)
       .flatMap(buildCustomInstrumentSettings)
@@ -95,7 +96,6 @@ private[kamon] object InstrumentFactory {
       highestTrackableValue = config.getLong("highest-trackable-value"),
       significantValueDigits = config.getInt("significant-value-digits")
     )
-
 
   private case class CustomInstrumentSettings(
     lowestDiscernibleValue: Option[Long],

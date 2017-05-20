@@ -14,9 +14,9 @@
  * =========================================================================================
  */
 
-package kamon.util
+package kamon
+package metric
 
-import kamon.metric.GlobPathFilter
 import org.scalatest.{Matchers, WordSpecLike}
 
 class GlobPathFilterSpec extends WordSpecLike with Matchers {
@@ -26,7 +26,6 @@ class GlobPathFilterSpec extends WordSpecLike with Matchers {
       val filter = new GlobPathFilter("/user/actor")
 
       filter.accept("/user/actor") shouldBe true
-
       filter.accept("/user/actor/something") shouldBe false
       filter.accept("/user/actor/somethingElse") shouldBe false
     }
@@ -36,36 +35,34 @@ class GlobPathFilterSpec extends WordSpecLike with Matchers {
 
       filter.accept("/user/actor") shouldBe true
       filter.accept("/user/otherActor") shouldBe true
-
       filter.accept("/user/something/actor") shouldBe false
       filter.accept("/user/something/otherActor") shouldBe false
     }
 
-    "match all expressions in the same levelss" in {
+    "match any expressions when using double star alone (**)" in {
       val filter = new GlobPathFilter("**")
 
       filter.accept("GET: /ping") shouldBe true
       filter.accept("GET: /ping/pong") shouldBe true
+      filter.accept("this-doesn't_look good but-passes") shouldBe true
     }
 
-    "match all expressions and crosses the path boundaries" in {
+    "match all expressions and cross the path boundaries when using double star suffix (**)" in {
       val filter = new GlobPathFilter("/user/actor-**")
 
       filter.accept("/user/actor-") shouldBe true
       filter.accept("/user/actor-one") shouldBe true
       filter.accept("/user/actor-one/other") shouldBe true
-
       filter.accept("/user/something/actor") shouldBe false
       filter.accept("/user/something/otherActor") shouldBe false
     }
 
-    "match exactly one character" in {
+    "match exactly one character when using question mark (?)" in {
       val filter = new GlobPathFilter("/user/actor-?")
 
       filter.accept("/user/actor-1") shouldBe true
       filter.accept("/user/actor-2") shouldBe true
       filter.accept("/user/actor-3") shouldBe true
-
       filter.accept("/user/actor-one") shouldBe false
       filter.accept("/user/actor-two") shouldBe false
       filter.accept("/user/actor-tree") shouldBe false

@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * Copyright © 2013-2014 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2015 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -14,16 +14,16 @@
  * =========================================================================================
  */
 
-package kamon.util
+package kamon
+package metric
 
-import kamon.metric.GlobPathFilter
 import org.scalatest.{Matchers, WordSpecLike}
 
-class GlobPathFilterSpec extends WordSpecLike with Matchers {
-  "The GlobPathFilter" should {
+class RegexPathFilterSpec extends WordSpecLike with Matchers {
+  "The RegexPathFilter" should {
 
     "match a single expression" in {
-      val filter = new GlobPathFilter("/user/actor")
+      val filter = new RegexNameFilter("/user/actor")
 
       filter.accept("/user/actor") shouldBe true
 
@@ -31,36 +31,22 @@ class GlobPathFilterSpec extends WordSpecLike with Matchers {
       filter.accept("/user/actor/somethingElse") shouldBe false
     }
 
-    "match all expressions in the same level" in {
-      val filter = new GlobPathFilter("/user/*")
+    "match arbitray expressions ending with wildcard" in {
+      val filter = new RegexNameFilter("/user/.*")
 
       filter.accept("/user/actor") shouldBe true
       filter.accept("/user/otherActor") shouldBe true
+      filter.accept("/user/something/actor") shouldBe true
+      filter.accept("/user/something/otherActor") shouldBe true
 
-      filter.accept("/user/something/actor") shouldBe false
-      filter.accept("/user/something/otherActor") shouldBe false
+      filter.accept("/otheruser/actor") shouldBe false
+      filter.accept("/otheruser/otherActor") shouldBe false
+      filter.accept("/otheruser/something/actor") shouldBe false
+      filter.accept("/otheruser/something/otherActor") shouldBe false
     }
 
-    "match all expressions in the same levelss" in {
-      val filter = new GlobPathFilter("**")
-
-      filter.accept("GET: /ping") shouldBe true
-      filter.accept("GET: /ping/pong") shouldBe true
-    }
-
-    "match all expressions and crosses the path boundaries" in {
-      val filter = new GlobPathFilter("/user/actor-**")
-
-      filter.accept("/user/actor-") shouldBe true
-      filter.accept("/user/actor-one") shouldBe true
-      filter.accept("/user/actor-one/other") shouldBe true
-
-      filter.accept("/user/something/actor") shouldBe false
-      filter.accept("/user/something/otherActor") shouldBe false
-    }
-
-    "match exactly one character" in {
-      val filter = new GlobPathFilter("/user/actor-?")
+    "match numbers" in {
+      val filter = new RegexNameFilter("/user/actor-\\d")
 
       filter.accept("/user/actor-1") shouldBe true
       filter.accept("/user/actor-2") shouldBe true

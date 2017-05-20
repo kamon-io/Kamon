@@ -23,6 +23,7 @@ lazy val core = (project in file("kamon-core"))
   .settings(moduleName := "kamon-core")
   .settings(
     scalaVersion := "2.12.1",
+    coverageEnabled := true,
     resolvers += Resolver.mavenLocal,
     libraryDependencies ++= Seq(
       "com.typesafe"     % "config"          % "1.3.1",
@@ -31,6 +32,7 @@ lazy val core = (project in file("kamon-core"))
       "org.hdrhistogram" % "HdrHistogram"    % "2.1.9",
       "io.opentracing"   % "opentracing-api" % "0.30.0.RC2",
       "io.opentracing"   % "opentracing-util" % "0.30.0.RC2",
+      "com.lihaoyi" %% "fansi" % "0.2.4",
 
       "uk.org.lidalia" % "slf4j-test" % "1.1.0",
       "org.scalatest" %% "scalatest" % "3.0.1" % "test"

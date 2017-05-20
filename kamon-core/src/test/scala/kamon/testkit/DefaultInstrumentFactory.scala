@@ -6,7 +6,7 @@ import kamon.metric.instrument.InstrumentFactory
 
 trait DefaultInstrumentFactory {
   val defaultEntity = Entity("default-entity", "default-category", Map.empty)
-  val instrumentFactory = InstrumentFactory(ConfigFactory.load().getConfig("kamon.metric.instrument-factory"))
+  val instrumentFactory = InstrumentFactory.fromConfig(ConfigFactory.load())
 
   def buildCounter(name: String) = instrumentFactory.buildCounter(defaultEntity, name)
 

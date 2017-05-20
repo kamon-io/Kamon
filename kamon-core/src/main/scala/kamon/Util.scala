@@ -1,6 +1,6 @@
 package kamon
 
-import kamon.util.EntityFilter
+import kamon.metric.EntityFilter
 
 /**
   * Useful classes for Kamon and submodules.

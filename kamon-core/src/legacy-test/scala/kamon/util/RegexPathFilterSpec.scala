@@ -16,13 +16,14 @@
 
 package kamon.util
 
+import kamon.metric.RegexNameFilter
 import org.scalatest.{Matchers, WordSpecLike}
 
 class RegexPathFilterSpec extends WordSpecLike with Matchers {
   "The RegexPathFilter" should {
 
     "match a single expression" in {
-      val filter = new RegexPathFilter("/user/actor")
+      val filter = new RegexNameFilter("/user/actor")
 
       filter.accept("/user/actor") shouldBe true
 
@@ -31,7 +32,7 @@ class RegexPathFilterSpec extends WordSpecLike with Matchers {
     }
 
     "match arbitray expressions ending with wildcard" in {
-      val filter = new RegexPathFilter("/user/.*")
+      val filter = new RegexNameFilter("/user/.*")
 
       filter.accept("/user/actor") shouldBe true
       filter.accept("/user/otherActor") shouldBe true
@@ -45,7 +46,7 @@ class RegexPathFilterSpec extends WordSpecLike with Matchers {
     }
 
     "match numbers" in {
-      val filter = new RegexPathFilter("/user/actor-\\d")
+      val filter = new RegexNameFilter("/user/actor-\\d")
 
       filter.accept("/user/actor-1") shouldBe true
       filter.accept("/user/actor-2") shouldBe true

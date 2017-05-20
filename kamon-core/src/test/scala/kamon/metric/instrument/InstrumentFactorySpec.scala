@@ -11,23 +11,25 @@ class InstrumentFactorySpec extends WordSpec with Matchers{
   val customEntity = Entity("test", "custom-category", Map.empty)
   val baseConfiguration = ConfigFactory.parseString(
     """
-      |default-settings {
-      |  histogram {
-      |    lowest-discernible-value = 100
-      |    highest-trackable-value = 5000
-      |    significant-value-digits = 2
+      |kamon.metric.instrument-factory {
+      |  default-settings {
+      |    histogram {
+      |      lowest-discernible-value = 100
+      |      highest-trackable-value = 5000
+      |      significant-value-digits = 2
+      |    }
+      |
+      |    min-max-counter {
+      |      lowest-discernible-value = 200
+      |      highest-trackable-value = 6000
+      |      significant-value-digits = 3
+      |      sample-interval = 647 millis
+      |    }
       |  }
       |
-      |  min-max-counter {
-      |    lowest-discernible-value = 200
-      |    highest-trackable-value = 6000
-      |    significant-value-digits = 3
-      |    sample-interval = 647 millis
+      |  custom-settings {
+      |
       |  }
-      |}
-      |
-      |custom-settings {
-      |
       |}
     """.stripMargin
   )
@@ -35,7 +37,7 @@ class InstrumentFactorySpec extends WordSpec with Matchers{
 
   "the metrics InstrumentFactory" should {
     "create instruments using the default configuration settings" in {
-      val factory = InstrumentFactory(baseConfiguration)
+      val factory = InstrumentFactory.fromConfig(baseConfiguration)
       val histogram = factory.buildHistogram(testEntity, "my-histogram")
       val mmCounter = factory.buildMinMaxCounter(testEntity, "my-mm-counter")
 
@@ -50,7 +52,7 @@ class InstrumentFactorySpec extends WordSpec with Matchers{
     }
 
     "accept custom settings when building instruments" in {
-      val factory = InstrumentFactory(baseConfiguration)
+      val factory = InstrumentFactory.fromConfig(baseConfiguration)
       val histogram = factory.buildHistogram(testEntity, "my-histogram", DynamicRange.Loose)
       val mmCounter = factory.buildMinMaxCounter(testEntity, "my-mm-counter", DynamicRange.Fine, Duration.ofMillis(500))
 
@@ -63,7 +65,7 @@ class InstrumentFactorySpec extends WordSpec with Matchers{
     "allow overriding any default and provided settings via the custom-settings configuration key" in {
       val customConfig = ConfigFactory.parseString(
         """
-          |custom-settings {
+          |kamon.metric.instrument-factory.custom-settings {
           |   custom-category {
           |     modified-histogram {
           |       lowest-discernible-value = 99
@@ -82,7 +84,7 @@ class InstrumentFactorySpec extends WordSpec with Matchers{
         """.stripMargin
       ).withFallback(baseConfiguration)
 
-      val factory = InstrumentFactory(customConfig)
+      val factory = InstrumentFactory.fromConfig(customConfig)
       val defaultHistogram = factory.buildHistogram(customEntity, "default-histogram")
       val modifiedHistogram = factory.buildHistogram(customEntity, "modified-histogram", DynamicRange.Loose)
 

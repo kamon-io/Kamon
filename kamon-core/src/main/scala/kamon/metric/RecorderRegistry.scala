@@ -10,31 +10,31 @@ import scala.collection.concurrent.TrieMap
 
 
 trait RecorderRegistry {
+  def shouldTrack(entity: Entity): Boolean
   def getRecorder(entity: Entity): EntityRecorder
-  def getRecorder(name: String, category: String, tags: Map[String, String]): EntityRecorder
-
   def removeRecorder(entity: Entity): Boolean
-  def removeRecorder(name: String, category: String, tags: Map[String, String]): Boolean
 }
 
 class RecorderRegistryImpl(initialConfig: Config) extends RecorderRegistry {
   private val instrumentFactory = new AtomicReference[InstrumentFactory]()
+  private val entityFilter = new AtomicReference[EntityFilter]()
   private val entities = TrieMap.empty[Entity, EntityRecorder with EntitySnapshotProducer]
 
   reconfigure(initialConfig)
 
+
+  override def shouldTrack(entity: Entity): Boolean =
+    entityFilter.get().accept(entity)
+
   override def getRecorder(entity: Entity): EntityRecorder =
     entities.atomicGetOrElseUpdate(entity, new DefaultEntityRecorder(entity, instrumentFactory.get()))
 
-  override def getRecorder(name: String, category: String, tags: Map[String, String]): EntityRecorder =
-    getRecorder(Entity(name, category, tags))
+  override def removeRecorder(entity: Entity): Boolean =
+    entities.remove(entity).nonEmpty
 
-  override def removeRecorder(entity: Entity): Boolean = ???
-
-  override def removeRecorder(name: String, category: String, tags: Map[String, String]): Boolean = ???
-
-  private[kamon] def reconfigure(config: Config): Unit = {
-    instrumentFactory.set(InstrumentFactory(config.getConfig("kamon.metric.instrument-factory")))
+  private[kamon] def reconfigure(config: Config): Unit = synchronized {
+    instrumentFactory.set(InstrumentFactory.fromConfig(config))
+    entityFilter.set(EntityFilter.fromConfig(config))
   }
 
   private[kamon] def snapshot(): Seq[EntitySnapshot] = {

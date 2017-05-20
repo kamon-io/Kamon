@@ -18,9 +18,8 @@ package kamon.metric
 
 import com.typesafe.config.Config
 import kamon.metric.instrument._
-import kamon.util.PathFilter
 import kamon.util.GlobPathFilter
-import kamon.util.RegexPathFilter
+import kamon.util.RegexNameFilter
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -46,7 +45,7 @@ case class MetricsSettings(
 /**
  *
  */
-case class EntityFilter(includes: List[PathFilter], excludes: List[PathFilter]) {
+case class EntityFilter(includes: List[NameFilter], excludes: List[NameFilter]) {
   def accept(name: String): Boolean =
     includes.exists(_.accept(name)) && !excludes.exists(_.accept(name))
 }
