@@ -7,13 +7,13 @@ import com.typesafe.config.Config
 object EntityFilter {
   def fromConfig(config: Config): EntityFilter = {
     val filtersConfig = config.getConfig("kamon.metric.filters")
-    val acceptUnmatched = filtersConfig.getBoolean("accept-unmatched")
+    val acceptUnmatched = filtersConfig.getBoolean("accept-unmatched-categories")
 
-    val perCategoryFilters = filtersConfig.firstLevelKeys.filter(_ != "accept-unmatched") map { category: String ⇒
+    val perCategoryFilters = filtersConfig.firstLevelKeys.filter(_ != "accept-unmatched-categories") map { category: String ⇒
       val includes = readFilters(filtersConfig, s"$category.includes")
       val excludes = readFilters(filtersConfig, s"$category.excludes")
 
-      (category, new IncludeExcludeNameFilter(includes, excludes, acceptUnmatched))
+      (category, new IncludeExcludeNameFilter(includes, excludes))
     } toMap
 
     new EntityFilter(perCategoryFilters, acceptUnmatched)
@@ -49,9 +49,9 @@ trait NameFilter {
   def accept(name: String): Boolean
 }
 
-class IncludeExcludeNameFilter(includes: Seq[NameFilter], excludes: Seq[NameFilter], acceptUnmatched: Boolean) extends NameFilter {
+class IncludeExcludeNameFilter(includes: Seq[NameFilter], excludes: Seq[NameFilter]) extends NameFilter {
   override def accept(name: String): Boolean =
-    (includes.exists(_.accept(name)) || acceptUnmatched) && !excludes.exists(_.accept(name))
+    includes.exists(_.accept(name)) && !excludes.exists(_.accept(name))
 }
 
 class RegexNameFilter(path: String) extends NameFilter {

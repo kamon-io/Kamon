@@ -134,21 +134,6 @@ class ReporterRegistryImpl(metrics: RecorderRegistryImpl, initialConfig: Config)
     }(ExecutionContext.fromExecutor(registryExecutionContext))
   }
 
-  /**
-    * Creates a thread factory that assigns the specified name to all created Threads.
-    */
-  private def threadFactory(name: String): ThreadFactory =
-    new ThreadFactory {
-      val defaultFactory = Executors.defaultThreadFactory()
-
-      override def newThread(r: Runnable): Thread = {
-        val thread = defaultFactory.newThread(r)
-        thread.setName(name)
-        thread
-      }
-    }
-
-
   private case class ReporterEntry(
     @volatile var isActive: Boolean = true,
     id: Long,

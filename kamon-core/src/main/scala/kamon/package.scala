@@ -1,9 +1,39 @@
+import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.{Executors, ThreadFactory}
+
 import com.typesafe.config.Config
 
 import scala.collection.concurrent.TrieMap
 
 package object kamon {
 
+
+
+  /**
+    * Creates a thread factory that assigns the specified name to all created Threads.
+    */
+  def threadFactory(name: String): ThreadFactory =
+    new ThreadFactory {
+      val defaultFactory = Executors.defaultThreadFactory()
+
+      override def newThread(r: Runnable): Thread = {
+        val thread = defaultFactory.newThread(r)
+        thread.setName(name)
+        thread
+      }
+    }
+
+  def numberedThreadFactory(name: String): ThreadFactory =
+    new ThreadFactory {
+      val count = new AtomicLong()
+      val defaultFactory = Executors.defaultThreadFactory()
+
+      override def newThread(r: Runnable): Thread = {
+        val thread = defaultFactory.newThread(r)
+        thread.setName(name + "-" + count.incrementAndGet().toString)
+        thread
+      }
+    }
 
 
   /**

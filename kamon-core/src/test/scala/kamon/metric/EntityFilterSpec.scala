@@ -9,7 +9,7 @@ class EntityFilterSpec extends WordSpec with Matchers {
   val testConfig = ConfigFactory.parseString(
     """
       |kamon.metric.filters {
-      |  accept-unmatched = false
+      |  accept-unmatched-categories = false
       |
       |  some-category {
       |    includes = ["**"]
@@ -32,9 +32,9 @@ class EntityFilterSpec extends WordSpec with Matchers {
   )
 
   "the entity filters" should {
-    "use the accept-unmatched setting when there is no configuration for a given category" in {
-      val acceptUnmatched = EntityFilter.fromConfig(ConfigFactory.parseString("kamon.metric.filters.accept-unmatched=true"))
-      val rejectUnmatched = EntityFilter.fromConfig(ConfigFactory.parseString("kamon.metric.filters.accept-unmatched=false"))
+    "use the accept-unmatched-categories setting when there is no configuration for a given category" in {
+      val acceptUnmatched = EntityFilter.fromConfig(ConfigFactory.parseString("kamon.metric.filters.accept-unmatched-categories=true"))
+      val rejectUnmatched = EntityFilter.fromConfig(ConfigFactory.parseString("kamon.metric.filters.accept-unmatched-categories=false"))
 
       acceptUnmatched.accept(Entity("a", "b", Map.empty)) shouldBe true
       rejectUnmatched.accept(Entity("a", "b", Map.empty)) shouldBe false

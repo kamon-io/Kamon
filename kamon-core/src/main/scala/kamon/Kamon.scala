@@ -1,68 +1,48 @@
 package kamon
 
+import java.util.concurrent.atomic.AtomicReference
+
 import com.typesafe.config.{Config, ConfigFactory}
 import kamon.metric.{RecorderRegistry, RecorderRegistryImpl}
 import kamon.trace.Tracer
 
-/**
-  * The main entry point to all Kamon functionality.
-  *
-  *
-  *
-  *
-  */
-object Kamon {
-  private val recorderRegistry = new RecorderRegistryImpl(ConfigFactory.load())
-  private val reporterRegistry = new ReporterRegistryImpl(recorderRegistry, ConfigFactory.load())
-  private val kamonTracer = new Tracer(recorderRegistry, reporterRegistry)
 
-  def tracer: io.opentracing.Tracer = kamonTracer
-  def metrics: RecorderRegistry = recorderRegistry
-  def reporters: ReporterRegistry = reporterRegistry
+object Kamon {
+  private val _initialConfig = ConfigFactory.load()
+  private val _recorderRegistry = new RecorderRegistryImpl(_initialConfig)
+  private val _reporterRegistry = new ReporterRegistryImpl(_recorderRegistry, _initialConfig)
+  private val _tracer = new Tracer(_recorderRegistry, _reporterRegistry)
+  private val _environment = new AtomicReference[Environment](environmentFromConfig(ConfigFactory.load()))
+
+  def tracer: io.opentracing.Tracer =
+    _tracer
+
+  def metrics: RecorderRegistry =
+    _recorderRegistry
+
+  def reporters: ReporterRegistry =
+    _reporterRegistry
+
+  def environment: Environment =
+    _environment.get()
 
   def reconfigure(config: Config): Unit = synchronized {
-    recorderRegistry.reconfigure(config)
-    reporterRegistry.reconfigure(config)
+    _recorderRegistry.reconfigure(config)
+    _reporterRegistry.reconfigure(config)
+    _environment.set(environmentFromConfig(config))
   }
 
-  def environment: Environment = ???
-  def diagnose: Diagnostic = ???
-  def util: Util = ???
+
+
+
+  case class Environment(config: Config, application: String, host: String, instance: String)
+
+  private def environmentFromConfig(config: Config): Environment = {
+    val environmentConfig = config.getConfig("kamon.environment")
+    val application = environmentConfig.getString("application")
+    val host = environmentConfig.getString("host")
+    val instance = environmentConfig.getString("instance")
+
+    Environment(config, application, host, instance)
+  }
 }
-
-
-
-/*
-
-Kamon.metrics.getRecorder("app-metrics")
-Kamon.metrics.getRecorder("akka-actor", "test")
-
-Kamon.entities.get("akka-actor", "test")
-Kamon.entities.remove(entity)
-
-Kamon.util.entityFilters.accept(entity)
-Kamon.util.clock.
-
-Kamon.entities.new().
-
-Kamon.subscriptions.loadFromConfig()
-Kamon.subscriptions.subscribe(StatsD, Filters.IncludeAll)
-Kamon.subscriptions.subscribe(NewRelic, Filters.Empty().includeCategory("span").withTag("span.kind", "server"))
-
-
-Things that you need to do with Kamon:
-Global:
-  - Reconfigure
-  - Get Diagnostic Data
-Metrics:
-  - create entities
-  - subscribe to metrics data
-
-Tracer:
-  - Build Spans / Use ActiveSpanSource
-  - subscribe to tracing data
-
- */
-
-
-
