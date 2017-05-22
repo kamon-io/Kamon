@@ -19,6 +19,7 @@ import akka.actor.ActorSystem
 object ActorSystemTools {
   private[kamon] def terminateActorSystem(system: ActorSystem): Unit = {
     // Use system.shutdown() if it exists (akka 2.4 and lower), system.terminate() otherwise (akka 2.5+)
-    system.getClass.getMethods.find(_.getName == "shutdown").map(_.invoke(system)).getOrElse(system.terminate())
+    system.getClass.getMethods.find(_.getName == "shutdown").map(_.invoke(system))
+      .getOrElse(system.getClass.getMethod("terminate").invoke(system))
   }
 }
