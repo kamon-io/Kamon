@@ -28,16 +28,16 @@ object Span {
 }
 
 
-class Span(spanContext: SpanContext, initialOperationName: String, startTimestampMicros: Long,
+class Span(spanContext: SpanContext, initialOperationName: String, initialTags: Map[String, String], startTimestampMicros: Long,
     recorderRegistry: RecorderRegistry, reporterRegistry: ReporterRegistryImpl) extends io.opentracing.Span {
 
   private var isOpen: Boolean = true
-  private val isSampled: Boolean = true // TODO: User a proper sampler
+  private val sampled: Boolean = spanContext.sampled
   private var operationName: String = initialOperationName
   private var endTimestampMicros: Long = 0
 
+  private var tags = initialTags
   private var logs = List.empty[Span.LogEntry]
-  private var tags = Map.empty[String, String]
   private var metricTags = Map.empty[String, String]
 
 
@@ -45,47 +45,41 @@ class Span(spanContext: SpanContext, initialOperationName: String, startTimestam
     log(fields.asScala.asInstanceOf[Map[String, _]])
 
   def log(fields: Map[String, _]): Span = synchronized {
-    if (isSampled && isOpen) {
+    if (sampled && isOpen)
       logs = Span.LogEntry(Clock.microTimestamp(), fields) :: logs
-    }
+    this
+  }
+
+  def log(timestampMicroseconds: Long, fields: Map[String, _]): Span = synchronized {
+    if(sampled && isOpen)
+      logs = Span.LogEntry(timestampMicroseconds, fields) :: logs
     this
   }
 
   override def log(timestampMicroseconds: Long, fields: java.util.Map[String, _]): Span =
     log(timestampMicroseconds, fields.asScala.asInstanceOf[Map[String, _]])
 
-  def log(timestampMicroseconds: Long, fields: Map[String, _]): Span = synchronized {
-    if(isSampled && isOpen) {
-      logs = Span.LogEntry(timestampMicroseconds, fields) :: logs
-    }
-    this
-  }
-
   override def log(event: String): Span = synchronized {
-    if(isSampled && isOpen) {
+    if(sampled && isOpen)
       logs = Span.LogEntry(Clock.microTimestamp(), Map("event" -> event)) :: logs
-    }
     this
   }
 
   override def log(timestampMicroseconds: Long, event: String): Span = synchronized {
-    if(isSampled && isOpen) {
+    if(sampled && isOpen)
       logs = Span.LogEntry(timestampMicroseconds, Map("event" -> event)) :: logs
-    }
     this
   }
 
   override def log(eventName: String, payload: scala.Any): Span = synchronized {
-    if(isSampled && isOpen) {
+    if(sampled && isOpen)
       logs = Span.LogEntry(Clock.microTimestamp(), Map(eventName -> payload)) :: logs
-    }
     this
   }
 
   override def log(timestampMicroseconds: Long, eventName: String, payload: scala.Any): Span = synchronized {
-    if(isSampled && isOpen) {
+    if(sampled && isOpen)
       logs = Span.LogEntry(timestampMicroseconds, Map(eventName -> payload)) :: logs
-    }
     this
   }
 
@@ -98,7 +92,7 @@ class Span(spanContext: SpanContext, initialOperationName: String, startTimestam
   override def setTag(key: String, value: String): Span = synchronized {
     if (isOpen) {
       extractMetricTag(key, value)
-      if(isSampled)
+      if(sampled)
         tags = tags ++ Map(key -> value)
     }
     this
@@ -108,7 +102,7 @@ class Span(spanContext: SpanContext, initialOperationName: String, startTimestam
     if (isOpen) {
       val tagValue = if(value) Span.BooleanTagTrueValue else Span.BooleanTagFalseValue
       extractMetricTag(key, tagValue)
-      if(isSampled)
+      if(sampled)
         tags = tags + (key -> tagValue)
     }
     this
@@ -118,38 +112,33 @@ class Span(spanContext: SpanContext, initialOperationName: String, startTimestam
     if (isOpen) {
       val tagValue = String.valueOf(value)
       extractMetricTag(key, tagValue)
-      if(isSampled)
+      if(sampled)
         tags = tags + (key -> tagValue)
     }
     this
   }
 
   def setMetricTag(key: String, value: String): Span = synchronized {
-    if (isOpen) {
+    if (isOpen)
       metricTags = metricTags ++ Map(key -> value)
-    }
     this
   }
 
   override def setBaggageItem(key: String, value: String): Span = synchronized {
-    if (isOpen) {
+    if (isOpen)
       spanContext.addBaggageItem(key, value)
-    }
     this
   }
 
-  override def setOperationName(operationName: String): Span = {
-    if(isOpen) {
+  override def setOperationName(operationName: String): Span = synchronized {
+    if(isOpen)
       this.operationName = operationName
-    }
     this
   }
 
-  private def extractMetricTag(tag: String, value: String): Unit = {
-    if(tag.startsWith(Span.MetricTagPrefix)) {
+  private def extractMetricTag(tag: String, value: String): Unit =
+    if(tag.startsWith(Span.MetricTagPrefix))
       metricTags = metricTags ++ Map(tag.substring(Span.MetricTagPrefix.length) -> value)
-    }
-  }
 
   override def finish(): Unit =
     finish(Clock.microTimestamp())

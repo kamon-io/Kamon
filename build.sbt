@@ -22,7 +22,7 @@ lazy val kamon = (project in file("."))
 lazy val core = (project in file("kamon-core"))
   .settings(moduleName := "kamon-core")
   .settings(
-    scalaVersion := "2.12.1",
+    scalaVersion := "2.12.2",
     coverageEnabled := true,
     resolvers += Resolver.mavenLocal,
     libraryDependencies ++= Seq(
@@ -34,7 +34,7 @@ lazy val core = (project in file("kamon-core"))
       "io.opentracing"   % "opentracing-util" % "0.30.0.RC2",
       "com.lihaoyi" %% "fansi" % "0.2.4",
 
-      "uk.org.lidalia" % "slf4j-test" % "1.1.0",
+      "uk.org.lidalia" % "slf4j-test" % "1.1.0" % "test",
       "org.scalatest" %% "scalatest" % "3.0.1" % "test"
     )
   )

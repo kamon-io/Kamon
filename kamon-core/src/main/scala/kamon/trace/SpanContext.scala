@@ -1,11 +1,12 @@
 package kamon.trace
 
 import java.lang
-import java.util.Map
+import java.util.{Map => JavaMap}
+
 import scala.collection.JavaConverters._
 
-class SpanContext(val traceID: Long, val spanID: Long, val parentID: Long) extends io.opentracing.SpanContext {
-  private var baggage = scala.collection.immutable.Map.empty[String, String]
+class SpanContext(val traceID: Long, val spanID: Long, val parentID: Long, val sampled: Boolean,
+  private var baggage: Map[String, String]) extends io.opentracing.SpanContext {
 
   private[kamon] def addBaggageItem(key: String, value: String): Unit = synchronized {
     baggage = baggage + (key -> value)
@@ -15,10 +16,10 @@ class SpanContext(val traceID: Long, val spanID: Long, val parentID: Long) exten
     baggage.get(key).getOrElse(null)
   }
 
-  private[kamon] def baggageMap: scala.collection.immutable.Map[String, String] =
+  private[kamon] def baggageMap: Map[String, String] =
     baggage
 
-  override def baggageItems(): lang.Iterable[Map.Entry[String, String]] = synchronized {
+  override def baggageItems(): lang.Iterable[JavaMap.Entry[String, String]] = synchronized {
     baggage.asJava.entrySet()
   }
 }
