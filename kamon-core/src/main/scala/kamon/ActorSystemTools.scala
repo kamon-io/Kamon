@@ -14,12 +14,12 @@
  */
 package kamon
 
-import scala.util.control.NonFatal
-
 import akka.actor.ActorSystem
 
 object ActorSystemTools {
   private[kamon] def terminateActorSystem(system: ActorSystem): Unit = {
-    system.shutdown()
+    // Use system.shutdown() if it exists (akka 2.4 and lower), system.terminate() otherwise (akka 2.5+)
+    system.getClass.getMethods.find(_.getName == "shutdown").map(_.invoke(system))
+      .getOrElse(system.getClass.getMethod("terminate").invoke(system))
   }
 }
