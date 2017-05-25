@@ -4,7 +4,7 @@ import akka.actor.ActorSystem
 import akka.testkit.{TestKitBase, TestProbe}
 import com.typesafe.config.ConfigFactory
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
-import kamon.metric.{EntitySnapshot, SubscriptionsDispatcher}
+import kamon.metric.SubscriptionsDispatcher
 import kamon.util.LazyActorRef
 import org.scalatest.{Matchers, WordSpecLike}
 import org.scalactic.TimesOnInt._

@@ -1,8 +1,6 @@
 package kamon.metric.instrument
 
 import java.util.concurrent.atomic.AtomicLong
-
-import kamon.metric.Entity
 import kamon.util.MeasurementUnit
 
 trait Gauge {
@@ -16,8 +14,8 @@ trait Gauge {
 }
 
 
-class AtomicLongGauge(entity: Entity, name: String, val measurementUnit: MeasurementUnit)
-  extends Gauge with SingleValueSnapshotInstrument  {
+class AtomicLongGauge(name: String, tags: Map[String, String], val measurementUnit: MeasurementUnit)
+  extends SnapshotableGauge {
 
   private val currentValue = new AtomicLong(0L)
 
@@ -37,5 +35,5 @@ class AtomicLongGauge(entity: Entity, name: String, val measurementUnit: Measure
     currentValue.set(value)
 
   def snapshot(): SingleValueSnapshot =
-    SingleValueSnapshot(name, measurementUnit, currentValue.get())
+    SingleValueSnapshot(name, tags, measurementUnit, currentValue.get())
 }

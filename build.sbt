@@ -19,22 +19,26 @@ lazy val kamon = (project in file("."))
   .aggregate(core, testkit)
 
 
+
+
 lazy val core = (project in file("kamon-core"))
   .settings(moduleName := "kamon-core")
   .settings(
     scalaVersion := "2.12.2",
     coverageEnabled := true,
+    javacOptions += "-XDignore.symbol.file",
     resolvers += Resolver.mavenLocal,
     libraryDependencies ++= Seq(
       "com.typesafe"     % "config"          % "1.3.1",
       "org.slf4j"        % "slf4j-api"       % "1.7.7",
+      "ch.qos.logback" % "logback-classic" % "1.2.2",
       "com.typesafe.scala-logging" %% "scala-logging" % "3.5.0",
       "org.hdrhistogram" % "HdrHistogram"    % "2.1.9",
       "io.opentracing"   % "opentracing-api" % "0.30.0.RC2",
       "io.opentracing"   % "opentracing-util" % "0.30.0.RC2",
       "com.lihaoyi" %% "fansi" % "0.2.4",
 
-      "uk.org.lidalia" % "slf4j-test" % "1.1.0" % "test",
+      //"uk.org.lidalia" % "slf4j-test" % "1.1.0" % "test",
       "org.scalatest" %% "scalatest" % "3.0.1" % "test"
     )
   )

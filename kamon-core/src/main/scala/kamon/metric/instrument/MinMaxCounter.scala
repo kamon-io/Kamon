@@ -5,7 +5,6 @@ import java.time.Duration
 import java.util.concurrent.atomic.{AtomicLong, AtomicReference}
 
 import kamon.jsr166.LongMaxUpdater
-import kamon.metric.Entity
 import kamon.util.MeasurementUnit
 
 trait MinMaxCounter {
@@ -21,8 +20,8 @@ trait MinMaxCounter {
 }
 
 
-class PaddedMinMaxCounter(entity: Entity, name: String, underlyingHistogram: Histogram with DistributionSnapshotInstrument,
-    val sampleInterval: Duration) extends MinMaxCounter with DistributionSnapshotInstrument {
+class PaddedMinMaxCounter(name: String, tags: Map[String, String], underlyingHistogram: Histogram with DistributionSnapshotInstrument,
+    val sampleInterval: Duration) extends SnapshotableMinMaxCounter {
 
   private val min = new LongMaxUpdater(0L)
   private val max = new LongMaxUpdater(0L)

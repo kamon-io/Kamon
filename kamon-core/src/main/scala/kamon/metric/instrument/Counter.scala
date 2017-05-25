@@ -14,8 +14,8 @@ trait Counter {
   def increment(times: Long): Unit
 }
 
-class LongAdderCounter(entity: Entity, name: String, val measurementUnit: MeasurementUnit)
-    extends Counter with SingleValueSnapshotInstrument with StrictLogging {
+class LongAdderCounter(name: String, tags: Map[String, String], val measurementUnit: MeasurementUnit)
+    extends SnapshotableCounter with StrictLogging {
 
   private val adder = new LongAdder()
 
@@ -26,9 +26,9 @@ class LongAdderCounter(entity: Entity, name: String, val measurementUnit: Measur
     if (times >= 0)
       adder.add(times)
     else
-      logger.warn(s"Ignored attempt to decrement counter [$name] on entity [$entity]")
+      logger.warn(s"Ignored attempt to decrement counter [$name]")
   }
 
   def snapshot(): SingleValueSnapshot =
-    SingleValueSnapshot(name, measurementUnit, adder.sumThenReset())
+    SingleValueSnapshot(name, tags, measurementUnit, adder.sumThenReset())
 }

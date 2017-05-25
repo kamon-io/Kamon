@@ -5,7 +5,7 @@ import com.typesafe.config.ConfigFactory
 import org.scalatest.{Matchers, WordSpec}
 
 
-class EntityFilterSpec extends WordSpec with Matchers {
+class FilterSpec extends WordSpec with Matchers {
   val testConfig = ConfigFactory.parseString(
     """
       |kamon.metric.filters {
@@ -33,15 +33,15 @@ class EntityFilterSpec extends WordSpec with Matchers {
 
   "the entity filters" should {
     "use the accept-unmatched-categories setting when there is no configuration for a given category" in {
-      val acceptUnmatched = EntityFilter.fromConfig(ConfigFactory.parseString("kamon.metric.filters.accept-unmatched-categories=true"))
-      val rejectUnmatched = EntityFilter.fromConfig(ConfigFactory.parseString("kamon.metric.filters.accept-unmatched-categories=false"))
+      val acceptUnmatched = Filter.fromConfig(ConfigFactory.parseString("kamon.metric.filters.accept-unmatched-categories=true"))
+      val rejectUnmatched = Filter.fromConfig(ConfigFactory.parseString("kamon.metric.filters.accept-unmatched-categories=false"))
 
       acceptUnmatched.accept(Entity("a", "b", Map.empty)) shouldBe true
       rejectUnmatched.accept(Entity("a", "b", Map.empty)) shouldBe false
     }
 
     "accept entities that are matched by any include and none exclude filters" in {
-      val entityFilter = EntityFilter.fromConfig(testConfig)
+      val entityFilter = Filter.fromConfig(testConfig)
 
       entityFilter.accept(Entity("anything", "anything", Map.empty)) shouldBe false
       entityFilter.accept(Entity("anything", "some-category", Map.empty)) shouldBe true
@@ -49,7 +49,7 @@ class EntityFilterSpec extends WordSpec with Matchers {
     }
 
     "allow configuring includes only or excludes only for any category" in {
-      val entityFilter = EntityFilter.fromConfig(testConfig)
+      val entityFilter = Filter.fromConfig(testConfig)
 
       entityFilter.accept(Entity("only-me", "only-includes", Map.empty)) shouldBe true
       entityFilter.accept(Entity("anything", "only-includes", Map.empty)) shouldBe false
@@ -58,7 +58,7 @@ class EntityFilterSpec extends WordSpec with Matchers {
     }
 
     "allow to explicitly decide whether patterns are treated as Glob or Regex" in {
-      val entityFilter = EntityFilter.fromConfig(testConfig)
+      val entityFilter = Filter.fromConfig(testConfig)
 
       entityFilter.accept(Entity("/user/accepted", "specific-rules", Map.empty)) shouldBe true
       entityFilter.accept(Entity("/other/rejected/", "specific-rules", Map.empty)) shouldBe false

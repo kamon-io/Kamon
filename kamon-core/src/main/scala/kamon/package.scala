@@ -35,6 +35,10 @@ package object kamon {
       }
     }
 
+  implicit class PrettyPrintTags(val tags: Map[String, String]) extends AnyVal {
+    def prettyPrint(): String =
+      tags.map { case (k, v) => k + "=" + v } mkString("{", ",", "}")
+  }
 
   /**
     *  Workaround to the non thread-safe [[scala.collection.concurrent.TrieMap#getOrElseUpdate()]] method. More details on

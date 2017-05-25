@@ -30,7 +30,7 @@ case class MetricsSettings(
     tickInterval: FiniteDuration,
     defaultCollectionContextBufferSize: Int,
     trackUnmatchedEntities: Boolean,
-    entityFilters: Map[String, EntityFilter],
+    entityFilters: Map[String, Filter],
     instrumentFactories: Map[String, InstrumentFactory],
     defaultInstrumentFactory: InstrumentFactory,
     refreshScheduler: RefreshScheduler
@@ -89,7 +89,7 @@ object MetricsSettings {
    *
    *  @return a Map from category name to corresponding entity filter.
    */
-  def loadFilters(filtersConfig: Config): Map[String, EntityFilter] = {
+  def loadFilters(filtersConfig: Config): Map[String, Filter] = {
     import scala.collection.JavaConverters._
 
     filtersConfig.firstLevelKeys map { category: String ⇒
@@ -99,7 +99,7 @@ object MetricsSettings {
       val excludes = filtersConfig.getStringList(s"$category.excludes").asScala.map(exc ⇒
         if (asRegex) RegexPathFilter(exc) else new GlobPathFilter(exc)).toList
 
-      (category, EntityFilter(includes, excludes))
+      (category, Filter(includes, excludes))
     } toMap
   }
 

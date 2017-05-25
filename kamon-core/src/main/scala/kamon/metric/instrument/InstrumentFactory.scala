@@ -9,49 +9,36 @@ import kamon.metric.instrument.InstrumentFactory.CustomInstrumentSettings
 import kamon.util.MeasurementUnit
 
 
-private[kamon] class InstrumentFactory private (
-    defaultHistogramDynamicRange: DynamicRange,
-    defaultMMCounterDynamicRange: DynamicRange,
-    defaultMMCounterSampleRate: Duration,
-    customSettings: Map[(String, String), CustomInstrumentSettings]) {
+private[kamon] class InstrumentFactory private (defaultHistogramDynamicRange: DynamicRange, defaultMMCounterDynamicRange: DynamicRange,
+    defaultMMCounterSampleInterval: Duration, customSettings: Map[String, CustomInstrumentSettings]) {
 
-  def buildHistogram(entity: Entity, name: String, dynamicRange: DynamicRange = defaultHistogramDynamicRange,
-      measurementUnit: MeasurementUnit = MeasurementUnit.none): Histogram with DistributionSnapshotInstrument = {
+  println("DEFAULT: " + defaultHistogramDynamicRange)
 
-    new HdrHistogram(
-      entity,
-      name,
-      measurementUnit,
-      instrumentDynamicRange(entity, name, dynamicRange)
-    )
-  }
+  def buildHistogram(dynamicRange: Option[DynamicRange])(name: String, tags: Map[String, String], unit: MeasurementUnit): SnapshotableHistogram =
+    new HdrHistogram(name, tags, unit, instrumentDynamicRange(name, dynamicRange.getOrElse(defaultHistogramDynamicRange)))
 
-  def buildMinMaxCounter(entity: Entity, name: String, dynamicRange: DynamicRange = defaultMMCounterDynamicRange,
-      sampleInterval: Duration = defaultMMCounterSampleRate, measurementUnit: MeasurementUnit = MeasurementUnit.none): MinMaxCounter with DistributionSnapshotInstrument = {
-
-    val underlyingHistogram = buildHistogram(entity, name, dynamicRange, measurementUnit)
+  def buildMinMaxCounter(dynamicRange: Option[DynamicRange], sampleInterval: Option[Duration])
+      (name: String, tags: Map[String, String], unit: MeasurementUnit): SnapshotableMinMaxCounter =
     new PaddedMinMaxCounter(
-      entity,
       name,
-      underlyingHistogram,
-      instrumentSampleInterval(entity, name, sampleInterval)
-    )
-  }
+      tags,
+      buildHistogram(dynamicRange.orElse(Some(defaultMMCounterDynamicRange)))(name, tags, unit),
+      instrumentSampleInterval(name, sampleInterval.getOrElse(defaultMMCounterSampleInterval))    )
 
-  def buildGauge(entity: Entity, name: String, measurementUnit: MeasurementUnit = MeasurementUnit.none): Gauge with SingleValueSnapshotInstrument =
-    new AtomicLongGauge(entity, name, measurementUnit)
+  def buildGauge(name: String, tags: Map[String, String], unit: MeasurementUnit): SnapshotableGauge =
+    new AtomicLongGauge(name, tags, unit)
 
-  def buildCounter(entity: Entity, name: String, measurementUnit: MeasurementUnit = MeasurementUnit.none): Counter with SingleValueSnapshotInstrument =
-    new LongAdderCounter(entity, name, measurementUnit)
+  def buildCounter(name: String, tags: Map[String, String], unit: MeasurementUnit): SnapshotableCounter =
+    new LongAdderCounter(name, tags, unit)
 
 
-  private def instrumentDynamicRange(entity: Entity, instrumentName: String, dynamicRange: DynamicRange): DynamicRange =
-    customSettings.get((entity.category, instrumentName)).fold(dynamicRange) { cs =>
+  private def instrumentDynamicRange(instrumentName: String, dynamicRange: DynamicRange): DynamicRange =
+    customSettings.get(instrumentName).fold(dynamicRange) { cs =>
       overrideDynamicRange(dynamicRange, cs)
     }
 
-  private def instrumentSampleInterval(entity: Entity, instrumentName: String, sampleInterval: Duration): Duration =
-    customSettings.get((entity.category, instrumentName)).fold(sampleInterval) { cs =>
+  private def instrumentSampleInterval(instrumentName: String, sampleInterval: Duration): Duration =
+    customSettings.get(instrumentName).fold(sampleInterval) { cs =>
       cs.sampleInterval.getOrElse(sampleInterval)
     }
 
@@ -73,21 +60,26 @@ object InstrumentFactory {
 
     val customSettings = factoryConfig.getConfig("custom-settings")
       .configurations
-      .filter(nonEmptyCategories)
-      .flatMap(buildCustomInstrumentSettings)
+      .filter(nonEmptySection)
+      .map(readCustomInstrumentSettings)
 
     new InstrumentFactory(histogramDynamicRange, mmCounterDynamicRange, mmCounterSampleInterval, customSettings)
   }
 
-  private def nonEmptyCategories(entry: (String, Config)): Boolean = entry match {
+  private def nonEmptySection(entry: (String, Config)): Boolean = entry match {
     case (_, config) => config.firstLevelKeys.nonEmpty
   }
 
-  private def buildCustomInstrumentSettings(entry: (String, Config)): Map[(String, String), CustomInstrumentSettings] = {
-    val (category, categoryConfig) = entry
-    categoryConfig.configurations.map {
-      case (instrumentName, instrumentConfig) => (category, instrumentName) -> readCustomSettings(instrumentConfig)
-    }
+  private def readCustomInstrumentSettings(entry: (String, Config)): (String, CustomInstrumentSettings) = {
+    val (metricName, metricConfig) = entry
+    val customSettings = CustomInstrumentSettings(
+      if (metricConfig.hasPath("lowest-discernible-value")) Some(metricConfig.getLong("lowest-discernible-value")) else None,
+      if (metricConfig.hasPath("highest-trackable-value")) Some(metricConfig.getLong("highest-trackable-value")) else None,
+      if (metricConfig.hasPath("significant-value-digits")) Some(metricConfig.getInt("significant-value-digits")) else None,
+      if (metricConfig.hasPath("sample-interval")) Some(metricConfig.getDuration("sample-interval")) else None
+    )
+
+    (metricName -> customSettings)
   }
 
   private def readDynamicRange(config: Config): DynamicRange =
@@ -103,12 +95,4 @@ object InstrumentFactory {
     significantValueDigits: Option[Int],
     sampleInterval: Option[Duration]
   )
-
-  private def readCustomSettings(config: Config): CustomInstrumentSettings =
-    CustomInstrumentSettings(
-      if (config.hasPath("lowest-discernible-value")) Some(config.getLong("lowest-discernible-value")) else None,
-      if (config.hasPath("highest-trackable-value")) Some(config.getLong("highest-trackable-value")) else None,
-      if (config.hasPath("significant-value-digits")) Some(config.getInt("significant-value-digits")) else None,
-      if (config.hasPath("sample-interval")) Some(config.getDuration("sample-interval")) else None
-    )
 }

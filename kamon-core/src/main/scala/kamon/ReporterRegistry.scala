@@ -44,7 +44,7 @@ trait SpansReporter {
   def reportSpan(span: Span.CompletedSpan): Unit
 }
 
-class ReporterRegistryImpl(metrics: RecorderRegistryImpl, initialConfig: Config) extends ReporterRegistry {
+class ReporterRegistryImpl(metrics: RegistrySnapshotGenerator, initialConfig: Config) extends ReporterRegistry {
   private val registryExecutionContext = Executors.newSingleThreadScheduledExecutor(threadFactory("kamon-reporter-registry"))
   private val metricsTickerSchedule = new AtomicReference[ScheduledFuture[_]]()
   private val metricReporters = new ConcurrentLinkedQueue[ReporterEntry]()
@@ -141,7 +141,7 @@ class ReporterRegistryImpl(metrics: RecorderRegistryImpl, initialConfig: Config)
     executionContext: ExecutionContextExecutorService
   )
 
-  private class MetricTicker(metricsImpl: RecorderRegistryImpl, reporterEntries: java.util.Queue[ReporterEntry]) extends Runnable {
+  private class MetricTicker(snapshotGenerator: RegistrySnapshotGenerator, reporterEntries: java.util.Queue[ReporterEntry]) extends Runnable {
     val logger = LoggerFactory.getLogger(classOf[MetricTicker])
     var lastTick = Instant.now()
 
@@ -149,7 +149,7 @@ class ReporterRegistryImpl(metrics: RecorderRegistryImpl, initialConfig: Config)
       val currentTick = Instant.now()
       val tickSnapshot = TickSnapshot(
         interval = Interval(lastTick, currentTick),
-        entities = metricsImpl.snapshot()
+        metrics = snapshotGenerator.snapshot()
       )
 
       reporterEntries.forEach { entry =>

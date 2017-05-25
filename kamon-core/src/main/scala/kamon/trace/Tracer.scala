@@ -7,12 +7,11 @@ import io.opentracing.propagation.{TextMap, Format}
 import io.opentracing.propagation.Format.Builtin.{BINARY, HTTP_HEADERS, TEXT_MAP}
 import io.opentracing.util.ThreadLocalActiveSpanSource
 import kamon.ReporterRegistryImpl
-import kamon.metric.{Entity, EntityRecorder, RecorderRegistry}
 import kamon.util.Clock
 
-class Tracer(metrics: RecorderRegistry, reporterRegistry: ReporterRegistryImpl) extends io.opentracing.Tracer {
+class Tracer(metrics: Any, reporterRegistry: ReporterRegistryImpl) extends io.opentracing.Tracer {
   private val logger = Logger(classOf[Tracer])
-  private val metricsRecorder = new TracerMetricsRecorder(metrics.getRecorder(Entity("tracer", "tracer", Map.empty)))
+  ///private val metricsRecorder = new TracerMetricsRecorder(metrics.getRecorder(Entity("tracer", "tracer", Map.empty)))
   private val activeSpanSource = new ThreadLocalActiveSpanSource()
 
   @volatile private var sampler: Sampler = Sampler.never
@@ -118,15 +117,12 @@ class Tracer(metrics: RecorderRegistry, reporterRegistry: ReporterRegistryImpl) 
           new SpanContext(traceID, traceID, 0L, sampler.decide(traceID), initialTags)
         }
 
-      metricsRecorder.createdSpans.increment()
-      new Span(spanContext, operationName, initialTags, startTimestampMicros, metrics, reporterRegistry)
+      //metricsRecorder.createdSpans.increment()
+      new Span(spanContext, operationName, initialTags, startTimestampMicros, ???, reporterRegistry)
     }
 
     private def createID(): Long =
       ThreadLocalRandom.current().nextLong()
   }
 
-  private class TracerMetricsRecorder(recorder: EntityRecorder) {
-    val createdSpans = recorder.counter("created-spans")
-  }
 }

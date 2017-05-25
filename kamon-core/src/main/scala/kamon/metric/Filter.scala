@@ -4,19 +4,19 @@ package metric
 import java.util.regex.Pattern
 import com.typesafe.config.Config
 
-object EntityFilter {
-  def fromConfig(config: Config): EntityFilter = {
+object Filter {
+  def fromConfig(config: Config): Filter = {
     val filtersConfig = config.getConfig("kamon.metric.filters")
-    val acceptUnmatched = filtersConfig.getBoolean("accept-unmatched-categories")
+    val acceptUnmatched = filtersConfig.getBoolean("accept-unmatched")
 
-    val perCategoryFilters = filtersConfig.firstLevelKeys.filter(_ != "accept-unmatched-categories") map { category: String ⇒
-      val includes = readFilters(filtersConfig, s"$category.includes")
-      val excludes = readFilters(filtersConfig, s"$category.excludes")
+    val perMetricFilter = filtersConfig.firstLevelKeys.filter(_ != "accept-unmatched") map { metricName: String ⇒
+      val includes = readFilters(filtersConfig, s"$metricName.includes")
+      val excludes = readFilters(filtersConfig, s"$metricName.excludes")
 
-      (category, new IncludeExcludeNameFilter(includes, excludes))
+      (metricName, new IncludeExcludeNameFilter(includes, excludes))
     } toMap
 
-    new EntityFilter(perCategoryFilters, acceptUnmatched)
+    new Filter(perMetricFilter, acceptUnmatched)
   }
 
   private def readFilters(filtersConfig: Config, name: String): Seq[NameFilter] = {
@@ -37,11 +37,11 @@ object EntityFilter {
   }
 }
 
-class EntityFilter(perCategoryFilters: Map[String, NameFilter], acceptUnmatched: Boolean) {
-  def accept(entity: Entity): Boolean =
-    perCategoryFilters
-      .get(entity.category)
-      .map(_.accept(entity.name))
+class Filter(perMetricFilter: Map[String, NameFilter], acceptUnmatched: Boolean) {
+  def accept(metricName: String, pattern: String): Boolean =
+    perMetricFilter
+      .get(metricName)
+      .map(_.accept(pattern))
       .getOrElse(acceptUnmatched)
 }
 
@@ -54,10 +54,10 @@ class IncludeExcludeNameFilter(includes: Seq[NameFilter], excludes: Seq[NameFilt
     includes.exists(_.accept(name)) && !excludes.exists(_.accept(name))
 }
 
-class RegexNameFilter(path: String) extends NameFilter {
-  private val pathRegex = path.r
+class RegexNameFilter(pattern: String) extends NameFilter {
+  private val pathRegex = pattern.r
 
-  override def accept(path: String): Boolean = path match {
+  override def accept(name: String): Boolean = name match {
     case pathRegex(_*) ⇒ true
     case _             ⇒ false
   }

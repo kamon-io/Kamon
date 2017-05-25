@@ -19,7 +19,6 @@ package kamon.util.executors
 import java.util.concurrent.{ExecutorService, ForkJoinPool ⇒ JavaForkJoinPool, ThreadPoolExecutor}
 
 import kamon.Kamon
-import kamon.metric.Entity
 
 import scala.concurrent.forkjoin.ForkJoinPool
 import scala.util.control.NoStackTrace

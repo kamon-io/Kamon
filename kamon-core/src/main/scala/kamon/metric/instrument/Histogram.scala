@@ -1,9 +1,10 @@
-package kamon.metric.instrument
+package kamon
+package metric
+package instrument
 
 import java.nio.ByteBuffer
 
 import com.typesafe.scalalogging.StrictLogging
-import kamon.metric.Entity
 import kamon.util.MeasurementUnit
 import org.HdrHistogram.{AtomicHistogramExtension, ZigZag}
 
@@ -16,8 +17,8 @@ trait Histogram {
 }
 
 
-class HdrHistogram(entity: Entity, name: String, val measurementUnit: MeasurementUnit, val dynamicRange: DynamicRange)
-    extends AtomicHistogramExtension(dynamicRange) with Histogram with DistributionSnapshotInstrument with StrictLogging {
+class HdrHistogram(name: String, tags: Map[String, String], val measurementUnit: MeasurementUnit, val dynamicRange: DynamicRange)
+    extends AtomicHistogramExtension(dynamicRange) with SnapshotableHistogram with StrictLogging {
 
   def record(value: Long): Unit =
     tryRecord(value, 1)
@@ -30,7 +31,7 @@ class HdrHistogram(entity: Entity, name: String, val measurementUnit: Measuremen
       recordValueWithCount(value, count)
     } catch {
       case anyException: Throwable ⇒
-        logger.warn(s"Failed to store value [$value] in histogram [$name] of entity [$entity]. You might need to change " +
+        logger.warn(s"Failed to store value [$value] in histogram [$name]. You might need to change " +
                      "your dynamic range configuration for this instrument.", anyException)
     }
   }
@@ -81,7 +82,7 @@ class HdrHistogram(entity: Entity, name: String, val measurementUnit: Measuremen
     val distribution = new ZigZagCountsDistribution(totalCount, minIndex, maxIndex, ByteBuffer.wrap(zigZagCounts),
       protectedUnitMagnitude(), protectedSubBucketHalfCount(), protectedSubBucketHalfCountMagnitude())
 
-    DistributionSnapshot(name, measurementUnit, dynamicRange, distribution)
+    DistributionSnapshot(name, tags, measurementUnit, dynamicRange, distribution)
   }
 
   private class ZigZagCountsDistribution(val count: Long, minIndex: Int, maxIndex: Int, zigZagCounts: ByteBuffer,

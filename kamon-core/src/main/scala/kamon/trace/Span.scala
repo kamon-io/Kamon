@@ -1,11 +1,8 @@
 package kamon
 package trace
 
-import kamon.metric.{Entity, RecorderRegistry}
-import kamon.metric.instrument.DynamicRange
-
 import scala.collection.JavaConverters._
-import kamon.util.{Clock, MeasurementUnit}
+import kamon.util.Clock
 
 object Span {
   val MetricCategory = "span"
@@ -29,7 +26,7 @@ object Span {
 
 
 class Span(spanContext: SpanContext, initialOperationName: String, initialTags: Map[String, String], startTimestampMicros: Long,
-    recorderRegistry: RecorderRegistry, reporterRegistry: ReporterRegistryImpl) extends io.opentracing.Span {
+    recorderRegistry: Any, reporterRegistry: ReporterRegistryImpl) extends io.opentracing.Span {
 
   private var isOpen: Boolean = true
   private val sampled: Boolean = spanContext.sampled
@@ -156,17 +153,17 @@ class Span(spanContext: SpanContext, initialOperationName: String, initialTags: 
 
   private def recordSpanMetrics(): Unit = {
     val elapsedTime = endTimestampMicros - startTimestampMicros
-    val entity = Entity(operationName, Span.MetricCategory, metricTags)
-    val recorder = recorderRegistry.getRecorder(entity)
+//    val entity = Entity(operationName, Span.MetricCategory, metricTags)
+//    val recorder = recorderRegistry.getRecorder(entity)
 
-    recorder
-      .histogram(Span.LatencyMetricName, MeasurementUnit.time.microseconds, DynamicRange.Default)
-      .record(elapsedTime)
-
-    tags.get("error").foreach { errorTag =>
-      if(errorTag != null && errorTag.equals(Span.BooleanTagTrueValue)) {
-        recorder.counter(Span.ErrorMetricName).increment()
-      }
-    }
+//    recorder
+//      .histogram(Span.LatencyMetricName, MeasurementUnit.time.microseconds, DynamicRange.Default)
+//      .record(elapsedTime)
+//
+//    tags.get("error").foreach { errorTag =>
+//      if(errorTag != null && errorTag.equals(Span.BooleanTagTrueValue)) {
+//        recorder.counter(Span.ErrorMetricName).increment()
+//      }
+//    }
   }
 }
