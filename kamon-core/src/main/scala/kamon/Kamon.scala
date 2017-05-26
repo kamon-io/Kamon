@@ -1,52 +1,65 @@
 package kamon
 
+import java.time.Duration
+import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.atomic.AtomicReference
 
 import com.typesafe.config.{Config, ConfigFactory}
-import kamon.metric.instrument.{DynamicRange, Histogram}
-import kamon.metric.{MetricLookup, Registry}
+import kamon.metric.instrument._
+import kamon.metric.{MetricLookup, MetricRegistry}
 import kamon.trace.Tracer
-import kamon.util.MeasurementUnit
+import kamon.util.{HexCodec, MeasurementUnit}
 
 
 object Kamon extends MetricLookup {
-  private val _initialConfig = ConfigFactory.load()
-  //private val _recorderRegistry = new RecorderRegistryImpl(_initialConfig)
-  private val _reporterRegistry = new ReporterRegistryImpl(???, _initialConfig)
-  private val _tracer = new Tracer(???, _reporterRegistry)
-  private val _environment = new AtomicReference[Environment](environmentFromConfig(ConfigFactory.load()))
+  private val initialConfig = ConfigFactory.load()
+  private val incarnation = HexCodec.toLowerHex(ThreadLocalRandom.current().nextLong())
+
+  private val metricRegistry = new MetricRegistry(initialConfig)
+  private val reporterRegistry = new ReporterRegistryImpl(metricRegistry, initialConfig)
+  private val trazer = new Tracer(Kamon, reporterRegistry)
+  private val env = new AtomicReference[Environment](environmentFromConfig(ConfigFactory.load()))
 
   def tracer: io.opentracing.Tracer =
-    _tracer
-
-//  def metrics: RecorderRegistry =
-//    _recorderRegistry
+    trazer
 
   def reporters: ReporterRegistry =
-    _reporterRegistry
+    reporterRegistry
 
   def environment: Environment =
-    _environment.get()
+    env.get()
 
   def reconfigure(config: Config): Unit = synchronized {
-   // _recorderRegistry.reconfigure(config)
-    _reporterRegistry.reconfigure(config)
-    _environment.set(environmentFromConfig(config))
+    metricRegistry.reconfigure(config)
+    reporterRegistry.reconfigure(config)
+    env.set(environmentFromConfig(config))
   }
 
 
-  private val metricRegistry = new Registry(_initialConfig)
-  override def histogram(name: String, unit: MeasurementUnit, tags: Map[String, String], dynamicRange: Option[DynamicRange]): Histogram =
+  override def histogram(name: String, unit: MeasurementUnit, tags: Map[String, String], dynamicRange:
+      Option[DynamicRange]): Histogram =
     metricRegistry.histogram(name, unit, tags, dynamicRange)
 
-  case class Environment(config: Config, application: String, host: String, instance: String)
+  override def counter(name: String, unit: MeasurementUnit, tags: Map[String, String]): Counter =
+    metricRegistry.counter(name, unit, tags)
+
+  override def gauge(name: String, unit: MeasurementUnit, tags: Map[String, String]): Gauge =
+    metricRegistry.gauge(name, unit, tags)
+
+  override def minMaxCounter(name: String, unit: MeasurementUnit, tags: Map[String, String], sampleInterval: Option[Duration],
+      dynamicRange: Option[DynamicRange]): MinMaxCounter =
+    metricRegistry.minMaxCounter(name, unit, tags, dynamicRange, sampleInterval)
+
+
+   case class Environment(config: Config, application: String, host: String, instance: String, incarnation: String)
 
   private def environmentFromConfig(config: Config): Environment = {
     val environmentConfig = config.getConfig("kamon.environment")
+
     val application = environmentConfig.getString("application")
     val host = environmentConfig.getString("host")
     val instance = environmentConfig.getString("instance")
 
-    Environment(config, application, host, instance)
+    Environment(config, application, host, instance, incarnation)
   }
 }

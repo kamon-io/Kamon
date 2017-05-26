@@ -20,6 +20,9 @@ object Sampler {
 
   class Constant(decision: Boolean) extends Sampler {
     override def decide(spanID: Long): Boolean = decision
+
+    override def toString: String =
+      s"Sampler.Constant(decision = $decision)"
   }
 
   class Random(chance: Double) extends Sampler {
@@ -28,5 +31,8 @@ object Sampler {
 
     override def decide(spanID: Long): Boolean =
       spanID >= lowerBoundary && spanID <= upperBoundary
+
+    override def toString: String =
+      s"Sampler.Random(chance = $chance)"
   }
 }

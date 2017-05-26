@@ -5,9 +5,9 @@ import java.util.concurrent.atomic.{AtomicLong, AtomicReference}
 import java.util.concurrent._
 
 import com.typesafe.config.Config
+import com.typesafe.scalalogging.Logger
 import kamon.metric._
 import kamon.trace.Span
-import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutorService, Future}
 import scala.util.Try
@@ -29,22 +29,22 @@ trait Registration {
 }
 
 trait MetricsReporter {
-  def start(config: Config): Unit
-  def reconfigure(config: Config): Unit
+  def start(): Unit
   def stop(): Unit
 
-  def reportTickSnapshot(snapshot: TickSnapshot)
+  def reconfigure(config: Config): Unit
+  def reportTickSnapshot(snapshot: TickSnapshot): Unit
 }
 
 trait SpansReporter {
-  def start(config: Config): Unit
-  def reconfigure(config: Config): Unit
+  def start(): Unit
   def stop(): Unit
 
+  def reconfigure(config: Config): Unit
   def reportSpan(span: Span.CompletedSpan): Unit
 }
 
-class ReporterRegistryImpl(metrics: RegistrySnapshotGenerator, initialConfig: Config) extends ReporterRegistry {
+class ReporterRegistryImpl(metrics: MetricsSnapshotGenerator, initialConfig: Config) extends ReporterRegistry {
   private val registryExecutionContext = Executors.newSingleThreadScheduledExecutor(threadFactory("kamon-reporter-registry"))
   private val metricsTickerSchedule = new AtomicReference[ScheduledFuture[_]]()
   private val metricReporters = new ConcurrentLinkedQueue[ReporterEntry]()
@@ -141,8 +141,8 @@ class ReporterRegistryImpl(metrics: RegistrySnapshotGenerator, initialConfig: Co
     executionContext: ExecutionContextExecutorService
   )
 
-  private class MetricTicker(snapshotGenerator: RegistrySnapshotGenerator, reporterEntries: java.util.Queue[ReporterEntry]) extends Runnable {
-    val logger = LoggerFactory.getLogger(classOf[MetricTicker])
+  private class MetricTicker(snapshotGenerator: MetricsSnapshotGenerator, reporterEntries: java.util.Queue[ReporterEntry]) extends Runnable {
+    val logger = Logger(classOf[MetricTicker])
     var lastTick = Instant.now()
 
     def run(): Unit = try {

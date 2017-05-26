@@ -2,19 +2,24 @@ package kamon.trace
 
 import java.util.concurrent.ThreadLocalRandom
 
+import com.typesafe.config.Config
 import com.typesafe.scalalogging.Logger
-import io.opentracing.propagation.{TextMap, Format}
+import io.opentracing.propagation.{Format, TextMap}
 import io.opentracing.propagation.Format.Builtin.{BINARY, HTTP_HEADERS, TEXT_MAP}
 import io.opentracing.util.ThreadLocalActiveSpanSource
 import kamon.ReporterRegistryImpl
+import kamon.metric.MetricLookup
 import kamon.util.Clock
 
-class Tracer(metrics: Any, reporterRegistry: ReporterRegistryImpl) extends io.opentracing.Tracer {
+
+
+
+class Tracer(metrics: MetricLookup, reporterRegistry: ReporterRegistryImpl) extends io.opentracing.Tracer {
   private val logger = Logger(classOf[Tracer])
-  ///private val metricsRecorder = new TracerMetricsRecorder(metrics.getRecorder(Entity("tracer", "tracer", Map.empty)))
+  private val tracerMetrics = new TracerMetrics(metrics)
   private val activeSpanSource = new ThreadLocalActiveSpanSource()
 
-  @volatile private var sampler: Sampler = Sampler.never
+  @volatile private var configuredSampler: Sampler = Sampler.never
   @volatile private var textMapSpanContextCodec = SpanContextCodec.TextMap
   @volatile private var httpHeaderSpanContextCodec = SpanContextCodec.ZipkinB3
 
@@ -22,8 +27,8 @@ class Tracer(metrics: Any, reporterRegistry: ReporterRegistryImpl) extends io.op
     new SpanBuilder(operationName)
 
   override def extract[C](format: Format[C], carrier: C): io.opentracing.SpanContext = format match {
-    case HTTP_HEADERS => httpHeaderSpanContextCodec.extract(carrier.asInstanceOf[TextMap], sampler)
-    case TEXT_MAP     => textMapSpanContextCodec.extract(carrier.asInstanceOf[TextMap], sampler)
+    case HTTP_HEADERS => httpHeaderSpanContextCodec.extract(carrier.asInstanceOf[TextMap], configuredSampler)
+    case TEXT_MAP     => textMapSpanContextCodec.extract(carrier.asInstanceOf[TextMap], configuredSampler)
     case BINARY       => null // TODO: Implement Binary Encoding
     case _            => null
   }
@@ -34,6 +39,9 @@ class Tracer(metrics: Any, reporterRegistry: ReporterRegistryImpl) extends io.op
     case BINARY       =>
     case _            =>
   }
+
+  def sampler: Sampler =
+    configuredSampler
 
   override def activeSpan(): io.opentracing.ActiveSpan =
     activeSpanSource.activeSpan()
@@ -114,15 +122,31 @@ class Tracer(metrics: Any, reporterRegistry: ReporterRegistryImpl) extends io.op
           new SpanContext(parentContext.traceID, createID(), parentContext.spanID, parentContext.sampled, initialTags)
         else {
           val traceID = createID()
-          new SpanContext(traceID, traceID, 0L, sampler.decide(traceID), initialTags)
+          new SpanContext(traceID, traceID, 0L, configuredSampler.decide(traceID), initialTags)
         }
 
-      //metricsRecorder.createdSpans.increment()
-      new Span(spanContext, operationName, initialTags, startTimestampMicros, ???, reporterRegistry)
+      tracerMetrics.createdSpans.increment()
+      new Span(spanContext, operationName, initialTags, startTimestampMicros, metrics, reporterRegistry)
     }
 
     private def createID(): Long =
       ThreadLocalRandom.current().nextLong()
+  }
+
+
+  private[kamon] def reconfigure(config: Config): Unit = synchronized {
+    val traceConfig = config.getConfig("kamon.trace")
+
+    configuredSampler = traceConfig.getString("sampler") match {
+      case "always" => Sampler.always
+      case "never"  => Sampler.never
+      case "random" => Sampler.random(traceConfig.getDouble("sampler-random.chance"))
+      case other    => sys.error(s"Unexpected sampler name $other.")
+    }
+  }
+
+  private final class TracerMetrics(metricLookup: MetricLookup) {
+    val createdSpans = metricLookup.counter("tracer.spans-created")
   }
 
 }

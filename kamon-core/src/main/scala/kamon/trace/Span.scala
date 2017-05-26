@@ -1,32 +1,13 @@
 package kamon
 package trace
 
+import kamon.metric.MetricLookup
+
 import scala.collection.JavaConverters._
-import kamon.util.Clock
-
-object Span {
-  val MetricCategory = "span"
-  val LatencyMetricName = "elapsed-time"
-  val ErrorMetricName = "error"
-  val MetricTagPrefix = "metric."
-  val BooleanTagTrueValue = "1"
-  val BooleanTagFalseValue = "0"
-
-  case class LogEntry(timestamp: Long, fields: Map[String, _])
-
-  case class CompletedSpan(
-    context: SpanContext,
-    operationName: String,
-    startTimestampMicros: Long,
-    endTimestampMicros: Long,
-    tags: Map[String, String],
-    logs: Seq[LogEntry]
-  )
-}
-
+import kamon.util.{Clock, MeasurementUnit}
 
 class Span(spanContext: SpanContext, initialOperationName: String, initialTags: Map[String, String], startTimestampMicros: Long,
-    recorderRegistry: Any, reporterRegistry: ReporterRegistryImpl) extends io.opentracing.Span {
+    metrics: MetricLookup, reporterRegistry: ReporterRegistryImpl) extends io.opentracing.Span {
 
   private var isOpen: Boolean = true
   private val sampled: Boolean = spanContext.sampled
@@ -35,7 +16,7 @@ class Span(spanContext: SpanContext, initialOperationName: String, initialTags: 
 
   private var tags = initialTags
   private var logs = List.empty[Span.LogEntry]
-  private var metricTags = Map.empty[String, String]
+  private var additionalMetricTags = Map.empty[String, String]
 
 
   override def log(fields: java.util.Map[String, _]): Span =
@@ -117,7 +98,7 @@ class Span(spanContext: SpanContext, initialOperationName: String, initialTags: 
 
   def setMetricTag(key: String, value: String): Span = synchronized {
     if (isOpen)
-      metricTags = metricTags ++ Map(key -> value)
+      additionalMetricTags = additionalMetricTags ++ Map(key -> value)
     this
   }
 
@@ -135,7 +116,7 @@ class Span(spanContext: SpanContext, initialOperationName: String, initialTags: 
 
   private def extractMetricTag(tag: String, value: String): Unit =
     if(tag.startsWith(Span.MetricTagPrefix))
-      metricTags = metricTags ++ Map(tag.substring(Span.MetricTagPrefix.length) -> value)
+      additionalMetricTags = additionalMetricTags ++ Map(tag.substring(Span.MetricTagPrefix.length) -> value)
 
   override def finish(): Unit =
     finish(Clock.microTimestamp())
@@ -153,17 +134,32 @@ class Span(spanContext: SpanContext, initialOperationName: String, initialTags: 
 
   private def recordSpanMetrics(): Unit = {
     val elapsedTime = endTimestampMicros - startTimestampMicros
-//    val entity = Entity(operationName, Span.MetricCategory, metricTags)
-//    val recorder = recorderRegistry.getRecorder(entity)
+    val metricTags = Map("operation" -> operationName) ++ additionalMetricTags
 
-//    recorder
-//      .histogram(Span.LatencyMetricName, MeasurementUnit.time.microseconds, DynamicRange.Default)
-//      .record(elapsedTime)
-//
-//    tags.get("error").foreach { errorTag =>
-//      if(errorTag != null && errorTag.equals(Span.BooleanTagTrueValue)) {
-//        recorder.counter(Span.ErrorMetricName).increment()
-//      }
-//    }
+    val latencyHistogram = metrics.histogram("span.processing-time", MeasurementUnit.time.microseconds, metricTags)
+    latencyHistogram.record(elapsedTime)
+
+    tags.get("error").foreach { errorTag =>
+      if(errorTag != null && errorTag.equals(Span.BooleanTagTrueValue)) {
+        metrics.counter("span.errors", MeasurementUnit.none, metricTags).increment()
+      }
+    }
   }
+}
+
+object Span {
+  val MetricTagPrefix = "metric."
+  val BooleanTagTrueValue = "1"
+  val BooleanTagFalseValue = "0"
+
+  case class LogEntry(timestamp: Long, fields: Map[String, _])
+
+  case class CompletedSpan(
+    context: SpanContext,
+    operationName: String,
+    startTimestampMicros: Long,
+    endTimestampMicros: Long,
+    tags: Map[String, String],
+    logs: Seq[LogEntry]
+  )
 }
