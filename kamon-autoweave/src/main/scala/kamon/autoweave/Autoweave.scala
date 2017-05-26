@@ -17,17 +17,27 @@ package kamon.autoweave
 
 import kamon.Kamon
 import kamon.autoweave.loader.AgentLoader
+import kamon.util.logger.LazyLogger
 import org.aspectj.weaver.loadtime.Agent
 
+import scala.util.control.{NoStackTrace, NonFatal}
+import scala.util.{Failure, Success, Try}
+
 class Autoweave {
+  val log = LazyLogger(classOf[Autoweave])
   val config = Kamon.config.getConfig("kamon.autowave.options")
   val verbose = config.getBoolean("verbose")
-  val showWeaveInfo = config.getBoolean("showWeaveInfo")
+  val showWeaveInfo = config.getBoolean("show-weave-info")
+  val enabled = config.getBoolean("enabled")
 
-  def attach(): Unit = {
-    System.setProperty("aj.weaving.verbose", verbose.toString)
-    System.setProperty("org.aspectj.weaver.showWeaveInfo", showWeaveInfo.toString)
+  def attach(): Unit = if (enabled) {
+    Try(Agent.getInstrumentation) match {
+      case Success(_) ⇒ throw new RuntimeException("AspectJ weaving agent was started via '-javaagent'") with NoStackTrace
+      case Failure(NonFatal(_)) ⇒
+        System.setProperty("aj.weaving.verbose", verbose.toString)
+        System.setProperty("org.aspectj.weaver.showWeaveInfo", showWeaveInfo.toString)
 
-    AgentLoader.attachAgentToJVM(classOf[Agent])
-  }
+        AgentLoader.attachAgentToJVM(classOf[Agent])
+    }
+  } else log.warn("Autoweave disabled by configuration.")
 }
