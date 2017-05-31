@@ -14,11 +14,12 @@
  */
 
 val kamonCore = "io.kamon" %% "kamon-core" % "0.6.6"
+val asyncHttpClient = "org.asynchttpclient" % "async-http-client" % "2.0.25"
 
 lazy val root = (project in file("."))
   .settings(name := "kamon-datadog")
   .settings(
       libraryDependencies ++=
-        compileScope(kamonCore, akkaDependency("actor").value) ++
+        compileScope(kamonCore, asyncHttpClient, akkaDependency("actor").value) ++
         testScope(scalatest, akkaDependency("testkit").value, slf4jApi, slf4jnop))
 
