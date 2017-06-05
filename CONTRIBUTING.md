@@ -28,8 +28,13 @@ Awesome! First, please note that we try to follow the [commit message convention
 you to electronically fill our [CLA] before accepting your contribution. Also, if your PR contains various commits,
 please squash them into a single commit. Let the PR rain begin!
 
+Sbt project requirements:
+------------------------------
+- Installed globally [sbt-dependency-graph Plugin]
+
 
 [open an issue]: https://github.com/kamon-io/Kamon/issues/new
 [mailing list]: https://groups.google.com/forum/#!forum/kamon-user
 [commit message conventions]: http://spray.io/project-info/contributing/
 [CLA]: https://docs.google.com/forms/d/1G_IDrBTFzOMwHvhxfKRBwNtpRelSa_MZ6jecH8lpTlc/viewform
+[sbt-dependency-graph Plugin]: https://github.com/jrudolph/sbt-dependency-graph
