@@ -23,11 +23,10 @@ lazy val kamon = (project in file("."))
   .aggregate(core)//, testkit)
 
 
-
-
 lazy val core = (project in file("kamon-core"))
   .settings(moduleName := "kamon-core")
   .settings(
+    isSnapshot := true,
     coverageEnabled in Test := true,
     scalaVersion := "2.11.8",
     javacOptions += "-XDignore.symbol.file",
