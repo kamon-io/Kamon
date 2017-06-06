@@ -22,16 +22,16 @@ class MetricRegistry(initialConfig: Config) extends MetricsSnapshotGenerator {
   }
 
   def histogram(name: String, unit: MeasurementUnit, tags: Map[String, String], dynamicRange: Option[DynamicRange]): Histogram =
-    lookupInstrument(name, unit, tags, InstrumentType.Histogram, instrumentFactory.get().buildHistogram(dynamicRange))
+    lookupInstrument(name, unit, tags, InstrumentTypes.Histogram, instrumentFactory.get().buildHistogram(dynamicRange))
 
   def counter(name: String, unit: MeasurementUnit, tags: Map[String, String]): Counter =
-    lookupInstrument(name, unit, tags, InstrumentType.Counter, instrumentFactory.get().buildCounter)
+    lookupInstrument(name, unit, tags, InstrumentTypes.Counter, instrumentFactory.get().buildCounter)
 
   def gauge(name: String, unit: MeasurementUnit, tags: Map[String, String]): Gauge =
-    lookupInstrument(name, unit, tags, InstrumentType.Gauge, instrumentFactory.get().buildGauge)
+    lookupInstrument(name, unit, tags, InstrumentTypes.Gauge, instrumentFactory.get().buildGauge)
 
   def minMaxCounter(name: String, unit: MeasurementUnit, tags: Map[String, String], dynamicRange: Option[DynamicRange], sampleInterval: Option[Duration]): MinMaxCounter =
-    lookupInstrument(name, unit, tags, InstrumentType.MinMaxCounter, instrumentFactory.get().buildMinMaxCounter(dynamicRange, sampleInterval))
+    lookupInstrument(name, unit, tags, InstrumentTypes.MinMaxCounter, instrumentFactory.get().buildMinMaxCounter(dynamicRange, sampleInterval))
 
 
   override def snapshot(): MetricsSnapshot = synchronized {
@@ -45,10 +45,10 @@ class MetricRegistry(initialConfig: Config) extends MetricsSnapshotGenerator {
       instrument  <- metricEntry.instruments.values
     } {
       metricEntry.instrumentType match {
-        case InstrumentType.Histogram     => histograms = histograms :+ instrument.asInstanceOf[SnapshotableHistogram].snapshot()
-        case InstrumentType.MinMaxCounter => mmCounters = mmCounters :+ instrument.asInstanceOf[SnapshotableMinMaxCounter].snapshot()
-        case InstrumentType.Gauge         => gauges = gauges :+ instrument.asInstanceOf[SnapshotableGauge].snapshot()
-        case InstrumentType.Counter       => counters = counters :+ instrument.asInstanceOf[SnapshotableCounter].snapshot()
+        case InstrumentTypes.Histogram     => histograms = histograms :+ instrument.asInstanceOf[SnapshotableHistogram].snapshot()
+        case InstrumentTypes.MinMaxCounter => mmCounters = mmCounters :+ instrument.asInstanceOf[SnapshotableMinMaxCounter].snapshot()
+        case InstrumentTypes.Gauge         => gauges = gauges :+ instrument.asInstanceOf[SnapshotableGauge].snapshot()
+        case InstrumentTypes.Counter       => counters = counters :+ instrument.asInstanceOf[SnapshotableCounter].snapshot()
         case other                        => logger.warn("Unexpected instrument type [{}] found in the registry", other )
       }
     }
@@ -71,7 +71,7 @@ class MetricRegistry(initialConfig: Config) extends MetricsSnapshotGenerator {
   }
 
   private case class InstrumentType(name: String)
-  private object InstrumentType {
+  private object InstrumentTypes {
     val Histogram     = InstrumentType("Histogram")
     val MinMaxCounter = InstrumentType("MinMaxCounter")
     val Counter       = InstrumentType("Counter")
