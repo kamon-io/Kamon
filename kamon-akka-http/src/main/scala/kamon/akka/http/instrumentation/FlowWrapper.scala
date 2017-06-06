@@ -64,10 +64,12 @@ object FlowWrapper {
           metrics.recordRequest()
           push(requestOut, request)
         }
+        override def onUpstreamFinish(): Unit = complete(requestOut)
       })
 
       setHandler(requestOut, new OutHandler {
         override def onPull(): Unit = pull(requestIn)
+        override def onDownstreamFinish(): Unit = cancel(requestIn)
       })
 
       setHandler(responseIn, new InHandler {
@@ -86,10 +88,12 @@ object FlowWrapper {
 
           push(responseOut, response)
         }
+        override def onUpstreamFinish(): Unit = completeStage()
       })
 
       setHandler(responseOut, new OutHandler {
         override def onPull(): Unit = pull(responseIn)
+        override def onDownstreamFinish(): Unit = cancel(responseIn)
       })
 
       override def preStart(): Unit = metrics.recordConnectionOpened()
