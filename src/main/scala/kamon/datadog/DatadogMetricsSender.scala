@@ -26,6 +26,9 @@ import kamon.metric.instrument.{Counter, Histogram}
 import kamon.metric.{SingleInstrumentEntityRecorder, MetricKey, Entity}
 import java.util.Locale
 
+/**
+ * Sends metrics to Datadog through dogstatsd in the form of UDP packets
+ */
 class DatadogMetricsSender(remote: InetSocketAddress, maxPacketSizeInBytes: Long) extends Actor with UdpExtensionProvider {
 
   import context.system

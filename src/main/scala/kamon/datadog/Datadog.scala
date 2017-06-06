@@ -58,7 +58,11 @@ class DatadogExtension(system: ExtendedActorSystem) extends Kamon.Extension {
   def buildMetricsListener(tickInterval: FiniteDuration, flushInterval: FiniteDuration): ActorRef = {
     assert(flushInterval >= tickInterval, "Datadog flush-interval needs to be equal or greater to the tick-interval")
 
-    val metricsSender = system.actorOf(DatadogMetricsSender.props(datadogHost, maxPacketSizeInBytes), "datadog-metrics-sender")
+    val metricsSender = if (datadogConfig.getString("http.api-key").isEmpty()) {
+      system.actorOf(DatadogMetricsSender.props(datadogHost, maxPacketSizeInBytes), "datadog-metrics-sender")
+    } else {
+      system.actorOf(Props[DatadogAPIMetricsSender], "datadog-metrics-sender")
+    }
 
     val decoratedSender = datadogConfig match {
       case NeedToScale(scaleTimeTo, scaleMemoryTo) ⇒
