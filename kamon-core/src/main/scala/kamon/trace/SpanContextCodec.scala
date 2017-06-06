@@ -1,10 +1,12 @@
 package kamon.trace
 
 import java.net.{URLDecoder, URLEncoder}
-import java.util.concurrent.ThreadLocalRandom
 
+import scala.collection.JavaConverters._
 import io.opentracing.propagation.TextMap
 import kamon.util.HexCodec
+
+import scala.concurrent.forkjoin.ThreadLocalRandom
 
 trait SpanContextCodec[T] {
   def inject(spanContext: SpanContext, carrier: T): Unit
@@ -44,7 +46,7 @@ object SpanContextCodec {
       carrier.put(parentIDKey, encodeLong(spanContext.parentID))
       carrier.put(spanIDKey, encodeLong(spanContext.spanID))
 
-      spanContext.baggageItems().forEach { entry =>
+      spanContext.baggageItems().iterator().asScala.foreach { entry =>
         carrier.put(baggagePrefix + entry.getKey, baggageValueEncoder(entry.getValue))
       }
     }
@@ -56,7 +58,7 @@ object SpanContextCodec {
       var sampled: String = null
       var baggage: Map[String, String] = Map.empty
 
-      carrier.forEach { entry =>
+      carrier.iterator().asScala.foreach { entry =>
         if(entry.getKey.equals(traceIDKey))
           traceID = baggageValueDecoder(entry.getValue)
         else if(entry.getKey.equals(parentIDKey))

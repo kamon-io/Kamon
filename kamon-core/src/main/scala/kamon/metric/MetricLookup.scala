@@ -1,10 +1,9 @@
 package kamon
 package metric
 
-import java.time.Duration
 
-import kamon.metric.instrument._
 import kamon.util.MeasurementUnit
+import scala.concurrent.duration.Duration
 
 trait MetricLookup {
 

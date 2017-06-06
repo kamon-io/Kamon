@@ -1,11 +1,12 @@
-package kamon.metric.instrument
+package kamon.metric
 
 import java.lang.Math.abs
-import java.time.Duration
-import java.util.concurrent.atomic.{AtomicLong, AtomicReference}
+import java.util.concurrent.atomic.AtomicLong
 
 import kamon.jsr166.LongMaxUpdater
 import kamon.util.MeasurementUnit
+
+import scala.concurrent.duration.Duration
 
 trait MinMaxCounter {
   def dynamicRange: DynamicRange
@@ -33,7 +34,7 @@ class PaddedMinMaxCounter(name: String, tags: Map[String, String], underlyingHis
   def measurementUnit: MeasurementUnit =
     underlyingHistogram.measurementUnit
 
-  private[kamon] def snapshot(): DistributionSnapshot =
+  private[kamon] def snapshot(): MetricDistribution =
     underlyingHistogram.snapshot()
 
   def increment(): Unit =

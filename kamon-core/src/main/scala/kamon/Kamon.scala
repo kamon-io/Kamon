@@ -1,14 +1,14 @@
 package kamon
 
-import java.time.Duration
-import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.atomic.AtomicReference
 
 import com.typesafe.config.{Config, ConfigFactory}
-import kamon.metric.instrument._
-import kamon.metric.{MetricLookup, MetricRegistry}
+import kamon.metric._
 import kamon.trace.Tracer
 import kamon.util.{HexCodec, MeasurementUnit}
+
+import scala.concurrent.duration.Duration
+import scala.concurrent.forkjoin.ThreadLocalRandom
 
 
 object Kamon extends MetricLookup {

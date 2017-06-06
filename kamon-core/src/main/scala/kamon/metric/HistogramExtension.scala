@@ -3,7 +3,7 @@ package org.HdrHistogram
 import java.nio.ByteBuffer
 import java.util.concurrent.atomic.AtomicLongArray
 
-import kamon.metric.instrument.DynamicRange
+import kamon.metric.DynamicRange
 
 /**
   * Exposes package-private members of [[org.HdrHistogram.AtomicHistogram]].

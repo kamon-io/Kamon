@@ -1,7 +1,7 @@
 package kamon.testkit
 
 import com.typesafe.config.ConfigFactory
-import kamon.metric.instrument.InstrumentFactory
+import kamon.metric.InstrumentFactory
 
 trait DefaultInstrumentFactory {
   val defaultEntity = Entity("default-entity", "default-category", Map.empty)

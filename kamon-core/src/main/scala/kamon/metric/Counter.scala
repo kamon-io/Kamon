@@ -1,6 +1,4 @@
-package kamon
-package metric
-package instrument
+package kamon.metric
 
 import java.util.concurrent.atomic.LongAdder
 
@@ -29,6 +27,6 @@ class LongAdderCounter(name: String, tags: Map[String, String], val measurementU
       logger.warn(s"Ignored attempt to decrement counter [$name]")
   }
 
-  def snapshot(): SingleValueSnapshot =
-    SingleValueSnapshot(name, tags, measurementUnit, adder.sumThenReset())
+  def snapshot(): MetricValue =
+    MetricValue(name, tags, measurementUnit, adder.sumThenReset())
 }

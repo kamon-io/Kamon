@@ -13,10 +13,14 @@
  * =========================================================================================
  */
 
+
+scalaVersion := "2.11.8"
+crossScalaVersions := Seq("2.12.2", "2.11.8")
+
 lazy val kamon = (project in file("."))
   .settings(moduleName := "kamon")
   .settings(noPublishing: _*)
-  .aggregate(core, testkit)
+  .aggregate(core)//, testkit)
 
 
 
@@ -24,12 +28,12 @@ lazy val kamon = (project in file("."))
 lazy val core = (project in file("kamon-core"))
   .settings(moduleName := "kamon-core")
   .settings(
-    scalaVersion := "2.12.2",
-    coverageEnabled := true,
+    coverageEnabled in Test := true,
+    scalaVersion := "2.11.8",
     javacOptions += "-XDignore.symbol.file",
     resolvers += Resolver.mavenLocal,
     libraryDependencies ++= Seq(
-      "com.typesafe"     % "config"          % "1.3.1",
+      "com.typesafe"     % "config"          % "1.2.1",
       "org.slf4j"        % "slf4j-api"       % "1.7.7",
       "ch.qos.logback" % "logback-classic" % "1.2.2",
       "com.typesafe.scala-logging" %% "scala-logging" % "3.5.0",
@@ -42,15 +46,15 @@ lazy val core = (project in file("kamon-core"))
       "org.scalatest" %% "scalatest" % "3.0.1" % "test"
     )
   )
-
-lazy val testkit = (project in file("kamon-testkit"))
-  .settings(moduleName := "kamon-testkit", resolvers += Resolver.mavenLocal)
-  .settings(
-    libraryDependencies ++=
-      compileScope(akkaDependency("actor").value, akkaDependency("testkit").value) ++
-      providedScope(aspectJ) ++
-      testScope(slf4jApi, slf4jnop)
-  ).dependsOn(core)
+//
+//lazy val testkit = (project in file("kamon-testkit"))
+//  .settings(moduleName := "kamon-testkit", resolvers += Resolver.mavenLocal)
+//  .settings(
+//    libraryDependencies ++=
+//      compileScope(akkaDependency("actor").value, akkaDependency("testkit").value) ++
+//      providedScope(aspectJ) ++
+//      testScope(slf4jApi, slf4jnop)
+//  ).dependsOn(core)
 
 //
 //lazy val coreTests = (project in file("kamon-core-tests"))

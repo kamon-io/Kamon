@@ -1,4 +1,4 @@
-package kamon.metric.instrument
+package kamon.metric
 
 import java.util.concurrent.TimeUnit
 

@@ -1,18 +1,18 @@
 package kamon
 package metric
-package instrument
 
-import java.time.Duration
+
+import java.util.concurrent.TimeUnit
 
 import com.typesafe.config.Config
-import kamon.metric.instrument.InstrumentFactory.CustomInstrumentSettings
+import kamon.metric.InstrumentFactory.CustomInstrumentSettings
 import kamon.util.MeasurementUnit
+
+import scala.concurrent.duration._
 
 
 private[kamon] class InstrumentFactory private (defaultHistogramDynamicRange: DynamicRange, defaultMMCounterDynamicRange: DynamicRange,
     defaultMMCounterSampleInterval: Duration, customSettings: Map[String, CustomInstrumentSettings]) {
-
-  println("DEFAULT: " + defaultHistogramDynamicRange)
 
   def buildHistogram(dynamicRange: Option[DynamicRange])(name: String, tags: Map[String, String], unit: MeasurementUnit): SnapshotableHistogram =
     new HdrHistogram(name, tags, unit, instrumentDynamicRange(name, dynamicRange.getOrElse(defaultHistogramDynamicRange)))
@@ -23,7 +23,7 @@ private[kamon] class InstrumentFactory private (defaultHistogramDynamicRange: Dy
       name,
       tags,
       buildHistogram(dynamicRange.orElse(Some(defaultMMCounterDynamicRange)))(name, tags, unit),
-      instrumentSampleInterval(name, sampleInterval.getOrElse(defaultMMCounterSampleInterval))    )
+      instrumentSampleInterval(name, sampleInterval.getOrElse(defaultMMCounterSampleInterval)))
 
   def buildGauge(name: String, tags: Map[String, String], unit: MeasurementUnit): SnapshotableGauge =
     new AtomicLongGauge(name, tags, unit)
@@ -56,14 +56,14 @@ object InstrumentFactory {
     val factoryConfig = config.getConfig("kamon.metric.instrument-factory")
     val histogramDynamicRange = readDynamicRange(factoryConfig.getConfig("default-settings.histogram"))
     val mmCounterDynamicRange = readDynamicRange(factoryConfig.getConfig("default-settings.min-max-counter"))
-    val mmCounterSampleInterval = factoryConfig.getDuration("default-settings.min-max-counter.sample-interval")
+    val mmCounterSampleInterval = factoryConfig.getDuration("default-settings.min-max-counter.sample-interval", TimeUnit.MILLISECONDS)
 
     val customSettings = factoryConfig.getConfig("custom-settings")
       .configurations
       .filter(nonEmptySection)
       .map(readCustomInstrumentSettings)
 
-    new InstrumentFactory(histogramDynamicRange, mmCounterDynamicRange, mmCounterSampleInterval, customSettings)
+    new InstrumentFactory(histogramDynamicRange, mmCounterDynamicRange, mmCounterSampleInterval.millis, customSettings)
   }
 
   private def nonEmptySection(entry: (String, Config)): Boolean = entry match {
@@ -76,7 +76,7 @@ object InstrumentFactory {
       if (metricConfig.hasPath("lowest-discernible-value")) Some(metricConfig.getLong("lowest-discernible-value")) else None,
       if (metricConfig.hasPath("highest-trackable-value")) Some(metricConfig.getLong("highest-trackable-value")) else None,
       if (metricConfig.hasPath("significant-value-digits")) Some(metricConfig.getInt("significant-value-digits")) else None,
-      if (metricConfig.hasPath("sample-interval")) Some(metricConfig.getDuration("sample-interval")) else None
+      if (metricConfig.hasPath("sample-interval")) Some(metricConfig.getDuration("sample-interval", TimeUnit.MILLISECONDS).millis) else None
     )
 
     (metricName -> customSettings)

@@ -1,15 +1,14 @@
 package kamon
 package metric
 
-import java.time.Duration
 import java.util.concurrent.atomic.AtomicReference
 
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.Logger
-import kamon.metric.instrument._
 import kamon.util.MeasurementUnit
 
 import scala.collection.concurrent.TrieMap
+import scala.concurrent.duration.Duration
 
 
 class MetricRegistry(initialConfig: Config) extends MetricsSnapshotGenerator {
@@ -36,10 +35,10 @@ class MetricRegistry(initialConfig: Config) extends MetricsSnapshotGenerator {
 
 
   override def snapshot(): MetricsSnapshot = synchronized {
-    var histograms = Seq.empty[DistributionSnapshot]
-    var mmCounters = Seq.empty[DistributionSnapshot]
-    var counters = Seq.empty[SingleValueSnapshot]
-    var gauges = Seq.empty[SingleValueSnapshot]
+    var histograms = Seq.empty[MetricDistribution]
+    var mmCounters = Seq.empty[MetricDistribution]
+    var counters = Seq.empty[MetricValue]
+    var gauges = Seq.empty[MetricValue]
 
     for {
       metricEntry <- metrics.values
@@ -50,6 +49,7 @@ class MetricRegistry(initialConfig: Config) extends MetricsSnapshotGenerator {
         case InstrumentType.MinMaxCounter => mmCounters = mmCounters :+ instrument.asInstanceOf[SnapshotableMinMaxCounter].snapshot()
         case InstrumentType.Gauge         => gauges = gauges :+ instrument.asInstanceOf[SnapshotableGauge].snapshot()
         case InstrumentType.Counter       => counters = counters :+ instrument.asInstanceOf[SnapshotableCounter].snapshot()
+        case other                        => logger.warn("Unexpected instrument type [{}] found in the registry", other )
       }
     }
 

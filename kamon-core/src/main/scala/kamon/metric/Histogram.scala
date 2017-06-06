@@ -1,6 +1,4 @@
-package kamon
-package metric
-package instrument
+package kamon.metric
 
 import java.nio.ByteBuffer
 
@@ -36,7 +34,7 @@ class HdrHistogram(name: String, tags: Map[String, String], val measurementUnit:
     }
   }
 
-  override def snapshot(): DistributionSnapshot = {
+  override def snapshot(): MetricDistribution = {
     val buffer = HdrHistogram.tempSnapshotBuffer.get()
     val counts = countsArray()
     val countsLimit = counts.length()
@@ -82,7 +80,7 @@ class HdrHistogram(name: String, tags: Map[String, String], val measurementUnit:
     val distribution = new ZigZagCountsDistribution(totalCount, minIndex, maxIndex, ByteBuffer.wrap(zigZagCounts),
       protectedUnitMagnitude(), protectedSubBucketHalfCount(), protectedSubBucketHalfCountMagnitude())
 
-    DistributionSnapshot(name, tags, measurementUnit, dynamicRange, distribution)
+    MetricDistribution(name, tags, measurementUnit, dynamicRange, distribution)
   }
 
   private class ZigZagCountsDistribution(val count: Long, minIndex: Int, maxIndex: Int, zigZagCounts: ByteBuffer,
