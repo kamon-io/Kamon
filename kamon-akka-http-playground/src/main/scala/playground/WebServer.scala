@@ -67,11 +67,11 @@ object WebServer extends App {
 
   val bindingFuture = Http().bindAndHandle(routes, interface, port)
 
-  val matGraph = RequestsGenerator.activate(100 millis, Vector(
-    s"/ok",
-    s"/go-to-outside",
-    s"/internal-error",
-    s"/fail-with-exception"))
+//  val matGraph = RequestsGenerator.activate(100 millis, Vector(
+//    s"/ok",
+//    s"/go-to-outside",
+//    s"/internal-error",
+//    s"/fail-with-exception"))
 
   bindingFuture.map { serverBinding ⇒
 
@@ -81,7 +81,7 @@ object WebServer extends App {
 
     logger.info(s"Server is shutting down.")
 
-    matGraph.cancel()
+    //matGraph.cancel()
 
     serverBinding
       .unbind() // trigger unbinding from the port
