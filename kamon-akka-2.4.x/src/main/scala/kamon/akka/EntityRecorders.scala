@@ -22,11 +22,11 @@ import kamon.metric.instrument.{ Time, InstrumentFactory }
  *
  *  Entity recorder for Akka Actors. The metrics being tracked are:
  *
- *    - time-in-mailbox: Time spent from the instant when a message is enqueued in a actor's mailbox to the instant when
+ *    - time-in-mailbox: Time spent from the instant when a message is enqueued in an actor's mailbox to the instant when
  *      that message is dequeued for processing.
  *    - processing-time: Time taken for the actor to process the receive function.
  *    - mailbox-size: Size of the actor's mailbox.
- *    - errors: Number or errors seen by the actor's supervision mechanism.
+ *    - errors: Number of errors seen by the actor's supervision mechanism.
  */
 class ActorMetrics(instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) {
   val timeInMailbox = histogram("time-in-mailbox", Time.Nanoseconds)
@@ -42,7 +42,7 @@ object ActorMetrics extends EntityRecorderFactoryCompanion[ActorMetrics]("akka-a
  *  Entity recorder for Akka Routers. The metrics being tracked are:
  *
  *    - routing-time: Time taken for the router to process the routing logic.
- *    - time-in-mailbox: Time spent from the instant when a message is enqueued in a actor's mailbox to the instant when
+ *    - time-in-mailbox: Time spent from the instant when a message is enqueued in an actor's mailbox to the instant when
  *      that message is dequeued for processing.
  *    - processing-time: Time taken for the actor to process the receive function.
  *    - errors: Number or errors seen by the actor's supervision mechanism.
@@ -58,16 +58,21 @@ object RouterMetrics extends EntityRecorderFactoryCompanion[RouterMetrics]("akka
 
 /**
  *
- *  Entity recorder for Actor Groups. The metrics being tracked are:
+ *  Entity recorder for Actor Groups. Sums across all actors in the Actor Group.
+ *  The metrics being tracked are:
  *
- *    - time-in-mailbox: Time spent from the instant when a message is enqueued in a actor's mailbox to the instant when
+ *    - time-in-mailbox: Time spent from the instant when a message is enqueued in an actor's mailbox to the instant when
  *      that message is dequeued for processing.
  *    - processing-time: Time taken for the actor to process the receive function.
- *    - errors: Number or errors seen by the actor's supervision mechanism.
+ *    - actors: Number of actors that have been created.
+ *    - mailbox-size: Size of the actor's mailbox.
+ *    - errors: Number of errors seen by the actor's supervision mechanism.
  */
 class ActorGroupMetrics(instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) {
   val timeInMailbox = histogram("time-in-mailbox", Time.Nanoseconds)
   val processingTime = histogram("processing-time", Time.Nanoseconds)
+  val mailboxSize = minMaxCounter("mailbox-size")
+  val actors = minMaxCounter("actors")
   val errors = counter("errors")
 }
 

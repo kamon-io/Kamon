@@ -14,8 +14,8 @@
  */
 
 
-val kamonCore = "io.kamon" %% "kamon-core" % "0.6.5"
-val kamonScala = "io.kamon" %% "kamon-scala" % "0.6.5"
+val kamonCore = "io.kamon" %% "kamon-core" % "0.6.6"
+val kamonScala = "io.kamon" %% "kamon-scala" % "0.6.6"
 val `akka-2.3` = "2.3.13"
 val `akka-2.4` = "2.4.16"
 

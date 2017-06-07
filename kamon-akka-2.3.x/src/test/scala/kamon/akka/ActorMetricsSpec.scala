@@ -17,18 +17,21 @@ package kamon.akka
 
 import java.nio.LongBuffer
 
+import scala.concurrent.duration._
+
+import org.scalatest.concurrent.Eventually
+
+import com.typesafe.config.ConfigFactory
+
 import akka.actor._
 import akka.testkit.TestProbe
-import com.typesafe.config.ConfigFactory
 import kamon.Kamon
 import kamon.akka.ActorMetricsTestActor._
 import kamon.metric.EntitySnapshot
 import kamon.metric.instrument.CollectionContext
 import kamon.testkit.BaseKamonSpec
 
-import scala.concurrent.duration._
-
-class ActorMetricsSpec extends BaseKamonSpec("actor-metrics-spec") {
+class ActorMetricsSpec extends BaseKamonSpec("actor-metrics-spec") with Eventually {
 
   "the Kamon actor metrics" should {
     "respect the configured include and exclude filters" in new ActorMetricsFixtures {
@@ -63,11 +66,13 @@ class ActorMetricsSpec extends BaseKamonSpec("actor-metrics-spec") {
         firstSnapshot.histogram("processing-time").get.numberOfMeasurements should be(102L) // 102 examples
         firstSnapshot.histogram("time-in-mailbox").get.numberOfMeasurements should be(102L) // 102 examples
 
-        val secondSnapshot = collectMetricsOf(trackedActor).get // Ensure that the recorders are clean
-        secondSnapshot.counter("errors").get.count should be(0L)
-        secondSnapshot.minMaxCounter("mailbox-size").get.numberOfMeasurements should be(3L) // min, max and current
-        secondSnapshot.histogram("processing-time").get.numberOfMeasurements should be(0L)
-        secondSnapshot.histogram("time-in-mailbox").get.numberOfMeasurements should be(0L)
+        eventually(timeout(5.seconds)) {
+          val secondSnapshot = collectMetricsOf(trackedActor).get // Ensure that the recorders are clean
+          secondSnapshot.counter("errors").get.count should be(0L)
+          secondSnapshot.minMaxCounter("mailbox-size").get.numberOfMeasurements should be(3L) // min, max and current
+          secondSnapshot.histogram("processing-time").get.numberOfMeasurements should be(0L)
+          secondSnapshot.histogram("time-in-mailbox").get.numberOfMeasurements should be(0L)
+        }
       }
     }
 
@@ -167,33 +172,5 @@ class ActorMetricsSpec extends BaseKamonSpec("actor-metrics-spec") {
 
       actor
     }
-  }
-}
-
-class ActorMetricsTestActor extends Actor {
-  def receive = {
-    case Discard ⇒
-    case Fail    ⇒ throw new ArithmeticException("Division by zero.")
-    case Ping    ⇒ sender ! Pong
-    case TrackTimings(sendTimestamp, sleep) ⇒ {
-      val dequeueTimestamp = System.nanoTime()
-      sleep.map(s ⇒ Thread.sleep(s.toMillis))
-      val afterReceiveTimestamp = System.nanoTime()
-
-      sender ! TrackedTimings(sendTimestamp, dequeueTimestamp, afterReceiveTimestamp)
-    }
-  }
-}
-
-object ActorMetricsTestActor {
-  case object Ping
-  case object Pong
-  case object Fail
-  case object Discard
-
-  case class TrackTimings(sendTimestamp: Long = System.nanoTime(), sleep: Option[Duration] = None)
-  case class TrackedTimings(sendTimestamp: Long, dequeueTimestamp: Long, afterReceiveTimestamp: Long) {
-    def approximateTimeInMailbox: Long = dequeueTimestamp - sendTimestamp
-    def approximateProcessingTime: Long = afterReceiveTimestamp - dequeueTimestamp
   }
 }
