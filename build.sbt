@@ -13,7 +13,7 @@
  * =========================================================================================
  */
 
-val kamonCore  = "io.kamon" %% "kamon-core" % "0.6.6"
+val kamonCore  = "io.kamon" %% "kamon-core" % "0.6.7"
 val scalazConcurrent  = "org.scalaz" %% "scalaz-concurrent" % "7.2.8"
 
 lazy val root = (project in file("."))
