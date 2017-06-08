@@ -15,14 +15,14 @@ import scala.collection.JavaConverters._
 import scala.collection.concurrent.TrieMap
 
 trait ReporterRegistry {
-  def loadFromConfig(): Unit
+  def loadReportersFromConfig(): Unit
 
-  def add(reporter: MetricReporter): Registration
-  def add(reporter: MetricReporter, name: String): Registration
-  def add(reporter: SpanReporter): Registration
-  def add(reporter: SpanReporter, name: String): Registration
+  def addReporter(reporter: MetricReporter): Registration
+  def addReporter(reporter: MetricReporter, name: String): Registration
+  def addReporter(reporter: SpanReporter): Registration
+  def addReporter(reporter: SpanReporter, name: String): Registration
 
-  def stopAll(): Future[Unit]
+  def stopAllReporters(): Future[Unit]
 }
 
 
@@ -47,29 +47,31 @@ trait SpanReporter {
 }
 
 class ReporterRegistryImpl(metrics: MetricsSnapshotGenerator, initialConfig: Config) extends ReporterRegistry {
+  private val registryExecutionContext = Executors.newScheduledThreadPool(2, threadFactory("kamon-reporter-registry"))
   private val reporterCounter = new AtomicLong(0L)
-  private val registryExecutionContext = Executors.newSingleThreadScheduledExecutor(threadFactory("kamon-reporter-registry"))
-  private val metricsTickerSchedule = new AtomicReference[ScheduledFuture[_]]()
-  private val spanReporterTickerSchedule = new AtomicReference[ScheduledFuture[_]]()
 
+  private val metricReporterTickerSchedule = new AtomicReference[ScheduledFuture[_]]()
   private val metricReporters = TrieMap[Long, MetricReporterEntry]()
+
+  private val spanReporterTickerSchedule = new AtomicReference[ScheduledFuture[_]]()
   private val spanReporters = TrieMap[Long, SpanReporterEntry]()
+
 
 
   reconfigure(initialConfig)
 
-  override def loadFromConfig(): Unit = ???
+  override def loadReportersFromConfig(): Unit = ???
 
-  override def add(reporter: MetricReporter): Registration =
+  override def addReporter(reporter: MetricReporter): Registration =
     addMetricReporter(reporter, reporter.getClass.getName())
 
-  override def add(reporter: MetricReporter, name: String): Registration =
+  override def addReporter(reporter: MetricReporter, name: String): Registration =
     addMetricReporter(reporter, name)
 
-  override def add(reporter: SpanReporter): Registration =
+  override def addReporter(reporter: SpanReporter): Registration =
     addSpanReporter(reporter, reporter.getClass.getName())
 
-  override def add(reporter: SpanReporter, name: String): Registration =
+  override def addReporter(reporter: SpanReporter, name: String): Registration =
     addSpanReporter(reporter, name)
 
 
@@ -103,7 +105,7 @@ class ReporterRegistryImpl(metrics: MetricsSnapshotGenerator, initialConfig: Con
       metricReporters.remove(id).nonEmpty
   }
 
-  override def stopAll(): Future[Unit] = {
+  override def stopAllReporters(): Future[Unit] = {
     implicit val stopReporterExeContext = ExecutionContext.fromExecutor(registryExecutionContext)
     val reporterStopFutures = Vector.newBuilder[Future[Unit]]
 
@@ -128,9 +130,14 @@ class ReporterRegistryImpl(metrics: MetricsSnapshotGenerator, initialConfig: Con
     val tickIntervalMillis = config.getDuration("kamon.metric.tick-interval", TimeUnit.MILLISECONDS)
     val traceTickIntervalMillis = config.getDuration("kamon.trace.tick-interval", TimeUnit.MILLISECONDS)
 
-    val currentTicker = metricsTickerSchedule.get()
-    if(currentTicker != null) {
-      currentTicker.cancel(true)
+    val currentMetricTicker = metricReporterTickerSchedule.get()
+    if(currentMetricTicker != null) {
+      currentMetricTicker.cancel(true)
+    }
+
+    val currentSpanTicker = spanReporterTickerSchedule.get()
+    if(currentSpanTicker  != null) {
+      currentSpanTicker .cancel(true)
     }
 
     // Reconfigure all registered reporters
@@ -142,15 +149,15 @@ class ReporterRegistryImpl(metrics: MetricsSnapshotGenerator, initialConfig: Con
       Future(entry.reporter.reconfigure(config))(entry.executionContext)
     }
 
-    metricsTickerSchedule.set {
+    metricReporterTickerSchedule.set {
       registryExecutionContext.scheduleAtFixedRate(
-        new MetricTicker(metrics, metricReporters), tickIntervalMillis, tickIntervalMillis, TimeUnit.MILLISECONDS
+        new MetricReporterTicker(metrics, metricReporters), tickIntervalMillis, tickIntervalMillis, TimeUnit.MILLISECONDS
       )
     }
 
     spanReporterTickerSchedule.set {
       registryExecutionContext.scheduleAtFixedRate(
-        new SpanTicker(spanReporters), traceTickIntervalMillis, traceTickIntervalMillis, TimeUnit.MILLISECONDS
+        new SpanReporterTicker(spanReporters), traceTickIntervalMillis, traceTickIntervalMillis, TimeUnit.MILLISECONDS
       )
     }
   }
@@ -195,8 +202,8 @@ class ReporterRegistryImpl(metrics: MetricsSnapshotGenerator, initialConfig: Con
     val buffer = new ArrayBlockingQueue[Span.CompletedSpan](bufferCapacity)
   }
 
-  private class MetricTicker(snapshotGenerator: MetricsSnapshotGenerator, reporterEntries: TrieMap[Long, MetricReporterEntry]) extends Runnable {
-    val logger = Logger(classOf[MetricTicker])
+  private class MetricReporterTicker(snapshotGenerator: MetricsSnapshotGenerator, reporterEntries: TrieMap[Long, MetricReporterEntry]) extends Runnable {
+    val logger = Logger(classOf[MetricReporterTicker])
     var lastTick = System.currentTimeMillis()
 
     def run(): Unit = try {
@@ -221,7 +228,7 @@ class ReporterRegistryImpl(metrics: MetricsSnapshotGenerator, initialConfig: Con
     }
   }
 
-  private class SpanTicker(spanReporters: TrieMap[Long, SpanReporterEntry]) extends Runnable {
+  private class SpanReporterTicker(spanReporters: TrieMap[Long, SpanReporterEntry]) extends Runnable {
     override def run(): Unit = {
       spanReporters.foreach {
         case (_, entry) =>
