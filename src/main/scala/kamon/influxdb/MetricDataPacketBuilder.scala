@@ -20,10 +20,10 @@ class MetricDataPacketBuilder(maxPacketSizeInBytes: Long, flushToDestination: St
   protected val metricSeparator = "\n"
   protected var buffer = new StringBuilder()
 
-  protected def createInfluxString(data: Map[String, Any]): String =
+  protected def createInfluxString(data: TraversableOnce[(String, Any)]): String =
     data.map { case (k, v) ⇒ s"$k=$v" }.mkString(",")
 
-  def appendMeasurement(key: String, tags: Map[String, String], measurementData: Map[String, BigDecimal], timeStamp: Long): Unit = {
+  def appendMeasurement(key: String, tags: TraversableOnce[(String, String)], measurementData: TraversableOnce[(String, BigDecimal)], timeStamp: Long): Unit = {
     val tagsString = createInfluxString(tags)
     val valuesString = createInfluxString(measurementData)
     val data = s"$key,$tagsString $valuesString $timeStamp$metricSeparator"

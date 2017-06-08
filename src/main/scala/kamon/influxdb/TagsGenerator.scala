@@ -21,7 +21,9 @@ import java.lang.management.ManagementFactory
 import com.typesafe.config.Config
 import kamon.metric.instrument.Histogram
 import kamon.metric.{ Entity, MetricKey }
+
 import collection.JavaConversions._
+import scala.collection.immutable.ListMap
 
 trait TagsGenerator {
   protected val config: Config
@@ -39,22 +41,23 @@ trait TagsGenerator {
   }
 
   protected val percentiles = config.getDoubleList("percentiles").toList
+  protected val extraTags = config.getObject("extra-tags").unwrapped().toSeq.sortBy(_._1).map {
+    case (k, v: String)            ⇒ (normalize(k), normalize(v))
+    case (k, v: Number)            ⇒ (normalize(k), normalize(v.toString))
+    case (k, v: java.lang.Boolean) ⇒ (normalize(k), v.toString)
+    case (k, v: AnyRef)            ⇒ throw new IllegalArgumentException(s"Unsupported tag value type ${v.getClass.getName} for tag $k")
+  }
 
-  protected def generateTags(entity: Entity, metricKey: MetricKey): Map[String, String] =
-    entity.category match {
-      case "trace-segment" ⇒
-        Map(
-          "category" -> normalize(entity.tags("trace")),
-          "entity" -> normalize(entity.name),
-          "hostname" -> normalize(hostname),
-          "metric" -> normalize(metricKey.name))
-      case _ ⇒
-        Map(
-          "category" -> normalize(entity.category),
-          "entity" -> normalize(entity.name),
-          "hostname" -> normalize(hostname),
-          "metric" -> normalize(metricKey.name))
-    }
+  protected def generateTags(entity: Entity, metricKey: MetricKey): Map[String, String] = {
+    val baseTags = Seq(
+      "category" -> normalize(entity.category),
+      "entity" -> normalize(entity.name),
+      "hostname" -> normalize(hostname),
+      "metric" -> normalize(metricKey.name))
+    val entityTags = if (entity.category == "trace-segment") entity.tags - "category" else entity.tags
+    if (extraTags.isEmpty && entityTags.isEmpty) Map(baseTags: _*) // up to 4 elements Map preserves order?
+    else ListMap((baseTags ++ extraTags ++ entityTags).sortBy(_._1): _*) // from InfluxDB's "Line Protocol Tutorial": For best performance you should sort tags by key before sending them to the database.
+  }
 
   protected def histogramValues(hs: Histogram.Snapshot): Map[String, BigDecimal] = {
     val defaults = Map(
