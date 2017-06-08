@@ -41,12 +41,15 @@ trait TagsGenerator {
   }
 
   protected val percentiles = config.getDoubleList("percentiles").toList
+  protected val includeMeasurements = config.getBoolean("include-measurements")
+
   protected val extraTags = config.getObject("extra-tags").unwrapped().toSeq.sortBy(_._1).map {
     case (k, v: String)            ⇒ (normalize(k), normalize(v))
     case (k, v: Number)            ⇒ (normalize(k), normalize(v.toString))
     case (k, v: java.lang.Boolean) ⇒ (normalize(k), v.toString)
     case (k, v: AnyRef)            ⇒ throw new IllegalArgumentException(s"Unsupported tag value type ${v.getClass.getName} for tag $k")
   }
+
 
   protected def generateTags(entity: Entity, metricKey: MetricKey): Map[String, String] = {
     val baseTags = Seq(
@@ -60,10 +63,13 @@ trait TagsGenerator {
   }
 
   protected def histogramValues(hs: Histogram.Snapshot): Map[String, BigDecimal] = {
+    val measurements =
+      if (includeMeasurements) Map("measurements" -> BigDecimal(hs.numberOfMeasurements))
+      else Map.empty
     val defaults = Map(
       "lower" -> BigDecimal(hs.min),
       "mean" -> average(hs),
-      "upper" -> BigDecimal(hs.max))
+      "upper" -> BigDecimal(hs.max)) ++ measurements
 
     percentiles.foldLeft(defaults) { (acc, p) ⇒
       val fractional = p % 1

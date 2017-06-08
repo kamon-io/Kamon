@@ -77,6 +77,7 @@ class HttpBasedInfluxDBMetricSenderSpec extends BaseKamonSpec("udp-based-influxd
     val influxDBConfig = config.getConfig("kamon.influxdb")
     val configWithAuthAndRetention = config.getConfig("kamon.influx-with-auth-and-rp")
     val configWithHostnameOverride = config.getConfig("kamon.influxdb-hostname-override")
+    val configWithMeasurementsEnabled = config.getConfig("kamon.influxdb-with-measurements")
     val configWithExtraTags= config.getConfig("kamon.influxdb-with-extra-tags")
 
     "use the overriden hostname, if provided" in new HttpSenderFixture(configWithHostnameOverride) {
@@ -141,6 +142,17 @@ class HttpBasedInfluxDBMetricSenderSpec extends BaseKamonSpec("udp-based-influxd
 
       requestData should contain(expectedMessage)
     }
+
+    "send number of measurements, if enabled" in new HttpSenderFixture(configWithMeasurementsEnabled) {
+      val testRecorder = buildRecorder("user/kamon")
+
+      testRecorder.histogramOne.record(10L)
+      testRecorder.histogramOne.record(5L)
+
+      val http = setup(Map(testEntity -> testRecorder.collect(collectionContext)))
+      val expectedMessage = s"kamon-timers,category=test,entity=user-kamon,hostname=$hostName,metric=metric-one measurements=2,mean=7.5,lower=5,upper=10,p70.5=10,p50=5 ${from.millis * 1000000}"
+    }
+     
     "send extra tags, if configured" in new HttpSenderFixture(configWithExtraTags) {
       val testRecorder = buildRecorder("user/kamon")
       testRecorder.counter.increment()
