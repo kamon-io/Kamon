@@ -1,9 +1,9 @@
-package kamon.util
+package kamon.metric
 
-import kamon.metric.{DynamicRange, HdrHistogram, MetricDistribution, MetricValue}
+import kamon.util.MeasurementUnit
 import kamon.util.MeasurementUnit.Dimension
 
-class MetricScaler(targetTimeUnit: MeasurementUnit, targetInformationUnit: MeasurementUnit, dynamicRange: DynamicRange) {
+class Scaler(targetTimeUnit: MeasurementUnit, targetInformationUnit: MeasurementUnit, dynamicRange: DynamicRange) {
   require(targetTimeUnit.dimension == Dimension.Time, "timeUnit must be in the time dimension.")
   require(targetInformationUnit.dimension == Dimension.Information, "informationUnit must be in the information dimension.")
 

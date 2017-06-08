@@ -1,7 +1,14 @@
 package kamon.metric
 
-
 import kamon.util.MeasurementUnit
+
+
+/**
+  *
+  * @param interval
+  * @param metrics
+  */
+case class TickSnapshot(interval: Interval, metrics: MetricsSnapshot)
 
 case class Interval(from: Long, to: Long)
 
@@ -11,10 +18,6 @@ case class MetricsSnapshot(
   gauges: Seq[MetricValue],
   counters: Seq[MetricValue]
 )
-
-case class TickSnapshot(interval: Interval, metrics: MetricsSnapshot)
-
-
 
 /**
   * Snapshot for instruments that internally track a single value. Meant to be used for counters and gauges.

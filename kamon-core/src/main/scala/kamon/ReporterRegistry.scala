@@ -12,13 +12,15 @@ import scala.concurrent.{ExecutionContext, ExecutionContextExecutorService, Futu
 import scala.util.Try
 import scala.util.control.NonFatal
 import scala.collection.JavaConverters._
+import scala.collection.concurrent.TrieMap
 
 trait ReporterRegistry {
   def loadFromConfig(): Unit
 
-  def add(reporter: MetricsReporter): Registration
-  def add(reporter: MetricsReporter, name: String): Registration
-  def add(reporter: SpansReporter): Registration
+  def add(reporter: MetricReporter): Registration
+  def add(reporter: MetricReporter, name: String): Registration
+  def add(reporter: SpanReporter): Registration
+  def add(reporter: SpanReporter, name: String): Registration
 
   def stopAll(): Future[Unit]
 }
@@ -28,7 +30,7 @@ trait Registration {
   def cancel(): Boolean
 }
 
-trait MetricsReporter {
+trait MetricReporter {
   def start(): Unit
   def stop(): Unit
 
@@ -36,64 +38,86 @@ trait MetricsReporter {
   def reportTickSnapshot(snapshot: TickSnapshot): Unit
 }
 
-trait SpansReporter {
+trait SpanReporter {
   def start(): Unit
   def stop(): Unit
 
   def reconfigure(config: Config): Unit
-  def reportSpan(span: Span.CompletedSpan): Unit
+  def reportSpans(spans: Seq[Span.CompletedSpan]): Unit
 }
 
 class ReporterRegistryImpl(metrics: MetricsSnapshotGenerator, initialConfig: Config) extends ReporterRegistry {
+  private val reporterCounter = new AtomicLong(0L)
   private val registryExecutionContext = Executors.newSingleThreadScheduledExecutor(threadFactory("kamon-reporter-registry"))
   private val metricsTickerSchedule = new AtomicReference[ScheduledFuture[_]]()
-  private val metricReporters = new ConcurrentLinkedQueue[ReporterEntry]()
-  private val spanReporters = new ConcurrentLinkedQueue[SpansReporter]()
-  private val reporterCounter = new AtomicLong(0L)
+  private val spanReporterTickerSchedule = new AtomicReference[ScheduledFuture[_]]()
+
+  private val metricReporters = TrieMap[Long, MetricReporterEntry]()
+  private val spanReporters = TrieMap[Long, SpanReporterEntry]()
+
 
   reconfigure(initialConfig)
 
   override def loadFromConfig(): Unit = ???
 
-  override def add(reporter: MetricsReporter): Registration =
-    add(reporter, reporter.getClass.getName())
+  override def add(reporter: MetricReporter): Registration =
+    addMetricReporter(reporter, reporter.getClass.getName())
 
-  override def add(reporter: MetricsReporter, name: String): Registration = {
+  override def add(reporter: MetricReporter, name: String): Registration =
+    addMetricReporter(reporter, name)
+
+  override def add(reporter: SpanReporter): Registration =
+    addSpanReporter(reporter, reporter.getClass.getName())
+
+  override def add(reporter: SpanReporter, name: String): Registration =
+    addSpanReporter(reporter, name)
+
+
+  private def addMetricReporter(reporter: MetricReporter, name: String): Registration = {
     val executor = Executors.newSingleThreadExecutor(threadFactory(name))
-    val reporterEntry = new ReporterEntry(
+    val reporterEntry = new MetricReporterEntry(
       id = reporterCounter.getAndIncrement(),
       reporter = reporter,
       executionContext = ExecutionContext.fromExecutorService(executor)
     )
 
-    metricReporters.add(reporterEntry)
-
-    new Registration {
-      val reporterID = reporterEntry.id
-      override def cancel(): Boolean = {
-        metricReporters.iterator().asScala
-          .find(e => e.id == reporterID)
-          .map(e => stopReporter(e))
-          .isDefined
-      }
-    }
+    metricReporters.put(reporterEntry.id, reporterEntry)
+    createRegistration(reporterEntry.id, metricReporters)
   }
 
-  override def add(reporter: SpansReporter): Registration = {
-    spanReporters.add(reporter)
+  private def addSpanReporter(reporter: SpanReporter, name: String): Registration = {
+    val executor = Executors.newSingleThreadExecutor(threadFactory(name))
+    val reporterEntry = new SpanReporterEntry(
+      id = reporterCounter.incrementAndGet(),
+      reporter = reporter,
+      bufferCapacity = 1024,
+      executionContext = ExecutionContext.fromExecutorService(executor)
+    )
 
-    new Registration {
-      override def cancel(): Boolean = true
-    }
+    spanReporters.put(reporterEntry.id, reporterEntry)
+    createRegistration(reporterEntry.id, spanReporters)
+  }
+
+  private def createRegistration(id: Long, target: TrieMap[Long, _]): Registration = new Registration {
+    override def cancel(): Boolean =
+      metricReporters.remove(id).nonEmpty
   }
 
   override def stopAll(): Future[Unit] = {
     implicit val stopReporterExeContext = ExecutionContext.fromExecutor(registryExecutionContext)
     val reporterStopFutures = Vector.newBuilder[Future[Unit]]
-    while(!metricReporters.isEmpty) {
-      val entry = metricReporters.poll()
-      if(entry != null) {
-        reporterStopFutures += stopReporter(entry)
+
+    while(metricReporters.nonEmpty) {
+      val (idToRemove, _) = metricReporters.head
+      metricReporters.remove(idToRemove).foreach { entry =>
+        reporterStopFutures += stopMetricReporter(entry)
+      }
+    }
+
+    while(spanReporters.nonEmpty) {
+      val (idToRemove, _) = spanReporters.head
+      spanReporters.remove(idToRemove).foreach { entry =>
+        reporterStopFutures += stopSpanReporter(entry)
       }
     }
 
@@ -102,29 +126,43 @@ class ReporterRegistryImpl(metrics: MetricsSnapshotGenerator, initialConfig: Con
 
   private[kamon] def reconfigure(config: Config): Unit = synchronized {
     val tickIntervalMillis = config.getDuration("kamon.metric.tick-interval", TimeUnit.MILLISECONDS)
+    val traceTickIntervalMillis = config.getDuration("kamon.trace.tick-interval", TimeUnit.MILLISECONDS)
+
     val currentTicker = metricsTickerSchedule.get()
     if(currentTicker != null) {
       currentTicker.cancel(true)
     }
 
     // Reconfigure all registered reporters
-    metricReporters.iterator().asScala.foreach(entry =>
+    metricReporters.foreach { case (_, entry) =>
       Future(entry.reporter.reconfigure(config))(entry.executionContext)
-    )
+    }
+
+    spanReporters.foreach { case (_, entry) =>
+      Future(entry.reporter.reconfigure(config))(entry.executionContext)
+    }
 
     metricsTickerSchedule.set {
       registryExecutionContext.scheduleAtFixedRate(
         new MetricTicker(metrics, metricReporters), tickIntervalMillis, tickIntervalMillis, TimeUnit.MILLISECONDS
       )
     }
-  }
 
+    spanReporterTickerSchedule.set {
+      registryExecutionContext.scheduleAtFixedRate(
+        new SpanTicker(spanReporters), traceTickIntervalMillis, traceTickIntervalMillis, TimeUnit.MILLISECONDS
+      )
+    }
+  }
 
   private[kamon] def reportSpan(span: Span.CompletedSpan): Unit = {
-    spanReporters.iterator().asScala.foreach(_.reportSpan(span))
+    spanReporters.foreach { case (_, reporterEntry) =>
+      if(reporterEntry.isActive)
+        reporterEntry.buffer.offer(span)
+    }
   }
 
-  private def stopReporter(entry: ReporterEntry): Future[Unit] = {
+  private def stopMetricReporter(entry: MetricReporterEntry): Future[Unit] = {
     entry.isActive = false
 
     Future(entry.reporter.stop())(entry.executionContext).andThen {
@@ -132,14 +170,32 @@ class ReporterRegistryImpl(metrics: MetricsSnapshotGenerator, initialConfig: Con
     }(ExecutionContext.fromExecutor(registryExecutionContext))
   }
 
-  private class ReporterEntry(
+  private def stopSpanReporter(entry: SpanReporterEntry): Future[Unit] = {
+    entry.isActive = false
+
+    Future(entry.reporter.stop())(entry.executionContext).andThen {
+      case _ => entry.executionContext.shutdown()
+    }(ExecutionContext.fromExecutor(registryExecutionContext))
+  }
+
+  private class MetricReporterEntry(
     @volatile var isActive: Boolean = true,
     val id: Long,
-    val reporter: MetricsReporter,
+    val reporter: MetricReporter,
     val executionContext: ExecutionContextExecutorService
   )
 
-  private class MetricTicker(snapshotGenerator: MetricsSnapshotGenerator, reporterEntries: java.util.Queue[ReporterEntry]) extends Runnable {
+  private class SpanReporterEntry(
+    @volatile var isActive: Boolean = true,
+    val id: Long,
+    val reporter: SpanReporter,
+    val bufferCapacity: Int,
+    val executionContext: ExecutionContextExecutorService
+  ) {
+    val buffer = new ArrayBlockingQueue[Span.CompletedSpan](bufferCapacity)
+  }
+
+  private class MetricTicker(snapshotGenerator: MetricsSnapshotGenerator, reporterEntries: TrieMap[Long, MetricReporterEntry]) extends Runnable {
     val logger = Logger(classOf[MetricTicker])
     var lastTick = System.currentTimeMillis()
 
@@ -150,7 +206,7 @@ class ReporterRegistryImpl(metrics: MetricsSnapshotGenerator, initialConfig: Con
         metrics = snapshotGenerator.snapshot()
       )
 
-      reporterEntries.iterator().asScala.foreach { entry =>
+      reporterEntries.foreach { case (_, entry) =>
         Future {
           if(entry.isActive)
             entry.reporter.reportTickSnapshot(tickSnapshot)
@@ -162,6 +218,21 @@ class ReporterRegistryImpl(metrics: MetricsSnapshotGenerator, initialConfig: Con
 
     } catch {
       case NonFatal(t) => logger.error("Error while running a tick", t)
+    }
+  }
+
+  private class SpanTicker(spanReporters: TrieMap[Long, SpanReporterEntry]) extends Runnable {
+    override def run(): Unit = {
+      spanReporters.foreach {
+        case (_, entry) =>
+
+          val spanBatch = new java.util.ArrayList[Span.CompletedSpan](entry.bufferCapacity)
+          entry.buffer.drainTo(spanBatch, entry.bufferCapacity)
+
+          Future {
+            entry.reporter.reportSpans(spanBatch.asScala)
+          }(entry.executionContext)
+      }
     }
   }
 }
