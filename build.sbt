@@ -37,8 +37,8 @@ lazy val core = (project in file("kamon-core"))
       "ch.qos.logback" % "logback-classic" % "1.2.2",
       "com.typesafe.scala-logging" %% "scala-logging" % "3.5.0",
       "org.hdrhistogram" % "HdrHistogram"    % "2.1.9",
-      "io.opentracing"   % "opentracing-api" % "0.30.0.RC2",
-      "io.opentracing"   % "opentracing-util" % "0.30.0.RC2",
+      "io.opentracing"   % "opentracing-api" % "0.30.0",
+      "io.opentracing"   % "opentracing-util" % "0.30.0",
       "com.lihaoyi" %% "fansi" % "0.2.4",
 
       //"uk.org.lidalia" % "slf4j-test" % "1.1.0" % "test",
