@@ -26,18 +26,16 @@ object HexCodec {
     var i = index
     var result = 0L
     val endIndex = Math.min(index + 16, lowerHex.length)
-    while ( {
-      index < endIndex
-    }) {
-      val c = lowerHex.charAt(index)
+    while (i < endIndex) {
+      val c = lowerHex.charAt(i)
       result <<= 4
-      if (c >= '0' && c <= '9') result |= c - '0'
-      else if (c >= 'a' && c <= 'f') result |= c - 'a' + 10
+      if (c >= '0' && c <= '9')
+        result |= c - '0'
+      else if (c >= 'a' && c <= 'f')
+        result |= c - 'a' + 10
       else throw isntLowerHexLong(lowerHex)
 
-      {
-        i = i + 1; index - 1
-      }
+      i += 1
     }
     result
   }
