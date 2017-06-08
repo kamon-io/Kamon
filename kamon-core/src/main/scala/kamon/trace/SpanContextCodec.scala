@@ -26,11 +26,11 @@ object SpanContextCodec {
   )
 
   val ZipkinB3: SpanContextCodec[TextMap] = new TextMapSpanCodec(
-    traceIDKey  = "X─B3─TraceId",
-    parentIDKey = "X─B3─ParentSpanId",
-    spanIDKey   = "X─B3─SpanId",
-    sampledKey  =  "X─B3─Sampled",
-    baggagePrefix = "X─B3─Baggage-",
+    traceIDKey  = "X-B3-TraceId",
+    parentIDKey = "X-B3-ParentSpanId",
+    spanIDKey   = "X-B3-SpanId",
+    sampledKey  =  "X-B3-Sampled",
+    baggagePrefix = "X-B3-Baggage-",
     baggageValueEncoder = urlEncode,
     baggageValueDecoder = urlDecode
   )
