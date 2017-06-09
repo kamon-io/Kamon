@@ -136,13 +136,16 @@ class Span(spanContext: SpanContext, initialOperationName: String, initialTags: 
   override def finish(): Unit =
     finish(Clock.microTimestamp())
 
-  override def finish(finishMicros: Long): Unit =
-    if(isOpen) {
+  override def finish(finishMicros: Long): Unit = synchronized {
+    if (isOpen) {
       isOpen = false
       endTimestampMicros = finishMicros
       recordSpanMetrics()
-      reporterRegistry.reportSpan(completedSpan)
+
+      if(sampled)
+        reporterRegistry.reportSpan(completedSpan)
     }
+  }
 
   private def completedSpan: Span.CompletedSpan =
     Span.CompletedSpan(spanContext, operationName, startTimestampMicros, endTimestampMicros, tags, logs)

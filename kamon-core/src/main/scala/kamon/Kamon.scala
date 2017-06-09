@@ -33,7 +33,7 @@ object Kamon extends MetricLookup with ReporterRegistry with io.opentracing.Trac
 
   private val metricRegistry = new MetricRegistry(initialConfig)
   private val reporterRegistry = new ReporterRegistryImpl(metricRegistry, initialConfig)
-  private val tracer = new Tracer(Kamon, reporterRegistry)
+  private val tracer = new Tracer(Kamon, reporterRegistry, initialConfig)
   private val env = new AtomicReference[Environment](Environment.fromConfig(ConfigFactory.load()))
 
   def environment: Environment =

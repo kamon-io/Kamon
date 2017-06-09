@@ -28,14 +28,17 @@ import kamon.metric.MetricLookup
 import kamon.util.Clock
 
 
-class Tracer(metrics: MetricLookup, reporterRegistry: ReporterRegistryImpl) extends io.opentracing.Tracer {
+class Tracer(metrics: MetricLookup, reporterRegistry: ReporterRegistryImpl, initialConfig: Config)
+    extends ThreadLocalActiveSpanSource with io.opentracing.Tracer {
+
   private val logger = Logger(classOf[Tracer])
   private val tracerMetrics = new TracerMetrics(metrics)
-  private val activeSpanSource = new ThreadLocalActiveSpanSource()
 
   @volatile private var configuredSampler: Sampler = Sampler.never
   @volatile private var textMapSpanContextCodec = SpanContextCodec.TextMap
   @volatile private var httpHeaderSpanContextCodec = SpanContextCodec.ZipkinB3
+
+  reconfigure(initialConfig)
 
   override def buildSpan(operationName: String): io.opentracing.Tracer.SpanBuilder =
     new SpanBuilder(operationName)
@@ -56,12 +59,6 @@ class Tracer(metrics: MetricLookup, reporterRegistry: ReporterRegistryImpl) exte
 
   def sampler: Sampler =
     configuredSampler
-
-  override def activeSpan(): io.opentracing.ActiveSpan =
-    activeSpanSource.activeSpan()
-
-  override def makeActive(span: io.opentracing.Span): io.opentracing.ActiveSpan =
-    activeSpanSource.makeActive(span)
 
   def setTextMapSpanContextCodec(codec: SpanContextCodec[TextMap]): Unit =
     this.textMapSpanContextCodec = codec
