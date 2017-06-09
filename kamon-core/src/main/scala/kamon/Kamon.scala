@@ -22,21 +22,19 @@ import io.opentracing.propagation.Format
 import io.opentracing.{ActiveSpan, Span, SpanContext}
 import kamon.metric._
 import kamon.trace.Tracer
-import kamon.util.{HexCodec, MeasurementUnit}
+import kamon.util.MeasurementUnit
 
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
-import scala.concurrent.forkjoin.ThreadLocalRandom
 
 
 object Kamon extends MetricLookup with ReporterRegistry with io.opentracing.Tracer {
   private val initialConfig = ConfigFactory.load()
-  private val incarnation = HexCodec.toLowerHex(ThreadLocalRandom.current().nextLong())
 
   private val metricRegistry = new MetricRegistry(initialConfig)
   private val reporterRegistry = new ReporterRegistryImpl(metricRegistry, initialConfig)
   private val tracer = new Tracer(Kamon, reporterRegistry)
-  private val env = new AtomicReference[Environment](environmentFromConfig(ConfigFactory.load()))
+  private val env = new AtomicReference[Environment](Environment.fromConfig(ConfigFactory.load()))
 
   def environment: Environment =
     env.get()
@@ -44,7 +42,7 @@ object Kamon extends MetricLookup with ReporterRegistry with io.opentracing.Trac
   def reconfigure(config: Config): Unit = synchronized {
     metricRegistry.reconfigure(config)
     reporterRegistry.reconfigure(config)
-    env.set(environmentFromConfig(config))
+    env.set(Environment.fromConfig(config))
   }
 
 
@@ -100,17 +98,4 @@ object Kamon extends MetricLookup with ReporterRegistry with io.opentracing.Trac
   override def stopAllReporters(): Future[Unit] =
     reporterRegistry.stopAllReporters()
 
-
-
-  case class Environment(config: Config, application: String, host: String, instance: String, incarnation: String)
-
-  private def environmentFromConfig(config: Config): Environment = {
-    val environmentConfig = config.getConfig("kamon.environment")
-
-    val application = environmentConfig.getString("application")
-    val host = environmentConfig.getString("host")
-    val instance = environmentConfig.getString("instance")
-
-    Environment(config, application, host, instance, incarnation)
-  }
 }
