@@ -18,8 +18,7 @@ package kamon.metric
 import java.lang.Math.abs
 import java.util.concurrent.atomic.AtomicLong
 
-import kamon.jsr166.LongMaxUpdater
-import kamon.util.MeasurementUnit
+import kamon.util.{AtomicLongMaxUpdater, MeasurementUnit}
 
 import scala.concurrent.duration.Duration
 
@@ -35,12 +34,11 @@ trait MinMaxCounter {
   def sample(): Unit
 }
 
+class SimpleMinMaxCounter(name: String, tags: Map[String, String], underlyingHistogram: Histogram with DistributionSnapshotInstrument,
+                          val sampleInterval: Duration) extends SnapshotableMinMaxCounter {
 
-class PaddedMinMaxCounter(name: String, tags: Map[String, String], underlyingHistogram: Histogram with DistributionSnapshotInstrument,
-    val sampleInterval: Duration) extends SnapshotableMinMaxCounter {
-
-  private val min = new LongMaxUpdater(0L)
-  private val max = new LongMaxUpdater(0L)
+  private val min = AtomicLongMaxUpdater()
+  private val max = AtomicLongMaxUpdater()
   private val sum = new AtomicLong()
 
   def dynamicRange: DynamicRange =

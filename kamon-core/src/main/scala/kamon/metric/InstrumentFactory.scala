@@ -34,7 +34,7 @@ private[kamon] class InstrumentFactory private (defaultHistogramDynamicRange: Dy
 
   def buildMinMaxCounter(dynamicRange: Option[DynamicRange], sampleInterval: Option[Duration])
       (name: String, tags: Map[String, String], unit: MeasurementUnit): SnapshotableMinMaxCounter =
-    new PaddedMinMaxCounter(
+    new SimpleMinMaxCounter(
       name,
       tags,
       buildHistogram(dynamicRange.orElse(Some(defaultMMCounterDynamicRange)))(name, tags, unit),
@@ -93,8 +93,7 @@ object InstrumentFactory {
       if (metricConfig.hasPath("significant-value-digits")) Some(metricConfig.getInt("significant-value-digits")) else None,
       if (metricConfig.hasPath("sample-interval")) Some(metricConfig.getDuration("sample-interval", TimeUnit.MILLISECONDS).millis) else None
     )
-
-    (metricName -> customSettings)
+    metricName -> customSettings
   }
 
   private def readDynamicRange(config: Config): DynamicRange =

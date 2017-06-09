@@ -1,14 +1,4 @@
 /*
-
-Note: this was copied from Doug Lea's CVS repository
-	http://gee.cs.oswego.edu/cgi-bin/viewcvs.cgi/jsr166/src/jsr166e/
-
-LongAdder.java version 1.14
-
-*/
-
-
-/*
  * Written by Doug Lea with assistance from members of JCP JSR-166
  * Expert Group and released to the public domain, as explained at
  * http://creativecommons.org/publicdomain/zero/1.0/
@@ -34,24 +24,23 @@ import java.io.Serializable;
  * this class is significantly higher, at the expense of higher space
  * consumption.
  *
+ * <p>LongAdders can be used with a {@link
+ * java.util.concurrent.ConcurrentHashMap} to maintain a scalable
+ * frequency map (a form of histogram or multiset). For example, to
+ * add a count to a {@code ConcurrentHashMap<String,LongAdder> freqs},
+ * initializing if not already present, you can use {@code
+ * freqs.computeIfAbsent(key, k -> new LongAdder()).increment();}
+ *
  * <p>This class extends {@link Number}, but does <em>not</em> define
  * methods such as {@code equals}, {@code hashCode} and {@code
  * compareTo} because instances are expected to be mutated, and so are
  * not useful as collection keys.
- *
- * <p><em>jsr166e note: This class is targeted to be placed in
- * java.util.concurrent.atomic.</em>
  *
  * @since 1.8
  * @author Doug Lea
  */
 public class LongAdder extends Striped64 implements Serializable {
     private static final long serialVersionUID = 7249069246863182397L;
-
-    /**
-     * Version of plus for use in retryUpdate
-     */
-    final long fn(long v, long x) { return v + x; }
 
     /**
      * Creates a new adder with initial sum of zero.
@@ -65,14 +54,13 @@ public class LongAdder extends Striped64 implements Serializable {
      * @param x the value to add
      */
     public void add(long x) {
-        Cell[] as; long b, v; HashCode hc; Cell a; int n;
+        Cell[] as; long b, v; int m; Cell a;
         if ((as = cells) != null || !casBase(b = base, b + x)) {
             boolean uncontended = true;
-            int h = (hc = threadHashCode.get()).code;
-            if (as == null || (n = as.length) < 1 ||
-                (a = as[(n - 1) & h]) == null ||
-                !(uncontended = a.cas(v = a.value, v + x)))
-                retryUpdate(x, hc, uncontended);
+            if (as == null || (m = as.length - 1) < 0 ||
+                    (a = as[getProbe() & m]) == null ||
+                    !(uncontended = a.cas(v = a.value, v + x)))
+                longAccumulate(x, null, uncontended);
         }
     }
 
@@ -100,15 +88,12 @@ public class LongAdder extends Striped64 implements Serializable {
      * @return the sum
      */
     public long sum() {
-        long sum = base;
         Cell[] as = cells;
+        long sum = base;
         if (as != null) {
-            int n = as.length;
-            for (int i = 0; i < n; ++i) {
-                Cell a = as[i];
+            for (Cell a : as)
                 if (a != null)
                     sum += a.value;
-            }
         }
         return sum;
     }
@@ -121,7 +106,13 @@ public class LongAdder extends Striped64 implements Serializable {
      * known that no threads are concurrently updating.
      */
     public void reset() {
-        internalReset(0L);
+        Cell[] as = cells;
+        base = 0L;
+        if (as != null) {
+            for (Cell a : as)
+                if (a != null)
+                    a.reset();
+        }
     }
 
     /**
@@ -135,22 +126,26 @@ public class LongAdder extends Striped64 implements Serializable {
      * @return the sum
      */
     public long sumThenReset() {
-        long sum = base;
         Cell[] as = cells;
+        long sum = base;
         base = 0L;
         if (as != null) {
-            int n = as.length;
-            for (int i = 0; i < n; ++i) {
-                Cell a = as[i];
+            for (Cell a : as) {
                 if (a != null) {
                     sum += a.value;
-                    a.value = 0L;
+                    a.reset();
                 }
             }
         }
         return sum;
     }
 
+
+    /**
+     * Atomic variant of {@link #sumThenReset}
+     *
+     * @return the sum
+     */
     public long sumAndReset() {
         long sum = getAndSetBase(0L);
         Cell[] as = cells;
@@ -207,18 +202,58 @@ public class LongAdder extends Striped64 implements Serializable {
         return (double)sum();
     }
 
-    private void writeObject(java.io.ObjectOutputStream s)
-        throws java.io.IOException {
-        s.defaultWriteObject();
-        s.writeLong(sum());
+    /**
+     * Serialization proxy, used to avoid reference to the non-public
+     * Striped64 superclass in serialized forms.
+     * @serial include
+     */
+    private static class SerializationProxy implements Serializable {
+        private static final long serialVersionUID = 7249069246863182397L;
+
+        /**
+         * The current value returned by sum().
+         * @serial
+         */
+        private final long value;
+
+        SerializationProxy(LongAdder a) {
+            value = a.sum();
+        }
+
+        /**
+         * Returns a {@code LongAdder} object with initial state
+         * held by this proxy.
+         *
+         * @return a {@code LongAdder} object with initial state
+         * held by this proxy
+         */
+        private Object readResolve() {
+            LongAdder a = new LongAdder();
+            a.base = value;
+            return a;
+        }
     }
 
+    /**
+     * Returns a
+     * <a href="../../../../serialized-form.html#java.util.concurrent.atomic.LongAdder.SerializationProxy">
+     * SerializationProxy</a>
+     * representing the state of this instance.
+     *
+     * @return a {@link SerializationProxy}
+     * representing the state of this instance
+     */
+    private Object writeReplace() {
+        return new SerializationProxy(this);
+    }
+
+    /**
+     * @param s the stream
+     * @throws java.io.InvalidObjectException always
+     */
     private void readObject(java.io.ObjectInputStream s)
-        throws java.io.IOException, ClassNotFoundException {
-        s.defaultReadObject();
-        busy = 0;
-        cells = null;
-        base = s.readLong();
+            throws java.io.InvalidObjectException {
+        throw new java.io.InvalidObjectException("Proxy required");
     }
 
 }

@@ -15,9 +15,8 @@
 
 package kamon.metric
 
-import java.util.concurrent.atomic.LongAdder
-
 import com.typesafe.scalalogging.StrictLogging
+import kamon.jsr166.LongAdder
 import kamon.util.MeasurementUnit
 
 trait Counter {
@@ -36,12 +35,9 @@ class LongAdderCounter(name: String, tags: Map[String, String], val measurementU
     adder.increment()
 
   def increment(times: Long): Unit = {
-    if (times >= 0)
-      adder.add(times)
-    else
-      logger.warn(s"Ignored attempt to decrement counter [$name]")
+    if (times >= 0) adder.add(times)
+    else logger.warn(s"Ignored attempt to decrement counter [$name]")
   }
 
-  def snapshot(): MetricValue =
-    MetricValue(name, tags, measurementUnit, adder.sumThenReset())
+  def snapshot(): MetricValue = MetricValue(name, tags, measurementUnit, adder.sumAndReset())
 }

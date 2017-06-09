@@ -13,16 +13,28 @@
  * =========================================================================================
  */
 
-package kamon.testkit
+package kamon.util
 
-import com.typesafe.config.ConfigFactory
-import kamon.metric.InstrumentFactory
-import kamon.util.MeasurementUnit
-import scala.concurrent.duration._
+import java.util.concurrent.atomic.AtomicLong
 
-trait DefaultInstrumentFactory {
-  val instrumentFactory: InstrumentFactory = InstrumentFactory.fromConfig(ConfigFactory.load())
+import scala.annotation.tailrec
 
-  def buildCounter(name: String) = instrumentFactory.buildCounter(name, Map.empty, MeasurementUnit.none)
-  def buildMinMaxCounter(name: String) = instrumentFactory.buildMinMaxCounter(None, Some(1 hour))(name, Map.empty, MeasurementUnit.none)
+class AtomicLongMaxUpdater(value:AtomicLong) {
+
+  def update(newMax:Long):Unit = {
+    @tailrec def compare():Long = {
+      val currentMax = value.get()
+      if(newMax > currentMax) if (!value.compareAndSet(currentMax, newMax)) compare() else newMax
+      else currentMax
+    }
+    compare()
+  }
+
+  def maxThenReset(newValue:Long): Long =
+    value.getAndSet(newValue)
+}
+
+object AtomicLongMaxUpdater {
+  def apply(): AtomicLongMaxUpdater =
+    new AtomicLongMaxUpdater(new AtomicLong(0))
 }
