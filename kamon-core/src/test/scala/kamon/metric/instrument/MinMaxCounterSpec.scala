@@ -81,6 +81,8 @@ class MinMaxCounterSpec extends WordSpec with Matchers with DefaultInstrumentFac
 
       mmCounter.decrement(3)
 
+      mmCounter.sample()
+
       val snapshot = mmCounter.snapshot()
 
       snapshot.distribution.min should be(0)
