@@ -15,7 +15,7 @@
 
 
 scalaVersion := "2.11.8"
-crossScalaVersions := Seq("2.12.2", "2.11.8")
+crossScalaVersions := Seq("2.12.2", "2.11.8", "2.10.6")
 
 lazy val kamon = (project in file("."))
   .settings(moduleName := "kamon")
@@ -27,7 +27,7 @@ lazy val core = (project in file("kamon-core"))
   .settings(moduleName := "kamon-core")
   .settings(
     isSnapshot := true,
-    coverageEnabled := true,
+    coverageEnabled := false,
     scalaVersion := "2.11.8",
     javacOptions += "-XDignore.symbol.file",
     resolvers += Resolver.mavenLocal,
@@ -35,7 +35,6 @@ lazy val core = (project in file("kamon-core"))
       "com.typesafe"     % "config"          % "1.3.1",
       "org.slf4j"        % "slf4j-api"       % "1.7.7",
       "ch.qos.logback" % "logback-classic" % "1.2.2",
-      "com.typesafe.scala-logging" %% "scala-logging" % "3.5.0",
       "org.hdrhistogram" % "HdrHistogram"    % "2.1.9",
       "io.opentracing"   % "opentracing-api" % "0.30.0",
       "io.opentracing"   % "opentracing-util" % "0.30.0",

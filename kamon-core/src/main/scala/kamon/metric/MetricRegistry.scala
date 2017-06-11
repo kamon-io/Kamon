@@ -19,16 +19,17 @@ package metric
 import java.util.concurrent.atomic.AtomicReference
 
 import com.typesafe.config.Config
-import com.typesafe.scalalogging.Logger
 import kamon.metric.InstrumentFactory.{InstrumentType, InstrumentTypes}
 import kamon.util.MeasurementUnit
 
 import scala.collection.concurrent.TrieMap
 import java.time.Duration
 
+import org.slf4j.LoggerFactory
+
 
 class MetricRegistry(initialConfig: Config) extends MetricsSnapshotGenerator {
-  private val logger = Logger(classOf[MetricRegistry])
+  private val logger = LoggerFactory.getLogger(classOf[MetricRegistry])
   private val instrumentFactory = new AtomicReference[InstrumentFactory]()
   private val metrics = TrieMap.empty[String, BaseMetric[_, _]]
 

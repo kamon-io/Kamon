@@ -20,7 +20,6 @@ import java.util.concurrent.atomic.{AtomicLong, AtomicReference}
 import java.util.concurrent._
 
 import com.typesafe.config.Config
-import com.typesafe.scalalogging.Logger
 import kamon.metric._
 import kamon.trace.Span
 import org.slf4j.LoggerFactory
@@ -258,7 +257,7 @@ class ReporterRegistryImpl(metrics: MetricsSnapshotGenerator, initialConfig: Con
   }
 
   private class MetricReporterTicker(snapshotGenerator: MetricsSnapshotGenerator, reporterEntries: TrieMap[Long, MetricReporterEntry]) extends Runnable {
-    val logger = Logger(classOf[MetricReporterTicker])
+    val logger = LoggerFactory.getLogger(classOf[MetricReporterTicker])
     var lastTick = System.currentTimeMillis()
 
     def run(): Unit = try {
@@ -273,7 +272,7 @@ class ReporterRegistryImpl(metrics: MetricsSnapshotGenerator, initialConfig: Con
           if(entry.isActive)
             entry.reporter.reportTickSnapshot(tickSnapshot)
 
-        }(executor = entry.executionContext)
+        }(entry.executionContext)
       }
 
       lastTick = currentTick

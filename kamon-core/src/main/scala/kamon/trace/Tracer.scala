@@ -19,19 +19,19 @@ package kamon.trace
 import java.util.concurrent.ThreadLocalRandom
 
 import com.typesafe.config.Config
-import com.typesafe.scalalogging.Logger
 import io.opentracing.propagation.{Format, TextMap}
 import io.opentracing.propagation.Format.Builtin.{BINARY, HTTP_HEADERS, TEXT_MAP}
 import io.opentracing.util.ThreadLocalActiveSpanSource
 import kamon.ReporterRegistryImpl
 import kamon.metric.MetricLookup
 import kamon.util.Clock
+import org.slf4j.LoggerFactory
 
 
 class Tracer(metrics: MetricLookup, reporterRegistry: ReporterRegistryImpl, initialConfig: Config)
     extends ThreadLocalActiveSpanSource with io.opentracing.Tracer {
 
-  private val logger = Logger(classOf[Tracer])
+  private val logger = LoggerFactory.getLogger(classOf[Tracer])
   private val tracerMetrics = new TracerMetrics(metrics)
 
   @volatile private var configuredSampler: Sampler = Sampler.never

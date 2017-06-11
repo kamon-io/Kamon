@@ -17,12 +17,12 @@
 package kamon.trace
 
 import java.net.{URLDecoder, URLEncoder}
+import java.util.concurrent.ThreadLocalRandom
 
 import scala.collection.JavaConverters._
 import io.opentracing.propagation.TextMap
 import kamon.util.HexCodec
 
-import scala.concurrent.forkjoin.ThreadLocalRandom
 
 trait SpanContextCodec[T] {
   def inject(spanContext: SpanContext, carrier: T): Unit
