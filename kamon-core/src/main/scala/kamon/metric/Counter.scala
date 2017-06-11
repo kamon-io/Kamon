@@ -15,9 +15,9 @@
 
 package kamon.metric
 
-import com.typesafe.scalalogging.StrictLogging
 import kamon.jsr166.LongAdder
 import kamon.util.MeasurementUnit
+import org.slf4j.LoggerFactory
 
 trait Counter {
   def unit: MeasurementUnit
@@ -26,8 +26,8 @@ trait Counter {
   def increment(times: Long): Unit
 }
 
-class LongAdderCounter(name: String, tags: Map[String, String], val unit: MeasurementUnit)
-    extends SnapshotableCounter with StrictLogging {
+class LongAdderCounter(name: String, tags: Map[String, String], val unit: MeasurementUnit) extends Counter {
+  import LongAdderCounter.logger
 
   private val adder = new LongAdder()
 
@@ -39,5 +39,14 @@ class LongAdderCounter(name: String, tags: Map[String, String], val unit: Measur
     else logger.warn(s"Ignored attempt to decrement counter [$name]")
   }
 
-  def snapshot(): MetricValue = MetricValue(name, tags, unit, adder.sumAndReset())
+  def snapshot(resetState: Boolean): MetricValue =
+    if(resetState)
+      MetricValue(name, tags, unit, adder.sumAndReset())
+    else
+      MetricValue(name, tags, unit, adder.sum())
 }
+
+object LongAdderCounter {
+  private val logger = LoggerFactory.getLogger(classOf[LongAdderCounter])
+}
+

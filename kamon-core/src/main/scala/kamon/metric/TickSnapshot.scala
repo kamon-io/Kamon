@@ -73,18 +73,18 @@ trait Percentile {
   def countUnderQuantile: Long
 }
 
-
-trait DistributionSnapshotInstrument {
-  private[kamon] def snapshot(): MetricDistribution
-}
-
-trait SingleValueSnapshotInstrument {
-  private[kamon] def snapshot(): MetricValue
-}
-
-trait SnapshotableHistogram extends Histogram with DistributionSnapshotInstrument
-trait SnapshotableMinMaxCounter extends MinMaxCounter with DistributionSnapshotInstrument
-trait SnapshotableCounter extends Counter with SingleValueSnapshotInstrument
-trait SnapshotableGauge extends Gauge with SingleValueSnapshotInstrument
+//
+//trait DistributionSnapshotInstrument {
+//  private[kamon] def snapshot(resetState: Boolean): MetricDistribution
+//}
+//
+//trait SingleValueSnapshotInstrument {
+//  private[kamon] def snapshot(resetState: Boolean): MetricValue
+//}
+//
+//trait SnapshotableHistogram extends Histogram with DistributionSnapshotInstrument
+//trait SnapshotableMinMaxCounter extends MinMaxCounter with DistributionSnapshotInstrument
+//trait SnapshotableCounter extends Counter with SingleValueSnapshotInstrument
+//trait SnapshotableGauge extends Gauge with SingleValueSnapshotInstrument
 
 

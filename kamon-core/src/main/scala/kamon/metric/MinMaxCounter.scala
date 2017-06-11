@@ -34,8 +34,8 @@ trait MinMaxCounter {
   def sample(): Unit
 }
 
-class SimpleMinMaxCounter(name: String, tags: Map[String, String], underlyingHistogram: HdrHistogram,
-                          val sampleInterval: Duration) extends SnapshotableMinMaxCounter {
+class SimpleMinMaxCounter(name: String, tags: Map[String, String], underlyingHistogram: AtomicHdrHistogram,
+                          val sampleInterval: Duration) extends MinMaxCounter{
 
   private val min = AtomicLongMaxUpdater()
   private val max = AtomicLongMaxUpdater()
@@ -47,8 +47,8 @@ class SimpleMinMaxCounter(name: String, tags: Map[String, String], underlyingHis
   def unit: MeasurementUnit =
     underlyingHistogram.unit
 
-  private[kamon] def snapshot(): MetricDistribution =
-    underlyingHistogram.snapshot()
+  private[kamon] def snapshot(resetState: Boolean): MetricDistribution =
+    underlyingHistogram.snapshot(resetState)
 
   def increment(): Unit =
     increment(1L)

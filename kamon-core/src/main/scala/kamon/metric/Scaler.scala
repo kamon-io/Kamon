@@ -22,7 +22,7 @@ class Scaler(targetTimeUnit: MeasurementUnit, targetInformationUnit: Measurement
   require(targetTimeUnit.dimension == Dimension.Time, "timeUnit must be in the time dimension.")
   require(targetInformationUnit.dimension == Dimension.Information, "informationUnit must be in the information dimension.")
 
-  val scaleHistogram = new HdrHistogram("scaler", Map.empty, MeasurementUnit.none, dynamicRange)
+  val scaleHistogram = new AtomicHdrHistogram("scaler", Map.empty, MeasurementUnit.none, dynamicRange)
 
   def scaleDistribution(metric: MetricDistribution): MetricDistribution = {
     metric.measurementUnit match {
@@ -54,7 +54,7 @@ class Scaler(targetTimeUnit: MeasurementUnit, targetInformationUnit: Measurement
       scaleHistogram.record(Math.ceil(scaledValue).toLong, b.frequency)
     })
 
-    scaleHistogram.snapshot().copy(
+    scaleHistogram.snapshot(resetState = true).copy(
       name = metric.name,
       tags = metric.tags,
       measurementUnit = targetUnit,

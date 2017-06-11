@@ -29,8 +29,8 @@ import scala.concurrent.duration._
 private[kamon] class InstrumentFactory private (defaultHistogramDynamicRange: DynamicRange, defaultMMCounterDynamicRange: DynamicRange,
     defaultMMCounterSampleInterval: Duration, customSettings: Map[String, CustomInstrumentSettings]) {
 
-  def buildHistogram(dynamicRange: Option[DynamicRange])(name: String, tags: Map[String, String], unit: MeasurementUnit): HdrHistogram =
-    new HdrHistogram(name, tags, unit, instrumentDynamicRange(name, dynamicRange.getOrElse(defaultHistogramDynamicRange)))
+  def buildHistogram(dynamicRange: Option[DynamicRange])(name: String, tags: Map[String, String], unit: MeasurementUnit): AtomicHdrHistogram =
+    new AtomicHdrHistogram(name, tags, unit, instrumentDynamicRange(name, dynamicRange.getOrElse(defaultHistogramDynamicRange)))
 
   def buildMinMaxCounter(dynamicRange: Option[DynamicRange], sampleInterval: Option[Duration])
       (name: String, tags: Map[String, String], unit: MeasurementUnit): SimpleMinMaxCounter =
@@ -40,10 +40,10 @@ private[kamon] class InstrumentFactory private (defaultHistogramDynamicRange: Dy
       buildHistogram(dynamicRange.orElse(Some(defaultMMCounterDynamicRange)))(name, tags, unit),
       instrumentSampleInterval(name, sampleInterval.getOrElse(defaultMMCounterSampleInterval)))
 
-  def buildGauge(name: String, tags: Map[String, String], unit: MeasurementUnit): SnapshotableGauge =
+  def buildGauge(name: String, tags: Map[String, String], unit: MeasurementUnit): AtomicLongGauge =
     new AtomicLongGauge(name, tags, unit)
 
-  def buildCounter(name: String, tags: Map[String, String], unit: MeasurementUnit): SnapshotableCounter =
+  def buildCounter(name: String, tags: Map[String, String], unit: MeasurementUnit): LongAdderCounter =
     new LongAdderCounter(name, tags, unit)
 
 

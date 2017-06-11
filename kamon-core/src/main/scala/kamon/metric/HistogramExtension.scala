@@ -16,24 +16,61 @@
 package org.HdrHistogram
 
 import java.nio.ByteBuffer
-import java.util.concurrent.atomic.AtomicLongArray
-
 import kamon.metric.DynamicRange
+
+
+trait HdrHistogramOps {
+  def getCountsArraySize(): Int
+  def getFromCountsArray(index: Int): Long
+  def getAndSetFromCountsArray(index: Int, newValue: Long): Long
+  def protectedUnitMagnitude(): Int
+  def protectedSubBucketHalfCount(): Int
+  def protectedSubBucketHalfCountMagnitude(): Int
+}
 
 /**
   * Exposes package-private members of org.HdrHistogram.AtomicHistogram.
   */
 abstract class AtomicHistogramExtension(dr: DynamicRange)
-    extends AtomicHistogram(dr.lowestDiscernibleValue, dr.highestTrackableValue, dr.significantValueDigits) {
+    extends AtomicHistogram(dr.lowestDiscernibleValue, dr.highestTrackableValue, dr.significantValueDigits) with HdrHistogramOps {
 
   override def incrementTotalCount(): Unit = {}
   override def addToTotalCount(value: Long): Unit = {}
 
-  def countsArray(): AtomicLongArray = counts
-  def protectedUnitMagnitude(): Int = unitMagnitude
-  def protectedSubBucketHalfCount(): Int = subBucketHalfCount
-  def protectedSubBucketHalfCountMagnitude(): Int = subBucketHalfCountMagnitude
+  override def getCountsArraySize(): Int = counts.length()
+  override def getFromCountsArray(index: Int): Long = counts.get(index)
+  override def getAndSetFromCountsArray(index: Int, newValue: Long): Long = counts.getAndSet(index, newValue)
+
+  override def protectedUnitMagnitude(): Int = unitMagnitude
+  override def protectedSubBucketHalfCount(): Int = subBucketHalfCount
+  override def protectedSubBucketHalfCountMagnitude(): Int = subBucketHalfCountMagnitude
 }
+
+
+/**
+  * Exposes package-private members of org.HdrHistogram.AtomicHistogram.
+  */
+abstract class SimpleHistogramExtension(dr: DynamicRange)
+  extends Histogram(dr.lowestDiscernibleValue, dr.highestTrackableValue, dr.significantValueDigits) with HdrHistogramOps {
+
+  override def incrementTotalCount(): Unit = {}
+  override def addToTotalCount(value: Long): Unit = {}
+
+  override def getCountsArraySize(): Int = counts.length
+  override def getFromCountsArray(index: Int): Long = getCountAtIndex(index)
+  override def getAndSetFromCountsArray(index: Int, newValue: Long): Long = {
+    val v = getCountAtIndex(index)
+    setCountAtIndex(index, newValue)
+    v
+  }
+
+  override def protectedUnitMagnitude(): Int = unitMagnitude
+  override def protectedSubBucketHalfCount(): Int = subBucketHalfCount
+  override def protectedSubBucketHalfCountMagnitude(): Int = subBucketHalfCountMagnitude
+}
+
+
+
 
 /**
   * Exposes the package-private members of org.HdrHistogram.ZigZagEncoding.

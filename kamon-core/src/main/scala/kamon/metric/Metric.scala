@@ -83,7 +83,7 @@ private[kamon] final class HistogramMetricImpl(val name: String, val unit: Measu
     factory.get().buildHistogram(customDynamicRange)(name, tags, unit)
 
   override protected def createSnapshot(instrument: Histogram): MetricDistribution =
-    instrument.asInstanceOf[SnapshotableHistogram].snapshot()
+    instrument.asInstanceOf[AtomicHdrHistogram].snapshot(resetState = true)
 }
 
 private[kamon] final class MinMaxCounterMetricImpl(val name: String, val unit: MeasurementUnit, customDynamicRange: Option[DynamicRange],
@@ -115,7 +115,7 @@ private[kamon] final class MinMaxCounterMetricImpl(val name: String, val unit: M
     factory.get().buildMinMaxCounter(customDynamicRange, customSampleInterval)(name, tags, unit)
 
   override protected def createSnapshot(instrument: MinMaxCounter): MetricDistribution =
-    instrument.asInstanceOf[SnapshotableMinMaxCounter].snapshot()
+    instrument.asInstanceOf[SimpleMinMaxCounter].snapshot(resetState = true)
 }
 
 
@@ -132,7 +132,7 @@ private[kamon] final class CounterMetricImpl(val name: String, val unit: Measure
     factory.get().buildCounter(name, tags, unit)
 
   override protected def createSnapshot(instrument: Counter): MetricValue =
-    instrument.asInstanceOf[SnapshotableCounter].snapshot()
+    instrument.asInstanceOf[LongAdderCounter].snapshot(resetState = true)
 }
 
 private[kamon] final class GaugeMetricImpl(val name: String, val unit: MeasurementUnit, factory: AtomicReference[InstrumentFactory])
@@ -157,5 +157,5 @@ private[kamon] final class GaugeMetricImpl(val name: String, val unit: Measureme
     factory.get().buildGauge(name, tags, unit)
 
   override protected def createSnapshot(instrument: Gauge): MetricValue =
-    instrument.asInstanceOf[SnapshotableGauge].snapshot()
+    instrument.asInstanceOf[AtomicLongGauge].snapshot()
 }

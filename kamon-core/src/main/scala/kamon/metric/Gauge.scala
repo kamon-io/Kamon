@@ -30,9 +30,7 @@ trait Gauge {
 }
 
 
-class AtomicLongGauge(name: String, tags: Map[String, String], val unit: MeasurementUnit)
-  extends SnapshotableGauge {
-
+class AtomicLongGauge(name: String, tags: Map[String, String], val unit: MeasurementUnit) extends Gauge {
   private val currentValue = new AtomicLong(0L)
 
   def increment(): Unit =
@@ -50,6 +48,7 @@ class AtomicLongGauge(name: String, tags: Map[String, String], val unit: Measure
   def set(value: Long): Unit =
     currentValue.set(value)
 
+  // Gauges never reset internal state, the resetSate parameter is always ignored.
   def snapshot(): MetricValue =
     MetricValue(name, tags, unit, currentValue.get())
 }
