@@ -13,8 +13,7 @@
  * =========================================================================================
  */
 
-package kamon
-package metric
+package kamon.metric
 
 import kamon.util.MeasurementUnit
 import org.scalatest.{Matchers, WordSpec}

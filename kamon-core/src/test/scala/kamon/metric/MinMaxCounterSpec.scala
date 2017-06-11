@@ -14,11 +14,10 @@
  */
 
 
-package kamon.metric.instrument
+package kamon.metric
 
 import java.time.Duration
 
-import kamon.metric.{AtomicHdrHistogram, Bucket, DynamicRange, SimpleMinMaxCounter}
 import kamon.util.MeasurementUnit
 import org.scalatest.{Matchers, WordSpec}
 
