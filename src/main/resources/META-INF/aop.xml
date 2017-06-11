@@ -11,6 +11,9 @@
   </aspects>
 
   <weaver>
+    <include within="kamon.scala.instrumentation..*"/>
+    <include within="kamon.scalaz.instrumentation..*"/>
+    <include within="kamon.twitter.instrumentation..*"/>
     <include within="scala.concurrent..*"/>
     <include within="scalaz.concurrent..*"/>
     <include within="com.twitter.util..*"/>

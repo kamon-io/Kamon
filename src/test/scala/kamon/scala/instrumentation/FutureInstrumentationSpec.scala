@@ -26,10 +26,11 @@ import scala.concurrent.Future
 class FutureInstrumentationSpec extends WordSpec with ScalaFutures with Matchers
     with PatienceConfiguration with OptionValues {
 
-  "a Future created with FutureTracing" should {
-    "capture the TraceContext available when created" which {
+  "a Future created when instrumentation is active" should {
+    "capture the active span available when created" which {
       "must be available when executing the future's body" in {
-        val baggageInBody = Kamon.withSpan(buildSpan("future-body").startManual().setBaggageItem("propagate", "in-future-body")) {
+        val testSpan = buildSpan("future-body").startManual().setBaggageItem("propagate", "in-future-body")
+        val baggageInBody = Kamon.withSpan(testSpan) {
           Future(Kamon.activeSpan().getBaggageItem("propagate"))
         }
 
@@ -37,14 +38,13 @@ class FutureInstrumentationSpec extends WordSpec with ScalaFutures with Matchers
       }
 
       "must be available when executing callbacks on the future" in {
-
-        val baggageAfterTransformations =
-          Kamon.withSpan(buildSpan("future-transformations").startManual().setBaggageItem("propagate", "in-future-transformations")) {
+        val testSpan = buildSpan("future-transformations").startManual().setBaggageItem("propagate", "in-future-transformations")
+        val baggageAfterTransformations = Kamon.withSpan(testSpan) {
             Future("Hello Kamon!")
-              // The TraceContext is expected to be available during all intermediate processing.
+              // The active span is expected to be available during all intermediate processing.
               .map(_.length)
               .flatMap(len ⇒ Future(len.toString))
-              .map(s ⇒ Kamon.activeSpan().getBaggageItem("propagate"))
+              .map(_ ⇒ Kamon.activeSpan().getBaggageItem("propagate"))
           }
 
         whenReady(baggageAfterTransformations)(baggageValue ⇒ baggageValue should equal("in-future-transformations"))

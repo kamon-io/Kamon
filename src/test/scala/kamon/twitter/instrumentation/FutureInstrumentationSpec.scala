@@ -17,45 +17,41 @@ package kamon.twitter.instrumentation
 
 import java.util.concurrent.Executors
 
-import org.scalatest.OptionValues
-import org.scalatest.concurrent.{ PatienceConfiguration, ScalaFutures }
-import com.twitter.util.{ Await, FuturePool }
+import org.scalatest.{Matchers, OptionValues, WordSpec}
+import org.scalatest.concurrent.{PatienceConfiguration, ScalaFutures}
+import com.twitter.util.{Await, FuturePool}
+import kamon.Kamon
+import kamon.Kamon.buildSpan
 
-//class FutureInstrumentationSpec extends BaseKamonSpec("future-instrumentation-spec") with ScalaFutures
-//    with PatienceConfiguration with OptionValues {
-//
-//  implicit val execContext = Executors.newCachedThreadPool()
-//
-//  "a Future created with FutureTracing" should {
-//    "capture the TraceContext available when created" which {
-//      "must be available when executing the future's body" in {
-//
-//        val (future, testTraceContext) = Tracer.withContext(newContext("future-body")) {
-//          val future = FuturePool(execContext)(Tracer.currentContext)
-//
-//          (future, Tracer.currentContext)
-//        }
-//
-//        val ctxInFuture = Await.result(future)
-//        ctxInFuture should equal(testTraceContext)
-//      }
-//
-//      "must be available when executing callbacks on the future" in {
-//
-//        val (future, testTraceContext) = Tracer.withContext(newContext("future-body")) {
-//          val future = FuturePool.unboundedPool("Hello Kamon!")
-//            // The TraceContext is expected to be available during all intermediate processing.
-//            .map(_.length)
-//            .flatMap(len ⇒ FuturePool.unboundedPool(len.toString))
-//            .map(s ⇒ Tracer.currentContext)
-//
-//          (future, Tracer.currentContext)
-//        }
-//
-//        val ctxInFuture = Await.result(future)
-//        ctxInFuture should equal(testTraceContext)
-//      }
-//    }
-//  }
-//}
-//
+class FutureInstrumentationSpec extends WordSpec with Matchers with ScalaFutures with PatienceConfiguration with OptionValues {
+  implicit val execContext = Executors.newCachedThreadPool()
+
+  "a Future created when instrumentation is active" should {
+    "capture the active span available when created" which {
+      "must be available when executing the future's body" in {
+
+        val testSpan = buildSpan("future-body").startManual().setBaggageItem("propagate", "in-future-body")
+        val baggageInBody = Kamon.withSpan(testSpan) {
+          FuturePool(execContext)(Kamon.activeSpan().getBaggageItem("propagate"))
+        }
+
+        Await.result(baggageInBody) should equal("in-future-body")
+      }
+
+      "must be available when executing callbacks on the future" in {
+
+        val testSpan = buildSpan("future-transformations").startManual().setBaggageItem("propagate", "in-future-transformations")
+        val baggageAfterTransformations = Kamon.withSpan(testSpan) {
+          FuturePool.unboundedPool("Hello Kamon!")
+            // The active span is expected to be available during all intermediate processing.
+            .map(_.length)
+            .flatMap(len ⇒ FuturePool.unboundedPool(len.toString))
+            .map(_ ⇒ Kamon.activeSpan().getBaggageItem("propagate"))
+        }
+
+        Await.result(baggageAfterTransformations) should equal("in-future-transformations")
+      }
+    }
+  }
+}
+
