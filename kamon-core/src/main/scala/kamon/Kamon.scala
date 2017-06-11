@@ -27,6 +27,8 @@ import kamon.util.MeasurementUnit
 import scala.concurrent.Future
 import java.time.Duration
 
+import io.opentracing.ActiveSpan.Continuation
+
 
 object Kamon extends MetricLookup with ReporterRegistry with io.opentracing.Tracer {
   private val initialConfig = ConfigFactory.load()
@@ -78,6 +80,12 @@ object Kamon extends MetricLookup with ReporterRegistry with io.opentracing.Trac
   override def makeActive(span: Span): ActiveSpan =
     kamonTracer.makeActive(span)
 
+  def withActiveSpan[T](continuation: Continuation)(code: => T): T = {
+    val activeSpan = continuation.activate()
+    val evaluatedCode = code
+    activeSpan.deactivate()
+    evaluatedCode
+  }
 
 
   override def loadReportersFromConfig(): Unit =

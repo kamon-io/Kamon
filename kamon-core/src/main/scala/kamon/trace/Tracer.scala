@@ -159,5 +159,4 @@ class Tracer(metrics: MetricLookup, reporterRegistry: ReporterRegistryImpl, init
   private final class TracerMetrics(metricLookup: MetricLookup) {
     val createdSpans = metricLookup.counter("tracer.spans-created")
   }
-
 }

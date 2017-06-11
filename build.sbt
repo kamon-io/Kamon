@@ -27,7 +27,6 @@ lazy val core = (project in file("kamon-core"))
   .settings(moduleName := "kamon-core")
   .settings(
     isSnapshot := true,
-    coverageEnabled := false,
     scalaVersion := "2.11.8",
     javacOptions += "-XDignore.symbol.file",
     resolvers += Resolver.mavenLocal,
