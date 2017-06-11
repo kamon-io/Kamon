@@ -80,7 +80,21 @@ object Kamon extends MetricLookup with ReporterRegistry with io.opentracing.Trac
   override def makeActive(span: Span): ActiveSpan =
     kamonTracer.makeActive(span)
 
-  def withActiveSpan[T](continuation: Continuation)(code: => T): T = {
+
+  /**
+    * Makes the provided Span active before code is evaluated and deactivates it afterwards.
+    */
+  def withSpan[T](span: Span)(code: => T): T = {
+    val activeSpan = makeActive(span)
+    val evaluatedCode = code
+    activeSpan.deactivate()
+    evaluatedCode
+  }
+
+  /**
+    * Actives the provided Continuation before code is evaluated and deactivates it afterwards.
+    */
+  def withContinuation[T](continuation: Continuation)(code: => T): T = {
     val activeSpan = continuation.activate()
     val evaluatedCode = code
     activeSpan.deactivate()
