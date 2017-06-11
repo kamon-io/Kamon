@@ -23,9 +23,9 @@ import kamon.util.{AtomicLongMaxUpdater, MeasurementUnit}
 import scala.concurrent.duration.Duration
 
 trait MinMaxCounter {
+  def unit: MeasurementUnit
   def dynamicRange: DynamicRange
   def sampleInterval: Duration
-  def measurementUnit: MeasurementUnit
 
   def increment(): Unit
   def increment(times: Long): Unit
@@ -34,7 +34,7 @@ trait MinMaxCounter {
   def sample(): Unit
 }
 
-class SimpleMinMaxCounter(name: String, tags: Map[String, String], underlyingHistogram: Histogram with DistributionSnapshotInstrument,
+class SimpleMinMaxCounter(name: String, tags: Map[String, String], underlyingHistogram: HdrHistogram,
                           val sampleInterval: Duration) extends SnapshotableMinMaxCounter {
 
   private val min = AtomicLongMaxUpdater()
@@ -44,8 +44,8 @@ class SimpleMinMaxCounter(name: String, tags: Map[String, String], underlyingHis
   def dynamicRange: DynamicRange =
     underlyingHistogram.dynamicRange
 
-  def measurementUnit: MeasurementUnit =
-    underlyingHistogram.measurementUnit
+  def unit: MeasurementUnit =
+    underlyingHistogram.unit
 
   private[kamon] def snapshot(): MetricDistribution =
     underlyingHistogram.snapshot()

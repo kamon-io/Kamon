@@ -13,25 +13,26 @@
  * =========================================================================================
  */
 
-package kamon.metric
+package kamon
+package metric
 
 import java.nio.ByteBuffer
 
-import com.typesafe.scalalogging.StrictLogging
 import kamon.util.MeasurementUnit
 import org.HdrHistogram.{AtomicHistogramExtension, ZigZag}
+import org.slf4j.LoggerFactory
 
 trait Histogram {
+  def unit: MeasurementUnit
   def dynamicRange: DynamicRange
-  def measurementUnit: MeasurementUnit
 
   def record(value: Long): Unit
   def record(value: Long, times: Long): Unit
 }
 
 
-class HdrHistogram(name: String, tags: Map[String, String], val measurementUnit: MeasurementUnit, val dynamicRange: DynamicRange)
-    extends AtomicHistogramExtension(dynamicRange) with SnapshotableHistogram with StrictLogging {
+private[kamon] class HdrHistogram(name: String, tags: Map[String, String], val unit: MeasurementUnit, val dynamicRange: DynamicRange)
+    extends AtomicHistogramExtension(dynamicRange) with Histogram {
 
   def record(value: Long): Unit =
     tryRecord(value, 1)
@@ -44,12 +45,12 @@ class HdrHistogram(name: String, tags: Map[String, String], val measurementUnit:
       recordValueWithCount(value, count)
     } catch {
       case anyException: Throwable ⇒
-        logger.warn(s"Failed to store value [$value] in histogram [$name]. You might need to change " +
-                     "your dynamic range configuration for this instrument.", anyException)
+        HdrHistogram.logger.warn(s"Failed to store value [$value] in histogram [$name]. You might need to change " +
+                                  "your dynamic range configuration for this instrument.", anyException)
     }
   }
 
-  override def snapshot(): MetricDistribution = {
+  def snapshot(): MetricDistribution = {
     val buffer = HdrHistogram.tempSnapshotBuffer.get()
     val counts = countsArray()
     val countsLimit = counts.length()
@@ -95,7 +96,7 @@ class HdrHistogram(name: String, tags: Map[String, String], val measurementUnit:
     val distribution = new ZigZagCountsDistribution(totalCount, minIndex, maxIndex, ByteBuffer.wrap(zigZagCounts),
       protectedUnitMagnitude(), protectedSubBucketHalfCount(), protectedSubBucketHalfCountMagnitude())
 
-    MetricDistribution(name, tags, measurementUnit, dynamicRange, distribution)
+    MetricDistribution(name, tags, unit, dynamicRange, distribution)
   }
 
   private class ZigZagCountsDistribution(val count: Long, minIndex: Int, maxIndex: Int, zigZagCounts: ByteBuffer,
@@ -199,6 +200,8 @@ class HdrHistogram(name: String, tags: Map[String, String], val measurementUnit:
 }
 
 object HdrHistogram {
+  private val logger = LoggerFactory.getLogger(classOf[HdrHistogram])
+
   // TODO: move this to some object pool might be better, or at
   private val tempSnapshotBuffer = new ThreadLocal[ByteBuffer] {
     override def initialValue(): ByteBuffer = ByteBuffer.allocate(33792)

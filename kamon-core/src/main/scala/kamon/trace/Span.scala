@@ -16,13 +16,12 @@
 package kamon
 package trace
 
-import kamon.metric.MetricLookup
 
 import scala.collection.JavaConverters._
 import kamon.util.{Clock, MeasurementUnit}
 
 class Span(spanContext: SpanContext, initialOperationName: String, initialTags: Map[String, String], startTimestampMicros: Long,
-    metrics: MetricLookup, reporterRegistry: ReporterRegistryImpl) extends io.opentracing.Span {
+    reporterRegistry: ReporterRegistryImpl) extends io.opentracing.Span {
 
   private var isOpen: Boolean = true
   private val sampled: Boolean = spanContext.sampled
@@ -154,18 +153,22 @@ class Span(spanContext: SpanContext, initialOperationName: String, initialTags: 
     val elapsedTime = endTimestampMicros - startTimestampMicros
     val metricTags = Map("operation" -> operationName) ++ additionalMetricTags
 
-    val latencyHistogram = metrics.histogram("span.processing-time", MeasurementUnit.time.microseconds, metricTags)
+    val latencyHistogram = Span.Metrics.SpanProcessingTimeMetric.refine(metricTags)
     latencyHistogram.record(elapsedTime)
 
     tags.get("error").foreach { errorTag =>
       if(errorTag != null && errorTag.equals(Span.BooleanTagTrueValue)) {
-        metrics.counter("span.errors", MeasurementUnit.none, metricTags).increment()
+        //TODO: count properly metrics.counter("span.errors", MeasurementUnit.none, metricTags).increment()
       }
     }
   }
 }
 
 object Span {
+  object Metrics {
+    val SpanProcessingTimeMetric = Kamon.histogram("span.processing-time", MeasurementUnit.time.microseconds)
+  }
+
   val MetricTagPrefix = "metric."
   val BooleanTagTrueValue = "1"
   val BooleanTagFalseValue = "0"

@@ -46,20 +46,18 @@ object Kamon extends MetricLookup with ReporterRegistry with io.opentracing.Trac
   }
 
 
+  override def histogram(name: String, unit: MeasurementUnit, dynamicRange: Option[DynamicRange]): HistogramMetric =
+    metricRegistry.histogram(name, unit, dynamicRange)
 
-  override def histogram(name: String, unit: MeasurementUnit, tags: Map[String, String], dynamicRange:
-      Option[DynamicRange]): Histogram =
-    metricRegistry.histogram(name, unit, tags, dynamicRange)
+  override def counter(name: String, unit: MeasurementUnit): CounterMetric =
+    metricRegistry.counter(name, unit)
 
-  override def counter(name: String, unit: MeasurementUnit, tags: Map[String, String]): Counter =
-    metricRegistry.counter(name, unit, tags)
+  override def gauge(name: String, unit: MeasurementUnit): GaugeMetric =
+    metricRegistry.gauge(name, unit)
 
-  override def gauge(name: String, unit: MeasurementUnit, tags: Map[String, String]): Gauge =
-    metricRegistry.gauge(name, unit, tags)
-
-  override def minMaxCounter(name: String, unit: MeasurementUnit, tags: Map[String, String], sampleInterval: Option[Duration],
-      dynamicRange: Option[DynamicRange]): MinMaxCounter =
-    metricRegistry.minMaxCounter(name, unit, tags, dynamicRange, sampleInterval)
+  override def minMaxCounter(name: String, unit: MeasurementUnit, sampleInterval: Option[Duration],
+      dynamicRange: Option[DynamicRange]): MinMaxCounterMetric =
+    metricRegistry.minMaxCounter(name, unit, dynamicRange, sampleInterval)
 
 
 

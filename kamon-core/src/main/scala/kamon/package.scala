@@ -23,6 +23,7 @@ import scala.collection.concurrent.TrieMap
 
 package object kamon {
 
+  type Tags = Map[String, String]
 
 
   /**

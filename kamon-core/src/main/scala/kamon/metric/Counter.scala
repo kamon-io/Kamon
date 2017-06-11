@@ -20,13 +20,13 @@ import kamon.jsr166.LongAdder
 import kamon.util.MeasurementUnit
 
 trait Counter {
-  def measurementUnit: MeasurementUnit
+  def unit: MeasurementUnit
 
   def increment(): Unit
   def increment(times: Long): Unit
 }
 
-class LongAdderCounter(name: String, tags: Map[String, String], val measurementUnit: MeasurementUnit)
+class LongAdderCounter(name: String, tags: Map[String, String], val unit: MeasurementUnit)
     extends SnapshotableCounter with StrictLogging {
 
   private val adder = new LongAdder()
@@ -39,5 +39,5 @@ class LongAdderCounter(name: String, tags: Map[String, String], val measurementU
     else logger.warn(s"Ignored attempt to decrement counter [$name]")
   }
 
-  def snapshot(): MetricValue = MetricValue(name, tags, measurementUnit, adder.sumAndReset())
+  def snapshot(): MetricValue = MetricValue(name, tags, unit, adder.sumAndReset())
 }

@@ -137,7 +137,7 @@ class Tracer(metrics: MetricLookup, reporterRegistry: ReporterRegistryImpl, init
         }
 
       tracerMetrics.createdSpans.increment()
-      new Span(spanContext, operationName, initialTags, startTimestampMicros, metrics, reporterRegistry)
+      new Span(spanContext, operationName, initialTags, startTimestampMicros, reporterRegistry)
     }
 
     private def createID(): Long =

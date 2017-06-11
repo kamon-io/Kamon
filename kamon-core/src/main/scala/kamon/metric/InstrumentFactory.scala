@@ -29,11 +29,11 @@ import scala.concurrent.duration._
 private[kamon] class InstrumentFactory private (defaultHistogramDynamicRange: DynamicRange, defaultMMCounterDynamicRange: DynamicRange,
     defaultMMCounterSampleInterval: Duration, customSettings: Map[String, CustomInstrumentSettings]) {
 
-  def buildHistogram(dynamicRange: Option[DynamicRange])(name: String, tags: Map[String, String], unit: MeasurementUnit): SnapshotableHistogram =
+  def buildHistogram(dynamicRange: Option[DynamicRange])(name: String, tags: Map[String, String], unit: MeasurementUnit): HdrHistogram =
     new HdrHistogram(name, tags, unit, instrumentDynamicRange(name, dynamicRange.getOrElse(defaultHistogramDynamicRange)))
 
   def buildMinMaxCounter(dynamicRange: Option[DynamicRange], sampleInterval: Option[Duration])
-      (name: String, tags: Map[String, String], unit: MeasurementUnit): SnapshotableMinMaxCounter =
+      (name: String, tags: Map[String, String], unit: MeasurementUnit): SimpleMinMaxCounter =
     new SimpleMinMaxCounter(
       name,
       tags,
@@ -66,6 +66,15 @@ private[kamon] class InstrumentFactory private (defaultHistogramDynamicRange: Dy
 }
 
 object InstrumentFactory {
+
+  case class InstrumentType(name: String)
+
+  object InstrumentTypes {
+    val Histogram     = InstrumentType("Histogram")
+    val MinMaxCounter = InstrumentType("MinMaxCounter")
+    val Counter       = InstrumentType("Counter")
+    val Gauge         = InstrumentType("Gauge")
+  }
 
   def fromConfig(config: Config): InstrumentFactory = {
     val factoryConfig = config.getConfig("kamon.metric.instrument-factory")

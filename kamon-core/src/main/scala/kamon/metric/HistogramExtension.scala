@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.AtomicLongArray
 import kamon.metric.DynamicRange
 
 /**
-  * Exposes package-private members of [[org.HdrHistogram.AtomicHistogram]].
+  * Exposes package-private members of org.HdrHistogram.AtomicHistogram.
   */
 abstract class AtomicHistogramExtension(dr: DynamicRange)
     extends AtomicHistogram(dr.lowestDiscernibleValue, dr.highestTrackableValue, dr.significantValueDigits) {
@@ -36,7 +36,7 @@ abstract class AtomicHistogramExtension(dr: DynamicRange)
 }
 
 /**
-  * Exposes the package-private members of [[org.HdrHistogram.ZigZagEncoding]].
+  * Exposes the package-private members of org.HdrHistogram.ZigZagEncoding.
   */
 object ZigZag {
   def putLong(buffer: ByteBuffer, value: Long): Unit =

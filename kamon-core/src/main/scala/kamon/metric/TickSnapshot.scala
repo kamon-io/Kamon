@@ -44,7 +44,7 @@ case class MetricValue(name: String, tags: Map[String, String], measurementUnit:
   * Snapshot for instruments that internally the distribution of values in a defined dynamic range. Meant to be used
   * with histograms and min max counters.
   */
-case class MetricDistribution(name: String, tags: Map[String, String],  measurementUnit: MeasurementUnit,
+case class MetricDistribution(name: String, tags: Map[String, String], measurementUnit: MeasurementUnit,
   dynamicRange: DynamicRange, distribution: Distribution)
 
 

@@ -65,12 +65,11 @@ class ReporterRegistryImpl(metrics: MetricsSnapshotGenerator, initialConfig: Con
   private val registryExecutionContext = Executors.newScheduledThreadPool(2, threadFactory("kamon-reporter-registry"))
   private val reporterCounter = new AtomicLong(0L)
 
-  private val metricReporterTickerSchedule = new AtomicReference[ScheduledFuture[_]]()
   private val metricReporters = TrieMap[Long, MetricReporterEntry]()
+  private val metricReporterTickerSchedule = new AtomicReference[ScheduledFuture[_]]()
 
-  private val spanReporterTickerSchedule = new AtomicReference[ScheduledFuture[_]]()
   private val spanReporters = TrieMap[Long, SpanReporterEntry]()
-
+  private val spanReporterTickerSchedule = new AtomicReference[ScheduledFuture[_]]()
 
 
   reconfigure(initialConfig)
@@ -90,7 +89,7 @@ class ReporterRegistryImpl(metrics: MetricsSnapshotGenerator, initialConfig: Con
     addSpanReporter(reporter, name)
 
 
-  private def addMetricReporter(reporter: MetricReporter, name: String): Registration = {
+  private def addMetricReporter(reporter: MetricReporter, name: String): Registration = synchronized {
     val executor = Executors.newSingleThreadExecutor(threadFactory(name))
     val reporterEntry = new MetricReporterEntry(
       id = reporterCounter.getAndIncrement(),
@@ -102,7 +101,7 @@ class ReporterRegistryImpl(metrics: MetricsSnapshotGenerator, initialConfig: Con
     createRegistration(reporterEntry.id, metricReporters)
   }
 
-  private def addSpanReporter(reporter: SpanReporter, name: String): Registration = {
+  private def addSpanReporter(reporter: SpanReporter, name: String): Registration = synchronized {
     val executor = Executors.newSingleThreadExecutor(threadFactory(name))
     val reporterEntry = new SpanReporterEntry(
       id = reporterCounter.incrementAndGet(),
@@ -117,7 +116,7 @@ class ReporterRegistryImpl(metrics: MetricsSnapshotGenerator, initialConfig: Con
 
   private def createRegistration(id: Long, target: TrieMap[Long, _]): Registration = new Registration {
     override def cancel(): Boolean =
-      metricReporters.remove(id).nonEmpty
+      target.remove(id).nonEmpty
   }
 
   override def stopAllReporters(): Future[Unit] = {
@@ -152,7 +151,7 @@ class ReporterRegistryImpl(metrics: MetricsSnapshotGenerator, initialConfig: Con
 
     val currentSpanTicker = spanReporterTickerSchedule.get()
     if(currentSpanTicker  != null) {
-      currentSpanTicker .cancel(true)
+      currentSpanTicker.cancel(true)
     }
 
     // Reconfigure all registered reporters
@@ -176,6 +175,8 @@ class ReporterRegistryImpl(metrics: MetricsSnapshotGenerator, initialConfig: Con
       )
     }
   }
+
+
 
   private[kamon] def reportSpan(span: Span.CompletedSpan): Unit = {
     spanReporters.foreach { case (_, reporterEntry) =>

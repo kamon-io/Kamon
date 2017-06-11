@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicLong
 import kamon.util.MeasurementUnit
 
 trait Gauge {
-  def measurementUnit: MeasurementUnit
+  def unit: MeasurementUnit
 
   def increment(): Unit
   def increment(times: Long): Unit
@@ -30,7 +30,7 @@ trait Gauge {
 }
 
 
-class AtomicLongGauge(name: String, tags: Map[String, String], val measurementUnit: MeasurementUnit)
+class AtomicLongGauge(name: String, tags: Map[String, String], val unit: MeasurementUnit)
   extends SnapshotableGauge {
 
   private val currentValue = new AtomicLong(0L)
@@ -51,5 +51,5 @@ class AtomicLongGauge(name: String, tags: Map[String, String], val measurementUn
     currentValue.set(value)
 
   def snapshot(): MetricValue =
-    MetricValue(name, tags, measurementUnit, currentValue.get())
+    MetricValue(name, tags, unit, currentValue.get())
 }

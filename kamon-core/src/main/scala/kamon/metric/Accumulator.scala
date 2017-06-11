@@ -20,7 +20,7 @@ import kamon.util.MeasurementUnit
 
 class DistributionAccumulator(dynamicRange: DynamicRange) {
   private val accumulatorHistogram = new HdrHistogram("metric-distribution-accumulator",
-    tags = Map.empty, measurementUnit = MeasurementUnit.none, dynamicRange)
+    tags = Map.empty, unit = MeasurementUnit.none, dynamicRange)
 
 
   def add(distribution: Distribution): Unit = {
