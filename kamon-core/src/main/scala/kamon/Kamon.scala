@@ -33,8 +33,8 @@ object Kamon extends MetricLookup with ReporterRegistry with io.opentracing.Trac
 
   private val metricRegistry = new MetricRegistry(initialConfig)
   private val reporterRegistry = new ReporterRegistryImpl(metricRegistry, initialConfig)
-  private val tracer = new Tracer(Kamon, reporterRegistry, initialConfig)
   private val env = new AtomicReference[Environment](Environment.fromConfig(ConfigFactory.load()))
+  private val kamonTracer = new Tracer(Kamon, reporterRegistry, initialConfig)
 
   def environment: Environment =
     env.get()
@@ -60,21 +60,23 @@ object Kamon extends MetricLookup with ReporterRegistry with io.opentracing.Trac
     metricRegistry.minMaxCounter(name, unit, dynamicRange, sampleInterval)
 
 
+  def tracer: Tracer =
+    kamonTracer
 
   override def buildSpan(operationName: String): io.opentracing.Tracer.SpanBuilder =
-    tracer.buildSpan(operationName)
+    kamonTracer.buildSpan(operationName)
 
   override def extract[C](format: Format[C], carrier: C): SpanContext =
-    tracer.extract(format, carrier)
+    kamonTracer.extract(format, carrier)
 
   override def inject[C](spanContext: SpanContext, format: Format[C], carrier: C): Unit =
-    tracer.inject(spanContext, format, carrier)
+    kamonTracer.inject(spanContext, format, carrier)
 
   override def activeSpan(): ActiveSpan =
-    tracer.activeSpan()
+    kamonTracer.activeSpan()
 
   override def makeActive(span: Span): ActiveSpan =
-    tracer.makeActive(span)
+    kamonTracer.makeActive(span)
 
 
 
