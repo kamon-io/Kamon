@@ -24,7 +24,7 @@ import kamon.metric.InstrumentFactory.{InstrumentType, InstrumentTypes}
 import kamon.util.MeasurementUnit
 
 import scala.collection.concurrent.TrieMap
-import scala.concurrent.duration.Duration
+import java.time.Duration
 
 
 class MetricRegistry(initialConfig: Config) extends MetricsSnapshotGenerator {

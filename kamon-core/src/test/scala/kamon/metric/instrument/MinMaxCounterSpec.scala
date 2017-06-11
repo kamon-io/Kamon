@@ -16,16 +16,17 @@
 
 package kamon.metric.instrument
 
-import kamon.metric.Bucket
-import kamon.testkit.DefaultInstrumentFactory
+import java.time.Duration
+
+import kamon.metric.{AtomicHdrHistogram, Bucket, DynamicRange, SimpleMinMaxCounter}
+import kamon.util.MeasurementUnit
 import org.scalatest.{Matchers, WordSpec}
 
 case class TemporalBucket(value: Long, frequency: Long) extends Bucket
 
-class MinMaxCounterSpec extends WordSpec with Matchers with DefaultInstrumentFactory {
+class MinMaxCounterSpec extends WordSpec with Matchers {
 
   "a MinMaxCounter" should {
-
     "track ascending tendencies" in {
       val mmCounter = buildMinMaxCounter("track-ascending")
       mmCounter.increment()
@@ -50,7 +51,6 @@ class MinMaxCounterSpec extends WordSpec with Matchers with DefaultInstrumentFac
       mmCounter.sample()
 
       val snapshot = mmCounter.snapshot()
-
       snapshot.distribution.min should be(0)
       snapshot.distribution.max should be(5)
     }
@@ -60,18 +60,15 @@ class MinMaxCounterSpec extends WordSpec with Matchers with DefaultInstrumentFac
 
       mmCounter.increment(5)
       mmCounter.decrement(3)
-
       mmCounter.sample()
 
       val firstSnapshot = mmCounter.snapshot()
-
       firstSnapshot.distribution.min should be(0)
       firstSnapshot.distribution.max should be(5)
 
       mmCounter.sample()
 
       val secondSnapshot = mmCounter.snapshot()
-
       secondSnapshot.distribution.min should be(2)
       secondSnapshot.distribution.max should be(2)
     }
@@ -89,4 +86,7 @@ class MinMaxCounterSpec extends WordSpec with Matchers with DefaultInstrumentFac
       snapshot.distribution.max should be(0)
     }
   }
+
+  def buildMinMaxCounter(name: String, tags: Map[String, String] = Map.empty, unit: MeasurementUnit = MeasurementUnit.none): SimpleMinMaxCounter =
+    new SimpleMinMaxCounter(name, tags, new AtomicHdrHistogram(name, tags, unit, dynamicRange = DynamicRange.Default), Duration.ofMillis(100))
 }

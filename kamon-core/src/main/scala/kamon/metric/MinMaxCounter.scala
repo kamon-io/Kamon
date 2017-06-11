@@ -16,11 +16,10 @@
 package kamon.metric
 
 import java.lang.Math.abs
+import java.time.Duration
 import java.util.concurrent.atomic.AtomicLong
 
 import kamon.util.{AtomicLongMaxUpdater, MeasurementUnit}
-
-import scala.concurrent.duration.Duration
 
 trait MinMaxCounter {
   def unit: MeasurementUnit
@@ -35,7 +34,7 @@ trait MinMaxCounter {
 }
 
 class SimpleMinMaxCounter(name: String, tags: Map[String, String], underlyingHistogram: AtomicHdrHistogram,
-                          val sampleInterval: Duration) extends MinMaxCounter{
+    val sampleInterval: Duration) extends MinMaxCounter {
 
   private val min = AtomicLongMaxUpdater()
   private val max = AtomicLongMaxUpdater()
@@ -46,9 +45,6 @@ class SimpleMinMaxCounter(name: String, tags: Map[String, String], underlyingHis
 
   def unit: MeasurementUnit =
     underlyingHistogram.unit
-
-  private[kamon] def snapshot(resetState: Boolean): MetricDistribution =
-    underlyingHistogram.snapshot(resetState)
 
   def increment(): Unit =
     increment(1L)
@@ -86,4 +82,7 @@ class SimpleMinMaxCounter(name: String, tags: Map[String, String], underlyingHis
     underlyingHistogram.record(currentMin)
     underlyingHistogram.record(currentMax)
   }
+
+  private[kamon] def snapshot(resetState: Boolean = true): MetricDistribution =
+    underlyingHistogram.snapshot(resetState)
 }

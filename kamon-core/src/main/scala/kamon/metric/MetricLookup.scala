@@ -18,7 +18,7 @@ package metric
 
 
 import kamon.util.MeasurementUnit
-import scala.concurrent.duration.Duration
+import java.time.Duration
 
 trait MetricLookup {
 

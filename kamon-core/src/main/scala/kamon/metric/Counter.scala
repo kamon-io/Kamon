@@ -39,7 +39,7 @@ class LongAdderCounter(name: String, tags: Map[String, String], val unit: Measur
     else logger.warn(s"Ignored attempt to decrement counter [$name]")
   }
 
-  def snapshot(resetState: Boolean): MetricValue =
+  def snapshot(resetState: Boolean = true): MetricValue =
     if(resetState)
       MetricValue(name, tags, unit, adder.sumAndReset())
     else

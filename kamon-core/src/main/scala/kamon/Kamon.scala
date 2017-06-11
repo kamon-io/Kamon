@@ -25,7 +25,7 @@ import kamon.trace.Tracer
 import kamon.util.MeasurementUnit
 
 import scala.concurrent.Future
-import scala.concurrent.duration.Duration
+import java.time.Duration
 
 
 object Kamon extends MetricLookup with ReporterRegistry with io.opentracing.Tracer {

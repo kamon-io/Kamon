@@ -13,15 +13,15 @@
  * =========================================================================================
  */
 
-package kamon.metric.instrument
+package kamon
+package metric
 
-import kamon.testkit.DefaultInstrumentFactory
+import kamon.util.MeasurementUnit
 import org.scalatest.{Matchers, WordSpec}
 
-class CounterSpec extends WordSpec with Matchers with DefaultInstrumentFactory {
+class LongAdderCounterSpec extends WordSpec with Matchers {
 
-  "a Counter" should {
-
+  "a LongAdderCounter" should {
     "allow unit and bundled increments" in {
       val counter = buildCounter("unit-increments")
       counter.increment()
@@ -40,7 +40,7 @@ class CounterSpec extends WordSpec with Matchers with DefaultInstrumentFactory {
       counter.snapshot().value shouldBe 300
     }
 
-    "reset the internal state to zero after taking snapshots" in {
+    "reset the internal state to zero after taking snapshots as a default behavior" in {
       val counter = buildCounter("reset-after-snapshot")
       counter.increment()
       counter.increment(10)
@@ -48,5 +48,17 @@ class CounterSpec extends WordSpec with Matchers with DefaultInstrumentFactory {
       counter.snapshot().value shouldBe 11
       counter.snapshot().value shouldBe 0
     }
+
+    "optionally leave the internal state unchanged" in {
+      val counter = buildCounter("reset-after-snapshot")
+      counter.increment()
+      counter.increment(10)
+
+      counter.snapshot(resetState = false).value shouldBe 11
+      counter.snapshot(resetState = false).value shouldBe 11
+    }
   }
+
+  def buildCounter(name: String, tags: Map[String, String] = Map.empty, unit: MeasurementUnit = MeasurementUnit.none): LongAdderCounter =
+    new LongAdderCounter(name, tags, unit)
 }

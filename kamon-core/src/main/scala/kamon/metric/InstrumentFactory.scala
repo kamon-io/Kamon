@@ -23,7 +23,7 @@ import com.typesafe.config.Config
 import kamon.metric.InstrumentFactory.CustomInstrumentSettings
 import kamon.util.MeasurementUnit
 
-import scala.concurrent.duration._
+import java.time.Duration
 
 
 private[kamon] class InstrumentFactory private (defaultHistogramDynamicRange: DynamicRange, defaultMMCounterDynamicRange: DynamicRange,
@@ -80,14 +80,14 @@ object InstrumentFactory {
     val factoryConfig = config.getConfig("kamon.metric.instrument-factory")
     val histogramDynamicRange = readDynamicRange(factoryConfig.getConfig("default-settings.histogram"))
     val mmCounterDynamicRange = readDynamicRange(factoryConfig.getConfig("default-settings.min-max-counter"))
-    val mmCounterSampleInterval = factoryConfig.getDuration("default-settings.min-max-counter.sample-interval", TimeUnit.MILLISECONDS)
+    val mmCounterSampleInterval = factoryConfig.getDuration("default-settings.min-max-counter.sample-interval")
 
     val customSettings = factoryConfig.getConfig("custom-settings")
       .configurations
       .filter(nonEmptySection)
       .map(readCustomInstrumentSettings)
 
-    new InstrumentFactory(histogramDynamicRange, mmCounterDynamicRange, mmCounterSampleInterval.millis, customSettings)
+    new InstrumentFactory(histogramDynamicRange, mmCounterDynamicRange, mmCounterSampleInterval, customSettings)
   }
 
   private def nonEmptySection(entry: (String, Config)): Boolean = entry match {
@@ -100,7 +100,7 @@ object InstrumentFactory {
       if (metricConfig.hasPath("lowest-discernible-value")) Some(metricConfig.getLong("lowest-discernible-value")) else None,
       if (metricConfig.hasPath("highest-trackable-value")) Some(metricConfig.getLong("highest-trackable-value")) else None,
       if (metricConfig.hasPath("significant-value-digits")) Some(metricConfig.getInt("significant-value-digits")) else None,
-      if (metricConfig.hasPath("sample-interval")) Some(metricConfig.getDuration("sample-interval", TimeUnit.MILLISECONDS).millis) else None
+      if (metricConfig.hasPath("sample-interval")) Some(metricConfig.getDuration("sample-interval")) else None
     )
     metricName -> customSettings
   }
