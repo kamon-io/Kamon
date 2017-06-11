@@ -32,7 +32,7 @@ lazy val core = (project in file("kamon-core"))
     javacOptions += "-XDignore.symbol.file",
     resolvers += Resolver.mavenLocal,
     libraryDependencies ++= Seq(
-      "com.typesafe"     % "config"          % "1.2.1",
+      "com.typesafe"     % "config"          % "1.3.1",
       "org.slf4j"        % "slf4j-api"       % "1.7.7",
       "ch.qos.logback" % "logback-classic" % "1.2.2",
       "com.typesafe.scala-logging" %% "scala-logging" % "3.5.0",

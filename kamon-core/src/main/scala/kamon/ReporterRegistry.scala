@@ -15,6 +15,7 @@
 
 package kamon
 
+import java.time.Duration
 import java.util.concurrent.atomic.{AtomicLong, AtomicReference}
 import java.util.concurrent._
 
@@ -64,6 +65,7 @@ trait SpanReporter {
 class ReporterRegistryImpl(metrics: MetricsSnapshotGenerator, initialConfig: Config) extends ReporterRegistry {
   private val registryExecutionContext = Executors.newScheduledThreadPool(2, threadFactory("kamon-reporter-registry"))
   private val reporterCounter = new AtomicLong(0L)
+  private var registryConfiguration = readRegistryConfiguration(initialConfig)
 
   private val metricReporters = TrieMap[Long, MetricReporterEntry]()
   private val metricReporterTickerSchedule = new AtomicReference[ScheduledFuture[_]]()
@@ -97,6 +99,9 @@ class ReporterRegistryImpl(metrics: MetricsSnapshotGenerator, initialConfig: Con
       executionContext = ExecutionContext.fromExecutorService(executor)
     )
 
+    if(metricReporters.isEmpty)
+      reStartMetricTicker()
+
     metricReporters.put(reporterEntry.id, reporterEntry)
     createRegistration(reporterEntry.id, metricReporters)
   }
@@ -109,6 +114,9 @@ class ReporterRegistryImpl(metrics: MetricsSnapshotGenerator, initialConfig: Con
       bufferCapacity = 1024,
       executionContext = ExecutionContext.fromExecutorService(executor)
     )
+
+    if(spanReporters.isEmpty)
+      reStartTraceTicker()
 
     spanReporters.put(reporterEntry.id, reporterEntry)
     createRegistration(reporterEntry.id, spanReporters)
@@ -141,42 +149,48 @@ class ReporterRegistryImpl(metrics: MetricsSnapshotGenerator, initialConfig: Con
   }
 
   private[kamon] def reconfigure(config: Config): Unit = synchronized {
-    val tickIntervalMillis = config.getDuration("kamon.metric.tick-interval", TimeUnit.MILLISECONDS)
-    val traceTickIntervalMillis = config.getDuration("kamon.trace.tick-interval", TimeUnit.MILLISECONDS)
+    val newConfig = readRegistryConfiguration(config)
 
-    val currentMetricTicker = metricReporterTickerSchedule.get()
-    if(currentMetricTicker != null) {
-      currentMetricTicker.cancel(true)
-    }
+    if(newConfig.metricTickInterval != registryConfiguration.metricTickInterval && metricReporters.nonEmpty)
+      reStartMetricTicker()
 
-    val currentSpanTicker = spanReporterTickerSchedule.get()
-    if(currentSpanTicker  != null) {
-      currentSpanTicker.cancel(true)
-    }
+    if(newConfig.traceTickInterval != registryConfiguration.metricTickInterval && spanReporters.nonEmpty)
+      reStartTraceTicker()
+
 
     // Reconfigure all registered reporters
-    metricReporters.foreach { case (_, entry) =>
-      Future(entry.reporter.reconfigure(config))(entry.executionContext)
-    }
+    metricReporters.foreach { case (_, entry) => Future(entry.reporter.reconfigure(config))(entry.executionContext) }
+    spanReporters.foreach   { case (_, entry) => Future(entry.reporter.reconfigure(config))(entry.executionContext) }
+    registryConfiguration = newConfig
+  }
 
-    spanReporters.foreach { case (_, entry) =>
-      Future(entry.reporter.reconfigure(config))(entry.executionContext)
-    }
+
+  private def reStartMetricTicker(): Unit = {
+    val tickIntervalMillis = registryConfiguration.metricTickInterval.toMillis
+    val currentMetricTicker = metricReporterTickerSchedule.get()
+
+    if(currentMetricTicker != null)
+      currentMetricTicker.cancel(false)
 
     metricReporterTickerSchedule.set {
       registryExecutionContext.scheduleAtFixedRate(
         new MetricReporterTicker(metrics, metricReporters), tickIntervalMillis, tickIntervalMillis, TimeUnit.MILLISECONDS
       )
     }
+  }
+
+  private def reStartTraceTicker(): Unit = {
+    val tickIntervalMillis = registryConfiguration.traceTickInterval.toMillis
+    val currentSpanTicker = spanReporterTickerSchedule.get()
+    if(currentSpanTicker  != null)
+      currentSpanTicker.cancel(false)
 
     spanReporterTickerSchedule.set {
       registryExecutionContext.scheduleAtFixedRate(
-        new SpanReporterTicker(spanReporters), traceTickIntervalMillis, traceTickIntervalMillis, TimeUnit.MILLISECONDS
+        new SpanReporterTicker(spanReporters), tickIntervalMillis, tickIntervalMillis, TimeUnit.MILLISECONDS
       )
     }
   }
-
-
 
   private[kamon] def reportSpan(span: Span.CompletedSpan): Unit = {
     spanReporters.foreach { case (_, reporterEntry) =>
@@ -258,4 +272,12 @@ class ReporterRegistryImpl(metrics: MetricsSnapshotGenerator, initialConfig: Con
       }
     }
   }
+
+  private def readRegistryConfiguration(config: Config): Configuration =
+    Configuration(
+      metricTickInterval = config.getDuration("kamon.metric.tick-interval"),
+      traceTickInterval = config.getDuration("kamon.trace.tick-interval")
+    )
+
+  private case class Configuration(metricTickInterval: Duration, traceTickInterval: Duration)
 }
