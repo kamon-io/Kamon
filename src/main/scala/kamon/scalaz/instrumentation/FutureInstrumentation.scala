@@ -16,7 +16,8 @@
 
 package kamon.scalaz.instrumentation
 
-import kamon.trace.{ Tracer, TraceContextAware }
+import kamon.Kamon
+import kamon.util.HasContinuation
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
 
@@ -24,23 +25,23 @@ import org.aspectj.lang.annotation._
 class FutureInstrumentation {
 
   @DeclareMixin("scalaz.concurrent..* && java.util.concurrent.Callable+")
-  def mixinTraceContextAwareToFutureRelatedCallable: TraceContextAware =
-    TraceContextAware.default
+  def mixinTraceContextAwareToFutureRelatedCallable: HasContinuation =
+    HasContinuation.fromTracerActiveSpan()
 
   @Pointcut("execution((scalaz.concurrent..* && java.util.concurrent.Callable+).new(..)) && this(callable)")
-  def futureRelatedCallableCreation(callable: TraceContextAware): Unit = {}
+  def futureRelatedCallableCreation(callable: HasContinuation): Unit = {}
 
   @After("futureRelatedCallableCreation(callable)")
-  def afterCreation(callable: TraceContextAware): Unit =
+  def afterCreation(callable: HasContinuation): Unit =
     // Force traceContext initialization.
-    callable.traceContext
+    callable.continuation
 
   @Pointcut("execution(* (scalaz.concurrent..* && java.util.concurrent.Callable+).call()) && this(callable)")
-  def futureRelatedCallableExecution(callable: TraceContextAware): Unit = {}
+  def futureRelatedCallableExecution(callable: HasContinuation): Unit = {}
 
   @Around("futureRelatedCallableExecution(callable)")
-  def aroundExecution(pjp: ProceedingJoinPoint, callable: TraceContextAware): Any =
-    Tracer.withContext(callable.traceContext) {
+  def aroundExecution(pjp: ProceedingJoinPoint, callable: HasContinuation): Any =
+    Kamon.withContinuation(callable.continuation) {
       pjp.proceed()
     }
 
