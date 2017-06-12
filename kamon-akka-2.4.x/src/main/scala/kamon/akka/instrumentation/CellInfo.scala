@@ -3,17 +3,18 @@ package akka.kamon.instrumentation
 import akka.actor.{ Cell, ActorRef, ActorSystem }
 import akka.routing.{ NoRouter, RoutedActorRef, RoutedActorCell }
 import kamon.Kamon
-import kamon.akka.{ ActorMetrics, RouterMetrics }
+import kamon.akka.{ ActorMetrics, ActorGroupConfig, RouterMetrics }
 import kamon.metric.Entity
 
-case class CellInfo(entity: Entity, isRouter: Boolean, isRoutee: Boolean, isTracked: Boolean)
+case class CellInfo(entity: Entity, isRouter: Boolean, isRoutee: Boolean,
+    isTracked: Boolean, trackingGroups: List[String], actorCellCreation: Boolean)
 
 object CellInfo {
 
   def cellName(system: ActorSystem, ref: ActorRef): String =
     system.name + "/" + ref.path.elements.mkString("/")
 
-  def cellInfoFor(cell: Cell, system: ActorSystem, ref: ActorRef, parent: ActorRef): CellInfo = {
+  def cellInfoFor(cell: Cell, system: ActorSystem, ref: ActorRef, parent: ActorRef, actorCellCreation: Boolean): CellInfo = {
     import kamon.metric.Entity
     def hasRouterProps(cell: Cell): Boolean = cell.props.deploy.routerConfig != NoRouter
 
@@ -26,7 +27,8 @@ object CellInfo {
     val category = if (isRouter || isRoutee) RouterMetrics.category else ActorMetrics.category
     val entity = Entity(name, category)
     val isTracked = !isRootSupervisor && Kamon.metrics.shouldTrack(entity)
+    val trackingGroups = if(isRootSupervisor) List() else ActorGroupConfig.actorShouldBeTrackedUnderGroups(name)
 
-    CellInfo(entity, isRouter, isRoutee, isTracked)
+    CellInfo(entity, isRouter, isRoutee, isTracked, trackingGroups, actorCellCreation)
   }
 }

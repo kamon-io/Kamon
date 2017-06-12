@@ -22,7 +22,7 @@ trait RouterMonitor {
 object RouterMonitor {
 
   def createRouterInstrumentation(cell: Cell): RouterMonitor = {
-    val cellInfo = CellInfo.cellInfoFor(cell, cell.system, cell.self, cell.parent)
+    val cellInfo = CellInfo.cellInfoFor(cell, cell.system, cell.self, cell.parent, false)
     def routerMetrics = Kamon.metrics.entity(RouterMetrics, cellInfo.entity)
 
     if (cellInfo.isTracked)

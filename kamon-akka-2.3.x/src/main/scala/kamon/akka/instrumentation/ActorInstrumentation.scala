@@ -27,13 +27,13 @@ class ActorCellInstrumentation {
   @After("actorCellCreation(cell, system, ref, parent)")
   def afterCreation(cell: Cell, system: ActorSystem, ref: ActorRef, parent: ActorRef): Unit = {
     cell.asInstanceOf[ActorInstrumentationAware].setActorInstrumentation(
-      ActorMonitor.createActorMonitor(cell, system, ref, parent))
+      ActorMonitor.createActorMonitor(cell, system, ref, parent, true))
   }
 
   @After("repointableActorRefCreation(cell, system, ref, parent)")
   def afterRepointableActorRefCreation(cell: Cell, system: ActorSystem, ref: ActorRef, parent: ActorRef): Unit = {
     cell.asInstanceOf[ActorInstrumentationAware].setActorInstrumentation(
-      ActorMonitor.createActorMonitor(cell, system, ref, parent))
+      ActorMonitor.createActorMonitor(cell, system, ref, parent, false))
   }
 
   @Pointcut("execution(* akka.actor.ActorCell.invoke(*)) && this(cell) && args(envelope)")

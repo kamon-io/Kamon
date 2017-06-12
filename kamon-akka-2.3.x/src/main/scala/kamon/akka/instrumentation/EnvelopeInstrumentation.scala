@@ -10,7 +10,7 @@ object EnvelopeContext {
   val Empty = EnvelopeContext(RelativeNanoTimestamp.zero, EmptyTraceContext)
 }
 
-trait InstrumentedEnvelope {
+trait InstrumentedEnvelope extends Serializable {
   def envelopeContext(): EnvelopeContext
   def setEnvelopeContext(envelopeContext: EnvelopeContext): Unit
 }
