@@ -41,7 +41,7 @@ object EnhancedELProcessor {
     } getOrElse expression
 
     def evalToMap(expression: String): Map[String, String] = extract(expression).map { str ⇒
-      eval[Map[String, String]](s"{$str}") match {
+      eval[java.util.HashMap[String, String]](s"{$str}") match {
         case Success(value) ⇒ value.asInstanceOf[java.util.HashMap[String, String]].asScala.toMap
         case Failure(cause) ⇒
           AnnotationExtension.log.error(s"${cause.getMessage} -> we will complete the operation with an empty map")

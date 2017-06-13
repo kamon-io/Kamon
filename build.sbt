@@ -13,7 +13,7 @@
  * =========================================================================================
  */
 
-val kamonCore = "io.kamon" %% "kamon-core" % "0.6.6"
+val kamonCore = "io.kamon" %% "kamon-core" % "0.6.7"
 val el = "org.glassfish" % "javax.el" % "3.0.0"
 
 lazy val root = (project in file("."))
