@@ -13,7 +13,7 @@
  * =========================================================================================
  */
 
-val kamonCore         = "io.kamon"                  %%  "kamon-core"            % "0.6.6"
+val kamonCore         = "io.kamon"                  %%  "kamon-core"            % "0.6.7"
 val asyncHttpClient   = "org.asynchttpclient"       %   "async-http-client"     % "2.0.24"
 
 name := "kamon-influxdb"
