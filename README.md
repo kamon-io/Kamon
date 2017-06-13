@@ -52,6 +52,7 @@ Kamon information and documentation is available on the
 * [JMX]
 * [Riemann]  
 * [Khronus]  
+* [OpenTSDB]
 
 
 ### Projects using Kamon ###
@@ -104,3 +105,4 @@ the License.
 [Khronus]: https://github.com/kamon-io/kamon-khronus
 [New Relic]: https://github.com/kamon-io/kamon-newrelic
 [InfluxDB]: https://github.com/kamon-io/kamon-influxdb
+[OpenTSDB]: https://github.com/kamon-io/kamon-opentsdb
