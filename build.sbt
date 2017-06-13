@@ -17,8 +17,8 @@ val play23Version     = "2.3.10"
 val play24Version     = "2.4.8"
 val play25Version     = "2.5.4"
 
-val kamonCore         = "io.kamon"                  %%  "kamon-core"            % "0.6.6"
-val kamonScala        = "io.kamon"                  %%  "kamon-scala"           % "0.6.6"
+val kamonCore         = "io.kamon"                  %%  "kamon-core"            % "0.6.7"
+val kamonScala        = "io.kamon"                  %%  "kamon-scala"           % "0.6.7"
 
 //play 2.3.x
 val play23            = "com.typesafe.play"         %%  "play"                  % play23Version
