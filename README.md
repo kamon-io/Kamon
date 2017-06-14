@@ -75,21 +75,22 @@ kamon {
 
 A better explanation is provided in the kamon-akka-http's [reference.conf].
 
-###Run
+### Run
+
 *kamon-akka-http* module require you to start your application using the AspectJ Weaver Agent. Kamon will warn you at startup if you failed to do so.
 
 To achieve it quickly you can use the [sbt-aspectj-runner] plugin.
 
-###Enjoy!
+### Enjoy!
 
-##Examples
+## Examples
 
 Coming soon!
 
-##Naming HTTP Client Segments
+## Naming HTTP Client Segments
 By default, the name generator bundled with the *kamon-akka-http* module will use the Host header available in the request to assign a name to the automatically generated segment. Currently, the only way to override that name would be to provide your own implementation of `kamon.akka.http.AkkaHttpNameGenerator` which is used to assign names both on the server and client sides of our instrumentation.
 
-##Backlog
+## Backlog
 * Connection-Level Client-Side API
 * Host-Level Client-Side API support
 * Take some ideas from [spray-kamon-metrics]
