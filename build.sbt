@@ -14,9 +14,9 @@
  * =========================================================================================
  */
 
-val kamonCore        = "io.kamon" %% "kamon-core"            % "0.6.6"
-val kamonAkka        = "io.kamon" %% "kamon-akka-2.4"        % "0.6.6"
-val kamonLogReporter = "io.kamon" %% "kamon-log-reporter"    % "0.6.6"
+val kamonCore        = "io.kamon" %% "kamon-core"            % "0.6.7"
+val kamonAkka        = "io.kamon" %% "kamon-akka-2.4"        % "0.6.7"
+val kamonLogReporter = "io.kamon" %% "kamon-log-reporter"    % "0.6.7"
 
 val http         = "com.typesafe.akka" %% "akka-http"          % "10.0.1"
 val httpTestKit  = "com.typesafe.akka" %% "akka-http-testkit"  % "10.0.1"
