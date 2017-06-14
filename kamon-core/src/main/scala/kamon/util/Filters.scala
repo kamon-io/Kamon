@@ -14,21 +14,22 @@
  */
 
 package kamon
-package metric
+package util
 
 import java.util.regex.Pattern
+
 import com.typesafe.config.Config
 
 object Filter {
   def fromConfig(config: Config): Filter = {
-    val filtersConfig = config.getConfig("kamon.metric.filters")
+    val filtersConfig = config.getConfig("kamon.util.filters")
     val acceptUnmatched = filtersConfig.getBoolean("accept-unmatched")
 
-    val perMetricFilter = filtersConfig.firstLevelKeys.filter(_ != "accept-unmatched") map { metricName: String ⇒
-      val includes = readFilters(filtersConfig, s"$metricName.includes")
-      val excludes = readFilters(filtersConfig, s"$metricName.excludes")
+    val perMetricFilter = filtersConfig.firstLevelKeys.filter(_ != "accept-unmatched") map { filterName: String ⇒
+      val includes = readFilters(filtersConfig, s"$filterName.includes")
+      val excludes = readFilters(filtersConfig, s"$filterName.excludes")
 
-      (metricName, new IncludeExcludeNameFilter(includes, excludes))
+      (filterName, new IncludeExcludeNameFilter(includes, excludes))
     } toMap
 
     new Filter(perMetricFilter, acceptUnmatched)
@@ -52,10 +53,10 @@ object Filter {
   }
 }
 
-class Filter(perMetricFilter: Map[String, NameFilter], acceptUnmatched: Boolean) {
-  def accept(metricName: String, pattern: String): Boolean =
-    perMetricFilter
-      .get(metricName)
+class Filter(filters: Map[String, NameFilter], acceptUnmatched: Boolean) {
+  def accept(filterName: String, pattern: String): Boolean =
+    filters
+      .get(filterName)
       .map(_.accept(pattern))
       .getOrElse(acceptUnmatched)
 }
