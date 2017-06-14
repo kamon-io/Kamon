@@ -26,9 +26,13 @@ import scala.concurrent.Future
 import java.time.Duration
 
 import io.opentracing.ActiveSpan.Continuation
+import org.slf4j.LoggerFactory
+
+import scala.util.Try
 
 
 object Kamon extends MetricLookup with ReporterRegistry with io.opentracing.Tracer {
+  private val logger = LoggerFactory.getLogger("kamon.Kamon")
   @volatile private var _config = ConfigFactory.load()
   @volatile private var _environment = Environment.fromConfig(_config)
   @volatile private var _filters = Filters.fromConfig(_config)
@@ -36,6 +40,7 @@ object Kamon extends MetricLookup with ReporterRegistry with io.opentracing.Trac
   private val _metrics = new MetricRegistry(_config)
   private val _reporters = new ReporterRegistryImpl(_metrics, _config)
   private val _tracer = new Tracer(Kamon, _reporters, _config)
+  private var _onReconfigureHooks = Seq.empty[OnReconfigureHook]
 
   def environment: Environment =
     _environment
@@ -49,6 +54,12 @@ object Kamon extends MetricLookup with ReporterRegistry with io.opentracing.Trac
     _filters = Filters.fromConfig(config)
     _metrics.reconfigure(config)
     _reporters.reconfigure(config)
+
+    _onReconfigureHooks.foreach(hook => {
+      Try(hook.onReconfigure(config)).failed.foreach(error =>
+        logger.error("Exception occurred while trying to run a OnReconfigureHook", error)
+      )
+    })
   }
 
 
@@ -157,4 +168,16 @@ object Kamon extends MetricLookup with ReporterRegistry with io.opentracing.Trac
 
   def filter(filterName: String, pattern: String): Boolean =
     _filters.accept(filterName, pattern)
+
+  /**
+    * Register a reconfigure hook that will be run when the a call to Kamon.reconfigure(config) is performed. All
+    * registered hooks will run sequentially in the same Thread that calls Kamon.reconfigure(config).
+    */
+  def onReconfigure(hook: OnReconfigureHook): Unit = synchronized {
+    _onReconfigureHooks = hook +: _onReconfigureHooks
+  }
+}
+
+trait OnReconfigureHook {
+  def onReconfigure(newConfig: Config): Unit
 }
