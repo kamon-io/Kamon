@@ -95,11 +95,42 @@ object Kamon extends MetricLookup with ReporterRegistry with io.opentracing.Trac
     * Actives the provided Continuation before code is evaluated and deactivates it afterwards.
     */
   def withContinuation[T](continuation: Continuation)(code: => T): T = {
-    val activeSpan = continuation.activate()
-    val evaluatedCode = code
-    activeSpan.deactivate()
-    evaluatedCode
+    if(continuation == null)
+      code
+    else {
+      val activeSpan = continuation.activate()
+      val evaluatedCode = code
+      activeSpan.deactivate()
+      evaluatedCode
+    }
   }
+
+  /**
+    * Captures a continuation from the currently active Span (if any).
+    */
+  def activeSpanContinuation(): Continuation = {
+    val activeSpan = Kamon.activeSpan()
+    if(activeSpan == null)
+      null
+    else
+      activeSpan.capture()
+  }
+
+  /**
+    * Runs the provided closure with the currently active Span (if any).
+    */
+  def onActiveSpan[T](code: ActiveSpan => T): Unit = {
+    val activeSpan = Kamon.activeSpan()
+    if(activeSpan != null)
+      code(activeSpan)
+  }
+
+  /**
+    * Evaluates the provided closure with the currently active Span (if any) and returns the evaluation result. If there
+    * was no active Span then the provided fallback value
+    */
+  def fromActiveSpan[T](code: ActiveSpan => T): Option[T] =
+    Option(activeSpan()).map(code)
 
 
   override def loadReportersFromConfig(): Unit =
