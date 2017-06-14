@@ -34,6 +34,10 @@ trait Metric[T] {
   def refine(tags: Tags): T
   def refine(tags: (String, String)*): T
   def refine(tag: String, value: String): T
+
+  def remove(tags: Tags): Boolean
+  def remove(tags: (String, String)*): Boolean
+  def remove(tag: String, value: String): Boolean
 }
 
 trait HistogramMetric extends Metric[Histogram] with Histogram
@@ -46,16 +50,25 @@ abstract sealed class BaseMetric[T, S](val instrumentType: InstrumentType) exten
   private val instruments = TrieMap.empty[Tags, T]
   protected lazy val baseInstrument: T = instruments.atomicGetOrElseUpdate(Map.empty, createInstrument(Map.empty))
 
-  def refine(tag: String, value: String): T = {
+  override def refine(tag: String, value: String): T = {
     val instrumentTags = Map(tag -> value)
     instruments.atomicGetOrElseUpdate(instrumentTags, createInstrument(instrumentTags))
   }
 
-  def refine(tags: Map[String, String]): T =
+  override def refine(tags: Map[String, String]): T =
     instruments.atomicGetOrElseUpdate(tags, createInstrument(tags))
 
-  def refine(tags: (String, String)*): T =
+  override def refine(tags: (String, String)*): T =
     refine(tags.toMap)
+
+  override def remove(tags: Tags): Boolean =
+    if(tags.nonEmpty) instruments.remove(tags).nonEmpty else false
+
+  override def remove(tags: (String, String)*): Boolean =
+    if(tags.nonEmpty) instruments.remove(tags.toMap).nonEmpty else false
+
+  override def remove(tag: String, value: String): Boolean =
+    instruments.remove(Map(tag -> value)).nonEmpty
 
 
   private[kamon] def snapshot(): Seq[S] =
