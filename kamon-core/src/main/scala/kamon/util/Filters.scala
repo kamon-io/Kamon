@@ -20,8 +20,8 @@ import java.util.regex.Pattern
 
 import com.typesafe.config.Config
 
-object Filter {
-  def fromConfig(config: Config): Filter = {
+object Filters {
+  def fromConfig(config: Config): Filters = {
     val filtersConfig = config.getConfig("kamon.util.filters")
     val acceptUnmatched = filtersConfig.getBoolean("accept-unmatched")
 
@@ -29,23 +29,23 @@ object Filter {
       val includes = readFilters(filtersConfig, s"$filterName.includes")
       val excludes = readFilters(filtersConfig, s"$filterName.excludes")
 
-      (filterName, new IncludeExcludeNameFilter(includes, excludes))
+      (filterName, new IncludeExcludeMatcher(includes, excludes))
     } toMap
 
-    new Filter(perMetricFilter, acceptUnmatched)
+    new Filters(perMetricFilter, acceptUnmatched)
   }
 
-  private def readFilters(filtersConfig: Config, name: String): Seq[NameFilter] = {
+  private def readFilters(filtersConfig: Config, name: String): Seq[Matcher] = {
     import scala.collection.JavaConverters._
     if(filtersConfig.hasPath(name))
-      filtersConfig.getStringList(name).asScala.map(readNameFilter)
+      filtersConfig.getStringList(name).asScala.map(readMatcher)
     else
       Seq.empty
   }
 
-  private def readNameFilter(pattern: String): NameFilter = {
+  private def readMatcher(pattern: String): Matcher = {
     if(pattern.startsWith("regex:"))
-      new RegexNameFilter(pattern.drop(6))
+      new RegexMatcher(pattern.drop(6))
     else if(pattern.startsWith("glob:"))
       new GlobPathFilter(pattern.drop(5))
     else
@@ -53,7 +53,7 @@ object Filter {
   }
 }
 
-class Filter(filters: Map[String, NameFilter], acceptUnmatched: Boolean) {
+class Filters(filters: Map[String, Matcher], acceptUnmatched: Boolean) {
   def accept(filterName: String, pattern: String): Boolean =
     filters
       .get(filterName)
@@ -61,16 +61,16 @@ class Filter(filters: Map[String, NameFilter], acceptUnmatched: Boolean) {
       .getOrElse(acceptUnmatched)
 }
 
-trait NameFilter {
+trait Matcher {
   def accept(name: String): Boolean
 }
 
-class IncludeExcludeNameFilter(includes: Seq[NameFilter], excludes: Seq[NameFilter]) extends NameFilter {
+class IncludeExcludeMatcher(includes: Seq[Matcher], excludes: Seq[Matcher]) extends Matcher {
   override def accept(name: String): Boolean =
     includes.exists(_.accept(name)) && !excludes.exists(_.accept(name))
 }
 
-class RegexNameFilter(pattern: String) extends NameFilter {
+class RegexMatcher(pattern: String) extends Matcher {
   private val pathRegex = pattern.r
 
   override def accept(name: String): Boolean = name match {
@@ -79,7 +79,7 @@ class RegexNameFilter(pattern: String) extends NameFilter {
   }
 }
 
-class GlobPathFilter(glob: String) extends NameFilter {
+class GlobPathFilter(glob: String) extends Matcher {
   private val globPattern = Pattern.compile("(\\*\\*?)|(\\?)|(\\\\.)|(/+)|([^*?]+)")
   private val compiledPattern = getGlobPattern(glob)
 

@@ -17,6 +17,7 @@
 package kamon
 package metric
 
+import kamon.util.GlobPathFilter
 import org.scalatest.{Matchers, WordSpecLike}
 
 class GlobPathFilterSpec extends WordSpecLike with Matchers {

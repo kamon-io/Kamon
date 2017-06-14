@@ -20,7 +20,7 @@ import io.opentracing.propagation.Format
 import io.opentracing.{ActiveSpan, Span, SpanContext}
 import kamon.metric._
 import kamon.trace.Tracer
-import kamon.util.MeasurementUnit
+import kamon.util.{Filters, MeasurementUnit}
 
 import scala.concurrent.Future
 import java.time.Duration
@@ -31,6 +31,7 @@ import io.opentracing.ActiveSpan.Continuation
 object Kamon extends MetricLookup with ReporterRegistry with io.opentracing.Tracer {
   @volatile private var _config = ConfigFactory.load()
   @volatile private var _environment = Environment.fromConfig(_config)
+  @volatile private var _filters = Filters.fromConfig(_config)
 
   private val _metrics = new MetricRegistry(_config)
   private val _reporters = new ReporterRegistryImpl(_metrics, _config)
@@ -45,6 +46,7 @@ object Kamon extends MetricLookup with ReporterRegistry with io.opentracing.Trac
   def reconfigure(config: Config): Unit = synchronized {
     _config = config
     _environment = Environment.fromConfig(config)
+    _filters = Filters.fromConfig(config)
     _metrics.reconfigure(config)
     _reporters.reconfigure(config)
   }
@@ -153,4 +155,6 @@ object Kamon extends MetricLookup with ReporterRegistry with io.opentracing.Trac
   override def stopAllReporters(): Future[Unit] =
     _reporters.stopAllReporters()
 
+  def filter(filterName: String, pattern: String): Boolean =
+    _filters.accept(filterName, pattern)
 }
