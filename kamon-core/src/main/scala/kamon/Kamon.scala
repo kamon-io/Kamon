@@ -15,8 +15,6 @@
 
 package kamon
 
-import java.util.concurrent.atomic.AtomicReference
-
 import com.typesafe.config.{Config, ConfigFactory}
 import io.opentracing.propagation.Format
 import io.opentracing.{ActiveSpan, Span, SpanContext}
@@ -31,54 +29,58 @@ import io.opentracing.ActiveSpan.Continuation
 
 
 object Kamon extends MetricLookup with ReporterRegistry with io.opentracing.Tracer {
-  private val initialConfig = ConfigFactory.load()
+  @volatile private var _config = ConfigFactory.load()
+  @volatile private var _environment = Environment.fromConfig(_config)
 
-  private val metricRegistry = new MetricRegistry(initialConfig)
-  private val reporterRegistry = new ReporterRegistryImpl(metricRegistry, initialConfig)
-  private val env = new AtomicReference[Environment](Environment.fromConfig(ConfigFactory.load()))
-  private val kamonTracer = new Tracer(Kamon, reporterRegistry, initialConfig)
+  private val _metrics = new MetricRegistry(_config)
+  private val _reporters = new ReporterRegistryImpl(_metrics, _config)
+  private val _tracer = new Tracer(Kamon, _reporters, _config)
 
   def environment: Environment =
-    env.get()
+    _environment
+
+  def config(): Config =
+    _config
 
   def reconfigure(config: Config): Unit = synchronized {
-    metricRegistry.reconfigure(config)
-    reporterRegistry.reconfigure(config)
-    env.set(Environment.fromConfig(config))
+    _config = config
+    _environment = Environment.fromConfig(config)
+    _metrics.reconfigure(config)
+    _reporters.reconfigure(config)
   }
 
 
   override def histogram(name: String, unit: MeasurementUnit, dynamicRange: Option[DynamicRange]): HistogramMetric =
-    metricRegistry.histogram(name, unit, dynamicRange)
+    _metrics.histogram(name, unit, dynamicRange)
 
   override def counter(name: String, unit: MeasurementUnit): CounterMetric =
-    metricRegistry.counter(name, unit)
+    _metrics.counter(name, unit)
 
   override def gauge(name: String, unit: MeasurementUnit): GaugeMetric =
-    metricRegistry.gauge(name, unit)
+    _metrics.gauge(name, unit)
 
   override def minMaxCounter(name: String, unit: MeasurementUnit, sampleInterval: Option[Duration],
       dynamicRange: Option[DynamicRange]): MinMaxCounterMetric =
-    metricRegistry.minMaxCounter(name, unit, dynamicRange, sampleInterval)
+    _metrics.minMaxCounter(name, unit, dynamicRange, sampleInterval)
 
 
   def tracer: Tracer =
-    kamonTracer
+    _tracer
 
   override def buildSpan(operationName: String): io.opentracing.Tracer.SpanBuilder =
-    kamonTracer.buildSpan(operationName)
+    _tracer.buildSpan(operationName)
 
   override def extract[C](format: Format[C], carrier: C): SpanContext =
-    kamonTracer.extract(format, carrier)
+    _tracer.extract(format, carrier)
 
   override def inject[C](spanContext: SpanContext, format: Format[C], carrier: C): Unit =
-    kamonTracer.inject(spanContext, format, carrier)
+    _tracer.inject(spanContext, format, carrier)
 
   override def activeSpan(): ActiveSpan =
-    kamonTracer.activeSpan()
+    _tracer.activeSpan()
 
   override def makeActive(span: Span): ActiveSpan =
-    kamonTracer.makeActive(span)
+    _tracer.makeActive(span)
 
 
   /**
@@ -134,21 +136,21 @@ object Kamon extends MetricLookup with ReporterRegistry with io.opentracing.Trac
 
 
   override def loadReportersFromConfig(): Unit =
-    reporterRegistry.loadReportersFromConfig()
+    _reporters.loadReportersFromConfig()
 
   override def addReporter(reporter: MetricReporter): Registration =
-    reporterRegistry.addReporter(reporter)
+    _reporters.addReporter(reporter)
 
   override def addReporter(reporter: MetricReporter, name: String): Registration =
-    reporterRegistry.addReporter(reporter, name)
+    _reporters.addReporter(reporter, name)
 
   override def addReporter(reporter: SpanReporter): Registration =
-    reporterRegistry.addReporter(reporter)
+    _reporters.addReporter(reporter)
 
   override def addReporter(reporter: SpanReporter, name: String): Registration =
-    reporterRegistry.addReporter(reporter, name)
+    _reporters.addReporter(reporter, name)
 
   override def stopAllReporters(): Future[Unit] =
-    reporterRegistry.stopAllReporters()
+    _reporters.stopAllReporters()
 
 }
