@@ -14,12 +14,20 @@
  */
 
 val kamonCore         = "io.kamon"               %% "kamon-core"          % "0.6.7"
-val scalaCompact      = "org.scala-lang.modules" %% "scala-java8-compat"  % "0.5.0"
 val asyncHttpClient   = "org.asynchttpclient"     % "async-http-client"   % "2.0.25"
 
 lazy val root = (project in file("."))
   .settings(name := "kamon-datadog")
   .settings(
       libraryDependencies ++=
-        compileScope(kamonCore, asyncHttpClient, akkaDependency("actor").value, scalaCompact) ++
+        compileScope(kamonCore, asyncHttpClient, akkaDependency("actor").value, scalaCompact.value) ++
         testScope(scalatest, akkaDependency("testkit").value, slf4jApi, slf4jnop))
+
+
+
+def scalaCompact = Def.setting {
+  scalaBinaryVersion.value match {
+    case "2.10" | "2.11" => "org.scala-lang.modules" %% "scala-java8-compat"  % "0.5.0"
+    case "2.12"          => "org.scala-lang.modules" %% "scala-java8-compat"  % "0.8.0"
+   }
+ }
