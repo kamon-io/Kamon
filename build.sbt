@@ -13,9 +13,9 @@
  * =========================================================================================
  */
 
-val kamonCore = "io.kamon" %% "kamon-core" % "0.6.6"
-val kamonTestkit = "io.kamon" %%  "kamon-testkit"  % "0.6.6"
-val newrelic = "com.newrelic.agent.java" % "newrelic-agent" % "3.26.1"
+val kamonCore         = "io.kamon"                  %%  "kamon-core"            % "0.6.7"
+val kamonTestkit      = "io.kamon"                  %%  "kamon-testkit"         % "0.6.7"
+val newrelic          = "com.newrelic.agent.java"   %   "newrelic-agent"        % "3.26.1"
 val sprayCan          = "io.spray"                  %%  "spray-can"             % "1.3.3"
 val sprayRouting      = "io.spray"                  %%  "spray-routing"         % "1.3.3"
 val sprayTestkit      = "io.spray"                  %%  "spray-testkit"         % "1.3.3"
