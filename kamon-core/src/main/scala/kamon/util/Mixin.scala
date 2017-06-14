@@ -32,12 +32,14 @@ object HasContinuation {
   /**
     * Construct a HasContinuation instance by capturing a continuation from the provided active span.
     */
-  def from(activeSpan: ActiveSpan): HasContinuation =
-    new Default(activeSpan.capture())
+  def from(activeSpan: ActiveSpan): HasContinuation = {
+    val continuation = if(activeSpan == null) null else activeSpan.capture()
+    new Default(continuation)
+  }
 
   /**
     * Constructs a new HasContinuation instance using Kamon's tracer currently active span.
     */
   def fromTracerActiveSpan(): HasContinuation =
-    new Default(Kamon.activeSpan().capture())
+    new Default(Kamon.activeSpanContinuation())
 }
