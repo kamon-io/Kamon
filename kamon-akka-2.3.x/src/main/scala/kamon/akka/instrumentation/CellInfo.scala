@@ -1,13 +1,26 @@
+/* =========================================================================================
+ * Copyright © 2013-2017 the kamon project <http://kamon.io/>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the specific language governing permissions
+ * and limitations under the License.
+ * =========================================================================================
+ */
 package akka.kamon.instrumentation
 
-import akka.actor.{ Cell, ActorRef, ActorSystem }
-import akka.routing.{ NoRouter, RoutedActorRef, RoutedActorCell }
+import akka.actor.{ActorRef, ActorSystem, Cell}
+import akka.routing.{NoRouter, RoutedActorRef}
 import kamon.Kamon
-import kamon.akka.{ ActorMetrics, ActorGroupConfig, RouterMetrics }
-import kamon.metric.Entity
+import kamon.akka.Akka
 
-case class CellInfo(entity: Entity, isRouter: Boolean, isRoutee: Boolean,
-    isTracked: Boolean, trackingGroups: List[String], actorCellCreation: Boolean)
+case class CellInfo(path: String, isRouter: Boolean, isRoutee: Boolean, isTracked: Boolean, trackingGroups: Seq[String],
+    actorCellCreation: Boolean)
 
 object CellInfo {
 
@@ -15,7 +28,6 @@ object CellInfo {
     system.name + "/" + ref.path.elements.mkString("/")
 
   def cellInfoFor(cell: Cell, system: ActorSystem, ref: ActorRef, parent: ActorRef, actorCellCreation: Boolean): CellInfo = {
-    import kamon.metric.Entity
     def hasRouterProps(cell: Cell): Boolean = cell.props.deploy.routerConfig != NoRouter
 
     val pathString = ref.path.elements.mkString("/")
@@ -23,12 +35,11 @@ object CellInfo {
     val isRouter = hasRouterProps(cell)
     val isRoutee = parent.isInstanceOf[RoutedActorRef]
 
-    val name = if (isRoutee) cellName(system, parent) else cellName(system, ref)
-    val category = if (isRouter || isRoutee) RouterMetrics.category else ActorMetrics.category
-    val entity = Entity(name, category)
-    val isTracked = !isRootSupervisor && Kamon.metrics.shouldTrack(entity)
-    val trackingGroups = if(isRootSupervisor) List() else ActorGroupConfig.actorShouldBeTrackedUnderGroups(name)
+    val fullPath = if (isRoutee) cellName(system, parent) else cellName(system, ref)
+    val filterName = if (isRouter || isRoutee) Akka.RouterFilterName else Akka.ActorFilterName
+    val isTracked = !isRootSupervisor && Kamon.filter(filterName, fullPath)
+    val trackingGroups = if(isRootSupervisor) List() else Akka.actorGroups.filter(group => Kamon.filter(group, fullPath))
 
-    CellInfo(entity, isRouter, isRoutee, isTracked, trackingGroups, actorCellCreation)
+    CellInfo(fullPath, isRouter, isRoutee, isTracked, trackingGroups, actorCellCreation)
   }
 }

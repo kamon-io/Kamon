@@ -15,162 +15,106 @@
 
 package kamon.akka
 
+
 import java.nio.LongBuffer
 
 import akka.actor._
 import akka.routing._
-import akka.testkit.TestProbe
+import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import kamon.Kamon
+import org.scalactic.TimesOnInt._
+import Metrics._
 import kamon.akka.RouterMetricsTestActor._
-import kamon.metric.EntitySnapshot
-import kamon.metric.instrument.CollectionContext
 import kamon.testkit.BaseKamonSpec
+import org.scalatest.concurrent.Eventually
+import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 
 import scala.concurrent.duration._
 
-class RouterMetricsSpec extends BaseKamonSpec("router-metrics-spec") {
+class RouterMetricsSpec extends TestKit(ActorSystem("RouterMetricsSpec")) with WordSpecLike with BaseKamonSpec with Matchers
+  with BeforeAndAfterAll with ImplicitSender with Eventually {
 
   "the Kamon router metrics" should {
     "respect the configured include and exclude filters" in new RouterMetricsFixtures {
       createTestPoolRouter("tracked-pool-router")
-      //createTestGroupRouter("tracked-group-router")
       createTestPoolRouter("non-tracked-pool-router")
-      //createTestGroupRouter("non-tracked-group-router")
       createTestPoolRouter("tracked-explicitly-excluded-pool-router")
-      //createTestGroupRouter("tracked-explicitly-excluded-group-router")
 
-      routerMetricsRecorderOf("user/tracked-pool-router") should not be empty
-      //routerMetricsRecorderOf("user/tracked-group-router") should not be empty
-      routerMetricsRecorderOf("user/non-tracked-pool-router") shouldBe empty
-      //routerMetricsRecorderOf("user/non-tracked-group-router") shouldBe empty
-      routerMetricsRecorderOf("user/tracked-explicitly-excluded-pool-router") shouldBe empty
-      //routerMetricsRecorderOf("user/tracked-explicitly-excluded-group-router") shouldBe empty
+      routerProcessingTime.valuesForTag("path") should contain("RouterMetricsSpec/user/tracked-pool-router")
+      routerProcessingTime.valuesForTag("path") shouldNot contain("RouterMetricsSpec/user/non-tracked-pool-router")
+      routerProcessingTime.valuesForTag("path") shouldNot contain("RouterMetricsSpec/user/tracked-explicitly-excluded-pool-router")
     }
+
 
     "record the routing-time of the receive function for pool routers" in new RouterMetricsFixtures {
       val listener = TestProbe()
-      val router = createTestPoolRouter("measuring-routing-time-in-pool-router")
+      val router = createTestPoolRouter("measuring-routing-time-in-pool-router", true)
 
       router.tell(Ping, listener.ref)
       listener.expectMsg(Pong)
-      val routerSnapshot = collectMetricsOf("user/measuring-routing-time-in-pool-router").get
 
-      routerSnapshot.histogram("routing-time").get.numberOfMeasurements should be(1L)
+      eventually {
+        routerRoutingTime.refine("path" -> "RouterMetricsSpec/user/measuring-routing-time-in-pool-router")
+          .distribution(resetState = false).count should be(1L)
+      }
     }
-    /*
-    "record the routing-time of the receive function for group routers" in new RouterMetricsFixtures {
-      val listener = TestProbe()
-      val router = createTestGroupRouter("measuring-routing-time-in-group-router")
-
-      router.tell(Ping, listener.ref)
-      listener.expectMsg(Pong)
-      val routerSnapshot = collectMetricsOf("user/measuring-routing-time-in-group-router").get
-
-      routerSnapshot.histogram("routing-time").get.numberOfMeasurements should be(1L)
-    }*/
 
     "record the processing-time of the receive function for pool routers" in new RouterMetricsFixtures {
       val timingsListener = TestProbe()
-      val router = createTestPoolRouter("measuring-processing-time-in-pool-router")
+      val router = createTestPoolRouter("measuring-processing-time-in-pool-router", true)
 
       router.tell(RouterTrackTimings(sleep = Some(1 second)), timingsListener.ref)
       val timings = timingsListener.expectMsgType[RouterTrackedTimings]
-      val routerSnapshot = collectMetricsOf("user/measuring-processing-time-in-pool-router").get
+      val processingTimeDistribution = routerProcessingTime.refine("path" -> "RouterMetricsSpec/user/measuring-processing-time-in-pool-router").distribution()
 
-      routerSnapshot.histogram("processing-time").get.numberOfMeasurements should be(1L)
-      routerSnapshot.histogram("processing-time").get.recordsIterator.next().count should be(1L)
-      routerSnapshot.histogram("processing-time").get.recordsIterator.next().level should be(timings.approximateProcessingTime +- 10.millis.toNanos)
+      processingTimeDistribution.count should be(1L)
+      processingTimeDistribution.buckets.head.frequency should be(1L)
+      processingTimeDistribution.buckets.head.value should be(timings.approximateProcessingTime +- 10.millis.toNanos)
     }
-
-    /*
-    "record the processing-time of the receive function for group routers" in new RouterMetricsFixtures {
-      val timingsListener = TestProbe()
-      val router = createTestGroupRouter("measuring-processing-time-in-group-router")
-
-      router.tell(RouterTrackTimings(sleep = Some(1 second)), timingsListener.ref)
-      val timings = timingsListener.expectMsgType[RouterTrackedTimings]
-      val routerSnapshot = collectMetricsOf("user/measuring-processing-time-in-group-router").get
-
-      routerSnapshot.histogram("processing-time").get.numberOfMeasurements should be(1L)
-      routerSnapshot.histogram("processing-time").get.recordsIterator.next().count should be(1L)
-      routerSnapshot.histogram("processing-time").get.recordsIterator.next().level should be(timings.approximateProcessingTime +- 10.millis.toNanos)
-    }
-*/
 
     "record the number of errors for pool routers" in new RouterMetricsFixtures {
       val listener = TestProbe()
       val router = createTestPoolRouter("measuring-errors-in-pool-router")
 
-      for (i ← 1 to 10) {
-        router.tell(Fail, listener.ref)
-      }
+      10.times(router.tell(Fail, listener.ref))
 
       router.tell(Ping, listener.ref)
       listener.expectMsg(Pong)
 
-      val routerSnapshot = collectMetricsOf("user/measuring-errors-in-pool-router").get
-      routerSnapshot.counter("errors").get.count should be(10L)
+      eventually {
+        routerErrors.refine("path" -> "RouterMetricsSpec/user/measuring-errors-in-pool-router").value(resetState = false) should be(10L)
+      }
     }
-
-    /*    "record the number of errors for group routers" in new RouterMetricsFixtures {
-      val listener = TestProbe()
-      val router = createTestGroupRouter("measuring-errors-in-group-router")
-
-      for (i ← 1 to 10) {
-        router.tell(Fail, listener.ref)
-      }
-
-      router.tell(Ping, listener.ref)
-      listener.expectMsg(Pong)
-
-      val routerSnapshot = collectMetricsOf("user/measuring-errors-in-group-router").get
-      routerSnapshot.counter("errors").get.count should be(10L)
-    }*/
 
     "record the time-in-mailbox for pool routers" in new RouterMetricsFixtures {
       val timingsListener = TestProbe()
-      val router = createTestPoolRouter("measuring-time-in-mailbox-in-pool-router")
+      val router = createTestPoolRouter("measuring-time-in-mailbox-in-pool-router", true)
 
       router.tell(RouterTrackTimings(sleep = Some(1 second)), timingsListener.ref)
       val timings = timingsListener.expectMsgType[RouterTrackedTimings]
-      val routerSnapshot = collectMetricsOf("user/measuring-time-in-mailbox-in-pool-router").get
 
-      routerSnapshot.histogram("time-in-mailbox").get.numberOfMeasurements should be(1L)
-      routerSnapshot.histogram("time-in-mailbox").get.recordsIterator.next().count should be(1L)
-      routerSnapshot.histogram("time-in-mailbox").get.recordsIterator.next().level should be(timings.approximateTimeInMailbox +- 10.millis.toNanos)
+      val timeInMailboxDistribution = routerTimeInMailbox.refine("path" -> "RouterMetricsSpec/user/measuring-time-in-mailbox-in-pool-router").distribution()
+      timeInMailboxDistribution.count should be(1L)
+      timeInMailboxDistribution.buckets.head.frequency should be(1L)
+      timeInMailboxDistribution.buckets.head.value should be(timings.approximateTimeInMailbox +- 10.millis.toNanos)
     }
 
     "record the time-in-mailbox for balancing pool routers" in new RouterMetricsFixtures {
       val timingsListener = TestProbe()
-      val router = createTestBalancingPoolRouter("measuring-time-in-mailbox-in-balancing-pool-router")
+      val router = createTestBalancingPoolRouter("measuring-time-in-mailbox-in-balancing-pool-router", true)
 
       router.tell(RouterTrackTimings(sleep = Some(1 second)), timingsListener.ref)
       val timings = timingsListener.expectMsgType[RouterTrackedTimings]
-      val routerSnapshot = collectMetricsOf("user/measuring-time-in-mailbox-in-balancing-pool-router").get
 
-      routerSnapshot.histogram("time-in-mailbox").get.numberOfMeasurements should be(1L)
-      routerSnapshot.histogram("time-in-mailbox").get.recordsIterator.next().count should be(1L)
-      routerSnapshot.histogram("time-in-mailbox").get.recordsIterator.next().level should be(timings.approximateTimeInMailbox +- 10.millis.toNanos)
+      val timeInMailboxDistribution = routerTimeInMailbox.refine("path" -> "RouterMetricsSpec/user/measuring-time-in-mailbox-in-balancing-pool-router").distribution()
+      timeInMailboxDistribution.count should be(1L)
+      timeInMailboxDistribution.buckets.head.frequency should be(1L)
+      timeInMailboxDistribution.buckets.head.value should be(timings.approximateTimeInMailbox +- 10.millis.toNanos)
     }
-
-    /*
-    "record the time-in-mailbox for group routers" in new RouterMetricsFixtures {
-      val timingsListener = TestProbe()
-      val router = createTestGroupRouter("measuring-time-in-mailbox-in-group-router")
-
-      router.tell(RouterTrackTimings(sleep = Some(1 second)), timingsListener.ref)
-      val timings = timingsListener.expectMsgType[RouterTrackedTimings]
-      val routerSnapshot = collectMetricsOf("user/measuring-time-in-mailbox-in-group-router").get
-
-      routerSnapshot.histogram("time-in-mailbox").get.numberOfMeasurements should be(1L)
-      routerSnapshot.histogram("time-in-mailbox").get.recordsIterator.next().count should be(1L)
-      routerSnapshot.histogram("time-in-mailbox").get.recordsIterator.next().level should be(timings.approximateTimeInMailbox +- 10.millis.toNanos)
-    }
-*/
 
     "clean up the associated recorder when the pool router is stopped" in new RouterMetricsFixtures {
       val trackedRouter = createTestPoolRouter("stop-in-pool-router")
-      val firstRecorder = routerMetricsRecorderOf("user/stop-in-pool-router").get
+      routerProcessingTime.valuesForTag("path") should contain("RouterMetricsSpec/user/stop-in-pool-router")
 
       // Killing the router should remove it's RouterMetrics and registering again bellow should create a new one.
       val deathWatcher = TestProbe()
@@ -178,46 +122,22 @@ class RouterMetricsSpec extends BaseKamonSpec("router-metrics-spec") {
       trackedRouter ! PoisonPill
       deathWatcher.expectTerminated(trackedRouter)
 
-      routerMetricsRecorderOf("user/stop-in-pool-router") shouldBe empty
+      routerProcessingTime.valuesForTag("path") shouldNot contain("RouterMetricsSpec/user/stop-in-pool-router")
     }
-
-    /*    "clean up the associated recorder when the group router is stopped" in new RouterMetricsFixtures {
-      val trackedRouter = createTestPoolRouter("stop-in-group-router")
-      val firstRecorder = routerMetricsRecorderOf("user/stop-in-group-router").get
-
-      // Killing the router should remove it's RouterMetrics and registering again bellow should create a new one.
-      val deathWatcher = TestProbe()
-      deathWatcher.watch(trackedRouter)
-      trackedRouter ! PoisonPill
-      deathWatcher.expectTerminated(trackedRouter)
-
-      routerMetricsRecorderOf("user/stop-in-group-router") shouldBe empty
-    }*/
   }
+
+  override implicit def patienceConfig: PatienceConfig = PatienceConfig(timeout = 5 seconds, interval = 5 milliseconds)
 
   override protected def afterAll(): Unit = shutdown()
 
+
   trait RouterMetricsFixtures {
-    val collectionContext = new CollectionContext {
-      val buffer: LongBuffer = LongBuffer.allocate(10000)
-    }
-
-    def routerMetricsRecorderOf(routerName: String): Option[RouterMetrics] =
-      Kamon.metrics.find(system.name + "/" + routerName, RouterMetrics.category).map(_.asInstanceOf[RouterMetrics])
-
-    def collectMetricsOf(routerName: String): Option[EntitySnapshot] = {
-      Thread.sleep(5) // Just in case the test advances a bit faster than the actor being tested.
-      routerMetricsRecorderOf(routerName).map(_.collect(collectionContext))
-    }
-
-    def createTestGroupRouter(routerName: String): ActorRef = {
+    def createTestGroupRouter(routerName: String, resetState: Boolean = false): ActorRef = {
       val routees = Vector.fill(5) {
         system.actorOf(Props[RouterMetricsTestActor])
       }
 
       val group = system.actorOf(RoundRobinGroup(routees.map(_.path.toStringWithoutAddress)).props(), routerName)
-
-      //val router = system.actorOf(RoundRobinPool(5).props(Props[RouterMetricsTestActor]), routerName)
       val initialiseListener = TestProbe()
 
       // Ensure that the router has been created before returning.
@@ -225,12 +145,17 @@ class RouterMetricsSpec extends BaseKamonSpec("router-metrics-spec") {
       initialiseListener.expectMsg(Pong)
 
       // Cleanup all the metric recording instruments:
-      collectMetricsOf("user/" + routerName)
+      if(resetState) {
+        routerRoutingTime.refine("path" -> s"RouterMetricsSpec/user/$routerName").distribution(resetState = true)
+        routerTimeInMailbox.refine("path" -> s"RouterMetricsSpec/user/$routerName").distribution(resetState = true)
+        routerProcessingTime.refine("path" -> s"RouterMetricsSpec/user/$routerName").distribution(resetState = true)
+        routerErrors.refine("path" -> s"RouterMetricsSpec/user/$routerName").value(resetState = true)
+      }
 
       group
     }
 
-    def createTestPoolRouter(routerName: String): ActorRef = {
+    def createTestPoolRouter(routerName: String, resetState: Boolean = false): ActorRef = {
       val router = system.actorOf(RoundRobinPool(5).props(Props[RouterMetricsTestActor]), routerName)
       val initialiseListener = TestProbe()
 
@@ -239,12 +164,18 @@ class RouterMetricsSpec extends BaseKamonSpec("router-metrics-spec") {
       initialiseListener.expectMsg(Pong)
 
       // Cleanup all the metric recording instruments:
-      collectMetricsOf("user/" + routerName)
+      if(resetState) {
+        routerRoutingTime.refine("path" -> s"RouterMetricsSpec/user/$routerName").distribution(resetState = true)
+        routerTimeInMailbox.refine("path" -> s"RouterMetricsSpec/user/$routerName").distribution(resetState = true)
+        routerProcessingTime.refine("path" -> s"RouterMetricsSpec/user/$routerName").distribution(resetState = true)
+        routerErrors.refine("path" -> s"RouterMetricsSpec/user/$routerName").value(resetState = true)
+      }
+
 
       router
     }
 
-    def createTestBalancingPoolRouter(routerName: String): ActorRef = {
+    def createTestBalancingPoolRouter(routerName: String, resetState: Boolean = false): ActorRef = {
       val router = system.actorOf(BalancingPool(5).props(Props[RouterMetricsTestActor]), routerName)
       val initialiseListener = TestProbe()
 
@@ -253,9 +184,16 @@ class RouterMetricsSpec extends BaseKamonSpec("router-metrics-spec") {
       initialiseListener.expectMsg(Pong)
 
       // Cleanup all the metric recording instruments:
-      collectMetricsOf("user/" + routerName)
+      if(resetState) {
+        routerRoutingTime.refine("path" -> s"RouterMetricsSpec/user/$routerName").distribution(resetState = true)
+        routerTimeInMailbox.refine("path" -> s"RouterMetricsSpec/user/$routerName").distribution(resetState = true)
+        routerProcessingTime.refine("path" -> s"RouterMetricsSpec/user/$routerName").distribution(resetState = true)
+        routerErrors.refine("path" -> s"RouterMetricsSpec/user/$routerName").value(resetState = true)
+      }
+
 
       router
     }
   }
 }
+

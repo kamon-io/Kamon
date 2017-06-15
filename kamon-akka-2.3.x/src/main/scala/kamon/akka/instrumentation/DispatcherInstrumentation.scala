@@ -17,22 +17,25 @@
 package akka.kamon.instrumentation
 
 import java.lang.reflect.Method
-import java.util.concurrent.{ ExecutorService, ThreadPoolExecutor }
+import java.util.concurrent.{ExecutorService, ForkJoinPool}
 
-import akka.actor.{ ActorContext, Props, ActorSystem, ActorSystemImpl }
+import akka.actor.{ActorContext, ActorSystem, ActorSystemImpl, Props}
+import akka.dispatch.ForkJoinExecutorConfigurator.AkkaForkJoinPool
 import akka.dispatch._
 import akka.kamon.instrumentation.LookupDataAware.LookupData
 import kamon.Kamon
-import kamon.util.executors.{ ForkJoinPoolMetrics, ThreadPoolExecutorMetrics }
-
-import kamon.metric.{ MetricsModule, Entity }
+import kamon.akka.Akka
+import kamon.executors.Executors
+import kamon.util.Registration
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
 
-import scala.concurrent.forkjoin.ForkJoinPool
+import scala.collection.concurrent.TrieMap
+
 
 @Aspect
 class DispatcherInstrumentation {
+  import DispatcherInstrumentation.registeredDispatchers
 
   @Pointcut("execution(* akka.actor.ActorSystemImpl.start(..)) && this(system)")
   def actorSystemInitialization(system: ActorSystemImpl): Unit = {}
@@ -70,22 +73,14 @@ class DispatcherInstrumentation {
     }
   }
 
-  private def registerDispatcher(dispatcherName: String, executorService: ExecutorService, system: ActorSystem): Unit =
-    executorService match {
-      case fjp: ForkJoinPool ⇒
-        val dispatcherEntity = Entity(system.name + "/" + dispatcherName, AkkaDispatcherMetrics.Category, tags = Map("dispatcher-type" -> "fork-join-pool"))
+  private def registerDispatcher(dispatcherName: String, executorService: ExecutorService, system: ActorSystem): Unit = {
+    if(Kamon.filter(Akka.DispatcherFilterName, dispatcherName)) {
+      val additionalTags = Map("actor-system" -> system.name)
+      val dispatcherRegistration = Executors.register(dispatcherName, additionalTags, executorService)
 
-        if (Kamon.metrics.shouldTrack(dispatcherEntity))
-          Kamon.metrics.entity(ForkJoinPoolMetrics.factory(fjp, AkkaDispatcherMetrics.Category), dispatcherEntity)
-
-      case tpe: ThreadPoolExecutor ⇒
-        val dispatcherEntity = Entity(system.name + "/" + dispatcherName, AkkaDispatcherMetrics.Category, tags = Map("dispatcher-type" -> "thread-pool-executor"))
-
-        if (Kamon.metrics.shouldTrack(dispatcherEntity))
-          Kamon.metrics.entity(ThreadPoolExecutorMetrics.factory(tpe, AkkaDispatcherMetrics.Category), dispatcherEntity)
-
-      case others ⇒ // Currently not interested in other kinds of dispatchers.
+      registeredDispatchers.put(dispatcherName, dispatcherRegistration)
     }
+  }
 
   @Pointcut("execution(* akka.dispatch.Dispatchers.lookup(..)) && this(dispatchers) && args(dispatcherName)")
   def dispatchersLookup(dispatchers: ActorSystemAware, dispatcherName: String) = {}
@@ -139,18 +134,9 @@ class DispatcherInstrumentation {
   def afterLazyExecutorShutdown(lazyExecutor: LookupDataAware): Unit = {
     import lazyExecutor.lookupData
 
-    if (lookupData.actorSystem != null)
-      lazyExecutor.asInstanceOf[ExecutorServiceDelegate].executor match {
-        case fjp: ForkJoinPool ⇒
-          lookupData.metrics.removeEntity(Entity(lookupData.actorSystem.name + "/" + lookupData.dispatcherName,
-            AkkaDispatcherMetrics.Category, tags = Map("dispatcher-type" -> "fork-join-pool")))
-
-        case tpe: ThreadPoolExecutor ⇒
-          lookupData.metrics.removeEntity(Entity(lookupData.actorSystem.name + "/" + lookupData.dispatcherName,
-            AkkaDispatcherMetrics.Category, tags = Map("dispatcher-type" -> "thread-pool-executor")))
-
-        case other ⇒ // nothing to remove.
-      }
+    if (lookupData.actorSystem != null) {
+      registeredDispatchers.get(lookupData.dispatcherName).foreach(_.cancel())
+    }
   }
 
   @Pointcut("execution(* akka.routing.BalancingPool.newRoutee(..)) && args(props, context)")
@@ -165,6 +151,10 @@ class DispatcherInstrumentation {
       pjp.proceed()
     }
   }
+}
+
+object DispatcherInstrumentation {
+  private val registeredDispatchers = TrieMap.empty[String, Registration]
 }
 
 @Aspect
@@ -193,7 +183,7 @@ trait LookupDataAware {
 }
 
 object LookupDataAware {
-  case class LookupData(dispatcherName: String, actorSystem: ActorSystem, metrics: MetricsModule = Kamon.metrics)
+  case class LookupData(dispatcherName: String, actorSystem: ActorSystem)
 
   private val _currentDispatcherLookupData = new ThreadLocal[LookupData]
 
@@ -208,8 +198,4 @@ object LookupDataAware {
 
     result
   }
-}
-
-object AkkaDispatcherMetrics {
-  val Category = "akka-dispatcher"
 }

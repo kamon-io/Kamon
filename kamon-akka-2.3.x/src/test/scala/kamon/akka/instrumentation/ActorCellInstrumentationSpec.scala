@@ -15,90 +15,88 @@
  * ========================================================== */
 package kamon.instrumentation.akka
 
-import akka.actor.{ Actor, Props }
-import akka.pattern.{ ask, pipe }
+import akka.actor.{Actor, ActorSystem, Props}
+import akka.pattern.{ask, pipe}
 import akka.routing._
+import akka.testkit.{ImplicitSender, TestKit}
 import akka.util.Timeout
+import kamon.Kamon
 import kamon.testkit.BaseKamonSpec
-import kamon.trace.Tracer
+import org.scalatest.{BeforeAndAfterAll, WordSpecLike}
 
 import scala.concurrent.duration._
 
-class ActorCellInstrumentationSpec extends BaseKamonSpec("actor-cell-instrumentation-spec") {
+class ActorCellInstrumentationSpec extends TestKit(ActorSystem("ActorCellInstrumentationSpec")) with WordSpecLike
+    with BaseKamonSpec with BeforeAndAfterAll with ImplicitSender {
   implicit lazy val executionContext = system.dispatcher
 
   "the message passing instrumentation" should {
-    "propagate the TraceContext using bang" in new EchoActorFixture {
-      val testTraceContext = Tracer.withContext(newContext("bang-reply")) {
-        ctxEchoActor ! "test"
-        Tracer.currentContext
+    "capture and propagate the active span using bang" in new EchoActorFixture {
+      Kamon.withSpan(spanWithBaggage(key = "propagate", value = "propagate-with-bang")) {
+        baggageEchoActor ! "test"
       }
 
-      expectMsg(testTraceContext)
+      expectMsg("propagate-with-bang")
     }
 
-    "propagate the TraceContext using tell" in new EchoActorFixture {
-      for (i ← 1 to 10000) {
-        val ta = system.actorOf(Props[TraceContextEcho])
-        val testTraceContext = Tracer.withContext(newContext("tell-reply", i.toString)) {
+    "capture and propagate the active span for messages sent when the target actor might be a repointable ref" in {
+      for (_ ← 1 to 10000) {
+        val ta = system.actorOf(Props[PropagateBaggageEcho])
+        Kamon.withSpan(spanWithBaggage(key = "propagate", value = "propagate-with-tell")) {
           ta.tell("test", testActor)
-          Tracer.currentContext
         }
 
-        expectMsg(testTraceContext)
+        expectMsg("propagate-with-tell")
         system.stop(ta)
       }
     }
 
-    "propagate the TraceContext using ask" in new EchoActorFixture {
+    "propagate the active span when using the ask pattern" in new EchoActorFixture {
       implicit val timeout = Timeout(1 seconds)
-      val testTraceContext = Tracer.withContext(newContext("ask-reply")) {
+      Kamon.withSpan(spanWithBaggage(key = "propagate", value = "propagate-with-ask")) {
         // The pipe pattern use Futures internally, so FutureTracing test should cover the underpinnings of it.
-        (ctxEchoActor ? "test") pipeTo (testActor)
-        Tracer.currentContext
+        (baggageEchoActor ? "test") pipeTo (testActor)
       }
 
-      expectMsg(testTraceContext)
+      expectMsg("propagate-with-ask")
     }
 
+
     "propagate the TraceContext to actors behind a simple router" in new EchoSimpleRouterFixture {
-      val testTraceContext = Tracer.withContext(newContext("router-reply")) {
+      Kamon.withSpan(spanWithBaggage(key = "propagate", value = "propagate-with-router")) {
         router.route("test", testActor)
-        Tracer.currentContext
       }
 
-      expectMsg(testTraceContext)
+      expectMsg("propagate-with-router")
     }
 
     "propagate the TraceContext to actors behind a pool router" in new EchoPoolRouterFixture {
-      val testTraceContext = Tracer.withContext(newContext("router-reply")) {
+      Kamon.withSpan(spanWithBaggage(key = "propagate", value = "propagate-with-pool")) {
         pool ! "test"
-        Tracer.currentContext
       }
 
-      expectMsg(testTraceContext)
+      expectMsg("propagate-with-pool")
     }
 
     "propagate the TraceContext to actors behind a group router" in new EchoGroupRouterFixture {
-      val testTraceContext = Tracer.withContext(newContext("router-reply")) {
+      Kamon.withSpan(spanWithBaggage(key = "propagate", value = "propagate-with-group")) {
         group ! "test"
-        Tracer.currentContext
       }
 
-      expectMsg(testTraceContext)
+      expectMsg("propagate-with-group")
     }
   }
 
   override protected def afterAll(): Unit = shutdown()
 
   trait EchoActorFixture {
-    val ctxEchoActor = system.actorOf(Props[TraceContextEcho])
+    val baggageEchoActor = system.actorOf(Props[PropagateBaggageEcho])
   }
 
   trait EchoSimpleRouterFixture {
     val router = {
       val routees = Vector.fill(5) {
-        val r = system.actorOf(Props[TraceContextEcho])
+        val r = system.actorOf(Props[PropagateBaggageEcho])
         ActorRefRoutee(r)
       }
       Router(RoundRobinRoutingLogic(), routees)
@@ -106,22 +104,22 @@ class ActorCellInstrumentationSpec extends BaseKamonSpec("actor-cell-instrumenta
   }
 
   trait EchoPoolRouterFixture {
-    val pool = system.actorOf(RoundRobinPool(nrOfInstances = 5).props(Props[TraceContextEcho]), "pool-router")
+    val pool = system.actorOf(RoundRobinPool(nrOfInstances = 5).props(Props[PropagateBaggageEcho]), "pool-router")
   }
 
   trait EchoGroupRouterFixture {
     val routees = Vector.fill(5) {
-      system.actorOf(Props[TraceContextEcho])
+      system.actorOf(Props[PropagateBaggageEcho])
     }
 
     val group = system.actorOf(RoundRobinGroup(routees.map(_.path.toStringWithoutAddress)).props(), "group-router")
   }
 }
 
-class TraceContextEcho extends Actor {
+class PropagateBaggageEcho extends Actor {
   def receive = {
-    case msg: String ⇒
-      sender ! Tracer.currentContext
+    case _: String ⇒
+      sender ! Kamon.fromActiveSpan(_.getBaggageItem("propagate")).getOrElse("MissingActiveSpan")
   }
 }
 

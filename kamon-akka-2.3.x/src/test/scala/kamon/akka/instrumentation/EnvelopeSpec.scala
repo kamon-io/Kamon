@@ -16,20 +16,24 @@
 
 package kamon.instrumentation.akka
 
-import akka.actor.{Actor, ExtendedActorSystem, Props}
-import akka.dispatch.Envelope
-import akka.kamon.instrumentation.{EnvelopeContext, InstrumentedEnvelope}
-import kamon.testkit.BaseKamonSpec
-import kamon.trace.Tracer
-import kamon.util.RelativeNanoTimestamp
 
-class EnvelopeSpec extends BaseKamonSpec("envelope-spec") {
+import akka.actor.{ActorSystem, ExtendedActorSystem, Props}
+import akka.dispatch.Envelope
+import akka.kamon.instrumentation.{InstrumentedEnvelope, TimestampedContinuation}
+import akka.testkit.{ImplicitSender, TestKit}
+import kamon.Kamon
+import kamon.testkit.BaseKamonSpec
+import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
+
+class EnvelopeSpec extends TestKit(ActorSystem("EnvelopeSpec")) with WordSpecLike with Matchers with BaseKamonSpec
+    with BeforeAndAfterAll with ImplicitSender {
+
   "EnvelopeInstrumentation" should {
     "mixin EnvelopeContext" in {
       val actorRef = system.actorOf(Props[NoReply])
       val env = Envelope("msg", actorRef, system).asInstanceOf[Object]
       env match {
-        case e: Envelope with InstrumentedEnvelope => e.setEnvelopeContext(EnvelopeContext(RelativeNanoTimestamp.now, Tracer.currentContext))
+        case e: Envelope with InstrumentedEnvelope => e.setTimestampedContinuation(TimestampedContinuation(System.nanoTime(), Kamon.activeSpanContinuation()))
         case _ => fail("InstrumentedEnvelope is not mixed in")
       }
       env match {
@@ -44,7 +48,7 @@ class EnvelopeSpec extends BaseKamonSpec("envelope-spec") {
             val obj = ois.readObject()
             ois.close()
             obj match {
-              case e: Envelope with InstrumentedEnvelope => e.envelopeContext() should not be null
+              case e: Envelope with InstrumentedEnvelope => e.timestampedContinuation() should not be null
               case _ => fail("InstrumentedEnvelope is not mixed in")
             }
           }

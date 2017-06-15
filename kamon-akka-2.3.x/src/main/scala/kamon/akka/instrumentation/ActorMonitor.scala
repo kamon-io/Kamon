@@ -1,17 +1,15 @@
 package akka.kamon.instrumentation
 
-import akka.actor.{ Cell, ActorRef, ActorSystem }
-import akka.kamon.instrumentation.ActorMonitors.{ TrackedRoutee, TrackedActor }
+import akka.actor.{ActorRef, ActorSystem, Cell}
+import akka.kamon.instrumentation.ActorMonitors.{TrackedActor, TrackedRoutee}
 import kamon.Kamon
-import kamon.akka.{ RouterMetrics, ActorMetrics, ActorGroupConfig, ActorGroupMetrics }
-import kamon.metric.Entity
-import kamon.trace.{ EmptyTraceContext, Tracer }
-import kamon.util.RelativeNanoTimestamp
+import kamon.akka.Metrics
+import kamon.akka.Metrics.{ActorGroupMetrics, ActorMetrics, RouterMetrics}
 import org.aspectj.lang.ProceedingJoinPoint
 
 trait ActorMonitor {
-  def captureEnvelopeContext(): EnvelopeContext
-  def processMessage(pjp: ProceedingJoinPoint, envelopeContext: EnvelopeContext): AnyRef
+  def captureEnvelopeContext(): TimestampedContinuation
+  def processMessage(pjp: ProceedingJoinPoint, envelopeContext: TimestampedContinuation): AnyRef
   def processFailure(failure: Throwable): Unit
   def cleanup(): Unit
 }
@@ -33,21 +31,21 @@ object ActorMonitor {
 
   def createRegularActorMonitor(cellInfo: CellInfo): ActorMonitor = {
     if (cellInfo.isTracked || !cellInfo.trackingGroups.isEmpty) {
-      val actorMetrics = if (cellInfo.isTracked) Some(Kamon.metrics.entity(ActorMetrics, cellInfo.entity)) else None
-      new TrackedActor(cellInfo.entity, actorMetrics, trackingGroupMetrics(cellInfo), cellInfo.actorCellCreation)
+      val actorMetrics = if (cellInfo.isTracked) Some(Metrics.forActor(cellInfo.path)) else None
+      new TrackedActor(actorMetrics, trackingGroupMetrics(cellInfo), cellInfo.actorCellCreation)
     } else {
       ActorMonitors.ContextPropagationOnly
     }
   }
 
   def createRouteeMonitor(cellInfo: CellInfo): ActorMonitor = {
-    def routerMetrics = Kamon.metrics.entity(RouterMetrics, cellInfo.entity)
-    new TrackedRoutee(cellInfo.entity, routerMetrics, trackingGroupMetrics(cellInfo), cellInfo.actorCellCreation)
+    val routerMetrics = Metrics.forRouter(cellInfo.path)
+    new TrackedRoutee(routerMetrics, trackingGroupMetrics(cellInfo), cellInfo.actorCellCreation)
   }
 
-  private def trackingGroupMetrics(cellInfo: CellInfo): List[ActorGroupMetrics] = {
+  private def trackingGroupMetrics(cellInfo: CellInfo): Seq[ActorGroupMetrics] = {
     cellInfo.trackingGroups.map { groupName =>
-      Kamon.metrics.entity(ActorGroupMetrics, Entity(groupName, ActorGroupMetrics.category))
+      Metrics.forGroup(groupName)
     }
   }
 }
@@ -55,11 +53,11 @@ object ActorMonitor {
 object ActorMonitors {
 
   val ContextPropagationOnly = new ActorMonitor {
-    def captureEnvelopeContext(): EnvelopeContext =
-      EnvelopeContext(RelativeNanoTimestamp.now, Tracer.currentContext)
+    def captureEnvelopeContext(): TimestampedContinuation =
+      TimestampedContinuation(0, Kamon.activeSpanContinuation())
 
-    def processMessage(pjp: ProceedingJoinPoint, envelopeContext: EnvelopeContext): AnyRef = {
-      Tracer.withContext(envelopeContext.context) {
+    def processMessage(pjp: ProceedingJoinPoint, envelopeContext: TimestampedContinuation): AnyRef = {
+      Kamon.withContinuation(envelopeContext.continuation) {
         pjp.proceed()
       }
     }
@@ -69,33 +67,32 @@ object ActorMonitors {
 
   }
 
-  class TrackedActor(val entity: Entity, actorMetrics: Option[ActorMetrics],
-      groupMetrics: List[ActorGroupMetrics], actorCellCreation: Boolean)
-      extends GroupMetricsTrackingActor(entity, groupMetrics, actorCellCreation) {
+  class TrackedActor(actorMetrics: Option[ActorMetrics], groupMetrics: Seq[ActorGroupMetrics], actorCellCreation: Boolean)
+      extends GroupMetricsTrackingActor(groupMetrics, actorCellCreation) {
 
-    override def captureEnvelopeContext(): EnvelopeContext = {
+    override def captureEnvelopeContext(): TimestampedContinuation = {
       actorMetrics.foreach { am =>
         am.mailboxSize.increment()
       }
       super.captureEnvelopeContext()
     }
 
-    def processMessage(pjp: ProceedingJoinPoint, envelopeContext: EnvelopeContext): AnyRef = {
-      val timestampBeforeProcessing = RelativeNanoTimestamp.now
+    def processMessage(pjp: ProceedingJoinPoint, envelopeContext: TimestampedContinuation): AnyRef = {
+      val timestampBeforeProcessing = System.nanoTime()
 
       try {
-        Tracer.withContext(envelopeContext.context) {
+        Kamon.withContinuation(envelopeContext.continuation) {
           pjp.proceed()
         }
 
       } finally {
-        val timestampAfterProcessing = RelativeNanoTimestamp.now
+        val timestampAfterProcessing = System.nanoTime()
         val timeInMailbox = timestampBeforeProcessing - envelopeContext.nanoTime
         val processingTime = timestampAfterProcessing - timestampBeforeProcessing
 
         actorMetrics.foreach { am =>
-          am.processingTime.record(processingTime.nanos)
-          am.timeInMailbox.record(timeInMailbox.nanos)
+          am.processingTime.record(processingTime)
+          am.timeInMailbox.record(timeInMailbox)
           am.mailboxSize.decrement()
         }
         recordProcessMetrics(processingTime, timeInMailbox)
@@ -108,27 +105,31 @@ object ActorMonitors {
       }
       super.processFailure(failure: Throwable)
     }
+
+    override def cleanup(): Unit = {
+      super.cleanup()
+      actorMetrics.foreach(_.cleanup())
+    }
   }
 
-  class TrackedRoutee(val entity: Entity, routerMetrics: RouterMetrics,
-      groupMetrics: List[ActorGroupMetrics], actorCellCreation: Boolean)
-      extends GroupMetricsTrackingActor(entity, groupMetrics, actorCellCreation) {
+  class TrackedRoutee(routerMetrics: RouterMetrics, groupMetrics: Seq[ActorGroupMetrics], actorCellCreation: Boolean)
+      extends GroupMetricsTrackingActor(groupMetrics, actorCellCreation) {
 
-    def processMessage(pjp: ProceedingJoinPoint, envelopeContext: EnvelopeContext): AnyRef = {
-      val timestampBeforeProcessing = RelativeNanoTimestamp.now
+    def processMessage(pjp: ProceedingJoinPoint, envelopeContext: TimestampedContinuation): AnyRef = {
+      val timestampBeforeProcessing = System.nanoTime()
 
       try {
-        Tracer.withContext(envelopeContext.context) {
+        Kamon.withContinuation(envelopeContext.continuation) {
           pjp.proceed()
         }
 
       } finally {
-        val timestampAfterProcessing = RelativeNanoTimestamp.now
+        val timestampAfterProcessing = System.nanoTime()
         val timeInMailbox = timestampBeforeProcessing - envelopeContext.nanoTime
         val processingTime = timestampAfterProcessing - timestampBeforeProcessing
 
-        routerMetrics.processingTime.record(processingTime.nanos)
-        routerMetrics.timeInMailbox.record(timeInMailbox.nanos)
+        routerMetrics.processingTime.record(processingTime)
+        routerMetrics.timeInMailbox.record(timeInMailbox)
         recordProcessMetrics(processingTime, timeInMailbox)
       }
     }
@@ -137,22 +138,26 @@ object ActorMonitors {
       routerMetrics.errors.increment()
       super.processFailure(failure)
     }
+
+    override def cleanup(): Unit = {
+      super.cleanup()
+      routerMetrics.cleanup()
+    }
   }
 
-  abstract class GroupMetricsTrackingActor(entity: Entity,
-      groupMetrics: List[ActorGroupMetrics], actorCellCreation: Boolean) extends ActorMonitor {
-
+  abstract class GroupMetricsTrackingActor(groupMetrics: Seq[ActorGroupMetrics], actorCellCreation: Boolean) extends ActorMonitor {
     if (actorCellCreation) {
       groupMetrics.foreach { gm =>
-        gm.actors.increment()
+        gm.members.increment()
       }
     }
 
-    def captureEnvelopeContext(): EnvelopeContext = {
+    def captureEnvelopeContext(): TimestampedContinuation = {
       groupMetrics.foreach { gm =>
         gm.mailboxSize.increment()
       }
-      EnvelopeContext(RelativeNanoTimestamp.now, Tracer.currentContext)
+
+      TimestampedContinuation(System.nanoTime(), Kamon.activeSpanContinuation())
     }
 
     def processFailure(failure: Throwable): Unit = {
@@ -161,19 +166,18 @@ object ActorMonitors {
       }
     }
 
-    protected def recordProcessMetrics(processingTime: RelativeNanoTimestamp, timeInMailbox: RelativeNanoTimestamp): Unit = {
+    protected def recordProcessMetrics(processingTime: Long, timeInMailbox: Long): Unit = {
       groupMetrics.foreach { gm =>
-        gm.processingTime.record(processingTime.nanos)
-        gm.timeInMailbox.record(timeInMailbox.nanos)
+        gm.processingTime.record(processingTime)
+        gm.timeInMailbox.record(timeInMailbox)
         gm.mailboxSize.decrement()
       }
     }
 
     def cleanup(): Unit = {
-      Kamon.metrics.removeEntity(entity)
       if (actorCellCreation) {
         groupMetrics.foreach { gm =>
-          gm.actors.decrement()
+          gm.members.decrement()
         }
       }
     }

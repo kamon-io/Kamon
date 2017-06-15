@@ -17,22 +17,23 @@
 package akka.kamon.instrumentation
 
 import akka.util.Timeout
-import kamon.akka.AkkaExtension
-import kamon.akka.AskPatternTimeoutWarningSettings.{ Heavyweight, Lightweight, Off }
-import akka.actor.{ InternalActorRef, ActorRef }
+import kamon.akka.Akka
+import kamon.akka.AskPatternTimeoutWarningSettings.{Heavyweight, Lightweight, Off}
+import akka.actor.{ActorRef, InternalActorRef}
 import akka.pattern.AskTimeoutException
-import kamon.trace.Tracer
-import kamon.util.SameThreadExecutionContext
-import kamon.util.logger.LazyLogger
+import kamon.Kamon
+import kamon.util.CallingThreadExecutionContext
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
 import org.aspectj.lang.reflect.SourceLocation
+import org.slf4j.LoggerFactory
+
 import scala.concurrent.Future
 import scala.compat.Platform.EOL
 
 @Aspect
 class AskPatternInstrumentation {
-  private val log = LazyLogger(getClass)
+  private val logger = LoggerFactory.getLogger(classOf[AskPatternInstrumentation])
 
   import AskPatternInstrumentation._
 
@@ -43,10 +44,10 @@ class AskPatternInstrumentation {
   def hookAskTimeoutWarning(pjp: ProceedingJoinPoint, actor: ActorRef, timeout: Timeout): AnyRef =
     actor match {
       // the AskPattern will only work for InternalActorRef's with these conditions.
-      case ref: InternalActorRef if !ref.isTerminated && timeout.duration.length > 0 && Tracer.currentContext.nonEmpty ⇒
+      case ref: InternalActorRef if !ref.isTerminated && timeout.duration.length > 0 && Kamon.activeSpan() != null ⇒
         val future = pjp.proceed().asInstanceOf[Future[AnyRef]]
 
-        AkkaExtension.askPatternTimeoutWarning match {
+        Akka.askPatternTimeoutWarning match {
           case Off         ⇒
           case Lightweight ⇒ hookLightweightWarning(future, pjp.getSourceLocation, actor)
           case Heavyweight ⇒ hookHeavyweightWarning(future, new StackTraceCaptureException, actor)
@@ -69,17 +70,17 @@ class AskPatternInstrumentation {
       .map(location ⇒ s"${location.getFileName}:${location.getLine}")
       .getOrElse("<unknown position>")
 
-    future.onFailure(ifAskTimeoutException {
-      log.warn(s"Timeout triggered for ask pattern to actor [${actor.path.name}] at [$locationString]")
-    })(SameThreadExecutionContext)
+    future.failed.foreach(ifAskTimeoutException {
+      logger.warn(s"Timeout triggered for ask pattern to actor [${actor.path.name}] at [$locationString]")
+    })(CallingThreadExecutionContext)
   }
 
   def hookHeavyweightWarning(future: Future[AnyRef], captureException: StackTraceCaptureException, actor: ActorRef): Unit = {
     val locationString = captureException.getStackTrace.drop(3).mkString("", EOL, EOL)
 
-    future.onFailure(ifAskTimeoutException {
-      log.warn(s"Timeout triggered for ask pattern to actor [${actor.path.name}] at [$locationString]")
-    })(SameThreadExecutionContext)
+    future.failed.foreach(ifAskTimeoutException {
+      logger.warn(s"Timeout triggered for ask pattern to actor [${actor.path.name}] at [$locationString]")
+    })(CallingThreadExecutionContext)
   }
 }
 
