@@ -34,6 +34,21 @@ object Executors {
   private val JavaForkJoinPool = classOf[JavaForkJoinPool]
   private val ScalaForkJoinPool = classOf[ScalaForkJoinPool]
 
+  /**
+    *   Extension trait for externally instrumented ExecutorService instances. Meant to be used when a ExecutorService
+    *   is not assignable to either ThreadPoolExecutor or Scala/Java ForkJoinPool.
+    */
+  trait ExecutorSampler {
+    /**
+      *   Collects all metrics from the ExecutorService and records them in Kamon's instruments.
+      */
+    def sample(): Unit
+
+    /**
+      *   Cleanup any state that is no longer required after the ExecutorService is no longer being monitored.
+      */
+    def cleanup(): Unit
+  }
 
   def register(name: String, executor: ExecutorService): Registration =
     register(name, Map.empty[String, String], executor)
@@ -42,13 +57,29 @@ object Executors {
     case executor: ExecutorService if isAssignableTo(executor, DelegatedExecutor)     => register(name, tags, unwrap(executor))
     case executor: ExecutorService if isAssignableTo(executor, FinalizableDelegated)  => register(name, tags, unwrap(executor))
     case executor: ExecutorService if isAssignableTo(executor, DelegateScheduled)     => register(name, tags, unwrap(executor))
-    case executor: ExecutorService if isAssignableTo(executor, JavaForkJoinPool)      => registerJavaForkJoinPool(name, tags, executor.asInstanceOf[JavaForkJoinPool])
-    case executor: ExecutorService if isAssignableTo(executor, ScalaForkJoinPool)     => registerScalaForkJoinPool(name, tags, executor.asInstanceOf[ScalaForkJoinPool])
-    case threadPool: ThreadPoolExecutor                                               => registerThreadPool(name, tags, threadPool)
+    case executor: ExecutorService if isAssignableTo(executor, JavaForkJoinPool)      => register(name, tags, javaForkJoinPoolSampler(name, tags, executor.asInstanceOf[JavaForkJoinPool]))
+    case executor: ExecutorService if isAssignableTo(executor, ScalaForkJoinPool)     => register(name, tags, scalaForkJoinPoolSampler(name, tags, executor.asInstanceOf[ScalaForkJoinPool]))
+    case threadPool: ThreadPoolExecutor                                               => register(name, tags, threadPoolSampler(name, tags, threadPool))
 
     case anyOther                       =>
       logger.error("Cannot register unsupported executor service [{}]", anyOther)
       fakeRegistration
+  }
+
+  def register(name: String, tags: Tags, sampler: ExecutorSampler): Registration = {
+    val samplingInterval = Kamon.config().getDuration("kamon.executors.sample-interval")
+    val scheduledFuture = Kamon.scheduler().schedule(sampleTask(sampler), samplingInterval.toMillis, TimeUnit.MILLISECONDS)
+
+    new Registration {
+      override def cancel(): Boolean = {
+        Try {
+          scheduledFuture.cancel(false)
+          sampler.cleanup()
+        }.failed.map { ex =>
+          logger.error(s"Failed to cancel registration for executor [name=${name}, tags=${tags.prettyPrint}]", ex)
+        }.isFailure
+      }
+    }
   }
 
   private val fakeRegistration = new Registration {
@@ -58,73 +89,63 @@ object Executors {
   private def isAssignableTo(executor: ExecutorService, expectedClass: Class[_]): Boolean =
     expectedClass.isAssignableFrom(executor.getClass)
 
-  private def registerThreadPool(name: String, tags: Tags, pool: ThreadPoolExecutor): Registration = {
+  private def threadPoolSampler(name: String, tags: Tags, pool: ThreadPoolExecutor): ExecutorSampler = new ExecutorSampler {
     val poolMetrics = Metrics.forThreadPool(name, tags)
+    var lastSeenTaskCount = pool.getTaskCount
 
-    registerSampler(name, tags, new Runnable {
-      var lastSeenTaskCount = pool.getTaskCount
-
-      private def taskCount(): Long = synchronized {
-        val currentTaskCount = pool.getTaskCount
-        val diff = currentTaskCount - lastSeenTaskCount
-        lastSeenTaskCount = currentTaskCount
-        if(diff >= 0) diff else 0
-      }
-
-      override def run(): Unit = {
-        poolMetrics.corePoolSize.set(pool.getCorePoolSize)
-        poolMetrics.maxPoolSize.set(pool.getMaximumPoolSize)
-        poolMetrics.poolSize.record(pool.getPoolSize)
-        poolMetrics.activeThreads.record(pool.getActiveCount)
-        poolMetrics.processedTasks.increment(taskCount())
-      }
-    }, () => poolMetrics.cleanup())
-  }
-
-  private def registerJavaForkJoinPool(name: String, tags: Tags, pool: JavaForkJoinPool): Registration = {
-    val poolMetrics = Metrics.forForkJoinPool(name, tags)
-
-    registerSampler(name, tags, new Runnable {
-      override def run(): Unit = {
-        poolMetrics.parallelism.set(pool.getParallelism)
-        poolMetrics.activeThreads.record(pool.getActiveThreadCount)
-        poolMetrics.poolSize.record(pool.getPoolSize)
-        poolMetrics.queuedTasks.record(pool.getQueuedTaskCount)
-        poolMetrics.runningThreads.record(pool.getRunningThreadCount)
-        poolMetrics.submittedTasks.record(pool.getQueuedSubmissionCount)
-      }
-    }, () => poolMetrics.cleanup())
-  }
-
-  private def registerScalaForkJoinPool(name: String, tags: Tags, pool: ScalaForkJoinPool): Registration = {
-    val poolMetrics = Metrics.forForkJoinPool(name, tags)
-
-    registerSampler(name, tags, new Runnable {
-      override def run(): Unit = {
-        poolMetrics.parallelism.set(pool.getParallelism)
-        poolMetrics.activeThreads.record(pool.getActiveThreadCount)
-        poolMetrics.poolSize.record(pool.getPoolSize)
-        poolMetrics.queuedTasks.record(pool.getQueuedTaskCount)
-        poolMetrics.runningThreads.record(pool.getRunningThreadCount)
-        poolMetrics.submittedTasks.record(pool.getQueuedSubmissionCount)
-      }
-    }, () => poolMetrics.cleanup())
-  }
-
-  private def registerSampler(name: String, tags: Tags, samplingTask: Runnable, cancellationHook: () => Unit): Registration = {
-    val samplingInterval = Kamon.config().getDuration("kamon.executors.sample-interval")
-    val scheduledFuture = Kamon.scheduler().schedule(samplingTask, samplingInterval.toMillis, TimeUnit.MILLISECONDS)
-
-    new Registration {
-      override def cancel(): Boolean = {
-        Try {
-          scheduledFuture.cancel(false)
-          cancellationHook.apply()
-        }.failed.map { ex =>
-          logger.error(s"Failed to cancel registration for executor [name=${name}, tags=${tags.prettyPrint}]", ex)
-        }.isFailure
-      }
+    private def taskCount(): Long = synchronized {
+      val currentTaskCount = pool.getTaskCount
+      val diff = currentTaskCount - lastSeenTaskCount
+      lastSeenTaskCount = currentTaskCount
+      if(diff >= 0) diff else 0
     }
+
+    def sample(): Unit = {
+      poolMetrics.corePoolSize.set(pool.getCorePoolSize)
+      poolMetrics.maxPoolSize.set(pool.getMaximumPoolSize)
+      poolMetrics.poolSize.record(pool.getPoolSize)
+      poolMetrics.activeThreads.record(pool.getActiveCount)
+      poolMetrics.processedTasks.increment(taskCount())
+    }
+
+    def cleanup(): Unit =
+      poolMetrics.cleanup()
+  }
+
+  private def javaForkJoinPoolSampler(name: String, tags: Tags, pool: JavaForkJoinPool): ExecutorSampler = new ExecutorSampler {
+    val poolMetrics = Metrics.forForkJoinPool(name, tags)
+
+    def sample(): Unit = {
+      poolMetrics.parallelism.set(pool.getParallelism)
+      poolMetrics.activeThreads.record(pool.getActiveThreadCount)
+      poolMetrics.poolSize.record(pool.getPoolSize)
+      poolMetrics.queuedTasks.record(pool.getQueuedTaskCount)
+      poolMetrics.runningThreads.record(pool.getRunningThreadCount)
+      poolMetrics.submittedTasks.record(pool.getQueuedSubmissionCount)
+    }
+
+    def cleanup(): Unit =
+      poolMetrics.cleanup()
+  }
+
+  private def scalaForkJoinPoolSampler(name: String, tags: Tags, pool: ScalaForkJoinPool): ExecutorSampler = new ExecutorSampler {
+    val poolMetrics = Metrics.forForkJoinPool(name, tags)
+
+    def sample(): Unit = {
+        poolMetrics.parallelism.set(pool.getParallelism)
+        poolMetrics.activeThreads.record(pool.getActiveThreadCount)
+        poolMetrics.poolSize.record(pool.getPoolSize)
+        poolMetrics.queuedTasks.record(pool.getQueuedTaskCount)
+        poolMetrics.runningThreads.record(pool.getRunningThreadCount)
+        poolMetrics.submittedTasks.record(pool.getQueuedSubmissionCount)
+      }
+
+    def cleanup(): Unit =
+      poolMetrics.cleanup()
+  }
+
+  private def sampleTask(executorSampler: ExecutorSampler): Runnable = new Runnable {
+    override def run(): Unit = executorSampler.sample()
   }
 
   private val delegatedExecutorField = {
