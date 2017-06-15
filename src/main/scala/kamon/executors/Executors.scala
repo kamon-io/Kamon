@@ -31,6 +31,8 @@ object Executors {
   private val DelegatedExecutor = Class.forName("java.util.concurrent.Executors$DelegatedExecutorService")
   private val FinalizableDelegated = Class.forName("java.util.concurrent.Executors$FinalizableDelegatedExecutorService")
   private val DelegateScheduled = Class.forName("java.util.concurrent.Executors$DelegatedScheduledExecutorService")
+  private val JavaForkJoinPool = classOf[JavaForkJoinPool]
+  private val ScalaForkJoinPool = classOf[ScalaForkJoinPool]
 
 
   def register(name: String, executor: ExecutorService): Registration =
@@ -40,10 +42,9 @@ object Executors {
     case executor: ExecutorService if isAssignableTo(executor, DelegatedExecutor)     => register(name, tags, unwrap(executor))
     case executor: ExecutorService if isAssignableTo(executor, FinalizableDelegated)  => register(name, tags, unwrap(executor))
     case executor: ExecutorService if isAssignableTo(executor, DelegateScheduled)     => register(name, tags, unwrap(executor))
-
-    case javaPool: JavaForkJoinPool     => registerScalaForkJoinPool(name, tags, javaPool)
-    case scalaPool: ScalaForkJoinPool   => registerScalaForkJoinPool(name, tags, scalaPool)
-    case threadPool: ThreadPoolExecutor => registerThreadPool(name, tags, threadPool)
+    case executor: ExecutorService if isAssignableTo(executor, JavaForkJoinPool)      => registerJavaForkJoinPool(name, tags, executor.asInstanceOf[JavaForkJoinPool])
+    case executor: ExecutorService if isAssignableTo(executor, ScalaForkJoinPool)     => registerScalaForkJoinPool(name, tags, executor.asInstanceOf[ScalaForkJoinPool])
+    case threadPool: ThreadPoolExecutor                                               => registerThreadPool(name, tags, threadPool)
 
     case anyOther                       =>
       logger.error("Cannot register unsupported executor service [{}]", anyOther)
