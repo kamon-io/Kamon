@@ -14,6 +14,7 @@
  * limitations under the License.
  * ========================================================== */
 package kamon.instrumentation.akka
+/*
 
 import akka.actor.{ Actor, ActorLogging, Props }
 import akka.event.Logging.LogEvent
@@ -67,3 +68,4 @@ class LoggerActor extends Actor with ActorLogging {
     case "info" ⇒ log.info("TraceContext(name = {}, token = {})", Tracer.currentContext.name, Tracer.currentContext.token)
   }
 }
+*/

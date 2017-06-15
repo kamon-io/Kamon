@@ -16,15 +16,13 @@
 
 package akka.kamon.instrumentation
 
-import kamon.trace.logging.MdcKeysSupport
-import kamon.trace.{ Tracer, TraceContextAware }
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
 
 @Aspect
-class ActorLoggingInstrumentation extends MdcKeysSupport {
+class ActorLoggingInstrumentation /*extends MdcKeysSupport*/ {
 
-  @DeclareMixin("akka.event.Logging.LogEvent+")
+/*  @DeclareMixin("akka.event.Logging.LogEvent+")
   def mixinTraceContextAwareToLogEvent: TraceContextAware = TraceContextAware.default
 
   @Pointcut("execution(akka.event.Logging.LogEvent+.new(..)) && this(event)")
@@ -46,5 +44,5 @@ class ActorLoggingInstrumentation extends MdcKeysSupport {
         pjp.proceed()
       }
     }
-  }
+  }*/
 }

@@ -16,18 +16,21 @@
 
 package kamon.instrumentation.akka
 
+
 import akka.actor._
 import akka.pattern.ask
-import akka.testkit.EventFilter
+import akka.testkit.{EventFilter, ImplicitSender, TestKit}
 import akka.util.Timeout
-import kamon.akka.AskPatternTimeoutWarningSettings.{ Off, Lightweight, Heavyweight }
-import kamon.akka.{ AkkaExtension, AskPatternTimeoutWarningSetting }
+import com.typesafe.config.ConfigFactory
+import kamon.Kamon
 import kamon.testkit.BaseKamonSpec
-import kamon.trace.Tracer
+import org.scalatest.{BeforeAndAfterAll, WordSpecLike}
 
 import scala.concurrent.duration._
 
-class AskPatternInstrumentationSpec extends BaseKamonSpec("ask-pattern-tracing-spec") {
+class AskPatternInstrumentationSpec extends TestKit(ActorSystem("AskPatternInstrumentationSpec")) with WordSpecLike
+  with BaseKamonSpec with BeforeAndAfterAll with ImplicitSender {
+
   implicit lazy val ec = system.dispatcher
   implicit val askTimeout = Timeout(10 millis)
 
@@ -35,14 +38,13 @@ class AskPatternInstrumentationSpec extends BaseKamonSpec("ask-pattern-tracing-s
 
   "the AskPatternInstrumentation" when {
     "configured in heavyweight mode" should {
-      "log a warning with a full stack trace and the TraceContext taken from the moment the ask was triggered for a actor" in {
+      "log a warning with a full stack trace and the active span captured the moment when the ask was triggered for an actor" in {
         val noReplyActorRef = system.actorOf(Props[NoReply], "no-reply-1")
-        setAskPatternTimeoutWarningMode(Heavyweight)
+        setAskPatternTimeoutWarningMode("heavyweight")
 
         EventFilter.warning(start = "Timeout triggered for ask pattern to actor [no-reply-1] at").intercept {
-          Tracer.withContext(newContext("ask-timeout-warning")) {
+          Kamon.withSpan(spanWithBaggage(key = "propagate", value = "ask-timeout-warning")) {
             noReplyActorRef ? "hello"
-            Tracer.currentContext
           }
         }
       }
@@ -51,12 +53,11 @@ class AskPatternInstrumentationSpec extends BaseKamonSpec("ask-pattern-tracing-s
     "configured in lightweight mode" should {
       "log a warning with a short source location description and the TraceContext taken from the moment the ask was triggered for a actor" in {
         val noReplyActorRef = system.actorOf(Props[NoReply], "no-reply-2")
-        setAskPatternTimeoutWarningMode(Lightweight)
+        setAskPatternTimeoutWarningMode("lightweight")
 
         EventFilter.warning(start = "Timeout triggered for ask pattern to actor [no-reply-2] at").intercept {
-          Tracer.withContext(newContext("ask-timeout-warning")) {
+          Kamon.withSpan(spanWithBaggage(key = "propagate", value = "ask-timeout-warning")) {
             noReplyActorRef ? "hello"
-            Tracer.currentContext
           }
         }
       }
@@ -65,13 +66,12 @@ class AskPatternInstrumentationSpec extends BaseKamonSpec("ask-pattern-tracing-s
     "configured in off mode" should {
       "should not log any warning messages" in {
         val noReplyActorRef = system.actorOf(Props[NoReply], "no-reply-3")
-        setAskPatternTimeoutWarningMode(Off)
+        setAskPatternTimeoutWarningMode("off")
 
         intercept[AssertionError] { // No message will be logged and the event filter will fail.
           EventFilter.warning(start = "Timeout triggered for ask pattern to actor", occurrences = 1).intercept {
-            Tracer.withContext(newContext("ask-timeout-warning")) {
+            Kamon.withSpan(spanWithBaggage(key = "propagate", value = "ask-timeout-warning")) {
               noReplyActorRef ? "hello"
-              Tracer.currentContext
             }
           }
         }
@@ -81,15 +81,14 @@ class AskPatternInstrumentationSpec extends BaseKamonSpec("ask-pattern-tracing-s
 
   override protected def afterAll(): Unit = shutdown()
 
-  def setAskPatternTimeoutWarningMode(mode: AskPatternTimeoutWarningSetting): Unit = {
-    val field = AkkaExtension.getClass.getDeclaredField("askPatternTimeoutWarning")
-    field.setAccessible(true)
-    field.set(AkkaExtension, mode)
+  def setAskPatternTimeoutWarningMode(mode: String): Unit = {
+    val newConfiguration = ConfigFactory.parseString(s"kamon.akka.ask-pattern-timeout-warning=$mode").withFallback(Kamon.config())
+    Kamon.reconfigure(newConfiguration)
   }
 }
 
 class NoReply extends Actor {
   def receive = {
-    case any ⇒
+    case _ ⇒
   }
 }

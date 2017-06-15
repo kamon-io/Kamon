@@ -17,12 +17,30 @@
 package kamon.akka
 
 import com.typesafe.config.Config
-import kamon.Kamon
+import kamon.{Kamon, OnReconfigureHook}
+import kamon.akka.AskPatternTimeoutWarningSettings.Off
+import scala.collection.JavaConverters._
 
-object AkkaExtension {
-  private val akkaConfig = Kamon.config.getConfig("kamon.akka")
+object Akka {
+  val ActorFilterName = "akka.actor"
+  val RouterFilterName = "akka.router"
+  val DispatcherFilterName = "akka.dispatcher"
 
-  val askPatternTimeoutWarning = AskPatternTimeoutWarningSettings.fromConfig(akkaConfig)
+  @volatile var askPatternTimeoutWarning: AskPatternTimeoutWarningSetting = Off
+  @volatile var actorGroups = Seq.empty[String]
+
+  loadConfiguration(Kamon.config())
+
+  Kamon.onReconfigure(new OnReconfigureHook {
+    override def onReconfigure(newConfig: Config): Unit =
+      Akka.loadConfiguration(newConfig)
+  })
+
+  private def loadConfiguration(config: Config): Unit = synchronized {
+    val akkaConfig = config.getConfig("kamon.akka")
+    askPatternTimeoutWarning = AskPatternTimeoutWarningSettings.fromConfig(akkaConfig)
+    actorGroups = akkaConfig.getStringList("actor-groups").asScala
+  }
 }
 
 sealed trait AskPatternTimeoutWarningSetting

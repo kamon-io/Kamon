@@ -6,7 +6,7 @@ import akka.actor._
 import akka.dispatch.Envelope
 import akka.dispatch.sysmsg.SystemMessage
 import akka.routing.RoutedActorCell
-import kamon.trace.Tracer
+import kamon.Kamon
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
 
@@ -42,7 +42,7 @@ class ActorCellInstrumentation {
 
   @Around("invokingActorBehaviourAtActorCell(cell, envelope)")
   def aroundBehaviourInvoke(pjp: ProceedingJoinPoint, cell: ActorCell, envelope: Envelope): Any = {
-    actorInstrumentation(cell).processMessage(pjp, envelope.asInstanceOf[InstrumentedEnvelope].envelopeContext())
+    actorInstrumentation(cell).processMessage(pjp, envelope.asInstanceOf[InstrumentedEnvelope].timestampedContinuation())
   }
 
   /**
@@ -67,7 +67,7 @@ class ActorCellInstrumentation {
   }
 
   private def setEnvelopeContext(cell: Cell, envelope: Envelope): Unit = {
-    envelope.asInstanceOf[InstrumentedEnvelope].setEnvelopeContext(
+    envelope.asInstanceOf[InstrumentedEnvelope].setTimestampedContinuation(
       actorInstrumentation(cell).captureEnvelopeContext())
   }
 
@@ -90,9 +90,9 @@ class ActorCellInstrumentation {
       try {
         while (!queue.isEmpty) {
           queue.poll() match {
-            case s: SystemMessage ⇒ cell.sendSystemMessage(s) // TODO: ============= CHECK SYSTEM MESSAGESSSSS =========
+            case s: SystemMessage ⇒ cell.sendSystemMessage(s)
             case e: Envelope with InstrumentedEnvelope ⇒
-              Tracer.withContext(e.envelopeContext().context) {
+              Kamon.withContinuation(e.timestampedContinuation().continuation) {
                 cell.sendMessage(e)
               }
           }

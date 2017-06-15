@@ -15,66 +15,74 @@
 
 package kamon.akka
 
+
 import java.nio.LongBuffer
 
 import akka.actor._
 import akka.routing.RoundRobinPool
-import akka.testkit.TestProbe
-import com.typesafe.config.ConfigFactory
-import kamon.Kamon
-import kamon.metric.{Entity, EntitySnapshot}
-import kamon.metric.instrument.CollectionContext
+import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import kamon.testkit.BaseKamonSpec
+import Metrics._
+import org.scalatest.concurrent.{Eventually, PatienceConfiguration}
+import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 
 import scala.concurrent.duration._
 
-class ActorGroupMetricsSpec extends BaseKamonSpec("actor-group-metrics-spec") {
+class ActorGroupMetricsSpec extends TestKit(ActorSystem("ActorGroupMetricsSpec")) with WordSpecLike with BaseKamonSpec with Matchers
+    with BeforeAndAfterAll with ImplicitSender with Eventually {
+
+
+
 
   "the Kamon actor-group metrics" should {
-    "respect the configured include and exclude filters for actors" in new ActorGroupMetricsFixtures {
-      val metric = Kamon.metrics.entity(ActorGroupMetrics,
-          Entity("tracked-group", ActorGroupMetrics.category)).asInstanceOf[ActorGroupMetrics]
-      metric.collect(collectionContext)
-      val trackedActor = createTestActor("tracked-actor")
-      val nonTrackedActor = createTestActor("non-tracked-actor")
-      system.stop(trackedActor)
-      system.stop(nonTrackedActor)
-      max(metric.collect(collectionContext), "actors") shouldBe 1
-      val trackedActor2 = createTestActor("tracked-actor2")
-      val trackedActor3 = createTestActor("tracked-actor3")
+    "increase the member count when an actor matching the pattern is created" in new ActorGroupMetricsFixtures {
+      val trackedActor1 = watch(createTestActor("group-of-actors-1"))
+      val trackedActor2 = watch(createTestActor("group-of-actors-2"))
+      val trackedActor3 = watch(createTestActor("group-of-actors-3"))
+      val nonTrackedActor = createTestActor("someone-else")
+
+      groupMembers.refine("group" -> "group-of-actors").distribution().max shouldBe(3)
+
+      system.stop(trackedActor1)
+      expectTerminated(trackedActor1)
       system.stop(trackedActor2)
+      expectTerminated(trackedActor2)
       system.stop(trackedActor3)
-      max(metric.collect(collectionContext), "actors") shouldBe 2
+      expectTerminated(trackedActor3)
+
+      eventually(groupMembers.refine("group" -> "group-of-actors").distribution().max shouldBe (0))
     }
-    "respect the configured include and exclude filters for routees" in new ActorGroupMetricsFixtures {
-      val metric = Kamon.metrics.entity(ActorGroupMetrics,
-          Entity("tracked-group", ActorGroupMetrics.category)).asInstanceOf[ActorGroupMetrics]
-      metric.collect(collectionContext)
-      val trackedRouter = createTestPoolRouter("tracked-router")
-      val nonTrackedRouter = createTestPoolRouter("non-tracked-router")
+
+
+    "increase the member count when a routee matching the pattern is created" in new ActorGroupMetricsFixtures {
+      val trackedRouter = createTestPoolRouter("group-of-routees")
+      val nonTrackedRouter = createTestPoolRouter("group-non-tracked-router")
+
+      eventually(groupMembers.refine("group" -> "group-of-routees").distribution().max shouldBe(5))
+
+      val trackedRouter2 = createTestPoolRouter("group-of-routees-2")
+      val trackedRouter3 = createTestPoolRouter("group-of-routees-3")
+
+      eventually(groupMembers.refine("group" -> "group-of-routees").distribution().max shouldBe(15))
+
       system.stop(trackedRouter)
-      system.stop(nonTrackedRouter)
-      max(metric.collect(collectionContext), "actors") shouldBe 5
-      val trackedActor2 = createTestPoolRouter("tracked-router2")
-      val trackedActor3 = createTestPoolRouter("tracked-router3")
-      system.stop(trackedActor2)
-      system.stop(trackedActor3)
-      max(metric.collect(collectionContext), "actors") shouldBe 10
+      system.stop(trackedRouter2)
+      system.stop(trackedRouter3)
+
+      eventually(groupMembers.refine("group" -> "group-of-routees").distribution(resetState = true).max shouldBe(0))
     }
   }
+
+  override implicit def patienceConfig: PatienceConfig = PatienceConfig(timeout = 5 seconds, interval = 5 milliseconds)
 
   override protected def afterAll(): Unit = shutdown()
 
   trait ActorGroupMetricsFixtures {
-    val collectionContext = new CollectionContext {
-      override val buffer: LongBuffer = LongBuffer.allocate(10000)
-    }
-
     def createTestActor(name: String): ActorRef = {
       val actor = system.actorOf(Props[ActorMetricsTestActor], name)
       val initialiseListener = TestProbe()
 
-      // Ensure that the router has been created before returning.
+      // Ensure that the actor has been created before returning.
       actor.tell(ActorMetricsTestActor.Ping, initialiseListener.ref)
       initialiseListener.expectMsg(ActorMetricsTestActor.Pong)
 
@@ -91,8 +99,6 @@ class ActorGroupMetricsSpec extends BaseKamonSpec("actor-group-metrics-spec") {
 
       router
     }
-
-    def max(snapshot: EntitySnapshot, counterName: String): Long =
-      snapshot.minMaxCounter(counterName).map(_.max).getOrElse(fail(s"Unknown counter $counterName"))
   }
 }
+

@@ -15,122 +15,90 @@
 
 package kamon.akka
 
+
 import java.nio.LongBuffer
 
 import scala.concurrent.duration._
-
 import org.scalatest.concurrent.Eventually
-
-import com.typesafe.config.ConfigFactory
-
+import org.scalactic.TimesOnInt._
 import akka.actor._
-import akka.testkit.TestProbe
+import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import kamon.Kamon
+import Metrics._
 import kamon.akka.ActorMetricsTestActor._
-import kamon.metric.EntitySnapshot
-import kamon.metric.instrument.CollectionContext
 import kamon.testkit.BaseKamonSpec
+import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 
-class ActorMetricsSpec extends BaseKamonSpec("actor-metrics-spec") with Eventually {
+class ActorMetricsSpec extends TestKit(ActorSystem("ActorMetricsSpec")) with WordSpecLike with BaseKamonSpec with Matchers
+    with BeforeAndAfterAll with ImplicitSender with Eventually {
 
   "the Kamon actor metrics" should {
     "respect the configured include and exclude filters" in new ActorMetricsFixtures {
       val trackedActor = createTestActor("tracked-actor")
-      actorMetricsRecorderOf(trackedActor) should not be empty
+      actorProcessingTimeMetric.valuesForTag("path") should contain("ActorMetricsSpec/user/tracked-actor")
 
       val nonTrackedActor = createTestActor("non-tracked-actor")
-      actorMetricsRecorderOf(nonTrackedActor) shouldBe empty
+      actorProcessingTimeMetric.valuesForTag("path") shouldNot contain("ActorMetricsSpec/user/non-tracked-actor")
 
       val trackedButExplicitlyExcluded = createTestActor("tracked-explicitly-excluded")
-      actorMetricsRecorderOf(trackedButExplicitlyExcluded) shouldBe empty
+      actorProcessingTimeMetric.valuesForTag("path") shouldNot contain("ActorMetricsSpec/user/tracked-explicitly-excluded")
     }
 
     "not pick up the root supervisor" in {
-      Kamon.metrics.find("actor-metrics-spec/", ActorMetrics.category) shouldBe empty
+      actorProcessingTimeMetric.valuesForTag("path") shouldNot contain("ActorMetricsSpec/")
     }
 
-    "reset all recording instruments after taking a snapshot" in new ActorMetricsFixtures {
-      val trackedActor = createTestActor("clean-after-collect")
-
-      for (_ ← 1 to 100) {
-        for (i ← 1 to 100) {
-          trackedActor ! Discard
-        }
-        trackedActor ! Fail
-        trackedActor ! Ping
-        expectMsg(Pong)
-
-        val firstSnapshot = collectMetricsOf(trackedActor).get
-        firstSnapshot.counter("errors").get.count should be(1L)
-        firstSnapshot.minMaxCounter("mailbox-size").get.numberOfMeasurements should be > 0L
-        firstSnapshot.histogram("processing-time").get.numberOfMeasurements should be(102L) // 102 examples
-        firstSnapshot.histogram("time-in-mailbox").get.numberOfMeasurements should be(102L) // 102 examples
-
-        eventually(timeout(5.seconds)) {
-          val secondSnapshot = collectMetricsOf(trackedActor).get // Ensure that the recorders are clean
-          secondSnapshot.counter("errors").get.count should be(0L)
-          secondSnapshot.minMaxCounter("mailbox-size").get.numberOfMeasurements should be(3L) // min, max and current
-          secondSnapshot.histogram("processing-time").get.numberOfMeasurements should be(0L)
-          secondSnapshot.histogram("time-in-mailbox").get.numberOfMeasurements should be(0L)
-        }
-      }
-    }
 
     "record the processing-time of the receive function" in new ActorMetricsFixtures {
-      val trackedActor = createTestActor("measuring-processing-time")
+      createTestActor("measuring-processing-time", true) ! TrackTimings(sleep = Some(100 millis))
 
-      trackedActor ! TrackTimings(sleep = Some(100 millis))
       val timings = expectMsgType[TrackedTimings]
-      val snapshot = collectMetricsOf(trackedActor).get
+      val processingTimeDistribution = actorProcessingTimeMetric.
+        refine("path" -> "ActorMetricsSpec/user/measuring-processing-time").distribution()
 
-      snapshot.histogram("processing-time").get.numberOfMeasurements should be(1L)
-      snapshot.histogram("processing-time").get.recordsIterator.next().count should be(1L)
-      snapshot.histogram("processing-time").get.recordsIterator.next().level should be(timings.approximateProcessingTime +- 10.millis.toNanos)
+      processingTimeDistribution.count should be(1L)
+      processingTimeDistribution.buckets.size should be(1L)
+      processingTimeDistribution.buckets.head.value should be(timings.approximateProcessingTime +- 10.millis.toNanos)
     }
+
+
 
     "record the number of errors" in new ActorMetricsFixtures {
       val trackedActor = createTestActor("measuring-errors")
+      10.times(trackedActor ! Fail)
 
-      for (i ← 1 to 10) { trackedActor ! Fail }
       trackedActor ! Ping
       expectMsg(Pong)
-      val snapshot = collectMetricsOf(trackedActor).get
-
-      snapshot.counter("errors").get.count should be(10)
+      actorErrorsMetric.refine("path" -> "ActorMetricsSpec/user/measuring-errors").value() should be(10)
     }
 
     "record the mailbox-size" in new ActorMetricsFixtures {
       val trackedActor = createTestActor("measuring-mailbox-size")
-
       trackedActor ! TrackTimings(sleep = Some(100 millis))
-      for (i ← 1 to 10) {
-        trackedActor ! Discard
-      }
+      10.times(trackedActor ! Discard)
       trackedActor ! Ping
 
       val timings = expectMsgType[TrackedTimings]
       expectMsg(Pong)
-      val snapshot = collectMetricsOf(trackedActor).get
 
-      snapshot.minMaxCounter("mailbox-size").get.min should be(0L)
-      snapshot.minMaxCounter("mailbox-size").get.max should be(11L +- 1L)
+      val mailboxSizeDistribution = actorMailboxSizeMetric.refine("path" -> "ActorMetricsSpec/user/measuring-mailbox-size").distribution()
+      mailboxSizeDistribution.min should be(0L)
+      mailboxSizeDistribution.max should be(11L +- 1L)
     }
 
     "record the time-in-mailbox" in new ActorMetricsFixtures {
-      val trackedActor = createTestActor("measuring-time-in-mailbox")
-
+      val trackedActor = createTestActor("measuring-time-in-mailbox", true)
       trackedActor ! TrackTimings(sleep = Some(100 millis))
       val timings = expectMsgType[TrackedTimings]
-      val snapshot = collectMetricsOf(trackedActor).get
 
-      snapshot.histogram("time-in-mailbox").get.numberOfMeasurements should be(1L)
-      snapshot.histogram("time-in-mailbox").get.recordsIterator.next().count should be(1L)
-      snapshot.histogram("time-in-mailbox").get.recordsIterator.next().level should be(timings.approximateTimeInMailbox +- 10.millis.toNanos)
+      val timeInMailboxDistribution = actorTimeInMailboxMetric.refine("path" -> "ActorMetricsSpec/user/measuring-time-in-mailbox").distribution()
+      timeInMailboxDistribution.count should be(1L)
+      timeInMailboxDistribution.buckets.head.frequency should be(1L)
+      timeInMailboxDistribution.buckets.head.value should be(timings.approximateTimeInMailbox +- 10.millis.toNanos)
     }
 
     "clean up the associated recorder when the actor is stopped" in new ActorMetricsFixtures {
       val trackedActor = createTestActor("stop")
-      val firstRecorder = actorMetricsRecorderOf(trackedActor).get
 
       // Killing the actor should remove it's ActorMetrics and registering again bellow should create a new one.
       val deathWatcher = TestProbe()
@@ -138,28 +106,15 @@ class ActorMetricsSpec extends BaseKamonSpec("actor-metrics-spec") with Eventual
       trackedActor ! PoisonPill
       deathWatcher.expectTerminated(trackedActor)
 
-      actorMetricsRecorderOf(trackedActor) shouldBe empty
+      actorProcessingTimeMetric.valuesForTag("path") shouldNot contain("ActorMetricsSpec/user/stop")
     }
   }
 
   override protected def afterAll(): Unit = shutdown()
 
   trait ActorMetricsFixtures {
-    val collectionContext = new CollectionContext {
-      val buffer: LongBuffer = LongBuffer.allocate(10000)
-    }
 
-    def actorRecorderName(ref: ActorRef): String = system.name + "/" + ref.path.elements.mkString("/")
-
-    def actorMetricsRecorderOf(ref: ActorRef): Option[ActorMetrics] =
-      Kamon.metrics.find(actorRecorderName(ref), ActorMetrics.category).map(_.asInstanceOf[ActorMetrics])
-
-    def collectMetricsOf(ref: ActorRef): Option[EntitySnapshot] = {
-      Thread.sleep(5) // Just in case the test advances a bit faster than the actor being tested.
-      actorMetricsRecorderOf(ref).map(_.collect(collectionContext))
-    }
-
-    def createTestActor(name: String): ActorRef = {
+    def createTestActor(name: String, resetState: Boolean = false): ActorRef = {
       val actor = system.actorOf(Props[ActorMetricsTestActor], name)
       val initialiseListener = TestProbe()
 
@@ -168,7 +123,12 @@ class ActorMetricsSpec extends BaseKamonSpec("actor-metrics-spec") with Eventual
       initialiseListener.expectMsg(Pong)
 
       // Cleanup all the metric recording instruments:
-      collectMetricsOf(actor)
+      if(resetState) {
+        actorTimeInMailboxMetric.refine("path" -> s"ActorMetricsSpec/user/$name").distribution(resetState = true)
+        actorProcessingTimeMetric.refine("path" -> s"ActorMetricsSpec/user/$name").distribution(resetState = true)
+        actorMailboxSizeMetric.refine("path" -> s"ActorMetricsSpec/user/$name").distribution(resetState = true)
+        actorErrorsMetric.refine("path" -> s"ActorMetricsSpec/user/$name").value(resetState = true)
+      }
 
       actor
     }

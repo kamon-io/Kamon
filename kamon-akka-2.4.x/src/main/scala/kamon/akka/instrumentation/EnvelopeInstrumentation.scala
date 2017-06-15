@@ -1,26 +1,25 @@
 package akka.kamon.instrumentation
 
-import kamon.trace.{ EmptyTraceContext, TraceContext }
-import kamon.util.RelativeNanoTimestamp
-import org.aspectj.lang.annotation.{ DeclareMixin, Aspect }
+import io.opentracing.ActiveSpan.Continuation
+import org.aspectj.lang.annotation.{Aspect, DeclareMixin}
 
-case class EnvelopeContext(nanoTime: RelativeNanoTimestamp, context: TraceContext)
+case class TimestampedContinuation(nanoTime: Long, continuation: Continuation)
 
-object EnvelopeContext {
-  val Empty = EnvelopeContext(RelativeNanoTimestamp.zero, EmptyTraceContext)
-}
+//object TimestampedContinuation {
+//  val Empty = TimestampedContinuation(0, null)
+//}
 
 trait InstrumentedEnvelope extends Serializable {
-  def envelopeContext(): EnvelopeContext
-  def setEnvelopeContext(envelopeContext: EnvelopeContext): Unit
+  def timestampedContinuation(): TimestampedContinuation
+  def setTimestampedContinuation(timestampedContinuation: TimestampedContinuation): Unit
 }
 
 object InstrumentedEnvelope {
   def apply(): InstrumentedEnvelope = new InstrumentedEnvelope {
-    var envelopeContext: EnvelopeContext = _
+    var timestampedContinuation: TimestampedContinuation = _
 
-    def setEnvelopeContext(envelopeContext: EnvelopeContext): Unit =
-      this.envelopeContext = envelopeContext
+    def setTimestampedContinuation(timestampedContinuation: TimestampedContinuation): Unit =
+      this.timestampedContinuation = timestampedContinuation
   }
 }
 

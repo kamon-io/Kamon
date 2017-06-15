@@ -17,7 +17,8 @@
 package akka.kamon.instrumentation
 
 import akka.dispatch.sysmsg.EarliestFirstSystemMessageList
-import kamon.trace.{ Tracer, TraceContextAware }
+import kamon.Kamon
+import kamon.util.HasContinuation
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
 
@@ -30,8 +31,8 @@ class ActorSystemMessageInstrumentation {
   @Around("systemMessageProcessing(messages)")
   def aroundSystemMessageInvoke(pjp: ProceedingJoinPoint, messages: EarliestFirstSystemMessageList): Any = {
     if (messages.nonEmpty) {
-      val ctx = messages.head.asInstanceOf[TraceContextAware].traceContext
-      Tracer.withContext(ctx)(pjp.proceed())
+      val continuation = messages.head.asInstanceOf[HasContinuation].continuation
+      Kamon.withContinuation(continuation)(pjp.proceed())
 
     } else pjp.proceed()
   }
@@ -41,15 +42,15 @@ class ActorSystemMessageInstrumentation {
 class TraceContextIntoSystemMessageMixin {
 
   @DeclareMixin("akka.dispatch.sysmsg.SystemMessage+")
-  def mixinTraceContextAwareToSystemMessage: TraceContextAware = TraceContextAware.default
+  def mixinHasContinuationToSystemMessage: HasContinuation = HasContinuation.fromTracerActiveSpan()
 
-  @Pointcut("execution(akka.dispatch.sysmsg.SystemMessage+.new(..)) && this(ctx)")
-  def envelopeCreation(ctx: TraceContextAware): Unit = {}
+  @Pointcut("execution(akka.dispatch.sysmsg.SystemMessage+.new(..)) && this(message)")
+  def systemMessageCreation(message: HasContinuation): Unit = {}
 
-  @After("envelopeCreation(ctx)")
-  def afterEnvelopeCreation(ctx: TraceContextAware): Unit = {
-    // Necessary to force the initialization of ContextAware at the moment of creation.
-    ctx.traceContext
+  @After("systemMessageCreation(message)")
+  def afterSystemMessageCreation(message: HasContinuation): Unit = {
+    // Necessary to force the initialization of HasContinuation at the moment of creation.
+    message.continuation
   }
 }
 
@@ -57,23 +58,23 @@ class TraceContextIntoSystemMessageMixin {
 class TraceContextIntoRepointableActorRefMixin {
 
   @DeclareMixin("akka.actor.RepointableActorRef")
-  def mixinTraceContextAwareToRepointableActorRef: TraceContextAware = TraceContextAware.default
+  def mixinTraceContextAwareToRepointableActorRef: HasContinuation = HasContinuation.fromTracerActiveSpan()
 
-  @Pointcut("execution(akka.actor.RepointableActorRef.new(..)) && this(ctx)")
-  def envelopeCreation(ctx: TraceContextAware): Unit = {}
+  @Pointcut("execution(akka.actor.RepointableActorRef.new(..)) && this(repointableActorRef)")
+  def envelopeCreation(repointableActorRef: HasContinuation): Unit = {}
 
-  @After("envelopeCreation(ctx)")
-  def afterEnvelopeCreation(ctx: TraceContextAware): Unit = {
-    // Necessary to force the initialization of ContextAware at the moment of creation.
-    ctx.traceContext
+  @After("envelopeCreation(repointableActorRef)")
+  def afterEnvelopeCreation(repointableActorRef: HasContinuation): Unit = {
+    // Necessary to force the initialization of HasContinuation at the moment of creation.
+    repointableActorRef.continuation
   }
 
   @Pointcut("execution(* akka.actor.RepointableActorRef.point(..)) && this(repointableActorRef)")
-  def repointableActorRefCreation(repointableActorRef: TraceContextAware): Unit = {}
+  def repointableActorRefCreation(repointableActorRef: HasContinuation): Unit = {}
 
   @Around("repointableActorRefCreation(repointableActorRef)")
-  def afterRepointableActorRefCreation(pjp: ProceedingJoinPoint, repointableActorRef: TraceContextAware): Any = {
-    Tracer.withContext(repointableActorRef.traceContext) {
+  def afterRepointableActorRefCreation(pjp: ProceedingJoinPoint, repointableActorRef: HasContinuation): Any = {
+    Kamon.withContinuation(repointableActorRef.continuation) {
       pjp.proceed()
     }
   }

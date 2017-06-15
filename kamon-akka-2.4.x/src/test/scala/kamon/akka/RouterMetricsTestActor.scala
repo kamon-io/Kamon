@@ -15,6 +15,7 @@
 
 package kamon.akka
 
+
 import akka.actor._
 import scala.concurrent.duration._
 
@@ -46,3 +47,4 @@ object RouterMetricsTestActor {
     def approximateProcessingTime: Long = afterReceiveTimestamp - dequeueTimestamp
   }
 }
+

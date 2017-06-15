@@ -14,8 +14,10 @@
  */
 
 
-val kamonCore = "io.kamon" %% "kamon-core" % "0.6.6"
-val kamonScala = "io.kamon" %% "kamon-scala" % "0.6.6"
+resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
+val kamonCore  = "io.kamon" %% "kamon-core" % "1.0.0-RC1-dd645df1b7c462418c01074d0e137982d2f270b7"
+val kamonScala = "io.kamon" %% "kamon-scala" % "1.0.0-RC1-114203f1f524131beed64faddcf06b3955ed276e" exclude("io.kamon", "kamon-core")
+val kamonExecutors = "io.kamon" %% "kamon-executors" % "1.0.0-RC1-e15dfd4000662e0afde205b0567a9645c4186969" exclude("io.kamon", "kamon-core")
 val `akka-2.3` = "2.3.13"
 val `akka-2.4` = "2.4.16"
 
@@ -37,7 +39,7 @@ lazy val kamonAkka23 = Project("kamon-akka-23", file("kamon-akka-2.3.x"))
   .settings(aspectJSettings: _*)
   .settings(
     libraryDependencies ++=
-      compileScope(akkaDependency("actor", `akka-2.3`), kamonCore, kamonScala) ++
+      compileScope(akkaDependency("actor", `akka-2.3`), kamonCore, kamonScala, kamonExecutors) ++
       providedScope(aspectJ) ++
       optionalScope(logbackClassic) ++
       testScope(scalatest, akkaDependency("testkit", `akka-2.3`), akkaDependency("slf4j", `akka-2.3`), logbackClassic))
@@ -52,7 +54,7 @@ lazy val kamonAkka24 = Project("kamon-akka-24", file("kamon-akka-2.4.x"))
   .settings(aspectJSettings: _*)
   .settings(
     libraryDependencies ++=
-      compileScope(akkaDependency("actor", `akka-2.4`), kamonCore, kamonScala) ++
+      compileScope(akkaDependency("actor", `akka-2.4`), kamonCore, kamonScala, kamonExecutors) ++
       providedScope(aspectJ) ++
       optionalScope(logbackClassic) ++
       testScope(scalatest, akkaDependency("testkit", `akka-2.4`), akkaDependency("slf4j", `akka-2.4`), logbackClassic))

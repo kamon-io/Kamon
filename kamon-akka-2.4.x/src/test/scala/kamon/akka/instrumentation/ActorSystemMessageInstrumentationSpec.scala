@@ -16,114 +16,106 @@
 
 package kamon.instrumentation.akka
 
-import akka.actor.SupervisorStrategy.{ Escalate, Restart, Resume, Stop }
+
+import akka.actor.SupervisorStrategy.{Escalate, Restart, Resume, Stop}
 import akka.actor._
-import akka.testkit.ImplicitSender
-import com.typesafe.config.ConfigFactory
+import akka.testkit.{ImplicitSender, TestKit}
+import kamon.Kamon
 import kamon.testkit.BaseKamonSpec
-import kamon.trace.{ Tracer, EmptyTraceContext }
-import org.scalatest.WordSpecLike
+import org.scalatest.{BeforeAndAfterAll, WordSpecLike}
 
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
 
-class ActorSystemMessageInstrumentationSpec extends BaseKamonSpec("actor-system-message-instrumentation-spec") with WordSpecLike with ImplicitSender {
+class ActorSystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSystemMessageInstrumentationSpec")) with WordSpecLike
+    with BaseKamonSpec with BeforeAndAfterAll with ImplicitSender {
   implicit lazy val executionContext = system.dispatcher
 
   "the system message passing instrumentation" should {
-    "keep the TraceContext while processing the Create message in top level actors" in {
-      val testTraceContext = Tracer.withContext(newContext("creating-top-level-actor")) {
+    "capture and propagate the active span while processing the Create message in top level actors" in {
+      Kamon.withSpan(spanWithBaggage(key = "propagate", value = "creating-top-level-actor")) {
         system.actorOf(Props(new Actor {
-          testActor ! Tracer.currentContext
+          testActor ! propagatedBaggage()
           def receive: Actor.Receive = { case any ⇒ }
         }))
-
-        Tracer.currentContext
       }
 
-      expectMsg(testTraceContext)
+      expectMsg("creating-top-level-actor")
     }
 
-    "keep the TraceContext while processing the Create message in non top level actors" in {
-      val testTraceContext = Tracer.withContext(newContext("creating-non-top-level-actor")) {
+    "capture and propagate the active span when processing the Create message in non top level actors" in {
+      Kamon.withSpan(spanWithBaggage(key = "propagate", value = "creating-non-top-level-actor")) {
         system.actorOf(Props(new Actor {
           def receive: Actor.Receive = {
-            case any ⇒
+            case _ ⇒
               context.actorOf(Props(new Actor {
-                testActor ! Tracer.currentContext
-                def receive: Actor.Receive = { case any ⇒ }
+                testActor ! propagatedBaggage()
+                def receive: Actor.Receive = { case _ ⇒ }
               }))
           }
         })) ! "any"
-
-        Tracer.currentContext
       }
 
-      expectMsg(testTraceContext)
+      expectMsg("creating-non-top-level-actor")
     }
 
     "keep the TraceContext in the supervision cycle" when {
       "the actor is resumed" in {
         val supervisor = supervisorWithDirective(Resume)
-
-        val testTraceContext = Tracer.withContext(newContext("fail-and-resume")) {
+        Kamon.withSpan(spanWithBaggage(key = "propagate", value = "fail-and-resume")) {
           supervisor ! "fail"
-          Tracer.currentContext
         }
 
-        expectMsg(testTraceContext) // From the parent executing the supervision strategy
+        expectMsg("fail-and-resume") // From the parent executing the supervision strategy
 
-        // Ensure we didn't tie the actor with the context
-        supervisor ! "context"
-        expectMsg(EmptyTraceContext)
+        // Ensure we didn't tie the actor with the initially captured span
+        supervisor ! "baggage"
+        expectMsg("MissingActiveSpan")
       }
 
       "the actor is restarted" in {
         val supervisor = supervisorWithDirective(Restart, sendPreRestart = true, sendPostRestart = true)
-
-        val testTraceContext = Tracer.withContext(newContext("fail-and-restart")) {
+        Kamon.withSpan(spanWithBaggage(key = "propagate", value = "fail-and-restart")) {
           supervisor ! "fail"
-          Tracer.currentContext
         }
 
-        expectMsg(testTraceContext) // From the parent executing the supervision strategy
-        expectMsg(testTraceContext) // From the preRestart hook
-        expectMsg(testTraceContext) // From the postRestart hook
+        expectMsg("fail-and-restart") // From the parent executing the supervision strategy
+        expectMsg("fail-and-restart") // From the preRestart hook
+        expectMsg("fail-and-restart") // From the postRestart hook
 
         // Ensure we didn't tie the actor with the context
-        supervisor ! "context"
-        expectMsg(EmptyTraceContext)
+        supervisor ! "baggage"
+        expectMsg("MissingActiveSpan")
       }
 
       "the actor is stopped" in {
         val supervisor = supervisorWithDirective(Stop, sendPostStop = true)
-
-        val testTraceContext = Tracer.withContext(newContext("fail-and-stop")) {
+        Kamon.withSpan(spanWithBaggage(key = "propagate", value = "fail-and-stop")) {
           supervisor ! "fail"
-          Tracer.currentContext
         }
 
-        expectMsg(testTraceContext) // From the parent executing the supervision strategy
-        expectMsg(testTraceContext) // From the postStop hook
+        expectMsg("fail-and-stop") // From the parent executing the supervision strategy
+        expectMsg("fail-and-stop") // From the postStop hook
         expectNoMsg(1 second)
       }
 
       "the failure is escalated" in {
         val supervisor = supervisorWithDirective(Escalate, sendPostStop = true)
-
-        val testTraceContext = Tracer.withContext(newContext("fail-and-escalate")) {
+        Kamon.withSpan(spanWithBaggage(key = "propagate", value = "fail-and-escalate")) {
           supervisor ! "fail"
-          Tracer.currentContext
         }
 
-        expectMsg(testTraceContext) // From the parent executing the supervision strategy
-        expectMsg(testTraceContext) // From the grandparent executing the supervision strategy
-        expectMsg(testTraceContext) // From the postStop hook in the child
-        expectMsg(testTraceContext) // From the postStop hook in the parent
+        expectMsg("fail-and-escalate") // From the parent executing the supervision strategy
+        expectMsg("fail-and-escalate") // From the grandparent executing the supervision strategy
+        expectMsg("fail-and-escalate") // From the postStop hook in the child
+        expectMsg("fail-and-escalate") // From the postStop hook in the parent
         expectNoMsg(1 second)
       }
     }
   }
+
+  private def propagatedBaggage(): String =
+    Kamon.fromActiveSpan(_.getBaggageItem("propagate")).getOrElse("MissingActiveSpan")
 
   def supervisorWithDirective(directive: SupervisorStrategy.Directive, sendPreRestart: Boolean = false, sendPostRestart: Boolean = false,
     sendPostStop: Boolean = false, sendPreStart: Boolean = false): ActorRef = {
@@ -131,7 +123,7 @@ class ActorSystemMessageInstrumentationSpec extends BaseKamonSpec("actor-system-
       val child = context.actorOf(Props(new Parent))
 
       override def supervisorStrategy: SupervisorStrategy = OneForOneStrategy() {
-        case NonFatal(throwable) ⇒ testActor ! Tracer.currentContext; Stop
+        case NonFatal(_) ⇒ testActor ! propagatedBaggage(); Stop
       }
 
       def receive = {
@@ -143,7 +135,7 @@ class ActorSystemMessageInstrumentationSpec extends BaseKamonSpec("actor-system-
       val child = context.actorOf(Props(new Child))
 
       override def supervisorStrategy: SupervisorStrategy = OneForOneStrategy() {
-        case NonFatal(throwable) ⇒ testActor ! Tracer.currentContext; directive
+        case NonFatal(_) ⇒ testActor ! propagatedBaggage(); directive
       }
 
       def receive: Actor.Receive = {
@@ -151,7 +143,7 @@ class ActorSystemMessageInstrumentationSpec extends BaseKamonSpec("actor-system-
       }
 
       override def postStop(): Unit = {
-        if (sendPostStop) testActor ! Tracer.currentContext
+        if (sendPostStop) testActor ! propagatedBaggage()
         super.postStop()
       }
     }
@@ -159,26 +151,26 @@ class ActorSystemMessageInstrumentationSpec extends BaseKamonSpec("actor-system-
     class Child extends Actor {
       def receive = {
         case "fail"    ⇒ throw new ArithmeticException("Division by zero.")
-        case "context" ⇒ sender ! Tracer.currentContext
+        case "baggage" ⇒ sender ! propagatedBaggage()
       }
 
       override def preRestart(reason: Throwable, message: Option[Any]): Unit = {
-        if (sendPreRestart) testActor ! Tracer.currentContext
+        if (sendPreRestart) testActor ! propagatedBaggage()
         super.preRestart(reason, message)
       }
 
       override def postRestart(reason: Throwable): Unit = {
-        if (sendPostRestart) testActor ! Tracer.currentContext
+        if (sendPostRestart) testActor ! propagatedBaggage()
         super.postRestart(reason)
       }
 
       override def postStop(): Unit = {
-        if (sendPostStop) testActor ! Tracer.currentContext
+        if (sendPostStop) testActor ! propagatedBaggage()
         super.postStop()
       }
 
       override def preStart(): Unit = {
-        if (sendPreStart) testActor ! Tracer.currentContext
+        if (sendPreStart) testActor ! propagatedBaggage()
         super.preStart()
       }
     }
@@ -186,3 +178,4 @@ class ActorSystemMessageInstrumentationSpec extends BaseKamonSpec("actor-system-
     system.actorOf(Props(new GrandParent))
   }
 }
+
