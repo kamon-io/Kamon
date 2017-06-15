@@ -24,6 +24,11 @@ import kamon.util.MeasurementUnit
 
 import scala.collection.concurrent.TrieMap
 import java.time.Duration
+import java.util.concurrent.{ScheduledExecutorService, ScheduledFuture, TimeUnit}
+
+import org.slf4j.LoggerFactory
+
+import scala.util.Try
 
 
 
@@ -100,8 +105,11 @@ private[kamon] final class HistogramMetricImpl(val name: String, val unit: Measu
 }
 
 private[kamon] final class MinMaxCounterMetricImpl(val name: String, val unit: MeasurementUnit, customDynamicRange: Option[DynamicRange],
-    customSampleInterval: Option[Duration], factory: AtomicReference[InstrumentFactory])
-  extends BaseMetric[MinMaxCounter, MetricDistribution](MinMaxCounter) with MinMaxCounterMetric {
+    customSampleInterval: Option[Duration], factory: AtomicReference[InstrumentFactory], scheduler: ScheduledExecutorService)
+    extends BaseMetric[MinMaxCounter, MetricDistribution](MinMaxCounter) with MinMaxCounterMetric {
+
+  private val logger = LoggerFactory.getLogger(classOf[MinMaxCounterMetric])
+  private val scheduledSamplers = TrieMap.empty[Tags, ScheduledFuture[_]]
 
   def dynamicRange: DynamicRange =
     baseInstrument.dynamicRange
@@ -124,11 +132,42 @@ private[kamon] final class MinMaxCounterMetricImpl(val name: String, val unit: M
   override def sample(): Unit =
     baseInstrument.sample()
 
-  override protected def createInstrument(tags: Tags): MinMaxCounter =
-    factory.get().buildMinMaxCounter(customDynamicRange, customSampleInterval)(name, tags, unit)
+  override protected def createInstrument(tags: Tags): MinMaxCounter = {
+    val mmCounter = factory.get().buildMinMaxCounter(customDynamicRange, customSampleInterval)(name, tags, unit)
+    val sampleInterval = mmCounter.sampleInterval.toMillis
+    val scheduledFuture = scheduler.scheduleAtFixedRate(scheduledSampler(mmCounter), sampleInterval, sampleInterval, TimeUnit.MILLISECONDS)
+
+    println("SCHEDULING THE MMCOUNTER " + name + ", tags=" + tags.prettyPrint())
+    scheduledSamplers.put(tags, scheduledFuture)
+
+    mmCounter
+  }
+
+  override def remove(tags: Tags): Boolean =
+    removeAndStopSampler(tags)
+
+  override def remove(tags: (String, String)*): Boolean =
+    removeAndStopSampler(tags.toMap)
+
+  override def remove(tag: String, value: String): Boolean =
+    removeAndStopSampler(Map(tag -> value))
+
+  private def removeAndStopSampler(tags: Tags): Boolean = {
+    val removed = super.remove(tags)
+    if(removed)
+      scheduledSamplers.get(tags).foreach(sf => {
+        Try(sf.cancel(false)).failed.foreach(_ => logger.error("Failed to cancel scheduled sampling for MinMaxCounter []", tags.prettyPrint()))
+      })
+    removed
+  }
 
   override protected def createSnapshot(instrument: MinMaxCounter): MetricDistribution =
     instrument.asInstanceOf[SimpleMinMaxCounter].snapshot(resetState = true)
+
+
+  private def scheduledSampler(mmCounter: MinMaxCounter): Runnable = new Runnable {
+    override def run(): Unit = mmCounter.sample()
+  }
 }
 
 

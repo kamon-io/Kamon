@@ -25,7 +25,7 @@ object Filters {
     val filtersConfig = config.getConfig("kamon.util.filters")
     val acceptUnmatched = filtersConfig.getBoolean("accept-unmatched")
 
-    val perMetricFilter = filtersConfig.firstLevelKeys.filter(_ != "accept-unmatched") map { filterName: String ⇒
+    val perMetricFilter = filtersConfig.topLevelKeys.filter(_ != "accept-unmatched") map { filterName: String ⇒
       val includes = readFilters(filtersConfig, s"$filterName.includes")
       val excludes = readFilters(filtersConfig, s"$filterName.excludes")
 

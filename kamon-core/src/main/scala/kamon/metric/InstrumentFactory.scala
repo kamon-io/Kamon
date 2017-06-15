@@ -91,7 +91,7 @@ object InstrumentFactory {
   }
 
   private def nonEmptySection(entry: (String, Config)): Boolean = entry match {
-    case (_, config) => config.firstLevelKeys.nonEmpty
+    case (_, config) => config.topLevelKeys.nonEmpty
   }
 
   private def readCustomInstrumentSettings(entry: (String, Config)): (String, CustomInstrumentSettings) = {

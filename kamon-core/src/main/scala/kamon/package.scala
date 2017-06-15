@@ -17,7 +17,7 @@
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.{Executors, ThreadFactory}
 
-import com.typesafe.config.Config
+import com.typesafe.config.{Config, ConfigUtil}
 
 import scala.collection.concurrent.TrieMap
 
@@ -81,20 +81,16 @@ package object kamon {
       }
   }
 
-
   implicit class UtilsOnConfig(val config: Config) extends AnyVal {
     import scala.collection.JavaConverters._
 
-    def firstLevelKeys: Set[String] = {
-      config.entrySet().asScala.map {
-        case entry ⇒ entry.getKey.takeWhile(_ != '.')
-      } toSet
-    }
+    def topLevelKeys: Set[String] =
+      config.root().entrySet().asScala.map(_.getKey).toSet
 
     def configurations: Map[String, Config] = {
-      firstLevelKeys
-        .map(entry => (entry, config.getConfig(entry)))
-        .toMap
+      topLevelKeys
+      .map(entry => (entry, config.getConfig(ConfigUtil.joinPath(entry))))
+      .toMap
     }
   }
 }
