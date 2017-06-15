@@ -56,7 +56,7 @@ object Executors {
   }
 
   private def isAssignableTo(executor: ExecutorService, expectedClass: Class[_]): Boolean =
-    executor.getClass.isAssignableFrom(expectedClass)
+    expectedClass.isAssignableFrom(executor.getClass)
 
   private def registerThreadPool(name: String, tags: Tags, pool: ThreadPoolExecutor): Registration = {
     val poolMetrics = Metrics.forThreadPool(name, tags)
