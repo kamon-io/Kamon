@@ -46,8 +46,8 @@ trait GaugeMetric extends Metric[Gauge] with Gauge
 trait CounterMetric extends Metric[Counter] with Counter
 
 
-abstract sealed class BaseMetric[T, S](val instrumentType: InstrumentType) extends Metric[T] {
-  private val instruments = TrieMap.empty[Tags, T]
+private[kamon] abstract sealed class BaseMetric[T, S](val instrumentType: InstrumentType) extends Metric[T] {
+  private[kamon] val instruments = TrieMap.empty[Tags, T]
   protected lazy val baseInstrument: T = instruments.atomicGetOrElseUpdate(Map.empty, createInstrument(Map.empty))
 
   override def refine(tag: String, value: String): T = {
