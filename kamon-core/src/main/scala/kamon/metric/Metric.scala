@@ -136,8 +136,6 @@ private[kamon] final class MinMaxCounterMetricImpl(val name: String, val unit: M
     val mmCounter = factory.get().buildMinMaxCounter(customDynamicRange, customSampleInterval)(name, tags, unit)
     val sampleInterval = mmCounter.sampleInterval.toMillis
     val scheduledFuture = scheduler.scheduleAtFixedRate(scheduledSampler(mmCounter), sampleInterval, sampleInterval, TimeUnit.MILLISECONDS)
-
-    println("SCHEDULING THE MMCOUNTER " + name + ", tags=" + tags.prettyPrint())
     scheduledSamplers.put(tags, scheduledFuture)
 
     mmCounter
