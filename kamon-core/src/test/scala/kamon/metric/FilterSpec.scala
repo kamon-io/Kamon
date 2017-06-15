@@ -5,65 +5,68 @@ import com.typesafe.config.ConfigFactory
 import org.scalatest.{Matchers, WordSpec}
 
 
-//class FilterSpec extends WordSpec with Matchers {
-//  val testConfig = ConfigFactory.parseString(
-//    """
-//      |kamon.metric.filters {
-//      |  accept-unmatched-categories = false
-//      |
-//      |  some-category {
-//      |    includes = ["**"]
-//      |    excludes = ["not-me"]
-//      |  }
-//      |
-//      |  only-includes {
-//      |    includes = ["only-me"]
-//      |  }
-//      |
-//      |  only-excludes {
-//      |    excludes = ["not-me"]
-//      |  }
-//      |
-//      |  specific-rules {
-//      |    includes = ["glob:/user/**", "regex:test-[0-5]"]
-//      |  }
-//      |}
-//    """.stripMargin
-//  )
-//
-//  "the entity filters" should {
-//    "use the accept-unmatched-categories setting when there is no configuration for a given category" in {
-//      val acceptUnmatched = Filter.fromConfig(ConfigFactory.parseString("kamon.metric.filters.accept-unmatched-categories=true"))
-//      val rejectUnmatched = Filter.fromConfig(ConfigFactory.parseString("kamon.metric.filters.accept-unmatched-categories=false"))
-//
-//      acceptUnmatched.accept(Entity("a", "b", Map.empty)) shouldBe true
-//      rejectUnmatched.accept(Entity("a", "b", Map.empty)) shouldBe false
-//    }
-//
-//    "accept entities that are matched by any include and none exclude filters" in {
-//      val entityFilter = Filter.fromConfig(testConfig)
-//
-//      entityFilter.accept(Entity("anything", "anything", Map.empty)) shouldBe false
-//      entityFilter.accept(Entity("anything", "some-category", Map.empty)) shouldBe true
-//      entityFilter.accept(Entity("not-me", "some-category", Map.empty)) shouldBe false
-//    }
-//
-//    "allow configuring includes only or excludes only for any category" in {
-//      val entityFilter = Filter.fromConfig(testConfig)
-//
-//      entityFilter.accept(Entity("only-me", "only-includes", Map.empty)) shouldBe true
-//      entityFilter.accept(Entity("anything", "only-includes", Map.empty)) shouldBe false
-//      entityFilter.accept(Entity("any-other", "only-excludes", Map.empty)) shouldBe false
-//      entityFilter.accept(Entity("not-me", "only-excludes", Map.empty)) shouldBe false
-//    }
-//
-//    "allow to explicitly decide whether patterns are treated as Glob or Regex" in {
-//      val entityFilter = Filter.fromConfig(testConfig)
-//
-//      entityFilter.accept(Entity("/user/accepted", "specific-rules", Map.empty)) shouldBe true
-//      entityFilter.accept(Entity("/other/rejected/", "specific-rules", Map.empty)) shouldBe false
-//      entityFilter.accept(Entity("test-5", "specific-rules", Map.empty)) shouldBe true
-//      entityFilter.accept(Entity("test-6", "specific-rules", Map.empty)) shouldBe false
-//    }
-//  }
-//}
+class FilterSpec extends WordSpec with Matchers {
+  val testConfig = ConfigFactory.parseString(
+    """
+      |kamon.util.filters {
+      |
+      |  some-filter {
+      |    includes = ["**"]
+      |    excludes = ["not-me"]
+      |  }
+      |
+      |  only-includes {
+      |    includes = ["only-me"]
+      |  }
+      |
+      |  only-excludes {
+      |    excludes = ["not-me"]
+      |  }
+      |
+      |  specific-rules {
+      |    includes = ["glob:/user/**", "regex:test-[0-5]"]
+      |  }
+      |
+      |  "filter.with.quotes" {
+      |    includes = ["**"]
+      |    excludes = ["not-me"]
+      |  }
+      |}
+    """.stripMargin
+  )
+
+  Kamon.reconfigure(testConfig.withFallback(Kamon.config()))
+
+  "the entity filters" should {
+    "reject anything that doesn't match any configured filter" in {
+      Kamon.filter("not-a-filter", "hello") shouldBe false
+    }
+
+    "evaluate patterns for filters with includes and excludes" in {
+      Kamon.filter("some-filter", "anything") shouldBe true
+      Kamon.filter("some-filter", "some-other") shouldBe true
+      Kamon.filter("some-filter", "not-me") shouldBe false
+    }
+
+    "allow configuring includes only or excludes only for any filter" in {
+      Kamon.filter("only-includes", "only-me") shouldBe true
+      Kamon.filter("only-includes", "anything") shouldBe false
+      Kamon.filter("only-excludes", "any-other") shouldBe false
+      Kamon.filter("only-excludes", "not-me") shouldBe false
+    }
+
+    "allow to explicitly decide whether patterns are treated as Glob or Regex" in {
+      Kamon.filter("specific-rules", "/user/accepted") shouldBe true
+      Kamon.filter("specific-rules", "/other/rejected/") shouldBe false
+      Kamon.filter("specific-rules", "test-5") shouldBe true
+      Kamon.filter("specific-rules", "test-6") shouldBe false
+    }
+
+    "allow filters with quoted names" in {
+      Kamon.filter("filter.with.quotes", "anything") shouldBe true
+      Kamon.filter("filter.with.quotes", "some-other") shouldBe true
+      Kamon.filter("filter.with.quotes", "not-me") shouldBe false
+    }
+
+  }
+}

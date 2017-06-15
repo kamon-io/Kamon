@@ -18,27 +18,28 @@ package util
 
 import java.util.regex.Pattern
 
-import com.typesafe.config.Config
+import com.typesafe.config.{Config, ConfigUtil}
 
 object Filters {
   def fromConfig(config: Config): Filters = {
     val filtersConfig = config.getConfig("kamon.util.filters")
-    val acceptUnmatched = filtersConfig.getBoolean("accept-unmatched")
 
-    val perMetricFilter = filtersConfig.topLevelKeys.filter(_ != "accept-unmatched") map { filterName: String ⇒
-      val includes = readFilters(filtersConfig, s"$filterName.includes")
-      val excludes = readFilters(filtersConfig, s"$filterName.excludes")
+    val perMetricFilter = filtersConfig.topLevelKeys map { filterName: String ⇒
+      val includes = readFilters(filtersConfig, filterName, "includes")
+      val excludes = readFilters(filtersConfig, filterName, "excludes")
 
       (filterName, new IncludeExcludeMatcher(includes, excludes))
     } toMap
 
-    new Filters(perMetricFilter, acceptUnmatched)
+    new Filters(perMetricFilter)
   }
 
-  private def readFilters(filtersConfig: Config, name: String): Seq[Matcher] = {
+  private def readFilters(filtersConfig: Config, name: String, key: String): Seq[Matcher] = {
     import scala.collection.JavaConverters._
-    if(filtersConfig.hasPath(name))
-      filtersConfig.getStringList(name).asScala.map(readMatcher)
+    val configKey = ConfigUtil.joinPath(name, key)
+
+    if(filtersConfig.hasPath(configKey))
+      filtersConfig.getStringList(configKey).asScala.map(readMatcher)
     else
       Seq.empty
   }
@@ -53,12 +54,12 @@ object Filters {
   }
 }
 
-class Filters(filters: Map[String, Matcher], acceptUnmatched: Boolean) {
+class Filters(filters: Map[String, Matcher]) {
   def accept(filterName: String, pattern: String): Boolean =
     filters
       .get(filterName)
       .map(_.accept(pattern))
-      .getOrElse(acceptUnmatched)
+      .getOrElse(false)
 }
 
 trait Matcher {
