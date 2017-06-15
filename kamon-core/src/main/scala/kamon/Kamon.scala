@@ -20,10 +20,11 @@ import io.opentracing.propagation.Format
 import io.opentracing.{ActiveSpan, Span, SpanContext}
 import kamon.metric._
 import kamon.trace.Tracer
-import kamon.util.{Filters, MeasurementUnit}
+import kamon.util.{Filters, MeasurementUnit, Registration}
 
 import scala.concurrent.Future
 import java.time.Duration
+import java.util.concurrent.{Executors, ScheduledExecutorService, ScheduledThreadPoolExecutor}
 
 import io.opentracing.ActiveSpan.Continuation
 import org.slf4j.LoggerFactory
@@ -37,7 +38,8 @@ object Kamon extends MetricLookup with ReporterRegistry with io.opentracing.Trac
   @volatile private var _environment = Environment.fromConfig(_config)
   @volatile private var _filters = Filters.fromConfig(_config)
 
-  private val _metrics = new MetricRegistry(_config)
+  private val _scheduler = Executors.newScheduledThreadPool(schedulerPoolSize(_config), numberedThreadFactory("kamon-scheduler"))
+  private val _metrics = new MetricRegistry(_config, _scheduler)
   private val _reporters = new ReporterRegistryImpl(_metrics, _config)
   private val _tracer = new Tracer(Kamon, _reporters, _config)
   private var _onReconfigureHooks = Seq.empty[OnReconfigureHook]
@@ -60,6 +62,11 @@ object Kamon extends MetricLookup with ReporterRegistry with io.opentracing.Trac
         logger.error("Exception occurred while trying to run a OnReconfigureHook", error)
       )
     })
+
+    _scheduler match {
+      case stpe: ScheduledThreadPoolExecutor => stpe.setCorePoolSize(schedulerPoolSize(config))
+      case other => logger.error("Unexpected scheduler [{}] found when reconfiguring Kamon.", other)
+    }
   }
 
 
@@ -176,6 +183,13 @@ object Kamon extends MetricLookup with ReporterRegistry with io.opentracing.Trac
   def onReconfigure(hook: OnReconfigureHook): Unit = synchronized {
     _onReconfigureHooks = hook +: _onReconfigureHooks
   }
+
+  def scheduler(): ScheduledExecutorService =
+    _scheduler
+
+  private def schedulerPoolSize(config: Config): Int =
+    config.getInt("kamon.scheduler-pool-size")
+
 }
 
 trait OnReconfigureHook {

@@ -24,13 +24,12 @@ import kamon.util.MeasurementUnit
 
 import scala.collection.concurrent.TrieMap
 import java.time.Duration
-import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
 
 import org.slf4j.LoggerFactory
 
 
-class MetricRegistry(initialConfig: Config) extends MetricsSnapshotGenerator {
-  private val registryExecutionContext = Executors.newScheduledThreadPool(2, threadFactory("kamon-min-max-counter-sampler"))
+class MetricRegistry(initialConfig: Config, scheduler: ScheduledExecutorService) extends MetricsSnapshotGenerator {
   private val logger = LoggerFactory.getLogger(classOf[MetricRegistry])
   private val instrumentFactory = new AtomicReference[InstrumentFactory]()
   private val metrics = TrieMap.empty[String, BaseMetric[_, _]]
@@ -52,7 +51,7 @@ class MetricRegistry(initialConfig: Config) extends MetricsSnapshotGenerator {
     lookupMetric(name, unit, InstrumentTypes.Gauge)(new GaugeMetricImpl(name, unit, instrumentFactory))
 
   def minMaxCounter(name: String, unit: MeasurementUnit, dynamicRange: Option[DynamicRange], sampleInterval: Option[Duration]): MinMaxCounterMetric =
-    lookupMetric(name, unit, InstrumentTypes.MinMaxCounter)(new MinMaxCounterMetricImpl(name, unit, dynamicRange, sampleInterval, instrumentFactory, registryExecutionContext))
+    lookupMetric(name, unit, InstrumentTypes.MinMaxCounter)(new MinMaxCounterMetricImpl(name, unit, dynamicRange, sampleInterval, instrumentFactory, scheduler))
 
 
   override def snapshot(): MetricsSnapshot = synchronized {

@@ -22,6 +22,7 @@ import java.util.concurrent._
 import com.typesafe.config.Config
 import kamon.metric._
 import kamon.trace.Span
+import kamon.util.Registration
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutorService, Future}
@@ -39,11 +40,6 @@ trait ReporterRegistry {
   def addReporter(reporter: SpanReporter, name: String): Registration
 
   def stopAllReporters(): Future[Unit]
-}
-
-
-trait Registration {
-  def cancel(): Boolean
 }
 
 trait MetricReporter {
