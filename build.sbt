@@ -16,8 +16,8 @@
 
 resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
 val kamonCore  = "io.kamon" %% "kamon-core" % "1.0.0-RC1-dd645df1b7c462418c01074d0e137982d2f270b7"
-val kamonScala = "io.kamon" %% "kamon-scala" % "1.0.0-RC1-114203f1f524131beed64faddcf06b3955ed276e" exclude("io.kamon", "kamon-core")
-val kamonExecutors = "io.kamon" %% "kamon-executors" % "1.0.0-RC1-129a05be391261865c5b01eaa52e3e77d7578bf2" exclude("io.kamon", "kamon-core")
+val kamonScala = "io.kamon" %% "kamon-scala" % "1.0.0-RC1-b1dc4786bca305d87400cd423b347b4d689a9807" exclude("io.kamon", "kamon-core")
+val kamonExecutors = "io.kamon" %% "kamon-executors" % "1.0.0-RC1-24f29c9a3c52663ada75fd85edcc5fd3810e97a2" exclude("io.kamon", "kamon-core")
 
 val `akka-2.3` = "2.3.13"
 val `akka-2.4` = "2.4.16"
