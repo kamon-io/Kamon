@@ -14,7 +14,7 @@
  */
 
 resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
-val kamonCore = "io.kamon" %% "kamon-core" % "1.0.0-RC1-bc481389e427c83069b092e24200dbe960aaeb67"
+val kamonCore = "io.kamon" %% "kamon-core" % "1.0.0-RC1-dd645df1b7c462418c01074d0e137982d2f270b7"
 
 lazy val root = (project in file("."))
   .settings(name := "kamon-executors")
