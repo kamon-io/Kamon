@@ -73,7 +73,7 @@ class ActorMetricsSpec extends TestKit(ActorSystem("ActorMetricsSpec")) with Wor
     }
 
     "record the mailbox-size" in new ActorMetricsFixtures {
-      val trackedActor = createTestActor("measuring-mailbox-size")
+      val trackedActor = createTestActor("measuring-mailbox-size", true)
       trackedActor ! TrackTimings(sleep = Some(100 millis))
       10.times(trackedActor ! Discard)
       trackedActor ! Ping
@@ -82,7 +82,7 @@ class ActorMetricsSpec extends TestKit(ActorSystem("ActorMetricsSpec")) with Wor
       expectMsg(Pong)
 
       val mailboxSizeDistribution = actorMailboxSizeMetric.refine("path" -> "ActorMetricsSpec/user/measuring-mailbox-size").distribution()
-      mailboxSizeDistribution.min should be(0L)
+      mailboxSizeDistribution.min should be(0L +- 1L)
       mailboxSizeDistribution.max should be(11L +- 1L)
     }
 
