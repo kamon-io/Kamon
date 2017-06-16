@@ -32,7 +32,7 @@ class ExecutorMetricsSpec extends WordSpec with BaseSpec with Matchers{
       val singleThreadPoolExecutor = JavaExecutors.newSingleThreadExecutor()
       val registeredPool = Executors.register("single-thread-pool", singleThreadPoolExecutor)
 
-      Metrics.threadPoolSize.valuesForTag("name")  should contain only "single-thread-pool"
+      Metrics.threadPoolSize.valuesForTag("name")  should contain ("single-thread-pool")
 
       registeredPool.cancel()
     }
@@ -41,7 +41,7 @@ class ExecutorMetricsSpec extends WordSpec with BaseSpec with Matchers{
       val threadPoolExecutor = JavaExecutors.newCachedThreadPool()
       val registeredPool = Executors.register("thread-pool-executor", threadPoolExecutor)
 
-      Metrics.threadPoolSize.valuesForTag("name")  should contain only "thread-pool-executor"
+      Metrics.threadPoolSize.valuesForTag("name")  should contain ("thread-pool-executor")
 
       registeredPool.cancel()
     }
@@ -50,7 +50,7 @@ class ExecutorMetricsSpec extends WordSpec with BaseSpec with Matchers{
       val scheduledThreadPoolExecutor = JavaExecutors.newSingleThreadScheduledExecutor()
       val registeredPool = Executors.register("scheduled-thread-pool-executor", scheduledThreadPoolExecutor)
 
-      Metrics.threadPoolSize.valuesForTag("name")  should contain only "scheduled-thread-pool-executor"
+      Metrics.threadPoolSize.valuesForTag("name")  should contain ("scheduled-thread-pool-executor")
 
       registeredPool.cancel()
     }
@@ -59,7 +59,7 @@ class ExecutorMetricsSpec extends WordSpec with BaseSpec with Matchers{
       val javaForkJoinPool = JavaExecutors.newWorkStealingPool()
       val registeredForkJoin = Executors.register("java-fork-join-pool", javaForkJoinPool)
 
-      Metrics.forkJoinPoolSize.valuesForTag("name")  should contain only "java-fork-join-pool"
+      Metrics.forkJoinPoolSize.valuesForTag("name")  should contain ("java-fork-join-pool")
 
       registeredForkJoin.cancel()
     }
@@ -68,7 +68,7 @@ class ExecutorMetricsSpec extends WordSpec with BaseSpec with Matchers{
       val scalaForkJoinPool = new ScalaForkJoinPool()
       val registeredForkJoin = Executors.register("scala-fork-join-pool", scalaForkJoinPool)
 
-      Metrics.forkJoinPoolSize.valuesForTag("name")  should contain only "scala-fork-join-pool"
+      Metrics.forkJoinPoolSize.valuesForTag("name")  should contain ("scala-fork-join-pool")
 
       registeredForkJoin.cancel()
     }
