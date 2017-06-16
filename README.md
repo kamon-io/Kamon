@@ -1,4 +1,4 @@
-#Executor Service Metrics Tracker <img align="right" src="https://rawgit.com/kamon-io/Kamon/master/kamon-logo.svg" height="150px" style="padding-left: 20px"/> 
+# Executor Service Metrics Tracker <img align="right" src="https://rawgit.com/kamon-io/Kamon/master/kamon-logo.svg" height="150px" style="padding-left: 20px"/> 
 [![Build Status](https://travis-ci.org/kamon-io/kamon-executors.svg?branch=master)](https://travis-ci.org/kamon-io/kamon-executors)
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/kamon-io/Kamon?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-executors_2.11/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-executors_2.11)
