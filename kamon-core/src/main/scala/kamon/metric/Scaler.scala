@@ -25,7 +25,7 @@ class Scaler(targetTimeUnit: MeasurementUnit, targetInformationUnit: Measurement
   val scaleHistogram = new AtomicHdrHistogram("scaler", Map.empty, MeasurementUnit.none, dynamicRange)
 
   def scaleDistribution(metric: MetricDistribution): MetricDistribution = {
-    metric.measurementUnit match {
+    metric.unit match {
       case MeasurementUnit(Dimension.Time, magnitude) if(magnitude != targetTimeUnit.magnitude) =>
         scaleMetricDistributionToTarget(metric, targetTimeUnit)
 
@@ -37,7 +37,7 @@ class Scaler(targetTimeUnit: MeasurementUnit, targetInformationUnit: Measurement
   }
 
   def scaleMetricValue(metric: MetricValue): MetricValue = {
-    metric.measurementUnit match {
+    metric.unit match {
       case MeasurementUnit(Dimension.Time, magnitude) if(magnitude != targetTimeUnit.magnitude) =>
         scaleMetricValueToTarget(metric, targetTimeUnit)
 
@@ -50,24 +50,24 @@ class Scaler(targetTimeUnit: MeasurementUnit, targetInformationUnit: Measurement
 
   private def scaleMetricDistributionToTarget(metric: MetricDistribution, targetUnit: MeasurementUnit): MetricDistribution = {
     metric.distribution.bucketsIterator.foreach(b => {
-      val scaledValue = MeasurementUnit.scale(b.value, metric.measurementUnit, targetUnit)
+      val scaledValue = MeasurementUnit.scale(b.value, metric.unit, targetUnit)
       scaleHistogram.record(Math.ceil(scaledValue).toLong, b.frequency)
     })
 
     scaleHistogram.snapshot(resetState = true).copy(
       name = metric.name,
       tags = metric.tags,
-      measurementUnit = targetUnit,
+      unit = targetUnit,
       dynamicRange = dynamicRange
     )
   }
 
   private def scaleMetricValueToTarget(metric: MetricValue, targetUnit: MeasurementUnit): MetricValue = {
-    val scaledValue = MeasurementUnit.scale(metric.value, metric.measurementUnit, targetUnit)
+    val scaledValue = MeasurementUnit.scale(metric.value, metric.unit, targetUnit)
 
     metric.copy(
       value = Math.ceil(scaledValue).toLong,
-      measurementUnit = targetUnit
+      unit = targetUnit
     )
   }
 }
