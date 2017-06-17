@@ -10,7 +10,7 @@ import kamon.util.MeasurementUnit.Dimension._
 
 class ScrapeDataBuilder(prometheusConfig: PrometheusReporter.Configuration) {
   private val builder = new StringBuilder()
-  private val numberFormat = new DecimalFormat("#.0########")
+  private val numberFormat = new DecimalFormat("#0.0########")
 
   import builder.append
 
@@ -61,7 +61,7 @@ class ScrapeDataBuilder(prometheusConfig: PrometheusReporter.Configuration) {
       if(metric.distribution.count > 0) {
         appendHistogramBuckets(normalizedMetricName, metric.tags, metric)
 
-        val count = format(scale(metric.distribution.count, metric.unit))
+        val count = format(metric.distribution.count)
         val sum = format(scale(metric.distribution.sum, metric.unit))
         appendTimeSerieValue(normalizedMetricName, metric.tags, count, "_count")
         appendTimeSerieValue(normalizedMetricName, metric.tags, sum, "_sum")
@@ -91,8 +91,6 @@ class ScrapeDataBuilder(prometheusConfig: PrometheusReporter.Configuration) {
     var inBucketCount = 0L
     var leftOver = currentDistributionBucket.frequency
 
-    var accumulatedCount = currentDistributionBucket.frequency
-
     configuredBuckets.foreach { configuredBucket =>
       val bucketTags = tags + ("le" -> String.valueOf(configuredBucket))
 
@@ -110,12 +108,9 @@ class ScrapeDataBuilder(prometheusConfig: PrometheusReporter.Configuration) {
           else
             leftOver = currentDistributionBucket.frequency
         }
-
-        appendTimeSerieValue(name, bucketTags, format(inBucketCount), "_bucket")
-
-      } else {
-        appendTimeSerieValue(name, bucketTags, "0.0", "_bucket")
       }
+
+      appendTimeSerieValue(name, bucketTags, format(inBucketCount), "_bucket")
     }
 
     while(distributionBuckets.hasNext) {

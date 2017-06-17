@@ -1,20 +1,45 @@
 package kamon.prometheus
 
 import com.typesafe.config.Config
+import fi.iki.elonen.NanoHTTPD
+import fi.iki.elonen.NanoHTTPD.newFixedLengthResponse
 import kamon.{Kamon, MetricReporter}
 import kamon.metric._
 import kamon.util.MeasurementUnit
+import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 import scala.collection.concurrent.TrieMap
 
 class PrometheusReporter extends MetricReporter {
+  private val logger = LoggerFactory.getLogger(classOf[PrometheusReporter])
+  private var embeddedHttpServer: Option[EmbeddedHttpServer] = None
+  @volatile private var preparedScrapeData: String =
+    "# The kamon-prometheus module didn't receive any data just yet.\n"
 
-  override def start(): Unit = {}
+  private val counters = TrieMap.empty[MetricKey, CumulativeValue]
+  private val gauges = TrieMap.empty[MetricKey, CumulativeValue]
+  private val histograms = TrieMap.empty[MetricKey, CumulativeDistribution]
 
-  override def stop(): Unit = {}
 
-  override def reconfigure(config: Config): Unit = {}
+  override def start(): Unit = {
+    val config = readConfiguration(Kamon.config())
+
+    if(config.startEmbeddedServer)
+      startEmbeddedServer(config)
+  }
+
+  override def stop(): Unit = {
+    stopEmbeddedServer()
+  }
+
+  override def reconfigure(newConfig: Config): Unit = {
+    val config = readConfiguration(newConfig)
+    if(config.startEmbeddedServer) {
+      stopEmbeddedServer()
+      startEmbeddedServer(config)
+    }
+  }
 
   override def reportTickSnapshot(snapshot: TickSnapshot): Unit = {
     snapshot.metrics.counters.foreach(accumulateValue(this.counters, _))
@@ -27,14 +52,11 @@ class PrometheusReporter extends MetricReporter {
     scrapeDataBuilder.appendGauges(gauges.values.map(_.snapshot()).toSeq)
     scrapeDataBuilder.appendHistograms(histograms.values.map(_.snapshot()).toSeq)
 
-    println(scrapeDataBuilder.build())
-
+    preparedScrapeData = scrapeDataBuilder.build()
   }
 
-  private val counters = TrieMap.empty[MetricKey, CumulativeValue]
-  private val gauges = TrieMap.empty[MetricKey, CumulativeValue]
-  private val histograms = TrieMap.empty[MetricKey, CumulativeDistribution]
-
+  def scrapeData(): String =
+    preparedScrapeData
 
   private def accumulateValue(target: TrieMap[MetricKey, CumulativeValue], metric: MetricValue): Unit =
     target.getOrElseUpdate(MetricKey(metric.name, metric.tags, metric.unit), new CumulativeValue(metric)).add(metric)
@@ -65,13 +87,32 @@ class PrometheusReporter extends MetricReporter {
       initialValue.copy(value = this.value)
   }
 
+  class EmbeddedHttpServer(hostname: String, port: Int) extends NanoHTTPD(hostname, port) {
+    override def serve(session: NanoHTTPD.IHTTPSession): NanoHTTPD.Response = {
+      newFixedLengthResponse(scrapeData())
+    }
+  }
+
+
+  private def startEmbeddedServer(config: PrometheusReporter.Configuration): Unit = {
+    val server = new EmbeddedHttpServer(config.embeddedServerHostname, config.embeddedServerPort)
+    server.start()
+
+    logger.info(s"Started the embedded HTTP server on http://${config.embeddedServerHostname}:${config.embeddedServerPort}")
+    embeddedHttpServer = Some(server)
+  }
+
+  private def stopEmbeddedServer(): Unit =
+    embeddedHttpServer.foreach(_.stop())
+
 
 
   private def readConfiguration(config: Config): PrometheusReporter.Configuration = {
     val prometheusConfig = config.getConfig("kamon.prometheus")
 
     PrometheusReporter.Configuration(
-      startEmbeddedServer = prometheusConfig.getBoolean("start-embedded-server"),
+      startEmbeddedServer = prometheusConfig.getBoolean("start-embedded-http-server"),
+      embeddedServerHostname = prometheusConfig.getString("embedded-server.hostname"),
       embeddedServerPort = prometheusConfig.getInt("embedded-server.port"),
       defaultBuckets = prometheusConfig.getDoubleList("buckets.default-buckets").asScala,
       timeBuckets = prometheusConfig.getDoubleList("buckets.time-buckets").asScala,
@@ -81,6 +122,6 @@ class PrometheusReporter extends MetricReporter {
 }
 
 object PrometheusReporter {
-  case class Configuration(startEmbeddedServer: Boolean, embeddedServerPort: Int, defaultBuckets: Seq[java.lang.Double],
-    timeBuckets: Seq[java.lang.Double], informationBuckets: Seq[java.lang.Double])
+  case class Configuration(startEmbeddedServer: Boolean, embeddedServerHostname: String, embeddedServerPort: Int,
+    defaultBuckets: Seq[java.lang.Double], timeBuckets: Seq[java.lang.Double], informationBuckets: Seq[java.lang.Double])
 }

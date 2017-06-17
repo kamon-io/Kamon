@@ -79,16 +79,7 @@ class ScrapeDataBuilderSpec extends WordSpec with Matchers {
       val histogramOne = constantDistribution("histogram-one", Map.empty, none, 1, 10)
       val histogramTwo = constantDistribution("histogram-two", Map.empty, none, 1, 20)
       val histogramThree = constantDistribution("histogram-three", Map.empty, none, 5, 10)
-
-//      println(builder(buckets = Seq(15D)).appendHistograms(Seq(histogramOne)).build())
-//      println(builder(buckets = Seq(5D, 10D, 15D, 20D)).appendHistograms(Seq(histogramTwo)).build())
-//      println(builder(buckets = Seq(3D)).appendHistograms(Seq(histogramThree)).build())
-//      println(builder(buckets = Seq(3D, 50D)).appendHistograms(Seq(histogramThree)).build())
-//      println(builder(buckets = Seq(3D, 50D, 60D, 70D)).appendHistograms(Seq(histogramThree)).build())
-//      println(builder(buckets = Seq(7D)).appendHistograms(Seq(histogramThree)).build())
-
-
-
+      val histogramWithZero = constantDistribution("histogram-with-zero", Map.empty, none, 0, 10)
 
       builder(buckets = Seq(15D)).appendHistograms(Seq(histogramOne)).build() should include {
         """
@@ -156,6 +147,24 @@ class ScrapeDataBuilderSpec extends WordSpec with Matchers {
           |histogram_three_sum 45.0
         """.stripMargin.trim()
       }
+
+      builder(buckets = Seq(0.005D, 0.05D, 0.5D, 1D, 2D, 2.1D, 2.2D, 2.3D, 10D)).appendHistograms(Seq(histogramWithZero)).build() should include {
+        """
+          |# TYPE histogram_with_zero histogram
+          |histogram_with_zero_bucket{le="0.005"} 1.0
+          |histogram_with_zero_bucket{le="0.05"} 1.0
+          |histogram_with_zero_bucket{le="0.5"} 1.0
+          |histogram_with_zero_bucket{le="1.0"} 2.0
+          |histogram_with_zero_bucket{le="2.0"} 3.0
+          |histogram_with_zero_bucket{le="2.1"} 3.0
+          |histogram_with_zero_bucket{le="2.2"} 3.0
+          |histogram_with_zero_bucket{le="2.3"} 3.0
+          |histogram_with_zero_bucket{le="10.0"} 11.0
+          |histogram_with_zero_bucket{le="+Inf"} 11.0
+          |histogram_with_zero_count 11.0
+          |histogram_with_zero_sum 55.0
+        """.stripMargin.trim()
+      }
     }
   }
 
@@ -171,4 +180,9 @@ class ScrapeDataBuilderSpec extends WordSpec with Matchers {
 
     histogram.snapshot(resetState = true)
   }
+
+  val values = Array(6,4,4,7,3,2,4,9,5,2,6,8,6,7,5,4,2,6,4,7,6,3,2,9,8,0,4,6,8,9,9,9,9,4,1,9,5,9,7,3,4,8,0,6,8,8,7,7,4,3,9,4,0,4,3,4,6,8,1,9,3,5,8,9,9,5,1,5,4,0,6,7,8,9,6,5,1,9,1,2,4,6,9,8,9,8,0,6,7,6,6,9,9,8,4,0,1,8,7,8,0)
+  val hist = new HdrHistogram("test", Map.empty, none, DynamicRange.Default)
+  values.foreach(hist.record(_))
+  val weirdHistogram = hist.snapshot(resetState = true)
 }
