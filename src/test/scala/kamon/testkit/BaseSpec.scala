@@ -22,7 +22,7 @@ import scala.collection.concurrent.TrieMap
 trait BaseSpec {
 
   implicit class MetricSyntax(metric: Metric[_]) {
-    def valuesForTag(tag: String): Seq[String] = {
+    def  valuesForTag(tag: String): Seq[String] = {
       val instrumentsField = classOf[BaseMetric[_, _]].getDeclaredField("instruments")
       instrumentsField.setAccessible(true)
 

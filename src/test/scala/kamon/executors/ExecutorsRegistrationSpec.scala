@@ -27,15 +27,14 @@ class ExecutorsRegistrationSpec extends WordSpec with BaseSpec with Matchers {
 
   "the Executors registration function" should {
     "accept all types of known executors" in {
-      Executors.register("java-fjp", new JavaForkJoinPool(1))
-      Executors.register("scala-fjp", new ScalaForkJoinPool(1))
-      Executors.register("thread-pool", JavaExecutors.newFixedThreadPool(1))
-      Executors.register("scheduled-thread-pool", JavaExecutors.newScheduledThreadPool(1))
-      Executors.register("single-thread-pool", JavaExecutors.newSingleThreadExecutor())
-      Executors.register("single-scheduled-thread-pool", JavaExecutors.newSingleThreadScheduledExecutor())
-      Executors.register("unconfigurable-thread-pool", JavaExecutors.unconfigurableExecutorService(JavaExecutors.newFixedThreadPool(1)))
-      Executors.register("unconfigurable-scheduled-thread-pool", JavaExecutors.unconfigurableScheduledExecutorService(JavaExecutors.newScheduledThreadPool(1)))
-
+      val registeredJavaForkJoin  = Executors.register("java-fjp", new JavaForkJoinPool(1))
+      val registeredScalaForkJoin = Executors.register("scala-fjp", new ScalaForkJoinPool(1))
+      val registeredThreadPool = Executors.register("thread-pool", JavaExecutors.newFixedThreadPool(1))
+      val registeredScheduled = Executors.register("scheduled-thread-pool", JavaExecutors.newScheduledThreadPool(1))
+      val registeredSingle = Executors.register("single-thread-pool", JavaExecutors.newSingleThreadExecutor())
+      val registeredSingleScheduled = Executors.register("single-scheduled-thread-pool", JavaExecutors.newSingleThreadScheduledExecutor())
+      val registeredUThreadPool = Executors.register("unconfigurable-thread-pool", JavaExecutors.unconfigurableExecutorService(JavaExecutors.newFixedThreadPool(1)))
+      val registeredUScheduled = Executors.register("unconfigurable-scheduled-thread-pool", JavaExecutors.unconfigurableScheduledExecutorService(JavaExecutors.newScheduledThreadPool(1)))
 
       forkJoinPoolParallelism.valuesForTag("name") should contain only(
         "java-fjp",
@@ -50,8 +49,15 @@ class ExecutorsRegistrationSpec extends WordSpec with BaseSpec with Matchers {
         "unconfigurable-thread-pool",
         "unconfigurable-scheduled-thread-pool"
       )
+
+      registeredJavaForkJoin.cancel()
+      registeredScalaForkJoin.cancel()
+      registeredThreadPool.cancel()
+      registeredScheduled.cancel()
+      registeredSingle.cancel()
+      registeredSingleScheduled.cancel()
+      registeredUThreadPool.cancel()
+      registeredUScheduled.cancel()
     }
   }
-
-
 }
