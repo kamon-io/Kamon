@@ -2,7 +2,7 @@ package kamon.prometheus
 
 import com.typesafe.config.Config
 import fi.iki.elonen.NanoHTTPD
-import fi.iki.elonen.NanoHTTPD.newFixedLengthResponse
+import fi.iki.elonen.NanoHTTPD.{Response, newFixedLengthResponse}
 import kamon.{Kamon, MetricReporter}
 import kamon.metric._
 import kamon.util.MeasurementUnit
@@ -18,7 +18,6 @@ class PrometheusReporter extends MetricReporter {
     "# The kamon-prometheus module didn't receive any data just yet.\n"
 
   private val counters = TrieMap.empty[MetricKey, CumulativeValue]
-  private val gauges = TrieMap.empty[MetricKey, CumulativeValue]
   private val histograms = TrieMap.empty[MetricKey, CumulativeDistribution]
 
 
@@ -43,13 +42,12 @@ class PrometheusReporter extends MetricReporter {
 
   override def reportTickSnapshot(snapshot: TickSnapshot): Unit = {
     snapshot.metrics.counters.foreach(accumulateValue(this.counters, _))
-    snapshot.metrics.gauges.foreach(accumulateValue(this.gauges, _))
     snapshot.metrics.histograms.foreach(accumulateDistribution(this.histograms, _))
     snapshot.metrics.minMaxCounters.foreach(accumulateDistribution(this.histograms, _))
 
     val scrapeDataBuilder = new ScrapeDataBuilder(readConfiguration(Kamon.config()))
     scrapeDataBuilder.appendCounters(counters.values.map(_.snapshot()).toSeq)
-    scrapeDataBuilder.appendGauges(gauges.values.map(_.snapshot()).toSeq)
+    scrapeDataBuilder.appendGauges(snapshot.metrics.gauges)
     scrapeDataBuilder.appendHistograms(histograms.values.map(_.snapshot()).toSeq)
 
     preparedScrapeData = scrapeDataBuilder.build()
@@ -89,7 +87,7 @@ class PrometheusReporter extends MetricReporter {
 
   class EmbeddedHttpServer(hostname: String, port: Int) extends NanoHTTPD(hostname, port) {
     override def serve(session: NanoHTTPD.IHTTPSession): NanoHTTPD.Response = {
-      newFixedLengthResponse(scrapeData())
+      newFixedLengthResponse(Response.Status.OK, "text/plain", scrapeData())
     }
   }
 
