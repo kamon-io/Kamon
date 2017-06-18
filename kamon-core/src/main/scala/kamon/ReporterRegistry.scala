@@ -22,7 +22,7 @@ import java.util.concurrent._
 import com.typesafe.config.Config
 import kamon.metric._
 import kamon.trace.Span
-import kamon.util.Registration
+import kamon.util.{DynamicAccess, Registration}
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutorService, Future}
@@ -42,19 +42,17 @@ trait ReporterRegistry {
   def stopAllReporters(): Future[Unit]
 }
 
-trait MetricReporter {
+sealed trait Reporter {
   def start(): Unit
   def stop(): Unit
-
   def reconfigure(config: Config): Unit
+}
+
+trait MetricReporter extends Reporter {
   def reportTickSnapshot(snapshot: TickSnapshot): Unit
 }
 
-trait SpanReporter {
-  def start(): Unit
-  def stop(): Unit
-
-  def reconfigure(config: Config): Unit
+trait SpanReporter extends Reporter {
   def reportSpans(spans: Seq[Span.CompletedSpan]): Unit
 }
 
@@ -77,22 +75,17 @@ class ReporterRegistryImpl(metrics: MetricsSnapshotGenerator, initialConfig: Con
       logger.info("The kamon.reporters setting is empty, no reporters have been started.")
     else {
       registryConfiguration.configuredReporters.foreach { reporterFQCN =>
-        Try {
-          val reporterClass = Class.forName(reporterFQCN)
-          val instance = reporterClass.newInstance()
-          instance match {
-            case mr: MetricReporter =>
-              addMetricReporter(mr, "loaded-from-config: " + reporterFQCN)
-              logger.info("Loaded metric reporter [{}]", reporterFQCN)
+        val dynamicAccess = new DynamicAccess(getClass.getClassLoader)
+        dynamicAccess.createInstanceFor[Reporter](reporterFQCN, Nil).map({
+          case mr: MetricReporter =>
+            addMetricReporter(mr, "loaded-from-config: " + reporterFQCN)
+            logger.info("Loaded metric reporter [{}]", reporterFQCN)
 
-            case sr: SpanReporter   =>
-              addSpanReporter(sr, "loaded-from-config: " + reporterFQCN)
-              logger.info("Loaded span reporter [{}]", reporterFQCN)
+          case sr: SpanReporter =>
+            addSpanReporter(sr, "loaded-from-config: " + reporterFQCN)
+            logger.info("Loaded span reporter [{}]", reporterFQCN)
 
-            case anyOther           =>
-              logger.error("Cannot add [{}] as a reporter, it doesn't implement the MetricReporter or SpanReporter interfaces", anyOther)
-          }
-        }.failed.foreach {
+        }).failed.foreach {
           t => logger.error(s"Failed to load configured reporter [$reporterFQCN]", t)
         }
       }
