@@ -14,7 +14,7 @@
  */
 
 resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
-val kamonCore = "io.kamon" %% "kamon-core" % "1.0.0-RC1-472394506fa92bf5957276c5d8f536f0872bd669"
+val kamonCore = "io.kamon" %% "kamon-core" % "1.0.0-RC1-1d98b9e8a397acf8b6f6f55a3fd5189eb72740ba"
 val nanohttpd = "org.nanohttpd" % "nanohttpd" % "2.3.1"
 
 
