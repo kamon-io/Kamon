@@ -120,11 +120,14 @@ class ReporterRegistryImpl(metrics: MetricsSnapshotGenerator, initialConfig: Con
       executionContext = ExecutionContext.fromExecutorService(executor)
     )
 
+    Future(reporterEntry.reporter.start())(reporterEntry.executionContext)
+
     if(metricReporters.isEmpty)
       reStartMetricTicker()
 
     metricReporters.put(reporterEntry.id, reporterEntry)
     createRegistration(reporterEntry.id, metricReporters)
+
   }
 
   private def addSpanReporter(reporter: SpanReporter, name: String): Registration = synchronized {
@@ -135,6 +138,8 @@ class ReporterRegistryImpl(metrics: MetricsSnapshotGenerator, initialConfig: Con
       bufferCapacity = registryConfiguration.traceReporterQueueSize,
       executionContext = ExecutionContext.fromExecutorService(executor)
     )
+
+    Future(reporterEntry.reporter.start())(reporterEntry.executionContext)
 
     if(spanReporters.isEmpty)
       reStartTraceTicker()
