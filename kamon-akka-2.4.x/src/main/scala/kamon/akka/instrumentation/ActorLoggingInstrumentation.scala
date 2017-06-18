@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * Copyright © 2013-2014 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2017 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -16,33 +16,35 @@
 
 package akka.kamon.instrumentation
 
+import kamon.Kamon
+import kamon.util.{BaggageOnMDC, HasContinuation}
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
 
 @Aspect
-class ActorLoggingInstrumentation /*extends MdcKeysSupport*/ {
+class ActorLoggingInstrumentation  {
 
-/*  @DeclareMixin("akka.event.Logging.LogEvent+")
-  def mixinTraceContextAwareToLogEvent: TraceContextAware = TraceContextAware.default
+  @DeclareMixin("akka.event.Logging.LogEvent+")
+  def mixinTraceContextAwareToLogEvent: HasContinuation = HasContinuation.fromTracerActiveSpan()
 
   @Pointcut("execution(akka.event.Logging.LogEvent+.new(..)) && this(event)")
-  def logEventCreation(event: TraceContextAware): Unit = {}
+  def logEventCreation(event: HasContinuation): Unit = {}
 
   @After("logEventCreation(event)")
-  def captureTraceContext(event: TraceContextAware): Unit = {
-    // Force initialization of TraceContextAware
-    event.traceContext
+  def captureTraceContext(event: HasContinuation): Unit = {
+    // Force initialization of the continuation
+    event.continuation
   }
 
   @Pointcut("execution(* akka.event.slf4j.Slf4jLogger.withMdc(..)) && args(logSource, logEvent, logStatement)")
-  def withMdcInvocation(logSource: String, logEvent: TraceContextAware, logStatement: () ⇒ _): Unit = {}
+  def withMdcInvocation(logSource: String, logEvent: HasContinuation, logStatement: () ⇒ _): Unit = {}
 
   @Around("withMdcInvocation(logSource, logEvent, logStatement)")
-  def aroundWithMdcInvocation(pjp: ProceedingJoinPoint, logSource: String, logEvent: TraceContextAware, logStatement: () ⇒ _): Unit = {
-    Tracer.withContext(logEvent.traceContext) {
-      withMdc {
+  def aroundWithMdcInvocation(pjp: ProceedingJoinPoint, logSource: String, logEvent: HasContinuation, logStatement: () ⇒ _): Unit = {
+    Kamon.withContinuation(logEvent.continuation) {
+      BaggageOnMDC.withBaggageOnMDC {
         pjp.proceed()
       }
     }
-  }*/
+  }
 }
