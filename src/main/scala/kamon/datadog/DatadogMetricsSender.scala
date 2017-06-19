@@ -15,6 +15,7 @@
  */
 
 package kamon.datadog
+/*
 
 import akka.actor.{ActorSystem, Props, ActorRef, Actor}
 import akka.io.{Udp, IO}
@@ -126,31 +127,4 @@ trait UdpExtensionProvider {
   def udpExtension(implicit system: ActorSystem): ActorRef = IO(Udp)
 }
 
-class MetricDataPacketBuilder(maxPacketSizeInBytes: Long, udpSender: ActorRef, remote: InetSocketAddress) {
-  val metricSeparator = "\n"
-  val measurementSeparator = ":"
-  var lastKey = ""
-  var buffer = new StringBuilder()
-
-  def appendMeasurement(key: String, measurementData: String): Unit = {
-    val data = key + measurementSeparator + measurementData
-
-    if (fitsOnBuffer(metricSeparator + data)) {
-      val mSeparator = if (buffer.length > 0) metricSeparator else ""
-      buffer.append(mSeparator).append(data)
-    } else {
-      flushToUDP(buffer.toString())
-      buffer.clear()
-      buffer.append(data)
-    }
-  }
-
-  def fitsOnBuffer(data: String): Boolean = (buffer.length + data.length) <= maxPacketSizeInBytes
-
-  private def flushToUDP(data: String): Unit = udpSender ! Udp.Send(ByteString(data), remote)
-
-  def flush(): Unit = {
-    flushToUDP(buffer.toString)
-    buffer.clear()
-  }
-}
+*/

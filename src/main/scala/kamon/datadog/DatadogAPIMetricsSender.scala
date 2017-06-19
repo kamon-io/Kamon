@@ -1,4 +1,5 @@
 package kamon.datadog
+/*
 
 import akka.actor.Actor
 
@@ -21,7 +22,7 @@ import java.util.concurrent.TimeUnit
 /**
  * Sends metrics to Datadog through its native HTTPS API.
  */
-class DatadogAPIMetricsSender extends Actor with ActorLogging {
+class DatadogAPIMetricsSender {
   import context.dispatcher
 
   val config = context.system.settings.config.getConfig("kamon.datadog")
@@ -31,6 +32,8 @@ class DatadogAPIMetricsSender extends Actor with ActorLogging {
     .setReadTimeout(config.getDuration("http.read-timeout", TimeUnit.MILLISECONDS).toInt)
     .setRequestTimeout(config.getDuration("http.request-timeout", TimeUnit.MILLISECONDS).toInt)
     .build)
+
+
   val url = "https://app.datadoghq.com/api/v1/series?api_key=" + config.getString("http.api-key") // FIXME url encode
   val host = config.getString("http.host-override") match {
     case "none" => systemHostName
@@ -90,14 +93,8 @@ class DatadogAPIMetricsSender extends Actor with ActorLogging {
     client.preparePost(url).setBody(body).setHeader("Content-Type", "application/json").execute().toCompletableFuture.toScala pipeTo self
   }
 
-  def isSingleInstrumentEntity(entity: Entity): Boolean =
-    SingleInstrumentEntityRecorder.AllCategories.contains(entity.category)
 
-  def buildMetricName(entity: Entity, metricKey: MetricKey): String =
-    if (isSingleInstrumentEntity(entity))
-      s"$appName.${entity.category}.${entity.name}"
-    else
-      s"$appName.${entity.category}.${metricKey.name}"
 
   def systemHostName: String = ManagementFactory.getRuntimeMXBean.getName.split('@')(1)
 }
+*/
