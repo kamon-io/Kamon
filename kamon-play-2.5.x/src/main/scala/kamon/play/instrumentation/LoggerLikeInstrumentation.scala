@@ -15,12 +15,12 @@
 
 package kamon.play.instrumentation
 
-import kamon.trace.logging.MdcKeysSupport
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
+import kamon.util.BaggageOnMDC.withBaggageOnMDC
 
 @Aspect
-class LoggerLikeInstrumentation extends MdcKeysSupport {
+class LoggerLikeInstrumentation {
 
   @Pointcut("execution(* play.api.LoggerLike+.info(..))")
   def infoPointcut(): Unit = {}
@@ -38,8 +38,34 @@ class LoggerLikeInstrumentation extends MdcKeysSupport {
   def tracePointcut(): Unit = {}
 
   @Around("(infoPointcut() || debugPointcut() || warnPointcut() || errorPointcut() || tracePointcut())")
-  def aroundLog(pjp: ProceedingJoinPoint): Any = withMdc {
+  def aroundLog(pjp: ProceedingJoinPoint): Any = withBaggageOnMDC {
     pjp.proceed()
   }
 }
+
+
+@Aspect
+class JavaLoggerInstrumentation {
+
+  @Pointcut("execution(* play.Logger..*.info(..))")
+  def infoPointcut(): Unit = {}
+
+  @Pointcut("execution(* play.Logger..*.debug(..))")
+  def debugPointcut(): Unit = {}
+
+  @Pointcut("execution(* play.Logger..*.warn(..))")
+  def warnPointcut(): Unit = {}
+
+  @Pointcut("execution(* play.Logger..*.error(..))")
+  def errorPointcut(): Unit = {}
+
+  @Pointcut("execution(* play.Logger..*.trace(..))")
+  def tracePointcut(): Unit = {}
+
+  @Around("(infoPointcut() || debugPointcut() || warnPointcut() || errorPointcut() || tracePointcut())")
+  def aroundLog(pjp: ProceedingJoinPoint): Any = withBaggageOnMDC {
+    pjp.proceed()
+  }
+}
+
 

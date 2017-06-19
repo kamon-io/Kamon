@@ -16,14 +16,16 @@
 
 package kamon.play.action
 
-import kamon.trace.Tracer
+import kamon.Kamon
 import play.api.mvc._
+
 import scala.concurrent.Future
 
-case class TraceName[A](name: String)(action: Action[A]) extends Action[A] {
+case class OperationName[A](name: String)(action: Action[A]) extends Action[A] {
   def apply(request: Request[A]): Future[Result] = {
-    Tracer.currentContext.rename(name)
+    Kamon.onActiveSpan(_.setOperationName(name))
     action(request)
   }
+
   lazy val parser = action.parser
 }

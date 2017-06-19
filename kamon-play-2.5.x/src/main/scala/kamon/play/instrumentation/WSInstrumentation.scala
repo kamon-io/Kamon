@@ -16,61 +16,64 @@
 
 package kamon.play.instrumentation
 
-import kamon.metric.{ EntityRecorderFactory, GenericEntityRecorder }
-import kamon.metric.instrument.InstrumentFactory
-import kamon.play.PlayExtension
-import kamon.trace.{ SegmentCategory, Tracer }
-import kamon.util.SameThreadExecutionContext
-import org.aspectj.lang.ProceedingJoinPoint
-import org.aspectj.lang.annotation.{ Around, Aspect, Pointcut }
-import play.api.libs.ws.{ WSRequest, WSResponse }
+import java.util
+import java.util.{Collections, Map}
 
+import io.opentracing.SpanContext
+import kamon.Kamon
+import kamon.play.Play
+import kamon.util.CallingThreadExecutionContext
+import org.aspectj.lang.ProceedingJoinPoint
+import org.aspectj.lang.annotation.{Around, Aspect, Pointcut}
+import play.api.libs.ws.{WSRequest, WSResponse}
+import io.opentracing.propagation.Format.Builtin.HTTP_HEADERS
+import io.opentracing.propagation.TextMap
+
+import scala.collection.mutable
 import scala.concurrent.Future
-import scala.util.{ Failure, Success }
 
 @Aspect
 class WSInstrumentation {
 
-  @Pointcut("target(request) && call(scala.concurrent.Future<play.api.libs.ws.WSResponse> execute())")
-  def onExecuteRequest(request: WSRequest): Unit = {}
+  @Pointcut("execution(* play.api.libs.ws.WSRequestExecutor+.execute(..)) && args(request)")
+  def onExecuteWSRequest(request: WSRequest): Unit = {}
 
-  @Around("onExecuteRequest(request)")
+  @Around("onExecuteWSRequest(request)")
   def aroundExecuteRequest(pjp: ProceedingJoinPoint, request: WSRequest): Any = {
-    Tracer.currentContext.collect { ctx ⇒
-      val segmentName = PlayExtension.generateHttpClientSegmentName(request)
-      val segment = ctx.startSegment(segmentName, SegmentCategory.HttpClient, PlayExtension.SegmentLibraryName)
-      val response = pjp.proceed().asInstanceOf[Future[WSResponse]]
+    println("EXECUTING A HTTP CLIENT " + Kamon.activeSpan())
 
-      response.onComplete {
-        case Success(result) ⇒
-          PlayExtension.httpClientMetrics.recordResponse(segmentName, result.status.toString)
-          segment.finish()
-        case Failure(error) ⇒
-          segment.finishWithError(error)
-      }(SameThreadExecutionContext)
-      response
-    } getOrElse pjp.proceed()
+    val activeSpan = Kamon.activeSpan()
+    if(activeSpan == null)
+      pjp.proceed()
+    else {
+      val operationName = Play.generateHttpClientOperationName(request)
+      val clientRequestSpan = Kamon.buildSpan(operationName).asChildOf(activeSpan.context()).startManual()
+      clientRequestSpan.setTag("span.kind", "client")
+
+      val maybeHeaders = mutable.Map.empty[String, String]
+      Kamon.inject(clientRequestSpan.context(), HTTP_HEADERS, writeOnlyTextMapFromMap(maybeHeaders))
+      val injectedRequest = request.withHeaders(maybeHeaders.toSeq: _*)
+      val responseFuture = pjp.proceed(Array(injectedRequest)).asInstanceOf[Future[WSResponse]]
+
+      responseFuture.transform(
+        s = response => {
+          clientRequestSpan.finish()
+          response
+        },
+        f = error => {
+          clientRequestSpan.setTag("error", "true").finish()
+          error
+        }
+      )(CallingThreadExecutionContext)
+    }
   }
-}
 
-/**
- *  Counts HTTP response status codes into per status code and per trace name + status counters. If recording a HTTP
- *  response with status 500 for the trace "http://localhost:9000/badoutside_200", the counter with name "500" as
-  *  well as the counter with name "http://localhost:9000/badoutside_500" will be incremented.
- */
-class HttpClientMetrics(instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) {
+  def writeOnlyTextMapFromMap(map: scala.collection.mutable.Map[String, String]): TextMap = new TextMap {
+    override def put(key: String, value: String): Unit = {
+      map.put(key, value)
+    }
 
-  def recordResponse(statusCode: String): Unit = {
-    counter(statusCode).increment()
+    override def iterator(): util.Iterator[Map.Entry[String, String]] =
+      Collections.emptyIterator()
   }
-
-  def recordResponse(traceName: String, statusCode: String): Unit = {
-    recordResponse(statusCode)
-    counter(traceName + "_" + statusCode).increment()
-  }
-}
-
-object HttpClientMetrics extends EntityRecorderFactory[HttpClientMetrics] {
-  def category: String = "http-client"
-  def createRecorder(instrumentFactory: InstrumentFactory): HttpClientMetrics = new HttpClientMetrics(instrumentFactory)
 }

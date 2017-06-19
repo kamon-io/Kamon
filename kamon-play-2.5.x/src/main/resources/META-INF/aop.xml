@@ -2,14 +2,16 @@
 
 <aspectj>
   <aspects>
-    <aspect name="kamon.play.instrumentation.RequestInstrumentation"/>
+    <aspect name="kamon.play.instrumentation.RequestHandlerInstrumentation"/>
     <aspect name="kamon.play.instrumentation.WSInstrumentation"/>
     <aspect name="kamon.play.instrumentation.LoggerLikeInstrumentation"/>
     <aspect name="kamon.play.instrumentation.JavaLoggerInstrumentation"/>
   </aspects>
 
    <weaver>
+       <include within="kamon.play.instrumentation..*"/>
        <include within="play.Logger..*"/>
        <include within="play.api..*"/>
+       <include within="play.core.server.netty..*"/>
    </weaver>
 </aspectj>

@@ -31,12 +31,11 @@ object GuiceModule {
 
   @Singleton
   class KamonLoader @Inject() (lifecycle: ApplicationLifecycle, environment: Environment, configuration: Configuration) {
-    Logger(classOf[KamonLoader]).debug("Starting Kamon.")
-
-    Kamon.start(configuration.underlying)
+    Logger(classOf[KamonLoader]).debug("Reconfiguring Kamon with Play's Config")
+    Kamon.reconfigure(configuration.underlying)
 
     lifecycle.addStopHook { () ⇒
-      Future.successful(Kamon.shutdown())
+      Future.successful(Kamon.stopAllReporters())
     }
   }
 }

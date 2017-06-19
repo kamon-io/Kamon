@@ -19,7 +19,7 @@ import javax.inject.Inject
 
 import kamon.Kamon
 import kamon.metric.instrument.CollectionContext
-import kamon.play.action.TraceName
+import kamon.play.action.OperationName
 import kamon.trace.{ MetricsOnlyContext, TraceLocal, Tracer, Status }
 import org.scalatestplus.play._
 import org.scalatest.Inside
@@ -38,7 +38,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 import akka.stream.Materializer
 
-class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite with Inside {
+class RequestHandlerInstrumentationSpec extends PlaySpec with OneServerPerSuite with Inside {
   System.setProperty("config.file", "./kamon-play-2.5.x/src/test/resources/conf/application.conf")
 
   override lazy val port: Port = 19002
@@ -69,7 +69,7 @@ class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite with In
         Ok("default")
       }
     case ("GET", "/async-renamed") ⇒
-      TraceName("renamed-trace") {
+      OperationName("renamed-trace") {
         Action.async {
           Future {
             Ok("Async.async")
@@ -292,7 +292,7 @@ class TestNameGenerator extends NameGenerator {
   private val cache = TrieMap.empty[String, String]
   private val normalizePattern = """\$([^<]+)<[^>]+>""".r
 
-  def generateTraceName(requestHeader: RequestHeader): String = requestHeader.tags.get(Router.Tags.RouteVerb).map { verb ⇒
+  def generateOperationName(requestHeader: RequestHeader): String = requestHeader.tags.get(Router.Tags.RouteVerb).map { verb ⇒
     val path = requestHeader.tags(Router.Tags.RoutePattern)
     cache.atomicGetOrElseUpdate(s"$verb$path", {
       val traceName = {
@@ -308,5 +308,5 @@ class TestNameGenerator extends NameGenerator {
     })
   } getOrElse s"${requestHeader.method}: ${requestHeader.uri}"
 
-  def generateHttpClientSegmentName(request: WSRequest): String = request.url
+  def generateHttpClientOperationName(request: WSRequest): String = request.url
 }
