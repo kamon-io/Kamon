@@ -28,7 +28,7 @@ import com.typesafe.config.Config
 import kamon.metric._
 import kamon.util.MeasurementUnit
 import kamon.util.MeasurementUnit.Dimension.{Information, Time}
-import kamon.util.MeasurementUnit.{Dimension, information, time}
+import kamon.util.MeasurementUnit.{information, time}
 import kamon.{Kamon, MetricReporter}
 import org.asynchttpclient.{DefaultAsyncHttpClient, DefaultAsyncHttpClientConfig}
 import org.slf4j.LoggerFactory
@@ -38,17 +38,25 @@ class DatadogAPIReporter extends MetricReporter {
   private val logger = LoggerFactory.getLogger(classOf[DatadogAPIReporter])
   private val symbols = DecimalFormatSymbols.getInstance(Locale.US)
   symbols.setDecimalSeparator('.') // Just in case there is some weird locale config we are not aware of.
-
-  // Absurdly high number of decimal digits, let the other end lose precision if it needs to.
-  private val samplingRateFormat = new DecimalFormat("#.################################################################", symbols)
   private val valueFormat = new DecimalFormat("#0.#########", symbols)
 
-  override def start(): Unit =
-    logger.info("Started the Kamon Datadog reporter")
+  private var httpClient: Option[DefaultAsyncHttpClient] = None
 
-  override def stop(): Unit = {}
+  override def start(): Unit = {
+    httpClient = Option(createHttpClient(readConfiguration(Kamon.config())))
+    logger.info("Started the Datadog API reporter.")
+  }
 
-  override def reconfigure(config: Config): Unit = {}
+  override def stop(): Unit = {
+    stopHttpClient()
+  }
+
+  override def reconfigure(config: Config): Unit = {
+    if(httpClient.nonEmpty)
+      stopHttpClient()
+
+    httpClient = Option(createHttpClient(readConfiguration(config)))
+  }
 
 
   override def reportTickSnapshot(snapshot: TickSnapshot): Unit = {
@@ -61,22 +69,16 @@ class DatadogAPIReporter extends MetricReporter {
       .setRequestTimeout(config.connectTimeout.toMillis.toInt)
       .build())
 
-
     client.preparePost(url)
       .setBody(buildRequestBody(snapshot))
       .setHeader("Content-Type", "application/json")
       .execute()
 
-    println(buildRequestBody(snapshot))
-
   }
 
-
-
-
   private def buildRequestBody(snapshot: TickSnapshot): String = {
-    val timestamp = snapshot.interval.from
-    val serviceTag = "service:" + Kamon.environment.service
+    val timestamp: Long = (snapshot.interval.from / 1000L)
+    val serviceTag = "\"service:" + Kamon.environment.service + "\""
     val host = Kamon.environment.host
     val seriesBuilder = new StringBuilder()
 
@@ -98,7 +100,8 @@ class DatadogAPIReporter extends MetricReporter {
     }
 
     def addMetric(metricName: String, value: String, metricType: String, tags: Map[String, String]): Unit = {
-      val tagsString = if(tags.isEmpty) serviceTag else (serviceTag + "," + (tags.map { case (k, v) ⇒ k + ":" + v } mkString ","))
+      val customTags = tags.map { case (k, v) ⇒ "\"" + k + ":" + v + "\"" }.toSeq
+      val allTagsString = (customTags :+ serviceTag).mkString("[", ",", "]")
 
       if(seriesBuilder.length() > 0)
         seriesBuilder.append(",")
@@ -108,7 +111,7 @@ class DatadogAPIReporter extends MetricReporter {
         .append("\"points\":[[").append(String.valueOf(timestamp)).append(",").append(value).append("]],")
         .append("\"type\":\"").append(metricType).append("\",")
         .append("\"host\":\"").append(host).append("\",")
-        .append("\"tags\":\"").append(tagsString).append("\"}")
+        .append("\"tags\":").append(allTagsString).append("}")
     }
 
 
@@ -127,13 +130,21 @@ class DatadogAPIReporter extends MetricReporter {
     "{\"series\":[" + seriesBuilder.toString() + "]}"
   }
 
-
-
-
   private def scale(value: Long, unit: MeasurementUnit): Double = unit.dimension match {
     case Time         if unit.magnitude != time.seconds       => MeasurementUnit.scale(value, unit, time.seconds)
     case Information  if unit.magnitude != information.bytes  => MeasurementUnit.scale(value, unit, information.bytes)
     case _ => value
+  }
+
+  private def createHttpClient(config: Configuration): DefaultAsyncHttpClient =
+    new DefaultAsyncHttpClient(new DefaultAsyncHttpClientConfig.Builder()
+      .setConnectTimeout(config.connectTimeout.toMillis.toInt)
+      .setReadTimeout(config.connectTimeout.toMillis.toInt)
+      .setRequestTimeout(config.connectTimeout.toMillis.toInt)
+      .build())
+
+  private def stopHttpClient(): Unit = {
+    httpClient.foreach(_.close())
   }
 
   private def readConfiguration(config: Config): Configuration = {
