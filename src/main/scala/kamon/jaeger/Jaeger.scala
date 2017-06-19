@@ -4,9 +4,9 @@ import java.util
 
 import com.typesafe.config.Config
 import com.uber.jaeger.agent.thrift.Agent
-import com.uber.jaeger.thriftjava.{Batch, Process, Tag, TagType, Span => JaegerSpan}
-import kamon.{Kamon, SpanReporter}
+import com.uber.jaeger.thriftjava.{Batch, Log, Process, Tag, TagType, Span => JaegerSpan}
 import kamon.trace.Span
+import kamon.{Kamon, SpanReporter}
 import org.apache.thrift.protocol.TCompactProtocol
 
 class Jaeger() extends SpanReporter {
@@ -28,7 +28,7 @@ class JaegerClient() {
 
   val transport = TUDPTransport.NewTUDPClient("jaeger", 5775)
   val client = new Agent.Client(new TCompactProtocol(transport))
-  val process = new Process(Kamon.environment.application)
+  val process = new Process(Kamon.environment.service)
 
 
   def sendSpan(span: Span.CompletedSpan): Unit = {
@@ -47,6 +47,12 @@ class JaegerClient() {
       span.endTimestampMicros - span.startTimestampMicros
     )
 
+    val convertedLogs = span.logs.map { log =>
+      val convertedFields = log.fields.map(convertField)
+      new Log(log.timestamp, convertedFields.toList.asJava)
+    }
+    convertedSpan.setLogs(convertedLogs.asJava)
+
     convertedSpan.setTags(new util.ArrayList[Tag](span.tags.size))
     span.tags.foreach {
       case (k, v) =>
@@ -56,5 +62,19 @@ class JaegerClient() {
     }
 
     convertedSpan
+  }
+
+  private def convertField(field: (String, _)): Tag = {
+    val (tagType, setFun) = field._2 match {
+      case v: String =>      (TagType.STRING, (tag: Tag) => tag.setVStr(v))
+      case v: Double =>      (TagType.DOUBLE, (tag: Tag) => tag.setVDouble(v))
+      case v: Boolean =>     (TagType.BOOL,   (tag: Tag) => tag.setVBool(v))
+      case v: Long =>        (TagType.LONG,   (tag: Tag) => tag.setVLong(v))
+      case v: Array[Byte] => (TagType.BINARY, (tag: Tag) => tag.setVBinary(v))
+      case v => throw new RuntimeException(s"Tag type ${v.getClass.getName} not supported")
+    }
+    val convertedTag = new Tag(field._1, tagType)
+    setFun(convertedTag)
+    convertedTag
   }
 }

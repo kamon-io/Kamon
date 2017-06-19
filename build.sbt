@@ -1,5 +1,5 @@
 scalaVersion := "2.12.2"
-version := "0.1.2-SNAPSHOT"
+version := "0.1.3-SNAPSHOT"
 resolvers += Resolver.mavenLocal
 resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
 libraryDependencies += "com.uber.jaeger" % "jaeger-thrift" % "0.18.0"
