@@ -109,6 +109,7 @@ class ReporterRegistryImpl(metrics: MetricsSnapshotGenerator, initialConfig: Con
     val executor = Executors.newSingleThreadExecutor(threadFactory(name))
     val reporterEntry = new MetricReporterEntry(
       id = reporterCounter.getAndIncrement(),
+      name = name,
       reporter = reporter,
       executionContext = ExecutionContext.fromExecutorService(executor)
     )
@@ -127,6 +128,7 @@ class ReporterRegistryImpl(metrics: MetricsSnapshotGenerator, initialConfig: Con
     val executor = Executors.newSingleThreadExecutor(threadFactory(name))
     val reporterEntry = new SpanReporterEntry(
       id = reporterCounter.incrementAndGet(),
+      name = name,
       reporter = reporter,
       bufferCapacity = registryConfiguration.traceReporterQueueSize,
       executionContext = ExecutionContext.fromExecutorService(executor)
@@ -236,6 +238,7 @@ class ReporterRegistryImpl(metrics: MetricsSnapshotGenerator, initialConfig: Con
   private class MetricReporterEntry(
     @volatile var isActive: Boolean = true,
     val id: Long,
+    val name: String,
     val reporter: MetricReporter,
     val executionContext: ExecutionContextExecutorService
   )
@@ -243,6 +246,7 @@ class ReporterRegistryImpl(metrics: MetricsSnapshotGenerator, initialConfig: Con
   private class SpanReporterEntry(
     @volatile var isActive: Boolean = true,
     val id: Long,
+    val name: String,
     val reporter: SpanReporter,
     val bufferCapacity: Int,
     val executionContext: ExecutionContextExecutorService
@@ -263,8 +267,13 @@ class ReporterRegistryImpl(metrics: MetricsSnapshotGenerator, initialConfig: Con
 
       reporterEntries.foreach { case (_, entry) =>
         Future {
-          if(entry.isActive)
-            entry.reporter.reportTickSnapshot(tickSnapshot)
+          Try {
+            if (entry.isActive)
+              entry.reporter.reportTickSnapshot(tickSnapshot)
+
+          }.failed.foreach { error =>
+            logger.error(s"Reporter [${entry.name}] failed to process a metrics tick.", error)
+          }
 
         }(entry.executionContext)
       }
