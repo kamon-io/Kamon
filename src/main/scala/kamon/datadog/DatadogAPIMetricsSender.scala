@@ -1,29 +1,29 @@
 package kamon.datadog
+
 /*
 
-import akka.actor.Actor
-
-import scala.compat.java8.FutureConverters._
-import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
-import akka.actor.ActorLogging
 import org.asynchttpclient.DefaultAsyncHttpClient
 import org.asynchttpclient.DefaultAsyncHttpClientConfig
-import kamon.metric.Entity
-import kamon.metric.SingleInstrumentEntityRecorder
-import kamon.metric.MetricKey
-import kamon.metric.instrument.Histogram
-import kamon.metric.instrument.Counter
-import akka.pattern.pipe
-import akka.actor.Status
 import org.asynchttpclient.Response
 import java.lang.management.ManagementFactory
 import java.util.concurrent.TimeUnit
 
+import com.typesafe.config.Config
+import kamon.MetricReporter
+import kamon.metric.TickSnapshot
+
 /**
  * Sends metrics to Datadog through its native HTTPS API.
  */
-class DatadogAPIMetricsSender {
-  import context.dispatcher
+class DatadogAPIMetricsSender extends MetricReporter {
+
+  override def start(): Unit = ???
+
+  override def stop(): Unit = ???
+
+  override def reconfigure(config: Config): Unit = ???
+
+  override def reportTickSnapshot(snapshot: TickSnapshot): Unit = ???
 
   val config = context.system.settings.config.getConfig("kamon.datadog")
   val appName = config.getString("application-name")
@@ -94,7 +94,7 @@ class DatadogAPIMetricsSender {
   }
 
 
-
   def systemHostName: String = ManagementFactory.getRuntimeMXBean.getName.split('@')(1)
 }
 */
+

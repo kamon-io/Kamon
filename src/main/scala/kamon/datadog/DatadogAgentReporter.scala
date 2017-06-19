@@ -49,8 +49,6 @@ class DatadogAgentReporter extends MetricReporter {
 
 
   override def reportTickSnapshot(snapshot: TickSnapshot): Unit = {
-    println("RECEIVED A TICK")
-
     val config = readConfiguration(Kamon.config())
     val clientChannel = DatagramChannel.open()
     val packetBuffer = new PacketBuffer(config.maxPacketSize, clientChannel, config.agentAddress)
