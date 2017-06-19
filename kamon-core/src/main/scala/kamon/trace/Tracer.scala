@@ -76,7 +76,8 @@ class Tracer(metrics: MetricLookup, reporterRegistry: ReporterRegistryImpl, init
       case spanContext: kamon.trace.SpanContext =>
         this.parentContext = spanContext
         this
-      case _ => logger.error("Can't extract the parent ID from a non-Kamon SpanContext"); this
+      case null => this
+      case _    => logger.error("Can't extract the parent ID from a non-Kamon SpanContext"); this
     }
 
     override def asChildOf(parent: io.opentracing.BaseSpan[_]): io.opentracing.Tracer.SpanBuilder =
