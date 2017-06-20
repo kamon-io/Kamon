@@ -18,45 +18,22 @@ Kamon statsd module is currently available for Scala 2.10, 2.11 and 2.12.
 
 Supported releases and dependencies are shown below.
 
-| kamon-statsd  | status | jdk  | scala            | akka   |
+| kamon-statsd  | status | jdk  | scala            |
 |:------:|:------:|:----:|------------------|:------:|
-|  0.6.7 | stable | 1.7+, 1.8+ | 2.10, 2.11, 2.12  | 2.3.x, 2.4.x |
+|  1.0.0 | stable | 1.8+ | 2.10, 2.11, 2.12  | 
 
 To get started with SBT, simply add the following to your `build.sbt`
 file:
 
 ```scala
-libraryDependencies += "io.kamon" %% "kamon-statsd" % "0.6.7"
+libraryDependencies += "io.kamon" %% "kamon-statsd" % "1.0.0"
 ```
 
 Configuration
 -------------
 
 At the very basic level, you will certainly want to use the `kamon.statsd.hostname` and `kamon.statsd.port` configuration
-keys to ensure your data is being sent to wherever your StatsD instance is running. Additionally to that, you can configure
-the metric categories to which this module will subscribe using the `kamon.statsd.subscriptions` key. By default, the
-following subscriptions are included:
-
-```typesafeconfig
-kamon.statsd {
-  subscriptions {
-    histogram       = [ "**" ]
-    min-max-counter = [ "**" ]
-    gauge           = [ "**" ]
-    counter         = [ "**" ]
-    trace           = [ "**" ]
-    trace-segment   = [ "**" ]
-    akka-actor      = [ "**" ]
-    akka-dispatcher = [ "**" ]
-    akka-router     = [ "**" ]
-    system-metric   = [ "**" ]
-    http-server     = [ "**" ]
-  }
-}
-```
-
-If you are interested in reporting additional entities to StatsD please ensure that you include the categories and name
-patterns accordingly.
+keys to ensure your data is being sent to wherever your StatsD instance is running.
 
 
 ### Metric Key Generators ###

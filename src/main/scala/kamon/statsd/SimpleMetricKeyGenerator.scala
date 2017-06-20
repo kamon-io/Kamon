@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * Copyright © 2013-2015 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2017 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -19,10 +19,11 @@ package kamon.statsd
 import java.lang.management.ManagementFactory
 
 import com.typesafe.config.Config
-import kamon.metric.{SingleInstrumentEntityRecorder, MetricKey, Entity}
+
+import scala.collection.immutable.TreeMap
 
 trait MetricKeyGenerator {
-  def generateKey(entity: Entity, metricKey: MetricKey): String
+  def generateKey(name: String, tags: Map[String, String]): String
 }
 
 class SimpleMetricKeyGenerator(config: Config) extends MetricKeyGenerator {
@@ -42,16 +43,9 @@ class SimpleMetricKeyGenerator(config: Config) extends MetricKeyGenerator {
     if (includeHostname) s"$application.$normalizedHostname"
     else application
 
-  def generateKey(entity: Entity, metricKey: MetricKey): String = entity.category match {
-    case "trace-segment" ⇒
-      s"${baseName}.trace.${normalizer(entity.tags("trace"))}.segments.${normalizer(entity.name)}.${metricKey.name}"
-
-    case _ if SingleInstrumentEntityRecorder.AllCategories.contains(entity.category) ⇒
-      s"${baseName}.${entity.category}.${normalizer(entity.name)}"
-
-    case _ ⇒
-      s"${baseName}.${entity.category}.${normalizer(entity.name)}.${metricKey.name}"
-
+  def generateKey(name: String, tags: Map[String, String]): String = {
+    val stringTags = TreeMap(tags.toSeq:_ *).values.map(normalizer).mkString(".")
+    s"$baseName.${normalizer(name)}.$stringTags"
   }
 
   def hostName: String = ManagementFactory.getRuntimeMXBean.getName.split('@')(1)

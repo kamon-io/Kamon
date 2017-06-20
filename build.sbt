@@ -13,21 +13,12 @@
  * =========================================================================================
  */
 
- val kamonCore         = "io.kamon"                  %%  "kamon-core"            % "0.6.7"
+val kamonCore = "io.kamon"  %%  "kamon-core"  % "1.0.0-RC1-1d98b9e8a397acf8b6f6f55a3fd5189eb72740ba"
 
 name := "kamon-statsd"
 
 libraryDependencies ++=
-  compileScope(kamonCore, akkaDependency("actor").value) ++
-  testScope(scalatest, akkaDependency("testkit").value, slf4jApi, slf4jnop)
+  compileScope(kamonCore) ++
+  testScope(scalatest, slf4jApi, logbackClassic)
 
-testGrouping in Test := singleTestPerJvm((definedTests in Test).value, (javaOptions in Test).value)
 
-import sbt.Tests._
-def singleTestPerJvm(tests: Seq[TestDefinition], jvmSettings: Seq[String]): Seq[Group] =
-  tests map { test =>
-    Group(
-      name = test.name,
-      tests = Seq(test),
-      runPolicy = SubProcess(ForkOptions(runJVMOptions = jvmSettings)))
-  }
