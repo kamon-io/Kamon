@@ -31,8 +31,9 @@ object GuiceModule {
 
   @Singleton
   class KamonLoader @Inject() (lifecycle: ApplicationLifecycle, environment: Environment, configuration: Configuration) {
-    Logger(classOf[KamonLoader]).debug("Reconfiguring Kamon with Play's Config")
+    Logger(classOf[KamonLoader]).info("Reconfiguring Kamon with Play's Config")
     Kamon.reconfigure(configuration.underlying)
+    Kamon.loadReportersFromConfig()
 
     lifecycle.addStopHook { () ⇒
       Future.successful(Kamon.stopAllReporters())
