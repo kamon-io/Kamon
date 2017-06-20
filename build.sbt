@@ -13,7 +13,7 @@
  * =========================================================================================
  */
 
-val kamonCore         = "io.kamon"               %% "kamon-core"          % "1.0.0-RC1-7aeeedad6f6684f8aae018fbf433557b2a587172"
+val kamonCore         = "io.kamon"               %% "kamon-core"          % "1.0.0-RC1-1d0548cb8281202738d8d48cbe9cdd62cf209e21"
 val asyncHttpClient   = "org.asynchttpclient"     % "async-http-client"   % "2.0.25"
 
 lazy val root = (project in file("."))
