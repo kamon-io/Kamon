@@ -21,4 +21,4 @@ libraryDependencies ++=
   compileScope(kamonCore) ++
   testScope(scalatest, slf4jApi, logbackClassic)
 
-
+resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
