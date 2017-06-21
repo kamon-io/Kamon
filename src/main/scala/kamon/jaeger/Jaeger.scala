@@ -33,10 +33,13 @@ object Jaeger {
 
 class Jaeger() extends SpanReporter {
   import Jaeger._
-  private val host = config.getString(KEY_HOST)
-  private val port = config.getInt(KEY_PORT)
+  private var host = config.getString(KEY_HOST)
+  private var port = config.getInt(KEY_PORT)
 
-  override def reconfigure(newConfig: Config): Unit = {}
+  override def reconfigure(newConfig: Config): Unit = {
+    if (newConfig.hasPath(KEY_HOST)) host = newConfig.getString(KEY_HOST)
+    if (newConfig.hasPath(KEY_PORT)) port = newConfig.getInt(KEY_PORT)
+  }
   override def start(): Unit = {}
   override def stop(): Unit = {}
 
