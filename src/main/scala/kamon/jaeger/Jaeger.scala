@@ -18,20 +18,29 @@ package kamon.jaeger
 
 import java.util
 
-import com.typesafe.config.Config
+import com.typesafe.config.{Config, ConfigFactory}
 import com.uber.jaeger.agent.thrift.Agent
 import com.uber.jaeger.thriftjava.{Batch, Log, Process, Tag, TagType, Span => JaegerSpan}
 import kamon.trace.Span
 import kamon.{Kamon, SpanReporter}
 import org.apache.thrift.protocol.TCompactProtocol
 
+object Jaeger {
+  private val KEY_HOST = "kamon.jaeger.host"
+  private val KEY_PORT = "kamon.jaeger.port"
+  private val config = ConfigFactory.load
+}
+
 class Jaeger() extends SpanReporter {
-  override def reconfigure(config: Config): Unit = {}
+  import Jaeger._
+  private val host = config.getString(KEY_HOST)
+  private val port = config.getInt(KEY_PORT)
+
+  override def reconfigure(newConfig: Config): Unit = {}
   override def start(): Unit = {}
   override def stop(): Unit = {}
 
-  val jaegerClient = new JaegerClient()
-
+  val jaegerClient = new JaegerClient(host, port)
 
   override def reportSpans(spans: Seq[Span.CompletedSpan]): Unit = {
     spans.foreach(s => jaegerClient.sendSpan(s))
@@ -39,10 +48,10 @@ class Jaeger() extends SpanReporter {
 }
 
 
-class JaegerClient() {
+class JaegerClient(host: String, port: Int) {
   import scala.collection.JavaConverters._
 
-  val transport = TUDPTransport.NewTUDPClient("jaeger", 5775)
+  val transport = TUDPTransport.NewTUDPClient(host, port)
   val client = new Agent.Client(new TCompactProtocol(transport))
   val process = new Process(Kamon.environment.service)
 
