@@ -131,7 +131,7 @@ class ScrapeDataBuilder(prometheusConfig: PrometheusReporter.Configuration) {
     while(tagIterator.hasNext) {
       val (key, value) = tagIterator.next()
       if(tagCount > 0) append(",")
-      append(key).append("=\"").append(value).append('"')
+      append(normalizeLabelName(key)).append("=\"").append(value).append('"')
       tagCount += 1
     }
 
@@ -139,15 +139,20 @@ class ScrapeDataBuilder(prometheusConfig: PrometheusReporter.Configuration) {
   }
 
   private def normalizeMetricName(metricName: String, unit: MeasurementUnit): String = {
-    def charOrUnderscore(char: Char): Char = if(char.isLetterOrDigit || char == '_') char else '_'
-    val formattedMetricName = metricName.map(charOrUnderscore)
+    val normalizedMetricName = metricName.map(charOrUnderscore)
 
     unit.dimension match  {
-      case Time         => formattedMetricName + "_seconds"
-      case Information  => formattedMetricName + "_bytes"
-      case _            => formattedMetricName
+      case Time         => normalizedMetricName + "_seconds"
+      case Information  => normalizedMetricName + "_bytes"
+      case _            => normalizedMetricName
     }
   }
+
+  private def normalizeLabelName(label: String): String =
+    label.map(charOrUnderscore)
+
+  private def charOrUnderscore(char: Char): Char =
+    if(char.isLetterOrDigit || char == '_') char else '_'
 
   private def format(value: Double): String =
     numberFormat.format(value)

@@ -42,6 +42,23 @@ class ScrapeDataBuilderSpec extends WordSpec with Matchers {
       }
     }
 
+    "normalize tag names" in {
+      val counterOne = MetricValue("counter-one", Map("tag.with.dots" -> "value"), time.seconds, 10)
+      val gaugeOne = MetricValue("gauge-one", Map.empty, time.seconds, 20)
+
+      builder()
+      .appendCounters(Seq(counterOne))
+      .appendGauges(Seq(gaugeOne))
+      .build() should include {
+        """
+          |# TYPE counter_one_seconds counter
+          |counter_one_seconds{tag_with_dots="value"} 10.0
+          |# TYPE gauge_one_seconds gauge
+          |gauge_one_seconds 20.0
+        """.stripMargin.trim()
+      }
+    }
+
     "append counters and group them together by metric name" in {
       val counterOne = MetricValue("counter-one", Map.empty, none, 10)
       val counterTwo = MetricValue("counter-two", Map.empty, none, 20)
