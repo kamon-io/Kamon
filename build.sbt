@@ -1,5 +1,5 @@
 /* =========================================================================================
- * Copyright © 2013-2016 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2017 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -13,12 +13,12 @@
  * =========================================================================================
  */
 
-val kamonCore         = "io.kamon"                  %%  "kamon-core"            % "0.6.7"
-val kamonTestkit      = "io.kamon"                  %%  "kamon-testkit"         % "0.6.7"
-val newrelic          = "com.newrelic.agent.java"   %   "newrelic-agent"        % "3.26.1"
-val sprayJson         = "io.spray"                  %%  "spray-json"            % "1.3.3"
-val sprayJsonLenses   = "net.virtual-void"          %%  "json-lenses"           % "0.6.2"
-val scalaTest         = "org.scalatest"             %%  "scalatest"             % "3.0.3"
+val kamonCore         = "io.kamon"                  %%  "kamon-core"                  % "0.6.7"
+val kamonTestkit      = "io.kamon"                  %%  "kamon-testkit"               % "0.6.7"
+val newrelic          = "com.newrelic.agent.java"   %   "newrelic-agent"              % "3.26.1"
+val sprayJson         = "io.spray"                  %%  "spray-json"                  % "1.3.3"
+val sprayJsonLenses   = "net.virtual-void"          %%  "json-lenses"                 % "0.6.2"
+val scalaTest         = "org.scalatest"             %%  "scalatest"                   % "3.0.3"
 val scalaMock         = "org.scalamock"             %%  "scalamock-scalatest-support" % "3.6.0"
 val scalajHttp        = "org.scalaj"                %% "scalaj-http"                  % "2.3.0"
 
