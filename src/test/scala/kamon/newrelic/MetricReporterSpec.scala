@@ -16,26 +16,59 @@
 
 package kamon.newrelic
 
-import akka.actor.ActorRef
-import akka.io.IO
-import akka.testkit._
+
+import akka.actor.Props
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
-import kamon.metric.{ Entity, TraceMetrics }
+import kamon.metric.{Entity, TraceMetrics}
 import kamon.testkit.BaseKamonSpec
 import kamon.util.MilliTimestamp
 import kamon.Kamon
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
-import spray.can.Http
-import spray.http.Uri.Query
-import spray.http._
-import spray.httpx.encoding.Deflate
-import spray.httpx.SprayJsonSupport
-import testkit.AkkaExtensionSwap
+import org.scalamock.scalatest.MockFactory
+
 import scala.concurrent.duration._
 import spray.json._
 
-class MetricReporterSpec extends BaseKamonSpec("metric-reporter-spec") with SprayJsonSupport {
+class MetricReporterMock(val agentSettings: AgentSettings, nrClientMock: NewRelicClient) extends MetricReporter(agentSettings) {
+  override def getNRClient(): NewRelicClient = nrClientMock
+}
+
+case class ClientMockParameters(host: String, licenseKey: String, useSsl: Boolean = false, runID: Option[Long] = None)
+
+trait NewRelicClientTest extends NewRelicUrlBuilder with MockFactory {
+  def buildUrl(params: ClientMockParameters, method: String): String = {
+    val protocol: String = if (params.useSsl) "https" else "http"
+    buildUrl(protocol, params.host, method, params.licenseKey, params.runID)
+  }
+
+  def mockClientCall(nrClientMock: NewRelicClient, params: ClientMockParameters, method: String,
+                     requestBodyApply: Option[String => Unit], responseValueOrException: Either[Throwable, String],
+                     requestBody: Option[String] = None): Unit = {
+    val urlExpected = buildUrl(params, method)
+
+    def mock(f: (String, String, String) => Boolean): Unit =
+      (nrClientMock.execute _)
+        .expects( where {f})
+        .onCall(
+          (_: String, _: String, body: String) => {
+            requestBodyApply.foreach(f => f(body))
+            responseValueOrException match {
+              case Right(resp) => resp
+              case Left(ex) => throw ex
+            }
+          }
+        )
+
+    if (requestBody.isDefined) {
+      mock ({(url: String, _: String, body: String) => url.equalsIgnoreCase(urlExpected) && body.equalsIgnoreCase(requestBody.get)})
+    } else {
+      mock({(_, _, _) => true})
+    }
+  }
+}
+
+class MetricReporterSpec extends BaseKamonSpec("metric-reporter-spec") with NewRelicClientTest {
   import kamon.newrelic.JsonProtocol._
 
   override lazy val config =
@@ -56,85 +89,70 @@ class MetricReporterSpec extends BaseKamonSpec("metric-reporter-spec") with Spra
       """.stripMargin)
 
   val agentSettings = AgentSettings("1111111111", "kamon", "test-host", 1, Timeout(5 seconds), 1, 30 seconds, 1D, false)
-  val baseQuery = Query(
-    "license_key" -> agentSettings.licenseKey,
-    "marshal_format" -> "json",
-    "protocol_version" -> "12")
-  val baseCollectorUri = Uri("http://collector-1.newrelic.com/agent_listener/invoke_raw_method").withQuery(baseQuery)
+  val METRIC_DATA = "metric_data"
 
   "the MetricReporter" should {
     "report metrics to New Relic upon arrival" in new FakeTickSnapshotsFixture {
-      val httpManager = setHttpManager(TestProbe())
-      val metricReporter = system.actorOf(MetricReporter.props(agentSettings))
+      val nrClientMock = mock[NewRelicClient]
+      val (uriCollector, pid) = ("collector-1.newrelic.com", 9999)
+      val clientCallParameters = ClientMockParameters(uriCollector, agentSettings.licenseKey, agentSettings.ssl, Option(pid))
 
-      metricReporter ! Agent.Configure("collector-1.newrelic.com", 9999)
+      val checkMetricBatch: (String) => Unit = (sendData: String) => {
+        val postedBatch = sendData.parseJson.convertTo[MetricBatch]
+
+        postedBatch.runID should be(9999)
+        postedBatch.timeSliceMetrics.from.seconds should be(1415587618)
+        postedBatch.timeSliceMetrics.to.seconds should be(1415587678)
+
+        val metrics = postedBatch.timeSliceMetrics.metrics
+        metrics(MetricID("Apdex", None)).callCount should be(3)
+        metrics(MetricID("WebTransaction", None)).callCount should be(3)
+        metrics(MetricID("HttpDispatcher", None)).callCount should be(3)
+      }
+
+      mockClientCall(nrClientMock, clientCallParameters, METRIC_DATA, Some(checkMetricBatch), Right("[]"))
+
+      val metricReporter = system.actorOf(Props(classOf[MetricReporterMock], agentSettings, nrClientMock))
+
+      metricReporter ! Agent.Configure(uriCollector, pid)
       metricReporter ! firstSnapshot
-      val metricPost = httpManager.expectMsgType[HttpRequest]
 
-      metricPost.method should be(HttpMethods.POST)
-      metricPost.uri should be(rawMethodUri("collector-1.newrelic.com", "metric_data"))
-      metricPost.encoding should be(HttpEncodings.deflate)
-
-      val postedBatch = Deflate.decode(metricPost).entity.asString.parseJson.convertTo[MetricBatch]
-      postedBatch.runID should be(9999)
-      postedBatch.timeSliceMetrics.from.seconds should be(1415587618)
-      postedBatch.timeSliceMetrics.to.seconds should be(1415587678)
-
-      val metrics = postedBatch.timeSliceMetrics.metrics
-      metrics(MetricID("Apdex", None)).callCount should be(3)
-      metrics(MetricID("WebTransaction", None)).callCount should be(3)
-      metrics(MetricID("HttpDispatcher", None)).callCount should be(3)
+      expectNoMsg(3 second)
     }
 
     "accumulate metrics if posting fails" in new FakeTickSnapshotsFixture {
-      val httpManager = setHttpManager(TestProbe())
-      val metricReporter = system.actorOf(MetricReporter.props(agentSettings))
+      val nrClientMock = mock[NewRelicClient]
+      val (uriCollector, pid) = ("collector-1.newrelic.com", 9999)
+      val clientCallParameters = ClientMockParameters(uriCollector, agentSettings.licenseKey, agentSettings.ssl, Option(pid))
 
-      metricReporter ! Agent.Configure("collector-1.newrelic.com", 9999)
+      val checkAccumulateMetricBatch: (String) => Unit = (sendData: String) => {
+        val postedBatch = sendData.parseJson.convertTo[MetricBatch]
+
+        postedBatch.runID should be(9999)
+        postedBatch.timeSliceMetrics.from.seconds should be(1415587618)
+        postedBatch.timeSliceMetrics.to.seconds should be(1415587738)
+
+        val metrics = postedBatch.timeSliceMetrics.metrics
+        metrics(MetricID("Apdex", None)).callCount should be(6)
+        metrics(MetricID("WebTransaction", None)).callCount should be(6)
+        metrics(MetricID("HttpDispatcher", None)).callCount should be(6)
+      }
+
+      /** FIRST SNAPSHOT MOCK **/
+      mockClientCall(nrClientMock, clientCallParameters, METRIC_DATA, None, Left(ApiMethodClient.NewRelicException("test", "test")))
+
+      /** SECOND SNAPSHOT MOCK **/
+      mockClientCall(nrClientMock, clientCallParameters, METRIC_DATA, Some(checkAccumulateMetricBatch), Left(ApiMethodClient.NewRelicException("test", "test")))
+
+      val metricReporter = system.actorOf(Props(classOf[MetricReporterMock], agentSettings, nrClientMock))
+
+      metricReporter ! Agent.Configure(uriCollector, pid)
       metricReporter ! firstSnapshot
-      val request = httpManager.expectMsgType[HttpRequest]
-      httpManager.reply(Timedout(request))
 
       metricReporter ! secondSnapshot
-      val metricPost = httpManager.expectMsgType[HttpRequest]
 
-      metricPost.method should be(HttpMethods.POST)
-      metricPost.uri should be(rawMethodUri("collector-1.newrelic.com", "metric_data"))
-      metricPost.encoding should be(HttpEncodings.deflate)
-
-      val postedBatch = Deflate.decode(metricPost).entity.asString.parseJson.convertTo[MetricBatch]
-      postedBatch.runID should be(9999)
-      postedBatch.timeSliceMetrics.from.seconds should be(1415587618)
-      postedBatch.timeSliceMetrics.to.seconds should be(1415587738)
-
-      val metrics = postedBatch.timeSliceMetrics.metrics
-      metrics(MetricID("Apdex", None)).callCount should be(6)
-      metrics(MetricID("WebTransaction", None)).callCount should be(6)
-      metrics(MetricID("HttpDispatcher", None)).callCount should be(6)
+      expectNoMsg(3 second)
     }
-  }
-
-  def setHttpManager(probe: TestProbe): TestProbe = {
-    AkkaExtensionSwap.swap(system, Http, new IO.Extension {
-      def manager: ActorRef = probe.ref
-    })
-    probe
-  }
-
-  def rawMethodUri(host: String, methodName: String): Uri = {
-    Uri(s"http://$host/agent_listener/invoke_raw_method").withQuery(
-      "method" -> methodName,
-      "run_id" -> "9999",
-      "license_key" -> "1111111111",
-      "marshal_format" -> "json",
-      "protocol_version" -> "12")
-  }
-
-  def compactJsonEntity(jsonString: String): HttpEntity = {
-    import spray.json._
-
-    val compactJson = jsonString.parseJson.compactPrint
-    HttpEntity(ContentTypes.`application/json`, compactJson)
   }
 
   trait FakeTickSnapshotsFixture {

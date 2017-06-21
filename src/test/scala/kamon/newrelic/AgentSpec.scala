@@ -18,21 +18,22 @@ package kamon.newrelic
 
 import java.lang.management.ManagementFactory
 
-import akka.actor.{ ActorRef, ActorSystem, Props }
-import akka.io.IO
-import akka.testkit._
-import com.typesafe.config.ConfigFactory
+import akka.actor.Props
+import akka.testkit.EventFilter
+import com.typesafe.config.{ConfigFactory}
 import kamon.testkit.BaseKamonSpec
-import org.scalatest.{ BeforeAndAfterAll, WordSpecLike }
-import spray.can.Http
-import spray.http._
-import spray.httpx.encoding.Deflate
-import spray.httpx.{ SprayJsonSupport, RequestBuilding }
+import org.scalamock.scalatest.MockFactory
 import spray.json.JsArray
 import spray.json._
-import testkit.AkkaExtensionSwap
 
-class AgentSpec extends BaseKamonSpec("metric-reporter-spec") with RequestBuilding with SprayJsonSupport {
+import scala.concurrent.duration._
+
+class AgentWithMock(nrClientMock: NewRelicClient) extends Agent {
+  override def getNRClient(): NewRelicClient = nrClientMock
+}
+
+class AgentSpec extends BaseKamonSpec("metric-reporter-spec")
+  with MockFactory with NewRelicClientTest {
   import JsonProtocol._
 
   override lazy val config =
@@ -56,164 +57,182 @@ class AgentSpec extends BaseKamonSpec("metric-reporter-spec") with RequestBuildi
         |
       """.stripMargin)
 
+  val licenseKey = "1111111111"
+  val CONNECT = "connect"
+  val GET_REDIRECT_HOST = "get_redirect_host"
+
   "the New Relic Agent" should {
     "try to establish a connection to the collector upon creation" in {
-      val httpManager = setHttpManager(TestProbe())
-      val agent = system.actorOf(Props[Agent])
+      val nrClientMock: NewRelicClient = mock[NewRelicClient]
 
-      // Request NR for a collector
-      httpManager.expectMsg(Deflate.encode {
-        Post(rawMethodUri("collector.newrelic.com", "get_redirect_host"), JsArray())
-      })
+      val responseCollectorString = """
+                                      | {
+                                      |   "return_value": "collector-8.newrelic.com"
+                                      | }
+                                      | """.stripMargin
 
-      // Receive the assigned collector
-      httpManager.reply(jsonResponse(
+      val responseAgentString =
         """
-          | {
-          |   "return_value": "collector-8.newrelic.com"
-          | }
-          | """.stripMargin))
-
-      // Connect to the collector
-      val (host, pid) = getHostAndPid()
-      httpManager.expectMsg(Deflate.encode {
-        Post(rawMethodUri("collector-8.newrelic.com", "connect"),
-          s"""
-          | [
-          |   {
-          |     "agent_version": "3.1.0",
-          |     "app_name": [ "kamon" ],
-          |     "host": "$host",
-          |     "identifier": "java:kamon",
-          |     "language": "java",
-          |     "pid": $pid,
-          |     "ssl": "true"
-          |   }
-          | ]
-        """.stripMargin.parseJson)(sprayJsonMarshaller(JsValueFormat))
-      })
-
-      // Receive the runID
-      EventFilter.info(message = "Configuring New Relic reporters to use runID: [161221111] and collector: [collector-8.newrelic.com] over: [https]", occurrences = 1).intercept {
-        httpManager.reply(jsonResponse(
-          """
-          | {
+          |{
           |   "return_value": {
-          |     "agent_run_id": 161221111
+          |       "agent_run_id": 161221111
           |   }
-          | }
-          | """.stripMargin))
-      }
+          |}
+        """.stripMargin
+
+      val (host, pid) = getHostAndPid()
+
+      val body = s"""
+                           | [
+                           |   {
+                           |     "agent_version": "3.1.0",
+                           |     "app_name": [ "kamon" ],
+                           |     "host": "$host",
+                           |     "identifier": "java:kamon",
+                           |     "language": "java",
+                           |     "pid": $pid,
+                           |     "ssl": "true"
+                           |   }
+                           | ]
+        """.stripMargin.parseJson
+
+      val clientMockParameters = ClientMockParameters("collector.newrelic.com", licenseKey, true, None)
+
+      /** CALL TO REDIRECT HOST **/
+      mockClientCall(nrClientMock,
+        clientMockParameters,
+        GET_REDIRECT_HOST,
+        None,
+        Right(responseCollectorString),
+        Some(JsArray().compactPrint)
+      )
+
+      /** CALL TO CONNECT **/
+      mockClientCall(nrClientMock,
+        clientMockParameters.copy(host = "collector-8.newrelic.com"),
+        CONNECT,
+        None,
+        Right(responseAgentString),
+        Some(body.compactPrint)
+      )
+
+      system.actorOf(Props(new AgentWithMock(nrClientMock)))
+
+      EventFilter.info(message = "Configuring New Relic reporters to use runID: [161221111] and collector: [collector-8.newrelic.com] over: [https]",
+        occurrences = 1)
+
+      expectNoMsg(3 seconds)
     }
 
     "retry the connection in case it fails" in {
-      val httpManager = setHttpManager(TestProbe())
-      val agent = system.actorOf(Props[Agent])
+      val nrClientMock = mock[NewRelicClient]
 
-      // Request NR for a collector
-      val request = httpManager.expectMsg(Deflate.encode {
-        Post(rawMethodUri("collector.newrelic.com", "get_redirect_host"), JsArray())
-      })
+      val responseCollectorString = """
+                                      | {
+                                      |   "return_value": "collector-8.newrelic.com"
+                                      | }
+                                      | """.stripMargin
 
-      // Fail the request.
-      EventFilter[RuntimeException](start = "Initialization failed, retrying in 1 seconds", occurrences = 1).intercept {
-        httpManager.reply(Timedout(request))
-      }
-
-      // Request NR for a collector, second attempt
-      httpManager.expectMsg(Deflate.encode {
-        Post(rawMethodUri("collector.newrelic.com", "get_redirect_host"), JsArray())
-      })
-
-      // Receive the assigned collector
-      httpManager.reply(jsonResponse(
+      val responseAgentString =
         """
-          | {
-          |   "return_value": "collector-8.newrelic.com"
-          | }
-          | """.stripMargin))
-
-      // Connect to the collector
-      val (host, pid) = getHostAndPid()
-      httpManager.expectMsg(Deflate.encode {
-        Post(rawMethodUri("collector-8.newrelic.com", "connect"),
-          s"""
-          | [
-          |   {
-          |     "agent_version": "3.1.0",
-          |     "app_name": [ "kamon" ],
-          |     "host": "$host",
-          |     "identifier": "java:kamon",
-          |     "language": "java",
-          |     "pid": $pid,
-          |     "ssl": "true"
+          |{
+          |   "return_value": {
+          |       "agent_run_id": 161221111
           |   }
-          | ]
-        """.stripMargin.parseJson)(sprayJsonMarshaller(JsValueFormat))
-      })
+          |}
+        """.stripMargin
 
-      // Receive the runID
+      val (host, pid) = getHostAndPid()
+
+      val body = s"""
+                    | [
+                    |   {
+                    |     "agent_version": "3.1.0",
+                    |     "app_name": [ "kamon" ],
+                    |     "host": "$host",
+                    |     "identifier": "java:kamon",
+                    |     "language": "java",
+                    |     "pid": $pid,
+                    |     "ssl": "true"
+                    |   }
+                    | ]
+        """.stripMargin.parseJson
+
+      val clientMockParameters = ClientMockParameters("collector.newrelic.com", licenseKey, true, None)
+
+      /** FIRST CALL FAIL **/
+      mockClientCall(nrClientMock,
+        clientMockParameters,
+        GET_REDIRECT_HOST,
+        None,
+        Left(ApiMethodClient.NewRelicException("test", "test")),
+        Some(JsArray().compactPrint)
+      )
+
+      /** SECOND CALL SUCCESS REDIRECT HOST **/
+      mockClientCall(nrClientMock,
+        clientMockParameters,
+        GET_REDIRECT_HOST,
+        None,
+        Right(responseCollectorString),
+        Some(JsArray().compactPrint)
+      )
+
+      /** THIRD CALL SUCCESS TO CONNECT **/
+      mockClientCall(nrClientMock,
+        clientMockParameters.copy(host = "collector-8.newrelic.com"),
+        CONNECT,
+        None,
+        Right(responseAgentString),
+        Some(body.compactPrint)
+      )
+
+      system.actorOf(Props(classOf[AgentWithMock], nrClientMock))
+
+      EventFilter[RuntimeException](start = "Initialization failed, retrying in 1 seconds",
+        occurrences = 1)
+
       EventFilter.info(
-        message = "Configuring New Relic reporters to use runID: [161221112] and collector: [collector-8.newrelic.com] over: [https]", occurrences = 1).intercept {
+        message = "Configuring New Relic reporters to use runID: [161221112] and collector: [collector-8.newrelic.com] over: [https]",
+        occurrences = 1)
 
-          httpManager.reply(jsonResponse(
-            """
-            | {
-            |   "return_value": {
-            |     "agent_run_id": 161221112
-            |   }
-            | }
-            | """.stripMargin))
-        }
+      expectNoMsg(3 second)
     }
 
     "give up the connection after max-initialize-retries" in {
-      val httpManager = setHttpManager(TestProbe())
-      val agent = system.actorOf(Props[Agent])
+      val nrClientMock = mock[NewRelicClient]
+      val clientMockParameters = ClientMockParameters("collector.newrelic.com", licenseKey, true, None)
 
-      // First attempt and two retries
-      for (_ ← 1 to 3) {
+      for (_ <- 1 to 3) {
+        /** ALL CALL FAILED **/
 
-        // Request NR for a collector
-        val request = httpManager.expectMsg(Deflate.encode {
-          Post(rawMethodUri("collector.newrelic.com", "get_redirect_host"), JsArray())
-        })
-
-        // Fail the request.
-        EventFilter[RuntimeException](start = "Initialization failed, retrying in 1 seconds", occurrences = 1).intercept {
-          httpManager.reply(Timedout(request))
-        }
+        mockClientCall(nrClientMock,
+          clientMockParameters,
+          GET_REDIRECT_HOST,
+          None,
+          Left(ApiMethodClient.NewRelicException("test", "test")),
+          Some(JsArray().compactPrint)
+        )
       }
 
-      // Final retry. Request NR for a collector
-      val request = httpManager.expectMsg(Deflate.encode {
-        Post(rawMethodUri("collector.newrelic.com", "get_redirect_host"), JsArray())
-      })
+      /** LAST  CALL FAILED **/
+      mockClientCall(nrClientMock,
+        clientMockParameters,
+        GET_REDIRECT_HOST,
+        None,
+        Left(ApiMethodClient.NewRelicException("test", "test")),
+        Some(JsArray().compactPrint)
+      )
 
-      // Give up on connecting.
-      EventFilter.error(message = "Giving up while trying to set up a connection with the New Relic collector. The New Relic module is shutting down itself.", occurrences = 1).intercept {
-        httpManager.reply(Timedout(request))
-      }
+      system.actorOf(Props(classOf[AgentWithMock], nrClientMock))
+
+      EventFilter[RuntimeException](start = "Initialization failed, retrying in 1 seconds",
+        occurrences = 3)
+      EventFilter.error(message = "Giving up while trying to set up a connection with the New Relic collector. The New Relic module is shutting down itself.",
+        occurrences = 1)
+
+      expectNoMsg(5 seconds)
     }
-  }
-
-  def setHttpManager(probe: TestProbe): TestProbe = {
-    AkkaExtensionSwap.swap(system, Http, new IO.Extension {
-      def manager: ActorRef = probe.ref
-    })
-    probe
-  }
-
-  def rawMethodUri(host: String, methodName: String): Uri = {
-    Uri(s"https://$host/agent_listener/invoke_raw_method").withQuery(
-      "method" -> methodName,
-      "license_key" -> "1111111111",
-      "marshal_format" -> "json",
-      "protocol_version" -> "12")
-  }
-
-  def jsonResponse(json: String): HttpResponse = {
-    HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, json))
   }
 
   def getHostAndPid(): (String, String) = {

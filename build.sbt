@@ -16,20 +16,19 @@
 val kamonCore         = "io.kamon"                  %%  "kamon-core"            % "0.6.7"
 val kamonTestkit      = "io.kamon"                  %%  "kamon-testkit"         % "0.6.7"
 val newrelic          = "com.newrelic.agent.java"   %   "newrelic-agent"        % "3.26.1"
-val sprayCan          = "io.spray"                  %%  "spray-can"             % "1.3.3"
-val sprayRouting      = "io.spray"                  %%  "spray-routing"         % "1.3.3"
-val sprayTestkit      = "io.spray"                  %%  "spray-testkit"         % "1.3.3"
-val sprayClient       = "io.spray"                  %%  "spray-client"          % "1.3.3"
-val sprayJson         = "io.spray"                  %%  "spray-json"            % "1.3.1"
-val sprayJsonLenses   = "net.virtual-void"          %%  "json-lenses"           % "0.6.0"
+val sprayJson         = "io.spray"                  %%  "spray-json"            % "1.3.3"
+val sprayJsonLenses   = "net.virtual-void"          %%  "json-lenses"           % "0.6.2"
+val scalaTest         = "org.scalatest"             %%  "scalatest"             % "3.0.3"
+val scalaMock         = "org.scalamock"             %%  "scalamock-scalatest-support" % "3.6.0"
+val scalajHttp        = "org.scalaj"                %% "scalaj-http"                  % "2.3.0"
 
 lazy val root = (project in file("."))
   .settings(name := "kamon-newrelic")
   .settings(Seq(
-    scalaVersion := "2.11.8",
-    crossScalaVersions := Seq("2.10.6", "2.11.8")))  
+    scalaVersion := "2.12.2",
+    crossScalaVersions := Seq("2.10.6", "2.11.8", "2.12.2")))
   .settings(
       libraryDependencies ++=
-        compileScope(kamonCore, sprayCan, sprayClient, sprayRouting, sprayJson, sprayJsonLenses, newrelic) ++
+        compileScope(kamonCore, sprayJson, scalajHttp, sprayJsonLenses, newrelic) ++
         providedScope(aspectJ, newrelic) ++
-        testScope(scalatest, akkaDependency("testkit").value, kamonTestkit, sprayTestkit, slf4jApi, slf4jnop))
+        testScope(scalatest, akkaDependency("testkit").value, scalaTest, scalaMock, kamonTestkit, slf4jApi, slf4jnop))

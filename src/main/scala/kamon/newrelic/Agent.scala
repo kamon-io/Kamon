@@ -16,32 +16,38 @@
 
 package kamon.newrelic
 
-import akka.actor.{ ActorRef, ActorLogging, Actor }
+import akka.actor.{Actor, ActorLogging, ActorRef}
 import akka.event.LoggingAdapter
-import akka.io.IO
 import akka.util.Timeout
 import com.typesafe.config.Config
 import kamon.Kamon
-import kamon.metric.{ SegmentMetrics, TraceMetrics, MetricsModule, TickMetricSnapshotBuffer }
-import spray.can.Http
+import kamon.metric.{MetricsModule, SegmentMetrics, TickMetricSnapshotBuffer, TraceMetrics}
 import spray.json._
+
 import scala.concurrent.Future
-import spray.httpx.SprayJsonSupport
 import spray.json.lenses.JsonLenses._
 import java.lang.management.ManagementFactory
+
 import kamon.util.ConfigTools.Syntax
 import Agent._
 import JsonProtocol._
 import akka.pattern.pipe
+
 import scala.concurrent.duration._
 import scala.concurrent.duration.FiniteDuration
 
-class Agent extends Actor with SprayJsonSupport with ActorLogging with MetricsSubscription {
+trait KamonNewRelicClient {
+  def getNRClient(): NewRelicClient = new ScalaJClient()
+}
+
+class Agent extends Actor with ActorLogging with MetricsSubscription with KamonNewRelicClient {
   import context.dispatcher
 
   private val config = context.system.settings.config
 
   val agentSettings = AgentSettings.fromConfig(config)
+
+  val nrClient = getNRClient()
 
   // Start the reporters
   private val reporter = context.actorOf(MetricReporter.props(agentSettings), "metric-reporter")
@@ -110,15 +116,15 @@ class Agent extends Actor with SprayJsonSupport with ActorLogging with MetricsSu
   }
 
   def selectCollector: Future[String] = {
-    val apiClient = new ApiMethodClient("collector.newrelic.com", None, agentSettings, IO(Http)(context.system))
+    val apiClient = new ApiMethodClient("collector.newrelic.com", None, agentSettings, nrClient)
     apiClient.invokeMethod(RawMethods.GetRedirectHost, JsArray()) map { json ⇒
       json.extract[String]('return_value)
     }
   }
 
   def connect(collectorHost: String, connect: AgentSettings): Future[(Long, String)] = {
-    val apiClient = new ApiMethodClient(collectorHost, None, agentSettings, IO(Http)(context.system))
-    apiClient.invokeMethod(RawMethods.Connect, connect) map { json ⇒
+    val apiClient = new ApiMethodClient(collectorHost, None, agentSettings, nrClient)
+    apiClient.invokeMethod(RawMethods.Connect, connect.toJson) map { json ⇒
       (json.extract[Long]('return_value / 'agent_run_id), apiClient.scheme)
     }
   }

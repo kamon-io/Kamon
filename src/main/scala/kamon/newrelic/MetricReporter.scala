@@ -17,20 +17,22 @@
 package kamon.newrelic
 
 import akka.actor._
-import akka.io.IO
 import akka.pattern.pipe
 import kamon.Kamon
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 import kamon.metric._
 import kamon.metric.instrument.CollectionContext
-import kamon.newrelic.ApiMethodClient.{ AgentShutdownRequiredException, AgentRestartRequiredException }
-import kamon.newrelic.MetricReporter.{ PostFailed, PostSucceeded }
-import spray.can.Http
-import spray.httpx.SprayJsonSupport
+import kamon.newrelic.ApiMethodClient.{AgentRestartRequiredException, AgentShutdownRequiredException}
+import kamon.newrelic.MetricReporter.{PostFailed, PostSucceeded}
 import JsonProtocol._
+import spray.json._
 
-class MetricReporter(settings: AgentSettings) extends Actor with ActorLogging with SprayJsonSupport {
+class MetricReporter(settings: AgentSettings) extends Actor with ActorLogging with KamonNewRelicClient {
   import context.dispatcher
+
+  private val config = context.system.settings.config
+
+  val nrClient : NewRelicClient = getNRClient()
 
   val metricsExtension = Kamon.metrics
   val collectionContext = metricsExtension.buildDefaultCollectionContext
@@ -54,14 +56,13 @@ class MetricReporter(settings: AgentSettings) extends Actor with ActorLogging wi
 
   def sendMetricData(apiClient: ApiMethodClient, tick: TickMetricSnapshot, bufferedMetrics: Option[TimeSliceMetrics]): Unit = {
     val metricsToReport = merge(convertToTimeSliceMetrics(tick), bufferedMetrics)
-    val customMarshaller = sprayJsonMarshaller(MetricBatchWriter, NewRelicJsonPrinter)
 
     if (log.isDebugEnabled)
       log.debug("Sending [{}] metrics to New Relic for the time slice between {} and {}.", metricsToReport.metrics.size,
         metricsToReport.from, metricsToReport.to)
 
     pipe {
-      apiClient.invokeMethod(RawMethods.MetricData, MetricBatch(apiClient.runID.get, metricsToReport))(customMarshaller)
+      apiClient.invokeMethod(RawMethods.MetricData, MetricBatch(apiClient.runID.get, metricsToReport).toJson)
         .map { _ ⇒ PostSucceeded }
         .recover { case error ⇒ PostFailed(error) }
     } to self
@@ -77,7 +78,7 @@ class MetricReporter(settings: AgentSettings) extends Actor with ActorLogging wi
   }
 
   def startReporting(collector: String, runID: Long, bufferedMetrics: Option[TimeSliceMetrics]): Unit = {
-    val apiClient = new ApiMethodClient(collector, Some(runID), settings, IO(Http)(context.system))
+    val apiClient = new ApiMethodClient(collector, Some(runID), settings, nrClient)
     context become reporting(apiClient, bufferedMetrics)
   }
 

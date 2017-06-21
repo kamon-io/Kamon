@@ -1,52 +1,54 @@
 package kamon.newrelic
 
-import akka.actor.ActorRef
-import kamon.newrelic.ApiMethodClient.{ NewRelicException, AgentShutdownRequiredException, AgentRestartRequiredException }
-import spray.http.Uri.Query
-import spray.http._
-import spray.httpx.encoding.Deflate
-import spray.httpx.marshalling.Marshaller
-import spray.httpx.unmarshalling._
-import spray.json.{ JsonParser, JsValue }
+import kamon.newrelic.ApiMethodClient.{AgentRestartRequiredException, AgentShutdownRequiredException, NewRelicException}
+import spray.json.{JsValue, JsonParser}
 import spray.json.lenses.JsonLenses._
 import spray.json.DefaultJsonProtocol._
-import spray.client.pipelining._
 
-import scala.concurrent.{ Future, ExecutionContext }
+import scalaj.http._
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NoStackTrace
 
-class ApiMethodClient(host: String, val runID: Option[Long], agentSettings: AgentSettings, httpTransport: ActorRef)(implicit exeContext: ExecutionContext) {
+sealed trait QueryParamsBuilder {
+  def baseQueryParams(runID: Option[Long], licenseKey: String) : Map[String, String] =
+    runID.map(ri ⇒ Map("run_id" → String.valueOf(ri))).getOrElse(Map.empty[String, String]) +
+      ("license_key" -> licenseKey) +
+      ("marshal_format" -> "json") +
+      ("protocol_version" -> "12")
 
-  implicit val to = agentSettings.operationTimeout
+  def baseQueryParams(method: String, licenseKey: String, runID: Option[Long]): Map[String, String] =
+    baseQueryParams(runID, licenseKey) + ("method" -> method)
+}
 
-  val baseQuery = Query(runID.map(ri ⇒ Map("run_id" -> String.valueOf(ri))).getOrElse(Map.empty[String, String]) +
-    ("license_key" -> agentSettings.licenseKey) +
-    ("marshal_format" -> "json") +
-    ("protocol_version" -> "12"))
+trait NewRelicUrlBuilder extends QueryParamsBuilder {
+  val baseCollector = "/agent_listener/invoke_raw_method"
 
-  // New Relic responses contain JSON but with text/plain content type :(.
-  implicit val JsValueUnmarshaller = Unmarshaller[JsValue](MediaType.custom("text/json"), MediaTypes.`application/json`, MediaTypes.`text/plain`) {
-    case x: HttpEntity.NonEmpty ⇒
-      JsonParser(x.asString(defaultCharset = HttpCharsets.`UTF-8`))
-  }
+  def buildUrl(protocol: String, host: String, method: String, licenseKey: String, runID: Option[Long]) =
+    protocol + "://" + host + baseCollector +
+      baseQueryParams(method, licenseKey, runID).foldLeft("?")((acc, it) ⇒ acc + it._1 + "=" + it._2 + "&")
+}
 
-  val httpClient = encode(Deflate) ~> sendReceive(httpTransport) ~> decode(Deflate) ~> unmarshal[JsValue]
+class ApiMethodClient(host: String, val runID: Option[Long], agentSettings: AgentSettings, client: NewRelicClient)(implicit exeContext: ExecutionContext)
+  extends NewRelicUrlBuilder {
+
   val scheme = if (agentSettings.ssl) "https" else "http"
-  val baseCollectorUri = Uri("/agent_listener/invoke_raw_method").withHost(host).withScheme(scheme)
 
-  def invokeMethod[T: Marshaller](method: String, payload: T): Future[JsValue] = {
-    val methodQuery = ("method" -> method) +: baseQuery
+  def invokeMethod(method: String, payload: JsValue): Future[JsValue] = {
+    val url = buildUrl(scheme, host, method, agentSettings.licenseKey, runID)
 
-    httpClient(Post(baseCollectorUri.withQuery(methodQuery), payload)) map { jsResponse ⇒
-      jsResponse.extract[String]('exception.? / 'error_type.?).map(_ match {
-        case CollectorErrors.`ForceRestart`  ⇒ throw AgentRestartRequiredException
-        case CollectorErrors.`ForceShutdown` ⇒ throw AgentShutdownRequiredException
-        case anyOtherError ⇒
-          val errorMessage = jsResponse.extract[String]('exception / 'message.?).getOrElse("no message")
-          throw NewRelicException(anyOtherError, errorMessage)
-      })
+    Future(client.execute(url, method, payload.compactPrint)).map {
+      response => {
+        val jsResponse = JsonParser(response)
 
-      jsResponse
+        jsResponse.extract[String]('exception.? / 'error_type.?).map(_ match {
+          case CollectorErrors.`ForceRestart`  ⇒ throw AgentRestartRequiredException
+          case CollectorErrors.`ForceShutdown` ⇒ throw AgentShutdownRequiredException
+          case anyOtherError ⇒
+            val errorMessage = jsResponse.extract[String]('exception / 'message.?).getOrElse("no message")
+            throw NewRelicException(anyOtherError, errorMessage)
+        })
+        jsResponse
+      }
     }
   }
 }
