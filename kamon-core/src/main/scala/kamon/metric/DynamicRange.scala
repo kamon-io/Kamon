@@ -21,7 +21,7 @@ case class DynamicRange(lowestDiscernibleValue: Long, highestTrackableValue: Lon
   def upTo(highestTrackableValue: Long): DynamicRange =
     copy(highestTrackableValue = highestTrackableValue)
 
-  def startingFrom(lowestDiscernibleValue: Long): DynamicRange =
+  def withLowestDiscernibleValue(lowestDiscernibleValue: Long): DynamicRange =
     copy(lowestDiscernibleValue = lowestDiscernibleValue)
 }
 
