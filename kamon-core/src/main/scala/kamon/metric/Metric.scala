@@ -46,6 +46,7 @@ trait Metric[T] {
 }
 
 trait HistogramMetric extends Metric[Histogram] with Histogram
+trait TimerMetric extends Metric[Timer] with Timer
 trait MinMaxCounterMetric extends Metric[MinMaxCounter] with MinMaxCounter
 trait GaugeMetric extends Metric[Gauge] with Gauge
 trait CounterMetric extends Metric[Counter] with Counter

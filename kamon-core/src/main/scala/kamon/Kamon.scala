@@ -83,6 +83,9 @@ object Kamon extends MetricLookup with ReporterRegistry with io.opentracing.Trac
       dynamicRange: Option[DynamicRange]): MinMaxCounterMetric =
     _metrics.minMaxCounter(name, unit, dynamicRange, sampleInterval)
 
+  override def timer(name: String, dynamicRange: Option[DynamicRange]): TimerMetric =
+    _metrics.timer(name, dynamicRange)
+
 
   def tracer: Tracer =
     _tracer

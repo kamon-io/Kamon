@@ -32,6 +32,13 @@ trait MetricLookup {
     histogram(name, unit, Some(dynamicRange))
 
 
+  def timer(name: String): TimerMetric =
+    timer(name, None)
+
+  def timer(name: String, dynamicRange: DynamicRange): TimerMetric =
+    timer(name, Some(dynamicRange))
+
+
   def counter(name: String): CounterMetric =
     counter(name, MeasurementUnit.none)
 
@@ -54,6 +61,8 @@ trait MetricLookup {
 
 
   def histogram(name: String, unit: MeasurementUnit, dynamicRange: Option[DynamicRange]): HistogramMetric
+
+  def timer(name: String, dynamicRange: Option[DynamicRange]): TimerMetric
 
   def counter(name: String, unit: MeasurementUnit): CounterMetric
 

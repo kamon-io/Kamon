@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.AtomicReference
 import com.typesafe.config.Config
 import kamon.metric.InstrumentFactory.{InstrumentType, InstrumentTypes}
 import kamon.util.MeasurementUnit
+import kamon.util.MeasurementUnit.time
 
 import scala.collection.concurrent.TrieMap
 import java.time.Duration
@@ -52,6 +53,9 @@ class MetricRegistry(initialConfig: Config, scheduler: ScheduledExecutorService)
 
   def minMaxCounter(name: String, unit: MeasurementUnit, dynamicRange: Option[DynamicRange], sampleInterval: Option[Duration]): MinMaxCounterMetric =
     lookupMetric(name, unit, InstrumentTypes.MinMaxCounter)(new MinMaxCounterMetricImpl(name, unit, dynamicRange, sampleInterval, instrumentFactory, scheduler))
+
+  def timer(name: String, dynamicRange: Option[DynamicRange]): TimerMetric =
+    new TimerMetricImpl(histogram(name, time.nanoseconds, dynamicRange))
 
 
   override def snapshot(): MetricsSnapshot = synchronized {
