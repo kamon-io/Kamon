@@ -23,13 +23,10 @@ import kamon.trace.{SpanContext => KamonSpanContext}
 
 class LogbackSpanTokenConverter extends ClassicConverter {
   override def convert(event: ILoggingEvent): String = {
-    Option(Kamon.activeSpan) match {
-      case Some(span) =>
-        span.context match {
-          case context: KamonSpanContext => context.traceID.toString
-          case _ => "undefined"
-        }
-      case _ => "undefined"
+    val traceIdOpt = Kamon.fromActiveSpan(_.context).collect {
+      case context: KamonSpanContext => context.traceID.toString
     }
+
+    traceIdOpt.getOrElse("undefined")
   }
 }
