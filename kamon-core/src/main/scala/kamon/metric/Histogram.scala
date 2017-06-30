@@ -18,6 +18,7 @@ package metric
 
 import java.nio.ByteBuffer
 
+import kamon.metric.SnapshotCreation.ZigZagCountsDistribution
 import kamon.util.MeasurementUnit
 import org.HdrHistogram.{AtomicHistogramExtension, HdrHistogramOps, SimpleHistogramExtension, ZigZag}
 import org.slf4j.LoggerFactory
@@ -72,7 +73,7 @@ private[kamon] class HdrHistogram(name: String, tags: Map[String, String], val u
 }
 
 
-trait SnapshotCreation {
+private[kamon] trait SnapshotCreation {
   self: HdrHistogramOps with Histogram =>
 
   private[kamon] def snapshot(resetState: Boolean, name: String, tags: Map[String, String]): MetricDistribution = {
@@ -122,8 +123,15 @@ trait SnapshotCreation {
 
     MetricDistribution(name, tags, unit, dynamicRange, distribution)
   }
+}
 
-  private class ZigZagCountsDistribution(val count: Long, minIndex: Int, maxIndex: Int, zigZagCounts: ByteBuffer,
+private[kamon] object SnapshotCreation {
+  // TODO: maybe make the buffer size configurable or make it auto-expanding.
+  private val tempSnapshotBuffer = new ThreadLocal[ByteBuffer] {
+    override def initialValue(): ByteBuffer = ByteBuffer.allocate(33792)
+  }
+
+  class ZigZagCountsDistribution(val count: Long, minIndex: Int, maxIndex: Int, val zigZagCounts: ByteBuffer,
     unitMagnitude: Int, subBucketHalfCount: Int, subBucketHalfCountMagnitude: Int) extends Distribution {
 
     val min: Long = if(count == 0) 0 else bucketValueAtIndex(minIndex)
@@ -221,14 +229,6 @@ trait SnapshotCreation {
 
   case class DefaultPercentile(quantile: Double, value: Long, countUnderQuantile: Long) extends Percentile
   case class MutablePercentile(var quantile: Double, var value: Long, var countUnderQuantile: Long) extends Percentile
-
-}
-
-object SnapshotCreation {
-  // TODO: maybe make the buffer size configurable or make it auto-expanding.
-  private val tempSnapshotBuffer = new ThreadLocal[ByteBuffer] {
-    override def initialValue(): ByteBuffer = ByteBuffer.allocate(33792)
-  }
 }
 
 object AtomicHdrHistogram {
