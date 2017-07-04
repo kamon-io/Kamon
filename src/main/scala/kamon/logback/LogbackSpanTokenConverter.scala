@@ -20,13 +20,14 @@ import ch.qos.logback.classic.pattern.ClassicConverter
 import ch.qos.logback.classic.spi.ILoggingEvent
 import kamon.Kamon
 import kamon.trace.{SpanContext => KamonSpanContext}
+import kamon.util.HexCodec
 
 class LogbackSpanTokenConverter extends ClassicConverter {
   override def convert(event: ILoggingEvent): String = {
-    val traceIdOpt = Kamon.fromActiveSpan(_.context).collect {
-      case context: KamonSpanContext => context.traceID.toString
-    }
-
-    traceIdOpt.getOrElse("undefined")
+    Kamon.fromActiveSpan(_.context).collect {
+      case context: KamonSpanContext => encodeId(context.traceID)
+    } getOrElse "undefined       "
   }
+
+  private def encodeId(id: Long): String = HexCodec.toLowerHex(id)
 }
