@@ -20,11 +20,12 @@ import akka.actor._
 import kamon.metric.SubscriptionsDispatcher._
 import kamon.util.{MilliTimestamp, GlobPathFilter}
 import scala.concurrent.duration.FiniteDuration
+import scala.util.control.NonFatal
 
 /**
  *  Manages subscriptions to metrics and dispatch snapshots on every tick to all subscribers.
  */
-private[kamon] class SubscriptionsDispatcher(interval: FiniteDuration, metricsExtension: MetricsModuleImpl) extends Actor {
+private[kamon] class SubscriptionsDispatcher(interval: FiniteDuration, metricsExtension: MetricsModuleImpl) extends Actor with ActorLogging {
   var lastTick = MilliTimestamp.now
   var oneShotSubscriptions = Map.empty[ActorRef, SubscriptionFilter]
   var permanentSubscriptions = Map.empty[ActorRef, SubscriptionFilter]
@@ -72,7 +73,14 @@ private[kamon] class SubscriptionsDispatcher(interval: FiniteDuration, metricsEx
     snapshots: Map[Entity, EntitySnapshot]): Unit = {
 
     for ((subscriber, filter) ← subscriptions) {
-      val selection = snapshots.filter(group ⇒ filter.accept(group._1))
+      val selection = snapshots.filter(group ⇒
+        try filter.accept(group._1)
+        catch {
+          case NonFatal(e) =>
+            log.warning("Checking if filter {} accepts snapshot {} failed: {}", filter, group._1, e)
+            false
+        }
+      )
       val tickMetrics = TickMetricSnapshot(lastTick, currentTick, selection)
 
       subscriber ! tickMetrics

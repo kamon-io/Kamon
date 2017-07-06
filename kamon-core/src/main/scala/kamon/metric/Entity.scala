@@ -16,6 +16,8 @@
 
 package kamon.metric
 
+import org.slf4j.LoggerFactory
+
 /**
  *  Identify a `thing` that is being monitored by Kamon. A [[kamon.metric.Entity]] is used to identify tracked `things`
  *  in both the metrics recording and reporting sides. Only the name and category fields are used with determining
@@ -23,9 +25,14 @@ package kamon.metric
  *
  *  // TODO: Find a better word for `thing`.
  */
-case class Entity(name: String, category: String, tags: Map[String, String])
+case class Entity(name: String, category: String, tags: Map[String, String]) {
+  if(name == null) Entity.log.warn("Entity with name=null created (category: {}), your monitoring will not work as expected!", category)
+}
 
 object Entity {
+
+  private lazy val log = LoggerFactory.getLogger(classOf[Entity])
+
   def apply(name: String, category: String): Entity =
     apply(name, category, Map.empty)
 
