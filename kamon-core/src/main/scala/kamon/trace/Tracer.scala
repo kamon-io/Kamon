@@ -131,7 +131,7 @@ class Tracer(metrics: MetricLookup, reporterRegistry: ReporterRegistryImpl, init
 
       val spanContext =
         if(parentContext != null)
-          new SpanContext(parentContext.traceID, createID(), parentContext.spanID, parentContext.sampled, initialTags)
+          new SpanContext(parentContext.traceID, createID(), parentContext.spanID, parentContext.sampled, initialTags ++ parentContext.baggageMap)
         else {
           val traceID = createID()
           new SpanContext(traceID, traceID, 0L, configuredSampler.decide(traceID), initialTags)
