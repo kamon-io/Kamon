@@ -158,7 +158,7 @@ class Span(spanContext: SpanContext, initialOperationName: String, initialTags: 
 
     tags.get("error").foreach { errorTag =>
       if(errorTag != null && errorTag.equals(Span.BooleanTagTrueValue)) {
-        //TODO: count properly metrics.counter("span.errors", MeasurementUnit.none, metricTags).increment()
+        Span.Metrics.SpanErrorCount.refine(metricTags).increment()
       }
     }
   }
@@ -167,6 +167,7 @@ class Span(spanContext: SpanContext, initialOperationName: String, initialTags: 
 object Span {
   object Metrics {
     val SpanProcessingTimeMetric = Kamon.histogram("span.processing-time", MeasurementUnit.time.microseconds)
+    val SpanErrorCount = Kamon.counter("span.error-count")
   }
 
   val MetricTagPrefix = "metric."
