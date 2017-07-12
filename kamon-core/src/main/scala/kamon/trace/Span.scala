@@ -158,7 +158,6 @@ class Span(spanContext: SpanContext, initialOperationName: String, initialTags: 
     }
 
     val refinedTags = if(isError) {
-      Span.Metrics.SpanErrorCount.refine(metricTags).increment()
       metricTags + ("error" -> Span.BooleanTagTrueValue)
     } else {
       metricTags

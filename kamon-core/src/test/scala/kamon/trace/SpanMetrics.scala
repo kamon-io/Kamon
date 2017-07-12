@@ -26,8 +26,6 @@ class SpanMetrics extends WordSpecLike with Matchers {
       val errorHistogram = histogramMetric.refine(operationTag, errorTag).distribution()
       errorHistogram.count === 0
 
-      val errorCount = histogramMetric.refine(operationTag, errorTag).distribution()
-      errorCount === 0
     }
 
     "record correctly error latency and count" in {
@@ -44,8 +42,6 @@ class SpanMetrics extends WordSpecLike with Matchers {
       val errorHistogram = histogramMetric.refine(operationTag, errorTag).distribution()
       errorHistogram.count === 1
 
-      val errorCount = histogramMetric.refine(operationTag, errorTag).distribution()
-      errorCount === 1
     }
   }
 
