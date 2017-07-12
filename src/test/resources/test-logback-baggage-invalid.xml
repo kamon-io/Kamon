@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration scan="false" debug="false">
+  <conversionRule conversionWord="spanBaggage" converterClass="kamon.logback.LogbackSpanBaggageConverter" />
+
+  <appender name="MEMORY" class="kamon.logback.LogbackMemoryAppender">
+    <encoder>
+      <pattern>%spanBaggage{invalid-key}</pattern>
+    </encoder>
+  </appender>
+
+  <root level="TRACE">
+    <appender-ref ref="MEMORY" />
+  </root>
+</configuration>

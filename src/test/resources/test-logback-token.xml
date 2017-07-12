@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration scan="false" debug="false">
+  <conversionRule conversionWord="spanToken" converterClass="kamon.logback.LogbackSpanTokenConverter" />
+
+  <appender name="MEMORY" class="kamon.logback.LogbackMemoryAppender">
+    <encoder>
+      <pattern>%spanToken</pattern>
+    </encoder>
+  </appender>
+
+  <root level="TRACE">
+    <appender-ref ref="MEMORY" />
+  </root>
+</configuration>
