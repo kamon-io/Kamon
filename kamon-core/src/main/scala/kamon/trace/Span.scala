@@ -153,14 +153,19 @@ class Span(spanContext: SpanContext, initialOperationName: String, initialTags: 
     val elapsedTime = endTimestampMicros - startTimestampMicros
     val metricTags = Map("operation" -> operationName) ++ additionalMetricTags
 
-    val latencyHistogram = Span.Metrics.SpanProcessingTimeMetric.refine(metricTags)
-    latencyHistogram.record(elapsedTime)
-
-    tags.get("error").foreach { errorTag =>
-      if(errorTag != null && errorTag.equals(Span.BooleanTagTrueValue)) {
-        Span.Metrics.SpanErrorCount.refine(metricTags).increment()
-      }
+    val isError = tags.get("error").exists {
+      errorTag => errorTag != null && errorTag.equals(Span.BooleanTagTrueValue)
     }
+
+    val refinedTags = if(isError) {
+      Span.Metrics.SpanErrorCount.refine(metricTags).increment()
+      metricTags + ("error" -> Span.BooleanTagTrueValue)
+    } else {
+      metricTags
+    }
+
+    val latencyHistogram = Span.Metrics.SpanProcessingTimeMetric.refine(refinedTags)
+    latencyHistogram.record(elapsedTime)
   }
 }
 
