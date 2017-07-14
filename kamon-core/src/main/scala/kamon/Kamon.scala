@@ -16,23 +16,21 @@
 package kamon
 
 import com.typesafe.config.{Config, ConfigFactory}
-import io.opentracing.propagation.Format
-import io.opentracing.{ActiveSpan, Span, SpanContext}
 import kamon.metric._
-import kamon.trace.Tracer
+import kamon.trace.{ActiveSpan, Span, SpanContext, Tracer, Continuation}
 import kamon.util.{Filters, MeasurementUnit, Registration}
 
 import scala.concurrent.Future
 import java.time.Duration
 import java.util.concurrent.{Executors, ScheduledExecutorService, ScheduledThreadPoolExecutor}
 
-import io.opentracing.ActiveSpan.Continuation
+import kamon.trace.SpanContextCodec.Format
 import org.slf4j.LoggerFactory
 
 import scala.util.Try
 
 
-object Kamon extends MetricLookup with ReporterRegistry with io.opentracing.Tracer {
+object Kamon extends MetricLookup with ReporterRegistry {
   private val logger = LoggerFactory.getLogger("kamon.Kamon")
   @volatile private var _config = ConfigFactory.load()
   @volatile private var _environment = Environment.fromConfig(_config)
@@ -41,7 +39,7 @@ object Kamon extends MetricLookup with ReporterRegistry with io.opentracing.Trac
   private val _scheduler = Executors.newScheduledThreadPool(schedulerPoolSize(_config), numberedThreadFactory("kamon-scheduler"))
   private val _metrics = new MetricRegistry(_config, _scheduler)
   private val _reporters = new ReporterRegistryImpl(_metrics, _config)
-  private val _tracer = new Tracer(Kamon, _reporters, _config)
+  private val _tracer = new Tracer.Default(Kamon, _reporters, _config)
   private var _onReconfigureHooks = Seq.empty[OnReconfigureHook]
 
   def environment: Environment =
@@ -90,19 +88,19 @@ object Kamon extends MetricLookup with ReporterRegistry with io.opentracing.Trac
   def tracer: Tracer =
     _tracer
 
-  override def buildSpan(operationName: String): io.opentracing.Tracer.SpanBuilder =
+  def buildSpan(operationName: String): Tracer.SpanBuilder =
     _tracer.buildSpan(operationName)
 
-  override def extract[C](format: Format[C], carrier: C): SpanContext =
+  def extract[C](format: Format[C], carrier: C): Option[SpanContext] =
     _tracer.extract(format, carrier)
 
-  override def inject[C](spanContext: SpanContext, format: Format[C], carrier: C): Unit =
+  def inject[C](spanContext: SpanContext, format: Format[C], carrier: C): Unit =
     _tracer.inject(spanContext, format, carrier)
 
-  override def activeSpan(): ActiveSpan =
+  def activeSpan(): ActiveSpan =
     _tracer.activeSpan()
 
-  override def makeActive(span: Span): ActiveSpan =
+  def makeActive(span: Span): ActiveSpan =
     _tracer.makeActive(span)
 
 
@@ -133,13 +131,8 @@ object Kamon extends MetricLookup with ReporterRegistry with io.opentracing.Trac
   /**
     * Captures a continuation from the currently active Span (if any).
     */
-  def activeSpanContinuation(): Continuation = {
-    val activeSpan = Kamon.activeSpan()
-    if(activeSpan == null)
-      null
-    else
-      activeSpan.capture()
-  }
+  def activeSpanContinuation(): Continuation =
+    activeSpan().capture()
 
   /**
     * Runs the provided closure with the currently active Span (if any).
@@ -155,7 +148,7 @@ object Kamon extends MetricLookup with ReporterRegistry with io.opentracing.Trac
     * was no active Span then the provided fallback value
     */
   def fromActiveSpan[T](code: ActiveSpan => T): Option[T] =
-    Option(activeSpan()).map(code)
+    None//activeSpan().map(code)
 
 
   override def loadReportersFromConfig(): Unit =

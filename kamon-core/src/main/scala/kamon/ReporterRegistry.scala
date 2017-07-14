@@ -53,7 +53,7 @@ trait MetricReporter extends Reporter {
 }
 
 trait SpanReporter extends Reporter {
-  def reportSpans(spans: Seq[Span.CompletedSpan]): Unit
+  def reportSpans(spans: Seq[Span.FinishedSpan]): Unit
 }
 
 class ReporterRegistryImpl(metrics: MetricsSnapshotGenerator, initialConfig: Config) extends ReporterRegistry {
@@ -212,7 +212,7 @@ class ReporterRegistryImpl(metrics: MetricsSnapshotGenerator, initialConfig: Con
     }
   }
 
-  private[kamon] def reportSpan(span: Span.CompletedSpan): Unit = {
+  private[kamon] def reportSpan(span: Span.FinishedSpan): Unit = {
     spanReporters.foreach { case (_, reporterEntry) =>
       if(reporterEntry.isActive)
         reporterEntry.buffer.offer(span)
@@ -251,7 +251,7 @@ class ReporterRegistryImpl(metrics: MetricsSnapshotGenerator, initialConfig: Con
     val bufferCapacity: Int,
     val executionContext: ExecutionContextExecutorService
   ) {
-    val buffer = new ArrayBlockingQueue[Span.CompletedSpan](bufferCapacity)
+    val buffer = new ArrayBlockingQueue[Span.FinishedSpan](bufferCapacity)
   }
 
   private class MetricReporterTicker(snapshotGenerator: MetricsSnapshotGenerator, reporterEntries: TrieMap[Long, MetricReporterEntry]) extends Runnable {
@@ -290,7 +290,7 @@ class ReporterRegistryImpl(metrics: MetricsSnapshotGenerator, initialConfig: Con
       spanReporters.foreach {
         case (_, entry) =>
 
-          val spanBatch = new java.util.ArrayList[Span.CompletedSpan](entry.bufferCapacity)
+          val spanBatch = new java.util.ArrayList[Span.FinishedSpan](entry.bufferCapacity)
           entry.buffer.drainTo(spanBatch, entry.bufferCapacity)
 
           Future {

@@ -15,13 +15,16 @@
 
 package kamon.trace
 
+import java.util.concurrent.ThreadLocalRandom
+import kamon.trace.SpanContext.SamplingDecision
+
 trait Sampler {
-  def decide(spanID: Long): Boolean
+  def decide(operationName: String, builderTags: Map[String, String]): SamplingDecision
 }
 
 object Sampler {
-  val always = new Constant(true)
-  val never = new Constant(false)
+  val always = new Constant(SamplingDecision.Sample)
+  val never = new Constant(SamplingDecision.DoNotSample)
 
   def random(chance: Double): Sampler = {
     assert(chance >= 0D && chance <= 1.0D, "Change should be >= 0 and <= 1.0")
@@ -33,8 +36,8 @@ object Sampler {
     }
   }
 
-  class Constant(decision: Boolean) extends Sampler {
-    override def decide(spanID: Long): Boolean = decision
+  class Constant(decision: SamplingDecision) extends Sampler {
+    override def decide(operationName: String, builderTags: Map[String, String]): SamplingDecision = decision
 
     override def toString: String =
       s"Sampler.Constant(decision = $decision)"
@@ -44,8 +47,10 @@ object Sampler {
     val upperBoundary = Long.MaxValue * chance
     val lowerBoundary = -upperBoundary
 
-    override def decide(spanID: Long): Boolean =
-      spanID >= lowerBoundary && spanID <= upperBoundary
+    override def decide(operationName: String, builderTags: Map[String, String]): SamplingDecision = {
+      val random = ThreadLocalRandom.current().nextLong()
+      if(random >= lowerBoundary && random <= upperBoundary) SamplingDecision.Sample else SamplingDecision.DoNotSample
+    }
 
     override def toString: String =
       s"Sampler.Random(chance = $chance)"

@@ -20,7 +20,7 @@ crossScalaVersions := Seq("2.12.2", "2.11.8", "2.10.6")
 lazy val kamon = (project in file("."))
   .settings(moduleName := "kamon")
   .settings(noPublishing: _*)
-  .aggregate(core)//, testkit)
+  .aggregate(core, opentracing)
 
 
 lazy val core = (project in file("kamon-core"))
@@ -33,13 +33,24 @@ lazy val core = (project in file("kamon-core"))
     libraryDependencies ++= Seq(
       "com.typesafe"     % "config"          % "1.3.1",
       "org.slf4j"        % "slf4j-api"       % "1.7.7",
-      "ch.qos.logback" % "logback-classic" % "1.2.2",
       "org.hdrhistogram" % "HdrHistogram"    % "2.1.9",
+
+      "com.lihaoyi" %% "fansi" % "0.2.4",
+      "org.scalatest" %% "scalatest" % "3.0.1" % "test"
+    )
+  )
+
+lazy val opentracing = (project in file("kamon-opentracing"))
+  .settings(moduleName := "kamon-opentracing")
+  .dependsOn(core)
+  .settings(
+    isSnapshot := true,
+    scalaVersion := "2.11.8",
+    javacOptions += "-XDignore.symbol.file",
+    resolvers += Resolver.mavenLocal,
+    libraryDependencies ++= Seq(
       "io.opentracing"   % "opentracing-api" % "0.30.0",
       "io.opentracing"   % "opentracing-util" % "0.30.0",
-      "com.lihaoyi" %% "fansi" % "0.2.4",
-
-      //"uk.org.lidalia" % "slf4j-test" % "1.1.0" % "test",
       "org.scalatest" %% "scalatest" % "3.0.1" % "test"
     )
   )

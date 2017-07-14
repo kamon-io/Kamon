@@ -15,26 +15,92 @@
 
 package kamon.trace
 
-import java.lang
-import java.util.{Map => JavaMap}
+import kamon.trace.IdentityProvider.Identifier
+import kamon.trace.SpanContext.{Baggage, SamplingDecision, Source}
 
-import scala.collection.JavaConverters._
+/**
+  *
+  * @param traceID
+  * @param spanID
+  * @param parentID
+  * @param samplingDecision
+  * @param baggage
+  */
+case class SpanContext(traceID: Identifier, spanID: Identifier, parentID: Identifier, samplingDecision: SamplingDecision, baggage: Baggage, source: Source) {
 
-class SpanContext(val traceID: Long, val spanID: Long, val parentID: Long, val sampled: Boolean,
-  private var baggage: Map[String, String]) extends io.opentracing.SpanContext {
+  def createChild(childSpanID: Identifier, samplingDecision: SamplingDecision): SpanContext =
+    this.copy(parentID = this.spanID, spanID = childSpanID)
+}
 
-  private[kamon] def addBaggageItem(key: String, value: String): Unit = synchronized {
-    baggage = baggage + (key -> value)
+object SpanContext {
+
+  sealed trait Source
+  object Source {
+    case object Local extends Source
+    case object Remote extends Source
   }
 
-  private[kamon] def getBaggage(key: String): String = synchronized {
-    baggage.get(key).getOrElse(null)
+  val EmptySpanContext = SpanContext(
+    traceID   = IdentityProvider.NoIdentifier,
+    spanID    = IdentityProvider.NoIdentifier,
+    parentID  = IdentityProvider.NoIdentifier,
+    samplingDecision = SamplingDecision.DoNotSample,
+    baggage = Baggage.EmptyBaggage,
+    source = Source.Local
+  )
+
+
+  sealed trait SamplingDecision
+  object SamplingDecision {
+
+    /**
+      *   The Trace is sampled, all child Spans should be sampled as well.
+      */
+    case object Sample extends SamplingDecision
+
+    /**
+      *   The Trace is not sampled, none of the child Spans should be sampled.
+      */
+    case object DoNotSample extends SamplingDecision
+
+    /**
+      *   The sampling decision has not been taken yet, the Tracer is free to decide when creating a Span.
+      */
+    case object Unknown extends SamplingDecision
   }
 
-  private[kamon] def baggageMap: Map[String, String] =
-    baggage
+  /**
+    *
+    */
 
-  override def baggageItems(): lang.Iterable[JavaMap.Entry[String, String]] = synchronized {
-    baggage.asJava.entrySet()
+  sealed trait Baggage {
+    def add(key: String, value:String): Unit
+    def get(key: String): Option[String]
+    def getAll(): Map[String, String]
+  }
+
+  object Baggage {
+    def apply(): Baggage = new DefaultBaggage()
+
+    case object EmptyBaggage extends Baggage {
+      override def add(key: String, value: String): Unit = {}
+      override def get(key: String): Option[String] = None
+      override def getAll: Map[String, String] = Map.empty
+    }
+
+
+    final class DefaultBaggage extends Baggage {
+      private var baggage: Map[String, String] = Map.empty
+
+      def add(key: String, value: String): Unit = synchronized {
+        baggage = baggage + (key -> value)
+      }
+
+      def get(key: String): Option[String] =
+        baggage.get(key)
+
+      def getAll: Map[String, String] =
+        baggage
+    }
   }
 }
