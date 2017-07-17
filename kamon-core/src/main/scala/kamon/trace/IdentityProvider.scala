@@ -17,7 +17,6 @@ object IdentityProvider {
 
   val NoIdentifier = Identifier("", new Array[Byte](0))
 
-
   trait Generator {
     def generate(): Identifier
     def from(string: String): Identifier
@@ -53,5 +52,9 @@ object IdentityProvider {
 
     override def traceIdentifierGenerator(): Generator = generator
     override def spanIdentifierGenerator(): Generator = generator
+  }
+
+  object Default {
+    def apply(): Default = new Default()
   }
 }

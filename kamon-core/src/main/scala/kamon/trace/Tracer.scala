@@ -27,22 +27,17 @@ import kamon.util.Clock
 import org.slf4j.LoggerFactory
 
 
-trait Tracer {
-  def buildSpan(operationName: String): SpanBuilder
+trait ActiveSpanSource {
   def activeSpan(): ActiveSpan
   def makeActive(span: Span): ActiveSpan
+}
+
+trait Tracer extends ActiveSpanSource{
+  def buildSpan(operationName: String): SpanBuilder
 
   def extract[C](format: SpanContextCodec.Format[C], carrier: C): Option[SpanContext]
-  def inject[C](spanContext: SpanContext, format: SpanContextCodec.Format[C], carrier: C): Unit
-
-
-
-  //
-  // Configuration Utilities
-  //
-
-  def setTextMapSpanContextCodec(codec: SpanContextCodec[TextMap]): Unit
-  def setHttpHeaderSpanContextCodec(codec: SpanContextCodec[TextMap]): Unit
+  def inject[C](spanContext: SpanContext, format: SpanContextCodec.Format[C], carrier: C): C
+  def inject[C](spanContext: SpanContext, format: SpanContextCodec.Format[C]): C
 }
 
 object Tracer {
@@ -57,33 +52,40 @@ object Tracer {
     private[Tracer] val tracerMetrics = new TracerMetrics(metrics)
     @volatile private[Tracer] var joinRemoteSpansWithSameID: Boolean = false
     @volatile private[Tracer] var configuredSampler: Sampler = Sampler.never
-    @volatile private[Tracer] var idGenerator: IdentifierGenerator = IdentifierGenerator.RandomLong()
-    @volatile private[Tracer] var textMapSpanContextCodec: SpanContextCodec[TextMap] = SpanContextCodec.TextMap
-    @volatile private[Tracer] var httpHeaderSpanContextCodec: SpanContextCodec[TextMap] = SpanContextCodec.ZipkinB3
+    @volatile private[Tracer] var identityProvider: IdentityProvider = IdentityProvider.Default()
+    @volatile private[Tracer] var textMapSpanContextCodec: SpanContextCodec[TextMap] = SpanContextCodec.ExtendedB3(identityProvider)
+    @volatile private[Tracer] var httpHeaderSpanContextCodec: SpanContextCodec[TextMap] = SpanContextCodec.ExtendedB3(identityProvider)
 
     reconfigure(initialConfig)
 
-    def buildSpan(operationName: String): SpanBuilder =
+    override def buildSpan(operationName: String): SpanBuilder =
       new SpanBuilder(operationName, this, reporterRegistry)
 
-    def extract[C](format: SpanContextCodec.Format[C], carrier: C): Option[SpanContext] = format match {
+    override def extract[C](format: SpanContextCodec.Format[C], carrier: C): Option[SpanContext] = format match {
       case SpanContextCodec.Format.HttpHeaders  => httpHeaderSpanContextCodec.extract(carrier.asInstanceOf[TextMap])
       case SpanContextCodec.Format.TextMap      => textMapSpanContextCodec.extract(carrier.asInstanceOf[TextMap])
       case SpanContextCodec.Format.Binary       => None
       case _                                    => None
     }
 
-    def inject[C](spanContext: SpanContext, format: SpanContextCodec.Format[C], carrier: C): Unit = format match {
+    override def inject[C](spanContext: SpanContext, format: SpanContextCodec.Format[C], carrier: C): C = format match {
       case SpanContextCodec.Format.HttpHeaders => httpHeaderSpanContextCodec.inject(spanContext, carrier.asInstanceOf[TextMap])
       case SpanContextCodec.Format.TextMap     => textMapSpanContextCodec.inject(spanContext, carrier.asInstanceOf[TextMap])
-      case SpanContextCodec.Format.Binary      =>
-      case _                                   =>
+      case SpanContextCodec.Format.Binary      => carrier
+      case _                                   => carrier
     }
 
-    def activeSpan(): ActiveSpan =
+    override def inject[C](spanContext: SpanContext, format: SpanContextCodec.Format[C]): C = format match {
+      case SpanContextCodec.Format.HttpHeaders => httpHeaderSpanContextCodec.inject(spanContext)
+      case SpanContextCodec.Format.TextMap     => textMapSpanContextCodec.inject(spanContext)
+      case SpanContextCodec.Format.Binary      => ByteBuffer.allocate(0) // TODO: Implement binary encoding.
+      case _                                   => sys.error("can't do")
+    }
+
+    override def activeSpan(): ActiveSpan =
       activeSpanStorage.get()
 
-    def makeActive(span: Span): ActiveSpan = {
+    override def makeActive(span: Span): ActiveSpan = {
       val currentlyActiveSpan = activeSpanStorage.get()
       val newActiveSpan = ActiveSpan.Default(span, currentlyActiveSpan, activeSpanStorage)
       activeSpanStorage.set(newActiveSpan)
@@ -92,13 +94,6 @@ object Tracer {
 
     def sampler: Sampler =
       configuredSampler
-
-    def setTextMapSpanContextCodec(codec: SpanContextCodec[TextMap]): Unit =
-      this.textMapSpanContextCodec = codec
-
-    def setHttpHeaderSpanContextCodec(codec: SpanContextCodec[TextMap]): Unit =
-      this.httpHeaderSpanContextCodec = codec
-
 
     private[kamon] def reconfigure(config: Config): Unit = synchronized {
       val traceConfig = config.getConfig("kamon.trace")
@@ -109,10 +104,6 @@ object Tracer {
         case "random" => Sampler.random(traceConfig.getDouble("sampler-random.chance"))
         case other    => sys.error(s"Unexpected sampler name $other.")
       }
-    }
-
-    private final class TracerMetrics(metricLookup: MetricLookup) {
-      val createdSpans = metricLookup.counter("tracer.spans-created")
     }
   }
 
@@ -170,13 +161,13 @@ object Tracer {
       if(parent.source == Source.Remote && tracer.joinRemoteSpansWithSameID)
         parent.copy(samplingDecision = samplingDecision)
       else
-        parent.createChild(tracer.idGenerator.generateSpanID(), samplingDecision)
+        parent.createChild(tracer.identityProvider.spanIdentifierGenerator().generate(), samplingDecision)
 
     private def newSpanContext(samplingDecision: SamplingDecision): SpanContext =
       SpanContext(
-        traceID = tracer.idGenerator.generateTraceID(),
-        spanID = tracer.idGenerator.generateSpanID(),
-        parentID = tracer.idGenerator.generateEmptyID(),
+        traceID = tracer.identityProvider.traceIdentifierGenerator().generate(),
+        spanID = tracer.identityProvider.spanIdentifierGenerator().generate(),
+        parentID = IdentityProvider.NoIdentifier,
         samplingDecision = samplingDecision,
         baggage = SpanContext.Baggage(),
         source = Source.Local
@@ -184,5 +175,9 @@ object Tracer {
 
     def startActive(): ActiveSpan =
       tracer.makeActive(start())
+  }
+
+  private final class TracerMetrics(metricLookup: MetricLookup) {
+    val createdSpans = metricLookup.counter("tracer.spans-created")
   }
 }
