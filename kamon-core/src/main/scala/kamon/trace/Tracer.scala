@@ -107,6 +107,11 @@ object Tracer {
     }
   }
 
+  object Default {
+    def apply(metrics: MetricLookup, reporterRegistry: ReporterRegistryImpl, initialConfig: Config): Default =
+      new Default(metrics, reporterRegistry, initialConfig)
+  }
+
   final class SpanBuilder(operationName: String, tracer: Tracer.Default, reporterRegistry: ReporterRegistryImpl) {
     private var parentContext: SpanContext = _
     private var startTimestamp = 0L

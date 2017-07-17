@@ -30,8 +30,9 @@ import org.slf4j.LoggerFactory
 import scala.util.Try
 
 
-object Kamon extends MetricLookup with ReporterRegistry {
+object Kamon extends MetricLookup with ReporterRegistry with Tracer {
   private val logger = LoggerFactory.getLogger("kamon.Kamon")
+
   @volatile private var _config = ConfigFactory.load()
   @volatile private var _environment = Environment.fromConfig(_config)
   @volatile private var _filters = Filters.fromConfig(_config)
@@ -39,7 +40,7 @@ object Kamon extends MetricLookup with ReporterRegistry {
   private val _scheduler = Executors.newScheduledThreadPool(schedulerPoolSize(_config), numberedThreadFactory("kamon-scheduler"))
   private val _metrics = new MetricRegistry(_config, _scheduler)
   private val _reporters = new ReporterRegistryImpl(_metrics, _config)
-  private val _tracer = new Tracer.Default(Kamon, _reporters, _config)
+  private val _tracer = Tracer.Default(Kamon, _reporters, _config)
   private var _onReconfigureHooks = Seq.empty[OnReconfigureHook]
 
   def environment: Environment =
@@ -88,19 +89,22 @@ object Kamon extends MetricLookup with ReporterRegistry {
   def tracer: Tracer =
     _tracer
 
-  def buildSpan(operationName: String): Tracer.SpanBuilder =
+  override def buildSpan(operationName: String): Tracer.SpanBuilder =
     _tracer.buildSpan(operationName)
 
-  def extract[C](format: Format[C], carrier: C): Option[SpanContext] =
+  override def extract[C](format: Format[C], carrier: C): Option[SpanContext] =
     _tracer.extract(format, carrier)
 
-  def inject[C](spanContext: SpanContext, format: Format[C], carrier: C): Unit =
+  override def inject[C](spanContext: SpanContext, format: Format[C], carrier: C): C =
     _tracer.inject(spanContext, format, carrier)
 
-  def activeSpan(): ActiveSpan =
+  override def inject[C](spanContext: SpanContext, format: Format[C]): C =
+    _tracer.inject(spanContext, format)
+
+  override def activeSpan(): ActiveSpan =
     _tracer.activeSpan()
 
-  def makeActive(span: Span): ActiveSpan =
+  override def makeActive(span: Span): ActiveSpan =
     _tracer.makeActive(span)
 
 
