@@ -14,7 +14,7 @@ class DefaultIdentityGeneratorSpec extends WordSpecLike with Matchers with Optio
 
   def validateGenerator(generatorName: String, generator: IdentityProvider.Generator) = {
     s"The $generatorName" should {
-      "generate random longs (8 byte) as Span and Trace identifiers" in {
+      "generate random longs (8 byte) identifiers" in {
         100 times {
           val Identifier(string, bytes) = generator.generate()
 
@@ -38,8 +38,14 @@ class DefaultIdentityGeneratorSpec extends WordSpecLike with Matchers with Optio
           val identifier = generator.generate()
           val decodedIdentifier = generator.from(identifier.bytes)
 
-          identifier should equal(decodedIdentifier)
+          identifier.string should equal(decodedIdentifier.string)
+          identifier.bytes should equal(decodedIdentifier.bytes)
         }
+      }
+
+      "return IdentityProvider.NoIdentifier if the provided input cannot be decoded into a Identifier" in {
+        generator.from("zzzz") shouldBe(IdentityProvider.NoIdentifier)
+        generator.from(Array[Byte](1)) shouldBe(IdentityProvider.NoIdentifier)
       }
     }
   }
