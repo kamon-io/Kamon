@@ -94,29 +94,28 @@ object Span {
     startTimestampMicros: Long, reporterRegistry: ReporterRegistryImpl, tracer: Tracer) extends Span {
 
     private var collectMetrics: Boolean = true
-    private var isOpen: Boolean = true
+    private var open: Boolean = true
     private val sampled: Boolean = spanContext.samplingDecision == SamplingDecision.Sample
     private var operationName: String = initialOperationName
-    private var endTimestampMicros: Long = 0
 
     private var spanTags = initialTags
     private var customMetricTags = Map.empty[String, String]
     private var annotations = List.empty[Span.Annotation]
 
     def annotate(annotation: Annotation): Span = synchronized {
-      if(sampled && isOpen)
+      if(sampled && open)
         annotations = annotation :: annotations
       this
     }
 
     override def addSpanTag(key: String, value: String): Span = synchronized {
-      if(sampled && isOpen)
+      if(sampled && open)
         spanTags = spanTags + (key -> value)
       this
     }
 
     override def addMetricTag(key: String, value: String): Span = synchronized {
-      if(sampled && isOpen && collectMetrics)
+      if(sampled && open && collectMetrics)
         customMetricTags = customMetricTags + (key -> value)
       this
     }
@@ -138,7 +137,7 @@ object Span {
       spanContext
 
     override def setOperationName(operationName: String): Span = synchronized {
-      if(isOpen)
+      if(open)
         this.operationName = operationName
       this
     }
@@ -147,25 +146,24 @@ object Span {
       finish(Clock.microTimestamp())
 
     override def finish(finishMicros: Long): Unit = synchronized {
-      if (isOpen) {
-        isOpen = false
-        endTimestampMicros = finishMicros
+      if (open) {
+        open = false
 
         if(collectMetrics)
-          recordSpanMetrics()
+          recordSpanMetrics(finishMicros)
 
         if(sampled)
-          reporterRegistry.reportSpan(completedSpan)
+          reporterRegistry.reportSpan(toFinishedSpan(finishMicros))
       }
     }
 
     override def capture(): Continuation =
       Continuation.Default(this, tracer)
 
-    private def completedSpan: Span.FinishedSpan =
+    private def toFinishedSpan(endTimestampMicros: Long): Span.FinishedSpan =
       Span.FinishedSpan(spanContext, operationName, startTimestampMicros, endTimestampMicros, spanTags, annotations)
 
-    private def recordSpanMetrics(): Unit = {
+    private def recordSpanMetrics(endTimestampMicros: Long): Unit = {
       val elapsedTime = endTimestampMicros - startTimestampMicros
       val metricTags = Map("operation" -> operationName) ++ customMetricTags
 
