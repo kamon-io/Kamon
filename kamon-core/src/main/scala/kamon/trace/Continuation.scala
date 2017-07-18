@@ -34,6 +34,6 @@ object Continuation {
   }
 
   object Default {
-    def apply(span: Span, tracer: Tracer): Default = new Default(span, tracer)
+    def apply(span: Span, activeSpanSource: ActiveSpanSource): Default = new Default(span, activeSpanSource)
   }
 }
