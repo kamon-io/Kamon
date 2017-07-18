@@ -50,7 +50,7 @@ object Tracer {
     }
 
     private[Tracer] val tracerMetrics = new TracerMetrics(metrics)
-    @volatile private[Tracer] var joinRemoteSpansWithSameID: Boolean = false
+    @volatile private[Tracer] var joinRemoteParentsWithSameSpanID: Boolean = true
     @volatile private[Tracer] var configuredSampler: Sampler = Sampler.Never
     @volatile private[Tracer] var identityProvider: IdentityProvider = IdentityProvider.Default()
     @volatile private[Tracer] var textMapSpanContextCodec: SpanContextCodec[TextMap] = SpanContextCodec.ExtendedB3(identityProvider)
@@ -101,6 +101,8 @@ object Tracer {
         case "random" => Sampler.random(traceConfig.getDouble("random-sampler.probability"))
         case other    => sys.error(s"Unexpected sampler name $other.")
       }
+
+      joinRemoteParentsWithSameSpanID = traceConfig.getBoolean("join-remote-parents-with-same-span-id")
     }
   }
 
@@ -160,7 +162,7 @@ object Tracer {
     }
 
     private def joinParentContext(parent: SpanContext, samplingDecision: SamplingDecision): SpanContext =
-      if(parent.source == Source.Remote && tracer.joinRemoteSpansWithSameID)
+      if(parent.source == Source.Remote && tracer.joinRemoteParentsWithSameSpanID)
         parent.copy(samplingDecision = samplingDecision)
       else
         parent.createChild(tracer.identityProvider.spanIdentifierGenerator().generate(), samplingDecision)
