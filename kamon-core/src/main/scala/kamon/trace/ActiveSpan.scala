@@ -37,6 +37,12 @@ object ActiveSpan {
     override def addSpanTag(key: String, value: String): Span =
       wrappedSpan.addSpanTag(key, value)
 
+    override def addSpanTag(key: String, value: Long): Span =
+      wrappedSpan.addSpanTag(key, value)
+
+    override def addSpanTag(key: String, value: Boolean): Span =
+      wrappedSpan.addSpanTag(key, value)
+
     override def addMetricTag(key: String, value: String): Span =
       wrappedSpan.addMetricTag(key, value)
 

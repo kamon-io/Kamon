@@ -35,6 +35,10 @@ trait BaseSpan {
 
   def addSpanTag(key: String, value: String): Span
 
+  def addSpanTag(key: String, value: Long): Span
+
+  def addSpanTag(key: String, value: Boolean): Span
+
   def addMetricTag(key: String, value: String): Span
 
   def addBaggage(key: String, value: String): Span
@@ -64,8 +68,7 @@ trait Span extends BaseSpan {
 
   def annotate(timestampMicroseconds: Long, name: String, fields: Map[String, String]): Span =
     annotate(Span.Annotation(timestampMicroseconds, name, fields))
-
-
+  
 }
 
 object Span {
@@ -76,6 +79,8 @@ object Span {
 
     override def annotate(annotation: Annotation): Span = this
     override def addSpanTag(key: String, value: String): Span = this
+    override def addSpanTag(key: String, value: Long): Span = this
+    override def addSpanTag(key: String, value: Boolean): Span = this
     override def addMetricTag(key: String, value: String): Span = this
     override def addBaggage(key: String, value: String): Span = this
     override def getBaggage(key: String): Option[String] = None
@@ -96,7 +101,7 @@ object Span {
     * @param startTimestampMicros
     * @param reporterRegistry
     */
-  final class Real(spanContext: SpanContext, initialOperationName: String, initialTags: Map[String, String],
+  final class Real(spanContext: SpanContext, initialOperationName: String, initialTags: Map[String, Span.TagValue],
     startTimestampMicros: Long, reporterRegistry: ReporterRegistryImpl, tracer: Tracer) extends Span {
 
     private var collectMetrics: Boolean = true
@@ -104,7 +109,7 @@ object Span {
     private val sampled: Boolean = spanContext.samplingDecision == SamplingDecision.Sample
     private var operationName: String = initialOperationName
 
-    private var spanTags = initialTags
+    private var spanTags: Map[String, Span.TagValue] = initialTags
     private var customMetricTags = Map.empty[String, String]
     private var annotations = List.empty[Span.Annotation]
 
@@ -116,7 +121,21 @@ object Span {
 
     override def addSpanTag(key: String, value: String): Span = synchronized {
       if(sampled && open)
-        spanTags = spanTags + (key -> value)
+        spanTags = spanTags + (key -> TagValue.String(value))
+      this
+    }
+
+    override def addSpanTag(key: String, value: Long): Span = synchronized {
+      if(sampled && open)
+        spanTags = spanTags + (key -> TagValue.Number(value))
+      this
+    }
+
+    override def addSpanTag(key: String, value: Boolean): Span = synchronized {
+      if(sampled && open) {
+        val tagValue = if (value) TagValue.True else TagValue.False
+        spanTags = spanTags + (key -> tagValue)
+      }
       this
     }
 
@@ -174,7 +193,7 @@ object Span {
       latencyHistogram.record(elapsedTime)
 
       spanTags.get("error").foreach { errorTag =>
-        if(errorTag != null && errorTag.equals(Span.BooleanTagTrueValue)) {
+        if(errorTag != null && errorTag.equals(TagValue.True)) {
           Span.Metrics.SpanErrorCount.refine(metricTags).increment()
         }
       }
@@ -182,19 +201,25 @@ object Span {
   }
 
   object Real {
-    def apply(spanContext: SpanContext, initialOperationName: String, initialTags: Map[String, String],
+    def apply(spanContext: SpanContext, initialOperationName: String, initialTags: Map[String, Span.TagValue],
         startTimestampMicros: Long, reporterRegistry: ReporterRegistryImpl, tracer: Tracer): Real =
       new Real(spanContext, initialOperationName, initialTags, startTimestampMicros, reporterRegistry, tracer)
   }
 
+  sealed trait TagValue
+  object TagValue {
+    sealed trait Boolean extends TagValue
+    case object True extends Boolean
+    case object False extends Boolean
+
+    case class String(string: java.lang.String) extends TagValue
+    case class Number(number: Long) extends TagValue
+  }
 
   object Metrics {
     val SpanProcessingTimeMetric = Kamon.histogram("span.processing-time", MeasurementUnit.time.microseconds)
     val SpanErrorCount = Kamon.counter("span.error-count")
   }
-
-  val BooleanTagTrueValue = "1"
-  val BooleanTagFalseValue = "0"
 
   case class Annotation(timestampMicros: Long, name: String, fields: Map[String, String])
 
@@ -203,7 +228,7 @@ object Span {
     operationName: String,
     startTimestampMicros: Long,
     endTimestampMicros: Long,
-    tags: Map[String, String],
+    tags: Map[String, Span.TagValue],
     annotations: Seq[Annotation]
   )
 }

@@ -21,6 +21,7 @@ import java.nio.ByteBuffer
 import com.typesafe.config.Config
 import kamon.ReporterRegistryImpl
 import kamon.metric.MetricLookup
+import kamon.trace.Span.TagValue
 import kamon.trace.SpanContext.{SamplingDecision, Source}
 import kamon.trace.Tracer.SpanBuilder
 import kamon.util.Clock
@@ -114,7 +115,7 @@ object Tracer {
   final class SpanBuilder(operationName: String, tracer: Tracer.Default, reporterRegistry: ReporterRegistryImpl) {
     private var parentContext: SpanContext = _
     private var startTimestamp = 0L
-    private var initialTags = Map.empty[String, String]
+    private var initialTags = Map.empty[String, Span.TagValue]
     private var useActiveSpanAsParent = true
 
     def asChildOf(parentContext: SpanContext): SpanBuilder = {
@@ -126,7 +127,18 @@ object Tracer {
       asChildOf(parentSpan.context())
 
     def withSpanTag(key: String, value: String): SpanBuilder = {
-      this.initialTags = this.initialTags + (key -> value)
+      this.initialTags = this.initialTags + (key -> TagValue.String(value))
+      this
+    }
+
+    def withSpanTag(key: String, value: Long): SpanBuilder = {
+      this.initialTags = this.initialTags + (key -> TagValue.Number(value))
+      this
+    }
+
+    def withSpanTag(key: String, value: Boolean): SpanBuilder = {
+      val tagValue = if (value) TagValue.True else TagValue.False
+      this.initialTags = this.initialTags + (key -> tagValue)
       this
     }
 

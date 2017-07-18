@@ -19,7 +19,7 @@ import java.util.concurrent.ThreadLocalRandom
 import kamon.trace.SpanContext.SamplingDecision
 
 trait Sampler {
-  def decide(operationName: String, builderTags: Map[String, String]): SamplingDecision
+  def decide(operationName: String, builderTags: Map[String, Span.TagValue]): SamplingDecision
 }
 
 object Sampler {
@@ -37,7 +37,7 @@ object Sampler {
   }
 
   class Constant(decision: SamplingDecision) extends Sampler {
-    override def decide(operationName: String, builderTags: Map[String, String]): SamplingDecision = decision
+    override def decide(operationName: String, builderTags: Map[String, Span.TagValue]): SamplingDecision = decision
 
     override def toString: String =
       s"Sampler.Constant(decision = $decision)"
@@ -47,7 +47,7 @@ object Sampler {
     val upperBoundary = Long.MaxValue * probability
     val lowerBoundary = -upperBoundary
 
-    override def decide(operationName: String, builderTags: Map[String, String]): SamplingDecision = {
+    override def decide(operationName: String, builderTags: Map[String, Span.TagValue]): SamplingDecision = {
       val random = ThreadLocalRandom.current().nextLong()
       if(random >= lowerBoundary && random <= upperBoundary) SamplingDecision.Sample else SamplingDecision.DoNotSample
     }
