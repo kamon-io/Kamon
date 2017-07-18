@@ -24,8 +24,11 @@ import kamon.metric.MetricLookup
 import kamon.trace.Span.TagValue
 import kamon.trace.SpanContext.{SamplingDecision, Source}
 import kamon.trace.Tracer.SpanBuilder
-import kamon.util.Clock
+import kamon.util.{Clock, DynamicAccess}
 import org.slf4j.LoggerFactory
+
+import scala.collection.immutable
+import scala.util.Try
 
 
 trait ActiveSpanSource {
@@ -94,16 +97,44 @@ object Tracer {
       configuredSampler
 
     private[kamon] def reconfigure(config: Config): Unit = synchronized {
-      val traceConfig = config.getConfig("kamon.trace")
+      Try {
+        val dynamic = new DynamicAccess(classOf[Tracer].getClassLoader)
+        val traceConfig = config.getConfig("kamon.trace")
 
-      configuredSampler = traceConfig.getString("sampler") match {
-        case "always" => Sampler.Always
-        case "never"  => Sampler.Never
-        case "random" => Sampler.random(traceConfig.getDouble("random-sampler.probability"))
-        case other    => sys.error(s"Unexpected sampler name $other.")
+        val newSampler = traceConfig.getString("sampler") match {
+          case "always" => Sampler.Always
+          case "never" => Sampler.Never
+          case "random" => Sampler.random(traceConfig.getDouble("random-sampler.probability"))
+          case other => sys.error(s"Unexpected sampler name $other.")
+        }
+
+        val newJoinRemoteParentsWithSameSpanID = traceConfig.getBoolean("join-remote-parents-with-same-span-id")
+
+        val newIdentityProvider = dynamic.createInstanceFor[IdentityProvider](
+          traceConfig.getString("identity-provider"), immutable.Seq.empty[(Class[_], AnyRef)]
+        ).get
+
+        val spanContextCodecs = traceConfig.getConfig("span-context-codec")
+        val newTextMapSpanContextCodec = dynamic.createInstanceFor[SpanContextCodec[TextMap]](
+          spanContextCodecs.getString("text-map"), immutable.Seq((classOf[IdentityProvider], newIdentityProvider))
+        ).get
+
+        val newHttpHeadersSpanContextCodec = dynamic.createInstanceFor[SpanContextCodec[TextMap]](
+          spanContextCodecs.getString("http-headers"), immutable.Seq((classOf[IdentityProvider], newIdentityProvider))
+        ).get
+
+//        val newBinarySpanContextCodec = dynamic.createInstanceFor[SpanContextCodec[TextMap]](
+//          spanContextCodecs.getString("binary"), immutable.Seq((classOf[IdentityProvider], newIdentityProvider))
+//        ).get // TODO: Make it happen!
+
+
+        configuredSampler = newSampler
+        joinRemoteParentsWithSameSpanID = newJoinRemoteParentsWithSameSpanID
+        identityProvider = newIdentityProvider
+        textMapSpanContextCodec = newTextMapSpanContextCodec
+        httpHeaderSpanContextCodec = newHttpHeadersSpanContextCodec
+
       }
-
-      joinRemoteParentsWithSameSpanID = traceConfig.getBoolean("join-remote-parents-with-same-span-id")
     }
   }
 
