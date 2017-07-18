@@ -65,21 +65,18 @@ object Tracer {
       case SpanContextCodec.Format.HttpHeaders  => httpHeaderSpanContextCodec.extract(carrier.asInstanceOf[TextMap])
       case SpanContextCodec.Format.TextMap      => textMapSpanContextCodec.extract(carrier.asInstanceOf[TextMap])
       case SpanContextCodec.Format.Binary       => None
-      case _                                    => None
     }
 
     override def inject[C](spanContext: SpanContext, format: SpanContextCodec.Format[C], carrier: C): C = format match {
       case SpanContextCodec.Format.HttpHeaders => httpHeaderSpanContextCodec.inject(spanContext, carrier.asInstanceOf[TextMap])
       case SpanContextCodec.Format.TextMap     => textMapSpanContextCodec.inject(spanContext, carrier.asInstanceOf[TextMap])
       case SpanContextCodec.Format.Binary      => carrier
-      case _                                   => carrier
     }
 
     override def inject[C](spanContext: SpanContext, format: SpanContextCodec.Format[C]): C = format match {
       case SpanContextCodec.Format.HttpHeaders => httpHeaderSpanContextCodec.inject(spanContext)
       case SpanContextCodec.Format.TextMap     => textMapSpanContextCodec.inject(spanContext)
       case SpanContextCodec.Format.Binary      => ByteBuffer.allocate(0) // TODO: Implement binary encoding.
-      case _                                   => sys.error("can't do")
     }
 
     override def activeSpan(): ActiveSpan =
