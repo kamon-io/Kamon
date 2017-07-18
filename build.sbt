@@ -36,7 +36,8 @@ lazy val core = (project in file("kamon-core"))
       "org.hdrhistogram" % "HdrHistogram"    % "2.1.9",
 
       "com.lihaoyi" %% "fansi" % "0.2.4",
-      "org.scalatest" %% "scalatest" % "3.0.1" % "test"
+      "org.scalatest" %% "scalatest" % "3.0.1" % "test",
+      "ch.qos.logback" % "logback-classic" % "1.2.2" % "test"
     )
   )
 

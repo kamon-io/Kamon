@@ -98,7 +98,7 @@ object Tracer {
 
     private[kamon] def reconfigure(config: Config): Unit = synchronized {
       Try {
-        val dynamic = new DynamicAccess(classOf[Tracer].getClassLoader)
+        val dynamic = new DynamicAccess(getClass.getClassLoader)
         val traceConfig = config.getConfig("kamon.trace")
 
         val newSampler = traceConfig.getString("sampler") match {
@@ -134,6 +134,8 @@ object Tracer {
         textMapSpanContextCodec = newTextMapSpanContextCodec
         httpHeaderSpanContextCodec = newHttpHeadersSpanContextCodec
 
+      }.failed.foreach {
+        ex => logger.error("Unable to reconfigure Kamon Tracer", ex)
       }
     }
   }
