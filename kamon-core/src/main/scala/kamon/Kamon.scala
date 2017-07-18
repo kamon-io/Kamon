@@ -147,13 +147,6 @@ object Kamon extends MetricLookup with ReporterRegistry with Tracer {
       code(activeSpan)
   }
 
-  /**
-    * Evaluates the provided closure with the currently active Span (if any) and returns the evaluation result. If there
-    * was no active Span then the provided fallback value
-    */
-  def fromActiveSpan[T](code: ActiveSpan => T): Option[T] =
-    None//activeSpan().map(code)
-
 
   override def loadReportersFromConfig(): Unit =
     _reporters.loadReportersFromConfig()
