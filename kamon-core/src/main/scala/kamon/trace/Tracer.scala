@@ -51,7 +51,7 @@ object Tracer {
 
     private[Tracer] val tracerMetrics = new TracerMetrics(metrics)
     @volatile private[Tracer] var joinRemoteSpansWithSameID: Boolean = false
-    @volatile private[Tracer] var configuredSampler: Sampler = Sampler.never
+    @volatile private[Tracer] var configuredSampler: Sampler = Sampler.Never
     @volatile private[Tracer] var identityProvider: IdentityProvider = IdentityProvider.Default()
     @volatile private[Tracer] var textMapSpanContextCodec: SpanContextCodec[TextMap] = SpanContextCodec.ExtendedB3(identityProvider)
     @volatile private[Tracer] var httpHeaderSpanContextCodec: SpanContextCodec[TextMap] = SpanContextCodec.ExtendedB3(identityProvider)
@@ -99,9 +99,9 @@ object Tracer {
       val traceConfig = config.getConfig("kamon.trace")
 
       configuredSampler = traceConfig.getString("sampler") match {
-        case "always" => Sampler.always
-        case "never"  => Sampler.never
-        case "random" => Sampler.random(traceConfig.getDouble("sampler-random.chance"))
+        case "always" => Sampler.Always
+        case "never"  => Sampler.Never
+        case "random" => Sampler.random(traceConfig.getDouble("random-sampler.probability"))
         case other    => sys.error(s"Unexpected sampler name $other.")
       }
     }

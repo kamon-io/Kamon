@@ -23,15 +23,15 @@ trait Sampler {
 }
 
 object Sampler {
-  val always = new Constant(SamplingDecision.Sample)
-  val never = new Constant(SamplingDecision.DoNotSample)
+  val Always = new Constant(SamplingDecision.Sample)
+  val Never = new Constant(SamplingDecision.DoNotSample)
 
-  def random(chance: Double): Sampler = {
-    assert(chance >= 0D && chance <= 1.0D, "Change should be >= 0 and <= 1.0")
+  def random(probability: Double): Sampler = {
+    assert(probability >= 0D && probability <= 1.0D, "The probability should be >= 0 and <= 1.0")
 
-    chance match {
-      case 0D       => never
-      case 1.0D     => always
+    probability match {
+      case 0D       => Never
+      case 1.0D     => Always
       case anyOther => new Random(anyOther)
     }
   }
@@ -43,8 +43,8 @@ object Sampler {
       s"Sampler.Constant(decision = $decision)"
   }
 
-  class Random(chance: Double) extends Sampler {
-    val upperBoundary = Long.MaxValue * chance
+  class Random(probability: Double) extends Sampler {
+    val upperBoundary = Long.MaxValue * probability
     val lowerBoundary = -upperBoundary
 
     override def decide(operationName: String, builderTags: Map[String, String]): SamplingDecision = {
@@ -53,6 +53,6 @@ object Sampler {
     }
 
     override def toString: String =
-      s"Sampler.Random(chance = $chance)"
+      s"Sampler.Random(probability = $probability)"
   }
 }
