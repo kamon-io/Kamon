@@ -14,7 +14,7 @@ trait ActiveSpan extends Span {
     * Sets the currently active Span to whatever Span was active when this Span was activated.
     *
     */
-  def deactivate(): Unit
+  def deactivate(): Span
 }
 
 object ActiveSpan {
@@ -22,8 +22,10 @@ object ActiveSpan {
   final class Default(wrappedSpan: Span, restoreOnDeactivate: ActiveSpan, tl: ThreadLocal[ActiveSpan])
       extends ActiveSpan {
 
-    override def deactivate(): Unit =
+    override def deactivate(): Span = {
       tl.set(restoreOnDeactivate)
+      wrappedSpan
+    }
 
     //
     //  Forward all other members to the wrapped Span.
