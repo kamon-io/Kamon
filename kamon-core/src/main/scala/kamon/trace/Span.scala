@@ -21,20 +21,10 @@ import kamon.trace.SpanContext.SamplingDecision
 import scala.collection.JavaConverters._
 import kamon.util.{Clock, MeasurementUnit}
 
-trait Span extends BaseSpan {
-
-  def annotate(name: String): Span =
-    annotate(Span.Annotation(Clock.microTimestamp(), name, Map.empty))
-
-  def annotate(name: String, fields: Map[String, String]): Span =
-    annotate(Span.Annotation(Clock.microTimestamp(), name, fields))
-
-  def annotate(timestampMicroseconds: Long, name: String, fields: Map[String, String]): Span =
-    annotate(Span.Annotation(timestampMicroseconds, name, fields))
-
-
-}
-
+/**
+  *   Minimum set of capabilities that should be provided by a Span, all additional sugar is provided by extensions
+  *   in the Span trait bellow.
+  */
 trait BaseSpan {
 
   def context(): SpanContext
@@ -55,17 +45,34 @@ trait BaseSpan {
 
   def disableMetricsCollection(): Span
 
-  def finish(): Unit
-
   def finish(finishTimestampMicros: Long): Unit
+}
+
+/**
+  *
+  */
+trait Span extends BaseSpan {
+
+  def finish(): Unit =
+    finish(Clock.microTimestamp())
+
+  def annotate(name: String): Span =
+    annotate(Span.Annotation(Clock.microTimestamp(), name, Map.empty))
+
+  def annotate(name: String, fields: Map[String, String]): Span =
+    annotate(Span.Annotation(Clock.microTimestamp(), name, fields))
+
+  def annotate(timestampMicroseconds: Long, name: String, fields: Map[String, String]): Span =
+    annotate(Span.Annotation(timestampMicroseconds, name, fields))
+
 
 }
 
 object Span {
 
-  final class Empty(tracer: Tracer) extends Span {
+  final class Empty(activeSpanSource: ActiveSpanSource) extends Span {
     override val context: SpanContext = SpanContext.EmptySpanContext
-    override def capture(): Continuation = Continuation.Default(this, tracer)
+    override def capture(): Continuation = Continuation.Default(this, activeSpanSource)
 
     override def annotate(annotation: Annotation): Span = this
     override def addSpanTag(key: String, value: String): Span = this
@@ -74,7 +81,6 @@ object Span {
     override def getBaggage(key: String): Option[String] = None
     override def setOperationName(name: String): Span = this
     override def disableMetricsCollection(): Span = this
-    override def finish(): Unit = {}
     override def finish(finishTimestampMicros: Long): Unit = {}
   }
 
@@ -142,9 +148,6 @@ object Span {
       this
     }
 
-    override def finish(): Unit =
-      finish(Clock.microTimestamp())
-
     override def finish(finishMicros: Long): Unit = synchronized {
       if (open) {
         open = false
@@ -190,11 +193,10 @@ object Span {
     val SpanErrorCount = Kamon.counter("span.error-count")
   }
 
-  val MetricTagPrefix = "metric."
   val BooleanTagTrueValue = "1"
   val BooleanTagFalseValue = "0"
 
-  case class Annotation(timestamp: Long, name: String, fields: Map[String, String])
+  case class Annotation(timestampMicros: Long, name: String, fields: Map[String, String])
 
   case class FinishedSpan(
     context: SpanContext,
