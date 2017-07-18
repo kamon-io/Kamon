@@ -25,7 +25,7 @@ object IdentityProvider {
 
 
   class Default extends IdentityProvider {
-    private val generator = new Generator {
+    protected val longGenerator = new Generator {
       override def generate(): Identifier = {
         val data = ByteBuffer.wrap(new Array[Byte](8))
         val random = ThreadLocalRandom.current().nextLong()
@@ -50,11 +50,50 @@ object IdentityProvider {
       } getOrElse(IdentityProvider.NoIdentifier)
     }
 
-    override def traceIdentifierGenerator(): Generator = generator
-    override def spanIdentifierGenerator(): Generator = generator
+    override def traceIdentifierGenerator(): Generator = longGenerator
+    override def spanIdentifierGenerator(): Generator = longGenerator
   }
 
   object Default {
     def apply(): Default = new Default()
+  }
+
+
+  class DoubleSizeTraceID extends Default {
+    private val doubleLongGenerator = new Generator {
+      override def generate(): Identifier = {
+        val data = ByteBuffer.wrap(new Array[Byte](16))
+        val highLong = ThreadLocalRandom.current().nextLong()
+        val lowLong = ThreadLocalRandom.current().nextLong()
+        data.putLong(highLong)
+        data.putLong(lowLong)
+
+        Identifier(HexCodec.toLowerHex(highLong) + HexCodec.toLowerHex(lowLong), data.array())
+      }
+
+      override def from(string: String): Identifier =  Try {
+        val highPart = HexCodec.lowerHexToUnsignedLong(string.substring(0, 16))
+        val lowPart = HexCodec.lowerHexToUnsignedLong(string.substring(16, 32))
+        val data = ByteBuffer.allocate(16)
+        data.putLong(highPart)
+        data.putLong(lowPart)
+
+        Identifier(string, data.array())
+      } getOrElse(IdentityProvider.NoIdentifier)
+
+      override def from(bytes: Array[Byte]): Identifier = Try {
+        val buffer = ByteBuffer.wrap(bytes)
+        val highLong = buffer.getLong
+        val lowLong = buffer.getLong
+
+        Identifier(HexCodec.toLowerHex(highLong) + HexCodec.toLowerHex(lowLong), bytes)
+      } getOrElse(IdentityProvider.NoIdentifier)
+    }
+
+    override def traceIdentifierGenerator(): Generator = doubleLongGenerator
+  }
+
+  object DoubleSizeTraceID {
+    def apply(): DoubleSizeTraceID = new DoubleSizeTraceID()
   }
 }
