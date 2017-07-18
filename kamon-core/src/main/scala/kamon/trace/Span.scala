@@ -185,7 +185,6 @@ object Span {
   }
 
 
-
   object Metrics {
     val SpanProcessingTimeMetric = Kamon.histogram("span.processing-time", MeasurementUnit.time.microseconds)
     val SpanErrorCount = Kamon.counter("span.error-count")

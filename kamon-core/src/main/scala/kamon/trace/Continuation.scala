@@ -26,11 +26,11 @@ object Continuation {
   /**
     *
     * @param span
-    * @param tracer
+    * @param activeSpanSource
     */
-  final class Default(span: Span, tracer: Tracer) extends Continuation {
+  final class Default(span: Span, activeSpanSource: ActiveSpanSource) extends Continuation {
     override def activate(): ActiveSpan =
-      tracer.makeActive(span)
+      activeSpanSource.makeActive(span)
   }
 
   object Default {
