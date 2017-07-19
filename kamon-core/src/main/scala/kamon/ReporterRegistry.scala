@@ -20,9 +20,11 @@ import java.util.concurrent.atomic.{AtomicLong, AtomicReference}
 import java.util.concurrent._
 
 import com.typesafe.config.Config
+import kamon.ReporterRegistry.SpanSink
 import kamon.metric._
 import kamon.trace.Span
-import kamon.util.{DynamicAccess, Registration}
+import kamon.trace.Span.FinishedSpan
+import kamon.util.{CallingThreadExecutionContext, DynamicAccess, Registration}
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutorService, Future}
@@ -42,6 +44,12 @@ trait ReporterRegistry {
   def stopAllReporters(): Future[Unit]
 }
 
+object ReporterRegistry {
+  private[kamon] trait SpanSink {
+    def reportSpan(finishedSpan: FinishedSpan): Unit
+  }
+}
+
 sealed trait Reporter {
   def start(): Unit
   def stop(): Unit
@@ -56,7 +64,7 @@ trait SpanReporter extends Reporter {
   def reportSpans(spans: Seq[Span.FinishedSpan]): Unit
 }
 
-class ReporterRegistryImpl(metrics: MetricsSnapshotGenerator, initialConfig: Config) extends ReporterRegistry {
+class ReporterRegistryImpl(metrics: MetricsSnapshotGenerator, initialConfig: Config) extends ReporterRegistry with SpanSink {
   private val logger = LoggerFactory.getLogger(classOf[ReporterRegistry])
   private val registryExecutionContext = Executors.newScheduledThreadPool(2, threadFactory("kamon-reporter-registry"))
   private val reporterCounter = new AtomicLong(0L)
@@ -212,7 +220,7 @@ class ReporterRegistryImpl(metrics: MetricsSnapshotGenerator, initialConfig: Con
     }
   }
 
-  private[kamon] def reportSpan(span: Span.FinishedSpan): Unit = {
+  def reportSpan(span: Span.FinishedSpan): Unit = {
     spanReporters.foreach { case (_, reporterEntry) =>
       if(reporterEntry.isActive)
         reporterEntry.buffer.offer(span)

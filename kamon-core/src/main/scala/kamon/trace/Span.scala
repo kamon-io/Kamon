@@ -16,9 +16,9 @@
 package kamon
 package trace
 
+import kamon.ReporterRegistry.SpanSink
 import kamon.trace.SpanContext.SamplingDecision
 
-import scala.collection.JavaConverters._
 import kamon.util.{Clock, MeasurementUnit}
 
 /**
@@ -30,6 +30,8 @@ trait BaseSpan {
   def context(): SpanContext
 
   def capture(): Continuation
+
+  def capture(activeSpanSource: ActiveSpanSource): Continuation
 
   def annotate(annotation: Span.Annotation): Span
 
@@ -76,6 +78,7 @@ object Span {
   final class Empty(activeSpanSource: ActiveSpanSource) extends Span {
     override val context: SpanContext = SpanContext.EmptySpanContext
     override def capture(): Continuation = Continuation.Default(this, activeSpanSource)
+    override def capture(activeSpanSource: ActiveSpanSource): Continuation = Continuation.Default(this, activeSpanSource)
 
     override def annotate(annotation: Annotation): Span = this
     override def addSpanTag(key: String, value: String): Span = this
@@ -99,10 +102,10 @@ object Span {
     * @param initialOperationName
     * @param initialSpanTags
     * @param startTimestampMicros
-    * @param reporterRegistry
+    * @param spanSink
     */
   final class Real(spanContext: SpanContext, initialOperationName: String, initialSpanTags: Map[String, Span.TagValue],
-    initialMetricTags: Map[String, String], startTimestampMicros: Long, reporterRegistry: ReporterRegistryImpl, tracer: Tracer) extends Span {
+    initialMetricTags: Map[String, String], startTimestampMicros: Long, spanSink: SpanSink, activeSpanSource: ActiveSpanSource) extends Span {
 
     private var collectMetrics: Boolean = true
     private var open: Boolean = true
@@ -175,12 +178,15 @@ object Span {
           recordSpanMetrics(finishMicros)
 
         if(sampled)
-          reporterRegistry.reportSpan(toFinishedSpan(finishMicros))
+          spanSink.reportSpan(toFinishedSpan(finishMicros))
       }
     }
 
     override def capture(): Continuation =
-      Continuation.Default(this, tracer)
+      Continuation.Default(this, activeSpanSource)
+
+    override def capture(activeSpanSource: ActiveSpanSource): Continuation =
+      Continuation.Default(this, activeSpanSource)
 
     private def toFinishedSpan(endTimestampMicros: Long): Span.FinishedSpan =
       Span.FinishedSpan(spanContext, operationName, startTimestampMicros, endTimestampMicros, spanTags, annotations)

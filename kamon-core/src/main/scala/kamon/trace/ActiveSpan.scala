@@ -66,6 +66,9 @@ object ActiveSpan {
 
     override def capture(): Continuation =
       wrappedSpan.capture()
+
+    override def capture(activeSpanSource: ActiveSpanSource): Continuation =
+      wrappedSpan.capture(activeSpanSource)
   }
 
   object Default {
