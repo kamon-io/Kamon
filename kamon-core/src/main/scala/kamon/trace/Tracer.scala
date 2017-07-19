@@ -148,7 +148,8 @@ object Tracer {
   final class SpanBuilder(operationName: String, tracer: Tracer.Default, reporterRegistry: ReporterRegistryImpl) {
     private var parentContext: SpanContext = _
     private var startTimestamp = 0L
-    private var initialTags = Map.empty[String, Span.TagValue]
+    private var initialSpanTags = Map.empty[String, Span.TagValue]
+    private var initialMetricTags = Map.empty[String, String]
     private var useActiveSpanAsParent = true
 
     def asChildOf(parentContext: SpanContext): SpanBuilder = {
@@ -159,19 +160,24 @@ object Tracer {
     def asChildOf(parentSpan: Span): SpanBuilder =
       asChildOf(parentSpan.context())
 
+    def withMetricTag(key: String, value: String): SpanBuilder = {
+      this.initialMetricTags = this.initialMetricTags + (key -> value)
+      this
+    }
+
     def withSpanTag(key: String, value: String): SpanBuilder = {
-      this.initialTags = this.initialTags + (key -> TagValue.String(value))
+      this.initialSpanTags = this.initialSpanTags + (key -> TagValue.String(value))
       this
     }
 
     def withSpanTag(key: String, value: Long): SpanBuilder = {
-      this.initialTags = this.initialTags + (key -> TagValue.Number(value))
+      this.initialSpanTags = this.initialSpanTags + (key -> TagValue.Number(value))
       this
     }
 
     def withSpanTag(key: String, value: Boolean): SpanBuilder = {
       val tagValue = if (value) TagValue.True else TagValue.False
-      this.initialTags = this.initialTags + (key -> tagValue)
+      this.initialSpanTags = this.initialSpanTags + (key -> tagValue)
       this
     }
 
@@ -195,7 +201,7 @@ object Tracer {
       val samplingDecision: SamplingDecision = parentSpanContext
         .map(_.samplingDecision)
         .filter(_ != SamplingDecision.Unknown)
-        .getOrElse(tracer.sampler.decide(operationName, initialTags))
+        .getOrElse(tracer.sampler.decide(operationName, initialSpanTags))
 
       val spanContext = parentSpanContext match {
         case Some(parent) => joinParentContext(parent, samplingDecision)
@@ -203,7 +209,7 @@ object Tracer {
       }
 
       tracer.tracerMetrics.createdSpans.increment()
-      Span.Real(spanContext, operationName, initialTags, startTimestampMicros, reporterRegistry, tracer)
+      Span.Real(spanContext, operationName, initialSpanTags, initialMetricTags, startTimestampMicros, reporterRegistry, tracer)
     }
 
     private def joinParentContext(parent: SpanContext, samplingDecision: SamplingDecision): SpanContext =

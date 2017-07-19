@@ -44,8 +44,11 @@ object SpanContextCodec {
         carrier.put(Headers.TraceIdentifier, urlEncode(spanContext.traceID.string))
         carrier.put(Headers.SpanIdentifier, urlEncode(spanContext.spanID.string))
         carrier.put(Headers.ParentSpanIdentifier, urlEncode(spanContext.parentID.string))
-        carrier.put(Headers.Sampled, encodeSamplingDecision(spanContext.samplingDecision))
         carrier.put(Headers.Baggage, encodeBaggage(spanContext.baggage))
+
+        encodeSamplingDecision(spanContext.samplingDecision).foreach { samplingDecision =>
+          carrier.put(Headers.Sampled, samplingDecision)
+        }
 
         spanContext.baggage.get(Headers.Flags).foreach { flags =>
           carrier.put(Headers.Flags, flags)
@@ -55,11 +58,8 @@ object SpanContextCodec {
       carrier
     }
 
-    override def inject(spanContext: SpanContext): TextMap = {
-      val mutableTextMap = TextMap.Default()
-      inject(spanContext, mutableTextMap)
-      mutableTextMap
-    }
+    override def inject(spanContext: SpanContext): TextMap =
+      inject(spanContext, TextMap.Default())
 
     override def extract(carrier: TextMap): Option[SpanContext] = {
       val traceID = carrier.get(Headers.TraceIdentifier)
@@ -97,14 +97,16 @@ object SpanContextCodec {
       if(baggage.getAll().nonEmpty) {
         val encodedBaggage = new StringBuilder()
         baggage.getAll().foreach {
-          case (key, value) if key != Headers.Flags =>
-            if(encodedBaggage.length() > 0)
-              encodedBaggage.append(';')
+          case (key, value) =>
+            if(key != Headers.Flags) {
+              if (encodedBaggage.length() > 0)
+                encodedBaggage.append(';')
 
-            encodedBaggage
-              .append(urlEncode(key))
-              .append('=')
-              .append(urlEncode(value))
+              encodedBaggage
+                .append(urlEncode(key))
+                .append('=')
+                .append(urlEncode(value))
+            }
         }
 
         encodedBaggage.toString()
@@ -125,10 +127,10 @@ object SpanContextCodec {
       baggage
     }
 
-    private def encodeSamplingDecision(samplingDecision: SamplingDecision): String = samplingDecision match {
-      case SamplingDecision.Sample      => "1"
-      case SamplingDecision.DoNotSample => "0"
-      case SamplingDecision.Unknown     => ""
+    private def encodeSamplingDecision(samplingDecision: SamplingDecision): Option[String] = samplingDecision match {
+      case SamplingDecision.Sample      => Some("1")
+      case SamplingDecision.DoNotSample => Some("0")
+      case SamplingDecision.Unknown     => None
     }
 
     private def urlEncode(s: String): String = URLEncoder.encode(s, "UTF-8")

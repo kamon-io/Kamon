@@ -13,7 +13,14 @@ trait IdentityProvider {
 }
 
 object IdentityProvider {
-  case class Identifier(string: String, bytes: Array[Byte])
+  case class Identifier(string: String, bytes: Array[Byte]) {
+
+    override def equals(obj: Any): Boolean = {
+      if(obj != null && obj.isInstanceOf[Identifier])
+        obj.asInstanceOf[Identifier].string == string
+      else false
+    }
+  }
 
   val NoIdentifier = Identifier("", new Array[Byte](0))
 

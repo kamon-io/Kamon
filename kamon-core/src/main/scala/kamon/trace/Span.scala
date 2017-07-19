@@ -97,20 +97,20 @@ object Span {
     *
     * @param spanContext
     * @param initialOperationName
-    * @param initialTags
+    * @param initialSpanTags
     * @param startTimestampMicros
     * @param reporterRegistry
     */
-  final class Real(spanContext: SpanContext, initialOperationName: String, initialTags: Map[String, Span.TagValue],
-    startTimestampMicros: Long, reporterRegistry: ReporterRegistryImpl, tracer: Tracer) extends Span {
+  final class Real(spanContext: SpanContext, initialOperationName: String, initialSpanTags: Map[String, Span.TagValue],
+    initialMetricTags: Map[String, String], startTimestampMicros: Long, reporterRegistry: ReporterRegistryImpl, tracer: Tracer) extends Span {
 
     private var collectMetrics: Boolean = true
     private var open: Boolean = true
     private val sampled: Boolean = spanContext.samplingDecision == SamplingDecision.Sample
     private var operationName: String = initialOperationName
 
-    private var spanTags: Map[String, Span.TagValue] = initialTags
-    private var customMetricTags = Map.empty[String, String]
+    private var spanTags: Map[String, Span.TagValue] = initialSpanTags
+    private var customMetricTags = initialMetricTags
     private var annotations = List.empty[Span.Annotation]
 
     def annotate(annotation: Annotation): Span = synchronized {
@@ -201,9 +201,9 @@ object Span {
   }
 
   object Real {
-    def apply(spanContext: SpanContext, initialOperationName: String, initialTags: Map[String, Span.TagValue],
-        startTimestampMicros: Long, reporterRegistry: ReporterRegistryImpl, tracer: Tracer): Real =
-      new Real(spanContext, initialOperationName, initialTags, startTimestampMicros, reporterRegistry, tracer)
+    def apply(spanContext: SpanContext, initialOperationName: String, initialSpanTags: Map[String, Span.TagValue],
+        initialMetricTags: Map[String, String], startTimestampMicros: Long, reporterRegistry: ReporterRegistryImpl, tracer: Tracer): Real =
+      new Real(spanContext, initialOperationName, initialSpanTags, initialMetricTags, startTimestampMicros, reporterRegistry, tracer)
   }
 
   sealed trait TagValue

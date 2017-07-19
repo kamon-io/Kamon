@@ -55,6 +55,7 @@ object Kamon extends MetricLookup with ReporterRegistry with Tracer {
     _filters = Filters.fromConfig(config)
     _metrics.reconfigure(config)
     _reporters.reconfigure(config)
+    _tracer.reconfigure(config)
 
     _onReconfigureHooks.foreach(hook => {
       Try(hook.onReconfigure(config)).failed.foreach(error =>
