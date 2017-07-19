@@ -16,14 +16,18 @@
 
 package kamon.jaeger
 
+import java.nio.ByteBuffer
 import java.util
 
 import com.typesafe.config.{Config, ConfigFactory}
 import com.uber.jaeger.agent.thrift.Agent
 import com.uber.jaeger.thriftjava.{Batch, Log, Process, Tag, TagType, Span => JaegerSpan}
+import kamon.trace.IdentityProvider.Identifier
 import kamon.trace.Span
 import kamon.{Kamon, SpanReporter}
 import org.apache.thrift.protocol.TCompactProtocol
+
+import scala.util.Try
 
 object Jaeger {
   private val KEY_HOST = "kamon.jaeger.host"
@@ -45,7 +49,7 @@ class Jaeger() extends SpanReporter {
 
   val jaegerClient = new JaegerClient(host, port)
 
-  override def reportSpans(spans: Seq[Span.CompletedSpan]): Unit = {
+  override def reportSpans(spans: Seq[Span.FinishedSpan]): Unit = {
     spans.foreach(s => jaegerClient.sendSpan(s))
   }
 }
@@ -59,38 +63,61 @@ class JaegerClient(host: String, port: Int) {
   val process = new Process(Kamon.environment.service)
 
 
-  def sendSpan(span: Span.CompletedSpan): Unit = {
+  def sendSpan(span: Span.FinishedSpan): Unit = {
     client.emitBatch(new Batch(process, Seq(convertSpan(span)).asJava))
   }
 
-  private def convertSpan(span: Span.CompletedSpan): JaegerSpan = {
+  private def convertSpan(span: Span.FinishedSpan): JaegerSpan = {
     val convertedSpan = new JaegerSpan(
-      span.context.traceID,
+      convertIdentifier(span.context.traceID),
       0L,
-      span.context.spanID,
-      span.context.parentID,
+      convertIdentifier(span.context.spanID),
+      convertIdentifier(span.context.parentID),
       span.operationName,
       0,
       span.startTimestampMicros,
       span.endTimestampMicros - span.startTimestampMicros
     )
 
-    val convertedLogs = span.logs.map { log =>
-      val convertedFields = log.fields.map(convertField)
-      new Log(log.timestamp, convertedFields.toList.asJava)
+    val convertedLogs = span.annotations.map { annotation =>
+      val convertedFields = annotation.fields.map(convertField)
+      new Log(annotation.timestampMicros, convertedFields.toList.asJava)
     }
+
     convertedSpan.setLogs(convertedLogs.asJava)
 
     convertedSpan.setTags(new util.ArrayList[Tag](span.tags.size))
     span.tags.foreach {
-      case (k, v) =>
-        val tag = new Tag(k, TagType.STRING)
-        tag.setVStr(v)
-        convertedSpan.tags.add(tag)
+      case (k, v) => v match {
+        case Span.TagValue.True =>
+          val tag = new Tag(k, TagType.BOOL)
+          tag.setVBool(true)
+          convertedSpan.tags.add(tag)
+
+        case Span.TagValue.False =>
+          val tag = new Tag(k, TagType.BOOL)
+          tag.setVBool(false)
+          convertedSpan.tags.add(tag)
+
+        case Span.TagValue.String(string) =>
+          val tag = new Tag(k, TagType.STRING)
+          tag.setVStr(string)
+          convertedSpan.tags.add(tag)
+
+        case Span.TagValue.Number(number) =>
+          val tag = new Tag(k, TagType.LONG)
+          tag.setVLong(number)
+          convertedSpan.tags.add(tag)
+      }
     }
 
     convertedSpan
   }
+
+  private def convertIdentifier(identifier: Identifier): Long = Try {
+    // Assumes that Kamon was configured to use the default identity generator.
+    ByteBuffer.wrap(identifier.bytes).getLong
+  }.getOrElse(0L)
 
   private def convertField(field: (String, _)): Tag = {
     val (tagType, setFun) = field._2 match {
