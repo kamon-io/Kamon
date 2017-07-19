@@ -61,9 +61,6 @@ object ActiveSpan {
     override def setOperationName(operationName: String): Span =
       wrappedSpan.setOperationName(operationName)
 
-    override def finish(): Unit =
-      wrappedSpan.finish()
-
     override def finish(finishMicros: Long): Unit =
       wrappedSpan.finish(finishMicros)
 

@@ -8,7 +8,7 @@ import scala.reflect.ClassTag
 import scala.util.Try
 
 class SpanInspector(span: Span) {
-  private val (realSpan, spanData) = {
+  private val (realSpan, spanData) = Try {
     val realSpan = span match {
       case _: Span.Real => span
       case a: ActiveSpan =>
@@ -17,10 +17,10 @@ class SpanInspector(span: Span) {
 
     val spanData = invoke[Span.Real, FinishedSpan](realSpan, "toFinishedSpan", classOf[Long] -> Long.box(Clock.microTimestamp()))
     (realSpan, spanData)
-  }
+  }.getOrElse((null, null))
 
-  def nonEmpty: Boolean =
-    !span.isInstanceOf[Span.Empty]
+  def isEmpty: Boolean =
+    realSpan == null
 
   def spanTag(key: String): Option[Span.TagValue] =
     spanData.tags.get(key)
