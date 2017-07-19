@@ -31,26 +31,26 @@ class FutureInstrumentationSpec extends WordSpec with Matchers with ScalaFutures
     "capture the active span available when created" which {
       "must be available when executing the future's body" in {
 
-        val testSpan = buildSpan("future-body").startManual().setBaggageItem("propagate", "in-future-body")
+        val testSpan = buildSpan("future-body").start().addBaggage("propagate", "in-future-body")
         val baggageInBody = Kamon.withSpan(testSpan) {
-          Future(Kamon.activeSpan().getBaggageItem("propagate")).unsafeStart
+          Future(Kamon.activeSpan().getBaggage("propagate")).unsafeStart
         }
 
-        baggageInBody.unsafePerformSync should equal("in-future-body")
+        baggageInBody.unsafePerformSync should equal(Some("in-future-body"))
       }
 
       "must be available when executing callbacks on the future" in {
-        val testSpan = buildSpan("future-transformations").startManual().setBaggageItem("propagate", "in-future-transformations")
+        val testSpan = buildSpan("future-transformations").start().addBaggage("propagate", "in-future-transformations")
         val baggageAfterTransformations = Kamon.withSpan(testSpan) {
           Future("Hello Kamon!")
             // The active span is expected to be available during all intermediate processing.
             .map(_.length)
             .flatMap(len ⇒ Future(len.toString))
-            .map(_ ⇒ Kamon.activeSpan().getBaggageItem("propagate"))
+            .map(_ ⇒ Kamon.activeSpan().getBaggage("propagate"))
             .unsafeStart
         }
 
-        baggageAfterTransformations.unsafePerformSync should equal("in-future-transformations")
+        baggageAfterTransformations.unsafePerformSync should equal(Some("in-future-transformations"))
       }
     }
   }
