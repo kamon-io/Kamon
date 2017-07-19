@@ -20,7 +20,7 @@ crossScalaVersions := Seq("2.12.2", "2.11.8", "2.10.6")
 lazy val kamon = (project in file("."))
   .settings(moduleName := "kamon")
   .settings(noPublishing: _*)
-  .aggregate(core, opentracing)
+  .aggregate(core)
 
 
 lazy val core = (project in file("kamon-core"))
@@ -41,20 +41,6 @@ lazy val core = (project in file("kamon-core"))
     )
   )
 
-lazy val opentracing = (project in file("kamon-opentracing"))
-  .settings(moduleName := "kamon-opentracing")
-  .dependsOn(core)
-  .settings(
-    isSnapshot := true,
-    scalaVersion := "2.11.8",
-    javacOptions += "-XDignore.symbol.file",
-    resolvers += Resolver.mavenLocal,
-    libraryDependencies ++= Seq(
-      "io.opentracing"   % "opentracing-api" % "0.30.0",
-      "io.opentracing"   % "opentracing-util" % "0.30.0",
-      "org.scalatest" %% "scalatest" % "3.0.1" % "test"
-    )
-  )
 //
 //lazy val testkit = (project in file("kamon-testkit"))
 //  .settings(moduleName := "kamon-testkit", resolvers += Resolver.mavenLocal)
