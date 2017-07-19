@@ -12,17 +12,18 @@ class RealSpanSpec extends WordSpec with Matchers with BeforeAndAfterAll with Ev
   "a real span" when {
     "sampled" should {
       "be sent to the Span reporters" in {
-
         Kamon.buildSpan("test-span")
           .withSpanTag("test", "value")
           .start()
           .finish()
 
-        eventually(timeout(50 milliseconds)) {
+        eventually(timeout(10 seconds)) {
           val finishedSpan = reporter.nextSpan().value
           finishedSpan.operationName shouldBe("test-span")
         }
       }
+
+
     }
   }
 

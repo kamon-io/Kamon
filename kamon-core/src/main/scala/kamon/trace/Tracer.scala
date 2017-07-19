@@ -157,6 +157,11 @@ object Tracer {
       this
     }
 
+    def asChildOf(parentContext: Option[SpanContext]): SpanBuilder = {
+      parentContext.foreach(asChildOf)
+      this
+    }
+
     def asChildOf(parentSpan: Span): SpanBuilder =
       asChildOf(parentSpan.context())
 
