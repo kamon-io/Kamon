@@ -54,6 +54,11 @@ class ExtendedB3SpanContextCodecSpec extends WordSpecLike with Matchers with Opt
       textMap.get("X-B3-Extra-Baggage").value shouldBe "some=baggage;more=baggage"
     }
 
+    "not inject anything if the SpanContext is empty" in {
+      val textMap = extendedB3Codec.inject(SpanContext.EmptySpanContext)
+      textMap.values shouldBe empty
+    }
+
     "extract a SpanContext from a TextMap when all fields are set" in {
       val textMap = TextMap.Default()
       textMap.put("X-B3-TraceId", "1234")
