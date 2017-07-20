@@ -21,13 +21,8 @@ import ch.qos.logback.classic.spi.ILoggingEvent
 import kamon.Kamon
 
 class LogbackSpanBaggageConverter extends ClassicConverter {
-  def convert(event: ILoggingEvent): String = {
-    val baggageValueOpt = for {
-      span  <- Option(Kamon.activeSpan)
-      key   <- Option(getFirstOption)
-      value <- Option(span.getBaggageItem(key))  // Returns null if key does not exist
-    } yield value
 
-    baggageValueOpt.getOrElse("undefined")
+  def convert(event: ILoggingEvent): String = {
+    Option(getFirstOption).flatMap(key => Kamon.activeSpan().getBaggage(key)).getOrElse("undefined")
   }
 }

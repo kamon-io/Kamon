@@ -1,6 +1,7 @@
-val kamonCore = "io.kamon" %% "kamon-core" % "1.0.0-RC1-1d0548cb8281202738d8d48cbe9cdd62cf209e21"
+val kamonCore = "io.kamon" %% "kamon-core" % "1.0.0-RC1-450978b92bc968bfdb9c6470028ad30586433609"
+val latestLogbackClassic = "ch.qos.logback" % "logback-classic" % "1.2.3"
 
 name := "kamon-logback"
 libraryDependencies ++=
-  compileScope(kamonCore, logbackClassic) ++
+  compileScope(kamonCore, latestLogbackClassic) ++
   testScope(scalatest)

@@ -47,11 +47,12 @@ class LogbackSpanConverterSpec extends WordSpec with Matchers {
 
     "a span is initialized" should {
       "report the its context" in {
-        val span = Kamon.buildSpan("my-span").startActive
-        span.setBaggageItem("my-key", "asdf")
+        val span = Kamon.buildSpan("my-span").startActive()
+        val traceID = span.context().traceID
+        span.addBaggage("my-key", "asdf")
         val (logger, appender) = initLogger("test-logback-token")
         logger.info("")
-        appender.getLastLine should fullyMatch regex """-?\d+"""
+        appender.getLastLine shouldBe traceID.string
         span.deactivate()
       }
     }
@@ -69,7 +70,7 @@ class LogbackSpanConverterSpec extends WordSpec with Matchers {
     "a span is initialized" should {
       "report an undefined context" in {
         val span = Kamon.buildSpan("my-span").startActive
-        span.setBaggageItem("my-key", "my-value")
+        span.addBaggage("my-key", "my-value")
         val (logger, appender) = initLogger("test-logback-baggage-invalid")
         logger.info("")
         appender.getLastLine should be ("undefined")
@@ -90,7 +91,7 @@ class LogbackSpanConverterSpec extends WordSpec with Matchers {
     "a span is initialized" should {
       "report an undefined context" in {
         val span = Kamon.buildSpan("my-span").startActive
-        span.setBaggageItem("my-key", "my-value")
+        span.addBaggage("my-key", "my-value")
         val (logger, appender) = initLogger("test-logback-baggage-valid")
         logger.info("")
         appender.getLastLine should be ("my-value")

@@ -19,15 +19,15 @@ package kamon.logback
 import ch.qos.logback.classic.pattern.ClassicConverter
 import ch.qos.logback.classic.spi.ILoggingEvent
 import kamon.Kamon
-import kamon.trace.{SpanContext => KamonSpanContext}
-import kamon.util.HexCodec
+import kamon.trace.IdentityProvider
 
-class LogbackSpanTokenConverter extends ClassicConverter {
+class LogbackTraceIDConverter extends ClassicConverter {
+
   override def convert(event: ILoggingEvent): String = {
-    Kamon.fromActiveSpan(_.context).collect {
-      case context: KamonSpanContext => encodeId(context.traceID)
-    } getOrElse "undefined       "
+    val traceID = Kamon.activeSpan().context().traceID
+    if(traceID == IdentityProvider.NoIdentifier)
+      "undefined"
+    else
+      traceID.string
   }
-
-  private def encodeId(id: Long): String = HexCodec.toLowerHex(id)
 }
