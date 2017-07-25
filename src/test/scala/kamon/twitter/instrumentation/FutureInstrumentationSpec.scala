@@ -31,7 +31,7 @@ class FutureInstrumentationSpec extends WordSpec with Matchers with ScalaFutures
       "must be available when executing the future's body" in {
 
         val testSpan = buildSpan("future-body").start().addBaggage("propagate", "in-future-body")
-        val baggageInBody = Kamon.withSpan(testSpan) {
+        val baggageInBody = Kamon.withActiveSpan(testSpan) {
           FuturePool(execContext)(Kamon.activeSpan().getBaggage("propagate"))
         }
 
@@ -41,7 +41,7 @@ class FutureInstrumentationSpec extends WordSpec with Matchers with ScalaFutures
       "must be available when executing callbacks on the future" in {
 
         val testSpan = buildSpan("future-transformations").start().addBaggage("propagate", "in-future-transformations")
-        val baggageAfterTransformations = Kamon.withSpan(testSpan) {
+        val baggageAfterTransformations = Kamon.withActiveSpan(testSpan) {
           FuturePool.unboundedPool("Hello Kamon!")
             // The active span is expected to be available during all intermediate processing.
             .map(_.length)
