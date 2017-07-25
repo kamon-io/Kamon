@@ -29,10 +29,6 @@ trait BaseSpan {
 
   def context(): SpanContext
 
-  def capture(): Continuation
-
-  def capture(activeSpanSource: ActiveSpanSource): Continuation
-
   def annotate(annotation: Span.Annotation): Span
 
   def addSpanTag(key: String, value: String): Span
@@ -77,8 +73,6 @@ object Span {
 
   final class Empty(activeSpanSource: ActiveSpanSource) extends Span {
     override val context: SpanContext = SpanContext.EmptySpanContext
-    override def capture(): Continuation = Continuation.Default(this, activeSpanSource)
-    override def capture(activeSpanSource: ActiveSpanSource): Continuation = Continuation.Default(this, activeSpanSource)
 
     override def annotate(annotation: Annotation): Span = this
     override def addSpanTag(key: String, value: String): Span = this
@@ -93,7 +87,7 @@ object Span {
   }
 
   object Empty {
-    def apply(tracer: Tracer): Empty = new Empty(tracer)
+    def apply(activeSpanSource: ActiveSpanSource): Empty = new Empty(activeSpanSource)
   }
 
   /**
@@ -181,12 +175,6 @@ object Span {
           spanSink.reportSpan(toFinishedSpan(finishMicros))
       }
     }
-
-    override def capture(): Continuation =
-      Continuation.Default(this, activeSpanSource)
-
-    override def capture(activeSpanSource: ActiveSpanSource): Continuation =
-      Continuation.Default(this, activeSpanSource)
 
     private def toFinishedSpan(endTimestampMicros: Long): Span.FinishedSpan =
       Span.FinishedSpan(spanContext, operationName, startTimestampMicros, endTimestampMicros, spanTags, annotations)

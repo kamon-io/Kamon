@@ -16,30 +16,31 @@
 package kamon
 package util
 
-import kamon.trace.{ActiveSpan, Continuation}
+import kamon.trace.Span
 
 
 /**
-  *  Utility trait that marks objects carrying an ActiveSpan.Continuation.
+  * Utility trait that marks objects carrying a reference to a Span.
+  *
   */
-trait HasContinuation {
-  def continuation: Continuation
+trait HasSpan {
+  def span: Span
 }
 
-object HasContinuation {
-  private class Default(val continuation: Continuation) extends HasContinuation
+object HasSpan {
+  private case class Default(span: Span) extends HasSpan
 
   /**
-    * Construct a HasContinuation instance by capturing a continuation from the provided active span.
+    * Construct a HasSpan instance that references the provided Span.
+    *
     */
-  def from(activeSpan: ActiveSpan): HasContinuation = {
-    val continuation = if(activeSpan == null) null else activeSpan.capture()
-    new Default(continuation)
-  }
+  def from(span: Span): HasSpan =
+    Default(span)
 
   /**
-    * Constructs a new HasContinuation instance using Kamon's tracer currently active span.
+    * Construct a HasSpan instance that references the currently ActiveSpan in Kamon's tracer.
+    *
     */
-  def fromTracerActiveSpan(): HasContinuation =
-    new Default(Kamon.activeSpanContinuation())
+  def fromActiveSpan(): HasSpan =
+    Default(Kamon.activeSpan())
 }

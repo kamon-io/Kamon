@@ -16,6 +16,7 @@
 
 scalaVersion := "2.11.8"
 crossScalaVersions := Seq("2.12.2", "2.11.8", "2.10.6")
+concurrentRestrictions in Global += Tags.limit(Tags.Test, 1)
 
 lazy val kamon = (project in file("."))
   .settings(moduleName := "kamon")

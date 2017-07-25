@@ -13,7 +13,6 @@
  * =========================================================================================
  */
 
-
 package kamon.trace
 
 import java.nio.ByteBuffer
@@ -30,13 +29,7 @@ import org.slf4j.LoggerFactory
 import scala.collection.immutable
 import scala.util.Try
 
-
-trait ActiveSpanSource {
-  def activeSpan(): ActiveSpan
-  def makeActive(span: Span): ActiveSpan
-}
-
-trait Tracer extends ActiveSpanSource{
+trait Tracer extends ActiveSpanSource {
   def buildSpan(operationName: String): SpanBuilder
 
   def extract[C](format: SpanContextCodec.Format[C], carrier: C): Option[SpanContext]
@@ -48,10 +41,7 @@ object Tracer {
 
   final class Default(metrics: MetricLookup, reporterRegistry: ReporterRegistryImpl, initialConfig: Config) extends Tracer {
     private val logger = LoggerFactory.getLogger(classOf[Tracer])
-    private val emptySpan = Span.Empty(this)
-    private val activeSpanStorage: ThreadLocal[ActiveSpan] = new ThreadLocal[ActiveSpan] {
-      override def initialValue(): ActiveSpan = ActiveSpan.Default(emptySpan, null, activeSpanStorage)
-    }
+    private val activeSpanSource = ActiveSpanSource.ThreadLocalBased()
 
     private[Tracer] val tracerMetrics = new TracerMetrics(metrics)
     @volatile private[Tracer] var joinRemoteParentsWithSameSpanID: Boolean = true
@@ -83,15 +73,14 @@ object Tracer {
       case SpanContextCodec.Format.Binary      => ByteBuffer.allocate(0) // TODO: Implement binary encoding.
     }
 
-    override def activeSpan(): ActiveSpan =
-      activeSpanStorage.get()
+    override def activeSpan(): Span =
+      activeSpanSource.activeSpan()
 
-    override def makeActive(span: Span): ActiveSpan = {
-      val currentlyActiveSpan = activeSpanStorage.get()
-      val newActiveSpan = ActiveSpan.Default(span, currentlyActiveSpan, activeSpanStorage)
-      activeSpanStorage.set(newActiveSpan)
-      newActiveSpan
-    }
+    override def activate(span: Span): Scope =
+      activeSpanSource.activate(span)
+
+    override def activate(span: Span, finishOnClose: Boolean): Scope =
+      activeSpanSource.activate(span, finishOnClose)
 
     def sampler: Sampler =
       configuredSampler
@@ -232,9 +221,6 @@ object Tracer {
         baggage = SpanContext.Baggage(),
         source = Source.Local
       )
-
-    def startActive(): ActiveSpan =
-      tracer.makeActive(start())
   }
 
   private final class TracerMetrics(metricLookup: MetricLookup) {

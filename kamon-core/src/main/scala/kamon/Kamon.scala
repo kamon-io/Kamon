@@ -17,7 +17,7 @@ package kamon
 
 import com.typesafe.config.{Config, ConfigFactory}
 import kamon.metric._
-import kamon.trace.{ActiveSpan, Span, SpanContext, Tracer, Continuation}
+import kamon.trace._
 import kamon.util.{Filters, MeasurementUnit, Registration}
 
 import scala.concurrent.Future
@@ -102,50 +102,26 @@ object Kamon extends MetricLookup with ReporterRegistry with Tracer {
   override def inject[C](spanContext: SpanContext, format: Format[C]): C =
     _tracer.inject(spanContext, format)
 
-  override def activeSpan(): ActiveSpan =
+  override def activeSpan(): Span =
     _tracer.activeSpan()
 
-  override def makeActive(span: Span): ActiveSpan =
-    _tracer.makeActive(span)
+  override def activate(span: Span): Scope =
+    _tracer.activate(span)
 
+  override def activate(span: Span, finishOnClose: Boolean): Scope =
+    _tracer.activate(span, finishOnClose)
 
   /**
     * Makes the provided Span active before code is evaluated and deactivates it afterwards.
     */
-  def withSpan[T](span: Span)(code: => T): T = {
-    val activeSpan = makeActive(span)
-    val evaluatedCode = code
-    activeSpan.deactivate()
-    evaluatedCode
-  }
+  def withActiveSpan[T](span: Span)(code: => T): T = {
+    val scope = activate(span)
 
-  /**
-    * Actives the provided Continuation before code is evaluated and deactivates it afterwards.
-    */
-  def withContinuation[T](continuation: Continuation)(code: => T): T = {
-    if(continuation == null)
+    try {
       code
-    else {
-      val activeSpan = continuation.activate()
-      val evaluatedCode = code
-      activeSpan.deactivate()
-      evaluatedCode
+    } finally {
+      scope.close()
     }
-  }
-
-  /**
-    * Captures a continuation from the currently active Span (if any).
-    */
-  def activeSpanContinuation(): Continuation =
-    activeSpan().capture()
-
-  /**
-    * Runs the provided closure with the currently active Span (if any).
-    */
-  def onActiveSpan[T](code: ActiveSpan => T): Unit = {
-    val activeSpan = Kamon.activeSpan()
-    if(activeSpan != null)
-      code(activeSpan)
   }
 
 

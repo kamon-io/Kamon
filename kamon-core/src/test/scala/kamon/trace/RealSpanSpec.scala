@@ -88,16 +88,16 @@ class RealSpanSpec extends WordSpec with Matchers with BeforeAndAfterAll with Ev
         }
       }
 
-      "pass all the tags, annotations and baggage to the FinishedSpan instance when started active and finished" in {
-        val activeSpan = Kamon.buildSpan("full-span")
+      "pass all the tags, annotations and baggage to the FinishedSpan instance when started, activated and finished" in {
+        val scope = Kamon.activate(Kamon.buildSpan("full-span")
           .withSpanTag("builder-string-tag", "value")
           .withSpanTag("builder-boolean-tag-true", true)
           .withSpanTag("builder-boolean-tag-false", false)
           .withSpanTag("builder-number-tag", 42)
           .withStartTimestamp(100)
-          .startActive()
+          .start())
 
-        activeSpan
+        Kamon.activeSpan()
           .addBaggage("baggage", "value")
           .addSpanTag("span-string-tag", "value")
           .addSpanTag("span-boolean-tag-true", true)
@@ -110,7 +110,7 @@ class RealSpanSpec extends WordSpec with Matchers with BeforeAndAfterAll with Ev
           .setOperationName("fully-populated-active-span")
           .finish(200)
 
-        activeSpan.deactivate()
+        scope.close()
 
         eventually(timeout(2 seconds)) {
           val finishedSpan = reporter.nextSpan().value

@@ -1,6 +1,6 @@
 package kamon.testkit
 
-import kamon.trace.{ActiveSpan, Span, SpanContext}
+import kamon.trace.{Span, SpanContext}
 import kamon.trace.Span.FinishedSpan
 import kamon.util.Clock
 
@@ -11,8 +11,6 @@ class SpanInspector(span: Span) {
   private val (realSpan, spanData) = Try {
     val realSpan = span match {
       case _: Span.Real => span
-      case a: ActiveSpan =>
-        getField[ActiveSpan.Default, Span](a, "wrappedSpan")
     }
 
     val spanData = invoke[Span.Real, FinishedSpan](realSpan, "toFinishedSpan", classOf[Long] -> Long.box(Clock.microTimestamp()))
