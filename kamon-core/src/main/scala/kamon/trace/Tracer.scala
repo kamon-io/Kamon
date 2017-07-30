@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory
 import scala.collection.immutable
 import scala.util.Try
 
-trait Tracer extends ActiveSpanSource {
+trait Tracer extends ActiveSpanStorage {
   def buildSpan(operationName: String): SpanBuilder
 
   def extract[C](format: SpanContextCodec.Format[C], carrier: C): Option[SpanContext]
@@ -41,7 +41,7 @@ object Tracer {
 
   final class Default(metrics: MetricLookup, reporterRegistry: ReporterRegistryImpl, initialConfig: Config) extends Tracer {
     private val logger = LoggerFactory.getLogger(classOf[Tracer])
-    private val activeSpanSource = ActiveSpanSource.ThreadLocalBased()
+    private val activeSpanSource = ActiveSpanStorage.ThreadLocal()
 
     private[Tracer] val tracerMetrics = new TracerMetrics(metrics)
     @volatile private[Tracer] var joinRemoteParentsWithSameSpanID: Boolean = true
@@ -78,9 +78,6 @@ object Tracer {
 
     override def activate(span: Span): Scope =
       activeSpanSource.activate(span)
-
-    override def activate(span: Span, finishOnClose: Boolean): Scope =
-      activeSpanSource.activate(span, finishOnClose)
 
     def sampler: Sampler =
       configuredSampler

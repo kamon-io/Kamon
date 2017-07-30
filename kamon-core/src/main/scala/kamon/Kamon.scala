@@ -108,8 +108,6 @@ object Kamon extends MetricLookup with ReporterRegistry with Tracer {
   override def activate(span: Span): Scope =
     _tracer.activate(span)
 
-  override def activate(span: Span, finishOnClose: Boolean): Scope =
-    _tracer.activate(span, finishOnClose)
 
   /**
     * Makes the provided Span active before code is evaluated and deactivates it afterwards.

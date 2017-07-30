@@ -71,7 +71,7 @@ trait Span extends BaseSpan {
 
 object Span {
 
-  final class Empty(activeSpanSource: ActiveSpanSource) extends Span {
+  final class Empty(activeSpanSource: ActiveSpanStorage) extends Span {
     override val context: SpanContext = SpanContext.EmptySpanContext
 
     override def annotate(annotation: Annotation): Span = this
@@ -87,7 +87,7 @@ object Span {
   }
 
   object Empty {
-    def apply(activeSpanSource: ActiveSpanSource): Empty = new Empty(activeSpanSource)
+    def apply(activeSpanSource: ActiveSpanStorage): Empty = new Empty(activeSpanSource)
   }
 
   /**
@@ -99,7 +99,7 @@ object Span {
     * @param spanSink
     */
   final class Real(spanContext: SpanContext, initialOperationName: String, initialSpanTags: Map[String, Span.TagValue],
-    initialMetricTags: Map[String, String], startTimestampMicros: Long, spanSink: SpanSink, activeSpanSource: ActiveSpanSource) extends Span {
+    initialMetricTags: Map[String, String], startTimestampMicros: Long, spanSink: SpanSink, activeSpanSource: ActiveSpanStorage) extends Span {
 
     private var collectMetrics: Boolean = true
     private var open: Boolean = true
