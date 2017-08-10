@@ -85,6 +85,26 @@ class ActorCellInstrumentationSpec extends TestKit(ActorSystem("ActorCellInstrum
 
       expectMsg("propagate-with-group")
     }
+
+    "be cleaned up in case of a RepointableActorRef" in {
+      // TODO: FIXME
+      def actorRecorderName(ref: ActorRef): String = system.name + "/" + ref.path.elements.mkString("/")
+
+      def actorMetricsRecorderOf(name: String): Option[EntityRecorder] =
+        Kamon.metrics.find(name, ActorMetrics.category)
+
+      val buffer = new ListBuffer[String]
+
+      for(j <- 1 to 10) {
+        for (i <- 1 to 1000) {
+          val a = system.actorOf(Props[TraceContextEcho], s"actor$j$i")
+          a ! PoisonPill
+          buffer.append(actorRecorderName(a))
+        }
+        eventually(for(p <- buffer) actorMetricsRecorderOf(p) should be(None))
+        buffer.clear()
+      }
+    }
   }
 
   override protected def afterAll(): Unit = shutdown()

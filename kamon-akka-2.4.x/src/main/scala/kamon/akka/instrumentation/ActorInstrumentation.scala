@@ -4,7 +4,7 @@ import java.util.concurrent.locks.ReentrantLock
 
 import akka.actor._
 import akka.dispatch.Envelope
-import akka.dispatch.sysmsg.SystemMessage
+import akka.dispatch.sysmsg.{LatestFirstSystemMessageList, SystemMessage, SystemMessageList}
 import akka.routing.RoutedActorCell
 import kamon.Kamon
 import org.aspectj.lang.ProceedingJoinPoint
@@ -45,6 +45,18 @@ class ActorCellInstrumentation {
     actorInstrumentation(cell).processMessage(pjp, envelope.asInstanceOf[InstrumentedEnvelope].timestampedContext())
   }
 
+  @Pointcut("execution(* akka.actor.ActorCell.terminate()) && this(cell)")
+  def callTerminate(cell: Cell) = {}
+
+  @Before("callTerminate(cell)")
+  def beforeSystemInvoke(cell: Cell): Unit = {
+    actorInstrumentation(cell).cleanup()
+
+    if (cell.isInstanceOf[RoutedActorCell]) {
+      cell.asInstanceOf[RouterInstrumentationAware].routerInstrumentation.cleanup()
+    }
+  }
+
   /**
    *
    *
@@ -80,43 +92,44 @@ class ActorCellInstrumentation {
     // TODO: Find a way to do this without resorting to reflection and, even better, without copy/pasting the Akka Code!
     val queue = unstartedCellQueueField.get(unStartedCell).asInstanceOf[java.util.LinkedList[_]]
     val lock = unstartedCellLockField.get(unStartedCell).asInstanceOf[ReentrantLock]
+    var sysQueueHead = systemMsgQueueField.get(unStartedCell).asInstanceOf[SystemMessage]
 
     def locked[T](body: ⇒ T): T = {
       lock.lock()
       try body finally lock.unlock()
     }
 
+    var sysQueue =  new LatestFirstSystemMessageList(sysQueueHead)
+
     locked {
       try {
+        def drainSysmsgQueue(): Unit = {
+          // using while in case a sys msg enqueues another sys msg
+          while (sysQueue.nonEmpty) {
+            var sysQ = sysQueue.reverse
+            sysQueue = SystemMessageList.LNil
+            while (sysQ.nonEmpty) {
+              val msg = sysQ.head
+              sysQ = sysQ.tail
+              msg.unlink()
+              cell.sendSystemMessage(msg)
+            }
+          }
+        }
+
+        drainSysmsgQueue()
+
         while (!queue.isEmpty) {
           queue.poll() match {
-            case s: SystemMessage ⇒ cell.sendSystemMessage(s)
-            case e: Envelope with InstrumentedEnvelope ⇒
-              Kamon.withContext(e.timestampedContext().context) {
-                cell.sendMessage(e)
-              }
+            case e: Envelope with InstrumentedEnvelope => Tracer.withContext(e.envelopeContext().context) {
+              cell.sendMessage(e)
+            }
           }
+          drainSysmsgQueue()
         }
       } finally {
         unStartedCell.self.swapCell(cell)
       }
-    }
-  }
-
-  /**
-   *
-   */
-
-  @Pointcut("execution(* akka.actor.ActorCell.stop()) && this(cell)")
-  def actorStop(cell: ActorCell): Unit = {}
-
-  @After("actorStop(cell)")
-  def afterStop(cell: ActorCell): Unit = {
-    actorInstrumentation(cell).cleanup()
-
-    // The Stop can't be captured from the RoutedActorCell so we need to put this piece of cleanup here.
-    if (cell.isInstanceOf[RoutedActorCell]) {
-      cell.asInstanceOf[RouterInstrumentationAware].routerInstrumentation.cleanup()
     }
   }
 
@@ -130,21 +143,25 @@ class ActorCellInstrumentation {
 }
 
 object ActorCellInstrumentation {
-  private val (unstartedCellQueueField, unstartedCellLockField) = {
+  private val (unstartedCellQueueField, unstartedCellLockField, systemMsgQueueField) = {
     val unstartedCellClass = classOf[UnstartedCell]
-    val queueFieldName = Properties.versionNumberString.split("\\.").take(2).mkString(".") match {
-      case _@ "2.11" ⇒ "akka$actor$UnstartedCell$$queue"
-      case _@ "2.12" ⇒ "queue"
+
+    val prefix = Properties.versionNumberString.split("\\.").take(2).mkString(".") match {
+      case _@ "2.11" ⇒ "akka$actor$UnstartedCell$$"
+      case _@ "2.12" ⇒ ""
       case v         ⇒ throw new IllegalStateException(s"Incompatible Scala version: $v")
     }
 
-    val queueField = unstartedCellClass.getDeclaredField(queueFieldName)
+    val queueField = unstartedCellClass.getDeclaredField(prefix+"queue")
     queueField.setAccessible(true)
 
     val lockField = unstartedCellClass.getDeclaredField("lock")
     lockField.setAccessible(true)
 
-    (queueField, lockField)
+    val sysQueueField = unstartedCellClass.getDeclaredField(prefix+"sysmsgQueue")
+    sysQueueField.setAccessible(true)
+
+    (queueField, lockField, sysQueueField)
   }
 
 }

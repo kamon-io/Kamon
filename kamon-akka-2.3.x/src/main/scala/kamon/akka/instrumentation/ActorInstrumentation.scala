@@ -45,6 +45,19 @@ class ActorCellInstrumentation {
     actorInstrumentation(cell).processMessage(pjp, envelope.asInstanceOf[InstrumentedEnvelope].timestampedContext())
   }
 
+  @Pointcut("execution(* akka.actor.ActorCell.terminate()) && this(cell)")
+  def callTerminate(cell: Cell) = {}
+
+  @Before("callTerminate(cell)")
+  def beforeSystemInvoke(cell: Cell): Unit = {
+    actorInstrumentation(cell).cleanup()
+
+    if (cell.isInstanceOf[RoutedActorCell]) {
+      cell.asInstanceOf[RouterInstrumentationAware].routerInstrumentation.cleanup()
+    }
+  }
+
+
   /**
    *
    *
@@ -100,23 +113,6 @@ class ActorCellInstrumentation {
       } finally {
         unStartedCell.self.swapCell(cell)
       }
-    }
-  }
-
-  /**
-   *
-   */
-
-  @Pointcut("execution(* akka.actor.ActorCell.stop()) && this(cell)")
-  def actorStop(cell: ActorCell): Unit = {}
-
-  @After("actorStop(cell)")
-  def afterStop(cell: ActorCell): Unit = {
-    actorInstrumentation(cell).cleanup()
-
-    // The Stop can't be captured from the RoutedActorCell so we need to put this piece of cleanup here.
-    if (cell.isInstanceOf[RoutedActorCell]) {
-      cell.asInstanceOf[RouterInstrumentationAware].routerInstrumentation.cleanup()
     }
   }
 
