@@ -15,6 +15,8 @@
 
 package kamon.context
 
+import kamon.Kamon
+
 
 /**
   * Utility trait that marks objects carrying a reference to a Span.
@@ -38,6 +40,6 @@ object HasContext {
     * Construct a HasSpan instance that references the currently ActiveSpan in Kamon's tracer.
     *
     */
-//  def fromActiveSpan(): HasContext =
-//    Default(Kamon.activeSpan())
+  def fromCurrentContext(): HasContext =
+    Default(Kamon.currentContext())
 }
