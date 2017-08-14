@@ -1,6 +1,6 @@
 package kamon.testkit
 
-import kamon.trace.SpanContext.{SamplingDecision, Source}
+import kamon.trace.SpanContext.SamplingDecision
 import kamon.trace.{IdentityProvider, SpanContext, SpanContextCodec}
 
 trait SpanBuilding {
@@ -12,9 +12,7 @@ trait SpanBuilding {
       traceID = identityProvider.traceIdentifierGenerator().generate(),
       spanID = identityProvider.spanIdentifierGenerator().generate(),
       parentID = identityProvider.spanIdentifierGenerator().generate(),
-      samplingDecision = samplingDecision,
-      baggage = SpanContext.Baggage(),
-      source = Source.Local
+      samplingDecision = samplingDecision
     )
 
 }

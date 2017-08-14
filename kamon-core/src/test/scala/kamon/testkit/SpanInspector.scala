@@ -10,10 +10,10 @@ import scala.util.Try
 class SpanInspector(span: Span) {
   private val (realSpan, spanData) = Try {
     val realSpan = span match {
-      case _: Span.Real => span
+      case _: Span.Local => span
     }
 
-    val spanData = invoke[Span.Real, FinishedSpan](realSpan, "toFinishedSpan", classOf[Long] -> Long.box(Clock.microTimestamp()))
+    val spanData = invoke[Span.Local, FinishedSpan](realSpan, "toFinishedSpan", classOf[Long] -> Long.box(Clock.microTimestamp()))
     (realSpan, spanData)
   }.getOrElse((null, null))
 
@@ -27,10 +27,10 @@ class SpanInspector(span: Span) {
     spanData.tags
 
   def metricTags(): Map[String, String] =
-    getField[Span.Real, Map[String, String]](realSpan, "customMetricTags")
+    getField[Span.Local, Map[String, String]](realSpan, "customMetricTags")
 
   def startTimestamp(): Long =
-    getField[Span.Real, Long](realSpan, "startTimestampMicros")
+    getField[Span.Local, Long](realSpan, "startTimestampMicros")
 
   def context(): SpanContext =
     spanData.context

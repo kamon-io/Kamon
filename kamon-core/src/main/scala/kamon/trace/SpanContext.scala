@@ -16,7 +16,7 @@
 package kamon.trace
 
 import kamon.trace.IdentityProvider.Identifier
-import kamon.trace.SpanContext.{Baggage, SamplingDecision, Source}
+import kamon.trace.SpanContext.SamplingDecision
 
 /**
   *
@@ -24,9 +24,8 @@ import kamon.trace.SpanContext.{Baggage, SamplingDecision, Source}
   * @param spanID
   * @param parentID
   * @param samplingDecision
-  * @param baggage
   */
-case class SpanContext(traceID: Identifier, spanID: Identifier, parentID: Identifier, samplingDecision: SamplingDecision, baggage: Baggage, source: Source) {
+case class SpanContext(traceID: Identifier, spanID: Identifier, parentID: Identifier, samplingDecision: SamplingDecision) {
 
   def createChild(childSpanID: Identifier, samplingDecision: SamplingDecision): SpanContext =
     this.copy(parentID = this.spanID, spanID = childSpanID)
@@ -34,19 +33,11 @@ case class SpanContext(traceID: Identifier, spanID: Identifier, parentID: Identi
 
 object SpanContext {
 
-  sealed trait Source
-  object Source {
-    case object Local extends Source
-    case object Remote extends Source
-  }
-
   val EmptySpanContext = SpanContext(
     traceID   = IdentityProvider.NoIdentifier,
     spanID    = IdentityProvider.NoIdentifier,
     parentID  = IdentityProvider.NoIdentifier,
-    samplingDecision = SamplingDecision.DoNotSample,
-    baggage = Baggage.EmptyBaggage,
-    source = Source.Local
+    samplingDecision = SamplingDecision.DoNotSample
   )
 
 

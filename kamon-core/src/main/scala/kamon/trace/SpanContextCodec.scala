@@ -15,53 +15,36 @@
 
 package kamon.trace
 
-import java.lang.StringBuilder
 import java.net.{URLDecoder, URLEncoder}
-import java.nio.ByteBuffer
-import kamon.trace.SpanContext.{Baggage, SamplingDecision, Source}
-import scala.collection.mutable
 
-trait SpanContextCodec[T] {
-  def inject(spanContext: SpanContext, carrier: T): T
-  def inject(spanContext: SpanContext): T
-  def extract(carrier: T): Option[SpanContext]
-}
+import kamon.context.{Codec, Context, TextMap}
+import kamon.trace.SpanContext.SamplingDecision
+
 
 object SpanContextCodec {
 
-  sealed trait Format[C]
-  object Format {
-    case object TextMap extends Format[TextMap]
-    case object HttpHeaders extends Format[TextMap]
-    case object Binary extends Format[ByteBuffer]
-  }
-
-  class ExtendedB3(identityProvider: IdentityProvider) extends SpanContextCodec[TextMap] {
+  class ExtendedB3(identityProvider: IdentityProvider) extends Codec.ForEntry[TextMap] {
     import ExtendedB3.Headers
 
-    override def inject(spanContext: SpanContext, carrier: TextMap): TextMap = {
-      if(spanContext != SpanContext.EmptySpanContext) {
+    override def encode(context: Context): TextMap = {
+      val span = context.get(Span.ContextKey)
+      val carrier = TextMap.Default()
+
+      if(span.nonEmpty()) {
+        val spanContext = span.context
         carrier.put(Headers.TraceIdentifier, urlEncode(spanContext.traceID.string))
         carrier.put(Headers.SpanIdentifier, urlEncode(spanContext.spanID.string))
         carrier.put(Headers.ParentSpanIdentifier, urlEncode(spanContext.parentID.string))
-        carrier.put(Headers.Baggage, encodeBaggage(spanContext.baggage))
 
         encodeSamplingDecision(spanContext.samplingDecision).foreach { samplingDecision =>
           carrier.put(Headers.Sampled, samplingDecision)
-        }
-
-        spanContext.baggage.get(Headers.Flags).foreach { flags =>
-          carrier.put(Headers.Flags, flags)
         }
       }
 
       carrier
     }
 
-    override def inject(spanContext: SpanContext): TextMap =
-      inject(spanContext, TextMap.Default())
-
-    override def extract(carrier: TextMap): Option[SpanContext] = {
+    override def decode(carrier: TextMap, context: Context): Context = {
       val traceID = carrier.get(Headers.TraceIdentifier)
         .map(id => identityProvider.traceIdentifierGenerator().from(urlDecode(id)))
         .getOrElse(IdentityProvider.NoIdentifier)
@@ -75,12 +58,7 @@ object SpanContextCodec {
           .map(id => identityProvider.spanIdentifierGenerator().from(urlDecode(id)))
           .getOrElse(IdentityProvider.NoIdentifier)
 
-        val baggage = decodeBaggage(carrier.get(Headers.Baggage))
         val flags = carrier.get(Headers.Flags)
-
-        flags.foreach { flags =>
-          baggage.add(Headers.Flags, flags)
-        }
 
         val samplingDecision = flags.orElse(carrier.get(Headers.Sampled)) match {
           case Some(sampled) if sampled == "1" => SamplingDecision.Sample
@@ -88,43 +66,9 @@ object SpanContextCodec {
           case _ => SamplingDecision.Unknown
         }
 
-        Some(SpanContext(traceID, spanID, parentID, samplingDecision, baggage, Source.Remote))
+        context.withKey(Span.ContextKey, Span.Remote(SpanContext(traceID, spanID, parentID, samplingDecision)))
 
-      } else None
-    }
-
-    private def encodeBaggage(baggage: Baggage): String = {
-      if(baggage.getAll().nonEmpty) {
-        val encodedBaggage = new StringBuilder()
-        baggage.getAll().foreach {
-          case (key, value) =>
-            if(key != Headers.Flags) {
-              if (encodedBaggage.length() > 0)
-                encodedBaggage.append(';')
-
-              encodedBaggage
-                .append(urlEncode(key))
-                .append('=')
-                .append(urlEncode(value))
-            }
-        }
-
-        encodedBaggage.toString()
-      } else ""
-    }
-
-    private def decodeBaggage(encodedBaggage: Option[String]): Baggage = {
-      val baggage = Baggage()
-      encodedBaggage.foreach { baggageString =>
-        baggageString.split(";").foreach { group =>
-          val pair = group.split("=")
-          if(pair.length >= 2 && pair(0).nonEmpty) {
-            baggage.add(urlDecode(pair(0)), urlDecode(pair(1)))
-          }
-        }
-      }
-
-      baggage
+      } else context
     }
 
     private def encodeSamplingDecision(samplingDecision: SamplingDecision): Option[String] = samplingDecision match {
@@ -135,7 +79,6 @@ object SpanContextCodec {
 
     private def urlEncode(s: String): String = URLEncoder.encode(s, "UTF-8")
     private def urlDecode(s: String): String = URLDecoder.decode(s, "UTF-8")
-
   }
 
   object ExtendedB3 {
@@ -149,26 +92,6 @@ object SpanContextCodec {
       val SpanIdentifier = "X-B3-SpanId"
       val Sampled = "X-B3-Sampled"
       val Flags = "X-B3-Flags"
-      val Baggage = "X-B3-Extra-Baggage"
     }
-  }
-}
-
-trait TextMap {
-  def get(key: String): Option[String]
-  def put(key: String, value: String): Unit
-  def values: Iterator[(String, String)]
-}
-
-object TextMap {
-  class Default extends TextMap {
-    private val storage = mutable.Map.empty[String, String]
-    override def get(key: String): Option[String] = storage.get(key)
-    override def put(key: String, value: String): Unit = storage.put(key, value)
-    override def values: Iterator[(String, String)] = storage.toIterator
-  }
-
-  object Default {
-    def apply(): Default = new Default()
   }
 }
