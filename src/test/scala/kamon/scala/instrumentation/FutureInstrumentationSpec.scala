@@ -16,35 +16,35 @@
 package kamon.scala.instrumentation
 
 import kamon.Kamon
-import kamon.Kamon.buildSpan
+import kamon.testkit.ContextTesting
 import org.scalatest.{Matchers, OptionValues, WordSpec}
 import org.scalatest.concurrent.{PatienceConfiguration, ScalaFutures}
-import scala.concurrent.ExecutionContext.Implicits.global
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class FutureInstrumentationSpec extends WordSpec with ScalaFutures with Matchers
+class FutureInstrumentationSpec extends WordSpec with ScalaFutures with Matchers with ContextTesting
     with PatienceConfiguration with OptionValues {
 
   "a Future created when instrumentation is active" should {
     "capture the active span available when created" which {
       "must be available when executing the future's body" in {
-        val testSpan = buildSpan("future-body").start().addBaggage("propagate", "in-future-body")
-        val baggageInBody = Kamon.withActiveSpan(testSpan) {
-          Future(Kamon.activeSpan().getBaggage("propagate"))
+        val context = contextWithLocal("in-future-body")
+        val contextInBody = Kamon.withContext(context) {
+          Future(Kamon.currentContext().get(TestLocalKey))
         }
 
-        whenReady(baggageInBody)(baggageValue ⇒ baggageValue should be(Some("in-future-body")))
+        whenReady(contextInBody)(baggageValue ⇒ baggageValue should be(Some("in-future-body")))
       }
 
       "must be available when executing callbacks on the future" in {
-        val testSpan = buildSpan("future-transformations").start().addBaggage("propagate", "in-future-transformations")
-        val baggageAfterTransformations = Kamon.withActiveSpan(testSpan) {
+        val context = contextWithLocal("in-future-transformations")
+        val baggageAfterTransformations = Kamon.withContext(context) {
             Future("Hello Kamon!")
               // The active span is expected to be available during all intermediate processing.
               .map(_.length)
               .flatMap(len ⇒ Future(len.toString))
-              .map(_ ⇒ Kamon.activeSpan().getBaggage("propagate"))
+              .map(_ ⇒ Kamon.currentContext().get(TestLocalKey))
           }
 
         whenReady(baggageAfterTransformations)(baggageValue ⇒ baggageValue should equal(Some("in-future-transformations")))

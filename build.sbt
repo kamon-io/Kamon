@@ -14,18 +14,19 @@
  */
 
 resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
-val kamonCore = "io.kamon" %% "kamon-core" % "1.0.0-RC1-0930e36def6ce62c55d30d744b41ef475374a541"
+val kamonCore = "io.kamon" %% "kamon-core" % "1.0.0-RC1-7361fde5f06692a0e1b83d53756bb536627f2d02"
+val kamonTestkit = "io.kamon" %% "kamon-testkit" % "1.0.0-RC1-7361fde5f06692a0e1b83d53756bb536627f2d02"
 val scalazConcurrent  = "org.scalaz" %% "scalaz-concurrent" % "7.2.8"
 
 lazy val root = (project in file("."))
   .settings(name := "kamon-scala")
   .settings(aspectJSettings: _*)
   .settings(
-      libraryDependencies ++=
-        compileScope(kamonCore) ++
-        providedScope(aspectJ) ++
-        optionalScope(scalazConcurrent, twitterDependency("core").value) ++
-        testScope(scalatest, logbackClassic))
+    libraryDependencies ++=
+      compileScope(kamonCore, kamonTestkit) ++
+      providedScope(aspectJ) ++
+      optionalScope(scalazConcurrent, twitterDependency("core").value) ++
+      testScope(scalatest, logbackClassic))
 
 def twitterDependency(moduleName: String) = Def.setting {
   scalaBinaryVersion.value match {

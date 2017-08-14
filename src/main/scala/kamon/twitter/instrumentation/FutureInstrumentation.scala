@@ -17,7 +17,7 @@
 package kamon.twitter.instrumentation
 
 import kamon.Kamon
-import kamon.util.HasSpan
+import kamon.context.HasContext
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
 
@@ -25,24 +25,24 @@ import org.aspectj.lang.annotation._
 class FutureInstrumentation {
 
   @DeclareMixin("com.twitter.util..* && java.lang.Runnable+")
-  def mixinTraceContextAwareToFutureRelatedRunnable: HasSpan =
-    HasSpan.fromActiveSpan()
+  def mixinTraceContextAwareToFutureRelatedRunnable: HasContext =
+    HasContext.fromCurrentContext()
 
   @Pointcut("execution((com.twitter.util..* && java.lang.Runnable+).new(..)) && this(runnable)")
-  def futureRelatedRunnableCreation(runnable: HasSpan): Unit = {}
+  def futureRelatedRunnableCreation(runnable: HasContext): Unit = {}
 
   @After("futureRelatedRunnableCreation(runnable)")
-  def afterCreation(runnable: HasSpan): Unit = {
+  def afterCreation(runnable: HasContext): Unit = {
     // Force traceContext initialization.
-    runnable.span
+    runnable.context
   }
 
   @Pointcut("execution(* (com.twitter.util..* && java.lang.Runnable+).run()) && this(runnable)")
-  def futureRelatedRunnableExecution(runnable: HasSpan) = {}
+  def futureRelatedRunnableExecution(runnable: HasContext) = {}
 
   @Around("futureRelatedRunnableExecution(runnable)")
-  def aroundExecution(pjp: ProceedingJoinPoint, runnable: HasSpan): Any = {
-    Kamon.withActiveSpan(runnable.span) {
+  def aroundExecution(pjp: ProceedingJoinPoint, runnable: HasContext): Any = {
+    Kamon.withContext(runnable.context) {
       pjp.proceed()
     }
   }

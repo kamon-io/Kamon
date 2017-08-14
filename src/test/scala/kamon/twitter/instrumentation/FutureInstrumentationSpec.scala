@@ -21,18 +21,20 @@ import org.scalatest.{Matchers, OptionValues, WordSpec}
 import org.scalatest.concurrent.{PatienceConfiguration, ScalaFutures}
 import com.twitter.util.{Await, FuturePool}
 import kamon.Kamon
-import kamon.Kamon.buildSpan
+import kamon.testkit.ContextTesting
 
-class FutureInstrumentationSpec extends WordSpec with Matchers with ScalaFutures with PatienceConfiguration with OptionValues {
+class FutureInstrumentationSpec extends WordSpec with Matchers with ScalaFutures with PatienceConfiguration
+    with OptionValues with ContextTesting {
+
   implicit val execContext = Executors.newCachedThreadPool()
 
   "a Future created when instrumentation is active" should {
     "capture the active span available when created" which {
       "must be available when executing the future's body" in {
 
-        val testSpan = buildSpan("future-body").start().addBaggage("propagate", "in-future-body")
-        val baggageInBody = Kamon.withActiveSpan(testSpan) {
-          FuturePool(execContext)(Kamon.activeSpan().getBaggage("propagate"))
+        val context = contextWithLocal("in-future-body")
+        val baggageInBody = Kamon.withContext(context) {
+          FuturePool(execContext)(Kamon.currentContext().get(TestLocalKey))
         }
 
         Await.result(baggageInBody) should equal(Some("in-future-body"))
@@ -40,13 +42,13 @@ class FutureInstrumentationSpec extends WordSpec with Matchers with ScalaFutures
 
       "must be available when executing callbacks on the future" in {
 
-        val testSpan = buildSpan("future-transformations").start().addBaggage("propagate", "in-future-transformations")
-        val baggageAfterTransformations = Kamon.withActiveSpan(testSpan) {
+        val context = contextWithLocal("in-future-transformations")
+        val baggageAfterTransformations = Kamon.withContext(context) {
           FuturePool.unboundedPool("Hello Kamon!")
             // The active span is expected to be available during all intermediate processing.
             .map(_.length)
             .flatMap(len ⇒ FuturePool.unboundedPool(len.toString))
-            .map(_ ⇒ Kamon.activeSpan().getBaggage("propagate"))
+            .map(_ ⇒ Kamon.currentContext().get(TestLocalKey))
         }
 
         Await.result(baggageAfterTransformations) should equal(Some("in-future-transformations"))
