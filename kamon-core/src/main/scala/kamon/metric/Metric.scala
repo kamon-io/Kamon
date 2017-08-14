@@ -20,7 +20,6 @@ import java.util.concurrent.atomic.AtomicReference
 
 import kamon.metric.InstrumentFactory.InstrumentType
 import kamon.metric.InstrumentFactory.InstrumentTypes._
-import kamon.util.MeasurementUnit
 
 import scala.collection.concurrent.TrieMap
 import java.time.Duration

@@ -13,15 +13,13 @@
  * =========================================================================================
  */
 
-package kamon.util
-
-import kamon.util.MeasurementUnit.{Dimension, Magnitude}
+package kamon.metric
 
 /**
   * A MeasurementUnit is a simple representation of the dimension and magnitude of a quantity being measured, such as
   * "Time in Seconds" or "Data in Kilobytes".
   */
-case class MeasurementUnit(dimension: Dimension, magnitude: Magnitude)
+case class MeasurementUnit(dimension: MeasurementUnit.Dimension, magnitude: MeasurementUnit.Magnitude)
 
 object MeasurementUnit {
   val none = MeasurementUnit(Dimension.None, Magnitude("none", 1D))

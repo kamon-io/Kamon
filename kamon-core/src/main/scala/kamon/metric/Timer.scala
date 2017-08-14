@@ -16,7 +16,6 @@
 package kamon.metric
 
 import kamon.Tags
-import kamon.util.MeasurementUnit
 
 trait Timer extends Histogram {
   def start(): StartedTimer

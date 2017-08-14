@@ -15,8 +15,7 @@
 
 package kamon.metric
 
-import kamon.util.MeasurementUnit
-import kamon.util.MeasurementUnit.Dimension
+import MeasurementUnit.Dimension
 
 class Scaler(targetTimeUnit: MeasurementUnit, targetInformationUnit: MeasurementUnit, dynamicRange: DynamicRange) {
   require(targetTimeUnit.dimension == Dimension.Time, "timeUnit must be in the time dimension.")

@@ -21,8 +21,6 @@ import java.util.concurrent.TimeUnit
 
 import com.typesafe.config.Config
 import kamon.metric.InstrumentFactory.CustomInstrumentSettings
-import kamon.util.MeasurementUnit
-
 import java.time.Duration
 
 

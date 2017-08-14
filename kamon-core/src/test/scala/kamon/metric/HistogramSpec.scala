@@ -2,7 +2,7 @@ package kamon.metric
 
 import kamon.Kamon
 import org.scalatest.{Matchers, WordSpec}
-import kamon.util.MeasurementUnit._
+import MeasurementUnit._
 
 
 class HistogramSpec extends WordSpec with Matchers {

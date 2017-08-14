@@ -16,8 +16,6 @@
 package kamon
 package metric
 
-import kamon.util.MeasurementUnit
-
 
 /**
   *

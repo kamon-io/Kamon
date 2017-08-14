@@ -16,7 +16,6 @@
 package kamon.metric
 
 import kamon.jsr166.LongAdder
-import kamon.util.MeasurementUnit
 import org.slf4j.LoggerFactory
 
 trait Counter {

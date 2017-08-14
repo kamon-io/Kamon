@@ -13,7 +13,7 @@
  * =========================================================================================
  */
 
-package kamon.util
+package kamon.metric
 
 import java.util.concurrent.atomic.AtomicLong
 

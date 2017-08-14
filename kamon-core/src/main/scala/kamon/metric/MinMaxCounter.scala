@@ -19,8 +19,6 @@ import java.lang.Math.abs
 import java.time.Duration
 import java.util.concurrent.atomic.AtomicLong
 
-import kamon.util.{AtomicLongMaxUpdater, MeasurementUnit}
-
 trait MinMaxCounter {
   def unit: MeasurementUnit
   def dynamicRange: DynamicRange

@@ -18,7 +18,7 @@ package kamon
 import com.typesafe.config.{Config, ConfigFactory}
 import kamon.metric._
 import kamon.trace._
-import kamon.util.{Filters, MeasurementUnit, Registration}
+import kamon.util.{Filters, Registration}
 
 import scala.concurrent.Future
 import java.time.Duration

@@ -18,8 +18,9 @@ package trace
 
 import kamon.ReporterRegistry.SpanSink
 import kamon.context.Key
+import kamon.metric.MeasurementUnit
 import kamon.trace.SpanContext.SamplingDecision
-import kamon.util.{Clock, MeasurementUnit}
+import kamon.util.Clock
 
 
 trait Span {

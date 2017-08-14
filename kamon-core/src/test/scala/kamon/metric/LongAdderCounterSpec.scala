@@ -15,7 +15,6 @@
 
 package kamon.metric
 
-import kamon.util.MeasurementUnit
 import org.scalatest.{Matchers, WordSpec}
 
 class LongAdderCounterSpec extends WordSpec with Matchers {

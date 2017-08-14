@@ -18,7 +18,6 @@ package kamon.metric
 
 import java.time.Duration
 
-import kamon.util.MeasurementUnit
 import org.scalatest.{Matchers, WordSpec}
 
 case class TemporalBucket(value: Long, frequency: Long) extends Bucket

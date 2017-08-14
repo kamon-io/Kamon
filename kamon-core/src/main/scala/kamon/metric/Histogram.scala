@@ -19,7 +19,6 @@ package metric
 import java.nio.ByteBuffer
 
 import kamon.metric.SnapshotCreation.ZigZagCountsDistribution
-import kamon.util.MeasurementUnit
 import org.HdrHistogram.{AtomicHistogramExtension, HdrHistogramOps, SimpleHistogramExtension, ZigZag}
 import org.slf4j.LoggerFactory
 

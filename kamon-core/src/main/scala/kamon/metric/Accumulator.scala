@@ -15,8 +15,6 @@
 
 package kamon.metric
 
-import kamon.util.MeasurementUnit
-
 
 class DistributionAccumulator(dynamicRange: DynamicRange) {
   private val accumulatorHistogram = new HdrHistogram("metric-distribution-accumulator",

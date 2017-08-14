@@ -17,8 +17,6 @@ package kamon.metric
 
 import java.util.concurrent.atomic.AtomicLong
 
-import kamon.util.MeasurementUnit
-
 trait Gauge {
   def unit: MeasurementUnit
 
