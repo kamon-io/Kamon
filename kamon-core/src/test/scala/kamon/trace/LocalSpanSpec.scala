@@ -8,7 +8,7 @@ import org.scalatest.concurrent.Eventually
 import org.scalatest.{BeforeAndAfterAll, Matchers, OptionValues, WordSpec}
 import org.scalatest.time.SpanSugar._
 
-class RealSpanSpec extends WordSpec with Matchers with BeforeAndAfterAll with Eventually with OptionValues
+class LocalSpanSpec extends WordSpec with Matchers with BeforeAndAfterAll with Eventually with OptionValues
     with Reconfigure with MetricInspection {
 
   "a real span" when {
@@ -37,7 +37,6 @@ class RealSpanSpec extends WordSpec with Matchers with BeforeAndAfterAll with Ev
           .withSpanTag("builder-number-tag", 42)
           .withStartTimestamp(100)
           .start()
-          .addBaggage("baggage", "value")
           .addSpanTag("span-string-tag", "value")
           .addSpanTag("span-boolean-tag-true", true)
           .addSpanTag("span-boolean-tag-false", false)
@@ -81,86 +80,7 @@ class RealSpanSpec extends WordSpec with Matchers with BeforeAndAfterAll with Ev
           val customAnnotationTwo = annotations("custom-annotation-2").head
           customAnnotationTwo.timestampMicros shouldBe (4201)
           customAnnotationTwo.fields shouldBe (Map("custom" -> "yes-2"))
-
-          finishedSpan.context.baggage.getAll() should contain(
-            "baggage" -> "value"
-          )
         }
-      }
-
-      "pass all the tags, annotations and baggage to the FinishedSpan instance when started, activated and finished" in {
-        val scope = Kamon.activate(Kamon.buildSpan("full-span")
-          .withSpanTag("builder-string-tag", "value")
-          .withSpanTag("builder-boolean-tag-true", true)
-          .withSpanTag("builder-boolean-tag-false", false)
-          .withSpanTag("builder-number-tag", 42)
-          .withStartTimestamp(100)
-          .start())
-
-        Kamon.activeSpan()
-          .addBaggage("baggage", "value")
-          .addSpanTag("span-string-tag", "value")
-          .addSpanTag("span-boolean-tag-true", true)
-          .addSpanTag("span-boolean-tag-false", false)
-          .addSpanTag("span-number-tag", 42)
-          .annotate("simple-annotation")
-          .annotate("regular-annotation", Map("data" -> "something"))
-          .annotate(4200, "custom-annotation-1", Map("custom" -> "yes-1"))
-          .annotate(Annotation(4201, "custom-annotation-2", Map("custom" -> "yes-2")))
-          .setOperationName("fully-populated-active-span")
-          .finish(200)
-
-        scope.close()
-
-        eventually(timeout(2 seconds)) {
-          val finishedSpan = reporter.nextSpan().value
-          finishedSpan.operationName shouldBe ("fully-populated-active-span")
-          finishedSpan.startTimestampMicros shouldBe 100
-          finishedSpan.endTimestampMicros shouldBe 200
-          finishedSpan.tags should contain allOf(
-            "builder-string-tag" -> TagValue.String("value"),
-            "builder-boolean-tag-true" -> TagValue.True,
-            "builder-boolean-tag-false" -> TagValue.False,
-            "builder-number-tag" -> TagValue.Number(42),
-            "span-string-tag" -> TagValue.String("value"),
-            "span-boolean-tag-true" -> TagValue.True,
-            "span-boolean-tag-false" -> TagValue.False,
-            "span-number-tag" -> TagValue.Number(42)
-          )
-
-          finishedSpan.annotations.length shouldBe (4)
-          val annotations = finishedSpan.annotations.groupBy(_.name)
-          annotations.keys should contain allOf(
-            "simple-annotation",
-            "regular-annotation",
-            "custom-annotation-1",
-            "custom-annotation-2"
-          )
-
-          val customAnnotationOne = annotations("custom-annotation-1").head
-          customAnnotationOne.timestampMicros shouldBe (4200)
-          customAnnotationOne.fields shouldBe (Map("custom" -> "yes-1"))
-
-          val customAnnotationTwo = annotations("custom-annotation-2").head
-          customAnnotationTwo.timestampMicros shouldBe (4201)
-          customAnnotationTwo.fields shouldBe (Map("custom" -> "yes-2"))
-
-          finishedSpan.context.baggage.getAll() should contain(
-            "baggage" -> "value"
-          )
-        }
-      }
-
-      "allow storing and retrieving baggage items" in {
-        val span = Kamon.buildSpan("span-with-baggage").start()
-        span.addBaggage("my-baggage", "value-1")
-        span.addBaggage("my-baggage", "value-2")
-        span.addBaggage("my-other-baggage", "value-3")
-
-        span.context().baggage.getAll() should contain only(
-          "my-baggage" -> "value-2",
-          "my-other-baggage" -> "value-3"
-        )
       }
     }
   }

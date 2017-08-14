@@ -24,7 +24,7 @@ import scala.concurrent.Future
 import java.time.Duration
 import java.util.concurrent.{Executors, ScheduledExecutorService, ScheduledThreadPoolExecutor}
 
-import kamon.trace.SpanContextCodec.Format
+import kamon.context.{Context, Storage}
 import org.slf4j.LoggerFactory
 
 import scala.util.Try
@@ -41,6 +41,7 @@ object Kamon extends MetricLookup with ReporterRegistry with Tracer {
   private val _metrics = new MetricRegistry(_config, _scheduler)
   private val _reporters = new ReporterRegistryImpl(_metrics, _config)
   private val _tracer = Tracer.Default(Kamon, _reporters, _config)
+  private val _contextStorage = Storage.ThreadLocal()
   private var _onReconfigureHooks = Seq.empty[OnReconfigureHook]
 
   def environment: Environment =
@@ -93,30 +94,20 @@ object Kamon extends MetricLookup with ReporterRegistry with Tracer {
   override def buildSpan(operationName: String): Tracer.SpanBuilder =
     _tracer.buildSpan(operationName)
 
-  override def extract[C](format: Format[C], carrier: C): Option[SpanContext] =
-    _tracer.extract(format, carrier)
 
-  override def inject[C](spanContext: SpanContext, format: Format[C], carrier: C): C =
-    _tracer.inject(spanContext, format, carrier)
+  override def identityProvider: IdentityProvider =
+    _tracer.identityProvider
 
-  override def inject[C](spanContext: SpanContext, format: Format[C]): C =
-    _tracer.inject(spanContext, format)
+  def currentContext(): Context =
+    _contextStorage.current()
 
-  override def activeSpan(): Span =
-    _tracer.activeSpan()
+  def storeContext(context: Context): Storage.Scope =
+    _contextStorage.store(context)
 
-  override def activate(span: Span): Scope =
-    _tracer.activate(span)
-
-
-  /**
-    * Makes the provided Span active before code is evaluated and deactivates it afterwards.
-    */
-  def withActiveSpan[T](span: Span)(code: => T): T = {
-    val scope = activate(span)
-
+  def withContext[T](context: Context)(f: => T): T = {
+    val scope = _contextStorage.store(context)
     try {
-      code
+      f
     } finally {
       scope.close()
     }

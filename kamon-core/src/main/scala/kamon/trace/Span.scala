@@ -17,15 +17,18 @@ package kamon
 package trace
 
 import kamon.ReporterRegistry.SpanSink
+import kamon.context.Key
 import kamon.trace.SpanContext.SamplingDecision
-
 import kamon.util.{Clock, MeasurementUnit}
 
-/**
-  *   Minimum set of capabilities that should be provided by a Span, all additional sugar is provided by extensions
-  *   in the Span trait bellow.
-  */
-trait BaseSpan {
+
+trait Span {
+
+  def isEmpty(): Boolean
+  def isLocal(): Boolean
+
+  def nonEmpty(): Boolean = !isEmpty()
+  def isRemote(): Boolean = !isLocal()
 
   def context(): SpanContext
 
@@ -39,21 +42,11 @@ trait BaseSpan {
 
   def addMetricTag(key: String, value: String): Span
 
-  def addBaggage(key: String, value: String): Span
-
-  def getBaggage(key: String): Option[String]
-
   def setOperationName(name: String): Span
 
   def disableMetricsCollection(): Span
 
   def finish(finishTimestampMicros: Long): Unit
-}
-
-/**
-  *
-  */
-trait Span extends BaseSpan {
 
   def finish(): Unit =
     finish(Clock.microTimestamp())
@@ -71,23 +64,20 @@ trait Span extends BaseSpan {
 
 object Span {
 
-  final class Empty(activeSpanSource: ActiveSpanStorage) extends Span {
-    override val context: SpanContext = SpanContext.EmptySpanContext
+  val ContextKey = Key.broadcast[Span]("span", Span.Empty)
 
+  object Empty extends Span {
+    override val context: SpanContext = SpanContext.EmptySpanContext
+    override def isEmpty(): Boolean = true
+    override def isLocal(): Boolean = true
     override def annotate(annotation: Annotation): Span = this
     override def addSpanTag(key: String, value: String): Span = this
     override def addSpanTag(key: String, value: Long): Span = this
     override def addSpanTag(key: String, value: Boolean): Span = this
     override def addMetricTag(key: String, value: String): Span = this
-    override def addBaggage(key: String, value: String): Span = this
-    override def getBaggage(key: String): Option[String] = None
     override def setOperationName(name: String): Span = this
     override def disableMetricsCollection(): Span = this
     override def finish(finishTimestampMicros: Long): Unit = {}
-  }
-
-  object Empty {
-    def apply(activeSpanSource: ActiveSpanStorage): Empty = new Empty(activeSpanSource)
   }
 
   /**
@@ -98,8 +88,8 @@ object Span {
     * @param startTimestampMicros
     * @param spanSink
     */
-  final class Real(spanContext: SpanContext, initialOperationName: String, initialSpanTags: Map[String, Span.TagValue],
-    initialMetricTags: Map[String, String], startTimestampMicros: Long, spanSink: SpanSink, activeSpanSource: ActiveSpanStorage) extends Span {
+  final class Local(spanContext: SpanContext, initialOperationName: String, initialSpanTags: Map[String, Span.TagValue],
+    initialMetricTags: Map[String, String], startTimestampMicros: Long, spanSink: SpanSink) extends Span {
 
     private var collectMetrics: Boolean = true
     private var open: Boolean = true
@@ -109,6 +99,9 @@ object Span {
     private var spanTags: Map[String, Span.TagValue] = initialSpanTags
     private var customMetricTags = initialMetricTags
     private var annotations = List.empty[Span.Annotation]
+
+    override def isEmpty(): Boolean = false
+    override def isLocal(): Boolean = true
 
     def annotate(annotation: Annotation): Span = synchronized {
       if(sampled && open)
@@ -141,14 +134,6 @@ object Span {
         customMetricTags = customMetricTags + (key -> value)
       this
     }
-
-    override def addBaggage(key: String, value: String): Span = {
-      spanContext.baggage.add(key, value)
-      this
-    }
-
-    override def getBaggage(key: String): Option[String] =
-      spanContext.baggage.get(key)
 
     override def disableMetricsCollection(): Span = synchronized {
       collectMetrics = false
@@ -194,10 +179,29 @@ object Span {
     }
   }
 
-  object Real {
+  object Local {
     def apply(spanContext: SpanContext, initialOperationName: String, initialSpanTags: Map[String, Span.TagValue],
-        initialMetricTags: Map[String, String], startTimestampMicros: Long, reporterRegistry: ReporterRegistryImpl, tracer: Tracer): Real =
-      new Real(spanContext, initialOperationName, initialSpanTags, initialMetricTags, startTimestampMicros, reporterRegistry, tracer)
+        initialMetricTags: Map[String, String], startTimestampMicros: Long, reporterRegistry: ReporterRegistryImpl): Local =
+      new Local(spanContext, initialOperationName, initialSpanTags, initialMetricTags, startTimestampMicros, reporterRegistry)
+  }
+
+
+  final class Remote(val context: SpanContext) extends Span {
+    override def isEmpty(): Boolean = false
+    override def isLocal(): Boolean = false
+    override def annotate(annotation: Annotation): Span = this
+    override def addSpanTag(key: String, value: String): Span = this
+    override def addSpanTag(key: String, value: Long): Span = this
+    override def addSpanTag(key: String, value: Boolean): Span = this
+    override def addMetricTag(key: String, value: String): Span = this
+    override def setOperationName(name: String): Span = this
+    override def disableMetricsCollection(): Span = this
+    override def finish(finishTimestampMicros: Long): Unit = {}
+  }
+
+  object Remote {
+    def apply(spanContext: SpanContext): Remote =
+      new Remote(spanContext)
   }
 
   sealed trait TagValue

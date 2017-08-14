@@ -8,8 +8,8 @@ import kamon.util.HexCodec
 import scala.util.Try
 
 trait IdentityProvider {
-  def traceIdentifierGenerator(): IdentityProvider.Generator
-  def spanIdentifierGenerator(): IdentityProvider.Generator
+  def traceIdGenerator(): IdentityProvider.Generator
+  def spanIdGenerator(): IdentityProvider.Generator
 }
 
 object IdentityProvider {
@@ -57,8 +57,8 @@ object IdentityProvider {
       } getOrElse(IdentityProvider.NoIdentifier)
     }
 
-    override def traceIdentifierGenerator(): Generator = longGenerator
-    override def spanIdentifierGenerator(): Generator = longGenerator
+    override def traceIdGenerator(): Generator = longGenerator
+    override def spanIdGenerator(): Generator = longGenerator
   }
 
   object Default {
@@ -97,7 +97,7 @@ object IdentityProvider {
       } getOrElse(IdentityProvider.NoIdentifier)
     }
 
-    override def traceIdentifierGenerator(): Generator = doubleLongGenerator
+    override def traceIdGenerator(): Generator = doubleLongGenerator
   }
 
   object DoubleSizeTraceID {

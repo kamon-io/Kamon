@@ -16,50 +16,34 @@
 
 package kamon.trace
 
+import kamon.context.{Context, TextMap}
 import kamon.testkit.SpanBuilding
 import kamon.trace.IdentityProvider.Identifier
 import kamon.trace.SpanContext.SamplingDecision
 import org.scalatest.{Matchers, OptionValues, WordSpecLike}
 
 
-class ExtendedB3SpanContextCodecSpec extends WordSpecLike with Matchers with OptionValues with SpanBuilding {
-  val identityProvider = IdentityProvider.Default()
-  val extendedB3Codec = SpanContextCodec.ExtendedB3(identityProvider)
+class B3SpanCodecSpec extends WordSpecLike with Matchers with OptionValues with SpanBuilding {
+  val extendedB3Codec = SpanCodec.B3()
 
   "The ExtendedB3 SpanContextCodec" should {
     "return a TextMap containing the SpanContext data" in {
-      val context = testSpanContext()
-      context.baggage.add("some", "baggage")
-      context.baggage.add("more", "baggage")
+      val context = testContext()
 
-      val textMap = extendedB3Codec.inject(context)
+      val textMap = extendedB3Codec.encode(context)
       textMap.get("X-B3-TraceId").value shouldBe "1234"
       textMap.get("X-B3-ParentSpanId").value shouldBe "2222"
       textMap.get("X-B3-SpanId").value shouldBe "4321"
       textMap.get("X-B3-Sampled").value shouldBe "1"
-      textMap.get("X-B3-Extra-Baggage").value shouldBe "some=baggage;more=baggage"
     }
 
-    "allow to provide the TextMap to be used for encoding" in {
-      val context = testSpanContext()
-      context.baggage.add("some", "baggage")
-      context.baggage.add("more", "baggage")
 
-      val textMap = TextMap.Default()
-      extendedB3Codec.inject(context, textMap)
-      textMap.get("X-B3-TraceId").value shouldBe "1234"
-      textMap.get("X-B3-ParentSpanId").value shouldBe "2222"
-      textMap.get("X-B3-SpanId").value shouldBe "4321"
-      textMap.get("X-B3-Sampled").value shouldBe "1"
-      textMap.get("X-B3-Extra-Baggage").value shouldBe "some=baggage;more=baggage"
-    }
-
-    "not inject anything if the SpanContext is empty" in {
-      val textMap = extendedB3Codec.inject(SpanContext.EmptySpanContext)
+    "not inject anything if there is no Span in the Context" in {
+      val textMap = extendedB3Codec.encode(Context.Empty)
       textMap.values shouldBe empty
     }
 
-    "extract a SpanContext from a TextMap when all fields are set" in {
+    "extract a RemoteSpan from a TextMap when all fields are set" in {
       val textMap = TextMap.Default()
       textMap.put("X-B3-TraceId", "1234")
       textMap.put("X-B3-ParentSpanId", "2222")
@@ -67,15 +51,11 @@ class ExtendedB3SpanContextCodecSpec extends WordSpecLike with Matchers with Opt
       textMap.put("X-B3-Sampled", "1")
       textMap.put("X-B3-Extra-Baggage", "some=baggage;more=baggage")
 
-      val spanContext = extendedB3Codec.extract(textMap).value
+      val spanContext = extendedB3Codec.decode(textMap, Context.Empty).get(Span.ContextKey).context()
       spanContext.traceID.string shouldBe "1234"
       spanContext.spanID.string shouldBe "4321"
       spanContext.parentID.string shouldBe "2222"
       spanContext.samplingDecision shouldBe SamplingDecision.Sample
-      spanContext.baggage.getAll() should contain allOf(
-        "some" -> "baggage",
-        "more" -> "baggage"
-      )
     }
 
     "decode the sampling decision based on the X-B3-Sampled header" in {
@@ -93,19 +73,27 @@ class ExtendedB3SpanContextCodecSpec extends WordSpecLike with Matchers with Opt
       noSamplingTextMap.put("X-B3-TraceId", "1234")
       noSamplingTextMap.put("X-B3-SpanId", "4321")
 
-      extendedB3Codec.extract(sampledTextMap).value.samplingDecision shouldBe SamplingDecision.Sample
-      extendedB3Codec.extract(notSampledTextMap).value.samplingDecision shouldBe SamplingDecision.DoNotSample
-      extendedB3Codec.extract(noSamplingTextMap).value.samplingDecision shouldBe SamplingDecision.Unknown
+      extendedB3Codec.decode(sampledTextMap, Context.Empty)
+        .get(Span.ContextKey).context().samplingDecision shouldBe SamplingDecision.Sample
+
+      extendedB3Codec.decode(notSampledTextMap, Context.Empty)
+        .get(Span.ContextKey).context().samplingDecision shouldBe SamplingDecision.DoNotSample
+
+      extendedB3Codec.decode(noSamplingTextMap, Context.Empty)
+        .get(Span.ContextKey).context().samplingDecision shouldBe SamplingDecision.Unknown
     }
 
     "not include the X-B3-Sampled header if the sampling decision is unknown" in {
-      val sampledSpanContext = testSpanContext()
-      val notSampledSpanContext = testSpanContext().copy(samplingDecision = SamplingDecision.DoNotSample)
-      val unknownSamplingSpanContext = testSpanContext().copy(samplingDecision = SamplingDecision.Unknown)
+      val context = testContext()
+      val sampledSpanContext = context.get(Span.ContextKey).context()
+      val notSampledSpanContext = Context.Empty.withKey(Span.ContextKey,
+        Span.Remote(sampledSpanContext.copy(samplingDecision = SamplingDecision.DoNotSample)))
+      val unknownSamplingSpanContext = Context.Empty.withKey(Span.ContextKey,
+        Span.Remote(sampledSpanContext.copy(samplingDecision = SamplingDecision.Unknown)))
 
-      extendedB3Codec.inject(sampledSpanContext).get("X-B3-Sampled").value shouldBe("1")
-      extendedB3Codec.inject(notSampledSpanContext).get("X-B3-Sampled").value shouldBe("0")
-      extendedB3Codec.inject(unknownSamplingSpanContext).get("X-B3-Sampled") shouldBe empty
+      extendedB3Codec.encode(context).get("X-B3-Sampled").value shouldBe("1")
+      extendedB3Codec.encode(notSampledSpanContext).get("X-B3-Sampled").value shouldBe("0")
+      extendedB3Codec.encode(unknownSamplingSpanContext).get("X-B3-Sampled") shouldBe empty
     }
 
     "use the Debug flag to override the sampling decision, if provided." in {
@@ -115,7 +103,7 @@ class ExtendedB3SpanContextCodecSpec extends WordSpecLike with Matchers with Opt
       textMap.put("X-B3-Sampled", "0")
       textMap.put("X-B3-Flags", "1")
 
-      val spanContext = extendedB3Codec.extract(textMap).value
+      val spanContext = extendedB3Codec.decode(textMap, Context.Empty).get(Span.ContextKey).context()
       spanContext.samplingDecision shouldBe SamplingDecision.Sample
     }
 
@@ -125,7 +113,7 @@ class ExtendedB3SpanContextCodecSpec extends WordSpecLike with Matchers with Opt
       textMap.put("X-B3-SpanId", "4321")
       textMap.put("X-B3-Flags", "1")
 
-      val spanContext = extendedB3Codec.extract(textMap).value
+      val spanContext = extendedB3Codec.decode(textMap, Context.Empty).get(Span.ContextKey).context()
       spanContext.samplingDecision shouldBe SamplingDecision.Sample
     }
 
@@ -134,12 +122,11 @@ class ExtendedB3SpanContextCodecSpec extends WordSpecLike with Matchers with Opt
       textMap.put("X-B3-TraceId", "1234")
       textMap.put("X-B3-SpanId", "4321")
 
-      val spanContext = extendedB3Codec.extract(textMap).value
+      val spanContext = extendedB3Codec.decode(textMap, Context.Empty).get(Span.ContextKey).context()
       spanContext.traceID.string shouldBe "1234"
       spanContext.spanID.string shouldBe "4321"
       spanContext.parentID shouldBe IdentityProvider.NoIdentifier
       spanContext.samplingDecision shouldBe SamplingDecision.Unknown
-      spanContext.baggage.getAll() shouldBe empty
     }
 
     "do not extract a SpanContext if Trace ID and Span ID are not provided" in {
@@ -157,34 +144,26 @@ class ExtendedB3SpanContextCodecSpec extends WordSpecLike with Matchers with Opt
       noIds.put("X-B3-Sampled", "0")
       noIds.put("X-B3-Flags", "1")
 
-      extendedB3Codec.extract(onlyTraceID) shouldBe empty
-      extendedB3Codec.extract(onlySpanID) shouldBe empty
-      extendedB3Codec.extract(noIds) shouldBe empty
+      extendedB3Codec.decode(onlyTraceID, Context.Empty).get(Span.ContextKey) shouldBe Span.Empty
+      extendedB3Codec.decode(onlySpanID, Context.Empty).get(Span.ContextKey) shouldBe Span.Empty
+      extendedB3Codec.decode(noIds, Context.Empty).get(Span.ContextKey) shouldBe Span.Empty
     }
 
-    "round trip a SpanContext from TextMap -> SpanContext -> TextMap" in {
+    "round trip a Span from TextMap -> Context -> TextMap" in {
       val textMap = TextMap.Default()
       textMap.put("X-B3-TraceId", "1234")
       textMap.put("X-B3-ParentSpanId", "2222")
       textMap.put("X-B3-SpanId", "4321")
       textMap.put("X-B3-Sampled", "1")
-      textMap.put("X-B3-Extra-Baggage", "some=baggage;more=baggage")
 
-      val spanContext = extendedB3Codec.extract(textMap).value
-      val injectTextMap = extendedB3Codec.inject(spanContext)
+      val context = extendedB3Codec.decode(textMap, Context.Empty)
+      val injectTextMap = extendedB3Codec.encode(context)
 
       textMap.values.toSeq should contain theSameElementsAs(injectTextMap.values.toSeq)
     }
 
-    "round trip a baggage that has special characters in there" in {
-      val spanContext = testSpanContext()
-      spanContext.baggage.add("key-with-!specials", "value=with~spec;als")
-
-      val textMap = extendedB3Codec.inject(spanContext)
-      val extractedSpanContext = extendedB3Codec.extract(textMap).value
-      extractedSpanContext.baggage.getAll().values.toSeq should contain theSameElementsAs(spanContext.baggage.getAll().values.toSeq)
-    }
-
+    /*
+    // TODO: Should we be supporting this use case? maybe even have the concept of Debug requests ourselves?
     "internally carry the X-B3-Flags value so that it can be injected in outgoing requests" in {
       val textMap = TextMap.Default()
       textMap.put("X-B3-TraceId", "1234")
@@ -192,19 +171,22 @@ class ExtendedB3SpanContextCodecSpec extends WordSpecLike with Matchers with Opt
       textMap.put("X-B3-SpanId", "4321")
       textMap.put("X-B3-Sampled", "1")
       textMap.put("X-B3-Flags", "1")
-      textMap.put("X-B3-Extra-Baggage", "some=baggage;more=baggage")
 
       val spanContext = extendedB3Codec.extract(textMap).value
       val injectTextMap = extendedB3Codec.inject(spanContext)
 
       injectTextMap.get("X-B3-Flags").value shouldBe("1")
-    }
+    }*/
   }
 
-  def testSpanContext(): SpanContext =
-    createSpanContext().copy(
+  def testContext(): Context = {
+    val spanContext = createSpanContext().copy(
       traceID = Identifier("1234", Array[Byte](1, 2, 3, 4)),
       spanID = Identifier("4321", Array[Byte](4, 3, 2, 1)),
       parentID = Identifier("2222", Array[Byte](2, 2, 2, 2))
     )
+
+    Context.create().withKey(Span.ContextKey, Span.Remote(spanContext))
+  }
+
 }

@@ -6,8 +6,8 @@ import org.scalactic.TimesOnInt._
 
 class DefaultIdentityGeneratorSpec extends WordSpecLike with Matchers with OptionValues {
   val idProvider = IdentityProvider.Default()
-  val traceGenerator = idProvider.traceIdentifierGenerator()
-  val spanGenerator = idProvider.spanIdentifierGenerator()
+  val traceGenerator = idProvider.traceIdGenerator()
+  val spanGenerator = idProvider.spanIdGenerator()
 
   validateGenerator("TraceID Generator", traceGenerator)
   validateGenerator("SpanID Generator", spanGenerator)

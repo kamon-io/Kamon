@@ -13,34 +13,33 @@
  * =========================================================================================
  */
 
-package kamon
-package util
+package kamon.context
 
-import kamon.trace.Span
+import kamon.Kamon
 
 
 /**
   * Utility trait that marks objects carrying a reference to a Span.
   *
   */
-trait HasSpan {
-  def span: Span
+trait HasContext {
+  def context: Context
 }
 
-object HasSpan {
-  private case class Default(span: Span) extends HasSpan
+object HasContext {
+  private case class Default(context: Context) extends HasContext
 
   /**
     * Construct a HasSpan instance that references the provided Span.
     *
     */
-  def from(span: Span): HasSpan =
-    Default(span)
+  def from(context: Context): HasContext =
+    Default(context)
 
   /**
     * Construct a HasSpan instance that references the currently ActiveSpan in Kamon's tracer.
     *
     */
-  def fromActiveSpan(): HasSpan =
-    Default(Kamon.activeSpan())
+  def fromCurrentContext(): HasContext =
+    Default(Kamon.currentContext())
 }
