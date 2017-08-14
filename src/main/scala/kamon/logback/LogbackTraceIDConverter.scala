@@ -19,12 +19,14 @@ package kamon.logback
 import ch.qos.logback.classic.pattern.ClassicConverter
 import ch.qos.logback.classic.spi.ILoggingEvent
 import kamon.Kamon
-import kamon.trace.IdentityProvider
+import kamon.trace.{IdentityProvider, Span}
 
 class LogbackTraceIDConverter extends ClassicConverter {
 
   override def convert(event: ILoggingEvent): String = {
-    val traceID = Kamon.activeSpan().context().traceID
+    val currentSpan = Kamon.currentContext().get(Span.ContextKey)
+    val traceID = currentSpan.context().traceID
+
     if(traceID == IdentityProvider.NoIdentifier)
       "undefined"
     else

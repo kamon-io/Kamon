@@ -19,6 +19,8 @@ package kamon.logback
 import ch.qos.logback.classic.joran.JoranConfigurator
 import ch.qos.logback.classic.{Logger, LoggerContext}
 import kamon.Kamon
+import kamon.context.Context
+import kamon.trace.Span
 import org.scalatest._
 import org.slf4j.LoggerFactory
 
@@ -47,55 +49,16 @@ class LogbackSpanConverterSpec extends WordSpec with Matchers {
 
     "a span is initialized" should {
       "report the its context" in {
-        val span = Kamon.buildSpan("my-span").startActive()
-        val traceID = span.context().traceID
-        span.addBaggage("my-key", "asdf")
         val (logger, appender) = initLogger("test-logback-token")
-        logger.info("")
+        val span = Kamon.buildSpan("my-span").start()
+        val traceID = span.context().traceID
+        val contextWithSpan = Context.create(Span.ContextKey, span)
+
+        Kamon.withContext(contextWithSpan) {
+          logger.info("")
+        }
+
         appender.getLastLine shouldBe traceID.string
-        span.deactivate()
-      }
-    }
-  }
-
-  "Invalid BaggageConverter" when {
-    "a span is uninitialized" should {
-      "report an undefined context" in {
-        val (logger, appender) = initLogger("test-logback-baggage-invalid")
-        logger.info("")
-        appender.getLastLine should be ("undefined")
-      }
-    }
-
-    "a span is initialized" should {
-      "report an undefined context" in {
-        val span = Kamon.buildSpan("my-span").startActive
-        span.addBaggage("my-key", "my-value")
-        val (logger, appender) = initLogger("test-logback-baggage-invalid")
-        logger.info("")
-        appender.getLastLine should be ("undefined")
-        span.deactivate()
-      }
-    }
-  }
-
-  "Valid BaggageConverter" when {
-    "a span is uninitialized" should {
-      "report an undefined context" in {
-        val (logger, appender) = initLogger("test-logback-baggage-valid")
-        logger.info("")
-        appender.getLastLine should be ("undefined")
-      }
-    }
-
-    "a span is initialized" should {
-      "report an undefined context" in {
-        val span = Kamon.buildSpan("my-span").startActive
-        span.addBaggage("my-key", "my-value")
-        val (logger, appender) = initLogger("test-logback-baggage-valid")
-        logger.info("")
-        appender.getLastLine should be ("my-value")
-        span.deactivate()
       }
     }
   }
