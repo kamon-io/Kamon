@@ -94,6 +94,10 @@ object Kamon extends MetricLookup with ReporterRegistry with Tracer {
   override def buildSpan(operationName: String): Tracer.SpanBuilder =
     _tracer.buildSpan(operationName)
 
+
+  override def identityProvider: IdentityProvider =
+    _tracer.identityProvider
+
   def currentContext(): Context =
     _contextStorage.current()
 

@@ -14,5 +14,5 @@ class ContextCodecSpec extends WordSpec with Matchers {
     }
   }
 
-  val ContextCodec = new Codec(Kamon.config())
+  val ContextCodec = new Codec(Kamon.identityProvider, Kamon.config())
 }

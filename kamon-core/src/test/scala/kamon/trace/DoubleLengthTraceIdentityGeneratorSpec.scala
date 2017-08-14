@@ -6,8 +6,8 @@ import org.scalatest.{Matchers, OptionValues, WordSpecLike}
 
 class DoubleLengthTraceIdentityGeneratorSpec extends WordSpecLike with Matchers with OptionValues {
   val idProvider = IdentityProvider.DoubleSizeTraceID()
-  val traceGenerator = idProvider.traceIdentifierGenerator()
-  val spanGenerator = idProvider.spanIdentifierGenerator()
+  val traceGenerator = idProvider.traceIdGenerator()
+  val spanGenerator = idProvider.spanIdGenerator()
 
   "The DoubleSizeTraceID identity provider" when {
     "generating trace identifiers" should {

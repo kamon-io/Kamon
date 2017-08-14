@@ -29,6 +29,7 @@ import scala.util.Try
 
 trait Tracer {
   def buildSpan(operationName: String): SpanBuilder
+  def identityProvider: IdentityProvider
 }
 
 object Tracer {
@@ -39,12 +40,15 @@ object Tracer {
     private[Tracer] val tracerMetrics = new TracerMetrics(metrics)
     @volatile private[Tracer] var joinRemoteParentsWithSameSpanID: Boolean = true
     @volatile private[Tracer] var configuredSampler: Sampler = Sampler.Never
-    @volatile private[Tracer] var identityProvider: IdentityProvider = IdentityProvider.Default()
+    @volatile private[Tracer] var _identityProvider: IdentityProvider = IdentityProvider.Default()
 
     reconfigure(initialConfig)
 
     override def buildSpan(operationName: String): SpanBuilder =
       new SpanBuilder(operationName, this, reporterRegistry)
+
+    override def identityProvider: IdentityProvider =
+      this._identityProvider
 
     def sampler: Sampler =
       configuredSampler
@@ -69,7 +73,7 @@ object Tracer {
 
         configuredSampler = newSampler
         joinRemoteParentsWithSameSpanID = newJoinRemoteParentsWithSameSpanID
-        identityProvider = newIdentityProvider
+        _identityProvider = newIdentityProvider
 
       }.failed.foreach {
         ex => logger.error("Unable to reconfigure Kamon Tracer", ex)
@@ -150,12 +154,12 @@ object Tracer {
       if(parent.isRemote() && tracer.joinRemoteParentsWithSameSpanID)
         parent.context().copy(samplingDecision = samplingDecision)
       else
-        parent.context().createChild(tracer.identityProvider.spanIdentifierGenerator().generate(), samplingDecision)
+        parent.context().createChild(tracer._identityProvider.spanIdGenerator().generate(), samplingDecision)
 
     private def newSpanContext(samplingDecision: SamplingDecision): SpanContext =
       SpanContext(
-        traceID = tracer.identityProvider.traceIdentifierGenerator().generate(),
-        spanID = tracer.identityProvider.spanIdentifierGenerator().generate(),
+        traceID = tracer._identityProvider.traceIdGenerator().generate(),
+        spanID = tracer._identityProvider.spanIdGenerator().generate(),
         parentID = IdentityProvider.NoIdentifier,
         samplingDecision = samplingDecision
       )

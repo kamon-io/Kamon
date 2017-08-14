@@ -2,11 +2,13 @@ package kamon
 package context
 
 import com.typesafe.config.Config
+import kamon.trace.IdentityProvider
 import kamon.util.DynamicAccess
 import org.slf4j.LoggerFactory
+
 import scala.collection.mutable
 
-class Codec(initialConfig: Config) {
+class Codec(identityProvider: IdentityProvider, initialConfig: Config) {
   private val log = LoggerFactory.getLogger(classOf[Codec])
 
   @volatile private var httpHeaders: Codec.ForContext[TextMap] = new Codec.HttpHeaders(Map.empty)
@@ -19,14 +21,6 @@ class Codec(initialConfig: Config) {
 
   def reconfigure(config: Config): Unit = {
     httpHeaders = new Codec.HttpHeaders(readEntryCodecs("kamon.context.encoding.http-headers", config))
-
-
-    // Kamon.contextCodec.httpHeaderExport(current)
-    // Kamon.exportContext(HTTP, context)
-    // Kamon.importContext(HTTP, textMap)
-    // Kamon.currentContext()
-    // Kamon.storeContext(context)
-
   }
 
   private def readEntryCodecs[T](rootKey: String, config: Config): Map[String, Codec.ForEntry[T]] = {
@@ -101,11 +95,11 @@ object Codec {
       context
     }
   }
-
 }
 
 
 trait TextMap {
+
   def get(key: String): Option[String]
 
   def put(key: String, value: String): Unit
@@ -116,17 +110,21 @@ trait TextMap {
 object TextMap {
 
   class Default extends TextMap {
-    private val storage = mutable.Map.empty[String, String]
+    private val storage =
+      mutable.Map.empty[String, String]
 
-    override def get(key: String): Option[String] = storage.get(key)
+    override def get(key: String): Option[String] =
+      storage.get(key)
 
-    override def put(key: String, value: String): Unit = storage.put(key, value)
+    override def put(key: String, value: String): Unit =
+      storage.put(key, value)
 
-    override def values: Iterator[(String, String)] = storage.toIterator
+    override def values: Iterator[(String, String)] =
+      storage.toIterator
   }
 
   object Default {
-    def apply(): Default = new Default()
+    def apply(): Default =
+      new Default()
   }
-
 }

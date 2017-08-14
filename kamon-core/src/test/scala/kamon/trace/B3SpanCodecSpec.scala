@@ -23,9 +23,8 @@ import kamon.trace.SpanContext.SamplingDecision
 import org.scalatest.{Matchers, OptionValues, WordSpecLike}
 
 
-class ExtendedB3SpanContextCodecSpec extends WordSpecLike with Matchers with OptionValues with SpanBuilding {
-  val identityProvider = IdentityProvider.Default()
-  val extendedB3Codec = SpanContextCodec.ExtendedB3(identityProvider)
+class B3SpanCodecSpec extends WordSpecLike with Matchers with OptionValues with SpanBuilding {
+  val extendedB3Codec = SpanCodec.B3()
 
   "The ExtendedB3 SpanContextCodec" should {
     "return a TextMap containing the SpanContext data" in {

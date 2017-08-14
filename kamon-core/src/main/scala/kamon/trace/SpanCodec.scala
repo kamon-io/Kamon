@@ -17,14 +17,15 @@ package kamon.trace
 
 import java.net.{URLDecoder, URLEncoder}
 
+import kamon.Kamon
 import kamon.context.{Codec, Context, TextMap}
 import kamon.trace.SpanContext.SamplingDecision
 
 
-object SpanContextCodec {
+object SpanCodec {
 
-  class ExtendedB3(identityProvider: IdentityProvider) extends Codec.ForEntry[TextMap] {
-    import ExtendedB3.Headers
+  class B3 extends Codec.ForEntry[TextMap] {
+    import B3.Headers
 
     override def encode(context: Context): TextMap = {
       val span = context.get(Span.ContextKey)
@@ -45,17 +46,18 @@ object SpanContextCodec {
     }
 
     override def decode(carrier: TextMap, context: Context): Context = {
+      val identityProvider = Kamon.tracer.identityProvider
       val traceID = carrier.get(Headers.TraceIdentifier)
-        .map(id => identityProvider.traceIdentifierGenerator().from(urlDecode(id)))
+        .map(id => identityProvider.traceIdGenerator().from(urlDecode(id)))
         .getOrElse(IdentityProvider.NoIdentifier)
 
       val spanID = carrier.get(Headers.SpanIdentifier)
-        .map(id => identityProvider.spanIdentifierGenerator().from(urlDecode(id)))
+        .map(id => identityProvider.spanIdGenerator().from(urlDecode(id)))
         .getOrElse(IdentityProvider.NoIdentifier)
 
       if(traceID != IdentityProvider.NoIdentifier && spanID != IdentityProvider.NoIdentifier) {
         val parentID = carrier.get(Headers.ParentSpanIdentifier)
-          .map(id => identityProvider.spanIdentifierGenerator().from(urlDecode(id)))
+          .map(id => identityProvider.spanIdGenerator().from(urlDecode(id)))
           .getOrElse(IdentityProvider.NoIdentifier)
 
         val flags = carrier.get(Headers.Flags)
@@ -81,10 +83,10 @@ object SpanContextCodec {
     private def urlDecode(s: String): String = URLDecoder.decode(s, "UTF-8")
   }
 
-  object ExtendedB3 {
+  object B3 {
 
-    def apply(identityProvider: IdentityProvider): ExtendedB3 =
-      new ExtendedB3(identityProvider)
+    def apply(): B3 =
+      new B3()
 
     object Headers {
       val TraceIdentifier = "X-B3-TraceId"
