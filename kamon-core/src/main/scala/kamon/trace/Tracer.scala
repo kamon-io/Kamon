@@ -13,148 +13,156 @@
  * =========================================================================================
  */
 
-
 package kamon.trace
 
-import java.util.concurrent.ThreadLocalRandom
-
 import com.typesafe.config.Config
-import io.opentracing.propagation.{Format, TextMap}
-import io.opentracing.propagation.Format.Builtin.{BINARY, HTTP_HEADERS, TEXT_MAP}
-import io.opentracing.util.ThreadLocalActiveSpanSource
-import kamon.ReporterRegistryImpl
+import kamon.{Kamon, ReporterRegistryImpl}
 import kamon.metric.MetricLookup
-import kamon.util.Clock
+import kamon.trace.Span.TagValue
+import kamon.trace.SpanContext.SamplingDecision
+import kamon.trace.Tracer.SpanBuilder
+import kamon.util.{Clock, DynamicAccess}
 import org.slf4j.LoggerFactory
 
+import scala.collection.immutable
+import scala.util.Try
 
-class Tracer(metrics: MetricLookup, reporterRegistry: ReporterRegistryImpl, initialConfig: Config)
-    extends ThreadLocalActiveSpanSource with io.opentracing.Tracer {
+trait Tracer {
+  def buildSpan(operationName: String): SpanBuilder
+  def identityProvider: IdentityProvider
+}
 
-  private val logger = LoggerFactory.getLogger(classOf[Tracer])
-  private val tracerMetrics = new TracerMetrics(metrics)
+object Tracer {
 
-  @volatile private var configuredSampler: Sampler = Sampler.never
-  @volatile private var textMapSpanContextCodec = SpanContextCodec.TextMap
-  @volatile private var httpHeaderSpanContextCodec = SpanContextCodec.ZipkinB3
+  final class Default(metrics: MetricLookup, reporterRegistry: ReporterRegistryImpl, initialConfig: Config) extends Tracer {
+    private val logger = LoggerFactory.getLogger(classOf[Tracer])
 
-  reconfigure(initialConfig)
+    private[Tracer] val tracerMetrics = new TracerMetrics(metrics)
+    @volatile private[Tracer] var joinRemoteParentsWithSameSpanID: Boolean = true
+    @volatile private[Tracer] var configuredSampler: Sampler = Sampler.Never
+    @volatile private[Tracer] var _identityProvider: IdentityProvider = IdentityProvider.Default()
 
-  override def buildSpan(operationName: String): io.opentracing.Tracer.SpanBuilder =
-    new SpanBuilder(operationName)
+    reconfigure(initialConfig)
 
-  override def extract[C](format: Format[C], carrier: C): io.opentracing.SpanContext = format match {
-    case HTTP_HEADERS => httpHeaderSpanContextCodec.extract(carrier.asInstanceOf[TextMap], configuredSampler)
-    case TEXT_MAP     => textMapSpanContextCodec.extract(carrier.asInstanceOf[TextMap], configuredSampler)
-    case BINARY       => null // TODO: Implement Binary Encoding
-    case _            => null
+    override def buildSpan(operationName: String): SpanBuilder =
+      new SpanBuilder(operationName, this, reporterRegistry)
+
+    override def identityProvider: IdentityProvider =
+      this._identityProvider
+
+    def sampler: Sampler =
+      configuredSampler
+
+    private[kamon] def reconfigure(config: Config): Unit = synchronized {
+      Try {
+        val dynamic = new DynamicAccess(getClass.getClassLoader)
+        val traceConfig = config.getConfig("kamon.trace")
+
+        val newSampler = traceConfig.getString("sampler") match {
+          case "always" => Sampler.Always
+          case "never" => Sampler.Never
+          case "random" => Sampler.random(traceConfig.getDouble("random-sampler.probability"))
+          case other => sys.error(s"Unexpected sampler name $other.")
+        }
+
+        val newJoinRemoteParentsWithSameSpanID = traceConfig.getBoolean("join-remote-parents-with-same-span-id")
+
+        val newIdentityProvider = dynamic.createInstanceFor[IdentityProvider](
+          traceConfig.getString("identity-provider"), immutable.Seq.empty[(Class[_], AnyRef)]
+        ).get
+
+        configuredSampler = newSampler
+        joinRemoteParentsWithSameSpanID = newJoinRemoteParentsWithSameSpanID
+        _identityProvider = newIdentityProvider
+
+      }.failed.foreach {
+        ex => logger.error("Unable to reconfigure Kamon Tracer", ex)
+      }
+    }
   }
 
-  override def inject[C](spanContext: io.opentracing.SpanContext, format: Format[C], carrier: C): Unit = format match {
-    case HTTP_HEADERS => httpHeaderSpanContextCodec.inject(spanContext.asInstanceOf[SpanContext], carrier.asInstanceOf[TextMap])
-    case TEXT_MAP     => textMapSpanContextCodec.inject(spanContext.asInstanceOf[SpanContext], carrier.asInstanceOf[TextMap])
-    case BINARY       =>
-    case _            =>
+  object Default {
+    def apply(metrics: MetricLookup, reporterRegistry: ReporterRegistryImpl, initialConfig: Config): Default =
+      new Default(metrics, reporterRegistry, initialConfig)
   }
 
-  def sampler: Sampler =
-    configuredSampler
-
-  def setTextMapSpanContextCodec(codec: SpanContextCodec[TextMap]): Unit =
-    this.textMapSpanContextCodec = codec
-
-  def setHttpHeaderSpanContextCodec(codec: SpanContextCodec[TextMap]): Unit =
-    this.httpHeaderSpanContextCodec = codec
-
-  private class SpanBuilder(operationName: String) extends io.opentracing.Tracer.SpanBuilder {
-    private var parentContext: SpanContext = _
+  final class SpanBuilder(operationName: String, tracer: Tracer.Default, reporterRegistry: ReporterRegistryImpl) {
+    private var parentSpan: Span = _
     private var startTimestamp = 0L
-    private var initialTags = Map.empty[String, String]
+    private var initialSpanTags = Map.empty[String, Span.TagValue]
+    private var initialMetricTags = Map.empty[String, String]
     private var useActiveSpanAsParent = true
 
-    override def asChildOf(parent: io.opentracing.SpanContext): io.opentracing.Tracer.SpanBuilder = parent match {
-      case spanContext: kamon.trace.SpanContext =>
-        this.parentContext = spanContext
-        this
-      case null => this
-      case _    => logger.error("Can't extract the parent ID from a non-Kamon SpanContext"); this
-    }
-
-    override def asChildOf(parent: io.opentracing.BaseSpan[_]): io.opentracing.Tracer.SpanBuilder =
-      asChildOf(parent.context())
-
-    override def addReference(referenceType: String, referencedContext: io.opentracing.SpanContext): io.opentracing.Tracer.SpanBuilder = {
-      if(referenceType != null && referenceType.equals(io.opentracing.References.CHILD_OF)) {
-        asChildOf(referencedContext)
-      } else this
-    }
-
-    override def withTag(key: String, value: String): io.opentracing.Tracer.SpanBuilder = {
-      this.initialTags = this.initialTags + (key -> value)
+    def asChildOf(parent: Span): SpanBuilder = {
+      if(parent != Span.Empty) this.parentSpan = parent
       this
     }
 
-    override def withTag(key: String, value: Boolean): io.opentracing.Tracer.SpanBuilder = {
-      this.initialTags = this.initialTags + (key -> value.toString)
+    def withMetricTag(key: String, value: String): SpanBuilder = {
+      this.initialMetricTags = this.initialMetricTags + (key -> value)
       this
     }
 
-    override def withTag(key: String, value: Number): io.opentracing.Tracer.SpanBuilder = {
-      this.initialTags = this.initialTags + (key -> value.toString)
+    def withSpanTag(key: String, value: String): SpanBuilder = {
+      this.initialSpanTags = this.initialSpanTags + (key -> TagValue.String(value))
       this
     }
 
-    override def withStartTimestamp(microseconds: Long): io.opentracing.Tracer.SpanBuilder = {
+    def withSpanTag(key: String, value: Long): SpanBuilder = {
+      this.initialSpanTags = this.initialSpanTags + (key -> TagValue.Number(value))
+      this
+    }
+
+    def withSpanTag(key: String, value: Boolean): SpanBuilder = {
+      val tagValue = if (value) TagValue.True else TagValue.False
+      this.initialSpanTags = this.initialSpanTags + (key -> tagValue)
+      this
+    }
+
+    def withStartTimestamp(microseconds: Long): SpanBuilder = {
       this.startTimestamp = microseconds
       this
     }
 
-    override def ignoreActiveSpan(): io.opentracing.Tracer.SpanBuilder = {
+    def ignoreActiveSpan(): SpanBuilder = {
       this.useActiveSpanAsParent = false
       this
     }
 
-    override def start(): io.opentracing.Span =
-      startManual()
-
-    override def startActive(): io.opentracing.ActiveSpan =
-      makeActive(startManual())
-
-    override def startManual(): Span = {
+    def start(): Span = {
       val startTimestampMicros = if(startTimestamp != 0L) startTimestamp else Clock.microTimestamp()
 
-      if(parentContext == null && useActiveSpanAsParent) {
-        val possibleParent = activeSpan()
-        if(possibleParent != null)
-          parentContext = possibleParent.context().asInstanceOf[SpanContext]
+      val parentSpan: Option[Span] = Option(this.parentSpan)
+        .orElse(if(useActiveSpanAsParent) Some(Kamon.currentContext().get(Span.ContextKey)) else None)
+        .filter(span => span != Span.Empty)
+
+      val samplingDecision: SamplingDecision = parentSpan
+        .map(_.context.samplingDecision)
+        .filter(_ != SamplingDecision.Unknown)
+        .getOrElse(tracer.sampler.decide(operationName, initialSpanTags))
+
+      val spanContext = parentSpan match {
+        case Some(parent) => joinParentContext(parent, samplingDecision)
+        case None         => newSpanContext(samplingDecision)
       }
 
-      val spanContext =
-        if(parentContext != null)
-          new SpanContext(parentContext.traceID, createID(), parentContext.spanID, parentContext.sampled, parentContext.baggageMap)
-        else {
-          val traceID = createID()
-          new SpanContext(traceID, traceID, 0L, configuredSampler.decide(traceID), Map.empty)
-        }
-
-      tracerMetrics.createdSpans.increment()
-      new Span(spanContext, operationName, initialTags, startTimestampMicros, reporterRegistry)
+      tracer.tracerMetrics.createdSpans.increment()
+      Span.Local(spanContext, operationName, initialSpanTags, initialMetricTags, startTimestampMicros, reporterRegistry)
     }
 
-    private def createID(): Long =
-      ThreadLocalRandom.current().nextLong()
-  }
+    private def joinParentContext(parent: Span, samplingDecision: SamplingDecision): SpanContext =
+      if(parent.isRemote() && tracer.joinRemoteParentsWithSameSpanID)
+        parent.context().copy(samplingDecision = samplingDecision)
+      else
+        parent.context().createChild(tracer._identityProvider.spanIdGenerator().generate(), samplingDecision)
 
-
-  private[kamon] def reconfigure(config: Config): Unit = synchronized {
-    val traceConfig = config.getConfig("kamon.trace")
-
-    configuredSampler = traceConfig.getString("sampler") match {
-      case "always" => Sampler.always
-      case "never"  => Sampler.never
-      case "random" => Sampler.random(traceConfig.getDouble("sampler-random.chance"))
-      case other    => sys.error(s"Unexpected sampler name $other.")
-    }
+    private def newSpanContext(samplingDecision: SamplingDecision): SpanContext =
+      SpanContext(
+        traceID = tracer._identityProvider.traceIdGenerator().generate(),
+        spanID = tracer._identityProvider.spanIdGenerator().generate(),
+        parentID = IdentityProvider.NoIdentifier,
+        samplingDecision = samplingDecision
+      )
   }
 
   private final class TracerMetrics(metricLookup: MetricLookup) {

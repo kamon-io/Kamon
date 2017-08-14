@@ -1,0 +1,10 @@
+package kamon
+
+type Entry struct {
+  name text
+  content binary
+}
+
+type Context struct {
+  entries []Entry
+}

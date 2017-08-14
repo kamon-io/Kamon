@@ -8,7 +8,7 @@ import org.scalatest.{Matchers, WordSpecLike}
 class SpanMetrics extends WordSpecLike with Matchers {
   import SpanMetricsTestHelper._
 
-  val errorTag = "error" -> Span.BooleanTagTrueValue
+  val errorTag = "error" -> "true"
   val histogramMetric: HistogramMetric = Kamon.histogram("span.elapsed-time")
 
   "Span Metrics" should {
@@ -16,14 +16,14 @@ class SpanMetrics extends WordSpecLike with Matchers {
       val operation = "span-success"
       val operationTag = "operation" -> operation
 
-      val span = buildSpan(operation).startManual()
-      span.finish()
-
+      buildSpan(operation)
+        .start()
+        .finish()
 
       val histogram = histogramMetric.refine(operationTag)
       histogram.distribution().count === 1
 
-      val errorHistogram = histogramMetric.refine(operationTag, errorTag).distribution()
+      val errorHistogram = histogramMetric.refine(Map(operationTag, errorTag)).distribution()
       errorHistogram.count === 0
 
     }
@@ -32,9 +32,10 @@ class SpanMetrics extends WordSpecLike with Matchers {
       val operation = "span-failure"
       val operationTag = "operation" -> operation
 
-      val span = buildSpan(operation).startManual()
-      span.setTag("error", Span.BooleanTagTrueValue)
-      span.finish()
+      buildSpan(operation)
+        .start()
+        .addSpanTag("error", true)
+        .finish()
 
       val histogram = histogramMetric.refine(operationTag)
       histogram.distribution().count === 0
@@ -57,9 +58,6 @@ object SpanMetricsTestHelper {
         case h: HdrHistogram        => h.snapshot(resetState).distribution
       }
   }
-
-
-
 }
 
 

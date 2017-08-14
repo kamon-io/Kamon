@@ -15,39 +15,44 @@
 
 package kamon.trace
 
+import java.util.concurrent.ThreadLocalRandom
+import kamon.trace.SpanContext.SamplingDecision
+
 trait Sampler {
-  def decide(spanID: Long): Boolean
+  def decide(operationName: String, builderTags: Map[String, Span.TagValue]): SamplingDecision
 }
 
 object Sampler {
-  val always = new Constant(true)
-  val never = new Constant(false)
+  val Always = new Constant(SamplingDecision.Sample)
+  val Never = new Constant(SamplingDecision.DoNotSample)
 
-  def random(chance: Double): Sampler = {
-    assert(chance >= 0D && chance <= 1.0D, "Change should be >= 0 and <= 1.0")
+  def random(probability: Double): Sampler = {
+    assert(probability >= 0D && probability <= 1.0D, "The probability should be >= 0 and <= 1.0")
 
-    chance match {
-      case 0D       => never
-      case 1.0D     => always
+    probability match {
+      case 0D       => Never
+      case 1.0D     => Always
       case anyOther => new Random(anyOther)
     }
   }
 
-  class Constant(decision: Boolean) extends Sampler {
-    override def decide(spanID: Long): Boolean = decision
+  class Constant(decision: SamplingDecision) extends Sampler {
+    override def decide(operationName: String, builderTags: Map[String, Span.TagValue]): SamplingDecision = decision
 
     override def toString: String =
       s"Sampler.Constant(decision = $decision)"
   }
 
-  class Random(chance: Double) extends Sampler {
-    val upperBoundary = Long.MaxValue * chance
+  class Random(probability: Double) extends Sampler {
+    val upperBoundary = Long.MaxValue * probability
     val lowerBoundary = -upperBoundary
 
-    override def decide(spanID: Long): Boolean =
-      spanID >= lowerBoundary && spanID <= upperBoundary
+    override def decide(operationName: String, builderTags: Map[String, Span.TagValue]): SamplingDecision = {
+      val random = ThreadLocalRandom.current().nextLong()
+      if(random >= lowerBoundary && random <= upperBoundary) SamplingDecision.Sample else SamplingDecision.DoNotSample
+    }
 
     override def toString: String =
-      s"Sampler.Random(chance = $chance)"
+      s"Sampler.Random(probability = $probability)"
   }
 }

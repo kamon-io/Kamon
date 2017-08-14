@@ -13,33 +13,33 @@
  * =========================================================================================
  */
 
-package kamon
-package util
+package kamon.context
 
-import io.opentracing.ActiveSpan
-import io.opentracing.ActiveSpan.Continuation
+import kamon.Kamon
+
 
 /**
-  *  Utility trait that marks objects carrying an ActiveSpan.Continuation.
+  * Utility trait that marks objects carrying a reference to a Span.
+  *
   */
-trait HasContinuation {
-  def continuation: Continuation
+trait HasContext {
+  def context: Context
 }
 
-object HasContinuation {
-  private class Default(val continuation: Continuation) extends HasContinuation
+object HasContext {
+  private case class Default(context: Context) extends HasContext
 
   /**
-    * Construct a HasContinuation instance by capturing a continuation from the provided active span.
+    * Construct a HasSpan instance that references the provided Span.
+    *
     */
-  def from(activeSpan: ActiveSpan): HasContinuation = {
-    val continuation = if(activeSpan == null) null else activeSpan.capture()
-    new Default(continuation)
-  }
+  def from(context: Context): HasContext =
+    Default(context)
 
   /**
-    * Constructs a new HasContinuation instance using Kamon's tracer currently active span.
+    * Construct a HasSpan instance that references the currently ActiveSpan in Kamon's tracer.
+    *
     */
-  def fromTracerActiveSpan(): HasContinuation =
-    new Default(Kamon.activeSpanContinuation())
+  def fromCurrentContext(): HasContext =
+    Default(Kamon.currentContext())
 }

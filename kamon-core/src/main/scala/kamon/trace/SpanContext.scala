@@ -15,26 +15,51 @@
 
 package kamon.trace
 
-import java.lang
-import java.util.{Map => JavaMap}
+import kamon.trace.IdentityProvider.Identifier
+import kamon.trace.SpanContext.SamplingDecision
 
-import scala.collection.JavaConverters._
+/**
+  *
+  * @param traceID
+  * @param spanID
+  * @param parentID
+  * @param samplingDecision
+  */
+case class SpanContext(traceID: Identifier, spanID: Identifier, parentID: Identifier, samplingDecision: SamplingDecision) {
 
-class SpanContext(val traceID: Long, val spanID: Long, val parentID: Long, val sampled: Boolean,
-  private var baggage: Map[String, String]) extends io.opentracing.SpanContext {
+  def createChild(childSpanID: Identifier, samplingDecision: SamplingDecision): SpanContext =
+    this.copy(parentID = this.spanID, spanID = childSpanID)
+}
 
-  private[kamon] def addBaggageItem(key: String, value: String): Unit = synchronized {
-    baggage = baggage + (key -> value)
+object SpanContext {
+
+  val EmptySpanContext = SpanContext(
+    traceID = IdentityProvider.NoIdentifier,
+    spanID = IdentityProvider.NoIdentifier,
+    parentID = IdentityProvider.NoIdentifier,
+    samplingDecision = SamplingDecision.DoNotSample
+  )
+
+
+  sealed trait SamplingDecision
+
+  object SamplingDecision {
+
+    /**
+      * The Trace is sampled, all child Spans should be sampled as well.
+      */
+    case object Sample extends SamplingDecision
+
+    /**
+      * The Trace is not sampled, none of the child Spans should be sampled.
+      */
+    case object DoNotSample extends SamplingDecision
+
+    /**
+      * The sampling decision has not been taken yet, the Tracer is free to decide when creating a Span.
+      */
+    case object Unknown extends SamplingDecision
+
   }
 
-  private[kamon] def getBaggage(key: String): String = synchronized {
-    baggage.get(key).getOrElse(null)
-  }
-
-  private[kamon] def baggageMap: Map[String, String] =
-    baggage
-
-  override def baggageItems(): lang.Iterable[JavaMap.Entry[String, String]] = synchronized {
-    baggage.asJava.entrySet()
-  }
 }

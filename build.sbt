@@ -16,11 +16,12 @@
 
 scalaVersion := "2.11.8"
 crossScalaVersions := Seq("2.12.2", "2.11.8", "2.10.6")
+concurrentRestrictions in Global += Tags.limit(Tags.Test, 1)
 
 lazy val kamon = (project in file("."))
   .settings(moduleName := "kamon")
   .settings(noPublishing: _*)
-  .aggregate(core)//, testkit)
+  .aggregate(core)
 
 
 lazy val core = (project in file("kamon-core"))
@@ -33,16 +34,14 @@ lazy val core = (project in file("kamon-core"))
     libraryDependencies ++= Seq(
       "com.typesafe"     % "config"          % "1.3.1",
       "org.slf4j"        % "slf4j-api"       % "1.7.7",
-      "ch.qos.logback" % "logback-classic" % "1.2.2",
       "org.hdrhistogram" % "HdrHistogram"    % "2.1.9",
-      "io.opentracing"   % "opentracing-api" % "0.30.0",
-      "io.opentracing"   % "opentracing-util" % "0.30.0",
-      "com.lihaoyi" %% "fansi" % "0.2.4",
 
-      //"uk.org.lidalia" % "slf4j-test" % "1.1.0" % "test",
-      "org.scalatest" %% "scalatest" % "3.0.1" % "test"
+      "com.lihaoyi" %% "fansi" % "0.2.4",
+      "org.scalatest" %% "scalatest" % "3.0.1" % "test",
+      "ch.qos.logback" % "logback-classic" % "1.2.2" % "test"
     )
   )
+
 //
 //lazy val testkit = (project in file("kamon-testkit"))
 //  .settings(moduleName := "kamon-testkit", resolvers += Resolver.mavenLocal)
