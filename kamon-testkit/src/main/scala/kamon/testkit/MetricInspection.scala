@@ -1,8 +1,23 @@
+/* =========================================================================================
+ * Copyright © 2013-2017 the kamon project <http://kamon.io/>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the specific language governing permissions
+ * and limitations under the License.
+ * =========================================================================================
+ */
+
 package kamon.testkit
 
 import kamon.metric._
-import _root_.scala.collection.concurrent.TrieMap
 
+import _root_.scala.collection.concurrent.TrieMap
 
 trait MetricInspection {
 
@@ -12,7 +27,7 @@ trait MetricInspection {
       instrumentsField.setAccessible(true)
 
       val instruments = instrumentsField.get(metric).asInstanceOf[TrieMap[Map[String, String], _]]
-      val instrumentsWithTheTag = instruments.keys.filter(_.keys.find(_ == tag).nonEmpty)
+      val instrumentsWithTheTag = instruments.keys.filter(_.keys.exists(_ == tag))
       instrumentsWithTheTag.map(t => t(tag)).toSeq
     }
   }
@@ -39,6 +54,14 @@ trait MetricInspection {
       counter match {
         case cm: CounterMetric    => cm.refine(Map.empty[String, String]).value(resetState)
         case c: LongAdderCounter  => c.snapshot(resetState).value
+      }
+  }
+
+  implicit class GaugeMetricSyntax(gauge:  Gauge) {
+    def value(resetState: Boolean = true): Long =
+      gauge match {
+        case gm: GaugeMetric    => gm.refine(Map.empty[String, String]).value(resetState)
+        case g: AtomicLongGauge  => g.snapshot().value
       }
   }
 }
