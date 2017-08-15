@@ -39,7 +39,8 @@ object Tracer {
 
     private[Tracer] val tracerMetrics = new TracerMetrics(metrics)
     @volatile private[Tracer] var joinRemoteParentsWithSameSpanID: Boolean = true
-    @volatile private[Tracer] var configuredSampler: Sampler = Sampler.Never
+    @volatile private[Tracer] var scopeSpanMetrics: Boolean = true
+    @volatile private[Tracer] var _sampler: Sampler = Sampler.Never
     @volatile private[Tracer] var _identityProvider: IdentityProvider = IdentityProvider.Default()
 
     reconfigure(initialConfig)
@@ -51,7 +52,7 @@ object Tracer {
       this._identityProvider
 
     def sampler: Sampler =
-      configuredSampler
+      _sampler
 
     private[kamon] def reconfigure(config: Config): Unit = synchronized {
       Try {
@@ -66,13 +67,14 @@ object Tracer {
         }
 
         val newJoinRemoteParentsWithSameSpanID = traceConfig.getBoolean("join-remote-parents-with-same-span-id")
-
+        val newScopeSpanMetrics = traceConfig.getBoolean("span-metrics.scope-spans-to-parent")
         val newIdentityProvider = dynamic.createInstanceFor[IdentityProvider](
           traceConfig.getString("identity-provider"), immutable.Seq.empty[(Class[_], AnyRef)]
         ).get
 
-        configuredSampler = newSampler
+        _sampler = newSampler
         joinRemoteParentsWithSameSpanID = newJoinRemoteParentsWithSameSpanID
+        scopeSpanMetrics = newScopeSpanMetrics
         _identityProvider = newIdentityProvider
 
       }.failed.foreach {
@@ -136,6 +138,8 @@ object Tracer {
         .orElse(if(useActiveSpanAsParent) Some(Kamon.currentContext().get(Span.ContextKey)) else None)
         .filter(span => span != Span.Empty)
 
+      val nonRemoteParent = parentSpan.filter(s => s.isLocal() && s.nonEmpty())
+
       val samplingDecision: SamplingDecision = parentSpan
         .map(_.context.samplingDecision)
         .filter(_ != SamplingDecision.Unknown)
@@ -147,7 +151,7 @@ object Tracer {
       }
 
       tracer.tracerMetrics.createdSpans.increment()
-      Span.Local(spanContext, operationName, initialSpanTags, initialMetricTags, startTimestampMicros, reporterRegistry)
+      Span.Local(spanContext, nonRemoteParent, operationName, initialSpanTags, initialMetricTags, startTimestampMicros, reporterRegistry, tracer.scopeSpanMetrics)
     }
 
     private def joinParentContext(parent: Span, samplingDecision: SamplingDecision): SpanContext =

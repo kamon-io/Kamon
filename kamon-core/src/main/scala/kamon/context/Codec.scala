@@ -8,7 +8,7 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
 
-class Codec(identityProvider: IdentityProvider, initialConfig: Config) {
+class Codec(initialConfig: Config) {
   private val log = LoggerFactory.getLogger(classOf[Codec])
 
   @volatile private var httpHeaders: Codec.ForContext[TextMap] = new Codec.HttpHeaders(Map.empty)

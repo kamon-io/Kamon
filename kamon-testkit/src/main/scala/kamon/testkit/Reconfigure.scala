@@ -17,6 +17,14 @@ trait Reconfigure {
     applyConfig("kamon.trace.sampler = never")
   }
 
+  def enableSpanMetricScoping(): Unit = {
+    applyConfig("kamon.trace.span-metrics.scope-spans-to-parent = yes")
+  }
+
+  def disableSpanMetricScoping(): Unit = {
+    applyConfig("kamon.trace.span-metrics.scope-spans-to-parent = no")
+  }
+
   private def applyConfig(configString: String): Unit = {
     Kamon.reconfigure(ConfigFactory.parseString(configString).withFallback(Kamon.config()))
   }

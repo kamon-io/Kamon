@@ -3,16 +3,15 @@ package kamon.trace
 import kamon.Kamon
 import kamon.Kamon.buildSpan
 import kamon.metric._
+import kamon.testkit.{MetricInspection, Reconfigure}
 import org.scalatest.{Matchers, WordSpecLike}
 
-class SpanMetrics extends WordSpecLike with Matchers {
-  import SpanMetricsTestHelper._
+class SpanMetrics extends WordSpecLike with Matchers with MetricInspection with Reconfigure {
 
-  val errorTag = "error" -> "true"
-  val histogramMetric: HistogramMetric = Kamon.histogram("span.elapsed-time")
+  sampleAlways()
 
   "Span Metrics" should {
-    "be recorded for successeful execution" in {
+    "be recorded for successful execution" in {
       val operation = "span-success"
       val operationTag = "operation" -> operation
 
@@ -20,11 +19,11 @@ class SpanMetrics extends WordSpecLike with Matchers {
         .start()
         .finish()
 
-      val histogram = histogramMetric.refine(operationTag)
-      histogram.distribution().count === 1
+      val histogram = Span.Metrics.ProcessingTime.refine(Map(operationTag, noErrorTag))
+      histogram.distribution().count shouldBe 1
 
-      val errorHistogram = histogramMetric.refine(Map(operationTag, errorTag)).distribution()
-      errorHistogram.count === 0
+      val errorHistogram = Span.Metrics.ProcessingTime.refine(Map(operationTag, errorTag))
+      errorHistogram.distribution().count shouldBe 0
 
     }
 
@@ -37,28 +36,75 @@ class SpanMetrics extends WordSpecLike with Matchers {
         .addSpanTag("error", true)
         .finish()
 
-      val histogram = histogramMetric.refine(operationTag)
-      histogram.distribution().count === 0
+      val histogram = Span.Metrics.ProcessingTime.refine(Map(operationTag, noErrorTag))
+      histogram.distribution().count shouldBe 0
 
-      val errorHistogram = histogramMetric.refine(operationTag, errorTag).distribution()
-      errorHistogram.count === 1
+      val errorHistogram = Span.Metrics.ProcessingTime.refine(Map(operationTag, errorTag))
+      errorHistogram.distribution().count shouldBe 1
+    }
 
+    "add a parentOperation tag to the metrics if span metrics scoping is enabled" in {
+      val parent = buildSpan("parent").start()
+      val parentOperationTag = "parentOperation" -> "parent"
+
+      val operation = "span-with-parent"
+      val operationTag = "operation" -> operation
+
+      buildSpan(operation)
+        .asChildOf(parent)
+        .start()
+        .addSpanTag("error", false)
+        .finish()
+
+      buildSpan(operation)
+        .asChildOf(parent)
+        .start()
+        .addSpanTag("error", true)
+        .finish()
+
+      val histogram = Span.Metrics.ProcessingTime.refine(Map(operationTag, noErrorTag, parentOperationTag))
+      histogram.distribution().count shouldBe 1
+
+      val errorHistogram = Span.Metrics.ProcessingTime.refine(Map(operationTag, errorTag, parentOperationTag))
+      errorHistogram.distribution().count shouldBe 1
+    }
+
+    "not add any parentOperation tag to the metrics if span metrics scoping is disabled" in withoutSpanScopingEnabled {
+      val parent = buildSpan("parent").start()
+      val parentOperationTag = "parentOperation" -> "parent"
+
+      val operation = "span-with-parent"
+      val operationTag = "operation" -> operation
+
+      buildSpan(operation)
+        .asChildOf(parent)
+        .start()
+        .addSpanTag("error", false)
+        .finish()
+
+      buildSpan(operation)
+        .asChildOf(parent)
+        .start()
+        .addSpanTag("error", true)
+        .finish()
+
+      val histogram = Span.Metrics.ProcessingTime.refine(Map(operationTag, noErrorTag, parentOperationTag))
+      histogram.distribution().count shouldBe 0
+
+      val errorHistogram = Span.Metrics.ProcessingTime.refine(Map(operationTag, errorTag, parentOperationTag))
+      errorHistogram.distribution().count shouldBe 0
     }
   }
 
-}
+  val errorTag = "error" -> "true"
+  val noErrorTag = "error" -> "false"
 
-object SpanMetricsTestHelper {
-
-  implicit class HistogramMetricSyntax(histogram: Histogram) {
-    def distribution(resetState: Boolean = true): Distribution =
-      histogram match {
-        case hm: HistogramMetric    => hm.refine(Map.empty[String, String]).distribution(resetState)
-        case h: AtomicHdrHistogram  => h.snapshot(resetState).distribution
-        case h: HdrHistogram        => h.snapshot(resetState).distribution
-      }
+  private def withoutSpanScopingEnabled[T](f: => T): T = {
+    disableSpanMetricScoping()
+    val evaluated = f
+    enableSpanMetricScoping()
+    evaluated
   }
 }
-
 
 

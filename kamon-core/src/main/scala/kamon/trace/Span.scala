@@ -89,8 +89,8 @@ object Span {
     * @param startTimestampMicros
     * @param spanSink
     */
-  final class Local(spanContext: SpanContext, initialOperationName: String, initialSpanTags: Map[String, Span.TagValue],
-    initialMetricTags: Map[String, String], startTimestampMicros: Long, spanSink: SpanSink) extends Span {
+  final class Local(spanContext: SpanContext, parent: Option[Span], initialOperationName: String, initialSpanTags: Map[String, Span.TagValue],
+    initialMetricTags: Map[String, String], startTimestampMicros: Long, spanSink: SpanSink, scopeSpanMetrics: Boolean) extends Span {
 
     private var collectMetrics: Boolean = true
     private var open: Boolean = true
@@ -167,26 +167,28 @@ object Span {
 
     private def recordSpanMetrics(endTimestampMicros: Long): Unit = {
       val elapsedTime = endTimestampMicros - startTimestampMicros
-      val metricTags = Map("operation" -> operationName) ++ customMetricTags
+      val isError = spanTags.get("error").map {
+        case boolean: TagValue.Boolean  => boolean.text
+        case _                          => TagValue.False.text
+      } getOrElse(TagValue.False.text)
 
-      val isError = spanTags.get("error").exists {
-        errorTag => errorTag != null && errorTag.equals(Span.TagValue.True)
-      }
+      if(scopeSpanMetrics)
+        parent.foreach(parentSpan => customMetricTags = customMetricTags + ("parentOperation" -> parentSpan.asInstanceOf[Local].operationName))
 
-      val refinedMetricTags = if(isError)
-        metricTags + ("error" -> "true")
-      else
-        metricTags
+      val metricTags = Map(
+        "operation" -> operationName,
+        "error" -> isError
+      ) ++ customMetricTags
 
-      val latencyHistogram = Span.Metrics.SpanProcessingTimeMetric.refine(refinedMetricTags)
-      latencyHistogram.record(elapsedTime)
+      Span.Metrics.ProcessingTime.refine(metricTags).record(elapsedTime)
     }
   }
 
   object Local {
-    def apply(spanContext: SpanContext, initialOperationName: String, initialSpanTags: Map[String, Span.TagValue],
-        initialMetricTags: Map[String, String], startTimestampMicros: Long, reporterRegistry: ReporterRegistryImpl): Local =
-      new Local(spanContext, initialOperationName, initialSpanTags, initialMetricTags, startTimestampMicros, reporterRegistry)
+    def apply(spanContext: SpanContext, parent: Option[Span], initialOperationName: String, initialSpanTags: Map[String, Span.TagValue],
+        initialMetricTags: Map[String, String], startTimestampMicros: Long, reporterRegistry: ReporterRegistryImpl,
+        scopeSpanMetrics: Boolean): Local =
+      new Local(spanContext, parent, initialOperationName, initialSpanTags, initialMetricTags, startTimestampMicros, reporterRegistry, scopeSpanMetrics)
   }
 
 
@@ -210,16 +212,25 @@ object Span {
 
   sealed trait TagValue
   object TagValue {
-    sealed trait Boolean extends TagValue
-    case object True extends Boolean
-    case object False extends Boolean
+
+    sealed trait Boolean extends TagValue {
+      def text: java.lang.String
+    }
+
+    case object True extends Boolean {
+      override def text: java.lang.String = "true"
+    }
+
+    case object False extends Boolean {
+      override def text: java.lang.String = "false"
+    }
 
     case class String(string: java.lang.String) extends TagValue
     case class Number(number: Long) extends TagValue
   }
 
   object Metrics {
-    val SpanProcessingTimeMetric = Kamon.histogram("span.processing-time", MeasurementUnit.time.microseconds)
+    val ProcessingTime = Kamon.histogram("span.processing-time", MeasurementUnit.time.microseconds)
     val SpanErrorCount = Kamon.counter("span.error-count")
   }
 
