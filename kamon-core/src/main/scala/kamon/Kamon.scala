@@ -24,7 +24,7 @@ import scala.concurrent.Future
 import java.time.Duration
 import java.util.concurrent.{Executors, ScheduledExecutorService, ScheduledThreadPoolExecutor}
 
-import kamon.context.{Context, Storage}
+import kamon.context.{Codec, Context, Storage}
 import org.slf4j.LoggerFactory
 
 import scala.util.Try
@@ -42,6 +42,7 @@ object Kamon extends MetricLookup with ReporterRegistry with Tracer {
   private val _reporters = new ReporterRegistryImpl(_metrics, _config)
   private val _tracer = Tracer.Default(Kamon, _reporters, _config)
   private val _contextStorage = Storage.ThreadLocal()
+  private val _contextCodec = new Codec(_config)
   private var _onReconfigureHooks = Seq.empty[OnReconfigureHook]
 
   def environment: Environment =
@@ -57,6 +58,7 @@ object Kamon extends MetricLookup with ReporterRegistry with Tracer {
     _metrics.reconfigure(config)
     _reporters.reconfigure(config)
     _tracer.reconfigure(config)
+    _contextCodec.reconfigure(config)
 
     _onReconfigureHooks.foreach(hook => {
       Try(hook.onReconfigure(config)).failed.foreach(error =>
@@ -97,6 +99,9 @@ object Kamon extends MetricLookup with ReporterRegistry with Tracer {
 
   override def identityProvider: IdentityProvider =
     _tracer.identityProvider
+
+  def contextCodec(): Codec =
+      _contextCodec
 
   def currentContext(): Context =
     _contextStorage.current()

@@ -32,7 +32,7 @@ object SpanCodec {
       val carrier = TextMap.Default()
 
       if(span.nonEmpty()) {
-        val spanContext = span.context
+        val spanContext = span.context()
         carrier.put(Headers.TraceIdentifier, urlEncode(spanContext.traceID.string))
         carrier.put(Headers.SpanIdentifier, urlEncode(spanContext.spanID.string))
         carrier.put(Headers.ParentSpanIdentifier, urlEncode(spanContext.parentID.string))
