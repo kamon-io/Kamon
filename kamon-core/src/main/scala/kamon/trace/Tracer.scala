@@ -100,6 +100,12 @@ object Tracer {
       this
     }
 
+    def withTag(key: String, value: String): SpanBuilder = {
+      this.initialMetricTags = this.initialMetricTags + (key -> value)
+      this.initialSpanTags = this.initialSpanTags + (key -> TagValue.String(value))
+      this
+    }
+
     def withMetricTag(key: String, value: String): SpanBuilder = {
       this.initialMetricTags = this.initialMetricTags + (key -> value)
       this

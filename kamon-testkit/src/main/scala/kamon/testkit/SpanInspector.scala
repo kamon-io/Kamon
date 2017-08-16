@@ -27,7 +27,7 @@ class SpanInspector(span: Span) {
     spanData.tags
 
   def metricTags(): Map[String, String] =
-    getField[Span.Local, Map[String, String]](realSpan, "customMetricTags")
+    getField[Span.Local, Map[String, String]](realSpan, "kamon$trace$Span$Local$$customMetricTags")
 
   def startTimestamp(): Long =
     getField[Span.Local, Long](realSpan, "startTimestampMicros")
@@ -42,6 +42,7 @@ class SpanInspector(span: Span) {
 
 
   private def getField[T, R](target: Any, fieldName: String)(implicit classTag: ClassTag[T]): R = {
+    println("TRYING TO ACCESS: " + classTag.runtimeClass)
     val toFinishedSpanMethod = classTag.runtimeClass.getDeclaredField(fieldName)
     toFinishedSpanMethod.setAccessible(true)
     toFinishedSpanMethod.get(target).asInstanceOf[R]

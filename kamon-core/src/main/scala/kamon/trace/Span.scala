@@ -35,6 +35,8 @@ trait Span {
 
   def annotate(annotation: Span.Annotation): Span
 
+  def addTag(key: String, value: String): Span
+
   def addSpanTag(key: String, value: String): Span
 
   def addSpanTag(key: String, value: Long): Span
@@ -72,6 +74,7 @@ object Span {
     override def isEmpty(): Boolean = true
     override def isLocal(): Boolean = true
     override def annotate(annotation: Annotation): Span = this
+    override def addTag(key: String, value: String): Span = this
     override def addSpanTag(key: String, value: String): Span = this
     override def addSpanTag(key: String, value: Long): Span = this
     override def addSpanTag(key: String, value: Boolean): Span = this
@@ -107,6 +110,12 @@ object Span {
     def annotate(annotation: Annotation): Span = synchronized {
       if(sampled && open)
         annotations = annotation :: annotations
+      this
+    }
+
+    override def addTag(key: String, value: String): Span = synchronized {
+      addSpanTag(key, value)
+      addMetricTag(key, value)
       this
     }
 
@@ -196,6 +205,7 @@ object Span {
     override def isEmpty(): Boolean = false
     override def isLocal(): Boolean = false
     override def annotate(annotation: Annotation): Span = this
+    override def addTag(key: String, value: String): Span = this
     override def addSpanTag(key: String, value: String): Span = this
     override def addSpanTag(key: String, value: Long): Span = this
     override def addSpanTag(key: String, value: Boolean): Span = this
