@@ -5,7 +5,6 @@ import fi.iki.elonen.NanoHTTPD
 import fi.iki.elonen.NanoHTTPD.{Response, newFixedLengthResponse}
 import kamon.{Kamon, MetricReporter}
 import kamon.metric._
-import kamon.util.MeasurementUnit
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._

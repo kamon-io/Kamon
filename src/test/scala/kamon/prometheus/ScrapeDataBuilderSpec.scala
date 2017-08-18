@@ -1,9 +1,9 @@
 package kamon.prometheus
 
 import kamon.metric.{DynamicRange, HdrHistogram, MetricDistribution, MetricValue}
-import kamon.util.MeasurementUnit
+import kamon.metric.MeasurementUnit
 import org.scalatest.{Matchers, WordSpec}
-import kamon.util.MeasurementUnit.{information, time, none}
+import kamon.metric.MeasurementUnit.{information, time, none}
 
 class ScrapeDataBuilderSpec extends WordSpec with Matchers {
 

@@ -4,9 +4,9 @@ import java.lang.StringBuilder
 import java.text.DecimalFormat
 
 import kamon.metric.{MetricDistribution, MetricValue}
-import kamon.util.MeasurementUnit
-import kamon.util.MeasurementUnit.{information, time, none}
-import kamon.util.MeasurementUnit.Dimension._
+import kamon.metric.MeasurementUnit
+import kamon.metric.MeasurementUnit.{information, time, none}
+import kamon.metric.MeasurementUnit.Dimension._
 
 class ScrapeDataBuilder(prometheusConfig: PrometheusReporter.Configuration) {
   private val builder = new StringBuilder()
