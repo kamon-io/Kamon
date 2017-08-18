@@ -24,10 +24,10 @@ import java.util.Locale
 import java.util.concurrent.atomic.AtomicReference
 
 import com.typesafe.config.Config
-import kamon.metric._
-import kamon.util.MeasurementUnit.Dimension.{Information, Time}
-import kamon.util.MeasurementUnit.{information, time}
-import kamon.util.{DynamicAccess, MeasurementUnit}
+import kamon.metric.MeasurementUnit.Dimension.{Information, Time}
+import kamon.metric.MeasurementUnit.{information, time}
+import kamon.metric.{MeasurementUnit, _}
+import kamon.util.DynamicAccess
 import kamon.{Kamon, MetricReporter}
 import org.slf4j.LoggerFactory
 
