@@ -93,7 +93,7 @@ object Tracer {
     private var startTimestamp = 0L
     private var initialSpanTags = Map.empty[String, Span.TagValue]
     private var initialMetricTags = Map.empty[String, String]
-    private var useActiveSpanAsParent = true
+    private var useParentFromContext = true
 
     def asChildOf(parent: Span): SpanBuilder = {
       if(parent != Span.Empty) this.parentSpan = parent
@@ -132,8 +132,8 @@ object Tracer {
       this
     }
 
-    def ignoreActiveSpan(): SpanBuilder = {
-      this.useActiveSpanAsParent = false
+    def ignoreParentFromContext(): SpanBuilder = {
+      this.useParentFromContext = false
       this
     }
 
@@ -141,7 +141,7 @@ object Tracer {
       val startTimestampMicros = if(startTimestamp != 0L) startTimestamp else Clock.microTimestamp()
 
       val parentSpan: Option[Span] = Option(this.parentSpan)
-        .orElse(if(useActiveSpanAsParent) Some(Kamon.currentContext().get(Span.ContextKey)) else None)
+        .orElse(if(useParentFromContext) Some(Kamon.currentContext().get(Span.ContextKey)) else None)
         .filter(span => span != Span.Empty)
 
       val nonRemoteParent = parentSpan.filter(s => s.isLocal() && s.nonEmpty())

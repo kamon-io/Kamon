@@ -21,6 +21,7 @@ class TracerSpec extends WordSpec with Matchers with SpanBuilding with OptionVal
 
     "pass the operation name and tags to started Span" in {
       val span = tracer.buildSpan("myOperation")
+        .withTag("both", "both")
         .withMetricTag("metric-tag", "value")
         .withMetricTag("metric-tag", "value")
         .withSpanTag("hello", "world")
@@ -32,16 +33,18 @@ class TracerSpec extends WordSpec with Matchers with SpanBuilding with OptionVal
       val spanData = inspect(span)
       spanData.operationName() shouldBe "myOperation"
       spanData.metricTags() should contain only (
-        ("metric-tag" -> "value"))
+        ("metric-tag" -> "value"),
+        ("both" -> "both"))
 
       spanData.spanTags() should contain allOf(
+        ("both" -> TagValue.String("both")),
         ("hello" -> TagValue.String("world")),
         ("kamon" -> TagValue.String("rulez")),
         ("number" -> TagValue.Number(123)),
         ("boolean" -> TagValue.True))
     }
 
-    "not have any parent Span if there is ActiveSpan and no parent was explicitly given" in {
+    "not have any parent Span if there is no Span in the current context and no parent was explicitly given" in {
       val span = tracer.buildSpan("myOperation").start()
       val spanData = inspect(span)
       spanData.context().parentID shouldBe IdentityProvider.NoIdentifier
@@ -59,10 +62,10 @@ class TracerSpec extends WordSpec with Matchers with SpanBuilding with OptionVal
       parentData.context().spanID shouldBe childData.context().parentID
     }
 
-    "ignore the currently active span as parent if explicitly requested" in {
+    "ignore the span from the current context as parent if explicitly requested" in {
       val parent = tracer.buildSpan("myOperation").start()
       val child = Kamon.withContext(Context.create(Span.ContextKey, parent)) {
-        tracer.buildSpan("childOperation").ignoreActiveSpan().start()
+        tracer.buildSpan("childOperation").ignoreParentFromContext().start()
       }
 
       val childData = inspect(child)

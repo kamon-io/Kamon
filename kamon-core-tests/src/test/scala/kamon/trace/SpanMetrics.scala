@@ -1,8 +1,6 @@
 package kamon.trace
 
-import kamon.Kamon
 import kamon.Kamon.buildSpan
-import kamon.metric._
 import kamon.testkit.{MetricInspection, Reconfigure}
 import org.scalatest.{Matchers, WordSpecLike}
 

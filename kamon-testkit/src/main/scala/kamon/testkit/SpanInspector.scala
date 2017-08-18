@@ -42,7 +42,6 @@ class SpanInspector(span: Span) {
 
 
   private def getField[T, R](target: Any, fieldName: String)(implicit classTag: ClassTag[T]): R = {
-    println("TRYING TO ACCESS: " + classTag.runtimeClass)
     val toFinishedSpanMethod = classTag.runtimeClass.getDeclaredField(fieldName)
     toFinishedSpanMethod.setAccessible(true)
     toFinishedSpanMethod.get(target).asInstanceOf[R]
