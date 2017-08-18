@@ -21,10 +21,10 @@ import java.util
 import java.util.concurrent.{Callable, ExecutorService, Future, TimeUnit}
 
 import kamon.Kamon
-import kamon.util.HasContinuation
+import kamon.context.{Context, HasContext}
 
 
-class ContinuationAwareExecutorService(underlying: ExecutorService) extends ExecutorService {
+class ContextAwareExecutorService(underlying: ExecutorService) extends ExecutorService {
   override def isShutdown: Boolean =
     underlying.isShutdown
 
@@ -81,30 +81,30 @@ class ContinuationAwareExecutorService(underlying: ExecutorService) extends Exec
   }
 }
 
-class ContinuationAwareRunnable(r: Runnable) extends Runnable {
-  val continuation = Kamon.activeSpan().capture()
+class ContinuationAwareRunnable(r: Runnable) extends Runnable with HasContext {
+  override val context: Context = Kamon.currentContext()
 
   override def run(): Unit = {
-    Kamon.withContinuation(continuation) {
+    Kamon.withContext(context) {
       r.run()
     }
   }
 }
 
-class ContinuationAwareCallable[A](c: Callable[A]) extends HasContinuation with Callable[A] {
-  val continuation = Kamon.activeSpan().capture()
+class ContinuationAwareCallable[A](c: Callable[A]) extends HasContext with Callable[A] {
+  override val context: Context = Kamon.currentContext()
 
   override def call(): A = {
-    Kamon.withContinuation(continuation) {
+    Kamon.withContext(context) {
       c.call()
     }
   }
 }
 
-object ContinuationAwareExecutorService {
-  def apply(underlying: ExecutorService): ContinuationAwareExecutorService =
-    new ContinuationAwareExecutorService(underlying)
+object ContextAwareExecutorService {
+  def apply(underlying: ExecutorService): ContextAwareExecutorService =
+    new ContextAwareExecutorService(underlying)
 
   def from(underlying: ExecutorService) =
-    new ContinuationAwareExecutorService(underlying)
+    new ContextAwareExecutorService(underlying)
 }

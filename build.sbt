@@ -14,11 +14,12 @@
  */
 
 resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
-val kamonCore = "io.kamon" %% "kamon-core" % "1.0.0-RC1-1d0548cb8281202738d8d48cbe9cdd62cf209e21"
+val kamonCore    = "io.kamon" %% "kamon-core"    % "1.0.0-RC1-5e0b768f139fc2c5e75d6b5060bd4d0aa48092b0"
+val kamonTestkit = "io.kamon" %% "kamon-testkit" % "1.0.0-RC1-5e0b768f139fc2c5e75d6b5060bd4d0aa48092b0"
 
 lazy val root = (project in file("."))
   .settings(name := "kamon-executors")
   .settings(
       libraryDependencies ++=
         compileScope(kamonCore) ++
-        testScope(scalatest, logbackClassic))
+        testScope(scalatest, logbackClassic, kamonTestkit))

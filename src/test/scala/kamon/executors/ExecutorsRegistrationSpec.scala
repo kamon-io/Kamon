@@ -18,12 +18,12 @@ package kamon.executors
 import org.scalatest.{Matchers, WordSpec}
 import java.util.concurrent.{Executors => JavaExecutors, ForkJoinPool => JavaForkJoinPool}
 
-import kamon.testkit.BaseSpec
+import kamon.testkit.MetricInspection
 import Metrics._
 
 import scala.concurrent.forkjoin.{ForkJoinPool => ScalaForkJoinPool}
 
-class ExecutorsRegistrationSpec extends WordSpec with BaseSpec with Matchers {
+class ExecutorsRegistrationSpec extends WordSpec with Matchers with MetricInspection {
 
   "the Executors registration function" should {
     "accept all types of known executors" in {

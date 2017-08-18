@@ -17,15 +17,14 @@
 
 package kamon.executors
 
-import kamon.testkit.BaseSpec
+import kamon.testkit.MetricInspection
 import org.scalatest.{Matchers, WordSpec}
-
-
 import java.util.concurrent.{Executors => JavaExecutors}
+
 import scala.concurrent.forkjoin.{ForkJoinPool => ScalaForkJoinPool}
 
 
-class ExecutorMetricsSpec extends WordSpec with BaseSpec with Matchers{
+class ExecutorMetricsSpec extends WordSpec with Matchers with MetricInspection {
 
   "the ExecutorServiceMetrics" should {
     "register a SingleThreadPool, collect their metrics and remove it" in {
