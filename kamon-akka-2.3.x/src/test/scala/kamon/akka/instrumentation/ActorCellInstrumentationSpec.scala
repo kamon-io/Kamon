@@ -15,25 +15,28 @@
  * ========================================================== */
 package kamon.instrumentation.akka
 
-import akka.actor.{Actor, ActorSystem, Props}
+import akka.actor.{Actor, ActorRef, ActorSystem, PoisonPill, Props}
 import akka.pattern.{ask, pipe}
 import akka.routing._
 import akka.testkit.{ImplicitSender, TestKit}
 import akka.util.Timeout
 import kamon.Kamon
-import kamon.testkit.ContextTesting
-import org.scalatest.{BeforeAndAfterAll, WordSpecLike}
+import kamon.akka.Metrics
+import kamon.testkit.{ContextTesting, MetricInspection}
+import org.scalatest.concurrent.Eventually
+import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 
+import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration._
 
 class ActorCellInstrumentationSpec extends TestKit(ActorSystem("ActorCellInstrumentationSpec")) with WordSpecLike
-    with ContextTesting with BeforeAndAfterAll with ImplicitSender {
+    with ContextTesting with BeforeAndAfterAll with ImplicitSender with Eventually with MetricInspection with Matchers {
   implicit lazy val executionContext = system.dispatcher
 
   "the message passing instrumentation" should {
     "capture and propagate the context using bang" in new EchoActorFixture {
       Kamon.withContext(contextWithLocal("propagate-with-bang")) {
-        baggageEchoActor ! "test"
+        contextEchoActor ! "test"
       }
 
       expectMsg("propagate-with-bang")
@@ -55,7 +58,7 @@ class ActorCellInstrumentationSpec extends TestKit(ActorSystem("ActorCellInstrum
       implicit val timeout = Timeout(1 seconds)
       Kamon.withContext(contextWithLocal("propagate-with-ask")) {
         // The pipe pattern use Futures internally, so FutureTracing test should cover the underpinnings of it.
-        (baggageEchoActor ? "test") pipeTo (testActor)
+        (contextEchoActor ? "test") pipeTo (testActor)
       }
 
       expectMsg("propagate-with-ask")
@@ -85,12 +88,34 @@ class ActorCellInstrumentationSpec extends TestKit(ActorSystem("ActorCellInstrum
 
       expectMsg("propagate-with-group")
     }
+
+    "cleanup the metric recorders when a RepointableActorRef is killed early" in {
+      def actorPathTag(ref: ActorRef): String = system.name + "/" + ref.path.elements.mkString("/")
+      val trackedActors = new ListBuffer[String]
+
+      for(j <- 1 to 10) {
+        for (i <- 1 to 1000) {
+          val a = system.actorOf(Props[ContextStringEcho], s"repointable-$j-$i")
+          a ! PoisonPill
+          trackedActors.append(actorPathTag(a))
+        }
+
+        eventually {
+          val trackedActors = Metrics.actorProcessingTimeMetric.valuesForTag("path")
+          for(p <- trackedActors) {
+            trackedActors.find(_ == p) shouldBe empty
+          }
+        }
+
+        trackedActors.clear()
+      }
+    }
   }
 
   override protected def afterAll(): Unit = shutdown()
 
   trait EchoActorFixture {
-    val baggageEchoActor = system.actorOf(Props[ContextStringEcho])
+    val contextEchoActor = system.actorOf(Props[ContextStringEcho])
   }
 
   trait EchoSimpleRouterFixture {

@@ -35,7 +35,7 @@ class ActorSystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSy
     "capture and propagate the current context while processing the Create message in top level actors" in {
       Kamon.withContext(contextWithLocal("creating-top-level-actor")) {
         system.actorOf(Props(new Actor {
-          testActor ! propagatedBaggage()
+          testActor ! propagatedContextKey()
           def receive: Actor.Receive = { case any ⇒ }
         }))
       }
@@ -49,7 +49,7 @@ class ActorSystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSy
           def receive: Actor.Receive = {
             case _ ⇒
               context.actorOf(Props(new Actor {
-                testActor ! propagatedBaggage()
+                testActor ! propagatedContextKey()
                 def receive: Actor.Receive = { case _ ⇒ }
               }))
           }
@@ -114,7 +114,7 @@ class ActorSystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSy
     }
   }
 
-  private def propagatedBaggage(): String =
+  private def propagatedContextKey(): String =
     Kamon.currentContext().get(StringKey).getOrElse("MissingContext")
 
   def supervisorWithDirective(directive: SupervisorStrategy.Directive, sendPreRestart: Boolean = false, sendPostRestart: Boolean = false,
@@ -123,7 +123,7 @@ class ActorSystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSy
       val child = context.actorOf(Props(new Parent))
 
       override def supervisorStrategy: SupervisorStrategy = OneForOneStrategy() {
-        case NonFatal(_) ⇒ testActor ! propagatedBaggage(); Stop
+        case NonFatal(_) ⇒ testActor ! propagatedContextKey(); Stop
       }
 
       def receive = {
@@ -135,7 +135,7 @@ class ActorSystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSy
       val child = context.actorOf(Props(new Child))
 
       override def supervisorStrategy: SupervisorStrategy = OneForOneStrategy() {
-        case NonFatal(_) ⇒ testActor ! propagatedBaggage(); directive
+        case NonFatal(_) ⇒ testActor ! propagatedContextKey(); directive
       }
 
       def receive: Actor.Receive = {
@@ -143,7 +143,7 @@ class ActorSystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSy
       }
 
       override def postStop(): Unit = {
-        if (sendPostStop) testActor ! propagatedBaggage()
+        if (sendPostStop) testActor ! propagatedContextKey()
         super.postStop()
       }
     }
@@ -151,26 +151,26 @@ class ActorSystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSy
     class Child extends Actor {
       def receive = {
         case "fail"    ⇒ throw new ArithmeticException("Division by zero.")
-        case "context" ⇒ sender ! propagatedBaggage()
+        case "context" ⇒ sender ! propagatedContextKey()
       }
 
       override def preRestart(reason: Throwable, message: Option[Any]): Unit = {
-        if (sendPreRestart) testActor ! propagatedBaggage()
+        if (sendPreRestart) testActor ! propagatedContextKey()
         super.preRestart(reason, message)
       }
 
       override def postRestart(reason: Throwable): Unit = {
-        if (sendPostRestart) testActor ! propagatedBaggage()
+        if (sendPostRestart) testActor ! propagatedContextKey()
         super.postRestart(reason)
       }
 
       override def postStop(): Unit = {
-        if (sendPostStop) testActor ! propagatedBaggage()
+        if (sendPostStop) testActor ! propagatedContextKey()
         super.postStop()
       }
 
       override def preStart(): Unit = {
-        if (sendPreStart) testActor ! propagatedBaggage()
+        if (sendPreStart) testActor ! propagatedContextKey()
         super.preStart()
       }
     }

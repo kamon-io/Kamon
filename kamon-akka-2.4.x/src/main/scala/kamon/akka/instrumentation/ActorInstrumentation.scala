@@ -121,7 +121,7 @@ class ActorCellInstrumentation {
 
         while (!queue.isEmpty) {
           queue.poll() match {
-            case e: Envelope with InstrumentedEnvelope => Tracer.withContext(e.envelopeContext().context) {
+            case e: Envelope with InstrumentedEnvelope => Kamon.withContext(e.timestampedContext().context) {
               cell.sendMessage(e)
             }
           }

@@ -15,25 +15,28 @@
  * ========================================================== */
 package kamon.instrumentation.akka
 
-import akka.actor.{Actor, ActorSystem, Props}
+import akka.actor.{Actor, ActorRef, ActorSystem, PoisonPill, Props}
 import akka.pattern.{ask, pipe}
 import akka.routing._
 import akka.testkit.{ImplicitSender, TestKit}
 import akka.util.Timeout
 import kamon.Kamon
-import kamon.testkit.ContextTesting
-import org.scalatest.{BeforeAndAfterAll, WordSpecLike}
+import kamon.akka.Metrics
+import kamon.testkit.{ContextTesting, MetricInspection}
+import org.scalatest.concurrent.Eventually
+import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 
+import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration._
 
 class ActorCellInstrumentationSpec extends TestKit(ActorSystem("ActorCellInstrumentationSpec")) with WordSpecLike
-    with ContextTesting with BeforeAndAfterAll with ImplicitSender {
+    with ContextTesting with BeforeAndAfterAll with ImplicitSender with Eventually with MetricInspection with Matchers {
   implicit lazy val executionContext = system.dispatcher
 
   "the message passing instrumentation" should {
     "capture and propagate the current context when using bang" in new EchoActorFixture {
       Kamon.withContext(contextWithLocal("propagate-with-bang")) {
-        baggageEchoActor ! "test"
+        contextEchoActor ! "test"
       }
 
       expectMsg("propagate-with-bang")
@@ -41,7 +44,7 @@ class ActorCellInstrumentationSpec extends TestKit(ActorSystem("ActorCellInstrum
 
     "capture and propagate the current context for messages sent when the target actor might be a repointable ref" in {
       for (_ ← 1 to 10000) {
-        val ta = system.actorOf(Props[PropagateBaggageEcho])
+        val ta = system.actorOf(Props[ContextStringEcho])
         Kamon.withContext(contextWithLocal("propagate-with-tell")) {
           ta.tell("test", testActor)
         }
@@ -55,7 +58,7 @@ class ActorCellInstrumentationSpec extends TestKit(ActorSystem("ActorCellInstrum
       implicit val timeout = Timeout(1 seconds)
       Kamon.withContext(contextWithLocal("propagate-with-ask")) {
         // The pipe pattern use Futures internally, so FutureTracing test should cover the underpinnings of it.
-        (baggageEchoActor ? "test") pipeTo (testActor)
+        (contextEchoActor ? "test") pipeTo (testActor)
       }
 
       expectMsg("propagate-with-ask")
@@ -86,23 +89,25 @@ class ActorCellInstrumentationSpec extends TestKit(ActorSystem("ActorCellInstrum
       expectMsg("propagate-with-group")
     }
 
-    "be cleaned up in case of a RepointableActorRef" in {
-      // TODO: FIXME
-      def actorRecorderName(ref: ActorRef): String = system.name + "/" + ref.path.elements.mkString("/")
-
-      def actorMetricsRecorderOf(name: String): Option[EntityRecorder] =
-        Kamon.metrics.find(name, ActorMetrics.category)
-
-      val buffer = new ListBuffer[String]
+    "cleanup the metric recorders when a RepointableActorRef is killed early" in {
+      def actorPathTag(ref: ActorRef): String = system.name + "/" + ref.path.elements.mkString("/")
+      val trackedActors = new ListBuffer[String]
 
       for(j <- 1 to 10) {
         for (i <- 1 to 1000) {
-          val a = system.actorOf(Props[TraceContextEcho], s"actor$j$i")
+          val a = system.actorOf(Props[ContextStringEcho], s"repointable-$j-$i")
           a ! PoisonPill
-          buffer.append(actorRecorderName(a))
+          trackedActors.append(actorPathTag(a))
         }
-        eventually(for(p <- buffer) actorMetricsRecorderOf(p) should be(None))
-        buffer.clear()
+
+        eventually {
+          val trackedActors = Metrics.actorProcessingTimeMetric.valuesForTag("path")
+          for(p <- trackedActors) {
+            trackedActors.find(_ == p) shouldBe empty
+          }
+        }
+
+        trackedActors.clear()
       }
     }
   }
@@ -110,13 +115,13 @@ class ActorCellInstrumentationSpec extends TestKit(ActorSystem("ActorCellInstrum
   override protected def afterAll(): Unit = shutdown()
 
   trait EchoActorFixture {
-    val baggageEchoActor = system.actorOf(Props[PropagateBaggageEcho])
+    val contextEchoActor = system.actorOf(Props[ContextStringEcho])
   }
 
   trait EchoSimpleRouterFixture {
     val router = {
       val routees = Vector.fill(5) {
-        val r = system.actorOf(Props[PropagateBaggageEcho])
+        val r = system.actorOf(Props[ContextStringEcho])
         ActorRefRoutee(r)
       }
       Router(RoundRobinRoutingLogic(), routees)
@@ -124,19 +129,19 @@ class ActorCellInstrumentationSpec extends TestKit(ActorSystem("ActorCellInstrum
   }
 
   trait EchoPoolRouterFixture {
-    val pool = system.actorOf(RoundRobinPool(nrOfInstances = 5).props(Props[PropagateBaggageEcho]), "pool-router")
+    val pool = system.actorOf(RoundRobinPool(nrOfInstances = 5).props(Props[ContextStringEcho]), "pool-router")
   }
 
   trait EchoGroupRouterFixture {
     val routees = Vector.fill(5) {
-      system.actorOf(Props[PropagateBaggageEcho])
+      system.actorOf(Props[ContextStringEcho])
     }
 
     val group = system.actorOf(RoundRobinGroup(routees.map(_.path.toStringWithoutAddress)).props(), "group-router")
   }
 }
 
-class PropagateBaggageEcho extends Actor with ContextTesting {
+class ContextStringEcho extends Actor with ContextTesting {
   def receive = {
     case _: String ⇒
       sender ! Kamon.currentContext().get(StringKey).getOrElse("MissingContext")
