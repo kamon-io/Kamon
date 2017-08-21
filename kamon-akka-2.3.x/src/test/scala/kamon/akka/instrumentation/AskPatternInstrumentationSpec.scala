@@ -23,13 +23,13 @@ import akka.testkit.{EventFilter, ImplicitSender, TestKit}
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
-import kamon.testkit.BaseKamonSpec
+import kamon.testkit.ContextTesting
 import org.scalatest.{BeforeAndAfterAll, WordSpecLike}
 
 import scala.concurrent.duration._
 
 class AskPatternInstrumentationSpec extends TestKit(ActorSystem("AskPatternInstrumentationSpec")) with WordSpecLike
-  with BaseKamonSpec with BeforeAndAfterAll with ImplicitSender {
+  with ContextTesting with BeforeAndAfterAll with ImplicitSender {
 
   implicit lazy val ec = system.dispatcher
   implicit val askTimeout = Timeout(10 millis)
@@ -43,7 +43,7 @@ class AskPatternInstrumentationSpec extends TestKit(ActorSystem("AskPatternInstr
         setAskPatternTimeoutWarningMode("heavyweight")
 
         EventFilter.warning(start = "Timeout triggered for ask pattern to actor [no-reply-1] at").intercept {
-          Kamon.withSpan(spanWithBaggage(key = "propagate", value = "ask-timeout-warning")) {
+          Kamon.withContext(contextWithLocal("ask-timeout-warning")) {
             noReplyActorRef ? "hello"
           }
         }
@@ -56,7 +56,7 @@ class AskPatternInstrumentationSpec extends TestKit(ActorSystem("AskPatternInstr
         setAskPatternTimeoutWarningMode("lightweight")
 
         EventFilter.warning(start = "Timeout triggered for ask pattern to actor [no-reply-2] at").intercept {
-          Kamon.withSpan(spanWithBaggage(key = "propagate", value = "ask-timeout-warning")) {
+          Kamon.withContext(contextWithLocal("ask-timeout-warning")) {
             noReplyActorRef ? "hello"
           }
         }
@@ -70,7 +70,7 @@ class AskPatternInstrumentationSpec extends TestKit(ActorSystem("AskPatternInstr
 
         intercept[AssertionError] { // No message will be logged and the event filter will fail.
           EventFilter.warning(start = "Timeout triggered for ask pattern to actor", occurrences = 1).intercept {
-            Kamon.withSpan(spanWithBaggage(key = "propagate", value = "ask-timeout-warning")) {
+            Kamon.withContext(contextWithLocal("ask-timeout-warning")) {
               noReplyActorRef ? "hello"
             }
           }

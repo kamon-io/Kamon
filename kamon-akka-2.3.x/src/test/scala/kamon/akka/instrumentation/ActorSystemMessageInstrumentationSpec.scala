@@ -21,21 +21,21 @@ import akka.actor.SupervisorStrategy.{Escalate, Restart, Resume, Stop}
 import akka.actor._
 import akka.testkit.{ImplicitSender, TestKit}
 import kamon.Kamon
-import kamon.testkit.BaseKamonSpec
+import kamon.testkit.ContextTesting
 import org.scalatest.{BeforeAndAfterAll, WordSpecLike}
 
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
 
 class ActorSystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSystemMessageInstrumentationSpec")) with WordSpecLike
-    with BaseKamonSpec with BeforeAndAfterAll with ImplicitSender {
+    with ContextTesting with BeforeAndAfterAll with ImplicitSender {
   implicit lazy val executionContext = system.dispatcher
 
   "the system message passing instrumentation" should {
     "capture and propagate the active span while processing the Create message in top level actors" in {
-      Kamon.withSpan(spanWithBaggage(key = "propagate", value = "creating-top-level-actor")) {
+      Kamon.withContext(contextWithLocal("creating-top-level-actor")) {
         system.actorOf(Props(new Actor {
-          testActor ! propagatedBaggage()
+          testActor ! propagatedContextKey()
           def receive: Actor.Receive = { case any ⇒ }
         }))
       }
@@ -44,12 +44,12 @@ class ActorSystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSy
     }
 
     "capture and propagate the active span when processing the Create message in non top level actors" in {
-      Kamon.withSpan(spanWithBaggage(key = "propagate", value = "creating-non-top-level-actor")) {
+      Kamon.withContext(contextWithLocal("creating-non-top-level-actor")) {
         system.actorOf(Props(new Actor {
           def receive: Actor.Receive = {
             case _ ⇒
               context.actorOf(Props(new Actor {
-                testActor ! propagatedBaggage()
+                testActor ! propagatedContextKey()
                 def receive: Actor.Receive = { case _ ⇒ }
               }))
           }
@@ -62,7 +62,7 @@ class ActorSystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSy
     "keep the TraceContext in the supervision cycle" when {
       "the actor is resumed" in {
         val supervisor = supervisorWithDirective(Resume)
-        Kamon.withSpan(spanWithBaggage(key = "propagate", value = "fail-and-resume")) {
+        Kamon.withContext(contextWithLocal("fail-and-resume")) {
           supervisor ! "fail"
         }
 
@@ -70,12 +70,12 @@ class ActorSystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSy
 
         // Ensure we didn't tie the actor with the initially captured span
         supervisor ! "baggage"
-        expectMsg("MissingActiveSpan")
+        expectMsg("MissingContextKey")
       }
 
       "the actor is restarted" in {
         val supervisor = supervisorWithDirective(Restart, sendPreRestart = true, sendPostRestart = true)
-        Kamon.withSpan(spanWithBaggage(key = "propagate", value = "fail-and-restart")) {
+        Kamon.withContext(contextWithLocal("fail-and-restart")) {
           supervisor ! "fail"
         }
 
@@ -85,12 +85,12 @@ class ActorSystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSy
 
         // Ensure we didn't tie the actor with the context
         supervisor ! "baggage"
-        expectMsg("MissingActiveSpan")
+        expectMsg("MissingContextKey")
       }
 
       "the actor is stopped" in {
         val supervisor = supervisorWithDirective(Stop, sendPostStop = true)
-        Kamon.withSpan(spanWithBaggage(key = "propagate", value = "fail-and-stop")) {
+        Kamon.withContext(contextWithLocal("fail-and-stop")) {
           supervisor ! "fail"
         }
 
@@ -101,7 +101,7 @@ class ActorSystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSy
 
       "the failure is escalated" in {
         val supervisor = supervisorWithDirective(Escalate, sendPostStop = true)
-        Kamon.withSpan(spanWithBaggage(key = "propagate", value = "fail-and-escalate")) {
+        Kamon.withContext(contextWithLocal("fail-and-escalate")) {
           supervisor ! "fail"
         }
 
@@ -114,8 +114,8 @@ class ActorSystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSy
     }
   }
 
-  private def propagatedBaggage(): String =
-    Kamon.fromActiveSpan(_.getBaggageItem("propagate")).getOrElse("MissingActiveSpan")
+  private def propagatedContextKey(): String =
+    Kamon.currentContext().get(StringKey).getOrElse("MissingContextKey")
 
   def supervisorWithDirective(directive: SupervisorStrategy.Directive, sendPreRestart: Boolean = false, sendPostRestart: Boolean = false,
     sendPostStop: Boolean = false, sendPreStart: Boolean = false): ActorRef = {
@@ -123,7 +123,7 @@ class ActorSystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSy
       val child = context.actorOf(Props(new Parent))
 
       override def supervisorStrategy: SupervisorStrategy = OneForOneStrategy() {
-        case NonFatal(_) ⇒ testActor ! propagatedBaggage(); Stop
+        case NonFatal(_) ⇒ testActor ! propagatedContextKey(); Stop
       }
 
       def receive = {
@@ -135,7 +135,7 @@ class ActorSystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSy
       val child = context.actorOf(Props(new Child))
 
       override def supervisorStrategy: SupervisorStrategy = OneForOneStrategy() {
-        case NonFatal(_) ⇒ testActor ! propagatedBaggage(); directive
+        case NonFatal(_) ⇒ testActor ! propagatedContextKey(); directive
       }
 
       def receive: Actor.Receive = {
@@ -143,7 +143,7 @@ class ActorSystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSy
       }
 
       override def postStop(): Unit = {
-        if (sendPostStop) testActor ! propagatedBaggage()
+        if (sendPostStop) testActor ! propagatedContextKey()
         super.postStop()
       }
     }
@@ -151,26 +151,26 @@ class ActorSystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSy
     class Child extends Actor {
       def receive = {
         case "fail"    ⇒ throw new ArithmeticException("Division by zero.")
-        case "baggage" ⇒ sender ! propagatedBaggage()
+        case "baggage" ⇒ sender ! propagatedContextKey()
       }
 
       override def preRestart(reason: Throwable, message: Option[Any]): Unit = {
-        if (sendPreRestart) testActor ! propagatedBaggage()
+        if (sendPreRestart) testActor ! propagatedContextKey()
         super.preRestart(reason, message)
       }
 
       override def postRestart(reason: Throwable): Unit = {
-        if (sendPostRestart) testActor ! propagatedBaggage()
+        if (sendPostRestart) testActor ! propagatedContextKey()
         super.postRestart(reason)
       }
 
       override def postStop(): Unit = {
-        if (sendPostStop) testActor ! propagatedBaggage()
+        if (sendPostStop) testActor ! propagatedContextKey()
         super.postStop()
       }
 
       override def preStart(): Unit = {
-        if (sendPreStart) testActor ! propagatedBaggage()
+        if (sendPreStart) testActor ! propagatedContextKey()
         super.preStart()
       }
     }

@@ -16,7 +16,7 @@
 package kamon.akka
 
 import kamon.Kamon
-import kamon.util.MeasurementUnit._
+import kamon.metric.MeasurementUnit._
 import kamon.metric._
 
 

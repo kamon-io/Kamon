@@ -16,22 +16,20 @@
 package kamon.akka
 
 
-import java.nio.LongBuffer
 
 import akka.actor._
 import akka.routing._
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
-import kamon.Kamon
 import org.scalactic.TimesOnInt._
 import Metrics._
 import kamon.akka.RouterMetricsTestActor._
-import kamon.testkit.BaseKamonSpec
+import kamon.testkit.MetricInspection
 import org.scalatest.concurrent.Eventually
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 
 import scala.concurrent.duration._
 
-class RouterMetricsSpec extends TestKit(ActorSystem("RouterMetricsSpec")) with WordSpecLike with BaseKamonSpec with Matchers
+class RouterMetricsSpec extends TestKit(ActorSystem("RouterMetricsSpec")) with WordSpecLike with MetricInspection with Matchers
   with BeforeAndAfterAll with ImplicitSender with Eventually {
 
   "the Kamon router metrics" should {

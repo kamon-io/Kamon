@@ -22,13 +22,13 @@ import akka.routing.BalancingPool
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import kamon.akka.RouterMetricsTestActor.{Ping, Pong}
 import kamon.executors.Metrics._
-import kamon.testkit.BaseKamonSpec
+import kamon.testkit.MetricInspection
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 import org.scalatest.concurrent.Eventually
 
 import scala.concurrent.Future
 
-class DispatcherMetricsSpec extends TestKit(ActorSystem("DispatcherMetricsSpec")) with WordSpecLike with BaseKamonSpec with Matchers
+class DispatcherMetricsSpec extends TestKit(ActorSystem("DispatcherMetricsSpec")) with WordSpecLike with MetricInspection with Matchers
     with BeforeAndAfterAll with ImplicitSender with Eventually {
 
   "the Kamon dispatcher metrics" should {

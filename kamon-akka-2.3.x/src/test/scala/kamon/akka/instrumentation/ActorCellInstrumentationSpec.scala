@@ -21,28 +21,28 @@ import akka.routing._
 import akka.testkit.{ImplicitSender, TestKit}
 import akka.util.Timeout
 import kamon.Kamon
-import kamon.testkit.BaseKamonSpec
+import kamon.testkit.ContextTesting
 import org.scalatest.{BeforeAndAfterAll, WordSpecLike}
 
 import scala.concurrent.duration._
 
 class ActorCellInstrumentationSpec extends TestKit(ActorSystem("ActorCellInstrumentationSpec")) with WordSpecLike
-    with BaseKamonSpec with BeforeAndAfterAll with ImplicitSender {
+    with ContextTesting with BeforeAndAfterAll with ImplicitSender {
   implicit lazy val executionContext = system.dispatcher
 
   "the message passing instrumentation" should {
-    "capture and propagate the active span using bang" in new EchoActorFixture {
-      Kamon.withSpan(spanWithBaggage(key = "propagate", value = "propagate-with-bang")) {
+    "capture and propagate the context using bang" in new EchoActorFixture {
+      Kamon.withContext(contextWithLocal("propagate-with-bang")) {
         baggageEchoActor ! "test"
       }
 
       expectMsg("propagate-with-bang")
     }
 
-    "capture and propagate the active span for messages sent when the target actor might be a repointable ref" in {
+    "capture and propagate the context  for messages sent when the target actor might be a repointable ref" in {
       for (_ ← 1 to 10000) {
-        val ta = system.actorOf(Props[PropagateBaggageEcho])
-        Kamon.withSpan(spanWithBaggage(key = "propagate", value = "propagate-with-tell")) {
+        val ta = system.actorOf(Props[ContextStringEcho])
+        Kamon.withContext(contextWithLocal("propagate-with-tell")) {
           ta.tell("test", testActor)
         }
 
@@ -51,9 +51,9 @@ class ActorCellInstrumentationSpec extends TestKit(ActorSystem("ActorCellInstrum
       }
     }
 
-    "propagate the active span when using the ask pattern" in new EchoActorFixture {
+    "propagate the context when using the ask pattern" in new EchoActorFixture {
       implicit val timeout = Timeout(1 seconds)
-      Kamon.withSpan(spanWithBaggage(key = "propagate", value = "propagate-with-ask")) {
+      Kamon.withContext(contextWithLocal("propagate-with-ask")) {
         // The pipe pattern use Futures internally, so FutureTracing test should cover the underpinnings of it.
         (baggageEchoActor ? "test") pipeTo (testActor)
       }
@@ -62,24 +62,24 @@ class ActorCellInstrumentationSpec extends TestKit(ActorSystem("ActorCellInstrum
     }
 
 
-    "propagate the TraceContext to actors behind a simple router" in new EchoSimpleRouterFixture {
-      Kamon.withSpan(spanWithBaggage(key = "propagate", value = "propagate-with-router")) {
+    "propagate the context to actors behind a simple router" in new EchoSimpleRouterFixture {
+      Kamon.withContext(contextWithLocal("propagate-with-router")) {
         router.route("test", testActor)
       }
 
       expectMsg("propagate-with-router")
     }
 
-    "propagate the TraceContext to actors behind a pool router" in new EchoPoolRouterFixture {
-      Kamon.withSpan(spanWithBaggage(key = "propagate", value = "propagate-with-pool")) {
+    "propagate the context to actors behind a pool router" in new EchoPoolRouterFixture {
+      Kamon.withContext(contextWithLocal("propagate-with-pool")) {
         pool ! "test"
       }
 
       expectMsg("propagate-with-pool")
     }
 
-    "propagate the TraceContext to actors behind a group router" in new EchoGroupRouterFixture {
-      Kamon.withSpan(spanWithBaggage(key = "propagate", value = "propagate-with-group")) {
+    "propagate the context to actors behind a group router" in new EchoGroupRouterFixture {
+      Kamon.withContext(contextWithLocal("propagate-with-group")) {
         group ! "test"
       }
 
@@ -90,13 +90,13 @@ class ActorCellInstrumentationSpec extends TestKit(ActorSystem("ActorCellInstrum
   override protected def afterAll(): Unit = shutdown()
 
   trait EchoActorFixture {
-    val baggageEchoActor = system.actorOf(Props[PropagateBaggageEcho])
+    val baggageEchoActor = system.actorOf(Props[ContextStringEcho])
   }
 
   trait EchoSimpleRouterFixture {
     val router = {
       val routees = Vector.fill(5) {
-        val r = system.actorOf(Props[PropagateBaggageEcho])
+        val r = system.actorOf(Props[ContextStringEcho])
         ActorRefRoutee(r)
       }
       Router(RoundRobinRoutingLogic(), routees)
@@ -104,22 +104,22 @@ class ActorCellInstrumentationSpec extends TestKit(ActorSystem("ActorCellInstrum
   }
 
   trait EchoPoolRouterFixture {
-    val pool = system.actorOf(RoundRobinPool(nrOfInstances = 5).props(Props[PropagateBaggageEcho]), "pool-router")
+    val pool = system.actorOf(RoundRobinPool(nrOfInstances = 5).props(Props[ContextStringEcho]), "pool-router")
   }
 
   trait EchoGroupRouterFixture {
     val routees = Vector.fill(5) {
-      system.actorOf(Props[PropagateBaggageEcho])
+      system.actorOf(Props[ContextStringEcho])
     }
 
     val group = system.actorOf(RoundRobinGroup(routees.map(_.path.toStringWithoutAddress)).props(), "group-router")
   }
 }
 
-class PropagateBaggageEcho extends Actor {
+class ContextStringEcho extends Actor with ContextTesting {
   def receive = {
     case _: String ⇒
-      sender ! Kamon.fromActiveSpan(_.getBaggageItem("propagate")).getOrElse("MissingActiveSpan")
+      sender ! Kamon.currentContext.get(StringKey).getOrElse("MissingContext")
   }
 }
 

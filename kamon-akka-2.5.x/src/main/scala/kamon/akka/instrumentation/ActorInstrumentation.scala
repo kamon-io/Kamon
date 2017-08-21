@@ -92,7 +92,7 @@ class ActorCellInstrumentation {
           queue.poll() match {
             case s: SystemMessage ⇒ cell.sendSystemMessage(s)
             case e: Envelope with InstrumentedEnvelope ⇒
-              Kamon.withContinuation(e.timestampedContinuation().continuation) {
+              Kamon.withContext(e.timestampedContinuation().continuation) {
                 cell.sendMessage(e)
               }
           }
