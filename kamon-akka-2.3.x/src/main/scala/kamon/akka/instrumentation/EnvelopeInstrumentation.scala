@@ -7,7 +7,7 @@ case class TimestampedContext(nanoTime: Long, @transient context: Context)
 
 trait InstrumentedEnvelope extends Serializable {
   def timestampedContext(): TimestampedContext
-  def setTimestampedContext(timestampedContinuation: TimestampedContext): Unit
+  def setTimestampedContext(timestampedContext: TimestampedContext): Unit
 }
 
 object InstrumentedEnvelope {

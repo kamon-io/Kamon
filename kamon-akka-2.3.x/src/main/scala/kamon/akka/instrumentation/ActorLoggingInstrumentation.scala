@@ -25,14 +25,14 @@ import org.aspectj.lang.annotation._
 class ActorLoggingInstrumentation  {
 
   @DeclareMixin("akka.event.Logging.LogEvent+")
-  def mixinTraceContextAwareToLogEvent: HasContext = HasContext.fromCurrentContext()
+  def mixinHasContextToLogEvent: HasContext = HasContext.fromCurrentContext()
 
   @Pointcut("execution(akka.event.Logging.LogEvent+.new(..)) && this(event)")
   def logEventCreation(event: HasContext): Unit = {}
 
   @After("logEventCreation(event)")
-  def captureTraceContext(event: HasContext): Unit = {
-    // Force initialization of the continuation
+  def captureContext(event: HasContext): Unit = {
+    // Force initialization of the context
     event.context
   }
 

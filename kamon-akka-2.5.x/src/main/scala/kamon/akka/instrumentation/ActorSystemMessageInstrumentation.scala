@@ -31,41 +31,41 @@ class ActorSystemMessageInstrumentation {
   @Around("systemMessageProcessing(messages)")
   def aroundSystemMessageInvoke(pjp: ProceedingJoinPoint, messages: EarliestFirstSystemMessageList): Any = {
     if (messages.nonEmpty) {
-      val continuation = messages.head.asInstanceOf[HasContext].context
-      Kamon.withContext(continuation)(pjp.proceed())
+      val context = messages.head.asInstanceOf[HasContext].context
+      Kamon.withContext(context)(pjp.proceed())
 
     } else pjp.proceed()
   }
 }
 
 @Aspect
-class TraceContextIntoSystemMessageMixin {
+class HasContextIntoSystemMessageMixin {
 
   @DeclareMixin("akka.dispatch.sysmsg.SystemMessage+")
-  def mixinHasContinuationToSystemMessage: HasContext = HasContext.fromCurrentContext()
+  def mixinHasContextToSystemMessage: HasContext = HasContext.fromCurrentContext()
 
   @Pointcut("execution(akka.dispatch.sysmsg.SystemMessage+.new(..)) && this(message)")
   def systemMessageCreation(message: HasContext): Unit = {}
 
   @After("systemMessageCreation(message)")
   def afterSystemMessageCreation(message: HasContext): Unit = {
-    // Necessary to force the initialization of HasContinuation at the moment of creation.
+    // Necessary to force the initialization of HasContext at the moment of creation.
     message.context
   }
 }
 
 @Aspect
-class TraceContextIntoRepointableActorRefMixin {
+class HasContextIntoRepointableActorRefMixin {
 
   @DeclareMixin("akka.actor.RepointableActorRef")
-  def mixinTraceContextAwareToRepointableActorRef: HasContext = HasContext.fromCurrentContext()
+  def mixinHasContextToRepointableActorRef: HasContext = HasContext.fromCurrentContext()
 
   @Pointcut("execution(akka.actor.RepointableActorRef.new(..)) && this(repointableActorRef)")
   def envelopeCreation(repointableActorRef: HasContext): Unit = {}
 
   @After("envelopeCreation(repointableActorRef)")
   def afterEnvelopeCreation(repointableActorRef: HasContext): Unit = {
-    // Necessary to force the initialization of HasContinuation at the moment of creation.
+    // Necessary to force the initialization of HasContext at the moment of creation.
     repointableActorRef.context
   }
 

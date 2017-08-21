@@ -32,7 +32,7 @@ class ActorSystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSy
   implicit lazy val executionContext = system.dispatcher
 
   "the system message passing instrumentation" should {
-    "capture and propagate the active span while processing the Create message in top level actors" in {
+    "capture and propagate the current context while processing the Create message in top level actors" in {
       Kamon.withContext(contextWithLocal("creating-top-level-actor")) {
         system.actorOf(Props(new Actor {
           testActor ! propagatedBaggage()
@@ -43,7 +43,7 @@ class ActorSystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSy
       expectMsg("creating-top-level-actor")
     }
 
-    "capture and propagate the active span when processing the Create message in non top level actors" in {
+    "capture and propagate the current context when processing the Create message in non top level actors" in {
       Kamon.withContext(contextWithLocal("creating-non-top-level-actor")) {
         system.actorOf(Props(new Actor {
           def receive: Actor.Receive = {
@@ -59,7 +59,7 @@ class ActorSystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSy
       expectMsg("creating-non-top-level-actor")
     }
 
-    "keep the TraceContext in the supervision cycle" when {
+    "keep the current context in the supervision cycle" when {
       "the actor is resumed" in {
         val supervisor = supervisorWithDirective(Resume)
         Kamon.withContext(contextWithLocal("fail-and-resume")) {
@@ -68,8 +68,8 @@ class ActorSystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSy
 
         expectMsg("fail-and-resume") // From the parent executing the supervision strategy
 
-        // Ensure we didn't tie the actor with the initially captured span
-        supervisor ! "baggage"
+        // Ensure we didn't tie the actor with the initially captured context
+        supervisor ! "context"
         expectMsg("MissingContext")
       }
 
@@ -84,7 +84,7 @@ class ActorSystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSy
         expectMsg("fail-and-restart") // From the postRestart hook
 
         // Ensure we didn't tie the actor with the context
-        supervisor ! "baggage"
+        supervisor ! "context"
         expectMsg("MissingContext")
       }
 
@@ -151,7 +151,7 @@ class ActorSystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSy
     class Child extends Actor {
       def receive = {
         case "fail"    ⇒ throw new ArithmeticException("Division by zero.")
-        case "baggage" ⇒ sender ! propagatedBaggage()
+        case "context" ⇒ sender ! propagatedBaggage()
       }
 
       override def preRestart(reason: Throwable, message: Option[Any]): Unit = {

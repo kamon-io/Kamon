@@ -4,8 +4,8 @@
   <aspects>
 
     <!-- Actors -->
-    <aspect name="akka.kamon.instrumentation.TraceContextIntoRepointableActorRefMixin"/>
-    <aspect name="akka.kamon.instrumentation.TraceContextIntoSystemMessageMixin"/>
+    <aspect name="akka.kamon.instrumentation.HasContextIntoRepointableActorRefMixin"/>
+    <aspect name="akka.kamon.instrumentation.HasContextIntoSystemMessageMixin"/>
     <aspect name="akka.kamon.instrumentation.ActorSystemMessageInstrumentation"/>
     <aspect name="akka.kamon.instrumentation.EnvelopeContextIntoEnvelopeMixin"/>
     <aspect name="akka.kamon.instrumentation.MetricsIntoActorCellsMixin"/>

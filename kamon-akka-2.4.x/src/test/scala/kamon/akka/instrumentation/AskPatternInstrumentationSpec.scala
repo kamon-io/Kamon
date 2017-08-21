@@ -38,7 +38,7 @@ class AskPatternInstrumentationSpec extends TestKit(ActorSystem("AskPatternInstr
 
   "the AskPatternInstrumentation" when {
     "configured in heavyweight mode" should {
-      "log a warning with a full stack trace and the active span captured the moment when the ask was triggered for an actor" in {
+      "log a warning with a full stack trace and the context captured the moment when the ask was triggered for an actor" in {
         val noReplyActorRef = system.actorOf(Props[NoReply], "no-reply-1")
         setAskPatternTimeoutWarningMode("heavyweight")
 
@@ -51,7 +51,7 @@ class AskPatternInstrumentationSpec extends TestKit(ActorSystem("AskPatternInstr
     }
 
     "configured in lightweight mode" should {
-      "log a warning with a short source location description and the TraceContext taken from the moment the ask was triggered for a actor" in {
+      "log a warning with a short source location description and the context taken from the moment the ask was triggered for a actor" in {
         val noReplyActorRef = system.actorOf(Props[NoReply], "no-reply-2")
         setAskPatternTimeoutWarningMode("lightweight")
 
