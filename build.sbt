@@ -35,10 +35,11 @@ lazy val `kamon-akka` = (project in file("."))
 
 lazy val kamonAkka23 = Project("kamon-akka-23", file("kamon-akka-2.3.x"))
   .settings(Seq(
-      bintrayPackage := "kamon-akka",
-      moduleName := "kamon-akka-2.3",
-      scalaVersion := "2.11.8",
-      crossScalaVersions := Seq("2.10.6", "2.11.8")))
+    bintrayPackage := "kamon-akka",
+    moduleName := "kamon-akka-2.3",
+    scalaVersion := "2.11.8",
+    crossScalaVersions := Seq("2.10.6", "2.11.8"),
+    resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")))
   .settings(aspectJSettings: _*)
   .settings(
     libraryDependencies ++=
@@ -50,10 +51,11 @@ lazy val kamonAkka23 = Project("kamon-akka-23", file("kamon-akka-2.3.x"))
 
 lazy val kamonAkka24 = Project("kamon-akka-24", file("kamon-akka-2.4.x"))
   .settings(Seq(
-      bintrayPackage := "kamon-akka",
-      moduleName := "kamon-akka-2.4",
-      scalaVersion := "2.12.1",
-      crossScalaVersions := Seq("2.11.8", "2.12.1")))
+    bintrayPackage := "kamon-akka",
+    moduleName := "kamon-akka-2.4",
+    scalaVersion := "2.12.1",
+    crossScalaVersions := Seq("2.11.8", "2.12.1"),
+    resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")))
   .settings(aspectJSettings: _*)
   .settings(
     libraryDependencies ++=
@@ -63,17 +65,18 @@ lazy val kamonAkka24 = Project("kamon-akka-24", file("kamon-akka-2.4.x"))
       testScope(scalatest, kamonTestkit, akkaDependency("testkit", `akka-2.4`), akkaDependency("slf4j", `akka-2.4`), logbackClassic))
 
 lazy val kamonAkka25 = Project("kamon-akka-25", file("kamon-akka-2.5.x"))
-   .settings(Seq(
-     bintrayPackage := "kamon-akka",
-     moduleName := "kamon-akka-2.5",
-     scalaVersion := "2.12.1",
-     crossScalaVersions := Seq("2.11.8", "2.12.1")))
-   .settings(aspectJSettings: _*)
-   .settings(
-     libraryDependencies ++=
-       compileScope(akkaDependency("actor", `akka-2.5`), kamonCore, kamonScala, kamonExecutors) ++
-       providedScope(aspectJ) ++
-       optionalScope(logbackClassic) ++
-       testScope(scalatest, kamonTestkit, akkaDependency("testkit", `akka-2.5`), akkaDependency("slf4j", `akka-2.5`), logbackClassic))
+  .settings(Seq(
+    bintrayPackage := "kamon-akka",
+    moduleName := "kamon-akka-2.5",
+    scalaVersion := "2.12.1",
+    crossScalaVersions := Seq("2.11.8", "2.12.1"),
+    resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")))
+  .settings(aspectJSettings: _*)
+  .settings(
+    libraryDependencies ++=
+      compileScope(akkaDependency("actor", `akka-2.5`), kamonCore, kamonScala, kamonExecutors) ++
+      providedScope(aspectJ) ++
+      optionalScope(logbackClassic) ++
+      testScope(scalatest, kamonTestkit, akkaDependency("testkit", `akka-2.5`), akkaDependency("slf4j", `akka-2.5`), logbackClassic))
 
 enableProperCrossScalaVersionTasks
