@@ -1,0 +1,8 @@
+package span
+
+type Span struct {
+  traceID binary
+  spanID binary
+  parentID binary
+  samplingDecision uint8
+}

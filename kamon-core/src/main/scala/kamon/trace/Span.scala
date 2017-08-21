@@ -195,9 +195,9 @@ object Span {
 
   object Local {
     def apply(spanContext: SpanContext, parent: Option[Span], initialOperationName: String, initialSpanTags: Map[String, Span.TagValue],
-        initialMetricTags: Map[String, String], startTimestampMicros: Long, reporterRegistry: ReporterRegistryImpl,
+        initialMetricTags: Map[String, String], startTimestampMicros: Long, spanSink: SpanSink,
         scopeSpanMetrics: Boolean): Local =
-      new Local(spanContext, parent, initialOperationName, initialSpanTags, initialMetricTags, startTimestampMicros, reporterRegistry, scopeSpanMetrics)
+      new Local(spanContext, parent, initialOperationName, initialSpanTags, initialMetricTags, startTimestampMicros, spanSink, scopeSpanMetrics)
   }
 
 

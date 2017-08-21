@@ -24,7 +24,7 @@ import scala.concurrent.Future
 import java.time.Duration
 import java.util.concurrent.{Executors, ScheduledExecutorService, ScheduledThreadPoolExecutor}
 
-import kamon.context.{Codec, Context, Storage}
+import kamon.context.{Codecs, Context, Storage}
 import org.slf4j.LoggerFactory
 
 import scala.util.Try
@@ -39,10 +39,10 @@ object Kamon extends MetricLookup with ReporterRegistry with Tracer {
 
   private val _scheduler = Executors.newScheduledThreadPool(schedulerPoolSize(_config), numberedThreadFactory("kamon-scheduler"))
   private val _metrics = new MetricRegistry(_config, _scheduler)
-  private val _reporters = new ReporterRegistryImpl(_metrics, _config)
-  private val _tracer = Tracer.Default(Kamon, _reporters, _config)
+  private val _reporterRegistry = new ReporterRegistry.Default(_metrics, _config)
+  private val _tracer = Tracer.Default(Kamon, _reporterRegistry, _config)
   private val _contextStorage = Storage.ThreadLocal()
-  private val _contextCodec = new Codec(_config)
+  private val _contextCodec = new Codecs(_config)
   private var _onReconfigureHooks = Seq.empty[OnReconfigureHook]
 
   def environment: Environment =
@@ -56,7 +56,7 @@ object Kamon extends MetricLookup with ReporterRegistry with Tracer {
     _environment = Environment.fromConfig(config)
     _filters = Filters.fromConfig(config)
     _metrics.reconfigure(config)
-    _reporters.reconfigure(config)
+    _reporterRegistry.reconfigure(config)
     _tracer.reconfigure(config)
     _contextCodec.reconfigure(config)
 
@@ -100,7 +100,7 @@ object Kamon extends MetricLookup with ReporterRegistry with Tracer {
   override def identityProvider: IdentityProvider =
     _tracer.identityProvider
 
-  def contextCodec(): Codec =
+  def contextCodec(): Codecs =
       _contextCodec
 
   def currentContext(): Context =
@@ -120,22 +120,22 @@ object Kamon extends MetricLookup with ReporterRegistry with Tracer {
 
 
   override def loadReportersFromConfig(): Unit =
-    _reporters.loadReportersFromConfig()
+    _reporterRegistry.loadReportersFromConfig()
 
   override def addReporter(reporter: MetricReporter): Registration =
-    _reporters.addReporter(reporter)
+    _reporterRegistry.addReporter(reporter)
 
   override def addReporter(reporter: MetricReporter, name: String): Registration =
-    _reporters.addReporter(reporter, name)
+    _reporterRegistry.addReporter(reporter, name)
 
   override def addReporter(reporter: SpanReporter): Registration =
-    _reporters.addReporter(reporter)
+    _reporterRegistry.addReporter(reporter)
 
   override def addReporter(reporter: SpanReporter, name: String): Registration =
-    _reporters.addReporter(reporter, name)
+    _reporterRegistry.addReporter(reporter, name)
 
   override def stopAllReporters(): Future[Unit] =
-    _reporters.stopAllReporters()
+    _reporterRegistry.stopAllReporters()
 
   def filter(filterName: String, pattern: String): Boolean =
     _filters.accept(filterName, pattern)

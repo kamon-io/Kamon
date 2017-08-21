@@ -16,15 +16,17 @@
 package kamon.trace
 
 import java.net.{URLDecoder, URLEncoder}
+import java.nio.ByteBuffer
 
 import kamon.Kamon
-import kamon.context.{Codec, Context, TextMap}
+import kamon.context.{Codecs, Context, TextMap}
+import kamon.context.generated.binary.span.{Span => ColferSpan}
 import kamon.trace.SpanContext.SamplingDecision
 
 
 object SpanCodec {
 
-  class B3 extends Codec.ForEntry[TextMap] {
+  class B3 extends Codecs.ForEntry[TextMap] {
     import B3.Headers
 
     override def encode(context: Context): TextMap = {
@@ -94,6 +96,71 @@ object SpanCodec {
       val SpanIdentifier = "X-B3-SpanId"
       val Sampled = "X-B3-Sampled"
       val Flags = "X-B3-Flags"
+    }
+  }
+
+
+  class Colfer extends Codecs.ForEntry[ByteBuffer] {
+    val emptyBuffer = ByteBuffer.allocate(0)
+
+    override def encode(context: Context): ByteBuffer = {
+      val span = context.get(Span.ContextKey)
+      if(span.nonEmpty()) {
+        val marshalBuffer = Colfer.codecBuffer.get()
+        val colferSpan = new ColferSpan()
+        val spanContext = span.context()
+
+        colferSpan.setTraceID(spanContext.traceID.bytes)
+        colferSpan.setSpanID(spanContext.spanID.bytes)
+        colferSpan.setParentID(spanContext.parentID.bytes)
+        colferSpan.setSamplingDecision(samplingDecisionToByte(spanContext.samplingDecision))
+
+        val marshalledSize = colferSpan.marshal(marshalBuffer, 0)
+        val buffer = ByteBuffer.allocate(marshalledSize)
+        buffer.put(marshalBuffer, 0, marshalledSize)
+        buffer
+
+      } else emptyBuffer
+    }
+
+    override def decode(carrier: ByteBuffer, context: Context): Context = {
+      carrier.clear()
+
+      if(carrier.capacity() == 0)
+        context
+      else {
+        val identityProvider = Kamon.tracer.identityProvider
+        val colferSpan = new ColferSpan()
+        colferSpan.unmarshal(carrier.array(), 0)
+
+        val spanContext = SpanContext(
+          traceID = identityProvider.traceIdGenerator().from(colferSpan.traceID),
+          spanID = identityProvider.traceIdGenerator().from(colferSpan.spanID),
+          parentID = identityProvider.traceIdGenerator().from(colferSpan.parentID),
+          samplingDecision = byteToSamplingDecision(colferSpan.samplingDecision)
+        )
+
+        context.withKey(Span.ContextKey, Span.Remote(spanContext))
+      }
+    }
+
+
+    private def samplingDecisionToByte(samplingDecision: SamplingDecision): Byte = samplingDecision match {
+      case SamplingDecision.Sample      => 1
+      case SamplingDecision.DoNotSample => 2
+      case SamplingDecision.Unknown     => 3
+    }
+
+    private def byteToSamplingDecision(byte: Byte): SamplingDecision = byte match {
+      case 1 => SamplingDecision.Sample
+      case 2 => SamplingDecision.DoNotSample
+      case _ => SamplingDecision.Unknown
+    }
+  }
+
+  object Colfer {
+    private val codecBuffer = new ThreadLocal[Array[Byte]] {
+      override def initialValue(): Array[Byte] = Array.ofDim[Byte](256)
     }
   }
 }
