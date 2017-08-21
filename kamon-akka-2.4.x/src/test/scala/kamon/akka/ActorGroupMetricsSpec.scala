@@ -21,14 +21,14 @@ import java.nio.LongBuffer
 import akka.actor._
 import akka.routing.RoundRobinPool
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
-import kamon.testkit.BaseKamonSpec
+import kamon.testkit.MetricInspection
 import Metrics._
 import org.scalatest.concurrent.{Eventually, PatienceConfiguration}
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 
 import scala.concurrent.duration._
 
-class ActorGroupMetricsSpec extends TestKit(ActorSystem("ActorGroupMetricsSpec")) with WordSpecLike with BaseKamonSpec with Matchers
+class ActorGroupMetricsSpec extends TestKit(ActorSystem("ActorGroupMetricsSpec")) with WordSpecLike with MetricInspection with Matchers
     with BeforeAndAfterAll with ImplicitSender with Eventually {
 
 

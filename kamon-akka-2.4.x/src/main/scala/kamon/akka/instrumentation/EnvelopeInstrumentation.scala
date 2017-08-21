@@ -1,25 +1,21 @@
 package akka.kamon.instrumentation
 
-import io.opentracing.ActiveSpan.Continuation
+import kamon.context.Context
 import org.aspectj.lang.annotation.{Aspect, DeclareMixin}
 
-case class TimestampedContinuation(nanoTime: Long, continuation: Continuation)
-
-//object TimestampedContinuation {
-//  val Empty = TimestampedContinuation(0, null)
-//}
+case class TimestampedContext(nanoTime: Long, @transient context: Context)
 
 trait InstrumentedEnvelope extends Serializable {
-  def timestampedContinuation(): TimestampedContinuation
-  def setTimestampedContinuation(timestampedContinuation: TimestampedContinuation): Unit
+  def timestampedContext(): TimestampedContext
+  def setTimestampedContext(timestampedContext: TimestampedContext): Unit
 }
 
 object InstrumentedEnvelope {
   def apply(): InstrumentedEnvelope = new InstrumentedEnvelope {
-    var timestampedContinuation: TimestampedContinuation = _
+    var timestampedContext: TimestampedContext = _
 
-    def setTimestampedContinuation(timestampedContinuation: TimestampedContinuation): Unit =
-      this.timestampedContinuation = timestampedContinuation
+    def setTimestampedContext(timestampedContext: TimestampedContext): Unit =
+      this.timestampedContext = timestampedContext
   }
 }
 

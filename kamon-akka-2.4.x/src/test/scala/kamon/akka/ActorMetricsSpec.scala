@@ -26,10 +26,11 @@ import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import kamon.Kamon
 import Metrics._
 import kamon.akka.ActorMetricsTestActor._
-import kamon.testkit.BaseKamonSpec
+import kamon.testkit.MetricInspection
+
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 
-class ActorMetricsSpec extends TestKit(ActorSystem("ActorMetricsSpec")) with WordSpecLike with BaseKamonSpec with Matchers
+class ActorMetricsSpec extends TestKit(ActorSystem("ActorMetricsSpec")) with WordSpecLike with MetricInspection with Matchers
     with BeforeAndAfterAll with ImplicitSender with Eventually {
 
   "the Kamon actor metrics" should {

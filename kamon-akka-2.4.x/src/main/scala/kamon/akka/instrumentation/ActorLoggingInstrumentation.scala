@@ -17,7 +17,7 @@
 package akka.kamon.instrumentation
 
 import kamon.Kamon
-import kamon.util.{BaggageOnMDC, HasContinuation}
+import kamon.context.HasContext
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
 
@@ -25,26 +25,24 @@ import org.aspectj.lang.annotation._
 class ActorLoggingInstrumentation  {
 
   @DeclareMixin("akka.event.Logging.LogEvent+")
-  def mixinTraceContextAwareToLogEvent: HasContinuation = HasContinuation.fromTracerActiveSpan()
+  def mixinTraceContextAwareToLogEvent: HasContext = HasContext.fromCurrentContext()
 
   @Pointcut("execution(akka.event.Logging.LogEvent+.new(..)) && this(event)")
-  def logEventCreation(event: HasContinuation): Unit = {}
+  def logEventCreation(event: HasContext): Unit = {}
 
   @After("logEventCreation(event)")
-  def captureTraceContext(event: HasContinuation): Unit = {
+  def captureTraceContext(event: HasContext): Unit = {
     // Force initialization of the continuation
-    event.continuation
+    event.context
   }
 
   @Pointcut("execution(* akka.event.slf4j.Slf4jLogger.withMdc(..)) && args(logSource, logEvent, logStatement)")
-  def withMdcInvocation(logSource: String, logEvent: HasContinuation, logStatement: () ⇒ _): Unit = {}
+  def withMdcInvocation(logSource: String, logEvent: HasContext, logStatement: () ⇒ _): Unit = {}
 
   @Around("withMdcInvocation(logSource, logEvent, logStatement)")
-  def aroundWithMdcInvocation(pjp: ProceedingJoinPoint, logSource: String, logEvent: HasContinuation, logStatement: () ⇒ _): Unit = {
-    Kamon.withContinuation(logEvent.continuation) {
-      BaggageOnMDC.withBaggageOnMDC {
-        pjp.proceed()
-      }
+  def aroundWithMdcInvocation(pjp: ProceedingJoinPoint, logSource: String, logEvent: HasContext, logStatement: () ⇒ _): Unit = {
+    Kamon.withContext(logEvent.context) {
+      pjp.proceed()
     }
   }
 }

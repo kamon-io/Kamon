@@ -21,19 +21,19 @@ import akka.actor.SupervisorStrategy.{Escalate, Restart, Resume, Stop}
 import akka.actor._
 import akka.testkit.{ImplicitSender, TestKit}
 import kamon.Kamon
-import kamon.testkit.BaseKamonSpec
+import kamon.testkit.ContextTesting
 import org.scalatest.{BeforeAndAfterAll, WordSpecLike}
 
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
 
 class ActorSystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSystemMessageInstrumentationSpec")) with WordSpecLike
-    with BaseKamonSpec with BeforeAndAfterAll with ImplicitSender {
+    with ContextTesting with BeforeAndAfterAll with ImplicitSender {
   implicit lazy val executionContext = system.dispatcher
 
   "the system message passing instrumentation" should {
     "capture and propagate the active span while processing the Create message in top level actors" in {
-      Kamon.withSpan(spanWithBaggage(key = "propagate", value = "creating-top-level-actor")) {
+      Kamon.withContext(contextWithLocal("creating-top-level-actor")) {
         system.actorOf(Props(new Actor {
           testActor ! propagatedBaggage()
           def receive: Actor.Receive = { case any ⇒ }
@@ -44,7 +44,7 @@ class ActorSystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSy
     }
 
     "capture and propagate the active span when processing the Create message in non top level actors" in {
-      Kamon.withSpan(spanWithBaggage(key = "propagate", value = "creating-non-top-level-actor")) {
+      Kamon.withContext(contextWithLocal("creating-non-top-level-actor")) {
         system.actorOf(Props(new Actor {
           def receive: Actor.Receive = {
             case _ ⇒
@@ -62,7 +62,7 @@ class ActorSystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSy
     "keep the TraceContext in the supervision cycle" when {
       "the actor is resumed" in {
         val supervisor = supervisorWithDirective(Resume)
-        Kamon.withSpan(spanWithBaggage(key = "propagate", value = "fail-and-resume")) {
+        Kamon.withContext(contextWithLocal("fail-and-resume")) {
           supervisor ! "fail"
         }
 
@@ -70,12 +70,12 @@ class ActorSystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSy
 
         // Ensure we didn't tie the actor with the initially captured span
         supervisor ! "baggage"
-        expectMsg("MissingActiveSpan")
+        expectMsg("MissingContext")
       }
 
       "the actor is restarted" in {
         val supervisor = supervisorWithDirective(Restart, sendPreRestart = true, sendPostRestart = true)
-        Kamon.withSpan(spanWithBaggage(key = "propagate", value = "fail-and-restart")) {
+        Kamon.withContext(contextWithLocal("fail-and-restart")) {
           supervisor ! "fail"
         }
 
@@ -85,12 +85,12 @@ class ActorSystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSy
 
         // Ensure we didn't tie the actor with the context
         supervisor ! "baggage"
-        expectMsg("MissingActiveSpan")
+        expectMsg("MissingContext")
       }
 
       "the actor is stopped" in {
         val supervisor = supervisorWithDirective(Stop, sendPostStop = true)
-        Kamon.withSpan(spanWithBaggage(key = "propagate", value = "fail-and-stop")) {
+        Kamon.withContext(contextWithLocal("fail-and-stop")) {
           supervisor ! "fail"
         }
 
@@ -101,7 +101,7 @@ class ActorSystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSy
 
       "the failure is escalated" in {
         val supervisor = supervisorWithDirective(Escalate, sendPostStop = true)
-        Kamon.withSpan(spanWithBaggage(key = "propagate", value = "fail-and-escalate")) {
+        Kamon.withContext(contextWithLocal("fail-and-escalate")) {
           supervisor ! "fail"
         }
 
@@ -115,7 +115,7 @@ class ActorSystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSy
   }
 
   private def propagatedBaggage(): String =
-    Kamon.fromActiveSpan(_.getBaggageItem("propagate")).getOrElse("MissingActiveSpan")
+    Kamon.currentContext().get(StringKey).getOrElse("MissingContext")
 
   def supervisorWithDirective(directive: SupervisorStrategy.Directive, sendPreRestart: Boolean = false, sendPostRestart: Boolean = false,
     sendPostStop: Boolean = false, sendPreStart: Boolean = false): ActorRef = {

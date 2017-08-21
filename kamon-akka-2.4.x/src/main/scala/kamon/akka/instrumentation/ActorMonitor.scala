@@ -8,8 +8,8 @@ import kamon.akka.Metrics.{ActorGroupMetrics, ActorMetrics, RouterMetrics}
 import org.aspectj.lang.ProceedingJoinPoint
 
 trait ActorMonitor {
-  def captureEnvelopeContext(): TimestampedContinuation
-  def processMessage(pjp: ProceedingJoinPoint, envelopeContext: TimestampedContinuation): AnyRef
+  def captureEnvelopeContext(): TimestampedContext
+  def processMessage(pjp: ProceedingJoinPoint, envelopeContext: TimestampedContext): AnyRef
   def processFailure(failure: Throwable): Unit
   def cleanup(): Unit
 }
@@ -53,11 +53,11 @@ object ActorMonitor {
 object ActorMonitors {
 
   val ContextPropagationOnly = new ActorMonitor {
-    def captureEnvelopeContext(): TimestampedContinuation =
-      TimestampedContinuation(0, Kamon.activeSpanContinuation())
+    def captureEnvelopeContext(): TimestampedContext =
+      TimestampedContext(0, Kamon.currentContext())
 
-    def processMessage(pjp: ProceedingJoinPoint, envelopeContext: TimestampedContinuation): AnyRef = {
-      Kamon.withContinuation(envelopeContext.continuation) {
+    def processMessage(pjp: ProceedingJoinPoint, envelopeContext: TimestampedContext): AnyRef = {
+      Kamon.withContext(envelopeContext.context) {
         pjp.proceed()
       }
     }
@@ -70,18 +70,18 @@ object ActorMonitors {
   class TrackedActor(actorMetrics: Option[ActorMetrics], groupMetrics: Seq[ActorGroupMetrics], actorCellCreation: Boolean)
       extends GroupMetricsTrackingActor(groupMetrics, actorCellCreation) {
 
-    override def captureEnvelopeContext(): TimestampedContinuation = {
+    override def captureEnvelopeContext(): TimestampedContext = {
       actorMetrics.foreach { am =>
         am.mailboxSize.increment()
       }
       super.captureEnvelopeContext()
     }
 
-    def processMessage(pjp: ProceedingJoinPoint, envelopeContext: TimestampedContinuation): AnyRef = {
+    def processMessage(pjp: ProceedingJoinPoint, envelopeContext: TimestampedContext): AnyRef = {
       val timestampBeforeProcessing = System.nanoTime()
 
       try {
-        Kamon.withContinuation(envelopeContext.continuation) {
+        Kamon.withContext(envelopeContext.context) {
           pjp.proceed()
         }
 
@@ -115,11 +115,11 @@ object ActorMonitors {
   class TrackedRoutee(routerMetrics: RouterMetrics, groupMetrics: Seq[ActorGroupMetrics], actorCellCreation: Boolean)
       extends GroupMetricsTrackingActor(groupMetrics, actorCellCreation) {
 
-    def processMessage(pjp: ProceedingJoinPoint, envelopeContext: TimestampedContinuation): AnyRef = {
+    def processMessage(pjp: ProceedingJoinPoint, envelopeContext: TimestampedContext): AnyRef = {
       val timestampBeforeProcessing = System.nanoTime()
 
       try {
-        Kamon.withContinuation(envelopeContext.continuation) {
+        Kamon.withContext(envelopeContext.context) {
           pjp.proceed()
         }
 
@@ -152,12 +152,12 @@ object ActorMonitors {
       }
     }
 
-    def captureEnvelopeContext(): TimestampedContinuation = {
+    def captureEnvelopeContext(): TimestampedContext = {
       groupMetrics.foreach { gm =>
         gm.mailboxSize.increment()
       }
 
-      TimestampedContinuation(System.nanoTime(), Kamon.activeSpanContinuation())
+      TimestampedContext(System.nanoTime(), Kamon.currentContext())
     }
 
     def processFailure(failure: Throwable): Unit = {
