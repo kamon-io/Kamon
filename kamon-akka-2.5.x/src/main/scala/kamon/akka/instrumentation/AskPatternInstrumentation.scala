@@ -22,6 +22,7 @@ import kamon.akka.AskPatternTimeoutWarningSettings.{Heavyweight, Lightweight, Of
 import akka.actor.{ActorRef, InternalActorRef}
 import akka.pattern.AskTimeoutException
 import kamon.Kamon
+import kamon.context.Context
 import kamon.util.CallingThreadExecutionContext
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
@@ -44,7 +45,7 @@ class AskPatternInstrumentation {
   def hookAskTimeoutWarning(pjp: ProceedingJoinPoint, actor: ActorRef, timeout: Timeout): AnyRef =
     actor match {
       // the AskPattern will only work for InternalActorRef's with these conditions.
-      case ref: InternalActorRef if !ref.isTerminated && timeout.duration.length > 0 && Kamon.activeSpan() != null ⇒
+      case ref: InternalActorRef if !ref.isTerminated && timeout.duration.length > 0 && Kamon.currentContext() != Context.Empty ⇒
         val future = pjp.proceed().asInstanceOf[Future[AnyRef]]
 
         Akka.askPatternTimeoutWarning match {

@@ -18,7 +18,7 @@ package akka.kamon.instrumentation
 
 import akka.dispatch.sysmsg.EarliestFirstSystemMessageList
 import kamon.Kamon
-import kamon.util.HasContinuation
+import kamon.context.HasContext
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
 
@@ -31,8 +31,8 @@ class ActorSystemMessageInstrumentation {
   @Around("systemMessageProcessing(messages)")
   def aroundSystemMessageInvoke(pjp: ProceedingJoinPoint, messages: EarliestFirstSystemMessageList): Any = {
     if (messages.nonEmpty) {
-      val continuation = messages.head.asInstanceOf[HasContinuation].continuation
-      Kamon.withContinuation(continuation)(pjp.proceed())
+      val continuation = messages.head.asInstanceOf[HasContext].context
+      Kamon.withContext(continuation)(pjp.proceed())
 
     } else pjp.proceed()
   }
@@ -42,15 +42,15 @@ class ActorSystemMessageInstrumentation {
 class TraceContextIntoSystemMessageMixin {
 
   @DeclareMixin("akka.dispatch.sysmsg.SystemMessage+")
-  def mixinHasContinuationToSystemMessage: HasContinuation = HasContinuation.fromTracerActiveSpan()
+  def mixinHasContinuationToSystemMessage: HasContext = HasContext.fromCurrentContext()
 
   @Pointcut("execution(akka.dispatch.sysmsg.SystemMessage+.new(..)) && this(message)")
-  def systemMessageCreation(message: HasContinuation): Unit = {}
+  def systemMessageCreation(message: HasContext): Unit = {}
 
   @After("systemMessageCreation(message)")
-  def afterSystemMessageCreation(message: HasContinuation): Unit = {
+  def afterSystemMessageCreation(message: HasContext): Unit = {
     // Necessary to force the initialization of HasContinuation at the moment of creation.
-    message.continuation
+    message.context
   }
 }
 
@@ -58,23 +58,23 @@ class TraceContextIntoSystemMessageMixin {
 class TraceContextIntoRepointableActorRefMixin {
 
   @DeclareMixin("akka.actor.RepointableActorRef")
-  def mixinTraceContextAwareToRepointableActorRef: HasContinuation = HasContinuation.fromTracerActiveSpan()
+  def mixinTraceContextAwareToRepointableActorRef: HasContext = HasContext.fromCurrentContext()
 
   @Pointcut("execution(akka.actor.RepointableActorRef.new(..)) && this(repointableActorRef)")
-  def envelopeCreation(repointableActorRef: HasContinuation): Unit = {}
+  def envelopeCreation(repointableActorRef: HasContext): Unit = {}
 
   @After("envelopeCreation(repointableActorRef)")
-  def afterEnvelopeCreation(repointableActorRef: HasContinuation): Unit = {
+  def afterEnvelopeCreation(repointableActorRef: HasContext): Unit = {
     // Necessary to force the initialization of HasContinuation at the moment of creation.
-    repointableActorRef.continuation
+    repointableActorRef.context
   }
 
   @Pointcut("execution(* akka.actor.RepointableActorRef.point(..)) && this(repointableActorRef)")
-  def repointableActorRefCreation(repointableActorRef: HasContinuation): Unit = {}
+  def repointableActorRefCreation(repointableActorRef: HasContext): Unit = {}
 
   @Around("repointableActorRefCreation(repointableActorRef)")
-  def afterRepointableActorRefCreation(pjp: ProceedingJoinPoint, repointableActorRef: HasContinuation): Any = {
-    Kamon.withContinuation(repointableActorRef.continuation) {
+  def afterRepointableActorRefCreation(pjp: ProceedingJoinPoint, repointableActorRef: HasContext): Any = {
+    Kamon.withContext(repointableActorRef.context) {
       pjp.proceed()
     }
   }

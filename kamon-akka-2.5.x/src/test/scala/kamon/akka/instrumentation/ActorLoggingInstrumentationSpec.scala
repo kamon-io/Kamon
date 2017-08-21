@@ -20,18 +20,18 @@ import akka.actor.{Actor, ActorLogging, ActorSystem, Props}
 import akka.event.Logging.LogEvent
 import akka.testkit.{ImplicitSender, TestKit}
 import kamon.Kamon
-import kamon.testkit.BaseKamonSpec
-import kamon.util.HasContinuation
+import kamon.context.HasContext
+import kamon.testkit.ContextTesting
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 
 
 class ActorLoggingInstrumentationSpec extends TestKit(ActorSystem("ActorCellInstrumentationSpec")) with WordSpecLike
-    with BaseKamonSpec with BeforeAndAfterAll with Matchers with ImplicitSender {
+    with ContextTesting with BeforeAndAfterAll with Matchers with ImplicitSender {
 
   "the ActorLogging instrumentation" should {
     "capture a active span continuation and attach it to log events" in {
       val loggerActor = system.actorOf(Props[LoggerActor])
-      Kamon.withSpan(spanWithBaggage(key = "propagate", value = "propagate-when-logging")) {
+      Kamon.withContext(contextWithLocal("propagate-when-logging")) {
         loggerActor ! "info"
       }
 
@@ -40,12 +40,11 @@ class ActorLoggingInstrumentationSpec extends TestKit(ActorSystem("ActorCellInst
         case _: LogEvent ⇒ false
       }
 
-      Kamon.withContinuation(logEvent.asInstanceOf[HasContinuation].continuation) {
-        val baggageFromActiveSpan = Kamon.fromActiveSpan(_.getBaggageItem("propagate")).getOrElse("MissingActiveSpan")
-        baggageFromActiveSpan should be("propagate-when-logging")
+      Kamon.withContext(logEvent.asInstanceOf[HasContext].context) {
+        val keyValueFromContext = Kamon.currentContext().get(StringKey).getOrElse("MissingContext")
+        keyValueFromContext should be("propagate-when-logging")
       }
     }
-
   }
 
 

@@ -42,7 +42,7 @@ class ActorCellInstrumentation {
 
   @Around("invokingActorBehaviourAtActorCell(cell, envelope)")
   def aroundBehaviourInvoke(pjp: ProceedingJoinPoint, cell: ActorCell, envelope: Envelope): Any = {
-    actorInstrumentation(cell).processMessage(pjp, envelope.asInstanceOf[InstrumentedEnvelope].timestampedContinuation())
+    actorInstrumentation(cell).processMessage(pjp, envelope.asInstanceOf[InstrumentedEnvelope].timestampedContext())
   }
 
   /**
@@ -67,7 +67,7 @@ class ActorCellInstrumentation {
   }
 
   private def setEnvelopeContext(cell: Cell, envelope: Envelope): Unit = {
-    envelope.asInstanceOf[InstrumentedEnvelope].setTimestampedContinuation(
+    envelope.asInstanceOf[InstrumentedEnvelope].setTimestampedContext(
       actorInstrumentation(cell).captureEnvelopeContext())
   }
 
@@ -92,7 +92,7 @@ class ActorCellInstrumentation {
           queue.poll() match {
             case s: SystemMessage ⇒ cell.sendSystemMessage(s)
             case e: Envelope with InstrumentedEnvelope ⇒
-              Kamon.withContext(e.timestampedContinuation().continuation) {
+              Kamon.withContext(e.timestampedContext().context) {
                 cell.sendMessage(e)
               }
           }
