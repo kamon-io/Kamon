@@ -16,22 +16,22 @@
 package kamon.jdbc.instrumentation
 
 import java.sql.{PreparedStatement, Statement}
-import java.util.concurrent.TimeUnit.{NANOSECONDS => nanos}
 
-import kamon.jdbc.JdbcExtension
+import kamon.Kamon
+import kamon.Kamon.buildSpan
+import kamon.jdbc.{JdbcExtension, Metrics}
 import kamon.jdbc.instrumentation.StatementInstrumentation.StatementTypes
-import kamon.metric.instrument.{Counter, Histogram, MinMaxCounter}
-import kamon.trace.{SegmentCategory, TraceContext, Tracer}
+import kamon.trace.SpanCustomizer
+import kamon.util.Clock
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation.{Around, Aspect, DeclareMixin, Pointcut}
 
-import scala.util.control.NonFatal
 
 @Aspect
 class StatementInstrumentation {
 
   @DeclareMixin("java.sql.Statement+")
-  def mixinHasConnectionPoolTrackerToStatement: HasStatementMetrics.Mixin = HasStatementMetrics()
+  def mixinHasConnectionPoolTrackerToStatement: Mixin.HasConnectionPoolMetrics = Mixin.HasConnectionPoolMetrics()
 
   /**
    *   Calls to java.sql.Statement+.execute(..)
@@ -99,53 +99,44 @@ class StatementInstrumentation {
     track(pjp, statement, "not-available", StatementTypes.Batch)
 
   def track(pjp: ProceedingJoinPoint, target: Any, sql: String, statementType: String): Any = {
-    val customRecorder = target.asInstanceOf[HasStatementMetrics.Mixin].statementMetrics
-    val entityRecorder = if(customRecorder != null) customRecorder else JdbcExtension.defaultTracker
-    val latencyRecorder = statementType match {
-      case StatementTypes.Query           ⇒ entityRecorder.queries
-      case StatementTypes.Update          ⇒ entityRecorder.updates
-      case StatementTypes.Batch           ⇒ entityRecorder.batches
-      case StatementTypes.GenericExecute  ⇒ entityRecorder.genericExecute
-    }
+    val poolTags = Option(target.asInstanceOf[Mixin.HasConnectionPoolMetrics].connectionPoolMetrics)
+      .map(_.tags)
+      .getOrElse(Map.empty[String, String])
 
-    trackExecution(pjp, sql, statementType, latencyRecorder, entityRecorder.inFlightStatements, entityRecorder.errors, entityRecorder.slowStatements)
-  }
+    val inFlight = Metrics.Statements.InFlight.refine(poolTags)
+    inFlight.increment()
 
-  def trackExecution(pjp: ProceedingJoinPoint, sql: String, statementType: String, latencyHistogram: Histogram,
-    inFlightCounter: MinMaxCounter, errorCounter: Counter, slowStatementsCounter: Counter): Any = {
+    val startTimestamp = Clock.microTimestamp()
+    val span = Kamon.currentContext().get(SpanCustomizer.ContextKey).customize {
+      val builder = buildSpan(statementType)
+        .withStartTimestamp(startTimestamp)
+        .withTag("component", "jdbc")
+        .withTag("db.statement", sql)
 
-    inFlightCounter.increment()
-    val startedAt = System.nanoTime()
+      poolTags.foreach { case (key, value) => builder.withTag(key, value) }
+      builder
+    }.start()
 
     try {
-      if (Tracer.currentContext.nonEmpty && JdbcExtension.shouldGenerateSegments)
-        withSegment(Tracer.currentContext, statementType, sql)(pjp.proceed())
-      else
-        pjp.proceed()
+
+      pjp.proceed()
 
     } catch {
-      case NonFatal(throwable) ⇒ {
-        JdbcExtension.processSqlError(sql, throwable)
-        errorCounter.increment()
-        throw throwable
-      }
+      case t: Throwable =>
+        span
+          .addSpanTag("error", true)
+          .addSpanTag("error.object", t.toString)
+
+        JdbcExtension.onStatementError(sql, t)
+
     } finally {
-      val timeSpent = System.nanoTime() - startedAt
-      latencyHistogram.record(timeSpent)
-      inFlightCounter.decrement()
+      val endTimestamp = Clock.microTimestamp()
+      val elapsedTime = endTimestamp - startTimestamp
+      span.finish(endTimestamp)
+      inFlight.decrement()
 
-      val timeSpentInMillis = nanos.toMillis(timeSpent)
-      if (timeSpentInMillis >= JdbcExtension.slowQueryThreshold) {
-        slowStatementsCounter.increment()
-        JdbcExtension.processSlowQuery(sql, timeSpentInMillis)
-      }
+      JdbcExtension.onStatementFinish(sql, elapsedTime)
     }
-  }
-
-  def withSegment[A](ctx: TraceContext, statementType: String, statement: String)(thunk: ⇒ A): A = {
-    val segmentName = JdbcExtension.generateJdbcSegmentName(statementType, statement)
-    val segment = ctx.startSegment(segmentName, SegmentCategory.Database, JdbcExtension.SegmentLibraryName)
-    try thunk finally segment.finish()
   }
 }
 

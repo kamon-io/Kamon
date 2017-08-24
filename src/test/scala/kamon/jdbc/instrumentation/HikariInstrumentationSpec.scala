@@ -5,7 +5,8 @@ import java.util.concurrent.Executors
 
 import com.zaxxer.hikari.{HikariConfig, HikariDataSource}
 import kamon.Kamon
-import kamon.metric.EntitySnapshot
+import kamon.jdbc.Metrics.ConnectionPoolMetrics
+import kamon.testkit.MetricInspection
 import org.scalatest.{Matchers, WordSpec}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.SpanSugar
@@ -13,60 +14,70 @@ import org.scalatest.time.SpanSugar
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.Try
 
-class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually with SpanSugar {
+class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually with SpanSugar with MetricInspection {
   implicit val parallelQueriesContext = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(16))
 
   "the Hikari instrumentation" should {
     "create a entity tracking each hikari pool using the pool name as entity name and cleanup after closing the pool" in {
       val pool1 = createPool("example-1")
       val pool2 = createPool("example-2")
-      Kamon.metrics.find("example-1", "hikari-pool") shouldBe defined
-      Kamon.metrics.find("example-2", "hikari-pool") shouldBe defined
+
+      ConnectionPoolMetrics.OpenConnections.valuesForTag("poolName") should contain allOf(
+        "example-1",
+        "example-2"
+      )
 
       pool1.close()
       pool2.close()
-      Kamon.metrics.find("example-1", "hikari-pool") shouldBe empty
-      Kamon.metrics.find("example-2", "hikari-pool") shouldBe empty
 
+      ConnectionPoolMetrics.OpenConnections.valuesForTag("poolName") shouldBe empty
     }
 
-    "track the number of open connections to the database" in {
+    "track the number of open connections to the database" ignore {
       val pool = createPool("track-open-connections", 16)
       val connections = (1 to 10) map { _ ⇒
         pool.getConnection()
       }
 
-      val openConnections = takeSnapshotOf("track-open-connections", "hikari-pool").minMaxCounter("open-connections").get
-      openConnections.min shouldBe (1)
-      openConnections.max shouldBe (10)
+      eventually {
+        ConnectionPoolMetrics.OpenConnections.refine(
+          "poolVendor" -> "hikari",
+          "poolName" -> "track-open-connections"
+        ).distribution().max shouldBe (10)
+      }
 
       connections.foreach(_.close())
 
-      eventually(timeout(15 seconds), interval(1 second)) {
-        takeSnapshotOf("track-open-connections", "hikari-pool")
-          .minMaxCounter("open-connections")
-          .get
-          .max shouldBe (1)
+      eventually(timeout(15 seconds)) {
+        ConnectionPoolMetrics.OpenConnections.refine(
+          "poolVendor" -> "hikari",
+          "poolName" -> "track-open-connections"
+        ).distribution().max shouldBe (1)
       }
+
+      pool.close()
     }
 
     "track the number of borrowed connections" in {
       val pool = createPool("track-borrowed-connections", 16)
-      val connections = (1 to 7) map { _ ⇒
+      val connections = (1 to 10) map { _ ⇒
         pool.getConnection()
       }
 
-      val openConnections = takeSnapshotOf("track-borrowed-connections", "hikari-pool").minMaxCounter("borrowed-connections").get
-      openConnections.min shouldBe (0)
-      openConnections.max shouldBe (7)
+      eventually {
+        ConnectionPoolMetrics.BorrowedConnections.refine(
+          "poolVendor" -> "hikari",
+          "poolName" -> "track-borrowed-connections"
+        ).distribution().max shouldBe (10)
+      }
 
-      connections.drop(3).foreach(_.close())
+      connections.drop(5).foreach(_.close())
 
       eventually {
-        takeSnapshotOf("track-borrowed-connections", "hikari-pool")
-          .minMaxCounter("borrowed-connections")
-          .get
-          .max shouldBe (3)
+        ConnectionPoolMetrics.BorrowedConnections.refine(
+          "poolVendor" -> "hikari",
+          "poolName" -> "track-borrowed-connections"
+        ).distribution().max shouldBe (5)
       }
 
       pool.close()
@@ -78,7 +89,12 @@ class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually w
         pool.getConnection()
       }
 
-      takeSnapshotOf("track-borrow-time", "hikari-pool").histogram("borrow-time").get.numberOfMeasurements shouldBe(5)
+      eventually {
+        ConnectionPoolMetrics.BorrowTime.refine(
+          "poolVendor" -> "hikari",
+          "poolName" -> "track-borrow-time"
+        ).distribution(resetState = false).count shouldBe (6) // 5 + 1 during setup
+      }
     }
 
     "track timeout errors when borrowing a connection" in {
@@ -91,10 +107,18 @@ class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually w
         pool.getConnection()
       }
 
-      val poolMetrics = takeSnapshotOf("track-borrow-timeouts", "hikari-pool")
-      poolMetrics.histogram("borrow-time").get.max shouldBe ((3 seconds).toNanos +- (100 milliseconds).toNanos)
-      poolMetrics.counter("borrow-timeouts").get.count shouldBe(1)
-    }
+      eventually {
+        ConnectionPoolMetrics.BorrowTime.refine(
+          "poolVendor" -> "hikari",
+          "poolName" -> "track-borrow-timeouts"
+        ).distribution(resetState = false).max shouldBe ((3 seconds).toNanos +- (100 milliseconds).toNanos)
+      }
+
+      ConnectionPoolMetrics.BorrowTimeouts.refine(
+        "poolVendor" -> "hikari",
+        "poolName" -> "track-borrow-timeouts"
+      ).value() shouldBe 1
+    }/*
 
     "track the number of in-flight operations in connections from the pool" in {
       val pool = createPool("track-in-flight", 16)
@@ -109,34 +133,7 @@ class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually w
       eventually(timeout(2 seconds), interval(100 millis)) {
         takeSnapshotOf("track-in-flight", "hikari-pool").minMaxCounter("in-flight").get.max should be(10)
       }
-    }
-
-    "track standard metrics for statements executed with connection from the pool" in {
-      val pool = createPool("track-metrics", 10)
-      val operations = for (id ← 1 to 10) yield {
-        Future {
-          val connection = pool.getConnection()
-          val insert = s"INSERT INTO Address (Nr, Name) VALUES($id, 'foo')"
-          val select = s"SELECT * FROM Address where Nr = $id"
-          val badQuery = "SELECT * FROM NotATable"
-
-          connection.createStatement().execute(select)
-          connection.createStatement().executeQuery(select)
-          connection.createStatement().executeUpdate(insert)
-          connection.prepareStatement(insert).executeBatch()
-          Try(connection.createStatement().execute(badQuery))
-        }
-      }
-
-      Await.result(Future.sequence(operations), 10 seconds)
-
-      val poolSnapshot = takeSnapshotOf("track-metrics", "hikari-pool")
-      poolSnapshot.histogram("generic-execute").get.numberOfMeasurements should be(20)
-      poolSnapshot.histogram("queries").get.numberOfMeasurements should be(10)
-      poolSnapshot.histogram("updates").get.numberOfMeasurements should be(10)
-      poolSnapshot.histogram("batches").get.numberOfMeasurements should be(10)
-      poolSnapshot.counter("errors").get.count should be(10)
-    }
+    }*/
 
   }
 
@@ -163,13 +160,8 @@ class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually w
       .executeUpdate()
     setupConnection.close()
 
-    takeSnapshotOf(name, "hikari-pool")
-
     hikariPool
   }
 
-  def takeSnapshotOf(name: String, category: String): EntitySnapshot = {
-    val recorder = Kamon.metrics.find(name, category).get
-    recorder.collect(Kamon.metrics.buildDefaultCollectionContext)
-  }
 }
+

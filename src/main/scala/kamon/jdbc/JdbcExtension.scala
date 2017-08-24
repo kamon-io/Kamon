@@ -15,72 +15,86 @@
 
 package kamon.jdbc
 
-import kamon.util.ConfigTools.Syntax
-import akka.actor._
-import kamon.Kamon
-import kamon.jdbc.metric.StatementMetrics
-import kamon.util.logger.LazyLogger
+import java.util.concurrent.TimeUnit
+
+import com.typesafe.config.Config
+import kamon.{Kamon, OnReconfigureHook}
+import kamon.util.DynamicAccess
+import org.slf4j.LoggerFactory
 
 object JdbcExtension {
-  val log = LazyLogger("kamon.jdbc.JdbcExtension")
+  private val logger = LoggerFactory.getLogger(JdbcExtension.getClass)
+  @volatile private var slowQueryThresholdMicroseconds: Long = 2000000
+  @volatile private var slowQueryProcessor: SlowQueryProcessor = _
+  @volatile private var sqlErrorProcessor: SqlErrorProcessor = _
 
-  val SegmentLibraryName = "jdbc"
+  loadConfiguration(Kamon.config())
 
-  private val config = Kamon.config.getConfig("kamon.jdbc")
-  private val dynamic = new ReflectiveDynamicAccess(getClass.getClassLoader)
+  Kamon.onReconfigure(new OnReconfigureHook {
+    override def onReconfigure(newConfig: Config): Unit =
+      JdbcExtension.loadConfiguration(newConfig)
+  })
 
-  private val nameGeneratorFQN = config.getString("name-generator")
-  private val nameGenerator: JdbcNameGenerator = dynamic.createInstanceFor[JdbcNameGenerator](nameGeneratorFQN, Nil).get
 
-  private val slowQueryProcessorClass = config.getString("slow-query-processor")
-  private val slowQueryProcessor: SlowQueryProcessor = dynamic.createInstanceFor[SlowQueryProcessor](slowQueryProcessorClass, Nil).get
 
-  private val sqlErrorProcessorClass = config.getString("sql-error-processor")
-  private val sqlErrorProcessor: SqlErrorProcessor = dynamic.createInstanceFor[SqlErrorProcessor](sqlErrorProcessorClass, Nil).get
+  private def loadConfiguration(config: Config): Unit = {
+    try {
+      val jdbcConfig = config.getConfig("kamon.jdbc")
+      val dynamic = new DynamicAccess(getClass.getClassLoader)
 
-  val slowQueryThreshold = config.getFiniteDuration("slow-query-threshold").toMillis
-  val shouldGenerateSegments = config.getBoolean("generate-segments")
+      val slowQueryProcessorFQCN = jdbcConfig.getString("slow-query-processor")
+      slowQueryProcessor = dynamic.createInstanceFor[SlowQueryProcessor](slowQueryProcessorFQCN, Nil).get
+      slowQueryThresholdMicroseconds = jdbcConfig.getDuration("slow-query-threshold", TimeUnit.MICROSECONDS)
 
-  val defaultTracker = Kamon.metrics.entity(StatementMetrics, "non-pooled")
+      val sqlErrorProcessorFQCN = jdbcConfig.getString("sql-error-processor")
+      sqlErrorProcessor = dynamic.createInstanceFor[SqlErrorProcessor](sqlErrorProcessorFQCN, Nil).get
 
-  def processSlowQuery(sql: String, executionTime: Long) =
-    slowQueryProcessor.process(sql, executionTime, slowQueryThreshold)
+    } catch {
+      case t: Throwable => logger.error("The kamon-jdbc module failed to load configuration", t)
+    }
+  }
 
-  def processSqlError(sql: String, ex: Throwable) =
-    sqlErrorProcessor.process(sql, ex)
 
-  def generateJdbcSegmentName(statementType: String, statement: String): String =
-    nameGenerator.generateJdbcSegmentName(statementType, statement)
+  def onStatementFinish(statement: String, elapsedTimeMicroseconds: Long): Unit = {
+    if(elapsedTimeMicroseconds > slowQueryThresholdMicroseconds)
+      slowQueryProcessor.process(statement, elapsedTimeMicroseconds, slowQueryThresholdMicroseconds)
+  }
+
+  def onStatementError(statement: String, error: Throwable): Unit = {
+    sqlErrorProcessor.process(statement, error)
+  }
 }
 
 trait SlowQueryProcessor {
-  def process(sql: String, executionTime: Long, queryThreshold: Long): Unit
+  def process(statement: String, elapsedTimeMicroseconds: Long, slowThresholdMicroseconds: Long): Unit
+}
+
+object SlowQueryProcessor {
+  final class Default extends SlowQueryProcessor {
+    private val log = LoggerFactory.getLogger(classOf[SlowQueryProcessor.Default])
+
+    override def process(statement: String, elapsedTimeMicroseconds: Long, slowThresholdMicroseconds: Long): Unit =
+      log.warn("Query execution exceeded the [{}] microseconds threshold and lasted [{}] microseconds. The query was: [{}]",
+        slowThresholdMicroseconds.toString, elapsedTimeMicroseconds.toString, statement)
+  }
 }
 
 trait SqlErrorProcessor {
   def process(sql: String, ex: Throwable): Unit
 }
 
-trait JdbcNameGenerator {
-  def generateJdbcSegmentName(statementType: String, statement: String): String
-}
-
-class DefaultJdbcNameGenerator extends JdbcNameGenerator {
-  def generateJdbcSegmentName(statementType: String, statement: String): String = s"jdbc-$statementType"
-}
-
-class DefaultSqlErrorProcessor extends SqlErrorProcessor {
-  val log = LazyLogger(classOf[DefaultSqlErrorProcessor])
-
-  override def process(sql: String, cause: Throwable): Unit = {
-    log.error(s"the query [$sql] failed with exception [${cause.getMessage}]")
-  }
-}
+//class DefaultSqlErrorProcessor extends SqlErrorProcessor {
+//  val log = LazyLogger(classOf[DefaultSqlErrorProcessor])
+//
+//  override def process(sql: String, cause: Throwable): Unit = {
+//    log.error(s"the query [$sql] failed with exception [${cause.getMessage}]")
+//  }
+//}
 
 class DefaultSlowQueryProcessor extends SlowQueryProcessor {
-  val log = LazyLogger(classOf[DefaultSlowQueryProcessor])
+  //val log = LazyLogger(classOf[DefaultSlowQueryProcessor])
 
   override def process(sql: String, executionTimeInMillis: Long, queryThresholdInMillis: Long): Unit = {
-    log.warn(s"The query [$sql] took $executionTimeInMillis ms and the slow query threshold is $queryThresholdInMillis ms")
+    //log.warn(s"The query [$sql] took $executionTimeInMillis ms and the slow query threshold is $queryThresholdInMillis ms")
   }
 }

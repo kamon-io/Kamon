@@ -8,6 +8,7 @@
 
 
   <weaver>
+    <include within="kamon.jdbc.instrumentation..*"/>
     <include within="com.zaxxer.hikari.pool.HikariPool"/>
     <include within="com.zaxxer.hikari.pool.ProxyConnection"/>
 
