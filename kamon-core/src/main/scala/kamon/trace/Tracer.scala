@@ -91,6 +91,7 @@ object Tracer {
 
   final class SpanBuilder(operationName: String, tracer: Tracer.Default, spanSink: SpanSink) {
     private var parentSpan: Span = _
+    private var initialOperationName: String = operationName
     private var startTimestamp = 0L
     private var initialSpanTags = Map.empty[String, Span.TagValue]
     private var initialMetricTags = Map.empty[String, String]
@@ -133,6 +134,17 @@ object Tracer {
       this
     }
 
+    def withOperationName(operationName: String): SpanBuilder = {
+      this.initialOperationName = operationName
+      this
+    }
+
+    def spanTags: Map[String, Span.TagValue] =
+      this.initialSpanTags
+
+    def metricTags: Map[String, String] =
+      this.initialMetricTags
+
     def ignoreParentFromContext(): SpanBuilder = {
       this.useParentFromContext = false
       this
@@ -150,7 +162,7 @@ object Tracer {
       val samplingDecision: SamplingDecision = parentSpan
         .map(_.context.samplingDecision)
         .filter(_ != SamplingDecision.Unknown)
-        .getOrElse(tracer.sampler.decide(operationName, initialSpanTags))
+        .getOrElse(tracer.sampler.decide(initialOperationName, initialSpanTags))
 
       val spanContext = parentSpan match {
         case Some(parent) => joinParentContext(parent, samplingDecision)
@@ -158,7 +170,7 @@ object Tracer {
       }
 
       tracer.tracerMetrics.createdSpans.increment()
-      Span.Local(spanContext, nonRemoteParent, operationName, initialSpanTags, initialMetricTags, startTimestampMicros, spanSink, tracer.scopeSpanMetrics)
+      Span.Local(spanContext, nonRemoteParent, initialOperationName, initialSpanTags, initialMetricTags, startTimestampMicros, spanSink, tracer.scopeSpanMetrics)
     }
 
     private def joinParentContext(parent: Span, samplingDecision: SamplingDecision): SpanContext =

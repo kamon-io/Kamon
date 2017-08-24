@@ -24,7 +24,7 @@ import scala.concurrent.Future
 import java.time.Duration
 import java.util.concurrent.{Executors, ScheduledExecutorService, ScheduledThreadPoolExecutor}
 
-import kamon.context.{Codecs, Context, Storage}
+import kamon.context.{Codecs, Context, Key, Storage}
 import org.slf4j.LoggerFactory
 
 import scala.util.Try
@@ -117,6 +117,9 @@ object Kamon extends MetricLookup with ReporterRegistry with Tracer {
       scope.close()
     }
   }
+
+  def withContextKey[T, K](key: Key[K], value: K)(f: => T): T =
+    withContext(currentContext().withKey(key, value))(f)
 
 
   override def loadReportersFromConfig(): Unit =

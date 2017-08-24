@@ -3,11 +3,11 @@ package kamon.trace
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
 import kamon.context.Context
-import kamon.testkit.{SpanBuilding, SpanInspector}
+import kamon.testkit.{SpanBuilding, SpanInspection}
 import kamon.trace.Span.TagValue
 import org.scalatest.{Matchers, OptionValues, WordSpec}
 
-class TracerSpec extends WordSpec with Matchers with SpanBuilding with OptionValues {
+class TracerSpec extends WordSpec with Matchers with SpanBuilding with SpanInspection with OptionValues {
 
   "the Kamon tracer" should {
     "construct a minimal Span that only has a operation name" in {
@@ -99,8 +99,5 @@ class TracerSpec extends WordSpec with Matchers with SpanBuilding with OptionVal
   }
 
   val tracer: Tracer = Kamon
-
-  def inspect(span: Span): SpanInspector =
-    SpanInspector(span)
 
 }
