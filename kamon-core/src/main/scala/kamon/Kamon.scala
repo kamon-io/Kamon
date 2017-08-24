@@ -15,18 +15,17 @@
 
 package kamon
 
-import com.typesafe.config.{Config, ConfigFactory}
-import kamon.metric._
-import kamon.trace._
-import kamon.util.{Filters, Registration}
-
-import scala.concurrent.Future
 import java.time.Duration
 import java.util.concurrent.{Executors, ScheduledExecutorService, ScheduledThreadPoolExecutor}
 
+import com.typesafe.config.{Config, ConfigFactory}
 import kamon.context.{Codecs, Context, Key, Storage}
+import kamon.metric._
+import kamon.trace._
+import kamon.util.{Filters, Registration}
 import org.slf4j.LoggerFactory
 
+import scala.concurrent.Future
 import scala.util.Try
 
 
@@ -44,6 +43,8 @@ object Kamon extends MetricLookup with ReporterRegistry with Tracer {
   private val _contextStorage = Storage.ThreadLocal()
   private val _contextCodec = new Codecs(_config)
   private var _onReconfigureHooks = Seq.empty[OnReconfigureHook]
+
+  sys.addShutdownHook(() => _scheduler.shutdown())
 
   def environment: Environment =
     _environment
