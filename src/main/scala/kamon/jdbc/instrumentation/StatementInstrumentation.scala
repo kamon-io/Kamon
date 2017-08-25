@@ -111,7 +111,7 @@ class StatementInstrumentation {
       val builder = buildSpan(statementType)
         .withStartTimestamp(startTimestamp)
         .withTag("component", "jdbc")
-        .withTag("db.statement", sql)
+        .withSpanTag("db.statement", sql)
 
       poolTags.foreach { case (key, value) => builder.withTag(key, value) }
       builder
