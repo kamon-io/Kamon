@@ -32,6 +32,9 @@ class TestSpanReporter() extends SpanReporter {
   def nextSpan(): Option[FinishedSpan] =
     Option(reportedSpans.poll())
 
+  def clear(): Unit =
+    reportedSpans.clear()
+
   override def start(): Unit = {}
   override def stop(): Unit = {}
   override def reconfigure(config: Config): Unit = {}
