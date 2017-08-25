@@ -33,7 +33,7 @@ class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually w
       ConnectionPoolMetrics.OpenConnections.valuesForTag("poolName") shouldBe empty
     }
 
-    "track the number of open connections to the database" ignore {
+    "track the number of open connections to the database" in {
       val pool = createPool("track-open-connections", 16)
       val connections = (1 to 10) map { _ ⇒
         pool.getConnection()

@@ -19,16 +19,18 @@ import java.sql.DriverManager
 import java.util.concurrent.Executors
 
 import kamon.Kamon
+import kamon.context.Context
 import kamon.jdbc.instrumentation.StatementInstrumentation.StatementTypes
-import kamon.jdbc.{JdbcExtension, Metrics, SlowQueryProcessor, SqlErrorProcessor}
+import kamon.jdbc.Metrics
 import kamon.testkit.{MetricInspection, Reconfigure, TestSpanReporter}
 import kamon.trace.Span.TagValue
+import kamon.trace.SpanCustomizer
 import kamon.util.Registration
 import org.scalatest.{BeforeAndAfterAll, Matchers, OptionValues, WordSpec}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.SpanSugar
 
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
 class StatementInstrumentationSpec extends WordSpec with Matchers with Eventually with SpanSugar with BeforeAndAfterAll
@@ -38,11 +40,11 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
 
   "the StatementInstrumentation" should {
     "track in-flight operations" in {
-      for (id ← 1 to 10) yield {
+      for (_ ← 1 to 10) yield {
         Future {
           DriverManager
             .getConnection("jdbc:h2:mem:jdbc-spec", "SA", "")
-            .prepareStatement(s"SELECT * FROM Address where Nr = $id; CALL SLEEP(500)")
+            .prepareStatement(s"SELECT 1; CALL SLEEP(500)")
             .execute()
         }
       }
@@ -54,45 +56,83 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
       eventually(timeout(2 seconds)) {
         Metrics.Statements.InFlight.refine().distribution().max shouldBe 0
       }
+
+      reporter.clear()
     }
 
-    "generate Spans on calls to .execute(..) in statements" in {
+    "generate Spans on calls to .execute() in prepared statements" in {
       val select = s"SELECT * FROM Address where Nr = 1"
       connection.prepareStatement(select).execute()
+
+      eventually {
+        val span = reporter.nextSpan().value
+        span.operationName shouldBe StatementTypes.GenericExecute
+        span.tags("component") shouldBe TagValue.String("jdbc")
+        span.tags("db.statement").toString should include("SELECT * FROM Address where Nr = 1")
+      }
+    }
+
+    "generate Spans on calls to .execute(sql) in statements" in {
+      val select = s"SELECT * FROM Address where Nr = 2"
       connection.createStatement().execute(select)
 
       eventually {
         val span = reporter.nextSpan().value
         span.operationName shouldBe StatementTypes.GenericExecute
         span.tags("component") shouldBe TagValue.String("jdbc")
+        span.tags("db.statement").toString should include("SELECT * FROM Address where Nr = 2")
       }
     }
 
-    "generate Spans on calls to .executeQuery(..) in statements" in {
-      val select = s"SELECT * FROM Address where Nr = 1"
+    "generate Spans on calls to .executeQuery() in prepared statements" in {
+      val select = s"SELECT * FROM Address where Nr = 3"
       connection.prepareStatement(select).executeQuery()
+
+      eventually {
+        val span = reporter.nextSpan().value
+        span.operationName shouldBe StatementTypes.Query
+        span.tags("component") shouldBe TagValue.String("jdbc")
+        span.tags("db.statement").toString should include("SELECT * FROM Address where Nr = 3")
+      }
+    }
+
+    "generate Spans on calls to .executeQuery(sql) in statements" in {
+      val select = s"SELECT * FROM Address where Nr = 4"
       connection.createStatement().executeQuery(select)
 
       eventually {
         val span = reporter.nextSpan().value
-        span.operationName shouldBe StatementTypes.GenericExecute
+        span.operationName shouldBe StatementTypes.Query
         span.tags("component") shouldBe TagValue.String("jdbc")
+        span.tags("db.statement").toString should include("SELECT * FROM Address where Nr = 4")
       }
     }
 
-    "generate Spans on calls to .executeUpdate(..) in statements" in {
+    "generate Spans on calls to .executeUpdate() in prepared statements" in {
       val insert = s"INSERT INTO Address (Nr, Name) VALUES(1, 'foo')"
       connection.prepareStatement(insert).executeUpdate()
+
+      eventually {
+        val span = reporter.nextSpan().value
+        span.operationName shouldBe StatementTypes.Update
+        span.tags("component") shouldBe TagValue.String("jdbc")
+        span.tags("db.statement").toString should include("INSERT INTO Address (Nr, Name) VALUES(1, 'foo')")
+      }
+    }
+
+    "generate Spans on calls to .executeUpdate(sql) in statements" in {
+      val insert = s"INSERT INTO Address (Nr, Name) VALUES(2, 'foo')"
       connection.createStatement().executeUpdate(insert)
 
       eventually {
         val span = reporter.nextSpan().value
         span.operationName shouldBe StatementTypes.Update
         span.tags("component") shouldBe TagValue.String("jdbc")
+        span.tags("db.statement").toString should include("INSERT INTO Address (Nr, Name) VALUES(2, 'foo')")
       }
     }
 
-    "generate Spans on calls to .executeBatch() in statements" in {
+    "generate Spans on calls to .executeBatch() in prepared statements" in {
       val statement = connection.prepareStatement("INSERT INTO Address (Nr, Name) VALUES(?, 'foo')")
       statement.setInt(1, 1)
       statement.addBatch()
@@ -104,8 +144,23 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
 
       eventually {
         val span = reporter.nextSpan().value
-        span.operationName shouldBe StatementTypes.Update
+        span.operationName shouldBe StatementTypes.Batch
         span.tags("component") shouldBe TagValue.String("jdbc")
+        span.tags("db.statement").toString should include("INSERT INTO Address (Nr, Name) VALUES(?, 'foo')")
+      }
+    }
+
+    "pickup a SpanCustomizer from the current context and apply it to the new spans" in {
+      val select = s"SELECT * FROM Address where Nr = 1"
+      Kamon.withContext(Context(SpanCustomizer.ContextKey, SpanCustomizer.forOperationName("getAddress"))) {
+        connection.prepareStatement(select).executeQuery()
+      }
+
+      eventually {
+        val span = reporter.nextSpan().value
+        span.operationName shouldBe "getAddress"
+        span.tags("component") shouldBe TagValue.String("jdbc")
+        span.tags("db.statement").toString should include("SELECT * FROM Address where Nr = 1")
       }
     }
 
@@ -139,7 +194,6 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
         span.tags("component") shouldBe TagValue.String("jdbc")
         span.tags("error") shouldBe TagValue.True
       }
-
     }
   }
 
@@ -166,12 +220,4 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
   override protected def afterAll(): Unit = {
     registration.cancel()
   }
-}
-
-class NoOpSlowQueryProcessor extends SlowQueryProcessor {
-  override def process(sql: String, executionTimeInMillis: Long, queryThresholdInMillis: Long): Unit = { /*do nothing!!!*/ }
-}
-
-class NoOpSqlErrorProcessor extends SqlErrorProcessor {
-  override def process(sql: String, ex: Throwable): Unit = { /*do nothing!!!*/ }
 }

@@ -19,7 +19,7 @@ import java.sql.{PreparedStatement, Statement}
 
 import kamon.Kamon
 import kamon.Kamon.buildSpan
-import kamon.jdbc.{JdbcExtension, Metrics}
+import kamon.jdbc.{Jdbc, Metrics}
 import kamon.jdbc.instrumentation.StatementInstrumentation.StatementTypes
 import kamon.trace.SpanCustomizer
 import kamon.util.Clock
@@ -49,7 +49,7 @@ class StatementInstrumentation {
 
   @Around("statementExecuteWithoutArguments(statement)")
   def aroundStatementExecuteWithoutArguments(pjp: ProceedingJoinPoint, statement: PreparedStatement): Any =
-    track(pjp, statement, "not-available", StatementTypes.GenericExecute)
+    track(pjp, statement, statement.toString, StatementTypes.GenericExecute)
 
   /**
    *   Calls to java.sql.Statement+.executeQuery(..)
@@ -67,7 +67,7 @@ class StatementInstrumentation {
 
   @Around("statementExecuteQueryWithoutArguments(statement)")
   def aroundStatementExecuteQueryWithoutArguments(pjp: ProceedingJoinPoint, statement: PreparedStatement): Any =
-    track(pjp, statement, "not-available", StatementTypes.Query)
+    track(pjp, statement, statement.toString, StatementTypes.Query)
 
   /**
    *   Calls to java.sql.Statement+.executeUpdate(..)
@@ -85,7 +85,7 @@ class StatementInstrumentation {
 
   @Around("statementExecuteUpdateWithoutArguments(statement)")
   def aroundStatementExecuteUpdateWithoutArguments(pjp: ProceedingJoinPoint, statement: PreparedStatement): Any =
-    track(pjp, statement, "not-available", StatementTypes.Update)
+    track(pjp, statement, statement.toString, StatementTypes.Update)
 
   /**
    *   Calls to java.sql.Statement+.executeBatch() and java.sql.Statement+.executeLargeBatch()
@@ -96,7 +96,7 @@ class StatementInstrumentation {
 
   @Around("statementExecuteBatch(statement)")
   def aroundStatementExecuteBatch(pjp: ProceedingJoinPoint, statement: Statement): Any =
-    track(pjp, statement, "not-available", StatementTypes.Batch)
+    track(pjp, statement, statement.toString, StatementTypes.Batch)
 
   def track(pjp: ProceedingJoinPoint, target: Any, sql: String, statementType: String): Any = {
     val poolTags = Option(target.asInstanceOf[Mixin.HasConnectionPoolMetrics].connectionPoolMetrics)
@@ -127,7 +127,7 @@ class StatementInstrumentation {
           .addSpanTag("error", true)
           .addSpanTag("error.object", t.toString)
 
-        JdbcExtension.onStatementError(sql, t)
+        Jdbc.onStatementError(sql, t)
 
     } finally {
       val endTimestamp = Clock.microTimestamp()
@@ -135,7 +135,7 @@ class StatementInstrumentation {
       span.finish(endTimestamp)
       inFlight.decrement()
 
-      JdbcExtension.onStatementFinish(sql, elapsedTime)
+      Jdbc.onStatementFinish(sql, elapsedTime)
     }
   }
 }
