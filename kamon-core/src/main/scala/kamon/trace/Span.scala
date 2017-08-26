@@ -41,6 +41,10 @@ trait Span {
 
   def addMetricTag(key: String, value: String): Span
 
+  def addError(error: String): Span
+
+  def addError(error: String, throwable: Throwable): Span
+
   def setOperationName(name: String): Span
 
   def disableMetricsCollection(): Span
@@ -64,6 +68,8 @@ object Span {
     override def addTag(key: String, value: Long): Span = this
     override def addTag(key: String, value: Boolean): Span = this
     override def addMetricTag(key: String, value: String): Span = this
+    override def addError(error: String): Span = this
+    override def addError(error: String, throwable: Throwable): Span = this
     override def setOperationName(name: String): Span = this
     override def disableMetricsCollection(): Span = this
     override def finish(finishTimestampMicros: Long): Unit = {}
@@ -83,6 +89,7 @@ object Span {
     private var collectMetrics: Boolean = true
     private var open: Boolean = true
     private val sampled: Boolean = spanContext.samplingDecision == SamplingDecision.Sample
+    private var hasError: Boolean = false
     private var operationName: String = initialOperationName
 
     private var spanTags: Map[String, Span.TagValue] = initialSpanTags
@@ -121,6 +128,28 @@ object Span {
       this
     }
 
+    override def addError(error: String): Span = synchronized {
+      if(sampled && open) {
+        hasError = true
+        spanTags = spanTags ++ Map(
+          "error" -> TagValue.True,
+          "error.object" -> TagValue.String(error)
+        )
+      }
+      this
+    }
+
+    override def addError(error: String, throwable: Throwable): Span = synchronized {
+      if(sampled && open) {
+        hasError = true
+        spanTags = spanTags ++ Map(
+          "error" -> TagValue.True,
+          "error.object" -> TagValue.String(throwable.getMessage())
+        )
+      }
+      this
+    }
+
     override def disableMetricsCollection(): Span = synchronized {
       collectMetrics = false
       this
@@ -152,17 +181,14 @@ object Span {
 
     private def recordSpanMetrics(endTimestampMicros: Long): Unit = {
       val elapsedTime = endTimestampMicros - startTimestampMicros
-      val isError = spanTags.get("error").map {
-        case boolean: TagValue.Boolean  => boolean.text
-        case _                          => TagValue.False.text
-      } getOrElse(TagValue.False.text)
+      val isErrorText = if(hasError) TagValue.True.text else TagValue.False.text
 
       if(scopeSpanMetrics)
         parent.foreach(parentSpan => customMetricTags = customMetricTags + ("parentOperation" -> parentSpan.asInstanceOf[Local].operationName))
 
       val metricTags = Map(
         "operation" -> operationName,
-        "error" -> isError
+        "error" -> isErrorText
       ) ++ customMetricTags
 
       Span.Metrics.ProcessingTime.refine(metricTags).record(elapsedTime)
@@ -184,6 +210,8 @@ object Span {
     override def addTag(key: String, value: Long): Span = this
     override def addTag(key: String, value: Boolean): Span = this
     override def addMetricTag(key: String, value: String): Span = this
+    override def addError(error: String): Span = this
+    override def addError(error: String, throwable: Throwable): Span = this
     override def setOperationName(name: String): Span = this
     override def disableMetricsCollection(): Span = this
     override def finish(finishTimestampMicros: Long): Unit = {}

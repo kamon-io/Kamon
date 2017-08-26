@@ -44,7 +44,7 @@ class LocalSpanSpec extends WordSpec with Matchers with BeforeAndAfterAll with E
         }
       }
 
-      "pass all the tags, annotations and baggage to the FinishedSpan instance when started and finished" in {
+      "pass all the tags to the FinishedSpan instance when started and finished" in {
         Kamon.buildSpan("full-span")
           .withTag("builder-string-tag", "value")
           .withTag("builder-boolean-tag-true", true)

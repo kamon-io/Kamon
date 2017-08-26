@@ -19,6 +19,8 @@ import kamon.Kamon.buildSpan
 import kamon.testkit.{MetricInspection, Reconfigure}
 import org.scalatest.{Matchers, WordSpecLike}
 
+import scala.util.control.NoStackTrace
+
 class SpanMetrics extends WordSpecLike with Matchers with MetricInspection with Reconfigure {
 
   sampleAlways()
@@ -46,14 +48,19 @@ class SpanMetrics extends WordSpecLike with Matchers with MetricInspection with 
 
       buildSpan(operation)
         .start()
-        .addTag("error", true)
+        .addError("Terrible Error")
+        .finish()
+
+      buildSpan(operation)
+        .start()
+        .addError("Terrible Error with Throwable", new Throwable with NoStackTrace)
         .finish()
 
       val histogram = Span.Metrics.ProcessingTime.refine(Map(operationTag, noErrorTag))
       histogram.distribution().count shouldBe 0
 
       val errorHistogram = Span.Metrics.ProcessingTime.refine(Map(operationTag, errorTag))
-      errorHistogram.distribution().count shouldBe 1
+      errorHistogram.distribution().count shouldBe 2
     }
 
     "add a parentOperation tag to the metrics if span metrics scoping is enabled" in {
@@ -66,20 +73,25 @@ class SpanMetrics extends WordSpecLike with Matchers with MetricInspection with 
       buildSpan(operation)
         .asChildOf(parent)
         .start()
-        .addTag("error", false)
         .finish()
 
       buildSpan(operation)
         .asChildOf(parent)
         .start()
-        .addTag("error", true)
+        .addError("Terrible Error")
+        .finish()
+
+      buildSpan(operation)
+        .asChildOf(parent)
+        .start()
+        .addError("Terrible Error with Throwable", new Throwable with NoStackTrace)
         .finish()
 
       val histogram = Span.Metrics.ProcessingTime.refine(Map(operationTag, noErrorTag, parentOperationTag))
       histogram.distribution().count shouldBe 1
 
       val errorHistogram = Span.Metrics.ProcessingTime.refine(Map(operationTag, errorTag, parentOperationTag))
-      errorHistogram.distribution().count shouldBe 1
+      errorHistogram.distribution().count shouldBe 2
     }
 
     "not add any parentOperation tag to the metrics if span metrics scoping is disabled" in withoutSpanScopingEnabled {
@@ -92,13 +104,18 @@ class SpanMetrics extends WordSpecLike with Matchers with MetricInspection with 
       buildSpan(operation)
         .asChildOf(parent)
         .start()
-        .addTag("error", false)
         .finish()
 
       buildSpan(operation)
         .asChildOf(parent)
         .start()
-        .addTag("error", true)
+        .addError("Terrible Error")
+        .finish()
+
+      buildSpan(operation)
+        .asChildOf(parent)
+        .start()
+        .addError("Terrible Error with Throwable", new Throwable with NoStackTrace)
         .finish()
 
       val histogram = Span.Metrics.ProcessingTime.refine(Map(operationTag, noErrorTag, parentOperationTag))
