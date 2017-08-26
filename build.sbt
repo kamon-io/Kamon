@@ -14,9 +14,9 @@
  */
 
 resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
-val kamonCore = "io.kamon" %% "kamon-core" % "1.0.0-RC1-7361fde5f06692a0e1b83d53756bb536627f2d02"
-val kamonTestkit = "io.kamon" %% "kamon-testkit" % "1.0.0-RC1-7361fde5f06692a0e1b83d53756bb536627f2d02"
-val scalazConcurrent  = "org.scalaz" %% "scalaz-concurrent" % "7.2.8"
+val kamonCore         = "io.kamon"     %%   "kamon-core"        % "1.0.0-RC1-041d105ce8e0eef5f81e2d9e22a6a81342278257"
+val kamonTestkit      = "io.kamon"     %%   "kamon-testkit"     % "1.0.0-RC1-041d105ce8e0eef5f81e2d9e22a6a81342278257"
+val scalazConcurrent  = "org.scalaz"   %%   "scalaz-concurrent" % "7.2.8"
 
 lazy val root = (project in file("."))
   .settings(name := "kamon-scala")
