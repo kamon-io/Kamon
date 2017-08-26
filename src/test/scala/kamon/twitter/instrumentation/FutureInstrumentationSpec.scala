@@ -34,7 +34,7 @@ class FutureInstrumentationSpec extends WordSpec with Matchers with ScalaFutures
 
         val context = contextWithLocal("in-future-body")
         val baggageInBody = Kamon.withContext(context) {
-          FuturePool(execContext)(Kamon.currentContext().get(TestLocalKey))
+          FuturePool(execContext)(Kamon.currentContext().get(StringKey))
         }
 
         Await.result(baggageInBody) should equal(Some("in-future-body"))
@@ -48,7 +48,7 @@ class FutureInstrumentationSpec extends WordSpec with Matchers with ScalaFutures
             // The active span is expected to be available during all intermediate processing.
             .map(_.length)
             .flatMap(len ⇒ FuturePool.unboundedPool(len.toString))
-            .map(_ ⇒ Kamon.currentContext().get(TestLocalKey))
+            .map(_ ⇒ Kamon.currentContext().get(StringKey))
         }
 
         Await.result(baggageAfterTransformations) should equal(Some("in-future-transformations"))
