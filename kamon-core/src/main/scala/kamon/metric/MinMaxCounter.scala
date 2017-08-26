@@ -81,6 +81,8 @@ class SimpleMinMaxCounter(name: String, tags: Map[String, String], underlyingHis
     underlyingHistogram.record(currentMax)
   }
 
-  private[kamon] def snapshot(resetState: Boolean = true): MetricDistribution =
+  private[kamon] def snapshot(resetState: Boolean = true): MetricDistribution = {
+    sample()
     underlyingHistogram.snapshot(resetState)
+  }
 }
