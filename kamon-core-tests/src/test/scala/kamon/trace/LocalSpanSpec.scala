@@ -30,7 +30,7 @@ class LocalSpanSpec extends WordSpec with Matchers with BeforeAndAfterAll with E
     "sampled and finished" should {
       "be sent to the Span reporters" in {
         Kamon.buildSpan("test-span")
-          .withSpanTag("test", "value")
+          .withTag("test", "value")
           .withStartTimestamp(100)
           .start()
           .finish(200)
@@ -46,16 +46,16 @@ class LocalSpanSpec extends WordSpec with Matchers with BeforeAndAfterAll with E
 
       "pass all the tags, annotations and baggage to the FinishedSpan instance when started and finished" in {
         Kamon.buildSpan("full-span")
-          .withSpanTag("builder-string-tag", "value")
-          .withSpanTag("builder-boolean-tag-true", true)
-          .withSpanTag("builder-boolean-tag-false", false)
-          .withSpanTag("builder-number-tag", 42)
+          .withTag("builder-string-tag", "value")
+          .withTag("builder-boolean-tag-true", true)
+          .withTag("builder-boolean-tag-false", false)
+          .withTag("builder-number-tag", 42)
           .withStartTimestamp(100)
           .start()
-          .addSpanTag("span-string-tag", "value")
-          .addSpanTag("span-boolean-tag-true", true)
-          .addSpanTag("span-boolean-tag-false", false)
-          .addSpanTag("span-number-tag", 42)
+          .addTag("span-string-tag", "value")
+          .addTag("span-boolean-tag-true", true)
+          .addTag("span-boolean-tag-false", false)
+          .addTag("span-number-tag", 42)
           .setOperationName("fully-populated-span")
           .finish(200)
 

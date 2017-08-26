@@ -35,11 +35,9 @@ trait Span {
 
   def addTag(key: String, value: String): Span
 
-  def addSpanTag(key: String, value: String): Span
+  def addTag(key: String, value: Long): Span
 
-  def addSpanTag(key: String, value: Long): Span
-
-  def addSpanTag(key: String, value: Boolean): Span
+  def addTag(key: String, value: Boolean): Span
 
   def addMetricTag(key: String, value: String): Span
 
@@ -63,9 +61,8 @@ object Span {
     override def isEmpty(): Boolean = true
     override def isLocal(): Boolean = true
     override def addTag(key: String, value: String): Span = this
-    override def addSpanTag(key: String, value: String): Span = this
-    override def addSpanTag(key: String, value: Long): Span = this
-    override def addSpanTag(key: String, value: Boolean): Span = this
+    override def addTag(key: String, value: Long): Span = this
+    override def addTag(key: String, value: Boolean): Span = this
     override def addMetricTag(key: String, value: String): Span = this
     override def setOperationName(name: String): Span = this
     override def disableMetricsCollection(): Span = this
@@ -95,24 +92,18 @@ object Span {
     override def isLocal(): Boolean = true
 
     override def addTag(key: String, value: String): Span = synchronized {
-      addSpanTag(key, value)
-      addMetricTag(key, value)
-      this
-    }
-
-    override def addSpanTag(key: String, value: String): Span = synchronized {
       if(sampled && open)
         spanTags = spanTags + (key -> TagValue.String(value))
       this
     }
 
-    override def addSpanTag(key: String, value: Long): Span = synchronized {
+    override def addTag(key: String, value: Long): Span = synchronized {
       if(sampled && open)
         spanTags = spanTags + (key -> TagValue.Number(value))
       this
     }
 
-    override def addSpanTag(key: String, value: Boolean): Span = synchronized {
+    override def addTag(key: String, value: Boolean): Span = synchronized {
       if(sampled && open) {
         val tagValue = if (value) TagValue.True else TagValue.False
         spanTags = spanTags + (key -> tagValue)
@@ -121,8 +112,12 @@ object Span {
     }
 
     override def addMetricTag(key: String, value: String): Span = synchronized {
-      if(sampled && open && collectMetrics)
-        customMetricTags = customMetricTags + (key -> value)
+      if(sampled && open) {
+        spanTags = spanTags + (key -> TagValue.String(value))
+
+        if(collectMetrics)
+          customMetricTags = customMetricTags + (key -> value)
+      }
       this
     }
 
@@ -186,9 +181,8 @@ object Span {
     override def isEmpty(): Boolean = false
     override def isLocal(): Boolean = false
     override def addTag(key: String, value: String): Span = this
-    override def addSpanTag(key: String, value: String): Span = this
-    override def addSpanTag(key: String, value: Long): Span = this
-    override def addSpanTag(key: String, value: Boolean): Span = this
+    override def addTag(key: String, value: Long): Span = this
+    override def addTag(key: String, value: Boolean): Span = this
     override def addMetricTag(key: String, value: String): Span = this
     override def setOperationName(name: String): Span = this
     override def disableMetricsCollection(): Span = this

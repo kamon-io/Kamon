@@ -46,7 +46,7 @@ class SpanMetrics extends WordSpecLike with Matchers with MetricInspection with 
 
       buildSpan(operation)
         .start()
-        .addSpanTag("error", true)
+        .addTag("error", true)
         .finish()
 
       val histogram = Span.Metrics.ProcessingTime.refine(Map(operationTag, noErrorTag))
@@ -66,13 +66,13 @@ class SpanMetrics extends WordSpecLike with Matchers with MetricInspection with 
       buildSpan(operation)
         .asChildOf(parent)
         .start()
-        .addSpanTag("error", false)
+        .addTag("error", false)
         .finish()
 
       buildSpan(operation)
         .asChildOf(parent)
         .start()
-        .addSpanTag("error", true)
+        .addTag("error", true)
         .finish()
 
       val histogram = Span.Metrics.ProcessingTime.refine(Map(operationTag, noErrorTag, parentOperationTag))
@@ -92,13 +92,13 @@ class SpanMetrics extends WordSpecLike with Matchers with MetricInspection with 
       buildSpan(operation)
         .asChildOf(parent)
         .start()
-        .addSpanTag("error", false)
+        .addTag("error", false)
         .finish()
 
       buildSpan(operation)
         .asChildOf(parent)
         .start()
-        .addSpanTag("error", true)
+        .addTag("error", true)
         .finish()
 
       val histogram = Span.Metrics.ProcessingTime.refine(Map(operationTag, noErrorTag, parentOperationTag))

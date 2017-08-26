@@ -36,23 +36,20 @@ class TracerSpec extends WordSpec with Matchers with SpanBuilding with SpanInspe
 
     "pass the operation name and tags to started Span" in {
       val span = tracer.buildSpan("myOperation")
-        .withTag("both", "both")
         .withMetricTag("metric-tag", "value")
         .withMetricTag("metric-tag", "value")
-        .withSpanTag("hello", "world")
-        .withSpanTag("kamon", "rulez")
-        .withSpanTag("number", 123)
-        .withSpanTag("boolean", true)
+        .withTag("hello", "world")
+        .withTag("kamon", "rulez")
+        .withTag("number", 123)
+        .withTag("boolean", true)
         .start()
 
       val spanData = inspect(span)
       spanData.operationName() shouldBe "myOperation"
       spanData.metricTags() should contain only (
-        ("metric-tag" -> "value"),
-        ("both" -> "both"))
+        ("metric-tag" -> "value"))
 
       spanData.spanTags() should contain allOf(
-        ("both" -> TagValue.String("both")),
         ("hello" -> TagValue.String("world")),
         ("kamon" -> TagValue.String("rulez")),
         ("number" -> TagValue.Number(123)),

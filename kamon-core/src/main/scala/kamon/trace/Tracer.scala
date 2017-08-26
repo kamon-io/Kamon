@@ -102,28 +102,23 @@ object Tracer {
       this
     }
 
-    def withTag(key: String, value: String): SpanBuilder = {
-      this.initialMetricTags = this.initialMetricTags + (key -> value)
-      this.initialSpanTags = this.initialSpanTags + (key -> TagValue.String(value))
-      this
-    }
-
     def withMetricTag(key: String, value: String): SpanBuilder = {
       this.initialMetricTags = this.initialMetricTags + (key -> value)
-      this
-    }
-
-    def withSpanTag(key: String, value: String): SpanBuilder = {
       this.initialSpanTags = this.initialSpanTags + (key -> TagValue.String(value))
       this
     }
 
-    def withSpanTag(key: String, value: Long): SpanBuilder = {
+    def withTag(key: String, value: String): SpanBuilder = {
+      this.initialSpanTags = this.initialSpanTags + (key -> TagValue.String(value))
+      this
+    }
+
+    def withTag(key: String, value: Long): SpanBuilder = {
       this.initialSpanTags = this.initialSpanTags + (key -> TagValue.Number(value))
       this
     }
 
-    def withSpanTag(key: String, value: Boolean): SpanBuilder = {
+    def withTag(key: String, value: Boolean): SpanBuilder = {
       val tagValue = if (value) TagValue.True else TagValue.False
       this.initialSpanTags = this.initialSpanTags + (key -> tagValue)
       this
