@@ -56,10 +56,6 @@ class LocalSpanSpec extends WordSpec with Matchers with BeforeAndAfterAll with E
           .addSpanTag("span-boolean-tag-true", true)
           .addSpanTag("span-boolean-tag-false", false)
           .addSpanTag("span-number-tag", 42)
-          .annotate("simple-annotation")
-          .annotate("regular-annotation", Map("data" -> "something"))
-          .annotate(4200, "custom-annotation-1", Map("custom" -> "yes-1"))
-          .annotate(Annotation(4201, "custom-annotation-2", Map("custom" -> "yes-2")))
           .setOperationName("fully-populated-span")
           .finish(200)
 
@@ -78,23 +74,6 @@ class LocalSpanSpec extends WordSpec with Matchers with BeforeAndAfterAll with E
             "span-boolean-tag-false" -> TagValue.False,
             "span-number-tag" -> TagValue.Number(42)
           )
-
-          finishedSpan.annotations.length shouldBe (4)
-          val annotations = finishedSpan.annotations.groupBy(_.name)
-          annotations.keys should contain allOf(
-            "simple-annotation",
-            "regular-annotation",
-            "custom-annotation-1",
-            "custom-annotation-2"
-          )
-
-          val customAnnotationOne = annotations("custom-annotation-1").head
-          customAnnotationOne.timestampMicros shouldBe (4200)
-          customAnnotationOne.fields shouldBe (Map("custom" -> "yes-1"))
-
-          val customAnnotationTwo = annotations("custom-annotation-2").head
-          customAnnotationTwo.timestampMicros shouldBe (4201)
-          customAnnotationTwo.fields shouldBe (Map("custom" -> "yes-2"))
         }
       }
     }

@@ -33,8 +33,6 @@ trait Span {
 
   def context(): SpanContext
 
-  def annotate(annotation: Span.Annotation): Span
-
   def addTag(key: String, value: String): Span
 
   def addSpanTag(key: String, value: String): Span
@@ -54,15 +52,6 @@ trait Span {
   def finish(): Unit =
     finish(Clock.microTimestamp())
 
-  def annotate(name: String): Span =
-    annotate(Span.Annotation(Clock.microTimestamp(), name, Map.empty))
-
-  def annotate(name: String, fields: Map[String, String]): Span =
-    annotate(Span.Annotation(Clock.microTimestamp(), name, fields))
-
-  def annotate(timestampMicroseconds: Long, name: String, fields: Map[String, String]): Span =
-    annotate(Span.Annotation(timestampMicroseconds, name, fields))
-
 }
 
 object Span {
@@ -73,7 +62,6 @@ object Span {
     override val context: SpanContext = SpanContext.EmptySpanContext
     override def isEmpty(): Boolean = true
     override def isLocal(): Boolean = true
-    override def annotate(annotation: Annotation): Span = this
     override def addTag(key: String, value: String): Span = this
     override def addSpanTag(key: String, value: String): Span = this
     override def addSpanTag(key: String, value: Long): Span = this
@@ -102,16 +90,9 @@ object Span {
 
     private var spanTags: Map[String, Span.TagValue] = initialSpanTags
     private var customMetricTags = initialMetricTags
-    private var annotations = List.empty[Span.Annotation]
 
     override def isEmpty(): Boolean = false
     override def isLocal(): Boolean = true
-
-    def annotate(annotation: Annotation): Span = synchronized {
-      if(sampled && open)
-        annotations = annotation :: annotations
-      this
-    }
 
     override def addTag(key: String, value: String): Span = synchronized {
       addSpanTag(key, value)
@@ -172,7 +153,7 @@ object Span {
     }
 
     private def toFinishedSpan(endTimestampMicros: Long): Span.FinishedSpan =
-      Span.FinishedSpan(spanContext, operationName, startTimestampMicros, endTimestampMicros, spanTags, annotations)
+      Span.FinishedSpan(spanContext, operationName, startTimestampMicros, endTimestampMicros, spanTags)
 
     private def recordSpanMetrics(endTimestampMicros: Long): Unit = {
       val elapsedTime = endTimestampMicros - startTimestampMicros
@@ -204,7 +185,6 @@ object Span {
   final class Remote(val context: SpanContext) extends Span {
     override def isEmpty(): Boolean = false
     override def isLocal(): Boolean = false
-    override def annotate(annotation: Annotation): Span = this
     override def addTag(key: String, value: String): Span = this
     override def addSpanTag(key: String, value: String): Span = this
     override def addSpanTag(key: String, value: Long): Span = this
@@ -251,7 +231,6 @@ object Span {
     operationName: String,
     startTimestampMicros: Long,
     endTimestampMicros: Long,
-    tags: Map[String, Span.TagValue],
-    annotations: Seq[Annotation]
+    tags: Map[String, Span.TagValue]
   )
 }
