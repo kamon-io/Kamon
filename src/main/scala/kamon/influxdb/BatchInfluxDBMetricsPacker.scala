@@ -34,13 +34,14 @@ case class BatchInfluxDBMetricsPacker(config: Config) extends InfluxDBMetricsPac
       (entity, snapshot) ← tick.metrics
       (metricKey, metricSnapshot) ← snapshot.metrics
     } {
-      val tags = generateTags(entity, metricKey)
+      def tags = generateTags(entity, metricKey)
 
       metricSnapshot match {
         case hs: Histogram.Snapshot ⇒
           if (!hs.isEmpty) packetBuilder.appendMeasurement(s"$application-timers", tags, histogramValues(hs), timestamp * 1000000)
         case cs: Counter.Snapshot ⇒
-          packetBuilder.appendMeasurement(s"$application-counters", tags, Map("value" -> BigDecimal(cs.count)), timestamp * 1000000)
+          if (cs.count != 0)
+            packetBuilder.appendMeasurement(s"$application-counters", tags, Map("value" -> BigDecimal(cs.count)), timestamp * 1000000)
       }
     }
 
