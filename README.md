@@ -10,22 +10,22 @@ Kamon scala module is currently available for Scala 2.10, 2.11 and 2.12.
 
 Supported releases and dependencies are shown below.
 
-| kamon-scala  | status | jdk  | scala            | akka   |
-|:------:|:------:|:----:|------------------|:------:|
-|  0.6.7 | stable | 1.7+, 1.8+ | 2.10, 2.11, 2.12  | 2.3.x, 2.4.x |
+| kamon-scala  | status | jdk  | scala
+|:------:|:------:|:----:|------------------
+|  1.0.0-RC | stable | 1.7+, 1.8+ | 2.10, 2.11, 2.12
 
 To get started with SBT, simply add the following to your `build.sbt`
 file:
 
 ```scala
-libraryDependencies += "io.kamon" %% "kamon-scala" % "0.6.7"
+libraryDependencies += "io.kamon" %% "kamon-scala" % "1.0.0-RC1"
 ```
 
 
 ## Automatic TraceContext Propagation with Futures
 
 The `kamon-scala` module provides bytecode instrumentation for both Scala, Scalaz and Twitter Futures that automatically
-propagates the `TraceContext` across the asynchronous operations that might be scheduled for a given `Future`.
+propagates the `Context` across the asynchronous operations that might be scheduled for a given `Future`.
 
 The <b>kamon-scala</b> module require you to start your application using the AspectJ Weaver Agent. Kamon will warn you
 at startup if you failed to do so.
@@ -38,25 +38,18 @@ the ExecutionContext available in implicit scope, but Kamon will capture the `Tr
 was created and make it available while executing the future's body.
 
 ```scala
-Tracer.withNewContext("sample-trace") {
-    // The same TraceContext available here,
-
-    Future {
-      // is available here as well.
-      "Hello Kamon"
-
-    }.map(_.length)
-      .flatMap(len => Future(len.toString))
-      .map(s => Tracer.currentContext)
-      .map(println)
-      // And through all async callbacks, even while
-      // they are executed at different threads!
-  }
-
+  val context = contextWithLocal("in-future-transformations")
+        val baggageAfterTransformations = Kamon.withContext(context) {
+            Future("Hello Kamon!")
+              // The active span is expected to be available during all intermediate processing.
+              .map(_.length)
+              .flatMap(len ⇒ Future(len.toString))
+              .map(_ ⇒ Kamon.currentContext().get(StringKey))
+          }
 ```
 
 Also, when you transform a future by using map/flatMap/filter and friends or you directly register a
-onComplete/onSuccess/onFailure callback on a future, Kamon will capture the `TraceContext` available when transforming
+onComplete/onSuccess/onFailure callback on a future, Kamon will capture the `Context` available when transforming
 the future and make it available when executing the given callback. The code snippet above would print the same
-`TraceContext` that was available when creating the future, during it's body execution and during the execution of all
+`Context` that was available when creating the future, during it's body execution and during the execution of all
 the asynchronous operations scheduled on it.
