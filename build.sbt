@@ -23,10 +23,10 @@ lazy val root = (project in file("."))
   .settings(aspectJSettings: _*)
   .settings(
     libraryDependencies ++=
-      compileScope(kamonCore, kamonTestkit) ++
+      compileScope(kamonCore) ++
       providedScope(aspectJ) ++
       optionalScope(scalazConcurrent, twitterDependency("core").value) ++
-      testScope(scalatest, logbackClassic))
+      testScope(scalatest, kamonTestkit, logbackClassic))
 
 def twitterDependency(moduleName: String) = Def.setting {
   scalaBinaryVersion.value match {
