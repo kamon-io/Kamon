@@ -16,10 +16,10 @@
 
 package kamon.system.sigar
 
-import akka.event.LoggingAdapter
-import kamon.metric.GenericEntityRecorder
-import kamon.metric.instrument.{ Memory, InstrumentFactory }
+import kamon.Kamon
+import kamon.util.MeasurementUnit
 import org.hyperic.sigar.Sigar
+import org.slf4j.Logger
 
 /**
  *  System memory usage metrics, as reported by Sigar:
@@ -28,15 +28,17 @@ import org.hyperic.sigar.Sigar
  *    - swap-used: Total used system swap.
  *    - swap-free: Total free system swap.
  */
-class MemoryMetrics(sigar: Sigar, instrumentFactory: InstrumentFactory, logger: LoggingAdapter) extends GenericEntityRecorder(instrumentFactory) with SigarMetric {
+class MemoryMetrics(sigar: Sigar, metricPrefix: String, logger: Logger) extends SigarMetric {
   import SigarSafeRunner._
 
-  val used = histogram("memory-used", Memory.Bytes)
-  val cached = histogram("memory-cache-and-buffer", Memory.Bytes)
-  val free = histogram("memory-free", Memory.Bytes)
-  val total = histogram("memory-total", Memory.Bytes)
-  val swapUsed = histogram("swap-used", Memory.Bytes)
-  val swapFree = histogram("swap-free", Memory.Bytes)
+  private val measurementUnit = MeasurementUnit.information.bytes
+
+  val used      = Kamon.histogram(metricPrefix+"used", measurementUnit)
+  val cached    = Kamon.histogram(metricPrefix+"cache-and-buffer", measurementUnit)
+  val free      = Kamon.histogram(metricPrefix+"free", measurementUnit)
+  val total     = Kamon.histogram(metricPrefix+"total", measurementUnit)
+  val swapUsed  = Kamon.histogram(metricPrefix+"swap-used", measurementUnit)
+  val swapFree  = Kamon.histogram(metricPrefix+"swap-free", measurementUnit)
 
   def update(): Unit = {
     def mem = {
@@ -65,7 +67,7 @@ class MemoryMetrics(sigar: Sigar, instrumentFactory: InstrumentFactory, logger: 
 
 object MemoryMetrics extends SigarMetricRecorderCompanion("memory") {
 
-  def apply(sigar: Sigar, instrumentFactory: InstrumentFactory, logger: LoggingAdapter): MemoryMetrics =
-    new MemoryMetrics(sigar, instrumentFactory, logger)
+  def apply(sigar: Sigar, metricPrefix: String, logger: Logger): MemoryMetrics =
+    new MemoryMetrics(sigar, metricPrefix, logger)
 }
 

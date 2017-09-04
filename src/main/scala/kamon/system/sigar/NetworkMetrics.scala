@@ -16,10 +16,11 @@
 
 package kamon.system.sigar
 
-import akka.event.LoggingAdapter
-import kamon.metric.GenericEntityRecorder
-import kamon.metric.instrument._
-import org.hyperic.sigar.{ NetInterfaceStat, Sigar }
+import kamon.Kamon
+import kamon.util.MeasurementUnit
+import org.hyperic.sigar.{NetInterfaceStat, Sigar}
+import org.slf4j.Logger
+
 import scala.util.Try
 
 /**
@@ -31,15 +32,21 @@ import scala.util.Try
  *    - rxDropped: Total number of incoming packets dropped.
  *    - txDropped: Total number of outgoing packets dropped.
  */
-class NetworkMetrics(sigar: Sigar, instrumentFactory: InstrumentFactory, logger: LoggingAdapter) extends GenericEntityRecorder(instrumentFactory) with SigarMetric {
+class NetworkMetrics(sigar: Sigar, metricPrefix: String, logger: Logger) extends SigarMetric {
   import SigarSafeRunner._
 
-  val receivedBytes = DiffRecordingHistogram(histogram("rx-bytes", Memory.Bytes))
-  val transmittedBytes = DiffRecordingHistogram(histogram("tx-bytes", Memory.Bytes))
-  val receiveErrors = DiffRecordingHistogram(histogram("rx-errors"))
-  val transmitErrors = DiffRecordingHistogram(histogram("tx-errors"))
-  val receiveDrops = DiffRecordingHistogram(histogram("rx-dropped"))
-  val transmitDrops = DiffRecordingHistogram(histogram("tx-dropped"))
+  val events    = Kamon.histogram(metricPrefix+"packets")
+  val rDropped  = events.refine(Map("direction" -> "received",    "state" -> "dropped"))
+  val rErrors   = events.refine(Map("direction" -> "received",    "state" -> "error"))
+  val tDropped  = events.refine(Map("direction" -> "transmitted", "state" -> "dropped"))
+  val tErrors   = events.refine(Map("direction" -> "transmitted", "state" -> "error"))
+
+  val received      = DiffRecordingHistogram(Kamon.histogram(metricPrefix+"rx", MeasurementUnit.information.bytes))
+  val transmited    = DiffRecordingHistogram(Kamon.histogram(metricPrefix+"tx", MeasurementUnit.information.bytes))
+  val receiveErrors     = DiffRecordingHistogram(rErrors)
+  val transmitErrors    = DiffRecordingHistogram(tErrors)
+  val receiveDrops      = DiffRecordingHistogram(rDropped)
+  val transmitDrops     = DiffRecordingHistogram(tDropped)
 
   val interfaces = runSafe(sigar.getNetInterfaceList.toList.filter(_ != "lo"), List.empty[String], "network", logger)
 
@@ -49,8 +56,8 @@ class NetworkMetrics(sigar: Sigar, instrumentFactory: InstrumentFactory, logger:
   } getOrElse 0L
 
   def update(): Unit = {
-    receivedBytes.record(sumOfAllInterfaces(sigar, _.getRxBytes))
-    transmittedBytes.record(sumOfAllInterfaces(sigar, _.getTxBytes))
+    received.record(sumOfAllInterfaces(sigar, _.getRxBytes))
+    transmited.record(sumOfAllInterfaces(sigar, _.getTxBytes))
     receiveErrors.record(sumOfAllInterfaces(sigar, _.getRxErrors))
     transmitErrors.record(sumOfAllInterfaces(sigar, _.getTxErrors))
     receiveDrops.record(sumOfAllInterfaces(sigar, _.getRxDropped))
@@ -59,6 +66,6 @@ class NetworkMetrics(sigar: Sigar, instrumentFactory: InstrumentFactory, logger:
 }
 
 object NetworkMetrics extends SigarMetricRecorderCompanion("network") {
-  def apply(sigar: Sigar, instrumentFactory: InstrumentFactory, logger: LoggingAdapter): NetworkMetrics =
-    new NetworkMetrics(sigar, instrumentFactory, logger)
+  def apply(sigar: Sigar, metricPrefix: String, logger: Logger): NetworkMetrics =
+    new NetworkMetrics(sigar, metricPrefix, logger)
 }

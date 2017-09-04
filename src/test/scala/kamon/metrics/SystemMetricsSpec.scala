@@ -16,66 +16,92 @@
 package kamon.metric
 
 import java.lang.management.ManagementFactory
+import java.nio.ByteBuffer
 
 import com.typesafe.config.ConfigFactory
+import kamon.Kamon
+import kamon.system.SystemMetricsCollector
 import kamon.system.jmx.GarbageCollectionMetrics
 import kamon.testkit.BaseKamonSpec
+
 import scala.collection.JavaConverters._
 
 class SystemMetricsSpec extends BaseKamonSpec("system-metrics-spec") with RedirectLogging {
 
-  override lazy val config =
+  val config =
     ConfigFactory.parseString(
       """
-        |kamon.metric {
-        |  tick-interval = 1 hour
-        |}
+        |kamon {
+        |  system-metrics {
+        |    sigar-enabled = true
+        |    jmx-enabled = true
+        |  }
         |
-        |akka {
-        |  extensions = ["kamon.system.SystemMetrics"]
+        |  util {
+        |    filters {
+        |      system-metric {
+        |        includes = ["**"]
+        |      }
+        |    }
+        |  }
         |}
       """.stripMargin)
 
-  override protected def beforeAll(): Unit =
+  override protected def beforeAll(): Unit = {
+    val defaultConfig = Kamon.config()
+    Kamon.reconfigure(config.withFallback(defaultConfig))
+    SystemMetricsCollector.startCollecting
+    System.gc()
     Thread.sleep(2000) // Give some room to the recorders to store some values.
+  }
+
+  override protected def afterAll(): Unit = SystemMetricsCollector.stopCollecting
+
 
   "the Kamon System Metrics module" should {
     "record user, system, wait, idle and stolen CPU metrics" in {
-      val cpuMetrics = takeSnapshotOf("cpu", "system-metric")
 
-      cpuMetrics.histogram("cpu-user").get.numberOfMeasurements should be > 0L
-      cpuMetrics.histogram("cpu-system").get.numberOfMeasurements should be > 0L
-      cpuMetrics.histogram("cpu-wait").get.numberOfMeasurements should be > 0L
-      cpuMetrics.histogram("cpu-idle").get.numberOfMeasurements should be > 0L
-      cpuMetrics.histogram("cpu-stolen").get.numberOfMeasurements should be > 0L
+      Kamon.histogram("system-metric.cpu.user").distribution().count should be > 0L
+      Kamon.histogram("system-metric.cpu.system").distribution().count should be > 0L
+      Kamon.histogram("system-metric.cpu.wait").distribution().count should be > 0L
+      Kamon.histogram("system-metric.cpu.idle").distribution().count should be > 0L
+      Kamon.histogram("system-metric.cpu.stolen").distribution().count should be > 0L
     }
 
     "record count and time garbage collection metrics" in {
       val availableGarbageCollectors = ManagementFactory.getGarbageCollectorMXBeans.asScala.filter(_.isValid)
 
+
+      val gcCountMetric = Kamon.counter("system-metric.garbage-collection.count")
+      val gcTimeMetric = Kamon.counter("system-metric.garbage-collection.time")
+
       for (collectorName ← availableGarbageCollectors) {
         val sanitizedName = GarbageCollectionMetrics.sanitizeCollectorName(collectorName.getName)
-        val collectorMetrics = takeSnapshotOf(s"$sanitizedName-garbage-collector", "system-metric")
+        val tags = ("collector" -> sanitizedName)
 
-        collectorMetrics.gauge("garbage-collection-count").get.numberOfMeasurements should be > 0L
-        collectorMetrics.gauge("garbage-collection-time").get.numberOfMeasurements should be > 0L
+        gcCountMetric.refine(tags).value() should be > 0L
+        gcTimeMetric.refine(tags).value() should be > 0L
       }
     }
 
     "record used, max and committed heap and non-heap metrics" in {
-      val memoryMetrics = takeSnapshotOf("jmx-memory", "system-metric")
+      def p(name: String) = s"system-metric.jmx-memory.$name"
 
-      memoryMetrics.gauge("heap-used").get.numberOfMeasurements should be > 0L
-      memoryMetrics.gauge("heap-max").get.numberOfMeasurements should be > 0L
-      memoryMetrics.gauge("heap-committed").get.numberOfMeasurements should be > 0L
+      val heapTag =     ("segment" -> "heap")
+      val nonHeapTag =  ("segment" -> "non-heap")
+      val poolTag =     ("pool" -> "direct")
 
-      memoryMetrics.gauge("non-heap-used").get.numberOfMeasurements should be > 0L
-      memoryMetrics.gauge("non-heap-max").get.numberOfMeasurements should be > 0L
-      memoryMetrics.gauge("non-heap-committed").get.numberOfMeasurements should be > 0L
+      Kamon.histogram(p("used")).refine(heapTag).distribution().count   should be > 0L
+      Kamon.gauge(p("max")).refine(heapTag).value()                     should be > 0L
+      Kamon.gauge(p("commited")).refine(heapTag).value()                should be > 0L
 
-      memoryMetrics.gauge("direct-buffer-pool-count").get.numberOfMeasurements should be > 0L
-      memoryMetrics.gauge("direct-buffer-pool-used").get.numberOfMeasurements should be > 0L
-      memoryMetrics.gauge("direct-buffer-pool-capacity").get.numberOfMeasurements should be > 0L
+      Kamon.histogram(p("used")).refine(nonHeapTag).distribution().count    should be > 0L
+      Kamon.gauge(p("max")).refine(nonHeapTag).value()                    should be !== 0L
+      Kamon.gauge(p("committed")).refine(nonHeapTag).value()              should be !== 0L
+
+      Kamon.gauge(p("buffer-pool.count")).refine(poolTag).value()    should be > 0L
+      Kamon.gauge(p("buffer-pool.used")).refine(poolTag).value()     should be > 0L
+      Kamon.gauge(p("buffer-pool.capacity")).refine(poolTag).value() should be > 0L
     }
 
     "record correctly updatable values for heap metrics" in {
@@ -85,85 +111,95 @@ class SystemMetricsSpec extends BaseKamonSpec("system-metrics-spec") with Redire
 
       Thread.sleep(3000)
 
-      val memoryMetrics = takeSnapshotOf("jmx-memory", "system-metric")
-      val heapUsed = memoryMetrics.gauge("heap-used").get
+      val heapUsed = Kamon.histogram("system-metric.jmx-memory.used")
+        .refine(("segment" -> "heap"))
+        .distribution(false)
 
       heapUsed.max should be > heapUsed.min
       data.size should be > 0 // Just for data usage
     }
 
     "record daemon, count and peak jvm threads metrics" in {
-      val threadsMetrics = takeSnapshotOf("threads", "system-metric")
+      def p(name: String) = s"system-metric.threads.$name"
 
-      threadsMetrics.gauge("daemon-thread-count").get.numberOfMeasurements should be > 0L
-      threadsMetrics.gauge("peak-thread-count").get.numberOfMeasurements should be > 0L
-      threadsMetrics.gauge("thread-count").get.numberOfMeasurements should be > 0L
+      Kamon.gauge(p("daemon")).value()  should be > 0L
+      Kamon.gauge(p("peak")).value()    should be > 0L
+      Kamon.gauge(p("total")).value()   should be > 0L
     }
 
     "record loaded, unloaded and current class loading metrics" in {
-      val classLoadingMetrics = takeSnapshotOf("class-loading", "system-metric")
+      def p(name: String) = s"system-metric.class-loading.$name"
 
-      classLoadingMetrics.gauge("classes-loaded").get.numberOfMeasurements should be > 0L
-      classLoadingMetrics.gauge("classes-unloaded").get.numberOfMeasurements should be > 0L
-      classLoadingMetrics.gauge("classes-currently-loaded").get.numberOfMeasurements should be > 0L
+      Kamon.gauge(p("loaded")).value()            should be > 0L
+      Kamon.gauge(p("currently-loaded")).value()  should be > 0L
+      Kamon.gauge(p("unloaded")).value()          should be >= 0L
     }
 
     "record reads, writes, queue time and service time file system metrics" in {
-      val fileSystemMetrics = takeSnapshotOf("file-system", "system-metric")
+      def p(name: String) = s"system-metric.file-system.$name"
 
-      fileSystemMetrics.histogram("file-system-reads").get.numberOfMeasurements should be > 0L
-      fileSystemMetrics.histogram("file-system-writes").get.numberOfMeasurements should be > 0L
+      Kamon.histogram(p("reads")).distribution().count  should be > 0L
+      Kamon.histogram(p("writes")).distribution().count should be > 0L
     }
 
     "record 1 minute, 5 minutes and 15 minutes metrics load average metrics" in {
-      val loadAverage = takeSnapshotOf("load-average", "system-metric")
+      val metricName = s"system-metric.load.average"
+      val key = "aggregation"
+      val one = (key -> "1")
+      val five = (key -> "5")
+      val fifteen = (key -> "15")
 
-      loadAverage.histogram("one-minute").get.numberOfMeasurements should be > 0L
-      loadAverage.histogram("five-minutes").get.numberOfMeasurements should be > 0L
-      loadAverage.histogram("fifteen-minutes").get.numberOfMeasurements should be > 0L
+      Kamon.histogram(metricName).refine(one).distribution().count      should be > 0L
+      Kamon.histogram(metricName).refine(five).distribution().count     should be > 0L
+      Kamon.histogram(metricName).refine(fifteen).distribution().count  should be > 0L
     }
 
     "record used, free, swap used, swap free system memory metrics" in {
-      val memoryMetrics = takeSnapshotOf("memory", "system-metric")
+      def p(name: String) = s"system-metric.memory.$name"
 
-      memoryMetrics.histogram("memory-used").get.numberOfMeasurements should be > 0L
-      memoryMetrics.histogram("memory-free").get.numberOfMeasurements should be > 0L
-      memoryMetrics.histogram("swap-used").get.numberOfMeasurements should be > 0L
-      memoryMetrics.histogram("swap-free").get.numberOfMeasurements should be > 0L
+      Kamon.histogram(p("used")).distribution().count should be > 0L
+      Kamon.histogram(p("free")).distribution().count should be > 0L
+      Kamon.histogram(p("swap-used")).distribution().count should be > 0L
+      Kamon.histogram(p("swap-free")).distribution().count should be > 0L
     }
 
     "record rxBytes, txBytes, rxErrors, txErrors, rxDropped, txDropped network metrics" in {
-      val networkMetrics = takeSnapshotOf("network", "system-metric")
+      def p(name: String) = s"system-metric.network.$name"
 
-      networkMetrics.histogram("tx-bytes").get.numberOfMeasurements should be > 0L
-      networkMetrics.histogram("rx-bytes").get.numberOfMeasurements should be > 0L
-      networkMetrics.histogram("tx-errors").get.numberOfMeasurements should be > 0L
-      networkMetrics.histogram("rx-errors").get.numberOfMeasurements should be > 0L
-      networkMetrics.histogram("tx-dropped").get.numberOfMeasurements should be > 0L
-      networkMetrics.histogram("rx-dropped").get.numberOfMeasurements should be > 0L
+      val eventMetric = Kamon.histogram(p("packets"))
+
+      val received    = ("direction"  -> "received")
+      val transmitted = ("direction"  -> "transmitted")
+      val dropped     = ("state"      -> "dropped")
+      val error       = ("state"      -> "error")
+
+      Kamon.histogram(p("rx")).distribution().count                 should be > 0L
+      Kamon.histogram(p("tx")).distribution().count                 should be > 0L
+      eventMetric.refine(transmitted, error).distribution().count   should be > 0L
+      eventMetric.refine(received, error).distribution().count      should be > 0L
+      eventMetric.refine(transmitted, dropped).distribution().count should be > 0L
+      eventMetric.refine(received, dropped).distribution().count    should be > 0L
     }
 
     "record system and user CPU percentage for the application process" in {
-      val processCpuMetrics = takeSnapshotOf("process-cpu", "system-metric")
+      def p(name: String) = s"system-metric.process-cpu.$name"
 
-      processCpuMetrics.histogram("process-user-cpu").get.numberOfMeasurements should be > 0L
-      processCpuMetrics.histogram("process-system-cpu").get.numberOfMeasurements should be > 0L
-      processCpuMetrics.histogram("process-cpu").get.numberOfMeasurements should be > 0L
+      Kamon.histogram(p("user-cpu")).distribution().count     should be > 0L
+      Kamon.histogram(p("system-cpu")).distribution().count   should be > 0L
+      Kamon.histogram(p("process-cpu")).distribution().count  should be > 0L
     }
 
     "record the open files for the application process" in {
-      val openFilesMetrics = takeSnapshotOf("ulimit", "system-metric")
-
-      openFilesMetrics.histogram("open-files").get.numberOfMeasurements should be > 0L
+      Kamon.histogram("system-metric.ulimit.open-files").distribution().count should be > 0L
     }
 
     "record Context Switches Global, Voluntary and Non Voluntary metrics when running on Linux" in {
       if (isLinux) {
-        val contextSwitchesMetrics = takeSnapshotOf("context-switches", "system-metric")
+        def p(name: String) = s"system-metric.context-switches.$name"
 
-        contextSwitchesMetrics.histogram("context-switches-process-voluntary").get.numberOfMeasurements should be > 0L
-        contextSwitchesMetrics.histogram("context-switches-process-non-voluntary").get.numberOfMeasurements should be > 0L
-        contextSwitchesMetrics.histogram("context-switches-global").get.numberOfMeasurements should be > 0L
+        Kamon.histogram(p("process-voluntary")).distribution().count should be > 0L
+        Kamon.histogram(p("process-non-voluntary")).distribution().count should be > 0L
+        Kamon.histogram(p("global")).distribution().count should be > 0L
       }
     }
   }

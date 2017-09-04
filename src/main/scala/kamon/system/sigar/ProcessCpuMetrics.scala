@@ -16,10 +16,9 @@
 
 package kamon.system.sigar
 
-import akka.event.LoggingAdapter
-import kamon.metric.GenericEntityRecorder
-import kamon.metric.instrument.InstrumentFactory
-import org.hyperic.sigar.{ ProcCpu, Sigar }
+import kamon.Kamon
+import org.hyperic.sigar.{ProcCpu, Sigar}
+import org.slf4j.Logger
 
 import scala.util.Try
 
@@ -29,11 +28,11 @@ import scala.util.Try
  *    - total: Process cpu time (sum of User and Sys).
  *    - system: Process cpu kernel time.
  */
-class ProcessCpuMetrics(sigar: Sigar, instrumentFactory: InstrumentFactory, logger: LoggingAdapter) extends GenericEntityRecorder(instrumentFactory) with SigarMetric {
+class ProcessCpuMetrics(sigar: Sigar, metricPrefix: String, logger: Logger) extends SigarMetric {
 
-  val processUserCpu = histogram("process-user-cpu")
-  val processSystemCpu = histogram("process-system-cpu")
-  val processTotalCpu = histogram("process-cpu")
+  val processUserCpu = Kamon.histogram(metricPrefix+"user-cpu")
+  val processSystemCpu = Kamon.histogram(metricPrefix+"system-cpu")
+  val processTotalCpu = Kamon.histogram(metricPrefix+"process-cpu")
 
   val pid = sigar.getPid
   val totalCores = sigar.getCpuInfoList.headOption.map(_.getTotalCores.toLong).getOrElse(1L)
@@ -82,6 +81,6 @@ class ProcessCpuMetrics(sigar: Sigar, instrumentFactory: InstrumentFactory, logg
 }
 
 object ProcessCpuMetrics extends SigarMetricRecorderCompanion("process-cpu") {
-  def apply(sigar: Sigar, instrumentFactory: InstrumentFactory, logger: LoggingAdapter): ProcessCpuMetrics =
-    new ProcessCpuMetrics(sigar, instrumentFactory, logger)
+  def apply(sigar: Sigar, metricPrefix: String, logger: Logger): ProcessCpuMetrics =
+    new ProcessCpuMetrics(sigar, metricPrefix, logger)
 }

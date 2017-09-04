@@ -18,7 +18,9 @@ package kamon.system.sigar
 
 import java.util.concurrent.atomic.AtomicLong
 
-import kamon.metric.instrument.{ CollectionContext, Histogram }
+import kamon.metric.{DynamicRange, Histogram}
+import kamon.util.MeasurementUnit
+
 
 /**
  *  Wrapper Histogram for cases in which the recorded values should always be the difference
@@ -47,11 +49,9 @@ class DiffRecordingHistogram(wrappedHistogram: Histogram) extends Histogram {
   def record(value: Long, count: Long): Unit =
     processRecording(value, count)
 
-  def cleanup: Unit =
-    wrappedHistogram.cleanup
+  override def unit: MeasurementUnit = MeasurementUnit.information.bytes //TODO mladen
 
-  def collect(context: CollectionContext): Histogram.Snapshot =
-    wrappedHistogram.collect(context)
+  override def dynamicRange: DynamicRange = DynamicRange.Default
 }
 
 object DiffRecordingHistogram {

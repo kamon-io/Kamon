@@ -18,15 +18,11 @@ package kamon.system.custom
 
 import java.io.IOException
 import java.nio.charset.StandardCharsets
-import java.nio.file.{ Paths, Files }
+import java.nio.file.{Files, Paths}
 
-import akka.actor.{ Props, Actor, ActorSystem }
-import akka.event.{ Logging, LoggingAdapter }
 import kamon.Kamon
-import kamon.metric._
-import kamon.metric.instrument.InstrumentFactory
-import kamon.system.custom.ContextSwitchesUpdater.UpdateContextSwitches
-import org.hyperic.sigar.Sigar
+import org.slf4j.Logger
+
 import scala.collection.JavaConverters.iterableAsScalaIterableConverter
 import scala.concurrent.duration.FiniteDuration
 
@@ -36,10 +32,11 @@ import scala.concurrent.duration.FiniteDuration
  *    - process-non-voluntary: Total number of involuntary context switches related to the current process (the system scheduler suspends and active thread, and switches control to a different thread).
  *    - global:  Total number of context switches across all CPUs.
  */
-class ContextSwitchesMetrics(pid: Long, log: LoggingAdapter, instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) {
-  val perProcessVoluntary = histogram("context-switches-process-voluntary")
-  val perProcessNonVoluntary = histogram("context-switches-process-non-voluntary")
-  val global = histogram("context-switches-global")
+class ContextSwitchesMetrics(pid: Long, logger: Logger) {
+
+  val perProcessVoluntary     = Kamon.histogram("system-metric.context-switches.process-voluntary")
+  val perProcessNonVoluntary  = Kamon.histogram("system-metric.context-switches.process-non-voluntary")
+  val global                  = Kamon.histogram("system-metric.context-switches.global")
 
   def update(): Unit = {
     def contextSwitchesByProcess(pid: Long): (Long, Long) = {
@@ -57,7 +54,7 @@ class ContextSwitchesMetrics(pid: Long, log: LoggingAdapter, instrumentFactory: 
           }
         }
       } catch {
-        case ex: IOException ⇒ log.error("Error trying to read [{}]", filename)
+        case ex: IOException ⇒ logger.error("Error trying to read [{}]", filename)
       }
       (voluntaryContextSwitches, nonVoluntaryContextSwitches)
     }
@@ -73,7 +70,7 @@ class ContextSwitchesMetrics(pid: Long, log: LoggingAdapter, instrumentFactory: 
           }
         }
       } catch {
-        case ex: IOException ⇒ log.error("Error trying to read [{}]", filename)
+        case ex: IOException ⇒ logger.error("Error trying to read [{}]", filename)
       }
       contextSwitches
     }
@@ -83,34 +80,4 @@ class ContextSwitchesMetrics(pid: Long, log: LoggingAdapter, instrumentFactory: 
     perProcessNonVoluntary.record(nonVoluntary)
     global.record(contextSwitches)
   }
-}
-
-object ContextSwitchesMetrics {
-
-  def register(system: ActorSystem, refreshInterval: FiniteDuration): ContextSwitchesMetrics = {
-    val log = Logging(system, "ContextSwitchesMetrics")
-    val pid = (new Sigar).getPid
-
-    Kamon.metrics.entity(EntityRecorderFactory("system-metric", new ContextSwitchesMetrics(pid, log, _)), "context-switches")
-  }
-}
-
-class ContextSwitchesUpdater(csm: ContextSwitchesMetrics, refreshInterval: FiniteDuration) extends Actor {
-  val schedule = context.system.scheduler.schedule(refreshInterval, refreshInterval, self, UpdateContextSwitches)(context.dispatcher)
-
-  def receive = {
-    case UpdateContextSwitches ⇒ csm.update()
-  }
-
-  override def postStop(): Unit = {
-    schedule.cancel()
-    super.postStop()
-  }
-}
-
-object ContextSwitchesUpdater {
-  case object UpdateContextSwitches
-
-  def props(csm: ContextSwitchesMetrics, refreshInterval: FiniteDuration): Props =
-    Props(new ContextSwitchesUpdater(csm, refreshInterval))
 }

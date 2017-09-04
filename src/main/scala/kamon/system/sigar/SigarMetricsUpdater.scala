@@ -16,66 +16,44 @@
 
 package kamon.system.sigar
 
-import akka.actor.{ Props, Actor }
-import akka.event.{ Logging, NoLogging, LoggingAdapter }
 import kamon.Kamon
-import kamon.metric.instrument.InstrumentFactory
-import kamon.metric._
-import kamon.system.sigar.SigarMetricsUpdater.UpdateSigarMetrics
 import org.hyperic.sigar.Sigar
+import org.slf4j.Logger
 
 import scala.concurrent.duration.FiniteDuration
 
-class SigarMetricsUpdater(refreshInterval: FiniteDuration) extends Actor {
+class SigarMetricsUpdater(logger: Logger) {
   val sigar = new Sigar
-  val metricsExtension = Kamon.metrics
-  val logger = Logging(context.system, this)
 
   val sigarMetrics = List(
-    CpuMetrics.register(sigar, metricsExtension, logger),
-    FileSystemMetrics.register(sigar, metricsExtension, logger),
-    LoadAverageMetrics.register(sigar, metricsExtension, logger),
-    MemoryMetrics.register(sigar, metricsExtension, logger),
-    NetworkMetrics.register(sigar, metricsExtension, logger),
-    ProcessCpuMetrics.register(sigar, metricsExtension, logger),
-    ULimitMetrics.register(sigar, metricsExtension, logger)).flatten
-
-  val refreshSchedule = context.system.scheduler.schedule(refreshInterval, refreshInterval, self, UpdateSigarMetrics)(context.dispatcher)
-
-  def receive = {
-    case UpdateSigarMetrics ⇒ updateMetrics()
-  }
+    CpuMetrics.register(sigar, logger),
+    FileSystemMetrics.register(sigar, logger),
+    LoadAverageMetrics.register(sigar, logger),
+    MemoryMetrics.register(sigar, logger),
+    NetworkMetrics.register(sigar, logger),
+    ProcessCpuMetrics.register(sigar, logger),
+    ULimitMetrics.register(sigar, logger)).flatten
 
   def updateMetrics(): Unit = {
     sigarMetrics.foreach(_.update())
   }
 
-  override def postStop(): Unit = {
-    refreshSchedule.cancel()
-    super.postStop()
-  }
 }
 
-object SigarMetricsUpdater {
-  def props(refreshInterval: FiniteDuration): Props =
-    Props(new SigarMetricsUpdater(refreshInterval))
 
-  case object UpdateSigarMetrics
-}
-
-trait SigarMetric extends EntityRecorder {
+trait SigarMetric {
   def update(): Unit
 }
 
 object SigarSafeRunner {
   private val errorLogged = scala.collection.mutable.Set[String]()
 
-  def runSafe[T](thunk: ⇒ T, defaultValue: ⇒ T, error: String, logger: LoggingAdapter): T = {
+  def runSafe[T](thunk: ⇒ T, defaultValue: ⇒ T, error: String, logger: Logger): T = {
     try thunk catch {
       case e: Exception ⇒
         if (!errorLogged.contains(error)) {
           errorLogged += error
-          logger.warning("Couldn't get the metric [{}]. Due to [{}]", error, e.getMessage)
+          logger.warn(s"Couldn't get the metric [${error}]. Due to [${e.getMessage}]")
         }
         defaultValue
     }
@@ -83,11 +61,15 @@ object SigarSafeRunner {
 }
 
 abstract class SigarMetricRecorderCompanion(metricName: String) {
-  def register(sigar: Sigar, metricsExtension: MetricsModule, logger: LoggingAdapter = NoLogging): Option[SigarMetric] =
-    if (metricsExtension.shouldTrack(metricName, "system-metric"))
-      Some(metricsExtension.entity(EntityRecorderFactory("system-metric", apply(sigar, _)), metricName))
+  private val filterName = "system-metric"
+
+  def register(sigar: Sigar, logger: Logger): Option[SigarMetric] = {
+    val metricPrefix = s"$filterName.$metricName."
+    if (Kamon.filter(filterName, metricName))
+      Some(apply(sigar, metricPrefix, logger))
     else
       None
+  }
 
-  def apply(sigar: Sigar, instrumentFactory: InstrumentFactory, logger: LoggingAdapter = NoLogging): SigarMetric
+  def apply(sigar: Sigar, metricPrefix: String, logger: Logger): SigarMetric
 }

@@ -16,14 +16,22 @@
 
 package kamon.system.jmx
 
-import kamon.metric.instrument.InstrumentFactory
-import kamon.metric.{ MetricsModule, EntityRecorderFactory, EntityRecorder }
+import kamon.Kamon
 
 abstract class JmxSystemMetricRecorderCompanion(metricName: String) {
-  def register(metricsExtension: MetricsModule): Unit = {
-    if (metricsExtension.shouldTrack(metricName, "system-metric"))
-      metricsExtension.entity(EntityRecorderFactory("system-metric", apply(_)), metricName)
+  private val filterName = "system-metric"
+  def metricPrefix = filterName + "."+metricName+"."
+
+  def register(): Option[JmxMetric] = {
+    if (Kamon.filter(filterName, metricName))
+      Some(apply(metricName))
+    else
+      None
   }
 
-  def apply(instrumentFactory: InstrumentFactory): EntityRecorder
+  def apply(metricName: String): JmxMetric
+}
+
+trait JmxMetric {
+  def update(): Unit
 }

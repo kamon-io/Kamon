@@ -16,51 +16,58 @@
 
 package kamon.testkit
 
-import akka.actor.ActorSystem
-import akka.testkit.{ ImplicitSender, TestKitBase }
 import com.typesafe.config.Config
 import kamon.Kamon
-import kamon.metric.{ Entity, EntitySnapshot, SubscriptionsDispatcher }
-import kamon.trace.TraceContext
-import kamon.util.LazyActorRef
-import org.scalatest.{ BeforeAndAfterAll, Matchers, WordSpecLike }
+import kamon.metric._
+import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 
-abstract class BaseKamonSpec(actorSystemName: String) extends TestKitBase with WordSpecLike with Matchers with ImplicitSender with BeforeAndAfterAll {
-  lazy val collectionContext = Kamon.metrics.buildDefaultCollectionContext
-  implicit lazy val system: ActorSystem = {
-    Kamon.start()
-    ActorSystem(actorSystemName, config)
+import scala.collection.concurrent.TrieMap
+
+abstract class BaseKamonSpec(actorSystemName: String) extends WordSpecLike with Matchers with BeforeAndAfterAll {
+
+
+  implicit class MetricSyntax(metric: Metric[_]) {
+    def  valuesForTag(tag: String): Seq[String] = {
+      val instrumentsField = classOf[BaseMetric[_, _]].getDeclaredField("instruments")
+      instrumentsField.setAccessible(true)
+
+      val instruments = instrumentsField.get(metric).asInstanceOf[TrieMap[Map[String, String], _]]
+      val instrumentsWithTheTag = instruments.keys.filter(_.keys.find(_ == tag).nonEmpty)
+      instrumentsWithTheTag.map(t => t(tag)).toSeq
+    }
   }
 
-  def config: Config =
-    Kamon.config
-
-  def newContext(name: String): TraceContext =
-    Kamon.tracer.newContext(name)
-
-  def newContext(name: String, token: String): TraceContext =
-    Kamon.tracer.newContext(name, Option(token))
-
-  def newContext(name: String, token: String, tags: Map[String, String]): TraceContext =
-    Kamon.tracer.newContext(name, Option(token), tags)
-
-  def takeSnapshotOf(name: String, category: String): EntitySnapshot = {
-    val recorder = Kamon.metrics.find(name, category).get
-    recorder.collect(collectionContext)
+  implicit class HistogramMetricSyntax(histogram: Histogram) {
+    def distribution(resetState: Boolean = true): Distribution =
+      histogram match {
+        case hm: HistogramMetric    => hm.refine(Map.empty[String, String]).distribution(resetState)
+        case h: AtomicHdrHistogram  => h.snapshot(resetState).distribution
+        case h: HdrHistogram        => h.snapshot(resetState).distribution
+      }
   }
 
-  def takeSnapshotOf(name: String, category: String, tags: Map[String, String]): EntitySnapshot = {
-    val recorder = Kamon.metrics.find(Entity(name, category, tags)).get
-    recorder.collect(collectionContext)
+  implicit class MinMaxCounterMetricSyntax(mmCounter: MinMaxCounter) {
+    def distribution(resetState: Boolean = true): Distribution =
+      mmCounter match {
+        case mmcm: MinMaxCounterMetric  => mmcm.refine(Map.empty[String, String]).distribution(resetState)
+        case mmc: SimpleMinMaxCounter   => mmc.snapshot(resetState).distribution
+      }
   }
 
-  def flushSubscriptions(): Unit = {
-    val subscriptionsField = Kamon.metrics.getClass.getDeclaredField("_subscriptions")
-    subscriptionsField.setAccessible(true)
-    val subscriptions = subscriptionsField.get(Kamon.metrics).asInstanceOf[LazyActorRef]
-
-    subscriptions.tell(SubscriptionsDispatcher.Tick)
+  implicit class CounterMetricSyntax(counter: Counter) {
+    def value(resetState: Boolean = true): Long =
+      counter match {
+        case cm: CounterMetric    => cm.refine(Map.empty[String, String]).value(resetState)
+        case c: LongAdderCounter  => c.snapshot(resetState).value
+      }
   }
 
-  override protected def afterAll(): Unit = system.shutdown()
+  implicit class GaugeMetricSyntax(gauge: Gauge) {
+    def value(resetState: Boolean = true): Long =
+      gauge match {
+        case gm: GaugeMetric    => gm.refine(Map.empty[String, String]).value(resetState)
+        case ag: AtomicLongGauge => ag.snapshot().value
+      }
+  }
+
 }

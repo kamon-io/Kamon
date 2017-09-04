@@ -1,13 +1,12 @@
 package kamon.system.sigar
 
-import akka.event.LoggingAdapter
-import kamon.metric.GenericEntityRecorder
-import kamon.metric.instrument.InstrumentFactory
+import kamon.Kamon
 import org.hyperic.sigar.Sigar
+import org.slf4j.Logger
 
-class ULimitMetrics(sigar: Sigar, instrumentFactory: InstrumentFactory, logger: LoggingAdapter) extends GenericEntityRecorder(instrumentFactory) with SigarMetric {
+class ULimitMetrics(sigar: Sigar, metricPrefix: String, logger: Logger) extends SigarMetric {
   val pid = sigar.getPid
-  val openFiles = histogram("open-files")
+  val openFiles = Kamon.histogram(metricPrefix+"open-files")
 
   def update(): Unit = {
     import SigarSafeRunner._
@@ -17,6 +16,6 @@ class ULimitMetrics(sigar: Sigar, instrumentFactory: InstrumentFactory, logger: 
 }
 
 object ULimitMetrics extends SigarMetricRecorderCompanion("ulimit") {
-  def apply(sigar: Sigar, instrumentFactory: InstrumentFactory, logger: LoggingAdapter): ULimitMetrics =
-    new ULimitMetrics(sigar, instrumentFactory, logger)
+  def apply(sigar: Sigar, metricPrefix: String, logger: Logger): ULimitMetrics =
+    new ULimitMetrics(sigar, metricPrefix, logger)
 }

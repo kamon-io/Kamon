@@ -16,10 +16,9 @@
 
 package kamon.system.sigar
 
-import akka.event.LoggingAdapter
-import kamon.metric.GenericEntityRecorder
-import kamon.metric.instrument.InstrumentFactory
+import kamon.Kamon
 import org.hyperic.sigar.Sigar
+import org.slf4j.Logger
 
 /**
  *  Cpu usage metrics, as reported by Sigar:
@@ -29,12 +28,13 @@ import org.hyperic.sigar.Sigar
  *    - idle:  Total percentage of system cpu idle time
  *    - stolen: Total percentage of system cpu involuntary wait time. @see [[https://www.datadoghq.com/2013/08/understanding-aws-stolen-cpu-and-how-it-affects-your-apps/ "Understanding Stolen Cpu"]]
  */
-class CpuMetrics(sigar: Sigar, instrumentFactory: InstrumentFactory, logger: LoggingAdapter) extends GenericEntityRecorder(instrumentFactory) with SigarMetric {
-  val user = histogram("cpu-user")
-  val system = histogram("cpu-system")
-  val Wait = histogram("cpu-wait")
-  val idle = histogram("cpu-idle")
-  val stolen = histogram("cpu-stolen")
+class CpuMetrics(sigar: Sigar, metricPrefix: String, logger: Logger) extends SigarMetric {
+
+  val user    = Kamon.histogram(metricPrefix+"user")
+  val system  = Kamon.histogram(metricPrefix+"system")
+  val Wait    = Kamon.histogram(metricPrefix+"wait")
+  val idle    = Kamon.histogram(metricPrefix+"idle")
+  val stolen  = Kamon.histogram(metricPrefix+"stolen")
 
   def update(): Unit = {
     import SigarSafeRunner._
@@ -56,10 +56,14 @@ class CpuMetrics(sigar: Sigar, instrumentFactory: InstrumentFactory, logger: Log
     idle.record(cpuIdle)
     stolen.record(cpuStolen)
   }
+
 }
+
+
 
 object CpuMetrics extends SigarMetricRecorderCompanion("cpu") {
 
-  def apply(sigar: Sigar, instrumentFactory: InstrumentFactory, logger: LoggingAdapter): CpuMetrics =
-    new CpuMetrics(sigar, instrumentFactory, logger)
+  def apply(sigar: Sigar, metricPrefix: String, logger: Logger): CpuMetrics =
+    new CpuMetrics(sigar, metricPrefix, logger)
 }
+

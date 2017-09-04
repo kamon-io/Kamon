@@ -18,31 +18,27 @@ package kamon.system.jmx
 
 import java.lang.management.ManagementFactory
 
-import kamon.metric.GenericEntityRecorder
-import kamon.metric.instrument.InstrumentFactory
+import kamon.Kamon
 
 /**
  *  Threads metrics, as reported by JMX:
  *    - @see [[http://docs.oracle.com/javase/7/docs/api/java/lang/management/ThreadMXBean.html "ThreadMXBean"]]
  */
-class ThreadsMetrics(instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) {
+class ThreadsMetrics(metricPrefix: String) extends JmxMetric {
   val threadsBean = ManagementFactory.getThreadMXBean
 
-  gauge("daemon-thread-count", () ⇒ {
-    threadsBean.getDaemonThreadCount.toLong
-  })
+  val daemonThreadCount = Kamon.gauge(metricPrefix+"daemon")
+  val peekThreadCount   = Kamon.gauge(metricPrefix+"peak")
+  val threadCount       = Kamon.gauge(metricPrefix+"total")
 
-  gauge("peak-thread-count", () ⇒ {
-    threadsBean.getPeakThreadCount.toLong
-  })
-
-  gauge("thread-count", () ⇒ {
-    threadsBean.getThreadCount.toLong
-  })
-
+  override def update(): Unit = {
+    daemonThreadCount.set(threadsBean.getDaemonThreadCount.toLong)
+    peekThreadCount.set(threadsBean.getPeakThreadCount.toLong)
+    threadCount.set(threadsBean.getThreadCount.toLong)
+  }
 }
 
 object ThreadsMetrics extends JmxSystemMetricRecorderCompanion("threads") {
-  def apply(instrumentFactory: InstrumentFactory): ThreadsMetrics =
-    new ThreadsMetrics(instrumentFactory)
+  def apply(metricName: String): ThreadsMetrics =
+    new ThreadsMetrics(metricPrefix)
 }

@@ -16,55 +16,54 @@
 
 package kamon.system.jmx
 
-import java.lang.management.{ MemoryUsage, MemoryMXBean, BufferPoolMXBean, ManagementFactory, MemoryPoolMXBean }
+import java.lang.management.{BufferPoolMXBean, ManagementFactory, MemoryMXBean, MemoryPoolMXBean, MemoryUsage}
 
-import kamon.metric.GenericEntityRecorder
-import kamon.metric.instrument.{ Memory, InstrumentFactory }
+import kamon.Kamon
+import kamon.util.MeasurementUnit
 
 import scala.collection.convert.WrapAsScala
 
 /**
  * Generic memory usage stat recorder.
  * Records the amount of used, max, and committed memory in bytes for each passed MemoryUsage.
- * @param instrumentFactory Helpers for metric recording.
- * @param beansWithNames Data sources with metric name prefixes.
  */
-class MemoryUsageMetrics(
-    instrumentFactory: InstrumentFactory,
+class MemoryUsageMetrics( metricName: String,
     memoryUsageBeansWithNames: Iterable[MemoryUsageWithMetricName],
-    bufferPoolBeansWithNames: Iterable[BufferPoolWithMetricName]) extends GenericEntityRecorder(instrumentFactory) {
-  memoryUsageBeansWithNames.foreach {
-    case MemoryUsageWithMetricName(name, beanFun) ⇒
-      gauge(name + "-used", Memory.Bytes, () ⇒ {
-        beanFun().getUsed
-      })
+    bufferPoolBeansWithNames: Iterable[BufferPoolWithMetricName]) extends JmxMetric {
 
-      gauge(name + "-max", Memory.Bytes, () ⇒ {
-        val max = beanFun().getMax
 
-        // .getMax can return -1 if the max is not defined.
-        if (max >= 0) max
-        else 0
-      })
+  val memoryUsed      = Kamon.histogram(metricName+"used",     MeasurementUnit.information.bytes)
+  val memoryCommited  = Kamon.gauge(metricName+"commited", MeasurementUnit.information.bytes)
+  val memoryMax       = Kamon.gauge(metricName+"max",      MeasurementUnit.information.bytes)
 
-      gauge(name + "-committed", Memory.Bytes, () ⇒ {
-        beanFun().getCommitted
-      })
-  }
+  val poolCount     = Kamon.gauge(metricName+"buffer-pool.count")
+  val poolUsed      = Kamon.gauge(metricName+"buffer-pool.used", MeasurementUnit.information.bytes)
+  val poolCapacity  = Kamon.gauge(metricName+"buffer-pool.capacity", MeasurementUnit.information.bytes)
 
-  bufferPoolBeansWithNames.foreach {
-    case BufferPoolWithMetricName(name, beanFun) ⇒
-      gauge(name + "-buffer-pool-count", () ⇒ {
-        beanFun().getCount
-      })
 
-      gauge(name + "-buffer-pool-used", Memory.Bytes, () ⇒ {
-        beanFun().getMemoryUsed
-      })
+  override def update(): Unit = {
 
-      gauge(name + "-buffer-pool-capacity", Memory.Bytes, () ⇒ {
-        beanFun().getTotalCapacity
-      })
+    memoryUsageBeansWithNames.foreach {
+      case MemoryUsageWithMetricName(name, beanFun) ⇒
+        val tags = Map("segment" -> name)
+
+        memoryUsed.refine(tags).record(beanFun().getUsed)
+        memoryCommited.refine(tags).set(beanFun().getCommitted)
+        memoryMax.refine(tags).set({
+          val max = beanFun().getMax
+          // .getMax can return -1 if the max is not defined.
+          if (max >= 0) max
+          else 0
+        })
+    }
+
+    bufferPoolBeansWithNames.foreach {
+      case BufferPoolWithMetricName(name, beanFun) ⇒
+        val tags = Map("pool" -> name)
+        poolCount.refine(tags).set(beanFun().getCount)
+        poolUsed.refine(tags).set(beanFun().getMemoryUsed)
+        poolCapacity.refine(tags).set(beanFun().getTotalCapacity)
+    }
   }
 }
 
@@ -96,7 +95,7 @@ object MemoryUsageMetrics extends JmxSystemMetricRecorderCompanion("jmx-memory")
     invalidChars.replaceAllIn(name.toLowerCase, "-")
 
   private val usagesWithNames = ManagementFactory.getMemoryPoolMXBeans.toList.map { bean ⇒
-    MemoryUsageWithMetricName(sanitize(bean.getName), bean.getUsage)
+    MemoryUsageWithMetricName(sanitize(bean.getName()), bean.getUsage)
   }
 
   private val bufferPoolsWithNames = ManagementFactory.getPlatformMXBeans(classOf[BufferPoolMXBean]).toList.map { bean ⇒
@@ -105,9 +104,9 @@ object MemoryUsageMetrics extends JmxSystemMetricRecorderCompanion("jmx-memory")
 
   private val memoryMXBean: MemoryMXBean = ManagementFactory.getMemoryMXBean
 
-  def apply(instrumentFactory: InstrumentFactory): MemoryUsageMetrics =
+  def apply(metricName: String): MemoryUsageMetrics =
     new MemoryUsageMetrics(
-      instrumentFactory,
+      metricPrefix,
       MemoryUsageWithMetricName("non-heap", () ⇒ memoryMXBean.getNonHeapMemoryUsage) ::
         MemoryUsageWithMetricName("heap", () ⇒ memoryMXBean.getHeapMemoryUsage) ::
         usagesWithNames,

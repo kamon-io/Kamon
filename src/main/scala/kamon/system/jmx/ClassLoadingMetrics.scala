@@ -18,31 +18,30 @@ package kamon.system.jmx
 
 import java.lang.management.ManagementFactory
 
-import kamon.metric.GenericEntityRecorder
-import kamon.metric.instrument.{ Memory, InstrumentFactory }
+import kamon.Kamon
+
 
 /**
  *  Class Loading metrics, as reported by JMX:
  *    - @see [[http://docs.oracle.com/javase/7/docs/api/java/lang/management/ClassLoadingMXBean.html "ClassLoadingMXBean"]]
  */
-class ClassLoadingMetrics(instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) {
+class ClassLoadingMetrics(metricPrefix: String)  extends JmxMetric {
   val classLoadingBean = ManagementFactory.getClassLoadingMXBean
 
-  gauge("classes-loaded", () ⇒ {
-    classLoadingBean.getTotalLoadedClassCount
-  })
+  val classesLoaded                 = Kamon.gauge(metricPrefix+"loaded")
+  val classesUnloaded               = Kamon.gauge(metricPrefix+"unloaded")
+  val classesLoadedCurrentlyLoaded  = Kamon.gauge(metricPrefix+"currently-loaded")
 
-  gauge("classes-unloaded", () ⇒ {
-    classLoadingBean.getUnloadedClassCount
-  })
 
-  gauge("classes-currently-loaded", () ⇒ {
-    classLoadingBean.getLoadedClassCount.toLong
-  })
+  def update: Unit = {
+    classesLoaded.set(classLoadingBean.getTotalLoadedClassCount)
+    classesUnloaded.set(classLoadingBean.getUnloadedClassCount)
+    classesLoadedCurrentlyLoaded.set(classLoadingBean.getLoadedClassCount.toLong)
+  }
 
 }
 
 object ClassLoadingMetrics extends JmxSystemMetricRecorderCompanion("class-loading") {
-  def apply(instrumentFactory: InstrumentFactory): ClassLoadingMetrics =
-    new ClassLoadingMetrics(instrumentFactory)
+  def apply(metricName: String): ClassLoadingMetrics =
+    new ClassLoadingMetrics(metricPrefix)
 }

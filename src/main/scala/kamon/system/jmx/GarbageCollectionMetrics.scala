@@ -16,40 +16,61 @@
 
 package kamon.system.jmx
 
-import java.lang.management.{ GarbageCollectorMXBean, ManagementFactory }
+import java.lang.management.{GarbageCollectorMXBean, ManagementFactory}
 
 import kamon.Kamon
-import kamon.metric._
-import kamon.metric.instrument.{ DifferentialValueCollector, Time, InstrumentFactory }
+import kamon.system.jmx.GarbageCollectionMetrics.DifferentialCollector
+import kamon.util.MeasurementUnit
+
 import scala.collection.JavaConverters._
 
 /**
  *  Garbage Collection metrics, as reported by JMX:
  *    - @see [[http://docs.oracle.com/javase/7/docs/api/java/lang/management/GarbageCollectorMXBean.html "GarbageCollectorMXBean"]]
  */
-class GarbageCollectionMetrics(gc: GarbageCollectorMXBean, instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) {
+class GarbageCollectionMetrics(metricPrefix: String, tags: Map[String, String], gc: GarbageCollectorMXBean) extends JmxMetric {
 
-  gauge("garbage-collection-count", DifferentialValueCollector(() ⇒ {
-    gc.getCollectionCount
-  }))
+  val gcCount = Kamon.counter(metricPrefix+"count").refine(tags)
+  val gcTime  = Kamon.counter(metricPrefix+"time", MeasurementUnit.time.microseconds).refine(tags)
 
-  gauge("garbage-collection-time", Time.Milliseconds, DifferentialValueCollector(() ⇒ {
-    gc.getCollectionTime
-  }))
+  val gcCountCollector = new DifferentialCollector(gc.getCollectionCount)
+  val gcTimeCollector  = new DifferentialCollector(gc.getCollectionTime)
 
+  override def update(): Unit = {
+    gcCount.increment(gcCountCollector.collect)
+    gcTime.increment(gcTimeCollector.collect)
+  }
 }
 
 object GarbageCollectionMetrics {
 
+  class DifferentialCollector(collector: () => Long) {
+    private var lastCollectedValue = 0L
+
+    def collect =  synchronized {
+      val currentValue = collector()
+      val diff = currentValue - lastCollectedValue
+      lastCollectedValue = currentValue
+      if(diff >= 0) diff else 0
+    }
+  }
+
   def sanitizeCollectorName(name: String): String =
     name.replaceAll("""[^\w]""", "-").toLowerCase
 
-  def register(metricsExtension: MetricsModule): Unit = {
-    ManagementFactory.getGarbageCollectorMXBeans.asScala.filter(_.isValid) foreach { gc ⇒
+  def register(): Seq[JmxMetric] = {
+    ManagementFactory.getGarbageCollectorMXBeans.asScala.filter(_.isValid).flatMap { gc =>
       val gcName = sanitizeCollectorName(gc.getName)
-      val metricName = s"$gcName-garbage-collector"
-      if (metricsExtension.shouldTrack(metricName, "system-metric"))
-        Kamon.metrics.entity(EntityRecorderFactory("system-metric", new GarbageCollectionMetrics(gc, _)), metricName)
+      val tags = Map("collector" -> gcName)
+      val metricName = "garbage-collection"
+      val filterName = "system-metric"
+      val metricPrefix = s"$filterName.$metricName."
+      if (Kamon.filter(filterName, metricName))
+        Some(new GarbageCollectionMetrics(metricPrefix, tags, gc))
+      else
+        None
     }
   }
 }
+
+
