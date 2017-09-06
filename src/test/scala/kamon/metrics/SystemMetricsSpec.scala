@@ -16,19 +16,24 @@
 package kamon.metric
 
 import java.lang.management.ManagementFactory
-import java.nio.ByteBuffer
 
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.{Config, ConfigFactory}
 import kamon.Kamon
+import kamon.metrics.RedirectLogging
 import kamon.system.SystemMetricsCollector
 import kamon.system.jmx.GarbageCollectionMetrics
-import kamon.testkit.BaseKamonSpec
+import kamon.testkit.MetricInspection
+import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 
 import scala.collection.JavaConverters._
 
-class SystemMetricsSpec extends BaseKamonSpec("system-metrics-spec") with RedirectLogging {
+class SystemMetricsSpec extends WordSpecLike
+  with Matchers
+  with MetricInspection
+  with BeforeAndAfterAll
+  with RedirectLogging {
 
-  val config =
+  val config: Config =
     ConfigFactory.parseString(
       """
         |kamon {
@@ -77,7 +82,7 @@ class SystemMetricsSpec extends BaseKamonSpec("system-metrics-spec") with Redire
 
       for (collectorName ← availableGarbageCollectors) {
         val sanitizedName = GarbageCollectionMetrics.sanitizeCollectorName(collectorName.getName)
-        val tags = ("collector" -> sanitizedName)
+        val tags = "collector" -> sanitizedName
 
         gcCountMetric.refine(tags).value() should be > 0L
         gcTimeMetric.refine(tags).value() should be > 0L
@@ -87,9 +92,9 @@ class SystemMetricsSpec extends BaseKamonSpec("system-metrics-spec") with Redire
     "record used, max and committed heap and non-heap metrics" in {
       def p(name: String) = s"system-metric.jmx-memory.$name"
 
-      val heapTag =     ("segment" -> "heap")
-      val nonHeapTag =  ("segment" -> "non-heap")
-      val poolTag =     ("pool" -> "direct")
+      val heapTag =     "segment" -> "heap"
+      val nonHeapTag =  "segment" -> "non-heap"
+      val poolTag =     "pool" -> "direct"
 
       Kamon.histogram(p("used")).refine(heapTag).distribution().count   should be > 0L
       Kamon.gauge(p("max")).refine(heapTag).value()                     should be > 0L
@@ -112,11 +117,11 @@ class SystemMetricsSpec extends BaseKamonSpec("system-metrics-spec") with Redire
       Thread.sleep(3000)
 
       val heapUsed = Kamon.histogram("system-metric.jmx-memory.used")
-        .refine(("segment" -> "heap"))
+        .refine("segment" -> "heap")
         .distribution(false)
 
       heapUsed.max should be > heapUsed.min
-      data.size should be > 0 // Just for data usage
+      data.length should be > 0 // Just for data usage
     }
 
     "record daemon, count and peak jvm threads metrics" in {
@@ -145,9 +150,9 @@ class SystemMetricsSpec extends BaseKamonSpec("system-metrics-spec") with Redire
     "record 1 minute, 5 minutes and 15 minutes metrics load average metrics" in {
       val metricName = s"system-metric.load.average"
       val key = "aggregation"
-      val one = (key -> "1")
-      val five = (key -> "5")
-      val fifteen = (key -> "15")
+      val one = key -> "1"
+      val five = key -> "5"
+      val fifteen = key -> "15"
 
       Kamon.histogram(metricName).refine(one).distribution().count      should be > 0L
       Kamon.histogram(metricName).refine(five).distribution().count     should be > 0L
@@ -168,10 +173,10 @@ class SystemMetricsSpec extends BaseKamonSpec("system-metrics-spec") with Redire
 
       val eventMetric = Kamon.histogram(p("packets"))
 
-      val received    = ("direction"  -> "received")
-      val transmitted = ("direction"  -> "transmitted")
-      val dropped     = ("state"      -> "dropped")
-      val error       = ("state"      -> "error")
+      val received    = "direction" -> "received"
+      val transmitted = "direction" -> "transmitted"
+      val dropped     = "state" -> "dropped"
+      val error       = "state" -> "error"
 
       Kamon.histogram(p("rx")).distribution().count                 should be > 0L
       Kamon.histogram(p("tx")).distribution().count                 should be > 0L
@@ -206,5 +211,4 @@ class SystemMetricsSpec extends BaseKamonSpec("system-metrics-spec") with Redire
 
   def isLinux: Boolean =
     System.getProperty("os.name").indexOf("Linux") != -1
-
 }

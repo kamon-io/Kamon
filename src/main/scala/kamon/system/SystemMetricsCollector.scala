@@ -29,29 +29,19 @@ import org.slf4j.LoggerFactory
 
 
 object SystemMetricsCollector {
-
-  private val logger = LoggerFactory.getLogger("kamon.metrics.SystemMetrics")
-
-  val config                          = Kamon.config().getConfig("kamon.system-metrics")
-
-  val sigarFolder                     = config.getString("sigar-native-folder")
-  val sigarRefreshInterval            = config.getDuration("sigar-metrics-refresh-interval")
-  val sigarEnabled                    = config.getBoolean("sigar-enabled")
-  val jmxEnabled                      = config.getBoolean("jmx-enabled")
-  val contextSwitchesRefreshInterval  = config.getDuration("context-switches-refresh-interval")
-
+//
   private var scheduledCollections: Seq[ScheduledFuture[_]] = Seq.empty
 
   def startCollecting = {
     scheduledCollections = Seq(
       // OS Metrics collected with Sigar
-      if (sigarEnabled) Some(collectSigar) else None,
+      if (SystemMetrics.sigarEnabled) Some(collectSigar) else None,
 
       // If we are in Linux, add ContextSwitchesMetrics as well.
-      if (sigarEnabled && isLinux) Some(collectContextSwitches) else None,
+      if (SystemMetrics.sigarEnabled && isLinux) Some(collectContextSwitches) else None,
 
       // JMX Metrics
-      if (jmxEnabled) Some(collectJMX) else None
+      if (SystemMetrics.jmxEnabled) Some(collectJMX) else None
     ).flatten
   }
 
@@ -65,30 +55,31 @@ object SystemMetricsCollector {
 
 
   private def collectSigar: ScheduledFuture[_] = {
-    SigarProvisioner.provision(new File(sigarFolder))
+    SigarProvisioner.provision(new File(SystemMetrics.sigarFolder))
 
-    val sigarMetricsUpdater = new SigarMetricsUpdater(logger)
+    val sigarMetricsUpdater = new SigarMetricsUpdater(SystemMetrics.logger)
 
     val sigarUpdaterSchedule = new Runnable {
       override def run(): Unit = sigarMetricsUpdater.updateMetrics()
     }
+
     Kamon.scheduler().scheduleAtFixedRate(
       sigarUpdaterSchedule,
-      sigarRefreshInterval.toMillis,
-      sigarRefreshInterval.toMillis,
+      SystemMetrics.sigarRefreshInterval.toMillis,
+      SystemMetrics.sigarRefreshInterval.toMillis,
       TimeUnit.MILLISECONDS
     )
   }
 
   private def collectContextSwitches: ScheduledFuture[_] = {
     val pid = (new Sigar).getPid
-    val contextSwitchesRecorder = new ContextSwitchesMetrics(pid, logger)
+    val contextSwitchesRecorder = new ContextSwitchesMetrics(pid, SystemMetrics.logger)
     val cxSwitchSchedule = new Runnable {
       override def run(): Unit = contextSwitchesRecorder.update()
     }
     Kamon.scheduler().scheduleAtFixedRate(
-      cxSwitchSchedule, contextSwitchesRefreshInterval.toMillis,
-      contextSwitchesRefreshInterval.toMillis,
+      cxSwitchSchedule, SystemMetrics.contextSwitchesRefreshInterval.toMillis,
+      SystemMetrics.contextSwitchesRefreshInterval.toMillis,
       TimeUnit.MILLISECONDS
     )
   }
@@ -106,11 +97,10 @@ object SystemMetricsCollector {
 
     Kamon.scheduler().scheduleAtFixedRate(
       jmxMetricSchedule,
-      sigarRefreshInterval.toMillis,
-      sigarRefreshInterval.toMillis,
+      SystemMetrics.sigarRefreshInterval.toMillis,
+      SystemMetrics.sigarRefreshInterval.toMillis,
       TimeUnit.MILLISECONDS
     )
-
   }
 }
 

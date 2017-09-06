@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * Copyright © 2013-2015 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2017 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -17,21 +17,26 @@
 package kamon.system.jmx
 
 import kamon.Kamon
+import kamon.system.SystemMetrics
+import org.slf4j.Logger
 
-abstract class JmxSystemMetricRecorderCompanion(metricName: String) {
-  private val filterName = "system-metric"
-  def metricPrefix = filterName + "."+metricName+"."
+abstract class JmxMetricBuilder(metricName: String) {
+  private val filterName = SystemMetrics.FilterName
+  private val logger = SystemMetrics.logger
+
+  def metricPrefix: String = s"$filterName.$metricName"
 
   def register(): Option[JmxMetric] = {
     if (Kamon.filter(filterName, metricName))
-      Some(apply(metricName))
+      Some(build(metricName, logger))
     else
       None
   }
 
-  def apply(metricName: String): JmxMetric
+  def build(metricName: String, logger: Logger): JmxMetric
 }
 
 trait JmxMetric {
   def update(): Unit
 }
+

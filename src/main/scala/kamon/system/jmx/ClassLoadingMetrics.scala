@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * Copyright © 2013-2015 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2017 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -19,29 +19,24 @@ package kamon.system.jmx
 import java.lang.management.ManagementFactory
 
 import kamon.Kamon
-
+import org.slf4j.Logger
 
 /**
  *  Class Loading metrics, as reported by JMX:
- *    - @see [[http://docs.oracle.com/javase/7/docs/api/java/lang/management/ClassLoadingMXBean.html "ClassLoadingMXBean"]]
+ *    - @see [[http://docs.oracle.com/javase/8/docs/api/java/lang/management/ClassLoadingMXBean.html "ClassLoadingMXBean"]]
  */
-class ClassLoadingMetrics(metricPrefix: String)  extends JmxMetric {
+object ClassLoadingMetrics extends JmxMetricBuilder("class-loading") {
   val classLoadingBean = ManagementFactory.getClassLoadingMXBean
 
-  val classesLoaded                 = Kamon.gauge(metricPrefix+"loaded")
-  val classesUnloaded               = Kamon.gauge(metricPrefix+"unloaded")
-  val classesLoadedCurrentlyLoaded  = Kamon.gauge(metricPrefix+"currently-loaded")
+  val classesLoadedMetric           = Kamon.gauge(s"$metricPrefix.loaded")
+  val classesUnloadedMetric         = Kamon.gauge(s"$metricPrefix.unloaded")
+  val classesLoadedCurrentlyMetric  = Kamon.gauge(s"$metricPrefix.currently-loaded")
 
-
-  def update: Unit = {
-    classesLoaded.set(classLoadingBean.getTotalLoadedClassCount)
-    classesUnloaded.set(classLoadingBean.getUnloadedClassCount)
-    classesLoadedCurrentlyLoaded.set(classLoadingBean.getLoadedClassCount.toLong)
+  def build(metricName: String, logger: Logger) = new JmxMetric {
+    def update(): Unit = {
+      classesLoadedMetric.set(classLoadingBean.getTotalLoadedClassCount)
+      classesUnloadedMetric.set(classLoadingBean.getUnloadedClassCount)
+      classesLoadedCurrentlyMetric.set(classLoadingBean.getLoadedClassCount.toLong)
+    }
   }
-
-}
-
-object ClassLoadingMetrics extends JmxSystemMetricRecorderCompanion("class-loading") {
-  def apply(metricName: String): ClassLoadingMetrics =
-    new ClassLoadingMetrics(metricPrefix)
 }

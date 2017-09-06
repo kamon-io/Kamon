@@ -19,58 +19,75 @@ package kamon.system.jmx
 import java.lang.management.{GarbageCollectorMXBean, ManagementFactory}
 
 import kamon.Kamon
-import kamon.system.jmx.GarbageCollectionMetrics.DifferentialCollector
-import kamon.util.MeasurementUnit
+import kamon.metric._
+import org.slf4j.Logger
 
 import scala.collection.JavaConverters._
+import scala.collection.concurrent.TrieMap
 
 /**
  *  Garbage Collection metrics, as reported by JMX:
- *    - @see [[http://docs.oracle.com/javase/7/docs/api/java/lang/management/GarbageCollectorMXBean.html "GarbageCollectorMXBean"]]
+ *    - @see [[http://docs.oracle.com/javase/8/docs/api/java/lang/management/GarbageCollectorMXBean.html "GarbageCollectorMXBean"]]
  */
-class GarbageCollectionMetrics(metricPrefix: String, tags: Map[String, String], gc: GarbageCollectorMXBean) extends JmxMetric {
+object GarbageCollectionMetrics extends JmxMetricBuilder("garbage-collection") {
+  def build(metricName: String, logger: Logger) = new JmxMetric {
+    val gcMetrics = GarbageCollectorMetrics(metricName)
+    val collectors = TrieMap[String, DifferentialCollector]()
 
-  val gcCount = Kamon.counter(metricPrefix+"count").refine(tags)
-  val gcTime  = Kamon.counter(metricPrefix+"time", MeasurementUnit.time.microseconds).refine(tags)
-
-  val gcCountCollector = new DifferentialCollector(gc.getCollectionCount)
-  val gcTimeCollector  = new DifferentialCollector(gc.getCollectionTime)
-
-  override def update(): Unit = {
-    gcCount.increment(gcCountCollector.collect)
-    gcTime.increment(gcTimeCollector.collect)
-  }
-}
-
-object GarbageCollectionMetrics {
-
-  class DifferentialCollector(collector: () => Long) {
-    private var lastCollectedValue = 0L
-
-    def collect =  synchronized {
-      val currentValue = collector()
-      val diff = currentValue - lastCollectedValue
-      lastCollectedValue = currentValue
-      if(diff >= 0) diff else 0
+    def update(): Unit = {
+      ManagementFactory.getGarbageCollectorMXBeans.asScala.filter(_.isValid).foreach { gc =>
+        val gcName = sanitizeCollectorName(gc.getName)
+        collectors.getOrElseUpdate(gcName, DifferentialCollector(gc, gcMetrics.forCollector(gcName))).collect()
+      }
     }
   }
 
   def sanitizeCollectorName(name: String): String =
     name.replaceAll("""[^\w]""", "-").toLowerCase
+}
 
-  def register(): Seq[JmxMetric] = {
-    ManagementFactory.getGarbageCollectorMXBeans.asScala.filter(_.isValid).flatMap { gc =>
-      val gcName = sanitizeCollectorName(gc.getName)
-      val tags = Map("collector" -> gcName)
-      val metricName = "garbage-collection"
-      val filterName = "system-metric"
-      val metricPrefix = s"$filterName.$metricName."
-      if (Kamon.filter(filterName, metricName))
-        Some(new GarbageCollectionMetrics(metricPrefix, tags, gc))
-      else
-        None
+final case class GarbageCollectorMetrics(metricPrefix:String) {
+  val gcCountMetric = Kamon.counter(s"$metricPrefix.count")
+  val gcTimeMetric = Kamon.histogram(s"$metricPrefix.time", MeasurementUnit.time.milliseconds)
+
+  def forCollector(collector: String): GarbageCollectorMetrics = {
+    val collectorTags = Map("collector" -> collector)
+    GarbageCollectorMetrics(
+      collectorTags,
+      gcCountMetric.refine(collectorTags),
+      gcTimeMetric.refine(collectorTags))
+  }
+
+  case class GarbageCollectorMetrics(tags: Map[String, String],
+                                     gcCount: Counter,
+                                     gcTime: Histogram) {
+    def cleanup(): Unit = {
+      gcCountMetric.remove(tags)
+      gcTimeMetric.remove(tags)
     }
   }
 }
 
+final case class DifferentialCollector(gcBean: GarbageCollectorMXBean,
+                                       gcMetrics: GarbageCollectorMetrics#GarbageCollectorMetrics) {
+
+  var collectionCount = gcBean.getCollectionCount
+  var collectionTime = gcBean.getCollectionTime
+
+  def collect(): Unit = {
+    val lastCollectionCount = collectionCount
+    val lastCollectionTime = collectionTime
+
+    collectionCount = gcBean.getCollectionCount
+    collectionTime = gcBean.getCollectionTime
+
+    val numberOfCollections = collectionCount - lastCollectionCount
+    val time = collectionTime - lastCollectionTime
+
+    if (numberOfCollections > 0) {
+      gcMetrics.gcCount.increment(numberOfCollections)
+      gcMetrics.gcTime.record(time)
+    }
+  }
+}
 

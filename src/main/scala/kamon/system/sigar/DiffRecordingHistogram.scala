@@ -18,8 +18,7 @@ package kamon.system.sigar
 
 import java.util.concurrent.atomic.AtomicLong
 
-import kamon.metric.{DynamicRange, Histogram}
-import kamon.util.MeasurementUnit
+import kamon.metric.{DynamicRange, Histogram, MeasurementUnit}
 
 
 /**

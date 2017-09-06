@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * Copyright © 2013-2015 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2017 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -19,26 +19,24 @@ package kamon.system.jmx
 import java.lang.management.ManagementFactory
 
 import kamon.Kamon
+import org.slf4j.Logger
 
 /**
  *  Threads metrics, as reported by JMX:
  *    - @see [[http://docs.oracle.com/javase/7/docs/api/java/lang/management/ThreadMXBean.html "ThreadMXBean"]]
  */
-class ThreadsMetrics(metricPrefix: String) extends JmxMetric {
+object ThreadsMetrics extends JmxMetricBuilder("threads") {
   val threadsBean = ManagementFactory.getThreadMXBean
 
-  val daemonThreadCount = Kamon.gauge(metricPrefix+"daemon")
-  val peekThreadCount   = Kamon.gauge(metricPrefix+"peak")
-  val threadCount       = Kamon.gauge(metricPrefix+"total")
+  val daemonThreadCount = Kamon.gauge(s"$metricPrefix.daemon")
+  val peekThreadCount   = Kamon.gauge(s"$metricPrefix.peak")
+  val threadCount       = Kamon.gauge(s"$metricPrefix.total")
 
-  override def update(): Unit = {
-    daemonThreadCount.set(threadsBean.getDaemonThreadCount.toLong)
-    peekThreadCount.set(threadsBean.getPeakThreadCount.toLong)
-    threadCount.set(threadsBean.getThreadCount.toLong)
+  def build(metricName: String, log: Logger) = new JmxMetric {
+    def update(): Unit = {
+      daemonThreadCount.set(threadsBean.getDaemonThreadCount.toLong)
+      peekThreadCount.set(threadsBean.getPeakThreadCount.toLong)
+      threadCount.set(threadsBean.getThreadCount.toLong)
+    }
   }
-}
-
-object ThreadsMetrics extends JmxSystemMetricRecorderCompanion("threads") {
-  def apply(metricName: String): ThreadsMetrics =
-    new ThreadsMetrics(metricPrefix)
 }

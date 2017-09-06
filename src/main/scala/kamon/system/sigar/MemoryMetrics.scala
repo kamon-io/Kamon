@@ -17,7 +17,7 @@
 package kamon.system.sigar
 
 import kamon.Kamon
-import kamon.util.MeasurementUnit
+import kamon.metric.MeasurementUnit
 import org.hyperic.sigar.Sigar
 import org.slf4j.Logger
 

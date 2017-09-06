@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * Copyright © 2013-2015 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2017 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -16,70 +16,13 @@
 
 package kamon.system.jmx
 
-import java.lang.management.{BufferPoolMXBean, ManagementFactory, MemoryMXBean, MemoryPoolMXBean, MemoryUsage}
+import java.lang.management.{BufferPoolMXBean, ManagementFactory, MemoryMXBean, MemoryUsage}
 
 import kamon.Kamon
-import kamon.util.MeasurementUnit
+import kamon.metric.{Gauge, Histogram, MeasurementUnit}
+import org.slf4j.Logger
 
-import scala.collection.convert.WrapAsScala
-
-/**
- * Generic memory usage stat recorder.
- * Records the amount of used, max, and committed memory in bytes for each passed MemoryUsage.
- */
-class MemoryUsageMetrics( metricName: String,
-    memoryUsageBeansWithNames: Iterable[MemoryUsageWithMetricName],
-    bufferPoolBeansWithNames: Iterable[BufferPoolWithMetricName]) extends JmxMetric {
-
-
-  val memoryUsed      = Kamon.histogram(metricName+"used",     MeasurementUnit.information.bytes)
-  val memoryCommited  = Kamon.gauge(metricName+"commited", MeasurementUnit.information.bytes)
-  val memoryMax       = Kamon.gauge(metricName+"max",      MeasurementUnit.information.bytes)
-
-  val poolCount     = Kamon.gauge(metricName+"buffer-pool.count")
-  val poolUsed      = Kamon.gauge(metricName+"buffer-pool.used", MeasurementUnit.information.bytes)
-  val poolCapacity  = Kamon.gauge(metricName+"buffer-pool.capacity", MeasurementUnit.information.bytes)
-
-
-  override def update(): Unit = {
-
-    memoryUsageBeansWithNames.foreach {
-      case MemoryUsageWithMetricName(name, beanFun) ⇒
-        val tags = Map("segment" -> name)
-
-        memoryUsed.refine(tags).record(beanFun().getUsed)
-        memoryCommited.refine(tags).set(beanFun().getCommitted)
-        memoryMax.refine(tags).set({
-          val max = beanFun().getMax
-          // .getMax can return -1 if the max is not defined.
-          if (max >= 0) max
-          else 0
-        })
-    }
-
-    bufferPoolBeansWithNames.foreach {
-      case BufferPoolWithMetricName(name, beanFun) ⇒
-        val tags = Map("pool" -> name)
-        poolCount.refine(tags).set(beanFun().getCount)
-        poolUsed.refine(tags).set(beanFun().getMemoryUsed)
-        poolCapacity.refine(tags).set(beanFun().getTotalCapacity)
-    }
-  }
-}
-
-/**
- * Objects of this kind may be passed to instances of [[MemoryUsageMetrics]] for data collection.
- * @param metricName The sanitized name for a metric.
- * @param beanFun Function returning the data source for metrics.
- */
-private[jmx] final case class MemoryUsageWithMetricName(metricName: String, beanFun: () ⇒ MemoryUsage)
-
-/**
- * Objects of this kind may be passed to instances of [[BufferPoolUsageMetrics]] for data collection.
- * @param metricName The sanitized name for a metric.
- * @param beanFun Function returning the data source for metrics.
- */
-private[jmx] final case class BufferPoolWithMetricName(metricName: String, beanFun: () ⇒ BufferPoolMXBean)
+import scala.collection.JavaConverters._
 
 /**
  *  Memory Pool metrics, as reported by JMX:
@@ -87,28 +30,130 @@ private[jmx] final case class BufferPoolWithMetricName(metricName: String, beanF
  *  Pools in HotSpot Java 8:
  *  code-cache, metaspace, compressed-class-space, ps-eden-space, ps-survivor-space, ps-old-gen
  */
-object MemoryUsageMetrics extends JmxSystemMetricRecorderCompanion("jmx-memory") with WrapAsScala {
+
+object MemoryUsageMetrics extends JmxMetricBuilder("jmx-memory") {
 
   private val invalidChars = """[^a-z0-9]""".r
 
   private def sanitize(name: String) =
     invalidChars.replaceAllIn(name.toLowerCase, "-")
 
-  private val usagesWithNames = ManagementFactory.getMemoryPoolMXBeans.toList.map { bean ⇒
-    MemoryUsageWithMetricName(sanitize(bean.getName()), bean.getUsage)
+  private val usagesWithNames =
+    ManagementFactory.getMemoryPoolMXBeans.asScala.toList.map { bean ⇒
+      MemoryUsageWithMetricName(sanitize(bean.getName), () => bean.getUsage)
+    }
+
+  private val bufferPoolsWithNames =
+    ManagementFactory.getPlatformMXBeans(classOf[BufferPoolMXBean]).asScala.toList.map { bean ⇒
+      BufferPoolWithMetricName(sanitize(bean.getName), () ⇒ bean)
+    }
+
+  private val memoryMXBean: MemoryMXBean =
+    ManagementFactory.getMemoryMXBean
+
+  private val memoryUsageWithNames =
+    Seq(MemoryUsageWithMetricName("non-heap", () => memoryMXBean.getNonHeapMemoryUsage),
+      MemoryUsageWithMetricName("heap", () => memoryMXBean.getHeapMemoryUsage),
+      usagesWithNames)
+
+  def build(metricName: String, logger: Logger) = new JmxMetric {
+    val memoryMetrics = MemoryMetrics(metricName)
+    val bufferPoolMetrics = BufferPoolMetrics(metricName)
+
+    def update(): Unit = {
+      memoryUsageWithNames.foreach {
+        case MemoryUsageWithMetricName(name, beanFun) ⇒
+          val memory = memoryMetrics.forSegment(name)
+          memory.memoryUsed.record(beanFun().getUsed)
+          memory.memoryCommitted.set(beanFun().getCommitted)
+          memory.memoryMax.set({
+            val max = beanFun().getMax
+            // .getMax can return -1 if the max is not defined.
+            if (max >= 0) max
+            else 0
+          })
+      }
+
+      bufferPoolsWithNames.foreach {
+        case BufferPoolWithMetricName(name, beanFun) ⇒
+          val pool = bufferPoolMetrics.forPool(name)
+          pool.poolCount.set(beanFun().getCount)
+          pool.poolUsed.set(beanFun().getMemoryUsed)
+          pool.poolCapacity.set(beanFun().getTotalCapacity)
+      }
+    }
   }
-
-  private val bufferPoolsWithNames = ManagementFactory.getPlatformMXBeans(classOf[BufferPoolMXBean]).toList.map { bean ⇒
-    BufferPoolWithMetricName(sanitize(bean.getName), () ⇒ bean)
-  }
-
-  private val memoryMXBean: MemoryMXBean = ManagementFactory.getMemoryMXBean
-
-  def apply(metricName: String): MemoryUsageMetrics =
-    new MemoryUsageMetrics(
-      metricPrefix,
-      MemoryUsageWithMetricName("non-heap", () ⇒ memoryMXBean.getNonHeapMemoryUsage) ::
-        MemoryUsageWithMetricName("heap", () ⇒ memoryMXBean.getHeapMemoryUsage) ::
-        usagesWithNames,
-      bufferPoolsWithNames)
 }
+
+final case class MemoryMetrics(metricPrefix:String) {
+  val memoryUsedMetric      = Kamon.histogram(s"$metricPrefix.used",  MeasurementUnit.information.bytes)
+  val memoryCommittedMetric = Kamon.gauge(s"$metricPrefix.committed", MeasurementUnit.information.bytes)
+  val memoryMaxMetric       = Kamon.gauge(s"$metricPrefix.max", MeasurementUnit.information.bytes)
+
+  def forSegment(segment: String): MemoryMetrics = {
+    val memoryTags = Map("segment" -> segment)
+    MemoryMetrics(
+      memoryTags,
+      memoryUsedMetric.refine(memoryTags),
+      memoryCommittedMetric.refine(memoryTags),
+      memoryMaxMetric.refine(memoryTags)
+    )
+  }
+
+  case class MemoryMetrics(tags: Map[String, String],
+                           memoryUsed: Histogram,
+                           memoryCommitted: Gauge,
+                           memoryMax: Gauge) {
+
+    def cleanup(): Unit = {
+      memoryUsedMetric.remove(tags)
+      memoryCommittedMetric.remove(tags)
+      memoryMaxMetric.remove(tags)
+    }
+  }
+}
+
+final case class BufferPoolMetrics(metricPrefix:String) {
+  val poolCountMetric     = Kamon.gauge(s"$metricPrefix.buffer-pool.count")
+  val poolUsedMetric      = Kamon.gauge(s"$metricPrefix.buffer-pool.used", MeasurementUnit.information.bytes)
+  val poolCapacityMetric  = Kamon.gauge(s"$metricPrefix.buffer-pool.capacity", MeasurementUnit.information.bytes)
+
+
+  def forPool(pool: String): BufferPoolMetrics = {
+    val poolTags = Map("pool" -> pool)
+    BufferPoolMetrics(
+      poolTags,
+      poolCountMetric.refine(poolTags),
+      poolUsedMetric.refine(poolTags),
+      poolCapacityMetric.refine(poolTags)
+    )
+  }
+
+  case class BufferPoolMetrics(tags: Map[String, String],
+                               poolCount: Gauge,
+                               poolUsed: Gauge,
+                               poolCapacity: Gauge) {
+
+    def cleanup(): Unit = {
+      poolCountMetric.remove(tags)
+      poolUsedMetric.remove(tags)
+      poolCapacityMetric.remove(tags)
+    }
+  }
+}
+
+/**
+  * Objects of this kind may be passed to instances of [[MemoryUsageMetrics]] for data collection.
+  * @param metricName The sanitized name for a metric.
+  * @param beanFun Function returning the data source for metrics.
+  */
+private final case class MemoryUsageWithMetricName(metricName: String, beanFun: () => MemoryUsage)
+
+/**
+  * Objects of this kind may be passed to instances of [[BufferPoolMetrics]] for data collection.
+  * @param metricName The sanitized name for a metric.
+  * @param beanFun Function returning the data source for metrics.
+  */
+private final case class BufferPoolWithMetricName(metricName: String, beanFun: () => BufferPoolMXBean)
+
+
