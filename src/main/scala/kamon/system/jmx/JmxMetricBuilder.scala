@@ -24,16 +24,14 @@ abstract class JmxMetricBuilder(metricName: String) {
   private val filterName = SystemMetrics.FilterName
   private val logger = SystemMetrics.logger
 
-  def metricPrefix: String = s"$filterName.$metricName"
-
   def register(): Option[JmxMetric] = {
     if (Kamon.filter(filterName, metricName))
-      Some(build(metricName, logger))
+      Some(build(s"$filterName.$metricName", logger))
     else
       None
   }
 
-  def build(metricName: String, logger: Logger): JmxMetric
+  def build(metricPrefix: String, logger: Logger): JmxMetric
 }
 
 trait JmxMetric {

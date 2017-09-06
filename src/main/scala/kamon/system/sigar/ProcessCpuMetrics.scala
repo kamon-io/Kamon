@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * Copyright © 2013-2015 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2017 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -28,59 +28,48 @@ import scala.util.Try
  *    - total: Process cpu time (sum of User and Sys).
  *    - system: Process cpu kernel time.
  */
-class ProcessCpuMetrics(sigar: Sigar, metricPrefix: String, logger: Logger) extends SigarMetric {
+object ProcessCpuMetrics extends SigarMetricBuilder("process-cpu") {
+  def build(sigar: Sigar, metricPrefix: String, logger: Logger) = new SigarMetric {
 
-  val processUserCpu = Kamon.histogram(metricPrefix+"user-cpu")
-  val processSystemCpu = Kamon.histogram(metricPrefix+"system-cpu")
-  val processTotalCpu = Kamon.histogram(metricPrefix+"process-cpu")
+    val processUserCpuMetric = Kamon.histogram(s"$metricPrefix.user-cpu")
+    val processSystemCpuMetric = Kamon.histogram(s"$metricPrefix.system-cpu")
+    val processTotalCpuMetric = Kamon.histogram(s"$metricPrefix.process-cpu")
 
-  val pid = sigar.getPid
-  val totalCores = sigar.getCpuInfoList.headOption.map(_.getTotalCores.toLong).getOrElse(1L)
+    val pid = sigar.getPid
+    val totalCores = sigar.getCpuInfoList.headOption.map(_.getTotalCores.toLong).getOrElse(1L)
 
-  var lastProcCpu: ProcCpu = sigar.getProcCpu(pid)
-  var currentLoad: Long = 0
+    var lastProcCpu: ProcCpu = sigar.getProcCpu(pid)
+    var currentLoad: Long = 0
 
-  /**
-   * While CPU usage time updates not very often, We have introduced a simple heuristic, that supposes that the load is the same as previous,
-   * while CPU usage time doesn't update. But supposing that it could be zero load for a process for some time,
-   * We used an arbitrary duration of 2000 milliseconds, after which the same CPU usage time value become legal, and it is supposed that the load is really zero.
-   *
-   * @see [[http://stackoverflow.com/questions/19323364/using-sigar-api-to-get-jvm-cpu-usage "StackOverflow: Using Sigar API to get JVM Cpu usage"]]
-   */
-  def update(): Unit = {
+    override def update(): Unit = {
+      def percentUsage(delta: Long, timeDiff: Long): Long = Try(100 * delta / timeDiff / totalCores).getOrElse(0L)
 
-    def percentUsage(delta: Long, timeDiff: Long): Long = Try(100 * delta / timeDiff / totalCores).getOrElse(0L)
+      def positiveSubtraction(left: Long, right: Long): Long = {
+        val result = left - right
+        if (result < 0L) 0L else result
+      }
 
-    def positiveSubtraction(left: Long, right: Long): Long = {
-      val result = left - right
-      if (result < 0L) 0L else result
-    }
+      val currentProcCpu = sigar.getProcCpu(pid)
+      val totalDiff = positiveSubtraction(currentProcCpu.getTotal, lastProcCpu.getTotal)
+      val userDiff = positiveSubtraction(currentProcCpu.getUser, lastProcCpu.getUser)
+      val systemDiff = positiveSubtraction(currentProcCpu.getSys, lastProcCpu.getSys)
+      val timeDiff = currentProcCpu.getLastTime - lastProcCpu.getLastTime
 
-    val currentProcCpu = sigar.getProcCpu(pid)
-    val totalDiff = positiveSubtraction(currentProcCpu.getTotal, lastProcCpu.getTotal)
-    val userDiff = positiveSubtraction(currentProcCpu.getUser, lastProcCpu.getUser)
-    val systemDiff = positiveSubtraction(currentProcCpu.getSys, lastProcCpu.getSys)
-    val timeDiff = currentProcCpu.getLastTime - lastProcCpu.getLastTime
+      if (totalDiff == 0L) {
+        if (timeDiff > 2000L) currentLoad = 0L
+        if (currentLoad == 0L) lastProcCpu = currentProcCpu
+      } else {
+        val totalPercent = percentUsage(totalDiff, timeDiff)
+        val userPercent = percentUsage(userDiff, timeDiff)
+        val systemPercent = percentUsage(systemDiff, timeDiff)
 
-    if (totalDiff == 0L) {
-      if (timeDiff > 2000L) currentLoad = 0L
-      if (currentLoad == 0L) lastProcCpu = currentProcCpu
-    } else {
-      val totalPercent = percentUsage(totalDiff, timeDiff)
-      val userPercent = percentUsage(userDiff, timeDiff)
-      val systemPercent = percentUsage(systemDiff, timeDiff)
+        processUserCpuMetric.record(userPercent)
+        processSystemCpuMetric.record(systemPercent)
+        processTotalCpuMetric.record(userPercent + systemPercent)
 
-      processUserCpu.record(userPercent)
-      processSystemCpu.record(systemPercent)
-      processTotalCpu.record(userPercent + systemPercent)
-
-      currentLoad = totalPercent
-      lastProcCpu = currentProcCpu
+        currentLoad = totalPercent
+        lastProcCpu = currentProcCpu
+      }
     }
   }
-}
-
-object ProcessCpuMetrics extends SigarMetricRecorderCompanion("process-cpu") {
-  def apply(sigar: Sigar, metricPrefix: String, logger: Logger): ProcessCpuMetrics =
-    new ProcessCpuMetrics(sigar, metricPrefix, logger)
 }

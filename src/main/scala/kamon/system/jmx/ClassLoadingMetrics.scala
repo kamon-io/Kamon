@@ -26,13 +26,13 @@ import org.slf4j.Logger
  *    - @see [[http://docs.oracle.com/javase/8/docs/api/java/lang/management/ClassLoadingMXBean.html "ClassLoadingMXBean"]]
  */
 object ClassLoadingMetrics extends JmxMetricBuilder("class-loading") {
-  val classLoadingBean = ManagementFactory.getClassLoadingMXBean
+  def build(metricPrefix: String, logger: Logger) = new JmxMetric {
+    val classLoadingBean = ManagementFactory.getClassLoadingMXBean
 
-  val classesLoadedMetric           = Kamon.gauge(s"$metricPrefix.loaded")
-  val classesUnloadedMetric         = Kamon.gauge(s"$metricPrefix.unloaded")
-  val classesLoadedCurrentlyMetric  = Kamon.gauge(s"$metricPrefix.currently-loaded")
+    val classesLoadedMetric           = Kamon.gauge(s"$metricPrefix.loaded")
+    val classesUnloadedMetric         = Kamon.gauge(s"$metricPrefix.unloaded")
+    val classesLoadedCurrentlyMetric  = Kamon.gauge(s"$metricPrefix.currently-loaded")
 
-  def build(metricName: String, logger: Logger) = new JmxMetric {
     def update(): Unit = {
       classesLoadedMetric.set(classLoadingBean.getTotalLoadedClassCount)
       classesUnloadedMetric.set(classLoadingBean.getUnloadedClassCount)

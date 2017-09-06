@@ -30,8 +30,8 @@ import scala.collection.concurrent.TrieMap
  *    - @see [[http://docs.oracle.com/javase/8/docs/api/java/lang/management/GarbageCollectorMXBean.html "GarbageCollectorMXBean"]]
  */
 object GarbageCollectionMetrics extends JmxMetricBuilder("garbage-collection") {
-  def build(metricName: String, logger: Logger) = new JmxMetric {
-    val gcMetrics = GarbageCollectorMetrics(metricName)
+  def build(metricPrefix: String, logger: Logger) = new JmxMetric {
+    val gcMetrics = GarbageCollectorMetrics(metricPrefix)
     val collectors = TrieMap[String, DifferentialCollector]()
 
     def update(): Unit = {

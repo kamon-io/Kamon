@@ -17,22 +17,21 @@
 package kamon.system.sigar
 
 import kamon.Kamon
+import kamon.system.SystemMetrics
 import org.hyperic.sigar.Sigar
 import org.slf4j.Logger
-
-import scala.concurrent.duration.FiniteDuration
 
 class SigarMetricsUpdater(logger: Logger) {
   val sigar = new Sigar
 
   val sigarMetrics = List(
-    CpuMetrics.register(sigar, logger),
-    FileSystemMetrics.register(sigar, logger),
-    LoadAverageMetrics.register(sigar, logger),
-    MemoryMetrics.register(sigar, logger),
-    NetworkMetrics.register(sigar, logger),
-    ProcessCpuMetrics.register(sigar, logger),
-    ULimitMetrics.register(sigar, logger)).flatten
+    CpuMetrics.register(sigar),
+    FileSystemMetrics.register(sigar),
+    LoadAverageMetrics.register(sigar),
+    MemoryMetrics.register(sigar),
+    NetworkMetrics.register(sigar),
+    ProcessCpuMetrics.register(sigar),
+    ULimitMetrics.register(sigar)).flatten
 
   def updateMetrics(): Unit = {
     sigarMetrics.foreach(_.update())
@@ -60,16 +59,18 @@ object SigarSafeRunner {
   }
 }
 
-abstract class SigarMetricRecorderCompanion(metricName: String) {
-  private val filterName = "system-metric"
+abstract class SigarMetricBuilder(metricName: String) {
+  private val filterName = SystemMetrics.FilterName
+  private val logger = SystemMetrics.logger
 
-  def register(sigar: Sigar, logger: Logger): Option[SigarMetric] = {
-    val metricPrefix = s"$filterName.$metricName."
+  def metricPrefix: String = s"$filterName.$metricName"
+
+  def register(sigar: Sigar): Option[SigarMetric] = {
     if (Kamon.filter(filterName, metricName))
-      Some(apply(sigar, metricPrefix, logger))
+      Some(build(sigar, metricPrefix, logger))
     else
       None
   }
 
-  def apply(sigar: Sigar, metricPrefix: String, logger: Logger): SigarMetric
+  def build(sigar: Sigar, metricPrefix: String, logger: Logger): SigarMetric
 }

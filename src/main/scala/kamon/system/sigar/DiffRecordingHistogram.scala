@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * Copyright © 2013-2015 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2017 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -48,9 +48,11 @@ class DiffRecordingHistogram(wrappedHistogram: Histogram) extends Histogram {
   def record(value: Long, count: Long): Unit =
     processRecording(value, count)
 
-  override def unit: MeasurementUnit = MeasurementUnit.information.bytes //TODO mladen
+  override def unit: MeasurementUnit =
+    wrappedHistogram.unit
 
-  override def dynamicRange: DynamicRange = DynamicRange.Default
+  override def dynamicRange: DynamicRange =
+    wrappedHistogram.dynamicRange
 }
 
 object DiffRecordingHistogram {

@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * Copyright © 2013-2015 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2017 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -28,46 +28,40 @@ import org.slf4j.Logger
  *    - swap-used: Total used system swap.
  *    - swap-free: Total free system swap.
  */
-class MemoryMetrics(sigar: Sigar, metricPrefix: String, logger: Logger) extends SigarMetric {
-  import SigarSafeRunner._
+object MemoryMetrics extends SigarMetricBuilder("memory") {
+  def build(sigar: Sigar, metricPrefix: String, logger: Logger) =  new SigarMetric {
+    val usedMetric      = Kamon.histogram(s"$metricPrefix.used", MeasurementUnit.information.bytes)
+    val cachedMetric    = Kamon.histogram(s"$metricPrefix.cache-and-buffer", MeasurementUnit.information.bytes)
+    val freeMetric      = Kamon.histogram(s"$metricPrefix.free", MeasurementUnit.information.bytes)
+    val totalMetric     = Kamon.histogram(s"$metricPrefix.total", MeasurementUnit.information.bytes)
+    val swapUsedMetric  = Kamon.histogram(s"$metricPrefix.swap-used", MeasurementUnit.information.bytes)
+    val swapFreeMetric  = Kamon.histogram(s"$metricPrefix.swap-free", MeasurementUnit.information.bytes)
 
-  private val measurementUnit = MeasurementUnit.information.bytes
+    override def update(): Unit = {
+      import SigarSafeRunner._
 
-  val used      = Kamon.histogram(metricPrefix+"used", measurementUnit)
-  val cached    = Kamon.histogram(metricPrefix+"cache-and-buffer", measurementUnit)
-  val free      = Kamon.histogram(metricPrefix+"free", measurementUnit)
-  val total     = Kamon.histogram(metricPrefix+"total", measurementUnit)
-  val swapUsed  = Kamon.histogram(metricPrefix+"swap-used", measurementUnit)
-  val swapFree  = Kamon.histogram(metricPrefix+"swap-free", measurementUnit)
+      def mem = {
+        val mem = sigar.getMem
+        (mem.getActualUsed, mem.getActualFree, mem.getFree, mem.getTotal)
+      }
 
-  def update(): Unit = {
-    def mem = {
-      val mem = sigar.getMem
-      (mem.getActualUsed, mem.getActualFree, mem.getFree, mem.getTotal)
+      def swap = {
+        val swap = sigar.getSwap
+        (swap.getUsed, swap.getFree)
+      }
+
+      val (memActualUsed, memActualFree, memFree, memTotal) = runSafe(mem, (0L, 0L, 0L, 0L), "memory", logger)
+      val (memSwapUsed, memSwapFree) = runSafe(swap, (0L, 0L), "swap", logger)
+
+      def cachedMemory = if (memActualFree > memFree) memActualFree - memFree else 0L
+
+      usedMetric.record(memActualUsed)
+      freeMetric.record(memActualFree)
+      cachedMetric.record(cachedMemory)
+      totalMetric.record(memTotal)
+      swapUsedMetric.record(memSwapUsed)
+      swapFreeMetric.record(memSwapFree)
     }
-
-    def swap = {
-      val swap = sigar.getSwap
-      (swap.getUsed, swap.getFree)
-    }
-
-    val (memActualUsed, memActualFree, memFree, memTotal) = runSafe(mem, (0L, 0L, 0L, 0L), "memory", logger)
-    val (memSwapUsed, memSwapFree) = runSafe(swap, (0L, 0L), "swap", logger)
-
-    def cachedMemory = if (memActualFree > memFree) memActualFree - memFree else 0L
-
-    used.record(memActualUsed)
-    free.record(memActualFree)
-    cached.record(cachedMemory)
-    total.record(memTotal)
-    swapUsed.record(memSwapUsed)
-    swapFree.record(memSwapFree)
   }
-}
-
-object MemoryMetrics extends SigarMetricRecorderCompanion("memory") {
-
-  def apply(sigar: Sigar, metricPrefix: String, logger: Logger): MemoryMetrics =
-    new MemoryMetrics(sigar, metricPrefix, logger)
 }
 

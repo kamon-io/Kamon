@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * Copyright © 2013-2015 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2017 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -28,25 +28,22 @@ import scala.util.Try
  *    - readBytes: Total number of physical disk reads.
  *    - writesBytes:  Total number of physical disk writes.
  */
-class FileSystemMetrics(sigar: Sigar, metricPrefix: String, logger: Logger) extends SigarMetric {
-  import kamon.system.sigar.SigarSafeRunner._
+object FileSystemMetrics extends SigarMetricBuilder("file-system") {
+  def build(sigar: Sigar, metricPrefix: String,logger: Logger) = new SigarMetric {
+    import kamon.system.sigar.SigarSafeRunner.runSafe
 
-  val reads   = DiffRecordingHistogram(Kamon.histogram("system-metric.file-system.reads", MeasurementUnit.information.bytes))
-  val writes  = DiffRecordingHistogram(Kamon.histogram("system-metric.file-system.writes", MeasurementUnit.information.bytes))
+    val readsMetric   = DiffRecordingHistogram(Kamon.histogram(s"$metricPrefix.reads", MeasurementUnit.information.bytes))
+    val writesMetric  = DiffRecordingHistogram(Kamon.histogram(s"$metricPrefix.writes", MeasurementUnit.information.bytes))
 
-  val fileSystems = runSafe(sigar.getFileSystemList.filter(_.getType == FileSystem.TYPE_LOCAL_DISK).map(_.getDevName).toSet, Set.empty[String], "file-system", logger)
+    val fileSystems = runSafe(sigar.getFileSystemList.filter(_.getType == FileSystem.TYPE_LOCAL_DISK).map(_.getDevName).toSet, Set.empty[String], "file-system", logger)
 
-  def sumOfAllFileSystems(sigar: Sigar, thunk: DiskUsage ⇒ Long): Long = Try {
-    fileSystems.map(i ⇒ thunk(sigar.getDiskUsage(i))).fold(0L)(_ + _)
-  } getOrElse 0L
+    def sumOfAllFileSystems(sigar: Sigar, thunk: DiskUsage ⇒ Long): Long = Try {
+      fileSystems.map(i ⇒ thunk(sigar.getDiskUsage(i))).fold(0L)(_ + _)
+    } getOrElse 0L
 
-  def update(): Unit = {
-    reads.record(sumOfAllFileSystems(sigar, _.getReadBytes))
-    writes.record(sumOfAllFileSystems(sigar, _.getWriteBytes))
+    override def update(): Unit = {
+      readsMetric.record(sumOfAllFileSystems(sigar, _.getReadBytes))
+      writesMetric.record(sumOfAllFileSystems(sigar, _.getWriteBytes))
+    }
   }
-}
-
-object FileSystemMetrics extends SigarMetricRecorderCompanion("file-system") {
-  def apply(sigar: Sigar, metricPrefix: String,logger: Logger): FileSystemMetrics =
-    new FileSystemMetrics(sigar, metricPrefix, logger)
 }

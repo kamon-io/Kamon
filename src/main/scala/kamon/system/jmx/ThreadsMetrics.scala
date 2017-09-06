@@ -26,17 +26,17 @@ import org.slf4j.Logger
  *    - @see [[http://docs.oracle.com/javase/7/docs/api/java/lang/management/ThreadMXBean.html "ThreadMXBean"]]
  */
 object ThreadsMetrics extends JmxMetricBuilder("threads") {
-  val threadsBean = ManagementFactory.getThreadMXBean
+  def build(metricPrefix: String, log: Logger) = new JmxMetric {
+    val threadsBean = ManagementFactory.getThreadMXBean
 
-  val daemonThreadCount = Kamon.gauge(s"$metricPrefix.daemon")
-  val peekThreadCount   = Kamon.gauge(s"$metricPrefix.peak")
-  val threadCount       = Kamon.gauge(s"$metricPrefix.total")
+    val daemonThreadCountMetric = Kamon.gauge(s"$metricPrefix.daemon")
+    val peekThreadCountMetric   = Kamon.gauge(s"$metricPrefix.peak")
+    val threadCountMetric       = Kamon.gauge(s"$metricPrefix.total")
 
-  def build(metricName: String, log: Logger) = new JmxMetric {
     def update(): Unit = {
-      daemonThreadCount.set(threadsBean.getDaemonThreadCount.toLong)
-      peekThreadCount.set(threadsBean.getPeakThreadCount.toLong)
-      threadCount.set(threadsBean.getThreadCount.toLong)
+      daemonThreadCountMetric.set(threadsBean.getDaemonThreadCount.toLong)
+      peekThreadCountMetric.set(threadsBean.getPeakThreadCount.toLong)
+      threadCountMetric.set(threadsBean.getThreadCount.toLong)
     }
   }
 }

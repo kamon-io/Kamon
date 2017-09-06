@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * Copyright © 2013-2015 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2017 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -24,27 +24,23 @@ import org.slf4j.Logger
  *  Load Average metrics, as reported by Sigar:
  *    - The system load averages for the past 1, 5, and 15 minutes.
  */
-class LoadAverageMetrics(sigar: Sigar, metricPrefix: String, logger: Logger) extends SigarMetric {
-  import SigarSafeRunner._
+object LoadAverageMetrics extends SigarMetricBuilder("load") {
+  def build(sigar: Sigar, metricPrefix: String, logger: Logger) = new SigarMetric {
+    val AggregationKey = "aggregation"
 
-  val aggregationKey = "aggregation"
+    val baseHistogram         = Kamon.histogram(s"$metricPrefix.average")
+    val oneMinuteMetric       = baseHistogram.refine(Map(AggregationKey -> "1"))
+    val fiveMinutesMetric     = baseHistogram.refine(Map(AggregationKey -> "5"))
+    val fifteenMinutesMetric  = baseHistogram.refine(Map(AggregationKey -> "15"))
 
-  val baseHistogram   = Kamon.histogram(metricPrefix+"average")
-  val oneMinute       = baseHistogram.refine(Map(aggregationKey -> "1"))
-  val fiveMinutes     = baseHistogram.refine(Map(aggregationKey -> "5"))
-  val fifteenMinutes  = baseHistogram.refine(Map(aggregationKey -> "15"))
+    override def update(): Unit = {
+      import SigarSafeRunner._
 
-  def update(): Unit = {
-    val loadAverage = runSafe(sigar.getLoadAverage, Array(0D, 0D, 0D), "load-average", logger)
+      val loadAverage = runSafe(sigar.getLoadAverage, Array(0D, 0D, 0D), "load-average", logger)
 
-    oneMinute.record(loadAverage(0).toLong)
-    fiveMinutes.record(loadAverage(1).toLong)
-    fifteenMinutes.record(loadAverage(2).toLong)
+      oneMinuteMetric.record(loadAverage(0).toLong)
+      fiveMinutesMetric.record(loadAverage(1).toLong)
+      fifteenMinutesMetric.record(loadAverage(2).toLong)
+    }
   }
-}
-
-object LoadAverageMetrics extends SigarMetricRecorderCompanion("load") {
-
-  def apply(sigar: Sigar, metricPrefix: String, logger: Logger): LoadAverageMetrics =
-    new LoadAverageMetrics(sigar, metricPrefix, logger)
 }

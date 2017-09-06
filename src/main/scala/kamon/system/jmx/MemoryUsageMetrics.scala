@@ -30,35 +30,33 @@ import scala.collection.JavaConverters._
  *  Pools in HotSpot Java 8:
  *  code-cache, metaspace, compressed-class-space, ps-eden-space, ps-survivor-space, ps-old-gen
  */
-
 object MemoryUsageMetrics extends JmxMetricBuilder("jmx-memory") {
+  def build(metricPrefix: String, logger: Logger) = new JmxMetric {
+    val invalidChars = """[^a-z0-9]""".r
 
-  private val invalidChars = """[^a-z0-9]""".r
+    def sanitize(name: String): String =
+      invalidChars.replaceAllIn(name.toLowerCase, "-")
 
-  private def sanitize(name: String) =
-    invalidChars.replaceAllIn(name.toLowerCase, "-")
+    val usagesWithNames =
+      ManagementFactory.getMemoryPoolMXBeans.asScala.toList.map { bean ⇒
+        MemoryUsageWithMetricName(sanitize(bean.getName), () => bean.getUsage)
+      }
 
-  private val usagesWithNames =
-    ManagementFactory.getMemoryPoolMXBeans.asScala.toList.map { bean ⇒
-      MemoryUsageWithMetricName(sanitize(bean.getName), () => bean.getUsage)
-    }
+    val bufferPoolsWithNames =
+      ManagementFactory.getPlatformMXBeans(classOf[BufferPoolMXBean]).asScala.toList.map { bean ⇒
+        BufferPoolWithMetricName(sanitize(bean.getName), () ⇒ bean)
+      }
 
-  private val bufferPoolsWithNames =
-    ManagementFactory.getPlatformMXBeans(classOf[BufferPoolMXBean]).asScala.toList.map { bean ⇒
-      BufferPoolWithMetricName(sanitize(bean.getName), () ⇒ bean)
-    }
+    val memoryMXBean: MemoryMXBean =
+      ManagementFactory.getMemoryMXBean
 
-  private val memoryMXBean: MemoryMXBean =
-    ManagementFactory.getMemoryMXBean
+    val memoryUsageWithNames =
+      Seq(MemoryUsageWithMetricName("non-heap", () => memoryMXBean.getNonHeapMemoryUsage),
+        MemoryUsageWithMetricName("heap", () => memoryMXBean.getHeapMemoryUsage),
+        usagesWithNames)
 
-  private val memoryUsageWithNames =
-    Seq(MemoryUsageWithMetricName("non-heap", () => memoryMXBean.getNonHeapMemoryUsage),
-      MemoryUsageWithMetricName("heap", () => memoryMXBean.getHeapMemoryUsage),
-      usagesWithNames)
-
-  def build(metricName: String, logger: Logger) = new JmxMetric {
-    val memoryMetrics = MemoryMetrics(metricName)
-    val bufferPoolMetrics = BufferPoolMetrics(metricName)
+    val memoryMetrics = MemoryMetrics(metricPrefix)
+    val bufferPoolMetrics = BufferPoolMetrics(metricPrefix)
 
     def update(): Unit = {
       memoryUsageWithNames.foreach {

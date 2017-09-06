@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * Copyright © 2013-2015 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2017 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -32,40 +32,36 @@ import scala.util.Try
  *    - rxDropped: Total number of incoming packets dropped.
  *    - txDropped: Total number of outgoing packets dropped.
  */
-class NetworkMetrics(sigar: Sigar, metricPrefix: String, logger: Logger) extends SigarMetric {
-  import SigarSafeRunner._
+object NetworkMetrics extends SigarMetricBuilder("network") {
+  def build(sigar: Sigar, metricPrefix: String, logger: Logger) = new SigarMetric {
+    import SigarSafeRunner._
 
-  val events    = Kamon.histogram(metricPrefix+"packets")
-  val rDropped  = events.refine(Map("direction" -> "received",    "state" -> "dropped"))
-  val rErrors   = events.refine(Map("direction" -> "received",    "state" -> "error"))
-  val tDropped  = events.refine(Map("direction" -> "transmitted", "state" -> "dropped"))
-  val tErrors   = events.refine(Map("direction" -> "transmitted", "state" -> "error"))
+    val events    = Kamon.histogram(s"$metricPrefix.packets")
+    val rDroppedMetric  = events.refine(Map("direction" -> "received",    "state" -> "dropped"))
+    val rErrorsMetric   = events.refine(Map("direction" -> "received",    "state" -> "error"))
+    val tDroppedMetric  = events.refine(Map("direction" -> "transmitted", "state" -> "dropped"))
+    val tErrorsMetric   = events.refine(Map("direction" -> "transmitted", "state" -> "error"))
 
-  val received      = DiffRecordingHistogram(Kamon.histogram(metricPrefix+"rx", MeasurementUnit.information.bytes))
-  val transmited    = DiffRecordingHistogram(Kamon.histogram(metricPrefix+"tx", MeasurementUnit.information.bytes))
-  val receiveErrors     = DiffRecordingHistogram(rErrors)
-  val transmitErrors    = DiffRecordingHistogram(tErrors)
-  val receiveDrops      = DiffRecordingHistogram(rDropped)
-  val transmitDrops     = DiffRecordingHistogram(tDropped)
+    val received      = DiffRecordingHistogram(Kamon.histogram(s"$metricPrefix.rx", MeasurementUnit.information.bytes))
+    val transmitted    = DiffRecordingHistogram(Kamon.histogram(s"$metricPrefix.tx", MeasurementUnit.information.bytes))
+    val receiveErrors     = DiffRecordingHistogram(rErrorsMetric)
+    val transmitErrors    = DiffRecordingHistogram(tErrorsMetric)
+    val receiveDrops      = DiffRecordingHistogram(rDroppedMetric)
+    val transmitDrops     = DiffRecordingHistogram(tDroppedMetric)
 
-  val interfaces = runSafe(sigar.getNetInterfaceList.toList.filter(_ != "lo"), List.empty[String], "network", logger)
+    val interfaces = runSafe(sigar.getNetInterfaceList.toList.filter(_ != "lo"), List.empty[String], "network", logger)
 
-  def sumOfAllInterfaces(sigar: Sigar, thunk: NetInterfaceStat ⇒ Long): Long = Try {
-    interfaces.map(i ⇒ thunk(sigar.getNetInterfaceStat(i))).fold(0L)(_ + _)
+    def sumOfAllInterfaces(sigar: Sigar, thunk: NetInterfaceStat ⇒ Long): Long = Try {
+      interfaces.map(i ⇒ thunk(sigar.getNetInterfaceStat(i))).fold(0L)(_ + _)
+    } getOrElse 0L
 
-  } getOrElse 0L
-
-  def update(): Unit = {
-    received.record(sumOfAllInterfaces(sigar, _.getRxBytes))
-    transmited.record(sumOfAllInterfaces(sigar, _.getTxBytes))
-    receiveErrors.record(sumOfAllInterfaces(sigar, _.getRxErrors))
-    transmitErrors.record(sumOfAllInterfaces(sigar, _.getTxErrors))
-    receiveDrops.record(sumOfAllInterfaces(sigar, _.getRxDropped))
-    transmitDrops.record(sumOfAllInterfaces(sigar, _.getTxDropped))
+    override def update(): Unit = {
+      received.record(sumOfAllInterfaces(sigar, _.getRxBytes))
+      transmitted.record(sumOfAllInterfaces(sigar, _.getTxBytes))
+      receiveErrors.record(sumOfAllInterfaces(sigar, _.getRxErrors))
+      transmitErrors.record(sumOfAllInterfaces(sigar, _.getTxErrors))
+      receiveDrops.record(sumOfAllInterfaces(sigar, _.getRxDropped))
+      transmitDrops.record(sumOfAllInterfaces(sigar, _.getTxDropped))
+    }
   }
-}
-
-object NetworkMetrics extends SigarMetricRecorderCompanion("network") {
-  def apply(sigar: Sigar, metricPrefix: String, logger: Logger): NetworkMetrics =
-    new NetworkMetrics(sigar, metricPrefix, logger)
 }
