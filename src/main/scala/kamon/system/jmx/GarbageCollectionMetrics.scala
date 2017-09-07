@@ -45,9 +45,6 @@ object GarbageCollectionMetrics extends JmxMetricBuilder("garbage-collection") {
       }
     }
   }
-
-  def sanitizeCollectorName(name: String): String =
-    name.replaceAll("""[^\w]""", "-").toLowerCase
 }
 
 final case class GCNotificationListener(gcMetrics: GarbageCollectorMetrics) extends NotificationListener {
@@ -56,9 +53,12 @@ final case class GCNotificationListener(gcMetrics: GarbageCollectorMetrics) exte
       val compositeData = notification.getUserData.asInstanceOf[CompositeData]
       val info = GarbageCollectionNotificationInfo.from(compositeData)
 
-      gcMetrics.forCollector(info.getGcName).gcTime.record(info.getGcInfo.getDuration)
+      gcMetrics.forCollector(sanitizeCollectorName(info.getGcName)).gcTime.record(info.getGcInfo.getDuration)
     }
   }
+
+  private def sanitizeCollectorName(name: String): String =
+    name.replaceAll("""[^\w]""", "-").toLowerCase
 }
 
 final case class GarbageCollectorMetrics(metricPrefix:String) {
