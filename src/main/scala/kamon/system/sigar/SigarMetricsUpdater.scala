@@ -52,7 +52,7 @@ object SigarSafeRunner {
       case e: Exception ⇒
         if (!errorLogged.contains(error)) {
           errorLogged += error
-          logger.warn(s"Couldn't get the metric [${error}]. Due to [${e.getMessage}]")
+          logger.warn(s"Couldn't get the metric [$error]. Due to [${e.getMessage}]")
         }
         defaultValue
     }
@@ -63,11 +63,9 @@ abstract class SigarMetricBuilder(metricName: String) {
   private val filterName = SystemMetrics.FilterName
   private val logger = SystemMetrics.logger
 
-  def metricPrefix: String = s"$filterName.$metricName"
-
   def register(sigar: Sigar): Option[SigarMetric] = {
     if (Kamon.filter(filterName, metricName))
-      Some(build(sigar, metricPrefix, logger))
+      Some(build(sigar, s"$filterName.$metricName", logger))
     else
       None
   }

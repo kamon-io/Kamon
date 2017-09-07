@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * Copyright © 2013-2015 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2017 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -16,14 +16,14 @@
 
 package kamon.system.jmx
 
-import java.lang.management.{GarbageCollectorMXBean, ManagementFactory}
+import java.lang.management.ManagementFactory
+import javax.management.openmbean.CompositeData
+import javax.management.{Notification, NotificationEmitter, NotificationListener}
 
+import com.sun.management.GarbageCollectionNotificationInfo
 import kamon.Kamon
 import kamon.metric._
 import org.slf4j.Logger
-
-import scala.collection.JavaConverters._
-import scala.collection.concurrent.TrieMap
 
 /**
  *  Garbage Collection metrics, as reported by JMX:
@@ -31,13 +31,17 @@ import scala.collection.concurrent.TrieMap
  */
 object GarbageCollectionMetrics extends JmxMetricBuilder("garbage-collection") {
   def build(metricPrefix: String, logger: Logger) = new JmxMetric {
-    val gcMetrics = GarbageCollectorMetrics(metricPrefix)
-    val collectors = TrieMap[String, DifferentialCollector]()
 
-    def update(): Unit = {
-      ManagementFactory.getGarbageCollectorMXBeans.asScala.filter(_.isValid).foreach { gc =>
-        val gcName = sanitizeCollectorName(gc.getName)
-        collectors.getOrElseUpdate(gcName, DifferentialCollector(gc, gcMetrics.forCollector(gcName))).collect()
+    addNotificationListener(GarbageCollectorMetrics(metricPrefix))
+
+    def update(): Unit = {}
+
+    def addNotificationListener(gcMetrics: GarbageCollectorMetrics):Unit = {
+      ManagementFactory.getGarbageCollectorMXBeans.forEach { mbean =>
+        if(mbean.isInstanceOf[NotificationEmitter]) {
+          val emitter = mbean.asInstanceOf[NotificationEmitter]
+          emitter.addNotificationListener(GCNotificationListener(gcMetrics), null, null)
+        }
       }
     }
   }
@@ -46,48 +50,24 @@ object GarbageCollectionMetrics extends JmxMetricBuilder("garbage-collection") {
     name.replaceAll("""[^\w]""", "-").toLowerCase
 }
 
+final case class GCNotificationListener(gcMetrics: GarbageCollectorMetrics) extends NotificationListener {
+  override def handleNotification(notification: Notification, handback: scala.Any): Unit = {
+    if (notification.getType.equals(GarbageCollectionNotificationInfo.GARBAGE_COLLECTION_NOTIFICATION)) {
+      val compositeData = notification.getUserData.asInstanceOf[CompositeData]
+      val info = GarbageCollectionNotificationInfo.from(compositeData)
+
+      gcMetrics.forCollector(info.getGcName).gcTime.record(info.getGcInfo.getDuration)
+    }
+  }
+}
+
 final case class GarbageCollectorMetrics(metricPrefix:String) {
-  val gcCountMetric = Kamon.counter(s"$metricPrefix.count")
   val gcTimeMetric = Kamon.histogram(s"$metricPrefix.time", MeasurementUnit.time.milliseconds)
 
   def forCollector(collector: String): GarbageCollectorMetrics = {
     val collectorTags = Map("collector" -> collector)
-    GarbageCollectorMetrics(
-      collectorTags,
-      gcCountMetric.refine(collectorTags),
-      gcTimeMetric.refine(collectorTags))
+    GarbageCollectorMetrics(collectorTags, gcTimeMetric.refine(collectorTags))
   }
 
-  case class GarbageCollectorMetrics(tags: Map[String, String],
-                                     gcCount: Counter,
-                                     gcTime: Histogram) {
-    def cleanup(): Unit = {
-      gcCountMetric.remove(tags)
-      gcTimeMetric.remove(tags)
-    }
-  }
+  case class GarbageCollectorMetrics(tags: Map[String, String], gcTime: Histogram)
 }
-
-final case class DifferentialCollector(gcBean: GarbageCollectorMXBean,
-                                       gcMetrics: GarbageCollectorMetrics#GarbageCollectorMetrics) {
-
-  var collectionCount = gcBean.getCollectionCount
-  var collectionTime = gcBean.getCollectionTime
-
-  def collect(): Unit = {
-    val lastCollectionCount = collectionCount
-    val lastCollectionTime = collectionTime
-
-    collectionCount = gcBean.getCollectionCount
-    collectionTime = gcBean.getCollectionTime
-
-    val numberOfCollections = collectionCount - lastCollectionCount
-    val time = collectionTime - lastCollectionTime
-
-    if (numberOfCollections > 0) {
-      gcMetrics.gcCount.increment(numberOfCollections)
-      gcMetrics.gcTime.record(time)
-    }
-  }
-}
-

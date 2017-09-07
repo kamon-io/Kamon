@@ -33,9 +33,9 @@ import scala.collection.JavaConverters.iterableAsScalaIterableConverter
  */
 class ContextSwitchesMetrics(pid: Long, logger: Logger) {
 
-  val perProcessVoluntary     = Kamon.histogram("system-metric.context-switches.process-voluntary")
-  val perProcessNonVoluntary  = Kamon.histogram("system-metric.context-switches.process-non-voluntary")
-  val global                  = Kamon.histogram("system-metric.context-switches.global")
+  val perProcessVoluntaryMetric     = Kamon.histogram("system-metric.context-switches.process-voluntary")
+  val perProcessNonVoluntaryMetric  = Kamon.histogram("system-metric.context-switches.process-non-voluntary")
+  val globalMetric                  = Kamon.histogram("system-metric.context-switches.global")
 
   def update(): Unit = {
 
@@ -76,9 +76,9 @@ class ContextSwitchesMetrics(pid: Long, logger: Logger) {
     }
 
     val (voluntary, nonVoluntary) = contextSwitchesByProcess(pid)
-    perProcessVoluntary.record(voluntary)
-    perProcessNonVoluntary.record(nonVoluntary)
-    global.record(contextSwitches)
+    perProcessVoluntaryMetric.record(voluntary)
+    perProcessNonVoluntaryMetric.record(nonVoluntary)
+    globalMetric.record(contextSwitches)
   }
 }
 
