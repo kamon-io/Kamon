@@ -115,17 +115,7 @@ final case class BufferPoolMetrics(metricPrefix:String) {
     )
   }
 
-  case class BufferPoolMetrics(tags: Map[String, String],
-                               poolCount: Gauge,
-                               poolUsed: Gauge,
-                               poolCapacity: Gauge) {
-
-    def cleanup(): Unit = {
-      poolCountMetric.remove(tags)
-      poolUsedMetric.remove(tags)
-      poolCapacityMetric.remove(tags)
-    }
-  }
+  case class BufferPoolMetrics(tags: Map[String, String], poolCount: Gauge, poolUsed: Gauge, poolCapacity: Gauge)
 }
 
 /**
