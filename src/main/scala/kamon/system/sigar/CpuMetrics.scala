@@ -17,6 +17,7 @@
 package kamon.system.sigar
 
 import kamon.Kamon
+import kamon.system.Metric
 import org.hyperic.sigar.Sigar
 import org.slf4j.Logger
 
@@ -29,10 +30,10 @@ import org.slf4j.Logger
  *    - stolen: Total percentage of system cpu involuntary wait time. @see [[https://www.datadoghq.com/2013/08/understanding-aws-stolen-cpu-and-how-it-affects-your-apps/ "Understanding Stolen Cpu"]]
  */
 object CpuMetrics extends SigarMetricBuilder("cpu") {
-  def build(sigar: Sigar, metricPrefix: String, logger: Logger) = new SigarMetric {
+  def build(sigar: Sigar, metricPrefix: String, logger: Logger) = new Metric {
     val userMetric    = Kamon.histogram(s"$metricPrefix.user")
     val systemMetric  = Kamon.histogram(s"$metricPrefix.system")
-    val WaitMetric    = Kamon.histogram(s"$metricPrefix.wait")
+    val waitMetric    = Kamon.histogram(s"$metricPrefix.wait")
     val idleMetric    = Kamon.histogram(s"$metricPrefix.idle")
     val stolenMetric  = Kamon.histogram(s"$metricPrefix.stolen")
 
@@ -52,7 +53,7 @@ object CpuMetrics extends SigarMetricBuilder("cpu") {
 
       userMetric.record(cpuUser)
       systemMetric.record(cpuSys)
-      WaitMetric.record(cpuWait)
+      waitMetric.record(cpuWait)
       idleMetric.record(cpuIdle)
       stolenMetric.record(cpuStolen)
     }

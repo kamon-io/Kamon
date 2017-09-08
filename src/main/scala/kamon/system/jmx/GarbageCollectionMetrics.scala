@@ -21,8 +21,10 @@ import javax.management.openmbean.CompositeData
 import javax.management.{Notification, NotificationEmitter, NotificationListener}
 
 import com.sun.management.GarbageCollectionNotificationInfo
+import com.sun.management.GarbageCollectionNotificationInfo.GARBAGE_COLLECTION_NOTIFICATION
 import kamon.Kamon
 import kamon.metric._
+import kamon.system.Metric
 import org.slf4j.Logger
 
 /**
@@ -30,7 +32,7 @@ import org.slf4j.Logger
  *    - @see [[http://docs.oracle.com/javase/8/docs/api/java/lang/management/GarbageCollectorMXBean.html "GarbageCollectorMXBean"]]
  */
 object GarbageCollectionMetrics extends JmxMetricBuilder("garbage-collection") {
-  def build(metricPrefix: String, logger: Logger) = new JmxMetric {
+  def build(metricPrefix: String, logger: Logger) = new Metric {
 
     addNotificationListener(GarbageCollectorMetrics(metricPrefix))
 
@@ -49,10 +51,9 @@ object GarbageCollectionMetrics extends JmxMetricBuilder("garbage-collection") {
 
 final case class GCNotificationListener(gcMetrics: GarbageCollectorMetrics) extends NotificationListener {
   override def handleNotification(notification: Notification, handback: scala.Any): Unit = {
-    if (notification.getType.equals(GarbageCollectionNotificationInfo.GARBAGE_COLLECTION_NOTIFICATION)) {
+    if (notification.getType.equals(GARBAGE_COLLECTION_NOTIFICATION)) {
       val compositeData = notification.getUserData.asInstanceOf[CompositeData]
       val info = GarbageCollectionNotificationInfo.from(compositeData)
-
       gcMetrics.forCollector(sanitizeCollectorName(info.getGcName)).gcTime.record(info.getGcInfo.getDuration)
     }
   }

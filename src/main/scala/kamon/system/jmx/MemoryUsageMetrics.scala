@@ -16,44 +16,25 @@
 
 package kamon.system.jmx
 
-import java.lang.management.{BufferPoolMXBean, ManagementFactory, MemoryMXBean, MemoryUsage}
+import java.lang.management.{BufferPoolMXBean, ManagementFactory, MemoryUsage}
 
 import kamon.Kamon
 import kamon.metric.{Gauge, Histogram, MeasurementUnit}
+import kamon.system.Metric
 import org.slf4j.Logger
 
 import scala.collection.JavaConverters._
+import scala.util.matching.Regex
 
 /**
  *  Memory Pool metrics, as reported by JMX:
- *    - @see [[http://docs.oracle.com/javase/7/docs/api/java/lang/management/MemoryMXBean.html "MemoryMXBean"]]
+ *    - @see [[http://docs.oracle.com/javase/8/docs/api/java/lang/management/MemoryMXBean.html "MemoryMXBean"]]
  *  Pools in HotSpot Java 8:
  *  code-cache, metaspace, compressed-class-space, ps-eden-space, ps-survivor-space, ps-old-gen
  */
 object MemoryUsageMetrics extends JmxMetricBuilder("jmx-memory") {
-  def build(metricPrefix: String, logger: Logger) = new JmxMetric {
-    val invalidChars = """[^a-z0-9]""".r
-
-    def sanitize(name: String): String =
-      invalidChars.replaceAllIn(name.toLowerCase, "-")
-
-    val usagesWithNames =
-      ManagementFactory.getMemoryPoolMXBeans.asScala.toList.map { bean ⇒
-        MemoryUsageWithMetricName(sanitize(bean.getName), () => bean.getUsage)
-      }
-
-    val bufferPoolsWithNames =
-      ManagementFactory.getPlatformMXBeans(classOf[BufferPoolMXBean]).asScala.toList.map { bean ⇒
-        BufferPoolWithMetricName(sanitize(bean.getName), () ⇒ bean)
-      }
-
-    val memoryMXBean: MemoryMXBean =
-      ManagementFactory.getMemoryMXBean
-
-    val memoryUsageWithNames =
-      Seq(MemoryUsageWithMetricName("non-heap", () => memoryMXBean.getNonHeapMemoryUsage),
-        MemoryUsageWithMetricName("heap", () => memoryMXBean.getHeapMemoryUsage),
-        usagesWithNames)
+  def build(metricPrefix: String, logger: Logger) = new Metric {
+    val invalidChars: Regex = """[^a-z0-9]""".r
 
     val memoryMetrics = MemoryMetrics(metricPrefix)
     val bufferPoolMetrics = BufferPoolMetrics(metricPrefix)
@@ -80,6 +61,23 @@ object MemoryUsageMetrics extends JmxMetricBuilder("jmx-memory") {
           pool.poolCapacity.set(beanFun().getTotalCapacity)
       }
     }
+
+    def sanitize(name: String): String =
+      invalidChars.replaceAllIn(name.toLowerCase, "-")
+
+    def usagesWithNames =
+      ManagementFactory.getMemoryPoolMXBeans.asScala.toList.map { bean ⇒
+        MemoryUsageWithMetricName(sanitize(bean.getName), () => bean.getUsage)
+      }
+
+    def bufferPoolsWithNames =
+      ManagementFactory.getPlatformMXBeans(classOf[BufferPoolMXBean]).asScala.toList.map { bean ⇒
+        BufferPoolWithMetricName(sanitize(bean.getName), () ⇒ bean)
+      }
+
+    def memoryUsageWithNames =
+      Seq(MemoryUsageWithMetricName("non-heap", () => ManagementFactory.getMemoryMXBean.getNonHeapMemoryUsage),
+        MemoryUsageWithMetricName("heap", () => ManagementFactory.getMemoryMXBean.getHeapMemoryUsage)) ++ usagesWithNames
   }
 }
 
@@ -98,17 +96,7 @@ final case class MemoryMetrics(metricPrefix:String) {
     )
   }
 
-  case class MemoryMetrics(tags: Map[String, String],
-                           memoryUsed: Histogram,
-                           memoryCommitted: Gauge,
-                           memoryMax: Gauge) {
-
-    def cleanup(): Unit = {
-      memoryUsedMetric.remove(tags)
-      memoryCommittedMetric.remove(tags)
-      memoryMaxMetric.remove(tags)
-    }
-  }
+  case class MemoryMetrics(tags: Map[String, String], memoryUsed: Histogram, memoryCommitted: Gauge, memoryMax: Gauge)
 }
 
 final case class BufferPoolMetrics(metricPrefix:String) {

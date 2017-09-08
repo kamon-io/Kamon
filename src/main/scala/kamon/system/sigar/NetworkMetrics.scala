@@ -18,6 +18,7 @@ package kamon.system.sigar
 
 import kamon.Kamon
 import kamon.metric.MeasurementUnit
+import kamon.system.Metric
 import org.hyperic.sigar.{NetInterfaceStat, Sigar}
 import org.slf4j.Logger
 
@@ -33,9 +34,7 @@ import scala.util.Try
  *    - txDropped: Total number of outgoing packets dropped.
  */
 object NetworkMetrics extends SigarMetricBuilder("network") {
-  def build(sigar: Sigar, metricPrefix: String, logger: Logger) = new SigarMetric {
-    import SigarSafeRunner._
-
+  def build(sigar: Sigar, metricPrefix: String, logger: Logger) = new Metric {
     val events    = Kamon.histogram(s"$metricPrefix.packets")
     val rDroppedMetric  = events.refine(Map("direction" -> "received",    "state" -> "dropped"))
     val rErrorsMetric   = events.refine(Map("direction" -> "received",    "state" -> "error"))
@@ -49,19 +48,21 @@ object NetworkMetrics extends SigarMetricBuilder("network") {
     val receiveDrops      = DiffRecordingHistogram(rDroppedMetric)
     val transmitDrops     = DiffRecordingHistogram(tDroppedMetric)
 
-    val interfaces = runSafe(sigar.getNetInterfaceList.toList.filter(_ != "lo"), List.empty[String], "network", logger)
+    override def update(): Unit = {
+      import SigarSafeRunner._
 
-    def sumOfAllInterfaces(sigar: Sigar, thunk: NetInterfaceStat ⇒ Long): Long = Try {
+      val interfaces = runSafe(sigar.getNetInterfaceList.toList.filter(_ != "lo"), List.empty[String], "network", logger)
+
+      received.record(sumOfAllInterfaces(sigar, interfaces,_.getRxBytes))
+      transmitted.record(sumOfAllInterfaces(sigar, interfaces, _.getTxBytes))
+      receiveErrors.record(sumOfAllInterfaces(sigar,interfaces, _.getRxErrors))
+      transmitErrors.record(sumOfAllInterfaces(sigar,interfaces, _.getTxErrors))
+      receiveDrops.record(sumOfAllInterfaces(sigar,interfaces, _.getRxDropped))
+      transmitDrops.record(sumOfAllInterfaces(sigar,interfaces, _.getTxDropped))
+    }
+
+    def sumOfAllInterfaces(sigar: Sigar, interfaces: List[String], thunk: NetInterfaceStat ⇒ Long): Long = Try {
       interfaces.map(i ⇒ thunk(sigar.getNetInterfaceStat(i))).fold(0L)(_ + _)
     } getOrElse 0L
-
-    override def update(): Unit = {
-      received.record(sumOfAllInterfaces(sigar, _.getRxBytes))
-      transmitted.record(sumOfAllInterfaces(sigar, _.getTxBytes))
-      receiveErrors.record(sumOfAllInterfaces(sigar, _.getRxErrors))
-      transmitErrors.record(sumOfAllInterfaces(sigar, _.getTxErrors))
-      receiveDrops.record(sumOfAllInterfaces(sigar, _.getRxDropped))
-      transmitDrops.record(sumOfAllInterfaces(sigar, _.getTxDropped))
-    }
   }
 }

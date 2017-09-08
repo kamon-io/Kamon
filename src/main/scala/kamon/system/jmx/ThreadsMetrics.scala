@@ -19,14 +19,15 @@ package kamon.system.jmx
 import java.lang.management.ManagementFactory
 
 import kamon.Kamon
+import kamon.system.Metric
 import org.slf4j.Logger
 
 /**
  *  Threads metrics, as reported by JMX:
- *    - @see [[http://docs.oracle.com/javase/7/docs/api/java/lang/management/ThreadMXBean.html "ThreadMXBean"]]
+ *    - @see [[http://docs.oracle.com/javase/8/docs/api/java/lang/management/ThreadMXBean.html "ThreadMXBean"]]
  */
 object ThreadsMetrics extends JmxMetricBuilder("threads") {
-  def build(metricPrefix: String, log: Logger) = new JmxMetric {
+  def build(metricPrefix: String, log: Logger) = new Metric {
     val threadsBean = ManagementFactory.getThreadMXBean
 
     val daemonThreadCountMetric = Kamon.gauge(s"$metricPrefix.daemon")

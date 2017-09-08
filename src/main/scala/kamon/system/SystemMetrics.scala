@@ -30,6 +30,7 @@ object SystemMetrics {
 
   @volatile var sigarFolder:String = _
   @volatile var sigarRefreshInterval:Duration = _
+  @volatile var jmxRefreshInterval:Duration = _
   @volatile var sigarEnabled:Boolean = _
   @volatile var jmxEnabled: Boolean =_
   @volatile var contextSwitchesRefreshInterval:Duration = _
@@ -44,8 +45,13 @@ object SystemMetrics {
     
     sigarFolder = systemMetricsConfig.getString("sigar-native-folder")
     sigarRefreshInterval = systemMetricsConfig.getDuration("sigar-metrics-refresh-interval")
+    jmxRefreshInterval = systemMetricsConfig.getDuration("jmx-metrics-refresh-interval")
     sigarEnabled = systemMetricsConfig.getBoolean("sigar-enabled")
     jmxEnabled = systemMetricsConfig.getBoolean("jmx-enabled")
     contextSwitchesRefreshInterval = systemMetricsConfig.getDuration("context-switches-refresh-interval")
   }
+}
+
+trait Metric {
+  def update(): Unit
 }

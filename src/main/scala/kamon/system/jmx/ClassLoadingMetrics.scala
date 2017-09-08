@@ -19,6 +19,7 @@ package kamon.system.jmx
 import java.lang.management.ManagementFactory
 
 import kamon.Kamon
+import kamon.system.Metric
 import org.slf4j.Logger
 
 /**
@@ -26,7 +27,7 @@ import org.slf4j.Logger
  *    - @see [[http://docs.oracle.com/javase/8/docs/api/java/lang/management/ClassLoadingMXBean.html "ClassLoadingMXBean"]]
  */
 object ClassLoadingMetrics extends JmxMetricBuilder("class-loading") {
-  def build(metricPrefix: String, logger: Logger) = new JmxMetric {
+  def build(metricPrefix: String, logger: Logger) = new Metric {
     val classLoadingBean = ManagementFactory.getClassLoadingMXBean
 
     val classesLoadedMetric           = Kamon.gauge(s"$metricPrefix.loaded")

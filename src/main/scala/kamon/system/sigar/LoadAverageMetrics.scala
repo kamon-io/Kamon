@@ -17,6 +17,8 @@
 package kamon.system.sigar
 
 import kamon.Kamon
+import kamon.metric.Histogram
+import kamon.system.Metric
 import org.hyperic.sigar.Sigar
 import org.slf4j.Logger
 
@@ -25,22 +27,30 @@ import org.slf4j.Logger
  *    - The system load averages for the past 1, 5, and 15 minutes.
  */
 object LoadAverageMetrics extends SigarMetricBuilder("load") {
-  def build(sigar: Sigar, metricPrefix: String, logger: Logger) = new SigarMetric {
-    val AggregationKey = "aggregation"
-
-    val baseHistogram         = Kamon.histogram(s"$metricPrefix.average")
-    val oneMinuteMetric       = baseHistogram.refine(Map(AggregationKey -> "1"))
-    val fiveMinutesMetric     = baseHistogram.refine(Map(AggregationKey -> "5"))
-    val fifteenMinutesMetric  = baseHistogram.refine(Map(AggregationKey -> "15"))
+  def build(sigar: Sigar, metricPrefix: String, logger: Logger) = new Metric {
+    val aggregations = "1" :: "5" :: "15" :: Nil
+    val loadAverageMetrics = LoadAverageMetrics(metricPrefix)
 
     override def update(): Unit = {
       import SigarSafeRunner._
 
       val loadAverage = runSafe(sigar.getLoadAverage, Array(0D, 0D, 0D), "load-average", logger)
 
-      oneMinuteMetric.record(loadAverage(0).toLong)
-      fiveMinutesMetric.record(loadAverage(1).toLong)
-      fifteenMinutesMetric.record(loadAverage(2).toLong)
+      aggregations.zipWithIndex.foreach {
+        case(aggregation, index) =>
+          loadAverageMetrics.forAggregation(aggregation).average.record(loadAverage(index).toLong)
+      }
     }
   }
+}
+
+final case class LoadAverageMetrics(metricPrefix:String) {
+  val loadAverageMetric = Kamon.histogram(s"$metricPrefix.average")
+
+  def forAggregation(aggregation: String): LoadAverageMetrics = {
+    val aggregationTags = Map("aggregation" -> aggregation)
+    LoadAverageMetrics(aggregationTags, loadAverageMetric.refine(aggregationTags))
+  }
+
+  case class LoadAverageMetrics(tags: Map[String, String], average: Histogram)
 }

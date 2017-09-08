@@ -17,24 +17,32 @@
 package kamon.system.jmx
 
 import kamon.Kamon
-import kamon.system.SystemMetrics
+import kamon.system.{Metric, SystemMetrics}
 import org.slf4j.Logger
+
+class JmxMetricsUpdater extends Runnable{
+  val metrics: Seq[Metric] = Seq(
+    MemoryUsageMetrics.register(),
+    ClassLoadingMetrics.register(),
+    ThreadsMetrics.register(),
+    GarbageCollectionMetrics.register()
+  ).flatten
+
+  override def run(): Unit = {
+    metrics.foreach(_.update())
+  }
+}
 
 abstract class JmxMetricBuilder(metricName: String) {
   private val filterName = SystemMetrics.FilterName
   private val logger = SystemMetrics.logger
 
-  def register(): Option[JmxMetric] = {
+  def register(): Option[Metric] = {
     if (Kamon.filter(filterName, metricName))
       Some(build(s"$filterName.$metricName", logger))
     else
       None
   }
 
-  def build(metricPrefix: String, logger: Logger): JmxMetric
+  def build(metricPrefix: String, logger: Logger): Metric
 }
-
-trait JmxMetric {
-  def update(): Unit
-}
-

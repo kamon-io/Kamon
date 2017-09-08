@@ -17,6 +17,7 @@
 package kamon.system.sigar
 
 import kamon.Kamon
+import kamon.system.Metric
 import org.hyperic.sigar.{ProcCpu, Sigar}
 import org.slf4j.Logger
 
@@ -29,7 +30,7 @@ import scala.util.Try
  *    - system: Process cpu kernel time.
  */
 object ProcessCpuMetrics extends SigarMetricBuilder("process-cpu") {
-  def build(sigar: Sigar, metricPrefix: String, logger: Logger) = new SigarMetric {
+  def build(sigar: Sigar, metricPrefix: String, logger: Logger) = new Metric {
 
     val processUserCpuMetric = Kamon.histogram(s"$metricPrefix.user-cpu")
     val processSystemCpuMetric = Kamon.histogram(s"$metricPrefix.system-cpu")
@@ -41,6 +42,13 @@ object ProcessCpuMetrics extends SigarMetricBuilder("process-cpu") {
     var lastProcCpu: ProcCpu = sigar.getProcCpu(pid)
     var currentLoad: Long = 0
 
+    /**
+      * While CPU usage time updates not very often, We have introduced a simple heuristic, that supposes that the load is the same as previous,
+      * while CPU usage time doesn't update. But supposing that it could be zero load for a process for some time,
+      * We used an arbitrary duration of 2000 milliseconds, after which the same CPU usage time value become legal, and it is supposed that the load is really zero.
+      *
+      * @see [[http://stackoverflow.com/questions/19323364/using-sigar-api-to-get-jvm-cpu-usage "StackOverflow: Using Sigar API to get JVM Cpu usage"]]
+      */
     override def update(): Unit = {
       def percentUsage(delta: Long, timeDiff: Long): Long = Try(100 * delta / timeDiff / totalCores).getOrElse(0L)
 
