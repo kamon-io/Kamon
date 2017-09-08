@@ -18,7 +18,7 @@ package kamon.system.sigar
 
 import kamon.Kamon
 import kamon.metric.MeasurementUnit
-import kamon.system.Metric
+import kamon.system.{Metric, MetricBuilder, SigarMetricBuilder}
 import org.hyperic.sigar.Sigar
 import org.slf4j.Logger
 
@@ -29,7 +29,7 @@ import org.slf4j.Logger
  *    - swap-used: Total used system swap.
  *    - swap-free: Total free system swap.
  */
-object MemoryMetrics extends SigarMetricBuilder("memory") {
+object MemoryMetrics extends MetricBuilder("memory") with SigarMetricBuilder {
   def build(sigar: Sigar, metricPrefix: String, logger: Logger) =  new Metric {
     val usedMetric      = Kamon.histogram(s"$metricPrefix.used", MeasurementUnit.information.bytes)
     val cachedMetric    = Kamon.histogram(s"$metricPrefix.cache-and-buffer", MeasurementUnit.information.bytes)

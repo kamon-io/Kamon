@@ -20,7 +20,7 @@ import java.lang.management.{BufferPoolMXBean, ManagementFactory, MemoryUsage}
 
 import kamon.Kamon
 import kamon.metric.{Gauge, Histogram, MeasurementUnit}
-import kamon.system.Metric
+import kamon.system.{JmxMetricBuilder, Metric, MetricBuilder}
 import org.slf4j.Logger
 
 import scala.collection.JavaConverters._
@@ -32,7 +32,7 @@ import scala.util.matching.Regex
  *  Pools in HotSpot Java 8:
  *  code-cache, metaspace, compressed-class-space, ps-eden-space, ps-survivor-space, ps-old-gen
  */
-object MemoryUsageMetrics extends JmxMetricBuilder("jmx-memory") {
+object MemoryUsageMetrics extends MetricBuilder("jmx-memory") with JmxMetricBuilder{
   def build(metricPrefix: String, logger: Logger) = new Metric {
     val invalidChars: Regex = """[^a-z0-9]""".r
 

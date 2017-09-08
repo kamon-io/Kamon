@@ -17,11 +17,11 @@
 package kamon.system.sigar
 
 import kamon.Kamon
-import kamon.system.Metric
+import kamon.system.{Metric, MetricBuilder, SigarMetricBuilder}
 import org.hyperic.sigar.Sigar
 import org.slf4j.Logger
 
-object ULimitMetrics extends SigarMetricBuilder("ulimit") {
+object ULimitMetrics extends MetricBuilder("ulimit") with SigarMetricBuilder {
   def build(sigar: Sigar, metricPrefix: String, logger: Logger) = new Metric {
     val pid = sigar.getPid
     val openFilesMetric = Kamon.histogram(s"$metricPrefix.open-files")

@@ -17,7 +17,7 @@
 package kamon.system.sigar
 
 import kamon.Kamon
-import kamon.system.Metric
+import kamon.system.{Metric, MetricBuilder, SigarMetricBuilder}
 import org.hyperic.sigar.{ProcCpu, Sigar}
 import org.slf4j.Logger
 
@@ -29,7 +29,7 @@ import scala.util.Try
  *    - total: Process cpu time (sum of User and Sys).
  *    - system: Process cpu kernel time.
  */
-object ProcessCpuMetrics extends SigarMetricBuilder("process-cpu") {
+object ProcessCpuMetrics extends MetricBuilder("process-cpu") with SigarMetricBuilder {
   def build(sigar: Sigar, metricPrefix: String, logger: Logger) = new Metric {
 
     val processUserCpuMetric = Kamon.histogram(s"$metricPrefix.user-cpu")

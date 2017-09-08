@@ -14,41 +14,15 @@
  * =========================================================================================
  */
 
-package kamon.system.sigar
+package kamon.system.custom
 
 import kamon.system.Metric
-import org.slf4j.Logger
 
-class SigarMetricsUpdater(logger: Logger) extends Runnable {
-
+class CustomMetricsUpdater extends Runnable {
   val metrics: Seq[Metric] =
-    Seq(
-      CpuMetrics.register(),
-      FileSystemMetrics.register(),
-      LoadAverageMetrics.register(),
-      MemoryMetrics.register(),
-      NetworkMetrics.register(),
-      ProcessCpuMetrics.register(),
-      ULimitMetrics.register()
-    ).flatten
-
+    Seq(ContextSwitchesMetrics.register()).flatten
 
   override def run(): Unit = {
     metrics.foreach(_.update())
-  }
-}
-
-object SigarSafeRunner {
-  private val errorLogged = scala.collection.mutable.Set[String]()
-
-  def runSafe[T](thunk: ⇒ T, defaultValue: ⇒ T, error: String, logger: Logger): T = {
-    try thunk catch {
-      case e: Exception ⇒
-        if (!errorLogged.contains(error)) {
-          errorLogged += error
-          logger.warn(s"Couldn't get the metric [$error]. Due to [${e.getMessage}]")
-        }
-        defaultValue
-    }
   }
 }

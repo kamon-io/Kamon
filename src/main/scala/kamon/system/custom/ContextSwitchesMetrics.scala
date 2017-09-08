@@ -21,6 +21,7 @@ import java.nio.charset.StandardCharsets.US_ASCII
 import java.nio.file.{Files, Paths}
 
 import kamon.Kamon
+import kamon.system.{CustomMetricBuilder, Metric, MetricBuilder}
 import org.slf4j.Logger
 
 import scala.collection.JavaConverters.iterableAsScalaIterableConverter
@@ -31,13 +32,19 @@ import scala.collection.JavaConverters.iterableAsScalaIterableConverter
  *    - process-non-voluntary: Total number of involuntary context switches related to the current process (the system scheduler suspends and active thread, and switches control to a different thread).
  *    - global:  Total number of context switches across all CPUs.
  */
-class ContextSwitchesMetrics(pid: Long, logger: Logger) {
+object ContextSwitchesMetrics extends MetricBuilder("context-switches") with CustomMetricBuilder {
+  def build(pid: Long, metricPrefix: String, logger: Logger)  = new Metric {
 
-  val perProcessVoluntaryMetric     = Kamon.histogram("system-metric.context-switches.process-voluntary")
-  val perProcessNonVoluntaryMetric  = Kamon.histogram("system-metric.context-switches.process-non-voluntary")
-  val globalMetric                  = Kamon.histogram("system-metric.context-switches.global")
+    val perProcessVoluntaryMetric     = Kamon.histogram(s"$metricPrefix.process-voluntary")
+    val perProcessNonVoluntaryMetric  = Kamon.histogram(s"$metricPrefix.process-non-voluntary")
+    val globalMetric                  = Kamon.histogram(s"$metricPrefix.global")
 
-  def update(): Unit = {
+    override def update(): Unit = {
+      val (voluntary, nonVoluntary) = contextSwitchesByProcess(pid)
+      perProcessVoluntaryMetric.record(voluntary)
+      perProcessNonVoluntaryMetric.record(nonVoluntary)
+      globalMetric.record(contextSwitches)
+    }
 
     def contextSwitchesByProcess(pid: Long): (Long, Long) = {
       val filename = s"/proc/$pid/status"
@@ -75,14 +82,5 @@ class ContextSwitchesMetrics(pid: Long, logger: Logger) {
       contextSwitches
     }
 
-    val (voluntary, nonVoluntary) = contextSwitchesByProcess(pid)
-    perProcessVoluntaryMetric.record(voluntary)
-    perProcessNonVoluntaryMetric.record(nonVoluntary)
-    globalMetric.record(contextSwitches)
   }
-}
-
-object ContextSwitchesMetrics {
-  def apply(pid: Long, logger: Logger): ContextSwitchesMetrics =
-    new ContextSwitchesMetrics(pid, logger)
 }

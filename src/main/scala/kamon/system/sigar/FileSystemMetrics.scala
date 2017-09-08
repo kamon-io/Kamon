@@ -18,7 +18,7 @@ package kamon.system.sigar
 
 import kamon.Kamon
 import kamon.metric.MeasurementUnit
-import kamon.system.Metric
+import kamon.system.{Metric, MetricBuilder, SigarMetricBuilder}
 import org.hyperic.sigar.{DiskUsage, FileSystem, Sigar}
 import org.slf4j.Logger
 
@@ -29,7 +29,7 @@ import scala.util.Try
  *    - readBytes: Total number of physical disk reads.
  *    - writesBytes:  Total number of physical disk writes.
  */
-object FileSystemMetrics extends SigarMetricBuilder("file-system") {
+object FileSystemMetrics extends MetricBuilder("file-system") with SigarMetricBuilder {
   def build(sigar: Sigar, metricPrefix: String,logger: Logger) = new Metric {
     import kamon.system.sigar.SigarSafeRunner.runSafe
 

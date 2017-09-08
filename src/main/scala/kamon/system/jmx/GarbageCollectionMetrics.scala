@@ -24,14 +24,14 @@ import com.sun.management.GarbageCollectionNotificationInfo
 import com.sun.management.GarbageCollectionNotificationInfo.GARBAGE_COLLECTION_NOTIFICATION
 import kamon.Kamon
 import kamon.metric._
-import kamon.system.Metric
+import kamon.system.{JmxMetricBuilder, Metric, MetricBuilder}
 import org.slf4j.Logger
 
 /**
  *  Garbage Collection metrics, as reported by JMX:
  *    - @see [[http://docs.oracle.com/javase/8/docs/api/java/lang/management/GarbageCollectorMXBean.html "GarbageCollectorMXBean"]]
  */
-object GarbageCollectionMetrics extends JmxMetricBuilder("garbage-collection") {
+object GarbageCollectionMetrics extends MetricBuilder("garbage-collection") with JmxMetricBuilder {
   def build(metricPrefix: String, logger: Logger) = new Metric {
 
     addNotificationListener(GarbageCollectorMetrics(metricPrefix))
@@ -39,7 +39,9 @@ object GarbageCollectionMetrics extends JmxMetricBuilder("garbage-collection") {
     def update(): Unit = {}
 
     def addNotificationListener(gcMetrics: GarbageCollectorMetrics):Unit = {
-      ManagementFactory.getGarbageCollectorMXBeans.forEach { mbean =>
+      import scala.collection.JavaConverters._
+
+      ManagementFactory.getGarbageCollectorMXBeans.asScala.foreach{ mbean =>
         if(mbean.isInstanceOf[NotificationEmitter]) {
           val emitter = mbean.asInstanceOf[NotificationEmitter]
           emitter.addNotificationListener(GCNotificationListener(gcMetrics), null, null)

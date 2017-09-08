@@ -16,9 +16,7 @@
 
 package kamon.system.jmx
 
-import kamon.Kamon
-import kamon.system.{Metric, SystemMetrics}
-import org.slf4j.Logger
+import kamon.system.Metric
 
 class JmxMetricsUpdater extends Runnable{
   val metrics: Seq[Metric] = Seq(
@@ -31,18 +29,4 @@ class JmxMetricsUpdater extends Runnable{
   override def run(): Unit = {
     metrics.foreach(_.update())
   }
-}
-
-abstract class JmxMetricBuilder(metricName: String) {
-  private val filterName = SystemMetrics.FilterName
-  private val logger = SystemMetrics.logger
-
-  def register(): Option[Metric] = {
-    if (Kamon.filter(filterName, metricName))
-      Some(build(s"$filterName.$metricName", logger))
-    else
-      None
-  }
-
-  def build(metricPrefix: String, logger: Logger): Metric
 }

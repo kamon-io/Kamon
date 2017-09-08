@@ -18,7 +18,7 @@ package kamon.system.sigar
 
 import kamon.Kamon
 import kamon.metric.MeasurementUnit
-import kamon.system.Metric
+import kamon.system.{Metric, MetricBuilder, SigarMetricBuilder}
 import org.hyperic.sigar.{NetInterfaceStat, Sigar}
 import org.slf4j.Logger
 
@@ -33,7 +33,7 @@ import scala.util.Try
  *    - rxDropped: Total number of incoming packets dropped.
  *    - txDropped: Total number of outgoing packets dropped.
  */
-object NetworkMetrics extends SigarMetricBuilder("network") {
+object NetworkMetrics extends MetricBuilder("network") with SigarMetricBuilder{
   def build(sigar: Sigar, metricPrefix: String, logger: Logger) = new Metric {
     val events    = Kamon.histogram(s"$metricPrefix.packets")
     val rDroppedMetric  = events.refine(Map("direction" -> "received",    "state" -> "dropped"))

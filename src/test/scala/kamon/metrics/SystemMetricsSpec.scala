@@ -18,7 +18,8 @@ package kamon.metrics
 import java.lang.management.ManagementFactory
 
 import kamon.Kamon
-import kamon.system.{SystemMetrics, SystemMetricsCollector}
+import kamon.system.SystemMetrics
+import kamon.system.SystemMetrics.isLinux
 import kamon.testkit.MetricInspection
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.SpanSugar._
@@ -121,8 +122,6 @@ class SystemMetricsSpec extends WordSpecLike
     }
 
     "record used, free, swap used, swap free system memory metrics" in {
-      def p(name: String) = s"system-metric.memory.$name"
-
       Kamon.histogram("system-metric.memory.used").distribution().count should be > 0L
       Kamon.histogram("system-metric.memory.free").distribution().count should be > 0L
       Kamon.histogram("system-metric.memory.swap-used").distribution().count should be > 0L
@@ -164,20 +163,15 @@ class SystemMetricsSpec extends WordSpecLike
     }
   }
 
-  def isLinux: Boolean =
-    System.getProperty("os.name").indexOf("Linux") != -1
-
   def sanitizeCollectorName(name: String): String =
     name.replaceAll("""[^\w]""", "-").toLowerCase
 
   override protected def beforeAll(): Unit = {
-    SystemMetrics.FilterName
-    Kamon.reconfigure(Kamon.config())
-    SystemMetricsCollector.startCollecting
+    SystemMetrics.startCollecting()
     System.gc()
     Thread.sleep(2000) // Give some room to the recorders to store some values.
   }
 
-  override protected def afterAll(): Unit = SystemMetricsCollector.stopCollecting
+  override protected def afterAll(): Unit = SystemMetrics.stopCollecting()
 
 }

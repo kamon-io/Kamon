@@ -1,8 +1,8 @@
-System Metrics   ![Build Status](https://travis-ci.org/kamon-io/kamon-system-metrics.svg?branch=master)
+System Metrics   ![Build Status](https://travis-ci.org/kamon-io/kamon-system-metrics.svg?branch=kamon-1.0)
 ==========================
 
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/kamon-io/Kamon?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-system-metrics_2.11/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-system-metrics.11)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-system-metrics_2.12/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-system-metrics_2.12)
 
 Our `kamon-system-metrics` module registers a number of entities with the metrics module that track the performance
 indicators of both the host machine and the JVM where your application is running.
@@ -19,16 +19,26 @@ Kamon sytem-metrics module is currently available for Scala 2.10, 2.11 and 2.12.
 
 Supported releases and dependencies are shown below.
 
-| kamon-system-metrics  | status | jdk  | scala            | akka   |
-|:------:|:------:|:----:|------------------|:------:|
-|  0.6.7 | stable | 1.7+, 1.8+ | 2.10, 2.11, 2.12  | 2.3.x, 2.4.x |
+| kamon-system-metrics  | status | jdk  | scala     
+|:------:|:------:|:----:|------------------|:------
+|  1.0.0-RC1 | stable |1.8+ | 2.10, 2.11, 2.12
 
 To get started with SBT, simply add the following to your `build.sbt`
 file:
 
 ```scala
-libraryDependencies += "io.kamon" %% "kamon-system-metrics" % "0.6.7"
+libraryDependencies += "io.kamon" %% "kamon-system-metrics" % "1.0.0-RC1"
 ```
+
+##### Start
+```scala
+SystemMetrics.startCollecting()
+```
+##### Stop
+```scala
+SystemMetrics.stopCollecting()
+```
+
 
 As you might expect, you and any other module can subscribe to all the metrics that are reported by this module using
 the `system-metric` category and the entity recorder names described bellow.

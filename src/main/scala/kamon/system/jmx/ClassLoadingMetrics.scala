@@ -19,14 +19,14 @@ package kamon.system.jmx
 import java.lang.management.ManagementFactory
 
 import kamon.Kamon
-import kamon.system.Metric
+import kamon.system.{JmxMetricBuilder, Metric, MetricBuilder}
 import org.slf4j.Logger
 
 /**
  *  Class Loading metrics, as reported by JMX:
  *    - @see [[http://docs.oracle.com/javase/8/docs/api/java/lang/management/ClassLoadingMXBean.html "ClassLoadingMXBean"]]
  */
-object ClassLoadingMetrics extends JmxMetricBuilder("class-loading") {
+object ClassLoadingMetrics extends MetricBuilder("class-loading") with JmxMetricBuilder{
   def build(metricPrefix: String, logger: Logger) = new Metric {
     val classLoadingBean = ManagementFactory.getClassLoadingMXBean
 

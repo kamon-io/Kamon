@@ -18,7 +18,7 @@ package kamon.system.sigar
 
 import kamon.Kamon
 import kamon.metric.Histogram
-import kamon.system.Metric
+import kamon.system.{Metric, MetricBuilder, SigarMetricBuilder}
 import org.hyperic.sigar.Sigar
 import org.slf4j.Logger
 
@@ -26,7 +26,7 @@ import org.slf4j.Logger
  *  Load Average metrics, as reported by Sigar:
  *    - The system load averages for the past 1, 5, and 15 minutes.
  */
-object LoadAverageMetrics extends SigarMetricBuilder("load") {
+object LoadAverageMetrics extends MetricBuilder("load") with SigarMetricBuilder {
   def build(sigar: Sigar, metricPrefix: String, logger: Logger) = new Metric {
     val aggregations = "1" :: "5" :: "15" :: Nil
     val loadAverageMetrics = LoadAverageMetrics(metricPrefix)
