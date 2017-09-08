@@ -16,7 +16,7 @@
 
 package kamon.system.sigar
 
-import kamon.system.Metric
+import kamon.system.{Metric, withNamedThread}
 import org.slf4j.Logger
 
 class SigarMetricsUpdater(logger: Logger) extends Runnable {
@@ -33,7 +33,7 @@ class SigarMetricsUpdater(logger: Logger) extends Runnable {
     ).flatten
 
 
-  override def run(): Unit = {
+  override def run(): Unit = withNamedThread("sigar-metric-updater"){
     metrics.foreach(_.update())
   }
 }

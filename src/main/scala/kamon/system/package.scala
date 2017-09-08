@@ -61,4 +61,12 @@ package object system {
   trait Metric {
     def update(): Unit
   }
+
+  def withNamedThread[A](name:String)(thunk: => A):A = {
+    val oldName = Thread.currentThread().getName
+    Thread.currentThread().setName(name)
+    try thunk finally {
+      Thread.currentThread().setName(oldName)
+    }
+  }
 }

@@ -16,7 +16,7 @@
 
 package kamon.system.jmx
 
-import kamon.system.Metric
+import kamon.system.{Metric, withNamedThread}
 
 class JmxMetricsUpdater extends Runnable{
   val metrics: Seq[Metric] = Seq(
@@ -26,7 +26,7 @@ class JmxMetricsUpdater extends Runnable{
     GarbageCollectionMetrics.register()
   ).flatten
 
-  override def run(): Unit = {
+  override def run(): Unit =  withNamedThread("jmx-metric-updater"){
     metrics.foreach(_.update())
   }
 }
