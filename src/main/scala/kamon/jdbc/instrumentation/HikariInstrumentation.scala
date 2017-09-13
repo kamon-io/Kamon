@@ -1,7 +1,7 @@
 /* =========================================================================================
  * Copyright © 2013-2017 the kamon project <http://kamon.io/>
  *
- * Licensed under the Apache License, Version 2.0 (the "License") you may not use this file
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
  *
  *   http://www.apache.org/licenses/LICENSE-2.0
@@ -15,30 +15,52 @@
 
 package kamon.jdbc.instrumentation
 
-import java.sql.Statement
+import java.lang.reflect.Method
+import java.sql.{Connection, Statement}
+import java.util.concurrent.Callable
 
 import com.zaxxer.hikari.HikariConfig
-import com.zaxxer.hikari.pool.{HikariPool, ProxyConnection}
+import kamon.agent.libs.net.bytebuddy.asm.Advice
+import kamon.agent.libs.net.bytebuddy.asm.Advice._
+import kamon.agent.libs.net.bytebuddy.implementation.bind.{annotation, _}
+import kamon.agent.libs.net.bytebuddy.implementation.bind.annotation.{RuntimeType, SuperCall}
+import kamon.agent.scala.KamonInstrumentation
 import kamon.jdbc.Metrics
-import org.aspectj.lang.ProceedingJoinPoint
-import org.aspectj.lang.annotation._
+import kamon.jdbc.instrumentation.mixin.{HasConnectionPoolMetrics, HasConnectionPoolMetricsMixin}
 
-@Aspect
-class HikariInstrumentation {
-  val HikariMetricCategory = "hikari-pool"
+class HikariInstrumentation extends KamonInstrumentation {
 
-  @DeclareMixin("com.zaxxer.hikari.pool.HikariPool")
-  def mixinHasConnectionPoolTrackerToHikariDataSource: Mixin.HasConnectionPoolMetrics = Mixin.HasConnectionPoolMetrics()
+  forTargetType("com.zaxxer.hikari.pool.HikariPool") { builder =>
+    builder
+      .withMixin(classOf[HasConnectionPoolMetricsMixin])
+      .withAdvisorFor(isConstructor(), classOf[HikariPoolConstructorAdvisor])
+      .withAdvisorFor(method("shutdown"), classOf[HikariPoolShutdownMethodAdvisor])
+      .withAdvisorFor(method("createPoolEntry"), classOf[HikariPoolCreatePoolEntryMethodAdvisor])
+      .withAdvisorFor(method("closeConnection"), classOf[HikariPoolCloseConnectionMethodAdvisor])
+      .withAdvisorFor(method("createTimeoutException"), classOf[HikariPoolCreateTimeoutExceptionMethodAdvisor])
+      .withInterceptorFor(method("getConnection").and(takesArguments(0)), classOf[HikariPoolGetConnectionMethodInterceptor])
+      .build()
+  }
 
-  @DeclareMixin("com.zaxxer.hikari.pool.ProxyConnection")
-  def mixinHasConnectionPoolTrackerToProxyConnection: Mixin.HasConnectionPoolMetrics = Mixin.HasConnectionPoolMetrics()
 
-  @Pointcut("execution(com.zaxxer.hikari.pool.HikariPool.new(..)) && this(hikariPool) && args(config)")
-  def hikariPoolConstructor(hikariPool: HikariPool, config: HikariConfig): Unit = {}
+  forTargetType("com.zaxxer.hikari.pool.ProxyConnection") { builder =>
+    builder
+      .withMixin(classOf[HasConnectionPoolMetricsMixin])
+      .withAdvisorFor(method("close"), classOf[ProxyConnectionCloseMethodAdvisor])
+      .withAdvisorFor(method("prepareStatement"), classOf[ProxyConnectionStatementMethodsAdvisor])
+      .withAdvisorFor(method("createStatement"), classOf[ProxyConnectionStatementMethodsAdvisor])
+      .build()
+  }
+}
 
-  @Around("hikariPoolConstructor(hikariPool, config)")
-  def afterReturningHikariPoolConstructor(pjp: ProceedingJoinPoint, hikariPool: HikariPool, config: HikariConfig): Unit = {
-    hikariPool.asInstanceOf[Mixin.HasConnectionPoolMetrics].setConnectionPoolMetrics(
+/**
+  * Advisor com.zaxxer.hikari.pool.HikariPool::new
+  */
+class HikariPoolConstructorAdvisor
+object HikariPoolConstructorAdvisor {
+  @OnMethodExit
+  def onExit(@Advice.This hikariPool:Object, @Advice.Argument(0) config:HikariConfig): Unit = {
+    hikariPool.asInstanceOf[HasConnectionPoolMetrics].setConnectionPoolMetrics(
       Metrics.ConnectionPoolMetrics(
         Map(
           "poolVendor" -> "hikari",
@@ -46,88 +68,112 @@ class HikariInstrumentation {
         )
       )
     )
-
-    pjp.proceed()
   }
+}
 
-  @Pointcut("execution(* com.zaxxer.hikari.pool.HikariPool.shutdown()) && this(hikariPool)")
-  def hikariPoolShutdown(hikariPool: HikariPool): Unit = {}
+/**
+  * Advisor com.zaxxer.hikari.pool.HikariPool::shutdown
+  */
+class HikariPoolShutdownMethodAdvisor
+object HikariPoolShutdownMethodAdvisor {
 
-  @AfterReturning("hikariPoolShutdown(hikariPool)")
-  def afterHikariPoolShutdown(hikariPool: HikariPool): Unit = {
-    hikariPool.asInstanceOf[Mixin.HasConnectionPoolMetrics].connectionPoolMetrics.cleanup()
+  @OnMethodExit
+  def onExit(@This hikariPool: Object): Unit =
+    hikariPool.asInstanceOf[HasConnectionPoolMetrics].connectionPoolMetrics.cleanup()
+}
+
+/**
+  * Advisor com.zaxxer.hikari.pool.HikariPool::createPoolEntry
+  */
+class HikariPoolCreatePoolEntryMethodAdvisor
+object HikariPoolCreatePoolEntryMethodAdvisor {
+
+  @OnMethodExit
+  def onExit(@This hikariPool: Object): Unit = {
+    val poolMetrics = hikariPool.asInstanceOf[HasConnectionPoolMetrics].connectionPoolMetrics
+
+    if (poolMetrics != null)
+      poolMetrics.openConnections.increment()
   }
+}
 
-  @Pointcut("execution(* com.zaxxer.hikari.pool.HikariPool.createPoolEntry()) && this(hikariPool)")
-  def createPoolEntry(hikariPool: HikariPool): Unit = {}
 
-  @AfterReturning("createPoolEntry(hikariPool)")
-  def afterCreatePoolEntry(hikariPool: HikariPool): Unit = {
-    hikariPool.asInstanceOf[Mixin.HasConnectionPoolMetrics].connectionPoolMetrics.openConnections.increment()
+/**
+  * Advisor com.zaxxer.hikari.pool.HikariPool::closeConnection
+  */
+class HikariPoolCloseConnectionMethodAdvisor
+object HikariPoolCloseConnectionMethodAdvisor {
+
+  @OnMethodExit
+  def onExit(@This hikariPool: Object): Unit =
+    hikariPool.asInstanceOf[HasConnectionPoolMetrics].connectionPoolMetrics.openConnections.decrement()
+}
+
+/**
+  * Advisor com.zaxxer.hikari.pool.HikariPool::createTimeOutException
+  */
+class HikariPoolCreateTimeoutExceptionMethodAdvisor
+object HikariPoolCreateTimeoutExceptionMethodAdvisor {
+
+  @OnMethodExit
+  def onExit(@This hikariPool: Object): Unit =
+    hikariPool.asInstanceOf[HasConnectionPoolMetrics].connectionPoolMetrics.borrowTimeouts.increment()
+}
+
+/**
+  * Advisor com.zaxxer.hikari.pool.ProxyConnection::close
+  */
+class ProxyConnectionCloseMethodAdvisor
+object ProxyConnectionCloseMethodAdvisor {
+
+  @OnMethodExit
+  def onExit(@This proxyConnection: Object): Unit =
+    proxyConnection.asInstanceOf[HasConnectionPoolMetrics].connectionPoolMetrics.borrowedConnections.decrement()
+}
+
+
+/**
+  * Advisor com.zaxxer.hikari.pool.ProxyConnection::prepareStatement
+  * Advisor com.zaxxer.hikari.pool.ProxyConnection::createStatement
+  */
+class ProxyConnectionStatementMethodsAdvisor
+object ProxyConnectionStatementMethodsAdvisor {
+
+  @OnMethodExit
+  def onExit(@This proxyConnection: Object, @Return statement: Statement): Unit = {
+    val poolTracker = proxyConnection.asInstanceOf[HasConnectionPoolMetrics].connectionPoolMetrics
+
+    statement
+      .unwrap(classOf[Statement])
+      .asInstanceOf[HasConnectionPoolMetrics]
+      .setConnectionPoolMetrics(poolTracker)
+
   }
+}
 
-  @Pointcut("execution(* com.zaxxer.hikari.pool.HikariPool.closeConnection(..)) && this(hikariPool)")
-  def closeConnection(hikariPool: HikariPool): Unit = {}
+/**
+  * Interceptor com.zaxxer.hikari.pool.HikariPool::getConnection
+  */
+class HikariPoolGetConnectionMethodInterceptor
+object HikariPoolGetConnectionMethodInterceptor {
 
-  @After("closeConnection(hikariPool)")
-  def afterCloseConnection(hikariPool: HikariPool): Unit = {
-    hikariPool.asInstanceOf[Mixin.HasConnectionPoolMetrics].connectionPoolMetrics.openConnections.decrement()
-  }
-
-  @Pointcut("execution(* com.zaxxer.hikari.pool.HikariPool.getConnection(*)) && this(hikariPool)")
-  def hikariPoolGetConnection(hikariPool: HikariPool): Unit = {}
-
-  @Around("hikariPoolGetConnection(hikariPool)")
-  def aroundHikariPoolGetConnection(pjp: ProceedingJoinPoint, hikariPool: HikariPool): Any = {
-    val poolMetrics = hikariPool.asInstanceOf[Mixin.HasConnectionPoolMetrics].connectionPoolMetrics
+  @RuntimeType
+  def executeUpdate(@annotation.Origin obj:Method, @SuperCall callable: Callable[Connection], @annotation.This hikariPool: Object): Connection = {
+    val poolMetrics = hikariPool.asInstanceOf[HasConnectionPoolMetrics].connectionPoolMetrics
     val startTime = System.nanoTime()
-    var connection: Any = null
+    var connection: Connection = null
 
     try {
-      connection = pjp.proceed()
+      connection = callable.call()
       poolMetrics.borrowedConnections.increment()
 
       connection
-        .asInstanceOf[Mixin.HasConnectionPoolMetrics]
+        .asInstanceOf[HasConnectionPoolMetrics]
         .setConnectionPoolMetrics(poolMetrics)
 
     } finally {
       poolMetrics.borrowTime.record(System.nanoTime() - startTime)
     }
-
     connection
   }
-
-  @Pointcut("execution(* com.zaxxer.hikari.pool.HikariPool.createTimeoutException(..)) && this(hikariPool)")
-  def createTimeoutException(hikariPool: HikariPool): Unit = {}
-
-  @After("createTimeoutException(hikariPool)")
-  def afterCreateTimeoutException(hikariPool: HikariPool): Unit = {
-    hikariPool.asInstanceOf[Mixin.HasConnectionPoolMetrics].connectionPoolMetrics.borrowTimeouts.increment()
-  }
-
-  @Pointcut("execution(* com.zaxxer.hikari.pool.ProxyConnection.close()) && this(proxyConnection)")
-  def returnBorrowedConnection(proxyConnection: ProxyConnection): Unit = {}
-
-  @After("returnBorrowedConnection(proxyConnection)")
-  def afterReturnBorrowedConnection(proxyConnection: ProxyConnection): Unit = {
-    proxyConnection.asInstanceOf[Mixin.HasConnectionPoolMetrics].connectionPoolMetrics.borrowedConnections.decrement()
-  }
-
-  @Pointcut("execution(* com.zaxxer.hikari.pool.ProxyConnection.prepareStatement(..)) && this(proxyConnection)")
-  def prepareStatementInConnection(proxyConnection: ProxyConnection): Unit = {}
-
-  @Pointcut("execution(* com.zaxxer.hikari.pool.ProxyConnection.createStatement(..)) && this(proxyConnection)")
-  def createStatementInConnection(proxyConnection: ProxyConnection): Unit = {}
-
-  @AfterReturning(value = "prepareStatementInConnection(proxyConnection) || createStatementInConnection(proxyConnection)", returning = "statement")
-  def afterCreateStatementIntConnection(proxyConnection: ProxyConnection, statement: Statement): Unit = {
-    val poolTracker = proxyConnection.asInstanceOf[Mixin.HasConnectionPoolMetrics].connectionPoolMetrics
-
-    statement
-      .unwrap(classOf[Statement])
-      .asInstanceOf[Mixin.HasConnectionPoolMetrics]
-      .setConnectionPoolMetrics(poolTracker)
-  }
 }
-

@@ -2,16 +2,15 @@ JDBC Integration   ![Build Status](https://travis-ci.org/kamon-io/kamon-jdbc.svg
 ==========================
 
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/kamon-io/Kamon?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-[ ![Download](https://api.bintray.com/packages/kamon-io/snapshots/kamon-jdbc/images/download.svg) ](https://bintray.com/kamon-io/snapshots/kamon-jdbc/_latestVersion)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-jdbc_2.11/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-jdbc_2.11)
 
 
 The `kamon-jdbc` module brings bytecode instrumentation to trace jdbc-compatible database requests
 
-The <b>kamon-jdbc</b> module requires you to start your application using the AspectJ Weaver Agent. Kamon will warn you
+The <b>kamon-jdbc</b> module requires you to start your application using the Kamon Agent. Kamon will warn you
 at startup if you failed to do so.
 
-The bytecode instrumentation     provided by the `kamon-jdbc` module hooks into the JDBC API to automatically
+The bytecode instrumentation provided by the `kamon-jdbc` module hooks into the JDBC API to automatically
 start and finish segments for requests that are issued within a trace. This translates into you having metrics about how
 the requests you are doing are behaving.
 
@@ -21,24 +20,15 @@ Kamon scala module is currently available for Scala 2.10, 2.11 and 2.12.
 
 Supported releases and dependencies are shown below.
 
-| kamon      | status | jdk  | scala            
-|:----------:|:------:|:----:|------------------
-|  1.0.0 |   RC   | 1.8+ | 2.10, 2.11, 2.12
+| kamon-jdbc  | status | jdk  | scala            
+|:------:|:------:|:----:|------------------
+|  1.0.0-RC1 | experimental | 1.8+ | 2.10, 2.11, 2.12  
 
-
-To get started with SBT, simply add the following to your `build.sbt` or `pom.xml`
+To get started with SBT, simply add the following to your `build.sbt`
 file:
 
 ```scala
-libraryDependencies += "io.kamon" %% "kamon-jdbc" % "1.0.0"
-```
-
-```xml
-<dependency>
-    <groupId>io.kamon</groupId>
-    <artifactId>kamon-jdbc_2.12</artifactId>
-    <version>1.0.0</version>
-</dependency>
+libraryDependencies += "io.kamon" %% "kamon-jdbc" % "experimental-1.0.0-RC1"
 ```
 
 
@@ -50,6 +40,10 @@ The following metrics will be recorded:
 * __writes__: a histogram that tracks the writes requests latency (INSERT, UPDATE, and DELETE statements).
 * __slows__: a simple counter with the number of measured slow requests.
 * __errors__: a simple counter with the number of failures.
+
+### Naming Segments ###
+
+By default, the name generator bundled with the `kamon-jdbc` module will use the statement name as tge name to the automatically generated segment (i.e SELECT, INSERT, etc). Currently, the only way to override that name would be to provide your own implementation of `kamon.jdbc.JdbcNameGenerator` which is used to assign the segment name
 
 ### Slow Requests ###
 
@@ -71,6 +65,9 @@ kamon {
 
     # Fully qualified name of the implementation of kamon.jdbc.SqlErrorProcessor.
     sql-error-processor = kamon.jdbc.DefaultSqlErrorProcessor
+
+    # Fully qualified name of the implementation of kamon.jdbc.JdbcNameGenerator that will be used for assigning names to segments.
+    name-generator = kamon.jdbc.DefaultJdbcNameGenerator
   }
 }
 ```

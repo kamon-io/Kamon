@@ -16,101 +16,96 @@
 package kamon.jdbc.instrumentation
 
 import java.sql.{PreparedStatement, Statement}
-import java.time.temporal.ChronoUnit
+import java.util.concurrent.Callable
 
 import kamon.Kamon
 import kamon.Kamon.buildSpan
+import kamon.agent.libs.net.bytebuddy.implementation.bind.annotation
+import kamon.agent.libs.net.bytebuddy.implementation.bind.annotation.{RuntimeType, SuperCall, This}
+import kamon.agent.scala.KamonInstrumentation
 import kamon.jdbc.instrumentation.StatementInstrumentation.StatementTypes
+import kamon.jdbc.instrumentation.mixin.{HasConnectionPoolMetrics, HasConnectionPoolMetricsMixin}
 import kamon.jdbc.{Jdbc, Metrics}
 import kamon.trace.SpanCustomizer
-import org.aspectj.lang.ProceedingJoinPoint
-import org.aspectj.lang.annotation.{Around, Aspect, DeclareMixin, Pointcut}
+import kamon.util.Clock
 
 
-@Aspect
-class StatementInstrumentation {
+class StatementInstrumentation extends KamonInstrumentation {
 
-  @DeclareMixin("java.sql.Statement+")
-  def mixinHasConnectionPoolTrackerToStatement: Mixin.HasConnectionPoolMetrics = Mixin.HasConnectionPoolMetrics()
 
   /**
-   *   Calls to java.sql.Statement+.execute(..)
-   */
+    * Instrument:
+    *
+    * java.sql.Statement::execute
+    * java.sql.Statement::executeQuery
+    * java.sql.Statement::executeUpdate
+    * java.sql.Statement::executeBatch
+    * java.sql.Statement::executeLargeBatch
+    *
+    * Mix:
+    *
+    * java.sql.Statement with kamon.jdbc.instrumentation.mixin.HasConnectionPoolMetrics
+    *
+    */
+  val withOneStringArgument = withArgument(0, classOf[String])
 
-  @Pointcut("execution(* (java.sql.Statement+ || org.sqlite.jdbc3.JDBC3Statement+).execute(..)) && args(sql) && this(statement)")
-  def statementExecuteWithArguments(sql: String, statement: Statement): Unit = {}
+  forSubtypeOf("java.sql.Statement") { builder =>
+    builder
+       .withMixin(classOf[HasConnectionPoolMetricsMixin])
+       .withInterceptorFor(method("execute").and(withOneStringArgument), ExecuteMethodInterceptor)
+       .withInterceptorFor(method("executeQuery").and(withOneStringArgument), ExecuteQueryMethodInterceptor)
+       .withInterceptorFor(method("executeUpdate").and(withOneStringArgument), ExecuteUpdateMethodInterceptor)
+       .withInterceptorFor(anyMethod("executeBatch", "executeLargeBatch"), ExecuteBatchMethodInterceptor)
+       .build()
+  }
 
-  @Pointcut("execution(* (java.sql.PreparedStatement+ || org.sqlite.jdbc3.JDBC3PreparedStatement+).execute()) && this(statement)")
-  def statementExecuteWithoutArguments(statement: PreparedStatement): Unit = {}
-
-  @Around("statementExecuteWithArguments(sql, statement)")
-  def aroundStatementExecuteWithArguments(pjp: ProceedingJoinPoint, sql: String, statement: Statement): Any =
-    track(pjp, statement, sql, StatementTypes.GenericExecute)
-
-  @Around("statementExecuteWithoutArguments(statement)")
-  def aroundStatementExecuteWithoutArguments(pjp: ProceedingJoinPoint, statement: PreparedStatement): Any =
-    track(pjp, statement, statement.toString, StatementTypes.GenericExecute)
-
-  /**
-   *   Calls to java.sql.Statement+.executeQuery(..)
-   */
-
-  @Pointcut("execution(* (java.sql.Statement || org.sqlite.jdbc3.JDBC3Statement+).executeQuery(..)) && args(sql) && this(statement)")
-  def statementExecuteQueryWithArguments(sql: String, statement: Statement): Unit = {}
-
-  @Pointcut("execution(* (java.sql.PreparedStatement+ || org.sqlite.jdbc3.JDBC3PreparedStatement+).executeQuery()) && this(statement)")
-  def statementExecuteQueryWithoutArguments(statement: PreparedStatement): Unit = {}
-
-  @Around("statementExecuteQueryWithArguments(sql, statement)")
-  def aroundStatementExecuteQueryWithArguments(pjp: ProceedingJoinPoint, sql: String, statement: Statement): Any =
-    track(pjp, statement, sql, StatementTypes.Query)
-
-  @Around("statementExecuteQueryWithoutArguments(statement)")
-  def aroundStatementExecuteQueryWithoutArguments(pjp: ProceedingJoinPoint, statement: PreparedStatement): Any =
-    track(pjp, statement, statement.toString, StatementTypes.Query)
 
   /**
-   *   Calls to java.sql.Statement+.executeUpdate(..)
-   */
+    * Instrument:
+    *
+    * java.sql.PreparedStatement::execute
+    * java.sql.PreparedStatement::executeQuery
+    * java.sql.PreparedStatement::executeUpdate
+    * java.sql.PreparedStatement::executeBatch
+    * java.sql.PreparedStatement::executeLargeBatch
+    *
+    * Mix:
+    *
+    * java.sql.Statement with kamon.jdbc.instrumentation.mixin.HasConnectionPoolMetrics
+    *
+    */
+  forSubtypeOf("java.sql.PreparedStatement") { builder =>
+    builder
+      .withMixin(classOf[HasConnectionPoolMetricsMixin])
+      .withInterceptorFor(method("execute"), ExecuteMethodInterceptor)
+      .withInterceptorFor(method("executeQuery"), ExecuteQueryMethodInterceptor)
+      .withInterceptorFor(method("executeUpdate"), ExecuteUpdateMethodInterceptor)
+      .withInterceptorFor(anyMethod("executeBatch", "executeLargeBatch"), ExecuteBatchMethodInterceptor)
+      .build()
+  }
+}
 
-  @Pointcut("execution(* (java.sql.Statement+  || org.sqlite.jdbc3.JDBC3Statement+).executeUpdate(..)) && args(sql) && this(statement)")
-  def statementExecuteUpdateWithArguments(sql: String, statement: Statement): Unit = {}
+object StatementInstrumentation {
+  object StatementTypes {
+    val Query = "query"
+    val Update = "update"
+    val Batch = "batch"
+    val GenericExecute = "generic-execute"
+  }
 
-  @Pointcut("execution(* (java.sql.PreparedStatement+ || org.sqlite.jdbc3.JDBC3PreparedStatement+).executeUpdate()) && this(statement)")
-  def statementExecuteUpdateWithoutArguments(statement: PreparedStatement): Unit = {}
-
-  @Around("statementExecuteUpdateWithArguments(sql, statement)")
-  def aroundStatementExecuteUpdateWithArguments(pjp: ProceedingJoinPoint, sql: String, statement: Statement): Any =
-    track(pjp, statement, sql, StatementTypes.Update)
-
-  @Around("statementExecuteUpdateWithoutArguments(statement)")
-  def aroundStatementExecuteUpdateWithoutArguments(pjp: ProceedingJoinPoint, statement: PreparedStatement): Any =
-    track(pjp, statement, statement.toString, StatementTypes.Update)
-
-  /**
-   *   Calls to java.sql.Statement+.executeBatch() and java.sql.Statement+.executeLargeBatch()
-   */
-
-  @Pointcut("(execution(* (java.sql.Statement+ || org.sqlite.jdbc3.JDBC3Statement+).executeBatch()) || execution(* (java.sql.Statement+ || org.sqlite.jdbc3.JDBC3Statement+).executeLargeBatch()))  && this(statement)")
-  def statementExecuteBatch(statement: Statement): Unit = {}
-
-  @Around("statementExecuteBatch(statement)")
-  def aroundStatementExecuteBatch(pjp: ProceedingJoinPoint, statement: Statement): Any =
-    track(pjp, statement, statement.toString, StatementTypes.Batch)
-
-  def track(pjp: ProceedingJoinPoint, target: Any, sql: String, statementType: String): Any = {
-    val poolTags = Option(target.asInstanceOf[Mixin.HasConnectionPoolMetrics].connectionPoolMetrics)
+  def track(callable: Callable[_], target: Any, sql: String, statementType: String): Any = {
+    val poolTags = Option(target.asInstanceOf[HasConnectionPoolMetrics].connectionPoolMetrics)
       .map(_.tags)
       .getOrElse(Map.empty[String, String])
 
     val inFlight = Metrics.Statements.InFlight.refine(poolTags)
     inFlight.increment()
 
-    val startTimestamp = Kamon.clock().instant()
+    val startTimestamp = Clock.microTimestamp()
     val span = Kamon.currentContext().get(SpanCustomizer.ContextKey).customize {
       val builder = buildSpan(statementType)
-        .withFrom(startTimestamp)
-        .withMetricTag("component", "jdbc")
+        .withStartTimestamp(startTimestamp)
+        .withTag("component", "jdbc")
         .withTag("db.statement", sql)
 
       poolTags.foreach { case (key, value) => builder.withTag(key, value) }
@@ -119,17 +114,16 @@ class StatementInstrumentation {
 
     try {
 
-      pjp.proceed()
+      callable.call()
 
     } catch {
       case t: Throwable =>
         span.addError("error.object", t)
         Jdbc.onStatementError(sql, t)
-        throw t
 
     } finally {
-      val endTimestamp = Kamon.clock().instant()
-      val elapsedTime = startTimestamp.until(endTimestamp, ChronoUnit.MICROS)
+      val endTimestamp = Clock.microTimestamp()
+      val elapsedTime = endTimestamp - startTimestamp
       span.finish(endTimestamp)
       inFlight.decrement()
 
@@ -138,12 +132,69 @@ class StatementInstrumentation {
   }
 }
 
-object StatementInstrumentation {
-  object StatementTypes {
-    val Query = "jdbc.query"
-    val Update = "jdbc.update"
-    val Batch = "jdbc.batch"
-    val GenericExecute = "jdbc.execute"
+/**
+  * Interceptor for java.sql.Statement::execute
+  * Interceptor for java.sql.PreparedStatement::execute
+  */
+object ExecuteMethodInterceptor {
+
+  @RuntimeType
+  def execute(@SuperCall callable: Callable[_], @This statement: Statement, @annotation.Argument(0) sql: String): Any = {
+    StatementInstrumentation.track(callable, statement, sql, StatementTypes.GenericExecute)
+  }
+
+  @RuntimeType
+  def execute(@SuperCall callable: Callable[_], @This statement: PreparedStatement): Any = {
+    StatementInstrumentation.track(callable, statement, statement.toString, StatementTypes.GenericExecute)
   }
 }
+
+
+/**
+  * Interceptor for java.sql.Statement::executeQuery
+  * Interceptor for java.sql.PreparedStatement::executeQuery
+  */
+object ExecuteQueryMethodInterceptor {
+
+  @RuntimeType
+  def executeQuery(@SuperCall callable: Callable[_], @This statement: Statement, @annotation.Argument(0) sql: String): Any = {
+    StatementInstrumentation.track(callable, statement, sql, StatementTypes.Query)
+  }
+
+  @RuntimeType
+  def executeQuery(@SuperCall callable: Callable[_], @This statement: PreparedStatement): Any = {
+    StatementInstrumentation.track(callable, statement, statement.toString, StatementTypes.Query)
+  }
+}
+
+/**
+  * Interceptor for java.sql.Statement::executeUpdate
+  * Interceptor for java.sql.PreparedStatement::executeUpdate
+  */
+object ExecuteUpdateMethodInterceptor {
+
+  @RuntimeType
+  def executeUpdate(@SuperCall callable: Callable[_], @This statement:Statement, @annotation.Argument(0) sql:String): Any = {
+    StatementInstrumentation.track(callable, statement,  sql, StatementTypes.Update)
+  }
+
+  @RuntimeType
+  def executeUpdate(@SuperCall callable: Callable[_], @This statement:PreparedStatement): Any = {
+    StatementInstrumentation.track(callable, statement,  statement.toString , StatementTypes.Update)
+  }
+}
+
+/**
+  * Interceptor for java.sql.Statement::executeBatch
+  * Interceptor for java.sql.Statement::executeLargeBatch
+  * Interceptor for java.sql.PreparedStatement::executeBatch
+  * Interceptor for java.sql.PreparedStatement::executeLargeBatch
+  */
+object ExecuteBatchMethodInterceptor {
+
+  @RuntimeType
+  def executeUpdate(@SuperCall callable: Callable[_], @This statement:Statement): Any =
+    StatementInstrumentation.track(callable, statement,  statement.toString , StatementTypes.Batch)
+}
+
 

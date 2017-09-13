@@ -13,23 +13,21 @@
  * =========================================================================================
  */
 
-val kamonCore  =        "io.kamon"        %% "kamon-core"         % "1.1.6"
-val kamonTestkit  =     "io.kamon"        %% "kamon-testkit"      % "1.1.6"
-val slick =             "com.typesafe.slick" %% "slick" % "3.2.0"
-val h2 =                "com.h2database"   % "h2"                 % "1.4.196"
-val hikariCP =          "com.zaxxer"       % "HikariCP"           % "2.7.4"
 
-resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
+val kamonCore           = "io.kamon"            %% "kamon-core"               % "1.0.0-RC1"
+val kamonTestkit        = "io.kamon"            %% "kamon-testkit"            % "1.0.0-RC1"
+val scalaExtension      = "io.kamon"            %% "agent-scala-extension"    % "0.0.6-experimental"
+
+val h2                  = "com.h2database"      % "h2"       % "1.4.182"
+val hikariCP            = "com.zaxxer"          % "HikariCP" % "2.6.2"
 
 lazy val root = (project in file("."))
   .enablePlugins(JavaAgent)
   .settings(name := "kamon-jdbc")
-  .settings(instrumentationSettings: _*)
+  .settings(javaAgents += "io.kamon"    % "kamon-agent"   % "0.0.6-experimental"  % "compile;test")
+  .settings(resolvers += Resolver.bintrayRepo("kamon-io", "snapshots"))
   .settings(
-    kamonUseAspectJ := true,
-    kamonAspectJVersion := "1.9.4",
-    crossScalaVersions := Seq("2.12.8", "2.11.12"),
-    libraryDependencies ++=
-      compileScope(kamonCore) ++
-      providedScope(aspectJ, hikariCP, slick) ++
-      testScope(h2, kamonTestkit, scalatest, slf4jApi, logbackClassic))
+      libraryDependencies ++=
+        compileScope(kamonCore, scalaExtension) ++
+        providedScope(hikariCP) ++
+        testScope(h2, kamonTestkit, scalatest, slf4jApi, logbackClassic))
