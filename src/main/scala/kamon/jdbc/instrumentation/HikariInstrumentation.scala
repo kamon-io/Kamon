@@ -30,6 +30,21 @@ import kamon.jdbc.instrumentation.mixin.{HasConnectionPoolMetrics, HasConnection
 
 class HikariInstrumentation extends KamonInstrumentation {
 
+  /**
+    * Instrument:
+    *
+    * com.zaxxer.hikari.pool.HikariPool::new
+    * com.zaxxer.hikari.pool.HikariPool::shutdown
+    * com.zaxxer.hikari.pool.HikariPool::createPoolEntry
+    * com.zaxxer.hikari.pool.HikariPool::closeConnection
+    * com.zaxxer.hikari.pool.HikariPool::createTimeoutException
+    * com.zaxxer.hikari.pool.HikariPool::getConnection
+    *
+    * Mix:
+    *
+    * com.zaxxer.hikari.pool.HikariPool with kamon.jdbc.instrumentation.mixin.HasConnectionPoolMetrics
+    *
+    */
   forTargetType("com.zaxxer.hikari.pool.HikariPool") { builder =>
     builder
       .withMixin(classOf[HasConnectionPoolMetricsMixin])
@@ -43,6 +58,18 @@ class HikariInstrumentation extends KamonInstrumentation {
   }
 
 
+  /**
+    * Instrument:
+    *
+    * com.zaxxer.hikari.pool.ProxyConnection::close
+    * com.zaxxer.hikari.pool.ProxyConnection::prepareStatement
+    * com.zaxxer.hikari.pool.ProxyConnection::createStatement
+    *
+    * Mix:
+    *
+    * com.zaxxer.hikari.pool.HikariPool with kamon.jdbc.instrumentation.mixin.HasConnectionPoolMetrics
+    *
+    */
   forTargetType("com.zaxxer.hikari.pool.ProxyConnection") { builder =>
     builder
       .withMixin(classOf[HasConnectionPoolMetricsMixin])
@@ -96,7 +123,6 @@ object HikariPoolCreatePoolEntryMethodAdvisor {
       poolMetrics.openConnections.increment()
   }
 }
-
 
 /**
   * Advisor com.zaxxer.hikari.pool.HikariPool::closeConnection
