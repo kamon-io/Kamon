@@ -21,7 +21,7 @@ import java.util
 
 import com.typesafe.config.{Config, ConfigFactory}
 import com.uber.jaeger.agent.thrift.Agent
-import com.uber.jaeger.thriftjava.{Batch, Log, Process, Tag, TagType, Span => JaegerSpan}
+import com.uber.jaeger.thriftjava.{Batch, Process, Tag, TagType, Span => JaegerSpan}
 import kamon.trace.IdentityProvider.Identifier
 import kamon.trace.Span
 import kamon.{Kamon, SpanReporter}
@@ -78,13 +78,6 @@ class JaegerClient(host: String, port: Int) {
       span.startTimestampMicros,
       span.endTimestampMicros - span.startTimestampMicros
     )
-
-    val convertedLogs = span.annotations.map { annotation =>
-      val convertedFields = annotation.fields.map(convertField)
-      new Log(annotation.timestampMicros, convertedFields.toList.asJava)
-    }
-
-    convertedSpan.setLogs(convertedLogs.asJava)
 
     convertedSpan.setTags(new util.ArrayList[Tag](span.tags.size))
     span.tags.foreach {
