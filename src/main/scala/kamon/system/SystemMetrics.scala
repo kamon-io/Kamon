@@ -41,6 +41,7 @@ object SystemMetrics {
   @volatile var sigarEnabled:Boolean = _
   @volatile var jmxEnabled: Boolean =_
   @volatile var contextSwitchesRefreshInterval:Duration = _
+  @volatile var hiccupSampleIntervalResolution:Duration = _
   @volatile var scheduledCollections: Seq[ScheduledFuture[_]] = _
 
   logger.info(s"Starting the Kamon(SystemMetrics) module")
@@ -60,6 +61,7 @@ object SystemMetrics {
     sigarEnabled = systemMetricsConfig.getBoolean("sigar-enabled")
     jmxEnabled = systemMetricsConfig.getBoolean("jmx-enabled")
     contextSwitchesRefreshInterval = systemMetricsConfig.getDuration("context-switches-refresh-interval")
+    hiccupSampleIntervalResolution = systemMetricsConfig.getDuration("hiccup-sample-interval-resolution")
   }
 
 

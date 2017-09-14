@@ -78,6 +78,12 @@ class SystemMetricsSpec extends WordSpecLike
       }
     }
 
+    "record the hiccup time metric" in {
+      val hiccupTimeMetric = Kamon.histogram("system-metric.hiccup.time")
+      hiccupTimeMetric.distribution().count should be > 0L
+      hiccupTimeMetric.distribution().max should be > 0L
+    }
+
 
     "record correctly updatable values for heap metrics" in {
       val data = new Array[Byte](20 * 1024 * 1024) // 20 Mb of data

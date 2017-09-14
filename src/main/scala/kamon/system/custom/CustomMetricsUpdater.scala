@@ -19,8 +19,10 @@ package kamon.system.custom
 import kamon.system.{Metric, withNamedThread}
 
 class CustomMetricsUpdater extends Runnable {
-  val metrics: Seq[Metric] =
-    Seq(ContextSwitchesMetrics.register()).flatten
+  val metrics: Seq[Metric] = Seq(
+    ContextSwitchesMetrics.register(),
+    HiccupDetector.register()
+  ).flatten
 
   override def run(): Unit = withNamedThread("custom-metric-updater"){
     metrics.foreach(_.update())
