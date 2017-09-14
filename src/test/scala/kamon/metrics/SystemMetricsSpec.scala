@@ -81,7 +81,7 @@ class SystemMetricsSpec extends WordSpecLike
     "record the hiccup time metric" in {
       val hiccupTimeMetric = Kamon.histogram("system-metric.hiccup.time")
       hiccupTimeMetric.distribution().count should be > 0L
-      hiccupTimeMetric.distribution().max should be > 0L
+      hiccupTimeMetric.distribution().max should be >= 0L
     }
 
 
