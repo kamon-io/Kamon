@@ -38,11 +38,18 @@ class SystemMetricsSpec extends WordSpecLike
   "the Kamon System Metrics module" should {
     "record user, system, wait, idle and stolen CPU metrics" in {
 
-      Kamon.histogram("system-metric.cpu.user").distribution().count should be > 0L
-      Kamon.histogram("system-metric.cpu.system").distribution().count should be > 0L
-      Kamon.histogram("system-metric.cpu.wait").distribution().count should be > 0L
-      Kamon.histogram("system-metric.cpu.idle").distribution().count should be > 0L
-      Kamon.histogram("system-metric.cpu.stolen").distribution().count should be > 0L
+      val userTag = "mode" -> "user"
+      val systemTag = "mode" -> "system"
+      val waitTag = "mode" -> "wait"
+      val idleTag = "mode" -> "idle"
+      val stolenTag = "mode" -> "stolen"
+
+
+      Kamon.histogram("system-metric.host.cpu").refine(userTag).distribution().count should be > 0L
+      Kamon.histogram("system-metric.host.cpu").refine(systemTag).distribution().count should be > 0L
+      Kamon.histogram("system-metric.host.cpu").refine(waitTag).distribution().count should be > 0L
+      Kamon.histogram("system-metric.host.cpu").refine(idleTag).distribution().count should be > 0L
+      Kamon.histogram("system-metric.host.cpu").refine(stolenTag).distribution().count should be > 0L
     }
 
     "record used, max and committed heap and non-heap metrics" in {

@@ -16,12 +16,14 @@
 
 package kamon
 
+import java.lang.management.ManagementFactory
+
 import org.hyperic.sigar.Sigar
 import org.slf4j.Logger
 
 package object system {
   private lazy val sigar = new Sigar()
-  private lazy val pid = sigar.getPid
+  private lazy val pid = ManagementFactory.getRuntimeMXBean.getName.split("@")(0).toLong
 
   private val filterName = SystemMetrics.FilterName
   private val logger = SystemMetrics.logger

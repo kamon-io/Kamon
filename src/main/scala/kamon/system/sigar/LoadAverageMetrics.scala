@@ -38,7 +38,7 @@ object LoadAverageMetrics extends MetricBuilder("load") with SigarMetricBuilder 
 
       aggregations.zipWithIndex.foreach {
         case(aggregation, index) =>
-          loadAverageMetrics.forAggregation(aggregation).average.record(loadAverage(index).toLong)
+          loadAverageMetrics.forAggregation(aggregation).record(loadAverage(index).toLong)
       }
     }
   }
@@ -47,10 +47,8 @@ object LoadAverageMetrics extends MetricBuilder("load") with SigarMetricBuilder 
 final case class LoadAverageMetrics(metricPrefix:String) {
   val loadAverageMetric = Kamon.histogram(s"$metricPrefix.average")
 
-  def forAggregation(aggregation: String): LoadAverageMetrics = {
+  def forAggregation(aggregation: String): Histogram = {
     val aggregationTags = Map("aggregation" -> aggregation)
-    LoadAverageMetrics(aggregationTags, loadAverageMetric.refine(aggregationTags))
+    loadAverageMetric.refine(aggregationTags)
   }
-
-  case class LoadAverageMetrics(tags: Map[String, String], average: Histogram)
 }

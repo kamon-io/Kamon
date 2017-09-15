@@ -17,6 +17,7 @@
 package kamon.system.sigar
 
 import kamon.Kamon
+import kamon.metric.Histogram
 import kamon.system.{Metric, MetricBuilder, SigarMetricBuilder}
 import org.hyperic.sigar.Sigar
 import org.slf4j.Logger
@@ -29,13 +30,9 @@ import org.slf4j.Logger
  *    - idle:  Total percentage of system cpu idle time
  *    - stolen: Total percentage of system cpu involuntary wait time. @see [[https://www.datadoghq.com/2013/08/understanding-aws-stolen-cpu-and-how-it-affects-your-apps/ "Understanding Stolen Cpu"]]
  */
-object CpuMetrics extends MetricBuilder("cpu") with SigarMetricBuilder {
+object CpuMetrics extends MetricBuilder("host") with SigarMetricBuilder {
   def build(sigar: Sigar, metricPrefix: String, logger: Logger) = new Metric {
-    val userMetric    = Kamon.histogram(s"$metricPrefix.user")
-    val systemMetric  = Kamon.histogram(s"$metricPrefix.system")
-    val waitMetric    = Kamon.histogram(s"$metricPrefix.wait")
-    val idleMetric    = Kamon.histogram(s"$metricPrefix.idle")
-    val stolenMetric  = Kamon.histogram(s"$metricPrefix.stolen")
+    val cpuMetric = new CpuMetric(metricPrefix)
 
     def update(): Unit = {
       import SigarSafeRunner._
@@ -51,12 +48,21 @@ object CpuMetrics extends MetricBuilder("cpu") with SigarMetricBuilder {
 
       val (cpuUser, cpuSys, cpuWait, cpuIdle, cpuStolen) = runSafe(cpuPerc, (0L, 0L, 0L, 0L, 0L), "cpu", logger)
 
-      userMetric.record(cpuUser)
-      systemMetric.record(cpuSys)
-      waitMetric.record(cpuWait)
-      idleMetric.record(cpuIdle)
-      stolenMetric.record(cpuStolen)
+      cpuMetric.forMode("user").record(cpuUser)
+      cpuMetric.forMode("system").record(cpuSys)
+      cpuMetric.forMode("wait").record(cpuWait)
+      cpuMetric.forMode("idle").record(cpuIdle)
+      cpuMetric.forMode("stolen").record(cpuStolen)
     }
   }
+
+  class CpuMetric(metricPrefix:String) {
+    val cpuMetric = Kamon.histogram(s"$metricPrefix.cpu")
+
+    def forMode(mode: String): Histogram =
+      cpuMetric.refine(Map("mode" -> mode))
+  }
 }
+
+
 
