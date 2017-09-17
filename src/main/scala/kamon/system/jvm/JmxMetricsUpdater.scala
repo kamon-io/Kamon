@@ -14,7 +14,7 @@
  * =========================================================================================
  */
 
-package kamon.system.jmx
+package kamon.system.jvm
 
 import kamon.system.{Metric, withNamedThread}
 

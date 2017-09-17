@@ -14,7 +14,7 @@
  * =========================================================================================
  */
 
-package kamon.system.jmx
+package kamon.system.jvm
 
 import java.lang.management.{BufferPoolMXBean, ManagementFactory, MemoryUsage}
 
@@ -32,7 +32,7 @@ import scala.util.matching.Regex
  *  Pools in HotSpot Java 8:
  *  code-cache, metaspace, compressed-class-space, ps-eden-space, ps-survivor-space, ps-old-gen
  */
-object MemoryUsageMetrics extends MetricBuilder("jmx-memory") with JmxMetricBuilder{
+object MemoryUsageMetrics extends MetricBuilder("jvm.memory") with JmxMetricBuilder{
   def build(metricPrefix: String, logger: Logger) = new Metric {
     val invalidChars: Regex = """[^a-z0-9]""".r
 
@@ -44,8 +44,8 @@ object MemoryUsageMetrics extends MetricBuilder("jmx-memory") with JmxMetricBuil
         case MemoryUsageWithMetricName(name, beanFun) ⇒
           val memory = memoryMetrics.forSegment(name)
           memory.memoryUsed.record(beanFun().getUsed)
-          memory.memoryCommitted.set(beanFun().getCommitted)
-          memory.memoryMax.set({
+          memory.memoryCommitted.record(beanFun().getCommitted)
+          memory.memoryMax.record({
             val max = beanFun().getMax
             // .getMax can return -1 if the max is not defined.
             if (max >= 0) max
@@ -82,24 +82,25 @@ object MemoryUsageMetrics extends MetricBuilder("jmx-memory") with JmxMetricBuil
 }
 
 final case class MemoryMetrics(metricPrefix:String) {
-  val memoryUsedMetric      = Kamon.histogram(s"$metricPrefix.used",  MeasurementUnit.information.bytes)
-  val memoryCommittedMetric = Kamon.gauge(s"$metricPrefix.committed", MeasurementUnit.information.bytes)
-  val memoryMaxMetric       = Kamon.gauge(s"$metricPrefix.max", MeasurementUnit.information.bytes)
+  val memoryUsageMetric = Kamon.histogram("jvm.memory", MeasurementUnit.information.bytes)
 
   def forSegment(segment: String): MemoryMetrics = {
     val memoryTags = Map("segment" -> segment)
     MemoryMetrics(
       memoryTags,
-      memoryUsedMetric.refine(memoryTags),
-      memoryCommittedMetric.refine(memoryTags),
-      memoryMaxMetric.refine(memoryTags)
+      memoryUsageMetric.refine("component" -> "system-metrics", "measure" -> "used", "segment" -> segment),
+      memoryUsageMetric.refine("component" -> "system-metrics", "measure" -> "committed", "segment" -> segment),
+      memoryUsageMetric.refine("component" -> "system-metrics", "measure" -> "max", "segment" -> segment)
     )
   }
 
-  case class MemoryMetrics(tags: Map[String, String], memoryUsed: Histogram, memoryCommitted: Gauge, memoryMax: Gauge)
+  case class MemoryMetrics(tags: Map[String, String], memoryUsed: Histogram, memoryCommitted: Histogram, memoryMax: Histogram)
 }
 
 final case class BufferPoolMetrics(metricPrefix:String) {
+  val bufferPoolCountMetric = Kamon.gauge("jvm.buffer-pool.count")
+  val bufferPoolUsageMetric = Kamon.gauge("jvm.buffer-pool.usage")
+
   val poolCountMetric     = Kamon.gauge(s"$metricPrefix.buffer-pool.count")
   val poolUsedMetric      = Kamon.gauge(s"$metricPrefix.buffer-pool.used", MeasurementUnit.information.bytes)
   val poolCapacityMetric  = Kamon.gauge(s"$metricPrefix.buffer-pool.capacity", MeasurementUnit.information.bytes)
@@ -109,9 +110,9 @@ final case class BufferPoolMetrics(metricPrefix:String) {
     val poolTags = Map("pool" -> pool)
     BufferPoolMetrics(
       poolTags,
-      poolCountMetric.refine(poolTags),
-      poolUsedMetric.refine(poolTags),
-      poolCapacityMetric.refine(poolTags)
+      bufferPoolCountMetric.refine("component" -> "system-metrics", "pool" -> pool),
+      bufferPoolUsageMetric.refine("component" -> "system-metrics", "pool" -> pool, "measure" -> "used"),
+      bufferPoolUsageMetric.refine("component" -> "system-metrics", "pool" -> pool, "measure" -> "capacity")
     )
   }
 

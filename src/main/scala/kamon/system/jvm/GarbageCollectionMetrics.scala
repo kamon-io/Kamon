@@ -14,7 +14,7 @@
  * =========================================================================================
  */
 
-package kamon.system.jmx
+package kamon.system.jvm
 
 import java.lang.management.ManagementFactory
 import javax.management.openmbean.CompositeData
@@ -31,10 +31,10 @@ import org.slf4j.Logger
  *  Garbage Collection metrics, as reported by JMX:
  *    - @see [[http://docs.oracle.com/javase/8/docs/api/java/lang/management/GarbageCollectorMXBean.html "GarbageCollectorMXBean"]]
  */
-object GarbageCollectionMetrics extends MetricBuilder("garbage-collection") with JmxMetricBuilder {
-  def build(metricPrefix: String, logger: Logger) = new Metric {
+object GarbageCollectionMetrics extends MetricBuilder("jvm.gc") with JmxMetricBuilder {
+  def build(metricName: String, logger: Logger) = new Metric {
 
-    addNotificationListener(GarbageCollectorMetrics(metricPrefix))
+    addNotificationListener(GarbageCollectorMetrics(metricName))
 
     def update(): Unit = {}
 
@@ -64,11 +64,11 @@ final case class GCNotificationListener(gcMetrics: GarbageCollectorMetrics) exte
     name.replaceAll("""[^\w]""", "-").toLowerCase
 }
 
-final case class GarbageCollectorMetrics(metricPrefix:String) {
-  val gcTimeMetric = Kamon.histogram(s"$metricPrefix.time", MeasurementUnit.time.milliseconds)
+final case class GarbageCollectorMetrics(metricName: String) {
+  val gcTimeMetric = Kamon.histogram(metricName, MeasurementUnit.time.milliseconds)
 
   def forCollector(collector: String): GarbageCollectorMetrics = {
-    val collectorTags = Map("collector" -> collector)
+    val collectorTags = Map("component" -> "system-metrics",  "collector" -> collector)
     GarbageCollectorMetrics(collectorTags, gcTimeMetric.refine(collectorTags))
   }
 

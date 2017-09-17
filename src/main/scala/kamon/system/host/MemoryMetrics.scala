@@ -14,7 +14,7 @@
  * =========================================================================================
  */
 
-package kamon.system.sigar
+package kamon.system.host
 
 import kamon.Kamon
 import kamon.metric.MeasurementUnit
@@ -29,14 +29,19 @@ import org.slf4j.Logger
  *    - swap-used: Total used system swap.
  *    - swap-free: Total free system swap.
  */
-object MemoryMetrics extends MetricBuilder("memory") with SigarMetricBuilder {
-  def build(sigar: Sigar, metricPrefix: String, logger: Logger) =  new Metric {
-    val usedMetric      = Kamon.histogram(s"$metricPrefix.used", MeasurementUnit.information.bytes)
-    val cachedMetric    = Kamon.histogram(s"$metricPrefix.cache-and-buffer", MeasurementUnit.information.bytes)
-    val freeMetric      = Kamon.histogram(s"$metricPrefix.free", MeasurementUnit.information.bytes)
-    val totalMetric     = Kamon.histogram(s"$metricPrefix.total", MeasurementUnit.information.bytes)
-    val swapUsedMetric  = Kamon.histogram(s"$metricPrefix.swap-used", MeasurementUnit.information.bytes)
-    val swapFreeMetric  = Kamon.histogram(s"$metricPrefix.swap-free", MeasurementUnit.information.bytes)
+object MemoryMetrics extends MetricBuilder("host.memory") with SigarMetricBuilder {
+  def build(sigar: Sigar, metricName: String, logger: Logger) =  new Metric {
+    val memoryUsageMetric = Kamon.histogram(metricName, MeasurementUnit.information.bytes)
+    val swapUsageMetric = Kamon.histogram("host.swap", MeasurementUnit.information.bytes)
+
+
+    val usedMetric      = memoryUsageMetric.refine(Map("component" -> "system-metrics", "mode" -> "used"))
+    val cachedMetric    = memoryUsageMetric.refine(Map("component" -> "system-metrics", "mode" -> "cached-and-buffered"))
+    val freeMetric      = memoryUsageMetric.refine(Map("component" -> "system-metrics", "mode" -> "free"))
+    val totalMetric     = memoryUsageMetric.refine(Map("component" -> "system-metrics", "mode" -> "total"))
+
+    val swapUsedMetric  = swapUsageMetric.refine(Map("component" -> "system-metrics", "mode" -> "used"))
+    val swapFreeMetric  = swapUsageMetric.refine(Map("component" -> "system-metrics", "mode" -> "free"))
 
     override def update(): Unit = {
       import SigarSafeRunner._

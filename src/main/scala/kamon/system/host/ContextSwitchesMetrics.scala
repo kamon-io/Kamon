@@ -14,7 +14,7 @@
  * =========================================================================================
  */
 
-package kamon.system.custom
+package kamon.system.host
 
 import java.io.IOException
 import java.nio.charset.StandardCharsets.US_ASCII
@@ -32,12 +32,13 @@ import scala.collection.JavaConverters.iterableAsScalaIterableConverter
  *    - process-non-voluntary: Total number of involuntary context switches related to the current process (the system scheduler suspends and active thread, and switches control to a different thread).
  *    - global:  Total number of context switches across all CPUs.
  */
-object ContextSwitchesMetrics extends MetricBuilder("context-switches") with CustomMetricBuilder {
-  def build(pid: Long, metricPrefix: String, logger: Logger)  = new Metric {
+object ContextSwitchesMetrics extends MetricBuilder("host.context-switches") with CustomMetricBuilder {
+  def build(pid: Long, metricName: String, logger: Logger)  = new Metric {
+    val contextSwitchMetric = Kamon.histogram(metricName)
 
-    val perProcessVoluntaryMetric     = Kamon.histogram(s"$metricPrefix.process-voluntary")
-    val perProcessNonVoluntaryMetric  = Kamon.histogram(s"$metricPrefix.process-non-voluntary")
-    val globalMetric                  = Kamon.histogram(s"$metricPrefix.global")
+    val perProcessVoluntaryMetric     = contextSwitchMetric.refine(Map("component" -> "system-metrics", "mode" -> "process-voluntary"))
+    val perProcessNonVoluntaryMetric  = contextSwitchMetric.refine(Map("component" -> "system-metrics", "mode" -> "process-non-voluntary"))
+    val globalMetric                  = contextSwitchMetric.refine(Map("component" -> "system-metrics", "mode" -> "global"))
 
     override def update(): Unit = {
       val (voluntary, nonVoluntary) = contextSwitchesByProcess(pid)

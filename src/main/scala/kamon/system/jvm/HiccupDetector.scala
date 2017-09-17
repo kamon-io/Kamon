@@ -14,19 +14,19 @@
  * =========================================================================================
  */
 
-package kamon.system.custom
+package kamon.system.jvm
 
 import java.util.concurrent.TimeUnit
 
 import kamon.Kamon
-import kamon.metric.{HistogramMetric, MeasurementUnit}
+import kamon.metric.{Histogram, MeasurementUnit}
 import kamon.system.{CustomMetricBuilder, Metric, MetricBuilder, SystemMetrics}
 import org.slf4j.Logger
 
-object HiccupDetector extends MetricBuilder("hiccup") with CustomMetricBuilder {
-  override def build(pid: Long, metricPrefix: String, logger: Logger) = new Metric {
+object HiccupDetector extends MetricBuilder("jvm.hiccup") with CustomMetricBuilder {
+  override def build(pid: Long, metricName: String, logger: Logger) = new Metric {
     val sampleResolution = SystemMetrics.hiccupSampleIntervalResolution.toNanos
-    val hiccupTimeMetric = Kamon.histogram(s"$metricPrefix.time", MeasurementUnit.time.nanoseconds)
+    val hiccupTimeMetric = Kamon.histogram(metricName, MeasurementUnit.time.nanoseconds).refine("component" -> "system-metrics")
 
     override def update(): Unit = {}
 
@@ -37,7 +37,7 @@ object HiccupDetector extends MetricBuilder("hiccup") with CustomMetricBuilder {
   }
 
 
-  final class Monitor(hiccupTimeMetric: HistogramMetric, resolution:Long) extends Thread {
+  final class Monitor(hiccupTimeMetric: Histogram, resolution:Long) extends Thread {
 
     @volatile var doRun = true
 

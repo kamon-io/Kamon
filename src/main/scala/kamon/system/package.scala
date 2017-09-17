@@ -33,9 +33,9 @@ package object system {
     override def register(): Option[Metric] = {
       if (Kamon.filter(filterName, metricName)) {
         this match {
-          case s: SigarMetricBuilder => Some(s.build(sigar, s"$filterName.$metricName", logger))
-          case jmx: JmxMetricBuilder => Some(jmx.build(s"$filterName.$metricName", logger))
-          case custom: CustomMetricBuilder => Some(custom.build(pid, s"$filterName.$metricName", logger))
+          case s: SigarMetricBuilder => Some(s.build(sigar, metricName, logger))
+          case jmx: JmxMetricBuilder => Some(jmx.build(metricName, logger))
+          case custom: CustomMetricBuilder => Some(custom.build(pid, metricName, logger))
           case _ => None
         }
       }
@@ -49,7 +49,7 @@ package object system {
   }
 
   trait SigarMetricBuilder extends Builder {
-    def build(sigar: Sigar, metricPrefix: String, logger: Logger): Metric
+    def build(sigar: Sigar, metricName: String, logger: Logger): Metric
   }
 
   trait JmxMetricBuilder extends Builder {

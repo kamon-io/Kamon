@@ -24,8 +24,8 @@ import java.util.concurrent.TimeUnit.MILLISECONDS
 import com.typesafe.config.Config
 import kamon.sigar.SigarProvisioner
 import kamon.system.custom.CustomMetricsUpdater
-import kamon.system.jmx.JmxMetricsUpdater
-import kamon.system.sigar.SigarMetricsUpdater
+import kamon.system.jvm.JmxMetricsUpdater
+import kamon.system.host.SigarMetricsUpdater
 import kamon.{Kamon, OnReconfigureHook}
 import org.slf4j.{Logger, LoggerFactory}
 
@@ -55,13 +55,13 @@ object SystemMetrics {
 
   private def loadConfiguration(config: Config): Unit = synchronized {
     val systemMetricsConfig = config.getConfig("kamon.system-metrics")
-    sigarFolder = systemMetricsConfig.getString("sigar-native-folder")
-    sigarRefreshInterval = systemMetricsConfig.getDuration("sigar-metrics-refresh-interval")
-    jmxRefreshInterval = systemMetricsConfig.getDuration("jmx-metrics-refresh-interval")
-    sigarEnabled = systemMetricsConfig.getBoolean("sigar-enabled")
-    jmxEnabled = systemMetricsConfig.getBoolean("jmx-enabled")
-    contextSwitchesRefreshInterval = systemMetricsConfig.getDuration("context-switches-refresh-interval")
-    hiccupSampleIntervalResolution = systemMetricsConfig.getDuration("hiccup-sample-interval-resolution")
+    sigarFolder = systemMetricsConfig.getString("host.sigar-native-folder")
+    sigarRefreshInterval = systemMetricsConfig.getDuration("host.refresh-interval")
+    jmxRefreshInterval = systemMetricsConfig.getDuration("jvm.refresh-interval")
+    sigarEnabled = systemMetricsConfig.getBoolean("host.enabled")
+    jmxEnabled = systemMetricsConfig.getBoolean("jvm.enabled")
+    contextSwitchesRefreshInterval = systemMetricsConfig.getDuration("host.context-switches-refresh-interval")
+    hiccupSampleIntervalResolution = systemMetricsConfig.getDuration("jvm.hiccup-sample-interval-resolution")
   }
 
 

@@ -14,7 +14,7 @@
  * =========================================================================================
  */
 
-package kamon.system.sigar
+package kamon.system.host
 
 import java.util.concurrent.atomic.AtomicLong
 

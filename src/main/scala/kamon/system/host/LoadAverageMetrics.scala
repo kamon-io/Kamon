@@ -14,7 +14,7 @@
  * =========================================================================================
  */
 
-package kamon.system.sigar
+package kamon.system.host
 
 import kamon.Kamon
 import kamon.metric.Histogram
@@ -26,29 +26,29 @@ import org.slf4j.Logger
  *  Load Average metrics, as reported by Sigar:
  *    - The system load averages for the past 1, 5, and 15 minutes.
  */
-object LoadAverageMetrics extends MetricBuilder("load") with SigarMetricBuilder {
-  def build(sigar: Sigar, metricPrefix: String, logger: Logger) = new Metric {
-    val aggregations = "1" :: "5" :: "15" :: Nil
-    val loadAverageMetrics = LoadAverageMetrics(metricPrefix)
+object LoadAverageMetrics extends MetricBuilder("host.load-average") with SigarMetricBuilder {
+  def build(sigar: Sigar, metricName: String, logger: Logger) = new Metric {
+    val periods = "1" :: "5" :: "15" :: Nil
+    val loadAverageMetrics = LoadAverageMetrics(metricName)
 
     override def update(): Unit = {
       import SigarSafeRunner._
 
       val loadAverage = runSafe(sigar.getLoadAverage, Array(0D, 0D, 0D), "load-average", logger)
 
-      aggregations.zipWithIndex.foreach {
-        case(aggregation, index) =>
-          loadAverageMetrics.forAggregation(aggregation).record(loadAverage(index).toLong)
+      periods.zipWithIndex.foreach {
+        case(period, index) =>
+          loadAverageMetrics.forPeriod(period).record(loadAverage(index).toLong)
       }
     }
   }
 }
 
-final case class LoadAverageMetrics(metricPrefix:String) {
-  val loadAverageMetric = Kamon.histogram(s"$metricPrefix.average")
+final case class LoadAverageMetrics(metricName: String) {
+  val loadAverageMetric = Kamon.histogram(metricName)
 
-  def forAggregation(aggregation: String): Histogram = {
-    val aggregationTags = Map("aggregation" -> aggregation)
-    loadAverageMetric.refine(aggregationTags)
+  def forPeriod(period: String): Histogram = {
+    val periodTag = Map("component" -> "system-metrics", "period" -> period)
+    loadAverageMetric.refine(periodTag)
   }
 }

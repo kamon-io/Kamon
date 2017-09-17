@@ -14,7 +14,7 @@
  * =========================================================================================
  */
 
-package kamon.system.sigar
+package kamon.system.host
 
 import kamon.system.{Metric, withNamedThread}
 import org.slf4j.Logger

@@ -14,7 +14,7 @@
  * =========================================================================================
  */
 
-package kamon.system.sigar
+package kamon.system.host
 
 import kamon.Kamon
 import kamon.system.{Metric, MetricBuilder, SigarMetricBuilder}
@@ -29,12 +29,13 @@ import scala.util.Try
  *    - total: Process cpu time (sum of User and Sys).
  *    - system: Process cpu kernel time.
  */
-object ProcessCpuMetrics extends MetricBuilder("process-cpu") with SigarMetricBuilder {
-  def build(sigar: Sigar, metricPrefix: String, logger: Logger) = new Metric {
+object ProcessCpuMetrics extends MetricBuilder("host.process-cpu") with SigarMetricBuilder {
+  def build(sigar: Sigar, metricName: String, logger: Logger) = new Metric {
+    val processCpuMetric = Kamon.histogram(metricName)
 
-    val processUserCpuMetric = Kamon.histogram(s"$metricPrefix.user-cpu")
-    val processSystemCpuMetric = Kamon.histogram(s"$metricPrefix.system-cpu")
-    val processTotalCpuMetric = Kamon.histogram(s"$metricPrefix.process-cpu")
+    val processUserCpuMetric = processCpuMetric.refine(Map("component" -> "system-metrics", "mode" -> "user"))
+    val processSystemCpuMetric = processCpuMetric.refine(Map("component" -> "system-metrics", "mode" -> "system"))
+    val processTotalCpuMetric = processCpuMetric.refine(Map("component" -> "system-metrics", "mode" -> "total"))
 
     val pid = sigar.getPid
     val totalCores = sigar.getCpuInfoList.headOption.map(_.getTotalCores.toLong).getOrElse(1L)

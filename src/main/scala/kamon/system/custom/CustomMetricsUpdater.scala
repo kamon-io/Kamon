@@ -16,6 +16,8 @@
 
 package kamon.system.custom
 
+import kamon.system.host.ContextSwitchesMetrics
+import kamon.system.jvm.HiccupDetector
 import kamon.system.{Metric, withNamedThread}
 
 class CustomMetricsUpdater extends Runnable {

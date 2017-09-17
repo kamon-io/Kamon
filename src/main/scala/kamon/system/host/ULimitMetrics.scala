@@ -14,17 +14,18 @@
  * =========================================================================================
  */
 
-package kamon.system.sigar
+package kamon.system.host
 
 import kamon.Kamon
 import kamon.system.{Metric, MetricBuilder, SigarMetricBuilder}
 import org.hyperic.sigar.Sigar
 import org.slf4j.Logger
 
-object ULimitMetrics extends MetricBuilder("ulimit") with SigarMetricBuilder {
-  def build(sigar: Sigar, metricPrefix: String, logger: Logger) = new Metric {
+object ULimitMetrics extends MetricBuilder("host.ulimit") with SigarMetricBuilder {
+  def build(sigar: Sigar, metricName: String, logger: Logger) = new Metric {
     val pid = sigar.getPid
-    val openFilesMetric = Kamon.histogram(s"$metricPrefix.open-files")
+    val ulimitMetric = Kamon.histogram(metricName)
+    val openFilesMetric = ulimitMetric.refine(Map("component" -> "system-metrics", "limit" -> "open-files"))
 
     override def update(): Unit = {
       import SigarSafeRunner._
