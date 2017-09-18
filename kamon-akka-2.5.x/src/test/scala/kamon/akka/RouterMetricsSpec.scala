@@ -54,7 +54,7 @@ class RouterMetricsSpec extends TestKit(ActorSystem("RouterMetricsSpec")) with W
       listener.expectMsg(Pong)
 
       eventually {
-        routerRoutingTime.refine("path" -> "RouterMetricsSpec/user/measuring-routing-time-in-pool-router")
+        routerRoutingTime.refine(routerTags("RouterMetricsSpec/user/measuring-routing-time-in-pool-router"))
           .distribution(resetState = false).count should be(1L)
       }
     }
@@ -65,7 +65,8 @@ class RouterMetricsSpec extends TestKit(ActorSystem("RouterMetricsSpec")) with W
 
       router.tell(RouterTrackTimings(sleep = Some(1 second)), timingsListener.ref)
       val timings = timingsListener.expectMsgType[RouterTrackedTimings]
-      val processingTimeDistribution = routerProcessingTime.refine("path" -> "RouterMetricsSpec/user/measuring-processing-time-in-pool-router").distribution()
+      val processingTimeDistribution = routerProcessingTime
+        .refine(routerTags("RouterMetricsSpec/user/measuring-processing-time-in-pool-router")).distribution()
 
       processingTimeDistribution.count should be(1L)
       processingTimeDistribution.buckets.head.frequency should be(1L)
@@ -82,7 +83,8 @@ class RouterMetricsSpec extends TestKit(ActorSystem("RouterMetricsSpec")) with W
       listener.expectMsg(Pong)
 
       eventually {
-        routerErrors.refine("path" -> "RouterMetricsSpec/user/measuring-errors-in-pool-router").value(resetState = false) should be(10L)
+        routerErrors
+          .refine(routerTags("RouterMetricsSpec/user/measuring-errors-in-pool-router")).value(resetState = false) should be(10L)
       }
     }
 
@@ -93,7 +95,9 @@ class RouterMetricsSpec extends TestKit(ActorSystem("RouterMetricsSpec")) with W
       router.tell(RouterTrackTimings(sleep = Some(1 second)), timingsListener.ref)
       val timings = timingsListener.expectMsgType[RouterTrackedTimings]
 
-      val timeInMailboxDistribution = routerTimeInMailbox.refine("path" -> "RouterMetricsSpec/user/measuring-time-in-mailbox-in-pool-router").distribution()
+      val timeInMailboxDistribution = routerTimeInMailbox
+        .refine(routerTags("RouterMetricsSpec/user/measuring-time-in-mailbox-in-pool-router")).distribution()
+
       timeInMailboxDistribution.count should be(1L)
       timeInMailboxDistribution.buckets.head.frequency should be(1L)
       timeInMailboxDistribution.buckets.head.value should be(timings.approximateTimeInMailbox +- 10.millis.toNanos)
@@ -106,7 +110,11 @@ class RouterMetricsSpec extends TestKit(ActorSystem("RouterMetricsSpec")) with W
       router.tell(RouterTrackTimings(sleep = Some(1 second)), timingsListener.ref)
       val timings = timingsListener.expectMsgType[RouterTrackedTimings]
 
-      val timeInMailboxDistribution = routerTimeInMailbox.refine("path" -> "RouterMetricsSpec/user/measuring-time-in-mailbox-in-balancing-pool-router").distribution()
+      val timeInMailboxDistribution = routerTimeInMailbox
+        .refine(routerTags("RouterMetricsSpec/user/measuring-time-in-mailbox-in-balancing-pool-router") ++
+          Map("dispatcher" -> "BalancingPool-/measuring-time-in-mailbox-in-balancing-pool-router")
+        ).distribution()
+
       timeInMailboxDistribution.count should be(1L)
       timeInMailboxDistribution.buckets.head.frequency should be(1L)
       timeInMailboxDistribution.buckets.head.value should be(timings.approximateTimeInMailbox +- 10.millis.toNanos)
@@ -130,6 +138,12 @@ class RouterMetricsSpec extends TestKit(ActorSystem("RouterMetricsSpec")) with W
 
   override protected def afterAll(): Unit = shutdown()
 
+  def routerTags(path: String): Map[String, String] = Map(
+    "path" -> path,
+    "system" -> "RouterMetricsSpec",
+    "dispatcher" -> "akka.actor.default-dispatcher"
+  )
+
 
   trait RouterMetricsFixtures {
     def createTestGroupRouter(routerName: String, resetState: Boolean = false): ActorRef = {
@@ -146,10 +160,10 @@ class RouterMetricsSpec extends TestKit(ActorSystem("RouterMetricsSpec")) with W
 
       // Cleanup all the metric recording instruments:
       if(resetState) {
-        routerRoutingTime.refine("path" -> s"RouterMetricsSpec/user/$routerName").distribution(resetState = true)
-        routerTimeInMailbox.refine("path" -> s"RouterMetricsSpec/user/$routerName").distribution(resetState = true)
-        routerProcessingTime.refine("path" -> s"RouterMetricsSpec/user/$routerName").distribution(resetState = true)
-        routerErrors.refine("path" -> s"RouterMetricsSpec/user/$routerName").value(resetState = true)
+        routerRoutingTime.refine(routerTags(s"RouterMetricsSpec/user/$routerName")).distribution(resetState = true)
+        routerTimeInMailbox.refine(routerTags(s"RouterMetricsSpec/user/$routerName")).distribution(resetState = true)
+        routerProcessingTime.refine(routerTags(s"RouterMetricsSpec/user/$routerName")).distribution(resetState = true)
+        routerErrors.refine(routerTags(s"RouterMetricsSpec/user/$routerName")).value(resetState = true)
       }
 
       group
@@ -165,10 +179,10 @@ class RouterMetricsSpec extends TestKit(ActorSystem("RouterMetricsSpec")) with W
 
       // Cleanup all the metric recording instruments:
       if(resetState) {
-        routerRoutingTime.refine("path" -> s"RouterMetricsSpec/user/$routerName").distribution(resetState = true)
-        routerTimeInMailbox.refine("path" -> s"RouterMetricsSpec/user/$routerName").distribution(resetState = true)
-        routerProcessingTime.refine("path" -> s"RouterMetricsSpec/user/$routerName").distribution(resetState = true)
-        routerErrors.refine("path" -> s"RouterMetricsSpec/user/$routerName").value(resetState = true)
+        routerRoutingTime.refine(routerTags(s"RouterMetricsSpec/user/$routerName")).distribution(resetState = true)
+        routerTimeInMailbox.refine(routerTags(s"RouterMetricsSpec/user/$routerName")).distribution(resetState = true)
+        routerProcessingTime.refine(routerTags(s"RouterMetricsSpec/user/$routerName")).distribution(resetState = true)
+        routerErrors.refine(routerTags(s"RouterMetricsSpec/user/$routerName")).value(resetState = true)
       }
 
 
@@ -185,10 +199,13 @@ class RouterMetricsSpec extends TestKit(ActorSystem("RouterMetricsSpec")) with W
 
       // Cleanup all the metric recording instruments:
       if(resetState) {
-        routerRoutingTime.refine("path" -> s"RouterMetricsSpec/user/$routerName").distribution(resetState = true)
-        routerTimeInMailbox.refine("path" -> s"RouterMetricsSpec/user/$routerName").distribution(resetState = true)
-        routerProcessingTime.refine("path" -> s"RouterMetricsSpec/user/$routerName").distribution(resetState = true)
-        routerErrors.refine("path" -> s"RouterMetricsSpec/user/$routerName").value(resetState = true)
+        val tags = routerTags(s"RouterMetricsSpec/user/$routerName") ++
+          Map("dispatcher" -> "BalancingPool-/measuring-time-in-mailbox-in-balancing-pool-router")
+
+        routerRoutingTime.refine(tags).distribution(resetState = true)
+        routerTimeInMailbox.refine(tags).distribution(resetState = true)
+        routerProcessingTime.refine(tags).distribution(resetState = true)
+        routerErrors.refine(tags).value(resetState = true)
       }
 
 

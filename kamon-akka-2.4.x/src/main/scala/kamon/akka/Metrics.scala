@@ -38,10 +38,10 @@ object Metrics {
   val actorMailboxSizeMetric = Kamon.minMaxCounter("akka.actor.mailbox-size")
   val actorErrorsMetric = Kamon.counter("akka.actor.errors")
 
-  def forActor(path: String): ActorMetrics = {
-    val actorTags = Map("path" -> path)
+  def forActor(path: String, system: String, dispatcher: String): ActorMetrics = {
+    val actorTags = Map("path" -> path, "system" -> system, "dispatcher" -> dispatcher)
     ActorMetrics(
-      actorTags,
+    actorTags,
       actorTimeInMailboxMetric.refine(actorTags),
       actorProcessingTimeMetric.refine(actorTags),
       actorMailboxSizeMetric.refine(actorTags),
@@ -76,8 +76,8 @@ object Metrics {
   val routerProcessingTime = Kamon.histogram("akka.router.processing-time", time.nanoseconds)
   val routerErrors = Kamon.counter("akka.router.errors")
 
-  def forRouter(path: String): RouterMetrics = {
-    val routerTags = Map("path" -> path)
+  def forRouter(path: String, system: String, dispatcher: String): RouterMetrics = {
+    val routerTags = Map("path" -> path, "system" -> system, "dispatcher" -> dispatcher)
     RouterMetrics(
       routerTags,
       routerRoutingTime.refine(routerTags),
@@ -117,8 +117,8 @@ object Metrics {
   val groupMembers = Kamon.minMaxCounter("akka.group.members")
   val groupErrors = Kamon.counter("akka.group.errors")
 
-  def forGroup(group: String): ActorGroupMetrics = {
-    val actorTags = Map("group" -> group)
+  def forGroup(group: String, system: String): ActorGroupMetrics = {
+    val actorTags = Map("group" -> group, "system" -> system)
     ActorGroupMetrics(
       actorTags,
       groupTimeInMailbox.refine(actorTags),

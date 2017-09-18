@@ -20,7 +20,7 @@ import kamon.Kamon
 import kamon.akka.Akka
 
 case class CellInfo(path: String, isRouter: Boolean, isRoutee: Boolean, isTracked: Boolean, trackingGroups: Seq[String],
-    actorCellCreation: Boolean)
+    actorCellCreation: Boolean, systemName: String, dispatcherName: String)
 
 object CellInfo {
 
@@ -40,6 +40,6 @@ object CellInfo {
     val isTracked = !isRootSupervisor && Kamon.filter(filterName, fullPath)
     val trackingGroups = if(isRootSupervisor) List() else Akka.actorGroups.filter(group => Kamon.filter(group, fullPath))
 
-    CellInfo(fullPath, isRouter, isRoutee, isTracked, trackingGroups, actorCellCreation)
+    CellInfo(fullPath, isRouter, isRoutee, isTracked, trackingGroups, actorCellCreation, system.name, cell.props.dispatcher)
   }
 }

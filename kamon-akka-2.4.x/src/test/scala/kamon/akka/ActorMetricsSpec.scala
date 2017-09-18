@@ -55,7 +55,7 @@ class ActorMetricsSpec extends TestKit(ActorSystem("ActorMetricsSpec")) with Wor
 
       val timings = expectMsgType[TrackedTimings]
       val processingTimeDistribution = actorProcessingTimeMetric.
-        refine("path" -> "ActorMetricsSpec/user/measuring-processing-time").distribution()
+        refine(actorTags("ActorMetricsSpec/user/measuring-processing-time")).distribution()
 
       processingTimeDistribution.count should be(1L)
       processingTimeDistribution.buckets.size should be(1L)
@@ -70,7 +70,7 @@ class ActorMetricsSpec extends TestKit(ActorSystem("ActorMetricsSpec")) with Wor
 
       trackedActor ! Ping
       expectMsg(Pong)
-      actorErrorsMetric.refine("path" -> "ActorMetricsSpec/user/measuring-errors").value() should be(10)
+      actorErrorsMetric.refine(actorTags("ActorMetricsSpec/user/measuring-errors")).value() should be(10)
     }
 
     "record the mailbox-size" in new ActorMetricsFixtures {
@@ -82,7 +82,9 @@ class ActorMetricsSpec extends TestKit(ActorSystem("ActorMetricsSpec")) with Wor
       val timings = expectMsgType[TrackedTimings]
       expectMsg(Pong)
 
-      val mailboxSizeDistribution = actorMailboxSizeMetric.refine("path" -> "ActorMetricsSpec/user/measuring-mailbox-size").distribution()
+      val mailboxSizeDistribution = actorMailboxSizeMetric
+        .refine(actorTags("ActorMetricsSpec/user/measuring-mailbox-size")).distribution()
+
       mailboxSizeDistribution.min should be(0L +- 1L)
       mailboxSizeDistribution.max should be(11L +- 1L)
     }
@@ -92,7 +94,9 @@ class ActorMetricsSpec extends TestKit(ActorSystem("ActorMetricsSpec")) with Wor
       trackedActor ! TrackTimings(sleep = Some(100 millis))
       val timings = expectMsgType[TrackedTimings]
 
-      val timeInMailboxDistribution = actorTimeInMailboxMetric.refine("path" -> "ActorMetricsSpec/user/measuring-time-in-mailbox").distribution()
+      val timeInMailboxDistribution = actorTimeInMailboxMetric
+        .refine(actorTags("ActorMetricsSpec/user/measuring-time-in-mailbox")).distribution()
+
       timeInMailboxDistribution.count should be(1L)
       timeInMailboxDistribution.buckets.head.frequency should be(1L)
       timeInMailboxDistribution.buckets.head.value should be(timings.approximateTimeInMailbox +- 10.millis.toNanos)
@@ -113,6 +117,13 @@ class ActorMetricsSpec extends TestKit(ActorSystem("ActorMetricsSpec")) with Wor
 
   override protected def afterAll(): Unit = shutdown()
 
+  def actorTags(path: String): Map[String, String] =
+    Map(
+      "path" -> path,
+      "system" -> "ActorMetricsSpec",
+      "dispatcher" -> "akka.actor.default-dispatcher"
+    )
+
   trait ActorMetricsFixtures {
 
     def createTestActor(name: String, resetState: Boolean = false): ActorRef = {
@@ -125,10 +136,12 @@ class ActorMetricsSpec extends TestKit(ActorSystem("ActorMetricsSpec")) with Wor
 
       // Cleanup all the metric recording instruments:
       if(resetState) {
-        actorTimeInMailboxMetric.refine("path" -> s"ActorMetricsSpec/user/$name").distribution(resetState = true)
-        actorProcessingTimeMetric.refine("path" -> s"ActorMetricsSpec/user/$name").distribution(resetState = true)
-        actorMailboxSizeMetric.refine("path" -> s"ActorMetricsSpec/user/$name").distribution(resetState = true)
-        actorErrorsMetric.refine("path" -> s"ActorMetricsSpec/user/$name").value(resetState = true)
+        val tags = actorTags(s"ActorMetricsSpec/user/$name")
+
+        actorTimeInMailboxMetric.refine(tags).distribution(resetState = true)
+        actorProcessingTimeMetric.refine(tags).distribution(resetState = true)
+        actorMailboxSizeMetric.refine(tags).distribution(resetState = true)
+        actorErrorsMetric.refine(tags).value(resetState = true)
       }
 
       actor
