@@ -36,12 +36,9 @@ class ExecutorsRegistrationSpec extends WordSpec with Matchers with MetricInspec
       val registeredUThreadPool = Executors.register("unconfigurable-thread-pool", JavaExecutors.unconfigurableExecutorService(JavaExecutors.newFixedThreadPool(1)))
       val registeredUScheduled = Executors.register("unconfigurable-scheduled-thread-pool", JavaExecutors.unconfigurableScheduledExecutorService(JavaExecutors.newScheduledThreadPool(1)))
 
-      forkJoinPoolParallelism.valuesForTag("name") should contain only(
+      Threads.valuesForTag("name") should contain only(
         "java-fjp",
-        "scala-fjp"
-      )
-
-      threadPoolSize.valuesForTag("name")  should contain only(
+        "scala-fjp",
         "thread-pool",
         "scheduled-thread-pool",
         "single-thread-pool",
@@ -58,6 +55,10 @@ class ExecutorsRegistrationSpec extends WordSpec with Matchers with MetricInspec
       registeredSingleScheduled.cancel()
       registeredUThreadPool.cancel()
       registeredUScheduled.cancel()
+
+      Threads.valuesForTag("name") shouldBe empty
+      Tasks.valuesForTag("name") shouldBe empty
+      Settings.valuesForTag("name") shouldBe empty
     }
   }
 }

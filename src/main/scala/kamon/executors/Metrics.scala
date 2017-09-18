@@ -15,36 +15,26 @@
 
 package kamon.executors
 
-import kamon.metric.{Counter, Gauge, Histogram}
+import kamon.metric.{Gauge, Histogram}
 import kamon.{Kamon, Tags}
 
 object Metrics {
 
-
-  /**
-    *
-    *  Metrics for ForkJoinPool executors:
-    *
-    */
-  val forkJoinPoolParallelism = Kamon.gauge("executor.fork-join-pool.parallelism")
-  val forkJoinPoolSize = Kamon.histogram("executor.fork-join-pool.size")
-  val forkJoinPoolActiveThreads = Kamon.histogram("executor.fork-join-pool.active-threads")
-  val forkJoinPoolRunningThreads = Kamon.histogram("executor.fork-join-pool.running-threads")
-  val forkJoinPoolQueuedTasks = Kamon.histogram("executor.fork-join-pool.queued-tasks")
-  val forkJoinPoolSubmittedTasks = Kamon.histogram("executor.fork-join-pool.submitted-tasks")
-
+  val Threads = Kamon.histogram("executor.threads")
+  val Tasks = Kamon.histogram("executor.tasks")
+  val Settings = Kamon.gauge("executor.settings")
 
   def forForkJoinPool(name: String, tags: Tags): ForkJoinPoolMetrics = {
-    val poolTags = tags + ("name" -> name)
+    val poolTags = tags + ("type" -> "fjp", "name" -> name)
 
     ForkJoinPoolMetrics(
       poolTags,
-      forkJoinPoolParallelism.refine(poolTags),
-      forkJoinPoolSize.refine(poolTags),
-      forkJoinPoolActiveThreads.refine(poolTags),
-      forkJoinPoolRunningThreads.refine(poolTags),
-      forkJoinPoolQueuedTasks.refine(poolTags),
-      forkJoinPoolSubmittedTasks.refine(poolTags)
+      Settings.refine(poolTags + ("setting" -> "parallelism")),
+      Threads.refine(poolTags + ("state" -> "total")),
+      Threads.refine(poolTags + ("state" -> "active")),
+      Threads.refine(poolTags + ("state" -> "running")),
+      Tasks.refine(poolTags + ("state" -> "queued")),
+      Tasks.refine(poolTags + ("state" -> "submitted"))
     )
   }
 
@@ -52,51 +42,41 @@ object Metrics {
     runningThreads: Histogram, queuedTasks: Histogram, submittedTasks: Histogram) {
 
     def cleanup(): Unit = {
-      forkJoinPoolParallelism.remove(poolTags)
-      forkJoinPoolSize.remove(poolTags)
-      forkJoinPoolActiveThreads.remove(poolTags)
-      forkJoinPoolRunningThreads.remove(poolTags)
-      forkJoinPoolQueuedTasks.remove(poolTags)
-      forkJoinPoolSubmittedTasks.remove(poolTags)
+      Settings.remove(poolTags + ("setting" -> "parallelism"))
+      Threads.remove(poolTags + ("state" -> "total"))
+      Threads.remove(poolTags + ("state" -> "active"))
+      Threads.remove(poolTags + ("state" -> "running"))
+      Tasks.remove(poolTags + ("state" -> "queued"))
+      Tasks.remove(poolTags  + ("state" -> "submitted"))
     }
   }
 
-
-
-  /**
-    *
-    *  Metrics for Thread Pool executors:
-    *
-    */
-  val threadPoolCorePoolSize = Kamon.gauge("executor.thread-pool.size")
-  val threadPoolMaxPoolSize = Kamon.gauge("executor.thread-pool.parallelism")
-  val threadPoolSize = Kamon.histogram("executor.thread-pool.active-threads")
-  val threadPoolActiveThreads = Kamon.histogram("executor.thread-pool.running-threads")
-  val threadPoolProcessedTasks = Kamon.counter("executor.thread-pool.queued-tasks")
-
-
   def forThreadPool(name: String, tags: Tags): ThreadPoolMetrics = {
-    val poolTags = tags + ("name" -> name)
+    val poolTags = tags + ("type" -> "tpe", "name" -> name)
 
     ThreadPoolMetrics(
       poolTags,
-      threadPoolCorePoolSize.refine(poolTags),
-      threadPoolMaxPoolSize.refine(poolTags),
-      threadPoolSize.refine(poolTags),
-      threadPoolActiveThreads.refine(poolTags),
-      threadPoolProcessedTasks.refine(poolTags)
+      Settings.refine(poolTags + ("setting" -> "core-pool-size")),
+      Settings.refine(poolTags + ("setting" -> "max-pool-size")),
+      Threads.refine(poolTags + ("state" -> "total")),
+      Threads.refine(poolTags + ("state" -> "active")),
+      Tasks.refine(poolTags + ("state" -> "submitted")),
+      Tasks.refine(poolTags + ("state" -> "completed")),
+      Tasks.refine(poolTags + ("state" -> "queued"))
     )
   }
 
   case class ThreadPoolMetrics(poolTags: Tags, corePoolSize: Gauge, maxPoolSize: Gauge, poolSize: Histogram,
-    activeThreads: Histogram, processedTasks: Counter) {
+    activeThreads: Histogram, submittedTasks: Histogram, processedTasks: Histogram, queuedTasks: Histogram) {
 
     def cleanup(): Unit = {
-      threadPoolCorePoolSize.remove(poolTags)
-      threadPoolMaxPoolSize.remove(poolTags)
-      threadPoolSize.remove(poolTags)
-      threadPoolActiveThreads.remove(poolTags)
-      threadPoolProcessedTasks.remove(poolTags)
+      Settings.remove(poolTags + ("setting" -> "core-pool-size"))
+      Settings.remove(poolTags + ("setting" -> "max-pool-size"))
+      Threads.remove(poolTags + ("state" -> "total"))
+      Threads.remove(poolTags + ("state" -> "active"))
+      Tasks.remove(poolTags + ("state" -> "submitted"))
+      Tasks.remove(poolTags + ("state" -> "completed"))
+      Tasks.remove(poolTags + ("state" -> "queued"))
     }
   }
 

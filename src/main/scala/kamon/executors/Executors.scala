@@ -18,7 +18,7 @@ package executors
 
 import java.util.concurrent.{ExecutorService, ThreadPoolExecutor, TimeUnit, ForkJoinPool => JavaForkJoinPool}
 
-import kamon.util.Registration
+import kamon.util.{DifferentialSource, Registration}
 
 import scala.concurrent.forkjoin.{ForkJoinPool => ScalaForkJoinPool}
 import org.slf4j.LoggerFactory
@@ -91,21 +91,17 @@ object Executors {
 
   private def threadPoolSampler(name: String, tags: Tags, pool: ThreadPoolExecutor): ExecutorSampler = new ExecutorSampler {
     val poolMetrics = Metrics.forThreadPool(name, tags)
-    var lastSeenTaskCount = pool.getTaskCount
-
-    private def taskCount(): Long = synchronized {
-      val currentTaskCount = pool.getTaskCount
-      val diff = currentTaskCount - lastSeenTaskCount
-      lastSeenTaskCount = currentTaskCount
-      if(diff >= 0) diff else 0
-    }
+    val taskCountSource = DifferentialSource(() => pool.getTaskCount)
+    val completedTaskCountSource = DifferentialSource(() => pool.getCompletedTaskCount)
 
     def sample(): Unit = {
       poolMetrics.corePoolSize.set(pool.getCorePoolSize)
       poolMetrics.maxPoolSize.set(pool.getMaximumPoolSize)
       poolMetrics.poolSize.record(pool.getPoolSize)
       poolMetrics.activeThreads.record(pool.getActiveCount)
-      poolMetrics.processedTasks.increment(taskCount())
+      poolMetrics.submittedTasks.record(taskCountSource.get())
+      poolMetrics.processedTasks.record(completedTaskCountSource.get())
+      poolMetrics.queuedTasks.record(pool.getQueue.size())
     }
 
     def cleanup(): Unit =
