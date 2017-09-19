@@ -1,11 +1,8 @@
 package kamon.jdbc.instrumentation
 
-import java.util.concurrent.Callable
-
-import kamon.agent.libs.net.bytebuddy.implementation.bind.annotation.{RuntimeType, SuperCall, This}
 import kamon.agent.scala.KamonInstrumentation
+import kamon.jdb.instrumentation.{ExecuteQueryMethodInterceptor, ExecuteUpdateMethodInterceptor}
 import org.mariadb.jdbc.MariaDbServerPreparedStatement
-import org.mariadb.jdbc.internal.queryresults.resultset.MariaSelectResultSet
 
 import scala.util.Try
 
@@ -13,52 +10,26 @@ class MariaPreparedStatementServerInstrumentation extends KamonInstrumentation {
 
   forTargetType("org.mariadb.jdbc.MariaDbServerPreparedStatement") { builder =>
     builder
-      .withInterceptorFor(method("executeQuery"), ExecuteQueryMethodInterceptor)
-      .withInterceptorFor(method("executeUpdate"), ExecuteUpdateMethodInterceptor)
+      .withAdvisorFor(method("executeQuery"), classOf[ExecuteQueryMethodInterceptor])
+      .withAdvisorFor(method("executeUpdate"), classOf[ExecuteUpdateMethodInterceptor])
       .build
   }
 
   override def isActive: Boolean =
     Try(Class.forName("org.mariadb.jdbc.MariaDbServerPreparedStatement", false, this.getClass.getClassLoader)).isSuccess
+}
 
+object MariaPreparedStatementServerInstrumentationMethods {
+  import java.lang.invoke.{MethodHandles, MethodType}
 
-  object ExecuteQueryMethodInterceptor {
-    import MariaPreparedStatementServerInstrumentationMethods._
+  private val lookup = MethodHandles.lookup
+  private val executeInternalMethodType = MethodType.methodType(classOf[Boolean], classOf[Int], classOf[Boolean])
 
-    @RuntimeType
-    def execute(@SuperCall callable: Callable[_], @This preparedStatement:Object): Any = {
-      val pps = preparedStatement.asInstanceOf[MariaDbServerPreparedStatement]
+  private lazy val executeInternal =
+    lookup.findVirtual(classOf[MariaDbServerPreparedStatement], "executeInternal", executeInternalMethodType)
 
-      if(executeInternal(pps))
-        pps.getResultSet
-      else
-        MariaSelectResultSet.createEmptyResultSet
-    }
-  }
-
-  object ExecuteUpdateMethodInterceptor {
-    import MariaPreparedStatementServerInstrumentationMethods._
-
-    @RuntimeType
-    def executeUpdate(@SuperCall callable: Callable[_], @This preparedStatement:Object): Any = {
-      val pps = preparedStatement.asInstanceOf[MariaDbServerPreparedStatement]
-      executeInternal(pps)
-      pps.getUpdateCount
-    }
-  }
-
-  object MariaPreparedStatementServerInstrumentationMethods {
-    import java.lang.invoke.{MethodHandles, MethodType}
-
-    private val lookup = MethodHandles.lookup
-    private val executeInternalMethodType = MethodType.methodType(classOf[Boolean], classOf[Int], classOf[Boolean])
-
-    private lazy val executeInternal =
-      lookup.findVirtual(classOf[MariaDbServerPreparedStatement], "executeInternal", executeInternalMethodType)
-
-    def executeInternal(instance:MariaDbServerPreparedStatement): Boolean =
-      executeInternal.invokeExact(instance.getFetchSize, false)
-  }
+  def executeInternal(instance:MariaDbServerPreparedStatement): Boolean =
+    executeInternal.invokeExact(instance.getFetchSize, false)
 }
 
 
