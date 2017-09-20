@@ -18,9 +18,10 @@ val kamonCore           = "io.kamon"            %% "kamon-core"               % 
 val kamonTestkit        = "io.kamon"            %% "kamon-testkit"            % "1.0.0-RC1"
 val scalaExtension      = "io.kamon"            %% "agent-scala-extension"    % "0.0.6-experimental"
 
-val h2                  = "com.h2database"      % "h2"                        % "1.4.182"
-val mariaDB             = "org.mariadb.jdbc"    % "mariadb-java-client"       % "1.5.9"
-val hikariCP            = "com.zaxxer"          % "HikariCP" % "2.6.2"
+val h2                  = "com.h2database"            % "h2"                        % "1.4.182"
+val mariaConnector      = "org.mariadb.jdbc"          % "mariadb-java-client"       % "1.5.9"
+val mariaDB4j           = "ch.vorburger.mariaDB4j"    % "mariaDB4j"                 % "2.2.3"
+val hikariCP            = "com.zaxxer"                % "HikariCP"                  % "2.6.2"
 
 lazy val root = (project in file("."))
   .enablePlugins(JavaAgent)
@@ -30,5 +31,5 @@ lazy val root = (project in file("."))
   .settings(
       libraryDependencies ++=
         compileScope(kamonCore, scalaExtension) ++
-        providedScope(hikariCP, mariaDB) ++
-        testScope(h2, kamonTestkit, scalatest, slf4jApi, logbackClassic))
+        providedScope(hikariCP, mariaConnector) ++
+        testScope(h2, mariaDB4j, kamonTestkit, scalatest, slf4jApi, logbackClassic))

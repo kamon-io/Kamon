@@ -27,6 +27,8 @@ import scala.util.Try
 
 class PreparedStatementServerInstrumentation extends KamonInstrumentation {
 
+
+
   forTargetType("org.mariadb.jdbc.MariaDbServerPreparedStatement") { builder =>
     builder
       .withInterceptorFor(method("executeQuery"), ExecuteQueryMethodInterceptor)
@@ -34,15 +36,17 @@ class PreparedStatementServerInstrumentation extends KamonInstrumentation {
       .build
   }
 
-  override def isActive: Boolean =
-    Try(Class.forName("org.mariadb.jdbc.MariaDbServerPreparedStatement", false, this.getClass.getClassLoader)).isSuccess
+//  Class.forName("org.mariadb.jdbc.MariaDbServerPreparedStatement")
 
+//  override def isActive: Boolean = {
+//    Try(Class.forName("org.mariadb.jdbc.MariaDbServerPreparedStatement")).isSuccess
+//  }
 
   object ExecuteQueryMethodInterceptor {
     import Methods._
 
     @RuntimeType
-    def execute(@SuperCall callable: Callable[_], @This preparedStatement:Object): ResultSet = {
+    def executeQuery(@SuperCall callable: Callable[_], @This preparedStatement:Object): ResultSet = {
       val pps = preparedStatement.asInstanceOf[MariaDbServerPreparedStatement]
 
       if(executeInternal(pps))
@@ -66,15 +70,12 @@ class PreparedStatementServerInstrumentation extends KamonInstrumentation {
   object Methods {
     import java.lang.invoke.MethodHandles
 
-    private val lookup = MethodHandles.lookup
-
     val executeInternalMethod = classOf[MariaDbServerPreparedStatement]
       .getDeclaredMethod("executeInternal", classOf[Int], classOf[Boolean])
 
     executeInternalMethod.setAccessible(true)
 
-    private val executeInternal =
-      lookup.unreflect(executeInternalMethod)
+    private val executeInternal = MethodHandles.lookup.unreflect(executeInternalMethod)
 
     def executeInternal(instance:MariaDbServerPreparedStatement): Boolean =
       executeInternal.invokeExact(instance, instance.getFetchSize, false)

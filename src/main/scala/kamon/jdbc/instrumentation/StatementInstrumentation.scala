@@ -33,6 +33,8 @@ import kamon.util.Clock
 class StatementInstrumentation extends KamonInstrumentation {
 
 
+  override def order() = 1000
+
   /**
     * Instrument:
     *
@@ -94,6 +96,7 @@ object StatementInstrumentation {
   }
 
   def track(callable: Callable[_], target: Any, sql: String, statementType: String): Any = {
+    println(sql +" " + "" + statementType)
     val poolTags = Option(target.asInstanceOf[HasConnectionPoolMetrics].connectionPoolMetrics)
       .map(_.tags)
       .getOrElse(Map.empty[String, String])
