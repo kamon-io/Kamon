@@ -36,11 +36,9 @@ class PreparedStatementServerInstrumentation extends KamonInstrumentation {
       .build
   }
 
-//  Class.forName("org.mariadb.jdbc.MariaDbServerPreparedStatement")
-
-//  override def isActive: Boolean = {
-//    Try(Class.forName("org.mariadb.jdbc.MariaDbServerPreparedStatement")).isSuccess
-//  }
+  override def isActive: Boolean = {
+    Try(Class.forName("org.mariadb.jdbc.MariaDbServerPreparedStatement")).isSuccess
+ }
 
   object ExecuteQueryMethodInterceptor {
     import Methods._

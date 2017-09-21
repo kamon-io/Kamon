@@ -96,7 +96,6 @@ object StatementInstrumentation {
   }
 
   def track(callable: Callable[_], target: Any, sql: String, statementType: String): Any = {
-    println(sql +" " + "" + statementType)
     val poolTags = Option(target.asInstanceOf[HasConnectionPoolMetrics].connectionPoolMetrics)
       .map(_.tags)
       .getOrElse(Map.empty[String, String])
@@ -199,5 +198,3 @@ object ExecuteBatchMethodInterceptor {
   def executeUpdate(@SuperCall callable: Callable[_], @This statement:Statement): Any =
     StatementInstrumentation.track(callable, statement,  statement.toString , StatementTypes.Batch)
 }
-
-
