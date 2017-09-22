@@ -15,7 +15,7 @@
 
 package kamon.jdbc.instrumentation
 
-import java.sql.{PreparedStatement, Statement}
+import java.sql.{PreparedStatement, SQLException, Statement}
 import java.util.concurrent.Callable
 
 import kamon.Kamon
@@ -84,6 +84,19 @@ class StatementInstrumentation extends KamonInstrumentation {
       .withInterceptorFor(method("executeUpdate"), ExecuteUpdateMethodInterceptor)
       .withInterceptorFor(anyMethod("executeBatch", "executeLargeBatch"), ExecuteBatchMethodInterceptor)
       .build()
+  }
+
+  /**
+    * Instrument:
+    *
+    * org.mariadb.jdbc.MariaDbServerPreparedStatement::executeQuery
+    * org.mariadb.jdbc.MariaDbServerPreparedStatement::executeUpdate
+    */
+  forTargetType("org.mariadb.jdbc.MariaDbServerPreparedStatement") { builder =>
+    builder
+      .withInterceptorFor(method("executeQuery"), ExecuteQueryMethodInterceptor)
+      .withInterceptorFor(method("executeUpdate"), ExecuteUpdateMethodInterceptor)
+      .build
   }
 }
 
@@ -195,6 +208,7 @@ object ExecuteUpdateMethodInterceptor {
 object ExecuteBatchMethodInterceptor {
 
   @RuntimeType
+  @throws(classOf[SQLException])
   def executeUpdate(@SuperCall callable: Callable[_], @This statement:Statement): Any =
     StatementInstrumentation.track(callable, statement,  statement.toString , StatementTypes.Batch)
 }
