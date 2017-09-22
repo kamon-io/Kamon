@@ -42,7 +42,7 @@ object ExecuteQueryMethodInterceptor {
 
 /**
   * Interceptor for org.mariadb.jdbc.MariaDbServerPreparedStatement::executeUpdate
-  * */
+  */
 object ExecuteUpdateMethodInterceptor {
   import Methods._
 
