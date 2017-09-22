@@ -19,7 +19,7 @@ package kamon.jaeger
 import java.nio.ByteBuffer
 import java.util
 
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.Config
 import com.uber.jaeger.agent.thrift.Agent
 import com.uber.jaeger.thriftjava.{Batch, Process, Tag, TagType, Span => JaegerSpan}
 import kamon.trace.IdentityProvider.Identifier
@@ -29,31 +29,27 @@ import org.apache.thrift.protocol.TCompactProtocol
 
 import scala.util.Try
 
-object Jaeger {
-  private val KEY_HOST = "kamon.jaeger.host"
-  private val KEY_PORT = "kamon.jaeger.port"
-  private val config = ConfigFactory.load
-}
-
 class Jaeger() extends SpanReporter {
-  import Jaeger._
-  private var host = config.getString(KEY_HOST)
-  private var port = config.getInt(KEY_PORT)
 
-  override def reconfigure(newConfig: Config): Unit = {
-    if (newConfig.hasPath(KEY_HOST)) host = newConfig.getString(KEY_HOST)
-    if (newConfig.hasPath(KEY_PORT)) port = newConfig.getInt(KEY_PORT)
+  @volatile private var jaegerClient:JaegerClient = _
+
+  reconfigure(Kamon.config())
+
+  override def reconfigure(newConfig: Config):Unit = {
+    val jaegerConfig = newConfig.getConfig("kamon.jaeger")
+    val host = jaegerConfig.getString("host")
+    val port = jaegerConfig.getInt("port")
+
+    jaegerClient = new JaegerClient(host, port)
   }
+
   override def start(): Unit = {}
   override def stop(): Unit = {}
-
-  val jaegerClient = new JaegerClient(host, port)
 
   override def reportSpans(spans: Seq[Span.FinishedSpan]): Unit = {
     spans.foreach(s => jaegerClient.sendSpan(s))
   }
 }
-
 
 class JaegerClient(host: String, port: Int) {
   import scala.collection.JavaConverters._
