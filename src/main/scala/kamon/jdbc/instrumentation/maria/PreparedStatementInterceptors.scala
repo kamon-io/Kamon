@@ -19,22 +19,21 @@ import java.sql.{ResultSet, SQLException}
 import java.util.concurrent.Callable
 
 import kamon.agent.libs.net.bytebuddy.implementation.bind.annotation.{RuntimeType, SuperCall, This}
-import org.mariadb.jdbc.MariaDbServerPreparedStatement
+import kamon.jdbc.instrumentation.bridge.MariaPreparedStatement
 import org.mariadb.jdbc.internal.queryresults.resultset.MariaSelectResultSet
 
 /**
   * Interceptor for org.mariadb.jdbc.MariaDbServerPreparedStatement::executeQuery
   */
 object ExecuteQueryMethodInterceptor {
-  import Methods._
 
   @RuntimeType
   @throws(classOf[SQLException])
   def executeQuery(@SuperCall callable: Callable[_], @This preparedStatement:Object): ResultSet = {
-    val pps = preparedStatement.asInstanceOf[MariaDbServerPreparedStatement]
+    val pps = preparedStatement.asInstanceOf[MariaPreparedStatement]
 
-    if(executeInternal(pps))
-      pps.getResultSet
+    if(pps.kamon$executeInternal(pps.kamon$getFetchSize(), canHaveResultset = false))
+      pps.kamon$getResultSet()
     else
       MariaSelectResultSet.createEmptyResultSet
   }
@@ -44,28 +43,13 @@ object ExecuteQueryMethodInterceptor {
   * Interceptor for org.mariadb.jdbc.MariaDbServerPreparedStatement::executeUpdate
   */
 object ExecuteUpdateMethodInterceptor {
-  import Methods._
 
   @RuntimeType
   @throws(classOf[SQLException])
   def executeUpdate(@SuperCall callable: Callable[_], @This preparedStatement:Object): Int = {
-    val pps = preparedStatement.asInstanceOf[MariaDbServerPreparedStatement]
-    executeInternal(pps)
-    pps.getUpdateCount
+    val pps = preparedStatement.asInstanceOf[MariaPreparedStatement]
+    pps.kamon$executeInternal(pps.kamon$getFetchSize(), canHaveResultset = false)
+    pps.kamon$getUpdateCount()
   }
-}
-
-object Methods {
-  import java.lang.invoke.MethodHandles
-
-  val executeInternalMethod = classOf[MariaDbServerPreparedStatement]
-    .getDeclaredMethod("executeInternal", classOf[Int], classOf[Boolean])
-
-  executeInternalMethod.setAccessible(true)
-
-  private val executeInternal = MethodHandles.lookup.unreflect(executeInternalMethod)
-
-  def executeInternal(instance:MariaDbServerPreparedStatement): Boolean =
-    executeInternal.invokeExact(instance, instance.getFetchSize, false)
 }
 

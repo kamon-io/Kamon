@@ -24,6 +24,7 @@ import kamon.agent.libs.net.bytebuddy.implementation.bind.annotation
 import kamon.agent.libs.net.bytebuddy.implementation.bind.annotation.{RuntimeType, SuperCall, This}
 import kamon.agent.scala.KamonInstrumentation
 import kamon.jdbc.instrumentation.StatementInstrumentation.StatementTypes
+import kamon.jdbc.instrumentation.bridge.MariaPreparedStatement
 import kamon.jdbc.instrumentation.mixin.{HasConnectionPoolMetrics, HasConnectionPoolMetricsMixin}
 import kamon.jdbc.{Jdbc, Metrics}
 import kamon.trace.SpanCustomizer
@@ -94,9 +95,10 @@ class StatementInstrumentation extends KamonInstrumentation {
     */
   forTargetType("org.mariadb.jdbc.MariaDbServerPreparedStatement") { builder =>
     builder
+      .withBridge(classOf[MariaPreparedStatement])
       .withInterceptorFor(method("executeQuery"), ExecuteQueryMethodInterceptor)
       .withInterceptorFor(method("executeUpdate"), ExecuteUpdateMethodInterceptor)
-      .build
+      .build()
   }
 }
 
