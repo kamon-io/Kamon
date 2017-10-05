@@ -27,6 +27,7 @@ import kamon.metric._
 import kamon.system.{JmxMetricBuilder, Metric, MetricBuilder}
 import org.slf4j.Logger
 
+import collection.JavaConverters._
 /**
  *  Garbage Collection metrics, as reported by JMX:
  *    - @see [[http://docs.oracle.com/javase/8/docs/api/java/lang/management/GarbageCollectorMXBean.html "GarbageCollectorMXBean"]]
@@ -57,6 +58,22 @@ final case class GCNotificationListener(gcMetrics: GarbageCollectorMetrics) exte
       val compositeData = notification.getUserData.asInstanceOf[CompositeData]
       val info = GarbageCollectionNotificationInfo.from(compositeData)
       gcMetrics.forCollector(sanitizeCollectorName(info.getGcName)).gcTime.record(info.getGcInfo.getDuration)
+
+      val before = info.getGcInfo.getMemoryUsageBeforeGc.asScala
+      val after = info.getGcInfo.getMemoryUsageAfterGc.asScala
+
+      val spaceTags = Map(
+        "old"       -> Set("tenured", "old"),
+        "survivor"  -> Set("survivor")
+      )
+
+      spaceTags.keys.foreach { spaceTag =>
+        val space = before.keys.find(spaceName => spaceTags(spaceTag).exists(tag => spaceName.toLowerCase.contains(tag)))
+        space.foreach { sp =>
+          val promoted = after(sp).getUsed - before(sp).getUsed
+          if(promoted > 0) gcMetrics.gcPromotionMetric.refine("space", spaceTag).record(promoted)
+        }
+      }
     }
   }
 
@@ -66,11 +83,12 @@ final case class GCNotificationListener(gcMetrics: GarbageCollectorMetrics) exte
 
 final case class GarbageCollectorMetrics(metricName: String) {
   val gcTimeMetric = Kamon.histogram(metricName, MeasurementUnit.time.milliseconds)
+  val gcPromotionMetric = Kamon.histogram(s"$metricName.promotion", MeasurementUnit.none) //TODO different name
 
   def forCollector(collector: String): GarbageCollectorMetrics = {
     val collectorTags = Map("component" -> "system-metrics",  "collector" -> collector)
-    GarbageCollectorMetrics(collectorTags, gcTimeMetric.refine(collectorTags))
+    GarbageCollectorMetrics(collectorTags, gcTimeMetric.refine(collectorTags), gcTimeMetric.refine((collectorTags)))
   }
 
-  case class GarbageCollectorMetrics(tags: Map[String, String], gcTime: Histogram)
+  case class GarbageCollectorMetrics(tags: Map[String, String], gcTime: Histogram, gcPromotion: Histogram)
 }
