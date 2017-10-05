@@ -68,7 +68,7 @@ object Executors {
 
   def register(name: String, tags: Tags, sampler: ExecutorSampler): Registration = {
     val samplingInterval = Kamon.config().getDuration("kamon.executors.sample-interval")
-    val scheduledFuture = Kamon.scheduler().schedule(sampleTask(sampler), samplingInterval.toMillis, TimeUnit.MILLISECONDS)
+    val scheduledFuture = Kamon.scheduler().scheduleAtFixedRate(sampleTask(sampler), samplingInterval.toMillis, samplingInterval.toMillis, TimeUnit.MILLISECONDS)
 
     new Registration {
       override def cancel(): Boolean = {
