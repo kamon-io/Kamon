@@ -1,5 +1,5 @@
 /* =========================================================================================
- * Copyright © 2013-2016 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2017 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -14,9 +14,8 @@
  */
 
 resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
-val kamonCore = "io.kamon" %% "kamon-core" % "1.0.0-RC1-5e0b768f139fc2c5e75d6b5060bd4d0aa48092b0"
+val kamonCore = "io.kamon" %% "kamon-core" % "1.0.0-RC1"
 val nanohttpd = "org.nanohttpd" % "nanohttpd" % "2.3.1"
-
 
 lazy val root = (project in file("."))
   .settings(name := "kamon-prometheus")
@@ -24,4 +23,3 @@ lazy val root = (project in file("."))
     libraryDependencies ++=
       compileScope(kamonCore, nanohttpd) ++
       testScope(scalatest, logbackClassic))
-
