@@ -16,7 +16,7 @@
 
 package kamon.influxdb
 
-import java.net.InetSocketAddress
+import java.net.{InetSocketAddress, URLEncoder}
 
 import akka.actor._
 import akka.event.{ Logging, LoggingAdapter }
@@ -74,7 +74,7 @@ class InfluxDBHttpClient(config: Config, httpClient: HttpClient) extends InfluxD
       withAuth
     }
 
-    val queryString = query.map { case (key, value) ⇒ s"$key=$value" } match {
+    val queryString = query.map { case (key, value) ⇒ s"$key=${URLEncoder.encode(value, "UTF-8")}" } match {
       case Nil ⇒ ""
       case xs  ⇒ s"?${xs.mkString("&")}"
     }
