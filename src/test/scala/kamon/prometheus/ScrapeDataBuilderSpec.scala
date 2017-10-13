@@ -17,8 +17,8 @@ class ScrapeDataBuilderSpec extends WordSpec with Matchers {
         .appendGauges(Seq(gaugeOne))
         .build() should include {
           """
-            |# TYPE counter_one_seconds counter
-            |counter_one_seconds 10.0
+            |# TYPE counter_one_seconds_total counter
+            |counter_one_seconds_total 10.0
             |# TYPE gauge_one_seconds gauge
             |gauge_one_seconds 20.0
           """.stripMargin.trim()
@@ -34,8 +34,8 @@ class ScrapeDataBuilderSpec extends WordSpec with Matchers {
       .appendGauges(Seq(gaugeOne))
       .build() should include {
         """
-          |# TYPE counter_one_bytes counter
-          |counter_one_bytes 10.0
+          |# TYPE counter_one_bytes_total counter
+          |counter_one_bytes_total 10.0
           |# TYPE gauge_one_bytes gauge
           |gauge_one_bytes 20.0
         """.stripMargin.trim()
@@ -51,8 +51,8 @@ class ScrapeDataBuilderSpec extends WordSpec with Matchers {
       .appendGauges(Seq(gaugeOne))
       .build() should include {
         """
-          |# TYPE counter_one_seconds counter
-          |counter_one_seconds{tag_with_dots="value"} 10.0
+          |# TYPE counter_one_seconds_total counter
+          |counter_one_seconds_total{tag_with_dots="value"} 10.0
           |# TYPE gauge_one_seconds gauge
           |gauge_one_seconds 20.0
         """.stripMargin.trim()
@@ -66,11 +66,11 @@ class ScrapeDataBuilderSpec extends WordSpec with Matchers {
 
       builder().appendCounters(Seq(counterOne, counterTwo, counterOneWithTag)).build() should include {
         """
-          |# TYPE counter_one counter
-          |counter_one 10.0
-          |counter_one{t="v"} 30.0
-          |# TYPE counter_two counter
-          |counter_two 20.0
+          |# TYPE counter_one_total counter
+          |counter_one_total 10.0
+          |counter_one_total{t="v"} 30.0
+          |# TYPE counter_two_total counter
+          |counter_two_total 20.0
         """.stripMargin.trim()
       }
 

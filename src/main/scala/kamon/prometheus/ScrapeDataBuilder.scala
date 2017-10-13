@@ -33,12 +33,12 @@ class ScrapeDataBuilder(prometheusConfig: PrometheusReporter.Configuration) {
     builder.toString()
 
   def appendCounters(counters: Seq[MetricValue]): ScrapeDataBuilder = {
-    counters.groupBy(_.name).foreach(appendValueMetric("counter"))
+    counters.groupBy(_.name).foreach(appendValueMetric("counter", alwaysIncreasing = true))
     this
   }
 
   def appendGauges(gauges: Seq[MetricValue]): ScrapeDataBuilder = {
-    gauges.groupBy(_.name).foreach(appendValueMetric("gauge"))
+    gauges.groupBy(_.name).foreach(appendValueMetric("gauge", alwaysIncreasing = false))
     this
   }
 
@@ -47,12 +47,12 @@ class ScrapeDataBuilder(prometheusConfig: PrometheusReporter.Configuration) {
     this
   }
 
-
-
-  private def appendValueMetric(metricType: String)(group: (String, Seq[MetricValue])): Unit = {
+  private def appendValueMetric(metricType: String, alwaysIncreasing: Boolean)(group: (String, Seq[MetricValue])): Unit = {
     val (metricName, snapshots) = group
     val unit = snapshots.headOption.map(_.unit).getOrElse(none)
-    val normalizedMetricName = normalizeMetricName(metricName, unit)
+    val normalizedMetricName = normalizeMetricName(metricName, unit) + {
+      if(alwaysIncreasing) "_total" else ""
+    }
 
     append("# TYPE ").append(normalizedMetricName).append(" ").append(metricType).append("\n")
 
