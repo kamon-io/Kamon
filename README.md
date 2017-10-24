@@ -21,7 +21,7 @@ the InfluxDB module is in the classpath and automatically starts it.
 
 ### Getting Started
 
-Kamon akka-spm module is currently available for Scala 2.10, 2.11 and 2.12.
+Kamon influxdb module is currently available for Scala 2.10, 2.11 and 2.12.
 
 Supported releases and dependencies are shown below.
 
@@ -65,7 +65,7 @@ kamon.influxdb {
 }
 ```
 
-By default, the module sends data to InfluxDB through its HTTP interface. While
+By default, the module sends data to InfluxDB through its HTTP(S) interface. While
 the HTTP instance has a richer API compared to UDP, it is much slower to send
 data through it. It is possible to optimize the sends by setting a higher
 `kamon.influxdb.max-packet-size`, the default is 16 kB.

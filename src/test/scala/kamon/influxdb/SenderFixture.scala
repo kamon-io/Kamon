@@ -18,17 +18,13 @@ package kamon.influxdb
 
 import java.lang.management.ManagementFactory
 
-import akka.actor.{ ActorRef, Props }
-import akka.io.Udp
-import akka.testkit.TestProbe
 import kamon.Kamon
-import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
-import kamon.metric.instrument.{ Counter, InstrumentFactory }
-import kamon.metric.{ Entity, EntityRecorderFactory, EntitySnapshot, GenericEntityRecorder }
+import kamon.metric.instrument.{Counter, InstrumentFactory}
+import kamon.metric.{Entity, EntityRecorderFactory, GenericEntityRecorder}
 import kamon.util.MilliTimestamp
 
-trait SenderFixture {
-  val hostName = ManagementFactory.getRuntimeMXBean.getName.split('@')(1)
+trait SenderFixture extends TagNormalizer {
+  val hostName = normalize(ManagementFactory.getRuntimeMXBean.getName.split('@')(1))
 
   val testEntity = Entity("user/kamon", "test")
   val from = MilliTimestamp.now

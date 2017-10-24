@@ -16,9 +16,9 @@
 
 package kamon.influxdb
 
-import akka.actor.{ Actor, ActorRef, Props }
+import akka.actor.{Actor, ActorRef, Props}
 import akka.event.Logging
-import akka.io.{ IO, Udp }
+import akka.io.{IO, Udp}
 import com.typesafe.config.Config
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 
@@ -35,7 +35,7 @@ abstract class InfluxDBMetricsPacker(config: Config) extends Actor {
   protected val client: ActorRef = config.getString("protocol") match {
     case "udp" ⇒
       context.actorOf(Props(new InfluxDBUdpClient(config, udpRef)))
-    case "http" ⇒
+    case "http" | "https" ⇒
       context.actorOf(Props(new InfluxDBHttpClient(config, httpClient)))
     case unknownProtocol ⇒
       throw new UnsupportedOperationException(s"Protocol $unknownProtocol is not supported by Kamon InfluxDB Client")

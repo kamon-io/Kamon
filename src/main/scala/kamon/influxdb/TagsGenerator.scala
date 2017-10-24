@@ -25,7 +25,7 @@ import kamon.metric.{ Entity, MetricKey }
 import collection.JavaConversions._
 import scala.collection.immutable.ListMap
 
-trait TagsGenerator {
+trait TagsGenerator extends TagNormalizer{
   protected val config: Config
 
   protected val application = config.getString("application-name")
@@ -81,16 +81,6 @@ trait TagsGenerator {
       else acc ++ Map(s"p$integral" -> percentile)
     }
   }
-
-  protected def normalize(s: String): String =
-    s
-      .replace(": ", "-")
-      .replace(":\\", "-")
-      .replace(":", "-")
-      .replace(" ", "-")
-      .replace("\\", "-")
-      .replace("/", "-")
-      .replace(".", "-")
 
   private def average(histogram: Histogram.Snapshot): BigDecimal = {
     if (histogram.numberOfMeasurements == 0) BigDecimal(0.0)

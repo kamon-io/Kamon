@@ -39,7 +39,7 @@ class MockHttpClient extends HttpClient {
   }
 }
 
-class HttpBasedInfluxDBMetricSenderSpec extends BaseKamonSpec("udp-based-influxdb-metric-sender-spec") {
+class HttpBasedInfluxDBMetricSenderSpec extends BaseKamonSpec("http-based-influxdb-metric-sender-spec") {
   override lazy val config = ConfigFactory.load("http_test")
 
   class HttpSenderFixture(influxDBConfig: Config) extends SenderFixture {
@@ -75,6 +75,7 @@ class HttpBasedInfluxDBMetricSenderSpec extends BaseKamonSpec("udp-based-influxd
 
   "the HttpSender" should {
     val influxDBConfig = config.getConfig("kamon.influxdb")
+    val influxDBConfigHttps = config.getConfig("kamon.influxdb-https")
     val configWithAuthAndRetention = config.getConfig("kamon.influx-with-auth-and-rp")
     val configWithHostnameOverride = config.getConfig("kamon.influxdb-hostname-override")
     val configWithMeasurementsEnabled = config.getConfig("kamon.influxdb-with-measurements")
@@ -101,6 +102,14 @@ class HttpBasedInfluxDBMetricSenderSpec extends BaseKamonSpec("udp-based-influxd
       val query = getQueryParameters(request.uri)
 
       query("db") shouldBe influxDBConfig.getString("database")
+    }
+
+    "support HTTPS protocol" in new HttpSenderFixture(influxDBConfigHttps) {
+      val testrecorder = buildRecorder("user/kamon")
+      val http = setup(Map(testEntity -> testrecorder.collect(collectionContext)))
+      val request = getHttpRequest(http)
+
+      request.uri should startWith("https://")
     }
 
     "use authentication and retention policy are defined" in new HttpSenderFixture(configWithAuthAndRetention) {
