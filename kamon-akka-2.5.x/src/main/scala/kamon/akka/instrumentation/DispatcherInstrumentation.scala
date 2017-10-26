@@ -17,27 +17,55 @@
 package akka.kamon.instrumentation
 
 import java.lang.reflect.Method
-import java.util.concurrent.{ExecutorService, ForkJoinPool, TimeUnit}
+import java.util.concurrent.ExecutorService
 
 import akka.actor.{ActorContext, ActorSystem, ActorSystemImpl, Props}
-import akka.dispatch.ForkJoinExecutorConfigurator.AkkaForkJoinPool
+import akka.dispatch.forkjoin.ForkJoinPool
 import akka.dispatch._
 import akka.kamon.instrumentation.LookupDataAware.LookupData
-import kamon.{Kamon, Tags}
+import kamon.Kamon
 import kamon.akka.Akka
-import kamon.executors.Executors.ExecutorSampler
-import kamon.executors.{Executors, Metrics}
+import kamon.executors.Executors.{ForkJoinPoolMetrics, InstrumentedExecutorService}
+import kamon.executors.Executors
 import kamon.util.Registration
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
 
 import scala.collection.concurrent.TrieMap
-import scala.util.Try
+
+object DispatcherInstrumentation {
+  private val registeredDispatchers = TrieMap.empty[String, Registration]
+
+  implicit object AkkaFJPMetrics extends ForkJoinPoolMetrics[ForkJoinPool] {
+    override def minThreads(pool: ForkJoinPool)     = 0
+    override def maxThreads(pool: ForkJoinPool)     = pool.getParallelism
+    override def activeThreads(pool: ForkJoinPool)  = pool.getActiveThreadCount
+    override def poolSize(pool: ForkJoinPool)       = pool.getPoolSize
+    override def queuedTasks(pool: ForkJoinPool)    = pool.getQueuedSubmissionCount
+    override def parallelism(pool: ForkJoinPool)    = pool.getParallelism
+  }
+
+}
 
 
 @Aspect
 class DispatcherInstrumentation {
-  import DispatcherInstrumentation.registeredDispatchers
+  import DispatcherInstrumentation._
+
+  @Pointcut("execution(* akka.dispatch.ForkJoinExecutorConfigurator.ForkJoinExecutorServiceFactory.createExecutorService())")
+  def executorConstruction(): Unit = {}
+
+  @Around("executorConstruction()")
+  def aroundexecutorConstruction(pjp: ProceedingJoinPoint): ExecutorService = {
+    val executor = pjp.proceed().asInstanceOf[ExecutorService]
+
+    val instrumentedExecutor: ExecutorService = executor match {
+      case afjp: ForkJoinPool => new InstrumentedExecutorService[ForkJoinPool](afjp)
+      case _                      => Executors.instrument(executor)
+    }
+
+    instrumentedExecutor
+  }
 
   @Pointcut("execution(* akka.actor.ActorSystemImpl.start(..)) && this(system)")
   def actorSystemInitialization(system: ActorSystemImpl): Unit = {}
@@ -78,30 +106,12 @@ class DispatcherInstrumentation {
   private def registerDispatcher(dispatcherName: String, executorService: ExecutorService, system: ActorSystem): Unit = {
     if(Kamon.filter(Akka.DispatcherFilterName, dispatcherName)) {
       val additionalTags = Map("actor-system" -> system.name)
-      val dispatcherRegistration = executorService match {
-        case afjp: AkkaForkJoinPool => Executors.register(dispatcherName, additionalTags, akkaForkJoinPoolSampler(dispatcherName, additionalTags, afjp))
-        case other                  => Executors.register(dispatcherName, additionalTags, other)
-      }
+      val dispatcherRegistration = Executors.register(dispatcherName, additionalTags, executorService)
 
       registeredDispatchers.put(dispatcherName, dispatcherRegistration)
     }
   }
 
-  private def akkaForkJoinPoolSampler(name: String, tags: Tags, pool: AkkaForkJoinPool): ExecutorSampler = new ExecutorSampler {
-    val poolMetrics = Metrics.forForkJoinPool(name, tags)
-
-    def sample(): Unit = {
-      poolMetrics.parallelism.set(pool.getParallelism)
-      poolMetrics.activeThreads.record(pool.getActiveThreadCount)
-      poolMetrics.poolSize.record(pool.getPoolSize)
-      poolMetrics.queuedTasks.record(pool.getQueuedTaskCount)
-      poolMetrics.runningThreads.record(pool.getRunningThreadCount)
-      poolMetrics.submittedTasks.record(pool.getQueuedSubmissionCount)
-    }
-
-    def cleanup(): Unit =
-      poolMetrics.cleanup()
-  }
 
   @Pointcut("execution(* akka.dispatch.Dispatchers.lookup(..)) && this(dispatchers) && args(dispatcherName)")
   def dispatchersLookup(dispatchers: ActorSystemAware, dispatcherName: String) = {}
@@ -174,9 +184,7 @@ class DispatcherInstrumentation {
   }
 }
 
-object DispatcherInstrumentation {
-  private val registeredDispatchers = TrieMap.empty[String, Registration]
-}
+
 
 @Aspect
 class DispatcherMetricCollectionInfoIntoDispatcherMixin {

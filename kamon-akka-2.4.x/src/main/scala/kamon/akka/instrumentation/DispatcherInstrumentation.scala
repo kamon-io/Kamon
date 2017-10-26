@@ -37,6 +37,14 @@ import scala.collection.concurrent.TrieMap
 class DispatcherInstrumentation {
   import DispatcherInstrumentation.registeredDispatchers
 
+  @Pointcut("execution(* akka.dispatch.ForkJoinExecutorConfigurator.ForkJoinExecutorServiceFactory.createExecutorService())")
+  def executorConstruction(): Unit = {}
+
+  @Around("executorConstruction()")
+  def aroundexecutorConstruction(pjp: ProceedingJoinPoint): ExecutorService = Executors.instrument(
+    pjp.proceed().asInstanceOf[ExecutorService]
+  )
+
   @Pointcut("execution(* akka.actor.ActorSystemImpl.start(..)) && this(system)")
   def actorSystemInitialization(system: ActorSystemImpl): Unit = {}
 
