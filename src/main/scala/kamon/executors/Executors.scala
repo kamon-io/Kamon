@@ -16,12 +16,14 @@
 package kamon
 package executors
 
-import java.util.concurrent.{ExecutorService, ThreadPoolExecutor, TimeUnit, ForkJoinPool => JavaForkJoinPool}
-
-import kamon.util.{DifferentialSource, Registration}
+import java.util.concurrent.{Callable, ExecutorService, ThreadPoolExecutor, TimeUnit, ForkJoinPool => JavaForkJoinPool}
 
 import scala.concurrent.forkjoin.{ForkJoinPool => ScalaForkJoinPool}
+import kamon.metric.{LongAdderCounter, MeasurementUnit}
+import kamon.util.{DifferentialSource, Registration}
 import org.slf4j.LoggerFactory
+
+import scala.collection.JavaConverters._
 
 import scala.util.Try
 
@@ -31,8 +33,10 @@ object Executors {
   private val DelegatedExecutor = Class.forName("java.util.concurrent.Executors$DelegatedExecutorService")
   private val FinalizableDelegated = Class.forName("java.util.concurrent.Executors$FinalizableDelegatedExecutorService")
   private val DelegateScheduled = Class.forName("java.util.concurrent.Executors$DelegatedScheduledExecutorService")
-  private val JavaForkJoinPool = classOf[JavaForkJoinPool]
-  private val ScalaForkJoinPool = classOf[ScalaForkJoinPool]
+  private val JavaFJP = classOf[JavaForkJoinPool]
+  private val ScalaFJP = classOf[ScalaForkJoinPool]
+  private val InstrumentedExecutor = classOf[InstrumentedExecutorService[_]]
+
 
   /**
     *   Extension trait for externally instrumented ExecutorService instances. Meant to be used when a ExecutorService
@@ -57,9 +61,9 @@ object Executors {
     case executor: ExecutorService if isAssignableTo(executor, DelegatedExecutor)     => register(name, tags, unwrap(executor))
     case executor: ExecutorService if isAssignableTo(executor, FinalizableDelegated)  => register(name, tags, unwrap(executor))
     case executor: ExecutorService if isAssignableTo(executor, DelegateScheduled)     => register(name, tags, unwrap(executor))
-    case executor: ExecutorService if isAssignableTo(executor, JavaForkJoinPool)      => register(name, tags, javaForkJoinPoolSampler(name, tags, executor.asInstanceOf[JavaForkJoinPool]))
-    case executor: ExecutorService if isAssignableTo(executor, ScalaForkJoinPool)     => register(name, tags, scalaForkJoinPoolSampler(name, tags, executor.asInstanceOf[ScalaForkJoinPool]))
     case threadPool: ThreadPoolExecutor                                               => register(name, tags, threadPoolSampler(name, tags, threadPool))
+    case executor: ExecutorService if isAssignableTo(executor, classOf[InstrumentedExecutorService[_]])  =>
+      register(name, tags, forkJoinPoolSampler(name, tags, executor.asInstanceOf[InstrumentedExecutorService[_]]))
 
     case anyOther                       =>
       logger.error("Cannot register unsupported executor service [{}]", anyOther)
@@ -90,55 +94,46 @@ object Executors {
     expectedClass.isAssignableFrom(executor.getClass)
 
   private def threadPoolSampler(name: String, tags: Tags, pool: ThreadPoolExecutor): ExecutorSampler = new ExecutorSampler {
-    val poolMetrics = Metrics.forThreadPool(name, tags)
+    val poolMetrics = Metrics.threadPool(name, tags)
     val taskCountSource = DifferentialSource(() => pool.getTaskCount)
     val completedTaskCountSource = DifferentialSource(() => pool.getCompletedTaskCount)
 
     def sample(): Unit = {
-      poolMetrics.corePoolSize.set(pool.getCorePoolSize)
-      poolMetrics.maxPoolSize.set(pool.getMaximumPoolSize)
+      poolMetrics.poolMin.set(pool.getCorePoolSize)
+      poolMetrics.poolMax.set(pool.getMaximumPoolSize)
       poolMetrics.poolSize.record(pool.getPoolSize)
       poolMetrics.activeThreads.record(pool.getActiveCount)
-      poolMetrics.submittedTasks.record(taskCountSource.get())
-      poolMetrics.processedTasks.record(completedTaskCountSource.get())
+      poolMetrics.submittedTasks.increment(taskCountSource.get())
+      poolMetrics.processedTasks.increment(completedTaskCountSource.get())
       poolMetrics.queuedTasks.record(pool.getQueue.size())
+      poolMetrics.corePoolSize.set(pool.getCorePoolSize())
     }
 
     def cleanup(): Unit =
       poolMetrics.cleanup()
   }
 
-  private def javaForkJoinPoolSampler(name: String, tags: Tags, pool: JavaForkJoinPool): ExecutorSampler = new ExecutorSampler {
-    val poolMetrics = Metrics.forForkJoinPool(name, tags)
+  private def forkJoinPoolSampler(name: String, tags: Tags, pool: InstrumentedExecutorService[_]): ExecutorSampler = new ExecutorSampler {
+    val poolMetrics = Metrics.forkJoinPool(name, tags)
+
+    val taskCountSource = DifferentialSource(() => pool.submittedTasks)
+    val completedTaskCountSource = DifferentialSource(() => pool.processedTasks)
 
     def sample(): Unit = {
-      poolMetrics.parallelism.set(pool.getParallelism)
-      poolMetrics.activeThreads.record(pool.getActiveThreadCount)
-      poolMetrics.poolSize.record(pool.getPoolSize)
-      poolMetrics.queuedTasks.record(pool.getQueuedTaskCount)
-      poolMetrics.runningThreads.record(pool.getRunningThreadCount)
-      poolMetrics.submittedTasks.record(pool.getQueuedSubmissionCount)
+      poolMetrics.poolMax.set(pool.maxThreads)
+      poolMetrics.poolMin.set(pool.minThreads)
+      poolMetrics.parallelism.set(pool.parallelism)
+      poolMetrics.poolSize.record(pool.poolSize)
+      poolMetrics.activeThreads.record(pool.activeThreads)
+      poolMetrics.submittedTasks.increment(taskCountSource.get())
+      poolMetrics.processedTasks.increment(completedTaskCountSource.get())
+      poolMetrics.queuedTasks.record(pool.queuedTasks)
     }
 
     def cleanup(): Unit =
       poolMetrics.cleanup()
   }
 
-  private def scalaForkJoinPoolSampler(name: String, tags: Tags, pool: ScalaForkJoinPool): ExecutorSampler = new ExecutorSampler {
-    val poolMetrics = Metrics.forForkJoinPool(name, tags)
-
-    def sample(): Unit = {
-        poolMetrics.parallelism.set(pool.getParallelism)
-        poolMetrics.activeThreads.record(pool.getActiveThreadCount)
-        poolMetrics.poolSize.record(pool.getPoolSize)
-        poolMetrics.queuedTasks.record(pool.getQueuedTaskCount)
-        poolMetrics.runningThreads.record(pool.getRunningThreadCount)
-        poolMetrics.submittedTasks.record(pool.getQueuedSubmissionCount)
-      }
-
-    def cleanup(): Unit =
-      poolMetrics.cleanup()
-  }
 
   private def sampleTask(executorSampler: ExecutorSampler): Runnable = new Runnable {
     override def run(): Unit = executorSampler.sample()
@@ -152,4 +147,132 @@ object Executors {
 
   def unwrap(delegatedExecutor: ExecutorService): ExecutorService =
     delegatedExecutorField.get(delegatedExecutor).asInstanceOf[ExecutorService]
+
+
+  trait ForkJoinPoolMetrics[T]{
+    def minThreads(pool: T): Int
+    def maxThreads(pool: T): Int
+    def activeThreads(pool: T): Int
+    def poolSize(pool: T): Int
+    def queuedTasks(pool: T): Int
+    def parallelism(pool: T): Int
+  }
+
+  object ForkJoinPoolMetrics {
+    def apply[T: ForkJoinPoolMetrics]: ForkJoinPoolMetrics[T] = implicitly
+  }
+
+  implicit class PoolMetricsProvider[A: ForkJoinPoolMetrics](pool: A) {
+    def minThreads    = ForkJoinPoolMetrics[A].minThreads(pool)
+    def maxThreads    = ForkJoinPoolMetrics[A].maxThreads(pool)
+    def activeThreads = ForkJoinPoolMetrics[A].activeThreads(pool)
+    def poolSize      = ForkJoinPoolMetrics[A].poolSize(pool)
+    def queuedTasks   = ForkJoinPoolMetrics[A].queuedTasks(pool)
+    def parallelism   = ForkJoinPoolMetrics[A].parallelism(pool)
+  }
+
+  implicit object JavaFJPMetrics extends ForkJoinPoolMetrics[JavaForkJoinPool] {
+    override def minThreads(pool: JavaForkJoinPool): Int     = 0
+    override def maxThreads(pool: JavaForkJoinPool): Int     = pool.getParallelism
+    override def activeThreads(pool: JavaForkJoinPool): Int  = pool.getActiveThreadCount
+    override def poolSize(pool: JavaForkJoinPool): Int       = pool.getPoolSize
+    override def queuedTasks(pool: JavaForkJoinPool): Int    = pool.getQueuedSubmissionCount
+    override def parallelism(pool: JavaForkJoinPool): Int    = pool.getParallelism
+  }
+
+  implicit object ScalaFJPMetrics extends ForkJoinPoolMetrics[ScalaForkJoinPool] {
+    override def minThreads(pool: ScalaForkJoinPool): Int     = 0
+    override def maxThreads(pool: ScalaForkJoinPool): Int     = pool.getParallelism
+    override def activeThreads(pool: ScalaForkJoinPool): Int  = pool.getActiveThreadCount
+    override def poolSize(pool: ScalaForkJoinPool): Int       = pool.getPoolSize
+    override def queuedTasks(pool: ScalaForkJoinPool): Int    = pool.getQueuedSubmissionCount
+    override def parallelism(pool: ScalaForkJoinPool): Int    = pool.getParallelism
+  }
+
+  def instrument(inner: ExecutorService): ExecutorService = inner match {
+    case jfjp: JavaForkJoinPool   => new InstrumentedExecutorService(jfjp)(JavaFJPMetrics)
+    case sfjp: ScalaForkJoinPool  => new InstrumentedExecutorService(sfjp)(ScalaFJPMetrics)
+    case _                        => inner
+  }
+
+  class InstrumentedExecutorService[T <: ExecutorService](wrapped: T)(implicit metrics: ForkJoinPoolMetrics[T]) extends ExecutorService {
+
+
+    private var submittedTasksCounter: LongAdderCounter = new LongAdderCounter("", Map.empty, MeasurementUnit.none)
+    private var completedTasksCounter: LongAdderCounter = new LongAdderCounter("", Map.empty, MeasurementUnit.none)
+
+
+    def submittedTasks = submittedTasksCounter.snapshot(false).value
+    def processedTasks = completedTasksCounter.snapshot(false).value
+
+    def minThreads    = wrapped.minThreads
+    def maxThreads    = wrapped.maxThreads
+    def activeThreads = wrapped.activeThreads
+    def poolSize      = wrapped.poolSize
+    def queuedTasks   = wrapped.queuedTasks
+
+    def parallelism   = wrapped.parallelism
+
+    override def submit(task: Runnable) = {
+      submittedTasksCounter.increment
+      wrapped.submit(wrapRunnable(task, completedTasksCounter))
+    }
+
+    override def submit[T](task: Runnable, result: T) =
+    {
+      submittedTasksCounter.increment
+      wrapped.submit(wrapRunnable(task, completedTasksCounter), result)
+    }
+
+    override def submit[T](task: Callable[T]) = {
+      submittedTasksCounter.increment
+      wrapped.submit(wrapCallable(task, completedTasksCounter))
+    }
+
+    override def isTerminated = wrapped.isTerminated
+
+    override def invokeAll[T](tasks: java.util.Collection[_ <: Callable[T]]) = {
+      submittedTasksCounter.increment(tasks.size())
+      wrapped.invokeAll(tasks.asScala.map(task => wrapCallable(task, completedTasksCounter)).asJavaCollection)
+    }
+
+    override def invokeAll[T](tasks: java.util.Collection[_ <: Callable[T]], timeout: Long, unit: TimeUnit) = {
+      submittedTasksCounter.increment(tasks.size())
+      wrapped.invokeAll(tasks.asScala.map(task => wrapCallable(task, completedTasksCounter)).asJavaCollection,timeout, unit)
+    }
+
+    override def awaitTermination(timeout: Long, unit: TimeUnit) = wrapped.awaitTermination(timeout, unit)
+
+    override def shutdownNow() = wrapped.shutdownNow()
+
+    override def invokeAny[T](tasks: java.util.Collection[_ <: Callable[T]]) = wrapped.invokeAny(tasks)
+
+    override def invokeAny[T](tasks: java.util.Collection[_ <: Callable[T]], timeout: Long, unit: TimeUnit) = wrapped.invokeAny(tasks, timeout, unit)
+
+    override def shutdown() = wrapped.shutdown()
+
+    override def isShutdown = wrapped.isShutdown
+
+    override def execute(command: Runnable) = wrapped.execute(wrapRunnable(command, completedTasksCounter))
+
+    private def wrapCallable[T](task: Callable[T], metric: LongAdderCounter): Callable[T] = new Callable[T] {
+      override def call(): T = {
+        val result = try {
+          task.call()
+        } finally metric.increment()
+        result
+      }
+    }
+
+    private def wrapRunnable(task: Runnable, metric: LongAdderCounter): Runnable = new Runnable {
+      override def run(): Unit = {
+        try {
+          task.run()
+        } finally metric.increment()
+      }
+    }
+  }
+
 }
+
+

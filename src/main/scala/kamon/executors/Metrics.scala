@@ -15,69 +15,101 @@
 
 package kamon.executors
 
-import kamon.metric.{Gauge, Histogram}
+import kamon.metric.{Counter, Gauge, Histogram}
 import kamon.{Kamon, Tags}
 
 object Metrics {
 
+  val Pool = Kamon.gauge("executor.pool")
   val Threads = Kamon.histogram("executor.threads")
-  val Tasks = Kamon.histogram("executor.tasks")
-  val Settings = Kamon.gauge("executor.settings")
+  val Tasks = Kamon.counter("executor.tasks")
+  val Queue = Kamon.histogram("executor.queue")
 
-  def forForkJoinPool(name: String, tags: Tags): ForkJoinPoolMetrics = {
+  def forkJoinPool(name: String, tags: Tags): ForkJoinPoolMetrics = {
     val poolTags = tags + ("type" -> "fjp", "name" -> name)
 
     ForkJoinPoolMetrics(
       poolTags,
-      Settings.refine(poolTags + ("setting" -> "parallelism")),
-      Threads.refine(poolTags + ("state" -> "total")),
-      Threads.refine(poolTags + ("state" -> "active")),
-      Threads.refine(poolTags + ("state" -> "running")),
-      Tasks.refine(poolTags + ("state" -> "queued")),
-      Tasks.refine(poolTags + ("state" -> "submitted"))
-    )
-  }
-
-  case class ForkJoinPoolMetrics(poolTags: Tags, parallelism: Gauge, poolSize: Histogram, activeThreads: Histogram,
-    runningThreads: Histogram, queuedTasks: Histogram, submittedTasks: Histogram) {
-
-    def cleanup(): Unit = {
-      Settings.remove(poolTags + ("setting" -> "parallelism"))
-      Threads.remove(poolTags + ("state" -> "total"))
-      Threads.remove(poolTags + ("state" -> "active"))
-      Threads.remove(poolTags + ("state" -> "running"))
-      Tasks.remove(poolTags + ("state" -> "queued"))
-      Tasks.remove(poolTags  + ("state" -> "submitted"))
-    }
-  }
-
-  def forThreadPool(name: String, tags: Tags): ThreadPoolMetrics = {
-    val poolTags = tags + ("type" -> "tpe", "name" -> name)
-
-    ThreadPoolMetrics(
-      poolTags,
-      Settings.refine(poolTags + ("setting" -> "core-pool-size")),
-      Settings.refine(poolTags + ("setting" -> "max-pool-size")),
+      Pool.refine(poolTags + ("setting" -> "min")),
+      Pool.refine(poolTags + ("setting" -> "max")),
       Threads.refine(poolTags + ("state" -> "total")),
       Threads.refine(poolTags + ("state" -> "active")),
       Tasks.refine(poolTags + ("state" -> "submitted")),
       Tasks.refine(poolTags + ("state" -> "completed")),
-      Tasks.refine(poolTags + ("state" -> "queued"))
+      Queue.refine(poolTags),
+      Pool.refine(poolTags + ("setting" -> "parallelism"))
     )
   }
 
-  case class ThreadPoolMetrics(poolTags: Tags, corePoolSize: Gauge, maxPoolSize: Gauge, poolSize: Histogram,
-    activeThreads: Histogram, submittedTasks: Histogram, processedTasks: Histogram, queuedTasks: Histogram) {
+  case class ForkJoinPoolMetrics(
+    poolTags: Tags,
+    poolMin: Gauge,
+    poolMax: Gauge,
+    poolSize: Histogram,
+    activeThreads: Histogram,
+    submittedTasks: Counter,
+    processedTasks: Counter,
+    queuedTasks: Histogram,
+    parallelism: Gauge
+  ) {
 
     def cleanup(): Unit = {
-      Settings.remove(poolTags + ("setting" -> "core-pool-size"))
-      Settings.remove(poolTags + ("setting" -> "max-pool-size"))
+      Pool.remove(poolTags + ("setting" -> "min"))
+      Pool.remove(poolTags + ("setting" -> "max"))
       Threads.remove(poolTags + ("state" -> "total"))
       Threads.remove(poolTags + ("state" -> "active"))
       Tasks.remove(poolTags + ("state" -> "submitted"))
       Tasks.remove(poolTags + ("state" -> "completed"))
-      Tasks.remove(poolTags + ("state" -> "queued"))
+      Queue.remove(poolTags)
+      Pool.remove(poolTags + ("setting" -> "parallelism"))
     }
+
   }
+
+
+  def threadPool(name: String, tags: Tags): ThreadPoolMetrics = {
+    val poolTags = tags + ("type" -> "tpe", "name" -> name)
+
+    ThreadPoolMetrics(
+      poolTags,
+      Pool.refine(poolTags + ("setting" -> "min")),
+      Pool.refine(poolTags + ("setting" -> "max")),
+      Threads.refine(poolTags + ("state" -> "total")),
+      Threads.refine(poolTags + ("state" -> "active")),
+      Tasks.refine(poolTags + ("state" -> "submitted")),
+      Tasks.refine(poolTags + ("state" -> "completed")),
+      Queue.refine(poolTags),
+      Pool.refine(poolTags + ("setting" -> "corePoolSize"))
+    )
+  }
+
+
+  case class ThreadPoolMetrics(
+    poolTags: Tags,
+    poolMin: Gauge,
+    poolMax: Gauge,
+    poolSize: Histogram,
+    activeThreads: Histogram,
+    submittedTasks: Counter,
+    processedTasks: Counter,
+    queuedTasks: Histogram,
+    corePoolSize: Gauge
+  ) {
+
+    def cleanup(): Unit = {
+      Pool.remove(poolTags + ("setting" -> "min"))
+      Pool.remove(poolTags + ("setting" -> "max"))
+      Threads.remove(poolTags + ("state" -> "total"))
+      Threads.remove(poolTags + ("state" -> "active"))
+      Tasks.remove(poolTags + ("state" -> "submitted"))
+      Tasks.remove(poolTags + ("state" -> "completed"))
+      Queue.remove(poolTags)
+      Pool.remove(poolTags + ("setting" -> "corePoolSize"))
+    }
+
+  }
+
+
+
 
 }

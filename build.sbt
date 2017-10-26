@@ -12,14 +12,23 @@
  * and limitations under the License.
  * =========================================================================================
  */
+scalaVersion := "2.11.0"
+
+crossScalaVersions := Seq("2.10.6", "2.11.8", "2.12.0")
 
 resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
-val kamonCore    = "io.kamon" %% "kamon-core"    % "1.0.0-RC2-ead4fd7743895ffe1d34e37c23eceab575fb907e"
-val kamonTestkit = "io.kamon" %% "kamon-testkit" % "1.0.0-RC2-ead4fd7743895ffe1d34e37c23eceab575fb907e"
+val kamonCore    = "io.kamon" %% "kamon-core"    % "1.0.0-RC3"
+val kamonTestkit = "io.kamon" %% "kamon-testkit" % "1.0.0-RC3"
+val logback = "ch.qos.logback" % "logback-classic" % "1.2.3"
 
 lazy val root = (project in file("."))
   .settings(name := "kamon-executors")
+  .settings(aspectJSettings: _*)
   .settings(
       libraryDependencies ++=
-        compileScope(kamonCore) ++
-        testScope(scalatest, logbackClassic, kamonTestkit))
+      compileScope(kamonCore, logback) ++
+      testScope(scalatest, logbackClassic, kamonTestkit) ++
+      providedScope(aspectJ)
+  )
+
+fork := true

@@ -20,6 +20,7 @@ import java.util.concurrent.{Executors => JavaExecutors, ForkJoinPool => JavaFor
 
 import kamon.testkit.MetricInspection
 import Metrics._
+import kamon.Kamon
 
 import scala.concurrent.forkjoin.{ForkJoinPool => ScalaForkJoinPool}
 
@@ -27,8 +28,9 @@ class ExecutorsRegistrationSpec extends WordSpec with Matchers with MetricInspec
 
   "the Executors registration function" should {
     "accept all types of known executors" in {
-      val registeredJavaForkJoin  = Executors.register("java-fjp", new JavaForkJoinPool(1))
-      val registeredScalaForkJoin = Executors.register("scala-fjp", new ScalaForkJoinPool(1))
+
+
+      val registeredForkJoin  = Executors.register("fjp", Executors.instrument(new JavaForkJoinPool(1)))
       val registeredThreadPool = Executors.register("thread-pool", JavaExecutors.newFixedThreadPool(1))
       val registeredScheduled = Executors.register("scheduled-thread-pool", JavaExecutors.newScheduledThreadPool(1))
       val registeredSingle = Executors.register("single-thread-pool", JavaExecutors.newSingleThreadExecutor())
@@ -37,8 +39,7 @@ class ExecutorsRegistrationSpec extends WordSpec with Matchers with MetricInspec
       val registeredUScheduled = Executors.register("unconfigurable-scheduled-thread-pool", JavaExecutors.unconfigurableScheduledExecutorService(JavaExecutors.newScheduledThreadPool(1)))
 
       Threads.valuesForTag("name") should contain only(
-        "java-fjp",
-        "scala-fjp",
+        "fjp",
         "thread-pool",
         "scheduled-thread-pool",
         "single-thread-pool",
@@ -47,8 +48,7 @@ class ExecutorsRegistrationSpec extends WordSpec with Matchers with MetricInspec
         "unconfigurable-scheduled-thread-pool"
       )
 
-      registeredJavaForkJoin.cancel()
-      registeredScalaForkJoin.cancel()
+      registeredForkJoin.cancel()
       registeredThreadPool.cancel()
       registeredScheduled.cancel()
       registeredSingle.cancel()
@@ -58,7 +58,9 @@ class ExecutorsRegistrationSpec extends WordSpec with Matchers with MetricInspec
 
       Threads.valuesForTag("name") shouldBe empty
       Tasks.valuesForTag("name") shouldBe empty
-      Settings.valuesForTag("name") shouldBe empty
+      Pool.valuesForTag("name") shouldBe empty
+      Queue.valuesForTag("name") shouldBe empty
+
     }
   }
 }
