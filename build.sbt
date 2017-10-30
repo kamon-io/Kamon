@@ -13,59 +13,48 @@
  * =========================================================================================
  */
 
-val play23Version     = "2.3.10"
-val play24Version     = "2.4.8"
-val play25Version     = "2.5.4"
+val play24Version     = "2.4.11"
+val play25Version     = "2.5.16"
+val play26Version     = "2.6.3"
 
-val kamonCore         = "io.kamon"                  %%  "kamon-core"            % "1.0.0-RC1-1d0548cb8281202738d8d48cbe9cdd62cf209e21"
-val kamonScala        = "io.kamon"                  %%  "kamon-scala"           % "1.0.0-RC1-933bb552dab8c322a30363f8a56a4e66274367ce"
-
-//play 2.3.x
-val play23            = "com.typesafe.play"         %%  "play"                  % play23Version
-val playWS23          = "com.typesafe.play"         %%  "play-ws"               % play23Version
-val playTest23        = "org.scalatestplus"         %%  "play"                  % "1.2.0"
+val kamonCore         = "io.kamon"                  %%  "kamon-core"            % "1.0.0-RC1"
+val kamonScala        = "io.kamon"                  %%  "kamon-scala"           % "1.0.0-RC2-23f93e2b7fa4b431136be5ab9d6fc0caceb2e13f"
+val kamonTestkit      = "io.kamon"                  %%  "kamon-testkit"         % "1.0.0-RC1"
 
 //play 2.4.x
 val play24            = "com.typesafe.play"         %%  "play"                  % play24Version
 val playWS24          = "com.typesafe.play"         %%  "play-ws"               % play24Version
-val playTest24        = "org.scalatestplus"         %%  "play"                  % "1.4.0-M2"
+val playTest24        = "org.scalatestplus"         %%  "play"                  % "1.4.0"
 val typesafeConfig    = "com.typesafe"              %   "config"                % "1.2.1"
 
 //play 2.5.x
 val play25            = "com.typesafe.play"         %%  "play"                  % play25Version
 val playWS25          = "com.typesafe.play"         %%  "play-ws"               % play25Version
-val playTest25        = "org.scalatestplus.play"    %%  "scalatestplus-play"    % "1.5.0"
+val playTest25        = "org.scalatestplus.play"    %%  "scalatestplus-play"    % "2.0.0"
 
-val resolutionRepos = Seq("typesafe repo" at "http://repo.typesafe.com/typesafe/releases/")
+//play 2.6.x
+val play26            = "com.typesafe.play"         %%  "play"                  % play26Version
+val playWS26          = "com.typesafe.play"         %%  "play-ws"               % play26Version
+val playLogBack26     = "com.typesafe.play"         %%  "play-logback"          % play26Version
+val playTest26        = "org.scalatestplus.play"    %%  "scalatestplus-play"    % "3.0.0"
+val akkaHttp          = "com.typesafe.akka"         %%  "akka-http-core"        % "10.0.8"
+
 
 lazy val kamonPlay = Project("kamon-play", file("."))
   .settings(noPublishing: _*)
-  .aggregate(kamonPlay23, kamonPlay24, kamonPlay25)
+  .aggregate(kamonPlay24, kamonPlay25, kamonPlay26)
 
-lazy val kamonPlay23 = Project("kamon-play-23", file("kamon-play-2.3.x"))
-  .settings(Seq(
-      bintrayPackage := "kamon-play",
-      moduleName := "kamon-play-2.3",
-      scalaVersion := "2.11.8",
-      crossScalaVersions := Seq("2.10.6", "2.11.8"),
-      testGrouping in Test := singleTestPerJvm((definedTests in Test).value, (javaOptions in Test).value)))
-  .settings(aspectJSettings: _*)
-  .settings(resolvers ++= resolutionRepos)
-  .settings(
-    libraryDependencies ++=
-      compileScope(play23, playWS23, kamonCore, kamonScala) ++
-      providedScope(aspectJ) ++
-      testScope(playTest23))
 
 lazy val kamonPlay24 = Project("kamon-play-24", file("kamon-play-2.4.x"))
+  .enablePlugins(JavaAgent)
   .settings(Seq(
       bintrayPackage := "kamon-play",
       moduleName := "kamon-play-2.4",
       scalaVersion := "2.11.8",
       crossScalaVersions := Seq("2.10.6", "2.11.8"),
     testGrouping in Test := singleTestPerJvm((definedTests in Test).value, (javaOptions in Test).value)))
-  .settings(aspectJSettings: _*)
-  .settings(resolvers ++= resolutionRepos)
+  .settings(javaAgents += "org.aspectj" % "aspectjweaver"  % "1.8.10"  % "compile;test")
+  .settings(resolvers += Resolver.bintrayRepo("kamon-io", "snapshots"))
   .settings(
     libraryDependencies ++=
       compileScope(play24, playWS24, kamonCore, kamonScala) ++
@@ -73,19 +62,37 @@ lazy val kamonPlay24 = Project("kamon-play-24", file("kamon-play-2.4.x"))
       testScope(playTest24))
 
 lazy val kamonPlay25 = Project("kamon-play-25", file("kamon-play-2.5.x"))
+  .enablePlugins(JavaAgent)
   .settings(Seq(
       bintrayPackage := "kamon-play",
       moduleName := "kamon-play-2.5",
       scalaVersion := "2.11.8",
       crossScalaVersions := Seq("2.11.8"),
       testGrouping in Test := singleTestPerJvm((definedTests in Test).value, (javaOptions in Test).value)))
-  .settings(aspectJSettings: _*)
-  .settings(resolvers ++= resolutionRepos)
+  .settings(javaAgents += "org.aspectj" % "aspectjweaver"  % "1.8.10"  % "compile;test")
+  .settings(resolvers += Resolver.bintrayRepo("kamon-io", "snapshots"))
   .settings(
     libraryDependencies ++=
       compileScope(play25, playWS25, kamonCore, kamonScala) ++
       providedScope(aspectJ, typesafeConfig) ++
-      testScope(playTest25))
+      testScope(playTest25, kamonTestkit, logbackClassic))
+
+
+lazy val kamonPlay26 = Project("kamon-play-26", file("kamon-play-2.6.x"))
+  .enablePlugins(JavaAgent)
+  .settings(Seq(
+    bintrayPackage := "kamon-play",
+    moduleName := "kamon-play-2.6",
+    scalaVersion := "2.12.3",
+    crossScalaVersions := Seq("2.12.3"),
+    testGrouping in Test := singleTestPerJvm((definedTests in Test).value, (javaOptions in Test).value)))
+  .settings(javaAgents += "org.aspectj" % "aspectjweaver"  % "1.8.10"  % "compile;test")
+  .settings(resolvers += Resolver.bintrayRepo("kamon-io", "snapshots"))
+  .settings(
+    libraryDependencies ++=
+      compileScope(play26, playWS26, kamonCore, kamonScala) ++
+        providedScope(aspectJ, typesafeConfig, akkaHttp) ++
+        testScope(playTest26, playLogBack26, kamonTestkit))
 
 import sbt.Tests._
 def singleTestPerJvm(tests: Seq[TestDefinition], jvmSettings: Seq[String]): Seq[Group] =

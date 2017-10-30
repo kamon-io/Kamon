@@ -1,8 +1,8 @@
 language: scala
 script:
-  - ./travis-test.sh
+  - sbt test
 scala:
-   - 2.11.8
+   - 2.12.3
 jdk:
    - oraclejdk8
 before_script:

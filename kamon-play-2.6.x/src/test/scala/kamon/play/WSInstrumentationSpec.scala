@@ -50,7 +50,7 @@ class WSInstrumentationSpec extends PlaySpec with GuiceOneServerPerSuite
   with OptionValues
   with SpanReporter {
 
-  System.setProperty("config.file", "./kamon-play-2.5.x/src/test/resources/conf/application.conf")
+  System.setProperty("config.file", "./kamon-play-2.6.x/src/test/resources/conf/application.conf")
 
   override lazy val port: Port = 19003
 

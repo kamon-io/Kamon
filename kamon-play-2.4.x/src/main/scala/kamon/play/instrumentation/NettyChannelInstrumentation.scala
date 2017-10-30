@@ -1,4 +1,5 @@
-/* =========================================================================================
+/*
+ * =========================================================================================
  * Copyright © 2013-2017 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
@@ -13,19 +14,22 @@
  * =========================================================================================
  */
 
-package kamon.play.action
+package kamon.play.instrumentation
+
 
 import kamon.Kamon
-import kamon.trace.Span
-import play.api.mvc._
+import kamon.context.Context
+import org.aspectj.lang.annotation._
 
-import scala.concurrent.Future
+import scala.beans.BeanProperty
 
-case class OperationName[A](name: String)(action: Action[A]) extends Action[A] {
-  def apply(request: Request[A]): Future[Result] = {
-    Kamon.currentContext().get(Span.ContextKey).setOperationName(name)
-    action(request)
-  }
 
-  lazy val parser: BodyParser[A] = action.parser
+trait ChannelContextAware {
+  @volatile @BeanProperty var context:Context = Kamon.currentContext()
+}
+
+@Aspect
+class ChannelInstrumentation {
+  @DeclareMixin("org.jboss.netty.channel.Channel+")
+  def mixinChannelToContextAware: ChannelContextAware =  new ChannelContextAware{}
 }

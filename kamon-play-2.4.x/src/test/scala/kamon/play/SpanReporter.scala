@@ -13,19 +13,26 @@
  * =========================================================================================
  */
 
-package kamon.play.action
+package kamon.play
 
 import kamon.Kamon
-import kamon.trace.Span
-import play.api.mvc._
+import kamon.testkit.{Reconfigure, TestSpanReporter}
+import kamon.util.Registration
+import org.scalatest.BeforeAndAfterAll
 
-import scala.concurrent.Future
+trait SpanReporter extends Reconfigure {
+  self:BeforeAndAfterAll=>
 
-case class OperationName[A](name: String)(action: Action[A]) extends Action[A] {
-  def apply(request: Request[A]): Future[Result] = {
-    Kamon.currentContext().get(Span.ContextKey).setOperationName(name)
-    action(request)
+  @volatile var registration: Registration = _
+  val reporter = new TestSpanReporter()
+
+  override protected def beforeAll(): Unit = {
+    enableFastSpanFlushing()
+    sampleAlways()
+    registration = Kamon.addReporter(reporter)
   }
 
-  lazy val parser: BodyParser[A] = action.parser
+  override protected def afterAll(): Unit = {
+    registration.cancel()
+  }
 }

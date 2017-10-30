@@ -20,17 +20,13 @@ import javax.inject.Inject
 import kamon.Kamon
 import kamon.context.Context.create
 import kamon.play.action.OperationName
-import kamon.testkit.MetricInspection
 import kamon.trace.Span
 import kamon.trace.Span.TagValue
-import org.scalatest.concurrent.{Eventually, ScalaFutures}
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.concurrent.Eventually
 import org.scalatest.time.SpanSugar
-import org.scalatest.{BeforeAndAfterAll, OptionValues}
 import org.scalatestplus.play._
-import org.scalatestplus.play.guice.GuiceOneServerPerSuite
-import play.api.Application
 import play.api.http.HttpFilters
-import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.ws.{WSClient, WSRequest}
 import play.api.mvc.Results.{NotFound, Ok}
 import play.api.mvc._
@@ -39,23 +35,19 @@ import play.api.test._
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
-class RequestHandlerInstrumentationSpec extends PlaySpec with GuiceOneServerPerSuite
-  with ScalaFutures
+class RequestHandlerInstrumentationSpec extends PlaySpec with OneServerPerSuite
   with Eventually
   with SpanSugar
   with BeforeAndAfterAll
-  with MetricInspection
-  with OptionValues
   with SpanReporter {
 
-  System.setProperty("config.file", "./kamon-play-2.5.x/src/test/resources/conf/application.conf")
+  System.setProperty("config.file", "./kamon-play-2.4.x/src/test/resources/conf/application.conf")
 
   override lazy val port: Port = 19002
 
   implicit val executor: ExecutionContextExecutor = scala.concurrent.ExecutionContext.Implicits.global
 
-
-  val withRoutes: PartialFunction[(String, String), Handler] = {
+  val routes: PartialFunction[(String, String), Handler] = {
     case ("GET", "/ok") ⇒ Action { Ok }
     case ("GET", "/async") ⇒ Action.async { Future { Ok } }
     case ("GET", "/not-found") ⇒ Action { NotFound }
@@ -80,10 +72,9 @@ class RequestHandlerInstrumentationSpec extends PlaySpec with GuiceOneServerPerS
     ("logger.application", "OFF"))
 
 
-  override def fakeApplication(): Application = new GuiceApplicationBuilder()
-    .configure(additionalConfiguration)
-    .routes(withRoutes)
-    .build
+  override lazy val app: FakeApplication =
+    FakeApplication(withRoutes = routes, additionalConfiguration = additionalConfiguration)
+
 
   "the Request instrumentation" should {
     "propagate the current context and respond to the ok action" in {

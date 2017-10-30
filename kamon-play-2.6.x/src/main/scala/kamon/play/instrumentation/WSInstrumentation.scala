@@ -22,19 +22,18 @@ import kamon.trace.{Span, SpanCustomizer}
 import kamon.util.CallingThreadExecutionContext
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation.{Around, Aspect, Pointcut}
-import play.api.libs.ws.{WSRequest, WSResponse}
+import play.api.libs.ws.StandaloneWSRequest
 
 import scala.concurrent.Future
 
 @Aspect
 class WSInstrumentation {
 
-  @Pointcut("execution(* play.api.libs.ws.ning.NingWSRequest.execute()) && this(request)")
-  def onExecuteRequest(request: WSRequest): Unit = {}
+  @Pointcut("execution(* play.api.libs.ws.WSRequestExecutor$$anon$2.apply(..)) && args(request)")
+  def onExecuteWSRequest(request: StandaloneWSRequest): Unit = {}
 
-  @Around("onExecuteRequest(request)")
-  def aroundExecuteRequest(pjp: ProceedingJoinPoint, request: WSRequest): Any = {
-
+  @Around("onExecuteWSRequest(request)")
+  def aroundExecuteRequest(pjp: ProceedingJoinPoint, request: StandaloneWSRequest): Any = {
     val currentContext = Kamon.currentContext()
     val clientSpan = currentContext.get(Span.ContextKey)
 
@@ -51,7 +50,7 @@ class WSInstrumentation {
         .start()
 
       val newContext = currentContext.withKey(Span.ContextKey, clientRequestSpan)
-      val responseFuture = pjp.proceed(Array(encodeContext(newContext, request))).asInstanceOf[Future[WSResponse]]
+      val responseFuture = pjp.proceed(Array(encodeContext(newContext, request))).asInstanceOf[Future[play.api.libs.ws.StandaloneWSResponse]]
 
       responseFuture.transform(
         s = response => {

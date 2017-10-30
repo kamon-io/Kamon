@@ -19,7 +19,7 @@ import kamon.Kamon
 import kamon.trace.Span
 import play.api.mvc._
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 case class OperationName[A](name: String)(action: Action[A]) extends Action[A] {
   def apply(request: Request[A]): Future[Result] = {
@@ -28,4 +28,5 @@ case class OperationName[A](name: String)(action: Action[A]) extends Action[A] {
   }
 
   lazy val parser: BodyParser[A] = action.parser
+  lazy val executionContext: ExecutionContext = action.executionContext
 }

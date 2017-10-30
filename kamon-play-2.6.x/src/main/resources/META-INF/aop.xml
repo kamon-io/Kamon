@@ -9,6 +9,6 @@
     <weaver options="-Xset:weaveJavaPackages=true,weaveJavaxPackages=true">
         <include within="kamon.play.instrumentation..*"/>
         <include within="play.api..*"/>
-        <include within="play.core.server.netty..*"/>
+        <include within="play.core.server..*"/>
    </weaver>
 </aspectj>

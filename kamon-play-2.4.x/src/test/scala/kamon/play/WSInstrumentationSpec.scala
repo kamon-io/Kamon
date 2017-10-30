@@ -1,96 +1,188 @@
-/* ===================================================
- * Copyright © 2013-2015 the kamon project <http://kamon.io/>
+/* =========================================================================================
+ * Copyright © 2013-2017 the kamon project <http://kamon.io/>
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- * ========================================================== */
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the specific language governing permissions
+ * and limitations under the License.
+ * =========================================================================================
+ */
 
 package kamon.play
 
+import java.net.ConnectException
+
 import kamon.Kamon
-import kamon.metric.{ Entity, EntitySnapshot, TraceMetrics }
-import kamon.trace.{ Tracer, TraceContext, SegmentCategory }
-import org.scalatest.{ Matchers, WordSpecLike }
-import org.scalatestplus.play.OneServerPerSuite
-import play.api.libs.ws.WS
-import play.api.mvc.Action
-import play.api.mvc.Results.Ok
+import kamon.context.Context
+import kamon.context.Context.create
+import kamon.trace.Span.TagValue
+import kamon.trace.{Span, SpanCustomizer}
+import org.scalatest.concurrent.Eventually
+import org.scalatest.time.SpanSugar
+import org.scalatest.{BeforeAndAfterAll, OptionValues}
+import org.scalatestplus.play.{OneServerPerSuite, PlaySpec}
+import play.api.Application
+import play.api.libs.ws.WSClient
+import play.api.mvc.Results.{InternalServerError, NotFound, Ok}
+import play.api.mvc.{Action, AnyContent, Handler}
 import play.api.test.Helpers._
 import play.api.test._
 
-import scala.concurrent.Await
-import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
-class WSInstrumentationSpec extends WordSpecLike with Matchers with OneServerPerSuite {
+
+class WSInstrumentationSpec extends PlaySpec with OneServerPerSuite
+  with Eventually
+  with SpanSugar
+  with BeforeAndAfterAll
+  with OptionValues
+  with SpanReporter {
+
   System.setProperty("config.file", "./kamon-play-2.4.x/src/test/resources/conf/application.conf")
 
   override lazy val port: Port = 19003
-  implicit override lazy val app = FakeApplication(withRoutes = {
-    case ("GET", "/async")   ⇒ Action { Ok("ok") }
-    case ("GET", "/outside") ⇒ Action { Ok("ok") }
-    case ("GET", "/inside")  ⇒ callWSinsideController(s"http://localhost:$port/async")
-  })
+
+  val routes: PartialFunction[(String, String), Handler] = {
+    case ("GET", "/async")      ⇒ Action.async { Future(Ok) }
+    case ("GET", "/ok")    ⇒ Action { Ok }
+    case ("GET", "/not-found") ⇒ Action { NotFound }
+    case ("GET", "/error") ⇒ Action { InternalServerError }
+    case ("GET", "/inside-controller")     ⇒ insideController(s"http://localhost:$port/async")(app)
+  }
+
+  override lazy val app: FakeApplication = FakeApplication(withRoutes = routes)
+
 
   "the WS instrumentation" should {
-    "propagate the TraceContext inside an Action and complete the WS request" in {
-      Await.result(route(FakeRequest(GET, "/inside")).get, 10 seconds)
+    "propagate the current context and generate a span inside an action and complete the ws request" in {
+      val wsClient = app.injector.instanceOf[WSClient]
+      val okSpan = Kamon.buildSpan("ok-operation-span").start()
+      val endpoint = s"http://localhost:$port/ok"
 
-      val snapshot = takeSnapshotOf("GET: /inside", "trace")
-      snapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
-
-      val segmentMetricsSnapshot = takeSnapshotOf(s"http://localhost:$port/async", "trace-segment",
-        tags = Map(
-          "trace" -> "GET: /inside",
-          "category" -> SegmentCategory.HttpClient,
-          "library" -> PlayExtension.SegmentLibraryName))
-
-      segmentMetricsSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
-    }
-
-    "propagate the TraceContext outside an Action and complete the WS request" in {
-      Tracer.withContext(newContext("trace-outside-action")) {
-        Await.result(WS.url(s"http://localhost:$port/outside").get(), 10 seconds)
-        Tracer.currentContext.finish()
+      Kamon.withContext(create(Span.ContextKey, okSpan)) {
+        val response = await(wsClient.url(endpoint).get())
+        response.status mustBe 200
       }
 
-      val snapshot = takeSnapshotOf("trace-outside-action", "trace")
-      snapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
+      eventually(timeout(2 seconds)) {
+        val span = reporter.nextSpan().value
+        span.operationName mustBe endpoint
+        span.tags("span.kind") mustBe TagValue.String("client")
+        span.tags("http.method") mustBe TagValue.String("GET")
+      }
+    }
 
-      val segmentMetricsSnapshot = takeSnapshotOf(s"http://localhost:$port/outside", "trace-segment",
-        tags = Map(
-          "trace" -> "trace-outside-action",
-          "category" -> SegmentCategory.HttpClient,
-          "library" -> PlayExtension.SegmentLibraryName))
+    "propagate the current context and generate a span inside an async action and complete the ws request" in {
+      val wsClient = app.injector.instanceOf[WSClient]
+      val insideSpan = Kamon.buildSpan("inside-controller-operation-span").start()
+      val endpoint = s"http://localhost:$port/inside-controller"
 
-      segmentMetricsSnapshot.histogram("elapsed-time").get.numberOfMeasurements should be(1)
+      Kamon.withContext(create(Span.ContextKey, insideSpan)) {
+        val response = await(wsClient.url(endpoint).get())
+        response.status mustBe 200
+      }
+
+      eventually(timeout(2 seconds)) {
+        val span = reporter.nextSpan().value
+        span.operationName mustBe endpoint
+        span.tags("span.kind") mustBe TagValue.String("client")
+        span.tags("http.method") mustBe TagValue.String("GET")
+      }
+    }
+
+    "propagate the current context and generate a span called not-found and complete the ws request" in {
+      val wsClient = app.injector.instanceOf[WSClient]
+      val notFoundSpan = Kamon.buildSpan("not-found-operation-span").start()
+      val endpoint = s"http://localhost:$port/not-found"
+
+      Kamon.withContext(create(Span.ContextKey, notFoundSpan)) {
+        val response = await(wsClient.url(endpoint).get())
+        response.status mustBe 404
+      }
+
+      eventually(timeout(2 seconds)) {
+        val span = reporter.nextSpan().value
+        span.operationName mustBe "not-found"
+        span.tags("span.kind") mustBe TagValue.String("client")
+        span.tags("http.method") mustBe TagValue.String("GET")
+      }
+    }
+
+    "propagate the current context and generate a span with error and complete the ws request" in {
+      val wsClient = app.injector.instanceOf[WSClient]
+      val errorSpan = Kamon.buildSpan("error-operation-span").start()
+      val endpoint = s"http://localhost:$port/error"
+
+      Kamon.withContext(create(Span.ContextKey, errorSpan)) {
+        val response = await(wsClient.url(endpoint).get())
+        response.status mustBe 500
+      }
+
+      eventually(timeout(2 seconds)) {
+        val span = reporter.nextSpan().value
+        span.operationName mustBe endpoint
+        span.tags("span.kind") mustBe TagValue.String("client")
+        span.tags("http.method") mustBe TagValue.String("GET")
+        span.tags("error") mustBe TagValue.True
+      }
+    }
+
+    "propagate the current context and generate a span with error object and complete the ws request" in {
+      val wsClient = app.injector.instanceOf[WSClient]
+      val errorSpan = Kamon.buildSpan("throw-exception-operation-span").start()
+      val endpoint = s"http://localhost:1000/throw-exception"
+
+      intercept[ConnectException] {
+        Kamon.withContext(create(Span.ContextKey, errorSpan)) {
+          val response = await(wsClient.url(endpoint).get())
+          response.status mustBe 500
+        }
+      }
+
+      eventually(timeout(2 seconds)) {
+        val span = reporter.nextSpan().value
+        span.operationName mustBe endpoint
+        span.tags("span.kind") mustBe TagValue.String("client")
+        span.tags("http.method") mustBe TagValue.String("GET")
+        span.tags("error") mustBe TagValue.True
+        span.tags("error.object").toString must include(TagValue.String("Connection refused").string)
+      }
+    }
+
+    "propagate the current context and pickup a SpanCustomizer and apply it to the new spans and complete the ws request" in {
+      val wsClient = app.injector.instanceOf[WSClient]
+      val okSpan = Kamon.buildSpan("ok-operation-span").start()
+
+      val customizedOperationName = "customized-operation-name"
+      val endpoint = s"http://localhost:$port/ok"
+
+      val context = Context.create(Span.ContextKey, okSpan)
+        .withKey(SpanCustomizer.ContextKey, SpanCustomizer.forOperationName(customizedOperationName))
+
+      Kamon.withContext(context) {
+        val response = await(wsClient.url(endpoint).get())
+        response.status mustBe 200
+      }
+
+      eventually(timeout(2 seconds)) {
+        val span = reporter.nextSpan().value
+        span.operationName mustBe customizedOperationName
+        span.tags("span.kind") mustBe TagValue.String("client")
+        span.tags("http.method") mustBe TagValue.String("GET")
+      }
     }
   }
 
-  lazy val collectionContext = Kamon.metrics.buildDefaultCollectionContext
-
-  def newContext(name: String): TraceContext =
-    Kamon.tracer.newContext(name)
-
-  def takeSnapshotOf(name: String, category: String, tags: Map[String, String] = Map.empty): EntitySnapshot = {
-    val recorder = Kamon.metrics.find(Entity(name, category, tags)).get
-    recorder.collect(collectionContext)
-  }
-
-  def callWSinsideController(url: String) = Action.async {
-    import play.api.Play.current
-    import play.api.libs.concurrent.Execution.Implicits.defaultContext
-
-    WS.url(url).get().map { response ⇒
-      Ok("Ok")
-    }
+  def insideController(url: String)(app:Application): Action[AnyContent] = Action.async {
+    val wsClient = app.injector.instanceOf[WSClient]
+    wsClient.url(url).get().map(_ ⇒  Ok("Ok"))
   }
 }
+
+

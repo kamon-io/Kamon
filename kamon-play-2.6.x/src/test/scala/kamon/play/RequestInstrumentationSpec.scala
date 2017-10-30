@@ -31,13 +31,13 @@ import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.http.HttpFilters
 import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.libs.ws.{WSClient, WSRequest}
+import play.api.libs.ws.{StandaloneWSRequest, WSClient}
 import play.api.mvc.Results.{NotFound, Ok}
 import play.api.mvc._
 import play.api.test.Helpers._
 import play.api.test._
 
-import scala.concurrent.{ExecutionContextExecutor, Future}
+import scala.concurrent.{ExecutionContext, Future}
 
 class RequestHandlerInstrumentationSpec extends PlaySpec with GuiceOneServerPerSuite
   with ScalaFutures
@@ -48,11 +48,11 @@ class RequestHandlerInstrumentationSpec extends PlaySpec with GuiceOneServerPerS
   with OptionValues
   with SpanReporter {
 
-  System.setProperty("config.file", "./kamon-play-2.5.x/src/test/resources/conf/application.conf")
+  System.setProperty("config.file", "./kamon-play-2.6.x/src/test/resources/conf/application.conf")
 
   override lazy val port: Port = 19002
 
-  implicit val executor: ExecutionContextExecutor = scala.concurrent.ExecutionContext.Implicits.global
+  implicit val executor: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
 
   val withRoutes: PartialFunction[(String, String), Handler] = {
@@ -96,7 +96,7 @@ class RequestHandlerInstrumentationSpec extends PlaySpec with GuiceOneServerPerS
         response.status mustBe 200
       }
 
-      eventually(timeout(2 seconds)) {
+      eventually(timeout(5 seconds)) {
         val span = reporter.nextSpan().value
         span.operationName mustBe "GET:/ok"
         span.tags("span.kind") mustBe TagValue.String("server")
@@ -195,21 +195,20 @@ class TestNameGenerator extends NameGenerator {
   private val cache = TrieMap.empty[String, String]
   private val normalizePattern = """\$([^<]+)<[^>]+>""".r
 
-  def generateOperationName(requestHeader: RequestHeader): String = requestHeader.tags.get(Router.Tags.RouteVerb).map { verb ⇒
-    val path = requestHeader.tags(Router.Tags.RoutePattern)
-    cache.getOrElseUpdate(s"$verb$path", {
+  def generateOperationName(requestHeader: RequestHeader): String = requestHeader.attrs.get(Router.Attrs.HandlerDef).map { handlerDef ⇒
+    cache.getOrElseUpdate(s"${handlerDef.verb}${handlerDef.path}", {
       val traceName = {
         // Convert paths of form GET /foo/bar/$paramname<regexp>/blah to foo.bar.paramname.blah.get
-        val p = normalizePattern.replaceAllIn(path, "$1").replace('/', '.').dropWhile(_ == '.')
+        val p = normalizePattern.replaceAllIn(handlerDef.path, "$1").replace('/', '.').dropWhile(_ == '.')
         val normalisedPath = {
           if (p.lastOption.exists(_ != '.')) s"$p."
           else p
         }
-        s"$normalisedPath${verb.toLowerCase(Locale.ENGLISH)}"
+        s"$normalisedPath${handlerDef.verb.toLowerCase(Locale.ENGLISH)}"
       }
       traceName
     })
   } getOrElse s"${requestHeader.method}:${requestHeader.uri}"
 
-  def generateHttpClientOperationName(request: WSRequest): String = request.url
+  def generateHttpClientOperationName(request: StandaloneWSRequest): String = request.url
 }

@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * Copyright © 2013-2016 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2017 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -16,25 +16,17 @@
 
 package kamon.play
 
-import kamon.trace.Tracer
-import kamon.util.SameThreadExecutionContext
-import play.api.mvc.{ EssentialAction, EssentialFilter, Result }
+import kamon.Kamon
+import kamon.trace.Span
+import play.api.libs.iteratee.Iteratee
+import play.api.mvc.{EssentialAction, EssentialFilter, RequestHeader, Result}
 
 class KamonFilter extends EssentialFilter {
-  def apply(next: EssentialAction) = EssentialAction((requestHeader) ⇒ {
-    def onResult(result: Result): Result = {
-      Tracer.currentContext.collect { ctx ⇒
-        ctx.finish()
-        PlayExtension.httpServerMetrics.recordResponse(ctx.name, result.header.status.toString)
 
-        if (PlayExtension.includeTraceToken) result.withHeaders(PlayExtension.traceTokenHeaderName -> ctx.token)
-        else result
-
-      } getOrElse result
+  override def apply(next: EssentialAction): EssentialAction = new EssentialAction {
+    override def apply(requestHeader: RequestHeader): Iteratee[Array[Byte], Result] = {
+      Kamon.currentContext().get(Span.ContextKey).setOperationName(Play.generateOperationName(requestHeader))
+      next.apply(requestHeader)
     }
-    //override the current trace name
-    Tracer.currentContext.rename(PlayExtension.generateTraceName(requestHeader))
-    // Invoke the action
-    next(requestHeader).map(onResult)(SameThreadExecutionContext)
-  })
+  }
 }

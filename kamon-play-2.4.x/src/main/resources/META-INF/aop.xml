@@ -2,14 +2,15 @@
 
 <aspectj>
   <aspects>
-    <aspect name="kamon.play.instrumentation.RequestInstrumentation"/>
+    <aspect name="kamon.play.instrumentation.ChannelInstrumentation"/>
+    <aspect name="kamon.play.instrumentation.RequestHandlerInstrumentation"/>
     <aspect name="kamon.play.instrumentation.WSInstrumentation"/>
-    <aspect name="kamon.play.instrumentation.LoggerLikeInstrumentation"/>
-    <aspect name="kamon.play.instrumentation.JavaLoggerInstrumentation"/>
   </aspects>
 
-   <weaver>
-       <include within="play.Logger..*"/>
+   <weaver options="-Xset:weaveJavaPackages=true,weaveJavaxPackages=true">
+       <include within="kamon.play.instrumentation..*"/>
        <include within="play.api..*"/>
+       <include within="play.core.server..*"/>
+       <include within="org.jboss.netty..*"/>
    </weaver>
 </aspectj>

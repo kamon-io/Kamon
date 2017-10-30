@@ -15,7 +15,7 @@
 
 package kamon.play.instrumentation
 
-import io.netty.handler.codec.http.{HttpRequest, HttpResponse}
+import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
 import kamon.Kamon
 import kamon.context.Context
 import kamon.play.KamonFilter
@@ -32,14 +32,14 @@ class RequestHandlerInstrumentation {
 
   private lazy val filter: EssentialFilter = new KamonFilter()
 
-  @Around("execution(* play.core.server.netty.PlayRequestHandler.handle(..)) && args(*, request)")
-  def onHandle(pjp: ProceedingJoinPoint, request: HttpRequest): Any = {
+  @Around("execution(* play.core.server.AkkaHttpServer.handleRequest(..)) && args(request, *)")
+  def routeRequestNumberTwo(pjp: ProceedingJoinPoint, request: HttpRequest): Any = {
     val incomingContext = decodeContext(request)
     val serverSpan = Kamon.buildSpan("unknown-operation")
       .asChildOf(incomingContext.get(Span.ContextKey))
       .withTag("span.kind", "server")
-      .withTag("http.method", request.getMethod.name())
-      .withTag("http.url", request.getUri)
+      .withTag("http.method", request.method.value)
+      .withTag("http.url", request.getUri.toString)
       .start()
 
     val responseFuture = Kamon.withContext(Context.create(Span.ContextKey, serverSpan)) {
@@ -48,11 +48,11 @@ class RequestHandlerInstrumentation {
 
     responseFuture.transform(
       s = response => {
-        if(isError(response.getStatus.code())) {
+        if(isError(response.status.intValue())) {
           serverSpan.addError("error")
         }
 
-        if(response.getStatus.code() == StatusCodes.NotFound)
+        if(response.status.intValue() == StatusCodes.NotFound)
           serverSpan.setOperationName("not-found")
 
         serverSpan.finish()

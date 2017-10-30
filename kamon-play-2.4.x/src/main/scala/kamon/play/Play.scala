@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * Copyright © 2013-2015 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2017 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -14,52 +14,53 @@
  * =========================================================================================
  */
 
-package kamon.play
+package kamon
+package play
 
-import akka.actor._
-import kamon.Kamon
-import kamon.util.http.HttpServerMetrics
-import kamon.util.logger.LazyLogger
-import play.api.libs.ws.WSRequest
-import play.api.mvc.RequestHeader
+import _root_.play.api.libs.ws.WSRequest
+import _root_.play.api.mvc.RequestHeader
+import com.typesafe.config.Config
+import kamon.util.DynamicAccess
 
-object PlayExtension {
-  val SegmentLibraryName = "WS-client"
+object Play {
+  @volatile private var nameGenerator: NameGenerator = new DefaultNameGenerator()
+  loadConfiguration(Kamon.config())
 
-  val log = LazyLogger("kamon.play.PlayExtension")
+  def generateOperationName(requestHeader: RequestHeader): String =
+    nameGenerator.generateOperationName(requestHeader)
 
-  private val config = Kamon.config.getConfig("kamon.play")
-  private val dynamic = new ReflectiveDynamicAccess(getClass.getClassLoader)
-  val httpServerMetrics = Kamon.metrics.entity(HttpServerMetrics, "play-server")
+  def generateHttpClientOperationName(request: WSRequest): String =
+    nameGenerator.generateHttpClientOperationName(request)
 
-  val includeTraceToken: Boolean = config.getBoolean("automatic-trace-token-propagation")
-  val traceTokenHeaderName: String = config.getString("trace-token-header-name")
+  private def loadConfiguration(config: Config): Unit = {
+    val dynamic = new DynamicAccess(getClass.getClassLoader)
+    val nameGeneratorFQCN = config.getString("kamon.play.name-generator")
+    nameGenerator =  dynamic.createInstanceFor[NameGenerator](nameGeneratorFQCN, Nil).get
+  }
 
-  private val nameGeneratorFQN = config.getString("name-generator")
-  private val nameGenerator: NameGenerator = dynamic.createInstanceFor[NameGenerator](nameGeneratorFQN, Nil).get
-
-  def generateTraceName(requestHeader: RequestHeader): String = nameGenerator.generateTraceName(requestHeader)
-  def generateHttpClientSegmentName(request: WSRequest): String = nameGenerator.generateHttpClientSegmentName(request)
+  Kamon.onReconfigure(new OnReconfigureHook {
+    override def onReconfigure(newConfig: Config): Unit =
+      Play.loadConfiguration(newConfig)
+  })
 }
 
 trait NameGenerator {
-  def generateTraceName(requestHeader: RequestHeader): String
-  def generateHttpClientSegmentName(request: WSRequest): String
+  def generateOperationName(requestHeader: RequestHeader): String
+  def generateHttpClientOperationName(request: WSRequest): String
 }
 
 class DefaultNameGenerator extends NameGenerator {
-  import scala.collection.concurrent.TrieMap
-  import play.api.routing.Router
+  import _root_.scala.collection.concurrent.TrieMap
+  import _root_.play.api.routing.Router
   import java.util.Locale
-  import kamon.util.TriemapAtomicGetOrElseUpdate.Syntax
 
   private val cache = TrieMap.empty[String, String]
   private val normalizePattern = """\$([^<]+)<[^>]+>""".r
 
-  def generateTraceName(requestHeader: RequestHeader): String = requestHeader.tags.get(Router.Tags.RouteVerb).map { verb ⇒
+  def generateOperationName(requestHeader: RequestHeader): String = requestHeader.tags.get(Router.Tags.RouteVerb).map { verb ⇒
     val path = requestHeader.tags(Router.Tags.RoutePattern)
     cache.atomicGetOrElseUpdate(s"$verb$path", {
-      val traceName = {
+      val operationName = {
         // Convert paths of form GET /foo/bar/$paramname<regexp>/blah to foo.bar.paramname.blah.get
         val p = normalizePattern.replaceAllIn(path, "$1").replace('/', '.').dropWhile(_ == '.')
         val normalisedPath = {
@@ -68,9 +69,9 @@ class DefaultNameGenerator extends NameGenerator {
         }
         s"$normalisedPath${verb.toLowerCase(Locale.ENGLISH)}"
       }
-      traceName
+      operationName
     })
-  } getOrElse "UntaggedTrace"
+  } getOrElse "UntaggedOperation"
 
-  def generateHttpClientSegmentName(request: WSRequest): String = request.uri.getAuthority
+  def generateHttpClientOperationName(request: WSRequest): String = request.uri.getAuthority
 }

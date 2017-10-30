@@ -13,19 +13,34 @@
  * =========================================================================================
  */
 
-package kamon.play.action
+package kamon.testkit
 
+import com.typesafe.config.ConfigFactory
 import kamon.Kamon
-import kamon.trace.Span
-import play.api.mvc._
 
-import scala.concurrent.Future
+trait Reconfigure {
 
-case class OperationName[A](name: String)(action: Action[A]) extends Action[A] {
-  def apply(request: Request[A]): Future[Result] = {
-    Kamon.currentContext().get(Span.ContextKey).setOperationName(name)
-    action(request)
+  def enableFastSpanFlushing(): Unit = {
+    applyConfig("kamon.trace.tick-interval = 1 millisecond")
   }
 
-  lazy val parser: BodyParser[A] = action.parser
+  def sampleAlways(): Unit = {
+    applyConfig("kamon.trace.sampler = always")
+  }
+
+  def sampleNever(): Unit = {
+    applyConfig("kamon.trace.sampler = never")
+  }
+
+  def enableSpanMetricScoping(): Unit = {
+    applyConfig("kamon.trace.span-metrics.scope-spans-to-parent = yes")
+  }
+
+  def disableSpanMetricScoping(): Unit = {
+    applyConfig("kamon.trace.span-metrics.scope-spans-to-parent = no")
+  }
+
+  private def applyConfig(configString: String): Unit = {
+    Kamon.reconfigure(ConfigFactory.parseString(configString).withFallback(Kamon.config()))
+  }
 }

@@ -1,5 +1,5 @@
 /* =========================================================================================
- * Copyright © 2013-2015 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2017 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License") you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -16,19 +16,20 @@
 package kamon.play.di
 
 import javax.inject._
+
 import kamon.Kamon
-import play.api.inject.{ ApplicationLifecycle, Module }
-import play.api.{ Configuration, Environment, Logger }
+import play.api.inject.{ApplicationLifecycle, Binding, Module}
+import play.api.{Configuration, Environment, Logger}
+
 import scala.concurrent.Future
 
 class GuiceModule extends Module {
-  def bindings(environment: Environment, configuration: Configuration) = {
+  def bindings(environment: Environment, configuration: Configuration): Seq[Binding[GuiceModule.KamonLoader]] = {
     Seq(bind[GuiceModule.KamonLoader].toSelf.eagerly())
   }
 }
 
 object GuiceModule {
-
   @Singleton
   class KamonLoader @Inject() (lifecycle: ApplicationLifecycle, environment: Environment, configuration: Configuration) {
     Logger(classOf[KamonLoader]).info("Reconfiguring Kamon with Play's Config")

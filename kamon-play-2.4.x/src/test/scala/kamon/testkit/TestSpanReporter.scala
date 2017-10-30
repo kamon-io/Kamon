@@ -13,19 +13,29 @@
  * =========================================================================================
  */
 
-package kamon.play.action
+package kamon.testkit
 
-import kamon.Kamon
+import java.util.concurrent.LinkedBlockingQueue
+
+import com.typesafe.config.Config
+import kamon.SpanReporter
 import kamon.trace.Span
-import play.api.mvc._
+import kamon.trace.Span.FinishedSpan
 
-import scala.concurrent.Future
+class TestSpanReporter() extends SpanReporter {
+  import scala.collection.JavaConverters._
+  private val reportedSpans = new LinkedBlockingQueue[FinishedSpan]()
 
-case class OperationName[A](name: String)(action: Action[A]) extends Action[A] {
-  def apply(request: Request[A]): Future[Result] = {
-    Kamon.currentContext().get(Span.ContextKey).setOperationName(name)
-    action(request)
-  }
+  override def reportSpans(spans: Seq[Span.FinishedSpan]): Unit =
+    reportedSpans.addAll(spans.asJava)
 
-  lazy val parser: BodyParser[A] = action.parser
+  def nextSpan(): Option[FinishedSpan] =
+    Option(reportedSpans.poll())
+
+  def clear(): Unit =
+    reportedSpans.clear()
+
+  override def start(): Unit = {}
+  override def stop(): Unit = {}
+  override def reconfigure(config: Config): Unit = {}
 }
