@@ -11,7 +11,7 @@ Play!.
 The <b>kamon-play</b> module requires you to start your application using the AspectJ Weaver Agent. Kamon will warn you
 at startup if you failed to do so.
 
-Since Kamon 1.0.0 we support both Play Framework 2.4, 2.5 and 2.6, but bringing support for Play!. Please make sure you add either <b>kamon-play-24</b>, <b>kamon-play-25</b> or <b>kamon-play-26</b> to your project's classpath.
+Since Kamon 1.0.0 we support Play Framework 2.4, 2.5 and 2.6!. Please make sure you add either <b>kamon-play-24</b>, <b>kamon-play-25</b> or <b>kamon-play-26</b> to your project's classpath.
 
 ### Getting Started
 
