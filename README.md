@@ -1,6 +1,7 @@
 # Play Framework Integration <img align="right" src="https://rawgit.com/kamon-io/Kamon/master/kamon-logo.svg" height="150px" style="padding-left: 20px"/>
-[![Build Status](https://travis-ci.org/kamon-io/kamon-play.svg?branch=kamon-1.0)
+![Build Status](https://travis-ci.org/kamon-io/kamon-play.svg?branch=kamon-1.0)
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/kamon-io/Kamon?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[ ![Download](https://api.bintray.com/packages/kamon-io/snapshots/kamon-play/images/download.svg?version=1.0.0-RC1-48fb38ce6fd431ce607ca062f1bd33e613d8fea6) ](https://bintray.com/kamon-io/snapshots/kamon-play/1.0.0-RC1-48fb38ce6fd431ce607ca062f1bd33e613d8fea6/link)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-play-2.6_2.12/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-play-2.6_2.12)
 
 The `kamon-play` module ships with bytecode instrumentation that brings automatic traces and spans management to your Play! applications. The details on what those features are about can be found
