@@ -16,7 +16,7 @@
 
 val kamonCore           = "io.kamon"            %% "kamon-core"               % "1.0.0-RC1"
 val kamonTestkit        = "io.kamon"            %% "kamon-testkit"            % "1.0.0-RC1"
-val scalaExtension      = "io.kamon"            %% "agent-scala-extension"    % "0.0.9-experimental"
+val scalaExtension      = "io.kamon"            %% "agent-scala-extension"    % "0.0.8-experimental"
 
 val h2                  = "com.h2database"            % "h2"                        % "1.4.182"
 val mariaConnector      = "org.mariadb.jdbc"          % "mariadb-java-client"       % "1.5.9"
