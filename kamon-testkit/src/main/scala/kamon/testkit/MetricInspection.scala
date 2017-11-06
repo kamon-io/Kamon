@@ -15,7 +15,7 @@
 
 package kamon.testkit
 
-import kamon.metric._
+import kamon.metric.{BaseMetric, _}
 
 import _root_.scala.collection.concurrent.TrieMap
 
@@ -29,6 +29,27 @@ trait MetricInspection {
       val instruments = instrumentsField.get(metric).asInstanceOf[TrieMap[Map[String, String], _]]
       val instrumentsWithTheTag = instruments.keys.filter(_.keys.exists(_ == tag))
       instrumentsWithTheTag.map(t => t(tag)).toSeq
+    }
+
+    def partialRefine(tags: Map[String, String]): Seq[Map[String, String]] = {
+      val instrumentsField = classOf[BaseMetric[_, _]].getDeclaredField("instruments")
+      instrumentsField.setAccessible(true)
+
+      val instruments = instrumentsField.get(metric).asInstanceOf[TrieMap[Map[String, String], _]]
+
+      instruments.keys.filter { metricKey =>
+        tags.toSeq.forall { case (k, v) =>
+          metricKey.contains(k) && metricKey(k) == v
+        }
+      }.toSeq
+    }
+
+    def partialRefineKeys(tags: Set[String]): Seq[Map[String, String]] = {
+      val instrumentsField = classOf[BaseMetric[_, _]].getDeclaredField("instruments")
+      instrumentsField.setAccessible(true)
+
+      val instruments = instrumentsField.get(metric).asInstanceOf[TrieMap[Map[String, String], _]]
+      instruments.keys.filter(key => tags.subsetOf(key.keySet)).toSeq
     }
   }
 
