@@ -15,6 +15,8 @@
 
 package kamon.metric
 
+import java.util.Collections.{singletonMap => javaMap}
+
 import kamon.Kamon
 import org.scalatest.{Matchers, WordSpec}
 
@@ -69,6 +71,32 @@ class MetricLookupSpec extends WordSpec with Matchers {
       "always return the same min-max-counter for a set of tags" in {
         val minMaxCounterOne = Kamon.minMaxCounter("min-max-counter-lookup").refine("tag" -> "value")
         val minMaxCounterTwo = Kamon.minMaxCounter("min-max-counter-lookup").refine("tag" -> "value")
+        minMaxCounterOne shouldBe theSameInstanceAs(minMaxCounterTwo)
+      }
+    }
+
+    "refine a metric with java tags and" should {
+      "always return the same histogram for a set of tags" in {
+        val histogramOne = Kamon.histogram("histogram-lookup").refine(javaMap("tag", "value"))
+        val histogramTwo = Kamon.histogram("histogram-lookup").refine(javaMap("tag", "value"))
+        histogramOne shouldBe theSameInstanceAs(histogramTwo)
+      }
+
+      "always return the same counter for a set of tags" in {
+        val counterOne = Kamon.counter("counter-lookup").refine(javaMap("tag", "value"))
+        val counterTwo = Kamon.counter("counter-lookup").refine(javaMap("tag", "value"))
+        counterOne shouldBe theSameInstanceAs(counterTwo)
+      }
+
+      "always return the same gauge for a set of tags" in {
+        val gaugeOne = Kamon.gauge("gauge-lookup").refine(javaMap("tag", "value"))
+        val gaugeTwo = Kamon.gauge("gauge-lookup").refine(javaMap("tag", "value"))
+        gaugeOne shouldBe theSameInstanceAs(gaugeTwo)
+      }
+
+      "always return the same min-max-counter for a set of tags" in {
+        val minMaxCounterOne = Kamon.minMaxCounter("min-max-counter-lookup").refine(javaMap("tag", "value"))
+        val minMaxCounterTwo = Kamon.minMaxCounter("min-max-counter-lookup").refine(javaMap("tag", "value"))
         minMaxCounterOne shouldBe theSameInstanceAs(minMaxCounterTwo)
       }
     }
