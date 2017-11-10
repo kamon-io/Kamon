@@ -24,6 +24,7 @@ import scala.collection.concurrent.TrieMap
 package object kamon {
 
   type Tags = Map[String, String]
+  type JTags = java.util.Map[String, String]
 
 
   /**
