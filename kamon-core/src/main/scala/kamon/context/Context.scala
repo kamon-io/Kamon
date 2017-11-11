@@ -15,15 +15,48 @@
 
 package kamon.context
 
-class Context private (private[context] val entries: Map[Key[_], Any]) {
+import java.io._
+import java.nio.ByteBuffer
+
+import kamon.Kamon
+
+class Context private (private[context] val entries: Map[Key[_], Any]) extends scala.Serializable {
   def get[T](key: Key[T]): T =
     entries.getOrElse(key, key.emptyValue).asInstanceOf[T]
 
   def withKey[T](key: Key[T], value: T): Context =
     new Context(entries.updated(key, value))
+
+  var _deserializedEntries: Map[Key[_], Any] = Map.empty
+
+  @throws[IOException]
+  private def writeObject(out: ObjectOutputStream): Unit = out.write(
+    Kamon.contextCodec().Binary.encode(this).array()
+  )
+
+  @throws[IOException]
+  @throws[ClassNotFoundException]
+  private def readObject(in: ObjectInputStream): Unit = {
+    val buf = new Array[Byte](in.available())
+    in.readFully(buf)
+    _deserializedEntries = Kamon.contextCodec().Binary.decode(ByteBuffer.wrap(buf)).entries
+  }
+
+  def readResolve(): AnyRef = new Context(_deserializedEntries)
+
+  override def equals(obj: scala.Any): Boolean = {
+    obj != null &&
+    obj.isInstanceOf[Context] &&
+    obj.asInstanceOf[Context].entries != null &&
+    obj.asInstanceOf[Context].entries == this.entries
+  }
+
+  override def hashCode(): Int = entries.hashCode()
+
 }
 
 object Context {
+
   val Empty = new Context(Map.empty)
 
   def apply(): Context =
@@ -37,6 +70,7 @@ object Context {
 
   def create[T](key: Key[T], value: T): Context =
     apply(key, value)
+
 }
 
 
