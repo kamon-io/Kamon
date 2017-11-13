@@ -29,7 +29,7 @@ class TimerSpec extends WordSpec with Matchers {
       timer.start().stop()
       timer.start().stop()
 
-      timer.distribution().count shouldBe(3)
+      timer.distribution().count shouldBe 3
     }
 
     "ensure that a started timer can only be stopped once" in {
@@ -39,7 +39,7 @@ class TimerSpec extends WordSpec with Matchers {
       startedTimer.stop()
       startedTimer.stop()
 
-      timer.distribution().count shouldBe(1)
+      timer.distribution().count shouldBe 1
     }
 
 
@@ -50,20 +50,20 @@ class TimerSpec extends WordSpec with Matchers {
       timer.record(200)
 
       val distribution = timer.distribution()
-      distribution.min shouldBe(100)
-      distribution.max shouldBe(200)
-      distribution.count shouldBe(1000)
+      distribution.min shouldBe 100
+      distribution.max shouldBe 200
+      distribution.count shouldBe 1000
       distribution.buckets.length shouldBe 3
       distribution.buckets.map(b => (b.value, b.frequency)) should contain.allOf(
-        (100 -> 1),
-        (150 -> 998),
-        (200 -> 1)
+        100 -> 1,
+        150 -> 998,
+        200 -> 1
       )
 
       val emptyDistribution = timer.distribution()
-      emptyDistribution.min shouldBe(0)
-      emptyDistribution.max shouldBe(0)
-      emptyDistribution.count shouldBe(0)
+      emptyDistribution.min shouldBe 0
+      emptyDistribution.max shouldBe 0
+      emptyDistribution.count shouldBe 0
       emptyDistribution.buckets.length shouldBe 0
     }
   }

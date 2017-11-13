@@ -16,29 +16,29 @@
 package kamon
 package metric
 
+import java.time.Duration
 import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.{ScheduledExecutorService, ScheduledFuture, TimeUnit}
 
 import kamon.metric.InstrumentFactory.InstrumentType
 import kamon.metric.InstrumentFactory.InstrumentTypes._
-
-import scala.collection.concurrent.TrieMap
-import java.time.Duration
-import java.util.concurrent.{ScheduledExecutorService, ScheduledFuture, TimeUnit}
-
 import org.slf4j.LoggerFactory
 
+import scala.collection.JavaConverters._
+import scala.collection.concurrent.TrieMap
 import scala.util.Try
-
 
 
 trait Metric[T] {
   def name: String
   def unit: MeasurementUnit
 
+  def refine(tags: JTags): T
   def refine(tags: Tags): T
   def refine(tags: (String, String)*): T
   def refine(tag: String, value: String): T
 
+  def remove(tags: JTags): Boolean
   def remove(tags: Tags): Boolean
   def remove(tags: (String, String)*): Boolean
   def remove(tag: String, value: String): Boolean
@@ -55,16 +55,22 @@ private[kamon] abstract sealed class BaseMetric[T, S](val instrumentType: Instru
   private[kamon] val instruments = TrieMap.empty[Tags, T]
   protected lazy val baseInstrument: T = instruments.atomicGetOrElseUpdate(Map.empty, createInstrument(Map.empty))
 
+  override def refine(tags: JTags):T =
+    refine(tags.asScala.toMap)
+
+  override def refine(tags: Map[String, String]): T =
+    instruments.atomicGetOrElseUpdate(tags, createInstrument(tags))
+
   override def refine(tag: String, value: String): T = {
     val instrumentTags = Map(tag -> value)
     instruments.atomicGetOrElseUpdate(instrumentTags, createInstrument(instrumentTags))
   }
 
-  override def refine(tags: Map[String, String]): T =
-    instruments.atomicGetOrElseUpdate(tags, createInstrument(tags))
-
   override def refine(tags: (String, String)*): T =
     refine(tags.toMap)
+
+  override def remove(tags: JTags):Boolean =
+    remove(tags.asScala.toMap)
 
   override def remove(tags: Tags): Boolean =
     if(tags.nonEmpty) instruments.remove(tags).nonEmpty else false
@@ -140,6 +146,9 @@ private[kamon] final class MinMaxCounterMetricImpl(val name: String, val unit: M
 
     mmCounter
   }
+
+  override def remove(tags: JTags): Boolean =
+    removeAndStopSampler(tags.asScala.toMap)
 
   override def remove(tags: Tags): Boolean =
     removeAndStopSampler(tags)
