@@ -28,3 +28,4 @@ libraryDependencies ++=
   testScope(scalatest, kamonTestkit, logback, slf4jJul)
 
 resolvers += Resolver.bintrayRepo("kamon-io", "releases")
+resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
