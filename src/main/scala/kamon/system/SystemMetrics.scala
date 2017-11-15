@@ -24,8 +24,8 @@ import java.util.concurrent.TimeUnit.MILLISECONDS
 import com.typesafe.config.Config
 import kamon.sigar.SigarProvisioner
 import kamon.system.custom.CustomMetricsUpdater
-import kamon.system.jvm.JmxMetricsUpdater
 import kamon.system.host.SigarMetricsUpdater
+import kamon.system.jvm.JmxMetricsUpdater
 import kamon.{Kamon, OnReconfigureHook}
 import org.slf4j.{Logger, LoggerFactory}
 
@@ -35,14 +35,15 @@ object SystemMetrics {
 
   val logger: Logger = LoggerFactory.getLogger("kamon.metrics.SystemMetrics")
 
-  @volatile var sigarFolder:String = _
-  @volatile var sigarRefreshInterval:Duration = _
-  @volatile var jmxRefreshInterval:Duration = _
-  @volatile var sigarEnabled:Boolean = _
-  @volatile var jmxEnabled: Boolean =_
-  @volatile var contextSwitchesRefreshInterval:Duration = _
-  @volatile var hiccupSampleIntervalResolution:Duration = _
-  @volatile var scheduledCollections: Seq[ScheduledFuture[_]] = _
+  var sigarFolder:String = _
+  var sigarRefreshInterval:Duration = _
+  var jmxRefreshInterval:Duration = _
+  var sigarEnabled:Boolean = _
+  var jmxEnabled: Boolean =_
+  var hiccupMonitorEnabled: Boolean =_
+  var contextSwitchesRefreshInterval:Duration = _
+  var hiccupSampleIntervalResolution:Duration = _
+  var scheduledCollections: Seq[ScheduledFuture[_]] = _
 
   logger.info(s"Starting the Kamon(SystemMetrics) module")
 
@@ -61,11 +62,11 @@ object SystemMetrics {
     sigarEnabled = systemMetricsConfig.getBoolean("host.enabled")
     jmxEnabled = systemMetricsConfig.getBoolean("jvm.enabled")
     contextSwitchesRefreshInterval = systemMetricsConfig.getDuration("host.context-switches-refresh-interval")
-    hiccupSampleIntervalResolution = systemMetricsConfig.getDuration("jvm.hiccup-sample-interval-resolution")
+    hiccupMonitorEnabled = systemMetricsConfig.getBoolean("jvm.hiccup-monitor.enabled")
+    hiccupSampleIntervalResolution = systemMetricsConfig.getDuration("jvm.hiccup-monitor.sample-interval-resolution")
   }
 
-
-  def startCollecting(): Unit = {
+  def startCollecting(): Unit = synchronized {
     scheduledCollections = Seq(
       // OS Metrics collected with Sigar
       if (SystemMetrics.sigarEnabled) Some(collectSigarMetrics) else None,
@@ -78,7 +79,7 @@ object SystemMetrics {
     ).flatten
   }
 
-  def stopCollecting(): Unit = {
+  def stopCollecting(): Unit = synchronized {
     scheduledCollections.foreach(_.cancel(false))
     scheduledCollections = Seq.empty
   }
@@ -86,8 +87,8 @@ object SystemMetrics {
   private def collectSigarMetrics: ScheduledFuture[_] = {
     SigarProvisioner.provision(new File(SystemMetrics.sigarFolder))
     val sigarMetricsUpdater = new SigarMetricsUpdater(SystemMetrics.logger)
-
     val refreshInterval = SystemMetrics.sigarRefreshInterval.toMillis
+
     Kamon.scheduler().scheduleAtFixedRate(sigarMetricsUpdater, 0L, refreshInterval, MILLISECONDS)
   }
 

@@ -44,30 +44,38 @@ class SystemMetricsSpec extends WordSpecLike
       val idleTag = "mode" -> "idle"
       val stolenTag = "mode" -> "stolen"
 
+      val modes = userTag :: systemTag :: waitTag :: idleTag :: stolenTag :: Nil
 
-      Kamon.histogram("system-metric.host.cpu").refine(userTag).distribution().count should be > 0L
-      Kamon.histogram("system-metric.host.cpu").refine(systemTag).distribution().count should be > 0L
-      Kamon.histogram("system-metric.host.cpu").refine(waitTag).distribution().count should be > 0L
-      Kamon.histogram("system-metric.host.cpu").refine(idleTag).distribution().count should be > 0L
-      Kamon.histogram("system-metric.host.cpu").refine(stolenTag).distribution().count should be > 0L
+      modes.foreach(modeTag => Kamon.histogram("host.cpu").refine("component" -> "system-metrics", modeTag).distribution().count should be > 0L)
     }
 
     "record used, max and committed heap and non-heap metrics" in {
-      val heapTag =     "segment" -> "heap"
-      val nonHeapTag =  "segment" -> "non-heap"
-      val poolTag =     "pool" -> "direct"
 
-      Kamon.histogram("system-metric.jmx-memory.used").refine(heapTag).distribution().count should be > 0L
-      Kamon.gauge("system-metric.jmx-memory.max").refine(heapTag).value() should be > 0L
-      Kamon.gauge("system-metric.jmx-memory.committed").refine(heapTag).value() should be > 0L
+      val componentTag = "component" -> "system-metrics"
 
-      Kamon.histogram("system-metric.jmx-memory.used").refine(nonHeapTag).distribution().count should be > 0L
-      Kamon.gauge("system-metric.jmx-memory.max").refine(nonHeapTag).value() should be !== 0L
-      Kamon.gauge("system-metric.jmx-memory.committed").refine(nonHeapTag).value() should be !== 0L
+      val usedTag = "measure" -> "used"
+      val maxTag = "measure" -> "max"
+      val committedTag = "measure" -> "committed"
+      val capacityTag = "measure" -> "capacity"
 
-      Kamon.gauge("system-metric.jmx-memory.buffer-pool.count").refine(poolTag).value() should be > 0L
-      Kamon.gauge("system-metric.jmx-memory.buffer-pool.used").refine(poolTag).value() should be > 0L
-      Kamon.gauge("system-metric.jmx-memory.buffer-pool.capacity").refine(poolTag).value() should be > 0L
+      val poolDirectTag = "pool" -> "direct"
+
+      val memoryMeasures = usedTag :: maxTag :: committedTag :: Nil
+
+      //Heap
+      memoryMeasures.foreach {
+        measureTag => Kamon.histogram("jvm.memory").refine(componentTag, measureTag, "segment" -> "heap").distribution().count should be > 0L
+      }
+
+      //Non Heap
+      memoryMeasures.foreach { measureTag =>
+        Kamon.histogram("jvm.memory").refine(componentTag, measureTag, "segment" -> "non-heap").distribution().count should be > 0L
+      }
+
+      //Memory Pool
+      Kamon.gauge("jvm.memory.buffer-pool.count").refine(componentTag, poolDirectTag).value() should be > 0L
+      Kamon.gauge("jvm.memory.buffer-pool.usage").refine(componentTag, poolDirectTag, usedTag).value() should be > 0L
+      Kamon.gauge("jvm.memory.buffer-pool.usage").refine(componentTag, poolDirectTag, capacityTag).value() should be > 0L
     }
 
     "record count and time garbage collection metrics" in {
@@ -75,18 +83,22 @@ class SystemMetricsSpec extends WordSpecLike
 
       System.gc() //force GC event
 
-      val gcTimeMetric = Kamon.histogram("system-metric.garbage-collection.time")
-
+      //Collectors
       for (collectorName ← availableGarbageCollectors) {
         val sanitizedName = sanitizeCollectorName(collectorName.getName)
-        val tags = "collector" -> sanitizedName
+        val collectorTags = "collector" -> sanitizedName
 
-        gcTimeMetric.refine(tags).distribution().count should be > 0L
+        Kamon.histogram("jvm.gc").refine("component" -> "system-metrics", collectorTags).distribution().count should be > 0L
+      }
+
+      //Promotion
+      Seq("survivor", "old").foreach { space =>
+        Kamon.histogram("jvm.gc.promotion").refine("component" -> "system-metrics", "space" -> space).distribution().count should be >= 0L
       }
     }
 
     "record the hiccup time metric" in {
-      val hiccupTimeMetric = Kamon.histogram("system-metric.hiccup.time")
+      val hiccupTimeMetric = Kamon.histogram("jvm.hiccup").refine("component" -> "system-metrics")
       hiccupTimeMetric.distribution().count should be > 0L
       hiccupTimeMetric.distribution().max should be >= 0L
     }
@@ -96,8 +108,8 @@ class SystemMetricsSpec extends WordSpecLike
       val data = new Array[Byte](20 * 1024 * 1024) // 20 Mb of data
 
       eventually(timeout(6 seconds)) {
-        val heapUsed = Kamon.histogram("system-metric.jmx-memory.used")
-          .refine("segment" -> "heap")
+        val heapUsed = Kamon.histogram("jvm.memory")
+          .refine("component" -> "system-metrics", "measure" -> "used", "segment" -> "heap")
           .distribution(false)
 
         heapUsed.max should be > heapUsed.min
@@ -106,72 +118,77 @@ class SystemMetricsSpec extends WordSpecLike
     }
 
     "record daemon, count and peak jvm threads metrics" in {
-      Kamon.gauge("system-metric.threads.daemon").value() should be > 0L
-      Kamon.gauge("system-metric.threads.peak").value() should be > 0L
-      Kamon.gauge("system-metric.threads.total").value() should be > 0L
+      Seq("daemon", "peak", "total").foreach { measure =>
+        Kamon.gauge("jvm.threads").refine("component" -> "system-metrics", "measure" -> measure).value() should be > 0L
+      }
     }
 
     "record loaded, unloaded and current class loading metrics" in {
-      Kamon.gauge("system-metric.class-loading.loaded").value() should be > 0L
-      Kamon.gauge("system-metric.class-loading.currently-loaded").value() should be > 0L
-      Kamon.gauge("system-metric.class-loading.unloaded").value() should be >= 0L
+      Seq("loaded", "unloaded", "currently-loaded").foreach { mode =>
+        Kamon.gauge("jvm.class-loading").refine("component" -> "system-metrics", "mode" -> mode).value() should be >= 0L
+      }
     }
 
     "record reads, writes, queue time and service time file system metrics" in {
-      Kamon.histogram("system-metric.file-system.reads").distribution().count  should be > 0L
-      Kamon.histogram("system-metric.file-system.writes").distribution().count should be > 0L
+      Seq("reads", "writes").foreach { operation =>
+        Kamon.histogram("host.file-system").refine("component" -> "system-metrics", "operation" -> operation).distribution().count should be >= 0L
+      }
     }
 
     "record 1 minute, 5 minutes and 15 minutes metrics load average metrics" in {
-      val metricName = s"system-metric.load.average"
-      val key = "aggregation"
-      val one = key -> "1"
-      val five = key -> "5"
-      val fifteen = key -> "15"
-
-      Kamon.histogram(metricName).refine(one).distribution().count      should be > 0L
-      Kamon.histogram(metricName).refine(five).distribution().count     should be > 0L
-      Kamon.histogram(metricName).refine(fifteen).distribution().count  should be > 0L
+      Seq("1", "5", "15").foreach { period =>
+        Kamon.histogram("host.load-average").refine("component" -> "system-metrics", "period" -> period).distribution().count should be > 0L
+      }
     }
 
     "record used, free, swap used, swap free system memory metrics" in {
-      Kamon.histogram("system-metric.memory.used").distribution().count should be > 0L
-      Kamon.histogram("system-metric.memory.free").distribution().count should be > 0L
-      Kamon.histogram("system-metric.memory.swap-used").distribution().count should be > 0L
-      Kamon.histogram("system-metric.memory.swap-free").distribution().count should be > 0L
+      //Memory
+      Seq("used", "cached-and-buffered", "free", "total").foreach { mode =>
+        Kamon.histogram("host.memory").refine("component" -> "system-metrics", "mode" -> mode).distribution().count should be > 0L
+      }
+
+      //Swap
+      Seq("used", "free").foreach { mode =>
+        Kamon.histogram("host.swap").refine("component" -> "system-metrics", "mode" -> mode).distribution().count should be > 0L
+      }
     }
 
     "record rxBytes, txBytes, rxErrors, txErrors, rxDropped, txDropped network metrics" in {
-      val eventMetric = Kamon.histogram("system-metric.network.packets")
+      val eventMetric = Kamon.counter("host.network.packets")
+      val bytesMetric = Kamon.histogram("host.network.bytes")
+
+      val component = "component" -> "system-metrics"
 
       val received    = "direction" -> "received"
       val transmitted = "direction" -> "transmitted"
+
       val dropped     = "state" -> "dropped"
       val error       = "state" -> "error"
 
-      Kamon.histogram("system-metric.network.rx").distribution().count should be > 0L
-      Kamon.histogram("system-metric.network.tx").distribution().count should be > 0L
-      eventMetric.refine(transmitted, error).distribution().count   should be > 0L
-      eventMetric.refine(received, error).distribution().count      should be > 0L
-      eventMetric.refine(transmitted, dropped).distribution().count should be > 0L
-      eventMetric.refine(received, dropped).distribution().count    should be > 0L
+      bytesMetric.refine(component, received).distribution().count should be > 0L
+      bytesMetric.refine(component, transmitted).distribution().count should be > 0L
+
+      eventMetric.refine(component, transmitted, error).value() should be >= 0L
+      eventMetric.refine(component, received, error).value() should be >= 0L
+      eventMetric.refine(component, transmitted, dropped).value() should be >= 0L
+      eventMetric.refine(component, received, dropped).value() should be >= 0L
     }
 
     "record system and user CPU percentage for the application process" in {
-      Kamon.histogram("system-metric.process-cpu.user-cpu").distribution().count     should be > 0L
-      Kamon.histogram("system-metric.process-cpu.system-cpu").distribution().count   should be > 0L
-      Kamon.histogram("system-metric.process-cpu.process-cpu").distribution().count  should be > 0L
+      Seq("user", "system", "total").foreach { mode =>
+        Kamon.histogram("host.process-cpu").refine("component" -> "system-metrics", "mode" -> mode).distribution().count should be > 0L
+      }
     }
 
     "record the open files for the application process" in {
-      Kamon.histogram("system-metric.ulimit.open-files").distribution().count should be > 0L
+      Kamon.histogram("host.ulimit").refine("component" -> "system-metrics", "limit" -> "open-files").distribution().count should be > 0L
     }
 
     "record Context Switches Global, Voluntary and Non Voluntary metrics when running on Linux" in {
       if (isLinux) {
-        Kamon.histogram("system-metric.context-switches.process-voluntary").distribution().count should be > 0L
-        Kamon.histogram("system-metric.context-switches.process-non-voluntary").distribution().count should be > 0L
-        Kamon.histogram("system-metric.context-switches.global").distribution().count should be > 0L
+        Seq("process-voluntary", "process-non-voluntary", "global").foreach { mode =>
+          Kamon.histogram("host.context-switches").refine("component" -> "system-metrics", "mode" -> mode).distribution().count should be > 0L
+        }
       }
     }
   }

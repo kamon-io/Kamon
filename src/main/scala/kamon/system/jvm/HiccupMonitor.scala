@@ -23,17 +23,20 @@ import kamon.metric.{Histogram, MeasurementUnit}
 import kamon.system.{CustomMetricBuilder, Metric, MetricBuilder, SystemMetrics}
 import org.slf4j.Logger
 
-object HiccupDetector extends MetricBuilder("jvm.hiccup") with CustomMetricBuilder {
+object HiccupMonitor extends MetricBuilder("jvm.hiccup") with CustomMetricBuilder {
   override def build(pid: Long, metricName: String, logger: Logger) = new Metric {
-    val sampleResolution = SystemMetrics.hiccupSampleIntervalResolution.toNanos
-    val hiccupTimeMetric = Kamon.histogram(metricName, MeasurementUnit.time.nanoseconds).refine("component" -> "system-metrics")
 
     override def update(): Unit = {}
 
-    val threadMonitor = new Monitor(hiccupTimeMetric, sampleResolution)
-    threadMonitor.setDaemon(true)
-    threadMonitor.setName("hiccup-monitor")
-    threadMonitor.start()
+    if(SystemMetrics.hiccupMonitorEnabled) {
+      val sampleResolution = SystemMetrics.hiccupSampleIntervalResolution.toNanos
+      val hiccupTimeMetric = Kamon.histogram(metricName, MeasurementUnit.time.nanoseconds).refine("component" -> "system-metrics")
+
+      val threadMonitor = new Monitor(hiccupTimeMetric, sampleResolution)
+      threadMonitor.setDaemon(true)
+      threadMonitor.setName("hiccup-monitor")
+      threadMonitor.start()
+    }
   }
 
 
@@ -64,13 +67,13 @@ object HiccupDetector extends MetricBuilder("jvm.hiccup") with CustomMetricBuild
     def record(value: Long, expectedIntervalBetweenValueSamples: Long): Unit = {
       hiccupTimeMetric.record(value)
 
-      if (expectedIntervalBetweenValueSamples <= 0) return
+      if (expectedIntervalBetweenValueSamples > 0) {
+        var missingValue = value - expectedIntervalBetweenValueSamples
 
-      var missingValue = value - expectedIntervalBetweenValueSamples
-
-      while (missingValue >= expectedIntervalBetweenValueSamples) {
-        hiccupTimeMetric.record(missingValue)
-        missingValue -= expectedIntervalBetweenValueSamples
+        while (missingValue >= expectedIntervalBetweenValueSamples) {
+          hiccupTimeMetric.record(missingValue)
+          missingValue -= expectedIntervalBetweenValueSamples
+        }
       }
     }
 

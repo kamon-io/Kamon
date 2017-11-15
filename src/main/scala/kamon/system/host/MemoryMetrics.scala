@@ -34,7 +34,6 @@ object MemoryMetrics extends MetricBuilder("host.memory") with SigarMetricBuilde
     val memoryUsageMetric = Kamon.histogram(metricName, MeasurementUnit.information.bytes)
     val swapUsageMetric = Kamon.histogram("host.swap", MeasurementUnit.information.bytes)
 
-
     val usedMetric      = memoryUsageMetric.refine(Map("component" -> "system-metrics", "mode" -> "used"))
     val cachedMetric    = memoryUsageMetric.refine(Map("component" -> "system-metrics", "mode" -> "cached-and-buffered"))
     val freeMetric      = memoryUsageMetric.refine(Map("component" -> "system-metrics", "mode" -> "free"))

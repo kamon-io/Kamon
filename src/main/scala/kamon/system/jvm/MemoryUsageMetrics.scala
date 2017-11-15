@@ -82,7 +82,7 @@ object MemoryUsageMetrics extends MetricBuilder("jvm.memory") with JmxMetricBuil
 }
 
 final case class MemoryMetrics(metricPrefix:String) {
-  val memoryUsageMetric = Kamon.histogram("jvm.memory", MeasurementUnit.information.bytes)
+  val memoryUsageMetric = Kamon.histogram(metricPrefix, MeasurementUnit.information.bytes)
 
   def forSegment(segment: String): MemoryMetrics = {
     val memoryTags = Map("segment" -> segment)
@@ -98,13 +98,8 @@ final case class MemoryMetrics(metricPrefix:String) {
 }
 
 final case class BufferPoolMetrics(metricPrefix:String) {
-  val bufferPoolCountMetric = Kamon.gauge("jvm.buffer-pool.count")
-  val bufferPoolUsageMetric = Kamon.gauge("jvm.buffer-pool.usage")
-
-  val poolCountMetric     = Kamon.gauge(s"$metricPrefix.buffer-pool.count")
-  val poolUsedMetric      = Kamon.gauge(s"$metricPrefix.buffer-pool.used", MeasurementUnit.information.bytes)
-  val poolCapacityMetric  = Kamon.gauge(s"$metricPrefix.buffer-pool.capacity", MeasurementUnit.information.bytes)
-
+  val bufferPoolCountMetric = Kamon.gauge(s"$metricPrefix.buffer-pool.count")
+  val bufferPoolUsageMetric = Kamon.gauge(s"$metricPrefix.buffer-pool.usage")
 
   def forPool(pool: String): BufferPoolMetrics = {
     val poolTags = Map("pool" -> pool)

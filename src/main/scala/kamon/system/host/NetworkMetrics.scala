@@ -35,12 +35,12 @@ import scala.util.Try
  *    - rxDropped: Total number of incoming packets dropped.
  *    - txDropped: Total number of outgoing packets dropped.
  */
-object NetworkMetrics extends MetricBuilder("host.network.bytes") with SigarMetricBuilder{
+object NetworkMetrics extends MetricBuilder("host.network") with SigarMetricBuilder{
   def build(sigar: Sigar, metricName: String, logger: Logger) = new Metric {
     val interfaces = runSafe(sigar.getNetInterfaceList.toList.filter(_ != "lo"), List.empty[String], "network", logger)
 
-    val networkBytesMetric = Kamon.histogram(metricName, MeasurementUnit.information.bytes)
-    val networkPacketsMetric = Kamon.counter("host.network.packets")
+    val networkBytesMetric = Kamon.histogram(s"$metricName.bytes", MeasurementUnit.information.bytes)
+    val networkPacketsMetric = Kamon.counter(s"$metricName.packets")
 
     val receivedBytesMetric = networkBytesMetric.refine(Map("component" -> "system-metrics", "direction" -> "received"))
     val transmittedBytesMetric = networkBytesMetric.refine(Map("component" -> "system-metrics", "direction" -> "transmitted"))

@@ -87,7 +87,7 @@ final case class GarbageCollectorMetrics(metricName: String) {
 
   def forCollector(collector: String): GarbageCollectorMetrics = {
     val collectorTags = Map("component" -> "system-metrics",  "collector" -> collector)
-    GarbageCollectorMetrics(collectorTags, gcTimeMetric.refine(collectorTags), gcTimeMetric.refine((collectorTags)))
+    GarbageCollectorMetrics(collectorTags, gcTimeMetric.refine(collectorTags), gcTimeMetric.refine(collectorTags))
   }
 
   case class GarbageCollectorMetrics(tags: Map[String, String], gcTime: Histogram, gcPromotion: Histogram)

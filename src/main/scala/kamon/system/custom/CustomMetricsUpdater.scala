@@ -17,13 +17,13 @@
 package kamon.system.custom
 
 import kamon.system.host.ContextSwitchesMetrics
-import kamon.system.jvm.HiccupDetector
+import kamon.system.jvm.HiccupMonitor
 import kamon.system.{Metric, withNamedThread}
 
 class CustomMetricsUpdater extends Runnable {
   val metrics: Seq[Metric] = Seq(
     ContextSwitchesMetrics.register(),
-    HiccupDetector.register()
+    HiccupMonitor.register()
   ).flatten
 
   override def run(): Unit = withNamedThread("custom-metric-updater"){
