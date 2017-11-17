@@ -33,13 +33,17 @@ trait Span {
 
   def context(): SpanContext
 
-  def addTag(key: String, value: String): Span
+  def tag(key: String, value: String): Span
 
-  def addTag(key: String, value: Long): Span
+  def tag(key: String, value: Long): Span
 
-  def addTag(key: String, value: Boolean): Span
+  def tag(key: String, value: Boolean): Span
 
-  def addMetricTag(key: String, value: String): Span
+  def tagMetric(key: String, value: String): Span
+
+  def mark(key: String): Span
+
+  def mark(timestampMicros: Long, key: String): Span
 
   def addError(error: String): Span
 
@@ -64,10 +68,12 @@ object Span {
     override val context: SpanContext = SpanContext.EmptySpanContext
     override def isEmpty(): Boolean = true
     override def isLocal(): Boolean = true
-    override def addTag(key: String, value: String): Span = this
-    override def addTag(key: String, value: Long): Span = this
-    override def addTag(key: String, value: Boolean): Span = this
-    override def addMetricTag(key: String, value: String): Span = this
+    override def tag(key: String, value: String): Span = this
+    override def tag(key: String, value: Long): Span = this
+    override def tag(key: String, value: Boolean): Span = this
+    override def tagMetric(key: String, value: String): Span = this
+    override def mark(key: String): Span = this
+    override def mark(timestampMicros: Long, key: String): Span = this
     override def addError(error: String): Span = this
     override def addError(error: String, throwable: Throwable): Span = this
     override def setOperationName(name: String): Span = this
@@ -93,24 +99,25 @@ object Span {
     private var operationName: String = initialOperationName
 
     private var spanTags: Map[String, Span.TagValue] = initialSpanTags
+    private var marks: List[Mark] = Nil
     private var customMetricTags = initialMetricTags
 
     override def isEmpty(): Boolean = false
     override def isLocal(): Boolean = true
 
-    override def addTag(key: String, value: String): Span = synchronized {
+    override def tag(key: String, value: String): Span = synchronized {
       if(sampled && open)
         spanTags = spanTags + (key -> TagValue.String(value))
       this
     }
 
-    override def addTag(key: String, value: Long): Span = synchronized {
+    override def tag(key: String, value: Long): Span = synchronized {
       if(sampled && open)
         spanTags = spanTags + (key -> TagValue.Number(value))
       this
     }
 
-    override def addTag(key: String, value: Boolean): Span = synchronized {
+    override def tag(key: String, value: Boolean): Span = synchronized {
       if(sampled && open) {
         val tagValue = if (value) TagValue.True else TagValue.False
         spanTags = spanTags + (key -> tagValue)
@@ -118,13 +125,22 @@ object Span {
       this
     }
 
-    override def addMetricTag(key: String, value: String): Span = synchronized {
+    override def tagMetric(key: String, value: String): Span = synchronized {
       if(sampled && open) {
         spanTags = spanTags + (key -> TagValue.String(value))
 
         if(collectMetrics)
           customMetricTags = customMetricTags + (key -> value)
       }
+      this
+    }
+
+    override def mark(key: String): Span = {
+      mark(Clock.microTimestamp(), key)
+    }
+
+    override def mark(timestampMicros: Long, key: String): Span = synchronized {
+      this.marks = Mark(timestampMicros, key) :: this.marks
       this
     }
 
@@ -177,7 +193,7 @@ object Span {
     }
 
     private def toFinishedSpan(endTimestampMicros: Long): Span.FinishedSpan =
-      Span.FinishedSpan(spanContext, operationName, startTimestampMicros, endTimestampMicros, spanTags)
+      Span.FinishedSpan(spanContext, operationName, startTimestampMicros, endTimestampMicros, spanTags, marks)
 
     private def recordSpanMetrics(endTimestampMicros: Long): Unit = {
       val elapsedTime = endTimestampMicros - startTimestampMicros
@@ -206,10 +222,12 @@ object Span {
   final class Remote(val context: SpanContext) extends Span {
     override def isEmpty(): Boolean = false
     override def isLocal(): Boolean = false
-    override def addTag(key: String, value: String): Span = this
-    override def addTag(key: String, value: Long): Span = this
-    override def addTag(key: String, value: Boolean): Span = this
-    override def addMetricTag(key: String, value: String): Span = this
+    override def tag(key: String, value: String): Span = this
+    override def tag(key: String, value: Long): Span = this
+    override def tag(key: String, value: Boolean): Span = this
+    override def tagMetric(key: String, value: String): Span = this
+    override def mark(key: String): Span = this
+    override def mark(timestampMicros: Long, key: String): Span = this
     override def addError(error: String): Span = this
     override def addError(error: String, throwable: Throwable): Span = this
     override def setOperationName(name: String): Span = this
@@ -241,18 +259,20 @@ object Span {
     case class Number(number: Long) extends TagValue
   }
 
+
   object Metrics {
     val ProcessingTime = Kamon.histogram("span.processing-time", MeasurementUnit.time.microseconds)
     val SpanErrorCount = Kamon.counter("span.error-count")
   }
 
-  case class Annotation(timestampMicros: Long, name: String, fields: Map[String, String])
+  case class Mark(timestampMicros: Long, key: String)
 
   case class FinishedSpan(
     context: SpanContext,
     operationName: String,
     startTimestampMicros: Long,
     endTimestampMicros: Long,
-    tags: Map[String, Span.TagValue]
+    tags: Map[String, Span.TagValue],
+    marks: Seq[Span.Mark]
   )
 }

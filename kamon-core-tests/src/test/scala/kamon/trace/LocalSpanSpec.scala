@@ -18,7 +18,7 @@ package kamon.trace
 import kamon.testkit.{MetricInspection, Reconfigure, TestSpanReporter}
 import kamon.util.Registration
 import kamon.Kamon
-import kamon.trace.Span.{Annotation, TagValue}
+import kamon.trace.Span.TagValue
 import org.scalatest.concurrent.Eventually
 import org.scalatest.{BeforeAndAfterAll, Matchers, OptionValues, WordSpec}
 import org.scalatest.time.SpanSugar._
@@ -44,7 +44,7 @@ class LocalSpanSpec extends WordSpec with Matchers with BeforeAndAfterAll with E
         }
       }
 
-      "pass all the tags to the FinishedSpan instance when started and finished" in {
+      "pass all the tags and marks to the FinishedSpan instance when started and finished" in {
         Kamon.buildSpan("full-span")
           .withTag("builder-string-tag", "value")
           .withTag("builder-boolean-tag-true", true)
@@ -52,10 +52,12 @@ class LocalSpanSpec extends WordSpec with Matchers with BeforeAndAfterAll with E
           .withTag("builder-number-tag", 42)
           .withStartTimestamp(100)
           .start()
-          .addTag("span-string-tag", "value")
-          .addTag("span-boolean-tag-true", true)
-          .addTag("span-boolean-tag-false", false)
-          .addTag("span-number-tag", 42)
+          .tag("span-string-tag", "value")
+          .tag("span-boolean-tag-true", true)
+          .tag("span-boolean-tag-false", false)
+          .tag("span-number-tag", 42)
+          .mark("my-mark")
+          .mark(100, "my-custom-timetamp-mark")
           .setOperationName("fully-populated-span")
           .finish(200)
 
@@ -74,6 +76,12 @@ class LocalSpanSpec extends WordSpec with Matchers with BeforeAndAfterAll with E
             "span-boolean-tag-false" -> TagValue.False,
             "span-number-tag" -> TagValue.Number(42)
           )
+          finishedSpan.marks.map(_.key) should contain allOf(
+            "my-mark",
+            "my-custom-timetamp-mark"
+          )
+          finishedSpan.marks.find(_.key == "my-custom-timetamp-mark").value.timestampMicros should be(100)
+
         }
       }
     }
