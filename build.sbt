@@ -15,8 +15,8 @@
 
 
 resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
-val kamonCore       = "io.kamon" %% "kamon-core"        % "1.0.0-RC2-d21434fd5bc0fcbb05f7d5b4af770225f715a93c"
-val kamonTestkit    = "io.kamon" %% "kamon-testkit"     % "1.0.0-RC2-d21434fd5bc0fcbb05f7d5b4af770225f715a93c"
+val kamonCore       = "io.kamon" %% "kamon-core"        % "1.0.0-RC3"
+val kamonTestkit    = "io.kamon" %% "kamon-testkit"     % "1.0.0-RC3"
 val kamonScala      = "io.kamon" %% "kamon-scala"       % "1.0.0-RC1-db1f817ecc74cbf623140e98d80620e0f4e01499" exclude("io.kamon", "kamon-core")
 val kamonExecutors  = "io.kamon" %% "kamon-executors"   % "1.0.0-RC1-f5ce11c766e57336d53a719377b297e64f2224a7" exclude("io.kamon", "kamon-core")
 

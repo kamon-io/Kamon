@@ -20,7 +20,7 @@ import kamon.Kamon
 import kamon.akka.Akka
 
 case class CellInfo(path: String, isRouter: Boolean, isRoutee: Boolean, isTracked: Boolean, trackingGroups: Seq[String],
-    actorCellCreation: Boolean, systemName: String, dispatcherName: String)
+                    actorCellCreation: Boolean, systemName: String, dispatcherName: String, isTraced: Boolean, actorClass: String, actorName: String)
 
 object CellInfo {
 
@@ -30,6 +30,9 @@ object CellInfo {
   def cellInfoFor(cell: Cell, system: ActorSystem, ref: ActorRef, parent: ActorRef, actorCellCreation: Boolean): CellInfo = {
     def hasRouterProps(cell: Cell): Boolean = cell.props.deploy.routerConfig != NoRouter
 
+    val actorClass = cell.props.actorClass().getName
+    val actorName = ref.path.name
+
     val pathString = ref.path.elements.mkString("/")
     val isRootSupervisor = pathString.length == 0 || pathString == "user" || pathString == "system"
     val isRouter = hasRouterProps(cell)
@@ -38,8 +41,9 @@ object CellInfo {
     val fullPath = if (isRoutee) cellName(system, parent) else cellName(system, ref)
     val filterName = if (isRouter || isRoutee) Akka.RouterFilterName else Akka.ActorFilterName
     val isTracked = !isRootSupervisor && Kamon.filter(filterName, fullPath)
+    val isTraced = Kamon.filter(Akka.ActorTracingFilterName, fullPath)
     val trackingGroups = if(isRootSupervisor) List() else Akka.actorGroups.filter(group => Kamon.filter(group, fullPath))
 
-    CellInfo(fullPath, isRouter, isRoutee, isTracked, trackingGroups, actorCellCreation, system.name, cell.props.dispatcher)
+    CellInfo(fullPath, isRouter, isRoutee, isTracked, trackingGroups, actorCellCreation, system.name, cell.props.dispatcher, isTraced, actorClass, actorName)
   }
 }

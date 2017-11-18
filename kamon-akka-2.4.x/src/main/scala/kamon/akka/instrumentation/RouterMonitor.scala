@@ -20,7 +20,7 @@ object RouterMonitor {
     val cellInfo = CellInfo.cellInfoFor(cell, cell.system, cell.self, cell.parent, false)
 
     if (cellInfo.isTracked)
-      new MetricsOnlyRouterMonitor(Metrics.forRouter(cellInfo.path, cellInfo.systemName, cellInfo.dispatcherName))
+      new MetricsOnlyRouterMonitor(Metrics.forRouter(cellInfo.path, cellInfo.systemName, cellInfo.dispatcherName, cellInfo.actorClass))
     else NoOpRouterMonitor
   }
 }

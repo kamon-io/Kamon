@@ -14,6 +14,8 @@
     <aspect name="akka.kamon.instrumentation.RoutedActorCellInstrumentation"/>
     <aspect name="akka.kamon.instrumentation.ActorLoggingInstrumentation"/>
 
+    <aspect name="akka.kamon.instrumentation.DeadLettersInstrumentation"/>
+
     <!-- Dispatchers -->
     <aspect name="akka.kamon.instrumentation.DispatcherInstrumentation"/>
     <aspect name="akka.kamon.instrumentation.DispatcherMetricCollectionInfoIntoDispatcherMixin"/>

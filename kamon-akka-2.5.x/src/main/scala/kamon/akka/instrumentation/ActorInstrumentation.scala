@@ -42,7 +42,7 @@ class ActorCellInstrumentation {
 
   @Around("invokingActorBehaviourAtActorCell(cell, envelope)")
   def aroundBehaviourInvoke(pjp: ProceedingJoinPoint, cell: ActorCell, envelope: Envelope): Any = {
-    actorInstrumentation(cell).processMessage(pjp, envelope.asInstanceOf[InstrumentedEnvelope].timestampedContext())
+    actorInstrumentation(cell).processMessage(pjp, envelope.asInstanceOf[InstrumentedEnvelope].timestampedContext(), envelope)
   }
 
   @Pointcut("execution(* akka.actor.ActorCell.terminate()) && this(cell)")
