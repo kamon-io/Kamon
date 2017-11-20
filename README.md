@@ -2,6 +2,7 @@ JDBC Integration   ![Build Status](https://travis-ci.org/kamon-io/kamon-jdbc.svg
 ==========================
 
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/kamon-io/Kamon?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[ ![Download](https://api.bintray.com/packages/kamon-io/snapshots/kamon-jdbc/images/download.svg) ](https://bintray.com/kamon-io/snapshots/kamon-jdbc/_latestVersion)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-jdbc_2.11/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-jdbc_2.11)
 
 
@@ -20,15 +21,25 @@ Kamon scala module is currently available for Scala 2.10, 2.11 and 2.12.
 
 Supported releases and dependencies are shown below.
 
-| kamon-jdbc  | status | jdk  | scala            | akka   |
-|:------:|:------:|:----:|------------------|:------:|
-|  0.6.7 | stable | 1.7+, 1.8+ | 2.10, 2.11, 2.12  | 2.3.x, 2.4.x |
+| kamon      | status | jdk  | scala            
+|:----------:|:------:|:----:|------------------
+|  1.0.0-RC3 |   RC   | 1.8+ | 2.10, 2.11, 2.12
 
-To get started with SBT, simply add the following to your `build.sbt`
+
+To get started with SBT, simply add the following to your `build.sbt` or `pom.xml`
 file:
 
 ```scala
-libraryDependencies += "io.kamon" %% "kamon-jdbc" % "0.6.7"
+resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
+libraryDependencies += "io.kamon" %% "kamon-jdbc" % "1.0.0-RC3-d44a8e38f3ffac7ddb14f848f57aa5a7e0d34ca1"
+```
+
+```xml
+<dependency>
+    <groupId>io.kamon</groupId>
+    <artifactId>kamon-jdbc_2.12</artifactId>
+    <version>1.0.0-RC3-d44a8e38f3ffac7ddb14f848f57aa5a7e0d34ca1</version>
+</dependency>
 ```
 
 
