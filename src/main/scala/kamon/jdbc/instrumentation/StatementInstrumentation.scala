@@ -1,5 +1,5 @@
 /* =========================================================================================
- * Copyright © 2013-2014 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2017 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -19,8 +19,8 @@ import java.sql.{PreparedStatement, Statement}
 
 import kamon.Kamon
 import kamon.Kamon.buildSpan
-import kamon.jdbc.{Jdbc, Metrics}
 import kamon.jdbc.instrumentation.StatementInstrumentation.StatementTypes
+import kamon.jdbc.{Jdbc, Metrics}
 import kamon.trace.SpanCustomizer
 import kamon.util.Clock
 import org.aspectj.lang.ProceedingJoinPoint
@@ -111,7 +111,7 @@ class StatementInstrumentation {
       val builder = buildSpan(statementType)
         .withStartTimestamp(startTimestamp)
         .withTag("component", "jdbc")
-        .withSpanTag("db.statement", sql)
+        .withTag("db.statement", sql)
 
       poolTags.foreach { case (key, value) => builder.withTag(key, value) }
       builder
@@ -123,10 +123,7 @@ class StatementInstrumentation {
 
     } catch {
       case t: Throwable =>
-        span
-          .addSpanTag("error", true)
-          .addSpanTag("error.object", t.toString)
-
+        span.addError("error.object", t)
         Jdbc.onStatementError(sql, t)
 
     } finally {

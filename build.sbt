@@ -1,5 +1,5 @@
 /* =========================================================================================
- * Copyright © 2013-2016 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2017 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -13,12 +13,12 @@
  * =========================================================================================
  */
 
+val kamonCore  =        "io.kamon"        %% "kamon-core"         % "1.0.0-RC3"
+val kamonTestkit  =     "io.kamon"        %% "kamon-testkit"      % "1.0.0-RC3"
+val h2 =                "com.h2database"   % "h2"                 % "1.4.182"
+val hikariCP =          "com.zaxxer"       % "HikariCP"           % "2.6.2"
 
 resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
-val kamonCore  = "io.kamon" %% "kamon-core" % "1.0.0-RC1-041d105ce8e0eef5f81e2d9e22a6a81342278257"
-val kamonTestkit  = "io.kamon" %% "kamon-testkit" % "1.0.0-RC1-041d105ce8e0eef5f81e2d9e22a6a81342278257"
-val h2 = "com.h2database"% "h2" % "1.4.182"
-val hikariCP = "com.zaxxer" % "HikariCP" % "2.6.2"
 
 lazy val root = (project in file("."))
   .settings(name := "kamon-jdbc")
