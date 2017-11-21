@@ -45,25 +45,37 @@ object NetworkMetrics extends MetricBuilder("host.network") with SigarMetricBuil
     val receivedBytesMetric = networkBytesMetric.refine(Map("component" -> "system-metrics", "direction" -> "received"))
     val transmittedBytesMetric = networkBytesMetric.refine(Map("component" -> "system-metrics", "direction" -> "transmitted"))
 
+    val packetsReceived = networkPacketsMetric.refine(Map("component" -> "system-metrics", "direction" -> "received"))
+    val packetsTransmitted = networkPacketsMetric.refine(Map("component" -> "system-metrics", "direction" -> "transmitted"))
+
     val rDroppedMetric  = networkPacketsMetric.refine(Map("component" -> "system-metrics", "direction" -> "received",    "state" -> "dropped"))
     val rErrorsMetric   = networkPacketsMetric.refine(Map("component" -> "system-metrics", "direction" -> "received",    "state" -> "error"))
     val tDroppedMetric  = networkPacketsMetric.refine(Map("component" -> "system-metrics", "direction" -> "transmitted", "state" -> "dropped"))
     val tErrorsMetric   = networkPacketsMetric.refine(Map("component" -> "system-metrics", "direction" -> "transmitted", "state" -> "error"))
 
-    val received      = DifferentialSource(() => sumOfAllInterfaces(sigar, interfaces,_.getRxBytes))
-    val transmitted    = DifferentialSource(() => sumOfAllInterfaces(sigar, interfaces, _.getTxBytes))
+    val bReceived      = DifferentialSource(() => sumOfAllInterfaces(sigar, interfaces,_.getRxBytes))
+    val bTransmitted    = DifferentialSource(() => sumOfAllInterfaces(sigar, interfaces, _.getTxBytes))
+
+    val pReceived      = DifferentialSource(() => sumOfAllInterfaces(sigar, interfaces,_.getRxPackets))
+    val pTransmitted    = DifferentialSource(() => sumOfAllInterfaces(sigar, interfaces, _.getTxPackets))
+
     val receiveErrors     = DifferentialSource(() => sumOfAllInterfaces(sigar, interfaces, _.getRxErrors))
     val transmitErrors    = DifferentialSource(() => sumOfAllInterfaces(sigar,interfaces, _.getTxErrors))
     val receiveDrops      = DifferentialSource(() => sumOfAllInterfaces(sigar,interfaces, _.getRxDropped))
     val transmitDrops     = DifferentialSource(() => sumOfAllInterfaces(sigar,interfaces, _.getTxDropped))
 
     override def update(): Unit = {
-      receivedBytesMetric.record(received.get())
-      transmittedBytesMetric.record(transmitted.get())
-      rDroppedMetric.increment(receiveErrors.get())
-      tErrorsMetric.increment(transmitErrors.get())
+
+      receivedBytesMetric.record(bReceived.get())
+      transmittedBytesMetric.record(bTransmitted.get())
+
+      packetsReceived.increment(pReceived.get())
+      packetsTransmitted.increment(pTransmitted.get())
+
       rDroppedMetric.increment(receiveDrops.get())
+      rErrorsMetric.increment(receiveErrors.get())
       tDroppedMetric.increment(transmitDrops.get())
+      tErrorsMetric.increment(transmitErrors.get())
     }
 
     def sumOfAllInterfaces(sigar: Sigar, interfaces: List[String], thunk: NetInterfaceStat ⇒ Long): Long = Try {
