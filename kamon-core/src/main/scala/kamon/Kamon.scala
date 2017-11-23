@@ -122,6 +122,22 @@ object Kamon extends MetricLookup with ReporterRegistry with Tracer {
   def withContextKey[T, K](key: Key[K], value: K)(f: => T): T =
     withContext(currentContext().withKey(key, value))(f)
 
+  def withSpan[T](span: Span)(f: => T): T =
+    withSpan(span, true)(f)
+
+  def withSpan[T](span: Span, finishSpan: Boolean)(f: => T): T = {
+    try {
+      withContextKey(Span.ContextKey, span)(f)
+    } catch {
+      case t: Throwable =>
+        span.addError(t.getMessage, t)
+        throw t
+
+    } finally {
+      if(finishSpan)
+        span.finish()
+    }
+  }
 
   override def loadReportersFromConfig(): Unit =
     _reporterRegistry.loadReportersFromConfig()

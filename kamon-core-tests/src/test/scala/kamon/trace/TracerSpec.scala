@@ -65,7 +65,7 @@ class TracerSpec extends WordSpec with Matchers with SpanBuilding with SpanInspe
 
     "automatically take the Span from the current Context as parent" in {
       val parent = tracer.buildSpan("myOperation").start()
-      val child = Kamon.withContext(Context.create(Span.ContextKey, parent)) {
+      val child = Kamon.withSpan(parent) {
         tracer.buildSpan("childOperation").asChildOf(parent).start()
       }
 
@@ -76,7 +76,7 @@ class TracerSpec extends WordSpec with Matchers with SpanBuilding with SpanInspe
 
     "ignore the span from the current context as parent if explicitly requested" in {
       val parent = tracer.buildSpan("myOperation").start()
-      val child = Kamon.withContext(Context.create(Span.ContextKey, parent)) {
+      val child = Kamon.withSpan(parent) {
         tracer.buildSpan("childOperation").ignoreParentFromContext().start()
       }
 
