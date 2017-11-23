@@ -16,50 +16,57 @@
 
 package kamon.logback
 
-import ch.qos.logback.classic.joran.JoranConfigurator
-import ch.qos.logback.classic.{Logger, LoggerContext}
 import kamon.Kamon
 import kamon.context.Context
 import kamon.trace.Span
 import org.scalatest._
-import org.slf4j.LoggerFactory
+import org.scalatest.concurrent.Eventually
+import org.scalatest.time.SpanSugar._
 
-class LogbackSpanConverterSpec extends WordSpec with Matchers {
-  private def initLogger(filename: String): (Logger, LogbackMemoryAppender) = {
-    val url = this.getClass.getResource(s"/$filename.xml")
-    val loggerContext = LoggerFactory.getILoggerFactory.asInstanceOf[LoggerContext]
-    loggerContext.reset()
-    val configurator = new JoranConfigurator
-    configurator.setContext(loggerContext)
-    configurator.doConfigure(url)
-    val logger = LoggerFactory.getLogger(filename).asInstanceOf[Logger]
-    val root = LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME).asInstanceOf[Logger]
-    val appender = root.getAppender("MEMORY").asInstanceOf[LogbackMemoryAppender]
-    (logger, appender)
-  }
+class LogbackSpanConverterSpec extends WordSpec with Matchers with Eventually {
 
   "TokenConverter" when {
     "a span is uninitialized" should {
       "report an undefined context" in {
-        val (logger, appender) = initLogger("test-logback-token")
-        logger.info("")
-        appender.getLastLine should be ("undefined")
+        val appender = buildMemoryAppender(configurator)
+        appender.doAppend(createLoggingEvent(context))
+        appender.getLastLine should be("undefined")
       }
     }
 
     "a span is initialized" should {
       "report the its context" in {
-        val (logger, appender) = initLogger("test-logback-token")
+        val memoryAppender = buildMemoryAppender(configurator)
+
         val span = Kamon.buildSpan("my-span").start()
         val traceID = span.context().traceID
         val contextWithSpan = Context.create(Span.ContextKey, span)
 
         Kamon.withContext(contextWithSpan) {
-          logger.info("")
+          memoryAppender.doAppend(createLoggingEvent(context))
         }
 
-        appender.getLastLine shouldBe traceID.string
+        memoryAppender.getLastLine shouldBe traceID.string
+      }
+
+      "report the its context using an AsyncAppender" in {
+
+        val memoryAppender = buildMemoryAppender(configurator)
+        val asyncAppender = buildAsyncAppender(configurator, memoryAppender)
+
+        val span = Kamon.buildSpan("my-span").start()
+        val traceID = span.context().traceID
+        val contextWithSpan = Context.create(Span.ContextKey, span)
+
+        Kamon.withContext(contextWithSpan) {
+          asyncAppender.doAppend(createLoggingEvent(context))
+        }
+
+        eventually(timeout(2 seconds)) {
+          memoryAppender.getLastLine shouldBe traceID.string
+        }
       }
     }
   }
 }
+

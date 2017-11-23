@@ -1,0 +1,12 @@
+<!DOCTYPE aspectj PUBLIC "-//AspectJ//DTD//EN" "http://www.eclipse.org/aspectj/dtd/aspectj.dtd">
+
+<aspectj>
+    <aspects>
+        <aspect name="kamon.logback.instrumentation.AsyncAppenderInstrumentation"/>
+    </aspects>
+
+    <weaver>
+        <include within="kamon.logback..*"/>
+        <include within="ch.qos.logback..*"/>
+    </weaver>
+</aspectj>
