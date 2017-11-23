@@ -15,13 +15,13 @@
 
 
 resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
-val kamonCore  = "io.kamon" %% "kamon-core" % "1.0.0-RC1-670f32d19a30283a39a0519a74fc5c6a0efd379b" force()
-val kamonTestkit  = "io.kamon" %% "kamon-testkit" % "1.0.0-RC1-670f32d19a30283a39a0519a74fc5c6a0efd379b" force()
-val kamonScala = "io.kamon" %% "kamon-scala" % "1.0.0-RC1-a6fc82a887af5fada406d7b987f0a55ba72f1535" exclude("io.kamon", "kamon-core")
-val kamonExecutors = "io.kamon" %% "kamon-executors" % "1.0.0-RC1-d41250c58e9983f48ee3c455b3560d26846c628d" exclude("io.kamon", "kamon-core")
+val kamonCore       = "io.kamon" %% "kamon-core"        % "1.0.0-RC4"
+val kamonTestkit    = "io.kamon" %% "kamon-testkit"     % "1.0.0-RC4"
+val kamonScala      = "io.kamon" %% "kamon-scala"       % "1.0.0-RC4"
+val kamonExecutors  = "io.kamon" %% "kamon-executors"   % "1.0.0-RC4"
 
 val `akka-2.3` = "2.3.13"
-val `akka-2.4` = "2.4.16"
+val `akka-2.4` = "2.4.18"
 val `akka-2.5` = "2.5.2"
 
 def akkaDependency(name: String, version: String) = {

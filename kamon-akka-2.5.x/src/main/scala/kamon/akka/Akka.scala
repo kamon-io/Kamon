@@ -25,6 +25,7 @@ object Akka {
   val ActorFilterName = "akka.actor"
   val RouterFilterName = "akka.router"
   val DispatcherFilterName = "akka.dispatcher"
+  val ActorTracingFilterName = "akka-tracing"
 
   @volatile var askPatternTimeoutWarning: AskPatternTimeoutWarningSetting = Off
   @volatile var actorGroups = Seq.empty[String]

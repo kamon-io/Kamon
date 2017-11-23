@@ -38,8 +38,8 @@ object Metrics {
   val actorMailboxSizeMetric = Kamon.minMaxCounter("akka.actor.mailbox-size")
   val actorErrorsMetric = Kamon.counter("akka.actor.errors")
 
-  def forActor(path: String, system: String, dispatcher: String): ActorMetrics = {
-    val actorTags = Map("path" -> path, "system" -> system, "dispatcher" -> dispatcher)
+  def forActor(path: String, system: String, dispatcher: String, actorClass: String): ActorMetrics = {
+    val actorTags = Map("path" -> path, "system" -> system, "dispatcher" -> dispatcher, "class" -> actorClass)
     ActorMetrics(
     actorTags,
       actorTimeInMailboxMetric.refine(actorTags),
@@ -76,7 +76,7 @@ object Metrics {
   val routerProcessingTime = Kamon.histogram("akka.router.processing-time", time.nanoseconds)
   val routerErrors = Kamon.counter("akka.router.errors")
 
-  def forRouter(path: String, system: String, dispatcher: String): RouterMetrics = {
+  def forRouter(path: String, system: String, dispatcher: String, actorClass: String): RouterMetrics = {
     val routerTags = Map("path" -> path, "system" -> system, "dispatcher" -> dispatcher)
     RouterMetrics(
       routerTags,
@@ -138,6 +138,44 @@ object Metrics {
       groupMailboxSize.remove(tags)
       groupMembers.remove(tags)
       groupErrors.remove(tags)
+    }
+  }
+
+
+
+  /**
+    *
+    *  Metrics for actor systems.
+    *
+    *    - dead-letters: System global counter for messages received by dead letters.
+    *    - processed-messages: System global count of processed messages (separate for tracked and non-tracked)
+    *    - active-actors: Current count of active actors in the system.
+    */
+  val systemDeadLetters = Kamon.counter("akka.system.dead-letters")
+  val systemUnhandledMessages = Kamon.counter("akka.system.unhandled-messages")
+  val systemProcessedMessages = Kamon.counter("akka.system.processed-messages")
+  val systemActiveActors = Kamon.minMaxCounter("akka.system.active-actors")
+
+  def forSystem(name: String): ActorSystemMetrics = {
+    val systemTags = Map("system" -> name)
+    ActorSystemMetrics(
+      systemTags,
+      systemDeadLetters.refine(systemTags),
+      systemUnhandledMessages.refine(systemTags),
+      systemProcessedMessages.refine(systemTags + ("tracked" -> "true")),
+      systemProcessedMessages.refine(systemTags + ("tracked" -> "false")),
+      systemActiveActors.refine(systemTags)
+    )
+  }
+
+  case class ActorSystemMetrics(tags: Map[String, String], deadLetters: Counter, unhandledMessages: Counter, processedMessagesByTracked: Counter, processedMessagesByNonTracked: Counter, activeActors: MinMaxCounter) {
+    def cleanup(): Unit = {
+      systemDeadLetters.remove(tags)
+      systemUnhandledMessages.remove(tags)
+      systemActiveActors.remove(tags)
+      systemProcessedMessages.remove(tags + ("tracked" -> "true"))
+      systemProcessedMessages.remove(tags + ("tracked" -> "false"))
+
     }
   }
 }

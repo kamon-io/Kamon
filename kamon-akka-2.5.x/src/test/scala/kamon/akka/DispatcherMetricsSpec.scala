@@ -29,32 +29,31 @@ import org.scalatest.concurrent.Eventually
 import scala.concurrent.Future
 
 class DispatcherMetricsSpec extends TestKit(ActorSystem("DispatcherMetricsSpec")) with WordSpecLike with MetricInspection with Matchers
-    with BeforeAndAfterAll with ImplicitSender with Eventually {
+  with BeforeAndAfterAll with ImplicitSender with Eventually {
 
   "the Kamon dispatcher metrics" should {
-    "track dispatchers configured in the akka.dispatcher filter" in {
-      forceInit(system.dispatchers.lookup("akka.actor.default-dispatcher"))
-      forceInit(system.dispatchers.lookup("tracked-fjp"))
-      forceInit(system.dispatchers.lookup("tracked-tpe"))
-      forceInit(system.dispatchers.lookup("explicitly-excluded"))
 
-      forkJoinPoolParallelism.valuesForTag("name") should contain only("akka.actor.default-dispatcher", "tracked-fjp")
-      threadPoolSize.valuesForTag("name") should contain only("tracked-tpe")
+    val dispatcherMetrics = Seq(Pool, Threads, Tasks, Queue)
+
+    val trackedDispatchers = Seq(
+      "akka.actor.default-dispatcher",
+      "tracked-fjp",
+      "tracked-tpe"
+    )
+    val allDispatchers = trackedDispatchers :+ "explicitly-excluded"
+
+    "track dispatchers configured in the akka.dispatcher filter" in {
+      allDispatchers.foreach(id => forceInit(system.dispatchers.lookup(id)))
+
+      val dispatcherMetricTags = dispatcherMetrics.map(_.partialRefineKeys(Set("name"))).flatten
+
+      trackedDispatchers.forall(d => dispatcherMetricTags.exists(_.get("name").get == d)) should be (true)
     }
 
-
     "clean up the metrics recorders after a dispatcher is shutdown" in {
-      implicit val tpeDispatcher = system.dispatchers.lookup("tracked-tpe")
-      implicit val fjpDispatcher = system.dispatchers.lookup("tracked-fjp")
-
-      forkJoinPoolParallelism.valuesForTag("name") should contain("tracked-fjp")
-      threadPoolSize.valuesForTag("name") should contain("tracked-tpe")
-
-      shutdownDispatcher(tpeDispatcher)
-      shutdownDispatcher(fjpDispatcher)
-
-      forkJoinPoolParallelism.valuesForTag("name") shouldNot contain("tracked-fjp")
-      threadPoolSize.valuesForTag("name") shouldNot contain("tracked-tpe")
+      Pool.valuesForTag("name") should contain("tracked-fjp")
+      shutdownDispatcher(system.dispatchers.lookup("tracked-fjp"))
+      Pool.valuesForTag("name") shouldNot contain("tracked-fjp")
     }
 
     "play nicely when dispatchers are looked up from a BalancingPool router" in {
@@ -62,7 +61,11 @@ class DispatcherMetricsSpec extends TestKit(ActorSystem("DispatcherMetricsSpec")
       balancingPoolRouter ! Ping
       expectMsg(Pong)
 
-      forkJoinPoolParallelism.valuesForTag("name") should contain("BalancingPool-/test-balancing-pool")
+      Pool.valuesForTag("name") should contain("BalancingPool-/test-balancing-pool")
+    }
+
+    "akka-fork-join-pool" in {
+
     }
   }
 
@@ -76,10 +79,6 @@ class DispatcherMetricsSpec extends TestKit(ActorSystem("DispatcherMetricsSpec")
 
     dispatcher
   }
-
-  def submit(dispatcher: MessageDispatcher): Future[String] = Future {
-    "hello"
-  }(dispatcher)
 
   def shutdownDispatcher(dispatcher: MessageDispatcher): Unit = {
     val shutdownMethod = dispatcher.getClass.getDeclaredMethod("shutdown")

@@ -4,7 +4,7 @@ import java.util.concurrent.locks.ReentrantLock
 
 import akka.actor._
 import akka.dispatch.Envelope
-import akka.dispatch.sysmsg.SystemMessage
+import akka.dispatch.sysmsg.{LatestFirstSystemMessageList, SystemMessage, SystemMessageList}
 import akka.routing.RoutedActorCell
 import kamon.Kamon
 import org.aspectj.lang.ProceedingJoinPoint
@@ -42,7 +42,7 @@ class ActorCellInstrumentation {
 
   @Around("invokingActorBehaviourAtActorCell(cell, envelope)")
   def aroundBehaviourInvoke(pjp: ProceedingJoinPoint, cell: ActorCell, envelope: Envelope): Any = {
-    actorInstrumentation(cell).processMessage(pjp, envelope.asInstanceOf[InstrumentedEnvelope].timestampedContext())
+    actorInstrumentation(cell).processMessage(pjp, envelope.asInstanceOf[InstrumentedEnvelope].timestampedContext(), envelope)
   }
 
   @Pointcut("execution(* akka.actor.ActorCell.terminate()) && this(cell)")
@@ -56,7 +56,6 @@ class ActorCellInstrumentation {
       cell.asInstanceOf[RouterInstrumentationAware].routerInstrumentation.cleanup()
     }
   }
-
 
   /**
    *

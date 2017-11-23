@@ -16,14 +16,11 @@
 package kamon.akka
 
 
-import java.nio.LongBuffer
-
 import scala.concurrent.duration._
 import org.scalatest.concurrent.Eventually
 import org.scalactic.TimesOnInt._
 import akka.actor._
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
-import kamon.Kamon
 import Metrics._
 import kamon.akka.ActorMetricsTestActor._
 import kamon.testkit.MetricInspection
@@ -114,13 +111,62 @@ class ActorMetricsSpec extends TestKit(ActorSystem("ActorMetricsSpec")) with Wor
     }
   }
 
+  "the Kamon system metrics" should {
+    val systemMetrics= Metrics.forSystem(system.name)
+    "record deadletters" in {
+      val doaActor = system.actorOf(Props[ActorMetricsTestActor], "doa")
+
+      val deathWatcher = TestProbe()
+      deathWatcher.watch(doaActor)
+      doaActor ! PoisonPill
+      deathWatcher.expectTerminated(doaActor)
+
+      (1 to 7).foreach(_ =>  doaActor ! "deadonarrival")
+      eventually {
+        systemMetrics.deadLetters.value(false).toInt should be(7)
+      }
+    }
+
+    "record unhandeled messages" in {
+      val hndl = system.actorOf(Props[ActorMetricsTestActor], "nonhandled")
+
+      (1 to 10).foreach(_ => hndl ! "CantHandleStrings")
+      eventually {
+        systemMetrics.unhandledMessages.value(false).toInt should be(10)
+      }
+    }
+
+    "record active actor counts" in {
+      systemMetrics.activeActors.distribution(true)
+      (1 to 8).foreach(i => system.actorOf(Props[ActorMetricsTestActor], s"counted-$i"))
+      eventually {
+        systemMetrics.activeActors.distribution(false).max.toInt should be > 0
+      }
+    }
+
+    "record processed messages counts" in {
+      systemMetrics.processedMessagesByTracked.value(true)
+      systemMetrics.processedMessagesByNonTracked.value(true)
+
+      val tracked = system.actorOf(Props[ActorMetricsTestActor], "tracked-actor-counts")
+      val nonTracked = system.actorOf(Props[ActorMetricsTestActor], "non-tracked-actor-counts")
+
+      (1 to 10).foreach(_ => tracked ! Discard)
+      (1 to 15).foreach(_ => nonTracked ! Discard)
+
+      eventually(systemMetrics.processedMessagesByTracked.value(false) should be(10))
+      eventually(systemMetrics.processedMessagesByNonTracked.value(false) should be(15))
+    }
+  }
+
   override protected def afterAll(): Unit = shutdown()
 
   def actorTags(path: String): Map[String, String] =
     Map(
       "path" -> path,
       "system" -> "ActorMetricsSpec",
-      "dispatcher" -> "akka.actor.default-dispatcher"
+      "dispatcher" -> "akka.actor.default-dispatcher",
+      "class" -> "kamon.akka.ActorMetricsTestActor"
     )
 
   trait ActorMetricsFixtures {
