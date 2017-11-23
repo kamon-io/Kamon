@@ -21,7 +21,7 @@ val kamonScala      = "io.kamon" %% "kamon-scala"       % "1.0.0-RC3-dc88b870153
 val kamonExecutors  = "io.kamon" %% "kamon-executors"   % "1.0.0-RC3-bb7ce5ca4bdeff5a4f0a2b5179350e825e528ec1"
 
 val `akka-2.3` = "2.3.13"
-val `akka-2.4` = "2.4.16"
+val `akka-2.4` = "2.4.18"
 val `akka-2.5` = "2.5.2"
 
 def akkaDependency(name: String, version: String) = {
