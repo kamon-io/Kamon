@@ -28,14 +28,14 @@ file:
 
 ```scala
 resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
-libraryDependencies += "io.kamon" %% "kamon-play-[play-version]" % "1.0.0-RC3-293aa4df5e50a026693adfc9ae66001c6815fe5f"
+libraryDependencies += "io.kamon" %% "kamon-play-[play-version]" % "1.0.0-RC4-b4c7c921bb94b58abe2b5f3686173bdfa292c203"
 ```
 
 ```xml
 <dependency>
     <groupId>io.kamon</groupId>
     <artifactId>kamon-play-[play-version]_2.12</artifactId>
-    <version>1.0.0-RC3-293aa4df5e50a026693adfc9ae66001c6815fe5f</version>
+    <version>1.0.0-RC4-b4c7c921bb94b58abe2b5f3686173bdfa292c203</version>
 </dependency>
 ```
 
