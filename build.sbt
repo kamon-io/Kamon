@@ -13,8 +13,8 @@
  * =========================================================================================
  */
 
-val kamonCore  =        "io.kamon"        %% "kamon-core"         % "1.0.0-RC3"
-val kamonTestkit  =     "io.kamon"        %% "kamon-testkit"      % "1.0.0-RC3"
+val kamonCore  =        "io.kamon"        %% "kamon-core"         % "1.0.0-RC4"
+val kamonTestkit  =     "io.kamon"        %% "kamon-testkit"      % "1.0.0-RC4"
 val h2 =                "com.h2database"   % "h2"                 % "1.4.182"
 val hikariCP =          "com.zaxxer"       % "HikariCP"           % "2.6.2"
 
@@ -22,6 +22,7 @@ resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
 
 lazy val root = (project in file("."))
   .settings(name := "kamon-jdbc")
+  .settings(isSnapshot := true)
   .settings(aspectJSettings: _*)
   .settings(
       libraryDependencies ++=
