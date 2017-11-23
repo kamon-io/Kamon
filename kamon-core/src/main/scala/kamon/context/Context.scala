@@ -88,6 +88,9 @@ object Key {
   def broadcast[T](name: String, emptyValue: T): Key[T] =
     new Default[T](name, emptyValue, true)
 
+  def broadcastString(name: String): Key[Option[String]] =
+    new Default[Option[String]](name, None, true)
+
 
   private class Default[T](val name: String, val emptyValue: T, val broadcast: Boolean) extends Key[T] {
     override def hashCode(): Int =

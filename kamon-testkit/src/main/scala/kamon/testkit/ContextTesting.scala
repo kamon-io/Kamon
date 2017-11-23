@@ -19,7 +19,7 @@ import kamon.context.{Context, Key}
 
 trait ContextTesting {
   val StringKey = Key.local[Option[String]]("string-key", None)
-  val StringBroadcastKey = Key.broadcast[Option[String]]("string-broadcast-key", None)
+  val StringBroadcastKey = Key.broadcastString("string-broadcast-key")
 
   def contextWithLocal(value: String): Context =
     Context.create(StringKey, Some(value))

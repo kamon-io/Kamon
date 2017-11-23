@@ -40,10 +40,15 @@ class Codecs(initialConfig: Config) {
     binary
 
   def reconfigure(config: Config): Unit = {
+    import scala.collection.JavaConverters._
     try {
       val codecsConfig = config.getConfig("kamon.context.codecs")
-      httpHeaders = new Codecs.HttpHeaders(readEntryCodecs("http-headers-keys", codecsConfig))
-      binary = new Codecs.Binary(codecsConfig.getBytes("binary-buffer-size"), readEntryCodecs("binary-keys", codecsConfig))
+      val stringKeys = codecsConfig.getStringList("string-keys").asScala
+      val knownHttpHeaderCodecs = readEntryCodecs[TextMap]("http-headers-keys", codecsConfig) ++ stringHeaderCodecs(stringKeys)
+      val knownBinaryCodecs = readEntryCodecs[ByteBuffer]("binary-keys", codecsConfig) ++ stringBinaryCodecs(stringKeys)
+
+      httpHeaders = new Codecs.HttpHeaders(knownHttpHeaderCodecs)
+      binary = new Codecs.Binary(codecsConfig.getBytes("binary-buffer-size"), knownBinaryCodecs)
     } catch {
       case t: Throwable => log.error("Failed to initialize Context Codecs", t)
     }
@@ -65,6 +70,14 @@ class Codecs(initialConfig: Config) {
     })
 
     entries.result()
+  }
+
+  private def stringHeaderCodecs(keys: Seq[String]): Map[String, Codecs.ForEntry[TextMap]] = {
+    keys.map(key => (key, new Codecs.StringHeadersCodec(key))).toMap
+  }
+
+  private def stringBinaryCodecs(keys: Seq[String]): Map[String, Codecs.ForEntry[ByteBuffer]] = {
+    keys.map(key => (key, new Codecs.StringBinaryCodec(key))).toMap
   }
 }
 
@@ -208,6 +221,43 @@ object Codecs {
 
     private def newThreadLocalBuffer(size: Long): ThreadLocal[Array[Byte]] = new ThreadLocal[Array[Byte]] {
       override def initialValue(): Array[Byte] = Array.ofDim[Byte](size.toInt)
+    }
+  }
+
+  private class StringHeadersCodec(key: String) extends Codecs.ForEntry[TextMap] {
+    private val dataKey = "X-KamonContext-" + key
+    private val contextKey = Key.broadcast[Option[String]](key, None)
+
+    override def encode(context: Context): TextMap = {
+      val textMap = TextMap.Default()
+      context.get(contextKey).foreach { value =>
+        textMap.put(dataKey, value)
+      }
+
+      textMap
+    }
+
+    override def decode(carrier: TextMap, context: Context): Context = {
+      carrier.get(dataKey) match {
+        case value @ Some(_) => context.withKey(contextKey, value)
+        case None            => context
+      }
+    }
+  }
+
+  private class StringBinaryCodec(key: String) extends Codecs.ForEntry[ByteBuffer] {
+    val emptyBuffer: ByteBuffer = ByteBuffer.allocate(0)
+    private val contextKey = Key.broadcast[Option[String]](key, None)
+
+    override def encode(context: Context): ByteBuffer = {
+      context.get(contextKey) match {
+        case Some(value)  => ByteBuffer.wrap(value.getBytes)
+        case None         => emptyBuffer
+      }
+    }
+
+    override def decode(carrier: ByteBuffer, context: Context): Context = {
+      context.withKey(contextKey, Some(new String(carrier.array())))
     }
   }
 }
