@@ -22,10 +22,10 @@ import kamon.akka.AskPatternTimeoutWarningSettings.Off
 import scala.collection.JavaConverters._
 
 object Akka {
-  val ActorFilterName = "akka.actor"
-  val RouterFilterName = "akka.router"
-  val DispatcherFilterName = "akka.dispatcher"
-  val ActorTracingFilterName = "akka-tracing"
+  val ActorFilterName = "akka.tracked-actor"
+  val RouterFilterName = "akka.tracked-router"
+  val DispatcherFilterName = "akka.tracked-dispatcher"
+  val ActorTracingFilterName = "akka.traced-actor"
 
   @volatile var askPatternTimeoutWarning: AskPatternTimeoutWarningSetting = Off
   @volatile var actorGroups = Seq.empty[String]
