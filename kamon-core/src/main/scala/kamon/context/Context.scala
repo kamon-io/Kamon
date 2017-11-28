@@ -74,7 +74,7 @@ object Context {
 }
 
 
-trait Key[T] {
+sealed abstract class Key[T] {
   def name: String
   def emptyValue: T
   def broadcast: Boolean

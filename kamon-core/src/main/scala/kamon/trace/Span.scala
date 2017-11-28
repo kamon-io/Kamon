@@ -23,7 +23,7 @@ import kamon.trace.SpanContext.SamplingDecision
 import kamon.util.Clock
 
 
-trait Span {
+sealed abstract class Span {
 
   def isEmpty(): Boolean
   def isLocal(): Boolean
