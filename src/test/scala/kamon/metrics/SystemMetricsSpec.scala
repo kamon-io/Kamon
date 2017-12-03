@@ -188,7 +188,7 @@ class SystemMetricsSpec extends WordSpecLike
     "record Context Switches Global, Voluntary and Non Voluntary metrics when running on Linux" in {
       if (isLinux) {
         Seq("process-voluntary", "process-non-voluntary", "global").foreach { mode =>
-          Kamon.histogram("host.context-switches").refine("component" -> "system-metrics", "mode" -> mode).distribution().count should be > 0L
+          Kamon.counter("host.context-switches").refine("component" -> "system-metrics", "mode" -> mode).value() should be > 0L
         }
       }
     }

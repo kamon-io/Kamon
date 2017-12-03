@@ -22,6 +22,7 @@ import java.nio.file.{Files, Paths}
 
 import kamon.Kamon
 import kamon.system.{CustomMetricBuilder, Metric, MetricBuilder}
+import kamon.util.DifferentialSource
 import org.slf4j.Logger
 
 import scala.collection.JavaConverters.iterableAsScalaIterableConverter
@@ -34,17 +35,19 @@ import scala.collection.JavaConverters.iterableAsScalaIterableConverter
  */
 object ContextSwitchesMetrics extends MetricBuilder("host.context-switches") with CustomMetricBuilder {
   def build(pid: Long, metricName: String, logger: Logger)  = new Metric {
-    val contextSwitchMetric = Kamon.histogram(metricName)
+    val contextSwitchMetric = Kamon.counter(metricName)
 
     val perProcessVoluntaryMetric     = contextSwitchMetric.refine(Map("component" -> "system-metrics", "mode" -> "process-voluntary"))
     val perProcessNonVoluntaryMetric  = contextSwitchMetric.refine(Map("component" -> "system-metrics", "mode" -> "process-non-voluntary"))
     val globalMetric                  = contextSwitchMetric.refine(Map("component" -> "system-metrics", "mode" -> "global"))
 
+    val globalContextSwitchSource = DifferentialSource(() => contextSwitches)
+
     override def update(): Unit = {
       val (voluntary, nonVoluntary) = contextSwitchesByProcess(pid)
-      perProcessVoluntaryMetric.record(voluntary)
-      perProcessNonVoluntaryMetric.record(nonVoluntary)
-      globalMetric.record(contextSwitches)
+      perProcessVoluntaryMetric.increment(voluntary)
+      perProcessNonVoluntaryMetric.increment(nonVoluntary)
+      globalMetric.increment(globalContextSwitchSource.get())
     }
 
     def contextSwitchesByProcess(pid: Long): (Long, Long) = {
