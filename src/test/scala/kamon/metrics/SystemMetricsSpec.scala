@@ -36,15 +36,16 @@ class SystemMetricsSpec extends WordSpecLike
 
 
   "the Kamon System Metrics module" should {
-    "record user, system, wait, idle and stolen CPU metrics" in {
+    "record user, system, wait, idle, stolen and combined CPU metrics" in {
 
       val userTag = "mode" -> "user"
       val systemTag = "mode" -> "system"
       val waitTag = "mode" -> "wait"
       val idleTag = "mode" -> "idle"
       val stolenTag = "mode" -> "stolen"
+      val combinedTag = "mode" -> "combined"
 
-      val modes = userTag :: systemTag :: waitTag :: idleTag :: stolenTag :: Nil
+      val modes = userTag :: systemTag :: waitTag :: idleTag :: stolenTag :: combinedTag :: Nil
 
       modes.foreach(modeTag => Kamon.histogram("host.cpu").refine("component" -> "system-metrics", modeTag).distribution().count should be > 0L)
     }

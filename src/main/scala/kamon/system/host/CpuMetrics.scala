@@ -29,7 +29,8 @@ import org.slf4j.Logger
  *    - wait: Total percentage of system cpu io wait time.
  *    - idle:  Total percentage of system cpu idle time
  *    - stolen: Total percentage of system cpu involuntary wait time. @see [[https://www.datadoghq.com/2013/08/understanding-aws-stolen-cpu-and-how-it-affects-your-apps/ "Understanding Stolen Cpu"]]
- */
+ *    - combined:  Total percentage of user + system + nice + wait CPU usage.
+  */
 object CpuMetrics extends MetricBuilder("host.cpu") with SigarMetricBuilder {
 
   def build(sigar: Sigar, metricName: String, logger: Logger) = new Metric {
@@ -44,16 +45,18 @@ object CpuMetrics extends MetricBuilder("host.cpu") with SigarMetricBuilder {
           (cpuPerc.getSys * 100L).toLong,
           (cpuPerc.getWait * 100L).toLong,
           (cpuPerc.getIdle * 100L).toLong,
-          (cpuPerc.getStolen * 100L).toLong)
+          (cpuPerc.getStolen * 100L).toLong,
+          (cpuPerc.getCombined * 100L).toLong)
       }
 
-      val (cpuUser, cpuSys, cpuWait, cpuIdle, cpuStolen) = runSafe(cpuPerc, (0L, 0L, 0L, 0L, 0L), "cpu", logger)
+      val (cpuUser, cpuSys, cpuWait, cpuIdle, cpuStolen, cpuCombined) = runSafe(cpuPerc, (0L, 0L, 0L, 0L, 0L, 0L), "cpu", logger)
 
       cpuMetric.forMode("user").record(cpuUser)
       cpuMetric.forMode("system").record(cpuSys)
       cpuMetric.forMode("wait").record(cpuWait)
       cpuMetric.forMode("idle").record(cpuIdle)
       cpuMetric.forMode("stolen").record(cpuStolen)
+      cpuMetric.forMode("combined").record(cpuCombined)
     }
   }
 
