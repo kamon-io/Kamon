@@ -177,7 +177,7 @@ class SystemMetricsSpec extends WordSpecLike
 
     "record system and user CPU percentage for the application process" in {
       Seq("user", "system", "total").foreach { mode =>
-        Kamon.histogram("host.process-cpu").refine("component" -> "system-metrics", "mode" -> mode).distribution().count should be > 0L
+        Kamon.histogram("process.cpu").refine("component" -> "system-metrics", "mode" -> mode).distribution().count should be > 0L
       }
     }
 

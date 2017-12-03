@@ -16,6 +16,7 @@
 
 package kamon.system.host
 
+import kamon.system.process.ProcessCpuMetrics
 import kamon.system.{Metric, withNamedThread}
 import org.slf4j.Logger
 
