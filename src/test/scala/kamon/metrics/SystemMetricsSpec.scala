@@ -182,7 +182,7 @@ class SystemMetricsSpec extends WordSpecLike
     }
 
     "record the open files for the application process" in {
-      Kamon.histogram("host.ulimit").refine("component" -> "system-metrics", "limit" -> "open-files").distribution().count should be > 0L
+      Kamon.histogram("process.ulimit").refine("component" -> "system-metrics", "limit" -> "open-files").distribution().count should be > 0L
     }
 
     "record Context Switches Global, Voluntary and Non Voluntary metrics when running on Linux" in {

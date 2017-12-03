@@ -14,14 +14,15 @@
  * =========================================================================================
  */
 
-package kamon.system.host
+package kamon.system.process
 
 import kamon.Kamon
+import kamon.system.host.SigarSafeRunner
 import kamon.system.{Metric, MetricBuilder, SigarMetricBuilder}
 import org.hyperic.sigar.Sigar
 import org.slf4j.Logger
 
-object ULimitMetrics extends MetricBuilder("host.ulimit") with SigarMetricBuilder {
+object ULimitMetrics extends MetricBuilder("process.ulimit") with SigarMetricBuilder {
   def build(sigar: Sigar, metricName: String, logger: Logger) = new Metric {
     val pid = sigar.getPid
     val ulimitMetric = Kamon.histogram(metricName)
