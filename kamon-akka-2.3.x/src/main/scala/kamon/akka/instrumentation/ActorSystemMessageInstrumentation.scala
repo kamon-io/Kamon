@@ -18,6 +18,7 @@ package akka.kamon.instrumentation
 
 import akka.dispatch.sysmsg.EarliestFirstSystemMessageList
 import kamon.Kamon
+import kamon.akka.context.HasTransientContext
 import kamon.context.HasContext
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
@@ -42,7 +43,7 @@ class ActorSystemMessageInstrumentation {
 class HasContextIntoSystemMessageMixin {
 
   @DeclareMixin("akka.dispatch.sysmsg.SystemMessage+")
-  def mixinHasContextToSystemMessage: HasContext = HasContext.fromCurrentContext()
+  def mixinHasContextToSystemMessage: HasContext = HasTransientContext.fromCurrentContext()
 
   @Pointcut("execution(akka.dispatch.sysmsg.SystemMessage+.new(..)) && this(message)")
   def systemMessageCreation(message: HasContext): Unit = {}
@@ -58,7 +59,7 @@ class HasContextIntoSystemMessageMixin {
 class HasContextIntoRepointableActorRefMixin {
 
   @DeclareMixin("akka.actor.RepointableActorRef")
-  def mixinHasContextToRepointableActorRef: HasContext = HasContext.fromCurrentContext()
+  def mixinHasContextToRepointableActorRef: HasContext = HasTransientContext.fromCurrentContext()
 
   @Pointcut("execution(akka.actor.RepointableActorRef.new(..)) && this(repointableActorRef)")
   def envelopeCreation(repointableActorRef: HasContext): Unit = {}

@@ -17,6 +17,7 @@
 package akka.kamon.instrumentation
 
 import kamon.Kamon
+import kamon.akka.context.HasTransientContext
 import kamon.context.HasContext
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
@@ -25,7 +26,7 @@ import org.aspectj.lang.annotation._
 class ActorLoggingInstrumentation  {
 
   @DeclareMixin("akka.event.Logging.LogEvent+")
-  def mixinHasContextToLogEvent: HasContext = HasContext.fromCurrentContext()
+  def mixinHasContextToLogEvent: HasContext = HasTransientContext.fromCurrentContext()
 
   @Pointcut("execution(akka.event.Logging.LogEvent+.new(..)) && this(event)")
   def logEventCreation(event: HasContext): Unit = {}
