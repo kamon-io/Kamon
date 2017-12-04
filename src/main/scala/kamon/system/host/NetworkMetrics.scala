@@ -39,7 +39,7 @@ object NetworkMetrics extends MetricBuilder("host.network") with SigarMetricBuil
   def build(sigar: Sigar, metricName: String, logger: Logger) = new Metric {
     val interfaces = runSafe(sigar.getNetInterfaceList.toList.filter(_ != "lo"), List.empty[String], "network", logger)
 
-    val networkBytesMetric = Kamon.histogram(s"$metricName.bytes", MeasurementUnit.information.bytes)
+    val networkBytesMetric = Kamon.counter(s"$metricName.bytes", MeasurementUnit.information.bytes)
     val networkPacketsMetric = Kamon.counter(s"$metricName.packets")
 
     val receivedBytesMetric = networkBytesMetric.refine(Map("component" -> "system-metrics", "direction" -> "received"))
@@ -66,8 +66,8 @@ object NetworkMetrics extends MetricBuilder("host.network") with SigarMetricBuil
 
     override def update(): Unit = {
 
-      receivedBytesMetric.record(bReceived.get())
-      transmittedBytesMetric.record(bTransmitted.get())
+      receivedBytesMetric.increment(bReceived.get())
+      transmittedBytesMetric.increment(bTransmitted.get())
 
       packetsReceived.increment(pReceived.get())
       packetsTransmitted.increment(pTransmitted.get())

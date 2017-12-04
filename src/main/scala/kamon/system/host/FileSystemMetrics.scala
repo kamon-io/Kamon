@@ -35,10 +35,17 @@ object FileSystemMetrics extends MetricBuilder("host.file-system") with SigarMet
     import kamon.system.host.SigarSafeRunner.runSafe
 
     val fileSystems = runSafe(sigar.getFileSystemList.filter(_.getType == FileSystem.TYPE_LOCAL_DISK).map(_.getDevName).toSet, Set.empty[String], "file-system", logger)
+    val mountPoints = runSafe(sigar.getFileSystemList.filter(_.getType == FileSystem.TYPE_LOCAL_DISK).map(_.getDirName).toSet, Set.empty[String], "file-system", logger)
 
-    val fileSystemMetric = Kamon.histogram(metricName, MeasurementUnit.information.bytes)
-    val readsMetric   = fileSystemMetric.refine(Map("component" -> "system-metrics", "operation" -> "read"))
-    val writesMetric  = fileSystemMetric.refine(Map("component" -> "system-metrics", "operation" -> "write"))
+    val fileSystemActivityMetric = Kamon.counter("host.file-system.activity", MeasurementUnit.information.bytes)
+    val fileSystemUsageMetric = Kamon.gauge("host.file-system.usage", MeasurementUnit.information.bytes)
+
+    val fileSystemUsageRecorders = mountPoints.map(fs => {
+      (fs, fileSystemUsageMetric.refine("component" -> "system-metrics", "fs" -> fs))
+    })
+
+    val readsMetric   = fileSystemActivityMetric.refine(Map("component" -> "system-metrics", "operation" -> "read"))
+    val writesMetric  = fileSystemActivityMetric.refine(Map("component" -> "system-metrics", "operation" -> "write"))
     val fileSystemReadsSource = DifferentialSource(() => { sumOfAllFileSystems(sigar, _.getReadBytes) })
     val fileSystemWritesSource = DifferentialSource(() => { sumOfAllFileSystems(sigar, _.getWriteBytes) })
 
@@ -47,8 +54,15 @@ object FileSystemMetrics extends MetricBuilder("host.file-system") with SigarMet
     } getOrElse 0L
 
     override def update(): Unit = {
-      readsMetric.record(fileSystemReadsSource.get())
-      writesMetric.record(fileSystemWritesSource.get())
+      readsMetric.increment(fileSystemReadsSource.get())
+      writesMetric.increment(fileSystemWritesSource.get())
+
+      fileSystemUsageRecorders.foreach {
+        case (fs, gauge) =>
+          Try((sigar.getFileSystemUsage(fs).getUsePercent() * 100).round).foreach(fileSystemUsage => {
+            gauge.set(fileSystemUsage)
+          })
+      }
     }
   }
 }

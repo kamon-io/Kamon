@@ -132,7 +132,7 @@ class SystemMetricsSpec extends WordSpecLike
 
     "record reads, writes, queue time and service time file system metrics" in {
       Seq("reads", "writes").foreach { operation =>
-        Kamon.histogram("host.file-system").refine("component" -> "system-metrics", "operation" -> operation).distribution().count should be >= 0L
+        Kamon.counter("host.file-system.activity").refine("component" -> "system-metrics", "operation" -> operation).value() should be >= 0L
       }
     }
 
@@ -156,7 +156,7 @@ class SystemMetricsSpec extends WordSpecLike
 
     "record rxBytes, txBytes, rxErrors, txErrors, rxDropped, txDropped network metrics" in {
       val eventMetric = Kamon.counter("host.network.packets")
-      val bytesMetric = Kamon.histogram("host.network.bytes")
+      val bytesMetric = Kamon.counter("host.network.bytes")
 
       val component = "component" -> "system-metrics"
 
@@ -166,8 +166,8 @@ class SystemMetricsSpec extends WordSpecLike
       val dropped     = "state" -> "dropped"
       val error       = "state" -> "error"
 
-      bytesMetric.refine(component, received).distribution().count should be > 0L
-      bytesMetric.refine(component, transmitted).distribution().count should be > 0L
+      bytesMetric.refine(component, received).value() should be > 0L
+      bytesMetric.refine(component, transmitted).value() should be > 0L
 
       eventMetric.refine(component, transmitted, error).value() should be >= 0L
       eventMetric.refine(component, received, error).value() should be >= 0L
