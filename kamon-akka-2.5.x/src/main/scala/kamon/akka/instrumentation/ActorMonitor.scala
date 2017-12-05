@@ -88,7 +88,9 @@ object ActorMonitors {
 
     private def tagSpan(cellInfo: CellInfo, envelope: Envelope, context: Context) = {
       val span = context.get(Span.ContextKey)
-      val messageClass = envelope.message.getClass.getSimpleName
+      val cls = envelope.message.getClass
+      // could fail, check SI-2034
+      val messageClass = try { cls.getSimpleName } catch { case _ => cls.getName }
 
       span.setOperationName(s"${cellInfo.actorName}.$messageClass")
 
