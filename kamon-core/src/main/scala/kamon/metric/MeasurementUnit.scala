@@ -17,12 +17,15 @@ package kamon.metric
 
 /**
   * A MeasurementUnit is a simple representation of the dimension and magnitude of a quantity being measured, such as
-  * "Time in Seconds" or "Data in Kilobytes".
+  * "Time in Seconds" or "Data in Kilobytes". The main use of these units is done by the metric instruments; when a
+  * instrument has a specified MeasurementUnit the reporters can apply scaling in case it's necessary to meet the
+  * backend's requirements.
   */
 case class MeasurementUnit(dimension: MeasurementUnit.Dimension, magnitude: MeasurementUnit.Magnitude)
 
 object MeasurementUnit {
   val none = MeasurementUnit(Dimension.None, Magnitude("none", 1D))
+  val percentage = MeasurementUnit(Dimension.Percentage, Magnitude("percentage", 1D))
 
   val time: TimeUnits = new TimeUnits {
     val seconds = MeasurementUnit(Dimension.Time, Magnitude("seconds", 1D))
@@ -59,6 +62,7 @@ object MeasurementUnit {
 
   object Dimension {
     val None = Dimension("none")
+    val Percentage = Dimension("percentage")
     val Time = Dimension("time")
     val Information = Dimension("information")
   }
