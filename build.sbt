@@ -13,20 +13,48 @@
  * =========================================================================================
  */
 
-resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
-val kamonCore         = "io.kamon"     %%   "kamon-core"        % "1.0.0-RC4"
-val kamonTestkit      = "io.kamon"     %%   "kamon-testkit"     % "1.0.0-RC4"
+val kamonCore         = "io.kamon"     %%   "kamon-core"        % "1.0.0-RC5"
+val kamonTestkit      = "io.kamon"     %%   "kamon-testkit"     % "1.0.0-RC5"
 val scalazConcurrent  = "org.scalaz"   %%   "scalaz-concurrent" % "7.2.8"
 
-lazy val root = (project in file("."))
-  .settings(name := "kamon-scala")
+resolvers in ThisBuild += Resolver.bintrayRepo("kamon-io", "snapshots")
+
+lazy val `kamon-futures` = (project in file("."))
+  .settings(name := "kamon-futures")
+  .settings(noPublishing: _*)
+  .aggregate(`kamon-scala-future`, `kamon-twitter-future`, `kamon-scalaz-future`)
+
+
+lazy val `kamon-twitter-future` = (project in file("kamon-twitter-future"))
+  .settings(bintrayPackage := "kamon-futures")
   .settings(aspectJSettings: _*)
   .settings(
     libraryDependencies ++=
       compileScope(kamonCore) ++
       providedScope(aspectJ) ++
-      optionalScope(scalazConcurrent, twitterDependency("core").value) ++
+      optionalScope(twitterDependency("core").value) ++
       testScope(scalatest, kamonTestkit, logbackClassic))
+
+lazy val `kamon-scalaz-future` = (project in file("kamon-scalaz-future"))
+  .settings(bintrayPackage := "kamon-futures")
+  .settings(aspectJSettings: _*)
+  .settings(
+    libraryDependencies ++=
+      compileScope(kamonCore) ++
+      providedScope(aspectJ) ++
+      optionalScope(scalazConcurrent) ++
+      testScope(scalatest, kamonTestkit, logbackClassic))
+
+lazy val `kamon-scala-future` = (project in file("kamon-scala-future"))
+  .settings(bintrayPackage := "kamon-futures")
+  .settings(aspectJSettings: _*)
+  .settings(
+    libraryDependencies ++=
+      compileScope(kamonCore) ++
+        providedScope(aspectJ) ++
+        optionalScope(scalazConcurrent, twitterDependency("core").value) ++
+        testScope(scalatest, kamonTestkit, logbackClassic))
+
 
 def twitterDependency(moduleName: String) = Def.setting {
   scalaBinaryVersion.value match {

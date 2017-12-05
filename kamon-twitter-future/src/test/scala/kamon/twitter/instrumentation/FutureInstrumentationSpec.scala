@@ -28,7 +28,7 @@ class FutureInstrumentationSpec extends WordSpec with Matchers with ScalaFutures
 
   implicit val execContext = Executors.newCachedThreadPool()
 
-  "a Future created when instrumentation is active" should {
+  "a Twitter Future created when instrumentation is active" should {
     "capture the active span available when created" which {
       "must be available when executing the future's body" in {
 

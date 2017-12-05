@@ -13,41 +13,46 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  * ========================================================== */
-package kamon.scala.instrumentation
+package kamon.scalaz.instrumentation
+
+import java.util.concurrent.Executors
 
 import kamon.Kamon
 import kamon.testkit.ContextTesting
 import org.scalatest.{Matchers, OptionValues, WordSpec}
 import org.scalatest.concurrent.{PatienceConfiguration, ScalaFutures}
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scalaz.concurrent.Future
 
-class FutureInstrumentationSpec extends WordSpec with ScalaFutures with Matchers with ContextTesting
-    with PatienceConfiguration with OptionValues {
+class FutureInstrumentationSpec extends WordSpec with Matchers with ScalaFutures with PatienceConfiguration
+    with OptionValues with ContextTesting {
 
-  "a Future created when instrumentation is active" should {
+  implicit val execContext = Executors.newCachedThreadPool()
+
+  "a Scalaz Future created when instrumentation is active" should {
     "capture the active span available when created" which {
       "must be available when executing the future's body" in {
+
         val context = contextWithLocal("in-future-body")
-        val contextInBody = Kamon.withContext(context) {
-          Future(Kamon.currentContext().get(StringKey))
+        val baggageInBody = Kamon.withContext(context) {
+          Future(Kamon.currentContext().get(StringKey)).unsafeStart
         }
 
-        whenReady(contextInBody)(baggageValue ⇒ baggageValue should be(Some("in-future-body")))
+        baggageInBody.unsafePerformSync should equal(Some("in-future-body"))
       }
 
       "must be available when executing callbacks on the future" in {
         val context = contextWithLocal("in-future-transformations")
         val baggageAfterTransformations = Kamon.withContext(context) {
-            Future("Hello Kamon!")
-              // The active span is expected to be available during all intermediate processing.
-              .map(_.length)
-              .flatMap(len ⇒ Future(len.toString))
-              .map(_ ⇒ Kamon.currentContext().get(StringKey))
-          }
+          Future("Hello Kamon!")
+            // The active span is expected to be available during all intermediate processing.
+            .map(_.length)
+            .flatMap(len ⇒ Future(len.toString))
+            .map(_ ⇒ Kamon.currentContext().get(StringKey))
+            .unsafeStart
+        }
 
-        whenReady(baggageAfterTransformations)(baggageValue ⇒ baggageValue should equal(Some("in-future-transformations")))
+        baggageAfterTransformations.unsafePerformSync should equal(Some("in-future-transformations"))
       }
     }
   }
