@@ -1,4 +1,4 @@
-# Scala Integration   
+# Futures Instrumentation
 
 [![Build Status](https://travis-ci.org/kamon-io/kamon-scala.svg?branch=master)](https://travis-ci.org/kamon-io/kamon-scala)
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/kamon-io/Kamon?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
@@ -6,32 +6,35 @@
 
 ### Getting Started
 
-Kamon scala module is currently available for Scala 2.10, 2.11 and 2.12.
+The Futures instrumentation is currently available for Scala 2.10, 2.11 and 2.12.
 
 Supported releases and dependencies are shown below.
 
 | kamon-scala  | status | jdk  | scala
 |:------:|:------:|:----:|------------------
-|  1.0.0-RC | stable | 1.7+, 1.8+ | 2.10, 2.11, 2.12
+|  1.0.0-RC5 | stable | 1.7+, 1.8+ | 2.10, 2.11, 2.12
 
 To get started with SBT, simply add the following to your `build.sbt`
 file:
 
 ```scala
-libraryDependencies += "io.kamon" %% "kamon-scala" % "1.0.0-RC1"
+resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
+
+libraryDependencies += "io.kamon" %% "kamon-scala-future" % "1.0.0-RC5"
+libraryDependencies += "io.kamon" %% "kamon-scalaz-future" % "1.0.0-RC5"
+libraryDependencies += "io.kamon" %% "kamon-twitter-future" % "1.0.0-RC5"
 ```
 
 
 ## Automatic TraceContext Propagation with Futures
 
-The `kamon-scala` module provides bytecode instrumentation for both Scala, Scalaz and Twitter Futures that automatically
+The `kamon-futures` module provides bytecode instrumentation for Scala, Scalaz and Twitter Futures that automatically
 propagates the `Context` across the asynchronous operations that might be scheduled for a given `Future`.
 
-The <b>kamon-scala</b> module require you to start your application using the AspectJ Weaver Agent. Kamon will warn you
-at startup if you failed to do so.
+All modules in the <b>kamon-futures</b> project module require you to start your application using the AspectJ Weaver
+Agent.
 
-
-### Future's Body and Callbacks ###
+### Instrumenting Future's Body and Callbacks ###
 
 In the following piece of code, the body of the future will be executed asynchronously on some other thread provided by
 the ExecutionContext available in implicit scope, but Kamon will capture the `TraceContext` available when the future
