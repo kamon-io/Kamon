@@ -12,13 +12,13 @@
  * and limitations under the License.
  * =========================================================================================
  */
-scalaVersion := "2.11.0"
+scalaVersion := "2.11.8"
 isSnapshot := true
-crossScalaVersions := Seq("2.10.6", "2.11.8", "2.12.0")
+crossScalaVersions := Seq("2.10.6", "2.11.8", "2.12.2")
 
 resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
-val kamonCore    = "io.kamon" %% "kamon-core"    % "1.0.0-RC4"
-val kamonTestkit = "io.kamon" %% "kamon-testkit" % "1.0.0-RC4"
+val kamonCore    = "io.kamon" %% "kamon-core"    % "1.0.0-RC5"
+val kamonTestkit = "io.kamon" %% "kamon-testkit" % "1.0.0-RC5"
 val logback = "ch.qos.logback" % "logback-classic" % "1.2.3"
 
 lazy val root = (project in file("."))
