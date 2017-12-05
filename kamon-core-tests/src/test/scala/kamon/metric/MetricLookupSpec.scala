@@ -42,10 +42,10 @@ class MetricLookupSpec extends WordSpec with Matchers {
         gaugeOne shouldBe theSameInstanceAs(gaugeTwo)
       }
 
-      "always return the same min-max-counter metric" in {
-        val minMaxCounterOne = Kamon.minMaxCounter("min-max-counter-lookup")
-        val minMaxCounterTwo = Kamon.minMaxCounter("min-max-counter-lookup")
-        minMaxCounterOne shouldBe theSameInstanceAs(minMaxCounterTwo)
+      "always return the same range sampler metric" in {
+        val rangeSamplerOne = Kamon.rangeSampler("range-sampler-lookup")
+        val rangeSamplerTwo = Kamon.rangeSampler("range-sampler-lookup")
+        rangeSamplerOne shouldBe theSameInstanceAs(rangeSamplerTwo)
       }
     }
 
@@ -77,13 +77,13 @@ class MetricLookupSpec extends WordSpec with Matchers {
         gaugeOne shouldBe theSameInstanceAs(gaugeThree)
       }
 
-      "always return the same min-max-counter for a set of tags" in {
-        val minMaxCounterOne = Kamon.minMaxCounter("min-max-counter-lookup").refine("tag" -> "value")
-        val minMaxCounterTwo = Kamon.minMaxCounter("min-max-counter-lookup").refine("tag" -> "value")
-        val minMaxCounterThree = Kamon.minMaxCounter("min-max-counter-lookup").refine(javaMap("tag", "value"))
+      "always return the same range-sampler for a set of tags" in {
+        val rangeSamplerOne = Kamon.rangeSampler("range-sampler-lookup").refine("tag" -> "value")
+        val rangeSamplerTwo = Kamon.rangeSampler("range-sampler-lookup").refine("tag" -> "value")
+        val rangeSamplerThree = Kamon.rangeSampler("range-sampler-lookup").refine(javaMap("tag", "value"))
 
-        minMaxCounterOne shouldBe theSameInstanceAs(minMaxCounterTwo)
-        minMaxCounterOne shouldBe theSameInstanceAs(minMaxCounterThree)
+        rangeSamplerOne shouldBe theSameInstanceAs(rangeSamplerTwo)
+        rangeSamplerOne shouldBe theSameInstanceAs(rangeSamplerThree)
       }
     }
   }

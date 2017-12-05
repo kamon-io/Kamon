@@ -83,9 +83,9 @@ object Kamon extends MetricLookup with ReporterRegistry with Tracer {
   override def gauge(name: String, unit: MeasurementUnit): GaugeMetric =
     _metrics.gauge(name, unit)
 
-  override def minMaxCounter(name: String, unit: MeasurementUnit, sampleInterval: Option[Duration],
-      dynamicRange: Option[DynamicRange]): MinMaxCounterMetric =
-    _metrics.minMaxCounter(name, unit, dynamicRange, sampleInterval)
+  override def rangeSampler(name: String, unit: MeasurementUnit, sampleInterval: Option[Duration],
+      dynamicRange: Option[DynamicRange]): RangeSamplerMetric =
+    _metrics.rangeSampler(name, unit, dynamicRange, sampleInterval)
 
   override def timer(name: String, dynamicRange: Option[DynamicRange]): TimerMetric =
     _metrics.timer(name, dynamicRange)

@@ -24,19 +24,19 @@ import kamon.metric.InstrumentFactory.CustomInstrumentSettings
 import java.time.Duration
 
 
-private[kamon] class InstrumentFactory private (defaultHistogramDynamicRange: DynamicRange, defaultMMCounterDynamicRange: DynamicRange,
-    defaultMMCounterSampleInterval: Duration, customSettings: Map[String, CustomInstrumentSettings]) {
+private[kamon] class InstrumentFactory private (defaultHistogramDynamicRange: DynamicRange, defaultRangeSamplerDynamicRange: DynamicRange,
+    defaultRangeSamplerSampleInterval: Duration, customSettings: Map[String, CustomInstrumentSettings]) {
 
   def buildHistogram(dynamicRange: Option[DynamicRange])(name: String, tags: Map[String, String], unit: MeasurementUnit): AtomicHdrHistogram =
     new AtomicHdrHistogram(name, tags, unit, instrumentDynamicRange(name, dynamicRange.getOrElse(defaultHistogramDynamicRange)))
 
-  def buildMinMaxCounter(dynamicRange: Option[DynamicRange], sampleInterval: Option[Duration])
-      (name: String, tags: Map[String, String], unit: MeasurementUnit): SimpleMinMaxCounter =
-    new SimpleMinMaxCounter(
+  def buildRangeSampler(dynamicRange: Option[DynamicRange], sampleInterval: Option[Duration])
+      (name: String, tags: Map[String, String], unit: MeasurementUnit): SimpleRangeSampler =
+    new SimpleRangeSampler(
       name,
       tags,
-      buildHistogram(dynamicRange.orElse(Some(defaultMMCounterDynamicRange)))(name, tags, unit),
-      instrumentSampleInterval(name, sampleInterval.getOrElse(defaultMMCounterSampleInterval)))
+      buildHistogram(dynamicRange.orElse(Some(defaultRangeSamplerDynamicRange)))(name, tags, unit),
+      instrumentSampleInterval(name, sampleInterval.getOrElse(defaultRangeSamplerSampleInterval)))
 
   def buildGauge(name: String, tags: Map[String, String], unit: MeasurementUnit): AtomicLongGauge =
     new AtomicLongGauge(name, tags, unit)
@@ -68,24 +68,24 @@ object InstrumentFactory {
   case class InstrumentType(name: String)
 
   object InstrumentTypes {
-    val Histogram     = InstrumentType("Histogram")
-    val MinMaxCounter = InstrumentType("MinMaxCounter")
-    val Counter       = InstrumentType("Counter")
-    val Gauge         = InstrumentType("Gauge")
+    val Histogram    = InstrumentType("Histogram")
+    val RangeSampler = InstrumentType("RangeSampler")
+    val Counter      = InstrumentType("Counter")
+    val Gauge        = InstrumentType("Gauge")
   }
 
   def fromConfig(config: Config): InstrumentFactory = {
     val factoryConfig = config.getConfig("kamon.metric.instrument-factory")
     val histogramDynamicRange = readDynamicRange(factoryConfig.getConfig("default-settings.histogram"))
-    val mmCounterDynamicRange = readDynamicRange(factoryConfig.getConfig("default-settings.min-max-counter"))
-    val mmCounterSampleInterval = factoryConfig.getDuration("default-settings.min-max-counter.sample-interval")
+    val rangeSamplerDynamicRange = readDynamicRange(factoryConfig.getConfig("default-settings.range-sampler"))
+    val rangeSamplerSampleInterval = factoryConfig.getDuration("default-settings.range-sampler.sample-interval")
 
     val customSettings = factoryConfig.getConfig("custom-settings")
       .configurations
       .filter(nonEmptySection)
       .map(readCustomInstrumentSettings)
 
-    new InstrumentFactory(histogramDynamicRange, mmCounterDynamicRange, mmCounterSampleInterval, customSettings)
+    new InstrumentFactory(histogramDynamicRange, rangeSamplerDynamicRange, rangeSamplerSampleInterval, customSettings)
   }
 
   private def nonEmptySection(entry: (String, Config)): Boolean = entry match {

@@ -45,17 +45,17 @@ trait MetricLookup {
     gauge(name, MeasurementUnit.none)
 
 
-  def minMaxCounter(name: String): MinMaxCounterMetric =
-    minMaxCounter(name, MeasurementUnit.none, None, None)
+  def rangeSampler(name: String): RangeSamplerMetric =
+    rangeSampler(name, MeasurementUnit.none, None, None)
 
-  def minMaxCounter(name: String, unit: MeasurementUnit): MinMaxCounterMetric =
-    minMaxCounter(name, unit, None, None)
+  def rangeSampler(name: String, unit: MeasurementUnit): RangeSamplerMetric =
+    rangeSampler(name, unit, None, None)
 
-  def minMaxCounter(name: String, unit: MeasurementUnit, sampleInterval: Duration): MinMaxCounterMetric =
-    minMaxCounter(name, unit, Option(sampleInterval), None)
+  def rangeSampler(name: String, unit: MeasurementUnit, sampleInterval: Duration): RangeSamplerMetric =
+    rangeSampler(name, unit, Option(sampleInterval), None)
 
-  def minMaxCounter(name: String, unit: MeasurementUnit, sampleInterval: Duration, dynamicRange: DynamicRange): MinMaxCounterMetric =
-    minMaxCounter(name, unit, Option(sampleInterval), Option(dynamicRange))
+  def rangeSampler(name: String, unit: MeasurementUnit, sampleInterval: Duration, dynamicRange: DynamicRange): RangeSamplerMetric =
+    rangeSampler(name, unit, Option(sampleInterval), Option(dynamicRange))
 
 
   def histogram(name: String, unit: MeasurementUnit, dynamicRange: Option[DynamicRange]): HistogramMetric
@@ -66,5 +66,5 @@ trait MetricLookup {
 
   def gauge(name: String, unit: MeasurementUnit): GaugeMetric
 
-  def minMaxCounter(name: String, unit: MeasurementUnit, sampleInterval: Option[Duration], dynamicRange: Option[DynamicRange]): MinMaxCounterMetric
+  def rangeSampler(name: String, unit: MeasurementUnit, sampleInterval: Option[Duration], dynamicRange: Option[DynamicRange]): RangeSamplerMetric
 }

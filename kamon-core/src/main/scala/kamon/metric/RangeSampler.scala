@@ -19,7 +19,7 @@ import java.lang.Math.abs
 import java.time.Duration
 import java.util.concurrent.atomic.AtomicLong
 
-trait MinMaxCounter {
+trait RangeSampler {
   def unit: MeasurementUnit
   def dynamicRange: DynamicRange
   def sampleInterval: Duration
@@ -31,8 +31,8 @@ trait MinMaxCounter {
   def sample(): Unit
 }
 
-class SimpleMinMaxCounter(name: String, tags: Map[String, String], underlyingHistogram: AtomicHdrHistogram,
-    val sampleInterval: Duration) extends MinMaxCounter {
+class SimpleRangeSampler(name: String, tags: Map[String, String], underlyingHistogram: AtomicHdrHistogram,
+    val sampleInterval: Duration) extends RangeSampler {
 
   private val min = AtomicLongMaxUpdater()
   private val max = AtomicLongMaxUpdater()

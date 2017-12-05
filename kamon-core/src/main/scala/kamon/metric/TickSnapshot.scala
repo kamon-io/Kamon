@@ -28,7 +28,7 @@ case class Interval(from: Long, to: Long)
 
 case class MetricsSnapshot(
   histograms: Seq[MetricDistribution],
-  minMaxCounters: Seq[MetricDistribution],
+  rangeSamplers: Seq[MetricDistribution],
   gauges: Seq[MetricValue],
   counters: Seq[MetricValue]
 )

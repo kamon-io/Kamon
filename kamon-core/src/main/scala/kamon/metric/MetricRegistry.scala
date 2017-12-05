@@ -50,8 +50,8 @@ class MetricRegistry(initialConfig: Config, scheduler: ScheduledExecutorService)
   def gauge(name: String, unit: MeasurementUnit): GaugeMetric =
     lookupMetric(name, unit, InstrumentTypes.Gauge)(new GaugeMetricImpl(name, unit, instrumentFactory))
 
-  def minMaxCounter(name: String, unit: MeasurementUnit, dynamicRange: Option[DynamicRange], sampleInterval: Option[Duration]): MinMaxCounterMetric =
-    lookupMetric(name, unit, InstrumentTypes.MinMaxCounter)(new MinMaxCounterMetricImpl(name, unit, dynamicRange, sampleInterval, instrumentFactory, scheduler))
+  def rangeSampler(name: String, unit: MeasurementUnit, dynamicRange: Option[DynamicRange], sampleInterval: Option[Duration]): RangeSamplerMetric =
+    lookupMetric(name, unit, InstrumentTypes.RangeSampler)(new RangeSamplerMetricImpl(name, unit, dynamicRange, sampleInterval, instrumentFactory, scheduler))
 
   def timer(name: String, dynamicRange: Option[DynamicRange]): TimerMetric =
     new TimerMetricImpl(histogram(name, time.nanoseconds, dynamicRange))
@@ -59,21 +59,21 @@ class MetricRegistry(initialConfig: Config, scheduler: ScheduledExecutorService)
 
   override def snapshot(): MetricsSnapshot = synchronized {
     var histograms = Seq.empty[MetricDistribution]
-    var mmCounters = Seq.empty[MetricDistribution]
+    var rangeSamplers = Seq.empty[MetricDistribution]
     var counters = Seq.empty[MetricValue]
     var gauges = Seq.empty[MetricValue]
 
     for(metricEntry <- metrics.values) {
       metricEntry.instrumentType match {
         case InstrumentTypes.Histogram     => histograms = histograms ++ metricEntry.snapshot().asInstanceOf[Seq[MetricDistribution]]
-        case InstrumentTypes.MinMaxCounter => mmCounters = mmCounters ++ metricEntry.snapshot().asInstanceOf[Seq[MetricDistribution]]
+        case InstrumentTypes.RangeSampler => rangeSamplers = rangeSamplers ++ metricEntry.snapshot().asInstanceOf[Seq[MetricDistribution]]
         case InstrumentTypes.Gauge         => gauges = gauges ++ metricEntry.snapshot().asInstanceOf[Seq[MetricValue]]
         case InstrumentTypes.Counter       => counters = counters ++ metricEntry.snapshot().asInstanceOf[Seq[MetricValue]]
         case other                        => logger.warn("Unexpected instrument type [{}] found in the registry", other )
       }
     }
 
-    MetricsSnapshot(histograms, mmCounters, gauges, counters)
+    MetricsSnapshot(histograms, rangeSamplers, gauges, counters)
   }
 
   private def lookupMetric[T <: BaseMetric[_, _]](name: String, unit: MeasurementUnit, instrumentType: InstrumentType)(metricBuilder: => T): T = {

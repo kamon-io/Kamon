@@ -22,69 +22,69 @@ import org.scalatest.{Matchers, WordSpec}
 
 case class TemporalBucket(value: Long, frequency: Long) extends Bucket
 
-class MinMaxCounterSpec extends WordSpec with Matchers {
+class RangeSamplerSpec extends WordSpec with Matchers {
 
-  "a MinMaxCounter" should {
+  "a RangeSampler" should {
     "track ascending tendencies" in {
-      val mmCounter = buildMinMaxCounter("track-ascending")
-      mmCounter.increment()
-      mmCounter.increment(3)
-      mmCounter.increment()
+      val rangeSampler = buildRangeSampler("track-ascending")
+      rangeSampler.increment()
+      rangeSampler.increment(3)
+      rangeSampler.increment()
 
-      mmCounter.sample()
+      rangeSampler.sample()
 
-      val snapshot = mmCounter.snapshot()
+      val snapshot = rangeSampler.snapshot()
 
       snapshot.distribution.min should be(0)
       snapshot.distribution.max should be(5)
     }
 
     "track descending tendencies" in {
-      val mmCounter = buildMinMaxCounter("track-descending")
-      mmCounter.increment(5)
-      mmCounter.decrement()
-      mmCounter.decrement(3)
-      mmCounter.decrement()
+      val rangeSampler = buildRangeSampler("track-descending")
+      rangeSampler.increment(5)
+      rangeSampler.decrement()
+      rangeSampler.decrement(3)
+      rangeSampler.decrement()
 
-      mmCounter.sample()
+      rangeSampler.sample()
 
-      val snapshot = mmCounter.snapshot()
+      val snapshot = rangeSampler.snapshot()
       snapshot.distribution.min should be(0)
       snapshot.distribution.max should be(5)
     }
 
     "reset the min and max to the current value after taking a snapshot" in {
-      val mmCounter = buildMinMaxCounter("reset-min-max-to-current")
+      val rangeSampler = buildRangeSampler("reset-range-sampler-to-current")
 
-      mmCounter.increment(5)
-      mmCounter.decrement(3)
-      mmCounter.sample()
+      rangeSampler.increment(5)
+      rangeSampler.decrement(3)
+      rangeSampler.sample()
 
-      val firstSnapshot = mmCounter.snapshot()
+      val firstSnapshot = rangeSampler.snapshot()
       firstSnapshot.distribution.min should be(0)
       firstSnapshot.distribution.max should be(5)
 
-      mmCounter.sample()
+      rangeSampler.sample()
 
-      val secondSnapshot = mmCounter.snapshot()
+      val secondSnapshot = rangeSampler.snapshot()
       secondSnapshot.distribution.min should be(2)
       secondSnapshot.distribution.max should be(2)
     }
 
     "report zero as the min and current values if the current value fell bellow zero" in {
-      val mmCounter = buildMinMaxCounter("report-zero")
+      val rangeSampler = buildRangeSampler("report-zero")
 
-      mmCounter.decrement(3)
+      rangeSampler.decrement(3)
 
-      mmCounter.sample()
+      rangeSampler.sample()
 
-      val snapshot = mmCounter.snapshot()
+      val snapshot = rangeSampler.snapshot()
 
       snapshot.distribution.min should be(0)
       snapshot.distribution.max should be(0)
     }
   }
 
-  def buildMinMaxCounter(name: String, tags: Map[String, String] = Map.empty, unit: MeasurementUnit = MeasurementUnit.none): SimpleMinMaxCounter =
-    new SimpleMinMaxCounter(name, tags, new AtomicHdrHistogram(name, tags, unit, dynamicRange = DynamicRange.Default), Duration.ofMillis(100))
+  def buildRangeSampler(name: String, tags: Map[String, String] = Map.empty, unit: MeasurementUnit = MeasurementUnit.none): SimpleRangeSampler =
+    new SimpleRangeSampler(name, tags, new AtomicHdrHistogram(name, tags, unit, dynamicRange = DynamicRange.Default), Duration.ofMillis(100))
 }

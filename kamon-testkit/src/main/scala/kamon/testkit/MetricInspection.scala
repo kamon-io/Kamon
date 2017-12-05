@@ -62,11 +62,11 @@ trait MetricInspection {
       }
   }
 
-  implicit class MinMaxCounterMetricSyntax(mmCounter: MinMaxCounter) {
+  implicit class RangeSamplerMetricSyntax(rangeSampler: RangeSampler) {
     def distribution(resetState: Boolean = true): Distribution =
-      mmCounter match {
-        case mmcm: MinMaxCounterMetric  => mmcm.refine(Map.empty[String, String]).distribution(resetState)
-        case mmc: SimpleMinMaxCounter   => mmc.snapshot(resetState).distribution
+      rangeSampler match {
+        case rsm: RangeSamplerMetric  => rsm.refine(Map.empty[String, String]).distribution(resetState)
+        case rs: SimpleRangeSampler   => rs.snapshot(resetState).distribution
       }
   }
 
