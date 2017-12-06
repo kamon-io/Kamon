@@ -28,4 +28,7 @@ object Clock {
 
   def relativeNanoTimestamp(): Long =
     System.nanoTime()
+
+  def toMicroTimestamp(nanoTime: Long): Long =
+    startMicroTime + (startNanoTime - nanoTime / 1000L)
 }
