@@ -107,6 +107,9 @@ object Kamon extends MetricLookup with ReporterRegistry with Tracer {
   def currentContext(): Context =
     _contextStorage.current()
 
+  def currentSpan(): Span =
+    _contextStorage.current().get(Span.ContextKey)
+
   def storeContext(context: Context): Storage.Scope =
     _contextStorage.store(context)
 
