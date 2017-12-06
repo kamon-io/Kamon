@@ -42,6 +42,27 @@ class SpanMetrics extends WordSpecLike with Matchers with MetricInspection with 
 
     }
 
+    "not be recorded when disableMetrics() is called on the Span" in {
+      val operation = "span-with-disabled-metrics"
+      buildSpan(operation)
+        .start()
+        .disableMetrics()
+        .finish()
+
+      Span.Metrics.ProcessingTime.valuesForTag("operation") shouldNot contain(operation)
+    }
+
+    "be recorded if metrics are enabled by calling enableMetrics() on the Span" in {
+      val operation = "span-with-re-enabled-metrics"
+      buildSpan(operation)
+        .start()
+        .disableMetrics()
+        .enableMetrics()
+        .finish()
+
+      Span.Metrics.ProcessingTime.valuesForTag("operation") should contain(operation)
+    }
+
     "record correctly error latency and count" in {
       val operation = "span-failure"
       val operationTag = "operation" -> operation

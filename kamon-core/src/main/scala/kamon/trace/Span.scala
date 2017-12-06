@@ -51,7 +51,9 @@ sealed abstract class Span {
 
   def setOperationName(name: String): Span
 
-  def disableMetricsCollection(): Span
+  def enableMetrics(): Span
+
+  def disableMetrics(): Span
 
   def finish(finishTimestampMicros: Long): Unit
 
@@ -77,7 +79,8 @@ object Span {
     override def addError(error: String): Span = this
     override def addError(error: String, throwable: Throwable): Span = this
     override def setOperationName(name: String): Span = this
-    override def disableMetricsCollection(): Span = this
+    override def enableMetrics(): Span = this
+    override def disableMetrics(): Span = this
     override def finish(finishTimestampMicros: Long): Unit = {}
   }
 
@@ -166,7 +169,12 @@ object Span {
       this
     }
 
-    override def disableMetricsCollection(): Span = synchronized {
+    override def enableMetrics(): Span = synchronized {
+      collectMetrics = true
+      this
+    }
+
+    override def disableMetrics(): Span = synchronized {
       collectMetrics = false
       this
     }
@@ -231,7 +239,8 @@ object Span {
     override def addError(error: String): Span = this
     override def addError(error: String, throwable: Throwable): Span = this
     override def setOperationName(name: String): Span = this
-    override def disableMetricsCollection(): Span = this
+    override def enableMetrics(): Span = this
+    override def disableMetrics(): Span = this
     override def finish(finishTimestampMicros: Long): Unit = {}
   }
 
