@@ -13,7 +13,6 @@
  * =========================================================================================
  */
 scalaVersion := "2.11.8"
-isSnapshot := true
 crossScalaVersions := Seq("2.10.6", "2.11.8", "2.12.2")
 
 resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
