@@ -18,14 +18,15 @@ package kamon.akka.http.instrumentation
 
 import akka.NotUsed
 import akka.http.scaladsl.model.headers.RawHeader
-import akka.http.scaladsl.model.{ HttpRequest, HttpResponse }
+import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
 import akka.stream._
-import akka.stream.scaladsl.{ BidiFlow, Flow }
+import akka.stream.scaladsl.{BidiFlow, Flow}
 import akka.stream.stage._
 import kamon.Kamon
-import kamon.akka.http.AkkaHttpExtension
-import kamon.trace.Tracer
-import kamon.util.logger.LazyLogger
+import kamon.context.{Context => KamonContext}
+import kamon.akka.http.AkkaHttpServerMetrics
+import kamon.context.TextMap
+import kamon.trace.Span
 
 /**
  * Wraps an {@code Flow[HttpRequest,HttpResponse]} with the necessary steps to output
@@ -33,9 +34,9 @@ import kamon.util.logger.LazyLogger
  * credits to @jypma.
  */
 object FlowWrapper {
+  import AkkaHttpServerMetrics._
 
-  val log = LazyLogger("FlowWrapper")
-  val metrics = AkkaHttpExtension.metrics
+  private def componentPrefixed(metricName: String) = s"akka.http.server.$metricName"
 
   def wrap() = new GraphStage[BidiShape[HttpRequest, HttpRequest, HttpResponse, HttpResponse]] {
 
@@ -52,16 +53,19 @@ object FlowWrapper {
         override def onPush(): Unit = {
           val request = grab(requestIn)
 
-          val defaultTraceName = AkkaHttpExtension.generateTraceName(request)
+          val span = Kamon.buildSpan(generateTraceName(request))
+              .withOperationName(request.uri.path.toString())
+              .withMetricTag("span.kind", "server")
+              .withTag(componentPrefixed("method"), request.method.value)
+              .withTag(componentPrefixed("url"), request.uri.toString())
+              .start()
 
-          val token = if (AkkaHttpExtension.settings.includeTraceTokenHeader) {
-            request.headers.find(_.name.equalsIgnoreCase(AkkaHttpExtension.settings.traceTokenHeaderName)).map(_.value)
-          } else None
+          requestActive.increment()
 
-          val newContext = Kamon.tracer.newContext(defaultTraceName, token)
-          Tracer.setCurrentContext(newContext)
+          val newContext = Kamon.currentContext().withKey(Span.ContextKey, span)
 
-          metrics.recordRequest()
+          Kamon.storeContext(newContext)
+
           push(requestOut, request)
         }
         override def onUpstreamFinish(): Unit = complete(requestOut)
@@ -74,19 +78,23 @@ object FlowWrapper {
 
       setHandler(responseIn, new InHandler {
         override def onPush(): Unit = {
-          val response = Tracer.currentContext.collect { ctx ⇒
-            ctx.finish()
+          val response = grab(responseIn)
+          val span = Kamon.currentContext().get(Span.ContextKey)
 
-            val response = grab(responseIn)
-            metrics.recordResponse(response, ctx.name)
+          if(response.status.isFailure()) {
+            val errorCode = response.status.value
+            if (errorCode.startsWith("4")) span.setOperationName("not-found")
+            span.addError(response.status.reason())
+          }
 
-            if (AkkaHttpExtension.settings.includeTraceTokenHeader)
-              includeTraceToken(response, AkkaHttpExtension.settings.traceTokenHeaderName, ctx.token)
-            else response
+          requestActive.decrement()
 
-          } getOrElse grab(responseIn)
+          val tracedResponse = if (settings.includeTraceTokenHeader)
+            includeTraceToken(response, Kamon.currentContext())
+          else response
 
-          push(responseOut, response)
+          span.finish()
+          push(responseOut, tracedResponse)
         }
         override def onUpstreamFinish(): Unit = completeStage()
       })
@@ -96,16 +104,25 @@ object FlowWrapper {
         override def onDownstreamFinish(): Unit = cancel(responseIn)
       })
 
-      override def preStart(): Unit = metrics.recordConnectionOpened()
-      override def postStop(): Unit = metrics.recordConnectionClosed()
+      override def preStart(): Unit = connectionOpen.increment()
+      override def postStop(): Unit = connectionOpen.decrement()
     }
   }
 
   def apply(flow: Flow[HttpRequest, HttpResponse, NotUsed]): Flow[HttpRequest, HttpResponse, NotUsed] = BidiFlow.fromGraph(wrap()).join(flow)
 
-  private def includeTraceToken(response: HttpResponse, traceTokenHeaderName: String, token: String): HttpResponse = response match {
-    case response: HttpResponse ⇒ response.withHeaders(response.headers ++ Seq(RawHeader(traceTokenHeaderName, token)))
+  private def includeTraceToken(response: HttpResponse, context: KamonContext): HttpResponse = response match {
+    case response: HttpResponse ⇒ response.withHeaders(
+      response.headers ++ Kamon.contextCodec().HttpHeaders.encode(context).values.map(k => RawHeader(k._1, k._2))
+    )
     case other                  ⇒ other
   }
+
+  private def extractContext(request: HttpRequest) = Kamon.contextCodec().HttpHeaders.decode(new TextMap {
+    private def headersKeyValueMap = request.headers.map(h => h.name -> h.value()).toMap
+    override def values: Iterator[(String, String)] = headersKeyValueMap.iterator
+    override def put(key: String, value: String): Unit = headersKeyValueMap + (key -> value)
+    override def get(key: String): Option[String] = headersKeyValueMap.get(key)
+  })
 }
 

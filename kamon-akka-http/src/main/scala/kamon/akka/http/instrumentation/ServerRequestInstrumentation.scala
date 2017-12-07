@@ -14,17 +14,18 @@
  * =========================================================================================
  */
 
-package kamon.akka.http.instrumentation
+package akka.kamon.http.instrumentation
 
 import akka.NotUsed
 import akka.event.LoggingAdapter
 import akka.http.scaladsl.ConnectionContext
-import akka.http.scaladsl.model.{ HttpRequest, HttpResponse }
+import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
 import akka.http.scaladsl.settings.ServerSettings
 import akka.stream.Materializer
 import akka.stream.scaladsl.Flow
+import kamon.akka.http.instrumentation.FlowWrapper
 import org.aspectj.lang.ProceedingJoinPoint
-import org.aspectj.lang.annotation.{ Around, Aspect }
+import org.aspectj.lang.annotation.{Around, Aspect}
 
 @Aspect
 class ServerRequestInstrumentation {
@@ -38,7 +39,6 @@ class ServerRequestInstrumentation {
     settings: ServerSettings,
     log: LoggingAdapter,
     materializer: Materializer): AnyRef = {
-
     pjp.proceed(Array(FlowWrapper(handler.asInstanceOf[Flow[HttpRequest, HttpResponse, NotUsed]]), interface, port, connectionContext, settings, log, materializer))
   }
 }

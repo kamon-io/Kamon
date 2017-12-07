@@ -24,14 +24,9 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
 import akka.stream.ActorMaterializer
 import com.typesafe.config.ConfigFactory
-import kamon.Kamon
-
-import scala.concurrent.duration._
 import scala.io.StdIn
 
 object WebServer extends App {
-
-  Kamon.start()
 
   val config = ConfigFactory.load()
 
@@ -86,7 +81,6 @@ object WebServer extends App {
     serverBinding
       .unbind() // trigger unbinding from the port
       .flatMap(_ ⇒ {
-        Kamon.shutdown()
         system.terminate()
       }) // and shutdown when done
   }

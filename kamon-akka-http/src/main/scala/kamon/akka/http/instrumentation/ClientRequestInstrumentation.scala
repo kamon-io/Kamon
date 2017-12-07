@@ -14,13 +14,14 @@
  * =========================================================================================
  */
 
-package kamon.akka.http.instrumentation
+package akka.kamon.http.instrumentation
 
+import akka.dispatch.ExecutionContexts
 import akka.http.scaladsl.model.headers.RawHeader
-import akka.http.scaladsl.model.{ HttpHeader, HttpMessage, HttpRequest, HttpResponse }
-import kamon.akka.http.{ AkkaHttpExtension, ClientInstrumentationLevel }
+import akka.http.scaladsl.model.{HttpHeader, HttpMessage, HttpRequest, HttpResponse}
+import kamon.Kamon
+import kamon.akka.http.ClientInstrumentationLevel
 import kamon.trace._
-import kamon.util.SameThreadExecutionContext
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
 
@@ -29,32 +30,37 @@ import scala.util._
 
 @Aspect
 class ClientRequestInstrumentation {
+  import kamon.akka.http.AkkaHttpServerMetrics._
+
+  private def componentPrefixed(metricName: String) = s"akka.http.server.$metricName"
 
   @Around("execution(* akka.http.scaladsl.HttpExt.singleRequest(..)) && args(request, *, *, *, *)")
   def onSingleRequest(pjp: ProceedingJoinPoint, request: HttpRequest): Any = {
-    Tracer.currentContext.collect { ctx ⇒
-      val segment =
-        if (AkkaHttpExtension.settings.clientInstrumentationLevel == ClientInstrumentationLevel.RequestLevelAPI) {
-          val segmentName = AkkaHttpExtension.generateRequestLevelApiSegmentName(request)
-          ctx.startSegment(segmentName, SegmentCategory.HttpClient, AkkaHttpExtension.SegmentLibraryName)
-        } else EmptyTraceContext.EmptySegment
+    val span = if (settings.clientInstrumentationLevel == ClientInstrumentationLevel.RequestLevelAPI) {
+      val operationName = generateRequestLevelApiSegmentName(request)
+      Kamon.buildSpan(operationName).start()
+    } else Kamon.currentContext().get(Span.ContextKey)
 
-      val responseFuture = pjp.proceed().asInstanceOf[Future[HttpResponse]]
-      responseFuture.onComplete {
-        case Success(_) ⇒ segment.finish()
-        case Failure(t) ⇒ segment.finishWithError(t)
-      }(SameThreadExecutionContext)
-      responseFuture
-    } getOrElse pjp.proceed()
+    span
+      .tag(componentPrefixed("url"), request.getUri().toString)
+      .tag(componentPrefixed("method"), request.method.value)
+
+    val responseFuture = Kamon.withContext(Kamon.currentContext().withKey(Span.ContextKey, span)) {
+      pjp.proceed().asInstanceOf[Future[HttpResponse]]
+    }
+
+    responseFuture.onComplete {
+      case Success(_) ⇒ span.finish()
+      case Failure(t) ⇒ span.addError(t.getMessage, t)
+    }(ExecutionContexts.sameThreadExecutionContext)
+
+    responseFuture
   }
 
   @Around("execution(* akka.http.scaladsl.model.HttpMessage.withDefaultHeaders(*)) && this(request) && args(defaultHeaders)")
   def onWithDefaultHeaders(pjp: ProceedingJoinPoint, request: HttpMessage, defaultHeaders: List[HttpHeader]): Any = {
-    val modifiedHeaders = Tracer.currentContext.collect { ctx ⇒
-      if (AkkaHttpExtension.settings.includeTraceTokenHeader) RawHeader(AkkaHttpExtension.settings.traceTokenHeaderName, ctx.token) :: defaultHeaders
-      else defaultHeaders
-    } getOrElse defaultHeaders
-
-    pjp.proceed(Array[AnyRef](request, modifiedHeaders))
+    val modifiedHeaders = Kamon.contextCodec().HttpHeaders.encode(Kamon.currentContext()).values.toVector.map(c => RawHeader(c._1, c._2))
+    val headers = modifiedHeaders ++ defaultHeaders.toSeq
+    pjp.proceed(Array[AnyRef](request, headers))
   }
 }

@@ -19,21 +19,19 @@ package kamon.akka.http
 import akka.http.scaladsl.model.HttpRequest
 import akka.http.scaladsl.model.headers.Host
 import kamon.Kamon
-import kamon.akka.http.metrics.AkkaHttpServerMetrics
-import kamon.metric.Entity
-import kamon.util.logger.LazyLogger
 
-object AkkaHttpExtension {
-  val log = LazyLogger("kamon.akka.http.AkkaHttpExtension")
-  log.info("Starting the Kamon(Akka-Http) extension")
+object AkkaHttpServerMetrics {
 
   val settings = AkkaHttpExtensionSettings(Kamon.config)
   val SegmentLibraryName = "akka-http-client"
 
-  val metrics = {
-    val entity = Entity("akka-http-server", AkkaHttpServerMetrics.category)
-    Kamon.metrics.entity(AkkaHttpServerMetrics, entity)
-  }
+
+  val requestMetric = Kamon.minMaxCounter("akka-http.request")
+  val connectionMetric = Kamon.minMaxCounter("akka-http.connection")
+
+  val requestActive = requestMetric.refine("state", "active")
+  val connectionOpen = connectionMetric.refine("state", "open")
+
 
   def generateTraceName(request: HttpRequest): String =
     settings.nameGenerator.generateTraceName(request)
@@ -62,7 +60,7 @@ class DefaultNameGenerator extends NameGenerator {
     hostFromHeaders(request).getOrElse("unknown-host")
 
   def generateTraceName(request: HttpRequest): String =
-    "UnnamedTrace"
+    request.uri.path.toString()
 
   private def hostFromHeaders(request: HttpRequest): Option[String] =
     request.header[Host].map(_.host.toString())
