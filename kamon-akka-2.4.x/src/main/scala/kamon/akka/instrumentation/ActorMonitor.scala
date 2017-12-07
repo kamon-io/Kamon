@@ -104,10 +104,12 @@ object ActorMonitors {
 
 
   def ContextPropagationOnly(cellInfo: CellInfo) = new ActorMonitor {
+    private val processedMessagesCounter = Metrics.forSystem(cellInfo.systemName).processedMessagesByNonTracked
+
     def captureEnvelopeContext(): TimestampedContext = TimestampedContext(0, Kamon.currentContext())
 
     def processMessage(pjp: ProceedingJoinPoint, envelopeContext: TimestampedContext, envelope: Envelope): AnyRef = {
-      Metrics.forSystem(cellInfo.systemName).processedMessagesByNonTracked.increment()
+      processedMessagesCounter.increment()
 
       Kamon.withContext(envelopeContext.context) {
         pjp.proceed()
@@ -128,6 +130,8 @@ object ActorMonitors {
   class TrackedActor(actorMetrics: Option[ActorMetrics], groupMetrics: Seq[ActorGroupMetrics], actorCellCreation: Boolean, cellInfo: CellInfo)
       extends GroupMetricsTrackingActor(groupMetrics, actorCellCreation, cellInfo) {
 
+    private val processedMessagesCounter = Metrics.forSystem(cellInfo.systemName).processedMessagesByTracked
+
     override def captureEnvelopeContext(): TimestampedContext = {
       actorMetrics.foreach { am =>
         am.mailboxSize.increment()
@@ -137,7 +141,7 @@ object ActorMonitors {
 
     def processMessage(pjp: ProceedingJoinPoint, envelopeContext: TimestampedContext, envelope: Envelope): AnyRef = {
       val timestampBeforeProcessing = System.nanoTime()
-      Metrics.forSystem(cellInfo.systemName).processedMessagesByTracked.increment()
+      processedMessagesCounter.increment()
 
       try {
         Kamon.withContext(envelopeContext.context) {
@@ -173,9 +177,11 @@ object ActorMonitors {
   class TrackedRoutee(routerMetrics: RouterMetrics, groupMetrics: Seq[ActorGroupMetrics], actorCellCreation: Boolean, cellInfo: CellInfo)
       extends GroupMetricsTrackingActor(groupMetrics, actorCellCreation, cellInfo) {
 
+    private val processedMessagesCounter = Metrics.forSystem(cellInfo.systemName).processedMessagesByTracked
+
     def processMessage(pjp: ProceedingJoinPoint, envelopeContext: TimestampedContext, envelope: Envelope): AnyRef = {
       val timestampBeforeProcessing = System.nanoTime()
-      Metrics.forSystem(cellInfo.systemName).processedMessagesByTracked.increment()
+      processedMessagesCounter.increment()
 
       try {
         Kamon.withContext(envelopeContext.context) {
