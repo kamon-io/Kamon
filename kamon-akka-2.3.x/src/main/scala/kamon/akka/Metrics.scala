@@ -35,7 +35,7 @@ object Metrics {
     */
   val actorTimeInMailboxMetric = Kamon.histogram("akka.actor.time-in-mailbox", time.nanoseconds)
   val actorProcessingTimeMetric = Kamon.histogram("akka.actor.processing-time", time.nanoseconds)
-  val actorMailboxSizeMetric = Kamon.minMaxCounter("akka.actor.mailbox-size")
+  val actorMailboxSizeMetric = Kamon.rangeSampler("akka.actor.mailbox-size")
   val actorErrorsMetric = Kamon.counter("akka.actor.errors")
 
   def forActor(path: String, system: String, dispatcher: String, actorClass: String): ActorMetrics = {
@@ -50,7 +50,7 @@ object Metrics {
   }
 
   case class ActorMetrics(tags: Map[String, String], timeInMailbox: Histogram, processingTime: Histogram,
-    mailboxSize: MinMaxCounter, errors: Counter) {
+    mailboxSize: RangeSampler, errors: Counter) {
 
     def cleanup(): Unit = {
       actorTimeInMailboxMetric.remove(tags)
@@ -113,8 +113,8 @@ object Metrics {
     */
   val groupTimeInMailbox = Kamon.histogram("akka.group.time-in-mailbox", time.nanoseconds)
   val groupProcessingTime = Kamon.histogram("akka.group.processing-time", time.nanoseconds)
-  val groupMailboxSize = Kamon.minMaxCounter("akka.group.mailbox-size")
-  val groupMembers = Kamon.minMaxCounter("akka.group.members")
+  val groupMailboxSize = Kamon.rangeSampler("akka.group.mailbox-size")
+  val groupMembers = Kamon.rangeSampler("akka.group.members")
   val groupErrors = Kamon.counter("akka.group.errors")
 
   def forGroup(group: String, system: String): ActorGroupMetrics = {
@@ -130,7 +130,7 @@ object Metrics {
   }
 
   case class ActorGroupMetrics(tags: Map[String, String], timeInMailbox: Histogram, processingTime: Histogram,
-      mailboxSize: MinMaxCounter, members: MinMaxCounter, errors: Counter) {
+      mailboxSize: RangeSampler, members: RangeSampler, errors: Counter) {
 
     def cleanup(): Unit = {
       groupTimeInMailbox.remove(tags)
@@ -154,7 +154,7 @@ object Metrics {
   val systemDeadLetters = Kamon.counter("akka.system.dead-letters")
   val systemUnhandledMessages = Kamon.counter("akka.system.unhandled-messages")
   val systemProcessedMessages = Kamon.counter("akka.system.processed-messages")
-  val systemActiveActors = Kamon.minMaxCounter("akka.system.active-actors")
+  val systemActiveActors = Kamon.rangeSampler("akka.system.active-actors")
 
   def forSystem(name: String): ActorSystemMetrics = {
     val systemTags = Map("system" -> name)
@@ -168,7 +168,9 @@ object Metrics {
     )
   }
 
-  case class ActorSystemMetrics(tags: Map[String, String], deadLetters: Counter, unhandledMessages: Counter, processedMessagesByTracked: Counter, processedMessagesByNonTracked: Counter, activeActors: MinMaxCounter) {
+  case class ActorSystemMetrics(tags: Map[String, String], deadLetters: Counter, unhandledMessages: Counter,
+      processedMessagesByTracked: Counter, processedMessagesByNonTracked: Counter, activeActors: RangeSampler) {
+
     def cleanup(): Unit = {
       systemDeadLetters.remove(tags)
       systemUnhandledMessages.remove(tags)

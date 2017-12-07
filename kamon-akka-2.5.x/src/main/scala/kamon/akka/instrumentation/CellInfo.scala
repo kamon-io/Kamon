@@ -20,7 +20,7 @@ import kamon.Kamon
 import kamon.akka.Akka
 
 case class CellInfo(path: String, isRouter: Boolean, isRoutee: Boolean, isTracked: Boolean, trackingGroups: Seq[String],
-                    actorCellCreation: Boolean, systemName: String, dispatcherName: String, isTraced: Boolean, actorClass: String, actorName: String)
+    actorCellCreation: Boolean, systemName: String, dispatcherName: String, isTraced: Boolean, actorClass: Class[_], actorName: String)
 
 object CellInfo {
 
@@ -30,7 +30,7 @@ object CellInfo {
   def cellInfoFor(cell: Cell, system: ActorSystem, ref: ActorRef, parent: ActorRef, actorCellCreation: Boolean): CellInfo = {
     def hasRouterProps(cell: Cell): Boolean = cell.props.deploy.routerConfig != NoRouter
 
-    val actorClass = cell.props.actorClass().getName
+    val actorClass = cell.props.actorClass()
     val actorName = ref.path.name
 
     val pathString = ref.path.elements.mkString("/")
