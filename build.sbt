@@ -20,7 +20,6 @@ lazy val kamon = (project in file("."))
   .aggregate(core, testkit, coreTests)
 
 val commonSettings = Seq(
-  isSnapshot := true,
   scalaVersion := "2.11.8",
   javacOptions += "-XDignore.symbol.file",
   resolvers += Resolver.mavenLocal,
