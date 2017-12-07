@@ -29,6 +29,7 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Wor
       eventually(timeout(2 seconds)) {
         val span = reporter.nextSpan().value
         val spanTags = stringTag(span) _
+        spanTags("component") shouldBe "akka.actor"
         span.operationName shouldBe("TracingTestActor: String")
         spanTags("akka.actor.path") shouldNot include ("filteredout")
         spanTags("akka.actor.path") should be ("MessageTracing/user/traced-probe-1")
@@ -44,6 +45,7 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Wor
         val span = reporter.nextSpan().value
         val spanTags = stringTag(span) _
         span.operationName shouldBe("TracingTestActor: String")
+        spanTags("component") shouldBe "akka.actor"
         spanTags("akka.system") shouldBe "MessageTracing"
         spanTags("akka.actor.path") shouldBe "MessageTracing/user/traced"
         spanTags("akka.actor.class") shouldBe "kamon.akka.instrumentation.TracingTestActor"
@@ -63,6 +65,7 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Wor
         val span = reporter.nextSpan().value
         val spanTags = stringTag(span) _
         span.operationName should include("TracingTestActor: ")
+        spanTags("component") shouldBe "akka.actor"
         spanTags("akka.system") shouldBe "MessageTracing"
         spanTags("akka.actor.path") shouldBe "MessageTracing/user/traced-first"
         spanTags("akka.actor.class") shouldBe "kamon.akka.instrumentation.TracingTestActor"
@@ -77,6 +80,7 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Wor
         val spanTags = stringTag(span) _
         span.context.parentID shouldBe firstSpanID
         span.operationName should include("TracingTestActor: String")
+        spanTags("component") shouldBe "akka.actor"
         spanTags("akka.system") shouldBe "MessageTracing"
         spanTags("akka.actor.path") shouldBe "MessageTracing/user/traced-second"
         spanTags("akka.actor.class") shouldBe "kamon.akka.instrumentation.TracingTestActor"
@@ -97,6 +101,7 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Wor
         val span = reporter.nextSpan().value
         val spanTags = stringTag(span) _
         span.operationName shouldBe("TracingTestActor: Tuple2")
+        spanTags("component") shouldBe "akka.actor"
         spanTags("akka.system") shouldBe "MessageTracing"
         spanTags("akka.actor.path") shouldBe "MessageTracing/user/traced-chain-first"
         spanTags("akka.actor.class") shouldBe "kamon.akka.instrumentation.TracingTestActor"
@@ -111,6 +116,7 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Wor
         val spanTags = stringTag(span) _
         span.context.parentID shouldBe firstSpanID
         span.operationName shouldBe("TracingTestActor: String")
+        spanTags("component") shouldBe "akka.actor"
         spanTags("akka.system") shouldBe "MessageTracing"
         spanTags("akka.actor.path") shouldBe "MessageTracing/user/traced-chain-last"
         spanTags("akka.actor.class") shouldBe "kamon.akka.instrumentation.TracingTestActor"
@@ -127,6 +133,7 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Wor
 
       eventually(timeout(2 seconds)) {
         val spanTags = stringTag(reporter.nextSpan().value) _
+        spanTags("component") shouldBe "akka.actor"
         spanTags("akka.actor.path") shouldNot include ("nontraced-pool-router")
         spanTags("akka.actor.path") should be ("MessageTracing/user/traced-routee-one")
       }
@@ -140,6 +147,7 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Wor
 
       eventually(timeout(2 seconds)) {
         val spanTags = stringTag(reporter.nextSpan().value) _
+        spanTags("component") shouldBe "akka.actor"
         spanTags("akka.actor.path") should be ("MessageTracing/user/traced-pool-router")
       }
     }

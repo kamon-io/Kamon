@@ -95,6 +95,7 @@ object ActorMonitors {
         .asChildOf(parentSpan)
         .start()
         .mark("akka.actor.dequeued")
+        .tag("component", "akka.actor")
         .tag("akka.system", cellInfo.systemName)
         .tag("akka.actor.path", cellInfo.path)
         .tag("akka.actor.class", actorClassName)
