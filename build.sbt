@@ -36,7 +36,6 @@ lazy val `kamon-akka` = (project in file("."))
 lazy val kamonAkka23 = Project("kamon-akka-23", file("kamon-akka-2.3.x"))
   .settings(Seq(
     bintrayPackage := "kamon-akka",
-    isSnapshot := true,
     moduleName := "kamon-akka-2.3",
     scalaVersion := "2.11.8",
     crossScalaVersions := Seq("2.10.6", "2.11.8"),
@@ -53,7 +52,6 @@ lazy val kamonAkka23 = Project("kamon-akka-23", file("kamon-akka-2.3.x"))
 lazy val kamonAkka24 = Project("kamon-akka-24", file("kamon-akka-2.4.x"))
   .settings(Seq(
     bintrayPackage := "kamon-akka",
-    isSnapshot := true,
     moduleName := "kamon-akka-2.4",
     scalaVersion := "2.12.1",
     crossScalaVersions := Seq("2.11.8", "2.12.1"),
@@ -69,7 +67,6 @@ lazy val kamonAkka24 = Project("kamon-akka-24", file("kamon-akka-2.4.x"))
 lazy val kamonAkka25 = Project("kamon-akka-25", file("kamon-akka-2.5.x"))
   .settings(Seq(
     bintrayPackage := "kamon-akka",
-    isSnapshot := true,
     moduleName := "kamon-akka-2.5",
     scalaVersion := "2.12.1",
     crossScalaVersions := Seq("2.11.8", "2.12.1"),
