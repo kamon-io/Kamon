@@ -18,6 +18,7 @@ import akka.actor.{ActorRef, ActorSystem, Cell}
 import akka.routing.{NoRouter, RoutedActorRef}
 import kamon.Kamon
 import kamon.akka.Akka
+import scala.language.existentials
 
 case class CellInfo(path: String, isRouter: Boolean, isRoutee: Boolean, isTracked: Boolean, trackingGroups: Seq[String],
     actorCellCreation: Boolean, systemName: String, dispatcherName: String, isTraced: Boolean, actorClass: Class[_], actorName: String)
