@@ -20,9 +20,9 @@ val kamonTestkit    = "io.kamon" %% "kamon-testkit"      % "1.0.0-RC5"
 val kamonScala      = "io.kamon" %% "kamon-scala-future" % "1.0.0-RC5"
 val kamonExecutors  = "io.kamon" %% "kamon-executors"    % "1.0.0-RC5"
 
-val `akka-2.3` = "2.3.13"
-val `akka-2.4` = "2.4.18"
-val `akka-2.5` = "2.5.2"
+val `akka-2.3` = "2.3.15"
+val `akka-2.4` = "2.4.20"
+val `akka-2.5` = "2.5.8"
 
 def akkaDependency(name: String, version: String) = {
   "com.typesafe.akka" %% s"akka-$name" % version

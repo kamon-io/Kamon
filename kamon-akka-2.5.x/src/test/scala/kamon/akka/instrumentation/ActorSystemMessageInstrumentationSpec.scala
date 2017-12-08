@@ -96,7 +96,7 @@ class ActorSystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSy
 
         expectMsg("fail-and-stop") // From the parent executing the supervision strategy
         expectMsg("fail-and-stop") // From the postStop hook
-        expectNoMsg(1 second)
+        expectNoMessage(1 second)
       }
 
       "the failure is escalated" in {
@@ -109,7 +109,7 @@ class ActorSystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSy
         expectMsg("fail-and-escalate") // From the grandparent executing the supervision strategy
         expectMsg("fail-and-escalate") // From the postStop hook in the child
         expectMsg("fail-and-escalate") // From the postStop hook in the parent
-        expectNoMsg(1 second)
+        expectNoMessage(1 second)
       }
     }
   }
