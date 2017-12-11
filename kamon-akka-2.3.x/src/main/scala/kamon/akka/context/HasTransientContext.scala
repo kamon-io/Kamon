@@ -3,23 +3,29 @@ package kamon.akka.context
 import kamon.Kamon
 import kamon.context.{Context, HasContext}
 
+trait ContextContainer extends HasContext {
+  def setContext(context: Context)
+}
+
 object HasTransientContext {
 
-  private case class DefaultTransient(@transient context: Context) extends HasContext
+  private class DefaultTransient(@transient var context: Context) extends ContextContainer with Serializable {
+    override def setContext(context: Context): Unit = this.context = context
+  }
 
   /**
     * Construct a HasSpan instance that references the provided Context.
     *
     */
-  def from(context: Context): HasContext =
-    DefaultTransient(context)
+  def from(context: Context): ContextContainer =
+    new DefaultTransient(context)
 
   /**
     * Construct a HasContext instance with the current Kamon from Kamon's default context storage.
     *
     */
-  def fromCurrentContext(): HasContext =
-    DefaultTransient(Kamon.currentContext())
+  def fromCurrentContext(): ContextContainer =
+    new DefaultTransient(Kamon.currentContext())
 
 }
 
