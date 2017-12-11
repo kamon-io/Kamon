@@ -16,15 +16,17 @@
 package kamon
 package metric
 
+import java.time.Instant
+
 
 /**
+  * Contains immutable snapshots of all metrics recorded since from and until to.
   *
-  * @param interval
+  * @param from
+  * @param to
   * @param metrics
   */
-case class TickSnapshot(interval: Interval, metrics: MetricsSnapshot)
-
-case class Interval(from: Long, to: Long)
+case class PeriodSnapshot(from: Instant, to: Instant, metrics: MetricsSnapshot)
 
 case class MetricsSnapshot(
   histograms: Seq[MetricDistribution],

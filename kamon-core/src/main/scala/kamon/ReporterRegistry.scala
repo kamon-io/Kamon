@@ -15,7 +15,7 @@
 
 package kamon
 
-import java.time.Duration
+import java.time.{Duration, Instant}
 import java.util.concurrent.atomic.{AtomicLong, AtomicReference}
 import java.util.concurrent._
 
@@ -40,7 +40,7 @@ sealed trait Reporter {
 }
 
 trait MetricReporter extends Reporter {
-  def reportTickSnapshot(snapshot: TickSnapshot): Unit
+  def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit
 }
 
 trait SpanReporter extends Reporter {
@@ -321,12 +321,13 @@ object ReporterRegistry {
 
     private class MetricReporterTicker(snapshotGenerator: MetricsSnapshotGenerator, reporterEntries: TrieMap[Long, MetricReporterEntry]) extends Runnable {
       val logger = LoggerFactory.getLogger(classOf[MetricReporterTicker])
-      var lastTick = System.currentTimeMillis()
+      var lastInstant = Instant.now()
 
       def run(): Unit = try {
-        val currentTick = System.currentTimeMillis()
-        val tickSnapshot = TickSnapshot(
-          interval = Interval(lastTick, currentTick),
+        val currentInstant = Instant.now()
+        val tickSnapshot = PeriodSnapshot(
+          from = lastInstant,
+          to = currentInstant,
           metrics = snapshotGenerator.snapshot()
         )
 
@@ -334,7 +335,7 @@ object ReporterRegistry {
           Future {
             Try {
               if (entry.isActive)
-                entry.reporter.reportTickSnapshot(tickSnapshot)
+                entry.reporter.reportPeriodSnapshot(tickSnapshot)
 
             }.failed.foreach { error =>
               logger.error(s"Reporter [${entry.name}] failed to process a metrics tick.", error)
@@ -343,7 +344,7 @@ object ReporterRegistry {
           }(entry.executionContext)
         }
 
-        lastTick = currentTick
+        lastInstant = currentInstant
 
       } catch {
         case NonFatal(t) => logger.error("Error while running a tick", t)
