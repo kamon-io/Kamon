@@ -32,6 +32,8 @@ class LocalSpanSpec extends WordSpec with Matchers with BeforeAndAfterAll with E
         Kamon.buildSpan("test-span")
           .withTag("test", "value")
           .withStartTimestamp(100)
+          .disableMetrics()
+          .enableMetrics()
           .start()
           .finish(200)
 

@@ -96,6 +96,7 @@ object Tracer {
     private var initialSpanTags = Map.empty[String, Span.TagValue]
     private var initialMetricTags = Map.empty[String, String]
     private var useParentFromContext = true
+    private var trackMetrics = true
 
     def asChildOf(parent: Span): SpanBuilder = {
       if(parent != Span.Empty) this.parentSpan = parent
@@ -145,6 +146,17 @@ object Tracer {
       this
     }
 
+    def enableMetrics(): SpanBuilder = {
+      this.trackMetrics = true
+      this
+    }
+
+    def disableMetrics(): SpanBuilder = {
+      this.trackMetrics = false
+      this
+    }
+
+
     def start(): Span = {
       val startTimestampMicros = if(startTimestamp != 0L) startTimestamp else Clock.microTimestamp()
 
@@ -165,7 +177,7 @@ object Tracer {
       }
 
       tracer.tracerMetrics.createdSpans.increment()
-      Span.Local(spanContext, nonRemoteParent, initialOperationName, initialSpanTags, initialMetricTags, startTimestampMicros, spanSink, tracer.scopeSpanMetrics)
+      Span.Local(spanContext, nonRemoteParent, initialOperationName, initialSpanTags, initialMetricTags, startTimestampMicros, spanSink, trackMetrics, tracer.scopeSpanMetrics)
     }
 
     private def joinParentContext(parent: Span, samplingDecision: SamplingDecision): SpanContext =

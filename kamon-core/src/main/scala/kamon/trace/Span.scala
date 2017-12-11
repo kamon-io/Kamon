@@ -93,9 +93,9 @@ object Span {
     * @param spanSink
     */
   final class Local(spanContext: SpanContext, parent: Option[Span], initialOperationName: String, initialSpanTags: Map[String, Span.TagValue],
-    initialMetricTags: Map[String, String], startTimestampMicros: Long, spanSink: SpanSink, scopeSpanMetrics: Boolean) extends Span {
+    initialMetricTags: Map[String, String], startTimestampMicros: Long, spanSink: SpanSink, trackMetrics: Boolean, scopeSpanMetrics: Boolean) extends Span {
 
-    private var collectMetrics: Boolean = true
+    private var collectMetrics: Boolean = trackMetrics
     private var open: Boolean = true
     private val sampled: Boolean = spanContext.samplingDecision == SamplingDecision.Sample
     private var hasError: Boolean = false
@@ -222,8 +222,8 @@ object Span {
   object Local {
     def apply(spanContext: SpanContext, parent: Option[Span], initialOperationName: String, initialSpanTags: Map[String, Span.TagValue],
         initialMetricTags: Map[String, String], startTimestampMicros: Long, spanSink: SpanSink,
-        scopeSpanMetrics: Boolean): Local =
-      new Local(spanContext, parent, initialOperationName, initialSpanTags, initialMetricTags, startTimestampMicros, spanSink, scopeSpanMetrics)
+        trackMetrics: Boolean, scopeSpanMetrics: Boolean): Local =
+      new Local(spanContext, parent, initialOperationName, initialSpanTags, initialMetricTags, startTimestampMicros, spanSink, trackMetrics, scopeSpanMetrics)
   }
 
 
