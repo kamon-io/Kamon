@@ -40,7 +40,7 @@ trait Reconfigure {
     applyConfig("kamon.trace.span-metrics.scope-spans-to-parent = no")
   }
 
-  private def applyConfig(configString: String): Unit = {
+  def applyConfig(configString: String): Unit = {
     Kamon.reconfigure(ConfigFactory.parseString(configString).withFallback(Kamon.config()))
   }
 
