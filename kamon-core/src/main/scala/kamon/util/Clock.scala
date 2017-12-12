@@ -15,20 +15,34 @@
 
 package kamon.util
 
+import java.time.{Instant, ZoneId, Clock => JavaClock}
+
+abstract class Clock extends JavaClock {
+  def micros(): Long
+  def relativeNanos(): Long
+}
+
 object Clock {
-  private val startTimeMillis = System.currentTimeMillis()
-  private val startNanoTime = System.nanoTime()
-  private val startMicroTime = startTimeMillis * 1000L
 
-  def microTimestamp(): Long =
-    startMicroTime + ((System.nanoTime() - startNanoTime) / 1000L)
+  class Default extends Clock {
+    private val systemClock = JavaClock.systemUTC()
+    private val startTimeMillis = System.currentTimeMillis()
+    private val startNanoTime = System.nanoTime()
+    private val startMicroTime = startTimeMillis * 1000L
 
-  def milliTimestamp(): Long =
-    System.currentTimeMillis()
+    override def micros(): Long =
+      startMicroTime + ((System.nanoTime() - startNanoTime) / 1000L)
 
-  def relativeNanoTimestamp(): Long =
-    System.nanoTime()
+    override def relativeNanos(): Long =
+      System.nanoTime()
 
-  def toMicroTimestamp(nanoTime: Long): Long =
-    startMicroTime + (startNanoTime - nanoTime / 1000L)
+    override def instant(): Instant =
+      systemClock.instant()
+
+    override def withZone(zone: ZoneId): JavaClock =
+      systemClock.withZone(zone)
+
+    override def getZone: ZoneId =
+      systemClock.getZone()
+  }
 }

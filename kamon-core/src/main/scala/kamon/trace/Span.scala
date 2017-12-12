@@ -57,9 +57,7 @@ sealed abstract class Span {
 
   def finish(finishTimestampMicros: Long): Unit
 
-  def finish(): Unit =
-    finish(Clock.microTimestamp())
-
+  def finish(): Unit
 }
 
 object Span {
@@ -81,6 +79,7 @@ object Span {
     override def setOperationName(name: String): Span = this
     override def enableMetrics(): Span = this
     override def disableMetrics(): Span = this
+    override def finish(): Unit = {}
     override def finish(finishTimestampMicros: Long): Unit = {}
   }
 
@@ -93,7 +92,7 @@ object Span {
     * @param spanSink
     */
   final class Local(spanContext: SpanContext, parent: Option[Span], initialOperationName: String, initialSpanTags: Map[String, Span.TagValue],
-    initialMetricTags: Map[String, String], startTimestampMicros: Long, spanSink: SpanSink, trackMetrics: Boolean, scopeSpanMetrics: Boolean) extends Span {
+    initialMetricTags: Map[String, String], startTimestampMicros: Long, spanSink: SpanSink, trackMetrics: Boolean, scopeSpanMetrics: Boolean, clock: Clock) extends Span {
 
     private var collectMetrics: Boolean = trackMetrics
     private var open: Boolean = true
@@ -139,7 +138,7 @@ object Span {
     }
 
     override def mark(key: String): Span = {
-      mark(Clock.microTimestamp(), key)
+      mark(clock.micros(), key)
     }
 
     override def mark(timestampMicros: Long, key: String): Span = synchronized {
@@ -188,6 +187,9 @@ object Span {
       this
     }
 
+    override def finish(): Unit =
+      finish(clock.micros())
+
     override def finish(finishMicros: Long): Unit = synchronized {
       if (open) {
         open = false
@@ -222,8 +224,8 @@ object Span {
   object Local {
     def apply(spanContext: SpanContext, parent: Option[Span], initialOperationName: String, initialSpanTags: Map[String, Span.TagValue],
         initialMetricTags: Map[String, String], startTimestampMicros: Long, spanSink: SpanSink,
-        trackMetrics: Boolean, scopeSpanMetrics: Boolean): Local =
-      new Local(spanContext, parent, initialOperationName, initialSpanTags, initialMetricTags, startTimestampMicros, spanSink, trackMetrics, scopeSpanMetrics)
+        trackMetrics: Boolean, scopeSpanMetrics: Boolean, clock: Clock): Local =
+      new Local(spanContext, parent, initialOperationName, initialSpanTags, initialMetricTags, startTimestampMicros, spanSink, trackMetrics, scopeSpanMetrics, clock)
   }
 
 
@@ -241,6 +243,7 @@ object Span {
     override def setOperationName(name: String): Span = this
     override def enableMetrics(): Span = this
     override def disableMetrics(): Span = this
+    override def finish(): Unit = {}
     override def finish(finishTimestampMicros: Long): Unit = {}
   }
 

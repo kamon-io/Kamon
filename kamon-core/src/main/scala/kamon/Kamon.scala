@@ -22,7 +22,7 @@ import com.typesafe.config.{Config, ConfigFactory}
 import kamon.context.{Codecs, Context, Key, Storage}
 import kamon.metric._
 import kamon.trace._
-import kamon.util.{Filters, Registration}
+import kamon.util.{Filters, Registration, Clock}
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
@@ -36,10 +36,11 @@ object Kamon extends MetricLookup with ReporterRegistry with Tracer {
   @volatile private var _environment = Environment.fromConfig(_config)
   @volatile private var _filters = Filters.fromConfig(_config)
 
+  private val _clock = new Clock.Default()
   private val _scheduler = Executors.newScheduledThreadPool(schedulerPoolSize(_config), numberedThreadFactory("kamon-scheduler"))
   private val _metrics = new MetricRegistry(_config, _scheduler)
-  private val _reporterRegistry = new ReporterRegistry.Default(_metrics, _config)
-  private val _tracer = Tracer.Default(Kamon, _reporterRegistry, _config)
+  private val _reporterRegistry = new ReporterRegistry.Default(_metrics, _config, _clock)
+  private val _tracer = Tracer.Default(Kamon, _reporterRegistry, _config, _clock)
   private val _contextStorage = Storage.ThreadLocal()
   private val _contextCodec = new Codecs(_config)
   private var _onReconfigureHooks = Seq.empty[OnReconfigureHook]
@@ -162,6 +163,9 @@ object Kamon extends MetricLookup with ReporterRegistry with Tracer {
 
   def filter(filterName: String, pattern: String): Boolean =
     _filters.accept(filterName, pattern)
+
+  def clock(): Clock =
+    _clock
 
   /**
     * Register a reconfigure hook that will be run when the a call to Kamon.reconfigure(config) is performed. All

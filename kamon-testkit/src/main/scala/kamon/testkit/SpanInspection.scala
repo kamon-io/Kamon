@@ -15,6 +15,7 @@
 
 package kamon.testkit
 
+import kamon.Kamon
 import kamon.trace.{Span, SpanContext}
 import kamon.trace.Span.FinishedSpan
 import kamon.util.Clock
@@ -34,9 +35,10 @@ object SpanInspection {
     private val (realSpan, spanData) = Try {
       val realSpan = span match {
         case _: Span.Local => span
+        case other => sys.error(s"Only Span.Local can be inspected but got [${other.getClass.getName}]" )
       }
 
-      val spanData = invoke[Span.Local, FinishedSpan](realSpan, "toFinishedSpan", classOf[Long] -> Long.box(Clock.microTimestamp()))
+      val spanData = invoke[Span.Local, FinishedSpan](realSpan, "toFinishedSpan", classOf[Long] -> Long.box(Kamon.clock().micros()))
       (realSpan, spanData)
     }.getOrElse((null, null))
 

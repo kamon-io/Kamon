@@ -23,7 +23,7 @@ import com.typesafe.config.Config
 import kamon.metric._
 import kamon.trace.Span
 import kamon.trace.Span.FinishedSpan
-import kamon.util.{DynamicAccess, Registration}
+import kamon.util.{Clock, DynamicAccess, Registration}
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutorService, Future}
@@ -64,7 +64,7 @@ object ReporterRegistry {
     def reportSpan(finishedSpan: FinishedSpan): Unit
   }
 
-  private[kamon] class Default(metrics: MetricsSnapshotGenerator, initialConfig: Config) extends ReporterRegistry with SpanSink {
+  private[kamon] class Default(metrics: MetricsSnapshotGenerator, initialConfig: Config, clock: Clock) extends ReporterRegistry with SpanSink {
     private val logger = LoggerFactory.getLogger(classOf[ReporterRegistry])
     private val registryExecutionContext = Executors.newScheduledThreadPool(2, threadFactory("kamon-reporter-registry"))
     private val reporterCounter = new AtomicLong(0L)
@@ -247,7 +247,7 @@ object ReporterRegistry {
           } else tickIntervalMillis
 
         registryExecutionContext.scheduleAtFixedRate(
-          new MetricReporterTicker(metrics, metricReporters), initialDelay, tickIntervalMillis, TimeUnit.MILLISECONDS
+          new MetricReporterTicker(metrics, metricReporters, clock), initialDelay, tickIntervalMillis, TimeUnit.MILLISECONDS
         )
       }
     }
@@ -319,12 +319,14 @@ object ReporterRegistry {
       val buffer = new ArrayBlockingQueue[Span.FinishedSpan](bufferCapacity)
     }
 
-    private class MetricReporterTicker(snapshotGenerator: MetricsSnapshotGenerator, reporterEntries: TrieMap[Long, MetricReporterEntry]) extends Runnable {
+    private class MetricReporterTicker(snapshotGenerator: MetricsSnapshotGenerator, reporterEntries: TrieMap[Long, MetricReporterEntry],
+        clock: Clock) extends Runnable {
+
       val logger = LoggerFactory.getLogger(classOf[MetricReporterTicker])
-      var lastInstant = Instant.now()
+      var lastInstant = Instant.now(clock)
 
       def run(): Unit = try {
-        val currentInstant = Instant.now()
+        val currentInstant = Instant.now(clock)
         val tickSnapshot = PeriodSnapshot(
           from = lastInstant,
           to = currentInstant,

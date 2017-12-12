@@ -35,7 +35,7 @@ trait Tracer {
 
 object Tracer {
 
-  final class Default(metrics: MetricLookup, spanSink: SpanSink, initialConfig: Config) extends Tracer {
+  final class Default(metrics: MetricLookup, spanSink: SpanSink, initialConfig: Config, clock: Clock) extends Tracer {
     private val logger = LoggerFactory.getLogger(classOf[Tracer])
 
     private[Tracer] val tracerMetrics = new TracerMetrics(metrics)
@@ -47,7 +47,7 @@ object Tracer {
     reconfigure(initialConfig)
 
     override def buildSpan(operationName: String): SpanBuilder =
-      new SpanBuilder(operationName, this, spanSink)
+      new SpanBuilder(operationName, this, spanSink, clock)
 
     override def identityProvider: IdentityProvider =
       this._identityProvider
@@ -85,11 +85,11 @@ object Tracer {
   }
 
   object Default {
-    def apply(metrics: MetricLookup, spanSink: SpanSink, initialConfig: Config): Default =
-      new Default(metrics, spanSink, initialConfig)
+    def apply(metrics: MetricLookup, spanSink: SpanSink, initialConfig: Config, clock: Clock): Default =
+      new Default(metrics, spanSink, initialConfig, clock)
   }
 
-  final class SpanBuilder(operationName: String, tracer: Tracer.Default, spanSink: SpanSink) {
+  final class SpanBuilder(operationName: String, tracer: Tracer.Default, spanSink: SpanSink, clock: Clock) {
     private var parentSpan: Span = _
     private var initialOperationName: String = operationName
     private var startTimestamp = 0L
@@ -158,7 +158,7 @@ object Tracer {
 
 
     def start(): Span = {
-      val startTimestampMicros = if(startTimestamp != 0L) startTimestamp else Clock.microTimestamp()
+      val startTimestampMicros = if(startTimestamp != 0L) startTimestamp else clock.micros()
 
       val parentSpan: Option[Span] = Option(this.parentSpan)
         .orElse(if(useParentFromContext) Some(Kamon.currentContext().get(Span.ContextKey)) else None)
@@ -177,7 +177,18 @@ object Tracer {
       }
 
       tracer.tracerMetrics.createdSpans.increment()
-      Span.Local(spanContext, nonRemoteParent, initialOperationName, initialSpanTags, initialMetricTags, startTimestampMicros, spanSink, trackMetrics, tracer.scopeSpanMetrics)
+      Span.Local(
+        spanContext,
+        nonRemoteParent,
+        initialOperationName,
+        initialSpanTags,
+        initialMetricTags,
+        startTimestampMicros,
+        spanSink,
+        trackMetrics,
+        tracer.scopeSpanMetrics,
+        clock
+      )
     }
 
     private def joinParentContext(parent: Span, samplingDecision: SamplingDecision): SpanContext =
