@@ -15,10 +15,11 @@
 
 package kamon.testkit
 
+import java.time.Instant
+
 import kamon.Kamon
 import kamon.trace.{Span, SpanContext}
 import kamon.trace.Span.FinishedSpan
-import kamon.util.Clock
 
 import scala.reflect.ClassTag
 import scala.util.Try
@@ -38,7 +39,7 @@ object SpanInspection {
         case other => sys.error(s"Only Span.Local can be inspected but got [${other.getClass.getName}]" )
       }
 
-      val spanData = invoke[Span.Local, FinishedSpan](realSpan, "toFinishedSpan", classOf[Long] -> Long.box(Kamon.clock().micros()))
+      val spanData = invoke[Span.Local, FinishedSpan](realSpan, "toFinishedSpan", classOf[Instant] -> Kamon.clock().instant())
       (realSpan, spanData)
     }.getOrElse((null, null))
 
@@ -54,8 +55,8 @@ object SpanInspection {
     def metricTags(): Map[String, String] =
       getField[Span.Local, Map[String, String]](realSpan, "customMetricTags")
 
-    def startTimestamp(): Long =
-      getField[Span.Local, Long](realSpan, "startTimestampMicros")
+    def from(): Instant =
+      getField[Span.Local, Instant](realSpan, "from")
 
     def context(): SpanContext =
       spanData.context

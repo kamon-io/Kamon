@@ -16,6 +16,8 @@
 package kamon
 package trace
 
+import java.time.Instant
+
 import kamon.ReporterRegistry.SpanSink
 import kamon.context.Key
 import kamon.metric.MeasurementUnit
@@ -43,7 +45,7 @@ sealed abstract class Span {
 
   def mark(key: String): Span
 
-  def mark(timestampMicros: Long, key: String): Span
+  def mark(at: Instant, key: String): Span
 
   def addError(error: String): Span
 
@@ -55,7 +57,7 @@ sealed abstract class Span {
 
   def disableMetrics(): Span
 
-  def finish(finishTimestampMicros: Long): Unit
+  def finish(at: Instant): Unit
 
   def finish(): Unit
 }
@@ -73,26 +75,19 @@ object Span {
     override def tag(key: String, value: Boolean): Span = this
     override def tagMetric(key: String, value: String): Span = this
     override def mark(key: String): Span = this
-    override def mark(timestampMicros: Long, key: String): Span = this
+    override def mark(at: Instant, key: String): Span = this
     override def addError(error: String): Span = this
     override def addError(error: String, throwable: Throwable): Span = this
     override def setOperationName(name: String): Span = this
     override def enableMetrics(): Span = this
     override def disableMetrics(): Span = this
     override def finish(): Unit = {}
-    override def finish(finishTimestampMicros: Long): Unit = {}
+    override def finish(at: Instant): Unit = {}
   }
 
-  /**
-    *
-    * @param spanContext
-    * @param initialOperationName
-    * @param initialSpanTags
-    * @param startTimestampMicros
-    * @param spanSink
-    */
+
   final class Local(spanContext: SpanContext, parent: Option[Span], initialOperationName: String, initialSpanTags: Map[String, Span.TagValue],
-    initialMetricTags: Map[String, String], startTimestampMicros: Long, spanSink: SpanSink, trackMetrics: Boolean, scopeSpanMetrics: Boolean, clock: Clock) extends Span {
+    initialMetricTags: Map[String, String], from: Instant, spanSink: SpanSink, trackMetrics: Boolean, scopeSpanMetrics: Boolean, clock: Clock) extends Span {
 
     private var collectMetrics: Boolean = trackMetrics
     private var open: Boolean = true
@@ -138,11 +133,11 @@ object Span {
     }
 
     override def mark(key: String): Span = {
-      mark(clock.micros(), key)
+      mark(clock.instant(), key)
     }
 
-    override def mark(timestampMicros: Long, key: String): Span = synchronized {
-      this.marks = Mark(timestampMicros, key) :: this.marks
+    override def mark(at: Instant, key: String): Span = synchronized {
+      this.marks = Mark(at, key) :: this.marks
       this
     }
 
@@ -188,25 +183,25 @@ object Span {
     }
 
     override def finish(): Unit =
-      finish(clock.micros())
+      finish(clock.instant())
 
-    override def finish(finishMicros: Long): Unit = synchronized {
+    override def finish(to: Instant): Unit = synchronized {
       if (open) {
         open = false
 
         if(collectMetrics)
-          recordSpanMetrics(finishMicros)
+          recordSpanMetrics(to)
 
         if(sampled)
-          spanSink.reportSpan(toFinishedSpan(finishMicros))
+          spanSink.reportSpan(toFinishedSpan(to))
       }
     }
 
-    private def toFinishedSpan(endTimestampMicros: Long): Span.FinishedSpan =
-      Span.FinishedSpan(spanContext, operationName, startTimestampMicros, endTimestampMicros, spanTags, marks)
+    private def toFinishedSpan(to: Instant): Span.FinishedSpan =
+      Span.FinishedSpan(spanContext, operationName, from, to, spanTags, marks)
 
-    private def recordSpanMetrics(endTimestampMicros: Long): Unit = {
-      val elapsedTime = endTimestampMicros - startTimestampMicros
+    private def recordSpanMetrics(to: Instant): Unit = {
+      val elapsedTime = clock.nanosBetween(from, to)
       val isErrorText = if(hasError) TagValue.True.text else TagValue.False.text
 
       if(scopeSpanMetrics)
@@ -223,9 +218,9 @@ object Span {
 
   object Local {
     def apply(spanContext: SpanContext, parent: Option[Span], initialOperationName: String, initialSpanTags: Map[String, Span.TagValue],
-        initialMetricTags: Map[String, String], startTimestampMicros: Long, spanSink: SpanSink,
+        initialMetricTags: Map[String, String], from: Instant, spanSink: SpanSink,
         trackMetrics: Boolean, scopeSpanMetrics: Boolean, clock: Clock): Local =
-      new Local(spanContext, parent, initialOperationName, initialSpanTags, initialMetricTags, startTimestampMicros, spanSink, trackMetrics, scopeSpanMetrics, clock)
+      new Local(spanContext, parent, initialOperationName, initialSpanTags, initialMetricTags, from, spanSink, trackMetrics, scopeSpanMetrics, clock)
   }
 
 
@@ -237,14 +232,14 @@ object Span {
     override def tag(key: String, value: Boolean): Span = this
     override def tagMetric(key: String, value: String): Span = this
     override def mark(key: String): Span = this
-    override def mark(timestampMicros: Long, key: String): Span = this
+    override def mark(at: Instant, key: String): Span = this
     override def addError(error: String): Span = this
     override def addError(error: String, throwable: Throwable): Span = this
     override def setOperationName(name: String): Span = this
     override def enableMetrics(): Span = this
     override def disableMetrics(): Span = this
     override def finish(): Unit = {}
-    override def finish(finishTimestampMicros: Long): Unit = {}
+    override def finish(at: Instant): Unit = {}
   }
 
   object Remote {
@@ -273,17 +268,17 @@ object Span {
 
 
   object Metrics {
-    val ProcessingTime = Kamon.histogram("span.processing-time", MeasurementUnit.time.microseconds)
+    val ProcessingTime = Kamon.histogram("span.processing-time", MeasurementUnit.time.nanoseconds)
     val SpanErrorCount = Kamon.counter("span.error-count")
   }
 
-  case class Mark(timestampMicros: Long, key: String)
+  case class Mark(instant: Instant, key: String)
 
   case class FinishedSpan(
     context: SpanContext,
     operationName: String,
-    startTimestampMicros: Long,
-    endTimestampMicros: Long,
+    from: Instant,
+    to: Instant,
     tags: Map[String, Span.TagValue],
     marks: Seq[Span.Mark]
   )

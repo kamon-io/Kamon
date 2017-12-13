@@ -15,6 +15,8 @@
 
 package kamon.trace
 
+import java.time.Instant
+
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
 import kamon.context.Context
@@ -85,9 +87,9 @@ class TracerSpec extends WordSpec with Matchers with SpanBuilding with SpanInspe
     }
 
     "allow overriding the start timestamp for a Span" in {
-      val span = tracer.buildSpan("myOperation").withStartTimestamp(100).start()
+      val span = tracer.buildSpan("myOperation").withFrom(Instant.EPOCH.plusMillis(321)).start()
       val spanData = inspect(span)
-      spanData.startTimestamp() shouldBe 100
+      spanData.from() shouldBe Instant.EPOCH.plusMillis(321)
     }
 
     "preserve the same Span and Parent identifier when creating a Span with a remote parent if join-remote-parents-with-same-span-id is enabled" in {
