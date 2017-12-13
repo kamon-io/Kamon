@@ -13,39 +13,64 @@
  * and limitations under the License.
  * =========================================================================================
  */
-val kamonAkka         = "io.kamon" %% "kamon-akka-2.4"        % "1.0.0-RC5-db1aa82762077e2500aa1f7fe17550482e933b93"
 
-val http         = "com.typesafe.akka" %% "akka-http"          % "10.0.1"
-val httpTestKit  = "com.typesafe.akka" %% "akka-http-testkit"  % "10.0.1"
+val kamonAkka24         = "io.kamon" %% "kamon-akka-2.4"        % "1.0.0-RC5-db1aa82762077e2500aa1f7fe17550482e933b93"
+val kamonAkka25         = "io.kamon" %% "kamon-akka-2.5"        % "1.0.0-RC5-db1aa82762077e2500aa1f7fe17550482e933b93"
+
+val http24         = "com.typesafe.akka" %% "akka-http"          % "10.0.10"
+val httpTestKit24  = "com.typesafe.akka" %% "akka-http-testkit"  % "10.0.10"
+
+val http25         = "com.typesafe.akka" %% "akka-http"          % "10.0.11"
+val httpTestKit25  = "com.typesafe.akka" %% "akka-http-testkit"  % "10.0.11"
+
+
+lazy val baseSettings = Seq(
+  scalaSource in Compile := baseDirectory.value / ".." / ".." / "kamon-akka-http"/ "src" / "main" / "scala",
+  scalaSource in Test    := baseDirectory.value / ".." / ".." / "kamon-akka-http"/ "src" / "test" / "scala"
+)
 
 lazy val root = (project in file("."))
-  .aggregate(kamonAkkaHttp, kamonAkkaHttpPlayground)
+  .aggregate(kamonAkkaHttp24, kamonAkkaHttp25, kamonAkkaHttpPlayground)
   .settings(noPublishing: _*)
   .settings(Seq(crossScalaVersions := Seq("2.11.8", "2.12.1")))
 
-lazy val kamonAkkaHttp = Project("kamon-akka-http", file("kamon-akka-http"))
-  .settings(name := "kamon-akka-http")
+lazy val kamonAkkaHttp24 = Project("kamon-akka-http-24", file("target/kamon-akka-http-24"))
+  .settings(name := "kamon-akka-http-2.4")
   .settings(aspectJSettings: _*)
+  .settings(baseSettings: _*)
   .settings(Seq(
     scalaVersion := "2.12.1",
     crossScalaVersions := Seq("2.11.8", "2.12.1"),
     testGrouping in Test := singleTestPerJvm((definedTests in Test).value, (javaOptions in Test).value)))
   .settings(libraryDependencies ++=
-    compileScope(http, kamonAkka) ++
-      testScope(httpTestKit, scalatest, slf4jApi, slf4jnop) ++
+    compileScope(http24, kamonAkka24) ++
+      testScope(httpTestKit24, scalatest, slf4jApi, slf4jnop) ++
+      providedScope(aspectJ))
+
+lazy val kamonAkkaHttp25 = Project("kamon-akka-http-25", file("target/kamon-akka-http-25"))
+  .settings(name := "kamon-akka-http-2.5")
+  .settings(aspectJSettings: _*)
+  .settings(baseSettings: _*)
+  .settings(Seq(
+    scalaVersion := "2.12.1",
+    crossScalaVersions := Seq("2.11.8", "2.12.1"),
+    testGrouping in Test := singleTestPerJvm((definedTests in Test).value, (javaOptions in Test).value)))
+  .settings(libraryDependencies ++=
+    compileScope(http25, kamonAkka25) ++
+      testScope(httpTestKit25, scalatest, slf4jApi, slf4jnop) ++
       providedScope(aspectJ))
 
 lazy val kamonAkkaHttpPlayground = Project("kamon-akka-http-playground", file("kamon-akka-http-playground"))
-  .dependsOn(kamonAkkaHttp)
+  .dependsOn(kamonAkkaHttp25)
   .settings(Seq(
     scalaVersion := "2.12.1",
     crossScalaVersions := Seq("2.11.8", "2.12.1")))
   .settings(noPublishing: _*)
   .settings(settingsForPlayground: _*)
   .settings(libraryDependencies ++=
-    compileScope(http) ++
-    testScope(httpTestKit, scalatest, slf4jApi, slf4jnop) ++
-    providedScope(aspectJ))
+    compileScope(http25) ++
+      testScope(httpTestKit25, scalatest, slf4jApi, slf4jnop) ++
+      providedScope(aspectJ))
 
 lazy val settingsForPlayground: Seq[Setting[_]] = Seq(
   connectInput in run := true,
