@@ -18,26 +18,67 @@ package kamon.util
 import java.time.{Instant, ZoneId, Clock => JavaClock}
 
 abstract class Clock extends JavaClock {
-  def micros(): Long
-  def relativeNanos(): Long
+  def nanos(): Long
+  def nanosBetween(left: Instant, right: Instant): Long
+  def toInstant(nanos: Long): Instant
 }
 
 object Clock {
 
+  private val MillisInSecond = 1000L
+  private val MicrosInSecond = 1000000L
+  private val NanosInSecond = 1000000000L
+
   class Default extends Clock {
     private val systemClock = JavaClock.systemUTC()
-    private val startTimeMillis = System.currentTimeMillis()
-    private val startNanoTime = System.nanoTime()
-    private val startMicroTime = startTimeMillis * 1000L
+    private val (startTimeMillis, startNanoTime) = {
+      var calibrationIterations = 1000
+      var millis = System.currentTimeMillis()
+      var nanos = System.nanoTime()
+      var isCandidate = false
 
-    override def micros(): Long =
-      startMicroTime + ((System.nanoTime() - startNanoTime) / 1000L)
+      while(calibrationIterations > 0) {
+        val currentMillis = System.currentTimeMillis()
+        val currentNanos = System.nanoTime()
 
-    override def relativeNanos(): Long =
+        if(isCandidate && millis != currentMillis) {
+          millis = currentMillis
+          nanos = currentNanos
+          calibrationIterations = 0
+        } else {
+          if(millis == currentMillis) {
+            isCandidate = true
+          } else {
+            millis = currentMillis
+            nanos = currentNanos
+          }
+        }
+
+        calibrationIterations -= 1
+      }
+
+      (millis, nanos)
+    }
+
+    private val startSecondTime = Math.floorDiv(startTimeMillis, MillisInSecond)
+    private val startSecondNanoOffset = Math.multiplyExact(Math.floorMod(startTimeMillis, MillisInSecond), MicrosInSecond)
+
+    override def nanos(): Long =
       System.nanoTime()
 
+    override def toInstant(nanos: Long): Instant = {
+      val nanoOffset = nanos - startNanoTime + startSecondNanoOffset
+      Instant.ofEpochSecond(startSecondTime, nanoOffset)
+    }
+
     override def instant(): Instant =
-      systemClock.instant()
+      toInstant(System.nanoTime())
+
+    override def nanosBetween(left: Instant, right: Instant): Long = {
+      val secsDiff = Math.subtractExact(right.getEpochSecond, left.getEpochSecond)
+      val totalNanos = Math.multiplyExact(secsDiff, NanosInSecond)
+      return Math.addExact(totalNanos, right.getNano - left.getNano)
+    }
 
     override def withZone(zone: ZoneId): JavaClock =
       systemClock.withZone(zone)

@@ -15,6 +15,8 @@
 
 package kamon.trace
 
+import java.time.Instant
+
 import com.typesafe.config.Config
 import kamon.ReporterRegistry.SpanSink
 import kamon.Kamon
@@ -92,7 +94,7 @@ object Tracer {
   final class SpanBuilder(operationName: String, tracer: Tracer.Default, spanSink: SpanSink, clock: Clock) {
     private var parentSpan: Span = _
     private var initialOperationName: String = operationName
-    private var startTimestamp = 0L
+    private var from: Instant = Instant.EPOCH
     private var initialSpanTags = Map.empty[String, Span.TagValue]
     private var initialMetricTags = Map.empty[String, String]
     private var useParentFromContext = true
@@ -125,8 +127,8 @@ object Tracer {
       this
     }
 
-    def withStartTimestamp(microseconds: Long): SpanBuilder = {
-      this.startTimestamp = microseconds
+    def withFrom(from: Instant): SpanBuilder = {
+      this.from = from
       this
     }
 
@@ -158,7 +160,7 @@ object Tracer {
 
 
     def start(): Span = {
-      val startTimestampMicros = if(startTimestamp != 0L) startTimestamp else clock.micros()
+      val spanFrom = if(from == Instant.EPOCH) clock.instant() else from
 
       val parentSpan: Option[Span] = Option(this.parentSpan)
         .orElse(if(useParentFromContext) Some(Kamon.currentContext().get(Span.ContextKey)) else None)
@@ -183,7 +185,7 @@ object Tracer {
         initialOperationName,
         initialSpanTags,
         initialMetricTags,
-        startTimestampMicros,
+        spanFrom,
         spanSink,
         trackMetrics,
         tracer.scopeSpanMetrics,
