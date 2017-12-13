@@ -26,8 +26,8 @@ object AkkaHttpServerMetrics {
   val SegmentLibraryName = "akka-http-client"
 
 
-  val requestMetric = Kamon.minMaxCounter("akka-http.request")
-  val connectionMetric = Kamon.minMaxCounter("akka-http.connection")
+  val requestMetric = Kamon.rangeSampler("akka-http.request")
+  val connectionMetric = Kamon.rangeSampler("akka-http.connection")
 
   val requestActive = requestMetric.refine("state", "active")
   val connectionOpen = connectionMetric.refine("state", "open")

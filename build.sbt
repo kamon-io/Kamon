@@ -14,8 +14,8 @@
  * =========================================================================================
  */
 
-val kamonAkka24         = "io.kamon" %% "kamon-akka-2.4"        % "1.0.0-RC5-db1aa82762077e2500aa1f7fe17550482e933b93"
-val kamonAkka25         = "io.kamon" %% "kamon-akka-2.5"        % "1.0.0-RC5-db1aa82762077e2500aa1f7fe17550482e933b93"
+val kamonAkka24         = "io.kamon" %% "kamon-akka-2.4"        % "1.0.0-RC5"
+val kamonAkka25         = "io.kamon" %% "kamon-akka-2.5"        % "1.0.0-RC5"
 
 val http24         = "com.typesafe.akka" %% "akka-http"          % "10.0.10"
 val httpTestKit24  = "com.typesafe.akka" %% "akka-http-testkit"  % "10.0.10"
