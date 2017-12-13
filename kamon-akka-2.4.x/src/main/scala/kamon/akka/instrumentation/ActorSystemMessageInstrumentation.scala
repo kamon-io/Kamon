@@ -18,7 +18,7 @@ package akka.kamon.instrumentation
 
 import akka.dispatch.sysmsg.EarliestFirstSystemMessageList
 import kamon.Kamon
-import kamon.akka.context.HasTransientContext
+import kamon.akka.context.{ContextContainer, HasTransientContext}
 import kamon.context.HasContext
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
@@ -43,13 +43,13 @@ class ActorSystemMessageInstrumentation {
 class HasContextIntoSystemMessageMixin {
 
   @DeclareMixin("akka.dispatch.sysmsg.SystemMessage+")
-  def mixinHasContextToSystemMessage: HasContext = HasTransientContext.fromCurrentContext()
+  def mixinHasContextToSystemMessage: ContextContainer = HasTransientContext.fromCurrentContext()
 
   @Pointcut("execution(akka.dispatch.sysmsg.SystemMessage+.new(..)) && this(message)")
-  def systemMessageCreation(message: HasContext): Unit = {}
+  def systemMessageCreation(message: ContextContainer): Unit = {}
 
   @After("systemMessageCreation(message)")
-  def afterSystemMessageCreation(message: HasContext): Unit = {
+  def afterSystemMessageCreation(message: ContextContainer): Unit = {
     // Necessary to force the initialization of HasContext at the moment of creation.
     message.context
   }
