@@ -91,8 +91,9 @@ object ActorMonitors {
       val operationName = actorSimpleClassName + ": " + messageClass
 
       Kamon.buildSpan(operationName)
-        .withStartTimestamp(Clock.toMicroTimestamp(envelopeContext.nanoTime))
+        .withFrom(Kamon.clock().toInstant(envelopeContext.nanoTime))
         .asChildOf(parentSpan)
+        .disableMetrics()
         .start()
         .mark("akka.actor.dequeued")
         .tag("component", "akka.actor")
@@ -141,7 +142,7 @@ object ActorMonitors {
     }
 
     def processMessage(pjp: ProceedingJoinPoint, envelopeContext: TimestampedContext, envelope: Envelope): AnyRef = {
-      val timestampBeforeProcessing = System.nanoTime()
+      val timestampBeforeProcessing = Kamon.clock().nanos()
       processedMessagesCounter.increment()
 
       try {
@@ -149,7 +150,7 @@ object ActorMonitors {
           pjp.proceed()
         }
       } finally {
-        val timestampAfterProcessing = System.nanoTime()
+        val timestampAfterProcessing = Kamon.clock().nanos()
         val timeInMailbox = timestampBeforeProcessing - envelopeContext.nanoTime
         val processingTime = timestampAfterProcessing - timestampBeforeProcessing
 
@@ -181,7 +182,7 @@ object ActorMonitors {
     private val processedMessagesCounter = Metrics.forSystem(cellInfo.systemName).processedMessagesByTracked
 
     def processMessage(pjp: ProceedingJoinPoint, envelopeContext: TimestampedContext, envelope: Envelope): AnyRef = {
-      val timestampBeforeProcessing = System.nanoTime()
+      val timestampBeforeProcessing = Kamon.clock().nanos()
       processedMessagesCounter.increment()
 
       try {
@@ -189,7 +190,7 @@ object ActorMonitors {
           pjp.proceed()
         }
       } finally {
-        val timestampAfterProcessing = System.nanoTime()
+        val timestampAfterProcessing = Kamon.clock().nanos()
         val timeInMailbox = timestampBeforeProcessing - envelopeContext.nanoTime
         val processingTime = timestampAfterProcessing - timestampBeforeProcessing
 
@@ -222,7 +223,7 @@ object ActorMonitors {
         gm.mailboxSize.increment()
       }
 
-      TimestampedContext(System.nanoTime(), Kamon.currentContext())
+      TimestampedContext(Kamon.clock().nanos(), Kamon.currentContext())
     }
 
     def processFailure(failure: Throwable): Unit = {

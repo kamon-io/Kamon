@@ -16,6 +16,8 @@
 package kamon.akka
 
 import akka.actor._
+import kamon.Kamon
+
 import scala.concurrent.duration._
 
 class ActorMetricsTestActor extends Actor {
@@ -26,9 +28,9 @@ class ActorMetricsTestActor extends Actor {
     case Fail    ⇒ throw new ArithmeticException("Division by zero.")
     case Ping    ⇒ sender ! Pong
     case TrackTimings(sendTimestamp, sleep) ⇒ {
-      val dequeueTimestamp = System.nanoTime()
+      val dequeueTimestamp = Kamon.clock().nanos()
       sleep.map(s ⇒ Thread.sleep(s.toMillis))
-      val afterReceiveTimestamp = System.nanoTime()
+      val afterReceiveTimestamp = Kamon.clock().nanos()
 
       sender ! TrackedTimings(sendTimestamp, dequeueTimestamp, afterReceiveTimestamp)
     }
@@ -41,7 +43,7 @@ object ActorMetricsTestActor {
   case object Fail
   case object Discard
 
-  case class TrackTimings(sendTimestamp: Long = System.nanoTime(), sleep: Option[Duration] = None)
+  case class TrackTimings(sendTimestamp: Long = Kamon.clock().nanos(), sleep: Option[Duration] = None)
   case class TrackedTimings(sendTimestamp: Long, dequeueTimestamp: Long, afterReceiveTimestamp: Long) {
     def approximateTimeInMailbox: Long = dequeueTimestamp - sendTimestamp
     def approximateProcessingTime: Long = afterReceiveTimestamp - dequeueTimestamp

@@ -17,6 +17,8 @@ package kamon.akka
 
 
 import akka.actor._
+import kamon.Kamon
+
 import scala.concurrent.duration._
 
 class RouterMetricsTestActor extends Actor {
@@ -26,9 +28,9 @@ class RouterMetricsTestActor extends Actor {
     case Fail    ⇒ throw new ArithmeticException("Division by zero.")
     case Ping    ⇒ sender ! Pong
     case RouterTrackTimings(sendTimestamp, sleep) ⇒ {
-      val dequeueTimestamp = System.nanoTime()
+      val dequeueTimestamp = Kamon.clock().nanos()
       sleep.map(s ⇒ Thread.sleep(s.toMillis))
-      val afterReceiveTimestamp = System.nanoTime()
+      val afterReceiveTimestamp = Kamon.clock().nanos()
 
       sender ! RouterTrackedTimings(sendTimestamp, dequeueTimestamp, afterReceiveTimestamp)
     }
@@ -41,7 +43,7 @@ object RouterMetricsTestActor {
   case object Fail
   case object Discard
 
-  case class RouterTrackTimings(sendTimestamp: Long = System.nanoTime(), sleep: Option[Duration] = None)
+  case class RouterTrackTimings(sendTimestamp: Long = Kamon.clock().nanos(), sleep: Option[Duration] = None)
   case class RouterTrackedTimings(sendTimestamp: Long, dequeueTimestamp: Long, afterReceiveTimestamp: Long) {
     def approximateTimeInMailbox: Long = dequeueTimestamp - sendTimestamp
     def approximateProcessingTime: Long = afterReceiveTimestamp - dequeueTimestamp

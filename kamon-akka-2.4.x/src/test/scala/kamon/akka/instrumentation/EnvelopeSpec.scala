@@ -32,7 +32,7 @@ class EnvelopeSpec extends TestKit(ActorSystem("EnvelopeSpec")) with WordSpecLik
       val actorRef = system.actorOf(Props[NoReply])
       val env = Envelope("msg", actorRef, system).asInstanceOf[Object]
       env match {
-        case e: Envelope with InstrumentedEnvelope => e.setTimestampedContext(TimestampedContext(System.nanoTime(), Kamon.currentContext()))
+        case e: Envelope with InstrumentedEnvelope => e.setTimestampedContext(TimestampedContext(Kamon.clock().nanos(), Kamon.currentContext()))
         case _ => fail("InstrumentedEnvelope is not mixed in")
       }
       env match {
