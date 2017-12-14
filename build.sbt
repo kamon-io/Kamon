@@ -14,11 +14,11 @@
  */
 
 resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
-val kamonCore = "io.kamon" %% "kamon-core" % "1.0.0-RC4"
+val kamonCore = "io.kamon" %% "kamon-core" % "1.0.0-RC6"
 val nanohttpd = "org.nanohttpd" % "nanohttpd" % "2.3.1"
 
 lazy val root = (project in file("."))
-  .settings(name := "kamon-prometheus", isSnapshot := true)
+  .settings(name := "kamon-prometheus")
   .settings(
     libraryDependencies ++=
       compileScope(kamonCore, nanohttpd) ++

@@ -15,6 +15,8 @@
 
 package kamon.prometheus
 
+import java.time.Duration
+
 import com.typesafe.config.Config
 import fi.iki.elonen.NanoHTTPD
 import fi.iki.elonen.NanoHTTPD.{Response, newFixedLengthResponse}
@@ -23,16 +25,14 @@ import kamon.metric._
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
-import scala.collection.concurrent.TrieMap
 
 class PrometheusReporter extends MetricReporter {
   private val logger = LoggerFactory.getLogger(classOf[PrometheusReporter])
   private var embeddedHttpServer: Option[EmbeddedHttpServer] = None
+  private val snapshotAccumulator = new PeriodSnapshotAccumulator(Duration.ofSeconds(Long.MaxValue), Duration.ZERO)
+
   @volatile private var preparedScrapeData: String =
     "# The kamon-prometheus module didn't receive any data just yet.\n"
-
-  private val counters = TrieMap.empty[MetricKey, CumulativeValue]
-  private val histograms = TrieMap.empty[MetricKey, CumulativeDistribution]
 
 
   override def start(): Unit = {
@@ -54,50 +54,20 @@ class PrometheusReporter extends MetricReporter {
     }
   }
 
-  override def reportTickSnapshot(snapshot: TickSnapshot): Unit = {
-    snapshot.metrics.counters.foreach(accumulateValue(this.counters, _))
-    snapshot.metrics.histograms.foreach(accumulateDistribution(this.histograms, _))
-    snapshot.metrics.minMaxCounters.foreach(accumulateDistribution(this.histograms, _))
-
+  override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
+    snapshotAccumulator.add(snapshot)
+    val currentData = snapshotAccumulator.peek()
     val scrapeDataBuilder = new ScrapeDataBuilder(readConfiguration(Kamon.config()))
-    scrapeDataBuilder.appendCounters(counters.values.map(_.snapshot()).toSeq)
-    scrapeDataBuilder.appendGauges(snapshot.metrics.gauges)
-    scrapeDataBuilder.appendHistograms(histograms.values.map(_.snapshot()).toSeq)
 
+    scrapeDataBuilder.appendCounters(currentData.metrics.counters)
+    scrapeDataBuilder.appendGauges(currentData.metrics.gauges)
+    scrapeDataBuilder.appendHistograms(currentData.metrics.histograms)
+    scrapeDataBuilder.appendHistograms(currentData.metrics.rangeSamplers)
     preparedScrapeData = scrapeDataBuilder.build()
   }
 
   def scrapeData(): String =
     preparedScrapeData
-
-  private def accumulateValue(target: TrieMap[MetricKey, CumulativeValue], metric: MetricValue): Unit =
-    target.getOrElseUpdate(MetricKey(metric.name, metric.tags, metric.unit), new CumulativeValue(metric)).add(metric)
-
-  private def accumulateDistribution(target: TrieMap[MetricKey, CumulativeDistribution], metric: MetricDistribution): Unit =
-    target.getOrElseUpdate(MetricKey(metric.name, metric.tags, metric.unit), new CumulativeDistribution(metric)).add(metric)
-
-
-  private case class MetricKey(name: String, tags: Map[String, String], unit: MeasurementUnit)
-
-  private class CumulativeDistribution(initialDistribution: MetricDistribution) {
-    private val accumulator = new DistributionAccumulator(initialDistribution.dynamicRange)
-
-    def add(metric: MetricDistribution): Unit =
-      this.accumulator.add(metric.distribution)
-
-    def snapshot(): MetricDistribution =
-      initialDistribution.copy(distribution = this.accumulator.result(resetState = false))
-  }
-
-  private class CumulativeValue(initialValue: MetricValue) {
-    private var value = 0L
-
-    def add(metric: MetricValue): Unit =
-      this.value += metric.value
-
-    def snapshot(): MetricValue =
-      initialValue.copy(value = this.value)
-  }
 
   class EmbeddedHttpServer(hostname: String, port: Int) extends NanoHTTPD(hostname, port) {
     override def serve(session: NanoHTTPD.IHTTPSession): NanoHTTPD.Response = {
@@ -116,7 +86,6 @@ class PrometheusReporter extends MetricReporter {
 
   private def stopEmbeddedServer(): Unit =
     embeddedHttpServer.foreach(_.stop())
-
 
 
   private def readConfiguration(config: Config): PrometheusReporter.Configuration = {
