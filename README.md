@@ -9,22 +9,41 @@ Kamon Prometheus is currently available for Scala 2.10, 2.11 and 2.12.
 
 Supported releases and dependencies are shown below.
 
-| kamon      | status | jdk  | scala            
+| kamon      | status | jdk  | scala
 |:----------:|:------:|:----:|------------------
-|  1.0.0-RC1 |   RC   | 1.8+ | 2.10, 2.11, 2.12
+|  1.0.0-RC6 |   RC   | 1.8+ | 2.10, 2.11, 2.12
 
-To get started with SBT, simply add the following to your `build.sbt` or `pom.xml`
-file:
+
+#### Adding the Reporter to your project
+
+First, add the dependency to your build. For SBT that would look like this:
 
 ```scala
-resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
-libraryDependencies += "io.kamon" %% "kamon-prometheus" % "1.0.0-RC1-e2eaf5e8bc4d51145e2d7f542e43e1023f9fda95"
+resolvers += Resolver.bintrayRepo("kamon-io", "releases")
+libraryDependencies += "io.kamon" %% "kamon-prometheus" % "1.0.0-RC6"
 ```
+
+and for Maven:
 
 ```xml
 <dependency>
     <groupId>io.kamon</groupId>
     <artifactId>kamon-prometheus_2.12</artifactId>
-    <version>1.0.0-RC1-e2eaf5e8bc4d51145e2d7f542e43e1023f9fda95</version>
+    <version>1.0.0-RC6</version>
 </dependency>
 ```
+
+Then, start the reporter when your application starts:
+
+```scala
+import kamon.prometheus.PrometheusReporter
+Kamon.addReporter(new PrometheusReporter())
+
+```
+
+That's it! You can now go to [http://localhost:9095] and see the metrics. Check the [reference.conf][1] file for more
+details on what settings can be configured for the module.
+
+
+
+[1]: https://github.com/kamon-io/kamon-prometheus/blob/master/src/main/resources/reference.conf
