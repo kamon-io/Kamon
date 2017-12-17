@@ -71,7 +71,7 @@ class PrometheusReporter extends MetricReporter {
 
   class EmbeddedHttpServer(hostname: String, port: Int) extends NanoHTTPD(hostname, port) {
     override def serve(session: NanoHTTPD.IHTTPSession): NanoHTTPD.Response = {
-      newFixedLengthResponse(Response.Status.OK, "text/plain", scrapeData())
+      newFixedLengthResponse(Response.Status.OK, "text/plain; version=0.0.4; charset=utf-8", scrapeData())
     }
   }
 
