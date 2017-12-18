@@ -1,14 +1,15 @@
 package kamon.zipkin
 
-import java.net.{Inet4Address, InetAddress}
+import java.net.InetAddress
 import java.nio.ByteBuffer
-import java.util.Collections
+import java.time.Instant
 
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.Config
 import kamon.{Kamon, SpanReporter}
 import kamon.trace.IdentityProvider.Identifier
 import kamon.trace.Span.TagValue.{False, Number, True, String => TString}
 import kamon.trace.{Span => KamonSpan}
+import kamon.util.Clock
 import org.slf4j.LoggerFactory
 import zipkin.{Annotation, BinaryAnnotation, Constants, Endpoint, TraceKeys, Span => ZipkinSpan}
 import zipkin.reporter.okhttp3.OkHttpSender
@@ -22,53 +23,44 @@ case object ServerSpan extends SpanKind
 case object ClientSpan extends SpanKind
 case object LocalSpan extends SpanKind
 
-
 object ZipkinReporter {
-  private val KEY_HOST = "kamon.zipkin.host"
-  private val KEY_PORT = "kamon.zipkin.port"
-  private val config = ConfigFactory.load
-
-
-  private val KIND_KEY = "span.kind"
+  private val HostConfigKey = "kamon.zipkin.host"
+  private val PortConfigKey = "kamon.zipkin.port"
+  private val SpanKindTag = "span.kind"
 
   private object PEER_KEYS {
-    val HOST     = "peer.host"
-    val PORT     = "peer.port"
-    val SERVICE  = "peer.service"
-    val IPV4     = "peer.ipv4"
-    val METHOD   = "http.method"
+    val Host     = "peer.host"
+    val Port     = "peer.port"
+    val Service  = "peer.service"
+    val IPv4     = "peer.ipv4"
+    val Method   = "http.method"
     val URL      = "http.url"
   }
-
-
-
 }
 
 case class Peer(
- host:    Option[String]  = None,
- ipv4:    Option[Int]     = None,
- port:    Option[Int]     = None,
- service: Option[String]  = None,
- method:  Option[String]  = None,
- url:     Option[String]  = None
+  host:    Option[String]  = None,
+  ipv4:    Option[Int]     = None,
+  port:    Option[Int]     = None,
+  service: Option[String]  = None,
+  method:  Option[String]  = None,
+  url:     Option[String]  = None
 )
 
-class ZipkinReporter() extends SpanReporter {
+class ZipkinReporter extends SpanReporter {
   import ZipkinReporter._
-
+  private val logger = LoggerFactory.getLogger(classOf[ZipkinReporter])
   private var localEndpoint = buildEndpoint
   private var reporter      = buildReporter
 
-  private val logger = LoggerFactory.getLogger(classOf[ZipkinReporter])
+  checkJoinParameter()
 
-  def checkJoinParameter = {
-    val enabled = config.hasPath("kamon.trace.join-remote-parents-with-same-span-id")
-    if(!enabled)
-      logger.warn("For full Zipkin compatibility enable `kamon.trace.join-remote-parents-with-same-span-id` to preserve span id across client calls")
+  def checkJoinParameter() = {
+    val joinRemoteParentsWithSameID = Kamon.config().getBoolean("kamon.trace.join-remote-parents-with-same-span-id")
+    if(!joinRemoteParentsWithSameID)
+      logger.warn("For full Zipkin compatibility enable `kamon.trace.join-remote-parents-with-same-span-id` to " +
+        "preserve span id across client/server sides of a Span.")
   }
-
-  checkJoinParameter
-
 
   override def reportSpans(spans: Seq[KamonSpan.FinishedSpan]): Unit =
     spans.map(convertSpan).foreach(reporter.report)
@@ -76,8 +68,10 @@ class ZipkinReporter() extends SpanReporter {
 
   def convertSpan(internalSpan: KamonSpan.FinishedSpan): ZipkinSpan = {
     val builder = ZipkinSpan.builder()
-
-    val duration = internalSpan.endTimestampMicros - internalSpan.startTimestampMicros
+    val duration = Clock.nanosBetween(internalSpan.from, internalSpan.to) / 1000L
+    println("Internal Span: " + internalSpan)
+    println("Span Start: " + Clock.toEpochMicros(internalSpan.from))
+    println("Zipking Trace ID: " + convertIdentifier(internalSpan.context.traceID))
 
     builder
       .traceId(convertIdentifier(internalSpan.context.traceID))
@@ -85,7 +79,7 @@ class ZipkinReporter() extends SpanReporter {
       .parentId(convertIdentifier(internalSpan.context.parentID))
       .duration(duration)
       .name(internalSpan.operationName)
-      .timestamp(internalSpan.startTimestampMicros)
+      .timestamp(Clock.toEpochMicros(internalSpan.from))
 
     val spanKind = getKind(internalSpan)
 
@@ -117,8 +111,8 @@ class ZipkinReporter() extends SpanReporter {
   private def annotateServerSpan(internal: KamonSpan.FinishedSpan): (Seq[Annotation], Seq[BinaryAnnotation]) = {
     val peer = extractPeer(internal)
 
-    val serverReceive = Annotation.create(internal.startTimestampMicros, Constants.SERVER_RECV, localEndpoint)
-    val serverSend    = Annotation.create(internal.endTimestampMicros, Constants.SERVER_SEND, localEndpoint)
+    val serverReceive = Annotation.create(Clock.toEpochMicros(internal.from), Constants.SERVER_RECV, localEndpoint)
+    val serverSend    = Annotation.create(Clock.toEpochMicros(internal.to), Constants.SERVER_SEND, localEndpoint)
     val address = BinaryAnnotation.create(
       Constants.SERVER_ADDR,
       peer.host.getOrElse(""),
@@ -152,8 +146,8 @@ class ZipkinReporter() extends SpanReporter {
   private def annotateClientSpan(internal: KamonSpan.FinishedSpan): (Seq[Annotation], Seq[BinaryAnnotation]) = {
     val peer = extractPeer(internal)
 
-    val clientSend    = Annotation.create(internal.startTimestampMicros, Constants.CLIENT_SEND, localEndpoint)
-    val clientReceive = Annotation.create(internal.endTimestampMicros, Constants.CLIENT_RECV, localEndpoint)
+    val clientSend    = Annotation.create(Clock.toEpochMicros(internal.from), Constants.CLIENT_SEND, localEndpoint)
+    val clientReceive = Annotation.create(Clock.toEpochMicros(internal.to), Constants.CLIENT_RECV, localEndpoint)
     val address = BinaryAnnotation.create(
       Constants.CLIENT_ADDR,
       peer.host.getOrElse(""),
@@ -173,11 +167,11 @@ class ZipkinReporter() extends SpanReporter {
 
   private def extractPeer(internal: KamonSpan.FinishedSpan): Peer = {
     val tags    = internal.tags
-    val host    = tags.get(PEER_KEYS.HOST).filter(_.isInstanceOf[TString]).map(_.asInstanceOf[TString].string)
-    val ipv4    = tags.get(PEER_KEYS.IPV4).filter(_.isInstanceOf[Number]).map(_.asInstanceOf[Number].number).map(_.toInt)
-    val port    = tags.get(PEER_KEYS.PORT).filter(_.isInstanceOf[Number]).map(_.asInstanceOf[Number].number).map(_.toInt)
-    val service = tags.get(PEER_KEYS.SERVICE).filter(_.isInstanceOf[TString]).map(_.asInstanceOf[TString].string)
-    val method  = tags.get(PEER_KEYS.METHOD).filter(_.isInstanceOf[TString]).map(_.asInstanceOf[TString].string)
+    val host    = tags.get(PEER_KEYS.Host).filter(_.isInstanceOf[TString]).map(_.asInstanceOf[TString].string)
+    val ipv4    = tags.get(PEER_KEYS.IPv4).filter(_.isInstanceOf[Number]).map(_.asInstanceOf[Number].number).map(_.toInt)
+    val port    = tags.get(PEER_KEYS.Port).filter(_.isInstanceOf[Number]).map(_.asInstanceOf[Number].number).map(_.toInt)
+    val service = tags.get(PEER_KEYS.Service).filter(_.isInstanceOf[TString]).map(_.asInstanceOf[TString].string)
+    val method  = tags.get(PEER_KEYS.Method).filter(_.isInstanceOf[TString]).map(_.asInstanceOf[TString].string)
     val url     = tags.get(PEER_KEYS.URL).filter(_.isInstanceOf[TString]).map(_.asInstanceOf[TString].string)
 
     Peer(
@@ -185,7 +179,7 @@ class ZipkinReporter() extends SpanReporter {
   }
 
 
-  private def getKind(internalSpan: KamonSpan.FinishedSpan): SpanKind = internalSpan.tags.get(KIND_KEY) match {
+  private def getKind(internalSpan: KamonSpan.FinishedSpan): SpanKind = internalSpan.tags.get(SpanKindTag) match {
       case Some(TString("server"))  => ServerSpan
       case Some(TString("client"))  => ClientSpan
       case _                        => LocalSpan
@@ -215,8 +209,8 @@ class ZipkinReporter() extends SpanReporter {
   }
 
   private def buildReporter = {
-    val zipkinHost  = config.getString(KEY_HOST)
-    val zipkinPort  = config.getInt(KEY_PORT)
+    val zipkinHost  = Kamon.config().getString(HostConfigKey)
+    val zipkinPort  = Kamon.config().getInt(PortConfigKey)
 
     AsyncReporter.create(
       OkHttpSender.builder()
