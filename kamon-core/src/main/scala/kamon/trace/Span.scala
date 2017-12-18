@@ -201,7 +201,7 @@ object Span {
       Span.FinishedSpan(spanContext, operationName, from, to, spanTags, marks)
 
     private def recordSpanMetrics(to: Instant): Unit = {
-      val elapsedTime = clock.nanosBetween(from, to)
+      val elapsedTime = Clock.nanosBetween(from, to)
       val isErrorText = if(hasError) TagValue.True.text else TagValue.False.text
 
       if(scopeSpanMetrics)

@@ -15,17 +15,17 @@
 
 package kamon.util
 
-import java.time.{Instant, ZoneId, Clock => JavaClock}
+import java.time.{Duration, Instant, ZoneId, Clock => JavaClock}
 
 abstract class Clock extends JavaClock {
   def nanos(): Long
-  def nanosBetween(left: Instant, right: Instant): Long
   def toInstant(nanos: Long): Instant
 }
 
 object Clock {
 
   private val MillisInSecond = 1000L
+  private val NanosInMicro = 1000L
   private val MicrosInSecond = 1000000L
   private val NanosInSecond = 1000000000L
 
@@ -74,16 +74,28 @@ object Clock {
     override def instant(): Instant =
       toInstant(System.nanoTime())
 
-    override def nanosBetween(left: Instant, right: Instant): Long = {
-      val secsDiff = Math.subtractExact(right.getEpochSecond, left.getEpochSecond)
-      val totalNanos = Math.multiplyExact(secsDiff, NanosInSecond)
-      return Math.addExact(totalNanos, right.getNano - left.getNano)
-    }
-
     override def withZone(zone: ZoneId): JavaClock =
       systemClock.withZone(zone)
 
     override def getZone: ZoneId =
       systemClock.getZone()
+  }
+
+  def nanosBetween(left: Instant, right: Instant): Long = {
+    val secsDiff = Math.subtractExact(right.getEpochSecond, left.getEpochSecond)
+    val totalNanos = Math.multiplyExact(secsDiff, NanosInSecond)
+    return Math.addExact(totalNanos, right.getNano - left.getNano)
+  }
+
+  def toEpochMicros(instant: Instant): Long = {
+    Math.multiplyExact(instant.getEpochSecond, MicrosInSecond) + Math.floorDiv(instant.getNano, NanosInMicro)
+  }
+
+  def nextTick(from: Instant, expectedDuration: Duration): Instant = {
+    val fromMillis = from.toEpochMilli()
+    val intervalCount = Math.floorDiv(fromMillis, expectedDuration.toMillis)
+    val nextTickMillis = expectedDuration.toMillis * (intervalCount + 1)
+
+    Instant.ofEpochMilli(nextTickMillis)
   }
 }
