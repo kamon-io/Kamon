@@ -234,15 +234,9 @@ object ReporterRegistry {
       metricReporterTickerSchedule.set {
         val initialDelay =
           if(registryConfiguration.optimisticMetricTickAlignment) {
-            val minimumInitialDelay = 2.seconds.toMillis
-            val currentTimestamp = System.currentTimeMillis()
-            val roundCurrentTick = Math.floor(currentTimestamp.toDouble / tickIntervalMillis.toDouble).toLong
-            val roundCurrentTimestamp = roundCurrentTick * tickIntervalMillis
-
-            if(roundCurrentTimestamp - currentTimestamp >= minimumInitialDelay)
-              roundCurrentTimestamp - currentTimestamp
-            else
-              (roundCurrentTimestamp + tickIntervalMillis) - currentTimestamp
+            val now = clock.instant()
+            val nextTick = Clock.nextTick(now, registryConfiguration.metricTickInterval)
+            Duration.between(now, nextTick).toMillis
 
           } else tickIntervalMillis
 
