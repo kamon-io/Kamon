@@ -108,7 +108,10 @@ object ActorMonitors {
   def ContextPropagationOnly(cellInfo: CellInfo) = new ActorMonitor {
     private val processedMessagesCounter = Metrics.forSystem(cellInfo.systemName).processedMessagesByNonTracked
 
-    def captureEnvelopeContext(): TimestampedContext = TimestampedContext(0, Kamon.currentContext())
+    def captureEnvelopeContext(): TimestampedContext = {
+      val envelopeTimestamp = if(cellInfo.isTraced) Kamon.clock().nanos() else 0L
+      TimestampedContext(envelopeTimestamp, Kamon.currentContext())
+    }
 
     def processMessage(pjp: ProceedingJoinPoint, envelopeContext: TimestampedContext, envelope: Envelope): AnyRef = {
       processedMessagesCounter.increment()
