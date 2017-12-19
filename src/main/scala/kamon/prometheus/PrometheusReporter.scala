@@ -29,7 +29,7 @@ import scala.collection.JavaConverters._
 class PrometheusReporter extends MetricReporter {
   private val logger = LoggerFactory.getLogger(classOf[PrometheusReporter])
   private var embeddedHttpServer: Option[EmbeddedHttpServer] = None
-  private val snapshotAccumulator = new PeriodSnapshotAccumulator(Duration.ofSeconds(Long.MaxValue), Duration.ZERO)
+  private val snapshotAccumulator = new PeriodSnapshotAccumulator(Duration.ofDays(365 * 5), Duration.ZERO)
 
   @volatile private var preparedScrapeData: String =
     "# The kamon-prometheus module didn't receive any data just yet.\n"
