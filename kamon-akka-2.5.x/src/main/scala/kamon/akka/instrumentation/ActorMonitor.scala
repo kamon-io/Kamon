@@ -1,6 +1,6 @@
 package akka.kamon.instrumentation
 
-import akka.actor.{ActorRef, ActorSystem, Cell}
+import akka.actor.{ActorCell, ActorRef, ActorSystem, Cell}
 import akka.dispatch.Envelope
 import akka.kamon.instrumentation.ActorMonitors.{TracedMonitor, TrackedActor, TrackedRoutee}
 import kamon.Kamon
@@ -23,7 +23,10 @@ object ActorMonitor {
   def createActorMonitor(cell: Cell, system: ActorSystem, ref: ActorRef, parent: ActorRef, actorCellCreation: Boolean): ActorMonitor = {
     val cellInfo = CellInfo.cellInfoFor(cell, system, ref, parent, actorCellCreation)
 
-    Metrics.forSystem(system.name).activeActors.increment()
+    if(cell.isInstanceOf[ActorCell]) {
+      // Avoid increasing when in UnstartedCell
+      Metrics.forSystem(system.name).activeActors.increment()
+    }
 
     val monitor = if (cellInfo.isRouter)
       ActorMonitors.ContextPropagationOnly(cellInfo)
