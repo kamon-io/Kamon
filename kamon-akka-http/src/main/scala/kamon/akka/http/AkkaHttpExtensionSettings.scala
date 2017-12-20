@@ -19,17 +19,13 @@ package kamon.akka.http
 import akka.actor.ReflectiveDynamicAccess
 import com.typesafe.config.Config
 
-case class AkkaHttpExtensionSettings(includeTraceTokenHeader: Boolean,
-  traceTokenHeaderName: String,
+case class AkkaHttpExtensionSettings(
   nameGenerator: NameGenerator,
   clientInstrumentationLevel: ClientInstrumentationLevel.Level)
 
 object AkkaHttpExtensionSettings {
   def apply(config: Config): AkkaHttpExtensionSettings = {
     val akkaHttpConfig = config.getConfig("kamon.akka-http")
-
-    val includeTraceTokenHeader: Boolean = akkaHttpConfig.getBoolean("automatic-trace-token-propagation")
-    val traceTokenHeaderName: String = akkaHttpConfig.getString("trace-token-header-name")
 
     val nameGeneratorFQN = akkaHttpConfig.getString("name-generator")
     val nameGenerator: NameGenerator = new ReflectiveDynamicAccess(getClass.getClassLoader)
@@ -41,7 +37,7 @@ object AkkaHttpExtensionSettings {
       case other           ⇒ sys.error(s"Invalid client instrumentation level [$other] found in configuration.")
     }
 
-    AkkaHttpExtensionSettings(includeTraceTokenHeader, traceTokenHeaderName, nameGenerator, clientInstrumentationLevel)
+    AkkaHttpExtensionSettings(nameGenerator, clientInstrumentationLevel)
   }
 }
 

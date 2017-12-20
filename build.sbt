@@ -14,8 +14,9 @@
  * =========================================================================================
  */
 
-val kamonAkka24         = "io.kamon" %% "kamon-akka-2.4"        % "1.0.0-RC5"
-val kamonAkka25         = "io.kamon" %% "kamon-akka-2.5"        % "1.0.0-RC5"
+val kamonTestKit        = "io.kamon" %% "kamon-testkit"         % "1.0.0-RC7"
+val kamonAkka24         = "io.kamon" %% "kamon-akka-2.4"        % "1.0.0-RC7"
+val kamonAkka25         = "io.kamon" %% "kamon-akka-2.5"        % "1.0.0-RC7"
 
 val http24         = "com.typesafe.akka" %% "akka-http"          % "10.0.10"
 val httpTestKit24  = "com.typesafe.akka" %% "akka-http-testkit"  % "10.0.10"
@@ -26,7 +27,11 @@ val httpTestKit25  = "com.typesafe.akka" %% "akka-http-testkit"  % "10.0.11"
 
 lazy val baseSettings = Seq(
   scalaSource in Compile := baseDirectory.value / ".." / ".." / "kamon-akka-http"/ "src" / "main" / "scala",
-  scalaSource in Test    := baseDirectory.value / ".." / ".." / "kamon-akka-http"/ "src" / "test" / "scala"
+  scalaSource in Test    := baseDirectory.value / ".." / ".." / "kamon-akka-http"/ "src" / "test" / "scala",
+  unmanagedClasspath in Test ++= Seq(
+    baseDirectory.value / ".." / ".." / "kamon-akka-http" / "src" / "main" / "resources",
+    baseDirectory.value / ".." / ".." / "kamon-akka-http" / "src" / "test" / "resources"
+  )
 )
 
 lazy val root = (project in file("."))
@@ -44,7 +49,7 @@ lazy val kamonAkkaHttp24 = Project("kamon-akka-http-24", file("target/kamon-akka
     testGrouping in Test := singleTestPerJvm((definedTests in Test).value, (javaOptions in Test).value)))
   .settings(libraryDependencies ++=
     compileScope(http24, kamonAkka24) ++
-      testScope(httpTestKit24, scalatest, slf4jApi, slf4jnop) ++
+      testScope(httpTestKit24, scalatest, slf4jApi, slf4jnop, kamonTestKit) ++
       providedScope(aspectJ))
 
 lazy val kamonAkkaHttp25 = Project("kamon-akka-http-25", file("target/kamon-akka-http-25"))
@@ -57,7 +62,7 @@ lazy val kamonAkkaHttp25 = Project("kamon-akka-http-25", file("target/kamon-akka
     testGrouping in Test := singleTestPerJvm((definedTests in Test).value, (javaOptions in Test).value)))
   .settings(libraryDependencies ++=
     compileScope(http25, kamonAkka25) ++
-      testScope(httpTestKit25, scalatest, slf4jApi, slf4jnop) ++
+      testScope(httpTestKit25, scalatest, slf4jApi, slf4jnop, kamonTestKit) ++
       providedScope(aspectJ))
 
 lazy val kamonAkkaHttpPlayground = Project("kamon-akka-http-playground", file("kamon-akka-http-playground"))

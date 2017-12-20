@@ -26,13 +26,13 @@ import kamon.Kamon
 import kamon.context.{Context => KamonContext}
 import kamon.akka.http.AkkaHttpServerMetrics
 import kamon.context.TextMap
-import kamon.trace.Span
+import kamon.trace.{Span, SpanCodec}
 
 /**
- * Wraps an {@code Flow[HttpRequest,HttpResponse]} with the necessary steps to output
- * the http metrics defined in AkkaHttpServerMetrics.
- * credits to @jypma.
- */
+  * Wraps an {@code Flow[HttpRequest,HttpResponse]} with the necessary steps to output
+  * the http metrics defined in AkkaHttpServerMetrics.
+  * credits to @jypma.
+  */
 object FlowWrapper {
   import AkkaHttpServerMetrics._
 
@@ -53,19 +53,19 @@ object FlowWrapper {
         override def onPush(): Unit = {
           val request = grab(requestIn)
 
+          val parentContext = extractContext(request)
+
           val span = Kamon.buildSpan(generateTraceName(request))
-              .withOperationName(request.uri.path.toString())
-              .withMetricTag("span.kind", "server")
-              .withTag(componentPrefixed("method"), request.method.value)
-              .withTag(componentPrefixed("url"), request.uri.toString())
-              .start()
+            .asChildOf(parentContext.get(Span.ContextKey))
+            .withOperationName(request.uri.path.toString())
+            .withMetricTag("span.kind", "server")
+            .withTag(componentPrefixed("method"), request.method.value)
+            .withTag(componentPrefixed("url"), request.uri.toString())
+            .start()
 
           requestActive.increment()
 
-          val newContext = Kamon.currentContext().withKey(Span.ContextKey, span)
-
-          Kamon.storeContext(newContext)
-
+          Kamon.storeContext(parentContext.withKey(Span.ContextKey, span))
           push(requestOut, request)
         }
         override def onUpstreamFinish(): Unit = complete(requestOut)
@@ -89,12 +89,8 @@ object FlowWrapper {
 
           requestActive.decrement()
 
-          val tracedResponse = if (settings.includeTraceTokenHeader)
-            includeTraceToken(response, Kamon.currentContext())
-          else response
-
           span.finish()
-          push(responseOut, tracedResponse)
+          push(responseOut, includeTraceToken(response, Kamon.currentContext()))
         }
         override def onUpstreamFinish(): Unit = completeStage()
       })

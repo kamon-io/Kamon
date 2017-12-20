@@ -20,7 +20,8 @@ import akka.dispatch.ExecutionContexts
 import akka.http.scaladsl.model.headers.RawHeader
 import akka.http.scaladsl.model.{HttpHeader, HttpMessage, HttpRequest, HttpResponse}
 import kamon.Kamon
-import kamon.akka.http.ClientInstrumentationLevel
+import kamon.akka.http.ClientInstrumentationLevel.RequestLevelAPI
+import kamon.akka.http.{AkkaHttpServerMetrics, ClientInstrumentationLevel}
 import kamon.trace._
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
@@ -30,16 +31,20 @@ import scala.util._
 
 @Aspect
 class ClientRequestInstrumentation {
-  import kamon.akka.http.AkkaHttpServerMetrics._
 
   private def componentPrefixed(metricName: String) = s"akka.http.server.$metricName"
 
   @Around("execution(* akka.http.scaladsl.HttpExt.singleRequest(..)) && args(request, *, *, *, *)")
   def onSingleRequest(pjp: ProceedingJoinPoint, request: HttpRequest): Any = {
-    val span = if (settings.clientInstrumentationLevel == ClientInstrumentationLevel.RequestLevelAPI) {
-      val operationName = generateRequestLevelApiSegmentName(request)
-      Kamon.buildSpan(operationName).start()
-    } else Kamon.currentContext().get(Span.ContextKey)
+    val settings = AkkaHttpServerMetrics.settings
+
+    val span = settings.clientInstrumentationLevel match  {
+      case RequestLevelAPI =>
+        val operationName = AkkaHttpServerMetrics.generateRequestLevelApiSegmentName(request)
+        Kamon.buildSpan(operationName).start()
+      case _ =>
+        Kamon.currentContext().get(Span.ContextKey)
+    }
 
     span
       .tag(componentPrefixed("url"), request.getUri().toString)

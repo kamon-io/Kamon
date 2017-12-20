@@ -22,7 +22,7 @@ import kamon.Kamon
 
 object AkkaHttpServerMetrics {
 
-  val settings = AkkaHttpExtensionSettings(Kamon.config)
+  def settings = AkkaHttpExtensionSettings(Kamon.config)
   val SegmentLibraryName = "akka-http-client"
 
 
