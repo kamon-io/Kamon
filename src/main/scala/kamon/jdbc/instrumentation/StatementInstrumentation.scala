@@ -16,6 +16,7 @@
 package kamon.jdbc.instrumentation
 
 import java.sql.{PreparedStatement, Statement}
+import java.time.Duration
 
 import kamon.Kamon
 import kamon.Kamon.buildSpan
@@ -106,10 +107,10 @@ class StatementInstrumentation {
     val inFlight = Metrics.Statements.InFlight.refine(poolTags)
     inFlight.increment()
 
-    val startTimestamp = Clock.microTimestamp()
+    val startTimestamp = Kamon.clock().instant()
     val span = Kamon.currentContext().get(SpanCustomizer.ContextKey).customize {
       val builder = buildSpan(statementType)
-        .withStartTimestamp(startTimestamp)
+        .withFrom(startTimestamp)
         .withTag("component", "jdbc")
         .withTag("db.statement", sql)
 
@@ -127,8 +128,8 @@ class StatementInstrumentation {
         Jdbc.onStatementError(sql, t)
 
     } finally {
-      val endTimestamp = Clock.microTimestamp()
-      val elapsedTime = endTimestamp - startTimestamp
+      val endTimestamp = Kamon.clock().instant()
+      val elapsedTime = Duration.between(startTimestamp, endTimestamp).toMillis
       span.finish(endTimestamp)
       inFlight.decrement()
 
