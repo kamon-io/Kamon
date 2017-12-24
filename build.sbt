@@ -22,7 +22,6 @@ resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
 
 lazy val root = (project in file("."))
   .settings(name := "kamon-jdbc")
-  .settings(isSnapshot := true)
   .settings(aspectJSettings: _*)
   .settings(
       libraryDependencies ++=
