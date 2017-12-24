@@ -49,7 +49,7 @@ lazy val root = (project in file("."))
   .settings(Seq(crossScalaVersions := Seq("2.11.8", "2.12.1")))
 
 lazy val kamonAkkaHttp24 = Project("kamon-akka-http-24", file("target/kamon-akka-http-24"))
-  .settings(name := "kamon-akka-http-24", moduleName := "kamon-akka-http-2.4")
+  .settings(name := "kamon-akka-http-24", moduleName := "kamon-akka-http-2.4", bintrayPackage := "kamon-akka-http")
   .settings(aspectJSettings: _*)
   .settings(baseSettings: _*)
   .settings(Seq(
@@ -61,7 +61,7 @@ lazy val kamonAkkaHttp24 = Project("kamon-akka-http-24", file("target/kamon-akka
     providedScope(aspectJ))
 
 lazy val kamonAkkaHttp25 = Project("kamon-akka-http-25", file("target/kamon-akka-http-25"))
-  .settings(name := "kamon-akka-http-25", moduleName := "kamon-akka-http-2.5")
+  .settings(name := "kamon-akka-http-25", moduleName := "kamon-akka-http-2.5", bintrayPackage := "kamon-akka-http")
   .settings(aspectJSettings: _*)
   .settings(baseSettings: _*)
   .settings(Seq(
