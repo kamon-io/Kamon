@@ -13,25 +13,21 @@
  * and limitations under the License.
  * =========================================================================================
  */
+package kamon.akka.http
 
-package kamon.testkit
-
-import akka.http.scaladsl.model.headers.RawHeader
-import com.typesafe.config.ConfigValueFactory
+import akka.http.scaladsl.server.directives.BasicDirectives
+import akka.http.scaladsl.server.Directive0
 import kamon.Kamon
-import kamon.trace.SpanCodec.B3
-import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 
-abstract class BaseKamonSpec extends WordSpecLike with Matchers with BeforeAndAfterAll {
 
-  def traceIdHeader(id: String): RawHeader = RawHeader(B3.Headers.TraceIdentifier, id)
-  def spanIdHeader(id: String): RawHeader = RawHeader(B3.Headers.SpanIdentifier, id)
-  def parentSpanIdHeader(id: String): RawHeader = RawHeader(B3.Headers.ParentSpanIdentifier, id)
+trait TracingDirectives extends BasicDirectives {
 
-  def updateAndReloadConfig(key: String, value: AnyRef) = {
-    val updatedConfig = Kamon.config()
-      .withValue(s"kamon.akka-http.$key", ConfigValueFactory.fromAnyRef(value))
-    Kamon.reconfigure(updatedConfig)
+  def operationName(name: String, tags: Map[String, String] = Map.empty): Directive0 = mapRequest { req ⇒
+    val operationSpan = Kamon.currentSpan()
+    operationSpan.setOperationName(name)
+    tags.foreach { case (key, value) ⇒ operationSpan.tag(key, value) }
+    req
   }
-
 }
+
+object KamonTraceDirectives extends TracingDirectives

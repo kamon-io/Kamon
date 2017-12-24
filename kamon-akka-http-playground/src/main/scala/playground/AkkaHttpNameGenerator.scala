@@ -17,10 +17,10 @@
 package playground
 
 import akka.http.scaladsl.model.HttpRequest
-import kamon.akka.http.NameGenerator
+import kamon.akka.http.AkkaHttp.OperationNameGenerator
 
-class AkkaHttpNameGenerator extends NameGenerator {
-  def generateTraceName(request: HttpRequest): String = request.getUri().path()
-  def generateRequestLevelApiSegmentName(request: HttpRequest): String = "request-level " + request.uri.path.toString()
-  def generateHostLevelApiSegmentName(request: HttpRequest): String = "host-level " + request.uri.path.toString()
+
+class AkkaHttpNameGenerator extends OperationNameGenerator {
+  def serverOperationName(request: HttpRequest): String = request.getUri().path()
+  def clientOperationName(request: HttpRequest): String = "request-level " + request.uri.path.toString()
 }

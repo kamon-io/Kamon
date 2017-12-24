@@ -3,13 +3,14 @@
 <aspectj>
   <aspects>
     <!-- Akka Http Server -->
-    <aspect name="akka.kamon.http.instrumentation.ServerRequestInstrumentation"/>
+    <aspect name="kamon.akka.http.instrumentation.ServerRequestInstrumentation"/>
 
     <!-- Akka Http Client -->
-    <aspect name="akka.kamon.http.instrumentation.ClientRequestInstrumentation"/>
+    <aspect name="akka.http.impl.engine.client.ClientRequestInstrumentation"/>
   </aspects>
 
   <weaver options="-warn:none">
-    <include within="akka..*"/>
+    <include within="akka.http..*"/>
+    <include within="kamon.akka.http.instrumentation..*"/>
   </weaver>
 </aspectj>

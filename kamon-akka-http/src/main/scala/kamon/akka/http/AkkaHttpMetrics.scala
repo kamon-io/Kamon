@@ -14,12 +14,24 @@
  * =========================================================================================
  */
 
-package kamon.testkit
+package kamon.akka.http
 
-import akka.http.scaladsl.model.HttpRequest
-import kamon.akka.http.AkkaHttp.OperationNameGenerator
+import kamon.Kamon
 
-class TestNameGenerator extends OperationNameGenerator {
-  def serverOperationName(request: HttpRequest): String = "UnnamedTrace"
-  def clientOperationName(request: HttpRequest): String = "client " + request.uri.path.toString()
+
+object AkkaHttpMetrics {
+
+  /**
+    *  Tracks the number of requests currently executing on the Akka HTTP Server. Metrics will be refined with tags:
+    *    - interface: Listening Interface
+    *    - port: Listening Port
+    */
+  val ActiveRequests = Kamon.rangeSampler("akka.http.server.active-requests")
+
+  /**
+    *  Tracks the number of open connections on the Akka HTTP Server. Metrics will be refined with tags:
+    *    - interface: Listening interface
+    *    - port: Listening port
+    */
+  val OpenConnections = Kamon.rangeSampler("akka.http.server.open-connections")
 }

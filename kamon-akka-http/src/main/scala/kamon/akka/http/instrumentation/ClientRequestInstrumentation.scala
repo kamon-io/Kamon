@@ -14,15 +14,16 @@
  * =========================================================================================
  */
 
-package akka.kamon.http.instrumentation
+package akka.http.impl.engine.client
 
 import akka.dispatch.ExecutionContexts
+import akka.http.impl.engine.client.PoolInterfaceActor.PoolRequest
 import akka.http.scaladsl.model.headers.RawHeader
-import akka.http.scaladsl.model.{HttpHeader, HttpMessage, HttpRequest, HttpResponse}
+import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
 import kamon.Kamon
-import kamon.akka.http.ClientInstrumentationLevel.RequestLevelAPI
-import kamon.akka.http.{AkkaHttpServerMetrics, ClientInstrumentationLevel}
-import kamon.trace._
+import kamon.akka.http.AkkaHttp
+import kamon.context.HasContext
+import kamon.trace.SpanCustomizer
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
 
@@ -32,40 +33,55 @@ import scala.util._
 @Aspect
 class ClientRequestInstrumentation {
 
-  private def componentPrefixed(metricName: String) = s"akka.http.server.$metricName"
-
-  @Around("execution(* akka.http.scaladsl.HttpExt.singleRequest(..)) && args(request, *, *, *, *)")
+  @Around("execution(* akka.http.scaladsl.HttpExt.singleRequest(..)) && args(request, *, *, *)")
   def onSingleRequest(pjp: ProceedingJoinPoint, request: HttpRequest): Any = {
-    val settings = AkkaHttpServerMetrics.settings
+    val operationName = AkkaHttp.clientOperationName(request)
+    val customizer = Kamon.currentContext().get(SpanCustomizer.ContextKey)
+    val span = customizer.customize(
+      Kamon.buildSpan(operationName)
+        .withTag("component", "akka.http.client")
+        .withTag("span.kind", "client")
+        .withTag("http.url", request.getUri().toString)
+        .withTag("http.method", request.method.value)
+    ).start()
 
-    val span = settings.clientInstrumentationLevel match  {
-      case RequestLevelAPI =>
-        val operationName = AkkaHttpServerMetrics.generateRequestLevelApiSegmentName(request)
-        Kamon.buildSpan(operationName).start()
-      case _ =>
-        Kamon.currentContext().get(Span.ContextKey)
-    }
-
-    span
-      .tag(componentPrefixed("url"), request.getUri().toString)
-      .tag(componentPrefixed("method"), request.method.value)
-
-    val responseFuture = Kamon.withContext(Kamon.currentContext().withKey(Span.ContextKey, span)) {
+    val responseFuture = Kamon.withSpan(span, finishSpan = false) {
       pjp.proceed().asInstanceOf[Future[HttpResponse]]
     }
 
     responseFuture.onComplete {
-      case Success(_) ⇒ span.finish()
-      case Failure(t) ⇒ span.addError(t.getMessage, t)
+      case Success(response) ⇒ {
+        val status = response.status
+        if(status.isFailure())
+          span.addError(status.reason())
+
+        span
+          .tag("http.status_code", response.status.intValue())
+          .finish()
+      }
+      case Failure(t) ⇒ {
+        span.addError(t.getMessage, t).finish()
+      }
     }(ExecutionContexts.sameThreadExecutionContext)
 
     responseFuture
   }
 
-  @Around("execution(* akka.http.scaladsl.model.HttpMessage.withDefaultHeaders(*)) && this(request) && args(defaultHeaders)")
-  def onWithDefaultHeaders(pjp: ProceedingJoinPoint, request: HttpMessage, defaultHeaders: List[HttpHeader]): Any = {
-    val modifiedHeaders = Kamon.contextCodec().HttpHeaders.encode(Kamon.currentContext()).values.toVector.map(c => RawHeader(c._1, c._2))
-    val headers = modifiedHeaders ++ defaultHeaders.toSeq
-    pjp.proceed(Array[AnyRef](request, headers))
+
+  @DeclareMixin("akka.http.impl.engine.client.PoolInterfaceActor.PoolRequest")
+  def mixinContextIntoPoolRequest(): HasContext = HasContext.fromCurrentContext()
+
+  @After("execution(akka.http.impl.engine.client.PoolInterfaceActor.PoolRequest.new(..)) && this(poolRequest)")
+  def afterPoolRequestConstructor(poolRequest: HasContext): Unit = {
+    // Initialize the Context in the Thread creating the PoolRequest
+    poolRequest.context
+  }
+
+  @Around("execution(* akka.http.impl.engine.client.PoolInterfaceActor.dispatchRequest(..)) && args(poolRequest)")
+  def aroundDispatchRequest(pjp: ProceedingJoinPoint, poolRequest: PoolRequest with HasContext): Any = {
+    val contextHeaders = Kamon.contextCodec().HttpHeaders.encode(poolRequest.context).values.map(c => RawHeader(c._1, c._2)).toList
+    val requestWithContext = poolRequest.request.withHeaders(contextHeaders)
+
+    pjp.proceed(Array(poolRequest.copy(request = requestWithContext)))
   }
 }

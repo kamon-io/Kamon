@@ -14,7 +14,7 @@
  * =========================================================================================
  */
 
-package akka.kamon.http.instrumentation
+package kamon.akka.http.instrumentation
 
 import akka.NotUsed
 import akka.event.LoggingAdapter
@@ -23,7 +23,6 @@ import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
 import akka.http.scaladsl.settings.ServerSettings
 import akka.stream.Materializer
 import akka.stream.scaladsl.Flow
-import kamon.akka.http.instrumentation.FlowWrapper
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation.{Around, Aspect}
 
@@ -31,14 +30,10 @@ import org.aspectj.lang.annotation.{Around, Aspect}
 class ServerRequestInstrumentation {
 
   @Around("execution(* akka.http.scaladsl.HttpExt.bindAndHandle(..)) && args(handler, interface, port, connectionContext, settings, log, materializer)")
-  def onBindAndHandle(pjp: ProceedingJoinPoint,
-    handler: Flow[HttpRequest, HttpResponse, Any],
-    interface: String,
-    port: AnyRef,
-    connectionContext: ConnectionContext,
-    settings: ServerSettings,
-    log: LoggingAdapter,
-    materializer: Materializer): AnyRef = {
-    pjp.proceed(Array(FlowWrapper(handler.asInstanceOf[Flow[HttpRequest, HttpResponse, NotUsed]]), interface, port, connectionContext, settings, log, materializer))
+  def onBindAndHandle(pjp: ProceedingJoinPoint, handler: Flow[HttpRequest, HttpResponse, Any], interface: String,
+      port: Int, connectionContext: ConnectionContext, settings: ServerSettings, log: LoggingAdapter, materializer: Materializer): AnyRef = {
+
+    val originalFLow = handler.asInstanceOf[Flow[HttpRequest, HttpResponse, NotUsed]]
+    pjp.proceed(Array(ServerFlowWrapper(originalFLow, interface, port), interface, Int.box(port), connectionContext, settings, log, materializer))
   }
 }
