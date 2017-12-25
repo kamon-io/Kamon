@@ -17,15 +17,17 @@
 package kamon.jaeger
 
 import java.nio.ByteBuffer
+import java.time.temporal.{ChronoField, ChronoUnit}
 import java.util
 
 import com.typesafe.config.Config
-import com.uber.jaeger.agent.thrift.Agent
-import com.uber.jaeger.thriftjava.{Batch, Process, Tag, TagType, Span => JaegerSpan}
+import com.uber.jaeger.thriftjava.{Process, Tag, TagType, Span => JaegerSpan}
+import com.uber.jaeger.senders.HttpSender
 import kamon.trace.IdentityProvider.Identifier
 import kamon.trace.Span
+import kamon.util.Clock
 import kamon.{Kamon, SpanReporter}
-import org.apache.thrift.protocol.TCompactProtocol
+import okhttp3.OkHttpClient
 
 import scala.util.Try
 
@@ -47,23 +49,26 @@ class Jaeger() extends SpanReporter {
   override def stop(): Unit = {}
 
   override def reportSpans(spans: Seq[Span.FinishedSpan]): Unit = {
-    spans.foreach(s => jaegerClient.sendSpan(s))
+    jaegerClient.sendSpans(spans)
   }
 }
 
 class JaegerClient(host: String, port: Int) {
   import scala.collection.JavaConverters._
 
-  val transport = TUDPTransport.NewTUDPClient(host, port)
-  val client = new Agent.Client(new TCompactProtocol(transport))
+  val endpoint = s"http://$host:$port/api/traces"
   val process = new Process(Kamon.environment.service)
+  val sender = new HttpSender(endpoint, new OkHttpClient())
 
-
-  def sendSpan(span: Span.FinishedSpan): Unit = {
-    client.emitBatch(new Batch(process, Seq(convertSpan(span)).asJava))
+  def sendSpans(spans: Seq[Span.FinishedSpan]): Unit = {
+    val convertedSpans = spans.map(convertSpan).asJava
+    sender.send(process, convertedSpans)
   }
 
   private def convertSpan(span: Span.FinishedSpan): JaegerSpan = {
+    val from = Clock.toEpochMicros(span.from)
+    val to = Clock.toEpochMicros(span.to)
+
     val convertedSpan = new JaegerSpan(
       convertIdentifier(span.context.traceID),
       0L,
@@ -71,8 +76,8 @@ class JaegerClient(host: String, port: Int) {
       convertIdentifier(span.context.parentID),
       span.operationName,
       0,
-      span.startTimestampMicros,
-      span.endTimestampMicros - span.startTimestampMicros
+      from,
+      to - from
     )
 
     convertedSpan.setTags(new util.ArrayList[Tag](span.tags.size))
