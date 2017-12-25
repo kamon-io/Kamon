@@ -17,11 +17,10 @@
 package kamon.jaeger
 
 import java.nio.ByteBuffer
-import java.time.temporal.{ChronoField, ChronoUnit}
 import java.util
 
 import com.typesafe.config.Config
-import com.uber.jaeger.thriftjava.{Process, Tag, TagType, Span => JaegerSpan}
+import com.uber.jaeger.thriftjava.{Log, Process, Tag, TagType, Span => JaegerSpan}
 import com.uber.jaeger.senders.HttpSender
 import kamon.trace.IdentityProvider.Identifier
 import kamon.trace.Span
@@ -34,7 +33,6 @@ import scala.util.Try
 class Jaeger() extends SpanReporter {
 
   @volatile private var jaegerClient:JaegerClient = _
-
   reconfigure(Kamon.config())
 
   override def reconfigure(newConfig: Config):Unit = {
@@ -105,6 +103,12 @@ class JaegerClient(host: String, port: Int) {
       }
     }
 
+    span.marks.foreach(mark => {
+      val markTag = new Tag("event", TagType.STRING)
+      markTag.setVStr(mark.key)
+      convertedSpan.logs.add(new Log(Clock.toEpochMicros(mark.instant), java.util.Collections.singletonList(markTag)))
+    })
+
     convertedSpan
   }
 
@@ -112,18 +116,4 @@ class JaegerClient(host: String, port: Int) {
     // Assumes that Kamon was configured to use the default identity generator.
     ByteBuffer.wrap(identifier.bytes).getLong
   }.getOrElse(0L)
-
-  private def convertField(field: (String, _)): Tag = {
-    val (tagType, setFun) = field._2 match {
-      case v: String =>      (TagType.STRING, (tag: Tag) => tag.setVStr(v))
-      case v: Double =>      (TagType.DOUBLE, (tag: Tag) => tag.setVDouble(v))
-      case v: Boolean =>     (TagType.BOOL,   (tag: Tag) => tag.setVBool(v))
-      case v: Long =>        (TagType.LONG,   (tag: Tag) => tag.setVLong(v))
-      case v: Array[Byte] => (TagType.BINARY, (tag: Tag) => tag.setVBinary(v))
-      case v => throw new RuntimeException(s"Tag type ${v.getClass.getName} not supported")
-    }
-    val convertedTag = new Tag(field._1, tagType)
-    setFun(convertedTag)
-    convertedTag
-  }
 }
