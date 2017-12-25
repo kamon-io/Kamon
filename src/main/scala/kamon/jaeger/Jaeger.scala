@@ -26,11 +26,10 @@ import kamon.trace.IdentityProvider.Identifier
 import kamon.trace.Span
 import kamon.util.Clock
 import kamon.{Kamon, SpanReporter}
-import okhttp3.OkHttpClient
 
 import scala.util.Try
 
-class Jaeger() extends SpanReporter {
+class Jaeger extends SpanReporter {
 
   @volatile private var jaegerClient:JaegerClient = _
   reconfigure(Kamon.config())
@@ -56,7 +55,7 @@ class JaegerClient(host: String, port: Int) {
 
   val endpoint = s"http://$host:$port/api/traces"
   val process = new Process(Kamon.environment.service)
-  val sender = new HttpSender(endpoint, new OkHttpClient())
+  val sender = new HttpSender(endpoint)
 
   def sendSpans(spans: Seq[Span.FinishedSpan]): Unit = {
     val convertedSpans = spans.map(convertSpan).asJava
@@ -65,7 +64,7 @@ class JaegerClient(host: String, port: Int) {
 
   private def convertSpan(span: Span.FinishedSpan): JaegerSpan = {
     val from = Clock.toEpochMicros(span.from)
-    val to = Clock.toEpochMicros(span.to)
+    val duration = Clock.toEpochMicros(span.to) - from
 
     val convertedSpan = new JaegerSpan(
       convertIdentifier(span.context.traceID),
@@ -75,7 +74,7 @@ class JaegerClient(host: String, port: Int) {
       span.operationName,
       0,
       from,
-      to - from
+      duration
     )
 
     convertedSpan.setTags(new util.ArrayList[Tag](span.tags.size))
@@ -106,7 +105,7 @@ class JaegerClient(host: String, port: Int) {
     span.marks.foreach(mark => {
       val markTag = new Tag("event", TagType.STRING)
       markTag.setVStr(mark.key)
-      convertedSpan.logs.add(new Log(Clock.toEpochMicros(mark.instant), java.util.Collections.singletonList(markTag)))
+      convertedSpan.addToLogs(new Log(Clock.toEpochMicros(mark.instant), java.util.Collections.singletonList(markTag)))
     })
 
     convertedSpan
