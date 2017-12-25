@@ -48,7 +48,6 @@ lazy val kamonPlay = Project("kamon-play", file("."))
 lazy val kamonPlay24 = Project("kamon-play-24", file("kamon-play-2.4.x"))
   .enablePlugins(JavaAgent)
   .settings(Seq(
-      isSnapshot := true,
       bintrayPackage := "kamon-play",
       moduleName := "kamon-play-2.4",
       scalaVersion := "2.11.8",
@@ -65,7 +64,6 @@ lazy val kamonPlay24 = Project("kamon-play-24", file("kamon-play-2.4.x"))
 lazy val kamonPlay25 = Project("kamon-play-25", file("kamon-play-2.5.x"))
   .enablePlugins(JavaAgent)
   .settings(Seq(
-      isSnapshot := true,
       bintrayPackage := "kamon-play",
       moduleName := "kamon-play-2.5",
       scalaVersion := "2.11.8",
@@ -83,7 +81,6 @@ lazy val kamonPlay25 = Project("kamon-play-25", file("kamon-play-2.5.x"))
 lazy val kamonPlay26 = Project("kamon-play-26", file("kamon-play-2.6.x"))
   .enablePlugins(JavaAgent)
   .settings(Seq(
-    isSnapshot := true,
     bintrayPackage := "kamon-play",
     moduleName := "kamon-play-2.6",
     scalaVersion := "2.12.3",
