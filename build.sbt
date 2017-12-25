@@ -21,7 +21,6 @@ resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
 
 lazy val root = (project in file("."))
   .settings(Seq(
-      isSnapshot := true,
       name := "kamon-logback",
       scalaVersion := "2.12.3"))
   .settings(aspectJSettings: _*)
