@@ -43,6 +43,7 @@ class WSInstrumentation {
       val clientSpanBuilder = Kamon.buildSpan(Play.generateHttpClientOperationName(request))
         .asChildOf(clientSpan)
         .withTag("span.kind", "client")
+        .withTag("component", "play.client.ws")
         .withTag("http.method", request.method)
         .withTag("http.url", request.uri.toString)
 
@@ -55,6 +56,8 @@ class WSInstrumentation {
 
       responseFuture.transform(
         s = response => {
+          clientRequestSpan.tag("http.status_code", response.status)
+
           if(isError(response.status))
             clientRequestSpan.addError("error")
 

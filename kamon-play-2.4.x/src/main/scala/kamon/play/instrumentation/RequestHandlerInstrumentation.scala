@@ -16,7 +16,7 @@
 package kamon.play.instrumentation
 
 import kamon.Kamon
-import kamon.play.KamonFilter
+import kamon.play.OperationNameFilter
 import kamon.trace.Span
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation.{AfterThrowing, _}
@@ -27,7 +27,7 @@ import play.api.mvc._
 @Aspect
 class RequestHandlerInstrumentation {
 
-  private lazy val filter: EssentialFilter = new KamonFilter()
+  private lazy val filter: EssentialFilter = new OperationNameFilter()
 
   @Around("execution(* org.jboss.netty.handler.codec.http.HttpMessageDecoder.decode(..)) && args(ctx, *, *, *)")
   def onDecodeRequest(pjp: ProceedingJoinPoint, ctx: ChannelHandlerContext): AnyRef = {
@@ -39,7 +39,7 @@ class RequestHandlerInstrumentation {
       val serverSpan = Kamon.buildSpan("unknown-operation")
         .asChildOf(incomingContext.get(Span.ContextKey))
         .withTag("span.kind", "server")
-        .withTag("component", "netty")
+        .withTag("component", "play.server.netty")
         .withTag("http.method", request.getMethod.getName)
         .withTag("http.url", request.getUri)
         .start()
@@ -51,11 +51,14 @@ class RequestHandlerInstrumentation {
 
   @After("execution(* org.jboss.netty.handler.codec.http.HttpMessageEncoder.encode(..)) && args(ctx, *, response)")
   def onEncodeResponse(ctx: ChannelHandlerContext, response: DefaultHttpResponse): Unit = {
+    val responseStatus = response.getStatus
     val serverSpan = ctx.getChannel.getContext().get(Span.ContextKey)
-    if(isError(response.getStatus.getCode))
-      serverSpan.addError("error")
+    serverSpan.tag("http.status_code", responseStatus.getCode)
 
-    if(response.getStatus.getCode == StatusCodes.NotFound)
+    if(isError(responseStatus.getCode))
+      serverSpan.addError(responseStatus.getReasonPhrase)
+
+    if(responseStatus.getCode == StatusCodes.NotFound)
       serverSpan.setOperationName("not-found")
 
     serverSpan.finish()

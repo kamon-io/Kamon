@@ -92,6 +92,7 @@ class RequestHandlerInstrumentationSpec extends PlaySpec with OneServerPerSuite
         span.operationName mustBe "GET:/ok"
         span.tags("span.kind") mustBe TagValue.String("server")
         span.tags("http.method") mustBe TagValue.String("GET")
+        span.tags("http.status_code") mustBe TagValue.Number(200)
       }
     }
 
@@ -110,6 +111,7 @@ class RequestHandlerInstrumentationSpec extends PlaySpec with OneServerPerSuite
         span.operationName mustBe "GET:/async"
         span.tags("span.kind") mustBe TagValue.String("server")
         span.tags("http.method") mustBe TagValue.String("GET")
+        span.tags("http.status_code") mustBe TagValue.Number(200)
       }
     }
 
@@ -128,6 +130,7 @@ class RequestHandlerInstrumentationSpec extends PlaySpec with OneServerPerSuite
         span.operationName mustBe "not-found"
         span.tags("span.kind") mustBe TagValue.String("server")
         span.tags("http.method") mustBe TagValue.String("GET")
+        span.tags("http.status_code") mustBe TagValue.Number(404)
       }
     }
 
@@ -146,6 +149,7 @@ class RequestHandlerInstrumentationSpec extends PlaySpec with OneServerPerSuite
         span.operationName mustBe "renamed-operation"
         span.tags("span.kind") mustBe TagValue.String("server")
         span.tags("http.method") mustBe TagValue.String("GET")
+        span.tags("http.status_code") mustBe TagValue.Number(200)
       }
     }
 
@@ -166,13 +170,14 @@ class RequestHandlerInstrumentationSpec extends PlaySpec with OneServerPerSuite
         span.tags("span.kind") mustBe TagValue.String("server")
         span.tags("http.method") mustBe TagValue.String("GET")
         span.tags("error") mustBe TagValue.True
+        span.tags("http.status_code") mustBe TagValue.Number(500)
       }
     }
   }
 }
 
 
-class TestHttpFilters @Inject() (kamonFilter: KamonFilter) extends HttpFilters {
+class TestHttpFilters @Inject() (kamonFilter: OperationNameFilter) extends HttpFilters {
   val filters = Seq(kamonFilter)
 }
 

@@ -18,7 +18,7 @@ package kamon.play.instrumentation
 import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
 import kamon.Kamon
 import kamon.context.Context
-import kamon.play.KamonFilter
+import kamon.play.OperationNameFilter
 import kamon.trace.Span
 import kamon.util.CallingThreadExecutionContext
 import org.aspectj.lang.ProceedingJoinPoint
@@ -30,7 +30,7 @@ import scala.concurrent.Future
 @Aspect
 class RequestHandlerInstrumentation {
 
-  private lazy val filter: EssentialFilter = new KamonFilter()
+  private lazy val filter: EssentialFilter = new OperationNameFilter()
 
   @Around("execution(* play.core.server.AkkaHttpServer.handleRequest(..)) && args(request, *)")
   def routeRequestNumberTwo(pjp: ProceedingJoinPoint, request: HttpRequest): Any = {
@@ -38,6 +38,7 @@ class RequestHandlerInstrumentation {
     val serverSpan = Kamon.buildSpan("unknown-operation")
       .asChildOf(incomingContext.get(Span.ContextKey))
       .withTag("span.kind", "server")
+      .withTag("component", "play.server")
       .withTag("http.method", request.method.value)
       .withTag("http.url", request.getUri.toString)
       .start()
@@ -48,11 +49,14 @@ class RequestHandlerInstrumentation {
 
     responseFuture.transform(
       s = response => {
-        if(isError(response.status.intValue())) {
+        val responseStatus = response.status
+        serverSpan.tag("http.status_code", responseStatus.intValue())
+
+        if(isError(responseStatus.intValue())) {
           serverSpan.addError("error")
         }
 
-        if(response.status.intValue() == StatusCodes.NotFound)
+        if(responseStatus.intValue() == StatusCodes.NotFound)
           serverSpan.setOperationName("not-found")
 
         serverSpan.finish()

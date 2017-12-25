@@ -21,7 +21,7 @@ import kamon.trace.Span
 import play.api.libs.iteratee.Iteratee
 import play.api.mvc.{EssentialAction, EssentialFilter, RequestHeader, Result}
 
-class KamonFilter extends EssentialFilter {
+class OperationNameFilter extends EssentialFilter {
 
   override def apply(next: EssentialAction): EssentialAction = new EssentialAction {
     override def apply(requestHeader: RequestHeader): Iteratee[Array[Byte], Result] = {

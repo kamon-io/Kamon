@@ -82,6 +82,7 @@ class WSInstrumentationSpec extends PlaySpec with GuiceOneServerPerSuite
         span.operationName mustBe endpoint
         span.tags("span.kind") mustBe TagValue.String("client")
         span.tags("http.method") mustBe TagValue.String("GET")
+        span.tags("http.status_code") mustBe TagValue.Number(200)
       }
     }
 
@@ -100,6 +101,7 @@ class WSInstrumentationSpec extends PlaySpec with GuiceOneServerPerSuite
         span.operationName mustBe endpoint
         span.tags("span.kind") mustBe TagValue.String("client")
         span.tags("http.method") mustBe TagValue.String("GET")
+        span.tags("http.status_code") mustBe TagValue.Number(200)
       }
     }
 
@@ -118,6 +120,7 @@ class WSInstrumentationSpec extends PlaySpec with GuiceOneServerPerSuite
         span.operationName mustBe "not-found"
         span.tags("span.kind") mustBe TagValue.String("client")
         span.tags("http.method") mustBe TagValue.String("GET")
+        span.tags("http.status_code") mustBe TagValue.Number(404)
       }
     }
 
@@ -137,6 +140,7 @@ class WSInstrumentationSpec extends PlaySpec with GuiceOneServerPerSuite
         span.tags("span.kind") mustBe TagValue.String("client")
         span.tags("http.method") mustBe TagValue.String("GET")
         span.tags("error") mustBe TagValue.True
+        span.tags("http.status_code") mustBe TagValue.Number(500)
       }
     }
 
@@ -182,6 +186,7 @@ class WSInstrumentationSpec extends PlaySpec with GuiceOneServerPerSuite
         span.operationName mustBe customizedOperationName
         span.tags("span.kind") mustBe TagValue.String("client")
         span.tags("http.method") mustBe TagValue.String("GET")
+        span.tags("http.status_code") mustBe TagValue.Number(200)
       }
     }
   }

@@ -14,12 +14,12 @@
  */
 
 val play24Version     = "2.4.11"
-val play25Version     = "2.5.16"
-val play26Version     = "2.6.3"
+val play25Version     = "2.5.18"
+val play26Version     = "2.6.10"
 
-val kamonCore         = "io.kamon"                  %%  "kamon-core"            % "1.0.0-RC4"
-val kamonScala        = "io.kamon"                  %%  "kamon-scala"           % "1.0.0-RC4"
-val kamonTestkit      = "io.kamon"                  %%  "kamon-testkit"         % "1.0.0-RC4"
+val kamonCore         = "io.kamon"                  %%  "kamon-core"            % "1.0.0-RC7"
+val kamonScala        = "io.kamon"                  %%  "kamon-scala-future"    % "1.0.0-RC7"
+val kamonTestkit      = "io.kamon"                  %%  "kamon-testkit"         % "1.0.0-RC7"
 
 //play 2.4.x
 val play24            = "com.typesafe.play"         %%  "play"                  % play24Version

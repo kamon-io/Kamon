@@ -18,7 +18,7 @@ package kamon.play.instrumentation
 import io.netty.handler.codec.http.{HttpRequest, HttpResponse}
 import kamon.Kamon
 import kamon.context.Context
-import kamon.play.KamonFilter
+import kamon.play.OperationNameFilter
 import kamon.trace.Span
 import kamon.util.CallingThreadExecutionContext
 import org.aspectj.lang.ProceedingJoinPoint
@@ -30,7 +30,7 @@ import scala.concurrent.Future
 @Aspect
 class RequestHandlerInstrumentation {
 
-  private lazy val filter: EssentialFilter = new KamonFilter()
+  private lazy val filter: EssentialFilter = new OperationNameFilter()
 
   @Around("execution(* play.core.server.netty.PlayRequestHandler.handle(..)) && args(*, request)")
   def onHandle(pjp: ProceedingJoinPoint, request: HttpRequest): Any = {
@@ -38,6 +38,7 @@ class RequestHandlerInstrumentation {
     val serverSpan = Kamon.buildSpan("unknown-operation")
       .asChildOf(incomingContext.get(Span.ContextKey))
       .withTag("span.kind", "server")
+      .withTag("component", "play.server.netty")
       .withTag("http.method", request.getMethod.name())
       .withTag("http.url", request.getUri)
       .start()
@@ -48,11 +49,13 @@ class RequestHandlerInstrumentation {
 
     responseFuture.transform(
       s = response => {
-        if(isError(response.getStatus.code())) {
-          serverSpan.addError("error")
-        }
+        val responseStatus = response.getStatus
+        serverSpan.tag("http.status_code", responseStatus.code())
 
-        if(response.getStatus.code() == StatusCodes.NotFound)
+        if(isError(responseStatus.code))
+          serverSpan.addError(responseStatus.reasonPhrase())
+
+        if(responseStatus.code == StatusCodes.NotFound)
           serverSpan.setOperationName("not-found")
 
         serverSpan.finish()
