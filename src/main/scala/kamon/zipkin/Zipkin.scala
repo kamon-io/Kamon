@@ -48,7 +48,7 @@ class ZipkinReporter extends SpanReporter {
   override def reportSpans(spans: Seq[KamonSpan]): Unit =
     spans.map(convertSpan).foreach(reporter.report)
 
-  private def convertSpan(kamonSpan: KamonSpan): ZipkinSpan = {
+  private[zipkin] def convertSpan(kamonSpan: KamonSpan): ZipkinSpan = {
     val context = kamonSpan.context
     val duration = Math.floorDiv(Clock.nanosBetween(kamonSpan.from, kamonSpan.to), 1000)
     val builder = ZipkinSpan.newBuilder()
@@ -67,12 +67,14 @@ class ZipkinReporter extends SpanReporter {
     builder.kind(kind)
 
     if(kind == ZipkinSpan.Kind.CLIENT) {
-      builder.remoteEndpoint(
-        Endpoint.newBuilder()
-          .ip(stringTag(kamonSpan, PeerKeys.IPv4))
-          .port(numberTag(kamonSpan, PeerKeys.Port))
-          .build()
-      )
+      val remoteEndpoint = Endpoint.newBuilder()
+        .ip(stringTag(kamonSpan, PeerKeys.IPv4))
+        .ip(stringTag(kamonSpan, PeerKeys.IPv6))
+        .port(numberTag(kamonSpan, PeerKeys.Port))
+        .build()
+
+      if(hasAnyData(remoteEndpoint))
+        builder.remoteEndpoint(remoteEndpoint)
     }
 
     kamonSpan.marks.foreach {
@@ -108,6 +110,9 @@ class ZipkinReporter extends SpanReporter {
       case _ => null
     }
   }
+
+  private def hasAnyData(endpoint: Endpoint): Boolean =
+    endpoint.ipv4() != null || endpoint.ipv6() != null || endpoint.port() != null || endpoint.serviceName() != null
 
 
   override def reconfigure(newConfig: Config): Unit = {
@@ -156,5 +161,6 @@ object ZipkinReporter {
     val Host     = "peer.host"
     val Port     = "peer.port"
     val IPv4     = "peer.ipv4"
+    val IPv6     = "peer.ipv6"
   }
 }
