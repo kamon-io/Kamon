@@ -56,7 +56,6 @@ object ServerFlowWrapper {
           val parentContext = extractContext(request)
           val span = Kamon.buildSpan(serverOperationName(request))
             .asChildOf(parentContext.get(Span.ContextKey))
-            .withOperationName(request.uri.path.toString())
             .withMetricTag("span.kind", "server")
             .withTag("component", "akka.http.server")
             .withTag("http.method", request.method.value)

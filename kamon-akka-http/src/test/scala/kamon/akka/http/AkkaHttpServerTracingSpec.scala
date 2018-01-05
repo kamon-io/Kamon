@@ -54,7 +54,7 @@ class AkkaHttpServerTracingSpec extends WordSpecLike with Matchers with BeforeAn
       eventually(timeout(10 seconds)) {
         val span = reporter.nextSpan().value
         val spanTags = stringTag(span) _
-        span.operationName shouldBe s"/$dummyPathOk"
+        span.operationName shouldBe "dummy"
         spanTags("component") shouldBe "akka.http.server"
         spanTags("span.kind") shouldBe "server"
         spanTags("http.method") shouldBe "GET"
@@ -86,7 +86,7 @@ class AkkaHttpServerTracingSpec extends WordSpecLike with Matchers with BeforeAn
       eventually(timeout(10 seconds)) {
         val span = reporter.nextSpan().value
         val spanTags = stringTag(span) _
-        span.operationName shouldBe s"/$dummyPathError"
+        span.operationName shouldBe "dummy"
         spanTags("component") shouldBe "akka.http.server"
         spanTags("span.kind") shouldBe "server"
         spanTags("http.method") shouldBe "GET"
