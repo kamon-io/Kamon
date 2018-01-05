@@ -62,7 +62,8 @@ object AkkaHttp {
   }
 
   Kamon.onReconfigure(new OnReconfigureHook {
-    override def onReconfigure(newConfig: Config): Unit =
-      nameGeneratorFromConfig(newConfig)
+    override def onReconfigure(newConfig: Config): Unit = {
+      nameGenerator = nameGeneratorFromConfig(newConfig)
+    }
   })
 }
