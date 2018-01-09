@@ -16,14 +16,13 @@
 package kamon.jdbc.instrumentation
 
 import java.sql.{PreparedStatement, Statement}
-import java.time.Duration
+import java.time.temporal.ChronoUnit
 
 import kamon.Kamon
 import kamon.Kamon.buildSpan
 import kamon.jdbc.instrumentation.StatementInstrumentation.StatementTypes
 import kamon.jdbc.{Jdbc, Metrics}
 import kamon.trace.SpanCustomizer
-import kamon.util.Clock
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation.{Around, Aspect, DeclareMixin, Pointcut}
 
@@ -129,7 +128,7 @@ class StatementInstrumentation {
 
     } finally {
       val endTimestamp = Kamon.clock().instant()
-      val elapsedTime = Duration.between(startTimestamp, endTimestamp).toMillis
+      val elapsedTime = startTimestamp.until(endTimestamp, ChronoUnit.MICROS)
       span.finish(endTimestamp)
       inFlight.decrement()
 
