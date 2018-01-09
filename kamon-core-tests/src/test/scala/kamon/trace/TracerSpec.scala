@@ -22,6 +22,7 @@ import kamon.Kamon
 import kamon.context.Context
 import kamon.testkit.{SpanBuilding, SpanInspection}
 import kamon.trace.Span.TagValue
+import kamon.trace.SpanContext.SamplingDecision
 import org.scalatest.{Matchers, OptionValues, WordSpec}
 
 class TracerSpec extends WordSpec with Matchers with SpanBuilding with SpanInspection with OptionValues {
@@ -94,7 +95,6 @@ class TracerSpec extends WordSpec with Matchers with SpanBuilding with SpanInspe
 
     "preserve the same Span and Parent identifier when creating a Span with a remote parent if join-remote-parents-with-same-span-id is enabled" in {
       val previousConfig = Kamon.config()
-
       Kamon.reconfigure {
         ConfigFactory.parseString("kamon.trace.join-remote-parents-with-same-span-id = yes")
           .withFallback(Kamon.config())
@@ -106,6 +106,31 @@ class TracerSpec extends WordSpec with Matchers with SpanBuilding with SpanInspe
       childData.context().traceID shouldBe remoteParent.context.traceID
       childData.context().parentID shouldBe remoteParent.context.parentID
       childData.context().spanID shouldBe remoteParent.context.spanID
+
+      Kamon.reconfigure(previousConfig)
+    }
+
+    "propagate sampling decisions from parent to child spans, if the decision is known" in {
+      val sampledRemoteParent = Span.Remote(createSpanContext().copy(samplingDecision = SamplingDecision.Sample))
+      val notSampledRemoteParent = Span.Remote(createSpanContext().copy(samplingDecision = SamplingDecision.DoNotSample))
+
+      tracer.buildSpan("childOfSampled").asChildOf(sampledRemoteParent).start().context()
+        .samplingDecision shouldBe(SamplingDecision.Sample)
+
+      tracer.buildSpan("childOfNotSampled").asChildOf(notSampledRemoteParent).start().context()
+        .samplingDecision shouldBe(SamplingDecision.DoNotSample)
+    }
+
+    "take a sampling decision if the parent's decision is unknown" in {
+      val previousConfig = Kamon.config()
+      Kamon.reconfigure {
+        ConfigFactory.parseString("kamon.trace.sampler = always")
+          .withFallback(Kamon.config())
+      }
+
+      val unknownSamplingRemoteParent = Span.Remote(createSpanContext().copy(samplingDecision = SamplingDecision.Unknown))
+      tracer.buildSpan("childOfSampled").asChildOf(unknownSamplingRemoteParent).start().context()
+        .samplingDecision shouldBe(SamplingDecision.Sample)
 
       Kamon.reconfigure(previousConfig)
     }

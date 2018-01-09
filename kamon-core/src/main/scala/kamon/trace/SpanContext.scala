@@ -28,7 +28,7 @@ import kamon.trace.SpanContext.SamplingDecision
 case class SpanContext(traceID: Identifier, spanID: Identifier, parentID: Identifier, samplingDecision: SamplingDecision) {
 
   def createChild(childSpanID: Identifier, samplingDecision: SamplingDecision): SpanContext =
-    this.copy(parentID = this.spanID, spanID = childSpanID)
+    this.copy(parentID = this.spanID, spanID = childSpanID, samplingDecision = samplingDecision)
 }
 
 object SpanContext {
