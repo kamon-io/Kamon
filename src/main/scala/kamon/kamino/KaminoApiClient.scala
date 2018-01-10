@@ -2,7 +2,7 @@ package kamon.kamino
 
 import java.time.{Duration, Instant}
 import java.util.concurrent.TimeUnit
-import com.squareup.okhttp.{MediaType, OkHttpClient, Request, RequestBody}
+import okhttp3.{MediaType, OkHttpClient, Request, RequestBody}
 import kamino.IngestionV1.{Goodbye, Hello, MetricBatch, SpanBatch}
 import kamon.Kamon
 
@@ -25,7 +25,7 @@ class KaminoApiClient(config: KaminoConfiguration) {
   def postSpans(spanBatch: SpanBatch): Unit =
     postWithRetry(spanBatch.toByteArray, config.tracingRoute, config.tracingRetries)
 
-  def stop(): Unit = client.getDispatcher.getExecutorService.shutdown()
+  def stop(): Unit = client.dispatcher().executorService().shutdown()
 
   @tailrec
   private def postWithRetry(body: Array[Byte], apiUrl: String, retries: Int): Unit = {
@@ -57,10 +57,10 @@ class KaminoApiClient(config: KaminoConfiguration) {
   }
 
   private def createHttpClient(config: KaminoConfiguration): OkHttpClient = {
-    val client = new OkHttpClient()
-    client.setConnectTimeout(config.connectionTimeout.toMillis, TimeUnit.MILLISECONDS)
-    client.setReadTimeout(config.readTimeout.toMillis, TimeUnit.MILLISECONDS)
-    client
+    new OkHttpClient.Builder()
+      .connectTimeout(config.connectionTimeout.toMillis, TimeUnit.MILLISECONDS)
+      .readTimeout(config.readTimeout.toMillis, TimeUnit.MILLISECONDS)
+      .build()
   }
 
 
