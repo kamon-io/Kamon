@@ -1,0 +1,68 @@
+syntax = "proto2";
+
+option java_package = "kamino";
+
+message MetricBatch {
+  required Interval interval = 1;
+  required string apiKey = 2;
+  required string service = 3;
+  required string host = 4;
+  required string instance = 5;
+  repeated Metric metrics = 6;
+}
+
+message Interval {
+  required int64 from = 1;
+  required int64 to = 2;
+}
+
+message Metric {
+  required string name = 1;
+  map<string, string> tags = 2;
+  required InstrumentType instrumentType = 3;
+  required bytes data = 4;
+}
+
+enum InstrumentType {
+  COUNTER = 0;
+  GAUGE = 1;
+  HISTOGRAM = 2;
+  MIN_MAX_COUNTER = 3;
+}
+
+message NodeIdentity {
+  required string service = 1;
+  required string instance = 2;
+  required string host = 3;
+  required string apiKey = 4;
+}
+
+message Hello {
+  required NodeIdentity node = 1;
+  required int64 time = 2;
+  required string incarnation = 3;
+  required string version = 4;
+}
+
+message Goodbye {
+    required NodeIdentity node = 1;
+    required int64 time = 2;
+}
+
+message SpanBatch {
+  required string serviceName = 1;
+  required string apiKey = 2;
+  required string host = 3;
+  required string instance = 4;
+  repeated Span spans = 5;
+}
+
+message Span {
+  required string id = 1;
+  required string traceId = 2;
+  required string parentId = 3;
+  required string operationName = 4;
+  required int64 startMicros = 5;
+  required int64 endMicros = 6;
+  map<string, string> tags = 7;
+}
