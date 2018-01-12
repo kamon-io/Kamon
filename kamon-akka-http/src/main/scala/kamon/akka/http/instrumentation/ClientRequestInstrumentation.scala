@@ -79,8 +79,8 @@ class ClientRequestInstrumentation {
 
   @Around("execution(* akka.http.impl.engine.client.PoolInterfaceActor.dispatchRequest(..)) && args(poolRequest)")
   def aroundDispatchRequest(pjp: ProceedingJoinPoint, poolRequest: PoolRequest with HasContext): Any = {
-    val contextHeaders = Kamon.contextCodec().HttpHeaders.encode(poolRequest.context).values.map(c => RawHeader(c._1, c._2)).toList
-    val requestWithContext = poolRequest.request.withHeaders(contextHeaders)
+    val contextHeaders = Kamon.contextCodec().HttpHeaders.encode(poolRequest.context).values.map(c => RawHeader(c._1, c._2))
+    val requestWithContext = poolRequest.request.withHeaders(poolRequest.request.headers ++ contextHeaders)
 
     pjp.proceed(Array(poolRequest.copy(request = requestWithContext)))
   }
