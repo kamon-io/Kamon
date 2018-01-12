@@ -18,6 +18,7 @@ package kamon.akka.http
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
+import akka.http.scaladsl.model.headers.RawHeader
 import akka.http.scaladsl.model.HttpRequest
 import akka.stream.ActorMaterializer
 import kamon.Kamon
@@ -88,7 +89,7 @@ class AkkaHttpClientTracingSpec extends WordSpecLike with Matchers with BeforeAn
       val broadcastValue = Some("Hello World :D")
 
       val response = Kamon.withContextKey(broadcastKey, broadcastValue) {
-        Http().singleRequest(HttpRequest(uri = target))
+        Http().singleRequest(HttpRequest(uri = target, headers = List(RawHeader("X-Foo", "bar"))))
       }.flatMap(r => r.entity.toStrict(timeoutTest))
 
       eventually(timeout(10 seconds)) {
@@ -96,6 +97,7 @@ class AkkaHttpClientTracingSpec extends WordSpecLike with Matchers with BeforeAn
         val headersMap = parse(httpResponse.data.utf8String).extract[Map[String, String]]
         Kamon.contextCodec().HttpHeaders.decode(textMap(headersMap)).get(broadcastKey) shouldBe broadcastValue
         headersMap.keys.toList should contain allOf(
+          "X-Foo",
           "X-B3-TraceId",
           "X-B3-SpanId",
           "X-B3-Sampled"
