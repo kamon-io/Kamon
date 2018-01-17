@@ -22,7 +22,7 @@ import com.typesafe.config.{Config, ConfigFactory}
 import kamon.context.{Codecs, Context, Key, Storage}
 import kamon.metric._
 import kamon.trace._
-import kamon.util.{Filters, Registration, Clock}
+import kamon.util.{Clock, Filters, Matcher, Registration}
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
@@ -152,6 +152,9 @@ object Kamon extends MetricLookup with ReporterRegistry with Tracer {
   override def addReporter(reporter: MetricReporter, name: String): Registration =
     _reporterRegistry.addReporter(reporter, name)
 
+  override def addReporter(reporter: MetricReporter, name: String, filter: String): Registration =
+    _reporterRegistry.addReporter(reporter, name, filter)
+
   override def addReporter(reporter: SpanReporter): Registration =
     _reporterRegistry.addReporter(reporter)
 
@@ -163,6 +166,9 @@ object Kamon extends MetricLookup with ReporterRegistry with Tracer {
 
   def filter(filterName: String, pattern: String): Boolean =
     _filters.accept(filterName, pattern)
+
+  def filter(filterName: String): Matcher =
+    _filters.get(filterName)
 
   def clock(): Clock =
     _clock

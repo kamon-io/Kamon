@@ -60,6 +60,12 @@ class Filters(filters: Map[String, Matcher]) {
       .get(filterName)
       .map(_.accept(pattern))
       .getOrElse(false)
+
+  def get(filterName: String): Matcher = {
+    filters.getOrElse(filterName, new Matcher {
+      override def accept(name: String): Boolean = false
+    })
+  }
 }
 
 trait Matcher {

@@ -20,6 +20,10 @@ import kamon.Kamon
 
 trait Reconfigure {
 
+  def enableFastMetricFlushing(): Unit = {
+    applyConfig("kamon.metric.tick-interval = 1 millisecond")
+  }
+
   def enableFastSpanFlushing(): Unit = {
     applyConfig("kamon.trace.tick-interval = 1 millisecond")
   }
@@ -42,6 +46,10 @@ trait Reconfigure {
 
   def applyConfig(configString: String): Unit = {
     Kamon.reconfigure(ConfigFactory.parseString(configString).withFallback(Kamon.config()))
+  }
+
+  def resetConfig(): Unit = {
+    Kamon.reconfigure(ConfigFactory.load())
   }
 
 
