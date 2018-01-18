@@ -16,8 +16,8 @@ scalaVersion := "2.11.8"
 crossScalaVersions := Seq("2.10.6", "2.11.8", "2.12.2")
 
 resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
-val kamonCore    = "io.kamon" %% "kamon-core"    % "1.0.0-RC7"
-val kamonTestkit = "io.kamon" %% "kamon-testkit" % "1.0.0-RC7"
+val kamonCore    = "io.kamon" %% "kamon-core"    % "1.0.0"
+val kamonTestkit = "io.kamon" %% "kamon-testkit" % "1.0.0"
 val logback = "ch.qos.logback" % "logback-classic" % "1.2.3"
 
 lazy val root = (project in file("."))
