@@ -16,9 +16,9 @@
 
 resolvers += Resolver.bintrayRepo("hseeberger", "maven")
 
-val kamonTestKit        = "io.kamon" %% "kamon-testkit"         % "1.0.0-RC7"
-val kamonAkka24         = "io.kamon" %% "kamon-akka-2.4"        % "1.0.0-RC7"
-val kamonAkka25         = "io.kamon" %% "kamon-akka-2.5"        % "1.0.0-RC7"
+val kamonTestKit        = "io.kamon" %% "kamon-testkit"         % "1.0.0"
+val kamonAkka24         = "io.kamon" %% "kamon-akka-2.4"        % "1.0.0"
+val kamonAkka25         = "io.kamon" %% "kamon-akka-2.5"        % "1.0.0"
 val akkaHttpJson        = "de.heikoseeberger" %% "akka-http-json4s" % "1.18.1"
 val json4sNative        = "org.json4s" %% "json4s-native" % "3.5.3"
 
