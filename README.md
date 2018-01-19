@@ -43,7 +43,7 @@ libraryDependencies += "io.kamon" %% "kamon-play-[play-version]" % "1.0.0"
 <dependency>
     <groupId>io.kamon</groupId>
     <artifactId>kamon-play-[play-version]_2.12</artifactId>
-    <version>1.0.04</version>
+    <version>1.0.0</version>
 </dependency>
 ```
 [base functionality]: http://kamon.io/integrations/web-and-http-toolkits/base-functionality/
