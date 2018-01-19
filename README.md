@@ -23,22 +23,21 @@ Supported releases and dependencies are shown below.
 
 | kamon      | status | jdk  | scala            
 |:----------:|:------:|:----:|------------------
-|  1.0.0-RC4 |   RC   | 1.8+ | 2.10, 2.11, 2.12
+|  1.0.0 |   RC   | 1.8+ | 2.10, 2.11, 2.12
 
 
 To get started with SBT, simply add the following to your `build.sbt` or `pom.xml`
 file:
 
 ```scala
-resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
-libraryDependencies += "io.kamon" %% "kamon-jdbc" % "1.0.0-RC"
+libraryDependencies += "io.kamon" %% "kamon-jdbc" % "1.0.0"
 ```
 
 ```xml
 <dependency>
     <groupId>io.kamon</groupId>
     <artifactId>kamon-jdbc_2.12</artifactId>
-    <version>1.0.0-RC4</version>
+    <version>1.0.0</version>
 </dependency>
 ```
 
