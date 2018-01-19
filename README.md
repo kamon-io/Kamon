@@ -49,7 +49,7 @@ Now, the lucky modules currently available are:
   - [Futures](https://github.com/kamon-io/kamon-futures) bring automatic context propagation for Scala, Finagle and
     Scalaz futures.
   - [Executors](https://github.com/kamon-io/kamon-executors) collects executor service metrics.
-  - [Play Framework](https://github.com/kamon-io/kamon-futures) with client and server side tracing.
+  - [Play Framework](https://github.com/kamon-io/kamon-play) with client and server side tracing.
   - [JDBC](https://github.com/kamon-io/kamon-jdbc) gives you metrics and tracing for JDBC statements execution and
     Hikari pool metrics.
   - [Logback](https://github.com/kamon-io/kamon-logback) comes with utilities for adding trace IDs to your logs and
