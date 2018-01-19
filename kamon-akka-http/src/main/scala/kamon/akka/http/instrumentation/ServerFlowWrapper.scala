@@ -82,8 +82,8 @@ object ServerFlowWrapper {
           val response = grab(responseIn)
           val status = response.status.intValue()
 
-          val span = Kamon.currentSpan()
-            .tag("http.status_code", status)
+          val spanWithStatusTag = Kamon.currentSpan().tag("http.status_code", status)
+          val span = if (addHttpStatusCodeAsMetricTag) spanWithStatusTag.tagMetric("http.status_code", status.toString()) else spanWithStatusTag
 
           if(status >= 400 && status <= 499) {
             span.setOperationName("not-found")
