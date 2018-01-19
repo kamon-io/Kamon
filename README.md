@@ -14,14 +14,13 @@ Supported releases and dependencies are shown below.
 
 | kamon-zipkin | status | jdk  | scala            |
 |:------------:|:------:|:----:|------------------|
-|  1.0.0-RC7   |   RC   | 1.8+ | 2.10, 2.11, 2.12 |
-
+|  1.0.0   |   stable   | 1.8+ | 2.10, 2.11, 2.12 |
 
 
 To get started with SBT, simply add the following to your `build.sbt` file:
 
 ```scala
-libraryDependencies += "io.kamon" %% "kamon-zipkin" % "1.0.0-RC7"
+libraryDependencies += "io.kamon" %% "kamon-zipkin" % "1.0.0"
 ```
 
 You can find more info on [kamon.io](http://kamon.io) and in our [Monitoring Akka Quickstart Recipe][1]
