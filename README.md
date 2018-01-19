@@ -1,4 +1,4 @@
-# Akka Integration
+# Akka Integration<img align="right" src="https://rawgit.com/kamon-io/Kamon/master/kamon-logo.svg" height="150px" style="padding-left: 20px"/>
 
 [![Build Status](https://travis-ci.org/kamon-io/kamon-akka.svg?branch=master)](https://travis-ci.org/kamon-io/kamon-akka)
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/kamon-io/Kamon?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
@@ -46,7 +46,7 @@ Here is a quick list of the functionalities included in the module:
 
 * __[Actor, Router and Dispatcher Metrics]__: This module hooks into Akka's heart to give you a robust set of metrics
 based on the concepts already exposed by our metrics module.
-* __[Automatic Context Propagation]__: This allows you to implicitly propagate the `TraceContext` across actor messages
+* __[Automatic Context Propagation]__: This allows you to implicitly propagate the `Context` across actor messages
 without having to change a single line of code and respecting the "follow the events" rather than "stick to the thread"
 convention as described in the [event based threading model section].
 * __[Ask Pattern Timeout Warning]__: A utility that logs a warning with additional information when a usage of the Ask
