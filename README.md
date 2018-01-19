@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/kamon-io/kamon-scala.svg?branch=master)](https://travis-ci.org/kamon-io/kamon-scala)
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/kamon-io/Kamon?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-scala_2.11/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-scala_2.11)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-scala-future_2.12/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-scala-future_2.12)
 
 ### Getting Started
 
@@ -10,9 +10,9 @@ The Futures instrumentation is currently available for Scala 2.10, 2.11 and 2.12
 
 Supported releases and dependencies are shown below.
 
-| kamon-scala  | status | jdk  | scala
+| kamon-futures  | status | jdk  | scala
 |:------:|:------:|:----:|------------------
-|  1.0.0-RC5 | stable | 1.7+, 1.8+ | 2.10, 2.11, 2.12
+|  1.0.0 | stable | 1.7+, 1.8+ | 2.10, 2.11, 2.12
 
 To get started with SBT, simply add the following to your `build.sbt`
 file:
@@ -20,9 +20,9 @@ file:
 ```scala
 resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
 
-libraryDependencies += "io.kamon" %% "kamon-scala-future" % "1.0.0-RC5"
-libraryDependencies += "io.kamon" %% "kamon-scalaz-future" % "1.0.0-RC5"
-libraryDependencies += "io.kamon" %% "kamon-twitter-future" % "1.0.0-RC5"
+libraryDependencies += "io.kamon" %% "kamon-scala-future" % "1.0.0"
+libraryDependencies += "io.kamon" %% "kamon-scalaz-future" % "1.0.0"
+libraryDependencies += "io.kamon" %% "kamon-twitter-future" % "1.0.0"
 ```
 
 
