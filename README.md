@@ -20,14 +20,21 @@ Kamon sytem-metrics module is currently available for Scala 2.10, 2.11 and 2.12.
 Supported releases and dependencies are shown below.
 
 | kamon-system-metrics  | status | jdk  | scala     
-|:------:|:------:|:----:|------------------|:------
-|  1.0.0-RC1 | stable |1.8+ | 2.10, 2.11, 2.12
+|:------:|:------:|:----:|------------------|
+|  1.0.0 | stable |1.8+ | 2.10, 2.11, 2.12
 
-To get started with SBT, simply add the following to your `build.sbt`
+To get started with SBT, simply add the following to your `build.sbt` or `pom.xml`
 file:
 
 ```scala
-libraryDependencies += "io.kamon" %% "kamon-system-metrics" % "1.0.0-RC1"
+libraryDependencies += "io.kamon" %% "kamon-system-metrics" % "1.0.0"
+```
+```xml
+<dependency>
+    <groupId>io.kamon</groupId>
+    <artifactId>kamon-system-metrics_2.12</artifactId>
+    <version>1.0.0</version>
+</dependency>
 ```
 
 ##### Start
