@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/kamon-io/kamon-akka.svg?branch=master)](https://travis-ci.org/kamon-io/kamon-akka)
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/kamon-io/Kamon?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-akka-2.4_2.12/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-akka-2.4_2.12)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-akka-2.5_2.12/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-akka-2.5_2.12)
 
 Kamon's integration with Akka comes in the form of two modules: `kamon-akka` and `kamon-akka-remote` that bring bytecode
 instrumentation to gather metrics and perform automatic `Context` propagation on your behalf.
@@ -17,17 +17,29 @@ Supported releases and dependencies are shown below.
 
 | kamon-akka-2.3  | status | jdk  | scala            | akka   |
 |:------:|:------:|:----:|------------------|:------:|
-|  0.6.6 | stable | 1.7+, 1.8+ | 2.10, 2.11  | 2.3.x |
+|  1.0.0 | stable | 1.7+, 1.8+ | 2.10, 2.11  | 2.3.x |
 
 | kamon-akka-2.4  | status | jdk  | scala            | akka   |
 |:------:|:------:|:----:|------------------|:------:|
-|  0.6.6 | stable | 1.7+, 1.8+ | 2.11, 2.12  | 2.4.x |
+|  1.0.0 | stable | 1.7+, 1.8+ | 2.11, 2.12  | 2.4.x |
 
-To get started with SBT, simply add the following to your `build.sbt`
+| kamon-akka-2.5  | status | jdk  | scala            | akka   |
+|:------:|:------:|:----:|------------------|:------:|
+|  1.0.0 | stable | 1.7+, 1.8+ | 2.11, 2.12  | 2.5.x |
+
+To get started with SBT, simply add the following to your `build.sbt` or `pom.xml`
 file:
 
 ```scala
-libraryDependencies += "io.kamon" %% "kamon-akka-2.4" % "0.6.6"
+libraryDependencies += "io.kamon" %% "kamon-akka-2.5" % "1.0.0"
+```
+
+```xml
+<dependency>
+    <groupId>io.kamon</groupId>
+    <artifactId>kamon-kamon-akka-2.5_2.12</artifactId>
+    <version>1.0.0</version>
+</dependency>
 ```
 
 Here is a quick list of the functionalities included in the module:
