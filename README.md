@@ -19,33 +19,31 @@ Kamon Play is currently available for Scala 2.10, 2.11 and 2.12.
 
 Supported releases and dependencies are shown below.
 
-| kamon      | status | jdk  | scala            
-|:----------:|:------:|:----:|------------------
-|  1.0.0-RC4 |   RC   | 1.8+ | 2.10, 2.11, 2.12
+| kamon-play-2.4  | status | jdk  | scala            
+|:------:|:------:|:----:|------------------
+|  1.0.0 | stable | 1.7+, 1.8+ | 2.10, 2.11 
+
+| kamon-play-2.5  | status | jdk  | scala   
+|:------:|:------:|:----:|------------------
+|  1.0.0 | stable | 1.7+, 1.8+ | 2.11 
+
+| kamon-play-2.6  | status | jdk  | scala   
+|:------:|:------:|:----:|------------------
+|  1.0.0 | stable | 1.8+ | 2.12  
+
 
 To get started with SBT, simply add the following to your `build.sbt` or `pom.xml`
 file:
 
 ```scala
-resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
-<<<<<<< Updated upstream
-libraryDependencies += "io.kamon" %% "kamon-play-[play-version]" % "1.0.0-RC4-b4c7c921bb94b58abe2b5f3686173bdfa292c203"
-=======
-libraryDependencies += "io.kamon" %% "kamon-play-[play-version]" % "1.0.0-RC4"
->>>>>>> Stashed changes
+libraryDependencies += "io.kamon" %% "kamon-play-[play-version]" % "1.0.0"
 ```
 
 ```xml
 <dependency>
     <groupId>io.kamon</groupId>
     <artifactId>kamon-play-[play-version]_2.12</artifactId>
-<<<<<<< Updated upstream
-    <version>1.0.0-RC4-b4c7c921bb94b58abe2b5f3686173bdfa292c203</version>
-=======
-    <version>1.0.0-RC4</version>
->>>>>>> Stashed changes
+    <version>1.0.04</version>
 </dependency>
 ```
-
-
 [base functionality]: http://kamon.io/integrations/web-and-http-toolkits/base-functionality/
