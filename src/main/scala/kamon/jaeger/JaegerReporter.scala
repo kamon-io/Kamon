@@ -29,7 +29,7 @@ import kamon.{Kamon, SpanReporter}
 
 import scala.util.Try
 
-class Jaeger extends SpanReporter {
+class JaegerReporter extends SpanReporter {
 
   @volatile private var jaegerClient:JaegerClient = _
   reconfigure(Kamon.config())
