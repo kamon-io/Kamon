@@ -26,9 +26,9 @@ import java.util.Locale
 
 import com.typesafe.config.Config
 import kamon.metric._
-import kamon.util.MeasurementUnit
-import kamon.util.MeasurementUnit.Dimension.{Information, Time}
-import kamon.util.MeasurementUnit.{information, time}
+import kamon.metric.MeasurementUnit
+import kamon.metric.MeasurementUnit.Dimension.{Information, Time}
+import kamon.metric.MeasurementUnit.{information, time}
 import kamon.{Kamon, MetricReporter}
 import org.asynchttpclient.{DefaultAsyncHttpClient, DefaultAsyncHttpClientConfig}
 import org.slf4j.LoggerFactory
@@ -59,7 +59,7 @@ class DatadogAPIReporter extends MetricReporter {
   }
 
 
-  override def reportTickSnapshot(snapshot: TickSnapshot): Unit = {
+  override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
     val config = readConfiguration(Kamon.config())
     val url = "https://app.datadoghq.com/api/v1/series?api_key=" + config.apiKey
 
@@ -76,8 +76,8 @@ class DatadogAPIReporter extends MetricReporter {
 
   }
 
-  private def buildRequestBody(snapshot: TickSnapshot): String = {
-    val timestamp: Long = (snapshot.interval.from / 1000L)
+  private def buildRequestBody(snapshot: PeriodSnapshot): String = {
+    val timestamp: Long = (snapshot.from.toEpochMilli)
     val serviceTag = "\"service:" + Kamon.environment.service + "\""
     val host = Kamon.environment.host
     val seriesBuilder = new StringBuilder()
@@ -123,7 +123,7 @@ class DatadogAPIReporter extends MetricReporter {
       addGauge(gauge)
     }
 
-    for(metric <- snapshot.metrics.histograms ++ snapshot.metrics.minMaxCounters) {
+    for(metric <- snapshot.metrics.histograms ++ snapshot.metrics.rangeSamplers) {
       addDistribution(metric)
     }
 

@@ -13,7 +13,8 @@
  * =========================================================================================
  */
 
-val kamonCore         = "io.kamon"               %% "kamon-core"          % "1.0.0-RC1-1d0548cb8281202738d8d48cbe9cdd62cf209e21"
+val kamonCore         = "io.kamon"               %% "kamon-core"          % "1.0.0"
+val kamonTestKit      = "io.kamon"               %% "kamon-testkit"       % "1.0.0"
 val asyncHttpClient   = "org.asynchttpclient"     % "async-http-client"   % "2.0.25"
 
 lazy val root = (project in file("."))
@@ -21,7 +22,7 @@ lazy val root = (project in file("."))
   .settings(
       libraryDependencies ++=
         compileScope(kamonCore, asyncHttpClient, scalaCompact.value) ++
-        testScope(scalatest, slf4jApi, slf4jnop))
+        testScope(scalatest, slf4jApi, slf4jnop, kamonCore))
 
 
 

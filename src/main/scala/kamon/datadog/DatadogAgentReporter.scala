@@ -25,9 +25,9 @@ import java.util.Locale
 import com.typesafe.config.Config
 import kamon.{Kamon, MetricReporter}
 import kamon.metric._
-import kamon.util.MeasurementUnit
-import kamon.util.MeasurementUnit.Dimension.{Information, Time}
-import kamon.util.MeasurementUnit.{Dimension, information, time}
+import kamon.metric.MeasurementUnit
+import kamon.metric.MeasurementUnit.Dimension.{Information, Time}
+import kamon.metric.MeasurementUnit.{Dimension, information, time}
 import org.slf4j.LoggerFactory
 
 
@@ -48,7 +48,7 @@ class DatadogAgentReporter extends MetricReporter {
   override def reconfigure(config: Config): Unit = {}
 
 
-  override def reportTickSnapshot(snapshot: TickSnapshot): Unit = {
+  override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
     val config = readConfiguration(Kamon.config())
     val clientChannel = DatagramChannel.open()
     val packetBuffer = new PacketBuffer(config.maxPacketSize, clientChannel, config.agentAddress)
@@ -63,7 +63,7 @@ class DatadogAgentReporter extends MetricReporter {
       packetBuffer.appendMeasurement(gauge.name, formatMeasurement(encodeDatadogGauge(gauge.value, gauge.unit), serviceNameTag, gauge.tags))
     }
 
-    for(metric <- snapshot.metrics.histograms ++ snapshot.metrics.minMaxCounters;
+    for(metric <- snapshot.metrics.histograms ++ snapshot.metrics.rangeSamplers;
         bucket <- metric.distribution.bucketsIterator) {
 
       val bucketData = formatMeasurement(encodeDatadogHistogramBucket(bucket.value, bucket.frequency, metric.unit), serviceNameTag, metric.tags)
