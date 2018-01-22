@@ -15,7 +15,7 @@
  */
 
 package kamon.datadog
-
+/*
 import akka.testkit.{TestKitBase, TestProbe}
 import akka.actor.{Props, ActorRef, ActorSystem}
 import kamon.Kamon
@@ -156,3 +156,5 @@ object TestEntityRecorder extends EntityRecorderFactory[TestEntityRecorder] {
   def category: String = "category"
   def createRecorder(instrumentFactory: InstrumentFactory): TestEntityRecorder = new TestEntityRecorder(instrumentFactory)
 }
+
+*/

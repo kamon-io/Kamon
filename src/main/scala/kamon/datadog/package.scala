@@ -1,7 +1,7 @@
 package kamon
 
-import kamon.util.MeasurementUnit
-import kamon.util.MeasurementUnit.{time}
+import kamon.metric.MeasurementUnit
+import kamon.metric.MeasurementUnit.{time}
 
 package object datadog {
 

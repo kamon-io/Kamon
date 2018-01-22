@@ -16,6 +16,7 @@
 
 package kamon.testkit
 
+/*
 import akka.actor.ActorSystem
 import akka.testkit.{ImplicitSender, TestKitBase}
 import com.typesafe.config.Config
@@ -64,3 +65,4 @@ abstract class BaseKamonSpec(actorSystemName: String) extends TestKitBase with W
 
   override protected def afterAll(): Unit = system.shutdown()
 }
+*/
