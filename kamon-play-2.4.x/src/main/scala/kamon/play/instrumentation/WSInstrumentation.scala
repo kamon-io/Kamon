@@ -42,7 +42,7 @@ class WSInstrumentation {
     else {
       val clientSpanBuilder = Kamon.buildSpan(Play.generateHttpClientOperationName(request))
         .asChildOf(clientSpan)
-        .withTag("span.kind", "client")
+        .withMetricTag("span.kind", "client")
         .withTag("component", "play.client.ws")
         .withTag("http.method", request.method)
         .withTag("http.url", request.uri.toString)

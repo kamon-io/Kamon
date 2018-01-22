@@ -21,29 +21,29 @@ Supported releases and dependencies are shown below.
 
 | kamon-play-2.4  | status | jdk  | scala            
 |:------:|:------:|:----:|------------------
-|  1.0.0 | stable | 1.7+, 1.8+ | 2.10, 2.11 
+|  1.0.1 | stable | 1.7+, 1.8+ | 2.10, 2.11
 
 | kamon-play-2.5  | status | jdk  | scala   
 |:------:|:------:|:----:|------------------
-|  1.0.0 | stable | 1.7+, 1.8+ | 2.11 
+|  1.0.1 | stable | 1.7+, 1.8+ | 2.11
 
 | kamon-play-2.6  | status | jdk  | scala   
 |:------:|:------:|:----:|------------------
-|  1.0.0 | stable | 1.8+ | 2.12  
+|  1.0.1 | stable | 1.8+ | 2.12  
 
 
 To get started with SBT, simply add the following to your `build.sbt` or `pom.xml`
 file:
 
 ```scala
-libraryDependencies += "io.kamon" %% "kamon-play-[play-version]" % "1.0.0"
+libraryDependencies += "io.kamon" %% "kamon-play-[play-version]" % "1.0.1"
 ```
 
 ```xml
 <dependency>
     <groupId>io.kamon</groupId>
     <artifactId>kamon-play-[play-version]_2.12</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
 </dependency>
 ```
 [base functionality]: http://kamon.io/integrations/web-and-http-toolkits/base-functionality/

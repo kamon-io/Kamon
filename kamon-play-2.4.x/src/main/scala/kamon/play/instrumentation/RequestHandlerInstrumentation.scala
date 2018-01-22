@@ -38,7 +38,7 @@ class RequestHandlerInstrumentation {
       val incomingContext = decodeContext(request)
       val serverSpan = Kamon.buildSpan("unknown-operation")
         .asChildOf(incomingContext.get(Span.ContextKey))
-        .withTag("span.kind", "server")
+        .withMetricTag("span.kind", "server")
         .withTag("component", "play.server.netty")
         .withTag("http.method", request.getMethod.getName)
         .withTag("http.url", request.getUri)
