@@ -27,8 +27,8 @@ libraryDependencies += "io.kamon" %% "kamon-logback" % "1.0.0"
 ```xml
 <dependency>
     <groupId>io.kamon</groupId>
-    <artifactId>kamon-logback</artifactId>
-    <version>1.0.0-RC4</version>
+    <artifactId>kamon-logback_2.12</artifactId>
+    <version>1.0.0</version>
 </dependency>
 ```
 
