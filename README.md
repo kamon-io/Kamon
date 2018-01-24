@@ -40,9 +40,26 @@ Kamon.addReporter(new PrometheusReporter())
 
 ```
 
-That's it! You can now go to [http://localhost:9095] and see the metrics. Check the [reference.conf][1] file for more
+That's it! You can now go to `http://localhost:9095 and see the metrics. Check the [reference.conf][1] file for more
 details on what settings can be configured for the module.
 
+#### Consuming the metrics
+
+Finally, all you need to do is [configure a scrape configuration in Prometheus][2]. The following snippet is a minimal
+example that shold work with the minimal server from the previous section.
+
+```yaml
+
+A minimal Prometheus configuration snippet
+------------------------------------------------------------------------------
+scrape_configs:
+  - job_name: kamon-prometheus
+    target_groups:
+      - targets: ['localhost:9095']
+------------------------------------------------------------------------------
+```
+Note that the above configuration uses the default `scrape_interval`
 
 
 [1]: https://github.com/kamon-io/kamon-prometheus/blob/master/src/main/resources/reference.conf
+[2]: http://prometheus.io/docs/operating/configuration/#scrape-configurations-scrape_config
