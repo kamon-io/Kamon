@@ -95,36 +95,38 @@ object Span {
     private var hasError: Boolean = false
     private var operationName: String = initialOperationName
 
-    private var spanTags: Map[String, Span.TagValue] = initialSpanTags
+    private var _spanTags: Map[String, Span.TagValue] = initialSpanTags
     private var marks: List[Mark] = Nil
     private var customMetricTags = initialMetricTags
 
     override def isEmpty(): Boolean = false
     override def isLocal(): Boolean = true
 
+    def spanTags: Map[String, Span.TagValue] = _spanTags
+
     override def tag(key: String, value: String): Span = synchronized {
       if(sampled && open)
-        spanTags = spanTags + (key -> TagValue.String(value))
+        _spanTags = _spanTags + (key -> TagValue.String(value))
       this
     }
 
     override def tag(key: String, value: Long): Span = synchronized {
       if(sampled && open)
-        spanTags = spanTags + (key -> TagValue.Number(value))
+        _spanTags = _spanTags + (key -> TagValue.Number(value))
       this
     }
 
     override def tag(key: String, value: Boolean): Span = synchronized {
       if(sampled && open) {
         val tagValue = if (value) TagValue.True else TagValue.False
-        spanTags = spanTags + (key -> tagValue)
+        _spanTags = _spanTags + (key -> tagValue)
       }
       this
     }
 
     override def tagMetric(key: String, value: String): Span = synchronized {
       if(sampled && open) {
-        spanTags = spanTags + (key -> TagValue.String(value))
+        _spanTags = _spanTags + (key -> TagValue.String(value))
 
         if(collectMetrics)
           customMetricTags = customMetricTags + (key -> value)
@@ -144,7 +146,7 @@ object Span {
     override def addError(error: String): Span = synchronized {
       if(sampled && open) {
         hasError = true
-        spanTags = spanTags ++ Map(
+        _spanTags = _spanTags ++ Map(
           "error" -> TagValue.True,
           "error.object" -> TagValue.String(error)
         )
@@ -155,7 +157,7 @@ object Span {
     override def addError(error: String, throwable: Throwable): Span = synchronized {
       if(sampled && open) {
         hasError = true
-        spanTags = spanTags ++ Map(
+        _spanTags = _spanTags ++ Map(
           "error" -> TagValue.True,
           "error.object" -> TagValue.String(throwable.getMessage())
         )
