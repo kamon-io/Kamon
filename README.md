@@ -56,11 +56,11 @@ By default the `kamon-system-metrics` module starts with Host and JVM metrics en
 ```typesafeconfig
 kamon {
   system-metrics {
-   #sigar is enabled by default
-   sigar-enabled = true
+   # sigar is enabled by default
+   host.enabled = true
 
-   #jmx related metrics are enabled by default
-   jmx-enabled = true
+   # jmx related metrics are enabled by default
+   jmx.enabled = true
   }
 }
 ```
