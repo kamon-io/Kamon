@@ -54,7 +54,7 @@ A minimal Prometheus configuration snippet
 ------------------------------------------------------------------------------
 scrape_configs:
   - job_name: kamon-prometheus
-    target_groups:
+    static_configs:
       - targets: ['localhost:9095']
 ------------------------------------------------------------------------------
 ```
