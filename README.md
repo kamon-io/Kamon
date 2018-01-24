@@ -58,8 +58,6 @@ scrape_configs:
       - targets: ['localhost:9095']
 ------------------------------------------------------------------------------
 ```
-Note that the above configuration uses the default `scrape_interval`
-
 
 [1]: https://github.com/kamon-io/kamon-prometheus/blob/master/src/main/resources/reference.conf
 [2]: http://prometheus.io/docs/operating/configuration/#scrape-configurations-scrape_config
