@@ -58,7 +58,7 @@ Now, the lucky modules currently available are:
 
 ### Backends ###
 
-  - [Promethus](https://github.com/kamon-io/kamon-prometheus) exposes a scrape endpoint with all available metrics.
+  - [Prometheus](https://github.com/kamon-io/kamon-prometheus) exposes a scrape endpoint with all available metrics.
   - [Zipkin](https://github.com/kamon-io/kamon-zipkin) for reporting trace data.
   - [Jaeger](https://github.com/kamon-io/kamon-jaeger) reports tracing data as well.
   - [Kamino](https://github.com/kamino-apm/kamino-reporter) reports metrics and tracing data to [Kamino][8]
