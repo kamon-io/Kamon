@@ -18,7 +18,7 @@ package kamon.akka.http
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.HttpRequest
+import akka.http.scaladsl.model.{HttpMethods, HttpRequest}
 import akka.stream.ActorMaterializer
 import kamon.Kamon
 import kamon.context.{Context, Key, TextMap}
@@ -95,6 +95,22 @@ class AkkaHttpServerTracingSpec extends WordSpecLike with Matchers with BeforeAn
       }
     }
 
+    "change the operation name to 'unhandled' when the response status code is 404" in {
+      val target = s"http://$interface:$port/unknown-path"
+      Http().singleRequest(HttpRequest(uri = target))
+
+      eventually(timeout(10 seconds)) {
+        val span = reporter.nextSpan().value
+        val spanTags = stringTag(span) _
+        span.operationName shouldBe "unhandled"
+        spanTags("component") shouldBe "akka.http.server"
+        spanTags("span.kind") shouldBe "server"
+        spanTags("http.method") shouldBe "GET"
+        spanTags("http.url") shouldBe target
+        span.tags("http.status_code") shouldBe TagValue.Number(404)
+      }
+    }
+
     "deserialize the Context from HTTP Headers" in {
       val stringKey = Key.broadcastString("custom-string-key")
       val target = s"http://$interface:$port/$basicContext"
@@ -117,7 +133,6 @@ class AkkaHttpServerTracingSpec extends WordSpecLike with Matchers with BeforeAn
         basicContext("trace-id") shouldBe parentSpan.context().traceID.string
       }
     }
-
 
     def stringTag(span: Span.FinishedSpan)(tag: String): String = {
       span.tags(tag).asInstanceOf[TagValue.String].string

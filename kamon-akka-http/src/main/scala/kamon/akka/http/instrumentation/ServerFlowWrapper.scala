@@ -85,11 +85,11 @@ object ServerFlowWrapper {
           val span = Kamon.currentSpan()
             .tag("http.status_code", status)
 
-          if(status >= 400 && status <= 499) {
-            span.setOperationName("not-found")
-          } else if(status >= 500 && status <= 599) {
+          if(status == 404)
+            span.setOperationName("unhandled")
+
+          if(status >= 500 && status <= 599)
             span.addError(response.status.reason())
-          }
 
           activeRequests.decrement()
           span.finish()
