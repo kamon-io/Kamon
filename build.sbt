@@ -14,8 +14,8 @@
  */
 
 
-val kamonCore           = "io.kamon"            %% "kamon-core"               % "1.0.0-RC1"
-val kamonTestkit        = "io.kamon"            %% "kamon-testkit"            % "1.0.0-RC1"
+val kamonCore           = "io.kamon"            %% "kamon-core"               % "1.0.0"
+val kamonTestkit        = "io.kamon"            %% "kamon-testkit"            % "1.0.0"
 val scalaExtension      = "io.kamon"            %% "agent-scala-extension"    % "0.0.8-experimental"
 
 val h2                  = "com.h2database"            % "h2"                        % "1.4.182"

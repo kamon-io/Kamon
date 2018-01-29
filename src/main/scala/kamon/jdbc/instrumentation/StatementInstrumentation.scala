@@ -1,5 +1,5 @@
 /* =========================================================================================
- * Copyright © 2013-2017 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2018 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -16,6 +16,7 @@
 package kamon.jdbc.instrumentation
 
 import java.sql.{PreparedStatement, SQLException, Statement}
+import java.time.temporal.ChronoUnit
 import java.util.concurrent.Callable
 
 import kamon.Kamon
@@ -28,7 +29,6 @@ import kamon.jdbc.instrumentation.bridge.MariaPreparedStatement
 import kamon.jdbc.instrumentation.mixin.{HasConnectionPoolMetrics, HasConnectionPoolMetricsMixin}
 import kamon.jdbc.{Jdbc, Metrics}
 import kamon.trace.SpanCustomizer
-import kamon.util.Clock
 
 
 class StatementInstrumentation extends KamonInstrumentation {
@@ -118,10 +118,10 @@ object StatementInstrumentation {
     val inFlight = Metrics.Statements.InFlight.refine(poolTags)
     inFlight.increment()
 
-    val startTimestamp = Clock.microTimestamp()
+    val startTimestamp = Kamon.clock().instant()
     val span = Kamon.currentContext().get(SpanCustomizer.ContextKey).customize {
       val builder = buildSpan(statementType)
-        .withStartTimestamp(startTimestamp)
+        .withFrom(startTimestamp)
         .withTag("component", "jdbc")
         .withTag("db.statement", sql)
 
@@ -139,8 +139,8 @@ object StatementInstrumentation {
         Jdbc.onStatementError(sql, t)
 
     } finally {
-      val endTimestamp = Clock.microTimestamp()
-      val elapsedTime = endTimestamp - startTimestamp
+      val endTimestamp = Kamon.clock().instant()
+      val elapsedTime = startTimestamp.until(endTimestamp, ChronoUnit.MICROS)
       span.finish(endTimestamp)
       inFlight.decrement()
 
@@ -156,11 +156,13 @@ object StatementInstrumentation {
 object ExecuteMethodInterceptor {
 
   @RuntimeType
+  @throws(classOf[SQLException])
   def execute(@SuperCall callable: Callable[_], @This statement: Statement, @annotation.Argument(0) sql: String): Any = {
     StatementInstrumentation.track(callable, statement, sql, StatementTypes.GenericExecute)
   }
 
   @RuntimeType
+  @throws(classOf[SQLException])
   def execute(@SuperCall callable: Callable[_], @This statement: PreparedStatement): Any = {
     StatementInstrumentation.track(callable, statement, statement.toString, StatementTypes.GenericExecute)
   }
@@ -174,11 +176,13 @@ object ExecuteMethodInterceptor {
 object ExecuteQueryMethodInterceptor {
 
   @RuntimeType
+  @throws(classOf[SQLException])
   def executeQuery(@SuperCall callable: Callable[_], @This statement: Statement, @annotation.Argument(0) sql: String): Any = {
     StatementInstrumentation.track(callable, statement, sql, StatementTypes.Query)
   }
 
   @RuntimeType
+  @throws(classOf[SQLException])
   def executeQuery(@SuperCall callable: Callable[_], @This statement: PreparedStatement): Any = {
     StatementInstrumentation.track(callable, statement, statement.toString, StatementTypes.Query)
   }
@@ -191,11 +195,13 @@ object ExecuteQueryMethodInterceptor {
 object ExecuteUpdateMethodInterceptor {
 
   @RuntimeType
+  @throws(classOf[SQLException])
   def executeUpdate(@SuperCall callable: Callable[_], @This statement:Statement, @annotation.Argument(0) sql:String): Any = {
     StatementInstrumentation.track(callable, statement,  sql, StatementTypes.Update)
   }
 
   @RuntimeType
+  @throws(classOf[SQLException])
   def executeUpdate(@SuperCall callable: Callable[_], @This statement:PreparedStatement): Any = {
     StatementInstrumentation.track(callable, statement,  statement.toString , StatementTypes.Update)
   }
