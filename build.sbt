@@ -13,15 +13,15 @@
  * =========================================================================================
  */
 
-val kamonCore         = "io.kamon"                  %%  "kamon-core"            % "0.6.7"
-val asyncHttpClient   = "org.asynchttpclient"       %   "async-http-client"     % "2.0.24"
+val kamonCore        = "io.kamon"             %% "kamon-core"    % "1.0.0"
+val kamonTestkit     = "io.kamon"             %% "kamon-testkit" % "1.0.0"
+val okHttp           = "com.squareup.okhttp3" %  "okhttp"        % "3.9.1"
+val okHttpMockServer = "com.squareup.okhttp3" %  "mockwebserver" % "3.9.1"
 
 name := "kamon-influxdb"
 
-parallelExecution in Test in Global := false
-
 libraryDependencies ++=
-    compileScope(kamonCore, akkaDependency("slf4j").value, asyncHttpClient) ++
-    testScope(scalatest, akkaDependency("testkit").value, slf4jApi, slf4jnop)
+  compileScope(kamonCore, okHttp) ++
+  testScope(scalatest, kamonTestkit, okHttpMockServer, slf4jApi, slf4jnop)
 
 resolvers += Resolver.bintrayRepo("kamon-io", "releases")
