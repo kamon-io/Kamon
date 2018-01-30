@@ -67,7 +67,7 @@ object ReporterRegistry {
 
   private[kamon] class Default(metrics: MetricsSnapshotGenerator, initialConfig: Config, clock: Clock) extends ReporterRegistry with SpanSink {
     private val logger = LoggerFactory.getLogger(classOf[ReporterRegistry])
-    private val registryExecutionContext = Executors.newScheduledThreadPool(2, threadFactory("kamon-reporter-registry"))
+    private val registryExecutionContext = Executors.newScheduledThreadPool(2, threadFactory("kamon-reporter-registry", daemon = true))
     private val reporterCounter = new AtomicLong(0L)
     private var registryConfiguration = readRegistryConfiguration(initialConfig)
 

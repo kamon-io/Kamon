@@ -50,7 +50,10 @@ lazy val testkit = (project in file("kamon-testkit"))
 
 
 lazy val coreTests = (project in file("kamon-core-tests"))
-  .settings(moduleName := "kamon-core-tests", resolvers += Resolver.mavenLocal)
+  .settings(
+    moduleName := "kamon-core-tests",
+    resolvers += Resolver.mavenLocal,
+    fork in Test := true)
   .settings(noPublishing: _*)
   .settings(commonSettings: _*)
   .settings(
