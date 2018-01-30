@@ -30,18 +30,19 @@ package object kamon {
   /**
     * Creates a thread factory that assigns the specified name to all created Threads.
     */
-  def threadFactory(name: String): ThreadFactory =
+  def threadFactory(name: String, daemon: Boolean = false): ThreadFactory =
     new ThreadFactory {
       val defaultFactory = Executors.defaultThreadFactory()
 
       override def newThread(r: Runnable): Thread = {
         val thread = defaultFactory.newThread(r)
         thread.setName(name)
+        thread.setDaemon(daemon)
         thread
       }
     }
 
-  def numberedThreadFactory(name: String): ThreadFactory =
+  def numberedThreadFactory(name: String, daemon: Boolean = false): ThreadFactory =
     new ThreadFactory {
       val count = new AtomicLong()
       val defaultFactory = Executors.defaultThreadFactory()
@@ -49,6 +50,7 @@ package object kamon {
       override def newThread(r: Runnable): Thread = {
         val thread = defaultFactory.newThread(r)
         thread.setName(name + "-" + count.incrementAndGet().toString)
+        thread.setDaemon(daemon)
         thread
       }
     }

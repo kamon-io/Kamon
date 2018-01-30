@@ -37,7 +37,7 @@ object Kamon extends MetricLookup with ReporterRegistry with Tracer {
   @volatile private var _filters = Filters.fromConfig(_config)
 
   private val _clock = new Clock.Default()
-  private val _scheduler = Executors.newScheduledThreadPool(schedulerPoolSize(_config), numberedThreadFactory("kamon-scheduler"))
+  private val _scheduler = Executors.newScheduledThreadPool(schedulerPoolSize(_config), numberedThreadFactory("kamon-scheduler", daemon = true))
   private val _metrics = new MetricRegistry(_config, _scheduler)
   private val _reporterRegistry = new ReporterRegistry.Default(_metrics, _config, _clock)
   private val _tracer = Tracer.Default(Kamon, _reporterRegistry, _config, _clock)
