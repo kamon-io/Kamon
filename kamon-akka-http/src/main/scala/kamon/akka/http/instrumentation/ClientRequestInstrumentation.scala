@@ -55,14 +55,13 @@ class ClientRequestInstrumentation {
         if(status.isFailure())
           span.addError(status.reason())
 
-        val spanWithStatusTag = span.tag("http.status_code", status.intValue())
-        val spanWithStatusMetricTag = if (AkkaHttp.addHttpStatusCodeAsMetricTag) {
-          spanWithStatusTag.tagMetric("http.status_code", status.intValue.toString())
+        val spanWithStatusTag = if (AkkaHttp.addHttpStatusCodeAsMetricTag) {
+          span.tagMetric("http.status_code", status.intValue.toString())
         } else {
-          spanWithStatusTag
+          span.tag("http.status_code", status.intValue())
         }
 
-        spanWithStatusMetricTag.finish()
+        spanWithStatusTag.finish()
       }
       case Failure(t) ⇒ {
         span.addError(t.getMessage, t).finish()
