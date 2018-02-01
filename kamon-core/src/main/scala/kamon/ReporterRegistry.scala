@@ -200,7 +200,7 @@ object ReporterRegistry {
       if(newConfig.metricTickInterval != registryConfiguration.metricTickInterval && metricReporters.nonEmpty)
         reStartMetricTicker()
 
-      if(newConfig.traceTickInterval != registryConfiguration.metricTickInterval && spanReporters.nonEmpty)
+      if(newConfig.traceTickInterval != registryConfiguration.traceTickInterval && spanReporters.nonEmpty)
         reStartTraceTicker()
 
       // Reconfigure all registered reporters
