@@ -8,72 +8,41 @@ Kamon akka-http
 
 *Kamon Akka Http* module provides bytecode instrumentation to gather metrics and perform automatic `Context` propagation on your behalf, both on the client and server side.
 
-### Getting Started
-
-Kamon akka-http module is currently available for Scala 2.11 and 2.12.
+### Adding the Module
 
 Supported releases and dependencies are shown below.
 
 | kamon-akka-http-2.4  | status | jdk  | scala            | akka   |
 |:------:|:------:|:----:|------------------|:------:|
-|  1.0.0 | stable | 1.8+ |  2.11, 2.12  | 2.4.x |
+|  1.0.1 | stable | 1.8+ |  2.11, 2.12  | 2.4.x |
 
 | kamon-akka-http-2.5  | status | jdk  | scala            | akka   |
 |:------:|:------:|:----:|------------------|:------:|
-|  1.0.0 | stable | 1.8+ |  2.11, 2.12  | 2.5.x |
+|  1.0.1 | stable | 1.8+ |  2.11, 2.12  | 2.5.x |
 
 
-To get started with SBT, simply add the following to your `build.sbt` or `pom.xml`
+To get started with SBT add the following to your `build.sbt` or `pom.xml`
 file:
 
 ```scala
-libraryDependencies += "io.kamon" %% "kamon-akka-http-2.5" % "1.0.0"
+libraryDependencies += "io.kamon" %% "kamon-akka-http-2.5" % "1.0.1"
+```
 
 ```xml
 <dependency>
     <groupId>io.kamon</groupId>
     <artifactId>kamon-akka-http-2.5_2.12</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
 </dependency>
 ```
 
-
-The following is an example of a configuration to provide metrics to a server, such as Statsd.
-
-```
-kamon {
-  metric {
-    filters {
-      trace.includes = [ "**" ]
-    }
-  }
-
-  subscriptions {
-    trace                = [ "**" ]
-    trace-segment        = [ "**" ]
-    akka-http-server     = [ "**" ]
-  }
-}
-```
 ### Run
 
-*kamon-akka-http* module require you to start your application using the AspectJ Weaver Agent. Kamon will warn you at startup if you failed to do so.
-
-To achieve it quickly you can use the [sbt-aspectj-runner] plugin.
+The `kamon-akka-http` module requires you to start your application using the AspectJ Weaver Agent. You can achieve that quickly with the [sbt-aspectj-runner] plugin or take a look at the [documentation] for other options.
 
 ### Enjoy!
 
-## Examples
-
-Coming soon!
-
-## Naming HTTP Client Segments
-By default, the name generator bundled with the *kamon-akka-http* module will use the Host header available in the request to assign a name to the automatically generated segment. Currently, the only way to override that name would be to provide your own implementation of `kamon.akka.http.AkkaHttpNameGenerator` which is used to assign names both on the server and client sides of our instrumentation.
-
-## Backlog
-* Connection-Level Client-Side API
-* Host-Level Client-Side API support
-* Take some ideas from [spray-kamon-metrics]
+Feel free to ask anything you might need in our Gitter channel or in the mailing list.
 
 [spray-kamon-metrics]: http://engineering.monsanto.com/2015/09/24/better-spray-metrics-with-kamon/
 [Traces]: https://github.com/kamon-io/kamon-akka-http/blob/master/src/main/scala/kamon/akka/http/instrumentation/FlowWrapper.scala#L36-L49
@@ -81,3 +50,4 @@ By default, the name generator bundled with the *kamon-akka-http* module will us
 [Segments]:https://github.com/kamon-io/kamon-akka-http/blob/master/src/main/scala/kamon/akka/http/instrumentation/ClientRequestInstrumentation.scala#L32-L45
 [sbt-aspectj-runner]: https://github.com/kamon-io/sbt-aspectj-runner
 [reference.conf]: https://github.com/kamon-io/kamon-akka-http/blob/master/src/main/resources/reference.conf
+[documentation]: http://kamon.io/documentation/1.x/recipes/adding-the-aspectj-weaver/
