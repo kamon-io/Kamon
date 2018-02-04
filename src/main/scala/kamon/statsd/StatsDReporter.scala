@@ -43,7 +43,6 @@ class StatsDReporter extends MetricReporter {
   // Absurdly high number of decimal digits, let the other end lose precision if it needs to.
   val samplingRateFormat = new DecimalFormat("#.################################################################", symbols)
 
-
   override def start(): Unit = {
     logger.info("Started the Kamon StatsD reporter")
     configuration.set(readConfiguration(Kamon.config()))
@@ -57,6 +56,17 @@ class StatsDReporter extends MetricReporter {
       logger.info("The configuration was reloaded successfully.")
     else
       logger.warn("Unable to reload configuration.")
+  }
+
+  private def readConfiguration(config: Config): Configuration = {
+    val statsDConfig = config.getConfig("kamon.statsd")
+    val agentAddress = new InetSocketAddress(statsDConfig.getString("hostname"), statsDConfig.getInt("port"))
+    val maxPacketSize = statsDConfig.getBytes("max-packet-size")
+    val timeUnit = readTimeUnit(statsDConfig.getString("time-unit"))
+    val informationUnit = readInformationUnit(statsDConfig.getString("information-unit"))
+    val keyGenerator = loadKeyGenerator(statsDConfig.getString("metric-key-generator"), config)
+
+    Configuration(agentAddress, maxPacketSize, timeUnit, informationUnit, keyGenerator)
   }
 
   override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
@@ -99,17 +109,6 @@ class StatsDReporter extends MetricReporter {
     case _ => value
   }
 
-  private def readConfiguration(config: Config): Configuration = {
-    val statsDConfig = config.getConfig("kamon.statsd")
-    val agentAddress = new InetSocketAddress(statsDConfig.getString("hostname"), statsDConfig.getInt("port"))
-    val maxPacketSize = statsDConfig.getBytes("max-packet-size")
-    val timeUnit = readTimeUnit(statsDConfig.getString("time-unit"))
-    val informationUnit = readInformationUnit(statsDConfig.getString("information-unit"))
-    val keyGenerator = loadKeyGenerator(statsDConfig.getString("metric-key-generator"), config)
-
-    Configuration(agentAddress, maxPacketSize, timeUnit, informationUnit, keyGenerator)
-  }
-
   private def loadKeyGenerator(keyGeneratorFQCN: String, config:Config): MetricKeyGenerator = {
     new DynamicAccess(getClass.getClassLoader).createInstanceFor[MetricKeyGenerator](keyGeneratorFQCN, (classOf[Config], config) :: Nil).get
   }
@@ -143,16 +142,17 @@ class StatsDReporter extends MetricReporter {
       }
     }
 
-    def fitsOnBuffer(data: String): Boolean = (buffer.length + data.length) <= maxPacketSizeInBytes
-
-    private def flushToUDP(data: String): Unit =  {
-      channel.send(ByteBuffer.wrap(data.getBytes), remote)
-    }
+    private def fitsOnBuffer(data: String): Boolean = (buffer.length + data.length) <= maxPacketSizeInBytes
 
     def flush(): Unit = {
       flushToUDP(buffer.toString)
       buffer.clear()
     }
+
+    private def flushToUDP(data: String): Unit =  {
+      channel.send(ByteBuffer.wrap(data.getBytes), remote)
+    }
+
   }
 
   private case class Configuration(agentAddress: InetSocketAddress,
