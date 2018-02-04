@@ -13,12 +13,10 @@
  * =========================================================================================
  */
 
-val kamonCore = "io.kamon"  %%  "kamon-core"  % "1.0.0-RC1-61029e115272b9af3f4460b311d3a2e650c806e3"
+val kamonCore = "io.kamon"  %%  "kamon-core"  % "1.0.1"
 
 name := "kamon-statsd"
 
 libraryDependencies ++=
   compileScope(kamonCore) ++
   testScope(scalatest, slf4jApi, logbackClassic)
-
-resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")

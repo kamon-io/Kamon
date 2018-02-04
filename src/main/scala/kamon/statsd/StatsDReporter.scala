@@ -32,10 +32,10 @@ import kamon.{Kamon, MetricReporter}
 import org.slf4j.LoggerFactory
 
 
-class StatsDReporter extends MetricReporter  {
+class StatsDReporter extends MetricReporter {
   private val logger = LoggerFactory.getLogger(classOf[StatsDReporter])
 
-  private val configuration:AtomicReference[Configuration] = new AtomicReference[Configuration]()
+  private val configuration: AtomicReference[Configuration] = new AtomicReference[Configuration]()
 
   val symbols: DecimalFormatSymbols = DecimalFormatSymbols.getInstance(Locale.US)
   symbols.setDecimalSeparator('.') // Just in case there is some weird locale config we are not aware of.
@@ -59,7 +59,7 @@ class StatsDReporter extends MetricReporter  {
       logger.warn("Unable to reload configuration.")
   }
 
-  override def reportTickSnapshot(snapshot: TickSnapshot): Unit = {
+  override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
     val config = configuration.get()
     val keyGenerator = config.keyGenerator
     val clientChannel = DatagramChannel.open()
@@ -74,7 +74,7 @@ class StatsDReporter extends MetricReporter  {
       packetBuffer.appendMeasurement(keyGenerator.generateKey(gauge.name, gauge.tags), encodeStatsDGauge(gauge.value, gauge.unit))
     }
 
-    for (metric <- snapshot.metrics.histograms ++ snapshot.metrics.minMaxCounters;
+    for (metric <- snapshot.metrics.histograms ++ snapshot.metrics.rangeSamplers;
          bucket <- metric.distribution.bucketsIterator) {
 
       val bucketData = encodeStatsDTimer(bucket.value, bucket.frequency, metric.unit)
@@ -83,7 +83,6 @@ class StatsDReporter extends MetricReporter  {
 
     packetBuffer.flush()
   }
-
 
   private def encodeStatsDTimer(level: Long, count: Long, unit: MeasurementUnit): String = {
     val samplingRate: Double = 1D / count
@@ -114,7 +113,6 @@ class StatsDReporter extends MetricReporter  {
   private def loadKeyGenerator(keyGeneratorFQCN: String, config:Config): MetricKeyGenerator = {
     new DynamicAccess(getClass.getClassLoader).createInstanceFor[MetricKeyGenerator](keyGeneratorFQCN, (classOf[Config], config) :: Nil).get
   }
-
 
   private class MetricDataPacketBuffer(maxPacketSizeInBytes: Long, channel: DatagramChannel, remote: InetSocketAddress) {
     val metricSeparator = "\n"

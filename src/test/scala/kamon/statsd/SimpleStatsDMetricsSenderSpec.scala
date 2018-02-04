@@ -18,22 +18,32 @@ package kamon.statsd
 
 import com.typesafe.config.{Config, ConfigFactory}
 import kamon.Kamon
-import org.scalatest.{Matchers, WordSpec}
+import kamon.statsd.StatsDServer.Metric
+import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, Matchers, WordSpec}
 
-class SimpleStatsDMetricsSenderSpec extends WordSpec with Matchers {
+class SimpleStatsDMetricsSenderSpec extends WordSpec with Matchers with BeforeAndAfter with BeforeAndAfterAll {
 
-   val config: Config = ConfigFactory.parseString(
-      """
+  val statsDServer = new StatsDServer()
+
+  val Application = "kamon-test"
+  val HostnameOverride = "kamon-host-test"
+  val Gauge = "g"
+
+  val config: Config = ConfigFactory.parseString(
+      s"""
         |kamon {
         |  statsd {
         |    hostname = "127.0.0.1"
-        |    port = 0
+        |    port = ${statsDServer.port}
         |    simple-metric-key-generator {
-        |      application = kamon
-        |      hostname-override = kamon-host
+        |      application = $Application
+        |      hostname-override = $HostnameOverride
         |      include-hostname = true
         |      metric-name-normalization-strategy = normalize
         |    }
+        |  }
+        |  metric {
+        |    tick-interval = 1 second
         |  }
         |}
         |
@@ -42,30 +52,33 @@ class SimpleStatsDMetricsSenderSpec extends WordSpec with Matchers {
 
   "the SimpleStatsDMetricSender" should {
     "flush the metrics data for each unique value it receives" in  {
+      val testConfig = ConfigFactory.load(config).withFallback(ConfigFactory.load())
+      Kamon.reconfigure(testConfig)
       Kamon.addReporter(new StatsDReporter())
 
       for(_ <- 1 to 10000) {
-        Kamon.gauge("metric-one").refine("awesome-gauge" -> "1").increment()
+        Kamon.gauge("metric-one").increment()
       }
 
-//      Thread.sleep(10000)
-
-
-      //
-//      val udp = setup(Map(testEntity → testRecorder.collect(collectionContext)))
-//      expectUDPPacket(s"$testMetricKey1:10|ms", udp)
-//      expectUDPPacket(s"$testMetricKey1:30|ms", udp)
-//      expectUDPPacket(s"$testMetricKey2:20|ms", udp)
+      val packet = statsDServer.getPacket(_.metrics.exists(_.name.contains("metric-one")))
+      packet.metrics should have size 1
+      val metric = packet.metrics.head
+      val metricName = new SimpleMetricKeyGenerator(config).generateKey("metric-one", Map())
+      metric should be (Metric(metricName, "10000.0", Gauge, None))
     }
-
-//    "include the correspondent sampling rate when rendering multiple occurrences of the same value" in new SimpleSenderFixture {
-//      val testMetricKey = buildMetricKey(testEntity, "metric-one")
-//      val testRecorder = buildRecorder("user/kamon")
-//      testRecorder.metricOne.record(10L)
-//      testRecorder.metricOne.record(10L)
-//
-//      val udp = setup(Map(testEntity → testRecorder.collect(collectionContext)))
-//      expectUDPPacket(s"$testMetricKey:10|ms|@0.5", udp)
-//    }
+    
   }
+
+  override def beforeAll(): Unit = {
+    statsDServer.start()
+  }
+
+  before {
+    statsDServer.clear()
+  }
+
+  override def afterAll(): Unit = {
+    statsDServer.stop()
+  }
+
 }
