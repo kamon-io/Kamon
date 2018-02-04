@@ -27,6 +27,7 @@ import com.typesafe.config.Config
 import kamon.metric.MeasurementUnit.Dimension.{Information, Time}
 import kamon.metric.MeasurementUnit.{information, time}
 import kamon.metric.{MeasurementUnit, _}
+import kamon.statsd.StatsDReporter.{Configuration, MetricDataPacketBuffer}
 import kamon.util.DynamicAccess
 import kamon.{Kamon, MetricReporter}
 import org.slf4j.LoggerFactory
@@ -69,6 +70,10 @@ class StatsDReporter extends MetricReporter {
     Configuration(agentAddress, maxPacketSize, timeUnit, informationUnit, keyGenerator)
   }
 
+  private def loadKeyGenerator(keyGeneratorFQCN: String, config:Config): MetricKeyGenerator = {
+    new DynamicAccess(getClass.getClassLoader).createInstanceFor[MetricKeyGenerator](keyGeneratorFQCN, (classOf[Config], config) :: Nil).get
+  }
+
   override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
     val config = configuration.get()
     val keyGenerator = config.keyGenerator
@@ -94,26 +99,26 @@ class StatsDReporter extends MetricReporter {
     packetBuffer.flush()
   }
 
+  private def encodeStatsDCounter(count: Long, unit: MeasurementUnit): String = s"${scale(count, unit)}|c"
+
+  private def encodeStatsDGauge(value:Long, unit: MeasurementUnit): String = s"${scale(value, unit)}|g"
+
   private def encodeStatsDTimer(level: Long, count: Long, unit: MeasurementUnit): String = {
     val samplingRate: Double = 1D / count
     s"${scale(level, unit)}|ms${if (samplingRate != 1D) "|@" + samplingRateFormat.format(samplingRate) else ""}"
   }
 
-  private def encodeStatsDCounter(count: Long, unit: MeasurementUnit): String = s"${scale(count, unit)}|c"
-
-  private def encodeStatsDGauge(value:Long, unit: MeasurementUnit): String = s"${scale(value, unit)}|g"
-
   private def scale(value: Long, unit: MeasurementUnit): Double = unit.dimension match {
-    case Time         if unit.magnitude != time.seconds       => MeasurementUnit.scale(value, unit, time.seconds)
-    case Information  if unit.magnitude != information.bytes  => MeasurementUnit.scale(value, unit, information.bytes)
+    case Time         if unit.magnitude != time.seconds.magnitude => MeasurementUnit.scale(value, unit, time.seconds)
+    case Information  if unit.magnitude != information.bytes.magnitude  => MeasurementUnit.scale(value, unit, information.bytes)
     case _ => value
   }
 
-  private def loadKeyGenerator(keyGeneratorFQCN: String, config:Config): MetricKeyGenerator = {
-    new DynamicAccess(getClass.getClassLoader).createInstanceFor[MetricKeyGenerator](keyGeneratorFQCN, (classOf[Config], config) :: Nil).get
-  }
+}
 
-  private class MetricDataPacketBuffer(maxPacketSizeInBytes: Long, channel: DatagramChannel, remote: InetSocketAddress) {
+object StatsDReporter {
+
+  private[statsd] class MetricDataPacketBuffer(maxPacketSizeInBytes: Long, channel: DatagramChannel, remote: InetSocketAddress) {
     val metricSeparator = "\n"
     val measurementSeparator = ":"
 
@@ -160,4 +165,5 @@ class StatsDReporter extends MetricReporter {
                                    timeUnit: MeasurementUnit,
                                    informationUnit: MeasurementUnit,
                                    keyGenerator: MetricKeyGenerator)
+
 }

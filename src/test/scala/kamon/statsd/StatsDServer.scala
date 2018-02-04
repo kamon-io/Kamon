@@ -3,13 +3,12 @@ package kamon.statsd
 import java.io.IOException
 import java.net.{DatagramPacket, DatagramSocket, ServerSocket, SocketException}
 
+import kamon.statsd.StatsDServer._
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future, Promise}
-import kamon.statsd.StatsDServer._
-
 import scala.util.Try
 
 /**
@@ -90,7 +89,7 @@ object StatsDServer {
 
   object Packet {
     def apply(raw: String): Packet = {
-      val metrics = raw.split("\n").map(new Metric(_))
+      val metrics = raw.split("\n").filter(_.nonEmpty).flatMap(Metric.parse)
       Packet(metrics.toList)
     }
   }
@@ -98,15 +97,20 @@ object StatsDServer {
   /**
     * The metric format is [metric_name]:[value]|[metric_type]|@[sample_rate].
     */
-  case class Metric(name: String, value: String, metricType: String, sample: Option[String] = None) {
+  case class Metric(name: String, value: String, metricType: String, sample: Option[String] = None)
 
-    def this(raw: String) {
-      this(
-        name = raw.split(":").head,
-        value = raw.split(":")(1).split("\\|").head,
-        metricType = raw.split("\\|")(1),
-        sample = if (raw.contains("|@")) raw.split("\\|@").lastOption else None
-      )
+  object Metric {
+
+    def parse(raw: String): List[Metric] = {
+      val nameAndValues = raw.split(":").toList
+      val name = nameAndValues.head
+      val values = nameAndValues.tail.map(_.split("\\|"))
+      values.map {
+        case Array(value, metricType) =>
+          Metric(name, value, metricType)
+        case Array(value, metricType, sample) =>
+          Metric(name, value, metricType, Some(sample.tail))
+      }
     }
 
   }
