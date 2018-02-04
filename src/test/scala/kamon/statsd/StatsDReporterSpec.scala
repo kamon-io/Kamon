@@ -16,6 +16,8 @@
 
 package kamon.statsd
 
+import java.util.concurrent.atomic.AtomicInteger
+
 import com.typesafe.config.{Config, ConfigFactory}
 import kamon.Kamon
 import kamon.statsd.StatsDServer.Metric
@@ -52,26 +54,25 @@ class StatsDReporterSpec extends WordSpec with Matchers with BeforeAndAfter with
   "the StatsDReporterSpec" should {
 
     "flush the metrics data it receives" in  {
-      for(_ <- 1 to 10000) {
-        Kamon.gauge("metric-one").increment()
-      }
+      val name = generateMetricName()
+      Kamon.gauge(name).increment()
 
-      val packet = statsDServer.getPacket(_.metrics.exists(_.name.contains("metric-one")))
-      val metric = packet.getMetric(_.name == "metric-one".asMetricName)
-      metric.value should be (Metric("metric-one".asMetricName, "10000.0", Gauge, None))
+      val packet = statsDServer.getPacket(_.metrics.exists(_.name.contains(name)))
+      val metric = packet.getMetric(_.name == name.asMetricName)
+      metric.value should be (Metric(name.asMetricName, "1.0", Gauge, None))
     }
 
     "flush the metrics data for each unique value it receives" in  {
-      for(_ <- 1 to 10000) {
-        Kamon.gauge("metric-two").increment()
-        Kamon.counter("metric-three").increment()
-      }
+      val nameOne = generateMetricName()
+      val nameTwo = generateMetricName()
+      Kamon.gauge(nameOne).increment(2)
+      Kamon.counter(nameTwo).increment(3)
 
-      val packet = statsDServer.getPacket(_.metrics.exists(metric => metric.name.contains("metric-two")))
-      val metricOne = packet.getMetric(_.name == "metric-two".asMetricName)
-      metricOne.value should be (Metric("metric-two".asMetricName, "10000.0", Gauge, None))
-      val metricTwo = packet.getMetric(_.name == "metric-three".asMetricName)
-      metricTwo.value should be (Metric("metric-three".asMetricName, "10000.0", Counter, None))
+      val packet = statsDServer.getPacket(packet => List(nameOne, nameTwo).forall(name => packet.hasMetric(_.name == name.asMetricName)))
+      val metricOne = packet.getMetric(_.name == nameOne.asMetricName)
+      metricOne.value should be (Metric(nameOne.asMetricName, "2.0", Gauge, None))
+      val metricTwo = packet.getMetric(_.name == nameTwo.asMetricName)
+      metricTwo.value should be (Metric(nameTwo.asMetricName, "3.0", Counter, None))
     }
 
   }
@@ -105,5 +106,8 @@ object StatsDReporterSpec {
   val HostnameOverride = "kamon-host-test"
   val Gauge = "g"
   val Counter = "c"
+
+  val metricNameCounter = new AtomicInteger()
+  def generateMetricName(): String = "metric-" + metricNameCounter.incrementAndGet()
 
 }

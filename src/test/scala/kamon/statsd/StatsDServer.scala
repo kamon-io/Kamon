@@ -84,6 +84,7 @@ object StatsDServer {
   case class Packet(metrics: List[Metric]) {
 
     def getMetric(condition: (Metric) => Boolean): Option[Metric] = metrics.find(condition)
+    def hasMetric(condition: (Metric) => Boolean): Boolean = metrics.exists(condition)
 
   }
 
