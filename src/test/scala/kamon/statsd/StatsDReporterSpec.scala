@@ -20,15 +20,12 @@ import com.typesafe.config.{Config, ConfigFactory}
 import kamon.Kamon
 import kamon.statsd.StatsDServer.Metric
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, Matchers, WordSpec}
+import kamon.statsd.StatsDReporterSpec._
+import org.scalatest.OptionValues._
 
-class SimpleStatsDMetricsSenderSpec extends WordSpec with Matchers with BeforeAndAfter with BeforeAndAfterAll {
+class StatsDReporterSpec extends WordSpec with Matchers with BeforeAndAfter with BeforeAndAfterAll {
 
   val statsDServer = new StatsDServer()
-
-  val Application = "kamon-test"
-  val HostnameOverride = "kamon-host-test"
-  val Gauge = "g"
-
   val config: Config = ConfigFactory.parseString(
       s"""
         |kamon {
@@ -49,36 +46,64 @@ class SimpleStatsDMetricsSenderSpec extends WordSpec with Matchers with BeforeAn
         |
       """.stripMargin
     )
+  val metricKeyGenerator = new SimpleMetricKeyGenerator(config)
+  val testConfig: Config = ConfigFactory.load(config).withFallback(ConfigFactory.load())
 
-  "the SimpleStatsDMetricSender" should {
-    "flush the metrics data for each unique value it receives" in  {
-      val testConfig = ConfigFactory.load(config).withFallback(ConfigFactory.load())
-      Kamon.reconfigure(testConfig)
-      Kamon.addReporter(new StatsDReporter())
+  "the StatsDReporterSpec" should {
 
+    "flush the metrics data it receives" in  {
       for(_ <- 1 to 10000) {
         Kamon.gauge("metric-one").increment()
       }
 
       val packet = statsDServer.getPacket(_.metrics.exists(_.name.contains("metric-one")))
-      packet.metrics should have size 1
-      val metric = packet.metrics.head
-      val metricName = new SimpleMetricKeyGenerator(config).generateKey("metric-one", Map())
-      metric should be (Metric(metricName, "10000.0", Gauge, None))
+      val metric = packet.getMetric(_.name == "metric-one".asMetricName)
+      metric.value should be (Metric("metric-one".asMetricName, "10000.0", Gauge, None))
     }
-    
+
+    "flush the metrics data for each unique value it receives" in  {
+      for(_ <- 1 to 10000) {
+        Kamon.gauge("metric-two").increment()
+        Kamon.counter("metric-three").increment()
+      }
+
+      val packet = statsDServer.getPacket(_.metrics.exists(metric => metric.name.contains("metric-two")))
+      val metricOne = packet.getMetric(_.name == "metric-two".asMetricName)
+      metricOne.value should be (Metric("metric-two".asMetricName, "10000.0", Gauge, None))
+      val metricTwo = packet.getMetric(_.name == "metric-three".asMetricName)
+      metricTwo.value should be (Metric("metric-three".asMetricName, "10000.0", Counter, None))
+    }
+
+  }
+
+  private implicit class StringToMetricName(name: String) {
+    def asMetricName: String = {
+      metricKeyGenerator.generateKey(name, Map.empty)
+    }
   }
 
   override def beforeAll(): Unit = {
     statsDServer.start()
+    Kamon.addReporter(new StatsDReporter())
   }
 
   before {
+    Kamon.reconfigure(testConfig)
     statsDServer.clear()
   }
 
   override def afterAll(): Unit = {
+    Kamon.stopAllReporters()
     statsDServer.stop()
   }
+
+}
+
+object StatsDReporterSpec {
+
+  val Application = "kamon-test"
+  val HostnameOverride = "kamon-host-test"
+  val Gauge = "g"
+  val Counter = "c"
 
 }

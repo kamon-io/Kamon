@@ -12,6 +12,10 @@ import kamon.statsd.StatsDServer._
 
 import scala.util.Try
 
+/**
+  * Simulation of a statsD server that collects packets and metric coming from an UDP channel.
+  * @param port the UDP port the server is listening to (by default this port is randomized).
+  */
 class StatsDServer(val port: Int = selectRandomPort) {
 
   private val logger = LoggerFactory.getLogger(classOf[StatsDServer])
@@ -77,7 +81,11 @@ class StatsDServer(val port: Int = selectRandomPort) {
 
 object StatsDServer {
 
-  case class Packet(metrics: List[Metric])
+  case class Packet(metrics: List[Metric]) {
+
+    def getMetric(condition: (Metric) => Boolean): Option[Metric] = metrics.find(condition)
+
+  }
 
   object Packet {
     def apply(raw: String): Packet = {
