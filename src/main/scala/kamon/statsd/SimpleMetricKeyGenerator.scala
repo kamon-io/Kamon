@@ -44,8 +44,8 @@ class SimpleMetricKeyGenerator(config: Config) extends MetricKeyGenerator {
     else application
 
   def generateKey(name: String, tags: Map[String, String]): String = {
-    val stringTags = TreeMap(tags.toSeq:_ *).values.map(normalizer).mkString(".")
-    s"$baseName.${normalizer(name)}.$stringTags"
+    val stringTags = if (tags.nonEmpty) "." + TreeMap(tags.toSeq:_ *).values.map(normalizer).mkString(".") else ""
+    s"$baseName.${normalizer(name)}$stringTags"
   }
 
   def hostName: String = ManagementFactory.getRuntimeMXBean.getName.split('@')(1)

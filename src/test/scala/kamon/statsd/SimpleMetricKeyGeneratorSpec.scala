@@ -42,6 +42,14 @@ class SimpleMetricKeyGeneratorSpec extends WordSpec with Matchers {
       buildMetricKey("trace", Map("metric-name-1" -> "POST: /kamon/example", "metric-name-2" -> "elapsed-time")) should be("kamon.localhost.trace.POST-_kamon_example.elapsed-time")
     }
 
+    "generate metric names without tags that follow the application.host.entity.entity-name.metric-name pattern by default" in {
+      implicit val metricKeyGenerator = new SimpleMetricKeyGenerator(defaultConfiguration) {
+        override def hostName: String = "localhost"
+      }
+
+      buildMetricKey("actor", Map.empty) should be("kamon.localhost.actor")
+    }
+
     "allow to override the hostname" in {
       val hostOverrideConfig = ConfigFactory.parseString("kamon.statsd.simple-metric-key-generator.hostname-override = kamon-host")
       implicit val metricKeyGenerator = new SimpleMetricKeyGenerator(hostOverrideConfig.withFallback(defaultConfiguration)) {
