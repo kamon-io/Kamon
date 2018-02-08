@@ -48,6 +48,14 @@ class ContextCodecSpec extends WordSpec with Matchers with ContextTesting with O
         decodedContext.get(StringKey) shouldBe empty
         decodedContext.get(StringBroadcastKey).value shouldBe "this-should-be-round-tripped"
       }
+
+      "read string broadcast keys using the configured header name" in {
+        val textMap = TextMap.Default()
+        textMap.put("X-Request-ID", "123456")
+        val decodedContext = ContextCodec.HttpHeaders.decode(textMap)
+
+        decodedContext.get(Key.broadcastString("request-id")).value shouldBe "123456"
+      }
     }
 
     "encoding/decoding to Binary" should {

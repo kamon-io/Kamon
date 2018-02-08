@@ -43,7 +43,7 @@ class Codecs(initialConfig: Config) {
     import scala.collection.JavaConverters._
     try {
       val codecsConfig = config.getConfig("kamon.context.codecs")
-      val stringKeys = codecsConfig.getStringList("string-keys").asScala
+      val stringKeys = readStringKeysConfig(codecsConfig.getConfig("string-keys"))
       val knownHttpHeaderCodecs = readEntryCodecs[TextMap]("http-headers-keys", codecsConfig) ++ stringHeaderCodecs(stringKeys)
       val knownBinaryCodecs = readEntryCodecs[ByteBuffer]("binary-keys", codecsConfig) ++ stringBinaryCodecs(stringKeys)
 
@@ -72,13 +72,14 @@ class Codecs(initialConfig: Config) {
     entries.result()
   }
 
-  private def stringHeaderCodecs(keys: Seq[String]): Map[String, Codecs.ForEntry[TextMap]] = {
-    keys.map(key => (key, new Codecs.StringHeadersCodec(key))).toMap
-  }
+  private def readStringKeysConfig(config: Config): Map[String, String] =
+    config.topLevelKeys.map(key => (key, config.getString(key))).toMap
 
-  private def stringBinaryCodecs(keys: Seq[String]): Map[String, Codecs.ForEntry[ByteBuffer]] = {
-    keys.map(key => (key, new Codecs.StringBinaryCodec(key))).toMap
-  }
+  private def stringHeaderCodecs(keys: Map[String, String]): Map[String, Codecs.ForEntry[TextMap]] =
+    keys.map { case (key, header) => (key, new Codecs.StringHeadersCodec(key, header)) }
+
+  private def stringBinaryCodecs(keys: Map[String, String]): Map[String, Codecs.ForEntry[ByteBuffer]] =
+    keys.map { case (key, _) => (key, new Codecs.StringBinaryCodec(key)) }
 }
 
 object Codecs {
@@ -224,21 +225,20 @@ object Codecs {
     }
   }
 
-  private class StringHeadersCodec(key: String) extends Codecs.ForEntry[TextMap] {
-    private val dataKey = "X-KamonContext-" + key
+  private class StringHeadersCodec(key: String, headerName: String) extends Codecs.ForEntry[TextMap] {
     private val contextKey = Key.broadcast[Option[String]](key, None)
 
     override def encode(context: Context): TextMap = {
       val textMap = TextMap.Default()
       context.get(contextKey).foreach { value =>
-        textMap.put(dataKey, value)
+        textMap.put(headerName, value)
       }
 
       textMap
     }
 
     override def decode(carrier: TextMap, context: Context): Context = {
-      carrier.get(dataKey) match {
+      carrier.get(headerName) match {
         case value @ Some(_) => context.withKey(contextKey, value)
         case None            => context
       }
