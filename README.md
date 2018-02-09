@@ -20,13 +20,13 @@ Supported releases and dependencies are shown below.
 
 | kamon-statsd  | status | jdk  | scala            
 |:------:|:------:|:----:|------------------
-|  1.0.1 | stable | 1.8+ | 2.10, 2.11, 2.12   
+|  1.0.0 | stable | 1.8+ | 2.10, 2.11, 2.12   
 
 To get started with SBT, simply add the following to your `build.sbt`
 file:
 
 ```scala
-libraryDependencies += "io.kamon" %% "kamon-statsd" % "1.0.1"
+libraryDependencies += "io.kamon" %% "kamon-statsd" % "1.0.0"
 ```
 
 Configuration
