@@ -61,12 +61,15 @@ object AkkaHttp {
     }
   }
 
-  val addHttpStatusCodeAsMetricTag: Boolean =
+  @volatile var addHttpStatusCodeAsMetricTag: Boolean = addHttpStatusCodeAsMetricTagFromConfig(Kamon.config())
+
+  private def addHttpStatusCodeAsMetricTagFromConfig(config: Config): Boolean =
     Kamon.config.getBoolean("kamon.akka-http.add-http-status-code-as-metric-tag")
 
   Kamon.onReconfigure(new OnReconfigureHook {
     override def onReconfigure(newConfig: Config): Unit = {
       nameGenerator = nameGeneratorFromConfig(newConfig)
+      addHttpStatusCodeAsMetricTag = addHttpStatusCodeAsMetricTagFromConfig(newConfig)
     }
   })
 }
