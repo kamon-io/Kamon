@@ -82,8 +82,11 @@ object ServerFlowWrapper {
           val response = grab(responseIn)
           val status = response.status.intValue()
 
-          val span = Kamon.currentSpan()
-            .tag("http.status_code", status)
+          val span = if (addHttpStatusCodeAsMetricTag) {
+            Kamon.currentSpan().tagMetric("http.status_code", status.toString())
+          } else {
+            Kamon.currentSpan().tag("http.status_code", status)
+          }
 
           if(status == 404)
             span.setOperationName("unhandled")
