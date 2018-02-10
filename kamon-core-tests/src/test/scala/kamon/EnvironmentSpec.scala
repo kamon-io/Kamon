@@ -27,7 +27,7 @@ class EnvironmentSpec extends WordSpec with Matchers {
       |  instance = auto
       |}
     """.stripMargin
-  )
+  ).withFallback(ConfigFactory.defaultReference())
 
   "the Kamon environment" should {
     "assign a host and instance name when they are set to 'auto'" in {
@@ -36,6 +36,7 @@ class EnvironmentSpec extends WordSpec with Matchers {
       env.host shouldNot be("auto")
       env.instance shouldNot be("auto")
       env.instance shouldBe s"environment-spec@${env.host}"
+      env.tags shouldBe empty
     }
 
     "use the configured host and instance, if provided" in {
@@ -51,6 +52,24 @@ class EnvironmentSpec extends WordSpec with Matchers {
 
       env.host should be("spec-host")
       env.instance should be("spec-instance")
+      env.tags shouldBe empty
+    }
+
+    "read all environment tags, if provided" in {
+      val customConfig = ConfigFactory.parseString(
+        """
+          |kamon.environment.tags {
+          |  custom1 = "test1"
+          |  env = staging
+          |}
+        """.stripMargin)
+
+      val env = Environment.fromConfig(customConfig.withFallback(baseConfig))
+
+      env.tags should contain allOf(
+        ("custom1" -> "test1"),
+        ("env" -> "staging")
+      )
     }
 
     "always return the same incarnation name" in {
