@@ -123,11 +123,12 @@ object Span {
     }
 
     override def tagMetric(key: String, value: String): Span = synchronized {
-      if(sampled && open) {
-        spanTags = spanTags + (key -> TagValue.String(value))
-
+      if(open) {
         if(collectMetrics)
           customMetricTags = customMetricTags + (key -> value)
+
+        if(sampled)
+          spanTags = spanTags + (key -> TagValue.String(value))
       }
       this
     }
@@ -142,23 +143,29 @@ object Span {
     }
 
     override def addError(error: String): Span = synchronized {
-      if(sampled && open) {
+      if(open) {
         hasError = true
-        spanTags = spanTags ++ Map(
-          "error" -> TagValue.True,
-          "error.object" -> TagValue.String(error)
-        )
+
+        if(sampled) {
+          spanTags = spanTags ++ Map(
+            "error" -> TagValue.True,
+            "error.object" -> TagValue.String(error)
+          )
+        }
       }
       this
     }
 
     override def addError(error: String, throwable: Throwable): Span = synchronized {
-      if(sampled && open) {
+      if(open) {
         hasError = true
-        spanTags = spanTags ++ Map(
-          "error" -> TagValue.True,
-          "error.object" -> TagValue.String(throwable.getMessage())
-        )
+
+        if(sampled) {
+          spanTags = spanTags ++ Map(
+            "error" -> TagValue.True,
+            "error.object" -> TagValue.String(throwable.getMessage())
+          )
+        }
       }
       this
     }
