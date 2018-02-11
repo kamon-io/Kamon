@@ -21,7 +21,6 @@ import java.nio.ByteBuffer
 import java.nio.channels.DatagramChannel
 import java.text.{DecimalFormat, DecimalFormatSymbols}
 import java.util.Locale
-import java.util.concurrent.atomic.AtomicReference
 
 import com.typesafe.config.Config
 import kamon.metric.MeasurementUnit.Dimension.{Information, Time}
@@ -36,7 +35,7 @@ import org.slf4j.LoggerFactory
 class StatsDReporter extends MetricReporter {
   private val logger = LoggerFactory.getLogger(classOf[StatsDReporter])
 
-  private val configuration: AtomicReference[Configuration] = new AtomicReference[Configuration]()
+  private var configuration: Option[Configuration] = None
 
   val symbols: DecimalFormatSymbols = DecimalFormatSymbols.getInstance(Locale.US)
   symbols.setDecimalSeparator('.') // Just in case there is some weird locale config we are not aware of.
@@ -46,17 +45,14 @@ class StatsDReporter extends MetricReporter {
 
   override def start(): Unit = {
     logger.info("Started the Kamon StatsD reporter")
-    configuration.set(readConfiguration(Kamon.config()))
+    configuration = Some(readConfiguration(Kamon.config()))
   }
 
   override def stop(): Unit = {}
 
   override def reconfigure(config: Config): Unit = {
-    val current = configuration.get()
-    if(configuration.compareAndSet(current, readConfiguration(config)))
-      logger.info("The configuration was reloaded successfully.")
-    else
-      logger.warn("Unable to reload configuration.")
+    configuration = Some(readConfiguration(config))
+    logger.info("The configuration was reloaded successfully.")
   }
 
   private def readConfiguration(config: Config): Configuration = {
@@ -75,28 +71,29 @@ class StatsDReporter extends MetricReporter {
   }
 
   override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
-    val config = configuration.get()
-    val keyGenerator = config.keyGenerator
-    val clientChannel = DatagramChannel.open()
+    configuration.foreach { config =>
+      val keyGenerator = config.keyGenerator
+      val clientChannel = DatagramChannel.open()
 
-    val packetBuffer = new MetricDataPacketBuffer(config.maxPacketSize, clientChannel, config.agentAddress)
+      val packetBuffer = new MetricDataPacketBuffer(config.maxPacketSize, clientChannel, config.agentAddress)
 
-    for (counter <- snapshot.metrics.counters) {
-      packetBuffer.appendMeasurement(keyGenerator.generateKey(counter.name, counter.tags), encodeStatsDCounter(counter.value, counter.unit))
+      for (counter <- snapshot.metrics.counters) {
+        packetBuffer.appendMeasurement(keyGenerator.generateKey(counter.name, counter.tags), encodeStatsDCounter(counter.value, counter.unit))
+      }
+
+      for (gauge <- snapshot.metrics.gauges) {
+        packetBuffer.appendMeasurement(keyGenerator.generateKey(gauge.name, gauge.tags), encodeStatsDGauge(gauge.value, gauge.unit))
+      }
+
+      for (metric <- snapshot.metrics.histograms ++ snapshot.metrics.rangeSamplers;
+           bucket <- metric.distribution.bucketsIterator) {
+
+        val bucketData = encodeStatsDTimer(bucket.value, bucket.frequency, metric.unit)
+        packetBuffer.appendMeasurement(keyGenerator.generateKey(metric.name, metric.tags), bucketData)
+      }
+
+      packetBuffer.flush()
     }
-
-    for (gauge <- snapshot.metrics.gauges) {
-      packetBuffer.appendMeasurement(keyGenerator.generateKey(gauge.name, gauge.tags), encodeStatsDGauge(gauge.value, gauge.unit))
-    }
-
-    for (metric <- snapshot.metrics.histograms ++ snapshot.metrics.rangeSamplers;
-         bucket <- metric.distribution.bucketsIterator) {
-
-      val bucketData = encodeStatsDTimer(bucket.value, bucket.frequency, metric.unit)
-      packetBuffer.appendMeasurement(keyGenerator.generateKey(metric.name, metric.tags), bucketData)
-    }
-
-    packetBuffer.flush()
   }
 
   private def encodeStatsDCounter(count: Long, unit: MeasurementUnit): String = s"${scale(count, unit)}|c"
