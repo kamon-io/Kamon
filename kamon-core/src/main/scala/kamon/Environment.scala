@@ -21,15 +21,16 @@ import java.util.concurrent.ThreadLocalRandom
 import com.typesafe.config.Config
 import kamon.util.HexCodec
 
-case class Environment(host: String, service: String, instance: String, incarnation: String)
+case class Environment(host: String, service: String, instance: String, incarnation: String, tags: Map[String, String])
 
 object Environment {
   private val incarnation = HexCodec.toLowerHex(ThreadLocalRandom.current().nextLong())
 
   def fromConfig(config: Config): Environment = {
     val environmentConfig = config.getConfig("kamon.environment")
-
     val service = environmentConfig.getString("service")
+    val tagsConfig = environmentConfig.getConfig("tags")
+    val tags = tagsConfig.topLevelKeys.map(tag => (tag -> tagsConfig.getString(tag))).toMap
 
     val host = readValueOrGenerate(
       environmentConfig.getString("host"),
@@ -41,7 +42,7 @@ object Environment {
       s"$service@$host"
     )
 
-    Environment(host, service, instance, incarnation)
+    Environment(host, service, instance, incarnation, tags)
   }
 
   private def readValueOrGenerate(configuredValue: String, generator: => String): String =
