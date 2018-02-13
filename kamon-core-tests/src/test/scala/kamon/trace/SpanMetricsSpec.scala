@@ -21,9 +21,9 @@ import org.scalatest.{Matchers, WordSpecLike}
 
 import scala.util.control.NoStackTrace
 
-class SpanMetrics extends WordSpecLike with Matchers with MetricInspection with Reconfigure {
+class SpanMetricsSpec extends WordSpecLike with Matchers with MetricInspection with Reconfigure {
 
-  sampleAlways()
+  sampleNever()
 
   "Span Metrics" should {
     "be recorded for successful execution" in {
@@ -57,6 +57,18 @@ class SpanMetrics extends WordSpecLike with Matchers with MetricInspection with 
       Span.Metrics.ProcessingTime.valuesForTag("operation") shouldNot contain(operation)
     }
 
+    "allow specifying custom Span metric tags" in {
+      val operation = "span-with-custom-metric-tags"
+      buildSpan(operation)
+        .withMetricTag("custom-metric-tag-on-builder", "value")
+        .start()
+        .tagMetric("custom-metric-tag-on-span", "value")
+        .finish()
+
+      Span.Metrics.ProcessingTime.valuesForTag("custom-metric-tag-on-builder") should contain("value")
+      Span.Metrics.ProcessingTime.valuesForTag("custom-metric-tag-on-span") should contain("value")
+    }
+
     "be recorded if metrics are enabled by calling enableMetrics() on the Span" in {
       val operation = "span-with-re-enabled-metrics"
       buildSpan(operation)
@@ -68,7 +80,7 @@ class SpanMetrics extends WordSpecLike with Matchers with MetricInspection with 
       Span.Metrics.ProcessingTime.valuesForTag("operation") should contain(operation)
     }
 
-    "record correctly error latency and count" in {
+    "record error latency and count" in {
       val operation = "span-failure"
       val operationTag = "operation" -> operation
 
