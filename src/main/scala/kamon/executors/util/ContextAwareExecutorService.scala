@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * Copyright © 2013-2017 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2018 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -64,14 +64,14 @@ class ContextAwareExecutorService(underlying: ExecutorService) extends ExecutorS
   override def invokeAny[A](tasks: util.Collection[_ <: Callable[A]], timeout: Long, unit: TimeUnit): A =
     underlying.invokeAny(wrapCallables(tasks), timeout, unit)
 
-  private def wrapRunnable(r: Runnable): ContinuationAwareRunnable = r match {
-    case runnable: ContinuationAwareRunnable ⇒ runnable
-    case _                                   ⇒ new ContinuationAwareRunnable(r)
+  private def wrapRunnable(r: Runnable): ContextAwareRunnable = r match {
+    case runnable: ContextAwareRunnable ⇒ runnable
+    case _                                   ⇒ new ContextAwareRunnable(r)
   }
 
-  private def wrapCallable[T](r: Callable[T]): ContinuationAwareCallable[T] = r match {
-    case callable: ContinuationAwareCallable[T] ⇒ callable
-    case _                                      ⇒ new ContinuationAwareCallable[T](r)
+  private def wrapCallable[T](r: Callable[T]): ContextAwareCallable[T] = r match {
+    case callable: ContextAwareCallable[T] ⇒ callable
+    case _                                      ⇒ new ContextAwareCallable[T](r)
   }
 
   private def wrapCallables[T](tasks: util.Collection[_ <: Callable[T]]) = {
@@ -81,7 +81,7 @@ class ContextAwareExecutorService(underlying: ExecutorService) extends ExecutorS
   }
 }
 
-class ContinuationAwareRunnable(r: Runnable) extends Runnable with HasContext {
+private[this] class ContextAwareRunnable(r: Runnable) extends Runnable with HasContext {
   override val context: Context = Kamon.currentContext()
 
   override def run(): Unit = {
@@ -91,7 +91,7 @@ class ContinuationAwareRunnable(r: Runnable) extends Runnable with HasContext {
   }
 }
 
-class ContinuationAwareCallable[A](c: Callable[A]) extends HasContext with Callable[A] {
+private[this] class ContextAwareCallable[A](c: Callable[A]) extends HasContext with Callable[A] {
   override val context: Context = Kamon.currentContext()
 
   override def call(): A = {
