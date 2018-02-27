@@ -7,6 +7,9 @@
 
     <weaver>
         <include within="kamon.logback..*"/>
-        <include within="ch.qos.logback..*"/>
+        <include within="ch.qos.logback.classic.spi.*"/>
+        <include within="ch.qos.logback.classic.util.LogbackMDCAdapter"/>
+        <include within="ch.qos.logback.core.AsyncAppenderBase"/>
+        <include within="ch.qos.logback.core.spi.AppenderAttachableImpl"/>
     </weaver>
 </aspectj>
