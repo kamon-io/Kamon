@@ -13,20 +13,20 @@ Supported releases and dependencies are shown below.
 
 | kamon  | status | jdk  | scala            
 |:------:|:------:|:----:|------------------
-|  1.0.0 | stable | 1.7+, 1.8+ | 2.10, 2.11, 2.12
+|  1.1.0 | stable | 1.8+ | 2.10, 2.11, 2.12
 
 To get started with SBT, simply add the following to your `build.sbt` or `pom.xml`
 file:
 
 ```scala
-libraryDependencies += "io.kamon" %% "kamon-core" % "1.0.0"
+libraryDependencies += "io.kamon" %% "kamon-core" % "1.1.0"
 ```
 
 ```xml
 <dependency>
     <groupId>io.kamon</groupId>
     <artifactId>kamon-core_2.12</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
 </dependency>
 ```
 
@@ -37,7 +37,7 @@ Kamon information and documentation is available on the
 
 ### Modules ###
 
-We started migrating modules to Kamon `1.0.0` based on the usage data we have, community demand and time availability, but
+We started migrating modules to Kamon `1.1.0` based on the usage data we have, community demand and time availability, but
 not all have been upgraded just yet. 
 
 Now, the lucky modules currently available are:
