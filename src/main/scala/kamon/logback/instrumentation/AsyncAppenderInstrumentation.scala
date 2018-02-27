@@ -16,13 +16,37 @@
 
 package kamon.logback.instrumentation
 
-import kamon.Kamon
+
+import com.typesafe.config.Config
+import kamon.{Kamon, OnReconfigureHook}
 import kamon.context.Context
+import kamon.trace.{IdentityProvider, Span}
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
+import org.slf4j.MDC
 
 import scala.beans.BeanProperty
 
+object AsyncAppenderInstrumentation {
+
+  val MdcTraceKey : String = "kamonTraceID"
+  val MdcSpanKey : String = "kamonSpanID"
+
+  @volatile var mdcContextPropagation : Boolean = true
+
+  loadConfiguration(Kamon.config())
+
+  Kamon.onReconfigure(new OnReconfigureHook {
+    override def onReconfigure(newConfig: Config): Unit =
+      AsyncAppenderInstrumentation.loadConfiguration(newConfig)
+  })
+
+
+  private def loadConfiguration(config: Config): Unit = synchronized {
+    val logbackConfig = config.getConfig("kamon.logback")
+    mdcContextPropagation = logbackConfig.getBoolean("mdc-context-propagation")
+  }
+}
 @Aspect
 class AsyncAppenderInstrumentation {
 
@@ -37,6 +61,25 @@ class AsyncAppenderInstrumentation {
   @Around("execution(* ch.qos.logback.core.spi.AppenderAttachableImpl.appendLoopOnAppenders(..)) && args(event)")
   def onAppendLoopOnAppenders(pjp: ProceedingJoinPoint, event:ContextAwareLoggingEvent): Any =
     Kamon.withContext(event.getContext)(pjp.proceed())
+
+  @Around("execution(* ch.qos.logback.classic.util.LogbackMDCAdapter.getPropertyMap())")
+  def aroundGetMDCPropertyMap(pjp: ProceedingJoinPoint): Any = {
+
+    val context = Kamon.currentContext().get(Span.ContextKey)
+
+    if (context.context().traceID != IdentityProvider.NoIdentifier && AsyncAppenderInstrumentation.mdcContextPropagation){
+      MDC.put(AsyncAppenderInstrumentation.MdcTraceKey, context.context().traceID.string)
+      MDC.put(AsyncAppenderInstrumentation.MdcSpanKey, context.context().spanID.string)
+      try {
+        pjp.proceed()
+      } finally {
+        MDC.remove(AsyncAppenderInstrumentation.MdcTraceKey)
+        MDC.remove(AsyncAppenderInstrumentation.MdcSpanKey)
+      }
+    } else {
+      pjp.proceed()
+    }
+  }
 }
 
 

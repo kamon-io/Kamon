@@ -32,11 +32,12 @@ package object logback {
   val configurator = new LogbackConfigurator(context)
   configurator.conversionRule("traceID", classOf[kamon.logback.LogbackTraceIDConverter])
 
-  def buildMemoryAppender(config: LogbackConfigurator): LogbackMemoryAppender = {
+  def buildMemoryAppender(config: LogbackConfigurator): LogbackMemoryAppender = buildMemoryAppender(config,"%traceID")
+
+  def buildMemoryAppender(config: LogbackConfigurator, logPattern: String): LogbackMemoryAppender = {
     val appender = new LogbackMemoryAppender()
     config.appender("MEMORY", appender)
     val encoder = new PatternLayoutEncoder()
-    val logPattern = "%traceID"
     encoder.setPattern(OptionHelper.substVars(logPattern, config.getContext))
     encoder.setCharset(Charset.forName("UTF-8"))
     config.start(encoder)
