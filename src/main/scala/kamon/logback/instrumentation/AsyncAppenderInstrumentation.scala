@@ -29,10 +29,13 @@ import scala.beans.BeanProperty
 
 object AsyncAppenderInstrumentation {
 
-  @volatile var mdcTraceKey : String = "kamonTraceID"
-  @volatile var mdcSpanKey : String = "kamonSpanID"
+  @volatile private var _mdcContextPropagation: Boolean = true
+  @volatile private var _mdcTraceKey: String = "kamonTraceID"
+  @volatile private var _mdcSpanKey: String = "kamonSpanID"
 
-  @volatile var mdcContextPropagation : Boolean = true
+  def mdcTraceKey: String = _mdcTraceKey
+  def mdcSpanKey: String = _mdcSpanKey
+  def mdcContextPropagation: Boolean = _mdcContextPropagation
 
   loadConfiguration(Kamon.config())
 
@@ -44,9 +47,9 @@ object AsyncAppenderInstrumentation {
 
   private def loadConfiguration(config: Config): Unit = synchronized {
     val logbackConfig = config.getConfig("kamon.logback")
-    mdcContextPropagation = logbackConfig.getBoolean("mdc-context-propagation")
-    mdcTraceKey = logbackConfig.getString("mdc-trace-key")
-    mdcSpanKey = logbackConfig.getString("mdc-span-key")
+    _mdcContextPropagation = logbackConfig.getBoolean("mdc-context-propagation")
+    _mdcTraceKey = logbackConfig.getString("mdc-trace-key")
+    _mdcSpanKey = logbackConfig.getString("mdc-span-key")
   }
 }
 @Aspect
