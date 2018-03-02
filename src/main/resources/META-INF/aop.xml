@@ -15,6 +15,7 @@
     <!-- JDBC Drivers -->
     <include within="org.h2..*"/>
     <include within="com.mysql.jdbc..*"/>
+    <include within="com.mysql.cj.jdbc..*"/>
     <include within="org.mariadb.jdbc..*"/>
     <include within="org.postgresql.jdbc..*"/>
     <include within="com.microsoft.sqlserver.jdbc..*"/>
