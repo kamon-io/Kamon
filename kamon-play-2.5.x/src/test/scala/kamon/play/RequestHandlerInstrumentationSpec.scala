@@ -19,6 +19,7 @@ import javax.inject.Inject
 
 import kamon.Kamon
 import kamon.context.Context.create
+import kamon.context.Key
 import kamon.play.action.OperationName
 import kamon.testkit.MetricInspection
 import kamon.trace.Span
@@ -54,9 +55,10 @@ class RequestHandlerInstrumentationSpec extends PlaySpec with GuiceOneServerPerS
 
   implicit val executor: ExecutionContextExecutor = scala.concurrent.ExecutionContext.Implicits.global
 
-
+  val requestID = Key.broadcastString("request-id")
   val withRoutes: PartialFunction[(String, String), Handler] = {
     case ("GET", "/ok") ⇒ Action { Ok }
+    case ("GET", "/request-id") ⇒ Action { Ok(Kamon.currentContext().get(requestID).getOrElse("undefined")) }
     case ("GET", "/async") ⇒ Action.async { Future { Ok } }
     case ("GET", "/not-found") ⇒ Action { NotFound }
     case ("GET", "/renamed") ⇒
@@ -102,6 +104,19 @@ class RequestHandlerInstrumentationSpec extends PlaySpec with GuiceOneServerPerS
         span.tags("span.kind") mustBe TagValue.String("server")
         span.tags("http.method") mustBe TagValue.String("GET")
         span.tags("http.status_code") mustBe TagValue.Number(200)
+      }
+    }
+
+
+    "propagate automatic broadcast string keys" in {
+      val wsClient = app.injector.instanceOf[WSClient]
+      val okSpan = Kamon.buildSpan("ok-operation-span").start()
+      val endpoint = s"http://localhost:$port/request-id"
+
+      Kamon.withContext(create(Span.ContextKey, okSpan).withKey(requestID, Some("123456"))) {
+        val response = await(wsClient.url(endpoint).get())
+        response.status mustBe 200
+        response.body mustBe "123456"
       }
     }
 
