@@ -43,7 +43,7 @@ class RequestHandlerInstrumentation {
       .withTag("http.url", request.getUri)
       .start()
 
-    val responseFuture = Kamon.withContext(Context.create(Span.ContextKey, serverSpan)) {
+    val responseFuture = Kamon.withContext(incomingContext.withKey(Span.ContextKey, serverSpan)) {
       pjp.proceed().asInstanceOf[Future[HttpResponse]]
     }
 
