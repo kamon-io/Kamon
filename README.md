@@ -51,10 +51,6 @@ The following metrics will be recorded:
 * __slows__: a simple counter with the number of measured slow requests.
 * __errors__: a simple counter with the number of failures.
 
-### Naming Segments ###
-
-By default, the name generator bundled with the `kamon-jdbc` module will use the statement name as tge name to the automatically generated segment (i.e SELECT, INSERT, etc). Currently, the only way to override that name would be to provide your own implementation of `kamon.jdbc.JdbcNameGenerator` which is used to assign the segment name
-
 ### Slow Requests ###
 
 Requests that take longer to execute than the configured `kamon.jdbc.slow-query-threshold` can be processed by user-defined
@@ -75,9 +71,6 @@ kamon {
 
     # Fully qualified name of the implementation of kamon.jdbc.SqlErrorProcessor.
     sql-error-processor = kamon.jdbc.DefaultSqlErrorProcessor
-
-    # Fully qualified name of the implementation of kamon.jdbc.JdbcNameGenerator that will be used for assigning names to segments.
-    name-generator = kamon.jdbc.DefaultJdbcNameGenerator
   }
 }
 ```
