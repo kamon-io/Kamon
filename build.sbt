@@ -10,6 +10,7 @@ lazy val excludedPackages = Seq(
 lazy val depsAssembly= (project in file("."))
   .enablePlugins(AssemblyPlugin)
   .settings(
+    name := "kamino-reporter",
     crossScalaVersions := Seq("2.11.11", "2.12.2"),
     skip in publish := true,
     assemblyOption in assembly := (assemblyOption in assembly).value.copy(
@@ -50,15 +51,17 @@ lazy val depsAssembly= (project in file("."))
       "com.typesafe.akka" %% "akka-http" % "10.0.10" % Test,
       "com.typesafe.akka" %% "akka-testkit" % "2.4.19" % Test
     )
+
   )
 
 lazy val publishing = project
   .settings(
     crossScalaVersions := Seq("2.11.11", "2.12.2"),
-    name := "kamino-reporter",
+    name := (name in (depsAssembly, Compile)).value,
     libraryDependencies ++= Seq(
       kamonCoreDep
     ),
-    packageBin in Compile := (assembly in (depsAssembly, Compile)).value
+    packageBin in Compile := (assembly in (depsAssembly, Compile)).value,
+    packageSrc in Compile := (packageSrc in (depsAssembly, Compile)).value
   )
 
