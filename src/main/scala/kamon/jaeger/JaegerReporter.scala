@@ -66,9 +66,10 @@ class JaegerClient(host: String, port: Int) {
     val from = Clock.toEpochMicros(span.from)
     val duration = Clock.toEpochMicros(span.to) - from
 
+    val (traceIdHigh, traceIdLow) = convertDoubleSizeIdentifier(span.context.traceID)
     val convertedSpan = new JaegerSpan(
-      convertIdentifier(span.context.traceID),
-      0L,
+      traceIdLow,
+      traceIdHigh,
       convertIdentifier(span.context.spanID),
       convertIdentifier(span.context.parentID),
       span.operationName,
@@ -115,4 +116,11 @@ class JaegerClient(host: String, port: Int) {
     // Assumes that Kamon was configured to use the default identity generator.
     ByteBuffer.wrap(identifier.bytes).getLong
   }.getOrElse(0L)
+
+  private def convertDoubleSizeIdentifier(identifier: Identifier): (Long, Long) = Try {
+    val buffer = ByteBuffer.wrap(identifier.bytes)
+    (buffer.getLong, buffer.getLong)
+  }.getOrElse {
+    (0L, convertIdentifier(identifier))
+  }
 }
