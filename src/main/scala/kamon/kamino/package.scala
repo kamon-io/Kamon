@@ -33,7 +33,7 @@ package object kamino {
       proxy             = kaminoConfig.getString("proxy.type").toLowerCase match {
         case "system" => None
         case "socks"  => Some(Proxy.Type.SOCKS)
-        case "http"   => Some(Proxy.Type.HTTP)
+        case "https"   => Some(Proxy.Type.HTTP)
       }
     )
   }
