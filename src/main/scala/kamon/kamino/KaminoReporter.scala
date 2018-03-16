@@ -114,7 +114,7 @@ class KaminoReporter extends MetricReporter {
 
     IngestionV1.Metric.newBuilder()
       .setName(metric.name)
-      .putAllTags(metric.tags.asJava)
+      .putAllTags(cleanTags(metric.tags).asJava)
       .setInstrumentType(metricType)
       .setData(protobuf.ByteString.copyFrom(valueBuffer))
       .build()
@@ -127,9 +127,14 @@ class KaminoReporter extends MetricReporter {
 
     IngestionV1.Metric.newBuilder()
       .setName(metric.name)
-      .putAllTags(metric.tags.asJava)
+      .putAllTags(cleanTags(metric.tags).asJava)
       .setInstrumentType(metricType)
       .setData(protobuf.ByteString.copyFrom(privateCounts))
       .build()
+  }
+
+  private def cleanTags(tags: kamon.Tags): kamon.Tags = tags.filterKeys(_ != null) map {
+    case (k, null) => k -> "null"
+    case validPair => validPair
   }
 }
