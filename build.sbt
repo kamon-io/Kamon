@@ -35,7 +35,8 @@ val commonSettings = Seq(
   ) ++ (CrossVersion.partialVersion(scalaVersion.value) match {
     case Some((2,10)) => Seq("-Yno-generic-signatures", "-target:jvm-1.7")
     case Some((2,11)) => Seq("-Ybackend:GenBCode","-Ydelambdafy:method","-target:jvm-1.8")
-    case _ => Seq("-opt:l:method")
+    case Some((2,12)) => Seq("-opt:l:method")
+    case _ => Seq.empty
   })
 )
 
