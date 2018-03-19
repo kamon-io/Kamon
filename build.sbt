@@ -20,11 +20,24 @@ lazy val kamon = (project in file("."))
   .aggregate(core, testkit, coreTests)
 
 val commonSettings = Seq(
-  scalaVersion := "2.11.8",
+  scalaVersion := "2.12.4",
   javacOptions += "-XDignore.symbol.file",
   resolvers += Resolver.mavenLocal,
-  crossScalaVersions := Seq("2.12.2", "2.11.8", "2.10.6"),
-  concurrentRestrictions in Global += Tags.limit(Tags.Test, 1)
+  crossScalaVersions := Seq("2.12.4", "2.11.8", "2.10.6"),
+  concurrentRestrictions in Global += Tags.limit(Tags.Test, 1),
+  scalacOptions ++= Seq(
+    "-deprecation",
+    "-encoding", "UTF-8",
+    "-feature",
+    "-Xfuture",
+    "-language:implicitConversions", "-language:higherKinds", "-language:existentials", "-language:postfixOps",
+    "-unchecked"
+  ) ++ (CrossVersion.partialVersion(scalaVersion.value) match {
+    case Some((2,10)) => Seq("-Yno-generic-signatures", "-target:jvm-1.7")
+    case Some((2,11)) => Seq("-Ybackend:GenBCode","-Ydelambdafy:method","-target:jvm-1.8")
+    case Some((2,12)) => Seq("-opt:l:method")
+    case _ => Seq.empty
+  })
 )
 
 lazy val core = (project in file("kamon-core"))
