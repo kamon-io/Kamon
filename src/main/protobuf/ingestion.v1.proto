@@ -66,3 +66,19 @@ message Span {
   required int64 endMicros = 6;
   map<string, string> tags = 7;
 }
+
+//if 200 ok, if 400 parse and log warning, if 500 retry or whatever
+//400 wrong api key, stale (flush all), bad batch, blocked subscription
+
+enum IngestionStatus {
+    OK = 0;
+    ERROR = 1;
+    STALE = 2;
+    UNAUTHORIZED = 3;
+    BLOCKED = 4;
+    CORRUPTED = 5;
+}
+
+message IngestionResponse {
+    required IngestionStatus status = 1;
+}

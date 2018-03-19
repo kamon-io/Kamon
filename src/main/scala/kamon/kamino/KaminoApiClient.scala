@@ -2,14 +2,20 @@ package kamon.kamino
 
 import java.time.{Duration, Instant}
 import java.util.concurrent.TimeUnit
-import okhttp3.{MediaType, OkHttpClient, Request, RequestBody}
-import kamino.IngestionV1.{Goodbye, Hello, MetricBatch, SpanBatch}
+import java.net.{InetSocketAddress, Proxy}
+
+import okhttp3._
+import kamino.IngestionV1._
+import IngestionStatus._
 import kamon.Kamon
+import org.slf4j.LoggerFactory
 
 import scala.annotation.tailrec
-import scala.util.{Success, Try}
+import scala.util.{Failure, Success, Try}
 
 class KaminoApiClient(config: KaminoConfiguration) {
+  private val logger = LoggerFactory.getLogger(classOf[KaminoReporter])
+
   private val client = createHttpClient(config)
   private var lastAttempt: Instant = Instant.EPOCH
 
@@ -27,44 +33,81 @@ class KaminoApiClient(config: KaminoConfiguration) {
 
   def stop(): Unit = client.dispatcher().executorService().shutdown()
 
+
   @tailrec
   private def postWithRetry(body: Array[Byte], apiUrl: String, retries: Int): Unit = {
     val clock = Kamon.clock()
-    val timeSinceLastPost = Duration.between(lastAttempt, Kamon.clock().instant())
 
-    val request = () => {
+    val timeSinceLastPost = Duration.between(lastAttempt, clock.instant())
+    if(timeSinceLastPost.compareTo(config.clientBackoff) < 0) backoff
+
+    val request: () => Response = () => {
       val reqBody = RequestBody.create(MediaType.parse("application/octet-stream"), body)
       val request = new Request.Builder().url(apiUrl).post(reqBody).build
-      val response = client.newCall(request).execute
-      response.body().close()
-      response.code()
+      client.newCall(request).execute
     }
 
-    if(timeSinceLastPost.compareTo(config.clientBackoff) < 0) backoff(config.clientBackoff.toMillis)
-
-    def tryPosting: Try[Int] = Try {
+    def tryPosting: Try[Response] = Try {
       lastAttempt = clock.instant()
       request()
     }
 
-    tryPosting match {
-      case Success(200)  => // All good.
-      case _ if retries > 0 =>
-        backoff(config.retryBackoff.toMillis)
-        postWithRetry(body, apiUrl, retries - 1)
-      case _ => // Nothing to do.
+    def parseResponse(response: Response): Try[IngestionResponse] = Try {
+      if(response.code() == 200) {
+        response.body().close()
+        IngestionResponse
+          .newBuilder()
+          .setStatus(OK)
+          .build()
+      } else {
+        IngestionResponse.parseFrom(response.body().bytes())
+      }
     }
+
+    tryPosting.flatMap(parseResponse) match {
+      case Success(ingestionResult) =>
+        ingestionResult.getStatus match {
+          case OK =>
+            logger.info("Snapshot ingested")
+          case STALE =>
+            logger.warn("Ingestion declined, stale data")
+          case BLOCKED =>
+            logger.warn("Ingestion declined, plan limits reached")
+          case UNAUTHORIZED =>
+            logger.error("Ingestion declined, missing or wrong API key")
+          case CORRUPTED =>
+            logger.warn("Ingestion declined, illegal batch")
+          case ERROR =>
+            logger.warn("Ingestion declined, unknown error")
+            backoff
+            postWithRetry(body, apiUrl, retries - 1)
+        }
+      case Failure(connectionException) if retries > 0 =>
+        logger.error(s"Connection error, retrying... ($retries left) ${connectionException.getMessage}")
+        backoff
+        postWithRetry(body, apiUrl, retries - 1)
+      case Failure(connectionException) =>
+        logger.error(s"Ingestion error, no retries, dropping snapshot... ${connectionException.getMessage}")
+
+    }
+
   }
 
   private def createHttpClient(config: KaminoConfiguration): OkHttpClient = {
-    new OkHttpClient.Builder()
+    val builder = new OkHttpClient.Builder()
       .connectTimeout(config.connectionTimeout.toMillis, TimeUnit.MILLISECONDS)
       .readTimeout(config.readTimeout.toMillis, TimeUnit.MILLISECONDS)
-      .build()
+
+    config.proxy.foreach { pt =>
+      builder.proxy(
+        new Proxy(pt, new InetSocketAddress(config.proxyHost, config.proxyPort))
+      )
+    }
+
+    builder.build()
   }
 
-
-  private def backoff(millis: Long) = {
-    Thread.sleep(millis)
+  private def backoff = {
+    Thread.sleep(config.clientBackoff.toMillis)
   }
 }

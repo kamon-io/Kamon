@@ -4,6 +4,7 @@ import java.time.Duration
 
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
+import java.net.Proxy
 
 package object kamino {
   private val logger = LoggerFactory.getLogger("kamon.kamino")
@@ -26,7 +27,14 @@ package object kamino {
       shutdownRetries   = kaminoConfig.getInt("retries.shutdown"),
       tracingRetries    = kaminoConfig.getInt("retries.tracing"),
       retryBackoff      = kaminoConfig.getDuration("retries.backoff"),
-      clientBackoff     = kaminoConfig.getDuration("client.backoff")
+      clientBackoff     = kaminoConfig.getDuration("client.backoff"),
+      proxyHost         = kaminoConfig.getString("proxy.host"),
+      proxyPort         = kaminoConfig.getInt("proxy.port"),
+      proxy             = kaminoConfig.getString("proxy.type").toLowerCase match {
+        case "system" => None
+        case "socks"  => Some(Proxy.Type.SOCKS)
+        case "https"   => Some(Proxy.Type.HTTP)
+      }
     )
   }
 
@@ -41,7 +49,10 @@ package object kamino {
     shutdownRetries: Int,
     tracingRetries: Int,
     retryBackoff: Duration,
-    clientBackoff: Duration
+    clientBackoff: Duration,
+    proxy: Option[Proxy.Type],
+    proxyHost: String,
+    proxyPort: Int
   ) {
     def ingestionRoute  = s"$ingestionApi/ingest"
     def bootMark        = s"$ingestionApi/hello"
