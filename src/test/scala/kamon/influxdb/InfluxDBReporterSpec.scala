@@ -9,7 +9,9 @@ import kamon.Kamon
 import kamon.metric._
 import kamon.testkit.MetricInspection
 import okhttp3.mockwebserver.{MockResponse, MockWebServer}
-import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
+import org.scalatest._
+
+import kamon.influxdb.InfluxDBCustomMatchers._
 
 class InfluxDBReporterSpec extends WordSpec with Matchers with BeforeAndAfterAll {
 
@@ -18,13 +20,18 @@ class InfluxDBReporterSpec extends WordSpec with Matchers with BeforeAndAfterAll
       reporter.reportPeriodSnapshot(periodSnapshot)
       val reportedLines = influxDB.takeRequest(10, TimeUnit.SECONDS).getBody.readString(Charset.forName("UTF-8")).split("\n")
 
-      reportedLines should contain allOf(
-        "custom.user.counter count=42i 1517000993",
-        "jvm.heap-size value=150000000i 1517000993",
-        "akka.actor.errors,path=as/user/actor count=10i 1517000993",
-        "my.histogram,one=tag count=4i,sum=13i,min=1i,p50.0=2.0,p70.0=4.0,p90.0=6.0,p95.0=6.0,p99.0=6.0,p99.9=6.0,max=6i 1517000993",
-        "queue.monitor,one=tag count=4i,sum=13i,min=1i,p50.0=2.0,p70.0=4.0,p90.0=6.0,p95.0=6.0,p99.0=6.0,p99.9=6.0,max=6i 1517000993"
+      val expectedLines = List(
+        "custom.user.counter,service=test-service,host=test.host,instance=test-instance,env=staging,context=test-context count=42i 1517000993",
+        "jvm.heap-size,service=test-service,host=test.host,instance=test-instance,env=staging,context=test-context value=150000000i 1517000993",
+        "akka.actor.errors,path=as/user/actor,service=test-service,host=test.host,instance=test-instance,env=staging,context=test-context count=10i 1517000993",
+        "my.histogram,one=tag,service=test-service,host=test.host,instance=test-instance,env=staging,context=test-context count=4i,sum=13i,min=1i,p50.0=2.0,p70.0=4.0,p90.0=6.0,p95.0=6.0,p99.0=6.0,p99.9=6.0,max=6i 1517000993",
+        "queue.monitor,one=tag,service=test-service,host=test.host,instance=test-instance,env=staging,context=test-context count=4i,sum=13i,min=1i,p50.0=2.0,p70.0=4.0,p90.0=6.0,p95.0=6.0,p99.0=6.0,p99.9=6.0,max=6i 1517000993"
       )
+
+      reportedLines.sorted.zip(expectedLines.sorted) foreach {
+        case (reported, expected) => reported should matchExpectedLineProtocolPoint(expected)
+      }
+
     }
   }
 
@@ -46,7 +53,21 @@ class InfluxDBReporterSpec extends WordSpec with Matchers with BeforeAndAfterAll
 
   override protected def beforeAll(): Unit = {
     influxDB.enqueue(new MockResponse().setResponseCode(204))
+    influxDB.enqueue(new MockResponse().setResponseCode(204))
     influxDB.start()
+    Kamon.reconfigure(ConfigFactory.parseString(
+      s"""
+         |kamon.environment {
+         |    host = "test.host"
+         |    service = "test-service"
+         |    instance = "test-instance"
+         |    tags = {
+         |      env = "staging"
+         |      context = "test-context"
+         |    }
+         |}
+       """.stripMargin
+    ).withFallback(Kamon.config()))
     reporter.start()
     reporter.reconfigure(ConfigFactory.parseString(
       s"""

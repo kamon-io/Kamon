@@ -1,9 +1,9 @@
 package kamon.influxdb
 
 import com.typesafe.config.Config
-import kamon.{Kamon, MetricReporter}
 import kamon.influxdb.InfluxDBReporter.Settings
 import kamon.metric.{MetricDistribution, MetricValue, PeriodSnapshot}
+import kamon.{Kamon, MetricReporter}
 import okhttp3.{MediaType, OkHttpClient, Request, RequestBody}
 import org.slf4j.LoggerFactory
 
@@ -13,6 +13,8 @@ class InfluxDBReporter extends MetricReporter {
   private val logger = LoggerFactory.getLogger(classOf[InfluxDBReporter])
   private var settings = InfluxDBReporter.readSettings(Kamon.config())
   private val client = buildClient(settings)
+
+  private def env = Kamon.environment
 
   override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
     val request = new Request.Builder()
@@ -56,16 +58,22 @@ class InfluxDBReporter extends MetricReporter {
     RequestBody.create(MediaType.parse("text/plain"), builder.result())
   }
 
-
+  private def commonTags: Map[String, String] = {
+    Map(
+      "service" -> env.service,
+      "host" -> env.host,
+      "instance" -> env.instance
+    ) ++ env.tags
+  }
 
   private def writeMetricValue(builder: StringBuilder, metric: MetricValue, fieldName: String, timestamp: Long): Unit = {
-    writeNameAndTags(builder, metric.name, metric.tags)
+    writeNameAndTags(builder, metric.name, metric.tags ++ commonTags)
     writeIntField(builder, fieldName, metric.value, appendSeparator = false)
     writeTimestamp(builder, timestamp)
   }
 
   private def writeMetricDistribution(builder: StringBuilder, metric: MetricDistribution, percentiles: Seq[Double], timestamp: Long): Unit = {
-    writeNameAndTags(builder, metric.name, metric.tags)
+    writeNameAndTags(builder, metric.name, metric.tags ++ commonTags)
     writeIntField(builder, "count", metric.distribution.count)
     writeIntField(builder, "sum", metric.distribution.sum)
     writeIntField(builder, "min", metric.distribution.min)
