@@ -58,7 +58,7 @@ class InfluxDBReporter extends MetricReporter {
     RequestBody.create(MediaType.parse("text/plain"), builder.result())
   }
 
-  private def commonTags: Map[String, String] = {
+  private def envTags: Map[String, String] = {
     Map(
       "service" -> env.service,
       "host" -> env.host,
@@ -67,13 +67,13 @@ class InfluxDBReporter extends MetricReporter {
   }
 
   private def writeMetricValue(builder: StringBuilder, metric: MetricValue, fieldName: String, timestamp: Long): Unit = {
-    writeNameAndTags(builder, metric.name, metric.tags ++ commonTags)
+    writeNameAndTags(builder, metric.name, metric.tags)
     writeIntField(builder, fieldName, metric.value, appendSeparator = false)
     writeTimestamp(builder, timestamp)
   }
 
   private def writeMetricDistribution(builder: StringBuilder, metric: MetricDistribution, percentiles: Seq[Double], timestamp: Long): Unit = {
-    writeNameAndTags(builder, metric.name, metric.tags ++ commonTags)
+    writeNameAndTags(builder, metric.name, metric.tags)
     writeIntField(builder, "count", metric.distribution.count)
     writeIntField(builder, "sum", metric.distribution.sum)
     writeIntField(builder, "min", metric.distribution.min)
@@ -86,9 +86,11 @@ class InfluxDBReporter extends MetricReporter {
     writeTimestamp(builder, timestamp)
   }
 
-  private def writeNameAndTags(builder: StringBuilder, name: String, tags: Map[String, String]): Unit = {
+  private def writeNameAndTags(builder: StringBuilder, name: String, metricTags: Map[String, String]): Unit = {
     builder
       .append(name)
+
+    val tags = if(settings.envTagsEnabled) metricTags ++ envTags else metricTags
 
     if(tags.nonEmpty) {
       tags.foreach {
@@ -140,7 +142,8 @@ class InfluxDBReporter extends MetricReporter {
 object InfluxDBReporter {
   case class Settings(
     url: String,
-    percentiles: Seq[Double]
+    percentiles: Seq[Double],
+    envTagsEnabled: Boolean
   )
 
   def readSettings(config: Config): Settings = {
@@ -149,11 +152,13 @@ object InfluxDBReporter {
     val host = root.getString("hostname")
     val port = root.getInt("port")
     val database = root.getString("database")
+    val envTagsEnabled = root.getBoolean("env-tags-enabled")
     val url = s"http://${host}:${port}/write?precision=s&db=${database}"
 
     Settings(
       url,
-      root.getDoubleList("percentiles").asScala.map(_.toDouble)
+      root.getDoubleList("percentiles").asScala.map(_.toDouble),
+      envTagsEnabled
     )
   }
 }

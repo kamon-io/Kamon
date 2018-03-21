@@ -74,6 +74,7 @@ class InfluxDBReporterSpec extends WordSpec with Matchers with BeforeAndAfterAll
         |kamon.influxdb {
         |  hostname = ${influxDB.getHostName}
         |  port = ${influxDB.getPort}
+        |  env-tags-enabled = true
         |}
       """.stripMargin
     ).withFallback(Kamon.config()))
