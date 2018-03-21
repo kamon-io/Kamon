@@ -21,6 +21,34 @@ class InfluxDBReporterSpec extends WordSpec with Matchers with BeforeAndAfterAll
       val reportedLines = influxDB.takeRequest(10, TimeUnit.SECONDS).getBody.readString(Charset.forName("UTF-8")).split("\n")
 
       val expectedLines = List(
+        "custom.user.counter count=42i 1517000993",
+        "jvm.heap-size value=150000000i 1517000993",
+        "akka.actor.errors,path=as/user/actor count=10i 1517000993",
+        "my.histogram,one=tag count=4i,sum=13i,min=1i,p50.0=2.0,p70.0=4.0,p90.0=6.0,p95.0=6.0,p99.0=6.0,p99.9=6.0,max=6i 1517000993",
+        "queue.monitor,one=tag count=4i,sum=13i,min=1i,p50.0=2.0,p70.0=4.0,p90.0=6.0,p95.0=6.0,p99.0=6.0,p99.9=6.0,max=6i 1517000993"
+      )
+
+      reportedLines.sorted.zip(expectedLines.sorted) foreach {
+        case (reported, expected) => reported should matchExpectedLineProtocolPoint(expected)
+      }
+
+    }
+    "include the additional env tags if enabled" in {
+      //enable env tags
+      reporter.reconfigure(ConfigFactory.parseString(
+        s"""
+           |kamon.influxdb {
+           |  hostname = ${influxDB.getHostName}
+           |  port = ${influxDB.getPort}
+           |  env-tags-enabled = true
+           |}
+      """.stripMargin
+      ).withFallback(Kamon.config()))
+
+      reporter.reportPeriodSnapshot(periodSnapshot)
+      val reportedLines = influxDB.takeRequest(10, TimeUnit.SECONDS).getBody.readString(Charset.forName("UTF-8")).split("\n")
+
+      val expectedLines = List(
         "custom.user.counter,service=test-service,host=test.host,instance=test-instance,env=staging,context=test-context count=42i 1517000993",
         "jvm.heap-size,service=test-service,host=test.host,instance=test-instance,env=staging,context=test-context value=150000000i 1517000993",
         "akka.actor.errors,path=as/user/actor,service=test-service,host=test.host,instance=test-instance,env=staging,context=test-context count=10i 1517000993",
@@ -31,7 +59,6 @@ class InfluxDBReporterSpec extends WordSpec with Matchers with BeforeAndAfterAll
       reportedLines.sorted.zip(expectedLines.sorted) foreach {
         case (reported, expected) => reported should matchExpectedLineProtocolPoint(expected)
       }
-
     }
   }
 
@@ -74,7 +101,6 @@ class InfluxDBReporterSpec extends WordSpec with Matchers with BeforeAndAfterAll
         |kamon.influxdb {
         |  hostname = ${influxDB.getHostName}
         |  port = ${influxDB.getPort}
-        |  env-tags-enabled = true
         |}
       """.stripMargin
     ).withFallback(Kamon.config()))

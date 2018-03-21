@@ -50,6 +50,7 @@ trait InfluxDBCustomMatchers {
   def getLineProtocol(point: String): LineProtocol = {
     val parts = point.split(" ")
 
+    assert(parts.length == 3, "Line protocol incorrectly formatted")
     val measurementAndTags = parts(0).split(",").toList
 
     val (measurement, tags): (String, List[String]) = measurementAndTags match {
