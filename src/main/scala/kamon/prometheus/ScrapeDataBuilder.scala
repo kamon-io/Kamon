@@ -97,11 +97,14 @@ class ScrapeDataBuilder(prometheusConfig: PrometheusReporter.Configuration, envi
   }
 
   private def appendHistogramBuckets(name: String, tags: Map[String, String], metric: MetricDistribution): Unit = {
-    val configuredBuckets = (metric.unit.dimension match {
-      case Time         => prometheusConfig.timeBuckets
-      case Information  => prometheusConfig.informationBuckets
-      case _            => prometheusConfig.defaultBuckets
-    }).iterator
+    val configuredBuckets = prometheusConfig.customBuckets.getOrElse(
+      name,
+      metric.unit.dimension match {
+        case Time => prometheusConfig.timeBuckets
+        case Information => prometheusConfig.informationBuckets
+        case _ => prometheusConfig.defaultBuckets
+      }
+    ).iterator
 
     val distributionBuckets = metric.distribution.bucketsIterator
     var currentDistributionBucket = distributionBuckets.next()

@@ -92,6 +92,22 @@ class ScrapeDataBuilderSpec extends WordSpec with Matchers {
       }
     }
 
+    "custom histogram buckets override defaults" in {
+      val customBucketsHistogram = constantDistribution("histogram.custom-buckets", Map.empty, none, 1, 10)
+
+      builder(customBuckets = Map("histogram_custom_buckets" -> Seq(1D, 2D, 4D))).appendHistograms(Seq(customBucketsHistogram)).build() should include {
+        """
+          |# TYPE histogram_custom_buckets histogram
+          |histogram_custom_buckets_bucket{le="1.0"} 1.0
+          |histogram_custom_buckets_bucket{le="2.0"} 2.0
+          |histogram_custom_buckets_bucket{le="4.0"} 4.0
+          |histogram_custom_buckets_bucket{le="+Inf"} 10.0
+          |histogram_custom_buckets_count 10.0
+          |histogram_custom_buckets_sum 55.0
+        """.stripMargin.trim()
+      }
+    }
+
     "append histograms grouped together by metric name and with all their derived time series " in {
       val histogramOne = constantDistribution("histogram-one", Map.empty, none, 1, 10)
       val histogramTwo = constantDistribution("histogram-two", Map.empty, none, 1, 20)
@@ -218,8 +234,8 @@ class ScrapeDataBuilderSpec extends WordSpec with Matchers {
     }
   }
 
-  private def builder(buckets: Seq[java.lang.Double] = Seq(5D, 7D, 8D, 9D, 10D, 11D, 12D), environmentTags: Map[String, String] = Map.empty) = new ScrapeDataBuilder(
-    PrometheusReporter.Configuration(false, "localhost", 1, buckets, buckets, buckets, false), environmentTags
+  private def builder(buckets: Seq[java.lang.Double] = Seq(5D, 7D, 8D, 9D, 10D, 11D, 12D), customBuckets: Map[String, Seq[java.lang.Double]] = Map("histogram.custom-buckets" -> Seq(1D, 3D)), environmentTags: Map[String, String] = Map.empty) = new ScrapeDataBuilder(
+    PrometheusReporter.Configuration(false, "localhost", 1, buckets, buckets, buckets, customBuckets, false), environmentTags
   )
 
   private def constantDistribution(name: String, tags: Map[String, String], unit: MeasurementUnit, lower: Int, upper: Int): MetricDistribution = {
