@@ -48,8 +48,8 @@ object AsyncAppenderInstrumentation {
   private def loadConfiguration(config: Config): Unit = synchronized {
     val logbackConfig = config.getConfig("kamon.logback")
     _mdcContextPropagation = logbackConfig.getBoolean("mdc-context-propagation")
-    _mdcTraceKey = logbackConfig.getString("mdc-trace-key")
-    _mdcSpanKey = logbackConfig.getString("mdc-span-key")
+    _mdcTraceKey = logbackConfig.getString("mdc-trace-id-key")
+    _mdcSpanKey = logbackConfig.getString("mdc-span-id-key")
   }
 }
 @Aspect
