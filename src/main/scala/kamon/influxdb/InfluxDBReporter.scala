@@ -13,8 +13,7 @@ class InfluxDBReporter extends MetricReporter {
   private val logger = LoggerFactory.getLogger(classOf[InfluxDBReporter])
   private var settings = InfluxDBReporter.readSettings(Kamon.config())
   private val client = buildClient(settings)
-
-  private def env = Kamon.environment
+  private var env = Kamon.environment
 
   override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
     val request = new Request.Builder()
@@ -43,6 +42,7 @@ class InfluxDBReporter extends MetricReporter {
   override def stop(): Unit = {}
 
   override def reconfigure(config: Config): Unit = {
+    env = Kamon.environment
     settings = InfluxDBReporter.readSettings(config)
   }
 
