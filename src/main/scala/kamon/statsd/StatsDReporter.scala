@@ -78,17 +78,17 @@ class StatsDReporter extends MetricReporter {
       val packetBuffer = new MetricDataPacketBuffer(config.maxPacketSize, clientChannel, config.agentAddress)
 
       for (counter <- snapshot.metrics.counters) {
-        packetBuffer.appendMeasurement(keyGenerator.generateKey(counter.name, counter.tags), encodeStatsDCounter(counter.value, counter.unit))
+        packetBuffer.appendMeasurement(keyGenerator.generateKey(counter.name, counter.tags), encodeStatsDCounter(config, counter.value, counter.unit))
       }
 
       for (gauge <- snapshot.metrics.gauges) {
-        packetBuffer.appendMeasurement(keyGenerator.generateKey(gauge.name, gauge.tags), encodeStatsDGauge(gauge.value, gauge.unit))
+        packetBuffer.appendMeasurement(keyGenerator.generateKey(gauge.name, gauge.tags), encodeStatsDGauge(config, gauge.value, gauge.unit))
       }
 
       for (metric <- snapshot.metrics.histograms ++ snapshot.metrics.rangeSamplers;
            bucket <- metric.distribution.bucketsIterator) {
 
-        val bucketData = encodeStatsDTimer(bucket.value, bucket.frequency, metric.unit)
+        val bucketData = encodeStatsDTimer(config, bucket.value, bucket.frequency, metric.unit)
         packetBuffer.appendMeasurement(keyGenerator.generateKey(metric.name, metric.tags), bucketData)
       }
 
@@ -96,18 +96,19 @@ class StatsDReporter extends MetricReporter {
     }
   }
 
-  private def encodeStatsDCounter(count: Long, unit: MeasurementUnit): String = s"${scale(count, unit)}|c"
+  private def encodeStatsDCounter(config: Configuration, count: Long, unit: MeasurementUnit): String = s"${scale(config, count, unit)}|c"
 
-  private def encodeStatsDGauge(value:Long, unit: MeasurementUnit): String = s"${scale(value, unit)}|g"
+  private def encodeStatsDGauge(config: Configuration, value:Long, unit: MeasurementUnit): String = s"${scale(config, value, unit)}|g"
 
-  private def encodeStatsDTimer(level: Long, count: Long, unit: MeasurementUnit): String = {
+  private def encodeStatsDTimer(config: Configuration, level: Long, count: Long, unit: MeasurementUnit): String = {
     val samplingRate: Double = 1D / count
-    s"${scale(level, unit)}|ms${if (samplingRate != 1D) "|@" + samplingRateFormat.format(samplingRate) else ""}"
+    val sampled = if (samplingRate != 1D) "|@" + samplingRateFormat.format(samplingRate) else ""
+    s"${scale(config, level, unit)}|ms$sampled"
   }
 
-  private def scale(value: Long, unit: MeasurementUnit): Double = unit.dimension match {
-    case Time         if unit.magnitude != time.seconds.magnitude => MeasurementUnit.scale(value, unit, time.seconds)
-    case Information  if unit.magnitude != information.bytes.magnitude  => MeasurementUnit.scale(value, unit, information.bytes)
+  private[statsd] def scale(config: Configuration, value: Long, unit: MeasurementUnit): Double = unit.dimension match {
+    case Time         if unit.magnitude != config.timeUnit.magnitude => MeasurementUnit.scale(value, unit, config.timeUnit)
+    case Information  if unit.magnitude != config.informationUnit.magnitude  => MeasurementUnit.scale(value, unit, config.informationUnit)
     case _ => value
   }
 
