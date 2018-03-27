@@ -196,7 +196,7 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
       }
     }
 
-    "when error happen the exception must be rethrown" in {
+    "rethrow the exception when error happen" in {
       val select = s"SELECT * FROM NotATable where Nr = 1"
 
       Try(connection.createStatement().execute(select)).failed.get.getMessage should include("""Table "NOTATABLE" not found""")
