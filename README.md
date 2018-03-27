@@ -37,7 +37,7 @@ libraryDependencies += "io.kamon" %% "kamon-akka-2.5" % "1.0.0"
 ```xml
 <dependency>
     <groupId>io.kamon</groupId>
-    <artifactId>kamon-kamon-akka-2.5_2.12</artifactId>
+    <artifactId>kamon-akka-2.5_2.12</artifactId>
     <version>1.0.0</version>
 </dependency>
 ```
