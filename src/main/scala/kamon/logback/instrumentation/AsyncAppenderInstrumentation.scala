@@ -29,10 +29,13 @@ import scala.beans.BeanProperty
 
 object AsyncAppenderInstrumentation {
 
-  val MdcTraceKey : String = "kamonTraceID"
-  val MdcSpanKey : String = "kamonSpanID"
+  @volatile private var _mdcContextPropagation: Boolean = true
+  @volatile private var _mdcTraceKey: String = "kamonTraceID"
+  @volatile private var _mdcSpanKey: String = "kamonSpanID"
 
-  @volatile var mdcContextPropagation : Boolean = true
+  def mdcTraceKey: String = _mdcTraceKey
+  def mdcSpanKey: String = _mdcSpanKey
+  def mdcContextPropagation: Boolean = _mdcContextPropagation
 
   loadConfiguration(Kamon.config())
 
@@ -44,7 +47,9 @@ object AsyncAppenderInstrumentation {
 
   private def loadConfiguration(config: Config): Unit = synchronized {
     val logbackConfig = config.getConfig("kamon.logback")
-    mdcContextPropagation = logbackConfig.getBoolean("mdc-context-propagation")
+    _mdcContextPropagation = logbackConfig.getBoolean("mdc-context-propagation")
+    _mdcTraceKey = logbackConfig.getString("mdc-trace-id-key")
+    _mdcSpanKey = logbackConfig.getString("mdc-span-id-key")
   }
 }
 @Aspect
@@ -68,13 +73,13 @@ class AsyncAppenderInstrumentation {
     val context = Kamon.currentContext().get(Span.ContextKey)
 
     if (context.context().traceID != IdentityProvider.NoIdentifier && AsyncAppenderInstrumentation.mdcContextPropagation){
-      MDC.put(AsyncAppenderInstrumentation.MdcTraceKey, context.context().traceID.string)
-      MDC.put(AsyncAppenderInstrumentation.MdcSpanKey, context.context().spanID.string)
+      MDC.put(AsyncAppenderInstrumentation.mdcTraceKey, context.context().traceID.string)
+      MDC.put(AsyncAppenderInstrumentation.mdcSpanKey, context.context().spanID.string)
       try {
         pjp.proceed()
       } finally {
-        MDC.remove(AsyncAppenderInstrumentation.MdcTraceKey)
-        MDC.remove(AsyncAppenderInstrumentation.MdcSpanKey)
+        MDC.remove(AsyncAppenderInstrumentation.mdcTraceKey)
+        MDC.remove(AsyncAppenderInstrumentation.mdcSpanKey)
       }
     } else {
       pjp.proceed()

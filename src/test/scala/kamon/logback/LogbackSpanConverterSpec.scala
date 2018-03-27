@@ -53,7 +53,7 @@ class LogbackSpanConverterSpec extends WordSpec with Matchers with Eventually {
       }
 
       "MDC context" in {
-        val memoryAppender = buildMemoryAppender(configurator,s"%X{${AsyncAppenderInstrumentation.MdcTraceKey}} %X{${AsyncAppenderInstrumentation.MdcSpanKey}} %X{mdc_key}")
+        val memoryAppender = buildMemoryAppender(configurator,s"%X{${AsyncAppenderInstrumentation.mdcTraceKey}} %X{${AsyncAppenderInstrumentation.mdcSpanKey}} %X{mdc_key}")
 
         val span = Kamon.buildSpan("my-span").start()
         val traceID = span.context().traceID
@@ -66,8 +66,8 @@ class LogbackSpanConverterSpec extends WordSpec with Matchers with Eventually {
         }
 
         memoryAppender.getLastLine shouldBe traceID.string + " " + spanID.string + " mdc_value"
-        MDC.get(AsyncAppenderInstrumentation.MdcTraceKey) shouldBe null
-        MDC.get(AsyncAppenderInstrumentation.MdcSpanKey) shouldBe null
+        MDC.get(AsyncAppenderInstrumentation.mdcTraceKey) shouldBe null
+        MDC.get(AsyncAppenderInstrumentation.mdcSpanKey) shouldBe null
       }
 
       "disable MDC context" in {
@@ -78,7 +78,7 @@ class LogbackSpanConverterSpec extends WordSpec with Matchers with Eventually {
         )
 
 
-        val memoryAppender = buildMemoryAppender(configurator,s"%X{${AsyncAppenderInstrumentation.MdcTraceKey}}")
+        val memoryAppender = buildMemoryAppender(configurator,s"%X{${AsyncAppenderInstrumentation.mdcTraceKey}}")
 
         val span = Kamon.buildSpan("my-span").start()
         val contextWithSpan = Context.create(Span.ContextKey, span)
