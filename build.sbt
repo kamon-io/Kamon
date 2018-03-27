@@ -13,8 +13,8 @@
  * =========================================================================================
  */
 
-val kamonCore  =        "io.kamon"        %% "kamon-core"         % "1.0.0"
-val kamonTestkit  =     "io.kamon"        %% "kamon-testkit"      % "1.0.0"
+val kamonCore  =        "io.kamon"        %% "kamon-core"         % "1.1.0"
+val kamonTestkit  =     "io.kamon"        %% "kamon-testkit"      % "1.1.0"
 val h2 =                "com.h2database"   % "h2"                 % "1.4.196"
 val hikariCP =          "com.zaxxer"       % "HikariCP"           % "2.7.4"
 

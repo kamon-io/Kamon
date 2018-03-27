@@ -20,15 +20,15 @@ import java.util.concurrent.Executors
 
 import kamon.Kamon
 import kamon.context.Context
-import kamon.jdbc.instrumentation.StatementInstrumentation.StatementTypes
 import kamon.jdbc.Metrics
+import kamon.jdbc.instrumentation.StatementInstrumentation.StatementTypes
 import kamon.testkit.{MetricInspection, Reconfigure, TestSpanReporter}
 import kamon.trace.Span.TagValue
 import kamon.trace.SpanCustomizer
 import kamon.util.Registration
-import org.scalatest.{BeforeAndAfterAll, Matchers, OptionValues, WordSpec}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.SpanSugar
+import org.scalatest.{BeforeAndAfterAll, Matchers, OptionValues, WordSpec}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
@@ -194,6 +194,12 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
         span.tags("component") shouldBe TagValue.String("jdbc")
         span.tags("error") shouldBe TagValue.True
       }
+    }
+
+    "when error happen the exception must be rethrown" in {
+      val select = s"SELECT * FROM NotATable where Nr = 1"
+
+      Try(connection.createStatement().execute(select)).failed.get.getMessage should include("""Table "NOTATABLE" not found""")
     }
   }
 

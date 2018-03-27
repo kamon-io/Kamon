@@ -125,6 +125,7 @@ class StatementInstrumentation {
       case t: Throwable =>
         span.addError("error.object", t)
         Jdbc.onStatementError(sql, t)
+        throw t
 
     } finally {
       val endTimestamp = Kamon.clock().instant()
