@@ -26,7 +26,7 @@ val hikariCP            = "com.zaxxer"                % "HikariCP"              
 lazy val root = (project in file("."))
   .enablePlugins(JavaAgent)
   .settings(name := "kamon-jdbc")
-  .settings(isSnapshot := true)
+//  .settings(isSnapshot := true)
   .settings(javaAgents += "io.kamon"    % "kamon-agent"   % "0.0.9-experimental"  % "compile;test")
   .settings(resolvers += Resolver.bintrayRepo("kamon-io", "snapshots"))
   .settings(resolvers += Resolver.mavenLocal)
