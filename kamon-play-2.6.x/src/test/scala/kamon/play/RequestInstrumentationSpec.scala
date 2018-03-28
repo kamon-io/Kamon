@@ -133,6 +133,23 @@ abstract class RequestHandlerInstrumentationSpec extends PlaySpec with GuiceOneS
       }
     }
 
+    "decode insensitive headers" in {
+      val wsClient = app.injector.instanceOf[WSClient]
+      val okSpan = Kamon.buildSpan("ok-operation-span").start()
+      val endpoint = s"http://localhost:$port/request-id"
+
+      {
+        val response = await(wsClient.url(endpoint).withHeaders("X-Request-ID" -> "123456").get())
+        response.status mustBe 200
+        response.body mustBe "123456"
+      }
+      {
+        val response = await(wsClient.url(endpoint).withHeaders("X-Request-Id" -> "123456").get())
+        response.status mustBe 200
+        response.body mustBe "123456"
+      }
+    }
+
     "propagate automatic broadcast string keys" in {
       val wsClient = app.injector.instanceOf[WSClient]
       val okSpan = Kamon.buildSpan("ok-operation-span").start()
