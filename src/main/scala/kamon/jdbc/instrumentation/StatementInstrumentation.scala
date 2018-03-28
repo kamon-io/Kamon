@@ -15,7 +15,7 @@
 
 package kamon.jdbc.instrumentation
 
-import java.sql.{PreparedStatement, SQLException, Statement}
+import java.sql.{PreparedStatement, Statement}
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.Callable
 
@@ -137,6 +137,7 @@ object StatementInstrumentation {
       case t: Throwable =>
         span.addError("error.object", t)
         Jdbc.onStatementError(sql, t)
+        throw t
 
     } finally {
       val endTimestamp = Kamon.clock().instant()
@@ -156,13 +157,11 @@ object StatementInstrumentation {
 object ExecuteMethodInterceptor {
 
   @RuntimeType
-  @throws(classOf[SQLException])
   def execute(@SuperCall callable: Callable[_], @This statement: Statement, @annotation.Argument(0) sql: String): Any = {
     StatementInstrumentation.track(callable, statement, sql, StatementTypes.GenericExecute)
   }
 
   @RuntimeType
-  @throws(classOf[SQLException])
   def execute(@SuperCall callable: Callable[_], @This statement: PreparedStatement): Any = {
     StatementInstrumentation.track(callable, statement, statement.toString, StatementTypes.GenericExecute)
   }
@@ -176,13 +175,11 @@ object ExecuteMethodInterceptor {
 object ExecuteQueryMethodInterceptor {
 
   @RuntimeType
-  @throws(classOf[SQLException])
   def executeQuery(@SuperCall callable: Callable[_], @This statement: Statement, @annotation.Argument(0) sql: String): Any = {
     StatementInstrumentation.track(callable, statement, sql, StatementTypes.Query)
   }
 
   @RuntimeType
-  @throws(classOf[SQLException])
   def executeQuery(@SuperCall callable: Callable[_], @This statement: PreparedStatement): Any = {
     StatementInstrumentation.track(callable, statement, statement.toString, StatementTypes.Query)
   }
@@ -195,13 +192,11 @@ object ExecuteQueryMethodInterceptor {
 object ExecuteUpdateMethodInterceptor {
 
   @RuntimeType
-  @throws(classOf[SQLException])
   def executeUpdate(@SuperCall callable: Callable[_], @This statement:Statement, @annotation.Argument(0) sql:String): Any = {
     StatementInstrumentation.track(callable, statement,  sql, StatementTypes.Update)
   }
 
   @RuntimeType
-  @throws(classOf[SQLException])
   def executeUpdate(@SuperCall callable: Callable[_], @This statement:PreparedStatement): Any = {
     StatementInstrumentation.track(callable, statement,  statement.toString , StatementTypes.Update)
   }
@@ -216,7 +211,6 @@ object ExecuteUpdateMethodInterceptor {
 object ExecuteBatchMethodInterceptor {
 
   @RuntimeType
-  @throws(classOf[SQLException])
   def executeUpdate(@SuperCall callable: Callable[_], @This statement:Statement): Any =
     StatementInstrumentation.track(callable, statement,  statement.toString , StatementTypes.Batch)
 }
