@@ -16,9 +16,8 @@
 
 package kamon.statsd
 
-import java.lang.management.ManagementFactory
-
 import com.typesafe.config.Config
+import kamon.Kamon
 
 import scala.collection.immutable.TreeMap
 
@@ -30,30 +29,33 @@ class SimpleMetricKeyGenerator(config: Config) extends MetricKeyGenerator {
   type Normalizer = String ⇒ String
 
   val configSettings = config.getConfig("kamon.statsd.simple-metric-key-generator")
-  val application = configSettings.getString("application")
+  val application = Kamon.environment.service
   val includeHostname = configSettings.getBoolean("include-hostname")
-  val hostnameOverride = configSettings.getString("hostname-override")
+  val hostname = Kamon.environment.host
   val normalizer = createNormalizer(configSettings.getString("metric-name-normalization-strategy"))
-
-  val normalizedHostname =
-    if (hostnameOverride.equals("none")) normalizer(hostName)
-    else normalizer(hostnameOverride)
+  val normalizedHostname = normalizer(hostname)
 
   val baseName: String =
     if (includeHostname) s"$application.$normalizedHostname"
     else application
 
-  def generateKey(name: String, tags: Map[String, String]): String = {
-    val stringTags = TreeMap(tags.toSeq:_ *).values.map(normalizer).mkString(".")
-    s"$baseName.${normalizer(name)}.$stringTags"
-  }
-
-  def hostName: String = ManagementFactory.getRuntimeMXBean.getName.split('@')(1)
-
-  def createNormalizer(strategy: String): Normalizer = strategy match {
+  private def createNormalizer(strategy: String): Normalizer = strategy match {
     case "percent-encode" ⇒ PercentEncoder.encode
     case "normalize"      ⇒ (s: String) ⇒ s.replace(": ", "-").replace(":", "-").replace(" ", "_").replace("/", "_").replace(".", "_")
   }
+
+  def generateKey(name: String, tags: Map[String, String]): String = {
+    val stringTags = if (tags.nonEmpty) "." + sortAndConcatenateTags(tags) else ""
+    s"$baseName.${normalizer(name)}$stringTags"
+  }
+
+  private def sortAndConcatenateTags(tags: Map[String, String]): String = {
+    TreeMap(tags.toSeq:_ *)
+      .flatMap {case (key, value)=> List(key, value)}
+      .map(normalizer)
+      .mkString(".")
+  }
+
 }
 
 object PercentEncoder {
@@ -77,8 +79,8 @@ object PercentEncoder {
     encodedString.toString()
   }
 
-  def shouldEncode(ch: Char): Boolean = {
+  private def shouldEncode(ch: Char): Boolean = {
     if (ch > 128 || ch < 0) true
-    else " %$&+,./:;=?@<>#%".indexOf(ch) >= 0;
+    else " %$&+,./:;=?@<>#%".indexOf(ch) >= 0
   }
 }

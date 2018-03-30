@@ -21,21 +21,21 @@ import java.nio.ByteBuffer
 import java.nio.channels.DatagramChannel
 import java.text.{DecimalFormat, DecimalFormatSymbols}
 import java.util.Locale
-import java.util.concurrent.atomic.AtomicReference
 
 import com.typesafe.config.Config
 import kamon.metric.MeasurementUnit.Dimension.{Information, Time}
 import kamon.metric.MeasurementUnit.{information, time}
 import kamon.metric.{MeasurementUnit, _}
+import kamon.statsd.StatsDReporter.{Configuration, MetricDataPacketBuffer}
 import kamon.util.DynamicAccess
 import kamon.{Kamon, MetricReporter}
 import org.slf4j.LoggerFactory
 
 
-class StatsDReporter extends MetricReporter  {
+class StatsDReporter extends MetricReporter {
   private val logger = LoggerFactory.getLogger(classOf[StatsDReporter])
 
-  private val configuration:AtomicReference[Configuration] = new AtomicReference[Configuration]()
+  private var configuration: Option[Configuration] = None
 
   val symbols: DecimalFormatSymbols = DecimalFormatSymbols.getInstance(Locale.US)
   symbols.setDecimalSeparator('.') // Just in case there is some weird locale config we are not aware of.
@@ -43,61 +43,16 @@ class StatsDReporter extends MetricReporter  {
   // Absurdly high number of decimal digits, let the other end lose precision if it needs to.
   val samplingRateFormat = new DecimalFormat("#.################################################################", symbols)
 
-
   override def start(): Unit = {
     logger.info("Started the Kamon StatsD reporter")
-    configuration.set(readConfiguration(Kamon.config()))
+    configuration = Some(readConfiguration(Kamon.config()))
   }
 
   override def stop(): Unit = {}
 
   override def reconfigure(config: Config): Unit = {
-    val current = configuration.get()
-    if(configuration.compareAndSet(current, readConfiguration(config)))
-      logger.info("The configuration was reloaded successfully.")
-    else
-      logger.warn("Unable to reload configuration.")
-  }
-
-  override def reportTickSnapshot(snapshot: TickSnapshot): Unit = {
-    val config = configuration.get()
-    val keyGenerator = config.keyGenerator
-    val clientChannel = DatagramChannel.open()
-
-    val packetBuffer = new MetricDataPacketBuffer(config.maxPacketSize, clientChannel, config.agentAddress)
-
-    for (counter <- snapshot.metrics.counters) {
-      packetBuffer.appendMeasurement(keyGenerator.generateKey(counter.name, counter.tags), encodeStatsDCounter(counter.value, counter.unit))
-    }
-
-    for (gauge <- snapshot.metrics.gauges) {
-      packetBuffer.appendMeasurement(keyGenerator.generateKey(gauge.name, gauge.tags), encodeStatsDGauge(gauge.value, gauge.unit))
-    }
-
-    for (metric <- snapshot.metrics.histograms ++ snapshot.metrics.minMaxCounters;
-         bucket <- metric.distribution.bucketsIterator) {
-
-      val bucketData = encodeStatsDTimer(bucket.value, bucket.frequency, metric.unit)
-      packetBuffer.appendMeasurement(keyGenerator.generateKey(metric.name, metric.tags), bucketData)
-    }
-
-    packetBuffer.flush()
-  }
-
-
-  private def encodeStatsDTimer(level: Long, count: Long, unit: MeasurementUnit): String = {
-    val samplingRate: Double = 1D / count
-    s"${scale(level, unit)}|ms${if (samplingRate != 1D) "|@" + samplingRateFormat.format(samplingRate) else ""}"
-  }
-
-  private def encodeStatsDCounter(count: Long, unit: MeasurementUnit): String = s"${scale(count, unit)}|c"
-
-  private def encodeStatsDGauge(value:Long, unit: MeasurementUnit): String = s"${scale(value, unit)}|g"
-
-  private def scale(value: Long, unit: MeasurementUnit): Double = unit.dimension match {
-    case Time         if unit.magnitude != time.seconds       => MeasurementUnit.scale(value, unit, time.seconds)
-    case Information  if unit.magnitude != information.bytes  => MeasurementUnit.scale(value, unit, information.bytes)
-    case _ => value
+    configuration = Some(readConfiguration(config))
+    logger.info("The configuration was reloaded successfully.")
   }
 
   private def readConfiguration(config: Config): Configuration = {
@@ -115,8 +70,53 @@ class StatsDReporter extends MetricReporter  {
     new DynamicAccess(getClass.getClassLoader).createInstanceFor[MetricKeyGenerator](keyGeneratorFQCN, (classOf[Config], config) :: Nil).get
   }
 
+  override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
+    configuration.foreach { config =>
+      val keyGenerator = config.keyGenerator
+      val clientChannel = DatagramChannel.open()
 
-  private class MetricDataPacketBuffer(maxPacketSizeInBytes: Long, channel: DatagramChannel, remote: InetSocketAddress) {
+      val packetBuffer = new MetricDataPacketBuffer(config.maxPacketSize, clientChannel, config.agentAddress)
+
+      for (counter <- snapshot.metrics.counters) {
+        packetBuffer.appendMeasurement(keyGenerator.generateKey(counter.name, counter.tags), encodeStatsDCounter(config, counter.value, counter.unit))
+      }
+
+      for (gauge <- snapshot.metrics.gauges) {
+        packetBuffer.appendMeasurement(keyGenerator.generateKey(gauge.name, gauge.tags), encodeStatsDGauge(config, gauge.value, gauge.unit))
+      }
+
+      for (metric <- snapshot.metrics.histograms ++ snapshot.metrics.rangeSamplers;
+           bucket <- metric.distribution.bucketsIterator) {
+
+        val bucketData = encodeStatsDTimer(config, bucket.value, bucket.frequency, metric.unit)
+        packetBuffer.appendMeasurement(keyGenerator.generateKey(metric.name, metric.tags), bucketData)
+      }
+
+      packetBuffer.flush()
+    }
+  }
+
+  private def encodeStatsDCounter(config: Configuration, count: Long, unit: MeasurementUnit): String = s"${scale(config, count, unit)}|c"
+
+  private def encodeStatsDGauge(config: Configuration, value:Long, unit: MeasurementUnit): String = s"${scale(config, value, unit)}|g"
+
+  private def encodeStatsDTimer(config: Configuration, level: Long, count: Long, unit: MeasurementUnit): String = {
+    val samplingRate: Double = 1D / count
+    val sampled = if (samplingRate != 1D) "|@" + samplingRateFormat.format(samplingRate) else ""
+    s"${scale(config, level, unit)}|ms$sampled"
+  }
+
+  private[statsd] def scale(config: Configuration, value: Long, unit: MeasurementUnit): Double = unit.dimension match {
+    case Time         if unit.magnitude != config.timeUnit.magnitude => MeasurementUnit.scale(value, unit, config.timeUnit)
+    case Information  if unit.magnitude != config.informationUnit.magnitude  => MeasurementUnit.scale(value, unit, config.informationUnit)
+    case _ => value
+  }
+
+}
+
+object StatsDReporter {
+
+  private[statsd] class MetricDataPacketBuffer(maxPacketSizeInBytes: Long, channel: DatagramChannel, remote: InetSocketAddress) {
     val metricSeparator = "\n"
     val measurementSeparator = ":"
 
@@ -145,16 +145,17 @@ class StatsDReporter extends MetricReporter  {
       }
     }
 
-    def fitsOnBuffer(data: String): Boolean = (buffer.length + data.length) <= maxPacketSizeInBytes
-
-    private def flushToUDP(data: String): Unit =  {
-      channel.send(ByteBuffer.wrap(data.getBytes), remote)
-    }
+    private def fitsOnBuffer(data: String): Boolean = (buffer.length + data.length) <= maxPacketSizeInBytes
 
     def flush(): Unit = {
       flushToUDP(buffer.toString)
       buffer.clear()
     }
+
+    private def flushToUDP(data: String): Unit =  {
+      channel.send(ByteBuffer.wrap(data.getBytes), remote)
+    }
+
   }
 
   private case class Configuration(agentAddress: InetSocketAddress,
@@ -162,4 +163,5 @@ class StatsDReporter extends MetricReporter  {
                                    timeUnit: MeasurementUnit,
                                    informationUnit: MeasurementUnit,
                                    keyGenerator: MetricKeyGenerator)
+
 }
