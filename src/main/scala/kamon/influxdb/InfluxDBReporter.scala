@@ -1,9 +1,9 @@
 package kamon.influxdb
 
 import com.typesafe.config.Config
-import kamon.{Kamon, MetricReporter}
 import kamon.influxdb.InfluxDBReporter.Settings
 import kamon.metric.{MetricDistribution, MetricValue, PeriodSnapshot}
+import kamon.{Kamon, MetricReporter}
 import okhttp3.{MediaType, OkHttpClient, Request, RequestBody}
 import org.slf4j.LoggerFactory
 
@@ -13,6 +13,7 @@ class InfluxDBReporter extends MetricReporter {
   private val logger = LoggerFactory.getLogger(classOf[InfluxDBReporter])
   private var settings = InfluxDBReporter.readSettings(Kamon.config())
   private val client = buildClient(settings)
+  private var env = Kamon.environment
 
   override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
     val request = new Request.Builder()
@@ -41,6 +42,7 @@ class InfluxDBReporter extends MetricReporter {
   override def stop(): Unit = {}
 
   override def reconfigure(config: Config): Unit = {
+    env = Kamon.environment
     settings = InfluxDBReporter.readSettings(config)
   }
 
@@ -56,7 +58,13 @@ class InfluxDBReporter extends MetricReporter {
     RequestBody.create(MediaType.parse("text/plain"), builder.result())
   }
 
-
+  private def envTags: Map[String, String] = {
+    Map(
+      "service" -> env.service,
+      "host" -> env.host,
+      "instance" -> env.instance
+    ) ++ env.tags
+  }
 
   private def writeMetricValue(builder: StringBuilder, metric: MetricValue, fieldName: String, timestamp: Long): Unit = {
     writeNameAndTags(builder, metric.name, metric.tags)
@@ -78,9 +86,11 @@ class InfluxDBReporter extends MetricReporter {
     writeTimestamp(builder, timestamp)
   }
 
-  private def writeNameAndTags(builder: StringBuilder, name: String, tags: Map[String, String]): Unit = {
+  private def writeNameAndTags(builder: StringBuilder, name: String, metricTags: Map[String, String]): Unit = {
     builder
       .append(name)
+
+    val tags = if(settings.envTagsEnabled) metricTags ++ envTags else metricTags
 
     if(tags.nonEmpty) {
       tags.foreach {
@@ -132,7 +142,8 @@ class InfluxDBReporter extends MetricReporter {
 object InfluxDBReporter {
   case class Settings(
     url: String,
-    percentiles: Seq[Double]
+    percentiles: Seq[Double],
+    envTagsEnabled: Boolean
   )
 
   def readSettings(config: Config): Settings = {
@@ -141,11 +152,13 @@ object InfluxDBReporter {
     val host = root.getString("hostname")
     val port = root.getInt("port")
     val database = root.getString("database")
+    val envTagsEnabled = root.getBoolean("env-tags-enabled")
     val url = s"http://${host}:${port}/write?precision=s&db=${database}"
 
     Settings(
       url,
-      root.getDoubleList("percentiles").asScala.map(_.toDouble)
+      root.getDoubleList("percentiles").asScala.map(_.toDouble),
+      envTagsEnabled
     )
   }
 }
