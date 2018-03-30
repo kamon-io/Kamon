@@ -17,30 +17,33 @@
 package kamon.datadog
 
 import java.lang.StringBuilder
-import java.net.InetSocketAddress
-import java.nio.ByteBuffer
-import java.nio.channels.DatagramChannel
-import java.text.{DecimalFormat, DecimalFormatSymbols}
+import java.text.{ DecimalFormat, DecimalFormatSymbols }
 import java.time.Duration
 import java.util.Locale
 
 import com.typesafe.config.Config
+import io.netty.handler.codec.http.{ HttpHeaderNames, HttpHeaderValues }
 import kamon.metric._
 import kamon.metric.MeasurementUnit
-import kamon.metric.MeasurementUnit.Dimension.{Information, Time}
-import kamon.metric.MeasurementUnit.{information, time}
-import kamon.{Kamon, MetricReporter}
-import org.asynchttpclient.{DefaultAsyncHttpClient, DefaultAsyncHttpClientConfig}
+import kamon.metric.MeasurementUnit.Dimension.{ Information, Time }
+import kamon.metric.MeasurementUnit.{ information, time }
+import kamon.{ Kamon, MetricReporter }
+import org.asynchttpclient.{ DefaultAsyncHttpClient, DefaultAsyncHttpClientConfig }
 import org.slf4j.LoggerFactory
 
-
 class DatadogAPIReporter extends MetricReporter {
+  import DatadogAPIReporter._
+
   private val logger = LoggerFactory.getLogger(classOf[DatadogAPIReporter])
   private val symbols = DecimalFormatSymbols.getInstance(Locale.US)
+
   symbols.setDecimalSeparator('.') // Just in case there is some weird locale config we are not aware of.
+
   private val valueFormat = new DecimalFormat("#0.#########", symbols)
 
   private var httpClient: Option[DefaultAsyncHttpClient] = None
+
+  private var configuration = readConfiguration(Kamon.config())
 
   override def start(): Unit = {
     httpClient = Option(createHttpClient(readConfiguration(Kamon.config())))
@@ -48,92 +51,68 @@ class DatadogAPIReporter extends MetricReporter {
   }
 
   override def stop(): Unit = {
-    stopHttpClient()
+    httpClient.foreach(_.close())
+    logger.info("Stopped the Datadog API reporter.")
   }
 
   override def reconfigure(config: Config): Unit = {
-    if(httpClient.nonEmpty)
-      stopHttpClient()
-
-    httpClient = Option(createHttpClient(readConfiguration(config)))
+    val newConfiguration = readConfiguration(config)
+    httpClient.foreach(_.close())
+    httpClient = Option(createHttpClient(newConfiguration))
+    configuration = newConfiguration
   }
 
-
   override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
-    val config = readConfiguration(Kamon.config())
-    val url = "https://app.datadoghq.com/api/v1/series?api_key=" + config.apiKey
-
-    val client = new DefaultAsyncHttpClient(new DefaultAsyncHttpClientConfig.Builder()
-      .setConnectTimeout(config.connectTimeout.toMillis.toInt)
-      .setReadTimeout(config.connectTimeout.toMillis.toInt)
-      .setRequestTimeout(config.connectTimeout.toMillis.toInt)
-      .build())
-
-    client.preparePost(url)
+    httpClient.foreach(_.preparePost(apiUrl + configuration.apiKey)
       .setBody(buildRequestBody(snapshot))
-      .setHeader("Content-Type", "application/json")
-      .execute()
-
+      .setHeader(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON)
+      .execute())
   }
 
   private def buildRequestBody(snapshot: PeriodSnapshot): String = {
-    val timestamp: Long = (snapshot.from.toEpochMilli)
-    val serviceTag = "\"service:" + Kamon.environment.service + "\""
+    val timestamp = snapshot.from.getEpochSecond.toString
+    val serviceTag = quote"service:${Kamon.environment.service}"
     val host = Kamon.environment.host
     val seriesBuilder = new StringBuilder()
-
-    def addCounter(counter: MetricValue): Unit =
-      addMetric(counter.name, valueFormat.format(scale(counter.value, counter.unit)), "counter", counter.tags)
-
-    def addGauge(gauge: MetricValue): Unit =
-      addMetric(gauge.name, valueFormat.format(scale(gauge.value, gauge.unit)), "gauge", gauge.tags)
 
     def addDistribution(metric: MetricDistribution): Unit = {
       import metric._
 
-      addMetric(name + ".min", valueFormat.format(scale(distribution.min, unit)), "gauge", metric.tags)
-      addMetric(name + ".max", valueFormat.format(scale(distribution.max, unit)), "gauge", metric.tags)
-      addMetric(name + ".count", valueFormat.format(scale(distribution.count, unit)), "counter", metric.tags)
-      addMetric(name + ".sum", valueFormat.format(scale(distribution.sum, unit)), "gauge", metric.tags)
-      addMetric(name + ".p95", valueFormat.format(scale(distribution.percentile(95D).value, unit)), "gauge", metric.tags)
-
+      addMetric(name + ".min", valueFormat.format(scale(distribution.min, unit)), gauge, metric.tags)
+      addMetric(name + ".max", valueFormat.format(scale(distribution.max, unit)), gauge, metric.tags)
+      addMetric(name + ".count", valueFormat.format(scale(distribution.count, unit)), count, metric.tags)
+      addMetric(name + ".sum", valueFormat.format(scale(distribution.sum, unit)), gauge, metric.tags)
+      addMetric(name + ".p95", valueFormat.format(scale(distribution.percentile(95D).value, unit)), gauge, metric.tags)
     }
 
     def addMetric(metricName: String, value: String, metricType: String, tags: Map[String, String]): Unit = {
-      val customTags = tags.map { case (k, v) ⇒ "\"" + k + ":" + v + "\"" }.toSeq
+      val customTags = tags.map { case (k, v) ⇒ quote"$k:$v" }.toSeq
       val allTagsString = (customTags :+ serviceTag).mkString("[", ",", "]")
 
-      if(seriesBuilder.length() > 0)
-        seriesBuilder.append(",")
+      if (seriesBuilder.length() > 0) seriesBuilder.append(",")
 
       seriesBuilder
-        .append("{\"metric\":\"").append(metricName).append("\",")
-        .append("\"points\":[[").append(String.valueOf(timestamp)).append(",").append(value).append("]],")
-        .append("\"type\":\"").append(metricType).append("\",")
-        .append("\"host\":\"").append(host).append("\",")
-        .append("\"tags\":").append(allTagsString).append("}")
+        .append(s"""{"metric":"$metricName","points":[[$timestamp,$value]],"type":"$metricType","host":"$host","tags":$allTagsString}""")
     }
 
+    def add(metric: MetricValue, metricType: String): Unit =
+      addMetric(metric.name, valueFormat.format(scale(metric.value, metric.unit)), metricType, metric.tags)
 
-    for(counter <- snapshot.metrics.counters) {
-      addCounter(counter)
-    }
+    snapshot.metrics.counters.foreach(add(_, count))
+    snapshot.metrics.gauges.foreach(add(_, gauge))
 
-    for(gauge <- snapshot.metrics.gauges) {
-      addGauge(gauge)
-    }
+    (snapshot.metrics.histograms ++ snapshot.metrics.rangeSamplers).foreach(addDistribution)
 
-    for(metric <- snapshot.metrics.histograms ++ snapshot.metrics.rangeSamplers) {
-      addDistribution(metric)
-    }
-
-    "{\"series\":[" + seriesBuilder.toString() + "]}"
+    seriesBuilder
+      .insert(0, "{\"series\":[")
+      .append("]}")
+      .toString
   }
 
   private def scale(value: Long, unit: MeasurementUnit): Double = unit.dimension match {
-    case Time         if unit.magnitude != time.seconds       => MeasurementUnit.scale(value, unit, time.seconds)
-    case Information  if unit.magnitude != information.bytes  => MeasurementUnit.scale(value, unit, information.bytes)
-    case _ => value
+    case Time if unit.magnitude != time.seconds.magnitude             => MeasurementUnit.scale(value, unit, time.seconds)
+    case Information if unit.magnitude != information.bytes.magnitude => MeasurementUnit.scale(value, unit, information.bytes)
+    case _                                                            => value.toDouble
   }
 
   private def createHttpClient(config: Configuration): DefaultAsyncHttpClient =
@@ -142,10 +121,6 @@ class DatadogAPIReporter extends MetricReporter {
       .setReadTimeout(config.connectTimeout.toMillis.toInt)
       .setRequestTimeout(config.connectTimeout.toMillis.toInt)
       .build())
-
-  private def stopHttpClient(): Unit = {
-    httpClient.foreach(_.close())
-  }
 
   private def readConfiguration(config: Config): Configuration = {
     val datadogConfig = config.getConfig("kamon.datadog")
@@ -156,12 +131,20 @@ class DatadogAPIReporter extends MetricReporter {
       readTimeout = datadogConfig.getDuration("http.read-timeout"),
       requestTimeout = datadogConfig.getDuration("http.request-timeout"),
       timeUnit = readTimeUnit(datadogConfig.getString("time-unit")),
-      informationUnit = readInformationUnit(datadogConfig.getString("information-unit"))
-    )
+      informationUnit = readInformationUnit(datadogConfig.getString("information-unit")))
   }
-
-  private case class Configuration(apiKey: String, connectTimeout: Duration, readTimeout: Duration, requestTimeout: Duration,
-    timeUnit: MeasurementUnit, informationUnit: MeasurementUnit)
-
 }
 
+private object DatadogAPIReporter {
+  val apiUrl = "https://app.datadoghq.com/api/v1/series?api_key="
+
+  val count = "count"
+  val gauge = "gauge"
+
+  case class Configuration(apiKey: String, connectTimeout: Duration, readTimeout: Duration, requestTimeout: Duration,
+                           timeUnit: MeasurementUnit, informationUnit: MeasurementUnit)
+
+  implicit class QuoteInterp(val sc: StringContext) extends AnyVal {
+    def quote(args: Any*): String = "\"" + sc.s(args: _*) + "\""
+  }
+}

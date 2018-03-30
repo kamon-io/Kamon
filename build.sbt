@@ -13,22 +13,34 @@
  * =========================================================================================
  */
 
-val kamonCore         = "io.kamon"               %% "kamon-core"          % "1.0.0"
-val kamonTestKit      = "io.kamon"               %% "kamon-testkit"       % "1.0.0"
-val asyncHttpClient   = "org.asynchttpclient"     % "async-http-client"   % "2.0.25"
+import scalariform.formatter.preferences._
+import com.typesafe.sbt.SbtScalariform.ScalariformKeys
+
+val kamonCore         = "io.kamon"               %% "kamon-core"          % "1.1.0"
+val kamonTestKit      = "io.kamon"               %% "kamon-testkit"       % "1.1.0"
+val asyncHttpClient   = "org.asynchttpclient"     % "async-http-client"   % "2.4.4"
 
 lazy val root = (project in file("."))
   .settings(name := "kamon-datadog")
   .settings(
-      libraryDependencies ++=
-        compileScope(kamonCore, asyncHttpClient, scalaCompact.value) ++
-        testScope(scalatest, slf4jApi, slf4jnop, kamonCore))
-
+    libraryDependencies ++=
+      compileScope(kamonCore, asyncHttpClient, scalaCompact.value) ++
+        testScope(scalatest, slf4jApi, slf4jnop, kamonCore),
+    ScalariformKeys.preferences := formatSettings(ScalariformKeys.preferences.value))
 
 
 def scalaCompact = Def.setting {
   scalaBinaryVersion.value match {
-    case "2.10" | "2.11" => "org.scala-lang.modules" %% "scala-java8-compat"  % "0.5.0"
-    case "2.12"          => "org.scala-lang.modules" %% "scala-java8-compat"  % "0.8.0"
-   }
- }
+    case "2.10" | "2.11" => "org.scala-lang.modules" %% "scala-java8-compat" % "0.5.0"
+    case "2.12"          => "org.scala-lang.modules" %% "scala-java8-compat" % "0.8.0"
+  }
+}
+
+def formatSettings(prefs: IFormattingPreferences) = prefs
+  .setPreference(AlignParameters, true)
+  .setPreference(AlignSingleLineCaseStatements, true)
+  .setPreference(AlignSingleLineCaseStatements.MaxArrowIndent, 60)
+  .setPreference(DoubleIndentConstructorArguments, false)
+  .setPreference(DoubleIndentMethodDeclaration, false)
+  .setPreference(DanglingCloseParenthesis, Preserve)
+  .setPreference(NewlineAtEndOfFile, true)
