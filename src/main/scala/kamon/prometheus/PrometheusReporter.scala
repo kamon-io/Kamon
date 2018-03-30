@@ -57,7 +57,8 @@ class PrometheusReporter extends MetricReporter {
   override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
     snapshotAccumulator.add(snapshot)
     val currentData = snapshotAccumulator.peek()
-    val scrapeDataBuilder = new ScrapeDataBuilder(readConfiguration(Kamon.config()))
+    val reporterConfiguration = readConfiguration(Kamon.config())
+    val scrapeDataBuilder = new ScrapeDataBuilder(reporterConfiguration, environmentTags(reporterConfiguration))
 
     scrapeDataBuilder.appendCounters(currentData.metrics.counters)
     scrapeDataBuilder.appendGauges(currentData.metrics.gauges)
@@ -97,12 +98,17 @@ class PrometheusReporter extends MetricReporter {
       embeddedServerPort = prometheusConfig.getInt("embedded-server.port"),
       defaultBuckets = prometheusConfig.getDoubleList("buckets.default-buckets").asScala,
       timeBuckets = prometheusConfig.getDoubleList("buckets.time-buckets").asScala,
-      informationBuckets = prometheusConfig.getDoubleList("buckets.information-buckets").asScala
+      informationBuckets = prometheusConfig.getDoubleList("buckets.information-buckets").asScala,
+      includeEnvironmentTags = prometheusConfig.getBoolean("include-environment-tags")
     )
   }
+
+  private def environmentTags(reporterConfiguration: PrometheusReporter.Configuration) =
+    if (reporterConfiguration.includeEnvironmentTags) Kamon.environment.tags else Map.empty[String, String]
 }
 
 object PrometheusReporter {
   case class Configuration(startEmbeddedServer: Boolean, embeddedServerHostname: String, embeddedServerPort: Int,
-    defaultBuckets: Seq[java.lang.Double], timeBuckets: Seq[java.lang.Double], informationBuckets: Seq[java.lang.Double])
+    defaultBuckets: Seq[java.lang.Double], timeBuckets: Seq[java.lang.Double], informationBuckets: Seq[java.lang.Double],
+    includeEnvironmentTags: Boolean)
 }

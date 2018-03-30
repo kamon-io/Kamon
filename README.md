@@ -61,3 +61,25 @@ scrape_configs:
 
 [1]: https://github.com/kamon-io/kamon-prometheus/blob/master/src/main/resources/reference.conf
 [2]: http://prometheus.io/docs/operating/configuration/#scrape-configurations-scrape_config
+
+#### Custom environment tags
+Kamon allows you to provide custom environment tags to all your metrics by configuring `kamon.environment.tags` in your `application.conf`, e.g.
+```
+kamon.environment.tags {
+  custom.id = "test1"
+  env = staging
+}
+```
+In order to include these tags in your Prometheus metrics as well, you need to activate this feature for the `PrometheusReporter` by setting
+```
+kamon.prometheus.include-environment-tags = yes
+```
+in your `application.conf` as well, yielding, for example
+```
+# TYPE some_metric_seconds_total counter
+some_metric_seconds_total{custom_id="test1",env="staging"} 10.0
+# TYPE some_metric_seconds gauge
+some_metric_seconds{custom_id="test1",env="staging"} 10.0
+```
+
+Note that environment tags always have precedence over any other custom tag that may have been set by the application at runtime.

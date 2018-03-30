@@ -19,12 +19,13 @@ import java.lang.StringBuilder
 import java.text.{DecimalFormat, DecimalFormatSymbols}
 import java.util.Locale
 
+import kamon.Environment
 import kamon.metric.{MetricDistribution, MetricValue}
 import kamon.metric.MeasurementUnit
 import kamon.metric.MeasurementUnit.{information, time, none}
 import kamon.metric.MeasurementUnit.Dimension._
 
-class ScrapeDataBuilder(prometheusConfig: PrometheusReporter.Configuration) {
+class ScrapeDataBuilder(prometheusConfig: PrometheusReporter.Configuration, environmentTags: Map[String, String] = Map.empty) {
   private val builder = new StringBuilder()
   private val decimalFormatSymbols = DecimalFormatSymbols.getInstance(Locale.ROOT)
   private val numberFormat = new DecimalFormat("#0.0########", decimalFormatSymbols)
@@ -140,9 +141,10 @@ class ScrapeDataBuilder(prometheusConfig: PrometheusReporter.Configuration) {
 
 
   private def appendTags(tags: Map[String, String]): Unit = {
-    if(tags.nonEmpty) append("{")
+    val allTags = tags ++ environmentTags
+    if(allTags.nonEmpty) append("{")
 
-    val tagIterator = tags.iterator
+    val tagIterator = allTags.iterator
     var tagCount = 0
 
     while(tagIterator.hasNext) {
@@ -152,7 +154,7 @@ class ScrapeDataBuilder(prometheusConfig: PrometheusReporter.Configuration) {
       tagCount += 1
     }
 
-    if(tags.nonEmpty) append("}")
+    if(allTags.nonEmpty) append("}")
   }
 
   private def normalizeMetricName(metricName: String, unit: MeasurementUnit): String = {

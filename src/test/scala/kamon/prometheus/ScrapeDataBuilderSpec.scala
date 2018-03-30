@@ -183,10 +183,43 @@ class ScrapeDataBuilderSpec extends WordSpec with Matchers {
         """.stripMargin.trim()
       }
     }
+
+    "include global custom tags from the Kamon.environment.tags" in {
+      val counterOne = MetricValue("counter-one", Map("tag.with.dots" -> "value"), time.seconds, 10)
+      val gaugeOne = MetricValue("gauge-one", Map.empty, time.seconds, 20)
+
+      builder(environmentTags = Map("env_key" -> "env_value"))
+      .appendCounters(Seq(counterOne))
+      .appendGauges(Seq(gaugeOne))
+      .build() should include {
+        """
+          |# TYPE counter_one_seconds_total counter
+          |counter_one_seconds_total{tag_with_dots="value",env_key="env_value"} 10.0
+          |# TYPE gauge_one_seconds gauge
+          |gauge_one_seconds{env_key="env_value"} 20.0
+        """.stripMargin.trim()
+      }
+    }
+
+    "let environment tags have precedence over custom tags" in {
+      val metric = MetricValue("some-metric", Map("custom.tag" -> "custom-value"), time.seconds, 10)
+
+      builder(environmentTags = Map("custom.tag" -> "environment-value"))
+        .appendCounters(Seq(metric))
+        .appendGauges(Seq(metric))
+        .build() should include {
+        """
+          |# TYPE some_metric_seconds_total counter
+          |some_metric_seconds_total{custom_tag="environment-value"} 10.0
+          |# TYPE some_metric_seconds gauge
+          |some_metric_seconds{custom_tag="environment-value"} 10.0
+        """.stripMargin.trim()
+      }
+    }
   }
 
-  private def builder(buckets: Seq[java.lang.Double] = Seq(5D, 7D, 8D, 9D, 10D, 11D, 12D)) = new ScrapeDataBuilder(
-    PrometheusReporter.Configuration(false, "localhost", 1, buckets, buckets, buckets)
+  private def builder(buckets: Seq[java.lang.Double] = Seq(5D, 7D, 8D, 9D, 10D, 11D, 12D), environmentTags: Map[String, String] = Map.empty) = new ScrapeDataBuilder(
+    PrometheusReporter.Configuration(false, "localhost", 1, buckets, buckets, buckets, false), environmentTags
   )
 
   private def constantDistribution(name: String, tags: Map[String, String], unit: MeasurementUnit, lower: Int, upper: Int): MetricDistribution = {
