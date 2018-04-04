@@ -17,18 +17,18 @@
 package kamon.datadog
 
 import java.lang.StringBuilder
-import java.text.{ DecimalFormat, DecimalFormatSymbols }
+import java.text.{DecimalFormat, DecimalFormatSymbols}
 import java.time.Duration
 import java.util.Locale
+import java.util.concurrent.TimeUnit
 
 import com.typesafe.config.Config
-import io.netty.handler.codec.http.{ HttpHeaderNames, HttpHeaderValues }
 import kamon.metric._
 import kamon.metric.MeasurementUnit
-import kamon.metric.MeasurementUnit.Dimension.{ Information, Time }
-import kamon.metric.MeasurementUnit.{ information, time }
-import kamon.{ Kamon, MetricReporter }
-import org.asynchttpclient.{ DefaultAsyncHttpClient, DefaultAsyncHttpClientConfig }
+import kamon.metric.MeasurementUnit.Dimension.{Information, Time}
+import kamon.metric.MeasurementUnit.{information, time}
+import kamon.{Kamon, MetricReporter}
+import okhttp3.{MediaType, OkHttpClient, Request, RequestBody}
 import org.slf4j.LoggerFactory
 
 class DatadogAPIReporter extends MetricReporter {
@@ -37,36 +37,34 @@ class DatadogAPIReporter extends MetricReporter {
   private val logger = LoggerFactory.getLogger(classOf[DatadogAPIReporter])
   private val symbols = DecimalFormatSymbols.getInstance(Locale.US)
 
+  private val jsonType = MediaType.parse("application/json; charset=utf-8")
+
   symbols.setDecimalSeparator('.') // Just in case there is some weird locale config we are not aware of.
 
   private val valueFormat = new DecimalFormat("#0.#########", symbols)
 
-  private var httpClient: Option[DefaultAsyncHttpClient] = None
+  private var httpClient: OkHttpClient = createHttpClient(readConfiguration(Kamon.config()))
 
   private var configuration = readConfiguration(Kamon.config())
 
   override def start(): Unit = {
-    httpClient = Option(createHttpClient(readConfiguration(Kamon.config())))
     logger.info("Started the Datadog API reporter.")
   }
 
   override def stop(): Unit = {
-    httpClient.foreach(_.close())
     logger.info("Stopped the Datadog API reporter.")
   }
 
   override def reconfigure(config: Config): Unit = {
     val newConfiguration = readConfiguration(config)
-    httpClient.foreach(_.close())
-    httpClient = Option(createHttpClient(newConfiguration))
+    httpClient = createHttpClient(readConfiguration(Kamon.config()))
     configuration = newConfiguration
   }
 
   override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
-    httpClient.foreach(_.preparePost(apiUrl + configuration.apiKey)
-      .setBody(buildRequestBody(snapshot))
-      .setHeader(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON)
-      .execute())
+    val body = RequestBody.create(jsonType, buildRequestBody(snapshot))
+    val request = new Request.Builder().url(apiUrl + configuration.apiKey).post(body).build
+    httpClient.newCall(request).execute
   }
 
   private def buildRequestBody(snapshot: PeriodSnapshot): String = {
@@ -115,12 +113,13 @@ class DatadogAPIReporter extends MetricReporter {
     case _                                                            => value.toDouble
   }
 
-  private def createHttpClient(config: Configuration): DefaultAsyncHttpClient =
-    new DefaultAsyncHttpClient(new DefaultAsyncHttpClientConfig.Builder()
-      .setConnectTimeout(config.connectTimeout.toMillis.toInt)
-      .setReadTimeout(config.connectTimeout.toMillis.toInt)
-      .setRequestTimeout(config.connectTimeout.toMillis.toInt)
-      .build())
+  // Apparently okhttp doesn't require explicit closing of the connection
+  private def createHttpClient(config: Configuration): OkHttpClient = {
+    new OkHttpClient.Builder()
+    .connectTimeout(config.connectTimeout.toMillis, TimeUnit.MILLISECONDS)
+    .readTimeout(config.connectTimeout.toMillis, TimeUnit.MILLISECONDS)
+    .writeTimeout(config.connectTimeout.toMillis, TimeUnit.MILLISECONDS).build()
+  }
 
   private def readConfiguration(config: Config): Configuration = {
     val datadogConfig = config.getConfig("kamon.datadog")
