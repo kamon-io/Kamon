@@ -26,7 +26,7 @@ trait GenericRequest {
   val headers: Map[String, String]
   val method: String
   val url: String
-  val spanKind: String
+  val component: String
 }
 
 trait GenericResponse {
@@ -45,8 +45,8 @@ object RequestHandlerInstrumentation {
     val serverSpan = Kamon.buildSpan("unknown-operation")
       .asChildOf(incomingContext.get(Span.ContextKey))
       .withMetricTag("span.kind", "server")
-      .withTag("component", request.spanKind)
-      .withTag("http.method", request.method)
+      .withMetricTag("component", request.component)
+      .withMetricTag("http.method", request.method)
       .withTag("http.url", request.url)
       .start()
 

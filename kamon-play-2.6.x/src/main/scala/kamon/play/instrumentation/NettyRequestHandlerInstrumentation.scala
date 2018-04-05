@@ -33,7 +33,7 @@ object NettyRequestHandlerInstrumentation {
     }
     override val method: String = request.method().name()
     override val url: String = request.uri()
-    override val spanKind = "play.server.netty"
+    override val component = "play.server.netty"
   }
 
   case class NettyGenericResponse(response: HttpResponse) extends GenericResponse {
