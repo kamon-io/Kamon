@@ -15,7 +15,7 @@
 
 val play24Version     = "2.4.11"
 val play25Version     = "2.5.18"
-val play26Version     = "2.6.10"
+val play26Version     = "2.6.12"
 
 val kamonCore         = "io.kamon"                  %%  "kamon-core"            % "1.1.0"
 val kamonScala        = "io.kamon"                  %%  "kamon-scala-future"    % "1.0.0"
@@ -84,8 +84,8 @@ lazy val kamonPlay26 = Project("kamon-play-26", file("kamon-play-2.6.x"))
   .settings(Seq(
     bintrayPackage := "kamon-play",
     moduleName := "kamon-play-2.6",
-    scalaVersion := "2.12.3",
-    crossScalaVersions := Seq("2.12.3"),
+    scalaVersion := "2.12.4",
+    crossScalaVersions := Seq("2.11.12", "2.12.4"),
     testGrouping in Test := singleTestPerJvm((definedTests in Test).value, (javaOptions in Test).value)))
   .settings(javaAgents += "org.aspectj" % "aspectjweaver"  % "1.8.10"  % "compile;test")
   .settings(resolvers += Resolver.bintrayRepo("kamon-io", "snapshots"))
