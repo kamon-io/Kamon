@@ -37,7 +37,9 @@ object SpanCodec {
         val spanContext = span.context()
         carrier.put(Headers.TraceIdentifier, urlEncode(spanContext.traceID.string))
         carrier.put(Headers.SpanIdentifier, urlEncode(spanContext.spanID.string))
-        carrier.put(Headers.ParentSpanIdentifier, urlEncode(spanContext.parentID.string))
+
+        if(spanContext.parentID != IdentityProvider.NoIdentifier)
+          carrier.put(Headers.ParentSpanIdentifier, urlEncode(spanContext.parentID.string))
 
         encodeSamplingDecision(spanContext.samplingDecision).foreach { samplingDecision =>
           carrier.put(Headers.Sampled, samplingDecision)

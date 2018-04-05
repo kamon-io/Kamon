@@ -28,11 +28,17 @@ class B3SpanCodecSpec extends WordSpecLike with Matchers with OptionValues with 
 
   "The ExtendedB3 SpanContextCodec" should {
     "return a TextMap containing the SpanContext data" in {
-      val context = testContext()
-
-      val textMap = extendedB3Codec.encode(context)
+      val textMap = extendedB3Codec.encode(testContext())
       textMap.get("X-B3-TraceId").value shouldBe "1234"
       textMap.get("X-B3-ParentSpanId").value shouldBe "2222"
+      textMap.get("X-B3-SpanId").value shouldBe "4321"
+      textMap.get("X-B3-Sampled").value shouldBe "1"
+    }
+
+    "do not include the X-B3-ParentSpanId if there is no parent" in {
+      val textMap = extendedB3Codec.encode(testContextWithoutParent())
+      textMap.get("X-B3-TraceId").value shouldBe "1234"
+      textMap.get("X-B3-ParentSpanId") shouldBe empty
       textMap.get("X-B3-SpanId").value shouldBe "4321"
       textMap.get("X-B3-Sampled").value shouldBe "1"
     }
@@ -184,6 +190,16 @@ class B3SpanCodecSpec extends WordSpecLike with Matchers with OptionValues with 
       traceID = Identifier("1234", Array[Byte](1, 2, 3, 4)),
       spanID = Identifier("4321", Array[Byte](4, 3, 2, 1)),
       parentID = Identifier("2222", Array[Byte](2, 2, 2, 2))
+    )
+
+    Context.create().withKey(Span.ContextKey, Span.Remote(spanContext))
+  }
+
+  def testContextWithoutParent(): Context = {
+    val spanContext = createSpanContext().copy(
+      traceID = Identifier("1234", Array[Byte](1, 2, 3, 4)),
+      spanID = Identifier("4321", Array[Byte](4, 3, 2, 1)),
+      parentID = IdentityProvider.NoIdentifier
     )
 
     Context.create().withKey(Span.ContextKey, Span.Remote(spanContext))
