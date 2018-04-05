@@ -15,48 +15,54 @@
 
 package kamon.play.instrumentation
 
-import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
 import kamon.Kamon
 import kamon.context.Context
-import kamon.play.OperationNameFilter
 import kamon.trace.Span
 import kamon.util.CallingThreadExecutionContext
-import org.aspectj.lang.ProceedingJoinPoint
-import org.aspectj.lang.annotation._
-import play.api.mvc.EssentialFilter
 
 import scala.concurrent.Future
 
-@Aspect
-class RequestHandlerInstrumentation {
+trait GenericRequest {
+  val headers: Map[String, String]
+  val method: String
+  val url: String
+  val spanKind: String
+}
 
-  private lazy val filter: EssentialFilter = new OperationNameFilter()
+trait GenericResponse {
+  def statusCode: Int
+  def reason: String
+}
 
-  @Around("execution(* play.core.server.AkkaHttpServer.handleRequest(..)) && args(request, *)")
-  def routeRequestNumberTwo(pjp: ProceedingJoinPoint, request: HttpRequest): Any = {
-    val incomingContext = decodeContext(request)
+trait GenericResponseBuilder[T] {
+  def build(response: T): GenericResponse
+}
+
+object RequestHandlerInstrumentation {
+
+  def handleRequest[T](responseInvocation: => Future[T], request: GenericRequest)(implicit builder: GenericResponseBuilder[T]): Future[T] = {
+    val incomingContext = context(request.headers)
     val serverSpan = Kamon.buildSpan("unknown-operation")
       .asChildOf(incomingContext.get(Span.ContextKey))
       .withMetricTag("span.kind", "server")
-      .withTag("component", "play.server")
-      .withTag("http.method", request.method.value)
-      .withTag("http.url", request.getUri.toString)
+      .withTag("component", request.spanKind)
+      .withTag("http.method", request.method)
+      .withTag("http.url", request.url)
       .start()
 
-    val responseFuture = Kamon.withContext(incomingContext.withKey(Span.ContextKey, serverSpan)) {
-      pjp.proceed().asInstanceOf[Future[HttpResponse]]
-    }
+    val responseFuture = Kamon.withContext(incomingContext.withKey(Span.ContextKey, serverSpan))(responseInvocation)
 
     responseFuture.transform(
       s = response => {
-        val responseStatus = response.status
-        serverSpan.tag("http.status_code", responseStatus.intValue())
+        val genericResponse = builder.build(response)
+        val statusCode = genericResponse.statusCode
+        serverSpan.tag("http.status_code", statusCode)
 
-        if(isError(responseStatus.intValue())) {
-          serverSpan.addError("error")
+        if(isError(statusCode)) {
+          serverSpan.addError(genericResponse.reason)
         }
 
-        if(responseStatus.intValue() == StatusCodes.NotFound)
+        if(statusCode == StatusCodes.NotFound)
           serverSpan.setOperationName("not-found")
 
         serverSpan.finish()
@@ -68,10 +74,5 @@ class RequestHandlerInstrumentation {
         error
       }
     )(CallingThreadExecutionContext)
-  }
-
-  @Around("call(* play.api.http.HttpFilters.filters(..))")
-  def filters(pjp: ProceedingJoinPoint): Any = {
-    filter +: pjp.proceed().asInstanceOf[Seq[EssentialFilter]]
   }
 }

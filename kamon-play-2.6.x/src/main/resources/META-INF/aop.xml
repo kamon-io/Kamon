@@ -2,7 +2,8 @@
 
 <aspectj>
   <aspects>
-    <aspect name="kamon.play.instrumentation.RequestHandlerInstrumentation"/>
+    <aspect name="kamon.play.instrumentation.AkkaHttpRequestHandlerInstrumentation"/>
+    <aspect name="kamon.play.instrumentation.NettyRequestHandlerInstrumentation"/>
     <aspect name="kamon.play.instrumentation.WSInstrumentation"/>
   </aspects>
 
