@@ -49,7 +49,9 @@ class AkkaHttpRequestHandlerInstrumentation {
 
   private lazy val filter: EssentialFilter = new OperationNameFilter()
 
-  @Around("execution(* play.core.server.AkkaHttpServer.handleRequest(..)) && args(request, *)")
+  //In scala 2.11 play.core.server.AkkaHttpServer#handleRequest is compiled into play.core.server.AkkaHttpServer#play$core$server$AkkaHttpServer$$handleRequest
+  //so we use wildcard "*handleRequest" in the pointcut...
+  @Around("execution(* play.core.server.AkkaHttpServer.*handleRequest(..)) && args(request, *)")
   def routeRequestNumberTwo(pjp: ProceedingJoinPoint, request: HttpRequest): Any = {
     import AkkaHttpRequestHandlerInstrumentation._
     RequestHandlerInstrumentation.handleRequest(pjp.proceed().asInstanceOf[Future[HttpResponse]], AkkaHttpGenericRequest(request))
