@@ -26,14 +26,14 @@ package object instrumentation {
     request.addHttpHeaders(textMap.values.toSeq: _*)
   }
 
-  def context(headers: Map[String, String]): Context = {
-    val headersTextMap = readOnlyTextMapFromHeaders(headers)
+  def context(request: GenericRequest): Context = {
+    val headersTextMap = readOnlyTextMapFromHeaders(request)
     Kamon.contextCodec().HttpHeaders.decode(headersTextMap)
   }
 
-  private def readOnlyTextMapFromHeaders(headers: Map[String, String]): TextMap = new TextMap {
-    override def values: Iterator[(String, String)] = headers.iterator
-    override def get(key: String): Option[String] = headers.get(key)
+  private def readOnlyTextMapFromHeaders(request: GenericRequest): TextMap = new TextMap {
+    override def values: Iterator[(String, String)] = Iterator.empty
+    override def get(key: String): Option[String] = request.getHeader(key)
     override def put(key: String, value: String): Unit = {}
   }
 

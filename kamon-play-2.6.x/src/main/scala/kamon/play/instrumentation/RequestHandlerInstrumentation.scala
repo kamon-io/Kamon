@@ -23,7 +23,7 @@ import kamon.util.CallingThreadExecutionContext
 import scala.concurrent.Future
 
 trait GenericRequest {
-  val headers: Map[String, String]
+  val getHeader: String => Option[String]
   val method: String
   val url: String
   val component: String
@@ -41,7 +41,7 @@ trait GenericResponseBuilder[T] {
 object RequestHandlerInstrumentation {
 
   def handleRequest[T](responseInvocation: => Future[T], request: GenericRequest)(implicit builder: GenericResponseBuilder[T]): Future[T] = {
-    val incomingContext = context(request.headers)
+    val incomingContext = context(request)
     val serverSpan = Kamon.buildSpan("unknown-operation")
       .asChildOf(incomingContext.get(Span.ContextKey))
       .withMetricTag("span.kind", "server")
