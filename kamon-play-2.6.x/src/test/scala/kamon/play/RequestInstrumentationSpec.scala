@@ -35,12 +35,25 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.ws.{StandaloneWSRequest, WSClient}
 import play.api.mvc.Results.{NotFound, Ok}
 import play.api.mvc._
+import play.api.mvc.request.RequestAttrKey
 import play.api.test.Helpers._
 import play.api.test._
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class RequestHandlerInstrumentationSpec extends PlaySpec with GuiceOneServerPerSuite
+class AkkaHTTPRequestHandlerInstrumentationSpec extends {
+  val confFile = "./kamon-play-2.6.x/src/test/resources/conf/application-akka-http.conf"
+  //https://www.playframaework.com/documentation/2.6.x/NettyServer#Verifying-that-the-Netty-server-is-running
+  //The Akka HTTP backend will not set a value for this request attribute.
+  val expectedServer = "undefined"
+} with RequestHandlerInstrumentationSpec
+
+class NettyRequestHandlerInstrumentationSpec extends {
+  val confFile = "./kamon-play-2.6.x/src/test/resources/conf/application-netty.conf"
+  val expectedServer = "netty"
+} with RequestHandlerInstrumentationSpec
+
+abstract class RequestHandlerInstrumentationSpec extends PlaySpec with GuiceOneServerPerSuite
   with ScalaFutures
   with Eventually
   with SpanSugar
@@ -49,7 +62,10 @@ class RequestHandlerInstrumentationSpec extends PlaySpec with GuiceOneServerPerS
   with OptionValues
   with SpanReporter {
 
-  System.setProperty("config.file", "./kamon-play-2.6.x/src/test/resources/conf/application.conf")
+  val confFile: String
+  val expectedServer: String
+
+  System.setProperty("config.file", confFile)
 
   override lazy val port: Port = 19002
 
@@ -61,6 +77,7 @@ class RequestHandlerInstrumentationSpec extends PlaySpec with GuiceOneServerPerS
     case ("GET", "/request-id") ⇒ Action { Ok(Kamon.currentContext().get(requestID).getOrElse("undefined")) }
     case ("GET", "/async") ⇒ Action.async { Future { Ok } }
     case ("GET", "/not-found") ⇒ Action { NotFound }
+    case ("GET", "/server") ⇒ Action { req => Ok(req.attrs.get(RequestAttrKey.Server).getOrElse("undefined")) }
     case ("GET", "/renamed") ⇒
       OperationName("renamed-operation") {
         Action.async {
@@ -88,6 +105,16 @@ class RequestHandlerInstrumentationSpec extends PlaySpec with GuiceOneServerPerS
     .build
 
   "the Request instrumentation" should {
+
+    "check the right server is configured" in {
+      val wsClient = app.injector.instanceOf[WSClient]
+      val endpoint = s"http://localhost:$port/server"
+
+      val response = await(wsClient.url(endpoint).get())
+      response.status mustBe 200
+      response.body mustBe expectedServer
+    }
+
     "propagate the current context and respond to the ok action" in {
       val wsClient = app.injector.instanceOf[WSClient]
       val okSpan = Kamon.buildSpan("ok-operation-span").start()

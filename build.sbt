@@ -24,20 +24,23 @@ val kamonTestkit      = "io.kamon"                  %%  "kamon-testkit"         
 //play 2.4.x
 val play24            = "com.typesafe.play"         %%  "play"                  % play24Version
 val playWS24          = "com.typesafe.play"         %%  "play-ws"               % play24Version
-val playTest24        = "org.scalatestplus"         %%  "play"                  % "1.4.0"
+val playTest24        = "com.typesafe.play"         %%  "play-test"             % play24Version
+val scalatestplus24   = "org.scalatestplus"         %%  "play"                  % "1.4.0"
 val typesafeConfig    = "com.typesafe"              %   "config"                % "1.2.1"
 
 //play 2.5.x
 val play25            = "com.typesafe.play"         %%  "play"                  % play25Version
 val playWS25          = "com.typesafe.play"         %%  "play-ws"               % play25Version
-val playTest25        = "org.scalatestplus.play"    %%  "scalatestplus-play"    % "2.0.0"
+val playTest25        = "com.typesafe.play"         %%  "play-test"             % play25Version
+val scalatestplus25   = "org.scalatestplus.play"    %%  "scalatestplus-play"    % "2.0.0"
 
 //play 2.6.x
 val play26            = "com.typesafe.play"         %%  "play"                  % play26Version
 val playNetty26       = "com.typesafe.play"         %%  "play-netty-server"     % play26Version
 val playWS26          = "com.typesafe.play"         %%  "play-ws"               % play26Version
 val playLogBack26     = "com.typesafe.play"         %%  "play-logback"          % play26Version
-val playTest26        = "org.scalatestplus.play"    %%  "scalatestplus-play"    % "3.0.0"
+val playTest26        = "com.typesafe.play"         %%  "play-test"             % play26Version
+val scalatestplus26   = "org.scalatestplus.play"    %%  "scalatestplus-play"    % "3.0.0"
 val akkaHttp          = "com.typesafe.akka"         %%  "akka-http-core"        % "10.0.8"
 
 
@@ -60,7 +63,7 @@ lazy val kamonPlay24 = Project("kamon-play-24", file("kamon-play-2.4.x"))
     libraryDependencies ++=
       compileScope(play24, playWS24, kamonCore, kamonScala) ++
       providedScope(aspectJ, typesafeConfig) ++
-      testScope(playTest24))
+      testScope(playTest24, scalatestplus24))
 
 lazy val kamonPlay25 = Project("kamon-play-25", file("kamon-play-2.5.x"))
   .enablePlugins(JavaAgent)
@@ -76,7 +79,7 @@ lazy val kamonPlay25 = Project("kamon-play-25", file("kamon-play-2.5.x"))
     libraryDependencies ++=
       compileScope(play25, playWS25, kamonCore, kamonScala) ++
       providedScope(aspectJ, typesafeConfig) ++
-      testScope(playTest25, kamonTestkit, logbackClassic))
+      testScope(playTest25, scalatestplus25, kamonTestkit, logbackClassic))
 
 
 lazy val kamonPlay26 = Project("kamon-play-26", file("kamon-play-2.6.x"))
@@ -93,7 +96,7 @@ lazy val kamonPlay26 = Project("kamon-play-26", file("kamon-play-2.6.x"))
     libraryDependencies ++=
       compileScope(play26, playNetty26, playWS26, kamonCore, kamonScala) ++
         providedScope(aspectJ, typesafeConfig, akkaHttp) ++
-        testScope(playTest26, playLogBack26, kamonTestkit))
+        testScope(playTest26, scalatestplus26, playLogBack26, kamonTestkit))
 
 import sbt.Tests._
 def singleTestPerJvm(tests: Seq[TestDefinition], jvmSettings: Seq[String]): Seq[Group] =
