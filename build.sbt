@@ -16,8 +16,8 @@
 import scalariform.formatter.preferences._
 import com.typesafe.sbt.SbtScalariform.ScalariformKeys
 
-val kamonCore         = "io.kamon"               %% "kamon-core"          % "1.1.0"
-val kamonTestKit      = "io.kamon"               %% "kamon-testkit"       % "1.1.0"
+val kamonCore         = "io.kamon"               %% "kamon-core"          % "1.1.2"
+val kamonTestKit      = "io.kamon"               %% "kamon-testkit"       % "1.1.2"
 val asyncHttpClient   = "com.squareup.okhttp3"    % "okhttp"              % "3.10.0"
 
 lazy val root = (project in file("."))

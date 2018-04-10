@@ -16,23 +16,19 @@
 
 package kamon.datadog
 
-import java.lang.reflect.InvocationTargetException
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
 import java.nio.channels.DatagramChannel
-import java.text.{DecimalFormat, DecimalFormatSymbols}
+import java.text.{ DecimalFormat, DecimalFormatSymbols }
 import java.util.Locale
 
 import com.typesafe.config.Config
-import kamon.metric.MeasurementUnit.Dimension.{Information, Time}
-import kamon.metric.MeasurementUnit.{Dimension, information, time}
-import kamon.metric.{MeasurementUnit, _}
-import kamon.{Kamon, MetricReporter}
+import kamon.metric.MeasurementUnit.Dimension.{ Information, Time }
+import kamon.metric.MeasurementUnit.{ Dimension, information, time }
+import kamon.metric.{ MeasurementUnit, PeriodSnapshot }
+import kamon.util.{ DynamicAccess, EnvironmentTagBuilder }
+import kamon.{ Kamon, MetricReporter }
 import org.slf4j.LoggerFactory
-
-import scala.collection.immutable
-import scala.reflect.ClassTag
-import scala.util.Try
 
 // 1 arg constructor is intended for injecting config via unit tests
 class DatadogAgentReporter private[datadog] (c: DatadogAgentReporter.Configuration) extends MetricReporter {
@@ -112,82 +108,58 @@ object DatadogAgentReporter {
 
   private class DefaultMeasurementFormatter(config: Config) extends MeasurementFormatter {
 
-    private val tagConfig = readTagConfig(config)
+    private val tagFilterKey = config.getString("filter-config-key")
+    private val filter = Kamon.filter(tagFilterKey)
+    private val envTags = EnvironmentTagBuilder.create(config.getConfig("additional-tags"))
 
     override def formatMeasurement(
       measurementData: String,
-      tags: Map[String, String]
-    ): String  = {
+      tags:            Map[String, String]
+    ): String = {
 
-      val filteredTags = Map(tagConfig.serviceTagName -> Kamon.environment.service) ++ tags.filterKeys {
-        case k =>
-          tagConfig.filters.includes.exists(_.pattern.matcher(k).matches()) &&
-          !tagConfig.filters.excludes.exists(_.pattern.matcher(k).matches())
-      }
+      val filteredTags = envTags ++ tags.filterKeys(filter.accept)
 
       val stringTags: String = "#|" + filteredTags.map { case (k, v) ⇒ k + ":" + v }.mkString(",")
 
       StringBuilder.newBuilder
-      .append(measurementData)
-      .append(stringTags)
-      .result()
+        .append(measurementData)
+        .append(stringTags)
+        .result()
     }
   }
 
-
   private[datadog] def readConfiguration(config: Config): Configuration = {
+    val dynamic = new DynamicAccess(getClass.getClassLoader)
     val datadogConfig = config.getConfig("kamon.datadog")
 
     Configuration(
       timeUnit = readTimeUnit(datadogConfig.getString("time-unit")),
       informationUnit = readInformationUnit(datadogConfig.getString("information-unit")),
-      measurementFormatter = getMeasurementFormatter(datadogConfig),
-      packetBuffer = getPacketBuffer(datadogConfig)
+      measurementFormatter = getMeasurementFormatter(datadogConfig, dynamic),
+      packetBuffer = getPacketBuffer(datadogConfig, dynamic)
     )
   }
 
-
-  // Copied from akka
-  private def getClassFor[T: ClassTag](fqcn: String): Try[Class[_ <: T]] =
-    Try[Class[_ <: T]]({
-      val c = Class.forName(fqcn, false, this.getClass.getClassLoader).asInstanceOf[Class[_ <: T]]
-      val t = implicitly[ClassTag[T]].runtimeClass
-      if (t.isAssignableFrom(c)) c else throw new ClassCastException(t + " is not assignable from " + c)
-    })
-
-  // Copied from akka
-  private def createInstanceFor[T: ClassTag](clazz: Class[_], args: immutable.Seq[(Class[_], AnyRef)]): Try[T] =
-    Try {
-      val types = args.map(_._1).toArray
-      val values = args.map(_._2).toArray
-      val constructor = clazz.getDeclaredConstructor(types: _*)
-      constructor.setAccessible(true)
-      val obj = constructor.newInstance(values: _*)
-      val t = implicitly[ClassTag[T]].runtimeClass
-      if (t.isInstance(obj)) obj.asInstanceOf[T] else throw new ClassCastException(clazz.getName + " is not a subtype of " + t)
-    } recover { case i: InvocationTargetException if i.getTargetException ne null ⇒ throw i.getTargetException }
-
-  private def getMeasurementFormatter(config: Config): MeasurementFormatter = {
+  private def getMeasurementFormatter(config: Config, dynamic: DynamicAccess): MeasurementFormatter = {
     config.getString("agent.measurement-formatter") match {
       case "default" => new DefaultMeasurementFormatter(config)
-      case fqn => createInstanceFor(getClassFor[MeasurementFormatter](fqn).get, List(classOf[Config] -> config)).get
+      case fqn       => dynamic.createInstanceFor[MeasurementFormatter](fqn, List(classOf[Config] -> config)).get
     }
   }
 
-  private def getPacketBuffer(config: Config): PacketBuffer = {
+  private def getPacketBuffer(config: Config, dynamic: DynamicAccess): PacketBuffer = {
     config.getString("agent.packetbuffer") match {
       case "default" => new PacketBufferImpl(config)
-      case fqn => createInstanceFor(getClassFor[MeasurementFormatter](fqn).get, List(classOf[Config] -> config)).get
+      case fqn       => dynamic.createInstanceFor[PacketBuffer](fqn, List(classOf[Config] -> config)).get
     }
   }
 
   private[datadog] case class Configuration(
-    timeUnit: MeasurementUnit,
-    informationUnit: MeasurementUnit,
+    timeUnit:             MeasurementUnit,
+    informationUnit:      MeasurementUnit,
     measurementFormatter: MeasurementFormatter,
-    packetBuffer: PacketBuffer
+    packetBuffer:         PacketBuffer
   )
-
 
   trait PacketBuffer {
     def appendMeasurement(key: String, measurementData: String): Unit
@@ -203,7 +175,6 @@ object DatadogAgentReporter {
 
     val maxPacketSizeInBytes = config.getBytes("agent.max-packet-size")
     val remote = new InetSocketAddress(config.getString("agent.hostname"), config.getInt("agent.port"))
-
 
     def appendMeasurement(key: String, measurementData: String): Unit = {
       val data = key + measurementSeparator + measurementData
@@ -224,7 +195,7 @@ object DatadogAgentReporter {
       val channel = DatagramChannel.open()
       try {
         channel.send(ByteBuffer.wrap(data.getBytes), remote)
-      } finally{
+      } finally {
         channel.close()
       }
     }
