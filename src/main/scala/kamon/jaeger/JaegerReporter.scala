@@ -38,8 +38,9 @@ class JaegerReporter extends SpanReporter {
     val jaegerConfig = newConfig.getConfig("kamon.jaeger")
     val host = jaegerConfig.getString("host")
     val port = jaegerConfig.getInt("port")
+    val scheme = if (jaegerConfig.getBoolean("tls")) "https" else "http"
 
-    jaegerClient = new JaegerClient(host, port)
+    jaegerClient = new JaegerClient(host, port, scheme)
   }
 
   override def start(): Unit = {}
@@ -50,10 +51,10 @@ class JaegerReporter extends SpanReporter {
   }
 }
 
-class JaegerClient(host: String, port: Int) {
+class JaegerClient(host: String, port: Int, scheme: String) {
   import scala.collection.JavaConverters._
 
-  val endpoint = s"http://$host:$port/api/traces"
+  val endpoint = s"$scheme://$host:$port/api/traces"
   val process = new Process(Kamon.environment.service)
   val sender = new HttpSender(endpoint)
 
