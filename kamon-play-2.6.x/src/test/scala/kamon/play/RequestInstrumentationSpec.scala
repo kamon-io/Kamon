@@ -93,7 +93,6 @@ abstract class RequestHandlerInstrumentationSpec extends PlaySpec with GuiceOneS
   }
 
   val additionalConfiguration: Map[String, _] = Map(
-    ("play.http.requestHandler", "play.api.http.DefaultHttpRequestHandler"),
     ("logger.root", "OFF"),
     ("logger.play", "OFF"),
     ("logger.application", "OFF"))

@@ -30,7 +30,7 @@ object AkkaHttpRequestHandlerInstrumentation {
     override val headers: Map[String, String] = request.headers.map { h => h.name() -> h.value() }.toMap
     override val method: String = request.method.value
     override val url: String = request.getUri.toString
-    override val spanKind: String = "play.server"
+    override val component: String = "play.server.akka-http"
   }
 
   case class AkkaHttpGenericResponse(response: HttpResponse) extends GenericResponse {
