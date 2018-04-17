@@ -18,15 +18,14 @@ crossScalaVersions := Seq("2.10.6", "2.11.8", "2.12.2")
 resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
 val kamonCore    = "io.kamon" %% "kamon-core"    % "1.0.1"
 val kamonTestkit = "io.kamon" %% "kamon-testkit" % "1.0.1"
-val logback = "ch.qos.logback" % "logback-classic" % "1.2.3"
 
 lazy val root = (project in file("."))
   .settings(name := "kamon-executors")
   .settings(aspectJSettings: _*)
   .settings(
       libraryDependencies ++=
-      compileScope(kamonCore, logback) ++
-      testScope(scalatest, logbackClassic, kamonTestkit) ++
+      compileScope(kamonCore) ++
+      testScope(scalatest, kamonTestkit) ++
       providedScope(aspectJ)
   )
 
