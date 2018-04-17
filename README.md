@@ -18,14 +18,14 @@ To get started with SBT, simply add the following to your `build.sbt` or `pom.xm
 file:
 
 ```scala
-libraryDependencies += "io.kamon" %% "kamon-jaeger" % "1.0.1"
+libraryDependencies += "io.kamon" %% "kamon-jaeger" % "1.0.2"
 ```
 
 ```xml
 <dependency>
     <groupId>io.kamon</groupId>
     <artifactId>kamon-jaeger_2.12</artifactId>
-    <version>1.0.1</version>
+    <version>1.0.2</version>
 </dependency>
 ```
 
