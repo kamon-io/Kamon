@@ -1,7 +1,7 @@
 package kamon
 
 import kamon.metric.MeasurementUnit
-import kamon.metric.MeasurementUnit.{ time, information }
+import kamon.metric.MeasurementUnit.{ information, time }
 
 package object datadog {
 
@@ -20,5 +20,4 @@ package object datadog {
     case "gb"  => information.gigabytes
     case other => sys.error(s"Invalid time unit setting [$other], the possible values are [b, kb, mb, gb]")
   }
-
 }

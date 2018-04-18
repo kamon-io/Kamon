@@ -20,15 +20,16 @@ import java.lang.StringBuilder
 import java.text.{ DecimalFormat, DecimalFormatSymbols }
 import java.time.Duration
 import java.util.Locale
+import java.util.concurrent.TimeUnit
 
 import com.typesafe.config.Config
-import io.netty.handler.codec.http.{ HttpHeaderNames, HttpHeaderValues }
 import kamon.metric._
 import kamon.metric.MeasurementUnit
 import kamon.metric.MeasurementUnit.Dimension.{ Information, Time }
 import kamon.metric.MeasurementUnit.{ information, time }
+import kamon.util.{ EnvironmentTagBuilder, Matcher }
 import kamon.{ Kamon, MetricReporter }
-import org.asynchttpclient.{ DefaultAsyncHttpClient, DefaultAsyncHttpClientConfig }
+import okhttp3.{ MediaType, OkHttpClient, Request, RequestBody }
 import org.slf4j.LoggerFactory
 
 class DatadogAPIReporter extends MetricReporter {
@@ -37,41 +38,39 @@ class DatadogAPIReporter extends MetricReporter {
   private val logger = LoggerFactory.getLogger(classOf[DatadogAPIReporter])
   private val symbols = DecimalFormatSymbols.getInstance(Locale.US)
 
+  private val jsonType = MediaType.parse("application/json; charset=utf-8")
+
   symbols.setDecimalSeparator('.') // Just in case there is some weird locale config we are not aware of.
 
   private val valueFormat = new DecimalFormat("#0.#########", symbols)
 
-  private var httpClient: Option[DefaultAsyncHttpClient] = None
-
   private var configuration = readConfiguration(Kamon.config())
 
+  private var httpClient: OkHttpClient = createHttpClient(configuration)
+
   override def start(): Unit = {
-    httpClient = Option(createHttpClient(readConfiguration(Kamon.config())))
     logger.info("Started the Datadog API reporter.")
   }
 
   override def stop(): Unit = {
-    httpClient.foreach(_.close())
     logger.info("Stopped the Datadog API reporter.")
   }
 
   override def reconfigure(config: Config): Unit = {
     val newConfiguration = readConfiguration(config)
-    httpClient.foreach(_.close())
-    httpClient = Option(createHttpClient(newConfiguration))
+    httpClient = createHttpClient(readConfiguration(Kamon.config()))
     configuration = newConfiguration
   }
 
   override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
-    httpClient.foreach(_.preparePost(apiUrl + configuration.apiKey)
-      .setBody(buildRequestBody(snapshot))
-      .setHeader(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON)
-      .execute())
+    val body = RequestBody.create(jsonType, buildRequestBody(snapshot))
+    val request = new Request.Builder().url(apiUrl + configuration.apiKey).post(body).build
+    httpClient.newCall(request).execute
   }
 
-  private def buildRequestBody(snapshot: PeriodSnapshot): String = {
+  private[datadog] def buildRequestBody(snapshot: PeriodSnapshot): String = {
     val timestamp = snapshot.from.getEpochSecond.toString
-    val serviceTag = quote"service:${Kamon.environment.service}"
+
     val host = Kamon.environment.host
     val seriesBuilder = new StringBuilder()
 
@@ -86,8 +85,9 @@ class DatadogAPIReporter extends MetricReporter {
     }
 
     def addMetric(metricName: String, value: String, metricType: String, tags: Map[String, String]): Unit = {
-      val customTags = tags.map { case (k, v) ⇒ quote"$k:$v" }.toSeq
-      val allTagsString = (customTags :+ serviceTag).mkString("[", ",", "]")
+      println(tags)
+      val customTags = (configuration.extraTags ++ tags.filterKeys(configuration.tagFilter.accept)).map { case (k, v) ⇒ quote"$k:$v" }.toSeq
+      val allTagsString = customTags.mkString("[", ",", "]")
 
       if (seriesBuilder.length() > 0) seriesBuilder.append(",")
 
@@ -115,23 +115,29 @@ class DatadogAPIReporter extends MetricReporter {
     case _                                                            => value.toDouble
   }
 
-  private def createHttpClient(config: Configuration): DefaultAsyncHttpClient =
-    new DefaultAsyncHttpClient(new DefaultAsyncHttpClientConfig.Builder()
-      .setConnectTimeout(config.connectTimeout.toMillis.toInt)
-      .setReadTimeout(config.connectTimeout.toMillis.toInt)
-      .setRequestTimeout(config.connectTimeout.toMillis.toInt)
-      .build())
+  // Apparently okhttp doesn't require explicit closing of the connection
+  private def createHttpClient(config: Configuration): OkHttpClient = {
+    new OkHttpClient.Builder()
+      .connectTimeout(config.connectTimeout.toMillis, TimeUnit.MILLISECONDS)
+      .readTimeout(config.connectTimeout.toMillis, TimeUnit.MILLISECONDS)
+      .writeTimeout(config.connectTimeout.toMillis, TimeUnit.MILLISECONDS).build()
+  }
 
   private def readConfiguration(config: Config): Configuration = {
     val datadogConfig = config.getConfig("kamon.datadog")
 
+    println(datadogConfig.getString("filter-config-key"))
     Configuration(
       apiKey = datadogConfig.getString("http.api-key"),
       connectTimeout = datadogConfig.getDuration("http.connect-timeout"),
       readTimeout = datadogConfig.getDuration("http.read-timeout"),
       requestTimeout = datadogConfig.getDuration("http.request-timeout"),
       timeUnit = readTimeUnit(datadogConfig.getString("time-unit")),
-      informationUnit = readInformationUnit(datadogConfig.getString("information-unit")))
+      informationUnit = readInformationUnit(datadogConfig.getString("information-unit")),
+      // Remove the "host" tag since it gets added to the datadog payload separately
+      EnvironmentTagBuilder.create(datadogConfig.getConfig("additional-tags")) - "host",
+      Kamon.filter(datadogConfig.getString("filter-config-key"))
+    )
   }
 }
 
@@ -142,7 +148,7 @@ private object DatadogAPIReporter {
   val gauge = "gauge"
 
   case class Configuration(apiKey: String, connectTimeout: Duration, readTimeout: Duration, requestTimeout: Duration,
-                           timeUnit: MeasurementUnit, informationUnit: MeasurementUnit)
+                           timeUnit: MeasurementUnit, informationUnit: MeasurementUnit, extraTags: Map[String, String], tagFilter: Matcher)
 
   implicit class QuoteInterp(val sc: StringContext) extends AnyVal {
     def quote(args: Any*): String = "\"" + sc.s(args: _*) + "\""

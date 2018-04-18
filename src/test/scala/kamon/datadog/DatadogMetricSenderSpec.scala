@@ -15,146 +15,119 @@
  */
 
 package kamon.datadog
-/*
-import akka.testkit.{TestKitBase, TestProbe}
-import akka.actor.{Props, ActorRef, ActorSystem}
-import kamon.Kamon
-import kamon.metric.instrument._
-import kamon.testkit.BaseKamonSpec
-import kamon.util.MilliTimestamp
-import org.scalatest.{Matchers, WordSpecLike}
-import kamon.metric._
-import akka.io.Udp
-import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
-import java.lang.management.ManagementFactory
-import java.net.InetSocketAddress
-import com.typesafe.config.ConfigFactory
 
-class DatadogMetricSenderSpec extends BaseKamonSpec("datadog-metric-sender-spec") {
+import java.time.Instant
+
+import com.typesafe.config.{ Config, ConfigFactory }
+import kamon.Kamon
+import kamon.datadog.DatadogAgentReporter.PacketBuffer
+import kamon.metric._
+import kamon.testkit.Reconfigure
+import org.scalatest.{ Matchers, WordSpec }
+
+class DatadogMetricSenderSpec extends WordSpec with Matchers with Reconfigure {
+  reconfigure =>
+
+  class TestBuffer extends PacketBuffer {
+
+    val lst = scala.collection.mutable.Map.empty[String, String]
+
+    override def flush(): Unit = {}
+    override def appendMeasurement(
+      key:             String,
+      measurementData: String
+    ): Unit = {
+      lst += (key -> measurementData)
+    }
+  }
 
   "the DataDogMetricSender" should {
-    "send latency measurements" in new UdpListenerFixture {
-      val (entity, testRecorder) = buildRecorder("datadog")
-      testRecorder.metricOne.record(10L)
+    "send counter metrics" in AgentReporter(new TestBuffer(), ConfigFactory.parseString("kamon.environment.tags.env = staging").withFallback(Kamon.config())) {
+      case (buffer, reporter) =>
 
-      val udp = setup(Map(entity → testRecorder.collect(collectionContext)))
-      val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
+        val now = Instant.now()
+        reporter.reportPeriodSnapshot(
+          PeriodSnapshot.apply(
+            now.minusMillis(1000), now, MetricsSnapshot.apply(
+              Nil,
+              Nil,
+              Nil,
+              Seq(
+                MetricValue.apply("test.counter", Map("tag1" -> "value1"), MeasurementUnit.none, 0)
+              )
 
-      data.utf8String should be(s"kamon.category.metric-one:10|ms|#category:datadog")
+            )
+          )
+        )
+
+        buffer.lst should have size (1)
+        buffer.lst should contain("test.counter" -> "0|c#|service:kamon-application,env:staging,tag1:value1")
     }
 
-    "include the sampling rate in case of multiple measurements of the same value" in new UdpListenerFixture {
-      val (entity, testRecorder) = buildRecorder("datadog")
-      testRecorder.metricTwo.record(10L, 2)
+    "filter out blacklisted tags" in AgentReporter(new TestBuffer(), ConfigFactory.parseString(
+      """
+        |kamon.datadog.additional-tags.blacklisted-tags = [env]
+        |kamon.environment.tags.env = staging
+        |""".stripMargin).withFallback(Kamon.config())) {
+      case (buffer, reporter) =>
 
-      val udp = setup(Map(entity → testRecorder.collect(collectionContext)))
-      val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
+        val now = Instant.now()
+        reporter.reportPeriodSnapshot(
+          PeriodSnapshot.apply(
+            now.minusMillis(1000), now, MetricsSnapshot.apply(
+              Nil,
+              Nil,
+              Nil,
+              Seq(
+                MetricValue.apply("test.counter", Map("tag1" -> "value1"), MeasurementUnit.none, 0)
+              )
 
-      data.utf8String should be(s"kamon.category.metric-two:10|ms|@0.5|#category:datadog")
+            )
+          )
+        )
+
+        buffer.lst should have size (1)
+        buffer.lst should contain("test.counter" -> "0|c#|service:kamon-application,tag1:value1")
     }
 
-    "flush the packet when the max-packet-size is reached" in new UdpListenerFixture {
-      val (entity, testRecorder) = buildRecorder("datadog")
+    "filter other tags" in AgentReporter(new TestBuffer(), ConfigFactory.parseString(
+      """
+        |kamon.util.filters.datadog-tag-filter.excludes = [ "tag*" ]
+        |kamon.environment.tags.env = staging
+        |""".stripMargin).withFallback(Kamon.config())) {
+      case (buffer, reporter) =>
 
-      var bytes = 0
-      var level = 0
+        val now = Instant.now()
+        reporter.reportPeriodSnapshot(
+          PeriodSnapshot.apply(
+            now.minusMillis(1000), now, MetricsSnapshot.apply(
+              Nil,
+              Nil,
+              Nil,
+              Seq(
+                MetricValue.apply("test.counter", Map("tag1" -> "value1", "tag2" -> "value2", "otherTag" -> "otherValue"), MeasurementUnit.none, 0)
+              )
 
-      while (bytes <= testMaxPacketSize) {
-        level += 1
-        testRecorder.metricOne.record(level)
-        bytes += s"kamon.category.metric-one:$level|ms|#category:datadog".length
-      }
+            )
+          )
+        )
 
-      val udp = setup(Map(entity → testRecorder.collect(collectionContext)))
-      udp.expectMsgType[Udp.Send] // let the first flush pass
-
-      val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
-      data.utf8String should be(s"kamon.category.metric-one:$level|ms|#category:datadog")
-    }
-
-    "render multiple keys in the same packet using newline as separator" in new UdpListenerFixture {
-      val (entity, testRecorder) = buildRecorder("datadog")
-
-      testRecorder.metricOne.record(10L, 2)
-      testRecorder.metricTwo.record(21L)
-      testRecorder.counterOne.increment(4L)
-
-      val udp = setup(Map(entity → testRecorder.collect(collectionContext)))
-      val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
-
-      data.utf8String.split("\n") should contain allOf (
-        "kamon.category.metric-one:10|ms|@0.5|#category:datadog",
-        "kamon.category.metric-two:21|ms|#category:datadog",
-        "kamon.category.counter:4|c|#category:datadog"
-      )
-    }
-
-    "include all entity tags, if available in the metric packet" in new UdpListenerFixture {
-      val (entity, testRecorder) = buildRecorder("datadog", tags = Map("my-cool-tag" → "some-value"))
-      testRecorder.metricTwo.record(10L, 2)
-
-      val udp = setup(Map(entity → testRecorder.collect(collectionContext)))
-      val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
-
-      data.utf8String should be(s"kamon.category.metric-two:10|ms|@0.5|#category:datadog,my-cool-tag:some-value")
-    }
-
-    "not include the entity-category:entity:name identification tag for single instrument entities" in new UdpListenerFixture {
-      val (entity, testRecorder) = buildSimpleCounter("example-counter", tags = Map("my-cool-tag" → "some-value"))
-      testRecorder.instrument.increment(17)
-
-      val udp = setup(Map(entity → testRecorder.collect(collectionContext)))
-      val Udp.Send(data, _, _) = udp.expectMsgType[Udp.Send]
-
-      data.utf8String should be(s"kamon.counter.example-counter:17|c|#my-cool-tag:some-value")
+        buffer.lst should have size (1)
+        buffer.lst should contain("test.counter" -> "0|c#|service:kamon-application,otherTag:otherValue")
     }
 
   }
 
-  trait UdpListenerFixture {
-    val localhostName = ManagementFactory.getRuntimeMXBean.getName.split('@')(1)
-    val testMaxPacketSize = system.settings.config.getBytes("kamon.datadog.max-packet-size")
+  def AgentReporter[A, B <: PacketBuffer](buffer: B, config: Config)(f: (B, DatadogAgentReporter) => A): A = {
+    Kamon.reconfigure(config)
 
-    def buildRecorder(name: String, tags: Map[String, String] = Map.empty): (Entity, TestEntityRecorder) = {
-      val entity = Entity(name, TestEntityRecorder.category, tags)
-      val recorder = Kamon.metrics.entity(TestEntityRecorder, entity)
-      (entity, recorder)
-    }
-
-    def buildSimpleCounter(name: String, tags: Map[String, String] = Map.empty): (Entity, CounterRecorder) = {
-      val entity = Entity(name, SingleInstrumentEntityRecorder.Counter, tags)
-      val counter = Kamon.metrics.counter(name, tags)
-      val recorder = CounterRecorder(CounterKey("counter", UnitOfMeasurement.Unknown), counter)
-      (entity, recorder)
-    }
-
-    def setup(metrics: Map[Entity, EntitySnapshot]): TestProbe = {
-      val udp = TestProbe()
-      val metricsSender = system.actorOf(Props(new DatadogMetricsSender(new InetSocketAddress(localhostName, 0), testMaxPacketSize) {
-        override def udpExtension(implicit system: ActorSystem): ActorRef = udp.ref
-      }))
-
-      // Setup the SimpleSender
-      udp.expectMsgType[Udp.SimpleSender]
-      udp.reply(Udp.SimpleSenderReady)
-
-      val fakeSnapshot = TickMetricSnapshot(MilliTimestamp.now, MilliTimestamp.now, metrics)
-      metricsSender ! fakeSnapshot
-      udp
-    }
+    // Overriding a class for testing is an anti-pattern. But it's the best I could do
+    val reporter = new DatadogAgentReporter(
+      DatadogAgentReporter
+        .readConfiguration(
+          Kamon.config()
+        ).copy(packetBuffer = buffer)
+    )
+    f(buffer, reporter)
   }
-
 }
-
-class TestEntityRecorder(instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) {
-  val metricOne = histogram("metric-one")
-  val metricTwo = histogram("metric-two")
-  val counterOne = counter("counter")
-}
-
-object TestEntityRecorder extends EntityRecorderFactory[TestEntityRecorder] {
-  def category: String = "category"
-  def createRecorder(instrumentFactory: InstrumentFactory): TestEntityRecorder = new TestEntityRecorder(instrumentFactory)
-}
-
-*/

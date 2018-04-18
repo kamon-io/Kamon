@@ -23,15 +23,20 @@ import java.text.{ DecimalFormat, DecimalFormatSymbols }
 import java.util.Locale
 
 import com.typesafe.config.Config
-import kamon.{ Kamon, MetricReporter }
-import kamon.metric._
-import kamon.metric.MeasurementUnit
 import kamon.metric.MeasurementUnit.Dimension.{ Information, Time }
 import kamon.metric.MeasurementUnit.{ Dimension, information, time }
+import kamon.metric.{ MeasurementUnit, PeriodSnapshot }
+import kamon.util.{ DynamicAccess, EnvironmentTagBuilder }
+import kamon.{ Kamon, MetricReporter }
 import org.slf4j.LoggerFactory
 
-class DatadogAgentReporter extends MetricReporter {
-  private val logger = LoggerFactory.getLogger(classOf[DatadogAgentReporter])
+// 1 arg constructor is intended for injecting config via unit tests
+class DatadogAgentReporter private[datadog] (c: DatadogAgentReporter.Configuration) extends MetricReporter {
+
+  def this() = this(DatadogAgentReporter.readConfiguration(Kamon.config()))
+
+  import DatadogAgentReporter._
+
   private val symbols = DecimalFormatSymbols.getInstance(Locale.US)
   symbols.setDecimalSeparator('.') // Just in case there is some weird locale config we are not aware of.
 
@@ -44,20 +49,20 @@ class DatadogAgentReporter extends MetricReporter {
 
   override def stop(): Unit = {}
 
-  override def reconfigure(config: Config): Unit = {}
+  private[datadog] var config: Configuration = c
+
+  override def reconfigure(config: Config): Unit = {
+    this.config = readConfiguration(config)
+  }
 
   override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
-    val config = readConfiguration(Kamon.config())
-    val clientChannel = DatagramChannel.open()
-    val packetBuffer = new PacketBuffer(config.maxPacketSize, clientChannel, config.agentAddress)
-    val serviceNameTag = "|#service:" + Kamon.environment.service
 
     for (counter <- snapshot.metrics.counters) {
-      packetBuffer.appendMeasurement(counter.name, formatMeasurement(encodeDatadogCounter(counter.value, counter.unit), serviceNameTag, counter.tags))
+      config.packetBuffer.appendMeasurement(counter.name, config.measurementFormatter.formatMeasurement(encodeDatadogCounter(counter.value, counter.unit), counter.tags))
     }
 
     for (gauge <- snapshot.metrics.gauges) {
-      packetBuffer.appendMeasurement(gauge.name, formatMeasurement(encodeDatadogGauge(gauge.value, gauge.unit), serviceNameTag, gauge.tags))
+      config.packetBuffer.appendMeasurement(gauge.name, config.measurementFormatter.formatMeasurement(encodeDatadogGauge(gauge.value, gauge.unit), gauge.tags))
     }
 
     for (
@@ -65,21 +70,12 @@ class DatadogAgentReporter extends MetricReporter {
       bucket <- metric.distribution.bucketsIterator
     ) {
 
-      val bucketData = formatMeasurement(encodeDatadogHistogramBucket(bucket.value, bucket.frequency, metric.unit), serviceNameTag, metric.tags)
-      packetBuffer.appendMeasurement(metric.name, bucketData)
+      val bucketData = config.measurementFormatter.formatMeasurement(encodeDatadogHistogramBucket(bucket.value, bucket.frequency, metric.unit), metric.tags)
+      config.packetBuffer.appendMeasurement(metric.name, bucketData)
     }
 
-    packetBuffer.flush()
+    config.packetBuffer.flush()
 
-  }
-
-  private def formatMeasurement(measurementData: String, baseTag: String, tags: Map[String, String]): String = {
-    val stringTags: String = if (tags.isEmpty) baseTag else baseTag + "," + (tags.map { case (k, v) ⇒ k + ":" + v } mkString ",")
-
-    StringBuilder.newBuilder
-      .append(measurementData)
-      .append(stringTags)
-      .result()
   }
 
   private def encodeDatadogHistogramBucket(value: Long, frequency: Long, unit: MeasurementUnit): String = {
@@ -100,24 +96,85 @@ class DatadogAgentReporter extends MetricReporter {
     case _                                                            => value.toDouble
   }
 
-  private def readConfiguration(config: Config): Configuration = {
+}
+
+object DatadogAgentReporter {
+
+  private val logger = LoggerFactory.getLogger(classOf[DatadogAgentReporter])
+
+  trait MeasurementFormatter {
+    def formatMeasurement(measurementData: String, tags: Map[String, String]): String
+  }
+
+  private class DefaultMeasurementFormatter(config: Config) extends MeasurementFormatter {
+
+    private val tagFilterKey = config.getString("filter-config-key")
+    private val filter = Kamon.filter(tagFilterKey)
+    private val envTags = EnvironmentTagBuilder.create(config.getConfig("additional-tags"))
+
+    override def formatMeasurement(
+      measurementData: String,
+      tags:            Map[String, String]
+    ): String = {
+
+      val filteredTags = envTags ++ tags.filterKeys(filter.accept)
+
+      val stringTags: String = "#|" + filteredTags.map { case (k, v) ⇒ k + ":" + v }.mkString(",")
+
+      StringBuilder.newBuilder
+        .append(measurementData)
+        .append(stringTags)
+        .result()
+    }
+  }
+
+  private[datadog] def readConfiguration(config: Config): Configuration = {
+    val dynamic = new DynamicAccess(getClass.getClassLoader)
     val datadogConfig = config.getConfig("kamon.datadog")
 
     Configuration(
-      agentAddress = new InetSocketAddress(datadogConfig.getString("agent.hostname"), datadogConfig.getInt("agent.port")),
-      maxPacketSize = datadogConfig.getBytes("agent.max-packet-size"),
       timeUnit = readTimeUnit(datadogConfig.getString("time-unit")),
-      informationUnit = readInformationUnit(datadogConfig.getString("information-unit")))
+      informationUnit = readInformationUnit(datadogConfig.getString("information-unit")),
+      measurementFormatter = getMeasurementFormatter(datadogConfig, dynamic),
+      packetBuffer = getPacketBuffer(datadogConfig, dynamic)
+    )
   }
 
-  private case class Configuration(agentAddress: InetSocketAddress, maxPacketSize: Long, timeUnit: MeasurementUnit,
-                                   informationUnit: MeasurementUnit)
+  private def getMeasurementFormatter(config: Config, dynamic: DynamicAccess): MeasurementFormatter = {
+    config.getString("agent.measurement-formatter") match {
+      case "default" => new DefaultMeasurementFormatter(config)
+      case fqn       => dynamic.createInstanceFor[MeasurementFormatter](fqn, List(classOf[Config] -> config)).get
+    }
+  }
 
-  private class PacketBuffer(maxPacketSizeInBytes: Long, channel: DatagramChannel, remote: InetSocketAddress) {
+  private def getPacketBuffer(config: Config, dynamic: DynamicAccess): PacketBuffer = {
+    config.getString("agent.packetbuffer") match {
+      case "default" => new PacketBufferImpl(config)
+      case fqn       => dynamic.createInstanceFor[PacketBuffer](fqn, List(classOf[Config] -> config)).get
+    }
+  }
+
+  private[datadog] case class Configuration(
+    timeUnit:             MeasurementUnit,
+    informationUnit:      MeasurementUnit,
+    measurementFormatter: MeasurementFormatter,
+    packetBuffer:         PacketBuffer
+  )
+
+  trait PacketBuffer {
+    def appendMeasurement(key: String, measurementData: String): Unit
+    def flush(): Unit
+
+  }
+
+  private class PacketBufferImpl(config: Config) extends PacketBuffer {
     val metricSeparator = "\n"
     val measurementSeparator = ":"
     var lastKey = ""
     var buffer = new StringBuilder()
+
+    val maxPacketSizeInBytes = config.getBytes("agent.max-packet-size")
+    val remote = new InetSocketAddress(config.getString("agent.hostname"), config.getInt("agent.port"))
 
     def appendMeasurement(key: String, measurementData: String): Unit = {
       val data = key + measurementSeparator + measurementData
@@ -132,11 +189,15 @@ class DatadogAgentReporter extends MetricReporter {
       }
     }
 
-    def fitsOnBuffer(data: String): Boolean = (buffer.length + data.length) <= maxPacketSizeInBytes
+    private def fitsOnBuffer(data: String): Boolean = (buffer.length + data.length) <= maxPacketSizeInBytes
 
     private def flushToUDP(data: String): Unit = {
-      println(data)
-      channel.send(ByteBuffer.wrap(data.getBytes), remote)
+      val channel = DatagramChannel.open()
+      try {
+        channel.send(ByteBuffer.wrap(data.getBytes), remote)
+      } finally {
+        channel.close()
+      }
     }
 
     def flush(): Unit = {
