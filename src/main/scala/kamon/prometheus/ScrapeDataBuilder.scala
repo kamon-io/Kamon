@@ -77,7 +77,7 @@ class ScrapeDataBuilder(prometheusConfig: PrometheusReporter.Configuration, envi
 
     snapshots.foreach(metric => {
       if(metric.distribution.count > 0) {
-        appendHistogramBuckets(normalizedMetricName, metric.tags, metric)
+        appendHistogramBuckets(normalizedMetricName, metric.tags, metric, resolveBucketConfiguration(metric))
 
         val count = format(metric.distribution.count)
         val sum = format(scale(metric.distribution.sum, metric.unit))
@@ -96,23 +96,24 @@ class ScrapeDataBuilder(prometheusConfig: PrometheusReporter.Configuration, envi
     append("\n")
   }
 
-  private def appendHistogramBuckets(name: String, tags: Map[String, String], metric: MetricDistribution): Unit = {
-    val configuredBuckets = prometheusConfig.customBuckets.getOrElse(
-      name,
+  private def resolveBucketConfiguration(metric: MetricDistribution): Seq[java.lang.Double] =
+    prometheusConfig.customBuckets.getOrElse(
+      metric.name,
       metric.unit.dimension match {
-        case Time => prometheusConfig.timeBuckets
-        case Information => prometheusConfig.informationBuckets
-        case _ => prometheusConfig.defaultBuckets
+        case Time         => prometheusConfig.timeBuckets
+        case Information  => prometheusConfig.informationBuckets
+        case _            => prometheusConfig.defaultBuckets
       }
-    ).iterator
+    )
 
+  private def appendHistogramBuckets(name: String, tags: Map[String, String], metric: MetricDistribution, buckets: Seq[java.lang.Double]): Unit = {
     val distributionBuckets = metric.distribution.bucketsIterator
     var currentDistributionBucket = distributionBuckets.next()
     var currentDistributionBucketValue = scale(currentDistributionBucket.value, metric.unit)
     var inBucketCount = 0L
     var leftOver = currentDistributionBucket.frequency
 
-    configuredBuckets.foreach { configuredBucket =>
+    buckets.foreach { configuredBucket =>
       val bucketTags = tags + ("le" -> String.valueOf(configuredBucket))
 
       if(currentDistributionBucketValue <= configuredBucket) {

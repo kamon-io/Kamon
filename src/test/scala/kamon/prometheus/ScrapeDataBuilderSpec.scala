@@ -92,10 +92,10 @@ class ScrapeDataBuilderSpec extends WordSpec with Matchers {
       }
     }
 
-    "custom histogram buckets override defaults" in {
+    "override histogram buckets with custom configuration" in {
       val customBucketsHistogram = constantDistribution("histogram.custom-buckets", Map.empty, none, 1, 10)
 
-      builder(customBuckets = Map("histogram_custom_buckets" -> Seq(1D, 2D, 4D))).appendHistograms(Seq(customBucketsHistogram)).build() should include {
+      builder(customBuckets = Map("histogram.custom-buckets" -> Seq(1D, 2D, 4D))).appendHistograms(Seq(customBucketsHistogram)).build() should include {
         """
           |# TYPE histogram_custom_buckets histogram
           |histogram_custom_buckets_bucket{le="1.0"} 1.0
