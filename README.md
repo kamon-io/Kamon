@@ -32,3 +32,29 @@ libraryDependencies += "io.kamon" %% "kamon-logback" % "1.0.0"
 </dependency>
 ```
 
+Logging TraceID
+---------------
+
+Inserting a `conversionRule` allows you to incorporate the trace ID for a request into your [Logback layout](https://logback.qos.ch/manual/layouts.html). Here is a simple example `logback.xml` configuration that does this:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration scan="false" debug="false">
+  <conversionRule conversionWord="traceID" converterClass="kamon.logback.LogbackTraceIDConverter" />
+
+  <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      <pattern>%d{yyyy-MM-dd HH:mm:ss} | %-5level | %traceID | %c{0} -> %m%n</pattern>
+    </encoder>
+  </appender>
+
+  <root level="DEBUG">
+    <appender-ref ref="STDOUT" />
+  </root>
+</configuration>
+```
+
+Propagating TraceID to AsyncAppender
+------------------------------------
+
+If you choose to use [`AsyncAppender`](https://logback.qos.ch/manual/appenders.html#AsyncAppender), your trace ID will automatically be propagated to the thread where the log is actually published. No configuration needed. 
