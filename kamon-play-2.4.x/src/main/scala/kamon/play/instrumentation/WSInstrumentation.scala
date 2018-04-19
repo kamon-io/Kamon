@@ -29,50 +29,47 @@ import scala.concurrent.Future
 @Aspect
 class WSInstrumentation {
 
-  @Pointcut("execution(* play.api.libs.ws.ning.NingWSRequest.execute()) && this(request)")
+  @Pointcut("execution(* play.api.libs.ws.WSRequest+.execute()) && this(request)")
   def onExecuteRequest(request: WSRequest): Unit = {}
 
   @Around("onExecuteRequest(request)")
   def aroundExecuteRequest(pjp: ProceedingJoinPoint, request: WSRequest): Any = {
-
     val currentContext = Kamon.currentContext()
-    val clientSpan = currentContext.get(Span.ContextKey)
+    val parentSpan = currentContext.get(Span.ContextKey)
 
-    if (clientSpan.isEmpty()) pjp.proceed()
-    else {
-      val clientSpanBuilder = Kamon.buildSpan(Play.generateHttpClientOperationName(request))
-        .asChildOf(clientSpan)
-        .withMetricTag("span.kind", "client")
-        .withMetricTag("component", "play.client.ws")
-        .withMetricTag("http.method", request.method)
-        .withTag("http.url", request.uri.toString)
+    val clientSpanBuilder = Kamon.buildSpan(Play.generateHttpClientOperationName(request))
+      .asChildOf(parentSpan)
+      .withMetricTag("span.kind", "client")
+      .withMetricTag("component", "play.client.ws")
+      .withMetricTag("http.method", request.method)
+      .withTag("http.url", request.uri.toString)
 
-      val clientRequestSpan = currentContext.get(SpanCustomizer.ContextKey)
-        .customize(clientSpanBuilder)
-        .start()
+    val clientRequestSpan = currentContext.get(SpanCustomizer.ContextKey)
+      .customize(clientSpanBuilder)
+      .start()
 
-      val newContext = currentContext.withKey(Span.ContextKey, clientRequestSpan)
-      val responseFuture = pjp.proceed(Array(encodeContext(newContext, request))).asInstanceOf[Future[WSResponse]]
+    val newContext = currentContext.withKey(Span.ContextKey, clientRequestSpan)
+    val responseFuture = pjp.proceed(Array(encodeContext(newContext, request))).asInstanceOf[Future[WSResponse]]
 
-      responseFuture.transform(
-        s = response => {
-          clientRequestSpan.tag("http.status_code", response.status)
+    responseFuture.transform(
+      s = response => {
+        clientRequestSpan.tag("http.status_code", response.status)
 
-          if(isError(response.status))
-            clientRequestSpan.addError("error")
+        if(isError(response.status))
+          clientRequestSpan.addError("error")
 
-          if(response.status == StatusCodes.NotFound)
-            clientRequestSpan.setOperationName("not-found")
+        if(response.status == StatusCodes.NotFound)
+          clientRequestSpan.setOperationName("not-found")
 
-          clientRequestSpan.finish()
-          response
-        },
-        f = error => {
-          clientRequestSpan.addError("error.object", error)
-          clientRequestSpan.finish()
-          error
-        }
-      )(CallingThreadExecutionContext)
-    }
+        clientRequestSpan.finish()
+        response
+      },
+      f = error => {
+        clientRequestSpan.addError("error.object", error)
+        clientRequestSpan.finish()
+        error
+      }
+    )(CallingThreadExecutionContext)
   }
+
 }

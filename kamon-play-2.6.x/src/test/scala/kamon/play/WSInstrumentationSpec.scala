@@ -20,10 +20,12 @@ import java.net.ConnectException
 import kamon.Kamon
 import kamon.context.Context
 import kamon.context.Context.create
+import kamon.play.instrumentation.WSInstrumentation
 import kamon.testkit._
 import kamon.trace.Span.TagValue
 import kamon.trace.{Span, SpanCustomizer}
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
+import org.scalatest.exceptions.TestFailedDueToTimeoutException
 import org.scalatest.time.SpanSugar
 import org.scalatest.{BeforeAndAfterAll, OptionValues}
 import org.scalatestplus.play.PlaySpec
@@ -35,9 +37,11 @@ import play.api.mvc.Results.{InternalServerError, NotFound, Ok}
 import play.api.mvc.{Action, AnyContent, Handler}
 import play.api.test.Helpers._
 import play.api.test._
+import play.api.libs.ws.{WSRequestExecutor, WSRequestFilter}
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success}
 
 
 class WSInstrumentationSpec extends PlaySpec with GuiceOneServerPerSuite
@@ -189,11 +193,46 @@ class WSInstrumentationSpec extends PlaySpec with GuiceOneServerPerSuite
         span.tags("http.status_code") mustBe TagValue.Number(200)
       }
     }
+
+    "run the WSClient instrumentation only once, even if request filters are added" in {
+      val wsClient = app.injector.instanceOf[WSClient]
+      val okSpan = Kamon.buildSpan("ok-operation-span").start()
+      val endpoint = s"http://localhost:$port/ok"
+
+      Kamon.withContext(create(Span.ContextKey, okSpan)) {
+        val response = await(wsClient.url(endpoint)
+          .withRequestFilter(new DumbRequestFilter())
+          .get())
+
+        response.status mustBe 200
+      }
+
+      eventually(timeout(2 seconds)) {
+        val span = reporter.nextSpan().value
+        span.operationName mustBe endpoint
+        span.tags("span.kind") mustBe TagValue.String("client")
+        span.tags("http.method") mustBe TagValue.String("GET")
+        span.tags("http.status_code") mustBe TagValue.Number(200)
+      }
+
+      Thread.sleep(2000) // wait a bit for any duplicate Span to finish
+      reporter.nextSpan() mustBe empty
+
+    }
   }
 
   def insideController(url: String)(app:Application): Action[AnyContent] = Action.async {
     val wsClient = app.injector.instanceOf[WSClient]
     wsClient.url(url).get().map(_ ⇒  Ok("Ok"))
+  }
+
+  class DumbRequestFilter() extends WSRequestFilter {
+    def apply(executor: WSRequestExecutor) = WSRequestExecutor { request =>
+      executor(request) andThen {
+        case Success(_) =>
+        case Failure(_) =>
+      }
+    }
   }
 }
 

@@ -182,6 +182,29 @@ class WSInstrumentationSpec extends PlaySpec with OneServerPerSuite
         span.tags("http.status_code") mustBe TagValue.Number(200)
       }
     }
+
+    "run the WSClient instrumentation only once" in {
+      val wsClient = app.injector.instanceOf[WSClient]
+      val okSpan = Kamon.buildSpan("ok-operation-span").start()
+      val endpoint = s"http://localhost:$port/ok"
+
+      Kamon.withContext(create(Span.ContextKey, okSpan)) {
+        val response = await(wsClient.url(endpoint).get())
+        response.status mustBe 200
+      }
+
+      eventually(timeout(2 seconds)) {
+        val span = reporter.nextSpan().value
+        span.operationName mustBe endpoint
+        span.tags("span.kind") mustBe TagValue.String("client")
+        span.tags("http.method") mustBe TagValue.String("GET")
+        span.tags("http.status_code") mustBe TagValue.Number(200)
+      }
+
+      Thread.sleep(2000) // wait a bit for any duplicate Span to finish
+      reporter.nextSpan() mustBe empty
+
+    }
   }
 
   def insideController(url: String)(app:Application): Action[AnyContent] = Action.async {
