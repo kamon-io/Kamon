@@ -13,7 +13,8 @@
  * =========================================================================================
  */
 
-package kamon.prometheus
+package kamon
+package prometheus
 
 import java.time.Duration
 
@@ -99,7 +100,7 @@ class PrometheusReporter extends MetricReporter {
       defaultBuckets = prometheusConfig.getDoubleList("buckets.default-buckets").asScala,
       timeBuckets = prometheusConfig.getDoubleList("buckets.time-buckets").asScala,
       informationBuckets = prometheusConfig.getDoubleList("buckets.information-buckets").asScala,
-      customBuckets = getMappedDoubleList("buckets.custom", prometheusConfig),
+      customBuckets = readCustomBuckets(prometheusConfig.getConfig("buckets.custom")),
       includeEnvironmentTags = prometheusConfig.getBoolean("include-environment-tags")
     )
   }
@@ -107,12 +108,11 @@ class PrometheusReporter extends MetricReporter {
   private def environmentTags(reporterConfiguration: PrometheusReporter.Configuration) =
     if (reporterConfiguration.includeEnvironmentTags) Kamon.environment.tags else Map.empty[String, String]
 
-  private def getMappedDoubleList(key: String, conf: Config) = {
-    val cnf = conf.getConfig(key)
-    val keyMap = conf.getObject(key).asScala
-    (for ((k, v) <- keyMap if v.valueType() == ConfigValueType.LIST) yield
-      k -> cnf.getDoubleList(k).asScala.toList).toMap
-  }
+  private def readCustomBuckets(customBuckets: Config): Map[String, Seq[java.lang.Double]] =
+    customBuckets
+      .topLevelKeys
+      .map(k => (k, customBuckets.getDoubleList(k).asScala))
+      .toMap
 
 }
 
