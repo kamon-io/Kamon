@@ -119,7 +119,7 @@ object DatadogAgentReporter {
 
       val filteredTags = envTags ++ tags.filterKeys(filter.accept)
 
-      val stringTags: String = "#|" + filteredTags.map { case (k, v) ⇒ k + ":" + v }.mkString(",")
+      val stringTags: String = "|#" + filteredTags.map { case (k, v) ⇒ k + ":" + v }.mkString(",")
 
       StringBuilder.newBuilder
         .append(measurementData)
