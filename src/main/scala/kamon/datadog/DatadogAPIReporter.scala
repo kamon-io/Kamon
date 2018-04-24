@@ -65,7 +65,13 @@ class DatadogAPIReporter extends MetricReporter {
   override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
     val body = RequestBody.create(jsonType, buildRequestBody(snapshot))
     val request = new Request.Builder().url(apiUrl + configuration.apiKey).post(body).build
-    httpClient.newCall(request).execute
+    val response = httpClient.newCall(request).execute()
+
+    if (!response.isSuccessful()) {
+      logger.error(s"Failed to POST metrics to Datadog with status code [${response.code()}], Body: [${response.body().string()}]")
+    }
+
+    response.close()
   }
 
   private[datadog] def buildRequestBody(snapshot: PeriodSnapshot): String = {
@@ -77,15 +83,16 @@ class DatadogAPIReporter extends MetricReporter {
     def addDistribution(metric: MetricDistribution): Unit = {
       import metric._
 
-      addMetric(name + ".min", valueFormat.format(scale(distribution.min, unit)), gauge, metric.tags)
+      val average = if (distribution.count > 0L) (distribution.sum / distribution.count) else 0L
+      addMetric(name + ".avg", valueFormat.format(scale(average, unit)), gauge, metric.tags)
+      addMetric(name + ".count", valueFormat.format(distribution.count), count, metric.tags)
+      addMetric(name + ".median", valueFormat.format(distribution.percentile(50D).value), gauge, metric.tags)
+      addMetric(name + ".95percentile", valueFormat.format(scale(distribution.percentile(95D).value, unit)), gauge, metric.tags)
       addMetric(name + ".max", valueFormat.format(scale(distribution.max, unit)), gauge, metric.tags)
-      addMetric(name + ".count", valueFormat.format(scale(distribution.count, unit)), count, metric.tags)
-      addMetric(name + ".sum", valueFormat.format(scale(distribution.sum, unit)), gauge, metric.tags)
-      addMetric(name + ".p95", valueFormat.format(scale(distribution.percentile(95D).value, unit)), gauge, metric.tags)
+      addMetric(name + ".min", valueFormat.format(scale(distribution.min, unit)), gauge, metric.tags)
     }
 
     def addMetric(metricName: String, value: String, metricType: String, tags: Map[String, String]): Unit = {
-      println(tags)
       val customTags = (configuration.extraTags ++ tags.filterKeys(configuration.tagFilter.accept)).map { case (k, v) ⇒ quote"$k:$v" }.toSeq
       val allTagsString = customTags.mkString("[", ",", "]")
 
@@ -126,7 +133,6 @@ class DatadogAPIReporter extends MetricReporter {
   private def readConfiguration(config: Config): Configuration = {
     val datadogConfig = config.getConfig("kamon.datadog")
 
-    println(datadogConfig.getString("filter-config-key"))
     Configuration(
       apiKey = datadogConfig.getString("http.api-key"),
       connectTimeout = datadogConfig.getDuration("http.connect-timeout"),
