@@ -17,6 +17,23 @@ class InfluxDBReporterSpec extends WordSpec with Matchers with BeforeAndAfterAll
 
   "the InfluxDB reporter" should {
     "convert and post all metrics using the line protocol over HTTP" in {
+      reporter.reconfigure(ConfigFactory.parseString(
+        s"""
+           |kamon.influxdb {
+           |  hostname = ${influxDB.getHostName}
+           |  port = ${influxDB.getPort}
+           |
+           |  additional-tags {
+           |    service = no
+           |    host = no
+           |    instance = no
+           |
+           |    blacklisted-tags = [ "env", "context" ]
+           |  }
+           |}
+      """.stripMargin
+      ).withFallback(Kamon.config()))
+
       reporter.reportPeriodSnapshot(periodSnapshot)
       val reportedLines = influxDB.takeRequest(10, TimeUnit.SECONDS).getBody.readString(Charset.forName("UTF-8")).split("\n")
 
@@ -40,7 +57,11 @@ class InfluxDBReporterSpec extends WordSpec with Matchers with BeforeAndAfterAll
            |kamon.influxdb {
            |  hostname = ${influxDB.getHostName}
            |  port = ${influxDB.getPort}
-           |  env-tags-enabled = true
+           |  additional-tags {
+           |    service = yes
+           |    host = yes
+           |    instance = yes
+           |  }
            |}
       """.stripMargin
       ).withFallback(Kamon.config()))
