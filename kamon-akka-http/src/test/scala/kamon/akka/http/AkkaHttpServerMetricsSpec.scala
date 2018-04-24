@@ -71,6 +71,10 @@ class AkkaHttpServerMetricsSpec extends WordSpecLike with Matchers with BeforeAn
     val connectionSettings = ClientConnectionSettings(system).withIdleTimeout(1 second)
     Source.single(request)
       .via(Http().outgoingConnection(interface, port, settings = connectionSettings))
+      .map{r =>
+        r.discardEntityBytes()
+        r
+      }
       .runWith(Sink.head)
   }
 

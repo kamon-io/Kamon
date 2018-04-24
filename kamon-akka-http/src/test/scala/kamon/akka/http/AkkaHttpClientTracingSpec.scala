@@ -51,7 +51,7 @@ class AkkaHttpClientTracingSpec extends WordSpecLike with Matchers with BeforeAn
   "the Akka HTTP client instrumentation" should {
     "create a client Span when using the request level API - Http().singleRequest(...)" in {
       val target = s"http://$interface:$port/$dummyPathOk"
-      Http().singleRequest(HttpRequest(uri = target))
+      Http().singleRequest(HttpRequest(uri = target)).map(_.discardEntityBytes())
 
       eventually(timeout(10 seconds)) {
         val span = reporter.nextSpan().value
@@ -68,7 +68,7 @@ class AkkaHttpClientTracingSpec extends WordSpecLike with Matchers with BeforeAn
     "pick up customizations from the SpanCustomizer in context" in {
       val target = s"http://$interface:$port/$dummyPathOk"
       Kamon.withContextKey(SpanCustomizer.ContextKey, SpanCustomizer.forOperationName("get-dummy-path")) {
-        Http().singleRequest(HttpRequest(uri = target))
+        Http().singleRequest(HttpRequest(uri = target)).map(_.discardEntityBytes())
       }
 
       eventually(timeout(10 seconds)) {
@@ -107,7 +107,7 @@ class AkkaHttpClientTracingSpec extends WordSpecLike with Matchers with BeforeAn
 
     "mark Spans as errors if the client request failed" in {
       val target = s"http://$interface:$port/$dummyPathError"
-      Http().singleRequest(HttpRequest(uri = target))
+      Http().singleRequest(HttpRequest(uri = target)).map(_.discardEntityBytes())
 
       eventually(timeout(10 seconds)) {
         val span = reporter.nextSpan().value
