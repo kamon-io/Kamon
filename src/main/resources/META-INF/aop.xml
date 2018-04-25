@@ -2,7 +2,7 @@
 
 <aspectj>
     <aspects>
-        <aspect name="kamon.logback.instrumentation.AsyncAppenderInstrumentation"/>
+        <aspect name="kamon.logback.instrumentation.aspectj.AsyncAppenderInstrumentation"/>
     </aspects>
 
     <weaver>
