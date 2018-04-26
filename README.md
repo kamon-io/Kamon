@@ -12,69 +12,55 @@ want to turn the massive amounts of data produced by their apps, tools and servi
 
 ### Getting Started
 
-Kamon datadog module is currently available for Scala 2.10, 2.11 and 2.12.
-
 Supported releases and dependencies are shown below.
 
-| kamon-datadog  | status | jdk  | scala            | akka   |
-|:------:|:------:|:----:|------------------|:------:|
-|  0.6.7 | stable | 1.7+, 1.8+ | 2.10, 2.11, 2.12  | 2.3.x, 2.4.x |
+| kamon-datadog  | status | jdk  | scala            |
+|:--------------:|:------:|:----:|------------------|
+|  1.0.0         | stable | 1.8+ | 2.10, 2.11, 2.12 |
 
-To get started with SBT, simply add the following to your `build.sbt`
-file:
+To get started with SBT, simply add the following to your `build.sbt` file:
 
 ```scala
-libraryDependencies += "io.kamon" %% "kamon-datadog" % "0.6.7"
+libraryDependencies += "io.kamon" %% "kamon-datadog" % "1.0.0"
+```
+
+And add the Agent or API reporter to Kamon:
+
+```
+Kamon.addReporter(new DatadogAgentReporter())
+// OR
+Kamon.addReporter(new DatadogAPIReporter())
 ```
 
 Configuration
 -------------
 
-By default, this module assumes that you have an instance of the Datadog Agent running in localhost and listening on
-port 8125. If that is not the case the you can use the `kamon.datadog.hostname` and `kamon.datadog.port` configuration
+#### Agent Reporter
+
+By default, the Agent reporter assumes that you have an instance of the Datadog Agent running in localhost and listening on
+port 8125. If that is not the case the you can use the `kamon.datadog.agent.hostname` and `kamon.datadog.agent.port` configuration
 keys to point the module at your Datadog Agent installation.
 
-The Datadog module subscribes itself to the entities included in the `kamon.datadog.subscriptions` key. By default, the
-following subscriptions are included:
+#### API Reporter
 
-```
-kamon.datadog {
-  subscriptions {
-    histogram       = [ "**" ]
-    min-max-counter = [ "**" ]
-    gauge           = [ "**" ]
-    counter         = [ "**" ]
-    trace           = [ "**" ]
-    trace-segment   = [ "**" ]
-    akka-actor      = [ "**" ]
-    akka-dispatcher = [ "**" ]
-    akka-router     = [ "**" ]
-    system-metric   = [ "**" ]
-    http-server     = [ "**" ]
-  }
-}
-```
+When using the API reporter you must configure your API key using the `kamon.datadog.http.api-key` configuration setting.
+Since Kamon has access to the entire distribution of values for a given period, the API reporter can directly post the
+data that would otherwise be summarized and sent by the Datadog Agent. Gauges andAll histogram-backed metrics will be reported as
+follows:
+  - metric.avg
+  - metric.count
+  - metric.median
+  - metric.95percentile
+  - metric.max
+  - metric.min
 
-If you are interested in reporting additional entities to Datadog please ensure that you include the categories and name
-patterns accordingly.
-
-
-### Metric Naming Conventions ###
-
-For all single instrument entities (those tracking counters, histograms, gaugues and min-max-counters) the generated
-metric key will follow the `application.instrument-type.entity-name` pattern. Additionaly all tags supplied when
-creating the instrument will also be reported.
-
-For all other entities the pattern is a little different: `application.entity-category.entity-name` and a identification
-tag using the category and entity name will be used. For example, all mailbox size measurements for Akka actors are
-reported under the `application.akka-actor.mailbox-size` metric and a identification tag similar to
-`actor:/user/example-actor` is included as well.
-
-Finally, the application name can be changed by setting the `kamon.datadog.application-name` configuration key.
+You can refer to the [Datadog documentation](https://docs.datadoghq.com/developers/metrics/#histograms) for more details.
 
 ### Metric Units ###
 
-Kamon keeps all timing measurements in nanoseconds and memory measurements in bytes. In order to scale those to other units before sending to datadog, set `time-units` and `memory-units` config keys to desired units. Supported units are:
+Kamon keeps all timing measurements in nanoseconds and memory measurements in bytes. In order to scale those to other
+units before sending to datadog set the `time-units` and `memory-units` config keys to desired units. Supported units are:
+
 ```
 n  - nanoseconds
 µs - microseconds
@@ -86,30 +72,31 @@ kb - kilobytes
 mb - megabytes
 gb - gigabytes
 ```
+
 For example,
+
 ```
 kamon.datadog.time-units = "ms" 
 ```
+
 will scale all timing measurements to milliseconds right before sending to datadog.
+
 
 Integration Notes
 -----------------
 
 * Contrary to other Datadog client implementations, we don't flush the metrics data as soon as the measurements are
   taken but instead, all metrics data is buffered by the `kamon-datadog` module and flushed periodically using the
-  configured `kamon.datadog.flush-interval` and `kamon.datadog.max-packet-size` settings.
-* It is advisable to experiment with the `kamon.datadog.flush-interval` and `kamon.datadog.max-packet-size` settings to
+  configured `kamon.metric.tick-interval` and `kamon.datadog.max-packet-size` settings.
+* It is advisable to experiment with the `kamon.metric.tick-interval` and `kamon.datadog.agent.max-packet-size` settings to
   find the right balance between network bandwidth utilisation and granularity on your metrics data.
-
-<img class="img-responsive" src="http://kamon.io/assets/img/datadog-scaling-metrics.png">
 
 
 Visualization and Fun
 ---------------------
 
-Creating a dashboard in the Datadog user interface is really simple, just start typing the application name ("kamon" by
-default) in the metric selector and all metric names will start to show up. You can also break it down based on the entity
-names. Here is a very simple example of a dashboard created with metrics reported by Kamon:
+Creating a dashboard in the Datadog user interface is really simple, all metric names will match the Kamon metric names
+with the additional "qualifier" suffix. Here is a very simple example of a dashboard created with metrics reported by Kamon:
 
 <img class="img-responsive" src="http://kamon.io/assets/img/datadog-dashboard.png">
 

@@ -37,15 +37,11 @@ class DatadogAPIReporter extends MetricReporter {
 
   private val logger = LoggerFactory.getLogger(classOf[DatadogAPIReporter])
   private val symbols = DecimalFormatSymbols.getInstance(Locale.US)
-
-  private val jsonType = MediaType.parse("application/json; charset=utf-8")
-
   symbols.setDecimalSeparator('.') // Just in case there is some weird locale config we are not aware of.
 
+  private val jsonType = MediaType.parse("application/json; charset=utf-8")
   private val valueFormat = new DecimalFormat("#0.#########", symbols)
-
   private var configuration = readConfiguration(Kamon.config())
-
   private var httpClient: OkHttpClient = createHttpClient(configuration)
 
   override def start(): Unit = {
@@ -78,6 +74,7 @@ class DatadogAPIReporter extends MetricReporter {
     val timestamp = snapshot.from.getEpochSecond.toString
 
     val host = Kamon.environment.host
+    val interval = Math.round(Duration.between(snapshot.from, snapshot.to).toMillis() / 1000D)
     val seriesBuilder = new StringBuilder()
 
     def addDistribution(metric: MetricDistribution): Unit = {
@@ -86,7 +83,7 @@ class DatadogAPIReporter extends MetricReporter {
       val average = if (distribution.count > 0L) (distribution.sum / distribution.count) else 0L
       addMetric(name + ".avg", valueFormat.format(scale(average, unit)), gauge, metric.tags)
       addMetric(name + ".count", valueFormat.format(distribution.count), count, metric.tags)
-      addMetric(name + ".median", valueFormat.format(distribution.percentile(50D).value), gauge, metric.tags)
+      addMetric(name + ".median", valueFormat.format(scale(distribution.percentile(50D).value, unit)), gauge, metric.tags)
       addMetric(name + ".95percentile", valueFormat.format(scale(distribution.percentile(95D).value, unit)), gauge, metric.tags)
       addMetric(name + ".max", valueFormat.format(scale(distribution.max, unit)), gauge, metric.tags)
       addMetric(name + ".min", valueFormat.format(scale(distribution.min, unit)), gauge, metric.tags)
@@ -99,7 +96,7 @@ class DatadogAPIReporter extends MetricReporter {
       if (seriesBuilder.length() > 0) seriesBuilder.append(",")
 
       seriesBuilder
-        .append(s"""{"metric":"$metricName","points":[[$timestamp,$value]],"type":"$metricType","host":"$host","tags":$allTagsString}""")
+        .append(s"""{"metric":"$metricName","interval":$interval,"points":[[$timestamp,$value]],"type":"$metricType","host":"$host","tags":$allTagsString}""")
     }
 
     def add(metric: MetricValue, metricType: String): Unit =
@@ -117,9 +114,13 @@ class DatadogAPIReporter extends MetricReporter {
   }
 
   private def scale(value: Long, unit: MeasurementUnit): Double = unit.dimension match {
-    case Time if unit.magnitude != time.seconds.magnitude             => MeasurementUnit.scale(value, unit, time.seconds)
-    case Information if unit.magnitude != information.bytes.magnitude => MeasurementUnit.scale(value, unit, information.bytes)
-    case _                                                            => value.toDouble
+    case Time if unit.magnitude != configuration.timeUnit.magnitude =>
+      MeasurementUnit.scale(value, unit, configuration.timeUnit)
+
+    case Information if unit.magnitude != configuration.informationUnit.magnitude =>
+      MeasurementUnit.scale(value, unit, configuration.informationUnit)
+
+    case _ => value.toDouble
   }
 
   // Apparently okhttp doesn't require explicit closing of the connection
@@ -149,7 +150,6 @@ class DatadogAPIReporter extends MetricReporter {
 
 private object DatadogAPIReporter {
   val apiUrl = "https://app.datadoghq.com/api/v1/series?api_key="
-
   val count = "count"
   val gauge = "gauge"
 
