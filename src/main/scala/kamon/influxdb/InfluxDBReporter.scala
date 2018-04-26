@@ -24,12 +24,14 @@ class InfluxDBReporter extends MetricReporter {
     Try {
       val response = client.newCall(request).execute()
       if(response.isSuccessful())
-        logger.debug("Successfully sent metrics to InfluxDB")
+        logger.trace("Successfully sent metrics to InfluxDB")
       else {
         logger.error("Metrics POST to InfluxDB failed with status code [{}], response body: {}",
           response.code(),
           response.body().string())
       }
+
+      response.close()
 
     }.failed.map {
       error => logger.error("Failed to POST metrics to InfluxDB", error)
@@ -88,14 +90,19 @@ class InfluxDBReporter extends MetricReporter {
         case (key, value) =>
           builder
             .append(',')
-            .append(key)
-            .append('=')
-            .append(value)
+            .append(escapeString(key))
+            .append("=")
+            .append(escapeString(value))
       }
     }
 
     builder.append(' ')
   }
+
+  private def escapeString(in: String): String =
+    in.replace(" ", "\\ ")
+      .replace("=", "\\=")
+      .replace(",", "\\,")
 
   def writeDoubleField(builder: StringBuilder, fieldName: String, value: Double, appendSeparator: Boolean = true): Unit = {
     builder
