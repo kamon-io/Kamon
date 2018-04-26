@@ -26,7 +26,7 @@ class DatadogAPIReporterSpec extends WordSpec with Matchers with Reconfigure { r
           )
         )
       )
-      series shouldBe """{"series":[{"metric":"test.counter","points":[[1523394,0]],"type":"count","host":"test","tags":["service:kamon-application","env:staging","tag1:value1"]}]}"""
+      series shouldBe """{"series":[{"metric":"test.counter","interval":1,"points":[[1523394,0]],"type":"count","host":"test","tags":["service:kamon-application","env:staging","tag1:value1"]}]}"""
 
     }
   }
