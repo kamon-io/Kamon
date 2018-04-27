@@ -13,7 +13,7 @@
  * =========================================================================================
  */
 
-val kamonCore = "io.kamon"  %%  "kamon-core"  % "1.0.1"
+val kamonCore = "io.kamon"  %%  "kamon-core"  % "1.1.2"
 
 name := "kamon-statsd"
 
