@@ -42,6 +42,7 @@ class StatsDReporter extends MetricReporter {
 
   // Absurdly high number of decimal digits, let the other end lose precision if it needs to.
   val samplingRateFormat = new DecimalFormat("#.################################################################", symbols)
+  val clientChannel: DatagramChannel = DatagramChannel.open()
 
   override def start(): Unit = {
     logger.info("Started the Kamon StatsD reporter")
@@ -73,8 +74,6 @@ class StatsDReporter extends MetricReporter {
   override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
     configuration.foreach { config =>
       val keyGenerator = config.keyGenerator
-      val clientChannel = DatagramChannel.open()
-
       val packetBuffer = new MetricDataPacketBuffer(config.maxPacketSize, clientChannel, config.agentAddress)
 
       for (counter <- snapshot.metrics.counters) {
