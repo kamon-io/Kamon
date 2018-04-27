@@ -1,9 +1,10 @@
 package kamon.prometheus
 
+import com.typesafe.config.ConfigFactory
 import kamon.metric.{DynamicRange, HdrHistogram, MetricDistribution, MetricValue}
 import kamon.metric.MeasurementUnit
 import org.scalatest.{Matchers, WordSpec}
-import kamon.metric.MeasurementUnit.{information, time, none}
+import kamon.metric.MeasurementUnit.{information, none, time}
 
 class ScrapeDataBuilderSpec extends WordSpec with Matchers {
 
@@ -90,6 +91,23 @@ class ScrapeDataBuilderSpec extends WordSpec with Matchers {
           |gauge_two{t="v",t2="v2"} 30.0
         """.stripMargin.trim()
       }
+    }
+
+    "read custom bucket configurations" in {
+      val config = PrometheusReporter.Configuration.readConfiguration(ConfigFactory.parseString(
+        """
+          |kamon.prometheus.buckets.custom {
+          |  singleword = [1, 2, 3]
+          |  "with.several.dots" = [3, 2, 1]
+          |}
+        """.stripMargin
+      ).withFallback(ConfigFactory.defaultReference()))
+
+      config.customBuckets should contain allOf(
+        ("singleword" -> Seq(1D, 2D, 3D)),
+        ("with.several.dots" -> Seq(3D, 2D, 1D))
+      )
+
     }
 
     "override histogram buckets with custom configuration" in {
