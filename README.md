@@ -11,7 +11,7 @@ Supported releases and dependencies are shown below.
 
 | kamon      | status | jdk  | scala
 |:----------:|:------:|:----:|------------------
-|  1.0.0 |  stable   | 1.8+ | 2.10, 2.11, 2.12
+|  1.1.0 |  stable   | 1.8+ | 2.10, 2.11, 2.12
 
 
 #### Adding the Reporter to your project
@@ -19,7 +19,7 @@ Supported releases and dependencies are shown below.
 First, add the dependency to your build. For SBT that would look like this:
 
 ```scala
-libraryDependencies += "io.kamon" %% "kamon-prometheus" % "1.0.0"
+libraryDependencies += "io.kamon" %% "kamon-prometheus" % "1.1.0"
 ```
 
 and for Maven:
@@ -28,7 +28,7 @@ and for Maven:
 <dependency>
     <groupId>io.kamon</groupId>
     <artifactId>kamon-prometheus_2.12</artifactId>
-    <version>1.0.0/version>
+    <version>1.1.0/version>
 </dependency>
 ```
 
