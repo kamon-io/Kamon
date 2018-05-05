@@ -18,7 +18,7 @@ package kamon.jdbc.instrumentation.maria
 import java.sql.{ResultSet, SQLException}
 import java.util.concurrent.Callable
 
-import kamon.agent.libs.net.bytebuddy.implementation.bind.annotation.{RuntimeType, SuperCall, This}
+import kanela.agent.libs.net.bytebuddy.implementation.bind.annotation.{RuntimeType, SuperCall, This}
 import kamon.jdbc.instrumentation.bridge.MariaPreparedStatement
 import org.mariadb.jdbc.internal.queryresults.resultset.MariaSelectResultSet
 

@@ -17,7 +17,7 @@ package kamon.jdbc.instrumentation.bridge
 
 import java.sql.ResultSet
 
-import kamon.agent.api.instrumentation.bridge.Bridge
+import kanela.agent.api.instrumentation.bridge.Bridge
 
 trait MariaPreparedStatement {
   @Bridge("boolean executeInternal(int, boolean)")

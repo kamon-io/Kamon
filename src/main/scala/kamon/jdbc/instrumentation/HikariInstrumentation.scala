@@ -20,15 +20,15 @@ import java.sql.{Connection, Statement}
 import java.util.concurrent.Callable
 
 import com.zaxxer.hikari.HikariConfig
-import kamon.agent.libs.net.bytebuddy.asm.Advice
-import kamon.agent.libs.net.bytebuddy.asm.Advice._
-import kamon.agent.libs.net.bytebuddy.implementation.bind.{annotation, _}
-import kamon.agent.libs.net.bytebuddy.implementation.bind.annotation.{RuntimeType, SuperCall}
-import kamon.agent.scala.KamonInstrumentation
+import kanela.agent.libs.net.bytebuddy.asm.Advice
+import kanela.agent.libs.net.bytebuddy.asm.Advice._
+import kanela.agent.libs.net.bytebuddy.implementation.bind.{annotation, _}
+import kanela.agent.libs.net.bytebuddy.implementation.bind.annotation.{RuntimeType, SuperCall}
+import kanela.agent.scala.KanelaInstrumentation
 import kamon.jdbc.Metrics
 import kamon.jdbc.instrumentation.mixin.{HasConnectionPoolMetrics, HasConnectionPoolMetricsMixin}
 
-class HikariInstrumentation extends KamonInstrumentation {
+class HikariInstrumentation extends KanelaInstrumentation {
 
   /**
     * Instrument:

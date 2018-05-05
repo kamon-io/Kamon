@@ -21,9 +21,9 @@ import java.util.concurrent.Callable
 
 import kamon.Kamon
 import kamon.Kamon.buildSpan
-import kamon.agent.libs.net.bytebuddy.implementation.bind.annotation
-import kamon.agent.libs.net.bytebuddy.implementation.bind.annotation.{RuntimeType, SuperCall, This}
-import kamon.agent.scala.KamonInstrumentation
+import kanela.agent.libs.net.bytebuddy.implementation.bind.annotation
+import kanela.agent.libs.net.bytebuddy.implementation.bind.annotation.{RuntimeType, SuperCall, This}
+import kanela.agent.scala.KanelaInstrumentation
 import kamon.jdbc.instrumentation.StatementInstrumentation.StatementTypes
 import kamon.jdbc.instrumentation.bridge.MariaPreparedStatement
 import kamon.jdbc.instrumentation.mixin.{HasConnectionPoolMetrics, HasConnectionPoolMetricsMixin}
@@ -31,7 +31,7 @@ import kamon.jdbc.{Jdbc, Metrics}
 import kamon.trace.SpanCustomizer
 
 
-class StatementInstrumentation extends KamonInstrumentation {
+class StatementInstrumentation extends KanelaInstrumentation {
 
 
   override def order() = 1000
