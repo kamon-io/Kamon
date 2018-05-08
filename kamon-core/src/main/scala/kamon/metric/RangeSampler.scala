@@ -50,6 +50,7 @@ class SimpleRangeSampler(name: String, tags: Map[String, String], underlyingHist
   def increment(times: Long): Unit = {
     val currentValue = sum.addAndGet(times)
     max.update(currentValue)
+    min.update(-currentValue)
   }
 
   def decrement(): Unit =
@@ -57,6 +58,7 @@ class SimpleRangeSampler(name: String, tags: Map[String, String], underlyingHist
 
   def decrement(times: Long): Unit = {
     val currentValue = sum.addAndGet(-times)
+    max.update(currentValue)
     min.update(-currentValue)
   }
 

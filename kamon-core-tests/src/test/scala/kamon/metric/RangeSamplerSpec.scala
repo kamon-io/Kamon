@@ -83,6 +83,34 @@ class RangeSamplerSpec extends WordSpec with Matchers {
       snapshot.distribution.min should be(0)
       snapshot.distribution.max should be(0)
     }
+
+    "report correct min and max values if increment or decrement are used with negative values" in {
+      val rangeSampler = buildRangeSampler("report-increment-decrement-negative")
+
+      rangeSampler.increment(5)
+      rangeSampler.decrement(3)
+      rangeSampler.sample()
+
+      val firstSnapshot = rangeSampler.snapshot()
+      firstSnapshot.distribution.min should be(0)
+      firstSnapshot.distribution.max should be(5)
+
+      rangeSampler.increment(-1)
+      rangeSampler.increment(2)
+      rangeSampler.sample()
+
+      val secondSnapshot = rangeSampler.snapshot()
+      secondSnapshot.distribution.min should be(1)
+      secondSnapshot.distribution.max should be(3)
+
+      rangeSampler.decrement(-2)
+      rangeSampler.decrement(2)
+      rangeSampler.sample()
+
+      val thirdSnapshot = rangeSampler.snapshot()
+      thirdSnapshot.distribution.min should be(3)
+      thirdSnapshot.distribution.max should be(5)
+    }
   }
 
   def buildRangeSampler(name: String, tags: Map[String, String] = Map.empty, unit: MeasurementUnit = MeasurementUnit.none): SimpleRangeSampler =
