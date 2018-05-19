@@ -16,16 +16,16 @@
 
 package akka.kamon.instrumentation.kanela.advisor
 
-import java.lang.reflect.Method
 import java.util.concurrent.ExecutorService
 
 import akka.actor.{ActorContext, ActorSystem, Props}
-import akka.dispatch.{Dispatcher, _}
+import akka.dispatch._
 import akka.kamon.instrumentation.LookupDataAware.LookupData
 import akka.kamon.instrumentation.kanela.advisor.DispatcherInstrumentationAdvisors.{extractExecutor, registerDispatcher, registeredDispatchers}
 import akka.kamon.instrumentation.{ActorSystemAware, LookupDataAware}
 import kamon.Kamon
 import kamon.akka.Akka
+import kamon.akka.instrumentation.kanela.bridge.AkkaDispatcherBridge
 import kamon.executors.Executors
 import kamon.util.Registration
 import kanela.agent.libs.net.bytebuddy.asm.Advice
@@ -47,7 +47,6 @@ object StartMethodAdvisor {
     // we are manually selecting and registering the default dispatcher with the Metrics extension. All other dispatchers
     // will by registered by the instrumentation bellow.
 
-    // Yes, reflection sucks, but this piece of code is only executed once on ActorSystem's startup.
     val defaultDispatcher = system.dispatcher
     val defaultDispatcherExecutor = extractExecutor(defaultDispatcher.asInstanceOf[MessageDispatcher])
     registerDispatcher(Dispatchers.DefaultDispatcherId, defaultDispatcherExecutor, system)
@@ -157,20 +156,10 @@ object DispatcherInstrumentationAdvisors {
   val registeredDispatchers = TrieMap.empty[String, Registration]
 
   def extractExecutor(dispatcher: MessageDispatcher): ExecutorService = {
-    val executorServiceMethod: Method = {
-      // executorService is protected
-      val method = classOf[Dispatcher].getDeclaredMethod("executorService")
-      method.setAccessible(true)
-      method
-    }
-
-    dispatcher match {
-      case x: Dispatcher ⇒
-        val executor = executorServiceMethod.invoke(x) match {
-          case delegate: ExecutorServiceDelegate ⇒ delegate.executor
-          case other                             ⇒ other
-        }
-        executor.asInstanceOf[ExecutorService]
+    val executor = dispatcher.asInstanceOf[AkkaDispatcherBridge].kamon$executorService()
+    executor  match {
+      case delegate: ExecutorServiceDelegate ⇒ delegate.executor
+      case other                             ⇒ other
     }
   }
 

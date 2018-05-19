@@ -17,6 +17,7 @@
 package kamon.akka.instrumentation.kanela
 
 import akka.kamon.instrumentation.kanela.advisor._
+import kamon.akka.instrumentation.kanela.bridge.AkkaDispatcherBridge
 import kamon.akka.instrumentation.kanela.interceptor.CreateExecutorMethodInterceptor
 import kamon.akka.instrumentation.kanela.mixin.{ActorSystemAwareMixin, LookupDataAwareMixin}
 import kanela.agent.scala.KanelaInstrumentation
@@ -35,6 +36,19 @@ class DispatcherInstrumentation extends KanelaInstrumentation {
       .withAdvisorFor(method("lookup"), classOf[LookupMethodAdvisor])
       .build()
   }
+
+  /**
+    * Instrument:
+    *
+    *  akka.dispatch.Dispatcher::executorService
+    *
+    */
+  forTargetType("akka.dispatch.Dispatcher") { builder ⇒
+    builder
+      .withBridge(classOf[AkkaDispatcherBridge])
+      .build()
+  }
+
 
   /**
     * Instrument:
