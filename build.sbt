@@ -29,8 +29,7 @@ lazy val root = (project in file("."))
 val commonSettings = Seq(
   scalaVersion := "2.12.6",
   resolvers += Resolver.mavenLocal,
-  crossScalaVersions := Seq("2.12.6", "2.11.12", "2.10.7"),
-  scalacOptions ++= Seq("-opt:l:method")
+  crossScalaVersions := Seq("2.12.6", "2.11.12", "2.10.7")
 )
 
 lazy val executors = (project in file("kamon-executors"))
