@@ -1,5 +1,6 @@
 package akka.kamon.instrumentation
 
+import java.util.concurrent.Callable
 import java.util.concurrent.locks.ReentrantLock
 
 import akka.actor._
@@ -143,7 +144,7 @@ class ActorCellInstrumentation {
 }
 
 object ActorCellInstrumentation {
-  private val (unstartedCellQueueField, unstartedCellLockField, systemMsgQueueField) = {
+  val (unstartedCellQueueField, unstartedCellLockField, systemMsgQueueField) = {
     val unstartedCellClass = classOf[UnstartedCell]
 
     val prefix = Properties.versionNumberString.split("\\.").take(2).mkString(".") match {
