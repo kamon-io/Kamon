@@ -16,8 +16,6 @@
 
 package akka.kamon.instrumentation.kanela.advisor
 
-import java.io.Closeable
-
 import _root_.kanela.agent.libs.net.bytebuddy.asm.Advice._
 import akka.actor.{ActorRef, ActorSystem, ActorSystemImpl, Cell}
 import akka.dispatch.Envelope

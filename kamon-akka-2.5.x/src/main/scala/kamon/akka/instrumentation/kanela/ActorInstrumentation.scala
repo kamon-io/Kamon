@@ -16,10 +16,9 @@
 
 package kamon.akka.instrumentation.kanela
 
-
+import akka.kamon.akka.instrumentation.kanela.ReplaceWithMethodInterceptor
 import akka.kamon.instrumentation.kanela.advisor._
 import akka.kamon.instrumentation.kanela.interceptor.InvokeAllMethodInterceptor
-import kamon.akka.instrumentation.kanela.advisor.ReplaceWithMethodAdvisor
 import kamon.akka.instrumentation.kanela.mixin.{ActorInstrumentationMixin, RoutedActorCellInstrumentationMixin}
 import kanela.agent.scala.KanelaInstrumentation
 
@@ -53,7 +52,7 @@ class ActorInstrumentation extends KanelaInstrumentation {
 
   /**
     * Instrument:
-    ``
+    *
     * akka.actor.UnstartedCell::constructor
     * akka.actor.UnstartedCell::sendMessage
     * akka.actor.UnstartedCell::replaceWith
@@ -68,7 +67,7 @@ class ActorInstrumentation extends KanelaInstrumentation {
       .withMixin(classOf[ActorInstrumentationMixin])
       .withAdvisorFor(Constructor, classOf[RepointableActorCellConstructorAdvisor])
       .withAdvisorFor(method("sendMessage").and(takesArguments(1)), classOf[SendMessageMethodAdvisor])
-      .withAdvisorFor(method("replaceWith"), classOf[ReplaceWithMethodAdvisor])
+      .withInterceptorFor(method("replaceWith"), ReplaceWithMethodInterceptor)
       .build()
   }
 

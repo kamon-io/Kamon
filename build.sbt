@@ -75,6 +75,9 @@ lazy val kamonAkka25 = Project("kamon-akka-25", file("kamon-akka-2.5.x"))
     resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")))
   .enablePlugins(JavaAgent)
   .settings(javaAgents ++= resolveAgent)
+  .settings(publishArtifact in (Compile, packageDoc) := false)
+  .settings(publishArtifact in packageDoc := false)
+  .settings(sources in (Compile,doc) := Seq.empty)
   .settings(
     libraryDependencies ++=
       compileScope(akkaDependency("actor", `akka-2.5`), kamonCore, kamonScala, kamonExecutors, kanelaScalaExtension) ++

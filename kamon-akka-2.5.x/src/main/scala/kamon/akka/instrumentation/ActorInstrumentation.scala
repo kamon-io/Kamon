@@ -1,13 +1,12 @@
 package akka.kamon.instrumentation
 
-import java.util.concurrent.Callable
 import java.util.concurrent.locks.ReentrantLock
 
 import akka.actor._
 import akka.dispatch.Envelope
 import akka.dispatch.sysmsg.{LatestFirstSystemMessageList, SystemMessage, SystemMessageList}
 import akka.routing.RoutedActorCell
-import kamon.Kamon
+import _root_.kamon.Kamon
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
 
@@ -133,6 +132,7 @@ class ActorCellInstrumentation {
       }
     }
   }
+
 
   @Pointcut("execution(* akka.actor.ActorCell.handleInvokeFailure(..)) && this(cell) && args(childrenNotToSuspend, failure)")
   def actorInvokeFailure(cell: ActorCell, childrenNotToSuspend: immutable.Iterable[ActorRef], failure: Throwable): Unit = {}
