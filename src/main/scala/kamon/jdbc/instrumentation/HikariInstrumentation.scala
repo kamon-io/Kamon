@@ -20,13 +20,13 @@ import java.sql.{Connection, Statement}
 import java.util.concurrent.Callable
 
 import com.zaxxer.hikari.HikariConfig
-import kanela.agent.libs.net.bytebuddy.asm.Advice
-import kanela.agent.libs.net.bytebuddy.asm.Advice._
-import kanela.agent.libs.net.bytebuddy.implementation.bind.{annotation, _}
-import kanela.agent.libs.net.bytebuddy.implementation.bind.annotation.{RuntimeType, SuperCall}
-import kanela.agent.scala.KanelaInstrumentation
 import kamon.jdbc.Metrics
 import kamon.jdbc.instrumentation.mixin.{HasConnectionPoolMetrics, HasConnectionPoolMetricsMixin}
+import kanela.agent.libs.net.bytebuddy.asm.Advice
+import kanela.agent.libs.net.bytebuddy.asm.Advice._
+import kanela.agent.libs.net.bytebuddy.implementation.bind.annotation
+import kanela.agent.libs.net.bytebuddy.implementation.bind.annotation.{RuntimeType, SuperCall}
+import kanela.agent.scala.KanelaInstrumentation
 
 class HikariInstrumentation extends KanelaInstrumentation {
 
@@ -53,7 +53,7 @@ class HikariInstrumentation extends KanelaInstrumentation {
       .withAdvisorFor(method("createPoolEntry"), classOf[HikariPoolCreatePoolEntryMethodAdvisor])
       .withAdvisorFor(method("closeConnection"), classOf[HikariPoolCloseConnectionMethodAdvisor])
       .withAdvisorFor(method("createTimeoutException"), classOf[HikariPoolCreateTimeoutExceptionMethodAdvisor])
-      .withInterceptorFor(method("getConnection").and(takesArguments(0)), classOf[HikariPoolGetConnectionMethodInterceptor])
+      .withInterceptorFor(method("getConnection").and(takesArguments(0)), HikariPoolGetConnectionMethodInterceptor)
       .build()
   }
 
@@ -180,7 +180,6 @@ object ProxyConnectionStatementMethodsAdvisor {
 /**
   * Interceptor com.zaxxer.hikari.pool.HikariPool::getConnection
   */
-class HikariPoolGetConnectionMethodInterceptor
 object HikariPoolGetConnectionMethodInterceptor {
 
   @RuntimeType
