@@ -79,7 +79,6 @@ class StatementInstrumentation extends KanelaInstrumentation {
     */
   forSubtypeOf("java.sql.PreparedStatement") { builder =>
     builder
-      .withMixin(classOf[HasConnectionPoolMetricsMixin])
       .withInterceptorFor(method("execute"), ExecuteMethodInterceptor)
       .withInterceptorFor(method("executeQuery"), ExecuteQueryMethodInterceptor)
       .withInterceptorFor(method("executeUpdate"), ExecuteUpdateMethodInterceptor)
