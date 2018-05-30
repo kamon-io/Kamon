@@ -5,14 +5,14 @@ import kamon.influxdb.InfluxDBReporter.Settings
 import kamon.metric.{MetricDistribution, MetricValue, PeriodSnapshot}
 import kamon.util.EnvironmentTagBuilder
 import kamon.{Kamon, MetricReporter}
-import okhttp3.{MediaType, OkHttpClient, Request, RequestBody}
+import okhttp3.{MediaType, OkHttpClient, Request, RequestBody, Authenticator, Route, Response, Credentials}
 import org.slf4j.LoggerFactory
 
 import scala.util.Try
 
-class InfluxDBReporter extends MetricReporter {
+class InfluxDBReporter(config: Config = Kamon.config()) extends MetricReporter {
   private val logger = LoggerFactory.getLogger(classOf[InfluxDBReporter])
-  private var settings = InfluxDBReporter.readSettings(Kamon.config())
+  private var settings = InfluxDBReporter.readSettings(config)
   private val client = buildClient(settings)
 
   override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
@@ -133,7 +133,13 @@ class InfluxDBReporter extends MetricReporter {
   }
 
   private def buildClient(settings: Settings): OkHttpClient = {
-    new OkHttpClient.Builder().build()
+    val basicBuilder = new OkHttpClient.Builder()
+    val authenticator = settings.credentials.map(credentials => new Authenticator() {
+      def authenticate(route: Route, response: Response): Request = {
+        response.request().newBuilder().header("Authorization", credentials).build()
+      }
+    })
+    authenticator.foldLeft(basicBuilder){ case (builder, auth) => builder.authenticator(auth)}.build()
   }
 }
 
@@ -141,6 +147,7 @@ object InfluxDBReporter {
   case class Settings(
     url: String,
     percentiles: Seq[Double],
+    credentials: Option[String],
     additionalTags: Map[String, String]
   )
 
@@ -148,6 +155,8 @@ object InfluxDBReporter {
     import scala.collection.JavaConverters._
     val root = config.getConfig("kamon.influxdb")
     val host = root.getString("hostname")
+    val authConfig = Try(root.getConfig("authentication")).toOption
+    val credentials = authConfig.map(conf => Credentials.basic(conf.getString("user"), conf.getString("password")))
     val port = root.getInt("port")
     val database = root.getString("database")
     val url = s"http://${host}:${port}/write?precision=s&db=${database}"
@@ -157,6 +166,7 @@ object InfluxDBReporter {
     Settings(
       url,
       root.getDoubleList("percentiles").asScala.map(_.toDouble),
+      credentials,
       additionalTags
     )
   }

@@ -4,36 +4,27 @@ import java.nio.charset.Charset
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.{ConfigFactory, Config}
 import kamon.Kamon
 import kamon.metric._
 import kamon.testkit.MetricInspection
+import okhttp3.Headers
 import okhttp3.mockwebserver.{MockResponse, MockWebServer}
 import org.scalatest._
 
 import kamon.influxdb.InfluxDBCustomMatchers._
 
-class InfluxDBReporterSpec extends WordSpec with Matchers with BeforeAndAfterAll {
+class InfluxDBReporterSpec extends WordSpec with Matchers with OptionValues {
 
   "the InfluxDB reporter" should {
-    "convert and post all metrics using the line protocol over HTTP" in {
-      reporter.reconfigure(ConfigFactory.parseString(
-        s"""
-           |kamon.influxdb {
-           |  hostname = ${influxDB.getHostName}
-           |  port = ${influxDB.getPort}
-           |
-           |  additional-tags {
-           |    service = no
-           |    host = no
-           |    instance = no
-           |
-           |    blacklisted-tags = [ "env", "context" ]
-           |  }
-           |}
-      """.stripMargin
-      ).withFallback(Kamon.config()))
-
+    "convert and post all metrics using the line protocol over HTTP" in new Fixture(extraConfig =
+      s"""
+         |kamon.influxdb {
+         |  additional-tags {
+         |    blacklisted-tags = [ "env", "context" ]
+         |  }
+         |}
+      """.stripMargin) {
       reporter.reportPeriodSnapshot(periodSnapshot)
       val reportedLines = influxDB.takeRequest(10, TimeUnit.SECONDS).getBody.readString(Charset.forName("UTF-8")).split("\n")
 
@@ -50,21 +41,16 @@ class InfluxDBReporterSpec extends WordSpec with Matchers with BeforeAndAfterAll
       }
 
     }
-    "include the additional env tags if enabled" in {
-      //enable env tags
-      reporter.reconfigure(ConfigFactory.parseString(
+    "include the additional env tags if enabled" in new Fixture(extraConfig =
         s"""
            |kamon.influxdb {
-           |  hostname = ${influxDB.getHostName}
-           |  port = ${influxDB.getPort}
            |  additional-tags {
            |    service = yes
            |    host = yes
            |    instance = yes
            |  }
            |}
-      """.stripMargin
-      ).withFallback(Kamon.config()))
+        """.stripMargin) {
 
       reporter.reportPeriodSnapshot(periodSnapshot)
       val reportedLines = influxDB.takeRequest(10, TimeUnit.SECONDS).getBody.readString(Charset.forName("UTF-8")).split("\n")
@@ -81,55 +67,69 @@ class InfluxDBReporterSpec extends WordSpec with Matchers with BeforeAndAfterAll
         case (reported, expected) => reported should matchExpectedLineProtocolPoint(expected)
       }
     }
-  }
-
-  val influxDB = new MockWebServer()
-  val reporter = new InfluxDBReporter()
-
-  val from = Instant.ofEpochSecond(1517000974)
-  val to = Instant.ofEpochSecond(1517000993)
-  val periodSnapshot = new PeriodSnapshotBuilder()
-    .from(from)
-    .to(to)
-    .counter("custom.user.counter", Map(), 42)
-    .gauge("jvm.heap-size",         Map(), 150000000)
-    .counter("akka.actor.errors",   Map("path" -> "as/user/actor"), 10)
-    .histogram("my.histogram",      Map("one" -> "tag"), 1, 2, 4, 6)
-    .rangeSampler("queue.monitor",  Map("one" -> "tag"), 1, 2, 4, 6)
-    .build()
-
-
-  override protected def beforeAll(): Unit = {
-    influxDB.enqueue(new MockResponse().setResponseCode(204))
-    influxDB.enqueue(new MockResponse().setResponseCode(204))
-    influxDB.start()
-    Kamon.reconfigure(ConfigFactory.parseString(
-      s"""
-         |kamon.environment {
-         |    host = "test.host"
-         |    service = "test-service"
-         |    instance = "test-instance"
-         |    tags = {
-         |      env = "staging"
-         |      context = "test-context"
-         |    }
+    "send basic authentication credentials when configured" in new Fixture(extraConfig =
+      """
+         |kamon.influxdb {
+         |  authentication {
+         |    user = test-user
+         |    password = p4ssw0rd
+         |  }
          |}
-       """.stripMargin
-    ).withFallback(Kamon.config()))
-    reporter.start()
-    reporter.reconfigure(ConfigFactory.parseString(
-      s"""
-        |kamon.influxdb {
-        |  hostname = ${influxDB.getHostName}
-        |  port = ${influxDB.getPort}
-        |}
-      """.stripMargin
-    ).withFallback(Kamon.config()))
+      """.stripMargin, responses = List(
+        new MockResponse().setResponseCode(401),
+        new MockResponse().setResponseCode(204)
+      )) {
+      reporter.reportPeriodSnapshot(periodSnapshot)
+      val failedRequest = influxDB.takeRequest(10, TimeUnit.SECONDS)
+      val authRequest = influxDB.takeRequest(10, TimeUnit.SECONDS)
+
+      val authHeader = authRequest.getHeader("Authorization")
+
+      Option(authHeader) shouldBe defined
+    }
+  }
+
+  object Fixture {
+    val DefaultResponses: List[MockResponse] = List(new MockResponse().setResponseCode(204))
   }
 
 
-  override protected def afterAll(): Unit = {
-    influxDB.shutdown()
+  class Fixture(config: Config = ConfigFactory.load(), responses: List[MockResponse] = Fixture.DefaultResponses) {
+
+    def this(extraConfig: String) =
+      this(ConfigFactory.parseString(extraConfig).withFallback(ConfigFactory.load()))
+
+    def this(extraConfig: String, responses: List[MockResponse]) =
+      this(ConfigFactory.parseString(extraConfig).withFallback(ConfigFactory.load()), responses)
+
+    val influxDB = new MockWebServer()
+    val reporter = new InfluxDBReporter(config)
+
+    val from = Instant.ofEpochSecond(1517000974)
+    val to = Instant.ofEpochSecond(1517000993)
+    val periodSnapshot = new PeriodSnapshotBuilder()
+      .from(from)
+      .to(to)
+      .counter("custom.user.counter", Map(), 42)
+      .gauge("jvm.heap-size",         Map(), 150000000)
+      .counter("akka.actor.errors",   Map("path" -> "as/user/actor"), 10)
+      .histogram("my.histogram",      Map("one" -> "tag"), 1, 2, 4, 6)
+      .rangeSampler("queue.monitor",  Map("one" -> "tag"), 1, 2, 4, 6)
+      .build()
+
+      responses.map(influxDB.enqueue)
+      influxDB.start()
+      reporter.start()
+      Kamon.reconfigure(config)
+
+      reporter.reconfigure(ConfigFactory.parseString(
+        s"""
+          |kamon.influxdb {
+          |  hostname = ${influxDB.getHostName}
+          |  port = ${influxDB.getPort}
+          |}
+        """.stripMargin
+      ).withFallback(config))
   }
 
   class PeriodSnapshotBuilder extends MetricInspection {
