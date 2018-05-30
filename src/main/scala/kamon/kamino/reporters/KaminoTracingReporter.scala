@@ -1,19 +1,20 @@
-package kamon.kamino
+package kamon.kamino.reporters
 
-import kamon.{Kamon, SpanReporter}
-import kamon.trace.Span
-import kamino.IngestionV1.{SpanBatch}
-import kamon.trace.Span.TagValue
 import com.typesafe.config.Config
 import kamino.IngestionV1
-import org.slf4j.LoggerFactory
+import kamino.IngestionV1.SpanBatch
+import kamon.kamino.{KaminoApiClient, KaminoConfiguration, readConfiguration}
+import kamon.trace.Span
+import kamon.trace.Span.TagValue
 import kamon.util.Clock
+import kamon.{Kamon, SpanReporter}
+import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 
-class KaminoTracingReporter extends SpanReporter {
+private[kamino] class KaminoTracingReporter extends SpanReporter {
 
-  private val logger = LoggerFactory.getLogger(classOf[KaminoReporter])
+  private val logger = LoggerFactory.getLogger(classOf[KaminoMetricReporter])
   private var httpClient: Option[KaminoApiClient] = None
   private var configuration: KaminoConfiguration = readConfiguration(Kamon.config())
 

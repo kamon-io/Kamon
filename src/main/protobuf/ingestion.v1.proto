@@ -9,6 +9,7 @@ message MetricBatch {
   required string host = 4;
   required string instance = 5;
   repeated Metric metrics = 6;
+  optional Plan plan = 7;
 }
 
 message Interval {
@@ -28,6 +29,11 @@ enum InstrumentType {
   GAUGE = 1;
   HISTOGRAM = 2;
   MIN_MAX_COUNTER = 3;
+}
+
+enum Plan {
+  METRIC_ONLY = 1;
+  METRIC_TRACING = 2;
 }
 
 message NodeIdentity {

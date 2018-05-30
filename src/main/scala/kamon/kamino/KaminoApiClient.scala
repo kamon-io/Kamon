@@ -8,13 +8,14 @@ import okhttp3._
 import kamino.IngestionV1._
 import IngestionStatus._
 import kamon.Kamon
+import kamon.kamino.reporters.KaminoMetricReporter
 import org.slf4j.LoggerFactory
 
 import scala.annotation.tailrec
 import scala.util.{Failure, Success, Try}
 
 class KaminoApiClient(config: KaminoConfiguration) {
-  private val logger = LoggerFactory.getLogger(classOf[KaminoReporter])
+  private val logger = LoggerFactory.getLogger(classOf[KaminoMetricReporter])
 
   private val client = createHttpClient(config)
   private var lastAttempt: Instant = Instant.EPOCH

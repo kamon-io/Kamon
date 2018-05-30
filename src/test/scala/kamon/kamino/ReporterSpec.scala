@@ -16,8 +16,10 @@ import akka.http.scaladsl.server.directives.MethodDirectives.post
 import akka.http.scaladsl.server.directives.RouteDirectives.complete
 import akka.http.scaladsl.server.directives.PathDirectives.path
 import akka.http.scaladsl.server.Directives.{pathPrefix, _}
+import kamino.IngestionV1
 import kamino.IngestionV1.{Goodbye, Hello, MetricBatch, SpanBatch}
 import kamon.Kamon
+import kamon.kamino.reporters.{KaminoMetricReporter, KaminoTracingReporter}
 import kamon.metric.{MetricsSnapshot, PeriodSnapshot}
 import kamon.trace.SpanContext
 import kamon.trace.Span.FinishedSpan
@@ -26,7 +28,7 @@ import org.scalatest.concurrent.Eventually
 import scala.concurrent.duration._
 
 
-class MetricReporterSpec extends TestKit(ActorSystem("MetricReporterSpec")) with WordSpecLike
+class ReporterSpec extends TestKit(ActorSystem("MetricReporterSpec")) with WordSpecLike
   with Matchers with BeforeAndAfterAll with ImplicitSender with BeforeAndAfterEach with Eventually {
 
   var server: Future[ServerBinding] = null
@@ -77,7 +79,7 @@ class MetricReporterSpec extends TestKit(ActorSystem("MetricReporterSpec")) with
 
   "Metric reporter on flaky network" should {
 
-    val reporter = new KaminoReporter()
+    val reporter = new KaminoMetricReporter(IngestionV1.Plan.METRIC_ONLY)
     val tracingReporter = new KaminoTracingReporter()
 
     "retry initial HELLO" in {
@@ -117,7 +119,7 @@ class MetricReporterSpec extends TestKit(ActorSystem("MetricReporterSpec")) with
       expectNoMsg(1 second)
     }
 
-    "not retry lost Goodbye in order not to hang shutdown of host app" in {
+    "don't retry lost Goodbye in order not to hang shutdown of host app" in {
       reporter.stop()
       expectMsgType[Goodbye]
       expectNoMsg(1 second)
