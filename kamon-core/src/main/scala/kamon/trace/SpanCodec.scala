@@ -137,8 +137,8 @@ object SpanCodec {
 
         val spanContext = SpanContext(
           traceID = identityProvider.traceIdGenerator().from(colferSpan.traceID),
-          spanID = identityProvider.traceIdGenerator().from(colferSpan.spanID),
-          parentID = identityProvider.traceIdGenerator().from(colferSpan.parentID),
+          spanID = identityProvider.spanIdGenerator().from(colferSpan.spanID),
+          parentID = identityProvider.spanIdGenerator().from(colferSpan.parentID),
           samplingDecision = byteToSamplingDecision(colferSpan.samplingDecision)
         )
 
