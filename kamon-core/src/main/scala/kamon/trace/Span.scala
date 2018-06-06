@@ -18,6 +18,7 @@ package trace
 
 import java.time.Instant
 
+import com.typesafe.config.ConfigFactory
 import kamon.ReporterRegistry.SpanSink
 import kamon.context.Key
 import kamon.metric.MeasurementUnit
@@ -275,8 +276,11 @@ object Span {
 
 
   object Metrics {
-    val ProcessingTime = Kamon.histogram("span.processing-time", MeasurementUnit.time.nanoseconds)
-    val SpanErrorCount = Kamon.counter("span.error-count")
+    private val processingTimeName = ConfigFactory.load().getString("kamon.trace.span-metrics.processing-time-name")
+    private val errorCountName = ConfigFactory.load().getString("kamon.trace.span-metrics.error-count-name")
+
+    val ProcessingTime = Kamon.histogram(processingTimeName, MeasurementUnit.time.nanoseconds)
+    val SpanErrorCount = Kamon.counter(errorCountName)
   }
 
   case class Mark(instant: Instant, key: String)
