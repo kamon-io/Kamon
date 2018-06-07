@@ -1,5 +1,6 @@
 package kamon.graphite
 
+import java.net.Socket
 import java.nio.charset.StandardCharsets
 
 import com.typesafe.config.Config
@@ -14,13 +15,13 @@ class GraphiteReporter extends MetricReporter {
   override def start(): Unit = {
     val c = GraphiteSenderConfig(Kamon.config())
     log.info("starting Graphite reporter {}", c)
-    sender = new GraphiteSender(c)
+    sender = new GraphiteSender(c) with TcpSender
   }
   override def stop(): Unit = {}
   override def reconfigure(config: Config): Unit = {
     val c = GraphiteSenderConfig(config)
     log.info("restarting new Graphite reporter {}", c)
-    sender = new GraphiteSender(c)
+    sender = new GraphiteSender(c) with TcpSender
   }
   override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = sender.reportPeriodSnapshot(snapshot)
 }
@@ -36,10 +37,12 @@ private object GraphiteSenderConfig {
   }
 }
 
-private class GraphiteSender(val senderConfig: GraphiteSenderConfig) extends TcpSender {
+abstract class GraphiteSender(val senderConfig: GraphiteSenderConfig) extends Sender {
   private val log = LoggerFactory.getLogger(classOf[GraphiteSender])
 
   def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
+    log.debug("send {} to {}", snapshot, senderConfig)
+
     val timestamp = snapshot.to.getEpochSecond
     val packetBuilder = new MetricPacketBuilder(senderConfig.metricPrefix, timestamp)
 
@@ -81,23 +84,20 @@ class MetricPacketBuilder(baseName: String, timestamp: Long) {
   }
 }
 
-private trait TcpSender {
+private trait Sender extends AutoCloseable {
   def senderConfig: GraphiteSenderConfig
-  def write(data: Array[Byte]): Unit = {}
-  def flush(): Unit = {}
+  def write(data: Array[Byte]): Unit
+  def flush(): Unit
+  def close(): Unit
+}
 
-  //  object EchoClient {
-  //    def main(args : Array[String]) : Unit = {
-  //      for { connection <- ManagedResource(new Socket("localhost", 8007))
-  //            outStream <- ManagedResource(connection.getOutputStream))
-  //        val out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(outStream)))
-  //        inStream <- managed(new InputStreamReader(connection.getInputStream))
-  //        val in = new BufferedReader(inStream)
-  //      } {
-  //        out.println("Test Echo Server!")
-  //        out.flush()
-  //        println("Client Received: " + in.readLine)
-  //      }
-  //    }
-  //  }
+private trait TcpSender extends Sender {
+  private lazy val out = {
+    val socket = new Socket(senderConfig.hostname, senderConfig.port)
+    socket.getOutputStream
+  }
+
+  def write(data: Array[Byte]): Unit = out.write(data)
+  def flush(): Unit = out.flush()
+  def close() = out.close()
 }
