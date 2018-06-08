@@ -5,7 +5,7 @@ import java.nio.charset.StandardCharsets
 
 import com.typesafe.config.Config
 import kamon.metric.PeriodSnapshot
-import kamon.{Kamon, MetricReporter}
+import kamon.{ Kamon, MetricReporter }
 import org.slf4j.LoggerFactory
 
 class GraphiteReporter extends MetricReporter {
@@ -29,8 +29,7 @@ class GraphiteReporter extends MetricReporter {
   override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
     try {
       sender.reportPeriodSnapshot(snapshot)
-    }
-    catch {
+    } catch {
       case e: Throwable =>
         log.warn("sending failed - dispose current snapshot and retry sending next snapshot using a new connection", e)
         sender.close()
@@ -52,11 +51,11 @@ private object GraphiteSenderConfig {
   }
 }
 
-abstract class GraphiteSender(val senderConfig: GraphiteSenderConfig) extends Sender {
+private abstract class GraphiteSender(val senderConfig: GraphiteSenderConfig) extends Sender {
   private val log = LoggerFactory.getLogger(classOf[GraphiteSender])
 
   def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
-    log.debug("send {} to {}", snapshot, senderConfig)
+    log.debug("sending {} to {}", snapshot: Any, senderConfig: Any)
 
     val timestamp = snapshot.to.getEpochSecond
     val packetBuilder = new MetricPacketBuilder(senderConfig.metricPrefix, timestamp)
@@ -80,7 +79,7 @@ abstract class GraphiteSender(val senderConfig: GraphiteSenderConfig) extends Se
   }
 }
 
-class MetricPacketBuilder(baseName: String, timestamp: Long) {
+private class MetricPacketBuilder(baseName: String, timestamp: Long) {
   private val builder = new java.lang.StringBuilder()
 
   private def sanitize(value: String): String =
@@ -89,12 +88,12 @@ class MetricPacketBuilder(baseName: String, timestamp: Long) {
   def build(metricName: String, value: Long): Array[Byte] = {
     builder.setLength(0)
     builder
-        .append(sanitize(baseName)).append(".").append(sanitize(metricName))
-        .append(" ")
-        .append(value)
-        .append(" ")
-        .append(timestamp)
-        .append("\n")
+      .append(sanitize(baseName)).append(".").append(sanitize(metricName))
+      .append(" ")
+      .append(value)
+      .append(" ")
+      .append(timestamp)
+      .append("\n")
     builder.toString.getBytes(StandardCharsets.US_ASCII)
   }
 }
