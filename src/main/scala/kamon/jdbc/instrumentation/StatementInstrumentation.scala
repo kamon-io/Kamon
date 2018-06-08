@@ -23,6 +23,7 @@ import kamon.Kamon
 import kamon.Kamon.buildSpan
 import kamon.jdbc.instrumentation.StatementInstrumentation.StatementTypes
 import kamon.jdbc.instrumentation.bridge.MariaPreparedStatement
+import kamon.jdbc.instrumentation.maria.{MariaExecuteQueryMethodInterceptor, MariaExecuteUpdateMethodInterceptor}
 import kamon.jdbc.instrumentation.mixin.{HasConnectionPoolMetrics, HasConnectionPoolMetricsMixin}
 import kamon.jdbc.{Jdbc, Metrics}
 import kamon.trace.SpanCustomizer
@@ -90,8 +91,8 @@ class StatementInstrumentation extends KanelaInstrumentation {
   forTargetType("org.mariadb.jdbc.MariaDbServerPreparedStatement") { builder =>
     builder
       .withBridge(classOf[MariaPreparedStatement])
-      .withInterceptorFor(method("executeQuery"), ExecuteQueryMethodInterceptor)
-      .withInterceptorFor(method("executeUpdate"), ExecuteUpdateMethodInterceptor)
+      .withInterceptorFor(method("executeQuery"), MariaExecuteQueryMethodInterceptor)
+      .withInterceptorFor(method("executeUpdate"), MariaExecuteUpdateMethodInterceptor)
       .build()
   }
 }

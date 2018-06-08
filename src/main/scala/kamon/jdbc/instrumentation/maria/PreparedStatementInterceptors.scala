@@ -25,7 +25,7 @@ import org.mariadb.jdbc.internal.queryresults.resultset.MariaSelectResultSet
 /**
   * Interceptor for org.mariadb.jdbc.MariaDbServerPreparedStatement::executeQuery
   */
-object ExecuteQueryMethodInterceptor {
+object MariaExecuteQueryMethodInterceptor {
 
   @RuntimeType
   @throws(classOf[SQLException])
@@ -42,7 +42,7 @@ object ExecuteQueryMethodInterceptor {
 /**
   * Interceptor for org.mariadb.jdbc.MariaDbServerPreparedStatement::executeUpdate
   */
-object ExecuteUpdateMethodInterceptor {
+object MariaExecuteUpdateMethodInterceptor {
 
   @RuntimeType
   @throws(classOf[SQLException])
