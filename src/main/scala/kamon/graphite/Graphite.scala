@@ -60,19 +60,23 @@ private abstract class GraphiteSender(val senderConfig: GraphiteSenderConfig) ex
     val timestamp = snapshot.to.getEpochSecond
     val packetBuilder = new MetricPacketBuilder(senderConfig.metricPrefix, timestamp)
 
-    for (metric <- snapshot.metrics.counters ++ snapshot.metrics.gauges) {
-      write(packetBuilder.build(metric.name, metric.value))
+    for (metric <- snapshot.metrics.counters) {
+      write(packetBuilder.build(metric.name, "count", metric.value))
+    }
+
+    for (metric <- snapshot.metrics.gauges) {
+      write(packetBuilder.build(metric.name, "value", metric.value))
     }
 
     for (metric <- snapshot.metrics.histograms ++ snapshot.metrics.rangeSamplers) {
       val distribution = metric.distribution
-      write(packetBuilder.build(metric.name + ".count", distribution.count))
-      write(packetBuilder.build(metric.name + ".min", distribution.min))
-      write(packetBuilder.build(metric.name + ".max", distribution.max))
-      write(packetBuilder.build(metric.name + ".p50", distribution.percentile(50D).value))
-      write(packetBuilder.build(metric.name + ".p90", distribution.percentile(90D).value))
-      write(packetBuilder.build(metric.name + ".p99", distribution.percentile(99D).value))
-      write(packetBuilder.build(metric.name + ".sum", distribution.count))
+      write(packetBuilder.build(metric.name, "count", distribution.count))
+      write(packetBuilder.build(metric.name, "min", distribution.min))
+      write(packetBuilder.build(metric.name, "max", distribution.max))
+      write(packetBuilder.build(metric.name, "p50", distribution.percentile(50D).value))
+      write(packetBuilder.build(metric.name, "p90", distribution.percentile(90D).value))
+      write(packetBuilder.build(metric.name, "p99", distribution.percentile(99D).value))
+      write(packetBuilder.build(metric.name, "sum", distribution.count))
     }
 
     flush()
@@ -80,21 +84,24 @@ private abstract class GraphiteSender(val senderConfig: GraphiteSenderConfig) ex
 }
 
 private class MetricPacketBuilder(baseName: String, timestamp: Long) {
+  private val log = LoggerFactory.getLogger(classOf[MetricPacketBuilder])
   private val builder = new java.lang.StringBuilder()
 
   private def sanitize(value: String): String =
     value.replace('/', '_').replace('.', '_')
 
-  def build(metricName: String, value: Long): Array[Byte] = {
+  def build(metricName: String, metricType: String, value: Long): Array[Byte] = {
     builder.setLength(0)
     builder
-      .append(sanitize(baseName)).append(".").append(sanitize(metricName))
+      .append(baseName).append(".").append(sanitize(metricName)).append(".").append(metricType)
       .append(" ")
       .append(value)
       .append(" ")
       .append(timestamp)
       .append("\n")
-    builder.toString.getBytes(StandardCharsets.US_ASCII)
+    val packet = builder.toString
+    log.trace("built packet '{}'", packet)
+    packet.getBytes(StandardCharsets.US_ASCII)
   }
 }
 
