@@ -76,7 +76,7 @@ private abstract class GraphiteSender(val senderConfig: GraphiteSenderConfig) ex
       write(packetBuilder.build(metric.name, "p50", distribution.percentile(50D).value))
       write(packetBuilder.build(metric.name, "p90", distribution.percentile(90D).value))
       write(packetBuilder.build(metric.name, "p99", distribution.percentile(99D).value))
-      write(packetBuilder.build(metric.name, "sum", distribution.count))
+      write(packetBuilder.build(metric.name, "sum", distribution.sum))
     }
 
     flush()
