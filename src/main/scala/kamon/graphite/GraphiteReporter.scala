@@ -1,5 +1,6 @@
 package kamon.graphite
 
+import java.io.BufferedOutputStream
 import java.net.Socket
 import java.nio.charset.StandardCharsets
 
@@ -56,10 +57,10 @@ private abstract class GraphiteSender(val senderConfig: GraphiteSenderConfig) ex
   val log: Logger = LoggerFactory.getLogger(classOf[GraphiteSender])
 
   def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
-    log.debug("sending {} to {}", snapshot: Any, senderConfig: Any)
+    log.debug("sending metrics for interval '{}->{}' to {}", snapshot.from, snapshot.to, senderConfig)
 
     val timestamp = snapshot.to.getEpochSecond
-    val packetBuilder = new MetricPacketBuilder(senderConfig.metricPrefix, timestamp, senderConfig.includeTags)
+    val packetBuilder = new MetricPacketBuilder(senderConfig.metricPrefix, timestamp, senderConfig)
 
     for (metric <- snapshot.metrics.counters) {
       write(packetBuilder.build(metric.name, "count", metric.value, metric.tags))
@@ -84,7 +85,7 @@ private abstract class GraphiteSender(val senderConfig: GraphiteSenderConfig) ex
   }
 }
 
-private class MetricPacketBuilder(baseName: String, timestamp: Long, includeTags: Boolean) {
+private class MetricPacketBuilder(baseName: String, timestamp: Long, config: GraphiteSenderConfig) {
   private val log = LoggerFactory.getLogger(classOf[MetricPacketBuilder])
   private val builder = new java.lang.StringBuilder()
 
@@ -94,7 +95,7 @@ private class MetricPacketBuilder(baseName: String, timestamp: Long, includeTags
   def build(metricName: String, metricType: String, value: Long, tags: Tags): Array[Byte] = {
     builder.setLength(0)
     builder.append(baseName).append(".").append(sanitize(metricName)).append(".").append(metricType)
-    if (includeTags) tags.foreach(kv => builder.append(";").append(kv._1).append("=").append(kv._2))
+    if (config.includeTags) tags.foreach(kv => builder.append(";").append(kv._1).append("=").append(kv._2))
     builder
       .append(" ")
       .append(value)
@@ -118,7 +119,7 @@ private trait Sender extends AutoCloseable {
 private trait TcpSender extends Sender {
   private lazy val out = {
     val socket = new Socket(senderConfig.hostname, senderConfig.port)
-    socket.getOutputStream
+    new BufferedOutputStream(socket.getOutputStream)
   }
 
   def write(data: Array[Byte]): Unit = out.write(data)
