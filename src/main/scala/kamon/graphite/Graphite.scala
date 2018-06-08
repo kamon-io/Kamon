@@ -5,7 +5,7 @@ import java.nio.charset.StandardCharsets
 
 import com.typesafe.config.Config
 import kamon.metric.PeriodSnapshot
-import kamon.{ Kamon, MetricReporter }
+import kamon.{ Kamon, MetricReporter, Tags }
 import org.slf4j.{ Logger, LoggerFactory }
 
 class GraphiteReporter extends MetricReporter {
@@ -40,14 +40,15 @@ class GraphiteReporter extends MetricReporter {
   private def buildNewSender(c: GraphiteSenderConfig): Unit = sender = new GraphiteSender(c) with TcpSender
 }
 
-private case class GraphiteSenderConfig(hostname: String, port: Int, metricPrefix: String)
+private case class GraphiteSenderConfig(hostname: String, port: Int, metricPrefix: String, includeTags: Boolean)
 private object GraphiteSenderConfig {
   def apply(config: Config): GraphiteSenderConfig = {
     val graphiteConfig = config.getConfig("kamon.graphite")
     val hostname = graphiteConfig.getString("hostname")
     val port = graphiteConfig.getInt("port")
     val metricPrefix = graphiteConfig.getString("metric-name-prefix")
-    GraphiteSenderConfig(hostname, port, metricPrefix)
+    val includeTags = graphiteConfig.getBoolean("include-tags")
+    GraphiteSenderConfig(hostname, port, metricPrefix, includeTags)
   }
 }
 
@@ -58,49 +59,50 @@ private abstract class GraphiteSender(val senderConfig: GraphiteSenderConfig) ex
     log.debug("sending {} to {}", snapshot: Any, senderConfig: Any)
 
     val timestamp = snapshot.to.getEpochSecond
-    val packetBuilder = new MetricPacketBuilder(senderConfig.metricPrefix, timestamp)
+    val packetBuilder = new MetricPacketBuilder(senderConfig.metricPrefix, timestamp, senderConfig.includeTags)
 
     for (metric <- snapshot.metrics.counters) {
-      write(packetBuilder.build(metric.name, "count", metric.value))
+      write(packetBuilder.build(metric.name, "count", metric.value, metric.tags))
     }
 
     for (metric <- snapshot.metrics.gauges) {
-      write(packetBuilder.build(metric.name, "value", metric.value))
+      write(packetBuilder.build(metric.name, "value", metric.value, metric.tags))
     }
 
     for (metric <- snapshot.metrics.histograms ++ snapshot.metrics.rangeSamplers) {
       val distribution = metric.distribution
-      write(packetBuilder.build(metric.name, "count", distribution.count))
-      write(packetBuilder.build(metric.name, "min", distribution.min))
-      write(packetBuilder.build(metric.name, "max", distribution.max))
-      write(packetBuilder.build(metric.name, "p50", distribution.percentile(50D).value))
-      write(packetBuilder.build(metric.name, "p90", distribution.percentile(90D).value))
-      write(packetBuilder.build(metric.name, "p99", distribution.percentile(99D).value))
-      write(packetBuilder.build(metric.name, "sum", distribution.sum))
+      write(packetBuilder.build(metric.name, "count", distribution.count, metric.tags))
+      write(packetBuilder.build(metric.name, "min", distribution.min, metric.tags))
+      write(packetBuilder.build(metric.name, "max", distribution.max, metric.tags))
+      write(packetBuilder.build(metric.name, "p50", distribution.percentile(50D).value, metric.tags))
+      write(packetBuilder.build(metric.name, "p90", distribution.percentile(90D).value, metric.tags))
+      write(packetBuilder.build(metric.name, "p99", distribution.percentile(99D).value, metric.tags))
+      write(packetBuilder.build(metric.name, "sum", distribution.sum, metric.tags))
     }
 
     flush()
   }
 }
 
-private class MetricPacketBuilder(baseName: String, timestamp: Long) {
+private class MetricPacketBuilder(baseName: String, timestamp: Long, includeTags: Boolean) {
   private val log = LoggerFactory.getLogger(classOf[MetricPacketBuilder])
   private val builder = new java.lang.StringBuilder()
 
   private def sanitize(value: String): String =
     value.replace('/', '_').replace('.', '_')
 
-  def build(metricName: String, metricType: String, value: Long): Array[Byte] = {
+  def build(metricName: String, metricType: String, value: Long, tags: Tags): Array[Byte] = {
     builder.setLength(0)
+    builder.append(baseName).append(".").append(sanitize(metricName)).append(".").append(metricType)
+    if (includeTags) tags.foreach(kv => builder.append(";").append(kv._1).append("=").append(kv._2))
     builder
-      .append(baseName).append(".").append(sanitize(metricName)).append(".").append(metricType)
       .append(" ")
       .append(value)
       .append(" ")
       .append(timestamp)
       .append("\n")
     val packet = builder.toString
-    log.trace("built packet '{}'", packet)
+    log.debug("built packet '{}'", packet)
     packet.getBytes(StandardCharsets.US_ASCII)
   }
 }
