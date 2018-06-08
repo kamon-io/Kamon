@@ -15,15 +15,30 @@ class GraphiteReporter extends MetricReporter {
   override def start(): Unit = {
     val c = GraphiteSenderConfig(Kamon.config())
     log.info("starting Graphite reporter {}", c)
-    sender = new GraphiteSender(c) with TcpSender
+    buildNewSender(c)
   }
+
   override def stop(): Unit = {}
+
   override def reconfigure(config: Config): Unit = {
     val c = GraphiteSenderConfig(config)
     log.info("restarting new Graphite reporter {}", c)
-    sender = new GraphiteSender(c) with TcpSender
+    buildNewSender(c)
   }
-  override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = sender.reportPeriodSnapshot(snapshot)
+
+  override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
+    try {
+      sender.reportPeriodSnapshot(snapshot)
+    }
+    catch {
+      case e: Throwable =>
+        log.warn("sending failed - dispose current snapshot and retry sending next snapshot using a new connection", e)
+        sender.close()
+        buildNewSender(GraphiteSenderConfig(Kamon.config()))
+    }
+  }
+
+  private def buildNewSender(c: GraphiteSenderConfig): Unit = sender = new GraphiteSender(c) with TcpSender
 }
 
 private case class GraphiteSenderConfig(hostname: String, port: Int, metricPrefix: String)
@@ -99,5 +114,5 @@ private trait TcpSender extends Sender {
 
   def write(data: Array[Byte]): Unit = out.write(data)
   def flush(): Unit = out.flush()
-  def close() = out.close()
+  def close(): Unit = out.close()
 }
