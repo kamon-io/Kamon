@@ -6,7 +6,7 @@ import java.nio.charset.StandardCharsets
 import com.typesafe.config.Config
 import kamon.metric.PeriodSnapshot
 import kamon.{ Kamon, MetricReporter }
-import org.slf4j.LoggerFactory
+import org.slf4j.{ Logger, LoggerFactory }
 
 class GraphiteReporter extends MetricReporter {
   private val log = LoggerFactory.getLogger(classOf[GraphiteReporter])
@@ -52,7 +52,7 @@ private object GraphiteSenderConfig {
 }
 
 private abstract class GraphiteSender(val senderConfig: GraphiteSenderConfig) extends Sender {
-  private val log = LoggerFactory.getLogger(classOf[GraphiteSender])
+  val log: Logger = LoggerFactory.getLogger(classOf[GraphiteSender])
 
   def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
     log.debug("sending {} to {}", snapshot: Any, senderConfig: Any)
@@ -100,6 +100,7 @@ private class MetricPacketBuilder(baseName: String, timestamp: Long) {
 
 private trait Sender extends AutoCloseable {
   def senderConfig: GraphiteSenderConfig
+  def log: Logger
   def write(data: Array[Byte]): Unit
   def flush(): Unit
   def close(): Unit
@@ -113,5 +114,11 @@ private trait TcpSender extends Sender {
 
   def write(data: Array[Byte]): Unit = out.write(data)
   def flush(): Unit = out.flush()
-  def close(): Unit = out.close()
+  def close(): Unit = {
+    try
+      out.close()
+    catch {
+      case t: Throwable => log.warn("failed to close connection", t)
+    }
+  }
 }
