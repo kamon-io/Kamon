@@ -21,14 +21,14 @@ import java.util.concurrent.Callable
 
 import kamon.Kamon
 import kamon.Kamon.buildSpan
-import kanela.agent.libs.net.bytebuddy.implementation.bind.annotation
-import kanela.agent.libs.net.bytebuddy.implementation.bind.annotation.{RuntimeType, SuperCall, This}
-import kanela.agent.scala.KanelaInstrumentation
 import kamon.jdbc.instrumentation.StatementInstrumentation.StatementTypes
 import kamon.jdbc.instrumentation.bridge.MariaPreparedStatement
 import kamon.jdbc.instrumentation.mixin.{HasConnectionPoolMetrics, HasConnectionPoolMetricsMixin}
 import kamon.jdbc.{Jdbc, Metrics}
 import kamon.trace.SpanCustomizer
+import kanela.agent.libs.net.bytebuddy.implementation.bind.annotation
+import kanela.agent.libs.net.bytebuddy.implementation.bind.annotation.{RuntimeType, SuperCall, This}
+import kanela.agent.scala.KanelaInstrumentation
 
 
 class StatementInstrumentation extends KanelaInstrumentation {
@@ -72,17 +72,12 @@ class StatementInstrumentation extends KanelaInstrumentation {
     * java.sql.PreparedStatement::executeBatch
     * java.sql.PreparedStatement::executeLargeBatch
     *
-    * Mix:
-    *
-    * java.sql.Statement with kamon.jdbc.instrumentation.mixin.HasConnectionPoolMetrics
-    *
     */
   forSubtypeOf("java.sql.PreparedStatement") { builder =>
     builder
-      .withInterceptorFor(method("execute"), ExecuteMethodInterceptor)
-      .withInterceptorFor(method("executeQuery"), ExecuteQueryMethodInterceptor)
-      .withInterceptorFor(method("executeUpdate"), ExecuteUpdateMethodInterceptor)
-      .withInterceptorFor(anyMethod("executeBatch", "executeLargeBatch"), ExecuteBatchMethodInterceptor)
+      .withInterceptorFor(method("execute").and(takesArguments(0)), ExecuteMethodInterceptor)
+      .withInterceptorFor(method("executeQuery").and(takesArguments(0)), ExecuteQueryMethodInterceptor)
+      .withInterceptorFor(method("executeUpdate").and(takesArguments(0)), ExecuteUpdateMethodInterceptor)
       .build()
   }
 
