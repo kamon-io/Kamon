@@ -23,7 +23,8 @@ import kamon.Kamon
 import kamon.Kamon.buildSpan
 import kamon.jdbc.instrumentation.StatementInstrumentation.StatementTypes
 import kamon.jdbc.instrumentation.bridge.MariaPreparedStatement
-import kamon.jdbc.instrumentation.maria.{MariaExecuteQueryMethodInterceptor, MariaExecuteUpdateMethodInterceptor}
+import kamon.jdbc.instrumentation.maria.ExecuteQueryMethodInterceptor2.ExecuteUpdateMethodInterceptor2
+import kamon.jdbc.instrumentation.maria.{ExecuteQueryMethodInterceptor2, MariaExecuteQueryMethodInterceptor, MariaExecuteUpdateMethodInterceptor}
 import kamon.jdbc.instrumentation.mixin.{HasConnectionPoolMetrics, HasConnectionPoolMetricsMixin}
 import kamon.jdbc.{Jdbc, Metrics}
 import kamon.trace.SpanCustomizer
@@ -76,12 +77,28 @@ class StatementInstrumentation extends KanelaInstrumentation {
     */
   forSubtypeOf("java.sql.PreparedStatement") { builder =>
     builder
-      .withInterceptorFor(method("execute").and(takesArguments(0)), ExecuteMethodInterceptor)
-      .withInterceptorFor(method("executeQuery").and(takesArguments(0)), ExecuteQueryMethodInterceptor)
-      .withInterceptorFor(method("executeUpdate").and(takesArguments(0)), ExecuteUpdateMethodInterceptor)
+      .withInterceptorFor(method("execute"), ExecuteMethodInterceptor)
+      .withInterceptorFor(method("executeQuery"), ExecuteQueryMethodInterceptor)
+      .withInterceptorFor(method("executeUpdate"), ExecuteUpdateMethodInterceptor)
       .build()
   }
 
+//  /**
+//    * Instrument:
+//    *
+//    * org.mariadb.jdbc.MariaDbServerPreparedStatement::executeQuery
+//    * org.mariadb.jdbc.MariaDbServerPreparedStatement::executeUpdate
+//    */
+//  forTargetType("org.mariadb.jdbc.MariaDbServerPreparedStatement") { builder =>
+//    builder
+//      .withBridge(classOf[MariaPreparedStatement])
+//      .withInterceptorFor(method("executeQuery"), MariaExecuteQueryMethodInterceptor)
+//      .withInterceptorFor(method("executeUpdate"), MariaExecuteUpdateMethodInterceptor)
+//      .build()
+//  }
+}
+
+class MariaInstrumentation extends KanelaInstrumentation {
   /**
     * Instrument:
     *
@@ -90,9 +107,8 @@ class StatementInstrumentation extends KanelaInstrumentation {
     */
   forTargetType("org.mariadb.jdbc.MariaDbServerPreparedStatement") { builder =>
     builder
-      .withBridge(classOf[MariaPreparedStatement])
-      .withInterceptorFor(method("executeQuery"), MariaExecuteQueryMethodInterceptor)
-      .withInterceptorFor(method("executeUpdate"), MariaExecuteUpdateMethodInterceptor)
+      .withInterceptorFor(method("executeQuery"), ExecuteQueryMethodInterceptor2)
+      .withInterceptorFor(method("executeUpdate"), ExecuteUpdateMethodInterceptor2)
       .build()
   }
 }
@@ -153,11 +169,13 @@ object ExecuteMethodInterceptor {
 
   @RuntimeType
   def execute(@SuperCall callable: Callable[_], @This statement: Statement, @annotation.Argument(0) sql: String): Any = {
+    println("1")
     StatementInstrumentation.track(callable, statement, sql, StatementTypes.GenericExecute)
   }
 
   @RuntimeType
   def execute(@SuperCall callable: Callable[_], @This statement: PreparedStatement): Any = {
+    println("2")
     StatementInstrumentation.track(callable, statement, statement.toString, StatementTypes.GenericExecute)
   }
 }
@@ -171,11 +189,13 @@ object ExecuteQueryMethodInterceptor {
 
   @RuntimeType
   def executeQuery(@SuperCall callable: Callable[_], @This statement: Statement, @annotation.Argument(0) sql: String): Any = {
+    println("3")
     StatementInstrumentation.track(callable, statement, sql, StatementTypes.Query)
   }
 
   @RuntimeType
   def executeQuery(@SuperCall callable: Callable[_], @This statement: PreparedStatement): Any = {
+    println("4")
     StatementInstrumentation.track(callable, statement, statement.toString, StatementTypes.Query)
   }
 }
