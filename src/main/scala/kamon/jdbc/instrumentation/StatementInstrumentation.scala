@@ -35,9 +35,6 @@ import kanela.agent.scala.KanelaInstrumentation
 
 class StatementInstrumentation extends KanelaInstrumentation {
 
-
-  override def order() = 1000
-
   /**
     * Instrument:
     *
@@ -83,22 +80,6 @@ class StatementInstrumentation extends KanelaInstrumentation {
       .build()
   }
 
-//  /**
-//    * Instrument:
-//    *
-//    * org.mariadb.jdbc.MariaDbServerPreparedStatement::executeQuery
-//    * org.mariadb.jdbc.MariaDbServerPreparedStatement::executeUpdate
-//    */
-//  forTargetType("org.mariadb.jdbc.MariaDbServerPreparedStatement") { builder =>
-//    builder
-//      .withBridge(classOf[MariaPreparedStatement])
-//      .withInterceptorFor(method("executeQuery"), MariaExecuteQueryMethodInterceptor)
-//      .withInterceptorFor(method("executeUpdate"), MariaExecuteUpdateMethodInterceptor)
-//      .build()
-//  }
-}
-
-class MariaInstrumentation extends KanelaInstrumentation {
   /**
     * Instrument:
     *
@@ -107,10 +88,36 @@ class MariaInstrumentation extends KanelaInstrumentation {
     */
   forTargetType("org.mariadb.jdbc.MariaDbServerPreparedStatement") { builder =>
     builder
-      .withInterceptorFor(method("executeQuery"), ExecuteQueryMethodInterceptor2)
-      .withInterceptorFor(method("executeUpdate"), ExecuteUpdateMethodInterceptor2)
+      .withBridge(classOf[MariaPreparedStatement])
+      .withInterceptorFor(method("executeQuery"), MariaExecuteQueryMethodInterceptor)
+      .withInterceptorFor(method("executeUpdate"), MariaExecuteUpdateMethodInterceptor)
       .build()
   }
+}
+
+class MariaInstrumentation extends KanelaInstrumentation {
+
+
+  /**
+    * Instrument:
+    *
+    * org.mariadb.jdbc.MariaDbServerPreparedStatement::executeQuery
+    * org.mariadb.jdbc.MariaDbServerPreparedStatement::executeUpdate
+    */
+//  forTargetType("org.mariadb.jdbc.MariaDbServerPreparedStatement") { builder =>
+//    builder
+//      .withInterceptorFor(method("executeQuery"), ExecuteQueryMethodInterceptor2)
+//      .withInterceptorFor(method("executeUpdate"), ExecuteUpdateMethodInterceptor2)
+//      .build()
+//  }
+  forTargetType("org.mariadb.jdbc.MariaDbServerPreparedStatement") { builder =>
+    builder
+      .withBridge(classOf[MariaPreparedStatement])
+      .withInterceptorFor(method("executeQuery"), MariaExecuteQueryMethodInterceptor)
+      .withInterceptorFor(method("executeUpdate"), MariaExecuteUpdateMethodInterceptor)
+      .build()
+  }
+
 }
 
 object StatementInstrumentation {
