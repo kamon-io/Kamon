@@ -117,7 +117,7 @@ private[kamon] trait SnapshotCreation {
     val zigZagCounts = Array.ofDim[Byte](buffer.limit())
     buffer.get(zigZagCounts)
 
-    val distribution = new ZigZagCountsDistribution(totalCount, minIndex, maxIndex, ByteBuffer.wrap(zigZagCounts),
+    val distribution = new ZigZagCountsDistribution(totalCount, minIndex, maxIndex, ByteBuffer.wrap(zigZagCounts).asReadOnlyBuffer(),
       protectedUnitMagnitude(), protectedSubBucketHalfCount(), protectedSubBucketHalfCountMagnitude())
 
     MetricDistribution(name, tags, unit, dynamicRange, distribution)
@@ -130,7 +130,7 @@ private[kamon] object SnapshotCreation {
     override def initialValue(): ByteBuffer = ByteBuffer.allocate(33792)
   }
 
-  class ZigZagCountsDistribution(val count: Long, minIndex: Int, maxIndex: Int, val zigZagCounts: ByteBuffer,
+  class ZigZagCountsDistribution(val count: Long, minIndex: Int, maxIndex: Int, zigZagCounts: ByteBuffer,
     unitMagnitude: Int, subBucketHalfCount: Int, subBucketHalfCountMagnitude: Int) extends Distribution {
 
     val min: Long = if(count == 0) 0 else bucketValueAtIndex(minIndex)
@@ -209,6 +209,10 @@ private[kamon] object SnapshotCreation {
       }
 
       builder.result()
+    }
+
+    def countsArray(): ByteBuffer = {
+      zigZagCounts.duplicate()
     }
 
     @inline private def bucketValueAtIndex(index: Int): Long = {
