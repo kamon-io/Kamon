@@ -16,20 +16,20 @@
 package kamon.jdbc.instrumentation
 
 import java.sql.{PreparedStatement, Statement}
+import java.time.Instant
 import java.time.temporal.ChronoUnit
-import java.util.concurrent.Callable
 
 import kamon.Kamon
 import kamon.Kamon.buildSpan
 import kamon.jdbc.instrumentation.StatementInstrumentation.StatementTypes
 import kamon.jdbc.instrumentation.bridge.MariaPreparedStatement
-import kamon.jdbc.instrumentation.maria.ExecuteQueryMethodInterceptor2.ExecuteUpdateMethodInterceptor2
-import kamon.jdbc.instrumentation.maria.{ExecuteQueryMethodInterceptor2, MariaExecuteQueryMethodInterceptor, MariaExecuteUpdateMethodInterceptor}
+import kamon.jdbc.instrumentation.maria.{MariaExecuteQueryMethodInterceptor, MariaExecuteUpdateMethodInterceptor}
 import kamon.jdbc.instrumentation.mixin.{HasConnectionPoolMetrics, HasConnectionPoolMetricsMixin}
 import kamon.jdbc.{Jdbc, Metrics}
-import kamon.trace.SpanCustomizer
-import kanela.agent.libs.net.bytebuddy.implementation.bind.annotation
-import kanela.agent.libs.net.bytebuddy.implementation.bind.annotation.{RuntimeType, SuperCall, This}
+import kamon.metric.RangeSampler
+import kamon.trace.{Span, SpanCustomizer}
+import kanela.agent.libs.net.bytebuddy.asm.Advice
+import kanela.agent.libs.net.bytebuddy.asm.Advice.Thrown
 import kanela.agent.scala.KanelaInstrumentation
 
 
@@ -54,10 +54,10 @@ class StatementInstrumentation extends KanelaInstrumentation {
   forSubtypeOf("java.sql.Statement") { builder =>
     builder
        .withMixin(classOf[HasConnectionPoolMetricsMixin])
-       .withInterceptorFor(method("execute").and(withOneStringArgument), ExecuteMethodInterceptor)
-       .withInterceptorFor(method("executeQuery").and(withOneStringArgument), ExecuteQueryMethodInterceptor)
-       .withInterceptorFor(method("executeUpdate").and(withOneStringArgument), ExecuteUpdateMethodInterceptor)
-       .withInterceptorFor(anyMethod("executeBatch", "executeLargeBatch"), ExecuteBatchMethodInterceptor)
+       .withAdvisorFor(method("execute").and(withOneStringArgument), classOf[StatementExecuteMethodAdvisor])
+       .withAdvisorFor(method("executeQuery").and(withOneStringArgument), classOf[StatementExecuteQueryMethodAdvisor])
+       .withAdvisorFor(method("executeUpdate").and(withOneStringArgument), classOf[StatementExecuteUpdateMethodAdvisor])
+       .withAdvisorFor(anyMethod("executeBatch", "executeLargeBatch"), classOf[StatementExecuteBatchMethodAdvisor])
        .build()
   }
 
@@ -74,9 +74,9 @@ class StatementInstrumentation extends KanelaInstrumentation {
     */
   forSubtypeOf("java.sql.PreparedStatement") { builder =>
     builder
-      .withInterceptorFor(method("execute"), ExecuteMethodInterceptor)
-      .withInterceptorFor(method("executeQuery"), ExecuteQueryMethodInterceptor)
-      .withInterceptorFor(method("executeUpdate"), ExecuteUpdateMethodInterceptor)
+      .withAdvisorFor(method("execute"), classOf[PreparedStatementExecuteMethodAdvisor])
+      .withAdvisorFor(method("executeQuery"), classOf[PreparedStatementExecuteQueryMethodAdvisor])
+      .withAdvisorFor(method("executeUpdate"), classOf[PreparedStatementExecuteUpdateMethodAdvisor])
       .build()
   }
 
@@ -93,31 +93,6 @@ class StatementInstrumentation extends KanelaInstrumentation {
       .withInterceptorFor(method("executeUpdate"), MariaExecuteUpdateMethodInterceptor)
       .build()
   }
-}
-
-class MariaInstrumentation extends KanelaInstrumentation {
-
-
-  /**
-    * Instrument:
-    *
-    * org.mariadb.jdbc.MariaDbServerPreparedStatement::executeQuery
-    * org.mariadb.jdbc.MariaDbServerPreparedStatement::executeUpdate
-    */
-//  forTargetType("org.mariadb.jdbc.MariaDbServerPreparedStatement") { builder =>
-//    builder
-//      .withInterceptorFor(method("executeQuery"), ExecuteQueryMethodInterceptor2)
-//      .withInterceptorFor(method("executeUpdate"), ExecuteUpdateMethodInterceptor2)
-//      .build()
-//  }
-  forTargetType("org.mariadb.jdbc.MariaDbServerPreparedStatement") { builder =>
-    builder
-      .withBridge(classOf[MariaPreparedStatement])
-      .withInterceptorFor(method("executeQuery"), MariaExecuteQueryMethodInterceptor)
-      .withInterceptorFor(method("executeUpdate"), MariaExecuteUpdateMethodInterceptor)
-      .build()
-  }
-
 }
 
 object StatementInstrumentation {
@@ -128,7 +103,10 @@ object StatementInstrumentation {
     val GenericExecute = "generic-execute"
   }
 
-  def track(callable: Callable[_], target: Any, sql: String, statementType: String): Any = {
+  def trackStart(target: Any,
+                 sql: String,
+                 statementType: String): (Span, String, Instant, RangeSampler) = {
+
     val poolTags = Option(target.asInstanceOf[HasConnectionPoolMetrics].connectionPoolMetrics)
       .map(_.tags)
       .getOrElse(Map.empty[String, String])
@@ -147,92 +125,138 @@ object StatementInstrumentation {
       builder
     }.start()
 
-    try {
+    (span, sql, startTimestamp, inFlight)
+  }
 
-      callable.call()
+  def trackEnd(traveler:(Span, String, Instant, RangeSampler),
+               throwable: Throwable): Unit = {
 
-    } catch {
-      case t: Throwable =>
-        span.addError("error.object", t)
-        Jdbc.onStatementError(sql, t)
-        throw t
+    val (span, sql, startTimestamp, inFlight) = traveler
 
-    } finally {
-      val endTimestamp = Kamon.clock().instant()
-      val elapsedTime = startTimestamp.until(endTimestamp, ChronoUnit.MICROS)
-      span.finish(endTimestamp)
-      inFlight.decrement()
-
-      Jdbc.onStatementFinish(sql, elapsedTime)
+    if(throwable != null) {
+      span.addError("error.object", throwable)
+      Jdbc.onStatementError(sql, throwable)
     }
+
+    val endTimestamp = Kamon.clock().instant()
+    val elapsedTime = startTimestamp.until(endTimestamp, ChronoUnit.MICROS)
+    span.finish(endTimestamp)
+    inFlight.decrement()
+
+    Jdbc.onStatementFinish(sql, elapsedTime)
   }
 }
 
 /**
-  * Interceptor for java.sql.Statement::execute
-  * Interceptor for java.sql.PreparedStatement::execute
+  * Advisor for java.sql.Statement::execute
   */
-object ExecuteMethodInterceptor {
-
-  @RuntimeType
-  def execute(@SuperCall callable: Callable[_], @This statement: Statement, @annotation.Argument(0) sql: String): Any = {
-    println("1")
-    StatementInstrumentation.track(callable, statement, sql, StatementTypes.GenericExecute)
+class StatementExecuteMethodAdvisor
+object StatementExecuteMethodAdvisor {
+  @Advice.OnMethodEnter(suppress = classOf[Throwable])
+  def executeStart(@Advice.This statement: Statement, @Advice.Argument(0) sql: String): (Span, String, Instant, RangeSampler) = {
+    StatementInstrumentation.trackStart(statement, sql, StatementTypes.GenericExecute)
   }
 
-  @RuntimeType
-  def execute(@SuperCall callable: Callable[_], @This statement: PreparedStatement): Any = {
-    println("2")
-    StatementInstrumentation.track(callable, statement, statement.toString, StatementTypes.GenericExecute)
+  @Advice.OnMethodExit(onThrowable = classOf[Throwable], suppress = classOf[Throwable])
+  def executeEnd(@Advice.Enter traveler:(Span, String, Instant, RangeSampler), @Thrown throwable: Throwable): Unit = {
+    StatementInstrumentation.trackEnd(traveler, throwable)
+  }
+}
+
+/**
+  * Advisor for java.sql.PreparedStatement::execute
+  */
+class PreparedStatementExecuteMethodAdvisor
+object PreparedStatementExecuteMethodAdvisor {
+  @Advice.OnMethodEnter(suppress = classOf[Throwable])
+  def executeStart(@Advice.This statement: PreparedStatement): (Span, String, Instant, RangeSampler) = {
+    StatementInstrumentation.trackStart(statement, statement.toString, StatementTypes.GenericExecute)
+  }
+
+  @Advice.OnMethodExit(onThrowable = classOf[Throwable], suppress = classOf[Throwable])
+  def executeEnd(@Advice.Enter traveler:(Span, String, Instant, RangeSampler), @Thrown throwable: Throwable): Unit = {
+    StatementInstrumentation.trackEnd(traveler, throwable)
   }
 }
 
 
 /**
-  * Interceptor for java.sql.Statement::executeQuery
-  * Interceptor for java.sql.PreparedStatement::executeQuery
+  * Advisor for java.sql.Statement::executeQuery
   */
-object ExecuteQueryMethodInterceptor {
-
-  @RuntimeType
-  def executeQuery(@SuperCall callable: Callable[_], @This statement: Statement, @annotation.Argument(0) sql: String): Any = {
-    println("3")
-    StatementInstrumentation.track(callable, statement, sql, StatementTypes.Query)
+class StatementExecuteQueryMethodAdvisor
+object StatementExecuteQueryMethodAdvisor  {
+  @Advice.OnMethodEnter(suppress = classOf[Throwable])
+  def executeStart(@Advice.This statement: Statement, @Advice.Argument(0) sql: String): (Span, String, Instant, RangeSampler) = {
+    StatementInstrumentation.trackStart(statement, sql, StatementTypes.Query)
   }
 
-  @RuntimeType
-  def executeQuery(@SuperCall callable: Callable[_], @This statement: PreparedStatement): Any = {
-    println("4")
-    StatementInstrumentation.track(callable, statement, statement.toString, StatementTypes.Query)
+  @Advice.OnMethodExit(onThrowable = classOf[Throwable], suppress = classOf[Throwable])
+  def executeEnd(@Advice.Enter traveler:(Span, String, Instant, RangeSampler), @Thrown throwable: Throwable): Unit = {
+    StatementInstrumentation.trackEnd(traveler, throwable)
   }
 }
 
 /**
-  * Interceptor for java.sql.Statement::executeUpdate
-  * Interceptor for java.sql.PreparedStatement::executeUpdate
-  */
-object ExecuteUpdateMethodInterceptor {
-
-  @RuntimeType
-  def executeUpdate(@SuperCall callable: Callable[_], @This statement:Statement, @annotation.Argument(0) sql:String): Any = {
-    StatementInstrumentation.track(callable, statement,  sql, StatementTypes.Update)
+*  Advisor for java.sql.PreparedStatement::executeQuery
+*/
+class PreparedStatementExecuteQueryMethodAdvisor
+object PreparedStatementExecuteQueryMethodAdvisor {
+  @Advice.OnMethodEnter(suppress = classOf[Throwable])
+  def executeStart(@Advice.This statement: PreparedStatement): (Span, String, Instant, RangeSampler) = {
+    StatementInstrumentation.trackStart(statement, statement.toString, StatementTypes.Query)
   }
 
-  @RuntimeType
-  def executeUpdate(@SuperCall callable: Callable[_], @This statement:PreparedStatement): Any = {
-    StatementInstrumentation.track(callable, statement,  statement.toString , StatementTypes.Update)
+  @Advice.OnMethodExit(onThrowable = classOf[Throwable], suppress = classOf[Throwable])
+  def executeEnd(@Advice.Enter traveler:(Span, String, Instant, RangeSampler), @Thrown throwable: Throwable): Unit = {
+    StatementInstrumentation.trackEnd(traveler, throwable)
   }
 }
 
 /**
-  * Interceptor for java.sql.Statement::executeBatch
-  * Interceptor for java.sql.Statement::executeLargeBatch
-  * Interceptor for java.sql.PreparedStatement::executeBatch
-  * Interceptor for java.sql.PreparedStatement::executeLargeBatch
+  * Advisor for java.sql.Statement::executeUpdate
   */
-object ExecuteBatchMethodInterceptor {
+class StatementExecuteUpdateMethodAdvisor
+object StatementExecuteUpdateMethodAdvisor  {
+  @Advice.OnMethodEnter(suppress = classOf[Throwable])
+  def executeStart(@Advice.This statement: Statement, @Advice.Argument(0) sql: String): (Span, String, Instant, RangeSampler) = {
+    StatementInstrumentation.trackStart(statement, sql, StatementTypes.Update)
+  }
 
-  @RuntimeType
-  def executeUpdate(@SuperCall callable: Callable[_], @This statement:Statement): Any =
-    StatementInstrumentation.track(callable, statement,  statement.toString , StatementTypes.Batch)
+  @Advice.OnMethodExit(onThrowable = classOf[Throwable], suppress = classOf[Throwable])
+  def executeEnd(@Advice.Enter traveler:(Span, String, Instant, RangeSampler), @Thrown throwable: Throwable): Unit = {
+    StatementInstrumentation.trackEnd(traveler, throwable)
+  }
+}
+
+/**
+  * Advisor for java.sql.PreparedStatement::executeUpdate
+  */
+class PreparedStatementExecuteUpdateMethodAdvisor
+object PreparedStatementExecuteUpdateMethodAdvisor {
+  @Advice.OnMethodEnter(suppress = classOf[Throwable])
+  def executeStart(@Advice.This statement: PreparedStatement): (Span, String, Instant, RangeSampler) = {
+    StatementInstrumentation.trackStart(statement, statement.toString, StatementTypes.Update)
+  }
+
+  @Advice.OnMethodExit(onThrowable = classOf[Throwable], suppress = classOf[Throwable])
+  def executeEnd(@Advice.Enter traveler:(Span, String, Instant, RangeSampler), @Thrown throwable: Throwable): Unit = {
+    StatementInstrumentation.trackEnd(traveler, throwable)
+  }
+}
+
+/**
+  * Advisor for java.sql.Statement+::executeBatch
+  * Advisor for java.sql.Statement+::executeLargeBatch
+  */
+class StatementExecuteBatchMethodAdvisor
+object StatementExecuteBatchMethodAdvisor  {
+  @Advice.OnMethodEnter(suppress = classOf[Throwable])
+  def executeStart(@Advice.This statement: Statement): (Span, String, Instant, RangeSampler) = {
+    StatementInstrumentation.trackStart(statement, statement.toString, StatementTypes.Batch)
+  }
+
+  @Advice.OnMethodExit(onThrowable = classOf[Throwable], suppress = classOf[Throwable])
+  def executeEnd(@Advice.Enter traveler:(Span, String, Instant, RangeSampler), @Thrown throwable: Throwable): Unit = {
+    StatementInstrumentation.trackEnd(traveler, throwable)
+  }
 }
