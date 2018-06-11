@@ -21,7 +21,7 @@ import java.util.concurrent.Executors
 import kamon.Kamon
 import kamon.context.Context
 import kamon.jdbc.Metrics
-import kamon.jdbc.instrumentation.StatementInstrumentation.StatementTypes
+import kamon.jdbc.instrumentation.StatementMonitor.StatementTypes
 import kamon.testkit.{MetricInspection, Reconfigure, TestSpanReporter}
 import kamon.trace.Span.TagValue
 import kamon.trace.SpanCustomizer

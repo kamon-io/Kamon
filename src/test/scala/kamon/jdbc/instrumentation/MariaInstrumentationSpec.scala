@@ -20,7 +20,7 @@ import java.sql.{Connection, DriverManager, ResultSet}
 import ch.vorburger.mariadb4j.DB
 import kamon.Kamon
 import kamon.jdbc.Metrics
-import kamon.jdbc.instrumentation.StatementInstrumentation.StatementTypes
+import kamon.jdbc.instrumentation.StatementMonitor.StatementTypes
 import kamon.testkit.{MetricInspection, Reconfigure, TestSpanReporter}
 import kamon.trace.Span.TagValue
 import kamon.util.Registration
