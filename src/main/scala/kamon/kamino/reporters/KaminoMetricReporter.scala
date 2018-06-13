@@ -8,6 +8,7 @@ import kamino.IngestionV1
 import kamino.IngestionV1.{InstrumentType, Plan}
 import kamino.IngestionV1.InstrumentType.{COUNTER, GAUGE, HISTOGRAM, MIN_MAX_COUNTER}
 import kamon.kamino.{KaminoApiClient, readConfiguration}
+import kamon.kamino.isAcceptableApiKey
 import kamon.metric.SnapshotCreation.ZigZagCountsDistribution
 import kamon.metric._
 import kamon.{Kamon, MetricReporter}
@@ -49,10 +50,10 @@ private[kamino] class KaminoMetricReporter(codeProvidedPlan: Option[Plan]) exten
   override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
     val snapshotAge = java.time.Duration.between(snapshot.to, Kamon.clock().instant()).toMillis
     if(snapshotAge >= 0 && snapshotAge < MaxAge.toMillis)
-      if(configuration.apiKey != "none")
+      if(isAcceptableApiKey(configuration.apiKey))
         reportIngestion(snapshot)
       else
-        logger.error("Dropping PeriodSnapshot because no API key has been configured.")
+        logger.error(s"Dropping PeriodSnapshot because a invalid API key has been configured: ${configuration.apiKey}")
     else
       logger.warn("Dropping stale PeriodSnapshot for period from: [{}], to: [{}]. The snapshot is {} millis old.",
         snapshot.from.toEpochMilli().toString(), snapshot.to.toEpochMilli().toString(), snapshotAge.toString())

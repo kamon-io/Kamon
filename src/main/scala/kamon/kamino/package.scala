@@ -6,9 +6,11 @@ import com.typesafe.config.Config
 import _root_.kamino.IngestionV1.Plan
 import org.slf4j.LoggerFactory
 import java.net.Proxy
+import java.util.regex.Pattern
 
 package object kamino {
   private val logger = LoggerFactory.getLogger("kamon.kamino")
+  private val apiKeyPattern = Pattern.compile("^[a-zA-Z0-9]*$")
 
   def readConfiguration(config: Config): KaminoConfiguration = {
     val kaminoConfig = config.getConfig("kamino")
@@ -39,6 +41,10 @@ package object kamino {
       }
     )
   }
+
+  def isAcceptableApiKey(apiKey: String): Boolean =
+    apiKey != null && apiKey.length == 26 && apiKeyPattern.matcher(apiKey).matches()
+
 
   case class KaminoConfiguration(
     apiKey: String,

@@ -19,6 +19,7 @@ class KaminoApiClient(config: KaminoConfiguration) {
 
   private val client = createHttpClient(config)
   private var lastAttempt: Instant = Instant.EPOCH
+  private val apiKeyHeaderName = "kamino-api-key"
 
   def postIngestion(metricBatch: MetricBatch): Unit =
     postWithRetry(metricBatch.toByteArray, config.ingestionRoute, config.ingestionRetries)
@@ -44,7 +45,12 @@ class KaminoApiClient(config: KaminoConfiguration) {
 
     val request: () => Response = () => {
       val reqBody = RequestBody.create(MediaType.parse("application/octet-stream"), body)
-      val request = new Request.Builder().url(apiUrl).post(reqBody).build
+      val request = new Request.Builder()
+        .url(apiUrl)
+        .post(reqBody)
+        .addHeader(apiKeyHeaderName, config.apiKey)
+        .build()
+
       client.newCall(request).execute
     }
 
