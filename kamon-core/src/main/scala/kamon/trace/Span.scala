@@ -60,6 +60,8 @@ sealed abstract class Span {
   def finish(at: Instant): Unit
 
   def finish(): Unit
+
+  def operationName(): String
 }
 
 object Span {
@@ -83,6 +85,7 @@ object Span {
     override def disableMetrics(): Span = this
     override def finish(): Unit = {}
     override def finish(at: Instant): Unit = {}
+    override def operationName(): String = "empty"
   }
 
 
@@ -93,7 +96,7 @@ object Span {
     private var open: Boolean = true
     private val sampled: Boolean = spanContext.samplingDecision == SamplingDecision.Sample
     private var hasError: Boolean = false
-    private var operationName: String = initialOperationName
+    private var _operationName: String = initialOperationName
 
     private var spanTags: Map[String, Span.TagValue] = initialSpanTags
     private var marks: List[Mark] = Nil
@@ -185,7 +188,7 @@ object Span {
 
     override def setOperationName(operationName: String): Span = synchronized {
       if(open)
-        this.operationName = operationName
+        this._operationName = operationName
       this
     }
 
@@ -205,22 +208,23 @@ object Span {
     }
 
     private def toFinishedSpan(to: Instant): Span.FinishedSpan =
-      Span.FinishedSpan(spanContext, operationName, from, to, spanTags, marks)
+      Span.FinishedSpan(spanContext, _operationName, from, to, spanTags, marks)
 
     private def recordSpanMetrics(to: Instant): Unit = {
       val elapsedTime = Clock.nanosBetween(from, to)
       val isErrorText = if(hasError) TagValue.True.text else TagValue.False.text
 
       if(scopeSpanMetrics)
-        parent.foreach(parentSpan => customMetricTags = customMetricTags + ("parentOperation" -> parentSpan.asInstanceOf[Local].operationName))
+        parent.foreach(parentSpan => customMetricTags = customMetricTags + ("parentOperation" -> parentSpan.asInstanceOf[Local]._operationName))
 
       val metricTags = Map(
-        "operation" -> operationName,
+        "operation" -> _operationName,
         "error" -> isErrorText
       ) ++ customMetricTags
 
       Span.Metrics.ProcessingTime.refine(metricTags).record(elapsedTime)
     }
+    override def operationName(): String = _operationName
   }
 
   object Local {
@@ -247,6 +251,7 @@ object Span {
     override def disableMetrics(): Span = this
     override def finish(): Unit = {}
     override def finish(at: Instant): Unit = {}
+    override def operationName(): String = "remote"
   }
 
   object Remote {
