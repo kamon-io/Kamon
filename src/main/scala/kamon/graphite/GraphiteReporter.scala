@@ -6,6 +6,7 @@ import java.nio.charset.StandardCharsets
 
 import com.typesafe.config.Config
 import kamon.metric.PeriodSnapshot
+import kamon.util.{ EnvironmentTagBuilder, Matcher }
 import kamon.{ Kamon, MetricReporter, Tags }
 import org.slf4j.{ Logger, LoggerFactory }
 
@@ -41,7 +42,7 @@ class GraphiteReporter extends MetricReporter {
   private def buildNewSender(c: GraphiteSenderConfig): Unit = sender = new GraphiteSender(c) with TcpSender
 }
 
-private case class GraphiteSenderConfig(hostname: String, port: Int, metricPrefix: String, includeTags: Boolean)
+private case class GraphiteSenderConfig(hostname: String, port: Int, metricPrefix: String, includeTags: Boolean, envTags: Map[String, String], tagFilter: Matcher)
 private object GraphiteSenderConfig {
   def apply(config: Config): GraphiteSenderConfig = {
     val graphiteConfig = config.getConfig("kamon.graphite")
@@ -49,7 +50,9 @@ private object GraphiteSenderConfig {
     val port = graphiteConfig.getInt("port")
     val metricPrefix = graphiteConfig.getString("metric-name-prefix")
     val includeTags = graphiteConfig.getBoolean("include-tags")
-    GraphiteSenderConfig(hostname, port, metricPrefix, includeTags)
+    val envTags = EnvironmentTagBuilder.create(graphiteConfig.getConfig("additional-tags"))
+    val tagFilter = Kamon.filter(graphiteConfig.getString("filter-config-key"))
+    GraphiteSenderConfig(hostname, port, metricPrefix, includeTags, envTags, tagFilter)
   }
 }
 
@@ -92,10 +95,10 @@ private class MetricPacketBuilder(baseName: String, timestamp: Long, config: Gra
   private def sanitize(value: String): String =
     value.replace('/', '_').replace('.', '_')
 
-  def build(metricName: String, metricType: String, value: Long, tags: Tags): Array[Byte] = {
+  def build(metricName: String, metricType: String, value: Long, metricTags: Tags): Array[Byte] = {
     builder.setLength(0)
     builder.append(baseName).append(".").append(sanitize(metricName)).append(".").append(metricType)
-    if (config.includeTags) tags.foreach(kv => builder.append(";").append(kv._1).append("=").append(kv._2))
+    if (config.includeTags) (metricTags ++ config.envTags).filterKeys(config.tagFilter.accept).foreach(kv => builder.append(";").append(kv._1).append("=").append(kv._2))
     builder
       .append(" ")
       .append(value)
