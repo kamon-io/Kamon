@@ -49,7 +49,7 @@ object AskMethodAdvisor {
     }
   }
 
-  @OnMethodExit
+  @OnMethodExit(suppress = classOf[Throwable])
   def onExit(@Origin origin: String,
              @Return future: Future[AnyRef],
              @Argument(0) actor: ActorRef,

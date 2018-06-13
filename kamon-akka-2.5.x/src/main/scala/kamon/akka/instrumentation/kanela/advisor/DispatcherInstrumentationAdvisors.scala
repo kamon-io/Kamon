@@ -38,7 +38,7 @@ import scala.collection.concurrent.TrieMap
   */
 class StartMethodAdvisor
 object StartMethodAdvisor {
-  @OnMethodEnter
+  @OnMethodEnter(suppress = classOf[Throwable])
   def onEnter(@This system: ActorSystem): Unit = {
     system.dispatchers.asInstanceOf[ActorSystemAware].actorSystem = system
 
@@ -58,12 +58,12 @@ object StartMethodAdvisor {
   */
 class LookupMethodAdvisor
 object LookupMethodAdvisor {
-  @OnMethodEnter
+  @OnMethodEnter(suppress = classOf[Throwable])
   def onEnter(@This dispatchers: ActorSystemAware, @Argument(0) dispatcherName: String): ThreadLocal[LookupData] = {
     LookupDataAware.setLookupData(LookupData(dispatcherName, dispatchers.actorSystem))
   }
 
-  @OnMethodExit
+  @OnMethodExit(suppress = classOf[Throwable])
   def onExit(@Enter lookupData: ThreadLocal[LookupData]): Unit = lookupData.remove()
 }
 
@@ -72,7 +72,7 @@ object LookupMethodAdvisor {
   */
 class ExecutorServiceFactoryConstructorAdvisor
 object ExecutorServiceFactoryConstructorAdvisor {
-  @OnMethodExit
+  @OnMethodExit(suppress = classOf[Throwable])
   def onExit(@This factory: ExecutorServiceFactory): Unit = {
     factory.asInstanceOf[LookupDataAware].lookupData = LookupDataAware.currentLookupData
   }
@@ -83,7 +83,7 @@ object ExecutorServiceFactoryConstructorAdvisor {
   */
 class CreateExecutorServiceAdvisor
 object CreateExecutorServiceAdvisor {
-  @OnMethodExit
+  @OnMethodExit(suppress = classOf[Throwable])
   def onExit(@This factory: ExecutorServiceFactory, @Return executorService: ExecutorService): Unit = {
     val lookupData = factory.asInstanceOf[LookupDataAware].lookupData
 
@@ -99,7 +99,7 @@ object CreateExecutorServiceAdvisor {
   */
 class LazyExecutorServiceDelegateConstructorAdvisor
 object LazyExecutorServiceDelegateConstructorAdvisor {
-  @OnMethodExit
+  @OnMethodExit(suppress = classOf[Throwable])
   def onExit(@This lazyExecutor: ExecutorServiceDelegate): Unit =
     lazyExecutor.asInstanceOf[LookupDataAware].lookupData = LookupDataAware.currentLookupData
 }
@@ -109,12 +109,12 @@ object LazyExecutorServiceDelegateConstructorAdvisor {
   */
 class CopyMethodAdvisor
 object CopyMethodAdvisor {
-  @OnMethodEnter
+  @OnMethodEnter(suppress = classOf[Throwable])
   def onEnter(@This lazyExecutor: ExecutorServiceDelegate): ThreadLocal[LookupData] = {
     LookupDataAware.setLookupData(lazyExecutor.asInstanceOf[LookupDataAware].lookupData)
   }
 
-  @OnMethodExit
+  @OnMethodExit(suppress = classOf[Throwable])
   def onExit(@Enter lookupData: ThreadLocal[LookupData]): Unit =
     lookupData.remove()
 }
@@ -124,7 +124,7 @@ object CopyMethodAdvisor {
   */
 class ShutdownMethodAdvisor
 object ShutdownMethodAdvisor {
-  @OnMethodExit
+  @OnMethodExit(suppress = classOf[Throwable])
   def onExit(@This lazyExecutor: ExecutorServiceDelegate): Unit = {
     val lookupData = lazyExecutor.asInstanceOf[LookupDataAware].lookupData
 

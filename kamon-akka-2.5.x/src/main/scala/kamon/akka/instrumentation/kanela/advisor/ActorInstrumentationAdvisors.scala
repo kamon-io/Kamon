@@ -32,7 +32,7 @@ trait ActorInstrumentationSupport {
   */
 class ActorCellConstructorAdvisor
 object ActorCellConstructorAdvisor {
-  @OnMethodExit
+  @OnMethodExit(suppress = classOf[Throwable])
   def onExit(@This cell: Cell,
              @Argument(0) system: ActorSystemImpl,
              @Argument(1) ref: ActorRef,
@@ -47,14 +47,13 @@ object ActorCellConstructorAdvisor {
   */
 class InvokeMethodAdvisor
 object InvokeMethodAdvisor extends ActorInstrumentationSupport {
-
-  @OnMethodEnter
+  @OnMethodEnter(suppress = classOf[Throwable])
   def onEnter(@This cell: Cell,
               @Argument(0) envelope: Object): Traveler = {
     actorInstrumentation(cell).processMessageStart(envelope.asInstanceOf[InstrumentedEnvelope].timestampedContext(), envelope.asInstanceOf[Envelope])
   }
 
-  @OnMethodExit(onThrowable = classOf[Throwable])
+  @OnMethodExit(onThrowable = classOf[Throwable], suppress = classOf[Throwable])
   def onExit(@This cell: Cell,
              @Enter traveler:Traveler,
              @Thrown failure: Throwable): Unit = {
@@ -71,8 +70,7 @@ object InvokeMethodAdvisor extends ActorInstrumentationSupport {
   */
 class HandleInvokeFailureMethodAdvisor
 object HandleInvokeFailureMethodAdvisor extends ActorInstrumentationSupport {
-
-  @OnMethodEnter
+  @OnMethodEnter(suppress = classOf[Throwable])
   def onEnter(@This cell: Cell,
               @Argument(1) failure: Throwable): Unit = {
     actorInstrumentation(cell).processFailure(failure)
@@ -85,7 +83,7 @@ object HandleInvokeFailureMethodAdvisor extends ActorInstrumentationSupport {
   */
 class SendMessageMethodAdvisor
 object SendMessageMethodAdvisor extends ActorInstrumentationSupport {
-  @OnMethodEnter
+  @OnMethodEnter(suppress = classOf[Throwable])
   def onEnter(@This cell: Cell,
               @Argument(0) envelope: Object): Unit = {
     envelope.asInstanceOf[InstrumentedEnvelope].setTimestampedContext(actorInstrumentation(cell).captureEnvelopeContext())
@@ -97,7 +95,7 @@ object SendMessageMethodAdvisor extends ActorInstrumentationSupport {
   */
 class TerminateMethodAdvisor
 object TerminateMethodAdvisor extends ActorInstrumentationSupport {
-  @OnMethodEnter
+  @OnMethodEnter(suppress = classOf[Throwable])
   def onEnter(@This cell: Cell): Unit = {
     actorInstrumentation(cell).cleanup()
 
@@ -112,7 +110,7 @@ object TerminateMethodAdvisor extends ActorInstrumentationSupport {
   */
 class RepointableActorCellConstructorAdvisor
 object RepointableActorCellConstructorAdvisor {
-  @OnMethodExit
+  @OnMethodExit(suppress = classOf[Throwable])
   def onExit(@This cell: Cell,
              @Argument(0) system: ActorSystem,
              @Argument(1) ref: ActorRef,
@@ -127,7 +125,7 @@ object RepointableActorCellConstructorAdvisor {
   */
 class RoutedActorCellConstructorAdvisor
 object RoutedActorCellConstructorAdvisor {
-  @OnMethodExit
+  @OnMethodExit(suppress = classOf[Throwable])
   def onExit(@This cell: Cell): Unit = {
     cell.asInstanceOf[RouterInstrumentationAware].setRouterInstrumentation(RouterMonitor.createRouterInstrumentation(cell))
   }
@@ -141,12 +139,12 @@ object SendMessageMethodAdvisorForRouter {
 
   def routerInstrumentation(cell: Cell): RouterMonitor = cell.asInstanceOf[RouterInstrumentationAware].routerInstrumentation
 
-  @OnMethodEnter
+  @OnMethodEnter(suppress = classOf[Throwable])
   def onEnter(@This cell: Cell): Long = {
     routerInstrumentation(cell).processMessageStart()
   }
 
-  @OnMethodExit
+  @OnMethodExit(suppress = classOf[Throwable])
   def onExit(@This cell: Cell,
              @Enter timestampBeforeProcessing: Long): Unit = {
 

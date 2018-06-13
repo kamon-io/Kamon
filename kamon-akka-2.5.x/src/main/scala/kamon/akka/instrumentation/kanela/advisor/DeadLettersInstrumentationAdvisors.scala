@@ -24,8 +24,7 @@ import kanela.agent.libs.net.bytebuddy.asm.Advice.{Argument, OnMethodExit, This}
 
 class ConstructorAdvisor
 object ConstructorAdvisor {
-
-  @OnMethodExit
+  @OnMethodExit(suppress = classOf[Throwable])
   def onExit(@This eventStream:HasSystem, @Argument(0) system:ActorSystem):Unit = {
     eventStream.setSystem(system)
   }
@@ -33,8 +32,7 @@ object ConstructorAdvisor {
 
 class PublishMethodAdvisor
 object PublishMethodAdvisor {
-
-  @OnMethodExit
+  @OnMethodExit(suppress = classOf[Throwable])
   def onExit(@This stream:HasSystem, @Argument(0) event: AnyRef):Unit = event match {
     case dl: DeadLetter => Metrics.forSystem(stream.system.name).deadLetters.increment()
     case um: UnhandledMessage => Metrics.forSystem(stream.system.name).unhandledMessages.increment()
