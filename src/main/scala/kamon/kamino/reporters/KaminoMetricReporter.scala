@@ -18,7 +18,7 @@ import scala.collection.JavaConverters._
 import scala.util.Try
 
 
-private[kamino] class KaminoMetricReporter(plan: Plan) extends MetricReporter {
+private[kamino] class KaminoMetricReporter(codeProvidedPlan: Option[Plan]) extends MetricReporter {
   private val MaxAge = Duration.ofMinutes(30)
   private val logger = LoggerFactory.getLogger(classOf[KaminoMetricReporter])
   private var httpClient: Option[KaminoApiClient] = None
@@ -48,7 +48,14 @@ private[kamino] class KaminoMetricReporter(plan: Plan) extends MetricReporter {
 
   override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
     val snapshotAge = java.time.Duration.between(snapshot.to, Kamon.clock().instant()).toMillis
-    if(snapshotAge >= 0 && snapshotAge < MaxAge.toMillis) reportIngestion(snapshot)
+    if(snapshotAge >= 0 && snapshotAge < MaxAge.toMillis)
+      if(configuration.apiKey != "none")
+        reportIngestion(snapshot)
+      else
+        logger.error("Dropping PeriodSnapshot because no API key has been configured.")
+    else
+      logger.warn("Dropping stale PeriodSnapshot for period from: [{}], to: [{}]. The snapshot is {} millis old.",
+        snapshot.from.toEpochMilli().toString(), snapshot.to.toEpochMilli().toString(), snapshotAge.toString())
   }
 
   private def reportIngestion(snapshot: PeriodSnapshot): Unit = {
@@ -58,6 +65,7 @@ private[kamino] class KaminoMetricReporter(plan: Plan) extends MetricReporter {
       val gauges = accumulatedSnapshot.metrics.gauges.map(toIngestionMetricValue(GAUGE))
       val counters = accumulatedSnapshot.metrics.counters.map(toIngestionMetricValue(COUNTER))
 
+      val plan = codeProvidedPlan.getOrElse(configuration.plan)
       val allMetrics = histograms ++ mmCounters ++ gauges ++ counters
       val interval = IngestionV1.Interval.newBuilder()
         .setFrom(accumulatedSnapshot.from.toEpochMilli)
@@ -65,7 +73,7 @@ private[kamino] class KaminoMetricReporter(plan: Plan) extends MetricReporter {
 
       val batch = IngestionV1.MetricBatch.newBuilder()
         .setInterval(interval)
-        .setApiKey( configuration.apiKey)
+        .setApiKey(configuration.apiKey)
         .setService(Kamon.environment.service)
         .setHost(Kamon.environment.host)
         .setInstance(Kamon.environment.instance)
@@ -124,7 +132,7 @@ private[kamino] class KaminoMetricReporter(plan: Plan) extends MetricReporter {
 
 
   private def toIngestionMetricDistribution(metricType: InstrumentType)(metric: MetricDistribution): IngestionV1.Metric = {
-    val counts = metricScaler.scaleDistribution(metric).distribution.asInstanceOf[ZigZagCountsDistribution].zigZagCounts
+    val counts = metricScaler.scaleDistribution(metric).distribution.asInstanceOf[ZigZagCountsDistribution].zigZagCounts.duplicate()
     val privateCounts = ByteBuffer.wrap(counts.array())
 
     IngestionV1.Metric.newBuilder()

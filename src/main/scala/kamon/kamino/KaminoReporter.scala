@@ -7,26 +7,39 @@ import kamon.kamino.reporters.{KaminoMetricReporter, KaminoTracingReporter}
 import kamon.metric.PeriodSnapshot
 
 
-class KaminoReporter(enableTracing: Boolean) extends MetricReporter {
-  val plan = if(enableTracing) Plan.METRIC_TRACING else Plan.METRIC_ONLY
-  val innerMetricReporter = new KaminoMetricReporter(plan)
+class KaminoReporter private(codeProvidedPlan: Option[Plan]) extends MetricReporter {
+  var configuration = readConfiguration(Kamon.config())
+  val metricReporter = new KaminoMetricReporter(codeProvidedPlan)
+
+  def this() = {
+    this(None)
+  }
+
+  def this(enableTracing: Boolean) = {
+    this(if(enableTracing) Some(Plan.METRIC_TRACING) else Some(Plan.METRIC_ONLY))
+  }
 
   override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
-   innerMetricReporter.reportPeriodSnapshot(snapshot)
+   metricReporter.reportPeriodSnapshot(snapshot)
   }
 
   override def start(): Unit = {
-    innerMetricReporter.start()
-    if(plan == Plan.METRIC_TRACING)
+    metricReporter.start()
+
+    if(resolvePlan() == Plan.METRIC_TRACING)
       Kamon.addReporter(new KaminoTracingReporter)
   }
 
   override def stop(): Unit = {
-    innerMetricReporter.stop()
+    metricReporter.stop()
   }
 
   override def reconfigure(config: Config): Unit = {
-    innerMetricReporter.reconfigure(config)
+    this.configuration = readConfiguration(config)
+    metricReporter.reconfigure(config)
   }
 
+  private def resolvePlan(): Plan = {
+    codeProvidedPlan.getOrElse(configuration.plan)
+  }
 }

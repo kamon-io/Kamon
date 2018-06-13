@@ -3,6 +3,7 @@ package kamon
 import java.time.Duration
 
 import com.typesafe.config.Config
+import _root_.kamino.IngestionV1.Plan
 import org.slf4j.LoggerFactory
 import java.net.Proxy
 
@@ -18,6 +19,7 @@ package object kamino {
 
     KaminoConfiguration(
       apiKey            = apiKey,
+      plan              = if(kaminoConfig.getBoolean("enable-tracing")) Plan.METRIC_TRACING else Plan.METRIC_ONLY,
       connectionTimeout = kaminoConfig.getDuration("client.timeouts.connection"),
       readTimeout       = kaminoConfig.getDuration("client.timeouts.read"),
       appVersion        = kaminoConfig.getString("app-version"),
@@ -33,13 +35,14 @@ package object kamino {
       proxy             = kaminoConfig.getString("proxy.type").toLowerCase match {
         case "system" => None
         case "socks"  => Some(Proxy.Type.SOCKS)
-        case "https"   => Some(Proxy.Type.HTTP)
+        case "https"  => Some(Proxy.Type.HTTP)
       }
     )
   }
 
   case class KaminoConfiguration(
     apiKey: String,
+    plan: Plan,
     connectionTimeout: Duration,
     readTimeout: Duration,
     appVersion: String,

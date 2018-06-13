@@ -79,7 +79,7 @@ class ReporterSpec extends TestKit(ActorSystem("MetricReporterSpec")) with WordS
 
   "Metric reporter on flaky network" should {
 
-    val reporter = new KaminoMetricReporter(IngestionV1.Plan.METRIC_ONLY)
+    val reporter = new KaminoMetricReporter(Some(IngestionV1.Plan.METRIC_ONLY))
     val tracingReporter = new KaminoTracingReporter()
 
     "retry initial HELLO" in {
