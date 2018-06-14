@@ -1,5 +1,5 @@
 /* =========================================================================================
- * Copyright © 2013-2017 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2018 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -12,6 +12,11 @@
  * and limitations under the License.
  * =========================================================================================
  */
+
+val typesafeConfig  =   "com.typesafe"     %  "config"          % "1.3.1"
+val sl4jApi         =   "org.slf4j"        %  "slf4j-api"       % "1.7.25"
+val hdr             =   "org.hdrhistogram" %  "HdrHistogram"    % "2.1.9"
+val fansi           =   "com.lihaoyi"      %% "fansi"           % "0.2.4"
 
 
 lazy val kamon = (project in file("."))
@@ -44,13 +49,9 @@ lazy val core = (project in file("kamon-core"))
   .settings(moduleName := "kamon-core")
   .settings(commonSettings: _*)
   .settings(
-    libraryDependencies ++= Seq(
-      "com.typesafe"     %  "config"          % "1.3.1",
-      "org.slf4j"        %  "slf4j-api"       % "1.7.25",
-      "org.hdrhistogram" %  "HdrHistogram"    % "2.1.9",
-      "com.lihaoyi"      %% "fansi"           % "0.2.4"
-    )
-  )
+    libraryDependencies ++=
+      compileScope(typesafeConfig, sl4jApi, hdr) ++
+      testScope(fansi))
 
 lazy val testkit = (project in file("kamon-testkit"))
   .settings(moduleName := "kamon-testkit")
