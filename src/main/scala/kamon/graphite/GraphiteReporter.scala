@@ -78,9 +78,11 @@ private abstract class GraphiteSender(val senderConfig: GraphiteSenderConfig) ex
       write(packetBuilder.build(metric.name, "count", distribution.count, metric.tags))
       write(packetBuilder.build(metric.name, "min", distribution.min, metric.tags))
       write(packetBuilder.build(metric.name, "max", distribution.max, metric.tags))
-      write(packetBuilder.build(metric.name, "p50", distribution.percentile(50D).value, metric.tags))
+      //todo configure which percentiles should be included
+      //write(packetBuilder.build(metric.name, "p50", distribution.percentile(50D).value, metric.tags))
       write(packetBuilder.build(metric.name, "p90", distribution.percentile(90D).value, metric.tags))
-      write(packetBuilder.build(metric.name, "p99", distribution.percentile(99D).value, metric.tags))
+      //write(packetBuilder.build(metric.name, "p99", distribution.percentile(99D).value, metric.tags))
+      write(packetBuilder.build(metric.name, "average", distribution.percentile(100D).value, metric.tags))
       write(packetBuilder.build(metric.name, "sum", distribution.sum, metric.tags))
     }
 
