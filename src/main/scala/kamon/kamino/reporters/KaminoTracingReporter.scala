@@ -35,7 +35,7 @@ private[kamino] class KaminoTracingReporter extends SpanReporter {
       httpClient.foreach(_.postSpans(batch))
 
     } else
-      logger.error(s"Dropping Spans batch because a invalid API key has been configured: ${configuration.apiKey}")
+      logger.error(s"Dropping Spans batch because an invalid API key has been configured: ${configuration.apiKey}")
   }
 
   private def convert(span: Span.FinishedSpan): IngestionV1.Span = {

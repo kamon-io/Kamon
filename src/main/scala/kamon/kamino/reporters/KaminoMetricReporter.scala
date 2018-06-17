@@ -53,7 +53,7 @@ private[kamino] class KaminoMetricReporter(codeProvidedPlan: Option[Plan]) exten
       if(isAcceptableApiKey(configuration.apiKey))
         reportIngestion(snapshot)
       else
-        logger.error(s"Dropping PeriodSnapshot because a invalid API key has been configured: ${configuration.apiKey}")
+        logger.error(s"Dropping PeriodSnapshot because an invalid API key has been configured: ${configuration.apiKey}")
     else
       logger.warn("Dropping stale PeriodSnapshot for period from: [{}], to: [{}]. The snapshot is {} millis old.",
         snapshot.from.toEpochMilli().toString(), snapshot.to.toEpochMilli().toString(), snapshotAge.toString())
