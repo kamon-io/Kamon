@@ -123,6 +123,96 @@ public final class IngestionV1 {
   }
 
   /**
+   * Protobuf enum {@code Plan}
+   */
+  public enum Plan
+      implements com.google.protobuf.ProtocolMessageEnum {
+    /**
+     * <code>METRIC_ONLY = 1;</code>
+     */
+    METRIC_ONLY(1),
+    /**
+     * <code>METRIC_TRACING = 2;</code>
+     */
+    METRIC_TRACING(2),
+    ;
+
+    /**
+     * <code>METRIC_ONLY = 1;</code>
+     */
+    public static final int METRIC_ONLY_VALUE = 1;
+    /**
+     * <code>METRIC_TRACING = 2;</code>
+     */
+    public static final int METRIC_TRACING_VALUE = 2;
+
+
+    public final int getNumber() {
+      return value;
+    }
+
+    /**
+     * @deprecated Use {@link #forNumber(int)} instead.
+     */
+    @java.lang.Deprecated
+    public static Plan valueOf(int value) {
+      return forNumber(value);
+    }
+
+    public static Plan forNumber(int value) {
+      switch (value) {
+        case 1: return METRIC_ONLY;
+        case 2: return METRIC_TRACING;
+        default: return null;
+      }
+    }
+
+    public static com.google.protobuf.Internal.EnumLiteMap<Plan>
+        internalGetValueMap() {
+      return internalValueMap;
+    }
+    private static final com.google.protobuf.Internal.EnumLiteMap<
+        Plan> internalValueMap =
+          new com.google.protobuf.Internal.EnumLiteMap<Plan>() {
+            public Plan findValueByNumber(int number) {
+              return Plan.forNumber(number);
+            }
+          };
+
+    public final com.google.protobuf.Descriptors.EnumValueDescriptor
+        getValueDescriptor() {
+      return getDescriptor().getValues().get(ordinal());
+    }
+    public final com.google.protobuf.Descriptors.EnumDescriptor
+        getDescriptorForType() {
+      return getDescriptor();
+    }
+    public static final com.google.protobuf.Descriptors.EnumDescriptor
+        getDescriptor() {
+      return kamino.IngestionV1.getDescriptor().getEnumTypes().get(1);
+    }
+
+    private static final Plan[] VALUES = values();
+
+    public static Plan valueOf(
+        com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
+      if (desc.getType() != getDescriptor()) {
+        throw new java.lang.IllegalArgumentException(
+          "EnumValueDescriptor is not for this type.");
+      }
+      return VALUES[desc.getIndex()];
+    }
+
+    private final int value;
+
+    private Plan(int value) {
+      this.value = value;
+    }
+
+    // @@protoc_insertion_point(enum_scope:Plan)
+  }
+
+  /**
    * Protobuf enum {@code IngestionStatus}
    */
   public enum IngestionStatus
@@ -225,7 +315,7 @@ public final class IngestionV1 {
     }
     public static final com.google.protobuf.Descriptors.EnumDescriptor
         getDescriptor() {
-      return kamino.IngestionV1.getDescriptor().getEnumTypes().get(1);
+      return kamino.IngestionV1.getDescriptor().getEnumTypes().get(2);
     }
 
     private static final IngestionStatus[] VALUES = values();
@@ -344,6 +434,15 @@ public final class IngestionV1 {
      */
     kamino.IngestionV1.MetricOrBuilder getMetricsOrBuilder(
         int index);
+
+    /**
+     * <code>optional .Plan plan = 7;</code>
+     */
+    boolean hasPlan();
+    /**
+     * <code>optional .Plan plan = 7;</code>
+     */
+    kamino.IngestionV1.Plan getPlan();
   }
   /**
    * Protobuf type {@code MetricBatch}
@@ -362,6 +461,7 @@ public final class IngestionV1 {
       host_ = "";
       instance_ = "";
       metrics_ = java.util.Collections.emptyList();
+      plan_ = 1;
     }
 
     @java.lang.Override
@@ -436,6 +536,17 @@ public final class IngestionV1 {
               }
               metrics_.add(
                   input.readMessage(kamino.IngestionV1.Metric.PARSER, extensionRegistry));
+              break;
+            }
+            case 56: {
+              int rawValue = input.readEnum();
+              kamino.IngestionV1.Plan value = kamino.IngestionV1.Plan.valueOf(rawValue);
+              if (value == null) {
+                unknownFields.mergeVarintField(7, rawValue);
+              } else {
+                bitField0_ |= 0x00000020;
+                plan_ = rawValue;
+              }
               break;
             }
           }
@@ -690,6 +801,22 @@ public final class IngestionV1 {
       return metrics_.get(index);
     }
 
+    public static final int PLAN_FIELD_NUMBER = 7;
+    private int plan_;
+    /**
+     * <code>optional .Plan plan = 7;</code>
+     */
+    public boolean hasPlan() {
+      return ((bitField0_ & 0x00000020) == 0x00000020);
+    }
+    /**
+     * <code>optional .Plan plan = 7;</code>
+     */
+    public kamino.IngestionV1.Plan getPlan() {
+      kamino.IngestionV1.Plan result = kamino.IngestionV1.Plan.valueOf(plan_);
+      return result == null ? kamino.IngestionV1.Plan.METRIC_ONLY : result;
+    }
+
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
@@ -750,6 +877,9 @@ public final class IngestionV1 {
       for (int i = 0; i < metrics_.size(); i++) {
         output.writeMessage(6, metrics_.get(i));
       }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        output.writeEnum(7, plan_);
+      }
       unknownFields.writeTo(output);
     }
 
@@ -777,6 +907,10 @@ public final class IngestionV1 {
       for (int i = 0; i < metrics_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(6, metrics_.get(i));
+      }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeEnumSize(7, plan_);
       }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
@@ -822,6 +956,10 @@ public final class IngestionV1 {
       }
       result = result && getMetricsList()
           .equals(other.getMetricsList());
+      result = result && (hasPlan() == other.hasPlan());
+      if (hasPlan()) {
+        result = result && plan_ == other.plan_;
+      }
       result = result && unknownFields.equals(other.unknownFields);
       return result;
     }
@@ -856,6 +994,10 @@ public final class IngestionV1 {
       if (getMetricsCount() > 0) {
         hash = (37 * hash) + METRICS_FIELD_NUMBER;
         hash = (53 * hash) + getMetricsList().hashCode();
+      }
+      if (hasPlan()) {
+        hash = (37 * hash) + PLAN_FIELD_NUMBER;
+        hash = (53 * hash) + plan_;
       }
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
@@ -997,6 +1139,8 @@ public final class IngestionV1 {
         } else {
           metricsBuilder_.clear();
         }
+        plan_ = 1;
+        bitField0_ = (bitField0_ & ~0x00000040);
         return this;
       }
 
@@ -1054,6 +1198,10 @@ public final class IngestionV1 {
         } else {
           result.metrics_ = metricsBuilder_.build();
         }
+        if (((from_bitField0_ & 0x00000040) == 0x00000040)) {
+          to_bitField0_ |= 0x00000020;
+        }
+        result.plan_ = plan_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -1144,6 +1292,9 @@ public final class IngestionV1 {
               metricsBuilder_.addAllMessages(other.metrics_);
             }
           }
+        }
+        if (other.hasPlan()) {
+          setPlan(other.getPlan());
         }
         this.mergeUnknownFields(other.unknownFields);
         onChanged();
@@ -1856,6 +2007,42 @@ public final class IngestionV1 {
           metrics_ = null;
         }
         return metricsBuilder_;
+      }
+
+      private int plan_ = 1;
+      /**
+       * <code>optional .Plan plan = 7;</code>
+       */
+      public boolean hasPlan() {
+        return ((bitField0_ & 0x00000040) == 0x00000040);
+      }
+      /**
+       * <code>optional .Plan plan = 7;</code>
+       */
+      public kamino.IngestionV1.Plan getPlan() {
+        kamino.IngestionV1.Plan result = kamino.IngestionV1.Plan.valueOf(plan_);
+        return result == null ? kamino.IngestionV1.Plan.METRIC_ONLY : result;
+      }
+      /**
+       * <code>optional .Plan plan = 7;</code>
+       */
+      public Builder setPlan(kamino.IngestionV1.Plan value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000040;
+        plan_ = value.getNumber();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional .Plan plan = 7;</code>
+       */
+      public Builder clearPlan() {
+        bitField0_ = (bitField0_ & ~0x00000040);
+        plan_ = 1;
+        onChanged();
+        return this;
       }
       public final Builder setUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
@@ -9869,35 +10056,36 @@ public final class IngestionV1 {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n$src/main/protobuf/ingestion.v1.proto\"\205" +
+      "\n$src/main/protobuf/ingestion.v1.proto\"\232" +
       "\001\n\013MetricBatch\022\033\n\010interval\030\001 \002(\0132\t.Inter" +
       "val\022\016\n\006apiKey\030\002 \002(\t\022\017\n\007service\030\003 \002(\t\022\014\n\004" +
       "host\030\004 \002(\t\022\020\n\010instance\030\005 \002(\t\022\030\n\007metrics\030" +
-      "\006 \003(\0132\007.Metric\"$\n\010Interval\022\014\n\004from\030\001 \002(\003" +
-      "\022\n\n\002to\030\002 \002(\003\"\233\001\n\006Metric\022\014\n\004name\030\001 \002(\t\022\037\n" +
-      "\004tags\030\002 \003(\0132\021.Metric.TagsEntry\022\'\n\016instru" +
-      "mentType\030\003 \002(\0162\017.InstrumentType\022\014\n\004data\030" +
-      "\004 \002(\014\032+\n\tTagsEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005value" +
-      "\030\002 \001(\t:\0028\001\"O\n\014NodeIdentity\022\017\n\007service\030\001 ",
-      "\002(\t\022\020\n\010instance\030\002 \002(\t\022\014\n\004host\030\003 \002(\t\022\016\n\006a" +
-      "piKey\030\004 \002(\t\"X\n\005Hello\022\033\n\004node\030\001 \002(\0132\r.Nod" +
-      "eIdentity\022\014\n\004time\030\002 \002(\003\022\023\n\013incarnation\030\003" +
-      " \002(\t\022\017\n\007version\030\004 \002(\t\"4\n\007Goodbye\022\033\n\004node" +
-      "\030\001 \002(\0132\r.NodeIdentity\022\014\n\004time\030\002 \002(\003\"f\n\tS" +
-      "panBatch\022\023\n\013serviceName\030\001 \002(\t\022\016\n\006apiKey\030" +
-      "\002 \002(\t\022\014\n\004host\030\003 \002(\t\022\020\n\010instance\030\004 \002(\t\022\024\n" +
-      "\005spans\030\005 \003(\0132\005.Span\"\300\001\n\004Span\022\n\n\002id\030\001 \002(\t" +
-      "\022\017\n\007traceId\030\002 \002(\t\022\020\n\010parentId\030\003 \002(\t\022\025\n\ro" +
-      "perationName\030\004 \002(\t\022\023\n\013startMicros\030\005 \002(\003\022",
-      "\021\n\tendMicros\030\006 \002(\003\022\035\n\004tags\030\007 \003(\0132\017.Span." +
-      "TagsEntry\032+\n\tTagsEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005v" +
-      "alue\030\002 \001(\t:\0028\001\"5\n\021IngestionResponse\022 \n\006s" +
-      "tatus\030\001 \002(\0162\020.IngestionStatus*L\n\016Instrum" +
-      "entType\022\013\n\007COUNTER\020\000\022\t\n\005GAUGE\020\001\022\r\n\tHISTO" +
-      "GRAM\020\002\022\023\n\017MIN_MAX_COUNTER\020\003*]\n\017Ingestion" +
-      "Status\022\006\n\002OK\020\000\022\t\n\005ERROR\020\001\022\t\n\005STALE\020\002\022\020\n\014" +
-      "UNAUTHORIZED\020\003\022\013\n\007BLOCKED\020\004\022\r\n\tCORRUPTED" +
-      "\020\005B\010\n\006kamino"
+      "\006 \003(\0132\007.Metric\022\023\n\004plan\030\007 \001(\0162\005.Plan\"$\n\010I" +
+      "nterval\022\014\n\004from\030\001 \002(\003\022\n\n\002to\030\002 \002(\003\"\233\001\n\006Me" +
+      "tric\022\014\n\004name\030\001 \002(\t\022\037\n\004tags\030\002 \003(\0132\021.Metri" +
+      "c.TagsEntry\022\'\n\016instrumentType\030\003 \002(\0162\017.In" +
+      "strumentType\022\014\n\004data\030\004 \002(\014\032+\n\tTagsEntry\022" +
+      "\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\t:\0028\001\"O\n\014NodeI",
+      "dentity\022\017\n\007service\030\001 \002(\t\022\020\n\010instance\030\002 \002" +
+      "(\t\022\014\n\004host\030\003 \002(\t\022\016\n\006apiKey\030\004 \002(\t\"X\n\005Hell" +
+      "o\022\033\n\004node\030\001 \002(\0132\r.NodeIdentity\022\014\n\004time\030\002" +
+      " \002(\003\022\023\n\013incarnation\030\003 \002(\t\022\017\n\007version\030\004 \002" +
+      "(\t\"4\n\007Goodbye\022\033\n\004node\030\001 \002(\0132\r.NodeIdenti" +
+      "ty\022\014\n\004time\030\002 \002(\003\"f\n\tSpanBatch\022\023\n\013service" +
+      "Name\030\001 \002(\t\022\016\n\006apiKey\030\002 \002(\t\022\014\n\004host\030\003 \002(\t" +
+      "\022\020\n\010instance\030\004 \002(\t\022\024\n\005spans\030\005 \003(\0132\005.Span" +
+      "\"\300\001\n\004Span\022\n\n\002id\030\001 \002(\t\022\017\n\007traceId\030\002 \002(\t\022\020" +
+      "\n\010parentId\030\003 \002(\t\022\025\n\roperationName\030\004 \002(\t\022",
+      "\023\n\013startMicros\030\005 \002(\003\022\021\n\tendMicros\030\006 \002(\003\022" +
+      "\035\n\004tags\030\007 \003(\0132\017.Span.TagsEntry\032+\n\tTagsEn" +
+      "try\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\t:\0028\001\"5\n\021I" +
+      "ngestionResponse\022 \n\006status\030\001 \002(\0162\020.Inges" +
+      "tionStatus*L\n\016InstrumentType\022\013\n\007COUNTER\020" +
+      "\000\022\t\n\005GAUGE\020\001\022\r\n\tHISTOGRAM\020\002\022\023\n\017MIN_MAX_C" +
+      "OUNTER\020\003*+\n\004Plan\022\017\n\013METRIC_ONLY\020\001\022\022\n\016MET" +
+      "RIC_TRACING\020\002*]\n\017IngestionStatus\022\006\n\002OK\020\000" +
+      "\022\t\n\005ERROR\020\001\022\t\n\005STALE\020\002\022\020\n\014UNAUTHORIZED\020\003" +
+      "\022\013\n\007BLOCKED\020\004\022\r\n\tCORRUPTED\020\005B\010\n\006kamino"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -9916,7 +10104,7 @@ public final class IngestionV1 {
     internal_static_MetricBatch_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_MetricBatch_descriptor,
-        new java.lang.String[] { "Interval", "ApiKey", "Service", "Host", "Instance", "Metrics", });
+        new java.lang.String[] { "Interval", "ApiKey", "Service", "Host", "Instance", "Metrics", "Plan", });
     internal_static_Interval_descriptor =
       getDescriptor().getMessageTypes().get(1);
     internal_static_Interval_fieldAccessorTable = new

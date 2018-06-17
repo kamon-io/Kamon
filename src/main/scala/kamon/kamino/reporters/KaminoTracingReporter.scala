@@ -1,35 +1,41 @@
-package kamon.kamino
+package kamon.kamino.reporters
 
-import kamon.{Kamon, SpanReporter}
-import kamon.trace.Span
-import kamino.IngestionV1.{SpanBatch}
-import kamon.trace.Span.TagValue
 import com.typesafe.config.Config
 import kamino.IngestionV1
-import org.slf4j.LoggerFactory
+import kamino.IngestionV1.SpanBatch
+import kamon.kamino.{KaminoApiClient, KaminoConfiguration, readConfiguration}
+import kamon.kamino.isAcceptableApiKey
+import kamon.trace.Span
+import kamon.trace.Span.TagValue
 import kamon.util.Clock
+import kamon.{Kamon, SpanReporter}
+import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 
-class KaminoTracingReporter extends SpanReporter {
+private[kamino] class KaminoTracingReporter extends SpanReporter {
 
-  private val logger = LoggerFactory.getLogger(classOf[KaminoReporter])
+  private val logger = LoggerFactory.getLogger(classOf[KaminoTracingReporter])
   private var httpClient: Option[KaminoApiClient] = None
   private var configuration: KaminoConfiguration = readConfiguration(Kamon.config())
 
   override def reportSpans(spans: Seq[Span.FinishedSpan]): Unit = if(spans.nonEmpty) {
-    val env = Kamon.environment
-    val kaminoSpans = spans map convert
+    if(isAcceptableApiKey(configuration.apiKey)) {
+      val env = Kamon.environment
+      val kaminoSpans = spans map convert
 
-    val batch = SpanBatch.newBuilder()
-      .setServiceName(env.service)
-      .setHost(env.host)
-      .setInstance(env.instance)
-      .setApiKey(configuration.apiKey)
-      .addAllSpans(kaminoSpans.asJava)
-      .build()
+      val batch = SpanBatch.newBuilder()
+        .setServiceName(env.service)
+        .setHost(env.host)
+        .setInstance(env.instance)
+        .setApiKey(configuration.apiKey)
+        .addAllSpans(kaminoSpans.asJava)
+        .build()
 
-    httpClient.foreach(_.postSpans(batch))
+      httpClient.foreach(_.postSpans(batch))
+
+    } else
+      logger.error(s"Dropping Spans batch because an invalid API key has been configured: ${configuration.apiKey}")
   }
 
   private def convert(span: Span.FinishedSpan): IngestionV1.Span = {
