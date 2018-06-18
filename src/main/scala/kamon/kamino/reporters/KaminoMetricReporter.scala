@@ -133,14 +133,13 @@ private[kamino] class KaminoMetricReporter(codeProvidedPlan: Option[Plan]) exten
 
 
   private def toIngestionMetricDistribution(metricType: InstrumentType)(metric: MetricDistribution): IngestionV1.Metric = {
-    val counts = metricScaler.scaleDistribution(metric).distribution.asInstanceOf[ZigZagCountsDistribution].zigZagCounts.duplicate()
-    val privateCounts = ByteBuffer.wrap(counts.array())
+    val counts = metricScaler.scaleDistribution(metric).distribution.asInstanceOf[ZigZagCountsDistribution].countsArray()
 
     IngestionV1.Metric.newBuilder()
       .setName(metric.name)
       .putAllTags(cleanTags(metric.tags).asJava)
       .setInstrumentType(metricType)
-      .setData(protobuf.ByteString.copyFrom(privateCounts))
+      .setData(protobuf.ByteString.copyFrom(counts))
       .build()
   }
 

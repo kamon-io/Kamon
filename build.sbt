@@ -1,7 +1,7 @@
 scalaVersion := "2.12.2"
 resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
 
-lazy val kamonCoreDep = "io.kamon" %% "kamon-core" % "1.0.0"
+lazy val kamonCoreDep = "io.kamon" %% "kamon-core" % "1.1.3"
 
 lazy val excludedPackages = Seq(
   "kamon-core"
