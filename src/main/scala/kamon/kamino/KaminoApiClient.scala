@@ -15,29 +15,29 @@ import scala.annotation.tailrec
 import scala.util.{Failure, Success, Try}
 
 class KaminoApiClient(config: KaminoConfiguration) {
-  private val logger = LoggerFactory.getLogger(classOf[KaminoMetricReporter])
+  private val logger = LoggerFactory.getLogger(classOf[KaminoApiClient])
 
   private val client = createHttpClient(config)
   private var lastAttempt: Instant = Instant.EPOCH
   private val apiKeyHeaderName = "kamino-api-key"
 
   def postIngestion(metricBatch: MetricBatch): Unit =
-    postWithRetry(metricBatch.toByteArray, config.ingestionRoute, config.ingestionRetries)
+    postWithRetry(metricBatch.toByteArray, "metrics-ingestion", config.ingestionRoute, config.ingestionRetries)
 
   def postHello(hello: Hello): Unit =
-    postWithRetry(hello.toByteArray, config.bootMark, config.bootRetries)
+    postWithRetry(hello.toByteArray, "hello", config.bootMark, config.bootRetries)
 
   def postGoodbye(goodBye: Goodbye): Unit =
-    postWithRetry(goodBye.toByteArray, config.shutdownMark, config.shutdownRetries)
+    postWithRetry(goodBye.toByteArray, "goodbye", config.shutdownMark, config.shutdownRetries)
 
   def postSpans(spanBatch: SpanBatch): Unit =
-    postWithRetry(spanBatch.toByteArray, config.tracingRoute, config.tracingRetries)
+    postWithRetry(spanBatch.toByteArray, "spans-ingestion", config.tracingRoute, config.tracingRetries)
 
   def stop(): Unit = client.dispatcher().executorService().shutdown()
 
 
   @tailrec
-  private def postWithRetry(body: Array[Byte], apiUrl: String, retries: Int): Unit = {
+  private def postWithRetry(body: Array[Byte], endpointName: String, apiUrl: String, retries: Int): Unit = {
     val clock = Kamon.clock()
 
     val timeSinceLastPost = Duration.between(lastAttempt, clock.instant())
@@ -75,24 +75,24 @@ class KaminoApiClient(config: KaminoConfiguration) {
       case Success(ingestionResult) =>
         ingestionResult.getStatus match {
           case OK =>
-            logger.info("Snapshot ingested")
+            logger.trace("[{}] request succeeded", endpointName)
           case STALE =>
-            logger.warn("Ingestion declined, stale data")
+            logger.warn("[{}] request declined, stale data", endpointName)
           case BLOCKED =>
-            logger.warn("Ingestion declined, plan limits reached")
+            logger.warn("[{}] request declined, plan limits reached", endpointName)
           case UNAUTHORIZED =>
-            logger.error("Ingestion declined, missing or wrong API key")
+            logger.error("[{}] request declined, missing or wrong API key", endpointName)
           case CORRUPTED =>
-            logger.warn("Ingestion declined, illegal batch")
+            logger.warn("[{}] request declined, illegal batch", endpointName)
           case ERROR =>
-            logger.warn("Ingestion declined, unknown error")
+            logger.warn("[{}] request declined, unknown error", endpointName)
             backoff
-            postWithRetry(body, apiUrl, retries - 1)
+            postWithRetry(body, endpointName, apiUrl, retries - 1)
         }
       case Failure(connectionException) if retries > 0 =>
         logger.error(s"Connection error, retrying... ($retries left) ${connectionException.getMessage}")
         backoff
-        postWithRetry(body, apiUrl, retries - 1)
+        postWithRetry(body, endpointName, apiUrl, retries - 1)
       case Failure(connectionException) =>
         logger.error(s"Ingestion error, no retries, dropping snapshot... ${connectionException.getMessage}")
 
