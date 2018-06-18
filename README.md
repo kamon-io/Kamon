@@ -13,7 +13,7 @@ Supported releases and dependencies are shown below.
 
 | kamino-reporter | status | jdk  | scala            |
 |:---------------:|:------:|:----:|------------------|
-|    1.1.0    |   RC   | 1.8+ |    2.11, 2.12    |
+|    1.1.0        | Stable | 1.8+ |    2.11, 2.12    |
 
 
 
