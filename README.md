@@ -28,7 +28,7 @@ and for Maven:
 <dependency>
     <groupId>io.kamon</groupId>
     <artifactId>kamon-prometheus_2.12</artifactId>
-    <version>1.1.1/version>
+    <version>1.1.1</version>
 </dependency>
 ```
 
