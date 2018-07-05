@@ -67,5 +67,7 @@ class MetricsOnlyRouterMonitor(routerMetrics: RouterMetrics) extends RouterMonit
   def processFailure(failure: Throwable): Unit = {}
   def routeeAdded(): Unit = {}
   def routeeRemoved(): Unit = {}
-  def cleanup(): Unit = routerMetrics.cleanup()
+  def cleanup(): Unit = {
+    routerMetrics.cleanup()
+  }
 }

@@ -35,6 +35,7 @@ trait ActorMonitor {
   def captureEnvelopeContext(): TimestampedContext
   def processMessage(pjp: ProceedingJoinPoint, envelopeContext: TimestampedContext, envelope: Envelope): AnyRef
   def processFailure(failure: Throwable): Unit
+  def processDroppedMessage(count: Long): Unit
   def cleanup(): Unit
 
   //Kanela
@@ -119,6 +120,7 @@ object ActorMonitors {
       traveler.closeable.close()
 
     override def processFailure(failure: Throwable): Unit = monitor.processFailure(failure)
+    override def processDroppedMessage(count: Long): Unit = monitor.processDroppedMessage(count)
 
     override def cleanup(): Unit = monitor.cleanup()
 
@@ -159,6 +161,7 @@ object ActorMonitors {
     }
 
     def processFailure(failure: Throwable): Unit = {}
+    def processDroppedMessage(count: Long): Unit = {}
     def cleanup(): Unit = {
       Metrics.forSystem(cellInfo.systemName).activeActors.decrement()
     }
@@ -193,6 +196,7 @@ object ActorMonitors {
     }
 
     def processMessage(pjp: ProceedingJoinPoint, envelopeContext: TimestampedContext, envelope: Envelope): AnyRef = {
+      println("=====> Processing Message: " + envelope.message)
       val timestampBeforeProcessing = Kamon.clock().nanos()
       processedMessagesCounter.increment()
 
@@ -245,6 +249,10 @@ object ActorMonitors {
       super.processFailure(failure: Throwable)
     }
 
+    override def processDroppedMessage(count: Long): Unit = {
+      // Dropped messages are only measured for routees
+    }
+
     override def cleanup(): Unit = {
       super.cleanup()
       actorMetrics.foreach(_.cleanup())
@@ -254,9 +262,18 @@ object ActorMonitors {
   class TrackedRoutee(routerMetrics: RouterMetrics, groupMetrics: Seq[ActorGroupMetrics], actorCellCreation: Boolean, cellInfo: CellInfo)
       extends GroupMetricsTrackingActor(groupMetrics, actorCellCreation, cellInfo) {
 
+    routerMetrics.members.increment()
     private val processedMessagesCounter = Metrics.forSystem(cellInfo.systemName).processedMessagesByTracked
 
+
+
+    override def captureEnvelopeContext(): TimestampedContext = {
+      routerMetrics.pendingMessages.increment()
+      super.captureEnvelopeContext()
+    }
+
     def processMessage(pjp: ProceedingJoinPoint, envelopeContext: TimestampedContext, envelope: Envelope): AnyRef = {
+      println("=====> Processing Message Routee: " + envelope.message)
       val timestampBeforeProcessing = Kamon.clock().nanos()
       processedMessagesCounter.increment()
 
@@ -271,6 +288,7 @@ object ActorMonitors {
 
         routerMetrics.processingTime.record(processingTime)
         routerMetrics.timeInMailbox.record(timeInMailbox)
+        routerMetrics.pendingMessages.decrement()
         recordProcessMetrics(processingTime, timeInMailbox)
       }
     }
@@ -301,9 +319,14 @@ object ActorMonitors {
       super.processFailure(failure)
     }
 
+
+    override def processDroppedMessage(count: Long): Unit = {
+      routerMetrics.pendingMessages.decrement(count)
+    }
+
     override def cleanup(): Unit = {
       super.cleanup()
-      routerMetrics.cleanup()
+      routerMetrics.members.decrement()
     }
   }
 
