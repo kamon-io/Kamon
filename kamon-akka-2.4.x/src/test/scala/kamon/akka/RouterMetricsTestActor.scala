@@ -25,6 +25,7 @@ class RouterMetricsTestActor extends Actor {
   import RouterMetricsTestActor._
   override def receive = {
     case Discard ⇒
+    case Die     ⇒ context.stop(self)
     case Fail    ⇒ throw new ArithmeticException("Division by zero.")
     case Ping    ⇒ sender ! Pong
     case RouterTrackTimings(sendTimestamp, sleep) ⇒ {
@@ -42,6 +43,7 @@ object RouterMetricsTestActor {
   case object Pong
   case object Fail
   case object Discard
+  case object Die
 
   case class RouterTrackTimings(sendTimestamp: Long = Kamon.clock().nanos(), sleep: Option[Duration] = None)
   case class RouterTrackedTimings(sendTimestamp: Long, dequeueTimestamp: Long, afterReceiveTimestamp: Long) {
