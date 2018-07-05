@@ -249,7 +249,7 @@ object ActorMonitors {
 
     def captureEnvelopeContext(): TimestampedContext = {
       groupMetrics.foreach { gm =>
-        gm.mailboxSize.increment()
+        gm.pendingMessages.increment()
       }
 
       TimestampedContext(Kamon.clock().nanos(), Kamon.currentContext())
@@ -265,7 +265,7 @@ object ActorMonitors {
       groupMetrics.foreach { gm =>
         gm.processingTime.record(processingTime)
         gm.timeInMailbox.record(timeInMailbox)
-        gm.mailboxSize.decrement()
+        gm.pendingMessages.decrement()
       }
     }
 

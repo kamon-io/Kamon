@@ -127,7 +127,7 @@ object Metrics {
     */
   val groupTimeInMailbox = Kamon.histogram("akka.group.time-in-mailbox", time.nanoseconds)
   val groupProcessingTime = Kamon.histogram("akka.group.processing-time", time.nanoseconds)
-  val groupMailboxSize = Kamon.rangeSampler("akka.group.mailbox-size")
+  val groupPendingMessages = Kamon.rangeSampler("akka.group.pending-messages")
   val groupMembers = Kamon.rangeSampler("akka.group.members")
   val groupErrors = Kamon.counter("akka.group.errors")
 
@@ -137,19 +137,19 @@ object Metrics {
       actorTags,
       groupTimeInMailbox.refine(actorTags),
       groupProcessingTime.refine(actorTags),
-      groupMailboxSize.refine(actorTags),
+      groupPendingMessages.refine(actorTags),
       groupMembers.refine(actorTags),
       groupErrors.refine(actorTags)
     )
   }
 
   case class ActorGroupMetrics(tags: Map[String, String], timeInMailbox: Histogram, processingTime: Histogram,
-      mailboxSize: RangeSampler, members: RangeSampler, errors: Counter) {
+      pendingMessages: RangeSampler, members: RangeSampler, errors: Counter) {
 
     def cleanup(): Unit = {
       groupTimeInMailbox.remove(tags)
       groupProcessingTime.remove(tags)
-      groupMailboxSize.remove(tags)
+      groupPendingMessages.remove(tags)
       groupMembers.remove(tags)
       groupErrors.remove(tags)
     }
