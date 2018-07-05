@@ -20,7 +20,6 @@ val kamonTestkit    = "io.kamon" %% "kamon-testkit"      % "1.0.0"
 val kamonScala      = "io.kamon" %% "kamon-scala-future" % "1.0.0"
 val kamonExecutors  = "io.kamon" %% "kamon-executors"    % "1.0.1"
 
-val `akka-2.3` = "2.3.15"
 val `akka-2.4` = "2.4.20"
 val `akka-2.5` = "2.5.13"
 
@@ -30,23 +29,7 @@ def akkaDependency(name: String, version: String) = {
 
 lazy val `kamon-akka` = (project in file("."))
     .settings(noPublishing: _*)
-    .aggregate(kamonAkka23, kamonAkka24, kamonAkka25)
-
-
-lazy val kamonAkka23 = Project("kamon-akka-23", file("kamon-akka-2.3.x"))
-  .settings(Seq(
-    bintrayPackage := "kamon-akka",
-    moduleName := "kamon-akka-2.3",
-    scalaVersion := "2.11.8",
-    crossScalaVersions := Seq("2.10.6", "2.11.8"),
-    resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")))
-  .settings(aspectJSettings: _*)
-  .settings(
-    libraryDependencies ++=
-      compileScope(akkaDependency("actor", `akka-2.3`), kamonCore, kamonScala, kamonExecutors) ++
-      providedScope(aspectJ) ++
-      optionalScope(logbackClassic) ++
-      testScope(scalatest, kamonTestkit, akkaDependency("testkit", `akka-2.3`), akkaDependency("slf4j", `akka-2.3`), logbackClassic))
+    .aggregate(kamonAkka24, kamonAkka25)
 
 
 lazy val kamonAkka24 = Project("kamon-akka-24", file("kamon-akka-2.4.x"))
