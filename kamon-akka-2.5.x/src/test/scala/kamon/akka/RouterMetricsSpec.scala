@@ -243,11 +243,17 @@ class RouterMetricsSpec extends TestKit(ActorSystem("RouterMetricsSpec")) with W
 
   override protected def afterAll(): Unit = shutdown()
 
-  def routerTags(path: String): Map[String, String] = Map(
-    "path" -> path,
-    "system" -> "RouterMetricsSpec",
-    "dispatcher" -> "akka.actor.default-dispatcher"
-  )
+  def routerTags(path: String): Map[String, String] = {
+    val routerClass = if(path.contains("balancing")) "akka.routing.BalancingPool" else "akka.routing.RoundRobinPool"
+
+    Map(
+      "path" -> path,
+      "system" -> "RouterMetricsSpec",
+      "dispatcher" -> "akka.actor.default-dispatcher",
+      "routeeClass" -> "kamon.akka.RouterMetricsTestActor",
+      "routerClass" -> routerClass
+    )
+  }
 
 
   trait RouterMetricsFixtures {
@@ -292,7 +298,6 @@ class RouterMetricsSpec extends TestKit(ActorSystem("RouterMetricsSpec")) with W
         routerMembers.refine(routerTags(s"RouterMetricsSpec/user/$routerName")).distribution(resetState = true)
       }
 
-
       router
     }
 
@@ -307,7 +312,7 @@ class RouterMetricsSpec extends TestKit(ActorSystem("RouterMetricsSpec")) with W
       // Cleanup all the metric recording instruments:
       if(resetState) {
         val tags = routerTags(s"RouterMetricsSpec/user/$routerName") ++
-          Map("dispatcher" -> "BalancingPool-/measuring-time-in-mailbox-in-balancing-pool-router")
+          Map("dispatcher" -> s"BalancingPool-/$routerName")
 
         routerRoutingTime.refine(tags).distribution(resetState = true)
         routerTimeInMailbox.refine(tags).distribution(resetState = true)
@@ -316,7 +321,6 @@ class RouterMetricsSpec extends TestKit(ActorSystem("RouterMetricsSpec")) with W
         routerMembers.refine(tags).distribution(resetState = true)
         routerErrors.refine(tags).value(resetState = true)
       }
-
 
       router
     }

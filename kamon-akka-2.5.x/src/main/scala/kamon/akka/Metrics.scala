@@ -79,8 +79,15 @@ object Metrics {
   val routerMembers = Kamon.rangeSampler("akka.router.members")
   val routerErrors = Kamon.counter("akka.router.errors")
 
-  def forRouter(path: String, system: String, dispatcher: String, actorClass: String): RouterMetrics = {
-    val routerTags = Map("path" -> path, "system" -> system, "dispatcher" -> dispatcher)
+  def forRouter(path: String, system: String, dispatcher: String, routerClass: String, routeeClass: String): RouterMetrics = {
+    val routerTags = Map(
+      "path" -> path,
+      "system" -> system,
+      "dispatcher" -> dispatcher,
+      "routerClass" -> routerClass,
+      "routeeClass" -> routeeClass
+    )
+
     RouterMetrics(
       routerTags,
       routerRoutingTime.refine(routerTags),
