@@ -67,7 +67,7 @@ object ActorMonitor {
 
   def createRegularActorMonitor(cellInfo: CellInfo): ActorMonitor = {
     if (cellInfo.isTracked || !cellInfo.trackingGroups.isEmpty) {
-      val actorMetrics = if (cellInfo.isTracked) Some(Metrics.forActor(cellInfo.path, cellInfo.systemName, cellInfo.dispatcherName, cellInfo.actorClass.getName)) else None
+      val actorMetrics = if (cellInfo.isTracked) Some(Metrics.forActor(cellInfo.path, cellInfo.systemName, cellInfo.dispatcherName, cellInfo.actorOrRouterClass.getName)) else None
       new TrackedActor(actorMetrics, trackingGroupMetrics(cellInfo), cellInfo.actorCellCreation, cellInfo)
     } else {
       ActorMonitors.ContextPropagationOnly(cellInfo)
@@ -75,7 +75,9 @@ object ActorMonitor {
   }
 
   def createRouteeMonitor(cellInfo: CellInfo): ActorMonitor = {
-    val routerMetrics = Metrics.forRouter(cellInfo.path, cellInfo.systemName, cellInfo.dispatcherName, cellInfo.actorClass.getName)
+    val routerMetrics = Metrics.forRouter(cellInfo.path, cellInfo.systemName, cellInfo.dispatcherName, cellInfo.actorOrRouterClass.getName,
+      cellInfo.routeeClass.map(_.getName).getOrElse("Unknown"))
+
     new TrackedRoutee(routerMetrics, trackingGroupMetrics(cellInfo), cellInfo.actorCellCreation, cellInfo)
   }
 
@@ -89,8 +91,8 @@ object ActorMonitor {
 object ActorMonitors {
 
   class TracedMonitor(cellInfo: CellInfo, monitor: ActorMonitor) extends ActorMonitor {
-    private val actorClassName = cellInfo.actorClass.getName
-    private val actorSimpleClassName = simpleClassName(cellInfo.actorClass)
+    private val actorClassName = cellInfo.actorOrRouterClass.getName
+    private val actorSimpleClassName = simpleClassName(cellInfo.actorOrRouterClass)
 
     override def captureEnvelopeContext(): TimestampedContext = {
       monitor.captureEnvelopeContext()
@@ -196,7 +198,6 @@ object ActorMonitors {
     }
 
     def processMessage(pjp: ProceedingJoinPoint, envelopeContext: TimestampedContext, envelope: Envelope): AnyRef = {
-      println("=====> Processing Message: " + envelope.message)
       val timestampBeforeProcessing = Kamon.clock().nanos()
       processedMessagesCounter.increment()
 
@@ -273,7 +274,6 @@ object ActorMonitors {
     }
 
     def processMessage(pjp: ProceedingJoinPoint, envelopeContext: TimestampedContext, envelope: Envelope): AnyRef = {
-      println("=====> Processing Message Routee: " + envelope.message)
       val timestampBeforeProcessing = Kamon.clock().nanos()
       processedMessagesCounter.increment()
 

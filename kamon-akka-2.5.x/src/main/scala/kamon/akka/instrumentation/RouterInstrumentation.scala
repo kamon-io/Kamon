@@ -28,6 +28,16 @@ class RoutedActorCellInstrumentation {
   def aroundSendMessageInRouterActorCell(pjp: ProceedingJoinPoint, cell: RoutedActorCell, envelope: Envelope): Any = {
     routerInstrumentation(cell).processMessage(pjp)
   }
+
+  @Pointcut("execution(akka.routing.RoutedActorRef.new(..)) && this(ref) && args(*, routerProps, *, *, routeeProps, *, *)")
+  def routedActorRefCreation(ref: ActorRef, routerProps: Props, routeeProps: Props): Unit = {}
+
+  @Before("routedActorRefCreation(ref, routerProps, routeeProps)")
+  def beforeRoutedActorRefCreation(ref: ActorRef, routerProps: Props, routeeProps: Props): Unit = {
+    val routedRef = ref.asInstanceOf[RoutedActorRefAccessor]
+    routedRef.setRouteeProps(routeeProps)
+    routedRef.setRouterProps(routerProps)
+  }
 }
 
 trait RouterInstrumentationAware {
@@ -44,10 +54,33 @@ object RouterInstrumentationAware {
   }
 }
 
+trait RoutedActorRefAccessor {
+  def routeeProps: Props
+  def routerProps: Props
+  def setRouteeProps(props: Props): Unit
+  def setRouterProps(props: Props): Unit
+}
+
+object RoutedActorRefAccessor {
+  def apply(): RoutedActorRefAccessor = new RoutedActorRefAccessor {
+    private var _routeeProps: Props = _
+    private var _routerProps: Props = _
+
+    override def routeeProps: Props = _routeeProps
+    override def setRouteeProps(props: Props): Unit = _routeeProps = props
+
+    override def routerProps: Props = _routerProps
+    override def setRouterProps(props: Props): Unit = _routerProps = props
+  }
+}
+
 @Aspect
 class MetricsIntoRouterCellsMixin {
 
   @DeclareMixin("akka.routing.RoutedActorCell")
   def mixinActorCellMetricsToRoutedActorCell: RouterInstrumentationAware = RouterInstrumentationAware()
+
+  @DeclareMixin("akka.routing.RoutedActorRef")
+  def mixinRoutedActorRefAccessorToRoutedActorRef: RoutedActorRefAccessor = RoutedActorRefAccessor()
 
 }
