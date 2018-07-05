@@ -70,10 +70,13 @@ object Metrics {
     *      that message is dequeued for processing.
     *    - processing-time: Time taken for the actor to process the receive function.
     *    - errors: Number or errors seen by the actor's supervision mechanism.
+    *    - pending-messages: Number of messages waiting to be processed across all routees.
     */
   val routerRoutingTime = Kamon.histogram("akka.router.routing-time", time.nanoseconds)
   val routerTimeInMailbox = Kamon.histogram("akka.router.time-in-mailbox", time.nanoseconds)
   val routerProcessingTime = Kamon.histogram("akka.router.processing-time", time.nanoseconds)
+  val routerPendingMessages = Kamon.rangeSampler("akka.router.pending-messages")
+  val routerMembers = Kamon.rangeSampler("akka.router.members")
   val routerErrors = Kamon.counter("akka.router.errors")
 
   def forRouter(path: String, system: String, dispatcher: String, actorClass: String): RouterMetrics = {
@@ -83,18 +86,22 @@ object Metrics {
       routerRoutingTime.refine(routerTags),
       routerTimeInMailbox.refine(routerTags),
       routerProcessingTime.refine(routerTags),
+      routerPendingMessages.refine(routerTags),
+      routerMembers.refine(routerTags),
       routerErrors.refine(routerTags)
     )
   }
 
   case class RouterMetrics(tags: Map[String, String], routingTime: Histogram, timeInMailbox: Histogram,
-      processingTime: Histogram, errors: Counter) {
+      processingTime: Histogram, pendingMessages: RangeSampler, members: RangeSampler, errors: Counter) {
 
     def cleanup(): Unit = {
       routerRoutingTime.remove(tags)
       routerTimeInMailbox.remove(tags)
       routerProcessingTime.remove(tags)
       routerErrors.remove(tags)
+      routerPendingMessages.remove(tags)
+      routerMembers.remove(tags)
     }
   }
 

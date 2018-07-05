@@ -140,6 +140,14 @@ class ActorCellInstrumentation {
   def beforeInvokeFailure(cell: ActorCell, childrenNotToSuspend: immutable.Iterable[ActorRef], failure: Throwable): Unit = {
     actorInstrumentation(cell).processFailure(failure)
   }
+
+  @Pointcut("execution(* akka.dispatch.MessageDispatcher.unregister(..)) && args(cell)")
+  def messageDispatcherUnregister(cell: ActorCell): Unit = {}
+
+  @Before("messageDispatcherUnregister(cell)")
+  def beforeMessageDispatcherUnregister(cell: ActorCell): Unit = {
+    actorInstrumentation(cell).processDroppedMessage(cell.mailbox.numberOfMessages)
+  }
 }
 
 object ActorCellInstrumentation {
