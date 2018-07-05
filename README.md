@@ -30,3 +30,16 @@ libraryDependencies += "io.kamon" %% "kamon-jaeger" % "1.0.2"
 ```
 
 
+#### Custom environment tags
+Kamon allows you to provide custom environment tags to all your metrics by configuring `kamon.environment.tags` in your `application.conf`, e.g.
+```
+kamon.environment.tags {
+  custom.id = "test1"
+  env = staging
+}
+```
+In order to include these tags in your Prometheus metrics as well, you need to activate this feature for the `JaegerReporter` by setting
+```
+kamon.jaeger.include-environment-tags = yes
+```
+in your `application.conf`.
