@@ -188,6 +188,20 @@ class RouterMetricsSpec extends TestKit(ActorSystem("RouterMetricsSpec")) with W
     }
 
 
+    "pick the right dispatcher name when the routees have a custom dispatcher set via deployment configuration" in new RouterMetricsFixtures {
+      val testProbe = TestProbe()
+      val router = system.actorOf(FromConfig.props(Props[RouterMetricsTestActor]), "picking-the-right-dispatcher-in-pool-router")
+
+      10 times {
+        router.tell(Ping, testProbe.ref)
+        testProbe.expectMsg(Pong)
+      }
+
+      val routerMetrics = routerMembers.partialRefine(Map("path" -> "RouterMetricsSpec/user/picking-the-right-dispatcher-in-pool-router"))
+      routerMetrics.map(m => m("dispatcher")) should contain only("custom-dispatcher")
+    }
+
+
     "clean the pending messages metric when a routee dies in pool routers" in new RouterMetricsFixtures {
       val timingsListener = TestProbe()
       val router = createTestPoolRouter("cleanup-pending-messages-in-pool-router", true)
