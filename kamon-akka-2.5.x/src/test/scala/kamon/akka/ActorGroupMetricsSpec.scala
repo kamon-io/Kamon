@@ -23,6 +23,7 @@ import akka.routing.RoundRobinPool
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import kamon.testkit.MetricInspection
 import Metrics._
+import kamon.util.GlobPathFilter
 import org.scalatest.concurrent.{Eventually, PatienceConfiguration}
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 
@@ -67,6 +68,14 @@ class ActorGroupMetricsSpec extends TestKit(ActorSystem("ActorGroupMetricsSpec")
       system.stop(trackedRouter3)
 
       eventually(groupMembers.refine(groupTags("group-of-routees")).distribution(resetState = true).max shouldBe(0))
+    }
+
+    "allow defining groups by configuration" in {
+      Akka.actorGroups("system/user/group-provided-by-code-actor") shouldBe empty
+      Akka.addActorGroup("group-by-code", new GlobPathFilter("*/user/group-provided-by-code-actor")) shouldBe true
+      Akka.actorGroups("system/user/group-provided-by-code-actor") should contain only("group-by-code")
+      Akka.removeActorGroup("group-by-code")
+      Akka.actorGroups("system/user/group-provided-by-code-actor") shouldBe empty
     }
   }
 

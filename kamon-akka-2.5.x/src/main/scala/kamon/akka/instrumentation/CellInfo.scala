@@ -52,7 +52,7 @@ object CellInfo {
     val filterName = if (isRouter || isRoutee) Akka.RouterFilterName else Akka.ActorFilterName
     val isTracked = !isRootSupervisor && Kamon.filter(filterName, fullPath)
     val isTraced = Kamon.filter(Akka.ActorTracingFilterName, fullPath)
-    val trackingGroups = if(isRootSupervisor) List() else Akka.actorGroups.filter(group => Kamon.filter(group, fullPath))
+    val trackingGroups = if(isRootSupervisor) List() else Akka.actorGroups(fullPath)
 
     val dispatcherName = if(isRouter) {
       if(cell.props.routerConfig.isInstanceOf[BalancingPool]) {

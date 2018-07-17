@@ -19,6 +19,8 @@ package kamon.akka
 import com.typesafe.config.Config
 import kamon.{Kamon, OnReconfigureHook}
 import kamon.akka.AskPatternTimeoutWarningSettings.Off
+import kamon.util.Matcher
+
 import scala.collection.JavaConverters._
 
 object Akka {
@@ -28,7 +30,9 @@ object Akka {
   val ActorTracingFilterName = "akka.traced-actor"
 
   @volatile var askPatternTimeoutWarning: AskPatternTimeoutWarningSetting = Off
-  @volatile var actorGroups = Seq.empty[String]
+  @volatile private var _actorGroups = Map.empty[String, Matcher]
+  @volatile private var _configProvidedActorGroups = Map.empty[String, Matcher]
+  @volatile private var _codeProvidedActorGroups = Map.empty[String, Matcher]
 
   loadConfiguration(Kamon.config())
 
@@ -40,7 +44,29 @@ object Akka {
   private def loadConfiguration(config: Config): Unit = synchronized {
     val akkaConfig = config.getConfig("kamon.akka")
     askPatternTimeoutWarning = AskPatternTimeoutWarningSettings.fromConfig(akkaConfig)
-    actorGroups = akkaConfig.getStringList("actor-groups").asScala
+
+    _configProvidedActorGroups = akkaConfig.getStringList("actor-groups").asScala.map(groupName => {
+      (groupName -> Kamon.filter(groupName))
+    }).toMap
+
+    _actorGroups = _codeProvidedActorGroups ++ _configProvidedActorGroups
+  }
+
+  def actorGroups(path: String): Seq[String] = {
+    _actorGroups.filter { case (_, v) => v.accept(path) }.keys.toSeq
+  }
+
+  def addActorGroup(groupName: String, matcher: Matcher): Boolean = synchronized {
+    if(_codeProvidedActorGroups.get(groupName).isEmpty) {
+      _codeProvidedActorGroups = _codeProvidedActorGroups + (groupName -> matcher)
+      _actorGroups = _codeProvidedActorGroups ++ _configProvidedActorGroups
+      true
+    } else false
+  }
+
+  def removeActorGroup(groupName: String): Unit = synchronized {
+    _codeProvidedActorGroups = _codeProvidedActorGroups - groupName
+    _actorGroups = _codeProvidedActorGroups ++ _configProvidedActorGroups
   }
 }
 
