@@ -20,13 +20,15 @@ import akka.NotUsed
 import akka.http.scaladsl.model.headers.RawHeader
 import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
 import akka.stream._
-import akka.stream.scaladsl.{BidiFlow, Flow}
+import akka.stream.scaladsl.{BidiFlow, Flow, Keep}
 import akka.stream.stage._
+import akka.util.ByteString
 import kamon.Kamon
-import kamon.context.{Context => KamonContext}
 import kamon.akka.http.{AkkaHttp, AkkaHttpMetrics}
-import kamon.context.TextMap
+import kamon.context.{TextMap, Context => KamonContext}
 import kamon.trace.Span
+
+import scala.util.{Failure, Success}
 
 /**
   * Wraps an {@code Flow[HttpRequest,HttpResponse]} with the necessary steps to output
@@ -89,15 +91,45 @@ object ServerFlowWrapper {
           }
 
           if(status == 404)
-            span.setOperationName("unhandled")
+            serverNotFoundOperationName(response).foreach(o => span.setOperationName(o))
 
           if(status >= 500 && status <= 599)
             span.addError(response.status.reason())
 
-          activeRequests.decrement()
-          span.finish()
+          span.mark("response-ready")
 
-          push(responseOut, includeTraceToken(response, Kamon.currentContext()))
+          val resp = includeTraceToken(
+            response,
+            Kamon.currentContext()
+          )
+
+          push(
+            responseOut,
+            if (!resp.entity.isKnownEmpty()) {
+              resp.transformEntityDataBytes(
+                Flow[ByteString]
+                .watchTermination()(Keep.right)
+                .mapMaterializedValue { f =>
+                  f.andThen {
+                    case Success(_) =>
+                      activeRequests.decrement()
+                      span.finish()
+                    case Failure(e) =>
+                      span.addError("Response entity stream failed", e)
+                      activeRequests.decrement()
+                      span.finish()
+
+                  }(materializer.executionContext)
+                }
+              )
+
+            } else {
+              activeRequests.decrement()
+              span.finish()
+              resp
+            }
+
+          )
         }
         override def onUpstreamFinish(): Unit = completeStage()
       })
@@ -115,12 +147,9 @@ object ServerFlowWrapper {
   def apply(flow: Flow[HttpRequest, HttpResponse, NotUsed], interface: String, port: Int): Flow[HttpRequest, HttpResponse, NotUsed] =
     BidiFlow.fromGraph(wrap(interface, port)).join(flow)
 
-  private def includeTraceToken(response: HttpResponse, context: KamonContext): HttpResponse = response match {
-    case response: HttpResponse ⇒ response.withHeaders(
+  private def includeTraceToken(response: HttpResponse, context: KamonContext): HttpResponse = response.withHeaders(
       response.headers ++ Kamon.contextCodec().HttpHeaders.encode(context).values.map(k => RawHeader(k._1, k._2))
     )
-    case other                  ⇒ other
-  }
 
   private def extractContext(request: HttpRequest) = Kamon.contextCodec().HttpHeaders.decode(new TextMap {
     private val headersKeyValueMap = request.headers.map(h => h.name -> h.value()).toMap

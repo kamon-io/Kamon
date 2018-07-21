@@ -18,17 +18,22 @@ package kamon.testkit
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
+import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpResponse}
 import de.heikoseeberger.akkahttpjson4s.Json4sSupport
 import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.model.headers.Connection
 import akka.http.scaladsl.server.Directives._
 import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.Source
+import akka.util.ByteString
 import kamon.Kamon
 import kamon.akka.http.TracingDirectives
 import kamon.context.Key
 import org.json4s.{DefaultFormats, native}
+import scala.concurrent.duration._
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.Random
 
 trait TestWebServer extends TracingDirectives {
   implicit val serialization = native.Serialization
@@ -86,6 +91,20 @@ trait TestWebServer extends TracingDirectives {
               OK
             }
           }
+        } ~
+        path(stream) {
+          complete{
+
+            val longStringContentStream = Source(
+              Range(1, 16).map{ i =>
+              ByteString(
+                100 * ('a' + i).toChar
+              )
+              }
+            )
+
+            HttpResponse(entity = HttpEntity(ContentTypes.`text/plain(UTF-8)`, longStringContentStream))
+          }
         }
       }
     }
@@ -104,6 +123,7 @@ trait TestWebServer extends TracingDirectives {
     val replyWithHeaders: String = "reply-with-headers"
     val basicContext: String = "basic-context"
     val waitTen: String = "wait"
+    val stream: String = "stream"
 
     implicit class Converter(endpoint: String) {
       implicit def withSlash: String = "/" + endpoint

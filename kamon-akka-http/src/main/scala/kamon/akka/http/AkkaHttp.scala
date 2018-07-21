@@ -17,7 +17,7 @@
 package kamon.akka.http
 
 import akka.actor.ReflectiveDynamicAccess
-import akka.http.scaladsl.model.HttpRequest
+import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
 import akka.http.scaladsl.model.headers.Host
 import com.typesafe.config.Config
 import kamon.{Kamon, OnReconfigureHook}
@@ -33,11 +33,18 @@ object AkkaHttp {
   def clientOperationName(request: HttpRequest): String =
     nameGenerator.clientOperationName(request)
 
+  def serverNotFoundOperationName(response: HttpResponse): Option[String] =
+    nameGenerator.serverNotFoundOperationName(response)
 
   trait OperationNameGenerator {
     def serverOperationName(request: HttpRequest): String
     def clientOperationName(request: HttpRequest): String
+
+    def serverNotFoundOperationName(request: HttpResponse): Option[String] = Some(defaultNotFoundOperationName)
   }
+
+
+  @volatile private var defaultNotFoundOperationName = defaultNotFoundOperationNameFromConfig(Kamon.config)
 
   private def defaultOperationNameGenerator(): OperationNameGenerator = new OperationNameGenerator {
 
@@ -53,6 +60,10 @@ object AkkaHttp {
       request.header[Host].map(_.host.toString())
   }
 
+  private def defaultNotFoundOperationNameFromConfig(config: Config): String = {
+    config.getString("kamon.akka-http.not-found-operation-name")
+  }
+
   private def nameGeneratorFromConfig(config: Config): OperationNameGenerator = {
     val nameGeneratorFQN = config.getString("kamon.akka-http.name-generator")
     if(nameGeneratorFQN == "default") defaultOperationNameGenerator() else {
@@ -64,12 +75,13 @@ object AkkaHttp {
   @volatile var addHttpStatusCodeAsMetricTag: Boolean = addHttpStatusCodeAsMetricTagFromConfig(Kamon.config())
 
   private def addHttpStatusCodeAsMetricTagFromConfig(config: Config): Boolean =
-    Kamon.config.getBoolean("kamon.akka-http.add-http-status-code-as-metric-tag")
+    config.getBoolean("kamon.akka-http.add-http-status-code-as-metric-tag")
 
   Kamon.onReconfigure(new OnReconfigureHook {
     override def onReconfigure(newConfig: Config): Unit = {
       nameGenerator = nameGeneratorFromConfig(newConfig)
       addHttpStatusCodeAsMetricTag = addHttpStatusCodeAsMetricTagFromConfig(newConfig)
+      defaultNotFoundOperationName = defaultNotFoundOperationNameFromConfig(newConfig)
     }
   })
 }
