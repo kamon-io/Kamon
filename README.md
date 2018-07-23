@@ -66,7 +66,7 @@ scrape_configs:
 Kamon allows you to provide custom environment tags to all your metrics by configuring `kamon.environment.tags` in your `application.conf`, e.g.
 ```
 kamon.environment.tags {
-  custom.id = "test1"
+  custom-id = "test1"
   env = staging
 }
 ```
