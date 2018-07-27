@@ -42,17 +42,17 @@ class GraphiteReporter extends MetricReporter {
   private def buildNewSender(c: GraphiteSenderConfig): Unit = sender = new GraphiteSender(c) with TcpSender
 }
 
-private case class GraphiteSenderConfig(hostname: String, port: Int, metricPrefix: String, includeTags: Boolean, envTags: Map[String, String], tagFilter: Matcher)
+private case class GraphiteSenderConfig(hostname: String, port: Int, metricPrefix: String, legacySupport: Boolean, envTags: Map[String, String], tagFilter: Matcher)
 private object GraphiteSenderConfig {
   def apply(config: Config): GraphiteSenderConfig = {
     val graphiteConfig = config.getConfig("kamon.graphite")
     val hostname = graphiteConfig.getString("hostname")
     val port = graphiteConfig.getInt("port")
     val metricPrefix = graphiteConfig.getString("metric-name-prefix")
-    val includeTags = graphiteConfig.getBoolean("include-tags")
+    val legacySupport = graphiteConfig.getBoolean("legacy-support")
     val envTags = EnvironmentTagBuilder.create(graphiteConfig.getConfig("additional-tags"))
     val tagFilter = Kamon.filter(graphiteConfig.getString("filter-config-key"))
-    GraphiteSenderConfig(hostname, port, metricPrefix, includeTags, envTags, tagFilter)
+    GraphiteSenderConfig(hostname, port, metricPrefix, legacySupport, envTags, tagFilter)
   }
 }
 
@@ -93,6 +93,8 @@ private abstract class GraphiteSender(val senderConfig: GraphiteSenderConfig) ex
 private class MetricPacketBuilder(baseName: String, timestamp: Long, config: GraphiteSenderConfig) {
   private val log = LoggerFactory.getLogger(classOf[MetricPacketBuilder])
   private val builder = new java.lang.StringBuilder()
+  private val tagseperator = if (config.legacySupport) "." else ";"
+  private val valueseperator = if (config.legacySupport) "." else "="
 
   private def sanitize(value: String): String =
     value.replace('/', '_').replace('.', '_')
@@ -100,7 +102,7 @@ private class MetricPacketBuilder(baseName: String, timestamp: Long, config: Gra
   def build(metricName: String, metricType: String, value: Long, metricTags: Tags): Array[Byte] = {
     builder.setLength(0)
     builder.append(baseName).append(".").append(sanitize(metricName)).append(".").append(metricType)
-    if (config.includeTags) (metricTags ++ config.envTags).filterKeys(config.tagFilter.accept).foreach(kv => builder.append(";").append(kv._1).append("=").append(kv._2))
+    (metricTags ++ config.envTags).filterKeys(config.tagFilter.accept).foreach(kv => builder.append(tagseperator).append(kv._1).append(valueseperator).append(kv._2))
     builder
       .append(" ")
       .append(value)
