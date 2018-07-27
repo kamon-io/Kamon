@@ -34,12 +34,33 @@ Per default the graphite tag support (available since graphite 1.1) is enabled (
             }
         }
     }
+    
+## Usage
+
+Example config
+
+application.conf
+
+    kamon {
+      reporters = ["kamon.graphite.GraphiteReporter"]
+      environment {
+        service = "supercool-app"
+        tags {
+          env = "local"
+        }
+      }
+      graphite {
+        hostname = "127.0.0.1"
+        port = 2003
+      }
+    } 
+    
+Main
+
+    Kamon.loadReportersFromConfig()       
 
 ## Failure handling
 When sending metrics at a tick interval fails the current snapshot will be dropped and the next snapshot will try to send metrics using new connection.
     
-   
 ## Possible enhancements
 * configure percentiles - currently hardcoded to 50,90,99
-* configure additional tags to be sent
-* configure tag filters
