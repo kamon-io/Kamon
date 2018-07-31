@@ -17,21 +17,21 @@ Supported releases and dependencies are shown below.
 
 | kamon-play-2.4  | status | jdk        | scala            
 |:---------------:|:------:|:----------:|------------------
-|  1.0.1          | stable | 1.7+, 1.8+ | 2.10, 2.11
+|  1.1.0          | stable | 1.7+, 1.8+ | 2.10, 2.11
 
 | kamon-play-2.5  | status | jdk        | scala   
 |:---------------:|:------:|:----------:|------------------
-|  1.0.1          | stable | 1.7+, 1.8+ | 2.11
+|  1.1.0         | stable | 1.7+, 1.8+ | 2.11
 
 | kamon-play-2.6  | status | jdk        | scala   
 |:---------------:|:------:|:----------:|------------------
-|  1.0.1          | stable | 1.8+       | 2.12  
+|  1.1.0         | stable | 1.8+       | 2.12  
 
 
 For Play Framework 2.6, just add the dependency bellow and ensure your application is [running with the AspectJ Weaver][1]
 
 ```scala
-libraryDependencies += "io.kamon" %% "kamon-play-2.6" % "1.0.1"
+libraryDependencies += "io.kamon" %% "kamon-play-2.6" % "1.1.0"
 ```
 
 [1]: http://kamon.io/documentation/1.x/recipes/adding-the-aspectj-weaver/
