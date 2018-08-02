@@ -13,8 +13,8 @@
  * =========================================================================================
  */
 
-val kamonCore             = "io.kamon"        %%  "kamon-core"      % "1.0.0"
-val kamonTestkit          = "io.kamon"        %%  "kamon-testkit"   % "1.0.0"
+val kamonCore             = "io.kamon"        %%  "kamon-core"      % "1.1.3"
+val kamonTestkit          = "io.kamon"        %%  "kamon-testkit"   % "1.1.3"
 val latestLogbackClassic  = "ch.qos.logback"  %   "logback-classic" % "1.2.3"
 
 resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
