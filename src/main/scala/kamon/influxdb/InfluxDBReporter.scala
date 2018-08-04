@@ -132,7 +132,7 @@ class InfluxDBReporter(config: Config = Kamon.config()) extends MetricReporter {
       .append("\n")
   }
 
-  private def buildClient(settings: Settings): OkHttpClient = {
+  protected def buildClient(settings: Settings): OkHttpClient = {
     val basicBuilder = new OkHttpClient.Builder()
     val authenticator = settings.credentials.map(credentials => new Authenticator() {
       def authenticate(route: Route, response: Response): Request = {
@@ -159,7 +159,8 @@ object InfluxDBReporter {
     val credentials = authConfig.map(conf => Credentials.basic(conf.getString("user"), conf.getString("password")))
     val port = root.getInt("port")
     val database = root.getString("database")
-    val url = s"http://${host}:${port}/write?precision=s&db=${database}"
+    val protocol = root.getString("protocol").toLowerCase
+    val url = s"$protocol://$host:$port/write?precision=s&db=$database"
 
     val additionalTags = EnvironmentTagBuilder.create(root.getConfig("additional-tags"))
 
