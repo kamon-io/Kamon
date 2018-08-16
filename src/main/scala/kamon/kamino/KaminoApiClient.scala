@@ -90,7 +90,7 @@ class KaminoApiClient(config: KaminoConfiguration) {
             postWithRetry(body, endpointName, apiUrl, retries - 1)
         }
       case Failure(connectionException) if retries > 0 =>
-        logger.error(s"Connection error, retrying... ($retries left) ${connectionException.getMessage}")
+        logger.warn(s"Connection error, retrying... ($retries left) ${connectionException.getMessage}")
         backoff
         postWithRetry(body, endpointName, apiUrl, retries - 1)
       case Failure(connectionException) =>
