@@ -46,7 +46,7 @@ object CellInfo {
       else if (isRoutee)
         (parent.asInstanceOf[RoutedActorRefAccessor].routerProps.routerConfig.getClass, Some(cell.props.clazz))
       else
-        (cell.props.clazz, None)
+        (cell.props.actorClass(), None)
 
     val fullPath = if (isRoutee) cellName(system, parent) else cellName(system, ref)
     val filterName = if (isRouter || isRoutee) Akka.RouterFilterName else Akka.ActorFilterName

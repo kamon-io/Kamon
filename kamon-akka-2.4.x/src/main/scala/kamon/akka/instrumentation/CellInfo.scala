@@ -42,11 +42,11 @@ object CellInfo {
 
     val (actorOrRouterClass, routeeClass) =
       if(isRouter)
-        (cell.props.routerConfig.getClass, Some(ref.asInstanceOf[RoutedActorRefAccessor].routeeProps.clazz))
+        (cell.props.routerConfig.getClass, Some(ref.asInstanceOf[RoutedActorRefAccessor].routeeProps.actorClass))
       else if (isRoutee)
-        (parent.asInstanceOf[RoutedActorRefAccessor].routerProps.routerConfig.getClass, Some(cell.props.clazz))
+        (parent.asInstanceOf[RoutedActorRefAccessor].routerProps.routerConfig.getClass, Some(cell.props.actorClass))
       else
-        (cell.props.clazz, None)
+        (cell.props.actorClass, None)
 
     val fullPath = if (isRoutee) cellName(system, parent) else cellName(system, ref)
     val filterName = if (isRouter || isRoutee) Akka.RouterFilterName else Akka.ActorFilterName
