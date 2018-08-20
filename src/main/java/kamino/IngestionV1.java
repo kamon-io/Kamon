@@ -7948,6 +7948,652 @@ public final class IngestionV1 {
 
   }
 
+  public interface MarkOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:Mark)
+      com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <code>required int64 instant = 1;</code>
+     */
+    boolean hasInstant();
+    /**
+     * <code>required int64 instant = 1;</code>
+     */
+    long getInstant();
+
+    /**
+     * <code>required string key = 2;</code>
+     */
+    boolean hasKey();
+    /**
+     * <code>required string key = 2;</code>
+     */
+    java.lang.String getKey();
+    /**
+     * <code>required string key = 2;</code>
+     */
+    com.google.protobuf.ByteString
+        getKeyBytes();
+  }
+  /**
+   * Protobuf type {@code Mark}
+   */
+  public  static final class Mark extends
+      com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:Mark)
+      MarkOrBuilder {
+    // Use Mark.newBuilder() to construct.
+    private Mark(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private Mark() {
+      instant_ = 0L;
+      key_ = "";
+    }
+
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+    getUnknownFields() {
+      return this.unknownFields;
+    }
+    private Mark(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      this();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 8: {
+              bitField0_ |= 0x00000001;
+              instant_ = input.readInt64();
+              break;
+            }
+            case 18: {
+              com.google.protobuf.ByteString bs = input.readBytes();
+              bitField0_ |= 0x00000002;
+              key_ = bs;
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return kamino.IngestionV1.internal_static_Mark_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return kamino.IngestionV1.internal_static_Mark_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              kamino.IngestionV1.Mark.class, kamino.IngestionV1.Mark.Builder.class);
+    }
+
+    private int bitField0_;
+    public static final int INSTANT_FIELD_NUMBER = 1;
+    private long instant_;
+    /**
+     * <code>required int64 instant = 1;</code>
+     */
+    public boolean hasInstant() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>required int64 instant = 1;</code>
+     */
+    public long getInstant() {
+      return instant_;
+    }
+
+    public static final int KEY_FIELD_NUMBER = 2;
+    private volatile java.lang.Object key_;
+    /**
+     * <code>required string key = 2;</code>
+     */
+    public boolean hasKey() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>required string key = 2;</code>
+     */
+    public java.lang.String getKey() {
+      java.lang.Object ref = key_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          key_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>required string key = 2;</code>
+     */
+    public com.google.protobuf.ByteString
+        getKeyBytes() {
+      java.lang.Object ref = key_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        key_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      if (!hasInstant()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasKey()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeInt64(1, instant_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 2, key_);
+      }
+      unknownFields.writeTo(output);
+    }
+
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(1, instant_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, key_);
+      }
+      size += unknownFields.getSerializedSize();
+      memoizedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof kamino.IngestionV1.Mark)) {
+        return super.equals(obj);
+      }
+      kamino.IngestionV1.Mark other = (kamino.IngestionV1.Mark) obj;
+
+      boolean result = true;
+      result = result && (hasInstant() == other.hasInstant());
+      if (hasInstant()) {
+        result = result && (getInstant()
+            == other.getInstant());
+      }
+      result = result && (hasKey() == other.hasKey());
+      if (hasKey()) {
+        result = result && getKey()
+            .equals(other.getKey());
+      }
+      result = result && unknownFields.equals(other.unknownFields);
+      return result;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasInstant()) {
+        hash = (37 * hash) + INSTANT_FIELD_NUMBER;
+        hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+            getInstant());
+      }
+      if (hasKey()) {
+        hash = (37 * hash) + KEY_FIELD_NUMBER;
+        hash = (53 * hash) + getKey().hashCode();
+      }
+      hash = (29 * hash) + unknownFields.hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static kamino.IngestionV1.Mark parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static kamino.IngestionV1.Mark parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static kamino.IngestionV1.Mark parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static kamino.IngestionV1.Mark parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static kamino.IngestionV1.Mark parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static kamino.IngestionV1.Mark parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static kamino.IngestionV1.Mark parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+    public static kamino.IngestionV1.Mark parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static kamino.IngestionV1.Mark parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static kamino.IngestionV1.Mark parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(kamino.IngestionV1.Mark prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code Mark}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:Mark)
+        kamino.IngestionV1.MarkOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return kamino.IngestionV1.internal_static_Mark_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return kamino.IngestionV1.internal_static_Mark_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                kamino.IngestionV1.Mark.class, kamino.IngestionV1.Mark.Builder.class);
+      }
+
+      // Construct using kamino.IngestionV1.Mark.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessageV3
+                .alwaysUseFieldBuilders) {
+        }
+      }
+      public Builder clear() {
+        super.clear();
+        instant_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        key_ = "";
+        bitField0_ = (bitField0_ & ~0x00000002);
+        return this;
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return kamino.IngestionV1.internal_static_Mark_descriptor;
+      }
+
+      public kamino.IngestionV1.Mark getDefaultInstanceForType() {
+        return kamino.IngestionV1.Mark.getDefaultInstance();
+      }
+
+      public kamino.IngestionV1.Mark build() {
+        kamino.IngestionV1.Mark result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public kamino.IngestionV1.Mark buildPartial() {
+        kamino.IngestionV1.Mark result = new kamino.IngestionV1.Mark(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.instant_ = instant_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.key_ = key_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder clone() {
+        return (Builder) super.clone();
+      }
+      public Builder setField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.setField(field, value);
+      }
+      public Builder clearField(
+          com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return (Builder) super.clearField(field);
+      }
+      public Builder clearOneof(
+          com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return (Builder) super.clearOneof(oneof);
+      }
+      public Builder setRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, Object value) {
+        return (Builder) super.setRepeatedField(field, index, value);
+      }
+      public Builder addRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.addRepeatedField(field, value);
+      }
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof kamino.IngestionV1.Mark) {
+          return mergeFrom((kamino.IngestionV1.Mark)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(kamino.IngestionV1.Mark other) {
+        if (other == kamino.IngestionV1.Mark.getDefaultInstance()) return this;
+        if (other.hasInstant()) {
+          setInstant(other.getInstant());
+        }
+        if (other.hasKey()) {
+          bitField0_ |= 0x00000002;
+          key_ = other.key_;
+          onChanged();
+        }
+        this.mergeUnknownFields(other.unknownFields);
+        onChanged();
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasInstant()) {
+          return false;
+        }
+        if (!hasKey()) {
+          return false;
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        kamino.IngestionV1.Mark parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (kamino.IngestionV1.Mark) e.getUnfinishedMessage();
+          throw e.unwrapIOException();
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      private long instant_ ;
+      /**
+       * <code>required int64 instant = 1;</code>
+       */
+      public boolean hasInstant() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required int64 instant = 1;</code>
+       */
+      public long getInstant() {
+        return instant_;
+      }
+      /**
+       * <code>required int64 instant = 1;</code>
+       */
+      public Builder setInstant(long value) {
+        bitField0_ |= 0x00000001;
+        instant_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required int64 instant = 1;</code>
+       */
+      public Builder clearInstant() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        instant_ = 0L;
+        onChanged();
+        return this;
+      }
+
+      private java.lang.Object key_ = "";
+      /**
+       * <code>required string key = 2;</code>
+       */
+      public boolean hasKey() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>required string key = 2;</code>
+       */
+      public java.lang.String getKey() {
+        java.lang.Object ref = key_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            key_ = s;
+          }
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>required string key = 2;</code>
+       */
+      public com.google.protobuf.ByteString
+          getKeyBytes() {
+        java.lang.Object ref = key_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          key_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>required string key = 2;</code>
+       */
+      public Builder setKey(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        key_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string key = 2;</code>
+       */
+      public Builder clearKey() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        key_ = getDefaultInstance().getKey();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string key = 2;</code>
+       */
+      public Builder setKeyBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        key_ = value;
+        onChanged();
+        return this;
+      }
+      public final Builder setUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.setUnknownFields(unknownFields);
+      }
+
+      public final Builder mergeUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.mergeUnknownFields(unknownFields);
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:Mark)
+    }
+
+    // @@protoc_insertion_point(class_scope:Mark)
+    private static final kamino.IngestionV1.Mark DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new kamino.IngestionV1.Mark();
+    }
+
+    public static kamino.IngestionV1.Mark getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    @java.lang.Deprecated public static final com.google.protobuf.Parser<Mark>
+        PARSER = new com.google.protobuf.AbstractParser<Mark>() {
+      public Mark parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+          return new Mark(input, extensionRegistry);
+      }
+    };
+
+    public static com.google.protobuf.Parser<Mark> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<Mark> getParserForType() {
+      return PARSER;
+    }
+
+    public kamino.IngestionV1.Mark getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
+  }
+
   public interface SpanOrBuilder extends
       // @@protoc_insertion_point(interface_extends:Span)
       com.google.protobuf.MessageOrBuilder {
@@ -8059,6 +8705,30 @@ public final class IngestionV1 {
 
     java.lang.String getTagsOrThrow(
         java.lang.String key);
+
+    /**
+     * <code>repeated .Mark marks = 8;</code>
+     */
+    java.util.List<kamino.IngestionV1.Mark> 
+        getMarksList();
+    /**
+     * <code>repeated .Mark marks = 8;</code>
+     */
+    kamino.IngestionV1.Mark getMarks(int index);
+    /**
+     * <code>repeated .Mark marks = 8;</code>
+     */
+    int getMarksCount();
+    /**
+     * <code>repeated .Mark marks = 8;</code>
+     */
+    java.util.List<? extends kamino.IngestionV1.MarkOrBuilder> 
+        getMarksOrBuilderList();
+    /**
+     * <code>repeated .Mark marks = 8;</code>
+     */
+    kamino.IngestionV1.MarkOrBuilder getMarksOrBuilder(
+        int index);
   }
   /**
    * Protobuf type {@code Span}
@@ -8078,6 +8748,7 @@ public final class IngestionV1 {
       operationName_ = "";
       startMicros_ = 0L;
       endMicros_ = 0L;
+      marks_ = java.util.Collections.emptyList();
     }
 
     @java.lang.Override
@@ -8154,6 +8825,15 @@ public final class IngestionV1 {
               tags_.getMutableMap().put(tags.getKey(), tags.getValue());
               break;
             }
+            case 66: {
+              if (!((mutable_bitField0_ & 0x00000080) == 0x00000080)) {
+                marks_ = new java.util.ArrayList<kamino.IngestionV1.Mark>();
+                mutable_bitField0_ |= 0x00000080;
+              }
+              marks_.add(
+                  input.readMessage(kamino.IngestionV1.Mark.PARSER, extensionRegistry));
+              break;
+            }
           }
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -8162,6 +8842,9 @@ public final class IngestionV1 {
         throw new com.google.protobuf.InvalidProtocolBufferException(
             e).setUnfinishedMessage(this);
       } finally {
+        if (((mutable_bitField0_ & 0x00000080) == 0x00000080)) {
+          marks_ = java.util.Collections.unmodifiableList(marks_);
+        }
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
       }
@@ -8464,6 +9147,41 @@ public final class IngestionV1 {
       return map.get(key);
     }
 
+    public static final int MARKS_FIELD_NUMBER = 8;
+    private java.util.List<kamino.IngestionV1.Mark> marks_;
+    /**
+     * <code>repeated .Mark marks = 8;</code>
+     */
+    public java.util.List<kamino.IngestionV1.Mark> getMarksList() {
+      return marks_;
+    }
+    /**
+     * <code>repeated .Mark marks = 8;</code>
+     */
+    public java.util.List<? extends kamino.IngestionV1.MarkOrBuilder> 
+        getMarksOrBuilderList() {
+      return marks_;
+    }
+    /**
+     * <code>repeated .Mark marks = 8;</code>
+     */
+    public int getMarksCount() {
+      return marks_.size();
+    }
+    /**
+     * <code>repeated .Mark marks = 8;</code>
+     */
+    public kamino.IngestionV1.Mark getMarks(int index) {
+      return marks_.get(index);
+    }
+    /**
+     * <code>repeated .Mark marks = 8;</code>
+     */
+    public kamino.IngestionV1.MarkOrBuilder getMarksOrBuilder(
+        int index) {
+      return marks_.get(index);
+    }
+
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
@@ -8493,6 +9211,12 @@ public final class IngestionV1 {
       if (!hasEndMicros()) {
         memoizedIsInitialized = 0;
         return false;
+      }
+      for (int i = 0; i < getMarksCount(); i++) {
+        if (!getMarks(i).isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
       }
       memoizedIsInitialized = 1;
       return true;
@@ -8526,6 +9250,9 @@ public final class IngestionV1 {
             .setValue(entry.getValue())
             .build();
         output.writeMessage(7, tags);
+      }
+      for (int i = 0; i < marks_.size(); i++) {
+        output.writeMessage(8, marks_.get(i));
       }
       unknownFields.writeTo(output);
     }
@@ -8564,6 +9291,10 @@ public final class IngestionV1 {
             .build();
         size += com.google.protobuf.CodedOutputStream
             .computeMessageSize(7, tags);
+      }
+      for (int i = 0; i < marks_.size(); i++) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(8, marks_.get(i));
       }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
@@ -8614,6 +9345,8 @@ public final class IngestionV1 {
       }
       result = result && internalGetTags().equals(
           other.internalGetTags());
+      result = result && getMarksList()
+          .equals(other.getMarksList());
       result = result && unknownFields.equals(other.unknownFields);
       return result;
     }
@@ -8654,6 +9387,10 @@ public final class IngestionV1 {
       if (!internalGetTags().getMap().isEmpty()) {
         hash = (37 * hash) + TAGS_FIELD_NUMBER;
         hash = (53 * hash) + internalGetTags().hashCode();
+      }
+      if (getMarksCount() > 0) {
+        hash = (37 * hash) + MARKS_FIELD_NUMBER;
+        hash = (53 * hash) + getMarksList().hashCode();
       }
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
@@ -8791,6 +9528,7 @@ public final class IngestionV1 {
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessageV3
                 .alwaysUseFieldBuilders) {
+          getMarksFieldBuilder();
         }
       }
       public Builder clear() {
@@ -8808,6 +9546,12 @@ public final class IngestionV1 {
         endMicros_ = 0L;
         bitField0_ = (bitField0_ & ~0x00000020);
         internalGetMutableTags().clear();
+        if (marksBuilder_ == null) {
+          marks_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000080);
+        } else {
+          marksBuilder_.clear();
+        }
         return this;
       }
 
@@ -8858,6 +9602,15 @@ public final class IngestionV1 {
         result.endMicros_ = endMicros_;
         result.tags_ = internalGetTags();
         result.tags_.makeImmutable();
+        if (marksBuilder_ == null) {
+          if (((bitField0_ & 0x00000080) == 0x00000080)) {
+            marks_ = java.util.Collections.unmodifiableList(marks_);
+            bitField0_ = (bitField0_ & ~0x00000080);
+          }
+          result.marks_ = marks_;
+        } else {
+          result.marks_ = marksBuilder_.build();
+        }
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -8928,6 +9681,32 @@ public final class IngestionV1 {
         }
         internalGetMutableTags().mergeFrom(
             other.internalGetTags());
+        if (marksBuilder_ == null) {
+          if (!other.marks_.isEmpty()) {
+            if (marks_.isEmpty()) {
+              marks_ = other.marks_;
+              bitField0_ = (bitField0_ & ~0x00000080);
+            } else {
+              ensureMarksIsMutable();
+              marks_.addAll(other.marks_);
+            }
+            onChanged();
+          }
+        } else {
+          if (!other.marks_.isEmpty()) {
+            if (marksBuilder_.isEmpty()) {
+              marksBuilder_.dispose();
+              marksBuilder_ = null;
+              marks_ = other.marks_;
+              bitField0_ = (bitField0_ & ~0x00000080);
+              marksBuilder_ = 
+                com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
+                   getMarksFieldBuilder() : null;
+            } else {
+              marksBuilder_.addAllMessages(other.marks_);
+            }
+          }
+        }
         this.mergeUnknownFields(other.unknownFields);
         onChanged();
         return this;
@@ -8951,6 +9730,11 @@ public final class IngestionV1 {
         }
         if (!hasEndMicros()) {
           return false;
+        }
+        for (int i = 0; i < getMarksCount(); i++) {
+          if (!getMarks(i).isInitialized()) {
+            return false;
+          }
         }
         return true;
       }
@@ -9459,6 +10243,246 @@ public final class IngestionV1 {
           java.util.Map<java.lang.String, java.lang.String> values) {
         getMutableTags().putAll(values);
         return this;
+      }
+
+      private java.util.List<kamino.IngestionV1.Mark> marks_ =
+        java.util.Collections.emptyList();
+      private void ensureMarksIsMutable() {
+        if (!((bitField0_ & 0x00000080) == 0x00000080)) {
+          marks_ = new java.util.ArrayList<kamino.IngestionV1.Mark>(marks_);
+          bitField0_ |= 0x00000080;
+         }
+      }
+
+      private com.google.protobuf.RepeatedFieldBuilderV3<
+          kamino.IngestionV1.Mark, kamino.IngestionV1.Mark.Builder, kamino.IngestionV1.MarkOrBuilder> marksBuilder_;
+
+      /**
+       * <code>repeated .Mark marks = 8;</code>
+       */
+      public java.util.List<kamino.IngestionV1.Mark> getMarksList() {
+        if (marksBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(marks_);
+        } else {
+          return marksBuilder_.getMessageList();
+        }
+      }
+      /**
+       * <code>repeated .Mark marks = 8;</code>
+       */
+      public int getMarksCount() {
+        if (marksBuilder_ == null) {
+          return marks_.size();
+        } else {
+          return marksBuilder_.getCount();
+        }
+      }
+      /**
+       * <code>repeated .Mark marks = 8;</code>
+       */
+      public kamino.IngestionV1.Mark getMarks(int index) {
+        if (marksBuilder_ == null) {
+          return marks_.get(index);
+        } else {
+          return marksBuilder_.getMessage(index);
+        }
+      }
+      /**
+       * <code>repeated .Mark marks = 8;</code>
+       */
+      public Builder setMarks(
+          int index, kamino.IngestionV1.Mark value) {
+        if (marksBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureMarksIsMutable();
+          marks_.set(index, value);
+          onChanged();
+        } else {
+          marksBuilder_.setMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .Mark marks = 8;</code>
+       */
+      public Builder setMarks(
+          int index, kamino.IngestionV1.Mark.Builder builderForValue) {
+        if (marksBuilder_ == null) {
+          ensureMarksIsMutable();
+          marks_.set(index, builderForValue.build());
+          onChanged();
+        } else {
+          marksBuilder_.setMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .Mark marks = 8;</code>
+       */
+      public Builder addMarks(kamino.IngestionV1.Mark value) {
+        if (marksBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureMarksIsMutable();
+          marks_.add(value);
+          onChanged();
+        } else {
+          marksBuilder_.addMessage(value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .Mark marks = 8;</code>
+       */
+      public Builder addMarks(
+          int index, kamino.IngestionV1.Mark value) {
+        if (marksBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureMarksIsMutable();
+          marks_.add(index, value);
+          onChanged();
+        } else {
+          marksBuilder_.addMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .Mark marks = 8;</code>
+       */
+      public Builder addMarks(
+          kamino.IngestionV1.Mark.Builder builderForValue) {
+        if (marksBuilder_ == null) {
+          ensureMarksIsMutable();
+          marks_.add(builderForValue.build());
+          onChanged();
+        } else {
+          marksBuilder_.addMessage(builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .Mark marks = 8;</code>
+       */
+      public Builder addMarks(
+          int index, kamino.IngestionV1.Mark.Builder builderForValue) {
+        if (marksBuilder_ == null) {
+          ensureMarksIsMutable();
+          marks_.add(index, builderForValue.build());
+          onChanged();
+        } else {
+          marksBuilder_.addMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .Mark marks = 8;</code>
+       */
+      public Builder addAllMarks(
+          java.lang.Iterable<? extends kamino.IngestionV1.Mark> values) {
+        if (marksBuilder_ == null) {
+          ensureMarksIsMutable();
+          com.google.protobuf.AbstractMessageLite.Builder.addAll(
+              values, marks_);
+          onChanged();
+        } else {
+          marksBuilder_.addAllMessages(values);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .Mark marks = 8;</code>
+       */
+      public Builder clearMarks() {
+        if (marksBuilder_ == null) {
+          marks_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000080);
+          onChanged();
+        } else {
+          marksBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .Mark marks = 8;</code>
+       */
+      public Builder removeMarks(int index) {
+        if (marksBuilder_ == null) {
+          ensureMarksIsMutable();
+          marks_.remove(index);
+          onChanged();
+        } else {
+          marksBuilder_.remove(index);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .Mark marks = 8;</code>
+       */
+      public kamino.IngestionV1.Mark.Builder getMarksBuilder(
+          int index) {
+        return getMarksFieldBuilder().getBuilder(index);
+      }
+      /**
+       * <code>repeated .Mark marks = 8;</code>
+       */
+      public kamino.IngestionV1.MarkOrBuilder getMarksOrBuilder(
+          int index) {
+        if (marksBuilder_ == null) {
+          return marks_.get(index);  } else {
+          return marksBuilder_.getMessageOrBuilder(index);
+        }
+      }
+      /**
+       * <code>repeated .Mark marks = 8;</code>
+       */
+      public java.util.List<? extends kamino.IngestionV1.MarkOrBuilder> 
+           getMarksOrBuilderList() {
+        if (marksBuilder_ != null) {
+          return marksBuilder_.getMessageOrBuilderList();
+        } else {
+          return java.util.Collections.unmodifiableList(marks_);
+        }
+      }
+      /**
+       * <code>repeated .Mark marks = 8;</code>
+       */
+      public kamino.IngestionV1.Mark.Builder addMarksBuilder() {
+        return getMarksFieldBuilder().addBuilder(
+            kamino.IngestionV1.Mark.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .Mark marks = 8;</code>
+       */
+      public kamino.IngestionV1.Mark.Builder addMarksBuilder(
+          int index) {
+        return getMarksFieldBuilder().addBuilder(
+            index, kamino.IngestionV1.Mark.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .Mark marks = 8;</code>
+       */
+      public java.util.List<kamino.IngestionV1.Mark.Builder> 
+           getMarksBuilderList() {
+        return getMarksFieldBuilder().getBuilderList();
+      }
+      private com.google.protobuf.RepeatedFieldBuilderV3<
+          kamino.IngestionV1.Mark, kamino.IngestionV1.Mark.Builder, kamino.IngestionV1.MarkOrBuilder> 
+          getMarksFieldBuilder() {
+        if (marksBuilder_ == null) {
+          marksBuilder_ = new com.google.protobuf.RepeatedFieldBuilderV3<
+              kamino.IngestionV1.Mark, kamino.IngestionV1.Mark.Builder, kamino.IngestionV1.MarkOrBuilder>(
+                  marks_,
+                  ((bitField0_ & 0x00000080) == 0x00000080),
+                  getParentForChildren(),
+                  isClean());
+          marks_ = null;
+        }
+        return marksBuilder_;
       }
       public final Builder setUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
@@ -10033,6 +11057,11 @@ public final class IngestionV1 {
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_SpanBatch_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_Mark_descriptor;
+  private static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_Mark_fieldAccessorTable;
+  private static final com.google.protobuf.Descriptors.Descriptor
     internal_static_Span_descriptor;
   private static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
@@ -10074,18 +11103,20 @@ public final class IngestionV1 {
       "ty\022\014\n\004time\030\002 \002(\003\"f\n\tSpanBatch\022\023\n\013service" +
       "Name\030\001 \002(\t\022\016\n\006apiKey\030\002 \002(\t\022\014\n\004host\030\003 \002(\t" +
       "\022\020\n\010instance\030\004 \002(\t\022\024\n\005spans\030\005 \003(\0132\005.Span" +
-      "\"\300\001\n\004Span\022\n\n\002id\030\001 \002(\t\022\017\n\007traceId\030\002 \002(\t\022\020" +
-      "\n\010parentId\030\003 \002(\t\022\025\n\roperationName\030\004 \002(\t\022",
-      "\023\n\013startMicros\030\005 \002(\003\022\021\n\tendMicros\030\006 \002(\003\022" +
-      "\035\n\004tags\030\007 \003(\0132\017.Span.TagsEntry\032+\n\tTagsEn" +
-      "try\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\t:\0028\001\"5\n\021I" +
-      "ngestionResponse\022 \n\006status\030\001 \002(\0162\020.Inges" +
-      "tionStatus*L\n\016InstrumentType\022\013\n\007COUNTER\020" +
-      "\000\022\t\n\005GAUGE\020\001\022\r\n\tHISTOGRAM\020\002\022\023\n\017MIN_MAX_C" +
-      "OUNTER\020\003*+\n\004Plan\022\017\n\013METRIC_ONLY\020\001\022\022\n\016MET" +
-      "RIC_TRACING\020\002*]\n\017IngestionStatus\022\006\n\002OK\020\000" +
-      "\022\t\n\005ERROR\020\001\022\t\n\005STALE\020\002\022\020\n\014UNAUTHORIZED\020\003" +
-      "\022\013\n\007BLOCKED\020\004\022\r\n\tCORRUPTED\020\005B\010\n\006kamino"
+      "\"$\n\004Mark\022\017\n\007instant\030\001 \002(\003\022\013\n\003key\030\002 \002(\t\"\326" +
+      "\001\n\004Span\022\n\n\002id\030\001 \002(\t\022\017\n\007traceId\030\002 \002(\t\022\020\n\010",
+      "parentId\030\003 \002(\t\022\025\n\roperationName\030\004 \002(\t\022\023\n" +
+      "\013startMicros\030\005 \002(\003\022\021\n\tendMicros\030\006 \002(\003\022\035\n" +
+      "\004tags\030\007 \003(\0132\017.Span.TagsEntry\022\024\n\005marks\030\010 " +
+      "\003(\0132\005.Mark\032+\n\tTagsEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005" +
+      "value\030\002 \001(\t:\0028\001\"5\n\021IngestionResponse\022 \n\006" +
+      "status\030\001 \002(\0162\020.IngestionStatus*L\n\016Instru" +
+      "mentType\022\013\n\007COUNTER\020\000\022\t\n\005GAUGE\020\001\022\r\n\tHIST" +
+      "OGRAM\020\002\022\023\n\017MIN_MAX_COUNTER\020\003*+\n\004Plan\022\017\n\013" +
+      "METRIC_ONLY\020\001\022\022\n\016METRIC_TRACING\020\002*]\n\017Ing" +
+      "estionStatus\022\006\n\002OK\020\000\022\t\n\005ERROR\020\001\022\t\n\005STALE",
+      "\020\002\022\020\n\014UNAUTHORIZED\020\003\022\013\n\007BLOCKED\020\004\022\r\n\tCOR" +
+      "RUPTED\020\005B\010\n\006kamino"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -10147,12 +11178,18 @@ public final class IngestionV1 {
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_SpanBatch_descriptor,
         new java.lang.String[] { "ServiceName", "ApiKey", "Host", "Instance", "Spans", });
-    internal_static_Span_descriptor =
+    internal_static_Mark_descriptor =
       getDescriptor().getMessageTypes().get(7);
+    internal_static_Mark_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_Mark_descriptor,
+        new java.lang.String[] { "Instant", "Key", });
+    internal_static_Span_descriptor =
+      getDescriptor().getMessageTypes().get(8);
     internal_static_Span_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_Span_descriptor,
-        new java.lang.String[] { "Id", "TraceId", "ParentId", "OperationName", "StartMicros", "EndMicros", "Tags", });
+        new java.lang.String[] { "Id", "TraceId", "ParentId", "OperationName", "StartMicros", "EndMicros", "Tags", "Marks", });
     internal_static_Span_TagsEntry_descriptor =
       internal_static_Span_descriptor.getNestedTypes().get(0);
     internal_static_Span_TagsEntry_fieldAccessorTable = new
@@ -10160,7 +11197,7 @@ public final class IngestionV1 {
         internal_static_Span_TagsEntry_descriptor,
         new java.lang.String[] { "Key", "Value", });
     internal_static_IngestionResponse_descriptor =
-      getDescriptor().getMessageTypes().get(8);
+      getDescriptor().getMessageTypes().get(9);
     internal_static_IngestionResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_IngestionResponse_descriptor,

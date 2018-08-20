@@ -63,6 +63,11 @@ message SpanBatch {
   repeated Span spans = 5;
 }
 
+message Mark {
+  required int64 instant = 1;
+  required string key = 2;
+}
+
 message Span {
   required string id = 1;
   required string traceId = 2;
@@ -71,6 +76,7 @@ message Span {
   required int64 startMicros = 5;
   required int64 endMicros = 6;
   map<string, string> tags = 7;
+  repeated Mark marks = 8;
 }
 
 //if 200 ok, if 400 parse and log warning, if 500 retry or whatever

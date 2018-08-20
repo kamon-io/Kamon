@@ -46,6 +46,14 @@ private[kamino] class KaminoTracingReporter extends SpanReporter {
       case n:TagValue.Number => n.number.toString
     })
 
+    val marks = span.marks.map { m =>
+      IngestionV1.Mark
+        .newBuilder()
+        .setInstant(m.instant.toEpochMilli)
+        .setKey(m.key)
+        .build()
+    }
+
     IngestionV1.Span.newBuilder()
       .setId(span.context.spanID.string)
       .setTraceId(span.context.traceID.string)
@@ -54,6 +62,7 @@ private[kamino] class KaminoTracingReporter extends SpanReporter {
       .setStartMicros(Clock.toEpochMicros(span.from))
       .setEndMicros(Clock.toEpochMicros(span.to))
       .putAllTags(tags.asJava)
+      .addAllMarks(marks.asJava)
       .build()
   }
 
