@@ -14,19 +14,19 @@
  */
 
 
-val kamonCore           = "io.kamon"            %% "kamon-core"               % "1.0.0"
-val kamonTestkit        = "io.kamon"            %% "kamon-testkit"            % "1.0.0"
-val scalaExtension      = "io.kamon"            %% "kanela-scala-extension"   % "0.0.10"
+val kamonCore           = "io.kamon"            %% "kamon-core"               % "1.1.3"
+val kamonTestkit        = "io.kamon"            %% "kamon-testkit"            % "1.1.0"
+val scalaExtension      = "io.kamon"            %% "kanela-scala-extension"   % "0.0.13"
 
 val h2                  = "com.h2database"            % "h2"                        % "1.4.182"
-val mariaConnector      = "org.mariadb.jdbc"          % "mariadb-java-client"       % "1.5.9"
+val mariaConnector      = "org.mariadb.jdbc"          % "mariadb-java-client"       % "2.2.6"
 val mariaDB4j           = "ch.vorburger.mariaDB4j"    % "mariaDB4j"                 % "2.2.3"
 val hikariCP            = "com.zaxxer"                % "HikariCP"                  % "2.6.2"
 
 lazy val root = (project in file("."))
   .enablePlugins(JavaAgent)
   .settings(name := "kamon-jdbc")
-  .settings(javaAgents += "io.kamon"    % "kanela-agent"   % "0.0.300"  % "compile;test")
+  .settings(javaAgents += "io.kamon"    % "kanela-agent"   % "0.0.13"  % "compile;test")
   .settings(resolvers += Resolver.bintrayRepo("kamon-io", "snapshots"))
   .settings(resolvers += Resolver.mavenLocal)
   .settings(

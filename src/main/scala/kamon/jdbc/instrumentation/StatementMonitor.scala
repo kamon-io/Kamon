@@ -21,11 +21,12 @@ import java.time.temporal.ChronoUnit
 import kamon.Kamon
 import kamon.Kamon.buildSpan
 import kamon.jdbc.{Jdbc, Metrics}
-import kamon.jdbc.instrumentation.mixin.HasConnectionPoolMetrics
+import kamon.jdbc.instrumentation.mixin.{HasConnectionPoolMetrics, ProcessOnlyOnce}
+import kamon.jdbc.utils.LoggingSupport
 import kamon.metric.RangeSampler
 import kamon.trace.{Span, SpanCustomizer}
 
-object StatementMonitor {
+object StatementMonitor extends LoggingSupport {
   object StatementTypes {
     val Query = "query"
     val Update = "update"
@@ -33,47 +34,62 @@ object StatementMonitor {
     val GenericExecute = "generic-execute"
   }
 
-  def trackStart(target: Any,
-                 sql: String,
-                 statementType: String): (Span, String, Instant, RangeSampler) = {
+  def start(target: Any,
+            sql: String,
+            statementType: String): Option[KamonMonitorTraveler] = target match {
+    case processOnlyOnce: ProcessOnlyOnce =>
+      processOnlyOnce.processOnlyOnce {
 
-    val poolTags = Option(target.asInstanceOf[HasConnectionPoolMetrics].connectionPoolMetrics)
-      .map(_.tags)
-      .getOrElse(Map.empty[String, String])
+        val poolTags = extractPoolTags(target)
 
-    val inFlight = Metrics.Statements.InFlight.refine(poolTags)
-    inFlight.increment()
+        val inFlight = Metrics.Statements.InFlight.refine(poolTags)
+        inFlight.increment()
 
-    val startTimestamp = Kamon.clock().instant()
-    val span = Kamon.currentContext().get(SpanCustomizer.ContextKey).customize {
-      val builder = buildSpan(statementType)
-        .withFrom(startTimestamp)
-        .withTag("component", "jdbc")
-        .withTag("db.statement", sql)
+        val startTimestamp = Kamon.clock().instant()
+        val span = Kamon.currentContext().get(SpanCustomizer.ContextKey).customize {
+          val builder = buildSpan(statementType)
+            .withFrom(startTimestamp)
+            .withTag("component", "jdbc")
+            .withTag("db.statement", sql)
+          poolTags.foreach { case (key, value) => builder.withTag(key, value) }
+          builder
+        }.start()
 
-      poolTags.foreach { case (key, value) => builder.withTag(key, value) }
-      builder
-    }.start()
-
-    (span, sql, startTimestamp, inFlight)
+        KamonMonitorTraveler(processOnlyOnce, span, sql, startTimestamp, inFlight)
+      }
+    case _ =>
+      logDebug(s"It's not possible to trace the statement with Kamon because it's not a " +
+        s"ProcessOnlyOnce type. Target type: ${target.getClass.getTypeName}")
+      None
   }
 
-  def trackEnd(traveler:(Span, String, Instant, RangeSampler),
-               throwable: Throwable): Unit = {
+  private def extractPoolTags(target: Any): Map[String, String] = target match {
+    case targetWithPoolMetrics: HasConnectionPoolMetrics =>
+      Option(targetWithPoolMetrics.connectionPoolMetrics)
+        .map(_.tags)
+        .getOrElse(Map.empty[String, String])
+    case _ =>
+      logTrace(s"Statement is not a HasConnectionPoolMetrics type (used by kamon-jdbc). Target type: ${target.getClass.getTypeName}")
+      Map.empty[String, String]
+  }
 
-    val (span, sql, startTimestamp, inFlight) = traveler
+  case class KamonMonitorTraveler(processOnlyOnce: ProcessOnlyOnce, span: Span,
+                                  sql: String, startTimestamp: Instant, inFlight: RangeSampler) {
 
-    if(throwable != null) {
-      span.addError("error.object", throwable)
-      Jdbc.onStatementError(sql, throwable)
+    def close(throwable: Throwable): Unit = {
+
+      if (throwable != null) {
+        span.addError("error.object", throwable)
+        Jdbc.onStatementError(sql, throwable)
+      }
+
+      val endTimestamp = Kamon.clock().instant()
+      val elapsedTime = startTimestamp.until(endTimestamp, ChronoUnit.MICROS)
+      span.finish(endTimestamp)
+      inFlight.decrement()
+
+      Jdbc.onStatementFinish(sql, elapsedTime)
+      processOnlyOnce.finish()
     }
-
-    val endTimestamp = Kamon.clock().instant()
-    val elapsedTime = startTimestamp.until(endTimestamp, ChronoUnit.MICROS)
-    span.finish(endTimestamp)
-    inFlight.decrement()
-
-    Jdbc.onStatementFinish(sql, elapsedTime)
   }
 }
-
