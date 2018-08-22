@@ -60,14 +60,19 @@ class KaminoApiClient(config: KaminoConfiguration) {
     }
 
     def parseResponse(response: Response): Try[IngestionResponse] = Try {
-      if(response.code() == 200) {
-        response.body().close()
-        IngestionResponse
-          .newBuilder()
-          .setStatus(OK)
-          .build()
-      } else {
-        IngestionResponse.parseFrom(response.body().bytes())
+      val respBuilder = IngestionResponse.newBuilder()
+      response.code() match {
+        case 200 =>
+          respBuilder
+            .setStatus(OK)
+            .build()
+        case 490 =>
+          IngestionResponse
+            .parseFrom(response.body().bytes())
+        case _ =>
+          respBuilder
+            .setStatus(IngestionStatus.ERROR)
+            .build()
       }
     }
 
@@ -84,10 +89,12 @@ class KaminoApiClient(config: KaminoConfiguration) {
             logger.error("[{}] request declined, missing or wrong API key", endpointName)
           case CORRUPTED =>
             logger.warn("[{}] request declined, illegal batch", endpointName)
-          case ERROR =>
+          case ERROR if retries > 0 =>
             logger.warn("[{}] request declined, unknown error", endpointName)
             backoff
             postWithRetry(body, endpointName, apiUrl, retries - 1)
+          case ERROR =>
+            logger.warn("[{}] request declined, unknown error", endpointName)
         }
       case Failure(connectionException) if retries > 0 =>
         logger.warn(s"Connection error, retrying... ($retries left) ${connectionException.getMessage}")
@@ -95,7 +102,6 @@ class KaminoApiClient(config: KaminoConfiguration) {
         postWithRetry(body, endpointName, apiUrl, retries - 1)
       case Failure(connectionException) =>
         logger.error(s"Ingestion error, no retries, dropping snapshot... ${connectionException.getMessage}")
-
     }
 
   }
