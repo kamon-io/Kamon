@@ -27,10 +27,7 @@ import scala.concurrent.Future
 object NettyRequestHandlerInstrumentation {
 
   case class NettyGenericRequest(request: HttpRequest) extends GenericRequest {
-    override val headers: Map[String, String] =  {
-      import scala.collection.JavaConverters._
-      request.headers().iteratorAsString().asScala.map { h => h.getKey -> h.getValue }.toMap
-    }
+    override val getHeader: String => Option[String] = (h: String) => Option(request.headers().get(h))
     override val method: String = request.method().name()
     override val url: String = request.uri()
     override val component = "play.server.netty"

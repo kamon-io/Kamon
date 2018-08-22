@@ -55,12 +55,8 @@ package object instrumentation {
   }
 
   private def readOnlyTextMapFromHeaders(request: HttpRequest): TextMap = new TextMap {
-    import scala.collection.JavaConverters._
-
-    private val headersMap = request.headers().iterator().asScala.map { h => h.getKey -> h.getValue }.toMap
-
-    override def values: Iterator[(String, String)] = headersMap.iterator
-    override def get(key: String): Option[String] = headersMap.get(key)
+    override def values: Iterator[(String, String)] = Iterator.empty
+    override def get(key: String): Option[String] = Option(request.headers().get(key))
     override def put(key: String, value: String): Unit = {}
   }
 

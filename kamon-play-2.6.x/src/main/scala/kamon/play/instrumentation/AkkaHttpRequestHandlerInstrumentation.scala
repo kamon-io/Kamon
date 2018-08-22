@@ -16,18 +16,18 @@
 package kamon.play.instrumentation
 
 import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
-import kamon.context.Context
-import kamon.play.{OperationNameFilter, instrumentation}
+import kamon.play.OperationNameFilter
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
 import play.api.mvc.EssentialFilter
 
+import scala.compat.java8.OptionConverters._
 import scala.concurrent.Future
 
 object AkkaHttpRequestHandlerInstrumentation {
 
   case class AkkaHttpGenericRequest(request: HttpRequest) extends GenericRequest {
-    override val headers: Map[String, String] = request.headers.map { h => h.name() -> h.value() }.toMap
+    override val getHeader: String => Option[String] = (h: String) => request.getHeader(h).asScala.map(_.value())
     override val method: String = request.method.value
     override val url: String = request.getUri.toString
     override val component: String = "play.server.akka-http"
