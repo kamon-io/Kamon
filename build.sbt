@@ -61,8 +61,8 @@ lazy val kamonPlay24 = Project("kamon-play-24", file("kamon-play-2.4.x"))
   .settings(resolvers += Resolver.bintrayRepo("kamon-io", "snapshots"))
   .settings(
     libraryDependencies ++=
-      compileScope(play24, playWS24, kamonCore, kamonScala) ++
-      providedScope(aspectJ, typesafeConfig) ++
+      compileScope(kamonCore, kamonScala) ++
+      providedScope(aspectJ, play24, playWS24, typesafeConfig) ++
       testScope(playTest24, scalatestplus24))
 
 lazy val kamonPlay25 = Project("kamon-play-25", file("kamon-play-2.5.x"))
@@ -77,8 +77,8 @@ lazy val kamonPlay25 = Project("kamon-play-25", file("kamon-play-2.5.x"))
   .settings(resolvers += Resolver.bintrayRepo("kamon-io", "snapshots"))
   .settings(
     libraryDependencies ++=
-      compileScope(play25, playWS25, kamonCore, kamonScala) ++
-      providedScope(aspectJ, typesafeConfig) ++
+      compileScope(kamonCore, kamonScala) ++
+      providedScope(aspectJ, play25, playWS25, typesafeConfig) ++
       testScope(playTest25, scalatestplus25, kamonTestkit, logbackClassic))
 
 
@@ -94,8 +94,8 @@ lazy val kamonPlay26 = Project("kamon-play-26", file("kamon-play-2.6.x"))
   .settings(resolvers += Resolver.bintrayRepo("kamon-io", "snapshots"))
   .settings(
     libraryDependencies ++=
-      compileScope(play26, playNetty26, playWS26, kamonCore, kamonScala) ++
-        providedScope(aspectJ, typesafeConfig, akkaHttp) ++
+      compileScope(kamonCore, kamonScala) ++
+        providedScope(aspectJ, play26, playNetty26, playWS26, typesafeConfig, akkaHttp) ++
         testScope(playTest26, scalatestplus26, playLogBack26, kamonTestkit))
 
 import sbt.Tests._
