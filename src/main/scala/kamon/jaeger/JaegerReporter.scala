@@ -20,10 +20,16 @@ import java.nio.ByteBuffer
 import java.util
 
 import com.typesafe.config.Config
-import com.uber.jaeger.thriftjava.{Log, Process, Tag, TagType, Span => JaegerSpan}
-import com.uber.jaeger.senders.HttpSender
+import io.jaegertracing.thrift.internal.senders.HttpSender
+import io.jaegertracing.thriftjava.{
+  Log,
+  Process,
+  Tag,
+  TagType,
+  Span => JaegerSpan
+}
 import kamon.trace.IdentityProvider.Identifier
-import kamon.trace.Span
+import kamon.trace.Span.{Mark, TagValue, FinishedSpan => KamonSpan}
 import kamon.util.Clock
 import kamon.{Kamon, SpanReporter}
 
@@ -31,89 +37,103 @@ import scala.util.Try
 
 class JaegerReporter extends SpanReporter {
 
-  @volatile private var jaegerClient:JaegerClient = _
+  @volatile private var jaegerClient: JaegerClient = _
   reconfigure(Kamon.config())
 
-  override def reconfigure(newConfig: Config):Unit = {
+  override def reconfigure(newConfig: Config): Unit = {
     val jaegerConfig = newConfig.getConfig("kamon.jaeger")
     val host = jaegerConfig.getString("host")
     val port = jaegerConfig.getInt("port")
     val scheme = if (jaegerConfig.getBoolean("tls")) "https" else "http"
+    val includeEnvironmentTags =
+      jaegerConfig.getBoolean("include-environment-tags")
 
-    jaegerClient = new JaegerClient(host, port, scheme)
+    jaegerClient = new JaegerClient(host, port, scheme, includeEnvironmentTags)
   }
 
   override def start(): Unit = {}
   override def stop(): Unit = {}
 
-  override def reportSpans(spans: Seq[Span.FinishedSpan]): Unit = {
+  override def reportSpans(spans: Seq[KamonSpan]): Unit = {
     jaegerClient.sendSpans(spans)
   }
 }
 
-class JaegerClient(host: String, port: Int, scheme: String) {
+class JaegerClient(host: String,
+                   port: Int,
+                   scheme: String,
+                   includeEnvironmentTags: Boolean) {
   import scala.collection.JavaConverters._
 
   val endpoint = s"$scheme://$host:$port/api/traces"
   val process = new Process(Kamon.environment.service)
-  val sender = new HttpSender(endpoint)
 
-  def sendSpans(spans: Seq[Span.FinishedSpan]): Unit = {
+  if (includeEnvironmentTags)
+    process.setTags(
+      Kamon.environment.tags
+        .map { case (k, v) => new Tag(k, TagType.STRING).setVStr(v) }
+        .toList
+        .asJava)
+
+  val sender = new HttpSender.Builder(endpoint).build()
+
+  def sendSpans(spans: Seq[KamonSpan]): Unit = {
     val convertedSpans = spans.map(convertSpan).asJava
     sender.send(process, convertedSpans)
   }
 
-  private def convertSpan(span: Span.FinishedSpan): JaegerSpan = {
-    val from = Clock.toEpochMicros(span.from)
-    val duration = Clock.toEpochMicros(span.to) - from
+  private def convertSpan(kamonSpan: KamonSpan): JaegerSpan = {
+    val context = kamonSpan.context
+    val from = Clock.toEpochMicros(kamonSpan.from)
+    val duration =
+      Math.floorDiv(Clock.nanosBetween(kamonSpan.from, kamonSpan.to), 1000)
 
     val convertedSpan = new JaegerSpan(
-      convertIdentifier(span.context.traceID),
+      convertIdentifier(context.traceID),
       0L,
-      convertIdentifier(span.context.spanID),
-      convertIdentifier(span.context.parentID),
-      span.operationName,
+      convertIdentifier(context.spanID),
+      convertIdentifier(context.parentID),
+      kamonSpan.operationName,
       0,
       from,
       duration
     )
 
-    convertedSpan.setTags(new util.ArrayList[Tag](span.tags.size))
-    span.tags.foreach {
-      case (k, v) => v match {
-        case Span.TagValue.True =>
-          val tag = new Tag(k, TagType.BOOL)
-          tag.setVBool(true)
-          convertedSpan.tags.add(tag)
+    convertedSpan.setTags(new util.ArrayList[Tag](kamonSpan.tags.size))
 
-        case Span.TagValue.False =>
-          val tag = new Tag(k, TagType.BOOL)
-          tag.setVBool(false)
-          convertedSpan.tags.add(tag)
+    kamonSpan.tags.foreach {
+      case (key, TagValue.True) =>
+        val tag = new Tag(key, TagType.BOOL).setVBool(true)
+        convertedSpan.tags.add(tag)
 
-        case Span.TagValue.String(string) =>
-          val tag = new Tag(k, TagType.STRING)
-          tag.setVStr(string)
-          convertedSpan.tags.add(tag)
+      case (key, TagValue.False) =>
+        val tag = new Tag(key, TagType.BOOL).setVBool(false)
+        convertedSpan.tags.add(tag)
 
-        case Span.TagValue.Number(number) =>
-          val tag = new Tag(k, TagType.LONG)
-          tag.setVLong(number)
-          convertedSpan.tags.add(tag)
-      }
+      case (key, TagValue.String(string)) =>
+        val tag = new Tag(key, TagType.STRING).setVStr(string)
+        convertedSpan.tags.add(tag)
+
+      case (key, TagValue.Number(number)) =>
+        val tag = new Tag(key, TagType.LONG).setVLong(number)
+        convertedSpan.tags.add(tag)
     }
 
-    span.marks.foreach(mark => {
-      val markTag = new Tag("event", TagType.STRING)
-      markTag.setVStr(mark.key)
-      convertedSpan.addToLogs(new Log(Clock.toEpochMicros(mark.instant), java.util.Collections.singletonList(markTag)))
-    })
+    kamonSpan.marks.foreach {
+      case Mark(instant, key) =>
+        val markTag = new Tag("event", TagType.STRING)
+        markTag.setVStr(key)
+        convertedSpan.addToLogs(
+          new Log(Clock.toEpochMicros(instant),
+                  java.util.Collections.singletonList(markTag)))
+    }
 
     convertedSpan
   }
 
-  private def convertIdentifier(identifier: Identifier): Long = Try {
-    // Assumes that Kamon was configured to use the default identity generator.
-    ByteBuffer.wrap(identifier.bytes).getLong
-  }.getOrElse(0L)
+  private def convertIdentifier(identifier: Identifier): Long =
+    Try {
+      // Assumes that Kamon was configured to use the default identity generator.
+      ByteBuffer.wrap(identifier.bytes).getLong
+    }.getOrElse(0L)
 }

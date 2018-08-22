@@ -1,5 +1,5 @@
-scalaVersion := "2.12.2"
+scalaVersion := "2.12.6"
 resolvers += Resolver.mavenLocal
 resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
-libraryDependencies += "com.uber.jaeger" % "jaeger-core" % "0.21.0"
-libraryDependencies += "io.kamon" %% "kamon-core" % "1.0.0"
+libraryDependencies += "io.jaegertracing" % "jaeger-thrift" % "0.30.0"
+libraryDependencies += "io.kamon" %% "kamon-core" % "1.1.3"
