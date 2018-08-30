@@ -40,8 +40,8 @@ trait ContextPropagation { self: Configuration with ClassLoading =>
 }
 
 object ContextPropagation {
-  val DefaultHttpChannel = "http"
-  val DefaultBinaryChannel = "binary"
+  val DefaultHttpChannel = "default"
+  val DefaultBinaryChannel = "default"
 
   case class Components(
     httpChannels: Map[String, HttpPropagation]
@@ -51,17 +51,12 @@ object ContextPropagation {
 
     def from(config: Config, classLoading: ClassLoading): Components = {
       val propagationConfig = config.getConfig("kamon.propagation")
-      val channels = propagationConfig.getConfig("channels").configurations
-
-      val httpChannels = Map.newBuilder[String, HttpPropagation]
-
-      channels.foreach {
-        case (channelName, channelConfig) => channelConfig.getString("type") match {
-          case "http" => httpChannels += (channelName -> HttpPropagation.from(channelConfig, classLoading))
-        }
+      val httpChannelsConfig = propagationConfig.getConfig("http").configurations
+      val httpChannels = httpChannelsConfig.map {
+        case (channelName, channelConfig) => (channelName -> HttpPropagation.from(channelConfig, classLoading))
       }
 
-      Components(httpChannels.result())
+      Components(httpChannels)
     }
   }
 }
