@@ -13,90 +13,83 @@
  * =========================================================================================
  */
 
-package kamon.context
+package kamon
+package context
 
-import java.io._
-import java.nio.ByteBuffer
+import java.util.{Map => JavaMap}
+import scala.collection.JavaConverters._
 
-import kamon.Kamon
+class Context private (private[context] val entries: Map[Context.Key[_], Any], private[context] val tags: Map[String, String]) {
 
-class Context private (private[context] val entries: Map[Key[_], Any]) extends scala.Serializable {
-  def get[T](key: Key[T]): T =
+  def get[T](key: Context.Key[T]): T =
     entries.getOrElse(key, key.emptyValue).asInstanceOf[T]
 
-  def withKey[T](key: Key[T], value: T): Context =
-    new Context(entries.updated(key, value))
+  def getTag(tagKey: String): Option[String] =
+    tags.get(tagKey)
 
-  var _deserializedEntries: Map[Key[_], Any] = Map.empty
+  def withKey[T](key: Context.Key[T], value: T): Context =
+    new Context(entries.updated(key, value), tags)
 
-  @throws[IOException]
-  private def writeObject(out: ObjectOutputStream): Unit = out.write(
-    Kamon.contextCodec().Binary.encode(this).array()
-  )
+  def withTag(tagKey: String, tagValue: String): Context =
+    new Context(entries, tags.updated(tagKey, tagValue))
 
-  @throws[IOException]
-  @throws[ClassNotFoundException]
-  private def readObject(in: ObjectInputStream): Unit = {
-    val buf = new Array[Byte](in.available())
-    in.readFully(buf)
-    _deserializedEntries = Kamon.contextCodec().Binary.decode(ByteBuffer.wrap(buf)).entries
-  }
+  def withTags(tags: Map[String, String]): Context =
+    new Context(entries, this.tags ++ tags)
 
-  def readResolve(): AnyRef = new Context(_deserializedEntries)
+  def withTags(tags: JavaMap[String, String]): Context =
+    new Context(entries, this.tags ++ tags.asScala.toMap)
 
-  override def equals(obj: scala.Any): Boolean = {
-    obj != null &&
-    obj.isInstanceOf[Context] &&
-    obj.asInstanceOf[Context].entries != null &&
-    obj.asInstanceOf[Context].entries == this.entries
-  }
-
-  override def hashCode(): Int = entries.hashCode()
 
 }
 
 object Context {
 
-  val Empty = new Context(Map.empty)
+  val Empty = new Context(Map.empty, Map.empty)
 
-  def apply(): Context =
-    Empty
+  def of(tags: JavaMap[String, String]): Context =
+    new Context(Map.empty, tags.asScala.toMap)
 
-  def create(): Context =
-    Empty
+  def of(tags: Map[String, String]): Context =
+    new Context(Map.empty, tags)
 
-  def apply[T](key: Key[T], value: T): Context =
-    new Context(Map(key -> value))
+  def of[T](key: Context.Key[T], value: T): Context =
+    new Context(Map(key -> value), Map.empty)
 
-  def create[T](key: Key[T], value: T): Context =
-    apply(key, value)
+  def of[T](key: Context.Key[T], value: T, tags: JavaMap[String, String]): Context =
+    new Context(Map(key -> value), tags.asScala.toMap)
 
-}
+  def of[T](key: Context.Key[T], value: T, tags: Map[String, String]): Context =
+    new Context(Map(key -> value), tags)
 
+  def of[T, U](keyOne: Context.Key[T], valueOne: T, keyTwo: Context.Key[U], valueTwo: U): Context =
+    new Context(Map(keyOne -> valueOne, keyTwo -> valueTwo), Map.empty)
 
-sealed abstract class Key[T] {
-  def name: String
-  def emptyValue: T
-  def broadcast: Boolean
-}
+  def of[T, U](keyOne: Context.Key[T], valueOne: T, keyTwo: Context.Key[U], valueTwo: U, tags: JavaMap[String, String]): Context =
+    new Context(Map(keyOne -> valueOne, keyTwo -> valueTwo), tags.asScala.toMap)
 
-object Key {
+  def of[T, U](keyOne: Context.Key[T], valueOne: T, keyTwo: Context.Key[U], valueTwo: U, tags: Map[String, String]): Context =
+    new Context(Map(keyOne -> valueOne, keyTwo -> valueTwo), tags)
 
-  def local[T](name: String, emptyValue: T): Key[T] =
-    new Default[T](name, emptyValue, false)
+  def key[T](name: String, emptyValue: T): Context.Key[T] =
+    new Context.Key(name, emptyValue)
 
-  def broadcast[T](name: String, emptyValue: T): Key[T] =
-    new Default[T](name, emptyValue, true)
-
-  def broadcastString(name: String): Key[Option[String]] =
-    new Default[Option[String]](name, None, true)
-
-
-  private class Default[T](val name: String, val emptyValue: T, val broadcast: Boolean) extends Key[T] {
+  /**
+    * Encapsulates the type, name and empty value for a context entry. All reads and writes from a context instance
+    * must be done using a context key, which will ensure the right type is used on both operations. The key's name
+    * is used when configuring mappings and incoming/outgoing/returning codecs for context propagation across channels.
+    *
+    * If you try to read an entry from a context and such entry is not present, the empty value for the key is returned
+    * instead.
+    *
+    * @param name Key name. Must be unique.
+    * @param emptyValue Value to be returned when reading from a context that doesn't have an entry with this key.
+    * @tparam ValueType Type of the value to be held on the context with this key.
+    */
+  final class Key[ValueType](val name: String, val emptyValue: ValueType) {
     override def hashCode(): Int =
       name.hashCode
 
     override def equals(that: Any): Boolean =
-      that.isInstanceOf[Default[_]] && that.asInstanceOf[Default[_]].name == this.name
+      that.isInstanceOf[Context.Key[_]] && that.asInstanceOf[Context.Key[_]].name == this.name
   }
 }

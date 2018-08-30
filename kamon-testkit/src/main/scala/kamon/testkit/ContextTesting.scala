@@ -15,14 +15,14 @@
 
 package kamon.testkit
 
-import kamon.context.{Context, Key}
+import kamon.context.{Context}
 
 trait ContextTesting {
-  val StringKey = Key.local[Option[String]]("string-key", None)
-  val StringBroadcastKey = Key.broadcastString("string-broadcast-key")
+  val StringKey = Context.key[Option[String]]("string-key", None)
+  val StringBroadcastKey = Context.key[Option[String]]("string-broadcast-key", None)
 
   def contextWithLocal(value: String): Context =
-    Context.create(StringKey, Some(value))
+    Context.of(StringKey, Some(value))
 }
 
 object ContextTesting extends ContextTesting

@@ -19,54 +19,35 @@ import java.net.{URLDecoder, URLEncoder}
 import java.nio.ByteBuffer
 
 import kamon.Kamon
-import kamon.context.{Codecs, Context, TextMap}
+import kamon.context.{Codecs, Context, HttpPropagation, TextMap}
 import kamon.context.generated.binary.span.{Span => ColferSpan}
+import kamon.context.HttpPropagation.Direction
 import kamon.trace.SpanContext.SamplingDecision
 
 
 object SpanCodec {
 
-  class B3 extends Codecs.ForEntry[TextMap] {
+  class B3 extends HttpPropagation.EntryReader with HttpPropagation.EntryWriter {
     import B3.Headers
 
-    override def encode(context: Context): TextMap = {
-      val span = context.get(Span.ContextKey)
-      val carrier = TextMap.Default()
-
-      if(span.nonEmpty()) {
-        val spanContext = span.context()
-        carrier.put(Headers.TraceIdentifier, urlEncode(spanContext.traceID.string))
-        carrier.put(Headers.SpanIdentifier, urlEncode(spanContext.spanID.string))
-
-        if(spanContext.parentID != IdentityProvider.NoIdentifier)
-          carrier.put(Headers.ParentSpanIdentifier, urlEncode(spanContext.parentID.string))
-
-        encodeSamplingDecision(spanContext.samplingDecision).foreach { samplingDecision =>
-          carrier.put(Headers.Sampled, samplingDecision)
-        }
-      }
-
-      carrier
-    }
-
-    override def decode(carrier: TextMap, context: Context): Context = {
+    override def read(reader: HttpPropagation.HeaderReader, context: Context): Context = {
       val identityProvider = Kamon.tracer.identityProvider
-      val traceID = carrier.get(Headers.TraceIdentifier)
+      val traceID = reader.read(Headers.TraceIdentifier)
         .map(id => identityProvider.traceIdGenerator().from(urlDecode(id)))
         .getOrElse(IdentityProvider.NoIdentifier)
 
-      val spanID = carrier.get(Headers.SpanIdentifier)
+      val spanID = reader.read(Headers.SpanIdentifier)
         .map(id => identityProvider.spanIdGenerator().from(urlDecode(id)))
         .getOrElse(IdentityProvider.NoIdentifier)
 
       if(traceID != IdentityProvider.NoIdentifier && spanID != IdentityProvider.NoIdentifier) {
-        val parentID = carrier.get(Headers.ParentSpanIdentifier)
+        val parentID = reader.read(Headers.ParentSpanIdentifier)
           .map(id => identityProvider.spanIdGenerator().from(urlDecode(id)))
           .getOrElse(IdentityProvider.NoIdentifier)
 
-        val flags = carrier.get(Headers.Flags)
+        val flags = reader.read(Headers.Flags)
 
-        val samplingDecision = flags.orElse(carrier.get(Headers.Sampled)) match {
+        val samplingDecision = flags.orElse(reader.read(Headers.Sampled)) match {
           case Some(sampled) if sampled == "1" => SamplingDecision.Sample
           case Some(sampled) if sampled == "0" => SamplingDecision.DoNotSample
           case _ => SamplingDecision.Unknown
@@ -75,6 +56,24 @@ object SpanCodec {
         context.withKey(Span.ContextKey, Span.Remote(SpanContext(traceID, spanID, parentID, samplingDecision)))
 
       } else context
+    }
+
+
+    override def write(context: Context, writer: HttpPropagation.HeaderWriter, direction: Direction.Write): Unit = {
+      val span = context.get(Span.ContextKey)
+
+      if(span.nonEmpty()) {
+        val spanContext = span.context()
+        writer.write(Headers.TraceIdentifier, urlEncode(spanContext.traceID.string))
+        writer.write(Headers.SpanIdentifier, urlEncode(spanContext.spanID.string))
+
+        if(spanContext.parentID != IdentityProvider.NoIdentifier)
+          writer.write(Headers.ParentSpanIdentifier, urlEncode(spanContext.parentID.string))
+
+        encodeSamplingDecision(spanContext.samplingDecision).foreach { samplingDecision =>
+          writer.write(Headers.Sampled, samplingDecision)
+        }
+      }
     }
 
     private def encodeSamplingDecision(samplingDecision: SamplingDecision): Option[String] = samplingDecision match {

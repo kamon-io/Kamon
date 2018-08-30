@@ -49,8 +49,8 @@ class ThreadLocalStorageSpec extends WordSpec with Matchers {
   }
 
   val TLS: Storage = new Storage.ThreadLocal
-  val TestKey = Key.local("test-key", 42)
-  val AnotherKey = Key.local("another-key", 99)
-  val BroadcastKey = Key.broadcast("broadcast", "i travel around")
-  val ScopeWithKey = Context.create().withKey(TestKey, 43)
+  val TestKey = Context.key("test-key", 42)
+  val AnotherKey = Context.key("another-key", 99)
+  val BroadcastKey = Context.key("broadcast", "i travel around")
+  val ScopeWithKey = Context.of(TestKey, 43)
 }

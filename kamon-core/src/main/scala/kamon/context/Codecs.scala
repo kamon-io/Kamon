@@ -100,22 +100,22 @@ object Codecs {
     override def encode(context: Context): TextMap = {
       val encoded = TextMap.Default()
 
-      context.entries.foreach {
-        case (key, _) if key.broadcast =>
-          entryCodecs.get(key.name) match {
-            case Some(codec) =>
-              try {
-                codec.encode(context).values.foreach(pair => encoded.put(pair._1, pair._2))
-              } catch {
-                case e: Throwable => log.error(s"Failed to encode key [${key.name}]", e)
-              }
-
-            case None =>
-              log.error("Context key [{}] should be encoded in HttpHeaders but no codec was found for it.", key.name)
-          }
-
-        case _ => // All non-broadcast keys should be ignored.
-      }
+//      context.entries.foreach {
+//        case (key, _) if key.broadcast =>
+//          entryCodecs.get(key.name) match {
+//            case Some(codec) =>
+//              try {
+//                codec.encode(context).values.foreach(pair => encoded.put(pair._1, pair._2))
+//              } catch {
+//                case e: Throwable => log.error(s"Failed to encode key [${key.name}]", e)
+//              }
+//
+//            case None =>
+//              log.error("Context key [{}] should be encoded in HttpHeaders but no codec was found for it.", key.name)
+//          }
+//
+//        case _ => // All non-broadcast keys should be ignored.
+//      }
 
       encoded
     }
@@ -150,29 +150,29 @@ object Codecs {
         emptyBuffer
       else {
         var colferEntries: List[ColferEntry] = Nil
-        entries.foreach {
-          case (key, _) if key.broadcast =>
-            entryCodecs.get(key.name) match {
-              case Some(entryCodec) =>
-                try {
-                  val entryData = entryCodec.encode(context)
-                  if(entryData.capacity() > 0) {
-                    val colferEntry = new ColferEntry()
-                    colferEntry.setName(key.name)
-                    colferEntry.setContent(entryData.array())
-                    colferEntries = colferEntry :: colferEntries
-                  }
-                } catch {
-                  case throwable: Throwable =>
-                    log.error(s"Failed to encode broadcast context key [${key.name}]", throwable)
-                }
-
-              case None =>
-                log.error("Failed to encode broadcast context key [{}]. No codec found.", key.name)
-            }
-
-          case _ => // All non-broadcast keys should be ignored.
-        }
+//        entries.foreach {
+//          case (key, _) if key.broadcast =>
+//            entryCodecs.get(key.name) match {
+//              case Some(entryCodec) =>
+//                try {
+//                  val entryData = entryCodec.encode(context)
+//                  if(entryData.capacity() > 0) {
+//                    val colferEntry = new ColferEntry()
+//                    colferEntry.setName(key.name)
+//                    colferEntry.setContent(entryData.array())
+//                    colferEntries = colferEntry :: colferEntries
+//                  }
+//                } catch {
+//                  case throwable: Throwable =>
+//                    log.error(s"Failed to encode broadcast context key [${key.name}]", throwable)
+//                }
+//
+//              case None =>
+//                log.error("Failed to encode broadcast context key [{}]. No codec found.", key.name)
+//            }
+//
+//          case _ => // All non-broadcast keys should be ignored.
+//        }
 
         if(colferEntries.isEmpty)
           emptyBuffer
@@ -226,38 +226,40 @@ object Codecs {
   }
 
   private class StringHeadersCodec(key: String, headerName: String) extends Codecs.ForEntry[TextMap] {
-    private val contextKey = Key.broadcast[Option[String]](key, None)
+    //private val contextKey = Key.broadcast[Option[String]](key, None)
 
     override def encode(context: Context): TextMap = {
       val textMap = TextMap.Default()
-      context.get(contextKey).foreach { value =>
-        textMap.put(headerName, value)
-      }
+//      context.get(contextKey).foreach { value =>
+//        textMap.put(headerName, value)
+//      }
 
       textMap
     }
 
     override def decode(carrier: TextMap, context: Context): Context = {
-      carrier.get(headerName) match {
-        case value @ Some(_) => context.withKey(contextKey, value)
-        case None            => context
-      }
+      ???
+//      carrier.get(headerName) match {
+//        case value @ Some(_) => context.withKey(contextKey, value)
+//        case None            => context
+//      }
     }
   }
 
   private class StringBinaryCodec(key: String) extends Codecs.ForEntry[ByteBuffer] {
     val emptyBuffer: ByteBuffer = ByteBuffer.allocate(0)
-    private val contextKey = Key.broadcast[Option[String]](key, None)
+    //private val contextKey = Key.broadcast[Option[String]](key, None)
 
     override def encode(context: Context): ByteBuffer = {
-      context.get(contextKey) match {
-        case Some(value)  => ByteBuffer.wrap(value.getBytes)
-        case None         => emptyBuffer
-      }
+//      context.get(contextKey) match {
+//        case Some(value)  => ByteBuffer.wrap(value.getBytes)
+//        case None         => emptyBuffer
+//      }
+      ???
     }
 
     override def decode(carrier: ByteBuffer, context: Context): Context = {
-      context.withKey(contextKey, Some(new String(carrier.array())))
+      ??? //context.withKey(contextKey, Some(new String(carrier.array())))
     }
   }
 }
