@@ -19,11 +19,12 @@ package kamon.logback.instrumentation
 
 import com.typesafe.config.Config
 import kamon.{Kamon, OnReconfigureHook}
-import kamon.context.Context
+import kamon.context.{Context, Key}
 import kamon.trace.{IdentityProvider, Span}
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
 import org.slf4j.MDC
+import scala.collection.JavaConverters._
 
 import scala.beans.BeanProperty
 
@@ -32,10 +33,14 @@ object AsyncAppenderInstrumentation {
   @volatile private var _mdcContextPropagation: Boolean = true
   @volatile private var _mdcTraceKey: String = "kamonTraceID"
   @volatile private var _mdcSpanKey: String = "kamonSpanID"
+  @volatile private var _mdcLocalKeys: Set[Key[Option[String]]] = Set.empty[Key[Option[String]]]
+  @volatile private var _mdcBroadcastKeys: Set[Key[Option[String]]] = Set.empty[Key[Option[String]]]
 
   def mdcTraceKey: String = _mdcTraceKey
   def mdcSpanKey: String = _mdcSpanKey
   def mdcContextPropagation: Boolean = _mdcContextPropagation
+  def mdcLocalKeys: Set[Key[Option[String]]] = _mdcLocalKeys
+  def mdcBroadcastKeys: Set[Key[Option[String]]] = _mdcBroadcastKeys
 
   loadConfiguration(Kamon.config())
 
@@ -50,8 +55,11 @@ object AsyncAppenderInstrumentation {
     _mdcContextPropagation = logbackConfig.getBoolean("mdc-context-propagation")
     _mdcTraceKey = logbackConfig.getString("mdc-trace-id-key")
     _mdcSpanKey = logbackConfig.getString("mdc-span-id-key")
+    _mdcLocalKeys = logbackConfig.getStringList("mdc-traced-local-keys").asScala.toSet.map { key: String => Key.local[Option[String]](key, None) }
+    _mdcBroadcastKeys = logbackConfig.getStringList("mdc-traced-broadcast-keys").asScala.toSet.map { key: String => Key.broadcastString(key) }
   }
 }
+
 @Aspect
 class AsyncAppenderInstrumentation {
 
@@ -70,16 +78,31 @@ class AsyncAppenderInstrumentation {
   @Around("execution(* ch.qos.logback.classic.util.LogbackMDCAdapter.getPropertyMap())")
   def aroundGetMDCPropertyMap(pjp: ProceedingJoinPoint): Any = {
 
-    val context = Kamon.currentContext().get(Span.ContextKey)
+    val currentContext = Kamon.currentContext()
+    val span = currentContext.get(Span.ContextKey)
 
-    if (context.context().traceID != IdentityProvider.NoIdentifier && AsyncAppenderInstrumentation.mdcContextPropagation){
-      MDC.put(AsyncAppenderInstrumentation.mdcTraceKey, context.context().traceID.string)
-      MDC.put(AsyncAppenderInstrumentation.mdcSpanKey, context.context().spanID.string)
+    if (span.context().traceID != IdentityProvider.NoIdentifier && AsyncAppenderInstrumentation.mdcContextPropagation){
+      MDC.put(AsyncAppenderInstrumentation.mdcTraceKey, span.context().traceID.string)
+      MDC.put(AsyncAppenderInstrumentation.mdcSpanKey, span.context().spanID.string)
+
+      AsyncAppenderInstrumentation.mdcLocalKeys.foreach { localKey =>
+        currentContext.get(localKey).foreach { localKeyValue =>
+          MDC.put(localKey.name, localKeyValue)
+        }
+      }
+
+      AsyncAppenderInstrumentation.mdcBroadcastKeys.foreach { broadcast =>
+        currentContext.get(broadcast).foreach { broadcastKeyValue =>
+          MDC.put(broadcast.name, broadcastKeyValue)
+        }
+      }
       try {
         pjp.proceed()
       } finally {
         MDC.remove(AsyncAppenderInstrumentation.mdcTraceKey)
         MDC.remove(AsyncAppenderInstrumentation.mdcSpanKey)
+        AsyncAppenderInstrumentation.mdcLocalKeys.foreach(key => MDC.remove(key.name))
+        AsyncAppenderInstrumentation.mdcBroadcastKeys.foreach(key => MDC.remove(key.name))
       }
     } else {
       pjp.proceed()

@@ -18,7 +18,7 @@ package kamon.logback
 
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
-import kamon.context.Context
+import kamon.context.{Context, Key}
 import kamon.logback.instrumentation.AsyncAppenderInstrumentation
 import kamon.trace.Span
 import org.scalatest._
@@ -69,6 +69,45 @@ class LogbackSpanConverterSpec extends WordSpec with Matchers with Eventually {
         MDC.get(AsyncAppenderInstrumentation.mdcTraceKey) shouldBe null
         MDC.get(AsyncAppenderInstrumentation.mdcSpanKey) shouldBe null
       }
+
+      "report the custom MDC keys in the context" in {
+        Kamon.reconfigure(
+          ConfigFactory
+            .parseString("kamon.logback.mdc-traced-broadcast-keys = [ testKey1, testKey2 ]")
+            .withFallback(ConfigFactory.defaultReference()))
+        val memoryAppender = buildMemoryAppender(configurator, "%X{testKey1} %X{testKey2}")
+
+        val span = Kamon.buildSpan("my-span").start()
+        val contextWithSpan = Context
+          .create(Span.ContextKey, span)
+          .withKey(Key.broadcastString("testKey1"), Some("testKey1Value"))
+          .withKey(Key.broadcastString("testKey2"), Some("testKey2Value"))
+
+        Kamon.withContext(contextWithSpan) {
+          memoryAppender.doAppend(createLoggingEvent(context))
+        }
+
+        memoryAppender.getLastLine shouldBe "testKey1Value testKey2Value"
+      }
+
+      "report empty if custom MDC keys are configured, but not provided" in {
+        Kamon.reconfigure(
+          ConfigFactory
+            .parseString("kamon.logback.mdc-traced-broadcast-keys = [ testKey1, testKey2 ]")
+            .withFallback(ConfigFactory.defaultReference()))
+        val memoryAppender = buildMemoryAppender(configurator, "%X{testKey1} %X{testKey2}")
+
+        val span = Kamon.buildSpan("my-span").start()
+        val contextWithSpan = Context
+          .create(Span.ContextKey, span)
+
+        Kamon.withContext(contextWithSpan) {
+          memoryAppender.doAppend(createLoggingEvent(context))
+        }
+
+        memoryAppender.getLastLine shouldBe " "
+      }
+
 
       "disable MDC context" in {
         Kamon.reconfigure(
