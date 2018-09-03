@@ -6,9 +6,9 @@ import java.nio.charset.StandardCharsets
 
 import com.typesafe.config.Config
 import kamon.metric.PeriodSnapshot
-import kamon.util.{EnvironmentTagBuilder, Matcher}
-import kamon.{Kamon, MetricReporter, Tags}
-import org.slf4j.{Logger, LoggerFactory}
+import kamon.util.{ EnvironmentTagBuilder, Matcher }
+import kamon.{ Kamon, MetricReporter, Tags }
+import org.slf4j.{ Logger, LoggerFactory }
 
 class GraphiteReporter extends MetricReporter {
   private val log = LoggerFactory.getLogger(classOf[GraphiteReporter])
@@ -42,7 +42,7 @@ class GraphiteReporter extends MetricReporter {
   private def buildNewSender(c: GraphiteSenderConfig): Unit = sender = new GraphiteSender(c) with TcpSender
 }
 
-private case class GraphiteSenderConfig(hostname: String, port: Int, metricPrefix: String, legacySupport: Boolean, envTags: Map[String, String], tagFilter: Matcher)
+private case class GraphiteSenderConfig(hostname: String, port: Int, metricPrefix: String, legacySupport: Boolean, envTags: Map[String, String], tagFilter: Matcher, percentiles: Seq[Double])
 private object GraphiteSenderConfig {
   def apply(config: Config): GraphiteSenderConfig = {
     val graphiteConfig = config.getConfig("kamon.graphite")
@@ -52,7 +52,9 @@ private object GraphiteSenderConfig {
     val legacySupport = graphiteConfig.getBoolean("legacy-support")
     val envTags = EnvironmentTagBuilder.create(graphiteConfig.getConfig("additional-tags"))
     val tagFilter = Kamon.filter(graphiteConfig.getString("filter-config-key"))
-    GraphiteSenderConfig(hostname, port, metricPrefix, legacySupport, envTags, tagFilter)
+    import scala.collection.JavaConverters._
+    val percentiles = graphiteConfig.getDoubleList("percentiles").asScala.map(_.toDouble)
+    GraphiteSenderConfig(hostname, port, metricPrefix, legacySupport, envTags, tagFilter, percentiles)
   }
 }
 
@@ -78,10 +80,9 @@ private abstract class GraphiteSender(val senderConfig: GraphiteSenderConfig) ex
       write(packetBuilder.build(metric.name, "count", distribution.count, metric.tags))
       write(packetBuilder.build(metric.name, "min", distribution.min, metric.tags))
       write(packetBuilder.build(metric.name, "max", distribution.max, metric.tags))
-      //todo configure which percentiles should be included
-      //write(packetBuilder.build(metric.name, "p50", distribution.percentile(50D).value, metric.tags))
-      write(packetBuilder.build(metric.name, "p90", distribution.percentile(90D).value, metric.tags))
-      //write(packetBuilder.build(metric.name, "p99", distribution.percentile(99D).value, metric.tags))
+      senderConfig.percentiles.foreach { p =>
+        write(packetBuilder.build(metric.name, s"p$p", distribution.percentile(p).value, metric.tags))
+      }
       write(packetBuilder.build(metric.name, "average", average(distribution.sum, distribution.count), metric.tags))
       write(packetBuilder.build(metric.name, "sum", distribution.sum, metric.tags))
     }
@@ -106,11 +107,11 @@ private class MetricPacketBuilder(baseName: String, timestamp: Long, config: Gra
     builder.append(baseName).append(".").append(sanitize(metricName)).append(".").append(metricType)
     (metricTags ++ config.envTags).filterKeys(config.tagFilter.accept).foreach(kv => builder.append(tagseperator).append(kv._1).append(valueseperator).append(kv._2))
     builder
-        .append(" ")
-        .append(value)
-        .append(" ")
-        .append(timestamp)
-        .append("\n")
+      .append(" ")
+      .append(value)
+      .append(" ")
+      .append(timestamp)
+      .append("\n")
     val packet = builder.toString
     log.debug("built packet '{}'", packet)
     packet.getBytes(StandardCharsets.US_ASCII)
