@@ -6,9 +6,9 @@ import java.nio.charset.StandardCharsets
 
 import com.typesafe.config.Config
 import kamon.metric.PeriodSnapshot
-import kamon.util.{ EnvironmentTagBuilder, Matcher }
-import kamon.{ Kamon, MetricReporter, Tags }
-import org.slf4j.{ Logger, LoggerFactory }
+import kamon.util.{EnvironmentTagBuilder, Matcher}
+import kamon.{Kamon, MetricReporter, Tags}
+import org.slf4j.{Logger, LoggerFactory}
 
 class GraphiteReporter extends MetricReporter {
   private val log = LoggerFactory.getLogger(classOf[GraphiteReporter])
@@ -82,12 +82,14 @@ private abstract class GraphiteSender(val senderConfig: GraphiteSenderConfig) ex
       //write(packetBuilder.build(metric.name, "p50", distribution.percentile(50D).value, metric.tags))
       write(packetBuilder.build(metric.name, "p90", distribution.percentile(90D).value, metric.tags))
       //write(packetBuilder.build(metric.name, "p99", distribution.percentile(99D).value, metric.tags))
-      write(packetBuilder.build(metric.name, "average", distribution.percentile(100D).value, metric.tags))
+      write(packetBuilder.build(metric.name, "average", average(distribution.sum, distribution.count), metric.tags))
       write(packetBuilder.build(metric.name, "sum", distribution.sum, metric.tags))
     }
 
     flush()
   }
+
+  private def average(sum: Long, count: Long): Long = if (count > 0) sum / count else 0
 }
 
 private class MetricPacketBuilder(baseName: String, timestamp: Long, config: GraphiteSenderConfig) {
@@ -104,11 +106,11 @@ private class MetricPacketBuilder(baseName: String, timestamp: Long, config: Gra
     builder.append(baseName).append(".").append(sanitize(metricName)).append(".").append(metricType)
     (metricTags ++ config.envTags).filterKeys(config.tagFilter.accept).foreach(kv => builder.append(tagseperator).append(kv._1).append(valueseperator).append(kv._2))
     builder
-      .append(" ")
-      .append(value)
-      .append(" ")
-      .append(timestamp)
-      .append("\n")
+        .append(" ")
+        .append(value)
+        .append(" ")
+        .append(timestamp)
+        .append("\n")
     val packet = builder.toString
     log.debug("built packet '{}'", packet)
     packet.getBytes(StandardCharsets.US_ASCII)
