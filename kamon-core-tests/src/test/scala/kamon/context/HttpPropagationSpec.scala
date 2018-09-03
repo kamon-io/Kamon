@@ -12,7 +12,7 @@ class HttpPropagationSpec extends WordSpec with Matchers with OptionValues {
   "The HTTP Context Propagation" when {
     "reading from incoming requests" should {
       "return an empty context if there are no tags nor keys" in {
-        val context = httpPropagation.read(headerReaderFromMap(Map.empty))
+        val context = httpPropagation.readContext(headerReaderFromMap(Map.empty))
         context.tags shouldBe empty
         context.entries shouldBe empty
       }
@@ -22,7 +22,7 @@ class HttpPropagationSpec extends WordSpec with Matchers with OptionValues {
           "x-content-tags" -> "hello=world;correlation=1234",
           "x-mapped-tag" -> "value"
         )
-        val context = httpPropagation.read(headerReaderFromMap(headers))
+        val context = httpPropagation.readContext(headerReaderFromMap(headers))
         context.tags should contain only(
           "hello" -> "world",
           "correlation" -> "1234",
@@ -32,7 +32,7 @@ class HttpPropagationSpec extends WordSpec with Matchers with OptionValues {
 
       "handle errors when reading HTTP headers" in {
         val headers = Map("fail" -> "")
-        val context = httpPropagation.read(headerReaderFromMap(headers))
+        val context = httpPropagation.readContext(headerReaderFromMap(headers))
         context.tags shouldBe empty
         context.entries shouldBe empty
       }
@@ -44,7 +44,7 @@ class HttpPropagationSpec extends WordSpec with Matchers with OptionValues {
           "integer-header" -> "123"
         )
 
-        val context = httpPropagation.read(headerReaderFromMap(headers))
+        val context = httpPropagation.readContext(headerReaderFromMap(headers))
         context.get(HttpPropagationSpec.StringKey) shouldBe "hey"
         context.get(HttpPropagationSpec.IntegerKey) shouldBe 123
         context.get(HttpPropagationSpec.OptionalKey) shouldBe empty
@@ -66,7 +66,7 @@ class HttpPropagationSpec extends WordSpec with Matchers with OptionValues {
     def propagationWritingTests(direction: Direction.Write) = {
       "not write anything if the context is empty" in {
         val headers = mutable.Map.empty[String, String]
-        httpPropagation.write(Context.Empty, headerWriterFromMap(headers), direction)
+        httpPropagation.writeContext(Context.Empty, headerWriterFromMap(headers), direction)
         headers shouldBe empty
       }
 
@@ -77,7 +77,7 @@ class HttpPropagationSpec extends WordSpec with Matchers with OptionValues {
           "mappedTag" -> "value"
         ))
 
-        httpPropagation.write(context, headerWriterFromMap(headers), direction)
+        httpPropagation.writeContext(context, headerWriterFromMap(headers), direction)
         headers should contain only(
           "x-content-tags" -> "hello=world;",
           "x-mapped-tag" -> "value"
@@ -91,7 +91,7 @@ class HttpPropagationSpec extends WordSpec with Matchers with OptionValues {
           HttpPropagationSpec.IntegerKey, 42,
         )
 
-        httpPropagation.write(context, headerWriterFromMap(headers), direction)
+        httpPropagation.writeContext(context, headerWriterFromMap(headers), direction)
         headers should contain only(
           "string-header" -> "out-we-go"
         )
@@ -123,7 +123,7 @@ class HttpPropagationSpec extends WordSpec with Matchers with OptionValues {
 
 
   def headerReaderFromMap(map: Map[String, String]): HttpPropagation.HeaderReader = new HttpPropagation.HeaderReader {
-    override def read(header: String): Option[String] = {
+    override def readHeader(header: String): Option[String] = {
       if(map.get("fail").nonEmpty)
         sys.error("failing on purpose")
 
@@ -132,7 +132,7 @@ class HttpPropagationSpec extends WordSpec with Matchers with OptionValues {
   }
 
   def headerWriterFromMap(map: mutable.Map[String, String]): HttpPropagation.HeaderWriter = new HttpPropagation.HeaderWriter {
-    override def write(header: String, value: String): Unit = map.put(header, value)
+    override def writeHeader(header: String, value: String): Unit = map.put(header, value)
   }
 }
 
@@ -146,20 +146,20 @@ object HttpPropagationSpec {
   class StringEntryCodec extends HttpPropagation.EntryReader with HttpPropagation.EntryWriter {
     private val HeaderName = "string-header"
 
-    override def read(reader: HttpPropagation.HeaderReader, context: Context): Context = {
-      reader.read(HeaderName)
+    override def readEntry(reader: HttpPropagation.HeaderReader, context: Context): Context = {
+      reader.readHeader(HeaderName)
         .map(v => context.withKey(StringKey, v))
         .getOrElse(context)
     }
 
-    override def write(context: Context, writer: HttpPropagation.HeaderWriter, direction: Direction.Write): Unit = {
-      Option(context.get(StringKey)).foreach(v => writer.write(HeaderName, v))
+    override def writeEntry(context: Context, writer: HttpPropagation.HeaderWriter, direction: Direction.Write): Unit = {
+      Option(context.get(StringKey)).foreach(v => writer.writeHeader(HeaderName, v))
     }
   }
 
   class IntegerEntryCodec extends HttpPropagation.EntryReader {
-    override def read(reader: HttpPropagation.HeaderReader, context: Context): Context = {
-      reader.read("integer-header")
+    override def readEntry(reader: HttpPropagation.HeaderReader, context: Context): Context = {
+      reader.readHeader("integer-header")
         .map(v => context.withKey(IntegerKey, v.toInt))
         .getOrElse(context)
 

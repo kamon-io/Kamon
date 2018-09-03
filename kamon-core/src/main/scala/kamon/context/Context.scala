@@ -19,7 +19,7 @@ package context
 import java.util.{Map => JavaMap}
 import scala.collection.JavaConverters._
 
-class Context private (private[context] val entries: Map[Context.Key[_], Any], private[context] val tags: Map[String, String]) {
+class Context private (private[context] val entries: Map[Context.Key[_], Any], val tags: Map[String, String]) {
 
   def get[T](key: Context.Key[T]): T =
     entries.getOrElse(key, key.emptyValue).asInstanceOf[T]

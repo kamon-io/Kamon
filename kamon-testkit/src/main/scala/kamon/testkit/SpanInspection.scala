@@ -19,7 +19,7 @@ import java.time.Instant
 
 import kamon.Kamon
 import kamon.trace.{Span, SpanContext}
-import kamon.trace.Span.FinishedSpan
+import kamon.trace.Span.{FinishedSpan, TagValue}
 
 import scala.reflect.ClassTag
 import scala.util.Try
@@ -52,8 +52,19 @@ object SpanInspection {
     def spanTags(): Map[String, Span.TagValue] =
       spanData.tags
 
+    def tag(key: String): Option[String] =
+      spanTag(key).map {
+        case TagValue.String(string) => string
+        case TagValue.Number(number) => number.toString
+        case TagValue.True => "true"
+        case TagValue.False => "false"
+      }
+
     def metricTags(): Map[String, String] =
       getField[Span.Local, Map[String, String]](realSpan, "customMetricTags")
+
+    def metricTag(key: String): Option[String] =
+      metricTags().get(key)
 
     def from(): Instant =
       getField[Span.Local, Instant](realSpan, "from")

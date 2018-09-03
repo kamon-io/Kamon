@@ -25,7 +25,7 @@ trait HttpPropagation {
     * @return The decoded Context instance. If no entries or tags could be read from the HTTP message then an
     *          empty context is returned instead.
     */
-  def read(reader: HttpPropagation.HeaderReader): Context
+  def readContext(reader: HttpPropagation.HeaderReader): Context
 
   /**
     * Writes the tags and entries from the supplied context using the supplied [[HttpPropagation.HeaderWriter]]
@@ -38,7 +38,7 @@ trait HttpPropagation {
     * @param writer Wrapper on the HTTP message that will carry the context headers.
     * @param direction Write direction. It can be either Outgoing or Returning.
     */
-  def write(context: Context, writer: HttpPropagation.HeaderWriter, direction: HttpPropagation.Direction.Write): Unit
+  def writeContext(context: Context, writer: HttpPropagation.HeaderWriter, direction: HttpPropagation.Direction.Write): Unit
 
 }
 
@@ -59,7 +59,7 @@ object HttpPropagation {
       * @param context Current context.
       * @return Either the original context passed in or a modified version of it, including the read entry.
       */
-    def read(reader: HttpPropagation.HeaderReader, context: Context): Context
+    def readEntry(reader: HttpPropagation.HeaderReader, context: Context): Context
   }
 
   /**
@@ -75,7 +75,7 @@ object HttpPropagation {
       * @param writer Wrapper on the HTTP message that will carry the context headers.
       * @param direction Write direction. It can be either Outgoing or Returning.
       */
-    def write(context: Context, writer: HttpPropagation.HeaderWriter, direction: Direction.Write): Unit
+    def writeEntry(context: Context, writer: HttpPropagation.HeaderWriter, direction: Direction.Write): Unit
   }
 
 
@@ -90,7 +90,7 @@ object HttpPropagation {
       * @param header HTTP header name
       * @return The HTTP header value, if present.
       */
-    def read(header: String): Option[String]
+    def readHeader(header: String): Option[String]
   }
 
   /**
@@ -104,7 +104,7 @@ object HttpPropagation {
       * @param header HTTP header name.
       * @param value HTTP header value.
       */
-    def write(header: String, value: String): Unit
+    def writeHeader(header: String, value: String): Unit
   }
 
 
@@ -131,12 +131,12 @@ object HttpPropagation {
       *     of a tag key clash.
       *   - Read all context entries using the incoming entries configuration.
       */
-    override def read(reader: HeaderReader): Context = {
+    override def readContext(reader: HeaderReader): Context = {
       val tags = Map.newBuilder[String, String]
 
       // Tags encoded together in the context tags header.
       try {
-        reader.read(components.tagsHeaderName).foreach { contextTagsHeader =>
+        reader.readHeader(components.tagsHeaderName).foreach { contextTagsHeader =>
           contextTagsHeader.split(";").foreach(tagData => {
             val tagPair = tagData.split("=")
             if (tagPair.length == 2) {
@@ -152,7 +152,7 @@ object HttpPropagation {
       components.tagsMappings.foreach {
         case (tagName, httpHeader) =>
           try {
-            reader.read(httpHeader).foreach(tagValue => tags += (tagName -> tagValue))
+            reader.readHeader(httpHeader).foreach(tagValue => tags += (tagName -> tagValue))
           } catch {
             case t: Throwable => log.warn("Failed to read mapped tag [{}]", tagName, t.asInstanceOf[Any])
           }
@@ -163,7 +163,7 @@ object HttpPropagation {
         case (context, (entryName, entryDecoder)) =>
           var result = context
           try {
-            result = entryDecoder.read(reader, context)
+            result = entryDecoder.readEntry(reader, context)
           } catch {
             case t: Throwable => log.warn("Failed to read entry [{}]", entryName.asInstanceOf[Any], t.asInstanceOf[Any])
           }
@@ -175,7 +175,7 @@ object HttpPropagation {
     /**
       * Writes context tags and entries
       */
-    override def write(context: Context, writer: HeaderWriter, direction: Direction.Write): Unit = {
+    override def writeContext(context: Context, writer: HeaderWriter, direction: Direction.Write): Unit = {
       val keys = direction match {
         case Direction.Outgoing => components.outgoingEntries
         case Direction.Returning => components.returningEntries
@@ -193,21 +193,21 @@ object HttpPropagation {
       // Write tags with specific mappings or append them to the context tags header.
       context.tags.foreach {
         case (tagKey, tagValue) => components.tagsMappings.get(tagKey) match {
-          case Some(mappedHeader) => writer.write(mappedHeader, tagValue)
+          case Some(mappedHeader) => writer.writeHeader(mappedHeader, tagValue)
           case None => appendTag(tagKey, tagValue)
         }
       }
 
       // Write the context tags header.
       if(contextTagsHeader.nonEmpty) {
-        writer.write(components.tagsHeaderName, contextTagsHeader.result())
+        writer.writeHeader(components.tagsHeaderName, contextTagsHeader.result())
       }
 
       // Write entries for the specified direction.
       keys.foreach {
         case (entryName, entryWriter) =>
           try {
-            entryWriter.write(context, writer, direction)
+            entryWriter.writeEntry(context, writer, direction)
           } catch {
             case t: Throwable => log.warn("Failed to write entry [{}] due to: {}", entryName.asInstanceOf[Any], t.asInstanceOf[Any])
           }

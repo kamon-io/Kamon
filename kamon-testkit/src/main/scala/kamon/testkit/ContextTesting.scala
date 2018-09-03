@@ -23,6 +23,9 @@ trait ContextTesting {
 
   def contextWithLocal(value: String): Context =
     Context.of(StringKey, Some(value))
+
+
+
 }
 
 object ContextTesting extends ContextTesting
