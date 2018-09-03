@@ -61,14 +61,15 @@ class KaminoApiClient(config: KaminoConfiguration) {
 
     def parseResponse(response: Response): Try[IngestionResponse] = Try {
       val respBuilder = IngestionResponse.newBuilder()
+      val body = response.body().bytes()
       response.code() match {
         case 200 =>
           respBuilder
             .setStatus(OK)
             .build()
-        case 490 =>
+        case 490 if body.nonEmpty =>
           IngestionResponse
-            .parseFrom(response.body().bytes())
+            .parseFrom(body)
         case _ =>
           respBuilder
             .setStatus(IngestionStatus.ERROR)
