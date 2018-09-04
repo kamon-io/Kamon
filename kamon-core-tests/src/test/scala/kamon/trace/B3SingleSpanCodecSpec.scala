@@ -88,72 +88,52 @@ class B3SingleSpanCodecSpec extends WordSpecLike with Matchers with OptionValues
       extendedB3Codec.encode(notSampledSpanContext).get("B3").value shouldBe "1234-4321-0-2222"
       extendedB3Codec.encode(unknownSamplingSpanContext).get("B3").value shouldBe "1234-4321-2222"
     }
-//
-//    "use the Debug flag to override the sampling decision, if provided." in {
-//      val textMap = TextMap.Default()
-//      textMap.put("X-B3-TraceId", "1234")
-//      textMap.put("X-B3-SpanId", "4321")
-//      textMap.put("X-B3-Sampled", "0")
-//      textMap.put("X-B3-Flags", "1")
-//
-//      val spanContext = extendedB3Codec.decode(textMap, Context.Empty).get(Span.ContextKey).context()
-//      spanContext.samplingDecision shouldBe SamplingDecision.Sample
-//    }
-//
-//    "use the Debug flag as sampling decision when Sampled is not provided" in {
-//      val textMap = TextMap.Default()
-//      textMap.put("X-B3-TraceId", "1234")
-//      textMap.put("X-B3-SpanId", "4321")
-//      textMap.put("X-B3-Flags", "1")
-//
-//      val spanContext = extendedB3Codec.decode(textMap, Context.Empty).get(Span.ContextKey).context()
-//      spanContext.samplingDecision shouldBe SamplingDecision.Sample
-//    }
-//
-//    "extract a minimal SpanContext from a TextMap containing only the Trace ID and Span ID" in {
-//      val textMap = TextMap.Default()
-//      textMap.put("X-B3-TraceId", "1234")
-//      textMap.put("X-B3-SpanId", "4321")
-//
-//      val spanContext = extendedB3Codec.decode(textMap, Context.Empty).get(Span.ContextKey).context()
-//      spanContext.traceID.string shouldBe "1234"
-//      spanContext.spanID.string shouldBe "4321"
-//      spanContext.parentID shouldBe IdentityProvider.NoIdentifier
-//      spanContext.samplingDecision shouldBe SamplingDecision.Unknown
-//    }
-//
-//    "do not extract a SpanContext if Trace ID and Span ID are not provided" in {
-//      val onlyTraceID = TextMap.Default()
-//      onlyTraceID.put("X-B3-TraceId", "1234")
-//      onlyTraceID.put("X-B3-Sampled", "0")
-//      onlyTraceID.put("X-B3-Flags", "1")
-//
-//      val onlySpanID = TextMap.Default()
-//      onlySpanID.put("X-B3-SpanId", "4321")
-//      onlySpanID.put("X-B3-Sampled", "0")
-//      onlySpanID.put("X-B3-Flags", "1")
-//
-//      val noIds = TextMap.Default()
-//      noIds.put("X-B3-Sampled", "0")
-//      noIds.put("X-B3-Flags", "1")
-//
-//      extendedB3Codec.decode(onlyTraceID, Context.Empty).get(Span.ContextKey) shouldBe Span.Empty
-//      extendedB3Codec.decode(onlySpanID, Context.Empty).get(Span.ContextKey) shouldBe Span.Empty
-//      extendedB3Codec.decode(noIds, Context.Empty).get(Span.ContextKey) shouldBe Span.Empty
-//    }
-//
-//    "round trip a Span from TextMap -> Context -> TextMap" in {
-//      val textMap = TextMap.Default()
-//      textMap.put("X-B3-TraceId", "1234")
-//      textMap.put("X-B3-ParentSpanId", "2222")
-//      textMap.put("X-B3-SpanId", "4321")
-//      textMap.put("X-B3-Sampled", "1")
-//
-//      val context = extendedB3Codec.decode(textMap, Context.Empty)
-//      val injectTextMap = extendedB3Codec.encode(context)
-//
-//      textMap.values.toSeq should contain theSameElementsAs(injectTextMap.values.toSeq)
-//    }
+
+    "use the Debug flag to override the sampling decision, if provided." in {
+      val textMap = TextMap.Default()
+      textMap.put("B3", "1234-4321-0")
+      textMap.put("X-B3-Flags", "1")
+
+      val spanContext = extendedB3Codec.decode(textMap, Context.Empty).get(Span.ContextKey).context()
+      spanContext.samplingDecision shouldBe SamplingDecision.Sample
+    }
+
+    "use the Debug flag as sampling decision when Sampled is not provided" in {
+      val textMap = TextMap.Default()
+      textMap.put("B3", "1234-4321")
+      textMap.put("X-B3-Flags", "1")
+
+      val spanContext = extendedB3Codec.decode(textMap, Context.Empty).get(Span.ContextKey).context()
+      spanContext.samplingDecision shouldBe SamplingDecision.Sample
+    }
+
+    "extract a minimal SpanContext from a TextMap containing only the Trace ID and Span ID" in {
+      val textMap = TextMap.Default()
+      textMap.put("B3", "1234-4321")
+
+      val spanContext = extendedB3Codec.decode(textMap, Context.Empty).get(Span.ContextKey).context()
+      spanContext.traceID.string shouldBe "1234"
+      spanContext.spanID.string shouldBe "4321"
+      spanContext.parentID shouldBe IdentityProvider.NoIdentifier
+      spanContext.samplingDecision shouldBe SamplingDecision.Unknown
+    }
+
+    "do not extract a SpanContext if Trace ID and Span ID are not provided" in {
+      val onlyTraceID = TextMap.Default()
+      onlyTraceID.put("B3", "")
+
+      extendedB3Codec.decode(onlyTraceID, Context.Empty).get(Span.ContextKey) shouldBe Span.Empty
+    }
+
+    "round trip a Span from TextMap -> Context -> TextMap" in {
+      val textMap = TextMap.Default()
+      textMap.put("B3", "1234-4321-1-4321")
+
+      val context = extendedB3Codec.decode(textMap, Context.Empty)
+      val injectTextMap = extendedB3Codec.encode(context)
+
+      textMap.values.toSeq should contain theSameElementsAs injectTextMap.values.toSeq
+    }
 
     /*
     // TODO: Should we be supporting this use case? maybe even have the concept of Debug requests ourselves?

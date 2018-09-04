@@ -61,27 +61,29 @@ object SpanCodec {
       carrier.get(Header.B3).map { header =>
         val identityProvider = Kamon.tracer.identityProvider
 
-        val (traceID, spanID, samplingDecision, parentSpanID) = header.splitToTuple("-")
+        val (trace, span, sample, parentSpan) = header.splitToTuple("-")
 
-        val ti =traceID
-          .map(id => identityProvider.traceIdGenerator().from(urlDecode(id)))
+        val traceID = trace.map(id => identityProvider.traceIdGenerator().from(urlDecode(id)))
           .getOrElse(IdentityProvider.NoIdentifier)
 
-        val si = spanID
-          .map(id => identityProvider.spanIdGenerator().from(urlDecode(id)))
+        val spanID = span.map(id => identityProvider.spanIdGenerator().from(urlDecode(id)))
           .getOrElse(IdentityProvider.NoIdentifier)
 
-        if (ti != IdentityProvider.NoIdentifier && si != IdentityProvider.NoIdentifier) {
-          val parentID = parentSpanID
+        if (traceID != IdentityProvider.NoIdentifier && spanID != IdentityProvider.NoIdentifier) {
+          val parentID = parentSpan
             .map(id => identityProvider.spanIdGenerator().from(urlDecode(id)))
             .getOrElse(IdentityProvider.NoIdentifier)
 
-          val sd = samplingDecision match {
+          val flags = carrier.get(Header.Flags)
+
+          val samplingDecision = flags.orElse(sample)  match {
             case Some(sampled) if sampled == "1" => SamplingDecision.Sample
             case Some(sampled) if sampled == "0" => SamplingDecision.DoNotSample
             case _ => SamplingDecision.Unknown
           }
-          context.withKey(Span.ContextKey, Span.Remote(SpanContext(ti, si, parentID, sd)))
+
+          context.withKey(Span.ContextKey, Span.Remote(SpanContext(traceID, spanID, parentID, samplingDecision)))
+
         } else context
       }.getOrElse(context)
     }
@@ -99,6 +101,7 @@ object SpanCodec {
   object B3Single {
     object Header {
       val B3 = "B3"
+      val Flags = "X-B3-Flags"
     }
 
     implicit class Syntax(val s: String) extends AnyVal {
@@ -107,6 +110,7 @@ object SpanCodec {
           case Array(str1, str2, str3, str4) => (Option(str1), Option(str2), Option(str3), Option(str4))
           case Array(str1, str2, str3) => (Option(str1), Option(str2), Option(str3), None)
           case Array(str1, str2) => (Option(str1), Option(str2), None, None)
+          case Array(str1) => (Option(str1), None, None, None)
         }
       }
     }
