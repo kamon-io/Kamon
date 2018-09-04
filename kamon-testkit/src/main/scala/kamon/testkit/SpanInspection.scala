@@ -52,13 +52,14 @@ object SpanInspection {
     def spanTags(): Map[String, Span.TagValue] =
       spanData.tags
 
-    def tag(key: String): Option[String] =
+    def tag(key: String): Option[String] = {
       spanTag(key).map {
         case TagValue.String(string) => string
         case TagValue.Number(number) => number.toString
         case TagValue.True => "true"
         case TagValue.False => "false"
       }
+    }
 
     def metricTags(): Map[String, String] =
       getField[Span.Local, Map[String, String]](realSpan, "customMetricTags")
@@ -74,6 +75,9 @@ object SpanInspection {
 
     def operationName(): String =
       spanData.operationName
+
+    def hasMetricsEnabled(): Boolean =
+      getField[Span.Local, Boolean](realSpan, "collectMetrics")
 
 
     private def getField[T, R](target: Any, fieldName: String)(implicit classTag: ClassTag[T]): R = {
