@@ -19,12 +19,103 @@ import java.net.{URLDecoder, URLEncoder}
 import java.nio.ByteBuffer
 
 import kamon.Kamon
-import kamon.context.{Codecs, Context, TextMap}
 import kamon.context.generated.binary.span.{Span => ColferSpan}
+import kamon.context.{Codecs, Context, TextMap}
 import kamon.trace.SpanContext.SamplingDecision
 
 
 object SpanCodec {
+
+  class B3Single extends Codecs.ForEntry[TextMap] {
+    import B3Single.Header
+
+    override def encode(context: Context): TextMap = {
+      val span = context.get(Span.ContextKey)
+      val carrier = TextMap.Default()
+
+      // * b3: {x-b3-traceid}-{x-b3-spanid}-{if x-b3-flags 'd' else x-b3-sampled}-{x-b3-parentspanid}
+
+      if(span.nonEmpty()) {
+        val buffer = new StringBuffer()
+        val spanContext = span.context()
+
+        val traceId = urlEncode(spanContext.traceID.string)
+        val spanId = urlEncode(spanContext.spanID.string)
+
+        buffer.append(traceId).append("-").append(spanId)
+
+        encodeSamplingDecision(spanContext.samplingDecision)
+          .foreach(samplingDecision => buffer.append("-").append(samplingDecision))
+
+        if(spanContext.parentID != IdentityProvider.NoIdentifier)
+          buffer.append("-").append(urlEncode(spanContext.parentID.string))
+
+        carrier.put(Header.B3, buffer.toString)
+      }
+      carrier
+    }
+
+    override def decode(carrier: TextMap, context: Context): Context = {
+      import B3Single.Syntax
+
+      carrier.get(Header.B3).map { header =>
+        val identityProvider = Kamon.tracer.identityProvider
+
+        val (traceID, spanID, samplingDecision, parentSpanID) = header.splitToTuple("-")
+
+        val ti =traceID
+          .map(id => identityProvider.traceIdGenerator().from(urlDecode(id)))
+          .getOrElse(IdentityProvider.NoIdentifier)
+
+        val si = spanID
+          .map(id => identityProvider.spanIdGenerator().from(urlDecode(id)))
+          .getOrElse(IdentityProvider.NoIdentifier)
+
+        if (ti != IdentityProvider.NoIdentifier && si != IdentityProvider.NoIdentifier) {
+          val parentID = parentSpanID
+            .map(id => identityProvider.spanIdGenerator().from(urlDecode(id)))
+            .getOrElse(IdentityProvider.NoIdentifier)
+
+          val sd = samplingDecision match {
+            case Some(sampled) if sampled == "1" => SamplingDecision.Sample
+            case Some(sampled) if sampled == "0" => SamplingDecision.DoNotSample
+            case _ => SamplingDecision.Unknown
+          }
+          context.withKey(Span.ContextKey, Span.Remote(SpanContext(ti, si, parentID, sd)))
+        } else context
+      }.getOrElse(context)
+    }
+
+    private def encodeSamplingDecision(samplingDecision: SamplingDecision): Option[String] = samplingDecision match {
+      case SamplingDecision.Sample      => Some("1")
+      case SamplingDecision.DoNotSample => Some("0")
+      case SamplingDecision.Unknown     => None
+    }
+
+    private def urlEncode(s: String): String = URLEncoder.encode(s, "UTF-8")
+    private def urlDecode(s: String): String = URLDecoder.decode(s, "UTF-8")
+  }
+
+  object B3Single {
+    object Header {
+      val B3 = "B3"
+    }
+
+    implicit class Syntax(val s: String) extends AnyVal {
+      def splitToTuple(regex: String): (Option[String], Option[String], Option[String], Option[String]) = {
+        s.split(regex) match {
+          case Array(str1, str2, str3, str4) => (Option(str1), Option(str2), Option(str3), Option(str4))
+          case Array(str1, str2, str3) => (Option(str1), Option(str2), Option(str3), None)
+          case Array(str1, str2) => (Option(str1), Option(str2), None, None)
+        }
+      }
+    }
+
+    def apply(): B3Single =
+      new B3Single()
+  }
+
+
 
   class B3 extends Codecs.ForEntry[TextMap] {
     import B3.Headers
