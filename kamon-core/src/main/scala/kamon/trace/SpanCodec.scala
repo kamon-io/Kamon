@@ -26,14 +26,22 @@ import kamon.trace.SpanContext.SamplingDecision
 
 object SpanCodec {
 
+  /**
+    * This format corresponds to the propagation key "b3" (or "B3"), which delimits fields in the
+    * following manner.
+    *
+    * <pre>{@code
+    * b3: {x-b3-traceid}-{x-b3-spanid}-{if x-b3-flags 'd' else x-b3-sampled}-{x-b3-parentspanid}
+    * }</pre>
+    *
+    * <p>See <a href="https://github.com/openzipkin/b3-propagation">B3 Propagation</a>
+    */
   class B3Single extends Codecs.ForEntry[TextMap] {
-    import B3Single.Header
+    import B3Single.{Header, Syntax}
 
     override def encode(context: Context): TextMap = {
       val span = context.get(Span.ContextKey)
       val carrier = TextMap.Default()
-
-      // * b3: {x-b3-traceid}-{x-b3-spanid}-{if x-b3-flags 'd' else x-b3-sampled}-{x-b3-parentspanid}
 
       if(span.nonEmpty()) {
         val buffer = new StringBuffer()
@@ -55,18 +63,18 @@ object SpanCodec {
       carrier
     }
 
-    override def decode(carrier: TextMap, context: Context): Context = {
-      import B3Single.Syntax
-
+    override def decode(carrier: TextMap, context: Context): Context =
       carrier.get(Header.B3).map { header =>
         val identityProvider = Kamon.tracer.identityProvider
 
         val (trace, span, sample, parentSpan) = header.splitToTuple("-")
 
-        val traceID = trace.map(id => identityProvider.traceIdGenerator().from(urlDecode(id)))
+        val traceID = trace
+          .map(id => identityProvider.traceIdGenerator().from(urlDecode(id)))
           .getOrElse(IdentityProvider.NoIdentifier)
 
-        val spanID = span.map(id => identityProvider.spanIdGenerator().from(urlDecode(id)))
+        val spanID = span
+          .map(id => identityProvider.spanIdGenerator().from(urlDecode(id)))
           .getOrElse(IdentityProvider.NoIdentifier)
 
         if (traceID != IdentityProvider.NoIdentifier && spanID != IdentityProvider.NoIdentifier) {
@@ -74,34 +82,29 @@ object SpanCodec {
             .map(id => identityProvider.spanIdGenerator().from(urlDecode(id)))
             .getOrElse(IdentityProvider.NoIdentifier)
 
-          val flags = carrier.get(Header.Flags)
-
-          val samplingDecision = flags.orElse(sample)  match {
-            case Some(sampled) if sampled == "1" => SamplingDecision.Sample
+          val samplingDecision = sample match {
+            case Some(sampled) if sampled == "1" || sampled == "d" => SamplingDecision.Sample
             case Some(sampled) if sampled == "0" => SamplingDecision.DoNotSample
             case _ => SamplingDecision.Unknown
           }
 
           context.withKey(Span.ContextKey, Span.Remote(SpanContext(traceID, spanID, parentID, samplingDecision)))
-
         } else context
       }.getOrElse(context)
-    }
 
-    private def encodeSamplingDecision(samplingDecision: SamplingDecision): Option[String] = samplingDecision match {
+    private def encodeSamplingDecision(samplingDecision: SamplingDecision) = samplingDecision match {
       case SamplingDecision.Sample      => Some("1")
       case SamplingDecision.DoNotSample => Some("0")
       case SamplingDecision.Unknown     => None
     }
 
-    private def urlEncode(s: String): String = URLEncoder.encode(s, "UTF-8")
-    private def urlDecode(s: String): String = URLDecoder.decode(s, "UTF-8")
+    private def urlEncode(s: String) = URLEncoder.encode(s, "UTF-8")
+    private def urlDecode(s: String) = URLDecoder.decode(s, "UTF-8")
   }
 
   object B3Single {
     object Header {
       val B3 = "B3"
-      val Flags = "X-B3-Flags"
     }
 
     implicit class Syntax(val s: String) extends AnyVal {
@@ -118,8 +121,6 @@ object SpanCodec {
     def apply(): B3Single =
       new B3Single()
   }
-
-
 
   class B3 extends Codecs.ForEntry[TextMap] {
     import B3.Headers

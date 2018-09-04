@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * Copyright © 2013-2017 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2018   the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -91,8 +91,7 @@ class B3SingleSpanCodecSpec extends WordSpecLike with Matchers with OptionValues
 
     "use the Debug flag to override the sampling decision, if provided." in {
       val textMap = TextMap.Default()
-      textMap.put("B3", "1234-4321-0")
-      textMap.put("X-B3-Flags", "1")
+      textMap.put("B3", "1234-4321-d")
 
       val spanContext = extendedB3Codec.decode(textMap, Context.Empty).get(Span.ContextKey).context()
       spanContext.samplingDecision shouldBe SamplingDecision.Sample
@@ -100,8 +99,7 @@ class B3SingleSpanCodecSpec extends WordSpecLike with Matchers with OptionValues
 
     "use the Debug flag as sampling decision when Sampled is not provided" in {
       val textMap = TextMap.Default()
-      textMap.put("B3", "1234-4321")
-      textMap.put("X-B3-Flags", "1")
+      textMap.put("B3", "1234-4321-d")
 
       val spanContext = extendedB3Codec.decode(textMap, Context.Empty).get(Span.ContextKey).context()
       spanContext.samplingDecision shouldBe SamplingDecision.Sample
