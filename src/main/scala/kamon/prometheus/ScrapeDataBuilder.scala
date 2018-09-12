@@ -162,7 +162,7 @@ class ScrapeDataBuilder(prometheusConfig: PrometheusReporter.Configuration, envi
   }
 
   private def normalizeMetricName(metricName: String, unit: MeasurementUnit): String = {
-    val normalizedMetricName = metricName.map(charOrUnderscore)
+    val normalizedMetricName = metricName.map(validNameChar)
 
     unit.dimension match  {
       case Time         => normalizedMetricName + "_seconds"
@@ -172,10 +172,13 @@ class ScrapeDataBuilder(prometheusConfig: PrometheusReporter.Configuration, envi
   }
 
   private def normalizeLabelName(label: String): String =
-    label.map(charOrUnderscore)
+    label.map(validLabelChar)
 
-  private def charOrUnderscore(char: Char): Char =
+  private def validLabelChar(char: Char): Char =
     if(char.isLetterOrDigit || char == '_') char else '_'
+
+  private def validNameChar(char: Char): Char =
+    if(char.isLetterOrDigit || char == '_' || char == ':') char else '_'
 
   private def format(value: Double): String =
     numberFormat.format(value)
