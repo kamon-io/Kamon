@@ -50,8 +50,9 @@ class PrometheusReporter extends MetricReporter {
 
   override def reconfigure(newConfig: Config): Unit = {
     val config = readConfiguration(newConfig)
+
+    stopEmbeddedServer()
     if(config.startEmbeddedServer) {
-      stopEmbeddedServer()
       startEmbeddedServer(config)
     }
   }
