@@ -4,6 +4,7 @@
   <aspects>
     <!-- Akka Http Server -->
     <aspect name="kamon.akka.http.instrumentation.ServerRequestInstrumentation"/>
+    <aspect name="kamon.akka.http.instrumentation.MatchingContextIntoRequestContext"/>
 
     <!-- Akka Http Client -->
     <aspect name="akka.http.impl.engine.client.ClientRequestInstrumentation"/>

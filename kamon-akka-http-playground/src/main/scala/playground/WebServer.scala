@@ -38,7 +38,6 @@ object WebServer extends App {
   implicit val materializer = ActorMaterializer()
 
   val logger = Logging(system, getClass)
-
   val routes = { // logRequestResult("akka-http-with-kamon") {
     get {
       path("ok") {

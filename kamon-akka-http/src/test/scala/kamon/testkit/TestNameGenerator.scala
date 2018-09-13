@@ -22,7 +22,6 @@ import kamon.akka.http.AkkaHttp.OperationNameGenerator
 class TestNameGenerator extends OperationNameGenerator {
   def serverOperationName(request: HttpRequest): String = {
     val path = request.uri.path.toString()
-
     // turns "/dummy-path" into "dummy"
     path.substring(1).split("-")(0)
   }
