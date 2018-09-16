@@ -1,12 +1,13 @@
 package kamon.instrumentation
 
 import kamon.context.Context
-import kamon.testkit.SpanInspection
+import kamon.metric.Counter
+import kamon.testkit.{MetricInspection, SpanInspection}
 import org.scalatest.{Matchers, OptionValues, WordSpec}
 
 import scala.collection.mutable
 
-class HttpServerInstrumentationSpec extends WordSpec with Matchers with SpanInspection with OptionValues {
+class HttpServerInstrumentationSpec extends WordSpec with Matchers with SpanInspection with OptionValues with MetricInspection {
 
   "the HTTP server instrumentation" when {
     "configured for context propagation" should {
@@ -73,7 +74,7 @@ class HttpServerInstrumentationSpec extends WordSpec with Matchers with SpanInsp
       }
 
       "not record span metrics when disabled" in {
-        val handler = HttpServer.from("no-span-metrics", port = 8081, "http.server")
+        val handler = noSpanMetricsHttpServer()
           .receive(fakeRequest("http://localhost:8080/", "/", "GET", Map.empty))
         handler.send(fakeResponse(200, mutable.Map.empty), handler.context)
 
@@ -94,7 +95,7 @@ class HttpServerInstrumentationSpec extends WordSpec with Matchers with SpanInsp
 
     "all capabilities are disabled" should {
       "not read any context from the incoming requests" in {
-        val httpServer = HttpServer.from("noop", port = 8081, "http.server")
+        val httpServer = noopHttpServer()
         val handler = httpServer.receive(fakeRequest("http://localhost:8080/", "/", "GET", Map(
           "context-tags" -> "tag=value;none=0011223344556677;",
           "custom-trace-id" -> "0011223344556677"
@@ -104,7 +105,7 @@ class HttpServerInstrumentationSpec extends WordSpec with Matchers with SpanInsp
       }
 
       "not create any span to represent the server request" in {
-        val httpServer = HttpServer.from("noop", port = 8081, "http.server")
+        val httpServer = noopHttpServer()
         val handler = httpServer.receive(fakeRequest("http://localhost:8080/", "/", "GET", Map(
           "context-tags" -> "tag=value;none=0011223344556677;",
           "custom-trace-id" -> "0011223344556677"
@@ -113,12 +114,29 @@ class HttpServerInstrumentationSpec extends WordSpec with Matchers with SpanInsp
         handler.span.isEmpty() shouldBe true
       }
 
-      "not record any HTTP server metrics" is (pending)
+      "not record any HTTP server metrics" in {
+        val request = fakeRequest("http://localhost:8080/", "/", "GET", Map.empty)
+        noopHttpServer().receive(request).send(fakeResponse(200, mutable.Map.empty), Context.Empty)
+        noopHttpServer().receive(request).send(fakeResponse(302, mutable.Map.empty), Context.Empty)
+        noopHttpServer().receive(request).send(fakeResponse(404, mutable.Map.empty), Context.Empty)
+        noopHttpServer().receive(request).send(fakeResponse(504, mutable.Map.empty), Context.Empty)
+        noopHttpServer().receive(request).send(fakeResponse(110, mutable.Map.empty), Context.Empty)
+
+        completedRequests(8083, 100).value() shouldBe 0L
+        completedRequests(8083, 200).value() shouldBe 0L
+        completedRequests(8083, 300).value() shouldBe 0L
+        completedRequests(8083, 400).value() shouldBe 0L
+        completedRequests(8083, 500).value() shouldBe 0L
+      }
     }
   }
 
-  def httpServer(): HttpServer = HttpServer.from("default", port = 8081, "http.server")
-  def noopHttpServer(): HttpServer = HttpServer.from("noop", port = 8081, "http.server")
+  val TestComponent = "http.server"
+  val TestInterface = "0.0.0.0"
+
+  def httpServer(): HttpServer = HttpServer.from("default", component = TestComponent, interface = TestInterface, port = 8081)
+  def noSpanMetricsHttpServer(): HttpServer = HttpServer.from("no-span-metrics", component = TestComponent, interface = TestInterface, port = 8082)
+  def noopHttpServer(): HttpServer = HttpServer.from("noop", component = TestComponent, interface = TestInterface, port = 8083)
 
   def fakeRequest(requestUrl: String, requestPath: String, requestMethod: String, headers: Map[String, String]): HttpRequest =
     new HttpRequest {
@@ -134,4 +152,17 @@ class HttpServerInstrumentationSpec extends WordSpec with Matchers with SpanInsp
       override def writeHeader(header: String, value: String): Unit = headers.put(header, value)
       override def build(): HttpResponse = this
     }
+
+  def completedRequests(port: Int, statusCode: Int): Counter = {
+    val metrics = HttpServer.Metrics.of(TestComponent, TestInterface, port)
+
+    statusCode match {
+      case sc if sc >= 100 && sc <= 199 => metrics.requestsInformational
+      case sc if sc >= 200 && sc <= 299 => metrics.requestsSuccessful
+      case sc if sc >= 300 && sc <= 399 => metrics.requestsRedirection
+      case sc if sc >= 400 && sc <= 499 => metrics.requestsClientError
+      case sc if sc >= 500 && sc <= 599 => metrics.requestsServerError
+    }
+  }
+
 }

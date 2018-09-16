@@ -58,7 +58,7 @@ object SpanInspection {
         case TagValue.Number(number) => number.toString
         case TagValue.True => "true"
         case TagValue.False => "false"
-      }
+      } orElse(metricTag(key))
     }
 
     def metricTags(): Map[String, String] =
