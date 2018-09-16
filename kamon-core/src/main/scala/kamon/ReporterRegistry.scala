@@ -195,12 +195,13 @@ object ReporterRegistry {
     }
 
     private[kamon] def reconfigure(config: Config): Unit = synchronized {
-      val newConfig = readRegistryConfiguration(config)
+      val oldConfig = registryConfiguration
+      registryConfiguration = readRegistryConfiguration(config)
 
-      if(newConfig.metricTickInterval != registryConfiguration.metricTickInterval && metricReporters.nonEmpty)
+      if(oldConfig.metricTickInterval != registryConfiguration.metricTickInterval && metricReporters.nonEmpty)
         reStartMetricTicker()
 
-      if(newConfig.traceTickInterval != registryConfiguration.traceTickInterval && spanReporters.nonEmpty)
+      if(oldConfig.traceTickInterval != registryConfiguration.traceTickInterval && spanReporters.nonEmpty)
         reStartTraceTicker()
 
       // Reconfigure all registered reporters
@@ -224,8 +225,6 @@ object ReporterRegistry {
             }
           }(entry.executionContext)
       }
-
-      registryConfiguration = newConfig
     }
 
 
