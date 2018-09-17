@@ -309,6 +309,7 @@ object HttpServer {
 
         override def doneSending(sentBytes: Long): Unit = {
           _metrics.foreach { httpServerMetrics =>
+            httpServerMetrics.activeRequests.decrement()
             httpServerMetrics.responseSize.record(sentBytes)
           }
 
