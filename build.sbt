@@ -20,10 +20,10 @@ lazy val kamon = (project in file("."))
   .aggregate(core, testkit, coreTests)
 
 val commonSettings = Seq(
-  scalaVersion := "2.12.4",
+  scalaVersion := "2.12.6",
   javacOptions += "-XDignore.symbol.file",
   resolvers += Resolver.mavenLocal,
-  crossScalaVersions := Seq("2.12.4", "2.11.8", "2.10.6"),
+  crossScalaVersions := Seq("2.12.6", "2.11.8", "2.10.6"),
   concurrentRestrictions in Global += Tags.limit(Tags.Test, 1),
   scalacOptions ++= Seq(
     "-deprecation",
