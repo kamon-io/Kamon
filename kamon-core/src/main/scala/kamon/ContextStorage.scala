@@ -3,6 +3,8 @@ package kamon
 import kamon.context.{Context, Storage}
 import kamon.trace.Span
 
+import scala.util.control.NonFatal
+
 trait ContextStorage {
   private val _contextStorage = Storage.ThreadLocal()
 
@@ -34,7 +36,7 @@ trait ContextStorage {
     try {
       withContextKey(Span.ContextKey, span)(f)
     } catch {
-      case t: Throwable =>
+      case NonFatal(t) =>
         span.addError(t.getMessage, t)
         throw t
 

@@ -5,6 +5,7 @@ import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
 
 import scala.reflect.ClassTag
+import scala.util.control.NonFatal
 import scala.util.{Failure, Success}
 
 /**
@@ -145,7 +146,7 @@ object HttpPropagation {
           })
         }
       } catch {
-        case t: Throwable => log.warn("Failed to read the context tags header", t.asInstanceOf[Any])
+        case NonFatal(t) => log.warn("Failed to read the context tags header", t.asInstanceOf[Any])
       }
 
       // Tags explicitly mapped on the tags.mappings configuration.
@@ -154,7 +155,7 @@ object HttpPropagation {
           try {
             reader.readHeader(httpHeader).foreach(tagValue => tags += (tagName -> tagValue))
           } catch {
-            case t: Throwable => log.warn("Failed to read mapped tag [{}]", tagName, t.asInstanceOf[Any])
+            case NonFatal(t) => log.warn("Failed to read mapped tag [{}]", tagName, t.asInstanceOf[Any])
           }
       }
 
@@ -165,7 +166,7 @@ object HttpPropagation {
           try {
             result = entryDecoder.readEntry(reader, context)
           } catch {
-            case t: Throwable => log.warn("Failed to read entry [{}]", entryName.asInstanceOf[Any], t.asInstanceOf[Any])
+            case NonFatal(t) => log.warn("Failed to read entry [{}]", entryName.asInstanceOf[Any], t.asInstanceOf[Any])
           }
 
           result
@@ -209,7 +210,7 @@ object HttpPropagation {
           try {
             entryWriter.writeEntry(context, writer, direction)
           } catch {
-            case t: Throwable => log.warn("Failed to write entry [{}] due to: {}", entryName.asInstanceOf[Any], t.asInstanceOf[Any])
+            case NonFatal(t) => log.warn("Failed to write entry [{}] due to: {}", entryName.asInstanceOf[Any], t.asInstanceOf[Any])
           }
       }
     }
