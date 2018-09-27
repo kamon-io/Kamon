@@ -1,5 +1,5 @@
 /* =========================================================================================
- * Copyright © 2013-2017 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2018 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -14,8 +14,6 @@
  */
 
 package kamon.context
-
-import kamon.context.Storage.ThreadLocal.ContextHolder
 
 trait Storage {
   def current(): Context
@@ -33,41 +31,37 @@ object Storage {
     * Wrapper that implements optimized {@link ThreadLocal} access pattern ideal for heavily used
     * ThreadLocals.
     *
-    * It is faster to use a mutable holder object and always perform ThreadLocal.get() and never use
+    * <p> It is faster to use a mutable holder object and always perform ThreadLocal.get() and never use
     * ThreadLocal.set(), because the value is more likely to be found in the ThreadLocalMap direct hash
     * slot and avoid the slow path ThreadLocalMap.getEntryAfterMiss().
     *
-    * Important: this thread local will live in ThreadLocalMap forever, so use with care.
-    */
+    * <p> Credit to @trask from the FastThreadLocal in glowroot.
+    *
+    * <p> One small change is that we don't use an kamon-defined holder object as that would prevent class unloading.
+    *
+    * */
   class ThreadLocal extends Storage {
-    private val tls = new java.lang.ThreadLocal[ContextHolder]() {
-      override def initialValue() = new ContextHolder(Context.Empty)
+    private val tls = new java.lang.ThreadLocal[Array[AnyRef]]() {
+      override def initialValue(): Array[AnyRef] =
+        Array(Context.Empty)
     }
 
     override def current(): Context =
-      get()
+      tls.get()(0).asInstanceOf[Context]
 
-    override def store(context: Context): Scope = {
-      val newContext = context
-      val previousContext = get()
-      set(newContext)
+    override def store(newContext: Context): Scope = {
+      val ref = tls.get()
+      val previousContext = ref(0)
+      ref(0) = newContext
 
       new Scope {
         override def context: Context = newContext
-        override def close(): Unit = set(previousContext)
+        override def close(): Unit = ref(0) = previousContext
       }
     }
-
-    private def get():Context =
-      tls.get().value
-
-    private def set(value:Context) : Unit =
-      tls.get().value = value
   }
 
   object ThreadLocal {
     def apply(): ThreadLocal = new ThreadLocal()
-
-    final class ContextHolder(var value:Context)
   }
 }
