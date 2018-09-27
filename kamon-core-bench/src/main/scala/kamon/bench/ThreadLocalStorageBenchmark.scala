@@ -22,7 +22,7 @@ import kamon.context.Storage.Scope
 import kamon.context.{Context, Key, Storage}
 import org.openjdk.jmh.annotations._
 
-@State(Scope.Benchmark	)
+@State(Scope.Benchmark)
 class ThreadLocalStorageBenchmark {
 
   val TestKey: Key[Int] = Key.local("test-key", 0)
