@@ -80,7 +80,7 @@ class HttpPropagationSpec extends WordSpec with Matchers with OptionValues {
         val headers = mutable.Map.empty[String, String]
         val context = Context.of(
           HttpPropagationSpec.StringKey, "out-we-go",
-          HttpPropagationSpec.IntegerKey, 42,
+          HttpPropagationSpec.IntegerKey, 42
         )
 
         httpPropagation.write(context, headerWriterFromMap(headers))
@@ -90,8 +90,6 @@ class HttpPropagationSpec extends WordSpec with Matchers with OptionValues {
       }
     }
   }
-
-
 
 
   val httpPropagation = HttpPropagation.from(
