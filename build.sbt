@@ -80,7 +80,6 @@ lazy val coreBench = (project in file("kamon-core-bench"))
   .enablePlugins(JmhPlugin)
   .settings(
     moduleName := "kamon-core-bench",
-    resolvers += Resolver.mavenLocal,
     fork in Test := true)
   .settings(noPublishing: _*)
   .settings(commonSettings: _*)

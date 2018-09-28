@@ -26,7 +26,7 @@ import org.openjdk.jmh.annotations._
 class ThreadLocalStorageBenchmark {
 
   val TestKey: Key[Int] = Key.local("test-key", 0)
-  val ScopeWithKey: Context = Context.create().withKey(TestKey, 43)
+  val ContextWithKey: Context = Context.create().withKey(TestKey, 43)
 
   val TLS: Storage =  new OldThreadLocal
   val FTLS: Storage =  new Storage.ThreadLocal
@@ -37,7 +37,7 @@ class ThreadLocalStorageBenchmark {
   @OutputTimeUnit(TimeUnit.NANOSECONDS)
   @Fork
   def currentThreadLocal: Context = {
-    val scope = TLS.store(ScopeWithKey)
+    val scope = TLS.store(ContextWithKey)
     TLS.current()
     scope.close()
     TLS.current()
@@ -48,7 +48,7 @@ class ThreadLocalStorageBenchmark {
   @OutputTimeUnit(TimeUnit.NANOSECONDS)
   @Fork
   def fastThreadLocal: Context = {
-    val scope = FTLS.store(ScopeWithKey)
+    val scope = FTLS.store(ContextWithKey)
     FTLS.current()
     scope.close()
     FTLS.current()
