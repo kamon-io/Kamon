@@ -25,8 +25,8 @@ import org.scalatest.{Matchers, OptionValues, WordSpecLike}
 import scala.collection.mutable
 
 
-class B3SpanCodecSpec extends WordSpecLike with Matchers with OptionValues with SpanBuilding {
-  val b3Propagation = SpanCodec.B3()
+class B3SpanPropagationSpec extends WordSpecLike with Matchers with OptionValues with SpanBuilding {
+  val b3Propagation = SpanPropagation.B3()
 
   "The B3 Span propagation for HTTP" should {
     "write the Span data into headers" in {
@@ -61,7 +61,7 @@ class B3SpanCodecSpec extends WordSpecLike with Matchers with OptionValues with 
         "X-B3-ParentSpanId" -> "2222",
         "X-B3-SpanId" -> "4321",
         "X-B3-Sampled" -> "1",
-        "X-B3-Extra-Baggage" -> "some=baggage;more=baggage",
+        "X-B3-Extra-Baggage" -> "some=baggage;more=baggage"
       )
 
       val spanContext = b3Propagation.read(headerReaderFromMap(headersMap), Context.Empty).get(Span.ContextKey).context()

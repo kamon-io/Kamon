@@ -26,8 +26,15 @@ import kamon.context.HttpPropagation.{HeaderReader, HeaderWriter}
 import kamon.trace.SpanContext.SamplingDecision
 
 
-object SpanCodec {
+/**
+  * Propagation mechanisms for Kamon's Span data to and from HTTP and Binary mediums.
+  */
+object SpanPropagation {
 
+  /**
+    * Reads and Writes a Span instance using the B3 propagation format. The specification and semantics of the B3
+    * Propagation protocol can be found here: https://github.com/openzipkin/b3-propagation
+    */
   class B3 extends Propagation.EntryReader[HeaderReader] with Propagation.EntryWriter[HeaderWriter] {
     import B3.Headers
 
@@ -102,6 +109,18 @@ object SpanCodec {
   }
 
 
+  /**
+    * Defines a bare bones binary context propagation that uses Colfer [1] as the serialization library. The Schema
+    * for the Span data is simply defined as:
+    *
+    * type Span struct {
+    *   traceID binary
+    *   spanID binary
+    *   parentID binary
+    *   samplingDecision uint8
+    * }
+    *
+    */
   class Colfer extends Propagation.EntryReader[ByteStreamReader] with Propagation.EntryWriter[ByteStreamWriter] {
     val emptyBuffer = ByteBuffer.allocate(0)
 
