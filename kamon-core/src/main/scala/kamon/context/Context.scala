@@ -1,5 +1,5 @@
 /* =========================================================================================
- * Copyright © 2013-2017 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2018 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -19,16 +19,16 @@ package context
 import java.util.{Map => JavaMap}
 import scala.collection.JavaConverters._
 
-class Context private (private[context] val entries: Map[Context.Key[_], Any], val tags: Map[String, String]) {
+class Context private (val entries: Map[String, Any], val tags: Map[String, String]) {
 
   def get[T](key: Context.Key[T]): T =
-    entries.getOrElse(key, key.emptyValue).asInstanceOf[T]
+    entries.getOrElse(key.name, key.emptyValue).asInstanceOf[T]
 
   def getTag(tagKey: String): Option[String] =
     tags.get(tagKey)
 
   def withKey[T](key: Context.Key[T], value: T): Context =
-    new Context(entries.updated(key, value), tags)
+    new Context(entries.updated(key.name, value), tags)
 
   def withTag(tagKey: String, tagValue: String): Context =
     new Context(entries, tags.updated(tagKey, tagValue))
@@ -39,6 +39,11 @@ class Context private (private[context] val entries: Map[Context.Key[_], Any], v
   def withTags(tags: JavaMap[String, String]): Context =
     new Context(entries, this.tags ++ tags.asScala.toMap)
 
+  def isEmpty(): Boolean =
+    entries.isEmpty && tags.isEmpty
+
+  def nonEmpty(): Boolean =
+    !isEmpty()
 
 }
 
@@ -53,22 +58,22 @@ object Context {
     new Context(Map.empty, tags)
 
   def of[T](key: Context.Key[T], value: T): Context =
-    new Context(Map(key -> value), Map.empty)
+    new Context(Map(key.name -> value), Map.empty)
 
   def of[T](key: Context.Key[T], value: T, tags: JavaMap[String, String]): Context =
-    new Context(Map(key -> value), tags.asScala.toMap)
+    new Context(Map(key.name -> value), tags.asScala.toMap)
 
   def of[T](key: Context.Key[T], value: T, tags: Map[String, String]): Context =
-    new Context(Map(key -> value), tags)
+    new Context(Map(key.name -> value), tags)
 
   def of[T, U](keyOne: Context.Key[T], valueOne: T, keyTwo: Context.Key[U], valueTwo: U): Context =
-    new Context(Map(keyOne -> valueOne, keyTwo -> valueTwo), Map.empty)
+    new Context(Map(keyOne.name -> valueOne, keyTwo.name -> valueTwo), Map.empty)
 
   def of[T, U](keyOne: Context.Key[T], valueOne: T, keyTwo: Context.Key[U], valueTwo: U, tags: JavaMap[String, String]): Context =
-    new Context(Map(keyOne -> valueOne, keyTwo -> valueTwo), tags.asScala.toMap)
+    new Context(Map(keyOne.name -> valueOne, keyTwo.name -> valueTwo), tags.asScala.toMap)
 
   def of[T, U](keyOne: Context.Key[T], valueOne: T, keyTwo: Context.Key[U], valueTwo: U, tags: Map[String, String]): Context =
-    new Context(Map(keyOne -> valueOne, keyTwo -> valueTwo), tags)
+    new Context(Map(keyOne.name -> valueOne, keyTwo.name -> valueTwo), tags)
 
   def key[T](name: String, emptyValue: T): Context.Key[T] =
     new Context.Key(name, emptyValue)

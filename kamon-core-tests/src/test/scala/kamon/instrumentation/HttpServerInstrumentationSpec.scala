@@ -272,13 +272,14 @@ class HttpServerInstrumentationSpec extends WordSpec with Matchers with SpanInsp
       override def url: String = requestUrl
       override def path: String = requestPath
       override def method: String = requestMethod
-      override def readHeader(header: String): Option[String] = headers.get(header)
+      override def read(header: String): Option[String] = headers.get(header)
+      override def readAll(): Map[String, String] = headers
     }
 
   def fakeResponse(responseStatusCode: Int, headers: mutable.Map[String, String]): HttpResponse.Writable[HttpResponse] =
     new HttpResponse.Writable[HttpResponse] {
       override def statusCode: Int = responseStatusCode
-      override def writeHeader(header: String, value: String): Unit = headers.put(header, value)
+      override def write(header: String, value: String): Unit = headers.put(header, value)
       override def build(): HttpResponse = this
     }
 

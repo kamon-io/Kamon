@@ -19,7 +19,6 @@ import java.time.Duration
 import java.util.concurrent.{Executors, ScheduledExecutorService, ScheduledThreadPoolExecutor}
 
 import com.typesafe.config.{Config, ConfigFactory}
-import kamon.context.Codecs
 import kamon.metric._
 import kamon.trace._
 import kamon.util.{Clock, Filters, Matcher, Registration}
@@ -41,7 +40,6 @@ object Kamon extends MetricLookup with ClassLoading with Configuration with Repo
   private val _metrics = new MetricRegistry(_config, _scheduler)
   private val _reporterRegistry = new ReporterRegistry.Default(_metrics, _config, _clock)
   private val _tracer = Tracer.Default(Kamon, _reporterRegistry, _config, _clock)
-  private val _contextCodec = new Codecs(_config)
   //private var _onReconfigureHooks = Seq.empty[OnReconfigureHook]
 
   sys.addShutdownHook(() => _scheduler.shutdown())
@@ -56,7 +54,6 @@ object Kamon extends MetricLookup with ClassLoading with Configuration with Repo
     _metrics.reconfigure(config)
     _reporterRegistry.reconfigure(config)
     _tracer.reconfigure(config)
-    _contextCodec.reconfigure(config)
 
     _scheduler match {
       case stpe: ScheduledThreadPoolExecutor => stpe.setCorePoolSize(schedulerPoolSize(config))
@@ -90,11 +87,6 @@ object Kamon extends MetricLookup with ClassLoading with Configuration with Repo
 
   override def identityProvider: IdentityProvider =
     _tracer.identityProvider
-
-  def contextCodec(): Codecs =
-      _contextCodec
-
-
 
   override def loadReportersFromConfig(): Unit =
     _reporterRegistry.loadReportersFromConfig()

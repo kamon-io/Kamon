@@ -5,7 +5,6 @@ import java.time.Duration
 
 import com.typesafe.config.Config
 import kamon.context.Context
-import kamon.context.HttpPropagation.Direction
 import kamon.instrumentation.HttpServer.Settings.TagMode
 import kamon.metric.MeasurementUnit.{time, information}
 import kamon.trace.{IdentityProvider, Span}
@@ -259,7 +258,7 @@ object HttpServer {
     override def receive(request: HttpRequest): RequestHandler = {
 
       val incomingContext = if(settings.enableContextPropagation)
-        _propagation.readContext(request)
+        _propagation.read(request)
         else Context.Empty
 
       val requestSpan = if(settings.enableTracing)
@@ -296,7 +295,7 @@ object HttpServer {
           }
 
           if(settings.enableContextPropagation) {
-            _propagation.writeContext(context, response, Direction.Returning)
+            _propagation.write(context, response)
           }
 
           _metrics.foreach { httpServerMetrics =>

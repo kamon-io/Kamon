@@ -16,7 +16,7 @@
 
 package kamon.trace
 
-import kamon.context.{Context, TextMap}
+import kamon.context.{Context}
 import kamon.testkit.SpanBuilding
 import kamon.trace.IdentityProvider.Identifier
 import kamon.trace.SpanContext.SamplingDecision
