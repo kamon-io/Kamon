@@ -122,7 +122,6 @@ object SpanPropagation {
     *
     */
   class Colfer extends Propagation.EntryReader[ByteStreamReader] with Propagation.EntryWriter[ByteStreamWriter] {
-    val emptyBuffer = ByteBuffer.allocate(0)
 
     override def read(medium: ByteStreamReader, context: Context): Context = {
       if(medium.available() == 0)
