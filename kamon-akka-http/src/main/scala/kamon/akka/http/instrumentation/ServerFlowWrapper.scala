@@ -16,6 +16,8 @@
 
 package kamon.akka.http.instrumentation
 
+import scala.collection.immutable.TreeMap
+
 import akka.NotUsed
 import akka.http.scaladsl.model.headers.RawHeader
 import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
@@ -152,7 +154,9 @@ object ServerFlowWrapper {
     )
 
   private def extractContext(request: HttpRequest) = Kamon.contextCodec().HttpHeaders.decode(new TextMap {
-    private val headersKeyValueMap = request.headers.map(h => h.name -> h.value()).toMap
+    private val headersKeyValueMap =
+      new TreeMap[String, String]()(Ordering.comparatorToOrdering(String.CASE_INSENSITIVE_ORDER)) ++
+        request.headers.map(h => h.name -> h.value())
     override def values: Iterator[(String, String)] = headersKeyValueMap.iterator
     override def get(key: String): Option[String] = headersKeyValueMap.get(key)
     override def put(key: String, value: String): Unit = {}
