@@ -16,24 +16,11 @@
 package kamon.jdbc.instrumentation
 
 import kamon.jdbc.instrumentation.advisor._
-import kamon.jdbc.instrumentation.mixin.{HasConnectionPoolMetricsMixin, ProcessOnlyOnceMixin}
+import kamon.jdbc.instrumentation.mixin.HasConnectionPoolMetricsMixin
 import kanela.agent.scala.KanelaInstrumentation
 
 
 class StatementInstrumentation extends KanelaInstrumentation {
-
-  /**
-    * Mix:
-    *
-    * Any class with java.sql.Statement and/or java.sql.PreparedStatement as super type is mixed
-    * with kamon.jdbc.instrumentation.mixin.ProcessOnlyOnceMixin
-    *
-    */
-  forSubtypeOf("java.sql.Statement" or "java.sql.PreparedStatement") { builder =>
-    builder
-      .withMixin(classOf[ProcessOnlyOnceMixin])
-      .build()
-  }
 
   /**
     * Instrument:

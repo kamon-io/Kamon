@@ -1,5 +1,5 @@
 /* =========================================================================================
- * Copyright © 2013-2017 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2018 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -20,11 +20,12 @@ import java.time.temporal.ChronoUnit
 
 import kamon.Kamon
 import kamon.Kamon.buildSpan
-import kamon.jdbc.{Jdbc, Metrics}
-import kamon.jdbc.instrumentation.mixin.{HasConnectionPoolMetrics, ProcessOnlyOnce}
+import kamon.jdbc.instrumentation.mixin.HasConnectionPoolMetrics
 import kamon.jdbc.utils.LoggingSupport
+import kamon.jdbc.{Jdbc, Metrics}
 import kamon.metric.RangeSampler
 import kamon.trace.{Span, SpanCustomizer}
+import kanela.agent.bootstrap.stack.CallStackDepth
 
 object StatementMonitor extends LoggingSupport {
   object StatementTypes {
@@ -34,47 +35,27 @@ object StatementMonitor extends LoggingSupport {
     val GenericExecute = "generic-execute"
   }
 
-  def start(target: Any,
-            sql: String,
-            statementType: String): Option[KamonMonitorTraveler] = target match {
-    case processOnlyOnce: ProcessOnlyOnce =>
-      processOnlyOnce.processOnlyOnce {
+  def start(target: Any, sql: String, statementType: String): Option[KamonMonitorTraveler] = {
+    if (CallStackDepth.incrementFor(target) == 0) {
+      val poolTags = extractPoolTags(target)
+      val inFlight = Metrics.Statements.InFlight.refine(poolTags)
+      inFlight.increment()
 
-        val poolTags = extractPoolTags(target)
+      val startTimestamp = Kamon.clock().instant()
+      val span = Kamon.currentContext().get(SpanCustomizer.ContextKey).customize {
+        val builder = buildSpan(statementType)
+          .withFrom(startTimestamp)
+          .withTag("component", "jdbc")
+          .withTag("db.statement", sql)
+        poolTags.foreach { case (key, value) => builder.withTag(key, value) }
+        builder
+      }.start()
 
-        val inFlight = Metrics.Statements.InFlight.refine(poolTags)
-        inFlight.increment()
-
-        val startTimestamp = Kamon.clock().instant()
-        val span = Kamon.currentContext().get(SpanCustomizer.ContextKey).customize {
-          val builder = buildSpan(statementType)
-            .withFrom(startTimestamp)
-            .withTag("component", "jdbc")
-            .withTag("db.statement", sql)
-          poolTags.foreach { case (key, value) => builder.withTag(key, value) }
-          builder
-        }.start()
-
-        KamonMonitorTraveler(processOnlyOnce, span, sql, startTimestamp, inFlight)
-      }
-    case _ =>
-      logDebug(s"It's not possible to trace the statement with Kamon because it's not a " +
-        s"ProcessOnlyOnce type. Target type: ${target.getClass.getTypeName}")
-      None
+      Some(KamonMonitorTraveler(target, span, sql, startTimestamp, inFlight))
+    } else None
   }
 
-  private def extractPoolTags(target: Any): Map[String, String] = target match {
-    case targetWithPoolMetrics: HasConnectionPoolMetrics =>
-      Option(targetWithPoolMetrics.connectionPoolMetrics)
-        .map(_.tags)
-        .getOrElse(Map.empty[String, String])
-    case _ =>
-      logTrace(s"Statement is not a HasConnectionPoolMetrics type (used by kamon-jdbc). Target type: ${target.getClass.getTypeName}")
-      Map.empty[String, String]
-  }
-
-  case class KamonMonitorTraveler(processOnlyOnce: ProcessOnlyOnce, span: Span,
-                                  sql: String, startTimestamp: Instant, inFlight: RangeSampler) {
+  case class KamonMonitorTraveler(target:Any, span: Span, sql: String, startTimestamp: Instant, inFlight: RangeSampler) {
 
     def close(throwable: Throwable): Unit = {
 
@@ -89,7 +70,17 @@ object StatementMonitor extends LoggingSupport {
       inFlight.decrement()
 
       Jdbc.onStatementFinish(sql, elapsedTime)
-      processOnlyOnce.finish()
+      CallStackDepth.resetFor(target)
     }
+  }
+
+  private def extractPoolTags(target: Any): Map[String, String] = target match {
+    case targetWithPoolMetrics: HasConnectionPoolMetrics =>
+      Option(targetWithPoolMetrics.connectionPoolMetrics)
+        .map(_.tags)
+        .getOrElse(Map.empty[String, String])
+    case _ =>
+      logTrace(s"Statement is not a HasConnectionPoolMetrics type (used by kamon-jdbc). Target type: ${target.getClass.getTypeName}")
+      Map.empty[String, String]
   }
 }
