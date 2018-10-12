@@ -383,7 +383,6 @@ object HttpServer {
     enableContextPropagation: Boolean,
     propagationChannel: String,
     enableServerMetrics: Boolean,
-    serverMetricsTags: Seq[String],
     enableTracing: Boolean,
     traceIDTag: Option[String],
     enableSpanMetrics: Boolean,
@@ -418,11 +417,10 @@ object HttpServer {
 
       // HTTP Server metrics settings
       val enableServerMetrics = config.getBoolean("metrics.enabled")
-      val serverMetricsTags = config.getStringList("metrics.tags").asScala
 
       // Tracing settings
       val enableTracing = config.getBoolean("tracing.enabled")
-      val traceIdTag = Option(config.getString("tracing.trace-id-tag")).filterNot(_ == "none")
+      val traceIdTag = Option(config.getString("tracing.preferred-trace-id-tag")).filterNot(_ == "none")
       val enableSpanMetrics = config.getBoolean("tracing.span-metrics")
       val urlTagMode = TagMode.from(config.getString("tracing.tags.url"))
       val methodTagMode = TagMode.from(config.getString("tracing.tags.method"))
@@ -440,7 +438,6 @@ object HttpServer {
         enablePropagation,
         propagationChannel,
         enableServerMetrics,
-        serverMetricsTags,
         enableTracing,
         traceIdTag,
         enableSpanMetrics,
