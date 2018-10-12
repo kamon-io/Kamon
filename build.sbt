@@ -71,8 +71,6 @@ lazy val coreTests = (project in file("kamon-core-tests"))
   .settings(
     libraryDependencies ++= Seq(
       "org.scalatest" %% "scalatest" % "3.0.1" % "test",
-      "ch.qos.logback" % "logback-classic" % "1.2.2" % "test",
-      "com.squareup.okhttp3" % "okhttp" % "3.11.0" % "test",
-      "com.typesafe.akka" % "akka-http-core_2.12" % "10.1.4" % "test"
+      "ch.qos.logback" % "logback-classic" % "1.2.2" % "test"
     )
   ).dependsOn(testkit)
