@@ -267,8 +267,8 @@ class HttpServerInstrumentationSpec extends WordSpec with Matchers with SpanInsp
   def noSpanMetricsHttpServer(): HttpServer = HttpServer.from("no-span-metrics", component = TestComponent, interface = TestInterface, port = 8082)
   def noopHttpServer(): HttpServer = HttpServer.from("noop", component = TestComponent, interface = TestInterface, port = 8083)
 
-  def fakeRequest(requestUrl: String, requestPath: String, requestMethod: String, headers: Map[String, String]): HttpRequest =
-    new HttpRequest {
+  def fakeRequest(requestUrl: String, requestPath: String, requestMethod: String, headers: Map[String, String]): HttpMessage.Request =
+    new HttpMessage.Request {
       override def url: String = requestUrl
       override def path: String = requestPath
       override def method: String = requestMethod
@@ -276,11 +276,11 @@ class HttpServerInstrumentationSpec extends WordSpec with Matchers with SpanInsp
       override def readAll(): Map[String, String] = headers
     }
 
-  def fakeResponse(responseStatusCode: Int, headers: mutable.Map[String, String]): HttpResponse.Writable[HttpResponse] =
-    new HttpResponse.Writable[HttpResponse] {
+  def fakeResponse(responseStatusCode: Int, headers: mutable.Map[String, String]): HttpMessage.ResponseBuilder[HttpMessage.Response] =
+    new HttpMessage.ResponseBuilder[HttpMessage.Response] {
       override def statusCode: Int = responseStatusCode
       override def write(header: String, value: String): Unit = headers.put(header, value)
-      override def build(): HttpResponse = this
+      override def build(): HttpMessage.Response = this
     }
 
   def completedRequests(port: Int, statusCode: Int): Counter = {

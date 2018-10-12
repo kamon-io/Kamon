@@ -41,7 +41,7 @@ trait HttpServer {
     * @param request A HttpRequest wrapper on the original incoming HTTP request.
     * @return The RequestHandler that will follow the lifecycle of the incoming request.
     */
-  def receive(request: HttpRequest): HttpServer.RequestHandler
+  def receive(request: HttpMessage.Request): HttpServer.RequestHandler
 
 
   /**
@@ -104,7 +104,7 @@ object HttpServer {
       * @param context Context that should be used for writing returning keys into the response.
       * @return The modified HTTP response that should be sent to clients.
       */
-    def send[HttpResponse](response: HttpResponse.Writable[HttpResponse], context: Context): HttpResponse
+    def send[HttpResponse](response: HttpMessage.ResponseBuilder[HttpResponse], context: Context): HttpResponse
 
     /**
       * Signals that the entire response (headers and body) has been sent to the client.
@@ -255,7 +255,7 @@ object HttpServer {
         contextPropagation.defaultHttpPropagation()
       }
 
-    override def receive(request: HttpRequest): RequestHandler = {
+    override def receive(request: HttpMessage.Request): RequestHandler = {
 
       val incomingContext = if(settings.enableContextPropagation)
         _propagation.read(request)
@@ -287,7 +287,7 @@ object HttpServer {
           }
         }
 
-        override def send[HttpResponse](response: HttpResponse.Writable[HttpResponse], context: Context): HttpResponse = {
+        override def send[HttpResponse](response: HttpMessage.ResponseBuilder[HttpResponse], context: Context): HttpResponse = {
           def addResponseTag(tag: String, value: String, mode: TagMode): Unit = mode match {
             case TagMode.Metric => span.tagMetric(tag, value)
             case TagMode.Span => span.tag(tag, value)
@@ -338,7 +338,7 @@ object HttpServer {
     }
 
 
-    private def buildServerSpan(context: Context, request: HttpRequest): Span = {
+    private def buildServerSpan(context: Context, request: HttpMessage.Request): Span = {
       val span = Kamon.buildSpan(operationName(request))
         .withMetricTag("span.kind", "server")
         .withMetricTag("component", component)
@@ -368,7 +368,7 @@ object HttpServer {
       span.start()
     }
 
-    private def operationName(request: HttpRequest): String = {
+    private def operationName(request: HttpMessage.Request): String = {
       val requestPath = request.path
       val customMapping = settings.operationMappings.collectFirst {
         case (pattern, operationName) if pattern.accept(requestPath) => operationName
