@@ -92,8 +92,14 @@ package object kamon {
 
     def configurations: Map[String, Config] = {
       topLevelKeys
-      .map(entry => (entry, config.getConfig(ConfigUtil.joinPath(entry))))
-      .toMap
+        .map(entry => (entry, config.getConfig(ConfigUtil.joinPath(entry))))
+        .toMap
+    }
+
+    def pairs: Map[String, String] = {
+      topLevelKeys
+        .map(key => (key, config.getString(key)))
+        .toMap
     }
   }
 }

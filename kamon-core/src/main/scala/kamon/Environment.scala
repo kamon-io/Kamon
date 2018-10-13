@@ -21,6 +21,9 @@ import java.util.concurrent.ThreadLocalRandom
 import com.typesafe.config.Config
 import kamon.util.HexCodec
 
+
+
+
 case class Environment(host: String, service: String, instance: String, incarnation: String, tags: Map[String, String])
 
 object Environment {
@@ -47,6 +50,4 @@ object Environment {
 
   private def readValueOrGenerate(configuredValue: String, generator: => String): String =
     if(configuredValue == "auto") generator else configuredValue
-
-
 }

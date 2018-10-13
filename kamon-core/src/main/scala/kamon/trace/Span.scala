@@ -19,7 +19,7 @@ package trace
 import java.time.Instant
 
 import kamon.ReporterRegistry.SpanSink
-import kamon.context.Key
+import kamon.context.Context
 import kamon.metric.MeasurementUnit
 import kamon.trace.SpanContext.SamplingDecision
 import kamon.util.Clock
@@ -66,7 +66,7 @@ sealed abstract class Span {
 
 object Span {
 
-  val ContextKey = Key.broadcast[Span]("span", Span.Empty)
+  val ContextKey = Context.key[Span]("span", Span.Empty)
 
   object Empty extends Span {
     override val context: SpanContext = SpanContext.EmptySpanContext

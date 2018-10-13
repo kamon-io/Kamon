@@ -99,6 +99,7 @@ object Tracer {
     private var initialMetricTags = Map.empty[String, String]
     private var useParentFromContext = true
     private var trackMetrics = true
+    private var providedTraceID = IdentityProvider.NoIdentifier
 
     def asChildOf(parent: Span): SpanBuilder = {
       if(parent != Span.Empty) this.parentSpan = parent
@@ -158,6 +159,11 @@ object Tracer {
       this
     }
 
+    def withTraceID(identifier: IdentityProvider.Identifier): SpanBuilder = {
+      this.providedTraceID = identifier
+      this
+    }
+
 
     def start(): Span = {
       val spanFrom = if(from == Instant.EPOCH) clock.instant() else from
@@ -199,13 +205,21 @@ object Tracer {
       else
         parent.context().createChild(tracer._identityProvider.spanIdGenerator().generate(), samplingDecision)
 
-    private def newSpanContext(samplingDecision: SamplingDecision): SpanContext =
+    private def newSpanContext(samplingDecision: SamplingDecision): SpanContext = {
+      val traceID =
+        if(providedTraceID != IdentityProvider.NoIdentifier)
+          providedTraceID
+        else
+          tracer._identityProvider.traceIdGenerator().generate()
+
+
       SpanContext(
-        traceID = tracer._identityProvider.traceIdGenerator().generate(),
+        traceID,
         spanID = tracer._identityProvider.spanIdGenerator().generate(),
         parentID = IdentityProvider.NoIdentifier,
         samplingDecision = samplingDecision
       )
+    }
   }
 
   private final class TracerMetrics(metricLookup: MetricLookup) {

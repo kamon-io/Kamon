@@ -19,7 +19,6 @@ import java.time.Duration
 import java.util.concurrent.{Executors, ScheduledExecutorService, ScheduledThreadPoolExecutor}
 
 import com.typesafe.config.{Config, ConfigFactory}
-import kamon.context.{Codecs, Context, Key, Storage}
 import kamon.metric._
 import kamon.trace._
 import kamon.util.{Clock, Filters, Matcher, Registration}
@@ -29,7 +28,7 @@ import scala.concurrent.Future
 import scala.util.Try
 
 
-object Kamon extends MetricLookup with ReporterRegistry with Tracer {
+object Kamon extends MetricLookup with ClassLoading with Configuration with ReporterRegistry with Tracer with ContextPropagation with ContextStorage {
   private val logger = LoggerFactory.getLogger("kamon.Kamon")
 
   @volatile private var _config = ConfigFactory.load()
@@ -41,39 +40,26 @@ object Kamon extends MetricLookup with ReporterRegistry with Tracer {
   private val _metrics = new MetricRegistry(_config, _scheduler)
   private val _reporterRegistry = new ReporterRegistry.Default(_metrics, _config, _clock)
   private val _tracer = Tracer.Default(Kamon, _reporterRegistry, _config, _clock)
-  private val _contextStorage = Storage.ThreadLocal()
-  private val _contextCodec = new Codecs(_config)
-  private var _onReconfigureHooks = Seq.empty[OnReconfigureHook]
+  //private var _onReconfigureHooks = Seq.empty[OnReconfigureHook]
 
   sys.addShutdownHook(() => _scheduler.shutdown())
 
   def environment: Environment =
     _environment
 
-  def config(): Config =
-    _config
-
-  def reconfigure(config: Config): Unit = synchronized {
+  onReconfigure(newConfig => {
     _config = config
     _environment = Environment.fromConfig(config)
     _filters = Filters.fromConfig(config)
     _metrics.reconfigure(config)
     _reporterRegistry.reconfigure(config)
     _tracer.reconfigure(config)
-    _contextCodec.reconfigure(config)
-
-    _onReconfigureHooks.foreach(hook => {
-      Try(hook.onReconfigure(config)).failed.foreach(error =>
-        logger.error("Exception occurred while trying to run a OnReconfigureHook", error)
-      )
-    })
 
     _scheduler match {
       case stpe: ScheduledThreadPoolExecutor => stpe.setCorePoolSize(schedulerPoolSize(config))
       case other => logger.error("Unexpected scheduler [{}] found when reconfiguring Kamon.", other)
     }
-  }
-
+  })
 
   override def histogram(name: String, unit: MeasurementUnit, dynamicRange: Option[DynamicRange]): HistogramMetric =
     _metrics.histogram(name, unit, dynamicRange)
@@ -101,47 +87,6 @@ object Kamon extends MetricLookup with ReporterRegistry with Tracer {
 
   override def identityProvider: IdentityProvider =
     _tracer.identityProvider
-
-  def contextCodec(): Codecs =
-      _contextCodec
-
-  def currentContext(): Context =
-    _contextStorage.current()
-
-  def currentSpan(): Span =
-    _contextStorage.current().get(Span.ContextKey)
-
-  def storeContext(context: Context): Storage.Scope =
-    _contextStorage.store(context)
-
-  def withContext[T](context: Context)(f: => T): T = {
-    val scope = _contextStorage.store(context)
-    try {
-      f
-    } finally {
-      scope.close()
-    }
-  }
-
-  def withContextKey[T, K](key: Key[K], value: K)(f: => T): T =
-    withContext(currentContext().withKey(key, value))(f)
-
-  def withSpan[T](span: Span)(f: => T): T =
-    withSpan(span, true)(f)
-
-  def withSpan[T](span: Span, finishSpan: Boolean)(f: => T): T = {
-    try {
-      withContextKey(Span.ContextKey, span)(f)
-    } catch {
-      case t: Throwable =>
-        span.addError(t.getMessage, t)
-        throw t
-
-    } finally {
-      if(finishSpan)
-        span.finish()
-    }
-  }
 
   override def loadReportersFromConfig(): Unit =
     _reporterRegistry.loadReportersFromConfig()
@@ -173,22 +118,10 @@ object Kamon extends MetricLookup with ReporterRegistry with Tracer {
   def clock(): Clock =
     _clock
 
-  /**
-    * Register a reconfigure hook that will be run when the a call to Kamon.reconfigure(config) is performed. All
-    * registered hooks will run sequentially in the same Thread that calls Kamon.reconfigure(config).
-    */
-  def onReconfigure(hook: OnReconfigureHook): Unit = synchronized {
-    _onReconfigureHooks = hook +: _onReconfigureHooks
-  }
-
   def scheduler(): ScheduledExecutorService =
     _scheduler
 
   private def schedulerPoolSize(config: Config): Int =
     config.getInt("kamon.scheduler-pool-size")
 
-}
-
-trait OnReconfigureHook {
-  def onReconfigure(newConfig: Config): Unit
 }

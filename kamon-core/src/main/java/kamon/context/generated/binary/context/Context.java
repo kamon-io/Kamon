@@ -12,6 +12,7 @@ import java.io.ObjectOutputStream;
 import java.io.ObjectStreamException;
 import java.io.OutputStream;
 import java.io.Serializable;
+import java.nio.charset.StandardCharsets;
 import java.util.InputMismatchException;
 import java.nio.BufferOverflowException;
 import java.nio.BufferUnderflowException;
@@ -35,6 +36,8 @@ public class Context implements Serializable {
 
 
 
+	public String[] tags;
+
 	public Entry[] entries;
 
 
@@ -43,10 +46,12 @@ public class Context implements Serializable {
 		init();
 	}
 
+	private static final String[] _zeroTags = new String[0];
 	private static final Entry[] _zeroEntries = new Entry[0];
 
 	/** Colfer zero values. */
 	private void init() {
+		tags = _zeroTags;
 		entries = _zeroEntries;
 	}
 
@@ -142,6 +147,7 @@ public class Context implements Serializable {
 
 	/**
 	 * Serializes the object.
+	 * All {@code null} elements in {@link #tags} will be replaced with {@code ""}.
 	 * All {@code null} elements in {@link #entries} will be replaced with a {@code new} value.
 	 * @param out the data destination.
 	 * @param buf the initial buffer or {@code null}.
@@ -171,6 +177,7 @@ public class Context implements Serializable {
 
 	/**
 	 * Serializes the object.
+	 * All {@code null} elements in {@link #tags} will be replaced with {@code ""}.
 	 * All {@code null} elements in {@link #entries} will be replaced with a {@code new} value.
 	 * @param buf the data destination.
 	 * @param offset the initial index for {@code buf}, inclusive.
@@ -182,8 +189,72 @@ public class Context implements Serializable {
 		int i = offset;
 
 		try {
-			if (this.entries.length != 0) {
+			if (this.tags.length != 0) {
 				buf[i++] = (byte) 0;
+				String[] a = this.tags;
+
+				int x = a.length;
+				if (x > Context.colferListMax)
+					throw new IllegalStateException(format("colfer: kamon/context/generated/binary/context.Context.tags length %d exceeds %d elements", x, Context.colferListMax));
+				while (x > 0x7f) {
+					buf[i++] = (byte) (x | 0x80);
+					x >>>= 7;
+				}
+				buf[i++] = (byte) x;
+
+				for (int ai = 0; ai < a.length; ai++) {
+					String s = a[ai];
+					if (s == null) {
+						s = "";
+						a[ai] = s;
+					}
+
+					int start = ++i;
+
+					for (int sIndex = 0, sLength = s.length(); sIndex < sLength; sIndex++) {
+						char c = s.charAt(sIndex);
+						if (c < '\u0080') {
+							buf[i++] = (byte) c;
+						} else if (c < '\u0800') {
+							buf[i++] = (byte) (192 | c >>> 6);
+							buf[i++] = (byte) (128 | c & 63);
+						} else if (c < '\ud800' || c > '\udfff') {
+							buf[i++] = (byte) (224 | c >>> 12);
+							buf[i++] = (byte) (128 | c >>> 6 & 63);
+							buf[i++] = (byte) (128 | c & 63);
+						} else {
+							int cp = 0;
+							if (++sIndex < sLength) cp = Character.toCodePoint(c, s.charAt(sIndex));
+							if ((cp >= 1 << 16) && (cp < 1 << 21)) {
+								buf[i++] = (byte) (240 | cp >>> 18);
+								buf[i++] = (byte) (128 | cp >>> 12 & 63);
+								buf[i++] = (byte) (128 | cp >>> 6 & 63);
+								buf[i++] = (byte) (128 | cp & 63);
+							} else
+								buf[i++] = (byte) '?';
+						}
+					}
+					int size = i - start;
+					if (size > Context.colferSizeMax)
+						throw new IllegalStateException(format("colfer: kamon/context/generated/binary/context.Context.tags[%d] size %d exceeds %d UTF-8 bytes", ai, size, Context.colferSizeMax));
+
+					int ii = start - 1;
+					if (size > 0x7f) {
+						i++;
+						for (int y = size; y >= 1 << 14; y >>>= 7) i++;
+						System.arraycopy(buf, start, buf, i - size, size);
+
+						do {
+							buf[ii++] = (byte) (size | 0x80);
+							size >>>= 7;
+						} while (size > 0x7f);
+					}
+					buf[ii] = (byte) size;
+				}
+			}
+
+			if (this.entries.length != 0) {
+				buf[i++] = (byte) 1;
 				Entry[] a = this.entries;
 
 				int x = a.length;
@@ -253,6 +324,35 @@ public class Context implements Serializable {
 					if (shift == 28 || b >= 0) break;
 				}
 				if (length < 0 || length > Context.colferListMax)
+					throw new SecurityException(format("colfer: kamon/context/generated/binary/context.Context.tags length %d exceeds %d elements", length, Context.colferListMax));
+
+				String[] a = new String[length];
+				for (int ai = 0; ai < length; ai++) {
+					int size = 0;
+					for (int shift = 0; true; shift += 7) {
+						byte b = buf[i++];
+						size |= (b & 0x7f) << shift;
+						if (shift == 28 || b >= 0) break;
+					}
+					if (size < 0 || size > Context.colferSizeMax)
+						throw new SecurityException(format("colfer: kamon/context/generated/binary/context.Context.tags[%d] size %d exceeds %d UTF-8 bytes", ai, size, Context.colferSizeMax));
+
+					int start = i;
+					i += size;
+					a[ai] = new String(buf, start, size, StandardCharsets.UTF_8);
+				}
+				this.tags = a;
+				header = buf[i++];
+			}
+
+			if (header == (byte) 1) {
+				int length = 0;
+				for (int shift = 0; true; shift += 7) {
+					byte b = buf[i++];
+					length |= (b & 0x7f) << shift;
+					if (shift == 28 || b >= 0) break;
+				}
+				if (length < 0 || length > Context.colferListMax)
 					throw new SecurityException(format("colfer: kamon/context/generated/binary/context.Context.entries length %d exceeds %d elements", length, Context.colferListMax));
 
 				Entry[] a = new Entry[length];
@@ -278,7 +378,7 @@ public class Context implements Serializable {
 	}
 
 	// {@link Serializable} version number.
-	private static final long serialVersionUID = 1L;
+	private static final long serialVersionUID = 2L;
 
 	// {@link Serializable} Colfer extension.
 	private void writeObject(ObjectOutputStream out) throws IOException {
@@ -312,6 +412,32 @@ public class Context implements Serializable {
 	}
 
 	/**
+	 * Gets kamon/context/generated/binary/context.Context.tags.
+	 * @return the value.
+	 */
+	public String[] getTags() {
+		return this.tags;
+	}
+
+	/**
+	 * Sets kamon/context/generated/binary/context.Context.tags.
+	 * @param value the replacement.
+	 */
+	public void setTags(String[] value) {
+		this.tags = value;
+	}
+
+	/**
+	 * Sets kamon/context/generated/binary/context.Context.tags.
+	 * @param value the replacement.
+	 * @return {link this}.
+	 */
+	public Context withTags(String[] value) {
+		this.tags = value;
+		return this;
+	}
+
+	/**
 	 * Gets kamon/context/generated/binary/context.Context.entries.
 	 * @return the value.
 	 */
@@ -340,6 +466,7 @@ public class Context implements Serializable {
 	@Override
 	public final int hashCode() {
 		int h = 1;
+		for (String o : this.tags) h = 31 * h + (o == null ? 0 : o.hashCode());
 		for (Entry o : this.entries) h = 31 * h + (o == null ? 0 : o.hashCode());
 		return h;
 	}
@@ -353,6 +480,7 @@ public class Context implements Serializable {
 		if (o == null) return false;
 		if (o == this) return true;
 		return o.getClass() == Context.class
+			&& java.util.Arrays.equals(this.tags, o.tags)
 			&& java.util.Arrays.equals(this.entries, o.entries);
 	}
 

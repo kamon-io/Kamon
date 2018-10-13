@@ -15,7 +15,7 @@
 
 package kamon.trace
 
-import kamon.context.Key
+import kamon.context.{Context}
 import kamon.trace.Tracer.SpanBuilder
 
 /**
@@ -39,7 +39,7 @@ object SpanCustomizer {
     override def customize(spanBuilder: SpanBuilder): SpanBuilder = spanBuilder
   }
 
-  val ContextKey = Key.local[SpanCustomizer]("span-customizer", Noop)
+  val ContextKey = Context.key[SpanCustomizer]("span-customizer", Noop)
 
   def forOperationName(operationName: String): SpanCustomizer = new SpanCustomizer {
     override def customize(spanBuilder: SpanBuilder): SpanBuilder =

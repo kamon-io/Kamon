@@ -6,5 +6,6 @@ type Entry struct {
 }
 
 type Context struct {
+  tags    []text
   entries []Entry
 }

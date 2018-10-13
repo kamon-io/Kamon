@@ -2,7 +2,7 @@ language: scala
 script:
   - sbt +test
 scala:
-   - 2.12.4
+   - 2.12.6
 jdk:
    - oraclejdk8
 before_script:
