@@ -17,7 +17,7 @@
 lazy val kamon = (project in file("."))
   .settings(moduleName := "kamon")
   .settings(noPublishing: _*)
-  .aggregate(core, testkit, coreTests)
+  .aggregate(core, testkit, coreTests, coreBench)
 
 val commonSettings = Seq(
   scalaVersion := "2.12.6",
@@ -74,3 +74,13 @@ lazy val coreTests = (project in file("kamon-core-tests"))
       "ch.qos.logback" % "logback-classic" % "1.2.2" % "test"
     )
   ).dependsOn(testkit)
+
+
+lazy val coreBench = (project in file("kamon-core-bench"))
+  .enablePlugins(JmhPlugin)
+  .settings(
+    moduleName := "kamon-core-bench",
+    fork in Test := true)
+  .settings(noPublishing: _*)
+  .settings(commonSettings: _*)
+  .dependsOn(core)

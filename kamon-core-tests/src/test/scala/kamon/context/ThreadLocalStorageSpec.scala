@@ -45,7 +45,6 @@ class ThreadLocalStorageSpec extends WordSpec with Matchers {
       TLS.current() shouldBe Context.Empty
     }
 
-
   }
 
   val TLS: Storage = new Storage.ThreadLocal
