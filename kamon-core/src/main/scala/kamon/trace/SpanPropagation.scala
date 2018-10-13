@@ -38,7 +38,7 @@ object SpanPropagation {
     import B3.Headers
 
     override def read(reader: HttpPropagation.HeaderReader, context: Context): Context = {
-      val identityProvider = Kamon.tracer.identityProvider
+      val identityProvider = Kamon.identityProvider
       val traceID = reader.read(Headers.TraceIdentifier)
         .map(id => identityProvider.traceIdGenerator().from(urlDecode(id)))
         .getOrElse(IdentityProvider.NoIdentifier)
@@ -122,7 +122,7 @@ object SpanPropagation {
 
     override def read(reader: HttpPropagation.HeaderReader, context: Context): Context = {
       reader.read(Header.B3).map { header =>
-        val identityProvider = Kamon.tracer.identityProvider
+        val identityProvider = Kamon.identityProvider
 
         val (traceID, spanID, samplingDecision, parentSpanID) = header.splitToTuple("-")
 
@@ -220,7 +220,7 @@ object SpanPropagation {
       if(medium.available() == 0)
         context
       else {
-        val identityProvider = Kamon.tracer.identityProvider
+        val identityProvider = Kamon.identityProvider
         val colferSpan = new ColferSpan()
         colferSpan.unmarshal(medium.readAll(), 0)
 

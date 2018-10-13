@@ -29,7 +29,7 @@ class TracerSpec extends WordSpec with Matchers with SpanBuilding with SpanInspe
 
   "the Kamon tracer" should {
     "construct a minimal Span that only has a operation name" in {
-      val span = tracer.buildSpan("myOperation").start()
+      val span = Kamon.buildSpan("myOperation").start()
       val spanData = inspect(span)
 
       spanData.operationName() shouldBe "myOperation"
@@ -38,7 +38,7 @@ class TracerSpec extends WordSpec with Matchers with SpanBuilding with SpanInspe
     }
 
     "pass the operation name and tags to started Span" in {
-      val span = tracer.buildSpan("myOperation")
+      val span = Kamon.buildSpan("myOperation")
         .withMetricTag("metric-tag", "value")
         .withMetricTag("metric-tag", "value")
         .withTag("hello", "world")
@@ -60,16 +60,16 @@ class TracerSpec extends WordSpec with Matchers with SpanBuilding with SpanInspe
     }
 
     "not have any parent Span if there is no Span in the current context and no parent was explicitly given" in {
-      val span = tracer.buildSpan("myOperation").start()
+      val span = Kamon.buildSpan("myOperation").start()
       val spanData = inspect(span)
       spanData.context().parentID shouldBe IdentityProvider.NoIdentifier
     }
 
 
     "automatically take the Span from the current Context as parent" in {
-      val parent = tracer.buildSpan("myOperation").start()
+      val parent = Kamon.buildSpan("myOperation").start()
       val child = Kamon.withSpan(parent) {
-        tracer.buildSpan("childOperation").asChildOf(parent).start()
+        Kamon.buildSpan("childOperation").asChildOf(parent).start()
       }
 
       val parentData = inspect(parent)
@@ -78,9 +78,9 @@ class TracerSpec extends WordSpec with Matchers with SpanBuilding with SpanInspe
     }
 
     "ignore the span from the current context as parent if explicitly requested" in {
-      val parent = tracer.buildSpan("myOperation").start()
+      val parent = Kamon.buildSpan("myOperation").start()
       val child = Kamon.withSpan(parent) {
-        tracer.buildSpan("childOperation").ignoreParentFromContext().start()
+        Kamon.buildSpan("childOperation").ignoreParentFromContext().start()
       }
 
       val childData = inspect(child)
@@ -88,7 +88,7 @@ class TracerSpec extends WordSpec with Matchers with SpanBuilding with SpanInspe
     }
 
     "allow overriding the start timestamp for a Span" in {
-      val span = tracer.buildSpan("myOperation").withFrom(Instant.EPOCH.plusMillis(321)).start()
+      val span = Kamon.buildSpan("myOperation").withFrom(Instant.EPOCH.plusMillis(321)).start()
       val spanData = inspect(span)
       spanData.from() shouldBe Instant.EPOCH.plusMillis(321)
     }
@@ -101,7 +101,7 @@ class TracerSpec extends WordSpec with Matchers with SpanBuilding with SpanInspe
       }
 
       val remoteParent = Span.Remote(createSpanContext())
-      val childData = inspect(tracer.buildSpan("local").asChildOf(remoteParent).start())
+      val childData = inspect(Kamon.buildSpan("local").asChildOf(remoteParent).start())
 
       childData.context().traceID shouldBe remoteParent.context.traceID
       childData.context().parentID shouldBe remoteParent.context.parentID
@@ -114,10 +114,10 @@ class TracerSpec extends WordSpec with Matchers with SpanBuilding with SpanInspe
       val sampledRemoteParent = Span.Remote(createSpanContext().copy(samplingDecision = SamplingDecision.Sample))
       val notSampledRemoteParent = Span.Remote(createSpanContext().copy(samplingDecision = SamplingDecision.DoNotSample))
 
-      tracer.buildSpan("childOfSampled").asChildOf(sampledRemoteParent).start().context()
+      Kamon.buildSpan("childOfSampled").asChildOf(sampledRemoteParent).start().context()
         .samplingDecision shouldBe(SamplingDecision.Sample)
 
-      tracer.buildSpan("childOfNotSampled").asChildOf(notSampledRemoteParent).start().context()
+      Kamon.buildSpan("childOfNotSampled").asChildOf(notSampledRemoteParent).start().context()
         .samplingDecision shouldBe(SamplingDecision.DoNotSample)
     }
 
@@ -129,14 +129,12 @@ class TracerSpec extends WordSpec with Matchers with SpanBuilding with SpanInspe
       }
 
       val unknownSamplingRemoteParent = Span.Remote(createSpanContext().copy(samplingDecision = SamplingDecision.Unknown))
-      tracer.buildSpan("childOfSampled").asChildOf(unknownSamplingRemoteParent).start().context()
+      Kamon.buildSpan("childOfSampled").asChildOf(unknownSamplingRemoteParent).start().context()
         .samplingDecision shouldBe(SamplingDecision.Sample)
 
       Kamon.reconfigure(previousConfig)
     }
 
   }
-
-  val tracer: Tracer = Kamon
 
 }

@@ -18,7 +18,6 @@ package trace
 
 import java.time.Instant
 
-import kamon.ReporterRegistry.SpanSink
 import kamon.context.Context
 import kamon.metric.MeasurementUnit
 import kamon.trace.SpanContext.SamplingDecision
@@ -90,7 +89,7 @@ object Span {
 
 
   final class Local(spanContext: SpanContext, parent: Option[Span], initialOperationName: String, initialSpanTags: Map[String, Span.TagValue],
-    initialMetricTags: Map[String, String], from: Instant, spanSink: SpanSink, trackMetrics: Boolean, scopeSpanMetrics: Boolean, clock: Clock) extends Span {
+    initialMetricTags: Map[String, String], from: Instant, spanBuffer: Tracer.SpanBuffer, trackMetrics: Boolean, scopeSpanMetrics: Boolean, clock: Clock) extends Span {
 
     private var collectMetrics: Boolean = trackMetrics
     private var open: Boolean = true
@@ -203,7 +202,7 @@ object Span {
           recordSpanMetrics(to)
 
         if(sampled)
-          spanSink.reportSpan(toFinishedSpan(to))
+          spanBuffer.append(toFinishedSpan(to))
       }
     }
 
@@ -229,9 +228,9 @@ object Span {
 
   object Local {
     def apply(spanContext: SpanContext, parent: Option[Span], initialOperationName: String, initialSpanTags: Map[String, Span.TagValue],
-        initialMetricTags: Map[String, String], from: Instant, spanSink: SpanSink,
+        initialMetricTags: Map[String, String], from: Instant, spanBuffer: Tracer.SpanBuffer,
         trackMetrics: Boolean, scopeSpanMetrics: Boolean, clock: Clock): Local =
-      new Local(spanContext, parent, initialOperationName, initialSpanTags, initialMetricTags, from, spanSink, trackMetrics, scopeSpanMetrics, clock)
+      new Local(spanContext, parent, initialOperationName, initialSpanTags, initialMetricTags, from, spanBuffer, trackMetrics, scopeSpanMetrics, clock)
   }
 
 
