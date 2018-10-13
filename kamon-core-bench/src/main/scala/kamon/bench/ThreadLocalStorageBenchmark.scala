@@ -19,14 +19,14 @@ package kamon.bench
 import java.util.concurrent.TimeUnit
 
 import kamon.context.Storage.Scope
-import kamon.context.{Context, Key, Storage}
+import kamon.context.{Context, Storage}
 import org.openjdk.jmh.annotations._
 
 @State(Scope.Benchmark)
 class ThreadLocalStorageBenchmark {
 
-  val TestKey: Key[Int] = Key.local("test-key", 0)
-  val ContextWithKey: Context = Context.create().withKey(TestKey, 43)
+  val TestKey: Context.Key[Int] = Context.key("test-key", 0)
+  val ContextWithKey: Context = Context.of(TestKey, 43)
 
   val TLS: Storage =  new OldThreadLocal
   val FTLS: Storage =  new Storage.ThreadLocal
