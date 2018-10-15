@@ -1,5 +1,5 @@
 /* =========================================================================================
- * Copyright © 2013-2017 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2018 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -16,13 +16,12 @@
 package kamon.trace
 
 import java.net.{URLDecoder, URLEncoder}
-import java.nio.ByteBuffer
 
 import kamon.Kamon
 import kamon.context.BinaryPropagation.{ByteStreamReader, ByteStreamWriter}
-import kamon.context._
-import kamon.context.generated.binary.span.{Span => ColferSpan}
 import kamon.context.HttpPropagation.{HeaderReader, HeaderWriter}
+import kamon.context.generated.binary.span.{Span => ColferSpan}
+import kamon.context.{Context, _}
 import kamon.trace.SpanContext.SamplingDecision
 
 
@@ -106,6 +105,100 @@ object SpanPropagation {
       val Sampled = "X-B3-Sampled"
       val Flags = "X-B3-Flags"
     }
+  }
+
+  /**
+    * This format corresponds to the propagation key "b3" (or "B3"), which delimits fields in the
+    * following manner.
+    *
+    * <pre>{@code
+    * b3: {x-b3-traceid}-{x-b3-spanid}-{if x-b3-flags 'd' else x-b3-sampled}-{x-b3-parentspanid}
+    * }</pre>
+    *
+    * <p>See <a href="https://github.com/openzipkin/b3-propagation">B3 Propagation</a>
+    */
+  class B3Single extends Propagation.EntryReader[HeaderReader] with Propagation.EntryWriter[HeaderWriter] {
+    import B3Single._
+
+    override def read(reader: HttpPropagation.HeaderReader, context: Context): Context = {
+      reader.read(Header.B3).map { header =>
+        val identityProvider = Kamon.tracer.identityProvider
+
+        val (traceID, spanID, samplingDecision, parentSpanID) = header.splitToTuple("-")
+
+        val ti = traceID
+          .map(id => identityProvider.traceIdGenerator().from(urlDecode(id)))
+          .getOrElse(IdentityProvider.NoIdentifier)
+
+        val si = spanID
+          .map(id => identityProvider.spanIdGenerator().from(urlDecode(id)))
+          .getOrElse(IdentityProvider.NoIdentifier)
+
+        if (ti != IdentityProvider.NoIdentifier && si != IdentityProvider.NoIdentifier) {
+          val parentID = parentSpanID
+            .map(id => identityProvider.spanIdGenerator().from(urlDecode(id)))
+            .getOrElse(IdentityProvider.NoIdentifier)
+
+          val sd = samplingDecision match {
+            case Some(sampled) if sampled == "1" || sampled.equalsIgnoreCase("d") => SamplingDecision.Sample
+            case Some(sampled) if sampled == "0" => SamplingDecision.DoNotSample
+            case _ => SamplingDecision.Unknown
+          }
+          context.withKey(Span.ContextKey, Span.Remote(SpanContext(ti, si, parentID, sd)))
+        } else context
+      }.getOrElse(context)
+    }
+
+    override def write(context: Context, writer: HttpPropagation.HeaderWriter): Unit = {
+      val span = context.get(Span.ContextKey)
+
+      if(span.nonEmpty()) {
+        val buffer = new StringBuilder()
+        val spanContext = span.context()
+
+        val traceId = urlEncode(spanContext.traceID.string)
+        val spanId = urlEncode(spanContext.spanID.string)
+
+        buffer.append(traceId).append("-").append(spanId)
+
+        encodeSamplingDecision(spanContext.samplingDecision)
+          .foreach(samplingDecision => buffer.append("-").append(samplingDecision))
+
+        if(spanContext.parentID != IdentityProvider.NoIdentifier)
+          buffer.append("-").append(urlEncode(spanContext.parentID.string))
+
+        writer.write(Header.B3, buffer.toString)
+      }
+    }
+
+
+    private def encodeSamplingDecision(samplingDecision: SamplingDecision): Option[String] = samplingDecision match {
+      case SamplingDecision.Sample      => Some("1")
+      case SamplingDecision.DoNotSample => Some("0")
+      case SamplingDecision.Unknown     => None
+    }
+
+    private def urlEncode(s: String): String = URLEncoder.encode(s, "UTF-8")
+    private def urlDecode(s: String): String = URLDecoder.decode(s, "UTF-8")
+  }
+
+  object B3Single {
+    object Header {
+      val B3 = "B3"
+    }
+
+    implicit class Syntax(val s: String) extends AnyVal {
+      def splitToTuple(regex: String): (Option[String], Option[String], Option[String], Option[String]) = {
+        s.split(regex) match {
+          case Array(str1, str2, str3, str4) => (Option(str1), Option(str2), Option(str3), Option(str4))
+          case Array(str1, str2, str3) => (Option(str1), Option(str2), Option(str3), None)
+          case Array(str1, str2) => (Option(str1), Option(str2), None, None)
+        }
+      }
+    }
+
+    def apply(): B3Single =
+      new B3Single()
   }
 
 
