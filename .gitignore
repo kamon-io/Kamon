@@ -1,0 +1,96 @@
+*.class
+*.log
+.history
+*.sc
+.pygments-cache
+.DS_Store
+
+# sbt specific
+dist/*
+target/
+lib_managed/
+src_managed/
+project/boot/
+project/plugins/project/
+
+# Scala-IDE specific
+.scala_dependencies
+.idea
+.idea_modules
+
+# Intellij
+.idea/
+*.iml
+*.iws
+
+# Eclipse
+.project
+.settings
+.classpath
+.cache
+bin/
+
+
+### Gradle ###
+.gradle
+/build/
+agent/build/
+agent/.gradle
+agent/build
+.gradle/*
+# Ignore Gradle GUI config
+gradle-app.setting
+
+# Build output directies
+/target
+*/target
+/build
+*/build
+
+*.jar
+
+# Avoid ignoring Gradle wrapper jar file (.jar files are usually ignored)
+!gradle-wrapper.jar
+!agent/libs/byte-buddy-*.jar
+
+# Cache of project
+.gradletasknamecache
+
+# Work around https://youtrack.jetbrains.com/issue/IDEA-116898
+#gradle/wrapper/gradle-wrapper.properties
+
+# End of https://www.gitignore.io/api/gradle
+
+# Default sigar library provision location.
+native/
+
+# CMake
+cmake-build-debug/
+
+# Mongo Explorer plugin:
+.idea/**/mongoSettings.xml
+
+## Plugin-specific files:
+
+# IntelliJ
+out/
+
+# mpeltonen/sbt-idea plugin
+.idea_modules/
+
+# JIRA plugin
+atlassian-ide-plugin.xml
+
+# Cursive Clojure plugin
+.idea/replstate.xml
+
+# Crashlytics plugin (for Android Studio and IntelliJ)
+com_crashlytics_export_strings.xml
+crashlytics.properties
+crashlytics-build.properties
+fabric.properties
+
+# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
+hs_err_pid*
+
+/agent/src/main/scala/*.sc
