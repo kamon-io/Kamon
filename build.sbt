@@ -15,12 +15,12 @@
 
 
 resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
-val kamonCore       = "io.kamon" %% "kamon-core"         % "1.0.0"
-val kamonTestkit    = "io.kamon" %% "kamon-testkit"      % "1.0.0"
+val kamonCore       = "io.kamon" %% "kamon-core"         % "1.1.3"
+val kamonTestkit    = "io.kamon" %% "kamon-testkit"      % "1.1.3"
 val kamonScala      = "io.kamon" %% "kamon-scala-future" % "1.0.2"
 val kamonExecutors  = "io.kamon" %% "kamon-executors"    % "1.0.3"
 
-val kanelaScalaExtension  = "io.kamon"  %%  "kanela-scala-extension"  % "0.0.10"
+val kanelaScalaExtension  = "io.kamon"  %%  "kanela-scala-extension"  % "0.0.14"
 
 val `akka-2.3` = "2.3.15"
 val `akka-2.4` = "2.4.20"
@@ -87,9 +87,5 @@ lazy val kamonAkka25 = Project("kamon-akka-25", file("kamon-akka-2.5.x"))
 enableProperCrossScalaVersionTasks
 
 def resolveAgent: Seq[ModuleID] = {
-    val agent = Option(System.getProperty("agent")).getOrElse("aspectj")
-    if(agent.equalsIgnoreCase("kanela"))
-        Seq("org.aspectj" % "aspectjweaver" % "1.9.1" % "compile", "io.kamon" % "kanela-agent" % "0.0.300" % "compile;test")
-    else
-        Seq("org.aspectj" % "aspectjweaver" % "1.9.1" % "compile;test", "io.kamon" % "kanela-agent" % "0.0.300" % "compile")
+  Seq("org.aspectj" % "aspectjweaver" % "1.9.1" % "compile", "io.kamon" % "kanela-agent" % "0.0.15" % "compile;test")
 }
