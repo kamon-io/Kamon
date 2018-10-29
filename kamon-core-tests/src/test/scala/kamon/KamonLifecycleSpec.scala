@@ -10,17 +10,17 @@ import org.scalatest.{Matchers, WordSpec}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.SpanSugar._
 
-class KamonLifecycleSpec extends WordSpec with Matchers with Eventually{
+class KamonLifecycleSpec extends WordSpec with Matchers with Eventually {
 
   "the Kamon lifecycle" should {
-    "keep the JVM running if reporters are running" in {
+    "keep the JVM running if modules are running" in {
       val process = Runtime.getRuntime.exec(createProcessCommand("kamon.KamonWithRunningReporter"))
       Thread.sleep(5000)
       process.isAlive shouldBe true
       process.destroyForcibly().waitFor(5, TimeUnit.SECONDS)
     }
 
-    "let the JVM stop after all reporters are stopped" in {
+    "let the JVM stop after all modules are stopped" in {
       val process = Runtime.getRuntime.exec(createProcessCommand("kamon.KamonWithTemporaryReporter"))
       Thread.sleep(2000)
       process.isAlive shouldBe true

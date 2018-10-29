@@ -46,8 +46,9 @@ lazy val core = (project in file("kamon-core"))
   .settings(
     libraryDependencies ++= Seq(
       "com.typesafe"     %  "config"          % "1.3.1",
-      "org.slf4j"        %  "slf4j-api"       % "1.7.25",
-      "org.hdrhistogram" %  "HdrHistogram"    % "2.1.9"
+      "org.hdrhistogram" %  "HdrHistogram"    % "2.1.9",
+      "org.jctools"      %  "jctools-core"    % "2.1.1",
+      "org.slf4j"        %  "slf4j-api"       % "1.7.25"
     )
   )
 
