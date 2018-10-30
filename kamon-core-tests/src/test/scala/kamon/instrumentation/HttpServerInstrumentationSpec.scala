@@ -220,6 +220,18 @@ class HttpServerInstrumentationSpec extends WordSpec with Matchers with SpanInsp
         val span = inspect(handler.span)
         span.tag("peer").value shouldBe "superservice"
       }
+
+      "write trace identifiers on the responses" in {
+        val handler = httpServer().receive(fakeRequest("http://localhost:8080/", "/", "GET", Map(
+          "x-correlation-id" -> "0011223344556677"
+        )))
+
+        val responseHeaders = mutable.Map.empty[String, String]
+        handler.send(fakeResponse(200, responseHeaders), handler.context)
+
+        responseHeaders.get("x-trace-id").value shouldBe "0011223344556677"
+        responseHeaders.get("x-span-id") shouldBe defined
+      }
     }
 
     "all capabilities are disabled" should {

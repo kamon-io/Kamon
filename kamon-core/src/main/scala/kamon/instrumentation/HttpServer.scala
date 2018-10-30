@@ -294,12 +294,13 @@ object HttpServer {
             case TagMode.Off =>
           }
 
-          if(settings.enableContextPropagation) {
-            _propagation.write(context, response)
-          }
-
           _metrics.foreach { httpServerMetrics =>
             httpServerMetrics.countCompletedRequest(response.statusCode)
+          }
+
+          if(span.nonEmpty()) {
+            settings.traceIDResponseHeader.foreach(traceIDHeader => response.write(traceIDHeader, span.context().traceID.string))
+            settings.spanIDResponseHeader.foreach(spanIDHeader => response.write(spanIDHeader, span.context().spanID.string))
           }
 
           addResponseTag("http.status_code", response.statusCode.toString, settings.statusCodeTagMode)
@@ -390,6 +391,8 @@ object HttpServer {
     methodTagMode: TagMode,
     statusCodeTagMode: TagMode,
     contextTags: Map[String, TagMode],
+    traceIDResponseHeader: Option[String],
+    spanIDResponseHeader: Option[String],
     unhandledOperationName: String,
     operationMappings: Map[GlobPathFilter, String]
   )
@@ -410,6 +413,7 @@ object HttpServer {
     }
 
     def from(config: Config): Settings = {
+      def optionalString(value: String): Option[String] = if(value.equalsIgnoreCase("none")) None else Some(value)
 
       // Context propagation settings
       val enablePropagation = config.getBoolean("propagation.enabled")
@@ -429,6 +433,9 @@ object HttpServer {
         case (tagName, mode) => (tagName, TagMode.from(mode))
       }
 
+      val traceIDResponseHeader = optionalString(config.getString("tracing.response-headers.trace-id"))
+      val spanIDResponseHeader = optionalString(config.getString("tracing.response-headers.span-id"))
+
       val unhandledOperationName = config.getString("tracing.operations.unhandled")
       val operationMappings = config.getConfig("tracing.operations.mappings").pairs.map {
         case (pattern, operationName) => (new GlobPathFilter(pattern), operationName)
@@ -445,6 +452,8 @@ object HttpServer {
         methodTagMode,
         statusCodeTagMode,
         contextTags,
+        traceIDResponseHeader,
+        spanIDResponseHeader,
         unhandledOperationName,
         operationMappings
       )
