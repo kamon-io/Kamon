@@ -16,15 +16,20 @@
 
 package kamon.akka.instrumentation.kanela
 
-import akka.kamon.instrumentation.{ActorInstrumentationAware, ActorMonitor}
+import akka.instrumentation.kanela.advisor.AskMethodAdvisor
+import kanela.agent.scala.KanelaInstrumentation
 
-/**
-  * Mixin for akka.actor.ActorCell
-  * Mixin for akka.actor.UnstartedCell
-  */
-class ActorInstrumentationMixin extends ActorInstrumentationAware {
-  @volatile private var _ai: ActorMonitor = _
+class AskPatternInstrumentation extends KanelaInstrumentation {
 
-  def setActorInstrumentation(ai: ActorMonitor): Unit = _ai = ai
-  def actorInstrumentation: ActorMonitor = _ai
+  /**
+    * Instrument:
+    *
+    * akka.pattern.AskableActorRef::$qmark$extension
+    *
+    */
+  forTargetType("akka.pattern.AskableActorRef$") { builder ⇒
+    builder
+      .withAdvisorFor(method("$qmark$extension"), classOf[AskMethodAdvisor])
+      .build()
+  }
 }

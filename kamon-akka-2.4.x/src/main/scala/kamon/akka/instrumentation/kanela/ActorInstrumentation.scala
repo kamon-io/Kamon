@@ -17,8 +17,8 @@
 package kamon.akka.instrumentation.kanela
 
 import akka.kamon.instrumentation.kanela.advisor._
-import kamon.akka.instrumentation.kanela.advisor._
-import kamon.akka.instrumentation.kanela.interceptor.{InvokeAllMethodInterceptor, ReplaceWithMethodInterceptor}
+import akka.kamon.instrumentation.kanela.interceptor.{InvokeAllMethodInterceptor, ReplaceWithMethodInterceptor}
+import kamon.akka.instrumentation.kanela.mixin.{ActorInstrumentationMixin, RoutedActorCellInstrumentationMixin}
 import kanela.agent.scala.KanelaInstrumentation
 
 class ActorInstrumentation extends KanelaInstrumentation {

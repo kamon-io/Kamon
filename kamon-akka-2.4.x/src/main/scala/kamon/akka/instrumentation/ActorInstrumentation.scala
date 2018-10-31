@@ -58,9 +58,9 @@ class ActorCellInstrumentation {
   }
 
   /**
-   *
-   *
-   */
+    *
+    *
+    */
 
   @Pointcut("execution(* akka.actor.ActorCell.sendMessage(*)) && this(cell) && args(envelope)")
   def sendMessageInActorCell(cell: Cell, envelope: Envelope): Unit = {}
@@ -143,7 +143,7 @@ class ActorCellInstrumentation {
 }
 
 object ActorCellInstrumentation {
-  private val (unstartedCellQueueField, unstartedCellLockField, systemMsgQueueField) = {
+  val (unstartedCellQueueField, unstartedCellLockField, systemMsgQueueField) = {
     val unstartedCellClass = classOf[UnstartedCell]
 
     val prefix = Properties.versionNumberString.split("\\.").take(2).mkString(".") match {

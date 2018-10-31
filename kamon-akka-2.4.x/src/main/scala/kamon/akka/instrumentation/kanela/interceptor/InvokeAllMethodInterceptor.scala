@@ -15,7 +15,7 @@
  */
 
 
-package kamon.akka.instrumentation.kanela.interceptor
+package akka.kamon.instrumentation.kanela.interceptor
 
 import java.util.concurrent.Callable
 

@@ -16,19 +16,23 @@
 
 package kamon.akka.instrumentation.kanela
 
-import kamon.akka.instrumentation.kanela.interceptor.PointMethodInterceptor
+import akka.event.Logging.LogEvent
+import kamon.Kamon
 import kamon.akka.instrumentation.kanela.mixin.HasTransientContextMixin
+import kamon.context.HasContext
+import kamon.context.Storage.Scope
+import kanela.agent.libs.net.bytebuddy.asm.Advice.{Argument, Enter, OnMethodEnter, OnMethodExit}
 import kanela.agent.scala.KanelaInstrumentation
 
-class ActorSystemMessageInstrumentation extends KanelaInstrumentation {
+class ActorLoggingInstrumentation extends KanelaInstrumentation {
 
   /**
     * Mix:
     *
-    * akka.dispatch.sysmsg.SystemMessage with kamon.trace.TraceContextAware
+    *  akka.event.Logging$LogEvent with kamon.trace.TraceContextAware
     *
     */
-  forSubtypeOf("akka.dispatch.sysmsg.SystemMessage") { builder ⇒
+  forSubtypeOf("akka.event.Logging$LogEvent") { builder ⇒
     builder
       .withMixin(classOf[HasTransientContextMixin])
       .build()
@@ -37,17 +41,27 @@ class ActorSystemMessageInstrumentation extends KanelaInstrumentation {
   /**
     * Instrument:
     *
-    * akka.actor.RepointableActorRef::point
-    *
-    * Mix:
-    *
-    * akka.actor.RepointableActorRef with kamon.trace.TraceContextAware
+    *  akka.event.slf4j.Slf4jLogger::withMdc
     *
     */
-  forTargetType("akka.actor.RepointableActorRef") { builder ⇒
+  forTargetType("akka.event.slf4j.Slf4jLogger") { builder ⇒
     builder
-      .withMixin(classOf[HasTransientContextMixin])
-      .withInterceptorFor(method("point"), PointMethodInterceptor)
+      .withAdvisorFor(method("withMdc"), classOf[WithMdcMethodAdvisor])
       .build()
   }
+}
+
+/**
+  * Advisor for akka.event.slf4j.Slf4jLogger::withMdc
+  */
+class WithMdcMethodAdvisor
+
+object WithMdcMethodAdvisor {
+  @OnMethodEnter
+  def onEnter(@Argument(1) logEvent: LogEvent): Scope =
+    Kamon.storeContext(logEvent.asInstanceOf[HasContext].context)
+
+  @OnMethodExit
+  def onExit(@Enter scope: Scope): Unit =
+    scope.close()
 }

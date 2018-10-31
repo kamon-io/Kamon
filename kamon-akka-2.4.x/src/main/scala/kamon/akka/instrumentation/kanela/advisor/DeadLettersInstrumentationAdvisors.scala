@@ -34,7 +34,9 @@ class PublishMethodAdvisor
 object PublishMethodAdvisor {
   @OnMethodExit(suppress = classOf[Throwable])
   def onExit(@This stream:HasSystem, @Argument(0) event: AnyRef):Unit = event match {
-    case dl: DeadLetter => Metrics.forSystem(stream.system.name).deadLetters.increment()
+    case dl: DeadLetter => {
+      Metrics.forSystem(stream.system.name).deadLetters.increment()
+    }
     case um: UnhandledMessage => Metrics.forSystem(stream.system.name).unhandledMessages.increment()
     case _ => ()
   }

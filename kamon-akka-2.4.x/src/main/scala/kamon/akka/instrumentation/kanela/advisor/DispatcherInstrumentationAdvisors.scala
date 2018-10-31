@@ -14,14 +14,14 @@
  * =========================================================================================
  */
 
-package kamon.akka.instrumentation.kanela.advisor
+package akka.instrumentation.kanela.advisor
 
 import java.util.concurrent.ExecutorService
 
 import akka.actor.{ActorContext, ActorSystem, Props}
 import akka.dispatch._
 import akka.kamon.instrumentation.LookupDataAware.LookupData
-import akka.kamon.instrumentation.kanela.advisor.DispatcherInstrumentationAdvisors.{extractExecutor, registerDispatcher, registeredDispatchers}
+import DispatcherInstrumentationAdvisors.{extractExecutor, registerDispatcher, registeredDispatchers}
 import akka.kamon.instrumentation.{ActorSystemAware, LookupDataAware}
 import kamon.Kamon
 import kamon.akka.Akka

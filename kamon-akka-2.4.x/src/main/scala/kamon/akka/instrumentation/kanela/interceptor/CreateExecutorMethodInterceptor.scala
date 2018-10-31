@@ -14,29 +14,29 @@
  * =========================================================================================
  */
 
-package kamon.akka.instrumentation.kanela.interceptor
+package akka.kamon.instrumentation.kanela.interceptor
 
 import java.util.concurrent.{Callable, ExecutorService}
-
+import akka.dispatch.ForkJoinExecutorConfigurator.AkkaForkJoinPool
 import kamon.executors.Executors
 import kamon.executors.Executors.{ForkJoinPoolMetrics, InstrumentedExecutorService}
 import kanela.agent.libs.net.bytebuddy.implementation.bind.annotation.SuperCall
 
 object CreateExecutorMethodInterceptor {
 
-  implicit object AkkaFJPMetrics extends ForkJoinPoolMetrics[ForkJoinPool] {
-    override def minThreads(pool: ForkJoinPool)     = 0
-    override def maxThreads(pool: ForkJoinPool)     = pool.getParallelism
-    override def activeThreads(pool: ForkJoinPool)  = pool.getActiveThreadCount
-    override def poolSize(pool: ForkJoinPool)       = pool.getPoolSize
-    override def queuedTasks(pool: ForkJoinPool)    = pool.getQueuedSubmissionCount
-    override def parallelism(pool: ForkJoinPool)    = pool.getParallelism
+  implicit object AkkaFJPMetrics extends ForkJoinPoolMetrics[AkkaForkJoinPool] {
+    override def minThreads(pool: AkkaForkJoinPool)     = 0
+    override def maxThreads(pool: AkkaForkJoinPool)     = pool.getParallelism
+    override def activeThreads(pool: AkkaForkJoinPool)  = pool.getActiveThreadCount
+    override def poolSize(pool: AkkaForkJoinPool)       = pool.getPoolSize
+    override def queuedTasks(pool: AkkaForkJoinPool)    = pool.getQueuedSubmissionCount
+    override def parallelism(pool: AkkaForkJoinPool)    = pool.getParallelism
   }
 
   def around(@SuperCall callable: Callable[ExecutorService]): ExecutorService = {
     val executor = callable.call()
     val instrumentedExecutor: ExecutorService = executor match {
-      case afjp: ForkJoinPool => new InstrumentedExecutorService[ForkJoinPool](afjp)
+      case afjp: AkkaForkJoinPool => new InstrumentedExecutorService[AkkaForkJoinPool](afjp)
       case _ => Executors.instrument(executor)
     }
     instrumentedExecutor

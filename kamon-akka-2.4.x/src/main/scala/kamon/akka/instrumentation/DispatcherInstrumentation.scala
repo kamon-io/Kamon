@@ -199,6 +199,11 @@ object LookupDataAware {
 
   def currentLookupData: LookupData = _currentDispatcherLookupData.get()
 
+  def setLookupData[T](lookupData: LookupData): ThreadLocal[LookupData] = {
+    _currentDispatcherLookupData.set(lookupData)
+    _currentDispatcherLookupData
+  }
+
   def withLookupData[T](lookupData: LookupData)(thunk: ⇒ T): T = {
     _currentDispatcherLookupData.set(lookupData)
     val result = thunk

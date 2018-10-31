@@ -16,13 +16,24 @@
 
 package kamon.akka.instrumentation.kanela
 
-import akka.actor.ActorSystem
-import akka.kamon.instrumentation.HasSystem
+import kamon.akka.instrumentation.kanela.interceptor.CopyMethodInterceptor
+import kamon.akka.instrumentation.kanela.mixin.EnvelopeInstrumentationMixin
+import kanela.agent.scala.KanelaInstrumentation
 
-class HasSystemMixin extends HasSystem {
-  @volatile var _system: ActorSystem = _
 
-  override def system: ActorSystem = _system
+class EnvelopeInstrumentation extends KanelaInstrumentation {
 
-  override def setSystem(system: ActorSystem): Unit = _system = system
+  /**
+    * Mix:
+    *
+    * akka.dispatch.Envelope with InstrumentedEnvelope
+    *
+    */
+  forTargetType("akka.dispatch.Envelope") { builder ⇒
+    builder
+      .withMixin(classOf[EnvelopeInstrumentationMixin])
+      .withInterceptorFor(method("copy"), CopyMethodInterceptor)
+      .build()
+  }
 }
+

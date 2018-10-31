@@ -16,15 +16,24 @@
 
 package kamon.akka.instrumentation.kanela
 
-import akka.kamon.instrumentation.{RouterInstrumentationAware, RouterMonitor}
+import kamon.akka.instrumentation.kanela.advisor.{ConstructorAdvisor, PublishMethodAdvisor}
+import kamon.akka.instrumentation.kanela.mixin.HasSystemMixin
+import kanela.agent.scala.KanelaInstrumentation
 
-/**
-  * Mixin for akka.routing.RoutedActorCell
-  */
-class RoutedActorCellInstrumentationMixin extends RouterInstrumentationAware {
-  @volatile private var _ri: RouterMonitor = _
 
-  def setRouterInstrumentation(ai: RouterMonitor): Unit = _ri = ai
-  def routerInstrumentation: RouterMonitor = _ri
+class DeadLettersInstrumentation extends KanelaInstrumentation {
+
+  /**
+    * Mix:
+    *
+    * akka.event.EventStream with HasSystem
+    *
+    */
+  forSubtypeOf("akka.event.EventStream") { builder ⇒
+    builder
+      .withMixin(classOf[HasSystemMixin])
+      .withAdvisorFor(Constructor.and(takesArguments(2)), classOf[ConstructorAdvisor])
+      .withAdvisorFor(method("publish").and(takesArguments(1)), classOf[PublishMethodAdvisor])
+      .build()
+  }
 }
-

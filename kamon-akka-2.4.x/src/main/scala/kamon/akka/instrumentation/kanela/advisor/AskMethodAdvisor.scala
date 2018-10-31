@@ -14,7 +14,7 @@
  * =========================================================================================
  */
 
-package kamon.akka.instrumentation.kanela.advisor
+package akka.instrumentation.kanela.advisor
 
 import akka.actor.{ActorRef, InternalActorRef}
 import akka.kamon.instrumentation.AskPatternInstrumentation

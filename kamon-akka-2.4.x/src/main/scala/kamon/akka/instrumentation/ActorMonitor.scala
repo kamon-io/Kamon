@@ -1,4 +1,23 @@
+/*
+ * =========================================================================================
+ * Copyright © 2013-2018 the kamon project <http://kamon.io/>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the specific language governing permissions
+ * and limitations under the License.
+ * =========================================================================================
+ */
+
+
 package akka.kamon.instrumentation
+
+import java.io.Closeable
 
 import akka.actor.{ActorCell, ActorRef, ActorSystem, Cell}
 import akka.dispatch.Envelope
@@ -6,17 +25,22 @@ import akka.kamon.instrumentation.ActorMonitors.{TracedMonitor, TrackedActor, Tr
 import kamon.Kamon
 import kamon.akka.Metrics
 import kamon.akka.Metrics.{ActorGroupMetrics, ActorMetrics, RouterMetrics}
+import kamon.context.Storage.Scope
 import kamon.trace.Span
-import kamon.util.Clock
 import org.aspectj.lang.ProceedingJoinPoint
+
+final case class Traveler(envelopeContext: TimestampedContext, closeable: Closeable, timestampBeforeProcessing: Long = 0L)
 
 trait ActorMonitor {
   def captureEnvelopeContext(): TimestampedContext
   def processMessage(pjp: ProceedingJoinPoint, envelopeContext: TimestampedContext, envelope: Envelope): AnyRef
   def processFailure(failure: Throwable): Unit
   def cleanup(): Unit
-}
 
+  //Kanela
+  def processMessageStart(envelopeContext: TimestampedContext, envelope: Envelope): Traveler
+  def processMessageEnd(traveler: Traveler): Unit
+}
 
 object ActorMonitor {
 
@@ -63,8 +87,6 @@ object ActorMonitor {
 
 object ActorMonitors {
 
-
-
   class TracedMonitor(cellInfo: CellInfo, monitor: ActorMonitor) extends ActorMonitor {
     private val actorClassName = cellInfo.actorClass.getName
     private val actorSimpleClassName = simpleClassName(cellInfo.actorClass)
@@ -83,6 +105,18 @@ object ActorMonitors {
         messageSpan.finish()
       }
     }
+
+    override def processMessageStart(envelopeContext: TimestampedContext, envelope: Envelope): Traveler = {
+      import CloseableSyntax._
+
+      val messageSpan = buildSpan(cellInfo, envelopeContext, envelope)
+      val contextWithMessageSpan = envelopeContext.context.withKey(Span.ContextKey, messageSpan)
+      monitor.processMessageStart(envelopeContext.copy(context = contextWithMessageSpan), envelope)
+      Traveler(envelopeContext, messageSpan.toCloseable)
+    }
+
+    override def processMessageEnd(traveler: Traveler): Unit =
+      traveler.closeable.close()
 
     override def processFailure(failure: Throwable): Unit = monitor.processFailure(failure)
 
@@ -128,6 +162,17 @@ object ActorMonitors {
     def cleanup(): Unit = {
       Metrics.forSystem(cellInfo.systemName).activeActors.decrement()
     }
+
+    def processMessageStart(envelopeContext: TimestampedContext, envelope: Envelope): Traveler = {
+      import CloseableSyntax._
+
+      processedMessagesCounter.increment()
+      val scope = Kamon.storeContext(envelopeContext.context)
+      Traveler(envelopeContext, scope.toCloseable)
+    }
+
+    def processMessageEnd(traveler: Traveler): Unit =
+      traveler.closeable.close()
   }
 
   def simpleClassName(cls: Class[_]): String = {
@@ -136,7 +181,7 @@ object ActorMonitors {
   }
 
   class TrackedActor(actorMetrics: Option[ActorMetrics], groupMetrics: Seq[ActorGroupMetrics], actorCellCreation: Boolean, cellInfo: CellInfo)
-      extends GroupMetricsTrackingActor(groupMetrics, actorCellCreation, cellInfo) {
+    extends GroupMetricsTrackingActor(groupMetrics, actorCellCreation, cellInfo) {
 
     private val processedMessagesCounter = Metrics.forSystem(cellInfo.systemName).processedMessagesByTracked
 
@@ -169,6 +214,30 @@ object ActorMonitors {
       }
     }
 
+    override def processMessageStart(envelopeContext: TimestampedContext, envelope: Envelope): Traveler = {
+      import CloseableSyntax._
+
+      val timestampBeforeProcessing = Kamon.clock().nanos()
+      processedMessagesCounter.increment()
+      val scope = Kamon.storeContext(envelopeContext.context)
+      Traveler(envelopeContext, scope.toCloseable, timestampBeforeProcessing)
+    }
+
+    override def processMessageEnd(traveler: Traveler): Unit = {
+      try traveler.closeable.close() finally {
+        val timestampAfterProcessing = Kamon.clock().nanos()
+        val timeInMailbox = traveler.timestampBeforeProcessing - traveler.envelopeContext.nanoTime
+        val processingTime = timestampAfterProcessing - traveler.timestampBeforeProcessing
+
+        actorMetrics.foreach { am =>
+          am.processingTime.record(processingTime)
+          am.timeInMailbox.record(timeInMailbox)
+          am.mailboxSize.decrement()
+        }
+        recordProcessMetrics(processingTime, timeInMailbox)
+      }
+    }
+
     override def processFailure(failure: Throwable): Unit = {
       actorMetrics.foreach { am =>
         am.errors.increment()
@@ -183,7 +252,7 @@ object ActorMonitors {
   }
 
   class TrackedRoutee(routerMetrics: RouterMetrics, groupMetrics: Seq[ActorGroupMetrics], actorCellCreation: Boolean, cellInfo: CellInfo)
-      extends GroupMetricsTrackingActor(groupMetrics, actorCellCreation, cellInfo) {
+    extends GroupMetricsTrackingActor(groupMetrics, actorCellCreation, cellInfo) {
 
     private val processedMessagesCounter = Metrics.forSystem(cellInfo.systemName).processedMessagesByTracked
 
@@ -199,6 +268,27 @@ object ActorMonitors {
         val timestampAfterProcessing = Kamon.clock().nanos()
         val timeInMailbox = timestampBeforeProcessing - envelopeContext.nanoTime
         val processingTime = timestampAfterProcessing - timestampBeforeProcessing
+
+        routerMetrics.processingTime.record(processingTime)
+        routerMetrics.timeInMailbox.record(timeInMailbox)
+        recordProcessMetrics(processingTime, timeInMailbox)
+      }
+    }
+
+    override def processMessageStart(envelopeContext: TimestampedContext, envelope: Envelope): Traveler  = {
+      import CloseableSyntax._
+
+      val timestampBeforeProcessing = Kamon.clock().nanos()
+      processedMessagesCounter.increment()
+      val scope = Kamon.storeContext(envelopeContext.context)
+      Traveler(envelopeContext, scope.toCloseable, timestampBeforeProcessing)
+    }
+
+    override def processMessageEnd(traveler: Traveler): Unit = {
+      try  traveler.closeable.close() finally {
+        val timestampAfterProcessing = Kamon.clock().nanos()
+        val timeInMailbox = traveler.timestampBeforeProcessing - traveler.envelopeContext.nanoTime
+        val processingTime = timestampAfterProcessing - traveler.timestampBeforeProcessing
 
         routerMetrics.processingTime.record(processingTime)
         routerMetrics.timeInMailbox.record(timeInMailbox)
@@ -254,5 +344,17 @@ object ActorMonitors {
         }
       }
     }
+  }
+}
+
+object CloseableSyntax {
+  implicit class ScopeToCloseable(val scope:Scope) extends AnyVal {
+    def toCloseable:Closeable =
+      () => scope.close()
+  }
+
+  implicit class SpanToCloseable(val span:Span) extends AnyVal {
+    def toCloseable:Closeable =
+      () => span.finish()
   }
 }
