@@ -90,6 +90,8 @@ object ActorMonitor {
 
 object ActorMonitors {
 
+
+
   class TracedMonitor(cellInfo: CellInfo, monitor: ActorMonitor) extends ActorMonitor {
     private val actorClassName = cellInfo.actorOrRouterClass.getName
     private val actorSimpleClassName = simpleClassName(cellInfo.actorOrRouterClass)
@@ -310,6 +312,7 @@ object ActorMonitors {
 
         routerMetrics.processingTime.record(processingTime)
         routerMetrics.timeInMailbox.record(timeInMailbox)
+        routerMetrics.pendingMessages.decrement()
         recordProcessMetrics(processingTime, timeInMailbox)
       }
     }
@@ -339,7 +342,7 @@ object ActorMonitors {
 
     def captureEnvelopeContext(): TimestampedContext = {
       groupMetrics.foreach { gm =>
-        gm.mailboxSize.increment()
+        gm.pendingMessages.increment()
       }
 
       TimestampedContext(Kamon.clock().nanos(), Kamon.currentContext())
@@ -355,7 +358,7 @@ object ActorMonitors {
       groupMetrics.foreach { gm =>
         gm.processingTime.record(processingTime)
         gm.timeInMailbox.record(timeInMailbox)
-        gm.mailboxSize.decrement()
+        gm.pendingMessages.decrement()
       }
     }
 

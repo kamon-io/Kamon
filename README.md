@@ -15,45 +15,28 @@ Kamon akka module is currently available for Scala 2.10, 2.11 and 2.12.
 
 Supported releases and dependencies are shown below.
 
-| kamon-akka-2.3  | status | jdk  | scala            | akka   |
-|:------:|:------:|:----:|------------------|:------:|
-|  1.0.0 | stable | 1.7+, 1.8+ | 2.10, 2.11  | 2.3.x |
-
-| kamon-akka-2.4  | status | jdk  | scala            | akka   |
-|:------:|:------:|:----:|------------------|:------:|
-|  1.0.0 | stable | 1.7+, 1.8+ | 2.11, 2.12  | 2.4.x |
-
-| kamon-akka-2.5  | status | jdk  | scala            | akka   |
-|:------:|:------:|:----:|------------------|:------:|
-|  1.0.0 | stable | 1.8+ | 2.11, 2.12  | 2.5.x |
+| Artifact              | status | jdk        | scala            | akka   |
+|:---------------------:|:------:|:----------:|------------------|:------:|
+|  kamon-akka-2.3 1.0.1 | stable | 1.7+, 1.8+ | 2.10, 2.11       | 2.3.x  |
+|  kamon-akka-2.4 1.1.0 | stable | 1.7+, 1.8+ | 2.11, 2.12       | 2.4.x  |
+|  kamon-akka-2.5 1.1.0 | stable | 1.8+       | 2.11, 2.12       | 2.5.x  |
 
 To get started with SBT, simply add the following to your `build.sbt` or `pom.xml`
 file:
 
 ```scala
-libraryDependencies += "io.kamon" %% "kamon-akka-2.5" % "1.0.0"
+libraryDependencies += "io.kamon" %% "kamon-akka-2.5" % "1.1.0"
 ```
 
 ```xml
 <dependency>
     <groupId>io.kamon</groupId>
     <artifactId>kamon-akka-2.5_2.12</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
 </dependency>
 ```
 
-Here is a quick list of the functionalities included in the module:
-
-* __[Actor, Router and Dispatcher Metrics]__: This module hooks into Akka's heart to give you a robust set of metrics
-based on the concepts already exposed by our metrics module.
-* __[Automatic Context Propagation]__: This allows you to implicitly propagate the `Context` across actor messages
-without having to change a single line of code and respecting the "follow the events" rather than "stick to the thread"
-convention as described in the [event based threading model section].
-* __[Ask Pattern Timeout Warning]__: A utility that logs a warning with additional information when a usage of the Ask
-Pattern timesout.
+A full description of the capabilities of this module can be found in [the official documentation][1].
 
 
-[event based threading model section]: http://kamon.io/core/tracing/threading-model-considerations/
-[Ask Pattern Timeout Warning]: http://kamon.io/integrations/akka/ask-pattern-timeout-warning/
-[Actor, Router and Dispatcher Metrics]: http://kamon.io/integrations/akka/actor-router-and-dispatcher-metrics/
-[Automatic Context Propagation]: http://kamon.io/integrations/akka/automatic-trace-context-propagation/
+[1]: http://kamon.io/documentation/1.x/instrumentation/akka/

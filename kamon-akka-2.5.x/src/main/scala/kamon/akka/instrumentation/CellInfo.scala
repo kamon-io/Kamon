@@ -14,7 +14,7 @@
  */
 package akka.kamon.instrumentation
 
-import akka.actor.{ActorRef, ActorSystem, Cell}
+import akka.actor.{ActorRef, ActorSystem, Cell, Deployer, ExtendedActorSystem}
 import akka.routing.{BalancingPool, NoRouter, RoutedActorCell, RoutedActorRef}
 import kamon.Kamon
 import kamon.akka.Akka
@@ -46,20 +46,29 @@ object CellInfo {
       else if (isRoutee)
         (parent.asInstanceOf[RoutedActorRefAccessor].routerProps.routerConfig.getClass, Some(cell.props.clazz))
       else
-        (cell.props.clazz, None)
+        (cell.props.actorClass(), None)
 
     val fullPath = if (isRoutee) cellName(system, parent) else cellName(system, ref)
     val filterName = if (isRouter || isRoutee) Akka.RouterFilterName else Akka.ActorFilterName
     val isTracked = !isRootSupervisor && Kamon.filter(filterName, fullPath)
     val isTraced = Kamon.filter(Akka.ActorTracingFilterName, fullPath)
-    val trackingGroups = if(isRootSupervisor) List() else Akka.actorGroups.filter(group => Kamon.filter(group, fullPath))
+    val trackingGroups = if(isRootSupervisor) List() else Akka.actorGroups(fullPath)
 
-    val dispatcherName = if(isRouter && cell.props.routerConfig.isInstanceOf[BalancingPool]) {
-      // Even though the router actor for a BalancingPool can have a different dispatcher we will
-      // assign the name of the same dispatcher where the routees will run to ensure all metrics are
-      // correlated and cleaned up correctly.
-      val deployPath = ref.path.elements.drop(1).mkString("/", "/", "")
-      "BalancingPool-" + deployPath
+    val dispatcherName = if(isRouter) {
+      if(cell.props.routerConfig.isInstanceOf[BalancingPool]) {
+        // Even though the router actor for a BalancingPool can have a different dispatcher we will
+        // assign the name of the same dispatcher where the routees will run to ensure all metrics are
+        // correlated and cleaned up correctly.
+        val deployPath = ref.path.elements.drop(1).mkString("/", "/", "")
+        "BalancingPool-" + deployPath
+
+      } else {
+        // It might happen that the deployment configuration will provide a different dispatcher name
+        // for the routees and we should catch that case only when creating the router (the routees will
+        // be initialized with an updated Props instance.
+        val deployer = new Deployer(system.settings, system.asInstanceOf[ExtendedActorSystem].dynamicAccess)
+        deployer.lookup(ref.path / "$a").map(_.dispatcher).getOrElse(cell.props.dispatcher)
+      }
     } else cell.props.dispatcher
 
     CellInfo(fullPath, isRouter, isRoutee, isTracked, trackingGroups, actorCellCreation, system.name, dispatcherName,

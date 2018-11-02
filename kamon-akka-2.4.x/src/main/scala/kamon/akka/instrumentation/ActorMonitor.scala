@@ -35,6 +35,7 @@ trait ActorMonitor {
   def captureEnvelopeContext(): TimestampedContext
   def processMessage(pjp: ProceedingJoinPoint, envelopeContext: TimestampedContext, envelope: Envelope): AnyRef
   def processFailure(failure: Throwable): Unit
+  def processDroppedMessage(count: Long): Unit
   def cleanup(): Unit
 
   //Kanela
@@ -66,7 +67,7 @@ object ActorMonitor {
 
   def createRegularActorMonitor(cellInfo: CellInfo): ActorMonitor = {
     if (cellInfo.isTracked || !cellInfo.trackingGroups.isEmpty) {
-      val actorMetrics = if (cellInfo.isTracked) Some(Metrics.forActor(cellInfo.path, cellInfo.systemName, cellInfo.dispatcherName, cellInfo.actorClass.getName)) else None
+      val actorMetrics = if (cellInfo.isTracked) Some(Metrics.forActor(cellInfo.path, cellInfo.systemName, cellInfo.dispatcherName, cellInfo.actorOrRouterClass.getName)) else None
       new TrackedActor(actorMetrics, trackingGroupMetrics(cellInfo), cellInfo.actorCellCreation, cellInfo)
     } else {
       ActorMonitors.ContextPropagationOnly(cellInfo)
@@ -74,7 +75,9 @@ object ActorMonitor {
   }
 
   def createRouteeMonitor(cellInfo: CellInfo): ActorMonitor = {
-    val routerMetrics = Metrics.forRouter(cellInfo.path, cellInfo.systemName, cellInfo.dispatcherName, cellInfo.actorClass.getName)
+    val routerMetrics = Metrics.forRouter(cellInfo.path, cellInfo.systemName, cellInfo.dispatcherName, cellInfo.actorOrRouterClass.getName,
+      cellInfo.routeeClass.map(_.getName).getOrElse("Unknown"))
+
     new TrackedRoutee(routerMetrics, trackingGroupMetrics(cellInfo), cellInfo.actorCellCreation, cellInfo)
   }
 
@@ -88,8 +91,8 @@ object ActorMonitor {
 object ActorMonitors {
 
   class TracedMonitor(cellInfo: CellInfo, monitor: ActorMonitor) extends ActorMonitor {
-    private val actorClassName = cellInfo.actorClass.getName
-    private val actorSimpleClassName = simpleClassName(cellInfo.actorClass)
+    private val actorClassName = cellInfo.actorOrRouterClass.getName
+    private val actorSimpleClassName = simpleClassName(cellInfo.actorOrRouterClass)
 
     override def captureEnvelopeContext(): TimestampedContext = {
       monitor.captureEnvelopeContext()
@@ -119,6 +122,7 @@ object ActorMonitors {
       traveler.closeable.close()
 
     override def processFailure(failure: Throwable): Unit = monitor.processFailure(failure)
+    override def processDroppedMessage(count: Long): Unit = monitor.processDroppedMessage(count)
 
     override def cleanup(): Unit = monitor.cleanup()
 
@@ -159,6 +163,7 @@ object ActorMonitors {
     }
 
     def processFailure(failure: Throwable): Unit = {}
+    def processDroppedMessage(count: Long): Unit = {}
     def cleanup(): Unit = {
       Metrics.forSystem(cellInfo.systemName).activeActors.decrement()
     }
@@ -245,6 +250,10 @@ object ActorMonitors {
       super.processFailure(failure: Throwable)
     }
 
+    override def processDroppedMessage(count: Long): Unit = {
+      // Dropped messages are only measured for routees
+    }
+
     override def cleanup(): Unit = {
       super.cleanup()
       actorMetrics.foreach(_.cleanup())
@@ -254,7 +263,15 @@ object ActorMonitors {
   class TrackedRoutee(routerMetrics: RouterMetrics, groupMetrics: Seq[ActorGroupMetrics], actorCellCreation: Boolean, cellInfo: CellInfo)
     extends GroupMetricsTrackingActor(groupMetrics, actorCellCreation, cellInfo) {
 
+    routerMetrics.members.increment()
     private val processedMessagesCounter = Metrics.forSystem(cellInfo.systemName).processedMessagesByTracked
+
+
+
+    override def captureEnvelopeContext(): TimestampedContext = {
+      routerMetrics.pendingMessages.increment()
+      super.captureEnvelopeContext()
+    }
 
     def processMessage(pjp: ProceedingJoinPoint, envelopeContext: TimestampedContext, envelope: Envelope): AnyRef = {
       val timestampBeforeProcessing = Kamon.clock().nanos()
@@ -271,6 +288,7 @@ object ActorMonitors {
 
         routerMetrics.processingTime.record(processingTime)
         routerMetrics.timeInMailbox.record(timeInMailbox)
+        routerMetrics.pendingMessages.decrement()
         recordProcessMetrics(processingTime, timeInMailbox)
       }
     }
@@ -301,9 +319,14 @@ object ActorMonitors {
       super.processFailure(failure)
     }
 
+
+    override def processDroppedMessage(count: Long): Unit = {
+      routerMetrics.pendingMessages.decrement(count)
+    }
+
     override def cleanup(): Unit = {
       super.cleanup()
-      routerMetrics.cleanup()
+      routerMetrics.members.decrement()
     }
   }
 
@@ -316,7 +339,7 @@ object ActorMonitors {
 
     def captureEnvelopeContext(): TimestampedContext = {
       groupMetrics.foreach { gm =>
-        gm.mailboxSize.increment()
+        gm.pendingMessages.increment()
       }
 
       TimestampedContext(Kamon.clock().nanos(), Kamon.currentContext())
@@ -332,7 +355,7 @@ object ActorMonitors {
       groupMetrics.foreach { gm =>
         gm.processingTime.record(processingTime)
         gm.timeInMailbox.record(timeInMailbox)
-        gm.mailboxSize.decrement()
+        gm.pendingMessages.decrement()
       }
     }
 

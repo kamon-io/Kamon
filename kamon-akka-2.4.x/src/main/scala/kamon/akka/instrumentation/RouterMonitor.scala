@@ -24,7 +24,15 @@ object RouterMonitor {
     val cellInfo = CellInfo.cellInfoFor(cell, cell.system, cell.self, cell.parent, false)
 
     if (cellInfo.isTracked)
-      new MetricsOnlyRouterMonitor(Metrics.forRouter(cellInfo.path, cellInfo.systemName, cellInfo.dispatcherName, cellInfo.actorClass.getName))
+      new MetricsOnlyRouterMonitor(
+        Metrics.forRouter(
+          cellInfo.path,
+          cellInfo.systemName,
+          cellInfo.dispatcherName,
+          cellInfo.actorOrRouterClass.getName,
+          cellInfo.routeeClass.map(_.getName).getOrElse("Unknown")
+        )
+      )
     else NoOpRouterMonitor
   }
 }
@@ -67,5 +75,7 @@ class MetricsOnlyRouterMonitor(routerMetrics: RouterMetrics) extends RouterMonit
   def processFailure(failure: Throwable): Unit = {}
   def routeeAdded(): Unit = {}
   def routeeRemoved(): Unit = {}
-  def cleanup(): Unit = routerMetrics.cleanup()
+  def cleanup(): Unit = {
+    routerMetrics.cleanup()
+  }
 }
