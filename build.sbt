@@ -72,7 +72,7 @@ enableProperCrossScalaVersionTasks
 def resolveAgent: Seq[ModuleID] = {
     val agent = Option(System.getProperty("agent")).getOrElse("aspectj")
     if(agent.equalsIgnoreCase("kanela"))
-        Seq("org.aspectj" % "aspectjweaver" % "1.9.1" % "compile", "io.kamon" % "kanela-agent" % "0.0.300" % "compile;test")
+        Seq("org.aspectj" % "aspectjweaver" % "1.9.1" % "compile", "io.kamon" % "kanela-agent" % "0.0.15" % "compile;test")
     else
-        Seq("org.aspectj" % "aspectjweaver" % "1.9.1" % "compile;test", "io.kamon" % "kanela-agent" % "0.0.300" % "compile")
+        Seq("org.aspectj" % "aspectjweaver" % "1.9.1" % "compile;test", "io.kamon" % "kanela-agent" % "0.0.15" % "compile")
 }

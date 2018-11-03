@@ -16,7 +16,7 @@
 
 package kamon.akka.instrumentation.kanela
 
-import akka.kamon.instrumentation.kanela.advisor._
+import akka.kamon.instrumentation.kanela.advisor.{UnregisterMethodAdvisor, _}
 import akka.kamon.instrumentation.kanela.interceptor.{InvokeAllMethodInterceptor, ReplaceWithMethodInterceptor}
 import kamon.akka.instrumentation.kanela.mixin.{ActorInstrumentationMixin, RoutedActorCellInstrumentationMixin}
 import kanela.agent.scala.KanelaInstrumentation
@@ -70,24 +70,12 @@ class ActorInstrumentation extends KanelaInstrumentation {
       .build()
   }
 
-  /**
-    * Instrument:
-    *
-    * akka.routing.RoutedActorCell::constructor
-    * akka.routing.RoutedActorCell::sendMessage
-    *
-    * Mix:
-    *
-    * akka.routing.RoutedActorCell with kamon.akka.instrumentation.mixin.RouterInstrumentationAware
-    *
-    */
-  forTargetType("akka.routing.RoutedActorCell") { builder ⇒
+
+  forTargetType("akka.dispatch.MessageDispatcher") { builder =>
     builder
-      .withMixin(classOf[RoutedActorCellInstrumentationMixin])
-      .withAdvisorFor(Constructor, classOf[RoutedActorCellConstructorAdvisor])
-      .withAdvisorFor(method("sendMessage").and(takesArguments(1)), classOf[SendMessageMethodAdvisor])
-      .withAdvisorFor(method("sendMessage").and(takesArguments(1)), classOf[SendMessageMethodAdvisorForRouter])
+      .withAdvisorFor(method("unregister").and(takesArguments(1)), classOf[UnregisterMethodAdvisor])
       .build()
+
   }
 }
 

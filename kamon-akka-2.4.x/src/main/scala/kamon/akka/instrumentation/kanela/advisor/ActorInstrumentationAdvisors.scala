@@ -17,7 +17,7 @@
 package akka.kamon.instrumentation.kanela.advisor
 
 import _root_.kanela.agent.libs.net.bytebuddy.asm.Advice._
-import akka.actor.{ActorRef, ActorSystem, ActorSystemImpl, Cell}
+import akka.actor.{ActorCell, ActorRef, ActorSystem, ActorSystemImpl, Cell}
 import akka.dispatch.Envelope
 import akka.kamon.instrumentation._
 import akka.routing.RoutedActorCell
@@ -120,14 +120,16 @@ object RepointableActorCellConstructorAdvisor {
   }
 }
 
+
 /**
-  * Advisor for akka.routing.RoutedActorCell::constructor
+  * Advisor for akka.dispatch.MessageDispatcher#unregister
   */
-class RoutedActorCellConstructorAdvisor
-object RoutedActorCellConstructorAdvisor {
-  @OnMethodExit(suppress = classOf[Throwable])
-  def onExit(@This cell: Cell): Unit = {
-    cell.asInstanceOf[RouterInstrumentationAware].setRouterInstrumentation(RouterMonitor.createRouterInstrumentation(cell))
+class UnregisterMethodAdvisor
+object UnregisterMethodAdvisor extends ActorInstrumentationSupport {
+  @OnMethodEnter(suppress = classOf[Throwable])
+  def onEnter(@Argument(0) cell: ActorCell): Unit = {
+
+    actorInstrumentation(cell).processDroppedMessage(cell.mailbox.numberOfMessages)
   }
 }
 

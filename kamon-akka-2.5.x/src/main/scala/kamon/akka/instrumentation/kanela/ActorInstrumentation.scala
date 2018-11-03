@@ -71,24 +71,12 @@ class ActorInstrumentation extends KanelaInstrumentation {
       .build()
   }
 
-  /**
-    * Instrument:
-    *
-    * akka.routing.RoutedActorCell::constructor
-    * akka.routing.RoutedActorCell::sendMessage
-    *
-    * Mix:
-    *
-    * akka.routing.RoutedActorCell with kamon.akka.instrumentation.mixin.RouterInstrumentationAware
-    *
-    */
-  forTargetType("akka.routing.RoutedActorCell") { builder ⇒
+  forTargetType("akka.dispatch.MessageDispatcher") { builder =>
     builder
-      .withMixin(classOf[RoutedActorCellInstrumentationMixin])
-      .withAdvisorFor(Constructor, classOf[RoutedActorCellConstructorAdvisor])
-      .withAdvisorFor(method("sendMessage").and(takesArguments(1)), classOf[SendMessageMethodAdvisor])
-      .withAdvisorFor(method("sendMessage").and(takesArguments(1)), classOf[SendMessageMethodAdvisorForRouter])
+      .withAdvisorFor(method("unregister").and(takesArguments(1)), classOf[UnregisterMethodAdvisor])
       .build()
+
   }
+
 }
 
