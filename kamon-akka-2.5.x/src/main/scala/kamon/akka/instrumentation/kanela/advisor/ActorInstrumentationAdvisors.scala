@@ -47,7 +47,7 @@ object ActorCellConstructorAdvisor {
   */
 class InvokeMethodAdvisor
 object InvokeMethodAdvisor extends ActorInstrumentationSupport {
-  @OnMethodEnter(suppress = classOf[Throwable])
+  @OnMethodEnter()
   def onEnter(@This cell: Cell,
               @Argument(0) envelope: Object): Traveler = {
     actorInstrumentation(cell).processMessageStart(envelope.asInstanceOf[InstrumentedEnvelope].timestampedContext(), envelope.asInstanceOf[Envelope])

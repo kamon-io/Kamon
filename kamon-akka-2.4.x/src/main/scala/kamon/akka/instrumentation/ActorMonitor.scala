@@ -310,6 +310,7 @@ object ActorMonitors {
 
         routerMetrics.processingTime.record(processingTime)
         routerMetrics.timeInMailbox.record(timeInMailbox)
+        routerMetrics.pendingMessages.decrement()
         recordProcessMetrics(processingTime, timeInMailbox)
       }
     }
