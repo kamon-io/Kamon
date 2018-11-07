@@ -120,7 +120,6 @@ class RouterMetricsSpec extends TestKit(ActorSystem("RouterMetricsSpec")) with W
       timeInMailboxDistribution.buckets.head.value should be(timings.approximateTimeInMailbox +- 10.millis.toNanos)
     }
 
-    // Fails
     "record pending-messages for pool routers" in new RouterMetricsFixtures {
       val timingsListener = TestProbe()
       val router = createTestPoolRouter("measuring-pending-messages-in-pool-router", true)
@@ -137,7 +136,6 @@ class RouterMetricsSpec extends TestKit(ActorSystem("RouterMetricsSpec")) with W
       }
     }
 
-    // Fails
     "record pending-messages for balancing pool routers" in new RouterMetricsFixtures {
       val timingsListener = TestProbe()
       val router = createTestBalancingPoolRouter("measuring-pending-messages-in-balancing-pool-router", true)
@@ -155,7 +153,6 @@ class RouterMetricsSpec extends TestKit(ActorSystem("RouterMetricsSpec")) with W
       }
     }
 
-    // NPE
     "record member count for pool routers" in new RouterMetricsFixtures {
       val timingsListener = TestProbe()
       val router = createTestPoolRouter("measuring-members-in-pool-router", true)
@@ -172,7 +169,6 @@ class RouterMetricsSpec extends TestKit(ActorSystem("RouterMetricsSpec")) with W
       }
     }
 
-    // NPE
     "record member count for balancing pool routers" in new RouterMetricsFixtures {
       val timingsListener = TestProbe()
       val router = createTestBalancingPoolRouter("measuring-members-in-balancing-pool-router", true)
@@ -203,7 +199,6 @@ class RouterMetricsSpec extends TestKit(ActorSystem("RouterMetricsSpec")) with W
       routerMetrics.map(m => m("dispatcher")) should contain only("custom-dispatcher")
     }
 
-    // NPE
     "clean the pending messages metric when a routee dies in pool routers" in new RouterMetricsFixtures {
       val timingsListener = TestProbe()
       val router = createTestPoolRouter("cleanup-pending-messages-in-pool-router", true)
@@ -222,7 +217,6 @@ class RouterMetricsSpec extends TestKit(ActorSystem("RouterMetricsSpec")) with W
       }
     }
 
-    // NPE
     "clean the pending messages metric when a routee dies in balancing pool routers" in new RouterMetricsFixtures {
       val timingsListener = TestProbe()
       val router = createTestBalancingPoolRouter("cleanup-pending-messages-in-balancing-pool-router", true)
@@ -242,7 +236,6 @@ class RouterMetricsSpec extends TestKit(ActorSystem("RouterMetricsSpec")) with W
       }
     }
 
-    // NPE
     "clean up the associated recorder when the pool router is stopped" in new RouterMetricsFixtures {
       val trackedRouter = createTestPoolRouter("stop-in-pool-router")
       routerProcessingTime.valuesForTag("path") should contain("RouterMetricsSpec/user/stop-in-pool-router")
