@@ -34,7 +34,7 @@ public final class ExecutorInstrumentation extends KanelaInstrumentation {
         /**
          * Set the ContextProvider
          */
-        ContextHandler.setContexProvider(new KamonContextProvider());
+        ContextHandler.setContextProvider(new KamonContextProvider());
 
         /**
          * Instrument all implementations of:

@@ -28,7 +28,7 @@ final class ExecutorsInstrumentationAdvisors {
         /**
          * Wraps a {@link Runnable} so that it executes with the current context.
          */
-        @Advice.OnMethodEnter
+        @Advice.OnMethodEnter(suppress = Throwable.class)
         public static void wrapParam(@Advice.Argument(value = 0, readOnly = false) Runnable runnable) {
             runnable = ContextHandler.wrapInContextAware(runnable);
         }
@@ -38,7 +38,7 @@ final class ExecutorsInstrumentationAdvisors {
         /**
          * Wraps a {@link Callable} so that it executes with the current context.
          */
-        @Advice.OnMethodEnter
+        @Advice.OnMethodEnter(suppress = Throwable.class)
         public static void wrapParam(@Advice.Argument(value = 0, readOnly = false) Callable<?> callable) {
             callable = ContextHandler.wrapInContextAware(callable);
         }
@@ -48,7 +48,7 @@ final class ExecutorsInstrumentationAdvisors {
         /**
          * Wraps all elements of a list of {@link Callable}'s so that it executes with the current context.
          */
-        @Advice.OnMethodEnter
+        @Advice.OnMethodEnter(suppress = Throwable.class)
         public static void wrapParam(@Advice.Argument(value = 0, readOnly = false) Collection<? extends Callable<?>> tasks) {
             final Collection<Callable<?>> wrappedTasks = new ArrayList<>(tasks.size());
             for (Callable<?> task : tasks) {

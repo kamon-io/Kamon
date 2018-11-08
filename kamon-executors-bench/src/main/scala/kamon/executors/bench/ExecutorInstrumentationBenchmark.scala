@@ -60,7 +60,7 @@ class ExecutorInstrumentationBenchmark {
   @Benchmark
   @BenchmarkMode(Array(Mode.AverageTime))
   @OutputTimeUnit(TimeUnit.NANOSECONDS)
-  @Fork(jvmArgsAppend = Array("-javaagent:/home/diego/.m2/repository/io/kamon/kanela-agent/0.0.300/kanela-agent-0.0.300.jar"))
+  @Fork(jvmArgsAppend = Array("-javaagent:/home/diego/.m2/repository/io/kamon/kanela-agent/0.0.15/kanela-agent-0.0.15.jar"))
   def automatic(blackhole: Blackhole): Unit = {
     MoreExecutors.directExecutor.execute(new BlackholeRunnable(blackhole))
   }
