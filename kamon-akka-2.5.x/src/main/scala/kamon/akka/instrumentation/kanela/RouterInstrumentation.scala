@@ -1,6 +1,6 @@
 package kamon.akka.instrumentation.kanela
 
-import akka.kamon.instrumentation.kanela.advisor.{RoutedActorCellConstructorAdvisor, RoutedActorRefConstructorAdvisor, SendMessageMethodAdvisorForRouter}
+import akka.kamon.instrumentation.kanela.advisor.{RoutedActorCellConstructorAdvisor, RoutedActorRefConstructorAdvisor, SendMessageMethodAdvisor, SendMessageMethodAdvisorForRouter}
 import kamon.akka.instrumentation.kanela.mixin.{RoutedActorCellInstrumentationMixin, RoutedActorRefInstrumentationMixin}
 import kanela.agent.scala.KanelaInstrumentation
 
@@ -21,6 +21,7 @@ class RouterInstrumentation extends KanelaInstrumentation {
     builder
       .withMixin(classOf[RoutedActorCellInstrumentationMixin])
       .withAdvisorFor(Constructor, classOf[RoutedActorCellConstructorAdvisor])
+      .withAdvisorFor(method("sendMessage").and(takesArguments(1)), classOf[SendMessageMethodAdvisor])
       .withAdvisorFor(method("sendMessage").and(takesArguments(1)), classOf[SendMessageMethodAdvisorForRouter])
       .build()
   }

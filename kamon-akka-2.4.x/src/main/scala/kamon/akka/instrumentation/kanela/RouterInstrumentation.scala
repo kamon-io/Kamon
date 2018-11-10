@@ -21,6 +21,7 @@ class RouterInstrumentation extends KanelaInstrumentation {
     builder
       .withMixin(classOf[RoutedActorCellInstrumentationMixin])
       .withAdvisorFor(Constructor, classOf[RoutedActorCellConstructorAdvisor])
+      .withAdvisorFor(method("sendMessage").and(takesArguments(1)), classOf[SendMessageMethodAdvisor])
       .withAdvisorFor(method("sendMessage").and(takesArguments(1)), classOf[SendMessageMethodAdvisorForRouter])
       .build()
   }
