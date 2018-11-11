@@ -21,7 +21,7 @@ import java.util.concurrent.Callable
 
 import akka.dispatch.sysmsg.EarliestFirstSystemMessageList
 import kamon.Kamon
-import kamon.context.HasContext
+import kamon.instrumentation.Mixin.HasContext
 import kanela.agent.libs.net.bytebuddy.implementation.bind.annotation.{Argument, RuntimeType, SuperCall}
 
 

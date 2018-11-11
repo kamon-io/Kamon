@@ -17,7 +17,8 @@
 package kamon.akka
 
 import com.typesafe.config.Config
-import kamon.{Kamon, OnReconfigureHook}
+import kamon.Configuration.OnReconfigureHook
+import kamon.Kamon
 import kamon.akka.AskPatternTimeoutWarningSettings.Off
 import kamon.util.Matcher
 

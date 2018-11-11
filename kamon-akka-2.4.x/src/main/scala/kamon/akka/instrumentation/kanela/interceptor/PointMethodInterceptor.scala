@@ -19,7 +19,7 @@ package kamon.akka.instrumentation.kanela.interceptor
 import java.util.concurrent.Callable
 
 import kamon.Kamon
-import kamon.context.HasContext
+import kamon.instrumentation.Mixin.HasContext
 import kanela.agent.libs.net.bytebuddy.implementation.bind.annotation.{RuntimeType, SuperCall, This}
 
 /**

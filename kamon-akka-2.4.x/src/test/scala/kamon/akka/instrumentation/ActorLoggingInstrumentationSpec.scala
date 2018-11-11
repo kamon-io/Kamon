@@ -20,7 +20,7 @@ import akka.actor.{Actor, ActorLogging, ActorSystem, Props}
 import akka.event.Logging.LogEvent
 import akka.testkit.{ImplicitSender, TestKit}
 import kamon.Kamon
-import kamon.context.HasContext
+import kamon.instrumentation.Mixin.HasContext
 import kamon.testkit.ContextTesting
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 

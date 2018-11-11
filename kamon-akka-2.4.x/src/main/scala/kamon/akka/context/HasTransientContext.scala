@@ -1,7 +1,8 @@
 package kamon.akka.context
 
 import kamon.Kamon
-import kamon.context.{Context, HasContext}
+import kamon.context.Context
+import kamon.instrumentation.Mixin.HasContext
 
 trait ContextContainer extends HasContext {
   def setContext(context: Context)

@@ -18,7 +18,7 @@ package akka.kamon.instrumentation
 
 import kamon.Kamon
 import kamon.akka.context.HasTransientContext
-import kamon.context.HasContext
+import kamon.instrumentation.Mixin.HasContext
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
 

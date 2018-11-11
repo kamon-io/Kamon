@@ -19,7 +19,7 @@ package akka.kamon.instrumentation
 import akka.dispatch.sysmsg.EarliestFirstSystemMessageList
 import kamon.Kamon
 import kamon.akka.context.{ContextContainer, HasTransientContext}
-import kamon.context.HasContext
+import kamon.instrumentation.Mixin.HasContext
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
 

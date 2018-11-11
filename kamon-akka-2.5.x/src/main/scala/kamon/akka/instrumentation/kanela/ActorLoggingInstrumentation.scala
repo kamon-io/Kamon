@@ -19,8 +19,8 @@ package kamon.akka.instrumentation.kanela
 import akka.event.Logging.LogEvent
 import kamon.Kamon
 import kamon.akka.instrumentation.kanela.mixin.HasTransientContextMixin
-import kamon.context.HasContext
 import kamon.context.Storage.Scope
+import kamon.instrumentation.Mixin.HasContext
 import kanela.agent.libs.net.bytebuddy.asm.Advice.{Argument, Enter, OnMethodEnter, OnMethodExit}
 import kanela.agent.scala.KanelaInstrumentation
 

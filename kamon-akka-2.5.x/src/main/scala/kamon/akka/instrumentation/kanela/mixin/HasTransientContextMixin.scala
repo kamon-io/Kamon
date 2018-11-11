@@ -17,7 +17,8 @@
 package kamon.akka.instrumentation.kanela.mixin
 
 import kamon.Kamon
-import kamon.context.{Context, HasContext}
+import kamon.context.Context
+import kamon.instrumentation.Mixin.HasContext
 import kanela.agent.api.instrumentation.mixin.Initializer
 
 class HasTransientContextMixin extends HasContext {
