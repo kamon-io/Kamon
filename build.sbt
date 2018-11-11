@@ -35,7 +35,7 @@ lazy val executors = (project in file("kamon-executors"))
   .enablePlugins(JavaAgent)
   .settings(moduleName := "kamon-executors")
   .settings(commonSettings: _*)
-  .settings(javaAgents += "io.kamon"  % "kanela-agent"  % "0.0.555"  % "compile;test")
+  .settings(javaAgents += "io.kamon"  % "kanela-agent"  % "0.0.15"  % "compile;test")
   .settings(
     libraryDependencies ++=
       compileScope(kamonCore, kanelaScala) ++
