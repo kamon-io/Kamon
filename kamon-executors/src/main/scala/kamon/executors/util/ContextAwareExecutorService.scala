@@ -21,7 +21,7 @@ import java.util
 import java.util.concurrent.{Callable, ExecutorService, Future, TimeUnit}
 
 import kamon.Kamon
-import kamon.context.{Context, HasContext}
+import kamon.context.Context
 
 
 class ContextAwareExecutorService(underlying: ExecutorService) extends ExecutorService {

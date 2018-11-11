@@ -13,8 +13,8 @@
  * =========================================================================================
  */
 
-val kamonCore       = "io.kamon" %% "kamon-core"              % "1.1.2"
-val kamonTestkit    = "io.kamon" %% "kamon-testkit"           % "1.1.2"
+val kamonCore       = "io.kamon" %% "kamon-core"              % "1.2.0-M1"
+val kamonTestkit    = "io.kamon" %% "kamon-testkit"           % "1.2.0-M1"
 
 val kanelaScala     = "io.kamon" %% "kanela-scala-extension"  % "0.0.14"
 
