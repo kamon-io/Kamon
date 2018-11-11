@@ -16,7 +16,7 @@
 val kamonCore       = "io.kamon" %% "kamon-core"              % "1.1.2"
 val kamonTestkit    = "io.kamon" %% "kamon-testkit"           % "1.1.2"
 
-val kanelaScala     = "io.kamon" %% "kanela-scala-extension"  % "0.0.10"
+val kanelaScala     = "io.kamon" %% "kanela-scala-extension"  % "0.0.14"
 
 val guava           = "com.google.guava"  % "guava"  % "24.1-jre"
 
