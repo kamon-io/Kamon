@@ -67,8 +67,6 @@ lazy val kamonAkka25 = Project("kamon-akka-25", file("kamon-akka-2.5.x"))
       optionalScope(logbackClassic) ++
       testScope(scalatest, kamonTestkit, akkaDependency("testkit", `akka-2.5`), akkaDependency("slf4j", `akka-2.5`), logbackClassic))
 
-enableProperCrossScalaVersionTasks
-
 def resolveAgent: Seq[ModuleID] = {
     val agent = Option(System.getProperty("agent")).getOrElse("aspectj")
     if(agent.equalsIgnoreCase("kanela"))
