@@ -1,8 +1,8 @@
 language: scala
 script:
-  - ./travis-test.sh
+  - sbt +test && sbt ';set kamonUseAspectJ in ThisBuild := true; +test'
 scala:
-   - 2.11.8
+   - 2.12.6
 jdk:
    - oraclejdk8
 before_script:

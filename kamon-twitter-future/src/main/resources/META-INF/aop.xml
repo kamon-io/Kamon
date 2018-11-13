@@ -2,11 +2,11 @@
 
 <aspectj>
   <aspects>
-    <aspect name="kamon.twitter.instrumentation.FutureInstrumentation"/>
+    <aspect name="kamon.instrumentation.twitter.aspectj.FutureInstrumentation"/>
   </aspects>
 
   <weaver>
-    <include within="kamon.twitter.instrumentation..*"/>
+    <include within="kamon.instrumentation.twitter..*"/>
     <include within="com.twitter.util..*"/>
   </weaver>
 </aspectj>

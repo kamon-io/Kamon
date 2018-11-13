@@ -2,11 +2,11 @@
 
 <aspectj>
   <aspects>
-    <aspect name="kamon.scala.instrumentation.FutureInstrumentation"/>
+    <aspect name="kamon.instrumentation.scala.aspectj.FutureInstrumentation"/>
   </aspects>
 
   <weaver>
-    <include within="kamon.scala.instrumentation..*"/>
+    <include within="kamon.instrumentation.scala..*"/>
     <include within="scala.concurrent..*"/>
   </weaver>
 </aspectj>
