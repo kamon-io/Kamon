@@ -375,12 +375,14 @@ object ActorMonitors {
 
 object CloseableSyntax {
   implicit class ScopeToCloseable(val scope:Scope) extends AnyVal {
-    def toCloseable:Closeable =
-      () => scope.close()
+    def toCloseable: Closeable = new Closeable {
+      override def close(): Unit = scope.close()
+    }
   }
 
   implicit class SpanToCloseable(val span:Span) extends AnyVal {
-    def toCloseable:Closeable =
-      () => span.finish()
+    def toCloseable: Closeable = new Closeable {
+      override def close(): Unit = span.finish()
+    }
   }
 }
