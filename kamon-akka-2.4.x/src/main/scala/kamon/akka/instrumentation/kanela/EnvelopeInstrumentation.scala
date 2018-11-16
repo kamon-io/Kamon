@@ -21,7 +21,7 @@ import kamon.akka.instrumentation.kanela.mixin.EnvelopeInstrumentationMixin
 import kanela.agent.scala.KanelaInstrumentation
 
 
-class EnvelopeInstrumentation extends KanelaInstrumentation {
+class EnvelopeInstrumentation extends KanelaInstrumentation with AkkaVersionedFilter {
 
   /**
     * Mix:
@@ -30,7 +30,7 @@ class EnvelopeInstrumentation extends KanelaInstrumentation {
     *
     */
   forTargetType("akka.dispatch.Envelope") { builder ⇒
-    builder
+    filterAkkaVersion(builder)
       .withMixin(classOf[EnvelopeInstrumentationMixin])
       .withInterceptorFor(method("copy"), CopyMethodInterceptor)
       .build()

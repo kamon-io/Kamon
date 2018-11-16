@@ -22,7 +22,7 @@ import akka.kamon.instrumentation.kanela.interceptor.InvokeAllMethodInterceptor
 import kamon.akka.instrumentation.kanela.mixin.{ActorInstrumentationMixin, RoutedActorCellInstrumentationMixin}
 import kanela.agent.scala.KanelaInstrumentation
 
-class ActorInstrumentation extends KanelaInstrumentation {
+class ActorInstrumentation extends KanelaInstrumentation with AkkaVersionedFilter {
 
   /**
     * Instrument:
@@ -39,7 +39,7 @@ class ActorInstrumentation extends KanelaInstrumentation {
     *
     */
   forTargetType("akka.actor.ActorCell") { builder ⇒
-    builder
+    filterAkkaVersion(builder)
       .withMixin(classOf[ActorInstrumentationMixin])
       .withAdvisorFor(Constructor, classOf[ActorCellConstructorAdvisor])
       .withAdvisorFor(method("invoke"), classOf[InvokeMethodAdvisor])
@@ -63,7 +63,7 @@ class ActorInstrumentation extends KanelaInstrumentation {
     *
     */
   forTargetType("akka.actor.UnstartedCell") { builder ⇒
-    builder
+    filterAkkaVersion(builder)
       .withMixin(classOf[ActorInstrumentationMixin])
       .withAdvisorFor(Constructor, classOf[RepointableActorCellConstructorAdvisor])
       .withAdvisorFor(method("sendMessage").and(takesArguments(1)), classOf[SendMessageMethodAdvisor])
@@ -72,7 +72,7 @@ class ActorInstrumentation extends KanelaInstrumentation {
   }
 
   forTargetType("akka.dispatch.MessageDispatcher") { builder =>
-    builder
+    filterAkkaVersion(builder)
       .withAdvisorFor(method("unregister").and(takesArguments(1)), classOf[UnregisterMethodAdvisor])
       .build()
 

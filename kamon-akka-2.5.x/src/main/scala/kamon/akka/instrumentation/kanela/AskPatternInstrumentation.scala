@@ -19,7 +19,7 @@ package kamon.akka.instrumentation.kanela
 import akka.kamon.instrumentation.kanela.advisor.AskMethodAdvisor
 import kanela.agent.scala.KanelaInstrumentation
 
-class AskPatternInstrumentation extends KanelaInstrumentation {
+class AskPatternInstrumentation extends KanelaInstrumentation with AkkaVersionedFilter {
 
   /**
     * Instrument:
@@ -28,7 +28,7 @@ class AskPatternInstrumentation extends KanelaInstrumentation {
     *
     */
   forTargetType("akka.pattern.AskableActorRef$") { builder ⇒
-    builder
+    filterAkkaVersion(builder)
       .withAdvisorFor(method("$qmark$extension"), classOf[AskMethodAdvisor])
       .build()
   }

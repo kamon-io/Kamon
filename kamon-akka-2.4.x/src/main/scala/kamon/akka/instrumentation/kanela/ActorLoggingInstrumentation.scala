@@ -24,7 +24,7 @@ import kamon.instrumentation.Mixin.HasContext
 import kanela.agent.libs.net.bytebuddy.asm.Advice.{Argument, Enter, OnMethodEnter, OnMethodExit}
 import kanela.agent.scala.KanelaInstrumentation
 
-class ActorLoggingInstrumentation extends KanelaInstrumentation {
+class ActorLoggingInstrumentation extends KanelaInstrumentation with AkkaVersionedFilter {
 
   /**
     * Mix:
@@ -33,7 +33,7 @@ class ActorLoggingInstrumentation extends KanelaInstrumentation {
     *
     */
   forSubtypeOf("akka.event.Logging$LogEvent") { builder ⇒
-    builder
+    filterAkkaVersion(builder)
       .withMixin(classOf[HasTransientContextMixin])
       .build()
   }
@@ -45,7 +45,7 @@ class ActorLoggingInstrumentation extends KanelaInstrumentation {
     *
     */
   forTargetType("akka.event.slf4j.Slf4jLogger") { builder ⇒
-    builder
+    filterAkkaVersion(builder)
       .withAdvisorFor(method("withMdc"), classOf[WithMdcMethodAdvisor])
       .build()
   }

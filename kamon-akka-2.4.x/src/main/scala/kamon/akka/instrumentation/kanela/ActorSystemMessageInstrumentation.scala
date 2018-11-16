@@ -20,7 +20,7 @@ import kamon.akka.instrumentation.kanela.interceptor.PointMethodInterceptor
 import kamon.akka.instrumentation.kanela.mixin.HasTransientContextMixin
 import kanela.agent.scala.KanelaInstrumentation
 
-class ActorSystemMessageInstrumentation extends KanelaInstrumentation {
+class ActorSystemMessageInstrumentation extends KanelaInstrumentation with AkkaVersionedFilter {
 
   /**
     * Mix:
@@ -29,7 +29,7 @@ class ActorSystemMessageInstrumentation extends KanelaInstrumentation {
     *
     */
   forSubtypeOf("akka.dispatch.sysmsg.SystemMessage") { builder ⇒
-    builder
+    filterAkkaVersion(builder)
       .withMixin(classOf[HasTransientContextMixin])
       .build()
   }
@@ -45,7 +45,7 @@ class ActorSystemMessageInstrumentation extends KanelaInstrumentation {
     *
     */
   forTargetType("akka.actor.RepointableActorRef") { builder ⇒
-    builder
+    filterAkkaVersion(builder)
       .withMixin(classOf[HasTransientContextMixin])
       .withInterceptorFor(method("point"), PointMethodInterceptor)
       .build()

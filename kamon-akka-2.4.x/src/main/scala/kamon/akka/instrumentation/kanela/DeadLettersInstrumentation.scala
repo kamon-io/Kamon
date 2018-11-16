@@ -21,7 +21,7 @@ import kamon.akka.instrumentation.kanela.mixin.HasSystemMixin
 import kanela.agent.scala.KanelaInstrumentation
 
 
-class DeadLettersInstrumentation extends KanelaInstrumentation {
+class DeadLettersInstrumentation extends KanelaInstrumentation with AkkaVersionedFilter {
 
   /**
     * Mix:
@@ -30,7 +30,7 @@ class DeadLettersInstrumentation extends KanelaInstrumentation {
     *
     */
   forSubtypeOf("akka.event.EventStream") { builder ⇒
-    builder
+    filterAkkaVersion(builder)
       .withMixin(classOf[HasSystemMixin])
       .withAdvisorFor(Constructor.and(takesArguments(2)), classOf[ConstructorAdvisor])
       .withAdvisorFor(method("publish").and(takesArguments(1)), classOf[PublishMethodAdvisor])

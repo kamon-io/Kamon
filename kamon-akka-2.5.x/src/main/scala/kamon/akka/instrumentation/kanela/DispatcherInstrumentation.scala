@@ -22,7 +22,7 @@ import kamon.akka.instrumentation.kanela.interceptor.CreateExecutorMethodInterce
 import kamon.akka.instrumentation.kanela.mixin.{ActorSystemAwareMixin, LookupDataAwareMixin}
 import kanela.agent.scala.KanelaInstrumentation
 
-class DispatcherInstrumentation extends KanelaInstrumentation {
+class DispatcherInstrumentation extends KanelaInstrumentation with AkkaVersionedFilter {
 
   /**
     * Instrument:
@@ -31,7 +31,7 @@ class DispatcherInstrumentation extends KanelaInstrumentation {
     *
     */
   forTargetType("akka.dispatch.Dispatchers") { builder ⇒
-    builder
+    filterAkkaVersion(builder)
       .withMixin(classOf[ActorSystemAwareMixin])
       .withAdvisorFor(method("lookup"), classOf[LookupMethodAdvisor])
       .build()
@@ -44,7 +44,7 @@ class DispatcherInstrumentation extends KanelaInstrumentation {
     *
     */
   forTargetType("akka.dispatch.Dispatcher") { builder ⇒
-    builder
+    filterAkkaVersion(builder)
       .withBridge(classOf[AkkaDispatcherBridge])
       .build()
   }
@@ -57,7 +57,7 @@ class DispatcherInstrumentation extends KanelaInstrumentation {
     *
     */
   forTargetType("akka.actor.ActorSystemImpl") { builder ⇒
-    builder
+    filterAkkaVersion(builder)
       .withAdvisorFor(method("start"), classOf[StartMethodAdvisor])
       .build()
   }
@@ -72,7 +72,7 @@ class DispatcherInstrumentation extends KanelaInstrumentation {
     *
     */
   forSubtypeOf("akka.dispatch.ExecutorServiceFactory") { builder ⇒
-    builder
+    filterAkkaVersion(builder)
       .withMixin(classOf[LookupDataAwareMixin])
       .withAdvisorFor(Constructor, classOf[ExecutorServiceFactoryConstructorAdvisor])
       .withAdvisorFor(method("createExecutorService"), classOf[CreateExecutorServiceAdvisor])
@@ -91,7 +91,7 @@ class DispatcherInstrumentation extends KanelaInstrumentation {
     *
     */
   forSubtypeOf("akka.dispatch.ExecutorServiceDelegate") { builder ⇒
-    builder
+    filterAkkaVersion(builder)
       .withMixin(classOf[LookupDataAwareMixin])
       .withAdvisorFor(Constructor, classOf[LazyExecutorServiceDelegateConstructorAdvisor])
       .withAdvisorFor(method("copy"), classOf[CopyMethodAdvisor])
@@ -105,7 +105,7 @@ class DispatcherInstrumentation extends KanelaInstrumentation {
     * akka.routing.BalancingPool::newRoutee
     */
   forTargetType("akka.routing.BalancingPool") { builder ⇒
-    builder
+    filterAkkaVersion(builder)
       .withAdvisorFor(method("newRoutee"), classOf[NewRouteeMethodAdvisor])
       .build()
   }
@@ -116,7 +116,7 @@ class DispatcherInstrumentation extends KanelaInstrumentation {
     * akka.dispatch.ForkJoinExecutorConfigurator.ForkJoinExecutorServiceFactory::createExecutorService
     */
   forTargetType("akka.dispatch.ForkJoinExecutorConfigurator$ForkJoinExecutorServiceFactory") { builder ⇒
-    builder
+    filterAkkaVersion(builder)
       .withInterceptorFor(method("createExecutorService"), CreateExecutorMethodInterceptor)
       .build()
   }

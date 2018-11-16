@@ -4,7 +4,7 @@ import akka.kamon.instrumentation.kanela.advisor.{RoutedActorCellConstructorAdvi
 import kamon.akka.instrumentation.kanela.mixin.{RoutedActorCellInstrumentationMixin, RoutedActorRefInstrumentationMixin}
 import kanela.agent.scala.KanelaInstrumentation
 
-class RouterInstrumentation extends KanelaInstrumentation {
+class RouterInstrumentation extends KanelaInstrumentation with AkkaVersionedFilter {
 
   /**
     * Instrument:
@@ -18,7 +18,7 @@ class RouterInstrumentation extends KanelaInstrumentation {
     *
     */
   forTargetType("akka.routing.RoutedActorCell") { builder ⇒
-    builder
+    filterAkkaVersion(builder)
       .withMixin(classOf[RoutedActorCellInstrumentationMixin])
       .withAdvisorFor(Constructor, classOf[RoutedActorCellConstructorAdvisor])
       .withAdvisorFor(method("sendMessage").and(takesArguments(1)), classOf[SendMessageMethodAdvisor])
@@ -38,7 +38,7 @@ class RouterInstrumentation extends KanelaInstrumentation {
     *
     */
   forTargetType("akka.routing.RoutedActorRef") { builder ⇒
-    builder
+    filterAkkaVersion(builder)
       .withMixin(classOf[RoutedActorRefInstrumentationMixin])
       .withAdvisorFor(Constructor, classOf[RoutedActorRefConstructorAdvisor])
       .build()

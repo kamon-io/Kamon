@@ -17,7 +17,7 @@
 resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
 val kamonCore       = "io.kamon" %% "kamon-core"         % "1.2.0-M1"
 val kamonTestkit    = "io.kamon" %% "kamon-testkit"      % "1.2.0-M1"
-val kamonScala      = "io.kamon" %% "kamon-scala-future" % "1.0.2"
+val kamonScala      = "io.kamon" %% "kamon-scala-future" % "1.1.0-M1"
 val kamonExecutors  = "io.kamon" %% "kamon-executors"    % "1.0.3"
 
 val kanelaScalaExtension  = "io.kamon"  %%  "kanela-scala-extension"  % "0.0.14"
