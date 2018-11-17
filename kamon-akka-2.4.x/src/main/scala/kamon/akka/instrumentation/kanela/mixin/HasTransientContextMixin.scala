@@ -17,11 +17,11 @@
 package kamon.akka.instrumentation.kanela.mixin
 
 import kamon.Kamon
+import kamon.akka.context.ContextContainer
 import kamon.context.Context
-import kamon.instrumentation.Mixin.HasContext
 import kanela.agent.api.instrumentation.mixin.Initializer
 
-class HasTransientContextMixin extends HasContext {
+class HasTransientContextMixin extends ContextContainer {
   @transient var _context: Context = _
 
   def context: Context = _context
@@ -29,5 +29,7 @@ class HasTransientContextMixin extends HasContext {
   @Initializer
   def _initializer(): Unit = this._context =
     Kamon.currentContext()
+
+  def setContext(context: Context): Unit = this._context = context
 }
 
