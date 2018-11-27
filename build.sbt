@@ -1,5 +1,5 @@
 /* =========================================================================================
- * Copyright © 2013-2016 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2018 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -12,21 +12,43 @@
  * and limitations under the License.
  * =========================================================================================
  */
-scalaVersion := "2.11.8"
-crossScalaVersions := Seq("2.10.6", "2.11.8", "2.12.2")
 
-resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
-val kamonCore    = "io.kamon" %% "kamon-core"    % "1.0.1"
-val kamonTestkit = "io.kamon" %% "kamon-testkit" % "1.0.1"
+val kamonCore       = "io.kamon" %% "kamon-core"              % "1.2.0-M1"
+val kamonTestkit    = "io.kamon" %% "kamon-testkit"           % "1.2.0-M1"
+
+val kanelaScala     = "io.kamon" %% "kanela-scala-extension"  % "0.0.14"
+
+val guava           = "com.google.guava"  % "guava"  % "24.1-jre"
 
 lazy val root = (project in file("."))
-  .settings(name := "kamon-executors")
-  .settings(aspectJSettings: _*)
+  .settings(noPublishing: _*)
+  .aggregate(executors, benchmark)
+
+
+val commonSettings = Seq(
+  scalaVersion := "2.12.6",
+  resolvers += Resolver.mavenLocal,
+  crossScalaVersions := Seq("2.12.6", "2.11.12", "2.10.7")
+)
+
+lazy val executors = (project in file("kamon-executors"))
+  .enablePlugins(JavaAgent)
+  .settings(moduleName := "kamon-executors")
+  .settings(commonSettings: _*)
+  .settings(javaAgents += "io.kamon"  % "kanela-agent"  % "0.0.15"  % "compile;test")
   .settings(
-      libraryDependencies ++=
-      compileScope(kamonCore) ++
-      testScope(scalatest, kamonTestkit) ++
-      providedScope(aspectJ)
+    libraryDependencies ++=
+      compileScope(kamonCore, kanelaScala) ++
+      testScope(scalatest, logbackClassic, kamonTestkit, guava)
   )
 
-fork := true
+lazy val benchmark = (project in file("kamon-executors-bench"))
+  .enablePlugins(JmhPlugin)
+  .settings(
+    moduleName := "kamon-executors-bench",
+    resolvers += Resolver.mavenLocal,
+    fork in Test := true)
+  .settings(noPublishing: _*)
+  .settings(commonSettings: _*)
+  .settings(libraryDependencies ++= compileScope(guava))
+  .dependsOn(executors)
