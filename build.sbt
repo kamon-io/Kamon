@@ -38,8 +38,8 @@ lazy val kamonAkka24 = Project("kamon-akka-24", file("kamon-akka-2.4.x"))
   .settings(Seq(
     bintrayPackage := "kamon-akka",
     moduleName := "kamon-akka-2.4",
-    scalaVersion := "2.12.1",
-    crossScalaVersions := Seq("2.11.8", "2.12.1"),
+    scalaVersion := "2.12.7",
+    crossScalaVersions := Seq("2.11.8", "2.12.7"),
     resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")))
   .enablePlugins(JavaAgent)
   .settings(javaAgents ++= resolveAgent)
@@ -53,8 +53,8 @@ lazy val kamonAkka25 = Project("kamon-akka-25", file("kamon-akka-2.5.x"))
   .settings(Seq(
     bintrayPackage := "kamon-akka",
     moduleName := "kamon-akka-2.5",
-    scalaVersion := "2.12.1",
-    crossScalaVersions := Seq("2.11.8", "2.12.1"),
+    scalaVersion := "2.12.7",
+    crossScalaVersions := Seq("2.11.8", "2.12.7"),
     resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")))
   .enablePlugins(JavaAgent)
   .settings(javaAgents ++= resolveAgent)
