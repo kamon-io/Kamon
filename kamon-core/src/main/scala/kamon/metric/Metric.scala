@@ -162,7 +162,7 @@ private[kamon] final class RangeSamplerMetricImpl(val name: String, val unit: Me
   private def removeAndStopSampler(tags: Tags): Boolean = {
     val removed = super.remove(tags)
     if(removed)
-      scheduledSamplers.get(tags).foreach(sf => {
+      scheduledSamplers.remove(tags).foreach(sf => {
         Try(sf.cancel(false)).failed.foreach(_ => logger.error("Failed to cancel scheduled sampling for RangeSampler []", tags.prettyPrint()))
       })
     removed
