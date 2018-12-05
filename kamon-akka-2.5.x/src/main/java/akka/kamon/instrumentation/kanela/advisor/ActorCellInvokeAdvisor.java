@@ -8,7 +8,7 @@ import akka.kamon.instrumentation.InstrumentedEnvelope;
 import akka.kamon.instrumentation.TimestampedContext;
 import kanela.agent.libs.net.bytebuddy.asm.Advice;
 
-public class ActorCellInvokeAdvisor {
+final public class ActorCellInvokeAdvisor {
 
     @Advice.OnMethodEnter(suppress = Throwable.class)
     public static void onEnter(@Advice.This Cell cell,
