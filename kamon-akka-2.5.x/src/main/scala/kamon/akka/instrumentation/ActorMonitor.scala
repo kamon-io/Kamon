@@ -29,8 +29,6 @@ import kamon.context.Storage.Scope
 import kamon.trace.Span
 import org.aspectj.lang.ProceedingJoinPoint
 
-final case class Traveler(envelopeContext: TimestampedContext, closeable: Closeable, timestampBeforeProcessing: Long = 0L)
-
 trait ActorMonitor {
   def captureEnvelopeContext(): TimestampedContext
   def processMessage(pjp: ProceedingJoinPoint, envelopeContext: TimestampedContext, envelope: Envelope): AnyRef
@@ -39,8 +37,9 @@ trait ActorMonitor {
   def cleanup(): Unit
 
   //Kanela
-  def processMessageStart(envelopeContext: TimestampedContext, envelope: Envelope): Traveler
-  def processMessageEnd(traveler: Traveler): Unit
+  def processMessageStartTimestamp: Long
+  def processMessageStart(envelopeContext: TimestampedContext, envelope: Envelope): AnyRef
+  def processMessageEnd(envelopeContext: TimestampedContext, toClose: AnyRef, timestampBeforeProcessing: Long): Unit
 }
 
 object ActorMonitor {
@@ -111,17 +110,19 @@ object ActorMonitors {
       }
     }
 
-    override def processMessageStart(envelopeContext: TimestampedContext, envelope: Envelope): Traveler = {
-      import CloseableSyntax._
+    override val processMessageStartTimestamp: Long = 0L
+
+    override def processMessageStart(envelopeContext: TimestampedContext, envelope: Envelope): AnyRef = {
 
       val messageSpan = buildSpan(cellInfo, envelopeContext, envelope)
       val contextWithMessageSpan = envelopeContext.context.withKey(Span.ContextKey, messageSpan)
       monitor.processMessageStart(envelopeContext.copy(context = contextWithMessageSpan), envelope)
-      Traveler(envelopeContext, messageSpan.toCloseable)
+      messageSpan
     }
 
-    override def processMessageEnd(traveler: Traveler): Unit =
-      traveler.closeable.close()
+    override def processMessageEnd(envelopeContext: TimestampedContext, span: AnyRef, timestampBeforeProcessing: Long): Unit =
+      span.asInstanceOf[Span].finish()
+
 
     override def processFailure(failure: Throwable): Unit = monitor.processFailure(failure)
     override def processDroppedMessage(count: Long): Unit = monitor.processDroppedMessage(count)
@@ -170,16 +171,17 @@ object ActorMonitors {
       Metrics.forSystem(cellInfo.systemName).activeActors.decrement()
     }
 
-    def processMessageStart(envelopeContext: TimestampedContext, envelope: Envelope): Traveler = {
-      import CloseableSyntax._
+    override val processMessageStartTimestamp: Long = 0L
+
+    def processMessageStart(envelopeContext: TimestampedContext, envelope: Envelope): AnyRef = {
 
       processedMessagesCounter.increment()
       val scope = Kamon.storeContext(envelopeContext.context)
-      Traveler(envelopeContext, scope.toCloseable)
+      scope
     }
 
-    def processMessageEnd(traveler: Traveler): Unit =
-      traveler.closeable.close()
+    override def processMessageEnd(envelopeContext: TimestampedContext, scope: AnyRef, timestampBeforeProcessing: Long): Unit =
+      scope.asInstanceOf[Scope].close()
   }
 
   def simpleClassName(cls: Class[_]): String = {
@@ -188,7 +190,7 @@ object ActorMonitors {
   }
 
   class TrackedActor(actorMetrics: Option[ActorMetrics], groupMetrics: Seq[ActorGroupMetrics], actorCellCreation: Boolean, cellInfo: CellInfo)
-      extends GroupMetricsTrackingActor(groupMetrics, actorCellCreation, cellInfo) {
+    extends GroupMetricsTrackingActor(groupMetrics, actorCellCreation, cellInfo) {
 
     private val processedMessagesCounter = Metrics.forSystem(cellInfo.systemName).processedMessagesByTracked
 
@@ -221,20 +223,19 @@ object ActorMonitors {
       }
     }
 
-    override def processMessageStart(envelopeContext: TimestampedContext, envelope: Envelope): Traveler = {
-      import CloseableSyntax._
+    def processMessageStartTimestamp: Long = Kamon.clock().nanos()
 
-      val timestampBeforeProcessing = Kamon.clock().nanos()
+    override def processMessageStart(envelopeContext: TimestampedContext, envelope: Envelope): AnyRef = {
       processedMessagesCounter.increment()
       val scope = Kamon.storeContext(envelopeContext.context)
-      Traveler(envelopeContext, scope.toCloseable, timestampBeforeProcessing)
+      scope
     }
 
-    override def processMessageEnd(traveler: Traveler): Unit = {
-      try traveler.closeable.close() finally {
+    override def processMessageEnd(envelopeContext: TimestampedContext, scope: AnyRef, timestampBeforeProcessing: Long): Unit = {
+      try scope.asInstanceOf[Scope].close() finally {
         val timestampAfterProcessing = Kamon.clock().nanos()
-        val timeInMailbox = traveler.timestampBeforeProcessing - traveler.envelopeContext.nanoTime
-        val processingTime = timestampAfterProcessing - traveler.timestampBeforeProcessing
+        val timeInMailbox = timestampBeforeProcessing - envelopeContext.nanoTime
+        val processingTime = timestampAfterProcessing - timestampBeforeProcessing
 
         actorMetrics.foreach { am =>
           am.processingTime.record(processingTime)
@@ -263,7 +264,7 @@ object ActorMonitors {
   }
 
   class TrackedRoutee(routerMetrics: RouterMetrics, groupMetrics: Seq[ActorGroupMetrics], actorCellCreation: Boolean, cellInfo: CellInfo)
-      extends GroupMetricsTrackingActor(groupMetrics, actorCellCreation, cellInfo) {
+    extends GroupMetricsTrackingActor(groupMetrics, actorCellCreation, cellInfo) {
 
     routerMetrics.members.increment()
     private val processedMessagesCounter = Metrics.forSystem(cellInfo.systemName).processedMessagesByTracked
@@ -295,20 +296,19 @@ object ActorMonitors {
       }
     }
 
-    override def processMessageStart(envelopeContext: TimestampedContext, envelope: Envelope): Traveler  = {
-      import CloseableSyntax._
+    def processMessageStartTimestamp(): Long = Kamon.clock().nanos()
 
-      val timestampBeforeProcessing = Kamon.clock().nanos()
+    override def processMessageStart(envelopeContext: TimestampedContext, envelope: Envelope): AnyRef  = {
       processedMessagesCounter.increment()
       val scope = Kamon.storeContext(envelopeContext.context)
-      Traveler(envelopeContext, scope.toCloseable, timestampBeforeProcessing)
+      scope
     }
 
-    override def processMessageEnd(traveler: Traveler): Unit = {
-      try  traveler.closeable.close() finally {
+    override def processMessageEnd(envelopeContext: TimestampedContext, scope: AnyRef, timestampBeforeProcessing: Long): Unit = {
+      try scope.asInstanceOf[Scope].close() finally {
         val timestampAfterProcessing = Kamon.clock().nanos()
-        val timeInMailbox = traveler.timestampBeforeProcessing - traveler.envelopeContext.nanoTime
-        val processingTime = timestampAfterProcessing - traveler.timestampBeforeProcessing
+        val timeInMailbox = timestampBeforeProcessing - envelopeContext.nanoTime
+        val processingTime = timestampAfterProcessing - timestampBeforeProcessing
 
         routerMetrics.processingTime.record(processingTime)
         routerMetrics.timeInMailbox.record(timeInMailbox)
@@ -369,20 +369,6 @@ object ActorMonitors {
           gm.members.decrement()
         }
       }
-    }
-  }
-}
-
-object CloseableSyntax {
-  implicit class ScopeToCloseable(val scope:Scope) extends AnyVal {
-    def toCloseable: Closeable = new Closeable {
-      override def close(): Unit = scope.close()
-    }
-  }
-
-  implicit class SpanToCloseable(val span:Span) extends AnyVal {
-    def toCloseable: Closeable = new Closeable {
-      override def close(): Unit = span.finish()
     }
   }
 }

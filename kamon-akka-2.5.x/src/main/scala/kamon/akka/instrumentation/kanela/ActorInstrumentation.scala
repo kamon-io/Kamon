@@ -42,7 +42,7 @@ class ActorInstrumentation extends KanelaInstrumentation with AkkaVersionedFilte
     filterAkkaVersion(builder)
       .withMixin(classOf[ActorInstrumentationMixin])
       .withAdvisorFor(Constructor, classOf[ActorCellConstructorAdvisor])
-      .withAdvisorFor(method("invoke"), classOf[InvokeMethodAdvisor])
+      .withAdvisorFor(method("invoke"), classOf[ActorCellInvokeAdvisor])
       .withAdvisorFor(method("handleInvokeFailure"), classOf[HandleInvokeFailureMethodAdvisor])
       .withAdvisorFor(method("sendMessage").and(takesArguments(1)), classOf[SendMessageMethodAdvisor])
       .withAdvisorFor(method("terminate"), classOf[TerminateMethodAdvisor])
