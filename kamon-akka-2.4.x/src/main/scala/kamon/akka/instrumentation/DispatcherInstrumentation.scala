@@ -86,7 +86,7 @@ class DispatcherInstrumentation {
       val additionalTags = Map("actor-system" -> system.name)
       val dispatcherRegistration = Executors.register(dispatcherName, additionalTags, executorService)
 
-      registeredDispatchers.put(dispatcherName, dispatcherRegistration)
+      registeredDispatchers.put(dispatcherName, dispatcherRegistration).foreach(_.cancel())
     }
   }
 
@@ -143,7 +143,7 @@ class DispatcherInstrumentation {
     import lazyExecutor.lookupData
 
     if (lookupData.actorSystem != null) {
-      registeredDispatchers.get(lookupData.dispatcherName).foreach(_.cancel())
+      registeredDispatchers.remove(lookupData.dispatcherName).foreach(_.cancel())
     }
   }
 
