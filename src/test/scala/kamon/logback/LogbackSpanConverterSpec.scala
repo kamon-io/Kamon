@@ -45,7 +45,7 @@ class LogbackSpanConverterSpec extends WordSpec with Matchers with Eventually {
 
         val span = Kamon.buildSpan("my-span").start()
         val traceID = span.context().traceID
-        val contextWithSpan = Context.create(Span.ContextKey, span)
+        val contextWithSpan = Context.of(Span.ContextKey, span)
 
         Kamon.withContext(contextWithSpan) {
           memoryAppender.doAppend(createLoggingEvent(context))
@@ -60,7 +60,7 @@ class LogbackSpanConverterSpec extends WordSpec with Matchers with Eventually {
         val span = Kamon.buildSpan("my-span").start()
         val traceID = span.context().traceID
         val spanID = span.context().spanID
-        val contextWithSpan = Context.create(Span.ContextKey, span)
+        val contextWithSpan = Context.of(Span.ContextKey, span)
 
         MDC.put("mdc_key","mdc_value")
         Kamon.withContext(contextWithSpan) {
@@ -83,7 +83,7 @@ class LogbackSpanConverterSpec extends WordSpec with Matchers with Eventually {
         val memoryAppender = buildMemoryAppender(configurator,s"%X{${AsyncAppenderInstrumentation.mdcTraceKey}}")
 
         val span = Kamon.buildSpan("my-span").start()
-        val contextWithSpan = Context.create(Span.ContextKey, span)
+        val contextWithSpan = Context.of(Span.ContextKey, span)
 
         Kamon.withContext(contextWithSpan) {
           memoryAppender.doAppend(createLoggingEvent(context))
@@ -99,7 +99,7 @@ class LogbackSpanConverterSpec extends WordSpec with Matchers with Eventually {
 
         val span = Kamon.buildSpan("my-span").start()
         val traceID = span.context().traceID
-        val contextWithSpan = Context.create(Span.ContextKey, span)
+        val contextWithSpan = Context.of(Span.ContextKey, span)
 
         Kamon.withContext(contextWithSpan) {
           asyncAppender.doAppend(createLoggingEvent(context))
@@ -112,4 +112,3 @@ class LogbackSpanConverterSpec extends WordSpec with Matchers with Eventually {
     }
   }
 }
-

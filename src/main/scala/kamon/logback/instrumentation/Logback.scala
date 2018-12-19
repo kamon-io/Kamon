@@ -19,7 +19,8 @@ package kamon.logback.instrumentation
 
 import com.typesafe.config.Config
 import kamon.context.Context
-import kamon.{Kamon, OnReconfigureHook}
+import kamon.Kamon
+import kamon.Configuration.OnReconfigureHook
 
 object Logback {
 
