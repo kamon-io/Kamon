@@ -19,9 +19,9 @@ package kamon.akka.instrumentation.kanela
 import kamon.akka.instrumentation.kanela.advisor.{ConstructorAdvisor, PublishMethodAdvisor}
 import kamon.akka.instrumentation.kanela.mixin.HasSystemMixin
 import kanela.agent.scala.KanelaInstrumentation
+import kamon.akka.instrumentation.kanela.AkkaVersionedFilter._
 
-
-class DeadLettersInstrumentation extends KanelaInstrumentation with AkkaVersionedFilter {
+class DeadLettersInstrumentation extends KanelaInstrumentation {
 
   /**
     * Mix:

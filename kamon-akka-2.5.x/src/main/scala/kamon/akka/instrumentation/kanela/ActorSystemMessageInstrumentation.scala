@@ -19,8 +19,9 @@ package kamon.akka.instrumentation.kanela
 import kamon.akka.instrumentation.kanela.interceptor.PointMethodInterceptor
 import kamon.akka.instrumentation.kanela.mixin.HasTransientContextMixin
 import kanela.agent.scala.KanelaInstrumentation
+import kamon.akka.instrumentation.kanela.AkkaVersionedFilter._
 
-class ActorSystemMessageInstrumentation extends KanelaInstrumentation with AkkaVersionedFilter {
+class ActorSystemMessageInstrumentation extends KanelaInstrumentation {
 
   /**
     * Mix:

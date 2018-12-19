@@ -19,9 +19,10 @@ package kamon.akka.instrumentation.kanela
 import kamon.akka.instrumentation.kanela.interceptor.CopyMethodInterceptor
 import kamon.akka.instrumentation.kanela.mixin.EnvelopeInstrumentationMixin
 import kanela.agent.scala.KanelaInstrumentation
+import kamon.akka.instrumentation.kanela.AkkaVersionedFilter._
 
 
-class EnvelopeInstrumentation extends KanelaInstrumentation with AkkaVersionedFilter {
+class EnvelopeInstrumentation extends KanelaInstrumentation {
 
   /**
     * Mix:

@@ -18,8 +18,9 @@ package kamon.akka.instrumentation.kanela
 
 import akka.instrumentation.kanela.advisor.AskMethodAdvisor
 import kanela.agent.scala.KanelaInstrumentation
+import kamon.akka.instrumentation.kanela.AkkaVersionedFilter._
 
-class AskPatternInstrumentation extends KanelaInstrumentation with AkkaVersionedFilter {
+class AskPatternInstrumentation extends KanelaInstrumentation {
 
   /**
     * Instrument:

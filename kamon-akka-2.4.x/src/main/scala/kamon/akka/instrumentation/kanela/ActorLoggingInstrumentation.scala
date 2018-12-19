@@ -23,8 +23,9 @@ import kamon.context.Storage.Scope
 import kamon.instrumentation.Mixin.HasContext
 import kanela.agent.libs.net.bytebuddy.asm.Advice.{Argument, Enter, OnMethodEnter, OnMethodExit}
 import kanela.agent.scala.KanelaInstrumentation
+import kamon.akka.instrumentation.kanela.AkkaVersionedFilter._
 
-class ActorLoggingInstrumentation extends KanelaInstrumentation with AkkaVersionedFilter {
+class ActorLoggingInstrumentation extends KanelaInstrumentation {
 
   /**
     * Mix:

@@ -21,8 +21,9 @@ import akka.kamon.instrumentation.kanela.interceptor.CreateExecutorMethodInterce
 import kamon.akka.instrumentation.kanela.bridge.AkkaDispatcherBridge
 import kamon.akka.instrumentation.kanela.mixin.{ActorSystemAwareMixin, LookupDataAwareMixin}
 import kanela.agent.scala.KanelaInstrumentation
+import kamon.akka.instrumentation.kanela.AkkaVersionedFilter._
 
-class DispatcherInstrumentation extends KanelaInstrumentation with AkkaVersionedFilter {
+class DispatcherInstrumentation extends KanelaInstrumentation {
 
   /**
     * Instrument:

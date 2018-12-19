@@ -20,8 +20,9 @@ import akka.kamon.instrumentation.kanela.advisor.{UnregisterMethodAdvisor, _}
 import akka.kamon.instrumentation.kanela.interceptor.{InvokeAllMethodInterceptor, ReplaceWithMethodInterceptor}
 import kamon.akka.instrumentation.kanela.mixin.{ActorInstrumentationMixin, RoutedActorCellInstrumentationMixin}
 import kanela.agent.scala.KanelaInstrumentation
+import kamon.akka.instrumentation.kanela.AkkaVersionedFilter._
 
-class ActorInstrumentation extends KanelaInstrumentation with AkkaVersionedFilter {
+class ActorInstrumentation extends KanelaInstrumentation {
 
   /**
     * Instrument:

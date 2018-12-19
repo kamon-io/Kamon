@@ -3,8 +3,9 @@ package kamon.akka.instrumentation.kanela
 import akka.kamon.instrumentation.kanela.advisor.{RoutedActorCellConstructorAdvisor, RoutedActorRefConstructorAdvisor, SendMessageMethodAdvisor, SendMessageMethodAdvisorForRouter}
 import kamon.akka.instrumentation.kanela.mixin.{RoutedActorCellInstrumentationMixin, RoutedActorRefInstrumentationMixin}
 import kanela.agent.scala.KanelaInstrumentation
+import kamon.akka.instrumentation.kanela.AkkaVersionedFilter._
 
-class RouterInstrumentation extends KanelaInstrumentation with AkkaVersionedFilter {
+class RouterInstrumentation extends KanelaInstrumentation {
 
   /**
     * Instrument:
