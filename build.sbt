@@ -20,12 +20,14 @@ val latestLogbackClassic  = "ch.qos.logback"  %   "logback-classic" % "1.2.3"
 resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
 
 lazy val root = (project in file("."))
-  .settings(Seq(
-      name := "kamon-logback",
-      scalaVersion := "2.12.6"))
-  .settings(aspectJSettings: _*)
+  .enablePlugins(JavaAgent)
+  .settings(instrumentationSettings)
   .settings(
+    name := "kamon-logback",
+    scalaVersion := "2.12.6",
+    kamonUseAspectJ := true,
     libraryDependencies ++=
       compileScope(kamonCore, latestLogbackClassic) ++
       providedScope(aspectJ) ++
-      testScope(kamonTestkit, scalatest))
+      testScope(kamonTestkit, scalatest)
+  )
