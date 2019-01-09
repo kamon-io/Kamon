@@ -33,13 +33,13 @@ object AsyncAppenderInstrumentation {
   @volatile private var _mdcContextPropagation: Boolean = true
   @volatile private var _mdcTraceKey: String = "kamonTraceID"
   @volatile private var _mdcSpanKey: String = "kamonSpanID"
-  @volatile private var _mdcLocalKeys: Set[Key[Option[String]]] = Set.empty[Key[Option[String]]]
+  @volatile private var _mdcLocalKeys: Set[Key[Any]] = Set.empty[Key[Any]]
   @volatile private var _mdcBroadcastKeys: Set[Key[Option[String]]] = Set.empty[Key[Option[String]]]
 
   def mdcTraceKey: String = _mdcTraceKey
   def mdcSpanKey: String = _mdcSpanKey
   def mdcContextPropagation: Boolean = _mdcContextPropagation
-  def mdcLocalKeys: Set[Key[Option[String]]] = _mdcLocalKeys
+  def mdcLocalKeys: Set[Key[Any]] = _mdcLocalKeys
   def mdcBroadcastKeys: Set[Key[Option[String]]] = _mdcBroadcastKeys
 
   loadConfiguration(Kamon.config())
@@ -55,7 +55,7 @@ object AsyncAppenderInstrumentation {
     _mdcContextPropagation = logbackConfig.getBoolean("mdc-context-propagation")
     _mdcTraceKey = logbackConfig.getString("mdc-trace-id-key")
     _mdcSpanKey = logbackConfig.getString("mdc-span-id-key")
-    _mdcLocalKeys = logbackConfig.getStringList("mdc-traced-local-keys").asScala.toSet.map { key: String => Key.local[Option[String]](key, None) }
+    _mdcLocalKeys = logbackConfig.getStringList("mdc-traced-local-keys").asScala.toSet.map { key: String => Key.local[Any](key, null) }
     _mdcBroadcastKeys = logbackConfig.getStringList("mdc-traced-broadcast-keys").asScala.toSet.map { key: String => Key.broadcastString(key) }
   }
 }
@@ -77,18 +77,22 @@ class AsyncAppenderInstrumentation {
 
   @Around("execution(* ch.qos.logback.classic.util.LogbackMDCAdapter.getPropertyMap())")
   def aroundGetMDCPropertyMap(pjp: ProceedingJoinPoint): Any = {
-
     val currentContext = Kamon.currentContext()
     val span = currentContext.get(Span.ContextKey)
 
-    if (span.context().traceID != IdentityProvider.NoIdentifier && AsyncAppenderInstrumentation.mdcContextPropagation){
-      MDC.put(AsyncAppenderInstrumentation.mdcTraceKey, span.context().traceID.string)
-      MDC.put(AsyncAppenderInstrumentation.mdcSpanKey, span.context().spanID.string)
+    if (AsyncAppenderInstrumentation.mdcContextPropagation) {
+      if(span.context().traceID != IdentityProvider.NoIdentifier) {
+        MDC.put(AsyncAppenderInstrumentation.mdcTraceKey, span.context().traceID.string)
+        MDC.put(AsyncAppenderInstrumentation.mdcSpanKey, span.context().spanID.string)
+      }
 
       AsyncAppenderInstrumentation.mdcLocalKeys.foreach { localKey =>
-        currentContext.get(localKey).foreach { localKeyValue =>
-          MDC.put(localKey.name, localKeyValue)
+        val localKeyValue = currentContext.get(localKey) match {
+          case Some(value)  => value.toString()
+          case anyOther     => if(anyOther != null) anyOther.toString() else null
         }
+
+        MDC.put(localKey.name, localKeyValue)
       }
 
       AsyncAppenderInstrumentation.mdcBroadcastKeys.foreach { broadcast =>
@@ -96,6 +100,7 @@ class AsyncAppenderInstrumentation {
           MDC.put(broadcast.name, broadcastKeyValue)
         }
       }
+
       try {
         pjp.proceed()
       } finally {
@@ -104,6 +109,7 @@ class AsyncAppenderInstrumentation {
         AsyncAppenderInstrumentation.mdcLocalKeys.foreach(key => MDC.remove(key.name))
         AsyncAppenderInstrumentation.mdcBroadcastKeys.foreach(key => MDC.remove(key.name))
       }
+
     } else {
       pjp.proceed()
     }
