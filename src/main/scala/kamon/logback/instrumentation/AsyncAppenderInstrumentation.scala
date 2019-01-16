@@ -34,13 +34,13 @@ object AsyncAppenderInstrumentation {
   @volatile private var _mdcTraceKey: String = "kamonTraceID"
   @volatile private var _mdcSpanKey: String = "kamonSpanID"
   @volatile private var _mdcLocalKeys: Set[Key[Any]] = Set.empty[Key[Any]]
-  @volatile private var _mdcBroadcastKeys: Set[Key[Option[String]]] = Set.empty[Key[Option[String]]]
+  @volatile private var _mdcBroadcastKeys: Set[Key[Any]] = Set.empty[Key[Any]]
 
   def mdcTraceKey: String = _mdcTraceKey
   def mdcSpanKey: String = _mdcSpanKey
   def mdcContextPropagation: Boolean = _mdcContextPropagation
   def mdcLocalKeys: Set[Key[Any]] = _mdcLocalKeys
-  def mdcBroadcastKeys: Set[Key[Option[String]]] = _mdcBroadcastKeys
+  def mdcBroadcastKeys: Set[Key[Any]] = _mdcBroadcastKeys
 
   loadConfiguration(Kamon.config())
 
@@ -56,7 +56,7 @@ object AsyncAppenderInstrumentation {
     _mdcTraceKey = logbackConfig.getString("mdc-trace-id-key")
     _mdcSpanKey = logbackConfig.getString("mdc-span-id-key")
     _mdcLocalKeys = logbackConfig.getStringList("mdc-traced-local-keys").asScala.toSet.map { key: String => Key.local[Any](key, null) }
-    _mdcBroadcastKeys = logbackConfig.getStringList("mdc-traced-broadcast-keys").asScala.toSet.map { key: String => Key.broadcastString(key) }
+    _mdcBroadcastKeys = logbackConfig.getStringList("mdc-traced-broadcast-keys").asScala.toSet.map { key: String => Key.broadcast[Any](key, null) }
   }
 }
 
@@ -96,9 +96,12 @@ class AsyncAppenderInstrumentation {
       }
 
       AsyncAppenderInstrumentation.mdcBroadcastKeys.foreach { broadcast =>
-        currentContext.get(broadcast).foreach { broadcastKeyValue =>
-          MDC.put(broadcast.name, broadcastKeyValue)
+        val broadcastKeyValue = currentContext.get(broadcast) match {
+          case Some(value)  => value.toString()
+          case anyOther     => if(anyOther != null) anyOther.toString() else null
         }
+
+         MDC.put(broadcast.name, broadcastKeyValue)
       }
 
       try {
