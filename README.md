@@ -22,7 +22,7 @@ Supported releases and dependencies are shown below.
 
 | kamon-system-metrics  | status | jdk  | scala     
 |:------:|:------:|:----:|------------------|
-|  1.0.0 | stable |1.8+ | 2.10, 2.11, 2.12
+|  1.0.1 | stable |1.8+ | 2.10, 2.11, 2.12
 
 To get started with SBT, simply add the following to your `build.sbt` or `pom.xml`
 file:
@@ -34,7 +34,7 @@ libraryDependencies += "io.kamon" %% "kamon-system-metrics" % "1.0.0"
 <dependency>
     <groupId>io.kamon</groupId>
     <artifactId>kamon-system-metrics_2.12</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
 </dependency>
 ```
 

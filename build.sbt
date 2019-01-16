@@ -1,5 +1,5 @@
 /* =========================================================================================
- * Copyright © 2013-2017 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2019 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -14,10 +14,9 @@
  * =========================================================================================
  */
 
-
-val kamonCore         = "io.kamon"                  %%  "kamon-core"            % "1.0.0"
-val kamonTestkit      = "io.kamon"                  %%  "kamon-testkit"         % "1.0.0"
-val sigarLoader       = "io.kamon"                  %   "sigar-loader"          % "1.6.5-rev002"
+val kamonCore         = "io.kamon"                  %%  "kamon-core"            % "1.1.3"
+val kamonTestkit      = "io.kamon"                  %%  "kamon-testkit"         % "1.1.3"
+val sigarLoader       = "io.kamon"                  %   "sigar-loader"          % "1.6.5-rev003"
 val logback           = "ch.qos.logback"            %   "logback-classic"       % "1.0.13"
 val slf4jJul          = "org.slf4j"                 %   "jul-to-slf4j"          % "1.7.7"
 
