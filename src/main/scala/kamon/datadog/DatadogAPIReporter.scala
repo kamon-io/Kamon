@@ -59,12 +59,13 @@ class DatadogAPIReporter extends MetricReporter {
   }
 
   override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
+    val url = configuration.apiUrl + configuration.apiKey
     val body = RequestBody.create(jsonType, buildRequestBody(snapshot))
-    val request = new Request.Builder().url(apiUrl + configuration.apiKey).post(body).build
+    val request = new Request.Builder().url(url).post(body).build
     val response = httpClient.newCall(request).execute()
 
     if (!response.isSuccessful()) {
-      logger.error(s"Failed to POST metrics to Datadog with status code [${response.code()}], Body: [${response.body().string()}]")
+      logger.error(s"Failed to POST metrics to Datadog ${url} with status code [${response.code()}], Body: [${response.body().string()}]")
     }
 
     response.close()
@@ -135,6 +136,7 @@ class DatadogAPIReporter extends MetricReporter {
     val datadogConfig = config.getConfig("kamon.datadog")
 
     Configuration(
+      apiUrl = datadogConfig.getString("http.api-url"),
       apiKey = datadogConfig.getString("http.api-key"),
       connectTimeout = datadogConfig.getDuration("http.connect-timeout"),
       readTimeout = datadogConfig.getDuration("http.read-timeout"),
@@ -149,11 +151,10 @@ class DatadogAPIReporter extends MetricReporter {
 }
 
 private object DatadogAPIReporter {
-  val apiUrl = "https://app.datadoghq.com/api/v1/series?api_key="
   val count = "count"
   val gauge = "gauge"
 
-  case class Configuration(apiKey: String, connectTimeout: Duration, readTimeout: Duration, requestTimeout: Duration,
+  case class Configuration(apiUrl: String, apiKey: String, connectTimeout: Duration, readTimeout: Duration, requestTimeout: Duration,
                            timeUnit: MeasurementUnit, informationUnit: MeasurementUnit, extraTags: Map[String, String], tagFilter: Matcher)
 
   implicit class QuoteInterp(val sc: StringContext) extends AnyVal {
