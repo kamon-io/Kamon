@@ -1,5 +1,5 @@
 /* =========================================================================================
- * Copyright © 2013-2017 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2019 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -36,13 +36,13 @@ object Kamon extends MetricLookup with ReporterRegistry with Tracer {
   @volatile private var _environment = Environment.fromConfig(_config)
   @volatile private var _filters = Filters.fromConfig(_config)
 
-  private val _clock = new Clock.Default()
-  private val _scheduler = Executors.newScheduledThreadPool(schedulerPoolSize(_config), numberedThreadFactory("kamon-scheduler", daemon = true))
-  private val _metrics = new MetricRegistry(_config, _scheduler)
-  private val _reporterRegistry = new ReporterRegistry.Default(_metrics, _config, _clock)
-  private val _tracer = Tracer.Default(Kamon, _reporterRegistry, _config, _clock)
-  private val _contextStorage = Storage.ThreadLocal()
-  private val _contextCodec = new Codecs(_config)
+  private lazy val _clock = new Clock.Default()
+  private lazy val _scheduler = Executors.newScheduledThreadPool(schedulerPoolSize(_config), numberedThreadFactory("kamon-scheduler", daemon = true))
+  private lazy val _metrics = new MetricRegistry(_config, _scheduler)
+  private lazy val _reporterRegistry = new ReporterRegistry.Default(_metrics, _config, _clock)
+  private lazy val _tracer = Tracer.Default(Kamon, _reporterRegistry, _config, _clock)
+  private lazy val _contextStorage = Storage.ThreadLocal()
+  private lazy val _contextCodec = new Codecs(_config)
   private var _onReconfigureHooks = Seq.empty[OnReconfigureHook]
 
   sys.addShutdownHook(() => _scheduler.shutdown())
