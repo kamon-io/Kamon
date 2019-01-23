@@ -41,14 +41,19 @@ val commonSettings = Seq(
 )
 
 lazy val core = (project in file("kamon-core"))
+  .enablePlugins(BuildInfoPlugin)
   .settings(moduleName := "kamon-core")
   .settings(commonSettings: _*)
   .settings(
+    buildInfoKeys := Seq[BuildInfoKey](version),
+    buildInfoPackage := "kamon.status",
     libraryDependencies ++= Seq(
-      "com.typesafe"     %  "config"          % "1.3.1",
-      "org.hdrhistogram" %  "HdrHistogram"    % "2.1.9",
-      "org.jctools"      %  "jctools-core"    % "2.1.1",
-      "org.slf4j"        %  "slf4j-api"       % "1.7.25"
+      "com.typesafe"     %  "config"              % "1.3.1",
+      "org.hdrhistogram" %  "HdrHistogram"        % "2.1.9",
+      "org.jctools"      %  "jctools-core"        % "2.1.1",
+      "org.nanohttpd"    %  "nanohttpd-nanolets"  % "2.3.1",
+      "com.grack"        %  "nanojson"            % "1.1",
+      "org.slf4j"        %  "slf4j-api"           % "1.7.25"
     )
   )
 

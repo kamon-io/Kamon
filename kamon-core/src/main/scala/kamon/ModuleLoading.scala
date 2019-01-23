@@ -36,7 +36,7 @@ trait SpanReporter extends kamon.module.SpanReporter { }
   *
   */
 trait ModuleLoading { self: ClassLoading with Configuration with Utilities with Metrics with Tracing =>
-  private val _moduleRegistry = new Module.Registry(self, self, clock(), self.metricRegistry(), self.tracer())
+  protected val _moduleRegistry = new Module.Registry(self, self, clock(), self.metricRegistry(), self.tracer())
   self.onReconfigure(newConfig => self._moduleRegistry.reconfigure(newConfig))
 
 

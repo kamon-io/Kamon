@@ -15,6 +15,9 @@
 
 package kamon
 
+import com.typesafe.config.{Config, ConfigRenderOptions}
+import kamon.module.Module
+
 object Kamon extends ClassLoading
   with Configuration
   with Utilities
@@ -22,7 +25,8 @@ object Kamon extends ClassLoading
   with Tracing
   with ModuleLoading
   with ContextPropagation
-  with ContextStorage {
+  with ContextStorage
+  with StatusPage {
 
 
   @volatile private var _environment = Environment.fromConfig(config())
@@ -33,4 +37,22 @@ object Kamon extends ClassLoading
   onReconfigure(newConfig => {
     _environment = Environment.fromConfig(config)
   })
+}
+
+
+object QuickTest extends App {
+  Kamon.loadModules()
+  Kamon.registerModule("my-module", new Module {
+    override def start(): Unit = {}
+    override def stop(): Unit = {}
+    override def reconfigure(newConfig: Config): Unit = {}
+  })
+
+
+  //println("JSON CONFIG: " + Kamon.config().root().render(ConfigRenderOptions.concise().setFormatted(true).setJson(true)))
+
+
+  Thread.sleep(100000000)
+
+
 }

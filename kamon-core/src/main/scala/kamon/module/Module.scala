@@ -289,19 +289,25 @@ object Module {
 
       } filter(_.isSuccess) map(_.get) toSeq
 
-      // Legacy modules from <1.2.0
-      val legacyModules = config.getStringList("kamon.reporters").asScala map { moduleClass =>
-        Settings(moduleClass, moduleClass, true)
-      } toSeq
 
-      val (repeatedLegacyModules, uniqueLegacyModules) = legacyModules.partition(lm => moduleSettings.find(_.fqcn == lm.fqcn).nonEmpty)
-      repeatedLegacyModules.foreach(m =>
-        _logger.warn(s"Module [${m.name}] is configured twice, please remove it from the deprecated kamon.reporters setting."))
+      // Load all modules that might have been configured using the legacy "kamon.reporters" setting from <1.2.0
+      // versions. This little hack should be removed by the time we release 2.0.
+      //
+      if(config.hasPath("kamon.reporters")) {
+        val legacyModules = config.getStringList("kamon.reporters").asScala map { moduleClass =>
+          Settings(moduleClass, moduleClass, true)
+        } toSeq
 
-      uniqueLegacyModules.foreach(m =>
-        _logger.warn(s"Module [${m.name}] is configured in the deprecated kamon.reporters setting, please consider moving it to kamon.modules."))
+        val (repeatedLegacyModules, uniqueLegacyModules) = legacyModules.partition(lm => moduleSettings.find(_.fqcn == lm.fqcn).nonEmpty)
+        repeatedLegacyModules.foreach(m =>
+          _logger.warn(s"Module [${m.name}] is configured twice, please remove it from the deprecated kamon.reporters setting."))
 
-      moduleSettings ++ uniqueLegacyModules
+        uniqueLegacyModules.foreach(m =>
+          _logger.warn(s"Module [${m.name}] is configured in the deprecated kamon.reporters setting, please consider moving it to kamon.modules."))
+
+        moduleSettings ++ uniqueLegacyModules
+
+      } else moduleSettings
     }
 
     /**
@@ -318,6 +324,26 @@ object Module {
     private def createEntry(name: String, programmaticallyAdded: Boolean, instance: Module): Entry[Module] = {
       val executor = Executors.newSingleThreadExecutor(threadFactory(name))
       Entry(name, ExecutionContext.fromExecutorService(executor), programmaticallyAdded, instance)
+    }
+
+
+    /**
+      * Returns the current status of this module registry.
+      */
+    private[kamon] def status(): Registry.Status = {
+      val automaticallyAddedModules = readModuleSettings(configuration.config()).map(moduleSettings => {
+        val entry = _registeredModules.get(moduleSettings.name)
+        Registry.ModuleInfo(moduleSettings.name, moduleSettings.fqcn, moduleSettings.enabled, entry.nonEmpty)
+      })
+
+      val programmaticallyAddedModules = _registeredModules
+        .filter { case (_, entry) => entry.programmaticallyAdded }
+        .map { case (name, entry) => {
+          Registry.ModuleInfo(name, entry.module.getClass.getName, true, true)
+        }}
+
+      val allModules = automaticallyAddedModules ++ programmaticallyAddedModules
+      Registry.Status(allModules)
     }
 
 
@@ -394,6 +420,20 @@ object Module {
     private def registration(entry: Entry[Module]): Registration = new Registration {
       override def cancel(): Unit = stopModule(entry)
     }
+  }
+
+  object Registry {
+
+    case class Status(
+      modules: Seq[ModuleInfo]
+    )
+
+    case class ModuleInfo(
+      name: String,
+      description: String,
+      enabled: Boolean,
+      started: Boolean
+    )
   }
 
   private def readRegistryConfiguration(config: Config): RegistrySettings =
