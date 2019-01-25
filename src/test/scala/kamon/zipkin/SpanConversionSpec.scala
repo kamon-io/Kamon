@@ -4,7 +4,7 @@ import java.time.Instant
 
 import kamon.trace.IdentityProvider.Identifier
 import kamon.trace.SpanContext.SamplingDecision
-import kamon.trace.{Span, SpanContext}
+import kamon.trace.{IdentityProvider, Span, SpanContext}
 import kamon.util.Clock
 import zipkin2.{Endpoint, Span => ZipkinSpan}
 import org.scalatest.{Matchers, WordSpec}
@@ -21,6 +21,17 @@ class SpanConversionSpec extends WordSpec with Matchers {
       zipkinSpan.parentId() shouldBe kamonSpan.context.parentID.string
       zipkinSpan.name() shouldBe kamonSpan.operationName
       zipkinSpan.timestamp() shouldBe Clock.toEpochMicros(kamonSpan.from)
+    }
+
+    "convert span without parent" in {
+      val kamonSpan = newSpan().build()
+      val zipkinSpan = convert(kamonSpan.copy(context =
+        kamonSpan.context.copy(parentID = IdentityProvider.NoIdentifier)
+      ))
+
+      zipkinSpan.traceId() shouldBe kamonSpan.context.traceID.string
+      zipkinSpan.id() shouldBe kamonSpan.context.spanID.string
+      zipkinSpan.parentId() shouldBe null
     }
 
     "assign a Span kind for client and server operations" in {
