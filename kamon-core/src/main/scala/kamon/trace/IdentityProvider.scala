@@ -37,7 +37,7 @@ object IdentityProvider {
     }
   }
 
-  val NoIdentifier = Identifier("", new Array[Byte](0))
+  val NoIdentifier = Identifier("0", new Array[Byte](0))
 
   trait Generator {
     def generate(): Identifier
