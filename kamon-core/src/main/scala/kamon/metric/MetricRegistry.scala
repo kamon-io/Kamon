@@ -88,6 +88,23 @@ class MetricRegistry(initialConfig: Config, scheduler: ScheduledExecutorService)
 
     metric.asInstanceOf[T]
   }
+
+  private[kamon] def status(): MetricRegistry.Status = {
+    var metricInfos = Seq.empty[MetricRegistry.MetricInfo]
+    metrics.foreach {
+      case (metricName, metric) =>
+        metric.incarnations().foreach(incarnation => {
+          metricInfos = metricInfos :+ MetricRegistry.MetricInfo(metricName, incarnation, metric.instrumentType)
+        })
+    }
+
+    MetricRegistry.Status(metricInfos)
+  }
+}
+
+object MetricRegistry {
+  case class Status(metrics: Seq[MetricInfo])
+  case class MetricInfo(name: String, tags: Map[String, String], instrumentType: InstrumentType)
 }
 
 trait MetricsSnapshotGenerator {

@@ -3,9 +3,9 @@ package kamon
 import com.typesafe.config.Config
 import kamon.status.{StatusPageServer, Status}
 
-trait StatusPage { self: Configuration with ClassLoading with ModuleLoading with Configuration =>
+trait StatusPage { self: Configuration with ClassLoading with ModuleLoading with Metrics with Configuration =>
   @volatile private var _statusPageServer: Option[StatusPageServer] = None
-  private val _status = new Status(self._moduleRegistry, self)
+  private val _status = new Status(self._moduleRegistry, self._metricsRegistry, self)
 
   // Initial configuration and reconfigures
   init(self.config())

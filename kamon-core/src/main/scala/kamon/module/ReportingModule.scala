@@ -19,3 +19,9 @@ trait MetricReporter extends Module {
 trait SpanReporter extends Module {
   def reportSpans(spans: Seq[Span.FinishedSpan]): Unit
 }
+
+/**
+  * Modules implementing this trait will get registered for periodically receiving metric period snapshots and span
+  * batches.
+  */
+trait CombinedReporter extends MetricReporter with SpanReporter

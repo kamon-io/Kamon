@@ -16,7 +16,8 @@
 package kamon
 
 import com.typesafe.config.{Config, ConfigRenderOptions}
-import kamon.module.Module
+import kamon.metric.PeriodSnapshot
+import kamon.module.{MetricReporter, Module}
 
 object Kamon extends ClassLoading
   with Configuration
@@ -42,12 +43,16 @@ object Kamon extends ClassLoading
 
 object QuickTest extends App {
   Kamon.loadModules()
-  Kamon.registerModule("my-module", new Module {
+  Kamon.registerModule("my-module", new MetricReporter {
+    override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {}
     override def start(): Unit = {}
     override def stop(): Unit = {}
     override def reconfigure(newConfig: Config): Unit = {}
   })
 
+
+  Kamon.histogram("test").refine("tagcito" -> "value").record(10)
+  Kamon.counter("test-counter").refine("tagcito" -> "value").increment(42)
 
   //println("JSON CONFIG: " + Kamon.config().root().render(ConfigRenderOptions.concise().setFormatted(true).setJson(true)))
 

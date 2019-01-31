@@ -6,6 +6,7 @@ import kamon.module.Module.Registry
 import java.lang.{StringBuilder => JavaStringBuilder}
 
 import com.typesafe.config.ConfigRenderOptions
+import kamon.metric.MetricRegistry
 
 
 trait JsonMarshalling[T] {
@@ -29,6 +30,7 @@ object JsonMarshalling {
         array.`object`()
           .value("name", m.name)
           .value("description", m.description)
+          .value("kind", m.kind)
           .value("enabled", m.enabled)
           .value("started", m.started)
           .end()
@@ -59,6 +61,33 @@ object JsonMarshalling {
         .end() // ends tags
         .end() // ends environment
         .end() // ends base config
+        .done()
+    }
+  }
+
+  implicit object MetricRegistryStatusJsonMarshalling extends JsonMarshalling[MetricRegistry.Status] {
+    override def toJson(instance: MetricRegistry.Status, builder: JavaStringBuilder): Unit = {
+      val metricsObject = JsonWriter.on(builder)
+        .`object`
+          .array("metrics")
+
+      instance.metrics.foreach(metric => {
+        metricsObject
+          .`object`()
+            .value("name", metric.name)
+            .value("type", metric.instrumentType.name)
+            .`object`("tags")
+
+        metric.tags.foreach { case (tag, value) => metricsObject.value(tag, value) }
+
+        metricsObject
+          .end() // tags
+          .end() // metric info
+      })
+
+      metricsObject
+        .end() // metrics array
+        .end() // object
         .done()
     }
   }

@@ -1,29 +1,67 @@
 <template>
   <div id="app">
-    <div id="nav">
-      <router-link to="/">Home</router-link> |
-      <router-link to="/about">About</router-link>
+    <div class="header w-100 mb-5 sticky-top">
+      <div class="container h-100">
+        <div class="row h-100 justify-content-between">
+          <div class="col-auto h-100">
+            <img class="py-3 h-100 img-fluid" src="./assets/logo.svg" alt="">
+          </div>
+
+          <div class="col-auto navigation">
+            <router-link to="/">
+              <div class="navigation-link">
+                Overview
+              </div>
+            </router-link>
+            <router-link to="/">
+              <div class="navigation-link">
+                Metrics
+              </div>
+            </router-link>
+          </div>
+        </div>
+      </div>
     </div>
+
     <router-view/>
   </div>
+
 </template>
 
 <style lang="scss">
-#app {
-  font-family: 'Avenir', Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-}
-#nav {
-  padding: 30px;
-  a {
-    font-weight: bold;
-    color: #2c3e50;
-    &.router-link-exact-active {
-      color: #42b983;
+
+$header-height: 70px;
+
+.header {
+  height: $header-height;
+  background-color: white;
+  box-shadow: 0 5px 9px 1px rgba(0,0,0,0.1);
+
+  .navigation {
+    line-height: $header-height;
+
+    .navigation-link, a {
+      display: inline-block;
+      padding: 0 0.5rem;
+      text-transform: uppercase;
+      text-decoration: none;
+      color: #b3b3b3;
+
+      &:hover {
+        color: #888888;
+      }
     }
   }
 }
+
+// #nav {
+//   padding: 30px;
+//   a {
+//     font-weight: bold;
+//     color: #2c3e50;
+//     &.router-link-exact-active {
+//       color: #42b983;
+//     }
+//   }
+// }
 </style>

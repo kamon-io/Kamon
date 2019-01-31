@@ -1,6 +1,7 @@
 package kamon.status
 
 import com.typesafe.config.Config
+import kamon.metric.MetricRegistry
 import kamon.{Configuration, Environment, Kamon}
 import kamon.module.Module
 
@@ -8,7 +9,7 @@ import kamon.module.Module
 /**
   * Allows accessing of component's status APIs without exposing any other internal API from those components.
   */
-class Status(_moduleRegistry: Module.Registry, configuration: Configuration) {
+class Status(_moduleRegistry: Module.Registry, _metricRegistry: MetricRegistry, configuration: Configuration) {
 
   def baseInfo(): Status.BaseInfo =
     Status.BaseInfo(BuildInfo.version, Kamon.environment, configuration.config())
@@ -18,8 +19,10 @@ class Status(_moduleRegistry: Module.Registry, configuration: Configuration) {
     */
   def moduleRegistry(): Module.Registry.Status =
     _moduleRegistry.status()
-}
 
+  def metricRegistry(): MetricRegistry.Status =
+    _metricRegistry.status()
+}
 
 
 

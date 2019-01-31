@@ -19,6 +19,7 @@ class StatusPageServer(hostname: String, port: Int, resourceLoader: ClassLoader,
         session.getUri() match {
           case "/status/config"       => json(status.baseInfo())
           case "/status/modules"      => json(status.moduleRegistry())
+          case "/status/metrics"      => json(status.metricRegistry())
           case _                      => NotFound
         }
 

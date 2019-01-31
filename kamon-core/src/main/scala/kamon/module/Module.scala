@@ -331,15 +331,23 @@ object Module {
       * Returns the current status of this module registry.
       */
     private[kamon] def status(): Registry.Status = {
+      def moduleKind(instance: Any): String = instance match {
+        case _: CombinedReporter  => "combined"
+        case _: MetricReporter    => "metric"
+        case _: SpanReporter      => "span"
+        case _: Module            => "plain"
+      }
+
       val automaticallyAddedModules = readModuleSettings(configuration.config()).map(moduleSettings => {
         val entry = _registeredModules.get(moduleSettings.name)
-        Registry.ModuleInfo(moduleSettings.name, moduleSettings.fqcn, moduleSettings.enabled, entry.nonEmpty)
+        val entryModuleKind = entry.map(e => moduleKind(e.module)).getOrElse("unknown")
+        Registry.ModuleInfo(moduleSettings.name, moduleSettings.fqcn, moduleSettings.enabled, entry.nonEmpty, entryModuleKind)
       })
 
       val programmaticallyAddedModules = _registeredModules
         .filter { case (_, entry) => entry.programmaticallyAdded }
         .map { case (name, entry) => {
-          Registry.ModuleInfo(name, entry.module.getClass.getName, true, true)
+          Registry.ModuleInfo(name, entry.module.getClass.getName, true, true, moduleKind(entry.module))
         }}
 
       val allModules = automaticallyAddedModules ++ programmaticallyAddedModules
@@ -432,7 +440,8 @@ object Module {
       name: String,
       description: String,
       enabled: Boolean,
-      started: Boolean
+      started: Boolean,
+      kind: String
     )
   }
 

@@ -39,7 +39,7 @@ export default class HelloWorld extends Vue {
 
   private mounted() {
     console.log("I'm mounting the thing")
-    axios.get("/status/base-config").then(result => {
+    axios.get("/status/config").then(result => {
       console.log("GOT A RESULT", result.data)
     })
   }
