@@ -17,20 +17,19 @@
 package kamon.datadog
 
 import java.lang.StringBuilder
+import java.nio.charset.StandardCharsets
 import java.text.{ DecimalFormat, DecimalFormatSymbols }
 import java.time.Duration
 import java.util.Locale
-import java.util.concurrent.TimeUnit
 
 import com.typesafe.config.Config
-import kamon.metric._
-import kamon.metric.MeasurementUnit
 import kamon.metric.MeasurementUnit.Dimension.{ Information, Time }
-import kamon.metric.MeasurementUnit.{ information, time }
+import kamon.metric.{ MeasurementUnit, MetricDistribution, MetricValue, PeriodSnapshot }
 import kamon.util.{ EnvironmentTagBuilder, Matcher }
 import kamon.{ Kamon, MetricReporter }
-import okhttp3.{ MediaType, OkHttpClient, Request, RequestBody }
 import org.slf4j.LoggerFactory
+
+import scala.util.{ Failure, Success }
 
 class DatadogAPIReporter extends MetricReporter {
   import DatadogAPIReporter._
@@ -39,10 +38,9 @@ class DatadogAPIReporter extends MetricReporter {
   private val symbols = DecimalFormatSymbols.getInstance(Locale.US)
   symbols.setDecimalSeparator('.') // Just in case there is some weird locale config we are not aware of.
 
-  private val jsonType = MediaType.parse("application/json; charset=utf-8")
   private val valueFormat = new DecimalFormat("#0.#########", symbols)
   private var configuration = readConfiguration(Kamon.config())
-  private var httpClient: OkHttpClient = createHttpClient(configuration)
+  private var httpClient: HttpClient = new HttpClient(configuration.httpConfig)
 
   override def start(): Unit = {
     logger.info("Started the Datadog API reporter.")
@@ -54,23 +52,20 @@ class DatadogAPIReporter extends MetricReporter {
 
   override def reconfigure(config: Config): Unit = {
     val newConfiguration = readConfiguration(config)
-    httpClient = createHttpClient(readConfiguration(Kamon.config()))
     configuration = newConfiguration
+    httpClient = new HttpClient(configuration.httpConfig)
   }
 
   override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
-    val body = RequestBody.create(jsonType, buildRequestBody(snapshot))
-    val request = new Request.Builder().url(configuration.apiUrl + configuration.apiKey).post(body).build
-    val response = httpClient.newCall(request).execute()
-
-    if (!response.isSuccessful()) {
-      logger.error(s"Failed to POST metrics to Datadog with status code [${response.code()}], Body: [${response.body().string()}]")
+    httpClient.doPost("application/json; charset=utf-8", buildRequestBody(snapshot)) match {
+      case Failure(e) =>
+        logger.error(e.getMessage)
+      case Success(response) =>
+        logger.info(response)
     }
-
-    response.close()
   }
 
-  private[datadog] def buildRequestBody(snapshot: PeriodSnapshot): String = {
+  private[datadog] def buildRequestBody(snapshot: PeriodSnapshot): Array[Byte] = {
     val timestamp = snapshot.from.getEpochSecond.toString
 
     val host = Kamon.environment.host
@@ -110,7 +105,9 @@ class DatadogAPIReporter extends MetricReporter {
     seriesBuilder
       .insert(0, "{\"series\":[")
       .append("]}")
-      .toString
+      .toString()
+      .getBytes(StandardCharsets.UTF_8)
+
   }
 
   private def scale(value: Long, unit: MeasurementUnit): Double = unit.dimension match {
@@ -123,23 +120,10 @@ class DatadogAPIReporter extends MetricReporter {
     case _ => value.toDouble
   }
 
-  // Apparently okhttp doesn't require explicit closing of the connection
-  private def createHttpClient(config: Configuration): OkHttpClient = {
-    new OkHttpClient.Builder()
-      .connectTimeout(config.connectTimeout.toMillis, TimeUnit.MILLISECONDS)
-      .readTimeout(config.connectTimeout.toMillis, TimeUnit.MILLISECONDS)
-      .writeTimeout(config.connectTimeout.toMillis, TimeUnit.MILLISECONDS).build()
-  }
-
   private def readConfiguration(config: Config): Configuration = {
     val datadogConfig = config.getConfig("kamon.datadog")
-
     Configuration(
-      apiUrl = datadogConfig.getString("http.api-url"),
-      apiKey = datadogConfig.getString("http.api-key"),
-      connectTimeout = datadogConfig.getDuration("http.connect-timeout"),
-      readTimeout = datadogConfig.getDuration("http.read-timeout"),
-      requestTimeout = datadogConfig.getDuration("http.request-timeout"),
+      datadogConfig.getConfig("http"),
       timeUnit = readTimeUnit(datadogConfig.getString("time-unit")),
       informationUnit = readInformationUnit(datadogConfig.getString("information-unit")),
       // Remove the "host" tag since it gets added to the datadog payload separately
@@ -153,8 +137,7 @@ private object DatadogAPIReporter {
   val count = "count"
   val gauge = "gauge"
 
-  case class Configuration(apiUrl: String, apiKey: String, connectTimeout: Duration, readTimeout: Duration, requestTimeout: Duration,
-                           timeUnit: MeasurementUnit, informationUnit: MeasurementUnit, extraTags: Map[String, String], tagFilter: Matcher)
+  case class Configuration(httpConfig: Config, timeUnit: MeasurementUnit, informationUnit: MeasurementUnit, extraTags: Map[String, String], tagFilter: Matcher)
 
   implicit class QuoteInterp(val sc: StringContext) extends AnyVal {
     def quote(args: Any*): String = "\"" + sc.s(args: _*) + "\""
