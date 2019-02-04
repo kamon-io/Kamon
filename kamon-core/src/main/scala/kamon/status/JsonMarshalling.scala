@@ -1,12 +1,10 @@
 package kamon.status
 
 import com.grack.nanojson.JsonWriter
-import kamon.module.Module
-import kamon.module.Module.Registry
 import java.lang.{StringBuilder => JavaStringBuilder}
 
 import com.typesafe.config.ConfigRenderOptions
-import kamon.metric.MetricRegistry
+import kamon.module.Module
 
 
 trait JsonMarshalling[T] {
@@ -20,8 +18,15 @@ trait JsonMarshalling[T] {
 
 object JsonMarshalling {
 
-  implicit object ModuleRegistryStatusJsonMarshalling extends JsonMarshalling[Module.Registry.Status] {
-    override def toJson(instance: Registry.Status, builder: JavaStringBuilder): Unit = {
+  implicit object ModuleRegistryStatusJsonMarshalling extends JsonMarshalling[Status.ModuleRegistry] {
+    override def toJson(instance: Status.ModuleRegistry, builder: JavaStringBuilder): Unit = {
+      def moduleKindString(moduleKind: Module.Kind): String = moduleKind match {
+        case Module.Kind.Combined => "combined"
+        case Module.Kind.Metric   => "metric"
+        case Module.Kind.Span     => "span"
+        case Module.Kind.Plain    => "plain"
+      }
+
       val array = JsonWriter.on(builder)
         .`object`()
         .array("modules")
@@ -30,9 +35,9 @@ object JsonMarshalling {
         array.`object`()
           .value("name", m.name)
           .value("description", m.description)
-          .value("kind", m.kind)
-          .value("enabled", m.enabled)
-          .value("started", m.started)
+          .value("kind", moduleKindString(m.kind))
+          .value("isProgrammaticallyRegistered", m.isProgrammaticallyRegistered)
+          .value("isStarted", m.isStarted)
           .end()
       })
 
@@ -40,8 +45,8 @@ object JsonMarshalling {
     }
   }
 
-  implicit object BaseInfoJsonMarshalling extends JsonMarshalling[Status.BaseInfo] {
-    override def toJson(instance: Status.BaseInfo, builder: JavaStringBuilder): Unit = {
+  implicit object BaseInfoJsonMarshalling extends JsonMarshalling[Status.Settings] {
+    override def toJson(instance: Status.Settings, builder: JavaStringBuilder): Unit = {
       val baseConfigJson = JsonWriter.on(builder)
         .`object`()
           .value("version", instance.version)
@@ -65,8 +70,8 @@ object JsonMarshalling {
     }
   }
 
-  implicit object MetricRegistryStatusJsonMarshalling extends JsonMarshalling[MetricRegistry.Status] {
-    override def toJson(instance: MetricRegistry.Status, builder: JavaStringBuilder): Unit = {
+  implicit object MetricRegistryStatusJsonMarshalling extends JsonMarshalling[Status.MetricRegistry] {
+    override def toJson(instance: Status.MetricRegistry, builder: JavaStringBuilder): Unit = {
       val metricsObject = JsonWriter.on(builder)
         .`object`
           .array("metrics")

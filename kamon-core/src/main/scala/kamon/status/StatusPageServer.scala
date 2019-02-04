@@ -17,7 +17,7 @@ class StatusPageServer(hostname: String, port: Int, resourceLoader: ClassLoader,
 
         // Serve the current status data on Json.
         session.getUri() match {
-          case "/status/config"       => json(status.baseInfo())
+          case "/status/settings"     => json(status.settings())
           case "/status/modules"      => json(status.moduleRegistry())
           case "/status/metrics"      => json(status.metricRegistry())
           case _                      => NotFound

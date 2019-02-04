@@ -15,9 +15,9 @@
 
 package kamon
 
-import com.typesafe.config.{Config, ConfigRenderOptions}
+import com.typesafe.config.{Config, ConfigFactory, ConfigRenderOptions}
 import kamon.metric.PeriodSnapshot
-import kamon.module.{MetricReporter, Module}
+import kamon.trace.Span
 
 object Kamon extends ClassLoading
   with Configuration
@@ -42,16 +42,41 @@ object Kamon extends ClassLoading
 
 
 object QuickTest extends App {
+  val manualConfig =
+    """
+      |kamon.modules {
+      |  kamon-zipkin {
+      |    enabled = false
+      |    description = "Module that sends data to particular places"
+      |    kind = metric
+      |    class = kamon.MyCustomMetricDude
+      |  }
+      |}
+    """.stripMargin
+
+  val newConfig = ConfigFactory.parseString(manualConfig).withFallback(Kamon.config())
+  Kamon.reconfigure(newConfig)
+
+
+
   Kamon.loadModules()
-  Kamon.registerModule("my-module", new MetricReporter {
+  Kamon.registerModule("my-module", new kamon.module.MetricReporter {
     override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {}
     override def start(): Unit = {}
     override def stop(): Unit = {}
     override def reconfigure(newConfig: Config): Unit = {}
   })
 
+  Kamon.registerModule("my-module-for-spans", new kamon.module.SpanReporter {
+    override def reportSpans(spans: Seq[Span.FinishedSpan]): Unit = {}
+    override def start(): Unit = {}
+    override def stop(): Unit = {}
+    override def reconfigure(newConfig: Config): Unit = {}
+  })
 
-  Kamon.histogram("test").refine("tagcito" -> "value").record(10)
+
+  Kamon.histogram("test").refine("actor_class" -> "com.kamon.something.MyActor", "system" -> "HRMS").record(10)
+  Kamon.rangeSampler("test-rs").refine("actor_class" -> "com.kamon.something.MyActor", "system" -> "HRMS").increment(34)
   Kamon.counter("test-counter").refine("tagcito" -> "value").increment(42)
 
   //println("JSON CONFIG: " + Kamon.config().root().render(ConfigRenderOptions.concise().setFormatted(true).setJson(true)))
@@ -60,4 +85,11 @@ object QuickTest extends App {
   Thread.sleep(100000000)
 
 
+}
+
+class MyCustomMetricDude extends kamon.module.MetricReporter {
+  override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {}
+  override def start(): Unit = {}
+  override def stop(): Unit = {}
+  override def reconfigure(newConfig: Config): Unit = {}
 }

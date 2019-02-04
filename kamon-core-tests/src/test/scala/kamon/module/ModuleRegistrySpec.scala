@@ -14,15 +14,17 @@
  */
 
 package kamon
+package module
 
 import com.typesafe.config.Config
 import kamon.metric.PeriodSnapshot
 import kamon.testkit.Reconfigure
 import org.scalatest.concurrent.Eventually
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
+import kamon.{MetricReporter => LegacyMetricReporter}
 
-class ReporterRegistrySpec extends WordSpec with Matchers with Reconfigure with Eventually with BeforeAndAfterAll  {
-  "The ReporterRegistry" when {
+class ModuleRegistrySpec extends WordSpec with Matchers with Reconfigure with Eventually with BeforeAndAfterAll  {
+  "The ModuleRegistry" when {
     "working with metrics reporters" should {
       "report all metrics if no filters are applied" in {
         Kamon.counter("test.hello").increment()
@@ -104,13 +106,7 @@ class ReporterRegistrySpec extends WordSpec with Matchers with Reconfigure with 
     resetConfig()
   }
 
-  abstract class DummyReporter extends MetricReporter {
-    override def start(): Unit = {}
-    override def stop(): Unit = {}
-    override def reconfigure(config: Config): Unit = {}
-  }
-
-  class SeenMetricsReporter extends DummyReporter {
+  class SeenMetricsReporter extends LegacyMetricReporter {
     @volatile private var count = 0
     @volatile private var seenMetrics = Seq.empty[String]
 
@@ -125,5 +121,9 @@ class ReporterRegistrySpec extends WordSpec with Matchers with Reconfigure with 
 
     def snapshotCount(): Int =
       count
+
+    override def start(): Unit = {}
+    override def stop(): Unit = {}
+    override def reconfigure(config: Config): Unit = {}
   }
 }
