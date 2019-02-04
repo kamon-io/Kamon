@@ -1,7 +1,7 @@
 body {
   background-color: #f7f7f7;
-  font-size: 16px;
-  color: #616161;
+  font-size: 14px;
+  color: #929292;
   font-family: 'Open Sans', Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -9,4 +9,8 @@ body {
 
 h1, h2, h3 {
   font-weight: 300;
+}
+
+.text-label {
+  color: #b3b3b3;
 }

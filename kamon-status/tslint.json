@@ -10,9 +10,10 @@
   },
   "rules": {
     "semicolon": [true, "never"],
-    "quotemark": [true, "double"],
+    "quotemark": [true, "single"],
     "indent": [true, "spaces", 2],
     "arrow-parens": [true, "ban-single-arg-parens"],
+    "trailing-comma": false,
     "interface-name": false,
     "ordered-imports": false,
     "object-literal-sort-keys": false,

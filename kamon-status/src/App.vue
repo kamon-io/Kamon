@@ -1,23 +1,10 @@
 <template>
   <div id="app">
-    <div class="header w-100 mb-5 sticky-top">
+    <div class="header w-100 mb-1 sticky-top">
       <div class="container h-100">
         <div class="row h-100 justify-content-between">
           <div class="col-auto h-100">
             <img class="py-3 h-100 img-fluid" src="./assets/logo.svg" alt="">
-          </div>
-
-          <div class="col-auto navigation">
-            <router-link to="/">
-              <div class="navigation-link">
-                Overview
-              </div>
-            </router-link>
-            <router-link to="/">
-              <div class="navigation-link">
-                Metrics
-              </div>
-            </router-link>
           </div>
         </div>
       </div>
@@ -53,15 +40,4 @@ $header-height: 70px;
     }
   }
 }
-
-// #nav {
-//   padding: 30px;
-//   a {
-//     font-weight: bold;
-//     color: #2c3e50;
-//     &.router-link-exact-active {
-//       color: #42b983;
-//     }
-//   }
-// }
 </style>
