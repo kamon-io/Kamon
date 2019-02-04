@@ -52,6 +52,10 @@ object QuickTest extends App {
       |    class = kamon.MyCustomMetricDude
       |  }
       |}
+      |
+      |kamon.environment.tags {
+      |  one = test
+      |}
     """.stripMargin
 
   val newConfig = ConfigFactory.parseString(manualConfig).withFallback(Kamon.config())

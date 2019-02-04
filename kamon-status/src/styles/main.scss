@@ -14,3 +14,21 @@ h1, h2, h3 {
 .text-label {
   color: #b3b3b3;
 }
+
+.tag-container {
+  margin: 0rem -0.3rem;
+}
+
+.tag {
+  display: inline-block;
+  overflow-wrap: anywhere;
+  background-color: #f4f4f4;
+  margin: 0.3rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 0.2rem;
+}
+
+.tag-value {
+  overflow-wrap: anywhere;
+  color: #676767;
+}

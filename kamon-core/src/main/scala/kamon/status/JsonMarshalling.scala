@@ -6,6 +6,8 @@ import java.lang.{StringBuilder => JavaStringBuilder}
 import com.typesafe.config.ConfigRenderOptions
 import kamon.module.Module
 
+import scala.collection.JavaConverters.{iterableAsScalaIterableConverter, mapAsScalaMapConverter}
+
 
 trait JsonMarshalling[T] {
 
@@ -92,6 +94,35 @@ object JsonMarshalling {
 
       metricsObject
         .end() // metrics array
+        .end() // object
+        .done()
+    }
+  }
+
+  implicit object InstrumentationStatusJsonMarshalling extends JsonMarshalling[Status.Instrumentation] {
+    override def toJson(instance: Status.Instrumentation, builder: JavaStringBuilder): Unit = {
+      val instrumentationObject = JsonWriter.on(builder)
+        .`object`()
+          .value("isActive", instance.isIActive)
+          .`object`("modules")
+
+      instance.modules.asScala.foreach {
+        case (moduleName, moduleDescription) => instrumentationObject.value(moduleName, moduleDescription)
+      }
+
+      instrumentationObject
+        .end() // end modules
+        .`object`("errors")
+
+      instance.errors.asScala.foreach {
+        case (moduleName, errors) =>
+          instrumentationObject.array(moduleName)
+          errors.asScala.foreach(t => instrumentationObject.value(t.toString))
+          instrumentationObject.end()
+      }
+
+      instrumentationObject
+        .end() // errors
         .end() // object
         .done()
     }

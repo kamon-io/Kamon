@@ -12,7 +12,7 @@
         <div class="row no-gutters" v-for="(metric, index) in matchedMetrics" :key="metric.search">
           <div class="col-12 px-3 pt-1 pb-3">
             <div class="text-uppercase text-label">{{ metric.type }}</div>
-            <h4>{{ metric.name }}</h4>
+            <h5>{{ metric.name }}</h5>
             <div class="tag-container">
               <span class="tag" v-for="tag in Object.keys(metric.tags)" :key="tag">
                 {{ tag }}=<span class="tag-value">{{ metric.tags[tag] }}</span>
@@ -75,7 +75,7 @@ export default class MetricList extends Vue {
     height: 2.5rem;
     border: none;
     border-radius: 0.3rem;
-    background-color: #e8e8e8;
+    background-color: #efefef;
 
     &:focus {
       outline: none;
@@ -93,20 +93,4 @@ export default class MetricList extends Vue {
     padding-right: 1rem;
   }
 }
-
-.tag-container {
-  margin: 0rem -0.3rem;
-}
-
-.tag {
-  background-color: #f4f4f4;
-  margin: 0.3rem;
-  padding: 0.1rem 0.5rem;
-  border-radius: 0.2rem;
-}
-
-.tag-value {
-  color: #676767;
-}
-
 </style>

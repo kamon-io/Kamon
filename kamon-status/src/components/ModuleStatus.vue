@@ -8,8 +8,8 @@
         <hr>
       </div>
       <div class="col">
-        <div class="px-3 py-2">
-          <h4>{{ moduleStatus.name }}</h4>
+        <div class="px-3 py-3">
+          <h5 class="mb-0">{{ moduleStatus.name }}</h5>
           <div class="text-label">
             {{ moduleStatus.description }}
           </div>

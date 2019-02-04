@@ -17,10 +17,11 @@ class StatusPageServer(hostname: String, port: Int, resourceLoader: ClassLoader,
 
         // Serve the current status data on Json.
         session.getUri() match {
-          case "/status/settings"     => json(status.settings())
-          case "/status/modules"      => json(status.moduleRegistry())
-          case "/status/metrics"      => json(status.metricRegistry())
-          case _                      => NotFound
+          case "/status/settings"         => json(status.settings())
+          case "/status/modules"          => json(status.moduleRegistry())
+          case "/status/metrics"          => json(status.metricRegistry())
+          case "/status/instrumentation"  => json(status.instrumentation())
+          case _                          => NotFound
         }
 
       } else {
@@ -43,6 +44,7 @@ class StatusPageServer(hostname: String, port: Int, resourceLoader: ClassLoader,
       case "css"  => "text/css"
       case "js"   => "application/javascript"
       case "ico"  => "image/x-icon"
+      case "svg"  => "image/svg+xml"
       case "html" => "text/html"
       case _      => "text/plain"
     }
