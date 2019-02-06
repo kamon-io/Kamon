@@ -110,7 +110,7 @@ object Status {
     /**
       * Whether instrumentation is active or not. When Kanela is present it will replace this method to return true.
       */
-    def isActive(): Boolean =
+    def isActive(): java.lang.Boolean =
       false
 
     /**
