@@ -32,3 +32,8 @@ h1, h2, h3 {
   overflow-wrap: anywhere;
   color: #676767;
 }
+
+a, a:hover, a:active {
+  color: inherit;
+  text-decoration: none;
+}

@@ -24,6 +24,7 @@ export enum ModuleKind {
 export interface Module {
   name: string
   description: string
+  clazz: string
   kind: ModuleKind
   isProgrammaticallyRegistered: boolean
   isStarted: boolean

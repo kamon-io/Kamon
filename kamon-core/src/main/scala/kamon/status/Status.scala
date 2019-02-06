@@ -70,6 +70,7 @@ object Status {
   case class Module(
     name: String,
     description: String,
+    clazz: String,
     kind: ModuleKind,
     isProgrammaticallyRegistered: Boolean,
     isStarted: Boolean

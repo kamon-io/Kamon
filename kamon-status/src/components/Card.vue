@@ -1,5 +1,5 @@
 <template>
-  <div class="outer py-1">
+  <div class="outer">
     <slot/>
   </div>
 </template>
@@ -13,7 +13,7 @@
 }
 
 hr {
-  margin: 1px;
+  margin: 0px;
   border-color: #f3f3f3;
 }
 </style>

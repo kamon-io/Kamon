@@ -10,7 +10,7 @@
     <div class="col-12">
       <card v-if="matchedMetrics.length > 0">
         <div class="row no-gutters" v-for="(metric, index) in matchedMetrics" :key="metric.search">
-          <div class="col-12 px-3 pt-1 pb-3">
+          <div class="col-12 px-3 pt-2 pb-3">
             <div class="text-uppercase text-label">{{ metric.type }}</div>
             <h5>{{ metric.name }}</h5>
             <div class="tag-container">

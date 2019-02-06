@@ -17,6 +17,7 @@
     "vue-router": "^3.0.1"
   },
   "devDependencies": {
+    "@fortawesome/fontawesome-free": "^5.7.1",
     "@vue/cli-plugin-typescript": "^3.3.0",
     "@vue/cli-service": "^3.3.0",
     "node-sass": "^4.9.0",

@@ -37,6 +37,7 @@ object JsonMarshalling {
         array.`object`()
           .value("name", m.name)
           .value("description", m.description)
+          .value("clazz", m.clazz)
           .value("kind", moduleKindString(m.kind))
           .value("isProgrammaticallyRegistered", m.isProgrammaticallyRegistered)
           .value("isStarted", m.isStarted)
