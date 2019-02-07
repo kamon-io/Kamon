@@ -40,7 +40,8 @@ object JsonMarshalling {
           .value("clazz", m.clazz)
           .value("kind", moduleKindString(m.kind))
           .value("isProgrammaticallyRegistered", m.isProgrammaticallyRegistered)
-          .value("isStarted", m.isStarted)
+          .value("enabled", m.isEnabled)
+          .value("started", m.isStarted)
           .end()
       })
 

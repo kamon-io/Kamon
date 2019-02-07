@@ -1,71 +1,84 @@
 <template>
-  <div class="row">
-    <div class="col-12">
-      <card>
-        <div class="row py-2 no-gutters">
-          <div class="col-12 col-md-3 py-2 px-3">
-            <div class="text-uppercase text-label pb-1">Instrumentation</div>
-            <h5>{{instrumentationStatusMessage}}</h5>
-          </div>
-          <div class="col-12 col-md-3 py-2 px-3">
-            <div class="text-uppercase text-label pb-1">Reporters</div>
-            <h5>{{ activeReporters.length }} Started</h5>
-          </div>
-          <div class="col-12 col-md-3 py-2 px-3">
-            <div class="text-uppercase text-label pb-1">Metrics</div>
-            <h5>{{metricsStatusMessage}}</h5>
-          </div>
+  <card>
+    <div class="row status-card">
+      <div class="col-auto">
+        <div class="status-indicator-wrap text-center text-uppercase" :style="indicatorStyle">
+          <slot name="status-indicator">
+            <div class="status-indicator h-100 pt-3">
+              <i class="fas fa-fw" :class="indicatorIcon"></i>
+              <div>
+                {{ indicatorText }}
+              </div>
+            </div>
+          </slot>
         </div>
-      </card>
+      </div>
+      <div class="col">
+        <slot name="default">
+
+        </slot>
+      </div>
     </div>
-  </div>
+  </card>
 </template>
 
-
 <script lang="ts">
-import { Component, Vue, Prop } from 'vue-property-decorator'
-import {Option, none, some} from 'ts-option'
-import Card from '../components/Card.vue'
-import {StatusApi, ModuleRegistry, ModuleKind, MetricRegistry, Module, Metric, Instrumentation} from '../api/StatusApi'
+import { Component, Prop, Vue } from 'vue-property-decorator'
+import Card from './Card.vue'
 
 @Component({
   components: {
     card: Card
-  },
+  }
 })
-export default class Overview extends Vue {
-  @Prop() private moduleRegistry: Option<ModuleRegistry> = none
-  @Prop() private metricRegistry: Option<MetricRegistry> = none
-  @Prop() private instrumentation: Option<Instrumentation> = none
+export default class StatusCard extends Vue {
+  @Prop({ default: 'white' }) private indicatorColor!: string
+  @Prop({ default: '#989898' }) private indicatorBackgroundColor!: string
+  @Prop({ default: 'fa-question' }) private indicatorIcon!: string
+  @Prop({ default: 'Unknown' }) private indicatorText!: string
 
-  get reporterModules(): Module[] {
-    return this.moduleRegistry
-      .map(moduleRegistry => moduleRegistry.modules.filter(this.isReporter))
-      .getOrElse([])
-  }
-
-  get activeReporters(): Module[] {
-    return this.reporterModules.filter(this.isStarted)
-  }
-
-  get trackedMetrics(): Option<number> {
-    return this.metricRegistry.map(metricRegistry => metricRegistry.metrics.length)
-  }
-
-  get instrumentationStatusMessage(): string {
-    return this.instrumentation.map(i => (i.isActive ? 'Active' : 'Disabled') as string).getOrElse('Unknown')
-  }
-
-  get metricsStatusMessage(): string {
-    return this.trackedMetrics.map(mc => mc + ' Tracked').getOrElse('Unknown')
-  }
-
-  private isReporter(module: Module): boolean {
-    return [ModuleKind.Combined, ModuleKind.Span, ModuleKind.Metric].indexOf(module.kind) > 0
-  }
-
-  private isStarted(module: Module): boolean {
-    return module.isStarted
+  get indicatorStyle() {
+    return {
+      color: this.indicatorColor,
+      backgroundColor: this.indicatorBackgroundColor
+    }
   }
 }
+
 </script>
+
+<style lang="scss">
+
+$indicator-size: 6rem;
+.status-card {
+  min-height: $indicator-size;
+
+  .status-indicator-wrap {
+    height: 100%;
+    min-width: $indicator-size;
+    min-height: $indicator-size;
+  }
+
+  .status-indicator {
+    line-height: 2rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+
+    i {
+      font-size: 2.5rem;
+    }
+  }
+
+  .critical {
+    background-color: #dadada;
+  }
+
+  .healthy {
+    background-color: #7ade94;
+  }
+
+  .suggested {
+    background-color: #5fd7cc;
+  }
+}
+</style>

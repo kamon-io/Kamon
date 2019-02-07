@@ -2,10 +2,10 @@
   <div class="container">
     <div class="row">
       <div class="col-12 pt-4 pb-2">
-        <h3>Status</h3>
+        <h3>Overview</h3>
       </div>
       <div class="col-12">
-        <status-card :module-registry="moduleRegistry" :metric-registry="metricRegistry" :instrumentation="instrumentation"/>
+        <overview-card :module-registry="moduleRegistry" :metric-registry="metricRegistry" :instrumentation="instrumentation"/>
       </div>
 
       <div class="col-12 pt-4 pb-2">
@@ -22,9 +22,13 @@
       <div class="col-12 pt-4 pb-2" v-if="metrics.length > 0">
         <h2>Metrics</h2>
       </div>
-      <div class="col-12 mb-5">
+      <div class="col-12">
         <metric-list :metrics="metrics"/>
       </div>
+      <div class="col-12 mb-5">
+        <instrumentation-module-list :modules="instrumentationModules"/>
+      </div>
+
     </div>
   </div>
 </template>
@@ -33,16 +37,18 @@
 import { Component, Vue } from 'vue-property-decorator'
 import {Option, none, some} from 'ts-option'
 import ModuleList from '../components/ModuleList.vue'
+import InstrumentationModuleList from '../components/InstrumentationModuleList.vue'
 import MetricList from '../components/MetricList.vue'
 import EnvironmentCard from '../components/EnvironmentCard.vue'
-import StatusCard from '../components/StatusCard.vue'
+import OverviewCard from '../components/OverviewCard.vue'
 import {StatusApi, Settings, ModuleRegistry, ModuleKind, MetricRegistry, Module, Metric,
-  Instrumentation, Environment} from '../api/StatusApi'
+  Instrumentation, Environment, InstrumentationModule} from '../api/StatusApi'
 
 @Component({
   components: {
-    'status-card': StatusCard,
+    'overview-card': OverviewCard,
     'module-list': ModuleList,
+    'instrumentation-module-list': InstrumentationModuleList,
     'metric-list': MetricList,
     'environment-card': EnvironmentCard
   },
@@ -93,6 +99,12 @@ export default class Overview extends Vue {
       .getOrElse([])
   }
 
+  get instrumentationModules(): InstrumentationModule[] {
+    return this.instrumentation
+      .map(i => i.modules)
+      .getOrElse([])
+  }
+
   get environment(): Option<Environment> {
     return this.settings.map(s => s.environment)
   }
@@ -113,7 +125,7 @@ export default class Overview extends Vue {
   }
 
   private isStarted(module: Module): boolean {
-    return module.isStarted
+    return module.started
   }
 }
 </script>

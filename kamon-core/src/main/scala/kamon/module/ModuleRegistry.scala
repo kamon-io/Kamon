@@ -335,23 +335,22 @@ class ModuleRegistry(classLoading: ClassLoading, configuration: Configuration, c
     */
   private[kamon] def status(): Status.ModuleRegistry = {
     val automaticallyAddedModules = readModuleSettings(configuration.config()).map(moduleSettings => {
-      _registeredModules.get(moduleSettings.name)
-        .map(moduleEntry =>
-          // The module is on the classpath and started.
-          Status.Module(moduleEntry.name, moduleEntry.settings.description, moduleEntry.settings.clazz.getCanonicalName,
-            moduleEntry.settings.kind, false, true)
+      val isActive = _registeredModules.get(moduleSettings.name).nonEmpty
 
-        ).getOrElse(
-          // The module is on the classpath but has not been started.
-          Status.Module(moduleSettings.name, moduleSettings.description, moduleSettings.clazz.getCanonicalName,
-            moduleSettings.kind, false, false)
-        )
+      Status.Module(
+        moduleSettings.name,
+        moduleSettings.description,
+        moduleSettings.clazz.getCanonicalName,
+        moduleSettings.kind,
+        isProgrammaticallyRegistered = false,
+        moduleSettings.enabled,
+        isActive)
     })
 
     val programmaticallyAddedModules = _registeredModules
       .filter { case (_, entry) => entry.programmaticallyAdded }
       .map { case (name, entry) => Status.Module(name, entry.settings.description, entry.settings.clazz.getCanonicalName,
-        entry.settings.kind, true, true) }
+        entry.settings.kind, true, true, true) }
 
     val allModules = automaticallyAddedModules ++ programmaticallyAddedModules
     Status.ModuleRegistry(allModules)

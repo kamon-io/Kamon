@@ -27,7 +27,8 @@ export interface Module {
   clazz: string
   kind: ModuleKind
   isProgrammaticallyRegistered: boolean
-  isStarted: boolean
+  enabled: boolean
+  started: boolean
 }
 
 export interface Metric {
@@ -46,14 +47,15 @@ export interface MetricRegistry {
 }
 
 export interface InstrumentationModule {
+  name: string
   description: string
-  isEnabled: boolean
-  isActive: boolean
+  enabled: boolean
+  active: boolean
 }
 
 export interface Instrumentation {
   isActive: boolean
-  modules: { [key: string]: InstrumentationModule }
+  modules: InstrumentationModule[]
   errors: { [key: string]: string[]}
 }
 
@@ -109,13 +111,17 @@ export class StatusApi {
     return axios.get('/status/instrumentation').then(response => {
       const instrumentation: Instrumentation = {
         isActive: response.data.isActive as boolean,
-        modules: {},
+        modules: [],
         errors: {}
       }
 
       const rawModules = response.data.modules
       Object.keys(rawModules).forEach(key => {
-        instrumentation.modules[key] = JSON.parse(rawModules[key])
+        const rawModule = JSON.parse(rawModules[key])
+        instrumentation.modules.push({
+          name: key,
+          ...rawModule
+        })
       })
 
       const rawErrors = response.data.errors

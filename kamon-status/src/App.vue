@@ -4,7 +4,7 @@
       <div class="container h-100">
         <div class="row h-100 justify-content-between">
           <div class="col-auto h-100">
-            <img class="py-3 h-100 img-fluid" src="./assets/logo.svg" alt="">
+            <img class="logo h-100 img-fluid" src="./assets/logo.svg" alt="">
           </div>
         </div>
       </div>
@@ -17,7 +17,7 @@
 
 <style lang="scss">
 
-$header-height: 70px;
+$header-height: 85px;
 
 .header {
   height: $header-height;
@@ -38,6 +38,10 @@ $header-height: 70px;
         color: #888888;
       }
     }
+  }
+
+  .logo {
+    padding: 1rem 0rem;
   }
 }
 </style>

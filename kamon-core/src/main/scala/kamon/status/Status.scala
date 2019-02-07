@@ -73,6 +73,7 @@ object Status {
     clazz: String,
     kind: ModuleKind,
     isProgrammaticallyRegistered: Boolean,
+    isEnabled: Boolean,
     isStarted: Boolean
   )
 
