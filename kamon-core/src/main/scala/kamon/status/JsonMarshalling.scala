@@ -85,6 +85,8 @@ object JsonMarshalling {
           .`object`()
             .value("name", metric.name)
             .value("type", metric.instrumentType.name)
+            .value("unitDimension", metric.unit.dimension.name)
+            .value("unitMagnitude", metric.unit.magnitude.name)
             .`object`("tags")
 
         metric.tags.foreach { case (tag, value) => metricsObject.value(tag, value) }

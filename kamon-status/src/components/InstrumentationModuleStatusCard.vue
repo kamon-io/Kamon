@@ -1,6 +1,6 @@
 <template>
   <status-card :indicator-text="runStatus.message" :indicator-icon="runStatus.icon" :indicator-background-color="runStatus.color">
-    <div slot="default" class="py-3">
+    <div slot="default" class="py-3 pl-4">
       <h5 class="mb-0">{{ module.name }}</h5>
       <div class="text-label">
         {{ module.description }}

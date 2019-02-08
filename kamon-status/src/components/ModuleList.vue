@@ -1,23 +1,25 @@
 <template>
-  <div class="row">
-    <div class="col-12 pt-4 pb-2">
-      <h3>Reporters</h3>
-    </div>
-    <div class="col-12 py-1" v-for="reporter in reporterModules" :key="reporter.name">
-      <module-status-card :module="reporter" />
-    </div>
-    <div v-if="!hasApmModule" class="col-12 py-1 apm-suggestion">
-      <a href="https://kamon.io/" target="_blank">
-        <module-status-card :is-suggestion="true" :module="apmModuleSuggestion" />
-      </a>
-    </div>
+  <div class="w-100">
+    <status-section title="Reporters">
+      <div class="row">
+        <div class="col-12 py-1" v-for="reporter in reporterModules" :key="reporter.name">
+          <module-status-card :module="reporter" />
+        </div>
+        <div v-if="!hasApmModule" class="col-12 py-1 apm-suggestion">
+          <a href="https://kamon.io/" target="_blank">
+            <module-status-card :is-suggestion="true" :module="apmModuleSuggestion" />
+          </a>
+        </div>
+      </div>
+    </status-section>
 
-    <div class="col-12 pt-4 pb-2" v-if="plainModules.length > 0">
-      <h2>Modules</h2>
-    </div>
-    <div class="col-12 py-1" v-for="module in plainModules" :key="module.name">
-      <module-status-card :module="module"/>
-    </div>
+    <status-section title="Modules" v-if="plainModules.length > 0">
+      <div class="row">
+        <div class="col-12 py-1" v-for="module in plainModules" :key="module.name">
+          <module-status-card :module="module"/>
+        </div>
+      </div>
+    </status-section>
   </div>
 </template>
 
@@ -25,10 +27,12 @@
 import { Component, Prop, Vue } from 'vue-property-decorator'
 import {Module, ModuleKind} from '../api/StatusApi'
 import ModuleStatusCard from './ModuleStatusCard.vue'
+import StatusSection from './StatusSection.vue'
 
 
 @Component({
   components: {
+    'status-section': StatusSection,
     'module-status-card': ModuleStatusCard
   }
 })

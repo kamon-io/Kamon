@@ -1,24 +1,22 @@
 <template>
-  <div class="row">
-    <div class="col-12">
-      <card>
-        <div class="row py-2 no-gutters">
-          <div class="col-12 col-md-3 py-2 px-3">
-            <div class="text-uppercase text-label pb-1">Instrumentation</div>
-            <h5>{{instrumentationStatusMessage}}</h5>
-          </div>
-          <div class="col-12 col-md-3 py-2 px-3">
-            <div class="text-uppercase text-label pb-1">Reporters</div>
-            <h5>{{ activeReporters.length }} Started</h5>
-          </div>
-          <div class="col-12 col-md-3 py-2 px-3">
-            <div class="text-uppercase text-label pb-1">Metrics</div>
-            <h5>{{metricsStatusMessage}}</h5>
-          </div>
+  <status-section title="Overview">
+    <card>
+      <div class="row py-2 no-gutters">
+        <div class="col-12 col-md-3 py-2 px-3">
+          <div class="text-uppercase text-label pb-1">Instrumentation</div>
+          <h5>{{instrumentationStatusMessage}}</h5>
         </div>
-      </card>
-    </div>
-  </div>
+        <div class="col-12 col-md-3 py-2 px-3">
+          <div class="text-uppercase text-label pb-1">Reporters</div>
+          <h5>{{ activeReporters.length }} Started</h5>
+        </div>
+        <div class="col-12 col-md-3 py-2 px-3">
+          <div class="text-uppercase text-label pb-1">Metrics</div>
+          <h5>{{metricsStatusMessage}}</h5>
+        </div>
+      </div>
+    </card>
+  </status-section>
 </template>
 
 
@@ -26,11 +24,13 @@
 import { Component, Vue, Prop } from 'vue-property-decorator'
 import {Option, none, some} from 'ts-option'
 import Card from '../components/Card.vue'
+import StatusSection from '../components/StatusSection.vue'
 import {StatusApi, ModuleRegistry, ModuleKind, MetricRegistry, Module, Metric, Instrumentation} from '../api/StatusApi'
 
 @Component({
   components: {
-    card: Card
+    'card': Card,
+    'status-section': StatusSection
   },
 })
 export default class OverviewCard extends Vue {
@@ -57,7 +57,7 @@ export default class OverviewCard extends Vue {
   }
 
   get metricsStatusMessage(): string {
-    return this.trackedMetrics.map(mc => mc + ' Tracked').getOrElse('Unknown')
+    return this.trackedMetrics.map(mc => mc + ' Series').getOrElse('Unknown')
   }
 
   private isReporter(module: Module): boolean {

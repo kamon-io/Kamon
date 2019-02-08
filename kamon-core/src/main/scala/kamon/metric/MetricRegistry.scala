@@ -95,7 +95,7 @@ class MetricRegistry(initialConfig: Config, scheduler: ScheduledExecutorService)
     metrics.foreach {
       case (metricName, metric) =>
         metric.incarnations().foreach(incarnation => {
-          registeredMetrics = registeredMetrics :+ Status.Metric(metricName, incarnation, metric.instrumentType)
+          registeredMetrics = registeredMetrics :+ Status.Metric(metricName, incarnation, metric.unit, metric.instrumentType)
         })
     }
 

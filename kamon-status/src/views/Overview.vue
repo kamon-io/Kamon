@@ -1,16 +1,10 @@
 <template>
   <div class="container">
     <div class="row">
-      <div class="col-12 pt-4 pb-2">
-        <h3>Overview</h3>
-      </div>
       <div class="col-12">
         <overview-card :module-registry="moduleRegistry" :metric-registry="metricRegistry" :instrumentation="instrumentation"/>
       </div>
 
-      <div class="col-12 pt-4 pb-2">
-        <h3>Environment</h3>
-      </div>
       <div class="col-12">
         <environment-card :environment="environment"/>
       </div>

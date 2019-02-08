@@ -34,6 +34,8 @@ export interface Module {
 export interface Metric {
   name: string
   type: string
+  unitDimension: string
+  unitMagnitude: string
   tags: { [key: string ]: string }
   search: string
 }

@@ -1,6 +1,6 @@
 <template>
   <card>
-    <div class="row status-card">
+    <div class="row status-card no-gutters">
       <div class="col-auto">
         <div class="status-indicator-wrap text-center text-uppercase" :style="indicatorStyle">
           <slot name="status-indicator">
@@ -56,15 +56,16 @@ $indicator-size: 6rem;
   .status-indicator-wrap {
     height: 100%;
     min-width: $indicator-size;
+    max-width: $indicator-size;
     min-height: $indicator-size;
+    font-size: 0.9rem;
+    font-weight: 600;
   }
 
   .status-indicator {
     line-height: 2rem;
-    font-size: 0.9rem;
-    font-weight: 600;
 
-    i {
+  i {
       font-size: 2.5rem;
     }
   }

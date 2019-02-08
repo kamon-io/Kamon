@@ -2,11 +2,11 @@ package kamon.status
 
 import com.typesafe.config.Config
 import kamon.metric.InstrumentFactory.InstrumentType
-import kamon.metric.MetricRegistry
+import kamon.metric.{MeasurementUnit, MetricRegistry}
 import kamon.{Configuration, Environment, Kamon}
 import kamon.module.ModuleRegistry
 import kamon.module.Module.{Kind => ModuleKind}
-import java.util.{Collections, Map => JavaMap, List => JavaList}
+import java.util.{Collections, List => JavaList, Map => JavaMap}
 
 /**
   * Exposes Kamon components' status information. This is meant to be used for informational and debugging purposes.
@@ -84,6 +84,7 @@ object Status {
   case class Metric(
     name: String,
     tags: Map[String, String],
+    unit: MeasurementUnit,
     instrumentType: InstrumentType
   )
 
