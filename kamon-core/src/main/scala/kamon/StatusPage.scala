@@ -1,9 +1,13 @@
 package kamon
 
 import com.typesafe.config.Config
-import kamon.status.{StatusPageServer, Status}
+import kamon.status.{Status, StatusPageServer}
+import org.slf4j.LoggerFactory
+
+import scala.util.{Failure, Success, Try}
 
 trait StatusPage { self: Configuration with ClassLoading with ModuleLoading with Metrics with Configuration =>
+  private val _log = LoggerFactory.getLogger(classOf[StatusPage])
   @volatile private var _statusPageServer: Option[StatusPageServer] = None
   private val _status = new Status(self._moduleRegistry, self._metricsRegistry, self)
 
@@ -47,10 +51,20 @@ trait StatusPage { self: Configuration with ClassLoading with ModuleLoading with
   }
 
   private def startServer(hostname: String, port: Int, resourceLoader: ClassLoader): Unit = {
-    val server = new StatusPageServer(hostname, port, resourceLoader, _status)
-    server.start()
+    Try {
 
-    _statusPageServer = Some(server)
+      val server = new StatusPageServer(hostname, port, resourceLoader, _status)
+      server.start()
+      server
+
+    } match {
+      case Success(server) =>
+        _log.info(s"Status page started on http://$hostname:$port/")
+        _statusPageServer = Some(server)
+
+      case Failure(t) =>
+        _log.error("Failed to start the status page embedded server", t)
+    }
   }
 
   private def stopServer(): Unit = {

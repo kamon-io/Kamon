@@ -30,7 +30,7 @@ export default class ModuleStatusCard extends Vue {
   @Prop() private module!: Module
 
   get discoveryStatus(): string {
-    return this.module.isProgrammaticallyRegistered ? 'manual' : 'automatic'
+    return this.module.programmaticallyRegistered ? 'manual' : 'automatic'
   }
 
   get runStatus(): { message: string, color: string, icon: string } {

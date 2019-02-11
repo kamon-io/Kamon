@@ -39,9 +39,9 @@ object JsonMarshalling {
           .value("description", m.description)
           .value("clazz", m.clazz)
           .value("kind", moduleKindString(m.kind))
-          .value("isProgrammaticallyRegistered", m.isProgrammaticallyRegistered)
-          .value("enabled", m.isEnabled)
-          .value("started", m.isStarted)
+          .value("programmaticallyRegistered", m.programmaticallyRegistered)
+          .value("enabled", m.enabled)
+          .value("started", m.started)
           .end()
       })
 
@@ -107,7 +107,7 @@ object JsonMarshalling {
     override def toJson(instance: Status.Instrumentation, builder: JavaStringBuilder): Unit = {
       val instrumentationObject = JsonWriter.on(builder)
         .`object`()
-          .value("isActive", instance.isIActive)
+          .value("active", instance.active)
           .`object`("modules")
 
       instance.modules.asScala.foreach {

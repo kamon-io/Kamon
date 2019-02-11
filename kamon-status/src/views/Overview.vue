@@ -16,7 +16,7 @@
       <div class="col-12 pt-4 pb-2" v-if="metrics.length > 0">
         <h2>Metrics</h2>
       </div>
-      <div class="col-12">
+      <div class="col-12" v-if="metrics.length > 0">
         <metric-list :metrics="metrics"/>
       </div>
       <div class="col-12 mb-5">
@@ -74,7 +74,7 @@ export default class Overview extends Vue {
   }
 
   get instrumentationStatusMessage(): string {
-    return this.instrumentation.map(i => (i.isActive ? 'Active' : 'Disabled') as string).getOrElse('Unknown')
+    return this.instrumentation.map(i => (i.active ? 'Active' : 'Disabled') as string).getOrElse('Unknown')
   }
 
   get metricsStatusMessage(): string {

@@ -26,7 +26,7 @@ export interface Module {
   description: string
   clazz: string
   kind: ModuleKind
-  isProgrammaticallyRegistered: boolean
+  programmaticallyRegistered: boolean
   enabled: boolean
   started: boolean
 }
@@ -56,7 +56,7 @@ export interface InstrumentationModule {
 }
 
 export interface Instrumentation {
-  isActive: boolean
+  active: boolean
   modules: InstrumentationModule[]
   errors: { [key: string]: string[]}
 }
@@ -112,7 +112,7 @@ export class StatusApi {
   public static instrumentationStatus(): Promise<Instrumentation> {
     return axios.get('/status/instrumentation').then(response => {
       const instrumentation: Instrumentation = {
-        isActive: response.data.isActive as boolean,
+        active: response.data.active as boolean,
         modules: [],
         errors: {}
       }

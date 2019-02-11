@@ -53,7 +53,7 @@ export default class OverviewCard extends Vue {
   }
 
   get instrumentationStatusMessage(): string {
-    return this.instrumentation.map(i => (i.isActive ? 'Active' : 'Disabled') as string).getOrElse('Unknown')
+    return this.instrumentation.map(i => (i.active ? 'Active' : 'Disabled') as string).getOrElse('Unknown')
   }
 
   get metricsStatusMessage(): string {

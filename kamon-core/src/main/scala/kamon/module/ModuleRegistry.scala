@@ -76,7 +76,7 @@ class ModuleRegistry(classLoading: ClassLoading, configuration: Configuration, c
     * configured modules state.
     */
   def load(config: Config): Unit = synchronized {
-    val configuredModules = readModuleSettings(config)
+    val configuredModules = readModuleSettings(config, true)
     val automaticallyRegisteredModules = _registeredModules.filterNot { case (_, module) => module.programmaticallyAdded }
 
     // Start, reconfigure and stop modules that are still present but disabled.
@@ -233,7 +233,7 @@ class ModuleRegistry(classLoading: ClassLoading, configuration: Configuration, c
     _spanReporterModules.values
   }
 
-  private def readModuleSettings(config: Config): Seq[Module.Settings] = {
+  private def readModuleSettings(config: Config, emitConfigurationWarnings: Boolean): Seq[Module.Settings] = {
     val moduleConfigs = config.getConfig("kamon.modules").configurations
     val moduleSettings = moduleConfigs.map {
       case (moduleName, moduleConfig) =>
@@ -253,11 +253,18 @@ class ModuleRegistry(classLoading: ClassLoading, configuration: Configuration, c
         })
 
 
-        moduleSettings.failed.foreach { t =>
-          _logger.warn(s"Failed to read configuration for module [$moduleName]", t)
+        if(emitConfigurationWarnings) {
+          moduleSettings.failed.foreach { t =>
+            _logger.warn(s"Failed to read configuration for module [$moduleName]", t)
 
-          if(moduleConfig.hasPath("requires-aspectj") || moduleConfig.hasPath("auto-start") || moduleConfig.hasPath("extension-class")) {
-            _logger.warn(s"Module [$moduleName] contains legacy configuration settings, please ensure that no legacy configuration")
+            val hasLegacySettings =
+              moduleConfig.hasPath("requires-aspectj") ||
+              moduleConfig.hasPath("auto-start") ||
+              moduleConfig.hasPath("extension-class")
+
+            if (hasLegacySettings) {
+              _logger.warn(s"Module [$moduleName] contains legacy configuration settings, please ensure that no legacy configuration")
+            }
           }
         }
 
@@ -281,7 +288,10 @@ class ModuleRegistry(classLoading: ClassLoading, configuration: Configuration, c
             Module.Settings(name, description, moduleClazz, inferredModuleKind, true)
           }
 
-          moduleSettings.failed.foreach(t => _logger.error(s"Failed to load legacy reporter module [${moduleClass}]", t))
+          if(emitConfigurationWarnings) {
+            moduleSettings.failed.foreach(t => _logger.error(s"Failed to load legacy reporter module [${moduleClass}]", t))
+          }
+
           moduleSettings
         })
         .filter(_.isSuccess)
@@ -291,11 +301,13 @@ class ModuleRegistry(classLoading: ClassLoading, configuration: Configuration, c
       val (repeatedLegacyModules, uniqueLegacyModules) = legacyModuleSettings
         .partition(lm => moduleSettings.find(_.clazz.getName == lm.clazz.getName).nonEmpty)
 
-      repeatedLegacyModules.foreach(m =>
-        _logger.warn(s"Module [${m.name}] is configured twice, please remove it from the deprecated kamon.reporters setting."))
+      if(emitConfigurationWarnings) {
+        repeatedLegacyModules.foreach(m =>
+          _logger.warn(s"Module [${m.name}] is configured twice, please remove it from the deprecated kamon.reporters setting."))
 
-      uniqueLegacyModules.foreach(m =>
-        _logger.warn(s"Module [${m.name}] is configured in the deprecated kamon.reporters setting, please consider moving it to kamon.modules."))
+        uniqueLegacyModules.foreach(m =>
+          _logger.warn(s"Module [${m.name}] is configured in the deprecated kamon.reporters setting, please consider moving it to kamon.modules."))
+      }
 
       moduleSettings ++ uniqueLegacyModules
 
@@ -334,7 +346,7 @@ class ModuleRegistry(classLoading: ClassLoading, configuration: Configuration, c
     * Returns the current status of this module registry.
     */
   private[kamon] def status(): Status.ModuleRegistry = {
-    val automaticallyAddedModules = readModuleSettings(configuration.config()).map(moduleSettings => {
+    val automaticallyAddedModules = readModuleSettings(configuration.config(), false).map(moduleSettings => {
       val isActive = _registeredModules.get(moduleSettings.name).nonEmpty
 
       Status.Module(
@@ -342,7 +354,7 @@ class ModuleRegistry(classLoading: ClassLoading, configuration: Configuration, c
         moduleSettings.description,
         moduleSettings.clazz.getCanonicalName,
         moduleSettings.kind,
-        isProgrammaticallyRegistered = false,
+        programmaticallyRegistered = false,
         moduleSettings.enabled,
         isActive)
     })

@@ -9,7 +9,8 @@ import kamon.module.Module.{Kind => ModuleKind}
 import java.util.{Collections, List => JavaList, Map => JavaMap}
 
 /**
-  * Exposes Kamon components' status information. This is meant to be used for informational and debugging purposes.
+  * Exposes Kamon components' status information. This is meant to be used for informational and debugging purposes and
+  * by no means should replace the use of reporters to extract information from Kamon.
   */
 class Status(_moduleRegistry: ModuleRegistry, _metricRegistry: MetricRegistry, configuration: Configuration) {
 
@@ -20,8 +21,8 @@ class Status(_moduleRegistry: ModuleRegistry, _metricRegistry: MetricRegistry, c
     Status.Settings(BuildInfo.version, Kamon.environment, configuration.config())
 
   /**
-    * Status of the module registry. Describes what modules have been detected in the classpath and their current
-    * statuses.
+    * Status of the module registry. Describes what modules have been detected and registered, either from the classpath
+    * or programatically and their current status.
     */
   def moduleRegistry(): Status.ModuleRegistry =
     _moduleRegistry.status()
@@ -72,9 +73,9 @@ object Status {
     description: String,
     clazz: String,
     kind: ModuleKind,
-    isProgrammaticallyRegistered: Boolean,
-    isEnabled: Boolean,
-    isStarted: Boolean
+    programmaticallyRegistered: Boolean,
+    enabled: Boolean,
+    started: Boolean
   )
 
   case class MetricRegistry(
@@ -94,7 +95,7 @@ object Status {
     * outside Kamon.
     */
   private[kamon] case class Instrumentation(
-    isIActive: Boolean,
+    active: Boolean,
     modules: JavaMap[String, String],
     errors: JavaMap[String, JavaList[Throwable]]
   )

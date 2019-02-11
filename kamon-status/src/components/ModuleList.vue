@@ -42,7 +42,7 @@ export default class ModuleList extends Vue {
     name: 'Kamon APM',
     description: 'See your metrics and trace data for free with a Starter account.',
     kind: ModuleKind.Combined,
-    isProgrammaticallyRegistered: false,
+    programmaticallyRegistered: false,
     enabled: false,
     started: false,
     clazz: ''
