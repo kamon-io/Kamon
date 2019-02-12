@@ -6,7 +6,7 @@
           <module-status-card :module="reporter" />
         </div>
         <div v-if="!hasApmModule" class="col-12 py-1 apm-suggestion">
-          <a href="https://kamon.io/" target="_blank">
+          <a href="https://kamon.io/apm/?utm_source=kamon&utm_medium=status-page&utm_campaign=kamon-status" target="_blank">
             <module-status-card :is-suggestion="true" :module="apmModuleSuggestion" />
           </a>
         </div>
