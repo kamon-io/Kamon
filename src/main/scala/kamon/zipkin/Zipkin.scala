@@ -19,6 +19,7 @@ package kamon.zipkin
 import java.net.InetAddress
 
 import com.typesafe.config.Config
+import kamon.trace.IdentityProvider
 import kamon.{Kamon, SpanReporter}
 import kamon.trace.Span.{Mark, TagValue, FinishedSpan => KamonSpan}
 import kamon.util.Clock
@@ -51,11 +52,13 @@ class ZipkinReporter extends SpanReporter {
   private[zipkin] def convertSpan(kamonSpan: KamonSpan): ZipkinSpan = {
     val context = kamonSpan.context
     val duration = Math.floorDiv(Clock.nanosBetween(kamonSpan.from, kamonSpan.to), 1000)
+    // Zipkin uses null to identify no identifier
+    val parentId: String = if (context.parentID.equals(IdentityProvider.NoIdentifier)) null else context.parentID.string
     val builder = ZipkinSpan.newBuilder()
       .localEndpoint(localEndpoint)
       .traceId(context.traceID.string)
       .id(context.spanID.string)
-      .parentId(context.parentID.string)
+      .parentId(parentId)
       .name(kamonSpan.operationName)
       .timestamp(Clock.toEpochMicros(kamonSpan.from))
       .duration(duration)

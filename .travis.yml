@@ -1,8 +1,8 @@
 language: scala
 script:
-  - sbt publishLocal
+  - sbt test publishLocal
 scala:
-   - 2.12.6
+   - 2.12.8
 jdk:
    - oraclejdk8
 before_script:
