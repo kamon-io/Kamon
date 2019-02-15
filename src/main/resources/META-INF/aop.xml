@@ -4,6 +4,7 @@
   <aspects>
     <aspect name="kamon.jdbc.instrumentation.StatementInstrumentation"/>
     <aspect name="kamon.jdbc.instrumentation.HikariInstrumentation"/>
+    <aspect name="kamon.jdbc.instrumentation.SlickInstrumentation"/>
   </aspects>
 
 
@@ -11,6 +12,9 @@
     <include within="kamon.jdbc.instrumentation..*"/>
     <include within="com.zaxxer.hikari.pool.HikariPool"/>
     <include within="com.zaxxer.hikari.pool.ProxyConnection"/>
+
+    <!-- Slick AsyncExecutor -->
+    <include within="slick.util..*"/>
 
     <!-- JDBC Drivers -->
     <include within="org.h2..*"/>

@@ -106,11 +106,13 @@ class StatementInstrumentation {
     val inFlight = Metrics.Statements.InFlight.refine(poolTags)
     inFlight.increment()
 
+    println("EXECUTING A QUERY")
+
     val startTimestamp = Kamon.clock().instant()
     val span = Kamon.currentContext().get(SpanCustomizer.ContextKey).customize {
       val builder = buildSpan(statementType)
         .withFrom(startTimestamp)
-        .withTag("component", "jdbc")
+        .withMetricTag("component", "jdbc")
         .withTag("db.statement", sql)
 
       poolTags.foreach { case (key, value) => builder.withTag(key, value) }

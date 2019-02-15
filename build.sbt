@@ -15,6 +15,7 @@
 
 val kamonCore  =        "io.kamon"        %% "kamon-core"         % "1.1.0"
 val kamonTestkit  =     "io.kamon"        %% "kamon-testkit"      % "1.1.0"
+val slick =             "com.typesafe.slick" %% "slick" % "3.2.0"
 val h2 =                "com.h2database"   % "h2"                 % "1.4.196"
 val hikariCP =          "com.zaxxer"       % "HikariCP"           % "2.7.4"
 
@@ -26,5 +27,5 @@ lazy val root = (project in file("."))
   .settings(
       libraryDependencies ++=
         compileScope(kamonCore) ++
-        providedScope(aspectJ, hikariCP) ++
+        providedScope(aspectJ, hikariCP, slick) ++
         testScope(h2, kamonTestkit, scalatest, slf4jApi, logbackClassic))
