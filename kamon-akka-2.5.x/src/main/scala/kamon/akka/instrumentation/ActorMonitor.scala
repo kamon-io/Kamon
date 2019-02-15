@@ -95,7 +95,7 @@ object ActorMonitors {
     private def buildSpan(cellInfo: CellInfo, envelopeContext: TimestampedContext, envelope: Envelope): Span = {
       val messageClass = simpleClassName(envelope.message.getClass)
       val parentSpan = envelopeContext.context.get(Span.ContextKey)
-      val operationName = actorSimpleClassName + ": " + messageClass
+      val operationName = actorSimpleClassName + " ! " + messageClass
 
       Kamon.buildSpan(operationName)
         .withFrom(Kamon.clock().toInstant(envelopeContext.nanoTime))
@@ -136,8 +136,17 @@ object ActorMonitors {
   }
 
   def simpleClassName(cls: Class[_]): String = {
-    // could fail, check SI-2034
-    try { cls.getSimpleName } catch { case _: Throwable => cls.getName }
+    // Class.getSimpleName could fail if called on a double-nested class.
+    // See https://github.com/scala/bug/issues/2034 for more details.
+    try { cls.getSimpleName } catch { case _: Throwable => {
+      val className = cls.getName
+      val lastSeparator = className.lastIndexOf('.')
+
+      if(lastSeparator > 0)
+        className.substring(lastSeparator + 1)
+      else
+        className
+    }}
   }
 
   class TrackedActor(actorMetrics: Option[ActorMetrics], groupMetrics: Seq[ActorGroupMetrics], actorCellCreation: Boolean, cellInfo: CellInfo)
