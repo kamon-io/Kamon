@@ -7,6 +7,7 @@ import kamon.Kamon
 import kamon.akka.Metrics
 import kamon.akka.Metrics.{ActorGroupMetrics, ActorMetrics, RouterMetrics}
 import kamon.trace.Span
+import kamon.trace.SpanContext.SamplingDecision
 import kamon.util.Clock
 import org.aspectj.lang.ProceedingJoinPoint
 
@@ -77,13 +78,19 @@ object ActorMonitors {
     }
 
     override def processMessage(pjp: ProceedingJoinPoint, envelopeContext: TimestampedContext, envelope: Envelope): AnyRef = {
-      val messageSpan = buildSpan(cellInfo, envelopeContext, envelope)
-      val contextWithMessageSpan = envelopeContext.context.withKey(Span.ContextKey, messageSpan)
+      val isSampled = envelopeContext.context.get(Span.ContextKey).context().samplingDecision == SamplingDecision.Sample
 
-      try {
-        monitor.processMessage(pjp, envelopeContext.copy(context = contextWithMessageSpan), envelope)
-      } finally {
-        messageSpan.finish()
+      if(isSampled) {
+        val messageSpan = buildSpan(cellInfo, envelopeContext, envelope)
+        val contextWithMessageSpan = envelopeContext.context.withKey(Span.ContextKey, messageSpan)
+
+        try {
+          monitor.processMessage(pjp, envelopeContext.copy(context = contextWithMessageSpan), envelope)
+        } finally {
+          messageSpan.finish()
+        }
+      } else {
+        monitor.processMessage(pjp, envelopeContext, envelope)
       }
     }
 
