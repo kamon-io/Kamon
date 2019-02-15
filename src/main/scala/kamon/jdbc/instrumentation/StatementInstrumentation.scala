@@ -106,8 +106,6 @@ class StatementInstrumentation {
     val inFlight = Metrics.Statements.InFlight.refine(poolTags)
     inFlight.increment()
 
-    println("EXECUTING A QUERY")
-
     val startTimestamp = Kamon.clock().instant()
     val span = Kamon.currentContext().get(SpanCustomizer.ContextKey).customize {
       val builder = buildSpan(statementType)
@@ -142,10 +140,10 @@ class StatementInstrumentation {
 
 object StatementInstrumentation {
   object StatementTypes {
-    val Query = "query"
-    val Update = "update"
-    val Batch = "batch"
-    val GenericExecute = "generic-execute"
+    val Query = "jdbc.query"
+    val Update = "jdbc.update"
+    val Batch = "jdbc.batch"
+    val GenericExecute = "jdbc.execute"
   }
 }
 
