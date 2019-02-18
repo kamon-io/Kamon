@@ -1,4 +1,4 @@
-package kamon.kamino.reporters
+package kamon.apm.reporters
 
 import java.nio.ByteBuffer
 import java.time.Duration
@@ -7,8 +7,8 @@ import com.google.protobuf
 import kamino.IngestionV1
 import kamino.IngestionV1.{InstrumentType, Plan}
 import kamino.IngestionV1.InstrumentType.{COUNTER, GAUGE, HISTOGRAM, MIN_MAX_COUNTER}
-import kamon.kamino.{KaminoApiClient, readConfiguration}
-import kamon.kamino.isAcceptableApiKey
+import kamon.apm.{KamonApmApiClient, readConfiguration}
+import kamon.apm.isAcceptableApiKey
 import kamon.metric.SnapshotCreation.ZigZagCountsDistribution
 import kamon.metric._
 import kamon.{Kamon, MetricReporter}
@@ -19,17 +19,17 @@ import scala.collection.JavaConverters._
 import scala.util.Try
 
 
-private[kamino] class KaminoMetricReporter(codeProvidedPlan: Option[Plan]) extends MetricReporter {
+private[apm] class KamonApmMetric(codeProvidedPlan: Option[Plan]) extends MetricReporter {
   private val MaxAge = Duration.ofMinutes(30)
-  private val logger = LoggerFactory.getLogger(classOf[KaminoMetricReporter])
-  private var httpClient: Option[KaminoApiClient] = None
+  private val logger = LoggerFactory.getLogger(classOf[KamonApmMetric])
+  private var httpClient: Option[KamonApmApiClient] = None
   private val metricScaler = new Scaler(MeasurementUnit.time.nanoseconds, MeasurementUnit.information.bytes, DynamicRange.Default)
   private val valueBuffer = ByteBuffer.wrap(Array.ofDim[Byte](16))
   private var configuration = readConfiguration(Kamon.config())
   private val periodAccumulator = new PeriodSnapshotAccumulator(Duration.ofSeconds(60), Duration.ofSeconds(1))
 
   override def start(): Unit = {
-    httpClient = Option(new KaminoApiClient(readConfiguration(Kamon.config())))
+    httpClient = Option(new KamonApmApiClient(readConfiguration(Kamon.config())))
     logger.info("Started the Kamino metrics reporter.")
     Try(reportBoot(Kamon.clock().millis()))
   }
@@ -43,7 +43,7 @@ private[kamino] class KaminoMetricReporter(codeProvidedPlan: Option[Plan]) exten
   override def reconfigure(config: com.typesafe.config.Config): Unit = {
     val newConfiguration = readConfiguration(config)
     httpClient.foreach(_.stop)
-    httpClient = Option(new KaminoApiClient(newConfiguration))
+    httpClient = Option(new KamonApmApiClient(newConfiguration))
     configuration = newConfiguration
   }
 

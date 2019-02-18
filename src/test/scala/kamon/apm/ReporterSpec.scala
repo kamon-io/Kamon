@@ -1,4 +1,4 @@
-package kamon.kamino
+package kamon.apm
 
 import java.time.Instant
 
@@ -19,7 +19,7 @@ import akka.http.scaladsl.server.Directives.{pathPrefix, _}
 import kamino.IngestionV1
 import kamino.IngestionV1.{Goodbye, Hello, MetricBatch, SpanBatch}
 import kamon.Kamon
-import kamon.kamino.reporters.{KaminoMetricReporter, KaminoTracingReporter}
+import kamon.apm.reporters.{KamonApmMetric, KamonApmTracing}
 import kamon.metric.{MetricsSnapshot, PeriodSnapshot}
 import kamon.trace.SpanContext
 import kamon.trace.Span.FinishedSpan
@@ -79,8 +79,8 @@ class ReporterSpec extends TestKit(ActorSystem("MetricReporterSpec")) with WordS
 
   "Metric reporter on flaky network" should {
 
-    val reporter = new KaminoMetricReporter(Some(IngestionV1.Plan.METRIC_ONLY))
-    val tracingReporter = new KaminoTracingReporter()
+    val reporter = new KamonApmMetric(Some(IngestionV1.Plan.METRIC_ONLY))
+    val tracingReporter = new KamonApmTracing()
 
     "retry initial HELLO" in {
       reporter.start()

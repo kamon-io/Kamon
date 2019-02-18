@@ -1,4 +1,4 @@
-package kamon.kamino
+package kamon.apm
 
 import java.time.{Duration, Instant}
 import java.util.concurrent.TimeUnit
@@ -8,14 +8,14 @@ import okhttp3._
 import kamino.IngestionV1._
 import IngestionStatus._
 import kamon.Kamon
-import kamon.kamino.reporters.KaminoMetricReporter
+import kamon.apm.reporters.KamonApmMetric
 import org.slf4j.LoggerFactory
 
 import scala.annotation.tailrec
 import scala.util.{Failure, Success, Try}
 
-class KaminoApiClient(config: KaminoConfiguration) {
-  private val logger = LoggerFactory.getLogger(classOf[KaminoApiClient])
+class KamonApmApiClient(config: KaminoConfiguration) {
+  private val logger = LoggerFactory.getLogger(classOf[KamonApmApiClient])
 
   private val client = createHttpClient(config)
   private var lastAttempt: Instant = Instant.EPOCH

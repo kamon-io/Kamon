@@ -1,15 +1,15 @@
-package kamon.kamino
+package kamon.apm
 
 import com.typesafe.config.Config
 import kamino.IngestionV1._
 import kamon.{Kamon, MetricReporter}
-import kamon.kamino.reporters.{KaminoMetricReporter, KaminoTracingReporter}
+import kamon.apm.reporters.{KamonApmMetric, KamonApmTracing}
 import kamon.metric.PeriodSnapshot
 
 
-class KaminoReporter private(codeProvidedPlan: Option[Plan]) extends MetricReporter {
+class KamonApm private(codeProvidedPlan: Option[Plan]) extends MetricReporter {
   var configuration = readConfiguration(Kamon.config())
-  val metricReporter = new KaminoMetricReporter(codeProvidedPlan)
+  val metricReporter = new KamonApmMetric(codeProvidedPlan)
 
   def this() = {
     this(None)
@@ -27,7 +27,7 @@ class KaminoReporter private(codeProvidedPlan: Option[Plan]) extends MetricRepor
     metricReporter.start()
 
     if(resolvePlan() == Plan.METRIC_TRACING)
-      Kamon.addReporter(new KaminoTracingReporter)
+      Kamon.addReporter(new KamonApmTracing)
   }
 
   override def stop(): Unit = {

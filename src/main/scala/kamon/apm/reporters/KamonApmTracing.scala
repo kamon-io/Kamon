@@ -1,10 +1,10 @@
-package kamon.kamino.reporters
+package kamon.apm.reporters
 
 import com.typesafe.config.Config
 import kamino.IngestionV1
 import kamino.IngestionV1.SpanBatch
-import kamon.kamino.{KaminoApiClient, KaminoConfiguration, readConfiguration}
-import kamon.kamino.isAcceptableApiKey
+import kamon.apm.{KamonApmApiClient, KaminoConfiguration, readConfiguration}
+import kamon.apm.isAcceptableApiKey
 import kamon.trace.Span
 import kamon.trace.Span.TagValue
 import kamon.util.Clock
@@ -13,10 +13,10 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 
-private[kamino] class KaminoTracingReporter extends SpanReporter {
+private[apm] class KamonApmTracing extends SpanReporter {
 
-  private val logger = LoggerFactory.getLogger(classOf[KaminoTracingReporter])
-  private var httpClient: Option[KaminoApiClient] = None
+  private val logger = LoggerFactory.getLogger(classOf[KamonApmTracing])
+  private var httpClient: Option[KamonApmApiClient] = None
   private var configuration: KaminoConfiguration = readConfiguration(Kamon.config())
 
   override def reportSpans(spans: Seq[Span.FinishedSpan]): Unit = if(spans.nonEmpty) {
@@ -68,7 +68,7 @@ private[kamino] class KaminoTracingReporter extends SpanReporter {
 
   override def start(): Unit = {
     configuration = readConfiguration(Kamon.config())
-    httpClient = Option(new KaminoApiClient(configuration))
+    httpClient = Option(new KamonApmApiClient(configuration))
     logger.info("Started the Kamino Trace reporter.")
   }
 
@@ -80,7 +80,7 @@ private[kamino] class KaminoTracingReporter extends SpanReporter {
   override def reconfigure(config: Config): Unit = {
     httpClient.foreach(_.stop)
     configuration = readConfiguration(config)
-    httpClient = Option(new KaminoApiClient(configuration))
+    httpClient = Option(new KamonApmApiClient(configuration))
   }
 
 }

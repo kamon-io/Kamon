@@ -8,12 +8,12 @@ import org.slf4j.LoggerFactory
 import java.net.Proxy
 import java.util.regex.Pattern
 
-package object kamino {
+package object apm {
   private val logger = LoggerFactory.getLogger("kamon.kamino")
   private val apiKeyPattern = Pattern.compile("^[a-zA-Z0-9]*$")
 
   def readConfiguration(config: Config): KaminoConfiguration = {
-    val kaminoConfig = config.getConfig("kamino")
+    val kaminoConfig = config.getConfig("kamon.apm")
     val apiKey = kaminoConfig.getString("api-key")
 
     if(apiKey.equals("none"))
