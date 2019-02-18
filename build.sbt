@@ -32,7 +32,8 @@ lazy val depsAssembly= (project in file("."))
       ,ShadeRule.rename("okhttp3.**"              -> "shaded.@0").inAll
       ,ShadeRule.rename("okio.**"                 -> "shaded.@0").inAll
       ,ShadeRule.zap("org.HdrHistogram.**").inAll
-      ,ShadeRule.zap("com.typesafe.config.**").inAll
+      ,ShadeRule.zap("com.typesafe.config.**").inAll,
+       ShadeRule.zap("org.slf4j.**").inAll
     ),
 
     assemblyExcludedJars in assembly := {
