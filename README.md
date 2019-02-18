@@ -32,13 +32,19 @@ Kamon.addReporter(new DatadogAgentReporter())
 Kamon.addReporter(new DatadogAPIReporter())
 ```
 
+In order to get [APM tracing](https://docs.datadoghq.com/tracing/) working, add
+
+```
+Kamon.addReporter(new DatadogSpanReporter())
+```
+
 Configuration
 -------------
 
 #### Agent Reporter
 
 By default, the Agent reporter assumes that you have an instance of the Datadog Agent running in localhost and listening on
-port 8125. If that is not the case the you can use the `kamon.datadog.agent.hostname` and `kamon.datadog.agent.port` configuration
+port 8125. If that is not the case, you can use the `kamon.datadog.agent.hostname` and `kamon.datadog.agent.port` configuration
 keys to point the module at your Datadog Agent installation.
 
 #### API Reporter
@@ -55,6 +61,15 @@ follows:
   - metric.min
 
 You can refer to the [Datadog documentation](https://docs.datadoghq.com/developers/metrics/#histograms) for more details.
+
+
+#### Span Reporter
+As [recommended](https://docs.datadoghq.com/api/?lang=python#tracing) , the Span reporter assumes that you have an instance of the Datadog Agent running in localhost and listening on
+port 8125. If that is not the case, you can use the `kamon.datadog.trace.http.api-url` configuration
+key to point the module at your Datadog Agent installation.
+
+Don't forget to configure [actors filtering for message tracing](https://kamon.io/docs/latest/instrumentation/akka/tracing/) 
+
 
 ### Metric Units ###
 
