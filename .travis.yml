@@ -1,12 +1,23 @@
-language: scala
-script:
-  - ./travis-test.sh
-scala:
-   - 2.11.8
-jdk:
-   - oraclejdk8
-before_script:
-  - mkdir $TRAVIS_BUILD_DIR/tmp
-  - export SBT_OPTS="-Djava.io.tmpdir=$TRAVIS_BUILD_DIR/tmp"
+# Use container-based infrastructure
 sudo: false
-  
+
+language: scala
+
+jdk: oraclejdk8
+
+scala:
+  - 2.12.8
+
+# These directories are cached to S3 at the end of the build
+cache:
+  directories:
+    - $HOME/.ivy2/cache
+    - $HOME/.sbt/boot/
+
+before_cache:
+  # Cleanup the cached directories to avoid unnecessary cache updates
+  - rm -fv $HOME/.ivy2/.sbt.ivy.lock
+  - find $HOME/.ivy2/cache -name "ivydata-*.properties" -print -delete
+  - find $HOME/.sbt        -name "*.lock"               -print -delete
+
+
