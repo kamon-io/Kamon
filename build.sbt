@@ -16,6 +16,7 @@
 val play24Version     = "2.4.11"
 val play25Version     = "2.5.19"
 val play26Version     = "2.6.20"
+val play27Version     = "2.7.0"
 
 val kamonCore         = "io.kamon"                  %%  "kamon-core"            % "1.1.4"
 val kamonScala        = "io.kamon"                  %%  "kamon-scala-future"    % "1.0.0"
@@ -44,9 +45,19 @@ val playTest26        = "com.typesafe.play"         %%  "play-test"             
 val scalatestplus26   = "org.scalatestplus.play"    %%  "scalatestplus-play"    % "3.1.2"
 
 
+//play 2.7.x
+val play27            = "com.typesafe.play"         %%  "play"                  % play27Version
+val playNetty27       = "com.typesafe.play"         %%  "play-netty-server"     % play27Version
+val playAkkaHttp27    = "com.typesafe.play"         %%  "play-akka-http-server" % play27Version
+val playWS27          = "com.typesafe.play"         %%  "play-ws"               % play27Version
+val playLogBack27     = "com.typesafe.play"         %%  "play-logback"          % play27Version
+val playTest27        = "com.typesafe.play"         %%  "play-test"             % play27Version
+val scalatestplus27   = "org.scalatestplus.play"    %%  "scalatestplus-play"    % "3.1.2"
+
+
 lazy val kamonPlay = Project("kamon-play", file("."))
   .settings(noPublishing: _*)
-  .aggregate(kamonPlay24, kamonPlay25, kamonPlay26)
+  .aggregate(kamonPlay24, kamonPlay25, kamonPlay26, kamonPlay27)
 
 
 lazy val kamonPlay24 = Project("kamon-play-24", file("kamon-play-2.4.x"))
@@ -97,6 +108,23 @@ lazy val kamonPlay26 = Project("kamon-play-26", file("kamon-play-2.6.x"))
       compileScope(play26, playNetty26, playAkkaHttp26, playWS26, kamonCore, kamonScala) ++
       providedScope(aspectJ, typesafeConfig) ++
       testScope(playTest26, scalatestplus26, playLogBack26, kamonTestkit))
+
+
+lazy val kamonPlay27 = Project("kamon-play-27", file("kamon-play-2.7.x"))
+  .enablePlugins(JavaAgent)
+  .settings(Seq(
+    bintrayPackage := "kamon-play",
+    moduleName := "kamon-play-2.7",
+    scalaVersion := "2.12.8",
+    crossScalaVersions := Seq("2.11.12", "2.12.8"),
+    testGrouping in Test := singleTestPerJvm((definedTests in Test).value, (javaOptions in Test).value)))
+  .settings(javaAgents += "org.aspectj" % "aspectjweaver"  % "1.9.2"  % "compile;test")
+  .settings(resolvers += Resolver.bintrayRepo("kamon-io", "snapshots"))
+  .settings(
+    libraryDependencies ++=
+      compileScope(play27, playNetty27, playAkkaHttp27, playWS27, kamonCore, kamonScala) ++
+        providedScope(aspectJ, typesafeConfig) ++
+        testScope(playTest27, scalatestplus27, playLogBack27, kamonTestkit))
 
 import sbt.Tests._
 def singleTestPerJvm(tests: Seq[TestDefinition], jvmSettings: Seq[String]): Seq[Group] =
