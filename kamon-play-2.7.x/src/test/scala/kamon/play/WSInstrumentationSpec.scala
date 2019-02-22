@@ -60,6 +60,7 @@ class WSInstrumentationSpec extends PlaySpec with GuiceOneServerPerSuite
 
   override def fakeApplication(): Application = new GuiceApplicationBuilder()
     .routes(withRoutes)
+    .globalApp(true)
     .build
 
   val withRoutes: PartialFunction[(String, String), Handler] = {

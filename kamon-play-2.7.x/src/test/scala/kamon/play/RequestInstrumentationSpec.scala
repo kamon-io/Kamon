@@ -101,6 +101,7 @@ abstract class RequestHandlerInstrumentationSpec extends PlaySpec with GuiceOneS
   override def fakeApplication(): Application = new GuiceApplicationBuilder()
     .configure(additionalConfiguration)
     .routes(withRoutes)
+    .globalApp(true)
     .build
 
   "the Request instrumentation" should {
