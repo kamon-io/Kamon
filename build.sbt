@@ -57,6 +57,7 @@ val scalatestplus27   = "org.scalatestplus.play"    %%  "scalatestplus-play"    
 
 lazy val kamonPlay = Project("kamon-play", file("."))
   .settings(noPublishing: _*)
+  .disablePlugins(KamonSbtUmbrella)
   .aggregate(kamonPlay24, kamonPlay25, kamonPlay26, kamonPlay27)
 
 
