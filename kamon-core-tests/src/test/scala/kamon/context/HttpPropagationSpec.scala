@@ -5,6 +5,8 @@ import kamon.Kamon
 import kamon.context.HttpPropagation.{HeaderReader, HeaderWriter}
 import kamon.context.Propagation.{EntryReader, EntryWriter}
 import org.scalatest.{Matchers, OptionValues, WordSpec}
+import kamon.tag.Lookups._
+import kamon.tag.TagSet
 
 import scala.collection.mutable
 
@@ -22,12 +24,11 @@ class HttpPropagationSpec extends WordSpec with Matchers with OptionValues {
           "x-content-tags" -> "hello=world;correlation=1234",
           "x-mapped-tag" -> "value"
         )
+
         val context = httpPropagation.read(headerReaderFromMap(headers))
-        context.tags should contain only(
-          "hello" -> "world",
-          "correlation" -> "1234",
-          "mappedTag" -> "value"
-        )
+        context.tags.get(plain("hello")) shouldBe "world"
+        context.tags.get(plain("correlation")) shouldBe "1234"
+        context.tags.get(plain("mappedTag")) shouldBe "value"
       }
 
       "handle errors when reading HTTP headers" in {
@@ -48,9 +49,9 @@ class HttpPropagationSpec extends WordSpec with Matchers with OptionValues {
         context.get(HttpPropagationSpec.StringKey) shouldBe "hey"
         context.get(HttpPropagationSpec.IntegerKey) shouldBe 123
         context.get(HttpPropagationSpec.OptionalKey) shouldBe empty
-        context.getTag("hello").value shouldBe "world"
-        context.getTag("correlation").value shouldBe "1234"
-        context.getTag("unknown") shouldBe empty
+        context.getTag(plain("hello")) shouldBe "world"
+        context.getTag(option("correlation")).value shouldBe "1234"
+        context.getTag(option("unknown")) shouldBe empty
       }
     }
 
@@ -64,10 +65,10 @@ class HttpPropagationSpec extends WordSpec with Matchers with OptionValues {
 
       "write context tags when available" in {
         val headers = mutable.Map.empty[String, String]
-        val context = Context.of(Map(
+        val context = Context.of(TagSet.from(Map(
           "hello" -> "world",
           "mappedTag" -> "value"
-        ))
+        )))
 
         httpPropagation.write(context, headerWriterFromMap(headers))
         headers should contain only(

@@ -6,25 +6,25 @@ import org.scalatest.{Matchers, WordSpec}
 
 import scala.collection.JavaConverters.mapAsJavaMapConverter
 
-class TagsSpec extends WordSpec with Matchers {
+class TagSetSpec extends WordSpec with Matchers {
   import Lookups._
 
   "Tags" should {
     "silently drop null and unacceptable keys and/or values when constructed from the companion object builders" in {
-      Tags.from(NullString, NullString).all().size shouldBe 0
-      Tags.from(EmptyString, NullString).all().size shouldBe 0
-      Tags.from(EmptyString, "value").all().size shouldBe 0
-      Tags.from(NullString, "value").all().size shouldBe 0
-      Tags.from("key", NullString).all().size shouldBe 0
-      Tags.from("key", NullBoolean).all().size shouldBe 0
-      Tags.from("key", NullLong).all().size shouldBe 0
+      TagSet.from(NullString, NullString).all().size shouldBe 0
+      TagSet.from(EmptyString, NullString).all().size shouldBe 0
+      TagSet.from(EmptyString, "value").all().size shouldBe 0
+      TagSet.from(NullString, "value").all().size shouldBe 0
+      TagSet.from("key", NullString).all().size shouldBe 0
+      TagSet.from("key", NullBoolean).all().size shouldBe 0
+      TagSet.from("key", NullLong).all().size shouldBe 0
 
-      Tags.from(BadScalaTagMap).all().size shouldBe 0
-      Tags.from(BadJavaTagMap).all().size shouldBe 0
+      TagSet.from(BadScalaTagMap).all().size shouldBe 0
+      TagSet.from(BadJavaTagMap).all().size shouldBe 0
     }
 
     "silently drop null keys and/or values when created with the .withTag, withTags or .and methods" in {
-      val tags = Tags.from("initialKey", "initialValue")
+      val tags = TagSet.from("initialKey", "initialValue")
         .withTag(NullString, NullString)
         .withTag(EmptyString, NullString)
         .withTag(EmptyString, "value")
@@ -46,14 +46,14 @@ class TagsSpec extends WordSpec with Matchers {
     }
 
     "create a properly populated instance when valid pairs are provided" in {
-      Tags.from("isAwesome", true).all().size shouldBe 1
-      Tags.from("name", "kamon").all().size shouldBe 1
-      Tags.from("age", 5L).all().size shouldBe 1
+      TagSet.from("isAwesome", true).all().size shouldBe 1
+      TagSet.from("name", "kamon").all().size shouldBe 1
+      TagSet.from("age", 5L).all().size shouldBe 1
 
-      Tags.from(GoodScalaTagMap).all().size shouldBe 3
-      Tags.from(GoodJavaTagMap).all().size shouldBe 3
+      TagSet.from(GoodScalaTagMap).all().size shouldBe 3
+      TagSet.from(GoodJavaTagMap).all().size shouldBe 3
 
-      Tags.from("initial", "initial")
+      TagSet.from("initial", "initial")
         .withTag("isAwesome", true)
         .withTag("name", "Kamon")
         .withTag("age", 5L)
@@ -64,8 +64,8 @@ class TagsSpec extends WordSpec with Matchers {
     }
 
     "override pre-existent tags when merging with other Tags instance" in {
-      val leftTags = Tags.from(GoodScalaTagMap)
-      val rightTags = Tags
+      val leftTags = TagSet.from(GoodScalaTagMap)
+      val rightTags = TagSet
         .from("name", "New Kamon")
         .and("age", 42L)
         .and("isAwesome", false) // just for testing :)
@@ -82,7 +82,7 @@ class TagsSpec extends WordSpec with Matchers {
     }
 
     "provide typed access to the contained pairs when looking up values" in {
-      val tags = Tags.from(GoodScalaTagMap)
+      val tags = TagSet.from(GoodScalaTagMap)
 
       tags.get(plain("name")) shouldBe "Kamon"
       tags.get(plain("none")) shouldBe null
@@ -111,7 +111,7 @@ class TagsSpec extends WordSpec with Matchers {
     }
 
     "allow iterating over all contained tags" in {
-      val tags = Tags.from(Map(
+      val tags = TagSet.from(Map(
         "age" -> 5L,
         "name" -> "Kamon",
         "isAwesome" -> true,
@@ -130,14 +130,14 @@ class TagsSpec extends WordSpec with Matchers {
     }
 
     "be equal to other Tags instance with the same tags" in {
-      Tags.from(GoodScalaTagMap) shouldBe Tags.from(GoodScalaTagMap)
-      Tags.from(GoodJavaTagMap) shouldBe Tags.from(GoodJavaTagMap)
+      TagSet.from(GoodScalaTagMap) shouldBe TagSet.from(GoodScalaTagMap)
+      TagSet.from(GoodJavaTagMap) shouldBe TagSet.from(GoodJavaTagMap)
     }
 
     "have a readable toString implementation" in {
-      Tags.from(GoodScalaTagMap).toString() should include("age=5")
-      Tags.from(GoodScalaTagMap).toString() should include("name=Kamon")
-      Tags.from(GoodScalaTagMap).toString() should include("isAwesome=true")
+      TagSet.from(GoodScalaTagMap).toString() should include("age=5")
+      TagSet.from(GoodScalaTagMap).toString() should include("name=Kamon")
+      TagSet.from(GoodScalaTagMap).toString() should include("isAwesome=true")
     }
   }
 

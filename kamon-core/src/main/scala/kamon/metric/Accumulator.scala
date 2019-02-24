@@ -17,7 +17,7 @@ package kamon.metric
 
 import java.time.{Duration, Instant}
 
-import kamon.{Kamon, Tags}
+import kamon.{Kamon, STags}
 import kamon.metric.PeriodSnapshotAccumulator.{MetricDistributionKey, MetricValueKey}
 import kamon.util.Clock
 
@@ -169,6 +169,6 @@ class PeriodSnapshotAccumulator(duration: Duration, margin: Duration) {
 }
 
 object PeriodSnapshotAccumulator {
-  case class MetricValueKey(name: String, tags: Tags, unit: MeasurementUnit)
-  case class MetricDistributionKey(name: String, tags: Tags, unit: MeasurementUnit,  dynamicRange: DynamicRange)
+  case class MetricValueKey(name: String, tags: STags, unit: MeasurementUnit)
+  case class MetricDistributionKey(name: String, tags: STags, unit: MeasurementUnit,  dynamicRange: DynamicRange)
 }

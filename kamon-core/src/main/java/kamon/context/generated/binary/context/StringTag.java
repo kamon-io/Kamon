@@ -25,7 +25,7 @@ import java.nio.BufferUnderflowException;
  * @see <a href="https://github.com/pascaldekloe/colfer">Colfer's home</a>
  */
 @javax.annotation.Generated(value="colf(1)", comments="Colfer from schema file Context.colf")
-public class Entry implements Serializable {
+public class StringTag implements Serializable {
 
 	/** The upper limit for serial byte sizes. */
 	public static int colferSizeMax = 16 * 1024 * 1024;
@@ -35,20 +35,19 @@ public class Entry implements Serializable {
 
 	public String key;
 
-	public byte[] value;
+	public String value;
 
 
 	/** Default constructor */
-	public Entry() {
+	public StringTag() {
 		init();
 	}
 
-	private static final byte[] _zeroBytes = new byte[0];
 
 	/** Colfer zero values. */
 	private void init() {
 		key = "";
-		value = _zeroBytes;
+		value = "";
 	}
 
 	/**
@@ -76,7 +75,7 @@ public class Entry implements Serializable {
 		public Unmarshaller(InputStream in, byte[] buf) {
 			// TODO: better size estimation
 			if (buf == null || buf.length == 0)
-				buf = new byte[Math.min(Entry.colferSizeMax, 2048)];
+				buf = new byte[Math.min(StringTag.colferSizeMax, 2048)];
 			this.buf = buf;
 			reset(in);
 		}
@@ -100,13 +99,13 @@ public class Entry implements Serializable {
 		 * @throws SecurityException on an upper limit breach defined by {@link #colferSizeMax}.
 		 * @throws InputMismatchException when the data does not match this object's schema.
 		 */
-		public Entry next() throws IOException {
+		public StringTag next() throws IOException {
 			if (in == null) return null;
 
 			while (true) {
 				if (this.i > this.offset) {
 					try {
-						Entry o = new Entry();
+						StringTag o = new StringTag();
 						this.offset = o.unmarshal(this.buf, this.offset, this.i);
 						return o;
 					} catch (BufferUnderflowException e) {
@@ -120,7 +119,7 @@ public class Entry implements Serializable {
 				} else if (i == buf.length) {
 					byte[] src = this.buf;
 					// TODO: better size estimation
-					if (offset == 0) this.buf = new byte[Math.min(Entry.colferSizeMax, this.buf.length * 4)];
+					if (offset == 0) this.buf = new byte[Math.min(StringTag.colferSizeMax, this.buf.length * 4)];
 					System.arraycopy(src, this.offset, this.buf, 0, this.i - this.offset);
 					this.i -= this.offset;
 					this.offset = 0;
@@ -153,14 +152,14 @@ public class Entry implements Serializable {
 	public byte[] marshal(OutputStream out, byte[] buf) throws IOException {
 		// TODO: better size estimation
 		if (buf == null || buf.length == 0)
-			buf = new byte[Math.min(Entry.colferSizeMax, 2048)];
+			buf = new byte[Math.min(StringTag.colferSizeMax, 2048)];
 
 		while (true) {
 			int i;
 			try {
 				i = marshal(buf, 0);
 			} catch (BufferOverflowException e) {
-				buf = new byte[Math.min(Entry.colferSizeMax, buf.length * 4)];
+				buf = new byte[Math.min(StringTag.colferSizeMax, buf.length * 4)];
 				continue;
 			}
 
@@ -210,8 +209,8 @@ public class Entry implements Serializable {
 					}
 				}
 				int size = i - start;
-				if (size > Entry.colferSizeMax)
-					throw new IllegalStateException(format("colfer: kamon/context/generated/binary/context.Entry.key size %d exceeds %d UTF-8 bytes", size, Entry.colferSizeMax));
+				if (size > StringTag.colferSizeMax)
+					throw new IllegalStateException(format("colfer: kamon/context/generated/binary/context.StringTag.key size %d exceeds %d UTF-8 bytes", size, StringTag.colferSizeMax));
 
 				int ii = start - 1;
 				if (size > 0x7f) {
@@ -227,30 +226,57 @@ public class Entry implements Serializable {
 				buf[ii] = (byte) size;
 			}
 
-			if (this.value.length != 0) {
+			if (! this.value.isEmpty()) {
 				buf[i++] = (byte) 1;
+				int start = ++i;
 
-				int size = this.value.length;
-				if (size > Entry.colferSizeMax)
-					throw new IllegalStateException(format("colfer: kamon/context/generated/binary/context.Entry.value size %d exceeds %d bytes", size, Entry.colferSizeMax));
-
-				int x = size;
-				while (x > 0x7f) {
-					buf[i++] = (byte) (x | 0x80);
-					x >>>= 7;
+				String s = this.value;
+				for (int sIndex = 0, sLength = s.length(); sIndex < sLength; sIndex++) {
+					char c = s.charAt(sIndex);
+					if (c < '\u0080') {
+						buf[i++] = (byte) c;
+					} else if (c < '\u0800') {
+						buf[i++] = (byte) (192 | c >>> 6);
+						buf[i++] = (byte) (128 | c & 63);
+					} else if (c < '\ud800' || c > '\udfff') {
+						buf[i++] = (byte) (224 | c >>> 12);
+						buf[i++] = (byte) (128 | c >>> 6 & 63);
+						buf[i++] = (byte) (128 | c & 63);
+					} else {
+						int cp = 0;
+						if (++sIndex < sLength) cp = Character.toCodePoint(c, s.charAt(sIndex));
+						if ((cp >= 1 << 16) && (cp < 1 << 21)) {
+							buf[i++] = (byte) (240 | cp >>> 18);
+							buf[i++] = (byte) (128 | cp >>> 12 & 63);
+							buf[i++] = (byte) (128 | cp >>> 6 & 63);
+							buf[i++] = (byte) (128 | cp & 63);
+						} else
+							buf[i++] = (byte) '?';
+					}
 				}
-				buf[i++] = (byte) x;
+				int size = i - start;
+				if (size > StringTag.colferSizeMax)
+					throw new IllegalStateException(format("colfer: kamon/context/generated/binary/context.StringTag.value size %d exceeds %d UTF-8 bytes", size, StringTag.colferSizeMax));
 
-				int start = i;
-				i += size;
-				System.arraycopy(this.value, 0, buf, start, size);
+				int ii = start - 1;
+				if (size > 0x7f) {
+					i++;
+					for (int x = size; x >= 1 << 14; x >>>= 7) i++;
+					System.arraycopy(buf, start, buf, i - size, size);
+
+					do {
+						buf[ii++] = (byte) (size | 0x80);
+						size >>>= 7;
+					} while (size > 0x7f);
+				}
+				buf[ii] = (byte) size;
 			}
 
 			buf[i++] = (byte) 0x7f;
 			return i;
 		} catch (ArrayIndexOutOfBoundsException e) {
-			if (i - offset > Entry.colferSizeMax)
-				throw new IllegalStateException(format("colfer: kamon/context/generated/binary/context.Entry exceeds %d bytes", Entry.colferSizeMax));
+			if (i - offset > StringTag.colferSizeMax)
+				throw new IllegalStateException(format("colfer: kamon/context/generated/binary/context.StringTag exceeds %d bytes", StringTag.colferSizeMax));
 			if (i > buf.length) throw new BufferOverflowException();
 			throw e;
 		}
@@ -293,8 +319,8 @@ public class Entry implements Serializable {
 					size |= (b & 0x7f) << shift;
 					if (shift == 28 || b >= 0) break;
 				}
-				if (size < 0 || size > Entry.colferSizeMax)
-					throw new SecurityException(format("colfer: kamon/context/generated/binary/context.Entry.key size %d exceeds %d UTF-8 bytes", size, Entry.colferSizeMax));
+				if (size < 0 || size > StringTag.colferSizeMax)
+					throw new SecurityException(format("colfer: kamon/context/generated/binary/context.StringTag.key size %d exceeds %d UTF-8 bytes", size, StringTag.colferSizeMax));
 
 				int start = i;
 				i += size;
@@ -309,23 +335,21 @@ public class Entry implements Serializable {
 					size |= (b & 0x7f) << shift;
 					if (shift == 28 || b >= 0) break;
 				}
-				if (size < 0 || size > Entry.colferSizeMax)
-					throw new SecurityException(format("colfer: kamon/context/generated/binary/context.Entry.value size %d exceeds %d bytes", size, Entry.colferSizeMax));
+				if (size < 0 || size > StringTag.colferSizeMax)
+					throw new SecurityException(format("colfer: kamon/context/generated/binary/context.StringTag.value size %d exceeds %d UTF-8 bytes", size, StringTag.colferSizeMax));
 
-				this.value = new byte[size];
 				int start = i;
 				i += size;
-				System.arraycopy(buf, start, this.value, 0, size);
-
+				this.value = new String(buf, start, size, StandardCharsets.UTF_8);
 				header = buf[i++];
 			}
 
 			if (header != (byte) 0x7f)
 				throw new InputMismatchException(format("colfer: unknown header at byte %d", i - 1));
 		} finally {
-			if (i > end && end - offset < Entry.colferSizeMax) throw new BufferUnderflowException();
-			if (i < 0 || i - offset > Entry.colferSizeMax)
-				throw new SecurityException(format("colfer: kamon/context/generated/binary/context.Entry exceeds %d bytes", Entry.colferSizeMax));
+			if (i > end && end - offset < StringTag.colferSizeMax) throw new BufferUnderflowException();
+			if (i < 0 || i - offset > StringTag.colferSizeMax)
+				throw new SecurityException(format("colfer: kamon/context/generated/binary/context.StringTag exceeds %d bytes", StringTag.colferSizeMax));
 			if (i > end) throw new BufferUnderflowException();
 		}
 
@@ -367,7 +391,7 @@ public class Entry implements Serializable {
 	}
 
 	/**
-	 * Gets kamon/context/generated/binary/context.Entry.key.
+	 * Gets kamon/context/generated/binary/context.StringTag.key.
 	 * @return the value.
 	 */
 	public String getKey() {
@@ -375,7 +399,7 @@ public class Entry implements Serializable {
 	}
 
 	/**
-	 * Sets kamon/context/generated/binary/context.Entry.key.
+	 * Sets kamon/context/generated/binary/context.StringTag.key.
 	 * @param value the replacement.
 	 */
 	public void setKey(String value) {
@@ -383,37 +407,37 @@ public class Entry implements Serializable {
 	}
 
 	/**
-	 * Sets kamon/context/generated/binary/context.Entry.key.
+	 * Sets kamon/context/generated/binary/context.StringTag.key.
 	 * @param value the replacement.
 	 * @return {link this}.
 	 */
-	public Entry withKey(String value) {
+	public StringTag withKey(String value) {
 		this.key = value;
 		return this;
 	}
 
 	/**
-	 * Gets kamon/context/generated/binary/context.Entry.value.
+	 * Gets kamon/context/generated/binary/context.StringTag.value.
 	 * @return the value.
 	 */
-	public byte[] getValue() {
+	public String getValue() {
 		return this.value;
 	}
 
 	/**
-	 * Sets kamon/context/generated/binary/context.Entry.value.
+	 * Sets kamon/context/generated/binary/context.StringTag.value.
 	 * @param value the replacement.
 	 */
-	public void setValue(byte[] value) {
+	public void setValue(String value) {
 		this.value = value;
 	}
 
 	/**
-	 * Sets kamon/context/generated/binary/context.Entry.value.
+	 * Sets kamon/context/generated/binary/context.StringTag.value.
 	 * @param value the replacement.
 	 * @return {link this}.
 	 */
-	public Entry withValue(byte[] value) {
+	public StringTag withValue(String value) {
 		this.value = value;
 		return this;
 	}
@@ -422,21 +446,21 @@ public class Entry implements Serializable {
 	public final int hashCode() {
 		int h = 1;
 		if (this.key != null) h = 31 * h + this.key.hashCode();
-		for (byte b : this.value) h = 31 * h + b;
+		if (this.value != null) h = 31 * h + this.value.hashCode();
 		return h;
 	}
 
 	@Override
 	public final boolean equals(Object o) {
-		return o instanceof Entry && equals((Entry) o);
+		return o instanceof StringTag && equals((StringTag) o);
 	}
 
-	public final boolean equals(Entry o) {
+	public final boolean equals(StringTag o) {
 		if (o == null) return false;
 		if (o == this) return true;
-		return o.getClass() == Entry.class
+		return o.getClass() == StringTag.class
 			&& (this.key == null ? o.key == null : this.key.equals(o.key))
-			&& java.util.Arrays.equals(this.value, o.value);
+			&& (this.value == null ? o.value == null : this.value.equals(o.value));
 	}
 
 }

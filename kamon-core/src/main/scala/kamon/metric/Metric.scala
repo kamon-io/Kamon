@@ -34,12 +34,12 @@ trait Metric[T] {
   def unit: MeasurementUnit
 
   def refine(tags: JTags): T
-  def refine(tags: Tags): T
+  def refine(tags: STags): T
   def refine(tags: (String, String)*): T
   def refine(tag: String, value: String): T
 
   def remove(tags: JTags): Boolean
-  def remove(tags: Tags): Boolean
+  def remove(tags: STags): Boolean
   def remove(tags: (String, String)*): Boolean
   def remove(tag: String, value: String): Boolean
 }
@@ -52,7 +52,7 @@ trait CounterMetric extends Metric[Counter] with Counter
 
 
 private[kamon] abstract sealed class BaseMetric[T, S](val instrumentType: InstrumentType) extends Metric[T] {
-  private[kamon] val instruments = TrieMap.empty[Tags, T]
+  private[kamon] val instruments = TrieMap.empty[STags, T]
   protected lazy val baseInstrument: T = instruments.atomicGetOrElseUpdate(Map.empty, createInstrument(Map.empty))
 
   override def refine(tags: JTags):T =
@@ -72,7 +72,7 @@ private[kamon] abstract sealed class BaseMetric[T, S](val instrumentType: Instru
   override def remove(tags: JTags):Boolean =
     remove(tags.asScala.toMap)
 
-  override def remove(tags: Tags): Boolean =
+  override def remove(tags: STags): Boolean =
     if(tags.nonEmpty) instruments.remove(tags).nonEmpty else false
 
   override def remove(tags: (String, String)*): Boolean =
@@ -88,7 +88,7 @@ private[kamon] abstract sealed class BaseMetric[T, S](val instrumentType: Instru
   private[kamon] def incarnations(): Seq[Map[String, String]] =
     instruments.keys.toSeq
 
-  protected def createInstrument(tags: Tags): T
+  protected def createInstrument(tags: STags): T
 
   protected def createSnapshot(instrument: T): S
 }
@@ -106,7 +106,7 @@ private[kamon] final class HistogramMetricImpl(val name: String, val unit: Measu
   override def record(value: Long, times: Long): Unit =
     baseInstrument.record(value, times)
 
-  override protected def createInstrument(tags: Tags): Histogram =
+  override protected def createInstrument(tags: STags): Histogram =
     factory.get().buildHistogram(customDynamicRange)(name, tags, unit)
 
   override protected def createSnapshot(instrument: Histogram): MetricDistribution =
@@ -118,7 +118,7 @@ private[kamon] final class RangeSamplerMetricImpl(val name: String, val unit: Me
     extends BaseMetric[RangeSampler, MetricDistribution](RangeSampler) with RangeSamplerMetric {
 
   private val logger = LoggerFactory.getLogger(classOf[RangeSamplerMetric])
-  private val scheduledSamplers = TrieMap.empty[Tags, ScheduledFuture[_]]
+  private val scheduledSamplers = TrieMap.empty[STags, ScheduledFuture[_]]
 
   def dynamicRange: DynamicRange =
     baseInstrument.dynamicRange
@@ -141,7 +141,7 @@ private[kamon] final class RangeSamplerMetricImpl(val name: String, val unit: Me
   override def sample(): Unit =
     baseInstrument.sample()
 
-  override protected def createInstrument(tags: Tags): RangeSampler = {
+  override protected def createInstrument(tags: STags): RangeSampler = {
     val rangeSampler = factory.get().buildRangeSampler(customDynamicRange, customSampleInterval)(name, tags, unit)
     val sampleInterval = rangeSampler.sampleInterval.toMillis
     val scheduledFuture = scheduler.scheduleAtFixedRate(scheduledSampler(rangeSampler), sampleInterval, sampleInterval, TimeUnit.MILLISECONDS)
@@ -153,7 +153,7 @@ private[kamon] final class RangeSamplerMetricImpl(val name: String, val unit: Me
   override def remove(tags: JTags): Boolean =
     removeAndStopSampler(tags.asScala.toMap)
 
-  override def remove(tags: Tags): Boolean =
+  override def remove(tags: STags): Boolean =
     removeAndStopSampler(tags)
 
   override def remove(tags: (String, String)*): Boolean =
@@ -162,7 +162,7 @@ private[kamon] final class RangeSamplerMetricImpl(val name: String, val unit: Me
   override def remove(tag: String, value: String): Boolean =
     removeAndStopSampler(Map(tag -> value))
 
-  private def removeAndStopSampler(tags: Tags): Boolean = {
+  private def removeAndStopSampler(tags: STags): Boolean = {
     val removed = super.remove(tags)
     if(removed)
       scheduledSamplers.remove(tags).foreach(sf => {
@@ -190,7 +190,7 @@ private[kamon] final class CounterMetricImpl(val name: String, val unit: Measure
   override def increment(times: Long): Unit =
     baseInstrument.increment(times)
 
-  override protected def createInstrument(tags: Tags): Counter =
+  override protected def createInstrument(tags: STags): Counter =
     factory.get().buildCounter(name, tags, unit)
 
   override protected def createSnapshot(instrument: Counter): MetricValue =
@@ -215,7 +215,7 @@ private[kamon] final class GaugeMetricImpl(val name: String, val unit: Measureme
   override def set(value: Long): Unit =
     baseInstrument.set(value)
 
-  override protected def createInstrument(tags: Tags): Gauge =
+  override protected def createInstrument(tags: STags): Gauge =
     factory.get().buildGauge(name, tags, unit)
 
   override protected def createSnapshot(instrument: Gauge): MetricValue =

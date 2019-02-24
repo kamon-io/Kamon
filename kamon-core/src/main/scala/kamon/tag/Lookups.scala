@@ -3,18 +3,27 @@ package kamon.tag
 import java.util.Optional
 import java.lang.{Boolean => JBoolean, Long => JLong, String => JString}
 
-import kamon.tag.Tags.Lookup
+import kamon.tag.TagSet.Lookup
 
 import scala.reflect.ClassTag
 
 object Lookups {
 
   /**
+    * Finds a value associated to the provided key and returns it. If the key is not present then a null is returned.
+    */
+  def any(key: JString) = new Lookup[Any] {
+    override def execute(storage: Map[JString, Any]): Any =
+      findAndTransform(key, storage, _any, null)
+  }
+
+
+  /**
     * Finds a String value associated to the provided key and returns it. If the key is not present or the value
     * associated with they is not a String then a null is returned.
     */
   def plain(key: JString) = new Lookup[JString] {
-    override def run(storage: Map[JString, Any]): JString =
+    override def execute(storage: Map[JString, Any]): JString =
       findAndTransform(key, storage, _plainString, null)
   }
 
@@ -24,7 +33,7 @@ object Lookups {
     * not present or the value associated with they is not a String then a None is returned.
     */
   def option(key: JString) = new Lookup[Option[JString]] {
-    override def run(storage: Map[JString, Any]): Option[JString] =
+    override def execute(storage: Map[JString, Any]): Option[JString] =
       findAndTransform(key, storage, _stringOption, None)
   }
 
@@ -34,7 +43,7 @@ object Lookups {
     * is not present or the value associated with they is not a String then Optional.empty() is returned.
     */
   def optional(key: JString) = new Lookup[Optional[String]] {
-    override def run(storage: Map[String, Any]): Optional[String] =
+    override def execute(storage: Map[String, Any]): Optional[String] =
       findAndTransform(key, storage, _stringOptional, Optional.empty())
   }
 
@@ -47,7 +56,7 @@ object Lookups {
     * This lookup type is guaranteed to return a non-null String representation of value.
     */
   def coerce(key: String) = new Lookup[String] {
-    override def run(storage: Map[String, Any]): String = {
+    override def execute(storage: Map[String, Any]): String = {
       val value = storage(key)
       if(value == null)
         "unknown"
@@ -62,7 +71,7 @@ object Lookups {
     * associated with they is not a Boolean then a null is returned.
     */
   def plainBoolean(key: String) = new Lookup[JBoolean] {
-    override def run(storage: Map[String, Any]): JBoolean =
+    override def execute(storage: Map[String, Any]): JBoolean =
       findAndTransform(key, storage, _plainBoolean, null)
   }
 
@@ -72,7 +81,7 @@ object Lookups {
     * is not present or the value associated with they is not a Boolean then a None is returned.
     */
   def booleanOption(key: String) = new Lookup[Option[JBoolean]] {
-    override def run(storage: Map[String, Any]): Option[JBoolean] =
+    override def execute(storage: Map[String, Any]): Option[JBoolean] =
       findAndTransform(key, storage, _booleanOption, None)
   }
 
@@ -82,7 +91,7 @@ object Lookups {
     * is not present or the value associated with they is not a Boolean then Optional.empty() is returned.
     */
   def booleanOptional(key: String) = new Lookup[Optional[JBoolean]] {
-    override def run(storage: Map[String, Any]): Optional[JBoolean] =
+    override def execute(storage: Map[String, Any]): Optional[JBoolean] =
       findAndTransform(key, storage, _booleanOptional, Optional.empty())
   }
 
@@ -92,7 +101,7 @@ object Lookups {
     * associated with they is not a Long then a null is returned.
     */
   def plainLong(key: String) = new Lookup[JLong] {
-    override def run(storage: Map[String, Any]): JLong =
+    override def execute(storage: Map[String, Any]): JLong =
       findAndTransform(key, storage, _plainLong, null)
   }
 
@@ -102,7 +111,7 @@ object Lookups {
     * not present or the value associated with they is not a Long then a None is returned.
     */
   def longOption(key: String) = new Lookup[Option[JLong]] {
-    override def run(storage: Map[String, Any]): Option[JLong] =
+    override def execute(storage: Map[String, Any]): Option[JLong] =
       findAndTransform(key, storage, _longOption, None)
   }
 
@@ -112,7 +121,7 @@ object Lookups {
     * is not present or the value associated with they is not a Long then Optional.empty() is returned.
     */
   def longOptional(key: String) = new Lookup[Optional[JLong]] {
-    override def run(storage: Map[String, Any]): Optional[JLong] =
+    override def execute(storage: Map[String, Any]): Optional[JLong] =
       findAndTransform(key, storage, _longOptional, Optional.empty())
   }
 
@@ -134,6 +143,7 @@ object Lookups {
       transform(value.asInstanceOf[R])
   }
 
+  private val _any = (a: Any) => a
   private val _plainString = (a: JString) => a
   private val _stringOption = (a: JString) => Option(a)
   private val _stringOptional = (a: JString) => Optional.of(a)
