@@ -56,7 +56,10 @@ package object logback {
     appender
   }
 
-  def createLoggingEvent(loggerContext: LoggerContext): LoggingEvent = {
-    new LoggingEvent(this.getClass.getName, loggerContext.getLogger("ROOT"), Level.DEBUG, "test message", null, null)
+  def createLoggingEvent(loggerContext: LoggerContext, level: Level = Level.DEBUG): LoggingEvent = {
+    new LoggingEvent(this.getClass.getName, loggerContext.getLogger("ROOT"), level, "test message", null, null)
   }
+
+  def logMany(times: Int, level: Level)(implicit appender: Appender[ILoggingEvent], loggerContext: LoggerContext): Unit =
+    for(_ ← 1 to times) { appender.doAppend(createLoggingEvent(context, level)) }
 }
