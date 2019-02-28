@@ -29,6 +29,8 @@ def akkaDependency(name: String, version: String) = {
   "com.typesafe.akka" %% s"akka-$name" % version
 }
 
+
+
 lazy val `kamon-akka` = (project in file("."))
     .settings(noPublishing: _*)
     .aggregate(kamonAkka24, kamonAkka25)
@@ -57,6 +59,8 @@ lazy val kamonAkka25 = Project("kamon-akka-25", file("kamon-akka-2.5.x"))
   .settings(publishArtifact in (Compile, packageDoc) := false)
   .settings(publishArtifact in packageDoc := false)
   .settings(sources in (Compile,doc) := Seq.empty)
+  .settings(scalacOptions += "-target:jvm-1.8")
+  .settings(scalaVersion := "2.12.7")
   .settings(
     libraryDependencies ++=
       compileScope(akkaDependency("actor", `akka-2.5`), kamonCore, kamonScala, kamonExecutors, kanelaScalaExtension) ++
