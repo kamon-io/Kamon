@@ -29,8 +29,6 @@ def akkaDependency(name: String, version: String) = {
   "com.typesafe.akka" %% s"akka-$name" % version
 }
 
-
-
 lazy val `kamon-akka` = (project in file("."))
     .settings(noPublishing: _*)
     .aggregate(kamonAkka24, kamonAkka25)

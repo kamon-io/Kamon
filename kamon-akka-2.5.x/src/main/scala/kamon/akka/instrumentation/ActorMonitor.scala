@@ -1,23 +1,4 @@
-/*
- * =========================================================================================
- * Copyright © 2013-2018 the kamon project <http://kamon.io/>
- *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
- * either express or implied. See the License for the specific language governing permissions
- * and limitations under the License.
- * =========================================================================================
- */
-
-
 package akka.kamon.instrumentation
-
-import java.io.Closeable
 
 import akka.actor.{ActorCell, ActorRef, ActorSystem, Cell}
 import akka.dispatch.Envelope
@@ -27,6 +8,8 @@ import kamon.akka.Metrics
 import kamon.akka.Metrics.{ActorGroupMetrics, ActorMetrics, RouterMetrics}
 import kamon.context.Storage.Scope
 import kamon.trace.Span
+import kamon.trace.SpanContext.SamplingDecision
+import kamon.util.Clock
 import org.aspectj.lang.ProceedingJoinPoint
 
 trait ActorMonitor {
@@ -100,13 +83,19 @@ object ActorMonitors {
     }
 
     override def processMessage(pjp: ProceedingJoinPoint, envelopeContext: TimestampedContext, envelope: Envelope): AnyRef = {
-      val messageSpan: Span = buildSpan(cellInfo, envelopeContext, envelope)
-      val contextWithMessageSpan = envelopeContext.context.withKey(Span.ContextKey, messageSpan)
+      val isSampled = envelopeContext.context.get(Span.ContextKey).context().samplingDecision == SamplingDecision.Sample
 
-      try {
-        monitor.processMessage(pjp, envelopeContext.copy(context = contextWithMessageSpan), envelope)
-      } finally {
-        messageSpan.finish()
+      if(isSampled) {
+        val messageSpan = buildSpan(cellInfo, envelopeContext, envelope)
+        val contextWithMessageSpan = envelopeContext.context.withKey(Span.ContextKey, messageSpan)
+
+        try {
+          monitor.processMessage(pjp, envelopeContext.copy(context = contextWithMessageSpan), envelope)
+        } finally {
+          messageSpan.finish()
+        }
+      } else {
+        monitor.processMessage(pjp, envelopeContext, envelope)
       }
     }
 
@@ -185,8 +174,17 @@ object ActorMonitors {
   }
 
   def simpleClassName(cls: Class[_]): String = {
-    // could fail, check SI-2034
-    try { cls.getSimpleName } catch { case _: Throwable => cls.getName }
+    // Class.getSimpleName could fail if called on a double-nested class.
+    // See https://github.com/scala/bug/issues/2034 for more details.
+    try { cls.getSimpleName } catch { case _: Throwable => {
+      val className = cls.getName
+      val lastSeparator = className.lastIndexOf('.')
+
+      if(lastSeparator > 0)
+        className.substring(lastSeparator + 1)
+      else
+        className
+    }}
   }
 
   class TrackedActor(actorMetrics: Option[ActorMetrics], groupMetrics: Seq[ActorGroupMetrics], actorCellCreation: Boolean, cellInfo: CellInfo)
