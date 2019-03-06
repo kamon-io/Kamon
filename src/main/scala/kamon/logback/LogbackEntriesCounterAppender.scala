@@ -7,8 +7,10 @@ import LogbackEntriesCounterAppender._
 
 class LogbackEntriesCounterAppender extends UnsynchronizedAppenderBase[ILoggingEvent] {
 
+  private val counter = Kamon.counter(CounterName)
+
   protected def append(event: ILoggingEvent): Unit =
-    Kamon.counter(CounterName).refine(LevelTagName → event.getLevel.levelStr).increment()
+    counter.refine(LevelTagName → event.getLevel.levelStr).increment()
 }
 
 object LogbackEntriesCounterAppender{
