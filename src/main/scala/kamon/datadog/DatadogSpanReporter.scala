@@ -70,7 +70,7 @@ class DatadogSpanReporter extends SpanReporter {
       .groupBy { _.\("trace_id").get.toString() }
       .values
       .toList
-    httpClient.doJsonPost(Json.toJson(spanList))
+    httpClient.doJsonPut(Json.toJson(spanList))
   }
 
   override def start(): Unit = {

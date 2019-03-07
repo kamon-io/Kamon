@@ -39,6 +39,7 @@ class DatadogAPIReporterSpec extends AbstractHttpReporter with Matchers with Rec
       )
       val request = server.takeRequest()
       request.getRequestUrl.toString shouldEqual baseUrl + "?api_key=dummy"
+      request.getMethod shouldEqual "POST"
       Json.parse(request.getBody().readUtf8()) shouldEqual Json.parse("""{"series":[{"metric":"test.counter","interval":1,"points":[[1523394,0]],"type":"count","host":"test","tags":["service:kamon-application","env:staging","tag1:value1"]}]}""")
 
     }

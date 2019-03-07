@@ -40,13 +40,13 @@ package object datadog {
       Try(httpClient.newCall(request).execute())
     }
 
-    def doPost(contentType: String, contentBody: Array[Byte]): Try[String] = {
+    def doMethodWithBody(method: String, contentType: String, contentBody: Array[Byte]): Try[String] = {
       val body = RequestBody.create(MediaType.parse(contentType), contentBody)
       val url = usingAgent match {
         case true  => apiUrl
         case false => apiUrl + "?api_key=" + apiKey
       }
-      val request = new Request.Builder().url(url).post(body).build
+      val request = new Request.Builder().url(url).method(method, body).build
       doRequest(request) match {
         case Success(response) =>
           val responseBody = response.body().string()
@@ -54,16 +54,29 @@ package object datadog {
           if (response.isSuccessful) {
             Success(responseBody)
           } else {
-            Failure(new Exception(s"Failed to POST metrics to Datadog with status code [${response.code()}], Body: [${responseBody}]"))
+            Failure(new Exception(s"Failed to ${method} metrics to Datadog with status code [${response.code()}], Body: [${responseBody}]"))
           }
         case Failure(f) =>
           Failure(f.getCause)
       }
     }
 
+    def doPost(contentType: String, contentBody: Array[Byte]): Try[String] = {
+      doMethodWithBody("POST", contentType, contentBody)
+    }
+
+    def doPut(contentType: String, contentBody: Array[Byte]): Try[String] = {
+      doMethodWithBody("PUT", contentType, contentBody)
+    }
+
     def doJsonPost(contentBody: JsValue): Try[String] = {
       // Datadog Agent does not accept ";charset=UTF-8", using bytes to send Json posts
       doPost("application/json", contentBody.toString().getBytes(StandardCharsets.UTF_8))
+    }
+
+    def doJsonPut(contentBody: JsValue): Try[String] = {
+      // Datadog Agent does not accept ";charset=UTF-8", using bytes to send Json posts
+      doPut("application/json", contentBody.toString().getBytes(StandardCharsets.UTF_8))
     }
 
     // Apparently okhttp doesn't require explicit closing of the connection

@@ -148,6 +148,7 @@ class DatadogSpanReporterSpec extends AbstractHttpReporter with Matchers with Re
         reporter.reportSpans(spans)
         val request = server.takeRequest()
         val url = request.getRequestUrl().toString()
+        val method = request.getMethod()
         val requestJson = Json.parse(request.getBody().readUtf8()).as[JsArray]
 
         // Ordering stuff
@@ -156,6 +157,7 @@ class DatadogSpanReporterSpec extends AbstractHttpReporter with Matchers with Re
 
         url shouldEqual baseUrl
         sortedRequestJson shouldEqual sortedTestData
+        method shouldEqual "PUT"
 
       }
     }
