@@ -1,10 +1,11 @@
-package kamon.status
+package kamon.status.page
 
-import com.grack.nanojson.JsonWriter
 import java.lang.{StringBuilder => JavaStringBuilder}
 
+import com.grack.nanojson.JsonWriter
 import com.typesafe.config.ConfigRenderOptions
 import kamon.module.Module
+import kamon.status.Status
 
 import scala.collection.JavaConverters.{iterableAsScalaIterableConverter, mapAsScalaMapConverter}
 

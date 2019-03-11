@@ -22,7 +22,7 @@ class Status(_moduleRegistry: ModuleRegistry, _metricRegistry: MetricRegistry, c
 
   /**
     * Status of the module registry. Describes what modules have been detected and registered, either from the classpath
-    * or programatically and their current status.
+    * or programmatically and their current status.
     */
   def moduleRegistry(): Status.ModuleRegistry =
     _moduleRegistry.status()
@@ -35,14 +35,10 @@ class Status(_moduleRegistry: ModuleRegistry, _metricRegistry: MetricRegistry, c
 
 
   /**
-    * PRIVATE API.
-    *
-    * Status of instrumentation modules that have been detected and/or loaded into the current JVM. This
-    * API is not meant to be used by the general public.
-    *
-    * Read the [[Status.Instrumentation]] companion object's docs for more information.
+    * Status of instrumentation modules that have been detected and/or loaded into the current JVM. Read the
+    * [[Status.Instrumentation]] companion object's docs for more information.
     */
-  private[kamon] def instrumentation(): Status.Instrumentation = {
+  def instrumentation(): Status.Instrumentation = {
     import Status.Instrumentation._
 
     Status.Instrumentation(

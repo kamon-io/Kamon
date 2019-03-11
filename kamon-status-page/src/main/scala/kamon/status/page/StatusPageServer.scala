@@ -1,18 +1,22 @@
-package kamon.status
+package kamon.status.page
 
 import java.io.InputStream
-
-import fi.iki.elonen.NanoHTTPD
-import fi.iki.elonen.NanoHTTPD.Response.{Status => StatusCode}
 import java.util.Collections
 import java.util.concurrent.{ExecutorService, Executors}
 
+import fi.iki.elonen.NanoHTTPD
+import fi.iki.elonen.NanoHTTPD.Response.{Status => StatusCode}
+import kamon.status.Status
+
 import scala.collection.JavaConverters.asScalaBufferConverter
 
+/**
+  * Exposes an embedded HTTP server based on NanoHTTP.
+  */
 class StatusPageServer(hostname: String, port: Int, resourceLoader: ClassLoader, status: Status)
     extends NanoHTTPD(hostname, port) {
 
-  private val RootResourceDirectory = "status"
+  private val RootResourceDirectory = "status-page"
   private val ResourceExtensionRegex = ".*\\.([a-zA-Z0-9]*)".r
 
   override def serve(session: NanoHTTPD.IHTTPSession): NanoHTTPD.Response = {
