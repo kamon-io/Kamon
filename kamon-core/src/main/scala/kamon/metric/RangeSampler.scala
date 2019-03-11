@@ -1,88 +1,146 @@
-/* =========================================================================================
- * Copyright © 2013-2017 the kamon project <http://kamon.io/>
- *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
- * either express or implied. See the License for the specific language governing permissions
- * and limitations under the License.
- * =========================================================================================
- */
-
 package kamon.metric
 
 import java.lang.Math.abs
-import java.time.Duration
 import java.util.concurrent.atomic.AtomicLong
 
-trait RangeSampler {
-  def unit: MeasurementUnit
-  def dynamicRange: DynamicRange
-  def sampleInterval: Duration
+import kamon.metric.Histogram.DistributionSnapshotBuilder
+import kamon.metric.Metric.{BaseMetric, BaseMetricAutoUpdate, Settings}
+import kamon.tag.TagSet
+import org.HdrHistogram.BaseAtomicHdrHistogram
+import org.slf4j.LoggerFactory
 
-  def increment(): Unit
-  def increment(times: Long): Unit
-  def decrement(): Unit
-  def decrement(times: Long): Unit
-  def sample(): Unit
+import scala.annotation.tailrec
+
+
+/**
+  * Instrument that tracks the behavior of a variable that can increase and decrease over time. A range sampler keeps
+  * track of the observed minimum and maximum values for the tracked variable and is constantly recording and resetting
+  * those indicators to the current variable value to get the most descriptive possible approximation of the behavior
+  * presented by the variable.
+  *
+  * When a snapshot is taken, this instrument generates a distribution of values observed which is guaranteed to have
+  * the minimum and maximum values of the observed variable as well as several samples across time since the last
+  * snapshot.
+  */
+trait RangeSampler extends Instrument[RangeSampler, Metric.Settings.DistributionInstrument] {
+
+  /**
+    * Increments the current value by one.
+    */
+  def increment(): RangeSampler
+
+  /**
+    * Increments the current value the provided number of times.
+    */
+  def increment(times: Long): RangeSampler
+
+  /**
+    * Decrements the current value by one.
+    */
+  def decrement(): RangeSampler
+
+  /**
+    * Decrements the current value the provided number of times.
+    */
+  def decrement(times: Long): RangeSampler
+
+  /**
+    * Triggers the sampling of the internal minimum, maximum and current value indicators.
+    */
+  def sample(): RangeSampler
+
 }
 
-class SimpleRangeSampler(name: String, tags: Map[String, String], underlyingHistogram: AtomicHdrHistogram,
-    val sampleInterval: Duration) extends RangeSampler {
 
-  private val min = AtomicLongMaxUpdater()
-  private val max = AtomicLongMaxUpdater()
-  private val sum = new AtomicLong()
+object RangeSampler {
 
-  def dynamicRange: DynamicRange =
-    underlyingHistogram.dynamicRange
+  private val _logger = LoggerFactory.getLogger(classOf[RangeSampler])
 
-  def unit: MeasurementUnit =
-    underlyingHistogram.unit
+  /**
+    * Timer implementation with thread safety guarantees. Instances of this class can be safely shared across threads
+    * and updated concurrently. This is, in fact, a close copy of the Histogram.Atomic implementation, modified to match
+    * the Timer interface.
+    */
+  class Atomic(val metric: BaseMetric[RangeSampler, Metric.Settings.DistributionInstrument, Distribution],
+      val tags: TagSet, val dynamicRange: DynamicRange) extends BaseAtomicHdrHistogram(dynamicRange) with RangeSampler
+      with Instrument.Snapshotting[Distribution] with DistributionSnapshotBuilder
+      with BaseMetricAutoUpdate[RangeSampler, Metric.Settings.DistributionInstrument, Distribution] {
 
-  def increment(): Unit =
-    increment(1L)
+    private val _min = new AtomicLongMaxUpdater(new AtomicLong(0L))
+    private val _max = new AtomicLongMaxUpdater(new AtomicLong(0L))
+    private val _sum = new AtomicLong()
 
-  def increment(times: Long): Unit = {
-    val currentValue = sum.addAndGet(times)
-    max.update(currentValue)
-  }
+    override def increment(): RangeSampler =
+      increment(1)
 
-  def decrement(): Unit =
-    decrement(1L)
+    override def decrement(): RangeSampler =
+      decrement(1)
 
-  def decrement(times: Long): Unit = {
-    val currentValue = sum.addAndGet(-times)
-    min.update(-currentValue)
-  }
-
-  def sample(): Unit = {
-    val currentValue = {
-      val value = sum.get()
-      if (value <= 0) 0 else value
+    override def increment(times: Long): RangeSampler = {
+      val currentValue = _sum.addAndGet(times)
+      _max.update(currentValue)
+      this
     }
 
-    val currentMin = {
-      val rawMin = min.maxThenReset(-currentValue)
-      if (rawMin >= 0)
-        0
-      else
-        abs(rawMin)
+    override def decrement(times: Long): RangeSampler = {
+      val currentValue = _sum.addAndGet(-times)
+      _min.update(-currentValue)
+      this
     }
 
-    val currentMax = max.maxThenReset(currentValue)
+    /** Triggers the sampling of the internal minimum, maximum and current value indicators. */
+    override def sample(): RangeSampler = {
+      try {
+        val currentValue = {
+          val value = _sum.get()
+          if (value <= 0) 0 else value
+        }
 
-    underlyingHistogram.record(currentValue)
-    underlyingHistogram.record(currentMin)
-    underlyingHistogram.record(currentMax)
-  }
+        val currentMin = {
+          val rawMin = _min.maxThenReset(-currentValue)
+          if (rawMin >= 0)
+            0
+          else
+            abs(rawMin)
+        }
 
-  private[kamon] def snapshot(resetState: Boolean = true): MetricDistribution = {
-    sample()
-    underlyingHistogram.snapshot(resetState)
+        val currentMax = _max.maxThenReset(currentValue)
+
+        recordValue(currentValue)
+        recordValue(currentMin)
+        recordValue(currentMax)
+
+      } catch {
+        case _: ArrayIndexOutOfBoundsException =>
+          _logger.warn (
+            s"Failed to record value on [${metric.name},${tags}] because the value is outside of the " +
+            s"configured range. You might need to change your dynamic range configuration for this metric"
+          )
+      }
+
+      this
+    }
+
+    override protected def baseMetric: BaseMetric[RangeSampler, Settings.DistributionInstrument, Distribution] =
+      metric
+
+
+    /**
+      * Keeps track of the max value of an observed value using an AtomicLong as the underlying storage.
+      */
+    private class AtomicLongMaxUpdater(value: AtomicLong) {
+
+      def update(newMax: Long):Unit = {
+        @tailrec def compare(): Long = {
+          val currentMax = value.get()
+          if(newMax > currentMax) if (!value.compareAndSet(currentMax, newMax)) compare() else newMax
+          else currentMax
+        }
+        compare()
+      }
+
+      def maxThenReset(newValue: Long): Long =
+        value.getAndSet(newValue)
+    }
   }
 }

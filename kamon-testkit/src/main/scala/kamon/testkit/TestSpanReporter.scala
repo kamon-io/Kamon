@@ -18,7 +18,7 @@ package kamon.testkit
 import java.util.concurrent.LinkedBlockingQueue
 
 import com.typesafe.config.Config
-import kamon.SpanReporter
+import kamon.module.SpanReporter
 import kamon.trace.Span
 import kamon.trace.Span.FinishedSpan
 

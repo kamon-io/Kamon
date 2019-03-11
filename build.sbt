@@ -1,6 +1,3 @@
-import scala.xml.Node
-import scala.xml.transform.{RewriteRule, RuleTransformer}
-
 /* =========================================================================================
  * Copyright © 2013-2018 the kamon project <http://kamon.io/>
  *
@@ -16,11 +13,13 @@ import scala.xml.transform.{RewriteRule, RuleTransformer}
  * =========================================================================================
  */
 
+import scala.xml.Node
+import scala.xml.transform.{RewriteRule, RuleTransformer}
 
 lazy val kamon = (project in file("."))
   .settings(moduleName := "kamon")
   .settings(noPublishing: _*)
-  .aggregate(core, statusPage, testkit, coreTests, coreBench)
+  .aggregate(core, statusPage, testkit, tests, benchmarks)
 
 val commonSettings = Seq(
   scalaVersion := "2.12.6",
@@ -108,14 +107,13 @@ lazy val statusPage = (project in file("kamon-status-page"))
   ).dependsOn(core)
 
 
-lazy val coreTests = (project in file("kamon-core-tests"))
-  .settings(
-    moduleName := "kamon-core-tests",
-    resolvers += Resolver.mavenLocal,
-    fork in Test := true)
+lazy val tests = (project in file("kamon-core-tests"))
+  .settings(moduleName := "kamon-core-tests")
   .settings(noPublishing: _*)
   .settings(commonSettings: _*)
   .settings(
+    fork in Test := true,
+    resolvers += Resolver.mavenLocal,
     libraryDependencies ++= Seq(
       "org.scalatest" %% "scalatest" % "3.0.1" % "test",
       "ch.qos.logback" % "logback-classic" % "1.2.3" % "test"
@@ -123,11 +121,11 @@ lazy val coreTests = (project in file("kamon-core-tests"))
   ).dependsOn(testkit)
 
 
-lazy val coreBench = (project in file("kamon-core-bench"))
-  .enablePlugins(JmhPlugin)
-  .settings(
-    moduleName := "kamon-core-bench",
-    fork in Test := true)
+lazy val benchmarks = (project in file("kamon-core-bench"))
+  .settings(moduleName := "kamon-core-bench")
   .settings(noPublishing: _*)
   .settings(commonSettings: _*)
+  .settings(
+    fork in Test := true
+  ).enablePlugins(JmhPlugin)
   .dependsOn(core)

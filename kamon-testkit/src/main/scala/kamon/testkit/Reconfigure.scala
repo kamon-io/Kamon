@@ -51,7 +51,4 @@ trait Reconfigure {
   def resetConfig(): Unit = {
     Kamon.reconfigure(ConfigFactory.load())
   }
-
-
-
 }

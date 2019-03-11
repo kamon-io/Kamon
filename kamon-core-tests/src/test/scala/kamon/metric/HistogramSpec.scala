@@ -18,14 +18,14 @@ package kamon.metric
 import kamon.Kamon
 import org.scalatest.{Matchers, WordSpec}
 import MeasurementUnit._
+import kamon.testkit.InstrumentInspection
 
 
-class HistogramSpec extends WordSpec with Matchers {
-  import HistogramTestHelper.HistogramMetricSyntax
+class HistogramSpec extends WordSpec with Matchers with InstrumentInspection.Syntax {
 
   "a Histogram" should {
     "record values and reset internal state when a snapshot is taken" in {
-      val histogram = Kamon.histogram("test", unit = time.nanoseconds)
+      val histogram = Kamon.histogram("test", unit = time.nanoseconds).withoutTags()
       histogram.record(100)
       histogram.record(150, 998)
       histogram.record(200)
@@ -50,7 +50,8 @@ class HistogramSpec extends WordSpec with Matchers {
 
     "accept a smallest discernible value configuration" in {
       // The lowestDiscernibleValue gets rounded down to the closest power of 2, so, here it will be 64.
-      val histogram = Kamon.histogram("test-lowest-discernible-value", unit = time.nanoseconds, dynamicRange = DynamicRange.Fine.withLowestDiscernibleValue(100))
+      val histogram = Kamon.histogram("test-lowest-discernible-value", unit = time.nanoseconds,
+        dynamicRange = DynamicRange.Fine.withLowestDiscernibleValue(100)).withoutTags()
       histogram.record(100)
       histogram.record(200)
       histogram.record(300)
@@ -74,7 +75,7 @@ class HistogramSpec extends WordSpec with Matchers {
     }
 
     "[private api] record values and optionally keep the internal state when a snapshot is taken" in {
-      val histogram = Kamon.histogram("test", unit = time.nanoseconds)
+      val histogram = Kamon.histogram("test", unit = time.nanoseconds).withoutTags()
       histogram.record(100)
       histogram.record(150, 998)
       histogram.record(200)
@@ -94,16 +95,5 @@ class HistogramSpec extends WordSpec with Matchers {
         (200 -> 1)
       )
     }
-  }
-}
-
-object HistogramTestHelper {
-
-  implicit class HistogramMetricSyntax(metric: HistogramMetric) {
-    def distribution(resetState: Boolean = true): Distribution =
-      metric.refine(Map.empty[String, String]) match {
-        case h: AtomicHdrHistogram  => h.snapshot(resetState).distribution
-        case h: HdrHistogram        => h.snapshot(resetState).distribution
-      }
   }
 }

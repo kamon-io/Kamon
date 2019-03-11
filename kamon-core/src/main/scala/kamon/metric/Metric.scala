@@ -1,223 +1,233 @@
-/* =========================================================================================
- * Copyright © 2013-2017 the kamon project <http://kamon.io/>
- *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
- * either express or implied. See the License for the specific language governing permissions
- * and limitations under the License.
- * =========================================================================================
- */
-
-package kamon
-package metric
+package kamon.metric
 
 import java.time.Duration
-import java.util.concurrent.atomic.AtomicReference
+import java.util.Collections
 import java.util.concurrent.{ScheduledExecutorService, ScheduledFuture, TimeUnit}
 
-import kamon.metric.InstrumentFactory.InstrumentType
-import kamon.metric.InstrumentFactory.InstrumentTypes._
-import org.slf4j.LoggerFactory
+import kamon.status.Status
+import kamon.tag.TagSet
 
-import scala.collection.JavaConverters._
+import scala.collection.JavaConverters.asScalaBufferConverter
 import scala.collection.concurrent.TrieMap
-import scala.util.Try
+import scala.collection.mutable
 
 
-trait Metric[T] {
+
+
+trait Metric[Inst, Sett <: Metric.Settings] extends Tagging[Inst] {
   def name: String
-  def unit: MeasurementUnit
+  def description: String
+  def settings: Sett
 
-  def refine(tags: JTags): T
-  def refine(tags: STags): T
-  def refine(tags: (String, String)*): T
-  def refine(tag: String, value: String): T
+  /**
+    * Returns an instrument without tags for this metric.
+    */
+  def withoutTags(): Inst
 
-  def remove(tags: JTags): Boolean
-  def remove(tags: STags): Boolean
-  def remove(tags: (String, String)*): Boolean
-  def remove(tag: String, value: String): Boolean
+  /**
+    * Removes an instrument with the provided tags from a metric, if it exists.
+    *
+    * @return True if the instrument existed and was removed or false if no instrument was found with the provided tags.
+    */
+  def remove(tags: TagSet): Boolean
 }
 
-trait HistogramMetric extends Metric[Histogram] with Histogram
-trait TimerMetric extends Metric[Timer] with Timer
-trait RangeSamplerMetric extends Metric[RangeSampler] with RangeSampler
-trait GaugeMetric extends Metric[Gauge] with Gauge
-trait CounterMetric extends Metric[Counter] with Counter
 
 
-private[kamon] abstract sealed class BaseMetric[T, S](val instrumentType: InstrumentType) extends Metric[T] {
-  private[kamon] val instruments = TrieMap.empty[STags, T]
-  protected lazy val baseInstrument: T = instruments.atomicGetOrElseUpdate(Map.empty, createInstrument(Map.empty))
+object Metric {
 
-  override def refine(tags: JTags):T =
-    refine(tags.asScala.toMap)
+  /**
+    * User-facing API for a counter-based metric. All Kamon APIs returning a counter-based metric to users should always
+    * return this interface rather than internal representations.
+    */
+  trait Counter extends Metric[kamon.metric.Counter, Settings.ValueInstrument]
 
-  override def refine(tags: Map[String, String]): T =
-    instruments.atomicGetOrElseUpdate(tags, createInstrument(tags))
+  /**
+    * User-facing API for a gauge-based metric. All Kamon APIs returning a gauge-based metric to users should always
+    * return this interface rather than internal representations.
+    */
+  trait Gauge extends Metric[kamon.metric.Gauge, Settings.ValueInstrument]
 
-  override def refine(tag: String, value: String): T = {
-    val instrumentTags = Map(tag -> value)
-    instruments.atomicGetOrElseUpdate(instrumentTags, createInstrument(instrumentTags))
+  /**
+    * User-facing API for a histogram-based metric. All Kamon APIs returning a histogram-based metric to users should
+    * always return this interface rather than internal representations.
+    */
+  trait Histogram extends Metric[kamon.metric.Histogram, Settings.DistributionInstrument]
+
+  /**
+    * User-facing API for a timer-based metric. All Kamon APIs returning a timer-based metric to users should always
+    * return this interface rather than internal representations.
+    */
+  trait Timer extends Metric[kamon.metric.Timer, Settings.DistributionInstrument]
+
+  /**
+    * User-facing API for a range sampler-based metric. All Kamon APIs returning a range sampler-based metric to users
+    * should always return this interface rather than internal representations.
+    */
+  trait RangeSampler extends Metric[kamon.metric.RangeSampler, Settings.DistributionInstrument]
+
+
+  /**
+    * Describes the minimum settings that should be provided to all metrics.
+    */
+  trait Settings {
+
+    /**
+      * Measurement unit of the values tracked by a metric.
+      */
+    def unit: MeasurementUnit
+
+    /**
+      * Interval at which auto-update actions will be scheduled.
+      */
+    def autoUpdateInterval: Duration
   }
 
-  override def refine(tags: (String, String)*): T =
-    refine(tags.toMap)
+  object Settings {
 
-  override def remove(tags: JTags):Boolean =
-    remove(tags.asScala.toMap)
-
-  override def remove(tags: STags): Boolean =
-    if(tags.nonEmpty) instruments.remove(tags).nonEmpty else false
-
-  override def remove(tags: (String, String)*): Boolean =
-    if(tags.nonEmpty) instruments.remove(tags.toMap).nonEmpty else false
-
-  override def remove(tag: String, value: String): Boolean =
-    instruments.remove(Map(tag -> value)).nonEmpty
+    /**
+      * Settings that apply to all metrics backed by instruments that produce a single value (e.g. counters and gauges).
+      */
+    case class ValueInstrument (
+      unit: MeasurementUnit,
+      autoUpdateInterval: Duration
+    ) extends Metric.Settings
 
 
-  private[kamon] def snapshot(): Seq[S] =
-    instruments.values.map(createSnapshot).toSeq
-
-  private[kamon] def incarnations(): Seq[Map[String, String]] =
-    instruments.keys.toSeq
-
-  protected def createInstrument(tags: STags): T
-
-  protected def createSnapshot(instrument: T): S
-}
-
-
-private[kamon] final class HistogramMetricImpl(val name: String, val unit: MeasurementUnit, customDynamicRange: Option[DynamicRange],
-    factory: AtomicReference[InstrumentFactory]) extends BaseMetric[Histogram, MetricDistribution](Histogram) with HistogramMetric {
-
-  def dynamicRange: DynamicRange =
-    baseInstrument.dynamicRange
-
-  override def record(value: Long): Unit =
-    baseInstrument.record(value)
-
-  override def record(value: Long, times: Long): Unit =
-    baseInstrument.record(value, times)
-
-  override protected def createInstrument(tags: STags): Histogram =
-    factory.get().buildHistogram(customDynamicRange)(name, tags, unit)
-
-  override protected def createSnapshot(instrument: Histogram): MetricDistribution =
-    instrument.asInstanceOf[AtomicHdrHistogram].snapshot(resetState = true)
-}
-
-private[kamon] final class RangeSamplerMetricImpl(val name: String, val unit: MeasurementUnit, customDynamicRange: Option[DynamicRange],
-    customSampleInterval: Option[Duration], factory: AtomicReference[InstrumentFactory], scheduler: ScheduledExecutorService)
-    extends BaseMetric[RangeSampler, MetricDistribution](RangeSampler) with RangeSamplerMetric {
-
-  private val logger = LoggerFactory.getLogger(classOf[RangeSamplerMetric])
-  private val scheduledSamplers = TrieMap.empty[STags, ScheduledFuture[_]]
-
-  def dynamicRange: DynamicRange =
-    baseInstrument.dynamicRange
-
-  override def sampleInterval: Duration =
-    baseInstrument.sampleInterval
-
-  override def increment(): Unit =
-    baseInstrument.increment()
-
-  override def increment(times: Long): Unit =
-    baseInstrument.increment(times)
-
-  override def decrement(): Unit =
-    baseInstrument.decrement()
-
-  override def decrement(times: Long): Unit =
-    baseInstrument.decrement(times)
-
-  override def sample(): Unit =
-    baseInstrument.sample()
-
-  override protected def createInstrument(tags: STags): RangeSampler = {
-    val rangeSampler = factory.get().buildRangeSampler(customDynamicRange, customSampleInterval)(name, tags, unit)
-    val sampleInterval = rangeSampler.sampleInterval.toMillis
-    val scheduledFuture = scheduler.scheduleAtFixedRate(scheduledSampler(rangeSampler), sampleInterval, sampleInterval, TimeUnit.MILLISECONDS)
-    scheduledSamplers.put(tags, scheduledFuture)
-
-    rangeSampler
+    /**
+      * Settings that apply to all metrics backed by instruments that produce value distributions (e.g. timers, range
+      * samplers and, of course, histograms).
+      */
+    case class DistributionInstrument (
+      unit: MeasurementUnit,
+      autoUpdateInterval: Duration,
+      dynamicRange: kamon.metric.DynamicRange
+    ) extends Metric.Settings
   }
 
-  override def remove(tags: JTags): Boolean =
-    removeAndStopSampler(tags.asScala.toMap)
 
-  override def remove(tags: STags): Boolean =
-    removeAndStopSampler(tags)
+  /**
+    * Exposes the required API to create metric snapshots. This API is not meant to be exposed to users.
+    */
+  trait Snapshotting[Sett <: Metric.Settings, Snap] {
 
-  override def remove(tags: (String, String)*): Boolean =
-    removeAndStopSampler(tags.toMap)
-
-  override def remove(tag: String, value: String): Boolean =
-    removeAndStopSampler(Map(tag -> value))
-
-  private def removeAndStopSampler(tags: STags): Boolean = {
-    val removed = super.remove(tags)
-    if(removed)
-      scheduledSamplers.remove(tags).foreach(sf => {
-        Try(sf.cancel(false)).failed.foreach(_ => logger.error("Failed to cancel scheduled sampling for RangeSampler []", tags.prettyPrint()))
-      })
-    removed
+    /**
+      * Creates a snapshot for a metric. If the resetState flag is set to true, the internal state of all instruments
+      * associated with this metric will be reset, if applicable.
+      */
+    def snapshot(resetState: Boolean): MetricSnapshot[Sett, Snap]
   }
 
-  override protected def createSnapshot(instrument: RangeSampler): MetricDistribution =
-    instrument.asInstanceOf[SimpleRangeSampler].snapshot(resetState = true)
 
+  /**
+    * Provides basic creation, lifecycle, tagging, scheduling and snapshotting operations for Kamon metrics. This base
+    * metric keeps track of all instruments created for a given metric and ensures that every time an instrument is
+    * requested from it, the instrument will be either created or retrieved if it was requested before, in a thread safe
+    * manner.
+    *
+    * Any actions scheduled on an instrument will be cancelled if that instrument is removed from the metric.
+    */
+  abstract class BaseMetric[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings, Snap] (
+      val name: String,
+      val description: String,
+      val settings: Sett,
+      instrumentBuilder: (BaseMetric[Inst, Sett, Snap], TagSet) => Inst with Instrument.Snapshotting[Snap],
+      scheduler: ScheduledExecutorService) extends Metric[Inst, Sett] with Metric.Snapshotting[Sett, Snap] {
 
-  private def scheduledSampler(rangeSampler: RangeSampler): Runnable = new Runnable {
-    override def run(): Unit = rangeSampler.sample()
+    private val _instruments = TrieMap.empty[TagSet, InstrumentEntry]
+
+    override def withTag(key: String, value: String): Inst =
+      lookupInstrument(TagSet.from(key, value))
+
+    override def withTag(key: String, value: Boolean): Inst =
+      lookupInstrument(TagSet.from(key, value))
+
+    override def withTag(key: String, value: Long): Inst =
+      lookupInstrument(TagSet.from(key, value))
+
+    override def withTags(tags: TagSet): Inst =
+      lookupInstrument(tags)
+
+    override def withoutTags(): Inst =
+      lookupInstrument(TagSet.Empty)
+
+    override def remove(tags: TagSet): Boolean = synchronized {
+      _instruments.get(tags).map(entry => {
+        entry.removeOnNextSnapshot = true
+        entry.scheduledActions.dropWhile(sa => {
+          sa.cancel(false)
+          true
+        })
+      }).nonEmpty
+    }
+
+    override def snapshot(resetState: Boolean): MetricSnapshot[Sett, Snap] = synchronized {
+      val instrumentSnapshots = Map.newBuilder[TagSet, Snap]
+      _instruments.foreach {
+        case (tags, entry) =>
+          val instrumentSnapshot = entry.instrument.snapshot(resetState)
+          if(entry.removeOnNextSnapshot && resetState)
+            _instruments.remove(tags)
+
+          instrumentSnapshots += (tags -> instrumentSnapshot)
+      }
+
+      buildMetricSnapshot(this, instrumentSnapshots.result())
+    }
+
+    def schedule(instrument: Inst, action: Runnable, interval: Duration): Any = synchronized {
+      _instruments.get(instrument.tags).map { entry =>
+        val scheduledAction = scheduler.scheduleAtFixedRate(action, interval.toNanos, interval.toNanos, TimeUnit.NANOSECONDS)
+        entry.scheduledActions += scheduledAction
+      }
+    }
+
+    def status(): Status.Metric =
+      Status.Metric (
+        name,
+        description,
+        settings.unit,
+        instrumentType,
+        _instruments.keys.map(t => Status.Instrument(t)).toSeq
+      )
+
+    /** Used by the Status API only */
+    protected def instrumentType: Instrument.Type
+
+    protected def buildMetricSnapshot(metric: Metric[Inst, Sett], instruments: Map[TagSet, Snap]): MetricSnapshot[Sett, Snap]
+
+    private def lookupInstrument(tags: TagSet): Inst = {
+      val entry = _instruments.atomicGetOrElseUpdate(tags, newInstrumentEntry(tags))
+      entry.removeOnNextSnapshot = false
+      entry.instrument
+    }
+
+    private def newInstrumentEntry(tags: TagSet): InstrumentEntry =
+      new InstrumentEntry(instrumentBuilder(this, tags), Collections.synchronizedList(Collections.emptyList[ScheduledFuture[_]]()).asScala, false)
+
+    private class InstrumentEntry (
+      val instrument: Inst with Instrument.Snapshotting[Snap],
+      val scheduledActions: mutable.Buffer[ScheduledFuture[_]],
+      @volatile var removeOnNextSnapshot: Boolean
+    )
   }
-}
 
+  /**
+    * Handles registration of auto-update actions on a base metric.
+    */
+  trait BaseMetricAutoUpdate[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings, Snap] {
+      self: Inst =>
 
-private[kamon] final class CounterMetricImpl(val name: String, val unit: MeasurementUnit, factory: AtomicReference[InstrumentFactory])
-  extends BaseMetric[Counter, MetricValue](Counter) with CounterMetric {
+    protected def baseMetric: BaseMetric[Inst, Sett, Snap]
 
-  override def increment(): Unit =
-    baseInstrument.increment()
+    def autoUpdate(consumer: Inst => Unit, interval: Duration): Inst = {
+      val instrument = this
+      val action = new Runnable {
+        override def run(): Unit = consumer(instrument)
+      }
 
-  override def increment(times: Long): Unit =
-    baseInstrument.increment(times)
-
-  override protected def createInstrument(tags: STags): Counter =
-    factory.get().buildCounter(name, tags, unit)
-
-  override protected def createSnapshot(instrument: Counter): MetricValue =
-    instrument.asInstanceOf[LongAdderCounter].snapshot(resetState = true)
-}
-
-private[kamon] final class GaugeMetricImpl(val name: String, val unit: MeasurementUnit, factory: AtomicReference[InstrumentFactory])
-  extends BaseMetric[Gauge, MetricValue](Gauge) with GaugeMetric {
-
-  override def increment(): Unit =
-    baseInstrument.increment()
-
-  override def increment(times: Long): Unit =
-    baseInstrument.increment(times)
-
-  override def decrement(): Unit =
-    baseInstrument.decrement()
-
-  override def decrement(times: Long): Unit =
-    baseInstrument.decrement(times)
-
-  override def set(value: Long): Unit =
-    baseInstrument.set(value)
-
-  override protected def createInstrument(tags: STags): Gauge =
-    factory.get().buildGauge(name, tags, unit)
-
-  override protected def createSnapshot(instrument: Gauge): MetricValue =
-    instrument.asInstanceOf[AtomicLongGauge].snapshot()
+      baseMetric.schedule(instrument, action, interval)
+      this
+    }
+  }
 }

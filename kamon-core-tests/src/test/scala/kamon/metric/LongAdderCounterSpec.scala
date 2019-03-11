@@ -15,48 +15,47 @@
 
 package kamon.metric
 
+import kamon.Kamon
+import kamon.testkit.InstrumentInspection
 import org.scalatest.{Matchers, WordSpec}
 
-class LongAdderCounterSpec extends WordSpec with Matchers {
+class LongAdderCounterSpec extends WordSpec with Matchers with InstrumentInspection.Syntax {
 
   "a LongAdderCounter" should {
     "allow unit and bundled increments" in {
-      val counter = buildCounter("unit-increments")
+      val counter = Kamon.counter("unit-increments").withoutTags()
       counter.increment()
       counter.increment()
       counter.increment(40)
 
-      counter.snapshot().value shouldBe 42
+      counter.value shouldBe 42
     }
 
     "warn the user and ignore attempts to decrement the counter" in {
-      val counter = buildCounter("attempt-to-decrement")
+      val counter = Kamon.counter("attempt-to-decrement").withoutTags()
       counter.increment(100)
       counter.increment(100)
       counter.increment(100)
 
-      counter.snapshot().value shouldBe 300
+      counter.value shouldBe 300
     }
 
     "reset the internal state to zero after taking snapshots as a default behavior" in {
-      val counter = buildCounter("reset-after-snapshot")
+      val counter = Kamon.counter("reset-after-snapshot").withoutTags()
       counter.increment()
       counter.increment(10)
 
-      counter.snapshot().value shouldBe 11
-      counter.snapshot().value shouldBe 0
+      counter.value shouldBe 11
+      counter.value shouldBe 0
     }
 
     "optionally leave the internal state unchanged" in {
-      val counter = buildCounter("reset-after-snapshot")
+      val counter = Kamon.counter("reset-after-snapshot").withoutTags()
       counter.increment()
       counter.increment(10)
 
-      counter.snapshot(resetState = false).value shouldBe 11
-      counter.snapshot(resetState = false).value shouldBe 11
+      counter.value(resetState = false) shouldBe 11
+      counter.value(resetState = false) shouldBe 11
     }
   }
-
-  def buildCounter(name: String, tags: Map[String, String] = Map.empty, unit: MeasurementUnit = MeasurementUnit.none): LongAdderCounter =
-    new LongAdderCounter(name, tags, unit)
 }

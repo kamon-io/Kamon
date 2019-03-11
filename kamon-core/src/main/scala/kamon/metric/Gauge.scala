@@ -1,52 +1,86 @@
-/* =========================================================================================
- * Copyright © 2013-2017 the kamon project <http://kamon.io/>
- *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
- * either express or implied. See the License for the specific language governing permissions
- * and limitations under the License.
- * =========================================================================================
- */
-
 package kamon.metric
 
 import java.util.concurrent.atomic.AtomicLong
 
-trait Gauge {
-  def unit: MeasurementUnit
+import kamon.metric.Metric.{BaseMetric, BaseMetricAutoUpdate}
+import kamon.tag.TagSet
 
-  def increment(): Unit
-  def increment(times: Long): Unit
-  def decrement(): Unit
-  def decrement(times: Long): Unit
-  def set(value: Long): Unit
+
+/**
+  * Instrument that tracks the latest observed value of a given measure.
+  */
+trait Gauge extends Instrument[Gauge, Metric.Settings.ValueInstrument] {
+
+  /**
+    * Increments the current value of the gauge by one unit.
+    */
+  def increment(): Gauge
+
+  /**
+    * Increments the current value of the gauge the specified number of times.
+    */
+  def increment(times: Long): Gauge
+
+  /**
+    * Decrements the current value of the gauge by one unit.
+    */
+  def decrement(): Gauge
+
+  /**
+    * Decrements the current value of the gauge the specified number of times.
+    */
+  def decrement(times: Long): Gauge
+
+  /**
+    * Sets the current value of the gauge to the provided value.
+    */
+  def set(value: Long): Gauge
+
+}
+
+object Gauge {
+
+  /**
+    * Gauge implementation backed by an AtomicLong value.
+    */
+  class Atomic(val metric: BaseMetric[Gauge, Metric.Settings.ValueInstrument, Long], val tags: TagSet)
+      extends Gauge with Instrument.Snapshotting[Long]
+      with BaseMetricAutoUpdate[Gauge, Metric.Settings.ValueInstrument, Long] {
+
+    private val _currentValue = new AtomicLong(0L)
+
+    override def increment(): Gauge = {
+      _currentValue.incrementAndGet()
+      this
+    }
+
+    override def increment(times: Long): Gauge = {
+      _currentValue.addAndGet(times)
+      this
+    }
+
+    override def decrement(): Gauge = {
+      _currentValue.decrementAndGet()
+      this
+    }
+
+    override def decrement(times: Long): Gauge = {
+      _currentValue.addAndGet(-times)
+      this
+    }
+
+    override def set(value: Long): Gauge = {
+      _currentValue.set(value)
+      this
+    }
+
+    override def snapshot(resetState: Boolean): Long =
+      _currentValue.get()
+
+    override def baseMetric: BaseMetric[Gauge, Metric.Settings.ValueInstrument, Long] =
+      metric
+  }
 }
 
 
-class AtomicLongGauge(name: String, tags: Map[String, String], val unit: MeasurementUnit) extends Gauge {
-  private val currentValue = new AtomicLong(0L)
 
-  def increment(): Unit =
-    currentValue.incrementAndGet()
-
-  def increment(times: Long): Unit =
-    currentValue.addAndGet(times)
-
-  def decrement(): Unit =
-    currentValue.decrementAndGet()
-
-  def decrement(times: Long): Unit =
-    currentValue.addAndGet(-times)
-
-  def set(value: Long): Unit =
-    currentValue.set(value)
-
-  // Gauges never reset internal state, the resetSate parameter is always ignored.
-  def snapshot(): MetricValue =
-    MetricValue(name, tags, unit, currentValue.get())
-}

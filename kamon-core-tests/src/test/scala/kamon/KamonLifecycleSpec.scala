@@ -63,5 +63,5 @@ object KamonWithTemporaryReporter extends App {
   Kamon.registerModule("dummy span reporter", new DummySpanReporter())
 
   Thread.sleep(5000)
-  Kamon.stopAllReporters()
+  Kamon.stopModules()
 }

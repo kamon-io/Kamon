@@ -36,14 +36,6 @@ trait Module {
 
 
 /**
-  * Modules implementing this trait will get registered for periodically receiving metric period snapshots. The
-  * frequency of the period snapshots is controlled by the kamon.metric.tick-interval setting.
-  */
-trait MetricReporter extends Module {
-  def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit
-}
-
-/**
   * Modules implementing this trait will get registered for periodically receiving span batches. The frequency of the
   * span batches is controlled by the kamon.trace.tick-interval setting.
   */
@@ -81,6 +73,13 @@ object Module {
   }
 
   /**
+    * Preserves information about an original module that has been wrapped with transformations.
+    */
+  trait Wrapped extends Module {
+    def originalClass: Class[_ <: Module]
+  }
+
+  /**
     * Configuration of a given module present in the classpath.
     *
     * @param name Module's name
@@ -90,7 +89,7 @@ object Module {
     * @param enabled Whether the module is enabled or not. Enabled modules in the classpath will be automatically
     *                started in any call to Kamon.loadModules().
     */
-  case class Settings(
+  case class Settings (
     name: String,
     description: String,
     clazz: Class[_ <: Module],

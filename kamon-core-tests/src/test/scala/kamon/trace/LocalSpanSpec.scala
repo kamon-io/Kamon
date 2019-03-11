@@ -17,8 +17,8 @@ package kamon.trace
 
 import java.time.Instant
 
-import kamon.testkit.{MetricInspection, Reconfigure, TestSpanReporter}
-import kamon.util.Registration
+import kamon.testkit.{Reconfigure, TestSpanReporter}
+import kamon.module.Module.Registration
 import kamon.Kamon
 import kamon.trace.Span.TagValue
 import org.scalatest.concurrent.Eventually
@@ -26,7 +26,7 @@ import org.scalatest.{BeforeAndAfterAll, Matchers, OptionValues, WordSpec}
 import org.scalatest.time.SpanSugar._
 
 class LocalSpanSpec extends WordSpec with Matchers with BeforeAndAfterAll with Eventually with OptionValues
-    with Reconfigure with MetricInspection {
+    with Reconfigure {
 
   "a real span" when {
     "sampled and finished" should {
@@ -97,7 +97,7 @@ class LocalSpanSpec extends WordSpec with Matchers with BeforeAndAfterAll with E
   override protected def beforeAll(): Unit = {
     enableFastSpanFlushing()
     sampleAlways()
-    registration = Kamon.addReporter(reporter)
+    registration = Kamon.registerModule("", reporter)
   }
 
   override protected def afterAll(): Unit = {

@@ -65,6 +65,23 @@ object Lookups {
     }
   }
 
+  /**
+    * Finds the value associated to the provided key and coerces it to a String representation. If the key is not
+    * present then the provided default will be returned. If the value associated with the key is not a String then
+    * the value of the key will be transformed into a String and returned.
+    *
+    * This lookup type is guaranteed to return a non-null String representation of value.
+    */
+  def coerce(key: String, default: String) = new Lookup[String] {
+    override def execute(storage: Map[String, Any]): String = {
+      val value = storage(key)
+      if(value == null)
+        default
+      else
+        value.toString
+    }
+  }
+
 
   /**
     * Finds a Boolean value associated to the provided key and returns it. If the key is not present or the value

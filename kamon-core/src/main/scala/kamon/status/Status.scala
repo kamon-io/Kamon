@@ -1,12 +1,13 @@
 package kamon.status
 
 import com.typesafe.config.Config
-import kamon.metric.InstrumentFactory.InstrumentType
 import kamon.metric.{MeasurementUnit, MetricRegistry}
 import kamon.{Configuration, Environment, Kamon}
 import kamon.module.ModuleRegistry
 import kamon.module.Module.{Kind => ModuleKind}
 import java.util.{Collections, List => JavaList, Map => JavaMap}
+
+import kamon.tag.TagSet
 
 /**
   * Exposes Kamon components' status information. This is meant to be used for informational and debugging purposes and
@@ -53,17 +54,19 @@ class Status(_moduleRegistry: ModuleRegistry, _metricRegistry: MetricRegistry, c
 
 object Status {
 
+  /** Describes the global settings currently being used by Kamon */
   case class Settings(
     version: String,
     environment: Environment,
     config: Config
   )
 
-
+  /** Describes all modules currently know to Kamon's module registry. */
   case class ModuleRegistry(
     modules: Seq[Module]
   )
 
+  /** Describes all known information for a single module.  */
   case class Module(
     name: String,
     description: String,
@@ -74,23 +77,33 @@ object Status {
     started: Boolean
   )
 
+  /** Describes all metrics currently registered on Kamon's default metric registry */
   case class MetricRegistry(
     metrics: Seq[Metric]
   )
 
-  case class Metric(
+  /**
+    * Describes a metric from a metric registry. Contains the basic metric information and details on all instruments
+    * registered for that metric.
+    */
+  case class Metric (
     name: String,
-    tags: Map[String, String],
+    description: String,
     unit: MeasurementUnit,
-    instrumentType: InstrumentType
+    instrumentType: kamon.metric.Instrument.Type,
+    instruments: Seq[Instrument]
   )
 
+  /** Describes the combination of tags in any given instrument */
+  case class Instrument (
+    tags: TagSet
+  )
 
   /**
-    * Status of the instrumentation modules. This data is completely untyped and not expected to be used anywhere
-    * outside Kamon.
+    * Describes all known instrumentation modules. This data is completely untyped and not expected to be used anywhere
+    * outside Kamon. The data is injected on runtime by the Kanela instrumentation agent.
     */
-  private[kamon] case class Instrumentation(
+  case class Instrumentation(
     active: Boolean,
     modules: JavaMap[String, String],
     errors: JavaMap[String, JavaList[Throwable]]
@@ -105,7 +118,7 @@ object Status {
     * This data is only exposed directly to the status page API because it lacks any sort of type safety. We might
     * change this in the future and provide proper types for all instrumentation modules' info.
     */
-  private[kamon] object Instrumentation {
+  object Instrumentation {
 
     /**
       * Whether instrumentation is active or not. When Kanela is present it will replace this method to return true.
