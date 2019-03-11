@@ -20,40 +20,62 @@ import akka.actor.{ActorSystem, Props}
 import akka.dispatch.MessageDispatcher
 import akka.routing.BalancingPool
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
+import com.typesafe.config.ConfigFactory
+import kamon.Kamon
 import kamon.akka.RouterMetricsTestActor.{Ping, Pong}
 import kamon.executors.Metrics._
 import kamon.testkit.MetricInspection
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 import org.scalatest.concurrent.Eventually
+import kamon.executors.{Metrics => ExecutorMetrics}
 
 import scala.concurrent.Future
 
-class DispatcherMetricsSpec extends TestKit(ActorSystem("DispatcherMetricsSpec")) with WordSpecLike with MetricInspection with Matchers
+class DispatcherMetricsSpec extends TestKit(ActorSystem("DispatcherMetricsSpec")) with WordSpecLike with MetricInspection.Syntax with Matchers
   with BeforeAndAfterAll with ImplicitSender with Eventually {
 
-  "the Kamon dispatcher metrics" should {
+  import ExecutorMetrics._
 
-    val dispatcherMetrics = Seq(Pool, Threads, Tasks, Queue)
+  Kamon.reconfigure(
+    ConfigFactory.parseString("kamon.metric.tick-interval=1s")
+      .withFallback(Kamon.config())
+  )
+
+  "the Kamon dispatcher metrics" should {
 
     val trackedDispatchers = Seq(
       "akka.actor.default-dispatcher",
       "tracked-fjp",
       "tracked-tpe"
     )
-    val allDispatchers = trackedDispatchers :+ "explicitly-excluded"
+
+    val excluded = "explicitly-excluded"
+    val allDispatchers = trackedDispatchers :+ excluded
 
     "track dispatchers configured in the akka.dispatcher filter" in {
       allDispatchers.foreach(id => forceInit(system.dispatchers.lookup(id)))
 
-      val dispatcherMetricTags = dispatcherMetrics.map(_.partialRefineKeys(Set("name"))).flatten
+      val threads = threadsMetric.tagValues("name")
+      val pools = poolMetric.tagValues("name")
+      val queues = queueMetric.tagValues("name")
+      val tasks = tasksMetric.tagValues("name")
 
-      trackedDispatchers.forall(d => dispatcherMetricTags.exists(_.get("name").get == d)) should be (true)
+      trackedDispatchers.forall { dispatcher =>
+        threads.contains(dispatcher) &&
+        pools.contains(dispatcher) &&
+        queues.contains(dispatcher) &&
+        tasks.contains(dispatcher)
+      } should be (true)
+
+      Seq(threads, pools, queues, tasks).flatten should not contain excluded
     }
 
+
     "clean up the metrics recorders after a dispatcher is shutdown" in {
-      Pool.valuesForTag("name") should contain("tracked-fjp")
+      poolMetric.tagValues("name") should contain("tracked-fjp")
       shutdownDispatcher(system.dispatchers.lookup("tracked-fjp"))
-      Pool.valuesForTag("name") shouldNot contain("tracked-fjp")
+      Thread.sleep(2000)
+      poolMetric.tagValues("name") shouldNot contain("tracked-fjp")
     }
 
     "play nicely when dispatchers are looked up from a BalancingPool router" in {
@@ -61,11 +83,7 @@ class DispatcherMetricsSpec extends TestKit(ActorSystem("DispatcherMetricsSpec")
       balancingPoolRouter ! Ping
       expectMsg(Pong)
 
-      Pool.valuesForTag("name") should contain("BalancingPool-/test-balancing-pool")
-    }
-
-    "akka-fork-join-pool" in {
-
+      poolMetric.tagValues("name") should contain("BalancingPool-/test-balancing-pool")
     }
   }
 

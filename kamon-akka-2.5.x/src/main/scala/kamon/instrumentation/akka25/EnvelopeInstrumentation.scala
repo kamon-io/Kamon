@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * Copyright © 2013-2014 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2018 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -14,15 +14,23 @@
  * =========================================================================================
  */
 
-package akka.kamon.instrumentation
+package kamon.instrumentation.akka25
 
-import org.slf4j.LoggerFactory
+import kamon.instrumentation.akka25.advisor.CopyMethodAdvisors
+import kamon.instrumentation.akka25.mixin.EnvelopeInstrumentationMixin
+import kanela.agent.api.instrumentation.InstrumentationBuilder
 
-class AskPatternInstrumentation {
-  import AskPatternInstrumentation._
-  private val logger = LoggerFactory.getLogger(classOf[AskPatternInstrumentation])
+
+class EnvelopeInstrumentation extends InstrumentationBuilder {
+
+  /**
+    * Mix:
+    *
+    * akka.dispatch.Envelope with InstrumentedEnvelope
+    *
+    */
+  onType("akka.dispatch.Envelope")
+    .mixin(classOf[EnvelopeInstrumentationMixin])
+    .advise(method("copy"), classOf[CopyMethodAdvisors])
 }
 
-object AskPatternInstrumentation {
-  class StackTraceCaptureException extends Throwable
-}

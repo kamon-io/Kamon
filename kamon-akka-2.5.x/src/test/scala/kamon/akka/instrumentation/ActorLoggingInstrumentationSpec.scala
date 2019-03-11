@@ -20,18 +20,19 @@ import akka.actor.{Actor, ActorLogging, ActorSystem, Props}
 import akka.event.Logging.LogEvent
 import akka.testkit.{ImplicitSender, TestKit}
 import kamon.Kamon
-import kamon.instrumentation.Mixin.HasContext
-import kamon.testkit.ContextTesting
+import kamon.akka.ContextTesting
+import kamon.akka.context.ContextContainer
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
-
+import kamon.tag.Lookups._
 
 class ActorLoggingInstrumentationSpec extends TestKit(ActorSystem("ActorCellInstrumentationSpec")) with WordSpecLike
-    with ContextTesting with BeforeAndAfterAll with Matchers with ImplicitSender {
+    with BeforeAndAfterAll with Matchers with ImplicitSender {
+  import kamon.akka.ContextTesting._
 
   "the ActorLogging instrumentation" should {
     "capture the current context and attach it to log events" in {
       val loggerActor = system.actorOf(Props[LoggerActor])
-      Kamon.withContext(contextWithLocal("propagate-when-logging")) {
+      Kamon.withContext(testContext("propagate-when-logging")) {
         loggerActor ! "info"
       }
 
@@ -40,8 +41,8 @@ class ActorLoggingInstrumentationSpec extends TestKit(ActorSystem("ActorCellInst
         case _: LogEvent ⇒ false
       }
 
-      Kamon.withContext(logEvent.asInstanceOf[HasContext].context) {
-        val keyValueFromContext = Kamon.currentContext().get(StringKey).getOrElse("MissingContext")
+      Kamon.withContext(logEvent.asInstanceOf[ContextContainer].context) {
+        val keyValueFromContext = Kamon.currentContext().getTag(option(ContextTesting.TestKey)).getOrElse("Missing Context Tag")
         keyValueFromContext should be("propagate-when-logging")
       }
     }

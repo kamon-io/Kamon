@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * Copyright © 2013-2014 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2017 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -14,15 +14,21 @@
  * =========================================================================================
  */
 
-package akka.kamon.instrumentation
 
-import org.slf4j.LoggerFactory
+package kamon.instrumentation.akka25.advisor
 
-class AskPatternInstrumentation {
-  import AskPatternInstrumentation._
-  private val logger = LoggerFactory.getLogger(classOf[AskPatternInstrumentation])
-}
+import akka.dispatch.Envelope
+import akka.kamon.instrumentation.InstrumentedEnvelope
+import kanela.agent.libs.net.bytebuddy.asm.Advice
 
-object AskPatternInstrumentation {
-  class StackTraceCaptureException extends Throwable
+/**
+  * Interceptor for akka.dispatch.Envelope::copy
+  */
+class CopyMethodAdvisors
+object CopyMethodAdvisors {
+
+  @Advice.OnMethodExit
+  def executeEnd(@Advice.Return newEnvelope: Envelope, @Advice.This envelope: Object): Unit = {
+    newEnvelope.asInstanceOf[InstrumentedEnvelope].setTimestampedContext(envelope.asInstanceOf[InstrumentedEnvelope].timestampedContext())
+  }
 }

@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * Copyright © 2013-2014 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2018 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -14,15 +14,26 @@
  * =========================================================================================
  */
 
-package akka.kamon.instrumentation
+package kamon.instrumentation.akka25.advisor
 
-import org.slf4j.LoggerFactory
+import kamon.Kamon
+import kamon.akka.context.ContextContainer
+import kamon.context.Storage.Scope
+import kanela.agent.libs.net.bytebuddy.asm.Advice
 
-class AskPatternInstrumentation {
-  import AskPatternInstrumentation._
-  private val logger = LoggerFactory.getLogger(classOf[AskPatternInstrumentation])
-}
+/**
+  * Advisor for akka.actor.RepointableActorRef::point
+  */
+class PointMethodAdvisors
+object PointMethodAdvisors {
 
-object AskPatternInstrumentation {
-  class StackTraceCaptureException extends Throwable
+  @Advice.OnMethodEnter
+  def executeEnd(@Advice.This repointableActorRef: Object): Scope = {
+    Kamon.storeContext(repointableActorRef.asInstanceOf[ContextContainer].context)
+  }
+
+  @Advice.OnMethodExit
+  def executeEnd(@Advice.Enter scope: Scope): Unit = {
+    scope.close()
+  }
 }

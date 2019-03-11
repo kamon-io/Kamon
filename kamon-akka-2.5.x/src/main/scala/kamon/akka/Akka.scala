@@ -19,8 +19,9 @@ package kamon.akka
 import com.typesafe.config.Config
 import kamon.Configuration.OnReconfigureHook
 import kamon.Kamon
+import kamon.akka.Akka.ActorTracingFilterName
 import kamon.akka.AskPatternTimeoutWarningSettings.Off
-import kamon.util.Matcher
+import kamon.util.Filter
 
 import scala.collection.JavaConverters._
 
@@ -31,9 +32,10 @@ object Akka {
   val ActorTracingFilterName = "akka.traced-actor"
 
   @volatile var askPatternTimeoutWarning: AskPatternTimeoutWarningSetting = Off
-  @volatile private var _actorGroups = Map.empty[String, Matcher]
-  @volatile private var _configProvidedActorGroups = Map.empty[String, Matcher]
-  @volatile private var _codeProvidedActorGroups = Map.empty[String, Matcher]
+  @volatile private var _actorGroups = Map.empty[String, Filter]
+  @volatile private var _actorFilters = Map.empty[String, Filter]
+  @volatile private var _configProvidedActorGroups = Map.empty[String, Filter]
+  @volatile private var _codeProvidedActorGroups = Map.empty[String, Filter]
 
   loadConfiguration(Kamon.config())
 
@@ -44,22 +46,39 @@ object Akka {
 
   private def loadConfiguration(config: Config): Unit = synchronized {
     val akkaConfig = config.getConfig("kamon.akka")
+    val groupsConfig = akkaConfig.getConfig("filters.groups")
+
     askPatternTimeoutWarning = AskPatternTimeoutWarningSettings.fromConfig(akkaConfig)
 
-    _configProvidedActorGroups = akkaConfig.getStringList("actor-groups").asScala.map(groupName => {
-      (groupName -> Kamon.filter(groupName))
+    _configProvidedActorGroups = groupsConfig.root.entrySet().asScala.map(entry => {
+      val groupName = entry.getKey
+      groupName -> Filter.from(groupsConfig.getConfig(groupName))
     }).toMap
 
     _actorGroups = _codeProvidedActorGroups ++ _configProvidedActorGroups
+
+    _actorFilters = loadFilters(akkaConfig)
   }
+
+  private def loadFilters(config: Config): Map[String, Filter] = synchronized {
+    val filterConfig = config.getConfig("filters")
+    Map(
+      ActorFilterName         -> Filter.from(filterConfig.getConfig("actors.track")),
+      ActorTracingFilterName  -> Filter.from(filterConfig.getConfig("actors.trace")),
+      RouterFilterName        -> Filter.from(filterConfig.getConfig("routers")),
+      DispatcherFilterName    -> Filter.from(filterConfig.getConfig("dispatchers")),
+    )
+  }
+
+  def filters: Map[String, Filter] = _actorFilters
 
   def actorGroups(path: String): Seq[String] = {
     _actorGroups.filter { case (_, v) => v.accept(path) }.keys.toSeq
   }
 
-  def addActorGroup(groupName: String, matcher: Matcher): Boolean = synchronized {
+  def addActorGroup(groupName: String, filter: Filter): Boolean = synchronized {
     if(_codeProvidedActorGroups.get(groupName).isEmpty) {
-      _codeProvidedActorGroups = _codeProvidedActorGroups + (groupName -> matcher)
+      _codeProvidedActorGroups = _codeProvidedActorGroups + (groupName -> filter)
       _actorGroups = _codeProvidedActorGroups ++ _configProvidedActorGroups
       true
     } else false

@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * Copyright © 2013-2014 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2018 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -14,15 +14,22 @@
  * =========================================================================================
  */
 
-package akka.kamon.instrumentation
+package kamon.instrumentation.akka25.mixin
 
-import org.slf4j.LoggerFactory
+import kamon.Kamon
+import kamon.akka.context.ContextContainer
+import kamon.context.Context
+import kanela.agent.api.instrumentation.mixin.Initializer
 
-class AskPatternInstrumentation {
-  import AskPatternInstrumentation._
-  private val logger = LoggerFactory.getLogger(classOf[AskPatternInstrumentation])
+class HasTransientContextMixin extends ContextContainer {
+  @transient var _context: Context = _
+
+  def context: Context = _context
+
+  @Initializer
+  def _initializer(): Unit = this._context =
+    Kamon.currentContext()
+
+  def setContext(context: Context): Unit = this._context = context
 }
 
-object AskPatternInstrumentation {
-  class StackTraceCaptureException extends Throwable
-}

@@ -18,6 +18,7 @@ package kamon.akka
 import kamon.Kamon
 import kamon.metric.MeasurementUnit._
 import kamon.metric._
+import kamon.tag.TagSet
 
 
 
@@ -39,24 +40,22 @@ object Metrics {
   val actorErrorsMetric = Kamon.counter("akka.actor.errors")
 
   def forActor(path: String, system: String, dispatcher: String, actorClass: String): ActorMetrics = {
-    val actorTags = Map("path" -> path, "system" -> system, "dispatcher" -> dispatcher, "class" -> actorClass)
+    val actorTags = TagSet.from(Map("path" -> path, "system" -> system, "dispatcher" -> dispatcher, "class" -> actorClass))
     ActorMetrics(
-    actorTags,
-      actorTimeInMailboxMetric.refine(actorTags),
-      actorProcessingTimeMetric.refine(actorTags),
-      actorMailboxSizeMetric.refine(actorTags),
-      actorErrorsMetric.refine(actorTags)
+      actorTimeInMailboxMetric.withTags(actorTags),
+      actorProcessingTimeMetric.withTags(actorTags),
+      actorMailboxSizeMetric.withTags(actorTags),
+      actorErrorsMetric.withTags(actorTags)
     )
   }
 
-  case class ActorMetrics(tags: Map[String, String], timeInMailbox: Histogram, processingTime: Histogram,
+  case class ActorMetrics(timeInMailbox: Histogram, processingTime: Histogram,
     mailboxSize: RangeSampler, errors: Counter) {
-
     def cleanup(): Unit = {
-      actorTimeInMailboxMetric.remove(tags)
-      actorProcessingTimeMetric.remove(tags)
-      actorMailboxSizeMetric.remove(tags)
-      actorErrorsMetric.remove(tags)
+      timeInMailbox.remove()
+      processingTime.remove()
+      mailboxSize.remove()
+      errors.remove()
     }
   }
 
@@ -80,35 +79,36 @@ object Metrics {
   val routerErrors = Kamon.counter("akka.router.errors")
 
   def forRouter(path: String, system: String, dispatcher: String, routerClass: String, routeeClass: String): RouterMetrics = {
-    val routerTags = Map(
-      "path" -> path,
-      "system" -> system,
-      "dispatcher" -> dispatcher,
-      "routerClass" -> routerClass,
-      "routeeClass" -> routeeClass
+    val routerTags = TagSet.from(
+      Map(
+        "path" -> path,
+        "system" -> system,
+        "dispatcher" -> dispatcher,
+        "routerClass" -> routerClass,
+        "routeeClass" -> routeeClass
+      )
     )
 
     RouterMetrics(
-      routerTags,
-      routerRoutingTime.refine(routerTags),
-      routerTimeInMailbox.refine(routerTags),
-      routerProcessingTime.refine(routerTags),
-      routerPendingMessages.refine(routerTags),
-      routerMembers.refine(routerTags),
-      routerErrors.refine(routerTags)
+      routerRoutingTime.withTags(routerTags),
+      routerTimeInMailbox.withTags(routerTags),
+      routerProcessingTime.withTags(routerTags),
+      routerPendingMessages.withTags(routerTags),
+      routerMembers.withTags(routerTags),
+      routerErrors.withTags(routerTags)
     )
   }
 
-  case class RouterMetrics(tags: Map[String, String], routingTime: Histogram, timeInMailbox: Histogram,
+  case class RouterMetrics(routingTime: Histogram, timeInMailbox: Histogram,
       processingTime: Histogram, pendingMessages: RangeSampler, members: RangeSampler, errors: Counter) {
 
     def cleanup(): Unit = {
-      routerRoutingTime.remove(tags)
-      routerTimeInMailbox.remove(tags)
-      routerProcessingTime.remove(tags)
-      routerErrors.remove(tags)
-      routerPendingMessages.remove(tags)
-      routerMembers.remove(tags)
+      routingTime.remove()
+      timeInMailbox.remove()
+      processingTime.remove()
+      pendingMessages.remove()
+      members.remove()
+      errors.remove()
     }
   }
 
@@ -132,26 +132,27 @@ object Metrics {
   val groupErrors = Kamon.counter("akka.group.errors")
 
   def forGroup(group: String, system: String): ActorGroupMetrics = {
-    val actorTags = Map("group" -> group, "system" -> system)
+    val actorTags = TagSet.from(
+      Map("group" -> group, "system" -> system)
+    )
     ActorGroupMetrics(
-      actorTags,
-      groupTimeInMailbox.refine(actorTags),
-      groupProcessingTime.refine(actorTags),
-      groupPendingMessages.refine(actorTags),
-      groupMembers.refine(actorTags),
-      groupErrors.refine(actorTags)
+      groupTimeInMailbox.withTags(actorTags),
+      groupProcessingTime.withTags(actorTags),
+      groupPendingMessages.withTags(actorTags),
+      groupMembers.withTags(actorTags),
+      groupErrors.withTags(actorTags)
     )
   }
 
-  case class ActorGroupMetrics(tags: Map[String, String], timeInMailbox: Histogram, processingTime: Histogram,
+  case class ActorGroupMetrics(timeInMailbox: Histogram, processingTime: Histogram,
       pendingMessages: RangeSampler, members: RangeSampler, errors: Counter) {
 
     def cleanup(): Unit = {
-      groupTimeInMailbox.remove(tags)
-      groupProcessingTime.remove(tags)
-      groupPendingMessages.remove(tags)
-      groupMembers.remove(tags)
-      groupErrors.remove(tags)
+      timeInMailbox.remove()
+      processingTime.remove()
+      pendingMessages.remove()
+      members.remove()
+      errors.remove()
     }
   }
 
@@ -171,27 +172,26 @@ object Metrics {
   val systemActiveActors = Kamon.rangeSampler("akka.system.active-actors")
 
   def forSystem(name: String): ActorSystemMetrics = {
-    val systemTags = Map("system" -> name)
+    val systemTags = TagSet.of("system", name)
+
     ActorSystemMetrics(
-      systemTags,
-      systemDeadLetters.refine(systemTags),
-      systemUnhandledMessages.refine(systemTags),
-      systemProcessedMessages.refine(systemTags + ("tracked" -> "true")),
-      systemProcessedMessages.refine(systemTags + ("tracked" -> "false")),
-      systemActiveActors.refine(systemTags)
+      systemDeadLetters.withTags(systemTags),
+      systemUnhandledMessages.withTags(systemTags),
+      systemProcessedMessages.withTags(systemTags.withTag("tracked", "true")),
+      systemProcessedMessages.withTags(systemTags.withTag("tracked", "false")),
+      systemActiveActors.withTags(systemTags)
     )
   }
 
-  case class ActorSystemMetrics(tags: Map[String, String], deadLetters: Counter, unhandledMessages: Counter,
+  case class ActorSystemMetrics(deadLetters: Counter, unhandledMessages: Counter,
       processedMessagesByTracked: Counter, processedMessagesByNonTracked: Counter, activeActors: RangeSampler) {
 
     def cleanup(): Unit = {
-      systemDeadLetters.remove(tags)
-      systemUnhandledMessages.remove(tags)
-      systemActiveActors.remove(tags)
-      systemProcessedMessages.remove(tags + ("tracked" -> "true"))
-      systemProcessedMessages.remove(tags + ("tracked" -> "false"))
-
+      deadLetters.remove()
+      unhandledMessages.remove()
+      processedMessagesByTracked.remove()
+      processedMessagesByNonTracked.remove()
+      activeActors.remove()
     }
   }
 }

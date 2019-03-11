@@ -21,19 +21,21 @@ import akka.actor.SupervisorStrategy.{Escalate, Restart, Resume, Stop}
 import akka.actor._
 import akka.testkit.{ImplicitSender, TestKit}
 import kamon.Kamon
-import kamon.testkit.ContextTesting
+import kamon.akka.ContextTesting._
+import kamon.context.Context
+import kamon.tag.Lookups._
 import org.scalatest.{BeforeAndAfterAll, WordSpecLike}
 
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
 
 class ActorSystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSystemMessageInstrumentationSpec")) with WordSpecLike
-    with ContextTesting with BeforeAndAfterAll with ImplicitSender {
+  with BeforeAndAfterAll with ImplicitSender {
   implicit lazy val executionContext = system.dispatcher
 
   "the system message passing instrumentation" should {
     "capture and propagate the current context while processing the Create message in top level actors" in {
-      Kamon.withContext(contextWithLocal("creating-top-level-actor")) {
+      Kamon.withContext(testContext("creating-top-level-actor")) {
         system.actorOf(Props(new Actor {
           testActor ! propagatedContextKey()
           def receive: Actor.Receive = { case any ⇒ }
@@ -44,7 +46,7 @@ class ActorSystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSy
     }
 
     "capture and propagate the current context when processing the Create message in non top level actors" in {
-      Kamon.withContext(contextWithLocal("creating-non-top-level-actor")) {
+      Kamon.withContext(testContext("creating-non-top-level-actor")) {
         system.actorOf(Props(new Actor {
           def receive: Actor.Receive = {
             case _ ⇒
@@ -62,7 +64,7 @@ class ActorSystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSy
     "keep the current context in the supervision cycle" when {
       "the actor is resumed" in {
         val supervisor = supervisorWithDirective(Resume)
-        Kamon.withContext(contextWithLocal("fail-and-resume")) {
+        Kamon.withContext(testContext("fail-and-resume")) {
           supervisor ! "fail"
         }
 
@@ -75,7 +77,7 @@ class ActorSystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSy
 
       "the actor is restarted" in {
         val supervisor = supervisorWithDirective(Restart, sendPreRestart = true, sendPostRestart = true)
-        Kamon.withContext(contextWithLocal("fail-and-restart")) {
+        Kamon.withContext(testContext("fail-and-restart")) {
           supervisor ! "fail"
         }
 
@@ -90,7 +92,7 @@ class ActorSystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSy
 
       "the actor is stopped" in {
         val supervisor = supervisorWithDirective(Stop, sendPostStop = true)
-        Kamon.withContext(contextWithLocal("fail-and-stop")) {
+        Kamon.withContext(testContext("fail-and-stop")) {
           supervisor ! "fail"
         }
 
@@ -101,7 +103,7 @@ class ActorSystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSy
 
       "the failure is escalated" in {
         val supervisor = supervisorWithDirective(Escalate, sendPostStop = true)
-        Kamon.withContext(contextWithLocal("fail-and-escalate")) {
+        Kamon.withContext(testContext("fail-and-escalate")) {
           supervisor ! "fail"
         }
 
@@ -115,10 +117,11 @@ class ActorSystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSy
   }
 
   private def propagatedContextKey(): String =
-    Kamon.currentContext().get(StringKey).getOrElse("MissingContext")
+    Kamon.currentContext().getTag(option(TestKey)).getOrElse("MissingContext")
 
   def supervisorWithDirective(directive: SupervisorStrategy.Directive, sendPreRestart: Boolean = false, sendPostRestart: Boolean = false,
     sendPostStop: Boolean = false, sendPreStart: Boolean = false): ActorRef = {
+
     class GrandParent extends Actor {
       val child = context.actorOf(Props(new Parent))
 

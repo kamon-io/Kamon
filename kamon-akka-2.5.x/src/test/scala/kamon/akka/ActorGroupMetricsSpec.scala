@@ -21,15 +21,16 @@ import java.nio.LongBuffer
 import akka.actor._
 import akka.routing.RoundRobinPool
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
-import kamon.testkit.MetricInspection
+import kamon.testkit.{InstrumentInspection, MetricInspection}
 import Metrics._
-import kamon.util.GlobPathFilter
+import kamon.tag.TagSet
+import kamon.util.Filter.Glob
 import org.scalatest.concurrent.{Eventually, PatienceConfiguration}
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 
 import scala.concurrent.duration._
 
-class ActorGroupMetricsSpec extends TestKit(ActorSystem("ActorGroupMetricsSpec")) with WordSpecLike with MetricInspection with Matchers
+class ActorGroupMetricsSpec extends TestKit(ActorSystem("ActorGroupMetricsSpec")) with WordSpecLike with MetricInspection.Syntax with InstrumentInspection.Syntax with Matchers
     with BeforeAndAfterAll with ImplicitSender with Eventually {
 
   "the Kamon actor-group metrics" should {
@@ -39,7 +40,9 @@ class ActorGroupMetricsSpec extends TestKit(ActorSystem("ActorGroupMetricsSpec")
       val trackedActor3 = watch(createTestActor("group-of-actors-3"))
       val nonTrackedActor = createTestActor("someone-else")
 
-      groupMembers.refine(groupTags("group-of-actors")).distribution().max shouldBe(3)
+      eventually {
+        groupMembers.withTags(groupTags("group-of-actors")).distribution().max shouldBe(3)
+      }
 
       system.stop(trackedActor1)
       expectTerminated(trackedActor1)
@@ -48,7 +51,7 @@ class ActorGroupMetricsSpec extends TestKit(ActorSystem("ActorGroupMetricsSpec")
       system.stop(trackedActor3)
       expectTerminated(trackedActor3)
 
-      eventually(groupMembers.refine(groupTags("group-of-actors")).distribution().max shouldBe (0))
+      eventually(groupMembers.withTags(groupTags("group-of-actors")).distribution().max shouldBe (0))
     }
 
 
@@ -56,23 +59,23 @@ class ActorGroupMetricsSpec extends TestKit(ActorSystem("ActorGroupMetricsSpec")
       val trackedRouter = createTestPoolRouter("group-of-routees")
       val nonTrackedRouter = createTestPoolRouter("group-non-tracked-router")
 
-      eventually(groupMembers.refine(groupTags("group-of-routees")).distribution().max shouldBe(5))
+      eventually(groupMembers.withTags(groupTags("group-of-routees")).distribution().max shouldBe(5))
 
       val trackedRouter2 = createTestPoolRouter("group-of-routees-2")
       val trackedRouter3 = createTestPoolRouter("group-of-routees-3")
 
-      eventually(groupMembers.refine(groupTags("group-of-routees")).distribution().max shouldBe(15))
+      eventually(groupMembers.withTags(groupTags("group-of-routees")).distribution().max shouldBe(15))
 
       system.stop(trackedRouter)
       system.stop(trackedRouter2)
       system.stop(trackedRouter3)
 
-      eventually(groupMembers.refine(groupTags("group-of-routees")).distribution(resetState = true).max shouldBe(0))
+      eventually(groupMembers.withTags(groupTags("group-of-routees")).distribution(resetState = true).max shouldBe(0))
     }
 
     "allow defining groups by configuration" in {
       Akka.actorGroups("system/user/group-provided-by-code-actor") shouldBe empty
-      Akka.addActorGroup("group-by-code", new GlobPathFilter("*/user/group-provided-by-code-actor")) shouldBe true
+      Akka.addActorGroup("group-by-code", Glob("*/user/group-provided-by-code-actor")) shouldBe true
       Akka.actorGroups("system/user/group-provided-by-code-actor") should contain only("group-by-code")
       Akka.removeActorGroup("group-by-code")
       Akka.actorGroups("system/user/group-provided-by-code-actor") shouldBe empty
@@ -83,10 +86,12 @@ class ActorGroupMetricsSpec extends TestKit(ActorSystem("ActorGroupMetricsSpec")
 
   override protected def afterAll(): Unit = shutdown()
 
-  def groupTags(group: String): Map[String, String] =
-    Map(
-      "group" -> group,
-      "system" -> "ActorGroupMetricsSpec"
+  def groupTags(group: String): TagSet =
+    TagSet.from(
+      Map(
+        "group" -> group,
+        "system" -> "ActorGroupMetricsSpec"
+      )
     )
 
   trait ActorGroupMetricsFixtures {

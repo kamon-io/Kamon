@@ -4,16 +4,16 @@ import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.routing.{RoundRobinGroup, RoundRobinPool}
 import akka.testkit.{ImplicitSender, TestKit}
 import kamon.Kamon
+import kamon.module.Module
+import kamon.tag.Lookups
 import kamon.testkit.{MetricInspection, Reconfigure, SpanInspection, TestSpanReporter}
 import kamon.trace.Span
-import kamon.trace.Span.TagValue
-import kamon.util.Registration
 import org.scalatest.concurrent.Eventually
 import org.scalatest.{BeforeAndAfterAll, Matchers, OptionValues, WordSpecLike}
 import org.scalatest.time.SpanSugar._
 
 
-class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with WordSpecLike with MetricInspection with Matchers
+class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with WordSpecLike with MetricInspection.Syntax with Matchers
   with SpanInspection with Reconfigure with BeforeAndAfterAll with ImplicitSender with Eventually with OptionValues {
 
   "Message tracing instrumentation" should {
@@ -71,14 +71,14 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Wor
         spanTags("akka.actor.class") shouldBe "kamon.akka.instrumentation.TracingTestActor"
         spanTags("akka.actor.message-class") should include("ActorRef")
 
-        span.context.spanID
+        span.id
       }
 
       // Span for the second actor message
       eventually(timeout(2 seconds)) {
         val span = reporter.nextSpan().value
         val spanTags = stringTag(span) _
-        span.context.parentID shouldBe firstSpanID
+        span.parentId shouldBe firstSpanID
         span.operationName should include("TracingTestActor: String")
         spanTags("component") shouldBe "akka.actor"
         spanTags("akka.system") shouldBe "MessageTracing"
@@ -107,14 +107,14 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Wor
         spanTags("akka.actor.class") shouldBe "kamon.akka.instrumentation.TracingTestActor"
         spanTags("akka.actor.message-class") should include("Tuple2")
 
-        span.context.spanID
+        span.id
       }
 
       // Span for the second actor message
       eventually(timeout(2 seconds)) {
         val span = reporter.nextSpan().value
         val spanTags = stringTag(span) _
-        span.context.parentID shouldBe firstSpanID
+        span.parentId shouldBe firstSpanID
         span.operationName shouldBe("TracingTestActor: String")
         spanTags("component") shouldBe "akka.actor"
         spanTags("akka.system") shouldBe "MessageTracing"
@@ -152,20 +152,20 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Wor
       }
     }
 
-    def stringTag(span: Span.FinishedSpan)(tag: String): String = {
-      span.tags(tag).asInstanceOf[TagValue.String].string
+    def stringTag(span: Span.Finished)(tag: String): String = {
+      span.tags.get(Lookups.plain(tag))
     }
 
   }
 
 
-  @volatile var registration: Registration = _
+  @volatile var registration: Module.Registration = _
   val reporter = new TestSpanReporter()
 
   override protected def beforeAll(): Unit = {
     enableFastSpanFlushing()
     sampleAlways()
-    registration = Kamon.addReporter(reporter)
+    registration = Kamon.registerModule("reporter", reporter)
   }
 
   override protected def afterAll(): Unit = {

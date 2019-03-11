@@ -2,10 +2,10 @@ package kamon.akka.context
 
 import kamon.Kamon
 import kamon.context.Context
-import kamon.instrumentation.Mixin.HasContext
 
-trait ContextContainer extends HasContext {
+trait ContextContainer  {
   def setContext(context: Context)
+  def context: Context
 }
 
 object HasTransientContext {

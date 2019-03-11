@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * Copyright © 2013-2014 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2018 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -14,15 +14,17 @@
  * =========================================================================================
  */
 
-package akka.kamon.instrumentation
+package kamon.instrumentation.akka25.mixin
 
-import org.slf4j.LoggerFactory
+import akka.kamon.instrumentation.{InstrumentedEnvelope, TimestampedContext}
 
-class AskPatternInstrumentation {
-  import AskPatternInstrumentation._
-  private val logger = LoggerFactory.getLogger(classOf[AskPatternInstrumentation])
+/**
+  * Mixin for akka.dispatch.Envelope
+  */
+class EnvelopeInstrumentationMixin extends InstrumentedEnvelope {
+  @volatile var timestampedContext: TimestampedContext = _
+
+  def setTimestampedContext(timestampedContext: TimestampedContext): Unit =
+    this.timestampedContext = timestampedContext
 }
 
-object AskPatternInstrumentation {
-  class StackTraceCaptureException extends Throwable
-}

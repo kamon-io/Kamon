@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * Copyright © 2013-2014 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2018 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -14,15 +14,22 @@
  * =========================================================================================
  */
 
-package akka.kamon.instrumentation
+package kamon.instrumentation.akka25
 
-import org.slf4j.LoggerFactory
+import kamon.instrumentation.akka25.advisor.{ConstructorAdvisor, PublishMethodAdvisor}
+import kamon.instrumentation.akka25.mixin.HasSystemMixin
+import kanela.agent.api.instrumentation.InstrumentationBuilder
 
-class AskPatternInstrumentation {
-  import AskPatternInstrumentation._
-  private val logger = LoggerFactory.getLogger(classOf[AskPatternInstrumentation])
-}
+class DeadLettersInstrumentation extends InstrumentationBuilder {
 
-object AskPatternInstrumentation {
-  class StackTraceCaptureException extends Throwable
+  /**
+    * Mix:
+    *
+    * akka.event.EventStream with HasSystem
+    *
+    */
+  onSubTypesOf("akka.event.EventStream")
+    .mixin(classOf[HasSystemMixin])
+    .advise(isConstructor, classOf[ConstructorAdvisor])
+    .advise(method("publish").and(takesArguments(1)), classOf[PublishMethodAdvisor])
 }
