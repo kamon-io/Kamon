@@ -25,6 +25,22 @@ import kamon.trace.Span.TagValue
 import kamon.trace.SpanContext.SamplingDecision
 import org.scalatest.{Matchers, OptionValues, WordSpec}
 
+// A custom sampler for testing, samples all operations that start with a specific prefix
+object TestSampler {
+  val MagicPrefix = "magic:"
+}
+
+class TestSampler extends Sampler {
+
+  // Ensure we could access the configuration if necessary
+  assert(Kamon.config().getString("kamon.trace.custom-sampler") == getClass.getCanonicalName,
+    "Custom Sampler should have access to Kamon Config"
+  )
+
+  def decide(operationName: String, builderTags: Map[String, Span.TagValue]): SamplingDecision =
+    if (operationName.startsWith(TestSampler.MagicPrefix)) SamplingDecision.Sample else SamplingDecision.DoNotSample
+}
+
 class TracerSpec extends WordSpec with Matchers with SpanBuilding with SpanInspection with OptionValues {
 
   "the Kamon tracer" should {
@@ -131,6 +147,24 @@ class TracerSpec extends WordSpec with Matchers with SpanBuilding with SpanInspe
       val unknownSamplingRemoteParent = Span.Remote(createSpanContext().copy(samplingDecision = SamplingDecision.Unknown))
       Kamon.buildSpan("childOfSampled").asChildOf(unknownSamplingRemoteParent).start().context()
         .samplingDecision shouldBe(SamplingDecision.Sample)
+
+      Kamon.reconfigure(previousConfig)
+    }
+
+    "allow a custom sampler" in {
+      val previousConfig = Kamon.config()
+      Kamon.reconfigure {
+        ConfigFactory.parseString("""
+          kamon.trace.sampler        = "custom"
+          kamon.trace.custom-sampler = "kamon.trace.TestSampler"
+        """).withFallback(Kamon.config())
+      }
+
+      Kamon.buildSpan(TestSampler.MagicPrefix + "testOp").start().context()
+          .samplingDecision shouldBe(SamplingDecision.Sample)
+
+      Kamon.buildSpan("NOT" + TestSampler.MagicPrefix + "testOp").start().context()
+          .samplingDecision shouldBe(SamplingDecision.DoNotSample)
 
       Kamon.reconfigure(previousConfig)
     }
