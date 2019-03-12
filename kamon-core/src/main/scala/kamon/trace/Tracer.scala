@@ -73,6 +73,9 @@ object Tracer {
           case "always" => Sampler.Always
           case "never" => Sampler.Never
           case "random" => Sampler.random(traceConfig.getDouble("random-sampler.probability"))
+          case "custom" => dynamic.createInstanceFor[Sampler](
+            traceConfig.getString("custom-sampler"), immutable.Seq.empty[(Class[_], AnyRef)]
+          ).get
           case other => sys.error(s"Unexpected sampler name $other.")
         }
 
