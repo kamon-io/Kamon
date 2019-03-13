@@ -23,6 +23,7 @@ import akka.routing.RoundRobinPool
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import kamon.testkit.MetricInspection
 import Metrics._
+import kamon.akka.ActorMetricsTestActor.Block
 import kamon.util.GlobPathFilter
 import org.scalatest.concurrent.{Eventually, PatienceConfiguration}
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
@@ -77,6 +78,22 @@ class ActorGroupMetricsSpec extends TestKit(ActorSystem("ActorGroupMetricsSpec")
       Akka.removeActorGroup("group-by-code")
       Akka.actorGroups("system/user/group-provided-by-code-actor") shouldBe empty
     }
+
+    "Cleanup pending-messages metric on member shutdown" in new ActorGroupMetricsFixtures {
+      val trackedActor1 = watch(createTestActor("group-of-actors-1"))
+
+      groupMembers.refine(groupTags("group-of-actors")).distribution().max shouldBe (1)
+
+      val hangQueue = Block(1 milliseconds)
+
+      (1 to 10000).foreach(i => trackedActor1 ! hangQueue)
+
+      system.stop(trackedActor1)
+      expectTerminated(trackedActor1)
+
+      eventually(groupPendingMessages.refine(groupTags("group-of-actors")).distribution().max shouldBe (0))
+    }
+
   }
 
   override implicit def patienceConfig: PatienceConfig = PatienceConfig(timeout = 5 seconds, interval = 5 milliseconds)

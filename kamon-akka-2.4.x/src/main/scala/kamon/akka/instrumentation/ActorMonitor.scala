@@ -197,10 +197,6 @@ object ActorMonitors {
       super.processFailure(failure: Throwable)
     }
 
-    override def processDroppedMessage(count: Long): Unit = {
-      // Dropped messages are only measured for routees
-    }
-
     override def cleanup(): Unit = {
       super.cleanup()
       actorMetrics.foreach(_.cleanup())
@@ -247,6 +243,7 @@ object ActorMonitors {
 
 
     override def processDroppedMessage(count: Long): Unit = {
+      super.processDroppedMessage(count)
       routerMetrics.pendingMessages.decrement(count)
     }
 
@@ -274,6 +271,12 @@ object ActorMonitors {
     def processFailure(failure: Throwable): Unit = {
       groupMetrics.foreach { gm =>
         gm.errors.increment()
+      }
+    }
+
+    override def processDroppedMessage(count: Long): Unit = {
+      groupMetrics.foreach { gm =>
+        gm.pendingMessages.decrement(count)
       }
     }
 
