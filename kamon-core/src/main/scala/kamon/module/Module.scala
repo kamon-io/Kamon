@@ -35,13 +35,6 @@ trait Module {
 }
 
 
-/**
-  * Modules implementing this trait will get registered for periodically receiving span batches. The frequency of the
-  * span batches is controlled by the kamon.trace.tick-interval setting.
-  */
-trait SpanReporter extends Module {
-  def reportSpans(spans: Seq[Span.FinishedSpan]): Unit
-}
 
 /**
   * Modules implementing this trait will get registered for periodically receiving metric period snapshots and span
