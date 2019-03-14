@@ -9,11 +9,11 @@
     </div>
 
     <div class="col-12" v-if="matchedMetrics.length > 0">
-      <div class="row no-gutters" v-for="(group, index) in groups" :key="group.name">
+      <div class="row no-gutters" v-for="(metric, index) in matchedMetrics" :key="metric.name">
         <div class="col-12">
-          <metric-list-item :group="group"/>
+          <metric-list-item :metric="metric"/>
         </div>
-        <hr v-if="index < (groups.length - 1)" class="w-100">
+        <hr v-if="index < (metrics.length - 1)" class="w-100">
       </div>
     </div>
   </div>
@@ -23,7 +23,7 @@
 import { Component, Prop, Vue } from 'vue-property-decorator'
 import {Metric} from '../api/StatusApi'
 import Card from './Card.vue'
-import MetricListItem, {MetricGroup} from './MetricListItem.vue'
+import MetricListItem from './MetricListItem.vue'
 import StatusCard from './StatusCard.vue'
 import _ from 'underscore'
 
@@ -42,36 +42,15 @@ export default class MetricList extends Vue {
     return this.metrics.length
   }
 
-  get groups(): MetricGroup[] {
-    const gropedByName = _.groupBy(this.matchedMetrics, m => m.name)
-    const metricGroups: MetricGroup[] = []
-
-    Object.keys(gropedByName).forEach(metricName => {
-      const metrics = gropedByName[metricName]
-
-      // All metrics with the same name must have the same unit (constrained in Kamon) so
-      // we can safely assume the first unit is the same for all.
-      metricGroups.push({
-        name: metricName,
-        type: metrics[0].type,
-        unitDimension: metrics[0].unitDimension,
-        unitMagnitude: metrics[0].unitMagnitude,
-        metrics
-      })
-    })
-
-    return _.sortBy(metricGroups, mg => mg.metrics.length).reverse()
-  }
-
   get filterRegex(): RegExp {
     return new RegExp(this.filterPattern)
   }
 
   get searchStats(): string {
     if (this.filterPattern.length > 0) {
-      return 'showing ' + this.matchedMetrics.length + ' out of ' + this.totalMetrics + ' series'
+      return 'showing ' + this.matchedMetrics.length + ' out of ' + this.totalMetrics + ' metrics'
     } else {
-      return this.totalMetrics + ' series'
+      return this.totalMetrics + ' metrics'
     }
   }
 

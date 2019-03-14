@@ -55,8 +55,8 @@ $indicator-size: 6rem;
 
   .status-indicator-wrap {
     height: 100%;
-    min-width: $indicator-size;
-    max-width: $indicator-size;
+    min-width: $indicator-size + 2rem;
+    max-width: $indicator-size + 2rem;
     min-height: $indicator-size;
     font-size: 0.9rem;
     font-weight: 600;
