@@ -15,13 +15,18 @@
 
 package kamon.metric
 
+import java.time.Duration
+import java.util.function.Supplier
+
 import kamon.Kamon
 import kamon.testkit.InstrumentInspection
+import org.scalatest.concurrent.Eventually
 import org.scalatest.{Matchers, WordSpec}
+import kamon.metric.Counter.delta
 
-class LongAdderCounterSpec extends WordSpec with Matchers with InstrumentInspection.Syntax {
+class CounterSpec extends WordSpec with Matchers with InstrumentInspection.Syntax with Eventually {
 
-  "a LongAdderCounter" should {
+  "a Counter" should {
     "allow unit and bundled increments" in {
       val counter = Kamon.counter("unit-increments").withoutTags()
       counter.increment()
@@ -56,6 +61,39 @@ class LongAdderCounterSpec extends WordSpec with Matchers with InstrumentInspect
 
       counter.value(resetState = false) shouldBe 11
       counter.value(resetState = false) shouldBe 11
+    }
+
+    "have an easy to setup delta auto-update that stores difference between the last two observations of a supplier" in {
+      val autoUpdateCounter = Kamon.counter("auto-update-delta").withoutTags()
+        .autoUpdate(delta(supplierOf(0, 0, 1, 1, 2, 3, 4, 6, 8, 10, 12, 16, 18)), Duration.ofMillis(1))
+
+      eventually {
+        autoUpdateCounter.value(resetState = false) shouldBe 18
+      }
+    }
+
+    "ignore decrements in observations" in {
+      val autoUpdateCounter = Kamon.counter("auto-update-delta-with-decrement").withoutTags()
+        .autoUpdate(delta(supplierOf(0, 0, 1, 1, 2, 3, 4, 6, 5, 4, 10, 16, 18)), Duration.ofMillis(1))
+
+      eventually {
+        autoUpdateCounter.value(resetState = false) shouldBe 20
+      }
+    }
+  }
+
+  /** Creates a supplier that gives out the sequence of numbers provided */
+  def supplierOf(numbers: Long*): Supplier[Long] = new Supplier[Long] {
+    var remaining = numbers.toList
+    var last = numbers.head
+
+    override def get(): Long = synchronized {
+      if(remaining.isEmpty) last else {
+        val head = remaining.head
+        remaining = remaining.tail
+        last = head
+        head
+      }
     }
   }
 }

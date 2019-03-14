@@ -1,6 +1,7 @@
 package kamon.metric
 
 import java.time.Duration
+import java.util
 import java.util.Collections
 import java.util.concurrent.{ScheduledExecutorService, ScheduledFuture, TimeUnit}
 
@@ -203,7 +204,7 @@ object Metric {
     }
 
     private def newInstrumentEntry(tags: TagSet): InstrumentEntry =
-      new InstrumentEntry(instrumentBuilder(this, tags), Collections.synchronizedList(Collections.emptyList[ScheduledFuture[_]]()).asScala, false)
+      new InstrumentEntry(instrumentBuilder(this, tags), Collections.synchronizedList(new util.ArrayList[ScheduledFuture[_]]()).asScala, false)
 
     private class InstrumentEntry (
       val instrument: Inst with Instrument.Snapshotting[Snap],
