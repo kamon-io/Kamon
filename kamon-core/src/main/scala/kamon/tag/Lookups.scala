@@ -73,8 +73,8 @@ object Lookups {
     * This lookup type is guaranteed to return a non-null String representation of value.
     */
   def coerce(key: String, default: String) = new Lookup[String] {
-    override def execute(storage: Map[String, Any]): String = {
-      val value = storage(key)
+    override def execute(storage: TagSet.Storage): String = {
+      val value = storage.get(key)
       if(value == null)
         default
       else
