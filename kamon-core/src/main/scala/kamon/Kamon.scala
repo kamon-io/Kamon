@@ -22,7 +22,8 @@ object Kamon extends ClassLoading
   with Tracing
   with ModuleLoading
   with ContextPropagation
-  with ContextStorage {
+  with ContextStorage
+  with Status {
 
 
   @volatile private var _environment = Environment.fromConfig(config())
@@ -31,6 +32,6 @@ object Kamon extends ClassLoading
     _environment
 
   onReconfigure(newConfig => {
-    _environment = Environment.fromConfig(config)
+    _environment = Environment.fromConfig(newConfig)
   })
 }

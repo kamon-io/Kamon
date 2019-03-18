@@ -39,14 +39,14 @@ class KamonLifecycleSpec extends WordSpec with Matchers with Eventually {
   }
 }
 
-class DummyMetricReporter extends MetricReporter {
+class DummyMetricReporter extends kamon.module.MetricReporter {
   override def start(): Unit = {}
   override def stop(): Unit = {}
   override def reconfigure(config: Config): Unit = {}
   override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {}
 }
 
-class DummySpanReporter extends SpanReporter {
+class DummySpanReporter extends kamon.module.SpanReporter {
   override def start(): Unit = {}
   override def stop(): Unit = {}
   override def reconfigure(config: Config): Unit = {}
@@ -54,13 +54,13 @@ class DummySpanReporter extends SpanReporter {
 }
 
 object KamonWithRunningReporter extends App {
-  Kamon.addReporter(new DummyMetricReporter())
-  Kamon.addReporter(new DummySpanReporter())
+  Kamon.registerModule("dummy metric reporter", new DummyMetricReporter())
+  Kamon.registerModule("dummy span reporter", new DummySpanReporter())
 }
 
 object KamonWithTemporaryReporter extends App {
-  Kamon.addReporter(new DummyMetricReporter())
-  Kamon.addReporter(new DummySpanReporter())
+  Kamon.registerModule("dummy metric reporter", new DummyMetricReporter())
+  Kamon.registerModule("dummy span reporter", new DummySpanReporter())
 
   Thread.sleep(5000)
   Kamon.stopAllReporters()

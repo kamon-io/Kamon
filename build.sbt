@@ -1,3 +1,6 @@
+import scala.xml.Node
+import scala.xml.transform.{RewriteRule, RuleTransformer}
+
 /* =========================================================================================
  * Copyright © 2013-2018 the kamon project <http://kamon.io/>
  *
@@ -17,7 +20,7 @@
 lazy val kamon = (project in file("."))
   .settings(moduleName := "kamon")
   .settings(noPublishing: _*)
-  .aggregate(core, testkit, coreTests, coreBench)
+  .aggregate(core, statusPage, testkit, coreTests, coreBench)
 
 val commonSettings = Seq(
   scalaVersion := "2.12.6",
@@ -37,18 +40,49 @@ val commonSettings = Seq(
     case Some((2,11)) => Seq("-Ybackend:GenBCode","-Ydelambdafy:method","-target:jvm-1.8")
     case Some((2,12)) => Seq("-opt:l:method")
     case _ => Seq.empty
-  })
+  }),
+  assembleArtifact in assemblyPackageScala := false,
+  assemblyShadeRules in assembly := Seq(
+    ShadeRule.rename("org.HdrHistogram.**"    -> "kamon.lib.@0").inAll,
+    ShadeRule.rename("com.grack.nanojson.**"  -> "kamon.lib.@0").inAll,
+    ShadeRule.rename("org.jctools.**"         -> "kamon.lib.@0").inAll,
+    ShadeRule.rename("fi.iki.elonen.**"       -> "kamon.lib.@0").inAll,
+  ),
+  assemblyExcludedJars in assembly := {
+    val cp = (fullClasspath in assembly).value
+    val excludedPackages = Seq("slf4j-api", "config")
+    cp filter { file => excludedPackages.exists(file.data.getName.startsWith(_))}
+  },
+  packageBin in Compile := assembly.value,
+  assemblyJarName in assembly := s"${moduleName.value}_${scalaBinaryVersion.value}-${version.value}.jar",
+  pomPostProcess := { originalPom => {
+    val shadedGroups = Seq("org.hdrhistogram", "org.jctools", "org.nanohttpd", "com.grack")
+    val filterShadedDependencies = new RuleTransformer(new RewriteRule {
+      override def transform(n: Node): Seq[Node] = {
+        if(n.label == "dependency") {
+          val group = (n \ "groupId").text
+          if (shadedGroups.find(eo => eo.equalsIgnoreCase(group)).nonEmpty) Seq.empty else n
+        } else n
+      }
+    })
+
+    filterShadedDependencies(originalPom)
+  }}
 )
 
 lazy val core = (project in file("kamon-core"))
-  .settings(moduleName := "kamon-core")
+  .enablePlugins(BuildInfoPlugin)
+  .enablePlugins(AssemblyPlugin)
   .settings(commonSettings: _*)
+  .settings(moduleName := "kamon-core")
   .settings(
+    buildInfoKeys := Seq[BuildInfoKey](version),
+    buildInfoPackage := "kamon.status",
     libraryDependencies ++= Seq(
-      "com.typesafe"     %  "config"          % "1.3.1",
-      "org.hdrhistogram" %  "HdrHistogram"    % "2.1.9",
-      "org.jctools"      %  "jctools-core"    % "2.1.1",
-      "org.slf4j"        %  "slf4j-api"       % "1.7.25"
+      "com.typesafe"     %  "config"              % "1.3.1",
+      "org.hdrhistogram" %  "HdrHistogram"        % "2.1.9",
+      "org.jctools"      %  "jctools-core"        % "2.1.1",
+      "org.slf4j"        %  "slf4j-api"           % "1.7.25"
     )
   )
 
@@ -58,6 +92,16 @@ lazy val testkit = (project in file("kamon-testkit"))
   .settings(
     libraryDependencies ++= Seq(
       "org.scalatest" %% "scalatest" % "3.0.1"
+    )
+  ).dependsOn(core)
+
+lazy val statusPage = (project in file("kamon-status-page"))
+  .settings(moduleName := "kamon-status-page")
+  .settings(commonSettings: _*)
+  .settings(
+    libraryDependencies ++= Seq(
+      "org.nanohttpd"    %  "nanohttpd"           % "2.3.1",
+      "com.grack"        %  "nanojson"            % "1.1"
     )
   ).dependsOn(core)
 
@@ -72,7 +116,7 @@ lazy val coreTests = (project in file("kamon-core-tests"))
   .settings(
     libraryDependencies ++= Seq(
       "org.scalatest" %% "scalatest" % "3.0.1" % "test",
-      "ch.qos.logback" % "logback-classic" % "1.2.2" % "test"
+      "ch.qos.logback" % "logback-classic" % "1.2.3" % "test"
     )
   ).dependsOn(testkit)
 

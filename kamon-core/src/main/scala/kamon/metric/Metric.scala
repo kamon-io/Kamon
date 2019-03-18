@@ -85,6 +85,9 @@ private[kamon] abstract sealed class BaseMetric[T, S](val instrumentType: Instru
   private[kamon] def snapshot(): Seq[S] =
     instruments.values.map(createSnapshot).toSeq
 
+  private[kamon] def incarnations(): Seq[Map[String, String]] =
+    instruments.keys.toSeq
+
   protected def createInstrument(tags: Tags): T
 
   protected def createSnapshot(instrument: T): S

@@ -26,6 +26,7 @@ import scala.collection.concurrent.TrieMap
 import java.time.Duration
 import java.util.concurrent.ScheduledExecutorService
 
+import kamon.status.Status
 import org.slf4j.LoggerFactory
 
 
@@ -87,6 +88,18 @@ class MetricRegistry(initialConfig: Config, scheduler: ScheduledExecutorService)
         unit.magnitude.name, name, metric.unit.magnitude.name)
 
     metric.asInstanceOf[T]
+  }
+
+  private[kamon] def status(): Status.MetricRegistry = {
+    var registeredMetrics = Seq.empty[Status.Metric]
+    metrics.foreach {
+      case (metricName, metric) =>
+        metric.incarnations().foreach(incarnation => {
+          registeredMetrics = registeredMetrics :+ Status.Metric(metricName, incarnation, metric.unit, metric.instrumentType)
+        })
+    }
+
+    Status.MetricRegistry(registeredMetrics)
   }
 }
 

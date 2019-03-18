@@ -6,7 +6,7 @@ import kamon.metric._
 
 
 trait Metrics extends MetricLookup { self: Configuration with Utilities =>
-  private val _metricsRegistry = new MetricRegistry(self.config(), self.scheduler())
+  protected val _metricsRegistry = new MetricRegistry(self.config(), self.scheduler())
 
   override def histogram(name: String, unit: MeasurementUnit, dynamicRange: Option[DynamicRange]): HistogramMetric =
     _metricsRegistry.histogram(name, unit, dynamicRange)

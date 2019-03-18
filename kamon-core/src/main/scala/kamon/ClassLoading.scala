@@ -23,4 +23,10 @@ trait ClassLoading {
 
   def createInstance[T: ClassTag](fqcn: String, args: immutable.Seq[(Class[_], AnyRef)]): Try[T] =
     _dynamicAccess.createInstanceFor(fqcn, args)
+
+  def createInstance[T: ClassTag](clazz: Class[_], args: immutable.Seq[(Class[_], AnyRef)]): Try[T] =
+    _dynamicAccess.createInstanceFor(clazz, args)
+
+  def resolveClass[T: ClassTag](fqcn: String): Try[Class[_ <: T]] =
+    _dynamicAccess.getClassFor(fqcn)
 }

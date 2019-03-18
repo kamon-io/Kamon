@@ -3,6 +3,7 @@ package kamon
 import com.typesafe.config.Config
 import kamon.metric.{MetricsSnapshot, PeriodSnapshot}
 import kamon.module.Module
+import kamon.module.ModuleRegistry
 import kamon.util.Registration
 import kamon.module.{MetricReporter => NewMetricReporter}
 import kamon.module.{SpanReporter => NewSpanReporter}
@@ -30,13 +31,15 @@ trait SpanReporter extends kamon.module.SpanReporter { }
   *   kamon.modules {
   *     module-name {
   *       enabled = true
+  *       description = "A module description"
+  *       kind = "combined | metric | span | plain"
   *       class = "com.example.MyModule"
   *     }
   *   }
   *
   */
 trait ModuleLoading { self: ClassLoading with Configuration with Utilities with Metrics with Tracing =>
-  private val _moduleRegistry = new Module.Registry(self, self, clock(), self.metricRegistry(), self.tracer())
+  protected val _moduleRegistry = new ModuleRegistry(self, self, clock(), self.metricRegistry(), self.tracer())
   self.onReconfigure(newConfig => self._moduleRegistry.reconfigure(newConfig))
 
 
