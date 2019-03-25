@@ -13,7 +13,7 @@ object Lookups {
     * Finds a value associated to the provided key and returns it. If the key is not present then a null is returned.
     */
   def any(key: JString) = new Lookup[Any] {
-    override def execute(storage: Map[JString, Any]): Any =
+    override def execute(storage: TagSet.Storage): Any =
       findAndTransform(key, storage, _any, null)
   }
 
@@ -23,7 +23,7 @@ object Lookups {
     * associated with they is not a String then a null is returned.
     */
   def plain(key: JString) = new Lookup[JString] {
-    override def execute(storage: Map[JString, Any]): JString =
+    override def execute(storage: TagSet.Storage): JString =
       findAndTransform(key, storage, _plainString, null)
   }
 
@@ -33,7 +33,7 @@ object Lookups {
     * not present or the value associated with they is not a String then a None is returned.
     */
   def option(key: JString) = new Lookup[Option[JString]] {
-    override def execute(storage: Map[JString, Any]): Option[JString] =
+    override def execute(storage: TagSet.Storage): Option[JString] =
       findAndTransform(key, storage, _stringOption, None)
   }
 
@@ -43,7 +43,7 @@ object Lookups {
     * is not present or the value associated with they is not a String then Optional.empty() is returned.
     */
   def optional(key: JString) = new Lookup[Optional[String]] {
-    override def execute(storage: Map[String, Any]): Optional[String] =
+    override def execute(storage: TagSet.Storage): Optional[String] =
       findAndTransform(key, storage, _stringOptional, Optional.empty())
   }
 
@@ -56,8 +56,8 @@ object Lookups {
     * This lookup type is guaranteed to return a non-null String representation of value.
     */
   def coerce(key: String) = new Lookup[String] {
-    override def execute(storage: Map[String, Any]): String = {
-      val value = storage(key)
+    override def execute(storage: TagSet.Storage): String = {
+      val value = storage.get(key)
       if(value == null)
         "unknown"
       else
@@ -71,7 +71,7 @@ object Lookups {
     * associated with they is not a Boolean then a null is returned.
     */
   def plainBoolean(key: String) = new Lookup[JBoolean] {
-    override def execute(storage: Map[String, Any]): JBoolean =
+    override def execute(storage: TagSet.Storage): JBoolean =
       findAndTransform(key, storage, _plainBoolean, null)
   }
 
@@ -81,7 +81,7 @@ object Lookups {
     * is not present or the value associated with they is not a Boolean then a None is returned.
     */
   def booleanOption(key: String) = new Lookup[Option[JBoolean]] {
-    override def execute(storage: Map[String, Any]): Option[JBoolean] =
+    override def execute(storage: TagSet.Storage): Option[JBoolean] =
       findAndTransform(key, storage, _booleanOption, None)
   }
 
@@ -91,7 +91,7 @@ object Lookups {
     * is not present or the value associated with they is not a Boolean then Optional.empty() is returned.
     */
   def booleanOptional(key: String) = new Lookup[Optional[JBoolean]] {
-    override def execute(storage: Map[String, Any]): Optional[JBoolean] =
+    override def execute(storage: TagSet.Storage): Optional[JBoolean] =
       findAndTransform(key, storage, _booleanOptional, Optional.empty())
   }
 
@@ -101,7 +101,7 @@ object Lookups {
     * associated with they is not a Long then a null is returned.
     */
   def plainLong(key: String) = new Lookup[JLong] {
-    override def execute(storage: Map[String, Any]): JLong =
+    override def execute(storage: TagSet.Storage): JLong =
       findAndTransform(key, storage, _plainLong, null)
   }
 
@@ -111,7 +111,7 @@ object Lookups {
     * not present or the value associated with they is not a Long then a None is returned.
     */
   def longOption(key: String) = new Lookup[Option[JLong]] {
-    override def execute(storage: Map[String, Any]): Option[JLong] =
+    override def execute(storage: TagSet.Storage): Option[JLong] =
       findAndTransform(key, storage, _longOption, None)
   }
 
@@ -121,7 +121,7 @@ object Lookups {
     * is not present or the value associated with they is not a Long then Optional.empty() is returned.
     */
   def longOptional(key: String) = new Lookup[Optional[JLong]] {
-    override def execute(storage: Map[String, Any]): Optional[JLong] =
+    override def execute(storage: TagSet.Storage): Optional[JLong] =
       findAndTransform(key, storage, _longOptional, Optional.empty())
   }
 
@@ -129,13 +129,13 @@ object Lookups {
   ////////////////////////////////////////////////////////////////
   // Transformation helpers for the lookup DSL                  //
   ////////////////////////////////////////////////////////////////
-
-  private def findAndTransform[T, R](key: String, storage: Map[String, Any], transform: R => T, default: T)
+  @inline
+  private def findAndTransform[T, R](key: String, storage: TagSet.Storage, transform: R => T, default: T)
     (implicit ct: ClassTag[R]): T = {
 
     // This assumes that this code will only be used to lookup values from a Tags instance
     // for which the underlying map always has "null" as the default value.
-    val value = storage(key)
+    val value = storage.get(key)
 
     if(value == null || !ct.runtimeClass.isInstance(value))
       default

@@ -2,9 +2,10 @@ package kamon.tag
 
 import kamon.tag.TagSet.Lookup
 
-import scala.collection.JavaConverters.asScalaIteratorConverter
 import java.lang.{Boolean => JBoolean, Long => JLong, String => JString}
+import java.util.function.BiConsumer
 
+import org.eclipse.collections.impl.map.mutable.UnifiedMap
 import org.slf4j.LoggerFactory
 
 /**
@@ -34,8 +35,9 @@ import org.slf4j.LoggerFactory
   *      cumbersome operation is rarely necessary on user-facing code.
   *
   */
-class TagSet private(private val _tags: Map[String, Any]) {
+class TagSet private(private val _underlying: UnifiedMap[String, Any]) {
   import TagSet.withPair
+
 
   /**
     * Creates a new TagSet instance that includes the provided key/value pair. If the provided key was already associated
@@ -67,7 +69,7 @@ class TagSet private(private val _tags: Map[String, Any]) {
     * overwritten with the provided one.
     */
   def withTags(other: TagSet): TagSet =
-    new TagSet(_tags ++ other._tags)
+    and(other)
 
 
   /**
@@ -99,22 +101,26 @@ class TagSet private(private val _tags: Map[String, Any]) {
     * instance are associated to a key present on the provided instance then the previous value will be discarded and
     * overwritten with the provided one.
     */
-  def and(other: TagSet): TagSet =
-    new TagSet(_tags ++ other._tags)
+  def and(other: TagSet): TagSet = {
+    val mergedMap = new UnifiedMap[String, Any](other._underlying.size() + this._underlying.size())
+    mergedMap.putAll(this._underlying)
+    mergedMap.putAll(other._underlying)
+    new TagSet(mergedMap)
+  }
 
 
   /**
     * Returns whether this TagSet instance does not contain any tags.
     */
   def isEmpty(): Boolean =
-    _tags.isEmpty
+    _underlying.isEmpty
 
 
   /**
     * Returns whether this TagSet instance contains any tags.
     */
   def nonEmpty(): Boolean =
-    _tags.nonEmpty
+    !_underlying.isEmpty
 
 
   /**
@@ -122,7 +128,7 @@ class TagSet private(private val _tags: Map[String, Any]) {
     * built-in lookups on the [[Lookups]] companion object for more information.
     */
   def get[T](lookup: Lookup[T]): T =
-    lookup.execute(_tags)
+    lookup.execute(_storage)
 
 
   /**
@@ -132,14 +138,19 @@ class TagSet private(private val _tags: Map[String, Any]) {
     *
     * The returned sequence contains immutable values and is safe to share across threads.
     */
-  def all(): Seq[Tag] =
-    _tags.foldLeft(List.empty[Tag]) {
-      case (ts, (key, value)) => value match {
-        case v: String  => new immutable.String(key, v) :: ts
-        case v: Boolean => new immutable.Boolean(key, v) :: ts
-        case v: Long    => new immutable.Long(key, v) :: ts
+  def all(): Seq[Tag] = {
+    var tags: List[Tag] = Nil
+
+    _underlying.forEach(new BiConsumer[String, Any] {
+      override def accept(key: String, value: Any): Unit = value match {
+        case v: String  => tags = new TagSet.immutable.String(key, v) :: tags
+        case v: Boolean => tags = new TagSet.immutable.Boolean(key, v) :: tags
+        case v: Long    => tags = new TagSet.immutable.Long(key, v) :: tags
       }
-    }
+    })
+
+    tags
+  }
 
 
   /**
@@ -149,59 +160,62 @@ class TagSet private(private val _tags: Map[String, Any]) {
     * structure that will be sent to the external systems.
     */
   def iterator(): Iterator[Tag] = new Iterator[Tag] {
-    private val _entriesIterator = _tags.iterator
-    private var _longTag: mutable.Long = null
-    private var _stringTag: mutable.String = null
-    private var _booleanTag: mutable.Boolean = null
+    private val _entriesIterator = _underlying.keyValuesView().iterator()
+    private var _longTag: TagSet.mutable.Long = null
+    private var _stringTag: TagSet.mutable.String = null
+    private var _booleanTag: TagSet.mutable.Boolean = null
 
     override def hasNext: Boolean =
       _entriesIterator.hasNext
 
     override def next(): Tag = {
-      val (key, value) = _entriesIterator.next()
-      value match {
-        case v: String  => stringTag(key, v)
-        case v: Boolean => booleanTag(key, v)
-        case v: Long    => longTag(key, v)
+      val pair = _entriesIterator.next()
+      pair.getTwo match {
+        case v: String  => stringTag(pair.getOne, v)
+        case v: Boolean => booleanTag(pair.getOne, v)
+        case v: Long    => longTag(pair.getOne, v)
       }
     }
 
     private def stringTag(key: JString, value: JString): Tag.String =
       if(_stringTag == null) {
-        _stringTag = new mutable.String(key, value)
+        _stringTag = new TagSet.mutable.String(key, value)
         _stringTag
       } else _stringTag.updated(key, value)
 
     private def booleanTag(key: JString, value: JBoolean): Tag.Boolean =
       if(_booleanTag == null) {
-        _booleanTag = new mutable.Boolean(key, value)
+        _booleanTag = new TagSet.mutable.Boolean(key, value)
         _booleanTag
       } else _booleanTag.updated(key, value)
 
     private def longTag(key: JString, value: JLong): Tag.Long =
       if(_longTag == null) {
-        _longTag = new mutable.Long(key, value)
+        _longTag = new TagSet.mutable.Long(key, value)
         _longTag
       } else _longTag.updated(key, value)
   }
 
-
   override def equals(other: Any): Boolean =
-    other != null && other.isInstanceOf[TagSet] && other.asInstanceOf[TagSet]._tags == this._tags
+    other != null && other.isInstanceOf[TagSet] && other.asInstanceOf[TagSet]._underlying == _underlying
 
+  override def hashCode(): Int =
+    _underlying.hashCode()
 
   override def toString: JString = {
     val sb = new StringBuilder()
     sb.append("Tags{")
 
     var hasTags = false
-    _tags.foreach { case (k, v) =>
+    val iterator = _underlying.keyValuesView().iterator()
+    while(iterator.hasNext) {
+      val pair = iterator.next()
       if(hasTags)
         sb.append(",")
 
-      sb.append(k)
+      sb.append(pair.getOne)
         .append("=")
-        .append(v)
+        .append(pair.getTwo)
 
       hasTags = true
     }
@@ -209,36 +223,104 @@ class TagSet private(private val _tags: Map[String, Any]) {
     sb.append("}").toString()
   }
 
-  private object immutable {
-    case class String(key: JString, value: JString) extends Tag.String
-    case class Boolean(key: JString, value: JBoolean) extends Tag.Boolean
-    case class Long(key: JString, value: JLong) extends Tag.Long
-  }
-
-  private object mutable {
-    case class String(var key: JString, var value: JString) extends Tag.String with Updateable[JString]
-    case class Boolean(var key: JString, var value: JBoolean) extends Tag.Boolean with Updateable[JBoolean]
-    case class Long(var key: JString, var value: JLong) extends Tag.Long with Updateable[JLong]
-
-    trait Updateable[T] {
-      var key: JString
-      var value: T
-
-      def updated(key: JString, value: T): this.type = {
-        this.key = key
-        this.value = value
-        this
-      }
-    }
+  private val _storage = new TagSet.Storage {
+    override def get(key: String): Any = _underlying.get(key)
+    override def iterator(): Iterator[Tag] = TagSet.this.iterator()
+    override def isEmpty(): Boolean = _underlying.isEmpty
   }
 }
 
 object TagSet {
 
   /**
+    * Describes a strategy to lookup values from a TagSet instance. Implementations of this interface will be provided
+    * with the actual data structure containing the tags and must perform any necessary runtime type checks to ensure
+    * that the returned value is in assignable to the expected type T.
+    *
+    * Several implementation are provided in the Lookup companion object and it is recommended to import and use those
+    * definitions when looking up keys from a Tags instance.
+    */
+  trait Lookup[T] {
+
+    /**
+      * Tries to find a value on a TagSet.Storage and returns a representation of it. In some cases the stored object
+      * might be returned as-is, in some others it might be transformed or wrapped on Option/Optional to handle missing
+      * values. Take a look at the Lookups companion object for examples..
+      */
+    def execute(storage: TagSet.Storage): T
+  }
+
+
+  /**
+    * A temporary structure that accumulates key/value and creates a new TagSet instance from them. It is faster to use
+    * a Builder and add tags to it rather than creating TagSet and add each key individually. Builder instances rely on
+    * internal mutable state and are not thread safe.
+    */
+  trait Builder {
+
+    /** Adds a new key/value pair to the builder. */
+    def add(key: String, value: Any): Builder
+
+    /** Creates a new TagSet instance that includes all valid key/value pairs added to this builder. */
+    def create(): TagSet
+  }
+
+
+  /**
+    * Abstracts the actual storage used for a TagSet. This interface resembles a stripped down interface of an immutable
+    * map of String to Any, used to expose the underlying structure where tags are stored to Lookups, without leaking
+    * the actual implementation.
+    */
+  trait Storage {
+
+    /**
+      * Gets the value associated with the provided key, or null if no value was found. The decision of returning null
+      * when the key is not present is a conscious one, backed by the fact that users will never be exposed to this
+      * storage interface and they can decide their way of handling missing values by selecting an appropriate lookup.
+      */
+    def get(key: String): Any
+
+    /**
+      * Provides an Iterator that can go through all key/value pairs contained in the Storage instance.
+      */
+    def iterator(): Iterator[Tag]
+
+    /**
+      * Returns true if there are no tags in the storage.
+      */
+    def isEmpty(): Boolean
+
+  }
+
+
+  /**
     * A valid instance of tags that doesn't contain any pairs.
     */
-  val Empty = new TagSet(Map.empty.withDefaultValue(null))
+  val Empty = new TagSet(UnifiedMap.newMap[String, Any]())
+
+
+  /**
+    * Creates a new Builder instance.
+    */
+  def builder(): Builder = new Builder {
+    private var _tagCount = 0
+    private var _tags: List[(String, Any)] = Nil
+
+    override def add(key: String, value: Any): Builder = {
+      if(isValidPair(key, value)) {
+        _tagCount += 1
+        _tags = (key -> value) :: _tags
+      }
+
+      this
+    }
+
+    override def create(): TagSet = {
+      val newMap = new UnifiedMap[String, Any](_tagCount)
+      _tags.foreach { case (key, value) => newMap.put(key, value) }
+      new TagSet(newMap)
+    }
+  }
 
 
   /**
@@ -266,8 +348,12 @@ object TagSet {
     * Constructs a new TagSet instance from a Map. The returned TagSet will only contain the entries that have String,
     * Long or Boolean values from the supplied map, any other entry in the map will be ignored.
     */
-  def from(map: Map[String, Any]): TagSet =
-    new TagSet(map.filter { case (k, v) => isValidPair(k, v) } withDefaultValue(null))
+  def from(map: Map[String, Any]): TagSet = {
+    val unifiedMap = new UnifiedMap[String, Any](map.size)
+    map.foreach { pair => if(isValidPair(pair._1, pair._2)) unifiedMap.put(pair._1, pair._2)}
+
+    new TagSet(unifiedMap)
+  }
 
 
   /**
@@ -275,22 +361,25 @@ object TagSet {
     * Long or Boolean values from the supplied map, any other entry in the map will be ignored.
     */
   def from(map: java.util.Map[String, Any]): TagSet = {
-    val allowedTags = Map.newBuilder[String, Any]
-    map.entrySet()
-      .iterator()
-      .asScala
-      .foreach(e => if(isValidPair(e.getKey, e.getValue)) allowedTags += (e.getKey -> e.getValue))
+    val unifiedMap = new UnifiedMap[String, Any](map.size)
+    map.forEach(new BiConsumer[String, Any] {
+      override def accept(key: String, value: Any): Unit =
+        if(isValidPair(key, value)) unifiedMap.put(key, value)
+    })
 
-    new TagSet(allowedTags.result().withDefaultValue(null))
+    new TagSet(unifiedMap)
   }
 
 
   private val _logger = LoggerFactory.getLogger(classOf[TagSet])
 
   private def withPair(parent: TagSet, key: String, value: Any): TagSet =
-    if(isValidPair(key, value))
-      new TagSet(parent._tags.updated(key, value))
-    else
+    if(isValidPair(key, value)) {
+      val mergedMap = new UnifiedMap[String, Any](parent._underlying.size() + 1)
+      mergedMap.putAll(parent._underlying)
+      mergedMap.put(key, value)
+      new TagSet(mergedMap)
+    } else
       parent
 
   private def isValidPair(key: String, value: Any): Boolean = {
@@ -313,16 +402,26 @@ object TagSet {
   private def isAllowedTagValue(v: Any): Boolean =
     v != null && (v.isInstanceOf[String] || v.isInstanceOf[Boolean] || v.isInstanceOf[Long])
 
+  private object immutable {
+    case class String(key: JString, value: JString) extends Tag.String
+    case class Boolean(key: JString, value: JBoolean) extends Tag.Boolean
+    case class Long(key: JString, value: JLong) extends Tag.Long
+  }
 
-  /**
-    * Describes a strategy to lookup values from a TagSet instance. Implementations of this interface will be provided
-    * with the actual data structure containing the tags and must perform any necessary runtime type checks to ensure
-    * that the returned value is in assignable to the expected type T.
-    *
-    * Several implementation are provided in the Lookup companion object and it is recommended to import and use those
-    * definitions when looking up keys from a Tags instance.
-    */
-  trait Lookup[T] {
-    def execute(storage: Map[String, Any]): T
+  private object mutable {
+    case class String(var key: JString, var value: JString) extends Tag.String with Updateable[JString]
+    case class Boolean(var key: JString, var value: JBoolean) extends Tag.Boolean with Updateable[JBoolean]
+    case class Long(var key: JString, var value: JLong) extends Tag.Long with Updateable[JLong]
+
+    trait Updateable[T] {
+      var key: JString
+      var value: T
+
+      def updated(key: JString, value: T): this.type = {
+        this.key = key
+        this.value = value
+        this
+      }
+    }
   }
 }
