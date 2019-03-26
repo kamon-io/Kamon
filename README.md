@@ -15,20 +15,20 @@ Supported releases and dependencies are shown below.
 
 | kamon  | status | jdk  | scala            
 |:------:|:------:|:----:|------------------
-|  1.0.0 | stable | 1.8+ | 2.10, 2.11, 2.12
+|  1.0.6 | stable | 1.8+ | 2.10, 2.11, 2.12
 
 To get started with SBT, simply add the following to your `build.sbt` or `pom.xml`
 file:
 
 ```scala
-libraryDependencies += "io.kamon" %% "kamon-logback" % "1.0.2"
+libraryDependencies += "io.kamon" %% "kamon-logback" % "1.0.6"
 ```
 
 ```xml
 <dependency>
     <groupId>io.kamon</groupId>
     <artifactId>kamon-logback_2.12</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.6</version>
 </dependency>
 ```
 
