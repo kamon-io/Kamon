@@ -79,3 +79,36 @@ Context
 ```
 
 Note: While in Kamon you can have one local key and one broadcast key with the same name, in MDC this is not possible. In this case only the broadcast key will be stored in MDC (will be present in the logs) 
+
+Counting Log Entries
+--------------------
+
+Sometimes you need to know how many log entries your application produce as a Kamon counter, in order to easily visualize that information, and more important, be able to alert on those metrics.
+
+This library allows you to do that by just changing the logback.xml file and adding a simple appender, please notice the appender called COUNTER:
+
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration scan="false" debug="false">
+  <conversionRule conversionWord="traceID" converterClass="kamon.logback.LogbackTraceIDConverter" />
+
+  <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      <pattern>%d{yyyy-MM-dd HH:mm:ss} | %-5level | %traceID | %c{0} -> %m%n</pattern>
+    </encoder>
+  </appender>
+  <appender name="COUNTER" class="kamon.logback.LogbackEntriesCounterAppender"/>
+
+  <root level="DEBUG">
+    <appender-ref ref="STDOUT" />
+    <appender-ref ref="COUNTER" />
+  </root>
+</configuration>
+```
+
+The Kamon counter is named "log.events", and is refined with the tags: 
+
+"level" → "ERROR", "WARN", "INFO", "DEBUG", "TRACE" (One of those values, is the level of the event.)
+
+"component" → "logback" (Always this value)
