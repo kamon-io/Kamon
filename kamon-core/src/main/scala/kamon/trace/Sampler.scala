@@ -13,46 +13,11 @@
  * =========================================================================================
  */
 
-package kamon.trace
-
-import java.util.concurrent.ThreadLocalRandom
+package kamon
+package trace
+import kamon.tag.TagSet
 import kamon.trace.SpanContext.SamplingDecision
 
 trait Sampler {
-  def decide(operationName: String, builderTags: Map[String, Span.TagValue]): SamplingDecision
-}
-
-object Sampler {
-  val Always = new Constant(SamplingDecision.Sample)
-  val Never = new Constant(SamplingDecision.DoNotSample)
-
-  def random(probability: Double): Sampler = {
-    assert(probability >= 0D && probability <= 1.0D, "The probability should be >= 0 and <= 1.0")
-
-    probability match {
-      case 0D       => Never
-      case 1.0D     => Always
-      case anyOther => new Random(anyOther)
-    }
-  }
-
-  class Constant(decision: SamplingDecision) extends Sampler {
-    override def decide(operationName: String, builderTags: Map[String, Span.TagValue]): SamplingDecision = decision
-
-    override def toString: String =
-      s"Sampler.Constant(decision = $decision)"
-  }
-
-  class Random(probability: Double) extends Sampler {
-    val upperBoundary = Long.MaxValue * probability
-    val lowerBoundary = -upperBoundary
-
-    override def decide(operationName: String, builderTags: Map[String, Span.TagValue]): SamplingDecision = {
-      val random = ThreadLocalRandom.current().nextLong()
-      if(random >= lowerBoundary && random <= upperBoundary) SamplingDecision.Sample else SamplingDecision.DoNotSample
-    }
-
-    override def toString: String =
-      s"Sampler.Random(probability = $probability)"
-  }
+  def decide(operationName: String, tags: TagSet): SamplingDecision
 }

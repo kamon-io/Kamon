@@ -20,6 +20,7 @@ import java.time.Instant
 import com.typesafe.config.Config
 import kamon.Kamon
 import kamon.metric.MetricBuilding
+import kamon.tag.TagSet
 import kamon.trace.Span.{FinishedSpan, TagValue}
 import kamon.trace.SpanContext.SamplingDecision
 import kamon.trace.Tracer.SpanBuilder
@@ -50,7 +51,7 @@ object Tracer {
     @volatile private[Tracer] var _spanBuffer = new MpscArrayQueue[Span.FinishedSpan](_traceReporterQueueSize)
     @volatile private[Tracer] var _joinRemoteParentsWithSameSpanID: Boolean = true
     @volatile private[Tracer] var _scopeSpanMetrics: Boolean = true
-    @volatile private[Tracer] var _sampler: Sampler = Sampler.Never
+    @volatile private[Tracer] var _sampler: Sampler = ConstantSampler.Never
     @volatile private[Tracer] var _identityProvider: IdentityProvider = IdentityProvider.Default()
 
     reconfigure(initialConfig)
@@ -70,9 +71,9 @@ object Tracer {
         val traceConfig = config.getConfig("kamon.trace")
 
         val newSampler = traceConfig.getString("sampler") match {
-          case "always" => Sampler.Always
-          case "never" => Sampler.Never
-          case "random" => Sampler.random(traceConfig.getDouble("random-sampler.probability"))
+          case "always" => ConstantSampler.Always
+          case "never"  => ConstantSampler.Never
+          case "random" => RandomSampler(traceConfig.getDouble("random-sampler.probability"))
           case other => sys.error(s"Unexpected sampler name $other.")
         }
 
@@ -209,7 +210,7 @@ object Tracer {
       val samplingDecision: SamplingDecision = parentSpan
         .map(_.context.samplingDecision)
         .filter(_ != SamplingDecision.Unknown)
-        .getOrElse(tracer.sampler.decide(initialOperationName, initialSpanTags))
+        .getOrElse(tracer.sampler.decide(initialOperationName, TagSet.Empty))// TODO: Put the proper thing here
 
       val spanContext = parentSpan match {
         case Some(parent) => joinParentContext(parent, samplingDecision)
