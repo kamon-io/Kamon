@@ -38,19 +38,19 @@ object SpanPropagation {
     import B3.Headers
 
     override def read(reader: HttpPropagation.HeaderReader, context: Context): Context = {
-      val identityProvider = Kamon.identityProvider
+      val identifierScheme = Kamon.identifierScheme
       val traceID = reader.read(Headers.TraceIdentifier)
-        .map(id => identityProvider.traceIdGenerator().from(urlDecode(id)))
-        .getOrElse(IdentityProvider.NoIdentifier)
+        .map(id => identifierScheme.traceIdFactory.from(urlDecode(id)))
+        .getOrElse(Identifier.Empty)
 
       val spanID = reader.read(Headers.SpanIdentifier)
-        .map(id => identityProvider.spanIdGenerator().from(urlDecode(id)))
-        .getOrElse(IdentityProvider.NoIdentifier)
+        .map(id => identifierScheme.spanIdFactory.from(urlDecode(id)))
+        .getOrElse(Identifier.Empty)
 
-      if(traceID != IdentityProvider.NoIdentifier && spanID != IdentityProvider.NoIdentifier) {
+      if(traceID != Identifier.Empty && spanID != Identifier.Empty) {
         val parentID = reader.read(Headers.ParentSpanIdentifier)
-          .map(id => identityProvider.spanIdGenerator().from(urlDecode(id)))
-          .getOrElse(IdentityProvider.NoIdentifier)
+          .map(id => identifierScheme.spanIdFactory.from(urlDecode(id)))
+          .getOrElse(Identifier.Empty)
 
         val flags = reader.read(Headers.Flags)
 
@@ -74,7 +74,7 @@ object SpanPropagation {
         writer.write(Headers.TraceIdentifier, urlEncode(spanContext.traceID.string))
         writer.write(Headers.SpanIdentifier, urlEncode(spanContext.spanID.string))
 
-        if(spanContext.parentID != IdentityProvider.NoIdentifier)
+        if(spanContext.parentID != Identifier.Empty)
           writer.write(Headers.ParentSpanIdentifier, urlEncode(spanContext.parentID.string))
 
         encodeSamplingDecision(spanContext.samplingDecision).foreach { samplingDecision =>
@@ -122,22 +122,22 @@ object SpanPropagation {
 
     override def read(reader: HttpPropagation.HeaderReader, context: Context): Context = {
       reader.read(Header.B3).map { header =>
-        val identityProvider = Kamon.identityProvider
+        val identityProvider = Kamon.identifierScheme
 
         val (traceID, spanID, samplingDecision, parentSpanID) = header.splitToTuple("-")
 
         val ti = traceID
-          .map(id => identityProvider.traceIdGenerator().from(urlDecode(id)))
-          .getOrElse(IdentityProvider.NoIdentifier)
+          .map(id => identityProvider.traceIdFactory.from(urlDecode(id)))
+          .getOrElse(Identifier.Empty)
 
         val si = spanID
-          .map(id => identityProvider.spanIdGenerator().from(urlDecode(id)))
-          .getOrElse(IdentityProvider.NoIdentifier)
+          .map(id => identityProvider.spanIdFactory.from(urlDecode(id)))
+          .getOrElse(Identifier.Empty)
 
-        if (ti != IdentityProvider.NoIdentifier && si != IdentityProvider.NoIdentifier) {
+        if (ti != Identifier.Empty && si != Identifier.Empty) {
           val parentID = parentSpanID
-            .map(id => identityProvider.spanIdGenerator().from(urlDecode(id)))
-            .getOrElse(IdentityProvider.NoIdentifier)
+            .map(id => identityProvider.spanIdFactory.from(urlDecode(id)))
+            .getOrElse(Identifier.Empty)
 
           val sd = samplingDecision match {
             case Some(sampled) if sampled == "1" || sampled.equalsIgnoreCase("d") => SamplingDecision.Sample
@@ -164,7 +164,7 @@ object SpanPropagation {
         encodeSamplingDecision(spanContext.samplingDecision)
           .foreach(samplingDecision => buffer.append("-").append(samplingDecision))
 
-        if(spanContext.parentID != IdentityProvider.NoIdentifier)
+        if(spanContext.parentID != Identifier.Empty)
           buffer.append("-").append(urlEncode(spanContext.parentID.string))
 
         writer.write(Header.B3, buffer.toString)
@@ -220,14 +220,14 @@ object SpanPropagation {
       if(medium.available() == 0)
         context
       else {
-        val identityProvider = Kamon.identityProvider
+        val identityProvider = Kamon.identifierScheme
         val colferSpan = new ColferSpan()
         colferSpan.unmarshal(medium.readAll(), 0)
 
         val spanContext = SpanContext(
-          traceID = identityProvider.traceIdGenerator().from(colferSpan.traceID),
-          spanID = identityProvider.spanIdGenerator().from(colferSpan.spanID),
-          parentID = identityProvider.spanIdGenerator().from(colferSpan.parentID),
+          traceID = identityProvider.traceIdFactory.from(colferSpan.traceID),
+          spanID = identityProvider.spanIdFactory.from(colferSpan.spanID),
+          parentID = identityProvider.spanIdFactory.from(colferSpan.parentID),
           samplingDecision = byteToSamplingDecision(colferSpan.samplingDecision)
         )
 

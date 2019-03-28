@@ -16,16 +16,16 @@
 package kamon.testkit
 
 import kamon.trace.SpanContext.SamplingDecision
-import kamon.trace.{IdentityProvider, SpanContext}
+import kamon.trace.{Identifier, SpanContext}
 
 trait SpanBuilding {
-  private val identityProvider = IdentityProvider.Default()
+  private val identifierScheme = Identifier.Scheme.Single
 
   def createSpanContext(samplingDecision: SamplingDecision = SamplingDecision.Sample): SpanContext =
     SpanContext(
-      traceID = identityProvider.traceIdGenerator().generate(),
-      spanID = identityProvider.spanIdGenerator().generate(),
-      parentID = identityProvider.spanIdGenerator().generate(),
+      traceID = identifierScheme.traceIdFactory.generate(),
+      spanID = identifierScheme.spanIdFactory.generate(),
+      parentID = identifierScheme.spanIdFactory.generate(),
       samplingDecision = samplingDecision
     )
 }

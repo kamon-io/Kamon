@@ -18,7 +18,6 @@ package kamon.trace
 
 import kamon.context.{Context, HttpPropagation}
 import kamon.testkit.SpanBuilding
-import kamon.trace.IdentityProvider.Identifier
 import kamon.trace.SpanContext.SamplingDecision
 import org.scalatest.{Matchers, OptionValues, WordSpecLike}
 
@@ -152,7 +151,7 @@ class B3SpanPropagationSpec extends WordSpecLike with Matchers with OptionValues
       val spanContext = b3Propagation.read(headerReaderFromMap(headers), Context.Empty).get(Span.ContextKey).context()
       spanContext.traceID.string shouldBe "1234"
       spanContext.spanID.string shouldBe "4321"
-      spanContext.parentID shouldBe IdentityProvider.NoIdentifier
+      spanContext.parentID shouldBe Identifier.Empty
       spanContext.samplingDecision shouldBe SamplingDecision.Unknown
     }
 
@@ -223,7 +222,7 @@ class B3SpanPropagationSpec extends WordSpecLike with Matchers with OptionValues
     val spanContext = createSpanContext().copy(
       traceID = Identifier("1234", Array[Byte](1, 2, 3, 4)),
       spanID = Identifier("4321", Array[Byte](4, 3, 2, 1)),
-      parentID = IdentityProvider.NoIdentifier
+      parentID = Identifier.Empty
     )
 
     Context.of(Span.ContextKey, Span.Remote(spanContext))

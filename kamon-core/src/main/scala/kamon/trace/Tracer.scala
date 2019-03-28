@@ -29,12 +29,11 @@ import kamon.util.{Clock, DynamicAccess}
 import org.jctools.queues.{MessagePassingQueue, MpscArrayQueue}
 import org.slf4j.LoggerFactory
 
-import scala.collection.immutable
 import scala.util.Try
 
 trait Tracer {
   def buildSpan(operationName: String): SpanBuilder
-  def identityProvider: IdentityProvider
+  def identifierScheme: Identifier.Scheme
 }
 
 object Tracer {
@@ -55,7 +54,7 @@ object Tracer {
     @volatile private[Tracer] var _joinRemoteParentsWithSameSpanID: Boolean = true
     @volatile private[Tracer] var _scopeSpanMetrics: Boolean = true
     @volatile private[Tracer] var _sampler: Sampler = ConstantSampler.Never
-    @volatile private[Tracer] var _identityProvider: IdentityProvider = IdentityProvider.Default()
+    @volatile private[Tracer] var _identifierScheme: Identifier.Scheme = Identifier.Scheme.Single
 
 
     reconfigure(initialConfig)
@@ -63,8 +62,8 @@ object Tracer {
     override def buildSpan(operationName: String): SpanBuilder =
       new SpanBuilder(operationName, this, this, clock)
 
-    override def identityProvider: IdentityProvider =
-      this._identityProvider
+    override def identifierScheme: Identifier.Scheme =
+      _identifierScheme
 
     def sampler: Sampler =
       _sampler
@@ -90,6 +89,21 @@ object Tracer {
             customSampler.getOrElse(RandomSampler(0.1D))
         }
 
+        val identifierScheme = traceConfig.getString("identifier-scheme") match {
+          case "single" => Identifier.Scheme.Single
+          case "double" => Identifier.Scheme.Double
+          case fqcn =>
+
+            // We assume that any other value must be a FQCN of an Identifier Scheme implementation and try to build an
+            // instance from it.
+            val customSampler = classLoading.createInstance[Identifier.Scheme](fqcn)
+            customSampler.failed.foreach(t => {
+              _logger.error(s"Failed to create identifier scheme instance from FQCN [$fqcn], falling back to the single scheme", t)
+            })
+
+            customSampler.getOrElse(Identifier.Scheme.Single)
+        }
+
         if(sampler.isInstanceOf[AdaptiveSampler]) {
           if(_adaptiveSamplerSchedule.isEmpty)
             _adaptiveSamplerSchedule = Some(utilities.scheduler().scheduleAtFixedRate(
@@ -104,7 +118,6 @@ object Tracer {
         val newTraceReporterQueueSize = traceConfig.getInt("reporter-queue-size")
         val newJoinRemoteParentsWithSameSpanID = traceConfig.getBoolean("join-remote-parents-with-same-span-id")
         val newScopeSpanMetrics = traceConfig.getBoolean("span-metrics.scope-spans-to-parent")
-        val newIdentityProvider = classLoading.createInstance[IdentityProvider](traceConfig.getString("identity-provider")).get
 
         if(_traceReporterQueueSize != newTraceReporterQueueSize) {
           // By simply changing the buffer we might be dropping Spans that have not been collected yet by the reporters.
@@ -115,9 +128,9 @@ object Tracer {
         }
 
         _sampler = sampler
+        _identifierScheme = identifierScheme
         _joinRemoteParentsWithSameSpanID = newJoinRemoteParentsWithSameSpanID
         _scopeSpanMetrics = newScopeSpanMetrics
-        _identityProvider = newIdentityProvider
         _traceReporterQueueSize = newTraceReporterQueueSize
 
       }.failed.foreach {
@@ -159,7 +172,7 @@ object Tracer {
     private var initialMetricTags = Map.empty[String, String]
     private var useParentFromContext = true
     private var trackMetrics = true
-    private var providedTraceID = IdentityProvider.NoIdentifier
+    private var providedTraceID: Identifier = Identifier.Empty
 
     def asChildOf(parent: Span): SpanBuilder = {
       if(parent != Span.Empty) this.parentSpan = parent
@@ -219,7 +232,7 @@ object Tracer {
       this
     }
 
-    def withTraceID(identifier: IdentityProvider.Identifier): SpanBuilder = {
+    def withTraceID(identifier: Identifier): SpanBuilder = {
       this.providedTraceID = identifier
       this
     }
@@ -263,20 +276,20 @@ object Tracer {
       if(parent.isRemote() && tracer._joinRemoteParentsWithSameSpanID)
         parent.context().copy(samplingDecision = samplingDecision)
       else
-        parent.context().createChild(tracer._identityProvider.spanIdGenerator().generate(), samplingDecision)
+        parent.context().createChild(tracer._identifierScheme.spanIdFactory.generate(), samplingDecision)
 
     private def newSpanContext(samplingDecision: SamplingDecision): SpanContext = {
       val traceID =
-        if(providedTraceID != IdentityProvider.NoIdentifier)
+        if(providedTraceID != Identifier.Empty)
           providedTraceID
         else
-          tracer._identityProvider.traceIdGenerator().generate()
+          tracer._identifierScheme.traceIdFactory.generate()
 
 
       SpanContext(
         traceID,
-        spanID = tracer._identityProvider.spanIdGenerator().generate(),
-        parentID = IdentityProvider.NoIdentifier,
+        spanID = tracer._identifierScheme.spanIdFactory.generate(),
+        parentID = Identifier.Empty,
         samplingDecision = samplingDecision
       )
     }

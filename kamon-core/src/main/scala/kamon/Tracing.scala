@@ -1,6 +1,6 @@
 package kamon
 
-import kamon.trace.{IdentityProvider, Tracer}
+import kamon.trace.{Identifier, IdentityProvider, Tracer}
 
 trait Tracing { self: Configuration with ClassLoading with Utilities =>
   private val _tracer = new Tracer.Default(Kamon, config(), clock(), this, this)
@@ -9,8 +9,8 @@ trait Tracing { self: Configuration with ClassLoading with Utilities =>
   def buildSpan(operationName: String): Tracer.SpanBuilder =
     _tracer.buildSpan(operationName)
 
-  def identityProvider: IdentityProvider =
-    _tracer.identityProvider
+  def identifierScheme: Identifier.Scheme =
+    _tracer.identifierScheme
 
   protected def tracer(): Tracer.Default =
     _tracer

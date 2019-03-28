@@ -62,7 +62,7 @@ class TracerSpec extends WordSpec with Matchers with SpanBuilding with SpanInspe
     "not have any parent Span if there is no Span in the current context and no parent was explicitly given" in {
       val span = Kamon.buildSpan("myOperation").start()
       val spanData = inspect(span)
-      spanData.context().parentID shouldBe IdentityProvider.NoIdentifier
+      spanData.context().parentID shouldBe Identifier.Empty
     }
 
 
@@ -84,7 +84,7 @@ class TracerSpec extends WordSpec with Matchers with SpanBuilding with SpanInspe
       }
 
       val childData = inspect(child)
-      childData.context().parentID shouldBe IdentityProvider.NoIdentifier
+      childData.context().parentID shouldBe Identifier.Empty
     }
 
     "allow overriding the start timestamp for a Span" in {

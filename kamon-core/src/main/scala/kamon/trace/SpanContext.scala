@@ -15,7 +15,6 @@
 
 package kamon.trace
 
-import kamon.trace.IdentityProvider.Identifier
 import kamon.trace.SpanContext.SamplingDecision
 
 /**
@@ -34,9 +33,9 @@ case class SpanContext(traceID: Identifier, spanID: Identifier, parentID: Identi
 object SpanContext {
 
   val EmptySpanContext = SpanContext(
-    traceID = IdentityProvider.NoIdentifier,
-    spanID = IdentityProvider.NoIdentifier,
-    parentID = IdentityProvider.NoIdentifier,
+    traceID = Identifier.Empty,
+    spanID = Identifier.Empty,
+    parentID = Identifier.Empty,
     samplingDecision = SamplingDecision.DoNotSample
   )
 

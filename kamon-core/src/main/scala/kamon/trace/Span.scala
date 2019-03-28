@@ -27,6 +27,10 @@ import kamon.util.Clock
 
 sealed abstract class Span {
 
+//  def isRoot(): Boolean
+//  def isLocalRoot(): Boolean
+//  def location(): Span.Location
+
   def isEmpty(): Boolean
   def isLocal(): Boolean
 
@@ -67,6 +71,24 @@ sealed abstract class Span {
 object Span {
 
   val ContextKey = Context.key[Span]("span", Span.Empty)
+
+
+
+  /**
+    * Describes a Span's location within the trace.
+    */
+  sealed abstract class Location
+  object Location {
+
+    /** Root spans are the very first Span on each trace. They do not have a parent Span. */
+    case object Root extends Location
+
+    /** A local root is the first Span within this process that is joining a trace started in another process */
+    case object LocalRoot extends Location
+
+    /** A span whose location is not know or does not need to be specified */
+    case object Unspecified extends Location
+  }
 
   object Empty extends Span {
     override val context: SpanContext = SpanContext.EmptySpanContext
