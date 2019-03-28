@@ -2,8 +2,8 @@ package kamon
 
 import kamon.trace.{IdentityProvider, Tracer}
 
-trait Tracing { self: Configuration with Utilities =>
-  private val _tracer = Tracer.Default(Kamon, config(), clock())
+trait Tracing { self: Configuration with ClassLoading with Utilities =>
+  private val _tracer = new Tracer.Default(Kamon, config(), clock(), this, this)
   onReconfigure(newConfig => _tracer.reconfigure(newConfig))
 
   def buildSpan(operationName: String): Tracer.SpanBuilder =

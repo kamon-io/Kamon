@@ -28,11 +28,6 @@ class AdaptiveSampler extends Sampler {
   @volatile private var _settings = AdaptiveSampler.Settings.from(Kamon.config())
   private val _samplers = TrieMap.empty[String, AdaptiveSampler.OperationSampler]
 
-  Kamon.onReconfigure(newSettings => {
-    _settings = AdaptiveSampler.Settings.from(newSettings)
-    _samplers.clear()
-  })
-
   override def decide(operationName: String, tags: TagSet): SamplingDecision = {
     val operationSampler = _samplers.get(operationName).getOrElse {
       // It might happen that the first time we see an operation under high concurrent throughput we will reach this
@@ -172,6 +167,11 @@ class AdaptiveSampler extends Sampler {
       val probability = (sampler.throughput() + boost) / throughputAverage
       sampler.updateProbability(probability)
     }}
+  }
+
+  def reconfigure(newConfig: Config): Unit = {
+    _settings = AdaptiveSampler.Settings.from(newConfig)
+    _samplers.clear()
   }
 
   private def randomOperationSamplers(): Seq[OperationSampler.Random] =

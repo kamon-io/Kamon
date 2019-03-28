@@ -13,12 +13,13 @@
  * =========================================================================================
  */
 
-package kamon.trace
+package kamon
+package trace
 
 import java.time.Instant
+import java.util.concurrent.{ScheduledFuture, TimeUnit}
 
 import com.typesafe.config.Config
-import kamon.Kamon
 import kamon.metric.MetricBuilding
 import kamon.tag.TagSet
 import kamon.trace.Span.{FinishedSpan, TagValue}
@@ -43,8 +44,10 @@ object Tracer {
     def flush(): Seq[FinishedSpan]
   }
 
-  final class Default(metrics: MetricBuilding, initialConfig: Config, clock: Clock) extends Tracer with SpanBuffer {
+  final class Default(metrics: MetricBuilding, initialConfig: Config, clock: Clock, classLoading: ClassLoading, utilities: Utilities) extends Tracer with SpanBuffer {
     private val _logger = LoggerFactory.getLogger(classOf[Tracer])
+
+    private var _adaptiveSamplerSchedule: Option[ScheduledFuture[_]] = None
 
     private[Tracer] val tracerMetrics = new TracerMetrics(metrics)
     @volatile private[Tracer] var _traceReporterQueueSize = 1024
@@ -53,6 +56,7 @@ object Tracer {
     @volatile private[Tracer] var _scopeSpanMetrics: Boolean = true
     @volatile private[Tracer] var _sampler: Sampler = ConstantSampler.Never
     @volatile private[Tracer] var _identityProvider: IdentityProvider = IdentityProvider.Default()
+
 
     reconfigure(initialConfig)
 
@@ -65,41 +69,59 @@ object Tracer {
     def sampler: Sampler =
       _sampler
 
-    private[kamon] def reconfigure(config: Config): Unit = synchronized {
+    private[kamon] def reconfigure(newConfig: Config): Unit = synchronized {
       Try {
-        val dynamic = new DynamicAccess(getClass.getClassLoader)
-        val traceConfig = config.getConfig("kamon.trace")
+        val traceConfig = newConfig.getConfig("kamon.trace")
 
-        val newSampler = traceConfig.getString("sampler") match {
-          case "always" => ConstantSampler.Always
-          case "never"  => ConstantSampler.Never
-          case "random" => RandomSampler(traceConfig.getDouble("random-sampler.probability"))
-          case other => sys.error(s"Unexpected sampler name $other.")
+        val sampler = traceConfig.getString("sampler") match {
+          case "always"     => ConstantSampler.Always
+          case "never"      => ConstantSampler.Never
+          case "random"     => RandomSampler(traceConfig.getDouble("random-sampler.probability"))
+          case "adaptive"   => AdaptiveSampler()
+          case fqcn         =>
+
+            // We assume that any other value must be a FQCN of a Sampler implementation and try to build an
+            // instance from it.
+            val customSampler = classLoading.createInstance[Sampler](fqcn)
+            customSampler.failed.foreach(t => {
+              _logger.error(s"Failed to create sampler instance from FQCN [$fqcn], falling back to random sampling with 10% probability", t)
+            })
+
+            customSampler.getOrElse(RandomSampler(0.1D))
         }
+
+        if(sampler.isInstanceOf[AdaptiveSampler]) {
+          if(_adaptiveSamplerSchedule.isEmpty)
+            _adaptiveSamplerSchedule = Some(utilities.scheduler().scheduleAtFixedRate(
+              adaptiveSamplerAdaptRunnable(), 1, 1, TimeUnit.SECONDS
+            ))
+        } else {
+          _adaptiveSamplerSchedule.foreach(_.cancel(false))
+          _adaptiveSamplerSchedule = None
+        }
+
 
         val newTraceReporterQueueSize = traceConfig.getInt("reporter-queue-size")
         val newJoinRemoteParentsWithSameSpanID = traceConfig.getBoolean("join-remote-parents-with-same-span-id")
         val newScopeSpanMetrics = traceConfig.getBoolean("span-metrics.scope-spans-to-parent")
-        val newIdentityProvider = dynamic.createInstanceFor[IdentityProvider](
-          traceConfig.getString("identity-provider"), immutable.Seq.empty[(Class[_], AnyRef)]
-        ).get
+        val newIdentityProvider = classLoading.createInstance[IdentityProvider](traceConfig.getString("identity-provider")).get
 
         if(_traceReporterQueueSize != newTraceReporterQueueSize) {
           // By simply changing the buffer we might be dropping Spans that have not been collected yet by the reporters.
-          // Since reconfigures are very unlikely to happen beyond application startup this might be a problem at all.
+          // Since reconfigures are very unlikely to happen beyond application startup this might not be a problem.
           // If we eventually decide to keep those possible Spans around then we will need to change the queue type to
           // multiple consumer as the reconfiguring thread will need to drain the contents before replacing.
           _spanBuffer = new MpscArrayQueue[Span.FinishedSpan](newTraceReporterQueueSize)
         }
 
-        _sampler = newSampler
+        _sampler = sampler
         _joinRemoteParentsWithSameSpanID = newJoinRemoteParentsWithSameSpanID
         _scopeSpanMetrics = newScopeSpanMetrics
         _identityProvider = newIdentityProvider
         _traceReporterQueueSize = newTraceReporterQueueSize
 
       }.failed.foreach {
-        ex => _logger.error("Unable to reconfigure Kamon Tracer", ex)
+        ex => _logger.error("Failed to reconfigure the Kamon tracer", ex)
       }
     }
 
@@ -117,12 +139,17 @@ object Tracer {
       spans
     }
 
+    private def adaptiveSamplerAdaptRunnable(): Runnable = new Runnable {
+      override def run(): Unit = {
+        _sampler match {
+          case adaptiveSampler: AdaptiveSampler => adaptiveSampler.adapt()
+          case _ => // just ignore any other sampler type.
+        }
+      }
+    }
+
   }
 
-  object Default {
-    def apply(metrics: MetricBuilding, initialConfig: Config, clock: Clock): Default =
-      new Default(metrics, initialConfig, clock)
-  }
 
   final class SpanBuilder(operationName: String, tracer: Tracer.Default, spanBuffer: Tracer.SpanBuffer, clock: Clock) {
     private var parentSpan: Span = _
