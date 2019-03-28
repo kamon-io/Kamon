@@ -1,4 +1,5 @@
-package kamon.trace
+package kamon
+package trace
 
 import kamon.tag.TagSet
 import kamon.trace.SpanContext.SamplingDecision
@@ -6,7 +7,7 @@ import kamon.trace.SpanContext.SamplingDecision
 /**
   * Sampler that always returns the same sampling decision.
   */
-class ConstantSampler(decision: SamplingDecision) extends Sampler {
+class ConstantSampler private(decision: SamplingDecision) extends Sampler {
 
   override def decide(operationName: String, tags: TagSet): SamplingDecision =
     decision
