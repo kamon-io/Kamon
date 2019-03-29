@@ -1,4 +1,5 @@
-package kamon.tag
+package kamon
+package tag
 
 import kamon.tag.TagSet.Lookup
 
@@ -259,7 +260,13 @@ object TagSet {
   trait Builder {
 
     /** Adds a new key/value pair to the builder. */
-    def add(key: String, value: Any): Builder
+    def add(key: String, value: String): Builder
+
+    /** Adds a new key/value pair to the builder. */
+    def add(key: String, value: Long): Builder
+
+    /** Adds a new key/value pair to the builder. */
+    def add(key: String, value: Boolean): Builder
 
     /** Creates a new TagSet instance that includes all valid key/value pairs added to this builder. */
     def create(): TagSet
@@ -302,25 +309,8 @@ object TagSet {
   /**
     * Creates a new Builder instance.
     */
-  def builder(): Builder = new Builder {
-    private var _tagCount = 0
-    private var _tags: List[(String, Any)] = Nil
-
-    override def add(key: String, value: Any): Builder = {
-      if(isValidPair(key, value)) {
-        _tagCount += 1
-        _tags = (key -> value) :: _tags
-      }
-
-      this
-    }
-
-    override def create(): TagSet = {
-      val newMap = new UnifiedMap[String, Any](_tagCount)
-      _tags.foreach { case (key, value) => newMap.put(key, value) }
-      new TagSet(newMap)
-    }
-  }
+  def builder(): Builder =
+    new Builder.ChainedArray
 
 
   /**
@@ -350,7 +340,7 @@ object TagSet {
     */
   def from(map: Map[String, Any]): TagSet = {
     val unifiedMap = new UnifiedMap[String, Any](map.size)
-    map.foreach { pair => if(isValidPair(pair._1, pair._2)) unifiedMap.put(pair._1, pair._2)}
+    map.foreach { pair => if(isValidPair(pair._1, pair._2, checkValueType = true)) unifiedMap.put(pair._1, pair._2)}
 
     new TagSet(unifiedMap)
   }
@@ -364,7 +354,7 @@ object TagSet {
     val unifiedMap = new UnifiedMap[String, Any](map.size)
     map.forEach(new BiConsumer[String, Any] {
       override def accept(key: String, value: Any): Unit =
-        if(isValidPair(key, value)) unifiedMap.put(key, value)
+        if(isValidPair(key, value, checkValueType = true)) unifiedMap.put(key, value)
     })
 
     new TagSet(unifiedMap)
@@ -374,7 +364,7 @@ object TagSet {
   private val _logger = LoggerFactory.getLogger(classOf[TagSet])
 
   private def withPair(parent: TagSet, key: String, value: Any): TagSet =
-    if(isValidPair(key, value)) {
+    if(isValidPair(key, value, checkValueType = true)) {
       val mergedMap = new UnifiedMap[String, Any](parent._underlying.size() + 1)
       mergedMap.putAll(parent._underlying)
       mergedMap.put(key, value)
@@ -382,9 +372,9 @@ object TagSet {
     } else
       parent
 
-  private def isValidPair(key: String, value: Any): Boolean = {
-    val isValidKey = key != null && key.nonEmpty
-    val isValidValue = isAllowedTagValue(value)
+  private def isValidPair(key: String, value: Any, checkValueType: Boolean): Boolean = {
+    val isValidKey = key != null && key.length > 0
+    val isValidValue = value != null && (!checkValueType || isAllowedTagValue(value))
     val isValid = isValidKey && isValidValue
 
     if(!isValid && _logger.isDebugEnabled) {
@@ -400,7 +390,7 @@ object TagSet {
   }
 
   private def isAllowedTagValue(v: Any): Boolean =
-    v != null && (v.isInstanceOf[String] || v.isInstanceOf[Boolean] || v.isInstanceOf[Long])
+    (v.isInstanceOf[String] || v.isInstanceOf[Boolean] || v.isInstanceOf[Long])
 
   private object immutable {
     case class String(key: JString, value: JString) extends Tag.String
@@ -422,6 +412,90 @@ object TagSet {
         this.value = value
         this
       }
+    }
+  }
+
+  object Builder {
+
+    /**
+      * Uses a chain of arrays with fixed size to temporarily hold key/value pairs until the TagSet instance is created.
+      * This allows for no allocations when adding new tags on the most common cases (less than 8 tags) and a single
+      * allocation for every additional 8 key/value pairs added to the Builder.
+      */
+    class ChainedArray extends Builder {
+      private val _firstBlock = newBlock()
+      private var _currentBlock: Array[Any] = _firstBlock
+      private var _position = 0
+
+      override def add(key: String, value: String): Builder = {
+        addPair(key, value)
+        this
+      }
+
+      override def add(key: String, value: Long): Builder = {
+        addPair(key, value)
+        this
+      }
+
+      override def add(key: String, value: Boolean): Builder = {
+        addPair(key, value)
+        this
+      }
+
+      override def create(): TagSet = {
+        val unifiedMap = new UnifiedMap[String, Any]()
+        var position = 0
+        var currentBlock = _firstBlock
+        var currentKey = currentBlock(position)
+        var currentValue = currentBlock(position + 1)
+
+        while(currentKey != null) {
+          unifiedMap.put(currentKey.asInstanceOf[String], currentValue)
+          position += 2
+
+          if(position == ChainedArray.BlockSize) {
+            val nextBlock = currentBlock(currentBlock.length - 1)
+            if(nextBlock == null) {
+              currentKey = null
+              currentValue = null
+            } else {
+              position = 0
+              currentBlock = nextBlock.asInstanceOf[Array[Any]]
+              currentKey = currentBlock(position)
+              currentValue = currentBlock(position + 1)
+            }
+          } else {
+            currentKey = currentBlock(position)
+            currentValue = currentBlock(position + 1)
+          }
+        }
+
+        new TagSet(unifiedMap)
+      }
+
+      private def addPair(key: String, value: Any): Unit = {
+        if(isValidPair(key, value, checkValueType = false)) {
+          if (_position == ChainedArray.BlockSize) {
+            // Adds an extra block at the end of the current one.
+            val extraBlock = newBlock()
+            _currentBlock.update(_currentBlock.length - 1, extraBlock)
+            _currentBlock = extraBlock
+            _position = 0
+          }
+
+          _currentBlock.update(_position, key)
+          _currentBlock.update(_position + 1, value)
+          _position += 2
+        }
+      }
+
+      private def newBlock(): Array[Any] =
+        Array.ofDim[Any](ChainedArray.BlockSize + 1)
+    }
+
+    private object ChainedArray {
+      val EntriesPerBlock = 8
+      val BlockSize = EntriesPerBlock * 2
     }
   }
 }

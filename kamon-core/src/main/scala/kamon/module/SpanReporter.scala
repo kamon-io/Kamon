@@ -7,5 +7,5 @@ import kamon.trace.Span
   * span batches is controlled by the kamon.trace.tick-interval setting.
   */
 trait SpanReporter extends Module {
-  def reportSpans(spans: Seq[Span.FinishedSpan]): Unit
+  def reportSpans(spans: Seq[Span.Finished]): Unit
 }

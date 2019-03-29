@@ -21,6 +21,10 @@ import scala.util.Try
   */
 case class Identifier(string: String, bytes: Array[Byte]) {
 
+  /** Returns true if the identifier does not contain any usable value */
+  def isEmpty: Boolean =
+    string.isEmpty
+
   override def equals(obj: Any): Boolean = {
     if(obj != null && obj.isInstanceOf[Identifier])
       obj.asInstanceOf[Identifier].string == string

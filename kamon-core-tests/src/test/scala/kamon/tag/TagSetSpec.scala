@@ -139,6 +139,28 @@ class TagSetSpec extends WordSpec with Matchers {
       TagSet.from(GoodScalaTagMap).toString() should include("name=Kamon")
       TagSet.from(GoodScalaTagMap).toString() should include("isAwesome=true")
     }
+
+    "allow creating them from a builder instance" in {
+      val tags = TagSet.builder()
+        .add("age", 5L)
+        .add("name", "Kamon")
+        .add("isAwesome", true)
+        .add("hasTracing", true)
+        .add("website", "wrong.io")
+        .add("website", "wrong.io")
+        .add("website", "kamon.io")
+        .add("luckyNumber", 7L)
+        .add("luckyNumber", 7L)
+        .create()
+
+      tags.get(plain("name")) shouldBe "Kamon"
+      tags.get(plain("website")) shouldBe "kamon.io"
+      tags.get(plainLong("age")) shouldBe 5L
+      tags.get(plainLong("luckyNumber")) shouldBe 7L
+      tags.get(plainBoolean("isAwesome")) shouldBe true
+      tags.get(plainBoolean("hasTracing")) shouldBe true
+
+    }
   }
 
   def matchPair(key: String, value: Any) = { tag: Tag => {

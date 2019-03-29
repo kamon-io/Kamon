@@ -16,7 +16,6 @@
 package kamon
 package testkit
 
-import kamon.metric.Metric.BaseMetric
 import kamon.metric.{Instrument, Metric}
 import kamon.tag.{Tag, TagSet}
 import kamon.tag.Lookups._
@@ -96,5 +95,6 @@ object MetricInspection {
         MetricInspection.instruments(metric, tags)
     }
   }
+
   object Syntax extends Syntax
 }

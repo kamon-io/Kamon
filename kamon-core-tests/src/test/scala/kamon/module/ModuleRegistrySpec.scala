@@ -105,7 +105,7 @@ class ModuleRegistrySpec extends WordSpec with Matchers with Reconfigure with Ev
 
 
   override protected def afterAll(): Unit = {
-    resetConfig()
+    reset()
   }
 
   class SeenMetricsReporter extends MetricReporter {

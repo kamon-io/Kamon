@@ -15,20 +15,17 @@
 
 package kamon.trace
 
-import kamon.trace.IdentityProvider.Identifier
 import org.scalactic.TimesOnInt._
 import org.scalatest.{Matchers, OptionValues, WordSpecLike}
 
-class DoubleLengthTraceIdentityGeneratorSpec extends WordSpecLike with Matchers with OptionValues {
-  val idProvider = IdentityProvider.DoubleSizeTraceID()
-  val traceGenerator = idProvider.traceIdGenerator()
-  val spanGenerator = idProvider.spanIdGenerator()
+class DoubleLengthIdentifierSchemeSpec extends WordSpecLike with Matchers with OptionValues {
+  import Identifier.Scheme.Double.{traceIdFactory, spanIdFactory}
 
-  "The DoubleSizeTraceID identity provider" when {
+  "The double length identifier scheme" when {
     "generating trace identifiers" should {
       "generate random longs (16 byte) identifiers" in {
         100 times {
-          val Identifier(string, bytes) = traceGenerator.generate()
+          val Identifier(string, bytes) = traceIdFactory.generate()
 
           string.length should be(32)
           bytes.length should be(16)
@@ -37,8 +34,8 @@ class DoubleLengthTraceIdentityGeneratorSpec extends WordSpecLike with Matchers 
 
       "decode the string representation back into a identifier" in {
         100 times {
-          val identifier = traceGenerator.generate()
-          val decodedIdentifier = traceGenerator.from(identifier.string)
+          val identifier = traceIdFactory.generate()
+          val decodedIdentifier = traceIdFactory.from(identifier.string)
 
           identifier.string should equal(decodedIdentifier.string)
           identifier.bytes should equal(decodedIdentifier.bytes)
@@ -47,8 +44,8 @@ class DoubleLengthTraceIdentityGeneratorSpec extends WordSpecLike with Matchers 
 
       "decode the bytes representation back into a identifier" in {
         100 times {
-          val identifier = traceGenerator.generate()
-          val decodedIdentifier = traceGenerator.from(identifier.bytes)
+          val identifier = traceIdFactory.generate()
+          val decodedIdentifier = traceIdFactory.from(identifier.bytes)
 
           identifier.string should equal(decodedIdentifier.string)
           identifier.bytes should equal(decodedIdentifier.bytes)
@@ -56,15 +53,15 @@ class DoubleLengthTraceIdentityGeneratorSpec extends WordSpecLike with Matchers 
       }
 
       "return IdentityProvider.NoIdentifier if the provided input cannot be decoded into a Identifier" in {
-        traceGenerator.from("zzzz") shouldBe (IdentityProvider.NoIdentifier)
-        traceGenerator.from(Array[Byte](1)) shouldBe (IdentityProvider.NoIdentifier)
+        traceIdFactory.from("zzzz") shouldBe (Identifier.Empty)
+        traceIdFactory.from(Array[Byte](1)) shouldBe (Identifier.Empty)
       }
     }
 
     "generating span identifiers" should {
       "generate random longs (8 byte) identifiers" in {
         100 times {
-          val Identifier(string, bytes) = spanGenerator.generate()
+          val Identifier(string, bytes) = spanIdFactory.generate()
 
           string.length should be(16)
           bytes.length should be(8)
@@ -73,8 +70,8 @@ class DoubleLengthTraceIdentityGeneratorSpec extends WordSpecLike with Matchers 
 
       "decode the string representation back into a identifier" in {
         100 times {
-          val identifier = spanGenerator.generate()
-          val decodedIdentifier = spanGenerator.from(identifier.string)
+          val identifier = spanIdFactory.generate()
+          val decodedIdentifier = spanIdFactory.from(identifier.string)
 
           identifier.string should equal(decodedIdentifier.string)
           identifier.bytes should equal(decodedIdentifier.bytes)
@@ -83,8 +80,8 @@ class DoubleLengthTraceIdentityGeneratorSpec extends WordSpecLike with Matchers 
 
       "decode the bytes representation back into a identifier" in {
         100 times {
-          val identifier = spanGenerator.generate()
-          val decodedIdentifier = spanGenerator.from(identifier.bytes)
+          val identifier = spanIdFactory.generate()
+          val decodedIdentifier = spanIdFactory.from(identifier.bytes)
 
           identifier.string should equal(decodedIdentifier.string)
           identifier.bytes should equal(decodedIdentifier.bytes)
@@ -92,8 +89,8 @@ class DoubleLengthTraceIdentityGeneratorSpec extends WordSpecLike with Matchers 
       }
 
       "return IdentityProvider.NoIdentifier if the provided input cannot be decoded into a Identifier" in {
-        spanGenerator.from("zzzz") shouldBe (IdentityProvider.NoIdentifier)
-        spanGenerator.from(Array[Byte](1)) shouldBe (IdentityProvider.NoIdentifier)
+        spanIdFactory.from("zzzz") shouldBe (Identifier.Empty)
+        spanIdFactory.from(Array[Byte](1)) shouldBe (Identifier.Empty)
       }
     }
   }

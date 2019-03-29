@@ -12,7 +12,7 @@ trait ContextStorage {
     _contextStorage.current()
 
   def currentSpan(): Span =
-    _contextStorage.current().get(Span.ContextKey)
+    _contextStorage.current().get(Span.Key)
 
   def storeContext(context: Context): Storage.Scope =
     _contextStorage.store(context)
@@ -34,10 +34,10 @@ trait ContextStorage {
 
   def withSpan[T](span: Span, finishSpan: Boolean)(f: => T): T = {
     try {
-      withContextKey(Span.ContextKey, span)(f)
+      withContextKey(Span.Key, span)(f)
     } catch {
       case NonFatal(t) =>
-        span.addError(t.getMessage, t)
+        span.fail(t.getMessage, t)
         throw t
 
     } finally {

@@ -9,7 +9,7 @@ import com.typesafe.config.Config
 import kamon.module.Module.Registration
 import kamon.status.Status
 import kamon.metric.MetricRegistry
-import kamon.trace.Tracer.SpanBuffer
+import kamon.trace.Tracer
 import kamon.util.Clock
 import org.slf4j.LoggerFactory
 
@@ -23,8 +23,8 @@ import scala.util.control.NonFatal
 /**
   * Controls the lifecycle of all available modules.
   */
-class ModuleRegistry(classLoading: ClassLoading, configuration: Configuration, clock: Clock, snapshotGenerator: MetricRegistry,
-    spanBuffer: SpanBuffer) {
+class ModuleRegistry(classLoading: ClassLoading, configuration: Configuration, clock: Clock,
+    metricRegistry: MetricRegistry, tracer: Tracer) {
 
   private val _logger = LoggerFactory.getLogger(classOf[ModuleRegistry])
   private val _metricsTickerExecutor = Executors.newScheduledThreadPool(1, threadFactory("kamon-metrics-ticker", daemon = true))
@@ -164,7 +164,7 @@ class ModuleRegistry(classLoading: ClassLoading, configuration: Configuration, c
 
         override def run(): Unit = try {
           val currentInstant = Instant.now(clock)
-          val periodSnapshot = snapshotGenerator.snapshot(resetState = true)
+          val periodSnapshot = metricRegistry.snapshot(resetState = true)
 
           metricReporterModules().foreach { entry =>
             Future {
@@ -202,7 +202,7 @@ class ModuleRegistry(classLoading: ClassLoading, configuration: Configuration, c
 
       val ticker = new Runnable {
         override def run(): Unit = try {
-          val spanBatch = spanBuffer.flush()
+          val spanBatch = tracer.spans()
 
           spanReporterModules().foreach { entry =>
             Future {

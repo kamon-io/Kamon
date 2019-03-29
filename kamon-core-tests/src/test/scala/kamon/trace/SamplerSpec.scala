@@ -2,8 +2,7 @@ package kamon.trace
 
 import kamon.Kamon
 import kamon.tag.TagSet
-import kamon.trace.SpanContext.SamplingDecision
-
+import kamon.trace.Trace.SamplingDecision
 import org.scalactic.TimesOnInt
 import org.scalatest.{BeforeAndAfterEach, Matchers, WordSpec}
 
@@ -245,7 +244,7 @@ class SamplerSpec extends WordSpec with TimesOnInt with Matchers with BeforeAndA
   // Gets a decision from an adaptive sampler for the provided operation name and stores the number of sampled
   // responses for it.
   def decide(operationName: String)(implicit sampler: AdaptiveSampler): Unit =
-    if (sampler.decide(operationName, TagSet.Empty) == SamplingDecision.Sample) {
+    if (sampler.decide(Kamon.spanBuilder(operationName)) == SamplingDecision.Sample) {
       val current = _decisions.get(operationName).getOrElse(0)
       _decisions.put(operationName, current + 1)
     }

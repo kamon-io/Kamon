@@ -15,23 +15,19 @@
 
 package kamon.trace
 
-import kamon.trace.IdentityProvider.Identifier
 import org.scalatest.{Matchers, OptionValues, WordSpecLike}
 import org.scalactic.TimesOnInt._
 
-class DefaultIdentityGeneratorSpec extends WordSpecLike with Matchers with OptionValues {
-  val idProvider = IdentityProvider.Default()
-  val traceGenerator = idProvider.traceIdGenerator()
-  val spanGenerator = idProvider.spanIdGenerator()
+class SingleLengthIdentifierSchemeSpec extends WordSpecLike with Matchers with OptionValues {
 
-  validateGenerator("TraceID Generator", traceGenerator)
-  validateGenerator("SpanID Generator", spanGenerator)
+  validateFactory("trace identifier factory", Identifier.Scheme.Single.traceIdFactory)
+  validateFactory("span identifier factory", Identifier.Scheme.Single.spanIdFactory)
 
-  def validateGenerator(generatorName: String, generator: IdentityProvider.Generator) = {
+  def validateFactory(generatorName: String, factory: Identifier.Factory) = {
     s"The $generatorName" should {
       "generate random longs (8 byte) identifiers" in {
         100 times {
-          val Identifier(string, bytes) = generator.generate()
+          val Identifier(string, bytes) = factory.generate()
 
           string.length should be(16)
           bytes.length should be(8)
@@ -40,8 +36,8 @@ class DefaultIdentityGeneratorSpec extends WordSpecLike with Matchers with Optio
 
       "decode the string representation back into a identifier" in {
         100 times {
-          val identifier = generator.generate()
-          val decodedIdentifier = generator.from(identifier.string)
+          val identifier = factory.generate()
+          val decodedIdentifier = factory.from(identifier.string)
 
           identifier.string should equal(decodedIdentifier.string)
           identifier.bytes should equal(decodedIdentifier.bytes)
@@ -50,8 +46,8 @@ class DefaultIdentityGeneratorSpec extends WordSpecLike with Matchers with Optio
 
       "decode the bytes representation back into a identifier" in {
         100 times {
-          val identifier = generator.generate()
-          val decodedIdentifier = generator.from(identifier.bytes)
+          val identifier = factory.generate()
+          val decodedIdentifier = factory.from(identifier.bytes)
 
           identifier.string should equal(decodedIdentifier.string)
           identifier.bytes should equal(decodedIdentifier.bytes)
@@ -59,8 +55,8 @@ class DefaultIdentityGeneratorSpec extends WordSpecLike with Matchers with Optio
       }
 
       "return IdentityProvider.NoIdentifier if the provided input cannot be decoded into a Identifier" in {
-        generator.from("zzzz") shouldBe(IdentityProvider.NoIdentifier)
-        generator.from(Array[Byte](1)) shouldBe(IdentityProvider.NoIdentifier)
+        factory.from("zzzz") shouldBe(Identifier.Empty)
+        factory.from(Array[Byte](1)) shouldBe(Identifier.Empty)
       }
     }
   }

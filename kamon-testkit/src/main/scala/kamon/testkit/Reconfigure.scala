@@ -20,35 +20,75 @@ import kamon.Kamon
 
 trait Reconfigure {
 
-  def enableFastMetricFlushing(): Unit = {
+  /**
+    * Makes Kamon flush metric snapshots to reporters every millisecond
+    */
+  def enableFastMetricFlushing(): Unit =
     applyConfig("kamon.metric.tick-interval = 1 millisecond")
-  }
 
-  def enableFastSpanFlushing(): Unit = {
+
+  /**
+    * Makes Kamon flush spans to reporters every millisecond
+    */
+  def enableFastSpanFlushing(): Unit =
     applyConfig("kamon.trace.tick-interval = 1 millisecond")
-  }
 
-  def sampleAlways(): Unit = {
+
+  /**
+    * Makes Kamon sample all new traces
+    */
+  def sampleAlways(): Unit =
     applyConfig("kamon.trace.sampler = always")
-  }
 
-  def sampleNever(): Unit = {
+
+  /**
+    * Makes Kamon never sample a new trace
+    */
+  def sampleNever(): Unit =
     applyConfig("kamon.trace.sampler = never")
-  }
 
-  def enableSpanMetricScoping(): Unit = {
-    applyConfig("kamon.trace.span-metrics.scope-spans-to-parent = yes")
-  }
 
-  def disableSpanMetricScoping(): Unit = {
-    applyConfig("kamon.trace.span-metrics.scope-spans-to-parent = no")
-  }
+  /**
+    * Enables scoping of Span metrics to their parent operation
+    */
+  def enableSpanMetricScoping(): Unit =
+    applyConfig("kamon.trace.span-metric-tags.parent-operation = yes")
 
-  def applyConfig(configString: String): Unit = {
+
+  /**
+    * Disables scoping of Span metrics to their parent operation
+    */
+  def disableSpanMetricScoping(): Unit =
+    applyConfig("kamon.trace.span-metric-tags.parent-operation = no")
+
+
+  /**
+    * Enables using the same Span identifier as their remote parent on server operations.
+    */
+  def enableJoiningRemoteParentWithSameId(): Unit =
+    applyConfig("kamon.trace.join-remote-parents-with-same-span-id = yes")
+
+
+  /**
+    * Disables using the same Span identifier as their remote parent on server operations.
+    */
+  def disableJoiningRemoteParentWithSameId(): Unit =
+    applyConfig("kamon.trace.join-remote-parents-with-same-span-id = no")
+
+
+  /**
+    * Parses the provided configuration and reconfigures Kamon with it
+    */
+  def applyConfig(configString: String): Unit =
     Kamon.reconfigure(ConfigFactory.parseString(configString).withFallback(Kamon.config()))
-  }
 
-  def resetConfig(): Unit = {
+
+  /**
+    * Resets Kamon's configuration what would be loaded by default.
+    */
+  def reset(): Unit =
     Kamon.reconfigure(ConfigFactory.load())
-  }
+
 }
+
+object Reconfigure extends Reconfigure

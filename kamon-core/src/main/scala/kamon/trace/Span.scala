@@ -19,142 +19,328 @@ package trace
 import java.time.Instant
 
 import kamon.context.Context
-import kamon.metric.MeasurementUnit
 import kamon.tag.TagSet
-import kamon.trace.SpanContext.SamplingDecision
 import kamon.util.Clock
 
+import scala.compat.Platform.EOL
 
+/**
+  * A Span encapsulates information about an operation performed by the application and its relationship to other
+  * operations. At the most basic level, all Spans have an operation name and they are bound to the time taken by the
+  * application to perform that operation, meaning that they have start and end time time stamps.
+  *
+  * Spans connect to each other creating a hierarchical structure of operations, where an operation can have several
+  * child operations but only one parent operation. Furthermore, all related Spans share the same Trace information.
+  *
+  * Spans can be enriched with two types of information: tags and marks. Tags are key/value pairs that give additional
+  * information about the operation; for example, a Span that represents an HTTP request could have tags that indicate
+  * the full request URL, the response status code and the size of the payload, information that might come handy when
+  * analyzing and troubleshooting issues using the trace data. Marks represent events related to the operation and they
+  * are bound to a specific instant in time; for example, a mark could be used to indicate the instant when a connection
+  * was established, when the SSL handshake finished and when the payload was transferred for a single HTTP request
+  * operation.
+  *
+  * Optionally, Spans can generate metrics about the processing time of the operations they represent. By default, all
+  * Spans will generate metrics unless they are explicitly disabled. Since metrics are very susceptible to high
+  * cardinality tags, the Spans handle two different sets of tags: the Span tags that can have any sort of information
+  * (like URLs, user ids and so on) and the metric tags which should only include information with low cardinality (like
+  * HTTP status codes or operation names).
+  *
+  * Once a Span is finished it will be flushed to the Span reporters and, if metrics stayed enabled, the processing time
+  * of the Span will be recorded on the "span.processing-time" metric with all provided metric tags in addition to the
+  * operationName and error tags which are always added.
+  */
 sealed abstract class Span {
 
-//  def isRoot(): Boolean
-//  def isLocalRoot(): Boolean
-//  def location(): Span.Location
+  /**
+    * Uniquely identifies this Span within the Trace.
+    */
+  def id: Identifier
 
-  def isEmpty(): Boolean
-  def isLocal(): Boolean
+  /**
+    * Identifier for the parent of this this Span, if any. If a Span has no parent (e.g. it is the first Span in the
+    * trace) then an empty identifier is returned.
+    */
+  def parentId: Identifier
 
-  def nonEmpty(): Boolean = !isEmpty()
-  def isRemote(): Boolean = !isLocal()
+  /**
+    * Returns the kind of operation represented by this Span.
+    */
+  def kind: Span.Kind
 
-  def context(): SpanContext
+  /**
+    * Trace to which this Span belongs.
+    */
+  def trace: Trace
 
+  /**
+    * Returns true if this Span was initially created in another process and then transferred to this process.
+    */
+  def isRemote: Boolean
+
+  /**
+    * Returns true if this Span is a placeholder because no Span information is available.
+    */
+  def isEmpty: Boolean
+  /**
+    * Returns the position of this Span in the trace to which it belongs.
+    */
+  def position: Span.Position
+
+  /**
+    * Returns the current operation name for this Span.
+    */
+  def operationName(): String
+
+  /**
+    * Changes the operation name on this Span. Even though it is possible (and sometimes necessary) to change the
+    * operation name in a Span, take into account that the operation name might be captured by child Spans when parent
+    * operation scoping is enabled and any updates done after the child spans read the operation name will not be
+    * reflected on the "parentOperation" tag.
+    */
+  def name(name: String): Span
+
+  /**
+    * Adds the provided key/value pair to the Span tags. If a tag with the provided key was already present then its
+    * value will be overwritten.
+    */
   def tag(key: String, value: String): Span
 
+  /**
+    * Adds the provided key/value pair to the Span tags. If a tag with the provided key was already present then its
+    * value will be overwritten.
+    */
   def tag(key: String, value: Long): Span
 
+  /**
+    * Adds the provided key/value pair to the Span tags. If a tag with the provided key was already present then its
+    * value will be overwritten.
+    */
   def tag(key: String, value: Boolean): Span
 
+  /**
+    * Adds the provided key/value pair to the Span metric tags. If a tag with the provided key was already present then
+    * its value will be overwritten.
+    */
   def tagMetric(key: String, value: String): Span
 
+  /**
+    * Adds the provided key/value pair to the Span metric tags. If a tag with the provided key was already present then
+    * its value will be overwritten.
+    */
+  def tagMetric(key: String, value: Long): Span
+
+  /**
+    * Adds the provided key/value pair to the Span metric tags. If a tag with the provided key was already present then
+    * its value will be overwritten.
+    */
+  def tagMetric(key: String, value: Boolean): Span
+
+  /**
+    * Adds a new mark with the provided key using the current instant from Kamon's clock.
+    */
   def mark(key: String): Span
 
+  /**
+    * Adds a new mark with the provided key and instant.
+    */
   def mark(at: Instant, key: String): Span
 
-  def addError(error: String): Span
+  /**
+    * Marks the operation represented by this Span as failed and adds the provided message as a Span tag using the
+    * "error.message" key.
+    */
+  def fail(errorMessage: String): Span
 
-  def addError(error: String, throwable: Throwable): Span
+  /**
+    * Marks the operation represented by this Span as failed and optionally adds the "error.stacktrace" Span tag with
+    * the stack trace from the provided throwable. See the "kamon.trace.include-error-stacktrace" setting for more
+    * information.
+    */
+  def fail(cause: Throwable): Span
 
-  def setOperationName(name: String): Span
+  /**
+    * Marks the operation represented by this Span as failed and adds the provided message as a Span tag using the
+    * "error.message" key and optionally adds the "error.stacktrace" Span tag with the stack trace from the provided
+    * throwable. See the "kamon.trace.include-error-stacktrace" setting for more information.
+    */
+  def fail(errorMessage: String, cause: Throwable): Span
 
+  /**
+    * Enables metrics recording for this Span.
+    */
   def enableMetrics(): Span
 
+  /**
+    * Disables metrics recording for this Span.
+    */
   def disableMetrics(): Span
 
-  def finish(at: Instant): Unit
 
+  /**
+    * Finishes this Span. Even though it is possible to call any of the methods that modify/write information on the
+    * Span, once it is finished no further changes are taken into account.
+    */
   def finish(): Unit
 
-  def operationName(): String
+  /**
+    * Finishes this Span using the provided finish instant. Even though it is possible to call any of the methods that
+    * modify/write information on the Span, once it is finished no further changes are taken into account.
+    */
+  def finish(at: Instant): Unit
+
 }
 
 object Span {
 
-  val ContextKey = Context.key[Span]("span", Span.Empty)
-
+  /**
+    * Key used to store and retrieve Span instances from the Context
+    */
+  val Key = Context.key[Span]("span", Span.Empty)
 
 
   /**
-    * Describes a Span's location within the trace.
+    * Describes the kind of operation being represented by a Span.
     */
-  sealed abstract class Location
-  object Location {
+  sealed abstract class Kind
+  object Kind {
 
-    /** Root spans are the very first Span on each trace. They do not have a parent Span. */
-    case object Root extends Location
+    /**
+      * The Span represents an operation on the receiving side of a request/response interaction. For example,
+      * instrumentation on a HTTP server will most likely create a Span with kind=server that represents the operations
+      * it processes.
+      */
+    case object Server extends Kind
 
-    /** A local root is the first Span within this process that is joining a trace started in another process */
-    case object LocalRoot extends Location
+    /**
+      * The Span represents an operation on the initiating side of a request/response interaction. For example,
+      * instrumentation on a HTTP client library will most likely generate a Span with kind=client that represents the
+      * outgoing HTTP requests that it sends to other parties.
+      */
+    case object Client extends Kind
 
-    /** A span whose location is not know or does not need to be specified */
-    case object Unspecified extends Location
+    /**
+      * The Span represents an operation the produces a message placed on a message broker.
+      */
+    case object Producer extends Kind
+
+    /**
+      * The Span represents an operation that consumes messages from a message broker.
+      */
+    case object Consumer extends Kind
+
+    /**
+      * The Span represents an internal operation that doesn't imply communication communication with any external
+      * services. For example, if there is an interesting block of code that affects the processing of a bigger
+      * operation, it might be useful to create an internal Span that represents it so that the time spent on it will
+      * be shown on traces and related metrics.
+      */
+    case object Internal extends Kind
+
+    /**
+      * The Span represents an unknown operation kind.
+      */
+    case object Unknown extends Kind
   }
 
-  object Empty extends Span {
-    override val context: SpanContext = SpanContext.EmptySpanContext
-    override def isEmpty(): Boolean = true
-    override def isLocal(): Boolean = true
-    override def tag(key: String, value: String): Span = this
-    override def tag(key: String, value: Long): Span = this
-    override def tag(key: String, value: Boolean): Span = this
-    override def tagMetric(key: String, value: String): Span = this
-    override def mark(key: String): Span = this
-    override def mark(at: Instant, key: String): Span = this
-    override def addError(error: String): Span = this
-    override def addError(error: String, throwable: Throwable): Span = this
-    override def setOperationName(name: String): Span = this
-    override def enableMetrics(): Span = this
-    override def disableMetrics(): Span = this
-    override def finish(): Unit = {}
-    override def finish(at: Instant): Unit = {}
-    override def operationName(): String = "empty"
+
+  /**
+    * Describes a Span's position within the trace they belong to.
+    */
+  sealed abstract class Position
+  object Position {
+
+    /**
+      * Root spans are the very first Span on each trace. They do not have a parent Span.
+      */
+    case object Root extends Position
+
+    /**
+      * A local root is the first Span within this process that is joining a trace started in another process
+      */
+    case object LocalRoot extends Position
+
+    /**
+      * A span whose location is not know or does not need to be specified
+      */
+    case object Unknown extends Position
   }
 
+  /**
+    * Represents an event that happens at a given instant and is related to a Span. The key is a unique identifier of
+    * the type of event being associated.
+    */
+  case class Mark(instant: Instant, key: String)
 
-  final class Local(spanContext: SpanContext, parent: Option[Span], initialOperationName: String, initialSpanTags: Map[String, Span.TagValue],
-    initialMetricTags: Map[String, String], from: Instant, spanBuffer: Tracer.SpanBuffer, trackMetrics: Boolean, scopeSpanMetrics: Boolean, clock: Clock) extends Span {
+  /**
+    * Represents a Span that has already been finished and should be exposed to the SpanReporters.
+    */
+  case class Finished (
+    id: Identifier,
+    parentId: Identifier,
+    trace: Trace,
+    operationName: String,
+    location: Position,
+    from: Instant,
+    to: Instant,
+    tags: TagSet,
+    metricTags: TagSet,
+    marks: Seq[Mark]
+  )
 
-    private var collectMetrics: Boolean = trackMetrics
-    private var open: Boolean = true
-    private val sampled: Boolean = spanContext.samplingDecision == SamplingDecision.Sample
-    private var hasError: Boolean = false
+  /**
+    * A writable Span created on this process and implementing all the capabilities defined by the Span interface.
+    */
+  final class Local(val id: Identifier, val parentId: Identifier, val trace: Trace, val position: Position,
+      val kind: Kind, localParent: Option[Span], initialOperationName: String, spanTags: TagSet.Builder,
+      metricTags: TagSet.Builder, from: Instant, trackMetrics: Boolean, tagWithParentOperation: Boolean,
+      includeErrorStacktrace: Boolean, clock: Clock, onFinish: Span.Finished => Unit) extends Span {
+
+    private val _isSampled: Boolean = trace.samplingDecision == Trace.SamplingDecision.Sample
+    private val _metricTags = metricTags
+    private val _spanTags = spanTags
+    private var _trackMetrics: Boolean = trackMetrics
+    private var _isOpen: Boolean = true
+    private var _hasError: Boolean = false
     private var _operationName: String = initialOperationName
+    private var _marks: List[Mark] = Nil
 
-    private var spanTags: Map[String, Span.TagValue] = initialSpanTags
-    private var marks: List[Mark] = Nil
-    private var customMetricTags = initialMetricTags
-
-    override def isEmpty(): Boolean = false
-    override def isLocal(): Boolean = true
+    override val isRemote: Boolean = false
+    override val isEmpty: Boolean = false
 
     override def tag(key: String, value: String): Span = synchronized {
-      if(sampled && open)
-        spanTags = spanTags + (key -> TagValue.String(value))
+      if(_isSampled && _isOpen)
+        _spanTags.add(key, value)
       this
     }
 
     override def tag(key: String, value: Long): Span = synchronized {
-      if(sampled && open)
-        spanTags = spanTags + (key -> TagValue.Number(value))
+      if(_isSampled && _isOpen)
+        _spanTags.add(key, value)
       this
     }
 
     override def tag(key: String, value: Boolean): Span = synchronized {
-      if(sampled && open) {
-        val tagValue = if (value) TagValue.True else TagValue.False
-        spanTags = spanTags + (key -> tagValue)
-      }
+      if(_isSampled && _isOpen)
+        _spanTags.add(key, value)
       this
     }
 
     override def tagMetric(key: String, value: String): Span = synchronized {
-      if(open) {
-        if(collectMetrics)
-          customMetricTags = customMetricTags + (key -> value)
+      if(_isOpen && _trackMetrics)
+        _metricTags.add(key, value)
+      this
+    }
 
-        if(sampled)
-          spanTags = spanTags + (key -> TagValue.String(value))
-      }
+    override def tagMetric(key: String, value: Long): Span = synchronized {
+      if(_isOpen && _trackMetrics)
+        _metricTags.add(key, value)
+      this
+    }
+
+    override def tagMetric(key: String, value: Boolean): Span = synchronized {
+      if(_isOpen && _trackMetrics)
+        _metricTags.add(key, value)
       this
     }
 
@@ -163,54 +349,61 @@ object Span {
     }
 
     override def mark(at: Instant, key: String): Span = synchronized {
-      this.marks = Mark(at, key) :: this.marks
+      _marks = Mark(at, key) :: _marks
       this
     }
 
-    override def addError(error: String): Span = synchronized {
-      if(open) {
-        hasError = true
+    override def fail(message: String): Span = synchronized {
+      if(_isOpen) {
+        _hasError = true
 
-        if(sampled) {
-          spanTags = spanTags ++ Map(
-            "error" -> TagValue.True,
-            "error.object" -> TagValue.String(error)
-          )
-        }
+        if(_isSampled)
+          _spanTags.add(TagKeys.ErrorMessage, message)
       }
       this
     }
 
-    override def addError(error: String, throwable: Throwable): Span = synchronized {
-      if(open) {
-        hasError = true
+    override def fail(throwable: Throwable): Span = synchronized {
+      if(_isOpen) {
+        _hasError = true
 
-        if(sampled) {
-          spanTags = spanTags ++ Map(
-            "error" -> TagValue.True,
-            "error.object" -> TagValue.String(throwable.getMessage())
-          )
+        if(_isSampled && includeErrorStacktrace)
+          _spanTags.add(TagKeys.ErrorStacktrace, toStackTraceString(throwable))
+      }
+      this
+    }
+
+    override def fail(message: String, throwable: Throwable): Span = synchronized {
+      if(_isOpen) {
+        _hasError = true
+
+        if(_isSampled) {
+          _spanTags.add(TagKeys.ErrorMessage, message)
+
+          if(includeErrorStacktrace)
+            _spanTags.add(TagKeys.ErrorStacktrace, toStackTraceString(throwable))
         }
       }
       this
     }
 
     override def enableMetrics(): Span = synchronized {
-      collectMetrics = true
+      _trackMetrics = true
       this
     }
 
     override def disableMetrics(): Span = synchronized {
-      collectMetrics = false
+      _trackMetrics = false
       this
     }
 
-    override def context(): SpanContext =
-      spanContext
+    override def operationName(): String = synchronized {
+      _operationName
+    }
 
-    override def setOperationName(operationName: String): Span = synchronized {
-      if(open)
-        this._operationName = operationName
+    override def name(operationName: String): Span = synchronized {
+      if(_isOpen)
+        _operationName = operationName
       this
     }
 
@@ -218,102 +411,128 @@ object Span {
       finish(clock.instant())
 
     override def finish(to: Instant): Unit = synchronized {
-      if (open) {
-        open = false
+      if (_isOpen) {
+        _isOpen = false
 
-        if(collectMetrics)
-          recordSpanMetrics(to)
+        val finalMetricTags = createMetricTags()
 
-        if(sampled)
-          spanBuffer.append(toFinishedSpan(to))
+        if(_trackMetrics)
+          recordSpanMetrics(to, finalMetricTags)
+
+        if(_isSampled)
+          onFinish(toFinishedSpan(to, finalMetricTags))
       }
     }
 
-    private def toFinishedSpan(to: Instant): Span.FinishedSpan =
-      Span.FinishedSpan(spanContext, _operationName, from, to, spanTags, marks)
+    private def toStackTraceString(throwable: Throwable): String =
+      throwable.getStackTrace().mkString("", EOL, EOL)
 
-    private def recordSpanMetrics(to: Instant): Unit = {
-      val elapsedTime = Clock.nanosBetween(from, to)
-      val isErrorText = if(hasError) TagValue.True.text else TagValue.False.text
+    private def toFinishedSpan(to: Instant, metricTags: TagSet): Span.Finished =
+      Span.Finished(id, parentId, trace, _operationName, position, from, to, _spanTags.create(), metricTags, _marks)
 
-      if(scopeSpanMetrics)
-        parent.foreach(parentSpan => customMetricTags = customMetricTags + ("parentOperation" -> parentSpan.asInstanceOf[Local]._operationName))
-
-      val metricTags = Map(
-        "operation" -> _operationName,
-        "error" -> isErrorText
-      ) ++ customMetricTags
-
-      Span.Metrics.ProcessingTime.withTags(TagSet.from(metricTags)).record(elapsedTime)
+    private def recordSpanMetrics(to: Instant, metricTags: TagSet): Unit = {
+      val processingTime = Clock.nanosBetween(from, to)
+      Span.Metrics.ProcessingTime.withTags(metricTags).record(processingTime)
     }
-    override def operationName(): String = _operationName
+
+    private def createMetricTags(): TagSet = {
+      _metricTags.add(TagKeys.OperationName, _operationName)
+      _metricTags.add(TagKeys.Error, _hasError)
+
+      if(tagWithParentOperation)
+        localParent.foreach {
+          case p: Span.Local  => _metricTags.add(TagKeys.ParentOperationName, p.operationName())
+          case _              => // Can't get an operation name from anything else than a local span.
+        }
+
+      _metricTags.create()
+    }
   }
 
-  object Local {
-    def apply(spanContext: SpanContext, parent: Option[Span], initialOperationName: String, initialSpanTags: Map[String, Span.TagValue],
-        initialMetricTags: Map[String, String], from: Instant, spanBuffer: Tracer.SpanBuffer,
-        trackMetrics: Boolean, scopeSpanMetrics: Boolean, clock: Clock): Local =
-      new Local(spanContext, parent, initialOperationName, initialSpanTags, initialMetricTags, from, spanBuffer, trackMetrics, scopeSpanMetrics, clock)
-  }
-
-
-  final class Remote(val context: SpanContext) extends Span {
-    override def isEmpty(): Boolean = false
-    override def isLocal(): Boolean = false
+  /**
+    * A immutable, no-op Span that can be used to signal that there is no Span information. An empty Span completely
+    * ignores all writes made to it.
+    */
+  object Empty extends Span {
+    override def id: Identifier = Identifier.Empty
+    override def parentId: Identifier = Identifier.Empty
+    override def trace: Trace = Trace.Empty
+    override def kind: Kind = Kind.Unknown
+    override def isRemote: Boolean = false
+    override def isEmpty: Boolean = true
+    override def position(): Position = Position.Unknown
     override def tag(key: String, value: String): Span = this
     override def tag(key: String, value: Long): Span = this
     override def tag(key: String, value: Boolean): Span = this
     override def tagMetric(key: String, value: String): Span = this
+    override def tagMetric(key: String, value: Long): Span = this
+    override def tagMetric(key: String, value: Boolean): Span = this
     override def mark(key: String): Span = this
     override def mark(at: Instant, key: String): Span = this
-    override def addError(error: String): Span = this
-    override def addError(error: String, throwable: Throwable): Span = this
-    override def setOperationName(name: String): Span = this
+    override def fail(errorMessage: String): Span = this
+    override def fail(cause: Throwable): Span = this
+    override def fail(errorMessage: String, cause: Throwable): Span = this
+    override def name(name: String): Span = this
     override def enableMetrics(): Span = this
     override def disableMetrics(): Span = this
     override def finish(): Unit = {}
     override def finish(at: Instant): Unit = {}
-    override def operationName(): String = "remote"
-  }
-
-  object Remote {
-    def apply(spanContext: SpanContext): Remote =
-      new Remote(spanContext)
-  }
-
-  sealed trait TagValue
-  object TagValue {
-
-    sealed trait Boolean extends TagValue {
-      def text: java.lang.String
-    }
-
-    case object True extends Boolean {
-      override def text: java.lang.String = "true"
-    }
-
-    case object False extends Boolean {
-      override def text: java.lang.String = "false"
-    }
-
-    case class String(string: java.lang.String) extends TagValue
-    case class Number(number: Long) extends TagValue
+    override def operationName(): String = "empty"
   }
 
 
+  /**
+    * A immutable, no-op Span that holds information from a Span that was initially created in another process and then
+    * transferred to this process. This is the minimal representation of a Span that gets transferred through Context
+    * propagation channels. A remote Span completely ignores all writes made to it.
+    */
+  final case class Remote(id: Identifier, parentId: Identifier, trace: Trace) extends Span {
+    override def kind: Kind = Kind.Unknown
+    override def isRemote: Boolean = true
+    override def isEmpty: Boolean = false
+    override def position(): Position = Position.Unknown
+    override def tag(key: String, value: String): Span = this
+    override def tag(key: String, value: Long): Span = this
+    override def tag(key: String, value: Boolean): Span = this
+    override def tagMetric(key: String, value: String): Span = this
+    override def tagMetric(key: String, value: Long): Span = this
+    override def tagMetric(key: String, value: Boolean): Span = this
+    override def mark(key: String): Span = this
+    override def mark(at: Instant, key: String): Span = this
+    override def fail(errorMessage: String): Span = this
+    override def fail(cause: Throwable): Span = this
+    override def fail(errorMessage: String, cause: Throwable): Span = this
+    override def name(name: String): Span = this
+    override def enableMetrics(): Span = this
+    override def disableMetrics(): Span = this
+    override def finish(): Unit = {}
+    override def finish(at: Instant): Unit = {}
+    override def operationName(): String = "empty"
+  }
+
+
+  /**
+    * Metrics tracked by the Span implementation.
+    */
   object Metrics {
-    val ProcessingTime = Kamon.histogram("span.processing-time", MeasurementUnit.time.nanoseconds)
-    val SpanErrorCount = Kamon.counter("span.error-count")
+
+    val ProcessingTime = Kamon.timer(
+      name = "span.processing-time",
+      description = "Tracks the elapsed time between the starting and finishing a Span."
+    )
   }
 
-  case class Mark(instant: Instant, key: String)
 
-  case class FinishedSpan(
-    context: SpanContext,
-    operationName: String,
-    from: Instant,
-    to: Instant,
-    tags: Map[String, Span.TagValue],
-    marks: Seq[Span.Mark]
-  )
+  /**
+    * Tag keys used by the implementations to record Span and metric tags.
+    */
+  object TagKeys {
+    val Error = "error"
+    val ErrorMessage = "error.message"
+    val ErrorStacktrace = "error.stacktrace"
+    val Component = "component"
+    val OperationName = "operation"
+    val ParentOperationName = "parentOperation"
+    val InitiatorName = "initiator.name"
+  }
 }

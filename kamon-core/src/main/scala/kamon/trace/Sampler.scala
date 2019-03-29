@@ -16,13 +16,15 @@
 package kamon
 package trace
 
-import kamon.tag.TagSet
-import kamon.trace.SpanContext.SamplingDecision
-
 /**
-  * A sampler takes the decision of whether to collect and report Spans for a trace or not. Samplers can only take a
-  * sampling decision when a new Span is being created and
+  * A sampler takes the decision of whether to collect and report Spans for a particular trace. Samplers are used only
+  * when starting a new Trace.
   */
 trait Sampler {
-  def decide(operationName: String, tags: TagSet): SamplingDecision
+
+  /**
+    * Decides whether a trace should be sampled or not. The provided SpanBuilder contains the information that has been
+    * gathered so far for what will become the root Span for the new Trace.
+    */
+  def decide(rootSpanBuilder: SpanBuilder): Trace.SamplingDecision
 }
