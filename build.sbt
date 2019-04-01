@@ -106,8 +106,8 @@ lazy val kamonPlay26 = Project("kamon-play-26", file("kamon-play-2.6.x"))
   .settings(resolvers += Resolver.bintrayRepo("kamon-io", "snapshots"))
   .settings(
     libraryDependencies ++=
-      compileScope(play26, playNetty26, playAkkaHttp26, playWS26, kamonCore, kamonScala) ++
-      providedScope(aspectJ, typesafeConfig) ++
+      compileScope(kamonCore, kamonScala) ++
+      providedScope(play26, playNetty26, playAkkaHttp26, playWS26, aspectJ, typesafeConfig) ++
       testScope(playTest26, scalatestplus26, playLogBack26, kamonTestkit))
 
 
@@ -123,9 +123,9 @@ lazy val kamonPlay27 = Project("kamon-play-27", file("kamon-play-2.7.x"))
   .settings(resolvers += Resolver.bintrayRepo("kamon-io", "snapshots"))
   .settings(
     libraryDependencies ++=
-      compileScope(play27, playNetty27, playAkkaHttp27, playWS27, kamonCore, kamonScala) ++
-        providedScope(aspectJ, typesafeConfig) ++
-        testScope(playTest27, scalatestplus27, playLogBack27, kamonTestkit))
+      compileScope(kamonCore, kamonScala) ++
+      providedScope(play27, playNetty27, playAkkaHttp27, playWS27, aspectJ, typesafeConfig) ++
+      testScope(playTest27, scalatestplus27, playLogBack27, kamonTestkit))
 
 import sbt.Tests._
 def singleTestPerJvm(tests: Seq[TestDefinition], jvmSettings: Seq[String]): Seq[Group] =
