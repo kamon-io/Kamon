@@ -15,7 +15,7 @@
 
 package kamon.metric
 
-import kamon.{JTags, Tags}
+import kamon.{JTags, STags}
 
 trait Timer extends Histogram {
   def start(): StartedTimer
@@ -82,7 +82,7 @@ private[kamon] final class TimerMetricImpl(val underlyingHistogram: HistogramMet
   override def refine(tags: JTags): Timer =
     refine(tags.asScala.toMap)
 
-  override def refine(tags: Tags): Timer =
+  override def refine(tags: STags): Timer =
     new TimerImpl(underlyingHistogram.refine(tags))
 
   override def refine(tags: (String, String)*): Timer =
@@ -94,7 +94,7 @@ private[kamon] final class TimerMetricImpl(val underlyingHistogram: HistogramMet
   override def remove(tags: JTags): Boolean =
     remove(tags.asScala.toMap)
 
-  override def remove(tags: Tags): Boolean =
+  override def remove(tags: STags): Boolean =
     underlyingHistogram.remove(tags)
 
   override def remove(tags: (String, String)*): Boolean =

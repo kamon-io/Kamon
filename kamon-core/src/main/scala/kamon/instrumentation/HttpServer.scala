@@ -6,7 +6,9 @@ import java.time.Duration
 import com.typesafe.config.Config
 import kamon.context.Context
 import kamon.instrumentation.HttpServer.Settings.TagMode
-import kamon.metric.MeasurementUnit.{time, information}
+import kamon.metric.MeasurementUnit.{information, time}
+import kamon.tag.TagSet
+import kamon.tag.Lookups.{any, option}
 import kamon.trace.{IdentityProvider, Span}
 import kamon.util.GlobPathFilter
 import org.slf4j.LoggerFactory
@@ -348,7 +350,7 @@ object HttpServer {
         span.disableMetrics()
 
 
-      for { traceIdTag <- settings.traceIDTag; customTraceID <- context.getTag(traceIdTag) } {
+      for {traceIdTag <- settings.traceIDTagLookup; customTraceID <- context.getTag(traceIdTag) } {
         val identifier = Kamon.identityProvider.traceIdGenerator().from(customTraceID)
         if(identifier != IdentityProvider.NoIdentifier)
           span.withTraceID(identifier)
@@ -361,9 +363,12 @@ object HttpServer {
       }
 
       addRequestTag("http.url", request.url, settings.urlTagMode)
-      addRequestTag("http.method", request.method, settings.urlTagMode)
+      addRequestTag("http.method", request.method, settings.methodTagMode)
       settings.contextTags.foreach {
-        case (tagName, mode) => context.getTag(tagName).foreach(tagValue => addRequestTag(tagName, tagValue, mode))
+        case (tagName, mode) =>
+          val tagValue = context.getTag(any(tagName))
+          if(tagValue != null)
+            addRequestTag(tagName, tagValue.toString, mode)
       }
 
       span.start()
@@ -385,7 +390,7 @@ object HttpServer {
     propagationChannel: String,
     enableServerMetrics: Boolean,
     enableTracing: Boolean,
-    traceIDTag: Option[String],
+    traceIDTagLookup: Option[TagSet.Lookup[Option[String]]],
     enableSpanMetrics: Boolean,
     urlTagMode: TagMode,
     methodTagMode: TagMode,
@@ -424,7 +429,10 @@ object HttpServer {
 
       // Tracing settings
       val enableTracing = config.getBoolean("tracing.enabled")
-      val traceIdTag = Option(config.getString("tracing.preferred-trace-id-tag")).filterNot(_ == "none")
+      val traceIdTagLookup = Option(config.getString("tracing.preferred-trace-id-tag"))
+        .filterNot(_ == "none")
+        .map(option)
+
       val enableSpanMetrics = config.getBoolean("tracing.span-metrics")
       val urlTagMode = TagMode.from(config.getString("tracing.tags.url"))
       val methodTagMode = TagMode.from(config.getString("tracing.tags.method"))
@@ -441,12 +449,12 @@ object HttpServer {
         case (pattern, operationName) => (new GlobPathFilter(pattern), operationName)
       }
 
-      Settings(
+      Settings (
         enablePropagation,
         propagationChannel,
         enableServerMetrics,
         enableTracing,
-        traceIdTag,
+        traceIdTagLookup,
         enableSpanMetrics,
         urlTagMode,
         methodTagMode,

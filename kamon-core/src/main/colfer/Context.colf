@@ -1,11 +1,32 @@
 package context
 
 type Entry struct {
-  name text
-  content binary
+  key text
+  value binary
+}
+
+type StringTag struct {
+  key text
+  value text
+}
+
+type LongTag struct {
+  key text
+  value int64
+}
+
+type BooleanTag struct {
+  key text
+  value bool
+}
+
+type Tags struct {
+  strings   []StringTag
+  longs     []LongTag
+  booleans  []BooleanTag
 }
 
 type Context struct {
-  tags    []text
+  tags    Tags
   entries []Entry
 }

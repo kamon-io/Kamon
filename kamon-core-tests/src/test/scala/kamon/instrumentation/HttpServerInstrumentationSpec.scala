@@ -4,6 +4,7 @@ import java.time.Duration
 
 import kamon.context.Context
 import kamon.metric.{Counter, Histogram, RangeSampler}
+import kamon.tag.Lookups._
 import kamon.testkit.{MetricInspection, SpanInspection}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.{Matchers, OptionValues, WordSpec}
@@ -20,10 +21,8 @@ class HttpServerInstrumentationSpec extends WordSpec with Matchers with SpanInsp
           "custom-trace-id" -> "0011223344556677"
         )))
 
-        handler.context.tags should contain only(
-          "tag" -> "value",
-          "none" -> "0011223344556677"
-        )
+        handler.context.tags.get(plain("tag")) shouldBe "value"
+        handler.context.tags.get(plain("none")) shouldBe "0011223344556677"
 
         handler.send(fakeResponse(200, mutable.Map.empty), Context.Empty)
         handler.doneSending(0L)
@@ -35,10 +34,8 @@ class HttpServerInstrumentationSpec extends WordSpec with Matchers with SpanInsp
           "custom-trace-id" -> "0011223344556677"
         )))
 
-        handler.context.tags should contain only(
-          "tag" -> "value",
-          "none" -> "0011223344556677"
-        )
+        handler.context.tags.get(plain("tag")) shouldBe "value"
+        handler.context.tags.get(plain("none")) shouldBe "0011223344556677"
 
         val span = inspect(handler.span)
         span.context().traceID.string shouldNot be("0011223344556677")

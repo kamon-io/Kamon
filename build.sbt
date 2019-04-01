@@ -47,6 +47,7 @@ val commonSettings = Seq(
     ShadeRule.rename("com.grack.nanojson.**"  -> "kamon.lib.@0").inAll,
     ShadeRule.rename("org.jctools.**"         -> "kamon.lib.@0").inAll,
     ShadeRule.rename("fi.iki.elonen.**"       -> "kamon.lib.@0").inAll,
+    ShadeRule.rename("org.eclipse.**"         -> "kamon.lib.@0").inAll,
   ),
   assemblyExcludedJars in assembly := {
     val cp = (fullClasspath in assembly).value
@@ -56,7 +57,7 @@ val commonSettings = Seq(
   packageBin in Compile := assembly.value,
   assemblyJarName in assembly := s"${moduleName.value}_${scalaBinaryVersion.value}-${version.value}.jar",
   pomPostProcess := { originalPom => {
-    val shadedGroups = Seq("org.hdrhistogram", "org.jctools", "org.nanohttpd", "com.grack")
+    val shadedGroups = Seq("org.hdrhistogram", "org.jctools", "org.nanohttpd", "com.grack", "org.eclipse.collections")
     val filterShadedDependencies = new RuleTransformer(new RewriteRule {
       override def transform(n: Node): Seq[Node] = {
         if(n.label == "dependency") {
@@ -79,10 +80,11 @@ lazy val core = (project in file("kamon-core"))
     buildInfoKeys := Seq[BuildInfoKey](version),
     buildInfoPackage := "kamon.status",
     libraryDependencies ++= Seq(
-      "com.typesafe"     %  "config"              % "1.3.1",
-      "org.hdrhistogram" %  "HdrHistogram"        % "2.1.9",
-      "org.jctools"      %  "jctools-core"        % "2.1.1",
-      "org.slf4j"        %  "slf4j-api"           % "1.7.25"
+      "com.typesafe"            %  "config"              % "1.3.1",
+      "org.hdrhistogram"        %  "HdrHistogram"        % "2.1.9",
+      "org.jctools"             %  "jctools-core"        % "2.1.1",
+      "org.eclipse.collections" %  "eclipse-collections" % "9.2.0",
+      "org.slf4j"               %  "slf4j-api"           % "1.7.25"
     )
   )
 

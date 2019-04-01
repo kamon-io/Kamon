@@ -24,7 +24,7 @@ import java.nio.BufferUnderflowException;
  * @see <a href="https://github.com/pascaldekloe/colfer">Colfer's home</a>
  */
 @javax.annotation.Generated(value="colf(1)", comments="Colfer from schema file Context.colf")
-public class Context implements Serializable {
+public class Tags implements Serializable {
 
 	/** The upper limit for serial byte sizes. */
 	public static int colferSizeMax = 16 * 1024 * 1024;
@@ -35,21 +35,27 @@ public class Context implements Serializable {
 
 
 
-	public Tags tags;
+	public StringTag[] strings;
 
-	public Entry[] entries;
+	public LongTag[] longs;
+
+	public BooleanTag[] booleans;
 
 
 	/** Default constructor */
-	public Context() {
+	public Tags() {
 		init();
 	}
 
-	private static final Entry[] _zeroEntries = new Entry[0];
+	private static final StringTag[] _zeroStrings = new StringTag[0];
+	private static final LongTag[] _zeroLongs = new LongTag[0];
+	private static final BooleanTag[] _zeroBooleans = new BooleanTag[0];
 
 	/** Colfer zero values. */
 	private void init() {
-		entries = _zeroEntries;
+		strings = _zeroStrings;
+		longs = _zeroLongs;
+		booleans = _zeroBooleans;
 	}
 
 	/**
@@ -77,7 +83,7 @@ public class Context implements Serializable {
 		public Unmarshaller(InputStream in, byte[] buf) {
 			// TODO: better size estimation
 			if (buf == null || buf.length == 0)
-				buf = new byte[Math.min(Context.colferSizeMax, 2048)];
+				buf = new byte[Math.min(Tags.colferSizeMax, 2048)];
 			this.buf = buf;
 			reset(in);
 		}
@@ -101,13 +107,13 @@ public class Context implements Serializable {
 		 * @throws SecurityException on an upper limit breach defined by either {@link #colferSizeMax} or {@link #colferListMax}.
 		 * @throws InputMismatchException when the data does not match this object's schema.
 		 */
-		public Context next() throws IOException {
+		public Tags next() throws IOException {
 			if (in == null) return null;
 
 			while (true) {
 				if (this.i > this.offset) {
 					try {
-						Context o = new Context();
+						Tags o = new Tags();
 						this.offset = o.unmarshal(this.buf, this.offset, this.i);
 						return o;
 					} catch (BufferUnderflowException e) {
@@ -121,7 +127,7 @@ public class Context implements Serializable {
 				} else if (i == buf.length) {
 					byte[] src = this.buf;
 					// TODO: better size estimation
-					if (offset == 0) this.buf = new byte[Math.min(Context.colferSizeMax, this.buf.length * 4)];
+					if (offset == 0) this.buf = new byte[Math.min(Tags.colferSizeMax, this.buf.length * 4)];
 					System.arraycopy(src, this.offset, this.buf, 0, this.i - this.offset);
 					this.i -= this.offset;
 					this.offset = 0;
@@ -144,7 +150,9 @@ public class Context implements Serializable {
 
 	/**
 	 * Serializes the object.
-	 * All {@code null} elements in {@link #entries} will be replaced with a {@code new} value.
+	 * All {@code null} elements in {@link #strings} will be replaced with a {@code new} value.
+	 * All {@code null} elements in {@link #longs} will be replaced with a {@code new} value.
+	 * All {@code null} elements in {@link #booleans} will be replaced with a {@code new} value.
 	 * @param out the data destination.
 	 * @param buf the initial buffer or {@code null}.
 	 * @return the final buffer. When the serial fits into {@code buf} then the return is {@code buf}.
@@ -155,14 +163,14 @@ public class Context implements Serializable {
 	public byte[] marshal(OutputStream out, byte[] buf) throws IOException {
 		// TODO: better size estimation
 		if (buf == null || buf.length == 0)
-			buf = new byte[Math.min(Context.colferSizeMax, 2048)];
+			buf = new byte[Math.min(Tags.colferSizeMax, 2048)];
 
 		while (true) {
 			int i;
 			try {
 				i = marshal(buf, 0);
 			} catch (BufferOverflowException e) {
-				buf = new byte[Math.min(Context.colferSizeMax, buf.length * 4)];
+				buf = new byte[Math.min(Tags.colferSizeMax, buf.length * 4)];
 				continue;
 			}
 
@@ -173,7 +181,9 @@ public class Context implements Serializable {
 
 	/**
 	 * Serializes the object.
-	 * All {@code null} elements in {@link #entries} will be replaced with a {@code new} value.
+	 * All {@code null} elements in {@link #strings} will be replaced with a {@code new} value.
+	 * All {@code null} elements in {@link #longs} will be replaced with a {@code new} value.
+	 * All {@code null} elements in {@link #booleans} will be replaced with a {@code new} value.
 	 * @param buf the data destination.
 	 * @param offset the initial index for {@code buf}, inclusive.
 	 * @return the final index for {@code buf}, exclusive.
@@ -184,18 +194,13 @@ public class Context implements Serializable {
 		int i = offset;
 
 		try {
-			if (this.tags != null) {
+			if (this.strings.length != 0) {
 				buf[i++] = (byte) 0;
-				i = this.tags.marshal(buf, i);
-			}
-
-			if (this.entries.length != 0) {
-				buf[i++] = (byte) 1;
-				Entry[] a = this.entries;
+				StringTag[] a = this.strings;
 
 				int x = a.length;
-				if (x > Context.colferListMax)
-					throw new IllegalStateException(format("colfer: kamon/context/generated/binary/context.Context.entries length %d exceeds %d elements", x, Context.colferListMax));
+				if (x > Tags.colferListMax)
+					throw new IllegalStateException(format("colfer: kamon/context/generated/binary/context.Tags.strings length %d exceeds %d elements", x, Tags.colferListMax));
 				while (x > 0x7f) {
 					buf[i++] = (byte) (x | 0x80);
 					x >>>= 7;
@@ -203,9 +208,55 @@ public class Context implements Serializable {
 				buf[i++] = (byte) x;
 
 				for (int ai = 0; ai < a.length; ai++) {
-					Entry o = a[ai];
+					StringTag o = a[ai];
 					if (o == null) {
-						o = new Entry();
+						o = new StringTag();
+						a[ai] = o;
+					}
+					i = o.marshal(buf, i);
+				}
+			}
+
+			if (this.longs.length != 0) {
+				buf[i++] = (byte) 1;
+				LongTag[] a = this.longs;
+
+				int x = a.length;
+				if (x > Tags.colferListMax)
+					throw new IllegalStateException(format("colfer: kamon/context/generated/binary/context.Tags.longs length %d exceeds %d elements", x, Tags.colferListMax));
+				while (x > 0x7f) {
+					buf[i++] = (byte) (x | 0x80);
+					x >>>= 7;
+				}
+				buf[i++] = (byte) x;
+
+				for (int ai = 0; ai < a.length; ai++) {
+					LongTag o = a[ai];
+					if (o == null) {
+						o = new LongTag();
+						a[ai] = o;
+					}
+					i = o.marshal(buf, i);
+				}
+			}
+
+			if (this.booleans.length != 0) {
+				buf[i++] = (byte) 2;
+				BooleanTag[] a = this.booleans;
+
+				int x = a.length;
+				if (x > Tags.colferListMax)
+					throw new IllegalStateException(format("colfer: kamon/context/generated/binary/context.Tags.booleans length %d exceeds %d elements", x, Tags.colferListMax));
+				while (x > 0x7f) {
+					buf[i++] = (byte) (x | 0x80);
+					x >>>= 7;
+				}
+				buf[i++] = (byte) x;
+
+				for (int ai = 0; ai < a.length; ai++) {
+					BooleanTag o = a[ai];
+					if (o == null) {
+						o = new BooleanTag();
 						a[ai] = o;
 					}
 					i = o.marshal(buf, i);
@@ -215,8 +266,8 @@ public class Context implements Serializable {
 			buf[i++] = (byte) 0x7f;
 			return i;
 		} catch (ArrayIndexOutOfBoundsException e) {
-			if (i - offset > Context.colferSizeMax)
-				throw new IllegalStateException(format("colfer: kamon/context/generated/binary/context.Context exceeds %d bytes", Context.colferSizeMax));
+			if (i - offset > Tags.colferSizeMax)
+				throw new IllegalStateException(format("colfer: kamon/context/generated/binary/context.Tags exceeds %d bytes", Tags.colferSizeMax));
 			if (i > buf.length) throw new BufferOverflowException();
 			throw e;
 		}
@@ -253,8 +304,22 @@ public class Context implements Serializable {
 			byte header = buf[i++];
 
 			if (header == (byte) 0) {
-				this.tags = new Tags();
-				i = this.tags.unmarshal(buf, i, end);
+				int length = 0;
+				for (int shift = 0; true; shift += 7) {
+					byte b = buf[i++];
+					length |= (b & 0x7f) << shift;
+					if (shift == 28 || b >= 0) break;
+				}
+				if (length < 0 || length > Tags.colferListMax)
+					throw new SecurityException(format("colfer: kamon/context/generated/binary/context.Tags.strings length %d exceeds %d elements", length, Tags.colferListMax));
+
+				StringTag[] a = new StringTag[length];
+				for (int ai = 0; ai < length; ai++) {
+					StringTag o = new StringTag();
+					i = o.unmarshal(buf, i, end);
+					a[ai] = o;
+				}
+				this.strings = a;
 				header = buf[i++];
 			}
 
@@ -265,25 +330,45 @@ public class Context implements Serializable {
 					length |= (b & 0x7f) << shift;
 					if (shift == 28 || b >= 0) break;
 				}
-				if (length < 0 || length > Context.colferListMax)
-					throw new SecurityException(format("colfer: kamon/context/generated/binary/context.Context.entries length %d exceeds %d elements", length, Context.colferListMax));
+				if (length < 0 || length > Tags.colferListMax)
+					throw new SecurityException(format("colfer: kamon/context/generated/binary/context.Tags.longs length %d exceeds %d elements", length, Tags.colferListMax));
 
-				Entry[] a = new Entry[length];
+				LongTag[] a = new LongTag[length];
 				for (int ai = 0; ai < length; ai++) {
-					Entry o = new Entry();
+					LongTag o = new LongTag();
 					i = o.unmarshal(buf, i, end);
 					a[ai] = o;
 				}
-				this.entries = a;
+				this.longs = a;
+				header = buf[i++];
+			}
+
+			if (header == (byte) 2) {
+				int length = 0;
+				for (int shift = 0; true; shift += 7) {
+					byte b = buf[i++];
+					length |= (b & 0x7f) << shift;
+					if (shift == 28 || b >= 0) break;
+				}
+				if (length < 0 || length > Tags.colferListMax)
+					throw new SecurityException(format("colfer: kamon/context/generated/binary/context.Tags.booleans length %d exceeds %d elements", length, Tags.colferListMax));
+
+				BooleanTag[] a = new BooleanTag[length];
+				for (int ai = 0; ai < length; ai++) {
+					BooleanTag o = new BooleanTag();
+					i = o.unmarshal(buf, i, end);
+					a[ai] = o;
+				}
+				this.booleans = a;
 				header = buf[i++];
 			}
 
 			if (header != (byte) 0x7f)
 				throw new InputMismatchException(format("colfer: unknown header at byte %d", i - 1));
 		} finally {
-			if (i > end && end - offset < Context.colferSizeMax) throw new BufferUnderflowException();
-			if (i < 0 || i - offset > Context.colferSizeMax)
-				throw new SecurityException(format("colfer: kamon/context/generated/binary/context.Context exceeds %d bytes", Context.colferSizeMax));
+			if (i > end && end - offset < Tags.colferSizeMax) throw new BufferUnderflowException();
+			if (i < 0 || i - offset > Tags.colferSizeMax)
+				throw new SecurityException(format("colfer: kamon/context/generated/binary/context.Tags exceeds %d bytes", Tags.colferSizeMax));
 			if (i > end) throw new BufferUnderflowException();
 		}
 
@@ -291,7 +376,7 @@ public class Context implements Serializable {
 	}
 
 	// {@link Serializable} version number.
-	private static final long serialVersionUID = 2L;
+	private static final long serialVersionUID = 3L;
 
 	// {@link Serializable} Colfer extension.
 	private void writeObject(ObjectOutputStream out) throws IOException {
@@ -325,76 +410,104 @@ public class Context implements Serializable {
 	}
 
 	/**
-	 * Gets kamon/context/generated/binary/context.Context.tags.
+	 * Gets kamon/context/generated/binary/context.Tags.strings.
 	 * @return the value.
 	 */
-	public Tags getTags() {
-		return this.tags;
+	public StringTag[] getStrings() {
+		return this.strings;
 	}
 
 	/**
-	 * Sets kamon/context/generated/binary/context.Context.tags.
+	 * Sets kamon/context/generated/binary/context.Tags.strings.
 	 * @param value the replacement.
 	 */
-	public void setTags(Tags value) {
-		this.tags = value;
+	public void setStrings(StringTag[] value) {
+		this.strings = value;
 	}
 
 	/**
-	 * Sets kamon/context/generated/binary/context.Context.tags.
+	 * Sets kamon/context/generated/binary/context.Tags.strings.
 	 * @param value the replacement.
 	 * @return {link this}.
 	 */
-	public Context withTags(Tags value) {
-		this.tags = value;
+	public Tags withStrings(StringTag[] value) {
+		this.strings = value;
 		return this;
 	}
 
 	/**
-	 * Gets kamon/context/generated/binary/context.Context.entries.
+	 * Gets kamon/context/generated/binary/context.Tags.longs.
 	 * @return the value.
 	 */
-	public Entry[] getEntries() {
-		return this.entries;
+	public LongTag[] getLongs() {
+		return this.longs;
 	}
 
 	/**
-	 * Sets kamon/context/generated/binary/context.Context.entries.
+	 * Sets kamon/context/generated/binary/context.Tags.longs.
 	 * @param value the replacement.
 	 */
-	public void setEntries(Entry[] value) {
-		this.entries = value;
+	public void setLongs(LongTag[] value) {
+		this.longs = value;
 	}
 
 	/**
-	 * Sets kamon/context/generated/binary/context.Context.entries.
+	 * Sets kamon/context/generated/binary/context.Tags.longs.
 	 * @param value the replacement.
 	 * @return {link this}.
 	 */
-	public Context withEntries(Entry[] value) {
-		this.entries = value;
+	public Tags withLongs(LongTag[] value) {
+		this.longs = value;
+		return this;
+	}
+
+	/**
+	 * Gets kamon/context/generated/binary/context.Tags.booleans.
+	 * @return the value.
+	 */
+	public BooleanTag[] getBooleans() {
+		return this.booleans;
+	}
+
+	/**
+	 * Sets kamon/context/generated/binary/context.Tags.booleans.
+	 * @param value the replacement.
+	 */
+	public void setBooleans(BooleanTag[] value) {
+		this.booleans = value;
+	}
+
+	/**
+	 * Sets kamon/context/generated/binary/context.Tags.booleans.
+	 * @param value the replacement.
+	 * @return {link this}.
+	 */
+	public Tags withBooleans(BooleanTag[] value) {
+		this.booleans = value;
 		return this;
 	}
 
 	@Override
 	public final int hashCode() {
 		int h = 1;
-		if (this.tags != null) h = 31 * h + this.tags.hashCode();
-		for (Entry o : this.entries) h = 31 * h + (o == null ? 0 : o.hashCode());
+		for (StringTag o : this.strings) h = 31 * h + (o == null ? 0 : o.hashCode());
+		for (LongTag o : this.longs) h = 31 * h + (o == null ? 0 : o.hashCode());
+		for (BooleanTag o : this.booleans) h = 31 * h + (o == null ? 0 : o.hashCode());
 		return h;
 	}
 
 	@Override
 	public final boolean equals(Object o) {
-		return o instanceof Context && equals((Context) o);
+		return o instanceof Tags && equals((Tags) o);
 	}
 
-	public final boolean equals(Context o) {
+	public final boolean equals(Tags o) {
 		if (o == null) return false;
 		if (o == this) return true;
-		return o.getClass() == Context.class
-			&& (this.tags == null ? o.tags == null : this.tags.equals(o.tags))
-			&& java.util.Arrays.equals(this.entries, o.entries);
+		return o.getClass() == Tags.class
+			&& java.util.Arrays.equals(this.strings, o.strings)
+			&& java.util.Arrays.equals(this.longs, o.longs)
+			&& java.util.Arrays.equals(this.booleans, o.booleans);
 	}
 
 }

@@ -17,6 +17,7 @@ package kamon
 package context
 
 import com.typesafe.config.Config
+import kamon.tag.{Tag, TagSet}
 import org.slf4j.LoggerFactory
 
 import scala.reflect.ClassTag
@@ -91,7 +92,7 @@ object HttpPropagation {
       *   3. Read all context entries using the incoming entries configuration.
       */
     override def read(reader: HeaderReader): Context = {
-      val tags = Map.newBuilder[String, String]
+      val tags = Map.newBuilder[String, Any]
 
       // Tags encoded together in the context tags header.
       try {
@@ -99,7 +100,7 @@ object HttpPropagation {
           contextTagsHeader.split(";").foreach(tagData => {
             val tagPair = tagData.split("=")
             if (tagPair.length == 2) {
-              tags += (tagPair(0) -> tagPair(1))
+              tags += (tagPair(0) -> parseTagValue(tagPair(1)))
             }
           })
         }
@@ -118,7 +119,7 @@ object HttpPropagation {
       }
 
       // Incoming Entries
-      settings.incomingEntries.foldLeft(Context.of(tags.result())) {
+      settings.incomingEntries.foldLeft(Context.of(TagSet.from(tags.result()))) {
         case (context, (entryName, entryDecoder)) =>
           var result = context
           try {
@@ -145,10 +146,12 @@ object HttpPropagation {
       }
 
       // Write tags with specific mappings or append them to the context tags header.
-      context.tags.foreach {
-        case (tagKey, tagValue) => settings.tagsMappings.get(tagKey) match {
-          case Some(mappedHeader) => writer.write(mappedHeader, tagValue)
-          case None => appendTag(tagKey, tagValue)
+      context.tags.iterator().foreach { tag =>
+        val tagKey = tag.key
+
+        settings.tagsMappings.get(tagKey) match {
+          case Some(mappedHeader) => writer.write(mappedHeader, tagValueWithPrefix(tag))
+          case None               => appendTag(tagKey, Tag.unwrapValue(tag).toString)
         }
       }
 
@@ -167,6 +170,54 @@ object HttpPropagation {
           }
       }
     }
+
+
+    private val _longTypePrefix = "l:"
+    private val _booleanTypePrefix = "b:"
+    private val _booleanTrue = "true"
+    private val _booleanFalse = "false"
+
+    /**
+      * Tries to infer and parse a value into one of the supported tag types: String, Long or Boolean by looking for the
+      * type indicator prefix on the tag value. If the inference fails it will default to treat the value as a String.
+      */
+    private def parseTagValue(value: String): Any = {
+      if (value.isEmpty || value.length < 2) // Empty and short values definitely do not have type indicators.
+        value
+      else {
+        if(value.startsWith(_longTypePrefix)) {
+          // Try to parse the content as a Long value.
+          val remaining = value.substring(2)
+          try {
+            java.lang.Long.parseLong(remaining)
+          } catch {
+            case _: Throwable => remaining
+          }
+
+        } else if(value.startsWith(_booleanTypePrefix)) {
+
+          // Try to parse the content as a Boolean value.
+          val remaining = value.substring(2)
+          if(remaining.equals(_booleanTrue))
+            true
+          else if(remaining.equals(_booleanFalse))
+            false
+          else
+            remaining
+
+        } else value
+      }
+    }
+
+    /**
+      * Returns the actual value to be written in the HTTP transport, with a type prefix if applicable.
+      */
+    private def tagValueWithPrefix(tag: Tag): String = tag match {
+      case t: Tag.String  => t.value
+      case t: Tag.Boolean => _booleanTypePrefix + t.value.toString
+      case t: Tag.Long    => _longTypePrefix + t.value.toString
+    }
+
   }
 
   case class Settings(

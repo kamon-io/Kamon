@@ -6,6 +6,8 @@ import com.typesafe.config.ConfigFactory
 import kamon.Kamon
 import kamon.context.BinaryPropagation.{ByteStreamReader, ByteStreamWriter}
 import kamon.context.Propagation.{EntryReader, EntryWriter}
+import kamon.tag.TagSet
+import kamon.tag.Lookups._
 import org.scalatest.{Matchers, OptionValues, WordSpec}
 
 import scala.util.Random
@@ -70,13 +72,14 @@ class BinaryPropagationSpec extends WordSpec with Matchers with OptionValues {
     }
 
     "round trip a Context that only has tags" in {
-      val context = Context.of(Map("hello" -> "world", "kamon" -> "rulez"))
+      val context = Context.of(TagSet.from(Map("hello" -> "world", "kamon" -> "rulez")))
       val writer = inspectableByteStreamWriter()
       binaryPropagation.write(context, writer)
 
       val rtContext = binaryPropagation.read(ByteStreamReader.of(writer.toByteArray))
       rtContext.entries shouldBe empty
-      rtContext.tags should contain theSameElementsAs (context.tags)
+      rtContext.tags.get(plain("hello")) shouldBe "world"
+      rtContext.tags.get(plain("kamon")) shouldBe "rulez"
     }
 
     "round trip a Context that only has entries" in {
@@ -91,7 +94,7 @@ class BinaryPropagationSpec extends WordSpec with Matchers with OptionValues {
     }
 
     "round trip a Context that with tags and entries" in {
-      val context = Context.of(Map("hello" -> "world", "kamon" -> "rulez"))
+      val context = Context.of(TagSet.from(Map("hello" -> "world", "kamon" -> "rulez")))
         .withKey(BinaryPropagationSpec.StringKey, "string-value")
         .withKey(BinaryPropagationSpec.IntegerKey, 42)
 
@@ -99,7 +102,8 @@ class BinaryPropagationSpec extends WordSpec with Matchers with OptionValues {
       binaryPropagation.write(context, writer)
       val rtContext = binaryPropagation.read(ByteStreamReader.of(writer.toByteArray))
 
-      rtContext.tags should contain theSameElementsAs (context.tags)
+      rtContext.tags.get(plain("hello")) shouldBe "world"
+      rtContext.tags.get(plain("kamon")) shouldBe "rulez"
       rtContext.get(BinaryPropagationSpec.StringKey) shouldBe "string-value"
       rtContext.get(BinaryPropagationSpec.IntegerKey) shouldBe 0 // there is no entry configuration for the integer key
     }

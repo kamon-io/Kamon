@@ -39,13 +39,13 @@ case class MetricsSnapshot(
   * Snapshot for instruments that internally track a single value. Meant to be used for counters and gauges.
   *
   */
-case class MetricValue(name: String, tags: Tags, unit: MeasurementUnit, value: Long)
+case class MetricValue(name: String, tags: STags, unit: MeasurementUnit, value: Long)
 
 /**
   * Snapshot for instruments that internally the distribution of values in a defined dynamic range. Meant to be used
   * with histograms and min max counters.
   */
-case class MetricDistribution(name: String, tags: Tags, unit: MeasurementUnit,  dynamicRange: DynamicRange, distribution: Distribution)
+case class MetricDistribution(name: String, tags: STags, unit: MeasurementUnit,  dynamicRange: DynamicRange, distribution: Distribution)
 
 
 trait Distribution {

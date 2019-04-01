@@ -16,32 +16,92 @@
 package kamon
 package context
 
-import java.util.{Map => JavaMap}
-import scala.collection.JavaConverters._
+import kamon.tag.TagSet
 
-class Context private (val entries: Map[String, Any], val tags: Map[String, String]) {
 
+/**
+  * An immutable set of information that is tied to the processing of single operation in a service. A Context instance
+  * can contain tags and entries.
+  *
+  * Context tags are built on top of the TagSet abstraction that ships with Kamon and since Kamon knows exactly what
+  * types of values can be included in a TagSet it can automatically  serialize and deserialize them when going over
+  * HTTP and/or Binary transports.
+  *
+  * Context entries can contain any arbitrary type specified by the user, but require additional configuration and
+  * implementation of entry readers and writers if you need them to go over HTTP and/or Binary transports.
+  *
+  * Context instances are meant to be constructed by using the builder functions on the Context companion object.
+  *
+  */
+class Context private (val entries: Map[String, Any], val tags: TagSet) {
+
+  /**
+    * Gets an entry from this Context. If the entry is present it's current value is returned, otherwise the empty value
+    * from the provided key will be returned.
+    */
   def get[T](key: Context.Key[T]): T =
     entries.getOrElse(key.name, key.emptyValue).asInstanceOf[T]
 
-  def getTag(tagKey: String): Option[String] =
-    tags.get(tagKey)
 
+  /**
+    * Executes a lookup on the context tags. The actual return type depends on the provided lookup instance. Take a look
+    * at the built-in lookups available on the Lookups companion object.
+    */
+  def getTag[T](lookup: TagSet.Lookup[T]): T =
+    tags.get(lookup)
+
+
+  /**
+    * Creates a new Context instance that includes the provided key and value. If the provided key was already
+    * associated with another value then the previous value will be discarded and overwritten with the provided one.
+    */
   def withKey[T](key: Context.Key[T], value: T): Context =
     new Context(entries.updated(key.name, value), tags)
 
-  def withTag(tagKey: String, tagValue: String): Context =
-    new Context(entries, tags.updated(tagKey, tagValue))
 
-  def withTags(tags: Map[String, String]): Context =
-    new Context(entries, this.tags ++ tags)
+  /**
+    * Creates a new Context instance that includes the provided tag key and value. If the provided tag key was already
+    * associated with another value then the previous tag value will be discarded and overwritten with the provided one.
+    */
+  def withTag(key: String, value: String): Context =
+    new Context(entries, tags.withTag(key, value))
 
-  def withTags(tags: JavaMap[String, String]): Context =
-    new Context(entries, this.tags ++ tags.asScala.toMap)
 
+  /**
+    * Creates a new Context instance that includes the provided tag key and value. If the provided tag key was already
+    * associated with another value then the previous tag value will be discarded and overwritten with the provided one.
+    */
+  def withTag(key: String, value: Long): Context =
+    new Context(entries, tags.withTag(key, value))
+
+
+  /**
+    * Creates a new Context instance that includes the provided tag key and value. If the provided tag key was already
+    * associated with another value then the previous tag value will be discarded and overwritten with the provided one.
+    */
+  def withTag(key: String, value: Boolean): Context =
+    new Context(entries, tags.withTag(key, value))
+
+
+  /**
+    * Creates a new Context instance that includes the provided tags. If any of the tags in this instance are associated
+    * to a key present on the provided tags then the previous values will be discarded and overwritten with the provided
+    * ones.
+    */
+  def withTags(tags: TagSet): Context =
+    new Context(entries, this.tags.and(tags))
+
+
+  /**
+    * Returns whether this Context does not have any tags and does not have any entries.
+    */
   def isEmpty(): Boolean =
     entries.isEmpty && tags.isEmpty
 
+
+  /**
+    * Returns whether this Context has any information, either as tags or entries.
+    */
   def nonEmpty(): Boolean =
     !isEmpty()
 
@@ -49,32 +109,48 @@ class Context private (val entries: Map[String, Any], val tags: Map[String, Stri
 
 object Context {
 
-  val Empty = new Context(Map.empty, Map.empty)
+  val Empty = new Context(Map.empty, TagSet.Empty)
 
-  def of(tags: JavaMap[String, String]): Context =
-    new Context(Map.empty, tags.asScala.toMap)
-
-  def of(tags: Map[String, String]): Context =
+  /**
+    * Creates a new Context instance with the provided tags and no entries.
+    */
+  def of(tags: TagSet): Context =
     new Context(Map.empty, tags)
 
+
+  /**
+    * Creates a new Context instance with the provided key and no tags.
+    */
   def of[T](key: Context.Key[T], value: T): Context =
-    new Context(Map(key.name -> value), Map.empty)
+    new Context(Map(key.name -> value), TagSet.Empty)
 
-  def of[T](key: Context.Key[T], value: T, tags: JavaMap[String, String]): Context =
-    new Context(Map(key.name -> value), tags.asScala.toMap)
 
-  def of[T](key: Context.Key[T], value: T, tags: Map[String, String]): Context =
+  /**
+    * Creates a new Context instance with a single entry and the provided tags.
+    */
+  def of[T](key: Context.Key[T], value: T, tags: TagSet): Context =
     new Context(Map(key.name -> value), tags)
 
+
+  /**
+    * Creates a new Context instance with two entries and no tags.
+    */
   def of[T, U](keyOne: Context.Key[T], valueOne: T, keyTwo: Context.Key[U], valueTwo: U): Context =
-    new Context(Map(keyOne.name -> valueOne, keyTwo.name -> valueTwo), Map.empty)
+    new Context(Map(keyOne.name -> valueOne, keyTwo.name -> valueTwo), TagSet.Empty)
 
-  def of[T, U](keyOne: Context.Key[T], valueOne: T, keyTwo: Context.Key[U], valueTwo: U, tags: JavaMap[String, String]): Context =
-    new Context(Map(keyOne.name -> valueOne, keyTwo.name -> valueTwo), tags.asScala.toMap)
 
-  def of[T, U](keyOne: Context.Key[T], valueOne: T, keyTwo: Context.Key[U], valueTwo: U, tags: Map[String, String]): Context =
+  /**
+    * Creates a new Context instance with two entries and the provided tags.
+    */
+  def of[T, U](keyOne: Context.Key[T], valueOne: T, keyTwo: Context.Key[U], valueTwo: U, tags: TagSet): Context =
     new Context(Map(keyOne.name -> valueOne, keyTwo.name -> valueTwo), tags)
 
+
+  /**
+    * Creates a new Context.Key instance that can be used to insert and retrieve values from the context entries.
+    * Context keys must have a unique name since they will be looked up in transports by their name and the context
+    * entries are internally stored using their key name as index.
+    */
   def key[T](name: String, emptyValue: T): Context.Key[T] =
     new Context.Key(name, emptyValue)
 
