@@ -77,18 +77,16 @@ class AkkaHttpServerTracingSpec extends WordSpecLike
            span.operationName shouldBe expected
          }
        }
-      "including concatenated matchers" in {
-        val path = s"extraction/concat/fixed${UUID.randomUUID().toString}CaFe"
-        val expected = "/extraction/concat/fixed{}{}"
+      "including ambiguous nested directives" in {
+        val path = s"v3/user/3/post/3"
+        val expected = "/v3/user/{}/post/{}"
         val target = s"http://$interface:$port/$path"
         Http().singleRequest(HttpRequest(uri = target)).map(_.discardEntityBytes())
-
         eventually(timeout(10 seconds)) {
           val span = reporter.nextSpan().value
           span.operationName shouldBe expected
         }
       }
-
     }
 
     //TODO decide what to do with operationName directive, currently whatever it sets gets overriden by instrumentation when route is completed

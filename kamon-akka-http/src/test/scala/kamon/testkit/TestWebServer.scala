@@ -48,6 +48,9 @@ trait TestWebServer extends TracingDirectives {
 
     val routes = logRequest("routing-request") {
       get {
+        path("v3" / "user" / IntNumber / "post" / IntNumber) { (_, _) =>
+          complete("OK")
+        } ~
         pathPrefix("extraction") {
           (post | get) {
             pathPrefix("nested") {

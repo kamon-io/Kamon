@@ -19,6 +19,7 @@ package kamon.akka.http.instrumentation
 import akka.NotUsed
 import akka.event.LoggingAdapter
 import akka.http.scaladsl.ConnectionContext
+import akka.http.scaladsl.model.Uri.Path
 import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
 import akka.http.scaladsl.server.PathMatcher.{Matched, Unmatched}
 import akka.http.scaladsl.server.directives.RouteDirectives.reject
@@ -60,7 +61,6 @@ class ServerRequestInstrumentation extends BasicDirectives with PathDirectives  
     }
   }
 
-
   @Around("execution(* akka.http.scaladsl.server.RequestContextImpl.complete(..)) && this(ctx)")
   def aroundCtxComplete(pjp: ProceedingJoinPoint, ctx: RequestContext): AnyRef = {
     val allMatches = ctx.asInstanceOf[MatchingContext].matchingContext.reverse.map(singleMatch)
@@ -86,7 +86,10 @@ class ServerRequestInstrumentation extends BasicDirectives with PathDirectives  
           case int: Int   => List(int.toString, int.toHexString)
           case a: Any     => List(a.toString)
         }
-        values.flatten.fold(consumedSegment)((full, value) => full.replaceFirst(s"(?i)$value", "{}"))
+        values.flatten.fold(consumedSegment) { (full, value) =>
+          val r = s"(?i)(^|/)" + value + "($|/)"
+          full.replaceFirst(r, "$1{}$2")
+        }
     }
   }
 
