@@ -13,8 +13,8 @@
  * =========================================================================================
  */
 
-val kamonCore       = "io.kamon" %% "kamon-core"              % "1.2.0-M1"
-val kamonTestkit    = "io.kamon" %% "kamon-testkit"           % "1.2.0-M1"
+val kamonCore           = "io.kamon"            %% "kamon-core"               % "2.0.0-d2d5cb18261e2c79b86340bf39524394700415e8"
+val kamonTestkit        = "io.kamon"            %% "kamon-testkit"            % "2.0.0-d2d5cb18261e2c79b86340bf39524394700415e8"
 
 val kanelaScala     = "io.kamon" %% "kanela-scala-extension"  % "0.0.14"
 
@@ -28,7 +28,8 @@ lazy val root = (project in file("."))
 val commonSettings = Seq(
   scalaVersion := "2.12.6",
   resolvers += Resolver.mavenLocal,
-  crossScalaVersions := Seq("2.12.6", "2.11.12", "2.10.7")
+  resolvers += Resolver.bintrayRepo("kamon-io", "snapshots"),
+  crossScalaVersions := Seq("2.12.6"/*, "2.11.12", "2.10.7"*/)
 )
 
 lazy val executors = (project in file("kamon-executors"))
@@ -52,3 +53,5 @@ lazy val benchmark = (project in file("kamon-executors-bench"))
   .settings(commonSettings: _*)
   .settings(libraryDependencies ++= compileScope(guava))
   .dependsOn(executors)
+
+
