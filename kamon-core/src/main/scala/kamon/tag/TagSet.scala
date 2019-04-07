@@ -2,8 +2,6 @@ package kamon
 package tag
 
 import kamon.tag.TagSet.Lookup
-
-import java.lang.{Boolean => JBoolean, Long => JLong, String => JString}
 import java.util.function.BiConsumer
 
 import org.eclipse.collections.impl.map.mutable.UnifiedMap
@@ -44,7 +42,7 @@ class TagSet private(private val _underlying: UnifiedMap[String, Any]) {
     * Creates a new TagSet instance that includes the provided key/value pair. If the provided key was already associated
     * with another value then the previous value will be discarded and overwritten with the provided one.
     */
-  def withTag(key: String, value: JString): TagSet =
+  def withTag(key: String, value: java.lang.String): TagSet =
     withPair(this, key, value)
 
 
@@ -52,7 +50,7 @@ class TagSet private(private val _underlying: UnifiedMap[String, Any]) {
     * Creates a new TagSet instance that includes the provided key/value pair. If the provided key was already associated
     * with another value then the previous value will be discarded and overwritten with the provided one.
     */
-  def withTag(key: String, value: JBoolean): TagSet =
+  def withTag(key: String, value: java.lang.Boolean): TagSet =
     withPair(this, key, value)
 
 
@@ -60,7 +58,7 @@ class TagSet private(private val _underlying: UnifiedMap[String, Any]) {
     * Creates a new TagSet instance that includes the provided key/value pair. If the provided key was already associated
     * with another value then the previous value will be discarded and overwritten with the provided one.
     */
-  def withTag(key: String, value: JLong): TagSet =
+  def withTag(key: String, value: java.lang.Long): TagSet =
     withPair(this, key, value)
 
 
@@ -69,40 +67,7 @@ class TagSet private(private val _underlying: UnifiedMap[String, Any]) {
     * instance are associated to a key present on the provided instance then the previous value will be discarded and
     * overwritten with the provided one.
     */
-  def withTags(other: TagSet): TagSet =
-    and(other)
-
-
-  /**
-    * Creates a new TagSet instance that includes the provided key/value pair. If the provided key was already associated
-    * with another value then the previous value will be discarded and overwritten with the provided one.
-    */
-  def and(key: String, value: JString): TagSet =
-    withPair(this, key, value)
-
-
-  /**
-    * Creates a new TagSet instance that includes the provided key/value pair. If the provided key was already associated
-    * with another value then the previous value will be discarded and overwritten with the provided one.
-    */
-  def and(key: String, value: JBoolean): TagSet =
-    withPair(this, key, value)
-
-
-  /**
-    * Creates a new TagSet instance that includes the provided key/value pair. If the provided key was already associated
-    * with another value then the previous value will be discarded and overwritten with the provided one.
-    */
-  def and(key: String, value: JLong): TagSet =
-    withPair(this, key, value)
-
-
-  /**
-    * Creates a new TagSet instance that includes all the tags from the provided Tags instance. If any of the tags in this
-    * instance are associated to a key present on the provided instance then the previous value will be discarded and
-    * overwritten with the provided one.
-    */
-  def and(other: TagSet): TagSet = {
+  def withTags(other: TagSet): TagSet ={
     val mergedMap = new UnifiedMap[String, Any](other._underlying.size() + this._underlying.size())
     mergedMap.putAll(this._underlying)
     mergedMap.putAll(other._underlying)
@@ -178,19 +143,19 @@ class TagSet private(private val _underlying: UnifiedMap[String, Any]) {
       }
     }
 
-    private def stringTag(key: JString, value: JString): Tag.String =
+    private def stringTag(key: String, value: String): Tag.String =
       if(_stringTag == null) {
         _stringTag = new TagSet.mutable.String(key, value)
         _stringTag
       } else _stringTag.updated(key, value)
 
-    private def booleanTag(key: JString, value: JBoolean): Tag.Boolean =
+    private def booleanTag(key: String, value: Boolean): Tag.Boolean =
       if(_booleanTag == null) {
         _booleanTag = new TagSet.mutable.Boolean(key, value)
         _booleanTag
       } else _booleanTag.updated(key, value)
 
-    private def longTag(key: JString, value: JLong): Tag.Long =
+    private def longTag(key: String, value: Long): Tag.Long =
       if(_longTag == null) {
         _longTag = new TagSet.mutable.Long(key, value)
         _longTag
@@ -203,7 +168,7 @@ class TagSet private(private val _underlying: UnifiedMap[String, Any]) {
   override def hashCode(): Int =
     _underlying.hashCode()
 
-  override def toString: JString = {
+  override def toString: String = {
     val sb = new StringBuilder()
     sb.append("Tags{")
 
@@ -316,21 +281,21 @@ object TagSet {
   /**
     * Construct a new TagSet instance with a single key/value pair.
     */
-  def from(key: String, value: JString): TagSet =
+  def of(key: String, value: java.lang.String): TagSet =
     withPair(Empty, key, value)
 
 
   /**
     * Construct a new TagSet instance with a single key/value pair.
     */
-  def from(key: String, value: JBoolean): TagSet =
+  def of(key: String, value: java.lang.Boolean): TagSet =
     withPair(Empty, key, value)
 
 
   /**
     * Construct a new TagSet instance with a single key/value pair.
     */
-  def from(key: String, value: JLong): TagSet =
+  def of(key: String, value: java.lang.Long): TagSet =
     withPair(Empty, key, value)
 
 
@@ -393,12 +358,16 @@ object TagSet {
     (v.isInstanceOf[String] || v.isInstanceOf[Boolean] || v.isInstanceOf[Long])
 
   private object immutable {
+    import java.lang.{Boolean => JBoolean, Long => JLong, String => JString}
+
     case class String(key: JString, value: JString) extends Tag.String
     case class Boolean(key: JString, value: JBoolean) extends Tag.Boolean
     case class Long(key: JString, value: JLong) extends Tag.Long
   }
 
   private object mutable {
+    import java.lang.{Boolean => JBoolean, Long => JLong, String => JString}
+
     case class String(var key: JString, var value: JString) extends Tag.String with Updateable[JString]
     case class Boolean(var key: JString, var value: JBoolean) extends Tag.Boolean with Updateable[JBoolean]
     case class Long(var key: JString, var value: JLong) extends Tag.Long with Updateable[JLong]

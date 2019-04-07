@@ -13,16 +13,16 @@ trait Instrument[Inst, Sett <: Metric.Settings] extends Tagging[Inst] {
     metric.remove(tags)
 
   override def withTag(key: String, value: String): Inst =
-    metric.withTags(tags.and(key, value))
+    metric.withTags(tags.withTag(key, value))
 
   override def withTag(key: String, value: Boolean): Inst =
-    metric.withTags(tags.and(key, value))
+    metric.withTags(tags.withTag(key, value))
 
   override def withTag(key: String, value: Long): Inst =
-    metric.withTags(tags.and(key, value))
+    metric.withTags(tags.withTag(key, value))
 
   override def withTags(tags: TagSet): Inst =
-    metric.withTags(tags.and(tags))
+    metric.withTags(tags.withTags(tags))
 
 
 

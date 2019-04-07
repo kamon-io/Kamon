@@ -59,7 +59,7 @@ trait SpanInspection {
       * Returns a combination of all tags (span and metric tags) on the Span.
       */
     def tags(): TagSet =
-      spanTags() and metricTags()
+      spanTags() withTags metricTags()
 
 
     /**

@@ -179,11 +179,11 @@ class PeriodSnapshotAccumulatorSpec extends WordSpec with Reconfigure with Instr
     val distribution = Kamon.histogram("temp").withoutTags().record(value).distribution()
 
     PeriodSnapshot(from, to,
-      counters = Map("counter" -> MetricSnapshot.Value("counter", "", valueSettings, Map(TagSet.from("metric", "counter") -> value))),
-      gauges = Map("gauge" -> MetricSnapshot.Value("gauge", "", valueSettings, Map(TagSet.from("metric", "gauge") -> value))),
-      histograms = Map("histogram" -> MetricSnapshot.Distribution("histogram", "", distributionSettings, Map(TagSet.from("metric", "histogram") -> distribution))),
-      timers = Map("timer" -> MetricSnapshot.Distribution("timer", "", distributionSettings, Map(TagSet.from("metric", "timer") -> distribution))),
-      rangeSamplers = Map("rangeSampler" -> MetricSnapshot.Distribution("rangeSampler", "", distributionSettings, Map(TagSet.from("metric", "rangeSampler") -> distribution)))
+      counters = Map("counter" -> MetricSnapshot.Value("counter", "", valueSettings, Map(TagSet.of("metric", "counter") -> value))),
+      gauges = Map("gauge" -> MetricSnapshot.Value("gauge", "", valueSettings, Map(TagSet.of("metric", "gauge") -> value))),
+      histograms = Map("histogram" -> MetricSnapshot.Distribution("histogram", "", distributionSettings, Map(TagSet.of("metric", "histogram") -> distribution))),
+      timers = Map("timer" -> MetricSnapshot.Distribution("timer", "", distributionSettings, Map(TagSet.of("metric", "timer") -> distribution))),
+      rangeSamplers = Map("rangeSampler" -> MetricSnapshot.Distribution("rangeSampler", "", distributionSettings, Map(TagSet.of("metric", "rangeSampler") -> distribution)))
     )
   }
 

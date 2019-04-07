@@ -89,7 +89,7 @@ class Context private (val entries: Map[String, Any], val tags: TagSet) {
     * ones.
     */
   def withTags(tags: TagSet): Context =
-    new Context(entries, this.tags.and(tags))
+    new Context(entries, this.tags.withTags(tags))
 
 
   /**
@@ -117,6 +117,9 @@ object Context {
   def of(tags: TagSet): Context =
     new Context(Map.empty, tags)
 
+
+  def of(tagKey: String, tagValue: String): Context =
+    ???
 
   /**
     * Creates a new Context instance with the provided key and no tags.

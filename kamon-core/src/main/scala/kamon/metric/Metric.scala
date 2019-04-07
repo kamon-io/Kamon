@@ -138,13 +138,13 @@ object Metric {
     private val _instruments = TrieMap.empty[TagSet, InstrumentEntry]
 
     override def withTag(key: String, value: String): Inst =
-      lookupInstrument(TagSet.from(key, value))
+      lookupInstrument(TagSet.of(key, value))
 
     override def withTag(key: String, value: Boolean): Inst =
-      lookupInstrument(TagSet.from(key, value))
+      lookupInstrument(TagSet.of(key, value))
 
     override def withTag(key: String, value: Long): Inst =
-      lookupInstrument(TagSet.from(key, value))
+      lookupInstrument(TagSet.of(key, value))
 
     override def withTags(tags: TagSet): Inst =
       lookupInstrument(tags)
