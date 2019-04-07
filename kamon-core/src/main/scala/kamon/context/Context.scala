@@ -118,6 +118,9 @@ object Context {
     new Context(Map.empty, tags)
 
 
+  def of(tagKey: String, tagValue: String): Context =
+    ???
+
   /**
     * Creates a new Context instance with one tag.
     */
