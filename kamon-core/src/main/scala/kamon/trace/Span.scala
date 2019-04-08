@@ -21,6 +21,7 @@ import java.time.Instant
 import kamon.context.Context
 import kamon.tag.TagSet
 import kamon.util.Clock
+import org.slf4j.LoggerFactory
 
 import scala.compat.Platform.EOL
 
@@ -294,7 +295,8 @@ object Span {
   final class Local(val id: Identifier, val parentId: Identifier, val trace: Trace, val position: Position,
       val kind: Kind, localParent: Option[Span], initialOperationName: String, spanTags: TagSet.Builder,
       metricTags: TagSet.Builder, from: Instant, trackMetrics: Boolean, tagWithParentOperation: Boolean,
-      includeErrorStacktrace: Boolean, clock: Clock, onFinish: Span.Finished => Unit) extends Span {
+      includeErrorStacktrace: Boolean, clock: Clock, preFinishHooks: Array[Tracer.PreFinishHook],
+      onFinish: Span.Finished => Unit) extends Span {
 
     private val _isSampled: Boolean = trace.samplingDecision == Trace.SamplingDecision.Sample
     private val _metricTags = metricTags
@@ -411,7 +413,21 @@ object Span {
       finish(clock.instant())
 
     override def finish(to: Instant): Unit = synchronized {
+      import Span.Local._logger
+
       if (_isOpen) {
+
+        if(preFinishHooks.nonEmpty) {
+          preFinishHooks.foreach(pfh => {
+            try {
+              pfh.beforeFinish(this)
+            } catch {
+              case t: Throwable =>
+                _logger.error("Failed to apply pre-finish hook", t)
+            }
+          })
+        }
+
         _isOpen = false
 
         val finalMetricTags = createMetricTags()
@@ -447,6 +463,10 @@ object Span {
 
       _metricTags.create()
     }
+  }
+
+  object Local {
+    private val _logger = LoggerFactory.getLogger(classOf[Span.Local])
   }
 
   /**

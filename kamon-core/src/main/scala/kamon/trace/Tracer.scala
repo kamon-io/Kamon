@@ -29,6 +29,7 @@ import kamon.util.Clock
 import org.jctools.queues.{MessagePassingQueue, MpscArrayQueue}
 import org.slf4j.LoggerFactory
 
+import scala.collection.JavaConverters.collectionAsScalaIterableConverter
 import scala.util.Try
 
 
@@ -50,6 +51,8 @@ class Tracer(initialConfig: Config, clock: Clock, classLoading: ClassLoading, co
   @volatile private var _sampler: Sampler = ConstantSampler.Never
   @volatile private var _identifierScheme: Identifier.Scheme = Identifier.Scheme.Single
   @volatile private var _adaptiveSamplerSchedule: Option[ScheduledFuture[_]] = None
+  @volatile private var _preStartHooks: Array[Tracer.PreStartHook] = Array.empty
+  @volatile private var _preFinishHooks: Array[Tracer.PreFinishHook] = Array.empty
   private val _onSpanFinish: Span.Finished => Unit = _spanBuffer.offer
 
   reconfigure(initialConfig)
@@ -110,7 +113,23 @@ class Tracer(initialConfig: Config, clock: Clock, classLoading: ClassLoading, co
   /**
     * Creates a new raw SpanBuilder instance using the provided operation name.
     */
-  def spanBuilder(initialOperationName: String): SpanBuilder = new SpanBuilder {
+  def spanBuilder(initialOperationName: String): SpanBuilder =
+    new MutableSpanBuilder(initialOperationName)
+
+  /**
+    * Removes and returns all finished Spans currently held by the tracer.
+    */
+  def spans(): Seq[Span.Finished] = {
+    var spans = Seq.empty[Span.Finished]
+    _spanBuffer.drain(new MessagePassingQueue.Consumer[Span.Finished] {
+      override def accept(span: Span.Finished): Unit =
+        spans = span +: spans
+    })
+
+    spans
+  }
+
+  private class MutableSpanBuilder(initialOperationName: String) extends SpanBuilder {
     private val _spanTags = TagSet.builder()
     private val _metricTags = TagSet.builder()
 
@@ -227,10 +246,21 @@ class Tracer(initialConfig: Config, clock: Clock, classLoading: ClassLoading, co
     }
 
     override def start(): Span =
-      start(clock.instant())
+    start(clock.instant())
 
     /** Uses all the accumulated information to create a new Span */
     override def start(at: Instant): Span = {
+      if(_preStartHooks.nonEmpty) {
+        _preStartHooks.foreach(psh => {
+          try {
+            psh.beforeStart(this)
+          } catch {
+            case t: Throwable =>
+              _logger.error("Failed to apply pre-start hook", t)
+          }
+        })
+      }
+
       val context = _context.getOrElse(contextStorage.currentContext())
       if(_tagWithInitiatorService) {
         context.getTag(option(TagKeys.InitiatorName)).foreach(initiatorName => {
@@ -271,22 +301,9 @@ class Tracer(initialConfig: Config, clock: Clock, classLoading: ClassLoading, co
 
       val trace = Trace(traceId, samplingDecision)
 
-      new Span.Local(id, parentId, trace, position, _kind, localParent, _name, _spanTags, _metricTags, at,
-        _trackMetrics, _tagWithParentOperation, _includeErrorStacktrace, clock, _onSpanFinish)
+      new Span.Local(id, parentId, trace, position, _kind, localParent, _name, _spanTags, _metricTags, at, _trackMetrics,
+        _tagWithParentOperation, _includeErrorStacktrace, clock, _preFinishHooks, _onSpanFinish)
     }
-  }
-
-  /**
-    * Removes and returns all finished Spans currently held by the tracer.
-    */
-  def spans(): Seq[Span.Finished] = {
-    var spans = Seq.empty[Span.Finished]
-    _spanBuffer.drain(new MessagePassingQueue.Consumer[Span.Finished] {
-      override def accept(span: Span.Finished): Unit =
-        spans = span +: spans
-    })
-
-    spans
   }
 
 
@@ -338,6 +355,11 @@ class Tracer(initialConfig: Config, clock: Clock, classLoading: ClassLoading, co
         _adaptiveSamplerSchedule = None
       }
 
+      val preStartHooks = traceConfig.getStringList("hooks.pre-start").asScala
+        .map(preStart => classLoading.createInstance[Tracer.PreStartHook](preStart).get).toArray
+
+      val preFinishHooks = traceConfig.getStringList("hooks.pre-finish").asScala
+        .map(preFinish => classLoading.createInstance[Tracer.PreFinishHook](preFinish).get).toArray
 
       val traceReporterQueueSize = traceConfig.getInt("reporter-queue-size")
       val joinRemoteParentsWithSameSpanID = traceConfig.getBoolean("join-remote-parents-with-same-span-id")
@@ -360,6 +382,8 @@ class Tracer(initialConfig: Config, clock: Clock, classLoading: ClassLoading, co
       _tagWithInitiatorService = tagWithInitiatorService
       _tagWithParentOperation = tagWithParentOperation
       _traceReporterQueueSize = traceReporterQueueSize
+      _preStartHooks = preStartHooks
+      _preFinishHooks = preFinishHooks
 
     }.failed.foreach {
       ex => _logger.error("Failed to reconfigure the Kamon tracer", ex)
@@ -381,20 +405,21 @@ object Tracer {
   private val _logger = LoggerFactory.getLogger(classOf[Tracer])
 
   /**
-    * A transformation logic that is applied to all SpanBuilder instances right before they are turned into an actual
-    * Span. PreStartTransformations are configured using the "kamon.trace.transformers.pre-start" configuration setting
+    * A callback function that is applied to all SpanBuilder instances right before they are turned into an actual
+    * Span. PreStartHook implementations are configured using the "kamon.trace.hooks.pre-start" configuration setting
     * and all implementations must have a parameter-less constructor.
     */
-  trait PreStartTransformation {
-    def transform(builder: SpanBuilder): SpanBuilder
+  trait PreStartHook {
+    def beforeStart(builder: SpanBuilder): Unit
   }
 
+
   /**
-    * A transformation logic that is applied to all Span instances right before they are finished and flushed to Span
-    * reporters. PreFinishTransformations are configured using the "kamon.trace.transformers.pre-finish" configuration
+    * A callback function that is applied to all Span instances right before they are finished and flushed to Span
+    * reporters. PreFinishHook implementations are configured using the "kamon.trace.hooks.pre-finish" configuration
     * setting and all implementations must have a parameter-less constructor.
     */
-  trait PreFinishTransformation {
-    def transform(span: Span): Span
+  trait PreFinishHook {
+    def beforeFinish(span: Span): Unit
   }
 }

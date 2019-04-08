@@ -23,6 +23,7 @@ import kamon.testkit.{Reconfigure, SpanInspection}
 import kamon.trace.Identifier.Factory.EightBytesIdentifier
 import kamon.trace.Span.Position
 import kamon.trace.Trace.SamplingDecision
+import kamon.trace.Hooks.{PreStart, PreFinish}
 import org.scalatest.{Matchers, OptionValues, WordSpec}
 
 class TracerSpec extends WordSpec with Matchers with SpanInspection.Syntax with OptionValues {
@@ -120,6 +121,23 @@ class TracerSpec extends WordSpec with Matchers with SpanInspection.Syntax with 
     "figure out the position of a Span in its trace" in {
       Kamon.spanBuilder("root").start().position shouldBe Position.Root
       Kamon.spanBuilder("localRoot").asChildOf(remoteSpan()).start().position shouldBe Position.LocalRoot
+    }
+
+    "apply pre-start hooks to all Spans" in {
+      val span = Kamon.withContextKey(PreStart.Key, PreStart.updateOperationName("customName")) {
+        Kamon.spanBuilder("defaultOperationName").start()
+      }
+
+      span.operationName() shouldBe "customName"
+    }
+
+    "apply pre-finish hooks to all Spans" in {
+      val span = Kamon.spanBuilder("defaultOperationName").start()
+      Kamon.withContextKey(PreFinish.Key, PreFinish.updateOperationName("customName")) {
+        span.finish()
+      }
+
+      span.operationName() shouldBe "customName"
     }
   }
 

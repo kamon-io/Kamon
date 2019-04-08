@@ -118,8 +118,25 @@ object Context {
     new Context(Map.empty, tags)
 
 
+  /**
+    * Creates a new Context instance with one tag.
+    */
   def of(tagKey: String, tagValue: String): Context =
-    ???
+    new Context(Map.empty, TagSet.of(tagKey, tagValue))
+
+
+  /**
+    * Creates a new Context instance with one tag.
+    */
+  def of(tagKey: String, tagValue: Long): Context =
+    new Context(Map.empty, TagSet.of(tagKey, tagValue))
+
+
+  /**
+    * Creates a new Context instance with one tag.
+    */
+  def of(tagKey: String, tagValue: Boolean): Context =
+    new Context(Map.empty, TagSet.of(tagKey, tagValue))
 
   /**
     * Creates a new Context instance with the provided key and no tags.
