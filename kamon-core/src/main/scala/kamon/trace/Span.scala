@@ -20,6 +20,7 @@ import java.time.Instant
 
 import kamon.context.Context
 import kamon.metric.MeasurementUnit
+import kamon.tag.TagSet
 import kamon.trace.SpanContext.SamplingDecision
 import kamon.util.Clock
 
@@ -221,7 +222,7 @@ object Span {
         "error" -> isErrorText
       ) ++ customMetricTags
 
-      Span.Metrics.ProcessingTime.refine(metricTags).record(elapsedTime)
+      Span.Metrics.ProcessingTime.withTags(TagSet.from(metricTags)).record(elapsedTime)
     }
     override def operationName(): String = _operationName
   }

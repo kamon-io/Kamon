@@ -2,10 +2,11 @@ package kamon.status.page
 
 import java.lang.{StringBuilder => JavaStringBuilder}
 
-import com.grack.nanojson.JsonWriter
+import com.grack.nanojson.{JsonAppendableWriter, JsonWriter}
 import com.typesafe.config.ConfigRenderOptions
 import kamon.module.Module
 import kamon.status.Status
+import kamon.tag.{Tag, TagSet}
 
 import scala.collection.JavaConverters.{iterableAsScalaIterableConverter, mapAsScalaMapConverter}
 
@@ -88,12 +89,13 @@ object JsonMarshalling {
             .value("type", metric.instrumentType.name)
             .value("unitDimension", metric.unit.dimension.name)
             .value("unitMagnitude", metric.unit.magnitude.name)
-            .`object`("tags")
+            .value("instrumentType", metric.instrumentType.name)
 
-        metric.tags.foreach { case (tag, value) => metricsObject.value(tag, value) }
+        val instrumentsArray = metricsObject.array("instruments")
+        metric.instruments.foreach(i => tagSetToJson(i.tags, instrumentsArray))
 
         metricsObject
-          .end() // tags
+          .end() // instruments
           .end() // metric info
       })
 
@@ -102,6 +104,12 @@ object JsonMarshalling {
         .end() // object
         .done()
     }
+  }
+
+  private def tagSetToJson(tags: TagSet, writer: JsonAppendableWriter): Unit = {
+    val tagsObject = writer.`object`()
+    tags.iterator().foreach(t => tagsObject.value(t.key, Tag.unwrapValue(t).toString))
+    tagsObject.end()
   }
 
   implicit object InstrumentationStatusJsonMarshalling extends JsonMarshalling[Status.Instrumentation] {

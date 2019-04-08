@@ -15,25 +15,26 @@
 
 package kamon.metric
 
-import java.time.temporal.ChronoUnit
 import java.time.{Duration, Instant}
 
 import kamon.Kamon
-import kamon.testkit.{MetricInspection, Reconfigure}
+import kamon.tag.TagSet
+import kamon.testkit.{InstrumentInspection, Reconfigure}
 import kamon.util.Clock
 import org.scalatest.{BeforeAndAfterAll, Matchers, OptionValues, WordSpec}
 
-class PeriodSnapshotAccumulatorSpec extends WordSpec with Reconfigure with MetricInspection with Matchers
+class PeriodSnapshotAccumulatorSpec extends WordSpec with Reconfigure with InstrumentInspection.Syntax with Matchers
     with BeforeAndAfterAll with OptionValues {
 
   "the PeriodSnapshotAccumulator" should {
     "allow to peek on an empty accumulator" in {
       val accumulator = newAccumulator(10, 1)
       val periodSnapshot = accumulator.peek()
-      periodSnapshot.metrics.histograms shouldBe empty
-      periodSnapshot.metrics.rangeSamplers shouldBe empty
-      periodSnapshot.metrics.gauges shouldBe empty
-      periodSnapshot.metrics.counters shouldBe empty
+      periodSnapshot.histograms shouldBe empty
+      periodSnapshot.timers shouldBe empty
+      periodSnapshot.rangeSamplers shouldBe empty
+      periodSnapshot.gauges shouldBe empty
+      periodSnapshot.counters shouldBe empty
     }
 
     "bypass accumulation if the configured duration is equal to the metric tick-interval, regardless of the snapshot" in {
@@ -92,24 +93,24 @@ class PeriodSnapshotAccumulatorSpec extends WordSpec with Reconfigure with Metri
 
       for(_ <- 1 to 10) {
         val peekSnapshot = accumulator.peek()
-        val mergedHistogram = peekSnapshot.metrics.histograms.head
-        val mergedRangeSampler = peekSnapshot.metrics.rangeSamplers.head
-        peekSnapshot.metrics.counters.head.value shouldBe (55)
-        peekSnapshot.metrics.gauges.head.value shouldBe (33)
-        mergedHistogram.distribution.buckets.map(_.value) should contain allOf(22L, 33L)
-        mergedRangeSampler.distribution.buckets.map(_.value) should contain allOf(22L, 33L)
+        val mergedHistogram = peekSnapshot.histograms("histogram").instruments.head._2
+        val mergedRangeSampler = peekSnapshot.rangeSamplers("rangeSampler").instruments.head._2
+        peekSnapshot.counters("counter").instruments.head._2 shouldBe (55)
+        peekSnapshot.gauges("gauge").instruments.head._2 shouldBe (33)
+        mergedHistogram.buckets.map(_.value) should contain allOf(22L, 33L)
+        mergedRangeSampler.buckets.map(_.value) should contain allOf(22L, 33L)
       }
 
       accumulator.add(fiveSecondsThree) shouldBe empty
 
       for(_ <- 1 to 10) {
         val peekSnapshot = accumulator.peek()
-        val mergedHistogram = peekSnapshot.metrics.histograms.head
-        val mergedRangeSampler = peekSnapshot.metrics.rangeSamplers.head
-        peekSnapshot.metrics.counters.head.value shouldBe (67)
-        peekSnapshot.metrics.gauges.head.value shouldBe (12)
-        mergedHistogram.distribution.buckets.map(_.value) should contain allOf(22L, 33L, 12L)
-        mergedRangeSampler.distribution.buckets.map(_.value) should contain allOf(22L, 33L, 12L)
+        val mergedHistogram = peekSnapshot.histograms("histogram").instruments.head._2
+        val mergedRangeSampler = peekSnapshot.rangeSamplers("rangeSampler").instruments.head._2
+        peekSnapshot.counters("counter").instruments.head._2 shouldBe (67)
+        peekSnapshot.gauges("gauge").instruments.head._2 shouldBe (12)
+        mergedHistogram.buckets.map(_.value) should contain allOf(22L, 33L, 12L)
+        mergedRangeSampler.buckets.map(_.value) should contain allOf(22L, 33L, 12L)
       }
     }
 
@@ -122,18 +123,18 @@ class PeriodSnapshotAccumulatorSpec extends WordSpec with Reconfigure with Metri
       snapshotOne.from shouldBe fiveSecondsOne.from
       snapshotOne.to shouldBe fiveSecondsThree.to
 
-      val mergedHistogram = snapshotOne.metrics.histograms.head
-      val mergedRangeSampler = snapshotOne.metrics.rangeSamplers.head
-      snapshotOne.metrics.counters.head.value shouldBe(67)
-      snapshotOne.metrics.gauges.head.value shouldBe(12)
-      mergedHistogram.distribution.buckets.map(_.value) should contain allOf(22L, 33L, 12L)
-      mergedRangeSampler.distribution.buckets.map(_.value) should contain allOf(22L, 33L, 12L)
+      val mergedHistogram = snapshotOne.histograms("histogram").instruments.head._2
+      val mergedRangeSampler = snapshotOne.rangeSamplers("rangeSampler").instruments.head._2
+      snapshotOne.counters("counter").instruments.head._2 shouldBe(67)
+      snapshotOne.gauges("gauge").instruments.head._2 shouldBe(12)
+      mergedHistogram.buckets.map(_.value) should contain allOf(22L, 33L, 12L)
+      mergedRangeSampler.buckets.map(_.value) should contain allOf(22L, 33L, 12L)
 
       val emptySnapshot = accumulator.peek()
-      emptySnapshot.metrics.histograms shouldBe empty
-      emptySnapshot.metrics.rangeSamplers shouldBe empty
-      emptySnapshot.metrics.gauges shouldBe empty
-      emptySnapshot.metrics.counters shouldBe empty
+      emptySnapshot.histograms shouldBe empty
+      emptySnapshot.rangeSamplers shouldBe empty
+      emptySnapshot.gauges shouldBe empty
+      emptySnapshot.counters shouldBe empty
 
       accumulator.add(fiveSecondsFour) shouldBe empty
     }
@@ -143,48 +144,47 @@ class PeriodSnapshotAccumulatorSpec extends WordSpec with Reconfigure with Metri
   val unAlignedZeroTime = alignedZeroTime.plusSeconds(3)
 
   // Aligned snapshots, every 5 seconds from second 00.
-  val fiveSecondsOne = PeriodSnapshot(alignedZeroTime, alignedZeroTime.plusSeconds(5), createMetricsSnapshot(22))
-  val fiveSecondsTwo = PeriodSnapshot(alignedZeroTime.plusSeconds(5), alignedZeroTime.plusSeconds(10), createMetricsSnapshot(33))
-  val fiveSecondsThree = PeriodSnapshot(alignedZeroTime.plusSeconds(10), alignedZeroTime.plusSeconds(15), createMetricsSnapshot(12))
-  val fiveSecondsFour = PeriodSnapshot(alignedZeroTime.plusSeconds(15), alignedZeroTime.plusSeconds(20), createMetricsSnapshot(37))
-  val fiveSecondsFive = PeriodSnapshot(alignedZeroTime.plusSeconds(20), alignedZeroTime.plusSeconds(25), createMetricsSnapshot(54))
-  val fiveSecondsSix = PeriodSnapshot(alignedZeroTime.plusSeconds(25), alignedZeroTime.plusSeconds(30), createMetricsSnapshot(63))
-  val fiveSecondsSeven = PeriodSnapshot(alignedZeroTime.plusSeconds(30), alignedZeroTime.plusSeconds(35), createMetricsSnapshot(62))
+  val fiveSecondsOne = createPeriodSnapshot(alignedZeroTime, alignedZeroTime.plusSeconds(5), 22)
+  val fiveSecondsTwo = createPeriodSnapshot(alignedZeroTime.plusSeconds(5), alignedZeroTime.plusSeconds(10), 33)
+  val fiveSecondsThree = createPeriodSnapshot(alignedZeroTime.plusSeconds(10), alignedZeroTime.plusSeconds(15), 12)
+  val fiveSecondsFour = createPeriodSnapshot(alignedZeroTime.plusSeconds(15), alignedZeroTime.plusSeconds(20), 37)
+  val fiveSecondsFive = createPeriodSnapshot(alignedZeroTime.plusSeconds(20), alignedZeroTime.plusSeconds(25), 54)
+  val fiveSecondsSix = createPeriodSnapshot(alignedZeroTime.plusSeconds(25), alignedZeroTime.plusSeconds(30), 63)
+  val fiveSecondsSeven = createPeriodSnapshot(alignedZeroTime.plusSeconds(30), alignedZeroTime.plusSeconds(35), 62)
 
   // Unaligned snapshots, every 10 seconds from second 03
-  val tenSecondsOne = PeriodSnapshot(unAlignedZeroTime, unAlignedZeroTime.plusSeconds(10), createMetricsSnapshot(22))
-  val tenSecondsTwo = PeriodSnapshot(unAlignedZeroTime.plusSeconds(10), unAlignedZeroTime.plusSeconds(20), createMetricsSnapshot(33))
-  val tenSecondsThree = PeriodSnapshot(unAlignedZeroTime.plusSeconds(20), unAlignedZeroTime.plusSeconds(30), createMetricsSnapshot(12))
-  val tenSecondsFour = PeriodSnapshot(unAlignedZeroTime.plusSeconds(30), unAlignedZeroTime.plusSeconds(40), createMetricsSnapshot(37))
-  val tenSecondsFive = PeriodSnapshot(unAlignedZeroTime.plusSeconds(40), unAlignedZeroTime.plusSeconds(50), createMetricsSnapshot(54))
-  val tenSecondsSix = PeriodSnapshot(unAlignedZeroTime.plusSeconds(50), unAlignedZeroTime.plusSeconds(60), createMetricsSnapshot(63))
+  val tenSecondsOne = createPeriodSnapshot(unAlignedZeroTime, unAlignedZeroTime.plusSeconds(10), 22)
+  val tenSecondsTwo = createPeriodSnapshot(unAlignedZeroTime.plusSeconds(10), unAlignedZeroTime.plusSeconds(20), 33)
+  val tenSecondsThree = createPeriodSnapshot(unAlignedZeroTime.plusSeconds(20), unAlignedZeroTime.plusSeconds(30), 12)
+  val tenSecondsFour = createPeriodSnapshot(unAlignedZeroTime.plusSeconds(30), unAlignedZeroTime.plusSeconds(40), 37)
+  val tenSecondsFive = createPeriodSnapshot(unAlignedZeroTime.plusSeconds(40), unAlignedZeroTime.plusSeconds(50), 54)
+  val tenSecondsSix = createPeriodSnapshot(unAlignedZeroTime.plusSeconds(50), unAlignedZeroTime.plusSeconds(60), 63)
 
-  val almostThreeSeconds = PeriodSnapshot(alignedZeroTime, alignedZeroTime.plusSeconds(3).minusMillis(1), createMetricsSnapshot(22))
-  val threeSeconds = PeriodSnapshot(alignedZeroTime, alignedZeroTime.plusSeconds(3), createMetricsSnapshot(22))
-  val fourSeconds = PeriodSnapshot(alignedZeroTime, alignedZeroTime.plusSeconds(4), createMetricsSnapshot(22))
-  val nineSeconds = PeriodSnapshot(alignedZeroTime, alignedZeroTime.plusSeconds(9), createMetricsSnapshot(22))
-  val tenSeconds = PeriodSnapshot(alignedZeroTime, alignedZeroTime.plusSeconds(10), createMetricsSnapshot(36))
+  val almostThreeSeconds = createPeriodSnapshot(alignedZeroTime, alignedZeroTime.plusSeconds(3).minusMillis(1), 22)
+  val threeSeconds = createPeriodSnapshot(alignedZeroTime, alignedZeroTime.plusSeconds(3), 22)
+  val fourSeconds = createPeriodSnapshot(alignedZeroTime, alignedZeroTime.plusSeconds(4), 22)
+  val nineSeconds = createPeriodSnapshot(alignedZeroTime, alignedZeroTime.plusSeconds(9), 22)
+  val tenSeconds = createPeriodSnapshot(alignedZeroTime, alignedZeroTime.plusSeconds(10), 36)
 
 
   def newAccumulator(duration: Long, margin: Long) =
-    new PeriodSnapshotAccumulator(Duration.ofSeconds(duration), Duration.ofSeconds(margin))
+    PeriodSnapshot.accumulator(Duration.ofSeconds(duration), Duration.ofSeconds(margin))
 
-  def createMetricsSnapshot(value: Long) = MetricsSnapshot(
-    histograms = Seq(createDistributionSnapshot(s"histogram", Map("metric" -> "histogram"), MeasurementUnit.time.microseconds, DynamicRange.Fine)(value)),
-    rangeSamplers = Seq(createDistributionSnapshot(s"gauge", Map("metric" -> "gauge"), MeasurementUnit.time.microseconds, DynamicRange.Default)(value)),
-    gauges = Seq(createValueSnapshot(s"gauge", Map("metric" -> "gauge"), MeasurementUnit.information.bytes, value)),
-    counters = Seq(createValueSnapshot(s"counter", Map("metric" -> "counter"), MeasurementUnit.information.bytes, value))
-  )
+  /** Creates a period snapshot with one metric of each type with one instrument. All instruments have a single
+    * measurement with the provided value.
+    */
+  def createPeriodSnapshot(from: Instant, to: Instant, value: Long): PeriodSnapshot = {
+    val valueSettings = Metric.Settings.ValueInstrument(MeasurementUnit.none, Duration.ofSeconds(10))
+    val distributionSettings = Metric.Settings.DistributionInstrument(MeasurementUnit.none, Duration.ofSeconds(10), DynamicRange.Default)
+    val distribution = Kamon.histogram("temp").withoutTags().record(value).distribution()
 
-  def createValueSnapshot(metric: String, tags: Map[String, String], unit: MeasurementUnit, value: Long): MetricValue = {
-    MetricValue(metric, tags, unit, value)
-  }
-
-  def createDistributionSnapshot(metric: String, tags: Map[String, String], unit: MeasurementUnit, dynamicRange: DynamicRange)(values: Long*): MetricDistribution = {
-    val histogram = Kamon.histogram(metric, unit, dynamicRange).refine(tags)
-    values.foreach(histogram.record)
-    val distribution = histogram.distribution(resetState = true)
-    MetricDistribution(metric, tags, unit, dynamicRange, distribution)
+    PeriodSnapshot(from, to,
+      counters = Map("counter" -> MetricSnapshot.Value("counter", "", valueSettings, Map(TagSet.from("metric", "counter") -> value))),
+      gauges = Map("gauge" -> MetricSnapshot.Value("gauge", "", valueSettings, Map(TagSet.from("metric", "gauge") -> value))),
+      histograms = Map("histogram" -> MetricSnapshot.Distribution("histogram", "", distributionSettings, Map(TagSet.from("metric", "histogram") -> distribution))),
+      timers = Map("timer" -> MetricSnapshot.Distribution("timer", "", distributionSettings, Map(TagSet.from("metric", "timer") -> distribution))),
+      rangeSamplers = Map("rangeSampler" -> MetricSnapshot.Distribution("rangeSampler", "", distributionSettings, Map(TagSet.from("metric", "rangeSampler") -> distribution)))
+    )
   }
 
   override protected def beforeAll(): Unit = {

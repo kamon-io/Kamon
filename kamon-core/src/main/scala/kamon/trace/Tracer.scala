@@ -19,7 +19,7 @@ import java.time.Instant
 
 import com.typesafe.config.Config
 import kamon.Kamon
-import kamon.metric.MetricLookup
+import kamon.metric.MetricBuilding
 import kamon.trace.Span.{FinishedSpan, TagValue}
 import kamon.trace.SpanContext.SamplingDecision
 import kamon.trace.Tracer.SpanBuilder
@@ -42,7 +42,7 @@ object Tracer {
     def flush(): Seq[FinishedSpan]
   }
 
-  final class Default(metrics: MetricLookup, initialConfig: Config, clock: Clock) extends Tracer with SpanBuffer {
+  final class Default(metrics: MetricBuilding, initialConfig: Config, clock: Clock) extends Tracer with SpanBuffer {
     private val _logger = LoggerFactory.getLogger(classOf[Tracer])
 
     private[Tracer] val tracerMetrics = new TracerMetrics(metrics)
@@ -119,7 +119,7 @@ object Tracer {
   }
 
   object Default {
-    def apply(metrics: MetricLookup, initialConfig: Config, clock: Clock): Default =
+    def apply(metrics: MetricBuilding, initialConfig: Config, clock: Clock): Default =
       new Default(metrics, initialConfig, clock)
   }
 
@@ -254,7 +254,7 @@ object Tracer {
     }
   }
 
-  private final class TracerMetrics(metricLookup: MetricLookup) {
-    val createdSpans = metricLookup.counter("tracer.spans-created")
+  private final class TracerMetrics(metricLookup: MetricBuilding) {
+    val createdSpans = metricLookup.counter("tracer.spans-created").withoutTags()
   }
 }

@@ -33,10 +33,12 @@ export interface Module {
 
 export interface Metric {
   name: string
+  description: string
   type: string
   unitDimension: string
   unitMagnitude: string
-  tags: { [key: string ]: string }
+  instrumentType: string
+  instruments: Array<{ [key: string ]: string }>
   search: string
 }
 
@@ -88,15 +90,17 @@ export class StatusApi {
 
       metricRegistry.metrics.forEach(metric => {
         // Fixes the display name for range samplers
-        if (metric.type === 'RangeSampler') {
+        if (metric.type === 'rangeSampler') {
           metric.type = 'Range Sampler'
         }
 
 
-        // Calculate the "search" string and inject it in all metrics.
+        // Calculate the "search" string, which contains all tags from all instruments
         let tagsSearch = ''
-        Object.keys(metric.tags).forEach(tag => {
-          tagsSearch += pair(tag, metric.tags[tag])
+        metric.instruments.forEach(instrument => {
+          Object.keys(instrument).forEach(tag => {
+            tagsSearch += pair(tag, instrument[tag])
+          })
         })
 
         metric.search =

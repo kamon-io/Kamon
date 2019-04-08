@@ -6,9 +6,9 @@ import java.util.concurrent.{CountDownLatch, Executors, ScheduledFuture, TimeUni
 import java.util.concurrent.atomic.AtomicReference
 
 import com.typesafe.config.Config
-import kamon.metric.{MetricsSnapshotGenerator, PeriodSnapshot}
 import kamon.module.Module.Registration
 import kamon.status.Status
+import kamon.metric.MetricRegistry
 import kamon.trace.Tracer.SpanBuffer
 import kamon.util.Clock
 import org.slf4j.LoggerFactory
@@ -23,7 +23,9 @@ import scala.util.control.NonFatal
 /**
   * Controls the lifecycle of all available modules.
   */
-class ModuleRegistry(classLoading: ClassLoading, configuration: Configuration, clock: Clock, snapshotGenerator: MetricsSnapshotGenerator, spanBuffer: SpanBuffer) {
+class ModuleRegistry(classLoading: ClassLoading, configuration: Configuration, clock: Clock, snapshotGenerator: MetricRegistry,
+    spanBuffer: SpanBuffer) {
+
   private val _logger = LoggerFactory.getLogger(classOf[ModuleRegistry])
   private val _metricsTickerExecutor = Executors.newScheduledThreadPool(1, threadFactory("kamon-metrics-ticker", daemon = true))
   private val _spansTickerExecutor = Executors.newScheduledThreadPool(1, threadFactory("kamon-spans-ticker", daemon = true))
@@ -162,10 +164,7 @@ class ModuleRegistry(classLoading: ClassLoading, configuration: Configuration, c
 
         override def run(): Unit = try {
           val currentInstant = Instant.now(clock)
-          val periodSnapshot = PeriodSnapshot(
-            from = lastInstant,
-            to = currentInstant,
-            metrics = snapshotGenerator.snapshot())
+          val periodSnapshot = snapshotGenerator.snapshot(resetState = true)
 
           metricReporterModules().foreach { entry =>
             Future {

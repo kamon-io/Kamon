@@ -1,52 +1,43 @@
-/* =========================================================================================
- * Copyright © 2013-2017 the kamon project <http://kamon.io/>
- *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
- * either express or implied. See the License for the specific language governing permissions
- * and limitations under the License.
- * =========================================================================================
- */
-
 package kamon.metric
 
-import java.util.concurrent.atomic.AtomicLong
+import kamon.metric.Metric.{BaseMetric, BaseMetricAutoUpdate}
+import kamon.tag.TagSet
 
-trait Gauge {
-  def unit: MeasurementUnit
 
-  def increment(): Unit
-  def increment(times: Long): Unit
-  def decrement(): Unit
-  def decrement(times: Long): Unit
-  def set(value: Long): Unit
+/**
+  * Instrument that tracks the latest observed value of a given measure.
+  */
+trait Gauge extends Instrument[Gauge, Metric.Settings.ValueInstrument] {
+
+  /**
+    * Sets the current value of the gauge to the provided value.
+    */
+  def update(value: Double): Gauge
+
+}
+
+object Gauge {
+
+  /**
+    * Gauge implementation backed by a volatile variable.
+    */
+  class Volatile(val metric: BaseMetric[Gauge, Metric.Settings.ValueInstrument, Double], val tags: TagSet) extends Gauge
+      with Instrument.Snapshotting[Double] with BaseMetricAutoUpdate[Gauge, Metric.Settings.ValueInstrument, Double] {
+
+    @volatile private var _currentValue = 0D
+
+    override def update(value: Double): Gauge = {
+      _currentValue = value
+      this
+    }
+
+    override def snapshot(resetState: Boolean): Double =
+      _currentValue
+
+    override def baseMetric: BaseMetric[Gauge, Metric.Settings.ValueInstrument, Double] =
+      metric
+  }
 }
 
 
-class AtomicLongGauge(name: String, tags: Map[String, String], val unit: MeasurementUnit) extends Gauge {
-  private val currentValue = new AtomicLong(0L)
 
-  def increment(): Unit =
-    currentValue.incrementAndGet()
-
-  def increment(times: Long): Unit =
-    currentValue.addAndGet(times)
-
-  def decrement(): Unit =
-    currentValue.decrementAndGet()
-
-  def decrement(times: Long): Unit =
-    currentValue.addAndGet(-times)
-
-  def set(value: Long): Unit =
-    currentValue.set(value)
-
-  // Gauges never reset internal state, the resetSate parameter is always ignored.
-  def snapshot(): MetricValue =
-    MetricValue(name, tags, unit, currentValue.get())
-}

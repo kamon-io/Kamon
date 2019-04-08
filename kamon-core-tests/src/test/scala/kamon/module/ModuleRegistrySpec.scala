@@ -21,18 +21,17 @@ import kamon.metric.PeriodSnapshot
 import kamon.testkit.Reconfigure
 import org.scalatest.concurrent.Eventually
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
-import kamon.{MetricReporter => LegacyMetricReporter}
 
 class ModuleRegistrySpec extends WordSpec with Matchers with Reconfigure with Eventually with BeforeAndAfterAll  {
   "The ModuleRegistry" when {
     "working with metrics reporters" should {
       "report all metrics if no filters are applied" in {
-        Kamon.counter("test.hello").increment()
-        Kamon.counter("test.world").increment()
-        Kamon.counter("other.hello").increment()
+        Kamon.counter("test.hello").withoutTags().increment()
+        Kamon.counter("test.world").withoutTags().increment()
+        Kamon.counter("other.hello").withoutTags().increment()
 
         val reporter = new SeenMetricsReporter()
-        val subscription = Kamon.addReporter(reporter, "reporter-registry-spec")
+        val subscription = Kamon.registerModule("reporter-registry-spec", reporter)
 
         eventually {
           reporter.snapshotCount() should be >= 1
@@ -47,32 +46,35 @@ class ModuleRegistrySpec extends WordSpec with Matchers with Reconfigure with Ev
       }
 
       "default to deny all metrics if a provided filter name doesn't exist" in {
-        Kamon.counter("test.hello").increment()
-        Kamon.counter("test.world").increment()
-        Kamon.counter("other.hello").increment()
+        Kamon.counter("test.hello").withoutTags().increment()
+        Kamon.counter("test.world").withoutTags().increment()
+        Kamon.counter("other.hello").withoutTags().increment()
 
-        val reporter = new SeenMetricsReporter()
-        val subscription = Kamon.addReporter(reporter, "reporter-registry-spec", "does-not-exist")
+        val originalReporter = new SeenMetricsReporter()
+        val reporter = MetricReporter.withTransformations(originalReporter, MetricReporter.filterMetrics("does-not-exist"))
+        val subscription = Kamon.registerModule("reporter-registry-spec", reporter)
 
         eventually {
-          reporter.snapshotCount() should be >= 1
-          reporter.metrics() shouldBe empty
+          originalReporter.snapshotCount() should be >= 1
+          originalReporter.metrics() shouldBe empty
         }
 
         subscription.cancel()
       }
 
       "apply existent filters" in {
-        Kamon.counter("test.hello").increment()
-        Kamon.counter("test.world").increment()
-        Kamon.counter("other.hello").increment()
+        Kamon.counter("test.hello").withoutTags().increment()
+        Kamon.counter("test.world").withoutTags().increment()
+        Kamon.counter("other.hello").withoutTags().increment()
 
-        val reporter = new SeenMetricsReporter()
-        val subscription = Kamon.addReporter(reporter, "reporter-registry-spec", "real-filter")
+        val originalReporter = new SeenMetricsReporter()
+        val reporter = MetricReporter.withTransformations(originalReporter, MetricReporter.filterMetrics("real-filter"))
+        val subscription = Kamon.registerModule("reporter-registry-spec", reporter)
+
 
         eventually {
-          reporter.snapshotCount() should be >= 1
-          reporter.metrics() should contain allOf(
+          originalReporter.snapshotCount() should be >= 1
+          originalReporter.metrics() should contain allOf(
             "test.hello",
             "test.world"
           )
@@ -106,14 +108,14 @@ class ModuleRegistrySpec extends WordSpec with Matchers with Reconfigure with Ev
     resetConfig()
   }
 
-  class SeenMetricsReporter extends LegacyMetricReporter {
+  class SeenMetricsReporter extends MetricReporter {
     @volatile private var count = 0
     @volatile private var seenMetrics = Seq.empty[String]
 
     override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
-      import snapshot.metrics._
+      import snapshot._
       count += 1
-      seenMetrics = counters.map(_.name) ++ histograms.map(_.name) ++ gauges.map(_.name) ++ rangeSamplers.map(_.name)
+      seenMetrics = (counters.keys ++ histograms.keys ++ gauges.keys ++ rangeSamplers.keys ++ timers.keys).toSeq
     }
 
     def metrics(): Seq[String] =

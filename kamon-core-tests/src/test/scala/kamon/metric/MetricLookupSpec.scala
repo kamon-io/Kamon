@@ -18,6 +18,7 @@ package kamon.metric
 import java.util.Collections.{singletonMap => javaMap}
 
 import kamon.Kamon
+import kamon.tag.TagSet
 import org.scalatest.{Matchers, WordSpec}
 
 class MetricLookupSpec extends WordSpec with Matchers {
@@ -51,36 +52,36 @@ class MetricLookupSpec extends WordSpec with Matchers {
 
     "refine a metric with tags and" should {
       "always return the same histogram for a set of tags" in {
-        val histogramOne = Kamon.histogram("histogram-lookup").refine("tag" -> "value")
-        val histogramTwo = Kamon.histogram("histogram-lookup").refine("tag" -> "value")
-        val histogramThree = Kamon.histogram("histogram-lookup").refine(javaMap("tag", "value"))
+        val histogramOne = Kamon.histogram("histogram-lookup").withTag("tag", "value")
+        val histogramTwo = Kamon.histogram("histogram-lookup").withTag("tag", "value")
+        val histogramThree = Kamon.histogram("histogram-lookup").withTags(TagSet.from(javaMap("tag", "value": Any)))
 
         histogramOne shouldBe theSameInstanceAs(histogramTwo)
         histogramOne shouldBe theSameInstanceAs(histogramThree)
       }
 
       "always return the same counter for a set of tags" in {
-        val counterOne = Kamon.counter("counter-lookup").refine("tag" -> "value")
-        val counterTwo = Kamon.counter("counter-lookup").refine("tag" -> "value")
-        val counterThree = Kamon.counter("counter-lookup").refine(javaMap("tag", "value"))
+        val counterOne = Kamon.counter("counter-lookup").withTag("tag", "value")
+        val counterTwo = Kamon.counter("counter-lookup").withTag("tag", "value")
+        val counterThree = Kamon.counter("counter-lookup").withTags(TagSet.from(javaMap("tag", "value": Any)))
 
         counterOne shouldBe theSameInstanceAs(counterTwo)
         counterOne shouldBe theSameInstanceAs(counterThree)
       }
 
       "always return the same gauge for a set of tags" in {
-        val gaugeOne = Kamon.gauge("gauge-lookup").refine("tag" -> "value")
-        val gaugeTwo = Kamon.gauge("gauge-lookup").refine("tag" -> "value")
-        val gaugeThree = Kamon.gauge("gauge-lookup").refine(javaMap("tag", "value"))
+        val gaugeOne = Kamon.gauge("gauge-lookup").withTag("tag", "value")
+        val gaugeTwo = Kamon.gauge("gauge-lookup").withTag("tag", "value")
+        val gaugeThree = Kamon.gauge("gauge-lookup").withTags(TagSet.from(javaMap("tag", "value": Any)))
 
         gaugeOne shouldBe theSameInstanceAs(gaugeTwo)
         gaugeOne shouldBe theSameInstanceAs(gaugeThree)
       }
 
       "always return the same range-sampler for a set of tags" in {
-        val rangeSamplerOne = Kamon.rangeSampler("range-sampler-lookup").refine("tag" -> "value")
-        val rangeSamplerTwo = Kamon.rangeSampler("range-sampler-lookup").refine("tag" -> "value")
-        val rangeSamplerThree = Kamon.rangeSampler("range-sampler-lookup").refine(javaMap("tag", "value"))
+        val rangeSamplerOne = Kamon.rangeSampler("range-sampler-lookup").withTag("tag", "value")
+        val rangeSamplerTwo = Kamon.rangeSampler("range-sampler-lookup").withTag("tag", "value")
+        val rangeSamplerThree = Kamon.rangeSampler("range-sampler-lookup").withTags(TagSet.from(javaMap("tag", "value": Any)))
 
         rangeSamplerOne shouldBe theSameInstanceAs(rangeSamplerTwo)
         rangeSamplerOne shouldBe theSameInstanceAs(rangeSamplerThree)

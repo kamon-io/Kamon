@@ -1,31 +1,19 @@
 package kamon
 
-import java.time.Duration
-
 import kamon.metric._
 
+/**
+  * Exposes all metric building APIs using a built-in, globally shared metric registry.
+  */
+trait Metrics extends MetricBuilding { self: Configuration with Utilities =>
+  protected val _metricRegistry = new MetricRegistry(self.config(), self.scheduler(), self.clock())
+  onReconfigure(newConfig => _metricRegistry.reconfigure(newConfig))
 
-trait Metrics extends MetricLookup { self: Configuration with Utilities =>
-  protected val _metricsRegistry = new MetricRegistry(self.config(), self.scheduler())
-
-  override def histogram(name: String, unit: MeasurementUnit, dynamicRange: Option[DynamicRange]): HistogramMetric =
-    _metricsRegistry.histogram(name, unit, dynamicRange)
-
-  override def counter(name: String, unit: MeasurementUnit): CounterMetric =
-    _metricsRegistry.counter(name, unit)
-
-  override def gauge(name: String, unit: MeasurementUnit): GaugeMetric =
-    _metricsRegistry.gauge(name, unit)
-
-  override def rangeSampler(name: String, unit: MeasurementUnit, sampleInterval: Option[Duration],
-    dynamicRange: Option[DynamicRange]): RangeSamplerMetric =
-    _metricsRegistry.rangeSampler(name, unit, dynamicRange, sampleInterval)
-
-  override def timer(name: String, dynamicRange: Option[DynamicRange]): TimerMetric =
-    _metricsRegistry.timer(name, dynamicRange)
-
-
-  protected def metricRegistry(): MetricRegistry =
-    _metricsRegistry
+  /**
+    * Metric registry from which all metric-building APIs will draw instances. For more details on the entire set of
+    * exposes APIs please refer to [[kamon.metric.MetricBuilding.]]
+    */
+  protected def registry(): MetricRegistry =
+    _metricRegistry
 
 }

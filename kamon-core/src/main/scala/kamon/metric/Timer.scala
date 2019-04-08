@@ -1,108 +1,138 @@
-/* =========================================================================================
- * Copyright © 2013-2017 the kamon project <http://kamon.io/>
- *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
- * either express or implied. See the License for the specific language governing permissions
- * and limitations under the License.
- * =========================================================================================
- */
-
 package kamon.metric
 
-import kamon.{JTags, STags}
+import java.time.{Duration, Instant}
+import java.util.concurrent.TimeUnit
 
-trait Timer extends Histogram {
-  def start(): StartedTimer
+import kamon.metric.Histogram.DistributionSnapshotBuilder
+import kamon.metric.Metric.{BaseMetric, BaseMetricAutoUpdate, Settings}
+import kamon.tag.TagSet
+import kamon.util.Clock
+import org.HdrHistogram.BaseAtomicHdrHistogram
+import org.slf4j.LoggerFactory
+
+
+/**
+  * Instrument that tracks the distribution of latency values within a configured range and precision. Timers are just a
+  * special case of histograms that provide special APIs dedicated to recording latency measurements.
+  */
+trait Timer extends Instrument[Timer, Metric.Settings.DistributionInstrument] {
+
+  /**
+    * Starts counting elapsed time from the instant this method is called and until the returned Timer.Started instance
+    * is stopped.
+    */
+  def start(): Timer.Started
+
+  /**
+    * Records one occurrence of the provided latency value. Keep in mind that the provided value will not be recorded
+    * as-is on the resulting Histogram but will be rather adjusted to a bucket within the configured precision. By
+    * default, all Kamon histograms are configured to achieve up to 1% error margin across the entire range.
+    */
+  def record(nanos: Long): Timer
+
+  /**
+    * Records one occurrence of the provided duration. Keep in mind that the provided value will not be recorded
+    * as-is on the resulting Histogram but will be rather adjusted to a bucket within the configured precision. By
+    * default, all Kamon histograms are configured to achieve up to 1% error margin across the entire range.
+    */
+  def record(duration: Duration): Timer
+
+  /**
+    * Records one occurrence of the provided duration. Keep in mind that the provided value will not be recorded
+    * as-is on the resulting Histogram but will be rather adjusted to a bucket within the configured precision. By
+    * default, all Kamon histograms are configured to achieve up to 1% error margin across the entire range.
+    */
+  def record(elapsed: Long, unit: TimeUnit): Timer
+
 }
 
-trait StartedTimer {
-  def stop(): Unit
-}
 
-object StartedTimer {
+object Timer {
 
-  def createFor(histogram: Histogram): StartedTimer = new StartedTimer {
-    var running = true
-    val startTimestamp = System.nanoTime()
+  private val _logger = LoggerFactory.getLogger(classOf[Timer])
+
+  /**
+    * Measures the elapsed time between the instant when a timer is started and the instant when it is stopped.
+    */
+  trait Started extends Tagging[Started] {
+
+    /**
+      * Stops the timer and record the elapsed time since it was started.
+      */
+    def stop(): Unit
+
+  }
+
+
+  /**
+    * Timer implementation with thread safety guarantees. Instances of this class can be safely shared across threads
+    * and updated concurrently. This is, in fact, a close copy of the Histogram.Atomic implementation, modified to match
+    * the Timer interface.
+    */
+  class Atomic(val metric: BaseMetric[Timer, Metric.Settings.DistributionInstrument, Distribution],
+    val tags: TagSet, val dynamicRange: DynamicRange, clock: Clock) extends BaseAtomicHdrHistogram(dynamicRange) with Timer
+    with Instrument.Snapshotting[Distribution] with DistributionSnapshotBuilder
+    with BaseMetricAutoUpdate[Timer, Metric.Settings.DistributionInstrument, Distribution] {
+
+    /** Starts a timer that will record the elapsed time between the start and stop instants */
+    override def start(): Started =
+      new TaggableStartedTimer(clock.instant(), clock, this)
+
+    /** Records a value on the underlying histogram, handling the case of overflowing the dynamic range */
+    override def record(nanos: Long): Timer = {
+      try {
+        recordValue(nanos)
+      } catch {
+        case _: ArrayIndexOutOfBoundsException =>
+          val highestTrackableValue = getHighestTrackableValue()
+          recordValue(highestTrackableValue)
+
+          _logger.warn (
+            s"Failed to record value [$nanos] on [${metric.name},${tags}] because the value is outside of the " +
+            s"configured range. The recorded value was adjusted to the highest trackable value [$highestTrackableValue]. " +
+            s"You might need to change your dynamic range configuration for this metric"
+          )
+      }
+
+      this
+    }
+
+    /** Records a specified duration, translated to nanoseconds */
+    override def record(duration: Duration): Timer =
+      record(duration.toNanos)
+
+    /** Records an elapsed time expressed on the provided time unit */
+    override def record(elapsed: Long, unit: TimeUnit): Timer =
+      record(unit.toNanos(elapsed))
+
+    override protected def baseMetric: BaseMetric[Timer, Settings.DistributionInstrument, Distribution] =
+      metric
+  }
+
+
+  /**
+    * Started timer implementation that allows applying tags before the timer is stopped.
+    */
+  private class TaggableStartedTimer(startedAt: Instant, clock: Clock, instrument: Timer) extends Timer.Started {
+    private var stopped = false
+
+    override def withTag(key: String, value: String): Timer.Started =
+      new TaggableStartedTimer(startedAt, clock, instrument.withTag(key, value))
+
+    override def withTag(key: String, value: Boolean): Timer.Started =
+      new TaggableStartedTimer(startedAt, clock, instrument.withTag(key, value))
+
+    override def withTag(key: String, value: Long): Timer.Started =
+      new TaggableStartedTimer(startedAt, clock, instrument.withTag(key, value))
+
+    override def withTags(tags: TagSet): Timer.Started =
+      new TaggableStartedTimer(startedAt, clock, instrument.withTags(tags))
 
     override def stop(): Unit = synchronized {
-      if(running) {
-        histogram.record(System.nanoTime() - startTimestamp)
-        running = false
+      if(!stopped) {
+        instrument.record(clock.nanosSince(startedAt))
+        stopped = true
       }
     }
   }
-}
-
-private[kamon] final class TimerImpl(val histogram: Histogram) extends Timer {
-
-  override def unit: MeasurementUnit =
-    histogram.unit
-
-  override def dynamicRange: DynamicRange =
-    histogram.dynamicRange
-
-  override def record(value: Long): Unit =
-    histogram.record(value)
-
-  override def record(value: Long, times: Long): Unit =
-    histogram.record(value, times)
-
-  override def start(): StartedTimer =
-    StartedTimer.createFor(histogram)
-}
-
-
-private[kamon] final class TimerMetricImpl(val underlyingHistogram: HistogramMetric) extends TimerMetric {
-
-  import scala.collection.JavaConverters._
-
-
-  override def unit: MeasurementUnit =
-    underlyingHistogram.unit
-
-  override def dynamicRange: DynamicRange =
-    underlyingHistogram.dynamicRange
-
-  override def record(value: Long): Unit =
-    underlyingHistogram.record(value)
-
-  override def record(value: Long, times: Long): Unit =
-    underlyingHistogram.record(value, times)
-
-  override def name: String =
-    underlyingHistogram.name
-
-  override def refine(tags: JTags): Timer =
-    refine(tags.asScala.toMap)
-
-  override def refine(tags: STags): Timer =
-    new TimerImpl(underlyingHistogram.refine(tags))
-
-  override def refine(tags: (String, String)*): Timer =
-    new TimerImpl(underlyingHistogram.refine(tags: _*))
-
-  override def refine(tag: String, value: String): Timer =
-    new TimerImpl(underlyingHistogram.refine(Map(tag -> value)))
-
-  override def remove(tags: JTags): Boolean =
-    remove(tags.asScala.toMap)
-
-  override def remove(tags: STags): Boolean =
-    underlyingHistogram.remove(tags)
-
-  override def remove(tags: (String, String)*): Boolean =
-    underlyingHistogram.remove(tags: _*)
-
-  override def remove(tag: String, value: String): Boolean =
-    underlyingHistogram.remove(tag, value)
-
-  override def start(): StartedTimer =
-    StartedTimer.createFor(underlyingHistogram)
 }

@@ -13,77 +13,88 @@
  * =========================================================================================
  */
 
-package kamon.testkit
+package kamon
+package testkit
 
-import kamon.metric.{BaseMetric, _}
+import kamon.metric.Metric.BaseMetric
+import kamon.metric.{Instrument, Metric}
+import kamon.tag.{Tag, TagSet}
+import kamon.tag.Lookups._
 
-import _root_.scala.collection.concurrent.TrieMap
+import scala.collection.concurrent.TrieMap
 
-trait MetricInspection {
 
-  implicit class MetricSyntax(metric: Metric[_]) {
-    def valuesForTag(tag: String): Seq[String] = {
-      val instrumentsField = classOf[BaseMetric[_, _]].getDeclaredField("instruments")
-      instrumentsField.setAccessible(true)
+/**
+  * Utility functions to extract tags and instrument information from metrics. These utilities are only meant to be used
+  * for testing purposes.
+  */
+object MetricInspection {
 
-      val instruments = instrumentsField.get(metric).asInstanceOf[TrieMap[Map[String, String], _]]
-      val instrumentsWithTheTag = instruments.keys.filter(_.keys.exists(_ == tag))
-      instrumentsWithTheTag.map(t => t(tag)).toSeq
+  /**
+    * Returns all values for a given tag across all instruments of the inspected metric.
+    */
+  def tagValues[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings](metric: Metric[Inst, Sett], key: String): Seq[String] = {
+    instrumentsMap(metric).keys
+      .map(t => t.get(coerce(key, "")))
+      .filter(_.nonEmpty)
+      .toSeq
+  }
+
+  /**
+    * Returns all instruments currently registered for the inspected metric.
+    */
+  def instruments[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings](metric: Metric[Inst, Sett]): Map[TagSet, Inst] = {
+    def extractInstrumentFromEntry(e: Any): Inst =
+      getFieldFromClass[Inst](e, "kamon.metric.Metric$BaseMetric$InstrumentEntry", "instrument")
+
+    instrumentsMap(metric)
+      .mapValues(extractInstrumentFromEntry)
+      .toMap
+  }
+
+  /**
+    * Returns all instruments that contain at least the provided tags for the inspected metric.
+    */
+  def instruments[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings](metric: Metric[Inst, Sett], tags: TagSet): Map[TagSet, Inst] = {
+    def hasAllRequestedTags(instrumentTags: TagSet): Boolean = {
+      val instrumentPairs = instrumentTags.iterator().map(t => (t.key -> Tag.unwrapValue(t))).toMap
+      tags.iterator().forall(t => instrumentPairs.get(t.key).filter(sv => sv == Tag.unwrapValue(t)).nonEmpty)
     }
 
-    def partialRefine(tags: Map[String, String]): Seq[Map[String, String]] = {
-      val instrumentsField = classOf[BaseMetric[_, _]].getDeclaredField("instruments")
-      instrumentsField.setAccessible(true)
+    instrumentsMap(metric)
+      .filterKeys(hasAllRequestedTags)
+      .mapValues(_.asInstanceOf[Inst])
+      .toMap
+  }
 
-      val instruments = instrumentsField.get(metric).asInstanceOf[TrieMap[Map[String, String], _]]
 
-      instruments.keys.filter { metricKey =>
-        tags.toSeq.forall { case (k, v) =>
-          metricKey.contains(k) && metricKey(k) == v
-        }
-      }.toSeq
+  private def instrumentsMap[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings](metric: Metric[Inst, Sett]): TrieMap[TagSet, Any] =
+    getFieldFromClass[TrieMap[TagSet, Any]](metric, "kamon.metric.Metric$BaseMetric", "_instruments")
+
+
+  /**
+    * Exposes an implicitly available syntax for inspecting tags and instruments from a metric.
+    */
+  trait Syntax {
+
+    trait RichMetric[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings] {
+      def tagValues(key: String): Seq[String]
+      def instruments(): Map[TagSet, Inst]
+      def instruments(tags: TagSet): Map[TagSet, Inst]
     }
 
-    def partialRefineKeys(tags: Set[String]): Seq[Map[String, String]] = {
-      val instrumentsField = classOf[BaseMetric[_, _]].getDeclaredField("instruments")
-      instrumentsField.setAccessible(true)
+    implicit def metricInspectionSyntax[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings](metric: Metric[Inst, Sett]) =
+        new RichMetric[Inst, Sett] {
 
-      val instruments = instrumentsField.get(metric).asInstanceOf[TrieMap[Map[String, String], _]]
-      instruments.keys.filter(key => tags.subsetOf(key.keySet)).toSeq
+      def tagValues(key: String): Seq[String] =
+        MetricInspection.tagValues(metric, key)
+
+      def instruments(): Map[TagSet, Inst] =
+        MetricInspection.instruments(metric)
+
+      def instruments(tags: TagSet): Map[TagSet, Inst] =
+        MetricInspection.instruments(metric, tags)
     }
   }
-
-  implicit class HistogramMetricSyntax(histogram: Histogram) {
-    def distribution(resetState: Boolean = true): Distribution =
-      histogram match {
-        case hm: HistogramMetric    => hm.refine(Map.empty[String, String]).distribution(resetState)
-        case h: AtomicHdrHistogram  => h.snapshot(resetState).distribution
-        case h: HdrHistogram        => h.snapshot(resetState).distribution
-      }
-  }
-
-  implicit class RangeSamplerMetricSyntax(rangeSampler: RangeSampler) {
-    def distribution(resetState: Boolean = true): Distribution =
-      rangeSampler match {
-        case rsm: RangeSamplerMetric  => rsm.refine(Map.empty[String, String]).distribution(resetState)
-        case rs: SimpleRangeSampler   => rs.snapshot(resetState).distribution
-      }
-  }
-
-  implicit class CounterMetricSyntax(counter: Counter) {
-    def value(resetState: Boolean = true): Long =
-      counter match {
-        case cm: CounterMetric    => cm.refine(Map.empty[String, String]).value(resetState)
-        case c: LongAdderCounter  => c.snapshot(resetState).value
-      }
-  }
-
-  implicit class GaugeMetricSyntax(gauge:  Gauge) {
-    def value(resetState: Boolean = true): Long =
-      gauge match {
-        case gm: GaugeMetric    => gm.refine(Map.empty[String, String]).value(resetState)
-        case g: AtomicLongGauge  => g.snapshot().value
-      }
-  }
+  object Syntax extends Syntax
 }
-

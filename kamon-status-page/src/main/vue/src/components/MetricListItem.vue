@@ -3,20 +3,20 @@
 
     <div slot="status-indicator" @click="onCardClick">
       <div class="metric-count">
-        {{ group.metrics.length }}
+        {{ metric.instruments.length }}
       </div>
-      <div>SERIES</div>
+      <div>INSTRUMENTS</div>
     </div>
 
     <div slot="default" @click="onCardClick">
       <div class="row no-gutters">
         <div class="col">
           <div class="py-3 pl-4">
-            <h5>{{ group.name }}</h5>
+            <h5>{{ metric.name }}</h5>
             <div class="text-label">
-              <span>{{group.type}}</span>
-              <span v-if="group.unitDimension !== 'none'"> - {{ group.unitDimension }}</span>
-              <span v-if="group.unitMagnitude !== 'none'"> - {{ group.unitMagnitude }}</span>
+              <span>{{metric.instrumentType}}</span>
+              <span v-if="metric.unitDimension !== 'none'"> - {{ metric.unitDimension }}</span>
+              <span v-if="metric.unitMagnitude !== 'none'"> - {{ metric.unitMagnitude }}</span>
             </div>
           </div>
         </div>
@@ -24,17 +24,17 @@
           <i class="fas fa-fw" :class="expansionIcon"></i>
         </div>
         <div class="col-12 series-container" v-if="expanded">
-          <div v-for="(metric, index) in group.metrics" :key="index">
+          <div v-for="(instrument, index) in metric.instruments" :key="index">
             <div class="p-3">
               <h6>Incarnation #{{ index + 1 }}</h6>
               <div class="tag-container">
-                <span class="tag" v-for="tag in Object.keys(metric.tags)" :key="tag">
-                  {{ tag }}=<span class="tag-value">{{ metric.tags[tag] }}</span>
+                <span class="tag" v-for="tag in Object.keys(instrument)" :key="tag">
+                  {{ tag }}=<span class="tag-value">{{ instrument[tag] }}</span>
                 </span>
-                <span v-if="Object.keys(metric.tags).length === 0" class="pl-2">Base Metric - No Tags</span>
+                <span v-if="Object.keys(instrument).length === 0" class="pl-2">Base Metric - No Tags</span>
               </div>
             </div>
-            <hr v-if="index < (group.metrics.length - 1)" class="w-100 incarnation-hr">
+            <hr v-if="index < (metric.instruments.length - 1)" class="w-100 incarnation-hr">
           </div>
         </div>
       </div>
@@ -51,13 +51,6 @@ import Card from './Card.vue'
 import StatusCard from './StatusCard.vue'
 import _ from 'underscore'
 
-export interface MetricGroup {
-  name: string
-  type: string
-  unitDimension: string
-  unitMagnitude: string
-  metrics: Metric[]
-}
 
 @Component({
   components: {
@@ -65,7 +58,7 @@ export interface MetricGroup {
   }
 })
 export default class MetricListItem extends Vue {
-  @Prop( { default: [] }) private group!: MetricGroup
+  @Prop( { default: null }) private metric!: Metric
   private expanded: boolean = false
 
   get expansionIcon(): string {

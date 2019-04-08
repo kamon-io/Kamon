@@ -15,26 +15,26 @@
 
 package kamon.metric
 
-import java.util.concurrent.atomic.AtomicLong
+import kamon.Kamon
+import kamon.testkit.InstrumentInspection
+import org.scalatest.{Matchers, WordSpec}
 
-import scala.annotation.tailrec
+class GaugeSpec extends WordSpec with Matchers with InstrumentInspection.Syntax {
 
-class AtomicLongMaxUpdater(value:AtomicLong) {
-
-  def update(newMax:Long):Unit = {
-    @tailrec def compare():Long = {
-      val currentMax = value.get()
-      if(newMax > currentMax) if (!value.compareAndSet(currentMax, newMax)) compare() else newMax
-      else currentMax
+  "a Gauge" should {
+    "have a starting value of zero" in {
+      val gauge = Kamon.gauge("default-value").withoutTags()
+      gauge.value shouldBe 0D
     }
-    compare()
+
+    "retain the last value recorded on it" in {
+      val gauge = Kamon.gauge("retain-value").withoutTags().update(42D)
+      gauge.value shouldBe 42D
+      gauge.value shouldBe 42D
+
+      gauge.update(17D)
+      gauge.value shouldBe 17D
+      gauge.value shouldBe 17D
+    }
   }
-
-  def maxThenReset(newValue:Long): Long =
-    value.getAndSet(newValue)
-}
-
-object AtomicLongMaxUpdater {
-  def apply(): AtomicLongMaxUpdater =
-    new AtomicLongMaxUpdater(new AtomicLong(0))
 }

@@ -20,6 +20,7 @@ import java.time.{Duration, Instant, ZoneId, Clock => JavaClock}
 abstract class Clock extends JavaClock {
   def nanos(): Long
   def toInstant(nanos: Long): Instant
+  def nanosSince(instant: Instant): Long
 }
 
 object Clock {
@@ -79,7 +80,14 @@ object Clock {
 
     override def getZone: ZoneId =
       systemClock.getZone()
+
+    override def nanosSince(instant: Instant): Long = {
+      return nanosBetween(instant, this.instant())
+    }
   }
+
+
+
 
   def nanosBetween(left: Instant, right: Instant): Long = {
     val secsDiff = Math.subtractExact(right.getEpochSecond, left.getEpochSecond)

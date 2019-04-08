@@ -16,12 +16,14 @@
 package kamon.trace
 
 import kamon.Kamon.buildSpan
-import kamon.testkit.{MetricInspection, Reconfigure}
+import kamon.tag.TagSet
+import kamon.testkit.{InstrumentInspection, MetricInspection, Reconfigure}
 import org.scalatest.{Matchers, WordSpecLike}
 
 import scala.util.control.NoStackTrace
 
-class SpanMetricsSpec extends WordSpecLike with Matchers with MetricInspection with Reconfigure {
+class SpanMetricsSpec extends WordSpecLike with Matchers with InstrumentInspection.Syntax with MetricInspection.Syntax
+    with Reconfigure {
 
   sampleNever()
 
@@ -34,10 +36,10 @@ class SpanMetricsSpec extends WordSpecLike with Matchers with MetricInspection w
         .start()
         .finish()
 
-      val histogram = Span.Metrics.ProcessingTime.refine(Map(operationTag, noErrorTag))
+      val histogram = Span.Metrics.ProcessingTime.withTags(TagSet.from(Map(operationTag, noErrorTag)))
       histogram.distribution().count shouldBe 1
 
-      val errorHistogram = Span.Metrics.ProcessingTime.refine(Map(operationTag, errorTag))
+      val errorHistogram = Span.Metrics.ProcessingTime.withTags(TagSet.from(Map(operationTag, errorTag)))
       errorHistogram.distribution().count shouldBe 0
 
     }
@@ -54,7 +56,7 @@ class SpanMetricsSpec extends WordSpecLike with Matchers with MetricInspection w
         .start()
         .finish()
 
-      Span.Metrics.ProcessingTime.valuesForTag("operation") shouldNot contain(operation)
+      Span.Metrics.ProcessingTime.tagValues("operation") shouldNot contain(operation)
     }
 
     "allow specifying custom Span metric tags" in {
@@ -65,8 +67,8 @@ class SpanMetricsSpec extends WordSpecLike with Matchers with MetricInspection w
         .tagMetric("custom-metric-tag-on-span", "value")
         .finish()
 
-      Span.Metrics.ProcessingTime.valuesForTag("custom-metric-tag-on-builder") should contain("value")
-      Span.Metrics.ProcessingTime.valuesForTag("custom-metric-tag-on-span") should contain("value")
+      Span.Metrics.ProcessingTime.tagValues("custom-metric-tag-on-builder") should contain("value")
+      Span.Metrics.ProcessingTime.tagValues("custom-metric-tag-on-span") should contain("value")
     }
 
     "be recorded if metrics are enabled by calling enableMetrics() on the Span" in {
@@ -77,7 +79,7 @@ class SpanMetricsSpec extends WordSpecLike with Matchers with MetricInspection w
         .enableMetrics()
         .finish()
 
-      Span.Metrics.ProcessingTime.valuesForTag("operation") should contain(operation)
+      Span.Metrics.ProcessingTime.tagValues("operation") should contain(operation)
     }
 
     "record error latency and count" in {
@@ -94,10 +96,10 @@ class SpanMetricsSpec extends WordSpecLike with Matchers with MetricInspection w
         .addError("Terrible Error with Throwable", new Throwable with NoStackTrace)
         .finish()
 
-      val histogram = Span.Metrics.ProcessingTime.refine(Map(operationTag, noErrorTag))
+      val histogram = Span.Metrics.ProcessingTime.withTags(TagSet.from(Map(operationTag, noErrorTag)))
       histogram.distribution().count shouldBe 0
 
-      val errorHistogram = Span.Metrics.ProcessingTime.refine(Map(operationTag, errorTag))
+      val errorHistogram = Span.Metrics.ProcessingTime.withTags(TagSet.from(Map(operationTag, errorTag)))
       errorHistogram.distribution().count shouldBe 2
     }
 
@@ -125,10 +127,10 @@ class SpanMetricsSpec extends WordSpecLike with Matchers with MetricInspection w
         .addError("Terrible Error with Throwable", new Throwable with NoStackTrace)
         .finish()
 
-      val histogram = Span.Metrics.ProcessingTime.refine(Map(operationTag, noErrorTag, parentOperationTag))
+      val histogram = Span.Metrics.ProcessingTime.withTags(TagSet.from(Map(operationTag, noErrorTag, parentOperationTag)))
       histogram.distribution().count shouldBe 1
 
-      val errorHistogram = Span.Metrics.ProcessingTime.refine(Map(operationTag, errorTag, parentOperationTag))
+      val errorHistogram = Span.Metrics.ProcessingTime.withTags(TagSet.from(Map(operationTag, errorTag, parentOperationTag)))
       errorHistogram.distribution().count shouldBe 2
     }
 
@@ -156,10 +158,10 @@ class SpanMetricsSpec extends WordSpecLike with Matchers with MetricInspection w
         .addError("Terrible Error with Throwable", new Throwable with NoStackTrace)
         .finish()
 
-      val histogram = Span.Metrics.ProcessingTime.refine(Map(operationTag, noErrorTag, parentOperationTag))
+      val histogram = Span.Metrics.ProcessingTime.withTags(TagSet.from(Map(operationTag, noErrorTag, parentOperationTag)))
       histogram.distribution().count shouldBe 0
 
-      val errorHistogram = Span.Metrics.ProcessingTime.refine(Map(operationTag, errorTag, parentOperationTag))
+      val errorHistogram = Span.Metrics.ProcessingTime.withTags(TagSet.from(Map(operationTag, errorTag, parentOperationTag)))
       errorHistogram.distribution().count shouldBe 0
     }
   }
