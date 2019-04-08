@@ -23,7 +23,8 @@ object Kamon extends ClassLoading
   with ModuleLoading
   with ContextPropagation
   with ContextStorage
-  with Status {
+  with CurrentStatus
+  with Init {
 
 
   @volatile private var _environment = Environment.fromConfig(config())
