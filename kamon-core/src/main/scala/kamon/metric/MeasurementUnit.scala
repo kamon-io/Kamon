@@ -49,11 +49,11 @@ object MeasurementUnit {
     * @param to target [[MeasurementUnit]].
     * @return equivalent of the provided value on the target [[MeasurementUnit]]
     */
-  def scale(value: Long, from: MeasurementUnit, to: MeasurementUnit): Double = {
+  def scale(value: Double, from: MeasurementUnit, to: MeasurementUnit): Double = {
     if(from.dimension != to.dimension)
       sys.error(s"Can't scale values from the [${from.dimension.name}] dimension into the [${to.dimension.name}] dimension.")
     else if(from == to)
-      value.toDouble
+      value
     else (from.magnitude.scaleFactor / to.magnitude.scaleFactor) * value.toDouble
   }
 

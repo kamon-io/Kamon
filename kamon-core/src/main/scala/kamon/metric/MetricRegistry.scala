@@ -24,7 +24,6 @@ class MetricRegistry(config: Config, scheduler: ScheduledExecutorService, clock:
   @volatile private var _lastSnapshotInstant: Instant = clock.instant()
   @volatile private var _factory: MetricFactory = MetricFactory.from(config, scheduler, clock)
 
-  // TODO: Replace the metric factory on reconfigure.
 
   /**
     * Retrieves or registers a new counter-based metric.
@@ -105,6 +104,13 @@ class MetricRegistry(config: Config, scheduler: ScheduledExecutorService, clock:
     checkDynamicRange(metric.name, metric.settings.dynamicRange, dynamicRange)
     checkAutoUpdate(metric.name, metric.settings.autoUpdateInterval, autoUpdateInterval)
     metric
+  }
+
+  /**
+    * Reconfigures the registry using the provided configuration.
+    */
+  def reconfigure(newConfig: Config): Unit = {
+    _factory = MetricFactory.from(newConfig, scheduler, clock)
   }
 
   private def checkInstrumentType(name: String, instrumentType: Instrument.Type, metric: Metric[_, _]): Unit =

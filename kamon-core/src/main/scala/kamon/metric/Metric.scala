@@ -13,22 +13,47 @@ import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 
 
-
-
+/**
+  * Describes a property of a system to be measured, and contains all the necessary information to create the actual
+  * instrument instances used to measure and record said property. Practically, a Metric can be seen as a group
+  * instruments that measure different dimensions (via tags) of the same property of the system.
+  *
+  * All instruments belonging to a given metric share the same settings and only differ from each other by the unique
+  * combination of tags used to create them.
+  *
+  */
 trait Metric[Inst, Sett <: Metric.Settings] extends Tagging[Inst] {
+
+  /**
+    * A unique identifier for this metric. Metric names typically will be namespaced, meaning that their name has a
+    * structure similar to that of a package name that describes what component is generating the metric. For example,
+    * metrics related to the JVM have the "jvm." prefix while metrics related to Akka Actors have the "akka.actor."
+    * prefix.
+    */
   def name: String
+
+
+  /**
+    * Short, concise and human readable explanation of what is being measured by a metric.
+    */
   def description: String
+
+
+  /**
+    * Configuration settings that apply to all instruments of this metric.
+    */
   def settings: Sett
+
 
   /**
     * Returns an instrument without tags for this metric.
     */
   def withoutTags(): Inst
 
+
   /**
-    * Removes an instrument with the provided tags from a metric, if it exists.
-    *
-    * @return True if the instrument existed and was removed or false if no instrument was found with the provided tags.
+    * Removes an instrument with the provided tags from a metric, if it exists. Returns true if the instrument existed
+    * and was removed or false if no instrument was found with the provided tags.
     */
   def remove(tags: TagSet): Boolean
 }
@@ -38,31 +63,31 @@ trait Metric[Inst, Sett <: Metric.Settings] extends Tagging[Inst] {
 object Metric {
 
   /**
-    * User-facing API for a counter-based metric. All Kamon APIs returning a counter-based metric to users should always
+    * User-facing API for a Counter-based metric. All Kamon APIs returning a Counter-based metric to users should always
     * return this interface rather than internal representations.
     */
   trait Counter extends Metric[kamon.metric.Counter, Settings.ValueInstrument]
 
   /**
-    * User-facing API for a gauge-based metric. All Kamon APIs returning a gauge-based metric to users should always
+    * User-facing API for a Gauge-based metric. All Kamon APIs returning a Gauge-based metric to users should always
     * return this interface rather than internal representations.
     */
   trait Gauge extends Metric[kamon.metric.Gauge, Settings.ValueInstrument]
 
   /**
-    * User-facing API for a histogram-based metric. All Kamon APIs returning a histogram-based metric to users should
+    * User-facing API for a Histogram-based metric. All Kamon APIs returning a Histogram-based metric to users should
     * always return this interface rather than internal representations.
     */
   trait Histogram extends Metric[kamon.metric.Histogram, Settings.DistributionInstrument]
 
   /**
-    * User-facing API for a timer-based metric. All Kamon APIs returning a timer-based metric to users should always
+    * User-facing API for a Timer-based metric. All Kamon APIs returning a Timer-based metric to users should always
     * return this interface rather than internal representations.
     */
   trait Timer extends Metric[kamon.metric.Timer, Settings.DistributionInstrument]
 
   /**
-    * User-facing API for a range sampler-based metric. All Kamon APIs returning a range sampler-based metric to users
+    * User-facing API for a Range Sampler-based metric. All Kamon APIs returning a Range Sampler-based metric to users
     * should always return this interface rather than internal representations.
     */
   trait RangeSampler extends Metric[kamon.metric.RangeSampler, Settings.DistributionInstrument]
@@ -77,6 +102,7 @@ object Metric {
       * Measurement unit of the values tracked by a metric.
       */
     def unit: MeasurementUnit
+
 
     /**
       * Interval at which auto-update actions will be scheduled.

@@ -21,23 +21,21 @@ import java.util.concurrent.TimeUnit
   * Describes the dynamic range in which a histogram can operate. Kamon uses the HdrHistogram under the hood to power
   * all histogram-based metrics and such implementation requires to setup a dynamic range in advance so that the
   * necessary data structures can be created before hand, a DynamicRange instance provides the necessary settings to
-  * create those data structures.
+  * create those data structures. There are three defining characteristics in a Dynamic Range:
   *
-  * @param lowestDiscernibleValue The smallest value that can be discerned within the range. E.g. if you are tracking
-  *                               latency for a range between 0 and 3.6e+12 (one hour in nanoseconds), it might be the
-  *                               case that you will never experience measurements bellow 1 microsecond, and thus, all
-  *                               buckets created to cover the range between 0 and 1000 nanoseconds are never used.
-  *                               Setting a lowest discernible value of 1000 will prevent the allocation of buckets for
-  *                               the range between 0 and 1000, saving a bit of space.
+  * The lowest discernible value limits the smallest value that can be discerned within the range. E.g. if you are
+  * tracking latency for a range between 0 and 3.6e+12 (one hour in nanoseconds), it might be the case that you will
+  * never experience measurements bellow 1 microsecond, and thus, all buckets created to cover the range between 0 and
+  * 1000 nanoseconds are never used. Setting a lowest discernible value of 1000 will prevent the allocation of buckets
+  * for the range between 0 and 1000, saving a bit of space.
   *
-  * @param highestTrackableValue  The highest value that can be tracked in a histogram. Any value bigger than this might
-  *                               not be recorded in the histogram.
+  * The highest trackable value sets the upper limit in the range covered by a Histogram. Any value bigger than this
+  * might not be recorded in a Histogram.
   *
-  * @param significantValueDigits Defines the precision with which the range will be covered. One significant value
-  *                               digit gives 10% error margin, two significant value digits give 1% error margin which
-  *                               is the default in Kamon and three significant value digits give 0.1% error margin.
-  *                               Even though it is possible to have even smaller error margin, it proves impractical to
-  *                               try to do so given the memory requirements of such configuration.
+  * And finally, the number of significant value digits which define the precision with which the range will be covered.
+  * One significant value digit gives 10% error margin, two significant value digits give 1% error margin which is the
+  * default in Kamon and three significant value digits give 0.1% error margin. Even though it is possible to have even
+  * smaller error margin, it proves impractical to try to do so given the memory requirements of such configuration.
   */
 case class DynamicRange(lowestDiscernibleValue: Long, highestTrackableValue: Long, significantValueDigits: Int) {
 
@@ -65,13 +63,13 @@ object DynamicRange {
   val Loose = DynamicRange(1L, _oneHourInNanoseconds, 1)
 
   /**
-    * Provides a range from 0 to 3.6e+12 (one hour in nanoseconds) with a value precision of 2 significant digit (1%)
+    * Provides a range from 0 to 3.6e+12 (one hour in nanoseconds) with a value precision of 2 significant digits (1%)
     * across that range.
     */
   val Default = DynamicRange(1L, _oneHourInNanoseconds, 2)
 
   /**
-    * Provides a range from 0 to 3.6e+12 (one hour in nanoseconds) with a value precision of 3 significant digit (0.1%)
+    * Provides a range from 0 to 3.6e+12 (one hour in nanoseconds) with a value precision of 3 significant digits (0.1%)
     * across that range.
     */
   val Fine = DynamicRange(1L, _oneHourInNanoseconds, 3)

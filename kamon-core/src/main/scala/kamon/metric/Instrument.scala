@@ -5,10 +5,24 @@ import java.util.function.Consumer
 
 import kamon.tag.TagSet
 
+/**
+  * Base user-facing API for all metric instruments in Kamon.
+  */
 trait Instrument[Inst, Sett <: Metric.Settings] extends Tagging[Inst] {
+
+  /**
+    * Returns the metric to which this instrument belongs.
+    */
   def metric: Metric[Inst, Sett]
+
+  /**
+    * Returns the tags used to create this instrument.
+    */
   def tags: TagSet
 
+  /**
+    * Removes this instrument from the metric.
+    */
   def remove(): Boolean =
     metric.remove(tags)
 
@@ -23,7 +37,6 @@ trait Instrument[Inst, Sett <: Metric.Settings] extends Tagging[Inst] {
 
   override def withTags(tags: TagSet): Inst =
     metric.withTags(tags.and(tags))
-
 
 
   /**

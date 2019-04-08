@@ -7,6 +7,7 @@ import kamon.metric._
   */
 trait Metrics extends MetricBuilding { self: Configuration with Utilities =>
   protected val _metricRegistry = new MetricRegistry(self.config(), self.scheduler(), self.clock())
+  onReconfigure(newConfig => _metricRegistry.reconfigure(newConfig))
 
   /**
     * Metric registry from which all metric-building APIs will draw instances. For more details on the entire set of

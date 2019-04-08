@@ -20,7 +20,7 @@ import java.time.Duration
 
 
 /**
-  * Provides APIs for creating metrics, using a MetricRegistry as the underlying source of those metrics. Not all
+  * Exposes APIs for creating metrics, using a MetricRegistry as the underlying source of those metrics. Not all
   * possible combinations of parameters to build metrics are exposed through this interface, but it is expected to cover
   * all the common cases.
   */
