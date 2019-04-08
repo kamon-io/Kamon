@@ -22,7 +22,7 @@ package kamon
   *
   * The Status APIs might change between minor versions.
   */
-trait Status { self: ModuleLoading with Metrics with Configuration =>
+trait CurrentStatus { self: ModuleLoading with Metrics with Configuration =>
   private val _status = new kamon.status.Status(self._moduleRegistry, self._metricRegistry, self)
 
   /**
