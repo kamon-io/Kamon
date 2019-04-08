@@ -61,8 +61,8 @@ class MetricFactory private (defaultCounterSettings: Metric.Settings.ValueInstru
 
       override protected def buildMetricSnapshot(
         metric: Metric[Counter, Metric.Settings.ValueInstrument],
-        instruments: Map[TagSet,Long]
-      ): MetricSnapshot.Value = MetricSnapshot.Value(metric.name, metric.description, metric.settings, instruments)
+        instruments: Map[TagSet, Long]
+      ): MetricSnapshot.Value[Long] = MetricSnapshot.Value[Long](metric.name, metric.description, metric.settings, instruments)
     }
   }
 
@@ -70,7 +70,7 @@ class MetricFactory private (defaultCounterSettings: Metric.Settings.ValueInstru
     * Creates a new counter-based metric, backed by the Counter.LongAdder implementation.
     */
   def gauge(name: String, description: Option[String], unit: Option[MeasurementUnit], autoUpdateInterval: Option[Duration]):
-    BaseMetric[Gauge, Metric.Settings.ValueInstrument,Long] with Metric.Gauge = {
+    BaseMetric[Gauge, Metric.Settings.ValueInstrument, Double] with Metric.Gauge = {
 
     val metricDescription = description.getOrElse("")
     val metricSettings = Metric.Settings.ValueInstrument (
@@ -78,10 +78,10 @@ class MetricFactory private (defaultCounterSettings: Metric.Settings.ValueInstru
       autoUpdateInterval.getOrElse(defaultGaugeSettings.autoUpdateInterval)
     )
 
-    val builder = (metric: BaseMetric[Gauge, Metric.Settings.ValueInstrument,Long], tags: TagSet) =>
-      new Gauge.Atomic(metric, tags)
+    val builder = (metric: BaseMetric[Gauge, Metric.Settings.ValueInstrument, Double], tags: TagSet) =>
+      new Gauge.Volatile(metric, tags)
 
-    new BaseMetric[Gauge, Metric.Settings.ValueInstrument,Long](name, metricDescription, metricSettings,
+    new BaseMetric[Gauge, Metric.Settings.ValueInstrument, Double](name, metricDescription, metricSettings,
       builder, scheduler) with Metric.Gauge {
 
       override protected def instrumentType: Instrument.Type =
@@ -89,8 +89,8 @@ class MetricFactory private (defaultCounterSettings: Metric.Settings.ValueInstru
 
       override protected def buildMetricSnapshot(
         metric: Metric[Gauge, Metric.Settings.ValueInstrument],
-        instruments: Map[TagSet,Long]
-      ): MetricSnapshot.Value = MetricSnapshot.Value(metric.name, metric.description, metric.settings, instruments)
+        instruments: Map[TagSet, Double]
+      ): MetricSnapshot.Value[Double] = MetricSnapshot.Value[Double](metric.name, metric.description, metric.settings, instruments)
     }
   }
 

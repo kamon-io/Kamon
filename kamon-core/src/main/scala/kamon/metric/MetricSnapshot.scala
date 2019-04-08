@@ -36,12 +36,12 @@ object MetricSnapshot {
     * Concrete snapshot implementation for metrics backed by instruments that produce single values. E.g. counters and
     * gauges.
     */
-  case class Value (
+  case class Value[V] (
     name: String,
     description: String,
     settings: Metric.Settings.ValueInstrument,
-    instruments: Map[TagSet, Long]
-  ) extends MetricSnapshot[Metric.Settings.ValueInstrument, Long]
+    instruments: Map[TagSet, V]
+  ) extends MetricSnapshot[Metric.Settings.ValueInstrument, V]
 
 
   /**

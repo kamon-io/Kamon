@@ -14,8 +14,8 @@ import scala.collection.mutable
 case class PeriodSnapshot (
   from: Instant,
   to: Instant,
-  counters: Map[String, MetricSnapshot.Value],
-  gauges: Map[String, MetricSnapshot.Value],
+  counters: Map[String, MetricSnapshot.Value[Long]],
+  gauges: Map[String, MetricSnapshot.Value[Double]],
   histograms: Map[String, MetricSnapshot.Distribution],
   timers: Map[String, MetricSnapshot.Distribution],
   rangeSamplers: Map[String, MetricSnapshot.Distribution]
@@ -72,8 +72,8 @@ object PeriodSnapshot {
     * @param clock the Clock from which the notion of "now" will be
     */
   class Accumulator(period: Duration, margin: Duration, stalePeriod: Duration) {
-    private val _counters: ValueMetricStorage = mutable.Map.empty
-    private val _gauges: ValueMetricStorage = mutable.Map.empty
+    private val _counters: ValueMetricStorage[Long] = mutable.Map.empty
+    private val _gauges: ValueMetricStorage[Double] = mutable.Map.empty
     private val _histograms: DistributionMetricStorage = mutable.Map.empty
     private val _timers: DistributionMetricStorage = mutable.Map.empty
     private val _rangeSamplers: DistributionMetricStorage = mutable.Map.empty
@@ -139,8 +139,8 @@ object PeriodSnapshot {
       snapshot
     }
 
-    private def valueSnapshots(storage: ValueMetricStorage): Map[String, MetricSnapshot.Value] = {
-      val metrics = Map.newBuilder[String, MetricSnapshot.Value]
+    private def valueSnapshots[T](storage: ValueMetricStorage[T]): Map[String, MetricSnapshot.Value[T]] = {
+      val metrics = Map.newBuilder[String, MetricSnapshot.Value[T]]
       storage.foreach {
         case (metricName, metricEntry) =>
           val snapshot = MetricSnapshot.Value (
@@ -173,10 +173,10 @@ object PeriodSnapshot {
       metrics.result()
     }
 
-    private def accumulateValue(currentInstant: Instant, storage: ValueMetricStorage, current: MetricSnapshot.Value): Unit =
+    private def accumulateValue(currentInstant: Instant, storage: ValueMetricStorage[Long], current: MetricSnapshot.Value[Long]): Unit =
       accumulate(currentInstant, storage, current)(_ + _)
 
-    private def keepLastValue(currentInstant: Instant, storage: ValueMetricStorage, current: MetricSnapshot.Value): Unit =
+    private def keepLastValue(currentInstant: Instant, storage: ValueMetricStorage[Double], current: MetricSnapshot.Value[Double]): Unit =
       accumulate(currentInstant, storage, current)((c, _) => c)
 
     private def accumulateDistribution(currentInstant: Instant, storage: DistributionMetricStorage, current: MetricSnapshot.Distribution): Unit =
@@ -237,7 +237,7 @@ object PeriodSnapshot {
       _rangeSamplers.clear()
     }
 
-    private type ValueMetricStorage = mutable.Map[String, MetricEntry[Metric.Settings.ValueInstrument, Long]]
+    private type ValueMetricStorage[T] = mutable.Map[String, MetricEntry[Metric.Settings.ValueInstrument, T]]
     private type DistributionMetricStorage = mutable.Map[String, MetricEntry[Metric.Settings.DistributionInstrument, Distribution]]
 
     private case class MetricEntry[Sett <: Metric.Settings, Snap] (

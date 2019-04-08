@@ -135,16 +135,16 @@ class MetricRegistry(config: Config, scheduler: ScheduledExecutorService, clock:
     * snapshot uses the registry creation instant as the starting point.
     */
   def snapshot(resetState: Boolean): PeriodSnapshot = synchronized {
-    val counters = Map.newBuilder[String, MetricSnapshot.Value]
-    val gauges = Map.newBuilder[String, MetricSnapshot.Value]
+    val counters = Map.newBuilder[String, MetricSnapshot.Value[Long]]
+    val gauges = Map.newBuilder[String, MetricSnapshot.Value[Double]]
     val histograms = Map.newBuilder[String, MetricSnapshot.Distribution]
     val timers = Map.newBuilder[String, MetricSnapshot.Distribution]
     val rangeSamplers = Map.newBuilder[String, MetricSnapshot.Distribution]
 
     _metrics.foreach {
       case (_, metric) => metric match {
-        case m: Metric.Counter      => counters += m.name -> m.snapshot(resetState).asInstanceOf[MetricSnapshot.Value]
-        case m: Metric.Gauge        => gauges += m.name -> m.snapshot(resetState).asInstanceOf[MetricSnapshot.Value]
+        case m: Metric.Counter      => counters += m.name -> m.snapshot(resetState).asInstanceOf[MetricSnapshot.Value[Long]]
+        case m: Metric.Gauge        => gauges += m.name -> m.snapshot(resetState).asInstanceOf[MetricSnapshot.Value[Double]]
         case m: Metric.Histogram    => histograms += m.name -> m.snapshot(resetState).asInstanceOf[MetricSnapshot.Distribution]
         case m: Metric.Timer        => timers += m.name -> m.snapshot(resetState).asInstanceOf[MetricSnapshot.Distribution]
         case m: Metric.RangeSampler => rangeSamplers += m.name -> m.snapshot(resetState).asInstanceOf[MetricSnapshot.Distribution]

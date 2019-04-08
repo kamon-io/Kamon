@@ -16,7 +16,7 @@
 package kamon
 package testkit
 
-import kamon.metric.{Distribution, Instrument, Metric}
+import kamon.metric._
 
 /**
   * Utility functions to extract snapshots from instruments. These utilities are only meant to be used for testing
@@ -24,13 +24,17 @@ import kamon.metric.{Distribution, Instrument, Metric}
   */
 object InstrumentInspection {
 
-  /** Retrieves the current value of an instruments */
-  def value(instrument: Instrument[_, Metric.Settings.ValueInstrument]): Long =
+  /** Retrieves the current value of a Counter instrument */
+  def longValue(instrument: Instrument[Counter, Metric.Settings.ValueInstrument]): Long =
     instrument.asInstanceOf[Instrument.Snapshotting[Long]].snapshot(resetState = true)
 
-  /** Retrieves the current value of an instruments */
-  def value(instrument: Instrument[_, Metric.Settings.ValueInstrument], resetState: Boolean): Long =
+  /** Retrieves the current value of a Counter instrument */
+  def longValue(instrument: Instrument[Counter, Metric.Settings.ValueInstrument], resetState: Boolean): Long =
     instrument.asInstanceOf[Instrument.Snapshotting[Long]].snapshot(resetState)
+
+  /** Retrieves the current value of a Gauge instrument */
+  def doubleValue(instrument: Instrument[Gauge, Metric.Settings.ValueInstrument]): Double =
+    instrument.asInstanceOf[Instrument.Snapshotting[Double]].snapshot(resetState = false)
 
   /** Retrieves the current value of an instruments */
   def distribution(instrument: Instrument[_, Metric.Settings.DistributionInstrument]): Distribution =
@@ -46,9 +50,13 @@ object InstrumentInspection {
     */
   trait Syntax {
 
-    trait RichValueInstrument {
+    trait RichCounterInstrument {
       def value(): Long
       def value(resetState: Boolean): Long
+    }
+
+    trait RichGaugeInstrument {
+      def value(): Double
     }
 
     trait RichDistributionInstrument {
@@ -56,15 +64,23 @@ object InstrumentInspection {
       def distribution(resetState: Boolean): Distribution
     }
 
-    /** Retrieves the current value of a counter or gauge instrument */
-    implicit def valueInstrumentInspection(instrument: Instrument[_, Metric.Settings.ValueInstrument]) =
-        new RichValueInstrument {
+    /** Retrieves the current value of a Counter instrument */
+    implicit def counterInstrumentInspection(instrument: Instrument[Counter, Metric.Settings.ValueInstrument]) =
+        new RichCounterInstrument {
 
       def value(): Long =
-        InstrumentInspection.value(instrument)
+        InstrumentInspection.longValue(instrument)
 
       def value(resetState: Boolean): Long =
-        InstrumentInspection.value(instrument, resetState)
+        InstrumentInspection.longValue(instrument, resetState)
+    }
+
+    /** Retrieves the current value of a Gauge instrument */
+    implicit def gaugeInstrumentInspection(instrument: Instrument[Gauge, Metric.Settings.ValueInstrument]) =
+        new RichGaugeInstrument {
+
+      def value(): Double =
+        InstrumentInspection.doubleValue(instrument)
     }
 
     /** Retrieves the current distribution of a histogram, timer or range sampler instrument */
