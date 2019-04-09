@@ -21,11 +21,86 @@ lazy val kamon = (project in file("."))
   .settings(noPublishing: _*)
   .aggregate(core, statusPage, testkit, tests, benchmarks)
 
-val commonSettings = Seq(
-  scalaVersion := "2.12.6",
+
+lazy val core = (project in file("kamon-core"))
+  .enablePlugins(BuildInfoPlugin)
+  .enablePlugins(AssemblyPlugin)
+  .enablePlugins(SbtProguard)
+  .settings(commonSettings: _*)
+  .settings(
+    moduleName := "kamon-core",
+    buildInfoKeys := Seq[BuildInfoKey](version),
+    buildInfoPackage := "kamon.status",
+    packageBin in Compile := (proguard in Proguard).value.head,
+    proguardOptions in Proguard ++= Seq(
+      "-dontnote", "-dontwarn", "-ignorewarnings", "-dontobfuscate", "-dontoptimize",
+      "-keepattributes **",
+      "-keep class kamon.Kamon { *; }",
+      "-keep class kamon.context.** { *; }",
+      "-keep class kamon.metric.** { *; }",
+      "-keep class kamon.module.** { *; }",
+      "-keep class kamon.status.** { *; }",
+      "-keep class kamon.tag.** { *; }",
+      "-keep class kamon.trace.** { *; }",
+      "-keep class kamon.util.** { *; }",
+    ),
+    libraryDependencies ++= Seq(
+      "com.typesafe"            %  "config"              % "1.3.1",
+      "org.slf4j"               %  "slf4j-api"           % "1.7.25",
+      "org.hdrhistogram"        %  "HdrHistogram"        % "2.1.9",
+      "org.jctools"             %  "jctools-core"        % "2.1.1",
+      "org.eclipse.collections" %  "eclipse-collections" % "9.2.0",
+    )
+  )
+
+lazy val testkit = (project in file("kamon-testkit"))
+  .settings(commonSettings: _*)
+  .settings(
+    moduleName := "kamon-testkit",
+    libraryDependencies ++= Seq(
+      "org.scalatest" %% "scalatest" % "3.0.1" % "test"
+    )
+  ).dependsOn(core)
+
+lazy val statusPage = (project in file("kamon-status-page"))
+  .enablePlugins(AssemblyPlugin)
+  .settings(commonSettings: _*)
+  .settings(
+    moduleName := "kamon-status-page",
+    packageBin in Compile := assembly.value,
+    libraryDependencies ++= Seq(
+      "org.nanohttpd" %  "nanohttpd" % "2.3.1",
+      "com.grack"     %  "nanojson"  % "1.1"
+    )
+  ).dependsOn(core % "provided")
+
+
+lazy val tests = (project in file("kamon-core-tests"))
+  .settings(noPublishing: _*)
+  .settings(commonSettings: _*)
+  .settings(
+    moduleName := "kamon-core-tests",
+    libraryDependencies ++= Seq(
+      "org.scalatest" %% "scalatest"        % "3.0.1" % "test",
+      "ch.qos.logback" % "logback-classic"  % "1.2.3" % "test"
+    )
+  ).dependsOn(testkit)
+
+
+lazy val benchmarks = (project in file("kamon-core-bench"))
+  .enablePlugins(JmhPlugin)
+  .settings(moduleName := "kamon-core-bench")
+  .settings(noPublishing: _*)
+  .settings(commonSettings: _*)
+  .dependsOn(core)
+
+
+lazy val commonSettings = Seq(
+  scalaVersion := "2.12.8",
   javacOptions += "-XDignore.symbol.file",
+  fork in Test := true,
   resolvers += Resolver.mavenLocal,
-  crossScalaVersions := Seq("2.12.6", "2.11.8", "2.10.6"),
+  crossScalaVersions := Seq("2.12.8", "2.11.12", "2.10.7"),
   concurrentRestrictions in Global += Tags.limit(Tags.Test, 1),
   scalacOptions ++= Seq(
     "-deprecation",
@@ -36,7 +111,7 @@ val commonSettings = Seq(
     "-unchecked"
   ) ++ (CrossVersion.partialVersion(scalaVersion.value) match {
     case Some((2,10)) => Seq("-Yno-generic-signatures", "-target:jvm-1.7")
-    case Some((2,11)) => Seq("-Ybackend:GenBCode","-Ydelambdafy:method","-target:jvm-1.8")
+    case Some((2,11)) => Seq("-Ybackend:GenASM","-Ydelambdafy:method","-target:jvm-1.8")
     case Some((2,12)) => Seq("-opt:l:method")
     case _ => Seq.empty
   }),
@@ -51,9 +126,13 @@ val commonSettings = Seq(
   assemblyExcludedJars in assembly := {
     val cp = (fullClasspath in assembly).value
     val excludedPackages = Seq("slf4j-api", "config")
-    cp filter { file => excludedPackages.exists(file.data.getName.startsWith(_))}
+    cp filter { file => excludedPackages.exists(file.data.getPath.contains(_))}
   },
-  packageBin in Compile := assembly.value,
+  assemblyMergeStrategy in assembly := {
+    case s if s.startsWith("LICENSE") => MergeStrategy.discard
+    case s if s.startsWith("about") => MergeStrategy.discard
+    case x => (assemblyMergeStrategy in assembly).value(x)
+  },
   assemblyJarName in assembly := s"${moduleName.value}_${scalaBinaryVersion.value}-${version.value}.jar",
   pomPostProcess := { originalPom => {
     val shadedGroups = Seq("org.hdrhistogram", "org.jctools", "org.nanohttpd", "com.grack", "org.eclipse.collections")
@@ -61,71 +140,15 @@ val commonSettings = Seq(
       override def transform(n: Node): Seq[Node] = {
         if(n.label == "dependency") {
           val group = (n \ "groupId").text
-          if (shadedGroups.find(eo => eo.equalsIgnoreCase(group)).nonEmpty) Seq.empty else n
+          val artifact = (n \ "artifactId").text
+          if (shadedGroups.find(eo => eo.equalsIgnoreCase(group)).nonEmpty && !artifact.startsWith("kamon-core")) Seq.empty else n
         } else n
       }
     })
 
     filterShadedDependencies(originalPom)
-  }}
+  }},
+  proguardVersion in Proguard := "6.0.3",
+  proguardInputs in Proguard := Seq(assembly.value),
+  javaOptions in (Proguard, proguard) := Seq("-Xmx2G")
 )
-
-lazy val core = (project in file("kamon-core"))
-  .enablePlugins(BuildInfoPlugin)
-  .enablePlugins(AssemblyPlugin)
-  .settings(commonSettings: _*)
-  .settings(moduleName := "kamon-core")
-  .settings(
-    buildInfoKeys := Seq[BuildInfoKey](version),
-    buildInfoPackage := "kamon.status",
-    libraryDependencies ++= Seq(
-      "com.typesafe"            %  "config"              % "1.3.1",
-      "org.hdrhistogram"        %  "HdrHistogram"        % "2.1.9",
-      "org.jctools"             %  "jctools-core"        % "2.1.1",
-      "org.eclipse.collections" %  "eclipse-collections" % "9.2.0",
-      "org.slf4j"               %  "slf4j-api"           % "1.7.25"
-    )
-  )
-
-lazy val testkit = (project in file("kamon-testkit"))
-  .settings(moduleName := "kamon-testkit")
-  .settings(commonSettings: _*)
-  .settings(
-    libraryDependencies ++= Seq(
-      "org.scalatest" %% "scalatest" % "3.0.1"
-    )
-  ).dependsOn(core)
-
-lazy val statusPage = (project in file("kamon-status-page"))
-  .settings(moduleName := "kamon-status-page")
-  .settings(commonSettings: _*)
-  .settings(
-    libraryDependencies ++= Seq(
-      "org.nanohttpd"    %  "nanohttpd"           % "2.3.1",
-      "com.grack"        %  "nanojson"            % "1.1"
-    )
-  ).dependsOn(core)
-
-
-lazy val tests = (project in file("kamon-core-tests"))
-  .settings(moduleName := "kamon-core-tests")
-  .settings(noPublishing: _*)
-  .settings(commonSettings: _*)
-  .settings(
-    fork in Test := true,
-    resolvers += Resolver.mavenLocal,
-    libraryDependencies ++= Seq(
-      "org.scalatest" %% "scalatest" % "3.0.1" % "test",
-      "ch.qos.logback" % "logback-classic" % "1.2.3" % "test"
-    )
-  ).dependsOn(testkit)
-
-
-lazy val benchmarks = (project in file("kamon-core-bench"))
-  .settings(moduleName := "kamon-core-bench")
-  .settings(noPublishing: _*)
-  .settings(commonSettings: _*)
-  .settings(
-    fork in Test := true
-  ).enablePlugins(JmhPlugin)
-  .dependsOn(core)
