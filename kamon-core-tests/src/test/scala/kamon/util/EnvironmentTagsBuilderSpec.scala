@@ -17,10 +17,12 @@ package kamon
 package util
 
 import com.typesafe.config.ConfigFactory
+import kamon.status.Environment
+import kamon.tag.TagSet
 import org.scalatest.{Matchers, WordSpec}
 
-class EnvironmentTagBuilderSpec extends WordSpec with Matchers {
-  private val testEnv = Environment.fromConfig(ConfigFactory.parseString(
+class EnvironmentTagsBuilderSpec extends WordSpec with Matchers {
+  private val testEnv = Environment.from(ConfigFactory.parseString(
     """
       |kamon.environment {
       |  service = environment-spec
@@ -40,14 +42,14 @@ class EnvironmentTagBuilderSpec extends WordSpec with Matchers {
     "build the tags from a configuration using the current Environment" in {
       val config = ConfigFactory.parseString(
         """
-          |service = yes
-          |host = yes
-          |instance = yes
-          |blacklisted-tags = []
+          |include-service = yes
+          |include-host = yes
+          |include-instance = yes
+          |exclude = []
         """.stripMargin)
 
       val env = Kamon.environment
-      val tags = EnvironmentTagBuilder.create(config)
+      val tags = EnvironmentTagsBuilder.toTags(env, config)
       tags("service") shouldBe env.service
       tags("host") shouldBe env.host
       tags("instance") shouldBe env.instance
@@ -56,13 +58,13 @@ class EnvironmentTagBuilderSpec extends WordSpec with Matchers {
     "build tags from a custom Environment" in {
       val config = ConfigFactory.parseString(
         """
-          |service = yes
-          |host = yes
-          |instance = yes
-          |blacklisted-tags = []
+          |include-service = yes
+          |include-host = yes
+          |include-instance = yes
+          |exclude = []
         """.stripMargin)
 
-      val tags = EnvironmentTagBuilder.create(testEnv, config)
+      val tags = EnvironmentTagsBuilder.toTags(testEnv, config)
       tags("service") shouldBe testEnv.service
       tags("host") shouldBe testEnv.host
       tags("instance") shouldBe testEnv.instance
@@ -71,34 +73,40 @@ class EnvironmentTagBuilderSpec extends WordSpec with Matchers {
 
     }
 
-    "remove blacklisted tags" in {
+    "remove excluded tags" in {
       val config = ConfigFactory.parseString(
         """
-          |service = yes
-          |host = yes
-          |instance = yes
-          |blacklisted-tags = [ "region" ]
+          |include-service = yes
+          |include-host = yes
+          |include-instance = yes
+          |exclude = [ "region" ]
         """.stripMargin)
 
-      val tags = EnvironmentTagBuilder.create(testEnv, config)
+      val tags = EnvironmentTagsBuilder.toTags(testEnv, config)
       tags("service") shouldBe testEnv.service
       tags("host") shouldBe testEnv.host
       tags("instance") shouldBe testEnv.instance
       tags("env") shouldBe "staging"
-      tags.get("region") shouldBe empty
+      tags.toMap.get("region") shouldBe empty
     }
 
     "remove all disabled elements" in {
       val config = ConfigFactory.parseString(
         """
-          |service = no
-          |host = no
-          |instance = no
-          |blacklisted-tags = [ "region", "env" ]
+          |include-service = no
+          |include-host = no
+          |include-instance = no
+          |exclude = [ "region", "env" ]
         """.stripMargin)
 
-      val tags = EnvironmentTagBuilder.create(testEnv, config)
+      val tags = EnvironmentTagsBuilder.toTags(testEnv, config)
       tags shouldBe empty
     }
+  }
+
+  implicit def toMap(tags: TagSet): Map[String, String] = {
+    val map = Map.newBuilder[String, String]
+    tags.iterator(_.toString).foreach(pair => map += pair.key -> pair.value)
+    map.result()
   }
 }

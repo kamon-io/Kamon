@@ -2,7 +2,7 @@ package kamon.status
 
 import com.typesafe.config.Config
 import kamon.metric.{MeasurementUnit, MetricRegistry}
-import kamon.{Configuration, Environment, Kamon}
+import kamon.{Configuration, Kamon}
 import kamon.module.ModuleRegistry
 import kamon.module.Module.{Kind => ModuleKind}
 import java.util.{Collections, List => JavaList, Map => JavaMap}

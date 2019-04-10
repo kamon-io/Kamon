@@ -37,14 +37,12 @@ import org.slf4j.LoggerFactory
 class TagSet private(private val _underlying: UnifiedMap[String, Any]) {
   import TagSet.withPair
 
-
   /**
     * Creates a new TagSet instance that includes the provided key/value pair. If the provided key was already associated
     * with another value then the previous value will be discarded and overwritten with the provided one.
     */
   def withTag(key: String, value: java.lang.String): TagSet =
     withPair(this, key, value)
-
 
   /**
     * Creates a new TagSet instance that includes the provided key/value pair. If the provided key was already associated
@@ -53,14 +51,12 @@ class TagSet private(private val _underlying: UnifiedMap[String, Any]) {
   def withTag(key: String, value: java.lang.Boolean): TagSet =
     withPair(this, key, value)
 
-
   /**
     * Creates a new TagSet instance that includes the provided key/value pair. If the provided key was already associated
     * with another value then the previous value will be discarded and overwritten with the provided one.
     */
   def withTag(key: String, value: java.lang.Long): TagSet =
     withPair(this, key, value)
-
 
   /**
     * Creates a new TagSet instance that includes all the tags from the provided Tags instance. If any of the tags in this
@@ -74,13 +70,11 @@ class TagSet private(private val _underlying: UnifiedMap[String, Any]) {
     new TagSet(mergedMap)
   }
 
-
   /**
     * Returns whether this TagSet instance does not contain any tags.
     */
   def isEmpty(): Boolean =
     _underlying.isEmpty
-
 
   /**
     * Returns whether this TagSet instance contains any tags.
@@ -88,14 +82,12 @@ class TagSet private(private val _underlying: UnifiedMap[String, Any]) {
   def nonEmpty(): Boolean =
     !_underlying.isEmpty
 
-
   /**
     * Executes a tag lookup. The return type of this function will depend on the provided Lookup. Take a look at the
     * built-in lookups on the [[Lookups]] companion object for more information.
     */
   def get[T](lookup: Lookup[T]): T =
     lookup.execute(_storage)
-
 
   /**
     * Returns a immutable sequence of tags created from the contained tags internal representation. Calling this method
@@ -118,6 +110,31 @@ class TagSet private(private val _underlying: UnifiedMap[String, Any]) {
     tags
   }
 
+  /**
+    * Returns a pairs iterator from this TagSet. All values are transformed using the provided valueTransform before
+    * being returned by the iterator.
+    */
+  def iterator[T](valueTransform: java.util.function.Function[Any, T]): Iterator[Tag.Pair[T]] =
+    iterator(any => valueTransform.apply(any))
+
+  /**
+    * Returns a pairs iterator from this TagSet. All values are transformed using the provided valueTransform before
+    * being returned by the iterator.
+    */
+  def iterator[T](valueTransform: Any => T): Iterator[Tag.Pair[T]] = new Iterator[Tag.Pair[T]] {
+    private val _entriesIterator = _underlying.keyValuesView().iterator()
+    private val _mutablePair = new TagSet.mutable.Pair[T](null, null.asInstanceOf[T])
+
+    override def hasNext: Boolean =
+      _entriesIterator.hasNext
+
+    override def next(): Tag.Pair[T] = {
+      val pair = _entriesIterator.next()
+      _mutablePair.pairKey = pair.getOne
+      _mutablePair.pairValue = valueTransform(pair.getTwo)
+      _mutablePair
+    }
+  }
 
   /**
     * Returns an iterator of tags. The underlying iterator reuses the Tag instances to avoid unnecessary intermediate
@@ -371,6 +388,11 @@ object TagSet {
     case class String(var key: JString, var value: JString) extends Tag.String with Updateable[JString]
     case class Boolean(var key: JString, var value: JBoolean) extends Tag.Boolean with Updateable[JBoolean]
     case class Long(var key: JString, var value: JLong) extends Tag.Long with Updateable[JLong]
+
+    case class Pair[T](var pairKey: JString, var pairValue: T) extends Tag.Pair[T] {
+      override def key: JString = pairKey
+      override def value: T = pairValue
+    }
 
     trait Updateable[T] {
       var key: JString

@@ -13,9 +13,10 @@
  * =========================================================================================
  */
 
-package kamon
+package kamon.status
 
 import com.typesafe.config.ConfigFactory
+import kamon.tag.TagSet
 import org.scalatest.{Matchers, WordSpec}
 
 class EnvironmentSpec extends WordSpec with Matchers {
@@ -31,7 +32,7 @@ class EnvironmentSpec extends WordSpec with Matchers {
 
   "the Kamon environment" should {
     "assign a host and instance name when they are set to 'auto'" in {
-      val env = Environment.fromConfig(baseConfig)
+      val env = Environment.from(baseConfig)
 
       env.host shouldNot be("auto")
       env.instance shouldNot be("auto")
@@ -48,7 +49,7 @@ class EnvironmentSpec extends WordSpec with Matchers {
           |}
         """.stripMargin)
 
-      val env = Environment.fromConfig(customConfig.withFallback(baseConfig))
+      val env = Environment.from(customConfig.withFallback(baseConfig))
 
       env.host should be("spec-host")
       env.instance should be("spec-instance")
@@ -64,19 +65,25 @@ class EnvironmentSpec extends WordSpec with Matchers {
           |}
         """.stripMargin)
 
-      val env = Environment.fromConfig(customConfig.withFallback(baseConfig))
+      val env = Environment.from(customConfig.withFallback(baseConfig))
 
-      env.tags should contain allOf(
+      env.tags.toMap should contain allOf(
         ("custom1" -> "test1"),
         ("env" -> "staging")
       )
     }
 
     "always return the same incarnation name" in {
-      val envOne = Environment.fromConfig(baseConfig)
-      val envTwo = Environment.fromConfig(baseConfig)
+      val envOne = Environment.from(baseConfig)
+      val envTwo = Environment.from(baseConfig)
 
       envOne.incarnation shouldBe envTwo.incarnation
     }
+  }
+
+  implicit def toMap(tags: TagSet): Map[String, String] = {
+    val map = Map.newBuilder[String, String]
+    tags.iterator(_.toString).foreach(pair => map += pair.key -> pair.value)
+    map.result()
   }
 }

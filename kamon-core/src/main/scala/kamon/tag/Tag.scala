@@ -13,6 +13,11 @@ sealed trait Tag {
 
 object Tag {
 
+  trait Pair[T] {
+    def key: JString
+    def value: T
+  }
+
   /**
     * Represents a String key pointing to a String value.
     */

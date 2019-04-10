@@ -64,8 +64,8 @@ object JsonMarshalling {
         .value("instance", instance.environment.instance)
         .`object`("tags")
 
-      instance.environment.tags.foreach {
-        case (key, value) => baseConfigJson.value(key, value)
+      instance.environment.tags.iterator(_.toString).foreach { pair =>
+        baseConfigJson.value(pair.key, pair.value)
       }
 
       baseConfigJson

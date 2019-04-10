@@ -24,15 +24,4 @@ object Kamon extends ClassLoading
   with ContextPropagation
   with ContextStorage
   with CurrentStatus
-  with Init {
-
-
-  @volatile private var _environment = Environment.fromConfig(config())
-
-  def environment: Environment =
-    _environment
-
-  onReconfigure(newConfig => {
-    _environment = Environment.fromConfig(newConfig)
-  })
-}
+  with Init
