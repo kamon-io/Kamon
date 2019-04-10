@@ -13,85 +13,148 @@
  * =========================================================================================
  */
 
-package kamon.testkit
+package kamon
+package testkit
 
 import java.time.Instant
 
-import kamon.Kamon
-import kamon.trace.{Span, SpanContext}
-import kamon.trace.Span.{FinishedSpan, TagValue}
+import kamon.tag.TagSet
+import kamon.trace.Span
 
-import scala.reflect.ClassTag
-import scala.util.Try
 
+/**
+  * Utility functions to extract information that is not exposed on the Span interface.
+  */
 trait SpanInspection {
 
-  def inspect(span: Span): SpanInspection.Inspector =
-    new SpanInspection.Inspector(span)
-}
+  /** Creates a new Inspector instance for the provided Span */
+  def inspect(span: Span): Inspector =
+    new Inspector(span)
 
-object SpanInspection {
 
   class Inspector(span: Span) {
-    private val (realSpan, spanData) = Try {
-      val realSpan = span match {
-        case _: Span.Local => span
-        case other => sys.error(s"Only Span.Local can be inspected but got [${other.getClass.getName}]" )
-      }
 
-      val spanData = invoke[Span.Local, FinishedSpan](realSpan, "toFinishedSpan", classOf[Instant] -> Kamon.clock().instant())
-      (realSpan, spanData)
-    }.getOrElse((null, null))
+    /**
+      * Returns a TagSet with all Span tags added on the Span.
+      */
+    def spanTags(): TagSet =
+      if(span.isInstanceOf[Span.Local])
+        getField[Span.Local, TagSet.Builder](span.asInstanceOf[Span.Local], "_spanTags").create()
+      else
+        TagSet.Empty
 
-    def isEmpty: Boolean =
-      realSpan == null
 
-    def spanTag(key: String): Option[Span.TagValue] =
-      spanData.tags.get(key)
+    /**
+      * Returns a TagSet with all Span metric tags added to the Span and the additional tags that are added by default
+      * like the "error", "operation" and possibly "parentOperation" tags.
+      */
+    def metricTags(): TagSet =
+      if(span.isInstanceOf[Span.Local])
+        invoke[Span.Local, TagSet](span.asInstanceOf[Span.Local], "createMetricTags")
+      else
+        TagSet.Empty
 
-    def spanTags(): Map[String, Span.TagValue] =
-      spanData.tags
 
-    def tag(key: String): Option[String] = {
-      spanTag(key).map {
-        case TagValue.String(string) => string
-        case TagValue.Number(number) => number.toString
-        case TagValue.True => "true"
-        case TagValue.False => "false"
-      } orElse(metricTag(key))
+    /**
+      * Returns a combination of all tags (span and metric tags) on the Span.
+      */
+    def tags(): TagSet =
+      spanTags() withTags metricTags()
+
+
+    /**
+      * Returns all marks on the Span.
+      */
+    def marks(): Seq[Span.Mark] =
+      if(span.isInstanceOf[Span.Local])
+        getField[Span.Local, Seq[Span.Mark]](span.asInstanceOf[Span.Local], "_marks")
+      else
+        Seq.empty
+
+    /**
+      * Returns true if the Span has been marked as failed.
+      */
+    def isFailed(): Boolean =
+      if(span.isInstanceOf[Span.Local])
+        getField[Span.Local, Boolean](span.asInstanceOf[Span.Local], "_hasError")
+      else
+        false
+
+
+    /**
+      * Returns true if the Span is set to track metrics once it is finished.
+      */
+    def isTrackingMetrics(): Boolean =
+      if(span.isInstanceOf[Span.Local])
+        getField[Span.Local, Boolean](span.asInstanceOf[Span.Local], "_trackMetrics")
+      else
+        false
+
+
+    /**
+      * Returns the Span.Finished instance that would be sent to the SpanReporters if the Span's trace is sampled.
+      */
+    def toFinished(): Span.Finished =
+      toFinished(Kamon.clock().instant())
+
+
+    /**
+      * Returns the Span.Finished instance that would be sent to the SpanReporters if the Span's trace is sampled.
+      */
+    def toFinished(at: Instant): Span.Finished =
+      if(span.isInstanceOf[Span.Local])
+        invoke[Span.Local, Span.Finished](span.asInstanceOf[Span.Local], "toFinishedSpan",
+          (classOf[Instant], at), (classOf[TagSet], metricTags()))
+      else
+        sys.error("Cannot finish an Empty/Remote Span")
+
+  }
+
+  /**
+    * Exposes an implicitly available syntax to extract information from Spans.
+    */
+  trait Syntax {
+
+    trait RichSpan {
+      def spanTags(): TagSet
+      def metricTags(): TagSet
+      def tags(): TagSet
+      def marks(): Seq[Span.Mark]
+      def isFailed(): Boolean
+      def isTrackingMetrics(): Boolean
+      def toFinished(): Span.Finished
+      def toFinished(at: Instant): Span.Finished
     }
 
-    def metricTags(): Map[String, String] =
-      getField[Span.Local, Map[String, String]](realSpan, "customMetricTags")
+    implicit def spanToRichSpan(span: Span): RichSpan = new RichSpan {
+      private val _inspector = SpanInspection.inspect(span)
 
-    def metricTag(key: String): Option[String] =
-      metricTags().get(key)
+      override def spanTags(): TagSet =
+        _inspector.spanTags()
 
-    def from(): Instant =
-      getField[Span.Local, Instant](realSpan, "from")
+      override def metricTags(): TagSet =
+        _inspector.metricTags()
 
-    def context(): SpanContext =
-      spanData.context
+      override def tags(): TagSet =
+        _inspector.tags()
 
-    def operationName(): String =
-      spanData.operationName
+      override def marks(): Seq[Span.Mark] =
+        _inspector.marks()
 
-    def hasMetricsEnabled(): Boolean =
-      getField[Span.Local, Boolean](realSpan, "collectMetrics")
+      override def isFailed(): Boolean =
+        _inspector.isFailed()
 
+      override def isTrackingMetrics(): Boolean =
+        _inspector.isTrackingMetrics()
 
-    private def getField[T, R](target: Any, fieldName: String)(implicit classTag: ClassTag[T]): R = {
-      val toFinishedSpanMethod = classTag.runtimeClass.getDeclaredFields.find(_.getName.contains(fieldName)).get
-      toFinishedSpanMethod.setAccessible(true)
-      toFinishedSpanMethod.get(target).asInstanceOf[R]
+      override def toFinished(): Span.Finished =
+        _inspector.toFinished()
+
+      override def toFinished(at: Instant): Span.Finished =
+        _inspector.toFinished(at)
     }
 
-    private def invoke[T, R](target: Any, fieldName: String, parameters: (Class[_], AnyRef)*)(implicit classTag: ClassTag[T]): R = {
-      val parameterClasses = parameters.map(_._1)
-      val parameterInstances = parameters.map(_._2)
-      val toFinishedSpanMethod = classTag.runtimeClass.getDeclaredMethod(fieldName, parameterClasses: _*)
-      toFinishedSpanMethod.setAccessible(true)
-      toFinishedSpanMethod.invoke(target, parameterInstances: _*).asInstanceOf[R]
-    }
   }
 }
+
+object SpanInspection extends SpanInspection

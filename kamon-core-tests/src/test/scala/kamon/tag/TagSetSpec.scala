@@ -11,20 +11,20 @@ class TagSetSpec extends WordSpec with Matchers {
 
   "Tags" should {
     "silently drop null and unacceptable keys and/or values when constructed from the companion object builders" in {
-      TagSet.from(NullString, NullString).all().size shouldBe 0
-      TagSet.from(EmptyString, NullString).all().size shouldBe 0
-      TagSet.from(EmptyString, "value").all().size shouldBe 0
-      TagSet.from(NullString, "value").all().size shouldBe 0
-      TagSet.from("key", NullString).all().size shouldBe 0
-      TagSet.from("key", NullBoolean).all().size shouldBe 0
-      TagSet.from("key", NullLong).all().size shouldBe 0
+      TagSet.of(NullString, NullString).all().size shouldBe 0
+      TagSet.of(EmptyString, NullString).all().size shouldBe 0
+      TagSet.of(EmptyString, "value").all().size shouldBe 0
+      TagSet.of(NullString, "value").all().size shouldBe 0
+      TagSet.of("key", NullString).all().size shouldBe 0
+      TagSet.of("key", NullBoolean).all().size shouldBe 0
+      TagSet.of("key", NullLong).all().size shouldBe 0
 
       TagSet.from(BadScalaTagMap).all().size shouldBe 0
       TagSet.from(BadJavaTagMap).all().size shouldBe 0
     }
 
-    "silently drop null keys and/or values when created with the .withTag, withTags or .and methods" in {
-      val tags = TagSet.from("initialKey", "initialValue")
+    "silently drop null keys and/or values when created with the .withTag or .withTags methods" in {
+      val tags = TagSet.of("initialKey", "initialValue")
         .withTag(NullString, NullString)
         .withTag(EmptyString, NullString)
         .withTag(EmptyString, "value")
@@ -32,13 +32,13 @@ class TagSetSpec extends WordSpec with Matchers {
         .withTag("key", NullString)
         .withTag("key", NullBoolean)
         .withTag("key", NullLong)
-        .and(NullString, NullString)
-        .and(EmptyString, NullString)
-        .and(EmptyString, "value")
-        .and(NullString, "value")
-        .and("key", NullString)
-        .and("key", NullBoolean)
-        .and("key", NullLong)
+        .withTag(NullString, NullString)
+        .withTag(EmptyString, NullString)
+        .withTag(EmptyString, "value")
+        .withTag(NullString, "value")
+        .withTag("key", NullString)
+        .withTag("key", NullBoolean)
+        .withTag("key", NullLong)
 
       tags.all().length shouldBe 1
       tags.all().head.asInstanceOf[Tag.String].key shouldBe "initialKey"
@@ -46,36 +46,36 @@ class TagSetSpec extends WordSpec with Matchers {
     }
 
     "create a properly populated instance when valid pairs are provided" in {
-      TagSet.from("isAwesome", true).all().size shouldBe 1
-      TagSet.from("name", "kamon").all().size shouldBe 1
-      TagSet.from("age", 5L).all().size shouldBe 1
+      TagSet.of("isAwesome", true).all().size shouldBe 1
+      TagSet.of("name", "kamon").all().size shouldBe 1
+      TagSet.of("age", 5L).all().size shouldBe 1
 
       TagSet.from(GoodScalaTagMap).all().size shouldBe 3
       TagSet.from(GoodJavaTagMap).all().size shouldBe 3
 
-      TagSet.from("initial", "initial")
+      TagSet.of("initial", "initial")
         .withTag("isAwesome", true)
         .withTag("name", "Kamon")
         .withTag("age", 5L)
-        .and("isAvailable", true)
-        .and("website", "kamon.io")
-        .and("supportedPlatforms", 1L)
+        .withTag("isAvailable", true)
+        .withTag("website", "kamon.io")
+        .withTag("supportedPlatforms", 1L)
         .all().size shouldBe 7
     }
 
     "override pre-existent tags when merging with other Tags instance" in {
       val leftTags = TagSet.from(GoodScalaTagMap)
       val rightTags = TagSet
-        .from("name", "New Kamon")
-        .and("age", 42L)
-        .and("isAwesome", false) // just for testing :)
+        .of("name", "New Kamon")
+        .withTag("age", 42L)
+        .withTag("isAwesome", false) // just for testing :)
 
       val tags = leftTags.withTags(rightTags)
       tags.get(plain("name")) shouldBe "New Kamon"
       tags.get(plainLong("age")) shouldBe 42L
       tags.get(plainBoolean("isAwesome")) shouldBe false
 
-      val andTags = tags and leftTags
+      val andTags = tags withTags leftTags
       andTags.get(plain("name")) shouldBe "Kamon"
       andTags.get(plainLong("age")) shouldBe 5L
       andTags.get(plainBoolean("isAwesome")) shouldBe true
@@ -139,6 +139,28 @@ class TagSetSpec extends WordSpec with Matchers {
       TagSet.from(GoodScalaTagMap).toString() should include("name=Kamon")
       TagSet.from(GoodScalaTagMap).toString() should include("isAwesome=true")
     }
+
+    "allow creating them from a builder instance" in {
+      val tags = TagSet.builder()
+        .add("age", 5L)
+        .add("name", "Kamon")
+        .add("isAwesome", true)
+        .add("hasTracing", true)
+        .add("website", "wrong.io")
+        .add("website", "wrong.io")
+        .add("website", "kamon.io")
+        .add("luckyNumber", 7L)
+        .add("luckyNumber", 7L)
+        .create()
+
+      tags.get(plain("name")) shouldBe "Kamon"
+      tags.get(plain("website")) shouldBe "kamon.io"
+      tags.get(plainLong("age")) shouldBe 5L
+      tags.get(plainLong("luckyNumber")) shouldBe 7L
+      tags.get(plainBoolean("isAwesome")) shouldBe true
+      tags.get(plainBoolean("hasTracing")) shouldBe true
+
+    }
   }
 
   def matchPair(key: String, value: Any) = { tag: Tag => {
@@ -152,7 +174,7 @@ class TagSetSpec extends WordSpec with Matchers {
 
 
   val NullString: java.lang.String = null
-  val NullBoolean: java.lang.Boolean = NullString.asInstanceOf[java.lang.Boolean]
+  val NullBoolean: java.lang.Boolean = null
   val NullLong: java.lang.Long = null
   val EmptyString: java.lang.String = ""
 

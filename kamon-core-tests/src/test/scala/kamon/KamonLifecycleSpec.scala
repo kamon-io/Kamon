@@ -50,7 +50,7 @@ class DummySpanReporter extends kamon.module.SpanReporter {
   override def start(): Unit = {}
   override def stop(): Unit = {}
   override def reconfigure(config: Config): Unit = {}
-  override def reportSpans(spans: Seq[Span.FinishedSpan]): Unit = {}
+  override def reportSpans(spans: Seq[Span.Finished]): Unit = {}
 }
 
 object KamonWithRunningReporter extends App {

@@ -1,8 +1,7 @@
-package kamon.tag
+package kamon
+package tag
 
 import kamon.tag.TagSet.Lookup
-
-import java.lang.{Boolean => JBoolean, Long => JLong, String => JString}
 import java.util.function.BiConsumer
 
 import org.eclipse.collections.impl.map.mutable.UnifiedMap
@@ -43,7 +42,7 @@ class TagSet private(private val _underlying: UnifiedMap[String, Any]) {
     * Creates a new TagSet instance that includes the provided key/value pair. If the provided key was already associated
     * with another value then the previous value will be discarded and overwritten with the provided one.
     */
-  def withTag(key: String, value: JString): TagSet =
+  def withTag(key: String, value: java.lang.String): TagSet =
     withPair(this, key, value)
 
 
@@ -51,7 +50,7 @@ class TagSet private(private val _underlying: UnifiedMap[String, Any]) {
     * Creates a new TagSet instance that includes the provided key/value pair. If the provided key was already associated
     * with another value then the previous value will be discarded and overwritten with the provided one.
     */
-  def withTag(key: String, value: JBoolean): TagSet =
+  def withTag(key: String, value: java.lang.Boolean): TagSet =
     withPair(this, key, value)
 
 
@@ -59,7 +58,7 @@ class TagSet private(private val _underlying: UnifiedMap[String, Any]) {
     * Creates a new TagSet instance that includes the provided key/value pair. If the provided key was already associated
     * with another value then the previous value will be discarded and overwritten with the provided one.
     */
-  def withTag(key: String, value: JLong): TagSet =
+  def withTag(key: String, value: java.lang.Long): TagSet =
     withPair(this, key, value)
 
 
@@ -68,40 +67,7 @@ class TagSet private(private val _underlying: UnifiedMap[String, Any]) {
     * instance are associated to a key present on the provided instance then the previous value will be discarded and
     * overwritten with the provided one.
     */
-  def withTags(other: TagSet): TagSet =
-    and(other)
-
-
-  /**
-    * Creates a new TagSet instance that includes the provided key/value pair. If the provided key was already associated
-    * with another value then the previous value will be discarded and overwritten with the provided one.
-    */
-  def and(key: String, value: JString): TagSet =
-    withPair(this, key, value)
-
-
-  /**
-    * Creates a new TagSet instance that includes the provided key/value pair. If the provided key was already associated
-    * with another value then the previous value will be discarded and overwritten with the provided one.
-    */
-  def and(key: String, value: JBoolean): TagSet =
-    withPair(this, key, value)
-
-
-  /**
-    * Creates a new TagSet instance that includes the provided key/value pair. If the provided key was already associated
-    * with another value then the previous value will be discarded and overwritten with the provided one.
-    */
-  def and(key: String, value: JLong): TagSet =
-    withPair(this, key, value)
-
-
-  /**
-    * Creates a new TagSet instance that includes all the tags from the provided Tags instance. If any of the tags in this
-    * instance are associated to a key present on the provided instance then the previous value will be discarded and
-    * overwritten with the provided one.
-    */
-  def and(other: TagSet): TagSet = {
+  def withTags(other: TagSet): TagSet ={
     val mergedMap = new UnifiedMap[String, Any](other._underlying.size() + this._underlying.size())
     mergedMap.putAll(this._underlying)
     mergedMap.putAll(other._underlying)
@@ -177,19 +143,19 @@ class TagSet private(private val _underlying: UnifiedMap[String, Any]) {
       }
     }
 
-    private def stringTag(key: JString, value: JString): Tag.String =
+    private def stringTag(key: String, value: String): Tag.String =
       if(_stringTag == null) {
         _stringTag = new TagSet.mutable.String(key, value)
         _stringTag
       } else _stringTag.updated(key, value)
 
-    private def booleanTag(key: JString, value: JBoolean): Tag.Boolean =
+    private def booleanTag(key: String, value: Boolean): Tag.Boolean =
       if(_booleanTag == null) {
         _booleanTag = new TagSet.mutable.Boolean(key, value)
         _booleanTag
       } else _booleanTag.updated(key, value)
 
-    private def longTag(key: JString, value: JLong): Tag.Long =
+    private def longTag(key: String, value: Long): Tag.Long =
       if(_longTag == null) {
         _longTag = new TagSet.mutable.Long(key, value)
         _longTag
@@ -202,7 +168,7 @@ class TagSet private(private val _underlying: UnifiedMap[String, Any]) {
   override def hashCode(): Int =
     _underlying.hashCode()
 
-  override def toString: JString = {
+  override def toString: String = {
     val sb = new StringBuilder()
     sb.append("Tags{")
 
@@ -259,7 +225,13 @@ object TagSet {
   trait Builder {
 
     /** Adds a new key/value pair to the builder. */
-    def add(key: String, value: Any): Builder
+    def add(key: String, value: String): Builder
+
+    /** Adds a new key/value pair to the builder. */
+    def add(key: String, value: Long): Builder
+
+    /** Adds a new key/value pair to the builder. */
+    def add(key: String, value: Boolean): Builder
 
     /** Creates a new TagSet instance that includes all valid key/value pairs added to this builder. */
     def create(): TagSet
@@ -302,45 +274,28 @@ object TagSet {
   /**
     * Creates a new Builder instance.
     */
-  def builder(): Builder = new Builder {
-    private var _tagCount = 0
-    private var _tags: List[(String, Any)] = Nil
-
-    override def add(key: String, value: Any): Builder = {
-      if(isValidPair(key, value)) {
-        _tagCount += 1
-        _tags = (key -> value) :: _tags
-      }
-
-      this
-    }
-
-    override def create(): TagSet = {
-      val newMap = new UnifiedMap[String, Any](_tagCount)
-      _tags.foreach { case (key, value) => newMap.put(key, value) }
-      new TagSet(newMap)
-    }
-  }
+  def builder(): Builder =
+    new Builder.ChainedArray
 
 
   /**
     * Construct a new TagSet instance with a single key/value pair.
     */
-  def from(key: String, value: JString): TagSet =
+  def of(key: String, value: java.lang.String): TagSet =
     withPair(Empty, key, value)
 
 
   /**
     * Construct a new TagSet instance with a single key/value pair.
     */
-  def from(key: String, value: JBoolean): TagSet =
+  def of(key: String, value: java.lang.Boolean): TagSet =
     withPair(Empty, key, value)
 
 
   /**
     * Construct a new TagSet instance with a single key/value pair.
     */
-  def from(key: String, value: JLong): TagSet =
+  def of(key: String, value: java.lang.Long): TagSet =
     withPair(Empty, key, value)
 
 
@@ -350,7 +305,7 @@ object TagSet {
     */
   def from(map: Map[String, Any]): TagSet = {
     val unifiedMap = new UnifiedMap[String, Any](map.size)
-    map.foreach { pair => if(isValidPair(pair._1, pair._2)) unifiedMap.put(pair._1, pair._2)}
+    map.foreach { pair => if(isValidPair(pair._1, pair._2, checkValueType = true)) unifiedMap.put(pair._1, pair._2)}
 
     new TagSet(unifiedMap)
   }
@@ -364,7 +319,7 @@ object TagSet {
     val unifiedMap = new UnifiedMap[String, Any](map.size)
     map.forEach(new BiConsumer[String, Any] {
       override def accept(key: String, value: Any): Unit =
-        if(isValidPair(key, value)) unifiedMap.put(key, value)
+        if(isValidPair(key, value, checkValueType = true)) unifiedMap.put(key, value)
     })
 
     new TagSet(unifiedMap)
@@ -374,7 +329,7 @@ object TagSet {
   private val _logger = LoggerFactory.getLogger(classOf[TagSet])
 
   private def withPair(parent: TagSet, key: String, value: Any): TagSet =
-    if(isValidPair(key, value)) {
+    if(isValidPair(key, value, checkValueType = true)) {
       val mergedMap = new UnifiedMap[String, Any](parent._underlying.size() + 1)
       mergedMap.putAll(parent._underlying)
       mergedMap.put(key, value)
@@ -382,9 +337,9 @@ object TagSet {
     } else
       parent
 
-  private def isValidPair(key: String, value: Any): Boolean = {
-    val isValidKey = key != null && key.nonEmpty
-    val isValidValue = isAllowedTagValue(value)
+  private def isValidPair(key: String, value: Any, checkValueType: Boolean): Boolean = {
+    val isValidKey = key != null && key.length > 0
+    val isValidValue = value != null && (!checkValueType || isAllowedTagValue(value))
     val isValid = isValidKey && isValidValue
 
     if(!isValid && _logger.isDebugEnabled) {
@@ -400,15 +355,19 @@ object TagSet {
   }
 
   private def isAllowedTagValue(v: Any): Boolean =
-    v != null && (v.isInstanceOf[String] || v.isInstanceOf[Boolean] || v.isInstanceOf[Long])
+    (v.isInstanceOf[String] || v.isInstanceOf[Boolean] || v.isInstanceOf[Long])
 
   private object immutable {
+    import java.lang.{Boolean => JBoolean, Long => JLong, String => JString}
+
     case class String(key: JString, value: JString) extends Tag.String
     case class Boolean(key: JString, value: JBoolean) extends Tag.Boolean
     case class Long(key: JString, value: JLong) extends Tag.Long
   }
 
   private object mutable {
+    import java.lang.{Boolean => JBoolean, Long => JLong, String => JString}
+
     case class String(var key: JString, var value: JString) extends Tag.String with Updateable[JString]
     case class Boolean(var key: JString, var value: JBoolean) extends Tag.Boolean with Updateable[JBoolean]
     case class Long(var key: JString, var value: JLong) extends Tag.Long with Updateable[JLong]
@@ -422,6 +381,90 @@ object TagSet {
         this.value = value
         this
       }
+    }
+  }
+
+  object Builder {
+
+    /**
+      * Uses a chain of arrays with fixed size to temporarily hold key/value pairs until the TagSet instance is created.
+      * This allows for no allocations when adding new tags on the most common cases (less than 8 tags) and a single
+      * allocation for every additional 8 key/value pairs added to the Builder.
+      */
+    class ChainedArray extends Builder {
+      private val _firstBlock = newBlock()
+      private var _currentBlock: Array[Any] = _firstBlock
+      private var _position = 0
+
+      override def add(key: String, value: String): Builder = {
+        addPair(key, value)
+        this
+      }
+
+      override def add(key: String, value: Long): Builder = {
+        addPair(key, value)
+        this
+      }
+
+      override def add(key: String, value: Boolean): Builder = {
+        addPair(key, value)
+        this
+      }
+
+      override def create(): TagSet = {
+        val unifiedMap = new UnifiedMap[String, Any]()
+        var position = 0
+        var currentBlock = _firstBlock
+        var currentKey = currentBlock(position)
+        var currentValue = currentBlock(position + 1)
+
+        while(currentKey != null) {
+          unifiedMap.put(currentKey.asInstanceOf[String], currentValue)
+          position += 2
+
+          if(position == ChainedArray.BlockSize) {
+            val nextBlock = currentBlock(currentBlock.length - 1)
+            if(nextBlock == null) {
+              currentKey = null
+              currentValue = null
+            } else {
+              position = 0
+              currentBlock = nextBlock.asInstanceOf[Array[Any]]
+              currentKey = currentBlock(position)
+              currentValue = currentBlock(position + 1)
+            }
+          } else {
+            currentKey = currentBlock(position)
+            currentValue = currentBlock(position + 1)
+          }
+        }
+
+        new TagSet(unifiedMap)
+      }
+
+      private def addPair(key: String, value: Any): Unit = {
+        if(isValidPair(key, value, checkValueType = false)) {
+          if (_position == ChainedArray.BlockSize) {
+            // Adds an extra block at the end of the current one.
+            val extraBlock = newBlock()
+            _currentBlock.update(_currentBlock.length - 1, extraBlock)
+            _currentBlock = extraBlock
+            _position = 0
+          }
+
+          _currentBlock.update(_position, key)
+          _currentBlock.update(_position + 1, value)
+          _position += 2
+        }
+      }
+
+      private def newBlock(): Array[Any] =
+        Array.ofDim[Any](ChainedArray.BlockSize + 1)
+    }
+
+    private object ChainedArray {
+      val EntriesPerBlock = 8
+      val BlockSize = EntriesPerBlock * 2
     }
   }
 }

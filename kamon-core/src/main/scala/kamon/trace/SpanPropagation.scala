@@ -22,7 +22,7 @@ import kamon.context.BinaryPropagation.{ByteStreamReader, ByteStreamWriter}
 import kamon.context.HttpPropagation.{HeaderReader, HeaderWriter}
 import kamon.context.generated.binary.span.{Span => ColferSpan}
 import kamon.context.{Context, _}
-import kamon.trace.SpanContext.SamplingDecision
+import kamon.trace.Trace.SamplingDecision
 
 
 /**
@@ -32,25 +32,25 @@ object SpanPropagation {
 
   /**
     * Reads and Writes a Span instance using the B3 propagation format. The specification and semantics of the B3
-    * Propagation protocol can be found here: https://github.com/openzipkin/b3-propagation
+    * Propagation format can be found here: https://github.com/openzipkin/b3-propagation
     */
   class B3 extends Propagation.EntryReader[HeaderReader] with Propagation.EntryWriter[HeaderWriter] {
     import B3.Headers
 
     override def read(reader: HttpPropagation.HeaderReader, context: Context): Context = {
-      val identityProvider = Kamon.identityProvider
+      val identifierScheme = Kamon.identifierScheme
       val traceID = reader.read(Headers.TraceIdentifier)
-        .map(id => identityProvider.traceIdGenerator().from(urlDecode(id)))
-        .getOrElse(IdentityProvider.NoIdentifier)
+        .map(id => identifierScheme.traceIdFactory.from(urlDecode(id)))
+        .getOrElse(Identifier.Empty)
 
       val spanID = reader.read(Headers.SpanIdentifier)
-        .map(id => identityProvider.spanIdGenerator().from(urlDecode(id)))
-        .getOrElse(IdentityProvider.NoIdentifier)
+        .map(id => identifierScheme.spanIdFactory.from(urlDecode(id)))
+        .getOrElse(Identifier.Empty)
 
-      if(traceID != IdentityProvider.NoIdentifier && spanID != IdentityProvider.NoIdentifier) {
+      if(traceID != Identifier.Empty && spanID != Identifier.Empty) {
         val parentID = reader.read(Headers.ParentSpanIdentifier)
-          .map(id => identityProvider.spanIdGenerator().from(urlDecode(id)))
-          .getOrElse(IdentityProvider.NoIdentifier)
+          .map(id => identifierScheme.spanIdFactory.from(urlDecode(id)))
+          .getOrElse(Identifier.Empty)
 
         val flags = reader.read(Headers.Flags)
 
@@ -60,24 +60,22 @@ object SpanPropagation {
           case _ => SamplingDecision.Unknown
         }
 
-        context.withKey(Span.ContextKey, Span.Remote(SpanContext(traceID, spanID, parentID, samplingDecision)))
+        context.withKey(Span.Key, new Span.Remote(spanID, parentID, Trace(traceID, samplingDecision)))
 
       } else context
     }
 
-
     override def write(context: Context, writer: HttpPropagation.HeaderWriter): Unit = {
-      val span = context.get(Span.ContextKey)
+      val span = context.get(Span.Key)
 
-      if(span.nonEmpty()) {
-        val spanContext = span.context()
-        writer.write(Headers.TraceIdentifier, urlEncode(spanContext.traceID.string))
-        writer.write(Headers.SpanIdentifier, urlEncode(spanContext.spanID.string))
+      if(span != Span.Empty) {
+        writer.write(Headers.TraceIdentifier, urlEncode(span.trace.id.string))
+        writer.write(Headers.SpanIdentifier, urlEncode(span.id.string))
 
-        if(spanContext.parentID != IdentityProvider.NoIdentifier)
-          writer.write(Headers.ParentSpanIdentifier, urlEncode(spanContext.parentID.string))
+        if(span.parentId != Identifier.Empty)
+          writer.write(Headers.ParentSpanIdentifier, urlEncode(span.parentId.string))
 
-        encodeSamplingDecision(spanContext.samplingDecision).foreach { samplingDecision =>
+        encodeSamplingDecision(span.trace.samplingDecision).foreach { samplingDecision =>
           writer.write(Headers.Sampled, samplingDecision)
         }
       }
@@ -108,64 +106,57 @@ object SpanPropagation {
   }
 
   /**
-    * This format corresponds to the propagation key "b3" (or "B3"), which delimits fields in the
-    * following manner.
-    *
-    * <pre>{@code
-    * b3: {x-b3-traceid}-{x-b3-spanid}-{if x-b3-flags 'd' else x-b3-sampled}-{x-b3-parentspanid}
-    * }</pre>
-    *
-    * <p>See <a href="https://github.com/openzipkin/b3-propagation">B3 Propagation</a>
+    * Reads and Writes a Span instance using the B3 single-header propagation format. The specification and semantics of
+    * the B3 Propagation format can be found here: https://github.com/openzipkin/b3-propagation
     */
   class B3Single extends Propagation.EntryReader[HeaderReader] with Propagation.EntryWriter[HeaderWriter] {
     import B3Single._
 
     override def read(reader: HttpPropagation.HeaderReader, context: Context): Context = {
       reader.read(Header.B3).map { header =>
-        val identityProvider = Kamon.identityProvider
+        val identityProvider = Kamon.identifierScheme
 
         val (traceID, spanID, samplingDecision, parentSpanID) = header.splitToTuple("-")
 
         val ti = traceID
-          .map(id => identityProvider.traceIdGenerator().from(urlDecode(id)))
-          .getOrElse(IdentityProvider.NoIdentifier)
+          .map(id => identityProvider.traceIdFactory.from(urlDecode(id)))
+          .getOrElse(Identifier.Empty)
 
         val si = spanID
-          .map(id => identityProvider.spanIdGenerator().from(urlDecode(id)))
-          .getOrElse(IdentityProvider.NoIdentifier)
+          .map(id => identityProvider.spanIdFactory.from(urlDecode(id)))
+          .getOrElse(Identifier.Empty)
 
-        if (ti != IdentityProvider.NoIdentifier && si != IdentityProvider.NoIdentifier) {
+        if (ti != Identifier.Empty && si != Identifier.Empty) {
           val parentID = parentSpanID
-            .map(id => identityProvider.spanIdGenerator().from(urlDecode(id)))
-            .getOrElse(IdentityProvider.NoIdentifier)
+            .map(id => identityProvider.spanIdFactory.from(urlDecode(id)))
+            .getOrElse(Identifier.Empty)
 
           val sd = samplingDecision match {
             case Some(sampled) if sampled == "1" || sampled.equalsIgnoreCase("d") => SamplingDecision.Sample
             case Some(sampled) if sampled == "0" => SamplingDecision.DoNotSample
             case _ => SamplingDecision.Unknown
           }
-          context.withKey(Span.ContextKey, Span.Remote(SpanContext(ti, si, parentID, sd)))
+
+          context.withKey(Span.Key, new Span.Remote(si, parentID, Trace(ti, sd)))
         } else context
       }.getOrElse(context)
     }
 
     override def write(context: Context, writer: HttpPropagation.HeaderWriter): Unit = {
-      val span = context.get(Span.ContextKey)
+      val span = context.get(Span.Key)
 
-      if(span.nonEmpty()) {
+      if(span != Span.Empty) {
         val buffer = new StringBuilder()
-        val spanContext = span.context()
-
-        val traceId = urlEncode(spanContext.traceID.string)
-        val spanId = urlEncode(spanContext.spanID.string)
+        val traceId = urlEncode(span.trace.id.string)
+        val spanId = urlEncode(span.id.string)
 
         buffer.append(traceId).append("-").append(spanId)
 
-        encodeSamplingDecision(spanContext.samplingDecision)
+        encodeSamplingDecision(span.trace.samplingDecision)
           .foreach(samplingDecision => buffer.append("-").append(samplingDecision))
 
-        if(spanContext.parentID != IdentityProvider.NoIdentifier)
-          buffer.append("-").append(urlEncode(spanContext.parentID.string))
+        if(span.parentId != Identifier.Empty)
+          buffer.append("-").append(urlEncode(span.parentId.string))
 
         writer.write(Header.B3, buffer.toString)
       }
@@ -220,33 +211,32 @@ object SpanPropagation {
       if(medium.available() == 0)
         context
       else {
-        val identityProvider = Kamon.identityProvider
+        val identityProvider = Kamon.identifierScheme
         val colferSpan = new ColferSpan()
         colferSpan.unmarshal(medium.readAll(), 0)
 
-        val spanContext = SpanContext(
-          traceID = identityProvider.traceIdGenerator().from(colferSpan.traceID),
-          spanID = identityProvider.spanIdGenerator().from(colferSpan.spanID),
-          parentID = identityProvider.spanIdGenerator().from(colferSpan.parentID),
-          samplingDecision = byteToSamplingDecision(colferSpan.samplingDecision)
-        )
-
-        context.withKey(Span.ContextKey, Span.Remote(spanContext))
+        context.withKey(Span.Key, new Span.Remote(
+          id = identityProvider.spanIdFactory.from(colferSpan.spanID),
+          parentId = identityProvider.spanIdFactory.from(colferSpan.parentID),
+          trace = Trace(
+            id = identityProvider.traceIdFactory.from(colferSpan.traceID),
+            samplingDecision = byteToSamplingDecision(colferSpan.samplingDecision)
+          )
+        ))
       }
     }
 
     override def write(context: Context, medium: ByteStreamWriter): Unit = {
-      val span = context.get(Span.ContextKey)
+      val span = context.get(Span.Key)
 
-      if(span.nonEmpty()) {
+      if(span != Span.Empty) {
         val marshalBuffer = Colfer.codecBuffer.get()
         val colferSpan = new ColferSpan()
-        val spanContext = span.context()
 
-        colferSpan.setTraceID(spanContext.traceID.bytes)
-        colferSpan.setSpanID(spanContext.spanID.bytes)
-        colferSpan.setParentID(spanContext.parentID.bytes)
-        colferSpan.setSamplingDecision(samplingDecisionToByte(spanContext.samplingDecision))
+        colferSpan.setTraceID(span.trace.id.bytes)
+        colferSpan.setSpanID(span.id.bytes)
+        colferSpan.setParentID(span.parentId.bytes)
+        colferSpan.setSamplingDecision(samplingDecisionToByte(span.trace.samplingDecision))
 
         val marshalledSize = colferSpan.marshal(marshalBuffer, 0)
         medium.write(marshalBuffer, 0, marshalledSize)

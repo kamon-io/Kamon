@@ -17,124 +17,131 @@ package kamon.trace
 
 import java.time.Instant
 
-import com.typesafe.config.ConfigFactory
 import kamon.Kamon
-import kamon.context.Context
-import kamon.testkit.{SpanBuilding, SpanInspection}
-import kamon.trace.Span.TagValue
-import kamon.trace.SpanContext.SamplingDecision
+import kamon.tag.Lookups._
+import kamon.testkit.{Reconfigure, SpanInspection}
+import kamon.trace.Identifier.Factory.EightBytesIdentifier
+import kamon.trace.Span.Position
+import kamon.trace.Trace.SamplingDecision
+import kamon.trace.Hooks.{PreStart, PreFinish}
 import org.scalatest.{Matchers, OptionValues, WordSpec}
 
-class TracerSpec extends WordSpec with Matchers with SpanBuilding with SpanInspection with OptionValues {
+class TracerSpec extends WordSpec with Matchers with SpanInspection.Syntax with OptionValues {
 
   "the Kamon tracer" should {
-    "construct a minimal Span that only has a operation name" in {
-      val span = Kamon.buildSpan("myOperation").start()
-      val spanData = inspect(span)
+    "construct a minimal Span that only has a operation name and default metric tags" in {
+      val span = Kamon.spanBuilder("myOperation").start()
 
-      spanData.operationName() shouldBe "myOperation"
-      spanData.metricTags() shouldBe empty
-      spanData.spanTags() shouldBe empty
+      span.operationName() shouldBe "myOperation"
+      span.spanTags() shouldBe empty
+      span.metricTags().get(plain("operation")) shouldBe "myOperation"
+      span.metricTags().get(plainBoolean("error")) shouldBe false
     }
 
     "pass the operation name and tags to started Span" in {
-      val span = Kamon.buildSpan("myOperation")
-        .withMetricTag("metric-tag", "value")
-        .withMetricTag("metric-tag", "value")
-        .withTag("hello", "world")
-        .withTag("kamon", "rulez")
-        .withTag("number", 123)
-        .withTag("boolean", true)
+      val span = Kamon.spanBuilder("myOperation")
+        .tagMetric("metric-tag", "value")
+        .tagMetric("metric-tag", "value")
+        .tag("hello", "world")
+        .tag("kamon", "rulez")
+        .tag("number", 123)
+        .tag("boolean", true)
         .start()
 
-      val spanData = inspect(span)
-      spanData.operationName() shouldBe "myOperation"
-      spanData.metricTags() should contain only (
-        ("metric-tag" -> "value"))
-
-      spanData.spanTags() should contain allOf(
-        ("hello" -> TagValue.String("world")),
-        ("kamon" -> TagValue.String("rulez")),
-        ("number" -> TagValue.Number(123)),
-        ("boolean" -> TagValue.True))
+      span.operationName() shouldBe "myOperation"
+      span.metricTags().get(plain("metric-tag")) shouldBe "value"
+      span.spanTags().get(plain("hello")) shouldBe "world"
+      span.spanTags().get(plain("kamon")) shouldBe "rulez"
+      span.spanTags().get(plainLong("number")) shouldBe 123L
+      span.spanTags().get(plainBoolean("boolean")) shouldBe true
     }
 
     "not have any parent Span if there is no Span in the current context and no parent was explicitly given" in {
-      val span = Kamon.buildSpan("myOperation").start()
-      val spanData = inspect(span)
-      spanData.context().parentID shouldBe IdentityProvider.NoIdentifier
+      val span = Kamon.spanBuilder("myOperation").start()
+      span.parentId shouldBe Identifier.Empty
     }
 
-
     "automatically take the Span from the current Context as parent" in {
-      val parent = Kamon.buildSpan("myOperation").start()
+      val parent = Kamon.spanBuilder("myOperation").start()
       val child = Kamon.withSpan(parent) {
-        Kamon.buildSpan("childOperation").asChildOf(parent).start()
+        Kamon.spanBuilder("childOperation").asChildOf(parent).start()
       }
 
-      val parentData = inspect(parent)
-      val childData = inspect(child)
-      parentData.context().spanID shouldBe childData.context().parentID
+      child.parentId shouldBe parent.id
     }
 
     "ignore the span from the current context as parent if explicitly requested" in {
-      val parent = Kamon.buildSpan("myOperation").start()
+      val parent = Kamon.spanBuilder("myOperation").start()
       val child = Kamon.withSpan(parent) {
-        Kamon.buildSpan("childOperation").ignoreParentFromContext().start()
+        Kamon.spanBuilder("childOperation").ignoreParentFromContext().start()
       }
 
-      val childData = inspect(child)
-      childData.context().parentID shouldBe IdentityProvider.NoIdentifier
+      child.parentId shouldBe Identifier.Empty
     }
 
-    "allow overriding the start timestamp for a Span" in {
-      val span = Kamon.buildSpan("myOperation").withFrom(Instant.EPOCH.plusMillis(321)).start()
-      val spanData = inspect(span)
-      spanData.from() shouldBe Instant.EPOCH.plusMillis(321)
+    "allow providing a custom start timestamp for a Span" in {
+      val span = Kamon.spanBuilder("myOperation").start(Instant.EPOCH.plusMillis(321)).toFinished()
+      span.from shouldBe Instant.EPOCH.plusMillis(321)
     }
 
-    "preserve the same Span and Parent identifier when creating a Span with a remote parent if join-remote-parents-with-same-span-id is enabled" in {
-      val previousConfig = Kamon.config()
-      Kamon.reconfigure {
-        ConfigFactory.parseString("kamon.trace.join-remote-parents-with-same-span-id = yes")
-          .withFallback(Kamon.config())
-      }
+    "preserve the same Span and Parent identifier when creating a server Span with a remote parent if join-remote-parents-with-same-span-id is enabled" in {
+      Reconfigure.enableJoiningRemoteParentWithSameId()
 
-      val remoteParent = Span.Remote(createSpanContext())
-      val childData = inspect(Kamon.buildSpan("local").asChildOf(remoteParent).start())
+      val remoteParent = remoteSpan(SamplingDecision.Sample)
+      val child = Kamon.spanBuilder("local").asChildOf(remoteParent).kind(Span.Kind.Server).start()
 
-      childData.context().traceID shouldBe remoteParent.context.traceID
-      childData.context().parentID shouldBe remoteParent.context.parentID
-      childData.context().spanID shouldBe remoteParent.context.spanID
+      child.id shouldBe remoteParent.id
+      child.parentId shouldBe remoteParent.parentId
+      child.trace.id shouldBe remoteParent.trace.id
 
-      Kamon.reconfigure(previousConfig)
+      Reconfigure.reset()
     }
 
     "propagate sampling decisions from parent to child spans, if the decision is known" in {
-      val sampledRemoteParent = Span.Remote(createSpanContext().copy(samplingDecision = SamplingDecision.Sample))
-      val notSampledRemoteParent = Span.Remote(createSpanContext().copy(samplingDecision = SamplingDecision.DoNotSample))
+      val sampledRemoteParent = remoteSpan(SamplingDecision.Sample)
+      val notSampledRemoteParent = remoteSpan(SamplingDecision.DoNotSample)
 
-      Kamon.buildSpan("childOfSampled").asChildOf(sampledRemoteParent).start().context()
+      Kamon.spanBuilder("childOfSampled").asChildOf(sampledRemoteParent).start().trace
         .samplingDecision shouldBe(SamplingDecision.Sample)
 
-      Kamon.buildSpan("childOfNotSampled").asChildOf(notSampledRemoteParent).start().context()
+      Kamon.spanBuilder("childOfNotSampled").asChildOf(notSampledRemoteParent).start().trace
         .samplingDecision shouldBe(SamplingDecision.DoNotSample)
     }
 
     "take a sampling decision if the parent's decision is unknown" in {
-      val previousConfig = Kamon.config()
-      Kamon.reconfigure {
-        ConfigFactory.parseString("kamon.trace.sampler = always")
-          .withFallback(Kamon.config())
-      }
+      Reconfigure.sampleAlways()
 
-      val unknownSamplingRemoteParent = Span.Remote(createSpanContext().copy(samplingDecision = SamplingDecision.Unknown))
-      Kamon.buildSpan("childOfSampled").asChildOf(unknownSamplingRemoteParent).start().context()
+      val unknownSamplingRemoteParent = remoteSpan(SamplingDecision.Unknown)
+      Kamon.spanBuilder("childOfSampled").asChildOf(unknownSamplingRemoteParent).start().trace
         .samplingDecision shouldBe(SamplingDecision.Sample)
 
-      Kamon.reconfigure(previousConfig)
+      Reconfigure.reset()
     }
 
+    "figure out the position of a Span in its trace" in {
+      Kamon.spanBuilder("root").start().position shouldBe Position.Root
+      Kamon.spanBuilder("localRoot").asChildOf(remoteSpan()).start().position shouldBe Position.LocalRoot
+    }
+
+    "apply pre-start hooks to all Spans" in {
+      val span = Kamon.withContextKey(PreStart.Key, PreStart.updateOperationName("customName")) {
+        Kamon.spanBuilder("defaultOperationName").start()
+      }
+
+      span.operationName() shouldBe "customName"
+    }
+
+    "apply pre-finish hooks to all Spans" in {
+      val span = Kamon.spanBuilder("defaultOperationName").start()
+      Kamon.withContextKey(PreFinish.Key, PreFinish.updateOperationName("customName")) {
+        span.finish()
+      }
+
+      span.operationName() shouldBe "customName"
+    }
   }
+
+  private def remoteSpan(samplingDecision: SamplingDecision = SamplingDecision.Sample): Span.Remote =
+    new Span.Remote(EightBytesIdentifier.generate(), EightBytesIdentifier.generate(), Trace(EightBytesIdentifier.generate(), samplingDecision))
 
 }

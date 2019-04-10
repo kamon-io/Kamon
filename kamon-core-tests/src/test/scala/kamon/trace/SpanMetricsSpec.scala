@@ -15,7 +15,7 @@
 
 package kamon.trace
 
-import kamon.Kamon.buildSpan
+import kamon.Kamon.spanBuilder
 import kamon.tag.TagSet
 import kamon.testkit.{InstrumentInspection, MetricInspection, Reconfigure}
 import org.scalatest.{Matchers, WordSpecLike}
@@ -32,7 +32,7 @@ class SpanMetricsSpec extends WordSpecLike with Matchers with InstrumentInspecti
       val operation = "span-success"
       val operationTag = "operation" -> operation
 
-      buildSpan(operation)
+      spanBuilder(operation)
         .start()
         .finish()
 
@@ -46,12 +46,12 @@ class SpanMetricsSpec extends WordSpecLike with Matchers with InstrumentInspecti
 
     "not be recorded when disableMetrics() is called on the SpanBuilder or the Span" in {
       val operation = "span-with-disabled-metrics"
-      buildSpan(operation)
+      spanBuilder(operation)
         .start()
         .disableMetrics()
         .finish()
 
-      buildSpan(operation)
+      spanBuilder(operation)
         .disableMetrics()
         .start()
         .finish()
@@ -61,8 +61,8 @@ class SpanMetricsSpec extends WordSpecLike with Matchers with InstrumentInspecti
 
     "allow specifying custom Span metric tags" in {
       val operation = "span-with-custom-metric-tags"
-      buildSpan(operation)
-        .withMetricTag("custom-metric-tag-on-builder", "value")
+      spanBuilder(operation)
+        .tagMetric("custom-metric-tag-on-builder", "value")
         .start()
         .tagMetric("custom-metric-tag-on-span", "value")
         .finish()
@@ -73,7 +73,7 @@ class SpanMetricsSpec extends WordSpecLike with Matchers with InstrumentInspecti
 
     "be recorded if metrics are enabled by calling enableMetrics() on the Span" in {
       val operation = "span-with-re-enabled-metrics"
-      buildSpan(operation)
+      spanBuilder(operation)
         .start()
         .disableMetrics()
         .enableMetrics()
@@ -86,14 +86,14 @@ class SpanMetricsSpec extends WordSpecLike with Matchers with InstrumentInspecti
       val operation = "span-failure"
       val operationTag = "operation" -> operation
 
-      buildSpan(operation)
+      spanBuilder(operation)
         .start()
-        .addError("Terrible Error")
+        .fail("Terrible Error")
         .finish()
 
-      buildSpan(operation)
+      spanBuilder(operation)
         .start()
-        .addError("Terrible Error with Throwable", new Throwable with NoStackTrace)
+        .fail("Terrible Error with Throwable", new Throwable with NoStackTrace)
         .finish()
 
       val histogram = Span.Metrics.ProcessingTime.withTags(TagSet.from(Map(operationTag, noErrorTag)))
@@ -104,27 +104,27 @@ class SpanMetricsSpec extends WordSpecLike with Matchers with InstrumentInspecti
     }
 
     "add a parentOperation tag to the metrics if span metrics scoping is enabled" in {
-      val parent = buildSpan("parent").start()
+      val parent = spanBuilder("parent").start()
       val parentOperationTag = "parentOperation" -> "parent"
 
       val operation = "span-with-parent"
       val operationTag = "operation" -> operation
 
-      buildSpan(operation)
+      spanBuilder(operation)
         .asChildOf(parent)
         .start()
         .finish()
 
-      buildSpan(operation)
+      spanBuilder(operation)
         .asChildOf(parent)
         .start()
-        .addError("Terrible Error")
+        .fail("Terrible Error")
         .finish()
 
-      buildSpan(operation)
+      spanBuilder(operation)
         .asChildOf(parent)
         .start()
-        .addError("Terrible Error with Throwable", new Throwable with NoStackTrace)
+        .fail("Terrible Error with Throwable", new Throwable with NoStackTrace)
         .finish()
 
       val histogram = Span.Metrics.ProcessingTime.withTags(TagSet.from(Map(operationTag, noErrorTag, parentOperationTag)))
@@ -135,27 +135,27 @@ class SpanMetricsSpec extends WordSpecLike with Matchers with InstrumentInspecti
     }
 
     "not add any parentOperation tag to the metrics if span metrics scoping is disabled" in withoutSpanScopingEnabled {
-      val parent = buildSpan("parent").start()
+      val parent = spanBuilder("parent").start()
       val parentOperationTag = "parentOperation" -> "parent"
 
       val operation = "span-with-parent"
       val operationTag = "operation" -> operation
 
-      buildSpan(operation)
+      spanBuilder(operation)
         .asChildOf(parent)
         .start()
         .finish()
 
-      buildSpan(operation)
+      spanBuilder(operation)
         .asChildOf(parent)
         .start()
-        .addError("Terrible Error")
+        .fail("Terrible Error")
         .finish()
 
-      buildSpan(operation)
+      spanBuilder(operation)
         .asChildOf(parent)
         .start()
-        .addError("Terrible Error with Throwable", new Throwable with NoStackTrace)
+        .fail("Terrible Error with Throwable", new Throwable with NoStackTrace)
         .finish()
 
       val histogram = Span.Metrics.ProcessingTime.withTags(TagSet.from(Map(operationTag, noErrorTag, parentOperationTag)))
@@ -166,8 +166,8 @@ class SpanMetricsSpec extends WordSpecLike with Matchers with InstrumentInspecti
     }
   }
 
-  val errorTag = "error" -> "true"
-  val noErrorTag = "error" -> "false"
+  val errorTag = "error" -> true
+  val noErrorTag = "error" -> false
 
   private def withoutSpanScopingEnabled[T](f: => T): T = {
     disableSpanMetricScoping()
