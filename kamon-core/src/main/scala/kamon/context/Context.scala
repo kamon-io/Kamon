@@ -16,7 +16,9 @@
 package kamon
 package context
 
+import kamon.context.Context.Entry
 import kamon.tag.TagSet
+import org.eclipse.collections.impl.map.mutable.UnifiedMap
 
 
 /**
@@ -33,15 +35,14 @@ import kamon.tag.TagSet
   * Context instances are meant to be constructed by using the builder functions on the Context companion object.
   *
   */
-class Context private (val entries: Map[String, Any], val tags: TagSet) {
+class Context private (private val _underlying: UnifiedMap[String, Any], val tags: TagSet) {
 
   /**
     * Gets an entry from this Context. If the entry is present it's current value is returned, otherwise the empty value
     * from the provided key will be returned.
     */
   def get[T](key: Context.Key[T]): T =
-    entries.getOrElse(key.name, key.emptyValue).asInstanceOf[T]
-
+    _underlying.getOrDefault(key.name, key.emptyValue).asInstanceOf[T]
 
   /**
     * Executes a lookup on the context tags. The actual return type depends on the provided lookup instance. Take a look
@@ -50,38 +51,38 @@ class Context private (val entries: Map[String, Any], val tags: TagSet) {
   def getTag[T](lookup: TagSet.Lookup[T]): T =
     tags.get(lookup)
 
-
   /**
     * Creates a new Context instance that includes the provided key and value. If the provided key was already
     * associated with another value then the previous value will be discarded and overwritten with the provided one.
     */
-  def withKey[T](key: Context.Key[T], value: T): Context =
-    new Context(entries.updated(key.name, value), tags)
+  def withKey[T](key: Context.Key[T], value: T): Context = {
+    val mergedEntries = new UnifiedMap[String, Any](_underlying.size() + 1)
+    mergedEntries.putAll(_underlying)
+    mergedEntries.put(key.name, value)
 
+    new Context(mergedEntries, tags)
+  }
 
   /**
     * Creates a new Context instance that includes the provided tag key and value. If the provided tag key was already
     * associated with another value then the previous tag value will be discarded and overwritten with the provided one.
     */
   def withTag(key: String, value: String): Context =
-    new Context(entries, tags.withTag(key, value))
-
+    new Context(_underlying, tags.withTag(key, value))
 
   /**
     * Creates a new Context instance that includes the provided tag key and value. If the provided tag key was already
     * associated with another value then the previous tag value will be discarded and overwritten with the provided one.
     */
   def withTag(key: String, value: Long): Context =
-    new Context(entries, tags.withTag(key, value))
-
+    new Context(_underlying, tags.withTag(key, value))
 
   /**
     * Creates a new Context instance that includes the provided tag key and value. If the provided tag key was already
     * associated with another value then the previous tag value will be discarded and overwritten with the provided one.
     */
   def withTag(key: String, value: Boolean): Context =
-    new Context(entries, tags.withTag(key, value))
-
+    new Context(_underlying, tags.withTag(key, value))
 
   /**
     * Creates a new Context instance that includes the provided tags. If any of the tags in this instance are associated
@@ -89,15 +90,13 @@ class Context private (val entries: Map[String, Any], val tags: TagSet) {
     * ones.
     */
   def withTags(tags: TagSet): Context =
-    new Context(entries, this.tags.withTags(tags))
-
+    new Context(_underlying, this.tags.withTags(tags))
 
   /**
     * Returns whether this Context does not have any tags and does not have any entries.
     */
   def isEmpty(): Boolean =
-    entries.isEmpty && tags.isEmpty
-
+    _underlying.isEmpty && tags.isEmpty
 
   /**
     * Returns whether this Context has any information, either as tags or entries.
@@ -105,18 +104,39 @@ class Context private (val entries: Map[String, Any], val tags: TagSet) {
   def nonEmpty(): Boolean =
     !isEmpty()
 
+  /**
+    * Returns a loosely typed iterator of all entries in this Context.
+    */
+  def entries(): Iterator[Context.Entry] = new Iterator[Context.Entry] {
+    private val _entriesIterator = _underlying.keyValuesView().iterator()
+    private val _entry = Entry.Mutable(null, null)
+
+    override def hasNext: Boolean =
+      _entriesIterator.hasNext
+
+    override def next(): Context.Entry = {
+      val pair = _entriesIterator.next()
+      _entry.key = pair.getOne
+      _entry.value = pair.getTwo
+      _entry
+    }
+  }
 }
 
 object Context {
 
-  val Empty = new Context(Map.empty, TagSet.Empty)
+  private val _emptyEntries = UnifiedMap.newMap[String, Any]()
+
+  /**
+    * A Context that doesn't have any entries nor tags.
+    */
+  val Empty = new Context(_emptyEntries, TagSet.Empty)
 
   /**
     * Creates a new Context instance with the provided tags and no entries.
     */
   def of(tags: TagSet): Context =
-    new Context(Map.empty, tags)
-
+    new Context(_emptyEntries, tags)
 
   def of(tagKey: String, tagValue: String): Context =
     ???
@@ -125,49 +145,43 @@ object Context {
     * Creates a new Context instance with one tag.
     */
   def of(tagKey: String, tagValue: String): Context =
-    new Context(Map.empty, TagSet.of(tagKey, tagValue))
-
+    new Context(_emptyEntries, TagSet.of(tagKey, tagValue))
 
   /**
     * Creates a new Context instance with one tag.
     */
   def of(tagKey: String, tagValue: Long): Context =
-    new Context(Map.empty, TagSet.of(tagKey, tagValue))
-
+    new Context(_emptyEntries, TagSet.of(tagKey, tagValue))
 
   /**
     * Creates a new Context instance with one tag.
     */
   def of(tagKey: String, tagValue: Boolean): Context =
-    new Context(Map.empty, TagSet.of(tagKey, tagValue))
+    new Context(_emptyEntries, TagSet.of(tagKey, tagValue))
 
   /**
     * Creates a new Context instance with the provided key and no tags.
     */
   def of[T](key: Context.Key[T], value: T): Context =
-    new Context(Map(key.name -> value), TagSet.Empty)
-
+    new Context(UnifiedMap.newWithKeysValues(key.name, value), TagSet.Empty)
 
   /**
     * Creates a new Context instance with a single entry and the provided tags.
     */
   def of[T](key: Context.Key[T], value: T, tags: TagSet): Context =
-    new Context(Map(key.name -> value), tags)
-
+    new Context(UnifiedMap.newWithKeysValues(key.name, value), tags)
 
   /**
     * Creates a new Context instance with two entries and no tags.
     */
   def of[T, U](keyOne: Context.Key[T], valueOne: T, keyTwo: Context.Key[U], valueTwo: U): Context =
-    new Context(Map(keyOne.name -> valueOne, keyTwo.name -> valueTwo), TagSet.Empty)
-
+    new Context(UnifiedMap.newWithKeysValues(keyOne.name, valueOne, keyTwo.name, valueTwo), TagSet.Empty)
 
   /**
     * Creates a new Context instance with two entries and the provided tags.
     */
   def of[T, U](keyOne: Context.Key[T], valueOne: T, keyTwo: Context.Key[U], valueTwo: U, tags: TagSet): Context =
-    new Context(Map(keyOne.name -> valueOne, keyTwo.name -> valueTwo), tags)
-
+    new Context(UnifiedMap.newWithKeysValues(keyOne.name, valueOne, keyTwo.name, valueTwo), tags)
 
   /**
     * Creates a new Context.Key instance that can be used to insert and retrieve values from the context entries.
@@ -184,16 +198,25 @@ object Context {
     *
     * If you try to read an entry from a context and such entry is not present, the empty value for the key is returned
     * instead.
-    *
-    * @param name Key name. Must be unique.
-    * @param emptyValue Value to be returned when reading from a context that doesn't have an entry with this key.
-    * @tparam ValueType Type of the value to be held on the context with this key.
     */
-  final class Key[ValueType](val name: String, val emptyValue: ValueType) {
+  final class Key[T](val name: String, val emptyValue: T) {
     override def hashCode(): Int =
       name.hashCode
 
     override def equals(that: Any): Boolean =
       that.isInstanceOf[Context.Key[_]] && that.asInstanceOf[Context.Key[_]].name == this.name
+  }
+
+  /**
+    * An untyped representation of a Context entry.
+    */
+  trait Entry {
+    def key: String
+    def value: Any
+  }
+
+  object Entry {
+
+    private[context] case class Mutable(var key: String, var value: Any) extends Entry
   }
 }

@@ -242,25 +242,26 @@ object BinaryPropagation {
           contextData.setTags(tagsData)
         }
 
-        if (context.entries.nonEmpty) {
-          val entries = settings.outgoingEntries.collect {
-            case (entryName, entryWriter) if context.entries.contains(entryName) =>
-              val colferEntry = new ColferEntry()
-              try {
-                output.reset()
-                entryWriter.write(context, output)
 
-                colferEntry.key = entryName
-                colferEntry.value = output.toByteArray()
-              } catch {
-                case NonFatal(t) => _logger.warn("Failed to write entry [{}]", entryName.asInstanceOf[Any], t)
-              }
+        val entriesBuilder = Array.newBuilder[ColferEntry]
+        context.entries().foreach { entry =>
+          settings.outgoingEntries.get(entry.key).foreach { entryWriter =>
+            val colferEntry = new ColferEntry()
+            try {
+              output.reset()
+              entryWriter.write(context, output)
 
-              colferEntry
+              colferEntry.key = entry.key
+              colferEntry.value = output.toByteArray()
+            } catch {
+              case NonFatal(t) => _logger.warn("Failed to write entry [{}]", entry.key.asInstanceOf[Any], t)
+            }
+
+            entriesBuilder += colferEntry
           }
-
-          contextData.entries = entries.toArray
         }
+
+        contextData.entries = entriesBuilder.result()
 
         try {
           val contextSize = contextData.marshal(contextOutgoingBuffer, 0)
