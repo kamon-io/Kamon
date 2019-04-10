@@ -14,17 +14,23 @@
  * =========================================================================================
  */
 
-package kamon.util
+package kamon
+package util
 
 import org.slf4j.LoggerFactory
 import scala.concurrent.ExecutionContext
 
 /**
-  * For small code blocks that don't need to be run on a separate thread.
+  * Execution Context that runes any submitted task on the calling thread. This is meant to be used for small code
+  * blocks like recording or finishing a Span that usually happen after completing a Future.
   */
 object CallingThreadExecutionContext extends ExecutionContext {
-  private val logger = LoggerFactory.getLogger("kamon.util.CallingThreadExecutionContext")
 
-  override def execute(runnable: Runnable): Unit = runnable.run
-  override def reportFailure(t: Throwable): Unit = logger.error(t.getMessage, t)
+  private val _logger = LoggerFactory.getLogger("kamon.util.CallingThreadExecutionContext")
+
+  override def execute(runnable: Runnable): Unit =
+    runnable.run
+
+  override def reportFailure(t: Throwable): Unit =
+    _logger.error(t.getMessage, t)
 }

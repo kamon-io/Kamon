@@ -4,6 +4,9 @@ import scala.util.Try
 import com.typesafe.config.{Config, ConfigFactory}
 import org.slf4j.LoggerFactory
 
+/**
+  * Exposes APIs to access and modify Kamon's configuration and to get notified of reconfigure events.
+  */
 trait Configuration { self: ClassLoading =>
   private val logger = LoggerFactory.getLogger(classOf[Configuration])
   private var _currentConfig: Config = ConfigFactory.load(self.classLoader())

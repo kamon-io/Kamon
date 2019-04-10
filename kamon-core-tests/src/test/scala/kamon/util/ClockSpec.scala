@@ -26,14 +26,14 @@ class ClockSpec extends WordSpec with Matchers {
     }
 
     "calculate ticks aligned to rounded boundaries" in {
-      Clock.nextTick(Instant.parse("2017-12-18T08:39:59.999Z"), Duration.ofSeconds(10)).toString shouldBe "2017-12-18T08:40:00Z"
-      Clock.nextTick(Instant.parse("2017-12-18T08:40:00.000Z"), Duration.ofSeconds(10)).toString shouldBe "2017-12-18T08:40:10Z"
-      Clock.nextTick(Instant.parse("2017-12-18T08:39:14.906Z"), Duration.ofSeconds(10)).toString shouldBe "2017-12-18T08:39:20Z"
+      Clock.nextAlignedInstant(Instant.parse("2017-12-18T08:39:59.999Z"), Duration.ofSeconds(10)).toString shouldBe "2017-12-18T08:40:00Z"
+      Clock.nextAlignedInstant(Instant.parse("2017-12-18T08:40:00.000Z"), Duration.ofSeconds(10)).toString shouldBe "2017-12-18T08:40:10Z"
+      Clock.nextAlignedInstant(Instant.parse("2017-12-18T08:39:14.906Z"), Duration.ofSeconds(10)).toString shouldBe "2017-12-18T08:39:20Z"
     }
   }
 
   val MicrosInSecond = 1000000
 
   def newClock(): Clock =
-    new util.Clock.Default()
+    new util.Clock.Anchored()
 }

@@ -140,7 +140,7 @@ class PeriodSnapshotAccumulatorSpec extends WordSpec with Reconfigure with Instr
     }
   }
 
-  val alignedZeroTime = Clock.nextTick(Kamon.clock().instant(), Duration.ofSeconds(60)).minusSeconds(60)
+  val alignedZeroTime = Clock.nextAlignedInstant(Kamon.clock().instant(), Duration.ofSeconds(60)).minusSeconds(60)
   val unAlignedZeroTime = alignedZeroTime.plusSeconds(3)
 
   // Aligned snapshots, every 5 seconds from second 00.

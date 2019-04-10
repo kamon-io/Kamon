@@ -10,7 +10,6 @@ import org.slf4j.LoggerFactory
 trait Init { self: ModuleLoading with Configuration with CurrentStatus =>
   private val _logger = LoggerFactory.getLogger(classOf[Init])
 
-
   /**
     * Attempts to attach the instrumentation agent and start all registered modules.
     */
@@ -18,7 +17,6 @@ trait Init { self: ModuleLoading with Configuration with CurrentStatus =>
     self.loadModules()
     self.attachInstrumentation()
   }
-
 
   /**
     * Reconfigures Kamon to use the provided configuration and then attempts to attach the instrumentation agent and
@@ -29,7 +27,6 @@ trait Init { self: ModuleLoading with Configuration with CurrentStatus =>
     self.loadModules()
     self.attachInstrumentation()
   }
-
 
   /**
     * Tries to attach the Kanela instrumentation agent, if available on the classpath. Users can get the Kanela agent
@@ -43,6 +40,12 @@ trait Init { self: ModuleLoading with Configuration with CurrentStatus =>
         val attachMethod = attacherClass.getDeclaredMethod("attach")
         attachMethod.invoke(null)
       } catch {
+        case _: ClassNotFoundException =>
+          _logger.warn(
+            "Failed to attach the instrumentation because the Kanela agent is not present on the classpath. " +
+            "Consider adding the kamon-bundle or kanela-agent dependencies."
+          )
+
         case t: Throwable =>
           _logger.error("Failed to attach the instrumentation agent", t)
       }

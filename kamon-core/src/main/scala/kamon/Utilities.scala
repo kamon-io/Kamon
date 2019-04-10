@@ -11,7 +11,7 @@ import scala.collection.concurrent.TrieMap
   * Base utilities used by other Kamon components.
   */
 trait Utilities { self: Configuration =>
-  private val _clock = new Clock.Default()
+  private val _clock = new Clock.Anchored()
   private val _scheduler = Executors.newScheduledThreadPool(1, numberedThreadFactory("kamon-scheduler", daemon = false))
   private val _filters = TrieMap.empty[String, Filter]
 

@@ -20,20 +20,17 @@ class EWMA private(weightingFactor: Double) {
   private val _newDataWeightFactor = 1D - weightingFactor
   private var _count = 0L
 
-
   /**
     * Returns the current exponentially weighted moving average.
     */
   def average(): Double =
     _current
 
-
   /**
     * Return the number of recorded values.
     */
   def count(): Long =
     _count
-
 
   /**
     * Adds the provided value to the exponentially weighted moving average.
@@ -55,13 +52,11 @@ object EWMA {
   // number of values represented in the moving average can be calculated via consideredValues = 1 / (1 - factor)
   private val _fallbackWeightingFactor = 0.9D
 
-
   /**
     * Creates a new EWMA instance with a weighting factor of 0.9.
     */
   def create(): EWMA =
     create(_fallbackWeightingFactor)
-
 
   /**
     * Creates a new EWMA instance with the provided weighting factor. If the provided weighting factor is not between

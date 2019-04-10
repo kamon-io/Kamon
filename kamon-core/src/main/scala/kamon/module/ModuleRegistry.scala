@@ -155,7 +155,7 @@ class ModuleRegistry(classLoading: ClassLoading, configuration: Configuration, c
       val interval = _registrySettings.metricTickInterval.toMillis
       val initialDelay = if(_registrySettings.optimisticMetricTickAlignment) {
         val now = clock.instant()
-        val nextTick = Clock.nextTick(now, _registrySettings.metricTickInterval)
+        val nextTick = Clock.nextAlignedInstant(now, _registrySettings.metricTickInterval)
         Duration.between(now, nextTick).toMillis
       } else _registrySettings.metricTickInterval.toMillis
 

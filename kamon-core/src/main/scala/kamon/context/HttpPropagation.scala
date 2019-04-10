@@ -38,16 +38,11 @@ object HttpPropagation {
 
     /**
       * Reads a single HTTP header value.
-      *
-      * @param header HTTP header name
-      * @return The HTTP header value, if present.
       */
     def read(header: String): Option[String]
 
     /**
-      * Reads all HTTP headers present in the wrapped HTTP message.
-      *
-      * @return A map from header name to
+      * Returns a map with all HTTP headers present in the wrapped HTTP message.
       */
     def readAll(): Map[String, String]
   }
@@ -59,9 +54,6 @@ object HttpPropagation {
 
     /**
       * Writes a HTTP header into a HTTP message.
-      *
-      * @param header HTTP header name.
-      * @param value HTTP header value.
       */
     def write(header: String, value: String): Unit
   }
@@ -69,10 +61,7 @@ object HttpPropagation {
 
 
   /**
-    * Create a new default HTTP propagation instance from the provided configuration.
-    *
-    * @param config HTTP propagation channel configuration
-    * @return A newly constructed HttpPropagation instance.
+    * Create a new HTTP propagation instance from the provided configuration.
     */
   def from(config: Config, classLoading: ClassLoading): Propagation[HttpPropagation.HeaderReader, HttpPropagation.HeaderWriter] = {
     new HttpPropagation.Default(Settings.from(config, classLoading))

@@ -13,33 +13,55 @@
  * =========================================================================================
  */
 
-package kamon.context
+package kamon
+package context
 
+/**
+  * A temporary space to store a Context instance.
+  */
 trait Storage {
+
+  /**
+    * Returns the Context instance held in the Storage, or Context.Empty if nothing is stored.
+    */
   def current(): Context
+
+  /**
+    * Temporarily puts a Context instance in the Storage.
+    */
   def store(context: Context): Storage.Scope
+
 }
 
 object Storage {
 
+  /**
+    * Encapsulates the extend during which a Context is held by an Storage implementation. Once a Scope is closed, the
+    * Context will be removed from the Storage that created the Scope.
+    */
   trait Scope {
+
+    /**
+      * Returns the Context managed by this Scope.
+      */
     def context: Context
+
+    /**
+      * Removes the Context from the Storage. Implementations will typically have a reference to the Context that was
+      * present before the Scope was created and put it back in the Storage upon closing.
+      */
     def close(): Unit
   }
 
   /**
-    * Wrapper that implements optimized {@link ThreadLocal} access pattern ideal for heavily used
-    * ThreadLocals.
+    * Wrapper that implements an optimized ThreadLocal access pattern ideal for heavily used ThreadLocals. It is faster
+    * to use a mutable holder object and always perform ThreadLocal.get() and never use ThreadLocal.set(), because the
+    * value is more likely to be found in the ThreadLocalMap direct hash slot and avoid the slow path of
+    * ThreadLocalMap.getEntryAfterMiss().
     *
-    * <p> It is faster to use a mutable holder object and always perform ThreadLocal.get() and never use
-    * ThreadLocal.set(), because the value is more likely to be found in the ThreadLocalMap direct hash
-    * slot and avoid the slow path ThreadLocalMap.getEntryAfterMiss().
-    *
-    * <p> Credit to @trask from the FastThreadLocal in glowroot.
-    *
-    * <p> One small change is that we don't use an kamon-defined holder object as that would prevent class unloading.
-    *
-    * */
+    * Credit to @trask from the FastThreadLocal in glowroot. One small change is that we don't use an kamon-defined
+    * holder object as that would prevent class unloading.
+    */
   class ThreadLocal extends Storage {
     private val tls = new java.lang.ThreadLocal[Array[AnyRef]]() {
       override def initialValue(): Array[AnyRef] =

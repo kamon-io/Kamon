@@ -32,16 +32,16 @@ import scala.util.{Failure, Success, Try}
 
 /**
   * Context propagation that uses byte stream abstractions as the transport medium. The Binary propagation uses
-  * instances of [[ByteStreamReader]] and [[ByteStreamWriter]] to decode and encode Context instances, respectively.
+  * instances of ByteStreamReader and ByteStreamWriter to decode and encode Context instances, respectively.
   *
-  * Binary propagation uses the [[ByteStreamReader]] and [[ByteStreamWriter]] abstraction which closely model the APIs
-  * from [[InputStream]] and [[OutputStream]], but without exposing additional functionality that wouldn't have any
+  * Binary propagation uses the ByteStreamReader and ByteStreamWriter abstraction which closely model the APIs from
+  * InputStream and OutputStream, respectively, but without exposing additional functionality that wouldn't have any
   * well defined behavior for Context propagation, e.g. flush or close functions on OutputStreams.
   */
 object BinaryPropagation {
 
   /**
-    * Represents a readable stream of bytes. This interface closely resembles [[InputStream]], minus the functionality
+    * Represents a readable stream of bytes. This interface closely resembles InputStream, minus the functionality
     * that wouldn't have a clearly defined behavior in the context of Context propagation.
     */
   trait ByteStreamReader {
@@ -51,27 +51,19 @@ object BinaryPropagation {
     def available(): Int
 
     /**
-      * Reads as many bytes as possible into the target byte array.
-      *
-      * @param target Target buffer in which the read bytes will be written.
-      * @return The number of bytes written into the target buffer.
+      * Reads as many bytes as possible into the target byte array and returns the number of byes that were actually
+      * written.
       */
     def read(target: Array[Byte]): Int
 
     /**
-      * Reads a specified number of bytes into the target buffer, starting from the offset position.
-      *
-      * @param target Target buffer in which read bytes will be written.
-      * @param offset Offset index in which to start writing bytes on the target buffer.
-      * @param count Number of bytes to be read.
-      * @return The number of bytes written into the target buffer.
+      * Reads a specified number of bytes into the target buffer, starting from the offset position and returns the
+      * number of bytes that were actually read.
       */
     def read(target: Array[Byte], offset: Int, count: Int): Int
 
     /**
-      * Reads all available bytes into a newly created byte array.
-      *
-      * @return All bytes read.
+      * Returns an array with all bytes from this stream.
       */
     def readAll(): Array[Byte]
   }
@@ -80,7 +72,7 @@ object BinaryPropagation {
   object ByteStreamReader {
 
     /**
-      * Creates a new [[ByteStreamReader]] that reads data from a byte array.
+      * Creates a new ByteStreamReader that reads data from a byte array.
       */
     def of(bytes: Array[Byte]): ByteStreamReader = new ByteArrayInputStream(bytes) with ByteStreamReader {
       override def readAll(): Array[Byte] = {
@@ -93,7 +85,7 @@ object BinaryPropagation {
 
 
   /**
-    * Represents a writable stream of bytes. This interface closely resembles [[OutputStream]], minus the functionality
+    * Represents a writable stream of bytes. This interface closely resembles OutputStream, minus the functionality
     * that wouldn't have a clearly defined behavior in the context of Context propagation.
     */
   trait ByteStreamWriter {
@@ -104,11 +96,7 @@ object BinaryPropagation {
     def write(bytes: Array[Byte]): Unit
 
     /**
-      * Writes a portion of the provided bytes into the stream.
-      *
-      * @param bytes Buffer from which data will be selected.
-      * @param offset Starting index on the buffer.
-      * @param count Number of bytes to write into the stream.
+      * Writes a portion of the provided bytes into the stream, starting from provided offset.
       */
     def write(bytes: Array[Byte], offset: Int, count: Int): Unit
 
@@ -139,10 +127,7 @@ object BinaryPropagation {
 
 
   /**
-    * Create a new default Binary Propagation instance from the provided configuration.
-    *
-    * @param config Binary Propagation channel configuration
-    * @return A newly constructed HttpPropagation instance.
+    * Create a new Binary Propagation instance from the provided configuration.
     */
   def from(config: Config, classLoading: ClassLoading): Propagation[ByteStreamReader, ByteStreamWriter] = {
     new BinaryPropagation.Default(Settings.from(config, classLoading))

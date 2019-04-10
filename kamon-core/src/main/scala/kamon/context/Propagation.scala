@@ -20,25 +20,20 @@ package kamon.context
   * representation of a given Context instance to the appropriate mediums. Out of the box, Kamon ships with two
   * implementations:
   *
-  *   * HttpPropagation: Uses HTTP headers as the medium to transport the Context data.
-  *   * BinaryPropagation: Uses byte streams as the medium to transport the Context data.
+  *   - HttpPropagation: Uses HTTP headers as the medium to transport the Context data.
+  *   - BinaryPropagation: Uses byte streams as the medium to transport the Context data.
   *
   */
 trait Propagation[ReaderMedium, WriterMedium] {
 
   /**
-    * Attempts to read a Context from the [[ReaderMedium]].
-    *
-    * @param medium An abstraction the reads data from the medium transporting the Context data.
-    * @return The decoded Context instance or an empty Context if no entries or tags could be read from the medium.
+    * Reads a Context from a ReaderMedium instance. If there is any problem while reading the Context then Context.Empty
+    * should be returned instead of throwing any exceptions.
     */
   def read(medium: ReaderMedium): Context
 
   /**
-    * Attempts to write a Context instance to the [[WriterMedium]].
-    *
-    * @param context Context instance to be written.
-    * @param medium An abstraction that writes data into the medium that will transport the Context data.
+    * Attempts to write a Context instance to the WriterMedium.
     */
   def write(context: Context, medium: WriterMedium): Unit
 
@@ -47,34 +42,27 @@ trait Propagation[ReaderMedium, WriterMedium] {
 object Propagation {
 
   /**
-    * Encapsulates logic required to read a single context entry from a medium. Implementations of this trait
-    * must be aware of the entry they are able to read.
+    * Encapsulates logic required to read a single Context entry from a medium. Implementations of this trait must be
+    * aware of the entry they are able to read.
     */
   trait EntryReader[Medium] {
 
     /**
-      * Tries to read a context entry from the medium. If a context entry is successfully read, implementations
-      * must return an updated context instance that includes such entry. If no entry could be read simply return the
-      * context instance that was passed in, unchanged.
-      *
-      * @param medium  An abstraction the reads data from the medium transporting the Context data.
-      * @param context Current context.
-      * @return Either the original context passed in or a modified version of it, including the read entry.
+      * Tries to read a Context entry from the medium. If a Context entry is successfully read, implementations must
+      * return an updated Context instance that includes such entry. If no entry could be read simply return the Context
+      * instance that was passed in, unchanged.
       */
     def read(medium: Medium, context: Context): Context
   }
 
   /**
-    * Encapsulates logic required to write a single context entry to the medium. Implementations of this trait
-    * must be aware of the entry they are able to write.
+    * Encapsulates logic required to write a single Context entry to the medium. Implementations of this trait must be
+    * aware of the entry they are able to write.
     */
   trait EntryWriter[Medium] {
 
     /**
-      * Tries to write a context entry into the medium.
-      *
-      * @param context   The context from which entries should be written.
-      * @param medium    An abstraction that writes data into the medium that will transport the Context data.
+      * Tries to write an entry from the provided Context into the medium.
       */
     def write(context: Context, medium: Medium): Unit
   }
