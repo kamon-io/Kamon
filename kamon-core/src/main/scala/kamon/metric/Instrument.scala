@@ -36,7 +36,7 @@ trait Instrument[Inst, Sett <: Metric.Settings] extends Tagging[Inst] {
     metric.withTags(tags.withTag(key, value))
 
   override def withTags(tags: TagSet): Inst =
-    metric.withTags(tags.withTags(tags))
+    metric.withTags(this.tags.withTags(tags))
 
 
   /**
