@@ -14,45 +14,54 @@
  * =========================================================================================
  */
 
-package kamon
-package metric
+package kamon.util
 
-import kamon.util.RegexMatcher
 import org.scalatest.{Matchers, WordSpecLike}
 
-class RegexPathFilterSpec extends WordSpecLike with Matchers {
-  "The RegexPathFilter" should {
+class GlobPathFilterSpec extends WordSpecLike with Matchers {
+  "The GlobPathFilter" should {
 
     "match a single expression" in {
-      val filter = new RegexMatcher("/user/actor")
+      val filter = Filter.Glob("/user/actor")
 
       filter.accept("/user/actor") shouldBe true
-
       filter.accept("/user/actor/something") shouldBe false
       filter.accept("/user/actor/somethingElse") shouldBe false
     }
 
-    "match arbitray expressions ending with wildcard" in {
-      val filter = new RegexMatcher("/user/.*")
+    "match all expressions in the same level" in {
+      val filter = Filter.Glob("/user/*")
 
       filter.accept("/user/actor") shouldBe true
       filter.accept("/user/otherActor") shouldBe true
-      filter.accept("/user/something/actor") shouldBe true
-      filter.accept("/user/something/otherActor") shouldBe true
-
-      filter.accept("/otheruser/actor") shouldBe false
-      filter.accept("/otheruser/otherActor") shouldBe false
-      filter.accept("/otheruser/something/actor") shouldBe false
-      filter.accept("/otheruser/something/otherActor") shouldBe false
+      filter.accept("/user/something/actor") shouldBe false
+      filter.accept("/user/something/otherActor") shouldBe false
     }
 
-    "match numbers" in {
-      val filter = new RegexMatcher("/user/actor-\\d")
+    "match any expressions when using double star alone (**)" in {
+      val filter = Filter.Glob("**")
+
+      filter.accept("GET: /ping") shouldBe true
+      filter.accept("GET: /ping/pong") shouldBe true
+      filter.accept("this-doesn't_look good but-passes") shouldBe true
+    }
+
+    "match all expressions and cross the path boundaries when using double star suffix (**)" in {
+      val filter = Filter.Glob("/user/actor-**")
+
+      filter.accept("/user/actor-") shouldBe true
+      filter.accept("/user/actor-one") shouldBe true
+      filter.accept("/user/actor-one/other") shouldBe true
+      filter.accept("/user/something/actor") shouldBe false
+      filter.accept("/user/something/otherActor") shouldBe false
+    }
+
+    "match exactly one character when using question mark (?)" in {
+      val filter = Filter.Glob("/user/actor-?")
 
       filter.accept("/user/actor-1") shouldBe true
       filter.accept("/user/actor-2") shouldBe true
       filter.accept("/user/actor-3") shouldBe true
-
       filter.accept("/user/actor-one") shouldBe false
       filter.accept("/user/actor-two") shouldBe false
       filter.accept("/user/actor-tree") shouldBe false

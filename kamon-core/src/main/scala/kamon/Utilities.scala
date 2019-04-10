@@ -3,56 +3,59 @@ package kamon
 import java.util.concurrent.{Executors, ScheduledExecutorService, ScheduledThreadPoolExecutor}
 
 import com.typesafe.config.Config
-import kamon.util.{Clock, Filters, Matcher}
+import kamon.util.{Clock, Filter}
+
+import scala.collection.concurrent.TrieMap
 
 /**
   * Base utilities used by other Kamon components.
   */
 trait Utilities { self: Configuration =>
   private val _clock = new Clock.Default()
-  private val _scheduler = Executors.newScheduledThreadPool(schedulerPoolSize(self.config()), numberedThreadFactory("kamon-scheduler", daemon = false))
-  @volatile private var _filters = Filters.fromConfig(self.config())
+  private val _scheduler = Executors.newScheduledThreadPool(1, numberedThreadFactory("kamon-scheduler", daemon = false))
+  private val _filters = TrieMap.empty[String, Filter]
 
-  self.onReconfigure(newConfig => {
-    self._filters = Filters.fromConfig(newConfig)
-    self._scheduler match {
-      case stpe: ScheduledThreadPoolExecutor => stpe.setCorePoolSize(schedulerPoolSize(config))
-      case _ => // cannot change the pool size on other unknown types.
-    }
-  })
-
+  reconfigureUtilities(self.config())
+  self.onReconfigure(newConfig => reconfigureUtilities(newConfig))
   sys.addShutdownHook(() => _scheduler.shutdown())
 
-
   /**
-    * Applies a filter to the given pattern. All filters are configured on the kamon.util.filters configuration section.
+    * Creates a new composite Filter by looking up the provided key on Kamon's configuration. All inputs matching any of
+    * the include filters and none of the exclude filters will be accepted. The configuration is expected to have the
+    * following structure:
     *
-    * @return true if the pattern matches at least one includes pattern and none of the excludes patterns in the filter.
+    * config {
+    *   includes = [ "some/pattern", "regex:some[0-9]" ]
+    *   excludes = [ ]
+    * }
+    *
+    * By default, the patterns are treated as Glob patterns but users can explicitly configure the pattern type by
+    * prefixing the pattern with either "glob:" or "regex:". If any of the elements are missing they will be considered
+    * empty.
     */
-  def filter(filterName: String, pattern: String): Boolean =
-    _filters.accept(filterName, pattern)
+  def filter(configKey: String): Filter =
+    _filters.atomicGetOrElseUpdate(configKey, Filter.from(configKey))
 
   /**
-    * Retrieves a matcher for the given filter name. All filters are configured on the kamon.util.filters configuration
-    * section.
-    */
-  def filter(filterName: String): Matcher =
-    _filters.get(filterName)
-
-  /**
-    * Kamon's clock implementation.
+    * Kamon's Clock implementation.
     */
   def clock(): Clock =
     _clock
 
   /**
-    * Scheduler to be used for Kamon-related tasks like updating gauges.
+    * Scheduler to be used for Kamon-related tasks like updating range samplers.
     */
   def scheduler(): ScheduledExecutorService =
     _scheduler
 
+  private def reconfigureUtilities(config: Config): Unit = {
+    _filters.clear()
+    _scheduler match {
+      case stpe: ScheduledThreadPoolExecutor =>
+        val newPoolSize = config.getInt("kamon.scheduler-pool-size")
+        stpe.setCorePoolSize(newPoolSize)
 
-
-  private def schedulerPoolSize(config: Config): Int =
-    config.getInt("kamon.scheduler-pool-size")
+      case _ => // cannot change the pool size on other unknown types.
+    }
+  }
 }

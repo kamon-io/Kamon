@@ -68,7 +68,7 @@ class ModuleRegistrySpec extends WordSpec with Matchers with Reconfigure with Ev
         Kamon.counter("other.hello").withoutTags().increment()
 
         val originalReporter = new SeenMetricsReporter()
-        val reporter = MetricReporter.withTransformations(originalReporter, MetricReporter.filterMetrics("real-filter"))
+        val reporter = MetricReporter.withTransformations(originalReporter, MetricReporter.filterMetrics("test-metric-filter"))
         val subscription = Kamon.registerModule("reporter-registry-spec", reporter)
 
 
@@ -89,14 +89,9 @@ class ModuleRegistrySpec extends WordSpec with Matchers with Reconfigure with Ev
   override protected def beforeAll(): Unit = {
     applyConfig(
       """
-        |kamon {
-        |  metric.tick-interval = 10 millis
-        |
-        |  util.filters {
-        |    real-filter {
-        |      includes = [ "test**" ]
-        |    }
-        |  }
+        |kamon.metric.tick-interval = 10 millis
+        |test-metric-filter {
+        |  includes = [ "test**" ]
         |}
         |
     """.stripMargin

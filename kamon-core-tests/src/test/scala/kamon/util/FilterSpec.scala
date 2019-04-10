@@ -13,10 +13,10 @@
  * =========================================================================================
  */
 
-package kamon
-package metric
+package kamon.util
 
 import com.typesafe.config.ConfigFactory
+import kamon.Kamon
 import org.scalatest.{Matchers, WordSpec}
 
 
@@ -54,33 +54,37 @@ class FilterSpec extends WordSpec with Matchers {
 
   "the entity filters" should {
     "reject anything that doesn't match any configured filter" in {
-      Kamon.filter("not-a-filter", "hello") shouldBe false
+      Kamon.filter("kamon.util.filters.not-a-filter").accept("hello") shouldBe false
     }
 
     "evaluate patterns for filters with includes and excludes" in {
-      Kamon.filter("some-filter", "anything") shouldBe true
-      Kamon.filter("some-filter", "some-other") shouldBe true
-      Kamon.filter("some-filter", "not-me") shouldBe false
+      val filter = Kamon.filter("kamon.util.filters.some-filter")
+      filter.accept("anything") shouldBe true
+      filter.accept("some-other") shouldBe true
+      filter.accept("not-me") shouldBe false
     }
 
     "allow configuring includes only or excludes only for any filter" in {
-      Kamon.filter("only-includes", "only-me") shouldBe true
-      Kamon.filter("only-includes", "anything") shouldBe false
-      Kamon.filter("only-excludes", "any-other") shouldBe false
-      Kamon.filter("only-excludes", "not-me") shouldBe false
+      val filter = Kamon.filter("kamon.util.filters.only-includes")
+      filter.accept("only-me") shouldBe true
+      filter.accept("anything") shouldBe false
+      filter.accept("any-other") shouldBe false
+      filter.accept("not-me") shouldBe false
     }
 
     "allow to explicitly decide whether patterns are treated as Glob or Regex" in {
-      Kamon.filter("specific-rules", "/user/accepted") shouldBe true
-      Kamon.filter("specific-rules", "/other/rejected/") shouldBe false
-      Kamon.filter("specific-rules", "test-5") shouldBe true
-      Kamon.filter("specific-rules", "test-6") shouldBe false
+      val filter = Kamon.filter("kamon.util.filters.specific-rules")
+      filter.accept("/user/accepted") shouldBe true
+      filter.accept("/other/rejected/") shouldBe false
+      filter.accept("test-5") shouldBe true
+      filter.accept("test-6") shouldBe false
     }
 
     "allow filters with quoted names" in {
-      Kamon.filter("filter.with.quotes", "anything") shouldBe true
-      Kamon.filter("filter.with.quotes", "some-other") shouldBe true
-      Kamon.filter("filter.with.quotes", "not-me") shouldBe false
+      val filter = Kamon.filter("kamon.util.filters.\"filter.with.quotes\"")
+      filter.accept("anything") shouldBe true
+      filter.accept("some-other") shouldBe true
+      filter.accept("not-me") shouldBe false
     }
 
   }
