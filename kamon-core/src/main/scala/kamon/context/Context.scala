@@ -137,10 +137,7 @@ object Context {
     */
   def of(tags: TagSet): Context =
     new Context(_emptyEntries, tags)
-
-  def of(tagKey: String, tagValue: String): Context =
-    ???
-
+  
   /**
     * Creates a new Context instance with one tag.
     */
