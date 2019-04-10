@@ -23,10 +23,6 @@ import scala.collection.concurrent.TrieMap
 
 package object kamon {
 
-  type STags = Map[String, String]
-  type JTags = java.util.Map[String, String]
-
-
   /**
     * Creates a thread factory that assigns the specified name to all created Threads.
     */
@@ -55,10 +51,6 @@ package object kamon {
       }
     }
 
-  implicit class PrettyPrintTags(val tags: Map[String, String]) extends AnyVal {
-    def prettyPrint(): String =
-      tags.map { case (k, v) => k + "=" + v } mkString("{", ",", "}")
-  }
 
   /**
     *  Workaround to the non thread-safe [scala.collection.concurrent.TrieMap#getOrElseUpdate()] method. More details on
