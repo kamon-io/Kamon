@@ -96,11 +96,9 @@ lazy val benchmarks = (project in file("kamon-core-bench"))
 
 
 lazy val commonSettings = Seq(
-  scalaVersion := "2.12.8",
   javacOptions += "-XDignore.symbol.file",
   fork in Test := true,
   resolvers += Resolver.mavenLocal,
-  crossScalaVersions := Seq("2.12.8", "2.11.12", "2.10.7"),
   concurrentRestrictions in Global += Tags.limit(Tags.Test, 1),
   scalacOptions ++= Seq(
     "-deprecation",
