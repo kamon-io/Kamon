@@ -9,7 +9,7 @@ import org.slf4j.LoggerFactory
   */
 trait Configuration { self: ClassLoading =>
   private val logger = LoggerFactory.getLogger(classOf[Configuration])
-  private var _currentConfig: Config = ConfigFactory.load(self.classLoader())
+  private var _currentConfig: Config = loadInitialConfiguration()
   private var _onReconfigureHooks = Seq.empty[Configuration.OnReconfigureHook]
 
 
@@ -47,6 +47,28 @@ trait Configuration { self: ClassLoading =>
     onReconfigure(new Configuration.OnReconfigureHook {
       override def onReconfigure(newConfig: Config): Unit = hook.apply(newConfig)
     })
+  }
+
+
+  private def loadInitialConfiguration(): Config = {
+    Try {
+      ConfigFactory.load(self.classLoader())
+
+    } recoverWith {
+      case t: Throwable =>
+        logger.warn("Failed to load the default configuration, attempting to load the reference configuration", t)
+
+        Try {
+          val referenceConfig = ConfigFactory.defaultReference(self.classLoader())
+          logger.warn("Initializing with the default reference configuration, none of the user settings might be in effect", t)
+          referenceConfig
+        }
+
+    } recover {
+      case t: Throwable =>
+        logger.error("Failed to load the reference configuration, please check your reference.conf files for errors", t)
+        ConfigFactory.empty()
+    } get
   }
 
 }
