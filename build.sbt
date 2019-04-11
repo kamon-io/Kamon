@@ -20,10 +20,10 @@ lazy val kamon = (project in file("."))
   .aggregate(core, testkit, coreTests)
 
 val commonSettings = Seq(
-  scalaVersion := "2.12.4",
+  scalaVersion := "2.12.8",
   javacOptions += "-XDignore.symbol.file",
   resolvers += Resolver.mavenLocal,
-  crossScalaVersions := Seq("2.12.4", "2.11.8", "2.10.6"),
+  crossScalaVersions := Seq("2.12.8", "2.11.12", "2.10.7"),
   concurrentRestrictions in Global += Tags.limit(Tags.Test, 1),
   scalacOptions ++= Seq(
     "-deprecation",
@@ -47,7 +47,7 @@ lazy val core = (project in file("kamon-core"))
     libraryDependencies ++= Seq(
       "com.typesafe"     %  "config"          % "1.3.1",
       "org.slf4j"        %  "slf4j-api"       % "1.7.25",
-      "org.hdrhistogram" %  "HdrHistogram"    % "2.1.9",
+      "org.hdrhistogram" %  "HdrHistogram"    % "2.1.11",
       "com.lihaoyi"      %% "fansi"           % "0.2.4"
     )
   )
