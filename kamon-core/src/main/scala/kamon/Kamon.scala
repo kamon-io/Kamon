@@ -32,7 +32,7 @@ import scala.util.Try
 object Kamon extends MetricLookup with ReporterRegistry with Tracer {
   private val logger = LoggerFactory.getLogger("kamon.Kamon")
 
-  @volatile private var _config = ConfigFactory.load()
+  @volatile private var _config = loadInitialConfiguration()
   @volatile private var _environment = Environment.fromConfig(_config)
   @volatile private var _filters = Filters.fromConfig(_config)
 
@@ -186,6 +186,27 @@ object Kamon extends MetricLookup with ReporterRegistry with Tracer {
 
   private def schedulerPoolSize(config: Config): Int =
     config.getInt("kamon.scheduler-pool-size")
+
+  private def loadInitialConfiguration(): Config = {
+    Try {
+      ConfigFactory.load(ConfigFactory.load())
+
+    } recoverWith {
+      case t: Throwable =>
+        logger.warn("Failed to load the default configuration, attempting to load the reference configuration", t)
+
+        Try {
+          val referenceConfig = ConfigFactory.defaultReference()
+          logger.warn("Initializing with the default reference configuration, none of the user settings might be in effect", t)
+          referenceConfig
+        }
+
+    } recover {
+      case t: Throwable =>
+        logger.error("Failed to load the reference configuration, please check your reference.conf files for errors", t)
+        ConfigFactory.empty()
+    } get
+  }
 
 }
 
