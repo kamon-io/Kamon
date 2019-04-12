@@ -138,7 +138,8 @@ class JaegerClient(host: String,
       ByteBuffer.wrap(identifier.bytes).getLong
     }.getOrElse(0L)
 
-  private def convertDoubleSizeIdentifier(identifier: Identifier): (Long, Long) =
+  private def convertDoubleSizeIdentifier(
+      identifier: Identifier): (Long, Long) =
     Try {
       val buffer = ByteBuffer.wrap(identifier.bytes)
       (buffer.getLong, buffer.getLong)
