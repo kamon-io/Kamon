@@ -18,24 +18,35 @@ package kamon.jdbc.instrumentation
 import java.sql.SQLException
 import java.util.concurrent.Executors
 
+import com.typesafe.config.ConfigFactory
 import com.zaxxer.hikari.{HikariConfig, HikariDataSource}
-import kamon.jdbc.Metrics.ConnectionPoolMetrics
-import kamon.testkit.MetricInspection
+import kamon.Kamon
+import kamon.jdbc.Metrics
+import kamon.tag.TagSet
+import kamon.testkit.{InstrumentInspection, MetricInspection}
 import org.scalatest.concurrent.Eventually
-import org.scalatest.time.SpanSugar
+import org.scalatest.time.{Millis, Milliseconds, Seconds, Span, SpanSugar}
 import org.scalatest.{Matchers, WordSpec}
 
 import scala.concurrent.ExecutionContext
 
-class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually with SpanSugar with MetricInspection {
+class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually with SpanSugar with MetricInspection.Syntax with InstrumentInspection.Syntax {
   implicit val parallelQueriesContext = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(16))
 
+
   "the Hikari instrumentation" should {
+
+    Kamon.reconfigure(
+      ConfigFactory.parseString("kamon.metric.tick-interval=1s")
+        .withFallback(Kamon.config())
+    )
+
+
     "create a entity tracking each hikari pool using the pool name as entity name and cleanup after closing the pool" in {
       val pool1 = createPool("example-1")
       val pool2 = createPool("example-2")
 
-      ConnectionPoolMetrics.OpenConnections.valuesForTag("poolName") should contain allOf(
+      Metrics.openConnections.tagValues("poolName") should contain allOf(
         "example-1",
         "example-2"
       )
@@ -43,29 +54,32 @@ class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually w
       pool1.close()
       pool2.close()
 
-      ConnectionPoolMetrics.OpenConnections.valuesForTag("poolName") shouldBe empty
+      Thread.sleep(2000)
+      Metrics.openConnections.tagValues("poolName") shouldBe empty
     }
 
     "track the number of open connections to the database" in {
       val pool = createPool("track-open-connections", 16)
+
       val connections = (1 to 10) map { _ ⇒
         pool.getConnection()
       }
 
-      eventually {
-        ConnectionPoolMetrics.OpenConnections.refine(
+      val tags = TagSet.from(
+        Map(
           "poolVendor" -> "hikari",
           "poolName" -> "track-open-connections"
-        ).distribution().max shouldBe (10)
+        )
+      )
+
+      eventually(timeout(15 seconds), interval(200 millis)) {
+        Metrics.openConnections.withTags(tags).distribution(false).max shouldBe (10)
       }
 
       connections.foreach(_.close())
 
-      eventually(timeout(15 seconds)) {
-        ConnectionPoolMetrics.OpenConnections.refine(
-          "poolVendor" -> "hikari",
-          "poolName" -> "track-open-connections"
-        ).distribution().max shouldBe (0)
+      eventually(timeout(15 seconds),  interval(1 second)) {
+        Metrics.openConnections.withTags(tags).distribution(false).max shouldBe (0)
       }
 
       pool.close()
@@ -77,24 +91,27 @@ class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually w
         pool.getConnection()
       }
 
-      eventually {
-        ConnectionPoolMetrics.BorrowedConnections.refine(
+
+      val tags = TagSet.from(
+        Map(
           "poolVendor" -> "hikari",
           "poolName" -> "track-borrowed-connections"
-        ).distribution().max shouldBe (10)
+        )
+      )
+
+      eventually(timeout(30 seconds),  interval(1 second)) {
+        Metrics.borrowedConnections.withTags(tags).distribution().max shouldBe (10)
       }
 
       connections.drop(5).foreach(_.close())
 
-      eventually {
-        ConnectionPoolMetrics.BorrowedConnections.refine(
-          "poolVendor" -> "hikari",
-          "poolName" -> "track-borrowed-connections"
-        ).distribution().max shouldBe (5)
+      eventually(timeout(30 seconds),  interval(1 second)) {
+        Metrics.borrowedConnections.withTags(tags).distribution().max shouldBe (5)
       }
 
       pool.close()
     }
+
 
     "track the time it takes to borrow a connection" in {
       val pool = createPool("track-borrow-time", 5)
@@ -102,13 +119,19 @@ class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually w
         pool.getConnection()
       }
 
-      eventually {
-        ConnectionPoolMetrics.BorrowTime.refine(
+      val tags = TagSet.from(
+        Map(
           "poolVendor" -> "hikari",
           "poolName" -> "track-borrow-time"
-        ).distribution(resetState = false).count shouldBe (6) // 5 + 1 during setup
+        )
+      )
+
+
+      eventually {
+        Metrics.borrowTime.withTags(tags).distribution(resetState = false).count shouldBe (6) // 5 + 1 during setup
       }
     }
+
 
     "track timeout errors when borrowing a connection" in {
       val pool = createPool("track-borrow-timeouts", 5)
@@ -117,36 +140,28 @@ class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually w
       }
 
       intercept[SQLException] {
-        pool.getConnection()
-      }
-
-      eventually {
-        ConnectionPoolMetrics.BorrowTime.refine(
-          "poolVendor" -> "hikari",
-          "poolName" -> "track-borrow-timeouts"
-        ).distribution(resetState = false).max shouldBe ((3 seconds).toNanos +- (100 milliseconds).toNanos)
-      }
-
-      ConnectionPoolMetrics.BorrowTimeouts.refine(
-        "poolVendor" -> "hikari",
-        "poolName" -> "track-borrow-timeouts"
-      ).value() shouldBe 1
-    }/*
-
-    "track the number of in-flight operations in connections from the pool" in {
-      val pool = createPool("track-in-flight", 16)
-      for (id ← 1 to 10) {
-        Future {
+        try {
           pool.getConnection()
-            .prepareStatement(s"SELECT * from Address; CALL SLEEP(1000);")
-            .execute()
+        } catch {
+          case ex =>
+            println(ex.getMessage)
+            throw ex
         }
       }
 
-      eventually(timeout(2 seconds), interval(100 millis)) {
-        takeSnapshotOf("track-in-flight", "hikari-pool").minMaxCounter("in-flight").get.max should be(10)
+      val tags = TagSet.from(
+        Map(
+          "poolVendor" -> "hikari",
+          "poolName" -> "track-borrow-timeouts"
+        )
+      )
+
+      eventually(timeout(30 seconds),  interval(1 second)) {
+        Metrics.borrowTime.withTags(tags).distribution(resetState = false).max shouldBe ((1 seconds).toNanos +- (100 milliseconds).toNanos)
       }
-    }*/
+
+      Metrics.borrowTimeouts.withTags(tags).value() shouldBe 1
+    }
 
   }
 
@@ -160,7 +175,7 @@ class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually w
     config.setPassword("")
     config.setMinimumIdle(1)
     config.setMaximumPoolSize(size)
-    config.setConnectionTimeout(3000)
+    config.setConnectionTimeout(1000)
     config.setIdleTimeout(10000) // If this setting is lower than 10 seconds it will be overridden by Hikari.
 
     val hikariPool = new HikariDataSource(config)

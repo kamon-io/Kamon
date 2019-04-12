@@ -16,19 +16,20 @@
 package kamon.jdbc.instrumentation
 
 import java.lang.reflect.Method
-import java.sql.{Connection, Statement}
+import java.sql.{Connection, SQLException, Statement}
 import java.util.concurrent.Callable
 
 import com.zaxxer.hikari.HikariConfig
 import kamon.jdbc.Metrics
 import kamon.jdbc.instrumentation.mixin.{HasConnectionPoolMetrics, HasConnectionPoolMetricsMixin}
+import kamon.tag.TagSet
+import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 import kanela.agent.libs.net.bytebuddy.asm.Advice._
 import kanela.agent.libs.net.bytebuddy.implementation.bind.annotation
 import kanela.agent.libs.net.bytebuddy.implementation.bind.annotation.{RuntimeType, SuperCall}
-import kanela.agent.scala.KanelaInstrumentation
 
-class HikariInstrumentation extends KanelaInstrumentation {
+class HikariInstrumentation extends InstrumentationBuilder {
 
   /**
     * Instrument:
@@ -45,19 +46,17 @@ class HikariInstrumentation extends KanelaInstrumentation {
     * com.zaxxer.hikari.pool.HikariPool with kamon.jdbc.instrumentation.mixin.HasConnectionPoolMetrics
     *
     */
-  forTargetType("com.zaxxer.hikari.pool.HikariPool") { builder =>
-    builder
-      .withMixin(classOf[HasConnectionPoolMetricsMixin])
-      .withAdvisorFor(isConstructor(), classOf[HikariPoolConstructorAdvisor])
-      .withAdvisorFor(method("shutdown"), classOf[HikariPoolShutdownMethodAdvisor])
-      .withAdvisorFor(method("createPoolEntry"), classOf[HikariPoolCreatePoolEntryMethodAdvisor])
-      .withAdvisorFor(method("closeConnection"), classOf[HikariPoolCloseConnectionMethodAdvisor])
-      .withAdvisorFor(method("createTimeoutException"), classOf[HikariPoolCreateTimeoutExceptionMethodAdvisor])
-      .withInterceptorFor(method("getConnection").and(takesArguments(0)), HikariPoolGetConnectionMethodInterceptor)
-      .build()
-  }
+  onType("com.zaxxer.hikari.pool.HikariPool")
+    .mixin(classOf[HasConnectionPoolMetricsMixin])
+    .advise(isConstructor(), classOf[HikariPoolConstructorAdvisor])
+    .advise(method("shutdown"), classOf[HikariPoolShutdownMethodAdvisor])
+    .advise(method("createPoolEntry"), classOf[HikariPoolCreatePoolEntryMethodAdvisor])
+    .advise(method("closeConnection"), classOf[HikariPoolCloseConnectionMethodAdvisor])
+    .advise(method("createTimeoutException"), classOf[HikariPoolCreateTimeoutExceptionMethodAdvisor])
+    .advise(method("getConnection").and(takesArguments(0)), classOf[HikariPoolGetConnectionMethodInterceptor])
 
-
+  //class kanela.agent.api.instrumentation.InstrumentationBuilder$Target$$Lambda$111 is not visible to
+  //com.zaxxer.hikari.pool.HikariPool. Class loader: sun.misc.Launcher$AppClassLoader
   /**
     * Instrument:
     *
@@ -70,14 +69,11 @@ class HikariInstrumentation extends KanelaInstrumentation {
     * com.zaxxer.hikari.pool.HikariPool with kamon.jdbc.instrumentation.mixin.HasConnectionPoolMetrics
     *
     */
-  forTargetType("com.zaxxer.hikari.pool.ProxyConnection") { builder =>
-    builder
-      .withMixin(classOf[HasConnectionPoolMetricsMixin])
-      .withAdvisorFor(method("close"), classOf[ProxyConnectionCloseMethodAdvisor])
-      .withAdvisorFor(method("prepareStatement"), classOf[ProxyConnectionStatementMethodsAdvisor])
-      .withAdvisorFor(method("createStatement"), classOf[ProxyConnectionStatementMethodsAdvisor])
-      .build()
-  }
+  onType("com.zaxxer.hikari.pool.ProxyConnection")
+    .mixin(classOf[HasConnectionPoolMetricsMixin])
+    .advise(method("close"), classOf[ProxyConnectionCloseMethodAdvisor])
+    .advise(method("prepareStatement"), classOf[ProxyConnectionStatementMethodsAdvisor])
+    .advise(method("createStatement"), classOf[ProxyConnectionStatementMethodsAdvisor])
 }
 
 /**
@@ -86,8 +82,8 @@ class HikariInstrumentation extends KanelaInstrumentation {
 class HikariPoolConstructorAdvisor
 object HikariPoolConstructorAdvisor {
   @OnMethodExit
-  def onExit(@Advice.This hikariPool:Object, @Advice.Argument(0) config:HikariConfig): Unit = {
-    hikariPool.asInstanceOf[HasConnectionPoolMetrics].setConnectionPoolMetrics(
+  def onExit(@Advice.This hikariPool:HasConnectionPoolMetrics, @Advice.Argument(0) config:HikariConfig): Unit = {
+    hikariPool.setConnectionPoolMetrics(
       Metrics.ConnectionPoolMetrics(
         Map(
           "poolVendor" -> "hikari",
@@ -116,9 +112,8 @@ class HikariPoolCreatePoolEntryMethodAdvisor
 object HikariPoolCreatePoolEntryMethodAdvisor {
 
   @OnMethodExit
-  def onExit(@This hikariPool: Object): Unit = {
-    val poolMetrics = hikariPool.asInstanceOf[HasConnectionPoolMetrics].connectionPoolMetrics
-
+  def onExit(@This hikariPool: HasConnectionPoolMetrics): Unit = {
+    val poolMetrics = hikariPool.connectionPoolMetrics
     if (poolMetrics != null)
       poolMetrics.openConnections.increment()
   }
@@ -131,8 +126,9 @@ class HikariPoolCloseConnectionMethodAdvisor
 object HikariPoolCloseConnectionMethodAdvisor {
 
   @OnMethodExit
-  def onExit(@This hikariPool: Object): Unit =
+  def onExit(@This hikariPool: Object): Unit = {
     hikariPool.asInstanceOf[HasConnectionPoolMetrics].connectionPoolMetrics.openConnections.decrement()
+  }
 }
 
 /**
@@ -153,8 +149,9 @@ class ProxyConnectionCloseMethodAdvisor
 object ProxyConnectionCloseMethodAdvisor {
 
   @OnMethodExit
-  def onExit(@This proxyConnection: Object): Unit =
+  def onExit(@This proxyConnection: Object): Unit = {
     proxyConnection.asInstanceOf[HasConnectionPoolMetrics].connectionPoolMetrics.borrowedConnections.decrement()
+  }
 }
 
 
@@ -180,25 +177,29 @@ object ProxyConnectionStatementMethodsAdvisor {
 /**
   * Interceptor com.zaxxer.hikari.pool.HikariPool::getConnection
   */
+
+class HikariPoolGetConnectionMethodInterceptor
 object HikariPoolGetConnectionMethodInterceptor {
 
-  @RuntimeType
-  def executeUpdate(@annotation.Origin obj:Method, @SuperCall callable: Callable[Connection], @annotation.This hikariPool: Object): Connection = {
-    val poolMetrics = hikariPool.asInstanceOf[HasConnectionPoolMetrics].connectionPoolMetrics
-    val startTime = System.nanoTime()
-    var connection: Connection = null
+  @Advice.OnMethodEnter
+  def executeStart(): Long = {
+    System.nanoTime()
+  }
 
-    try {
-      connection = callable.call()
+  @Advice.OnMethodExit(onThrowable = classOf[Exception])
+  def executeEnd(@Advice.Enter startTime: Long, @Advice.Return connection: Connection, @Advice.This pool: HasConnectionPoolMetrics, @Advice.Thrown throwable: java.lang.Throwable): Unit = {
+    val borrowTime = System.nanoTime() - startTime
+    val poolMetrics = pool.connectionPoolMetrics
+
+    poolMetrics.borrowTime.record(borrowTime)
+
+
+    if(throwable == null && connection != null) {
       poolMetrics.borrowedConnections.increment()
-
       connection
         .asInstanceOf[HasConnectionPoolMetrics]
         .setConnectionPoolMetrics(poolMetrics)
-
-    } finally {
-      poolMetrics.borrowTime.record(System.nanoTime() - startTime)
     }
-    connection
   }
+
 }

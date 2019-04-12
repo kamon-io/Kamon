@@ -18,25 +18,38 @@ package kamon.jdbc.instrumentation
 import java.sql.{DriverManager, ResultSet}
 import java.util.concurrent.Executors
 
+import com.typesafe.config.ConfigFactory
 import kamon.Kamon
 import kamon.context.Context
 import kamon.jdbc.Metrics
 import kamon.jdbc.instrumentation.StatementMonitor.StatementTypes
-import kamon.testkit.{MetricInspection, Reconfigure, TestSpanReporter}
-import kamon.trace.Span.TagValue
-import kamon.trace.SpanCustomizer
-import kamon.util.Registration
+import kamon.module.Module.Registration
+import kamon.testkit.{InstrumentInspection, MetricInspection, Reconfigure, TestSpanReporter}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.SpanSugar
 import org.scalatest.{BeforeAndAfterAll, Matchers, OptionValues, WordSpec}
+import kamon.tag.Lookups._
+import kamon.trace.SpanBuilder
+import kamon.trace.Tracer.PreStartHook
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
+class Ba extends PreStartHook {
+  override def beforeStart(builder: SpanBuilder): Unit = {
+
+  }
+}
+
 class StatementInstrumentationSpec extends WordSpec with Matchers with Eventually with SpanSugar with BeforeAndAfterAll
-    with MetricInspection with Reconfigure with OptionValues {
+    with MetricInspection.Syntax with InstrumentInspection.Syntax with Reconfigure with OptionValues {
 
   implicit val parallelQueriesExecutor = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(10))
+
+  Kamon.reconfigure(ConfigFactory.parseString(
+    """
+      |kamon.trace.hooks.pre-start = [ "kamon.trace.Hooks$PreStart$FromContext" ]
+    """.stripMargin).withFallback(Kamon.config()))
 
   "the StatementInstrumentation" should {
     "track in-flight operations" in {
@@ -50,11 +63,11 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
       }
 
       eventually(timeout(2 seconds)) {
-        Metrics.Statements.InFlight.refine().distribution().max shouldBe 10
+        Metrics.Statements.inFlight.withoutTags().distribution().max shouldBe 10
       }
 
       eventually(timeout(2 seconds)) {
-        Metrics.Statements.InFlight.refine().distribution().max shouldBe 0
+        Metrics.Statements.inFlight.withoutTags().distribution().max shouldBe 0
       }
 
       reporter.clear()
@@ -69,8 +82,8 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
       eventually {
         val span = reporter.nextSpan().value
         span.operationName shouldBe StatementTypes.GenericExecute
-        span.tags("component") shouldBe TagValue.String("jdbc")
-        span.tags("db.statement").toString should include("SELECT * FROM Address where Nr = 1")
+        span.tags.get(plain("component")) shouldBe "jdbc"
+        span.tags.get(plain("db.statement")) should include("SELECT * FROM Address where Nr = 1")
         reporter.nextSpan() shouldBe None
       }
     }
@@ -85,8 +98,8 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
       eventually {
         val span = reporter.nextSpan().value
         span.operationName shouldBe StatementTypes.GenericExecute
-        span.tags("component") shouldBe TagValue.String("jdbc")
-        span.tags("db.statement").toString should include("SELECT * FROM Address where Nr = 2")
+        span.tags.get(plain("component")) shouldBe "jdbc"
+        span.tags.get(plain("db.statement")) should include("SELECT * FROM Address where Nr = 2")
         reporter.nextSpan() shouldBe None
       }
     }
@@ -100,8 +113,8 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
       eventually {
         val span = reporter.nextSpan().value
         span.operationName shouldBe StatementTypes.Query
-        span.tags("component") shouldBe TagValue.String("jdbc")
-        span.tags("db.statement").toString should include("SELECT * FROM Address where Nr = 3")
+        span.tags.get(plain("component")) shouldBe "jdbc"
+        span.tags.get(plain("db.statement")) should include("SELECT * FROM Address where Nr = 3")
         reporter.nextSpan() shouldBe None
       }
     }
@@ -115,8 +128,8 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
       eventually {
         val span = reporter.nextSpan().value
         span.operationName shouldBe StatementTypes.Query
-        span.tags("component") shouldBe TagValue.String("jdbc")
-        span.tags("db.statement").toString should include("SELECT * FROM Address where Nr = 4")
+        span.tags.get(plain("component")) shouldBe "jdbc"
+        span.tags.get(plain("db.statement")) should include("SELECT * FROM Address where Nr = 4")
         reporter.nextSpan() shouldBe None
       }
     }
@@ -129,8 +142,8 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
       eventually {
         val span = reporter.nextSpan().value
         span.operationName shouldBe StatementTypes.Update
-        span.tags("component") shouldBe TagValue.String("jdbc")
-        span.tags("db.statement").toString should include("INSERT INTO Address (Nr, Name) VALUES(5, 'foo')")
+        span.tags.get(plain("component")) shouldBe "jdbc"
+        span.tags.get(plain("db.statement")) should include("INSERT INTO Address (Nr, Name) VALUES(5, 'foo')")
         reporter.nextSpan() shouldBe None
       }
     }
@@ -143,8 +156,8 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
       eventually {
         val span = reporter.nextSpan().value
         span.operationName shouldBe StatementTypes.Update
-        span.tags("component") shouldBe TagValue.String("jdbc")
-        span.tags("db.statement").toString should include("INSERT INTO Address (Nr, Name) VALUES(6, 'foo')")
+        span.tags.get(plain("component")) shouldBe "jdbc"
+        span.tags.get(plain("db.statement")) should include("INSERT INTO Address (Nr, Name) VALUES(6, 'foo')")
         reporter.nextSpan() shouldBe None
       }
     }
@@ -162,26 +175,25 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
       eventually {
         val span = reporter.nextSpan().value
         span.operationName shouldBe StatementTypes.Batch
-        span.tags("component") shouldBe TagValue.String("jdbc")
-        span.tags("db.statement").toString should include("INSERT INTO Address (Nr, Name) VALUES(?, 'foo')")
+        span.tags.get(plain("component")) shouldBe "jdbc"
+        span.tags.get(plain("db.statement")).toString should include("INSERT INTO Address (Nr, Name) VALUES(?, 'foo')")
         reporter.nextSpan() shouldBe None
       }
     }
 
-    "pickup a SpanCustomizer from the current context and apply it to the new spans" in {
+    //TODO should be covered by kamon-core tests
+/*    "pickup a SpanCustomizer from the current context and apply it to the new spans" in {
       val select = s"SELECT * FROM Address where Nr = 1"
-      Kamon.withContext(Context(SpanCustomizer.ContextKey, SpanCustomizer.forOperationName("getAddress"))) {
-        connection.prepareStatement(select).executeQuery()
-      }
+      connection.prepareStatement(select).executeQuery()
 
       eventually {
         val span = reporter.nextSpan().value
         span.operationName shouldBe "getAddress"
-        span.tags("component") shouldBe TagValue.String("jdbc")
-        span.tags("db.statement").toString should include("SELECT * FROM Address where Nr = 1")
+        span.tags.get(plain("component")) shouldBe "jdbc"
+        span.tags.get(plain("db.statement")) should include("SELECT * FROM Address where Nr = 1")
         reporter.nextSpan() shouldBe None
       }
-    }
+    }*/
 
     "add errors to Spans when errors happen" in {
       val insert = s"INSERT INTO NotATable (Nr, Name) VALUES(1, 'foo')"
@@ -192,8 +204,10 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
       eventually {
         val span = reporter.nextSpan().value
         span.operationName shouldBe StatementTypes.GenericExecute
-        span.tags("component") shouldBe TagValue.String("jdbc")
-        span.tags("error") shouldBe TagValue.True
+        span.tags.get(plain("component")) shouldBe "jdbc"
+        span.metricTags.get(plainBoolean("error")) shouldBe (true)
+        span.tags.get(option("error.message")) should be ('defined)
+        span.tags.get(option("error.stacktrace")) should be ('defined)
         reporter.nextSpan() shouldBe None
       }
 
@@ -202,8 +216,10 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
       eventually {
         val span = reporter.nextSpan().value
         span.operationName shouldBe StatementTypes.Query
-        span.tags("component") shouldBe TagValue.String("jdbc")
-        span.tags("error") shouldBe TagValue.True
+        span.tags.get(plain("component")) shouldBe "jdbc"
+        span.metricTags.get(plainBoolean("error")) shouldBe (true)
+        span.tags.get(option("error.message")) should be ('defined)
+        span.tags.get(option("error.stacktrace")) should be ('defined)
         reporter.nextSpan() shouldBe None
       }
 
@@ -212,8 +228,8 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
       eventually {
         val span = reporter.nextSpan().value
         span.operationName shouldBe StatementTypes.Update
-        span.tags("component") shouldBe TagValue.String("jdbc")
-        span.tags("error") shouldBe TagValue.True
+        span.tags.get(plain("component")) shouldBe "jdbc"
+        span.metricTags.get(plainBoolean("error")) shouldBe (true)
       }
     }
 
@@ -249,11 +265,11 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
     connection.createStatement().executeUpdate(s"INSERT INTO Address (Nr, Name) VALUES(3, 'foo')")
     connection.createStatement().executeUpdate(s"INSERT INTO Address (Nr, Name) VALUES(4, 'foo')")
 
-    Metrics.Statements.InFlight.refine().distribution()
+    Metrics.Statements.inFlight.withoutTags().distribution()
 
     enableFastSpanFlushing()
     sampleAlways()
-    registration = Kamon.addReporter(reporter)
+    registration = Kamon.registerModule("testReporter", reporter)
   }
 
   override protected def afterAll(): Unit = {

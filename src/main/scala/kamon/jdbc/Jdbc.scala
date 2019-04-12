@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit
 import com.typesafe.config.Config
 import kamon.jdbc.utils.LoggingSupport
 import kamon.util.DynamicAccess
-import kamon.{Kamon, OnReconfigureHook}
+import kamon.Kamon
 
 object Jdbc extends LoggingSupport {
 
@@ -30,10 +30,11 @@ object Jdbc extends LoggingSupport {
 
   loadConfiguration(Kamon.config())
 
-  Kamon.onReconfigure(new OnReconfigureHook {
-    override def onReconfigure(newConfig: Config): Unit =
-      Jdbc.loadConfiguration(newConfig)
-  })
+
+
+  Kamon.onReconfigure(
+    newConfig => Jdbc.loadConfiguration(newConfig)
+  )
 
 
 

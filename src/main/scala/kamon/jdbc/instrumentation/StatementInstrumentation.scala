@@ -17,10 +17,11 @@ package kamon.jdbc.instrumentation
 
 import kamon.jdbc.instrumentation.advisor._
 import kamon.jdbc.instrumentation.mixin.HasConnectionPoolMetricsMixin
+import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.scala.KanelaInstrumentation
 
 
-class StatementInstrumentation extends KanelaInstrumentation {
+class StatementInstrumentation extends InstrumentationBuilder {
 
   /**
     * Instrument:
@@ -38,15 +39,12 @@ class StatementInstrumentation extends KanelaInstrumentation {
     */
   private val withOneStringArgument = withArgument(0, classOf[String])
 
-  forSubtypeOf("java.sql.Statement") { builder =>
-    builder
-      .withMixin(classOf[HasConnectionPoolMetricsMixin])
-      .withAdvisorFor(method("execute").and(withOneStringArgument), classOf[StatementExecuteMethodAdvisor])
-      .withAdvisorFor(method("executeQuery").and(withOneStringArgument), classOf[StatementExecuteQueryMethodAdvisor])
-      .withAdvisorFor(method("executeUpdate").and(withOneStringArgument), classOf[StatementExecuteUpdateMethodAdvisor])
-      .withAdvisorFor(anyMethod("executeBatch", "executeLargeBatch"), classOf[StatementExecuteBatchMethodAdvisor])
-      .build()
-  }
+  onSubTypesOf("java.sql.Statement")
+      .mixin(classOf[HasConnectionPoolMetricsMixin])
+      .advise(method("execute").and(withOneStringArgument), classOf[StatementExecuteMethodAdvisor])
+      .advise(method("executeQuery").and(withOneStringArgument), classOf[StatementExecuteQueryMethodAdvisor])
+      .advise(method("executeUpdate").and(withOneStringArgument), classOf[StatementExecuteUpdateMethodAdvisor])
+      .advise(anyMethods("executeBatch", "executeLargeBatch"), classOf[StatementExecuteBatchMethodAdvisor])
 
 
   /**
@@ -59,12 +57,9 @@ class StatementInstrumentation extends KanelaInstrumentation {
     * java.sql.PreparedStatement::executeLargeBatch
     *
     */
-  forSubtypeOf("java.sql.PreparedStatement") { builder =>
-    builder
-      .withAdvisorFor(method("execute"), classOf[PreparedStatementExecuteMethodAdvisor])
-      .withAdvisorFor(method("executeQuery"), classOf[PreparedStatementExecuteQueryMethodAdvisor])
-      .withAdvisorFor(method("executeUpdate"), classOf[PreparedStatementExecuteUpdateMethodAdvisor])
-      .build()
-  }
+  onSubTypesOf("java.sql.PreparedStatement")
+    .advise(method("execute"), classOf[PreparedStatementExecuteMethodAdvisor])
+    .advise(method("executeQuery"), classOf[PreparedStatementExecuteQueryMethodAdvisor])
+    .advise(method("executeUpdate"), classOf[PreparedStatementExecuteUpdateMethodAdvisor])
 }
 

@@ -18,16 +18,21 @@ package kamon.jdbc
 
 import kamon.Kamon
 import kamon.metric.MeasurementUnit.time
-import kamon.metric.{Counter, Histogram, RangeSampler}
+import kamon.metric.{Counter, Histogram, Metric, RangeSampler}
+import kamon.tag.TagSet
 
 object Metrics {
+  val openConnections: Metric.RangeSampler = Kamon.rangeSampler("jdbc.pool.open-connections")
+  val borrowedConnections: Metric.RangeSampler = Kamon.rangeSampler("jdbc.pool.borrowed-connections")
+  val borrowTime: Metric.Histogram = Kamon.histogram("jdbc.pool.borrow-time", time.nanoseconds)
+  val borrowTimeouts: Metric.Counter = Kamon.counter("jdbc.pool.borrow-timeouts")
 
   object Statements {
-    val InFlight = Kamon.rangeSampler("jdbc.statements.in-flight")
+    def inFlight = Kamon.rangeSampler("jdbc.statements.in-flight")
   }
 
   case class ConnectionPoolMetrics(
-    tags: Map[String, String],
+    tags: TagSet,
     openConnections: RangeSampler,
     borrowedConnections: RangeSampler,
     borrowTime: Histogram,
@@ -35,26 +40,25 @@ object Metrics {
   ) {
 
     def cleanup(): Unit = {
-      ConnectionPoolMetrics.OpenConnections.remove(tags)
-      ConnectionPoolMetrics.BorrowedConnections.remove(tags)
-      ConnectionPoolMetrics.BorrowTime.remove(tags)
-      ConnectionPoolMetrics.BorrowTimeouts.remove(tags)
+      openConnections.remove()
+      borrowedConnections.remove()
+      borrowTime.remove()
+      borrowTimeouts.remove()
     }
   }
 
   object ConnectionPoolMetrics {
-    val OpenConnections     = Kamon.rangeSampler("jdbc.pool.open-connections")
-    val BorrowedConnections = Kamon.rangeSampler("jdbc.pool.borrowed-connections")
-    val BorrowTime          = Kamon.histogram("jdbc.pool.borrow-time", time.nanoseconds)
-    val BorrowTimeouts      = Kamon.counter("jdbc.pool.borrow-timeouts")
 
-    def apply(tags: Map[String, String]): ConnectionPoolMetrics =
+    def apply(tags: Map[String, String]): ConnectionPoolMetrics ={
+      val tagSet = TagSet.from(tags)
       ConnectionPoolMetrics(
-        tags,
-        OpenConnections.refine(tags),
-        BorrowedConnections.refine(tags),
-        BorrowTime.refine(tags),
-        BorrowTimeouts.refine(tags)
+        tagSet,
+        openConnections.withTags(tagSet),
+        borrowedConnections.withTags(tagSet),
+        borrowTime.withTags(tagSet),
+        borrowTimeouts.withTags(tagSet)
       )
+    }
+
   }
 }

@@ -19,12 +19,12 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 
 import kamon.Kamon
-import kamon.Kamon.buildSpan
 import kamon.jdbc.instrumentation.mixin.HasConnectionPoolMetrics
 import kamon.jdbc.utils.LoggingSupport
 import kamon.jdbc.{Jdbc, Metrics}
 import kamon.metric.RangeSampler
-import kamon.trace.{Span, SpanCustomizer}
+import kamon.tag.{Lookups, TagSet}
+import kamon.trace.Span
 import kanela.agent.bootstrap.stack.CallStackDepth
 
 object StatementMonitor extends LoggingSupport {
@@ -38,20 +38,22 @@ object StatementMonitor extends LoggingSupport {
   def start(target: Any, sql: String, statementType: String): Option[KamonMonitorTraveler] = {
     if (CallStackDepth.incrementFor(target) == 0) {
       val poolTags = extractPoolTags(target)
-      val inFlight = Metrics.Statements.InFlight.refine(poolTags)
-      inFlight.increment()
-
+      val inFlightMetric = Metrics.Statements.inFlight.withTags(poolTags)
       val startTimestamp = Kamon.clock().instant()
-      val span = Kamon.currentContext().get(SpanCustomizer.ContextKey).customize {
-        val builder = buildSpan(statementType)
-          .withFrom(startTimestamp)
-          .withTag("component", "jdbc")
-          .withTag("db.statement", sql)
-        poolTags.foreach { case (key, value) => builder.withTag(key, value) }
-        builder
-      }.start()
+      val builder = Kamon.spanBuilder(statementType)
+        .tag("component", "jdbc")
+        .tag("db.statement", sql)
 
-      Some(KamonMonitorTraveler(target, span, sql, startTimestamp, inFlight))
+      poolTags.iterator().foreach { t =>
+        builder.tag(
+          t.key,
+          poolTags.get(Lookups.coerce(t.key))
+        )
+      }
+
+      inFlightMetric.increment()
+      val span = builder.start(startTimestamp)
+      Some(KamonMonitorTraveler(target, span, sql, startTimestamp, inFlightMetric))
     } else None
   }
 
@@ -60,7 +62,7 @@ object StatementMonitor extends LoggingSupport {
     def close(throwable: Throwable): Unit = {
 
       if (throwable != null) {
-        span.addError("error.object", throwable)
+        span.fail("error.object", throwable)
         Jdbc.onStatementError(sql, throwable)
       }
 
@@ -74,13 +76,13 @@ object StatementMonitor extends LoggingSupport {
     }
   }
 
-  private def extractPoolTags(target: Any): Map[String, String] = target match {
+  private def extractPoolTags(target: Any): TagSet = target match {
     case targetWithPoolMetrics: HasConnectionPoolMetrics =>
       Option(targetWithPoolMetrics.connectionPoolMetrics)
         .map(_.tags)
-        .getOrElse(Map.empty[String, String])
+        .getOrElse(TagSet.Empty)
     case _ =>
       logTrace(s"Statement is not a HasConnectionPoolMetrics type (used by kamon-jdbc). Target type: ${target.getClass.getTypeName}")
-      Map.empty[String, String]
+      TagSet.Empty
   }
 }

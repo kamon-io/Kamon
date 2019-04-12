@@ -21,15 +21,15 @@ import ch.vorburger.mariadb4j.DB
 import kamon.Kamon
 import kamon.jdbc.Metrics
 import kamon.jdbc.instrumentation.StatementMonitor.StatementTypes
-import kamon.testkit.{MetricInspection, Reconfigure, TestSpanReporter}
-import kamon.trace.Span.TagValue
-import kamon.util.Registration
+import kamon.module.Module.Registration
+import kamon.testkit.{InstrumentInspection, MetricInspection, Reconfigure, TestSpanReporter}
+import kamon.tag.Lookups._
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.SpanSugar
 import org.scalatest.{BeforeAndAfterAll, Matchers, OptionValues, WordSpec}
 
 class MariaInstrumentationSpec extends WordSpec with Matchers with Eventually with SpanSugar with BeforeAndAfterAll
-  with MetricInspection with Reconfigure with OptionValues {
+  with MetricInspection.Syntax with InstrumentInspection.Syntax with Reconfigure with OptionValues {
 
   "the MariaInstrumentation" should {
     "generate Spans on calls to .executeQuery() in prepared statements" in {
@@ -40,8 +40,8 @@ class MariaInstrumentationSpec extends WordSpec with Matchers with Eventually wi
       eventually {
         val span = reporter.nextSpan().value
         span.operationName shouldBe StatementTypes.Query
-        span.tags("component") shouldBe TagValue.String("jdbc")
-        span.tags("db.statement").toString should include("SELECT * FROM Address where Nr = 3")
+        span.tags.get(plain("component")) shouldBe "jdbc"
+        span.tags.get(plain("db.statement")) should include("SELECT * FROM Address where Nr = 3")
         reporter.nextSpan() shouldBe None
       }
     }
@@ -54,8 +54,8 @@ class MariaInstrumentationSpec extends WordSpec with Matchers with Eventually wi
       eventually {
         val span = reporter.nextSpan().value
         span.operationName shouldBe StatementTypes.Query
-        span.tags("component") shouldBe TagValue.String("jdbc")
-        span.tags("db.statement").toString should include("SELECT * FROM Address where Nr = 4")
+        span.tags.get(plain("component")) shouldBe ("jdbc")
+        span.tags.get(plain("db.statement")) should include("SELECT * FROM Address where Nr = 4")
         reporter.nextSpan() shouldBe None
       }
     }
@@ -68,8 +68,8 @@ class MariaInstrumentationSpec extends WordSpec with Matchers with Eventually wi
       eventually {
         val span = reporter.nextSpan().value
         span.operationName shouldBe StatementTypes.Update
-        span.tags("component") shouldBe TagValue.String("jdbc")
-        span.tags("db.statement").toString should include("INSERT INTO Address (Nr, Name) VALUES(1, 'foo')")
+        span.tags.get(plain("component")) shouldBe "jdbc"
+        span.tags.get(plain("db.statement"))should include("INSERT INTO Address (Nr, Name) VALUES(1, 'foo')")
         reporter.nextSpan() shouldBe None
       }
     }
@@ -82,8 +82,8 @@ class MariaInstrumentationSpec extends WordSpec with Matchers with Eventually wi
       eventually {
         val span = reporter.nextSpan().value
         span.operationName shouldBe StatementTypes.Update
-        span.tags("component") shouldBe TagValue.String("jdbc")
-        span.tags("db.statement").toString should include("INSERT INTO Address (Nr, Name) VALUES(2, 'foo')")
+        span.tags.get(plain("component")) shouldBe "jdbc"
+        span.tags.get(plain("db.statement")) should include("INSERT INTO Address (Nr, Name) VALUES(2, 'foo')")
         reporter.nextSpan() shouldBe None
       }
     }
@@ -112,11 +112,11 @@ class MariaInstrumentationSpec extends WordSpec with Matchers with Eventually wi
     connection.createStatement().executeUpdate(s"INSERT INTO Address (Nr, Name) VALUES(3, 'foo')")
     connection.createStatement().executeUpdate(s"INSERT INTO Address (Nr, Name) VALUES(4, 'faa')")
 
-    Metrics.Statements.InFlight.refine().distribution()
+    Metrics.Statements.inFlight.withoutTags().distribution()
 
     enableFastSpanFlushing()
     sampleAlways()
-    registration = Kamon.addReporter(reporter)
+    registration = Kamon.registerModule("testReporter", reporter)
   }
 
   override protected def afterAll(): Unit = {

@@ -14,8 +14,8 @@
  */
 
 
-val kamonCore           = "io.kamon"            %% "kamon-core"               % "1.1.3"
-val kamonTestkit        = "io.kamon"            %% "kamon-testkit"            % "1.1.3"
+val kamonCore           = "io.kamon"            %% "kamon-core"               % "2.0.0-d2d5cb18261e2c79b86340bf39524394700415e8"
+val kamonTestkit        = "io.kamon"            %% "kamon-testkit"            % "2.0.0-d2d5cb18261e2c79b86340bf39524394700415e8"
 val scalaExtension      = "io.kamon"            %% "kanela-scala-extension"   % "0.0.14"
 
 val h2                  = "com.h2database"            % "h2"                        % "1.4.182"
@@ -26,7 +26,9 @@ val hikariCP            = "com.zaxxer"                % "HikariCP"              
 lazy val root = (project in file("."))
   .enablePlugins(JavaAgent)
   .settings(name := "kamon-jdbc")
-  .settings(javaAgents += "io.kamon"    % "kanela-agent"   % "0.0.400"  % "compile;test")
+  .settings(scalaVersion := "2.12.6")
+  .settings(  crossScalaVersions := Seq("2.12.6"/*, "2.11.12", "2.10.7"*/))
+  .settings(javaAgents += "io.kamon"    % "kanela-agent"   % "0.0.18-SNAPSHOT"  % "compile;test")
   .settings(resolvers += Resolver.bintrayRepo("kamon-io", "snapshots"))
   .settings(resolvers += Resolver.mavenLocal)
   .settings(
