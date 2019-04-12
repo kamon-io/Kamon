@@ -92,9 +92,9 @@ class JaegerClient(host: String,
     val convertedSpan = new JaegerSpan(
       traceIdLow,
       traceIdHigh,
-      convertIdentifier(span.context.spanID),
-      convertIdentifier(span.context.parentID),
-      span.operationName,
+      convertIdentifier(context.spanID),
+      convertIdentifier(context.parentID),
+      kamonSpan.operationName,
       0,
       from,
       duration
@@ -137,8 +137,8 @@ class JaegerClient(host: String,
       // Assumes that Kamon was configured to use the default identity generator.
       ByteBuffer.wrap(identifier.bytes).getLong
     }.getOrElse(0L)
-  
-  private def convertDoubleSizeIdentifier(identifier: Identifier): (Long, Long) = 
+
+  private def convertDoubleSizeIdentifier(identifier: Identifier): (Long, Long) =
     Try {
       val buffer = ByteBuffer.wrap(identifier.bytes)
       (buffer.getLong, buffer.getLong)
