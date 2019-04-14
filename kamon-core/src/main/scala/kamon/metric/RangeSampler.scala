@@ -89,8 +89,7 @@ object RangeSampler {
     }
 
     override def defaultSchedule(): Unit = {
-      val sampler: RangeSampler => Unit = (r: RangeSampler) => r.sample()
-      this.autoUpdate(sampler)
+      this.autoUpdate(_.sample(): Unit)
     }
 
     /** Triggers the sampling of the internal minimum, maximum and current value indicators. */
