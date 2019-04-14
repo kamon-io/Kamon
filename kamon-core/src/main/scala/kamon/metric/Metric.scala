@@ -154,11 +154,20 @@ object Metric {
     *
     * Any actions scheduled on an instrument will be cancelled if that instrument is removed from the metric.
     */
+
+  type RichInstrument[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings, Snap] = Inst
+    with Instrument.Snapshotting[Snap]
+    with BaseMetricAutoUpdate[Inst, Sett, Snap]
+
+  type InstrumentBuilder[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings, Snap] =
+    (BaseMetric[Inst, Sett, Snap], TagSet) => RichInstrument[Inst, Sett, Snap]
+
+
   abstract class BaseMetric[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings, Snap] (
       val name: String,
       val description: String,
       val settings: Sett,
-      instrumentBuilder: (BaseMetric[Inst, Sett, Snap], TagSet) => Inst with Instrument.Snapshotting[Snap],
+      instrumentBuilder: InstrumentBuilder[Inst, Sett, Snap],
       scheduler: ScheduledExecutorService) extends Metric[Inst, Sett] with Metric.Snapshotting[Sett, Snap] {
 
     private val _instruments = TrieMap.empty[TagSet, InstrumentEntry]
@@ -226,6 +235,7 @@ object Metric {
     private def lookupInstrument(tags: TagSet): Inst = {
       val entry = _instruments.atomicGetOrElseUpdate(tags, newInstrumentEntry(tags))
       entry.removeOnNextSnapshot = false
+      entry.instrument.defaultSchedule()
       entry.instrument
     }
 
@@ -233,7 +243,7 @@ object Metric {
       new InstrumentEntry(instrumentBuilder(this, tags), Collections.synchronizedList(new util.ArrayList[ScheduledFuture[_]]()).asScala, false)
 
     private class InstrumentEntry (
-      val instrument: Inst with Instrument.Snapshotting[Snap],
+      val instrument: RichInstrument[Inst, Sett, Snap],
       val scheduledActions: mutable.Buffer[ScheduledFuture[_]],
       @volatile var removeOnNextSnapshot: Boolean
     )
@@ -246,6 +256,8 @@ object Metric {
       self: Inst =>
 
     protected def baseMetric: BaseMetric[Inst, Sett, Snap]
+
+    def defaultSchedule(): Unit = ()
 
     def autoUpdate(consumer: Inst => Unit, interval: Duration): Inst = {
       val instrument = this

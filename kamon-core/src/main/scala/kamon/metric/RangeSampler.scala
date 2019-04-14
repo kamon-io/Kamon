@@ -70,9 +70,6 @@ object RangeSampler {
     private val _max = new AtomicLongMaxUpdater(new AtomicLong(0L))
     private val _sum = new AtomicLong()
 
-    // Schedules the automatic sampling of min/max/current values.
-    autoUpdate(rs => rs.sample(): Unit)
-
     override def increment(): RangeSampler =
       increment(1)
 
@@ -89,6 +86,10 @@ object RangeSampler {
       val currentValue = _sum.addAndGet(-times)
       _min.update(-currentValue)
       this
+    }
+
+    override def defaultSchedule(): Unit = {
+      this.autoUpdate(_.sample(): Unit)
     }
 
     /** Triggers the sampling of the internal minimum, maximum and current value indicators. */
