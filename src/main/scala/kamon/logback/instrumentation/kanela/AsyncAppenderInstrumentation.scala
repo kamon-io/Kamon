@@ -21,7 +21,7 @@ import java.util.concurrent.Callable
 import kamon.Kamon
 import kamon.context.Context
 import kamon.logback.instrumentation.{ContextAwareLoggingEvent, Logback}
-import kamon.trace.{IdentityProvider, Span}
+import kamon.trace.{Identifier, Span}
 import kanela.agent.api.instrumentation.mixin.Initializer
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 import kanela.agent.libs.net.bytebuddy.asm.Advice.Argument
@@ -108,16 +108,26 @@ object GetPropertyMapMethodInterceptor {
 
   @RuntimeType
   def aroundGetMDCPropertyMap(@SuperCall callable: Callable[_]): Any = {
-    val context = Kamon.currentContext().get(Span.ContextKey)
+    val currentContext = Kamon.currentContext()
+    val span = currentContext.get(Span.Key)
 
-    if (context.context().traceID != IdentityProvider.NoIdentifier && Logback.mdcContextPropagation){
-      MDC.put(Logback.mdcTraceKey, context.context().traceID.string)
-      MDC.put(Logback.mdcSpanKey, context.context().spanID.string)
-      try {
-        callable.call()
-      } finally {
+    if (span.trace.id != Identifier.Empty && Logback.mdcContextPropagation){
+      MDC.put(Logback.mdcTraceKey, span.trace.id.string)
+      MDC.put(Logback.mdcSpanKey, span.id.string)
+
+      Logback.mdcKeys.foreach { key =>
+        val localKeyValue = currentContext.get(key) match {
+          case Some(value)  => value.toString
+          case anyOther     => if(anyOther != null) anyOther.toString else null
+        }
+
+        MDC.put(key.name, localKeyValue)
+      }
+
+      try callable.call() finally {
         MDC.remove(Logback.mdcTraceKey)
         MDC.remove(Logback.mdcSpanKey)
+        Logback.mdcKeys.foreach(key => MDC.remove(key.name))
       }
     } else {
       callable.call()

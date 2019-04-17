@@ -71,7 +71,7 @@ kamon.logback.mdc-traced-broadcast-keys = [ requestID ]
 Then, add the value to the kamon context:
 ```
 Context
-  .create(Span.ContextKey, span)
+  .create(Span.Key, span)
   .withKey(Key.broadcastString("userID"), Some("user-1"))
   .withKey(Key.local[Option[String]("requestID", None), Some("request-id") {
   // loggers called in this context will have access to the userID, requestID
