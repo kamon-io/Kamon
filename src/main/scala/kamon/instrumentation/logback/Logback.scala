@@ -14,23 +14,27 @@
  * =========================================================================================
  */
 
-package kamon.logback.instrumentation
-
+package kamon.instrumentation.logback
 
 import com.typesafe.config.Config
-import kamon.context.Context
 import kamon.Kamon
-import kamon.Configuration.OnReconfigureHook
+import kamon.context.Context
+import kamon.context.Context.Key
+
+import scala.collection.JavaConverters._
+
 
 object Logback {
 
-  @volatile private var _mdcContextPropagation: Boolean = true
-  @volatile private var _mdcTraceKey: String = "kamonTraceID"
-  @volatile private var _mdcSpanKey: String = "kamonSpanID"
+  private var _mdcContextPropagation: Boolean = true
+  private var _mdcTraceKey: String = "kamonTraceID"
+  private var _mdcSpanKey: String = "kamonSpanID"
+  private var _mdcKeys: Set[Key[Option[String]]] = Set.empty[Key[Option[String]]]
 
   def mdcTraceKey: String = _mdcTraceKey
   def mdcSpanKey: String = _mdcSpanKey
   def mdcContextPropagation: Boolean = _mdcContextPropagation
+  def mdcKeys: Set[Key[Option[String]]] = _mdcKeys
 
   loadConfiguration(Kamon.config())
 
@@ -44,6 +48,7 @@ object Logback {
     _mdcContextPropagation = logbackConfig.getBoolean("mdc-context-propagation")
     _mdcTraceKey = logbackConfig.getString("mdc-trace-id-key")
     _mdcSpanKey = logbackConfig.getString("mdc-span-id-key")
+    _mdcKeys = logbackConfig.getStringList("mdc-traced-keys").asScala.toSet.map { key: String => Context.key[Option[String]](key, None) }
   }
 }
 

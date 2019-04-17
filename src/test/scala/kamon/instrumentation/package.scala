@@ -23,14 +23,15 @@ import ch.qos.logback.classic.spi.{ILoggingEvent, LoggingEvent}
 import ch.qos.logback.classic.{AsyncAppender, Level, LoggerContext}
 import ch.qos.logback.core.Appender
 import ch.qos.logback.core.util.OptionHelper
+import kamon.instrumentation.logback.LogbackTraceIDConverter
 import kamon.logback.util.LogbackConfigurator
 import org.slf4j.impl.StaticLoggerBinder
 
-package object logback {
+package object instrumentation {
 
   val context: LoggerContext = StaticLoggerBinder.getSingleton.getLoggerFactory.asInstanceOf[LoggerContext]
   val configurator = new LogbackConfigurator(context)
-  configurator.conversionRule("traceID", classOf[kamon.logback.LogbackTraceIDConverter])
+  configurator.conversionRule("traceID", classOf[LogbackTraceIDConverter])
 
   def buildMemoryAppender(config: LogbackConfigurator): LogbackMemoryAppender = buildMemoryAppender(config,"%traceID")
 

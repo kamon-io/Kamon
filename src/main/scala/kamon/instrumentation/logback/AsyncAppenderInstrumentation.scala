@@ -14,13 +14,12 @@
  * =========================================================================================
  */
 
-package kamon.logback.instrumentation.kanela
+package kamon.instrumentation.logback
 
 import java.util.concurrent.Callable
 
 import kamon.Kamon
 import kamon.context.Context
-import kamon.logback.instrumentation.{ContextAwareLoggingEvent, Logback}
 import kamon.trace.{Identifier, Span}
 import kanela.agent.api.instrumentation.mixin.Initializer
 import kanela.agent.libs.net.bytebuddy.asm.Advice

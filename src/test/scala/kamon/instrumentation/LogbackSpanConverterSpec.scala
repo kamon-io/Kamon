@@ -14,12 +14,12 @@
  * =========================================================================================
  */
 
-package kamon.logback
+package kamon.instrumentation
 
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
 import kamon.context.Context
-import kamon.logback.instrumentation.Logback
+import kamon.instrumentation.logback.Logback
 import kamon.trace.Span
 import org.scalatest._
 import org.scalatest.concurrent.Eventually
