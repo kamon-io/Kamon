@@ -39,15 +39,15 @@ object MetricInspection {
       .toSeq
   }
 
+  private def extractInstrumentFromEntry[Inst](e: Any): Inst =
+    getFieldFromClass[Inst](e, "kamon.metric.Metric$BaseMetric$InstrumentEntry", "instrument")
+
   /**
     * Returns all instruments currently registered for the inspected metric.
     */
   def instruments[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings](metric: Metric[Inst, Sett]): Map[TagSet, Inst] = {
-    def extractInstrumentFromEntry(e: Any): Inst =
-      getFieldFromClass[Inst](e, "kamon.metric.Metric$BaseMetric$InstrumentEntry", "instrument")
-
     instrumentsMap(metric)
-      .mapValues(extractInstrumentFromEntry)
+      .mapValues(extractInstrumentFromEntry[Inst])
       .toMap
   }
 
@@ -62,7 +62,7 @@ object MetricInspection {
 
     instrumentsMap(metric)
       .filterKeys(hasAllRequestedTags)
-      .mapValues(_.asInstanceOf[Inst])
+      .mapValues(extractInstrumentFromEntry[Inst])
       .toMap
   }
 
