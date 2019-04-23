@@ -13,13 +13,10 @@
  * =========================================================================================
  */
 
-import scala.xml.Node
-import scala.xml.transform.{RewriteRule, RuleTransformer}
-
 lazy val kamon = (project in file("."))
   .settings(moduleName := "kamon")
   .settings(noPublishing: _*)
-  .aggregate(core, statusPage, testkit, tests, benchmarks)
+  .aggregate(core, corePublishing, statusPage, statusPagePublishing, testkit, tests, benchmarks)
 
 
 lazy val core = (project in file("kamon-core"))
@@ -28,10 +25,11 @@ lazy val core = (project in file("kamon-core"))
   .enablePlugins(SbtProguard)
   .settings(commonSettings: _*)
   .settings(
-    moduleName := "kamon-core",
+    skip in publish := true,
     buildInfoKeys := Seq[BuildInfoKey](version),
     buildInfoPackage := "kamon.status",
     packageBin in Compile := (proguard in Proguard).value.head,
+    assemblyExcludedJars in assembly := filterOut((fullClasspath in assembly).value, "slf4j-api", "config"),
     proguardOptions in Proguard ++= Seq(
       "-dontnote", "-dontwarn", "-ignorewarnings", "-dontobfuscate", "-dontoptimize",
       "-keepattributes **",
@@ -53,6 +51,44 @@ lazy val core = (project in file("kamon-core"))
     )
   )
 
+
+lazy val corePublishing = project
+  .settings(
+    moduleName := "kamon-core",
+    exportedProducts in Compile := (exportedProducts in (core, Compile)).value,
+    packageBin in Compile := (packageBin in (core, Compile)).value,
+    packageSrc in Compile := (packageSrc in (core, Compile)).value,
+    packageDoc in Compile := (packageDoc in (core, Compile)).value,
+    libraryDependencies ++= Seq(
+      "com.typesafe"            %  "config"              % "1.3.1",
+      "org.slf4j"               %  "slf4j-api"           % "1.7.25"
+    )
+  )
+
+
+lazy val statusPage = (project in file("kamon-status-page"))
+  .enablePlugins(AssemblyPlugin)
+  .settings(commonSettings: _*)
+  .settings(
+    skip in publish := true,
+    packageBin in Compile := assembly.value,
+    assemblyExcludedJars in assembly := filterOut((fullClasspath in assembly).value, "slf4j-api", "config", "kamon-core"),
+    libraryDependencies ++= Seq(
+      "org.nanohttpd" %  "nanohttpd" % "2.3.1",
+      "com.grack"     %  "nanojson"  % "1.1"
+    )
+  ).dependsOn(corePublishing % "provided")
+
+
+lazy val statusPagePublishing = project
+  .settings(
+    moduleName := "kamon-status-page",
+    packageBin in Compile := (packageBin in (statusPage, Compile)).value,
+    packageSrc in Compile := (packageSrc in (statusPage, Compile)).value,
+    packageDoc in Compile := (packageDoc in (statusPage, Compile)).value,
+  ).dependsOn(corePublishing)
+
+
 lazy val testkit = (project in file("kamon-testkit"))
   .settings(commonSettings: _*)
   .settings(
@@ -61,18 +97,6 @@ lazy val testkit = (project in file("kamon-testkit"))
       "org.scalatest" %% "scalatest" % "3.0.1" % "test"
     )
   ).dependsOn(core)
-
-lazy val statusPage = (project in file("kamon-status-page"))
-  .enablePlugins(AssemblyPlugin)
-  .settings(commonSettings: _*)
-  .settings(
-    moduleName := "kamon-status-page",
-    packageBin in Compile := assembly.value,
-    libraryDependencies ++= Seq(
-      "org.nanohttpd" %  "nanohttpd" % "2.3.1",
-      "com.grack"     %  "nanojson"  % "1.1"
-    )
-  ).dependsOn(core % "provided")
 
 
 lazy val tests = (project in file("kamon-core-tests"))
@@ -121,32 +145,16 @@ lazy val commonSettings = Seq(
     ShadeRule.rename("fi.iki.elonen.**"       -> "kamon.lib.@0").inAll,
     ShadeRule.rename("org.eclipse.**"         -> "kamon.lib.@0").inAll,
   ),
-  assemblyExcludedJars in assembly := {
-    val cp = (fullClasspath in assembly).value
-    val excludedPackages = Seq("slf4j-api", "config")
-    cp filter { file => excludedPackages.exists(file.data.getPath.contains(_))}
-  },
   assemblyMergeStrategy in assembly := {
     case s if s.startsWith("LICENSE") => MergeStrategy.discard
     case s if s.startsWith("about") => MergeStrategy.discard
     case x => (assemblyMergeStrategy in assembly).value(x)
   },
-  assemblyJarName in assembly := s"${moduleName.value}_${scalaBinaryVersion.value}-${version.value}.jar",
-  pomPostProcess := { originalPom => {
-    val shadedGroups = Seq("org.hdrhistogram", "org.jctools", "org.nanohttpd", "com.grack", "org.eclipse.collections")
-    val filterShadedDependencies = new RuleTransformer(new RewriteRule {
-      override def transform(n: Node): Seq[Node] = {
-        if(n.label == "dependency") {
-          val group = (n \ "groupId").text
-          val artifact = (n \ "artifactId").text
-          if (shadedGroups.find(eo => eo.equalsIgnoreCase(group)).nonEmpty && !artifact.startsWith("kamon-core")) Seq.empty else n
-        } else n
-      }
-    })
-
-    filterShadedDependencies(originalPom)
-  }},
   proguardVersion in Proguard := "6.0.3",
   proguardInputs in Proguard := Seq(assembly.value),
   javaOptions in (Proguard, proguard) := Seq("-Xmx2G")
 )
+
+def filterOut(classPath: Classpath, patterns: String*): Classpath = {
+  classPath filter { file => patterns.exists(file.data.getPath.contains(_))}
+}
