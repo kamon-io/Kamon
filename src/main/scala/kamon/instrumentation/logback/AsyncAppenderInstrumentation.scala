@@ -21,28 +21,25 @@ import java.util.concurrent.Callable
 import kamon.Kamon
 import kamon.context.Context
 import kamon.trace.{Identifier, Span}
+import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.api.instrumentation.mixin.Initializer
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 import kanela.agent.libs.net.bytebuddy.asm.Advice.Argument
 import kanela.agent.libs.net.bytebuddy.implementation.bind.annotation
 import kanela.agent.libs.net.bytebuddy.implementation.bind.annotation.{RuntimeType, SuperCall}
-import kanela.agent.scala.KanelaInstrumentation
 import org.slf4j.MDC
 
 import scala.beans.BeanProperty
 
-class AsyncAppenderInstrumentation extends KanelaInstrumentation {
+class AsyncAppenderInstrumentation extends InstrumentationBuilder {
 
   /**
     * Mix:
     *
     * ch.qos.logback.core.spi.DeferredProcessingAware with kamon.logback.mixin.ContextAwareLoggingEvent
     */
-  forSubtypeOf("ch.qos.logback.core.spi.DeferredProcessingAware") { builder =>
-    builder
-      .withMixin(classOf[ContextAwareLoggingEventMixin])
-      .build()
-  }
+  onSubTypesOf("ch.qos.logback.core.spi.DeferredProcessingAware")
+    .mixin(classOf[ContextAwareLoggingEventMixin])
 
 
   /**
@@ -50,33 +47,24 @@ class AsyncAppenderInstrumentation extends KanelaInstrumentation {
     *
     * ch.qos.logback.core.AsyncAppenderBase::append
     */
-  forTargetType("ch.qos.logback.core.AsyncAppenderBase") { builder =>
-    builder
-      .withAdvisorFor(method("append"), classOf[AppendMethodAdvisor])
-      .build()
-  }
+  onType("ch.qos.logback.core.AsyncAppenderBase")
+    .advise(method("append"), classOf[AppendMethodAdvisor])
 
   /**
     * Instrument:
     *
     * ch.qos.logback.core.spi.AppenderAttachableImpl::appendLoopOnAppenders
     */
-  forTargetType("ch.qos.logback.core.spi.AppenderAttachableImpl") { builder =>
-    builder
-      .withInterceptorFor(method("appendLoopOnAppenders"), AppendLoopMethodInterceptor)
-      .build()
-  }
+  onType("ch.qos.logback.core.spi.AppenderAttachableImpl")
+    .intercept(method("appendLoopOnAppenders"), AppendLoopMethodInterceptor)
 
   /**
     * Instrument:
     *
     * ch.qos.logback.classic.util.LogbackMDCAdapter::getPropertyMap
     */
-  forTargetType("ch.qos.logback.classic.util.LogbackMDCAdapter") { builder =>
-    builder
-      .withInterceptorFor(method("getPropertyMap"), GetPropertyMapMethodInterceptor)
-      .build()
-  }
+  onType("ch.qos.logback.classic.util.LogbackMDCAdapter")
+    .intercept(method("getPropertyMap"), GetPropertyMapMethodInterceptor)
 }
 
 /**
@@ -84,7 +72,6 @@ class AsyncAppenderInstrumentation extends KanelaInstrumentation {
   */
 class AppendMethodAdvisor
 object AppendMethodAdvisor {
-
   @Advice.OnMethodExit(onThrowable = classOf[Throwable], suppress = classOf[Throwable])
   def onExit(@Argument(0) event:AnyRef): Unit =
     event.asInstanceOf[ContextAwareLoggingEvent].setContext(Kamon.currentContext())

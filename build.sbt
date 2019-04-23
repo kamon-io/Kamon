@@ -19,6 +19,7 @@ val kanela        = "io.kamon" %   "kanela-agent"  % "1.0.0-M3"
 val latestLogbackClassic  = "ch.qos.logback"  %   "logback-classic" % "1.2.3"
 
 resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
+resolvers += Resolver.mavenLocal
 
 lazy val root = (project in file("."))
   .enablePlugins(JavaAgent)
