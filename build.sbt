@@ -96,7 +96,7 @@ lazy val testkit = (project in file("kamon-testkit"))
     libraryDependencies ++= Seq(
       "org.scalatest" %% "scalatest" % "3.0.1" % "test"
     )
-  ).dependsOn(core)
+  ).dependsOn(corePublishing)
 
 
 lazy val tests = (project in file("kamon-core-tests"))

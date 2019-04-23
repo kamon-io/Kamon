@@ -1,6 +1,7 @@
 package kamon
 
 import com.typesafe.config.Config
+import kamon.status.InstrumentationStatus
 import org.slf4j.LoggerFactory
 
 /**
@@ -29,22 +30,18 @@ trait Init { self: ModuleLoading with Configuration with CurrentStatus =>
   }
 
   /**
-    * Tries to attach the Kanela instrumentation agent, if available on the classpath. Users can get the Kanela agent
-    * in the classpath by adding it explicitly or by using the kamon-bundle dependency. If the Status module indicates
-    * that instrumentation has been already applied this method will not try to do anything.
+    * Tries to attach the Kanela instrumentation agent, if the Kamon Bundle dependency is available on the classpath. If
+    * the Status module indicates that instrumentation has been already applied this method will not try to do anything.
     */
   def attachInstrumentation(): Unit = {
-    if(!self.status().instrumentation().active) {
+    if(!InstrumentationStatus.create(warnIfFailed = false).present) {
       try {
-        val attacherClass = Class.forName("kanela.agent.attacher.Attacher")
+        val attacherClass = Class.forName("kamon.bundle.Bundle")
         val attachMethod = attacherClass.getDeclaredMethod("attach")
         attachMethod.invoke(null)
       } catch {
         case _: ClassNotFoundException =>
-          _logger.warn(
-            "Failed to attach the instrumentation because the Kanela agent is not present on the classpath. " +
-            "Consider adding the kamon-bundle or kanela-agent dependencies."
-          )
+          _logger.warn("Failed to attach the instrumentation because the Kamon Bundle is not present on the classpath")
 
         case t: Throwable =>
           _logger.error("Failed to attach the instrumentation agent", t)
