@@ -2,18 +2,15 @@ package kamon.executors.instrumentation
 
 import kamon.executors.advisor.RunnableOrCallableMethodAdvisor
 import kamon.executors.mixin.ContextAwareMixin
-import kanela.agent.scala.KanelaInstrumentation
+import kanela.agent.api.instrumentation.InstrumentationBuilder
 
 
-class RunnableOrCallableInstrumentation extends KanelaInstrumentation {
+class RunnableOrCallableInstrumentation extends InstrumentationBuilder {
 
   /**
     *
     */
-  forSubtypeOf("java.lang.Runnable" or "java.util.concurrent.Callable") { builder =>
-    builder
-      .withMixin(classOf[ContextAwareMixin])
-      .withAdvisorFor(anyMethod("run", "call"), classOf[RunnableOrCallableMethodAdvisor])
-      .build()
-  }
+  onSubTypesOf("java.lang.Runnable" or "java.util.concurrent.Callable")
+    .mixin(classOf[ContextAwareMixin])
+    .advise(anyMethods("run", "call"), classOf[RunnableOrCallableMethodAdvisor])
 }

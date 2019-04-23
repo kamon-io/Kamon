@@ -17,7 +17,7 @@ val kamonCore           = "io.kamon"            %% "kamon-core"               % 
 val kamonTestkit        = "io.kamon"            %% "kamon-testkit"            % "2.0.0-d2d5cb18261e2c79b86340bf39524394700415e8"
 
 val kanelaScala     = "io.kamon" %% "kanela-scala-extension"  % "0.0.14"
-
+val kanelaAgent     = "io.kamon"  % "kanela-agent"  % "0.0.19-SNAPSHOT"
 val guava           = "com.google.guava"  % "guava"  % "24.1-jre"
 
 lazy val root = (project in file("."))
@@ -25,8 +25,11 @@ lazy val root = (project in file("."))
   .aggregate(executors, benchmark)
 
 
+
+
 val commonSettings = Seq(
   scalaVersion := "2.12.6",
+  resolvers += "Local Maven Repository" at Path.userHome.asFile.toURI.toURL + ".m2/repository",
   resolvers += Resolver.mavenLocal,
   resolvers += Resolver.bintrayRepo("kamon-io", "snapshots"),
   crossScalaVersions := Seq("2.12.6"/*, "2.11.12", "2.10.7"*/)
@@ -36,10 +39,10 @@ lazy val executors = (project in file("kamon-executors"))
   .enablePlugins(JavaAgent)
   .settings(moduleName := "kamon-executors")
   .settings(commonSettings: _*)
-  .settings(javaAgents += "io.kamon"  % "kanela-agent"  % "0.0.15"  % "compile;test")
+  .settings(javaAgents += kanelaAgent)
   .settings(
     libraryDependencies ++=
-      compileScope(kamonCore, kanelaScala) ++
+      compileScope(kamonCore, kanelaScala, kanelaAgent) ++
       testScope(scalatest, logbackClassic, kamonTestkit, guava)
   )
 
