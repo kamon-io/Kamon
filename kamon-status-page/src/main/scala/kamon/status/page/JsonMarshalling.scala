@@ -8,7 +8,7 @@ import kamon.module.Module
 import kamon.status.Status
 import kamon.tag.{Tag, TagSet}
 
-import scala.collection.JavaConverters.{iterableAsScalaIterableConverter, mapAsScalaMapConverter}
+import scala.compat.Platform.EOL
 
 
 trait JsonMarshalling[T] {
@@ -116,22 +116,31 @@ object JsonMarshalling {
     override def toJson(instance: Status.Instrumentation, builder: JavaStringBuilder): Unit = {
       val instrumentationObject = JsonWriter.on(builder)
         .`object`()
-          .value("active", instance.active)
+          .value("present", instance.present)
           .`object`("modules")
 
-      instance.modules.asScala.foreach {
-        case (moduleName, moduleDescription) => instrumentationObject.value(moduleName, moduleDescription)
+      instance.modules.foreach { module =>
+        instrumentationObject.`object`(module.path)
+          .value("name", module.name)
+          .value("description", module.description)
+          .value("enabled", module.enabled)
+          .value("active", module.active)
+          .end()
       }
 
       instrumentationObject
         .end() // end modules
         .`object`("errors")
 
-      instance.errors.asScala.foreach {
-        case (moduleName, errors) =>
-          instrumentationObject.array(moduleName)
-          errors.asScala.foreach(t => instrumentationObject.value(t.toString))
-          instrumentationObject.end()
+      instance.errors.foreach { typeError =>
+        val errorsArray = instrumentationObject.array(typeError.targetType)
+        typeError.errors.foreach(t => {
+          errorsArray.`object`()
+            .value("message", t.getMessage)
+            .value("stacktrace", t.getStackTrace.mkString("", EOL, EOL))
+            .end()
+        })
+        errorsArray.end()
       }
 
       instrumentationObject

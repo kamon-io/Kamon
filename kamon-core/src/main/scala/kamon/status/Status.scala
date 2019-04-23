@@ -5,9 +5,8 @@ import kamon.metric.{MeasurementUnit, MetricRegistry}
 import kamon.{Configuration, Kamon}
 import kamon.module.ModuleRegistry
 import kamon.module.Module.{Kind => ModuleKind}
-import java.util.{Collections, List => JavaList, Map => JavaMap}
-
 import kamon.tag.TagSet
+
 
 /**
   * Exposes Kamon components' status information. This is meant to be used for informational and debugging purposes and
@@ -34,22 +33,15 @@ class Status(_moduleRegistry: ModuleRegistry, _metricRegistry: MetricRegistry, c
   def metricRegistry(): Status.MetricRegistry =
     _metricRegistry.status()
 
-
   /**
-    * Status of instrumentation modules that have been detected and/or loaded into the current JVM. Read the
-    * [[Status.Instrumentation]] companion object's docs for more information.
+    * Status of instrumentation modules that have been detected and/or loaded into the current JVM. The implementation
+    * of this method is closely tied to the Kanela instrumentation agent. Read the Status.Instrumentation's companion
+    * object docs for more information.
     */
-  def instrumentation(): Status.Instrumentation = {
-    import Status.Instrumentation._
+  def instrumentation(): Status.Instrumentation =
+    InstrumentationStatus.create()
 
-    Status.Instrumentation(
-      isActive(),
-      modules(),
-      errors()
-    )
-  }
 }
-
 
 
 object Status {
@@ -103,57 +95,34 @@ object Status {
     * Describes all known instrumentation modules. This data is completely untyped and not expected to be used anywhere
     * outside Kamon. The data is injected on runtime by the Kanela instrumentation agent.
     */
-  case class Instrumentation(
-    active: Boolean,
-    modules: JavaMap[String, String],
-    errors: JavaMap[String, JavaList[Throwable]]
+  case class Instrumentation (
+    present: Boolean,
+    modules: Seq[Status.Instrumentation.ModuleInfo],
+    errors: Seq[Status.Instrumentation.TypeError]
   )
 
-
-  /**
-    * This object works as a bridge between Kamon and Kanela to gather information about instrumentation modules. When
-    * instrumentation is enabled, it should replace the implementation of the members of this object and return proper
-    * information.
-    *
-    * This data is only exposed directly to the status page API because it lacks any sort of type safety. We might
-    * change this in the future and provide proper types for all instrumentation modules' info.
-    */
   object Instrumentation {
 
     /**
-      * Whether instrumentation is active or not. When Kanela is present it will replace this method to return true.
+      * Describes an instrumentation module loaded by Kanela. Besides name and description, the "enabled" flag tells
+      * whether the module is able to instrument classes or not. By default, all modules are able to instrument classes
+      * but some modules might be shipped in a disabled state or forced to be disabled via configuration. The "active"
+      * flag tells whether the modules has already applied instrumentation to any of its target types.
       */
-    def isActive(): java.lang.Boolean =
-      false
+    case class ModuleInfo (
+      path: String,
+      name: String,
+      description: String,
+      enabled: Boolean,
+      active: Boolean
+    )
 
     /**
-      * List all instrumentation modules known and their current status. The result map contains the module name as keys
-      * and a JSON representation of the module status as values. The expected structure in the JSON representations is
-      * as follows:
-      *
-      *   {
-      *     'description': 'A explicative module description',
-      *     'isEnabled': true | false,
-      *     'isActive': true | false
-      *   }
-      *
-      *  The "isEnabled" flag tells whether the module is able to instrument classes or not. By default, all modules are
-      *  able to instrument classes but some modules might be shipped in a disabled state or forced to be disabled via
-      *  configuration.
-      *
-      *  The "isActive" flag tells whether the modules has already applied instrumentation to any of its target classes.
-      *
+      * Describes errors that might have occurred while transforming a target type.
       */
-    def modules(): JavaMap[String, String] =
-      Collections.emptyMap()
-
-
-    /**
-      * List all errors that might have happened during the instrumentation initialization. The resulting map contains
-      * a list of modules and any exceptions thrown by them during initialization. If not exceptions are thrown the map
-      * will always be empty.
-      */
-    def errors(): JavaMap[String, JavaList[Throwable]] =
-      Collections.emptyMap()
+    case class TypeError (
+      targetType: String,
+      errors: Seq[Throwable]
+    )
   }
 }

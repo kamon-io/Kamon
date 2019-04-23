@@ -4,11 +4,8 @@
       <div class="col-auto">
         <div class="status-indicator-wrap text-center text-uppercase" :style="indicatorStyle">
           <slot name="status-indicator">
-            <div class="status-indicator h-100 pt-3">
+            <div class="status-indicator h-100">
               <i class="fas fa-fw" :class="indicatorIcon"></i>
-              <div>
-                {{ indicatorText }}
-              </div>
             </div>
           </slot>
         </div>
@@ -55,19 +52,16 @@ $indicator-size: 6rem;
 
   .status-indicator-wrap {
     height: 100%;
-    min-width: $indicator-size + 2rem;
-    max-width: $indicator-size + 2rem;
+    min-width: $indicator-size;
+    max-width: $indicator-size;
     min-height: $indicator-size;
     font-size: 0.9rem;
     font-weight: 600;
   }
 
   .status-indicator {
-    line-height: 2rem;
-
-  i {
-      font-size: 2.5rem;
-    }
+    font-size: 3rem;
+    line-height: $indicator-size;
   }
 
   .critical {

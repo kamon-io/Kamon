@@ -51,6 +51,7 @@ export interface MetricRegistry {
 }
 
 export interface InstrumentationModule {
+  path: string
   name: string
   description: string
   enabled: boolean
@@ -58,9 +59,14 @@ export interface InstrumentationModule {
 }
 
 export interface Instrumentation {
-  active: boolean
+  present: boolean
   modules: InstrumentationModule[]
-  errors: { [key: string]: string[]}
+  errors: { [key: string]: InstrumentationError[]}
+}
+
+export interface InstrumentationError {
+  message: string
+  stacktrace: string
 }
 
 
@@ -116,23 +122,18 @@ export class StatusApi {
   public static instrumentationStatus(): Promise<Instrumentation> {
     return axios.get('/status/instrumentation').then(response => {
       const instrumentation: Instrumentation = {
-        active: response.data.active as boolean,
+        present: response.data.present as boolean,
         modules: [],
-        errors: {}
+        errors: response.data.errors
       }
 
       const rawModules = response.data.modules
       Object.keys(rawModules).forEach(key => {
-        const rawModule = JSON.parse(rawModules[key])
+        const rawModule = rawModules[key]
         instrumentation.modules.push({
           name: key,
           ...rawModule
         })
-      })
-
-      const rawErrors = response.data.errors
-      Object.keys(rawErrors).forEach(key => {
-        instrumentation.errors[key] = JSON.parse(rawErrors[key])
       })
 
       return instrumentation
