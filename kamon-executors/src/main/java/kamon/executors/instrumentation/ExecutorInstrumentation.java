@@ -21,20 +21,20 @@ import kamon.context.Storage.Scope;
 import kamon.executors.instrumentation.ExecutorsInstrumentationAdvisors.CallableCollectionWrapperAdvisor;
 import kamon.executors.instrumentation.ExecutorsInstrumentationAdvisors.CallableWrapperAdvisor;
 import kamon.executors.instrumentation.ExecutorsInstrumentationAdvisors.RunnableWrapperAdvisor;
-import kanela.agent.api.instrumentation.KanelaInstrumentation;
+import kanela.agent.api.instrumentation.InstrumentationBuilder;
 import kanela.agent.bootstrap.context.ContextHandler;
 import kanela.agent.bootstrap.context.ContextProvider;
 
 import java.util.Collection;
 import java.util.concurrent.Callable;
 
-public final class ExecutorInstrumentation extends KanelaInstrumentation {
+public final class ExecutorInstrumentation extends InstrumentationBuilder {
 
     public ExecutorInstrumentation() {
         /**
          * Set the ContextProvider
          */
-        ContextHandler.setContexProvider(new KamonContextProvider());
+        ContextHandler.setContextProvider(new KamonContextProvider());
 
         /**
          * Instrument all implementations of:
@@ -42,10 +42,8 @@ public final class ExecutorInstrumentation extends KanelaInstrumentation {
          * java.util.concurrent.Executor::execute
          *
          */
-        forSubtypeOf(() -> "java.util.concurrent.Executor", builder ->
-                builder
-                    .withAdvisorFor(method("execute").and(withArgument(Runnable.class)), () -> RunnableWrapperAdvisor.class)
-                    .build());
+        onSubTypesOf("java.util.concurrent.Executor")
+                .advise(method("execute").and(withArgument(Runnable.class)), RunnableWrapperAdvisor.class);
 
 
         /**
@@ -56,12 +54,10 @@ public final class ExecutorInstrumentation extends KanelaInstrumentation {
          * java.util.concurrent.ExecutorService::[invokeAny|invokeAll](Collection[Callable])
          *
          */
-        forSubtypeOf(() -> "java.util.concurrent.ExecutorService", builder ->
-                builder
-                    .withAdvisorFor(method("submit").and(withArgument(Runnable.class)), () -> RunnableWrapperAdvisor.class)
-                    .withAdvisorFor(method("submit").and(withArgument(Callable.class)), () -> CallableWrapperAdvisor.class)
-                    .withAdvisorFor(anyMethods("invokeAny", "invokeAll").and(withArgument(Collection.class)), () -> CallableCollectionWrapperAdvisor.class)
-                    .build());
+        onSubTypesOf( "java.util.concurrent.ExecutorService")
+                .advise(method("submit").and(withArgument(Runnable.class)), RunnableWrapperAdvisor.class)
+                .advise(method("submit").and(withArgument(Callable.class)), CallableWrapperAdvisor.class)
+                .advise(anyMethods("invokeAny", "invokeAll").and(withArgument(Collection.class)), CallableCollectionWrapperAdvisor.class);
     }
 
     /**

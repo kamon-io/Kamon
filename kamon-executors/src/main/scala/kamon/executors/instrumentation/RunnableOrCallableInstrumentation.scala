@@ -10,7 +10,7 @@ class RunnableOrCallableInstrumentation extends InstrumentationBuilder {
   /**
     *
     */
-  onSubTypesOf("java.lang.Runnable" or "java.util.concurrent.Callable")
+  onSubTypesOf("java.lang.Runnable", "java.util.concurrent.Callable")
     .mixin(classOf[ContextAwareMixin])
     .advise(anyMethods("run", "call"), classOf[RunnableOrCallableMethodAdvisor])
 }
