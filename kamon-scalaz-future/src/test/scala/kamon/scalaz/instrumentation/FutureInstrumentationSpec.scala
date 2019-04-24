@@ -18,14 +18,15 @@ package kamon.scalaz.instrumentation
 import java.util.concurrent.Executors
 
 import kamon.Kamon
-import kamon.testkit.ContextTesting
+import kamon.context.Context
+import kamon.tag.Lookups.plain
+import kamon.tag.TagSet
 import org.scalatest.{Matchers, OptionValues, WordSpec}
 import org.scalatest.concurrent.{PatienceConfiguration, ScalaFutures}
-
 import scalaz.concurrent.Future
 
 class FutureInstrumentationSpec extends WordSpec with Matchers with ScalaFutures with PatienceConfiguration
-    with OptionValues with ContextTesting {
+    with OptionValues {
 
   implicit val execContext = Executors.newCachedThreadPool()
 
@@ -33,26 +34,26 @@ class FutureInstrumentationSpec extends WordSpec with Matchers with ScalaFutures
     "capture the active span available when created" which {
       "must be available when executing the future's body" in {
 
-        val context = contextWithLocal("in-future-body")
-        val baggageInBody = Kamon.withContext(context) {
-          Future(Kamon.currentContext().get(StringKey)).unsafeStart
+        val context = Context.of("key", "value")
+        val tagInBody = Kamon.withContext(context) {
+          Future(Kamon.currentContext().getTag(plain("key"))).unsafeStart
         }
 
-        baggageInBody.unsafePerformSync should equal(Some("in-future-body"))
+        tagInBody.unsafePerformSync shouldBe "value"
       }
 
       "must be available when executing callbacks on the future" in {
-        val context = contextWithLocal("in-future-transformations")
+        val context = Context.of("key", "value")
         val baggageAfterTransformations = Kamon.withContext(context) {
           Future("Hello Kamon!")
-            // The active span is expected to be available during all intermediate processing.
+            // The current context is expected to be available during all intermediate processing.
             .map(_.length)
             .flatMap(len ⇒ Future(len.toString))
-            .map(_ ⇒ Kamon.currentContext().get(StringKey))
+            .map(_ ⇒ Kamon.currentContext().getTag(plain("key")))
             .unsafeStart
         }
 
-        baggageAfterTransformations.unsafePerformSync should equal(Some("in-future-transformations"))
+        baggageAfterTransformations.unsafePerformSync shouldBe "value"
       }
     }
   }

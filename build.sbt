@@ -13,11 +13,11 @@
  * =========================================================================================
  */
 
-val kamonCore             = "io.kamon"     %%   "kamon-core"              % "1.2.0-M1"
-val kamonTestkit          = "io.kamon"     %%   "kamon-testkit"           % "1.2.0-M1"
-val kanelaScalaExtension  = "io.kamon"     %%   "kanela-scala-extension"  % "0.0.14"
-
-val scalazConcurrent  = "org.scalaz"   %%   "scalaz-concurrent" % "7.2.8"
+val kamonCore        = "io.kamon"   %% "kamon-core"             % "2.0.0-ef6e364d6b7316aa22e5e7887de9ef1bd7a69316"
+val kamonTestkit     = "io.kamon"   %% "kamon-testkit"          % "2.0.0-ef6e364d6b7316aa22e5e7887de9ef1bd7a69316"
+val kanelaAgent      = "io.kamon"   %  "kanela-agent"           % "0.0.17"
+val kanelaExtension  = "io.kamon"   %% "kanela-kamon-extension" % "2.0.0-ab59ea17b017e1809b8e46ebccdee45e4a21ebe8"
+val scalazConcurrent = "org.scalaz" %% "scalaz-concurrent"      % "7.2.8"
 
 resolvers in ThisBuild += Resolver.bintrayRepo("kamon-io", "snapshots")
 resolvers in ThisBuild += Resolver.mavenLocal
@@ -31,34 +31,29 @@ lazy val `kamon-futures` = (project in file("."))
 
 lazy val `kamon-twitter-future` = (project in file("kamon-twitter-future"))
   .enablePlugins(JavaAgent)
-  .settings(bintrayPackage := "kamon-futures")
   .settings(instrumentationSettings)
   .settings(
+    bintrayPackage := "kamon-futures",
     libraryDependencies ++=
-      compileScope(kamonCore, kanelaScalaExtension) ++
-      providedScope(kanelaAgent, aspectJ) ++
-      optionalScope(twitterDependency("core").value) ++
+      providedScope(kamonCore, kanelaAgent, kanelaExtension, twitterDependency("core").value) ++
       testScope(scalatest, kamonTestkit, logbackClassic))
 
 lazy val `kamon-scalaz-future` = (project in file("kamon-scalaz-future"))
   .enablePlugins(JavaAgent)
-  .settings(bintrayPackage := "kamon-futures")
   .settings(instrumentationSettings)
   .settings(
+    bintrayPackage := "kamon-futures",
     libraryDependencies ++=
-      compileScope(kamonCore, kanelaScalaExtension) ++
-      providedScope(kanelaAgent, aspectJ) ++
-      optionalScope(scalazConcurrent) ++
+      providedScope(kamonCore, kanelaAgent, kanelaExtension, scalazConcurrent) ++
       testScope(scalatest, kamonTestkit, logbackClassic))
 
 lazy val `kamon-scala-future` = (project in file("kamon-scala-future"))
   .enablePlugins(JavaAgent)
-  .settings(bintrayPackage := "kamon-futures")
   .settings(instrumentationSettings)
   .settings(
+    bintrayPackage := "kamon-futures",
     libraryDependencies ++=
-      compileScope(kamonCore, kanelaScalaExtension) ++
-      providedScope(kanelaAgent, aspectJ) ++
+      providedScope(kamonCore, kanelaAgent, kanelaExtension) ++
       testScope(scalatest, kamonTestkit, logbackClassic))
 
 

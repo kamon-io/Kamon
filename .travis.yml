@@ -1,6 +1,6 @@
 language: scala
 script:
-  - sbt +test && sbt ';set kamonUseAspectJ in ThisBuild := true; +test'
+  - sbt +test
 scala:
    - 2.12.6
 jdk:
