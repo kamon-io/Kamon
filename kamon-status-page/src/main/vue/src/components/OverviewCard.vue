@@ -53,11 +53,11 @@ export default class OverviewCard extends Vue {
   }
 
   get instrumentationStatusMessage(): string {
-    return this.instrumentation.map(i => (i.active ? 'Active' : 'Disabled') as string).getOrElse('Unknown')
+    return this.instrumentation.map(i => (i.present ? 'Active' : 'Disabled') as string).getOrElse('Unknown')
   }
 
   get metricsStatusMessage(): string {
-    return this.trackedMetrics.map(mc => mc + ' Series').getOrElse('Unknown')
+    return this.trackedMetrics.map(mc => mc + ' Metrics').getOrElse('Unknown')
   }
 
   private isReporter(module: Module): boolean {

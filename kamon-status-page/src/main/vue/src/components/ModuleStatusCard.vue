@@ -3,8 +3,7 @@
     <div slot="default" class="py-3 pl-4">
       <h5 class="mb-0 mr-3 d-inline-block">{{ module.name }}</h5>
       <div class="tag-container d-inline-block" v-if="!isSuggestion">
-        <span class="tag">{{ module.kind }}</span>
-        <span class="tag">{{ discoveryStatus }}</span>
+        <span class="tag">{{ status }}</span>
       </div>
 
       <div class="text-label">
@@ -29,8 +28,14 @@ export default class ModuleStatusCard extends Vue {
   @Prop({ default: false }) private isSuggestion!: boolean
   @Prop() private module!: Module
 
-  get discoveryStatus(): string {
-    return this.module.programmaticallyRegistered ? 'manual' : 'automatic'
+  get status(): string {
+    if (this.module.started) {
+      return 'started'
+    } else if (this.module.enabled) {
+      return 'present'
+    } else {
+      return 'disabled'
+    }
   }
 
   get runStatus(): { message: string, color: string, icon: string } {
