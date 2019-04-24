@@ -5,7 +5,7 @@
       <div class="metric-count">
         {{ metric.instruments.length }}
       </div>
-      <div>INSTANCES</div>
+      <div class="indicator-label">INSTANCES</div>
     </div>
 
     <div slot="default" @click="onCardClick">
@@ -31,7 +31,7 @@
                 <span class="tag" v-for="tag in Object.keys(instrument)" :key="tag">
                   {{ tag }}=<span class="tag-value">{{ instrument[tag] }}</span>
                 </span>
-                <span v-if="Object.keys(instrument).length === 0" class="pl-2">Base Metric - No Tags</span>
+                <span v-if="Object.keys(instrument).length === 0" class="pl-2">No Tags</span>
               </div>
             </div>
             <hr v-if="index < (metric.instruments.length - 1)" class="w-100 instance-hr">
@@ -87,6 +87,11 @@ export default class MetricListItem extends Vue {
 
 .series-container {
   background-color: #f7f7f7;
+}
+
+.indicator-label {
+  font-weight: 600;
+  font-size: 0.9rem;
 }
 
 .instance-hr {
