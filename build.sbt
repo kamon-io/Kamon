@@ -24,8 +24,8 @@ lazy val core = (project in file("kamon-core"))
   .enablePlugins(AssemblyPlugin)
   .enablePlugins(SbtProguard)
   .settings(commonSettings: _*)
+  .settings(noPublishing: _*)
   .settings(
-    skip in publish := true,
     moduleName := "kamon-core",
     buildInfoKeys := Seq[BuildInfoKey](version),
     buildInfoPackage := "kamon.status",
@@ -70,8 +70,8 @@ lazy val corePublishing = project
 lazy val statusPage = (project in file("kamon-status-page"))
   .enablePlugins(AssemblyPlugin)
   .settings(commonSettings: _*)
+  .settings(noPublishing: _*)
   .settings(
-    skip in publish := true,
     packageBin in Compile := assembly.value,
     assemblyExcludedJars in assembly := filterOut((fullClasspath in assembly).value, "slf4j-api", "config", "kamon-core"),
     libraryDependencies ++= Seq(
