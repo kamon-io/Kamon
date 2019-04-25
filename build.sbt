@@ -55,8 +55,10 @@ lazy val core = (project in file("kamon-core"))
         "kamon.tag.**",
         "kamon.trace.**",
         "kamon.util.**",
+        "org.HdrHistogram.AtomicHistogram",
         "org.jctools.queues.MpscArrayQueue",
-        "org.eclipse.collections.impl.map.mutable.UnifiedMap"
+        "org.eclipse.collections.impl.map.mutable.UnifiedMap",
+        "org.eclipse.collections.api.map.MutableMap"
       ).inAll
     ),
     libraryDependencies ++= Seq(
