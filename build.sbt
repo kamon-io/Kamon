@@ -22,26 +22,42 @@ lazy val kamon = (project in file("."))
 lazy val core = (project in file("kamon-core"))
   .enablePlugins(BuildInfoPlugin)
   .enablePlugins(AssemblyPlugin)
-  .enablePlugins(SbtProguard)
   .settings(commonSettings: _*)
   .settings(noPublishing: _*)
   .settings(
     moduleName := "kamon-core",
     buildInfoKeys := Seq[BuildInfoKey](version),
     buildInfoPackage := "kamon.status",
-    packageBin in Compile := (proguard in Proguard).value.head,
+    packageBin in Compile := assembly.value,
     assemblyExcludedJars in assembly := filterOut((fullClasspath in assembly).value, "slf4j-api", "config"),
-    proguardOptions in Proguard ++= Seq(
-      "-dontnote", "-dontwarn", "-ignorewarnings", "-dontobfuscate", "-dontoptimize",
-      "-keepattributes **",
-      "-keep class kamon.Kamon { *; }",
-      "-keep class kamon.context.** { *; }",
-      "-keep class kamon.metric.** { *; }",
-      "-keep class kamon.module.** { *; }",
-      "-keep class kamon.status.** { *; }",
-      "-keep class kamon.tag.** { *; }",
-      "-keep class kamon.trace.** { *; }",
-      "-keep class kamon.util.** { *; }",
+    assemblyShadeRules in assembly := Seq(
+      ShadeRule.rename("org.HdrHistogram.**"    -> "kamon.lib.@0").inAll,
+      ShadeRule.rename("org.jctools.**"         -> "kamon.lib.@0").inAll,
+      ShadeRule.rename("org.eclipse.**"         -> "kamon.lib.@0").inAll,
+      ShadeRule.zap(
+        "org.eclipse.collections.impl.bag.**",
+        "org.eclipse.collections.impl.**.primitive.**",
+        "org.eclipse.collections.impl.**.parallel.**",
+        "org.eclipse.collections.impl.iterator.**",
+        "org.eclipse.collections.impl.list.**",
+        "org.eclipse.collections.impl.multimap.**",
+        "org.eclipse.collections.impl.primitive.**",
+        "org.eclipse.collections.impl.set.**",
+        "org.eclipse.collections.impl.stack.**",
+        "org.eclipse.collections.impl.string.**",
+      ).inAll,
+      ShadeRule.keep(
+        "kamon.Kamon",
+        "kamon.context.**",
+        "kamon.metric.**",
+        "kamon.module.**",
+        "kamon.status.**",
+        "kamon.tag.**",
+        "kamon.trace.**",
+        "kamon.util.**",
+        "org.jctools.queues.MpscArrayQueue",
+        "org.eclipse.collections.impl.map.mutable.UnifiedMap"
+      ).inAll
     ),
     libraryDependencies ++= Seq(
       "com.typesafe"            %  "config"              % "1.3.1",
@@ -74,6 +90,10 @@ lazy val statusPage = (project in file("kamon-status-page"))
   .settings(
     packageBin in Compile := assembly.value,
     assemblyExcludedJars in assembly := filterOut((fullClasspath in assembly).value, "slf4j-api", "config", "kamon-core"),
+    assemblyShadeRules in assembly := Seq(
+      ShadeRule.rename("com.grack.nanojson.**"  -> "kamon.lib.@0").inAll,
+      ShadeRule.rename("fi.iki.elonen.**"       -> "kamon.lib.@0").inAll,
+    ),
     libraryDependencies ++= Seq(
       "org.nanohttpd" %  "nanohttpd" % "2.3.1",
       "com.grack"     %  "nanojson"  % "1.1"
@@ -139,21 +159,11 @@ lazy val commonSettings = Seq(
     case _ => Seq.empty
   }),
   assembleArtifact in assemblyPackageScala := false,
-  assemblyShadeRules in assembly := Seq(
-    ShadeRule.rename("org.HdrHistogram.**"    -> "kamon.lib.@0").inAll,
-    ShadeRule.rename("com.grack.nanojson.**"  -> "kamon.lib.@0").inAll,
-    ShadeRule.rename("org.jctools.**"         -> "kamon.lib.@0").inAll,
-    ShadeRule.rename("fi.iki.elonen.**"       -> "kamon.lib.@0").inAll,
-    ShadeRule.rename("org.eclipse.**"         -> "kamon.lib.@0").inAll,
-  ),
   assemblyMergeStrategy in assembly := {
     case s if s.startsWith("LICENSE") => MergeStrategy.discard
     case s if s.startsWith("about") => MergeStrategy.discard
     case x => (assemblyMergeStrategy in assembly).value(x)
-  },
-  proguardVersion in Proguard := "6.0.3",
-  proguardInputs in Proguard := Seq(assembly.value),
-  javaOptions in (Proguard, proguard) := Seq("-Xmx2G")
+  }
 )
 
 def filterOut(classPath: Classpath, patterns: String*): Classpath = {
