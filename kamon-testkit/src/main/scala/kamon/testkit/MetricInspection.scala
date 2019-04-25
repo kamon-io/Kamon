@@ -67,8 +67,12 @@ object MetricInspection {
   }
 
 
-  private def instrumentsMap[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings](metric: Metric[Inst, Sett]): TrieMap[TagSet, Any] =
+  private def instrumentsMap[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings](metric: Metric[Inst, Sett]): TrieMap[TagSet, Any] = {
     getFieldFromClass[TrieMap[TagSet, Any]](metric, "kamon.metric.Metric$BaseMetric", "_instruments")
+      .filter { case (_, entry) =>
+        !getFieldFromClass[Boolean](entry, "kamon.metric.Metric$BaseMetric$InstrumentEntry", "removeOnNextSnapshot")
+      }
+  }
 
 
   /**
