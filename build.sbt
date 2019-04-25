@@ -26,6 +26,7 @@ lazy val core = (project in file("kamon-core"))
   .settings(commonSettings: _*)
   .settings(
     skip in publish := true,
+    moduleName := "kamon-core",
     buildInfoKeys := Seq[BuildInfoKey](version),
     buildInfoPackage := "kamon.status",
     packageBin in Compile := (proguard in Proguard).value.head,
@@ -77,7 +78,7 @@ lazy val statusPage = (project in file("kamon-status-page"))
       "org.nanohttpd" %  "nanohttpd" % "2.3.1",
       "com.grack"     %  "nanojson"  % "1.1"
     )
-  ).dependsOn(corePublishing % "provided")
+  ).dependsOn(core % "provided")
 
 
 lazy val statusPagePublishing = project
@@ -96,7 +97,7 @@ lazy val testkit = (project in file("kamon-testkit"))
     libraryDependencies ++= Seq(
       "org.scalatest" %% "scalatest" % "3.0.1" % "test"
     )
-  ).dependsOn(corePublishing)
+  ).dependsOn(core)
 
 
 lazy val tests = (project in file("kamon-core-tests"))
