@@ -22,7 +22,7 @@ import scala.collection.mutable
   * combination of tags used to create them.
   *
   */
-trait Metric[Inst, Sett <: Metric.Settings] extends Tagging[Inst] {
+trait Metric[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings] extends Tagging[Inst] {
 
   /**
     * A unique identifier for this metric. Metric names typically will be namespaced, meaning that their name has a

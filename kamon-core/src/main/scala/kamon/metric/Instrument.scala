@@ -8,7 +8,7 @@ import kamon.tag.TagSet
 /**
   * Base user-facing API for all metric instruments in Kamon.
   */
-trait Instrument[Inst, Sett <: Metric.Settings] extends Tagging[Inst] {
+trait Instrument[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings] extends Tagging[Inst] {
 
   /**
     * Returns the metric to which this instrument belongs.
