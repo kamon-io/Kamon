@@ -553,6 +553,6 @@ object Span {
     val Component = "component"
     val OperationName = "operation"
     val ParentOperationName = "parentOperation"
-    val InitiatorName = "initiator.name"
+    val UpstreamName = "upstream.name"
   }
 }

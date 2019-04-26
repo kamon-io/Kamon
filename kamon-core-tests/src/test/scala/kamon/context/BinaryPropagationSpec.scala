@@ -43,7 +43,7 @@ class BinaryPropagationSpec extends WordSpec with Matchers with OptionValues {
       binaryPropagation.write(context, writer)
 
       val rtContext = binaryPropagation.read(ByteStreamReader.of(writer.toByteArray))
-      rtContext.tags shouldBe empty
+      rtContext.tags.get(plain("upstream.name")) shouldBe "kamon-application"
       rtContext.get(BinaryPropagationSpec.StringKey) shouldBe "string-value"
       rtContext.get(BinaryPropagationSpec.FailStringKey) shouldBe null
     }
@@ -57,7 +57,7 @@ class BinaryPropagationSpec extends WordSpec with Matchers with OptionValues {
       binaryPropagation.write(context, writer)
 
       val rtContext = binaryPropagation.read(ByteStreamReader.of(writer.toByteArray))
-      rtContext.tags shouldBe empty
+      rtContext.tags.get(plain("upstream.name")) shouldBe "kamon-application"
       rtContext.get(BinaryPropagationSpec.StringKey) shouldBe "string-value"
       rtContext.get(BinaryPropagationSpec.FailStringKey) shouldBe null
     }
@@ -88,7 +88,7 @@ class BinaryPropagationSpec extends WordSpec with Matchers with OptionValues {
       binaryPropagation.write(context, writer)
 
       val rtContext = binaryPropagation.read(ByteStreamReader.of(writer.toByteArray))
-      rtContext.tags shouldBe empty
+      rtContext.tags.get(plain("upstream.name")) shouldBe "kamon-application"
       rtContext.get(BinaryPropagationSpec.StringKey) shouldBe "string-value"
       rtContext.get(BinaryPropagationSpec.IntegerKey) shouldBe 0 // there is no entry configuration for the integer key
     }
@@ -112,7 +112,8 @@ class BinaryPropagationSpec extends WordSpec with Matchers with OptionValues {
   val binaryPropagation = BinaryPropagation.from(
     ConfigFactory.parseString(
       """
-        |max-outgoing-size = 64
+        |max-outgoing-size = 128
+        |tags.include-upstream-name = yes
         |entries.incoming.string = "kamon.context.BinaryPropagationSpec$StringEntryCodec"
         |entries.incoming.failString = "kamon.context.BinaryPropagationSpec$FailStringEntryCodec"
         |entries.outgoing.string = "kamon.context.BinaryPropagationSpec$StringEntryCodec"

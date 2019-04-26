@@ -46,7 +46,7 @@ class Tracer(initialConfig: Config, clock: Clock, classLoading: ClassLoading, co
   @volatile private var _spanBuffer = new MpscArrayQueue[Span.Finished](_traceReporterQueueSize)
   @volatile private var _joinRemoteParentsWithSameSpanID: Boolean = false
   @volatile private var _includeErrorStacktrace: Boolean = true
-  @volatile private var _tagWithInitiatorService: Boolean = true
+  @volatile private var _tagWithUpstreamService: Boolean = true
   @volatile private var _tagWithParentOperation: Boolean = true
   @volatile private var _sampler: Sampler = ConstantSampler.Never
   @volatile private var _identifierScheme: Identifier.Scheme = Identifier.Scheme.Single
@@ -262,9 +262,9 @@ class Tracer(initialConfig: Config, clock: Clock, classLoading: ClassLoading, co
       }
 
       val context = _context.getOrElse(contextStorage.currentContext())
-      if(_tagWithInitiatorService) {
-        context.getTag(option(TagKeys.InitiatorName)).foreach(initiatorName => {
-          _metricTags.add(TagKeys.InitiatorName, initiatorName)
+      if(_tagWithUpstreamService) {
+        context.getTag(option(TagKeys.UpstreamName)).foreach(upstreamName => {
+          _metricTags.add(TagKeys.UpstreamName, upstreamName)
         })
       }
 
@@ -363,7 +363,7 @@ class Tracer(initialConfig: Config, clock: Clock, classLoading: ClassLoading, co
 
       val traceReporterQueueSize = traceConfig.getInt("reporter-queue-size")
       val joinRemoteParentsWithSameSpanID = traceConfig.getBoolean("join-remote-parents-with-same-span-id")
-      val tagWithInitiatorService = traceConfig.getBoolean("span-metric-tags.initiator-service")
+      val tagWithUpstreamService = traceConfig.getBoolean("span-metric-tags.upstream-service")
       val tagWithParentOperation = traceConfig.getBoolean("span-metric-tags.parent-operation")
       val includeErrorStacktrace = traceConfig.getBoolean("include-error-stacktrace")
 
@@ -379,7 +379,7 @@ class Tracer(initialConfig: Config, clock: Clock, classLoading: ClassLoading, co
       _identifierScheme = identifierScheme
       _joinRemoteParentsWithSameSpanID = joinRemoteParentsWithSameSpanID
       _includeErrorStacktrace = includeErrorStacktrace
-      _tagWithInitiatorService = tagWithInitiatorService
+      _tagWithUpstreamService = tagWithUpstreamService
       _tagWithParentOperation = tagWithParentOperation
       _traceReporterQueueSize = traceReporterQueueSize
       _preStartHooks = preStartHooks

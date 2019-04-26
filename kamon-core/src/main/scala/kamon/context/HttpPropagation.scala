@@ -18,6 +18,7 @@ package context
 
 import com.typesafe.config.Config
 import kamon.tag.{Tag, TagSet}
+import kamon.trace.Span
 import org.slf4j.LoggerFactory
 
 import scala.reflect.ClassTag
@@ -144,6 +145,10 @@ object HttpPropagation {
         }
       }
 
+      // Write the upstream name, if needed
+      if(settings.includeUpstreamName)
+        appendTag(Span.TagKeys.UpstreamName, Kamon.environment.service)
+
       // Write the context tags header.
       if(contextTagsHeader.nonEmpty) {
         writer.write(settings.tagsHeaderName, contextTagsHeader.result())
@@ -211,6 +216,7 @@ object HttpPropagation {
 
   case class Settings(
     tagsHeaderName: String,
+    includeUpstreamName: Boolean,
     tagsMappings: Map[String, String],
     incomingEntries: Map[String, Propagation.EntryReader[HeaderReader]],
     outgoingEntries: Map[String, Propagation.EntryWriter[HeaderWriter]]
@@ -235,11 +241,12 @@ object HttpPropagation {
       }
 
       val tagsHeaderName = config.getString("tags.header-name")
+      val tagsIncludeUpstreamName = config.getBoolean("tags.include-upstream-name")
       val tagsMappings = config.getConfig("tags.mappings").pairs
       val incomingEntries = buildInstances[Propagation.EntryReader[HeaderReader]](config.getConfig("entries.incoming").pairs)
       val outgoingEntries = buildInstances[Propagation.EntryWriter[HeaderWriter]](config.getConfig("entries.outgoing").pairs)
 
-      Settings(tagsHeaderName, tagsMappings, incomingEntries, outgoingEntries)
+      Settings(tagsHeaderName, tagsIncludeUpstreamName, tagsMappings, incomingEntries, outgoingEntries)
     }
   }
 

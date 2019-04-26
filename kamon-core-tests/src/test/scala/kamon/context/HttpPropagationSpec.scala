@@ -57,10 +57,12 @@ class HttpPropagationSpec extends WordSpec with Matchers with OptionValues {
 
 
     "writing to outgoing requests" should {
-      "not write anything if the context is empty" in {
+      "at least write the upstream name when the context is empty" in {
         val headers = mutable.Map.empty[String, String]
         httpPropagation.write(Context.Empty, headerWriterFromMap(headers))
-        headers shouldBe empty
+        headers should contain only(
+          "x-content-tags" -> "upstream.name=kamon-application;"
+        )
       }
 
       "write context tags when available" in {
@@ -72,7 +74,7 @@ class HttpPropagationSpec extends WordSpec with Matchers with OptionValues {
 
         httpPropagation.write(context, headerWriterFromMap(headers))
         headers should contain only(
-          "x-content-tags" -> "hello=world;",
+          "x-content-tags" -> "hello=world;upstream.name=kamon-application;",
           "x-mapped-tag" -> "value"
         )
       }
@@ -86,6 +88,7 @@ class HttpPropagationSpec extends WordSpec with Matchers with OptionValues {
 
         httpPropagation.write(context, headerWriterFromMap(headers))
         headers should contain only(
+          "x-content-tags" -> "upstream.name=kamon-application;",
           "string-header" -> "out-we-go"
           )
       }
@@ -98,6 +101,7 @@ class HttpPropagationSpec extends WordSpec with Matchers with OptionValues {
       """
         |tags {
         |  header-name = "x-content-tags"
+        |  include-upstream-name = yes
         |
         |  mappings {
         |    mappedTag = "x-mapped-tag"

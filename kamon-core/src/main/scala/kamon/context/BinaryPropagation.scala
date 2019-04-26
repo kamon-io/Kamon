@@ -21,8 +21,9 @@ import java.io.{ByteArrayInputStream, ByteArrayOutputStream, InputStream, Output
 import com.typesafe.config.Config
 import kamon.context.BinaryPropagation.{ByteStreamReader, ByteStreamWriter}
 import kamon.context.generated.binary.context.{Context => ColferContext, Entry => ColferEntry, Tags => ColferTags}
-import kamon.context.generated.binary.context.{StringTag => ColferStringTag, LongTag => ColferLongTag, BooleanTag => ColferBooleanTag}
+import kamon.context.generated.binary.context.{BooleanTag => ColferBooleanTag, LongTag => ColferLongTag, StringTag => ColferStringTag}
 import kamon.tag.{Tag, TagSet}
+import kamon.trace.Span.TagKeys
 import org.slf4j.LoggerFactory
 
 import scala.reflect.ClassTag
@@ -195,35 +196,46 @@ object BinaryPropagation {
         val output = _streamPool.get()
         val contextOutgoingBuffer = _contextBufferPool.get()
 
-        if(context.tags.nonEmpty()) {
+        if(context.tags.nonEmpty() || settings.includeUpstreamName) {
           val tagsData = new ColferTags()
           val strings = Array.newBuilder[ColferStringTag]
-          val longs = Array.newBuilder[ColferLongTag]
-          val booleans = Array.newBuilder[ColferBooleanTag]
 
-          context.tags.iterator().foreach {
-            case t: Tag.String =>
-              val st = new ColferStringTag()
-              st.setKey(t.key)
-              st.setValue(t.value)
-              strings += st
+          if(context.tags.nonEmpty()) {
+            val longs = Array.newBuilder[ColferLongTag]
+            val booleans = Array.newBuilder[ColferBooleanTag]
 
-            case t: Tag.Long =>
-              val lt = new ColferLongTag()
-              lt.setKey(t.key)
-              lt.setValue(t.value)
-              longs += lt
+            context.tags.iterator().foreach {
+              case t: Tag.String =>
+                val st = new ColferStringTag()
+                st.setKey(t.key)
+                st.setValue(t.value)
+                strings += st
 
-            case t: Tag.Boolean =>
-              val bt = new ColferBooleanTag()
-              bt.setKey(t.key)
-              bt.setValue(t.value)
-              booleans += bt
+              case t: Tag.Long =>
+                val lt = new ColferLongTag()
+                lt.setKey(t.key)
+                lt.setValue(t.value)
+                longs += lt
+
+              case t: Tag.Boolean =>
+                val bt = new ColferBooleanTag()
+                bt.setKey(t.key)
+                bt.setValue(t.value)
+                booleans += bt
+            }
+
+            tagsData.setLongs(longs.result())
+            tagsData.setBooleans(booleans.result())
+          }
+
+          if(settings.includeUpstreamName) {
+            val st = new ColferStringTag()
+            st.setKey(TagKeys.UpstreamName)
+            st.setValue(Kamon.environment.service)
+            strings += st
           }
 
           tagsData.setStrings(strings.result())
-          tagsData.setLongs(longs.result())
-          tagsData.setBooleans(booleans.result())
           contextData.setTags(tagsData)
         }
 
@@ -266,6 +278,7 @@ object BinaryPropagation {
 
   case class Settings(
     maxOutgoingSize: Int,
+    includeUpstreamName: Boolean,
     incomingEntries: Map[String, Propagation.EntryReader[ByteStreamReader]],
     outgoingEntries: Map[String, Propagation.EntryWriter[ByteStreamWriter]]
   )
@@ -290,6 +303,7 @@ object BinaryPropagation {
 
       Settings(
         config.getBytes("max-outgoing-size").toInt,
+        config.getBoolean("tags.include-upstream-name"),
         buildInstances[Propagation.EntryReader[ByteStreamReader]](config.getConfig("entries.incoming").pairs),
         buildInstances[Propagation.EntryWriter[ByteStreamWriter]](config.getConfig("entries.outgoing").pairs)
       )
