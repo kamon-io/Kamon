@@ -12,11 +12,11 @@
       <div class="row no-gutters">
         <div class="col">
           <div class="py-3 pl-4">
-            <h5>{{ metric.name }}</h5>
+            <h5 class="mb-0 mr-3 d-inline-block">{{ metric.name }}</h5>
+            <span class="tag">{{ metric.instrumentType }}</span>
+            <span class="tag" v-if="metric.unitMagnitude !== 'none'">{{ metric.unitMagnitude }}</span>
             <div class="text-label">
-              <span>{{metric.instrumentType}}</span>
-              <span v-if="metric.unitDimension !== 'none'"> - {{ metric.unitDimension }}</span>
-              <span v-if="metric.unitMagnitude !== 'none'"> - {{ metric.unitMagnitude }}</span>
+              <span>{{metric.description}}</span>
             </div>
           </div>
         </div>

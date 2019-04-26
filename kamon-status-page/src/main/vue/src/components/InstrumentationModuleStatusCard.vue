@@ -2,9 +2,6 @@
   <status-card :indicator-text="runStatus.message" :indicator-icon="runStatus.icon" :indicator-background-color="runStatus.color">
     <div slot="default" class="py-3 pl-4">
       <h5 class="mb-0 mr-3 d-inline-block">{{ module.name }}</h5>
-      <div class="tag-container d-inline-block" v-if="!isSuggestion">
-        <span class="tag">{{ status }}</span>
-      </div>
       <div class="text-label">
         {{ module.description }}
       </div>

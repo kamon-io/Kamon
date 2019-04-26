@@ -86,6 +86,7 @@ object JsonMarshalling {
         metricsObject
           .`object`()
             .value("name", metric.name)
+            .value("description", metric.description)
             .value("type", metric.instrumentType.name)
             .value("unitDimension", metric.unit.dimension.name)
             .value("unitMagnitude", metric.unit.magnitude.name)

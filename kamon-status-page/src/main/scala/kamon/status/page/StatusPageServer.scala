@@ -9,6 +9,7 @@ import fi.iki.elonen.NanoHTTPD.Response.{Status => StatusCode}
 import kamon.status.Status
 
 import scala.collection.JavaConverters.asScalaBufferConverter
+import scala.compat.Platform.EOL
 
 /**
   * Exposes an embedded HTTP server based on NanoHTTP.
@@ -21,25 +22,29 @@ class StatusPageServer(hostname: String, port: Int, resourceLoader: ClassLoader,
 
   override def serve(session: NanoHTTPD.IHTTPSession): NanoHTTPD.Response = {
     if(session.getMethod() == NanoHTTPD.Method.GET) {
-      if(session.getUri().startsWith("/status")) {
+      try {
+        if (session.getUri().startsWith("/status")) {
 
-        // Serve the current status data on Json.
-        session.getUri() match {
-          case "/status/settings"         => json(status.settings())
-          case "/status/modules"          => json(status.moduleRegistry())
-          case "/status/metrics"          => json(status.metricRegistry())
-          case "/status/instrumentation"  => json(status.instrumentation())
-          case _                          => NotFound
+          // Serve the current status data on Json.
+          session.getUri() match {
+            case "/status/settings" => json(status.settings())
+            case "/status/modules" => json(status.moduleRegistry())
+            case "/status/metrics" => json(status.metricRegistry())
+            case "/status/instrumentation" => json(status.instrumentation())
+            case _ => NotFound
+          }
+
+        } else {
+
+          // Serve resources from the status page folder.
+          val requestedResource = if (session.getUri() == "/") "/index.html" else session.getUri()
+          val resourcePath = RootResourceDirectory + requestedResource
+          val resourceStream = resourceLoader.getResourceAsStream(resourcePath)
+
+          if (resourceStream == null) NotFound else resource(requestedResource, resourceStream)
         }
-
-      } else {
-
-        // Serve resources from the status page folder.
-        val requestedResource = if (session.getUri() == "/") "/index.html" else session.getUri()
-        val resourcePath = RootResourceDirectory + requestedResource
-        val resourceStream = resourceLoader.getResourceAsStream(resourcePath)
-
-        if (resourceStream == null) NotFound else resource(requestedResource, resourceStream)
+      } catch {
+        case t: Throwable => serverError(t)
       }
 
     } else NotAllowed
@@ -77,6 +82,12 @@ class StatusPageServer(hostname: String, port: Int, resourceLoader: ClassLoader,
     response.closeConnection(true)
     response
   }
+
+  private def serverError(cause: Throwable) = NanoHTTPD.newFixedLengthResponse(
+    StatusCode.INTERNAL_ERROR,
+    NanoHTTPD.MIME_PLAINTEXT,
+    "Failed to serve request due to: \n\n" + cause.getStackTrace.mkString("", EOL, EOL)
+  )
 
   private val NotAllowed = NanoHTTPD.newFixedLengthResponse(
     StatusCode.METHOD_NOT_ALLOWED,
