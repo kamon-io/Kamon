@@ -151,7 +151,7 @@ class TagSetSpec extends WordSpec with Matchers {
         .add("website", "kamon.io")
         .add("luckyNumber", 7L)
         .add("luckyNumber", 7L)
-        .create()
+        .build()
 
       tags.get(plain("name")) shouldBe "Kamon"
       tags.get(plain("website")) shouldBe "kamon.io"

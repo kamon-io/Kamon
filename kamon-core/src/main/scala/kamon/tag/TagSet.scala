@@ -251,7 +251,7 @@ object TagSet {
     def add(key: String, value: Boolean): Builder
 
     /** Creates a new TagSet instance that includes all valid key/value pairs added to this builder. */
-    def create(): TagSet
+    def build(): TagSet
   }
 
 
@@ -433,7 +433,7 @@ object TagSet {
         this
       }
 
-      override def create(): TagSet = {
+      override def build(): TagSet = {
         val unifiedMap = new UnifiedMap[String, Any]()
         var position = 0
         var currentBlock = _firstBlock

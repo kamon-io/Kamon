@@ -146,9 +146,9 @@ class Tracer(initialConfig: Config, clock: Clock, classLoading: ClassLoading, co
 
     override def operationName(): String = _name
 
-    override def tags(): TagSet = _spanTags.create()
+    override def tags(): TagSet = _spanTags.build()
 
-    override def metricTags(): TagSet = _metricTags.create()
+    override def metricTags(): TagSet = _metricTags.build()
 
     override def name(name: String): SpanBuilder = {
       _name = name

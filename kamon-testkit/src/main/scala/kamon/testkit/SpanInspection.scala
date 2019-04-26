@@ -39,7 +39,7 @@ trait SpanInspection {
       */
     def spanTags(): TagSet =
       if(span.isInstanceOf[Span.Local])
-        getField[Span.Local, TagSet.Builder](span.asInstanceOf[Span.Local], "_spanTags").create()
+        getField[Span.Local, TagSet.Builder](span.asInstanceOf[Span.Local], "_spanTags").build()
       else
         TagSet.Empty
 

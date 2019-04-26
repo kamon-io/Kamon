@@ -444,7 +444,7 @@ object Span {
       throwable.getStackTrace().mkString("", EOL, EOL)
 
     private def toFinishedSpan(to: Instant, metricTags: TagSet): Span.Finished =
-      Span.Finished(id, parentId, trace, _operationName, position, from, to, _spanTags.create(), metricTags, _marks)
+      Span.Finished(id, parentId, trace, _operationName, position, from, to, _spanTags.build(), metricTags, _marks)
 
     private def recordSpanMetrics(to: Instant, metricTags: TagSet): Unit = {
       val processingTime = Clock.nanosBetween(from, to)
@@ -461,7 +461,7 @@ object Span {
           case _              => // Can't get an operation name from anything else than a local span.
         }
 
-      _metricTags.create()
+      _metricTags.build()
     }
   }
 

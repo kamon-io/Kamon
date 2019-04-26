@@ -21,7 +21,7 @@ import kamon.status.Environment
 import kamon.tag.TagSet
 import org.scalatest.{Matchers, WordSpec}
 
-class EnvironmentTagsBuilderSpec extends WordSpec with Matchers {
+class EnvironmentTagsSpec extends WordSpec with Matchers {
   private val testEnv = Environment.from(ConfigFactory.parseString(
     """
       |kamon.environment {
@@ -49,7 +49,7 @@ class EnvironmentTagsBuilderSpec extends WordSpec with Matchers {
         """.stripMargin)
 
       val env = Kamon.environment
-      val tags = EnvironmentTagsBuilder.toTags(env, config)
+      val tags = EnvironmentTags.from(env, config)
       tags("service") shouldBe env.service
       tags("host") shouldBe env.host
       tags("instance") shouldBe env.instance
@@ -64,7 +64,7 @@ class EnvironmentTagsBuilderSpec extends WordSpec with Matchers {
           |exclude = []
         """.stripMargin)
 
-      val tags = EnvironmentTagsBuilder.toTags(testEnv, config)
+      val tags = EnvironmentTags.from(testEnv, config)
       tags("service") shouldBe testEnv.service
       tags("host") shouldBe testEnv.host
       tags("instance") shouldBe testEnv.instance
@@ -82,7 +82,7 @@ class EnvironmentTagsBuilderSpec extends WordSpec with Matchers {
           |exclude = [ "region" ]
         """.stripMargin)
 
-      val tags = EnvironmentTagsBuilder.toTags(testEnv, config)
+      val tags = EnvironmentTags.from(testEnv, config)
       tags("service") shouldBe testEnv.service
       tags("host") shouldBe testEnv.host
       tags("instance") shouldBe testEnv.instance
@@ -99,7 +99,7 @@ class EnvironmentTagsBuilderSpec extends WordSpec with Matchers {
           |exclude = [ "region", "env" ]
         """.stripMargin)
 
-      val tags = EnvironmentTagsBuilder.toTags(testEnv, config)
+      val tags = EnvironmentTags.from(testEnv, config)
       tags shouldBe empty
     }
   }

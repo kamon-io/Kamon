@@ -20,7 +20,7 @@ import scala.collection.JavaConverters._
   * Most uses of this class are expected to happen in reporter modules, where the Environment information should usually
   * be exposed along with the metrics and spans.
   */
-object EnvironmentTagsBuilder {
+object EnvironmentTags {
 
   /**
     * Returns a TagSet instance with information from the provided Environment, using the provided config path to
@@ -36,8 +36,8 @@ object EnvironmentTagsBuilder {
     *
     * If any of the settings are missing this function will default to include all Environment information.
     */
-  def toTags(environment: Environment, path: String): TagSet =
-    toTags(environment, Kamon.config().getConfig(path))
+  def from(environment: Environment, path: String): TagSet =
+    from(environment, Kamon.config().getConfig(path))
 
   /**
     * Returns a TagSet instance with information from the provided Environment, using the provided Config to read the
@@ -52,19 +52,19 @@ object EnvironmentTagsBuilder {
     *
     * If any of the settings are missing this function will default to include all Environment information.
     */
-  def toTags(environment: Environment, config: Config): TagSet = {
+  def from(environment: Environment, config: Config): TagSet = {
     val includeHost = if(config.hasPath("include-host")) config.getBoolean("include-host") else true
     val includeService = if(config.hasPath("include-service")) config.getBoolean("include-service") else true
     val includeInstance = if(config.hasPath("include-instance")) config.getBoolean("include-instance") else true
     val exclude = if(config.hasPath("exclude")) config.getStringList("exclude").asScala.toSet else Set.empty[String]
 
-    toTags(environment, includeService, includeHost, includeInstance, exclude)
+    from(environment, includeService, includeHost, includeInstance, exclude)
   }
 
   /**
     * Turns the information enclosed in the provided Environment instance into a TagSet.
     */
-  def toTags(environment: Environment, includeService: Boolean, includeHost: Boolean, includeInstance: Boolean,
+  def from(environment: Environment, includeService: Boolean, includeHost: Boolean, includeInstance: Boolean,
       exclude: Set[String]): TagSet = {
 
     val tagSet = TagSet.builder()
@@ -83,7 +83,7 @@ object EnvironmentTagsBuilder {
       if(!exclude.contains(pair.key)) tagSet.add(pair.key, pair.value)
     }
 
-    tagSet.create()
+    tagSet.build()
   }
 
   object TagKeys {

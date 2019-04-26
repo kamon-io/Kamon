@@ -18,7 +18,7 @@ class TagSetLookupBenchmark {
     .add("error", false)
     .add("userID", "abcdef")
     .add("correlationID", "0123456")
-    .create()
+    .build()
 
   def keyByKeyTags() = TagSet.Empty
     .withTag("http.url", "http://localhost:8080/test")

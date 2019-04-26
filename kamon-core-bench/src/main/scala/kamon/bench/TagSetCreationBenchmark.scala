@@ -37,6 +37,6 @@ class TagSetCreationBenchmark {
     if(tagCount > 4) tags.add("userID", "abcdef")
     if(tagCount > 5) tags.add("correlationID", "0123456")
 
-    tags.create()
+    tags.build()
   }
 }
