@@ -4,7 +4,7 @@ package tag
 import kamon.tag.TagSet.Lookup
 import java.util.function.BiConsumer
 
-import org.eclipse.collections.impl.map.mutable.UnifiedMap
+import kamon.util.UnifiedMap
 import org.slf4j.LoggerFactory
 
 /**
@@ -122,7 +122,7 @@ class TagSet private(private val _underlying: UnifiedMap[String, Any]) {
     * being returned by the iterator.
     */
   def iterator[T](valueTransform: Any => T): Iterator[Tag.Pair[T]] = new Iterator[Tag.Pair[T]] {
-    private val _entriesIterator = _underlying.keyValuesView().iterator()
+    private val _entriesIterator = _underlying.entrySet().iterator()
     private val _mutablePair = new TagSet.mutable.Pair[T](null, null.asInstanceOf[T])
 
     override def hasNext: Boolean =
@@ -130,8 +130,8 @@ class TagSet private(private val _underlying: UnifiedMap[String, Any]) {
 
     override def next(): Tag.Pair[T] = {
       val pair = _entriesIterator.next()
-      _mutablePair.pairKey = pair.getOne
-      _mutablePair.pairValue = valueTransform(pair.getTwo)
+      _mutablePair.pairKey = pair.getKey
+      _mutablePair.pairValue = valueTransform(pair.getValue)
       _mutablePair
     }
   }
@@ -143,7 +143,7 @@ class TagSet private(private val _underlying: UnifiedMap[String, Any]) {
     * structure that will be sent to the external systems.
     */
   def iterator(): Iterator[Tag] = new Iterator[Tag] {
-    private val _entriesIterator = _underlying.keyValuesView().iterator()
+    private val _entriesIterator = _underlying.entrySet().iterator()
     private var _longTag: TagSet.mutable.Long = null
     private var _stringTag: TagSet.mutable.String = null
     private var _booleanTag: TagSet.mutable.Boolean = null
@@ -153,10 +153,10 @@ class TagSet private(private val _underlying: UnifiedMap[String, Any]) {
 
     override def next(): Tag = {
       val pair = _entriesIterator.next()
-      pair.getTwo match {
-        case v: String  => stringTag(pair.getOne, v)
-        case v: Boolean => booleanTag(pair.getOne, v)
-        case v: Long    => longTag(pair.getOne, v)
+      pair.getValue match {
+        case v: String  => stringTag(pair.getKey, v)
+        case v: Boolean => booleanTag(pair.getKey, v)
+        case v: Long    => longTag(pair.getKey, v)
       }
     }
 
@@ -190,15 +190,15 @@ class TagSet private(private val _underlying: UnifiedMap[String, Any]) {
     sb.append("Tags{")
 
     var hasTags = false
-    val iterator = _underlying.keyValuesView().iterator()
+    val iterator = _underlying.entrySet().iterator()
     while(iterator.hasNext) {
       val pair = iterator.next()
       if(hasTags)
         sb.append(",")
 
-      sb.append(pair.getOne)
+      sb.append(pair.getKey)
         .append("=")
-        .append(pair.getTwo)
+        .append(pair.getValue)
 
       hasTags = true
     }

@@ -33,19 +33,6 @@ lazy val core = (project in file("kamon-core"))
     assemblyShadeRules in assembly := Seq(
       ShadeRule.rename("org.HdrHistogram.**"    -> "kamon.lib.@0").inAll,
       ShadeRule.rename("org.jctools.**"         -> "kamon.lib.@0").inAll,
-      ShadeRule.rename("org.eclipse.**"         -> "kamon.lib.@0").inAll,
-      ShadeRule.zap(
-        "org.eclipse.collections.impl.bag.**",
-        "org.eclipse.collections.impl.**.primitive.**",
-        "org.eclipse.collections.impl.**.parallel.**",
-        "org.eclipse.collections.impl.iterator.**",
-        "org.eclipse.collections.impl.list.**",
-        "org.eclipse.collections.impl.multimap.**",
-        "org.eclipse.collections.impl.primitive.**",
-        "org.eclipse.collections.impl.set.**",
-        "org.eclipse.collections.impl.stack.**",
-        "org.eclipse.collections.impl.string.**",
-      ).inAll,
       ShadeRule.keep(
         "kamon.Kamon",
         "kamon.context.**",
@@ -57,16 +44,13 @@ lazy val core = (project in file("kamon-core"))
         "kamon.util.**",
         "org.HdrHistogram.AtomicHistogram",
         "org.jctools.queues.MpscArrayQueue",
-        "org.eclipse.collections.impl.map.mutable.UnifiedMap",
-        "org.eclipse.collections.api.map.MutableMap"
       ).inAll
     ),
     libraryDependencies ++= Seq(
-      "com.typesafe"            %  "config"              % "1.3.1",
-      "org.slf4j"               %  "slf4j-api"           % "1.7.25",
-      "org.hdrhistogram"        %  "HdrHistogram"        % "2.1.9",
-      "org.jctools"             %  "jctools-core"        % "2.1.1",
-      "org.eclipse.collections" %  "eclipse-collections" % "9.2.0",
+      "com.typesafe"      %  "config"       % "1.3.1",
+      "org.slf4j"         %  "slf4j-api"    % "1.7.25",
+      "org.hdrhistogram"  %  "HdrHistogram" % "2.1.9",
+      "org.jctools"       %  "jctools-core" % "2.1.1",
     )
   )
 

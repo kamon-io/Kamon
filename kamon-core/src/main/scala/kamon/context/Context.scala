@@ -18,7 +18,7 @@ package context
 
 import kamon.context.Context.Entry
 import kamon.tag.TagSet
-import org.eclipse.collections.impl.map.mutable.UnifiedMap
+import kamon.util.UnifiedMap
 
 
 /**
@@ -108,7 +108,7 @@ class Context private (private val _underlying: UnifiedMap[String, Any], val tag
     * Returns a loosely typed iterator of all entries in this Context.
     */
   def entries(): Iterator[Context.Entry] = new Iterator[Context.Entry] {
-    private val _entriesIterator = _underlying.keyValuesView().iterator()
+    private val _entriesIterator = _underlying.entrySet().iterator()
     private val _entry = Entry.Mutable(null, null)
 
     override def hasNext: Boolean =
@@ -116,8 +116,8 @@ class Context private (private val _underlying: UnifiedMap[String, Any], val tag
 
     override def next(): Context.Entry = {
       val pair = _entriesIterator.next()
-      _entry.key = pair.getOne
-      _entry.value = pair.getTwo
+      _entry.key = pair.getKey
+      _entry.value = pair.getValue
       _entry
     }
   }
