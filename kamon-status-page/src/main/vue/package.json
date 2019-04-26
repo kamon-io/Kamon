@@ -1,6 +1,6 @@
 {
   "name": "kamon-status",
-  "version": "0.1.0",
+  "version": "2.0.0",
   "private": true,
   "scripts": {
     "serve": "vue-cli-service serve",
@@ -8,24 +8,24 @@
     "lint": "vue-cli-service lint"
   },
   "dependencies": {
-    "axios": "^0.18.0",
-    "bootstrap": "^4.2.1",
-    "ts-option": "^1.1.5",
-    "underscore": "^1.9.1",
-    "vue": "^2.5.21",
-    "vue-class-component": "^6.0.0",
-    "vue-property-decorator": "^7.0.0",
-    "vue-router": "^3.0.1"
+    "axios": "0.18.0",
+    "bootstrap": "4.3.1",
+    "ts-option": "1.1.5",
+    "underscore": "1.9.1",
+    "vue": "2.6.10",
+    "vue-class-component": "7.0.2",
+    "vue-property-decorator": "8.1.0",
+    "vue-router": "3.0.6"
   },
   "devDependencies": {
-    "@fortawesome/fontawesome-free": "^5.7.1",
-    "@types/underscore": "^1.8.9",
-    "@vue/cli-plugin-typescript": "^3.3.0",
-    "@vue/cli-service": "^3.3.0",
-    "node-sass": "^4.9.0",
-    "sass-loader": "^7.0.1",
-    "typescript": "^3.0.0",
-    "vue-template-compiler": "^2.5.21"
+    "@fortawesome/fontawesome-free": "5.8.1",
+    "@types/underscore": "1.8.14",
+    "@vue/cli-plugin-typescript": "3.6.0",
+    "@vue/cli-service": "3.6.0",
+    "node-sass": "4.11.0",
+    "sass-loader": "7.1.0",
+    "typescript": "3.4.5",
+    "vue-template-compiler": "2.6.10"
   },
   "postcss": {
     "plugins": {
