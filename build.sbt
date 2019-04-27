@@ -5,15 +5,16 @@ import BundleKeys._
 
 
 lazy val instrumentationModules: Seq[ModuleID] = Seq(
-  "io.kamon" %% "kamon-scala-future"      % "2.0.0-209f237bcddf4a9c3de2ad91836b6a5d4f6ad3e6",
-  "io.kamon" %% "kamon-twitter-future"    % "2.0.0-209f237bcddf4a9c3de2ad91836b6a5d4f6ad3e6",
-  "io.kamon" %% "kamon-scalaz-future"     % "2.0.0-209f237bcddf4a9c3de2ad91836b6a5d4f6ad3e6",
+//  "io.kamon" %% "kamon-scala-future"      % "2.0.0-209f237bcddf4a9c3de2ad91836b6a5d4f6ad3e6",
+//  "io.kamon" %% "kamon-twitter-future"    % "2.0.0-209f237bcddf4a9c3de2ad91836b6a5d4f6ad3e6",
+//  "io.kamon" %% "kamon-scalaz-future"     % "2.0.0-209f237bcddf4a9c3de2ad91836b6a5d4f6ad3e6",
+  "io.kamon" %% "kamon-executors" % "2.0.0-16aace5b1de0ff1206c39ffebd6085e7997e206a"
 )
 
 val versionSettings = Seq(
   kamonCoreVersion := "2.0.0-M4",
-  kanelaAgentVersion := "1.0.0-M1",
-  instrumentationCommonVersion := "2.0.0-54cbfbf7961b05bfd2f22838bcb05461c4cc78f6"
+  kanelaAgentVersion := "1.0.0-M2",
+  instrumentationCommonVersion := "2.0.0-6432ad4395a3b2b6c5f03895b5313b8c80f9ead5"
 )
 
 lazy val kamonBundle = project
