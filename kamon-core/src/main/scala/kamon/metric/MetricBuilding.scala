@@ -74,7 +74,7 @@ trait MetricBuilding {
 
   /** Creates or retrieves a Histogram-backed metric */
   def histogram(name: String, description: String): Metric.Histogram =
-    registry.histogram(name, None, None, None, None)
+    registry.histogram(name, Some(description), None, None, None)
 
   /** Creates or retrieves a Histogram-backed metric with the provided unit */
   def histogram(name: String, unit: MeasurementUnit): Metric.Histogram =
@@ -103,7 +103,7 @@ trait MetricBuilding {
 
   /** Creates or retrieves a Timer-backed metric */
   def timer(name: String, description: String): Metric.Timer =
-    registry.timer(name, None, None, None)
+    registry.timer(name, Some(description), None, None)
 
   /** Creates or retrieves a Timer-backed metric with the provided unit and dynamic range */
   def timer(name: String, dynamicRange: DynamicRange): Metric.Timer =
@@ -120,7 +120,7 @@ trait MetricBuilding {
 
   /** Creates or retrieves a RangeSampler-backed metric */
   def rangeSampler(name: String, description: String): Metric.RangeSampler =
-    registry.rangeSampler(name, None, None, None, None)
+    registry.rangeSampler(name, Some(description), None, None, None)
 
   /** Creates or retrieves a RangeSampler-backed metric with the provided unit */
   def rangeSampler(name: String, unit: MeasurementUnit): Metric.RangeSampler =
