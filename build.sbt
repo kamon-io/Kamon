@@ -14,10 +14,10 @@
  */
 import Tests._
 
-val kamonCore     = "io.kamon"  %%  "kamon-core"                    % "2.0.0-M4"
-val kamonTestkit  = "io.kamon"  %%  "kamon-testkit"                 % "2.0.0-M4"
-val kanelaScala   = "io.kamon"  %%  "kamon-instrumentation-common"  % "2.0.0-6432ad4395a3b2b6c5f03895b5313b8c80f9ead5"
-val kanelaAgent   = "io.kamon"  %   "kanela-agent"                  % "1.0.0-M2"
+val kamonCore             = "io.kamon"  %%  "kamon-core"                    % "2.0.0-M4"
+val kamonTestkit          = "io.kamon"  %%  "kamon-testkit"                 % "2.0.0-M4"
+val kamonInstrumentation  = "io.kamon"  %%  "kamon-instrumentation-common"  % "2.0.0-6432ad4395a3b2b6c5f03895b5313b8c80f9ead5"
+val kanelaAgent           = "io.kamon"  %   "kanela-agent"                  % "1.0.0-M2"
 
 val guava         = "com.google.guava"  % "guava"  % "24.1-jre"
 
@@ -39,7 +39,8 @@ lazy val executors = (project in file("kamon-executors"))
     moduleName := "kamon-executors",
     testGrouping in Test := groupByExperimental((definedTests in Test).value, kanelaAgentJar.value),
     libraryDependencies ++=
-      providedScope(kamonCore, kanelaScala, kanelaAgent) ++
+      compileScope(kamonCore, kamonInstrumentation) ++
+      providedScope(kanelaAgent) ++
       testScope(scalatest, logbackClassic, kamonTestkit, guava)
   )
 
@@ -51,7 +52,7 @@ lazy val benchmark = (project in file("kamon-executors-bench"))
     fork in Test := true,
     moduleName := "kamon-executors-bench",
     resolvers += Resolver.mavenLocal,
-    libraryDependencies ++= compileScope(kamonCore, kanelaScala, kanelaAgent, guava)
+    libraryDependencies ++= compileScope(kamonCore, kamonInstrumentation, kanelaAgent, guava)
   ).dependsOn(executors)
 
 
