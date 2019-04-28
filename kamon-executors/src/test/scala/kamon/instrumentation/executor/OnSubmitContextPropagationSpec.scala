@@ -14,21 +14,21 @@
  */
 
 
-package kamon.executors.instrumentation
+package kamon.instrumentation.executor
 
-import java.util.concurrent.{Callable, CountDownLatch, Executors}
+import java.util.concurrent.{ExecutorService, Executors => JavaExecutors}
 
 import com.google.common.util.concurrent.MoreExecutors
 import kamon.Kamon
-import kamon.executors.ContextTesting
 import org.scalatest.concurrent.Eventually
 import org.scalatest.{Matchers, OptionValues, WordSpec}
-import kamon.tag.Lookups
+
 import scala.collection.mutable.ListBuffer
+import scala.util.Random
 
-class ExecutorInstrumentationSpec extends WordSpec with Matchers with ContextTesting with Eventually with OptionValues {
+class OnSubmitContextPropagationSpec extends WordSpec with Matchers with ContextTesting with Eventually with OptionValues {
 
-  "the ExecutorInstrumentation" should {
+  "an instrumented executor with context propagation on submit enabled" should {
     "capture the context when call execute(Runnable) in DirectExecutor" in {
       val ctx = Kamon.withContext(testContext("in-runnable-body")) {
         val runnable = new SimpleRunnable
@@ -41,7 +41,7 @@ class ExecutorInstrumentationSpec extends WordSpec with Matchers with ContextTes
     }
 
     "capture the context when call execute(Runnable) in ThreadPool" in {
-      val executor = Executors.newSingleThreadExecutor()
+      val executor = instrument(JavaExecutors.newSingleThreadExecutor())
       val ctx = Kamon.withContext(testContext("in-runnable-body")) {
         val runnable = new SimpleRunnable
         executor.execute(runnable)
@@ -53,7 +53,7 @@ class ExecutorInstrumentationSpec extends WordSpec with Matchers with ContextTes
     }
 
     "capture the context when call submit(Runnable) in ThreadPool" in {
-      val executor = Executors.newSingleThreadExecutor()
+      val executor = instrument(JavaExecutors.newSingleThreadExecutor())
       val ctx = Kamon.withContext(testContext("in-runnable-body")) {
         val runnable = new SimpleRunnable
         executor.submit(runnable)
@@ -65,7 +65,7 @@ class ExecutorInstrumentationSpec extends WordSpec with Matchers with ContextTes
     }
 
     "capture the context when call execute(Runnable) in ForkJoinPool" in {
-      val executor = Executors.newWorkStealingPool()
+      val executor = instrument(JavaExecutors.newWorkStealingPool())
 
       val ctx = Kamon.withContext(testContext("in-runnable-body")) {
         val runnable = new SimpleRunnable
@@ -78,7 +78,7 @@ class ExecutorInstrumentationSpec extends WordSpec with Matchers with ContextTes
     }
 
     "capture the context when call submit(Runnable) in ForkJoinPool" in {
-      val executor = Executors.newWorkStealingPool()
+      val executor = instrument(JavaExecutors.newWorkStealingPool())
 
       val ctx = Kamon.withContext(testContext("in-runnable-body")) {
         val runnable = new SimpleRunnable
@@ -91,7 +91,7 @@ class ExecutorInstrumentationSpec extends WordSpec with Matchers with ContextTes
     }
 
     "capture the context when call execute(Runnable) in ScheduledThreadPool" in {
-      val executor = Executors.newScheduledThreadPool(1)
+      val executor = instrument(JavaExecutors.newScheduledThreadPool(1))
 
       val ctx = Kamon.withContext(testContext("in-runnable-body")) {
         val runnable = new SimpleRunnable
@@ -104,7 +104,7 @@ class ExecutorInstrumentationSpec extends WordSpec with Matchers with ContextTes
     }
 
     "capture the context when call submit(Runnable) in ScheduledThreadPool" in {
-      val executor = Executors.newScheduledThreadPool(1)
+      val executor = instrument(JavaExecutors.newScheduledThreadPool(1))
 
       val ctx = Kamon.withContext(testContext("in-runnable-body")) {
         val runnable = new SimpleRunnable
@@ -117,7 +117,7 @@ class ExecutorInstrumentationSpec extends WordSpec with Matchers with ContextTes
     }
 
     "capture the context when call submit(Callable) in ThreadPool" in {
-      val executor = Executors.newSingleThreadExecutor()
+      val executor = instrument(JavaExecutors.newSingleThreadExecutor())
       val ctx = Kamon.withContext(testContext("in-callable-body")) {
         val callable = new SimpleCallable
         executor.submit(callable)
@@ -129,7 +129,7 @@ class ExecutorInstrumentationSpec extends WordSpec with Matchers with ContextTes
     }
 
     "capture the context when call submit(Callable) in ScheduledThreadPool" in {
-      val executor = Executors.newSingleThreadExecutor()
+      val executor = instrument(JavaExecutors.newSingleThreadExecutor())
       val ctx = Kamon.withContext(testContext("in-callable-body")) {
         val callable = new SimpleCallable
         executor.submit(callable)
@@ -141,7 +141,7 @@ class ExecutorInstrumentationSpec extends WordSpec with Matchers with ContextTes
     }
 
     "capture the context when call submit(Callable) in ForkJoinPool" in {
-      val executor = Executors.newWorkStealingPool()
+      val executor = instrument(JavaExecutors.newWorkStealingPool())
 
       val ctx = Kamon.withContext(testContext("in-callable-body")) {
         val callable = new SimpleCallable
@@ -158,35 +158,13 @@ class ExecutorInstrumentationSpec extends WordSpec with Matchers with ContextTes
 
       val values = Kamon.withContext(testContext("all-callables-should-see-this-key")) {
         val callables = new CallableWithContext("A") :: new CallableWithContext( "B") :: new CallableWithContext("C") :: Nil
-        Executors.newCachedThreadPool().invokeAll(callables.asJava).asScala.foldLeft(ListBuffer.empty[String]) { (acc, f) => acc += f.get() }
+        instrument(JavaExecutors.newCachedThreadPool()).invokeAll(callables.asJava).asScala.foldLeft(ListBuffer.empty[String]) { (acc, f) => acc += f.get() }
       }
       values should contain allOf("all-callables-should-see-this-key-A", "all-callables-should-see-this-key-B", "all-callables-should-see-this-key-C")
     }
   }
-}
 
-class SimpleRunnable extends Runnable with ContextTesting {
-  val latch = new CountDownLatch(1)
-  var ctx: Option[String] = _
-
-  override def run(): Unit = {
-    ctx = Kamon.currentContext().getTag(Lookups.option(TestKey))
-    latch.countDown()
+  def instrument(executor: ExecutorService): ExecutorService = {
+    ExecutorInstrumentation.instrument(executor, Random.nextString(10), ExecutorInstrumentation.DefaultSettings.propagateContextOnSubmit())
   }
-}
-
-class SimpleCallable extends Callable[Option[String]] with ContextTesting {
-  val latch = new CountDownLatch(1)
-  var ctx: Option[String] = _
-
-  override def call(): Option[String] = {
-    ctx = Kamon.currentContext().getTag(Lookups.option(TestKey))
-    latch.countDown()
-    ctx
-  }
-}
-
-class CallableWithContext[A](value:String) extends Callable[String] with ContextTesting {
-  override def call(): String =
-    Kamon.currentContext().getTag(Lookups.option(TestKey)).map(_ + s"-$value").getOrElse("undefined")
 }

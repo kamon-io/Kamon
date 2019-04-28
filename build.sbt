@@ -12,49 +12,66 @@
  * and limitations under the License.
  * =========================================================================================
  */
+import Tests._
 
-val kamonCore           = "io.kamon"            %% "kamon-core"               % "2.0.0-d2d5cb18261e2c79b86340bf39524394700415e8"
-val kamonTestkit        = "io.kamon"            %% "kamon-testkit"            % "2.0.0-d2d5cb18261e2c79b86340bf39524394700415e8"
+val kamonCore     = "io.kamon"  %%  "kamon-core"                    % "2.0.0-M4"
+val kamonTestkit  = "io.kamon"  %%  "kamon-testkit"                 % "2.0.0-M4"
+val kanelaScala   = "io.kamon"  %%  "kamon-instrumentation-common"  % "2.0.0-6432ad4395a3b2b6c5f03895b5313b8c80f9ead5"
+val kanelaAgent   = "io.kamon"  %   "kanela-agent"                  % "1.0.0-M2"
 
-val kanelaScala     = "io.kamon" %% "kanela-scala-extension"  % "0.0.14"
-val kanelaAgent     = "io.kamon"  % "kanela-agent"  % "0.0.19-SNAPSHOT"
-val guava           = "com.google.guava"  % "guava"  % "24.1-jre"
+val guava         = "com.google.guava"  % "guava"  % "24.1-jre"
 
 lazy val root = (project in file("."))
   .settings(noPublishing: _*)
   .aggregate(executors, benchmark)
 
-
-
-
 val commonSettings = Seq(
   scalaVersion := "2.12.6",
-  resolvers += "Local Maven Repository" at Path.userHome.asFile.toURI.toURL + ".m2/repository",
   resolvers += Resolver.mavenLocal,
   resolvers += Resolver.bintrayRepo("kamon-io", "snapshots"),
   crossScalaVersions := Seq("2.12.6"/*, "2.11.12", "2.10.7"*/)
 )
 
 lazy val executors = (project in file("kamon-executors"))
-  .enablePlugins(JavaAgent)
-  .settings(moduleName := "kamon-executors")
   .settings(commonSettings: _*)
-  .settings(javaAgents += kanelaAgent)
   .settings(
+    fork in Test := true,
+    moduleName := "kamon-executors",
+    testGrouping in Test := groupByExperimental((definedTests in Test).value, kanelaAgentJar.value),
     libraryDependencies ++=
-      compileScope(kamonCore, kanelaScala, kanelaAgent) ++
+      providedScope(kamonCore, kanelaScala, kanelaAgent) ++
       testScope(scalatest, logbackClassic, kamonTestkit, guava)
   )
 
 lazy val benchmark = (project in file("kamon-executors-bench"))
   .enablePlugins(JmhPlugin)
-  .settings(
-    moduleName := "kamon-executors-bench",
-    resolvers += Resolver.mavenLocal,
-    fork in Test := true)
   .settings(noPublishing: _*)
   .settings(commonSettings: _*)
-  .settings(libraryDependencies ++= compileScope(guava))
-  .dependsOn(executors)
+  .settings(
+    fork in Test := true,
+    moduleName := "kamon-executors-bench",
+    resolvers += Resolver.mavenLocal,
+    libraryDependencies ++= compileScope(kamonCore, kanelaScala, kanelaAgent, guava)
+  ).dependsOn(executors)
 
 
+def groupByExperimental(tests: Seq[TestDefinition], kanelaJar: File): Seq[Group] = {
+  val (stable, experimental) = tests.partition(t => t.name != "kamon.instrumentation.executor.BootstrapContextPropagationSpec")
+
+  val stableGroup = new Group("stableTests", stable, SubProcess(
+    ForkOptions().withRunJVMOptions(Vector(
+      "-javaagent:" + kanelaJar.toString
+    ))
+  ))
+
+  // TODO: Bring back these tests as soon as we figure out what's the issue with Kanela + bootstrap instrumentation
+  val experimentalGroup = new Group("experimentalTests", experimental, SubProcess(
+    ForkOptions().withRunJVMOptions(Vector(
+      "-javaagent:" + kanelaJar.toString,
+      "-Dkanela.modules.executors.enabled=false",
+      "-Dkanela.modules.executors-capture-on-submit.enabled=true"
+    ))
+  ))
+
+  Seq(stableGroup)
+}

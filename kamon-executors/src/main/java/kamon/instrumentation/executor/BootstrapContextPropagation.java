@@ -13,14 +13,14 @@
  * =========================================================================================
  */
 
-package kamon.executors.instrumentation;
+package kamon.instrumentation.executor;
 
 import kamon.Kamon;
 import kamon.context.Context;
 import kamon.context.Storage.Scope;
-import kamon.executors.instrumentation.ExecutorsInstrumentationAdvisors.CallableCollectionWrapperAdvisor;
-import kamon.executors.instrumentation.ExecutorsInstrumentationAdvisors.CallableWrapperAdvisor;
-import kamon.executors.instrumentation.ExecutorsInstrumentationAdvisors.RunnableWrapperAdvisor;
+import kamon.instrumentation.executor.BootstrapContextPropagationAdvisors.CallableCollectionWrapperAdvisor;
+import kamon.instrumentation.executor.BootstrapContextPropagationAdvisors.CallableWrapperAdvisor;
+import kamon.instrumentation.executor.BootstrapContextPropagationAdvisors.RunnableWrapperAdvisor;
 import kanela.agent.api.instrumentation.InstrumentationBuilder;
 import kanela.agent.bootstrap.context.ContextHandler;
 import kanela.agent.bootstrap.context.ContextProvider;
@@ -28,9 +28,10 @@ import kanela.agent.bootstrap.context.ContextProvider;
 import java.util.Collection;
 import java.util.concurrent.Callable;
 
-public final class ExecutorInstrumentation extends InstrumentationBuilder {
+public final class BootstrapContextPropagation extends InstrumentationBuilder {
 
-    public ExecutorInstrumentation() {
+    public BootstrapContextPropagation() {
+
         /**
          * Set the ContextProvider
          */
