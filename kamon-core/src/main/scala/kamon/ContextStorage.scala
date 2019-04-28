@@ -11,7 +11,7 @@ import scala.util.control.NonFatal
   * current context on a Thread.
   */
 trait ContextStorage {
-  private val _contextStorage = Storage.ThreadLocal()
+  import ContextStorage._
 
   /**
     * Returns the current Context on the calling Thread. As the default behavior this will return Context.Empty if no
@@ -110,5 +110,8 @@ trait ContextStorage {
         span.finish()
     }
   }
+}
 
+object ContextStorage {
+  private val _contextStorage = Storage.ThreadLocal()
 }
