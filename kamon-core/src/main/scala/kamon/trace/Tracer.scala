@@ -23,7 +23,7 @@ import com.typesafe.config.Config
 import kamon.context.Context
 import kamon.tag.TagSet
 import kamon.tag.Lookups.option
-import kamon.trace.Span.{Kind, Position, TagKeys}
+import kamon.trace.Span.{Kind, Link, Position, TagKeys}
 import kamon.trace.Trace.SamplingDecision
 import kamon.util.Clock
 import org.jctools.queues.{MessagePassingQueue, MpscArrayQueue}
@@ -135,7 +135,8 @@ class Tracer(initialConfig: Config, clock: Clock, classLoading: ClassLoading, co
 
     private var _trackMetrics = true
     private var _name = initialOperationName
-    private var _marks: Seq[Span.Mark] = Seq.empty
+    private var _marks: List[Span.Mark] = List.empty
+    private var _links: List[Span.Link] = List.empty
     private var _errorMessage: String = _
     private var _errorCause: Throwable = _
     private var _ignoreParentFromContext = false
@@ -195,6 +196,11 @@ class Tracer(initialConfig: Config, clock: Clock, classLoading: ClassLoading, co
       this
     }
 
+    override def link(span: Span, kind: Link.Kind): SpanBuilder = {
+      _links = Span.Link(kind, span.trace, span.id) +: _links
+      this
+    }
+
     override def fail(errorMessage: String): SpanBuilder = {
       _errorMessage = errorMessage
       this
@@ -210,12 +216,12 @@ class Tracer(initialConfig: Config, clock: Clock, classLoading: ClassLoading, co
       this
     }
 
-    override def enableMetrics(): SpanBuilder = {
+    override def trackProcessingTime(): SpanBuilder = {
       _trackMetrics = true
       this
     }
 
-    override def disableMetrics(): SpanBuilder = {
+    override def doNotTrackProcessingTime(): SpanBuilder = {
       _trackMetrics = false
       this
     }
@@ -301,8 +307,8 @@ class Tracer(initialConfig: Config, clock: Clock, classLoading: ClassLoading, co
 
       val trace = Trace(traceId, samplingDecision)
 
-      new Span.Local(id, parentId, trace, position, _kind, localParent, _name, _spanTags, _metricTags, at, _trackMetrics,
-        _tagWithParentOperation, _includeErrorStacktrace, clock, _preFinishHooks, _onSpanFinish)
+      new Span.Local(id, parentId, trace, position, _kind, localParent, _name, _spanTags, _metricTags, at, _marks, _links,
+        _trackMetrics, _tagWithParentOperation, _includeErrorStacktrace, clock, _preFinishHooks, _onSpanFinish)
     }
   }
 
