@@ -146,7 +146,7 @@ sealed abstract class Span {
   /**
     * Adds a new mark with the provided key and instant.
     */
-  def mark(at: Instant, key: String): Span
+  def mark(key: String, at: Instant): Span
 
   /**
     * Creates a link between this Span and the provided one.
@@ -174,14 +174,15 @@ sealed abstract class Span {
   def fail(errorMessage: String, cause: Throwable): Span
 
   /**
-    * Enables tracking of the span.processing-time metric for this Span.
+    * Enables tracking of metrics for this Span. For a plain Span, this means that the span.processing-time metric will
+    * be tracked and for a Delayed Span, the span.elapsed-time and span.wait-time metrics will be tracked as well.
     */
-  def trackProcessingTime(): Span
+  def trackMetrics(): Span
 
   /**
-    * Disables tracking of the span.processing-time metric for this Span.
+    * Disables tracking of metrics for this Span.
     */
-  def doNotTrackProcessingTime(): Span
+  def doNotTrackMetrics(): Span
 
   /**
     * Finishes this Span. Even though it is possible to call any of the methods that modify/write information on the
@@ -204,6 +205,47 @@ object Span {
     */
   val Key = Context.key[Span]("span", Span.Empty)
 
+  /**
+    * A Span representing an operation that will not start processing immediately after the Span is created but rather
+    * when the start method is called. Additionally to a regular Span, a Delayed Span will automatically track the wait
+    * time metric and add a "span.started" mark on the Span when the Start method is called. The three relevant instants
+    * when working with Delayed Spans are:
+    *
+    *  Created
+    *     |=====================|                                          <- Wait Time
+    *     |====================================================|           <- Elapsed Time
+    *                           |==============================|           <- Processing Time
+    *                        Started                        Finished
+    *
+    * Unless metrics tracking is disabled, a Delayed Span will track the "span.wait-time" metric with the time between
+    * creating and starting the Span, and the "span.elapsed-time" tracking the time between creating and finishing the
+    * Span. The "span.processing-time" remains the same, tracking the time between starting and finishing the Span.
+    *
+    *
+    **/
+  abstract class Delayed extends Span {
+
+    /**
+      * Enables tracking of the span.elapsed-time and span.wait-time metrics for this Span. Note that these metrics will
+      * not be recorded if metrics tracking has been disabled on the Span.
+      */
+    def trackDelayedSpanMetrics(): Delayed
+
+    /**
+      * Disables tracking of the span.elapsed-time and span.wait-time metrics for this Span.
+      */
+    def doNotTrackDelayedSpanMetrics(): Delayed
+
+    /**
+      * Signals that the operation represented by this Span started processing.
+      */
+    def start(): Delayed
+
+    /**
+      * Signals that the operation represented by this Span started processing at the provided instant.
+      */
+    def start(at: Instant): Delayed
+  }
 
   /**
     * Describes the kind of operation being represented by a Span.
@@ -305,13 +347,15 @@ object Span {
     */
   case class Finished (
     id: Identifier,
-    parentId: Identifier,
     trace: Trace,
+    parentId: Identifier,
     operationName: String,
-    kind: Kind,
-    location: Position,
+    hasError: Boolean,
+    wasDelayed: Boolean,
     from: Instant,
     to: Instant,
+    kind: Kind,
+    location: Position,
     tags: TagSet,
     metricTags: TagSet,
     marks: Seq[Mark],
@@ -323,21 +367,37 @@ object Span {
     */
   final class Local(val id: Identifier, val parentId: Identifier, val trace: Trace, val position: Position,
       val kind: Kind, localParent: Option[Span], initialOperationName: String, spanTags: TagSet.Builder, metricTags: TagSet.Builder,
-      from: Instant, initialMarks: List[Mark], initialLinks: List[Link], trackMetrics: Boolean, tagWithParentOperation: Boolean,
-      includeErrorStacktrace: Boolean, clock: Clock, preFinishHooks: Array[Tracer.PreFinishHook], onFinish: Span.Finished => Unit) extends Span {
+      createdAt: Instant, initialMarks: List[Mark], initialLinks: List[Link], initialTrackMetrics: Boolean, tagWithParentOperation: Boolean,
+      includeErrorStacktrace: Boolean, isDelayed: Boolean, clock: Clock, preFinishHooks: Array[Tracer.PreFinishHook],
+      onFinish: Span.Finished => Unit) extends Span.Delayed {
 
     private val _isSampled: Boolean = trace.samplingDecision == Trace.SamplingDecision.Sample
     private val _metricTags = metricTags
     private val _spanTags = spanTags
-    private var _trackMetrics: Boolean = trackMetrics
+    private var _trackMetrics: Boolean = initialTrackMetrics
+    private var _trackDelayedSpanMetrics: Boolean = true
     private var _isOpen: Boolean = true
     private var _hasError: Boolean = false
     private var _operationName: String = initialOperationName
     private var _marks: List[Mark] = initialMarks
     private var _links: List[Link] = initialLinks
+    private var _isDelayedStarted: Boolean = false
+    private var _startedAt: Instant = createdAt
 
     override val isRemote: Boolean = false
     override val isEmpty: Boolean = false
+
+    override def start(): Delayed =
+      start(clock.instant())
+
+    override def start(at: Instant): Delayed = synchronized {
+      if(_isOpen && isDelayed && !_isDelayedStarted) {
+        _startedAt = at
+        _isDelayedStarted = true
+        mark(MarkKeys.SpanStarted, at)
+      }
+      this
+    }
 
     override def tag(key: String, value: String): Span = synchronized {
       if(_isSampled && _isOpen)
@@ -376,10 +436,10 @@ object Span {
     }
 
     override def mark(key: String): Span = {
-      mark(clock.instant(), key)
+      mark(key, clock.instant())
     }
 
-    override def mark(at: Instant, key: String): Span = synchronized {
+    override def mark(key: String, at: Instant): Span = synchronized {
       if(_isOpen)
         _marks = Mark(at, key) :: _marks
       this
@@ -425,13 +485,23 @@ object Span {
       this
     }
 
-    override def trackProcessingTime(): Span = synchronized {
+    override def trackMetrics(): Span = synchronized {
       _trackMetrics = true
       this
     }
 
-    override def doNotTrackProcessingTime(): Span = synchronized {
+    override def doNotTrackMetrics(): Span = synchronized {
       _trackMetrics = false
+      this
+    }
+
+    override def trackDelayedSpanMetrics(): Delayed =  synchronized {
+      _trackDelayedSpanMetrics = true
+      this
+    }
+
+    override def doNotTrackDelayedSpanMetrics(): Delayed =  synchronized {
+      _trackDelayedSpanMetrics = false
       this
     }
 
@@ -448,7 +518,7 @@ object Span {
     override def finish(): Unit =
       finish(clock.instant())
 
-    override def finish(to: Instant): Unit = synchronized {
+    override def finish(finishedAt: Instant): Unit = synchronized {
       import Span.Local._logger
 
       if (_isOpen) {
@@ -465,14 +535,9 @@ object Span {
         }
 
         _isOpen = false
-
         val finalMetricTags = createMetricTags()
-
-        if(_trackMetrics)
-          recordSpanMetrics(to, finalMetricTags)
-
-        if(_isSampled)
-          onFinish(toFinishedSpan(to, finalMetricTags))
+        recordSpanMetrics(finishedAt, finalMetricTags)
+        reportSpan(finishedAt, finalMetricTags)
       }
     }
 
@@ -480,11 +545,33 @@ object Span {
       throwable.getStackTrace().mkString("", EOL, EOL)
 
     private def toFinishedSpan(to: Instant, metricTags: TagSet): Span.Finished =
-      Span.Finished(id, parentId, trace, _operationName, kind, position, from, to, _spanTags.build(), metricTags, _marks, _links)
+      Span.Finished(id, trace, parentId, _operationName, _hasError, isDelayed, createdAt, to, kind, position, _spanTags.build(),
+        metricTags, _marks, _links)
 
-    private def recordSpanMetrics(to: Instant, metricTags: TagSet): Unit = {
-      val processingTime = Clock.nanosBetween(from, to)
-      Span.Metrics.ProcessingTime.withTags(metricTags).record(processingTime)
+    private def recordSpanMetrics(finishedAt: Instant, metricTags: TagSet): Unit = {
+      if(_trackMetrics) {
+        if(!isDelayed) {
+          val processingTime = Clock.nanosBetween(createdAt, finishedAt)
+          Span.Metrics.ProcessingTime.withTags(metricTags).record(processingTime)
+
+        } else {
+          val processingTime = Clock.nanosBetween(_startedAt, finishedAt)
+          Span.Metrics.ProcessingTime.withTags(metricTags).record(processingTime)
+
+          if (_trackDelayedSpanMetrics) {
+            val waitTime = Clock.nanosBetween(createdAt, _startedAt)
+            val elapsedTime = Clock.nanosBetween(createdAt, finishedAt)
+
+            Span.Metrics.WaitTime.withTags(metricTags).record(waitTime)
+            Span.Metrics.ElapsedTime.withTags(metricTags).record(elapsedTime)
+          }
+        }
+      }
+    }
+
+    private def reportSpan(finishedAt: Instant, metricTags: TagSet): Unit = {
+      if(_isSampled)
+        onFinish(toFinishedSpan(finishedAt, metricTags))
     }
 
     private def createMetricTags(): TagSet = {
@@ -524,14 +611,14 @@ object Span {
     override def tagMetric(key: String, value: Long): Span = this
     override def tagMetric(key: String, value: Boolean): Span = this
     override def mark(key: String): Span = this
-    override def mark(at: Instant, key: String): Span = this
+    override def mark(key: String, at: Instant): Span = this
     override def link(span: Span, kind: Link.Kind): Span = this
     override def fail(errorMessage: String): Span = this
     override def fail(cause: Throwable): Span = this
     override def fail(errorMessage: String, cause: Throwable): Span = this
     override def name(name: String): Span = this
-    override def trackProcessingTime(): Span = this
-    override def doNotTrackProcessingTime(): Span = this
+    override def trackMetrics(): Span = this
+    override def doNotTrackMetrics(): Span = this
     override def finish(): Unit = {}
     override def finish(at: Instant): Unit = {}
     override def operationName(): String = "empty"
@@ -555,14 +642,14 @@ object Span {
     override def tagMetric(key: String, value: Long): Span = this
     override def tagMetric(key: String, value: Boolean): Span = this
     override def mark(key: String): Span = this
-    override def mark(at: Instant, key: String): Span = this
+    override def mark(key: String, at: Instant): Span = this
     override def link(span: Span, kind: Link.Kind): Span = this
     override def fail(errorMessage: String): Span = this
     override def fail(cause: Throwable): Span = this
     override def fail(errorMessage: String, cause: Throwable): Span = this
     override def name(name: String): Span = this
-    override def trackProcessingTime(): Span = this
-    override def doNotTrackProcessingTime(): Span = this
+    override def trackMetrics(): Span = this
+    override def doNotTrackMetrics(): Span = this
     override def finish(): Unit = {}
     override def finish(at: Instant): Unit = {}
     override def operationName(): String = "empty"
@@ -574,9 +661,19 @@ object Span {
     */
   object Metrics {
 
-    val ProcessingTime = Kamon.timer(
+    val ProcessingTime = Kamon.timer (
       name = "span.processing-time",
-      description = "Tracks the elapsed time between the starting and finishing a Span."
+      description = "Tracks the time between the instant a Span started and finished processing"
+    )
+
+    val ElapsedTime = Kamon.timer (
+      name = "span.elapsed-time",
+      description = "Tracks the total elapsed time between the instant a Span was created until it finishes processing"
+    )
+
+    val WaitTime = Kamon.timer (
+      name = "span.wait-time",
+      description = "Tracks the waiting time between creation of a delayed Span and the instant it starts processing"
     )
   }
 
@@ -592,5 +689,9 @@ object Span {
     val OperationName = "operation"
     val ParentOperationName = "parentOperation"
     val UpstreamName = "upstream.name"
+  }
+
+  object MarkKeys {
+    val SpanStarted = "span.started"
   }
 }

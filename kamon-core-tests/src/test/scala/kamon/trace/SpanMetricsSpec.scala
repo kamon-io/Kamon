@@ -15,6 +15,8 @@
 
 package kamon.trace
 
+import java.time.Instant
+
 import kamon.Kamon.spanBuilder
 import kamon.tag.TagSet
 import kamon.testkit.{InstrumentInspection, MetricInspection, Reconfigure}
@@ -27,8 +29,8 @@ class SpanMetricsSpec extends WordSpecLike with Matchers with InstrumentInspecti
 
   sampleNever()
 
-  "Span Metrics" should {
-    "be recorded for successful execution" in {
+  "the Span Metrics" should {
+    "track span.processing-time for successful execution on a Span" in {
       val operation = "span-success"
       val operationTag = "operation" -> operation
 
@@ -44,15 +46,15 @@ class SpanMetricsSpec extends WordSpecLike with Matchers with InstrumentInspecti
 
     }
 
-    "not be recorded when disableMetrics() is called on the SpanBuilder or the Span" in {
+    "not track span.processing-time when doNotTrackProcessingTime() is called on the SpanBuilder or the Span" in {
       val operation = "span-with-disabled-metrics"
       spanBuilder(operation)
         .start()
-        .doNotTrackProcessingTime()
+        .doNotTrackMetrics()
         .finish()
 
       spanBuilder(operation)
-        .doNotTrackProcessingTime()
+        .doNotTrackMetrics()
         .start()
         .finish()
 
@@ -71,18 +73,18 @@ class SpanMetricsSpec extends WordSpecLike with Matchers with InstrumentInspecti
       Span.Metrics.ProcessingTime.tagValues("custom-metric-tag-on-span") should contain("value")
     }
 
-    "be recorded if metrics are enabled by calling enableMetrics() on the Span" in {
+    "track span.processing-time if enabled by calling trackProcessingTime() on the Span" in {
       val operation = "span-with-re-enabled-metrics"
       spanBuilder(operation)
         .start()
-        .doNotTrackProcessingTime()
-        .trackProcessingTime()
+        .doNotTrackMetrics()
+        .trackMetrics()
         .finish()
 
       Span.Metrics.ProcessingTime.tagValues("operation") should contain(operation)
     }
 
-    "record error latency and count" in {
+    "track span.processing-time for failed execution on a Span" in {
       val operation = "span-failure"
       val operationTag = "operation" -> operation
 
@@ -163,6 +165,30 @@ class SpanMetricsSpec extends WordSpecLike with Matchers with InstrumentInspecti
 
       val errorHistogram = Span.Metrics.ProcessingTime.withTags(TagSet.from(Map(operationTag, errorTag, parentOperationTag)))
       errorHistogram.distribution().count shouldBe 0
+    }
+
+    "track span.elapsed-time and span.wait-time for delayed spans" in {
+      val createTime = Instant.ofEpochSecond(0)
+      val operation = "delayed-span-success"
+      val operationTag = "operation" -> operation
+
+      spanBuilder(operation)
+        .delay(createTime)
+        .start(createTime.plusNanos(10))
+        .finish(createTime.plusNanos(30))
+
+      val waitTime = Span.Metrics.WaitTime.withTags(TagSet.from(Map(operationTag, noErrorTag)))distribution()
+      val elapsedTime = Span.Metrics.ElapsedTime.withTags(TagSet.from(Map(operationTag, noErrorTag)))distribution()
+      val processingTime = Span.Metrics.ProcessingTime.withTags(TagSet.from(Map(operationTag, noErrorTag)))distribution()
+
+      waitTime.count shouldBe 1
+      waitTime.buckets.head.value shouldBe 10
+
+      elapsedTime.count shouldBe 1
+      elapsedTime.buckets.head.value shouldBe 30
+
+      processingTime.count shouldBe 1
+      processingTime.buckets.head.value shouldBe 20
     }
   }
 
