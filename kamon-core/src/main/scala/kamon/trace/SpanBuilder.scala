@@ -80,7 +80,7 @@ trait SpanBuilder {
   /**
     * Adds a new mark with the provided key and instant.
     */
-  def mark(at: Instant, key: String): SpanBuilder
+  def mark(key: String, at: Instant): SpanBuilder
 
   /**
     * Creates a link between this Span and the provided one.
@@ -105,17 +105,17 @@ trait SpanBuilder {
     * "error.message" key and optionally adds the "error.stacktrace" Span tag with the stack trace from the provided
     * throwable. See the "kamon.trace.include-error-stacktrace" setting for more information.
     */
-  def fail(errorMessage: String, cause: Throwable): SpanBuilder
+  def fail(cause: Throwable, errorMessage: String): SpanBuilder
 
   /**
     * Enables tracking of the span.processing-time metric for this Span.
     */
-  def trackProcessingTime(): SpanBuilder
+  def trackMetrics(): SpanBuilder
 
   /**
     * Disables tracking of the span.processing-time metric for this Span.
     */
-  def doNotTrackProcessingTime(): SpanBuilder
+  def doNotTrackMetrics(): SpanBuilder
 
   /**
     * Signals that the builder should not attempt to make the new Span a child of the Span held on the current context
@@ -148,17 +148,31 @@ trait SpanBuilder {
   def kind(kind: Span.Kind): SpanBuilder
 
   /**
-    * Creates a new Span with all information accumulated on the builder and the provided instant as its start time
+    * Creates a new Span with all the information accumulated on the builder and the provided instant as its start time
     * stamp. When a Span is created, its id, parentId, location and trace information become fixed and can no longer be
     * modified.
     */
   def start(at: Instant): Span
 
   /**
-    * Creates a new Span with all information accumulated on the builder and the current instant as its start time
+    * Creates a new Span with all then information accumulated on the builder and the current instant as its start time
     * stamp. When a Span is created, its id, parentId, location and trace information become fixed and can no longer be
     * modified.
     */
   def start(): Span
+
+  /**
+    * Creates a new Delayed Span with all the information accumulated on the builder and the current instant as its
+    * creation time. When a Span is created, its id, parentId, location and trace information become fixed and can no
+    * longer be modified.
+    */
+  def delay(): Span.Delayed
+
+  /**
+    * Creates a new Delayed Span with all the information accumulated on the builder and the provided instant as its
+    * creation time. When a Span is created, its id, parentId, location and trace information become fixed and can no
+    * longer be modified.
+    */
+  def delay(at: Instant): Span.Delayed
 
 }

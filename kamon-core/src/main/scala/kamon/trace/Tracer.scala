@@ -191,7 +191,7 @@ class Tracer(initialConfig: Config, clock: Clock, classLoading: ClassLoading, co
       this
     }
 
-    override def mark(at: Instant, key: String): SpanBuilder = {
+    override def mark(key: String, at: Instant): SpanBuilder = {
       _marks = Span.Mark(at, key) +: _marks
       this
     }
@@ -211,17 +211,17 @@ class Tracer(initialConfig: Config, clock: Clock, classLoading: ClassLoading, co
       this
     }
 
-    override def fail(errorMessage: String, cause: Throwable): SpanBuilder = {
+    override def fail(cause: Throwable, errorMessage: String): SpanBuilder = {
       fail(errorMessage); fail(cause)
       this
     }
 
-    override def trackProcessingTime(): SpanBuilder = {
+    override def trackMetrics(): SpanBuilder = {
       _trackMetrics = true
       this
     }
 
-    override def doNotTrackProcessingTime(): SpanBuilder = {
+    override def doNotTrackMetrics(): SpanBuilder = {
       _trackMetrics = false
       this
     }
@@ -252,10 +252,19 @@ class Tracer(initialConfig: Config, clock: Clock, classLoading: ClassLoading, co
     }
 
     override def start(): Span =
-    start(clock.instant())
+      createSpan(clock.instant(), isDelayed = false)
+
+    override def start(at: Instant): Span =
+      createSpan(at, isDelayed = false)
+
+    override def delay(): Span.Delayed =
+      createSpan(clock.instant(), isDelayed = true)
+
+    override def delay(at: Instant): Span.Delayed =
+      createSpan(at, isDelayed = true)
 
     /** Uses all the accumulated information to create a new Span */
-    override def start(at: Instant): Span = {
+    private def createSpan(at: Instant, isDelayed: Boolean): Span.Delayed = {
       if(_preStartHooks.nonEmpty) {
         _preStartHooks.foreach(psh => {
           try {
@@ -308,7 +317,7 @@ class Tracer(initialConfig: Config, clock: Clock, classLoading: ClassLoading, co
       val trace = Trace(traceId, samplingDecision)
 
       new Span.Local(id, parentId, trace, position, _kind, localParent, _name, _spanTags, _metricTags, at, _marks, _links,
-        _trackMetrics, _tagWithParentOperation, _includeErrorStacktrace, clock, _preFinishHooks, _onSpanFinish)
+        _trackMetrics, _tagWithParentOperation, _includeErrorStacktrace, isDelayed, clock, _preFinishHooks, _onSpanFinish)
     }
   }
 
