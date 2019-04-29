@@ -37,10 +37,10 @@ class StatementInstrumentation {
    *   Calls to java.sql.Statement+.execute(..)
    */
 
-  @Pointcut("execution(* java.sql.Statement+.execute(..)) && args(sql) && this(statement)")
+  @Pointcut("execution(* (java.sql.Statement+ || org.sqlite.jdbc3.JDBC3Statement+).execute(..)) && args(sql) && this(statement)")
   def statementExecuteWithArguments(sql: String, statement: Statement): Unit = {}
 
-  @Pointcut("execution(* java.sql.PreparedStatement+.execute()) && this(statement)")
+  @Pointcut("execution(* (java.sql.PreparedStatement+ || org.sqlite.jdbc3.JDBC3PreparedStatement+).execute()) && this(statement)")
   def statementExecuteWithoutArguments(statement: PreparedStatement): Unit = {}
 
   @Around("statementExecuteWithArguments(sql, statement)")
@@ -55,10 +55,10 @@ class StatementInstrumentation {
    *   Calls to java.sql.Statement+.executeQuery(..)
    */
 
-  @Pointcut("execution(* java.sql.Statement+.executeQuery(..)) && args(sql) && this(statement)")
+  @Pointcut("execution(* (java.sql.Statement || org.sqlite.jdbc3.JDBC3Statement+).executeQuery(..)) && args(sql) && this(statement)")
   def statementExecuteQueryWithArguments(sql: String, statement: Statement): Unit = {}
 
-  @Pointcut("execution(* java.sql.PreparedStatement+.executeQuery()) && this(statement)")
+  @Pointcut("execution(* (java.sql.PreparedStatement+ || org.sqlite.jdbc3.JDBC3PreparedStatement+).executeQuery()) && this(statement)")
   def statementExecuteQueryWithoutArguments(statement: PreparedStatement): Unit = {}
 
   @Around("statementExecuteQueryWithArguments(sql, statement)")
@@ -73,10 +73,10 @@ class StatementInstrumentation {
    *   Calls to java.sql.Statement+.executeUpdate(..)
    */
 
-  @Pointcut("execution(* java.sql.Statement+.executeUpdate(..)) && args(sql) && this(statement)")
+  @Pointcut("execution(* (java.sql.Statement+  || org.sqlite.jdbc3.JDBC3Statement+).executeUpdate(..)) && args(sql) && this(statement)")
   def statementExecuteUpdateWithArguments(sql: String, statement: Statement): Unit = {}
 
-  @Pointcut("execution(* java.sql.PreparedStatement+.executeUpdate()) && this(statement)")
+  @Pointcut("execution(* (java.sql.PreparedStatement+ || org.sqlite.jdbc3.JDBC3PreparedStatement+).executeUpdate()) && this(statement)")
   def statementExecuteUpdateWithoutArguments(statement: PreparedStatement): Unit = {}
 
   @Around("statementExecuteUpdateWithArguments(sql, statement)")
@@ -91,7 +91,7 @@ class StatementInstrumentation {
    *   Calls to java.sql.Statement+.executeBatch() and java.sql.Statement+.executeLargeBatch()
    */
 
-  @Pointcut("(execution(* java.sql.Statement+.executeBatch()) || execution(* java.sql.Statement+.executeLargeBatch()))  && this(statement)")
+  @Pointcut("(execution(* (java.sql.Statement+ || org.sqlite.jdbc3.JDBC3Statement+).executeBatch()) || execution(* (java.sql.Statement+ || org.sqlite.jdbc3.JDBC3Statement+).executeLargeBatch()))  && this(statement)")
   def statementExecuteBatch(statement: Statement): Unit = {}
 
   @Around("statementExecuteBatch(statement)")

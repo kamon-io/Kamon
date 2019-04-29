@@ -13,8 +13,8 @@
  * =========================================================================================
  */
 
-val kamonCore  =        "io.kamon"        %% "kamon-core"         % "1.1.0"
-val kamonTestkit  =     "io.kamon"        %% "kamon-testkit"      % "1.1.0"
+val kamonCore  =        "io.kamon"        %% "kamon-core"         % "1.1.6"
+val kamonTestkit  =     "io.kamon"        %% "kamon-testkit"      % "1.1.6"
 val slick =             "com.typesafe.slick" %% "slick" % "3.2.0"
 val h2 =                "com.h2database"   % "h2"                 % "1.4.196"
 val hikariCP =          "com.zaxxer"       % "HikariCP"           % "2.7.4"
@@ -22,9 +22,12 @@ val hikariCP =          "com.zaxxer"       % "HikariCP"           % "2.7.4"
 resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
 
 lazy val root = (project in file("."))
+  .enablePlugins(JavaAgent)
   .settings(name := "kamon-jdbc")
-  .settings(aspectJSettings: _*)
+  .settings(instrumentationSettings: _*)
   .settings(
+      kamonUseAspectJ := true,
+      kamonAspectJVersion := "1.9.4",
       libraryDependencies ++=
         compileScope(kamonCore) ++
         providedScope(aspectJ, hikariCP, slick) ++

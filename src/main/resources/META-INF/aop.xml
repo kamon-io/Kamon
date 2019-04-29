@@ -18,6 +18,7 @@
 
     <!-- JDBC Drivers -->
     <include within="org.h2..*"/>
+    <include within="org.sqlite..*"/>
     <include within="com.mysql.jdbc..*"/>
     <include within="com.mysql.cj.jdbc..*"/>
     <include within="org.mariadb.jdbc..*"/>
