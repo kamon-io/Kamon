@@ -281,6 +281,7 @@ object Span {
     parentId: Identifier,
     trace: Trace,
     operationName: String,
+    kind: Kind,
     location: Position,
     from: Instant,
     to: Instant,
@@ -444,7 +445,7 @@ object Span {
       throwable.getStackTrace().mkString("", EOL, EOL)
 
     private def toFinishedSpan(to: Instant, metricTags: TagSet): Span.Finished =
-      Span.Finished(id, parentId, trace, _operationName, position, from, to, _spanTags.build(), metricTags, _marks)
+      Span.Finished(id, parentId, trace, _operationName, kind, position, from, to, _spanTags.build(), metricTags, _marks)
 
     private def recordSpanMetrics(to: Instant, metricTags: TagSet): Unit = {
       val processingTime = Clock.nanosBetween(from, to)
