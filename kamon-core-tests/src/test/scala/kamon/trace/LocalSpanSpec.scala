@@ -20,6 +20,7 @@ import java.time.Instant
 import kamon.testkit.SpanInspection
 import kamon.Kamon
 import kamon.tag.Lookups._
+import kamon.trace.Span.Link.Kind
 import org.scalatest.{Matchers, OptionValues, WordSpec}
 
 class LocalSpanSpec extends WordSpec with Matchers with OptionValues with SpanInspection.Syntax {
@@ -29,8 +30,8 @@ class LocalSpanSpec extends WordSpec with Matchers with OptionValues with SpanIn
       "be sent to the Span reporters" in {
         val finishedSpan = Kamon.spanBuilder("test-span")
           .tag("test", "value")
-          .disableMetrics()
-          .enableMetrics()
+          .doNotTrackProcessingTime()
+          .trackProcessingTime()
           .start(Instant.EPOCH.plusSeconds(1))
           .toFinished(Instant.EPOCH.plusSeconds(10))
 
@@ -42,6 +43,8 @@ class LocalSpanSpec extends WordSpec with Matchers with OptionValues with SpanIn
       }
 
       "pass all the tags and marks to the FinishedSpan instance when started and finished" in {
+        val linkedSpan = Kamon.spanBuilder("linked").start()
+
         val finishedSpan = Kamon.spanBuilder("full-span")
           .tag("builder-string-tag", "value")
           .tag("builder-boolean-tag-true", true)
@@ -54,6 +57,7 @@ class LocalSpanSpec extends WordSpec with Matchers with OptionValues with SpanIn
           .tag("span-number-tag", 42)
           .mark("my-mark")
           .mark(Instant.EPOCH.plusSeconds(4), "my-custom-timetamp-mark")
+          .link(linkedSpan, Span.Link.Kind.FollowsFrom)
           .name("fully-populated-span")
           .toFinished(Instant.EPOCH.plusSeconds(10))
 
@@ -71,6 +75,10 @@ class LocalSpanSpec extends WordSpec with Matchers with OptionValues with SpanIn
         finishedSpan.marks.map(_.key) should contain allOf(
           "my-mark",
           "my-custom-timetamp-mark"
+        )
+
+        finishedSpan.links should contain only(
+          Span.Link(Kind.FollowsFrom, linkedSpan.trace, linkedSpan.id)
         )
 
         finishedSpan.marks.find(_.key == "my-custom-timetamp-mark")

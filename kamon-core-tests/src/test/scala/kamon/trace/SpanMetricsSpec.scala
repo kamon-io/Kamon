@@ -48,11 +48,11 @@ class SpanMetricsSpec extends WordSpecLike with Matchers with InstrumentInspecti
       val operation = "span-with-disabled-metrics"
       spanBuilder(operation)
         .start()
-        .disableMetrics()
+        .doNotTrackProcessingTime()
         .finish()
 
       spanBuilder(operation)
-        .disableMetrics()
+        .doNotTrackProcessingTime()
         .start()
         .finish()
 
@@ -75,8 +75,8 @@ class SpanMetricsSpec extends WordSpecLike with Matchers with InstrumentInspecti
       val operation = "span-with-re-enabled-metrics"
       spanBuilder(operation)
         .start()
-        .disableMetrics()
-        .enableMetrics()
+        .doNotTrackProcessingTime()
+        .trackProcessingTime()
         .finish()
 
       Span.Metrics.ProcessingTime.tagValues("operation") should contain(operation)

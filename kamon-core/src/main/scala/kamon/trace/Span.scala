@@ -20,6 +20,7 @@ import java.time.Instant
 
 import kamon.context.Context
 import kamon.tag.TagSet
+import kamon.trace.Span.Link
 import kamon.util.Clock
 import org.slf4j.LoggerFactory
 
@@ -148,6 +149,11 @@ sealed abstract class Span {
   def mark(at: Instant, key: String): Span
 
   /**
+    * Creates a link between this Span and the provided one.
+    */
+  def link(span: Span, kind: Link.Kind): Span
+
+  /**
     * Marks the operation represented by this Span as failed and adds the provided message as a Span tag using the
     * "error.message" key.
     */
@@ -168,15 +174,14 @@ sealed abstract class Span {
   def fail(errorMessage: String, cause: Throwable): Span
 
   /**
-    * Enables metrics recording for this Span.
+    * Enables tracking of the span.processing-time metric for this Span.
     */
-  def enableMetrics(): Span
+  def trackProcessingTime(): Span
 
   /**
-    * Disables metrics recording for this Span.
+    * Disables tracking of the span.processing-time metric for this Span.
     */
-  def disableMetrics(): Span
-
+  def doNotTrackProcessingTime(): Span
 
   /**
     * Finishes this Span. Even though it is possible to call any of the methods that modify/write information on the
@@ -274,6 +279,28 @@ object Span {
   case class Mark(instant: Instant, key: String)
 
   /**
+    * Represents a connection between two different Spans that might belong to different traces.
+    */
+  case class Link(kind: Link.Kind, trace: Trace, spanId: Identifier)
+
+  object Link {
+
+    /**
+      * Define type or relationship between linked Spans.
+      */
+    sealed abstract class Kind
+    object Kind {
+
+      /**
+        * Indicates that the the current Span is a continuation of the work started by the linked Span. A use case for
+        * this link kind is when having secondary or fire-and-forget operations spawned from a Trace but that do not
+        * necessarily should be part of the original trace.
+        */
+      case object FollowsFrom extends Link.Kind
+    }
+  }
+
+  /**
     * Represents a Span that has already been finished and should be exposed to the SpanReporters.
     */
   case class Finished (
@@ -287,17 +314,17 @@ object Span {
     to: Instant,
     tags: TagSet,
     metricTags: TagSet,
-    marks: Seq[Mark]
+    marks: Seq[Mark],
+    links: Seq[Link]
   )
 
   /**
     * A writable Span created on this process and implementing all the capabilities defined by the Span interface.
     */
   final class Local(val id: Identifier, val parentId: Identifier, val trace: Trace, val position: Position,
-      val kind: Kind, localParent: Option[Span], initialOperationName: String, spanTags: TagSet.Builder,
-      metricTags: TagSet.Builder, from: Instant, trackMetrics: Boolean, tagWithParentOperation: Boolean,
-      includeErrorStacktrace: Boolean, clock: Clock, preFinishHooks: Array[Tracer.PreFinishHook],
-      onFinish: Span.Finished => Unit) extends Span {
+      val kind: Kind, localParent: Option[Span], initialOperationName: String, spanTags: TagSet.Builder, metricTags: TagSet.Builder,
+      from: Instant, initialMarks: List[Mark], initialLinks: List[Link], trackMetrics: Boolean, tagWithParentOperation: Boolean,
+      includeErrorStacktrace: Boolean, clock: Clock, preFinishHooks: Array[Tracer.PreFinishHook], onFinish: Span.Finished => Unit) extends Span {
 
     private val _isSampled: Boolean = trace.samplingDecision == Trace.SamplingDecision.Sample
     private val _metricTags = metricTags
@@ -306,7 +333,8 @@ object Span {
     private var _isOpen: Boolean = true
     private var _hasError: Boolean = false
     private var _operationName: String = initialOperationName
-    private var _marks: List[Mark] = Nil
+    private var _marks: List[Mark] = initialMarks
+    private var _links: List[Link] = initialLinks
 
     override val isRemote: Boolean = false
     override val isEmpty: Boolean = false
@@ -352,7 +380,14 @@ object Span {
     }
 
     override def mark(at: Instant, key: String): Span = synchronized {
-      _marks = Mark(at, key) :: _marks
+      if(_isOpen)
+        _marks = Mark(at, key) :: _marks
+      this
+    }
+
+    override def link(span: Span, kind: Link.Kind): Span = synchronized {
+      if(_isOpen)
+        _links = Link(kind, span.trace, span.id) :: _links
       this
     }
 
@@ -390,12 +425,12 @@ object Span {
       this
     }
 
-    override def enableMetrics(): Span = synchronized {
+    override def trackProcessingTime(): Span = synchronized {
       _trackMetrics = true
       this
     }
 
-    override def disableMetrics(): Span = synchronized {
+    override def doNotTrackProcessingTime(): Span = synchronized {
       _trackMetrics = false
       this
     }
@@ -445,7 +480,7 @@ object Span {
       throwable.getStackTrace().mkString("", EOL, EOL)
 
     private def toFinishedSpan(to: Instant, metricTags: TagSet): Span.Finished =
-      Span.Finished(id, parentId, trace, _operationName, kind, position, from, to, _spanTags.build(), metricTags, _marks)
+      Span.Finished(id, parentId, trace, _operationName, kind, position, from, to, _spanTags.build(), metricTags, _marks, _links)
 
     private def recordSpanMetrics(to: Instant, metricTags: TagSet): Unit = {
       val processingTime = Clock.nanosBetween(from, to)
@@ -490,12 +525,13 @@ object Span {
     override def tagMetric(key: String, value: Boolean): Span = this
     override def mark(key: String): Span = this
     override def mark(at: Instant, key: String): Span = this
+    override def link(span: Span, kind: Link.Kind): Span = this
     override def fail(errorMessage: String): Span = this
     override def fail(cause: Throwable): Span = this
     override def fail(errorMessage: String, cause: Throwable): Span = this
     override def name(name: String): Span = this
-    override def enableMetrics(): Span = this
-    override def disableMetrics(): Span = this
+    override def trackProcessingTime(): Span = this
+    override def doNotTrackProcessingTime(): Span = this
     override def finish(): Unit = {}
     override def finish(at: Instant): Unit = {}
     override def operationName(): String = "empty"
@@ -520,12 +556,13 @@ object Span {
     override def tagMetric(key: String, value: Boolean): Span = this
     override def mark(key: String): Span = this
     override def mark(at: Instant, key: String): Span = this
+    override def link(span: Span, kind: Link.Kind): Span = this
     override def fail(errorMessage: String): Span = this
     override def fail(cause: Throwable): Span = this
     override def fail(errorMessage: String, cause: Throwable): Span = this
     override def name(name: String): Span = this
-    override def enableMetrics(): Span = this
-    override def disableMetrics(): Span = this
+    override def trackProcessingTime(): Span = this
+    override def doNotTrackProcessingTime(): Span = this
     override def finish(): Unit = {}
     override def finish(at: Instant): Unit = {}
     override def operationName(): String = "empty"

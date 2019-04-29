@@ -4,6 +4,7 @@ import java.time.Instant
 
 import kamon.context.Context
 import kamon.tag.TagSet
+import kamon.trace.Span.Link
 
 /**
   * Gathers information about an operation before it can be turned into a Span. The Span creation is handled in two
@@ -82,6 +83,11 @@ trait SpanBuilder {
   def mark(at: Instant, key: String): SpanBuilder
 
   /**
+    * Creates a link between this Span and the provided one.
+    */
+  def link(span: Span, kind: Link.Kind): SpanBuilder
+
+  /**
     * Marks the operation represented by this Span as failed and adds the provided message as a Span tag using the
     * "error.message" key.
     */
@@ -102,14 +108,14 @@ trait SpanBuilder {
   def fail(errorMessage: String, cause: Throwable): SpanBuilder
 
   /**
-    * Enables metrics recording for this Span.
+    * Enables tracking of the span.processing-time metric for this Span.
     */
-  def enableMetrics(): SpanBuilder
+  def trackProcessingTime(): SpanBuilder
 
   /**
-    * Disables metrics recording for this Span.
+    * Disables tracking of the span.processing-time metric for this Span.
     */
-  def disableMetrics(): SpanBuilder
+  def doNotTrackProcessingTime(): SpanBuilder
 
   /**
     * Signals that the builder should not attempt to make the new Span a child of the Span held on the current context
