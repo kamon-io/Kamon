@@ -16,7 +16,7 @@ import scala.util.Try
 
 object ExecutorInstrumentation {
 
-  private val _logger = LoggerFactory.getLogger("kamon.instrumentation.executor.Executors")
+  private val _logger = LoggerFactory.getLogger("kamon.instrumentation.executors.ExecutorsInstrumentation")
   @volatile private var _sampleInterval = readSampleInterval(Kamon.config())
   Kamon.onReconfigure(newConfig => _sampleInterval = readSampleInterval(newConfig))
 
@@ -152,7 +152,10 @@ object ExecutorInstrumentation {
 
 
   /**
-    * Abstracts the means of reading some telemetry information from concrete executor implementations.
+    * Abstracts the means of reading some telemetry information from concrete executor implementations. This allows us
+    * to track the same metrics even when coming from slightly different implementations. The three cases we have seen
+    * so far where this is useful are when instrumenting: the ForkJoinPool included in the JDK (since Java 8), the one
+    * included in Scala 2.11 Library and the one shipped with Akka.
     */
   trait ForkJoinPoolTelemetryReader {
     def activeThreads: Int
@@ -179,7 +182,7 @@ object ExecutorInstrumentation {
   }
 
   private def readSampleInterval(config: Config): Duration =
-    Try(Kamon.config().getDuration("kamon.instrumentation.executors.sample-interval"))
+    Try(Kamon.config().getDuration("kamon.instrumentation.executor.sample-interval"))
       .getOrElse(Duration.ofSeconds(10))
 
   private trait CallableWrapper {
@@ -197,7 +200,7 @@ object ExecutorInstrumentation {
 
     private val _runableWrapper = buildRunnableWrapper()
     private val _callableWrapper = buildCallableWrapper()
-    private val _instruments = new Metrics.ThreadPoolInstruments(name, extraTags)
+    private val _instruments = new ExecutorMetrics.ThreadPoolInstruments(name, extraTags)
     private val _timeInQueueTimer = _instruments.timeInQueue
     private val _sampler = Kamon.scheduler().scheduleAtFixedRate(new Runnable {
       val submittedTasksSource = Counter.delta(() => wrapped.getTaskCount)
@@ -315,7 +318,7 @@ object ExecutorInstrumentation {
       override def run(): Unit = {
         _timeInQueueTimer.record(System.nanoTime() - _createdAt)
 
-        val scope = Kamon.storeContext(_context)
+        val scope = Kamon.store(_context)
         try { runnable.run() } finally { scope.close() }
       }
     }
@@ -339,7 +342,7 @@ object ExecutorInstrumentation {
         override def call(): T = {
           _timeInQueueTimer.record(System.nanoTime() - _createdAt)
 
-          val scope = Kamon.storeContext(_context)
+          val scope = Kamon.store(_context)
           try { callable.call() } finally { scope.close() }
         }
       }
@@ -349,7 +352,7 @@ object ExecutorInstrumentation {
       private val _context = Kamon.currentContext()
 
       override def run(): Unit = {
-        val scope = Kamon.storeContext(_context)
+        val scope = Kamon.store(_context)
         runnable.run()
         scope.close()
       }
@@ -360,7 +363,7 @@ object ExecutorInstrumentation {
         val _context = Kamon.currentContext()
 
         override def call(): T = {
-          val scope = Kamon.storeContext(_context)
+          val scope = Kamon.store(_context)
           try { callable.call() } finally { scope.close() }
         }
       }
@@ -381,7 +384,7 @@ object ExecutorInstrumentation {
 
     private val _runableWrapper = buildRunnableWrapper()
     private val _callableWrapper = buildCallableWrapper()
-    private val _instruments = new Metrics.ForkJoinPoolInstruments(name, extraTags)
+    private val _instruments = new ExecutorMetrics.ForkJoinPoolInstruments(name, extraTags)
     private val _timeInQueueTimer = _instruments.timeInQueue
     private val _submittedTasksCounter: LongAdder = new LongAdder
     private val _completedTasksCounter: LongAdder = new LongAdder
@@ -514,7 +517,7 @@ object ExecutorInstrumentation {
       override def run(): Unit = {
         _timeInQueueTimer.record(System.nanoTime() - _createdAt)
 
-        val scope = Kamon.storeContext(_context)
+        val scope = Kamon.store(_context)
         try { runnable.run() } finally {
           _completedTasksCounter.increment()
           scope.close()
@@ -541,7 +544,7 @@ object ExecutorInstrumentation {
         override def call(): T = {
           _timeInQueueTimer.record(System.nanoTime() - _createdAt)
 
-          val scope = Kamon.storeContext(_context)
+          val scope = Kamon.store(_context)
           try { callable.call() } finally {
             _completedTasksCounter.increment()
             scope.close()
@@ -554,7 +557,7 @@ object ExecutorInstrumentation {
       private val _context = Kamon.currentContext()
 
       override def run(): Unit = {
-        val scope = Kamon.storeContext(_context)
+        val scope = Kamon.store(_context)
         try { runnable.run() } finally {
           _completedTasksCounter.increment()
           scope.close()
@@ -567,7 +570,7 @@ object ExecutorInstrumentation {
         val _context = Kamon.currentContext()
 
         override def call(): T = {
-          val scope = Kamon.storeContext(_context)
+          val scope = Kamon.store(_context)
           try { callable.call() } finally {
             _completedTasksCounter.increment()
             scope.close()

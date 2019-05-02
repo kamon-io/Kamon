@@ -41,8 +41,8 @@ class ExecutorMetricsSpec extends WordSpec with Matchers with InstrumentInspecti
       val singleThreadPoolExecutor = JavaExecutors.newSingleThreadExecutor()
       val registeredPool = ExecutorInstrumentation.instrument(singleThreadPoolExecutor, "single-thread-pool-metrics")
 
-      Metrics.Threads.tagValues("name")  should contain ("single-thread-pool-metrics")
-      Metrics.Threads.tagValues("type")  should contain ("tpe")
+      ExecutorMetrics.Threads.tagValues("name")  should contain ("single-thread-pool-metrics")
+      ExecutorMetrics.Threads.tagValues("type")  should contain ("tpe")
 
       registeredPool.shutdown()
     }
@@ -51,8 +51,8 @@ class ExecutorMetricsSpec extends WordSpec with Matchers with InstrumentInspecti
       val threadPoolExecutor = JavaExecutors.newCachedThreadPool()
       val registeredPool = ExecutorInstrumentation.instrument(threadPoolExecutor, "thread-pool-executor-metrics")
 
-      Metrics.Threads.tagValues("name")  should contain ("thread-pool-executor-metrics")
-      Metrics.Threads.tagValues("type")  should contain ("tpe")
+      ExecutorMetrics.Threads.tagValues("name")  should contain ("thread-pool-executor-metrics")
+      ExecutorMetrics.Threads.tagValues("type")  should contain ("tpe")
 
       registeredPool.shutdown()
     }
@@ -61,8 +61,8 @@ class ExecutorMetricsSpec extends WordSpec with Matchers with InstrumentInspecti
       val scheduledThreadPoolExecutor = JavaExecutors.newSingleThreadScheduledExecutor()
       val registeredPool = ExecutorInstrumentation.instrument(scheduledThreadPoolExecutor, "scheduled-thread-pool-executor-metrics")
 
-      Metrics.Threads.tagValues("name")  should contain ("scheduled-thread-pool-executor-metrics")
-      Metrics.Threads.tagValues("type")  should contain ("tpe")
+      ExecutorMetrics.Threads.tagValues("name")  should contain ("scheduled-thread-pool-executor-metrics")
+      ExecutorMetrics.Threads.tagValues("type")  should contain ("tpe")
 
       registeredPool.shutdown()
     }
@@ -71,8 +71,8 @@ class ExecutorMetricsSpec extends WordSpec with Matchers with InstrumentInspecti
       val javaForkJoinPool = JavaExecutors.newWorkStealingPool()
       val registeredForkJoin = ExecutorInstrumentation.instrument(javaForkJoinPool, "java-fork-join-pool-metrics")
 
-      Metrics.Threads.tagValues("name")  should contain ("java-fork-join-pool-metrics")
-      Metrics.Threads.tagValues("type")  should contain ("fjp")
+      ExecutorMetrics.Threads.tagValues("name")  should contain ("java-fork-join-pool-metrics")
+      ExecutorMetrics.Threads.tagValues("type")  should contain ("fjp")
 
       registeredForkJoin.shutdown()
     }
@@ -81,8 +81,8 @@ class ExecutorMetricsSpec extends WordSpec with Matchers with InstrumentInspecti
       val scalaForkJoinPool = new scala.concurrent.forkjoin.ForkJoinPool(10)
       val registeredForkJoin = ExecutorInstrumentation.instrument(scalaForkJoinPool, "scala-fork-join-pool-metrics")
 
-      Metrics.Threads.tagValues("name")  should contain ("scala-fork-join-pool-metrics")
-      Metrics.Threads.tagValues("type")  should contain ("fjp")
+      ExecutorMetrics.Threads.tagValues("name")  should contain ("scala-fork-join-pool-metrics")
+      ExecutorMetrics.Threads.tagValues("type")  should contain ("fjp")
 
       registeredForkJoin.shutdown()
     }
@@ -100,14 +100,14 @@ class ExecutorMetricsSpec extends WordSpec with Matchers with InstrumentInspecti
   def setupTestPool(executor: ExecutorService): TestPool =
     new TestPool(executor)
 
-  def poolInstruments(testPool: TestPool): Metrics.ThreadPoolInstruments = testPool.executor match {
-    case tpe:ThreadPoolExecutor                           => new Metrics.ThreadPoolInstruments(testPool.name, TagSet.Empty)
-    case javaFjp: ForkJoinPool                            => new Metrics.ForkJoinPoolInstruments(testPool.name, TagSet.Empty)
-    case scalaFjp: scala.concurrent.forkjoin.ForkJoinPool => new Metrics.ForkJoinPoolInstruments(testPool.name, TagSet.Empty)
+  def poolInstruments(testPool: TestPool): ExecutorMetrics.ThreadPoolInstruments = testPool.executor match {
+    case tpe:ThreadPoolExecutor                           => new ExecutorMetrics.ThreadPoolInstruments(testPool.name, TagSet.Empty)
+    case javaFjp: ForkJoinPool                            => new ExecutorMetrics.ForkJoinPoolInstruments(testPool.name, TagSet.Empty)
+    case scalaFjp: scala.concurrent.forkjoin.ForkJoinPool => new ExecutorMetrics.ForkJoinPoolInstruments(testPool.name, TagSet.Empty)
   }
 
-  def fjpInstruments(testPool: TestPool): Metrics.ForkJoinPoolInstruments =
-    new Metrics.ForkJoinPoolInstruments(testPool.name, TagSet.Empty)
+  def fjpInstruments(testPool: TestPool): ExecutorMetrics.ForkJoinPoolInstruments =
+    new ExecutorMetrics.ForkJoinPoolInstruments(testPool.name, TagSet.Empty)
 
 
   def commonExecutorBehaviour(executor: Int => ExecutorService, size: Int) = {

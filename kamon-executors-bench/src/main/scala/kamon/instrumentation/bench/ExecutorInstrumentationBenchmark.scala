@@ -93,7 +93,7 @@ class InstrumentedViaMixin(blackhole: Blackhole) extends Runnable {
   val context: Context = Kamon.currentContext()
 
   override def run(): Unit = {
-    val scope = Kamon.storeContext(context)
+    val scope = Kamon.store(context)
     blackhole.consume(Kamon.currentContext())
     scope.close()
   }
@@ -103,7 +103,7 @@ class InstrumentedWrapper(runnable: Runnable) extends Runnable {
   val context: Context = Kamon.currentContext()
 
   override def run(): Unit = {
-    val scope = Kamon.storeContext(context)
+    val scope = Kamon.store(context)
     runnable.run()
     scope.close()
   }

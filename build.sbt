@@ -16,20 +16,20 @@ import Tests._
 
 val kamonCore             = "io.kamon"  %%  "kamon-core"                    % "2.0.0-M4"
 val kamonTestkit          = "io.kamon"  %%  "kamon-testkit"                 % "2.0.0-M4"
-val kamonInstrumentation  = "io.kamon"  %%  "kamon-instrumentation-common"  % "2.0.0-6432ad4395a3b2b6c5f03895b5313b8c80f9ead5"
+val kamonInstrumentation  = "io.kamon"  %%  "kamon-instrumentation-common"  % "2.0.0-M1"
 val kanelaAgent           = "io.kamon"  %   "kanela-agent"                  % "1.0.0-M2"
 
 val guava         = "com.google.guava"  % "guava"  % "24.1-jre"
 
-lazy val root = (project in file("."))
+lazy val kamonExecutors = (project in file("."))
   .settings(noPublishing: _*)
+  .settings(name := "kamon-executors")
   .aggregate(executors, benchmark)
 
 val commonSettings = Seq(
   scalaVersion := "2.12.6",
   resolvers += Resolver.mavenLocal,
-  resolvers += Resolver.bintrayRepo("kamon-io", "snapshots"),
-  crossScalaVersions := Seq("2.12.6"/*, "2.11.12", "2.10.7"*/)
+  resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
 )
 
 lazy val executors = (project in file("kamon-executors"))
@@ -57,7 +57,7 @@ lazy val benchmark = (project in file("kamon-executors-bench"))
 
 
 def groupByExperimental(tests: Seq[TestDefinition], kanelaJar: File): Seq[Group] = {
-  val (stable, experimental) = tests.partition(t => t.name != "kamon.instrumentation.executor.BootstrapContextPropagationSpec")
+  val (stable, experimental) = tests.partition(t => t.name != "kamon.instrumentation.executor.CaptureContextOnSubmitInstrumentationSpec")
 
   val stableGroup = new Group("stableTests", stable, SubProcess(
     ForkOptions().withRunJVMOptions(Vector(

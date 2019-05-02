@@ -22,7 +22,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.concurrent.Callable;
 
-final class BootstrapContextPropagationAdvisors {
+final class CaptureContextOnSubmitAdvices {
 
     public static class RunnableWrapperAdvisor {
         /**

@@ -19,7 +19,7 @@ import kamon.Kamon
 import kamon.metric.InstrumentGroup
 import kamon.tag.TagSet
 
-object Metrics {
+object ExecutorMetrics {
 
   val Settings = Kamon.gauge (
     name = "executor.settings",

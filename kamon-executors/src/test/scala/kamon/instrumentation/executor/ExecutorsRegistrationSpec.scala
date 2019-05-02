@@ -17,7 +17,7 @@ package kamon.instrumentation.executor
 
 import java.util.concurrent.{Executors => JavaExecutors, ForkJoinPool => JavaForkJoinPool}
 
-import kamon.instrumentation.executor.Metrics._
+import kamon.instrumentation.executor.ExecutorMetrics._
 import kamon.testkit.MetricInspection
 import org.scalatest.{Matchers, WordSpec}
 

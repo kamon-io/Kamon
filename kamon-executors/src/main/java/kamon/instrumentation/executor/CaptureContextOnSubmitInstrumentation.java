@@ -18,9 +18,9 @@ package kamon.instrumentation.executor;
 import kamon.Kamon;
 import kamon.context.Context;
 import kamon.context.Storage.Scope;
-import kamon.instrumentation.executor.BootstrapContextPropagationAdvisors.CallableCollectionWrapperAdvisor;
-import kamon.instrumentation.executor.BootstrapContextPropagationAdvisors.CallableWrapperAdvisor;
-import kamon.instrumentation.executor.BootstrapContextPropagationAdvisors.RunnableWrapperAdvisor;
+import kamon.instrumentation.executor.CaptureContextOnSubmitAdvices.CallableCollectionWrapperAdvisor;
+import kamon.instrumentation.executor.CaptureContextOnSubmitAdvices.CallableWrapperAdvisor;
+import kamon.instrumentation.executor.CaptureContextOnSubmitAdvices.RunnableWrapperAdvisor;
 import kanela.agent.api.instrumentation.InstrumentationBuilder;
 import kanela.agent.bootstrap.context.ContextHandler;
 import kanela.agent.bootstrap.context.ContextProvider;
@@ -28,9 +28,9 @@ import kanela.agent.bootstrap.context.ContextProvider;
 import java.util.Collection;
 import java.util.concurrent.Callable;
 
-public final class BootstrapContextPropagation extends InstrumentationBuilder {
+public final class CaptureContextOnSubmitInstrumentation extends InstrumentationBuilder {
 
-    public BootstrapContextPropagation() {
+    public CaptureContextOnSubmitInstrumentation() {
 
         /**
          * Set the ContextProvider
@@ -76,7 +76,7 @@ public final class BootstrapContextPropagation extends InstrumentationBuilder {
 
         @Override
         public void run() {
-            final Scope scope = Kamon.storeContext(context);
+            final Scope scope = Kamon.store(context);
             try {
                 underlying.run();
             } finally {
@@ -99,7 +99,7 @@ public final class BootstrapContextPropagation extends InstrumentationBuilder {
         }
 
         public A call() throws Exception {
-            final Scope scope = Kamon.storeContext(context);
+            final Scope scope = Kamon.store(context);
             try {
                 return underlying.call();
             } finally {

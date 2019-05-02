@@ -1,6 +1,6 @@
 package kamon.instrumentation.executor
 
-import kamon.instrumentation.context.{CaptureCurrentContext, HasContext, InvokeWithCapturedContext}
+import kamon.instrumentation.context.{CaptureCurrentContextOnExit, HasContext, InvokeWithCapturedContext}
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 
 /**
@@ -8,10 +8,10 @@ import kanela.agent.api.instrumentation.InstrumentationBuilder
   * while their run/call methods are executed. See the module's exclude configuration for more info on what packages and
   * implementations will not be targeted by this instrumentation (e.g. it does not target any java.* class by default).
   */
-class RunnableOrCallableInstrumentation extends InstrumentationBuilder {
+class ExecutorTaskInstrumentation extends InstrumentationBuilder {
 
   onSubTypesOf("java.lang.Runnable", "java.util.concurrent.Callable")
     .mixin(classOf[HasContext.Mixin])
-    .advise(isConstructor, CaptureCurrentContext)
+    .advise(isConstructor, CaptureCurrentContextOnExit)
     .advise(anyMethods("run", "call"), InvokeWithCapturedContext)
 }
