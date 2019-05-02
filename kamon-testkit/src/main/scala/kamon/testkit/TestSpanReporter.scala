@@ -17,24 +17,87 @@ package kamon.testkit
 
 import java.util.concurrent.LinkedBlockingQueue
 
+import scala.collection.JavaConverters._
 import com.typesafe.config.Config
 import kamon.module.SpanReporter
+import kamon.{Kamon, testkit}
 import kamon.trace.Span
 
-class TestSpanReporter() extends SpanReporter {
-  import scala.collection.JavaConverters._
-  private val reportedSpans = new LinkedBlockingQueue[Span.Finished]()
+import scala.concurrent.duration.Duration
 
-  override def reportSpans(spans: Seq[Span.Finished]): Unit =
-    reportedSpans.addAll(spans.asJava)
+/**
+  * A Mixing that creates and initializes an inspectable Span reporter, setting up the typical options required for it
+  * to work as expected (sample always and fast span flushing).
+  */
+trait TestSpanReporter extends Reconfigure { self =>
+  private val _reporter = new testkit.TestSpanReporter.BufferingSpanReporter()
+  private val _registration = {
+    sampleAlways()
+    enableFastSpanFlushing()
+    Kamon.registerModule("test-span-reporter-" + self.getClass.getSimpleName, _reporter)
+  }
 
-  def nextSpan(): Option[Span.Finished] =
-    Option(reportedSpans.poll())
+  /**
+    * Returns the test reporter instance.
+    */
+  def testSpanReporter(): TestSpanReporter.BufferingSpanReporter =
+    _reporter
 
-  def clear(): Unit =
-    reportedSpans.clear()
+  /**
+    * Shuts down the test reporter. Once it has been shut down it will no longer receive newly reported Spans, but it
+    * can still be inspected.
+    */
+  def shutdownTestSpanReporter(): Unit =
+    _registration.cancel()
+}
 
-  override def start(): Unit = {}
-  override def stop(): Unit = {}
-  override def reconfigure(config: Config): Unit = {}
+object TestSpanReporter {
+
+  /**
+    * A SpanReporter that buffers all reported Spans and exposes them.
+    */
+  class BufferingSpanReporter extends SpanReporter {
+    private val _reportedSpans = new LinkedBlockingQueue[Span.Finished]()
+
+    /**
+      * Returns and discards the latest received Span, if any.
+      */
+    def nextSpan(): Option[Span.Finished] =
+      Option(_reportedSpans.poll())
+
+    /**
+      * Discards all received Spans.
+      */
+    def clear(): Unit =
+      _reportedSpans.clear()
+
+    /**
+      * Returns all remaining Spans in the buffer.
+      */
+    def spans(): Seq[Span.Finished] =
+      _reportedSpans.toArray(Array.ofDim[Span.Finished](0)).toSeq
+
+    /**
+      * Returns all remaining Spans in the buffer after waiting for the provided delay.
+      */
+    def spans(delay: Duration): Seq[Span.Finished] = {
+      Thread.sleep(delay.toMillis)
+      spans()
+    }
+
+    /**
+      * Returns all remaining Spans in the buffer after waiting for the provided delay.
+      */
+    def spans(delay: java.time.Duration): Seq[Span.Finished] = {
+      Thread.sleep(delay.toMillis)
+      spans()
+    }
+
+    // Here go the reporter-specific implementation details:
+    override def start(): Unit = {}
+    override def stop(): Unit = {}
+    override def reconfigure(config: Config): Unit = {}
+    override def reportSpans(spans: Seq[Span.Finished]): Unit =
+      _reportedSpans.addAll(spans.asJava)
+  }
 }
