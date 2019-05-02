@@ -499,6 +499,7 @@ object Span {
     override def finish(): Unit = {}
     override def finish(at: Instant): Unit = {}
     override def operationName(): String = "empty"
+    override def toString(): String = "Span.Empty"
   }
 
 
@@ -529,6 +530,7 @@ object Span {
     override def finish(): Unit = {}
     override def finish(at: Instant): Unit = {}
     override def operationName(): String = "empty"
+    override def toString(): String = s"Span.Remote{id=${id.string},parentId=${parentId.string},trace=${trace}"
   }
 
 
