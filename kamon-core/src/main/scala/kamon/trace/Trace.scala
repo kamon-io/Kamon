@@ -8,7 +8,12 @@ package trace
 case class Trace (
   id: Identifier,
   samplingDecision: Trace.SamplingDecision
-)
+) {
+
+  override def toString(): String = {
+    s"{id=${id.string},samplingDecision=${samplingDecision}"
+  }
+}
 
 object Trace {
 

@@ -6,20 +6,18 @@ import kamon.trace.Span
 import scala.util.control.NonFatal
 
 /**
-  * Exposes in-process Context storage APIs. Kamon uses a Thread-local storage for keeping track of the current Context
-  * in any given Thread and this class exposes the necessary means to inspect that context and to temporarily change the
-  * current context on a Thread.
+  * Exposes in-process Context storage APIs. See the ContextStorage companion object for more info on the default
+  * storage implementation.
   */
 trait ContextStorage {
   import ContextStorage._
 
   /**
-    * Returns the current Context on the calling Thread. As the default behavior this will return Context.Empty if no
-    * other Context instance has been made current on the calling Thread.
+    * Returns the current Context on Kamon's Context Storage. As the default behavior, this will return Context.Empty if
+    * no other Context has been stored on the calling thread.
     */
   def currentContext(): Context =
     _contextStorage.current()
-
 
   /**
     * Returns the Span held by the current Context, if any. As the default behavior, this will return Span.Empty if the
@@ -28,61 +26,26 @@ trait ContextStorage {
   def currentSpan(): Span =
     _contextStorage.current().get(Span.Key)
 
-
   /**
-    * Sets the provided Context as current and returns a Scope that removes the context from the current placeholder
-    * upon closing. When a Scope is closed, it will always set the current Context to the Context instance that was
-    * available right before it was created.
+    * Stores the provided Context on Kamon's Context Storage and returns a Scope that removes that Context from the it
+    * upon closing. When a Scope is closed, it will always set the current Context to the Context that was available
+    * right before it was created.
+    *
+    * NOTE: The default implementation of Scope is not thread safe and, unless there is a good reason not to, users
+    *       should always close scopes before leaving a thread, otherwise there is a risk of leaving "dirty" threads
+    *       that could cause unexpected correlation between Contexts from different operations. It is strongly
+    *       recommended to use any of the .storeContext(...) variants which ensure closing Scopes after finishing
+    *       execution.
+    *
     */
-  def storeContext(context: Context): Storage.Scope =
+  def store(context: Context): Storage.Scope =
     _contextStorage.store(context)
 
-
   /**
-    * Creates a new Context using the current Context and the provided Context key, and sets it as the current Context
-    * while the provided function runs.
+    * Temporarily stores the provided Context on Kamon's Context Storage. The provided Context will be stored before
+    * executing the provided function and removed right after it finishes executing.
     */
-  def withContextKey[T, K](key: Context.Key[K], value: K)(f: => T): T =
-    withContext(currentContext().withKey(key, value))(f)
-
-
-  /**
-    * Creates a new Context using the current Context and the provided Context tag, and sets it as the current Context
-    * while the provided function runs.
-    */
-  def withContextTag[T](key: String, value: String)(f: => T): T =
-    withContext(currentContext().withTag(key, value))(f)
-
-
-  /**
-    * Creates a new Context using the current Context and the provided Context tag, and sets it as the current Context
-    * while the provided function runs.
-    */
-  def withContextTag[T](key: String, value: Boolean)(f: => T): T =
-    withContext(currentContext().withTag(key, value))(f)
-
-
-  /**
-    * Creates a new Context using the current Context and the provided Context tag, and sets it as the current Context
-    * while the provided function runs.
-    */
-  def withContextTag[T](key: String, value: Long)(f: => T): T =
-    withContext(currentContext().withTag(key, value))(f)
-
-
-  /**
-    * Creates a new Context using the current Context and the provided Span, and sets it as the current Context while
-    * the provided function runs. Additionally, this function will finish the provided Span once the function execution
-    * finishes.
-    */
-  def withSpan[T](span: Span)(f: => T): T =
-    withSpan(span, true)(f)
-
-
-  /**
-    * Sets the provided Context as current while the provided function runs.
-    */
-  @inline def withContext[T](context: Context)(f: => T): T = {
+  @inline def storeContext[T](context: Context)(f: => T): T = {
     val scope = _contextStorage.store(context)
     try {
       f
@@ -91,15 +54,55 @@ trait ContextStorage {
     }
   }
 
-
   /**
-    * Creates a new Context using the current Context and the provided Span, and sets it as the current Context while
-    * the provided function runs. Optionally, this function can finish the provided Span once the function execution
+    * Temporarily stores the provided Context Key on Kamon's Context Storage. The provided Context key will be added to
+    * the current Context and stored before executing the provided function, then removed right after execution
     * finishes.
     */
-  @inline def withSpan[T](span: Span, finishSpan: Boolean)(f: => T): T = {
+  def storeContextKey[T, K](key: Context.Key[K], value: K)(f: => T): T =
+    storeContext(currentContext().withKey(key, value))(f)
+
+  /**
+    * Temporarily stores the provided Context tag on Kamon's Context Storage. The provided Context tag will be added to
+    * the current Context and stored before executing the provided function, then removed right after execution
+    * finishes.
+    */
+  def storeContextTag[T](key: String, value: String)(f: => T): T =
+    storeContext(currentContext().withTag(key, value))(f)
+
+
+  /**
+    * Temporarily stores the provided Context tag on Kamon's Context Storage. The provided Context tag will be added to
+    * the current Context and stored before executing the provided function, then removed right after execution
+    * finishes.
+    */
+  def storeContextTag[T](key: String, value: Boolean)(f: => T): T =
+    storeContext(currentContext().withTag(key, value))(f)
+
+
+  /**
+    * Temporarily stores the provided Context tag on Kamon's Context Storage. The provided Context tag will be added to
+    * the current Context and stored before executing the provided function, then removed right after execution
+    * finishes.
+    */
+  def storeContextTag[T](key: String, value: Long)(f: => T): T =
+    storeContext(currentContext().withTag(key, value))(f)
+
+  /**
+    * Temporarily stores the provided Span on Kamon's Context Storage. The provided Span will be added to the current
+    * Context and stored before executing the provided function, then removed right after execution finishes.
+    */
+  def storeSpan[T](span: Span)(f: => T): T =
+    storeSpan(span, true)(f)
+
+  /**
+    * Temporarily stores the provided Span on Kamon's Context Storage. The provided Span will be added to the current
+    * Context and stored before executing the provided function, then removed right after execution finishes.
+    * Optionally, this function can finish the provided Span once the function execution finishes.
+    */
+  @inline def storeSpan[T](span: Span, finishSpan: Boolean)(f: => T): T = {
     try {
-      withContextKey(Span.Key, span)(f)
+      storeContextKey(Span.Key, span)(f)
     } catch {
       case NonFatal(t) =>
         span.fail(t.getMessage, t)
@@ -113,5 +116,13 @@ trait ContextStorage {
 }
 
 object ContextStorage {
+
+  /**
+    * Kamon's global Context Storage instance. Unless stated otherwise, all instrumentation provided with Kamon ends
+    * up using this Storage instance for in-process Context propagation. This default storage is based on a ThreadLocal
+    * wrapper which stores the "current" Context for each thread on the application. Instrumentation will typically
+    * store and remove Context instances for small periods of time as events flow through the system and the
+    * instrumentation follows them around.
+    */
   private val _contextStorage = Storage.ThreadLocal()
 }

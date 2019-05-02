@@ -187,7 +187,7 @@ class TagSet private(private val _underlying: UnifiedMap[String, Any]) {
 
   override def toString: String = {
     val sb = new StringBuilder()
-    sb.append("Tags{")
+    sb.append("{")
 
     var hasTags = false
     val iterator = _underlying.entrySet().iterator()
