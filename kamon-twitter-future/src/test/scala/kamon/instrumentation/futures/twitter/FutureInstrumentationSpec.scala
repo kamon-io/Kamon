@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  * ========================================================== */
-package kamon.twitter.instrumentation
+package kamon.instrumentation.futures.twitter
 
 import java.util.concurrent.Executors
 
@@ -27,6 +27,10 @@ import kamon.tag.TagSet
 
 class FutureInstrumentationSpec extends WordSpec with Matchers with ScalaFutures with PatienceConfiguration with OptionValues {
 
+  // NOTE: We have this test just to ensure that the Context propagation is working, but starting with Kamon 2.0 there
+  //       is no need to have explicit Runnable/Callable instrumentation because the instrumentation brought by the
+  //       kamon-executors module should take care of all non-JDK Runnable/Callable implementations.
+
   implicit val execContext = Executors.newCachedThreadPool()
 
   "a Twitter Future created when instrumentation is active" should {
@@ -34,7 +38,7 @@ class FutureInstrumentationSpec extends WordSpec with Matchers with ScalaFutures
       "must be available when executing the future's body" in {
 
         val context = Context.of("key", "value")
-        val tagInBody = Kamon.withContext(context) {
+        val tagInBody = Kamon.storeContext(context) {
           FuturePool(execContext)(Kamon.currentContext().getTag(plain("key")))
         }
 
@@ -44,7 +48,7 @@ class FutureInstrumentationSpec extends WordSpec with Matchers with ScalaFutures
       "must be available when executing callbacks on the future" in {
 
         val context = Context.of("key", "value")
-        val tagAfterTransformations = Kamon.withContext(context) {
+        val tagAfterTransformations = Kamon.storeContext(context) {
           FuturePool.unboundedPool("Hello Kamon!")
             // The current context is expected to be available during all intermediate processing.
             .map(_.length)
