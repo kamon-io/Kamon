@@ -18,7 +18,6 @@ package kamon.instrumentation.twitter
 
 import kamon.Kamon
 import kamon.context.{Context, Storage}
-import kamon.instrumentation.Mixin.HasContext
 import kanela.agent.api.instrumentation.mixin.Initializer
 import kanela.agent.scala.KanelaInstrumentation
 import kanela.agent.libs.net.bytebuddy.asm.Advice
@@ -40,6 +39,15 @@ class FutureInstrumentation extends KanelaInstrumentation {
   }
 }
 
+trait HasContext {
+  def context: Context
+}
+
+object HasContext {
+  def fromCurrentContext(): HasContext = new HasContext {
+    val context = Kamon.currentContext()
+  }
+}
 
 class HasContextMixin extends HasContext {
   private var _context: Context = _

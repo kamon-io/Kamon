@@ -17,7 +17,7 @@
 package kamon.instrumentation.catseffect.aspectj
 
 import kamon.Kamon
-import kamon.instrumentation.Mixin.HasContext
+import kamon.instrumentation.catseffect.HasContext
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
 

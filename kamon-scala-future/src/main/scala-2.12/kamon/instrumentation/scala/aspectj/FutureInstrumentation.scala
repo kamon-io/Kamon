@@ -17,7 +17,7 @@
 package kamon.instrumentation.scala.aspectj
 
 import kamon.Kamon
-import kamon.instrumentation.Mixin.HasContext
+import kamon.instrumentation.scala.HasContext
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
 

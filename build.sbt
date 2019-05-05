@@ -13,10 +13,10 @@
  * =========================================================================================
  */
 
-val kamonCore             = "io.kamon"     %%   "kamon-core"              % "1.2.0-M1"
-val kamonTestkit          = "io.kamon"     %%   "kamon-testkit"           % "1.2.0-M1"
+val kamonCore             = "io.kamon"     %%   "kamon-core"              % "1.1.6"
+val kamonTestkit          = "io.kamon"     %%   "kamon-testkit"           % "1.1.6"
 val kanelaScalaExtension  = "io.kamon"     %%   "kanela-scala-extension"  % "0.0.14"
-
+val scalatest      = "org.scalatest"    %% "scalatest"       % "3.0.4"
 val scalazConcurrent  = "org.scalaz"    %%  "scalaz-concurrent" % "7.2.8"
 val catsEffect        = "org.typelevel" %%  "cats-effect"       % "1.2.0"
 
@@ -25,13 +25,15 @@ resolvers in ThisBuild += Resolver.mavenLocal
 
 lazy val `kamon-futures` = (project in file("."))
   .enablePlugins(JavaAgent)
-  .settings(name := "kamon-futures")
   .settings(noPublishing: _*)
-  .aggregate(
+  .settings(
+    name := "kamon-futures",
+    crossScalaVersions := Nil
+  ).aggregate(
     `kamon-scala-future`,
     `kamon-twitter-future`,
     `kamon-scalaz-future`,
-    `kamon-cats-effect`,
+    `kamon-cats-io`,
   )
 
 lazy val `kamon-twitter-future` = (project in file("kamon-twitter-future"))
@@ -66,11 +68,12 @@ lazy val `kamon-scala-future` = (project in file("kamon-scala-future"))
       providedScope(kanelaAgent, aspectJ) ++
       testScope(scalatest, kamonTestkit, logbackClassic))
 
-lazy val `kamon-cats-effect` = (project in file("kamon-cats-io"))
+lazy val `kamon-cats-io` = (project in file("kamon-cats-io"))
   .enablePlugins(JavaAgent)
   .settings(bintrayPackage := "kamon-futures")
   .settings(instrumentationSettings)
   .settings(
+    crossScalaVersions := Seq("2.11.12", "2.12.8"),
     libraryDependencies ++=
       compileScope(kamonCore, kanelaScalaExtension) ++
         providedScope(kanelaAgent, aspectJ) ++

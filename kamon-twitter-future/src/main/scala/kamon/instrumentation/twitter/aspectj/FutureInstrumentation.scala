@@ -17,7 +17,7 @@
 package kamon.instrumentation.twitter.aspectj
 
 import kamon.Kamon
-import kamon.instrumentation.Mixin.HasContext
+import kamon.instrumentation.twitter.HasContext
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation._
 

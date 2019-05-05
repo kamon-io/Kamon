@@ -19,8 +19,6 @@ package kamon.instrumentation.scalaz
 
 import kamon.Kamon
 import kamon.context.{Context, Storage}
-import kamon.instrumentation.Mixin.HasContext
-import kanela.agent.api.instrumentation.mixin.Initializer
 import kanela.agent.scala.KanelaInstrumentation
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 import kanela.agent.libs.net.bytebuddy.description.`type`.TypeDescription
@@ -38,6 +36,16 @@ class FutureInstrumentation extends KanelaInstrumentation {
       .withAdvisorFor(Constructor, classOf[ConstructorAdvisor])
       .withAdvisorFor(method("call"), classOf[RunMethodAdvisor])
       .build()
+  }
+}
+
+trait HasContext {
+  def context: Context
+}
+
+object HasContext {
+  def fromCurrentContext(): HasContext = new HasContext {
+    val context = Kamon.currentContext()
   }
 }
 
