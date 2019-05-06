@@ -20,16 +20,19 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Wor
     "skip filtered out actors" in {
       val traced = system.actorOf(Props[TracingTestActor], "traced-probe-1")
       val nonTraced = system.actorOf(Props[TracingTestActor], "filteredout")
-      nonTraced ! "ping"
-      expectMsg("pong")
 
-      traced ! "ping"
-      expectMsg("pong")
+      Kamon.withSpan(Kamon.buildSpan("outer").start()) {
+        nonTraced ! "ping"
+        expectMsg("pong")
+
+        traced ! "ping"
+        expectMsg("pong")
+      }
 
       eventually(timeout(2 seconds)) {
         val span = reporter.nextSpan().value
         val spanTags = stringTag(span) _
-        span.operationName shouldBe("TracingTestActor: String")
+        span.operationName shouldBe("TracingTestActor ! String")
         spanTags("component") shouldBe "akka.actor"
         spanTags("akka.actor.path") shouldNot include ("filteredout")
         spanTags("akka.actor.path") should be ("MessageTracing/user/traced-probe-1")
@@ -38,13 +41,15 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Wor
 
     "construct span for traced actors" in {
       val traced = system.actorOf(Props[TracingTestActor], "traced")
-      traced ! "ping"
-      expectMsg("pong")
+      Kamon.withSpan(Kamon.buildSpan("outer").start()) {
+        traced ! "ping"
+        expectMsg("pong")
+      }
 
       eventually(timeout(2 seconds)) {
         val span = reporter.nextSpan().value
         val spanTags = stringTag(span) _
-        span.operationName shouldBe("TracingTestActor: String")
+        span.operationName shouldBe("TracingTestActor ! String")
         spanTags("component") shouldBe "akka.actor"
         spanTags("akka.system") shouldBe "MessageTracing"
         spanTags("akka.actor.path") shouldBe "MessageTracing/user/traced"
@@ -57,14 +62,16 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Wor
       val first = system.actorOf(Props[TracingTestActor], "traced-first")
       val second = system.actorOf(Props[TracingTestActor], "traced-second")
 
-      first ! second
-      expectMsg("pong")
+      Kamon.withSpan(Kamon.buildSpan("outer").start()) {
+        first ! second
+        expectMsg("pong")
+      }
 
       // Span for the first actor message
       val firstSpanID = eventually(timeout(2 seconds)) {
         val span = reporter.nextSpan().value
         val spanTags = stringTag(span) _
-        span.operationName should include("TracingTestActor: ")
+        span.operationName should include("TracingTestActor !")
         spanTags("component") shouldBe "akka.actor"
         spanTags("akka.system") shouldBe "MessageTracing"
         spanTags("akka.actor.path") shouldBe "MessageTracing/user/traced-first"
@@ -79,7 +86,7 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Wor
         val span = reporter.nextSpan().value
         val spanTags = stringTag(span) _
         span.context.parentID shouldBe firstSpanID
-        span.operationName should include("TracingTestActor: String")
+        span.operationName should include("TracingTestActor ! String")
         spanTags("component") shouldBe "akka.actor"
         spanTags("akka.system") shouldBe "MessageTracing"
         spanTags("akka.actor.path") shouldBe "MessageTracing/user/traced-second"
@@ -93,14 +100,16 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Wor
       val nonInstrumented = system.actorOf(Props[TracingTestActor], "filteredout-middle")
       val last = system.actorOf(Props[TracingTestActor], "traced-chain-last")
 
-      first ! (nonInstrumented, last)
-      expectMsg("pong")
+      Kamon.withSpan(Kamon.buildSpan("outer").start()) {
+        first ! (nonInstrumented, last)
+        expectMsg("pong")
+      }
 
       // Span for the first actor message
       val firstSpanID = eventually(timeout(2 seconds)) {
         val span = reporter.nextSpan().value
         val spanTags = stringTag(span) _
-        span.operationName shouldBe("TracingTestActor: Tuple2")
+        span.operationName shouldBe("TracingTestActor ! Tuple2")
         spanTags("component") shouldBe "akka.actor"
         spanTags("akka.system") shouldBe "MessageTracing"
         spanTags("akka.actor.path") shouldBe "MessageTracing/user/traced-chain-first"
@@ -115,7 +124,7 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Wor
         val span = reporter.nextSpan().value
         val spanTags = stringTag(span) _
         span.context.parentID shouldBe firstSpanID
-        span.operationName shouldBe("TracingTestActor: String")
+        span.operationName shouldBe("TracingTestActor ! String")
         spanTags("component") shouldBe "akka.actor"
         spanTags("akka.system") shouldBe "MessageTracing"
         spanTags("akka.actor.path") shouldBe "MessageTracing/user/traced-chain-last"
@@ -128,8 +137,10 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Wor
       val routee = system.actorOf(Props[TracingTestActor],"traced-routee-one")
       val router = system.actorOf(RoundRobinGroup(Vector(routee.path.toStringWithoutAddress)).props(), "nontraced-group-router")
 
-      router ! "ping"
-      expectMsg("pong")
+      Kamon.withSpan(Kamon.buildSpan("outer").start()) {
+        router ! "ping"
+        expectMsg("pong")
+      }
 
       eventually(timeout(2 seconds)) {
         val spanTags = stringTag(reporter.nextSpan().value) _
@@ -142,8 +153,10 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Wor
     "create actor message spans when behind a pool router" in {
       val router = system.actorOf(Props[TracingTestActor].withRouter(RoundRobinPool(2)), "traced-pool-router")
 
-      router ! "ping-and-wait"
-      expectMsg("pong")
+      Kamon.withSpan(Kamon.buildSpan("outer").start()) {
+        router ! "ping-and-wait"
+        expectMsg("pong")
+      }
 
       eventually(timeout(2 seconds)) {
         val spanTags = stringTag(reporter.nextSpan().value) _
