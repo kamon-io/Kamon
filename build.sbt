@@ -40,6 +40,7 @@ lazy val kamonAkka24 = Project("kamon-akka-24", file("kamon-akka-2.4.x"))
     moduleName := "kamon-akka-2.4",
     scalaVersion := "2.12.1",
     crossScalaVersions := Seq("2.11.8", "2.12.1"),
+    kamonUseAspectJ := true,
     resolvers += Resolver.bintrayRepo("kamon-io", "snapshots"),
     libraryDependencies ++=
       compileScope(akkaDependency("actor", `akka-2.4`), kamonCore, kamonScala, kamonExecutors) ++
@@ -51,10 +52,11 @@ lazy val kamonAkka25 = Project("kamon-akka-25", file("kamon-akka-2.5.x"))
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings: _*)
   .settings(
-      bintrayPackage := "kamon-akka",
+    bintrayPackage := "kamon-akka",
     moduleName := "kamon-akka-2.5",
     scalaVersion := "2.12.1",
     crossScalaVersions := Seq("2.11.8", "2.12.1"),
+    kamonUseAspectJ := true,
     resolvers += Resolver.bintrayRepo("kamon-io", "snapshots"),
     libraryDependencies ++=
       compileScope(akkaDependency("actor", `akka-2.5`), kamonCore, kamonScala, kamonExecutors) ++
