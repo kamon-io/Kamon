@@ -21,7 +21,7 @@ import java.util.concurrent.ScheduledExecutorService
 import com.typesafe.config.Config
 import java.time.Duration
 
-import kamon.metric.Metric.BaseMetric
+import kamon.metric.Metric.{BaseMetric, Settings}
 import kamon.tag.TagSet
 import kamon.util.Clock
 
@@ -32,9 +32,9 @@ import kamon.util.Clock
   * not; that kind of verification is handled on the Kamon metric registry.
   *
   */
-class MetricFactory private (defaultCounterSettings: Metric.Settings.ValueInstrument, defaultGaugeSettings: Metric.Settings.ValueInstrument,
-    defaultHistogramSettings: Metric.Settings.DistributionInstrument, defaultTimerSettings: Metric.Settings.DistributionInstrument,
-    defaultRangeSamplerSettings: Metric.Settings.DistributionInstrument,  customSettings: Map[String, MetricFactory.CustomSettings],
+class MetricFactory private (defaultCounterSettings: Metric.Settings.ForValueInstrument, defaultGaugeSettings: Metric.Settings.ForValueInstrument,
+    defaultHistogramSettings: Metric.Settings.ForDistributionInstrument, defaultTimerSettings: Metric.Settings.ForDistributionInstrument,
+    defaultRangeSamplerSettings: Metric.Settings.ForDistributionInstrument,  customSettings: Map[String, MetricFactory.CustomSettings],
     scheduler: ScheduledExecutorService, clock: Clock) {
 
 
@@ -42,27 +42,26 @@ class MetricFactory private (defaultCounterSettings: Metric.Settings.ValueInstru
     * Creates a new counter-based metric, backed by the Counter.LongAdder implementation.
     */
   def counter(name: String, description: Option[String], unit: Option[MeasurementUnit], autoUpdateInterval: Option[Duration]):
-    BaseMetric[Counter, Metric.Settings.ValueInstrument, Long] with Metric.Counter = {
+    BaseMetric[Counter, Metric.Settings.ForValueInstrument, Long] with Metric.Counter = {
 
     val metricDescription = description.getOrElse("")
-    val metricSettings = Metric.Settings.ValueInstrument (
+    val metricSettings = Metric.Settings.ForValueInstrument (
       unit.getOrElse(defaultCounterSettings.unit),
       autoUpdateInterval.getOrElse(defaultCounterSettings.autoUpdateInterval)
     )
 
-    val builder = (metric: BaseMetric[Counter, Metric.Settings.ValueInstrument, Long], tags: TagSet) =>
+    val builder = (metric: BaseMetric[Counter, Metric.Settings.ForValueInstrument, Long], tags: TagSet) =>
       new Counter.LongAdder(metric, tags)
 
-    new BaseMetric[Counter, Metric.Settings.ValueInstrument, Long](name, metricDescription, metricSettings,
+    new BaseMetric[Counter, Metric.Settings.ForValueInstrument, Long](name, metricDescription, metricSettings,
       builder, scheduler) with Metric.Counter {
 
       override protected def instrumentType: Instrument.Type =
         Instrument.Type.Counter
 
-      override protected def buildMetricSnapshot(
-        metric: Metric[Counter, Metric.Settings.ValueInstrument],
-        instruments: Map[TagSet, Long]
-      ): MetricSnapshot.Value[Long] = MetricSnapshot.Value[Long](metric.name, metric.description, metric.settings, instruments)
+      override protected def buildMetricSnapshot(metric: Metric[Counter, Settings.ForValueInstrument],
+          instruments: Seq[Instrument.Snapshot[Long]]): MetricSnapshot.Values[Long] =
+        MetricSnapshot.ofValues(metric.name, metric.description, metric.settings, instruments)
     }
   }
 
@@ -70,27 +69,26 @@ class MetricFactory private (defaultCounterSettings: Metric.Settings.ValueInstru
     * Creates a new counter-based metric, backed by the Counter.LongAdder implementation.
     */
   def gauge(name: String, description: Option[String], unit: Option[MeasurementUnit], autoUpdateInterval: Option[Duration]):
-    BaseMetric[Gauge, Metric.Settings.ValueInstrument, Double] with Metric.Gauge = {
+    BaseMetric[Gauge, Metric.Settings.ForValueInstrument, Double] with Metric.Gauge = {
 
     val metricDescription = description.getOrElse("")
-    val metricSettings = Metric.Settings.ValueInstrument (
+    val metricSettings = Metric.Settings.ForValueInstrument (
       unit.getOrElse(defaultGaugeSettings.unit),
       autoUpdateInterval.getOrElse(defaultGaugeSettings.autoUpdateInterval)
     )
 
-    val builder = (metric: BaseMetric[Gauge, Metric.Settings.ValueInstrument, Double], tags: TagSet) =>
+    val builder = (metric: BaseMetric[Gauge, Metric.Settings.ForValueInstrument, Double], tags: TagSet) =>
       new Gauge.Volatile(metric, tags)
 
-    new BaseMetric[Gauge, Metric.Settings.ValueInstrument, Double](name, metricDescription, metricSettings,
+    new BaseMetric[Gauge, Metric.Settings.ForValueInstrument, Double](name, metricDescription, metricSettings,
       builder, scheduler) with Metric.Gauge {
 
       override protected def instrumentType: Instrument.Type =
         Instrument.Type.Gauge
 
-      override protected def buildMetricSnapshot(
-        metric: Metric[Gauge, Metric.Settings.ValueInstrument],
-        instruments: Map[TagSet, Double]
-      ): MetricSnapshot.Value[Double] = MetricSnapshot.Value[Double](metric.name, metric.description, metric.settings, instruments)
+      override protected def buildMetricSnapshot(metric: Metric[Gauge, Settings.ForValueInstrument],
+          instruments: Seq[Instrument.Snapshot[Double]]): MetricSnapshot.Values[Double] =
+        MetricSnapshot.ofValues(metric.name, metric.description, metric.settings, instruments)
     }
   }
 
@@ -98,28 +96,27 @@ class MetricFactory private (defaultCounterSettings: Metric.Settings.ValueInstru
     * Creates a new histogram-based metric, backed by the Histogram.Atomic implementation.
     */
   def histogram(name: String, description: Option[String], unit: Option[MeasurementUnit], dynamicRange: Option[DynamicRange],
-    autoUpdateInterval: Option[Duration]): BaseMetric[Histogram, Metric.Settings.DistributionInstrument, Distribution] with Metric.Histogram = {
+    autoUpdateInterval: Option[Duration]): BaseMetric[Histogram, Metric.Settings.ForDistributionInstrument, Distribution] with Metric.Histogram = {
 
     val metricDescription = description.getOrElse("")
-    val metricSettings = Metric.Settings.DistributionInstrument (
+    val metricSettings = Metric.Settings.ForDistributionInstrument (
       unit.getOrElse(defaultHistogramSettings.unit),
       autoUpdateInterval.getOrElse(defaultHistogramSettings.autoUpdateInterval),
       dynamicRange.getOrElse(defaultHistogramSettings.dynamicRange)
     )
 
-    val builder = (metric: BaseMetric[Histogram, Metric.Settings.DistributionInstrument, Distribution], tags: TagSet) =>
+    val builder = (metric: BaseMetric[Histogram, Metric.Settings.ForDistributionInstrument, Distribution], tags: TagSet) =>
       new Histogram.Atomic(metric, tags, metricSettings.dynamicRange)
 
-    new BaseMetric[Histogram, Metric.Settings.DistributionInstrument, Distribution](name, metricDescription, metricSettings,
+    new BaseMetric[Histogram, Metric.Settings.ForDistributionInstrument, Distribution](name, metricDescription, metricSettings,
       builder, scheduler) with Metric.Histogram {
 
       override protected def instrumentType: Instrument.Type =
         Instrument.Type.Histogram
 
-      override protected def buildMetricSnapshot(
-        metric: Metric[Histogram, Metric.Settings.DistributionInstrument],
-        instruments: Map[TagSet,Distribution]
-      ): MetricSnapshot.Distribution = MetricSnapshot.Distribution(metric.name, metric.description, metric.settings, instruments)
+      override protected def buildMetricSnapshot(metric: Metric[Histogram, Settings.ForDistributionInstrument],
+          instruments: Seq[Instrument.Snapshot[Distribution]]): MetricSnapshot.Distributions =
+        MetricSnapshot.ofDistributions(metric.name, metric.description, metric.settings, instruments)
     }
   }
 
@@ -127,28 +124,27 @@ class MetricFactory private (defaultCounterSettings: Metric.Settings.ValueInstru
     * Creates a new histogram-based metric, backed by the Histogram.Atomic implementation.
     */
   def timer(name: String, description: Option[String], unit: Option[MeasurementUnit], dynamicRange: Option[DynamicRange],
-    autoUpdateInterval: Option[Duration]): BaseMetric[Timer, Metric.Settings.DistributionInstrument, Distribution] with Metric.Timer = {
+    autoUpdateInterval: Option[Duration]): BaseMetric[Timer, Metric.Settings.ForDistributionInstrument, Distribution] with Metric.Timer = {
 
     val metricDescription = description.getOrElse("")
-    val metricSettings = Metric.Settings.DistributionInstrument (
+    val metricSettings = Metric.Settings.ForDistributionInstrument (
       unit.getOrElse(defaultTimerSettings.unit),
       autoUpdateInterval.getOrElse(defaultTimerSettings.autoUpdateInterval),
       dynamicRange.getOrElse(defaultTimerSettings.dynamicRange)
     )
 
-    val builder = (metric: BaseMetric[Timer, Metric.Settings.DistributionInstrument, Distribution], tags: TagSet) =>
+    val builder = (metric: BaseMetric[Timer, Metric.Settings.ForDistributionInstrument, Distribution], tags: TagSet) =>
       new Timer.Atomic(metric, tags, metricSettings.dynamicRange, clock)
 
-    new BaseMetric[Timer, Metric.Settings.DistributionInstrument, Distribution](name, metricDescription, metricSettings,
+    new BaseMetric[Timer, Metric.Settings.ForDistributionInstrument, Distribution](name, metricDescription, metricSettings,
       builder, scheduler) with Metric.Timer {
 
       override protected def instrumentType: Instrument.Type =
         Instrument.Type.Timer
 
-      override protected def buildMetricSnapshot(
-        metric: Metric[Timer, Metric.Settings.DistributionInstrument],
-        instruments: Map[TagSet,Distribution]
-      ): MetricSnapshot.Distribution = MetricSnapshot.Distribution(metric.name, metric.description, metric.settings, instruments)
+      override protected def buildMetricSnapshot(metric: Metric[Timer, Settings.ForDistributionInstrument],
+          instruments: Seq[Instrument.Snapshot[Distribution]]): MetricSnapshot.Distributions =
+        MetricSnapshot.ofDistributions(metric.name, metric.description, metric.settings, instruments)
     }
   }
 
@@ -156,28 +152,27 @@ class MetricFactory private (defaultCounterSettings: Metric.Settings.ValueInstru
     * Creates a new histogram-based metric, backed by the Histogram.Atomic implementation.
     */
   def rangeSampler(name: String, description: Option[String], unit: Option[MeasurementUnit], dynamicRange: Option[DynamicRange],
-    autoUpdateInterval: Option[Duration]): BaseMetric[RangeSampler, Metric.Settings.DistributionInstrument, Distribution] with Metric.RangeSampler = {
+    autoUpdateInterval: Option[Duration]): BaseMetric[RangeSampler, Metric.Settings.ForDistributionInstrument, Distribution] with Metric.RangeSampler = {
 
     val metricDescription = description.getOrElse("")
-    val metricSettings = Metric.Settings.DistributionInstrument (
+    val metricSettings = Metric.Settings.ForDistributionInstrument (
       unit.getOrElse(defaultRangeSamplerSettings.unit),
       autoUpdateInterval.getOrElse(defaultRangeSamplerSettings.autoUpdateInterval),
       dynamicRange.getOrElse(defaultRangeSamplerSettings.dynamicRange)
     )
 
-    val builder = (metric: BaseMetric[RangeSampler, Metric.Settings.DistributionInstrument, Distribution], tags: TagSet) =>
+    val builder = (metric: BaseMetric[RangeSampler, Metric.Settings.ForDistributionInstrument, Distribution], tags: TagSet) =>
       new RangeSampler.Atomic(metric, tags, metricSettings.dynamicRange)
 
-    new BaseMetric[RangeSampler, Metric.Settings.DistributionInstrument, Distribution](name, metricDescription, metricSettings,
+    new BaseMetric[RangeSampler, Metric.Settings.ForDistributionInstrument, Distribution](name, metricDescription, metricSettings,
       builder, scheduler) with Metric.RangeSampler {
 
       override protected def instrumentType: Instrument.Type =
         Instrument.Type.RangeSampler
 
-      override protected def buildMetricSnapshot(
-        metric: Metric[RangeSampler, Metric.Settings.DistributionInstrument],
-        instruments: Map[TagSet,Distribution]
-      ): MetricSnapshot.Distribution = MetricSnapshot.Distribution(metric.name, metric.description, metric.settings, instruments)
+      override protected def buildMetricSnapshot(metric: Metric[RangeSampler, Settings.ForDistributionInstrument],
+          instruments: Seq[Instrument.Snapshot[Distribution]]): MetricSnapshot.Distributions =
+        MetricSnapshot.ofDistributions(metric.name, metric.description, metric.settings, instruments)
     }
   }
 }
@@ -186,29 +181,29 @@ object MetricFactory {
 
   def from(config: Config, scheduler: ScheduledExecutorService, clock: Clock): MetricFactory = {
     val factoryConfig = config.getConfig("kamon.metric.factory")
-    val defaultCounterSettings = Metric.Settings.ValueInstrument (
+    val defaultCounterSettings = Metric.Settings.ForValueInstrument (
       MeasurementUnit.none,
       factoryConfig.getDuration("default-settings.counter.auto-update-interval")
     )
 
-    val defaultGaugeSettings = Metric.Settings.ValueInstrument (
+    val defaultGaugeSettings = Metric.Settings.ForValueInstrument (
       MeasurementUnit.none,
       factoryConfig.getDuration("default-settings.gauge.auto-update-interval")
     )
 
-    val defaultHistogramSettings = Metric.Settings.DistributionInstrument (
+    val defaultHistogramSettings = Metric.Settings.ForDistributionInstrument (
       MeasurementUnit.none,
       factoryConfig.getDuration("default-settings.histogram.auto-update-interval"),
       readDynamicRange(factoryConfig.getConfig("default-settings.histogram"))
     )
 
-    val defaultTimerSettings = Metric.Settings.DistributionInstrument (
+    val defaultTimerSettings = Metric.Settings.ForDistributionInstrument (
       MeasurementUnit.none,
       factoryConfig.getDuration("default-settings.timer.auto-update-interval"),
       readDynamicRange(factoryConfig.getConfig("default-settings.timer"))
     )
 
-    val defaultRangeSamplerSettings = Metric.Settings.DistributionInstrument (
+    val defaultRangeSamplerSettings = Metric.Settings.ForDistributionInstrument (
       MeasurementUnit.none,
       factoryConfig.getDuration("default-settings.range-sampler.auto-update-interval"),
       readDynamicRange(factoryConfig.getConfig("default-settings.range-sampler"))

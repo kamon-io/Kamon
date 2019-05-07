@@ -110,7 +110,12 @@ class ModuleRegistrySpec extends WordSpec with Matchers with Reconfigure with Ev
     override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
       import snapshot._
       count += 1
-      seenMetrics = (counters.keys ++ histograms.keys ++ gauges.keys ++ rangeSamplers.keys ++ timers.keys).toSeq
+      seenMetrics =
+        counters.map(_.name) ++
+        histograms.map(_.name) ++
+        gauges.map(_.name) ++
+        rangeSamplers.map(_.name) ++
+        timers.map(_.name)
     }
 
     def metrics(): Seq[String] =

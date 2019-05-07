@@ -15,7 +15,7 @@ import org.slf4j.LoggerFactory
   * Instrument that tracks the distribution of latency values within a configured range and precision. Timers are just a
   * special case of histograms that provide special APIs dedicated to recording latency measurements.
   */
-trait Timer extends Instrument[Timer, Metric.Settings.DistributionInstrument] {
+trait Timer extends Instrument[Timer, Metric.Settings.ForDistributionInstrument] {
 
   /**
     * Starts counting elapsed time from the instant this method is called and until the returned Timer.Started instance
@@ -69,10 +69,10 @@ object Timer {
     * and updated concurrently. This is, in fact, a close copy of the Histogram.Atomic implementation, modified to match
     * the Timer interface.
     */
-  class Atomic(val metric: BaseMetric[Timer, Metric.Settings.DistributionInstrument, Distribution],
+  class Atomic(val metric: BaseMetric[Timer, Metric.Settings.ForDistributionInstrument, Distribution],
     val tags: TagSet, val dynamicRange: DynamicRange, clock: Clock) extends BaseAtomicHdrHistogram(dynamicRange) with Timer
     with Instrument.Snapshotting[Distribution] with DistributionSnapshotBuilder
-    with BaseMetricAutoUpdate[Timer, Metric.Settings.DistributionInstrument, Distribution] {
+    with BaseMetricAutoUpdate[Timer, Metric.Settings.ForDistributionInstrument, Distribution] {
 
     /** Starts a timer that will record the elapsed time between the start and stop instants */
     override def start(): Started =
@@ -105,7 +105,7 @@ object Timer {
     override def record(elapsed: Long, unit: TimeUnit): Timer =
       record(unit.toNanos(elapsed))
 
-    override protected def baseMetric: BaseMetric[Timer, Settings.DistributionInstrument, Distribution] =
+    override protected def baseMetric: BaseMetric[Timer, Settings.ForDistributionInstrument, Distribution] =
       metric
   }
 

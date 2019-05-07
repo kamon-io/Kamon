@@ -1,58 +1,48 @@
 package kamon
 package metric
 
-import kamon.tag.TagSet
 
 /**
-  * Describes the common structure of a metric snapshot. Metric snapshots always contain the metric basic informantion
-  * and snapshots of all instruments created for that metric.
+  * Contains snapshots of all known instruments for a given metric. Instances of this class are meant to be exposed to
+  * metric reporters via the PeriodSnapshot.
   */
-sealed trait MetricSnapshot[Sett <: Metric.Settings, Snap] {
-
-  /**
-    * Name of the metric from which the snapshot was taken.
-    */
-  def name: String
-
-  /**
-    * Description of the metric from which the snapshot was taken.
-    */
-  def description: String
-
-  /**
-    * Settings of the metric from which the snapshot was taken.
-    */
-  def settings: Sett
-
-  /**
-    * Instrument snapshots of all instruments associated with the metric from which the snapshot was taken.
-    */
-  def instruments: Map[TagSet, Snap]
-}
+case class MetricSnapshot[Sett <: Metric.Settings, Snap] (
+  name: String,
+  description: String,
+  settings: Sett,
+  instruments: Seq[Instrument.Snapshot[Snap]]
+)
 
 object MetricSnapshot {
 
-  /**
-    * Concrete snapshot implementation for metrics backed by instruments that produce single values. E.g. counters and
-    * gauges.
-    */
-  case class Value[V] (
-    name: String,
-    description: String,
-    settings: Metric.Settings.ValueInstrument,
-    instruments: Map[TagSet, V]
-  ) extends MetricSnapshot[Metric.Settings.ValueInstrument, V]
-
+  type Values[T] = MetricSnapshot[Metric.Settings.ForValueInstrument, T]
+  type Distributions = MetricSnapshot[Metric.Settings.ForDistributionInstrument, Distribution]
 
   /**
-    * Concrete snapshot implementation for metrics backed by instruments that produce a distribution of values.
-    * E.g. histograms, timers and range samplers.
+    * Creates a MetricSnapshot instance for metrics that produce single values.
     */
-  case class Distribution (
-    name: String,
-    description: String,
-    settings: Metric.Settings.DistributionInstrument,
-    instruments: Map[TagSet, kamon.metric.Distribution]
-  ) extends MetricSnapshot[Metric.Settings.DistributionInstrument, kamon.metric.Distribution]
+  def ofValues[T](name: String, description: String, settings: Metric.Settings.ForValueInstrument,
+      instruments: Seq[Instrument.Snapshot[T]]): Values[T] = {
 
+    MetricSnapshot(
+      name,
+      description,
+      settings,
+      instruments
+    )
+  }
+
+  /**
+    * Creates a MetricSnapshot instance for metrics that produce distributions.
+    */
+  def ofDistributions(name: String, description: String, settings: Metric.Settings.ForDistributionInstrument,
+    instruments: Seq[Instrument.Snapshot[Distribution]]): Distributions = {
+
+    MetricSnapshot(
+      name,
+      description,
+      settings,
+      instruments
+    )
+  }
 }

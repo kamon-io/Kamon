@@ -66,37 +66,37 @@ object Metric {
     * User-facing API for a Counter-based metric. All Kamon APIs returning a Counter-based metric to users should always
     * return this interface rather than internal representations.
     */
-  trait Counter extends Metric[kamon.metric.Counter, Settings.ValueInstrument]
+  trait Counter extends Metric[kamon.metric.Counter, Settings.ForValueInstrument]
 
   /**
     * User-facing API for a Gauge-based metric. All Kamon APIs returning a Gauge-based metric to users should always
     * return this interface rather than internal representations.
     */
-  trait Gauge extends Metric[kamon.metric.Gauge, Settings.ValueInstrument]
+  trait Gauge extends Metric[kamon.metric.Gauge, Settings.ForValueInstrument]
 
   /**
     * User-facing API for a Histogram-based metric. All Kamon APIs returning a Histogram-based metric to users should
     * always return this interface rather than internal representations.
     */
-  trait Histogram extends Metric[kamon.metric.Histogram, Settings.DistributionInstrument]
+  trait Histogram extends Metric[kamon.metric.Histogram, Settings.ForDistributionInstrument]
 
   /**
     * User-facing API for a Timer-based metric. All Kamon APIs returning a Timer-based metric to users should always
     * return this interface rather than internal representations.
     */
-  trait Timer extends Metric[kamon.metric.Timer, Settings.DistributionInstrument]
+  trait Timer extends Metric[kamon.metric.Timer, Settings.ForDistributionInstrument]
 
   /**
     * User-facing API for a Range Sampler-based metric. All Kamon APIs returning a Range Sampler-based metric to users
     * should always return this interface rather than internal representations.
     */
-  trait RangeSampler extends Metric[kamon.metric.RangeSampler, Settings.DistributionInstrument]
+  trait RangeSampler extends Metric[kamon.metric.RangeSampler, Settings.ForDistributionInstrument]
 
 
   /**
     * Describes the minimum settings that should be provided to all metrics.
     */
-  trait Settings {
+  sealed trait Settings {
 
     /**
       * Measurement unit of the values tracked by a metric.
@@ -115,7 +115,7 @@ object Metric {
     /**
       * Settings that apply to all metrics backed by instruments that produce a single value (e.g. counters and gauges).
       */
-    case class ValueInstrument (
+    case class ForValueInstrument (
       unit: MeasurementUnit,
       autoUpdateInterval: Duration
     ) extends Metric.Settings
@@ -125,7 +125,7 @@ object Metric {
       * Settings that apply to all metrics backed by instruments that produce value distributions (e.g. timers, range
       * samplers and, of course, histograms).
       */
-    case class DistributionInstrument (
+    case class ForDistributionInstrument (
       unit: MeasurementUnit,
       autoUpdateInterval: Duration,
       dynamicRange: kamon.metric.DynamicRange
@@ -136,7 +136,7 @@ object Metric {
   /**
     * Exposes the required API to create metric snapshots. This API is not meant to be exposed to users.
     */
-  trait Snapshotting[Sett <: Metric.Settings, Snap] {
+  private[kamon] trait Snapshotting[Sett <: Metric.Settings, Snap] {
 
     /**
       * Creates a snapshot for a metric. If the resetState flag is set to true, the internal state of all instruments
@@ -198,17 +198,17 @@ object Metric {
     }
 
     override def snapshot(resetState: Boolean): MetricSnapshot[Sett, Snap] = synchronized {
-      val instrumentSnapshots = Map.newBuilder[TagSet, Snap]
+      var instrumentSnapshots = List.empty[Instrument.Snapshot[Snap]]
       _instruments.foreach {
         case (tags, entry) =>
           val instrumentSnapshot = entry.instrument.snapshot(resetState)
           if(entry.removeOnNextSnapshot && resetState)
             _instruments.remove(tags)
 
-          instrumentSnapshots += (tags -> instrumentSnapshot)
+          instrumentSnapshots = Instrument.Snapshot(tags, instrumentSnapshot) :: instrumentSnapshots
       }
 
-      buildMetricSnapshot(this, instrumentSnapshots.result())
+      buildMetricSnapshot(this, instrumentSnapshots)
     }
 
     def schedule(instrument: Inst, action: Runnable, interval: Duration): Any = synchronized {
@@ -230,7 +230,7 @@ object Metric {
     /** Used by the Status API only */
     protected def instrumentType: Instrument.Type
 
-    protected def buildMetricSnapshot(metric: Metric[Inst, Sett], instruments: Map[TagSet, Snap]): MetricSnapshot[Sett, Snap]
+    protected def buildMetricSnapshot(metric: Metric[Inst, Sett], instruments: Seq[Instrument.Snapshot[Snap]]): MetricSnapshot[Sett, Snap]
 
     private def lookupInstrument(tags: TagSet): Inst = {
       val entry = _instruments.atomicGetOrElseUpdate(tags, newInstrumentEntry(tags))

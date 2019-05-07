@@ -43,7 +43,7 @@ trait MetricBuilding {
     registry.counter(name, Some(description), Some(unit), None)
 
   /** Creates or retrieves a Counter-backed metric with the provided settings */
-  def counter(name: String, description: String, settings: Metric.Settings.ValueInstrument): Metric.Counter =
+  def counter(name: String, description: String, settings: Metric.Settings.ForValueInstrument): Metric.Counter =
     registry.counter(name, Some(description), Some(settings.unit), Some(settings.autoUpdateInterval))
 
 
@@ -64,7 +64,7 @@ trait MetricBuilding {
     registry.gauge(name, Some(description), Some(unit), None)
 
   /** Creates or retrieves a Gauge-backed metric with the provided settings */
-  def gauge(name: String, description: String, settings: Metric.Settings.ValueInstrument): Metric.Gauge =
+  def gauge(name: String, description: String, settings: Metric.Settings.ForValueInstrument): Metric.Gauge =
     registry.gauge(name, Some(description), Some(settings.unit), Some(settings.autoUpdateInterval))
 
 
@@ -93,7 +93,7 @@ trait MetricBuilding {
     registry.histogram(name, Some(description), Some(unit), Some(dynamicRange), None)
 
   /** Creates or retrieves a Histogram-backed metric with the provided settings */
-  def histogram(name: String, description: String, settings: Metric.Settings.DistributionInstrument): Metric.Histogram =
+  def histogram(name: String, description: String, settings: Metric.Settings.ForDistributionInstrument): Metric.Histogram =
     registry.histogram(name, Some(description), Some(settings.unit), Some(settings.dynamicRange), Some(settings.autoUpdateInterval))
 
 
@@ -147,7 +147,7 @@ trait MetricBuilding {
     registry.rangeSampler(name, Some(description), Some(unit), Some(dynamicRange), None)
 
   /** Creates or retrieves a RangeSampler-backed metric with the provided settings */
-  def rangeSampler(name: String, description: String, settings: Metric.Settings.DistributionInstrument): Metric.RangeSampler =
+  def rangeSampler(name: String, description: String, settings: Metric.Settings.ForDistributionInstrument): Metric.RangeSampler =
     registry.rangeSampler(name, Some(description), Some(settings.unit), Some(settings.dynamicRange), Some(settings.autoUpdateInterval))
 
   /**

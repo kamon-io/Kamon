@@ -80,4 +80,16 @@ object MeasurementUnit {
     def megabytes: MeasurementUnit
     def gigabytes: MeasurementUnit
   }
+
+
+  /**
+    * Converts metric snapshots of known types
+    * @param targetTimeUnit
+    * @param targetInformationUnit
+    * @param targetRange
+    */
+  class Converter(targetTimeUnit: MeasurementUnit, targetInformationUnit: MeasurementUnit, targetRange: DynamicRange) {
+
+
+  }
 }

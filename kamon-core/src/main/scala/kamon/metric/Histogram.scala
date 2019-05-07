@@ -12,7 +12,7 @@ import org.slf4j.LoggerFactory
 /**
   * Instrument that tracks the distribution of values within a configured range and precision.
   */
-trait Histogram extends Instrument[Histogram, Metric.Settings.DistributionInstrument] {
+trait Histogram extends Instrument[Histogram, Metric.Settings.ForDistributionInstrument] {
 
   /**
     * Records one occurrence of the provided value. Keep in mind that the provided value will not be recorded as-is on
@@ -39,10 +39,10 @@ object Histogram {
     * Histogram implementation with thread safety guarantees. Instances of this class can be safely shared across
     * threads and updated concurrently.
     */
-  class Atomic(val metric: BaseMetric[Histogram, Metric.Settings.DistributionInstrument, Distribution],
+  class Atomic(val metric: BaseMetric[Histogram, Metric.Settings.ForDistributionInstrument, Distribution],
       val tags: TagSet, val dynamicRange: DynamicRange) extends BaseAtomicHdrHistogram(dynamicRange) with Histogram
       with DistributionSnapshotBuilder
-      with BaseMetricAutoUpdate[Histogram, Metric.Settings.DistributionInstrument, Distribution] {
+      with BaseMetricAutoUpdate[Histogram, Metric.Settings.ForDistributionInstrument, Distribution] {
 
     override def record(value: Long): Histogram = {
       try {
@@ -80,7 +80,7 @@ object Histogram {
       this
     }
 
-    override protected def baseMetric: BaseMetric[Histogram, Metric.Settings.DistributionInstrument, Distribution] =
+    override protected def baseMetric: BaseMetric[Histogram, Metric.Settings.ForDistributionInstrument, Distribution] =
       metric
   }
 

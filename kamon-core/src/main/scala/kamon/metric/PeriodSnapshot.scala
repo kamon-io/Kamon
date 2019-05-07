@@ -14,11 +14,11 @@ import scala.collection.mutable
 case class PeriodSnapshot (
   from: Instant,
   to: Instant,
-  counters: Map[String, MetricSnapshot.Value[Long]],
-  gauges: Map[String, MetricSnapshot.Value[Double]],
-  histograms: Map[String, MetricSnapshot.Distribution],
-  timers: Map[String, MetricSnapshot.Distribution],
-  rangeSamplers: Map[String, MetricSnapshot.Distribution]
+  counters: Seq[MetricSnapshot.Values[Long]],
+  gauges: Seq[MetricSnapshot.Values[Double]],
+  histograms: Seq[MetricSnapshot.Distributions],
+  timers: Seq[MetricSnapshot.Distributions],
+  rangeSamplers: Seq[MetricSnapshot.Distributions]
 )
 
 object PeriodSnapshot {
@@ -93,11 +93,11 @@ object PeriodSnapshot {
         if (_accumulatingFrom.isEmpty)
           _accumulatingFrom = Some(periodSnapshot.from)
 
-        periodSnapshot.counters.values.foreach(c => accumulateValue(periodSnapshot.to, _counters, c))
-        periodSnapshot.gauges.values.foreach(g => keepLastValue(periodSnapshot.to, _gauges, g))
-        periodSnapshot.histograms.values.foreach(h => accumulateDistribution(periodSnapshot.to, _histograms, h))
-        periodSnapshot.timers.values.foreach(t => accumulateDistribution(periodSnapshot.to, _timers, t))
-        periodSnapshot.rangeSamplers.values.foreach(rs => accumulateDistribution(periodSnapshot.to, _rangeSamplers, rs))
+        periodSnapshot.counters.foreach(c => accumulateValue(periodSnapshot.to, _counters, c))
+        periodSnapshot.gauges.foreach(g => keepLastValue(periodSnapshot.to, _gauges, g))
+        periodSnapshot.histograms.foreach(h => accumulateDistribution(periodSnapshot.to, _histograms, h))
+        periodSnapshot.timers.foreach(t => accumulateDistribution(periodSnapshot.to, _timers, t))
+        periodSnapshot.rangeSamplers.foreach(rs => accumulateDistribution(periodSnapshot.to, _rangeSamplers, rs))
 
         for(from <- _accumulatingFrom if isAroundNextTick(periodSnapshot.to)) yield {
           val accumulatedPeriodSnapshot = buildPeriodSnapshot(from, periodSnapshot.to, resetState = true)
@@ -139,47 +139,47 @@ object PeriodSnapshot {
       snapshot
     }
 
-    private def valueSnapshots[T](storage: ValueMetricStorage[T]): Map[String, MetricSnapshot.Value[T]] = {
-      val metrics = Map.newBuilder[String, MetricSnapshot.Value[T]]
+    private def valueSnapshots[T](storage: ValueMetricStorage[T]): Seq[MetricSnapshot.Values[T]] = {
+      var metrics = List.empty[MetricSnapshot.Values[T]]
       storage.foreach {
-        case (metricName, metricEntry) =>
-          val snapshot = MetricSnapshot.Value (
+        case (_, metricEntry) =>
+          val snapshot = MetricSnapshot.ofValues (
             metricEntry.snapshot.name,
             metricEntry.snapshot.description,
             metricEntry.snapshot.settings,
-            metricEntry.instruments.mapValues(entry => entry.snapshot).toMap
+            metricEntry.instruments.map { case (tags, entry) => Instrument.Snapshot(tags, entry.snapshot) } toSeq
           )
 
-          metrics += metricName -> snapshot
+          metrics = snapshot :: metrics
       }
 
-      metrics.result()
+      metrics
     }
 
-    private def distributionSnapshots(storage: DistributionMetricStorage): Map[String, MetricSnapshot.Distribution] = {
-      val metrics = Map.newBuilder[String, MetricSnapshot.Distribution]
+    private def distributionSnapshots(storage: DistributionMetricStorage): Seq[MetricSnapshot.Distributions] = {
+      var metrics = List.empty[MetricSnapshot.Distributions]
       storage.foreach {
-        case (metricName, metricEntry) =>
-          val snapshot = MetricSnapshot.Distribution (
+        case (_, metricEntry) =>
+          val snapshot = MetricSnapshot.ofDistributions (
             metricEntry.snapshot.name,
             metricEntry.snapshot.description,
             metricEntry.snapshot.settings,
-            metricEntry.instruments.mapValues(entry => entry.snapshot).toMap
+            metricEntry.instruments.map { case (tags, entry) => Instrument.Snapshot(tags, entry.snapshot) } toSeq
           )
 
-          metrics += metricName -> snapshot
+          metrics = snapshot :: metrics
       }
 
-      metrics.result()
+      metrics
     }
 
-    private def accumulateValue(currentInstant: Instant, storage: ValueMetricStorage[Long], current: MetricSnapshot.Value[Long]): Unit =
+    private def accumulateValue(currentInstant: Instant, storage: ValueMetricStorage[Long], current: MetricSnapshot.Values[Long]): Unit =
       accumulate(currentInstant, storage, current)(_ + _)
 
-    private def keepLastValue(currentInstant: Instant, storage: ValueMetricStorage[Double], current: MetricSnapshot.Value[Double]): Unit =
+    private def keepLastValue(currentInstant: Instant, storage: ValueMetricStorage[Double], current: MetricSnapshot.Values[Double]): Unit =
       accumulate(currentInstant, storage, current)((c, _) => c)
 
-    private def accumulateDistribution(currentInstant: Instant, storage: DistributionMetricStorage, current: MetricSnapshot.Distribution): Unit =
+    private def accumulateDistribution(currentInstant: Instant, storage: DistributionMetricStorage, current: MetricSnapshot.Distributions): Unit =
       accumulate(currentInstant, storage, current)(Distribution.merge)
 
     private def accumulate[IS, MS <: Metric.Settings](currentInstant: Instant, storage: mutable.Map[String, MetricEntry[MS, IS]],
@@ -189,14 +189,17 @@ object PeriodSnapshot {
         case None =>
           // If the metric is not present just register it
           val instruments = mutable.Map.newBuilder[TagSet, InstrumentEntry[IS]]
-          current.instruments.foreach { case (tags, snapshot) => instruments += (tags -> InstrumentEntry(snapshot, currentInstant)) }
+          current.instruments.foreach {
+            case Instrument.Snapshot(tags, snapshot) => instruments += (tags -> InstrumentEntry(snapshot, currentInstant))
+          }
+
           storage.put(current.name, MetricEntry[MS, IS](current, instruments.result()))
 
         case Some(metricEntry) =>
           // If the metric was already registered, the values of all instruments must be aggregated with any
           // previously registered values
           current.instruments.foreach {
-            case (tags, instrumentSnapshot) =>
+            case Instrument.Snapshot(tags, instrumentSnapshot) =>
               metricEntry.instruments.get(tags) match {
                 case Some(instrumentEntry) =>
                   instrumentEntry.snapshot = combine(instrumentSnapshot, instrumentEntry.snapshot)
@@ -237,8 +240,8 @@ object PeriodSnapshot {
       _rangeSamplers.clear()
     }
 
-    private type ValueMetricStorage[T] = mutable.Map[String, MetricEntry[Metric.Settings.ValueInstrument, T]]
-    private type DistributionMetricStorage = mutable.Map[String, MetricEntry[Metric.Settings.DistributionInstrument, Distribution]]
+    private type ValueMetricStorage[T] = mutable.Map[String, MetricEntry[Metric.Settings.ForValueInstrument, T]]
+    private type DistributionMetricStorage = mutable.Map[String, MetricEntry[Metric.Settings.ForDistributionInstrument, Distribution]]
 
     private case class MetricEntry[Sett <: Metric.Settings, Snap] (
       snapshot: MetricSnapshot[Sett, Snap],

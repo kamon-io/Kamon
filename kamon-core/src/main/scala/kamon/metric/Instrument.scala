@@ -71,9 +71,18 @@ trait Instrument[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings] extend
 object Instrument {
 
   /**
+    * Snapshot of an instrument's state at a given point. Snapshots are expected to have either Long, Double or
+    * Distribution values, depending on the instrument type.
+    */
+  case class Snapshot[T] (
+    tags: TagSet,
+    value: T
+  )
+
+  /**
     * Exposes the required API to create instrument snapshots snapshots. This API is not meant to be exposed to users.
     */
-  trait Snapshotting[Snap] {
+  private[kamon] trait Snapshotting[Snap] {
 
     /**
       * Creates a snapshot for an instrument. If the resetState flag is set to true, the internal state of the
@@ -82,11 +91,11 @@ object Instrument {
     def snapshot(resetState: Boolean): Snap
   }
 
-
-  /** Internal means of type checking the metric types. This overcomes the fact of all metrics being stored in the same
+  /**
+    * Internal means of type checking the metric types. This overcomes the fact of all metrics being stored in the same
     * map and allows to communicate a well defined number of options to the Status API.
     */
-  final case class Type(name: String, implementation: Class[_])
+  private[kamon] final case class Type(name: String, implementation: Class[_])
 
   object Type {
     val Histogram = Type("histogram", classOf[Metric.Histogram])

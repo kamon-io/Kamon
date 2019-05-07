@@ -22,7 +22,7 @@ import scala.annotation.tailrec
   * the minimum and maximum values of the observed variable as well as several samples across time since the last
   * snapshot.
   */
-trait RangeSampler extends Instrument[RangeSampler, Metric.Settings.DistributionInstrument] {
+trait RangeSampler extends Instrument[RangeSampler, Metric.Settings.ForDistributionInstrument] {
 
   /**
     * Increments the current value by one.
@@ -61,10 +61,10 @@ object RangeSampler {
     * and updated concurrently. This is, in fact, a close copy of the Histogram.Atomic implementation, modified to match
     * the Timer interface.
     */
-  class Atomic(val metric: BaseMetric[RangeSampler, Metric.Settings.DistributionInstrument, Distribution],
+  class Atomic(val metric: BaseMetric[RangeSampler, Metric.Settings.ForDistributionInstrument, Distribution],
       val tags: TagSet, val dynamicRange: DynamicRange) extends BaseAtomicHdrHistogram(dynamicRange) with RangeSampler
       with Instrument.Snapshotting[Distribution] with DistributionSnapshotBuilder
-      with BaseMetricAutoUpdate[RangeSampler, Metric.Settings.DistributionInstrument, Distribution] {
+      with BaseMetricAutoUpdate[RangeSampler, Metric.Settings.ForDistributionInstrument, Distribution] {
 
     private val _min = new AtomicLongMaxUpdater(new AtomicLong(0L))
     private val _max = new AtomicLongMaxUpdater(new AtomicLong(0L))
@@ -125,7 +125,7 @@ object RangeSampler {
       this
     }
 
-    override protected def baseMetric: BaseMetric[RangeSampler, Settings.DistributionInstrument, Distribution] =
+    override protected def baseMetric: BaseMetric[RangeSampler, Settings.ForDistributionInstrument, Distribution] =
       metric
 
 

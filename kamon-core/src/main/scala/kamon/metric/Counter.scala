@@ -10,7 +10,7 @@ import org.slf4j.LoggerFactory
 /**
   * Instrument that tracks a monotonically increasing value.
   */
-trait Counter extends Instrument[Counter, Metric.Settings.ValueInstrument] {
+trait Counter extends Instrument[Counter, Metric.Settings.ForValueInstrument] {
 
   /**
     * Increments the counter by one.
@@ -62,9 +62,9 @@ object Counter {
     * write performance over Atomic values in cases where the writes largely outweigh the reads, which is the common
     * case in Kamon counters (writing every time something needs to be tracked, reading roughly once per minute).
     */
-  class LongAdder(val metric: BaseMetric[Counter, Metric.Settings.ValueInstrument,Long], val tags: TagSet)
+  class LongAdder(val metric: BaseMetric[Counter, Metric.Settings.ForValueInstrument,Long], val tags: TagSet)
       extends Counter with Instrument.Snapshotting[Long]
-      with BaseMetricAutoUpdate[Counter, Metric.Settings.ValueInstrument,Long] {
+      with BaseMetricAutoUpdate[Counter, Metric.Settings.ForValueInstrument,Long] {
 
     private val _adder = new kamon.jsr166.LongAdder()
 
@@ -88,7 +88,7 @@ object Counter {
       else
        _adder.sum()
 
-    override def baseMetric: BaseMetric[Counter, Metric.Settings.ValueInstrument,Long] =
+    override def baseMetric: BaseMetric[Counter, Metric.Settings.ForValueInstrument,Long] =
       metric
   }
 }

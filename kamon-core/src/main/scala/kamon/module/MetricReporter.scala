@@ -45,11 +45,11 @@ object MetricReporter {
     override def apply(snapshot: PeriodSnapshot): PeriodSnapshot = {
       val filter = Kamon.filter(filterName)
       snapshot.copy(
-        counters = snapshot.counters.filterKeys(filter.accept),
-        gauges = snapshot.gauges.filterKeys(filter.accept),
-        histograms = snapshot.histograms.filterKeys(filter.accept),
-        timers = snapshot.timers.filterKeys(filter.accept),
-        rangeSamplers = snapshot.rangeSamplers.filterKeys(filter.accept)
+        counters = snapshot.counters.filter(m => filter.accept(m.name)),
+        gauges = snapshot.gauges.filter(m => filter.accept(m.name)),
+        histograms = snapshot.histograms.filter(m => filter.accept(m.name)),
+        timers = snapshot.timers.filter(m => filter.accept(m.name)),
+        rangeSamplers = snapshot.rangeSamplers.filter(m => filter.accept(m.name)),
       )
     }
   }

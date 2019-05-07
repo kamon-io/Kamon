@@ -93,10 +93,10 @@ class PeriodSnapshotAccumulatorSpec extends WordSpec with Reconfigure with Instr
 
       for(_ <- 1 to 10) {
         val peekSnapshot = accumulator.peek()
-        val mergedHistogram = peekSnapshot.histograms("histogram").instruments.head._2
-        val mergedRangeSampler = peekSnapshot.rangeSamplers("rangeSampler").instruments.head._2
-        peekSnapshot.counters("counter").instruments.head._2 shouldBe (55)
-        peekSnapshot.gauges("gauge").instruments.head._2 shouldBe (33)
+        val mergedHistogram = peekSnapshot.histograms.find(_.name == "histogram").get.instruments.head.value
+        val mergedRangeSampler = peekSnapshot.rangeSamplers.find(_.name == "rangeSampler").get.instruments.head.value
+        peekSnapshot.counters.find(_.name == "counter").get.instruments.head.value shouldBe (55)
+        peekSnapshot.gauges.find(_.name == "gauge").get.instruments.head.value shouldBe (33)
         mergedHistogram.buckets.map(_.value) should contain allOf(22L, 33L)
         mergedRangeSampler.buckets.map(_.value) should contain allOf(22L, 33L)
       }
@@ -105,10 +105,10 @@ class PeriodSnapshotAccumulatorSpec extends WordSpec with Reconfigure with Instr
 
       for(_ <- 1 to 10) {
         val peekSnapshot = accumulator.peek()
-        val mergedHistogram = peekSnapshot.histograms("histogram").instruments.head._2
-        val mergedRangeSampler = peekSnapshot.rangeSamplers("rangeSampler").instruments.head._2
-        peekSnapshot.counters("counter").instruments.head._2 shouldBe (67)
-        peekSnapshot.gauges("gauge").instruments.head._2 shouldBe (12)
+        val mergedHistogram = peekSnapshot.histograms.find(_.name == "histogram").get.instruments.head.value
+        val mergedRangeSampler = peekSnapshot.rangeSamplers.find(_.name == "rangeSampler").get.instruments.head.value
+        peekSnapshot.counters.find(_.name == "counter").get.instruments.head.value shouldBe (67)
+        peekSnapshot.gauges.find(_.name == "gauge").get.instruments.head.value shouldBe (12)
         mergedHistogram.buckets.map(_.value) should contain allOf(22L, 33L, 12L)
         mergedRangeSampler.buckets.map(_.value) should contain allOf(22L, 33L, 12L)
       }
@@ -123,10 +123,10 @@ class PeriodSnapshotAccumulatorSpec extends WordSpec with Reconfigure with Instr
       snapshotOne.from shouldBe fiveSecondsOne.from
       snapshotOne.to shouldBe fiveSecondsThree.to
 
-      val mergedHistogram = snapshotOne.histograms("histogram").instruments.head._2
-      val mergedRangeSampler = snapshotOne.rangeSamplers("rangeSampler").instruments.head._2
-      snapshotOne.counters("counter").instruments.head._2 shouldBe(67)
-      snapshotOne.gauges("gauge").instruments.head._2 shouldBe(12)
+      val mergedHistogram = snapshotOne.histograms.find(_.name == "histogram").get.instruments.head.value
+      val mergedRangeSampler = snapshotOne.rangeSamplers.find(_.name == "rangeSampler").get.instruments.head.value
+      snapshotOne.counters.find(_.name == "counter").get.instruments.head.value shouldBe(67)
+      snapshotOne.gauges.find(_.name == "gauge").get.instruments.head.value shouldBe(12)
       mergedHistogram.buckets.map(_.value) should contain allOf(22L, 33L, 12L)
       mergedRangeSampler.buckets.map(_.value) should contain allOf(22L, 33L, 12L)
 
@@ -174,16 +174,16 @@ class PeriodSnapshotAccumulatorSpec extends WordSpec with Reconfigure with Instr
     * measurement with the provided value.
     */
   def createPeriodSnapshot(from: Instant, to: Instant, value: Long): PeriodSnapshot = {
-    val valueSettings = Metric.Settings.ValueInstrument(MeasurementUnit.none, Duration.ofSeconds(10))
-    val distributionSettings = Metric.Settings.DistributionInstrument(MeasurementUnit.none, Duration.ofSeconds(10), DynamicRange.Default)
+    val valueSettings = Metric.Settings.ForValueInstrument(MeasurementUnit.none, Duration.ofSeconds(10))
+    val distributionSettings = Metric.Settings.ForDistributionInstrument(MeasurementUnit.none, Duration.ofSeconds(10), DynamicRange.Default)
     val distribution = Kamon.histogram("temp").withoutTags().record(value).distribution()
 
     PeriodSnapshot(from, to,
-      counters = Map("counter" -> MetricSnapshot.Value("counter", "", valueSettings, Map(TagSet.of("metric", "counter") -> value))),
-      gauges = Map("gauge" -> MetricSnapshot.Value("gauge", "", valueSettings, Map(TagSet.of("metric", "gauge") -> value))),
-      histograms = Map("histogram" -> MetricSnapshot.Distribution("histogram", "", distributionSettings, Map(TagSet.of("metric", "histogram") -> distribution))),
-      timers = Map("timer" -> MetricSnapshot.Distribution("timer", "", distributionSettings, Map(TagSet.of("metric", "timer") -> distribution))),
-      rangeSamplers = Map("rangeSampler" -> MetricSnapshot.Distribution("rangeSampler", "", distributionSettings, Map(TagSet.of("metric", "rangeSampler") -> distribution)))
+      counters = Seq(MetricSnapshot.ofValues("counter", "", valueSettings, Seq(Instrument.Snapshot(TagSet.of("metric", "counter"), value)))),
+      gauges = Seq(MetricSnapshot.ofValues("gauge", "", valueSettings, Seq(Instrument.Snapshot(TagSet.of("metric", "gauge"), value)))),
+      histograms = Seq(MetricSnapshot.ofDistributions("histogram", "", distributionSettings, Seq(Instrument.Snapshot(TagSet.of("metric", "histogram"), distribution)))),
+      timers = Seq(MetricSnapshot.ofDistributions("timer", "", distributionSettings, Seq(Instrument.Snapshot(TagSet.of("metric", "timer"), distribution)))),
+      rangeSamplers = Seq(MetricSnapshot.ofDistributions("rangeSampler", "", distributionSettings, Seq(Instrument.Snapshot(TagSet.of("metric", "rangeSampler"), distribution))))
     )
   }
 
