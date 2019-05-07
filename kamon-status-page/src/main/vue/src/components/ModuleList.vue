@@ -69,15 +69,14 @@ export default class ModuleList extends Vue {
 
   get hasApmModule(): boolean {
     const knownApmClasses = [
-      'kamon.kamino.KaminoReporter',
       'kamon.apm.KamonApm'
     ]
 
-    return this.modules.find(m => knownApmClasses.indexOf(m.clazz) > 0) !== undefined
+    return this.modules.find(m => knownApmClasses.includes(m.clazz)) !== undefined
   }
 
   private isReporter(module: Module): boolean {
-    return [ModuleKind.Combined, ModuleKind.Span, ModuleKind.Metric].indexOf(module.kind) > 0
+    return [ModuleKind.Combined, ModuleKind.Span, ModuleKind.Metric].includes(module.kind)
   }
 
   private isStarted(module: Module): boolean {

@@ -115,7 +115,7 @@ export default class Overview extends Vue {
   }
 
   private isReporter(module: Module): boolean {
-    return [ModuleKind.Combined, ModuleKind.Span, ModuleKind.Metric].indexOf(module.kind) > 0
+    return [ModuleKind.Combined, ModuleKind.Span, ModuleKind.Metric].includes(module.kind)
   }
 
   private isStarted(module: Module): boolean {
