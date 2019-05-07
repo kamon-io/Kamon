@@ -139,34 +139,59 @@ object Distribution {
   }
 
   /**
-    * Tries to convert the provided distribution from one unit to another. Take into account that since Distributions
-    * are based on buckets with integer boundaries, converting from greater to lower magnitudes (e.g. from seconds to
-    * milliseconds) will always preserve precision, but the same is not true when converting the way around (e.g. from
-    * milliseconds to seconds) since the conversion could produce floating point result like which will always be
-    * rounded to the nearest integer equal or greater than 1. For example, when converting a value of 3500 milliseconds
-    * to seconds, the converted value of 3.2 seconds will be rounded down to 3 seconds and when converting a value of
-    * 300 milliseconds to seconds, it will be rounded up to 1 (the smallest possible value in a histogram).
+    * Tries to convert a distribution to the provided unit. Take into account that since Distributions are based on
+    * buckets with integer boundaries, converting from greater to lower magnitudes (e.g. from seconds to milliseconds)
+    * will always preserve precision, but the same is not true when converting the  way around (e.g. from milliseconds
+    * to seconds) since the conversion could produce floating point result like which will always be rounded to the
+    * nearest integer equal or greater than 1. For example, when converting a value of 3500 milliseconds to seconds,
+    * the converted value of 3.2 seconds will be rounded down to 3 seconds and when converting a value of 300 milliseconds
+    * to seconds, it will be rounded up to 1 (the smallest possible value in a histogram).
     *
     * If the distribution and target unit dimensions are not the same then a warning will be logged and the distribution
     * will be returned unchanged.
     */
-  def convert(distribution: Distribution, distributionUnit: MeasurementUnit, targetUnit: MeasurementUnit): Distribution = {
-    if(distributionUnit.dimension != targetUnit.dimension) {
-      _logger.warn(s"Can't convert distributions from the [${distributionUnit.dimension.name}] dimension into the " +
-        s"[${targetUnit.dimension.name}] dimension.")
-      distribution
+  def convert(distribution: Distribution, unit: MeasurementUnit, toUnit: MeasurementUnit): Distribution =
+    convert(distribution, unit, toUnit, distribution.dynamicRange)
 
-    } else if(distributionUnit == targetUnit)
+  /**
+    * Tries to convert the a distribution to the provided unit and dynamic range. Take into account that
+    * since Distributions are based on buckets with integer boundaries, converting from greater to lower magnitudes
+    * (e.g. from seconds to milliseconds) will always preserve precision, but the same is not true when converting the
+    * way around (e.g. from milliseconds to seconds) since the conversion could produce floating point result like which
+    * will always be rounded to the nearest integer equal or greater than 1. For example, when converting a value of
+    * 3500 milliseconds to seconds, the converted value of 3.2 seconds will be rounded down to 3 seconds and when
+    * converting a value of 300 milliseconds to seconds, it will be rounded up to 1 (the smallest possible value in a
+    * histogram).
+    *
+    * If the distribution and target unit dimensions are not the same then a warning will be logged and the distribution
+    * will be returned unchanged.
+    */
+  def convert(distribution: Distribution, unit: MeasurementUnit, toUnit: MeasurementUnit, toDynamicRange: DynamicRange): Distribution = {
+
+    if(unit == toUnit && distribution.dynamicRange == toDynamicRange)
       distribution
     else {
-      val scaledHistogram = LocalHistogram.get(distribution.dynamicRange)
-      distribution.bucketsIterator.foreach(bucket => {
-        val roundValue = Math.round(MeasurementUnit.convert(bucket.value, distributionUnit, targetUnit))
-        val convertedValue = if(roundValue == 0L) 1L else roundValue
-        scaledHistogram.recordValueWithCount(convertedValue, bucket.frequency)
-      })
+      val actualToUnit = if(unit.dimension == toUnit.dimension) toUnit else {
+        _logger.warn(
+          s"Can't convert distributions from the [${unit.dimension.name}] dimension into the " +
+          s"[${toUnit.dimension.name}] dimension."
+        )
 
-      scaledHistogram.snapshot(true)
+        unit
+      }
+
+      if(unit == actualToUnit && distribution.dynamicRange == toDynamicRange)
+        distribution
+      else {
+        val scaledHistogram = LocalHistogram.get(toDynamicRange)
+        distribution.bucketsIterator.foreach(bucket => {
+          val roundValue = Math.round(MeasurementUnit.convert(bucket.value, unit, toUnit))
+          val convertedValue = if(roundValue == 0L) 1L else roundValue
+          scaledHistogram.recordValueWithCount(convertedValue, bucket.frequency)
+        })
+
+        scaledHistogram.snapshot(true)
+      }
     }
   }
 
