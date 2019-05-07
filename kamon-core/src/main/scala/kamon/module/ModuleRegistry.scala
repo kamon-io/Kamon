@@ -56,6 +56,7 @@ class ModuleRegistry(classLoading: ClassLoading, configuration: Configuration, c
   def register(name: String, module: Module): Registration = synchronized {
     if(_registeredModules.get(name).isEmpty) {
       val inferredSettings = Module.Settings(
+        "unknown",
         name,
         module.getClass.getName,
         module.getClass,
@@ -235,10 +236,11 @@ class ModuleRegistry(classLoading: ClassLoading, configuration: Configuration, c
   private def readModuleSettings(config: Config, emitConfigurationWarnings: Boolean): Seq[Module.Settings] = {
     val moduleConfigs = config.getConfig("kamon.modules").configurations
     val moduleSettings = moduleConfigs.map {
-      case (moduleName, moduleConfig) =>
+      case (modulePath, moduleConfig) =>
         val moduleSettings = Try {
           Module.Settings(
-            moduleName,
+            modulePath,
+            moduleConfig.getString("name"),
             moduleConfig.getString("description"),
             classLoading.resolveClass[Module](moduleConfig.getString("class")).get,
             parseModuleKind(moduleConfig.getString("kind")),
@@ -254,7 +256,7 @@ class ModuleRegistry(classLoading: ClassLoading, configuration: Configuration, c
 
         if(emitConfigurationWarnings) {
           moduleSettings.failed.foreach { t =>
-            _logger.warn(s"Failed to read configuration for module [$moduleName]", t)
+            _logger.warn(s"Failed to read configuration for module [$modulePath]", t)
 
             val hasLegacySettings =
               moduleConfig.hasPath("requires-aspectj") ||
@@ -262,7 +264,7 @@ class ModuleRegistry(classLoading: ClassLoading, configuration: Configuration, c
               moduleConfig.hasPath("extension-class")
 
             if (hasLegacySettings) {
-              _logger.warn(s"Module [$moduleName] contains legacy configuration settings, please ensure that no legacy configuration")
+              _logger.warn(s"Module [$modulePath] contains legacy configuration settings, please ensure that no legacy configuration")
             }
           }
         }
@@ -284,7 +286,7 @@ class ModuleRegistry(classLoading: ClassLoading, configuration: Configuration, c
             val name = moduleClazz.getName()
             val description = "Module detected from the legacy kamon.reporters configuration."
 
-            Module.Settings(name, description, moduleClazz, inferredModuleKind, true)
+            Module.Settings("unknown", name, description, moduleClazz, inferredModuleKind, true)
           }
 
           if(emitConfigurationWarnings) {

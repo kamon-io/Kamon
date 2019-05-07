@@ -75,6 +75,7 @@ object Module {
   /**
     * Configuration of a given module present in the classpath.
     *
+    * @param path The configuration path
     * @param name Module's name
     * @param description Module's description.
     * @param clazz The class implementing the configured module.
@@ -83,6 +84,7 @@ object Module {
     *                started in any call to Kamon.loadModules().
     */
   case class Settings (
+    path: String,
     name: String,
     description: String,
     clazz: Class[_ <: Module],
