@@ -4,6 +4,7 @@ import java.nio.ByteBuffer
 
 import kamon.metric.Histogram.DistributionSnapshotBuilder
 import org.HdrHistogram.{BaseLocalHdrHistogram, ZigZag}
+import org.slf4j.LoggerFactory
 
 
 /**
@@ -77,6 +78,8 @@ trait Distribution {
 
 object Distribution {
 
+  private val _logger = LoggerFactory.getLogger(classOf[Distribution])
+
   /**
     * Describes a single bucket within a distribution.
     */
@@ -129,10 +132,42 @@ object Distribution {
     * to the provided dynamic range if necessary.
     */
   def merge(left: Distribution, right: Distribution, dynamicRange: DynamicRange): Distribution = {
-    val h = localHistogram(dynamicRange)
+    val h = LocalHistogram.get(dynamicRange)
     left.bucketsIterator.foreach(b => h.recordValueWithCount(b.value, b.frequency))
     right.bucketsIterator.foreach(b => h.recordValueWithCount(b.value, b.frequency))
     h.snapshot(true)
+  }
+
+  /**
+    * Tries to convert the provided distribution from one unit to another. Take into account that since Distributions
+    * are based on buckets with integer boundaries, converting from greater to lower magnitudes (e.g. from seconds to
+    * milliseconds) will always preserve precision, but the same is not true when converting the way around (e.g. from
+    * milliseconds to seconds) since the conversion could produce floating point result like which will always be
+    * rounded to the nearest integer equal or greater than 1. For example, when converting a value of 3500 milliseconds
+    * to seconds, the converted value of 3.2 seconds will be rounded down to 3 seconds and when converting a value of
+    * 300 milliseconds to seconds, it will be rounded up to 1 (the smallest possible value in a histogram).
+    *
+    * If the distribution and target unit dimensions are not the same then a warning will be logged and the distribution
+    * will be returned unchanged.
+    */
+  def convert(distribution: Distribution, distributionUnit: MeasurementUnit, targetUnit: MeasurementUnit): Distribution = {
+    if(distributionUnit.dimension != targetUnit.dimension) {
+      _logger.warn(s"Can't convert distributions from the [${distributionUnit.dimension.name}] dimension into the " +
+        s"[${targetUnit.dimension.name}] dimension.")
+      distribution
+
+    } else if(distributionUnit == targetUnit)
+      distribution
+    else {
+      val scaledHistogram = LocalHistogram.get(distribution.dynamicRange)
+      distribution.bucketsIterator.foreach(bucket => {
+        val roundValue = Math.round(MeasurementUnit.convert(bucket.value, distributionUnit, targetUnit))
+        val convertedValue = if(roundValue == 0L) 1L else roundValue
+        scaledHistogram.recordValueWithCount(convertedValue, bucket.frequency)
+      })
+
+      scaledHistogram.snapshot(true)
+    }
   }
 
   /**
@@ -267,17 +302,24 @@ object Distribution {
   private class LocalHistogram(val dynamicRange: DynamicRange) extends BaseLocalHdrHistogram(dynamicRange)
     with Instrument.Snapshotting[Distribution] with DistributionSnapshotBuilder
 
-  /** Keeps a thread-local cache of local histograms that can be reused when aggregating distributions. */
-  private val _localHistograms = new ThreadLocal[collection.mutable.Map[DynamicRange, LocalHistogram]] {
-    override def initialValue(): collection.mutable.Map[DynamicRange, LocalHistogram] =
-      collection.mutable.Map.empty
-  }
+  private object LocalHistogram {
 
-  /**
-    * Creates or retrieves a local histogram for the provided dynamic range. In theory, it is safe to do this since
-    * distribution merging is only expected to happen on reporter threads and all reporters have their own dedicated
-    * thread.
-    */
-  private def localHistogram(dynamicRange: DynamicRange): LocalHistogram =
-    _localHistograms.get().getOrElseUpdate(dynamicRange, new LocalHistogram(dynamicRange))
+    /** Keeps a thread-local cache of local histograms that can be reused when aggregating distributions. */
+    private val _localHistograms = new ThreadLocal[collection.mutable.Map[DynamicRange, LocalHistogram]] {
+      override def initialValue(): collection.mutable.Map[DynamicRange, LocalHistogram] =
+        collection.mutable.Map.empty
+    }
+
+    /**
+      * Creates or retrieves a local histogram for the provided dynamic range. In theory, it is safe to do this from the
+      * memory usage perspective since distribution merging or converting (the use cases for a Local Histogram) are only
+      * expected to happen on reporter threads and all reporters have their own dedicated thread so we wont have many
+      * instances around.
+      */
+    def get(dynamicRange: DynamicRange): LocalHistogram = {
+      val histogram = _localHistograms.get().getOrElseUpdate(dynamicRange, new LocalHistogram(dynamicRange))
+      histogram.reset()
+      histogram
+    }
+  }
 }

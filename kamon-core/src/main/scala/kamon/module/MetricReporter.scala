@@ -49,7 +49,7 @@ object MetricReporter {
         gauges = snapshot.gauges.filter(m => filter.accept(m.name)),
         histograms = snapshot.histograms.filter(m => filter.accept(m.name)),
         timers = snapshot.timers.filter(m => filter.accept(m.name)),
-        rangeSamplers = snapshot.rangeSamplers.filter(m => filter.accept(m.name)),
+        rangeSamplers = snapshot.rangeSamplers.filter(m => filter.accept(m.name))
       )
     }
   }

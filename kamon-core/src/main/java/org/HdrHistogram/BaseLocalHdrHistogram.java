@@ -9,6 +9,7 @@ public class BaseLocalHdrHistogram extends Histogram implements HdrHistogramInte
 
   public BaseLocalHdrHistogram(DynamicRange dynamicRange) {
     super(dynamicRange.lowestDiscernibleValue(), dynamicRange.highestTrackableValue(), dynamicRange.significantValueDigits());
+    setAutoResize(true);
   }
 
   @Override
