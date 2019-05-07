@@ -238,21 +238,18 @@ class ModuleRegistry(classLoading: ClassLoading, configuration: Configuration, c
     val moduleSettings = moduleConfigs.map {
       case (modulePath, moduleConfig) =>
         val moduleSettings = Try {
+          val moduleClazz = classLoading.resolveClass[Module](moduleConfig.getString("class")).get
+          val inferredModuleKind = inferModuleKind(moduleClazz)
+
           Module.Settings(
             modulePath,
             moduleConfig.getString("name"),
             moduleConfig.getString("description"),
-            classLoading.resolveClass[Module](moduleConfig.getString("class")).get,
-            parseModuleKind(moduleConfig.getString("kind")),
+            moduleClazz,
+            inferredModuleKind,
             moduleConfig.getBoolean("enabled")
           )
-        }.map(ms => {
-          val inferredModuleKind = inferModuleKind(ms.clazz)
-          assert(inferredModuleKind == ms.kind,
-            s"Module [${ms.name}] is configured as [${ms.kind}] but the actual type does not comply to the expected interface.")
-          ms
-        })
-
+        }
 
         if(emitConfigurationWarnings) {
           moduleSettings.failed.foreach { t =>
