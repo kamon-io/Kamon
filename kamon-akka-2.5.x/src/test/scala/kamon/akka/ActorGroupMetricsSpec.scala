@@ -23,6 +23,7 @@ import akka.routing.RoundRobinPool
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import kamon.testkit.{InstrumentInspection, MetricInspection}
 import Metrics._
+import kamon.akka.ActorMetricsTestActor.Block
 import kamon.tag.TagSet
 import kamon.util.Filter.Glob
 import org.scalatest.concurrent.{Eventually, PatienceConfiguration}
@@ -79,6 +80,21 @@ class ActorGroupMetricsSpec extends TestKit(ActorSystem("ActorGroupMetricsSpec")
       Akka.actorGroups("system/user/group-provided-by-code-actor") should contain only("group-by-code")
       Akka.removeActorGroup("group-by-code")
       Akka.actorGroups("system/user/group-provided-by-code-actor") shouldBe empty
+    }
+
+    "Cleanup pending-messages metric on member shutdown" in new ActorGroupMetricsFixtures {
+      val trackedActor1 = watch(createTestActor("group-of-actors-1"))
+
+      groupMembers.withTags(groupTags("group-of-actors")).distribution().max shouldBe (1)
+
+      val hangQueue = Block(1 milliseconds)
+
+      (1 to 10000).foreach(i => trackedActor1 ! hangQueue)
+
+      system.stop(trackedActor1)
+      expectTerminated(trackedActor1)
+
+      eventually(groupPendingMessages.withTags(groupTags("group-of-actors")).distribution().max shouldBe (0))
     }
   }
 

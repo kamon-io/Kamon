@@ -14,16 +14,13 @@
  */
 
 
-resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
-val kamonCore       = "io.kamon" %% "kamon-core"         % "2.0.0-07ebec0a2acd1ecd22a6cf41cb770e8daf39e3cc"
-val kamonTestkit    = "io.kamon" %% "kamon-testkit"      % "2.0.0-07ebec0a2acd1ecd22a6cf41cb770e8daf39e3cc"
+val kamonCore       = "io.kamon" %% "kamon-core"         % "2.0.0-M4"
+val kamonTestkit    = "io.kamon" %% "kamon-testkit"      % "2.0.0-M4"
+val kamonScala      = "io.kamon" %% "kamon-scala-future" % "2.0.0-4174b904116483573d943b22811a262501116c62"
+val kamonExecutors  = "io.kamon" %% "kamon-executors"    % "2.0.0-83b17a1a775aa3860432bd1b67788b53b2fdd017"
+val kamonInstrument = "io.kamon" %% "kamon-instrumentation-common" % "2.0.0-3d734de88d883ea580919995b58c12b9755de92d"
 
-val kamonScala      = "io.kamon" %% "kamon-scala-future" % "2.0.0-09bfd0aad353b0af5ef832b4d6b1a11061e87524"
-val kamonExecutors  = "io.kamon" %% "kamon-executors"    % "2.0.0-79b985e963b339fe0fc66a6c5b9a9380d67d0b5e"
-val kanelaExtension  = "io.kamon"   %% "kanela-kamon-extension" % "2.0.0-9c3842e61c90ecf3e269647edc356d6fabfba795"
-
-val kanelaScalaExtension  = "io.kamon"  %%  "kanela-scala-extension"  % "0.0.14"
-val kanelaAgent           =  "io.kamon" % "kanela-agent" % "0.0.19-SNAPSHOT" changing()
+val kanelaAgent     =  "io.kamon" % "kanela-agent" % "1.0.0-M2" changing()
 
 val `akka-2.5` = "2.5.13"
 
@@ -33,24 +30,20 @@ def akkaDependency(name: String, version: String) = {
 
 lazy val `kamon-akka` = (project in file("."))
   .settings(noPublishing: _*)
-  .settings(scalacOptions += "-target:jvm-1.8")
   .aggregate(kamonAkka25)
 
 lazy val kamonAkka25 = Project("kamon-akka-25", file("kamon-akka-2.5.x"))
-  .settings(Seq(
+  .enablePlugins(JavaAgent)
+  .settings(instrumentationSettings)
+  .settings(
     bintrayPackage := "kamon-akka",
     moduleName := "kamon-akka-2.5",
+    scalacOptions += "-target:jvm-1.8",
     resolvers += Resolver.bintrayRepo("kamon-io", "snapshots"),
-    resolvers += Resolver.mavenLocal
-  ))
-  .enablePlugins(JavaAgent)
-  .settings(javaAgents += kanelaAgent % "compile;test")
-  .settings(publishArtifact in (Compile, packageDoc) := false)
-  .settings(publishArtifact in packageDoc := false)
-  .settings(sources in (Compile,doc) := Seq.empty)
-  .settings(
+    resolvers += Resolver.mavenLocal,
     libraryDependencies ++=
-      compileScope(akkaDependency("actor", `akka-2.5`), kamonCore, kamonScala, kamonExecutors, kanelaScalaExtension, kanelaExtension) ++
-        optionalScope(logbackClassic) ++
-        testScope(scalatest, kamonTestkit, akkaDependency("testkit", `akka-2.5`), akkaDependency("slf4j", `akka-2.5`), logbackClassic))
+      compileScope(kamonCore, kamonInstrument, kamonScala, kamonExecutors) ++
+      providedScope(akkaDependency("actor", `akka-2.5`), kanelaAgent) ++
+      optionalScope(logbackClassic) ++
+      testScope(scalatest, kamonTestkit, akkaDependency("testkit", `akka-2.5`), akkaDependency("slf4j", `akka-2.5`), logbackClassic))
 

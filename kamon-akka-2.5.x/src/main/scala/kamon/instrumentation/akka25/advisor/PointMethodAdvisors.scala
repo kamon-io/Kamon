@@ -29,7 +29,7 @@ object PointMethodAdvisors {
 
   @Advice.OnMethodEnter
   def executeEnd(@Advice.This repointableActorRef: Object): Scope = {
-    Kamon.storeContext(repointableActorRef.asInstanceOf[ContextContainer].context)
+    Kamon.store(repointableActorRef.asInstanceOf[ContextContainer].context)
   }
 
   @Advice.OnMethodExit

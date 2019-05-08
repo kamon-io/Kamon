@@ -23,18 +23,15 @@ import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
 import kamon.akka.RouterMetricsTestActor.{Ping, Pong}
-import kamon.executors.Metrics._
+import kamon.instrumentation.executors.{Metrics => ExecutorMetrics}
 import kamon.testkit.MetricInspection
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 import org.scalatest.concurrent.Eventually
-import kamon.executors.{Metrics => ExecutorMetrics}
 
 import scala.concurrent.Future
 
 class DispatcherMetricsSpec extends TestKit(ActorSystem("DispatcherMetricsSpec")) with WordSpecLike with MetricInspection.Syntax with Matchers
   with BeforeAndAfterAll with ImplicitSender with Eventually {
-
-  import ExecutorMetrics._
 
   Kamon.reconfigure(
     ConfigFactory.parseString("kamon.metric.tick-interval=1s")
@@ -55,10 +52,10 @@ class DispatcherMetricsSpec extends TestKit(ActorSystem("DispatcherMetricsSpec")
     "track dispatchers configured in the akka.dispatcher filter" in {
       allDispatchers.foreach(id => forceInit(system.dispatchers.lookup(id)))
 
-      val threads = threadsMetric.tagValues("name")
-      val pools = poolMetric.tagValues("name")
-      val queues = queueMetric.tagValues("name")
-      val tasks = tasksMetric.tagValues("name")
+      val threads = ExecutorMetrics.Threads.tagValues("name")
+      val pools = ExecutorMetrics.Settings.tagValues("name")
+      val queues = ExecutorMetrics.QueueSize.tagValues("name")
+      val tasks = ExecutorMetrics.Tasks.tagValues("name")
 
       trackedDispatchers.forall { dispatcher =>
         threads.contains(dispatcher) &&
@@ -72,10 +69,10 @@ class DispatcherMetricsSpec extends TestKit(ActorSystem("DispatcherMetricsSpec")
 
 
     "clean up the metrics recorders after a dispatcher is shutdown" in {
-      poolMetric.tagValues("name") should contain("tracked-fjp")
+      ExecutorMetrics.Settings.tagValues("name") should contain("tracked-fjp")
       shutdownDispatcher(system.dispatchers.lookup("tracked-fjp"))
       Thread.sleep(2000)
-      poolMetric.tagValues("name") shouldNot contain("tracked-fjp")
+      ExecutorMetrics.Settings.tagValues("name") shouldNot contain("tracked-fjp")
     }
 
     "play nicely when dispatchers are looked up from a BalancingPool router" in {
@@ -83,7 +80,7 @@ class DispatcherMetricsSpec extends TestKit(ActorSystem("DispatcherMetricsSpec")
       balancingPoolRouter ! Ping
       expectMsg(Pong)
 
-      poolMetric.tagValues("name") should contain("BalancingPool-/test-balancing-pool")
+      ExecutorMetrics.Settings.tagValues("name") should contain("BalancingPool-/test-balancing-pool")
     }
   }
 

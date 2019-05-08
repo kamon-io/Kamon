@@ -14,7 +14,7 @@ import org.scalatest.time.SpanSugar._
 
 
 class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with WordSpecLike with MetricInspection.Syntax with Matchers
-  with SpanInspection with Reconfigure with BeforeAndAfterAll with ImplicitSender with Eventually with OptionValues {
+  with SpanInspection with Reconfigure with BeforeAndAfterAll with ImplicitSender with Eventually with OptionValues with TestSpanReporter {
 
   "Message tracing instrumentation" should {
     "skip filtered out actors" in {
@@ -27,7 +27,7 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Wor
       expectMsg("pong")
 
       eventually(timeout(2 seconds)) {
-        val span = reporter.nextSpan().value
+        val span = testSpanReporter.nextSpan().value
         val spanTags = stringTag(span) _
         spanTags("component") shouldBe "akka.actor"
         span.operationName shouldBe("TracingTestActor: String")
@@ -42,7 +42,7 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Wor
       expectMsg("pong")
 
       eventually(timeout(2 seconds)) {
-        val span = reporter.nextSpan().value
+        val span = testSpanReporter.nextSpan().value
         val spanTags = stringTag(span) _
         span.operationName shouldBe("TracingTestActor: String")
         spanTags("component") shouldBe "akka.actor"
@@ -62,7 +62,7 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Wor
 
       // Span for the first actor message
       val firstSpanID = eventually(timeout(2 seconds)) {
-        val span = reporter.nextSpan().value
+        val span = testSpanReporter.nextSpan().value
         val spanTags = stringTag(span) _
         span.operationName should include("TracingTestActor: ")
         spanTags("component") shouldBe "akka.actor"
@@ -76,7 +76,7 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Wor
 
       // Span for the second actor message
       eventually(timeout(2 seconds)) {
-        val span = reporter.nextSpan().value
+        val span = testSpanReporter.nextSpan().value
         val spanTags = stringTag(span) _
         span.parentId shouldBe firstSpanID
         span.operationName should include("TracingTestActor: String")
@@ -98,7 +98,7 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Wor
 
       // Span for the first actor message
       val firstSpanID = eventually(timeout(2 seconds)) {
-        val span = reporter.nextSpan().value
+        val span = testSpanReporter.nextSpan().value
         val spanTags = stringTag(span) _
         span.operationName shouldBe("TracingTestActor: Tuple2")
         spanTags("component") shouldBe "akka.actor"
@@ -112,7 +112,7 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Wor
 
       // Span for the second actor message
       eventually(timeout(2 seconds)) {
-        val span = reporter.nextSpan().value
+        val span = testSpanReporter.nextSpan().value
         val spanTags = stringTag(span) _
         span.parentId shouldBe firstSpanID
         span.operationName shouldBe("TracingTestActor: String")
@@ -132,7 +132,7 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Wor
       expectMsg("pong")
 
       eventually(timeout(2 seconds)) {
-        val spanTags = stringTag(reporter.nextSpan().value) _
+        val spanTags = stringTag(testSpanReporter.nextSpan().value) _
         spanTags("component") shouldBe "akka.actor"
         spanTags("akka.actor.path") shouldNot include ("nontraced-pool-router")
         spanTags("akka.actor.path") should be ("MessageTracing/user/traced-routee-one")
@@ -146,7 +146,7 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Wor
       expectMsg("pong")
 
       eventually(timeout(2 seconds)) {
-        val spanTags = stringTag(reporter.nextSpan().value) _
+        val spanTags = stringTag(testSpanReporter.nextSpan().value) _
         spanTags("component") shouldBe "akka.actor"
         spanTags("akka.actor.path") should be ("MessageTracing/user/traced-pool-router")
       }
@@ -158,18 +158,9 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Wor
 
   }
 
-
-  @volatile var registration: Module.Registration = _
-  val reporter = new TestSpanReporter()
-
   override protected def beforeAll(): Unit = {
     enableFastSpanFlushing()
     sampleAlways()
-    registration = Kamon.registerModule("reporter", reporter)
-  }
-
-  override protected def afterAll(): Unit = {
-    registration.cancel()
   }
 }
 

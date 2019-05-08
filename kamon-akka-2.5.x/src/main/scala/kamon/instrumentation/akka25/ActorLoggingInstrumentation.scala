@@ -52,7 +52,7 @@ class WithMdcMethodAdvisor
 object WithMdcMethodAdvisor {
   @OnMethodEnter
   def onEnter(@Argument(1) logEvent: LogEvent): Scope =
-    Kamon.storeContext(logEvent.asInstanceOf[ContextContainer].context)
+    Kamon.store(logEvent.asInstanceOf[ContextContainer].context)
 
   @OnMethodExit
   def onExit(@Enter scope: Scope): Unit =

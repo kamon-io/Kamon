@@ -32,7 +32,7 @@ class ActorLoggingInstrumentationSpec extends TestKit(ActorSystem("ActorCellInst
   "the ActorLogging instrumentation" should {
     "capture the current context and attach it to log events" in {
       val loggerActor = system.actorOf(Props[LoggerActor])
-      Kamon.withContext(testContext("propagate-when-logging")) {
+      Kamon.storeContext(testContext("propagate-when-logging")) {
         loggerActor ! "info"
       }
 
@@ -41,7 +41,7 @@ class ActorLoggingInstrumentationSpec extends TestKit(ActorSystem("ActorCellInst
         case _: LogEvent ⇒ false
       }
 
-      Kamon.withContext(logEvent.asInstanceOf[ContextContainer].context) {
+      Kamon.storeContext(logEvent.asInstanceOf[ContextContainer].context) {
         val keyValueFromContext = Kamon.currentContext().getTag(option(ContextTesting.TestKey)).getOrElse("Missing Context Tag")
         keyValueFromContext should be("propagate-when-logging")
       }

@@ -34,7 +34,7 @@ object InvokeAllMethodInterceptor {
   def executeEnd(@Advice.Argument(0) messages: EarliestFirstSystemMessageList): Option[Scope] = {
     if (messages.nonEmpty) {
       val context = messages.head.asInstanceOf[ContextContainer].context
-      Some(Kamon.storeContext(context))
+      Some(Kamon.store(context))
     } else None
   }
 

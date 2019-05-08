@@ -47,7 +47,7 @@ class ActorCellInstrumentationSpec extends TestKit(ActorSystem("ActorCellInstrum
 
   "the message passing instrumentation" should {
     "capture and propagate the current context when using bang" in new EchoActorFixture {
-      Kamon.withContext(testContext("propagate-with-bang")) {
+      Kamon.storeContext(testContext("propagate-with-bang")) {
         contextEchoActor ! "test"
       }
 
@@ -57,7 +57,7 @@ class ActorCellInstrumentationSpec extends TestKit(ActorSystem("ActorCellInstrum
     "capture and propagate the current context for messages sent when the target actor might be a repointable ref" in {
       for (_ ← 1 to 10000) {
         val ta = system.actorOf(Props[ContextStringEcho])
-        Kamon.withContext(testContext("propagate-with-tell")) {
+        Kamon.storeContext(testContext("propagate-with-tell")) {
           ta.tell("test", testActor)
         }
 
@@ -68,7 +68,7 @@ class ActorCellInstrumentationSpec extends TestKit(ActorSystem("ActorCellInstrum
 
     "propagate the current context when using the ask pattern" in new EchoActorFixture {
       implicit val timeout = Timeout(1 seconds)
-      Kamon.withContext(testContext("propagate-with-ask")) {
+      Kamon.storeContext(testContext("propagate-with-ask")) {
         // The pipe pattern use Futures internally, so FutureTracing test should cover the underpinnings of it.
         (contextEchoActor ? "test") pipeTo (testActor)
       }
@@ -78,7 +78,7 @@ class ActorCellInstrumentationSpec extends TestKit(ActorSystem("ActorCellInstrum
 
 
     "propagate the current context to actors behind a simple router" in new EchoSimpleRouterFixture {
-      Kamon.withContext(testContext("propagate-with-router")) {
+      Kamon.storeContext(testContext("propagate-with-router")) {
         router.route("test", testActor)
       }
 
@@ -86,7 +86,7 @@ class ActorCellInstrumentationSpec extends TestKit(ActorSystem("ActorCellInstrum
     }
 
     "propagate the current context to actors behind a pool router" in new EchoPoolRouterFixture {
-      Kamon.withContext(testContext("propagate-with-pool")) {
+      Kamon.storeContext(testContext("propagate-with-pool")) {
         pool ! "test"
       }
 
@@ -94,7 +94,7 @@ class ActorCellInstrumentationSpec extends TestKit(ActorSystem("ActorCellInstrum
     }
 
     "propagate the current context to actors behind a group router" in new EchoGroupRouterFixture {
-      Kamon.withContext(testContext("propagate-with-group")) {
+      Kamon.storeContext(testContext("propagate-with-group")) {
         group ! "test"
       }
 

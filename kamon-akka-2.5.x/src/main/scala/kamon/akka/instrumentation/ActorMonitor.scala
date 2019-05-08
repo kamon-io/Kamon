@@ -105,7 +105,7 @@ object ActorMonitors {
 
       Kamon.spanBuilder(operationName)
         .asChildOf(parentSpan)
-        .disableMetrics()
+        .doNotTrackMetrics()
         .start(Kamon.clock().toInstant(envelopeContext.nanoTime))
         .mark("akka.actor.dequeued")
         .tag("component", "akka.actor")
@@ -135,7 +135,7 @@ object ActorMonitors {
 
     def processMessageStart(envelopeContext: TimestampedContext, envelope: Envelope): AnyRef = {
       processedMessagesCounter.increment()
-      val scope = Kamon.storeContext(envelopeContext.context)
+      val scope = Kamon.store(envelopeContext.context)
       scope
     }
 
@@ -173,7 +173,7 @@ object ActorMonitors {
 
     override def processMessageStart(envelopeContext: TimestampedContext, envelope: Envelope): AnyRef = {
       processedMessagesCounter.increment()
-      val scope = Kamon.storeContext(envelopeContext.context)
+      val scope = Kamon.store(envelopeContext.context)
       scope
     }
 
@@ -199,10 +199,6 @@ object ActorMonitors {
       super.processFailure(failure: Throwable)
     }
 
-    override def processDroppedMessage(count: Long): Unit = {
-      // Dropped messages are only measured for routees
-    }
-
     override def cleanup(): Unit = {
       super.cleanup()
       actorMetrics.foreach(_.cleanup())
@@ -226,7 +222,7 @@ object ActorMonitors {
 
     override def processMessageStart(envelopeContext: TimestampedContext, envelope: Envelope): AnyRef  = {
       processedMessagesCounter.increment()
-      val scope = Kamon.storeContext(envelopeContext.context)
+      val scope = Kamon.store(envelopeContext.context)
       scope
     }
 
@@ -250,6 +246,7 @@ object ActorMonitors {
 
 
     override def processDroppedMessage(count: Long): Unit = {
+      super.processDroppedMessage(count)
       routerMetrics.pendingMessages.decrement(count)
     }
 
@@ -277,6 +274,12 @@ object ActorMonitors {
     def processFailure(failure: Throwable): Unit = {
       groupMetrics.foreach { gm =>
         gm.errors.increment()
+      }
+    }
+
+    override def processDroppedMessage(count: Long): Unit = {
+      groupMetrics.foreach { gm =>
+        gm.pendingMessages.decrement(count)
       }
     }
 
