@@ -22,7 +22,7 @@ val kamonInstrument = "io.kamon" %% "kamon-instrumentation-common" % "2.0.0-3d73
 
 val kanelaAgent     =  "io.kamon" % "kanela-agent" % "1.0.0-M2" changing()
 
-val `akka-2.5` = "2.5.13"
+val `akka-2.5` = "2.5.22"
 
 def akkaDependency(name: String, version: String) = {
   "com.typesafe.akka" %% s"akka-$name" % version
