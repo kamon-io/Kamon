@@ -46,31 +46,39 @@ lazy val baseSettings = Seq(
 lazy val root = (project in file("."))
   .aggregate(kamonAkkaHttp24, kamonAkkaHttp25, kamonAkkaHttpPlayground)
   .settings(noPublishing: _*)
-  .settings(Seq(crossScalaVersions := Seq("2.11.8", "2.12.1")))
+  .settings(crossScalaVersions := Nil)
 
 lazy val kamonAkkaHttp24 = Project("kamon-akka-http-24", file("target/kamon-akka-http-24"))
-  .settings(name := "kamon-akka-http-24", moduleName := "kamon-akka-http-2.4", bintrayPackage := "kamon-akka-http")
-  .settings(aspectJSettings: _*)
+  .enablePlugins(JavaAgent)
   .settings(baseSettings: _*)
+  .settings(instrumentationSettings: _*)
   .settings(Seq(
+    name := "kamon-akka-http-24",
+    moduleName := "kamon-akka-http-2.4",
+    bintrayPackage := "kamon-akka-http",
+    kamonUseAspectJ := true,
     scalaVersion := "2.12.1",
-    crossScalaVersions := Seq("2.11.8", "2.12.1")))
-  .settings(libraryDependencies ++=
-    compileScope(http24, stream24, kamonAkka24) ++
-    testScope(httpTestKit24, scalatest, slf4jApi, slf4jnop, kamonTestKit, akkaHttpJson, json4sNative) ++
-    providedScope(aspectJ))
+    crossScalaVersions := Seq("2.11.12", "2.12.8")),
+    libraryDependencies ++=
+      compileScope(http24, stream24, kamonAkka24) ++
+      testScope(httpTestKit24, scalatest, slf4jApi, slf4jnop, kamonTestKit, akkaHttpJson, json4sNative) ++
+      providedScope(aspectJ))
 
 lazy val kamonAkkaHttp25 = Project("kamon-akka-http-25", file("target/kamon-akka-http-25"))
-  .settings(name := "kamon-akka-http-25", moduleName := "kamon-akka-http-2.5", bintrayPackage := "kamon-akka-http")
-  .settings(aspectJSettings: _*)
+  .enablePlugins(JavaAgent)
   .settings(baseSettings: _*)
+  .settings(instrumentationSettings: _*)
   .settings(Seq(
+    name := "kamon-akka-http-25",
+    moduleName := "kamon-akka-http-2.5",
+    bintrayPackage := "kamon-akka-http",
+    kamonUseAspectJ := true,
     scalaVersion := "2.12.1",
-    crossScalaVersions := Seq("2.11.8", "2.12.1")))
-.settings(libraryDependencies ++=
-    compileScope(http25, stream25, kamonAkka25) ++
-    testScope(httpTestKit25, scalatest, slf4jApi, slf4jnop, kamonTestKit, akkaHttpJson, json4sNative) ++
-    providedScope(aspectJ))
+    crossScalaVersions := Seq("2.11.12", "2.12.8")),
+    libraryDependencies ++=
+      compileScope(http25, stream25, kamonAkka25) ++
+      testScope(httpTestKit25, scalatest, slf4jApi, slf4jnop, kamonTestKit, akkaHttpJson, json4sNative) ++
+      providedScope(aspectJ))
 
 lazy val kamonAkkaHttpPlayground = Project("kamon-akka-http-playground", file("kamon-akka-http-playground"))
   .dependsOn(kamonAkkaHttp25)
@@ -89,12 +97,3 @@ lazy val settingsForPlayground: Seq[Setting[_]] = Seq(
   connectInput in run := true,
   cancelable in Global := true
 )
-
-import sbt.Tests._
-def singleTestPerJvm(tests: Seq[TestDefinition], jvmSettings: Seq[String]): Seq[Group] =
-  tests map { test =>
-    Group(
-      name = test.name,
-      tests = Seq(test),
-      runPolicy = SubProcess(ForkOptions(runJVMOptions = jvmSettings)))
-  }
