@@ -48,6 +48,27 @@ trait TestWebServer extends TracingDirectives {
 
     val routes = logRequest("routing-request") {
       get {
+        path("v3" / "user" / IntNumber / "post" / IntNumber) { (_, _) =>
+          complete("OK")
+        } ~
+        pathPrefix("extraction") {
+          (post | get) {
+            pathPrefix("nested") {
+              pathPrefix(IntNumber / "fixed") { num =>
+                pathPrefix("anchor" / IntNumber.? / JavaUUID / "fixed") { (number, uuid) =>
+                  pathPrefix(LongNumber / HexIntNumber) { (longNum, hex) =>
+                    complete("OK")
+                  }
+                }
+              }
+            } ~
+            pathPrefix("concat") {
+              path("fixed" ~ JavaUUID ~ HexIntNumber) { (uuid, num) =>
+                complete("OK")
+              }
+            }
+          }
+        } ~
         path(rootOk) {
           complete(OK)
         } ~
