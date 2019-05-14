@@ -39,7 +39,7 @@ trait SpanInspection {
       */
     def spanTags(): TagSet =
       if(span.isInstanceOf[Span.Local])
-        getField[Span.Local, TagSet.Builder](span.asInstanceOf[Span.Local], "_spanTags").build()
+        Reflection.getField[Span.Local, TagSet.Builder](span.asInstanceOf[Span.Local], "_spanTags").build()
       else
         TagSet.Empty
 
@@ -50,7 +50,7 @@ trait SpanInspection {
       */
     def metricTags(): TagSet =
       if(span.isInstanceOf[Span.Local])
-        invoke[Span.Local, TagSet](span.asInstanceOf[Span.Local], "createMetricTags")
+        Reflection.invoke[Span.Local, TagSet](span.asInstanceOf[Span.Local], "createMetricTags")
       else
         TagSet.Empty
 
@@ -67,7 +67,7 @@ trait SpanInspection {
       */
     def marks(): Seq[Span.Mark] =
       if(span.isInstanceOf[Span.Local])
-        getField[Span.Local, Seq[Span.Mark]](span.asInstanceOf[Span.Local], "_marks")
+        Reflection.getField[Span.Local, Seq[Span.Mark]](span.asInstanceOf[Span.Local], "_marks")
       else
         Seq.empty
 
@@ -76,7 +76,7 @@ trait SpanInspection {
       */
     def isFailed(): Boolean =
       if(span.isInstanceOf[Span.Local])
-        getField[Span.Local, Boolean](span.asInstanceOf[Span.Local], "_hasError")
+        Reflection.getField[Span.Local, Boolean](span.asInstanceOf[Span.Local], "_hasError")
       else
         false
 
@@ -86,7 +86,7 @@ trait SpanInspection {
       */
     def isTrackingMetrics(): Boolean =
       if(span.isInstanceOf[Span.Local])
-        getField[Span.Local, Boolean](span.asInstanceOf[Span.Local], "_trackMetrics")
+        Reflection.getField[Span.Local, Boolean](span.asInstanceOf[Span.Local], "_trackMetrics")
       else
         false
 
@@ -103,7 +103,7 @@ trait SpanInspection {
       */
     def toFinished(at: Instant): Span.Finished =
       if(span.isInstanceOf[Span.Local])
-        invoke[Span.Local, Span.Finished](span.asInstanceOf[Span.Local], "toFinishedSpan",
+        Reflection.invoke[Span.Local, Span.Finished](span.asInstanceOf[Span.Local], "toFinishedSpan",
           (classOf[Instant], at), (classOf[TagSet], metricTags()))
       else
         sys.error("Cannot finish an Empty/Remote Span")

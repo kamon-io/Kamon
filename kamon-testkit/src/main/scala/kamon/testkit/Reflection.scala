@@ -2,7 +2,7 @@ package kamon
 
 import scala.reflect.ClassTag
 
-package object testkit {
+object Reflection {
 
   /**
     * Retrieves a member from the target object using reflection.
