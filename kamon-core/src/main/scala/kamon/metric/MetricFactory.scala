@@ -34,7 +34,7 @@ import kamon.util.Clock
   */
 class MetricFactory private (defaultCounterSettings: Metric.Settings.ForValueInstrument, defaultGaugeSettings: Metric.Settings.ForValueInstrument,
     defaultHistogramSettings: Metric.Settings.ForDistributionInstrument, defaultTimerSettings: Metric.Settings.ForDistributionInstrument,
-    defaultRangeSamplerSettings: Metric.Settings.ForDistributionInstrument,  customSettings: Map[String, MetricFactory.CustomSettings],
+    defaultRangeSamplerSettings: Metric.Settings.ForDistributionInstrument, customSettings: Map[String, MetricFactory.CustomSettings],
     scheduler: ScheduledExecutorService, clock: Clock) {
 
 
@@ -47,7 +47,7 @@ class MetricFactory private (defaultCounterSettings: Metric.Settings.ForValueIns
     val metricDescription = description.getOrElse("")
     val metricSettings = Metric.Settings.ForValueInstrument (
       unit.getOrElse(defaultCounterSettings.unit),
-      autoUpdateInterval.getOrElse(defaultCounterSettings.autoUpdateInterval)
+      resolveAutoUpdateInterval(name, autoUpdateInterval, defaultCounterSettings.autoUpdateInterval)
     )
 
     val builder = (metric: BaseMetric[Counter, Metric.Settings.ForValueInstrument, Long], tags: TagSet) =>
@@ -74,7 +74,7 @@ class MetricFactory private (defaultCounterSettings: Metric.Settings.ForValueIns
     val metricDescription = description.getOrElse("")
     val metricSettings = Metric.Settings.ForValueInstrument (
       unit.getOrElse(defaultGaugeSettings.unit),
-      autoUpdateInterval.getOrElse(defaultGaugeSettings.autoUpdateInterval)
+      resolveAutoUpdateInterval(name, autoUpdateInterval, defaultGaugeSettings.autoUpdateInterval)
     )
 
     val builder = (metric: BaseMetric[Gauge, Metric.Settings.ForValueInstrument, Double], tags: TagSet) =>
@@ -101,8 +101,8 @@ class MetricFactory private (defaultCounterSettings: Metric.Settings.ForValueIns
     val metricDescription = description.getOrElse("")
     val metricSettings = Metric.Settings.ForDistributionInstrument (
       unit.getOrElse(defaultHistogramSettings.unit),
-      autoUpdateInterval.getOrElse(defaultHistogramSettings.autoUpdateInterval),
-      dynamicRange.getOrElse(defaultHistogramSettings.dynamicRange)
+      resolveAutoUpdateInterval(name, autoUpdateInterval, defaultHistogramSettings.autoUpdateInterval),
+      resolveDynamicRange(name, dynamicRange, defaultHistogramSettings.dynamicRange)
     )
 
     val builder = (metric: BaseMetric[Histogram, Metric.Settings.ForDistributionInstrument, Distribution], tags: TagSet) =>
@@ -129,8 +129,8 @@ class MetricFactory private (defaultCounterSettings: Metric.Settings.ForValueIns
     val metricDescription = description.getOrElse("")
     val metricSettings = Metric.Settings.ForDistributionInstrument (
       unit.getOrElse(defaultTimerSettings.unit),
-      autoUpdateInterval.getOrElse(defaultTimerSettings.autoUpdateInterval),
-      dynamicRange.getOrElse(defaultTimerSettings.dynamicRange)
+      resolveAutoUpdateInterval(name, autoUpdateInterval, defaultTimerSettings.autoUpdateInterval),
+      resolveDynamicRange(name, dynamicRange, defaultTimerSettings.dynamicRange)
     )
 
     val builder = (metric: BaseMetric[Timer, Metric.Settings.ForDistributionInstrument, Distribution], tags: TagSet) =>
@@ -157,8 +157,8 @@ class MetricFactory private (defaultCounterSettings: Metric.Settings.ForValueIns
     val metricDescription = description.getOrElse("")
     val metricSettings = Metric.Settings.ForDistributionInstrument (
       unit.getOrElse(defaultRangeSamplerSettings.unit),
-      autoUpdateInterval.getOrElse(defaultRangeSamplerSettings.autoUpdateInterval),
-      dynamicRange.getOrElse(defaultRangeSamplerSettings.dynamicRange)
+      resolveAutoUpdateInterval(name, autoUpdateInterval, defaultRangeSamplerSettings.autoUpdateInterval),
+      resolveDynamicRange(name, dynamicRange, defaultRangeSamplerSettings.dynamicRange)
     )
 
     val builder = (metric: BaseMetric[RangeSampler, Metric.Settings.ForDistributionInstrument, Distribution], tags: TagSet) =>
@@ -174,6 +174,23 @@ class MetricFactory private (defaultCounterSettings: Metric.Settings.ForValueIns
           instruments: Seq[Instrument.Snapshot[Distribution]]): MetricSnapshot.Distributions =
         MetricSnapshot.ofDistributions(metric.name, metric.description, metric.settings, instruments)
     }
+  }
+
+  private def resolveAutoUpdateInterval(metricName: String, codeOption: Option[Duration], defaultValue: Duration): Duration = {
+    customSettings.get(metricName)
+      .flatMap(_.autoUpdateInterval)
+      .getOrElse(codeOption.getOrElse(defaultValue))
+  }
+
+  private def resolveDynamicRange(metricName: String, codeDynamicRange: Option[DynamicRange], default: DynamicRange): DynamicRange = {
+    val overrides = customSettings.get(metricName)
+    val base = codeDynamicRange.getOrElse(default)
+
+    DynamicRange (
+      lowestDiscernibleValue = overrides.flatMap(_.lowestDiscernibleValue).getOrElse(base.lowestDiscernibleValue),
+      highestTrackableValue = overrides.flatMap(_.highestTrackableValue).getOrElse(base.highestTrackableValue),
+      significantValueDigits = overrides.flatMap(_.significantValueDigits).getOrElse(base.significantValueDigits)
+    )
   }
 }
 
@@ -228,8 +245,7 @@ object MetricFactory {
       if (metricConfig.hasPath("auto-update-interval")) Some(metricConfig.getDuration("auto-update-interval")) else None,
       if (metricConfig.hasPath("lowest-discernible-value")) Some(metricConfig.getLong("lowest-discernible-value")) else None,
       if (metricConfig.hasPath("highest-trackable-value")) Some(metricConfig.getLong("highest-trackable-value")) else None,
-      if (metricConfig.hasPath("significant-value-digits")) Some(metricConfig.getInt("significant-value-digits")) else None,
-      if (metricConfig.hasPath("sample-interval")) Some(metricConfig.getDuration("sample-interval")) else None
+      if (metricConfig.hasPath("significant-value-digits")) Some(metricConfig.getInt("significant-value-digits")) else None
     )
     metricName -> customSettings
   }
@@ -245,7 +261,6 @@ object MetricFactory {
     autoUpdateInterval: Option[Duration],
     lowestDiscernibleValue: Option[Long],
     highestTrackableValue: Option[Long],
-    significantValueDigits: Option[Int],
-    sampleInterval: Option[Duration]
+    significantValueDigits: Option[Int]
   )
 }
