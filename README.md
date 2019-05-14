@@ -14,25 +14,25 @@ Supported releases and dependencies are shown below.
 
 | kamon-akka-http-2.4  | status | jdk  | scala            | akka   |
 |:------:|:------:|:----:|------------------|:------:|
-|  1.0.1 | stable | 1.8+ |  2.11, 2.12  | 2.4.x |
+|  1.1.2 | stable | 1.8+ |  2.11, 2.12  | 2.4.x |
 
 | kamon-akka-http-2.5  | status | jdk  | scala            | akka   |
 |:------:|:------:|:----:|------------------|:------:|
-|  1.0.1 | stable | 1.8+ |  2.11, 2.12  | 2.5.x |
+|  1.1.2 | stable | 1.8+ |  2.11, 2.12  | 2.5.x |
 
 
 To get started with SBT add the following to your `build.sbt` or `pom.xml`
 file:
 
 ```scala
-libraryDependencies += "io.kamon" %% "kamon-akka-http-2.5" % "1.0.1"
+libraryDependencies += "io.kamon" %% "kamon-akka-http-2.5" % "1.1.2"
 ```
 
 ```xml
 <dependency>
     <groupId>io.kamon</groupId>
     <artifactId>kamon-akka-http-2.5_2.12</artifactId>
-    <version>1.0.1</version>
+    <version>1.1.2</version>
 </dependency>
 ```
 
