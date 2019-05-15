@@ -12,7 +12,7 @@ class RandomSampler private(probability: Double) extends Sampler {
   val upperBoundary = Long.MaxValue * probability
   val lowerBoundary = -upperBoundary
 
-  override def decide(rootSpanBuilder: SpanBuilder): SamplingDecision = {
+  override def decide(operation: Sampler.Operation): SamplingDecision = {
     val random = ThreadLocalRandom.current().nextLong()
     if(random >= lowerBoundary && random <= upperBoundary) SamplingDecision.Sample else SamplingDecision.DoNotSample
   }

@@ -143,6 +143,7 @@ class Tracer(initialConfig: Config, clock: Clock, classLoading: ClassLoading, co
     private var _parent: Option[Span] = None
     private var _context: Option[Context] = None
     private var _suggestedTraceId: Identifier = Identifier.Empty
+    private var _suggestedSamplingDecision: Option[SamplingDecision] = None
     private var _kind: Span.Kind = Span.Kind.Unknown
 
     override def operationName(): String = _name
@@ -246,6 +247,11 @@ class Tracer(initialConfig: Config, clock: Clock, classLoading: ClassLoading, co
       this
     }
 
+    override def samplingDecision(decision: SamplingDecision): SpanBuilder = {
+      _suggestedSamplingDecision = Option(decision)
+      this
+    }
+
     override def kind(kind: Span.Kind): SpanBuilder = {
       _kind = kind
       this
@@ -292,14 +298,6 @@ class Tracer(initialConfig: Config, clock: Clock, classLoading: ClassLoading, co
         else
           (identifierScheme.spanIdFactory.generate(), parent.id)
 
-      val traceId =
-        if (parent.trace.id.isEmpty) {
-          if (!_suggestedTraceId.isEmpty)
-            _suggestedTraceId
-          else
-            identifierScheme.traceIdFactory.generate()
-        } else parent.trace.id
-
       val position =
         if (parent.isEmpty)
           Position.Root
@@ -308,17 +306,38 @@ class Tracer(initialConfig: Config, clock: Clock, classLoading: ClassLoading, co
         else
           Position.Unknown
 
-      val samplingDecision =
-        if (position == Position.Root || parent.trace.samplingDecision == SamplingDecision.Unknown)
-          _sampler.decide(this)
-        else
-          parent.trace.samplingDecision
+      val trace = {
+        if(position == Position.Root) {
 
-      val trace = Trace(traceId, samplingDecision)
+          // When this is the Root Span in the trace we create a new Trace instance and use any sampling decision
+          // suggestion we might have. In any other cases we will always reuse the Trace.
+          Trace(suggestedOrGeneratedTraceId(), suggestedOrSamplerDecision())
+
+        } else {
+
+          // The tracer will not allow a local root Span to have an known sampling decision unless it is explicitly
+          // set on the SpanBuilder.
+          if(parent.isRemote && parent.trace.samplingDecision == SamplingDecision.Unknown) {
+            suggestedOrSamplerDecision() match {
+              case SamplingDecision.Sample      => parent.trace.keep()
+              case SamplingDecision.DoNotSample => parent.trace.drop()
+              case SamplingDecision.Unknown     => // Nothing to do in this case.
+            }
+          }
+
+          parent.trace
+        }
+      }
 
       new Span.Local(id, parentId, trace, position, _kind, localParent, _name, _spanTags, _metricTags, at, _marks, _links,
-        _trackMetrics, _tagWithParentOperation, _includeErrorStacktrace, isDelayed, clock, _preFinishHooks, _onSpanFinish)
+        _trackMetrics, _tagWithParentOperation, _includeErrorStacktrace, isDelayed, clock, _preFinishHooks, _onSpanFinish, _sampler)
     }
+
+    private def suggestedOrSamplerDecision(): SamplingDecision =
+      _suggestedSamplingDecision.getOrElse(_sampler.decide(this))
+
+    private def suggestedOrGeneratedTraceId(): Identifier =
+      if(_suggestedTraceId.isEmpty) identifierScheme.traceIdFactory.generate() else _suggestedTraceId
   }
 
 

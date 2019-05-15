@@ -5,6 +5,7 @@ import java.time.Instant
 import kamon.context.Context
 import kamon.tag.TagSet
 import kamon.trace.Span.Link
+import kamon.trace.Trace.SamplingDecision
 
 /**
   * Gathers information about an operation before it can be turned into a Span. The Span creation is handled in two
@@ -14,7 +15,7 @@ import kamon.trace.Span.Link
   *
   * Implementations are not expected to be thread safe.
   */
-trait SpanBuilder {
+trait SpanBuilder extends Sampler.Operation {
 
   /**
     * Changes the operation name on this SpanBuilder.
@@ -136,11 +137,17 @@ trait SpanBuilder {
   def context(context: Context): SpanBuilder
 
   /**
-    * Suggests a Trace Identifier for the Span to be created. This suggestion will only be taken into account if the new
-    * Span is to become the root Span in a new Trace, in which case the provided identifier will become the Trace id
-    * instead of a newly generated one.
+    * Suggests a Trace Identifier in case a new Trace will be created for the new Span. This suggestion will only be
+    * taken into account if the new Span is to become the root Span in a new Trace, otherwise the parent Span's trace
+    * will be used.
     */
   def traceId(id: Identifier): SpanBuilder
+
+  /**
+    * Suggests a sampling decision in case a new Trace will be created for the new Span. This suggestion will only be
+    * taken into account if this Span doesn't have any parent or the parent's sampling decision is Unknown.
+    */
+  def samplingDecision(decision: SamplingDecision): SpanBuilder
 
   /**
     * Sets the kind of operation represented by the Span to be created.
