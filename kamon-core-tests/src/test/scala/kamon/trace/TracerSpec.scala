@@ -123,6 +123,126 @@ class TracerSpec extends WordSpec with Matchers with SpanInspection.Syntax with 
       Kamon.spanBuilder("localRoot").asChildOf(remoteSpan()).start().position shouldBe Position.LocalRoot
     }
 
+    "ignore sampling decision suggestions when the parent Span's trace has a decision already" in {
+      val sampledParent = remoteSpan(SamplingDecision.Sample)
+      val notSampledParent = remoteSpan(SamplingDecision.DoNotSample)
+
+      Kamon.spanBuilder("suggestions")
+        .asChildOf(sampledParent)
+        .samplingDecision(SamplingDecision.Unknown)
+        .start()
+        .trace.samplingDecision shouldBe SamplingDecision.Sample
+
+      Kamon.spanBuilder("suggestions")
+        .asChildOf(notSampledParent)
+        .samplingDecision(SamplingDecision.Unknown)
+        .start()
+        .trace.samplingDecision shouldBe SamplingDecision.DoNotSample
+    }
+
+    "use sampling decision suggestions when there is no parent" in {
+      Kamon.spanBuilder("suggestions")
+        .samplingDecision(SamplingDecision.Unknown)
+        .start()
+        .trace.samplingDecision shouldBe SamplingDecision.Unknown
+
+      Kamon.spanBuilder("suggestions")
+        .samplingDecision(SamplingDecision.Sample)
+        .start()
+        .trace.samplingDecision shouldBe SamplingDecision.Sample
+
+      Kamon.spanBuilder("suggestions")
+        .samplingDecision(SamplingDecision.DoNotSample)
+        .start()
+        .trace.samplingDecision shouldBe SamplingDecision.DoNotSample
+    }
+
+    "use sampling decision suggestions when the parent has an unknown sampling decision" in {
+      Kamon.spanBuilder("suggestions")
+        .asChildOf(remoteSpan(SamplingDecision.Unknown))
+        .samplingDecision(SamplingDecision.Sample)
+        .start()
+        .trace.samplingDecision shouldBe SamplingDecision.Sample
+
+      Kamon.spanBuilder("suggestions")
+        .asChildOf(remoteSpan(SamplingDecision.Unknown))
+        .samplingDecision(SamplingDecision.DoNotSample)
+        .start()
+        .trace.samplingDecision shouldBe SamplingDecision.DoNotSample
+
+      Kamon.spanBuilder("suggestions")
+        .asChildOf(remoteSpan(SamplingDecision.Unknown))
+        .samplingDecision(SamplingDecision.Unknown)
+        .start()
+        .trace.samplingDecision shouldBe SamplingDecision.Unknown
+    }
+
+    "not let Spans with remote parents remain with a Unknown sampling decision, even without suggestions" in {
+      Kamon.spanBuilder("suggestions")
+        .asChildOf(remoteSpan(SamplingDecision.Unknown))
+        .start()
+        .trace.samplingDecision should not be(SamplingDecision.Unknown)
+    }
+
+    "not change a Spans sampling decision if they were created with Sample or DoNotSample decisions sampling decision" in {
+      val sampledSpan = Kamon.spanBuilder("suggestions")
+        .samplingDecision(SamplingDecision.Sample)
+        .start()
+
+      val notSampledSpan = Kamon.spanBuilder("suggestions")
+        .samplingDecision(SamplingDecision.DoNotSample)
+        .start()
+
+      sampledSpan.trace.samplingDecision shouldBe SamplingDecision.Sample
+      sampledSpan.takeSamplingDecision()
+      sampledSpan.trace.samplingDecision shouldBe SamplingDecision.Sample
+
+      notSampledSpan.trace.samplingDecision shouldBe SamplingDecision.DoNotSample
+      notSampledSpan.takeSamplingDecision()
+      notSampledSpan.trace.samplingDecision shouldBe SamplingDecision.DoNotSample
+    }
+
+    "allow Spans to take a sampling decision if they were created with Unknown sampling decision" in {
+      val span = Kamon.spanBuilder("suggestions")
+        .samplingDecision(SamplingDecision.Unknown)
+        .start()
+
+      span.trace.samplingDecision shouldBe SamplingDecision.Unknown
+      span.takeSamplingDecision()
+      span.trace.samplingDecision should not be SamplingDecision.Unknown
+    }
+
+    "ensure that all local Spans share the exact same Trace instance" in {
+      val remoteParent = remoteSpan()
+      val parent = Kamon.spanBuilder("parent").asChildOf(remoteParent).start()
+      val child = Kamon.spanBuilder("child").asChildOf(parent).start()
+      val grandChild = Kamon.spanBuilder("grandChild").asChildOf(child).start()
+
+      parent.trace shouldBe theSameInstanceAs(remoteParent.trace)
+      child.trace shouldBe theSameInstanceAs(remoteParent.trace)
+      grandChild.trace shouldBe theSameInstanceAs(remoteParent.trace)
+    }
+
+    "allow explicitly dropping traces" in {
+      val span = Kamon.spanBuilder("suggestions")
+        .samplingDecision(SamplingDecision.Sample)
+        .start()
+
+      span.trace.samplingDecision shouldBe SamplingDecision.Sample
+      span.trace.drop()
+      span.trace.samplingDecision shouldBe SamplingDecision.DoNotSample
+    }
+
+    "allow explicitly keep traces" in {
+      val span = Kamon.spanBuilder("suggestions")
+        .samplingDecision(SamplingDecision.DoNotSample)
+        .start()
+
+      span.trace.samplingDecision shouldBe SamplingDecision.DoNotSample
+      span.trace.keep()
+      span.trace.samplingDecision shouldBe SamplingDecision.Sample
+    }
+
     "apply pre-start hooks to all Spans" in {
       val span = Kamon.storeContextKey(PreStart.Key, PreStart.updateOperationName("customName")) {
         Kamon.spanBuilder("defaultOperationName").start()

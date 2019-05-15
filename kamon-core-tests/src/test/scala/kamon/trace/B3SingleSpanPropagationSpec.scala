@@ -81,9 +81,9 @@ class B3SingleSpanPropagationSpec extends WordSpecLike with Matchers with Option
       val context = testContext()
       val sampledSpan = context.get(Span.Key)
       val notSampledSpanContext = Context.Empty.withKey(Span.Key,
-        new Span.Remote(sampledSpan.id, sampledSpan.parentId, sampledSpan.trace.copy(samplingDecision = SamplingDecision.DoNotSample)))
+        new Span.Remote(sampledSpan.id, sampledSpan.parentId, Trace(sampledSpan.trace.id, SamplingDecision.DoNotSample)))
       val unknownSamplingSpanContext = Context.Empty.withKey(Span.Key,
-        new Span.Remote(sampledSpan.id, sampledSpan.parentId, sampledSpan.trace.copy(samplingDecision = SamplingDecision.Unknown)))
+        new Span.Remote(sampledSpan.id, sampledSpan.parentId, Trace(sampledSpan.trace.id, SamplingDecision.Unknown)))
 
       val headersMap = mutable.Map.empty[String, String]
 

@@ -8,7 +8,7 @@ import kamon.trace.Trace.SamplingDecision
   */
 class ConstantSampler private(decision: SamplingDecision) extends Sampler {
 
-  override def decide(rootSpanBuilder: SpanBuilder): SamplingDecision =
+  override def decide(operation: Sampler.Operation): SamplingDecision =
     decision
 
   override def toString: String =

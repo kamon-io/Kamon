@@ -21,6 +21,7 @@ import java.time.Instant
 import kamon.context.Context
 import kamon.tag.TagSet
 import kamon.trace.Span.Link
+import kamon.trace.Trace.SamplingDecision
 import kamon.util.Clock
 import org.slf4j.LoggerFactory
 
@@ -52,7 +53,7 @@ import scala.compat.Platform.EOL
   * of the Span will be recorded on the "span.processing-time" metric with all provided metric tags in addition to the
   * operationName and error tags which are always added.
   */
-sealed abstract class Span {
+sealed abstract class Span extends Sampler.Operation {
 
   /**
     * Uniquely identifies this Span within the Trace.
@@ -183,6 +184,13 @@ sealed abstract class Span {
     * Disables tracking of metrics for this Span.
     */
   def doNotTrackMetrics(): Span
+
+  /**
+    * Makes the Span decide for a Sample or DoNotSample decision for the Trace it belongs to, in case the current that
+    * the current Sampling Decision is Unknown. If the Sampling Decision is already taken, calling this method will have
+    * no effect on the Span.
+    */
+  def takeSamplingDecision(): Span
 
   /**
     * Finishes this Span. Even though it is possible to call any of the methods that modify/write information on the
@@ -369,9 +377,8 @@ object Span {
       val kind: Kind, localParent: Option[Span], initialOperationName: String, spanTags: TagSet.Builder, metricTags: TagSet.Builder,
       createdAt: Instant, initialMarks: List[Mark], initialLinks: List[Link], initialTrackMetrics: Boolean, tagWithParentOperation: Boolean,
       includeErrorStacktrace: Boolean, isDelayed: Boolean, clock: Clock, preFinishHooks: Array[Tracer.PreFinishHook],
-      onFinish: Span.Finished => Unit) extends Span.Delayed {
+      onFinish: Span.Finished => Unit, sampler: Sampler) extends Span.Delayed {
 
-    private val _isSampled: Boolean = trace.samplingDecision == Trace.SamplingDecision.Sample
     private val _metricTags = metricTags
     private val _spanTags = spanTags
     private var _trackMetrics: Boolean = initialTrackMetrics
@@ -400,19 +407,19 @@ object Span {
     }
 
     override def tag(key: String, value: String): Span = synchronized {
-      if(_isSampled && _isOpen)
+      if(isSampled && _isOpen)
         _spanTags.add(key, value)
       this
     }
 
     override def tag(key: String, value: Long): Span = synchronized {
-      if(_isSampled && _isOpen)
+      if(isSampled && _isOpen)
         _spanTags.add(key, value)
       this
     }
 
     override def tag(key: String, value: Boolean): Span = synchronized {
-      if(_isSampled && _isOpen)
+      if(isSampled && _isOpen)
         _spanTags.add(key, value)
       this
     }
@@ -455,7 +462,7 @@ object Span {
       if(_isOpen) {
         _hasError = true
 
-        if(_isSampled)
+        if(isSampled)
           _spanTags.add(TagKeys.ErrorMessage, message)
       }
       this
@@ -465,7 +472,7 @@ object Span {
       if(_isOpen) {
         _hasError = true
 
-        if(_isSampled && includeErrorStacktrace)
+        if(isSampled && includeErrorStacktrace)
           _spanTags.add(TagKeys.ErrorStacktrace, toStackTraceString(throwable))
       }
       this
@@ -475,7 +482,7 @@ object Span {
       if(_isOpen) {
         _hasError = true
 
-        if(_isSampled) {
+        if(isSampled) {
           _spanTags.add(TagKeys.ErrorMessage, message)
 
           if(includeErrorStacktrace)
@@ -502,6 +509,18 @@ object Span {
 
     override def doNotTrackDelayedSpanMetrics(): Delayed =  synchronized {
       _trackDelayedSpanMetrics = false
+      this
+    }
+
+    override def takeSamplingDecision(): Span = synchronized {
+      if(trace.samplingDecision == SamplingDecision.Unknown) {
+        sampler.decide(this) match {
+          case SamplingDecision.Sample      => trace.keep()
+          case SamplingDecision.DoNotSample => trace.drop()
+          case SamplingDecision.Unknown     => // We should never get to this point!
+        }
+      }
+
       this
     }
 
@@ -541,6 +560,9 @@ object Span {
       }
     }
 
+    private def isSampled: Boolean =
+      trace.samplingDecision == Trace.SamplingDecision.Sample
+
     private def toStackTraceString(throwable: Throwable): String =
       throwable.getStackTrace().mkString("", EOL, EOL)
 
@@ -570,7 +592,7 @@ object Span {
     }
 
     private def reportSpan(finishedAt: Instant, metricTags: TagSet): Unit = {
-      if(_isSampled)
+      if(isSampled)
         onFinish(toFinishedSpan(finishedAt, metricTags))
     }
 
@@ -619,6 +641,7 @@ object Span {
     override def name(name: String): Span = this
     override def trackMetrics(): Span = this
     override def doNotTrackMetrics(): Span = this
+    override def takeSamplingDecision(): Span = this
     override def finish(): Unit = {}
     override def finish(at: Instant): Unit = {}
     override def operationName(): String = "empty"
@@ -651,6 +674,7 @@ object Span {
     override def name(name: String): Span = this
     override def trackMetrics(): Span = this
     override def doNotTrackMetrics(): Span = this
+    override def takeSamplingDecision(): Span = this
     override def finish(): Unit = {}
     override def finish(at: Instant): Unit = {}
     override def operationName(): String = "empty"

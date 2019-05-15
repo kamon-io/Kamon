@@ -26,5 +26,26 @@ trait Sampler {
     * Decides whether a trace should be sampled or not. The provided SpanBuilder contains the information that has been
     * gathered so far for what will become the root Span for the new Trace.
     */
-  def decide(rootSpanBuilder: SpanBuilder): Trace.SamplingDecision
+  def decide(operation: Sampler.Operation): Trace.SamplingDecision
+
+}
+
+object Sampler {
+
+  /**
+    * Exposes access to information about the operation triggering the sampling. The Kamon tracer can take a sampling in
+    * two different situations: during Span creation via SpanBuilder.start (the most common case) and once a Span has
+    * been already started with an Unknown Sampling Decision and Span.takSamplingDecision is called; this interface
+    * helps to abstract the actual instance holding the operation information (a SpanBuilder or Span) from the Sampler's
+    * external API.
+    */
+  trait Operation {
+
+    /**
+      * Name assigned to the operation that triggers the sampler. The name is typically assigned by either the user or
+      * automatic instrumentation.
+      */
+    def operationName(): String
+
+  }
 }
