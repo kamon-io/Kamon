@@ -73,6 +73,23 @@ class Context private (private val _underlying: UnifiedMap[String, Any], private
   }
 
   /**
+    * Creates a new Context without the specified Context entry.
+    */
+  def withoutKey[T](key: Context.Key[T]): Context = {
+    if(_underlying.containsKey(key.name)) {
+      if (key == Span.Key)
+        if(_span.isEmpty) this else new Context(_underlying, Span.Empty, tags)
+      else {
+        val mergedEntries = new UnifiedMap[String, Any](_underlying.size())
+        mergedEntries.putAll(_underlying)
+        mergedEntries.remove(key.name)
+
+        new Context(mergedEntries, _span, tags)
+      }
+    } else this
+  }
+
+  /**
     * Creates a new Context instance that includes the provided tag key and value. If the provided tag key was already
     * associated with another value then the previous tag value will be discarded and overwritten with the provided one.
     */
