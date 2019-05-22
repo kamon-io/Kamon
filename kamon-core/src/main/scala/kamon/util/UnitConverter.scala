@@ -18,7 +18,7 @@ class UnitConverter(targetTimeUnit: MeasurementUnit, targetInformationUnit: Meas
     if(unit.dimension == Dimension.Time)
       MeasurementUnit.convert(value, unit, targetTimeUnit)
     else if(unit.dimension == Dimension.Information)
-      MeasurementUnit.convert(value, unit, targetTimeUnit)
+      MeasurementUnit.convert(value, unit, targetInformationUnit)
     else
       value
 
@@ -31,7 +31,7 @@ class UnitConverter(targetTimeUnit: MeasurementUnit, targetInformationUnit: Meas
     if(unit.dimension == Dimension.Time)
       Distribution.convert(distribution, unit, targetTimeUnit, dynamicRange)
     else if(unit.dimension == Dimension.Information)
-      Distribution.convert(distribution, unit, targetTimeUnit, dynamicRange)
+      Distribution.convert(distribution, unit, targetInformationUnit, dynamicRange)
     else
       Distribution.convert(distribution, unit, unit, dynamicRange)
 
