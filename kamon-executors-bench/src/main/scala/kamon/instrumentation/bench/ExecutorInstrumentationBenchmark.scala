@@ -14,13 +14,13 @@
  */
 
 
-package kamon.executors.bench
+package kamon.instrumentation.bench
 
-import java.util.concurrent.{Executor, ExecutorService, TimeUnit}
+import java.util.concurrent.{Executor, TimeUnit}
 
 import com.google.common.util.concurrent.MoreExecutors
 import kamon.Kamon
-import kamon.executors.util.ContextAwareRunnable
+import kamon.context.Context
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 
@@ -35,7 +35,7 @@ class ExecutorInstrumentationBenchmark {
   @BenchmarkMode(Array(Mode.AverageTime))
   @OutputTimeUnit(TimeUnit.NANOSECONDS)
   @Fork
-  def none(blackhole: Blackhole): Unit = {
+  def control(blackhole: Blackhole): Unit = {
     MoreExecutors.directExecutor.execute(new BlackholeRunnable(blackhole))
  }
 
@@ -48,27 +48,64 @@ class ExecutorInstrumentationBenchmark {
   @BenchmarkMode(Array(Mode.AverageTime))
   @OutputTimeUnit(TimeUnit.NANOSECONDS)
   @Fork
-  def manual(blackhole: Blackhole): Unit = {
-    MoreExecutors.directExecutor.execute(new ContextAwareRunnable(new BlackholeRunnable(blackhole)))
+  def wrapped(blackhole: Blackhole): Unit = {
+    MoreExecutors.directExecutor.execute(new Wrapper(new BlackholeRunnable(blackhole)))
   }
 
   /**
-    * This benchmark attempts to measure the performance with automatic context propagation.
+    * This benchmark attempts to measure the performance with manual context propagation.
     *
     * @param blackhole a { @link Blackhole} object supplied by JMH
     */
   @Benchmark
   @BenchmarkMode(Array(Mode.AverageTime))
   @OutputTimeUnit(TimeUnit.NANOSECONDS)
-  @Fork(jvmArgsAppend = Array("-javaagent:/home/diego/.m2/repository/io/kamon/kanela-agent/0.0.15/kanela-agent-0.0.15.jar"))
-  def automatic(blackhole: Blackhole): Unit = {
-    MoreExecutors.directExecutor.execute(new BlackholeRunnable(blackhole))
+  @Fork
+  def instrumentedViaMixin(blackhole: Blackhole): Unit = {
+    MoreExecutors.directExecutor.execute(new InstrumentedViaMixin(blackhole))
+  }
+
+  /**
+    * This benchmark attempts to measure the performance with manual context propagation.
+    *
+    * @param blackhole a { @link Blackhole} object supplied by JMH
+    */
+  @Benchmark
+  @BenchmarkMode(Array(Mode.AverageTime))
+  @OutputTimeUnit(TimeUnit.NANOSECONDS)
+  @Fork
+  def instrumentedViaWrapper(blackhole: Blackhole): Unit = {
+    MoreExecutors.directExecutor.execute(new InstrumentedWrapper(new BlackholeRunnable(blackhole)))
   }
 }
 
 private class BlackholeRunnable(blackhole: Blackhole) extends Runnable {
   override def run(): Unit = {
     blackhole.consume(Kamon.currentContext())
+  }
+}
+
+private class Wrapper(runnable: Runnable) extends Runnable {
+  override def run(): Unit = runnable.run()
+}
+
+class InstrumentedViaMixin(blackhole: Blackhole) extends Runnable {
+  val context: Context = Kamon.currentContext()
+
+  override def run(): Unit = {
+    val scope = Kamon.store(context)
+    blackhole.consume(Kamon.currentContext())
+    scope.close()
+  }
+}
+
+class InstrumentedWrapper(runnable: Runnable) extends Runnable {
+  val context: Context = Kamon.currentContext()
+
+  override def run(): Unit = {
+    val scope = Kamon.store(context)
+    runnable.run()
+    scope.close()
   }
 }
 
