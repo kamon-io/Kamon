@@ -7,12 +7,13 @@ import kamon.Kamon
 import kamon.tag.Lookups.plain
 import kamon.context.Context
 import org.scalatest.{Matchers, OptionValues, WordSpec}
-import org.scalatest.concurrent.{PatienceConfiguration, ScalaFutures}
+import org.scalatest.concurrent.{Eventually, PatienceConfiguration, ScalaFutures}
 
 import scala.concurrent.ExecutionContext.global
 import scala.concurrent.ExecutionContext
 
-class CatsIoInstrumentationSpec extends WordSpec with ScalaFutures with Matchers with PatienceConfiguration with OptionValues {
+class CatsIoInstrumentationSpec extends WordSpec with ScalaFutures with Matchers with PatienceConfiguration
+    with OptionValues with Eventually {
 
   // NOTE: We have this test just to ensure that the Context propagation is working, but starting with Kamon 2.0 there
   //       is no need to have explicit Runnable/Callable instrumentation because the instrumentation brought by the
@@ -43,9 +44,10 @@ class CatsIoInstrumentationSpec extends WordSpec with ScalaFutures with Matchers
 
         val contextTagFuture = contextTagAfterTransformations.unsafeToFuture()
 
-        whenReady(contextTagFuture)(
-          tagValue ⇒ tagValue shouldBe "value"
-        )
+
+        eventually {
+          contextTagFuture.value.get.get shouldBe "value"
+        }
       }
     }
   }
