@@ -23,7 +23,7 @@ import kamon.trace.{Span, SpanBuilder}
 import scala.util.control.NonFatal
 
 
-object FutureInstrumentation {
+object ScalaFutureInstrumentation {
 
   val Component = "scala.future"
 

@@ -32,7 +32,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class FutureInstrumentationSpec extends WordSpec with ScalaFutures with Matchers with PatienceConfiguration
     with OptionValues with Eventually with TestSpanReporter {
 
-  import kamon.instrumentation.futures.scala.FutureInstrumentation.{traced, tracedCallback}
+  import kamon.instrumentation.futures.scala.ScalaFutureInstrumentation.{traced, tracedCallback}
   implicit val ec: ExecutionContext = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(1))
 
   "a Scala Future" when {

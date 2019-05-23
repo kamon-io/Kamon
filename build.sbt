@@ -15,8 +15,8 @@
 
 val kamonCore        = "io.kamon"     %% "kamon-core"                   % "2.0.0-M4"
 val kamonTestkit     = "io.kamon"     %% "kamon-testkit"                % "2.0.0-M4"
-val kamonExecutors   = "io.kamon"     %% "kamon-executors"              % "2.0.0-83b17a1a775aa3860432bd1b67788b53b2fdd017"
-val kamonInstrument  = "io.kamon"     %% "kamon-instrumentation-common" % "2.0.0-3d734de88d883ea580919995b58c12b9755de92d"
+val kamonExecutors   = "io.kamon"     %% "kamon-executors"              % "2.0.0-M1"
+val kamonInstrument  = "io.kamon"     %% "kamon-instrumentation-common" % "2.0.0-M1"
 val kanelaAgent      = "io.kamon"     %  "kanela-agent"                 % "1.0.0-M2"
 
 val twitterUtilCore  = "com.twitter"  %% "util-core"                    % "6.40.0"
