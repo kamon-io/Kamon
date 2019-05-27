@@ -24,10 +24,12 @@ import java.util.Locale
 
 import com.typesafe.config.Config
 import kamon.metric.MeasurementUnit.Dimension.{ Information, Time }
-import kamon.metric.MeasurementUnit.{ Dimension, information, time }
+import kamon.metric.MeasurementUnit.{ information, time, Dimension }
 import kamon.metric.{ MeasurementUnit, PeriodSnapshot }
-import kamon.util.{ DynamicAccess, EnvironmentTagBuilder }
-import kamon.{ Kamon, MetricReporter }
+import kamon.util.{ DynamicAccess, EnvironmentTags }
+import kamon.Kamon
+import kamon.module.MetricReporter
+import kamon.tag.TagSet
 import org.slf4j.LoggerFactory
 
 // 1 arg constructor is intended for injecting config via unit tests
@@ -57,20 +59,27 @@ class DatadogAgentReporter private[datadog] (c: DatadogAgentReporter.Configurati
 
   override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
 
-    for (counter <- snapshot.metrics.counters) {
-      config.packetBuffer.appendMeasurement(counter.name, config.measurementFormatter.formatMeasurement(encodeDatadogCounter(counter.value, counter.unit), counter.tags))
+    for {
+      counter <- snapshot.counters
+      instrument <- counter.instruments
+    } {
+      config.packetBuffer.appendMeasurement(counter.name, config.measurementFormatter.formatMeasurement(encodeDatadogCounter(instrument.value, counter.settings.unit), instrument.tags))
     }
 
-    for (gauge <- snapshot.metrics.gauges) {
-      config.packetBuffer.appendMeasurement(gauge.name, config.measurementFormatter.formatMeasurement(encodeDatadogGauge(gauge.value, gauge.unit), gauge.tags))
+    for {
+      gauge <- snapshot.gauges
+      instrument <- gauge.instruments
+    } {
+      config.packetBuffer.appendMeasurement(gauge.name, config.measurementFormatter.formatMeasurement(encodeDatadogGauge(instrument.value, gauge.settings.unit), instrument.tags))
     }
 
-    for (
-      metric <- snapshot.metrics.histograms ++ snapshot.metrics.rangeSamplers;
-      bucket <- metric.distribution.bucketsIterator
-    ) {
+    for {
+      metric <- snapshot.histograms ++ snapshot.rangeSamplers ++ snapshot.timers
+      instruments <- metric.instruments
+      bucket <- instruments.value.bucketsIterator
+    } {
 
-      val bucketData = config.measurementFormatter.formatMeasurement(encodeDatadogHistogramBucket(bucket.value, bucket.frequency, metric.unit), metric.tags)
+      val bucketData = config.measurementFormatter.formatMeasurement(encodeDatadogHistogramBucket(bucket.value, bucket.frequency, metric.settings.unit), instruments.tags)
       config.packetBuffer.appendMeasurement(metric.name, bucketData)
     }
 
@@ -87,12 +96,12 @@ class DatadogAgentReporter private[datadog] (c: DatadogAgentReporter.Configurati
   private def encodeDatadogCounter(count: Long, unit: MeasurementUnit): String =
     valueFormat.format(scale(count, unit)) + "|c"
 
-  private def encodeDatadogGauge(value: Long, unit: MeasurementUnit): String =
+  private def encodeDatadogGauge(value: Double, unit: MeasurementUnit): String =
     valueFormat.format(scale(value, unit)) + "|g"
 
-  private def scale(value: Long, unit: MeasurementUnit): Double = unit.dimension match {
-    case Time if unit.magnitude != time.seconds.magnitude             => MeasurementUnit.scale(value, unit, time.seconds)
-    case Information if unit.magnitude != information.bytes.magnitude => MeasurementUnit.scale(value, unit, information.bytes)
+  private def scale(value: Double, unit: MeasurementUnit): Double = unit.dimension match {
+    case Time if unit.magnitude != time.seconds.magnitude             => MeasurementUnit.convert(value, unit, time.seconds)
+    case Information if unit.magnitude != information.bytes.magnitude => MeasurementUnit.convert(value, unit, information.bytes)
     case _                                                            => value.toDouble
   }
 
@@ -103,23 +112,23 @@ object DatadogAgentReporter {
   private val logger = LoggerFactory.getLogger(classOf[DatadogAgentReporter])
 
   trait MeasurementFormatter {
-    def formatMeasurement(measurementData: String, tags: Map[String, String]): String
+    def formatMeasurement(measurementData: String, tags: TagSet): String
   }
 
   private class DefaultMeasurementFormatter(config: Config) extends MeasurementFormatter {
 
     private val tagFilterKey = config.getString("filter-config-key")
     private val filter = Kamon.filter(tagFilterKey)
-    private val envTags = EnvironmentTagBuilder.create(config.getConfig("additional-tags"))
+    private val envTags = EnvironmentTags.from(Kamon.environment, config.getConfig("additional-tags"))
 
     override def formatMeasurement(
       measurementData: String,
-      tags:            Map[String, String]
+      tags:            TagSet
     ): String = {
 
-      val filteredTags = envTags ++ tags.filterKeys(filter.accept)
+      val filteredTags = envTags.iterator(_.toString) ++ tags.iterator(_.toString).filter(p => filter.accept(p.key))
 
-      val stringTags: String = "|#" + filteredTags.map { case (k, v) ⇒ k + ":" + v }.mkString(",")
+      val stringTags: String = "|#" + filteredTags.map { p ⇒ s"${p.key}:${p.value}" }.mkString(",")
 
       StringBuilder.newBuilder
         .append(measurementData)

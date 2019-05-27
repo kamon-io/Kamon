@@ -56,8 +56,10 @@ package object datadog {
           } else {
             Failure(new Exception(s"Failed to ${method} metrics to Datadog with status code [${response.code()}], Body: [${responseBody}]"))
           }
-        case Failure(f) =>
+        case Failure(f) if f.getCause != null =>
           Failure(f.getCause)
+        case f @ Failure(_) =>
+          f.asInstanceOf[Try[String]]
       }
     }
 

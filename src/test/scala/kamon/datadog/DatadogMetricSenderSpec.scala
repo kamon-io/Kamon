@@ -18,12 +18,13 @@ package kamon.datadog
 
 import java.time.Instant
 
-import com.typesafe.config.{ Config, ConfigFactory }
+import com.typesafe.config.{Config, ConfigFactory}
 import kamon.Kamon
 import kamon.datadog.DatadogAgentReporter.PacketBuffer
 import kamon.metric._
+import kamon.tag.TagSet
 import kamon.testkit.Reconfigure
-import org.scalatest.{ Matchers, WordSpec }
+import org.scalatest.{Matchers, WordSpec}
 
 class DatadogMetricSenderSpec extends WordSpec with Matchers with Reconfigure {
   reconfigure =>
@@ -48,15 +49,17 @@ class DatadogMetricSenderSpec extends WordSpec with Matchers with Reconfigure {
         val now = Instant.now()
         reporter.reportPeriodSnapshot(
           PeriodSnapshot.apply(
-            now.minusMillis(1000), now, MetricsSnapshot.apply(
-              Nil,
-              Nil,
-              Nil,
-              Seq(
-                MetricValue.apply("test.counter", Map("tag1" -> "value1"), MeasurementUnit.none, 0)
-              )
-
-            )
+          now.minusMillis(1000),
+          now,
+          MetricSnapshot.ofValues[Long](
+            "test.counter",
+            "test",
+            Metric.Settings.ForValueInstrument(MeasurementUnit.none, java.time.Duration.ZERO),
+            Instrument.Snapshot.apply(TagSet.of("tag1", "value1"), 0L) :: Nil) :: Nil,
+          Nil,
+          Nil,
+          Nil,
+          Nil
           )
         )
 
@@ -74,20 +77,22 @@ class DatadogMetricSenderSpec extends WordSpec with Matchers with Reconfigure {
         val now = Instant.now()
         reporter.reportPeriodSnapshot(
           PeriodSnapshot.apply(
-            now.minusMillis(1000), now, MetricsSnapshot.apply(
-              Nil,
-              Nil,
-              Nil,
-              Seq(
-                MetricValue.apply("test.counter", Map("tag1" -> "value1"), MeasurementUnit.none, 0)
-              )
-
-            )
+          now.minusMillis(1000),
+          now,
+          MetricSnapshot.ofValues[Long](
+            "test.counter",
+            "test",
+            Metric.Settings.ForValueInstrument(MeasurementUnit.none, java.time.Duration.ZERO),
+            Instrument.Snapshot.apply(TagSet.of("tag1", "value1"), 0L) :: Nil) :: Nil,
+          Nil,
+          Nil,
+          Nil,
+          Nil
           )
         )
 
         buffer.lst should have size 1
-        buffer.lst should contain("test.counter" -> "0|c|#service:kamon-application,tag1:value1")
+        buffer.lst should contain("test.counter" -> "0|c|#service:kamon-application,env:staging,tag1:value1")
     }
 
     "filter other tags" in AgentReporter(new TestBuffer(), ConfigFactory.parseString(
@@ -100,20 +105,22 @@ class DatadogMetricSenderSpec extends WordSpec with Matchers with Reconfigure {
         val now = Instant.now()
         reporter.reportPeriodSnapshot(
           PeriodSnapshot.apply(
-            now.minusMillis(1000), now, MetricsSnapshot.apply(
-              Nil,
-              Nil,
-              Nil,
-              Seq(
-                MetricValue.apply("test.counter", Map("tag1" -> "value1", "tag2" -> "value2", "otherTag" -> "otherValue"), MeasurementUnit.none, 0)
-              )
-
-            )
+          now.minusMillis(1000),
+          now,
+          MetricSnapshot.ofValues[Long](
+            "test.counter",
+            "test",
+            Metric.Settings.ForValueInstrument(MeasurementUnit.none, java.time.Duration.ZERO),
+            Instrument.Snapshot.apply(TagSet.of("tag1", "value1").withTag("tag2", "value2").withTag( "otherTag", "otherValue"), 0L) :: Nil) :: Nil,
+          Nil,
+          Nil,
+          Nil,
+          Nil
           )
         )
 
         buffer.lst should have size 1
-        buffer.lst should contain("test.counter" -> "0|c|#service:kamon-application,otherTag:otherValue")
+        buffer.lst should contain("test.counter" -> "0|c|#service:kamon-application,env:staging,otherTag:otherValue")
     }
 
   }

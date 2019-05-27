@@ -17,17 +17,18 @@ import com.typesafe.sbt.SbtScalariform.ScalariformKeys
 import scalariform.formatter.preferences._
 
 
-val kamonCore             = "io.kamon"               %% "kamon-core"          % "1.1.6"
-val kamonTestKit          = "io.kamon"               %% "kamon-testkit"       % "1.1.6"
+val kamonCore             = "io.kamon"               %% "kamon-core"          % "2.0.0-M4"
+val kamonTestKit          = "io.kamon"               %% "kamon-testkit"       % "2.0.0-M4"
 val asyncHttpClient       = "com.squareup.okhttp3"    % "okhttp"              % "3.10.0"
 val asyncHttpClientMock   = "com.squareup.okhttp3"    % "mockwebserver"       % "3.10.0"
+val diffson               = "org.gnieh"              %% "diffson-play-json"    % "4.0.0-M3"
 
 lazy val root = (project in file("."))
   .settings(name := "kamon-datadog")
   .settings(
     libraryDependencies ++=
       compileScope(kamonCore, asyncHttpClient, scalaCompact.value, playJsonVersion.value) ++
-        testScope(scalatest, slf4jApi, slf4jnop, kamonCore, kamonTestKit, asyncHttpClientMock),
+        testScope(scalatest, slf4jApi, slf4jnop, kamonCore, kamonTestKit, asyncHttpClientMock, diffson),
     ScalariformKeys.preferences := formatSettings(ScalariformKeys.preferences.value))
 
 
@@ -46,7 +47,7 @@ def scalaCompact = Def.setting {
   }
 }
 
-/* Changing Kamon configuration in real-time seems to turn tests unstable */ 
+/* Changing Kamon configuration in real-time seems to turn tests unstable */
 parallelExecution in Test := false
 
 def formatSettings(prefs: IFormattingPreferences) = prefs

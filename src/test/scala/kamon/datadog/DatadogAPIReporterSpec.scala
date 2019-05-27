@@ -3,7 +3,8 @@ package kamon.datadog
 import java.time.Instant
 
 import kamon.Kamon
-import kamon.metric.{ MeasurementUnit, MetricValue, MetricsSnapshot, PeriodSnapshot }
+import kamon.metric.{Instrument, MeasurementUnit, Metric, MetricSnapshot, PeriodSnapshot}
+import kamon.tag.TagSet
 import kamon.testkit.Reconfigure
 import okhttp3.mockwebserver.MockResponse
 import org.scalatest.Matchers
@@ -26,21 +27,27 @@ class DatadogAPIReporterSpec extends AbstractHttpReporter with Matchers with Rec
 
       reporter.reportPeriodSnapshot(
         PeriodSnapshot.apply(
-          now.minusMillis(1000), now, MetricsSnapshot.apply(
-            Nil,
-            Nil,
-            Nil,
-            Seq(
-              MetricValue.apply("test.counter", Map("tag1" -> "value1"), MeasurementUnit.none, 0)
-            )
-
-          )
+          now.minusMillis(1000),
+          now,
+          MetricSnapshot.ofValues[Long](
+            "test.counter",
+            "test",
+            Metric.Settings.ForValueInstrument(MeasurementUnit.none, java.time.Duration.ZERO),
+            Instrument.Snapshot.apply(TagSet.of("tag1", "value1"), 0L) :: Nil
+          ) :: Nil,
+          Nil,
+          Nil,
+          Nil,
+          Nil
         )
       )
       val request = server.takeRequest()
       request.getRequestUrl.toString shouldEqual baseUrl + "?api_key=dummy"
       request.getMethod shouldEqual "POST"
-      Json.parse(request.getBody().readUtf8()) shouldEqual Json.parse("""{"series":[{"metric":"test.counter","interval":1,"points":[[1523394,0]],"type":"count","host":"test","tags":["service:kamon-application","env:staging","tag1:value1"]}]}""")
+      Json.parse(request.getBody().readUtf8()) shouldEqual Json
+        .parse(
+          """{"series":[{"metric":"test.counter","interval":1,"points":[[1523394,0]],"type":"count","host":"test","tags":["service:kamon-application","env:staging","tag1:value1"]}]}"""
+        )
 
     }
 
