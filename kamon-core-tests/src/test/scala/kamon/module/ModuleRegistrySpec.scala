@@ -124,7 +124,6 @@ class ModuleRegistrySpec extends WordSpec with Matchers with Reconfigure with Ev
     def snapshotCount(): Int =
       count
 
-    override def start(): Unit = {}
     override def stop(): Unit = {}
     override def reconfigure(config: Config): Unit = {}
   }

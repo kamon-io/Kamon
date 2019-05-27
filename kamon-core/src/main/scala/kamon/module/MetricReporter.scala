@@ -28,7 +28,6 @@ object MetricReporter {
   def withTransformations(reporter: MetricReporter, transformations: Transformation*): MetricReporter =
       new Module.Wrapped with MetricReporter {
 
-    override def start(): Unit = reporter.start()
     override def stop(): Unit = reporter.stop()
     override def reconfigure(newConfig: Config): Unit = reporter.reconfigure(newConfig)
     override def originalClass: Class[_ <: Module] = reporter.getClass

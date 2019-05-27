@@ -39,7 +39,7 @@ class Status(_moduleRegistry: ModuleRegistry, _metricRegistry: MetricRegistry, c
     * object docs for more information.
     */
   def instrumentation(): Status.Instrumentation =
-    InstrumentationStatus.create()
+    InstrumentationStatus.create(warnIfFailed = false)
 
 }
 
