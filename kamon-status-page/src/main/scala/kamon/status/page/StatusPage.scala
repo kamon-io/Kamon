@@ -3,7 +3,7 @@ package status
 package page
 
 import com.typesafe.config.Config
-import kamon.module.Module
+import kamon.module.{Module, ModuleFactory}
 import org.slf4j.LoggerFactory
 
 import scala.util.{Failure, Success, Try}
@@ -11,12 +11,10 @@ import scala.util.{Failure, Success, Try}
 /**
   * Uses an embedded web server to publish a simple status page with information about Kamon's internal status.
   */
-class StatusPage extends Module {
+class StatusPage(initialConfig: Config) extends Module {
   private val _logger = LoggerFactory.getLogger(classOf[StatusPage])
   @volatile private var _statusPageServer: Option[StatusPageServer] = None
-
-  override def start(): Unit =
-    init(Kamon.config())
+  init(initialConfig)
 
   override def stop(): Unit =
     stopServer()
@@ -26,9 +24,8 @@ class StatusPage extends Module {
 
 
   private def init(config: Config): Unit = synchronized {
-    val listenConfig = config.getConfig("kamon.status-page.listen")
-    val hostname = listenConfig.getString("hostname")
-    val port = listenConfig.getInt("port")
+    val hostname = config.getString("listen.hostname")
+    val port = config.getInt("listen.port")
 
     _statusPageServer.fold {
       // Starting a new server on the configured hostname/port
@@ -65,5 +62,12 @@ class StatusPage extends Module {
     _statusPageServer.foreach(_.stop())
     _statusPageServer = None
   }
+}
 
+object StatusPage {
+
+  class Factory extends ModuleFactory {
+    override def create(settings: ModuleFactory.Settings): Module =
+      new StatusPage(settings.config)
+  }
 }

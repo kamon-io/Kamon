@@ -40,14 +40,12 @@ class KamonLifecycleSpec extends WordSpec with Matchers with Eventually {
 }
 
 class DummyMetricReporter extends kamon.module.MetricReporter {
-  override def start(): Unit = {}
   override def stop(): Unit = {}
   override def reconfigure(config: Config): Unit = {}
   override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {}
 }
 
 class DummySpanReporter extends kamon.module.SpanReporter {
-  override def start(): Unit = {}
   override def stop(): Unit = {}
   override def reconfigure(config: Config): Unit = {}
   override def reportSpans(spans: Seq[Span.Finished]): Unit = {}

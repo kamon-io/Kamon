@@ -94,7 +94,6 @@ object TestSpanReporter {
     }
 
     // Here go the reporter-specific implementation details:
-    override def start(): Unit = {}
     override def stop(): Unit = {}
     override def reconfigure(config: Config): Unit = {}
     override def reportSpans(spans: Seq[Span.Finished]): Unit =

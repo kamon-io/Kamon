@@ -16,11 +16,14 @@ import scala.concurrent.Future
   *   kamon.modules {
   *     module-name {
   *       enabled = true
+  *       name = "My Module Name"
   *       description = "A module description"
-  *       kind = "combined | metric | span | plain"
-  *       class = "com.example.MyModule"
+  *       factory = "com.example.MyModuleFactory"
+  *       config-path = "kamon.my-module"
   *     }
   *   }
+  *
+  * Take a look at the reference.conf file for more details.
   *
   */
 trait ModuleLoading { self: ClassLoading with Configuration with Utilities with Metrics with Tracing =>
@@ -29,14 +32,22 @@ trait ModuleLoading { self: ClassLoading with Configuration with Utilities with 
 
 
   /**
-    * Register a module instantiated by the user.
+    * Register a module instantiated by the user. This method assumes that the module does not read any dedicated
+    * configuration settings and when Kamon gets reconfigured, the module will be provided with an empty Config.
     *
-    * @param name Module name. Registration will fail if a module with the given name already exists.
-    * @param module The module instance.
-    * @return A Registration that can be used to de-register the module at any time.
+    * The returned registration can be used to stop and deregister the module at any time.
     */
   def registerModule(name: String, module: Module): Registration =
-    _moduleRegistry.register(name, module)
+    _moduleRegistry.register(name, None, module)
+
+  /**
+    * Register a module instantiated by the user. When Kamon is reconfigured, the module will be reconfigured with the
+    * settings found under the provided configPath.
+    *
+    * The returned registration can be used to stop and deregister the module at any time.
+    */
+  def registerModule(name: String, configPath: String, module: Module): Registration =
+    _moduleRegistry.register(name, Option(configPath), module)
 
   /**
     * Loads modules from Kamon's configuration.

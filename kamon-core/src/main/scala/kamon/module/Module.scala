@@ -5,6 +5,8 @@ import com.typesafe.config.Config
 import kamon.metric.PeriodSnapshot
 import kamon.trace.Span
 
+import scala.concurrent.ExecutionContext
+
 /**
   * Modules provide additional capabilities to Kamon, like collecting JVM metrics or exporting the metrics and trace
   * data to external services. Additionally, modules can be automatically registered in Kamon by simply being present
@@ -18,11 +20,6 @@ import kamon.trace.Span
 trait Module {
 
   /**
-    * Signals that a the module has been registered in Kamon's module registry.
-    */
-  def start(): Unit
-
-  /**
     * Signals that the module should be stopped and all acquired resources, if any, should be released.
     */
   def stop(): Unit
@@ -32,6 +29,24 @@ trait Module {
     * settings are in sync with the provided configuration.
     */
   def reconfigure(newConfig: Config): Unit
+}
+
+/**
+  * Creates an instance of a module.
+  */
+trait ModuleFactory {
+
+  def create(settings: ModuleFactory.Settings): Module
+
+}
+
+object ModuleFactory {
+
+  case class Settings (
+    config: Config,
+    configPath: String,
+    executionContext: ExecutionContext
+  )
 }
 
 
@@ -51,6 +66,7 @@ object Module {
     case object Metric extends Kind
     case object Span extends Kind
     case object Plain extends Kind
+    case object Unknown extends Kind
   }
 
   /**
@@ -87,8 +103,8 @@ object Module {
     path: String,
     name: String,
     description: String,
-    clazz: Class[_ <: Module],
-    kind: Module.Kind,
-    enabled: Boolean
+    enabled: Boolean,
+    configPath: Option[String],
+    factory: Option[String]
   )
 }

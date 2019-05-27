@@ -5,7 +5,7 @@ import java.time.{Duration, Instant}
 import java.util.concurrent.{CountDownLatch, Executors, ScheduledFuture, TimeUnit}
 import java.util.concurrent.atomic.AtomicReference
 
-import com.typesafe.config.Config
+import com.typesafe.config.{Config, ConfigFactory}
 import kamon.module.Module.Registration
 import kamon.status.Status
 import kamon.metric.MetricRegistry
@@ -13,7 +13,6 @@ import kamon.trace.Tracer
 import kamon.util.Clock
 import org.slf4j.LoggerFactory
 
-import scala.collection.JavaConverters.asScalaBufferConverter
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutorService, Future, Promise}
 import scala.util.Try
 import scala.util.control.NonFatal
@@ -53,19 +52,19 @@ class ModuleRegistry(classLoading: ClassLoading, configuration: Configuration, c
     * @param module Module instance.
     * @return A registration that can be used to stop the module at any time.
     */
-  def register(name: String, module: Module): Registration = synchronized {
+  def register(name: String, configPath: Option[String], module: Module): Registration = synchronized {
     if(_registeredModules.get(name).isEmpty) {
       val inferredSettings = Module.Settings(
         "unknown",
         name,
         module.getClass.getName,
-        module.getClass,
-        inferModuleKind(module.getClass),
-        true
+        true,
+        configPath,
+        factory = None
       )
 
-      val moduleEntry = createEntry(inferredSettings, true, module)
-      startModule(moduleEntry)
+      val moduleEntry = Entry(name, createExecutor(inferredSettings), true, inferredSettings, module)
+      registerModule(moduleEntry)
       registration(moduleEntry)
 
     } else {
@@ -87,7 +86,7 @@ class ModuleRegistry(classLoading: ClassLoading, configuration: Configuration, c
       automaticallyRegisteredModules.get(moduleSettings.name).fold {
         // The module does not exist in the registry, the only possible action is starting it, if enabled.
         if(moduleSettings.enabled) {
-          createModule(moduleSettings).foreach(entry => startModule(entry))
+          createModule(moduleSettings, false).foreach(entry => registerModule(entry))
         }
 
       } { existentModuleSettings =>
@@ -235,19 +234,17 @@ class ModuleRegistry(classLoading: ClassLoading, configuration: Configuration, c
 
   private def readModuleSettings(config: Config, emitConfigurationWarnings: Boolean): Seq[Module.Settings] = {
     val moduleConfigs = config.getConfig("kamon.modules").configurations
-    val moduleSettings = moduleConfigs.map {
+
+    moduleConfigs.map {
       case (modulePath, moduleConfig) =>
         val moduleSettings = Try {
-          val moduleClazz = classLoading.resolveClass[Module](moduleConfig.getString("class")).get
-          val inferredModuleKind = inferModuleKind(moduleClazz)
-
           Module.Settings(
             modulePath,
             moduleConfig.getString("name"),
             moduleConfig.getString("description"),
-            moduleClazz,
-            inferredModuleKind,
-            moduleConfig.getBoolean("enabled")
+            moduleConfig.getBoolean("enabled"),
+            Option(moduleConfig.getString("config-path")),
+            Option(moduleConfig.getString("factory"))
           )
         }
 
@@ -269,63 +266,39 @@ class ModuleRegistry(classLoading: ClassLoading, configuration: Configuration, c
         moduleSettings
 
     } filter(_.isSuccess) map(_.get) toSeq
-
-
-    // Load all modules that might have been configured using the legacy "kamon.reporters" setting from <1.2.0
-    // versions. This little hack should be removed by the time we release 2.0.
-    //
-    if(config.hasPath("kamon.reporters")) {
-      val legacyModuleSettings = config.getStringList("kamon.reporters").asScala
-        .map(moduleClass => {
-          val moduleSettings = Try {
-            val moduleClazz = classLoading.resolveClass[Module](moduleClass).get
-            val inferredModuleKind = inferModuleKind(moduleClazz)
-            val name = moduleClazz.getName()
-            val description = "Module detected from the legacy kamon.reporters configuration."
-
-            Module.Settings("unknown", name, description, moduleClazz, inferredModuleKind, true)
-          }
-
-          if(emitConfigurationWarnings) {
-            moduleSettings.failed.foreach(t => _logger.error(s"Failed to load legacy reporter module [${moduleClass}]", t))
-          }
-
-          moduleSettings
-        })
-        .filter(_.isSuccess)
-        .map(_.get)
-
-
-      val (repeatedLegacyModules, uniqueLegacyModules) = legacyModuleSettings
-        .partition(lm => moduleSettings.find(_.clazz.getName == lm.clazz.getName).nonEmpty)
-
-      if(emitConfigurationWarnings) {
-        repeatedLegacyModules.foreach(m =>
-          _logger.warn(s"Module [${m.name}] is configured twice, please remove it from the deprecated kamon.reporters setting."))
-
-        uniqueLegacyModules.foreach(m =>
-          _logger.warn(s"Module [${m.name}] is configured in the deprecated kamon.reporters setting, please consider moving it to kamon.modules."))
-      }
-
-      moduleSettings ++ uniqueLegacyModules
-
-    } else moduleSettings
   }
 
   /**
     * Creates a module from the provided settings.
     */
-  private def createModule(settings: Module.Settings): Option[Entry[Module]] = {
-    val moduleInstance = classLoading.createInstance[Module](settings.clazz, Nil)
-    val moduleEntry = moduleInstance.map(instance => createEntry(settings, false, instance))
+  private def createModule(settings: Module.Settings, programmaticallyAdded: Boolean): Option[Entry[Module]] = {
+    val moduleEC = createExecutor(settings)
+    val moduleEntry = for {
+      moduleConfigPath  <- Try(settings.configPath.get)
+      moduleConfig      <- Try(Kamon.config().getConfig(moduleConfigPath))
+      factory           <- classLoading.createInstance[ModuleFactory](settings.factory.get, Nil)
+    } yield {
+      val instance = factory.create(ModuleFactory.Settings(moduleConfig, moduleConfigPath, moduleEC))
+      Entry(settings.name, moduleEC, programmaticallyAdded, settings, instance)
+    }
 
-    moduleEntry.failed.foreach(t => _logger.warn(s"Failed to create instance of module [${settings.name}]", t))
+    moduleEntry.failed.foreach(t => {
+      moduleEC.shutdown()
+      _logger.warn(s"Failed to create instance of module [${settings.name}]", t)
+    })
     moduleEntry.toOption
   }
 
-  private def createEntry(settings: Module.Settings, programmaticallyAdded: Boolean, instance: Module): Entry[Module] = {
+  private def createExecutor(settings: Module.Settings): ExecutionContextExecutorService = {
     val executor = Executors.newSingleThreadExecutor(threadFactory(settings.name))
-    Entry(settings.name, ExecutionContext.fromExecutorService(executor), programmaticallyAdded, settings, instance)
+
+    // Scheduling any task on the executor ensures that the underlying Thread is created and that the JVM will stay
+    // alive until the modules are stopped.
+    executor.submit(new Runnable {
+      override def run(): Unit = {}
+    })
+
+    ExecutionContext.fromExecutorService(executor)
   }
 
   private def inferModuleKind(clazz: Class[_ <: Module]): Module.Kind = {
@@ -339,48 +312,42 @@ class ModuleRegistry(classLoading: ClassLoading, configuration: Configuration, c
       Module.Kind.Plain
   }
 
-
   /**
     * Returns the current status of this module registry.
     */
   private[kamon] def status(): Status.ModuleRegistry = {
     val automaticallyAddedModules = readModuleSettings(configuration.config(), false).map(moduleSettings => {
-      val isActive = _registeredModules.get(moduleSettings.name).nonEmpty
+      val instance = _registeredModules.get(moduleSettings.name)
+      val isActive = instance.nonEmpty
+      val className = instance.map(_.module.getClass.getCanonicalName).getOrElse("unknown")
+      val moduleKind = instance.map(i => inferModuleKind(i.module.getClass)).getOrElse(Module.Kind.Unknown)
 
       Status.Module(
         moduleSettings.name,
         moduleSettings.description,
-        moduleSettings.clazz.getCanonicalName,
-        moduleSettings.kind,
+        className,
+        moduleKind,
         programmaticallyRegistered = false,
         moduleSettings.enabled,
         isActive)
     })
 
     val programmaticallyAddedModules = _registeredModules
-      .filter { case (_, entry) => entry.programmaticallyAdded }
-      .map { case (name, entry) => Status.Module(name, entry.settings.description, entry.settings.clazz.getCanonicalName,
-        entry.settings.kind, true, true, true) }
+      .collect {
+        case (name, entry) if entry.programmaticallyAdded =>
+          val className = entry.module.getClass.getCanonicalName
+          val moduleKind = inferModuleKind(entry.module.getClass)
+
+          Status.Module(name, entry.settings.description, className, moduleKind, true, true, true)
+      }
 
     val allModules = automaticallyAddedModules ++ programmaticallyAddedModules
     Status.ModuleRegistry(allModules)
   }
 
-
   /**
-    * Registers a module and schedules execution of its start procedure.
+    * Adds a module to the registry and to metric and/or span reporting.
     */
-  private def startModule(entry: Entry[Module]): Unit = {
-    registerModule(entry)
-
-    // Schedule the start hook on the module
-    entry.executionContext.execute(new Runnable {
-      override def run(): Unit =
-        Try(entry.module.start())
-          .failed.foreach(t => _logger.warn(s"Failure occurred while starting module [${entry.name}]", t))
-    })
-  }
-
   private def registerModule(entry: Entry[Module]): Unit = {
     _registeredModules = _registeredModules + (entry.name -> entry)
     if(entry.module.isInstanceOf[MetricReporter])
@@ -427,8 +394,14 @@ class ModuleRegistry(classLoading: ClassLoading, configuration: Configuration, c
   private def reconfigureModule(entry: Entry[Module], config: Config): Unit = {
     entry.executionContext.execute(new Runnable {
       override def run(): Unit =
-        Try(entry.module.reconfigure(config))
-          .failed.foreach(t => _logger.warn(s"Failure occurred while reconfiguring module [${entry.name}]", t))
+        Try {
+          val moduleConfig = entry.settings.configPath
+            .map(config.getConfig)
+            .getOrElse(ConfigFactory.empty())
+
+          entry.module.reconfigure(moduleConfig)
+
+        }.failed.foreach(t => _logger.warn(s"Failure occurred while reconfiguring module [${entry.name}]", t))
     })
   }
 
@@ -439,13 +412,6 @@ class ModuleRegistry(classLoading: ClassLoading, configuration: Configuration, c
 
   private def registration(entry: Entry[Module]): Registration = new Registration {
     override def cancel(): Unit = stopModule(entry)
-  }
-
-  private def parseModuleKind(kind: String): Module.Kind = kind.toLowerCase match {
-    case "combined" => Module.Kind.Combined
-    case "metric"   => Module.Kind.Metric
-    case "span"     => Module.Kind.Span
-    case "plain"    => Module.Kind.Plain
   }
 
   private def readRegistrySettings(config: Config): Settings =
