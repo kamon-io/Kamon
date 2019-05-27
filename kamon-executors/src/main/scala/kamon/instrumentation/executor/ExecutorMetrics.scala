@@ -21,19 +21,39 @@ import kamon.tag.TagSet
 
 object ExecutorMetrics {
 
-  val Settings = Kamon.gauge (
-    name = "executor.settings",
-    description = "Tracks executor service settings like min/max size and parallelism"
+  val ExecutorMinThreads = Kamon.gauge (
+    name = "executor.threads.min",
+    description = "Tracks executor minimum number of Threads"
   )
 
-  val Threads = Kamon.histogram (
-    name = "executor.threads",
-    description = "Samples the total and active threads on the executor service"
+  val ExecutorMaxThreads = Kamon.gauge (
+    name = "executor.threads.max",
+    description = "Tracks executor maximum number of Threads"
   )
 
-  val Tasks = Kamon.counter (
-    name = "executor.tasks",
+  val ExecutorParallelism = Kamon.gauge (
+    name = "executor.parallelism",
+    description = "Tracks executor parallelism"
+  )
+
+  val ThreadsActive = Kamon.histogram (
+    name = "executor.threads.active",
+    description = "Samples the number of active threads on the executor service"
+  )
+
+  val ThreadsTotal = Kamon.histogram (
+    name = "executor.threads.total",
+    description = "Samples the total number of threads on the executor service"
+  )
+
+  val TasksCompleted = Kamon.counter (
+    name = "executor.tasks.completed",
     description = "Tracks the number of tasks that completed execution on the executor service"
+  )
+
+  val TasksSubmitted = Kamon.counter (
+    name = "executor.tasks.submitted",
+    description = "Tracks the number of tasks submitted to the executor service"
   )
 
   val TimeInQueue = Kamon.timer (
@@ -52,13 +72,13 @@ object ExecutorMetrics {
   class ThreadPoolInstruments(name: String, extraTags: TagSet, executorType: String = "tpe")
       extends InstrumentGroup(extraTags.withTag("name", name).withTag("type", executorType)) {
 
-    val poolMin = register(Settings, "setting", "min")
-    val poolMax = register(Settings, "setting", "max")
-    val submittedTasks = register(Tasks, "state", "submitted")
-    val completedTasks = register(Tasks, "state", "completed")
-    val queuedTasks = register(QueueSize, "state", "completed")
-    val totalThreads = register(Threads, "state", "total")
-    val activeThreads = register(Threads, "state", "active")
+    val poolMin = register(ExecutorMinThreads)
+    val poolMax = register(ExecutorMaxThreads)
+    val submittedTasks = register(TasksSubmitted)
+    val completedTasks = register(TasksCompleted)
+    val queuedTasks = register(QueueSize)
+    val totalThreads = register(ThreadsTotal)
+    val activeThreads = register(ThreadsActive)
     val timeInQueue = register(TimeInQueue)
   }
 
@@ -68,6 +88,6 @@ object ExecutorMetrics {
   class ForkJoinPoolInstruments(name: String, extraTags: TagSet)
       extends ThreadPoolInstruments(name, extraTags, executorType = "fjp") {
 
-    val parallelism = register(Settings, "setting", "parallelism")
+    val parallelism = register(ExecutorParallelism)
   }
 }

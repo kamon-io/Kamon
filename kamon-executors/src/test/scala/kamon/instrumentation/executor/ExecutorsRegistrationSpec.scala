@@ -33,9 +33,8 @@ class ExecutorsRegistrationSpec extends WordSpec with Matchers with MetricInspec
       val registeredUThreadPool = ExecutorInstrumentation.instrument(JavaExecutors.unconfigurableExecutorService(JavaExecutors.newFixedThreadPool(1)), "unconfigurable-thread-pool")
       val registeredUScheduled = ExecutorInstrumentation.instrument(JavaExecutors.unconfigurableScheduledExecutorService(JavaExecutors.newScheduledThreadPool(1)), "unconfigurable-scheduled-thread-pool")
 
-      assertContainsAllExecutorNames(Threads.tagValues("name"))
-      assertContainsAllExecutorNames(Tasks.tagValues("name"))
-      assertContainsAllExecutorNames(Settings.tagValues("name"))
+      assertContainsAllExecutorNames(ThreadsActive.tagValues("name"))
+      assertContainsAllExecutorNames(TasksSubmitted.tagValues("name"))
       assertContainsAllExecutorNames(QueueSize.tagValues("name"))
 
       registeredForkJoin.shutdown()
@@ -46,9 +45,8 @@ class ExecutorsRegistrationSpec extends WordSpec with Matchers with MetricInspec
       registeredUThreadPool.shutdown()
       registeredUScheduled.shutdown()
 
-      assertDoesNotContainAllExecutorNames(Threads.tagValues("name"))
-      assertDoesNotContainAllExecutorNames(Tasks.tagValues("name"))
-      assertDoesNotContainAllExecutorNames(Settings.tagValues("name"))
+      assertDoesNotContainAllExecutorNames(ThreadsActive.tagValues("name"))
+      assertDoesNotContainAllExecutorNames(TasksSubmitted.tagValues("name"))
       assertDoesNotContainAllExecutorNames(QueueSize.tagValues("name"))
 
     }

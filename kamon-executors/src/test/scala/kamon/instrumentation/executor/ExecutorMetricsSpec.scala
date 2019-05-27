@@ -41,8 +41,8 @@ class ExecutorMetricsSpec extends WordSpec with Matchers with InstrumentInspecti
       val singleThreadPoolExecutor = JavaExecutors.newSingleThreadExecutor()
       val registeredPool = ExecutorInstrumentation.instrument(singleThreadPoolExecutor, "single-thread-pool-metrics")
 
-      ExecutorMetrics.Threads.tagValues("name")  should contain ("single-thread-pool-metrics")
-      ExecutorMetrics.Threads.tagValues("type")  should contain ("tpe")
+      ExecutorMetrics.ThreadsActive.tagValues("name")  should contain ("single-thread-pool-metrics")
+      ExecutorMetrics.ThreadsActive.tagValues("type")  should contain ("tpe")
 
       registeredPool.shutdown()
     }
@@ -51,8 +51,8 @@ class ExecutorMetricsSpec extends WordSpec with Matchers with InstrumentInspecti
       val threadPoolExecutor = JavaExecutors.newCachedThreadPool()
       val registeredPool = ExecutorInstrumentation.instrument(threadPoolExecutor, "thread-pool-executor-metrics")
 
-      ExecutorMetrics.Threads.tagValues("name")  should contain ("thread-pool-executor-metrics")
-      ExecutorMetrics.Threads.tagValues("type")  should contain ("tpe")
+      ExecutorMetrics.ThreadsActive.tagValues("name")  should contain ("thread-pool-executor-metrics")
+      ExecutorMetrics.ThreadsActive.tagValues("type")  should contain ("tpe")
 
       registeredPool.shutdown()
     }
@@ -61,8 +61,8 @@ class ExecutorMetricsSpec extends WordSpec with Matchers with InstrumentInspecti
       val scheduledThreadPoolExecutor = JavaExecutors.newSingleThreadScheduledExecutor()
       val registeredPool = ExecutorInstrumentation.instrument(scheduledThreadPoolExecutor, "scheduled-thread-pool-executor-metrics")
 
-      ExecutorMetrics.Threads.tagValues("name")  should contain ("scheduled-thread-pool-executor-metrics")
-      ExecutorMetrics.Threads.tagValues("type")  should contain ("tpe")
+      ExecutorMetrics.ThreadsActive.tagValues("name")  should contain ("scheduled-thread-pool-executor-metrics")
+      ExecutorMetrics.ThreadsActive.tagValues("type")  should contain ("tpe")
 
       registeredPool.shutdown()
     }
@@ -71,8 +71,8 @@ class ExecutorMetricsSpec extends WordSpec with Matchers with InstrumentInspecti
       val javaForkJoinPool = JavaExecutors.newWorkStealingPool()
       val registeredForkJoin = ExecutorInstrumentation.instrument(javaForkJoinPool, "java-fork-join-pool-metrics")
 
-      ExecutorMetrics.Threads.tagValues("name")  should contain ("java-fork-join-pool-metrics")
-      ExecutorMetrics.Threads.tagValues("type")  should contain ("fjp")
+      ExecutorMetrics.ThreadsActive.tagValues("name")  should contain ("java-fork-join-pool-metrics")
+      ExecutorMetrics.ThreadsActive.tagValues("type")  should contain ("fjp")
 
       registeredForkJoin.shutdown()
     }
@@ -81,8 +81,8 @@ class ExecutorMetricsSpec extends WordSpec with Matchers with InstrumentInspecti
       val scalaForkJoinPool = new scala.concurrent.forkjoin.ForkJoinPool(10)
       val registeredForkJoin = ExecutorInstrumentation.instrument(scalaForkJoinPool, "scala-fork-join-pool-metrics")
 
-      ExecutorMetrics.Threads.tagValues("name")  should contain ("scala-fork-join-pool-metrics")
-      ExecutorMetrics.Threads.tagValues("type")  should contain ("fjp")
+      ExecutorMetrics.ThreadsActive.tagValues("name")  should contain ("scala-fork-join-pool-metrics")
+      ExecutorMetrics.ThreadsActive.tagValues("type")  should contain ("fjp")
 
       registeredForkJoin.shutdown()
     }
