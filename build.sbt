@@ -14,13 +14,12 @@
  */
 
 
-val kamonCore       = "io.kamon" %% "kamon-core"         % "2.0.0-M4"
-val kamonTestkit    = "io.kamon" %% "kamon-testkit"      % "2.0.0-M4"
-val kamonScala      = "io.kamon" %% "kamon-scala-future" % "2.0.0-M1"
-val kamonExecutors  = "io.kamon" %% "kamon-executors"    % "2.0.0-M1"
-val kamonInstrument = "io.kamon" %% "kamon-instrumentation-common" % "2.0.0-3d734de88d883ea580919995b58c12b9755de92d"
-
-val kanelaAgent     =  "io.kamon" % "kanela-agent" % "1.0.0-M2" changing()
+val kamonCore       = "io.kamon" %% "kamon-core"         % "2.0.0-M4" changing()
+val kamonTestkit    = "io.kamon" %% "kamon-testkit"      % "2.0.0-M4" changing()
+val kamonScala      = "io.kamon" %% "kamon-scala-future" % "2.0.0-M1" changing()
+val kamonExecutors  = "io.kamon" %% "kamon-executors"    % "2.0.0-M1" changing()
+val kamonInstrument = "io.kamon" %% "kamon-instrumentation-common" % "2.0.0-M1" changing()
+val kanelaAgent     =  "io.kamon" % "kanela-agent"       % "1.0.0-M2" changing()
 
 val `akka-2.5` = "2.5.22"
 
