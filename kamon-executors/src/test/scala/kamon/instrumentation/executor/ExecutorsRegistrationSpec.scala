@@ -21,6 +21,8 @@ import kamon.instrumentation.executor.ExecutorMetrics._
 import kamon.testkit.MetricInspection
 import org.scalatest.{Matchers, WordSpec}
 
+import scala.concurrent.ExecutionContext
+
 class ExecutorsRegistrationSpec extends WordSpec with Matchers with MetricInspection.Syntax {
 
   "the Executors registration function" should {
@@ -32,6 +34,7 @@ class ExecutorsRegistrationSpec extends WordSpec with Matchers with MetricInspec
       val registeredSingleScheduled = ExecutorInstrumentation.instrument(JavaExecutors.newSingleThreadScheduledExecutor(), "single-scheduled-thread-pool")
       val registeredUThreadPool = ExecutorInstrumentation.instrument(JavaExecutors.unconfigurableExecutorService(JavaExecutors.newFixedThreadPool(1)), "unconfigurable-thread-pool")
       val registeredUScheduled = ExecutorInstrumentation.instrument(JavaExecutors.unconfigurableScheduledExecutorService(JavaExecutors.newScheduledThreadPool(1)), "unconfigurable-scheduled-thread-pool")
+      val registeredExecContext = ExecutorInstrumentation.instrumentExecutionContext(ExecutionContext.fromExecutorService(JavaExecutors.newFixedThreadPool(1)), "execution-context")
 
       assertContainsAllExecutorNames(ThreadsActive.tagValues("name"))
       assertContainsAllExecutorNames(TasksSubmitted.tagValues("name"))
@@ -44,6 +47,7 @@ class ExecutorsRegistrationSpec extends WordSpec with Matchers with MetricInspec
       registeredSingleScheduled.shutdown()
       registeredUThreadPool.shutdown()
       registeredUScheduled.shutdown()
+      registeredExecContext.shutdown()
 
       assertDoesNotContainAllExecutorNames(ThreadsActive.tagValues("name"))
       assertDoesNotContainAllExecutorNames(TasksSubmitted.tagValues("name"))
@@ -60,7 +64,8 @@ class ExecutorsRegistrationSpec extends WordSpec with Matchers with MetricInspec
       "single-thread-pool",
       "single-scheduled-thread-pool",
       "unconfigurable-thread-pool",
-      "unconfigurable-scheduled-thread-pool"
+      "unconfigurable-scheduled-thread-pool",
+      "execution-context"
     )
   }
 
@@ -72,7 +77,8 @@ class ExecutorsRegistrationSpec extends WordSpec with Matchers with MetricInspec
       "single-thread-pool",
       "single-scheduled-thread-pool",
       "unconfigurable-thread-pool",
-      "unconfigurable-scheduled-thread-pool"
+      "unconfigurable-scheduled-thread-pool",
+      "execution-context"
     )
   }
 }

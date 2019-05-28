@@ -2,7 +2,7 @@ package kamon.instrumentation.executor
 
 import java.time.Duration
 import java.util
-import java.util.concurrent.{Callable, ExecutorService, Future, ThreadPoolExecutor, TimeUnit, ForkJoinPool => JavaForkJoinPool}
+import java.util.concurrent.{Callable, Executor, ExecutorService, Future, ThreadPoolExecutor, TimeUnit, ForkJoinPool => JavaForkJoinPool}
 
 import com.typesafe.config.Config
 import kamon.Kamon
@@ -11,6 +11,7 @@ import kamon.metric.Counter
 import kamon.tag.TagSet
 import org.slf4j.LoggerFactory
 
+import scala.concurrent.{ExecutionContext, ExecutionContextExecutorService}
 import scala.concurrent.forkjoin.{ForkJoinPool => ScalaForkJoinPool}
 import scala.util.Try
 
@@ -34,6 +35,19 @@ object ExecutorInstrumentation {
     instrument(executor, name, TagSet.Empty, DefaultSettings)
 
   /**
+    * Creates a new instrumented ExecutionContext that wraps the provided one. The instrumented executor will track
+    * metrics for ThreadPoolExecutor and ForkJoinPool instances (both from Java and Scala). All metrics related to the
+    * instrumented service will have the following tags:
+    *
+    *   * name: set to the provided name parameter.
+    *   * type: set to "tpe" for ThreadPoolExecutor executors or "fjp" for ForkJoinPool executors.
+    *
+    * Once the returned executor is shutdown, all related metric instruments will be removed.
+    */
+  def instrumentExecutionContext(executionContext: ExecutionContext, name: String): ExecutionContextExecutorService =
+    instrumentExecutionContext(executionContext, name, TagSet.Empty, DefaultSettings)
+
+  /**
     * Creates a new instrumented ExecutorService that wraps the provided one. The instrumented executor will track
     * metrics for ThreadPoolExecutor and ForkJoinPool instances (both from Java and Scala) and optionally, track the
     * time spent by each task on the wrapped executor's queue.
@@ -49,6 +63,21 @@ object ExecutorInstrumentation {
     instrument(executor, name, TagSet.Empty, options)
 
   /**
+    * Creates a new instrumented ExecutionContext that wraps the provided one. The instrumented executor will track
+    * metrics for ThreadPoolExecutor and ForkJoinPool instances (both from Java and Scala) and optionally, track the
+    * time spent by each task on the wrapped executor's queue.
+    *
+    * All metrics related to the instrumented service will have the following tags:
+    *
+    *   * name: set to the provided name parameter.
+    *   * type: set to "tpe" for ThreadPoolExecutor executors or "fjp" for ForkJoinPool executors.
+    *
+    * Once the returned executor is shutdown, all related metric instruments will be removed.
+    */
+  def instrumentExecutionContext(executionContext: ExecutionContext, name: String, options: Settings): ExecutionContextExecutorService =
+    instrumentExecutionContext(executionContext, name, TagSet.Empty, options)
+
+  /**
     * Creates a new instrumented ExecutorService that wraps the provided one. The instrumented executor will track
     * metrics for ThreadPoolExecutor and ForkJoinPool instances (both from Java and Scala). All metrics related to the
     * instrumented service will have the following tags:
@@ -61,6 +90,20 @@ object ExecutorInstrumentation {
     */
   def instrument(executor: ExecutorService, name: String, extraTags: TagSet): ExecutorService =
     instrument(executor, name, extraTags, DefaultSettings)
+
+  /**
+    * Creates a new instrumented ExecutorService that wraps the provided one. The instrumented executor will track
+    * metrics for ThreadPoolExecutor and ForkJoinPool instances (both from Java and Scala). All metrics related to the
+    * instrumented service will have the following tags:
+    *
+    *   * all of the provided extraTags (take into account that any "name" or "type" tags will be overwritten.
+    *   * name: set to the provided name parameter.
+    *   * type: set to "tpe" for ThreadPoolExecutor executors or "fjp" for ForkJoinPool executors.
+    *
+    * Once the returned executor is shutdown, all related metric instruments will be removed.
+    */
+  def instrumentExecutionContext(executionContext: ExecutionContext, name: String, extraTags: TagSet): ExecutionContextExecutorService =
+    instrumentExecutionContext(executionContext, name, extraTags, DefaultSettings)
 
   /**
     * Creates a new instrumented ExecutorService that wraps the provided one. The instrumented executor will track
@@ -84,6 +127,27 @@ object ExecutorInstrumentation {
         _logger.warn("Cannot instrument unknown executor [{}]", anyOther)
         executor
     }
+  }
+
+  /**
+    * Creates a new instrumented ExecutionContext that wraps the provided one. The instrumented executor will track
+    * metrics for ThreadPoolExecutor and ForkJoinPool instances (both from Java and Scala) and optionally, track the
+    * time spent by each task on the wrapped executor's queue.
+    *
+    * All metrics related to the instrumented service will have the following tags:
+    *   * all of the provided extraTags (take into account that any "name" or "type" tags will be overwritten.
+    *   * name: set to the provided name parameter.
+    *   * type: set to "tpe" for ThreadPoolExecutor executors or "fjp" for ForkJoinPool executors.
+    *
+    * Once the returned executor is shutdown, all related metric instruments will be removed.
+    */
+  def instrumentExecutionContext(executionContext: ExecutionContext, name: String, extraTags: TagSet,
+      options: Settings): ExecutionContextExecutorService = {
+
+    val executor = unwrapExecutionContext(executionContext)
+    val instrumentedExecutor = instrument(executor, name, extraTags, options)
+
+    ExecutionContext.fromExecutorService(instrumentedExecutor)
   }
 
   /**
@@ -137,9 +201,14 @@ object ExecutorInstrumentation {
     field
   }
 
+  private val _executionContextExecutorField = {
+    val field = Class.forName("scala.concurrent.impl.ExecutionContextImpl").getDeclaredField("executor")
+    field.setAccessible(true)
+    field
+  }
+
   private def isAssignableTo(executor: ExecutorService, expectedClass: Class[_]): Boolean =
     expectedClass.isAssignableFrom(executor.getClass)
-
 
   private def isWrapper(executor: ExecutorService): Boolean = {
     isAssignableTo(executor, _delegatedExecutorClass) ||
@@ -150,6 +219,8 @@ object ExecutorInstrumentation {
   private def unwrap(delegatedExecutor: ExecutorService): ExecutorService =
     _delegatedExecutorField.get(delegatedExecutor).asInstanceOf[ExecutorService]
 
+  private def unwrapExecutionContext(executionContext: ExecutionContext): ExecutorService =
+    _executionContextExecutorField.get(executionContext).asInstanceOf[ExecutorService]
 
   /**
     * Abstracts the means of reading some telemetry information from concrete executor implementations. This allows us
