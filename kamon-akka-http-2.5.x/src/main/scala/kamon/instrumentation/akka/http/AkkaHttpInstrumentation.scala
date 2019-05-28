@@ -102,7 +102,7 @@ object AkkaHttpInstrumentation {
 
     Settings (
       serverInitialOperationName = akkaHttpConfig.getString("server.tracing.initial-operation-name"),
-      serverUnhandledOperationName = akkaHttpConfig.getString("server.tracing.unhandled-operation-name"),
+      serverUnhandledOperationName = akkaHttpConfig.getString("server.tracing.unhandled-operation-name")
     )
   }
 }
