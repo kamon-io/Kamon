@@ -1,25 +1,29 @@
 import com.lightbend.sbt.javaagent.Modules
 import sbt.Keys.resourceGenerators
 import BundleKeys._
-
-
+onLoad in Global ~= (_ andThen ("project kamonBundle" :: _))
 
 lazy val instrumentationModules: Seq[ModuleID] = Seq(
-//  "io.kamon" %% "kamon-scala-future"      % "2.0.0-209f237bcddf4a9c3de2ad91836b6a5d4f6ad3e6",
-//  "io.kamon" %% "kamon-twitter-future"    % "2.0.0-209f237bcddf4a9c3de2ad91836b6a5d4f6ad3e6",
-//  "io.kamon" %% "kamon-scalaz-future"     % "2.0.0-209f237bcddf4a9c3de2ad91836b6a5d4f6ad3e6",
-  "io.kamon" %% "kamon-executors" % "2.0.0-16aace5b1de0ff1206c39ffebd6085e7997e206a"
+  "io.kamon" %% "kamon-executors"         % "2.0.0-RC1",
+  "io.kamon" %% "kamon-scala-future"      % "2.0.0-RC1",
+  "io.kamon" %% "kamon-akka"              % "2.0.0-RC1",
+  "io.kamon" %% "kamon-akka-http"         % "2.0.0-RC1",
+  "io.kamon" %% "kamon-akka-remote"       % "2.0.0-RC1",
+  "io.kamon" %% "kamon-play"              % "2.0.0-RC1",
+  "io.kamon" %% "kamon-jdbc"              % "2.0.0-RC1",
+  "io.kamon" %% "kamon-logback"           % "2.0.0-RC1",
+  "io.kamon" %% "kamon-system-metrics"    % "2.0.0-RC1"
 )
 
 val versionSettings = Seq(
-  kamonCoreVersion := "2.0.0-M4",
-  kanelaAgentVersion := "1.0.0-M2",
-  instrumentationCommonVersion := "2.0.0-6432ad4395a3b2b6c5f03895b5313b8c80f9ead5"
+  kamonCoreVersion := "2.0.0-RC1",
+  kanelaAgentVersion := "1.0.0-RC1",
+  instrumentationCommonVersion := "2.0.0-RC1"
 )
 
 lazy val kamonBundle = project
    .settings(noPublishing: _*)
-   .aggregate(bundle, bundlePublishing)
+   .aggregate(bundle, publishing)
 
 val bundle = (project in file("."))
   .enablePlugins(BuildInfoPlugin)
@@ -27,7 +31,9 @@ val bundle = (project in file("."))
   .settings(versionSettings: _*)
   .settings(
     skip in publish := true,
+    name := "kamon-bundle",
     resolvers += Resolver.mavenLocal,
+    resolvers += Resolver.bintrayRepo("kamon-io", "releases"),
     buildInfoPackage := "kamon.bundle",
     buildInfoKeys := Seq[BuildInfoKey](kanelaAgentJarName),
     kanelaAgentModule := "io.kamon" % "kanela-agent" % kanelaAgentVersion.value % "provided",
@@ -37,8 +43,8 @@ val bundle = (project in file("."))
     kamonCoreExclusion := ExclusionRule(organization = "io.kamon", name = s"kamon-core_${scalaBinaryVersion.value}"),
     bundleDependencies := Seq(
       kanelaAgentModule.value,
-      "io.kamon"      %% "kamon-status-page"            % kamonCoreVersion.value excludeAll(kamonCoreExclusion.value),
-      "io.kamon"      %% "kamon-instrumentation-common" % instrumentationCommonVersion.value excludeAll(kamonCoreExclusion.value),
+      "io.kamon"      %% "kamon-status-page"            % kamonCoreVersion.value excludeAll(kamonCoreExclusion.value) changing(),
+      "io.kamon"      %% "kamon-instrumentation-common" % instrumentationCommonVersion.value excludeAll(kamonCoreExclusion.value) changing(),
       "net.bytebuddy" %  "byte-buddy-agent"             % "1.9.12",
     ),
     libraryDependencies ++= bundleDependencies.value ++ instrumentationModules.map(_.excludeAll(kamonCoreExclusion.value)),
@@ -54,12 +60,15 @@ val bundle = (project in file("."))
     }
   )
 
-lazy val bundlePublishing = project
+lazy val publishing = project
   .settings(versionSettings: _*)
   .settings(
-    moduleName := "kamon-bundle",
-    bintrayPackage := "kamon-bundle",
+    name := (name in (bundle, Compile)).value,
+    scalaVersion := (scalaVersion in bundle).value,
+    crossScalaVersions := (crossScalaVersions in bundle).value,
     packageBin in Compile := (packageBin in (bundle, Compile)).value,
+    packageSrc in Compile := (packageSrc in (bundle, Compile)).value,
+    bintrayPackage := "kamon-bundle",
     libraryDependencies ++= Seq(
       "io.kamon" %% "kamon-core" % kamonCoreVersion.value
     )

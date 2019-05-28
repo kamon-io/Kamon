@@ -5,8 +5,6 @@ import java.nio.file.{Files, StandardCopyOption}
 
 import net.bytebuddy.agent.ByteBuddyAgent
 
-import scala.util.Try
-
 object Bundle {
 
   /**
@@ -32,9 +30,9 @@ object Bundle {
     */
   private def isKanelaLoaded(): Boolean = {
     val isLoadedProperty = java.lang.Boolean.parseBoolean(System.getProperty("kanela.loaded"))
-    val hasKanelaClasses = Try {
+    val hasKanelaClasses = try {
       Class.forName("kanela.agent.Kanela", false, ClassLoader.getSystemClassLoader) != null
-    }.getOrElse(false)
+    } catch { case _: Throwable => false }
 
     hasKanelaClasses && isLoadedProperty
   }
