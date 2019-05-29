@@ -127,7 +127,7 @@ object ServerFlowWrapper {
           }
 
           _completedRequests += 1
-          push(responseOut, response.withEntity(entity))
+          push(responseOut, responseWithContext.withEntity(entity))
         }
 
         override def onUpstreamFinish(): Unit =
