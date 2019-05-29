@@ -1,13 +1,12 @@
 package kamon
 
-import scala.util.Try
 import com.typesafe.config.{Config, ConfigFactory}
 import org.slf4j.LoggerFactory
 
 /**
   * Exposes APIs to access and modify Kamon's configuration and to get notified of reconfigure events.
   */
-trait Configuration { self: ClassLoading =>
+trait Configuration {
   private val logger = LoggerFactory.getLogger(classOf[Configuration])
   private var _currentConfig: Config = loadInitialConfiguration()
   private var _onReconfigureHooks = Seq.empty[Configuration.OnReconfigureHook]
@@ -25,9 +24,11 @@ trait Configuration { self: ClassLoading =>
   def reconfigure(newConfig: Config): Unit = synchronized {
     _currentConfig = newConfig
     _onReconfigureHooks.foreach(hook => {
-      Try(hook.onReconfigure(newConfig)).failed.foreach(error =>
-        logger.error("Exception occurred while trying to run a OnReconfigureHook", error)
-      )
+      try {
+        hook.onReconfigure(newConfig)
+      } catch {
+        case error: Throwable => logger.error("Exception occurred while trying to run a OnReconfigureHook", error)
+      }
     })
   }
 
@@ -51,24 +52,22 @@ trait Configuration { self: ClassLoading =>
 
 
   private def loadInitialConfiguration(): Config = {
-    Try {
-      ConfigFactory.load(self.classLoader())
-
-    } recoverWith {
+    try {
+      ConfigFactory.load(ClassLoading.classLoader())
+    } catch {
       case t: Throwable =>
         logger.warn("Failed to load the default configuration, attempting to load the reference configuration", t)
 
-        Try {
-          val referenceConfig = ConfigFactory.defaultReference(self.classLoader())
+        try {
+          val referenceConfig = ConfigFactory.defaultReference(ClassLoading.classLoader())
           logger.warn("Initializing with the default reference configuration, none of the user settings might be in effect", t)
           referenceConfig
+        } catch {
+          case t: Throwable =>
+            logger.error("Failed to load the reference configuration, please check your reference.conf files for errors", t)
+            ConfigFactory.empty()
         }
-
-    } recover {
-      case t: Throwable =>
-        logger.error("Failed to load the reference configuration, please check your reference.conf files for errors", t)
-        ConfigFactory.empty()
-    } get
+    }
   }
 
 }

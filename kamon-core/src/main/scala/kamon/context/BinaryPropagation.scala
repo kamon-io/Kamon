@@ -16,10 +16,9 @@
 package kamon
 package context
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, InputStream, OutputStream}
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, OutputStream}
 
 import com.typesafe.config.Config
-import kamon.context.BinaryPropagation.{ByteStreamReader, ByteStreamWriter}
 import kamon.context.generated.binary.context.{Context => ColferContext, Entry => ColferEntry, Tags => ColferTags}
 import kamon.context.generated.binary.context.{BooleanTag => ColferBooleanTag, LongTag => ColferLongTag, StringTag => ColferStringTag}
 import kamon.tag.{Tag, TagSet}
@@ -130,8 +129,8 @@ object BinaryPropagation {
   /**
     * Create a new Binary Propagation instance from the provided configuration.
     */
-  def from(config: Config, classLoading: ClassLoading): Propagation[ByteStreamReader, ByteStreamWriter] = {
-    new BinaryPropagation.Default(Settings.from(config, classLoading))
+  def from(config: Config): Propagation[ByteStreamReader, ByteStreamWriter] = {
+    new BinaryPropagation.Default(Settings.from(config))
   }
 
   /**
@@ -286,14 +285,15 @@ object BinaryPropagation {
   object Settings {
     private val log = LoggerFactory.getLogger(classOf[BinaryPropagation.Settings])
 
-    def from(config: Config, classLoading: ClassLoading): BinaryPropagation.Settings = {
+    def from(config: Config): BinaryPropagation.Settings = {
       def buildInstances[ExpectedType : ClassTag](mappings: Map[String, String]): Map[String, ExpectedType] = {
         val instanceMap = Map.newBuilder[String, ExpectedType]
 
         mappings.foreach {
-          case (contextKey, componentClass) => classLoading.createInstance[ExpectedType](componentClass, Nil) match {
-            case Success(componentInstance) => instanceMap += (contextKey -> componentInstance)
-            case Failure(exception) => log.warn("Failed to instantiate {} [{}] due to []",
+          case (contextKey, componentClass) =>
+            try {
+              instanceMap += (contextKey -> ClassLoading.createInstance[ExpectedType](componentClass, Nil))
+            } catch { case exception: Exception => log.warn("Failed to instantiate {} [{}] due to []",
               implicitly[ClassTag[ExpectedType]].runtimeClass.getName, componentClass, exception)
           }
         }

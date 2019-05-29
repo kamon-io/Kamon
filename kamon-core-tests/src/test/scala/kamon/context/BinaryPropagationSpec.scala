@@ -3,7 +3,6 @@ package kamon.context
 import java.io.ByteArrayOutputStream
 
 import com.typesafe.config.ConfigFactory
-import kamon.Kamon
 import kamon.context.BinaryPropagation.{ByteStreamReader, ByteStreamWriter}
 import kamon.context.Propagation.{EntryReader, EntryWriter}
 import kamon.tag.TagSet
@@ -120,7 +119,7 @@ class BinaryPropagationSpec extends WordSpec with Matchers with OptionValues {
         |entries.outgoing.failString = "kamon.context.BinaryPropagationSpec$FailStringEntryCodec"
         |
       """.stripMargin
-    ).withFallback(ConfigFactory.load().getConfig("kamon.propagation")), Kamon)
+    ).withFallback(ConfigFactory.load().getConfig("kamon.propagation")))
 
 
   def inspectableByteStreamWriter() = new ByteArrayOutputStream(32) with ByteStreamWriter

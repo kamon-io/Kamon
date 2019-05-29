@@ -15,8 +15,8 @@ trait Init { self: ModuleLoading with Configuration with CurrentStatus =>
     * Attempts to attach the instrumentation agent and start all registered modules.
     */
   def init(): Unit = {
-    self.loadModules()
     self.attachInstrumentation()
+    self.loadModules()
   }
 
   /**
@@ -24,9 +24,9 @@ trait Init { self: ModuleLoading with Configuration with CurrentStatus =>
     * start all registered modules.
     */
   def init(config: Config): Unit = {
+    self.attachInstrumentation()
     self.reconfigure(config)
     self.loadModules()
-    self.attachInstrumentation()
   }
 
   /**

@@ -15,8 +15,7 @@
 
 package kamon
 
-object Kamon extends ClassLoading
-  with Configuration
+object Kamon extends Configuration
   with Utilities
   with Metrics
   with Tracing

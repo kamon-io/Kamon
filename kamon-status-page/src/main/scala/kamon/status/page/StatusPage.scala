@@ -29,7 +29,7 @@ class StatusPage(initialConfig: Config) extends Module {
 
     _statusPageServer.fold {
       // Starting a new server on the configured hostname/port
-      startServer(hostname, port, Kamon.classLoader())
+      startServer(hostname, port, ClassLoading.classLoader())
 
     }(existentServer => {
       // If the configuration has changed we will stop the previous version
@@ -37,7 +37,7 @@ class StatusPage(initialConfig: Config) extends Module {
 
       if(existentServer.getHostname != hostname || existentServer.getListeningPort != port) {
         stopServer()
-        startServer(hostname, port, Kamon.classLoader())
+        startServer(hostname, port, ClassLoading.classLoader())
       }
     })
   }

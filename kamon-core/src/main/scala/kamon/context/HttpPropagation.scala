@@ -64,8 +64,8 @@ object HttpPropagation {
   /**
     * Create a new HTTP propagation instance from the provided configuration.
     */
-  def from(config: Config, classLoading: ClassLoading): Propagation[HttpPropagation.HeaderReader, HttpPropagation.HeaderWriter] = {
-    new HttpPropagation.Default(Settings.from(config, classLoading))
+  def from(config: Config): Propagation[HttpPropagation.HeaderReader, HttpPropagation.HeaderWriter] = {
+    new HttpPropagation.Default(Settings.from(config))
   }
 
   /**
@@ -225,16 +225,17 @@ object HttpPropagation {
   object Settings {
     private val log = LoggerFactory.getLogger(classOf[HttpPropagation.Settings])
 
-    def from(config: Config, classLoading: ClassLoading): Settings = {
+    def from(config: Config): Settings = {
       def buildInstances[ExpectedType : ClassTag](mappings: Map[String, String]): Map[String, ExpectedType] = {
         val instanceMap = Map.newBuilder[String, ExpectedType]
 
         mappings.foreach {
-          case (contextKey, componentClass) => classLoading.createInstance[ExpectedType](componentClass, Nil) match {
-            case Success(componentInstance) => instanceMap += (contextKey -> componentInstance)
-            case Failure(exception) => log.warn("Failed to instantiate {} [{}] due to []",
+          case (contextKey, componentClass) =>
+            try {
+              instanceMap += (contextKey -> ClassLoading.createInstance[ExpectedType](componentClass, Nil))
+            } catch { case exception: Exception => log.warn("Failed to instantiate {} [{}] due to []",
               implicitly[ClassTag[ExpectedType]].runtimeClass.getName, componentClass, exception)
-          }
+            }
         }
 
         instanceMap.result()

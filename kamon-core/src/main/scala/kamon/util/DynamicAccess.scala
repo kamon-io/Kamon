@@ -19,11 +19,11 @@ package util
 import scala.collection.immutable
 import java.lang.reflect.InvocationTargetException
 import scala.reflect.ClassTag
-import scala.util.Try
 
 /**
   * Utility class for creating instances from a FQCN, see [1] for the original source. It uses reflection to turn
-  * fully-qualified class names into a `Class[_]` from which instances can be created.
+  * fully-qualified class names into a `Class[_]` from which instances can be created. All methods in this class are
+  * unsafe and might throw exceptions that should be handled by users if this class.
   *
   * [1] https://github.com/akka/akka/blob/master/akka-actor/src/main/scala/akka/actor/ReflectiveDynamicAccess.scala
   */
@@ -32,18 +32,16 @@ class DynamicAccess(val classLoader: ClassLoader) {
   /**
     * Tries to load a class that matches the provided fully-qualified class name.
     */
-  def getClassFor[T: ClassTag](fqcn: String): Try[Class[_ <: T]] =
-    Try[Class[_ <: T]]({
-      val c = Class.forName(fqcn, false, classLoader).asInstanceOf[Class[_ <: T]]
-      val t = implicitly[ClassTag[T]].runtimeClass
-      if (t.isAssignableFrom(c)) c else throw new ClassCastException(t + " is not assignable from " + c)
-    })
+  def getClassFor[T: ClassTag](fqcn: String): Class[_ <: T] = {
+    val c = Class.forName(fqcn, false, classLoader).asInstanceOf[Class[_ <: T]]
+    val t = implicitly[ClassTag[T]].runtimeClass
+    if (t.isAssignableFrom(c)) c else throw new ClassCastException(t + " is not assignable from " + c)
+  }
 
   /**
     * Tries to create an instance of the provided class, passing the provided arguments to the constructor.
     */
-  def createInstanceFor[T: ClassTag](clazz: Class[_], args: immutable.Seq[(Class[_], AnyRef)]): Try[T] =
-    Try {
+  def createInstanceFor[T: ClassTag](clazz: Class[_], args: immutable.Seq[(Class[_], AnyRef)]): T = try {
       val types = args.map(_._1).toArray
       val values = args.map(_._2).toArray
       val constructor = clazz.getDeclaredConstructor(types: _*)
@@ -51,13 +49,13 @@ class DynamicAccess(val classLoader: ClassLoader) {
       val obj = constructor.newInstance(values: _*)
       val t = implicitly[ClassTag[T]].runtimeClass
       if (t.isInstance(obj)) obj.asInstanceOf[T] else throw new ClassCastException(clazz.getName + " is not a subtype of " + t)
-    } recover { case i: InvocationTargetException if i.getTargetException ne null ⇒ throw i.getTargetException }
+    } catch { case i: InvocationTargetException if i.getTargetException ne null ⇒ throw i.getTargetException }
 
   /**
     * Tries to create an instance of the provided fully-qualified class name, passing the provided arguments to the
     * constructor.
     */
-  def createInstanceFor[T: ClassTag](fqcn: String, args: immutable.Seq[(Class[_], AnyRef)]): Try[T] =
-    getClassFor(fqcn) flatMap { c ⇒ createInstanceFor(c, args) }
+  def createInstanceFor[T: ClassTag](fqcn: String, args: immutable.Seq[(Class[_], AnyRef)]): T =
+    createInstanceFor(getClassFor(fqcn), args)
 
 }

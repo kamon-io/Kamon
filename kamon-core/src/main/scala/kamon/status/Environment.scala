@@ -9,8 +9,6 @@ import kamon.tag.TagSet
 import kamon.util.HexCodec
 import org.slf4j.LoggerFactory
 
-import scala.util.Try
-
 /**
   * Describes the conditions on which the instrumented application is running. This information is typically used by
   * reporter modules to enrich the data before it is sent to external systems. Kamon will always try to create an
@@ -59,12 +57,10 @@ object Environment {
   }
 
   private def generateHostname(): String = {
-    val hostname = Try(InetAddress.getLocalHost.getHostName)
-    hostname.failed.foreach { t =>
+    try InetAddress.getLocalHost.getHostName() catch { case t: Throwable =>
       _logger.warn("Could not automatically resolve a host name for this instance, falling back to 'localhost'", t)
+      "localhost"
     }
-
-    hostname.getOrElse("localhost")
   }
 
   private def readValueOrGenerate(configuredValue: String, generator: => String): String =

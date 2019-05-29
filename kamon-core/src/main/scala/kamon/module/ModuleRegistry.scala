@@ -22,8 +22,7 @@ import scala.util.control.NonFatal
 /**
   * Controls the lifecycle of all available modules.
   */
-class ModuleRegistry(classLoading: ClassLoading, configuration: Configuration, clock: Clock,
-    metricRegistry: MetricRegistry, tracer: Tracer) {
+class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry: MetricRegistry, tracer: Tracer) {
 
   private val _logger = LoggerFactory.getLogger(classOf[ModuleRegistry])
   private val _metricsTickerExecutor = Executors.newScheduledThreadPool(1, threadFactory("kamon-metrics-ticker", daemon = true))
@@ -168,7 +167,7 @@ class ModuleRegistry(classLoading: ClassLoading, configuration: Configuration, c
 
           metricReporterModules().foreach { entry =>
             Future {
-              Try(entry.module.reportPeriodSnapshot(periodSnapshot)).failed.foreach { error =>
+              try entry.module.reportPeriodSnapshot(periodSnapshot) catch { case error: Throwable =>
                 _logger.error(s"Reporter [${entry.name}] failed to process a metrics tick.", error)
               }
             }(entry.executionContext)
@@ -206,7 +205,7 @@ class ModuleRegistry(classLoading: ClassLoading, configuration: Configuration, c
 
           spanReporterModules().foreach { entry =>
             Future {
-              Try(entry.module.reportSpans(spanBatch)).failed.foreach { error =>
+              try entry.module.reportSpans(spanBatch) catch { case error: Throwable =>
                 _logger.error(s"Reporter [${entry.name}] failed to process a spans tick.", error)
               }
             }(entry.executionContext)
@@ -273,20 +272,21 @@ class ModuleRegistry(classLoading: ClassLoading, configuration: Configuration, c
     */
   private def createModule(settings: Module.Settings, programmaticallyAdded: Boolean): Option[Entry[Module]] = {
     val moduleEC = createExecutor(settings)
-    val moduleEntry = for {
-      moduleConfigPath  <- Try(settings.configPath.get)
-      moduleConfig      <- Try(Kamon.config().getConfig(moduleConfigPath))
-      factory           <- classLoading.createInstance[ModuleFactory](settings.factory.get, Nil)
-    } yield {
-      val instance = factory.create(ModuleFactory.Settings(moduleConfig, moduleConfigPath, moduleEC))
-      Entry(settings.name, moduleEC, programmaticallyAdded, settings, instance)
-    }
 
-    moduleEntry.failed.foreach(t => {
-      moduleEC.shutdown()
-      _logger.warn(s"Failed to create instance of module [${settings.name}]", t)
-    })
-    moduleEntry.toOption
+    try {
+      val moduleConfigPath = settings.configPath.get
+      val moduleConfig = Kamon.config().getConfig(moduleConfigPath)
+      val factory = ClassLoading.createInstance[ModuleFactory](settings.factory.get, Nil)
+      val instance = factory.create(ModuleFactory.Settings(moduleConfig, moduleConfigPath, moduleEC))
+
+      Some(Entry(settings.name, moduleEC, programmaticallyAdded, settings, instance))
+
+    } catch {
+      case t: Throwable =>
+        moduleEC.shutdown()
+        _logger.warn(s"Failed to create instance of module [${settings.name}]", t)
+        None
+    }
   }
 
   private def createExecutor(settings: Module.Settings): ExecutionContextExecutorService = {

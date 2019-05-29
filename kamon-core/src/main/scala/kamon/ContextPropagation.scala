@@ -8,7 +8,7 @@ import kamon.context.{BinaryPropagation, HttpPropagation, Propagation}
 /**
   * Exposes APIs for Context propagation across HTTP and Binary transports.
   */
-trait ContextPropagation { self: Configuration with ClassLoading =>
+trait ContextPropagation { self: Configuration =>
   @volatile private var _propagationComponents: ContextPropagation.Channels = _
   @volatile private var _defaultHttpPropagation: Propagation[HeaderReader, HeaderWriter] = _
   @volatile private var _defaultBinaryPropagation: Propagation[ByteStreamReader, ByteStreamWriter] = _
@@ -47,7 +47,7 @@ trait ContextPropagation { self: Configuration with ClassLoading =>
     _defaultBinaryPropagation
 
   private def init(config: Config): Unit = synchronized {
-    _propagationComponents = ContextPropagation.Channels.from(self.config, self)
+    _propagationComponents = ContextPropagation.Channels.from(self.config)
     _defaultHttpPropagation = _propagationComponents.httpChannels(ContextPropagation.DefaultHttpChannel)
     _defaultBinaryPropagation = _propagationComponents.binaryChannels(ContextPropagation.DefaultBinaryChannel)
   }
@@ -69,17 +69,17 @@ object ContextPropagation {
       * Creates a Channels instance from the provided configuration. The configuration details can be found on the
       * "kamon.propagation" section of the reference configuration.
       */
-    def from(config: Config, classLoading: ClassLoading): Channels = {
+    def from(config: Config): Channels = {
       val propagationConfig = config.getConfig("kamon.propagation")
       val httpChannelsConfig = propagationConfig.getConfig("http").configurations
       val binaryChannelsConfig = propagationConfig.getConfig("binary").configurations
 
       val httpChannels = httpChannelsConfig.map {
-        case (channelName, channelConfig) => (channelName -> HttpPropagation.from(channelConfig, classLoading))
+        case (channelName, channelConfig) => (channelName -> HttpPropagation.from(channelConfig))
       }
 
       val binaryChannels = binaryChannelsConfig.map {
-        case (channelName, channelConfig) => (channelName -> BinaryPropagation.from(channelConfig, classLoading))
+        case (channelName, channelConfig) => (channelName -> BinaryPropagation.from(channelConfig))
       }
 
       Channels(httpChannels, binaryChannels)

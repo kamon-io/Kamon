@@ -30,14 +30,13 @@ import org.jctools.queues.{MessagePassingQueue, MpscArrayQueue}
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters.collectionAsScalaIterableConverter
-import scala.util.Try
 
 
 /**
   * A Tracer assists on the creation of Spans and temporarily holds finished Spans until they are flushed to the
   * available reporters.
   */
-class Tracer(initialConfig: Config, clock: Clock, classLoading: ClassLoading, contextStorage: ContextStorage,
+class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage,
     scheduler: ScheduledExecutorService) {
 
   import Tracer._logger
@@ -345,7 +344,7 @@ class Tracer(initialConfig: Config, clock: Clock, classLoading: ClassLoading, co
     * Applies a new configuration to the tracer and its related components.
     */
   def reconfigure(newConfig: Config): Unit = synchronized {
-    Try {
+    try {
       val traceConfig = newConfig.getConfig("kamon.trace")
       val sampler = traceConfig.getString("sampler") match {
         case "always"     => ConstantSampler.Always
@@ -356,12 +355,11 @@ class Tracer(initialConfig: Config, clock: Clock, classLoading: ClassLoading, co
 
           // We assume that any other value must be a FQCN of a Sampler implementation and try to build an
           // instance from it.
-          val customSampler = classLoading.createInstance[Sampler](fqcn)
-          customSampler.failed.foreach(t => {
-            _logger.error(s"Failed to create sampler instance from FQCN [$fqcn], falling back to random sampling with 10% probability", t)
-          })
-
-          customSampler.getOrElse(RandomSampler(0.1D))
+          try ClassLoading.createInstance[Sampler](fqcn) catch {
+            case t: Throwable =>
+              _logger.error(s"Failed to create sampler instance from FQCN [$fqcn], falling back to random sampling with 10% probability", t)
+              RandomSampler(0.1D)
+          }
       }
 
       val identifierScheme = traceConfig.getString("identifier-scheme") match {
@@ -371,12 +369,11 @@ class Tracer(initialConfig: Config, clock: Clock, classLoading: ClassLoading, co
 
           // We assume that any other value must be a FQCN of an Identifier Scheme implementation and try to build an
           // instance from it.
-          val customSampler = classLoading.createInstance[Identifier.Scheme](fqcn)
-          customSampler.failed.foreach(t => {
-            _logger.error(s"Failed to create identifier scheme instance from FQCN [$fqcn], falling back to the single scheme", t)
-          })
-
-          customSampler.getOrElse(Identifier.Scheme.Single)
+          try ClassLoading.createInstance[Identifier.Scheme](fqcn) catch {
+            case t: Throwable =>
+              _logger.error(s"Failed to create identifier scheme instance from FQCN [$fqcn], falling back to the single scheme", t)
+              Identifier.Scheme.Single
+          }
       }
 
       if(sampler.isInstanceOf[AdaptiveSampler]) {
@@ -390,10 +387,10 @@ class Tracer(initialConfig: Config, clock: Clock, classLoading: ClassLoading, co
       }
 
       val preStartHooks = traceConfig.getStringList("hooks.pre-start").asScala
-        .map(preStart => classLoading.createInstance[Tracer.PreStartHook](preStart).get).toArray
+        .map(preStart => ClassLoading.createInstance[Tracer.PreStartHook](preStart)).toArray
 
       val preFinishHooks = traceConfig.getStringList("hooks.pre-finish").asScala
-        .map(preFinish => classLoading.createInstance[Tracer.PreFinishHook](preFinish).get).toArray
+        .map(preFinish => ClassLoading.createInstance[Tracer.PreFinishHook](preFinish)).toArray
 
       val traceReporterQueueSize = traceConfig.getInt("reporter-queue-size")
       val joinRemoteParentsWithSameSpanID = traceConfig.getBoolean("join-remote-parents-with-same-span-id")
@@ -419,8 +416,8 @@ class Tracer(initialConfig: Config, clock: Clock, classLoading: ClassLoading, co
       _preStartHooks = preStartHooks
       _preFinishHooks = preFinishHooks
 
-    }.failed.foreach {
-      ex => _logger.error("Failed to reconfigure the Kamon tracer", ex)
+    } catch {
+      case t: Throwable => _logger.error("Failed to reconfigure the Kamon tracer", t)
     }
   }
 

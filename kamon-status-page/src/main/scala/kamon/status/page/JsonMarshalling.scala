@@ -29,6 +29,7 @@ object JsonMarshalling {
         case Module.Kind.Metric   => "metric"
         case Module.Kind.Span     => "span"
         case Module.Kind.Plain    => "plain"
+        case Module.Kind.Unknown  => "unknown"
       }
 
       val array = JsonWriter.on(builder)

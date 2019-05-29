@@ -4,13 +4,13 @@ import kamon.util.DynamicAccess
 
 import scala.collection.immutable
 import scala.reflect.ClassTag
-import scala.util.Try
 
 /**
   * Exposes APIs for dynamically creating instances and holds the ClassLoader instance to be used by Kamon when looking
   * up resources and classes.
   */
-trait ClassLoading {
+object ClassLoading {
+
   @volatile private var _dynamicAccessClassLoader = this.getClass.getClassLoader
   @volatile private var _dynamicAccess = new DynamicAccess(_dynamicAccessClassLoader)
 
@@ -31,31 +31,31 @@ trait ClassLoading {
   /**
     * Tries to create an instance of a class with the provided fully-qualified class name and its no-arg constructor.
     */
-  def createInstance[T: ClassTag](fqcn: String): Try[T] =
+  private[kamon] def createInstance[T: ClassTag](fqcn: String): T =
     _dynamicAccess.createInstanceFor(fqcn, immutable.Seq.empty)
 
   /**
     * Tries to create an instance of a class with the provided fully-qualified class name and the provided constructor
     * arguments.
     */
-  def createInstance[T: ClassTag](fqcn: String, args: immutable.Seq[(Class[_], AnyRef)]): Try[T] =
+  private[kamon] def createInstance[T: ClassTag](fqcn: String, args: immutable.Seq[(Class[_], AnyRef)]): T =
     _dynamicAccess.createInstanceFor(fqcn, args)
 
   /**
     * Tries to create an instance of the provided Class with its no-arg constructor.
     */
-  def createInstance[T: ClassTag](clazz: Class[_]): Try[T] =
+  private[kamon] def createInstance[T: ClassTag](clazz: Class[_]): T =
     _dynamicAccess.createInstanceFor(clazz, immutable.Seq.empty)
 
   /**
     * Tries to create an instance of with the provided Class and constructor arguments.
     */
-  def createInstance[T: ClassTag](clazz: Class[_], args: immutable.Seq[(Class[_], AnyRef)]): Try[T] =
+  private[kamon] def createInstance[T: ClassTag](clazz: Class[_], args: immutable.Seq[(Class[_], AnyRef)]): T =
     _dynamicAccess.createInstanceFor(clazz, args)
 
   /**
     * Tries load a class with the provided fully-qualified class name.
     */
-  def resolveClass[T: ClassTag](fqcn: String): Try[Class[_ <: T]] =
+  private[kamon] def resolveClass[T: ClassTag](fqcn: String): Class[_ <: T] =
     _dynamicAccess.getClassFor(fqcn)
 }

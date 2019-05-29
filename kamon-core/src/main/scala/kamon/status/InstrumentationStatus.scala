@@ -7,8 +7,6 @@ import java.lang.{Boolean => JBoolean}
 import java.util.{List => JavaList, Map => JavaMap}
 import scala.collection.JavaConverters.{asScalaBufferConverter, mapAsScalaMapConverter}
 
-import scala.util.Try
-
 /**
   * This object works as a bridge between Kamon and Kanela to gather information about instrumentation modules. When
   * instrumentation is enabled, it should be possible to access the instrumentation registry from the System
@@ -31,7 +29,7 @@ object InstrumentationStatus {
     * ClassLoader every time this method is called and then, try to parse its contents.
     */
   def create(warnIfFailed: Boolean = true): Status.Instrumentation = {
-    val instrumentationInfo = Try {
+    try {
       val kanelaLoaded = JBoolean.parseBoolean(System.getProperty(_kanelaLoadedPropertyName))
       val registryClass = Class.forName(_registryClassName, false, ClassLoader.getSystemClassLoader)
 
@@ -53,19 +51,21 @@ object InstrumentationStatus {
         .toSeq
 
       Status.Instrumentation(present, modules, errors)
+    } catch {
+      case t: Throwable =>
+
+        if(warnIfFailed) {
+          t match {
+            case _: ClassNotFoundException if warnIfFailed =>
+              _logger.warn("Failed to load the instrumentation modules status because the Kanela agent is not available")
+
+            case t: Throwable if warnIfFailed =>
+              _logger.warn("Failed to load the instrumentation modules status", t)
+          }
+        }
+
+        Status.Instrumentation(false, Seq.empty, Seq.empty)
     }
-
-    if(warnIfFailed) {
-      instrumentationInfo.failed.foreach {
-        case _: ClassNotFoundException =>
-          _logger.warn("Failed to load the instrumentation modules status because the Kanela agent is not available")
-
-        case t: Throwable =>
-          _logger.warn("Failed to load the instrumentation modules status", t)
-      }
-    }
-
-    instrumentationInfo.getOrElse(Status.Instrumentation(false, Seq.empty, Seq.empty))
   }
 
   /**
