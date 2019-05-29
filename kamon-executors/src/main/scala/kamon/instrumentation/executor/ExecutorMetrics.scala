@@ -21,17 +21,17 @@ import kamon.tag.TagSet
 
 object ExecutorMetrics {
 
-  val ExecutorMinThreads = Kamon.gauge (
+  val MinThreads = Kamon.gauge (
     name = "executor.threads.min",
     description = "Tracks executor minimum number of Threads"
   )
 
-  val ExecutorMaxThreads = Kamon.gauge (
+  val MaxThreads = Kamon.gauge (
     name = "executor.threads.max",
     description = "Tracks executor maximum number of Threads"
   )
 
-  val ExecutorParallelism = Kamon.gauge (
+  val Parallelism = Kamon.gauge (
     name = "executor.parallelism",
     description = "Tracks executor parallelism"
   )
@@ -72,8 +72,8 @@ object ExecutorMetrics {
   class ThreadPoolInstruments(name: String, extraTags: TagSet, executorType: String = "tpe")
       extends InstrumentGroup(extraTags.withTag("name", name).withTag("type", executorType)) {
 
-    val poolMin = register(ExecutorMinThreads)
-    val poolMax = register(ExecutorMaxThreads)
+    val poolMin = register(MinThreads)
+    val poolMax = register(MaxThreads)
     val submittedTasks = register(TasksSubmitted)
     val completedTasks = register(TasksCompleted)
     val queuedTasks = register(QueueSize)
@@ -88,6 +88,6 @@ object ExecutorMetrics {
   class ForkJoinPoolInstruments(name: String, extraTags: TagSet)
       extends ThreadPoolInstruments(name, extraTags, executorType = "fjp") {
 
-    val parallelism = register(ExecutorParallelism)
+    val parallelism = register(Parallelism)
   }
 }
