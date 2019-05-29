@@ -26,8 +26,10 @@ object Gauge {
 
     @volatile private var _currentValue = 0D
 
-    override def update(value: Double): Gauge = {
-      _currentValue = value
+    override def update(newValue: Double): Gauge = {
+      if(newValue >= 0D)
+        _currentValue = newValue
+
       this
     }
 

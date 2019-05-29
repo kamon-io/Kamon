@@ -36,5 +36,12 @@ class GaugeSpec extends WordSpec with Matchers with InstrumentInspection.Syntax 
       gauge.value shouldBe 17D
       gauge.value shouldBe 17D
     }
+
+    "ignore updates with negative values" in {
+      val gauge = Kamon.gauge("non-negative-value").withoutTags().update(30)
+      gauge.value shouldBe 30D
+      gauge.update(-20D)
+      gauge.value shouldBe 30D
+    }
   }
 }
