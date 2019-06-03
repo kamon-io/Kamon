@@ -8,8 +8,6 @@ import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.api.instrumentation.bridge.Bridge
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 
-import scala.util.Try
-
 /**
   * Ensures that chained transformations on Scala Futures (e.g. future.map(...).flatmap(...)) will propagate the context
   * set on each transformation to the next transformation.
@@ -65,7 +63,7 @@ object CallbackRunnableRunInstrumentation {
   trait InternalState {
 
     @Bridge("scala.util.Try value()")
-    def valueBridge(): Try[_]
+    def valueBridge(): Any
 
   }
 

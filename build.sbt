@@ -13,14 +13,14 @@
  * =========================================================================================
  */
 
-val kamonCore        = "io.kamon"     %% "kamon-core"                   % "2.0.0-M4"
-val kamonTestkit     = "io.kamon"     %% "kamon-testkit"                % "2.0.0-M4"
-val kamonExecutors   = "io.kamon"     %% "kamon-executors"              % "2.0.0-M1"
-val kamonInstrument  = "io.kamon"     %% "kamon-instrumentation-common" % "2.0.0-M1"
-val kanelaAgent      = "io.kamon"     %  "kanela-agent"                 % "1.0.0-M2"
+val kamonCore        = "io.kamon"     %% "kamon-core"                   % "2.0.0-M5"
+val kamonTestkit     = "io.kamon"     %% "kamon-testkit"                % "2.0.0-M5"
+val kamonExecutors   = "io.kamon"     %% "kamon-executors"              % "2.0.0-M2"
+val kamonInstrument  = "io.kamon"     %% "kamon-instrumentation-common" % "2.0.0-M2"
+val kanelaAgent      = "io.kamon"     %  "kanela-agent"                 % "1.0.0-M3"
 
-val twitterUtilCore  = "com.twitter"  %% "util-core"                    % "6.40.0"
-val scalazConcurrent = "org.scalaz"   %% "scalaz-concurrent"            % "7.2.8"
+val twitterUtilCore  = "com.twitter"   %% "util-core"                   % "6.40.0"
+val scalazConcurrent = "org.scalaz"    %% "scalaz-concurrent"           % "7.2.8"
 val catsEffect       = "org.typelevel" %%  "cats-effect"                % "1.2.0"
 
 resolvers in ThisBuild += Resolver.bintrayRepo("kamon-io", "snapshots")

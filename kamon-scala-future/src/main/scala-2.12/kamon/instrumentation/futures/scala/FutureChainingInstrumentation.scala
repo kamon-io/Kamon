@@ -1,6 +1,7 @@
 package kamon.instrumentation.futures.scala
 
 import kamon.Kamon
+import kamon.context.Context
 import kamon.context.Storage.Scope
 import kamon.instrumentation.context._
 import kamon.instrumentation.futures.scala.CallbackRunnableRunInstrumentation.InternalState
@@ -8,7 +9,7 @@ import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.api.instrumentation.bridge.Bridge
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 
-import scala.util.Try
+import scala.concurrent.Future
 
 /**
   * Ensures that chained transformations on Scala Futures (e.g. future.map(...).flatmap(...)) will propagate the context
@@ -45,6 +46,14 @@ class FutureChainingInstrumentation extends InstrumentationBuilder {
     .advise(method("run"), CallbackRunnableRunInstrumentation)
     .advise(method("executeWithValue"), CaptureCurrentTimestampOnEnter)
 
+  /**
+    * In Scala 2.12, all Futures are created by calling .map(...) on Future.unit and if happens that while that seed
+    * Future was initialized there was non-empty current Context, that Context will be tied to all Futures which is
+    * obviously wrong. Little tweak ensures that no Context is retained on that seed Future.
+    */
+  onType("scala.concurrent.Future$")
+    .advise(isConstructor, CleanContextFromSeedFuture)
+
 }
 
 object CallbackRunnableRunInstrumentation {
@@ -55,7 +64,7 @@ object CallbackRunnableRunInstrumentation {
   trait InternalState {
 
     @Bridge("scala.util.Try value()")
-    def valueBridge(): Try[_]
+    def valueBridge(): Any
 
   }
 
@@ -86,7 +95,7 @@ object CallbackRunnableRunInstrumentation {
   private val _schedulingTimestamp = new ThreadLocal[java.lang.Long]()
 
   private def storeCurrentRunnableTimestamp(timestamp: Long): Unit =
-      _schedulingTimestamp.set(timestamp)
+    _schedulingTimestamp.set(timestamp)
 
   private def clearCurrentRunnableTimestamp(): Unit =
     _schedulingTimestamp.remove()
@@ -95,8 +104,9 @@ object CallbackRunnableRunInstrumentation {
 object CopyContextFromArgumentToResult {
 
   @Advice.OnMethodExit(suppress = classOf[Throwable])
-  def enter(@Advice.Argument(0) arg: Any, @Advice.Return result: Any): Any =
+  def exit(@Advice.Argument(0) arg: Any, @Advice.Return result: Any): Unit = {
     result.asInstanceOf[HasContext].setContext(arg.asInstanceOf[HasContext].context)
+  }
 }
 
 object CopyCurrentContextToArgument {
@@ -104,4 +114,16 @@ object CopyCurrentContextToArgument {
   @Advice.OnMethodEnter(suppress = classOf[Throwable])
   def enter(@Advice.Argument(0) arg: Any): Unit =
     arg.asInstanceOf[HasContext].setContext(Kamon.currentContext())
+}
+
+object CleanContextFromSeedFuture {
+
+  @Advice.OnMethodExit
+  def exit(@Advice.This futureCompanionObject: Any): Unit = {
+    val unitField = futureCompanionObject.getClass.getDeclaredField("unit")
+    unitField.setAccessible(true)
+    unitField.get(futureCompanionObject).asInstanceOf[Future[Unit]].value.foreach(unitValue => {
+      unitValue.asInstanceOf[HasContext].setContext(Context.Empty)
+    })
+  }
 }
