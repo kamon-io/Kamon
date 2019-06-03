@@ -16,7 +16,7 @@ import Tests._
 
 val kamonCore             = "io.kamon"  %%  "kamon-core"                    % "2.0.0-M5"
 val kamonTestkit          = "io.kamon"  %%  "kamon-testkit"                 % "2.0.0-M5"
-val kamonInstrumentation  = "io.kamon"  %%  "kamon-instrumentation-common"  % "2.0.0-M1"
+val kamonInstrumentation  = "io.kamon"  %%  "kamon-instrumentation-common"  % "2.0.0-M2"
 val kanelaAgent           = "io.kamon"  %   "kanela-agent"                  % "1.0.0-M3"
 
 val guava         = "com.google.guava"  % "guava"  % "24.1-jre"
