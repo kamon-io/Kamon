@@ -26,9 +26,10 @@ lazy val root = (project in file("."))
   .settings(name := "kamon-jdbc")
   .settings(instrumentationSettings: _*)
   .settings(
-      kamonUseAspectJ := true,
-      kamonAspectJVersion := "1.9.4",
-      libraryDependencies ++=
-        compileScope(kamonCore) ++
-        providedScope(aspectJ, hikariCP, slick) ++
-        testScope(h2, kamonTestkit, scalatest, slf4jApi, logbackClassic))
+    kamonUseAspectJ := true,
+    kamonAspectJVersion := "1.9.4",
+    crossScalaVersions := Seq("2.12.8", "2.11.12"),
+    libraryDependencies ++=
+      compileScope(kamonCore) ++
+      providedScope(aspectJ, hikariCP, slick) ++
+      testScope(h2, kamonTestkit, scalatest, slf4jApi, logbackClassic))
