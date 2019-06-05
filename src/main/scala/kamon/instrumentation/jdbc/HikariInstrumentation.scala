@@ -13,15 +13,14 @@
  * =========================================================================================
  */
 
-package kamon.jdbc.instrumentation
+package kamon.instrumentation.jdbc
 
 import java.lang.reflect.Method
 import java.sql.{Connection, SQLException, Statement}
 import java.util.concurrent.Callable
 
 import com.zaxxer.hikari.HikariConfig
-import kamon.jdbc.Metrics
-import kamon.jdbc.instrumentation.mixin.{HasConnectionPoolMetrics, HasConnectionPoolMetricsMixin}
+import kamon.instrumentation.jdbc.mixin.{HasConnectionPoolMetrics, HasConnectionPoolMetricsMixin}
 import kamon.tag.TagSet
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.asm.Advice
@@ -84,11 +83,11 @@ object HikariPoolConstructorAdvisor {
   @OnMethodExit
   def onExit(@Advice.This hikariPool:HasConnectionPoolMetrics, @Advice.Argument(0) config:HikariConfig): Unit = {
     hikariPool.setConnectionPoolMetrics(
-      Metrics.ConnectionPoolMetrics(
-        Map(
-          "poolVendor" -> "hikari",
-          "poolName" -> config.getPoolName
-        )
+      JdbcMetrics.poolInstruments(
+        TagSet.builder()
+          .add("jdbc.pool.vendor", "hikari")
+          .add("jdbc.pool.name", config.getPoolName)
+          .build()
       )
     )
   }
@@ -102,7 +101,7 @@ object HikariPoolShutdownMethodAdvisor {
 
   @OnMethodExit
   def onExit(@This hikariPool: Object): Unit =
-    hikariPool.asInstanceOf[HasConnectionPoolMetrics].connectionPoolMetrics.cleanup()
+    hikariPool.asInstanceOf[HasConnectionPoolMetrics].connectionPoolMetrics.remove()
 }
 
 /**

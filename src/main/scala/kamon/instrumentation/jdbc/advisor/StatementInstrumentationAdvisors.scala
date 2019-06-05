@@ -13,12 +13,12 @@
  * =========================================================================================
  */
 
-package kamon.jdbc.instrumentation.advisor
+package kamon.instrumentation.jdbc.advisor
 
 import java.sql.{PreparedStatement, Statement}
 
-import kamon.jdbc.instrumentation.StatementMonitor
-import kamon.jdbc.instrumentation.StatementMonitor.{KamonMonitorTraveler, StatementTypes}
+import kamon.instrumentation.jdbc.StatementMonitor
+import kamon.instrumentation.jdbc.StatementMonitor.{KamonMonitorTraveler, StatementTypes}
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 import kanela.agent.libs.net.bytebuddy.asm.Advice.Thrown
 

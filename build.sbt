@@ -14,10 +14,11 @@
  */
 
 
-val kamonCore           = "io.kamon"            %% "kamon-core"               % "2.0.0-d2d5cb18261e2c79b86340bf39524394700415e8"
-val kamonTestkit        = "io.kamon"            %% "kamon-testkit"            % "2.0.0-d2d5cb18261e2c79b86340bf39524394700415e8"
-val scalaExtension      = "io.kamon"            %% "kanela-scala-extension"   % "0.0.14"
+val kamonCore           = "io.kamon"            %% "kamon-core"               % "2.0.0-M5"
+val kamonTestkit        = "io.kamon"            %% "kamon-testkit"            % "2.0.0-M5"
+val kanela              = "io.kamon"            %  "kanela-agent"             % "1.0.0-M3"
 
+val slick               = "com.typesafe.slick"       %% "slick"                     % "3.2.3"
 val h2                  = "com.h2database"            % "h2"                        % "1.4.182"
 val mariaConnector      = "org.mariadb.jdbc"          % "mariadb-java-client"       % "2.2.6"
 val mariaDB4j           = "ch.vorburger.mariaDB4j"    % "mariaDB4j"                 % "2.2.3"
@@ -25,14 +26,10 @@ val hikariCP            = "com.zaxxer"                % "HikariCP"              
 
 lazy val root = (project in file("."))
   .enablePlugins(JavaAgent)
-  .settings(name := "kamon-jdbc")
-  .settings(scalaVersion := "2.12.6")
-  .settings(  crossScalaVersions := Seq("2.12.6"/*, "2.11.12", "2.10.7"*/))
-  .settings(javaAgents += "io.kamon"    % "kanela-agent"   % "0.0.18-SNAPSHOT"  % "compile;test")
-  .settings(resolvers += Resolver.bintrayRepo("kamon-io", "snapshots"))
-  .settings(resolvers += Resolver.mavenLocal)
+  .settings(instrumentationSettings)
   .settings(
-      libraryDependencies ++=
-        compileScope(kamonCore, scalaExtension) ++
-        providedScope(hikariCP, mariaConnector) ++
-        testScope(h2, mariaDB4j, kamonTestkit, scalatest, slf4jApi, logbackClassic))
+    name := "kamon-jdbc",
+    libraryDependencies ++=
+      compileScope(kamonCore) ++
+      providedScope(kanela, hikariCP, mariaConnector, slick) ++
+      testScope(h2, mariaDB4j, kamonTestkit, scalatest, slf4jApi, logbackClassic))

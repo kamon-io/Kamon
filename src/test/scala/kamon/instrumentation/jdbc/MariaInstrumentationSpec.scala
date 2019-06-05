@@ -13,14 +13,13 @@
  * =========================================================================================
  */
 
-package kamon.jdbc.instrumentation
+package kamon.instrumentation.jdbc
 
 import java.sql.{Connection, DriverManager, ResultSet}
 
 import ch.vorburger.mariadb4j.DB
 import kamon.Kamon
-import kamon.jdbc.Metrics
-import kamon.jdbc.instrumentation.StatementMonitor.StatementTypes
+import kamon.instrumentation.jdbc.StatementMonitor.StatementTypes
 import kamon.module.Module.Registration
 import kamon.testkit.{InstrumentInspection, MetricInspection, Reconfigure, TestSpanReporter}
 import kamon.tag.Lookups._
@@ -29,7 +28,7 @@ import org.scalatest.time.SpanSugar
 import org.scalatest.{BeforeAndAfterAll, Matchers, OptionValues, WordSpec}
 
 class MariaInstrumentationSpec extends WordSpec with Matchers with Eventually with SpanSugar with BeforeAndAfterAll
-  with MetricInspection.Syntax with InstrumentInspection.Syntax with Reconfigure with OptionValues {
+  with MetricInspection.Syntax with InstrumentInspection.Syntax with Reconfigure with OptionValues with TestSpanReporter {
 
   "the MariaInstrumentation" should {
     "generate Spans on calls to .executeQuery() in prepared statements" in {
@@ -38,11 +37,11 @@ class MariaInstrumentationSpec extends WordSpec with Matchers with Eventually wi
       validateNextRow(resultSet, valueNr = 3, valueName = "foo")
 
       eventually {
-        val span = reporter.nextSpan().value
+        val span = testSpanReporter().nextSpan().value
         span.operationName shouldBe StatementTypes.Query
-        span.tags.get(plain("component")) shouldBe "jdbc"
+        span.metricTags.get(plain("component")) shouldBe "jdbc"
         span.tags.get(plain("db.statement")) should include("SELECT * FROM Address where Nr = 3")
-        reporter.nextSpan() shouldBe None
+        testSpanReporter.nextSpan() shouldBe None
       }
     }
 
@@ -52,11 +51,11 @@ class MariaInstrumentationSpec extends WordSpec with Matchers with Eventually wi
       validateNextRow(resultSet, valueNr = 4, valueName = "faa")
 
       eventually {
-        val span = reporter.nextSpan().value
+        val span = testSpanReporter.nextSpan().value
         span.operationName shouldBe StatementTypes.Query
-        span.tags.get(plain("component")) shouldBe ("jdbc")
+        span.metricTags.get(plain("component")) shouldBe ("jdbc")
         span.tags.get(plain("db.statement")) should include("SELECT * FROM Address where Nr = 4")
-        reporter.nextSpan() shouldBe None
+        testSpanReporter.nextSpan() shouldBe None
       }
     }
 
@@ -66,11 +65,11 @@ class MariaInstrumentationSpec extends WordSpec with Matchers with Eventually wi
       affectedRows shouldBe 1
 
       eventually {
-        val span = reporter.nextSpan().value
+        val span = testSpanReporter.nextSpan().value
         span.operationName shouldBe StatementTypes.Update
-        span.tags.get(plain("component")) shouldBe "jdbc"
+        span.metricTags.get(plain("component")) shouldBe "jdbc"
         span.tags.get(plain("db.statement"))should include("INSERT INTO Address (Nr, Name) VALUES(1, 'foo')")
-        reporter.nextSpan() shouldBe None
+        testSpanReporter.nextSpan() shouldBe None
       }
     }
 
@@ -80,11 +79,11 @@ class MariaInstrumentationSpec extends WordSpec with Matchers with Eventually wi
       affectedRows shouldBe 1
 
       eventually {
-        val span = reporter.nextSpan().value
+        val span = testSpanReporter.nextSpan().value
         span.operationName shouldBe StatementTypes.Update
-        span.tags.get(plain("component")) shouldBe "jdbc"
+        span.metricTags.get(plain("component")) shouldBe "jdbc"
         span.tags.get(plain("db.statement")) should include("INSERT INTO Address (Nr, Name) VALUES(2, 'foo')")
-        reporter.nextSpan() shouldBe None
+        testSpanReporter.nextSpan() shouldBe None
       }
     }
   }
@@ -96,11 +95,8 @@ class MariaInstrumentationSpec extends WordSpec with Matchers with Eventually wi
     resultSet.next() shouldBe shouldBeMore
   }
 
-  var registration: Registration = _
   var connection:Connection = _
   val db = DB.newEmbeddedDB(3306)
-  val reporter = new TestSpanReporter()
-
 
   override protected def beforeAll(): Unit = {
     db.start()
@@ -112,15 +108,10 @@ class MariaInstrumentationSpec extends WordSpec with Matchers with Eventually wi
     connection.createStatement().executeUpdate(s"INSERT INTO Address (Nr, Name) VALUES(3, 'foo')")
     connection.createStatement().executeUpdate(s"INSERT INTO Address (Nr, Name) VALUES(4, 'faa')")
 
-    Metrics.Statements.inFlight.withoutTags().distribution()
-
-    enableFastSpanFlushing()
-    sampleAlways()
-    registration = Kamon.registerModule("testReporter", reporter)
+    JdbcMetrics.InFlightStatements.withoutTags().distribution()
   }
 
   override protected def afterAll(): Unit = {
     db.stop()
-    registration.cancel()
   }
 }

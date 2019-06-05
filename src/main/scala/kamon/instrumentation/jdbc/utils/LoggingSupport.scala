@@ -13,7 +13,7 @@
  * =========================================================================================
  */
 
-package kamon.jdbc.utils
+package kamon.instrumentation.jdbc.utils
 
 import org.slf4j.{Logger, LoggerFactory}
 

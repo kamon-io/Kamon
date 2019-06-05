@@ -13,19 +13,19 @@
  * =========================================================================================
  */
 
-package kamon.jdbc.instrumentation.mixin
+package kamon.instrumentation.jdbc.mixin
 
-import kamon.jdbc.Metrics
+import kamon.instrumentation.jdbc.JdbcMetrics
 
 trait HasConnectionPoolMetrics {
-  def connectionPoolMetrics: Metrics.ConnectionPoolMetrics
-  def setConnectionPoolMetrics(cpm: Metrics.ConnectionPoolMetrics): Unit
+  def connectionPoolMetrics: JdbcMetrics.ConnectionPoolInstruments
+  def setConnectionPoolMetrics(cpm: JdbcMetrics.ConnectionPoolInstruments): Unit
 }
 
 class HasConnectionPoolMetricsMixin extends HasConnectionPoolMetrics {
-  @volatile private var tracker: Metrics.ConnectionPoolMetrics = _
+  @volatile private var tracker: JdbcMetrics.ConnectionPoolInstruments = _
 
-  override def connectionPoolMetrics: Metrics.ConnectionPoolMetrics = this.tracker
-  override def setConnectionPoolMetrics(cpm: Metrics.ConnectionPoolMetrics): Unit = this.tracker = cpm
+  override def connectionPoolMetrics: JdbcMetrics.ConnectionPoolInstruments = this.tracker
+  override def setConnectionPoolMetrics(cpm: JdbcMetrics.ConnectionPoolInstruments): Unit = this.tracker = cpm
 }
 

@@ -13,50 +13,23 @@
  * =========================================================================================
  */
 
-package kamon.jdbc.instrumentation
+package kamon.instrumentation.jdbc
 
-import kamon.jdbc.instrumentation.advisor._
-import kamon.jdbc.instrumentation.mixin.HasConnectionPoolMetricsMixin
+import kamon.instrumentation.jdbc.advisor._
+import kamon.instrumentation.jdbc.mixin.HasConnectionPoolMetricsMixin
 import kanela.agent.api.instrumentation.InstrumentationBuilder
-import kanela.agent.scala.KanelaInstrumentation
-
 
 class StatementInstrumentation extends InstrumentationBuilder {
 
-  /**
-    * Instrument:
-    *
-    * java.sql.Statement::execute
-    * java.sql.Statement::executeQuery
-    * java.sql.Statement::executeUpdate
-    * java.sql.Statement::executeBatch
-    * java.sql.Statement::executeLargeBatch
-    *
-    * Mix:
-    *
-    * java.sql.Statement with kamon.jdbc.instrumentation.mixin.HasConnectionPoolMetrics
-    *
-    */
   private val withOneStringArgument = withArgument(0, classOf[String])
 
   onSubTypesOf("java.sql.Statement")
-      .mixin(classOf[HasConnectionPoolMetricsMixin])
-      .advise(method("execute").and(withOneStringArgument), classOf[StatementExecuteMethodAdvisor])
-      .advise(method("executeQuery").and(withOneStringArgument), classOf[StatementExecuteQueryMethodAdvisor])
-      .advise(method("executeUpdate").and(withOneStringArgument), classOf[StatementExecuteUpdateMethodAdvisor])
-      .advise(anyMethods("executeBatch", "executeLargeBatch"), classOf[StatementExecuteBatchMethodAdvisor])
+    .mixin(classOf[HasConnectionPoolMetricsMixin])
+    .advise(method("execute").and(withOneStringArgument), classOf[StatementExecuteMethodAdvisor])
+    .advise(method("executeQuery").and(withOneStringArgument), classOf[StatementExecuteQueryMethodAdvisor])
+    .advise(method("executeUpdate").and(withOneStringArgument), classOf[StatementExecuteUpdateMethodAdvisor])
+    .advise(anyMethods("executeBatch", "executeLargeBatch"), classOf[StatementExecuteBatchMethodAdvisor])
 
-
-  /**
-    * Instrument:
-    *
-    * java.sql.PreparedStatement::execute
-    * java.sql.PreparedStatement::executeQuery
-    * java.sql.PreparedStatement::executeUpdate
-    * java.sql.PreparedStatement::executeBatch
-    * java.sql.PreparedStatement::executeLargeBatch
-    *
-    */
   onSubTypesOf("java.sql.PreparedStatement")
     .advise(method("execute"), classOf[PreparedStatementExecuteMethodAdvisor])
     .advise(method("executeQuery"), classOf[PreparedStatementExecuteQueryMethodAdvisor])

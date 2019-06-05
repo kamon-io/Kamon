@@ -13,7 +13,7 @@
  * =========================================================================================
  */
 
-package kamon.jdbc.instrumentation
+package kamon.instrumentation.jdbc
 
 import java.sql.SQLException
 import java.util.concurrent.Executors
@@ -21,7 +21,6 @@ import java.util.concurrent.Executors
 import com.typesafe.config.ConfigFactory
 import com.zaxxer.hikari.{HikariConfig, HikariDataSource}
 import kamon.Kamon
-import kamon.jdbc.Metrics
 import kamon.tag.TagSet
 import kamon.testkit.{InstrumentInspection, MetricInspection}
 import org.scalatest.concurrent.Eventually
@@ -46,7 +45,7 @@ class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually w
       val pool1 = createPool("example-1")
       val pool2 = createPool("example-2")
 
-      Metrics.openConnections.tagValues("poolName") should contain allOf(
+      JdbcMetrics.OpenConnections.tagValues("jdbc.pool.name") should contain allOf(
         "example-1",
         "example-2"
       )
@@ -55,7 +54,7 @@ class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually w
       pool2.close()
 
       Thread.sleep(2000)
-      Metrics.openConnections.tagValues("poolName") shouldBe empty
+      JdbcMetrics.OpenConnections.tagValues("jdbc.pool.name") shouldBe empty
     }
 
     "track the number of open connections to the database" in {
@@ -67,19 +66,19 @@ class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually w
 
       val tags = TagSet.from(
         Map(
-          "poolVendor" -> "hikari",
-          "poolName" -> "track-open-connections"
+          "jdbc.pool.vendor"  -> "hikari",
+          "jdbc.pool.name"    -> "track-open-connections"
         )
       )
 
       eventually(timeout(15 seconds), interval(200 millis)) {
-        Metrics.openConnections.withTags(tags).distribution(false).max shouldBe (10)
+        JdbcMetrics.OpenConnections.withTags(tags).distribution(false).max shouldBe (10)
       }
 
       connections.foreach(_.close())
 
       eventually(timeout(15 seconds),  interval(1 second)) {
-        Metrics.openConnections.withTags(tags).distribution(false).max shouldBe (0)
+        JdbcMetrics.OpenConnections.withTags(tags).distribution(false).max shouldBe (0)
       }
 
       pool.close()
@@ -94,19 +93,19 @@ class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually w
 
       val tags = TagSet.from(
         Map(
-          "poolVendor" -> "hikari",
-          "poolName" -> "track-borrowed-connections"
+          "jdbc.pool.vendor" -> "hikari",
+          "jdbc.pool.name" -> "track-borrowed-connections"
         )
       )
 
       eventually(timeout(30 seconds),  interval(1 second)) {
-        Metrics.borrowedConnections.withTags(tags).distribution().max shouldBe (10)
+        JdbcMetrics.BorrowedConnections.withTags(tags).distribution().max shouldBe (10)
       }
 
       connections.drop(5).foreach(_.close())
 
       eventually(timeout(30 seconds),  interval(1 second)) {
-        Metrics.borrowedConnections.withTags(tags).distribution().max shouldBe (5)
+        JdbcMetrics.BorrowedConnections.withTags(tags).distribution().max shouldBe (5)
       }
 
       pool.close()
@@ -121,14 +120,14 @@ class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually w
 
       val tags = TagSet.from(
         Map(
-          "poolVendor" -> "hikari",
-          "poolName" -> "track-borrow-time"
+          "jdbc.pool.vendor" -> "hikari",
+          "jdbc.pool.name" -> "track-borrow-time"
         )
       )
 
 
       eventually {
-        Metrics.borrowTime.withTags(tags).distribution(resetState = false).count shouldBe (6) // 5 + 1 during setup
+        JdbcMetrics.BorrowTime.withTags(tags).distribution(resetState = false).count shouldBe (6) // 5 + 1 during setup
       }
     }
 
@@ -143,7 +142,7 @@ class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually w
         try {
           pool.getConnection()
         } catch {
-          case ex =>
+          case ex: Throwable =>
             println(ex.getMessage)
             throw ex
         }
@@ -151,16 +150,16 @@ class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually w
 
       val tags = TagSet.from(
         Map(
-          "poolVendor" -> "hikari",
-          "poolName" -> "track-borrow-timeouts"
+          "jdbc.pool.vendor" -> "hikari",
+          "jdbc.pool.name" -> "track-borrow-timeouts"
         )
       )
 
       eventually(timeout(30 seconds),  interval(1 second)) {
-        Metrics.borrowTime.withTags(tags).distribution(resetState = false).max shouldBe ((1 seconds).toNanos +- (100 milliseconds).toNanos)
+        JdbcMetrics.BorrowTime.withTags(tags).distribution(resetState = false).max shouldBe ((1 seconds).toNanos +- (100 milliseconds).toNanos)
       }
 
-      Metrics.borrowTimeouts.withTags(tags).value() shouldBe 1
+      JdbcMetrics.BorrowTimeouts.withTags(tags).value() shouldBe 1
     }
 
   }
