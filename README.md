@@ -40,7 +40,7 @@ Inserting a `conversionRule` allows you to incorporate the trace ID for a reques
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration scan="false" debug="false">
-  <conversionRule conversionWord="traceID" converterClass="kamon.instrumentation.logback.LogbackTraceIDConverter" />
+  <conversionRule conversionWord="traceID" converterClass="kamon.instrumentation.logback.tools.LogbackTraceIDConverter" />
 
   <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
     <encoder>
@@ -98,7 +98,7 @@ This library allows you to do that by just changing the logback.xml file and add
       <pattern>%d{yyyy-MM-dd HH:mm:ss} | %-5level | %traceID | %c{0} -> %m%n</pattern>
     </encoder>
   </appender>
-  <appender name="COUNTER" class="kamon.logback.LogbackEntriesCounterAppender"/>
+  <appender name="COUNTER" class="kamon.instrumentation.logback.LogbackEntriesCounterAppender"/>
 
   <root level="DEBUG">
     <appender-ref ref="STDOUT" />

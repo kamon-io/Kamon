@@ -15,7 +15,9 @@
 
 val kamonCore     = "io.kamon" %%  "kamon-core"     % "2.0.0-M5"
 val kamonTestkit  = "io.kamon" %%  "kamon-testkit"  % "2.0.0-M5"
-val kanela        = "io.kamon" %   "kanela-agent"  % "1.0.0-M3"
+val kanela        = "io.kamon" %   "kanela-agent"   % "1.0.0-M3"
+val kamonCommon   = "io.kamon" %%  "kamon-instrumentation-common"  % "2.0.0-M2"
+
 val latestLogbackClassic  = "ch.qos.logback"  %   "logback-classic" % "1.2.3"
 
 resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
@@ -28,6 +30,6 @@ lazy val root = (project in file("."))
     name := "kamon-logback",
     scalaVersion := "2.12.6",
     libraryDependencies ++=
-      compileScope(kamonCore) ++
+      compileScope(kamonCore, kamonCommon) ++
       providedScope(kanela, latestLogbackClassic) ++
       testScope(kamonTestkit, scalatest))

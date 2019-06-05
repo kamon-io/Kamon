@@ -14,46 +14,45 @@
  * =========================================================================================
  */
 
-package kamon.instrumentation
+package kamon.instrumentation.logback
 
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
 import kamon.context.Context
-import kamon.instrumentation.logback.Logback
 import kamon.trace.Span
 import org.scalatest._
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.SpanSugar._
 import org.slf4j.MDC
 
-class LogbackSpanConverterSpec extends WordSpec with Matchers with Eventually {
+class LogbackMdcCopyingSpec extends WordSpec with Matchers with Eventually {
 
-  "TokenConverter" when {
-    "a span is uninitialized" should {
+  "the Logback appender instrumentation" when {
+    "there is no context attached to the logging events" should {
       "report an undefined context" in {
         val appender = buildMemoryAppender(configurator)
         appender.doAppend(createLoggingEvent(context))
-        appender.getLastLine should be("undefined")
+        appender.getLastLine should be("undefined undefined")
       }
     }
 
-    "a span is initialized" should {
-      "report the its context" in {
+    "there is a context attached to the logging events" should {
+      "make the Span information available to the log patterns" in {
         val memoryAppender = buildMemoryAppender(configurator)
 
         val span = Kamon.spanBuilder("my-span").start()
         val traceID = span.trace.id
         val contextWithSpan = Context.of(Span.Key, span)
 
-        Kamon.withContext(contextWithSpan) {
+        Kamon.storeContext(contextWithSpan) {
           memoryAppender.doAppend(createLoggingEvent(context))
         }
 
-        memoryAppender.getLastLine shouldBe traceID.string
+        memoryAppender.getLastLine shouldBe (traceID.string + " " + span.id.string)
       }
 
-      "MDC context" in {
-        val memoryAppender = buildMemoryAppender(configurator,s"%X{${Logback.mdcTraceKey}} %X{${Logback.mdcSpanKey}} %X{mdc_key}")
+      "copy context information into the MDC" in {
+        val memoryAppender = buildMemoryAppender(configurator,s"%X{${LogbackInstrumentation.settings().mdcTraceIdKey}} %X{${LogbackInstrumentation.settings().mdcSpanIdKey}} %X{mdc_key}")
 
         val span = Kamon.spanBuilder("my-span").start()
         val traceID = span.trace.id
@@ -61,19 +60,19 @@ class LogbackSpanConverterSpec extends WordSpec with Matchers with Eventually {
         val contextWithSpan = Context.of(Span.Key, span)
 
         MDC.put("mdc_key","mdc_value")
-        Kamon.withContext(contextWithSpan) {
+        Kamon.storeContext(contextWithSpan) {
           memoryAppender.doAppend(createLoggingEvent(context))
         }
 
         memoryAppender.getLastLine shouldBe traceID.string + " " + spanID.string + " mdc_value"
-        MDC.get(Logback.mdcTraceKey) shouldBe null
-        MDC.get(Logback.mdcSpanKey) shouldBe null
+        MDC.get(LogbackInstrumentation.settings().mdcTraceIdKey) shouldBe null
+        MDC.get(LogbackInstrumentation.settings().mdcSpanIdKey) shouldBe null
       }
 
-      "report the custom MDC keys in the context" in {
+      "copy the configured Context entries into the MDC" in {
         Kamon.reconfigure(
           ConfigFactory
-            .parseString("kamon.logback.mdc-traced-keys = [ testKey1, testKey2 ]")
+            .parseString("kamon.instrumentation.logback.mdc.copy.entries = [ testKey1, testKey2 ]")
             .withFallback(ConfigFactory.defaultReference()))
         val memoryAppender = buildMemoryAppender(configurator, "%X{testKey1} %X{testKey2}")
 
@@ -84,14 +83,14 @@ class LogbackSpanConverterSpec extends WordSpec with Matchers with Eventually {
           .withKey(Context.key[Option[String]]("testKey1", None), Some("testKey1Value"))
           .withKey(Context.key[Option[String]]("testKey2", None), Some("testKey2Value"))
 
-        Kamon.withContext(contextWithSpan) {
+        Kamon.storeContext(contextWithSpan) {
           memoryAppender.doAppend(createLoggingEvent(context))
         }
 
         memoryAppender.getLastLine shouldBe "testKey1Value testKey2Value"
       }
 
-      "report empty if custom MDC keys are configured, but not provided" in {
+      "return entry values for entries configured to be copied but not present" in {
         Kamon.reconfigure(
           ConfigFactory
             .parseString("kamon.logback.mdc-traced-broadcast-keys = [ testKey1, testKey2 ]")
@@ -102,7 +101,7 @@ class LogbackSpanConverterSpec extends WordSpec with Matchers with Eventually {
         val contextWithSpan = Context
           .of(Span.Key, span)
 
-        Kamon.withContext(contextWithSpan) {
+        Kamon.storeContext(contextWithSpan) {
           memoryAppender.doAppend(createLoggingEvent(context))
         }
 
@@ -110,42 +109,54 @@ class LogbackSpanConverterSpec extends WordSpec with Matchers with Eventually {
       }
 
 
-      "disable MDC context" in {
+      "ignore copying information into the MDC when disabled" in {
         Kamon.reconfigure(
           ConfigFactory
-            .parseString("kamon.logback.mdc-context-propagation = off")
+            .parseString("kamon.instrumentation.logback.mdc.copy.enabled = no")
             .withFallback(ConfigFactory.defaultReference())
         )
 
-
-        val memoryAppender = buildMemoryAppender(configurator,s"%X{${Logback.mdcTraceKey}}")
-
+        val memoryAppender = buildMemoryAppender(configurator,s"%X{${LogbackInstrumentation.settings().mdcTraceIdKey}}")
         val span = Kamon.spanBuilder("my-span").start()
         val contextWithSpan = Context.of(Span.Key, span)
 
-        Kamon.withContext(contextWithSpan) {
+        Kamon.storeContext(contextWithSpan) {
           memoryAppender.doAppend(createLoggingEvent(context))
         }
 
         memoryAppender.getLastLine shouldBe ""
       }
 
-      "report the its context using an AsyncAppender" in {
-
+      "preserve the log events' Context when going through an AsyncAppender" in {
         val memoryAppender = buildMemoryAppender(configurator)
         val asyncAppender = buildAsyncAppender(configurator, memoryAppender)
-
         val span = Kamon.spanBuilder("my-span").start()
         val traceID = span.trace.id
         val contextWithSpan = Context.of(Span.Key, span)
 
-        Kamon.withContext(contextWithSpan) {
+        Kamon.storeContext(contextWithSpan) {
           asyncAppender.doAppend(createLoggingEvent(context))
         }
 
         eventually(timeout(2 seconds)) {
-          memoryAppender.getLastLine shouldBe traceID.string
+          memoryAppender.getLastLine shouldBe (traceID.string + " " + span.id.string)
         }
+      }
+
+      "allow using Context tags in the logging patterns" in {
+        val memoryAppender = buildMemoryAppender(configurator, "%contextTag{oneTag} %contextTag{otherTag:default}")
+        val contextWithTags = Context.of("oneTag", "oneValue")
+        Kamon.storeContext(contextWithTags)(memoryAppender.doAppend(createLoggingEvent(context)))
+
+        memoryAppender.getLastLine shouldBe "oneValue default"
+      }
+
+      "allow using Context entries in the logging patterns" in {
+        val memoryAppender = buildMemoryAppender(configurator, "%contextEntry{oneEntry} %contextEntry{otherEntry:default}")
+        val contextWithTags = Context.of(Context.key[String]("oneEntry", null), "oneValue")
+        Kamon.storeContext(contextWithTags)(memoryAppender.doAppend(createLoggingEvent(context)))
+
+        memoryAppender.getLastLine shouldBe "oneValue default"
       }
     }
   }

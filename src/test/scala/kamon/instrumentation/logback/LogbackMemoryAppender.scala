@@ -1,4 +1,4 @@
-package kamon.instrumentation
+package kamon.instrumentation.logback
 
 import java.io.IOException
 
