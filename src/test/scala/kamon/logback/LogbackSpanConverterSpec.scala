@@ -81,7 +81,7 @@ class LogbackSpanConverterSpec extends WordSpec with Matchers with Eventually {
         val contextWithSpan = Context
           .create(Span.ContextKey, span)
           .withKey(Key.broadcastString("testKey1"), Some("testKey1Value"))
-          .withKey(Key.broadcastString("testKey2"), Some("testKey2Value"))
+          .withKey(Key.broadcast("testKey2", ""), "testKey2Value")
 
         Kamon.withContext(contextWithSpan) {
           memoryAppender.doAppend(createLoggingEvent(context))
