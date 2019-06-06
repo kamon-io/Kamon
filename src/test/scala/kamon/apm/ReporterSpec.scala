@@ -16,13 +16,11 @@ import akka.http.scaladsl.server.directives.MethodDirectives.post
 import akka.http.scaladsl.server.directives.RouteDirectives.complete
 import akka.http.scaladsl.server.directives.PathDirectives.path
 import akka.http.scaladsl.server.Directives.{pathPrefix, _}
-import kamino.IngestionV1
 import kamino.IngestionV1.{Goodbye, Hello, MetricBatch, SpanBatch}
 import kamon.Kamon
-import kamon.apm.reporters.{KamonApmMetric, KamonApmTracing}
-import kamon.metric.{MetricsSnapshot, PeriodSnapshot}
-import kamon.trace.SpanContext
-import kamon.trace.Span.FinishedSpan
+import kamon.metric.PeriodSnapshot
+import kamon.tag.TagSet
+import kamon.trace.{Identifier, Span, Trace}
 import org.scalatest.concurrent.Eventually
 
 import scala.concurrent.duration._
@@ -75,15 +73,14 @@ class ReporterSpec extends TestKit(ActorSystem("MetricReporterSpec")) with WordS
 
   override def afterAll(): Unit = server.flatMap(_.unbind())(system.dispatcher)
 
-  val emptySnapshot = MetricsSnapshot(Seq.empty, Seq.empty, Seq.empty, Seq.empty)
+  val emptySnapshot = PeriodSnapshot(Instant.EPOCH, Instant.EPOCH.plusSeconds(1), Seq.empty, Seq.empty, Seq.empty, Seq.empty, Seq.empty)
 
   "Metric reporter on flaky network" should {
 
-    val reporter = new KamonApmMetric(Some(IngestionV1.Plan.METRIC_ONLY))
-    val tracingReporter = new KamonApmTracing()
+    var reporter: KamonApm = null
 
     "retry initial HELLO" in {
-      reporter.start()
+      reporter = new KamonApm()
       expectMsgType[Hello]
       expectMsgType[Hello]
       expectMsgType[Hello]
@@ -93,8 +90,8 @@ class ReporterSpec extends TestKit(ActorSystem("MetricReporterSpec")) with WordS
     "retry ingestion and then continue posting queued snapshots" in {
       val initialTimestamp = Kamon.clock().instant().minusSeconds(60)
       val nextTimestamp = initialTimestamp.plusMillis(100)
-      val initialSnapshot = PeriodSnapshot(initialTimestamp, nextTimestamp, emptySnapshot)
-      val nextSnapshot = PeriodSnapshot(nextTimestamp, nextTimestamp.plusMillis(100), emptySnapshot)
+      val initialSnapshot = emptySnapshot.copy(from = initialTimestamp, to = nextTimestamp)
+      val nextSnapshot = emptySnapshot.copy(from = nextTimestamp, to = nextTimestamp.plusMillis(100))
 
       reporter.reportPeriodSnapshot(initialSnapshot)
       reporter.reportPeriodSnapshot(nextSnapshot)
@@ -102,16 +99,16 @@ class ReporterSpec extends TestKit(ActorSystem("MetricReporterSpec")) with WordS
       expectMsgType[MetricBatch].getInterval.getFrom should be (initialTimestamp.toEpochMilli)
       expectMsgType[MetricBatch].getInterval.getFrom should be (initialTimestamp.toEpochMilli)
       expectMsgType[MetricBatch].getInterval.getFrom should be (initialTimestamp.toEpochMilli)
-
       expectMsgType[MetricBatch].getInterval.getFrom should be (nextTimestamp.toEpochMilli)
       expectNoMsg(1 second)
     }
 
     "retry span ingestion" in {
-      tracingReporter.start()
-      val span = FinishedSpan(SpanContext.EmptySpanContext, "", Instant.ofEpochMilli(0), Instant.ofEpochMilli(0), Map.empty, Seq.empty)
-      tracingReporter.reportSpans(Seq(span))
+      val span = Span.Finished(Identifier.Empty, Trace.Empty, Identifier.Empty, "", false, false,
+        Instant.ofEpochMilli(0), Instant.ofEpochMilli(0), Span.Kind.Unknown, Span.Position.Unknown,
+        TagSet.Empty, TagSet.Empty, Seq.empty, Seq.empty)
 
+      reporter.reportSpans(Seq(span))
       expectMsgType[SpanBatch]
       expectMsgType[SpanBatch]
       expectMsgType[SpanBatch]

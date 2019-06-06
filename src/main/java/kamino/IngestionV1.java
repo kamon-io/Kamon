@@ -78,27 +78,27 @@ public final class IngestionV1 {
     }
 
     public static com.google.protobuf.Internal.EnumLiteMap<InstrumentType>
-        internalGetValueMap() {
+    internalGetValueMap() {
       return internalValueMap;
     }
     private static final com.google.protobuf.Internal.EnumLiteMap<
         InstrumentType> internalValueMap =
-          new com.google.protobuf.Internal.EnumLiteMap<InstrumentType>() {
-            public InstrumentType findValueByNumber(int number) {
-              return InstrumentType.forNumber(number);
-            }
-          };
+        new com.google.protobuf.Internal.EnumLiteMap<InstrumentType>() {
+          public InstrumentType findValueByNumber(int number) {
+            return InstrumentType.forNumber(number);
+          }
+        };
 
     public final com.google.protobuf.Descriptors.EnumValueDescriptor
-        getValueDescriptor() {
+    getValueDescriptor() {
       return getDescriptor().getValues().get(ordinal());
     }
     public final com.google.protobuf.Descriptors.EnumDescriptor
-        getDescriptorForType() {
+    getDescriptorForType() {
       return getDescriptor();
     }
     public static final com.google.protobuf.Descriptors.EnumDescriptor
-        getDescriptor() {
+    getDescriptor() {
       return kamino.IngestionV1.getDescriptor().getEnumTypes().get(0);
     }
 
@@ -108,7 +108,7 @@ public final class IngestionV1 {
         com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
       if (desc.getType() != getDescriptor()) {
         throw new java.lang.IllegalArgumentException(
-          "EnumValueDescriptor is not for this type.");
+            "EnumValueDescriptor is not for this type.");
       }
       return VALUES[desc.getIndex()];
     }
@@ -168,27 +168,27 @@ public final class IngestionV1 {
     }
 
     public static com.google.protobuf.Internal.EnumLiteMap<Plan>
-        internalGetValueMap() {
+    internalGetValueMap() {
       return internalValueMap;
     }
     private static final com.google.protobuf.Internal.EnumLiteMap<
         Plan> internalValueMap =
-          new com.google.protobuf.Internal.EnumLiteMap<Plan>() {
-            public Plan findValueByNumber(int number) {
-              return Plan.forNumber(number);
-            }
-          };
+        new com.google.protobuf.Internal.EnumLiteMap<Plan>() {
+          public Plan findValueByNumber(int number) {
+            return Plan.forNumber(number);
+          }
+        };
 
     public final com.google.protobuf.Descriptors.EnumValueDescriptor
-        getValueDescriptor() {
+    getValueDescriptor() {
       return getDescriptor().getValues().get(ordinal());
     }
     public final com.google.protobuf.Descriptors.EnumDescriptor
-        getDescriptorForType() {
+    getDescriptorForType() {
       return getDescriptor();
     }
     public static final com.google.protobuf.Descriptors.EnumDescriptor
-        getDescriptor() {
+    getDescriptor() {
       return kamino.IngestionV1.getDescriptor().getEnumTypes().get(1);
     }
 
@@ -198,7 +198,7 @@ public final class IngestionV1 {
         com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
       if (desc.getType() != getDescriptor()) {
         throw new java.lang.IllegalArgumentException(
-          "EnumValueDescriptor is not for this type.");
+            "EnumValueDescriptor is not for this type.");
       }
       return VALUES[desc.getIndex()];
     }
@@ -294,27 +294,27 @@ public final class IngestionV1 {
     }
 
     public static com.google.protobuf.Internal.EnumLiteMap<IngestionStatus>
-        internalGetValueMap() {
+    internalGetValueMap() {
       return internalValueMap;
     }
     private static final com.google.protobuf.Internal.EnumLiteMap<
         IngestionStatus> internalValueMap =
-          new com.google.protobuf.Internal.EnumLiteMap<IngestionStatus>() {
-            public IngestionStatus findValueByNumber(int number) {
-              return IngestionStatus.forNumber(number);
-            }
-          };
+        new com.google.protobuf.Internal.EnumLiteMap<IngestionStatus>() {
+          public IngestionStatus findValueByNumber(int number) {
+            return IngestionStatus.forNumber(number);
+          }
+        };
 
     public final com.google.protobuf.Descriptors.EnumValueDescriptor
-        getValueDescriptor() {
+    getValueDescriptor() {
       return getDescriptor().getValues().get(ordinal());
     }
     public final com.google.protobuf.Descriptors.EnumDescriptor
-        getDescriptorForType() {
+    getDescriptorForType() {
       return getDescriptor();
     }
     public static final com.google.protobuf.Descriptors.EnumDescriptor
-        getDescriptor() {
+    getDescriptor() {
       return kamino.IngestionV1.getDescriptor().getEnumTypes().get(2);
     }
 
@@ -324,7 +324,7 @@ public final class IngestionV1 {
         com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
       if (desc.getType() != getDescriptor()) {
         throw new java.lang.IllegalArgumentException(
-          "EnumValueDescriptor is not for this type.");
+            "EnumValueDescriptor is not for this type.");
       }
       return VALUES[desc.getIndex()];
     }
@@ -367,7 +367,7 @@ public final class IngestionV1 {
      * <code>required string apiKey = 2;</code>
      */
     com.google.protobuf.ByteString
-        getApiKeyBytes();
+    getApiKeyBytes();
 
     /**
      * <code>required string service = 3;</code>
@@ -381,7 +381,7 @@ public final class IngestionV1 {
      * <code>required string service = 3;</code>
      */
     com.google.protobuf.ByteString
-        getServiceBytes();
+    getServiceBytes();
 
     /**
      * <code>required string host = 4;</code>
@@ -395,7 +395,7 @@ public final class IngestionV1 {
      * <code>required string host = 4;</code>
      */
     com.google.protobuf.ByteString
-        getHostBytes();
+    getHostBytes();
 
     /**
      * <code>required string instance = 5;</code>
@@ -409,13 +409,13 @@ public final class IngestionV1 {
      * <code>required string instance = 5;</code>
      */
     com.google.protobuf.ByteString
-        getInstanceBytes();
+    getInstanceBytes();
 
     /**
      * <code>repeated .Metric metrics = 6;</code>
      */
-    java.util.List<kamino.IngestionV1.Metric> 
-        getMetricsList();
+    java.util.List<kamino.IngestionV1.Metric>
+    getMetricsList();
     /**
      * <code>repeated .Metric metrics = 6;</code>
      */
@@ -427,8 +427,8 @@ public final class IngestionV1 {
     /**
      * <code>repeated .Metric metrics = 6;</code>
      */
-    java.util.List<? extends kamino.IngestionV1.MetricOrBuilder> 
-        getMetricsOrBuilderList();
+    java.util.List<? extends kamino.IngestionV1.MetricOrBuilder>
+    getMetricsOrBuilderList();
     /**
      * <code>repeated .Metric metrics = 6;</code>
      */
@@ -443,6 +443,20 @@ public final class IngestionV1 {
      * <code>optional .Plan plan = 7;</code>
      */
     kamino.IngestionV1.Plan getPlan();
+
+    /**
+     * <code>optional string agent = 8;</code>
+     */
+    boolean hasAgent();
+    /**
+     * <code>optional string agent = 8;</code>
+     */
+    java.lang.String getAgent();
+    /**
+     * <code>optional string agent = 8;</code>
+     */
+    com.google.protobuf.ByteString
+    getAgentBytes();
   }
   /**
    * Protobuf type {@code MetricBatch}
@@ -451,6 +465,7 @@ public final class IngestionV1 {
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:MetricBatch)
       MetricBatchOrBuilder {
+    private static final long serialVersionUID = 0L;
     // Use MetricBatch.newBuilder() to construct.
     private MetricBatch(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
       super(builder);
@@ -462,6 +477,14 @@ public final class IngestionV1 {
       instance_ = "";
       metrics_ = java.util.Collections.emptyList();
       plan_ = 1;
+      agent_ = "";
+    }
+
+    @java.lang.Override
+    @SuppressWarnings({"unused"})
+    protected java.lang.Object newInstance(
+        UnusedPrivateParameter unused) {
+      return new MetricBatch();
     }
 
     @java.lang.Override
@@ -474,6 +497,9 @@ public final class IngestionV1 {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
+      if (extensionRegistry == null) {
+        throw new java.lang.NullPointerException();
+      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -485,16 +511,9 @@ public final class IngestionV1 {
             case 0:
               done = true;
               break;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
             case 10: {
               kamino.IngestionV1.Interval.Builder subBuilder = null;
-              if (((bitField0_ & 0x00000001) == 0x00000001)) {
+              if (((bitField0_ & 0x00000001) != 0)) {
                 subBuilder = interval_.toBuilder();
               }
               interval_ = input.readMessage(kamino.IngestionV1.Interval.PARSER, extensionRegistry);
@@ -530,7 +549,7 @@ public final class IngestionV1 {
               break;
             }
             case 50: {
-              if (!((mutable_bitField0_ & 0x00000020) == 0x00000020)) {
+              if (!((mutable_bitField0_ & 0x00000020) != 0)) {
                 metrics_ = new java.util.ArrayList<kamino.IngestionV1.Metric>();
                 mutable_bitField0_ |= 0x00000020;
               }
@@ -540,12 +559,26 @@ public final class IngestionV1 {
             }
             case 56: {
               int rawValue = input.readEnum();
+              @SuppressWarnings("deprecation")
               kamino.IngestionV1.Plan value = kamino.IngestionV1.Plan.valueOf(rawValue);
               if (value == null) {
                 unknownFields.mergeVarintField(7, rawValue);
               } else {
                 bitField0_ |= 0x00000020;
                 plan_ = rawValue;
+              }
+              break;
+            }
+            case 66: {
+              com.google.protobuf.ByteString bs = input.readBytes();
+              bitField0_ |= 0x00000040;
+              agent_ = bs;
+              break;
+            }
+            default: {
+              if (!parseUnknownField(
+                  input, unknownFields, extensionRegistry, tag)) {
+                done = true;
               }
               break;
             }
@@ -557,7 +590,7 @@ public final class IngestionV1 {
         throw new com.google.protobuf.InvalidProtocolBufferException(
             e).setUnfinishedMessage(this);
       } finally {
-        if (((mutable_bitField0_ & 0x00000020) == 0x00000020)) {
+        if (((mutable_bitField0_ & 0x00000020) != 0)) {
           metrics_ = java.util.Collections.unmodifiableList(metrics_);
         }
         this.unknownFields = unknownFields.build();
@@ -565,12 +598,13 @@ public final class IngestionV1 {
       }
     }
     public static final com.google.protobuf.Descriptors.Descriptor
-        getDescriptor() {
+    getDescriptor() {
       return kamino.IngestionV1.internal_static_MetricBatch_descriptor;
     }
 
+    @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-        internalGetFieldAccessorTable() {
+    internalGetFieldAccessorTable() {
       return kamino.IngestionV1.internal_static_MetricBatch_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               kamino.IngestionV1.MetricBatch.class, kamino.IngestionV1.MetricBatch.Builder.class);
@@ -583,7 +617,7 @@ public final class IngestionV1 {
      * <code>required .Interval interval = 1;</code>
      */
     public boolean hasInterval() {
-      return ((bitField0_ & 0x00000001) == 0x00000001);
+      return ((bitField0_ & 0x00000001) != 0);
     }
     /**
      * <code>required .Interval interval = 1;</code>
@@ -604,7 +638,7 @@ public final class IngestionV1 {
      * <code>required string apiKey = 2;</code>
      */
     public boolean hasApiKey() {
-      return ((bitField0_ & 0x00000002) == 0x00000002);
+      return ((bitField0_ & 0x00000002) != 0);
     }
     /**
      * <code>required string apiKey = 2;</code>
@@ -614,7 +648,7 @@ public final class IngestionV1 {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs = 
+        com.google.protobuf.ByteString bs =
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
@@ -627,10 +661,10 @@ public final class IngestionV1 {
      * <code>required string apiKey = 2;</code>
      */
     public com.google.protobuf.ByteString
-        getApiKeyBytes() {
+    getApiKeyBytes() {
       java.lang.Object ref = apiKey_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         apiKey_ = b;
@@ -646,7 +680,7 @@ public final class IngestionV1 {
      * <code>required string service = 3;</code>
      */
     public boolean hasService() {
-      return ((bitField0_ & 0x00000004) == 0x00000004);
+      return ((bitField0_ & 0x00000004) != 0);
     }
     /**
      * <code>required string service = 3;</code>
@@ -656,7 +690,7 @@ public final class IngestionV1 {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs = 
+        com.google.protobuf.ByteString bs =
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
@@ -669,10 +703,10 @@ public final class IngestionV1 {
      * <code>required string service = 3;</code>
      */
     public com.google.protobuf.ByteString
-        getServiceBytes() {
+    getServiceBytes() {
       java.lang.Object ref = service_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         service_ = b;
@@ -688,7 +722,7 @@ public final class IngestionV1 {
      * <code>required string host = 4;</code>
      */
     public boolean hasHost() {
-      return ((bitField0_ & 0x00000008) == 0x00000008);
+      return ((bitField0_ & 0x00000008) != 0);
     }
     /**
      * <code>required string host = 4;</code>
@@ -698,7 +732,7 @@ public final class IngestionV1 {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs = 
+        com.google.protobuf.ByteString bs =
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
@@ -711,10 +745,10 @@ public final class IngestionV1 {
      * <code>required string host = 4;</code>
      */
     public com.google.protobuf.ByteString
-        getHostBytes() {
+    getHostBytes() {
       java.lang.Object ref = host_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         host_ = b;
@@ -730,7 +764,7 @@ public final class IngestionV1 {
      * <code>required string instance = 5;</code>
      */
     public boolean hasInstance() {
-      return ((bitField0_ & 0x00000010) == 0x00000010);
+      return ((bitField0_ & 0x00000010) != 0);
     }
     /**
      * <code>required string instance = 5;</code>
@@ -740,7 +774,7 @@ public final class IngestionV1 {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs = 
+        com.google.protobuf.ByteString bs =
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
@@ -753,10 +787,10 @@ public final class IngestionV1 {
      * <code>required string instance = 5;</code>
      */
     public com.google.protobuf.ByteString
-        getInstanceBytes() {
+    getInstanceBytes() {
       java.lang.Object ref = instance_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         instance_ = b;
@@ -777,8 +811,8 @@ public final class IngestionV1 {
     /**
      * <code>repeated .Metric metrics = 6;</code>
      */
-    public java.util.List<? extends kamino.IngestionV1.MetricOrBuilder> 
-        getMetricsOrBuilderList() {
+    public java.util.List<? extends kamino.IngestionV1.MetricOrBuilder>
+    getMetricsOrBuilderList() {
       return metrics_;
     }
     /**
@@ -807,17 +841,61 @@ public final class IngestionV1 {
      * <code>optional .Plan plan = 7;</code>
      */
     public boolean hasPlan() {
-      return ((bitField0_ & 0x00000020) == 0x00000020);
+      return ((bitField0_ & 0x00000020) != 0);
     }
     /**
      * <code>optional .Plan plan = 7;</code>
      */
     public kamino.IngestionV1.Plan getPlan() {
+      @SuppressWarnings("deprecation")
       kamino.IngestionV1.Plan result = kamino.IngestionV1.Plan.valueOf(plan_);
       return result == null ? kamino.IngestionV1.Plan.METRIC_ONLY : result;
     }
 
+    public static final int AGENT_FIELD_NUMBER = 8;
+    private volatile java.lang.Object agent_;
+    /**
+     * <code>optional string agent = 8;</code>
+     */
+    public boolean hasAgent() {
+      return ((bitField0_ & 0x00000040) != 0);
+    }
+    /**
+     * <code>optional string agent = 8;</code>
+     */
+    public java.lang.String getAgent() {
+      java.lang.Object ref = agent_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          agent_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>optional string agent = 8;</code>
+     */
+    public com.google.protobuf.ByteString
+    getAgentBytes() {
+      java.lang.Object ref = agent_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        agent_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
     private byte memoizedIsInitialized = -1;
+    @java.lang.Override
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized == 1) return true;
@@ -857,111 +935,122 @@ public final class IngestionV1 {
       return true;
     }
 
+    @java.lang.Override
     public void writeTo(com.google.protobuf.CodedOutputStream output)
-                        throws java.io.IOException {
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        throws java.io.IOException {
+      if (((bitField0_ & 0x00000001) != 0)) {
         output.writeMessage(1, getInterval());
       }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+      if (((bitField0_ & 0x00000002) != 0)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 2, apiKey_);
       }
-      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+      if (((bitField0_ & 0x00000004) != 0)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 3, service_);
       }
-      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+      if (((bitField0_ & 0x00000008) != 0)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 4, host_);
       }
-      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+      if (((bitField0_ & 0x00000010) != 0)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 5, instance_);
       }
       for (int i = 0; i < metrics_.size(); i++) {
         output.writeMessage(6, metrics_.get(i));
       }
-      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+      if (((bitField0_ & 0x00000020) != 0)) {
         output.writeEnum(7, plan_);
+      }
+      if (((bitField0_ & 0x00000040) != 0)) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 8, agent_);
       }
       unknownFields.writeTo(output);
     }
 
+    @java.lang.Override
     public int getSerializedSize() {
       int size = memoizedSize;
       if (size != -1) return size;
 
       size = 0;
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+      if (((bitField0_ & 0x00000001) != 0)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(1, getInterval());
+            .computeMessageSize(1, getInterval());
       }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+      if (((bitField0_ & 0x00000002) != 0)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, apiKey_);
       }
-      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+      if (((bitField0_ & 0x00000004) != 0)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(3, service_);
       }
-      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+      if (((bitField0_ & 0x00000008) != 0)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(4, host_);
       }
-      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+      if (((bitField0_ & 0x00000010) != 0)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(5, instance_);
       }
       for (int i = 0; i < metrics_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(6, metrics_.get(i));
+            .computeMessageSize(6, metrics_.get(i));
       }
-      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+      if (((bitField0_ & 0x00000020) != 0)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeEnumSize(7, plan_);
+            .computeEnumSize(7, plan_);
+      }
+      if (((bitField0_ & 0x00000040) != 0)) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(8, agent_);
       }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
       return size;
     }
 
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
-       return true;
+        return true;
       }
       if (!(obj instanceof kamino.IngestionV1.MetricBatch)) {
         return super.equals(obj);
       }
       kamino.IngestionV1.MetricBatch other = (kamino.IngestionV1.MetricBatch) obj;
 
-      boolean result = true;
-      result = result && (hasInterval() == other.hasInterval());
+      if (hasInterval() != other.hasInterval()) return false;
       if (hasInterval()) {
-        result = result && getInterval()
-            .equals(other.getInterval());
+        if (!getInterval()
+            .equals(other.getInterval())) return false;
       }
-      result = result && (hasApiKey() == other.hasApiKey());
+      if (hasApiKey() != other.hasApiKey()) return false;
       if (hasApiKey()) {
-        result = result && getApiKey()
-            .equals(other.getApiKey());
+        if (!getApiKey()
+            .equals(other.getApiKey())) return false;
       }
-      result = result && (hasService() == other.hasService());
+      if (hasService() != other.hasService()) return false;
       if (hasService()) {
-        result = result && getService()
-            .equals(other.getService());
+        if (!getService()
+            .equals(other.getService())) return false;
       }
-      result = result && (hasHost() == other.hasHost());
+      if (hasHost() != other.hasHost()) return false;
       if (hasHost()) {
-        result = result && getHost()
-            .equals(other.getHost());
+        if (!getHost()
+            .equals(other.getHost())) return false;
       }
-      result = result && (hasInstance() == other.hasInstance());
+      if (hasInstance() != other.hasInstance()) return false;
       if (hasInstance()) {
-        result = result && getInstance()
-            .equals(other.getInstance());
+        if (!getInstance()
+            .equals(other.getInstance())) return false;
       }
-      result = result && getMetricsList()
-          .equals(other.getMetricsList());
-      result = result && (hasPlan() == other.hasPlan());
+      if (!getMetricsList()
+          .equals(other.getMetricsList())) return false;
+      if (hasPlan() != other.hasPlan()) return false;
       if (hasPlan()) {
-        result = result && plan_ == other.plan_;
+        if (plan_ != other.plan_) return false;
       }
-      result = result && unknownFields.equals(other.unknownFields);
-      return result;
+      if (hasAgent() != other.hasAgent()) return false;
+      if (hasAgent()) {
+        if (!getAgent()
+            .equals(other.getAgent())) return false;
+      }
+      if (!unknownFields.equals(other.unknownFields)) return false;
+      return true;
     }
 
     @java.lang.Override
@@ -970,7 +1059,7 @@ public final class IngestionV1 {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasInterval()) {
         hash = (37 * hash) + INTERVAL_FIELD_NUMBER;
         hash = (53 * hash) + getInterval().hashCode();
@@ -999,11 +1088,26 @@ public final class IngestionV1 {
         hash = (37 * hash) + PLAN_FIELD_NUMBER;
         hash = (53 * hash) + plan_;
       }
+      if (hasAgent()) {
+        hash = (37 * hash) + AGENT_FIELD_NUMBER;
+        hash = (53 * hash) + getAgent().hashCode();
+      }
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
       return hash;
     }
 
+    public static kamino.IngestionV1.MetricBatch parseFrom(
+        java.nio.ByteBuffer data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static kamino.IngestionV1.MetricBatch parseFrom(
+        java.nio.ByteBuffer data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
     public static kamino.IngestionV1.MetricBatch parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
@@ -1063,6 +1167,7 @@ public final class IngestionV1 {
           .parseWithIOException(PARSER, input, extensionRegistry);
     }
 
+    @java.lang.Override
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder() {
       return DEFAULT_INSTANCE.toBuilder();
@@ -1070,6 +1175,7 @@ public final class IngestionV1 {
     public static Builder newBuilder(kamino.IngestionV1.MetricBatch prototype) {
       return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
     }
+    @java.lang.Override
     public Builder toBuilder() {
       return this == DEFAULT_INSTANCE
           ? new Builder() : new Builder().mergeFrom(this);
@@ -1089,12 +1195,13 @@ public final class IngestionV1 {
         // @@protoc_insertion_point(builder_implements:MetricBatch)
         kamino.IngestionV1.MetricBatchOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
-          getDescriptor() {
+      getDescriptor() {
         return kamino.IngestionV1.internal_static_MetricBatch_descriptor;
       }
 
+      @java.lang.Override
       protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-          internalGetFieldAccessorTable() {
+      internalGetFieldAccessorTable() {
         return kamino.IngestionV1.internal_static_MetricBatch_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 kamino.IngestionV1.MetricBatch.class, kamino.IngestionV1.MetricBatch.Builder.class);
@@ -1112,11 +1219,12 @@ public final class IngestionV1 {
       }
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessageV3
-                .alwaysUseFieldBuilders) {
+            .alwaysUseFieldBuilders) {
           getIntervalFieldBuilder();
           getMetricsFieldBuilder();
         }
       }
+      @java.lang.Override
       public Builder clear() {
         super.clear();
         if (intervalBuilder_ == null) {
@@ -1141,18 +1249,23 @@ public final class IngestionV1 {
         }
         plan_ = 1;
         bitField0_ = (bitField0_ & ~0x00000040);
+        agent_ = "";
+        bitField0_ = (bitField0_ & ~0x00000080);
         return this;
       }
 
+      @java.lang.Override
       public com.google.protobuf.Descriptors.Descriptor
-          getDescriptorForType() {
+      getDescriptorForType() {
         return kamino.IngestionV1.internal_static_MetricBatch_descriptor;
       }
 
+      @java.lang.Override
       public kamino.IngestionV1.MetricBatch getDefaultInstanceForType() {
         return kamino.IngestionV1.MetricBatch.getDefaultInstance();
       }
 
+      @java.lang.Override
       public kamino.IngestionV1.MetricBatch build() {
         kamino.IngestionV1.MetricBatch result = buildPartial();
         if (!result.isInitialized()) {
@@ -1161,36 +1274,37 @@ public final class IngestionV1 {
         return result;
       }
 
+      @java.lang.Override
       public kamino.IngestionV1.MetricBatch buildPartial() {
         kamino.IngestionV1.MetricBatch result = new kamino.IngestionV1.MetricBatch(this);
         int from_bitField0_ = bitField0_;
         int to_bitField0_ = 0;
-        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+        if (((from_bitField0_ & 0x00000001) != 0)) {
+          if (intervalBuilder_ == null) {
+            result.interval_ = interval_;
+          } else {
+            result.interval_ = intervalBuilder_.build();
+          }
           to_bitField0_ |= 0x00000001;
         }
-        if (intervalBuilder_ == null) {
-          result.interval_ = interval_;
-        } else {
-          result.interval_ = intervalBuilder_.build();
-        }
-        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+        if (((from_bitField0_ & 0x00000002) != 0)) {
           to_bitField0_ |= 0x00000002;
         }
         result.apiKey_ = apiKey_;
-        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+        if (((from_bitField0_ & 0x00000004) != 0)) {
           to_bitField0_ |= 0x00000004;
         }
         result.service_ = service_;
-        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+        if (((from_bitField0_ & 0x00000008) != 0)) {
           to_bitField0_ |= 0x00000008;
         }
         result.host_ = host_;
-        if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
+        if (((from_bitField0_ & 0x00000010) != 0)) {
           to_bitField0_ |= 0x00000010;
         }
         result.instance_ = instance_;
         if (metricsBuilder_ == null) {
-          if (((bitField0_ & 0x00000020) == 0x00000020)) {
+          if (((bitField0_ & 0x00000020) != 0)) {
             metrics_ = java.util.Collections.unmodifiableList(metrics_);
             bitField0_ = (bitField0_ & ~0x00000020);
           }
@@ -1198,41 +1312,52 @@ public final class IngestionV1 {
         } else {
           result.metrics_ = metricsBuilder_.build();
         }
-        if (((from_bitField0_ & 0x00000040) == 0x00000040)) {
+        if (((from_bitField0_ & 0x00000040) != 0)) {
           to_bitField0_ |= 0x00000020;
         }
         result.plan_ = plan_;
+        if (((from_bitField0_ & 0x00000080) != 0)) {
+          to_bitField0_ |= 0x00000040;
+        }
+        result.agent_ = agent_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
       }
 
+      @java.lang.Override
       public Builder clone() {
-        return (Builder) super.clone();
+        return super.clone();
       }
+      @java.lang.Override
       public Builder setField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          Object value) {
-        return (Builder) super.setField(field, value);
+          java.lang.Object value) {
+        return super.setField(field, value);
       }
+      @java.lang.Override
       public Builder clearField(
           com.google.protobuf.Descriptors.FieldDescriptor field) {
-        return (Builder) super.clearField(field);
+        return super.clearField(field);
       }
+      @java.lang.Override
       public Builder clearOneof(
           com.google.protobuf.Descriptors.OneofDescriptor oneof) {
-        return (Builder) super.clearOneof(oneof);
+        return super.clearOneof(oneof);
       }
+      @java.lang.Override
       public Builder setRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          int index, Object value) {
-        return (Builder) super.setRepeatedField(field, index, value);
+          int index, java.lang.Object value) {
+        return super.setRepeatedField(field, index, value);
       }
+      @java.lang.Override
       public Builder addRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          Object value) {
-        return (Builder) super.addRepeatedField(field, value);
+          java.lang.Object value) {
+        return super.addRepeatedField(field, value);
       }
+      @java.lang.Override
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof kamino.IngestionV1.MetricBatch) {
           return mergeFrom((kamino.IngestionV1.MetricBatch)other);
@@ -1285,9 +1410,9 @@ public final class IngestionV1 {
               metricsBuilder_ = null;
               metrics_ = other.metrics_;
               bitField0_ = (bitField0_ & ~0x00000020);
-              metricsBuilder_ = 
-                com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
-                   getMetricsFieldBuilder() : null;
+              metricsBuilder_ =
+                  com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
+                      getMetricsFieldBuilder() : null;
             } else {
               metricsBuilder_.addAllMessages(other.metrics_);
             }
@@ -1296,11 +1421,17 @@ public final class IngestionV1 {
         if (other.hasPlan()) {
           setPlan(other.getPlan());
         }
+        if (other.hasAgent()) {
+          bitField0_ |= 0x00000080;
+          agent_ = other.agent_;
+          onChanged();
+        }
         this.mergeUnknownFields(other.unknownFields);
         onChanged();
         return this;
       }
 
+      @java.lang.Override
       public final boolean isInitialized() {
         if (!hasInterval()) {
           return false;
@@ -1328,6 +1459,7 @@ public final class IngestionV1 {
         return true;
       }
 
+      @java.lang.Override
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
@@ -1347,14 +1479,14 @@ public final class IngestionV1 {
       }
       private int bitField0_;
 
-      private kamino.IngestionV1.Interval interval_ = null;
+      private kamino.IngestionV1.Interval interval_;
       private com.google.protobuf.SingleFieldBuilderV3<
           kamino.IngestionV1.Interval, kamino.IngestionV1.Interval.Builder, kamino.IngestionV1.IntervalOrBuilder> intervalBuilder_;
       /**
        * <code>required .Interval interval = 1;</code>
        */
       public boolean hasInterval() {
-        return ((bitField0_ & 0x00000001) == 0x00000001);
+        return ((bitField0_ & 0x00000001) != 0);
       }
       /**
        * <code>required .Interval interval = 1;</code>
@@ -1401,11 +1533,11 @@ public final class IngestionV1 {
        */
       public Builder mergeInterval(kamino.IngestionV1.Interval value) {
         if (intervalBuilder_ == null) {
-          if (((bitField0_ & 0x00000001) == 0x00000001) &&
+          if (((bitField0_ & 0x00000001) != 0) &&
               interval_ != null &&
               interval_ != kamino.IngestionV1.Interval.getDefaultInstance()) {
             interval_ =
-              kamino.IngestionV1.Interval.newBuilder(interval_).mergeFrom(value).buildPartial();
+                kamino.IngestionV1.Interval.newBuilder(interval_).mergeFrom(value).buildPartial();
           } else {
             interval_ = value;
           }
@@ -1452,14 +1584,14 @@ public final class IngestionV1 {
        * <code>required .Interval interval = 1;</code>
        */
       private com.google.protobuf.SingleFieldBuilderV3<
-          kamino.IngestionV1.Interval, kamino.IngestionV1.Interval.Builder, kamino.IngestionV1.IntervalOrBuilder> 
-          getIntervalFieldBuilder() {
+          kamino.IngestionV1.Interval, kamino.IngestionV1.Interval.Builder, kamino.IngestionV1.IntervalOrBuilder>
+      getIntervalFieldBuilder() {
         if (intervalBuilder_ == null) {
           intervalBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
               kamino.IngestionV1.Interval, kamino.IngestionV1.Interval.Builder, kamino.IngestionV1.IntervalOrBuilder>(
-                  getInterval(),
-                  getParentForChildren(),
-                  isClean());
+              getInterval(),
+              getParentForChildren(),
+              isClean());
           interval_ = null;
         }
         return intervalBuilder_;
@@ -1470,7 +1602,7 @@ public final class IngestionV1 {
        * <code>required string apiKey = 2;</code>
        */
       public boolean hasApiKey() {
-        return ((bitField0_ & 0x00000002) == 0x00000002);
+        return ((bitField0_ & 0x00000002) != 0);
       }
       /**
        * <code>required string apiKey = 2;</code>
@@ -1493,10 +1625,10 @@ public final class IngestionV1 {
        * <code>required string apiKey = 2;</code>
        */
       public com.google.protobuf.ByteString
-          getApiKeyBytes() {
+      getApiKeyBytes() {
         java.lang.Object ref = apiKey_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString b =
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           apiKey_ = b;
@@ -1511,9 +1643,9 @@ public final class IngestionV1 {
       public Builder setApiKey(
           java.lang.String value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000002;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000002;
         apiKey_ = value;
         onChanged();
         return this;
@@ -1533,9 +1665,9 @@ public final class IngestionV1 {
       public Builder setApiKeyBytes(
           com.google.protobuf.ByteString value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000002;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000002;
         apiKey_ = value;
         onChanged();
         return this;
@@ -1546,7 +1678,7 @@ public final class IngestionV1 {
        * <code>required string service = 3;</code>
        */
       public boolean hasService() {
-        return ((bitField0_ & 0x00000004) == 0x00000004);
+        return ((bitField0_ & 0x00000004) != 0);
       }
       /**
        * <code>required string service = 3;</code>
@@ -1569,10 +1701,10 @@ public final class IngestionV1 {
        * <code>required string service = 3;</code>
        */
       public com.google.protobuf.ByteString
-          getServiceBytes() {
+      getServiceBytes() {
         java.lang.Object ref = service_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString b =
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           service_ = b;
@@ -1587,9 +1719,9 @@ public final class IngestionV1 {
       public Builder setService(
           java.lang.String value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000004;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000004;
         service_ = value;
         onChanged();
         return this;
@@ -1609,9 +1741,9 @@ public final class IngestionV1 {
       public Builder setServiceBytes(
           com.google.protobuf.ByteString value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000004;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000004;
         service_ = value;
         onChanged();
         return this;
@@ -1622,7 +1754,7 @@ public final class IngestionV1 {
        * <code>required string host = 4;</code>
        */
       public boolean hasHost() {
-        return ((bitField0_ & 0x00000008) == 0x00000008);
+        return ((bitField0_ & 0x00000008) != 0);
       }
       /**
        * <code>required string host = 4;</code>
@@ -1645,10 +1777,10 @@ public final class IngestionV1 {
        * <code>required string host = 4;</code>
        */
       public com.google.protobuf.ByteString
-          getHostBytes() {
+      getHostBytes() {
         java.lang.Object ref = host_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString b =
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           host_ = b;
@@ -1663,9 +1795,9 @@ public final class IngestionV1 {
       public Builder setHost(
           java.lang.String value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000008;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000008;
         host_ = value;
         onChanged();
         return this;
@@ -1685,9 +1817,9 @@ public final class IngestionV1 {
       public Builder setHostBytes(
           com.google.protobuf.ByteString value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000008;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000008;
         host_ = value;
         onChanged();
         return this;
@@ -1698,7 +1830,7 @@ public final class IngestionV1 {
        * <code>required string instance = 5;</code>
        */
       public boolean hasInstance() {
-        return ((bitField0_ & 0x00000010) == 0x00000010);
+        return ((bitField0_ & 0x00000010) != 0);
       }
       /**
        * <code>required string instance = 5;</code>
@@ -1721,10 +1853,10 @@ public final class IngestionV1 {
        * <code>required string instance = 5;</code>
        */
       public com.google.protobuf.ByteString
-          getInstanceBytes() {
+      getInstanceBytes() {
         java.lang.Object ref = instance_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString b =
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           instance_ = b;
@@ -1739,9 +1871,9 @@ public final class IngestionV1 {
       public Builder setInstance(
           java.lang.String value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000010;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000010;
         instance_ = value;
         onChanged();
         return this;
@@ -1761,21 +1893,21 @@ public final class IngestionV1 {
       public Builder setInstanceBytes(
           com.google.protobuf.ByteString value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000010;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000010;
         instance_ = value;
         onChanged();
         return this;
       }
 
       private java.util.List<kamino.IngestionV1.Metric> metrics_ =
-        java.util.Collections.emptyList();
+          java.util.Collections.emptyList();
       private void ensureMetricsIsMutable() {
-        if (!((bitField0_ & 0x00000020) == 0x00000020)) {
+        if (!((bitField0_ & 0x00000020) != 0)) {
           metrics_ = new java.util.ArrayList<kamino.IngestionV1.Metric>(metrics_);
           bitField0_ |= 0x00000020;
-         }
+        }
       }
 
       private com.google.protobuf.RepeatedFieldBuilderV3<
@@ -1964,8 +2096,8 @@ public final class IngestionV1 {
       /**
        * <code>repeated .Metric metrics = 6;</code>
        */
-      public java.util.List<? extends kamino.IngestionV1.MetricOrBuilder> 
-           getMetricsOrBuilderList() {
+      public java.util.List<? extends kamino.IngestionV1.MetricOrBuilder>
+      getMetricsOrBuilderList() {
         if (metricsBuilder_ != null) {
           return metricsBuilder_.getMessageOrBuilderList();
         } else {
@@ -1990,20 +2122,20 @@ public final class IngestionV1 {
       /**
        * <code>repeated .Metric metrics = 6;</code>
        */
-      public java.util.List<kamino.IngestionV1.Metric.Builder> 
-           getMetricsBuilderList() {
+      public java.util.List<kamino.IngestionV1.Metric.Builder>
+      getMetricsBuilderList() {
         return getMetricsFieldBuilder().getBuilderList();
       }
       private com.google.protobuf.RepeatedFieldBuilderV3<
-          kamino.IngestionV1.Metric, kamino.IngestionV1.Metric.Builder, kamino.IngestionV1.MetricOrBuilder> 
-          getMetricsFieldBuilder() {
+          kamino.IngestionV1.Metric, kamino.IngestionV1.Metric.Builder, kamino.IngestionV1.MetricOrBuilder>
+      getMetricsFieldBuilder() {
         if (metricsBuilder_ == null) {
           metricsBuilder_ = new com.google.protobuf.RepeatedFieldBuilderV3<
               kamino.IngestionV1.Metric, kamino.IngestionV1.Metric.Builder, kamino.IngestionV1.MetricOrBuilder>(
-                  metrics_,
-                  ((bitField0_ & 0x00000020) == 0x00000020),
-                  getParentForChildren(),
-                  isClean());
+              metrics_,
+              ((bitField0_ & 0x00000020) != 0),
+              getParentForChildren(),
+              isClean());
           metrics_ = null;
         }
         return metricsBuilder_;
@@ -2014,12 +2146,13 @@ public final class IngestionV1 {
        * <code>optional .Plan plan = 7;</code>
        */
       public boolean hasPlan() {
-        return ((bitField0_ & 0x00000040) == 0x00000040);
+        return ((bitField0_ & 0x00000040) != 0);
       }
       /**
        * <code>optional .Plan plan = 7;</code>
        */
       public kamino.IngestionV1.Plan getPlan() {
+        @SuppressWarnings("deprecation")
         kamino.IngestionV1.Plan result = kamino.IngestionV1.Plan.valueOf(plan_);
         return result == null ? kamino.IngestionV1.Plan.METRIC_ONLY : result;
       }
@@ -2044,11 +2177,89 @@ public final class IngestionV1 {
         onChanged();
         return this;
       }
+
+      private java.lang.Object agent_ = "";
+      /**
+       * <code>optional string agent = 8;</code>
+       */
+      public boolean hasAgent() {
+        return ((bitField0_ & 0x00000080) != 0);
+      }
+      /**
+       * <code>optional string agent = 8;</code>
+       */
+      public java.lang.String getAgent() {
+        java.lang.Object ref = agent_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            agent_ = s;
+          }
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>optional string agent = 8;</code>
+       */
+      public com.google.protobuf.ByteString
+      getAgentBytes() {
+        java.lang.Object ref = agent_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b =
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          agent_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string agent = 8;</code>
+       */
+      public Builder setAgent(
+          java.lang.String value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000080;
+        agent_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string agent = 8;</code>
+       */
+      public Builder clearAgent() {
+        bitField0_ = (bitField0_ & ~0x00000080);
+        agent_ = getDefaultInstance().getAgent();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string agent = 8;</code>
+       */
+      public Builder setAgentBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000080;
+        agent_ = value;
+        onChanged();
+        return this;
+      }
+      @java.lang.Override
       public final Builder setUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
         return super.setUnknownFields(unknownFields);
       }
 
+      @java.lang.Override
       public final Builder mergeUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
         return super.mergeUnknownFields(unknownFields);
@@ -2070,11 +2281,12 @@ public final class IngestionV1 {
 
     @java.lang.Deprecated public static final com.google.protobuf.Parser<MetricBatch>
         PARSER = new com.google.protobuf.AbstractParser<MetricBatch>() {
+      @java.lang.Override
       public MetricBatch parsePartialFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-          return new MetricBatch(input, extensionRegistry);
+        return new MetricBatch(input, extensionRegistry);
       }
     };
 
@@ -2087,6 +2299,7 @@ public final class IngestionV1 {
       return PARSER;
     }
 
+    @java.lang.Override
     public kamino.IngestionV1.MetricBatch getDefaultInstanceForType() {
       return DEFAULT_INSTANCE;
     }
@@ -2122,13 +2335,19 @@ public final class IngestionV1 {
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:Interval)
       IntervalOrBuilder {
+    private static final long serialVersionUID = 0L;
     // Use Interval.newBuilder() to construct.
     private Interval(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
       super(builder);
     }
     private Interval() {
-      from_ = 0L;
-      to_ = 0L;
+    }
+
+    @java.lang.Override
+    @SuppressWarnings({"unused"})
+    protected java.lang.Object newInstance(
+        UnusedPrivateParameter unused) {
+      return new Interval();
     }
 
     @java.lang.Override
@@ -2141,6 +2360,9 @@ public final class IngestionV1 {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
+      if (extensionRegistry == null) {
+        throw new java.lang.NullPointerException();
+      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -2152,13 +2374,6 @@ public final class IngestionV1 {
             case 0:
               done = true;
               break;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
             case 8: {
               bitField0_ |= 0x00000001;
               from_ = input.readInt64();
@@ -2167,6 +2382,13 @@ public final class IngestionV1 {
             case 16: {
               bitField0_ |= 0x00000002;
               to_ = input.readInt64();
+              break;
+            }
+            default: {
+              if (!parseUnknownField(
+                  input, unknownFields, extensionRegistry, tag)) {
+                done = true;
+              }
               break;
             }
           }
@@ -2182,12 +2404,13 @@ public final class IngestionV1 {
       }
     }
     public static final com.google.protobuf.Descriptors.Descriptor
-        getDescriptor() {
+    getDescriptor() {
       return kamino.IngestionV1.internal_static_Interval_descriptor;
     }
 
+    @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-        internalGetFieldAccessorTable() {
+    internalGetFieldAccessorTable() {
       return kamino.IngestionV1.internal_static_Interval_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               kamino.IngestionV1.Interval.class, kamino.IngestionV1.Interval.Builder.class);
@@ -2200,7 +2423,7 @@ public final class IngestionV1 {
      * <code>required int64 from = 1;</code>
      */
     public boolean hasFrom() {
-      return ((bitField0_ & 0x00000001) == 0x00000001);
+      return ((bitField0_ & 0x00000001) != 0);
     }
     /**
      * <code>required int64 from = 1;</code>
@@ -2215,7 +2438,7 @@ public final class IngestionV1 {
      * <code>required int64 to = 2;</code>
      */
     public boolean hasTo() {
-      return ((bitField0_ & 0x00000002) == 0x00000002);
+      return ((bitField0_ & 0x00000002) != 0);
     }
     /**
      * <code>required int64 to = 2;</code>
@@ -2225,6 +2448,7 @@ public final class IngestionV1 {
     }
 
     private byte memoizedIsInitialized = -1;
+    @java.lang.Override
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized == 1) return true;
@@ -2242,59 +2466,59 @@ public final class IngestionV1 {
       return true;
     }
 
+    @java.lang.Override
     public void writeTo(com.google.protobuf.CodedOutputStream output)
-                        throws java.io.IOException {
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        throws java.io.IOException {
+      if (((bitField0_ & 0x00000001) != 0)) {
         output.writeInt64(1, from_);
       }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+      if (((bitField0_ & 0x00000002) != 0)) {
         output.writeInt64(2, to_);
       }
       unknownFields.writeTo(output);
     }
 
+    @java.lang.Override
     public int getSerializedSize() {
       int size = memoizedSize;
       if (size != -1) return size;
 
       size = 0;
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+      if (((bitField0_ & 0x00000001) != 0)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeInt64Size(1, from_);
+            .computeInt64Size(1, from_);
       }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+      if (((bitField0_ & 0x00000002) != 0)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeInt64Size(2, to_);
+            .computeInt64Size(2, to_);
       }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
       return size;
     }
 
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
-       return true;
+        return true;
       }
       if (!(obj instanceof kamino.IngestionV1.Interval)) {
         return super.equals(obj);
       }
       kamino.IngestionV1.Interval other = (kamino.IngestionV1.Interval) obj;
 
-      boolean result = true;
-      result = result && (hasFrom() == other.hasFrom());
+      if (hasFrom() != other.hasFrom()) return false;
       if (hasFrom()) {
-        result = result && (getFrom()
-            == other.getFrom());
+        if (getFrom()
+            != other.getFrom()) return false;
       }
-      result = result && (hasTo() == other.hasTo());
+      if (hasTo() != other.hasTo()) return false;
       if (hasTo()) {
-        result = result && (getTo()
-            == other.getTo());
+        if (getTo()
+            != other.getTo()) return false;
       }
-      result = result && unknownFields.equals(other.unknownFields);
-      return result;
+      if (!unknownFields.equals(other.unknownFields)) return false;
+      return true;
     }
 
     @java.lang.Override
@@ -2303,7 +2527,7 @@ public final class IngestionV1 {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasFrom()) {
         hash = (37 * hash) + FROM_FIELD_NUMBER;
         hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
@@ -2319,6 +2543,17 @@ public final class IngestionV1 {
       return hash;
     }
 
+    public static kamino.IngestionV1.Interval parseFrom(
+        java.nio.ByteBuffer data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static kamino.IngestionV1.Interval parseFrom(
+        java.nio.ByteBuffer data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
     public static kamino.IngestionV1.Interval parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
@@ -2378,6 +2613,7 @@ public final class IngestionV1 {
           .parseWithIOException(PARSER, input, extensionRegistry);
     }
 
+    @java.lang.Override
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder() {
       return DEFAULT_INSTANCE.toBuilder();
@@ -2385,6 +2621,7 @@ public final class IngestionV1 {
     public static Builder newBuilder(kamino.IngestionV1.Interval prototype) {
       return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
     }
+    @java.lang.Override
     public Builder toBuilder() {
       return this == DEFAULT_INSTANCE
           ? new Builder() : new Builder().mergeFrom(this);
@@ -2404,12 +2641,13 @@ public final class IngestionV1 {
         // @@protoc_insertion_point(builder_implements:Interval)
         kamino.IngestionV1.IntervalOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
-          getDescriptor() {
+      getDescriptor() {
         return kamino.IngestionV1.internal_static_Interval_descriptor;
       }
 
+      @java.lang.Override
       protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-          internalGetFieldAccessorTable() {
+      internalGetFieldAccessorTable() {
         return kamino.IngestionV1.internal_static_Interval_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 kamino.IngestionV1.Interval.class, kamino.IngestionV1.Interval.Builder.class);
@@ -2427,9 +2665,10 @@ public final class IngestionV1 {
       }
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessageV3
-                .alwaysUseFieldBuilders) {
+            .alwaysUseFieldBuilders) {
         }
       }
+      @java.lang.Override
       public Builder clear() {
         super.clear();
         from_ = 0L;
@@ -2439,15 +2678,18 @@ public final class IngestionV1 {
         return this;
       }
 
+      @java.lang.Override
       public com.google.protobuf.Descriptors.Descriptor
-          getDescriptorForType() {
+      getDescriptorForType() {
         return kamino.IngestionV1.internal_static_Interval_descriptor;
       }
 
+      @java.lang.Override
       public kamino.IngestionV1.Interval getDefaultInstanceForType() {
         return kamino.IngestionV1.Interval.getDefaultInstance();
       }
 
+      @java.lang.Override
       public kamino.IngestionV1.Interval build() {
         kamino.IngestionV1.Interval result = buildPartial();
         if (!result.isInitialized()) {
@@ -2456,49 +2698,57 @@ public final class IngestionV1 {
         return result;
       }
 
+      @java.lang.Override
       public kamino.IngestionV1.Interval buildPartial() {
         kamino.IngestionV1.Interval result = new kamino.IngestionV1.Interval(this);
         int from_bitField0_ = bitField0_;
         int to_bitField0_ = 0;
-        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+        if (((from_bitField0_ & 0x00000001) != 0)) {
+          result.from_ = from_;
           to_bitField0_ |= 0x00000001;
         }
-        result.from_ = from_;
-        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+        if (((from_bitField0_ & 0x00000002) != 0)) {
+          result.to_ = to_;
           to_bitField0_ |= 0x00000002;
         }
-        result.to_ = to_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
       }
 
+      @java.lang.Override
       public Builder clone() {
-        return (Builder) super.clone();
+        return super.clone();
       }
+      @java.lang.Override
       public Builder setField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          Object value) {
-        return (Builder) super.setField(field, value);
+          java.lang.Object value) {
+        return super.setField(field, value);
       }
+      @java.lang.Override
       public Builder clearField(
           com.google.protobuf.Descriptors.FieldDescriptor field) {
-        return (Builder) super.clearField(field);
+        return super.clearField(field);
       }
+      @java.lang.Override
       public Builder clearOneof(
           com.google.protobuf.Descriptors.OneofDescriptor oneof) {
-        return (Builder) super.clearOneof(oneof);
+        return super.clearOneof(oneof);
       }
+      @java.lang.Override
       public Builder setRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          int index, Object value) {
-        return (Builder) super.setRepeatedField(field, index, value);
+          int index, java.lang.Object value) {
+        return super.setRepeatedField(field, index, value);
       }
+      @java.lang.Override
       public Builder addRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          Object value) {
-        return (Builder) super.addRepeatedField(field, value);
+          java.lang.Object value) {
+        return super.addRepeatedField(field, value);
       }
+      @java.lang.Override
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof kamino.IngestionV1.Interval) {
           return mergeFrom((kamino.IngestionV1.Interval)other);
@@ -2521,6 +2771,7 @@ public final class IngestionV1 {
         return this;
       }
 
+      @java.lang.Override
       public final boolean isInitialized() {
         if (!hasFrom()) {
           return false;
@@ -2531,6 +2782,7 @@ public final class IngestionV1 {
         return true;
       }
 
+      @java.lang.Override
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
@@ -2555,7 +2807,7 @@ public final class IngestionV1 {
        * <code>required int64 from = 1;</code>
        */
       public boolean hasFrom() {
-        return ((bitField0_ & 0x00000001) == 0x00000001);
+        return ((bitField0_ & 0x00000001) != 0);
       }
       /**
        * <code>required int64 from = 1;</code>
@@ -2587,7 +2839,7 @@ public final class IngestionV1 {
        * <code>required int64 to = 2;</code>
        */
       public boolean hasTo() {
-        return ((bitField0_ & 0x00000002) == 0x00000002);
+        return ((bitField0_ & 0x00000002) != 0);
       }
       /**
        * <code>required int64 to = 2;</code>
@@ -2613,11 +2865,13 @@ public final class IngestionV1 {
         onChanged();
         return this;
       }
+      @java.lang.Override
       public final Builder setUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
         return super.setUnknownFields(unknownFields);
       }
 
+      @java.lang.Override
       public final Builder mergeUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
         return super.mergeUnknownFields(unknownFields);
@@ -2639,11 +2893,12 @@ public final class IngestionV1 {
 
     @java.lang.Deprecated public static final com.google.protobuf.Parser<Interval>
         PARSER = new com.google.protobuf.AbstractParser<Interval>() {
+      @java.lang.Override
       public Interval parsePartialFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-          return new Interval(input, extensionRegistry);
+        return new Interval(input, extensionRegistry);
       }
     };
 
@@ -2656,6 +2911,7 @@ public final class IngestionV1 {
       return PARSER;
     }
 
+    @java.lang.Override
     public kamino.IngestionV1.Interval getDefaultInstanceForType() {
       return DEFAULT_INSTANCE;
     }
@@ -2678,7 +2934,7 @@ public final class IngestionV1 {
      * <code>required string name = 1;</code>
      */
     com.google.protobuf.ByteString
-        getNameBytes();
+    getNameBytes();
 
     /**
      * <code>map&lt;string, string&gt; tags = 2;</code>
@@ -2739,6 +2995,7 @@ public final class IngestionV1 {
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:Metric)
       MetricOrBuilder {
+    private static final long serialVersionUID = 0L;
     // Use Metric.newBuilder() to construct.
     private Metric(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
       super(builder);
@@ -2747,6 +3004,13 @@ public final class IngestionV1 {
       name_ = "";
       instrumentType_ = 0;
       data_ = com.google.protobuf.ByteString.EMPTY;
+    }
+
+    @java.lang.Override
+    @SuppressWarnings({"unused"})
+    protected java.lang.Object newInstance(
+        UnusedPrivateParameter unused) {
+      return new Metric();
     }
 
     @java.lang.Override
@@ -2759,6 +3023,9 @@ public final class IngestionV1 {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
+      if (extensionRegistry == null) {
+        throw new java.lang.NullPointerException();
+      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -2770,13 +3037,6 @@ public final class IngestionV1 {
             case 0:
               done = true;
               break;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
             case 10: {
               com.google.protobuf.ByteString bs = input.readBytes();
               bitField0_ |= 0x00000001;
@@ -2784,19 +3044,21 @@ public final class IngestionV1 {
               break;
             }
             case 18: {
-              if (!((mutable_bitField0_ & 0x00000002) == 0x00000002)) {
+              if (!((mutable_bitField0_ & 0x00000002) != 0)) {
                 tags_ = com.google.protobuf.MapField.newMapField(
                     TagsDefaultEntryHolder.defaultEntry);
                 mutable_bitField0_ |= 0x00000002;
               }
               com.google.protobuf.MapEntry<java.lang.String, java.lang.String>
-              tags = input.readMessage(
+                  tags__ = input.readMessage(
                   TagsDefaultEntryHolder.defaultEntry.getParserForType(), extensionRegistry);
-              tags_.getMutableMap().put(tags.getKey(), tags.getValue());
+              tags_.getMutableMap().put(
+                  tags__.getKey(), tags__.getValue());
               break;
             }
             case 24: {
               int rawValue = input.readEnum();
+              @SuppressWarnings("deprecation")
               kamino.IngestionV1.InstrumentType value = kamino.IngestionV1.InstrumentType.valueOf(rawValue);
               if (value == null) {
                 unknownFields.mergeVarintField(3, rawValue);
@@ -2809,6 +3071,13 @@ public final class IngestionV1 {
             case 34: {
               bitField0_ |= 0x00000004;
               data_ = input.readBytes();
+              break;
+            }
+            default: {
+              if (!parseUnknownField(
+                  input, unknownFields, extensionRegistry, tag)) {
+                done = true;
+              }
               break;
             }
           }
@@ -2824,11 +3093,12 @@ public final class IngestionV1 {
       }
     }
     public static final com.google.protobuf.Descriptors.Descriptor
-        getDescriptor() {
+    getDescriptor() {
       return kamino.IngestionV1.internal_static_Metric_descriptor;
     }
 
     @SuppressWarnings({"rawtypes"})
+    @java.lang.Override
     protected com.google.protobuf.MapField internalGetMapField(
         int number) {
       switch (number) {
@@ -2839,8 +3109,9 @@ public final class IngestionV1 {
               "Invalid map field number: " + number);
       }
     }
+    @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-        internalGetFieldAccessorTable() {
+    internalGetFieldAccessorTable() {
       return kamino.IngestionV1.internal_static_Metric_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               kamino.IngestionV1.Metric.class, kamino.IngestionV1.Metric.Builder.class);
@@ -2853,7 +3124,7 @@ public final class IngestionV1 {
      * <code>required string name = 1;</code>
      */
     public boolean hasName() {
-      return ((bitField0_ & 0x00000001) == 0x00000001);
+      return ((bitField0_ & 0x00000001) != 0);
     }
     /**
      * <code>required string name = 1;</code>
@@ -2863,7 +3134,7 @@ public final class IngestionV1 {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs = 
+        com.google.protobuf.ByteString bs =
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
@@ -2876,10 +3147,10 @@ public final class IngestionV1 {
      * <code>required string name = 1;</code>
      */
     public com.google.protobuf.ByteString
-        getNameBytes() {
+    getNameBytes() {
       java.lang.Object ref = name_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         name_ = b;
@@ -2893,9 +3164,9 @@ public final class IngestionV1 {
     private static final class TagsDefaultEntryHolder {
       static final com.google.protobuf.MapEntry<
           java.lang.String, java.lang.String> defaultEntry =
-              com.google.protobuf.MapEntry
+          com.google.protobuf.MapEntry
               .<java.lang.String, java.lang.String>newDefaultInstance(
-                  kamino.IngestionV1.internal_static_Metric_TagsEntry_descriptor, 
+                  kamino.IngestionV1.internal_static_Metric_TagsEntry_descriptor,
                   com.google.protobuf.WireFormat.FieldType.STRING,
                   "",
                   com.google.protobuf.WireFormat.FieldType.STRING,
@@ -2971,12 +3242,13 @@ public final class IngestionV1 {
      * <code>required .InstrumentType instrumentType = 3;</code>
      */
     public boolean hasInstrumentType() {
-      return ((bitField0_ & 0x00000002) == 0x00000002);
+      return ((bitField0_ & 0x00000002) != 0);
     }
     /**
      * <code>required .InstrumentType instrumentType = 3;</code>
      */
     public kamino.IngestionV1.InstrumentType getInstrumentType() {
+      @SuppressWarnings("deprecation")
       kamino.IngestionV1.InstrumentType result = kamino.IngestionV1.InstrumentType.valueOf(instrumentType_);
       return result == null ? kamino.IngestionV1.InstrumentType.COUNTER : result;
     }
@@ -2987,7 +3259,7 @@ public final class IngestionV1 {
      * <code>required bytes data = 4;</code>
      */
     public boolean hasData() {
-      return ((bitField0_ & 0x00000004) == 0x00000004);
+      return ((bitField0_ & 0x00000004) != 0);
     }
     /**
      * <code>required bytes data = 4;</code>
@@ -2997,6 +3269,7 @@ public final class IngestionV1 {
     }
 
     private byte memoizedIsInitialized = -1;
+    @java.lang.Override
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized == 1) return true;
@@ -3018,90 +3291,87 @@ public final class IngestionV1 {
       return true;
     }
 
+    @java.lang.Override
     public void writeTo(com.google.protobuf.CodedOutputStream output)
-                        throws java.io.IOException {
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        throws java.io.IOException {
+      if (((bitField0_ & 0x00000001) != 0)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 1, name_);
       }
-      for (java.util.Map.Entry<java.lang.String, java.lang.String> entry
-           : internalGetTags().getMap().entrySet()) {
-        com.google.protobuf.MapEntry<java.lang.String, java.lang.String>
-        tags = TagsDefaultEntryHolder.defaultEntry.newBuilderForType()
-            .setKey(entry.getKey())
-            .setValue(entry.getValue())
-            .build();
-        output.writeMessage(2, tags);
-      }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+      com.google.protobuf.GeneratedMessageV3
+          .serializeStringMapTo(
+              output,
+              internalGetTags(),
+              TagsDefaultEntryHolder.defaultEntry,
+              2);
+      if (((bitField0_ & 0x00000002) != 0)) {
         output.writeEnum(3, instrumentType_);
       }
-      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+      if (((bitField0_ & 0x00000004) != 0)) {
         output.writeBytes(4, data_);
       }
       unknownFields.writeTo(output);
     }
 
+    @java.lang.Override
     public int getSerializedSize() {
       int size = memoizedSize;
       if (size != -1) return size;
 
       size = 0;
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+      if (((bitField0_ & 0x00000001) != 0)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, name_);
       }
       for (java.util.Map.Entry<java.lang.String, java.lang.String> entry
-           : internalGetTags().getMap().entrySet()) {
+          : internalGetTags().getMap().entrySet()) {
         com.google.protobuf.MapEntry<java.lang.String, java.lang.String>
-        tags = TagsDefaultEntryHolder.defaultEntry.newBuilderForType()
+            tags__ = TagsDefaultEntryHolder.defaultEntry.newBuilderForType()
             .setKey(entry.getKey())
             .setValue(entry.getValue())
             .build();
         size += com.google.protobuf.CodedOutputStream
-            .computeMessageSize(2, tags);
+            .computeMessageSize(2, tags__);
       }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+      if (((bitField0_ & 0x00000002) != 0)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeEnumSize(3, instrumentType_);
+            .computeEnumSize(3, instrumentType_);
       }
-      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+      if (((bitField0_ & 0x00000004) != 0)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(4, data_);
+            .computeBytesSize(4, data_);
       }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
       return size;
     }
 
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
-       return true;
+        return true;
       }
       if (!(obj instanceof kamino.IngestionV1.Metric)) {
         return super.equals(obj);
       }
       kamino.IngestionV1.Metric other = (kamino.IngestionV1.Metric) obj;
 
-      boolean result = true;
-      result = result && (hasName() == other.hasName());
+      if (hasName() != other.hasName()) return false;
       if (hasName()) {
-        result = result && getName()
-            .equals(other.getName());
+        if (!getName()
+            .equals(other.getName())) return false;
       }
-      result = result && internalGetTags().equals(
-          other.internalGetTags());
-      result = result && (hasInstrumentType() == other.hasInstrumentType());
+      if (!internalGetTags().equals(
+          other.internalGetTags())) return false;
+      if (hasInstrumentType() != other.hasInstrumentType()) return false;
       if (hasInstrumentType()) {
-        result = result && instrumentType_ == other.instrumentType_;
+        if (instrumentType_ != other.instrumentType_) return false;
       }
-      result = result && (hasData() == other.hasData());
+      if (hasData() != other.hasData()) return false;
       if (hasData()) {
-        result = result && getData()
-            .equals(other.getData());
+        if (!getData()
+            .equals(other.getData())) return false;
       }
-      result = result && unknownFields.equals(other.unknownFields);
-      return result;
+      if (!unknownFields.equals(other.unknownFields)) return false;
+      return true;
     }
 
     @java.lang.Override
@@ -3110,7 +3380,7 @@ public final class IngestionV1 {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasName()) {
         hash = (37 * hash) + NAME_FIELD_NUMBER;
         hash = (53 * hash) + getName().hashCode();
@@ -3132,6 +3402,17 @@ public final class IngestionV1 {
       return hash;
     }
 
+    public static kamino.IngestionV1.Metric parseFrom(
+        java.nio.ByteBuffer data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static kamino.IngestionV1.Metric parseFrom(
+        java.nio.ByteBuffer data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
     public static kamino.IngestionV1.Metric parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
@@ -3191,6 +3472,7 @@ public final class IngestionV1 {
           .parseWithIOException(PARSER, input, extensionRegistry);
     }
 
+    @java.lang.Override
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder() {
       return DEFAULT_INSTANCE.toBuilder();
@@ -3198,6 +3480,7 @@ public final class IngestionV1 {
     public static Builder newBuilder(kamino.IngestionV1.Metric prototype) {
       return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
     }
+    @java.lang.Override
     public Builder toBuilder() {
       return this == DEFAULT_INSTANCE
           ? new Builder() : new Builder().mergeFrom(this);
@@ -3217,7 +3500,7 @@ public final class IngestionV1 {
         // @@protoc_insertion_point(builder_implements:Metric)
         kamino.IngestionV1.MetricOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
-          getDescriptor() {
+      getDescriptor() {
         return kamino.IngestionV1.internal_static_Metric_descriptor;
       }
 
@@ -3243,8 +3526,9 @@ public final class IngestionV1 {
                 "Invalid map field number: " + number);
         }
       }
+      @java.lang.Override
       protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-          internalGetFieldAccessorTable() {
+      internalGetFieldAccessorTable() {
         return kamino.IngestionV1.internal_static_Metric_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 kamino.IngestionV1.Metric.class, kamino.IngestionV1.Metric.Builder.class);
@@ -3262,9 +3546,10 @@ public final class IngestionV1 {
       }
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessageV3
-                .alwaysUseFieldBuilders) {
+            .alwaysUseFieldBuilders) {
         }
       }
+      @java.lang.Override
       public Builder clear() {
         super.clear();
         name_ = "";
@@ -3277,15 +3562,18 @@ public final class IngestionV1 {
         return this;
       }
 
+      @java.lang.Override
       public com.google.protobuf.Descriptors.Descriptor
-          getDescriptorForType() {
+      getDescriptorForType() {
         return kamino.IngestionV1.internal_static_Metric_descriptor;
       }
 
+      @java.lang.Override
       public kamino.IngestionV1.Metric getDefaultInstanceForType() {
         return kamino.IngestionV1.Metric.getDefaultInstance();
       }
 
+      @java.lang.Override
       public kamino.IngestionV1.Metric build() {
         kamino.IngestionV1.Metric result = buildPartial();
         if (!result.isInitialized()) {
@@ -3294,21 +3582,22 @@ public final class IngestionV1 {
         return result;
       }
 
+      @java.lang.Override
       public kamino.IngestionV1.Metric buildPartial() {
         kamino.IngestionV1.Metric result = new kamino.IngestionV1.Metric(this);
         int from_bitField0_ = bitField0_;
         int to_bitField0_ = 0;
-        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+        if (((from_bitField0_ & 0x00000001) != 0)) {
           to_bitField0_ |= 0x00000001;
         }
         result.name_ = name_;
         result.tags_ = internalGetTags();
         result.tags_.makeImmutable();
-        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+        if (((from_bitField0_ & 0x00000004) != 0)) {
           to_bitField0_ |= 0x00000002;
         }
         result.instrumentType_ = instrumentType_;
-        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+        if (((from_bitField0_ & 0x00000008) != 0)) {
           to_bitField0_ |= 0x00000004;
         }
         result.data_ = data_;
@@ -3317,32 +3606,39 @@ public final class IngestionV1 {
         return result;
       }
 
+      @java.lang.Override
       public Builder clone() {
-        return (Builder) super.clone();
+        return super.clone();
       }
+      @java.lang.Override
       public Builder setField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          Object value) {
-        return (Builder) super.setField(field, value);
+          java.lang.Object value) {
+        return super.setField(field, value);
       }
+      @java.lang.Override
       public Builder clearField(
           com.google.protobuf.Descriptors.FieldDescriptor field) {
-        return (Builder) super.clearField(field);
+        return super.clearField(field);
       }
+      @java.lang.Override
       public Builder clearOneof(
           com.google.protobuf.Descriptors.OneofDescriptor oneof) {
-        return (Builder) super.clearOneof(oneof);
+        return super.clearOneof(oneof);
       }
+      @java.lang.Override
       public Builder setRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          int index, Object value) {
-        return (Builder) super.setRepeatedField(field, index, value);
+          int index, java.lang.Object value) {
+        return super.setRepeatedField(field, index, value);
       }
+      @java.lang.Override
       public Builder addRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          Object value) {
-        return (Builder) super.addRepeatedField(field, value);
+          java.lang.Object value) {
+        return super.addRepeatedField(field, value);
       }
+      @java.lang.Override
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof kamino.IngestionV1.Metric) {
           return mergeFrom((kamino.IngestionV1.Metric)other);
@@ -3372,6 +3668,7 @@ public final class IngestionV1 {
         return this;
       }
 
+      @java.lang.Override
       public final boolean isInitialized() {
         if (!hasName()) {
           return false;
@@ -3385,6 +3682,7 @@ public final class IngestionV1 {
         return true;
       }
 
+      @java.lang.Override
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
@@ -3409,7 +3707,7 @@ public final class IngestionV1 {
        * <code>required string name = 1;</code>
        */
       public boolean hasName() {
-        return ((bitField0_ & 0x00000001) == 0x00000001);
+        return ((bitField0_ & 0x00000001) != 0);
       }
       /**
        * <code>required string name = 1;</code>
@@ -3432,10 +3730,10 @@ public final class IngestionV1 {
        * <code>required string name = 1;</code>
        */
       public com.google.protobuf.ByteString
-          getNameBytes() {
+      getNameBytes() {
         java.lang.Object ref = name_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString b =
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           name_ = b;
@@ -3450,9 +3748,9 @@ public final class IngestionV1 {
       public Builder setName(
           java.lang.String value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000001;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000001;
         name_ = value;
         onChanged();
         return this;
@@ -3472,9 +3770,9 @@ public final class IngestionV1 {
       public Builder setNameBytes(
           com.google.protobuf.ByteString value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000001;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000001;
         name_ = value;
         onChanged();
         return this;
@@ -3557,7 +3855,8 @@ public final class IngestionV1 {
       }
 
       public Builder clearTags() {
-        getMutableTags().clear();
+        internalGetMutableTags().getMutableMap()
+            .clear();
         return this;
       }
       /**
@@ -3567,7 +3866,8 @@ public final class IngestionV1 {
       public Builder removeTags(
           java.lang.String key) {
         if (key == null) { throw new java.lang.NullPointerException(); }
-        getMutableTags().remove(key);
+        internalGetMutableTags().getMutableMap()
+            .remove(key);
         return this;
       }
       /**
@@ -3586,7 +3886,8 @@ public final class IngestionV1 {
           java.lang.String value) {
         if (key == null) { throw new java.lang.NullPointerException(); }
         if (value == null) { throw new java.lang.NullPointerException(); }
-        getMutableTags().put(key, value);
+        internalGetMutableTags().getMutableMap()
+            .put(key, value);
         return this;
       }
       /**
@@ -3595,7 +3896,8 @@ public final class IngestionV1 {
 
       public Builder putAllTags(
           java.util.Map<java.lang.String, java.lang.String> values) {
-        getMutableTags().putAll(values);
+        internalGetMutableTags().getMutableMap()
+            .putAll(values);
         return this;
       }
 
@@ -3604,12 +3906,13 @@ public final class IngestionV1 {
        * <code>required .InstrumentType instrumentType = 3;</code>
        */
       public boolean hasInstrumentType() {
-        return ((bitField0_ & 0x00000004) == 0x00000004);
+        return ((bitField0_ & 0x00000004) != 0);
       }
       /**
        * <code>required .InstrumentType instrumentType = 3;</code>
        */
       public kamino.IngestionV1.InstrumentType getInstrumentType() {
+        @SuppressWarnings("deprecation")
         kamino.IngestionV1.InstrumentType result = kamino.IngestionV1.InstrumentType.valueOf(instrumentType_);
         return result == null ? kamino.IngestionV1.InstrumentType.COUNTER : result;
       }
@@ -3640,7 +3943,7 @@ public final class IngestionV1 {
        * <code>required bytes data = 4;</code>
        */
       public boolean hasData() {
-        return ((bitField0_ & 0x00000008) == 0x00000008);
+        return ((bitField0_ & 0x00000008) != 0);
       }
       /**
        * <code>required bytes data = 4;</code>
@@ -3653,9 +3956,9 @@ public final class IngestionV1 {
        */
       public Builder setData(com.google.protobuf.ByteString value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000008;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000008;
         data_ = value;
         onChanged();
         return this;
@@ -3669,11 +3972,13 @@ public final class IngestionV1 {
         onChanged();
         return this;
       }
+      @java.lang.Override
       public final Builder setUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
         return super.setUnknownFields(unknownFields);
       }
 
+      @java.lang.Override
       public final Builder mergeUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
         return super.mergeUnknownFields(unknownFields);
@@ -3695,11 +4000,12 @@ public final class IngestionV1 {
 
     @java.lang.Deprecated public static final com.google.protobuf.Parser<Metric>
         PARSER = new com.google.protobuf.AbstractParser<Metric>() {
+      @java.lang.Override
       public Metric parsePartialFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-          return new Metric(input, extensionRegistry);
+        return new Metric(input, extensionRegistry);
       }
     };
 
@@ -3712,6 +4018,7 @@ public final class IngestionV1 {
       return PARSER;
     }
 
+    @java.lang.Override
     public kamino.IngestionV1.Metric getDefaultInstanceForType() {
       return DEFAULT_INSTANCE;
     }
@@ -3734,7 +4041,7 @@ public final class IngestionV1 {
      * <code>required string service = 1;</code>
      */
     com.google.protobuf.ByteString
-        getServiceBytes();
+    getServiceBytes();
 
     /**
      * <code>required string instance = 2;</code>
@@ -3748,7 +4055,7 @@ public final class IngestionV1 {
      * <code>required string instance = 2;</code>
      */
     com.google.protobuf.ByteString
-        getInstanceBytes();
+    getInstanceBytes();
 
     /**
      * <code>required string host = 3;</code>
@@ -3762,7 +4069,7 @@ public final class IngestionV1 {
      * <code>required string host = 3;</code>
      */
     com.google.protobuf.ByteString
-        getHostBytes();
+    getHostBytes();
 
     /**
      * <code>required string apiKey = 4;</code>
@@ -3776,7 +4083,21 @@ public final class IngestionV1 {
      * <code>required string apiKey = 4;</code>
      */
     com.google.protobuf.ByteString
-        getApiKeyBytes();
+    getApiKeyBytes();
+
+    /**
+     * <code>optional string agent = 5;</code>
+     */
+    boolean hasAgent();
+    /**
+     * <code>optional string agent = 5;</code>
+     */
+    java.lang.String getAgent();
+    /**
+     * <code>optional string agent = 5;</code>
+     */
+    com.google.protobuf.ByteString
+    getAgentBytes();
   }
   /**
    * Protobuf type {@code NodeIdentity}
@@ -3785,6 +4106,7 @@ public final class IngestionV1 {
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:NodeIdentity)
       NodeIdentityOrBuilder {
+    private static final long serialVersionUID = 0L;
     // Use NodeIdentity.newBuilder() to construct.
     private NodeIdentity(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
       super(builder);
@@ -3794,6 +4116,14 @@ public final class IngestionV1 {
       instance_ = "";
       host_ = "";
       apiKey_ = "";
+      agent_ = "";
+    }
+
+    @java.lang.Override
+    @SuppressWarnings({"unused"})
+    protected java.lang.Object newInstance(
+        UnusedPrivateParameter unused) {
+      return new NodeIdentity();
     }
 
     @java.lang.Override
@@ -3806,6 +4136,9 @@ public final class IngestionV1 {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
+      if (extensionRegistry == null) {
+        throw new java.lang.NullPointerException();
+      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -3817,13 +4150,6 @@ public final class IngestionV1 {
             case 0:
               done = true;
               break;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
             case 10: {
               com.google.protobuf.ByteString bs = input.readBytes();
               bitField0_ |= 0x00000001;
@@ -3848,6 +4174,19 @@ public final class IngestionV1 {
               apiKey_ = bs;
               break;
             }
+            case 42: {
+              com.google.protobuf.ByteString bs = input.readBytes();
+              bitField0_ |= 0x00000010;
+              agent_ = bs;
+              break;
+            }
+            default: {
+              if (!parseUnknownField(
+                  input, unknownFields, extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
           }
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -3861,12 +4200,13 @@ public final class IngestionV1 {
       }
     }
     public static final com.google.protobuf.Descriptors.Descriptor
-        getDescriptor() {
+    getDescriptor() {
       return kamino.IngestionV1.internal_static_NodeIdentity_descriptor;
     }
 
+    @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-        internalGetFieldAccessorTable() {
+    internalGetFieldAccessorTable() {
       return kamino.IngestionV1.internal_static_NodeIdentity_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               kamino.IngestionV1.NodeIdentity.class, kamino.IngestionV1.NodeIdentity.Builder.class);
@@ -3879,7 +4219,7 @@ public final class IngestionV1 {
      * <code>required string service = 1;</code>
      */
     public boolean hasService() {
-      return ((bitField0_ & 0x00000001) == 0x00000001);
+      return ((bitField0_ & 0x00000001) != 0);
     }
     /**
      * <code>required string service = 1;</code>
@@ -3889,7 +4229,7 @@ public final class IngestionV1 {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs = 
+        com.google.protobuf.ByteString bs =
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
@@ -3902,10 +4242,10 @@ public final class IngestionV1 {
      * <code>required string service = 1;</code>
      */
     public com.google.protobuf.ByteString
-        getServiceBytes() {
+    getServiceBytes() {
       java.lang.Object ref = service_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         service_ = b;
@@ -3921,7 +4261,7 @@ public final class IngestionV1 {
      * <code>required string instance = 2;</code>
      */
     public boolean hasInstance() {
-      return ((bitField0_ & 0x00000002) == 0x00000002);
+      return ((bitField0_ & 0x00000002) != 0);
     }
     /**
      * <code>required string instance = 2;</code>
@@ -3931,7 +4271,7 @@ public final class IngestionV1 {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs = 
+        com.google.protobuf.ByteString bs =
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
@@ -3944,10 +4284,10 @@ public final class IngestionV1 {
      * <code>required string instance = 2;</code>
      */
     public com.google.protobuf.ByteString
-        getInstanceBytes() {
+    getInstanceBytes() {
       java.lang.Object ref = instance_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         instance_ = b;
@@ -3963,7 +4303,7 @@ public final class IngestionV1 {
      * <code>required string host = 3;</code>
      */
     public boolean hasHost() {
-      return ((bitField0_ & 0x00000004) == 0x00000004);
+      return ((bitField0_ & 0x00000004) != 0);
     }
     /**
      * <code>required string host = 3;</code>
@@ -3973,7 +4313,7 @@ public final class IngestionV1 {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs = 
+        com.google.protobuf.ByteString bs =
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
@@ -3986,10 +4326,10 @@ public final class IngestionV1 {
      * <code>required string host = 3;</code>
      */
     public com.google.protobuf.ByteString
-        getHostBytes() {
+    getHostBytes() {
       java.lang.Object ref = host_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         host_ = b;
@@ -4005,7 +4345,7 @@ public final class IngestionV1 {
      * <code>required string apiKey = 4;</code>
      */
     public boolean hasApiKey() {
-      return ((bitField0_ & 0x00000008) == 0x00000008);
+      return ((bitField0_ & 0x00000008) != 0);
     }
     /**
      * <code>required string apiKey = 4;</code>
@@ -4015,7 +4355,7 @@ public final class IngestionV1 {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs = 
+        com.google.protobuf.ByteString bs =
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
@@ -4028,10 +4368,10 @@ public final class IngestionV1 {
      * <code>required string apiKey = 4;</code>
      */
     public com.google.protobuf.ByteString
-        getApiKeyBytes() {
+    getApiKeyBytes() {
       java.lang.Object ref = apiKey_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         apiKey_ = b;
@@ -4041,7 +4381,50 @@ public final class IngestionV1 {
       }
     }
 
+    public static final int AGENT_FIELD_NUMBER = 5;
+    private volatile java.lang.Object agent_;
+    /**
+     * <code>optional string agent = 5;</code>
+     */
+    public boolean hasAgent() {
+      return ((bitField0_ & 0x00000010) != 0);
+    }
+    /**
+     * <code>optional string agent = 5;</code>
+     */
+    public java.lang.String getAgent() {
+      java.lang.Object ref = agent_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          agent_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>optional string agent = 5;</code>
+     */
+    public com.google.protobuf.ByteString
+    getAgentBytes() {
+      java.lang.Object ref = agent_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        agent_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
     private byte memoizedIsInitialized = -1;
+    @java.lang.Override
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized == 1) return true;
@@ -4067,79 +4450,90 @@ public final class IngestionV1 {
       return true;
     }
 
+    @java.lang.Override
     public void writeTo(com.google.protobuf.CodedOutputStream output)
-                        throws java.io.IOException {
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        throws java.io.IOException {
+      if (((bitField0_ & 0x00000001) != 0)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 1, service_);
       }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+      if (((bitField0_ & 0x00000002) != 0)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 2, instance_);
       }
-      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+      if (((bitField0_ & 0x00000004) != 0)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 3, host_);
       }
-      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+      if (((bitField0_ & 0x00000008) != 0)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 4, apiKey_);
+      }
+      if (((bitField0_ & 0x00000010) != 0)) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 5, agent_);
       }
       unknownFields.writeTo(output);
     }
 
+    @java.lang.Override
     public int getSerializedSize() {
       int size = memoizedSize;
       if (size != -1) return size;
 
       size = 0;
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+      if (((bitField0_ & 0x00000001) != 0)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, service_);
       }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+      if (((bitField0_ & 0x00000002) != 0)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, instance_);
       }
-      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+      if (((bitField0_ & 0x00000004) != 0)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(3, host_);
       }
-      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+      if (((bitField0_ & 0x00000008) != 0)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(4, apiKey_);
+      }
+      if (((bitField0_ & 0x00000010) != 0)) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(5, agent_);
       }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
       return size;
     }
 
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
-       return true;
+        return true;
       }
       if (!(obj instanceof kamino.IngestionV1.NodeIdentity)) {
         return super.equals(obj);
       }
       kamino.IngestionV1.NodeIdentity other = (kamino.IngestionV1.NodeIdentity) obj;
 
-      boolean result = true;
-      result = result && (hasService() == other.hasService());
+      if (hasService() != other.hasService()) return false;
       if (hasService()) {
-        result = result && getService()
-            .equals(other.getService());
+        if (!getService()
+            .equals(other.getService())) return false;
       }
-      result = result && (hasInstance() == other.hasInstance());
+      if (hasInstance() != other.hasInstance()) return false;
       if (hasInstance()) {
-        result = result && getInstance()
-            .equals(other.getInstance());
+        if (!getInstance()
+            .equals(other.getInstance())) return false;
       }
-      result = result && (hasHost() == other.hasHost());
+      if (hasHost() != other.hasHost()) return false;
       if (hasHost()) {
-        result = result && getHost()
-            .equals(other.getHost());
+        if (!getHost()
+            .equals(other.getHost())) return false;
       }
-      result = result && (hasApiKey() == other.hasApiKey());
+      if (hasApiKey() != other.hasApiKey()) return false;
       if (hasApiKey()) {
-        result = result && getApiKey()
-            .equals(other.getApiKey());
+        if (!getApiKey()
+            .equals(other.getApiKey())) return false;
       }
-      result = result && unknownFields.equals(other.unknownFields);
-      return result;
+      if (hasAgent() != other.hasAgent()) return false;
+      if (hasAgent()) {
+        if (!getAgent()
+            .equals(other.getAgent())) return false;
+      }
+      if (!unknownFields.equals(other.unknownFields)) return false;
+      return true;
     }
 
     @java.lang.Override
@@ -4148,7 +4542,7 @@ public final class IngestionV1 {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasService()) {
         hash = (37 * hash) + SERVICE_FIELD_NUMBER;
         hash = (53 * hash) + getService().hashCode();
@@ -4165,11 +4559,26 @@ public final class IngestionV1 {
         hash = (37 * hash) + APIKEY_FIELD_NUMBER;
         hash = (53 * hash) + getApiKey().hashCode();
       }
+      if (hasAgent()) {
+        hash = (37 * hash) + AGENT_FIELD_NUMBER;
+        hash = (53 * hash) + getAgent().hashCode();
+      }
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
       return hash;
     }
 
+    public static kamino.IngestionV1.NodeIdentity parseFrom(
+        java.nio.ByteBuffer data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static kamino.IngestionV1.NodeIdentity parseFrom(
+        java.nio.ByteBuffer data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
     public static kamino.IngestionV1.NodeIdentity parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
@@ -4229,6 +4638,7 @@ public final class IngestionV1 {
           .parseWithIOException(PARSER, input, extensionRegistry);
     }
 
+    @java.lang.Override
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder() {
       return DEFAULT_INSTANCE.toBuilder();
@@ -4236,6 +4646,7 @@ public final class IngestionV1 {
     public static Builder newBuilder(kamino.IngestionV1.NodeIdentity prototype) {
       return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
     }
+    @java.lang.Override
     public Builder toBuilder() {
       return this == DEFAULT_INSTANCE
           ? new Builder() : new Builder().mergeFrom(this);
@@ -4255,12 +4666,13 @@ public final class IngestionV1 {
         // @@protoc_insertion_point(builder_implements:NodeIdentity)
         kamino.IngestionV1.NodeIdentityOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
-          getDescriptor() {
+      getDescriptor() {
         return kamino.IngestionV1.internal_static_NodeIdentity_descriptor;
       }
 
+      @java.lang.Override
       protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-          internalGetFieldAccessorTable() {
+      internalGetFieldAccessorTable() {
         return kamino.IngestionV1.internal_static_NodeIdentity_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 kamino.IngestionV1.NodeIdentity.class, kamino.IngestionV1.NodeIdentity.Builder.class);
@@ -4278,9 +4690,10 @@ public final class IngestionV1 {
       }
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessageV3
-                .alwaysUseFieldBuilders) {
+            .alwaysUseFieldBuilders) {
         }
       }
+      @java.lang.Override
       public Builder clear() {
         super.clear();
         service_ = "";
@@ -4291,18 +4704,23 @@ public final class IngestionV1 {
         bitField0_ = (bitField0_ & ~0x00000004);
         apiKey_ = "";
         bitField0_ = (bitField0_ & ~0x00000008);
+        agent_ = "";
+        bitField0_ = (bitField0_ & ~0x00000010);
         return this;
       }
 
+      @java.lang.Override
       public com.google.protobuf.Descriptors.Descriptor
-          getDescriptorForType() {
+      getDescriptorForType() {
         return kamino.IngestionV1.internal_static_NodeIdentity_descriptor;
       }
 
+      @java.lang.Override
       public kamino.IngestionV1.NodeIdentity getDefaultInstanceForType() {
         return kamino.IngestionV1.NodeIdentity.getDefaultInstance();
       }
 
+      @java.lang.Override
       public kamino.IngestionV1.NodeIdentity build() {
         kamino.IngestionV1.NodeIdentity result = buildPartial();
         if (!result.isInitialized()) {
@@ -4311,57 +4729,69 @@ public final class IngestionV1 {
         return result;
       }
 
+      @java.lang.Override
       public kamino.IngestionV1.NodeIdentity buildPartial() {
         kamino.IngestionV1.NodeIdentity result = new kamino.IngestionV1.NodeIdentity(this);
         int from_bitField0_ = bitField0_;
         int to_bitField0_ = 0;
-        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+        if (((from_bitField0_ & 0x00000001) != 0)) {
           to_bitField0_ |= 0x00000001;
         }
         result.service_ = service_;
-        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+        if (((from_bitField0_ & 0x00000002) != 0)) {
           to_bitField0_ |= 0x00000002;
         }
         result.instance_ = instance_;
-        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+        if (((from_bitField0_ & 0x00000004) != 0)) {
           to_bitField0_ |= 0x00000004;
         }
         result.host_ = host_;
-        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+        if (((from_bitField0_ & 0x00000008) != 0)) {
           to_bitField0_ |= 0x00000008;
         }
         result.apiKey_ = apiKey_;
+        if (((from_bitField0_ & 0x00000010) != 0)) {
+          to_bitField0_ |= 0x00000010;
+        }
+        result.agent_ = agent_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
       }
 
+      @java.lang.Override
       public Builder clone() {
-        return (Builder) super.clone();
+        return super.clone();
       }
+      @java.lang.Override
       public Builder setField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          Object value) {
-        return (Builder) super.setField(field, value);
+          java.lang.Object value) {
+        return super.setField(field, value);
       }
+      @java.lang.Override
       public Builder clearField(
           com.google.protobuf.Descriptors.FieldDescriptor field) {
-        return (Builder) super.clearField(field);
+        return super.clearField(field);
       }
+      @java.lang.Override
       public Builder clearOneof(
           com.google.protobuf.Descriptors.OneofDescriptor oneof) {
-        return (Builder) super.clearOneof(oneof);
+        return super.clearOneof(oneof);
       }
+      @java.lang.Override
       public Builder setRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          int index, Object value) {
-        return (Builder) super.setRepeatedField(field, index, value);
+          int index, java.lang.Object value) {
+        return super.setRepeatedField(field, index, value);
       }
+      @java.lang.Override
       public Builder addRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          Object value) {
-        return (Builder) super.addRepeatedField(field, value);
+          java.lang.Object value) {
+        return super.addRepeatedField(field, value);
       }
+      @java.lang.Override
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof kamino.IngestionV1.NodeIdentity) {
           return mergeFrom((kamino.IngestionV1.NodeIdentity)other);
@@ -4393,11 +4823,17 @@ public final class IngestionV1 {
           apiKey_ = other.apiKey_;
           onChanged();
         }
+        if (other.hasAgent()) {
+          bitField0_ |= 0x00000010;
+          agent_ = other.agent_;
+          onChanged();
+        }
         this.mergeUnknownFields(other.unknownFields);
         onChanged();
         return this;
       }
 
+      @java.lang.Override
       public final boolean isInitialized() {
         if (!hasService()) {
           return false;
@@ -4414,6 +4850,7 @@ public final class IngestionV1 {
         return true;
       }
 
+      @java.lang.Override
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
@@ -4438,7 +4875,7 @@ public final class IngestionV1 {
        * <code>required string service = 1;</code>
        */
       public boolean hasService() {
-        return ((bitField0_ & 0x00000001) == 0x00000001);
+        return ((bitField0_ & 0x00000001) != 0);
       }
       /**
        * <code>required string service = 1;</code>
@@ -4461,10 +4898,10 @@ public final class IngestionV1 {
        * <code>required string service = 1;</code>
        */
       public com.google.protobuf.ByteString
-          getServiceBytes() {
+      getServiceBytes() {
         java.lang.Object ref = service_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString b =
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           service_ = b;
@@ -4479,9 +4916,9 @@ public final class IngestionV1 {
       public Builder setService(
           java.lang.String value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000001;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000001;
         service_ = value;
         onChanged();
         return this;
@@ -4501,9 +4938,9 @@ public final class IngestionV1 {
       public Builder setServiceBytes(
           com.google.protobuf.ByteString value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000001;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000001;
         service_ = value;
         onChanged();
         return this;
@@ -4514,7 +4951,7 @@ public final class IngestionV1 {
        * <code>required string instance = 2;</code>
        */
       public boolean hasInstance() {
-        return ((bitField0_ & 0x00000002) == 0x00000002);
+        return ((bitField0_ & 0x00000002) != 0);
       }
       /**
        * <code>required string instance = 2;</code>
@@ -4537,10 +4974,10 @@ public final class IngestionV1 {
        * <code>required string instance = 2;</code>
        */
       public com.google.protobuf.ByteString
-          getInstanceBytes() {
+      getInstanceBytes() {
         java.lang.Object ref = instance_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString b =
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           instance_ = b;
@@ -4555,9 +4992,9 @@ public final class IngestionV1 {
       public Builder setInstance(
           java.lang.String value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000002;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000002;
         instance_ = value;
         onChanged();
         return this;
@@ -4577,9 +5014,9 @@ public final class IngestionV1 {
       public Builder setInstanceBytes(
           com.google.protobuf.ByteString value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000002;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000002;
         instance_ = value;
         onChanged();
         return this;
@@ -4590,7 +5027,7 @@ public final class IngestionV1 {
        * <code>required string host = 3;</code>
        */
       public boolean hasHost() {
-        return ((bitField0_ & 0x00000004) == 0x00000004);
+        return ((bitField0_ & 0x00000004) != 0);
       }
       /**
        * <code>required string host = 3;</code>
@@ -4613,10 +5050,10 @@ public final class IngestionV1 {
        * <code>required string host = 3;</code>
        */
       public com.google.protobuf.ByteString
-          getHostBytes() {
+      getHostBytes() {
         java.lang.Object ref = host_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString b =
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           host_ = b;
@@ -4631,9 +5068,9 @@ public final class IngestionV1 {
       public Builder setHost(
           java.lang.String value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000004;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000004;
         host_ = value;
         onChanged();
         return this;
@@ -4653,9 +5090,9 @@ public final class IngestionV1 {
       public Builder setHostBytes(
           com.google.protobuf.ByteString value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000004;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000004;
         host_ = value;
         onChanged();
         return this;
@@ -4666,7 +5103,7 @@ public final class IngestionV1 {
        * <code>required string apiKey = 4;</code>
        */
       public boolean hasApiKey() {
-        return ((bitField0_ & 0x00000008) == 0x00000008);
+        return ((bitField0_ & 0x00000008) != 0);
       }
       /**
        * <code>required string apiKey = 4;</code>
@@ -4689,10 +5126,10 @@ public final class IngestionV1 {
        * <code>required string apiKey = 4;</code>
        */
       public com.google.protobuf.ByteString
-          getApiKeyBytes() {
+      getApiKeyBytes() {
         java.lang.Object ref = apiKey_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString b =
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           apiKey_ = b;
@@ -4707,9 +5144,9 @@ public final class IngestionV1 {
       public Builder setApiKey(
           java.lang.String value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000008;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000008;
         apiKey_ = value;
         onChanged();
         return this;
@@ -4729,18 +5166,96 @@ public final class IngestionV1 {
       public Builder setApiKeyBytes(
           com.google.protobuf.ByteString value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000008;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000008;
         apiKey_ = value;
         onChanged();
         return this;
       }
+
+      private java.lang.Object agent_ = "";
+      /**
+       * <code>optional string agent = 5;</code>
+       */
+      public boolean hasAgent() {
+        return ((bitField0_ & 0x00000010) != 0);
+      }
+      /**
+       * <code>optional string agent = 5;</code>
+       */
+      public java.lang.String getAgent() {
+        java.lang.Object ref = agent_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            agent_ = s;
+          }
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>optional string agent = 5;</code>
+       */
+      public com.google.protobuf.ByteString
+      getAgentBytes() {
+        java.lang.Object ref = agent_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b =
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          agent_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string agent = 5;</code>
+       */
+      public Builder setAgent(
+          java.lang.String value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000010;
+        agent_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string agent = 5;</code>
+       */
+      public Builder clearAgent() {
+        bitField0_ = (bitField0_ & ~0x00000010);
+        agent_ = getDefaultInstance().getAgent();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string agent = 5;</code>
+       */
+      public Builder setAgentBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000010;
+        agent_ = value;
+        onChanged();
+        return this;
+      }
+      @java.lang.Override
       public final Builder setUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
         return super.setUnknownFields(unknownFields);
       }
 
+      @java.lang.Override
       public final Builder mergeUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
         return super.mergeUnknownFields(unknownFields);
@@ -4762,11 +5277,12 @@ public final class IngestionV1 {
 
     @java.lang.Deprecated public static final com.google.protobuf.Parser<NodeIdentity>
         PARSER = new com.google.protobuf.AbstractParser<NodeIdentity>() {
+      @java.lang.Override
       public NodeIdentity parsePartialFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-          return new NodeIdentity(input, extensionRegistry);
+        return new NodeIdentity(input, extensionRegistry);
       }
     };
 
@@ -4779,6 +5295,7 @@ public final class IngestionV1 {
       return PARSER;
     }
 
+    @java.lang.Override
     public kamino.IngestionV1.NodeIdentity getDefaultInstanceForType() {
       return DEFAULT_INSTANCE;
     }
@@ -4823,7 +5340,7 @@ public final class IngestionV1 {
      * <code>required string incarnation = 3;</code>
      */
     com.google.protobuf.ByteString
-        getIncarnationBytes();
+    getIncarnationBytes();
 
     /**
      * <code>required string version = 4;</code>
@@ -4837,7 +5354,7 @@ public final class IngestionV1 {
      * <code>required string version = 4;</code>
      */
     com.google.protobuf.ByteString
-        getVersionBytes();
+    getVersionBytes();
   }
   /**
    * Protobuf type {@code Hello}
@@ -4846,14 +5363,21 @@ public final class IngestionV1 {
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:Hello)
       HelloOrBuilder {
+    private static final long serialVersionUID = 0L;
     // Use Hello.newBuilder() to construct.
     private Hello(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
       super(builder);
     }
     private Hello() {
-      time_ = 0L;
       incarnation_ = "";
       version_ = "";
+    }
+
+    @java.lang.Override
+    @SuppressWarnings({"unused"})
+    protected java.lang.Object newInstance(
+        UnusedPrivateParameter unused) {
+      return new Hello();
     }
 
     @java.lang.Override
@@ -4866,6 +5390,9 @@ public final class IngestionV1 {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
+      if (extensionRegistry == null) {
+        throw new java.lang.NullPointerException();
+      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -4877,16 +5404,9 @@ public final class IngestionV1 {
             case 0:
               done = true;
               break;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
             case 10: {
               kamino.IngestionV1.NodeIdentity.Builder subBuilder = null;
-              if (((bitField0_ & 0x00000001) == 0x00000001)) {
+              if (((bitField0_ & 0x00000001) != 0)) {
                 subBuilder = node_.toBuilder();
               }
               node_ = input.readMessage(kamino.IngestionV1.NodeIdentity.PARSER, extensionRegistry);
@@ -4914,6 +5434,13 @@ public final class IngestionV1 {
               version_ = bs;
               break;
             }
+            default: {
+              if (!parseUnknownField(
+                  input, unknownFields, extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
           }
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -4927,12 +5454,13 @@ public final class IngestionV1 {
       }
     }
     public static final com.google.protobuf.Descriptors.Descriptor
-        getDescriptor() {
+    getDescriptor() {
       return kamino.IngestionV1.internal_static_Hello_descriptor;
     }
 
+    @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-        internalGetFieldAccessorTable() {
+    internalGetFieldAccessorTable() {
       return kamino.IngestionV1.internal_static_Hello_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               kamino.IngestionV1.Hello.class, kamino.IngestionV1.Hello.Builder.class);
@@ -4945,7 +5473,7 @@ public final class IngestionV1 {
      * <code>required .NodeIdentity node = 1;</code>
      */
     public boolean hasNode() {
-      return ((bitField0_ & 0x00000001) == 0x00000001);
+      return ((bitField0_ & 0x00000001) != 0);
     }
     /**
      * <code>required .NodeIdentity node = 1;</code>
@@ -4966,7 +5494,7 @@ public final class IngestionV1 {
      * <code>required int64 time = 2;</code>
      */
     public boolean hasTime() {
-      return ((bitField0_ & 0x00000002) == 0x00000002);
+      return ((bitField0_ & 0x00000002) != 0);
     }
     /**
      * <code>required int64 time = 2;</code>
@@ -4981,7 +5509,7 @@ public final class IngestionV1 {
      * <code>required string incarnation = 3;</code>
      */
     public boolean hasIncarnation() {
-      return ((bitField0_ & 0x00000004) == 0x00000004);
+      return ((bitField0_ & 0x00000004) != 0);
     }
     /**
      * <code>required string incarnation = 3;</code>
@@ -4991,7 +5519,7 @@ public final class IngestionV1 {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs = 
+        com.google.protobuf.ByteString bs =
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
@@ -5004,10 +5532,10 @@ public final class IngestionV1 {
      * <code>required string incarnation = 3;</code>
      */
     public com.google.protobuf.ByteString
-        getIncarnationBytes() {
+    getIncarnationBytes() {
       java.lang.Object ref = incarnation_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         incarnation_ = b;
@@ -5023,7 +5551,7 @@ public final class IngestionV1 {
      * <code>required string version = 4;</code>
      */
     public boolean hasVersion() {
-      return ((bitField0_ & 0x00000008) == 0x00000008);
+      return ((bitField0_ & 0x00000008) != 0);
     }
     /**
      * <code>required string version = 4;</code>
@@ -5033,7 +5561,7 @@ public final class IngestionV1 {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs = 
+        com.google.protobuf.ByteString bs =
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
@@ -5046,10 +5574,10 @@ public final class IngestionV1 {
      * <code>required string version = 4;</code>
      */
     public com.google.protobuf.ByteString
-        getVersionBytes() {
+    getVersionBytes() {
       java.lang.Object ref = version_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         version_ = b;
@@ -5060,6 +5588,7 @@ public final class IngestionV1 {
     }
 
     private byte memoizedIsInitialized = -1;
+    @java.lang.Override
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized == 1) return true;
@@ -5089,40 +5618,42 @@ public final class IngestionV1 {
       return true;
     }
 
+    @java.lang.Override
     public void writeTo(com.google.protobuf.CodedOutputStream output)
-                        throws java.io.IOException {
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        throws java.io.IOException {
+      if (((bitField0_ & 0x00000001) != 0)) {
         output.writeMessage(1, getNode());
       }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+      if (((bitField0_ & 0x00000002) != 0)) {
         output.writeInt64(2, time_);
       }
-      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+      if (((bitField0_ & 0x00000004) != 0)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 3, incarnation_);
       }
-      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+      if (((bitField0_ & 0x00000008) != 0)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 4, version_);
       }
       unknownFields.writeTo(output);
     }
 
+    @java.lang.Override
     public int getSerializedSize() {
       int size = memoizedSize;
       if (size != -1) return size;
 
       size = 0;
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+      if (((bitField0_ & 0x00000001) != 0)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(1, getNode());
+            .computeMessageSize(1, getNode());
       }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+      if (((bitField0_ & 0x00000002) != 0)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeInt64Size(2, time_);
+            .computeInt64Size(2, time_);
       }
-      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+      if (((bitField0_ & 0x00000004) != 0)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(3, incarnation_);
       }
-      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+      if (((bitField0_ & 0x00000008) != 0)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(4, version_);
       }
       size += unknownFields.getSerializedSize();
@@ -5130,40 +5661,38 @@ public final class IngestionV1 {
       return size;
     }
 
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
-       return true;
+        return true;
       }
       if (!(obj instanceof kamino.IngestionV1.Hello)) {
         return super.equals(obj);
       }
       kamino.IngestionV1.Hello other = (kamino.IngestionV1.Hello) obj;
 
-      boolean result = true;
-      result = result && (hasNode() == other.hasNode());
+      if (hasNode() != other.hasNode()) return false;
       if (hasNode()) {
-        result = result && getNode()
-            .equals(other.getNode());
+        if (!getNode()
+            .equals(other.getNode())) return false;
       }
-      result = result && (hasTime() == other.hasTime());
+      if (hasTime() != other.hasTime()) return false;
       if (hasTime()) {
-        result = result && (getTime()
-            == other.getTime());
+        if (getTime()
+            != other.getTime()) return false;
       }
-      result = result && (hasIncarnation() == other.hasIncarnation());
+      if (hasIncarnation() != other.hasIncarnation()) return false;
       if (hasIncarnation()) {
-        result = result && getIncarnation()
-            .equals(other.getIncarnation());
+        if (!getIncarnation()
+            .equals(other.getIncarnation())) return false;
       }
-      result = result && (hasVersion() == other.hasVersion());
+      if (hasVersion() != other.hasVersion()) return false;
       if (hasVersion()) {
-        result = result && getVersion()
-            .equals(other.getVersion());
+        if (!getVersion()
+            .equals(other.getVersion())) return false;
       }
-      result = result && unknownFields.equals(other.unknownFields);
-      return result;
+      if (!unknownFields.equals(other.unknownFields)) return false;
+      return true;
     }
 
     @java.lang.Override
@@ -5172,7 +5701,7 @@ public final class IngestionV1 {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasNode()) {
         hash = (37 * hash) + NODE_FIELD_NUMBER;
         hash = (53 * hash) + getNode().hashCode();
@@ -5195,6 +5724,17 @@ public final class IngestionV1 {
       return hash;
     }
 
+    public static kamino.IngestionV1.Hello parseFrom(
+        java.nio.ByteBuffer data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static kamino.IngestionV1.Hello parseFrom(
+        java.nio.ByteBuffer data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
     public static kamino.IngestionV1.Hello parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
@@ -5254,6 +5794,7 @@ public final class IngestionV1 {
           .parseWithIOException(PARSER, input, extensionRegistry);
     }
 
+    @java.lang.Override
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder() {
       return DEFAULT_INSTANCE.toBuilder();
@@ -5261,6 +5802,7 @@ public final class IngestionV1 {
     public static Builder newBuilder(kamino.IngestionV1.Hello prototype) {
       return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
     }
+    @java.lang.Override
     public Builder toBuilder() {
       return this == DEFAULT_INSTANCE
           ? new Builder() : new Builder().mergeFrom(this);
@@ -5280,12 +5822,13 @@ public final class IngestionV1 {
         // @@protoc_insertion_point(builder_implements:Hello)
         kamino.IngestionV1.HelloOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
-          getDescriptor() {
+      getDescriptor() {
         return kamino.IngestionV1.internal_static_Hello_descriptor;
       }
 
+      @java.lang.Override
       protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-          internalGetFieldAccessorTable() {
+      internalGetFieldAccessorTable() {
         return kamino.IngestionV1.internal_static_Hello_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 kamino.IngestionV1.Hello.class, kamino.IngestionV1.Hello.Builder.class);
@@ -5303,10 +5846,11 @@ public final class IngestionV1 {
       }
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessageV3
-                .alwaysUseFieldBuilders) {
+            .alwaysUseFieldBuilders) {
           getNodeFieldBuilder();
         }
       }
+      @java.lang.Override
       public Builder clear() {
         super.clear();
         if (nodeBuilder_ == null) {
@@ -5324,15 +5868,18 @@ public final class IngestionV1 {
         return this;
       }
 
+      @java.lang.Override
       public com.google.protobuf.Descriptors.Descriptor
-          getDescriptorForType() {
+      getDescriptorForType() {
         return kamino.IngestionV1.internal_static_Hello_descriptor;
       }
 
+      @java.lang.Override
       public kamino.IngestionV1.Hello getDefaultInstanceForType() {
         return kamino.IngestionV1.Hello.getDefaultInstance();
       }
 
+      @java.lang.Override
       public kamino.IngestionV1.Hello build() {
         kamino.IngestionV1.Hello result = buildPartial();
         if (!result.isInitialized()) {
@@ -5341,27 +5888,28 @@ public final class IngestionV1 {
         return result;
       }
 
+      @java.lang.Override
       public kamino.IngestionV1.Hello buildPartial() {
         kamino.IngestionV1.Hello result = new kamino.IngestionV1.Hello(this);
         int from_bitField0_ = bitField0_;
         int to_bitField0_ = 0;
-        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+        if (((from_bitField0_ & 0x00000001) != 0)) {
+          if (nodeBuilder_ == null) {
+            result.node_ = node_;
+          } else {
+            result.node_ = nodeBuilder_.build();
+          }
           to_bitField0_ |= 0x00000001;
         }
-        if (nodeBuilder_ == null) {
-          result.node_ = node_;
-        } else {
-          result.node_ = nodeBuilder_.build();
-        }
-        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+        if (((from_bitField0_ & 0x00000002) != 0)) {
+          result.time_ = time_;
           to_bitField0_ |= 0x00000002;
         }
-        result.time_ = time_;
-        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+        if (((from_bitField0_ & 0x00000004) != 0)) {
           to_bitField0_ |= 0x00000004;
         }
         result.incarnation_ = incarnation_;
-        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+        if (((from_bitField0_ & 0x00000008) != 0)) {
           to_bitField0_ |= 0x00000008;
         }
         result.version_ = version_;
@@ -5370,32 +5918,39 @@ public final class IngestionV1 {
         return result;
       }
 
+      @java.lang.Override
       public Builder clone() {
-        return (Builder) super.clone();
+        return super.clone();
       }
+      @java.lang.Override
       public Builder setField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          Object value) {
-        return (Builder) super.setField(field, value);
+          java.lang.Object value) {
+        return super.setField(field, value);
       }
+      @java.lang.Override
       public Builder clearField(
           com.google.protobuf.Descriptors.FieldDescriptor field) {
-        return (Builder) super.clearField(field);
+        return super.clearField(field);
       }
+      @java.lang.Override
       public Builder clearOneof(
           com.google.protobuf.Descriptors.OneofDescriptor oneof) {
-        return (Builder) super.clearOneof(oneof);
+        return super.clearOneof(oneof);
       }
+      @java.lang.Override
       public Builder setRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          int index, Object value) {
-        return (Builder) super.setRepeatedField(field, index, value);
+          int index, java.lang.Object value) {
+        return super.setRepeatedField(field, index, value);
       }
+      @java.lang.Override
       public Builder addRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          Object value) {
-        return (Builder) super.addRepeatedField(field, value);
+          java.lang.Object value) {
+        return super.addRepeatedField(field, value);
       }
+      @java.lang.Override
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof kamino.IngestionV1.Hello) {
           return mergeFrom((kamino.IngestionV1.Hello)other);
@@ -5428,6 +5983,7 @@ public final class IngestionV1 {
         return this;
       }
 
+      @java.lang.Override
       public final boolean isInitialized() {
         if (!hasNode()) {
           return false;
@@ -5447,6 +6003,7 @@ public final class IngestionV1 {
         return true;
       }
 
+      @java.lang.Override
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
@@ -5466,14 +6023,14 @@ public final class IngestionV1 {
       }
       private int bitField0_;
 
-      private kamino.IngestionV1.NodeIdentity node_ = null;
+      private kamino.IngestionV1.NodeIdentity node_;
       private com.google.protobuf.SingleFieldBuilderV3<
           kamino.IngestionV1.NodeIdentity, kamino.IngestionV1.NodeIdentity.Builder, kamino.IngestionV1.NodeIdentityOrBuilder> nodeBuilder_;
       /**
        * <code>required .NodeIdentity node = 1;</code>
        */
       public boolean hasNode() {
-        return ((bitField0_ & 0x00000001) == 0x00000001);
+        return ((bitField0_ & 0x00000001) != 0);
       }
       /**
        * <code>required .NodeIdentity node = 1;</code>
@@ -5520,11 +6077,11 @@ public final class IngestionV1 {
        */
       public Builder mergeNode(kamino.IngestionV1.NodeIdentity value) {
         if (nodeBuilder_ == null) {
-          if (((bitField0_ & 0x00000001) == 0x00000001) &&
+          if (((bitField0_ & 0x00000001) != 0) &&
               node_ != null &&
               node_ != kamino.IngestionV1.NodeIdentity.getDefaultInstance()) {
             node_ =
-              kamino.IngestionV1.NodeIdentity.newBuilder(node_).mergeFrom(value).buildPartial();
+                kamino.IngestionV1.NodeIdentity.newBuilder(node_).mergeFrom(value).buildPartial();
           } else {
             node_ = value;
           }
@@ -5571,14 +6128,14 @@ public final class IngestionV1 {
        * <code>required .NodeIdentity node = 1;</code>
        */
       private com.google.protobuf.SingleFieldBuilderV3<
-          kamino.IngestionV1.NodeIdentity, kamino.IngestionV1.NodeIdentity.Builder, kamino.IngestionV1.NodeIdentityOrBuilder> 
-          getNodeFieldBuilder() {
+          kamino.IngestionV1.NodeIdentity, kamino.IngestionV1.NodeIdentity.Builder, kamino.IngestionV1.NodeIdentityOrBuilder>
+      getNodeFieldBuilder() {
         if (nodeBuilder_ == null) {
           nodeBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
               kamino.IngestionV1.NodeIdentity, kamino.IngestionV1.NodeIdentity.Builder, kamino.IngestionV1.NodeIdentityOrBuilder>(
-                  getNode(),
-                  getParentForChildren(),
-                  isClean());
+              getNode(),
+              getParentForChildren(),
+              isClean());
           node_ = null;
         }
         return nodeBuilder_;
@@ -5589,7 +6146,7 @@ public final class IngestionV1 {
        * <code>required int64 time = 2;</code>
        */
       public boolean hasTime() {
-        return ((bitField0_ & 0x00000002) == 0x00000002);
+        return ((bitField0_ & 0x00000002) != 0);
       }
       /**
        * <code>required int64 time = 2;</code>
@@ -5621,7 +6178,7 @@ public final class IngestionV1 {
        * <code>required string incarnation = 3;</code>
        */
       public boolean hasIncarnation() {
-        return ((bitField0_ & 0x00000004) == 0x00000004);
+        return ((bitField0_ & 0x00000004) != 0);
       }
       /**
        * <code>required string incarnation = 3;</code>
@@ -5644,10 +6201,10 @@ public final class IngestionV1 {
        * <code>required string incarnation = 3;</code>
        */
       public com.google.protobuf.ByteString
-          getIncarnationBytes() {
+      getIncarnationBytes() {
         java.lang.Object ref = incarnation_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString b =
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           incarnation_ = b;
@@ -5662,9 +6219,9 @@ public final class IngestionV1 {
       public Builder setIncarnation(
           java.lang.String value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000004;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000004;
         incarnation_ = value;
         onChanged();
         return this;
@@ -5684,9 +6241,9 @@ public final class IngestionV1 {
       public Builder setIncarnationBytes(
           com.google.protobuf.ByteString value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000004;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000004;
         incarnation_ = value;
         onChanged();
         return this;
@@ -5697,7 +6254,7 @@ public final class IngestionV1 {
        * <code>required string version = 4;</code>
        */
       public boolean hasVersion() {
-        return ((bitField0_ & 0x00000008) == 0x00000008);
+        return ((bitField0_ & 0x00000008) != 0);
       }
       /**
        * <code>required string version = 4;</code>
@@ -5720,10 +6277,10 @@ public final class IngestionV1 {
        * <code>required string version = 4;</code>
        */
       public com.google.protobuf.ByteString
-          getVersionBytes() {
+      getVersionBytes() {
         java.lang.Object ref = version_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString b =
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           version_ = b;
@@ -5738,9 +6295,9 @@ public final class IngestionV1 {
       public Builder setVersion(
           java.lang.String value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000008;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000008;
         version_ = value;
         onChanged();
         return this;
@@ -5760,18 +6317,20 @@ public final class IngestionV1 {
       public Builder setVersionBytes(
           com.google.protobuf.ByteString value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000008;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000008;
         version_ = value;
         onChanged();
         return this;
       }
+      @java.lang.Override
       public final Builder setUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
         return super.setUnknownFields(unknownFields);
       }
 
+      @java.lang.Override
       public final Builder mergeUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
         return super.mergeUnknownFields(unknownFields);
@@ -5793,11 +6352,12 @@ public final class IngestionV1 {
 
     @java.lang.Deprecated public static final com.google.protobuf.Parser<Hello>
         PARSER = new com.google.protobuf.AbstractParser<Hello>() {
+      @java.lang.Override
       public Hello parsePartialFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-          return new Hello(input, extensionRegistry);
+        return new Hello(input, extensionRegistry);
       }
     };
 
@@ -5810,6 +6370,7 @@ public final class IngestionV1 {
       return PARSER;
     }
 
+    @java.lang.Override
     public kamino.IngestionV1.Hello getDefaultInstanceForType() {
       return DEFAULT_INSTANCE;
     }
@@ -5849,12 +6410,19 @@ public final class IngestionV1 {
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:Goodbye)
       GoodbyeOrBuilder {
+    private static final long serialVersionUID = 0L;
     // Use Goodbye.newBuilder() to construct.
     private Goodbye(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
       super(builder);
     }
     private Goodbye() {
-      time_ = 0L;
+    }
+
+    @java.lang.Override
+    @SuppressWarnings({"unused"})
+    protected java.lang.Object newInstance(
+        UnusedPrivateParameter unused) {
+      return new Goodbye();
     }
 
     @java.lang.Override
@@ -5867,6 +6435,9 @@ public final class IngestionV1 {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
+      if (extensionRegistry == null) {
+        throw new java.lang.NullPointerException();
+      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -5878,16 +6449,9 @@ public final class IngestionV1 {
             case 0:
               done = true;
               break;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
             case 10: {
               kamino.IngestionV1.NodeIdentity.Builder subBuilder = null;
-              if (((bitField0_ & 0x00000001) == 0x00000001)) {
+              if (((bitField0_ & 0x00000001) != 0)) {
                 subBuilder = node_.toBuilder();
               }
               node_ = input.readMessage(kamino.IngestionV1.NodeIdentity.PARSER, extensionRegistry);
@@ -5903,6 +6467,13 @@ public final class IngestionV1 {
               time_ = input.readInt64();
               break;
             }
+            default: {
+              if (!parseUnknownField(
+                  input, unknownFields, extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
           }
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -5916,12 +6487,13 @@ public final class IngestionV1 {
       }
     }
     public static final com.google.protobuf.Descriptors.Descriptor
-        getDescriptor() {
+    getDescriptor() {
       return kamino.IngestionV1.internal_static_Goodbye_descriptor;
     }
 
+    @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-        internalGetFieldAccessorTable() {
+    internalGetFieldAccessorTable() {
       return kamino.IngestionV1.internal_static_Goodbye_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               kamino.IngestionV1.Goodbye.class, kamino.IngestionV1.Goodbye.Builder.class);
@@ -5934,7 +6506,7 @@ public final class IngestionV1 {
      * <code>required .NodeIdentity node = 1;</code>
      */
     public boolean hasNode() {
-      return ((bitField0_ & 0x00000001) == 0x00000001);
+      return ((bitField0_ & 0x00000001) != 0);
     }
     /**
      * <code>required .NodeIdentity node = 1;</code>
@@ -5955,7 +6527,7 @@ public final class IngestionV1 {
      * <code>required int64 time = 2;</code>
      */
     public boolean hasTime() {
-      return ((bitField0_ & 0x00000002) == 0x00000002);
+      return ((bitField0_ & 0x00000002) != 0);
     }
     /**
      * <code>required int64 time = 2;</code>
@@ -5965,6 +6537,7 @@ public final class IngestionV1 {
     }
 
     private byte memoizedIsInitialized = -1;
+    @java.lang.Override
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized == 1) return true;
@@ -5986,59 +6559,59 @@ public final class IngestionV1 {
       return true;
     }
 
+    @java.lang.Override
     public void writeTo(com.google.protobuf.CodedOutputStream output)
-                        throws java.io.IOException {
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        throws java.io.IOException {
+      if (((bitField0_ & 0x00000001) != 0)) {
         output.writeMessage(1, getNode());
       }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+      if (((bitField0_ & 0x00000002) != 0)) {
         output.writeInt64(2, time_);
       }
       unknownFields.writeTo(output);
     }
 
+    @java.lang.Override
     public int getSerializedSize() {
       int size = memoizedSize;
       if (size != -1) return size;
 
       size = 0;
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+      if (((bitField0_ & 0x00000001) != 0)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(1, getNode());
+            .computeMessageSize(1, getNode());
       }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+      if (((bitField0_ & 0x00000002) != 0)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeInt64Size(2, time_);
+            .computeInt64Size(2, time_);
       }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
       return size;
     }
 
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
-       return true;
+        return true;
       }
       if (!(obj instanceof kamino.IngestionV1.Goodbye)) {
         return super.equals(obj);
       }
       kamino.IngestionV1.Goodbye other = (kamino.IngestionV1.Goodbye) obj;
 
-      boolean result = true;
-      result = result && (hasNode() == other.hasNode());
+      if (hasNode() != other.hasNode()) return false;
       if (hasNode()) {
-        result = result && getNode()
-            .equals(other.getNode());
+        if (!getNode()
+            .equals(other.getNode())) return false;
       }
-      result = result && (hasTime() == other.hasTime());
+      if (hasTime() != other.hasTime()) return false;
       if (hasTime()) {
-        result = result && (getTime()
-            == other.getTime());
+        if (getTime()
+            != other.getTime()) return false;
       }
-      result = result && unknownFields.equals(other.unknownFields);
-      return result;
+      if (!unknownFields.equals(other.unknownFields)) return false;
+      return true;
     }
 
     @java.lang.Override
@@ -6047,7 +6620,7 @@ public final class IngestionV1 {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasNode()) {
         hash = (37 * hash) + NODE_FIELD_NUMBER;
         hash = (53 * hash) + getNode().hashCode();
@@ -6062,6 +6635,17 @@ public final class IngestionV1 {
       return hash;
     }
 
+    public static kamino.IngestionV1.Goodbye parseFrom(
+        java.nio.ByteBuffer data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static kamino.IngestionV1.Goodbye parseFrom(
+        java.nio.ByteBuffer data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
     public static kamino.IngestionV1.Goodbye parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
@@ -6121,6 +6705,7 @@ public final class IngestionV1 {
           .parseWithIOException(PARSER, input, extensionRegistry);
     }
 
+    @java.lang.Override
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder() {
       return DEFAULT_INSTANCE.toBuilder();
@@ -6128,6 +6713,7 @@ public final class IngestionV1 {
     public static Builder newBuilder(kamino.IngestionV1.Goodbye prototype) {
       return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
     }
+    @java.lang.Override
     public Builder toBuilder() {
       return this == DEFAULT_INSTANCE
           ? new Builder() : new Builder().mergeFrom(this);
@@ -6147,12 +6733,13 @@ public final class IngestionV1 {
         // @@protoc_insertion_point(builder_implements:Goodbye)
         kamino.IngestionV1.GoodbyeOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
-          getDescriptor() {
+      getDescriptor() {
         return kamino.IngestionV1.internal_static_Goodbye_descriptor;
       }
 
+      @java.lang.Override
       protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-          internalGetFieldAccessorTable() {
+      internalGetFieldAccessorTable() {
         return kamino.IngestionV1.internal_static_Goodbye_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 kamino.IngestionV1.Goodbye.class, kamino.IngestionV1.Goodbye.Builder.class);
@@ -6170,10 +6757,11 @@ public final class IngestionV1 {
       }
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessageV3
-                .alwaysUseFieldBuilders) {
+            .alwaysUseFieldBuilders) {
           getNodeFieldBuilder();
         }
       }
+      @java.lang.Override
       public Builder clear() {
         super.clear();
         if (nodeBuilder_ == null) {
@@ -6187,15 +6775,18 @@ public final class IngestionV1 {
         return this;
       }
 
+      @java.lang.Override
       public com.google.protobuf.Descriptors.Descriptor
-          getDescriptorForType() {
+      getDescriptorForType() {
         return kamino.IngestionV1.internal_static_Goodbye_descriptor;
       }
 
+      @java.lang.Override
       public kamino.IngestionV1.Goodbye getDefaultInstanceForType() {
         return kamino.IngestionV1.Goodbye.getDefaultInstance();
       }
 
+      @java.lang.Override
       public kamino.IngestionV1.Goodbye build() {
         kamino.IngestionV1.Goodbye result = buildPartial();
         if (!result.isInitialized()) {
@@ -6204,53 +6795,61 @@ public final class IngestionV1 {
         return result;
       }
 
+      @java.lang.Override
       public kamino.IngestionV1.Goodbye buildPartial() {
         kamino.IngestionV1.Goodbye result = new kamino.IngestionV1.Goodbye(this);
         int from_bitField0_ = bitField0_;
         int to_bitField0_ = 0;
-        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+        if (((from_bitField0_ & 0x00000001) != 0)) {
+          if (nodeBuilder_ == null) {
+            result.node_ = node_;
+          } else {
+            result.node_ = nodeBuilder_.build();
+          }
           to_bitField0_ |= 0x00000001;
         }
-        if (nodeBuilder_ == null) {
-          result.node_ = node_;
-        } else {
-          result.node_ = nodeBuilder_.build();
-        }
-        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+        if (((from_bitField0_ & 0x00000002) != 0)) {
+          result.time_ = time_;
           to_bitField0_ |= 0x00000002;
         }
-        result.time_ = time_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
       }
 
+      @java.lang.Override
       public Builder clone() {
-        return (Builder) super.clone();
+        return super.clone();
       }
+      @java.lang.Override
       public Builder setField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          Object value) {
-        return (Builder) super.setField(field, value);
+          java.lang.Object value) {
+        return super.setField(field, value);
       }
+      @java.lang.Override
       public Builder clearField(
           com.google.protobuf.Descriptors.FieldDescriptor field) {
-        return (Builder) super.clearField(field);
+        return super.clearField(field);
       }
+      @java.lang.Override
       public Builder clearOneof(
           com.google.protobuf.Descriptors.OneofDescriptor oneof) {
-        return (Builder) super.clearOneof(oneof);
+        return super.clearOneof(oneof);
       }
+      @java.lang.Override
       public Builder setRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          int index, Object value) {
-        return (Builder) super.setRepeatedField(field, index, value);
+          int index, java.lang.Object value) {
+        return super.setRepeatedField(field, index, value);
       }
+      @java.lang.Override
       public Builder addRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          Object value) {
-        return (Builder) super.addRepeatedField(field, value);
+          java.lang.Object value) {
+        return super.addRepeatedField(field, value);
       }
+      @java.lang.Override
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof kamino.IngestionV1.Goodbye) {
           return mergeFrom((kamino.IngestionV1.Goodbye)other);
@@ -6273,6 +6872,7 @@ public final class IngestionV1 {
         return this;
       }
 
+      @java.lang.Override
       public final boolean isInitialized() {
         if (!hasNode()) {
           return false;
@@ -6286,6 +6886,7 @@ public final class IngestionV1 {
         return true;
       }
 
+      @java.lang.Override
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
@@ -6305,14 +6906,14 @@ public final class IngestionV1 {
       }
       private int bitField0_;
 
-      private kamino.IngestionV1.NodeIdentity node_ = null;
+      private kamino.IngestionV1.NodeIdentity node_;
       private com.google.protobuf.SingleFieldBuilderV3<
           kamino.IngestionV1.NodeIdentity, kamino.IngestionV1.NodeIdentity.Builder, kamino.IngestionV1.NodeIdentityOrBuilder> nodeBuilder_;
       /**
        * <code>required .NodeIdentity node = 1;</code>
        */
       public boolean hasNode() {
-        return ((bitField0_ & 0x00000001) == 0x00000001);
+        return ((bitField0_ & 0x00000001) != 0);
       }
       /**
        * <code>required .NodeIdentity node = 1;</code>
@@ -6359,11 +6960,11 @@ public final class IngestionV1 {
        */
       public Builder mergeNode(kamino.IngestionV1.NodeIdentity value) {
         if (nodeBuilder_ == null) {
-          if (((bitField0_ & 0x00000001) == 0x00000001) &&
+          if (((bitField0_ & 0x00000001) != 0) &&
               node_ != null &&
               node_ != kamino.IngestionV1.NodeIdentity.getDefaultInstance()) {
             node_ =
-              kamino.IngestionV1.NodeIdentity.newBuilder(node_).mergeFrom(value).buildPartial();
+                kamino.IngestionV1.NodeIdentity.newBuilder(node_).mergeFrom(value).buildPartial();
           } else {
             node_ = value;
           }
@@ -6410,14 +7011,14 @@ public final class IngestionV1 {
        * <code>required .NodeIdentity node = 1;</code>
        */
       private com.google.protobuf.SingleFieldBuilderV3<
-          kamino.IngestionV1.NodeIdentity, kamino.IngestionV1.NodeIdentity.Builder, kamino.IngestionV1.NodeIdentityOrBuilder> 
-          getNodeFieldBuilder() {
+          kamino.IngestionV1.NodeIdentity, kamino.IngestionV1.NodeIdentity.Builder, kamino.IngestionV1.NodeIdentityOrBuilder>
+      getNodeFieldBuilder() {
         if (nodeBuilder_ == null) {
           nodeBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
               kamino.IngestionV1.NodeIdentity, kamino.IngestionV1.NodeIdentity.Builder, kamino.IngestionV1.NodeIdentityOrBuilder>(
-                  getNode(),
-                  getParentForChildren(),
-                  isClean());
+              getNode(),
+              getParentForChildren(),
+              isClean());
           node_ = null;
         }
         return nodeBuilder_;
@@ -6428,7 +7029,7 @@ public final class IngestionV1 {
        * <code>required int64 time = 2;</code>
        */
       public boolean hasTime() {
-        return ((bitField0_ & 0x00000002) == 0x00000002);
+        return ((bitField0_ & 0x00000002) != 0);
       }
       /**
        * <code>required int64 time = 2;</code>
@@ -6454,11 +7055,13 @@ public final class IngestionV1 {
         onChanged();
         return this;
       }
+      @java.lang.Override
       public final Builder setUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
         return super.setUnknownFields(unknownFields);
       }
 
+      @java.lang.Override
       public final Builder mergeUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
         return super.mergeUnknownFields(unknownFields);
@@ -6480,11 +7083,12 @@ public final class IngestionV1 {
 
     @java.lang.Deprecated public static final com.google.protobuf.Parser<Goodbye>
         PARSER = new com.google.protobuf.AbstractParser<Goodbye>() {
+      @java.lang.Override
       public Goodbye parsePartialFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-          return new Goodbye(input, extensionRegistry);
+        return new Goodbye(input, extensionRegistry);
       }
     };
 
@@ -6497,6 +7101,7 @@ public final class IngestionV1 {
       return PARSER;
     }
 
+    @java.lang.Override
     public kamino.IngestionV1.Goodbye getDefaultInstanceForType() {
       return DEFAULT_INSTANCE;
     }
@@ -6519,7 +7124,7 @@ public final class IngestionV1 {
      * <code>required string serviceName = 1;</code>
      */
     com.google.protobuf.ByteString
-        getServiceNameBytes();
+    getServiceNameBytes();
 
     /**
      * <code>required string apiKey = 2;</code>
@@ -6533,7 +7138,7 @@ public final class IngestionV1 {
      * <code>required string apiKey = 2;</code>
      */
     com.google.protobuf.ByteString
-        getApiKeyBytes();
+    getApiKeyBytes();
 
     /**
      * <code>required string host = 3;</code>
@@ -6547,7 +7152,7 @@ public final class IngestionV1 {
      * <code>required string host = 3;</code>
      */
     com.google.protobuf.ByteString
-        getHostBytes();
+    getHostBytes();
 
     /**
      * <code>required string instance = 4;</code>
@@ -6561,13 +7166,13 @@ public final class IngestionV1 {
      * <code>required string instance = 4;</code>
      */
     com.google.protobuf.ByteString
-        getInstanceBytes();
+    getInstanceBytes();
 
     /**
      * <code>repeated .Span spans = 5;</code>
      */
-    java.util.List<kamino.IngestionV1.Span> 
-        getSpansList();
+    java.util.List<kamino.IngestionV1.Span>
+    getSpansList();
     /**
      * <code>repeated .Span spans = 5;</code>
      */
@@ -6579,13 +7184,27 @@ public final class IngestionV1 {
     /**
      * <code>repeated .Span spans = 5;</code>
      */
-    java.util.List<? extends kamino.IngestionV1.SpanOrBuilder> 
-        getSpansOrBuilderList();
+    java.util.List<? extends kamino.IngestionV1.SpanOrBuilder>
+    getSpansOrBuilderList();
     /**
      * <code>repeated .Span spans = 5;</code>
      */
     kamino.IngestionV1.SpanOrBuilder getSpansOrBuilder(
         int index);
+
+    /**
+     * <code>optional string agent = 6;</code>
+     */
+    boolean hasAgent();
+    /**
+     * <code>optional string agent = 6;</code>
+     */
+    java.lang.String getAgent();
+    /**
+     * <code>optional string agent = 6;</code>
+     */
+    com.google.protobuf.ByteString
+    getAgentBytes();
   }
   /**
    * Protobuf type {@code SpanBatch}
@@ -6594,6 +7213,7 @@ public final class IngestionV1 {
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:SpanBatch)
       SpanBatchOrBuilder {
+    private static final long serialVersionUID = 0L;
     // Use SpanBatch.newBuilder() to construct.
     private SpanBatch(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
       super(builder);
@@ -6604,6 +7224,14 @@ public final class IngestionV1 {
       host_ = "";
       instance_ = "";
       spans_ = java.util.Collections.emptyList();
+      agent_ = "";
+    }
+
+    @java.lang.Override
+    @SuppressWarnings({"unused"})
+    protected java.lang.Object newInstance(
+        UnusedPrivateParameter unused) {
+      return new SpanBatch();
     }
 
     @java.lang.Override
@@ -6616,6 +7244,9 @@ public final class IngestionV1 {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
+      if (extensionRegistry == null) {
+        throw new java.lang.NullPointerException();
+      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -6627,13 +7258,6 @@ public final class IngestionV1 {
             case 0:
               done = true;
               break;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
             case 10: {
               com.google.protobuf.ByteString bs = input.readBytes();
               bitField0_ |= 0x00000001;
@@ -6659,12 +7283,25 @@ public final class IngestionV1 {
               break;
             }
             case 42: {
-              if (!((mutable_bitField0_ & 0x00000010) == 0x00000010)) {
+              if (!((mutable_bitField0_ & 0x00000010) != 0)) {
                 spans_ = new java.util.ArrayList<kamino.IngestionV1.Span>();
                 mutable_bitField0_ |= 0x00000010;
               }
               spans_.add(
                   input.readMessage(kamino.IngestionV1.Span.PARSER, extensionRegistry));
+              break;
+            }
+            case 50: {
+              com.google.protobuf.ByteString bs = input.readBytes();
+              bitField0_ |= 0x00000010;
+              agent_ = bs;
+              break;
+            }
+            default: {
+              if (!parseUnknownField(
+                  input, unknownFields, extensionRegistry, tag)) {
+                done = true;
+              }
               break;
             }
           }
@@ -6675,7 +7312,7 @@ public final class IngestionV1 {
         throw new com.google.protobuf.InvalidProtocolBufferException(
             e).setUnfinishedMessage(this);
       } finally {
-        if (((mutable_bitField0_ & 0x00000010) == 0x00000010)) {
+        if (((mutable_bitField0_ & 0x00000010) != 0)) {
           spans_ = java.util.Collections.unmodifiableList(spans_);
         }
         this.unknownFields = unknownFields.build();
@@ -6683,12 +7320,13 @@ public final class IngestionV1 {
       }
     }
     public static final com.google.protobuf.Descriptors.Descriptor
-        getDescriptor() {
+    getDescriptor() {
       return kamino.IngestionV1.internal_static_SpanBatch_descriptor;
     }
 
+    @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-        internalGetFieldAccessorTable() {
+    internalGetFieldAccessorTable() {
       return kamino.IngestionV1.internal_static_SpanBatch_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               kamino.IngestionV1.SpanBatch.class, kamino.IngestionV1.SpanBatch.Builder.class);
@@ -6701,7 +7339,7 @@ public final class IngestionV1 {
      * <code>required string serviceName = 1;</code>
      */
     public boolean hasServiceName() {
-      return ((bitField0_ & 0x00000001) == 0x00000001);
+      return ((bitField0_ & 0x00000001) != 0);
     }
     /**
      * <code>required string serviceName = 1;</code>
@@ -6711,7 +7349,7 @@ public final class IngestionV1 {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs = 
+        com.google.protobuf.ByteString bs =
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
@@ -6724,10 +7362,10 @@ public final class IngestionV1 {
      * <code>required string serviceName = 1;</code>
      */
     public com.google.protobuf.ByteString
-        getServiceNameBytes() {
+    getServiceNameBytes() {
       java.lang.Object ref = serviceName_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         serviceName_ = b;
@@ -6743,7 +7381,7 @@ public final class IngestionV1 {
      * <code>required string apiKey = 2;</code>
      */
     public boolean hasApiKey() {
-      return ((bitField0_ & 0x00000002) == 0x00000002);
+      return ((bitField0_ & 0x00000002) != 0);
     }
     /**
      * <code>required string apiKey = 2;</code>
@@ -6753,7 +7391,7 @@ public final class IngestionV1 {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs = 
+        com.google.protobuf.ByteString bs =
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
@@ -6766,10 +7404,10 @@ public final class IngestionV1 {
      * <code>required string apiKey = 2;</code>
      */
     public com.google.protobuf.ByteString
-        getApiKeyBytes() {
+    getApiKeyBytes() {
       java.lang.Object ref = apiKey_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         apiKey_ = b;
@@ -6785,7 +7423,7 @@ public final class IngestionV1 {
      * <code>required string host = 3;</code>
      */
     public boolean hasHost() {
-      return ((bitField0_ & 0x00000004) == 0x00000004);
+      return ((bitField0_ & 0x00000004) != 0);
     }
     /**
      * <code>required string host = 3;</code>
@@ -6795,7 +7433,7 @@ public final class IngestionV1 {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs = 
+        com.google.protobuf.ByteString bs =
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
@@ -6808,10 +7446,10 @@ public final class IngestionV1 {
      * <code>required string host = 3;</code>
      */
     public com.google.protobuf.ByteString
-        getHostBytes() {
+    getHostBytes() {
       java.lang.Object ref = host_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         host_ = b;
@@ -6827,7 +7465,7 @@ public final class IngestionV1 {
      * <code>required string instance = 4;</code>
      */
     public boolean hasInstance() {
-      return ((bitField0_ & 0x00000008) == 0x00000008);
+      return ((bitField0_ & 0x00000008) != 0);
     }
     /**
      * <code>required string instance = 4;</code>
@@ -6837,7 +7475,7 @@ public final class IngestionV1 {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs = 
+        com.google.protobuf.ByteString bs =
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
@@ -6850,10 +7488,10 @@ public final class IngestionV1 {
      * <code>required string instance = 4;</code>
      */
     public com.google.protobuf.ByteString
-        getInstanceBytes() {
+    getInstanceBytes() {
       java.lang.Object ref = instance_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         instance_ = b;
@@ -6874,8 +7512,8 @@ public final class IngestionV1 {
     /**
      * <code>repeated .Span spans = 5;</code>
      */
-    public java.util.List<? extends kamino.IngestionV1.SpanOrBuilder> 
-        getSpansOrBuilderList() {
+    public java.util.List<? extends kamino.IngestionV1.SpanOrBuilder>
+    getSpansOrBuilderList() {
       return spans_;
     }
     /**
@@ -6898,7 +7536,50 @@ public final class IngestionV1 {
       return spans_.get(index);
     }
 
+    public static final int AGENT_FIELD_NUMBER = 6;
+    private volatile java.lang.Object agent_;
+    /**
+     * <code>optional string agent = 6;</code>
+     */
+    public boolean hasAgent() {
+      return ((bitField0_ & 0x00000010) != 0);
+    }
+    /**
+     * <code>optional string agent = 6;</code>
+     */
+    public java.lang.String getAgent() {
+      java.lang.Object ref = agent_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          agent_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>optional string agent = 6;</code>
+     */
+    public com.google.protobuf.ByteString
+    getAgentBytes() {
+      java.lang.Object ref = agent_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        agent_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
     private byte memoizedIsInitialized = -1;
+    @java.lang.Override
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized == 1) return true;
@@ -6930,88 +7611,99 @@ public final class IngestionV1 {
       return true;
     }
 
+    @java.lang.Override
     public void writeTo(com.google.protobuf.CodedOutputStream output)
-                        throws java.io.IOException {
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        throws java.io.IOException {
+      if (((bitField0_ & 0x00000001) != 0)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 1, serviceName_);
       }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+      if (((bitField0_ & 0x00000002) != 0)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 2, apiKey_);
       }
-      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+      if (((bitField0_ & 0x00000004) != 0)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 3, host_);
       }
-      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+      if (((bitField0_ & 0x00000008) != 0)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 4, instance_);
       }
       for (int i = 0; i < spans_.size(); i++) {
         output.writeMessage(5, spans_.get(i));
       }
+      if (((bitField0_ & 0x00000010) != 0)) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 6, agent_);
+      }
       unknownFields.writeTo(output);
     }
 
+    @java.lang.Override
     public int getSerializedSize() {
       int size = memoizedSize;
       if (size != -1) return size;
 
       size = 0;
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+      if (((bitField0_ & 0x00000001) != 0)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, serviceName_);
       }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+      if (((bitField0_ & 0x00000002) != 0)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, apiKey_);
       }
-      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+      if (((bitField0_ & 0x00000004) != 0)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(3, host_);
       }
-      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+      if (((bitField0_ & 0x00000008) != 0)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(4, instance_);
       }
       for (int i = 0; i < spans_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(5, spans_.get(i));
+            .computeMessageSize(5, spans_.get(i));
+      }
+      if (((bitField0_ & 0x00000010) != 0)) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(6, agent_);
       }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
       return size;
     }
 
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
-       return true;
+        return true;
       }
       if (!(obj instanceof kamino.IngestionV1.SpanBatch)) {
         return super.equals(obj);
       }
       kamino.IngestionV1.SpanBatch other = (kamino.IngestionV1.SpanBatch) obj;
 
-      boolean result = true;
-      result = result && (hasServiceName() == other.hasServiceName());
+      if (hasServiceName() != other.hasServiceName()) return false;
       if (hasServiceName()) {
-        result = result && getServiceName()
-            .equals(other.getServiceName());
+        if (!getServiceName()
+            .equals(other.getServiceName())) return false;
       }
-      result = result && (hasApiKey() == other.hasApiKey());
+      if (hasApiKey() != other.hasApiKey()) return false;
       if (hasApiKey()) {
-        result = result && getApiKey()
-            .equals(other.getApiKey());
+        if (!getApiKey()
+            .equals(other.getApiKey())) return false;
       }
-      result = result && (hasHost() == other.hasHost());
+      if (hasHost() != other.hasHost()) return false;
       if (hasHost()) {
-        result = result && getHost()
-            .equals(other.getHost());
+        if (!getHost()
+            .equals(other.getHost())) return false;
       }
-      result = result && (hasInstance() == other.hasInstance());
+      if (hasInstance() != other.hasInstance()) return false;
       if (hasInstance()) {
-        result = result && getInstance()
-            .equals(other.getInstance());
+        if (!getInstance()
+            .equals(other.getInstance())) return false;
       }
-      result = result && getSpansList()
-          .equals(other.getSpansList());
-      result = result && unknownFields.equals(other.unknownFields);
-      return result;
+      if (!getSpansList()
+          .equals(other.getSpansList())) return false;
+      if (hasAgent() != other.hasAgent()) return false;
+      if (hasAgent()) {
+        if (!getAgent()
+            .equals(other.getAgent())) return false;
+      }
+      if (!unknownFields.equals(other.unknownFields)) return false;
+      return true;
     }
 
     @java.lang.Override
@@ -7020,7 +7712,7 @@ public final class IngestionV1 {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasServiceName()) {
         hash = (37 * hash) + SERVICENAME_FIELD_NUMBER;
         hash = (53 * hash) + getServiceName().hashCode();
@@ -7041,11 +7733,26 @@ public final class IngestionV1 {
         hash = (37 * hash) + SPANS_FIELD_NUMBER;
         hash = (53 * hash) + getSpansList().hashCode();
       }
+      if (hasAgent()) {
+        hash = (37 * hash) + AGENT_FIELD_NUMBER;
+        hash = (53 * hash) + getAgent().hashCode();
+      }
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
       return hash;
     }
 
+    public static kamino.IngestionV1.SpanBatch parseFrom(
+        java.nio.ByteBuffer data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static kamino.IngestionV1.SpanBatch parseFrom(
+        java.nio.ByteBuffer data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
     public static kamino.IngestionV1.SpanBatch parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
@@ -7105,6 +7812,7 @@ public final class IngestionV1 {
           .parseWithIOException(PARSER, input, extensionRegistry);
     }
 
+    @java.lang.Override
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder() {
       return DEFAULT_INSTANCE.toBuilder();
@@ -7112,6 +7820,7 @@ public final class IngestionV1 {
     public static Builder newBuilder(kamino.IngestionV1.SpanBatch prototype) {
       return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
     }
+    @java.lang.Override
     public Builder toBuilder() {
       return this == DEFAULT_INSTANCE
           ? new Builder() : new Builder().mergeFrom(this);
@@ -7131,12 +7840,13 @@ public final class IngestionV1 {
         // @@protoc_insertion_point(builder_implements:SpanBatch)
         kamino.IngestionV1.SpanBatchOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
-          getDescriptor() {
+      getDescriptor() {
         return kamino.IngestionV1.internal_static_SpanBatch_descriptor;
       }
 
+      @java.lang.Override
       protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-          internalGetFieldAccessorTable() {
+      internalGetFieldAccessorTable() {
         return kamino.IngestionV1.internal_static_SpanBatch_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 kamino.IngestionV1.SpanBatch.class, kamino.IngestionV1.SpanBatch.Builder.class);
@@ -7154,10 +7864,11 @@ public final class IngestionV1 {
       }
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessageV3
-                .alwaysUseFieldBuilders) {
+            .alwaysUseFieldBuilders) {
           getSpansFieldBuilder();
         }
       }
+      @java.lang.Override
       public Builder clear() {
         super.clear();
         serviceName_ = "";
@@ -7174,18 +7885,23 @@ public final class IngestionV1 {
         } else {
           spansBuilder_.clear();
         }
+        agent_ = "";
+        bitField0_ = (bitField0_ & ~0x00000020);
         return this;
       }
 
+      @java.lang.Override
       public com.google.protobuf.Descriptors.Descriptor
-          getDescriptorForType() {
+      getDescriptorForType() {
         return kamino.IngestionV1.internal_static_SpanBatch_descriptor;
       }
 
+      @java.lang.Override
       public kamino.IngestionV1.SpanBatch getDefaultInstanceForType() {
         return kamino.IngestionV1.SpanBatch.getDefaultInstance();
       }
 
+      @java.lang.Override
       public kamino.IngestionV1.SpanBatch build() {
         kamino.IngestionV1.SpanBatch result = buildPartial();
         if (!result.isInitialized()) {
@@ -7194,28 +7910,29 @@ public final class IngestionV1 {
         return result;
       }
 
+      @java.lang.Override
       public kamino.IngestionV1.SpanBatch buildPartial() {
         kamino.IngestionV1.SpanBatch result = new kamino.IngestionV1.SpanBatch(this);
         int from_bitField0_ = bitField0_;
         int to_bitField0_ = 0;
-        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+        if (((from_bitField0_ & 0x00000001) != 0)) {
           to_bitField0_ |= 0x00000001;
         }
         result.serviceName_ = serviceName_;
-        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+        if (((from_bitField0_ & 0x00000002) != 0)) {
           to_bitField0_ |= 0x00000002;
         }
         result.apiKey_ = apiKey_;
-        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+        if (((from_bitField0_ & 0x00000004) != 0)) {
           to_bitField0_ |= 0x00000004;
         }
         result.host_ = host_;
-        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+        if (((from_bitField0_ & 0x00000008) != 0)) {
           to_bitField0_ |= 0x00000008;
         }
         result.instance_ = instance_;
         if (spansBuilder_ == null) {
-          if (((bitField0_ & 0x00000010) == 0x00000010)) {
+          if (((bitField0_ & 0x00000010) != 0)) {
             spans_ = java.util.Collections.unmodifiableList(spans_);
             bitField0_ = (bitField0_ & ~0x00000010);
           }
@@ -7223,37 +7940,48 @@ public final class IngestionV1 {
         } else {
           result.spans_ = spansBuilder_.build();
         }
+        if (((from_bitField0_ & 0x00000020) != 0)) {
+          to_bitField0_ |= 0x00000010;
+        }
+        result.agent_ = agent_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
       }
 
+      @java.lang.Override
       public Builder clone() {
-        return (Builder) super.clone();
+        return super.clone();
       }
+      @java.lang.Override
       public Builder setField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          Object value) {
-        return (Builder) super.setField(field, value);
+          java.lang.Object value) {
+        return super.setField(field, value);
       }
+      @java.lang.Override
       public Builder clearField(
           com.google.protobuf.Descriptors.FieldDescriptor field) {
-        return (Builder) super.clearField(field);
+        return super.clearField(field);
       }
+      @java.lang.Override
       public Builder clearOneof(
           com.google.protobuf.Descriptors.OneofDescriptor oneof) {
-        return (Builder) super.clearOneof(oneof);
+        return super.clearOneof(oneof);
       }
+      @java.lang.Override
       public Builder setRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          int index, Object value) {
-        return (Builder) super.setRepeatedField(field, index, value);
+          int index, java.lang.Object value) {
+        return super.setRepeatedField(field, index, value);
       }
+      @java.lang.Override
       public Builder addRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          Object value) {
-        return (Builder) super.addRepeatedField(field, value);
+          java.lang.Object value) {
+        return super.addRepeatedField(field, value);
       }
+      @java.lang.Override
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof kamino.IngestionV1.SpanBatch) {
           return mergeFrom((kamino.IngestionV1.SpanBatch)other);
@@ -7303,19 +8031,25 @@ public final class IngestionV1 {
               spansBuilder_ = null;
               spans_ = other.spans_;
               bitField0_ = (bitField0_ & ~0x00000010);
-              spansBuilder_ = 
-                com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
-                   getSpansFieldBuilder() : null;
+              spansBuilder_ =
+                  com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
+                      getSpansFieldBuilder() : null;
             } else {
               spansBuilder_.addAllMessages(other.spans_);
             }
           }
+        }
+        if (other.hasAgent()) {
+          bitField0_ |= 0x00000020;
+          agent_ = other.agent_;
+          onChanged();
         }
         this.mergeUnknownFields(other.unknownFields);
         onChanged();
         return this;
       }
 
+      @java.lang.Override
       public final boolean isInitialized() {
         if (!hasServiceName()) {
           return false;
@@ -7337,6 +8071,7 @@ public final class IngestionV1 {
         return true;
       }
 
+      @java.lang.Override
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
@@ -7361,7 +8096,7 @@ public final class IngestionV1 {
        * <code>required string serviceName = 1;</code>
        */
       public boolean hasServiceName() {
-        return ((bitField0_ & 0x00000001) == 0x00000001);
+        return ((bitField0_ & 0x00000001) != 0);
       }
       /**
        * <code>required string serviceName = 1;</code>
@@ -7384,10 +8119,10 @@ public final class IngestionV1 {
        * <code>required string serviceName = 1;</code>
        */
       public com.google.protobuf.ByteString
-          getServiceNameBytes() {
+      getServiceNameBytes() {
         java.lang.Object ref = serviceName_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString b =
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           serviceName_ = b;
@@ -7402,9 +8137,9 @@ public final class IngestionV1 {
       public Builder setServiceName(
           java.lang.String value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000001;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000001;
         serviceName_ = value;
         onChanged();
         return this;
@@ -7424,9 +8159,9 @@ public final class IngestionV1 {
       public Builder setServiceNameBytes(
           com.google.protobuf.ByteString value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000001;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000001;
         serviceName_ = value;
         onChanged();
         return this;
@@ -7437,7 +8172,7 @@ public final class IngestionV1 {
        * <code>required string apiKey = 2;</code>
        */
       public boolean hasApiKey() {
-        return ((bitField0_ & 0x00000002) == 0x00000002);
+        return ((bitField0_ & 0x00000002) != 0);
       }
       /**
        * <code>required string apiKey = 2;</code>
@@ -7460,10 +8195,10 @@ public final class IngestionV1 {
        * <code>required string apiKey = 2;</code>
        */
       public com.google.protobuf.ByteString
-          getApiKeyBytes() {
+      getApiKeyBytes() {
         java.lang.Object ref = apiKey_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString b =
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           apiKey_ = b;
@@ -7478,9 +8213,9 @@ public final class IngestionV1 {
       public Builder setApiKey(
           java.lang.String value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000002;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000002;
         apiKey_ = value;
         onChanged();
         return this;
@@ -7500,9 +8235,9 @@ public final class IngestionV1 {
       public Builder setApiKeyBytes(
           com.google.protobuf.ByteString value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000002;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000002;
         apiKey_ = value;
         onChanged();
         return this;
@@ -7513,7 +8248,7 @@ public final class IngestionV1 {
        * <code>required string host = 3;</code>
        */
       public boolean hasHost() {
-        return ((bitField0_ & 0x00000004) == 0x00000004);
+        return ((bitField0_ & 0x00000004) != 0);
       }
       /**
        * <code>required string host = 3;</code>
@@ -7536,10 +8271,10 @@ public final class IngestionV1 {
        * <code>required string host = 3;</code>
        */
       public com.google.protobuf.ByteString
-          getHostBytes() {
+      getHostBytes() {
         java.lang.Object ref = host_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString b =
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           host_ = b;
@@ -7554,9 +8289,9 @@ public final class IngestionV1 {
       public Builder setHost(
           java.lang.String value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000004;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000004;
         host_ = value;
         onChanged();
         return this;
@@ -7576,9 +8311,9 @@ public final class IngestionV1 {
       public Builder setHostBytes(
           com.google.protobuf.ByteString value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000004;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000004;
         host_ = value;
         onChanged();
         return this;
@@ -7589,7 +8324,7 @@ public final class IngestionV1 {
        * <code>required string instance = 4;</code>
        */
       public boolean hasInstance() {
-        return ((bitField0_ & 0x00000008) == 0x00000008);
+        return ((bitField0_ & 0x00000008) != 0);
       }
       /**
        * <code>required string instance = 4;</code>
@@ -7612,10 +8347,10 @@ public final class IngestionV1 {
        * <code>required string instance = 4;</code>
        */
       public com.google.protobuf.ByteString
-          getInstanceBytes() {
+      getInstanceBytes() {
         java.lang.Object ref = instance_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString b =
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           instance_ = b;
@@ -7630,9 +8365,9 @@ public final class IngestionV1 {
       public Builder setInstance(
           java.lang.String value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000008;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000008;
         instance_ = value;
         onChanged();
         return this;
@@ -7652,21 +8387,21 @@ public final class IngestionV1 {
       public Builder setInstanceBytes(
           com.google.protobuf.ByteString value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000008;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000008;
         instance_ = value;
         onChanged();
         return this;
       }
 
       private java.util.List<kamino.IngestionV1.Span> spans_ =
-        java.util.Collections.emptyList();
+          java.util.Collections.emptyList();
       private void ensureSpansIsMutable() {
-        if (!((bitField0_ & 0x00000010) == 0x00000010)) {
+        if (!((bitField0_ & 0x00000010) != 0)) {
           spans_ = new java.util.ArrayList<kamino.IngestionV1.Span>(spans_);
           bitField0_ |= 0x00000010;
-         }
+        }
       }
 
       private com.google.protobuf.RepeatedFieldBuilderV3<
@@ -7855,8 +8590,8 @@ public final class IngestionV1 {
       /**
        * <code>repeated .Span spans = 5;</code>
        */
-      public java.util.List<? extends kamino.IngestionV1.SpanOrBuilder> 
-           getSpansOrBuilderList() {
+      public java.util.List<? extends kamino.IngestionV1.SpanOrBuilder>
+      getSpansOrBuilderList() {
         if (spansBuilder_ != null) {
           return spansBuilder_.getMessageOrBuilderList();
         } else {
@@ -7881,29 +8616,107 @@ public final class IngestionV1 {
       /**
        * <code>repeated .Span spans = 5;</code>
        */
-      public java.util.List<kamino.IngestionV1.Span.Builder> 
-           getSpansBuilderList() {
+      public java.util.List<kamino.IngestionV1.Span.Builder>
+      getSpansBuilderList() {
         return getSpansFieldBuilder().getBuilderList();
       }
       private com.google.protobuf.RepeatedFieldBuilderV3<
-          kamino.IngestionV1.Span, kamino.IngestionV1.Span.Builder, kamino.IngestionV1.SpanOrBuilder> 
-          getSpansFieldBuilder() {
+          kamino.IngestionV1.Span, kamino.IngestionV1.Span.Builder, kamino.IngestionV1.SpanOrBuilder>
+      getSpansFieldBuilder() {
         if (spansBuilder_ == null) {
           spansBuilder_ = new com.google.protobuf.RepeatedFieldBuilderV3<
               kamino.IngestionV1.Span, kamino.IngestionV1.Span.Builder, kamino.IngestionV1.SpanOrBuilder>(
-                  spans_,
-                  ((bitField0_ & 0x00000010) == 0x00000010),
-                  getParentForChildren(),
-                  isClean());
+              spans_,
+              ((bitField0_ & 0x00000010) != 0),
+              getParentForChildren(),
+              isClean());
           spans_ = null;
         }
         return spansBuilder_;
       }
+
+      private java.lang.Object agent_ = "";
+      /**
+       * <code>optional string agent = 6;</code>
+       */
+      public boolean hasAgent() {
+        return ((bitField0_ & 0x00000020) != 0);
+      }
+      /**
+       * <code>optional string agent = 6;</code>
+       */
+      public java.lang.String getAgent() {
+        java.lang.Object ref = agent_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            agent_ = s;
+          }
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>optional string agent = 6;</code>
+       */
+      public com.google.protobuf.ByteString
+      getAgentBytes() {
+        java.lang.Object ref = agent_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b =
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          agent_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string agent = 6;</code>
+       */
+      public Builder setAgent(
+          java.lang.String value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000020;
+        agent_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string agent = 6;</code>
+       */
+      public Builder clearAgent() {
+        bitField0_ = (bitField0_ & ~0x00000020);
+        agent_ = getDefaultInstance().getAgent();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string agent = 6;</code>
+       */
+      public Builder setAgentBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000020;
+        agent_ = value;
+        onChanged();
+        return this;
+      }
+      @java.lang.Override
       public final Builder setUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
         return super.setUnknownFields(unknownFields);
       }
 
+      @java.lang.Override
       public final Builder mergeUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
         return super.mergeUnknownFields(unknownFields);
@@ -7925,11 +8738,12 @@ public final class IngestionV1 {
 
     @java.lang.Deprecated public static final com.google.protobuf.Parser<SpanBatch>
         PARSER = new com.google.protobuf.AbstractParser<SpanBatch>() {
+      @java.lang.Override
       public SpanBatch parsePartialFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-          return new SpanBatch(input, extensionRegistry);
+        return new SpanBatch(input, extensionRegistry);
       }
     };
 
@@ -7942,6 +8756,7 @@ public final class IngestionV1 {
       return PARSER;
     }
 
+    @java.lang.Override
     public kamino.IngestionV1.SpanBatch getDefaultInstanceForType() {
       return DEFAULT_INSTANCE;
     }
@@ -7973,7 +8788,7 @@ public final class IngestionV1 {
      * <code>required string key = 2;</code>
      */
     com.google.protobuf.ByteString
-        getKeyBytes();
+    getKeyBytes();
   }
   /**
    * Protobuf type {@code Mark}
@@ -7982,13 +8797,20 @@ public final class IngestionV1 {
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:Mark)
       MarkOrBuilder {
+    private static final long serialVersionUID = 0L;
     // Use Mark.newBuilder() to construct.
     private Mark(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
       super(builder);
     }
     private Mark() {
-      instant_ = 0L;
       key_ = "";
+    }
+
+    @java.lang.Override
+    @SuppressWarnings({"unused"})
+    protected java.lang.Object newInstance(
+        UnusedPrivateParameter unused) {
+      return new Mark();
     }
 
     @java.lang.Override
@@ -8001,6 +8823,9 @@ public final class IngestionV1 {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
+      if (extensionRegistry == null) {
+        throw new java.lang.NullPointerException();
+      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -8012,13 +8837,6 @@ public final class IngestionV1 {
             case 0:
               done = true;
               break;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
             case 8: {
               bitField0_ |= 0x00000001;
               instant_ = input.readInt64();
@@ -8028,6 +8846,13 @@ public final class IngestionV1 {
               com.google.protobuf.ByteString bs = input.readBytes();
               bitField0_ |= 0x00000002;
               key_ = bs;
+              break;
+            }
+            default: {
+              if (!parseUnknownField(
+                  input, unknownFields, extensionRegistry, tag)) {
+                done = true;
+              }
               break;
             }
           }
@@ -8043,12 +8868,13 @@ public final class IngestionV1 {
       }
     }
     public static final com.google.protobuf.Descriptors.Descriptor
-        getDescriptor() {
+    getDescriptor() {
       return kamino.IngestionV1.internal_static_Mark_descriptor;
     }
 
+    @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-        internalGetFieldAccessorTable() {
+    internalGetFieldAccessorTable() {
       return kamino.IngestionV1.internal_static_Mark_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               kamino.IngestionV1.Mark.class, kamino.IngestionV1.Mark.Builder.class);
@@ -8061,7 +8887,7 @@ public final class IngestionV1 {
      * <code>required int64 instant = 1;</code>
      */
     public boolean hasInstant() {
-      return ((bitField0_ & 0x00000001) == 0x00000001);
+      return ((bitField0_ & 0x00000001) != 0);
     }
     /**
      * <code>required int64 instant = 1;</code>
@@ -8076,7 +8902,7 @@ public final class IngestionV1 {
      * <code>required string key = 2;</code>
      */
     public boolean hasKey() {
-      return ((bitField0_ & 0x00000002) == 0x00000002);
+      return ((bitField0_ & 0x00000002) != 0);
     }
     /**
      * <code>required string key = 2;</code>
@@ -8086,7 +8912,7 @@ public final class IngestionV1 {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs = 
+        com.google.protobuf.ByteString bs =
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
@@ -8099,10 +8925,10 @@ public final class IngestionV1 {
      * <code>required string key = 2;</code>
      */
     public com.google.protobuf.ByteString
-        getKeyBytes() {
+    getKeyBytes() {
       java.lang.Object ref = key_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         key_ = b;
@@ -8113,6 +8939,7 @@ public final class IngestionV1 {
     }
 
     private byte memoizedIsInitialized = -1;
+    @java.lang.Override
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized == 1) return true;
@@ -8130,27 +8957,29 @@ public final class IngestionV1 {
       return true;
     }
 
+    @java.lang.Override
     public void writeTo(com.google.protobuf.CodedOutputStream output)
-                        throws java.io.IOException {
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        throws java.io.IOException {
+      if (((bitField0_ & 0x00000001) != 0)) {
         output.writeInt64(1, instant_);
       }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+      if (((bitField0_ & 0x00000002) != 0)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 2, key_);
       }
       unknownFields.writeTo(output);
     }
 
+    @java.lang.Override
     public int getSerializedSize() {
       int size = memoizedSize;
       if (size != -1) return size;
 
       size = 0;
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+      if (((bitField0_ & 0x00000001) != 0)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeInt64Size(1, instant_);
+            .computeInt64Size(1, instant_);
       }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+      if (((bitField0_ & 0x00000002) != 0)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, key_);
       }
       size += unknownFields.getSerializedSize();
@@ -8158,30 +8987,28 @@ public final class IngestionV1 {
       return size;
     }
 
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
-       return true;
+        return true;
       }
       if (!(obj instanceof kamino.IngestionV1.Mark)) {
         return super.equals(obj);
       }
       kamino.IngestionV1.Mark other = (kamino.IngestionV1.Mark) obj;
 
-      boolean result = true;
-      result = result && (hasInstant() == other.hasInstant());
+      if (hasInstant() != other.hasInstant()) return false;
       if (hasInstant()) {
-        result = result && (getInstant()
-            == other.getInstant());
+        if (getInstant()
+            != other.getInstant()) return false;
       }
-      result = result && (hasKey() == other.hasKey());
+      if (hasKey() != other.hasKey()) return false;
       if (hasKey()) {
-        result = result && getKey()
-            .equals(other.getKey());
+        if (!getKey()
+            .equals(other.getKey())) return false;
       }
-      result = result && unknownFields.equals(other.unknownFields);
-      return result;
+      if (!unknownFields.equals(other.unknownFields)) return false;
+      return true;
     }
 
     @java.lang.Override
@@ -8190,7 +9017,7 @@ public final class IngestionV1 {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasInstant()) {
         hash = (37 * hash) + INSTANT_FIELD_NUMBER;
         hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
@@ -8205,6 +9032,17 @@ public final class IngestionV1 {
       return hash;
     }
 
+    public static kamino.IngestionV1.Mark parseFrom(
+        java.nio.ByteBuffer data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static kamino.IngestionV1.Mark parseFrom(
+        java.nio.ByteBuffer data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
     public static kamino.IngestionV1.Mark parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
@@ -8264,6 +9102,7 @@ public final class IngestionV1 {
           .parseWithIOException(PARSER, input, extensionRegistry);
     }
 
+    @java.lang.Override
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder() {
       return DEFAULT_INSTANCE.toBuilder();
@@ -8271,6 +9110,7 @@ public final class IngestionV1 {
     public static Builder newBuilder(kamino.IngestionV1.Mark prototype) {
       return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
     }
+    @java.lang.Override
     public Builder toBuilder() {
       return this == DEFAULT_INSTANCE
           ? new Builder() : new Builder().mergeFrom(this);
@@ -8290,12 +9130,13 @@ public final class IngestionV1 {
         // @@protoc_insertion_point(builder_implements:Mark)
         kamino.IngestionV1.MarkOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
-          getDescriptor() {
+      getDescriptor() {
         return kamino.IngestionV1.internal_static_Mark_descriptor;
       }
 
+      @java.lang.Override
       protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-          internalGetFieldAccessorTable() {
+      internalGetFieldAccessorTable() {
         return kamino.IngestionV1.internal_static_Mark_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 kamino.IngestionV1.Mark.class, kamino.IngestionV1.Mark.Builder.class);
@@ -8313,9 +9154,10 @@ public final class IngestionV1 {
       }
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessageV3
-                .alwaysUseFieldBuilders) {
+            .alwaysUseFieldBuilders) {
         }
       }
+      @java.lang.Override
       public Builder clear() {
         super.clear();
         instant_ = 0L;
@@ -8325,15 +9167,18 @@ public final class IngestionV1 {
         return this;
       }
 
+      @java.lang.Override
       public com.google.protobuf.Descriptors.Descriptor
-          getDescriptorForType() {
+      getDescriptorForType() {
         return kamino.IngestionV1.internal_static_Mark_descriptor;
       }
 
+      @java.lang.Override
       public kamino.IngestionV1.Mark getDefaultInstanceForType() {
         return kamino.IngestionV1.Mark.getDefaultInstance();
       }
 
+      @java.lang.Override
       public kamino.IngestionV1.Mark build() {
         kamino.IngestionV1.Mark result = buildPartial();
         if (!result.isInitialized()) {
@@ -8342,15 +9187,16 @@ public final class IngestionV1 {
         return result;
       }
 
+      @java.lang.Override
       public kamino.IngestionV1.Mark buildPartial() {
         kamino.IngestionV1.Mark result = new kamino.IngestionV1.Mark(this);
         int from_bitField0_ = bitField0_;
         int to_bitField0_ = 0;
-        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+        if (((from_bitField0_ & 0x00000001) != 0)) {
+          result.instant_ = instant_;
           to_bitField0_ |= 0x00000001;
         }
-        result.instant_ = instant_;
-        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+        if (((from_bitField0_ & 0x00000002) != 0)) {
           to_bitField0_ |= 0x00000002;
         }
         result.key_ = key_;
@@ -8359,32 +9205,39 @@ public final class IngestionV1 {
         return result;
       }
 
+      @java.lang.Override
       public Builder clone() {
-        return (Builder) super.clone();
+        return super.clone();
       }
+      @java.lang.Override
       public Builder setField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          Object value) {
-        return (Builder) super.setField(field, value);
+          java.lang.Object value) {
+        return super.setField(field, value);
       }
+      @java.lang.Override
       public Builder clearField(
           com.google.protobuf.Descriptors.FieldDescriptor field) {
-        return (Builder) super.clearField(field);
+        return super.clearField(field);
       }
+      @java.lang.Override
       public Builder clearOneof(
           com.google.protobuf.Descriptors.OneofDescriptor oneof) {
-        return (Builder) super.clearOneof(oneof);
+        return super.clearOneof(oneof);
       }
+      @java.lang.Override
       public Builder setRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          int index, Object value) {
-        return (Builder) super.setRepeatedField(field, index, value);
+          int index, java.lang.Object value) {
+        return super.setRepeatedField(field, index, value);
       }
+      @java.lang.Override
       public Builder addRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          Object value) {
-        return (Builder) super.addRepeatedField(field, value);
+          java.lang.Object value) {
+        return super.addRepeatedField(field, value);
       }
+      @java.lang.Override
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof kamino.IngestionV1.Mark) {
           return mergeFrom((kamino.IngestionV1.Mark)other);
@@ -8409,6 +9262,7 @@ public final class IngestionV1 {
         return this;
       }
 
+      @java.lang.Override
       public final boolean isInitialized() {
         if (!hasInstant()) {
           return false;
@@ -8419,6 +9273,7 @@ public final class IngestionV1 {
         return true;
       }
 
+      @java.lang.Override
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
@@ -8443,7 +9298,7 @@ public final class IngestionV1 {
        * <code>required int64 instant = 1;</code>
        */
       public boolean hasInstant() {
-        return ((bitField0_ & 0x00000001) == 0x00000001);
+        return ((bitField0_ & 0x00000001) != 0);
       }
       /**
        * <code>required int64 instant = 1;</code>
@@ -8475,7 +9330,7 @@ public final class IngestionV1 {
        * <code>required string key = 2;</code>
        */
       public boolean hasKey() {
-        return ((bitField0_ & 0x00000002) == 0x00000002);
+        return ((bitField0_ & 0x00000002) != 0);
       }
       /**
        * <code>required string key = 2;</code>
@@ -8498,10 +9353,10 @@ public final class IngestionV1 {
        * <code>required string key = 2;</code>
        */
       public com.google.protobuf.ByteString
-          getKeyBytes() {
+      getKeyBytes() {
         java.lang.Object ref = key_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString b =
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           key_ = b;
@@ -8516,9 +9371,9 @@ public final class IngestionV1 {
       public Builder setKey(
           java.lang.String value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000002;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000002;
         key_ = value;
         onChanged();
         return this;
@@ -8538,18 +9393,20 @@ public final class IngestionV1 {
       public Builder setKeyBytes(
           com.google.protobuf.ByteString value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000002;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000002;
         key_ = value;
         onChanged();
         return this;
       }
+      @java.lang.Override
       public final Builder setUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
         return super.setUnknownFields(unknownFields);
       }
 
+      @java.lang.Override
       public final Builder mergeUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
         return super.mergeUnknownFields(unknownFields);
@@ -8571,11 +9428,12 @@ public final class IngestionV1 {
 
     @java.lang.Deprecated public static final com.google.protobuf.Parser<Mark>
         PARSER = new com.google.protobuf.AbstractParser<Mark>() {
+      @java.lang.Override
       public Mark parsePartialFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-          return new Mark(input, extensionRegistry);
+        return new Mark(input, extensionRegistry);
       }
     };
 
@@ -8588,6 +9446,7 @@ public final class IngestionV1 {
       return PARSER;
     }
 
+    @java.lang.Override
     public kamino.IngestionV1.Mark getDefaultInstanceForType() {
       return DEFAULT_INSTANCE;
     }
@@ -8610,7 +9469,7 @@ public final class IngestionV1 {
      * <code>required string id = 1;</code>
      */
     com.google.protobuf.ByteString
-        getIdBytes();
+    getIdBytes();
 
     /**
      * <code>required string traceId = 2;</code>
@@ -8624,7 +9483,7 @@ public final class IngestionV1 {
      * <code>required string traceId = 2;</code>
      */
     com.google.protobuf.ByteString
-        getTraceIdBytes();
+    getTraceIdBytes();
 
     /**
      * <code>required string parentId = 3;</code>
@@ -8638,7 +9497,7 @@ public final class IngestionV1 {
      * <code>required string parentId = 3;</code>
      */
     com.google.protobuf.ByteString
-        getParentIdBytes();
+    getParentIdBytes();
 
     /**
      * <code>required string operationName = 4;</code>
@@ -8652,7 +9511,7 @@ public final class IngestionV1 {
      * <code>required string operationName = 4;</code>
      */
     com.google.protobuf.ByteString
-        getOperationNameBytes();
+    getOperationNameBytes();
 
     /**
      * <code>required int64 startMicros = 5;</code>
@@ -8709,8 +9568,8 @@ public final class IngestionV1 {
     /**
      * <code>repeated .Mark marks = 8;</code>
      */
-    java.util.List<kamino.IngestionV1.Mark> 
-        getMarksList();
+    java.util.List<kamino.IngestionV1.Mark>
+    getMarksList();
     /**
      * <code>repeated .Mark marks = 8;</code>
      */
@@ -8722,8 +9581,8 @@ public final class IngestionV1 {
     /**
      * <code>repeated .Mark marks = 8;</code>
      */
-    java.util.List<? extends kamino.IngestionV1.MarkOrBuilder> 
-        getMarksOrBuilderList();
+    java.util.List<? extends kamino.IngestionV1.MarkOrBuilder>
+    getMarksOrBuilderList();
     /**
      * <code>repeated .Mark marks = 8;</code>
      */
@@ -8737,6 +9596,7 @@ public final class IngestionV1 {
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:Span)
       SpanOrBuilder {
+    private static final long serialVersionUID = 0L;
     // Use Span.newBuilder() to construct.
     private Span(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
       super(builder);
@@ -8746,9 +9606,14 @@ public final class IngestionV1 {
       traceId_ = "";
       parentId_ = "";
       operationName_ = "";
-      startMicros_ = 0L;
-      endMicros_ = 0L;
       marks_ = java.util.Collections.emptyList();
+    }
+
+    @java.lang.Override
+    @SuppressWarnings({"unused"})
+    protected java.lang.Object newInstance(
+        UnusedPrivateParameter unused) {
+      return new Span();
     }
 
     @java.lang.Override
@@ -8761,6 +9626,9 @@ public final class IngestionV1 {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
+      if (extensionRegistry == null) {
+        throw new java.lang.NullPointerException();
+      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -8772,13 +9640,6 @@ public final class IngestionV1 {
             case 0:
               done = true;
               break;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
             case 10: {
               com.google.protobuf.ByteString bs = input.readBytes();
               bitField0_ |= 0x00000001;
@@ -8814,24 +9675,32 @@ public final class IngestionV1 {
               break;
             }
             case 58: {
-              if (!((mutable_bitField0_ & 0x00000040) == 0x00000040)) {
+              if (!((mutable_bitField0_ & 0x00000040) != 0)) {
                 tags_ = com.google.protobuf.MapField.newMapField(
                     TagsDefaultEntryHolder.defaultEntry);
                 mutable_bitField0_ |= 0x00000040;
               }
               com.google.protobuf.MapEntry<java.lang.String, java.lang.String>
-              tags = input.readMessage(
+                  tags__ = input.readMessage(
                   TagsDefaultEntryHolder.defaultEntry.getParserForType(), extensionRegistry);
-              tags_.getMutableMap().put(tags.getKey(), tags.getValue());
+              tags_.getMutableMap().put(
+                  tags__.getKey(), tags__.getValue());
               break;
             }
             case 66: {
-              if (!((mutable_bitField0_ & 0x00000080) == 0x00000080)) {
+              if (!((mutable_bitField0_ & 0x00000080) != 0)) {
                 marks_ = new java.util.ArrayList<kamino.IngestionV1.Mark>();
                 mutable_bitField0_ |= 0x00000080;
               }
               marks_.add(
                   input.readMessage(kamino.IngestionV1.Mark.PARSER, extensionRegistry));
+              break;
+            }
+            default: {
+              if (!parseUnknownField(
+                  input, unknownFields, extensionRegistry, tag)) {
+                done = true;
+              }
               break;
             }
           }
@@ -8842,7 +9711,7 @@ public final class IngestionV1 {
         throw new com.google.protobuf.InvalidProtocolBufferException(
             e).setUnfinishedMessage(this);
       } finally {
-        if (((mutable_bitField0_ & 0x00000080) == 0x00000080)) {
+        if (((mutable_bitField0_ & 0x00000080) != 0)) {
           marks_ = java.util.Collections.unmodifiableList(marks_);
         }
         this.unknownFields = unknownFields.build();
@@ -8850,11 +9719,12 @@ public final class IngestionV1 {
       }
     }
     public static final com.google.protobuf.Descriptors.Descriptor
-        getDescriptor() {
+    getDescriptor() {
       return kamino.IngestionV1.internal_static_Span_descriptor;
     }
 
     @SuppressWarnings({"rawtypes"})
+    @java.lang.Override
     protected com.google.protobuf.MapField internalGetMapField(
         int number) {
       switch (number) {
@@ -8865,8 +9735,9 @@ public final class IngestionV1 {
               "Invalid map field number: " + number);
       }
     }
+    @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-        internalGetFieldAccessorTable() {
+    internalGetFieldAccessorTable() {
       return kamino.IngestionV1.internal_static_Span_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               kamino.IngestionV1.Span.class, kamino.IngestionV1.Span.Builder.class);
@@ -8879,7 +9750,7 @@ public final class IngestionV1 {
      * <code>required string id = 1;</code>
      */
     public boolean hasId() {
-      return ((bitField0_ & 0x00000001) == 0x00000001);
+      return ((bitField0_ & 0x00000001) != 0);
     }
     /**
      * <code>required string id = 1;</code>
@@ -8889,7 +9760,7 @@ public final class IngestionV1 {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs = 
+        com.google.protobuf.ByteString bs =
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
@@ -8902,10 +9773,10 @@ public final class IngestionV1 {
      * <code>required string id = 1;</code>
      */
     public com.google.protobuf.ByteString
-        getIdBytes() {
+    getIdBytes() {
       java.lang.Object ref = id_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         id_ = b;
@@ -8921,7 +9792,7 @@ public final class IngestionV1 {
      * <code>required string traceId = 2;</code>
      */
     public boolean hasTraceId() {
-      return ((bitField0_ & 0x00000002) == 0x00000002);
+      return ((bitField0_ & 0x00000002) != 0);
     }
     /**
      * <code>required string traceId = 2;</code>
@@ -8931,7 +9802,7 @@ public final class IngestionV1 {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs = 
+        com.google.protobuf.ByteString bs =
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
@@ -8944,10 +9815,10 @@ public final class IngestionV1 {
      * <code>required string traceId = 2;</code>
      */
     public com.google.protobuf.ByteString
-        getTraceIdBytes() {
+    getTraceIdBytes() {
       java.lang.Object ref = traceId_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         traceId_ = b;
@@ -8963,7 +9834,7 @@ public final class IngestionV1 {
      * <code>required string parentId = 3;</code>
      */
     public boolean hasParentId() {
-      return ((bitField0_ & 0x00000004) == 0x00000004);
+      return ((bitField0_ & 0x00000004) != 0);
     }
     /**
      * <code>required string parentId = 3;</code>
@@ -8973,7 +9844,7 @@ public final class IngestionV1 {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs = 
+        com.google.protobuf.ByteString bs =
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
@@ -8986,10 +9857,10 @@ public final class IngestionV1 {
      * <code>required string parentId = 3;</code>
      */
     public com.google.protobuf.ByteString
-        getParentIdBytes() {
+    getParentIdBytes() {
       java.lang.Object ref = parentId_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         parentId_ = b;
@@ -9005,7 +9876,7 @@ public final class IngestionV1 {
      * <code>required string operationName = 4;</code>
      */
     public boolean hasOperationName() {
-      return ((bitField0_ & 0x00000008) == 0x00000008);
+      return ((bitField0_ & 0x00000008) != 0);
     }
     /**
      * <code>required string operationName = 4;</code>
@@ -9015,7 +9886,7 @@ public final class IngestionV1 {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        com.google.protobuf.ByteString bs = 
+        com.google.protobuf.ByteString bs =
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
@@ -9028,10 +9899,10 @@ public final class IngestionV1 {
      * <code>required string operationName = 4;</code>
      */
     public com.google.protobuf.ByteString
-        getOperationNameBytes() {
+    getOperationNameBytes() {
       java.lang.Object ref = operationName_;
       if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         operationName_ = b;
@@ -9047,7 +9918,7 @@ public final class IngestionV1 {
      * <code>required int64 startMicros = 5;</code>
      */
     public boolean hasStartMicros() {
-      return ((bitField0_ & 0x00000010) == 0x00000010);
+      return ((bitField0_ & 0x00000010) != 0);
     }
     /**
      * <code>required int64 startMicros = 5;</code>
@@ -9062,7 +9933,7 @@ public final class IngestionV1 {
      * <code>required int64 endMicros = 6;</code>
      */
     public boolean hasEndMicros() {
-      return ((bitField0_ & 0x00000020) == 0x00000020);
+      return ((bitField0_ & 0x00000020) != 0);
     }
     /**
      * <code>required int64 endMicros = 6;</code>
@@ -9075,9 +9946,9 @@ public final class IngestionV1 {
     private static final class TagsDefaultEntryHolder {
       static final com.google.protobuf.MapEntry<
           java.lang.String, java.lang.String> defaultEntry =
-              com.google.protobuf.MapEntry
+          com.google.protobuf.MapEntry
               .<java.lang.String, java.lang.String>newDefaultInstance(
-                  kamino.IngestionV1.internal_static_Span_TagsEntry_descriptor, 
+                  kamino.IngestionV1.internal_static_Span_TagsEntry_descriptor,
                   com.google.protobuf.WireFormat.FieldType.STRING,
                   "",
                   com.google.protobuf.WireFormat.FieldType.STRING,
@@ -9158,8 +10029,8 @@ public final class IngestionV1 {
     /**
      * <code>repeated .Mark marks = 8;</code>
      */
-    public java.util.List<? extends kamino.IngestionV1.MarkOrBuilder> 
-        getMarksOrBuilderList() {
+    public java.util.List<? extends kamino.IngestionV1.MarkOrBuilder>
+    getMarksOrBuilderList() {
       return marks_;
     }
     /**
@@ -9183,6 +10054,7 @@ public final class IngestionV1 {
     }
 
     private byte memoizedIsInitialized = -1;
+    @java.lang.Override
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized == 1) return true;
@@ -9222,133 +10094,130 @@ public final class IngestionV1 {
       return true;
     }
 
+    @java.lang.Override
     public void writeTo(com.google.protobuf.CodedOutputStream output)
-                        throws java.io.IOException {
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        throws java.io.IOException {
+      if (((bitField0_ & 0x00000001) != 0)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 1, id_);
       }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+      if (((bitField0_ & 0x00000002) != 0)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 2, traceId_);
       }
-      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+      if (((bitField0_ & 0x00000004) != 0)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 3, parentId_);
       }
-      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+      if (((bitField0_ & 0x00000008) != 0)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 4, operationName_);
       }
-      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+      if (((bitField0_ & 0x00000010) != 0)) {
         output.writeInt64(5, startMicros_);
       }
-      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+      if (((bitField0_ & 0x00000020) != 0)) {
         output.writeInt64(6, endMicros_);
       }
-      for (java.util.Map.Entry<java.lang.String, java.lang.String> entry
-           : internalGetTags().getMap().entrySet()) {
-        com.google.protobuf.MapEntry<java.lang.String, java.lang.String>
-        tags = TagsDefaultEntryHolder.defaultEntry.newBuilderForType()
-            .setKey(entry.getKey())
-            .setValue(entry.getValue())
-            .build();
-        output.writeMessage(7, tags);
-      }
+      com.google.protobuf.GeneratedMessageV3
+          .serializeStringMapTo(
+              output,
+              internalGetTags(),
+              TagsDefaultEntryHolder.defaultEntry,
+              7);
       for (int i = 0; i < marks_.size(); i++) {
         output.writeMessage(8, marks_.get(i));
       }
       unknownFields.writeTo(output);
     }
 
+    @java.lang.Override
     public int getSerializedSize() {
       int size = memoizedSize;
       if (size != -1) return size;
 
       size = 0;
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+      if (((bitField0_ & 0x00000001) != 0)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, id_);
       }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+      if (((bitField0_ & 0x00000002) != 0)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, traceId_);
       }
-      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+      if (((bitField0_ & 0x00000004) != 0)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(3, parentId_);
       }
-      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+      if (((bitField0_ & 0x00000008) != 0)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(4, operationName_);
       }
-      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+      if (((bitField0_ & 0x00000010) != 0)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeInt64Size(5, startMicros_);
+            .computeInt64Size(5, startMicros_);
       }
-      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+      if (((bitField0_ & 0x00000020) != 0)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeInt64Size(6, endMicros_);
+            .computeInt64Size(6, endMicros_);
       }
       for (java.util.Map.Entry<java.lang.String, java.lang.String> entry
-           : internalGetTags().getMap().entrySet()) {
+          : internalGetTags().getMap().entrySet()) {
         com.google.protobuf.MapEntry<java.lang.String, java.lang.String>
-        tags = TagsDefaultEntryHolder.defaultEntry.newBuilderForType()
+            tags__ = TagsDefaultEntryHolder.defaultEntry.newBuilderForType()
             .setKey(entry.getKey())
             .setValue(entry.getValue())
             .build();
         size += com.google.protobuf.CodedOutputStream
-            .computeMessageSize(7, tags);
+            .computeMessageSize(7, tags__);
       }
       for (int i = 0; i < marks_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(8, marks_.get(i));
+            .computeMessageSize(8, marks_.get(i));
       }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
       return size;
     }
 
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
-       return true;
+        return true;
       }
       if (!(obj instanceof kamino.IngestionV1.Span)) {
         return super.equals(obj);
       }
       kamino.IngestionV1.Span other = (kamino.IngestionV1.Span) obj;
 
-      boolean result = true;
-      result = result && (hasId() == other.hasId());
+      if (hasId() != other.hasId()) return false;
       if (hasId()) {
-        result = result && getId()
-            .equals(other.getId());
+        if (!getId()
+            .equals(other.getId())) return false;
       }
-      result = result && (hasTraceId() == other.hasTraceId());
+      if (hasTraceId() != other.hasTraceId()) return false;
       if (hasTraceId()) {
-        result = result && getTraceId()
-            .equals(other.getTraceId());
+        if (!getTraceId()
+            .equals(other.getTraceId())) return false;
       }
-      result = result && (hasParentId() == other.hasParentId());
+      if (hasParentId() != other.hasParentId()) return false;
       if (hasParentId()) {
-        result = result && getParentId()
-            .equals(other.getParentId());
+        if (!getParentId()
+            .equals(other.getParentId())) return false;
       }
-      result = result && (hasOperationName() == other.hasOperationName());
+      if (hasOperationName() != other.hasOperationName()) return false;
       if (hasOperationName()) {
-        result = result && getOperationName()
-            .equals(other.getOperationName());
+        if (!getOperationName()
+            .equals(other.getOperationName())) return false;
       }
-      result = result && (hasStartMicros() == other.hasStartMicros());
+      if (hasStartMicros() != other.hasStartMicros()) return false;
       if (hasStartMicros()) {
-        result = result && (getStartMicros()
-            == other.getStartMicros());
+        if (getStartMicros()
+            != other.getStartMicros()) return false;
       }
-      result = result && (hasEndMicros() == other.hasEndMicros());
+      if (hasEndMicros() != other.hasEndMicros()) return false;
       if (hasEndMicros()) {
-        result = result && (getEndMicros()
-            == other.getEndMicros());
+        if (getEndMicros()
+            != other.getEndMicros()) return false;
       }
-      result = result && internalGetTags().equals(
-          other.internalGetTags());
-      result = result && getMarksList()
-          .equals(other.getMarksList());
-      result = result && unknownFields.equals(other.unknownFields);
-      return result;
+      if (!internalGetTags().equals(
+          other.internalGetTags())) return false;
+      if (!getMarksList()
+          .equals(other.getMarksList())) return false;
+      if (!unknownFields.equals(other.unknownFields)) return false;
+      return true;
     }
 
     @java.lang.Override
@@ -9357,7 +10226,7 @@ public final class IngestionV1 {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasId()) {
         hash = (37 * hash) + ID_FIELD_NUMBER;
         hash = (53 * hash) + getId().hashCode();
@@ -9397,6 +10266,17 @@ public final class IngestionV1 {
       return hash;
     }
 
+    public static kamino.IngestionV1.Span parseFrom(
+        java.nio.ByteBuffer data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static kamino.IngestionV1.Span parseFrom(
+        java.nio.ByteBuffer data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
     public static kamino.IngestionV1.Span parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
@@ -9456,6 +10336,7 @@ public final class IngestionV1 {
           .parseWithIOException(PARSER, input, extensionRegistry);
     }
 
+    @java.lang.Override
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder() {
       return DEFAULT_INSTANCE.toBuilder();
@@ -9463,6 +10344,7 @@ public final class IngestionV1 {
     public static Builder newBuilder(kamino.IngestionV1.Span prototype) {
       return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
     }
+    @java.lang.Override
     public Builder toBuilder() {
       return this == DEFAULT_INSTANCE
           ? new Builder() : new Builder().mergeFrom(this);
@@ -9482,7 +10364,7 @@ public final class IngestionV1 {
         // @@protoc_insertion_point(builder_implements:Span)
         kamino.IngestionV1.SpanOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
-          getDescriptor() {
+      getDescriptor() {
         return kamino.IngestionV1.internal_static_Span_descriptor;
       }
 
@@ -9508,8 +10390,9 @@ public final class IngestionV1 {
                 "Invalid map field number: " + number);
         }
       }
+      @java.lang.Override
       protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-          internalGetFieldAccessorTable() {
+      internalGetFieldAccessorTable() {
         return kamino.IngestionV1.internal_static_Span_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 kamino.IngestionV1.Span.class, kamino.IngestionV1.Span.Builder.class);
@@ -9527,10 +10410,11 @@ public final class IngestionV1 {
       }
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessageV3
-                .alwaysUseFieldBuilders) {
+            .alwaysUseFieldBuilders) {
           getMarksFieldBuilder();
         }
       }
+      @java.lang.Override
       public Builder clear() {
         super.clear();
         id_ = "";
@@ -9555,15 +10439,18 @@ public final class IngestionV1 {
         return this;
       }
 
+      @java.lang.Override
       public com.google.protobuf.Descriptors.Descriptor
-          getDescriptorForType() {
+      getDescriptorForType() {
         return kamino.IngestionV1.internal_static_Span_descriptor;
       }
 
+      @java.lang.Override
       public kamino.IngestionV1.Span getDefaultInstanceForType() {
         return kamino.IngestionV1.Span.getDefaultInstance();
       }
 
+      @java.lang.Override
       public kamino.IngestionV1.Span build() {
         kamino.IngestionV1.Span result = buildPartial();
         if (!result.isInitialized()) {
@@ -9572,38 +10459,39 @@ public final class IngestionV1 {
         return result;
       }
 
+      @java.lang.Override
       public kamino.IngestionV1.Span buildPartial() {
         kamino.IngestionV1.Span result = new kamino.IngestionV1.Span(this);
         int from_bitField0_ = bitField0_;
         int to_bitField0_ = 0;
-        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+        if (((from_bitField0_ & 0x00000001) != 0)) {
           to_bitField0_ |= 0x00000001;
         }
         result.id_ = id_;
-        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+        if (((from_bitField0_ & 0x00000002) != 0)) {
           to_bitField0_ |= 0x00000002;
         }
         result.traceId_ = traceId_;
-        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+        if (((from_bitField0_ & 0x00000004) != 0)) {
           to_bitField0_ |= 0x00000004;
         }
         result.parentId_ = parentId_;
-        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+        if (((from_bitField0_ & 0x00000008) != 0)) {
           to_bitField0_ |= 0x00000008;
         }
         result.operationName_ = operationName_;
-        if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
+        if (((from_bitField0_ & 0x00000010) != 0)) {
+          result.startMicros_ = startMicros_;
           to_bitField0_ |= 0x00000010;
         }
-        result.startMicros_ = startMicros_;
-        if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
+        if (((from_bitField0_ & 0x00000020) != 0)) {
+          result.endMicros_ = endMicros_;
           to_bitField0_ |= 0x00000020;
         }
-        result.endMicros_ = endMicros_;
         result.tags_ = internalGetTags();
         result.tags_.makeImmutable();
         if (marksBuilder_ == null) {
-          if (((bitField0_ & 0x00000080) == 0x00000080)) {
+          if (((bitField0_ & 0x00000080) != 0)) {
             marks_ = java.util.Collections.unmodifiableList(marks_);
             bitField0_ = (bitField0_ & ~0x00000080);
           }
@@ -9616,32 +10504,39 @@ public final class IngestionV1 {
         return result;
       }
 
+      @java.lang.Override
       public Builder clone() {
-        return (Builder) super.clone();
+        return super.clone();
       }
+      @java.lang.Override
       public Builder setField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          Object value) {
-        return (Builder) super.setField(field, value);
+          java.lang.Object value) {
+        return super.setField(field, value);
       }
+      @java.lang.Override
       public Builder clearField(
           com.google.protobuf.Descriptors.FieldDescriptor field) {
-        return (Builder) super.clearField(field);
+        return super.clearField(field);
       }
+      @java.lang.Override
       public Builder clearOneof(
           com.google.protobuf.Descriptors.OneofDescriptor oneof) {
-        return (Builder) super.clearOneof(oneof);
+        return super.clearOneof(oneof);
       }
+      @java.lang.Override
       public Builder setRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          int index, Object value) {
-        return (Builder) super.setRepeatedField(field, index, value);
+          int index, java.lang.Object value) {
+        return super.setRepeatedField(field, index, value);
       }
+      @java.lang.Override
       public Builder addRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          Object value) {
-        return (Builder) super.addRepeatedField(field, value);
+          java.lang.Object value) {
+        return super.addRepeatedField(field, value);
       }
+      @java.lang.Override
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof kamino.IngestionV1.Span) {
           return mergeFrom((kamino.IngestionV1.Span)other);
@@ -9699,9 +10594,9 @@ public final class IngestionV1 {
               marksBuilder_ = null;
               marks_ = other.marks_;
               bitField0_ = (bitField0_ & ~0x00000080);
-              marksBuilder_ = 
-                com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
-                   getMarksFieldBuilder() : null;
+              marksBuilder_ =
+                  com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
+                      getMarksFieldBuilder() : null;
             } else {
               marksBuilder_.addAllMessages(other.marks_);
             }
@@ -9712,6 +10607,7 @@ public final class IngestionV1 {
         return this;
       }
 
+      @java.lang.Override
       public final boolean isInitialized() {
         if (!hasId()) {
           return false;
@@ -9739,6 +10635,7 @@ public final class IngestionV1 {
         return true;
       }
 
+      @java.lang.Override
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
@@ -9763,7 +10660,7 @@ public final class IngestionV1 {
        * <code>required string id = 1;</code>
        */
       public boolean hasId() {
-        return ((bitField0_ & 0x00000001) == 0x00000001);
+        return ((bitField0_ & 0x00000001) != 0);
       }
       /**
        * <code>required string id = 1;</code>
@@ -9786,10 +10683,10 @@ public final class IngestionV1 {
        * <code>required string id = 1;</code>
        */
       public com.google.protobuf.ByteString
-          getIdBytes() {
+      getIdBytes() {
         java.lang.Object ref = id_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString b =
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           id_ = b;
@@ -9804,9 +10701,9 @@ public final class IngestionV1 {
       public Builder setId(
           java.lang.String value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000001;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000001;
         id_ = value;
         onChanged();
         return this;
@@ -9826,9 +10723,9 @@ public final class IngestionV1 {
       public Builder setIdBytes(
           com.google.protobuf.ByteString value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000001;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000001;
         id_ = value;
         onChanged();
         return this;
@@ -9839,7 +10736,7 @@ public final class IngestionV1 {
        * <code>required string traceId = 2;</code>
        */
       public boolean hasTraceId() {
-        return ((bitField0_ & 0x00000002) == 0x00000002);
+        return ((bitField0_ & 0x00000002) != 0);
       }
       /**
        * <code>required string traceId = 2;</code>
@@ -9862,10 +10759,10 @@ public final class IngestionV1 {
        * <code>required string traceId = 2;</code>
        */
       public com.google.protobuf.ByteString
-          getTraceIdBytes() {
+      getTraceIdBytes() {
         java.lang.Object ref = traceId_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString b =
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           traceId_ = b;
@@ -9880,9 +10777,9 @@ public final class IngestionV1 {
       public Builder setTraceId(
           java.lang.String value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000002;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000002;
         traceId_ = value;
         onChanged();
         return this;
@@ -9902,9 +10799,9 @@ public final class IngestionV1 {
       public Builder setTraceIdBytes(
           com.google.protobuf.ByteString value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000002;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000002;
         traceId_ = value;
         onChanged();
         return this;
@@ -9915,7 +10812,7 @@ public final class IngestionV1 {
        * <code>required string parentId = 3;</code>
        */
       public boolean hasParentId() {
-        return ((bitField0_ & 0x00000004) == 0x00000004);
+        return ((bitField0_ & 0x00000004) != 0);
       }
       /**
        * <code>required string parentId = 3;</code>
@@ -9938,10 +10835,10 @@ public final class IngestionV1 {
        * <code>required string parentId = 3;</code>
        */
       public com.google.protobuf.ByteString
-          getParentIdBytes() {
+      getParentIdBytes() {
         java.lang.Object ref = parentId_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString b =
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           parentId_ = b;
@@ -9956,9 +10853,9 @@ public final class IngestionV1 {
       public Builder setParentId(
           java.lang.String value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000004;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000004;
         parentId_ = value;
         onChanged();
         return this;
@@ -9978,9 +10875,9 @@ public final class IngestionV1 {
       public Builder setParentIdBytes(
           com.google.protobuf.ByteString value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000004;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000004;
         parentId_ = value;
         onChanged();
         return this;
@@ -9991,7 +10888,7 @@ public final class IngestionV1 {
        * <code>required string operationName = 4;</code>
        */
       public boolean hasOperationName() {
-        return ((bitField0_ & 0x00000008) == 0x00000008);
+        return ((bitField0_ & 0x00000008) != 0);
       }
       /**
        * <code>required string operationName = 4;</code>
@@ -10014,10 +10911,10 @@ public final class IngestionV1 {
        * <code>required string operationName = 4;</code>
        */
       public com.google.protobuf.ByteString
-          getOperationNameBytes() {
+      getOperationNameBytes() {
         java.lang.Object ref = operationName_;
         if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString b =
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           operationName_ = b;
@@ -10032,9 +10929,9 @@ public final class IngestionV1 {
       public Builder setOperationName(
           java.lang.String value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000008;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000008;
         operationName_ = value;
         onChanged();
         return this;
@@ -10054,9 +10951,9 @@ public final class IngestionV1 {
       public Builder setOperationNameBytes(
           com.google.protobuf.ByteString value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000008;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000008;
         operationName_ = value;
         onChanged();
         return this;
@@ -10067,7 +10964,7 @@ public final class IngestionV1 {
        * <code>required int64 startMicros = 5;</code>
        */
       public boolean hasStartMicros() {
-        return ((bitField0_ & 0x00000010) == 0x00000010);
+        return ((bitField0_ & 0x00000010) != 0);
       }
       /**
        * <code>required int64 startMicros = 5;</code>
@@ -10099,7 +10996,7 @@ public final class IngestionV1 {
        * <code>required int64 endMicros = 6;</code>
        */
       public boolean hasEndMicros() {
-        return ((bitField0_ & 0x00000020) == 0x00000020);
+        return ((bitField0_ & 0x00000020) != 0);
       }
       /**
        * <code>required int64 endMicros = 6;</code>
@@ -10203,7 +11100,8 @@ public final class IngestionV1 {
       }
 
       public Builder clearTags() {
-        getMutableTags().clear();
+        internalGetMutableTags().getMutableMap()
+            .clear();
         return this;
       }
       /**
@@ -10213,7 +11111,8 @@ public final class IngestionV1 {
       public Builder removeTags(
           java.lang.String key) {
         if (key == null) { throw new java.lang.NullPointerException(); }
-        getMutableTags().remove(key);
+        internalGetMutableTags().getMutableMap()
+            .remove(key);
         return this;
       }
       /**
@@ -10232,7 +11131,8 @@ public final class IngestionV1 {
           java.lang.String value) {
         if (key == null) { throw new java.lang.NullPointerException(); }
         if (value == null) { throw new java.lang.NullPointerException(); }
-        getMutableTags().put(key, value);
+        internalGetMutableTags().getMutableMap()
+            .put(key, value);
         return this;
       }
       /**
@@ -10241,17 +11141,18 @@ public final class IngestionV1 {
 
       public Builder putAllTags(
           java.util.Map<java.lang.String, java.lang.String> values) {
-        getMutableTags().putAll(values);
+        internalGetMutableTags().getMutableMap()
+            .putAll(values);
         return this;
       }
 
       private java.util.List<kamino.IngestionV1.Mark> marks_ =
-        java.util.Collections.emptyList();
+          java.util.Collections.emptyList();
       private void ensureMarksIsMutable() {
-        if (!((bitField0_ & 0x00000080) == 0x00000080)) {
+        if (!((bitField0_ & 0x00000080) != 0)) {
           marks_ = new java.util.ArrayList<kamino.IngestionV1.Mark>(marks_);
           bitField0_ |= 0x00000080;
-         }
+        }
       }
 
       private com.google.protobuf.RepeatedFieldBuilderV3<
@@ -10440,8 +11341,8 @@ public final class IngestionV1 {
       /**
        * <code>repeated .Mark marks = 8;</code>
        */
-      public java.util.List<? extends kamino.IngestionV1.MarkOrBuilder> 
-           getMarksOrBuilderList() {
+      public java.util.List<? extends kamino.IngestionV1.MarkOrBuilder>
+      getMarksOrBuilderList() {
         if (marksBuilder_ != null) {
           return marksBuilder_.getMessageOrBuilderList();
         } else {
@@ -10466,29 +11367,31 @@ public final class IngestionV1 {
       /**
        * <code>repeated .Mark marks = 8;</code>
        */
-      public java.util.List<kamino.IngestionV1.Mark.Builder> 
-           getMarksBuilderList() {
+      public java.util.List<kamino.IngestionV1.Mark.Builder>
+      getMarksBuilderList() {
         return getMarksFieldBuilder().getBuilderList();
       }
       private com.google.protobuf.RepeatedFieldBuilderV3<
-          kamino.IngestionV1.Mark, kamino.IngestionV1.Mark.Builder, kamino.IngestionV1.MarkOrBuilder> 
-          getMarksFieldBuilder() {
+          kamino.IngestionV1.Mark, kamino.IngestionV1.Mark.Builder, kamino.IngestionV1.MarkOrBuilder>
+      getMarksFieldBuilder() {
         if (marksBuilder_ == null) {
           marksBuilder_ = new com.google.protobuf.RepeatedFieldBuilderV3<
               kamino.IngestionV1.Mark, kamino.IngestionV1.Mark.Builder, kamino.IngestionV1.MarkOrBuilder>(
-                  marks_,
-                  ((bitField0_ & 0x00000080) == 0x00000080),
-                  getParentForChildren(),
-                  isClean());
+              marks_,
+              ((bitField0_ & 0x00000080) != 0),
+              getParentForChildren(),
+              isClean());
           marks_ = null;
         }
         return marksBuilder_;
       }
+      @java.lang.Override
       public final Builder setUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
         return super.setUnknownFields(unknownFields);
       }
 
+      @java.lang.Override
       public final Builder mergeUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
         return super.mergeUnknownFields(unknownFields);
@@ -10510,11 +11413,12 @@ public final class IngestionV1 {
 
     @java.lang.Deprecated public static final com.google.protobuf.Parser<Span>
         PARSER = new com.google.protobuf.AbstractParser<Span>() {
+      @java.lang.Override
       public Span parsePartialFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-          return new Span(input, extensionRegistry);
+        return new Span(input, extensionRegistry);
       }
     };
 
@@ -10527,6 +11431,7 @@ public final class IngestionV1 {
       return PARSER;
     }
 
+    @java.lang.Override
     public kamino.IngestionV1.Span getDefaultInstanceForType() {
       return DEFAULT_INSTANCE;
     }
@@ -10553,12 +11458,20 @@ public final class IngestionV1 {
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:IngestionResponse)
       IngestionResponseOrBuilder {
+    private static final long serialVersionUID = 0L;
     // Use IngestionResponse.newBuilder() to construct.
     private IngestionResponse(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
       super(builder);
     }
     private IngestionResponse() {
       status_ = 0;
+    }
+
+    @java.lang.Override
+    @SuppressWarnings({"unused"})
+    protected java.lang.Object newInstance(
+        UnusedPrivateParameter unused) {
+      return new IngestionResponse();
     }
 
     @java.lang.Override
@@ -10571,6 +11484,9 @@ public final class IngestionV1 {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
+      if (extensionRegistry == null) {
+        throw new java.lang.NullPointerException();
+      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -10582,21 +11498,22 @@ public final class IngestionV1 {
             case 0:
               done = true;
               break;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
             case 8: {
               int rawValue = input.readEnum();
+              @SuppressWarnings("deprecation")
               kamino.IngestionV1.IngestionStatus value = kamino.IngestionV1.IngestionStatus.valueOf(rawValue);
               if (value == null) {
                 unknownFields.mergeVarintField(1, rawValue);
               } else {
                 bitField0_ |= 0x00000001;
                 status_ = rawValue;
+              }
+              break;
+            }
+            default: {
+              if (!parseUnknownField(
+                  input, unknownFields, extensionRegistry, tag)) {
+                done = true;
               }
               break;
             }
@@ -10613,12 +11530,13 @@ public final class IngestionV1 {
       }
     }
     public static final com.google.protobuf.Descriptors.Descriptor
-        getDescriptor() {
+    getDescriptor() {
       return kamino.IngestionV1.internal_static_IngestionResponse_descriptor;
     }
 
+    @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-        internalGetFieldAccessorTable() {
+    internalGetFieldAccessorTable() {
       return kamino.IngestionV1.internal_static_IngestionResponse_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               kamino.IngestionV1.IngestionResponse.class, kamino.IngestionV1.IngestionResponse.Builder.class);
@@ -10631,17 +11549,19 @@ public final class IngestionV1 {
      * <code>required .IngestionStatus status = 1;</code>
      */
     public boolean hasStatus() {
-      return ((bitField0_ & 0x00000001) == 0x00000001);
+      return ((bitField0_ & 0x00000001) != 0);
     }
     /**
      * <code>required .IngestionStatus status = 1;</code>
      */
     public kamino.IngestionV1.IngestionStatus getStatus() {
+      @SuppressWarnings("deprecation")
       kamino.IngestionV1.IngestionStatus result = kamino.IngestionV1.IngestionStatus.valueOf(status_);
       return result == null ? kamino.IngestionV1.IngestionStatus.OK : result;
     }
 
     private byte memoizedIsInitialized = -1;
+    @java.lang.Override
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized == 1) return true;
@@ -10655,46 +11575,46 @@ public final class IngestionV1 {
       return true;
     }
 
+    @java.lang.Override
     public void writeTo(com.google.protobuf.CodedOutputStream output)
-                        throws java.io.IOException {
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        throws java.io.IOException {
+      if (((bitField0_ & 0x00000001) != 0)) {
         output.writeEnum(1, status_);
       }
       unknownFields.writeTo(output);
     }
 
+    @java.lang.Override
     public int getSerializedSize() {
       int size = memoizedSize;
       if (size != -1) return size;
 
       size = 0;
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+      if (((bitField0_ & 0x00000001) != 0)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeEnumSize(1, status_);
+            .computeEnumSize(1, status_);
       }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
       return size;
     }
 
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
-       return true;
+        return true;
       }
       if (!(obj instanceof kamino.IngestionV1.IngestionResponse)) {
         return super.equals(obj);
       }
       kamino.IngestionV1.IngestionResponse other = (kamino.IngestionV1.IngestionResponse) obj;
 
-      boolean result = true;
-      result = result && (hasStatus() == other.hasStatus());
+      if (hasStatus() != other.hasStatus()) return false;
       if (hasStatus()) {
-        result = result && status_ == other.status_;
+        if (status_ != other.status_) return false;
       }
-      result = result && unknownFields.equals(other.unknownFields);
-      return result;
+      if (!unknownFields.equals(other.unknownFields)) return false;
+      return true;
     }
 
     @java.lang.Override
@@ -10703,7 +11623,7 @@ public final class IngestionV1 {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasStatus()) {
         hash = (37 * hash) + STATUS_FIELD_NUMBER;
         hash = (53 * hash) + status_;
@@ -10713,6 +11633,17 @@ public final class IngestionV1 {
       return hash;
     }
 
+    public static kamino.IngestionV1.IngestionResponse parseFrom(
+        java.nio.ByteBuffer data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static kamino.IngestionV1.IngestionResponse parseFrom(
+        java.nio.ByteBuffer data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
     public static kamino.IngestionV1.IngestionResponse parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
@@ -10772,6 +11703,7 @@ public final class IngestionV1 {
           .parseWithIOException(PARSER, input, extensionRegistry);
     }
 
+    @java.lang.Override
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder() {
       return DEFAULT_INSTANCE.toBuilder();
@@ -10779,6 +11711,7 @@ public final class IngestionV1 {
     public static Builder newBuilder(kamino.IngestionV1.IngestionResponse prototype) {
       return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
     }
+    @java.lang.Override
     public Builder toBuilder() {
       return this == DEFAULT_INSTANCE
           ? new Builder() : new Builder().mergeFrom(this);
@@ -10798,12 +11731,13 @@ public final class IngestionV1 {
         // @@protoc_insertion_point(builder_implements:IngestionResponse)
         kamino.IngestionV1.IngestionResponseOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
-          getDescriptor() {
+      getDescriptor() {
         return kamino.IngestionV1.internal_static_IngestionResponse_descriptor;
       }
 
+      @java.lang.Override
       protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-          internalGetFieldAccessorTable() {
+      internalGetFieldAccessorTable() {
         return kamino.IngestionV1.internal_static_IngestionResponse_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 kamino.IngestionV1.IngestionResponse.class, kamino.IngestionV1.IngestionResponse.Builder.class);
@@ -10821,9 +11755,10 @@ public final class IngestionV1 {
       }
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessageV3
-                .alwaysUseFieldBuilders) {
+            .alwaysUseFieldBuilders) {
         }
       }
+      @java.lang.Override
       public Builder clear() {
         super.clear();
         status_ = 0;
@@ -10831,15 +11766,18 @@ public final class IngestionV1 {
         return this;
       }
 
+      @java.lang.Override
       public com.google.protobuf.Descriptors.Descriptor
-          getDescriptorForType() {
+      getDescriptorForType() {
         return kamino.IngestionV1.internal_static_IngestionResponse_descriptor;
       }
 
+      @java.lang.Override
       public kamino.IngestionV1.IngestionResponse getDefaultInstanceForType() {
         return kamino.IngestionV1.IngestionResponse.getDefaultInstance();
       }
 
+      @java.lang.Override
       public kamino.IngestionV1.IngestionResponse build() {
         kamino.IngestionV1.IngestionResponse result = buildPartial();
         if (!result.isInitialized()) {
@@ -10848,11 +11786,12 @@ public final class IngestionV1 {
         return result;
       }
 
+      @java.lang.Override
       public kamino.IngestionV1.IngestionResponse buildPartial() {
         kamino.IngestionV1.IngestionResponse result = new kamino.IngestionV1.IngestionResponse(this);
         int from_bitField0_ = bitField0_;
         int to_bitField0_ = 0;
-        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+        if (((from_bitField0_ & 0x00000001) != 0)) {
           to_bitField0_ |= 0x00000001;
         }
         result.status_ = status_;
@@ -10861,32 +11800,39 @@ public final class IngestionV1 {
         return result;
       }
 
+      @java.lang.Override
       public Builder clone() {
-        return (Builder) super.clone();
+        return super.clone();
       }
+      @java.lang.Override
       public Builder setField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          Object value) {
-        return (Builder) super.setField(field, value);
+          java.lang.Object value) {
+        return super.setField(field, value);
       }
+      @java.lang.Override
       public Builder clearField(
           com.google.protobuf.Descriptors.FieldDescriptor field) {
-        return (Builder) super.clearField(field);
+        return super.clearField(field);
       }
+      @java.lang.Override
       public Builder clearOneof(
           com.google.protobuf.Descriptors.OneofDescriptor oneof) {
-        return (Builder) super.clearOneof(oneof);
+        return super.clearOneof(oneof);
       }
+      @java.lang.Override
       public Builder setRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          int index, Object value) {
-        return (Builder) super.setRepeatedField(field, index, value);
+          int index, java.lang.Object value) {
+        return super.setRepeatedField(field, index, value);
       }
+      @java.lang.Override
       public Builder addRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          Object value) {
-        return (Builder) super.addRepeatedField(field, value);
+          java.lang.Object value) {
+        return super.addRepeatedField(field, value);
       }
+      @java.lang.Override
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof kamino.IngestionV1.IngestionResponse) {
           return mergeFrom((kamino.IngestionV1.IngestionResponse)other);
@@ -10906,6 +11852,7 @@ public final class IngestionV1 {
         return this;
       }
 
+      @java.lang.Override
       public final boolean isInitialized() {
         if (!hasStatus()) {
           return false;
@@ -10913,6 +11860,7 @@ public final class IngestionV1 {
         return true;
       }
 
+      @java.lang.Override
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
@@ -10937,12 +11885,13 @@ public final class IngestionV1 {
        * <code>required .IngestionStatus status = 1;</code>
        */
       public boolean hasStatus() {
-        return ((bitField0_ & 0x00000001) == 0x00000001);
+        return ((bitField0_ & 0x00000001) != 0);
       }
       /**
        * <code>required .IngestionStatus status = 1;</code>
        */
       public kamino.IngestionV1.IngestionStatus getStatus() {
+        @SuppressWarnings("deprecation")
         kamino.IngestionV1.IngestionStatus result = kamino.IngestionV1.IngestionStatus.valueOf(status_);
         return result == null ? kamino.IngestionV1.IngestionStatus.OK : result;
       }
@@ -10967,11 +11916,13 @@ public final class IngestionV1 {
         onChanged();
         return this;
       }
+      @java.lang.Override
       public final Builder setUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
         return super.setUnknownFields(unknownFields);
       }
 
+      @java.lang.Override
       public final Builder mergeUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
         return super.mergeUnknownFields(unknownFields);
@@ -10993,11 +11944,12 @@ public final class IngestionV1 {
 
     @java.lang.Deprecated public static final com.google.protobuf.Parser<IngestionResponse>
         PARSER = new com.google.protobuf.AbstractParser<IngestionResponse>() {
+      @java.lang.Override
       public IngestionResponse parsePartialFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-          return new IngestionResponse(input, extensionRegistry);
+        return new IngestionResponse(input, extensionRegistry);
       }
     };
 
@@ -11010,6 +11962,7 @@ public final class IngestionV1 {
       return PARSER;
     }
 
+    @java.lang.Override
     public kamino.IngestionV1.IngestionResponse getDefaultInstanceForType() {
       return DEFAULT_INSTANCE;
     }
@@ -11017,189 +11970,182 @@ public final class IngestionV1 {
   }
 
   private static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_MetricBatch_descriptor;
-  private static final 
-    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_MetricBatch_descriptor;
+  private static final
+  com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_MetricBatch_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_Interval_descriptor;
-  private static final 
-    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_Interval_descriptor;
+  private static final
+  com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_Interval_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_Metric_descriptor;
-  private static final 
-    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_Metric_descriptor;
+  private static final
+  com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_Metric_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_Metric_TagsEntry_descriptor;
-  private static final 
-    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_Metric_TagsEntry_descriptor;
+  private static final
+  com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_Metric_TagsEntry_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_NodeIdentity_descriptor;
-  private static final 
-    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_NodeIdentity_descriptor;
+  private static final
+  com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_NodeIdentity_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_Hello_descriptor;
-  private static final 
-    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_Hello_descriptor;
+  private static final
+  com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_Hello_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_Goodbye_descriptor;
-  private static final 
-    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_Goodbye_descriptor;
+  private static final
+  com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_Goodbye_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_SpanBatch_descriptor;
-  private static final 
-    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_SpanBatch_descriptor;
+  private static final
+  com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_SpanBatch_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_Mark_descriptor;
-  private static final 
-    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_Mark_descriptor;
+  private static final
+  com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_Mark_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_Span_descriptor;
-  private static final 
-    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_Span_descriptor;
+  private static final
+  com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_Span_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_Span_TagsEntry_descriptor;
-  private static final 
-    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_Span_TagsEntry_descriptor;
+  private static final
+  com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_Span_TagsEntry_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_IngestionResponse_descriptor;
-  private static final 
-    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_IngestionResponse_descriptor;
+  private static final
+  com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_IngestionResponse_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
-      getDescriptor() {
+  getDescriptor() {
     return descriptor;
   }
   private static  com.google.protobuf.Descriptors.FileDescriptor
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n$src/main/protobuf/ingestion.v1.proto\"\232" +
-      "\001\n\013MetricBatch\022\033\n\010interval\030\001 \002(\0132\t.Inter" +
-      "val\022\016\n\006apiKey\030\002 \002(\t\022\017\n\007service\030\003 \002(\t\022\014\n\004" +
-      "host\030\004 \002(\t\022\020\n\010instance\030\005 \002(\t\022\030\n\007metrics\030" +
-      "\006 \003(\0132\007.Metric\022\023\n\004plan\030\007 \001(\0162\005.Plan\"$\n\010I" +
-      "nterval\022\014\n\004from\030\001 \002(\003\022\n\n\002to\030\002 \002(\003\"\233\001\n\006Me" +
-      "tric\022\014\n\004name\030\001 \002(\t\022\037\n\004tags\030\002 \003(\0132\021.Metri" +
-      "c.TagsEntry\022\'\n\016instrumentType\030\003 \002(\0162\017.In" +
-      "strumentType\022\014\n\004data\030\004 \002(\014\032+\n\tTagsEntry\022" +
-      "\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\t:\0028\001\"O\n\014NodeI",
-      "dentity\022\017\n\007service\030\001 \002(\t\022\020\n\010instance\030\002 \002" +
-      "(\t\022\014\n\004host\030\003 \002(\t\022\016\n\006apiKey\030\004 \002(\t\"X\n\005Hell" +
-      "o\022\033\n\004node\030\001 \002(\0132\r.NodeIdentity\022\014\n\004time\030\002" +
-      " \002(\003\022\023\n\013incarnation\030\003 \002(\t\022\017\n\007version\030\004 \002" +
-      "(\t\"4\n\007Goodbye\022\033\n\004node\030\001 \002(\0132\r.NodeIdenti" +
-      "ty\022\014\n\004time\030\002 \002(\003\"f\n\tSpanBatch\022\023\n\013service" +
-      "Name\030\001 \002(\t\022\016\n\006apiKey\030\002 \002(\t\022\014\n\004host\030\003 \002(\t" +
-      "\022\020\n\010instance\030\004 \002(\t\022\024\n\005spans\030\005 \003(\0132\005.Span" +
-      "\"$\n\004Mark\022\017\n\007instant\030\001 \002(\003\022\013\n\003key\030\002 \002(\t\"\326" +
-      "\001\n\004Span\022\n\n\002id\030\001 \002(\t\022\017\n\007traceId\030\002 \002(\t\022\020\n\010",
-      "parentId\030\003 \002(\t\022\025\n\roperationName\030\004 \002(\t\022\023\n" +
-      "\013startMicros\030\005 \002(\003\022\021\n\tendMicros\030\006 \002(\003\022\035\n" +
-      "\004tags\030\007 \003(\0132\017.Span.TagsEntry\022\024\n\005marks\030\010 " +
-      "\003(\0132\005.Mark\032+\n\tTagsEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005" +
-      "value\030\002 \001(\t:\0028\001\"5\n\021IngestionResponse\022 \n\006" +
-      "status\030\001 \002(\0162\020.IngestionStatus*L\n\016Instru" +
-      "mentType\022\013\n\007COUNTER\020\000\022\t\n\005GAUGE\020\001\022\r\n\tHIST" +
-      "OGRAM\020\002\022\023\n\017MIN_MAX_COUNTER\020\003*+\n\004Plan\022\017\n\013" +
-      "METRIC_ONLY\020\001\022\022\n\016METRIC_TRACING\020\002*]\n\017Ing" +
-      "estionStatus\022\006\n\002OK\020\000\022\t\n\005ERROR\020\001\022\t\n\005STALE",
-      "\020\002\022\020\n\014UNAUTHORIZED\020\003\022\013\n\007BLOCKED\020\004\022\r\n\tCOR" +
-      "RUPTED\020\005B\010\n\006kamino"
+        "\n$src/main/protobuf/ingestion.v1.proto\"\251" +
+            "\001\n\013MetricBatch\022\033\n\010interval\030\001 \002(\0132\t.Inter" +
+            "val\022\016\n\006apiKey\030\002 \002(\t\022\017\n\007service\030\003 \002(\t\022\014\n\004" +
+            "host\030\004 \002(\t\022\020\n\010instance\030\005 \002(\t\022\030\n\007metrics\030" +
+            "\006 \003(\0132\007.Metric\022\023\n\004plan\030\007 \001(\0162\005.Plan\022\r\n\005a" +
+            "gent\030\010 \001(\t\"$\n\010Interval\022\014\n\004from\030\001 \002(\003\022\n\n\002" +
+            "to\030\002 \002(\003\"\233\001\n\006Metric\022\014\n\004name\030\001 \002(\t\022\037\n\004tag" +
+            "s\030\002 \003(\0132\021.Metric.TagsEntry\022\'\n\016instrument" +
+            "Type\030\003 \002(\0162\017.InstrumentType\022\014\n\004data\030\004 \002(" +
+            "\014\032+\n\tTagsEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001" +
+            "(\t:\0028\001\"^\n\014NodeIdentity\022\017\n\007service\030\001 \002(\t\022" +
+            "\020\n\010instance\030\002 \002(\t\022\014\n\004host\030\003 \002(\t\022\016\n\006apiKe" +
+            "y\030\004 \002(\t\022\r\n\005agent\030\005 \001(\t\"X\n\005Hello\022\033\n\004node\030" +
+            "\001 \002(\0132\r.NodeIdentity\022\014\n\004time\030\002 \002(\003\022\023\n\013in" +
+            "carnation\030\003 \002(\t\022\017\n\007version\030\004 \002(\t\"4\n\007Good" +
+            "bye\022\033\n\004node\030\001 \002(\0132\r.NodeIdentity\022\014\n\004time" +
+            "\030\002 \002(\003\"u\n\tSpanBatch\022\023\n\013serviceName\030\001 \002(\t" +
+            "\022\016\n\006apiKey\030\002 \002(\t\022\014\n\004host\030\003 \002(\t\022\020\n\010instan" +
+            "ce\030\004 \002(\t\022\024\n\005spans\030\005 \003(\0132\005.Span\022\r\n\005agent\030" +
+            "\006 \001(\t\"$\n\004Mark\022\017\n\007instant\030\001 \002(\003\022\013\n\003key\030\002 " +
+            "\002(\t\"\326\001\n\004Span\022\n\n\002id\030\001 \002(\t\022\017\n\007traceId\030\002 \002(" +
+            "\t\022\020\n\010parentId\030\003 \002(\t\022\025\n\roperationName\030\004 \002" +
+            "(\t\022\023\n\013startMicros\030\005 \002(\003\022\021\n\tendMicros\030\006 \002" +
+            "(\003\022\035\n\004tags\030\007 \003(\0132\017.Span.TagsEntry\022\024\n\005mar" +
+            "ks\030\010 \003(\0132\005.Mark\032+\n\tTagsEntry\022\013\n\003key\030\001 \001(" +
+            "\t\022\r\n\005value\030\002 \001(\t:\0028\001\"5\n\021IngestionRespons" +
+            "e\022 \n\006status\030\001 \002(\0162\020.IngestionStatus*L\n\016I" +
+            "nstrumentType\022\013\n\007COUNTER\020\000\022\t\n\005GAUGE\020\001\022\r\n" +
+            "\tHISTOGRAM\020\002\022\023\n\017MIN_MAX_COUNTER\020\003*+\n\004Pla" +
+            "n\022\017\n\013METRIC_ONLY\020\001\022\022\n\016METRIC_TRACING\020\002*]" +
+            "\n\017IngestionStatus\022\006\n\002OK\020\000\022\t\n\005ERROR\020\001\022\t\n\005" +
+            "STALE\020\002\022\020\n\014UNAUTHORIZED\020\003\022\013\n\007BLOCKED\020\004\022\r" +
+            "\n\tCORRUPTED\020\005B\010\n\006kamino"
     };
-    com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
-        new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
-          public com.google.protobuf.ExtensionRegistry assignDescriptors(
-              com.google.protobuf.Descriptors.FileDescriptor root) {
-            descriptor = root;
-            return null;
-          }
-        };
-    com.google.protobuf.Descriptors.FileDescriptor
-      .internalBuildGeneratedFileFrom(descriptorData,
-        new com.google.protobuf.Descriptors.FileDescriptor[] {
-        }, assigner);
+    descriptor = com.google.protobuf.Descriptors.FileDescriptor
+        .internalBuildGeneratedFileFrom(descriptorData,
+            new com.google.protobuf.Descriptors.FileDescriptor[] {
+            });
     internal_static_MetricBatch_descriptor =
-      getDescriptor().getMessageTypes().get(0);
+        getDescriptor().getMessageTypes().get(0);
     internal_static_MetricBatch_fieldAccessorTable = new
-      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_MetricBatch_descriptor,
-        new java.lang.String[] { "Interval", "ApiKey", "Service", "Host", "Instance", "Metrics", "Plan", });
+        new java.lang.String[] { "Interval", "ApiKey", "Service", "Host", "Instance", "Metrics", "Plan", "Agent", });
     internal_static_Interval_descriptor =
-      getDescriptor().getMessageTypes().get(1);
+        getDescriptor().getMessageTypes().get(1);
     internal_static_Interval_fieldAccessorTable = new
-      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_Interval_descriptor,
         new java.lang.String[] { "From", "To", });
     internal_static_Metric_descriptor =
-      getDescriptor().getMessageTypes().get(2);
+        getDescriptor().getMessageTypes().get(2);
     internal_static_Metric_fieldAccessorTable = new
-      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_Metric_descriptor,
         new java.lang.String[] { "Name", "Tags", "InstrumentType", "Data", });
     internal_static_Metric_TagsEntry_descriptor =
-      internal_static_Metric_descriptor.getNestedTypes().get(0);
+        internal_static_Metric_descriptor.getNestedTypes().get(0);
     internal_static_Metric_TagsEntry_fieldAccessorTable = new
-      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_Metric_TagsEntry_descriptor,
         new java.lang.String[] { "Key", "Value", });
     internal_static_NodeIdentity_descriptor =
-      getDescriptor().getMessageTypes().get(3);
+        getDescriptor().getMessageTypes().get(3);
     internal_static_NodeIdentity_fieldAccessorTable = new
-      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_NodeIdentity_descriptor,
-        new java.lang.String[] { "Service", "Instance", "Host", "ApiKey", });
+        new java.lang.String[] { "Service", "Instance", "Host", "ApiKey", "Agent", });
     internal_static_Hello_descriptor =
-      getDescriptor().getMessageTypes().get(4);
+        getDescriptor().getMessageTypes().get(4);
     internal_static_Hello_fieldAccessorTable = new
-      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_Hello_descriptor,
         new java.lang.String[] { "Node", "Time", "Incarnation", "Version", });
     internal_static_Goodbye_descriptor =
-      getDescriptor().getMessageTypes().get(5);
+        getDescriptor().getMessageTypes().get(5);
     internal_static_Goodbye_fieldAccessorTable = new
-      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_Goodbye_descriptor,
         new java.lang.String[] { "Node", "Time", });
     internal_static_SpanBatch_descriptor =
-      getDescriptor().getMessageTypes().get(6);
+        getDescriptor().getMessageTypes().get(6);
     internal_static_SpanBatch_fieldAccessorTable = new
-      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_SpanBatch_descriptor,
-        new java.lang.String[] { "ServiceName", "ApiKey", "Host", "Instance", "Spans", });
+        new java.lang.String[] { "ServiceName", "ApiKey", "Host", "Instance", "Spans", "Agent", });
     internal_static_Mark_descriptor =
-      getDescriptor().getMessageTypes().get(7);
+        getDescriptor().getMessageTypes().get(7);
     internal_static_Mark_fieldAccessorTable = new
-      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_Mark_descriptor,
         new java.lang.String[] { "Instant", "Key", });
     internal_static_Span_descriptor =
-      getDescriptor().getMessageTypes().get(8);
+        getDescriptor().getMessageTypes().get(8);
     internal_static_Span_fieldAccessorTable = new
-      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_Span_descriptor,
         new java.lang.String[] { "Id", "TraceId", "ParentId", "OperationName", "StartMicros", "EndMicros", "Tags", "Marks", });
     internal_static_Span_TagsEntry_descriptor =
-      internal_static_Span_descriptor.getNestedTypes().get(0);
+        internal_static_Span_descriptor.getNestedTypes().get(0);
     internal_static_Span_TagsEntry_fieldAccessorTable = new
-      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_Span_TagsEntry_descriptor,
         new java.lang.String[] { "Key", "Value", });
     internal_static_IngestionResponse_descriptor =
-      getDescriptor().getMessageTypes().get(9);
+        getDescriptor().getMessageTypes().get(9);
     internal_static_IngestionResponse_fieldAccessorTable = new
-      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_IngestionResponse_descriptor,
         new java.lang.String[] { "Status", });
   }

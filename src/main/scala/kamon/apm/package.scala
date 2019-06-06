@@ -9,32 +9,31 @@ import java.net.Proxy
 import java.util.regex.Pattern
 
 package object apm {
-  private val logger = LoggerFactory.getLogger("kamon.kamino")
-  private val apiKeyPattern = Pattern.compile("^[a-zA-Z0-9]*$")
+  private[apm] val _logger = LoggerFactory.getLogger("kamon.apm")
+  private val _apiKeyPattern = Pattern.compile("^[a-zA-Z0-9]*$")
 
-  def readConfiguration(config: Config): KaminoConfiguration = {
-    val kaminoConfig = config.getConfig("kamon.apm")
-    val apiKey = kaminoConfig.getString("api-key")
+  def readSettings(apmConfig: Config): Settings = {
+    val apiKey = apmConfig.getString("api-key")
 
     if(apiKey.equals("none"))
-      logger.error("No API key defined in the kamino.api-key setting.")
+      _logger.error("No API key defined in the kamino.api-key setting.")
 
-    KaminoConfiguration(
+    Settings (
       apiKey            = apiKey,
-      plan              = if(kaminoConfig.getBoolean("enable-tracing")) Plan.METRIC_TRACING else Plan.METRIC_ONLY,
-      connectionTimeout = kaminoConfig.getDuration("client.timeouts.connection"),
-      readTimeout       = kaminoConfig.getDuration("client.timeouts.read"),
-      appVersion        = kaminoConfig.getString("app-version"),
-      ingestionApi      = kaminoConfig.getString("ingestion-api"),
-      bootRetries       = kaminoConfig.getInt("retries.boot"),
-      ingestionRetries  = kaminoConfig.getInt("retries.ingestion"),
-      shutdownRetries   = kaminoConfig.getInt("retries.shutdown"),
-      tracingRetries    = kaminoConfig.getInt("retries.tracing"),
-      retryBackoff      = kaminoConfig.getDuration("retries.backoff"),
-      clientBackoff     = kaminoConfig.getDuration("client.backoff"),
-      proxyHost         = kaminoConfig.getString("proxy.host"),
-      proxyPort         = kaminoConfig.getInt("proxy.port"),
-      proxy             = kaminoConfig.getString("proxy.type").toLowerCase match {
+      plan              = if(apmConfig.getBoolean("enable-tracing")) Plan.METRIC_TRACING else Plan.METRIC_ONLY,
+      connectionTimeout = apmConfig.getDuration("client.timeouts.connection"),
+      readTimeout       = apmConfig.getDuration("client.timeouts.read"),
+      appVersion        = apmConfig.getString("app-version"),
+      ingestionApi      = apmConfig.getString("ingestion-api"),
+      bootRetries       = apmConfig.getInt("retries.boot"),
+      ingestionRetries  = apmConfig.getInt("retries.ingestion"),
+      shutdownRetries   = apmConfig.getInt("retries.shutdown"),
+      tracingRetries    = apmConfig.getInt("retries.tracing"),
+      retryBackoff      = apmConfig.getDuration("retries.backoff"),
+      clientBackoff     = apmConfig.getDuration("client.backoff"),
+      proxyHost         = apmConfig.getString("proxy.host"),
+      proxyPort         = apmConfig.getInt("proxy.port"),
+      proxy             = apmConfig.getString("proxy.type").toLowerCase match {
         case "system" => None
         case "socks"  => Some(Proxy.Type.SOCKS)
         case "https"  => Some(Proxy.Type.HTTP)
@@ -43,10 +42,9 @@ package object apm {
   }
 
   def isAcceptableApiKey(apiKey: String): Boolean =
-    apiKey != null && apiKey.length == 26 && apiKeyPattern.matcher(apiKey).matches()
+    apiKey != null && apiKey.length == 26 && _apiKeyPattern.matcher(apiKey).matches()
 
-
-  case class KaminoConfiguration(
+  case class Settings (
     apiKey: String,
     plan: Plan,
     connectionTimeout: Duration,
@@ -68,5 +66,4 @@ package object apm {
     def shutdownMark    = s"$ingestionApi/goodbye"
     def tracingRoute    = s"$ingestionApi/tracing/ingest"
   }
-
 }

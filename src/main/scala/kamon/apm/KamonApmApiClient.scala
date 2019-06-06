@@ -8,54 +8,51 @@ import okhttp3._
 import kamino.IngestionV1._
 import IngestionStatus._
 import kamon.Kamon
-import kamon.apm.reporters.KamonApmMetric
 import org.slf4j.LoggerFactory
 
 import scala.annotation.tailrec
 import scala.util.{Failure, Success, Try}
 
-class KamonApmApiClient(config: KaminoConfiguration) {
-  private val logger = LoggerFactory.getLogger(classOf[KamonApmApiClient])
-
-  private val client = createHttpClient(config)
-  private var lastAttempt: Instant = Instant.EPOCH
-  private val apiKeyHeaderName = "kamino-api-key"
+class KamonApmApiClient(settings: Settings) {
+  private val _logger = LoggerFactory.getLogger(classOf[KamonApmApiClient])
+  private val _httpClient = createHttpClient(settings)
+  private val _apiKeyHeaderName = "kamino-api-key"
+  private var _lastAttempt: Instant = Instant.EPOCH
 
   def postIngestion(metricBatch: MetricBatch): Unit =
-    postWithRetry(metricBatch.toByteArray, "metrics-ingestion", config.ingestionRoute, config.ingestionRetries)
+    postWithRetry(metricBatch.toByteArray, "metrics-ingestion", settings.ingestionRoute, settings.ingestionRetries)
 
   def postHello(hello: Hello): Unit =
-    postWithRetry(hello.toByteArray, "hello", config.bootMark, config.bootRetries)
+    postWithRetry(hello.toByteArray, "hello", settings.bootMark, settings.bootRetries)
 
   def postGoodbye(goodBye: Goodbye): Unit =
-    postWithRetry(goodBye.toByteArray, "goodbye", config.shutdownMark, config.shutdownRetries)
+    postWithRetry(goodBye.toByteArray, "goodbye", settings.shutdownMark, settings.shutdownRetries)
 
   def postSpans(spanBatch: SpanBatch): Unit =
-    postWithRetry(spanBatch.toByteArray, "spans-ingestion", config.tracingRoute, config.tracingRetries)
+    postWithRetry(spanBatch.toByteArray, "spans-ingestion", settings.tracingRoute, settings.tracingRetries)
 
-  def stop(): Unit = client.dispatcher().executorService().shutdown()
-
+  def stop(): Unit = _httpClient.dispatcher().executorService().shutdown()
 
   @tailrec
   private def postWithRetry(body: Array[Byte], endpointName: String, apiUrl: String, retries: Int): Unit = {
     val clock = Kamon.clock()
 
-    val timeSinceLastPost = Duration.between(lastAttempt, clock.instant())
-    if(timeSinceLastPost.compareTo(config.clientBackoff) < 0) backoff
+    val timeSinceLastPost = Duration.between(_lastAttempt, clock.instant())
+    if(timeSinceLastPost.compareTo(settings.clientBackoff) < 0) backoff
 
     val request: () => Response = () => {
       val reqBody = RequestBody.create(MediaType.parse("application/octet-stream"), body)
       val request = new Request.Builder()
         .url(apiUrl)
         .post(reqBody)
-        .addHeader(apiKeyHeaderName, config.apiKey)
+        .addHeader(_apiKeyHeaderName, settings.apiKey)
         .build()
 
-      client.newCall(request).execute
+      _httpClient.newCall(request).execute
     }
 
     def tryPosting: Try[Response] = Try {
-      lastAttempt = clock.instant()
+      _lastAttempt = clock.instant()
       request()
     }
 
@@ -81,33 +78,33 @@ class KamonApmApiClient(config: KaminoConfiguration) {
       case Success(ingestionResult) =>
         ingestionResult.getStatus match {
           case OK =>
-            logger.trace("[{}] request succeeded", endpointName)
+            _logger.trace("[{}] request succeeded", endpointName)
           case STALE =>
-            logger.warn("[{}] request declined, stale data", endpointName)
+            _logger.warn("[{}] request declined, stale data", endpointName)
           case BLOCKED =>
-            logger.warn("[{}] request declined, plan limits reached", endpointName)
+            _logger.warn("[{}] request declined, plan limits reached", endpointName)
           case UNAUTHORIZED =>
-            logger.error("[{}] request declined, missing or wrong API key", endpointName)
+            _logger.error("[{}] request declined, missing or wrong API key", endpointName)
           case CORRUPTED =>
-            logger.warn("[{}] request declined, illegal batch", endpointName)
+            _logger.warn("[{}] request declined, illegal batch", endpointName)
           case ERROR if retries > 0 =>
-            logger.warn("[{}] request declined, unknown error", endpointName)
+            _logger.warn("[{}] request declined, unknown error", endpointName)
             backoff
             postWithRetry(body, endpointName, apiUrl, retries - 1)
           case ERROR =>
-            logger.warn("[{}] request declined, unknown error", endpointName)
+            _logger.warn("[{}] request declined, unknown error", endpointName)
         }
       case Failure(connectionException) if retries > 0 =>
-        logger.warn(s"Connection error, retrying... ($retries left) ${connectionException.getMessage}")
+        _logger.warn(s"Connection error, retrying... ($retries left) ${connectionException.getMessage}")
         backoff
         postWithRetry(body, endpointName, apiUrl, retries - 1)
       case Failure(connectionException) =>
-        logger.error(s"Ingestion error, no retries, dropping snapshot... ${connectionException.getMessage}")
+        _logger.error(s"Ingestion error, no retries, dropping snapshot... ${connectionException.getMessage}")
     }
 
   }
 
-  private def createHttpClient(config: KaminoConfiguration): OkHttpClient = {
+  private def createHttpClient(config: Settings): OkHttpClient = {
     val builder = new OkHttpClient.Builder()
       .connectTimeout(config.connectionTimeout.toMillis, TimeUnit.MILLISECONDS)
       .readTimeout(config.readTimeout.toMillis, TimeUnit.MILLISECONDS)
@@ -122,6 +119,6 @@ class KamonApmApiClient(config: KaminoConfiguration) {
   }
 
   private def backoff = {
-    Thread.sleep(config.clientBackoff.toMillis)
+    Thread.sleep(settings.clientBackoff.toMillis)
   }
 }
