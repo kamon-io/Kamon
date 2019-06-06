@@ -19,6 +19,7 @@ import akka.actor.{ActorSystem, Props}
 import akka.dispatch.MessageDispatcher
 import akka.routing.BalancingPool
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
+import kamon.tag.Lookups.plain
 import kamon.instrumentation.executor.ExecutorMetrics
 import kamon.testkit.MetricInspection
 import org.scalatest.concurrent.Eventually
@@ -32,6 +33,7 @@ class DispatcherMetricsSpec extends TestKit(ActorSystem("DispatcherMetricsSpec")
   "the Kamon dispatcher metrics" should {
     val trackedDispatchers = Seq(
       "akka.actor.default-dispatcher",
+      "tracked-pinned-dispatcher",
       "tracked-fjp",
       "tracked-tpe"
     )
@@ -42,27 +44,35 @@ class DispatcherMetricsSpec extends TestKit(ActorSystem("DispatcherMetricsSpec")
     "track dispatchers configured in the akka.dispatcher filter" in {
       allDispatchers.foreach(id => forceInit(system.dispatchers.lookup(id)))
 
-      val threads = ExecutorMetrics.Threads.tagValues("name")
-      val pools = ExecutorMetrics.Settings.tagValues("name")
+      val threads = ExecutorMetrics.ThreadsActive.tagValues("name")
       val queues = ExecutorMetrics.QueueSize.tagValues("name")
-      val tasks = ExecutorMetrics.Tasks.tagValues("name")
+      val tasks = ExecutorMetrics.TasksCompleted.tagValues("name")
 
       trackedDispatchers.forall { dispatcher =>
         threads.contains(dispatcher) &&
-        pools.contains(dispatcher) &&
         queues.contains(dispatcher) &&
         tasks.contains(dispatcher)
       } should be (true)
 
-      Seq(threads, pools, queues, tasks).flatten should not contain excluded
+      Seq(threads, queues, tasks).flatten should not contain excluded
+    }
+
+    "include the actor system name in the executor tags" in {
+      val instrumentExecutorsWithSystem = ExecutorMetrics.ThreadsActive.instruments().keys
+        .filter(_.get(plain("system")) == system.name)
+        .map(_.get(plain("name")))
+
+      instrumentExecutorsWithSystem should contain only(trackedDispatchers: _*)
+
+
     }
 
 
     "clean up the metrics recorders after a dispatcher is shutdown" in {
-      ExecutorMetrics.Settings.tagValues("name") should contain("tracked-fjp")
+      ExecutorMetrics.Parallelism.tagValues("name") should contain("tracked-fjp")
       shutdownDispatcher(system.dispatchers.lookup("tracked-fjp"))
       Thread.sleep(2000)
-      ExecutorMetrics.Settings.tagValues("name") shouldNot contain("tracked-fjp")
+      ExecutorMetrics.Parallelism.tagValues("name") shouldNot contain("tracked-fjp")
     }
 
     "play nicely when dispatchers are looked up from a BalancingPool router" in {
@@ -70,7 +80,7 @@ class DispatcherMetricsSpec extends TestKit(ActorSystem("DispatcherMetricsSpec")
       balancingPoolRouter ! Ping
       expectMsg(Pong)
 
-      ExecutorMetrics.Settings.tagValues("name") should contain("BalancingPool-/test-balancing-pool")
+      ExecutorMetrics.Parallelism.tagValues("name") should contain("BalancingPool-/test-balancing-pool")
     }
   }
 

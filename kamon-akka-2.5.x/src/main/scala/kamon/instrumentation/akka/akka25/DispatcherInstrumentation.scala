@@ -19,7 +19,7 @@ package kamon.instrumentation.akka.akka25
 import java.util.concurrent.{Callable, ExecutorService}
 
 import akka.dispatch.forkjoin.ForkJoinPool
-import akka.dispatch.{DispatcherPrerequisites, ForkJoinExecutorConfigurator, ThreadPoolExecutorConfigurator}
+import akka.dispatch.{DispatcherPrerequisites, ForkJoinExecutorConfigurator, PinnedDispatcherConfigurator, ThreadPoolExecutorConfigurator}
 import kamon.Kamon
 import kamon.instrumentation.akka.AkkaInstrumentation
 import kamon.instrumentation.akka.akka25.DispatcherInfo.{HasActorSystemName, HasDispatcherName}
@@ -46,18 +46,23 @@ class DispatcherInstrumentation extends InstrumentationBuilder {
     * First step on getting the Actor System name is to read it from the prerequisites instance passed to the
     * constructors of these two classes.
     */
-  onTypes("akka.dispatch.ThreadPoolExecutorConfigurator", "akka.dispatch.ForkJoinExecutorConfigurator")
+  onTypes("akka.dispatch.ThreadPoolExecutorConfigurator", "akka.dispatch.ForkJoinExecutorConfigurator", "akka.dispatch.PinnedDispatcherConfigurator")
     .advise(isConstructor, CaptureActorSystemNameOnExecutorConfigurator)
 
   /**
     * Copies the Actor System and Dispatcher names to the ExecutorServiceFactory instances for the two types of
     * executors instrumented by Kamon.
     */
-  onTypes("akka.dispatch.ThreadPoolConfig", "akka.dispatch.ForkJoinExecutorConfigurator")
+  onTypes("akka.dispatch.ThreadPoolConfig", "akka.dispatch.ForkJoinExecutorConfigurator", "akka.dispatch.PinnedDispatcherConfigurator")
       .mixin(classOf[HasActorSystemName.Mixin])
       .mixin(classOf[HasDispatcherName.Mixin])
       .advise(method("createExecutorServiceFactory"), CopyDispatcherInfoToExecutorServiceFactory)
 
+  /**
+    * This ensures that the ActorSystem name is not lost when creating PinnedDispatcher instances.
+    */
+  onType("akka.dispatch.ThreadPoolConfig")
+    .advise(method("copy"), ThreadPoolConfigCopyAdvice)
 }
 
 object DispatcherInfo {
@@ -98,6 +103,7 @@ object CaptureActorSystemNameOnExecutorConfigurator {
     configurator match {
       case fjec: ForkJoinExecutorConfigurator => fjec.asInstanceOf[HasActorSystemName].setActorSystemName(actorSystemName)
       case tpec: ThreadPoolExecutorConfigurator => tpec.threadPoolConfig.asInstanceOf[HasActorSystemName].setActorSystemName(actorSystemName)
+      case pdc: PinnedDispatcherConfigurator => pdc.asInstanceOf[HasActorSystemName].setActorSystemName(actorSystemName)
       case _ => // just ignore any other case.
     }
   }
@@ -105,7 +111,7 @@ object CaptureActorSystemNameOnExecutorConfigurator {
 
 object CopyDispatcherInfoToExecutorServiceFactory {
 
-  @Advice.OnMethodExit(suppress = classOf[Throwable])
+  @Advice.OnMethodExit
   def exit(@Advice.This poolConfig: HasActorSystemName, @Advice.Argument(0) dispatcherName: String, @Advice.Return factory: Any): Unit = {
     val factoryWithMixins = factory.asInstanceOf[HasDispatcherName with HasActorSystemName]
     factoryWithMixins.setActorSystemName(poolConfig.actorSystemName)
@@ -150,5 +156,14 @@ object InstrumentNewExecutorService {
     override def poolSize: Int = fjp.getPoolSize
     override def queuedTasks: Int = fjp.getQueuedSubmissionCount
     override def parallelism: Int = fjp.getParallelism
+  }
+}
+
+object ThreadPoolConfigCopyAdvice {
+
+  @Advice.OnMethodExit
+  def exit(@Advice.This original: Any, @Advice.Return copy: Any): Unit = {
+    copy.asInstanceOf[HasActorSystemName].setActorSystemName(original.asInstanceOf[HasActorSystemName].actorSystemName)
+    copy.asInstanceOf[HasDispatcherName].setDispatcherName(original.asInstanceOf[HasDispatcherName].dispatcherName)
   }
 }
