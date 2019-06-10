@@ -17,7 +17,7 @@ package kamon.trace
 
 import java.time.Instant
 
-import kamon.Kamon.spanBuilder
+import kamon.Kamon._
 import kamon.tag.TagSet
 import kamon.testkit.{InstrumentInspection, MetricInspection, Reconfigure}
 import org.scalatest.{Matchers, WordSpecLike}
@@ -189,6 +189,29 @@ class SpanMetricsSpec extends WordSpecLike with Matchers with InstrumentInspecti
 
       processingTime.count shouldBe 1
       processingTime.buckets.head.value shouldBe 20
+    }
+
+    "include the span kind tag on all Span metrics" in {
+      val operation = "span-with-kind"
+
+      spanBuilder(operation).start().finish()
+      serverSpanBuilder(operation, "test").delay().start().finish()
+      clientSpanBuilder(operation, "test").delay().start().finish()
+      producerSpanBuilder(operation, "test").delay().start().finish()
+      consumerSpanBuilder(operation, "test").delay().start().finish()
+      internalSpanBuilder(operation, "test").delay().start().finish()
+
+      val expectedSpanKinds = Seq(
+        "client",
+        "server",
+        "producer",
+        "consumer",
+        "internal"
+      )
+
+      Span.Metrics.ProcessingTime.tagValues("span.kind") should contain only (expectedSpanKinds: _*)
+      Span.Metrics.ElapsedTime.tagValues("span.kind") should contain only (expectedSpanKinds: _*)
+      Span.Metrics.WaitTime.tagValues("span.kind") should contain only (expectedSpanKinds: _*)
     }
   }
 

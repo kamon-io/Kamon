@@ -259,6 +259,7 @@ object Span {
     * Describes the kind of operation being represented by a Span.
     */
   sealed abstract class Kind
+
   object Kind {
 
     /**
@@ -266,24 +267,33 @@ object Span {
       * instrumentation on a HTTP server will most likely create a Span with kind=server that represents the operations
       * it processes.
       */
-    case object Server extends Kind
+    case object Server extends Kind {
+      override def toString: String = "server"
+    }
 
     /**
       * The Span represents an operation on the initiating side of a request/response interaction. For example,
       * instrumentation on a HTTP client library will most likely generate a Span with kind=client that represents the
       * outgoing HTTP requests that it sends to other parties.
       */
-    case object Client extends Kind
+    case object Client extends Kind {
+      override def toString: String = "client"
+    }
 
     /**
       * The Span represents an operation the produces a message placed on a message broker.
       */
-    case object Producer extends Kind
+    case object Producer extends Kind {
+      override def toString: String = "producer"
+    }
+
 
     /**
       * The Span represents an operation that consumes messages from a message broker.
       */
-    case object Consumer extends Kind
+    case object Consumer extends Kind {
+      override def toString: String = "consumer"
+    }
 
     /**
       * The Span represents an internal operation that doesn't imply communication communication with any external
@@ -291,12 +301,16 @@ object Span {
       * operation, it might be useful to create an internal Span that represents it so that the time spent on it will
       * be shown on traces and related metrics.
       */
-    case object Internal extends Kind
+    case object Internal extends Kind {
+      override def toString: String = "internal"
+    }
 
     /**
       * The Span represents an unknown operation kind.
       */
-    case object Unknown extends Kind
+    case object Unknown extends Kind {
+      override def toString: String = "unknown"
+    }
   }
 
 
@@ -600,6 +614,9 @@ object Span {
       _metricTags.add(TagKeys.OperationName, _operationName)
       _metricTags.add(TagKeys.Error, _hasError)
 
+      if(kind != Span.Kind.Unknown)
+        _metricTags.add(TagKeys.SpanKind, kind.toString)
+
       if(tagWithParentOperation)
         localParent.foreach {
           case p: Span.Local  => _metricTags.add(TagKeys.ParentOperationName, p.operationName())
@@ -714,6 +731,7 @@ object Span {
     val Component = "component"
     val OperationName = "operation"
     val ParentOperationName = "parentOperation"
+    val SpanKind = "span.kind"
     val UpstreamName = "upstream.name"
   }
 
