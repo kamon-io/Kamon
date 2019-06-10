@@ -233,14 +233,24 @@ object Metric {
     protected def buildMetricSnapshot(metric: Metric[Inst, Sett], instruments: Seq[Instrument.Snapshot[Snap]]): MetricSnapshot[Sett, Snap]
 
     private def lookupInstrument(tags: TagSet): Inst = {
-      val entry = _instruments.atomicGetOrElseUpdate(tags, newInstrumentEntry(tags))
+      val entry = _instruments.atomicGetOrElseUpdate(tags, newInstrumentEntry(tags), cleanupStaleEntry, triggerDefaultSchedule)
       entry.removeOnNextSnapshot = false
-      entry.instrument.defaultSchedule()
       entry.instrument
     }
 
-    private def newInstrumentEntry(tags: TagSet): InstrumentEntry =
-      new InstrumentEntry(instrumentBuilder(this, tags), Collections.synchronizedList(new util.ArrayList[ScheduledFuture[_]]()).asScala, false)
+    private def newInstrumentEntry(tags: TagSet): InstrumentEntry = {
+      val scheduledActions = Collections.synchronizedList(new util.ArrayList[ScheduledFuture[_]]()).asScala
+      val instrument = instrumentBuilder(this, tags)
+      instrument.defaultSchedule()
+
+      new InstrumentEntry(instrument, scheduledActions, false)
+    }
+
+    private def triggerDefaultSchedule(entry: InstrumentEntry): Unit =
+      entry.instrument.defaultSchedule()
+
+    private def cleanupStaleEntry(entry: InstrumentEntry): Unit =
+      entry.scheduledActions.foreach(sa => sa.cancel(false))
 
     private class InstrumentEntry (
       val instrument: RichInstrument[Inst, Sett, Snap],
