@@ -3,6 +3,7 @@ package kamon.instrumentation.akka
 import com.typesafe.config.Config
 import kamon.Kamon
 import kamon.instrumentation.akka.AkkaInstrumentation.AskPatternTimeoutWarningSetting.{Heavyweight, Lightweight, Off}
+import kamon.tag.TagSet
 import kamon.util.Filter
 
 import scala.collection.JavaConverters.asScalaSetConverter
@@ -77,7 +78,9 @@ object AkkaInstrumentation {
     * Akka Instrumentation settings
     */
   case class Settings (
-    askPatternWarning: AskPatternTimeoutWarningSetting
+    askPatternWarning: AskPatternTimeoutWarningSetting,
+    autoGrouping: Boolean,
+    allowDoomsdayWildcards: Boolean
   )
 
   object Settings {
@@ -91,7 +94,12 @@ object AkkaInstrumentation {
         case other ⇒ sys.error(s"Unrecognized option [$other] for the kamon.akka.ask-pattern-timeout-warning config.")
       }
 
-      AkkaInstrumentation.Settings(askPatternWarning)
+      AkkaInstrumentation.Settings(
+        askPatternWarning,
+        akkaConfig.getBoolean("auto-grouping"),
+        akkaConfig.getBoolean("filters.actors.doomsday-wildcard")
+
+      )
     }
   }
 
