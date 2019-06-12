@@ -24,27 +24,42 @@ import scala.collection.JavaConverters.collectionAsScalaIterableConverter
 
 
 /**
-  * Decides whether a given String satisfy a predicate. Composite Filters with include/exclude patters are used by
-  * Kamon as a generic configuration abstraction that provides simple yet flexible filtering capabilities.
+  * Decides whether a given String satisfy a group of includes and excludes patterns.
   */
 trait Filter {
 
-  /** Returns true if the provided value satisfy the filter's predicate */
+  /**
+    * Returns true if the provided test string satisfies at least one of the includes patterns and none of the excludes
+    * patterns in the filter.
+    */
   def accept(value: String): Boolean
+
+  /**
+    * Returns whether the provided test string satisfies any of the filter's includes patterns.
+    */
+  def includes(value: String): Boolean
+
+  /**
+    * Returns whether the provided test string satisfies any of the filter's excludes patterns.
+    */
+  def excludes(value: String): Boolean
 
 }
 
 object Filter {
 
-  /** Filter that accepts any value */
+  /**
+    * Filter that accepts any value
+    */
   val Accept = Filter.Constant(true)
 
-  /** Filter that does not accept any value */
+  /**
+    * Filter that does not accept any value
+    */
   val Deny = Filter.Constant(false)
 
   /**
-    * Creates a new composite Filter by looking up the provided path on Kamon's configuration. All inputs matching any
-    * of the include filters and none of the exclude filters will be accepted. The configuration is expected to have the
+    * Creates a new Filter from the provided path on Kamon's configuration. The configuration is expected to have the
     * following structure:
     *
     * config {
@@ -63,9 +78,7 @@ object Filter {
       Filter.Deny
 
   /**
-    * Creates a new composite Filter with matchers from the provided configuration. All inputs matching any of the
-    * include filters and none of the exclude filters will be accepted. The configuration is expected to have the
-    * following structure:
+    * Creates a new Filter from the provided config. The configuration is expected to have the following structure:
     *
     * config {
     *   includes = [ "some/pattern", "regex:some[0-9]" ]
@@ -86,13 +99,25 @@ object Filter {
       new Filter.IncludeExclude(includes, excludes)
   }
 
-  private def readFilters(filtersConfig: Config, key: String): Seq[Filter] =
+  /**
+    * Creates a new Filter from a single glob pattern.
+    */
+  def fromGlob(glob: String): Filter =
+    Filter.SingleMatcher(Glob(glob))
+
+  /**
+    * Creates a new Filter from a single regex pattern.
+    */
+  def fromRegex(regexPattern: String): Filter =
+    Filter.SingleMatcher(Regex(regexPattern))
+
+  private def readFilters(filtersConfig: Config, key: String): Seq[Filter.Matcher] =
     if(filtersConfig.hasPath(key))
-      filtersConfig.getStringList(key).asScala.map(readFilter).toSeq
+      filtersConfig.getStringList(key).asScala.map(readMatcher).toSeq
     else
       Seq.empty
 
-  private def readFilter(pattern: String): Filter = {
+  private def readMatcher(pattern: String): Filter.Matcher = {
     if(pattern.startsWith("regex:"))
       new Filter.Regex(pattern.drop(6))
     else if(pattern.startsWith("glob:"))
@@ -105,37 +130,74 @@ object Filter {
     * Composite Filter that accepts inputs that match at least one of the include filters and none of the exclude
     * filters.
     */
-  case class IncludeExclude(includes: Seq[Filter], excludes: Seq[Filter]) extends Filter {
-    override def accept(name: String): Boolean =
-      includes.exists(_.accept(name)) && !excludes.exists(_.accept(name))
+  case class IncludeExclude(includeFilters: Seq[Filter.Matcher], excludeFilters: Seq[Filter.Matcher]) extends Filter {
+
+    override def accept(test: String): Boolean =
+      includes(test) && !excludes(test)
+
+    override def includes(test: String): Boolean =
+      includeFilters.exists(_.accept(test))
+
+    override def excludes(test: String): Boolean =
+      excludeFilters.exists(_.accept(test))
   }
 
-  /** Filter that always returns the same result, regardless of the pattern */
+  /**
+    * Filter that uses a single pattern to accept test strings.
+    */
+  case class SingleMatcher(matcher: Matcher) extends Filter {
+
+    override def accept(value: String): Boolean =
+      matcher.accept(value)
+
+    override def includes(value: String): Boolean =
+      matcher.accept(value)
+
+    override def excludes(value: String): Boolean =
+      !matcher.accept(value)
+  }
+
+  /**
+    * Base trait for all matcher implementations
+    */
+  trait Matcher {
+    def accept(value: String): Boolean
+  }
+
+  /**
+    * Filter that always returns the same result, regardless of the pattern
+    */
   case class Constant(result: Boolean) extends Filter {
     override def accept(value: String): Boolean = result
+    override def includes(value: String): Boolean = result
+    override def excludes(value: String): Boolean = false
   }
 
-  /** Filter that uses regexes to match values */
-  case class Regex(pattern: String) extends Filter {
-    private val pathRegex = pattern.r
+  /**
+    * Matcher that uses regexes to match values.
+    */
+  case class Regex(pattern: String) extends Matcher {
+    private val _pathRegex = pattern.r
 
-    override def accept(name: String): Boolean = name match {
-      case pathRegex(_*) ⇒ true
-      case _             ⇒ false
+    override def accept(value: String): Boolean = value match {
+      case _pathRegex(_*) ⇒ true
+      case _              ⇒ false
     }
   }
 
-  /** Filter that uses a glob pattern expression to match values. */
-  case class Glob(glob: String) extends Filter {
-    private val globPattern = Pattern.compile("(\\*\\*?)|(\\?)|(\\\\.)|(/+)|([^*?]+)")
-    private val compiledPattern = getGlobPattern(glob)
+  /**
+    * Matcher that uses a glob pattern expression to match values.
+    */
+  case class Glob(glob: String) extends Matcher {
+    private val _globPattern = Pattern.compile("(\\*\\*?)|(\\?)|(\\\\.)|(/+)|([^*?]+)")
+    private val _compiledPattern = getGlobPattern(glob)
 
     override def accept(name: String): Boolean =
-      compiledPattern.matcher(name).matches()
+      _compiledPattern.matcher(name).matches()
 
     private def getGlobPattern(glob: String) = {
       val patternBuilder = new StringBuilder
-      val matcher = globPattern.matcher(glob)
+      val matcher = _globPattern.matcher(glob)
       while (matcher.find()) {
         val (grp1, grp2, grp3, grp4) = (matcher.group(1), matcher.group(2), matcher.group(3), matcher.group(4))
         if (grp1 != null) {
