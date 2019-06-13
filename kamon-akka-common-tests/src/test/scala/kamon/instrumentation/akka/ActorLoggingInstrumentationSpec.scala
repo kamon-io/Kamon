@@ -20,7 +20,7 @@ import akka.actor.{Actor, ActorLogging, ActorSystem, Props}
 import akka.event.Logging.LogEvent
 import akka.testkit.{ImplicitSender, TestKit}
 import kamon.Kamon
-import kamon.instrumentation.akka.akka25.mixin.ContextContainer
+import kamon.instrumentation.context.HasContext
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 import kamon.tag.Lookups._
 
@@ -40,7 +40,7 @@ class ActorLoggingInstrumentationSpec extends TestKit(ActorSystem("ActorCellInst
         case _: LogEvent ⇒ false
       }
 
-      Kamon.storeContext(logEvent.asInstanceOf[ContextContainer].context) {
+      Kamon.storeContext(logEvent.asInstanceOf[HasContext].context) {
         val keyValueFromContext = Kamon.currentContext().getTag(option(ContextTesting.TestKey)).getOrElse("Missing Context Tag")
         keyValueFromContext should be("propagate-when-logging")
       }

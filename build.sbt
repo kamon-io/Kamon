@@ -113,6 +113,8 @@ lazy val kamonAkkaBench25 = Project("kamon-akka-bench", file("kamon-akka-bench")
   .enablePlugins(JmhPlugin)
   .dependsOn(kamonAkka25)
   .settings(noPublishing: _*)
+  .settings(
+    libraryDependencies ++= compileScope(akkaActor, kanelaAgent))
 
 def onAkka24(moduleID: ModuleID): ModuleID =
   moduleID.withRevision(akka24Version)

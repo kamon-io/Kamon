@@ -4,7 +4,12 @@ import kamon.Kamon
 import kamon.metric.InstrumentGroup
 import kamon.tag.TagSet
 
+import scala.collection.concurrent.TrieMap
+
 object AkkaMetrics {
+
+  private val _groupInstrumentsCache = TrieMap.empty[String, ActorGroupInstruments]
+  private val _systemInstrumentsCache = TrieMap.empty[String, ActorSystemInstruments]
 
   /**
     * Actor Metrics
@@ -128,11 +133,19 @@ object AkkaMetrics {
     description = "Counts the number of processing errors experienced by the members of a group"
   )
 
-  def forGroup(group: String, system: String): ActorGroupInstruments =
-    new ActorGroupInstruments(TagSet.builder()
-      .add("group", group)
-      .add("system", system)
-      .build())
+  def forGroup(group: String, system: String, clazz: Option[String] = None): ActorGroupInstruments =
+    _groupInstrumentsCache.getOrElseUpdate(system + "/" + group, {
+      val tags = TagSet.builder()
+        .add("group", group)
+        .add("system", system)
+
+      clazz.foreach(clazzName => {
+        tags.add("class", clazzName)
+      })
+
+      new ActorGroupInstruments(tags.build())
+    })
+
 
   case class ActorGroupInstruments(tags: TagSet) extends InstrumentGroup(tags) {
     val timeInMailbox = register(GroupTimeInMailbox)
@@ -168,7 +181,7 @@ object AkkaMetrics {
   )
 
   def forSystem(name: String): ActorSystemInstruments =
-    new ActorSystemInstruments(TagSet.of("system", name))
+    _systemInstrumentsCache.atomicGetOrElseUpdate(name, new ActorSystemInstruments(TagSet.of("system", name)))
 
   class ActorSystemInstruments(tags: TagSet) extends InstrumentGroup(tags) {
     val deadLetters = register(SystemDeadLetters)

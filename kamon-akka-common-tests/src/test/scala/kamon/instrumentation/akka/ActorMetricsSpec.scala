@@ -33,29 +33,28 @@ import scala.concurrent.duration._
 class ActorMetricsSpec extends TestKit(ActorSystem("ActorMetricsSpec")) with WordSpecLike with MetricInspection.Syntax with InstrumentInspection.Syntax with Matchers
     with BeforeAndAfterAll with ImplicitSender with Eventually {
 
+  val systemMetrics = AkkaMetrics.forSystem(system.name)
 
-  "the Kamon system metrics" should {
-    Kamon.reconfigure(ConfigFactory.load())
-
-    val systemMetrics= AkkaMetrics.forSystem(system.name)
-    "record deadletters" in {
+  "the Actor System metrics" should {
+    "record dead letters" in {
       val doaActor = system.actorOf(Props[ActorMetricsTestActor], "doa")
-
       val deathWatcher = TestProbe()
       deathWatcher.watch(doaActor)
       doaActor ! PoisonPill
       deathWatcher.expectTerminated(doaActor)
 
-      (1 to 7).foreach(_ =>  doaActor ! "deadonarrival")
+      7 times { doaActor ! "deadonarrival" }
+
       eventually {
         systemMetrics.deadLetters.value(false).toInt should be(7)
       }
     }
 
-    "record unhandeled messages" in {
-      val hndl = system.actorOf(Props[ActorMetricsTestActor], "nonhandled")
+    "record unhandled messages" in {
+      val unhandled = system.actorOf(Props[ActorMetricsTestActor], "unhandled")
 
-      (1 to 10).foreach(_ => hndl ! "CantHandleStrings")
+      10 times { unhandled ! "CantHandleStrings" }
+
       eventually {
         systemMetrics.unhandledMessages.value(false).toInt should be(10)
       }
@@ -63,7 +62,9 @@ class ActorMetricsSpec extends TestKit(ActorSystem("ActorMetricsSpec")) with Wor
 
     "record active actor counts" in {
       systemMetrics.activeActors.distribution(true)
-      (1 to 8).foreach(i => system.actorOf(Props[ActorMetricsTestActor], s"counted-$i"))
+
+      8 times { system.actorOf(Props[ActorMetricsTestActor]) ! Discard }
+
       eventually {
         systemMetrics.activeActors.distribution(false).max.toInt should be > 0
       }
@@ -72,7 +73,6 @@ class ActorMetricsSpec extends TestKit(ActorSystem("ActorMetricsSpec")) with Wor
     "record processed messages counts" in {
       systemMetrics.processedMessagesByTracked.value(true)
       systemMetrics.processedMessagesByNonTracked.value(true)
-
       systemMetrics.processedMessagesByNonTracked.value(false) should be(0)
 
       val tracked = system.actorOf(Props[ActorMetricsTestActor], "tracked-actor-counts")
@@ -82,7 +82,10 @@ class ActorMetricsSpec extends TestKit(ActorSystem("ActorMetricsSpec")) with Wor
       (1 to 15).foreach(_ => nonTracked ! Discard)
 
       systemMetrics.processedMessagesByTracked.value(false) should be(10)
-      systemMetrics.processedMessagesByNonTracked.value(false) should be >=(15L)
+
+      eventually(timeout(1 second)) {
+        systemMetrics.processedMessagesByNonTracked.value(false) should be >= (15L)
+      }
     }
   }
 

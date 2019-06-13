@@ -19,9 +19,9 @@ package kamon.instrumentation.akka
 
 import akka.actor.{ActorSystem, ExtendedActorSystem, Props}
 import akka.dispatch.Envelope
-import akka.kamon.instrumentation.{InstrumentedEnvelope, TimestampedContext}
 import akka.testkit.{ImplicitSender, TestKit}
 import kamon.Kamon
+import kamon.instrumentation.context.{HasContext, HasTimestamp}
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 
 class EnvelopeSpec extends TestKit(ActorSystem("EnvelopeSpec")) with WordSpecLike with Matchers
@@ -32,7 +32,10 @@ class EnvelopeSpec extends TestKit(ActorSystem("EnvelopeSpec")) with WordSpecLik
       val actorRef = system.actorOf(Props[NoReply])
       val env = Envelope("msg", actorRef, system).asInstanceOf[Object]
       env match {
-        case e: Envelope with InstrumentedEnvelope => e.setTimestampedContext(TimestampedContext(Kamon.clock().nanos(), Kamon.currentContext()))
+        case e: Envelope with HasContext with HasTimestamp =>
+          e.setContext(Kamon.currentContext())
+          e.setTimestamp(Kamon.clock().nanos())
+
         case _ => fail("InstrumentedEnvelope is not mixed in")
       }
       env match {
@@ -47,7 +50,9 @@ class EnvelopeSpec extends TestKit(ActorSystem("EnvelopeSpec")) with WordSpecLik
             val obj = ois.readObject()
             ois.close()
             obj match {
-              case e: Envelope with InstrumentedEnvelope => e.timestampedContext() should not be null
+              case e: Envelope with HasContext with HasTimestamp =>
+                e.timestamp should not be 0L
+                e.context should not be null
               case _ => fail("InstrumentedEnvelope is not mixed in")
             }
           }
