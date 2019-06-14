@@ -18,8 +18,8 @@ package kamon.instrumentation.akka.instrumentations
 
 import java.util.concurrent.{Callable, ExecutorService}
 
-import akka.dispatch.forkjoin.ForkJoinPool
 import akka.dispatch.{DispatcherPrerequisites, ForkJoinExecutorConfigurator, PinnedDispatcherConfigurator, ThreadPoolExecutorConfigurator}
+import akka.dispatch.forkjoin.ForkJoinPool
 import kamon.Kamon
 import kamon.instrumentation.akka.AkkaInstrumentation
 import kamon.instrumentation.akka.instrumentations.DispatcherInfo.{HasActorSystemName, HasDispatcherName}
@@ -40,7 +40,7 @@ class DispatcherInstrumentation extends InstrumentationBuilder {
   onSubTypesOf("akka.dispatch.ExecutorServiceFactory")
     .mixin(classOf[HasActorSystemName.Mixin])
     .mixin(classOf[HasDispatcherName.Mixin])
-    .intercept(method("createExecutorService"), InstrumentNewExecutorService)
+    .intercept(method("createExecutorService"), createExecutorServiceInterceptor())
 
   /**
     * First step on getting the Actor System name is to read it from the prerequisites instance passed to the
@@ -54,15 +54,22 @@ class DispatcherInstrumentation extends InstrumentationBuilder {
     * executors instrumented by Kamon.
     */
   onTypes("akka.dispatch.ThreadPoolConfig", "akka.dispatch.ForkJoinExecutorConfigurator", "akka.dispatch.PinnedDispatcherConfigurator")
-      .mixin(classOf[HasActorSystemName.Mixin])
-      .mixin(classOf[HasDispatcherName.Mixin])
-      .advise(method("createExecutorServiceFactory"), CopyDispatcherInfoToExecutorServiceFactory)
+    .mixin(classOf[HasActorSystemName.Mixin])
+    .mixin(classOf[HasDispatcherName.Mixin])
+    .advise(method("createExecutorServiceFactory"), CopyDispatcherInfoToExecutorServiceFactory)
 
   /**
     * This ensures that the ActorSystem name is not lost when creating PinnedDispatcher instances.
     */
   onType("akka.dispatch.ThreadPoolConfig")
     .advise(method("copy"), ThreadPoolConfigCopyAdvice)
+
+
+  private def createExecutorServiceInterceptor(): Any =
+    if(akka.Version.current.startsWith("2.4"))
+      InstrumentNewExecutorServiceOnAkka24
+    else
+      InstrumentNewExecutorServiceOnAkka25
 }
 
 object DispatcherInfo {
@@ -120,7 +127,22 @@ object CopyDispatcherInfoToExecutorServiceFactory {
 }
 
 
-object InstrumentNewExecutorService {
+object InstrumentNewExecutorServiceOnAkka24 {
+
+  def around(@This factory: HasActorSystemName with HasDispatcherName, @SuperCall callable: Callable[ExecutorService]): ExecutorService = {
+    val executor = callable.call()
+    val name = factory.dispatcherName
+    val systemTags = TagSet.of("system", factory.actorSystemName)
+
+    if(Kamon.filter(AkkaInstrumentation.TrackDispatcherFilterName).accept(name))
+      ExecutorInstrumentation.instrument(executor, name, systemTags)
+    else
+      executor
+  }
+}
+
+
+object InstrumentNewExecutorServiceOnAkka25 {
 
   def around(@This factory: HasActorSystemName with HasDispatcherName, @SuperCall callable: Callable[ExecutorService]): ExecutorService = {
     val executor = callable.call()
@@ -128,26 +150,14 @@ object InstrumentNewExecutorService {
     val systemTags = TagSet.of("system", factory.actorSystemName)
 
     if(Kamon.filter(AkkaInstrumentation.TrackDispatcherFilterName).accept(name)) {
-
-      val instrumentedExecutor: ExecutorService = executor match {
+      executor match {
         case afjp: ForkJoinPool =>
-          ExecutorInstrumentation.instrument(
-            executor,
-            telemetryReader(afjp),
-            name,
-            systemTags,
-            ExecutorInstrumentation.DefaultSettings
-          )
+          ExecutorInstrumentation.instrument(executor, telemetryReader(afjp), name, systemTags, ExecutorInstrumentation.DefaultSettings)
 
         case otherExecutor =>
-          ExecutorInstrumentation.instrument(
-            otherExecutor,
-            name,
-            systemTags
-          )
+          ExecutorInstrumentation.instrument(otherExecutor, name, systemTags)
       }
 
-      instrumentedExecutor
     } else executor
   }
 

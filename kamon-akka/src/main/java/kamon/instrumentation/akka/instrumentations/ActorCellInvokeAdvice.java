@@ -1,8 +1,6 @@
 package kamon.instrumentation.akka.instrumentations;
 
-import akka.actor.Cell;
 import akka.dispatch.Envelope;
-import kamon.instrumentation.akka.instrumentations.HasActorMonitor;
 import kamon.context.Context;
 import kamon.instrumentation.context.HasContext;
 import kamon.instrumentation.context.HasTimestamp;
@@ -12,7 +10,7 @@ final public class ActorCellInvokeAdvice {
 
   @Advice.OnMethodEnter(suppress = Throwable.class)
   public static void enter(
-      @Advice.This Cell cell,
+      @Advice.This Object cell,
       @Advice.Argument(0) Object envelope,
       @Advice.Local("stateFromStart") Object stateFromStart,
       @Advice.Local("processingStartTimestamp") Long processingStartTimestamp,
@@ -29,7 +27,7 @@ final public class ActorCellInvokeAdvice {
 
     @Advice.OnMethodExit(suppress = Throwable.class)
     public static void exit(
-        @Advice.This Cell cell,
+        @Advice.This Object cell,
         @Advice.Local("stateFromStart") Object stateFromStart,
         @Advice.Local("processingStartTimestamp") Long processingStartTimestamp,
         @Advice.Local("envelopeTimestamp") Long envelopeTimestamp,

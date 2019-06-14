@@ -81,9 +81,8 @@ class ActorMetricsSpec extends TestKit(ActorSystem("ActorMetricsSpec")) with Wor
       (1 to 10).foreach(_ => tracked ! Discard)
       (1 to 15).foreach(_ => nonTracked ! Discard)
 
-      systemMetrics.processedMessagesByTracked.value(false) should be(10)
-
       eventually(timeout(3 second)) {
+        systemMetrics.processedMessagesByTracked.value(false) should be >= (10L)
         systemMetrics.processedMessagesByNonTracked.value(false) should be >= (15L)
       }
     }

@@ -30,61 +30,36 @@ val akkaSLF4J       = "com.typesafe.akka" %% "akka-slf4j"    % "2.5.23"
 
 lazy val `kamon-akka` = (project in file("."))
   .settings(noPublishing: _*)
-  .aggregate(common, commonTests, kamonAkka24, kamonAkka25, kamonAkkaTests24, kamonAkkaTests25)
+  .aggregate(instrumentation, commonTests, testsOnAkka24, testsOnAkka25, benchmarks)
 
 // These common modules contains all the stuff that can be reused between different Akka versions. They compile with
 // Akka 2.4, but the actual modules for each Akka version are only using the sources from these project instead of the
 // compiled classes. This is just to ensure that if there are any binary incompatible changes between Akka 2.4 and 2.5
 // at the internal level, we will still be compiling and testing with the right versions.
 //
-lazy val common = Project("kamon-akka-common", file("kamon-akka-common"))
-  .settings(noPublishing: _*)
+lazy val instrumentation = Project("instrumentation", file("kamon-akka"))
   .settings(
+    name := "kamon-akka",
+    moduleName := "kamon-akka",
+    bintrayPackage := "kamon-akka",
+    scalacOptions += "-target:jvm-1.8",
     libraryDependencies ++=
       compileScope(kamonCore, kamonInstrument, kamonScala, kamonExecutors) ++
-      providedScope(onAkka24(akkaActor), kanelaAgent))
+      providedScope(akkaActor, kanelaAgent))
 
-lazy val commonTests = Project("kamon-akka-common-tests", file("kamon-akka-common-tests"))
-  .dependsOn(common)
+lazy val commonTests = Project("common-tests", file("kamon-akka-common-tests"))
+  .dependsOn(instrumentation)
   .settings(noPublishing: _*)
   .settings(
     test := ((): Unit),
-    libraryDependencies ++=
-      compileScope(kamonCore, kamonInstrument, kamonScala, kamonExecutors) ++
-      providedScope(onAkka24(akkaActor), kanelaAgent) ++
-      testScope(scalatest, kamonTestkit, onAkka24(akkaTestkit), onAkka24(akkaSLF4J), logbackClassic))
-
-
-lazy val kamonAkka24 = Project("kamon-akka-24", file("kamon-akka-2.4"))
-  .settings(
-    name := "kamon-akka-2.4",
-    moduleName := "kamon-akka-2.4",
-    bintrayPackage := "kamon-akka",
-    scalacOptions += "-target:jvm-1.8",
-    unmanagedSourceDirectories in Compile ++= (unmanagedSourceDirectories in Compile in common).value,
-    unmanagedResourceDirectories in Compile ++= (unmanagedResourceDirectories in Compile in common).value,
-    libraryDependencies ++=
-      compileScope(kamonCore, kamonInstrument, kamonScala, kamonExecutors) ++
-      providedScope(onAkka24(akkaActor), kanelaAgent))
-
-lazy val kamonAkka25 = Project("kamon-akka-25", file("kamon-akka-2.5"))
-  .enablePlugins(JavaAgent)
-  .settings(instrumentationSettings)
-  .settings(
-    bintrayPackage := "kamon-akka",
-    name := "kamon-akka-2.5",
-    moduleName := "kamon-akka-2.5",
-    scalacOptions += "-target:jvm-1.8",
-    unmanagedSourceDirectories in Compile ++= (unmanagedSourceDirectories in Compile in common).value,
-    unmanagedResourceDirectories in Compile ++= (unmanagedResourceDirectories in Compile in common).value,
     libraryDependencies ++=
       compileScope(kamonCore, kamonInstrument, kamonScala, kamonExecutors) ++
       providedScope(akkaActor, kanelaAgent) ++
       testScope(scalatest, kamonTestkit, akkaTestkit, akkaSLF4J, logbackClassic))
 
 
-lazy val kamonAkkaTests24 = Project("kamon-akka-tests-24", file("kamon-akka-tests-2.4"))
-  .dependsOn(kamonAkka24)
+lazy val testsOnAkka24 = Project("kamon-akka-tests-24", file("kamon-akka-tests-2.4"))
+  .dependsOn(instrumentation)
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(noPublishing: _*)
@@ -96,8 +71,8 @@ lazy val kamonAkkaTests24 = Project("kamon-akka-tests-24", file("kamon-akka-test
       providedScope(onAkka24(akkaActor), kanelaAgent) ++
       testScope(scalatest, kamonTestkit, onAkka24(akkaTestkit), onAkka24(akkaSLF4J), logbackClassic))
 
-lazy val kamonAkkaTests25 = Project("kamon-akka-tests-25", file("kamon-akka-tests-2.5"))
-  .dependsOn(kamonAkka25)
+lazy val testsOnAkka25 = Project("kamon-akka-tests-25", file("kamon-akka-tests-2.5"))
+  .dependsOn(instrumentation)
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(noPublishing: _*)
@@ -109,9 +84,9 @@ lazy val kamonAkkaTests25 = Project("kamon-akka-tests-25", file("kamon-akka-test
       providedScope(akkaActor, kanelaAgent) ++
       testScope(scalatest, kamonTestkit, akkaTestkit, akkaSLF4J, logbackClassic))
 
-lazy val kamonAkkaBench25 = Project("kamon-akka-bench", file("kamon-akka-bench"))
+lazy val benchmarks = Project("benchmarks", file("kamon-akka-bench"))
   .enablePlugins(JmhPlugin)
-  .dependsOn(kamonAkka25)
+  .dependsOn(instrumentation)
   .settings(noPublishing: _*)
   .settings(
     libraryDependencies ++= compileScope(akkaActor, kanelaAgent))
