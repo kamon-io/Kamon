@@ -133,15 +133,11 @@ object AkkaMetrics {
     description = "Counts the number of processing errors experienced by the members of a group"
   )
 
-  def forGroup(group: String, system: String, clazz: Option[String] = None): ActorGroupInstruments =
+  def forGroup(group: String, system: String): ActorGroupInstruments =
     _groupInstrumentsCache.getOrElseUpdate(system + "/" + group, {
       val tags = TagSet.builder()
         .add("group", group)
         .add("system", system)
-
-      clazz.foreach(clazzName => {
-        tags.add("class", clazzName)
-      })
 
       new ActorGroupInstruments(tags.build())
     })

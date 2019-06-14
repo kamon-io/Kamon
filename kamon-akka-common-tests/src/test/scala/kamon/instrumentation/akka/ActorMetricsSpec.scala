@@ -83,7 +83,7 @@ class ActorMetricsSpec extends TestKit(ActorSystem("ActorMetricsSpec")) with Wor
 
       systemMetrics.processedMessagesByTracked.value(false) should be(10)
 
-      eventually(timeout(1 second)) {
+      eventually(timeout(3 second)) {
         systemMetrics.processedMessagesByNonTracked.value(false) should be >= (15L)
       }
     }

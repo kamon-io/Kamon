@@ -67,9 +67,11 @@ object ActorMonitor {
     */
   def from(actorCell: Any, ref: ActorRef, parent: ActorRef, system: ActorSystem): ActorMonitor = {
     val cell = ActorCellInfo.from(actorCell, ref, parent, system)
+    val settings = AkkaInstrumentation.settings()
     val isTraced = Kamon.filter(TraceActorFilterName).accept(cell.path)
-    val startsTrace = Kamon.filter(StartTraceActorFilterName).accept(cell.path)
+    val startsTrace = settings.safeActorStartTraceFilter.accept(cell.path)
     val participatesInTracing = isTraced || startsTrace
+    val autoGroupingPath = resolveAutoGroupingPath(cell.actorOrRouterClass, ref, parent)
 
     def traceWrap(monitor: ActorMonitor): ActorMonitor =
       if(participatesInTracing) new TracedMonitor(cell, startsTrace, monitor) else monitor
@@ -84,37 +86,24 @@ object ActorMonitor {
 
       } else {
 
-        val trackedFilter = if (cell.isRouter || cell.isRoutee) Kamon.filter(TrackRouterFilterName) else Kamon.filter(TrackActorFilterName)
+        val trackedFilter = if (cell.isRouter || cell.isRoutee) Kamon.filter(TrackRouterFilterName) else settings.safeActorTrackFilter
         val isTracked = !cell.isRootSupervisor && trackedFilter.accept(cell.path)
         val trackingGroups: Seq[ActorGroupInstruments] = if (cell.isRootSupervisor) List() else {
           val configuredMatchingGroups = AkkaInstrumentation.matchingActorGroups(cell.path)
 
-          if (configuredMatchingGroups.isEmpty && !isTracked && settings().autoGrouping && !cell.isRouter && !cell.isRoutee) {
-            if (!trackedFilter.excludes(cell.path)) {
-              // TODO: Handle auto grouping.
+          if (configuredMatchingGroups.isEmpty && !isTracked && settings.autoGrouping && !cell.isRouter && !cell.isRoutee) {
+            if (!trackedFilter.excludes(cell.path) && Kamon.filter(TrackAutoGroupFilterName).accept(cell.path))
+              List(AkkaMetrics.forGroup(autoGroupingPath, system.name))
+            else
+              List.empty
 
-              //          cell.self match {
-              //            case hgp: HasGroupPath =>println(s"WE SHOULD BE CREATING A GROUP FOR [${ref.hashCode()}]: " + hgp.groupPath + " " + ref.getClass)
-              //              if(hgp.groupPath == null) {
-              //
-              //                //(new Throwable).printStackTrace()
-              //              }
-              //            case _ =>
-              //          }
-
-
-            }
-
-
-            List()
           } else {
 
             configuredMatchingGroups.map(groupName => {
-              AkkaMetrics.forGroup(groupName, cell.systemName, None)
+              AkkaMetrics.forGroup(groupName, cell.systemName)
             })
           }
         }
-
 
         if (cell.isRoutee && isTracked)
           createRouteeMonitor(cell, trackingGroups)
@@ -160,6 +149,23 @@ object ActorMonitor {
     )
 
     new TrackedRoutee(routerMetrics, groupMetrics, cellInfo)
+  }
+
+  private def resolveAutoGroupingPath(actorClass: Class[_], ref: ActorRef, parent: ActorRef): String = {
+    val name = ref.path.name
+    val elementCount = ref.path.elements.size
+
+    val parentPath = if(parent.isInstanceOf[HasGroupPath]) parent.asInstanceOf[HasGroupPath].groupPath else ""
+    val refGroupName = {
+      if(elementCount == 1)
+        if(name == "/") "" else name
+      else
+        ActorCellInfo.simpleClassName(actorClass)
+    }
+
+    val refGroupPath = if(parentPath.isEmpty) refGroupName else parentPath + "/" + refGroupName
+    ref.asInstanceOf[HasGroupPath].setGroupPath(refGroupPath)
+    refGroupPath
   }
 
   /**

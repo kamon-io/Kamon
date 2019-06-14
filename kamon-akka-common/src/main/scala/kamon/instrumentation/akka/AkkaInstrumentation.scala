@@ -1,18 +1,18 @@
 package kamon.instrumentation.akka
 
-import com.typesafe.config.Config
+import com.typesafe.config.{Config, ConfigFactory}
 import kamon.Kamon
 import kamon.instrumentation.akka.AkkaInstrumentation.AskPatternTimeoutWarningSetting.{Heavyweight, Lightweight, Off}
-import kamon.tag.TagSet
 import kamon.util.Filter
 
-import scala.collection.JavaConverters.asScalaSetConverter
+import scala.collection.JavaConverters.{asScalaBufferConverter, asScalaSetConverter}
 
 object AkkaInstrumentation {
 
   val TrackActorFilterName = "kamon.instrumentation.akka.filters.actors.track"
   val TraceActorFilterName = "kamon.instrumentation.akka.filters.actors.trace"
   val StartTraceActorFilterName = "kamon.instrumentation.akka.filters.actors.start-trace"
+  val TrackAutoGroupFilterName = "kamon.instrumentation.akka.filters.groups.auto-grouping"
   val TrackRouterFilterName = "kamon.instrumentation.akka.filters.routers"
   val TrackDispatcherFilterName = "kamon.instrumentation.akka.filters.dispatchers"
 
@@ -65,10 +65,12 @@ object AkkaInstrumentation {
     val akkaConfig = config.getConfig("kamon.instrumentation.akka")
     val groupsConfig = akkaConfig.getConfig("filters.groups")
 
-    _configProvidedActorGroups = groupsConfig.root.entrySet().asScala.map(entry => {
-      val groupName = entry.getKey
-      groupName -> Filter.from(groupsConfig.getConfig(groupName))
-    }).toMap
+    _configProvidedActorGroups = groupsConfig.root.entrySet().asScala
+      .filter(_.getKey != "auto-grouping")
+      .map(entry => {
+        val groupName = entry.getKey
+        groupName -> Filter.from(groupsConfig.getConfig(groupName))
+      }).toMap
 
     _actorGroups = _codeProvidedActorGroups ++ _configProvidedActorGroups
     _settings = Settings.from(config)
@@ -80,13 +82,17 @@ object AkkaInstrumentation {
   case class Settings (
     askPatternWarning: AskPatternTimeoutWarningSetting,
     autoGrouping: Boolean,
-    allowDoomsdayWildcards: Boolean
+    allowDoomsdayWildcards: Boolean,
+    safeActorTrackFilter: Filter,
+    safeActorStartTraceFilter: Filter
   )
 
   object Settings {
 
     def from(config: Config): Settings = {
       val akkaConfig = config.getConfig("kamon.instrumentation.akka")
+      val allowDoomsdayWildcards = akkaConfig.getBoolean("filters.actors.doomsday-wildcard")
+
       val askPatternWarning = akkaConfig.getString("ask-pattern-timeout-warning") match {
         case "off"          ⇒ Off
         case "lightweight"  ⇒ Lightweight
@@ -97,9 +103,21 @@ object AkkaInstrumentation {
       AkkaInstrumentation.Settings(
         askPatternWarning,
         akkaConfig.getBoolean("auto-grouping"),
-        akkaConfig.getBoolean("filters.actors.doomsday-wildcard")
-
+        allowDoomsdayWildcards,
+        safeFilter(config.getConfig(TrackActorFilterName), allowDoomsdayWildcards),
+        safeFilter(config.getConfig(StartTraceActorFilterName), allowDoomsdayWildcards)
       )
+    }
+
+    private def safeFilter(config: Config, allowDoomsday: Boolean): Filter = {
+      val includes = config.getStringList("includes").asScala
+      if(!allowDoomsday && includes.contains("**")) {
+        val newIncludes = "includes = " + includes.filter(_ == "**").map(s => s""""$s"""").mkString("[ ", ", ", " ]")
+        val safeFilterConfig = ConfigFactory.parseString(newIncludes).withFallback(config)
+
+        Filter.from(safeFilterConfig)
+
+      } else Filter.from(config)
     }
   }
 
