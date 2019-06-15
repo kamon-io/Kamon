@@ -30,17 +30,26 @@ import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 import kanela.agent.libs.net.bytebuddy.implementation.bind.annotation.{SuperCall, This}
 
-class DispatcherInstrumentation extends InstrumentationBuilder {
+class DispatcherInstrumentation extends InstrumentationBuilder with VersionFiltering  {
 
   /**
     * This is where the actual ExecutorService instances are being created, but at this point we don't have access to
     * the Actor System Name nor the Dispatcher name, which is why there is additional instrumentation to carry these two
     * names down to the ExecutorServiceFactory and use them to tag the newly instrumented ExecutorService.
     */
-  onSubTypesOf("akka.dispatch.ExecutorServiceFactory")
-    .mixin(classOf[HasActorSystemName.Mixin])
-    .mixin(classOf[HasDispatcherName.Mixin])
-    .intercept(method("createExecutorService"), createExecutorServiceInterceptor())
+  onAkka("2.5") {
+    onSubTypesOf("akka.dispatch.ExecutorServiceFactory")
+      .mixin(classOf[HasActorSystemName.Mixin])
+      .mixin(classOf[HasDispatcherName.Mixin])
+      .intercept(method("createExecutorService"), InstrumentNewExecutorServiceOnAkka25)
+  }
+
+  onAkka("2.4") {
+    onSubTypesOf("akka.dispatch.ExecutorServiceFactory")
+      .mixin(classOf[HasActorSystemName.Mixin])
+      .mixin(classOf[HasDispatcherName.Mixin])
+      .intercept(method("createExecutorService"), InstrumentNewExecutorServiceOnAkka24)
+  }
 
   /**
     * First step on getting the Actor System name is to read it from the prerequisites instance passed to the
@@ -64,12 +73,6 @@ class DispatcherInstrumentation extends InstrumentationBuilder {
   onType("akka.dispatch.ThreadPoolConfig")
     .advise(method("copy"), ThreadPoolConfigCopyAdvice)
 
-
-  private def createExecutorServiceInterceptor(): Any =
-    if(akka.Version.current.startsWith("2.4"))
-      InstrumentNewExecutorServiceOnAkka24
-    else
-      InstrumentNewExecutorServiceOnAkka25
 }
 
 object DispatcherInfo {
