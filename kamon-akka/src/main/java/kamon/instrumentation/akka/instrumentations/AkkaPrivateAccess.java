@@ -2,6 +2,7 @@ package kamon.instrumentation.akka.instrumentations;
 
 import akka.actor.*;
 import akka.dispatch.sysmsg.SystemMessage;
+import akka.pattern.PromiseActorRef;
 import akka.routing.RoutedActorCell;
 import akka.routing.RoutedActorRef;
 import scala.Option;
@@ -13,6 +14,10 @@ public class AkkaPrivateAccess {
 
   public static boolean isSystemMessage(Object message) {
     return message instanceof SystemMessage;
+  }
+
+  public static boolean isPromiseActorRef(ActorRef ref) {
+    return ref instanceof PromiseActorRef;
   }
 
   public static boolean isInternalAndActiveActorRef(ActorRef target) {

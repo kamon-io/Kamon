@@ -52,6 +52,8 @@ lazy val commonTests = Project("common-tests", file("kamon-akka-common-tests"))
   .settings(noPublishing: _*)
   .settings(
     test := ((): Unit),
+    testOnly := ((): Unit),
+    testQuick := ((): Unit),
     libraryDependencies ++=
       compileScope(kamonCore, kamonInstrument, kamonScala, kamonExecutors) ++
       providedScope(akkaActor, kanelaAgent) ++

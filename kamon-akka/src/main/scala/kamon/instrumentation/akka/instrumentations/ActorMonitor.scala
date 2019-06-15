@@ -216,9 +216,8 @@ object ActorMonitor {
     private def buildSpan(cellInfo: ActorCellInfo, context: Context, envelopeTimestamp: Long, envelope: Envelope): Span.Delayed = {
       val messageClass = ActorCellInfo.simpleClassName(envelope.message.getClass)
       val parentSpan = context.get(Span.Key)
-      val operationName = _actorSimpleClassName + " ! " + messageClass
 
-      Kamon.internalSpanBuilder(operationName, "akka.actor")
+      Kamon.internalSpanBuilder(operationName(messageClass, envelope.sender), "akka.actor")
         .asChildOf(parentSpan)
         .doNotTrackMetrics()
         .tag("akka.system", cellInfo.systemName)
@@ -226,6 +225,18 @@ object ActorMonitor {
         .tag("akka.actor.class", _actorClassName)
         .tag("akka.actor.message-class", messageClass)
         .delay(Kamon.clock().toInstant(envelopeTimestamp))
+    }
+
+    private def operationName(messageClass: String, sender: ActorRef): String = {
+      val operationType = if(AkkaPrivateAccess.isPromiseActorRef(sender)) "ask(" else "tell("
+
+      StringBuilder.newBuilder
+        .append(operationType)
+        .append(_actorSimpleClassName)
+        .append(", ")
+        .append(messageClass)
+        .append(")")
+        .result()
     }
 
     private class SpanAndMonitorState(val span: Span, val wrappedMonitorState: Any)
