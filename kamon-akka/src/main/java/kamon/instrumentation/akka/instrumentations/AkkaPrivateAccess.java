@@ -1,6 +1,7 @@
 package kamon.instrumentation.akka.instrumentations;
 
 import akka.actor.*;
+import akka.dispatch.sysmsg.SystemMessage;
 import akka.routing.RoutedActorCell;
 import akka.routing.RoutedActorRef;
 import scala.Option;
@@ -9,6 +10,10 @@ import scala.Option;
  *  This class exposes access to several private[akka] members that wouldn't be visible from the Scala codebase.
  */
 public class AkkaPrivateAccess {
+
+  public static boolean isSystemMessage(Object message) {
+    return message instanceof SystemMessage;
+  }
 
   public static boolean isInternalAndActiveActorRef(ActorRef target) {
     return target != null && target instanceof InternalActorRef && !((InternalActorRef) target).isTerminated();
