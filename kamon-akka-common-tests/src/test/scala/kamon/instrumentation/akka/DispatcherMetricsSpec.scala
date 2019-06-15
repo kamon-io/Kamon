@@ -59,7 +59,7 @@ class DispatcherMetricsSpec extends TestKit(ActorSystem("DispatcherMetricsSpec")
 
     "include the actor system name in the executor tags" in {
       val instrumentExecutorsWithSystem = ExecutorMetrics.ThreadsActive.instruments().keys
-        .filter(_.get(plain("system")) == system.name)
+        .filter(_.get(plain("akka.system")) == system.name)
         .map(_.get(plain("name")))
 
       instrumentExecutorsWithSystem should contain only(trackedDispatchers: _*)

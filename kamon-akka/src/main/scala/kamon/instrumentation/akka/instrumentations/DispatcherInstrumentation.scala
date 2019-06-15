@@ -135,7 +135,7 @@ object InstrumentNewExecutorServiceOnAkka24 {
   def around(@This factory: HasActorSystemName with HasDispatcherName, @SuperCall callable: Callable[ExecutorService]): ExecutorService = {
     val executor = callable.call()
     val name = factory.dispatcherName
-    val systemTags = TagSet.of("system", factory.actorSystemName)
+    val systemTags = TagSet.of("akka.system", factory.actorSystemName)
 
     if(Kamon.filter(AkkaInstrumentation.TrackDispatcherFilterName).accept(name))
       ExecutorInstrumentation.instrument(executor, name, systemTags)
@@ -150,7 +150,7 @@ object InstrumentNewExecutorServiceOnAkka25 {
   def around(@This factory: HasActorSystemName with HasDispatcherName, @SuperCall callable: Callable[ExecutorService]): ExecutorService = {
     val executor = callable.call()
     val name = factory.dispatcherName
-    val systemTags = TagSet.of("system", factory.actorSystemName)
+    val systemTags = TagSet.of("akka.system", factory.actorSystemName)
 
     if(Kamon.filter(AkkaInstrumentation.TrackDispatcherFilterName).accept(name)) {
       executor match {
