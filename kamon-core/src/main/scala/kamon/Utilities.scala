@@ -33,7 +33,6 @@ trait Utilities { self: Configuration =>
 
   reconfigureUtilities(self.config())
   self.onReconfigure(newConfig => reconfigureUtilities(newConfig))
-  sys.addShutdownHook(() => _scheduler.shutdown())
 
   /**
     * Creates a new composite Filter by looking up the provided key on Kamon's configuration. All inputs matching any of
