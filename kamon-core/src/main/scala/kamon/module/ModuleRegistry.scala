@@ -42,16 +42,15 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
 
 
   /**
-    * Registers a module that has already been instantiated by the user. The start callback will be executed as part
-    * of the registration process. If a module with the specified name already exists the registration will fail. If
-    * the registered module is a MetricReporter and/or SpanReporter it will also be configured to receive the metrics
-    * and spans data upon every tick.
+    * Registers a module that has created programmatically. If a module with the specified name already exists the
+    * registration will fail. If the registered module is a MetricReporter and/or SpanReporter it will also be
+    * registered to receive the metrics and/or spans data upon every tick.
     *
-    * @param name Desired module name.
-    * @param module Module instance.
-    * @return A registration that can be used to stop the module at any time.
+    * The configPath parameters allows to select a subset of the new configuration when processing reconfigure events.
+    * This option is particularly important when having more than one instance of the same module configured. If no
+    * configPath is provided, the reconfigure events will use the root configuration object on the reconfigure callbacks.
     */
-  def register(name: String, configPath: Option[String], module: Module): Registration = synchronized {
+  def register(name: String, module: Module, configPath: Option[String]): Registration = synchronized {
     if(_registeredModules.get(name).isEmpty) {
       val inferredSettings = Module.Settings(
         "unknown",
@@ -397,7 +396,7 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
         Try {
           val moduleConfig = entry.settings.configPath
             .map(config.getConfig)
-            .getOrElse(ConfigFactory.empty())
+            .getOrElse(config)
 
           entry.module.reconfigure(moduleConfig)
 

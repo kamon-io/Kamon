@@ -11,7 +11,7 @@ import scala.concurrent.ExecutionContext
   * Modules provide additional capabilities to Kamon, like collecting JVM metrics or exporting the metrics and trace
   * data to external services. Additionally, modules can be automatically registered in Kamon by simply being present
   * in the classpath and having the appropriate entry in the configuration file. All modules get a dedicated execution
-  * context which will be used to call the start, stop and reconfigure hooks.
+  * context which will be used to call the stop and reconfigure hooks, as well as any data processing callbacks.
   *
   * Besides the basic lifecycle hooks, when registering a [[MetricReporter]] and/or [[SpanReporter]] module, Kamon will
   * also schedule calls to [[MetricReporter.reportPeriodSnapshot()]] and [[SpanReporter.reportSpans()]] in the module's

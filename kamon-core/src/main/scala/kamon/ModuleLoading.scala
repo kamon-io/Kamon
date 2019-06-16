@@ -38,7 +38,7 @@ trait ModuleLoading { self: Configuration with Utilities with Metrics with Traci
     * The returned registration can be used to stop and deregister the module at any time.
     */
   def registerModule(name: String, module: Module): Registration =
-    _moduleRegistry.register(name, None, module)
+    _moduleRegistry.register(name, module, None)
 
   /**
     * Register a module instantiated by the user. When Kamon is reconfigured, the module will be reconfigured with the
@@ -46,8 +46,8 @@ trait ModuleLoading { self: Configuration with Utilities with Metrics with Traci
     *
     * The returned registration can be used to stop and deregister the module at any time.
     */
-  def registerModule(name: String, configPath: String, module: Module): Registration =
-    _moduleRegistry.register(name, Option(configPath), module)
+  def registerModule(name: String, module: Module, configPath: String): Registration =
+    _moduleRegistry.register(name, module, Option(configPath))
 
   /**
     * Loads modules from Kamon's configuration.
@@ -56,9 +56,8 @@ trait ModuleLoading { self: Configuration with Utilities with Metrics with Traci
     _moduleRegistry.load(self.config())
 
   /**
-    * Stops all registered modules. This includes automatically and programmatically registered modules.
-    *
-    * @return A future that completes when the stop callback on all available modules have been completed.
+    * Stops all registered modules and returns a future that completes when the stop callback on all available modules
+    * have been completed. This includes automatically and programmatically registered modules.
     */
   def stopModules(): Future[Unit] =
     _moduleRegistry.stop()
