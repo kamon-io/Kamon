@@ -55,3 +55,6 @@ server.pid
 
 # Default sigar library provision location.
 native/
+
+# Projects not available on this branch
+kamon-status-page
