@@ -16,10 +16,10 @@
 package kamon
 package prometheus
 
-import scala.collection.JavaConverters.{asScalaBuffer, mapAsScalaMap}
-
 import com.typesafe.config.Config
 import kamon.metric.{MetricDistribution, MetricValue, PeriodSnapshot}
+
+import scala.collection.JavaConverters.{asScalaBufferConverter, mapAsScalaMapConverter}
 
 class MetricOverrideReporter(wrappedReporter: MetricReporter, config: Config = Kamon.config) extends MetricReporter {
 
@@ -84,15 +84,17 @@ class MetricOverrideReporter(wrappedReporter: MetricReporter, config: Config = K
         if (config.hasPath("name"))
           Some(config.getString("name")) else None,
         if (config.hasPath("delete-tags"))
-          asScalaBuffer(config.getStringList("delete-tags")).toSet else Set.empty,
+          config.getStringList("delete-tags").asScala.toSet else Set.empty,
         if (config.hasPath("rename-tags"))
-          mapAsScalaMap(config.getObject("rename-tags").unwrapped()).toMap
+          config.getObject("rename-tags").unwrapped().asScala.toMap
             .map { case (tagName, value) => (tagName, value.toString) } else Map.empty
       ))
     }
   }
 
-  private case class MetricMapping(newName: Option[String],
-                                   tagsToDelete: Set[String],
-                                   tagsToRename: Map[String, String])
+  private case class MetricMapping(
+    newName: Option[String],
+    tagsToDelete: Set[String],
+    tagsToRename: Map[String, String]
+  )
 }
