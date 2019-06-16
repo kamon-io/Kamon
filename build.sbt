@@ -16,6 +16,7 @@
 lazy val kamon = (project in file("."))
   .settings(moduleName := "kamon")
   .settings(noPublishing: _*)
+  .settings(commonSettings: _*)
   .aggregate(core, corePublishing, statusPage, statusPagePublishing, testkit, tests, benchmarks)
 
 
@@ -56,6 +57,7 @@ lazy val core = (project in file("kamon-core"))
 
 
 lazy val corePublishing = project
+  .settings(commonSettings: _*)
   .settings(
     moduleName := "kamon-core",
     exportedProducts in Compile := (exportedProducts in (core, Compile)).value,
@@ -88,6 +90,7 @@ lazy val statusPage = (project in file("kamon-status-page"))
 
 
 lazy val statusPagePublishing = project
+  .settings(commonSettings: _*)
   .settings(
     moduleName := "kamon-status-page",
     packageBin in Compile := (packageBin in (statusPage, Compile)).value,
@@ -130,6 +133,7 @@ lazy val commonSettings = Seq(
   javacOptions += "-XDignore.symbol.file",
   fork in Test := true,
   resolvers += Resolver.mavenLocal,
+  startYear := Some(2013),
   concurrentRestrictions in Global += Tags.limit(Tags.Test, 1),
   scalacOptions ++= Seq(
     "-deprecation",
