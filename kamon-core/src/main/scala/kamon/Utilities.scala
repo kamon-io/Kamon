@@ -12,7 +12,7 @@ import scala.collection.concurrent.TrieMap
   */
 trait Utilities { self: Configuration =>
   private val _clock = new Clock.Anchored()
-  private val _scheduler = Executors.newScheduledThreadPool(1, numberedThreadFactory("kamon-scheduler", daemon = false))
+  private val _scheduler = Executors.newScheduledThreadPool(1, numberedThreadFactory("kamon-scheduler", daemon = true))
   private val _filters = TrieMap.empty[String, Filter]
 
   reconfigureUtilities(self.config())
