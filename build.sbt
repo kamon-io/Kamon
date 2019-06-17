@@ -132,7 +132,7 @@ lazy val commonSettings = Seq(
   resolvers += Resolver.mavenLocal,
   concurrentRestrictions in Global += Tags.limit(Tags.Test, 1),
   scalaVersion := "2.13.0",
-  crossScalaVersions := Seq("2.10.7", "2.11.12", "2.12.7", "2.13.0"),
+  crossScalaVersions := Seq("2.11.12", "2.12.7", "2.13.0"),
   scalacOptions ++= Seq(
     "-deprecation",
     "-encoding", "UTF-8",
@@ -140,7 +140,6 @@ lazy val commonSettings = Seq(
     "-language:implicitConversions", "-language:higherKinds", "-language:existentials", "-language:postfixOps",
     "-unchecked"
   ) ++ (CrossVersion.partialVersion(scalaVersion.value) match {
-    case Some((2,10)) => Seq("-Xfuture", "-Yno-generic-signatures", "-target:jvm-1.7")
     case Some((2,11)) => Seq("-Xfuture", "-Ybackend:GenASM","-Ydelambdafy:method","-target:jvm-1.8")
     case Some((2,12)) => Seq("-Xfuture", "-opt:l:method")
     case Some((2,13)) => Seq.empty
