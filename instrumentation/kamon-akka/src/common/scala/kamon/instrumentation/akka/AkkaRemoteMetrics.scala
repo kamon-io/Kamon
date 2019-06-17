@@ -41,5 +41,5 @@ object AkkaRemoteMetrics {
   }
 
   def serializationInstruments(system: String): SerializationInstruments =
-    _serializationInstrumentsCache.atomicGetOrElseUpdate(system, new SerializationInstruments(system))
+    _serializationInstrumentsCache.getOrElseUpdate(system, new SerializationInstruments(system))
 }

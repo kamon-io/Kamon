@@ -48,13 +48,13 @@ class AdaptiveSampler extends Sampler {
 
   override def decide(operation: Sampler.Operation): SamplingDecision = {
     val operationName = operation.operationName()
-    val operationSampler = _samplers.get(operationName).getOrElse {
+    val operationSampler = _samplers.getOrElse(operationName, {
       // It might happen that the first time we see an operation under high concurrent throughput we will reach this
       // block more than once, but worse case effect is that we will rebalance the operation samplers more than once.
-      val sampler = _samplers.atomicGetOrElseUpdate(operationName, buildOperationSampler(operationName))
+      val sampler = _samplers.getOrElseUpdate(operationName, buildOperationSampler(operationName))
       rebalance()
       sampler
-    }
+    })
 
     val decision = operationSampler.decide()
     if(decision == SamplingDecision.Sample)

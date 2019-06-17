@@ -50,10 +50,10 @@ object AkkaClusterShardingMetrics {
     private val _shardTelemetry = ShardingInstruments.shardTelemetry(system, typeName, shardHostedEntities, shardProcessedMessages)
 
     def hostedEntitiesPerShardCounter(shardID: String): AtomicLong =
-      _shardTelemetry.entitiesPerShard.atomicGetOrElseUpdate(shardID, new AtomicLong())
+      _shardTelemetry.entitiesPerShard.getOrElseUpdate(shardID, new AtomicLong())
 
     def processedMessagesPerShardCounter(shardID: String): AtomicLong =
-      _shardTelemetry.messagesPerShard.atomicGetOrElseUpdate(shardID, new AtomicLong())
+      _shardTelemetry.messagesPerShard.getOrElseUpdate(shardID, new AtomicLong())
 
     // We should only remove when the ShardRegion actor is terminated.
     override def remove(): Unit = {
@@ -85,7 +85,7 @@ object AkkaClusterShardingMetrics {
     private val _shardTelemetryMap = TrieMap.empty[String, ShardTelemetry]
 
     private def shardTelemetry(system: String, typeName: String, shardEntities: Histogram, shardMessages: Histogram): ShardTelemetry = {
-      _shardTelemetryMap.atomicGetOrElseUpdate(shardTelemetryKey(system, typeName), {
+      _shardTelemetryMap.getOrElseUpdate(shardTelemetryKey(system, typeName), {
         val entitiesPerShard = TrieMap.empty[String, AtomicLong]
         val messagesPerShard = TrieMap.empty[String, AtomicLong]
         val samplingInterval = AkkaRemoteInstrumentation.settings().shardMetricsSampleInterval

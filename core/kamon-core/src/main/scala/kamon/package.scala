@@ -64,13 +64,9 @@ package object kamon {
 
 
   /**
-    *  Workaround to the non thread-safe [scala.collection.concurrent.TrieMap#getOrElseUpdate()] method. More details on
-    *  why this is necessary can be found at [[https://issues.scala-lang.org/browse/SI-7943]].
+    *  Atomic variant of [scala.collection.concurrent.TrieMap#getOrElseUpdate()] method with cleanup and init functions.
     */
   implicit class AtomicGetOrElseUpdateOnTrieMap[K, V](val trieMap: TrieMap[K, V]) extends AnyVal {
-
-    def atomicGetOrElseUpdate(key: K, op: => V): V =
-      atomicGetOrElseUpdate(key, op, { _: V => () }, { _: V => () })
 
     def atomicGetOrElseUpdate(key: K, op: => V, cleanup: V => Unit, init: V => Unit): V =
       trieMap.get(key) match {
