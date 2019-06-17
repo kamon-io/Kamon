@@ -340,10 +340,10 @@ object Distribution {
     * values on them rather than trying to manually aggregate the buckets and take into account adjustments on dynamic
     * range.
     */
-  private class LocalHistogram(val dynamicRange: DynamicRange) extends BaseLocalHdrHistogram(dynamicRange)
+  private[kamon] class LocalHistogram(val dynamicRange: DynamicRange) extends BaseLocalHdrHistogram(dynamicRange)
     with Instrument.Snapshotting[Distribution] with DistributionSnapshotBuilder
 
-  private object LocalHistogram {
+  private[kamon] object LocalHistogram {
 
     /** Keeps a thread-local cache of local histograms that can be reused when aggregating distributions. */
     private val _localHistograms = new ThreadLocal[collection.mutable.Map[DynamicRange, LocalHistogram]] {
