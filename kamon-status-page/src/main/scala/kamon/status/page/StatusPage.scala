@@ -27,16 +27,19 @@ import scala.util.{Failure, Success, Try}
 /**
   * Uses an embedded web server to publish a simple status page with information about Kamon's internal status.
   */
-class StatusPage(initialConfig: Config) extends Module {
+class StatusPage(configPath: String) extends Module {
   private val _logger = LoggerFactory.getLogger(classOf[StatusPage])
   @volatile private var _statusPageServer: Option[StatusPageServer] = None
-  init(initialConfig)
+  init(Kamon.config().getConfig(configPath))
+
+  def this() =
+    this("kamon.status-page")
 
   override def stop(): Unit =
     stopServer()
 
   override def reconfigure(newConfig: Config): Unit =
-    init(newConfig)
+    init(newConfig.getConfig(configPath))
 
 
   private def init(config: Config): Unit = synchronized {
@@ -84,6 +87,6 @@ object StatusPage {
 
   class Factory extends ModuleFactory {
     override def create(settings: ModuleFactory.Settings): Module =
-      new StatusPage(settings.config)
+      new StatusPage()
   }
 }

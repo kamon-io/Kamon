@@ -18,8 +18,6 @@ package kamon
 package module
 
 import com.typesafe.config.Config
-import kamon.metric.PeriodSnapshot
-import kamon.trace.Span
 
 import scala.concurrent.ExecutionContext
 
@@ -58,14 +56,14 @@ trait ModuleFactory {
 
 object ModuleFactory {
 
+  /**
+    * Initial settings that get passed into factories when creating an automatically detected module.
+    */
   case class Settings (
     config: Config,
-    configPath: String,
     executionContext: ExecutionContext
   )
 }
-
-
 
 /**
   * Modules implementing this trait will get registered for periodically receiving metric period snapshots and span
@@ -107,20 +105,16 @@ object Module {
   /**
     * Configuration of a given module present in the classpath.
     *
-    * @param path The configuration path
     * @param name Module's name
     * @param description Module's description.
-    * @param clazz The class implementing the configured module.
-    * @param kind Module kind.
     * @param enabled Whether the module is enabled or not. Enabled modules in the classpath will be automatically
     *                started in any call to Kamon.loadModules().
+    * @param factory FQCN of the ModuleFactory implementation for the module.
     */
   case class Settings (
-    path: String,
     name: String,
     description: String,
     enabled: Boolean,
-    configPath: Option[String],
     factory: Option[String]
   )
 }

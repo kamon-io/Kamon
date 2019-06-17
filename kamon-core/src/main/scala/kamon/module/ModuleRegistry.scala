@@ -21,7 +21,7 @@ import java.time.{Duration, Instant}
 import java.util.concurrent.{CountDownLatch, Executors, ScheduledFuture, TimeUnit}
 import java.util.concurrent.atomic.AtomicReference
 
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.Config
 import kamon.module.Module.Registration
 import kamon.status.Status
 import kamon.metric.MetricRegistry
@@ -32,8 +32,6 @@ import org.slf4j.LoggerFactory
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutorService, Future, Promise}
 import scala.util.Try
 import scala.util.control.NonFatal
-
-
 
 /**
   * Controls the lifecycle of all available modules.
@@ -56,24 +54,17 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
   scheduleMetricsTicker()
   scheduleSpansTicker()
 
-
   /**
     * Registers a module that has created programmatically. If a module with the specified name already exists the
     * registration will fail. If the registered module is a MetricReporter and/or SpanReporter it will also be
     * registered to receive the metrics and/or spans data upon every tick.
-    *
-    * The configPath parameters allows to select a subset of the new configuration when processing reconfigure events.
-    * This option is particularly important when having more than one instance of the same module configured. If no
-    * configPath is provided, the reconfigure events will use the root configuration object on the reconfigure callbacks.
     */
-  def register(name: String, module: Module, configPath: Option[String]): Registration = synchronized {
+  def register(name: String, description: Option[String], module: Module): Registration = synchronized {
     if(_registeredModules.get(name).isEmpty) {
       val inferredSettings = Module.Settings(
-        "unknown",
         name,
-        module.getClass.getName,
+        description.getOrElse(module.getClass.getName),
         true,
-        configPath,
         factory = None
       )
 
@@ -253,11 +244,9 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
       case (modulePath, moduleConfig) =>
         val moduleSettings = Try {
           Module.Settings(
-            modulePath,
             moduleConfig.getString("name"),
             moduleConfig.getString("description"),
             moduleConfig.getBoolean("enabled"),
-            Option(moduleConfig.getString("config-path")),
             Option(moduleConfig.getString("factory"))
           )
         }
@@ -289,10 +278,8 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
     val moduleEC = createExecutor(settings)
 
     try {
-      val moduleConfigPath = settings.configPath.get
-      val moduleConfig = Kamon.config().getConfig(moduleConfigPath)
       val factory = ClassLoading.createInstance[ModuleFactory](settings.factory.get, Nil)
-      val instance = factory.create(ModuleFactory.Settings(moduleConfig, moduleConfigPath, moduleEC))
+      val instance = factory.create(ModuleFactory.Settings(Kamon.config(), moduleEC))
 
       Some(Entry(settings.name, moduleEC, programmaticallyAdded, settings, instance))
 
@@ -410,12 +397,7 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
     entry.executionContext.execute(new Runnable {
       override def run(): Unit =
         Try {
-          val moduleConfig = entry.settings.configPath
-            .map(config.getConfig)
-            .getOrElse(config)
-
-          entry.module.reconfigure(moduleConfig)
-
+          entry.module.reconfigure(config)
         }.failed.foreach(t => _logger.warn(s"Failure occurred while reconfiguring module [${entry.name}]", t))
     })
   }
@@ -443,7 +425,6 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
     traceTickInterval: Duration,
     traceReporterQueueSize: Int
   )
-
 
   private case class Entry[T <: Module](
     name: String,

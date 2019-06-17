@@ -27,7 +27,7 @@ import scala.concurrent.Future
   * span reporters, but modules can be used to encapsulate any process that should be started automatically by Kamon and
   * stopped when all modules are stopped (usually during shutdown).
   *
-  * Modules can be automatically discovered from the kamon.modules configuration key, using the following schema:
+  * Modules can be automatically discovered from the kamon.modules configuration path, using the following schema:
   *
   *   kamon.modules {
   *     module-name {
@@ -35,7 +35,6 @@ import scala.concurrent.Future
   *       name = "My Module Name"
   *       description = "A module description"
   *       factory = "com.example.MyModuleFactory"
-  *       config-path = "kamon.my-module"
   *     }
   *   }
   *
@@ -46,24 +45,19 @@ trait ModuleLoading { self: Configuration with Utilities with Metrics with Traci
   protected val _moduleRegistry = new ModuleRegistry(self, clock(), self.registry(), self.tracer())
   self.onReconfigure(newConfig => self._moduleRegistry.reconfigure(newConfig))
 
-
   /**
-    * Register a module instantiated by the user. This method assumes that the module does not read any dedicated
-    * configuration settings and when Kamon gets reconfigured, the module will be provided with an empty Config.
-    *
-    * The returned registration can be used to stop and deregister the module at any time.
+    * Register a module instantiated by the user and returns a Registration that can be used to stop and deregister the
+    * module at any time.
     */
   def registerModule(name: String, module: Module): Registration =
-    _moduleRegistry.register(name, module, None)
+    _moduleRegistry.register(name, None, module)
 
   /**
-    * Register a module instantiated by the user. When Kamon is reconfigured, the module will be reconfigured with the
-    * settings found under the provided configPath.
-    *
-    * The returned registration can be used to stop and deregister the module at any time.
+    * Register a module instantiated by the user and returns a Registration that can be used to stop and deregister the
+    * module at any time.
     */
-  def registerModule(name: String, module: Module, configPath: String): Registration =
-    _moduleRegistry.register(name, module, Option(configPath))
+  def registerModule(name: String, description: String, module: Module, configPath: String): Registration =
+    _moduleRegistry.register(name, Some(description), module)
 
   /**
     * Loads modules from Kamon's configuration.
