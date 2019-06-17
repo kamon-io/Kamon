@@ -327,12 +327,12 @@ object Span {
     case object Root extends Position
 
     /**
-      * A local root is the first Span within this process that is joining a trace started in another process
+      * A local root is the first Span within this process that is joining a trace started in another process.
       */
     case object LocalRoot extends Position
 
     /**
-      * A span whose location is not know or does not need to be specified
+      * A span whose position is not known or does not need to be specified.
       */
     case object Unknown extends Position
   }
@@ -378,7 +378,7 @@ object Span {
     from: Instant,
     to: Instant,
     kind: Kind,
-    location: Position,
+    position: Position,
     tags: TagSet,
     metricTags: TagSet,
     marks: Seq[Mark],
