@@ -161,6 +161,20 @@ class TagSetSpec extends WordSpec with Matchers {
       tags.get(plainBoolean("hasTracing")) shouldBe true
 
     }
+
+    "allow removing keys" in {
+      val tags = TagSet.from(Map(
+        "age" -> 5L,
+        "name" -> "Kamon",
+        "isAwesome" -> true,
+        "hasTracing" -> true,
+        "website" -> "kamon.io",
+        "luckyNumber" -> 7L
+      ))
+
+      tags.without("name").get(option("name")) shouldBe empty
+      tags.without("website").get(plain("name")) shouldBe "Kamon"
+    }
   }
 
   def matchPair(key: String, value: Any) = { tag: Tag => {

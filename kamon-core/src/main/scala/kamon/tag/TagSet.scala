@@ -79,11 +79,27 @@ class TagSet private(private val _underlying: UnifiedMap[String, Any]) {
     * instance are associated to a key present on the provided instance then the previous value will be discarded and
     * overwritten with the provided one.
     */
-  def withTags(other: TagSet): TagSet ={
+  def withTags(other: TagSet): TagSet = {
     val mergedMap = new UnifiedMap[String, Any](other._underlying.size() + this._underlying.size())
     mergedMap.putAll(this._underlying)
     mergedMap.putAll(other._underlying)
     new TagSet(mergedMap)
+  }
+
+  /**
+    * Creates a new TagSet instance without the provided key, if it was present.
+    */
+  def without(key: String): TagSet = {
+    if(_underlying.containsKey(key)) {
+      val withoutKey = new UnifiedMap[String, Any](_underlying.size())
+      _underlying.forEachKeyValue(new BiConsumer[String, Any] {
+        override def accept(t: String, u: Any): Unit =
+          if(t != key) withoutKey.put(t, u)
+      })
+
+      new TagSet(withoutKey)
+
+    } else this
   }
 
   /**
