@@ -1,53 +1,115 @@
 package org.HdrHistogram;
 
+import java.nio.ByteBuffer;
+
 import kamon.metric.DynamicRange;
 
 /**
  * Exposes internal state from the org.HdrHistogram.AtomicHistogram class.
+ * <p>
+ * Could extend AtomicHistogram and avoid the delegate pattern, but for issue https://github.com/scala/bug/issues/11575
  */
-public class BaseAtomicHdrHistogram extends AtomicHistogram implements HdrHistogramInternalState {
+public class BaseAtomicHdrHistogram extends AbstractHistogramBase implements HdrHistogramInternalState {
 
-  public BaseAtomicHdrHistogram(DynamicRange dynamicRange) {
-    super(dynamicRange.lowestDiscernibleValue(), dynamicRange.highestTrackableValue(), dynamicRange.significantValueDigits());
-  }
+    private AtomicHistogram delegate;
 
-  @Override
-  void incrementTotalCount() {
-    // We don't need to track the total count so this is just disabled.
-  }
+    public BaseAtomicHdrHistogram(DynamicRange dynamicRange) {
+        this.delegate = new AtomicHistogram(dynamicRange.lowestDiscernibleValue(), dynamicRange.highestTrackableValue(), dynamicRange.significantValueDigits());
+    }
 
-  @Override
-  void addToTotalCount(long value) {
-    // We don't need to track the total count so this is just disabled.
-  }
+    public long getHighestTrackableValue() {
+        return delegate.highestTrackableValue;
+    }
 
-  @Override
-  public int getCountsArraySize() {
-    return super.counts.length();
-  }
+    public void recordValue(long value) throws ArrayIndexOutOfBoundsException {
+        delegate.recordValue(value);
+    }
 
-  @Override
-  public long getFromCountsArray(int index) {
-    return super.counts.get(index);
-  }
+    public void recordValueWithCount(long value, long count) throws ArrayIndexOutOfBoundsException {
+        delegate.recordValueWithCount(value, count);
+    }
 
-  @Override
-  public long getAndSetFromCountsArray(int index, long newValue) {
-    return super.counts.getAndSet(index, newValue);
-  }
+    public void reset() {
+        delegate.reset();
+    }
 
-  @Override
-  public int getUnitMagnitude() {
-    return super.unitMagnitude;
-  }
+    @Override
+    public int getNeededByteBufferCapacity() {
+        return delegate.getNeededByteBufferCapacity();
+    }
 
-  @Override
-  public int getSubBucketHalfCount() {
-    return super.subBucketHalfCount;
-  }
+    @Override
+    public int encodeIntoCompressedByteBuffer(final ByteBuffer targetBuffer, int compressionLevel) {
+        return delegate.encodeIntoCompressedByteBuffer(targetBuffer, compressionLevel);
+    }
 
-  @Override
-  public int getSubBucketHalfCountMagnitude() {
-    return super.subBucketHalfCountMagnitude;
-  }
+    @Override
+    public long getStartTimeStamp() {
+        return delegate.getStartTimeStamp();
+    }
+
+    @Override
+    public void setStartTimeStamp(long startTimeStamp) {
+        delegate.setStartTimeStamp(startTimeStamp);
+    }
+
+    @Override
+    public long getEndTimeStamp() {
+        return delegate.getEndTimeStamp();
+    }
+
+    @Override
+    public void setEndTimeStamp(long startTimeStamp) {
+        delegate.setEndTimeStamp(startTimeStamp);
+    }
+
+    @Override
+    public String getTag() {
+        return delegate.getTag();
+    }
+
+    @Override
+    public void setTag(String tag) {
+        delegate.setTag(tag);
+    }
+
+    @Override
+    public double getMaxValueAsDouble() {
+        return delegate.getMaxValueAsDouble();
+    }
+
+    @Override
+    void setIntegerToDoubleValueConversionRatio(double integerToDoubleValueConversionRatio) {
+        delegate.setIntegerToDoubleValueConversionRatio(integerToDoubleValueConversionRatio);
+    }
+
+    @Override
+    public int getCountsArraySize() {
+        return delegate.counts.length();
+    }
+
+    @Override
+    public long getFromCountsArray(int index) {
+        return delegate.counts.get(index);
+    }
+
+    @Override
+    public long getAndSetFromCountsArray(int index, long newValue) {
+        return delegate.counts.getAndSet(index, newValue);
+    }
+
+    @Override
+    public int getUnitMagnitude() {
+        return delegate.unitMagnitude;
+    }
+
+    @Override
+    public int getSubBucketHalfCount() {
+        return delegate.subBucketHalfCount;
+    }
+
+    @Override
+    public int getSubBucketHalfCountMagnitude() {
+        return delegate.subBucketHalfCountMagnitude;
+    }
 }
