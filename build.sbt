@@ -13,10 +13,10 @@
  * =========================================================================================
  */
 
-val kamonCore     = "io.kamon" %%  "kamon-core"     % "2.0.0-M5"
-val kamonTestkit  = "io.kamon" %%  "kamon-testkit"  % "2.0.0-M5"
+val kamonCore     = "io.kamon" %%  "kamon-core"     % "2.0.0-RC1"
+val kamonTestkit  = "io.kamon" %%  "kamon-testkit"  % "2.0.0-RC1"
 val kanela        = "io.kamon" %   "kanela-agent"   % "1.0.0-M3"
-val kamonCommon   = "io.kamon" %%  "kamon-instrumentation-common"  % "2.0.0-M2"
+val kamonCommon   = "io.kamon" %%  "kamon-instrumentation-common"  % "2.0.0-RC1"
 
 val latestLogbackClassic  = "ch.qos.logback"  %   "logback-classic" % "1.2.3"
 
@@ -28,7 +28,7 @@ lazy val root = (project in file("."))
   .settings(instrumentationSettings)
   .settings(
     name := "kamon-logback",
-    scalaVersion := "2.12.6",
+    scalaVersion := "2.12.8",
     libraryDependencies ++=
       compileScope(kamonCore, kamonCommon) ++
       providedScope(kanela, latestLogbackClassic) ++
