@@ -22,34 +22,36 @@ import com.typesafe.config.{Config, ConfigUtil}
 import fi.iki.elonen.NanoHTTPD
 import fi.iki.elonen.NanoHTTPD.{Response, newFixedLengthResponse}
 import kamon.metric._
+import kamon.module.{MetricReporter, Module, ModuleFactory}
+import kamon.tag.TagSet
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 
-class PrometheusReporter extends MetricReporter {
-  import PrometheusReporter.Configuration.{readConfiguration, environmentTags}
+class PrometheusReporter(configPath: String) extends MetricReporter {
+  import PrometheusReporter.Settings.{readSettings, environmentTags}
 
-  private val logger = LoggerFactory.getLogger(classOf[PrometheusReporter])
-  private var embeddedHttpServer: Option[EmbeddedHttpServer] = None
-  private val snapshotAccumulator = new PeriodSnapshotAccumulator(Duration.ofDays(365 * 5), Duration.ZERO)
+  private val _logger = LoggerFactory.getLogger(classOf[PrometheusReporter])
+  private var _embeddedHttpServer: Option[EmbeddedHttpServer] = None
+  private val _snapshotAccumulator = PeriodSnapshot.accumulator(Duration.ofDays(365 * 5), Duration.ZERO)
 
-  @volatile private var preparedScrapeData: String =
+  @volatile private var _preparedScrapeData: String =
     "# The kamon-prometheus module didn't receive any data just yet.\n"
 
+  def this() =
+    this("kamon.prometheus")
 
-  override def start(): Unit = {
-    val config = readConfiguration(Kamon.config())
-
-    if(config.startEmbeddedServer)
-      startEmbeddedServer(config)
+  {
+    val initialSettings = readSettings(Kamon.config().getConfig(configPath))
+    if(initialSettings.startEmbeddedServer)
+      startEmbeddedServer(initialSettings)
   }
 
-  override def stop(): Unit = {
+  override def stop(): Unit =
     stopEmbeddedServer()
-  }
 
   override def reconfigure(newConfig: Config): Unit = {
-    val config = readConfiguration(newConfig)
+    val config = readSettings(newConfig.getConfig(configPath))
 
     stopEmbeddedServer()
     if(config.startEmbeddedServer) {
@@ -58,20 +60,21 @@ class PrometheusReporter extends MetricReporter {
   }
 
   override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
-    snapshotAccumulator.add(snapshot)
-    val currentData = snapshotAccumulator.peek()
-    val reporterConfiguration = readConfiguration(Kamon.config())
+    _snapshotAccumulator.add(snapshot)
+    val currentData = _snapshotAccumulator.peek()
+    val reporterConfiguration = readSettings(Kamon.config().getConfig(configPath))
     val scrapeDataBuilder = new ScrapeDataBuilder(reporterConfiguration, environmentTags(reporterConfiguration))
 
-    scrapeDataBuilder.appendCounters(currentData.metrics.counters)
-    scrapeDataBuilder.appendGauges(currentData.metrics.gauges)
-    scrapeDataBuilder.appendHistograms(currentData.metrics.histograms)
-    scrapeDataBuilder.appendHistograms(currentData.metrics.rangeSamplers)
-    preparedScrapeData = scrapeDataBuilder.build()
+    scrapeDataBuilder.appendCounters(currentData.counters)
+    scrapeDataBuilder.appendGauges(currentData.gauges)
+    scrapeDataBuilder.appendHistograms(currentData.histograms)
+    scrapeDataBuilder.appendHistograms(currentData.timers)
+    scrapeDataBuilder.appendHistograms(currentData.rangeSamplers)
+    _preparedScrapeData = scrapeDataBuilder.build()
   }
 
   def scrapeData(): String =
-    preparedScrapeData
+    _preparedScrapeData
 
   class EmbeddedHttpServer(hostname: String, port: Int) extends NanoHTTPD(hostname, port) {
     override def serve(session: NanoHTTPD.IHTTPSession): NanoHTTPD.Response = {
@@ -79,30 +82,46 @@ class PrometheusReporter extends MetricReporter {
     }
   }
 
-
-  private def startEmbeddedServer(config: PrometheusReporter.Configuration): Unit = {
+  private def startEmbeddedServer(config: PrometheusReporter.Settings): Unit = {
     val server = new EmbeddedHttpServer(config.embeddedServerHostname, config.embeddedServerPort)
     server.start()
 
-    logger.info(s"Started the embedded HTTP server on http://${config.embeddedServerHostname}:${config.embeddedServerPort}")
-    embeddedHttpServer = Some(server)
+    _logger.info(s"Started the embedded HTTP server on http://${config.embeddedServerHostname}:${config.embeddedServerPort}")
+    _embeddedHttpServer = Some(server)
   }
 
   private def stopEmbeddedServer(): Unit =
-    embeddedHttpServer.foreach(_.stop())
+    _embeddedHttpServer.foreach(_.stop())
 }
 
 object PrometheusReporter {
-  case class Configuration(startEmbeddedServer: Boolean, embeddedServerHostname: String, embeddedServerPort: Int,
-    defaultBuckets: Seq[java.lang.Double], timeBuckets: Seq[java.lang.Double], informationBuckets: Seq[java.lang.Double],
-    customBuckets: Map[String, Seq[java.lang.Double]], includeEnvironmentTags: Boolean)
 
-  object Configuration {
+  class Factory extends ModuleFactory {
+    override def create(settings: ModuleFactory.Settings): Module =
+      new PrometheusReporter()
+  }
 
-    def readConfiguration(config: Config): PrometheusReporter.Configuration = {
-      val prometheusConfig = config.getConfig("kamon.prometheus")
+  def create(): PrometheusReporter = {
+    val defaultConfigPath = "kamon.prometheus"
+    new PrometheusReporter()
+  }
 
-      PrometheusReporter.Configuration(
+
+  case class Settings(
+    startEmbeddedServer: Boolean,
+    embeddedServerHostname: String,
+    embeddedServerPort: Int,
+    defaultBuckets: Seq[java.lang.Double],
+    timeBuckets: Seq[java.lang.Double],
+    informationBuckets: Seq[java.lang.Double],
+    customBuckets: Map[String, Seq[java.lang.Double]],
+    includeEnvironmentTags: Boolean
+  )
+
+  object Settings {
+
+    def readSettings(prometheusConfig: Config): PrometheusReporter.Settings = {
+      PrometheusReporter.Settings(
         startEmbeddedServer = prometheusConfig.getBoolean("start-embedded-http-server"),
         embeddedServerHostname = prometheusConfig.getString("embedded-server.hostname"),
         embeddedServerPort = prometheusConfig.getInt("embedded-server.port"),
@@ -114,8 +133,8 @@ object PrometheusReporter {
       )
     }
 
-    def environmentTags(reporterConfiguration: PrometheusReporter.Configuration) =
-      if (reporterConfiguration.includeEnvironmentTags) Kamon.environment.tags else Map.empty[String, String]
+    def environmentTags(reporterConfiguration: PrometheusReporter.Settings): TagSet =
+      if (reporterConfiguration.includeEnvironmentTags) Kamon.environment.tags else TagSet.Empty
 
     private def readCustomBuckets(customBuckets: Config): Map[String, Seq[java.lang.Double]] =
       customBuckets

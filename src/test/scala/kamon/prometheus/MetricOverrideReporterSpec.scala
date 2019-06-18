@@ -17,11 +17,13 @@ package kamon.prometheus
 
 import com.typesafe.config.{Config, ConfigFactory}
 import kamon.metric._
-import kamon.testkit.MetricInspection
-import kamon.{Kamon, MetricReporter}
+import kamon.testkit.{InstrumentInspection, MetricInspection, MetricSnapshotBuilder}
+import kamon.Kamon
+import kamon.module.MetricReporter
+import kamon.tag.TagSet
 import org.scalatest.{Matchers, WordSpec}
 
-class MetricOverrideReporterSpec extends WordSpec with Matchers with MetricInspection {
+class MetricOverrideReporterSpec extends WordSpec with Matchers with MetricInspection.Syntax with InstrumentInspection.Syntax {
 
   "A MetricOverrideReporter" should {
     "apply metric overrides" in {
@@ -62,73 +64,73 @@ class MetricOverrideReporterSpec extends WordSpec with Matchers with MetricInspe
 
     "apply metric tag deletes" in {
       report(histogram("some-other-metric", Map("unwanted-tag" -> "foo", "keep-me" -> "bar"))) { snapshot =>
-        snapshot.histograms.head.tags should contain theSameElementsAs Map("keep-me" -> "bar")
+        snapshot.histograms.head.instruments.head.tags shouldBe TagSet.of("keep-me", "bar")
       }
 
       report(rangeSampler("some-other-metric", Map("unwanted-tag" -> "foo", "keep-me" -> "bar"))) { snapshot =>
-        snapshot.rangeSamplers.head.tags should contain theSameElementsAs Map("keep-me" -> "bar")
+        snapshot.rangeSamplers.head.instruments.head.tags shouldBe TagSet.of("keep-me", "bar")
       }
 
       report(gauge("some-other-metric", Map("unwanted-tag" -> "foo", "keep-me" -> "bar"))) { snapshot =>
-        snapshot.gauges.head.tags should contain theSameElementsAs Map("keep-me" -> "bar")
+        snapshot.gauges.head.instruments.head.tags shouldBe TagSet.of("keep-me", "bar")
       }
 
       report(counter("some-other-metric", Map("unwanted-tag" -> "foo", "keep-me" -> "bar"))) { snapshot =>
-        snapshot.counters.head.tags should contain theSameElementsAs Map("keep-me" -> "bar")
+        snapshot.counters.head.instruments.head.tags shouldBe TagSet.of("keep-me", "bar")
       }
     }
 
     "not delete tags with the same name from other metrics" in {
       report(histogram("other-metric-name", Map("unwanted-tag" -> "foo", "keep-me" -> "bar"))) { snapshot =>
-        snapshot.histograms.head.tags should contain theSameElementsAs Map("unwanted-tag" -> "foo", "keep-me" -> "bar")
+        snapshot.histograms.head.instruments.head.tags shouldBe TagSet.of("unwanted-tag", "foo").withTag("keep-me", "bar")
       }
 
       report(rangeSampler("other-metric-name", Map("unwanted-tag" -> "foo", "keep-me" -> "bar"))) { snapshot =>
-        snapshot.rangeSamplers.head.tags should contain theSameElementsAs Map("unwanted-tag" -> "foo", "keep-me" -> "bar")
+        snapshot.rangeSamplers.head.instruments.head.tags shouldBe TagSet.of("unwanted-tag", "foo").withTag("keep-me", "bar")
       }
 
       report(gauge("other-metric-name", Map("unwanted-tag" -> "foo", "keep-me" -> "bar"))) { snapshot =>
-        snapshot.gauges.head.tags should contain theSameElementsAs Map("unwanted-tag" -> "foo", "keep-me" -> "bar")
+        snapshot.gauges.head.instruments.head.tags shouldBe TagSet.of("unwanted-tag", "foo").withTag("keep-me", "bar")
       }
 
       report(counter("other-metric-name", Map("unwanted-tag" -> "foo", "keep-me" -> "bar"))) { snapshot =>
-        snapshot.counters.head.tags should contain theSameElementsAs Map("unwanted-tag" -> "foo", "keep-me" -> "bar")
+        snapshot.counters.head.instruments.head.tags shouldBe TagSet.of("unwanted-tag", "foo").withTag("keep-me", "bar")
       }
     }
 
     "apply metric tag renames" in {
       report(histogram("some-other-metric", Map("old-name" -> "foo", "leave-me" -> "bar"))) { snapshot =>
-        snapshot.histograms.head.tags should contain theSameElementsAs Map("new-name" -> "foo", "leave-me" -> "bar")
+        snapshot.histograms.head.instruments.head.tags shouldBe TagSet.of("new-name", "foo").withTag("leave-me", "bar")
       }
 
       report(rangeSampler("some-other-metric", Map("old-name" -> "foo", "leave-me" -> "bar"))) { snapshot =>
-        snapshot.rangeSamplers.head.tags should contain theSameElementsAs Map("new-name" -> "foo", "leave-me" -> "bar")
+        snapshot.rangeSamplers.head.instruments.head.tags shouldBe TagSet.of("new-name", "foo").withTag("leave-me", "bar")
       }
 
       report(gauge("some-other-metric", Map("old-name" -> "foo", "leave-me" -> "bar"))) { snapshot =>
-        snapshot.gauges.head.tags should contain theSameElementsAs Map("new-name" -> "foo", "leave-me" -> "bar")
+        snapshot.gauges.head.instruments.head.tags shouldBe TagSet.of("new-name", "foo").withTag("leave-me", "bar")
       }
 
       report(counter("some-other-metric", Map("old-name" -> "foo", "leave-me" -> "bar"))) { snapshot =>
-        snapshot.counters.head.tags should contain theSameElementsAs Map("new-name" -> "foo", "leave-me" -> "bar")
+        snapshot.counters.head.instruments.head.tags shouldBe TagSet.of("new-name", "foo").withTag("leave-me", "bar")
       }
     }
 
     "not rename tags from other metrics" in {
       report(histogram("other-metric-name", Map("old-name" -> "foo"))) { snapshot =>
-        snapshot.histograms.head.tags should contain theSameElementsAs Map("old-name" -> "foo")
+        snapshot.histograms.head.instruments.head.tags shouldBe TagSet.of("old-name", "foo")
       }
 
       report(rangeSampler("other-metric-name", Map("old-name" -> "foo"))) { snapshot =>
-        snapshot.rangeSamplers.head.tags should contain theSameElementsAs Map("old-name" -> "foo")
+        snapshot.rangeSamplers.head.instruments.head.tags shouldBe TagSet.of("old-name", "foo")
       }
 
       report(gauge("other-metric-name", Map("old-name" -> "foo"))) { snapshot =>
-        snapshot.gauges.head.tags should contain theSameElementsAs Map("old-name" -> "foo")
+        snapshot.gauges.head.instruments.head.tags shouldBe TagSet.of("old-name", "foo")
       }
 
       report(counter("other-metric-name", Map("old-name" -> "foo"))) { snapshot =>
-        snapshot.counters.head.tags should contain theSameElementsAs Map("old-name" -> "foo")
+        snapshot.counters.head.instruments.head.tags shouldBe TagSet.of("old-name", "foo")
       }
     }
   }
@@ -156,46 +158,36 @@ class MetricOverrideReporterSpec extends WordSpec with Matchers with MetricInspe
   val wrapper = new MetricOverrideReporter(reporter, config)
 
   class DummyMetricReporter extends MetricReporter {
-    override def start(): Unit = ()
-
     override def stop(): Unit = ()
-
     override def reconfigure(config: Config): Unit = ()
 
-    var metrics: MetricsSnapshot = _
+    var latestSnapshot: PeriodSnapshot = _
 
     override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
-      metrics = snapshot.metrics
+      latestSnapshot = snapshot
     }
   }
 
-
-  def report(periodSnapshot: PeriodSnapshot)(assertions: MetricsSnapshot => Unit): Unit = {
+  def report(periodSnapshot: PeriodSnapshot)(assertions: PeriodSnapshot => Unit): Unit = {
     wrapper.reportPeriodSnapshot(periodSnapshot)
-    assertions(reporter.metrics)
+    assertions(reporter.latestSnapshot)
   }
 
-  val emptyDistribution = Kamon.histogram("test").distribution()
   val emptyPeriodSnapshot = PeriodSnapshot(Kamon.clock().instant(), Kamon.clock().instant(),
-    MetricsSnapshot(Seq.empty, Seq.empty, Seq.empty, Seq.empty))
+    Seq.empty, Seq.empty, Seq.empty, Seq.empty, Seq.empty)
 
-  def counter(metricName: String, tags: Map[String, String]): PeriodSnapshot = {
-    emptyPeriodSnapshot.copy(metrics = emptyPeriodSnapshot.metrics
-      .copy(counters = Seq(MetricValue(metricName, tags, MeasurementUnit.none, 1))))
-  }
+  def counter(metricName: String, tags: Map[String, String]): PeriodSnapshot =
+    emptyPeriodSnapshot.copy(counters = Seq(MetricSnapshotBuilder.counter(metricName, TagSet.from(tags), 1L)))
 
-  def gauge(metricName: String, tags: Map[String, String]): PeriodSnapshot = {
-    emptyPeriodSnapshot.copy(metrics = emptyPeriodSnapshot.metrics
-      .copy(gauges = Seq(MetricValue(metricName, tags, MeasurementUnit.none, 1))))
-  }
+  def gauge(metricName: String, tags: Map[String, String]): PeriodSnapshot =
+    emptyPeriodSnapshot.copy(gauges = Seq(MetricSnapshotBuilder.gauge(metricName, TagSet.from(tags), 1D)))
 
-  def histogram(metricName: String, tags: Map[String, String]): PeriodSnapshot = {
-    emptyPeriodSnapshot.copy(metrics = emptyPeriodSnapshot.metrics
-      .copy(histograms = Seq(MetricDistribution(metricName, tags, MeasurementUnit.none, DynamicRange.Default, emptyDistribution))))
-  }
+  def histogram(metricName: String, tags: Map[String, String]): PeriodSnapshot =
+    emptyPeriodSnapshot.copy(histograms = Seq(MetricSnapshotBuilder.histogram(metricName, TagSet.from(tags))(1)))
 
-  def rangeSampler(metricName: String, tags: Map[String, String]): PeriodSnapshot = {
-    emptyPeriodSnapshot.copy(metrics = emptyPeriodSnapshot.metrics
-      .copy(rangeSamplers = Seq(MetricDistribution(metricName, tags, MeasurementUnit.none, DynamicRange.Default, emptyDistribution))))
-  }
+  def rangeSampler(metricName: String, tags: Map[String, String]): PeriodSnapshot =
+    emptyPeriodSnapshot.copy(rangeSamplers = Seq(MetricSnapshotBuilder.histogram(metricName, TagSet.from(tags))(1)))
+
+  def timers(metricName: String, tags: Map[String, String]): PeriodSnapshot =
+    emptyPeriodSnapshot.copy(rangeSamplers = Seq(MetricSnapshotBuilder.histogram(metricName, TagSet.from(tags))(1)))
 }

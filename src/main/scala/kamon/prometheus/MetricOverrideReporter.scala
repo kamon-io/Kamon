@@ -17,7 +17,9 @@ package kamon
 package prometheus
 
 import com.typesafe.config.Config
-import kamon.metric.{MetricDistribution, MetricValue, PeriodSnapshot}
+import kamon.metric.{Metric, MetricSnapshot, PeriodSnapshot}
+import kamon.module.MetricReporter
+import kamon.tag.{Tag, TagSet}
 
 import scala.collection.JavaConverters.{asScalaBufferConverter, mapAsScalaMapConverter}
 
@@ -27,17 +29,15 @@ class MetricOverrideReporter(wrappedReporter: MetricReporter, config: Config = K
     getMetricMapping(config)
 
   override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
-    val updatedMetrics = snapshot.metrics.copy(
-      histograms = snapshot.metrics.histograms.map(updateDistribution),
-      rangeSamplers = snapshot.metrics.rangeSamplers.map(updateDistribution),
-      gauges = snapshot.metrics.gauges.map(updateValue),
-      counters = snapshot.metrics.counters.map(updateValue))
+    val updatedSnapshot = snapshot.copy(
+      histograms = snapshot.histograms.map(updateDistribution),
+      timers = snapshot.timers.map(updateDistribution),
+      rangeSamplers = snapshot.rangeSamplers.map(updateDistribution),
+      gauges = snapshot.gauges.map(updateDistribution),
+      counters = snapshot.counters.map(updateDistribution))
 
-    wrappedReporter.reportPeriodSnapshot(snapshot.copy(metrics = updatedMetrics))
+    wrappedReporter.reportPeriodSnapshot(updatedSnapshot)
   }
-
-  override def start(): Unit =
-    wrappedReporter.start()
 
   override def stop(): Unit =
     wrappedReporter.stop()
@@ -47,34 +47,45 @@ class MetricOverrideReporter(wrappedReporter: MetricReporter, config: Config = K
     wrappedReporter.reconfigure(config)
   }
 
-  private def remapTags(tags: kamon.Tags, mapping: MetricMapping): kamon.Tags = {
-    tags.collect {
-      case (name, value) if !mapping.tagsToDelete.contains(name) =>
-        (mapping.tagsToRename.getOrElse(name, name), value)
-    }
+  private def remapTags(tags: TagSet, mapping: MetricMapping): TagSet = {
+    val remappedTags = TagSet.builder()
+
+    tags.iterator().foreach(tag => {
+      if(!mapping.tagsToDelete.contains(tag.key)) {
+        remappedTags.add(mapping.tagsToRename.getOrElse(tag.key, tag.key), Tag.unwrapValue(tag).toString)
+      }
+    })
+
+    remappedTags.build()
   }
 
-  private def updateDistribution(metricDistribution: MetricDistribution): MetricDistribution = {
-    val mappingForDistribution = metricsMap.get(metricDistribution.name)
+  private def updateDistribution[T <: Metric.Settings, U](metric: MetricSnapshot[T, U]): MetricSnapshot[T, U] = {
+    metricsMap.get(metric.name).map(mapping => {
 
-    metricDistribution.copy(
-      name = mappingForDistribution.flatMap(_.newName).getOrElse(metricDistribution.name),
-      tags = mappingForDistribution.map(
-        mapping => remapTags(metricDistribution.tags, mapping)
-      ).getOrElse(metricDistribution.tags)
-    )
+      val mappedInstruments = if(mapping.tagsToRename.isEmpty && mapping.tagsToDelete.isEmpty) metric.instruments else {
+        metric.instruments.map(inst => {
+          inst.copy(tags = remapTags(inst.tags, mapping))
+        })
+      }
+
+      metric.copy(
+        name = mapping.newName.getOrElse(metric.name),
+        instruments = mappedInstruments
+      )
+
+    }).getOrElse(metric)
   }
-
-  private def updateValue(metricValue: MetricValue): MetricValue = {
-    val mappingForValue = metricsMap.get(metricValue.name)
-
-    metricValue.copy(
-      name = mappingForValue.flatMap(_.newName).getOrElse(metricValue.name),
-      tags = mappingForValue.map(
-        mapping => remapTags(metricValue.tags, mapping)
-      ).getOrElse(metricValue.tags)
-    )
-  }
+//
+//  private def updateValue(metricValue: MetricValue): MetricValue = {
+//    val mappingForValue = metricsMap.get(metricValue.name)
+//
+//    metricValue.copy(
+//      name = mappingForValue.flatMap(_.newName).getOrElse(metricValue.name),
+//      tags = mappingForValue.map(
+//        mapping => remapTags(metricValue.tags, mapping)
+//      ).getOrElse(metricValue.tags)
+//    )
+//  }
 
   private def getMetricMapping(config: Config): Map[String, MetricMapping] = {
     val mappingConfig = config.getConfig("kamon.prometheus.metric-overrides")
