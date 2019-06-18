@@ -13,10 +13,10 @@
  * =========================================================================================
  */
 
-val kamonCore        = "io.kamon"     %% "kamon-core"                   % "2.0.0-M5"
-val kamonTestkit     = "io.kamon"     %% "kamon-testkit"                % "2.0.0-M5"
-val kamonExecutors   = "io.kamon"     %% "kamon-executors"              % "2.0.0-M2"
-val kamonInstrument  = "io.kamon"     %% "kamon-instrumentation-common" % "2.0.0-M2"
+val kamonCore        = "io.kamon"     %% "kamon-core"                   % "2.0.0-RC1"
+val kamonTestkit     = "io.kamon"     %% "kamon-testkit"                % "2.0.0-RC1"
+val kamonExecutors   = "io.kamon"     %% "kamon-executors"              % "2.0.0-RC1"
+val kamonInstrument  = "io.kamon"     %% "kamon-instrumentation-common" % "2.0.0-RC1"
 val kanelaAgent      = "io.kamon"     %  "kanela-agent"                 % "1.0.0-M3"
 
 val twitterUtilCore  = "com.twitter"   %% "util-core"                   % "6.40.0"
@@ -37,6 +37,7 @@ lazy val `kamon-futures` = (project in file("."))
 
 lazy val `kamon-twitter-future` = (project in file("kamon-twitter-future"))
   .enablePlugins(JavaAgent)
+  .settings(noPublishing: _*)
   .settings(instrumentationSettings)
   .settings(
     bintrayPackage := "kamon-futures",
@@ -47,6 +48,7 @@ lazy val `kamon-twitter-future` = (project in file("kamon-twitter-future"))
 
 lazy val `kamon-scalaz-future` = (project in file("kamon-scalaz-future"))
   .enablePlugins(JavaAgent)
+  .settings(noPublishing: _*)
   .settings(instrumentationSettings)
   .settings(
     bintrayPackage := "kamon-futures",
@@ -67,6 +69,7 @@ lazy val `kamon-scala-future` = (project in file("kamon-scala-future"))
 
 lazy val `kamon-cats-io` = (project in file("kamon-cats-io"))
   .enablePlugins(JavaAgent)
+  .settings(noPublishing: _*)
   .settings(bintrayPackage := "kamon-futures")
   .settings(instrumentationSettings)
   .settings(
