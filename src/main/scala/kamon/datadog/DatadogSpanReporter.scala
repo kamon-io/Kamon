@@ -53,9 +53,7 @@ class DatadogSpanReporter extends SpanReporter {
     httpClient.doJsonPut(Json.toJson(spanList))
   }
 
-  override def start(): Unit = {
-    logger.info("Started the Kamon DataDog reporter")
-  }
+  logger.info("Started the Kamon DataDog reporter")
 
   override def stop(): Unit = {
     logger.info("Stopped the Kamon DataDog reporter")

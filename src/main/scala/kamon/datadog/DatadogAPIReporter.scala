@@ -44,9 +44,7 @@ class DatadogAPIReporter extends MetricReporter {
   private var configuration = readConfiguration(Kamon.config())
   private var httpClient: HttpClient = new HttpClient(configuration.httpConfig)
 
-  override def start(): Unit = {
-    logger.info("Started the Datadog API reporter.")
-  }
+  logger.info("Started the Datadog API reporter.")
 
   override def stop(): Unit = {
     logger.info("Stopped the Datadog API reporter.")

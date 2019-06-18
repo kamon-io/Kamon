@@ -62,13 +62,16 @@ trait TestData {
     "meta" -> Json.obj(),
     "error" -> 0,
     "type" -> "custom",
-    "start" -> JsNumber(from.getEpochNano)
+    "start" -> JsNumber(from.getEpochNano),
+    "metrics" -> JsObject(Seq(
+       "_sampling_priority_v1" -> JsNumber(1)
+    ))
   )
 
   val spanWithoutParentId = span.copy(parentId = Identifier.Empty)
   val jsonWithoutParentId = json - "parent_id"
 
-  val spanWithError = span.copy(tags = TagSet.of("error", true))
+  val spanWithError = span.copy(tags = TagSet.of("error", true), hasError=true)
 
   val jsonWithError = json ++ Json.obj(
     "meta" -> Json.obj(
@@ -149,8 +152,6 @@ class DatadogSpanReporterSpec extends AbstractHttpReporter with Matchers with Re
 
   "the DatadogSpanReporter" should {
     val reporter = new DatadogSpanReporter()
-
-    reporter.start()
 
     val (firstSpan, _) = testMap.get("single span").head
 

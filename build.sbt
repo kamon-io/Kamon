@@ -17,8 +17,8 @@ import com.typesafe.sbt.SbtScalariform.ScalariformKeys
 import scalariform.formatter.preferences._
 
 
-val kamonCore             = "io.kamon"               %% "kamon-core"          % "2.0.0-M4"
-val kamonTestKit          = "io.kamon"               %% "kamon-testkit"       % "2.0.0-M4"
+val kamonCore             = "io.kamon"               %% "kamon-core"          % "2.0.0-M5"
+val kamonTestKit          = "io.kamon"               %% "kamon-testkit"       % "2.0.0-M5"
 val asyncHttpClient       = "com.squareup.okhttp3"    % "okhttp"              % "3.10.0"
 val asyncHttpClientMock   = "com.squareup.okhttp3"    % "mockwebserver"       % "3.10.0"
 val diffson               = "org.gnieh"              %% "diffson-play-json"    % "4.0.0-M3"

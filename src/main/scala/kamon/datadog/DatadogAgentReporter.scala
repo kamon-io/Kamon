@@ -46,8 +46,7 @@ class DatadogAgentReporter private[datadog] (c: DatadogAgentReporter.Configurati
   private val samplingRateFormat = new DecimalFormat("#.################################################################", symbols)
   private val valueFormat = new DecimalFormat("#0.#########", symbols)
 
-  override def start(): Unit =
-    logger.info("Started the Kamon Datadog reporter")
+  logger.info("Started the Kamon Datadog reporter")
 
   override def stop(): Unit = {}
 
@@ -152,14 +151,14 @@ object DatadogAgentReporter {
   private def getMeasurementFormatter(config: Config, dynamic: DynamicAccess): MeasurementFormatter = {
     config.getString("agent.measurement-formatter") match {
       case "default" => new DefaultMeasurementFormatter(config)
-      case fqn       => dynamic.createInstanceFor[MeasurementFormatter](fqn, List(classOf[Config] -> config)).get
+      case fqn       => dynamic.createInstanceFor[MeasurementFormatter](fqn, List(classOf[Config] -> config))
     }
   }
 
   private def getPacketBuffer(config: Config, dynamic: DynamicAccess): PacketBuffer = {
     config.getString("agent.packetbuffer") match {
       case "default" => new PacketBufferImpl(config)
-      case fqn       => dynamic.createInstanceFor[PacketBuffer](fqn, List(classOf[Config] -> config)).get
+      case fqn       => dynamic.createInstanceFor[PacketBuffer](fqn, List(classOf[Config] -> config))
     }
   }
 
