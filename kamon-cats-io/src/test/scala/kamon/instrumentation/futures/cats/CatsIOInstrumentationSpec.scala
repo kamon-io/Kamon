@@ -11,6 +11,7 @@ import org.scalatest.concurrent.{Eventually, PatienceConfiguration, ScalaFutures
 
 import scala.concurrent.ExecutionContext.global
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration._
 
 class CatsIoInstrumentationSpec extends WordSpec with ScalaFutures with Matchers with PatienceConfiguration
     with OptionValues with Eventually {
@@ -45,7 +46,7 @@ class CatsIoInstrumentationSpec extends WordSpec with ScalaFutures with Matchers
         val contextTagFuture = contextTagAfterTransformations.unsafeToFuture()
 
 
-        eventually {
+        eventually(timeout(10 seconds)) {
           contextTagFuture.value.get.get shouldBe "value"
         }
       }
