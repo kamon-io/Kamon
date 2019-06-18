@@ -195,7 +195,7 @@ object HostMetrics {
       reads: DiffCounter,
       readBytes: DiffCounter,
       writes: DiffCounter,
-      writeBytes: DiffCounter,
+      writeBytes: DiffCounter
     )
   }
 

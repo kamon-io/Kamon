@@ -19,7 +19,7 @@ import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.util.matching.Regex
 
-class JvmMetricsCollector(ec: ExecutionContext, initialConfig: Config) extends Module {
+class JvmMetricsCollector(ec: ExecutionContext) extends Module {
   private val _defaultTags = TagSet.of("component", "jvm")
   private val _gcListener = registerGcListener(_defaultTags)
   private val _memoryUsageInstruments = new MemoryUsageInstruments(_defaultTags)
@@ -146,7 +146,7 @@ object JvmMetricsCollector {
 
   class Factory extends ModuleFactory {
     override def create(settings: ModuleFactory.Settings): Module =
-      new JvmMetricsCollector(settings.executionContext, settings.config)
+      new JvmMetricsCollector(settings.executionContext)
   }
 
   case class Collector (
@@ -213,7 +213,7 @@ object JvmMetricsCollector {
       "Compressed Class Space"  -> MemoryPool("Compressed Class Space", "compressed-class-space", Usage.CodeCache),
       "PS Eden Space"           -> MemoryPool("PS Eden Space", "eden", Usage.Eden),
       "PS Survivor Space"       -> MemoryPool("PS Survivor Space", "survivor", Usage.YoungGeneration),
-      "PS Old Gen"              -> MemoryPool("PS Old Gen", "old", Usage.OldGeneration),
+      "PS Old Gen"              -> MemoryPool("PS Old Gen", "old", Usage.OldGeneration)
     )
 
     private val _invalidChars: Regex = """[^a-z0-9]""".r

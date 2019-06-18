@@ -21,8 +21,9 @@ import scala.concurrent.{ExecutionContext, Future}
   * time, like the CPU usage, while the infrequent collector focuses on metrics that can be updated less frequently like
   * swap and memory usage and cumulative metrics like network and storage usage.
   */
-class HostMetricsCollector(ec: ExecutionContext, initialConfig: Config) extends Module {
-  @volatile private var _settings: HostMetricsCollector.Settings = readSettings(initialConfig)
+class HostMetricsCollector(ec: ExecutionContext) extends Module {
+  private val _configPath = "kamon.instrumentation.system.host"
+  @volatile private var _settings: HostMetricsCollector.Settings = readSettings(Kamon.config())
 
   private val _frequentCollector = new FrequentCollectionTask
   private val _infrequentCollector = new InfrequentCollectionTask
@@ -39,11 +40,14 @@ class HostMetricsCollector(ec: ExecutionContext, initialConfig: Config) extends 
   override def reconfigure(newConfig: Config): Unit =
     _settings = readSettings(newConfig)
 
-  private def readSettings(config: Config): HostMetricsCollector.Settings =
+  private def readSettings(config: Config): HostMetricsCollector.Settings = {
+    val hostConfig = config.getConfig(_configPath)
+
     HostMetricsCollector.Settings(
-      Filter.from(config.getConfig("network.tracked-interfaces")),
-      Filter.from(config.getConfig("storage.tracked-mount-types"))
+      Filter.from(hostConfig.getConfig("network.tracked-interfaces")),
+      Filter.from(hostConfig.getConfig("storage.tracked-mount-types"))
     )
+  }
 
   private def scheduleOnModuleEC(task: CollectionTask): Runnable = new Runnable {
     override def run(): Unit =
@@ -99,7 +103,6 @@ class HostMetricsCollector(ec: ExecutionContext, initialConfig: Config) extends 
       } else {
         _prevCpuLoadTicks = _hal.getProcessor().getSystemCpuLoadTicks()
       }
-
     }
 
     private def ticksDiff(previous: Array[Long], current: Array[Long], tickType: TickType): Long =
@@ -206,7 +209,7 @@ object HostMetricsCollector {
 
   class Factory extends ModuleFactory {
     override def create(settings: ModuleFactory.Settings): Module =
-      new HostMetricsCollector(settings.executionContext, settings.config)
+      new HostMetricsCollector(settings.executionContext)
   }
 
   case class Settings (

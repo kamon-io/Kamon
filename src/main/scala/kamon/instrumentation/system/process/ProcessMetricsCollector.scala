@@ -17,7 +17,8 @@ import scala.collection.JavaConverters.iterableAsScalaIterableConverter
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
-class ProcessMetricsCollector(ec: ExecutionContext, initialConfig: Config) extends Module {
+class ProcessMetricsCollector(ec: ExecutionContext) extends Module {
+  private val _hiccupIntervalPath = "kamon.instrumentation.system.process.hiccup-monitor-interval"
   private val _defaultTags = TagSet.of("component", "process")
   private val _processCpuInstruments = new ProcessInstruments(_defaultTags)
   private val _collectionTask = new MetricsCollectionTask
@@ -30,9 +31,9 @@ class ProcessMetricsCollector(ec: ExecutionContext, initialConfig: Config) exten
     _collectionTask.cleanup()
   }
 
-  override def reconfigure(newConfig: Config): Unit = {
-    _hiccupMonitor.updateInterval(newConfig.getDuration("hiccup-monitor-interval"))
-  }
+  override def reconfigure(newConfig: Config): Unit =
+    _hiccupMonitor.updateInterval(newConfig.getDuration(_hiccupIntervalPath))
+
 
   private def scheduleOnModuleEC(task: MetricsCollectionTask): Runnable = new Runnable {
     override def run(): Unit =
@@ -40,7 +41,7 @@ class ProcessMetricsCollector(ec: ExecutionContext, initialConfig: Config) exten
   }
 
   private def startHiccupMonitor(): HiccupMonitor = {
-    val interval = initialConfig.getDuration("hiccup-monitor-interval")
+    val interval = Kamon.config().getDuration(_hiccupIntervalPath)
     val monitorThread = new HiccupMonitor(_processCpuInstruments.hiccups, interval)
     monitorThread.setDaemon(true)
     monitorThread.setName("hiccup-monitor")
@@ -94,7 +95,7 @@ class ProcessMetricsCollector(ec: ExecutionContext, initialConfig: Config) exten
 
     private def recordProcessULimits(): Unit = {
       val process = _os.getProcess(_pid)
-      _processCpuInstruments.openFilesCurrent.record(process.getOpenFiles())
+      _processCpuInstruments.openFilesCurrent.record(Math.max(process.getOpenFiles(), 0))
 
       Try {
         if (Platform.isLinux()) {
@@ -157,6 +158,6 @@ object ProcessMetricsCollector {
 
   class Factory extends ModuleFactory {
     override def create(settings: ModuleFactory.Settings): Module =
-      new ProcessMetricsCollector(settings.executionContext, settings.config)
+      new ProcessMetricsCollector(settings.executionContext)
   }
 }
