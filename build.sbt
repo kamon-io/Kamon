@@ -1,5 +1,5 @@
 /* =========================================================================================
- * Copyright © 2013-2017 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2018 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -13,21 +13,23 @@
  * =========================================================================================
  */
 
-val kamonCore             = "io.kamon"        %%  "kamon-core"      % "1.1.3"
-val kamonTestkit          = "io.kamon"        %%  "kamon-testkit"   % "1.1.3"
+val kamonCore     = "io.kamon" %%  "kamon-core"     % "2.0.0-RC1"
+val kamonTestkit  = "io.kamon" %%  "kamon-testkit"  % "2.0.0-RC1"
+val kanela        = "io.kamon" %   "kanela-agent"   % "1.0.0-M3"
+val kamonCommon   = "io.kamon" %%  "kamon-instrumentation-common"  % "2.0.0-RC1"
+
 val latestLogbackClassic  = "ch.qos.logback"  %   "logback-classic" % "1.2.3"
 
 resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
+resolvers += Resolver.mavenLocal
 
 lazy val root = (project in file("."))
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
     name := "kamon-logback",
-    scalaVersion := "2.12.6",
-    kamonUseAspectJ := true,
+    scalaVersion := "2.12.8",
     libraryDependencies ++=
-      compileScope(kamonCore, latestLogbackClassic) ++
-      providedScope(aspectJ) ++
-      testScope(kamonTestkit, scalatest)
-  )
+      compileScope(kamonCore, kamonCommon) ++
+      providedScope(kanela, latestLogbackClassic) ++
+      testScope(kamonTestkit, scalatest))

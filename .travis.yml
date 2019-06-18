@@ -1,6 +1,6 @@
 language: scala
 script:
-  - sbt +test
+  - sbt +test && sbt -Dagent=kanela +test
 scala:
    - 2.12.4
 jdk:
