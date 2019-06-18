@@ -42,6 +42,9 @@ import scala.collection.concurrent.TrieMap
 class AdaptiveSampler extends Sampler {
   @volatile private var _settings = AdaptiveSampler.Settings.from(Kamon.config())
   private val _samplers = TrieMap.empty[String, AdaptiveSampler.OperationSampler]
+  private val _affirmativeDecisionCounter = Sampler.Metrics.samplingDecisions("adaptive", SamplingDecision.Sample)
+  private val _negativeDecisionCounter = Sampler.Metrics.samplingDecisions("adaptive", SamplingDecision.DoNotSample)
+
 
   override def decide(operation: Sampler.Operation): SamplingDecision = {
     val operationName = operation.operationName()
@@ -53,7 +56,13 @@ class AdaptiveSampler extends Sampler {
       sampler
     }
 
-    operationSampler.decide()
+    val decision = operationSampler.decide()
+    if(decision == SamplingDecision.Sample)
+      _affirmativeDecisionCounter.increment()
+    else
+      _negativeDecisionCounter.increment()
+
+    decision
   }
 
   private def buildOperationSampler(operationName: String): AdaptiveSampler.OperationSampler = synchronized {

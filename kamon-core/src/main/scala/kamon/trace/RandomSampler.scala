@@ -25,12 +25,20 @@ import kamon.trace.Trace.SamplingDecision
   * Sampler that uses a random number generator and a probability threshold to decide whether to trace a request or not.
   */
 class RandomSampler private(probability: Double) extends Sampler {
-  val upperBoundary = Long.MaxValue * probability
-  val lowerBoundary = -upperBoundary
+  private val _upperBoundary = Long.MaxValue * probability
+  private val _lowerBoundary = -_upperBoundary
+  private val _affirmativeDecisionCounter = Sampler.Metrics.samplingDecisions("random", SamplingDecision.Sample)
+  private val _negativeDecisionCounter = Sampler.Metrics.samplingDecisions("random", SamplingDecision.DoNotSample)
 
   override def decide(operation: Sampler.Operation): SamplingDecision = {
     val random = ThreadLocalRandom.current().nextLong()
-    if(random >= lowerBoundary && random <= upperBoundary) SamplingDecision.Sample else SamplingDecision.DoNotSample
+    if(random >= _lowerBoundary && random <= _upperBoundary) {
+      _affirmativeDecisionCounter.increment()
+      SamplingDecision.Sample
+    } else {
+      _negativeDecisionCounter.increment()
+      SamplingDecision.DoNotSample
+    }
   }
 
   override def toString: String =

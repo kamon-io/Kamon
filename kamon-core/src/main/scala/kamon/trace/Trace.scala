@@ -94,7 +94,6 @@ object Trace {
       s"{id=${id.string},samplingDecision=${_samplingDecision}"
   }
 
-
   /**
     * A Sampling decision indicates whether Spans belonging to a trace should be captured and sent to the SpanReporters
     * or not.
@@ -105,20 +104,24 @@ object Trace {
     /**
       * Indicates that all Spans that belong to a trace should be captured and reported.
       */
-    case object Sample extends SamplingDecision
-
+    case object Sample extends SamplingDecision {
+      override def toString: String = "sample"
+    }
 
     /**
       * Indicates that all Spans that belong to a trace should not be captured nor reported. Note that traces with a
       * "do not sample" decision will still generate Spans that can gather metrics and propagate with the Context, they
       * just don't get sent to the Span reporters.
       */
-    case object DoNotSample extends SamplingDecision
-
+    case object DoNotSample extends SamplingDecision {
+      override def toString: String = "do-not-sample"
+    }
 
     /**
       * Indicates that a sampling decision has not been made yet.
       */
-    case object Unknown extends SamplingDecision
+    case object Unknown extends SamplingDecision {
+      override def toString: String = "unknown"
+    }
   }
 }

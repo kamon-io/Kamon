@@ -17,6 +17,10 @@
 package kamon
 package trace
 
+import kamon.metric.Counter
+import kamon.tag.TagSet
+import kamon.trace.Trace.SamplingDecision
+
 /**
   * A sampler takes the decision of whether to collect and report Spans for a particular trace. Samplers are used only
   * when starting a new Trace.
@@ -32,6 +36,23 @@ trait Sampler {
 }
 
 object Sampler {
+
+  object Metrics {
+
+    val SamplingDecisions = Kamon.counter(
+      name = "kamon.trace.sampler.decisions",
+      description = "Counts how many sampling decisions have been taking by Kamon's current sampler."
+    )
+
+    def samplingDecisions(samplerName: String, decision: SamplingDecision): Counter =
+      SamplingDecisions.withTags(
+        TagSet.builder()
+          .add("sampler", samplerName)
+          .add("decision", decision.toString)
+          .build()
+      )
+
+  }
 
   /**
     * Exposes access to information about the operation triggering the sampling. The Kamon tracer can take a sampling in
