@@ -19,9 +19,12 @@ package kamon.zipkin
 import java.net.InetAddress
 
 import com.typesafe.config.Config
-import kamon.trace.IdentityProvider
-import kamon.{Kamon, SpanReporter}
-import kamon.trace.Span.{Mark, TagValue, FinishedSpan => KamonSpan}
+import kamon.Kamon
+import kamon.module.{Module, ModuleFactory, SpanReporter}
+import kamon.tag.TagSet
+import kamon.tag.Lookups.{longOption, option}
+import kamon.trace.Span
+import kamon.trace.Span.Mark
 import kamon.util.Clock
 import org.slf4j.LoggerFactory
 import zipkin2.{Endpoint, Span => ZipkinSpan}
@@ -30,50 +33,50 @@ import zipkin2.reporter.AsyncReporter
 
 import scala.util.Try
 
-class ZipkinReporter extends SpanReporter {
+class ZipkinReporter(configPath: String) extends SpanReporter {
   import ZipkinReporter._
 
-  private val logger = LoggerFactory.getLogger(classOf[ZipkinReporter])
-  private var localEndpoint = buildEndpoint
-  private var reporter      = buildReporter
+  private val _logger = LoggerFactory.getLogger(classOf[ZipkinReporter])
+  private var _localEndpoint = buildEndpoint()
+  private var _reporter = buildReporter(Kamon.config())
 
   checkJoinParameter()
+  _logger.info("Started the Zipkin reporter")
+
+  def this() =
+    this("kamon.zipkin")
 
   def checkJoinParameter() = {
     val joinRemoteParentsWithSameID = Kamon.config().getBoolean("kamon.trace.join-remote-parents-with-same-span-id")
     if(!joinRemoteParentsWithSameID)
-      logger.warn("For full Zipkin compatibility enable `kamon.trace.join-remote-parents-with-same-span-id` to " +
+      _logger.warn("For full Zipkin compatibility enable `kamon.trace.join-remote-parents-with-same-span-id` to " +
         "preserve span id across client/server sides of a Span.")
   }
 
-  override def reportSpans(spans: Seq[KamonSpan]): Unit =
-    spans.map(convertSpan).foreach(reporter.report)
+  override def reportSpans(spans: Seq[Span.Finished]): Unit =
+    spans.map(convertSpan).foreach(_reporter.report)
 
-  private[zipkin] def convertSpan(kamonSpan: KamonSpan): ZipkinSpan = {
-    val context = kamonSpan.context
+  private[zipkin] def convertSpan(kamonSpan: Span.Finished): ZipkinSpan = {
     val duration = Math.floorDiv(Clock.nanosBetween(kamonSpan.from, kamonSpan.to), 1000)
     // Zipkin uses null to identify no identifier
-    val parentId: String = if (context.parentID.equals(IdentityProvider.NoIdentifier)) null else context.parentID.string
+    val parentId: String = if (kamonSpan.parentId.isEmpty) null else kamonSpan.parentId.string
     val builder = ZipkinSpan.newBuilder()
-      .localEndpoint(localEndpoint)
-      .traceId(context.traceID.string)
-      .id(context.spanID.string)
+      .localEndpoint(_localEndpoint)
+      .traceId(kamonSpan.trace.id.string)
+      .id(kamonSpan.id.string)
       .parentId(parentId)
       .name(kamonSpan.operationName)
       .timestamp(Clock.toEpochMicros(kamonSpan.from))
       .duration(duration)
 
-    val kind = kamonSpan.tags.get(SpanKindTag)
-      .map(spanKind)
-      .orNull
-
+    val kind = spanKind(kamonSpan)
     builder.kind(kind)
 
     if(kind == ZipkinSpan.Kind.CLIENT) {
       val remoteEndpoint = Endpoint.newBuilder()
-        .ip(stringTag(kamonSpan, PeerKeys.IPv4))
-        .ip(stringTag(kamonSpan, PeerKeys.IPv6))
-        .port(numberTag(kamonSpan, PeerKeys.Port))
+        .ip(getStringTag(kamonSpan, PeerKeys.IPv4))
+        .ip(getStringTag(kamonSpan, PeerKeys.IPv6))
+        .port(getLongTag(kamonSpan, PeerKeys.Port).toInt)
         .build()
 
       if(hasAnyData(remoteEndpoint))
@@ -84,43 +87,37 @@ class ZipkinReporter extends SpanReporter {
       case Mark(instant, key) => builder.addAnnotation(Clock.toEpochMicros(instant), key)
     }
 
-    kamonSpan.tags.foreach {
-      case (tag, TagValue.String(value))  => builder.putTag(tag, value)
-      case (tag, TagValue.Number(value))  => builder.putTag(tag, value.toString)
-      case (tag, TagValue.True)           => builder.putTag(tag, "true")
-      case (tag, TagValue.False)          => builder.putTag(tag, "false")
-    }
+    addTags(kamonSpan.tags, builder)
+    addTags(kamonSpan.metricTags, builder)
 
     builder.build()
   }
 
-  private def spanKind(spanKindTag: TagValue): ZipkinSpan.Kind = spanKindTag match {
-    case TagValue.String(SpanKindServer) => ZipkinSpan.Kind.SERVER
-    case TagValue.String(SpanKindClient) => ZipkinSpan.Kind.CLIENT
+  private def spanKind(span: Span.Finished): ZipkinSpan.Kind = span.kind match {
+    case Span.Kind.Client   => ZipkinSpan.Kind.CLIENT
+    case Span.Kind.Server   => ZipkinSpan.Kind.SERVER
+    case Span.Kind.Producer => ZipkinSpan.Kind.PRODUCER
+    case Span.Kind.Consumer => ZipkinSpan.Kind.CONSUMER
     case _ => null
   }
 
-  private def stringTag(kamonSpan: KamonSpan, tag: String): String = {
-    kamonSpan.tags.get(tag) match {
-      case Some(TagValue.String(string)) => string
-      case _ => null
-    }
-  }
+  private def addTags(tags: TagSet, builder: ZipkinSpan.Builder): Unit =
+    tags.iterator(_.toString).foreach(pair => builder.putTag(pair.key, pair.value))
 
-  private def numberTag(kamonSpan: KamonSpan, tag: String): Integer = {
-    kamonSpan.tags.get(tag) match {
-      case Some(TagValue.Number(number)) => number.toInt
-      case _ => null
-    }
-  }
+  private def getStringTag(span: Span.Finished, tagName: String): String =
+    span.tags.get(option(tagName)).orElse(span.metricTags.get(option(tagName))).orNull
+
+  private def getLongTag(span: Span.Finished, tagName: String): Long =
+    span.tags.get(longOption(tagName)).orElse(span.metricTags.get(longOption(tagName))).getOrElse(0L)
+
 
   private def hasAnyData(endpoint: Endpoint): Boolean =
     endpoint.ipv4() != null || endpoint.ipv6() != null || endpoint.port() != null || endpoint.serviceName() != null
 
 
   override def reconfigure(newConfig: Config): Unit = {
-    localEndpoint = buildEndpoint()
-    reporter      = buildReporter()
+    _localEndpoint = buildEndpoint()
+    _reporter = buildReporter(newConfig)
     checkJoinParameter()
   }
 
@@ -135,29 +132,26 @@ class ZipkinReporter extends SpanReporter {
       .build()
   }
 
-  private def buildReporter() = {
-    val zipkinHost = Kamon.config().getString(HostConfigKey)
-    val zipkinPort = Kamon.config().getInt(PortConfigKey)
-    val zipkinProtocol = Kamon.config().getString(ProtocolConfigKey).toLowerCase
+  private def buildReporter(config: Config) = {
+    val zipkinConfig = config.getConfig(configPath)
+    val zipkinHost = zipkinConfig.getString("host")
+    val zipkinPort = zipkinConfig.getInt("port")
+    val zipkinProtocol = zipkinConfig.getString("protocol").toLowerCase
     val fullServerUrl = s"$zipkinProtocol://$zipkinHost:$zipkinPort/api/v2/spans"
 
     AsyncReporter.create(OkHttpSender.create(fullServerUrl))
   }
 
-  override def start(): Unit =
-    logger.info("Started the Zipkin reporter")
-
   override def stop(): Unit =
-    logger.info("Stopped the Zipkin reporter")
+    _logger.info("Stopped the Zipkin reporter")
 }
 
 object ZipkinReporter {
-  private val HostConfigKey = "kamon.zipkin.host"
-  private val PortConfigKey = "kamon.zipkin.port"
-  private val ProtocolConfigKey = "kamon.zipkin.protocol"
-  private val SpanKindTag = "span.kind"
-  private val SpanKindServer = "server"
-  private val SpanKindClient = "client"
+
+  class Factory extends ModuleFactory {
+    override def create(settings: ModuleFactory.Settings): Module =
+      new ZipkinReporter()
+  }
 
   private object PeerKeys {
     val Host     = "peer.host"
