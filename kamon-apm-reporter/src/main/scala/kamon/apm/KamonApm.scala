@@ -22,9 +22,9 @@ import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.util.Try
 
 
-class KamonApm(initialConfig: Config) extends CombinedReporter {
+class KamonApm(configPath: String) extends CombinedReporter {
   private val _maxSnapshotAge = Duration.ofMinutes(30)
-  private var _settings = readSettings(initialConfig)
+  private var _settings = readSettings(Kamon.config(), configPath)
   private var _httpClient: Option[KamonApmApiClient] = Option(new KamonApmApiClient(_settings))
   private val _valueBuffer = ByteBuffer.wrap(Array.ofDim[Byte](16))
   private val _accumulator = PeriodSnapshot.accumulator(Duration.ofSeconds(60), Duration.ofSeconds(1))
@@ -39,7 +39,7 @@ class KamonApm(initialConfig: Config) extends CombinedReporter {
   }
 
   def this() =
-    this(Kamon.config().getConfig("kamon.apm"))
+    this("kamon.apm")
 
   override def stop(): Unit = {
     reportShutdown(Kamon.clock().millis())
@@ -48,7 +48,7 @@ class KamonApm(initialConfig: Config) extends CombinedReporter {
   }
 
   override def reconfigure(config: Config): Unit = {
-    _settings = readSettings(config)
+    _settings = readSettings(config, configPath)
     _httpClient.foreach(_.stop)
     _httpClient = Option(new KamonApmApiClient(_settings))
   }
@@ -229,7 +229,7 @@ object KamonApm {
 
   class Factory extends ModuleFactory {
     override def create(settings: ModuleFactory.Settings): Module =
-      new KamonApm(settings.config)
+      new KamonApm()
   }
 }
 

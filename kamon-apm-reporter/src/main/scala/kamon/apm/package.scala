@@ -12,11 +12,12 @@ package object apm {
   private[apm] val _logger = LoggerFactory.getLogger("kamon.apm")
   private val _apiKeyPattern = Pattern.compile("^[a-zA-Z0-9]*$")
 
-  def readSettings(apmConfig: Config): Settings = {
+  def readSettings(config: Config, path: String): Settings = {
+    val apmConfig = config.getConfig(path)
     val apiKey = apmConfig.getString("api-key")
 
     if(apiKey.equals("none"))
-      _logger.error("No API key defined in the kamino.api-key setting.")
+      _logger.error("No API key defined in the kamon.apm.api-key setting")
 
     Settings (
       apiKey            = apiKey,
