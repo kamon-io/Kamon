@@ -14,8 +14,8 @@
  */
 
 
-val kamonCore           = "io.kamon"            %% "kamon-core"               % "2.0.0-M5"
-val kamonTestkit        = "io.kamon"            %% "kamon-testkit"            % "2.0.0-M5"
+val kamonCore           = "io.kamon"            %% "kamon-core"               % "2.0.0-RC1"
+val kamonTestkit        = "io.kamon"            %% "kamon-testkit"            % "2.0.0-RC1"
 val kanela              = "io.kamon"            %  "kanela-agent"             % "1.0.0-M3"
 
 val slick               = "com.typesafe.slick"       %% "slick"                     % "3.2.3"

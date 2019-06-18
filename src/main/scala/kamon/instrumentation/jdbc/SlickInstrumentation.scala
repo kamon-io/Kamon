@@ -38,7 +38,6 @@ object AsyncExecutorApplyInterceptor {
 
   @RuntimeType
   def apply(@SuperCall zuper: Callable[AsyncExecutor]): AsyncExecutor = {
-    println("IM INTERCEPTING")
     new SlickInstrumentation.ContextAwareAsyncExecutor(zuper.call())
   }
 

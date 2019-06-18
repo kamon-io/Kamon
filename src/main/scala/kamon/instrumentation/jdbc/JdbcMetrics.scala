@@ -1,7 +1,6 @@
 package kamon.instrumentation.jdbc
 
 import kamon.Kamon
-import kamon.metric.MeasurementUnit.time
 import kamon.metric._
 import kamon.tag.TagSet
 
