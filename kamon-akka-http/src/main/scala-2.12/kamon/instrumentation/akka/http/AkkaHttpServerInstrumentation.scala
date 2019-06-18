@@ -30,7 +30,6 @@ class AkkaHttpServerInstrumentation extends InstrumentationBuilder {
   onType("akka.http.scaladsl.HttpExt")
     .advise(method("bindAndHandle"), classOf[HttpExtBindAndHandleAdvice])
 
-
   /**
     * The rest of these sections are just about making sure that we can generate an appropriate operation name (i.e. free
     * of variables) and take a Sampling Decision in case none has been taken so far.
@@ -100,12 +99,13 @@ object ResolveOperationNameOnRouteInterceptor {
   }
 
   private def resolveOperationName(requestContext: RequestContext): RequestContext = {
+    val defaultOperationName = ServerFlowWrapper.defaultOperationName(requestContext.request.uri.authority.port)
 
     // We will only change the operation name if no change was applied to it. At this point, the only way in which it
     // might have changed is if the user changed it with the operationName directive or just accessing the Span and
     // changing it there, so we wouldn't want to overwrite that.
     //
-    if(Kamon.currentSpan().operationName() == AkkaHttpInstrumentation.settings.serverInitialOperationName) {
+    if(Kamon.currentSpan().operationName() == defaultOperationName) {
       val allMatches = requestContext.asInstanceOf[HasMatchingContext].matchingContext.reverse.map(singleMatch)
       val operationName = allMatches.mkString("")
 
@@ -157,7 +157,6 @@ class PathDirectivesRawPathPrefixInterceptor
 object PathDirectivesRawPathPrefixInterceptor {
   import BasicDirectives._
 
-  @RuntimeType
   def rawPathPrefix[T](@Argument(0) matcher: PathMatcher[T]): Directive[T] = {
     implicit val LIsTuple = matcher.ev
 

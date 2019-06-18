@@ -15,7 +15,8 @@ import kamon.instrumentation.http.HttpServerInstrumentation
 import kamon.util.CallingThreadExecutionContext
 import kamon.instrumentation.akka.http.AkkaHttpInstrumentation.{toRequest, toResponseBuilder}
 
-import scala.collection.{immutable, mutable}
+import scala.collection.concurrent.TrieMap
+import scala.collection.mutable
 import scala.util.{Failure, Success}
 
 /**
@@ -26,12 +27,19 @@ import scala.util.{Failure, Success}
   */
 object ServerFlowWrapper {
 
-  def apply(flow: Flow[HttpRequest, HttpResponse, NotUsed], interface: String, port: Int): Flow[HttpRequest, HttpResponse, NotUsed] =
-    BidiFlow.fromGraph(wrapStage(interface, port)).join(flow)
+  // Since we reuse the same instrumentation to track Play, we are allowing for the component tag to be changed
+  // temporarily.
+  private val _serverInstrumentations = TrieMap.empty[Int, HttpServerInstrumentation]
+  private val _defaultOperationNames = TrieMap.empty[Int, String]
+  private val _defaultSettings = Settings("akka.http.server", "kamon.instrumentation.akka.http.server")
+  @volatile private var _wrapperSettings = _defaultSettings
 
-  def wrapStage(interface: String, port: Int) = new GraphStage[BidiShape[HttpRequest, HttpRequest, HttpResponse, HttpResponse]] {
-    val httpServerConfig = Kamon.config().getConfig("kamon.instrumentation.akka.http.server")
-    val httpServerInstrumentation = HttpServerInstrumentation.from(httpServerConfig, "akka.http.server", interface, port)
+  def apply(flow: Flow[HttpRequest, HttpResponse, NotUsed], interface: String, port: Int): Flow[HttpRequest, HttpResponse, NotUsed] =
+    BidiFlow.fromGraph(wrapStage(_wrapperSettings, interface, port)).join(flow)
+
+  def wrapStage(settings: Settings, interface: String, port: Int) = new GraphStage[BidiShape[HttpRequest, HttpRequest, HttpResponse, HttpResponse]] {
+    val httpServerConfig = Kamon.config().getConfig(settings.configPath)
+    val httpServerInstrumentation = HttpServerInstrumentation.from(httpServerConfig, settings.component, interface, port)
     val requestIn = Inlet.create[HttpRequest]("request.in")
     val requestOut = Outlet.create[HttpRequest]("request.out")
     val responseIn = Inlet.create[HttpResponse]("response.in")
@@ -56,13 +64,6 @@ object ServerFlowWrapper {
           val request = grab(requestIn)
           val requestHandler = httpServerInstrumentation.createHandler(toRequest(request), deferSamplingDecision = true)
             .requestReceived()
-
-          if(requestHandler.span.operationName() == httpServerInstrumentation.settings.defaultOperationName) {
-
-            // If the HTTP Server Instrumentation didn't set any operation name other than the default one we use that
-            // as a hint that we can override the Span operation name using the Path Directives instrumentation.
-            requestHandler.span.name(AkkaHttpInstrumentation.settings.serverInitialOperationName)
-          }
 
           _pendingRequests.enqueue(requestHandler)
 
@@ -97,7 +98,7 @@ object ServerFlowWrapper {
             // a sampling decision was run, the request would still not have any sampling decision so we both set the
             // request as unhandled and take a sampling decision for that operation here.
             requestSpan
-              .name(AkkaHttpInstrumentation.settings.serverUnhandledOperationName)
+              .name(httpServerInstrumentation.settings.unhandledOperationName)
               .takeSamplingDecision()
           }
 
@@ -151,4 +152,17 @@ object ServerFlowWrapper {
       }
     }
   }
+
+  def changeSettings(component: String, configPath: String): Unit =
+    _wrapperSettings = Settings(component, configPath)
+
+  def resetSettings(): Unit =
+    _wrapperSettings = _defaultSettings
+
+  def defaultOperationName(listenPort: Int): String =
+    _defaultOperationNames.getOrElseUpdate(listenPort, {
+      _serverInstrumentations.get(listenPort).map(_.settings.defaultOperationName).getOrElse("http.server.request")
+    })
+
+  case class Settings(component: String, configPath: String)
 }
