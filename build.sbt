@@ -14,53 +14,84 @@
  */
 
 
-resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
-val kamonCore       = "io.kamon" %% "kamon-core"         % "1.1.4"
-val kamonTestkit    = "io.kamon" %% "kamon-testkit"      % "1.1.3"
-val kamonScala      = "io.kamon" %% "kamon-scala-future" % "1.0.0"
-val kamonExecutors  = "io.kamon" %% "kamon-executors"    % "1.0.1"
+val kamonCore       = "io.kamon" %% "kamon-core"         % "2.0.0-RC1"
+val kamonTestkit    = "io.kamon" %% "kamon-testkit"      % "2.0.0-RC1"
+val kamonScala      = "io.kamon" %% "kamon-scala-future" % "2.0.0-RC1"
+val kamonExecutors  = "io.kamon" %% "kamon-executors"    % "2.0.0-RC1"
+val kamonInstrument = "io.kamon" %% "kamon-instrumentation-common" % "2.0.0-RC1"
+val kanelaAgent     =  "io.kamon" % "kanela-agent"       % "1.0.0-M3"
 
-val `akka-2.4` = "2.4.20"
-val `akka-2.5` = "2.5.13"
+val akka24Version = "2.4.20"
+val akka25Version = "2.5.23"
 
-def akkaDependency(name: String, version: String) = {
-  "com.typesafe.akka" %% s"akka-$name" % version
-}
+val akkaActor       = "com.typesafe.akka" %% "akka-actor"    % "2.5.23"
+val akkaTestkit     = "com.typesafe.akka" %% "akka-testkit"  % "2.5.23"
+val akkaSLF4J       = "com.typesafe.akka" %% "akka-slf4j"    % "2.5.23"
 
 lazy val `kamon-akka` = (project in file("."))
-    .settings(noPublishing: _*)
-    .aggregate(kamonAkka24, kamonAkka25)
+  .settings(noPublishing: _*)
+  .aggregate(instrumentation, commonTests, testsOnAkka24, testsOnAkka25, benchmarks)
 
-
-lazy val kamonAkka24 = Project("kamon-akka-24", file("kamon-akka-2.4.x"))
-  .enablePlugins(JavaAgent)
-  .settings(instrumentationSettings: _*)
+// These common modules contains all the stuff that can be reused between different Akka versions. They compile with
+// Akka 2.4, but the actual modules for each Akka version are only using the sources from these project instead of the
+// compiled classes. This is just to ensure that if there are any binary incompatible changes between Akka 2.4 and 2.5
+// at the internal level, we will still be compiling and testing with the right versions.
+//
+lazy val instrumentation = Project("instrumentation", file("kamon-akka"))
   .settings(
+    name := "kamon-akka",
+    moduleName := "kamon-akka",
     bintrayPackage := "kamon-akka",
-    moduleName := "kamon-akka-2.4",
-    scalaVersion := "2.12.1",
-    crossScalaVersions := Seq("2.11.8", "2.12.1"),
-    kamonUseAspectJ := true,
-    resolvers += Resolver.bintrayRepo("kamon-io", "snapshots"),
+    scalacOptions += "-target:jvm-1.8",
     libraryDependencies ++=
-      compileScope(akkaDependency("actor", `akka-2.4`), kamonCore, kamonScala, kamonExecutors) ++
-      providedScope(aspectJ) ++
-      optionalScope(logbackClassic) ++
-      testScope(scalatest, kamonTestkit, akkaDependency("testkit", `akka-2.4`), akkaDependency("slf4j", `akka-2.4`), logbackClassic))
+      compileScope(kamonCore, kamonInstrument, kamonScala, kamonExecutors) ++
+      providedScope(akkaActor, kanelaAgent))
 
-lazy val kamonAkka25 = Project("kamon-akka-25", file("kamon-akka-2.5.x"))
-  .enablePlugins(JavaAgent)
-  .settings(instrumentationSettings: _*)
+lazy val commonTests = Project("common-tests", file("kamon-akka-common-tests"))
+  .dependsOn(instrumentation)
+  .settings(noPublishing: _*)
   .settings(
-    bintrayPackage := "kamon-akka",
-    moduleName := "kamon-akka-2.5",
-    scalaVersion := "2.12.1",
-    crossScalaVersions := Seq("2.11.8", "2.12.1"),
-    kamonUseAspectJ := true,
-    resolvers += Resolver.bintrayRepo("kamon-io", "snapshots"),
+    test := ((): Unit),
+    testOnly := ((): Unit),
+    testQuick := ((): Unit),
     libraryDependencies ++=
-      compileScope(akkaDependency("actor", `akka-2.5`), kamonCore, kamonScala, kamonExecutors) ++
-      providedScope(aspectJ) ++
-      optionalScope(logbackClassic) ++
-      testScope(scalatest, kamonTestkit, akkaDependency("testkit", `akka-2.5`), akkaDependency("slf4j", `akka-2.5`), logbackClassic))
+      compileScope(kamonCore, kamonInstrument, kamonScala, kamonExecutors) ++
+      providedScope(akkaActor, kanelaAgent) ++
+      testScope(scalatest, kamonTestkit, akkaTestkit, akkaSLF4J, logbackClassic))
 
+
+lazy val testsOnAkka24 = Project("kamon-akka-tests-24", file("kamon-akka-tests-2.4"))
+  .dependsOn(instrumentation)
+  .enablePlugins(JavaAgent)
+  .settings(instrumentationSettings)
+  .settings(noPublishing: _*)
+  .settings(
+    name := "kamon-akka-tests-2.4",
+    unmanagedSourceDirectories in Test ++= (unmanagedSourceDirectories in Test in commonTests).value,
+    unmanagedResourceDirectories in Test ++= (unmanagedResourceDirectories in Test in commonTests).value,
+    libraryDependencies ++=
+      providedScope(onAkka24(akkaActor), kanelaAgent) ++
+      testScope(scalatest, kamonTestkit, onAkka24(akkaTestkit), onAkka24(akkaSLF4J), logbackClassic))
+
+lazy val testsOnAkka25 = Project("kamon-akka-tests-25", file("kamon-akka-tests-2.5"))
+  .dependsOn(instrumentation)
+  .enablePlugins(JavaAgent)
+  .settings(instrumentationSettings)
+  .settings(noPublishing: _*)
+  .settings(
+    name := "kamon-akka-tests-2.5",
+    unmanagedSourceDirectories in Test ++= (unmanagedSourceDirectories in Test in commonTests).value,
+    unmanagedResourceDirectories in Test ++= (unmanagedResourceDirectories in Test in commonTests).value,
+    libraryDependencies ++=
+      providedScope(akkaActor, kanelaAgent) ++
+      testScope(scalatest, kamonTestkit, akkaTestkit, akkaSLF4J, logbackClassic))
+
+lazy val benchmarks = Project("benchmarks", file("kamon-akka-bench"))
+  .enablePlugins(JmhPlugin)
+  .dependsOn(instrumentation)
+  .settings(noPublishing: _*)
+  .settings(
+    libraryDependencies ++= compileScope(akkaActor, kanelaAgent))
+
+def onAkka24(moduleID: ModuleID): ModuleID =
+  moduleID.withRevision(akka24Version)

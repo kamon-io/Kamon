@@ -17,7 +17,6 @@ Supported releases and dependencies are shown below.
 
 | Artifact              | status | jdk        | scala            | akka   |
 |:---------------------:|:------:|:----------:|------------------|:------:|
-|  kamon-akka-2.3 1.0.1 | stable | 1.7+, 1.8+ | 2.10, 2.11       | 2.3.x  |
 |  kamon-akka-2.4 1.1.0 | stable | 1.7+, 1.8+ | 2.11, 2.12       | 2.4.x  |
 |  kamon-akka-2.5 1.1.0 | stable | 1.8+       | 2.11, 2.12       | 2.5.x  |
 
