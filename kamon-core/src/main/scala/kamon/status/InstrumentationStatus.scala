@@ -66,7 +66,7 @@ object InstrumentationStatus {
         .map(toTypeError)
         .toSeq
 
-      Status.Instrumentation(present, modules, errors)
+      Status.Instrumentation(present, modules.toSeq, errors)
     } catch {
       case t: Throwable =>
 
@@ -103,6 +103,6 @@ object InstrumentationStatus {
     */
   private def toTypeError(pair: (String, JavaList[Throwable])): TypeError = {
     val (typeName, errors) = pair
-    TypeError(typeName, errors.asScala)
+    TypeError(typeName, errors.asScala.toSeq)
   }
 }

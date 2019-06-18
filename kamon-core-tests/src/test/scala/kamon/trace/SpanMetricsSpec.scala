@@ -177,9 +177,9 @@ class SpanMetricsSpec extends WordSpecLike with Matchers with InstrumentInspecti
         .start(createTime.plusNanos(10))
         .finish(createTime.plusNanos(30))
 
-      val waitTime = Span.Metrics.WaitTime.withTags(TagSet.from(Map(operationTag, noErrorTag)))distribution()
-      val elapsedTime = Span.Metrics.ElapsedTime.withTags(TagSet.from(Map(operationTag, noErrorTag)))distribution()
-      val processingTime = Span.Metrics.ProcessingTime.withTags(TagSet.from(Map(operationTag, noErrorTag)))distribution()
+      val waitTime = Span.Metrics.WaitTime.withTags(TagSet.from(Map(operationTag, noErrorTag))).distribution()
+      val elapsedTime = Span.Metrics.ElapsedTime.withTags(TagSet.from(Map(operationTag, noErrorTag))).distribution()
+      val processingTime = Span.Metrics.ProcessingTime.withTags(TagSet.from(Map(operationTag, noErrorTag))).distribution()
 
       waitTime.count shouldBe 1
       waitTime.buckets.head.value shouldBe 10
