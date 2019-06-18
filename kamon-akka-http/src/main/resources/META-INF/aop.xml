@@ -7,7 +7,7 @@
     <aspect name="kamon.akka.http.instrumentation.MatchingContextIntoRequestContext"/>
 
     <!-- Akka Http Client -->
-    <aspect name="akka.http.impl.engine.client.ClientRequestInstrumentation"/>
+    <aspect name="kamon.instrumentation.akka.http.AkkaHttpClientInstrumentation"/>
   </aspects>
 
   <weaver options="-warn:none">

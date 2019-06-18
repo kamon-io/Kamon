@@ -16,15 +16,18 @@
 
 package kamon.testkit
 
-import akka.http.scaladsl.model.HttpRequest
-import kamon.akka.http.AkkaHttp.OperationNameGenerator
+import kamon.instrumentation.http.{HttpMessage, HttpOperationNameGenerator}
 
-class TestNameGenerator extends OperationNameGenerator {
-  def serverOperationName(request: HttpRequest): String = {
-    val path = request.uri.path.toString()
-    // turns "/dummy-path" into "dummy"
-    path.substring(1).split("-")(0)
-  }
+class TestNameGenerator extends HttpOperationNameGenerator {
 
-  def clientOperationName(request: HttpRequest): String = "client " + request.uri.path.toString()
+
+
+//  def serverOperationName(request: HttpRequest): String = {
+//    val path = request.uri.path.toString()
+//    // turns "/dummy-path" into "dummy"
+//    path.substring(1).split("-")(0)
+//  }
+//
+//  def clientOperationName(request: HttpRequest): String = "client " + request.uri.path.toString()
+  override def name(request: HttpMessage.Request): Option[String] = Some("test")
 }

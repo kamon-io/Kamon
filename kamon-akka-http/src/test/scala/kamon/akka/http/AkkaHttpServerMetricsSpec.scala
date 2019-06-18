@@ -22,6 +22,7 @@ import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
 import akka.http.scaladsl.settings.ClientConnectionSettings
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source}
+import kamon.instrumentation.http.HttpServerMetrics
 import kamon.testkit._
 import org.scalatest.concurrent.Eventually
 import org.scalatest.{BeforeAndAfterAll, Matchers, OptionValues, WordSpecLike}
@@ -29,40 +30,36 @@ import org.scalatest.{BeforeAndAfterAll, Matchers, OptionValues, WordSpecLike}
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class AkkaHttpServerMetricsSpec extends WordSpecLike with Matchers with BeforeAndAfterAll with MetricInspection
+class AkkaHttpServerMetricsSpec extends WordSpecLike with Matchers with BeforeAndAfterAll with InstrumentInspection.Syntax
   with Reconfigure with TestWebServer with Eventually with OptionValues {
 
-  import AkkaHttpMetrics._
   import TestWebServer.Endpoints._
 
   implicit private val system = ActorSystem("http-server-metrics-instrumentation-spec")
   implicit private val executor = system.dispatcher
   implicit private val materializer = ActorMaterializer()
 
-  val timeoutTest: FiniteDuration = 5 second
-  val interface = "127.0.0.1"
   val port = 8083
+  val interface = "127.0.0.1"
+  val timeoutTest: FiniteDuration = 5 second
   val webServer = startServer(interface, port)
 
   "the Akka HTTP server instrumentation" should {
     "track the number of open connections and active requests on the Server side" in {
-      val httpServerMetricsTags = Map(
-        "interface" -> interface,
-        "port" -> port.toString
-      )
+      val httpServerMetrics = HttpServerMetrics.of("akka.http.server", interface, port)
 
       for(_ <- 1 to 8) yield {
         sendRequest(HttpRequest(uri = s"http://$interface:$port/$waitTen"))
       }
 
       eventually(timeout(10 seconds)) {
-        OpenConnections.refine(httpServerMetricsTags).distribution().max shouldBe(8)
-        ActiveRequests.refine(httpServerMetricsTags).distribution().max shouldBe(8)
+        httpServerMetrics.openConnections.distribution().max shouldBe(8)
+        httpServerMetrics.activeRequests.distribution().max shouldBe(8)
       }
 
       eventually(timeout(20 seconds)) {
-        OpenConnections.refine(httpServerMetricsTags).distribution().max shouldBe(0)
-        ActiveRequests.refine(httpServerMetricsTags).distribution().max shouldBe(0)
+        httpServerMetrics.openConnections.distribution().max shouldBe(0)
+        httpServerMetrics.activeRequests.distribution().max shouldBe(0)
       }
     }
   }

@@ -27,10 +27,11 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import kamon.Kamon
-import kamon.akka.http.TracingDirectives
-import kamon.context.Key
+import kamon.instrumentation.akka.http.TracingDirectives
 import org.json4s.{DefaultFormats, native}
+
 import scala.concurrent.duration._
+import kamon.tag.Lookups.plain
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Random
@@ -100,8 +101,8 @@ trait TestWebServer extends TracingDirectives {
         path(basicContext) {
           complete {
             Map(
-              "custom-string-key" -> Kamon.currentContext().get(Key.broadcastString("custom-string-key")),
-              "trace-id" -> Kamon.currentSpan().context().traceID.string
+              "custom-string-key" -> Kamon.currentContext().getTag(plain("custom-string-key")),
+              "trace-id" -> Kamon.currentSpan().trace.id.string
             )
           }
         } ~
@@ -114,17 +115,14 @@ trait TestWebServer extends TracingDirectives {
           }
         } ~
         path(stream) {
-          complete{
-
-            val longStringContentStream = Source(
-              Range(1, 16).map{ i =>
-              ByteString(
-                100 * ('a' + i).toChar
-              )
-              }
+          complete {
+            val longStringContentStream = Source.fromIterator(() =>
+              Range(1, 16)
+                .map(i => ByteString(100 * ('a' + i).toChar))
+                .toIterator
             )
 
-            HttpResponse(entity = HttpEntity(ContentTypes.`text/plain(UTF-8)`, longStringContentStream))
+            HttpResponse(entity = HttpEntity(ContentTypes.`text/plain(UTF-8)`, 1600, longStringContentStream))
           }
         }
       }

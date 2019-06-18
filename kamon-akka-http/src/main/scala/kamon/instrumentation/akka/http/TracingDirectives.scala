@@ -13,21 +13,28 @@
  * and limitations under the License.
  * =========================================================================================
  */
-package kamon.akka.http
+package kamon.instrumentation.akka.http
 
-import akka.http.scaladsl.server.directives.BasicDirectives
 import akka.http.scaladsl.server.Directive0
+import akka.http.scaladsl.server.directives.BasicDirectives
 import kamon.Kamon
 
 
 trait TracingDirectives extends BasicDirectives {
 
-  def operationName(name: String, tags: Map[String, String] = Map.empty): Directive0 = mapRequest { req ⇒
+  /**
+    * Assigns a new operation name to the Span representing the processing of the current request and ensures that a
+    * Sampling Decision is taken in case none has been taken so far.
+    */
+  def operationName(name: String, takeSamplingDecision: Boolean = true): Directive0 = mapRequest { req ⇒
     val operationSpan = Kamon.currentSpan()
-    operationSpan.setOperationName(name)
-    tags.foreach { case (key, value) ⇒ operationSpan.tag(key, value) }
+    operationSpan.name(name)
+
+    if(takeSamplingDecision)
+      operationSpan.takeSamplingDecision()
+
     req
   }
 }
 
-object KamonTraceDirectives extends TracingDirectives
+object TracingDirectives extends TracingDirectives

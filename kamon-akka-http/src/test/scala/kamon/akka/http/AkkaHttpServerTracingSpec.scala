@@ -22,21 +22,17 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.HttpRequest
 import akka.stream.ActorMaterializer
-import kamon.Kamon
-import kamon.context.{Context, Key}
 import kamon.testkit._
-import kamon.trace.Span.{Mark, TagValue}
-import kamon.trace.{Span, SpanCustomizer}
-import kamon.util.Registration
-import org.json4s.native.JsonMethods.parse
+import kamon.tag.Lookups.{plain, plainLong, plainBoolean}
+import kamon.trace.Span.Mark
+import kamon.trace.Span
 import org.scalatest._
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 
 import scala.concurrent.duration.{span, _}
 
-class AkkaHttpServerTracingSpec extends WordSpecLike
-    with Matchers with ScalaFutures with Inside with BeforeAndAfterAll with MetricInspection
-    with Reconfigure with TestWebServer with Eventually with OptionValues {
+class AkkaHttpServerTracingSpec extends WordSpecLike with Matchers with ScalaFutures with Inside with BeforeAndAfterAll
+    with MetricInspection.Syntax with Reconfigure with TestWebServer with Eventually with OptionValues with TestSpanReporter {
 
   import TestWebServer.Endpoints._
 
@@ -55,14 +51,11 @@ class AkkaHttpServerTracingSpec extends WordSpecLike
       Http().singleRequest(HttpRequest(uri = target)).map(_.discardEntityBytes())
 
       eventually(timeout(10 seconds)) {
-        val span = reporter.nextSpan().value
-        val spanTags = stringTag(span) _
-        span.operationName shouldBe s"/${dummyPathOk}"
-        spanTags("component") shouldBe "akka.http.server"
-        spanTags("span.kind") shouldBe "server"
-        spanTags("http.method") shouldBe "GET"
-        spanTags("http.url") shouldBe target
-        span.tags("http.status_code") shouldBe TagValue.Number(200)
+        val span = testSpanReporter().nextSpan().value
+        span.tags.get(plain("http.url")) shouldBe target
+        span.metricTags.get(plain("component")) shouldBe "akka.http.server"
+        span.metricTags.get(plain("http.method")) shouldBe "GET"
+        span.metricTags.get(plainLong("http.status_code")) shouldBe 200L
       }
     }
 
@@ -72,53 +65,52 @@ class AkkaHttpServerTracingSpec extends WordSpecLike
          val expected = "/extraction/nested/{}/fixed/anchor/{}/{}/fixed/{}/{}"
          val target = s"http://$interface:$port/$path"
          Http().singleRequest(HttpRequest(uri = target)).map(_.discardEntityBytes())
+
          eventually(timeout(10 seconds)) {
-           val span = reporter.nextSpan().value
+           val span = testSpanReporter().nextSpan().value
            span.operationName shouldBe expected
          }
        }
+
       "including ambiguous nested directives" in {
         val path = s"v3/user/3/post/3"
         val expected = "/v3/user/{}/post/{}"
         val target = s"http://$interface:$port/$path"
         Http().singleRequest(HttpRequest(uri = target)).map(_.discardEntityBytes())
+
         eventually(timeout(10 seconds)) {
-          val span = reporter.nextSpan().value
+          val span = testSpanReporter().nextSpan().value
           span.operationName shouldBe expected
         }
       }
     }
 
-    //TODO decide what to do with operationName directive, currently whatever it sets gets overriden by instrumentation when route is completed
-/*    "change the Span operation name when using the operationName directive" in {
+    "change the Span operation name when using the operationName directive" in {
       val target = s"http://$interface:$port/$traceOk"
       Http().singleRequest(HttpRequest(uri = target)).map(_.discardEntityBytes())
 
       eventually(timeout(10 seconds)) {
-        val span = reporter.nextSpan().value
-        val spanTags = stringTag(span) _
+        val span = testSpanReporter().nextSpan().value
         span.operationName shouldBe "user-supplied-operation"
-        spanTags("component") shouldBe "akka.http.server"
-        spanTags("span.kind") shouldBe "server"
-        spanTags("http.method") shouldBe "GET"
-        spanTags("http.url") shouldBe target
-        span.tags("http.status_code") shouldBe TagValue.Number(200)
+        span.tags.get(plain("http.url")) shouldBe target
+        span.metricTags.get(plain("component")) shouldBe "akka.http.server"
+        span.metricTags.get(plain("http.method")) shouldBe "GET"
+        span.metricTags.get(plainLong("http.status_code")) shouldBe 200L
       }
-    }*/
+    }
 
-    "mark spans as error when request fails" in {
+    "mark spans as failed when request fails" in {
       val target = s"http://$interface:$port/$dummyPathError"
       Http().singleRequest(HttpRequest(uri = target)).map(_.discardEntityBytes())
 
       eventually(timeout(10 seconds)) {
-        val span = reporter.nextSpan().value
-        val spanTags = stringTag(span) _
+        val span = testSpanReporter().nextSpan().value
         span.operationName shouldBe s"/$dummyPathError"
-        spanTags("component") shouldBe "akka.http.server"
-        spanTags("span.kind") shouldBe "server"
-        spanTags("http.method") shouldBe "GET"
-        spanTags("http.url") shouldBe target
-        span.tags("http.status_code") shouldBe TagValue.Number(500)
+        span.tags.get(plain("http.url")) shouldBe target
+        span.metricTags.get(plain("component")) shouldBe "akka.http.server"
+        span.metricTags.get(plain("http.method")) shouldBe "GET"
+        span.metricTags.get(plainBoolean("error")) shouldBe true
+        span.metricTags.get(plainLong("http.status_code")) shouldBe 500L
       }
     }
 
@@ -128,38 +120,13 @@ class AkkaHttpServerTracingSpec extends WordSpecLike
       Http().singleRequest(HttpRequest(uri = target)).map(_.discardEntityBytes())
 
       eventually(timeout(10 seconds)) {
-        val span = reporter.nextSpan().value
-        val spanTags = stringTag(span) _
-
+        val span = testSpanReporter().nextSpan().value
         span.operationName shouldBe "unhandled"
-        spanTags("component") shouldBe "akka.http.server"
-        spanTags("span.kind") shouldBe "server"
-        spanTags("http.method") shouldBe "GET"
-        spanTags("http.url") shouldBe target
-        span.tags("http.status_code") shouldBe TagValue.Number(404)
-      }
-    }
-
-    "deserialize the Context from HTTP Headers" in {
-      val stringKey = Key.broadcastString("custom-string-key")
-      val target = s"http://$interface:$port/$basicContext"
-      val parentSpan = Kamon.buildSpan("parent").start()
-      val context = Context.Empty
-        .withKey(Span.ContextKey, parentSpan)
-        .withKey(SpanCustomizer.ContextKey, SpanCustomizer.forOperationName("deserialize-context"))
-        .withKey(stringKey, Some("hello for the server"))
-
-      val response = Kamon.withContext(context) {
-        Http().singleRequest(HttpRequest(uri = target))
-          .flatMap(r => r.entity.toStrict(timeoutTest))
-      }
-
-      eventually(timeout(10 seconds)) {
-        val httpResponse = response.value.value.get
-        val basicContext = parse(httpResponse.data.utf8String).extract[Map[String, String]]
-
-        basicContext("custom-string-key") shouldBe "hello for the server"
-        basicContext("trace-id") shouldBe parentSpan.context().traceID.string
+        span.tags.get(plain("http.url")) shouldBe target
+        span.metricTags.get(plain("component")) shouldBe "akka.http.server"
+        span.metricTags.get(plain("http.method")) shouldBe "GET"
+        span.metricTags.get(plainBoolean("error")) shouldBe false
+        span.metricTags.get(plainLong("http.status_code")) shouldBe 404L
       }
     }
 
@@ -169,40 +136,23 @@ class AkkaHttpServerTracingSpec extends WordSpecLike
       Http().singleRequest(HttpRequest(uri = target)).map(_.discardEntityBytes())
 
       val span = eventually(timeout(10 seconds)) {
-        val span = reporter.nextSpan().value
+        val span = testSpanReporter().nextSpan().value
         span.operationName shouldBe "/stream"
         span
       }
-      val spanTags = stringTag(span) _
+
       inside(span.marks){
-        case List(m2@Mark(_, "response-ready")) =>
-
+        case List(m2 @ Mark(_, "http.response.ready")) =>
       }
-      spanTags("component") shouldBe "akka.http.server"
-      spanTags("span.kind") shouldBe "server"
-      spanTags("http.method") shouldBe "GET"
-      spanTags("http.url") shouldBe target
+
+      span.tags.get(plain("http.url")) shouldBe target
+      span.metricTags.get(plain("component")) shouldBe "akka.http.server"
+      span.metricTags.get(plain("http.method")) shouldBe "GET"
     }
 
-
-    def stringTag(span: Span.FinishedSpan)(tag: String): String = {
-      span.tags(tag).asInstanceOf[TagValue.String].string
-    }
-
-  }
-
-
-  @volatile var registration: Registration = _
-  val reporter = new TestSpanReporter()
-
-  override protected def beforeAll(): Unit = {
-    enableFastSpanFlushing()
-    sampleAlways()
-    registration = Kamon.addReporter(reporter)
   }
 
   override protected def afterAll(): Unit = {
-    registration.cancel()
     webServer.shutdown()
   }
 
