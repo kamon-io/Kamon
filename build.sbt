@@ -14,11 +14,11 @@
  */
 
 
-val kamonCore       = "io.kamon" %% "kamon-core"         % "2.0.0-M6"
-val kamonTestkit    = "io.kamon" %% "kamon-testkit"      % "2.0.0-M6"
-val kamonScala      = "io.kamon" %% "kamon-scala-future" % "2.0.0-M2"
-val kamonExecutors  = "io.kamon" %% "kamon-executors"    % "2.0.0-M2"
-val kamonInstrument = "io.kamon" %% "kamon-instrumentation-common" % "2.0.0-M2"
+val kamonCore       = "io.kamon" %% "kamon-core"         % "2.0.0-RC1"
+val kamonTestkit    = "io.kamon" %% "kamon-testkit"      % "2.0.0-RC1"
+val kamonScala      = "io.kamon" %% "kamon-scala-future" % "2.0.0-RC1"
+val kamonExecutors  = "io.kamon" %% "kamon-executors"    % "2.0.0-RC1"
+val kamonInstrument = "io.kamon" %% "kamon-instrumentation-common" % "2.0.0-RC1"
 val kanelaAgent     =  "io.kamon" % "kanela-agent"       % "1.0.0-M3"
 
 val akka24Version = "2.4.20"
