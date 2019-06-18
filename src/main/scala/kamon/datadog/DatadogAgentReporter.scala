@@ -100,7 +100,7 @@ class DatadogAgentReporter private[datadog] (c: DatadogAgentReporter.Configurati
     valueFormat.format(scale(value, unit)) + "|g"
 
   private def scale(value: Double, unit: MeasurementUnit): Double = unit.dimension match {
-    case Time if unit.magnitude != time.seconds.magnitude             => MeasurementUnit.convert(value, unit, time.seconds)
+    case Time if unit.magnitude != config.timeUnit.magnitude            => MeasurementUnit.convert(value, unit, config.timeUnit)
     case Information if unit.magnitude != information.bytes.magnitude => MeasurementUnit.convert(value, unit, information.bytes)
     case _                                                            => value.toDouble
   }
