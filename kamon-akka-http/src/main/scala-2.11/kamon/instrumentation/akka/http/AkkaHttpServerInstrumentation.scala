@@ -2,18 +2,22 @@ package kamon.instrumentation.akka.http
 
 import java.util.concurrent.Callable
 
-import akka.http.scaladsl.marshalling.ToResponseMarshallable
+import akka.http.scaladsl.marshalling.{ToResponseMarshallable, ToResponseMarshaller}
 import akka.http.scaladsl.model.StatusCodes.Redirection
 import akka.http.scaladsl.model.Uri
 import akka.http.scaladsl.server.PathMatcher.{Matched, Unmatched}
-import akka.http.scaladsl.server.directives.BasicDirectives
+import akka.http.scaladsl.server.directives.{BasicDirectives, CompleteOrRecoverWithMagnet, OnSuccessMagnet}
 import akka.http.scaladsl.server.directives.RouteDirectives.reject
 import akka.http.scaladsl.server._
+import akka.http.scaladsl.server.util.Tupler
 import kamon.Kamon
 import kamon.instrumentation.akka.http.HasMatchingContext.PathMatchingContext
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.api.instrumentation.mixin.Initializer
 import kanela.agent.libs.net.bytebuddy.implementation.bind.annotation._
+
+import scala.concurrent.Future
+import scala.util.{Failure, Success, Try}
 
 
 class AkkaHttpServerInstrumentation extends InstrumentationBuilder {
@@ -41,6 +45,12 @@ class AkkaHttpServerInstrumentation extends InstrumentationBuilder {
 
   onType("akka.http.scaladsl.server.directives.PathDirectives$class")
     .intercept(method("rawPathPrefix"), classOf[PathDirectivesRawPathPrefixInterceptor])
+
+  onType("akka.http.scaladsl.server.directives.FutureDirectives$class")
+    .intercept(method("onComplete"), classOf[ResolveOperationNameOnRouteInterceptor])
+
+  onTypes("akka.http.scaladsl.server.directives.OnSuccessMagnet$", "akka.http.scaladsl.server.directives.CompleteOrRecoverWithMagnet$")
+    .intercept(method("apply"), classOf[ResolveOperationNameOnRouteInterceptor])
 
   onType("akka.http.scaladsl.server.directives.RouteDirectives$class")
     .intercept(method("complete"), classOf[ResolveOperationNameOnRouteInterceptor])
@@ -83,6 +93,7 @@ object HasMatchingContext {
 
 class ResolveOperationNameOnRouteInterceptor
 object ResolveOperationNameOnRouteInterceptor {
+  import akka.http.scaladsl.util.FastFuture._
 
   // We are replacing some of the basic directives here to ensure that we will resolve both the Sampling Decision and
   // the operation name before the request gets to the actual handling code (presumably inside of a "complete"
@@ -98,6 +109,35 @@ object ResolveOperationNameOnRouteInterceptor {
     Kamon.currentSpan().fail(error)
     StandardRoute(resolveOperationName(_).fail(error))
   }
+
+  def onComplete[T](@Argument(1) future: ⇒ Future[T]): Directive1[Try[T]] =
+    Directive { inner ⇒ ctx ⇒
+      import ctx.executionContext
+      resolveOperationName(ctx)
+      future.fast.transformWith(t ⇒ inner(Tuple1(t))(ctx))
+    }
+
+  def apply[T](future: ⇒ Future[T])(implicit tupler: Tupler[T]): OnSuccessMagnet { type Out = tupler.Out } =
+    new OnSuccessMagnet {
+      type Out = tupler.Out
+      val directive = Directive[tupler.Out] { inner ⇒ ctx ⇒
+        import ctx.executionContext
+        resolveOperationName(ctx)
+        future.fast.flatMap(t ⇒ inner(tupler(t))(ctx))
+      }(tupler.OutIsTuple)
+    }
+
+  def apply[T](future: ⇒ Future[T])(implicit m: ToResponseMarshaller[T]): CompleteOrRecoverWithMagnet =
+    new CompleteOrRecoverWithMagnet {
+      val directive = Directive[Tuple1[Throwable]] { inner ⇒ ctx ⇒
+        import ctx.executionContext
+        resolveOperationName(ctx)
+        future.fast.transformWith {
+          case Success(res)   ⇒ ctx.complete(res)
+          case Failure(error) ⇒ inner(Tuple1(error))(ctx)
+        }
+      }
+    }
 
   private def resolveOperationName(requestContext: RequestContext): RequestContext = {
     val defaultOperationName = ServerFlowWrapper.defaultOperationName(requestContext.request.uri.authority.port)

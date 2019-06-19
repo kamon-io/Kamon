@@ -72,6 +72,54 @@ class AkkaHttpServerTracingSpec extends WordSpecLike with Matchers with ScalaFut
          }
        }
 
+      "take a sampling decision when the routing tree hits an onComplete directive" in {
+        val path = "extraction/on-complete/42/more-path"
+        val expected = "/extraction/on-complete/{}"
+        val target = s"http://$interface:$port/$path"
+        Http().singleRequest(HttpRequest(uri = target)).map(_.discardEntityBytes())
+
+        eventually(timeout(10 seconds)) {
+          val span = testSpanReporter().nextSpan().value
+          span.operationName shouldBe expected
+        }
+      }
+
+      "take a sampling decision when the routing tree hits an onSuccess directive" in {
+        val path = "extraction/on-success/42/after"
+        val expected = "/extraction/on-success/{}"
+        val target = s"http://$interface:$port/$path"
+        Http().singleRequest(HttpRequest(uri = target)).map(_.discardEntityBytes())
+
+        eventually(timeout(10 seconds)) {
+          val span = testSpanReporter().nextSpan().value
+          span.operationName shouldBe expected
+        }
+      }
+
+      "take a sampling decision when the routing tree hits a completeOrRecoverWith directive with a failed future" in {
+        val path = "extraction/complete-or-recover-with/42/after"
+        val expected = "/extraction/complete-or-recover-with/{}"
+        val target = s"http://$interface:$port/$path"
+        Http().singleRequest(HttpRequest(uri = target)).map(_.discardEntityBytes())
+
+        eventually(timeout(10 seconds)) {
+          val span = testSpanReporter().nextSpan().value
+          span.operationName shouldBe expected
+        }
+      }
+
+      "take a sampling decision when the routing tree hits a completeOrRecoverWith directive with a successful future" in {
+        val path = "extraction/complete-or-recover-with-success/42/after"
+        val expected = "/extraction/complete-or-recover-with-success/{}"
+        val target = s"http://$interface:$port/$path"
+        Http().singleRequest(HttpRequest(uri = target)).map(_.discardEntityBytes())
+
+        eventually(timeout(10 seconds)) {
+          val span = testSpanReporter().nextSpan().value
+          span.operationName shouldBe expected
+        }
+      }
+
       "including ambiguous nested directives" in {
         val path = s"v3/user/3/post/3"
         val expected = "/v3/user/{}/post/{}"

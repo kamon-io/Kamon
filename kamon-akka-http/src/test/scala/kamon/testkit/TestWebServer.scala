@@ -20,9 +20,10 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpResponse}
 import de.heikoseeberger.akkahttpjson4s.Json4sSupport
-import akka.http.scaladsl.model.StatusCodes._
+import akka.http.scaladsl.model.StatusCodes.{BadRequest, InternalServerError, OK}
 import akka.http.scaladsl.model.headers.Connection
 import akka.http.scaladsl.server.Directives._
+import akka.http.scaladsl.server.RequestContext
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
@@ -32,7 +33,9 @@ import org.json4s.{DefaultFormats, native}
 
 import scala.concurrent.duration._
 import kamon.tag.Lookups.plain
+import kamon.trace.Trace
 
+import scala.util.{Failure, Success}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Random
 
@@ -66,6 +69,36 @@ trait TestWebServer extends TracingDirectives {
             pathPrefix("concat") {
               path("fixed" ~ JavaUUID ~ HexIntNumber) { (uuid, num) =>
                 complete("OK")
+              }
+            } ~
+            pathPrefix("on-complete" / IntNumber) { _ =>
+              onComplete(Future("hello")) { _ =>
+                extract(samplingDecision) { decision =>
+                  path("more-path") {
+                    complete(decision.toString)
+                  }
+                }
+              }
+            } ~
+            pathPrefix("on-success" / IntNumber) { _ =>
+              onSuccess(Future("hello")) { text =>
+                pathPrefix("after") {
+                  complete(text)
+                }
+              }
+            } ~
+            pathPrefix("complete-or-recover-with" / IntNumber) { _ =>
+              completeOrRecoverWith(Future("bad".charAt(10).toString)) { failure =>
+                pathPrefix("after") {
+                  failWith(failure)
+                }
+              }
+            } ~
+            pathPrefix("complete-or-recover-with-success" / IntNumber) { _ =>
+              completeOrRecoverWith(Future("good")) { failure =>
+                pathPrefix("after") {
+                  failWith(failure)
+                }
               }
             }
           }
@@ -130,6 +163,9 @@ trait TestWebServer extends TracingDirectives {
 
     new WebServer(Http().bindAndHandle(routes, interface, port))
   }
+
+  def samplingDecision(ctx: RequestContext): Trace.SamplingDecision =
+    Kamon.currentSpan().trace.samplingDecision
 
   object Endpoints {
     val rootOk: String = ""
