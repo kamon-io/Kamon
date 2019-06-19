@@ -37,8 +37,8 @@ class SlickInstrumentation extends InstrumentationBuilder {
 object AsyncExecutorApplyInterceptor {
 
   @RuntimeType
-  def apply(@SuperCall zuper: Callable[AsyncExecutor]): AsyncExecutor = {
-    new SlickInstrumentation.ContextAwareAsyncExecutor(zuper.call())
+  def apply(@SuperCall zuper: Callable[Any]): Any = {
+    new SlickInstrumentation.ContextAwareAsyncExecutor(zuper.call().asInstanceOf[AsyncExecutor])
   }
 
 }
