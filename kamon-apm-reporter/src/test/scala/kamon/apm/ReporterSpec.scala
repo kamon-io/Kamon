@@ -73,12 +73,10 @@ class ReporterSpec extends TestKit(ActorSystem("MetricReporterSpec")) with WordS
 
   override def afterAll(): Unit = server.flatMap(_.unbind())(system.dispatcher)
 
+  var reporter: KamonApm = null
   val emptySnapshot = PeriodSnapshot(Instant.EPOCH, Instant.EPOCH.plusSeconds(1), Seq.empty, Seq.empty, Seq.empty, Seq.empty, Seq.empty)
 
   "Metric reporter on flaky network" should {
-
-    var reporter: KamonApm = null
-
     "retry initial HELLO" in {
       reporter = new KamonApm()
       expectMsgType[Hello]
