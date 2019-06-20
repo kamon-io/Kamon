@@ -22,30 +22,27 @@ import com.typesafe.config.Config
 import io.jaegertracing.thrift.internal.senders.HttpSender
 import io.jaegertracing.thriftjava.{Log, Process, Tag, TagType, Span => JaegerSpan}
 import kamon.util.Clock
-import kamon.Kamon
-import kamon.module.SpanReporter
+import kamon.{module, Kamon}
+import kamon.module.{ModuleFactory, SpanReporter}
 import kamon.trace.{Identifier, Span}
 import org.slf4j.LoggerFactory
 
 import scala.util.Try
 
-class JaegerReporter extends SpanReporter {
+class JaegerReporterFactory extends ModuleFactory {
+  override def create(settings: ModuleFactory.Settings): module.Module = {
+    new JaegerReporter(JaegerClient(settings.config))
+  }
+}
+
+class JaegerReporter(@volatile private var jaegerClient: JaegerClient) extends SpanReporter {
 
   private val logger = LoggerFactory.getLogger(classOf[JaegerReporter])
-
-  @volatile private var jaegerClient: JaegerClient = _
-  reconfigure(Kamon.config())
 
   logger.info("Started the Kamon Jaeger reporter")
 
   override def reconfigure(newConfig: Config): Unit = {
-    val jaegerConfig = newConfig.getConfig("kamon.jaeger")
-    val host = jaegerConfig.getString("host")
-    val port = jaegerConfig.getInt("port")
-    val scheme = if (jaegerConfig.getBoolean("tls")) "https" else "http"
-    val includeEnvironmentTags = jaegerConfig.getBoolean("include-environment-tags")
-
-    jaegerClient = new JaegerClient(host, port, scheme, includeEnvironmentTags)
+    jaegerClient = JaegerClient(newConfig)
   }
 
   override def stop(): Unit = {
@@ -54,6 +51,18 @@ class JaegerReporter extends SpanReporter {
 
   override def reportSpans(spans: Seq[Span.Finished]): Unit = {
     jaegerClient.sendSpans(spans)
+  }
+}
+
+object JaegerClient {
+
+  def apply(config: Config): JaegerClient = {
+    val jaegerConfig = config.getConfig("kamon.jaeger")
+    val host = jaegerConfig.getString("host")
+    val port = jaegerConfig.getInt("port")
+    val scheme = if (jaegerConfig.getBoolean("tls")) "https" else "http"
+    val includeEnvironmentTags = jaegerConfig.getBoolean("include-environment-tags")
+    new JaegerClient(host, port, scheme, includeEnvironmentTags)
   }
 }
 
