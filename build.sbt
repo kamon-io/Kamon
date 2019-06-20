@@ -17,33 +17,26 @@ import com.typesafe.sbt.SbtScalariform.ScalariformKeys
 import scalariform.formatter.preferences._
 
 
-val kamonCore             = "io.kamon"               %% "kamon-core"          % "2.0.0-M5"
-val kamonTestKit          = "io.kamon"               %% "kamon-testkit"       % "2.0.0-M5"
+val kamonCore             = "io.kamon"               %% "kamon-core"          % "2.0.0-RC1"
+val kamonTestKit          = "io.kamon"               %% "kamon-testkit"       % "2.0.0-RC1"
 val asyncHttpClient       = "com.squareup.okhttp3"    % "okhttp"              % "3.10.0"
 val asyncHttpClientMock   = "com.squareup.okhttp3"    % "mockwebserver"       % "3.10.0"
-val diffson               = "org.gnieh"              %% "diffson-play-json"    % "4.0.0-M3"
+val scalatest             = "org.scalatest"          %% "scalatest"            % "3.0.8"
 
 lazy val root = (project in file("."))
   .settings(name := "kamon-datadog")
   .settings(
     libraryDependencies ++=
-      compileScope(kamonCore, asyncHttpClient, scalaCompact.value, playJsonVersion.value) ++
-        testScope(scalatest, slf4jApi, slf4jnop, kamonCore, kamonTestKit, asyncHttpClientMock, diffson),
+      compileScope(kamonCore, asyncHttpClient, playJsonVersion.value) ++
+        testScope(scalatest, slf4jApi, slf4jnop, kamonCore, kamonTestKit, asyncHttpClientMock),
+    crossScalaVersions := Seq("2.11.12", "2.12.7", "2.13.0"),
     ScalariformKeys.preferences := formatSettings(ScalariformKeys.preferences.value))
 
 
 def playJsonVersion = Def.setting {
   scalaBinaryVersion.value match {
     case "2.10"          => "com.typesafe.play"      %% "play-json"          % "2.4.11"
-    case "2.12" | "2.11" => "com.typesafe.play"      %% "play-json"          % "2.6.9"
-  }
-}
-
-
-def scalaCompact = Def.setting {
-  scalaBinaryVersion.value match {
-    case "2.10" | "2.11" => "org.scala-lang.modules" %% "scala-java8-compat" % "0.5.0"
-    case "2.12"          => "org.scala-lang.modules" %% "scala-java8-compat" % "0.8.0"
+    case "2.12" | "2.11" | "2.13" => "com.typesafe.play"      %% "play-json"          % "2.7.4"
   }
 }
 

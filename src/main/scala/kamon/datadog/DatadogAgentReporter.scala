@@ -23,13 +23,13 @@ import java.text.{ DecimalFormat, DecimalFormatSymbols }
 import java.util.Locale
 
 import com.typesafe.config.Config
-import kamon.metric.MeasurementUnit.Dimension.{ Information, Time }
-import kamon.metric.MeasurementUnit.{ information, time, Dimension }
+import kamon.{ ClassLoading, Kamon }
 import kamon.metric.{ MeasurementUnit, PeriodSnapshot }
-import kamon.util.{ DynamicAccess, EnvironmentTags }
-import kamon.Kamon
+import kamon.metric.MeasurementUnit.{ information, Dimension }
+import kamon.metric.MeasurementUnit.Dimension.{ Information, Time }
 import kamon.module.MetricReporter
 import kamon.tag.TagSet
+import kamon.util.EnvironmentTags
 import org.slf4j.LoggerFactory
 
 // 1 arg constructor is intended for injecting config via unit tests
@@ -99,7 +99,7 @@ class DatadogAgentReporter private[datadog] (c: DatadogAgentReporter.Configurati
     valueFormat.format(scale(value, unit)) + "|g"
 
   private def scale(value: Double, unit: MeasurementUnit): Double = unit.dimension match {
-    case Time if unit.magnitude != config.timeUnit.magnitude            => MeasurementUnit.convert(value, unit, config.timeUnit)
+    case Time if unit.magnitude != config.timeUnit.magnitude          => MeasurementUnit.convert(value, unit, config.timeUnit)
     case Information if unit.magnitude != information.bytes.magnitude => MeasurementUnit.convert(value, unit, information.bytes)
     case _                                                            => value.toDouble
   }
@@ -127,9 +127,9 @@ object DatadogAgentReporter {
 
       val filteredTags = envTags.iterator(_.toString) ++ tags.iterator(_.toString).filter(p => filter.accept(p.key))
 
-      val stringTags: String = "|#" + filteredTags.map { p ⇒ s"${p.key}:${p.value}" }.mkString(",")
+      val stringTags: String = "|#" + filteredTags.map { p => s"${p.key}:${p.value}" }.mkString(",")
 
-      StringBuilder.newBuilder
+      new StringBuilder()
         .append(measurementData)
         .append(stringTags)
         .result()
@@ -137,28 +137,27 @@ object DatadogAgentReporter {
   }
 
   private[datadog] def readConfiguration(config: Config): Configuration = {
-    val dynamic = new DynamicAccess(getClass.getClassLoader)
     val datadogConfig = config.getConfig("kamon.datadog")
 
     Configuration(
       timeUnit = readTimeUnit(datadogConfig.getString("time-unit")),
       informationUnit = readInformationUnit(datadogConfig.getString("information-unit")),
-      measurementFormatter = getMeasurementFormatter(datadogConfig, dynamic),
-      packetBuffer = getPacketBuffer(datadogConfig, dynamic)
+      measurementFormatter = getMeasurementFormatter(datadogConfig),
+      packetBuffer = getPacketBuffer(datadogConfig)
     )
   }
 
-  private def getMeasurementFormatter(config: Config, dynamic: DynamicAccess): MeasurementFormatter = {
+  private def getMeasurementFormatter(config: Config): MeasurementFormatter = {
     config.getString("agent.measurement-formatter") match {
       case "default" => new DefaultMeasurementFormatter(config)
-      case fqn       => dynamic.createInstanceFor[MeasurementFormatter](fqn, List(classOf[Config] -> config))
+      case fqn       => ClassLoading.createInstance[MeasurementFormatter](fqn, List(classOf[Config] -> config))
     }
   }
 
-  private def getPacketBuffer(config: Config, dynamic: DynamicAccess): PacketBuffer = {
+  private def getPacketBuffer(config: Config): PacketBuffer = {
     config.getString("agent.packetbuffer") match {
       case "default" => new PacketBufferImpl(config)
-      case fqn       => dynamic.createInstanceFor[PacketBuffer](fqn, List(classOf[Config] -> config))
+      case fqn       => ClassLoading.createInstance[PacketBuffer](fqn, List(classOf[Config] -> config))
     }
   }
 

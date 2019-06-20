@@ -3,9 +3,6 @@ package kamon.datadog
 import java.time.{Duration, Instant}
 import java.util.concurrent.TimeUnit
 
-import diffson.jsonpatch.lcsdiff._
-import diffson.lcs.Patience
-import diffson.playJson._
 import kamon.Kamon
 import kamon.tag.TagSet
 import kamon.testkit.Reconfigure
@@ -45,7 +42,7 @@ trait TestData {
       from = from,
       to = to,
       kind = contextSpan.kind,
-      location = contextSpan.position,
+      position = contextSpan.position,
       tags = TagSet.Empty,
       metricTags = TagSet.Empty,
       marks = Nil,
@@ -147,8 +144,8 @@ trait TestData {
 
 class DatadogSpanReporterSpec extends AbstractHttpReporter with Matchers with Reconfigure with TestData {
 
-  implicit val lcs = new Patience[JsValue]
-  import DiffsonProtocol._
+  //implicit val lcs = new Patience[JsValue]
+  //import DiffsonProtocol._
 
   "the DatadogSpanReporter" should {
     val reporter = new DatadogSpanReporter()
@@ -170,12 +167,9 @@ class DatadogSpanReporterSpec extends AbstractHttpReporter with Matchers with Re
         val requestJson = Json.parse(request.getBody().readUtf8())
 
         url shouldEqual baseUrl
-        val diff = diffson.diff(requestJson, json)
         withClue("\nExpected json: " + Json.prettyPrint(json)) {
           withClue("\nSent json: " + Json.prettyPrint(requestJson)) {
-            withClue("\nDiff: " + Json.prettyPrint(Json.toJson(diff))) {
-              diff.ops shouldBe Nil
-            }
+            requestJson shouldEqual json
           }
         }
         method shouldEqual "PUT"

@@ -28,7 +28,7 @@ case class DdSpan(
       "start" -> JsNumber(BigDecimal(start)),
       "duration" -> JsNumber(BigDecimal(duration.toNanos)),
       "meta" -> JsObject(
-        meta.mapValues(JsString(_))
+        meta.mapValues(JsString(_)).toSeq
       ),
       "error" -> JsNumber(if (error) 1 else 0),
       "metrics" -> JsObject(Map(
@@ -37,7 +37,7 @@ case class DdSpan(
         // https://docs.datadoghq.com/tracing/guide/trace_sampling_and_storage/#client-implementation
         "_sampling_priority_v1" -> JsNumber(1)
       ))
-    ))
+    ).toSeq)
     if (parentId.nonEmpty) {
       json + ("parent_id", JsNumber(BigDecimal(parentId.get)))
     } else {
