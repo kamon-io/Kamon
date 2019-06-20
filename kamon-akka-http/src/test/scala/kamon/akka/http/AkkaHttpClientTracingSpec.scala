@@ -53,7 +53,7 @@ class AkkaHttpClientTracingSpec extends WordSpecLike with Matchers with BeforeAn
 
       eventually(timeout(10 seconds)) {
         val span = testSpanReporter.nextSpan().value
-        span.operationName shouldBe "127.0.0.1"
+        span.operationName shouldBe "GET"
         span.tags.get(plain("http.url")) shouldBe target
         span.metricTags.get(plain("component")) shouldBe "akka.http.client"
         span.metricTags.get(plain("http.method")) shouldBe "GET"
@@ -91,7 +91,7 @@ class AkkaHttpClientTracingSpec extends WordSpecLike with Matchers with BeforeAn
 
       eventually(timeout(10 seconds)) {
         val span = testSpanReporter().nextSpan().value
-        span.operationName shouldBe "127.0.0.1"
+        span.operationName shouldBe "GET"
         span.tags.get(plain("http.url")) shouldBe target
         span.metricTags.get(plain("component")) shouldBe "akka.http.client"
         span.metricTags.get(plain("http.method")) shouldBe "GET"
