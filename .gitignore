@@ -4,6 +4,7 @@
 *.sc
 .pygments-cache
 .DS_Store
+.metals
 
 # sbt specific
 dist/*
