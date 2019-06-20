@@ -91,7 +91,7 @@ class WSInstrumentationSpec extends PlaySpec with GuiceOneServerPerSuite with Sc
       eventually(timeout(5 seconds)) {
         val span = testSpanReporter().nextSpan().value
         span.kind mustBe Span.Kind.Client
-        span.operationName mustBe "localhost"
+        span.operationName mustBe "GET"
         span.metricTags.get(plain("component")) mustBe "play.http.client"
         span.metricTags.get(plain("http.method")) mustBe "GET"
         span.metricTags.get(plainLong("http.status_code")) mustBe 200L
@@ -109,7 +109,7 @@ class WSInstrumentationSpec extends PlaySpec with GuiceOneServerPerSuite with Sc
       eventually(timeout(2 seconds)) {
         val span = testSpanReporter().nextSpan().value
         span.kind mustBe Span.Kind.Client
-        span.operationName mustBe "localhost"
+        span.operationName mustBe "GET"
         span.metricTags.get(plain("component")) mustBe "play.http.client"
         span.metricTags.get(plain("http.method")) mustBe "GET"
         span.metricTags.get(plainLong("http.status_code")) mustBe 200L
@@ -127,91 +127,6 @@ class WSInstrumentationSpec extends PlaySpec with GuiceOneServerPerSuite with Sc
       response.status mustBe 200
       response.body mustBe "one"
     }
-//
-//    "propagate the current context and generate a span called not-found and complete the ws request" in {
-//      val wsClient = app.injector.instanceOf[WSClient]
-//      val notFoundSpan = Kamon.buildSpan("not-found-operation-span").start()
-//      val endpoint = s"http://localhost:$port/not-found"
-//
-//      Kamon.withContext(create(Span.ContextKey, notFoundSpan)) {
-//        val response = await(wsClient.url(endpoint).get())
-//        response.status mustBe 404
-//      }
-//
-//      eventually(timeout(2 seconds)) {
-//        val span = reporter.nextSpan().value
-//        span.operationName mustBe "not-found"
-//        span.tags("span.kind") mustBe TagValue.String("client")
-//        span.tags("http.method") mustBe TagValue.String("GET")
-//        span.tags("http.status_code") mustBe TagValue.Number(404)
-//      }
-//    }
-//
-//    "propagate the current context and generate a span with error and complete the ws request" in {
-//      val wsClient = app.injector.instanceOf[WSClient]
-//      val errorSpan = Kamon.buildSpan("error-operation-span").start()
-//      val endpoint = s"http://localhost:$port/error"
-//
-//      Kamon.withContext(create(Span.ContextKey, errorSpan)) {
-//        val response = await(wsClient.url(endpoint).get())
-//        response.status mustBe 500
-//      }
-//
-//      eventually(timeout(2 seconds)) {
-//        val span = reporter.nextSpan().value
-//        span.operationName mustBe endpoint
-//        span.tags("span.kind") mustBe TagValue.String("client")
-//        span.tags("http.method") mustBe TagValue.String("GET")
-//        span.tags("error") mustBe TagValue.True
-//        span.tags("http.status_code") mustBe TagValue.Number(500)
-//      }
-//    }
-//
-//    "propagate the current context and generate a span with error object and complete the ws request" in {
-//      val wsClient = app.injector.instanceOf[WSClient]
-//      val errorSpan = Kamon.buildSpan("throw-exception-operation-span").start()
-//      val endpoint = s"http://localhost:1000/throw-exception"
-//
-//      intercept[ConnectException] {
-//        Kamon.withContext(create(Span.ContextKey, errorSpan)) {
-//          val response = await(wsClient.url(endpoint).get())
-//          response.status mustBe 500
-//        }
-//      }
-//
-//      eventually(timeout(2 seconds)) {
-//        val span = reporter.nextSpan().value
-//        span.operationName mustBe endpoint
-//        span.tags("span.kind") mustBe TagValue.String("client")
-//        span.tags("http.method") mustBe TagValue.String("GET")
-//        span.tags("error") mustBe TagValue.True
-//        span.tags("error.object").toString must include(TagValue.String("Connection refused").string)
-//      }
-//    }
-//
-//    "propagate the current context and pickup a SpanCustomizer and apply it to the new spans and complete the ws request" in {
-//      val wsClient = app.injector.instanceOf[WSClient]
-//      val okSpan = Kamon.buildSpan("ok-operation-span").start()
-//
-//      val customizedOperationName = "customized-operation-name"
-//      val endpoint = s"http://localhost:$port/ok"
-//
-//      val context = Context.create(Span.ContextKey, okSpan)
-//        .withKey(SpanCustomizer.ContextKey, SpanCustomizer.forOperationName(customizedOperationName))
-//
-//      Kamon.withContext(context) {
-//        val response = await(wsClient.url(endpoint).get())
-//        response.status mustBe 200
-//      }
-//
-//      eventually(timeout(2 seconds)) {
-//        val span = reporter.nextSpan().value
-//        span.operationName mustBe customizedOperationName
-//        span.tags("span.kind") mustBe TagValue.String("client")
-//        span.tags("http.method") mustBe TagValue.String("GET")
-//        span.tags("http.status_code") mustBe TagValue.Number(200)
-//      }
-//    }
 
     "run the WSClient instrumentation only once, even if request filters are added" in {
       val wsClient = app.injector.instanceOf[WSClient]
@@ -229,7 +144,7 @@ class WSInstrumentationSpec extends PlaySpec with GuiceOneServerPerSuite with Sc
       eventually(timeout(2 seconds)) {
         val span = testSpanReporter().nextSpan().value
         span.kind mustBe Span.Kind.Client
-        span.operationName mustBe "localhost"
+        span.operationName mustBe "GET"
         span.metricTags.get(plain("component")) mustBe "play.http.client"
         span.metricTags.get(plain("http.method")) mustBe "GET"
         span.metricTags.get(plainLong("http.status_code")) mustBe 200L
