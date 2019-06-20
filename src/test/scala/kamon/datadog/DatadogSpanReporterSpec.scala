@@ -4,6 +4,7 @@ import java.time.{Duration, Instant}
 import java.util.concurrent.TimeUnit
 
 import kamon.Kamon
+import kamon.module.ModuleFactory
 import kamon.tag.TagSet
 import kamon.testkit.Reconfigure
 import kamon.trace._
@@ -12,6 +13,7 @@ import org.scalatest.Matchers
 import play.api.libs.json._
 
 import scala.collection.immutable.ListMap
+import scala.concurrent.ExecutionContext
 import scala.util.Random
 
 /**
@@ -148,7 +150,7 @@ class DatadogSpanReporterSpec extends AbstractHttpReporter with Matchers with Re
   //import DiffsonProtocol._
 
   "the DatadogSpanReporter" should {
-    val reporter = new DatadogSpanReporter()
+    val reporter = new DatadogSpanReporterFactory().create(ModuleFactory.Settings(Kamon.config(), ExecutionContext.global))
 
     val (firstSpan, _) = testMap.get("single span").head
 

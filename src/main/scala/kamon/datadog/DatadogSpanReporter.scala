@@ -4,8 +4,8 @@ import java.time.Duration
 
 import com.typesafe.config.Config
 import kamon.trace.Span
-import kamon.{ ClassLoading, Kamon }
-import kamon.module.SpanReporter
+import kamon.{ module, ClassLoading, Kamon }
+import kamon.module.{ ModuleFactory, SpanReporter }
 import kamon.tag.{ Lookups, Tag }
 import org.slf4j.LoggerFactory
 import play.api.libs.json.{ JsObject, Json }
@@ -39,7 +39,7 @@ object KamonDataDogTranslatorDefault extends KamonDataDogTranslator {
 }
 
 object DatadogSpanReporter {
-  final private val httpConfigPath = "kamon.datadog.trace.http"
+  private[kamon] val httpConfigPath = "kamon.datadog.trace.http"
 
   private[kamon] def getTranslator(config: Config): KamonDataDogTranslator = {
     config.getConfig(httpConfigPath).getString("translator") match {
@@ -49,11 +49,18 @@ object DatadogSpanReporter {
   }
 }
 
-class DatadogSpanReporter extends SpanReporter {
+class DatadogSpanReporterFactory extends ModuleFactory {
+  override def create(settings: ModuleFactory.Settings): DatadogSpanReporter = {
+    new DatadogSpanReporter(
+      DatadogSpanReporter.getTranslator(settings.config),
+      new HttpClient(settings.config.getConfig(DatadogSpanReporter.httpConfigPath))
+    )
+  }
+}
 
-  @volatile private var translator: KamonDataDogTranslator = DatadogSpanReporter.getTranslator(Kamon.config())
+class DatadogSpanReporter(@volatile private var translator: KamonDataDogTranslator, @volatile private var httpClient: HttpClient) extends SpanReporter {
+
   private val logger = LoggerFactory.getLogger(classOf[DatadogAPIReporter])
-  @volatile private var httpClient = new HttpClient(Kamon.config().getConfig(DatadogSpanReporter.httpConfigPath))
 
   override def reportSpans(spans: Seq[Span.Finished]): Unit = if (spans.nonEmpty) {
     val spanList: List[Seq[JsObject]] = spans
@@ -77,3 +84,4 @@ class DatadogSpanReporter extends SpanReporter {
   }
 
 }
+

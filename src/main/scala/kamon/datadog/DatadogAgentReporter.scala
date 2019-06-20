@@ -23,20 +23,22 @@ import java.text.{ DecimalFormat, DecimalFormatSymbols }
 import java.util.Locale
 
 import com.typesafe.config.Config
-import kamon.{ ClassLoading, Kamon }
+import kamon.{ module, ClassLoading, Kamon }
 import kamon.metric.{ MeasurementUnit, PeriodSnapshot }
 import kamon.metric.MeasurementUnit.{ information, Dimension }
 import kamon.metric.MeasurementUnit.Dimension.{ Information, Time }
-import kamon.module.MetricReporter
+import kamon.module.{ MetricReporter, ModuleFactory }
 import kamon.tag.TagSet
 import kamon.util.EnvironmentTags
 import org.slf4j.LoggerFactory
 
+class DatadogAgentReporterFactory extends ModuleFactory {
+  override def create(settings: ModuleFactory.Settings): DatadogAgentReporter = {
+    new DatadogAgentReporter(DatadogAgentReporter.readConfiguration(Kamon.config()))
+  }
+}
 // 1 arg constructor is intended for injecting config via unit tests
-class DatadogAgentReporter private[datadog] (c: DatadogAgentReporter.Configuration) extends MetricReporter {
-
-  def this() = this(DatadogAgentReporter.readConfiguration(Kamon.config()))
-
+class DatadogAgentReporter private[datadog] (@volatile private var config: DatadogAgentReporter.Configuration) extends MetricReporter {
   import DatadogAgentReporter._
 
   private val symbols = DecimalFormatSymbols.getInstance(Locale.US)
@@ -49,8 +51,6 @@ class DatadogAgentReporter private[datadog] (c: DatadogAgentReporter.Configurati
   logger.info("Started the Kamon Datadog reporter")
 
   override def stop(): Unit = {}
-
-  private[datadog] var config: Configuration = c
 
   override def reconfigure(config: Config): Unit = {
     this.config = readConfiguration(config)

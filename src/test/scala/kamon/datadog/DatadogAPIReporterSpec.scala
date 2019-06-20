@@ -3,17 +3,20 @@ package kamon.datadog
 import java.time.Instant
 
 import kamon.Kamon
-import kamon.metric.{Instrument, MeasurementUnit, Metric, MetricSnapshot, PeriodSnapshot}
+import kamon.metric.{ Instrument, MeasurementUnit, Metric, MetricSnapshot, PeriodSnapshot }
+import kamon.module.ModuleFactory
 import kamon.tag.TagSet
 import kamon.testkit.Reconfigure
 import okhttp3.mockwebserver.MockResponse
 import org.scalatest.Matchers
 import play.api.libs.json.Json
 
+import scala.concurrent.ExecutionContext
+
 class DatadogAPIReporterSpec extends AbstractHttpReporter with Matchers with Reconfigure {
 
   "the DatadogAPIReporter" should {
-    val reporter = new DatadogAPIReporter()
+    val reporter = new DatadogAPIReporterFactory().create(ModuleFactory.Settings(Kamon.config(), ExecutionContext.global))
     val now = Instant.ofEpochMilli(1523395554)
 
     "sends counter metrics" in {

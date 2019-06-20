@@ -27,13 +27,21 @@ import kamon.metric.MeasurementUnit.Dimension.{ Information, Time }
 import kamon.metric.{ MeasurementUnit, MetricSnapshot, PeriodSnapshot }
 import kamon.tag.TagSet
 import kamon.util.{ EnvironmentTags, Filter }
-import kamon.Kamon
-import kamon.module.MetricReporter
+import kamon.{ module, Kamon }
+import kamon.datadog.DatadogAPIReporter.Configuration
+import kamon.module.{ MetricReporter, ModuleFactory }
 import org.slf4j.LoggerFactory
 
 import scala.util.{ Failure, Success }
 
-class DatadogAPIReporter extends MetricReporter {
+class DatadogAPIReporterFactory extends ModuleFactory {
+  override def create(settings: ModuleFactory.Settings): DatadogAPIReporter = {
+    val config = DatadogAPIReporter.readConfiguration(settings.config)
+    new DatadogAPIReporter(config, new HttpClient(config.httpConfig))
+  }
+}
+
+class DatadogAPIReporter(@volatile private var configuration: Configuration, @volatile private var httpClient: HttpClient) extends MetricReporter {
   import DatadogAPIReporter._
 
   private val logger = LoggerFactory.getLogger(classOf[DatadogAPIReporter])
@@ -41,8 +49,6 @@ class DatadogAPIReporter extends MetricReporter {
   symbols.setDecimalSeparator('.') // Just in case there is some weird locale config we are not aware of.
 
   private val valueFormat = new DecimalFormat("#0.#########", symbols)
-  private var configuration = readConfiguration(Kamon.config())
-  private var httpClient: HttpClient = new HttpClient(configuration.httpConfig)
 
   logger.info("Started the Datadog API reporter.")
 
@@ -137,18 +143,6 @@ class DatadogAPIReporter extends MetricReporter {
 
     case _ => value
   }
-
-  private def readConfiguration(config: Config): Configuration = {
-    val datadogConfig = config.getConfig("kamon.datadog")
-    Configuration(
-      datadogConfig.getConfig("http"),
-      timeUnit = readTimeUnit(datadogConfig.getString("time-unit")),
-      informationUnit = readInformationUnit(datadogConfig.getString("information-unit")),
-      // Remove the "host" tag since it gets added to the datadog payload separately
-      EnvironmentTags.from(Kamon.environment, datadogConfig.getConfig("additional-tags")).iterator(_.toString).filterNot(_.key == "host").map(p => p.key -> p.value).toSeq,
-      Kamon.filter(datadogConfig.getString("filter-config-key"))
-    )
-  }
 }
 
 private object DatadogAPIReporter {
@@ -159,5 +153,17 @@ private object DatadogAPIReporter {
 
   implicit class QuoteInterp(val sc: StringContext) extends AnyVal {
     def quote(args: Any*): String = "\"" + sc.s(args: _*) + "\""
+  }
+
+  def readConfiguration(config: Config): Configuration = {
+    val datadogConfig = config.getConfig("kamon.datadog")
+    Configuration(
+      datadogConfig.getConfig("http"),
+      timeUnit = readTimeUnit(datadogConfig.getString("time-unit")),
+      informationUnit = readInformationUnit(datadogConfig.getString("information-unit")),
+      // Remove the "host" tag since it gets added to the datadog payload separately
+      EnvironmentTags.from(Kamon.environment, datadogConfig.getConfig("additional-tags")).iterator(_.toString).filterNot(_.key == "host").map(p => p.key -> p.value).toSeq,
+      Kamon.filter(datadogConfig.getString("filter-config-key"))
+    )
   }
 }
