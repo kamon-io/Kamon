@@ -25,13 +25,18 @@ import kamon.util.Clock
 import kamon.Kamon
 import kamon.module.SpanReporter
 import kamon.trace.{Identifier, Span}
+import org.slf4j.LoggerFactory
 
 import scala.util.Try
 
 class JaegerReporter extends SpanReporter {
 
+  private val logger = LoggerFactory.getLogger(classOf[JaegerReporter])
+
   @volatile private var jaegerClient: JaegerClient = _
   reconfigure(Kamon.config())
+
+  logger.info("Started the Kamon Jaeger reporter")
 
   override def reconfigure(newConfig: Config): Unit = {
     val jaegerConfig = newConfig.getConfig("kamon.jaeger")
@@ -43,8 +48,9 @@ class JaegerReporter extends SpanReporter {
     jaegerClient = new JaegerClient(host, port, scheme, includeEnvironmentTags)
   }
 
-  override def start(): Unit = {}
-  override def stop(): Unit = {}
+  override def stop(): Unit = {
+    logger.info("Stopped the Kamon Jaeger reporter")
+  }
 
   override def reportSpans(spans: Seq[Span.Finished]): Unit = {
     jaegerClient.sendSpans(spans)
