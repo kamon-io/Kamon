@@ -1,37 +1,37 @@
 import com.lightbend.sbt.javaagent.Modules
 import sbt.Keys.resourceGenerators
 import BundleKeys._
-onLoad in Global ~= (_ andThen ("project kamonBundle" :: _))
+resolvers += Resolver.mavenLocal
 
 lazy val instrumentationModules: Seq[ModuleID] = Seq(
   "io.kamon" %% "kamon-executors"         % "2.0.0-RC1",
   "io.kamon" %% "kamon-scala-future"      % "2.0.0-RC1",
-  "io.kamon" %% "kamon-akka"              % "2.0.0-RC1",
-  "io.kamon" %% "kamon-akka-http"         % "2.0.0-RC1",
-  "io.kamon" %% "kamon-akka-remote"       % "2.0.0-RC1",
-  "io.kamon" %% "kamon-play"              % "2.0.0-RC1",
-  "io.kamon" %% "kamon-jdbc"              % "2.0.0-RC1",
+  "io.kamon" %% "kamon-akka"              % "2.0.0-RC2",
+  "io.kamon" %% "kamon-akka-http"         % "2.0.0-RC2",
+  "io.kamon" %% "kamon-akka-remote"       % "2.0.0-RC2",
+  "io.kamon" %% "kamon-play"              % "2.0.0-RC3",
+  "io.kamon" %% "kamon-jdbc"              % "2.0.0-RC2",
   "io.kamon" %% "kamon-logback"           % "2.0.0-RC1",
-  "io.kamon" %% "kamon-system-metrics"    % "2.0.0-RC1"
+  "io.kamon" %% "kamon-system-metrics"    % "2.0.0-RC1" exclude("org.slf4j", "slf4j-api")
 )
 
 val versionSettings = Seq(
   kamonCoreVersion := "2.0.0-RC1",
-  kanelaAgentVersion := "1.0.0-RC1",
-  instrumentationCommonVersion := "2.0.0-RC1"
+  kanelaAgentVersion := "1.0.0-RC2",
+  instrumentationCommonVersion := "2.0.0-RC2"
 )
 
-lazy val kamonBundle = project
+lazy val root = Project("kamon-bundle", file("."))
    .settings(noPublishing: _*)
    .aggregate(bundle, publishing)
 
-val bundle = (project in file("."))
+val bundle = (project in file("bundle"))
   .enablePlugins(BuildInfoPlugin)
   .enablePlugins(AssemblyPlugin)
   .settings(versionSettings: _*)
   .settings(
     skip in publish := true,
-    name := "kamon-bundle",
+    moduleName := "kamon-bundle",
     resolvers += Resolver.mavenLocal,
     resolvers += Resolver.bintrayRepo("kamon-io", "releases"),
     buildInfoPackage := "kamon.bundle",
@@ -63,7 +63,7 @@ val bundle = (project in file("."))
 lazy val publishing = project
   .settings(versionSettings: _*)
   .settings(
-    name := (name in (bundle, Compile)).value,
+    moduleName := (moduleName in (bundle, Compile)).value,
     scalaVersion := (scalaVersion in bundle).value,
     crossScalaVersions := (crossScalaVersions in bundle).value,
     packageBin in Compile := (packageBin in (bundle, Compile)).value,
