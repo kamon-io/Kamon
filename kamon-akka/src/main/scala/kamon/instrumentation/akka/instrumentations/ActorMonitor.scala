@@ -82,7 +82,7 @@ object ActorMonitor {
 
         // A router cell is only used for Context propagation and most of the actual metrics are being
         // tracked in the routees' cells.
-        new ContextPropagationOnly(cell, participatesInTracing)
+        new ContextPropagationOnly(cell, participatesInTracing, trackActiveActors = false)
 
       } else {
 
@@ -135,7 +135,7 @@ object ActorMonitor {
     } else {
 
       // If the actors is not doing any sort of tracking, it should at least do Context propagation.
-      new ActorMonitor.ContextPropagationOnly(cellInfo, participatesInTracing)
+      new ActorMonitor.ContextPropagationOnly(cellInfo, participatesInTracing, trackActiveActors = true)
     }
   }
 
@@ -245,9 +245,11 @@ object ActorMonitor {
   /**
     * Basic implementation that only provides Context propagation across Actors.
     */
-  class ContextPropagationOnly(cellInfo: ActorCellInfo, participatesInTracing: Boolean) extends ActorMonitor {
+  class ContextPropagationOnly(cellInfo: ActorCellInfo, participatesInTracing: Boolean, trackActiveActors: Boolean) extends ActorMonitor {
     private val _systemMetrics = AkkaMetrics.forSystem(cellInfo.systemName)
-    _systemMetrics.activeActors.increment()
+
+    if(trackActiveActors)
+      _systemMetrics.activeActors.increment()
 
     override def captureEnvelopeTimestamp(): Long =
       if(participatesInTracing) Kamon.clock().nanos() else 0L
@@ -270,8 +272,10 @@ object ActorMonitor {
 
     def onDroppedMessages(count: Long): Unit = {}
 
-    def cleanup(): Unit =
-      _systemMetrics.activeActors.decrement()
+    def cleanup(): Unit = {
+      if(trackActiveActors)
+        _systemMetrics.activeActors.decrement()
+    }
   }
 
   /**
