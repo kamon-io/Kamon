@@ -1,10 +1,9 @@
 package kamon.instrumentation.play
 
 import javax.inject._
-
 import kamon.Kamon
 import play.api.inject.{ApplicationLifecycle, Binding, Module}
-import play.api.{Configuration, Environment, Logger}
+import play.api.{Configuration, Environment, Logger, Mode}
 
 import scala.concurrent.Future
 
@@ -23,7 +22,10 @@ object GuiceModule {
     Kamon.loadModules()
 
     lifecycle.addStopHook { () ⇒
-      Future.successful(Kamon.stopModules())
+      if(environment.mode != Mode.Dev)
+        Future.successful(Kamon.stopModules())
+      else
+        Future.successful(())
     }
   }
 }
