@@ -58,7 +58,9 @@ trait TestData {
     "resource" -> "operation name",
     "duration" -> JsNumber(duration.getSeconds * 1000000000 + duration.getNano),
     "name" -> "kamon.trace",
-    "meta" -> Json.obj(),
+    "meta" -> Json.obj(
+      "env" -> "staging",
+    ),
     "error" -> 0,
     "type" -> "custom",
     "start" -> JsNumber(from.getEpochNano),
@@ -74,7 +76,8 @@ trait TestData {
 
   val jsonWithError = json ++ Json.obj(
     "meta" -> Json.obj(
-      "error" -> "true"
+      "error" -> "true",
+      "env" -> "staging",
     ),
     "error" -> 1
   )
@@ -100,7 +103,8 @@ trait TestData {
       "true" -> "true",
       "false" -> "false",
       "number" -> randomNumber.toString,
-      "component" -> "custom.component"
+      "component" -> "custom.component",
+      "env" -> "staging",
     )
   )
 
@@ -110,7 +114,8 @@ trait TestData {
 
   val jsonWithMarks = json ++ Json.obj(
     "meta" -> Json.obj(
-      "from" -> JsString(from.getEpochNano.toString)
+      "from" -> JsString(from.getEpochNano.toString),
+        "env" -> JsString("staging")
     )
   )
 
