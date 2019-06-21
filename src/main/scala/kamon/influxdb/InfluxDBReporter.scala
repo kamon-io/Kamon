@@ -1,23 +1,29 @@
 package kamon.influxdb
 
+import java.time.Instant
+import java.util.concurrent.TimeUnit
+
 import com.typesafe.config.Config
 import kamon.influxdb.InfluxDBReporter.Settings
-import kamon.metric.{MetricDistribution, MetricValue, PeriodSnapshot}
-import kamon.util.EnvironmentTagBuilder
-import kamon.{Kamon, MetricReporter}
-import okhttp3.{MediaType, OkHttpClient, Request, RequestBody, Authenticator, Route, Response, Credentials}
+import kamon.metric.{MeasurementUnit, MetricSnapshot, PeriodSnapshot}
+import kamon.Kamon
+import kamon.module.{MetricReporter, ModuleFactory}
+import kamon.tag.{Tag, TagSet}
+import kamon.util.{EnvironmentTags, Filter}
+import okhttp3.{Authenticator, Credentials, Interceptor, MediaType, OkHttpClient, Request, RequestBody, Response, Route}
 import org.slf4j.LoggerFactory
 
 import scala.util.Try
 
-class InfluxDBReporter(config: Config) extends MetricReporter {
-  private val logger = LoggerFactory.getLogger(classOf[InfluxDBReporter])
-  private var settings = InfluxDBReporter.readSettings(config)
-  private val client = buildClient(settings)
 
-  // To allow loading of reporter via Kamon configuration (which uses reflection) a no-args constructor is required
-  // Specifying a default argument value in the constructor doesn't generate a no-args constructor
-  def this() = this(Kamon.config()) 
+class InfluxDBReporterFactory extends ModuleFactory {
+  override def create(settings: ModuleFactory.Settings): InfluxDBReporter = new InfluxDBReporter()
+}
+
+class InfluxDBReporter extends MetricReporter {
+  protected val logger = LoggerFactory.getLogger(classOf[InfluxDBReporter])
+  @volatile protected var settings = InfluxDBReporter.readSettings(Kamon.config())
+  @volatile protected var client = buildClient(settings)
 
   override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
     val request = new Request.Builder()
@@ -27,12 +33,14 @@ class InfluxDBReporter(config: Config) extends MetricReporter {
 
     Try {
       val response = client.newCall(request).execute()
-      if(response.isSuccessful())
+      if(response.isSuccessful() && logger.isTraceEnabled())
         logger.trace("Successfully sent metrics to InfluxDB")
       else {
-        logger.error("Metrics POST to InfluxDB failed with status code [{}], response body: {}",
+        logger.error(
+          "Metrics POST to InfluxDB failed with status code [{}], response body: {}",
           response.code(),
-          response.body().string())
+          response.body().string()
+        )
       }
 
       response.close()
@@ -43,60 +51,94 @@ class InfluxDBReporter(config: Config) extends MetricReporter {
   }
 
 
-  override def start(): Unit = {}
-
   override def stop(): Unit = {}
 
   override def reconfigure(config: Config): Unit = {
     settings = InfluxDBReporter.readSettings(config)
+    client = buildClient(settings)
+  }
+
+  protected def getTimestamp(instant: Instant): String = {
+     settings.measurementPrecision match {
+       case "s" =>
+         instant.getEpochSecond.toString
+       case "ms" =>
+         instant.toEpochMilli.toString
+       case "u" | "µ" =>
+         ((BigInt(instant.getEpochSecond) * 1000000) + TimeUnit.NANOSECONDS.toMicros(instant.getNano)).toString
+       case "ns" =>
+          ((BigInt(instant.getEpochSecond) * 1000000000) + instant.getNano).toString
+     }
   }
 
   private def translateToLineProtocol(periodSnapshot: PeriodSnapshot): RequestBody = {
-    import periodSnapshot.metrics._
     val builder = StringBuilder.newBuilder
 
-    counters.foreach(c => writeMetricValue(builder, c, "count", periodSnapshot.to.getEpochSecond))
-    gauges.foreach(g => writeMetricValue(builder, g, "value", periodSnapshot.to.getEpochSecond))
-    histograms.foreach(h => writeMetricDistribution(builder, h, settings.percentiles, periodSnapshot.to.getEpochSecond))
-    rangeSamplers.foreach(rs => writeMetricDistribution(builder, rs, settings.percentiles, periodSnapshot.to.getEpochSecond))
+    val timestamp = getTimestamp(periodSnapshot.to)
+
+    periodSnapshot.counters.foreach(c => writeLongMetricValue(builder, c, "count", timestamp))
+    periodSnapshot.gauges.foreach(g => writeDoubleMetricValue(builder, g, "value", timestamp))
+    periodSnapshot.histograms.foreach(h => writeMetricDistribution(builder, h, settings.percentiles, timestamp))
+    periodSnapshot.rangeSamplers.foreach(rs => writeMetricDistribution(builder, rs, settings.percentiles, timestamp))
+    periodSnapshot.timers.foreach(t => writeMetricDistribution(builder, t, settings.percentiles, timestamp))
 
     RequestBody.create(MediaType.parse("text/plain"), builder.result())
   }
 
-  private def writeMetricValue(builder: StringBuilder, metric: MetricValue, fieldName: String, timestamp: Long): Unit = {
-    writeNameAndTags(builder, metric.name, metric.tags)
-    writeIntField(builder, fieldName, metric.value, appendSeparator = false)
-    writeTimestamp(builder, timestamp)
+  private def writeLongMetricValue(builder: StringBuilder, metric: MetricSnapshot.Values[Long], fieldName: String, timestamp: String): Unit = {
+    metric.instruments.foreach{instrument =>
+      writeNameAndTags(builder, metric.name, instrument.tags)
+      writeIntField(builder, fieldName, instrument.value, appendSeparator = false)
+      writeTimestamp(builder, timestamp)
+    }
   }
 
-  private def writeMetricDistribution(builder: StringBuilder, metric: MetricDistribution, percentiles: Seq[Double], timestamp: Long): Unit = {
-    writeNameAndTags(builder, metric.name, metric.tags)
-    writeIntField(builder, "count", metric.distribution.count)
-    writeIntField(builder, "sum", metric.distribution.sum)
-    writeIntField(builder, "min", metric.distribution.min)
-
-    percentiles.foreach(p => {
-      writeDoubleField(builder, "p" + String.valueOf(p), metric.distribution.percentile(p).value)
-    })
-
-    writeIntField(builder, "max", metric.distribution.max, appendSeparator = false)
-    writeTimestamp(builder, timestamp)
+  private def writeDoubleMetricValue(builder: StringBuilder, metric: MetricSnapshot.Values[Double], fieldName: String, timestamp: String): Unit = {
+    metric.instruments.foreach{instrument =>
+      writeNameAndTags(builder, metric.name, instrument.tags)
+      writeDoubleField(builder, fieldName, instrument.value, appendSeparator = false)
+      writeTimestamp(builder, timestamp)
+    }
   }
 
-  private def writeNameAndTags(builder: StringBuilder, name: String, metricTags: Map[String, String]): Unit = {
+  private def writeMetricDistribution(builder: StringBuilder, metric: MetricSnapshot.Distributions, percentiles: Seq[Double], timestamp: String): Unit = {
+    metric.instruments.foreach { instrument =>
+      if (instrument.value.count > 0) {
+        writeNameAndTags(builder, metric.name, instrument.tags)
+        writeIntField(builder, "count", instrument.value.count)
+        writeIntField(builder, "sum", instrument.value.sum)
+        writeIntField(builder, "min", instrument.value.min)
+
+        percentiles.foreach { p =>
+          writeDoubleField(builder, "p" + String.valueOf(p), instrument.value.percentile(p).value)
+
+        }
+
+        writeIntField(builder, "max", instrument.value.max, appendSeparator = false)
+        writeTimestamp(builder, timestamp)
+      }
+    }
+  }
+
+  private def writeNameAndTags(builder: StringBuilder, name: String, metricTags: TagSet): Unit = {
     builder
       .append(escapeName(name))
 
-    val tags = if(settings.additionalTags.nonEmpty) metricTags ++ settings.additionalTags else metricTags
+    val tags = (if(settings.additionalTags.nonEmpty) metricTags.withTags(settings.additionalTags) else metricTags).all()
 
     if(tags.nonEmpty) {
-      tags.foreach {
-        case (key, value) =>
+      tags.foreach { t =>
+        if (settings.tagFilter.accept(t.key)) {
           builder
             .append(',')
-            .append(escapeString(key))
+            .append(escapeString(t.key))
             .append("=")
-            .append(escapeString(value))
+            .append(escapeString(Tag.unwrapValue(t).toString))
+        } else {
+          if (logger.isTraceEnabled) {
+            logger.trace("Filtered tag {}", t.key)
+          }
+        }
       }
     }
 
@@ -134,7 +176,7 @@ class InfluxDBReporter(config: Config) extends MetricReporter {
       builder.append(',')
   }
 
-  def writeTimestamp(builder: StringBuilder, timestamp: Long): Unit = {
+  def writeTimestamp(builder: StringBuilder, timestamp: String): Unit = {
     builder
       .append(' ')
       .append(timestamp)
@@ -143,12 +185,12 @@ class InfluxDBReporter(config: Config) extends MetricReporter {
 
   protected def buildClient(settings: Settings): OkHttpClient = {
     val basicBuilder = new OkHttpClient.Builder()
-    val authenticator = settings.credentials.map(credentials => new Authenticator() {
-      def authenticate(route: Route, response: Response): Request = {
-        response.request().newBuilder().header("Authorization", credentials).build()
+    val authenticator = settings.credentials.map(credentials => new Interceptor {
+      override def intercept(chain: Interceptor.Chain): Response = {
+        chain.proceed(chain.request().newBuilder().header("Authorization", credentials).build())
       }
     })
-    authenticator.foldLeft(basicBuilder){ case (builder, auth) => builder.authenticator(auth)}.build()
+    authenticator.foldLeft(basicBuilder){ case (builder, auth) => builder.addInterceptor(auth)}.build()
   }
 }
 
@@ -157,27 +199,43 @@ object InfluxDBReporter {
     url: String,
     percentiles: Seq[Double],
     credentials: Option[String],
-    additionalTags: Map[String, String]
+    tagFilter: Filter,
+    postEmptyDistributions: Boolean,
+    additionalTags:TagSet,
+    measurementPrecision: String
   )
 
   def readSettings(config: Config): Settings = {
     import scala.collection.JavaConverters._
     val root = config.getConfig("kamon.influxdb")
     val host = root.getString("hostname")
-    val authConfig = Try(root.getConfig("authentication")).toOption
-    val credentials = authConfig.map(conf => Credentials.basic(conf.getString("user"), conf.getString("password")))
+    val credentials = if (root.hasPath("authentication")) {
+      Some(Credentials.basic(root.getString("authentication.user"), root.getString("authentication.password")))
+    } else {
+      None
+    }
     val port = root.getInt("port")
     val database = root.getString("database")
     val protocol = root.getString("protocol").toLowerCase
-    val url = s"$protocol://$host:$port/write?precision=s&db=$database"
+    val additionalTags = EnvironmentTags.from(Kamon.environment, root.getConfig("environment-tags"))
 
-    val additionalTags = EnvironmentTagBuilder.create(root.getConfig("additional-tags"))
+    val precision = root.getString("precision")
+
+    if (!Set("ns","u","µ","ms","s").contains(precision)){
+      throw new RuntimeException("Precision must be one of `[ns,u,µ,ms,s]` to match https://docs.influxdata.com/influxdb/v1.7/tools/api/#query-string-parameters-1")
+
+    }
+
+    val url = s"$protocol://$host:$port/write?precision=$precision&db=$database"
 
     Settings(
       url,
-      root.getDoubleList("percentiles").asScala.map(_.toDouble),
+      root.getDoubleList("percentiles").asScala.toList.map(_.toDouble),
       credentials,
-      additionalTags
+      Filter.from("kamon.influxdb.tag-filter"),
+      root.getBoolean("post-empty-distributions"),
+      additionalTags,
+      precision
     )
   }
 }

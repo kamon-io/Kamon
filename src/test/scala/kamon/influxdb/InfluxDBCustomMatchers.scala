@@ -23,7 +23,7 @@ trait InfluxDBCustomMatchers {
 
       def tagsMatch = {
         val res = leftLP.tags.sorted == expectedLP.tags.sorted
-        if (!res) failureMessage ++= "Tags did not match "
+        if (!res) failureMessage ++= s"Tags did not match. Got ${leftLP.tags} expected ${expectedLP.tags}"
         res
       }
 

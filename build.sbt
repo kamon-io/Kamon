@@ -13,15 +13,19 @@
  * =========================================================================================
  */
 
-val kamonCore        = "io.kamon"             %% "kamon-core"    % "1.1.3"
-val kamonTestkit     = "io.kamon"             %% "kamon-testkit" % "1.1.3"
+val kamonCore        = "io.kamon"             %% "kamon-core"    % "2.0.0-RC1"
+val kamonTestkit     = "io.kamon"             %% "kamon-testkit" % "2.0.0-RC1"
 val okHttp           = "com.squareup.okhttp3" %  "okhttp"        % "3.9.1"
 val okHttpMockServer = "com.squareup.okhttp3" %  "mockwebserver" % "3.9.1"
+val scalatest2_13    = "org.scalatest"        %% "scalatest"     % "3.0.8"
 
 name := "kamon-influxdb"
 
 libraryDependencies ++=
   compileScope(kamonCore, okHttp) ++
-  testScope(scalatest, kamonTestkit, okHttpMockServer, slf4jApi, slf4jnop)
+  testScope(scalatest2_13, kamonTestkit, okHttpMockServer, slf4jApi, slf4jnop)
+
+crossScalaVersions := Seq("2.11.12", "2.12.7", "2.13.0")
+
 
 resolvers += Resolver.bintrayRepo("kamon-io", "releases")
