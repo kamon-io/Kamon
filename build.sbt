@@ -32,20 +32,18 @@ val playTest          = "com.typesafe.play"       %%  "play-test"             % 
 val scalatestPlus     = "org.scalatestplus.play"  %%  "scalatestplus-play"    % "3.1.2"
 
 
-lazy val root = Project("root", file("."))
+lazy val root = Project("kamon-play", file("."))
   .settings(noPublishing: _*)
-  .disablePlugins(KamonSbtUmbrella)
   .aggregate(instrumentation, commonTests, testsOnPlay26, testsOnPlay27)
 
 
 lazy val instrumentation = Project("instrumentation", file("kamon-play"))
   .enablePlugins(JavaAgent)
   .settings(
-    name := "kamon-play",
+    name := "instrumentation",
     bintrayPackage := "kamon-play",
     moduleName := "kamon-play",
     scalaVersion := "2.12.8",
-    crossScalaVersions := Seq("2.11.12", "2.12.8"),
     testGrouping in Test := singleTestPerJvm((definedTests in Test).value, (javaOptions in Test).value),
     libraryDependencies ++=
       compileScope(kamonCore, kamonScala, kamonAkkaHttp, kamonCommon) ++
@@ -60,7 +58,6 @@ lazy val commonTests = Project("common-tests", file("common-tests"))
     testOnly := ((): Unit),
     testQuick := ((): Unit),
     scalaVersion := "2.12.8",
-    crossScalaVersions := Seq("2.11.12", "2.12.8"),
     libraryDependencies ++=
       compileScope(kamonCore, kamonScala, kamonAkkaHttp, kamonCommon) ++
       providedScope(play, playNetty, playAkkaHttp, playWS, kanelaAgent) ++
@@ -74,7 +71,6 @@ lazy val testsOnPlay26 = Project("tests-26", file("tests-2.6"))
   .settings(
     name := "tests-2.6",
     scalaVersion := "2.12.8",
-    crossScalaVersions := Seq("2.11.12", "2.12.8"),
     testGrouping in Test := singleTestPerJvm((definedTests in Test).value, (javaOptions in Test).value),
     unmanagedSourceDirectories in Test ++= (unmanagedSourceDirectories in Test in commonTests).value,
     unmanagedResourceDirectories in Test ++= (unmanagedResourceDirectories in Test in commonTests).value,
@@ -93,7 +89,6 @@ lazy val testsOnPlay27 = Project("tests-27", file("tests-2.7"))
   .settings(
     name := "tests-2.7",
     scalaVersion := "2.12.8",
-    crossScalaVersions := Seq("2.11.12", "2.12.8"),
     testGrouping in Test := singleTestPerJvm((definedTests in Test).value, (javaOptions in Test).value),
     unmanagedSourceDirectories in Test ++= (unmanagedSourceDirectories in Test in commonTests).value,
     unmanagedResourceDirectories in Test ++= (unmanagedResourceDirectories in Test in commonTests).value,
