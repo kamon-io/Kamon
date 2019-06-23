@@ -107,7 +107,7 @@ class JaegerClient(host: String,
 
     import scala.collection.JavaConverters._
     convertedSpan.setTags(
-      kamonSpan.tags.iterator().map {
+      (kamonSpan.tags.iterator() ++ kamonSpan.metricTags.iterator()).map {
         case t: kamon.tag.Tag.String =>
           new Tag(t.key, TagType.STRING).setVStr(t.value)
         case t: kamon.tag.Tag.Boolean =>
