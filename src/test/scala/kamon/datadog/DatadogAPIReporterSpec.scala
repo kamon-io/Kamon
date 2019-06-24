@@ -47,7 +47,7 @@ class DatadogAPIReporterSpec extends AbstractHttpReporter with Matchers with Rec
       request.getMethod shouldEqual "POST"
       Json.parse(request.getBody().readUtf8()) shouldEqual Json
         .parse(
-          """{"series":[{"metric":"test.counter","interval":1,"points":[[1523394,0]],"type":"count","host":"test","tags":["service:kamon-application","env:staging","tag1:value1"]}]}"""
+          """{"series":[{"metric":"test.counter","interval":1,"points":[[1523394,0]],"type":"count","host":"test","tags":["env:staging","service:kamon-application","tag1:value1"]}]}"""
         )
 
     }

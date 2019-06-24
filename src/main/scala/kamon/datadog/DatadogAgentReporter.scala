@@ -116,9 +116,9 @@ object DatadogAgentReporter {
 
   private class DefaultMeasurementFormatter(config: Config) extends MeasurementFormatter {
 
-    private val tagFilterKey = config.getString("filter-config-key")
+    private val tagFilterKey = "kamon.datadog.environment-tags.filter"
     private val filter = Kamon.filter(tagFilterKey)
-    private val envTags = EnvironmentTags.from(Kamon.environment, config.getConfig("additional-tags"))
+    private val envTags = EnvironmentTags.from(Kamon.environment, config.getConfig("environment-tags"))
 
     override def formatMeasurement(
       measurementData: String,

@@ -25,7 +25,7 @@ import java.util.Locale
 import com.typesafe.config.Config
 import kamon.metric.MeasurementUnit.Dimension.{ Information, Time }
 import kamon.metric.{ MeasurementUnit, MetricSnapshot, PeriodSnapshot }
-import kamon.tag.TagSet
+import kamon.tag.{ Tag, TagSet }
 import kamon.util.{ EnvironmentTags, Filter }
 import kamon.{ module, Kamon }
 import kamon.datadog.DatadogAPIReporter.Configuration
@@ -162,8 +162,8 @@ private object DatadogAPIReporter {
       timeUnit = readTimeUnit(datadogConfig.getString("time-unit")),
       informationUnit = readInformationUnit(datadogConfig.getString("information-unit")),
       // Remove the "host" tag since it gets added to the datadog payload separately
-      EnvironmentTags.from(Kamon.environment, datadogConfig.getConfig("additional-tags")).iterator(_.toString).filterNot(_.key == "host").map(p => p.key -> p.value).toSeq,
-      Kamon.filter(datadogConfig.getString("filter-config-key"))
+      EnvironmentTags.from(Kamon.environment, datadogConfig.getConfig("environment-tags")).without("host").all().map(p => p.key -> Tag.unwrapValue(p).toString),
+      Kamon.filter("kamon.datadog.environment-tags.filter")
     )
   }
 }

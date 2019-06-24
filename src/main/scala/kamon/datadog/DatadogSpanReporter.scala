@@ -4,7 +4,7 @@ import java.time.Duration
 
 import com.typesafe.config.Config
 import kamon.trace.Span
-import kamon.{module, ClassLoading, Kamon}
+import kamon.{ClassLoading, Kamon}
 import kamon.datadog.DatadogSpanReporter.Configuration
 import kamon.module.{ModuleFactory, SpanReporter}
 import kamon.tag.{Lookups, Tag, TagSet}
@@ -63,8 +63,8 @@ object DatadogSpanReporter {
     Configuration(
       getTranslator(config),
       new HttpClient(config.getConfig(DatadogSpanReporter.httpConfigPath)),
-      Kamon.filter(config.getString("kamon.datadog.filter-config-key")),
-      EnvironmentTags.from(Kamon.environment, config.getConfig("kamon.datadog.additional-tags")).without("service"),
+      Kamon.filter("kamon.datadog.environment-tags.filter"),
+      EnvironmentTags.from(Kamon.environment, config.getConfig("kamon.datadog.environment-tags")).without("service"),
     )
   }
 }
@@ -90,14 +90,14 @@ class DatadogSpanReporter(@volatile private var configuration: Configuration) ex
     configuration.httpClient.doJsonPut(Json.toJson(spanList))
   }
 
-  logger.info("Started the Kamon DataDog reporter")
+  logger.info("Started the Kamon DataDog span reporter")
 
   override def stop(): Unit = {
-    logger.info("Stopped the Kamon DataDog reporter")
+    logger.info("Stopped the Kamon DataDog span reporter")
   }
 
   override def reconfigure(config: Config): Unit = {
-    logger.info("Reconfigured the Kamon DataDog reporter")
+    logger.info("Reconfigured the Kamon DataDog span reporter")
     configuration = DatadogSpanReporter.getConfiguration(config)
   }
 

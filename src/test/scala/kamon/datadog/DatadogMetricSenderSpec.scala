@@ -69,7 +69,7 @@ class DatadogMetricSenderSpec extends WordSpec with Matchers with Reconfigure {
 
     "filter out blacklisted tags" in AgentReporter(new TestBuffer(), ConfigFactory.parseString(
       """
-        |kamon.datadog.additional-tags.blacklisted-tags = [env]
+        |kamon.datadog.environment-tags.exclude = [env]
         |kamon.environment.tags.env = staging
         |""".stripMargin).withFallback(Kamon.config())) {
       case (buffer, reporter) =>
@@ -92,12 +92,12 @@ class DatadogMetricSenderSpec extends WordSpec with Matchers with Reconfigure {
         )
 
         buffer.lst should have size 1
-        buffer.lst should contain("test.counter" -> "0|c|#service:kamon-application,env:staging,tag1:value1")
+        buffer.lst should contain("test.counter" -> "0|c|#service:kamon-application,tag1:value1")
     }
 
     "filter other tags" in AgentReporter(new TestBuffer(), ConfigFactory.parseString(
       """
-        |kamon.util.filters.datadog-tag-filter.excludes = [ "tag*" ]
+        |kamon.datadog.environment-tags.exclude = [ "tag*" ]
         |kamon.environment.tags.env = staging
         |""".stripMargin).withFallback(Kamon.config())) {
       case (buffer, reporter) =>
@@ -120,7 +120,7 @@ class DatadogMetricSenderSpec extends WordSpec with Matchers with Reconfigure {
         )
 
         buffer.lst should have size 1
-        buffer.lst should contain("test.counter" -> "0|c|#service:kamon-application,env:staging,otherTag:otherValue")
+        buffer.lst should contain("test.counter" -> "0|c|#service:kamon-application,env:staging,tag1:value1,tag2:value2,otherTag:otherValue")
     }
 
   }
