@@ -21,8 +21,8 @@ class DatadogAPIReporterSpec extends AbstractHttpReporter with Matchers with Rec
 
     "sends counter metrics" in {
       val baseUrl = mockResponse("/test", new MockResponse().setStatus("HTTP/1.1 200 OK"))
-      applyConfig("kamon.datadog.http.api-url = \"" + baseUrl + "\"")
-      applyConfig("kamon.datadog.http.api-key = \"dummy\"")
+      applyConfig("kamon.datadog.api.api-url = \"" + baseUrl + "\"")
+      applyConfig("kamon.datadog.api.api-key = \"dummy\"")
 
       reporter.reconfigure(Kamon.config())
 

@@ -37,7 +37,7 @@ import scala.util.{ Failure, Success }
 class DatadogAPIReporterFactory extends ModuleFactory {
   override def create(settings: ModuleFactory.Settings): DatadogAPIReporter = {
     val config = DatadogAPIReporter.readConfiguration(settings.config)
-    new DatadogAPIReporter(config, new HttpClient(config.httpConfig))
+    new DatadogAPIReporter(config, new HttpClient(config.httpConfig, usingAgent = false))
   }
 }
 
@@ -59,7 +59,7 @@ class DatadogAPIReporter(@volatile private var configuration: Configuration, @vo
   override def reconfigure(config: Config): Unit = {
     val newConfiguration = readConfiguration(config)
     configuration = newConfiguration
-    httpClient = new HttpClient(configuration.httpConfig)
+    httpClient = new HttpClient(configuration.httpConfig, usingAgent = false)
   }
 
   override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
@@ -158,7 +158,7 @@ private object DatadogAPIReporter {
   def readConfiguration(config: Config): Configuration = {
     val datadogConfig = config.getConfig("kamon.datadog")
     Configuration(
-      datadogConfig.getConfig("http"),
+      datadogConfig.getConfig("api"),
       timeUnit = readTimeUnit(datadogConfig.getString("time-unit")),
       informationUnit = readInformationUnit(datadogConfig.getString("information-unit")),
       // Remove the "host" tag since it gets added to the datadog payload separately

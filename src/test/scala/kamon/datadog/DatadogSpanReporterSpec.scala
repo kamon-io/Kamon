@@ -1,6 +1,6 @@
 package kamon.datadog
 
-import java.time.{Duration, Instant}
+import java.time.{ Duration, Instant }
 import java.util.concurrent.TimeUnit
 
 import kamon.Kamon
@@ -59,30 +59,30 @@ trait TestData {
     "duration" -> JsNumber(duration.getSeconds * 1000000000 + duration.getNano),
     "name" -> "kamon.trace",
     "meta" -> Json.obj(
-      "env" -> "staging",
+      "env" -> "staging"
     ),
     "error" -> 0,
     "type" -> "custom",
     "start" -> JsNumber(from.getEpochNano),
     "metrics" -> JsObject(Seq(
-       "_sampling_priority_v1" -> JsNumber(1)
+      "_sampling_priority_v1" -> JsNumber(1)
     ))
   )
 
   val spanWithoutParentId = span.copy(parentId = Identifier.Empty)
   val jsonWithoutParentId = json - "parent_id"
 
-  val spanWithError = span.copy(tags = TagSet.of("error", true), hasError=true)
+  val spanWithError = span.copy(tags = TagSet.of("error", true), hasError = true)
 
   val jsonWithError = json ++ Json.obj(
     "meta" -> Json.obj(
       "error" -> "true",
-      "env" -> "staging",
+      "env" -> "staging"
     ),
     "error" -> 1
   )
 
-  val spanWithTags = span.copy(tags =
+  val spanWithTags = span.copy(metricTags =
     TagSet.from(
       Map(
         "string" -> "value",
@@ -104,7 +104,7 @@ trait TestData {
       "false" -> "false",
       "number" -> randomNumber.toString,
       "component" -> "custom.component",
-      "env" -> "staging",
+      "env" -> "staging"
     )
   )
 
@@ -115,7 +115,7 @@ trait TestData {
   val jsonWithMarks = json ++ Json.obj(
     "meta" -> Json.obj(
       "from" -> JsString(from.getEpochNano.toString),
-        "env" -> JsString("staging")
+      "env" -> JsString("staging")
     )
   )
 
@@ -144,8 +144,8 @@ trait TestData {
     "span with meta and marks" -> (Seq(spanWithTagsAndMarks), Json.arr(Json.arr(jsonWithTagsAndMarks))),
     "span with error" -> (Seq(spanWithError), Json.arr(Json.arr(jsonWithError))),
 
-    "multiple spans with same trace" -> (Seq(span, spanWithTags), Json.arr(Json.arr(json, jsonWithTags))),
-    // "multiple spans with two traces" -> (Seq(span, spanWithTags, otherTraceSpan, span), Json.arr(Json.arr(json, jsonWithTags, json), Json.arr(otherTraceJson)))
+    "multiple spans with same trace" -> (Seq(span, spanWithTags), Json.arr(Json.arr(json, jsonWithTags)))
+  // "multiple spans with two traces" -> (Seq(span, spanWithTags, otherTraceSpan, span), Json.arr(Json.arr(json, jsonWithTags, json), Json.arr(otherTraceJson)))
   )
 }
 
@@ -165,7 +165,7 @@ class DatadogSpanReporterSpec extends AbstractHttpReporter with Matchers with Re
 
         val baseUrl = mockResponse("/test", new MockResponse().setStatus("HTTP/1.1 200 OK").setBody("OK"))
 
-        applyConfig("kamon.datadog.trace.http.api-url = \"" + baseUrl + "\"")
+        applyConfig("kamon.datadog.trace.api-url = \"" + baseUrl + "\"")
         reporter.reconfigure(Kamon.config())
         reporter.reportSpans(spans)
         val request = server.takeRequest()
@@ -186,7 +186,7 @@ class DatadogSpanReporterSpec extends AbstractHttpReporter with Matchers with Re
 
     s"ignore error responses" in {
       val baseUrl = mockResponse("/test", new MockResponse().setStatus("HTTP/1.1 500 Internal Server Error"))
-      applyConfig("kamon.datadog.trace.http.api-url = \"" + baseUrl + "\"")
+      applyConfig("kamon.datadog.trace.api-url = \"" + baseUrl + "\"")
       reporter.reconfigure(Kamon.config())
       reporter.reportSpans(firstSpan)
       server.takeRequest()

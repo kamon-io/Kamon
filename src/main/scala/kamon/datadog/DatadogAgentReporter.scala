@@ -196,7 +196,8 @@ object DatadogAgentReporter {
       }
     }
 
-    private def fitsOnBuffer(data: String): Boolean = (buffer.length + data.length) <= maxPacketSizeInBytes
+    private def fitsOnBuffer(data: String): Boolean =
+      (buffer.length + data.length) <= maxPacketSizeInBytes
 
     private def flushToUDP(data: String): Unit = {
       val channel = DatagramChannel.open()
