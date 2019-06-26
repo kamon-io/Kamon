@@ -21,18 +21,19 @@ package object datadog {
     }
   }
 
-  private[datadog] case class HttpClient(apiUrl: String, apiKey: String, usingAgent: Boolean, connectTimeout: Duration, readTimeout: Duration, requestTimeout: Duration) {
+  private[datadog] case class HttpClient(apiUrl: String, apiKey: Option[String], usingAgent: Boolean, connectTimeout: Duration,
+                                         readTimeout: Duration, writeTimeout: Duration) {
 
     val httpClient: OkHttpClient = createHttpClient()
 
-    def this(config: Config) = {
+    def this(config: Config, usingAgent: Boolean) = {
       this(
         config.getString("api-url"),
-        config.getString("api-key"),
-        config.getBoolean("using-agent"),
+        if (usingAgent) None else Some(config.getString("api-key")),
+        usingAgent,
         config.getDuration("connect-timeout"),
         config.getDuration("read-timeout"),
-        config.getDuration("request-timeout")
+        config.getDuration("write-timeout")
       )
     }
 
@@ -42,11 +43,9 @@ package object datadog {
 
     def doMethodWithBody(method: String, contentType: String, contentBody: Array[Byte]): Try[String] = {
       val body = RequestBody.create(MediaType.parse(contentType), contentBody)
-      val url = usingAgent match {
-        case true  => apiUrl
-        case false => apiUrl + "?api_key=" + apiKey
-      }
+      val url = apiUrl + apiKey.map(key => "?api_key=" + key).getOrElse("")
       val request = new Request.Builder().url(url).method(method, body).build
+
       doRequest(request) match {
         case Success(response) =>
           val responseBody = response.body().string()
@@ -56,8 +55,10 @@ package object datadog {
           } else {
             Failure(new Exception(s"Failed to ${method} metrics to Datadog with status code [${response.code()}], Body: [${responseBody}]"))
           }
-        case Failure(f) =>
+        case Failure(f) if f.getCause != null =>
           Failure(f.getCause)
+        case f @ Failure(_) =>
+          f.asInstanceOf[Try[String]]
       }
     }
 
@@ -84,7 +85,7 @@ package object datadog {
       new OkHttpClient.Builder()
         .connectTimeout(connectTimeout.toMillis, TimeUnit.MILLISECONDS)
         .readTimeout(readTimeout.toMillis, TimeUnit.MILLISECONDS)
-        .writeTimeout(requestTimeout.toMillis, TimeUnit.MILLISECONDS)
+        .writeTimeout(writeTimeout.toMillis, TimeUnit.MILLISECONDS)
         .retryOnConnectionFailure(false)
         .build()
     }
