@@ -10,10 +10,14 @@ import org.slf4j.LoggerFactory
 
 import scala.util.Try
 
-class InfluxDBReporter(config: Config = Kamon.config()) extends MetricReporter {
+class InfluxDBReporter(config: Config) extends MetricReporter {
   private val logger = LoggerFactory.getLogger(classOf[InfluxDBReporter])
   private var settings = InfluxDBReporter.readSettings(config)
   private val client = buildClient(settings)
+
+  // To allow loading of reporter via Kamon configuration (which uses reflection) a no-args constructor is required
+  // Specifying a default argument value in the constructor doesn't generate a no-args constructor
+  def this() = this(Kamon.config()) 
 
   override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
     val request = new Request.Builder()
