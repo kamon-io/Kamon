@@ -17,45 +17,52 @@
 package kamon.jaeger
 
 import java.nio.ByteBuffer
-import java.util
 
 import com.typesafe.config.Config
 import io.jaegertracing.thrift.internal.senders.HttpSender
-import io.jaegertracing.thriftjava.{
-  Log,
-  Process,
-  Tag,
-  TagType,
-  Span => JaegerSpan
-}
-import kamon.trace.IdentityProvider.Identifier
-import kamon.trace.Span.{Mark, TagValue, FinishedSpan => KamonSpan}
+import io.jaegertracing.thriftjava.{Log, Process, Tag, TagType, Span => JaegerSpan}
 import kamon.util.Clock
-import kamon.{Kamon, SpanReporter}
+import kamon.{module, Kamon}
+import kamon.module.{ModuleFactory, SpanReporter}
+import kamon.trace.{Identifier, Span}
+import org.slf4j.LoggerFactory
 
 import scala.util.Try
 
-class JaegerReporter extends SpanReporter {
+class JaegerReporterFactory extends ModuleFactory {
+  override def create(settings: ModuleFactory.Settings): module.Module = {
+    new JaegerReporter(JaegerClient(settings.config))
+  }
+}
 
-  @volatile private var jaegerClient: JaegerClient = _
-  reconfigure(Kamon.config())
+class JaegerReporter(@volatile private var jaegerClient: JaegerClient) extends SpanReporter {
+
+  private val logger = LoggerFactory.getLogger(classOf[JaegerReporter])
+
+  logger.info("Started the Kamon Jaeger reporter")
 
   override def reconfigure(newConfig: Config): Unit = {
-    val jaegerConfig = newConfig.getConfig("kamon.jaeger")
+    jaegerClient = JaegerClient(newConfig)
+  }
+
+  override def stop(): Unit = {
+    logger.info("Stopped the Kamon Jaeger reporter")
+  }
+
+  override def reportSpans(spans: Seq[Span.Finished]): Unit = {
+    jaegerClient.sendSpans(spans)
+  }
+}
+
+object JaegerClient {
+
+  def apply(config: Config): JaegerClient = {
+    val jaegerConfig = config.getConfig("kamon.jaeger")
     val host = jaegerConfig.getString("host")
     val port = jaegerConfig.getInt("port")
     val scheme = if (jaegerConfig.getBoolean("tls")) "https" else "http"
-    val includeEnvironmentTags =
-      jaegerConfig.getBoolean("include-environment-tags")
-
-    jaegerClient = new JaegerClient(host, port, scheme, includeEnvironmentTags)
-  }
-
-  override def start(): Unit = {}
-  override def stop(): Unit = {}
-
-  override def reportSpans(spans: Seq[KamonSpan]): Unit = {
-    jaegerClient.sendSpans(spans)
+    val includeEnvironmentTags = jaegerConfig.getBoolean("include-environment-tags")
+    new JaegerClient(host, port, scheme, includeEnvironmentTags)
   }
 }
 
@@ -70,63 +77,56 @@ class JaegerClient(host: String,
 
   if (includeEnvironmentTags)
     process.setTags(
-      Kamon.environment.tags
-        .map { case (k, v) => new Tag(k, TagType.STRING).setVStr(v) }
+      Kamon.environment.tags.iterator(_.toString)
+        .map { p => new Tag(p.key, TagType.STRING).setVStr(p.value) }
         .toList
         .asJava)
 
   val sender = new HttpSender.Builder(endpoint).build()
 
-  def sendSpans(spans: Seq[KamonSpan]): Unit = {
+  def sendSpans(spans: Seq[Span.Finished]): Unit = {
     val convertedSpans = spans.map(convertSpan).asJava
     sender.send(process, convertedSpans)
   }
 
-  private def convertSpan(kamonSpan: KamonSpan): JaegerSpan = {
-    val context = kamonSpan.context
+  private def convertSpan(kamonSpan: Span.Finished): JaegerSpan = {
     val from = Clock.toEpochMicros(kamonSpan.from)
     val duration =
       Math.floorDiv(Clock.nanosBetween(kamonSpan.from, kamonSpan.to), 1000)
 
-    val (traceIdHigh, traceIdLow) = convertDoubleSizeIdentifier(context.traceID)
+    val (traceIdHigh, traceIdLow) = convertDoubleSizeIdentifier(kamonSpan.trace.id)
     val convertedSpan = new JaegerSpan(
       traceIdLow,
       traceIdHigh,
-      convertIdentifier(context.spanID),
-      convertIdentifier(context.parentID),
+      convertIdentifier(kamonSpan.id),
+      convertIdentifier(kamonSpan.parentId),
       kamonSpan.operationName,
       0,
       from,
       duration
     )
 
-    convertedSpan.setTags(new util.ArrayList[Tag](kamonSpan.tags.size))
+    import scala.collection.JavaConverters._
+    convertedSpan.setTags(
+      (kamonSpan.tags.iterator() ++ kamonSpan.metricTags.iterator()).map {
+        case t: kamon.tag.Tag.String =>
+          new Tag(t.key, TagType.STRING).setVStr(t.value)
+        case t: kamon.tag.Tag.Boolean =>
+          new Tag(t.key, TagType.BOOL).setVBool(t.value)
+        case t: kamon.tag.Tag.Long =>
+          new Tag(t.key, TagType.LONG).setVLong(t.value)
+      }.toList.asJava
+    )
 
-    kamonSpan.tags.foreach {
-      case (key, TagValue.True) =>
-        val tag = new Tag(key, TagType.BOOL).setVBool(true)
-        convertedSpan.tags.add(tag)
-
-      case (key, TagValue.False) =>
-        val tag = new Tag(key, TagType.BOOL).setVBool(false)
-        convertedSpan.tags.add(tag)
-
-      case (key, TagValue.String(string)) =>
-        val tag = new Tag(key, TagType.STRING).setVStr(string)
-        convertedSpan.tags.add(tag)
-
-      case (key, TagValue.Number(number)) =>
-        val tag = new Tag(key, TagType.LONG).setVLong(number)
-        convertedSpan.tags.add(tag)
-    }
-
-    kamonSpan.marks.foreach {
-      case Mark(instant, key) =>
-        val markTag = new Tag("event", TagType.STRING)
-        markTag.setVStr(key)
-        convertedSpan.addToLogs(
-          new Log(Clock.toEpochMicros(instant),
-                  java.util.Collections.singletonList(markTag)))
+    kamonSpan.marks.foreach { m =>
+      val markTag = new Tag("event", TagType.STRING)
+      markTag.setVStr(m.key)
+      convertedSpan.addToLogs(
+        new Log(
+          Clock.toEpochMicros(m.instant),
+          java.util.Collections.singletonList(markTag)
+        )
+      )
     }
 
     convertedSpan
@@ -138,12 +138,11 @@ class JaegerClient(host: String,
       ByteBuffer.wrap(identifier.bytes).getLong
     }.getOrElse(0L)
 
-  private def convertDoubleSizeIdentifier(
-      identifier: Identifier): (Long, Long) =
+  private def convertDoubleSizeIdentifier(identifier: Identifier): (Long, Long) =
     Try {
       val buffer = ByteBuffer.wrap(identifier.bytes)
       (buffer.getLong, buffer.getLong)
-    }.getOrElse {
+    } getOrElse {
       (0L, convertIdentifier(identifier))
     }
 }
