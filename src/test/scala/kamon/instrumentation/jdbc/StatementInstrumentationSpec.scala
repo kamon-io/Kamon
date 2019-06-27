@@ -44,13 +44,12 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
       .withFallback(Kamon.config())
   )
 
-  def drivers() =
-    Seq(
-      DriverSuite.H2,
-      DriverSuite.SQLite,
-      DriverSuite.MySQL,
-      DriverSuite.HikariH2
-    )
+  val drivers = Seq(
+    DriverSuite.H2,
+    DriverSuite.SQLite,
+    DriverSuite.MySQL,
+    DriverSuite.HikariH2
+  ).filter(canRunInCurrentEnvironment)
 
   "the StatementInstrumentation" when {
     drivers.foreach { driver =>
@@ -388,5 +387,9 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
         connection.createStatement().executeUpdate(s"INSERT INTO Address (Nr, Name) VALUES(4, 'foo')")
       }
     }
+  }
+
+  def canRunInCurrentEnvironment(driverSuite: DriverSuite): Boolean = {
+    !(System.getenv("TRAVIS") != null && driverSuite.vendor == "mysql")
   }
 }
