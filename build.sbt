@@ -16,10 +16,12 @@
 
 val kamonCore           = "io.kamon"            %% "kamon-core"               % "2.0.0-RC1"
 val kamonTestkit        = "io.kamon"            %% "kamon-testkit"            % "2.0.0-RC1"
+val kamonExecutors      = "io.kamon"            %% "kamon-executors"          % "2.0.0-RC1"
 val kanela              = "io.kamon"            %  "kanela-agent"             % "1.0.0-RC2"
 val kamonCommon         = "io.kamon"            %% "kamon-instrumentation-common" % "2.0.0-RC1"
 
 val slick               = "com.typesafe.slick"       %% "slick"                     % "3.2.3"
+val slickHikari         = "com.typesafe.slick"       %% "slick-hikaricp"            % "3.2.3"
 val h2                  = "com.h2database"            % "h2"                        % "1.4.182"
 val sqlite              = "org.xerial"                % "sqlite-jdbc"               % "3.27.2.1"
 val mariaConnector      = "org.mariadb.jdbc"          % "mariadb-java-client"       % "2.2.6"
@@ -32,6 +34,6 @@ lazy val root = (project in file("."))
   .settings(
     name := "kamon-jdbc",
     libraryDependencies ++=
-      compileScope(kamonCore, kamonCommon) ++
+      compileScope(kamonCore, kamonCommon, kamonExecutors) ++
       providedScope(kanela, hikariCP, mariaConnector, slick) ++
-      testScope(h2, sqlite, mariaDB4j, kamonTestkit, scalatest, slf4jApi, logbackClassic))
+      testScope(h2, sqlite, mariaDB4j, kamonTestkit, slickHikari, scalatest, slf4jApi, logbackClassic))

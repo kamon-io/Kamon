@@ -15,18 +15,79 @@
 
 package kamon.instrumentation.jdbc
 
+import kamon.Kamon
+import kamon.tag.Lookups.plain
+import kamon.testkit.TestSpanReporter
+import kamon.trace.Span
 import org.scalatest.concurrent.Eventually
-import org.scalatest.time.SpanSugar
-import org.scalatest.{Matchers, WordSpec}
-import slick.util.AsyncExecutor
+import org.scalatest.{Matchers, OptionValues, WordSpec}
+import slick.jdbc.H2Profile.api._
 
-class SlickInstrumentationSpec extends WordSpec with Matchers with Eventually with SpanSugar {
+import scala.concurrent.Await
+import scala.concurrent.duration._
+
+class SlickInstrumentationSpec extends WordSpec with Matchers with Eventually with TestSpanReporter with OptionValues {
+
+  // NOTE: There is no need for dedicated AsyncExecutor instrumentation because the kamon-executors module
+  //       instrumentation will pick up the runnables from Slick and get the job done. These tests are just for
+  //       validating that everything is working as expected.
 
   "the Slick instrumentation" should {
-    "wrap the AsyncExecutor on a ContextAwareAsyncExecutor" in {
-      AsyncExecutor("test-executor", 2, 32)
-        .isInstanceOf[SlickInstrumentation.ContextAwareAsyncExecutor] shouldBe true
+    "propagate the current Context to the AsyncExecutor on Slick" in {
+      val db = setup(Database.forConfig("slick-h2"))
+      val parent = Kamon.spanBuilder("parent").start()
+
+      Kamon.storeSpan(parent) {
+        db.run(addresses += (5, "test"))
+      }
+
+      eventually(timeout(10 seconds)) {
+        val span = testSpanReporter().nextSpan().value
+        span.kind shouldBe Span.Kind.Client
+        span.trace shouldBe parent.trace
+        span.tags.get(plain("db.statement")) shouldBe """insert into "Address" ("Nr","Name")  values (?,?)"""
+      }
+    }
+
+    "propagate the current Context to the AsyncExecutor on Slick when using a connection pool" in {
+      val db = setup(Database.forConfig("slick-h2-with-pool"))
+      val parent = Kamon.spanBuilder("parent").start()
+
+      Kamon.storeSpan(parent) {
+        db.run(addresses += (5, "test"))
+      }
+
+      eventually(timeout(10 seconds)) {
+        val span = testSpanReporter().nextSpan().value
+        span.kind shouldBe Span.Kind.Client
+        span.trace shouldBe parent.trace
+        span.tags.get(plain("db.statement")) shouldBe """insert into "Address" ("Nr","Name")  values (?,?)"""
+        span.metricTags.get(plain("jdbc.pool.name")) shouldBe "slick-h2-with-pool"
+        span.metricTags.get(plain("jdbc.pool.vendor")) shouldBe "hikari"
+      }
     }
   }
+
+  class Addresses(tag: Tag) extends Table[(Int, String)](tag, "Address") {
+    def id = column[Int]("Nr", O.PrimaryKey)
+    def name = column[String]("Name")
+    def * = (id, name)
+  }
+
+  val addresses = TableQuery[Addresses]
+
+  def setup(db: Database): Database = {
+    val ops = DBIO.seq(
+      addresses.schema.create,
+      addresses += (1, "hello"),
+      addresses += (2, "world"),
+      addresses += (3, "with"),
+      addresses += (4, "kamon"),
+    )
+
+    Await.result(db.run(ops), 10 seconds)
+    db
+  }
+
 }
 
