@@ -18,8 +18,11 @@ package kamon.instrumentation.jdbc
 import java.sql.{Connection, Statement}
 
 import com.zaxxer.hikari.HikariConfig
+import kamon.Kamon
+import kamon.context.Storage.Scope
 import kamon.instrumentation.jdbc.JdbcMetrics.ConnectionPoolInstruments
 import kamon.tag.TagSet
+import kamon.trace.Hooks
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 import kanela.agent.libs.net.bytebuddy.asm.Advice._
@@ -41,7 +44,7 @@ class HikariInstrumentation extends InstrumentationBuilder {
     .advise(method("getConnection").and(takesArguments(0)), HikariPoolGetConnectionAdvice)
 
   onType("com.zaxxer.hikari.pool.PoolBase")
-    .advise(method("newConnection"), PoolBaseNewConnectionAdvice)
+    .advise(method("setupConnection"), PoolBaseNewConnectionAdvice)
 
   /**
     *
@@ -170,9 +173,15 @@ object HikariPoolGetConnectionAdvice {
 }
 
 object PoolBaseNewConnectionAdvice {
+  import Hooks.PreStart
+
+  @Advice.OnMethodEnter
+  def enter(@Advice.This pool: Any, @Advice.Argument(0) connection: Any): Scope = {
+    connection.asInstanceOf[HasConnectionPoolTelemetry].setConnectionPoolTelemetry(pool.asInstanceOf[HasConnectionPoolTelemetry].connectionPoolTelemetry)
+    Kamon.store(Kamon.currentContext().withKey(PreStart.Key, PreStart.updateOperationName("connection-init")))
+  }
 
   @Advice.OnMethodExit
-  def exit(@Advice.This pool: Any, @Advice.Return connection: Any): Unit =
-    connection.asInstanceOf[HasConnectionPoolTelemetry].setConnectionPoolTelemetry(pool.asInstanceOf[HasConnectionPoolTelemetry].connectionPoolTelemetry)
-
+  def exit(@Advice.Enter scope: Scope): Unit =
+    scope.close()
 }

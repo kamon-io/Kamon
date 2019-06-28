@@ -82,7 +82,7 @@ class SlickInstrumentationSpec extends WordSpec with Matchers with Eventually wi
       addresses += (1, "hello"),
       addresses += (2, "world"),
       addresses += (3, "with"),
-      addresses += (4, "kamon"),
+      addresses += (4, "kamon")
     )
 
     Await.result(db.run(ops), 10 seconds)

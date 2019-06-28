@@ -135,6 +135,7 @@ object CreateStatementAdvice {
   @Advice.OnMethodExit
   def exit(@Advice.This connection: Any, @Advice.Return statement: Any): Unit = {
     statement.asInstanceOf[HasDatabaseTags].setDatabaseTags(connection.asInstanceOf[HasDatabaseTags].databaseTags())
+    statement.asInstanceOf[HasConnectionPoolTelemetry].setConnectionPoolTelemetry(connection.asInstanceOf[HasConnectionPoolTelemetry].connectionPoolTelemetry)
   }
 }
 
@@ -143,6 +144,7 @@ object CreatePreparedStatementAdvice {
   @Advice.OnMethodExit
   def exit(@Advice.This connection: Any, @Advice.Argument(0) sql: String, @Advice.Return statement: Any): Unit = {
     statement.asInstanceOf[HasDatabaseTags].setDatabaseTags(connection.asInstanceOf[HasDatabaseTags].databaseTags())
+    statement.asInstanceOf[HasConnectionPoolTelemetry].setConnectionPoolTelemetry(statement.asInstanceOf[HasConnectionPoolTelemetry].connectionPoolTelemetry)
     statement.asInstanceOf[HasStatementSQL].setStatementSQL(sql)
   }
 }
