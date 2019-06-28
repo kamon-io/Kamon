@@ -31,7 +31,7 @@ object StatementMonitor extends LoggingSupport {
     val Query = "query"
     val Update = "update"
     val Batch = "batch"
-    val GenericExecute = "generic-execute"
+    val GenericExecute = "execute"
   }
 
   def start(statement: Any, sql: String, statementType: String): Option[Invocation] = {
@@ -41,8 +41,9 @@ object StatementMonitor extends LoggingSupport {
       // It could happen that there is no Pool Telemetry on the Pool when fail-fast is enabled and a connection is
       // created while the Pool's constructor is still executing.
       val (inFlightRangeSampler: RangeSampler, databaseTags: DatabaseTags) = statement match {
-        case cpt: HasConnectionPoolTelemetry if cpt.connectionPoolTelemetry != null =>
-          (cpt.connectionPoolTelemetry.instruments.inFlightStatements, cpt.connectionPoolTelemetry.databaseTags)
+        case cpt: HasConnectionPoolTelemetry if cpt.connectionPoolTelemetry != null && cpt.connectionPoolTelemetry.get() != null =>
+          val poolTelemetry = cpt.connectionPoolTelemetry.get()
+          (poolTelemetry.instruments.inFlightStatements, poolTelemetry.databaseTags)
 
         case dbt: HasDatabaseTags if dbt.databaseTags() != null =>
           (JdbcMetrics.InFlightStatements.withTags(dbt.databaseTags().metricTags), dbt.databaseTags())

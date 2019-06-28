@@ -17,10 +17,14 @@ package kamon.instrumentation.jdbc
 
 import java.util.Properties
 
+import kamon.Kamon
+import kamon.context.Storage.Scope
 import kamon.instrumentation.jdbc.advisor._
 import kamon.tag.TagSet
+import kamon.trace.Hooks
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.asm.Advice
+
 import scala.util.Try
 import kanela.agent.libs.net.bytebuddy.matcher.ElementMatchers._
 
@@ -39,6 +43,7 @@ class StatementInstrumentation extends InstrumentationBuilder {
   onSubTypesOf("java.sql.Connection")
     .mixin(classOf[HasDatabaseTags.Mixin])
     .mixin(classOf[HasConnectionPoolTelemetry.Mixin])
+    .advise(method("isValid"), ConnectionIsValidAdvice)
     .advise(method("prepareCall"), CreatePreparedStatementAdvice)
     .advise(method("prepareStatement"), CreatePreparedStatementAdvice)
     .advise(method("createStatement"), CreateStatementAdvice)
@@ -147,4 +152,16 @@ object CreatePreparedStatementAdvice {
     statement.asInstanceOf[HasConnectionPoolTelemetry].setConnectionPoolTelemetry(statement.asInstanceOf[HasConnectionPoolTelemetry].connectionPoolTelemetry)
     statement.asInstanceOf[HasStatementSQL].setStatementSQL(sql)
   }
+}
+
+object ConnectionIsValidAdvice {
+  import Hooks.PreStart
+
+  @Advice.OnMethodEnter
+  def enter(@Advice.This pool: Any, @Advice.Argument(0) connection: Any): Scope =
+    Kamon.store(Kamon.currentContext().withKey(PreStart.Key, PreStart.updateOperationName("isValid")))
+
+  @Advice.OnMethodExit
+  def exit(@Advice.Enter scope: Scope): Unit =
+    scope.close()
 }

@@ -16,8 +16,10 @@
 package kamon.instrumentation.jdbc
 
 import java.sql.{Connection, Statement}
+import java.util.concurrent.atomic.AtomicReference
 
 import com.zaxxer.hikari.HikariConfig
+import com.zaxxer.hikari.pool.{HikariPool, PoolEntry, PoolEntryProtectedAccess}
 import kamon.Kamon
 import kamon.context.Storage.Scope
 import kamon.instrumentation.jdbc.JdbcMetrics.ConnectionPoolInstruments
@@ -37,6 +39,7 @@ class HikariInstrumentation extends InstrumentationBuilder {
   onType("com.zaxxer.hikari.pool.HikariPool")
     .mixin(classOf[HasConnectionPoolTelemetry.Mixin])
     .advise(isConstructor(), HikariPoolConstructorAdvice)
+    .advise(method("checkFailFast"), CheckFailFastAdvice)
     .advise(method("shutdown"), HikariPoolShutdownMethodAdvice)
     .advise(method("createPoolEntry"), HikariPoolCreatePoolEntryMethodAdvice)
     .advise(method("closeConnection"), HikariPoolCloseConnectionMethodAdvice)
@@ -46,27 +49,37 @@ class HikariInstrumentation extends InstrumentationBuilder {
   onType("com.zaxxer.hikari.pool.PoolBase")
     .advise(method("setupConnection"), PoolBaseNewConnectionAdvice)
 
-  /**
-    *
-    */
+  onType("com.zaxxer.hikari.pool.PoolEntry")
+    .mixin(classOf[HasConnectionPoolTelemetry.Mixin])
+    .advise(method("createProxyConnection"), CreateProxyConnectionAdvice)
+
   onType("com.zaxxer.hikari.pool.ProxyConnection")
     .advise(method("close"), ProxyConnectionCloseMethodAdvice)
-    .advise(method("prepareStatement"), ProxyConnectionStatementMethodsAdvice)
     .advise(method("createStatement"), ProxyConnectionStatementMethodsAdvice)
+    .advise(method("prepareStatement"), ProxyConnectionStatementMethodsAdvice)
+    .advise(method("prepareCall"), ProxyConnectionStatementMethodsAdvice)
 }
 
 case class ConnectionPoolTelemetry(instruments: ConnectionPoolInstruments, databaseTags: DatabaseTags)
 
 trait HasConnectionPoolTelemetry {
-  def connectionPoolTelemetry: ConnectionPoolTelemetry
-  def setConnectionPoolTelemetry(cpTelemetry: ConnectionPoolTelemetry): Unit
+  def connectionPoolTelemetry: AtomicReference[ConnectionPoolTelemetry]
+  def setConnectionPoolTelemetry(cpTelemetry: AtomicReference[ConnectionPoolTelemetry]): Unit
 }
 
 object HasConnectionPoolTelemetry {
 
-  class Mixin(@volatile var connectionPoolTelemetry: ConnectionPoolTelemetry) extends HasConnectionPoolTelemetry {
-    override def setConnectionPoolTelemetry(cpTelemetry: ConnectionPoolTelemetry): Unit =
+  class Mixin(var connectionPoolTelemetry: AtomicReference[ConnectionPoolTelemetry]) extends HasConnectionPoolTelemetry {
+    override def setConnectionPoolTelemetry(cpTelemetry: AtomicReference[ConnectionPoolTelemetry]): Unit =
       this.connectionPoolTelemetry = cpTelemetry
+  }
+}
+
+object CheckFailFastAdvice {
+
+  @Advice.OnMethodEnter
+  def enter(@Advice.This hikariPool: Any): Unit = {
+    hikariPool.asInstanceOf[HasConnectionPoolTelemetry].setConnectionPoolTelemetry(new AtomicReference[ConnectionPoolTelemetry]())
   }
 }
 
@@ -88,7 +101,7 @@ object HikariPoolConstructorAdvice {
       .build()
 
     val poolInstruments = JdbcMetrics.poolInstruments(metricTags)
-    hikariPool.setConnectionPoolTelemetry(ConnectionPoolTelemetry(poolInstruments, DatabaseTags(metricTags, spanTags)))
+    hikariPool.connectionPoolTelemetry.set(ConnectionPoolTelemetry(poolInstruments, DatabaseTags(metricTags, spanTags)))
   }
 }
 
@@ -96,14 +109,16 @@ object HikariPoolShutdownMethodAdvice {
 
   @Advice.OnMethodExit
   def exit(@This hikariPool: Object): Unit =
-    hikariPool.asInstanceOf[HasConnectionPoolTelemetry].connectionPoolTelemetry.instruments.remove()
+    hikariPool.asInstanceOf[HasConnectionPoolTelemetry].connectionPoolTelemetry.get.instruments.remove()
 }
 
 object HikariPoolCreatePoolEntryMethodAdvice {
 
   @Advice.OnMethodExit
-  def exit(@This hikariPool: HasConnectionPoolTelemetry): Unit = {
-    val poolTelemetry = hikariPool.connectionPoolTelemetry
+  def exit(@This hikariPool: HasConnectionPoolTelemetry, @Advice.Return poolEntry: Any): Unit = {
+    poolEntry.asInstanceOf[HasConnectionPoolTelemetry].setConnectionPoolTelemetry(hikariPool.connectionPoolTelemetry)
+
+    val poolTelemetry = hikariPool.connectionPoolTelemetry.get
     if (poolTelemetry != null) {
       poolTelemetry.instruments.openConnections.increment()
     }
@@ -113,30 +128,30 @@ object HikariPoolCreatePoolEntryMethodAdvice {
 object HikariPoolCloseConnectionMethodAdvice {
 
   @Advice.OnMethodExit
-  def exit(@This hikariPool: Object): Unit = {
-    hikariPool.asInstanceOf[HasConnectionPoolTelemetry].connectionPoolTelemetry.instruments.openConnections.decrement()
+  def exit(@This hikariPool: Any): Unit = {
+    hikariPool.asInstanceOf[HasConnectionPoolTelemetry].connectionPoolTelemetry.get.instruments.openConnections.decrement()
   }
 }
 
 object HikariPoolCreateTimeoutExceptionMethodAdvice {
 
   @Advice.OnMethodExit
-  def exit(@This hikariPool: Object): Unit =
-    hikariPool.asInstanceOf[HasConnectionPoolTelemetry].connectionPoolTelemetry.instruments.borrowTimeouts.increment()
+  def exit(@This hikariPool: Any): Unit =
+    hikariPool.asInstanceOf[HasConnectionPoolTelemetry].connectionPoolTelemetry.get.instruments.borrowTimeouts.increment()
 }
 
 object ProxyConnectionCloseMethodAdvice {
 
   @Advice.OnMethodExit
-  def exit(@This proxyConnection: Object): Unit = {
-    proxyConnection.asInstanceOf[HasConnectionPoolTelemetry].connectionPoolTelemetry.instruments.borrowedConnections.decrement()
+  def exit(@This proxyConnection: Any): Unit = {
+    proxyConnection.asInstanceOf[HasConnectionPoolTelemetry].connectionPoolTelemetry.get.instruments.borrowedConnections.decrement()
   }
 }
 
 object ProxyConnectionStatementMethodsAdvice {
 
   @Advice.OnMethodExit
-  def exit(@This proxyConnection: Object, @Return statement: Statement): Unit = {
+  def exit(@This proxyConnection: Any, @Return statement: Statement): Unit = {
     val poolTracker = proxyConnection.asInstanceOf[HasConnectionPoolTelemetry].connectionPoolTelemetry
 
     statement
@@ -159,7 +174,7 @@ object HikariPoolGetConnectionAdvice {
       @Advice.Thrown throwable: java.lang.Throwable): Unit = {
 
     val borrowTime = System.nanoTime() - startTime
-    val poolMetrics = pool.connectionPoolTelemetry
+    val poolMetrics = pool.connectionPoolTelemetry.get
 
     poolMetrics.instruments.borrowTime.record(borrowTime)
 
@@ -167,7 +182,7 @@ object HikariPoolGetConnectionAdvice {
       poolMetrics.instruments.borrowedConnections.increment()
       connection
         .asInstanceOf[HasConnectionPoolTelemetry]
-        .setConnectionPoolTelemetry(poolMetrics)
+        .setConnectionPoolTelemetry(pool.connectionPoolTelemetry)
     }
   }
 }
@@ -178,10 +193,21 @@ object PoolBaseNewConnectionAdvice {
   @Advice.OnMethodEnter
   def enter(@Advice.This pool: Any, @Advice.Argument(0) connection: Any): Scope = {
     connection.asInstanceOf[HasConnectionPoolTelemetry].setConnectionPoolTelemetry(pool.asInstanceOf[HasConnectionPoolTelemetry].connectionPoolTelemetry)
-    Kamon.store(Kamon.currentContext().withKey(PreStart.Key, PreStart.updateOperationName("connection-init")))
+    Kamon.store(Kamon.currentContext().withKey(PreStart.Key, PreStart.updateOperationName("init")))
   }
 
   @Advice.OnMethodExit
   def exit(@Advice.Enter scope: Scope): Unit =
     scope.close()
+}
+
+object CreateProxyConnectionAdvice {
+
+  @Advice.OnMethodExit
+  def exit(@Advice.This poolEntry: Any): Unit = {
+    val realConnection = PoolEntryProtectedAccess.underlyingConnection(poolEntry)
+    if(realConnection != null) {
+      realConnection.asInstanceOf[HasConnectionPoolTelemetry].setConnectionPoolTelemetry(poolEntry.asInstanceOf[HasConnectionPoolTelemetry].connectionPoolTelemetry)
+    }
+  }
 }

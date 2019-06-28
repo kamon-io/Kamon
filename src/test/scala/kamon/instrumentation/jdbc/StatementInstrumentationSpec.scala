@@ -328,7 +328,7 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
       val vendor = "h2"
       val url = "jdbc:h2:mem:hikari-tracing-spec;MULTI_THREADED=1"
       val supportSleeping = false
-      val pool = HikariInstrumentationSpec.createPool("hikari-tracing-spec", 20)
+      val pool = HikariInstrumentationSpec.createH2Pool("hikari-tracing-spec", 20)
 
       override def init(): Unit = {
         val connection = connect()
