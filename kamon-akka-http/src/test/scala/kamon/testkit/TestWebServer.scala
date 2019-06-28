@@ -21,7 +21,7 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpResponse}
 import de.heikoseeberger.akkahttpjson4s.Json4sSupport
 import akka.http.scaladsl.model.StatusCodes.{BadRequest, InternalServerError, OK}
-import akka.http.scaladsl.model.headers.Connection
+import akka.http.scaladsl.model.headers.{Connection, RawHeader}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.RequestContext
 import akka.stream.ActorMaterializer
@@ -156,6 +156,11 @@ trait TestWebServer extends TracingDirectives {
             )
 
             HttpResponse(entity = HttpEntity(ContentTypes.`text/plain(UTF-8)`, 1600, longStringContentStream))
+          }
+        } ~
+        path("extra-header") {
+          respondWithHeader(RawHeader("extra", "extra-header")) {
+            complete(OK)
           }
         }
       }

@@ -32,13 +32,13 @@ object AkkaHttpInstrumentation {
     }
 
   def toResponseBuilder(response: HttpResponse): HttpMessage.ResponseBuilder[HttpResponse] = new HttpMessage.ResponseBuilder[HttpResponse] {
-    private var _headers: immutable.List[HttpHeader] = Nil
+    private var _headers = response.headers
 
     override def statusCode: Int =
       response.status.intValue()
 
     override def write(header: String, value: String): Unit =
-      _headers = RawHeader(header, value) :: _headers
+      _headers = RawHeader(header, value) +: _headers
 
     override def build(): HttpResponse =
       response.withHeaders(_headers)

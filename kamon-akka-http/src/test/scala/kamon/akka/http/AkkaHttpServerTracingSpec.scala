@@ -25,11 +25,10 @@ import akka.stream.ActorMaterializer
 import kamon.testkit._
 import kamon.tag.Lookups.{plain, plainLong, plainBoolean}
 import kamon.trace.Span.Mark
-import kamon.trace.Span
 import org.scalatest._
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 
-import scala.concurrent.duration.{span, _}
+import scala.concurrent.duration._
 
 class AkkaHttpServerTracingSpec extends WordSpecLike with Matchers with ScalaFutures with Inside with BeforeAndAfterAll
     with MetricInspection.Syntax with Reconfigure with TestWebServer with Eventually with OptionValues with TestSpanReporter {
@@ -196,6 +195,18 @@ class AkkaHttpServerTracingSpec extends WordSpecLike with Matchers with ScalaFut
       span.tags.get(plain("http.url")) shouldBe target
       span.metricTags.get(plain("component")) shouldBe "akka.http.server"
       span.metricTags.get(plain("http.method")) shouldBe "GET"
+    }
+
+    "include the trace-id and keep all user-provided headers in the responses" in {
+      val target = s"http://$interface:$port/extra-header"
+      val response = Http().singleRequest(HttpRequest(uri = target))
+
+      whenReady(response) { httpResponse =>
+        httpResponse.headers.map(_.name()) should contain allOf (
+          "trace-id",
+          "extra"
+        )
+      }
     }
 
   }
