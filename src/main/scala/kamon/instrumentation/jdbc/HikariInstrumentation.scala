@@ -197,8 +197,9 @@ object PoolBaseNewConnectionAdvice {
   }
 
   @Advice.OnMethodExit
-  def exit(@Advice.Enter scope: Scope): Unit =
+  def exit(@Advice.Enter scope: Scope): Unit = {
     scope.close()
+  }
 }
 
 object CreateProxyConnectionAdvice {

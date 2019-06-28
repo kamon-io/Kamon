@@ -26,6 +26,7 @@ val h2                  = "com.h2database"            % "h2"                    
 val sqlite              = "org.xerial"                % "sqlite-jdbc"               % "3.27.2.1"
 val mariaConnector      = "org.mariadb.jdbc"          % "mariadb-java-client"       % "2.2.6"
 val mariaDB4j           = "ch.vorburger.mariaDB4j"    % "mariaDB4j"                 % "2.4.0"
+val postgres            = "org.postgresql"            % "postgresql"                % "42.2.5"
 val hikariCP            = "com.zaxxer"                % "HikariCP"                  % "2.6.2"
 
 lazy val root = (project in file("."))
@@ -35,5 +36,5 @@ lazy val root = (project in file("."))
     name := "kamon-jdbc",
     libraryDependencies ++=
       compileScope(kamonCore, kamonCommon, kamonExecutors) ++
-      providedScope(kanela, hikariCP, mariaConnector, slick) ++
-      testScope(h2, sqlite, mariaDB4j, kamonTestkit, slickHikari, scalatest, slf4jApi, logbackClassic))
+      providedScope(kanela, hikariCP, mariaConnector, slick, postgres) ++
+      testScope(h2, sqlite, mariaDB4j, postgres, kamonTestkit, slickHikari, scalatest, slf4jApi, logbackClassic))

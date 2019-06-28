@@ -172,9 +172,12 @@ class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually w
     }
 
     "add the pool information to the execution of the connection isValid query, if any" in {
-      val pool = createSQLitePool("connection-is-alive", 3)
-      pool.getConnection().isValid(10)
-      pool.getConnection().isValid(10)
+      val pool = createSQLitePool("connection-is-valid", 3)
+      val connection = pool.getConnection()
+      connection.isValid(10)
+      connection.isValid(10)
+      connection.isValid(10)
+
 
       eventually(timeout(5 seconds)) {
         val span = testSpanReporter().nextSpan().value
@@ -182,7 +185,7 @@ class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually w
         span.metricTags.get(plain("component")) shouldBe "jdbc"
         span.metricTags.get(plain("db.vendor")) shouldBe "sqlite"
         span.metricTags.get(plain("jdbc.pool.vendor")) shouldBe "hikari"
-        span.metricTags.get(plain("jdbc.pool.name")) shouldBe "connection-is-alive"
+        span.metricTags.get(plain("jdbc.pool.name")) shouldBe "connection-is-valid"
         span.tags.get(plain("db.statement")) should include("select 1")
       }
     }

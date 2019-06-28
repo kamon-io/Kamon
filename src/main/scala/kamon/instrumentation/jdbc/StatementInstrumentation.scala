@@ -27,6 +27,7 @@ import kanela.agent.libs.net.bytebuddy.asm.Advice
 
 import scala.util.Try
 import kanela.agent.libs.net.bytebuddy.matcher.ElementMatchers._
+import org.postgresql.jdbc.PgConnection
 
 class StatementInstrumentation extends InstrumentationBuilder {
 
@@ -80,6 +81,14 @@ class StatementInstrumentation extends InstrumentationBuilder {
     .advise(method("executeQuery").and(withOneStringArgument), classOf[StatementExecuteQueryMethodAdvisor])
     .advise(method("executeUpdate").and(withOneStringArgument), classOf[StatementExecuteUpdateMethodAdvisor])
     .advise(anyMethods("executeBatch", "executeLargeBatch"), classOf[StatementExecuteBatchMethodAdvisor])
+
+  /**
+    * Since Postgres is reusing the same statement in the implementation if isAlive, we need to "refresh" the
+    * information in that Statement to have the proper pool information and ensure that the check round trips will be
+    * observed appropriately.
+    */
+  onType("org.postgresql.jdbc.PgConnection")
+    .advise(method("isValid"), PgConnectionIsAliveAdvice)
 
 }
 
@@ -158,10 +167,33 @@ object ConnectionIsValidAdvice {
   import Hooks.PreStart
 
   @Advice.OnMethodEnter
-  def enter(@Advice.This pool: Any, @Advice.Argument(0) connection: Any): Scope =
+  def enter(): Scope =
     Kamon.store(Kamon.currentContext().withKey(PreStart.Key, PreStart.updateOperationName("isValid")))
 
   @Advice.OnMethodExit
   def exit(@Advice.Enter scope: Scope): Unit =
     scope.close()
+}
+
+
+object PgConnectionIsAliveAdvice {
+
+  @Advice.OnMethodEnter
+  def enter(@Advice.This connection: Any): Unit = {
+    if(connection != null) {
+      checkConnectionQueryField.map(field => {
+        val checkConnectionStatement = field.get(connection)
+        if(checkConnectionStatement != null) {
+          val connectionPoolTelemetry = connection.asInstanceOf[HasConnectionPoolTelemetry].connectionPoolTelemetry
+          checkConnectionStatement.asInstanceOf[HasConnectionPoolTelemetry].setConnectionPoolTelemetry(connectionPoolTelemetry)
+        }
+      })
+    }
+  }
+
+  lazy val checkConnectionQueryField = Try {
+    val field = classOf[PgConnection].getDeclaredField("checkConnectionQuery")
+    field.setAccessible(true)
+    field
+  }
 }
