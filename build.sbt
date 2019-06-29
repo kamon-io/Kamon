@@ -9,6 +9,7 @@ lazy val reporter = (project in file("kamon-apm-reporter"))
   .enablePlugins(AssemblyPlugin)
   .settings(noPublishing: _*)
   .settings(
+    skip in publish := true,
     scalaVersion := "2.12.8",
     crossScalaVersions := Seq("2.11.12", "2.12.8"),
     packageBin in Compile := assembly.value,

@@ -199,8 +199,17 @@ class KamonApm(configPath: String) extends CombinedReporter {
         .build()
     }
 
+    val links = span.links.map { link =>
+      IngestionV1.Link
+        .newBuilder()
+        .setKind(LinkKind.FOLLOWS_FROM)
+        .setTraceId(link.trace.id.string)
+        .setSpanId(link.spanId.string)
+        .build()
+    }
+
     val tags = stringifyTags(span.tags)
-    tags.putAll(stringifyTags(span.metricTags))
+    val metricTags = stringifyTags(span.metricTags)
 
     IngestionV1.Span.newBuilder()
       .setId(span.id.string)
@@ -210,7 +219,13 @@ class KamonApm(configPath: String) extends CombinedReporter {
       .setStartMicros(Clock.toEpochMicros(span.from))
       .setEndMicros(Clock.toEpochMicros(span.to))
       .putAllTags(tags)
+      .putAllMetricTags(metricTags)
       .addAllMarks(marks.asJava)
+      .setHasError(span.hasError)
+      .setWasDelayed(span.wasDelayed)
+      .setKind(convertSpanKind(span.kind))
+      .setPosition(convertSpanPosition(span.position))
+      .addAllLinks(links.asJava)
       .build()
   }
 
@@ -221,6 +236,21 @@ class KamonApm(configPath: String) extends CombinedReporter {
     })
 
     javaMap
+  }
+
+  private def convertSpanKind(kind: Span.Kind): SpanKind = kind match {
+    case Span.Kind.Server   => SpanKind.SERVER
+    case Span.Kind.Client   => SpanKind.CLIENT
+    case Span.Kind.Producer => SpanKind.PRODUCER
+    case Span.Kind.Consumer => SpanKind.CONSUMER
+    case Span.Kind.Internal => SpanKind.INTERNAL
+    case Span.Kind.Unknown  => SpanKind.UNKNOWN
+  }
+
+  private def convertSpanPosition(position: Span.Position): SpanPosition = position match {
+    case Span.Position.Root       => SpanPosition.ROOT
+    case Span.Position.LocalRoot  => SpanPosition.LOCAL_ROOT
+    case Span.Position.Unknown    => SpanPosition.POSITION_UNKNOWN
   }
 }
 
