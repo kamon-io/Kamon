@@ -54,6 +54,11 @@ trait ActorMonitor {
   def onDroppedMessages(count: Long): Unit
 
   /**
+    * Callback executed when the actor is about to terminate.
+    */
+  def onTerminationStart(): Unit
+
+  /**
     * Callback executed when an Actor has been stopped and any state or resources related to it should be cleaned up.
     */
   def cleanup(): Unit
@@ -71,7 +76,7 @@ object ActorMonitor {
     val isTraced = Kamon.filter(TraceActorFilterName).accept(cell.path)
     val startsTrace = settings.safeActorStartTraceFilter.accept(cell.path)
     val participatesInTracing = isTraced || startsTrace
-    val autoGroupingPath = resolveAutoGroupingPath(cell.actorOrRouterClass, ref, parent)
+    val autoGroupingPath = resolveAutoGroupingPath(cell.actorOrRouterClass, ref, parent, system.name)
 
     def traceWrap(monitor: ActorMonitor): ActorMonitor =
       if(participatesInTracing) new TracedMonitor(cell, startsTrace, monitor) else monitor
@@ -92,7 +97,7 @@ object ActorMonitor {
           val configuredMatchingGroups = AkkaInstrumentation.matchingActorGroups(cell.path)
 
           if (configuredMatchingGroups.isEmpty && !isTracked && settings.autoGrouping && !cell.isRouter && !cell.isRoutee) {
-            if (!trackedFilter.excludes(cell.path) && Kamon.filter(TrackAutoGroupFilterName).accept(cell.path))
+            if (!trackedFilter.excludes(cell.path) && Kamon.filter(TrackAutoGroupFilterName).accept(autoGroupingPath))
               List(AkkaMetrics.forGroup(autoGroupingPath, system.name))
             else
               List.empty
@@ -151,14 +156,14 @@ object ActorMonitor {
     new TrackedRoutee(routerMetrics, groupMetrics, cellInfo)
   }
 
-  private def resolveAutoGroupingPath(actorClass: Class[_], ref: ActorRef, parent: ActorRef): String = {
+  private def resolveAutoGroupingPath(actorClass: Class[_], ref: ActorRef, parent: ActorRef, systemName: String): String = {
     val name = ref.path.name
     val elementCount = ref.path.elements.size
 
     val parentPath = if(parent.isInstanceOf[HasGroupPath]) parent.asInstanceOf[HasGroupPath].groupPath else ""
     val refGroupName = {
       if(elementCount == 1)
-        if(name == "/") "" else name
+        if(name == "/") "" else systemName + "/" + name
       else
         ActorCellInfo.simpleClassName(actorClass)
     }
@@ -210,6 +215,9 @@ object ActorMonitor {
     override def onDroppedMessages(count: Long): Unit =
       monitor.onDroppedMessages(count)
 
+    override def onTerminationStart(): Unit =
+      monitor.onTerminationStart()
+
     override def cleanup(): Unit =
       monitor.cleanup()
 
@@ -248,8 +256,9 @@ object ActorMonitor {
   class ContextPropagationOnly(cellInfo: ActorCellInfo, participatesInTracing: Boolean, trackActiveActors: Boolean) extends ActorMonitor {
     private val _systemMetrics = AkkaMetrics.forSystem(cellInfo.systemName)
 
-    if(trackActiveActors)
+    if(trackActiveActors && !cellInfo.isTemporary) {
       _systemMetrics.activeActors.increment()
+    }
 
     override def captureEnvelopeTimestamp(): Long =
       if(participatesInTracing) Kamon.clock().nanos() else 0L
@@ -268,12 +277,14 @@ object ActorMonitor {
     override def onMessageProcessingEnd(context: Context, envelopeTimestamp: Long, processingStartTimestamp: Long, stateFromStart: Any): Unit =
       stateFromStart.asInstanceOf[Scope].close()
 
-    def onFailure(failure: Throwable): Unit = {}
+    override def onFailure(failure: Throwable): Unit = {}
 
-    def onDroppedMessages(count: Long): Unit = {}
+    override def onDroppedMessages(count: Long): Unit = {}
+
+    override def onTerminationStart(): Unit = {}
 
     def cleanup(): Unit = {
-      if(trackActiveActors)
+      if(trackActiveActors && !cellInfo.isTemporary)
         _systemMetrics.activeActors.decrement()
     }
   }
@@ -377,6 +388,7 @@ object ActorMonitor {
     * Base actor tracking class that brings support for Actor Group metrics.
     */
   abstract class GroupMetricsTrackingActor(groupMetrics: Seq[ActorGroupInstruments], cellInfo: ActorCellInfo) extends ActorMonitor {
+    @volatile private var _isAlive = true
     private val _shouldTrackActiveActors = !cellInfo.isTemporary
     protected val clock = Kamon.clock()
     protected val systemMetrics = AkkaMetrics.forSystem(cellInfo.systemName)
@@ -395,8 +407,10 @@ object ActorMonitor {
       clock.nanos()
 
     override def captureEnvelopeContext(): Context = {
-      groupMetrics.foreach { gm =>
-        gm.pendingMessages.increment()
+      if(_isAlive && !cellInfo.isTemporary) {
+        groupMetrics.foreach { gm =>
+          gm.pendingMessages.increment()
+        }
       }
 
       Kamon.currentContext()
@@ -424,6 +438,9 @@ object ActorMonitor {
         gm.pendingMessages.decrement()
       }
     }
+
+    override def onTerminationStart(): Unit =
+      _isAlive = false
 
     def cleanup(): Unit = {
 

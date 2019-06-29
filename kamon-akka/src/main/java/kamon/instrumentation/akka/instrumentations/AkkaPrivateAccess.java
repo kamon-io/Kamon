@@ -1,6 +1,7 @@
 package kamon.instrumentation.akka.instrumentations;
 
 import akka.actor.*;
+import akka.dispatch.Mailbox;
 import akka.dispatch.sysmsg.SystemMessage;
 import akka.pattern.PromiseActorRef;
 import akka.routing.RoutedActorCell;
@@ -40,8 +41,13 @@ public class AkkaPrivateAccess {
     return UnstartedCell.class;
   }
 
-  public static long mailboxMessageCount(Object cell) {
-    return ((ActorCell) cell).mailbox().numberOfMessages();
+  public static boolean isDeadLettersMailbox(Object cell, Object mailbox) {
+    final ActorCell actorCell = (ActorCell) cell;
+    return mailbox == actorCell.dispatcher().mailboxes().deadLetterMailbox();
+  }
+
+  public static long mailboxMessageCount(Object mailbox) {
+    return ((Mailbox) mailbox).numberOfMessages();
   }
 
   public static Option<Props> cellProps(Object cell) {

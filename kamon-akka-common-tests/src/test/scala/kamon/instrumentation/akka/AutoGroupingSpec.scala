@@ -63,17 +63,17 @@ class AutoGroupingSpec extends TestKit(ActorSystem("AutoGroupingSpec")) with Wor
 
       eventually {
         withoutPreExisting(AkkaMetrics.GroupMembers.tagValues("group")) should contain allOf (
-          "user/Dummy",
-          "user/Reproducer",
-          "user/Reproducer/Reproducer",
-          "user/Reproducer/Reproducer/Reproducer"
+          "AutoGroupingSpec/user/Dummy",
+          "AutoGroupingSpec/user/Reproducer",
+          "AutoGroupingSpec/user/Reproducer/Reproducer",
+          "AutoGroupingSpec/user/Reproducer/Reproducer/Reproducer"
         )
       }
 
-      val topGroup = AkkaMetrics.forGroup("user/Reproducer", system.name)
-      val secondLevelGroup = AkkaMetrics.forGroup("user/Reproducer/Reproducer", system.name)
-      val thirdLevelGroup = AkkaMetrics.forGroup("user/Reproducer/Reproducer/Reproducer", system.name)
-      val dummyGroup = AkkaMetrics.forGroup("user/Dummy", system.name)
+      val topGroup = AkkaMetrics.forGroup("AutoGroupingSpec/user/Reproducer", system.name)
+      val secondLevelGroup = AkkaMetrics.forGroup("AutoGroupingSpec/user/Reproducer/Reproducer", system.name)
+      val thirdLevelGroup = AkkaMetrics.forGroup("AutoGroupingSpec/user/Reproducer/Reproducer/Reproducer", system.name)
+      val dummyGroup = AkkaMetrics.forGroup("AutoGroupingSpec/user/Dummy", system.name)
 
       eventually {
         topGroup.members.distribution(resetState = false).max shouldBe 1

@@ -33,65 +33,7 @@ import scala.concurrent.duration._
 class ActorMetricsSpec extends TestKit(ActorSystem("ActorMetricsSpec")) with WordSpecLike with MetricInspection.Syntax with InstrumentInspection.Syntax with Matchers
     with BeforeAndAfterAll with ImplicitSender with Eventually {
 
-  val systemMetrics = AkkaMetrics.forSystem(system.name)
-
-  "the Actor System metrics" should {
-    "record dead letters" in {
-      val doaActor = system.actorOf(Props[ActorMetricsTestActor], "doa")
-      val deathWatcher = TestProbe()
-      deathWatcher.watch(doaActor)
-      doaActor ! PoisonPill
-      deathWatcher.expectTerminated(doaActor)
-
-      7 times { doaActor ! "deadonarrival" }
-
-      eventually {
-        systemMetrics.deadLetters.value(false).toInt should be(7)
-      }
-    }
-
-    "record unhandled messages" in {
-      val unhandled = system.actorOf(Props[ActorMetricsTestActor], "unhandled")
-
-      10 times { unhandled ! "CantHandleStrings" }
-
-      eventually {
-        systemMetrics.unhandledMessages.value(false).toInt should be(10)
-      }
-    }
-
-    "record active actor counts" in {
-      systemMetrics.activeActors.distribution(true)
-
-      8 times { system.actorOf(Props[ActorMetricsTestActor]) ! Discard }
-
-      eventually {
-        systemMetrics.activeActors.distribution(false).max.toInt should be > 0
-      }
-    }
-
-    "record processed messages counts" in {
-      systemMetrics.processedMessagesByTracked.value(true)
-      systemMetrics.processedMessagesByNonTracked.value(true)
-      systemMetrics.processedMessagesByNonTracked.value(false) should be(0)
-
-      val tracked = system.actorOf(Props[ActorMetricsTestActor], "tracked-actor-counts")
-      val nonTracked = system.actorOf(Props[ActorMetricsTestActor], "non-tracked-actor-counts")
-
-      (1 to 10).foreach(_ => tracked ! Discard)
-      (1 to 15).foreach(_ => nonTracked ! Discard)
-
-      eventually(timeout(3 second)) {
-        systemMetrics.processedMessagesByTracked.value(false) should be >= (10L)
-        systemMetrics.processedMessagesByNonTracked.value(false) should be >= (15L)
-      }
-    }
-  }
-
-
-
   "the Kamon actor metrics" should {
-
     "respect the configured include and exclude filters" in new ActorMetricsFixtures {
       val trackedActor = createTestActor("tracked-actor")
       ActorProcessingTime.tagValues("path") should contain("ActorMetricsSpec/user/tracked-actor")

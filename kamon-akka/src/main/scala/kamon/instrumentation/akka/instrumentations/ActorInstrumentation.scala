@@ -41,6 +41,7 @@ class ActorInstrumentation extends InstrumentationBuilder {
     .advise(method("handleInvokeFailure"), HandleInvokeFailureMethodAdvice)
     .advise(method("sendMessage").and(takesArguments(1)), SendMessageAdvice)
     .advise(method("terminate"), TerminateMethodAdvice)
+    .advise(method("swapMailbox"), ActorCellSwapMailboxAdvice)
     .advise(method("invokeAll$1"), InvokeAllMethodInterceptor)
 
   /**
@@ -51,12 +52,6 @@ class ActorInstrumentation extends InstrumentationBuilder {
     .advise(isConstructor, RepointableActorCellConstructorAdvice)
     .advise(method("sendMessage").and(takesArguments(1)), SendMessageAdvice)
     .intercept(method("replaceWith"), ReplaceWithMethodInterceptor)
-
-  /**
-    * Ensures that any dropped messages will be properly counted.
-    */
-  onType("akka.dispatch.MessageDispatcher")
-    .advise(method("unregister").and(takesArguments(1)), DispatcherUnregisterMethodAdvice)
 
 }
 
@@ -99,12 +94,23 @@ object HasActorMonitor {
     cell.asInstanceOf[HasActorMonitor].actorMonitor
 }
 
+object ActorCellSwapMailboxAdvice {
 
-object DispatcherUnregisterMethodAdvice {
+  @Advice.OnMethodEnter
+  def enter(@Advice.This cell: Any, @Advice.Argument(0) newMailbox: Any): Boolean = {
+    val isShuttingDown = AkkaPrivateAccess.isDeadLettersMailbox(cell, newMailbox)
+    if(isShuttingDown)
+      actorMonitor(cell).onTerminationStart()
 
-  @OnMethodEnter(suppress = classOf[Throwable])
-  def enter(@Argument(0) cell: Any): Unit =
-    actorMonitor(cell).onDroppedMessages(AkkaPrivateAccess.mailboxMessageCount(cell))
+    isShuttingDown
+  }
+
+  @Advice.OnMethodExit
+  def exit(@Advice.This cell: Any, @Advice.Return oldMailbox: Any, @Advice.Enter isShuttingDown: Boolean): Unit = {
+    if(oldMailbox != null && isShuttingDown) {
+      actorMonitor(cell).onDroppedMessages(AkkaPrivateAccess.mailboxMessageCount(oldMailbox))
+    }
+  }
 }
 
 object InvokeAllMethodInterceptor {

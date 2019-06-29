@@ -18,16 +18,17 @@ package kamon.instrumentation.akka
 import akka.actor._
 import akka.routing.RoundRobinPool
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
-import ActorMetricsTestActor.Block
+import ActorMetricsTestActor.{Block, BlockAndDie, Die, Discard}
 import kamon.instrumentation.akka.AkkaMetrics._
 import kamon.tag.TagSet
 import kamon.testkit.{InstrumentInspection, MetricInspection}
 import kamon.util.Filter
-import kamon.util.Filter.Glob
+import org.scalactic.TimesOnInt.convertIntToRepeater
 import org.scalatest.concurrent.Eventually
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 
 import scala.concurrent.duration._
+import scala.util.Random
 
 class ActorGroupMetricsSpec extends TestKit(ActorSystem("ActorGroupMetricsSpec")) with WordSpecLike with MetricInspection.Syntax with InstrumentInspection.Syntax with Matchers
     with BeforeAndAfterAll with ImplicitSender with Eventually {
@@ -80,17 +81,50 @@ class ActorGroupMetricsSpec extends TestKit(ActorSystem("ActorGroupMetricsSpec")
       AkkaInstrumentation.matchingActorGroups("system/user/group-provided-by-code-actor") shouldBe empty
     }
 
-    "Cleanup pending-messages metric on member shutdown" in new ActorGroupMetricsFixtures {
-      val trackedActor1 = watch(createTestActor("group-of-actors-1"))
-      eventually(GroupMembers.withTags(groupTags("group-of-actors")).distribution().max shouldBe (1))
+    "cleanup pending-messages metric on member shutdown" in new ActorGroupMetricsFixtures {
+      val actors = (1 to 10).map(id => watch(createTestActor(s"group-of-actors-$id")))
+      eventually{
+        GroupMembers.withTags(groupTags("group-of-actors")).distribution().min shouldBe (10)
+        GroupMembers.withTags(groupTags("group-of-actors")).distribution().max shouldBe (10)
+      }
 
       val hangQueue = Block(1 milliseconds)
-      (1 to 10000).foreach(_ => trackedActor1 ! hangQueue)
+      Random.shuffle(actors).foreach { groupMember =>
+        1000 times  {
+          groupMember ! hangQueue
+        }
+      }
 
-      system.stop(trackedActor1)
-      expectTerminated(trackedActor1)
+      actors.foreach(system.stop)
+      eventually {
+        val pendingMessagesDistribution = GroupPendingMessages.withTags(groupTags("group-of-actors")).distribution()
+        pendingMessagesDistribution.count should be > 0L
+        pendingMessagesDistribution.max shouldBe 0L
+      }
+    }
 
-      eventually(GroupPendingMessages.withTags(groupTags("group-of-actors")).distribution().max shouldBe (0))
+    "cleanup pending-messages metric on member shutdown there are messages still being sent to the members" in new ActorGroupMetricsFixtures {
+      val parent = watch(system.actorOf(Props[SecondLevelGrouping], "second-level-group"))
+
+      eventually{
+        GroupMembers.withTags(groupTags("second-level-group")).distribution().min shouldBe (10)
+        GroupMembers.withTags(groupTags("second-level-group")).distribution().max shouldBe (10)
+      }
+
+      1000 times  {
+        parent ! Die
+      }
+
+      eventually(timeout(5 seconds)) {
+        val pendingMessagesDistribution = GroupPendingMessages.withTags(groupTags("second-level-group")).distribution()
+
+        pendingMessagesDistribution.count should be > 0L
+        // We leave some room here because there is a small period of time in which the instrumentation might increment
+        // the mailbox-size range sampler if messages are being sent while shutting down the actor.
+        //
+        // TODO: Find a way to only increment the mailbox size when the messages are actually going to a mailbox.
+        pendingMessagesDistribution.max should be(0L +- 5L)
+      }
     }
   }
 
@@ -128,6 +162,14 @@ class ActorGroupMetricsSpec extends TestKit(ActorSystem("ActorGroupMetricsSpec")
 
       router
     }
+  }
+}
+
+class SecondLevelGrouping extends Actor {
+  (1 to 10).foreach(id => context.actorOf(Props[ActorMetricsTestActor], s"child-$id"))
+
+  def receive: Actor.Receive = {
+    case any => Random.shuffle(context.children).headOption.foreach(_.forward(any))
   }
 }
 

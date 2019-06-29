@@ -25,10 +25,14 @@ class ActorMetricsTestActor extends Actor {
 
   override def receive = {
     case Discard ⇒
+    case Die     ⇒ context.stop(self)
     case Fail    ⇒ throw new ArithmeticException("Division by zero.")
     case Ping    ⇒ sender ! Pong
     case Block(forDuration) =>
       Thread.sleep(forDuration.toMillis)
+    case BlockAndDie(forDuration) =>
+      Thread.sleep(forDuration.toMillis)
+      context.stop(self)
     case TrackTimings(sendTimestamp, sleep) ⇒ {
       val dequeueTimestamp = Kamon.clock().nanos()
       sleep.map(s ⇒ Thread.sleep(s.toMillis))
@@ -43,9 +47,11 @@ object ActorMetricsTestActor {
   case object Ping
   case object Pong
   case object Fail
+  case object Die
   case object Discard
 
   case class Block(duration: Duration)
+  case class BlockAndDie(duration: Duration)
   case class TrackTimings(sendTimestamp: Long = Kamon.clock().nanos(), sleep: Option[Duration] = None)
   case class TrackedTimings(sendTimestamp: Long, dequeueTimestamp: Long, afterReceiveTimestamp: Long) {
     def approximateTimeInMailbox: Long = dequeueTimestamp - sendTimestamp
