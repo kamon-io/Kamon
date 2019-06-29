@@ -201,7 +201,7 @@ class AkkaHttpServerTracingSpec extends WordSpecLike with Matchers with ScalaFut
       val target = s"http://$interface:$port/extra-header"
       val response = Http().singleRequest(HttpRequest(uri = target))
 
-      whenReady(response) { httpResponse =>
+      whenReady(response, timeout(5 seconds)) { httpResponse =>
         httpResponse.headers.map(_.name()) should contain allOf (
           "trace-id",
           "extra"
