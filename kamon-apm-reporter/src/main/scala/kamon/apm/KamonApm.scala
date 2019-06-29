@@ -32,7 +32,7 @@ class KamonApm(configPath: String) extends CombinedReporter {
 
   if(isAcceptableApiKey(_settings.apiKey)) {
     val serviceName = Kamon.environment.service
-    _logger.info(s"Stating the Kamon APM Reporter. Your service will be displayed as [${serviceName}] at https://apm.kamon.io/")
+    _logger.info(s"Starting the Kamon APM Reporter. Your service will be displayed as [${serviceName}] at https://apm.kamon.io/")
     Try(reportBoot(Kamon.clock().millis())).failed.foreach(t => _logger.error("Failed boot", t))
   } else {
     _logger.warn(s"The Kamon APM Reporter was started with an invalid API key [${_settings.apiKey}]")
@@ -210,7 +210,6 @@ class KamonApm(configPath: String) extends CombinedReporter {
 
     val tags = stringifyTags(span.tags)
     val metricTags = stringifyTags(span.metricTags)
-
     IngestionV1.Span.newBuilder()
       .setId(span.id.string)
       .setTraceId(span.trace.id.string)
