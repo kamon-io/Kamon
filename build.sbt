@@ -17,7 +17,7 @@ import Tests._
 val kamonCore             = "io.kamon"  %%  "kamon-core"                    % "2.0.0-RC1"
 val kamonTestkit          = "io.kamon"  %%  "kamon-testkit"                 % "2.0.0-RC1"
 val kamonInstrumentation  = "io.kamon"  %%  "kamon-instrumentation-common"  % "2.0.0-RC1"
-val kanelaAgent           = "io.kamon"  %   "kanela-agent"                  % "1.0.0-M3"
+val kanelaAgent           = "io.kamon"  %   "kanela-agent"                  % "1.0.0-RC3"
 
 val guava         = "com.google.guava"  % "guava"  % "24.1-jre"
 
@@ -59,14 +59,13 @@ lazy val benchmark = (project in file("kamon-executors-bench"))
 def groupByExperimental(tests: Seq[TestDefinition], kanelaJar: File): Seq[Group] = {
   val (stable, experimental) = tests.partition(t => t.name != "kamon.instrumentation.executor.CaptureContextOnSubmitInstrumentationSpec")
 
-  val stableGroup = new Group("stableTests", stable, SubProcess(
+  val stableGroup = Group("stableTests", stable, SubProcess(
     ForkOptions().withRunJVMOptions(Vector(
       "-javaagent:" + kanelaJar.toString
     ))
   ))
 
-  // TODO: Bring back these tests as soon as we figure out what's the issue with Kanela + bootstrap instrumentation
-  val experimentalGroup = new Group("experimentalTests", experimental, SubProcess(
+  val experimentalGroup = Group("experimentalTests", experimental, SubProcess(
     ForkOptions().withRunJVMOptions(Vector(
       "-javaagent:" + kanelaJar.toString,
       "-Dkanela.modules.executors.enabled=false",
@@ -74,5 +73,5 @@ def groupByExperimental(tests: Seq[TestDefinition], kanelaJar: File): Seq[Group]
     ))
   ))
 
-  Seq(stableGroup)
+  Seq(stableGroup, experimentalGroup)
 }
