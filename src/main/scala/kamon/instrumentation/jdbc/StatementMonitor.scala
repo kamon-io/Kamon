@@ -19,7 +19,6 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 
 import kamon.Kamon
-import kamon.instrumentation.jdbc.mixin.HasConnectionPoolMetrics
 import kamon.instrumentation.jdbc.utils.LoggingSupport
 import kamon.metric.RangeSampler
 import kamon.tag.{Lookups, TagSet}
@@ -27,61 +26,58 @@ import kamon.trace.Span
 import kanela.agent.bootstrap.stack.CallStackDepth
 
 object StatementMonitor extends LoggingSupport {
+
   object StatementTypes {
     val Query = "query"
     val Update = "update"
     val Batch = "batch"
-    val GenericExecute = "generic-execute"
+    val GenericExecute = "execute"
   }
 
-  def start(target: Any, sql: String, statementType: String): Option[KamonMonitorTraveler] = {
-    if (CallStackDepth.incrementFor(target) == 0) {
-      val poolTags = extractPoolTags(target)
-      val inFlightMetric = JdbcMetrics.InFlightStatements.withTags(poolTags)
+  def start(statement: Any, sql: String, statementType: String): Option[Invocation] = {
+    if (CallStackDepth.incrementFor(statement) == 0) {
       val startTimestamp = Kamon.clock().instant()
-      val builder = Kamon.clientSpanBuilder(statementType, "jdbc")
-        .tag("db.statement", sql)
 
-      poolTags.iterator().foreach { t =>
-        builder.tag(
-          t.key,
-          poolTags.get(Lookups.coerce(t.key))
-        )
+      // It could happen that there is no Pool Telemetry on the Pool when fail-fast is enabled and a connection is
+      // created while the Pool's constructor is still executing.
+      val (inFlightRangeSampler: RangeSampler, databaseTags: DatabaseTags) = statement match {
+        case cpt: HasConnectionPoolTelemetry if cpt.connectionPoolTelemetry != null && cpt.connectionPoolTelemetry.get() != null =>
+          val poolTelemetry = cpt.connectionPoolTelemetry.get()
+          (poolTelemetry.instruments.inFlightStatements, poolTelemetry.databaseTags)
+
+        case dbt: HasDatabaseTags if dbt.databaseTags() != null =>
+          (JdbcMetrics.InFlightStatements.withTags(dbt.databaseTags().metricTags), dbt.databaseTags())
+
+        case _ =>
+          (JdbcMetrics.InFlightStatements.withoutTags(), DatabaseTags(TagSet.Empty, TagSet.Empty))
       }
 
-      inFlightMetric.increment()
-      val span = builder.start(startTimestamp)
-      Some(KamonMonitorTraveler(target, span, sql, startTimestamp, inFlightMetric))
+      val clientSpan = Kamon.clientSpanBuilder(statementType, "jdbc")
+        .tag("db.statement", sql)
+
+      databaseTags.spanTags.iterator().foreach(t => clientSpan.tag(t.key, databaseTags.spanTags.get(Lookups.coerce(t.key))))
+      databaseTags.metricTags.iterator().foreach(t => clientSpan.tagMetric(t.key, databaseTags.metricTags.get(Lookups.coerce(t.key))))
+      inFlightRangeSampler.increment()
+
+      Some(Invocation(statement, clientSpan.start(startTimestamp), sql, startTimestamp, inFlightRangeSampler))
     } else None
   }
 
-  case class KamonMonitorTraveler(target:Any, span: Span, sql: String, startTimestamp: Instant, inFlight: RangeSampler) {
+  case class Invocation(statement: Any, span: Span, sql: String, startedAt: Instant, inFlight: RangeSampler) {
 
     def close(throwable: Throwable): Unit = {
-
       if (throwable != null) {
         span.fail(throwable)
         JdbcInstrumentation.onStatementFailure(sql, throwable)
       }
 
-      val endTimestamp = Kamon.clock().instant()
-      val elapsedTime = startTimestamp.until(endTimestamp, ChronoUnit.MICROS)
-      span.finish(endTimestamp)
       inFlight.decrement()
+      val endedAt = Kamon.clock().instant()
+      val elapsedTime = startedAt.until(endedAt, ChronoUnit.MICROS)
+      span.finish(endedAt)
 
       JdbcInstrumentation.onStatementFinish(sql, elapsedTime)
-      CallStackDepth.resetFor(target)
+      CallStackDepth.resetFor(statement)
     }
-  }
-
-  private def extractPoolTags(target: Any): TagSet = target match {
-    case targetWithPoolMetrics: HasConnectionPoolMetrics =>
-      Option(targetWithPoolMetrics.connectionPoolMetrics)
-        .map(_.commonTags)
-        .getOrElse(TagSet.Empty)
-
-    case _ =>
-      logTrace(s"Statement is not a HasConnectionPoolMetrics type (used by kamon-jdbc). Target type: ${target.getClass.getTypeName}")
-      TagSet.Empty
   }
 }

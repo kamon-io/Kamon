@@ -32,6 +32,7 @@ object JdbcMetrics {
   )
 
   class ConnectionPoolInstruments(tags: TagSet) extends InstrumentGroup(tags) {
+    val inFlightStatements = register(InFlightStatements)
     val openConnections = register(OpenConnections)
     val borrowedConnections = register(BorrowedConnections)
     val borrowTime = register(BorrowTime)

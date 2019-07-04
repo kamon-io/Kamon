@@ -16,12 +16,17 @@
 
 val kamonCore           = "io.kamon"            %% "kamon-core"               % "2.0.0-RC1"
 val kamonTestkit        = "io.kamon"            %% "kamon-testkit"            % "2.0.0-RC1"
-val kanela              = "io.kamon"            %  "kanela-agent"             % "1.0.0-M3"
+val kamonExecutors      = "io.kamon"            %% "kamon-executors"          % "2.0.0-RC1"
+val kanela              = "io.kamon"            %  "kanela-agent"             % "1.0.0-RC3"
+val kamonCommon         = "io.kamon"            %% "kamon-instrumentation-common" % "2.0.0-RC1"
 
 val slick               = "com.typesafe.slick"       %% "slick"                     % "3.2.3"
+val slickHikari         = "com.typesafe.slick"       %% "slick-hikaricp"            % "3.2.3"
 val h2                  = "com.h2database"            % "h2"                        % "1.4.182"
+val sqlite              = "org.xerial"                % "sqlite-jdbc"               % "3.27.2.1"
 val mariaConnector      = "org.mariadb.jdbc"          % "mariadb-java-client"       % "2.2.6"
-val mariaDB4j           = "ch.vorburger.mariaDB4j"    % "mariaDB4j"                 % "2.2.3"
+val mariaDB4j           = "ch.vorburger.mariaDB4j"    % "mariaDB4j"                 % "2.4.0"
+val postgres            = "org.postgresql"            % "postgresql"                % "42.2.5"
 val hikariCP            = "com.zaxxer"                % "HikariCP"                  % "2.6.2"
 
 lazy val root = (project in file("."))
@@ -30,6 +35,6 @@ lazy val root = (project in file("."))
   .settings(
     name := "kamon-jdbc",
     libraryDependencies ++=
-      compileScope(kamonCore) ++
-      providedScope(kanela, hikariCP, mariaConnector, slick) ++
-      testScope(h2, mariaDB4j, kamonTestkit, scalatest, slf4jApi, logbackClassic))
+      compileScope(kamonCore, kamonCommon, kamonExecutors) ++
+      providedScope(kanela, hikariCP, mariaConnector, slick, postgres) ++
+      testScope(h2, sqlite, mariaDB4j, postgres, kamonTestkit, slickHikari, scalatest, slf4jApi, logbackClassic))
