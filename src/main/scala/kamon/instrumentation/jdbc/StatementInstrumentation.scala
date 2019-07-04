@@ -15,6 +15,7 @@
 
 package kamon.instrumentation.jdbc
 
+import java.sql.PreparedStatement
 import java.util.Properties
 
 import kamon.Kamon
@@ -23,11 +24,11 @@ import kamon.instrumentation.jdbc.advisor._
 import kamon.tag.TagSet
 import kamon.trace.Hooks
 import kanela.agent.api.instrumentation.InstrumentationBuilder
+import kanela.agent.api.instrumentation.bridge.FieldBridge
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 
 import scala.util.Try
 import kanela.agent.libs.net.bytebuddy.matcher.ElementMatchers._
-import org.postgresql.jdbc.PgConnection
 
 class StatementInstrumentation extends InstrumentationBuilder {
 
@@ -88,6 +89,7 @@ class StatementInstrumentation extends InstrumentationBuilder {
     * observed appropriately.
     */
   onType("org.postgresql.jdbc.PgConnection")
+    .bridge(classOf[PgConnectionIsAliveAdvice.PgConnectionPrivateAccess])
     .advise(method("isValid"), PgConnectionIsAliveAdvice)
 
 }
@@ -178,22 +180,21 @@ object ConnectionIsValidAdvice {
 
 object PgConnectionIsAliveAdvice {
 
+  trait PgConnectionPrivateAccess {
+
+    @FieldBridge("checkConnectionQuery")
+    def getCheckConnectionStatement(): PreparedStatement
+  }
+
   @Advice.OnMethodEnter
   def enter(@Advice.This connection: Any): Unit = {
     if(connection != null) {
-      checkConnectionQueryField.map(field => {
-        val checkConnectionStatement = field.get(connection)
-        if(checkConnectionStatement != null) {
-          val connectionPoolTelemetry = connection.asInstanceOf[HasConnectionPoolTelemetry].connectionPoolTelemetry
-          checkConnectionStatement.asInstanceOf[HasConnectionPoolTelemetry].setConnectionPoolTelemetry(connectionPoolTelemetry)
-        }
-      })
-    }
-  }
+      val statement = connection.asInstanceOf[PgConnectionPrivateAccess].getCheckConnectionStatement()
 
-  lazy val checkConnectionQueryField = Try {
-    val field = classOf[PgConnection].getDeclaredField("checkConnectionQuery")
-    field.setAccessible(true)
-    field
+      if(statement != null) {
+        val connectionPoolTelemetry = connection.asInstanceOf[HasConnectionPoolTelemetry].connectionPoolTelemetry
+        statement.asInstanceOf[HasConnectionPoolTelemetry].setConnectionPoolTelemetry(connectionPoolTelemetry)
+      }
+    }
   }
 }

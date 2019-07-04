@@ -33,9 +33,6 @@ import scala.util.Try
 
 class HikariInstrumentation extends InstrumentationBuilder {
 
-  /**
-    *
-    */
   onType("com.zaxxer.hikari.pool.HikariPool")
     .mixin(classOf[HasConnectionPoolTelemetry.Mixin])
     .advise(isConstructor(), HikariPoolConstructorAdvice)
@@ -116,11 +113,13 @@ object HikariPoolCreatePoolEntryMethodAdvice {
 
   @Advice.OnMethodExit
   def exit(@This hikariPool: HasConnectionPoolTelemetry, @Advice.Return poolEntry: Any): Unit = {
-    poolEntry.asInstanceOf[HasConnectionPoolTelemetry].setConnectionPoolTelemetry(hikariPool.connectionPoolTelemetry)
+    if(hikariPool != null) {
+      poolEntry.asInstanceOf[HasConnectionPoolTelemetry].setConnectionPoolTelemetry(hikariPool.connectionPoolTelemetry)
 
-    val poolTelemetry = hikariPool.connectionPoolTelemetry.get
-    if (poolTelemetry != null) {
-      poolTelemetry.instruments.openConnections.increment()
+      val poolTelemetry = hikariPool.connectionPoolTelemetry.get
+      if (poolTelemetry != null) {
+        poolTelemetry.instruments.openConnections.increment()
+      }
     }
   }
 }
