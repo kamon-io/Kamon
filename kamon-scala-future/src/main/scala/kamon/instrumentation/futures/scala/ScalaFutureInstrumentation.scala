@@ -45,7 +45,7 @@ object ScalaFutureInstrumentation {
     *            bytecode instrumentation. If instrumentation is disabled you risk leaving dirty threads that can cause
     *            incorrect Context propagation behavior.
     */
-  def traced[S](operationName: String)(body: => S)(implicit settings: Settings): S = {
+  def trace[S](operationName: String)(body: => S)(implicit settings: Settings): S = {
     val span = startedSpan(operationName, settings)
     Kamon.store(Kamon.currentContext().withKey(Span.Key, span))
 
@@ -78,7 +78,7 @@ object ScalaFutureInstrumentation {
     *            bytecode instrumentation. If instrumentation is disabled you risk leaving dirty threads that can cause
     *            incorrect Context propagation behavior.
     */
-  def tracedCallback[T, S](operationName: String)(body: T => S)(implicit settings: Settings): T => S = { t: T =>
+  def traceAsync[T, S](operationName: String)(body: T => S)(implicit settings: Settings): T => S = { t: T =>
     val span = startedSpan(operationName, settings)
     Kamon.store(Kamon.currentContext().withKey(Span.Key, span))
 
