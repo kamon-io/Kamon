@@ -152,7 +152,7 @@ trait TestWebServer extends TracingDirectives {
             val longStringContentStream = Source.fromIterator(() =>
               Range(1, 16)
                 .map(i => ByteString(100 * ('a' + i).toChar))
-                .toIterator
+                .iterator
             )
 
             HttpResponse(entity = HttpEntity(ContentTypes.`text/plain(UTF-8)`, 1600, longStringContentStream))
@@ -192,7 +192,7 @@ trait TestWebServer extends TracingDirectives {
 
   class WebServer(bindingFuture: Future[Http.ServerBinding])(implicit ec: ExecutionContext) {
     def shutdown(): Future[_] = {
-      bindingFuture.flatMap(binding ⇒ binding.unbind())
+      bindingFuture.flatMap(binding => binding.unbind())
     }
   }
 

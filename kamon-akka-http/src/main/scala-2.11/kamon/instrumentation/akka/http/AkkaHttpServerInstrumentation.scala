@@ -80,9 +80,9 @@ class AkkaHttpServerInstrumentation extends InstrumentationBuilder {
 trait HasMatchingContext {
   def defaultOperationName: String
   def matchingContext: Seq[PathMatchingContext]
-  def setMatchingContext(ctx: Seq[PathMatchingContext])
-  def setDefaultOperationName(defaultOperationName: String)
-  def prependMatchingContext(matched: PathMatchingContext)
+  def setMatchingContext(ctx: Seq[PathMatchingContext]): Unit
+  def setDefaultOperationName(defaultOperationName: String): Unit
+  def prependMatchingContext(matched: PathMatchingContext): Unit
 }
 
 object HasMatchingContext {
@@ -117,7 +117,7 @@ object ResolveOperationNameOnRouteInterceptor {
   // the operation name before the request gets to the actual handling code (presumably inside of a "complete"
   // directive.
 
-  def complete(@Argument(1) m: ⇒ ToResponseMarshallable): StandardRoute =
+  def complete(@Argument(1) m: => ToResponseMarshallable): StandardRoute =
     StandardRoute(resolveOperationName(_).complete(m))
 
   def redirect(@Argument(1) uri: Uri, @Argument(2) redirectionType: Redirection): StandardRoute =
@@ -128,31 +128,31 @@ object ResolveOperationNameOnRouteInterceptor {
     StandardRoute(resolveOperationName(_).fail(error))
   }
 
-  def onComplete[T](@Argument(1) future: ⇒ Future[T]): Directive1[Try[T]] =
-    Directive { inner ⇒ ctx ⇒
+  def onComplete[T](@Argument(1) future: => Future[T]): Directive1[Try[T]] =
+    Directive { inner => ctx =>
       import ctx.executionContext
       resolveOperationName(ctx)
-      future.fast.transformWith(t ⇒ inner(Tuple1(t))(ctx))
+      future.fast.transformWith(t => inner(Tuple1(t))(ctx))
     }
 
-  def apply[T](future: ⇒ Future[T])(implicit tupler: Tupler[T]): OnSuccessMagnet { type Out = tupler.Out } =
+  def apply[T](future: => Future[T])(implicit tupler: Tupler[T]): OnSuccessMagnet { type Out = tupler.Out } =
     new OnSuccessMagnet {
       type Out = tupler.Out
-      val directive = Directive[tupler.Out] { inner ⇒ ctx ⇒
+      val directive = Directive[tupler.Out] { inner => ctx =>
         import ctx.executionContext
         resolveOperationName(ctx)
-        future.fast.flatMap(t ⇒ inner(tupler(t))(ctx))
+        future.fast.flatMap(t => inner(tupler(t))(ctx))
       }(tupler.OutIsTuple)
     }
 
-  def apply[T](future: ⇒ Future[T])(implicit m: ToResponseMarshaller[T]): CompleteOrRecoverWithMagnet =
+  def apply[T](future: => Future[T])(implicit m: ToResponseMarshaller[T]): CompleteOrRecoverWithMagnet =
     new CompleteOrRecoverWithMagnet {
-      val directive = Directive[Tuple1[Throwable]] { inner ⇒ ctx ⇒
+      val directive = Directive[Tuple1[Throwable]] { inner => ctx =>
         import ctx.executionContext
         resolveOperationName(ctx)
         future.fast.transformWith {
-          case Success(res)   ⇒ ctx.complete(res)
-          case Failure(error) ⇒ inner(Tuple1(error))(ctx)
+          case Success(res)   => ctx.complete(res)
+          case Failure(error) => inner(Tuple1(error))(ctx)
         }
       }
     }
@@ -230,8 +230,8 @@ object PathDirectivesRawPathPrefixInterceptor {
       }
       matching
     }).flatMap {
-      case Matched(rest, values) ⇒ tprovide(values) & mapRequestContext(_ withUnmatchedPath rest)
-      case Unmatched             ⇒ reject
+      case Matched(rest, values) => tprovide(values) & mapRequestContext(_ withUnmatchedPath rest)
+      case Unmatched             => reject
     }
   }
 }
@@ -243,9 +243,9 @@ object FastFutureTransformWithAdvice {
   def transformWith[A, B](@Argument(0) future: Future[A], @Argument(1) s: A => Future[B], @Argument(2) f: Throwable => Future[B],
     @Argument(3) ec: ExecutionContext, @SuperCall zuper: Callable[Future[B]]): Future[B] = {
 
-    def strictTransform[T](x: T, f: T ⇒ Future[B]) =
+    def strictTransform[T](x: T, f: T => Future[B]) =
       try f(x)
-      catch { case NonFatal(e) ⇒ FastFuture.failed(e) }
+      catch { case NonFatal(e) => FastFuture.failed(e) }
 
     // If we get a FulfilledFuture or ErrorFuture, those will have the HasContext mixin,
     // otherwise we are getting a regular Future which has the context mixed into its value.

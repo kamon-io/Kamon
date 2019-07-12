@@ -9,7 +9,7 @@ import org.scalatest.{Matchers, WordSpec}
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Await, Future, Promise}
-import kamon.instrumentation.futures.scala.ScalaFutureInstrumentation.traced
+import kamon.instrumentation.futures.scala.ScalaFutureInstrumentation.trace
 import akka.http.scaladsl.util.FastFuture.EnhancedFuture
 import kamon.Kamon
 import kamon.context.Context
@@ -23,7 +23,7 @@ class FastFutureInstrumentationSpec extends WordSpec with Matchers {
       "calling .map/.flatMap/.onComplete and the original Future has not completed yet" in {
         val completeSignal = new CountDownLatch(1)
         val future = Future {
-          traced("async-operation") {
+          trace("async-operation") {
             completeSignal.await()
             "Hello World"
           }
@@ -54,7 +54,7 @@ class FastFutureInstrumentationSpec extends WordSpec with Matchers {
       "calling .map/.flatMap/.onComplete and the original Future has already completed" in {
         val completeSignal = new CountDownLatch(1)
         val future = Future {
-          traced("async-operation") {
+          trace("async-operation") {
             completeSignal.await()
             "Hello World"
           }
