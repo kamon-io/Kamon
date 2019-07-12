@@ -46,8 +46,8 @@ was created and make it available while executing the future's body.
             Future("Hello Kamon!")
               // The active span is expected to be available during all intermediate processing.
               .map(_.length)
-              .flatMap(len ⇒ Future(len.toString))
-              .map(_ ⇒ Kamon.currentContext().get(StringKey))
+              .flatMap(len => Future(len.toString))
+              .map(_ => Kamon.currentContext().get(StringKey))
           }
 ```
 

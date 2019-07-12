@@ -121,7 +121,7 @@ class FutureInstrumentationSpec extends WordSpec with ScalaFutures with Matchers
           Future(Kamon.currentContext().getTag(plain("key")))
         }
 
-        whenReady(contextTag)(tagValue ⇒ tagValue shouldBe "value")
+        whenReady(contextTag)(tagValue => tagValue shouldBe "value")
         ensureExecutionContextIsClean()
       }
 
@@ -131,11 +131,11 @@ class FutureInstrumentationSpec extends WordSpec with ScalaFutures with Matchers
             Future("Hello Kamon!")
               // The current context is expected to be available during all intermediate processing.
               .map(_.length)
-              .flatMap(len ⇒ Future(len.toString))
-              .map(_ ⇒ Kamon.currentContext().getTag(plain("key")))
+              .flatMap(len => Future(len.toString))
+              .map(_ => Kamon.currentContext().getTag(plain("key")))
           }
 
-        whenReady(tagAfterTransformation)(tagValue ⇒ tagValue shouldBe "value")
+        whenReady(tagAfterTransformation)(tagValue => tagValue shouldBe "value")
         ensureExecutionContextIsClean()
       }
     }
