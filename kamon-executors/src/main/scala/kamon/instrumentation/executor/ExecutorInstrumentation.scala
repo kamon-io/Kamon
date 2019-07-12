@@ -12,7 +12,6 @@ import kamon.tag.TagSet
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutorService}
-import scala.concurrent.forkjoin.{ForkJoinPool => ScalaForkJoinPool}
 import scala.util.Try
 
 object ExecutorInstrumentation {

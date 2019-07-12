@@ -27,7 +27,7 @@ lazy val kamonExecutors = (project in file("."))
   .aggregate(executors, benchmark)
 
 val commonSettings = Seq(
-  scalaVersion := "2.12.6",
+  crossScalaVersions := List("2.11.12", "2.12.8", "2.13.0"),
   resolvers += Resolver.mavenLocal,
   resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
 )

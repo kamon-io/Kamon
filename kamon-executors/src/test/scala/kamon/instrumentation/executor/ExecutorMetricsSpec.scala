@@ -78,7 +78,7 @@ class ExecutorMetricsSpec extends WordSpec with Matchers with InstrumentInspecti
     }
 
     "register a Scala ForkJoinPool, collect their metrics and remove it" in {
-      val scalaForkJoinPool = new scala.concurrent.forkjoin.ForkJoinPool(10)
+      val scalaForkJoinPool = new ScalaForkJoinPool(10)
       val registeredForkJoin = ExecutorInstrumentation.instrument(scalaForkJoinPool, "scala-fork-join-pool-metrics")
 
       ExecutorMetrics.ThreadsActive.tagValues("name")  should contain ("scala-fork-join-pool-metrics")
@@ -101,9 +101,9 @@ class ExecutorMetricsSpec extends WordSpec with Matchers with InstrumentInspecti
     new TestPool(executor)
 
   def poolInstruments(testPool: TestPool): ExecutorMetrics.ThreadPoolInstruments = testPool.executor match {
-    case tpe:ThreadPoolExecutor                           => new ExecutorMetrics.ThreadPoolInstruments(testPool.name, TagSet.Empty)
-    case javaFjp: ForkJoinPool                            => new ExecutorMetrics.ForkJoinPoolInstruments(testPool.name, TagSet.Empty)
-    case scalaFjp: scala.concurrent.forkjoin.ForkJoinPool => new ExecutorMetrics.ForkJoinPoolInstruments(testPool.name, TagSet.Empty)
+    case tpe:ThreadPoolExecutor      => new ExecutorMetrics.ThreadPoolInstruments(testPool.name, TagSet.Empty)
+    case javaFjp: ForkJoinPool       => new ExecutorMetrics.ForkJoinPoolInstruments(testPool.name, TagSet.Empty)
+    case scalaFjp: ScalaForkJoinPool => new ExecutorMetrics.ForkJoinPoolInstruments(testPool.name, TagSet.Empty)
   }
 
   def fjpInstruments(testPool: TestPool): ExecutorMetrics.ForkJoinPoolInstruments =
@@ -233,7 +233,7 @@ class ExecutorMetricsSpec extends WordSpec with Matchers with InstrumentInspecti
     }
 
     "backed by Scala FJP" should {
-      behave like commonExecutorBehaviour(new scala.concurrent.forkjoin.ForkJoinPool(_), 10)
+      behave like commonExecutorBehaviour(new ScalaForkJoinPool(_), 10)
     }
 
     "backed by TPE" should {
