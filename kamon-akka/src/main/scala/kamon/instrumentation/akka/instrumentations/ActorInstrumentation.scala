@@ -61,9 +61,10 @@ object ActorInstrumentation {
     val unstartedCellClass = AkkaPrivateAccess.unstartedActorCellClass()
 
     val prefix = Properties.versionNumberString.split("\\.").take(2).mkString(".") match {
-      case _@ "2.11" ⇒ "akka$actor$UnstartedCell$$"
-      case _@ "2.12" ⇒ ""
-      case v         ⇒ throw new IllegalStateException(s"Incompatible Scala version: $v")
+      case _@ "2.11" => "akka$actor$UnstartedCell$$"
+      case _@ "2.12" => ""
+      case _@ "2.13" => ""
+      case v         => throw new IllegalStateException(s"Incompatible Scala version: $v")
     }
 
     val queueField = unstartedCellClass.getDeclaredField(prefix+"queue")

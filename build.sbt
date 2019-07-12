@@ -16,10 +16,10 @@
 
 val kamonCore       = "io.kamon" %% "kamon-core"         % "2.0.0-RC1"
 val kamonTestkit    = "io.kamon" %% "kamon-testkit"      % "2.0.0-RC1"
-val kamonScala      = "io.kamon" %% "kamon-scala-future" % "2.0.0-RC1"
-val kamonExecutors  = "io.kamon" %% "kamon-executors"    % "2.0.0-RC1"
-val kamonInstrument = "io.kamon" %% "kamon-instrumentation-common" % "2.0.0-RC1"
-val kanelaAgent     =  "io.kamon" % "kanela-agent"       % "1.0.0-M3"
+val kamonScala      = "io.kamon" %% "kamon-scala-future" % "2.0.0-RC2"
+val kamonExecutors  = "io.kamon" %% "kamon-executors"    % "2.0.0-RC2"
+val kamonInstrument = "io.kamon" %% "kamon-instrumentation-common" % "2.0.0-RC2"
+val kanelaAgent     =  "io.kamon" % "kanela-agent"       % "1.0.0-RC3"
 
 val akka24Version = "2.4.20"
 val akka25Version = "2.5.23"
@@ -27,10 +27,6 @@ val akka25Version = "2.5.23"
 val akkaActor       = "com.typesafe.akka" %% "akka-actor"    % "2.5.23"
 val akkaTestkit     = "com.typesafe.akka" %% "akka-testkit"  % "2.5.23"
 val akkaSLF4J       = "com.typesafe.akka" %% "akka-slf4j"    % "2.5.23"
-
-lazy val `kamon-akka` = (project in file("."))
-  .settings(noPublishing: _*)
-  .aggregate(instrumentation, commonTests, testsOnAkka24, testsOnAkka25, benchmarks)
 
 // These common modules contains all the stuff that can be reused between different Akka versions. They compile with
 // Akka 2.4, but the actual modules for each Akka version are only using the sources from these project instead of the
@@ -43,6 +39,7 @@ lazy val instrumentation = Project("instrumentation", file("kamon-akka"))
     moduleName := "kamon-akka",
     bintrayPackage := "kamon-akka",
     scalacOptions += "-target:jvm-1.8",
+    crossScalaVersions := Seq("2.11.12", "2.12.8", "2.13.0"),
     libraryDependencies ++=
       compileScope(kamonCore, kamonInstrument, kamonScala, kamonExecutors) ++
       providedScope(akkaActor, kanelaAgent))
@@ -54,6 +51,7 @@ lazy val commonTests = Project("common-tests", file("kamon-akka-common-tests"))
     test := ((): Unit),
     testOnly := ((): Unit),
     testQuick := ((): Unit),
+    crossScalaVersions := Seq("2.11.12", "2.12.8", "2.13.0"),
     libraryDependencies ++=
       compileScope(kamonCore, kamonInstrument, kamonScala, kamonExecutors) ++
       providedScope(akkaActor, kanelaAgent) ++
@@ -67,6 +65,7 @@ lazy val testsOnAkka24 = Project("kamon-akka-tests-24", file("kamon-akka-tests-2
   .settings(noPublishing: _*)
   .settings(
     name := "kamon-akka-tests-2.4",
+    crossScalaVersions := Seq("2.11.12", "2.12.8"),
     unmanagedSourceDirectories in Test ++= (unmanagedSourceDirectories in Test in commonTests).value,
     unmanagedResourceDirectories in Test ++= (unmanagedResourceDirectories in Test in commonTests).value,
     libraryDependencies ++=
@@ -80,6 +79,7 @@ lazy val testsOnAkka25 = Project("kamon-akka-tests-25", file("kamon-akka-tests-2
   .settings(noPublishing: _*)
   .settings(
     name := "kamon-akka-tests-2.5",
+    crossScalaVersions := Seq("2.11.12", "2.12.8", "2.13.0"),
     unmanagedSourceDirectories in Test ++= (unmanagedSourceDirectories in Test in commonTests).value,
     unmanagedResourceDirectories in Test ++= (unmanagedResourceDirectories in Test in commonTests).value,
     libraryDependencies ++=
@@ -91,6 +91,7 @@ lazy val benchmarks = Project("benchmarks", file("kamon-akka-bench"))
   .dependsOn(instrumentation)
   .settings(noPublishing: _*)
   .settings(
+    crossScalaVersions := Seq("2.11.12", "2.12.8", "2.13.0"),
     libraryDependencies ++= compileScope(akkaActor, kanelaAgent))
 
 def onAkka24(moduleID: ModuleID): ModuleID =

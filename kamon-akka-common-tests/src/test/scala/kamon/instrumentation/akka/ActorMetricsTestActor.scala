@@ -24,18 +24,18 @@ class ActorMetricsTestActor extends Actor {
   import ActorMetricsTestActor._
 
   override def receive = {
-    case Discard ⇒
-    case Die     ⇒ context.stop(self)
-    case Fail    ⇒ throw new ArithmeticException("Division by zero.")
-    case Ping    ⇒ sender ! Pong
+    case Discard =>
+    case Die     => context.stop(self)
+    case Fail    => throw new ArithmeticException("Division by zero.")
+    case Ping    => sender ! Pong
     case Block(forDuration) =>
       Thread.sleep(forDuration.toMillis)
     case BlockAndDie(forDuration) =>
       Thread.sleep(forDuration.toMillis)
       context.stop(self)
-    case TrackTimings(sendTimestamp, sleep) ⇒ {
+    case TrackTimings(sendTimestamp, sleep) => {
       val dequeueTimestamp = Kamon.clock().nanos()
-      sleep.map(s ⇒ Thread.sleep(s.toMillis))
+      sleep.map(s => Thread.sleep(s.toMillis))
       val afterReceiveTimestamp = Kamon.clock().nanos()
 
       sender ! TrackedTimings(sendTimestamp, dequeueTimestamp, afterReceiveTimestamp)

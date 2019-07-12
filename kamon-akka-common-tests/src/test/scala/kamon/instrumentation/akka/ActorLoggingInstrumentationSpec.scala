@@ -36,8 +36,8 @@ class ActorLoggingInstrumentationSpec extends TestKit(ActorSystem("ActorCellInst
       }
 
       val logEvent = fishForMessage() {
-        case event: LogEvent if event.message.toString startsWith "TestLogEvent" ⇒ true
-        case _: LogEvent ⇒ false
+        case event: LogEvent if event.message.toString startsWith "TestLogEvent" => true
+        case _: LogEvent => false
       }
 
       Kamon.storeContext(logEvent.asInstanceOf[HasContext].context) {
@@ -55,7 +55,7 @@ class ActorLoggingInstrumentationSpec extends TestKit(ActorSystem("ActorCellInst
 
 class LoggerActor extends Actor with ActorLogging {
   def receive = {
-    case "info" ⇒ log.info("TestLogEvent")
+    case "info" => log.info("TestLogEvent")
   }
 }
 
