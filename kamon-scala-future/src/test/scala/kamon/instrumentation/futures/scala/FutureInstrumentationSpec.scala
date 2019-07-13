@@ -32,18 +32,18 @@ import scala.concurrent.{ExecutionContext, Future}
 class FutureInstrumentationSpec extends WordSpec with ScalaFutures with Matchers with PatienceConfiguration
     with OptionValues with Eventually with TestSpanReporter {
 
-  import kamon.instrumentation.futures.scala.ScalaFutureInstrumentation.{traced, tracedCallback}
+  import kamon.instrumentation.futures.scala.ScalaFutureInstrumentation.{trace, traceAsync}
   implicit val ec: ExecutionContext = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(1))
 
   "a Scala Future" when {
     "manually instrumented" should {
       "create Delayed Spans for a traced future and traced callbacks" in {
-        Future(traced("future-body")("this is the future body"))
-          .map(tracedCallback("first-callback")(_.length))
+        Future(trace("future-body")("this is the future body"))
+          .map(traceAsync("first-callback")(_.length))
           .map(_ * 10)
-          .flatMap(tracedCallback("second-callback")(Future(_)))
+          .flatMap(traceAsync("second-callback")(Future(_)))
           .map(_ * 10)
-          .filter(tracedCallback("third-callback")(_.toString.length > 10))
+          .filter(traceAsync("third-callback")(_.toString.length > 10))
 
         val spans = testSpanReporter.spans(200 millis)
         val bodySpan = spans.find(_.operationName == "future-body").get
@@ -64,13 +64,13 @@ class FutureInstrumentationSpec extends WordSpec with ScalaFutures with Matchers
       }
 
       "propagate the last chained Context when failures happen" in {
-        Future(traced("future-body")("this is the future body"))
-          .map(tracedCallback("first-callback")(_.length))
+        Future(trace("future-body")("this is the future body"))
+          .map(traceAsync("first-callback")(_.length))
           .map(_ / 0)
-          .flatMap(tracedCallback("second-callback")(Future(_))) // this will never happen
+          .flatMap(traceAsync("second-callback")(Future(_))) // this will never happen
           .map(_ * 10)
           .recover { case _ => "recovered" }
-          .map(tracedCallback("third-callback")(_.toString))
+          .map(traceAsync("third-callback")(_.toString))
 
         val spans = testSpanReporter.spans(200 millis)
         val bodySpan = spans.find(_.operationName == "future-body").get
@@ -87,10 +87,10 @@ class FutureInstrumentationSpec extends WordSpec with ScalaFutures with Matchers
 
       "be usable when working with for comprehensions" in {
         for {
-          first <- Future(traced("first-future")("this is the future body"))
-          second <- Future(traced("second-future")(first.length))
-          third <- Future(traced("third-future")(second * 10))
-        } yield traced("yield") {
+          first <- Future(trace("first-future")("this is the future body"))
+          second <- Future(trace("second-future")(first.length))
+          third <- Future(trace("third-future")(second * 10))
+        } yield trace("yield") {
           Kamon.currentSpan().tag("location", "atTheYield")
           "Hello World! " * third
         }
@@ -121,7 +121,7 @@ class FutureInstrumentationSpec extends WordSpec with ScalaFutures with Matchers
           Future(Kamon.currentContext().getTag(plain("key")))
         }
 
-        whenReady(contextTag)(tagValue ⇒ tagValue shouldBe "value")
+        whenReady(contextTag)(tagValue => tagValue shouldBe "value")
         ensureExecutionContextIsClean()
       }
 
@@ -131,11 +131,11 @@ class FutureInstrumentationSpec extends WordSpec with ScalaFutures with Matchers
             Future("Hello Kamon!")
               // The current context is expected to be available during all intermediate processing.
               .map(_.length)
-              .flatMap(len ⇒ Future(len.toString))
-              .map(_ ⇒ Kamon.currentContext().getTag(plain("key")))
+              .flatMap(len => Future(len.toString))
+              .map(_ => Kamon.currentContext().getTag(plain("key")))
           }
 
-        whenReady(tagAfterTransformation)(tagValue ⇒ tagValue shouldBe "value")
+        whenReady(tagAfterTransformation)(tagValue => tagValue shouldBe "value")
         ensureExecutionContextIsClean()
       }
     }

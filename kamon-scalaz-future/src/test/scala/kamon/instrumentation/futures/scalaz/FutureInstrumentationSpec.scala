@@ -52,8 +52,8 @@ class FutureInstrumentationSpec extends WordSpec with Matchers with ScalaFutures
           Future("Hello Kamon!")
             // The current context is expected to be available during all intermediate processing.
             .map(_.length)
-            .flatMap(len ⇒ Future(len.toString))
-            .map(_ ⇒ Kamon.currentContext().getTag(plain("key")))
+            .flatMap(len => Future(len.toString))
+            .map(_ => Kamon.currentContext().getTag(plain("key")))
             .unsafeStart
         }
 
