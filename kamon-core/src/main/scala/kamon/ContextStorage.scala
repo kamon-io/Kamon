@@ -140,5 +140,10 @@ object ContextStorage {
     * store and remove Context instances for small periods of time as events flow through the system and the
     * instrumentation follows them around.
     */
-  private val _contextStorage = Storage.ThreadLocal()
+  private val _contextStorage: Storage = {
+    if("true".equals(System.getProperty("kamon.context.debug")))
+      Storage.Debug()
+    else
+      Storage.ThreadLocal()
+  }
 }
