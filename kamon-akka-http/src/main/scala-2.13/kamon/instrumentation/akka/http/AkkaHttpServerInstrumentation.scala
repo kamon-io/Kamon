@@ -72,7 +72,7 @@ class AkkaHttpServerInstrumentation extends InstrumentationBuilder {
       .advise(method("onComplete"), InvokeWithCapturedContext)
 
   onType("akka.http.scaladsl.util.FastFuture$")
-    .intercept(method("transformWith$extension1"), FastFutureTransformWithAdvice)
+    .intercept(method("transformWith$extension"), FastFutureTransformWithAdvice)
 }
 
 trait HasMatchingContext {
