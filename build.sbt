@@ -68,8 +68,8 @@ def groupByExperimental(tests: Seq[TestDefinition], kanelaJar: File): Seq[Group]
   val experimentalGroup = Group("experimentalTests", experimental, SubProcess(
     ForkOptions().withRunJVMOptions(Vector(
       "-javaagent:" + kanelaJar.toString,
-      "-Dkanela.modules.executors.enabled=false",
-      "-Dkanela.modules.executors-capture-on-submit.enabled=true"
+      "-Dkanela.modules.executor-service.enabled=false",
+      "-Dkanela.modules.executor-service-capture-on-submit.enabled=true"
     ))
   ))
 
