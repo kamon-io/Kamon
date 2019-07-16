@@ -74,7 +74,7 @@ object LogbackInstrumentation {
       logbackConfig.getString("mdc.trace-id-key"),
       logbackConfig.getString("mdc.span-id-key"),
       logbackConfig.getBoolean("mdc.copy.tags"),
-      logbackConfig.getStringList("mdc.copy.entries").asScala
+      logbackConfig.getStringList("mdc.copy.entries").asScala.toSeq
     )
   }
 }
