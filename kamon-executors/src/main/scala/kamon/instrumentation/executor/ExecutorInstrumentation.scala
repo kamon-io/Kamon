@@ -2,7 +2,7 @@ package kamon.instrumentation.executor
 
 import java.time.Duration
 import java.util
-import java.util.concurrent.{Callable, Executor, ExecutorService, Future, ThreadPoolExecutor, TimeUnit, ForkJoinPool => JavaForkJoinPool}
+import java.util.concurrent.{Callable, ExecutorService, Future, ScheduledExecutorService, ScheduledFuture, ScheduledThreadPoolExecutor, ThreadPoolExecutor, TimeUnit, ForkJoinPool => JavaForkJoinPool}
 
 import com.typesafe.config.Config
 import kamon.Kamon
@@ -26,7 +26,7 @@ object ExecutorInstrumentation {
     * instrumented service will have the following tags:
     *
     *   * name: set to the provided name parameter.
-    *   * type: set to "tpe" for ThreadPoolExecutor executors or "fjp" for ForkJoinPool executors.
+    *   * type: set to "ThreadPoolExecutor" executors or "ForkJoinPool".
     *
     * Once the returned executor is shutdown, all related metric instruments will be removed.
     */
@@ -39,12 +39,26 @@ object ExecutorInstrumentation {
     * instrumented service will have the following tags:
     *
     *   * name: set to the provided name parameter.
-    *   * type: set to "tpe" for ThreadPoolExecutor executors or "fjp" for ForkJoinPool executors.
+    *   * type: set to "ThreadPoolExecutor" executors or "ForkJoinPool".
     *
     * Once the returned executor is shutdown, all related metric instruments will be removed.
     */
   def instrumentExecutionContext(executionContext: ExecutionContext, name: String): ExecutionContextExecutorService =
     instrumentExecutionContext(executionContext, name, TagSet.Empty, DefaultSettings)
+
+  /**
+    * Creates a new instrumented ScheduledExecutorService that wraps the provided one. The instrumented executor will
+    * track metrics for a ScheduledThreadPoolExecutor, but will not perform any context propagation nor track the time
+    * in queue metric for submitted tasks.
+    *
+    * All metrics related to the instrumented service will have the following tags:
+    *   * name: set to the provided name parameter.
+    *   * type: set to "ScheduledThreadPoolExecutor".
+    *
+    * Once the returned executor is shutdown, all related metric instruments will be removed.
+    */
+  def instrumentScheduledExecutor(executor: ScheduledExecutorService, name: String): ScheduledExecutorService =
+    instrumentScheduledExecutor(executor, name, TagSet.Empty)
 
   /**
     * Creates a new instrumented ExecutorService that wraps the provided one. The instrumented executor will track
@@ -54,12 +68,12 @@ object ExecutorInstrumentation {
     * All metrics related to the instrumented service will have the following tags:
     *
     *   * name: set to the provided name parameter.
-    *   * type: set to "tpe" for ThreadPoolExecutor executors or "fjp" for ForkJoinPool executors.
+    *   * type: set to "ThreadPoolExecutor" executors or "ForkJoinPool".
     *
     * Once the returned executor is shutdown, all related metric instruments will be removed.
     */
-  def instrument(executor: ExecutorService, name: String, options: Settings): ExecutorService =
-    instrument(executor, name, TagSet.Empty, options)
+  def instrument(executor: ExecutorService, name: String, settings: Settings): ExecutorService =
+    instrument(executor, name, TagSet.Empty, settings)
 
   /**
     * Creates a new instrumented ExecutionContext that wraps the provided one. The instrumented executor will track
@@ -69,12 +83,12 @@ object ExecutorInstrumentation {
     * All metrics related to the instrumented service will have the following tags:
     *
     *   * name: set to the provided name parameter.
-    *   * type: set to "tpe" for ThreadPoolExecutor executors or "fjp" for ForkJoinPool executors.
+    *   * type: set to "ThreadPoolExecutor" executors or "ForkJoinPool".
     *
     * Once the returned executor is shutdown, all related metric instruments will be removed.
     */
-  def instrumentExecutionContext(executionContext: ExecutionContext, name: String, options: Settings): ExecutionContextExecutorService =
-    instrumentExecutionContext(executionContext, name, TagSet.Empty, options)
+  def instrumentExecutionContext(executionContext: ExecutionContext, name: String, settings: Settings): ExecutionContextExecutorService =
+    instrumentExecutionContext(executionContext, name, TagSet.Empty, settings)
 
   /**
     * Creates a new instrumented ExecutorService that wraps the provided one. The instrumented executor will track
@@ -83,7 +97,7 @@ object ExecutorInstrumentation {
     *
     *   * all of the provided extraTags (take into account that any "name" or "type" tags will be overwritten.
     *   * name: set to the provided name parameter.
-    *   * type: set to "tpe" for ThreadPoolExecutor executors or "fjp" for ForkJoinPool executors.
+    *   * type: set to "ThreadPoolExecutor" executors or "ForkJoinPool".
     *
     * Once the returned executor is shutdown, all related metric instruments will be removed.
     */
@@ -97,7 +111,7 @@ object ExecutorInstrumentation {
     *
     *   * all of the provided extraTags (take into account that any "name" or "type" tags will be overwritten.
     *   * name: set to the provided name parameter.
-    *   * type: set to "tpe" for ThreadPoolExecutor executors or "fjp" for ForkJoinPool executors.
+    *   * type: set to "ThreadPoolExecutor" executors or "ForkJoinPool".
     *
     * Once the returned executor is shutdown, all related metric instruments will be removed.
     */
@@ -112,16 +126,42 @@ object ExecutorInstrumentation {
     * All metrics related to the instrumented service will have the following tags:
     *   * all of the provided extraTags (take into account that any "name" or "type" tags will be overwritten.
     *   * name: set to the provided name parameter.
-    *   * type: set to "tpe" for ThreadPoolExecutor executors or "fjp" for ForkJoinPool executors.
+    *   * type: set to "ThreadPoolExecutor" executors or "ForkJoinPool".
     *
     * Once the returned executor is shutdown, all related metric instruments will be removed.
     */
-  def instrument(executor: ExecutorService, name: String, extraTags: TagSet, options: Settings): ExecutorService = {
+  def instrument(executor: ExecutorService, name: String, extraTags: TagSet, settings: Settings): ExecutorService = {
     executor match {
-      case es: ExecutorService if isWrapper(es) => instrument(unwrap(es), name, extraTags, options)
-      case tpe: ThreadPoolExecutor  => new InstrumentedThreadPool(tpe, name, extraTags, options)
-      case jfjp: JavaForkJoinPool   => new InstrumentedForkJoinPool(jfjp, ForkJoinPoolTelemetryReader.forJava(jfjp), name, extraTags, options)
-      case sfjp: ScalaForkJoinPool  => new InstrumentedForkJoinPool(sfjp, ForkJoinPoolTelemetryReader.forScala(sfjp), name, extraTags, options)
+      case es: ExecutorService if isWrapper(es) => instrument(unwrap(es), name, extraTags, settings)
+      case tpe: ThreadPoolExecutor  => new InstrumentedThreadPool(tpe, name, extraTags, settings)
+      case jfjp: JavaForkJoinPool   => new InstrumentedForkJoinPool(jfjp, ForkJoinPoolTelemetryReader.forJava(jfjp), name, extraTags, settings)
+      case sfjp: ScalaForkJoinPool  => new InstrumentedForkJoinPool(sfjp, ForkJoinPoolTelemetryReader.forScala(sfjp), name, extraTags, settings)
+      case anyOther =>
+        _logger.warn("Cannot instrument unknown executor [{}]", anyOther)
+        executor
+    }
+  }
+
+  /**
+    * Creates a new instrumented ScheduledExecutorService that wraps the provided one. The instrumented executor will
+    * track metrics for a ScheduledThreadPoolExecutor, but will not perform any context propagation nor track the time
+    * in queue metric for submitted tasks.
+    *
+    * All metrics related to the instrumented service will have the following tags:
+    *   * all of the provided extraTags (take into account that any "name" or "type" tags will be overwritten.
+    *   * name: set to the provided name parameter.
+    *   * type: set to "ScheduledThreadPoolExecutor".
+    *
+    * Once the returned executor is shutdown, all related metric instruments will be removed.
+    */
+  def instrumentScheduledExecutor(executor: ScheduledExecutorService, name: String, extraTags: TagSet): ScheduledExecutorService = {
+    executor match {
+      case es: ScheduledExecutorService if isWrapper(es) =>
+        instrumentScheduledExecutor(unwrap(es).asInstanceOf[ScheduledExecutorService], name, extraTags)
+
+      case stpe: ScheduledThreadPoolExecutor =>
+        new InstrumentedScheduledThreadPoolExecutor(stpe, name, extraTags.withTag("scheduled", true))
+
       case anyOther =>
         _logger.warn("Cannot instrument unknown executor [{}]", anyOther)
         executor
@@ -136,15 +176,15 @@ object ExecutorInstrumentation {
     * All metrics related to the instrumented service will have the following tags:
     *   * all of the provided extraTags (take into account that any "name" or "type" tags will be overwritten.
     *   * name: set to the provided name parameter.
-    *   * type: set to "tpe" for ThreadPoolExecutor executors or "fjp" for ForkJoinPool executors.
+    *   * type: set to "ThreadPoolExecutor" executors or "ForkJoinPool".
     *
     * Once the returned executor is shutdown, all related metric instruments will be removed.
     */
   def instrumentExecutionContext(executionContext: ExecutionContext, name: String, extraTags: TagSet,
-      options: Settings): ExecutionContextExecutorService = {
+      settings: Settings): ExecutionContextExecutorService = {
 
     val executor = unwrapExecutionContext(executionContext)
-    val instrumentedExecutor = instrument(executor, name, extraTags, options)
+    val instrumentedExecutor = instrument(executor, name, extraTags, settings)
 
     ExecutionContext.fromExecutorService(instrumentedExecutor)
   }
@@ -157,13 +197,13 @@ object ExecutorInstrumentation {
     * All metrics related to the instrumented service will have the following tags:
     *   * all of the provided extraTags (take into account that any "name" or "type" tags will be overwritten.
     *   * name: set to the provided name parameter.
-    *   * type: set to "tpe" for ThreadPoolExecutor executors or "fjp" for ForkJoinPool executors.
+    *   * type: set to "ThreadPoolExecutor" executors or "ForkJoinPool".
     *
     * Once the returned executor is shutdown, all related metric instruments will be removed.
     */
   def instrument(executor: ExecutorService, telemetryReader: ForkJoinPoolTelemetryReader, name: String, extraTags: TagSet,
-      options: Settings): ExecutorService = {
-    new InstrumentedForkJoinPool(executor, telemetryReader, name, extraTags, options)
+      settings: Settings): ExecutorService = {
+    new InstrumentedForkJoinPool(executor, telemetryReader, name, extraTags, settings)
   }
 
   /**
@@ -174,6 +214,11 @@ object ExecutorInstrumentation {
     * Runnable/Callable should capture the current Context at the instant when they are created, not when submitted.
     */
   val DefaultSettings = new Settings(shouldTrackTimeInQueue = true, shouldPropagateContextOnSubmit = false)
+
+  /**
+    * Settings that do not enable any extra features on the instrumented executor service.
+    */
+  val NoExtraSettings = new Settings(shouldTrackTimeInQueue = false, shouldPropagateContextOnSubmit = false)
 
   class Settings(val shouldTrackTimeInQueue: Boolean, val shouldPropagateContextOnSubmit: Boolean) {
 
@@ -265,12 +310,12 @@ object ExecutorInstrumentation {
     *
     * The instruments used to track the pool's behavior are removed once the pool is shut down.
     */
-  class InstrumentedThreadPool(wrapped: ThreadPoolExecutor, name: String, extraTags: TagSet, options: Settings)
+  class InstrumentedThreadPool(wrapped: ThreadPoolExecutor, name: String, extraTags: TagSet, settings: Settings)
       extends ExecutorService {
 
     private val _runableWrapper = buildRunnableWrapper()
     private val _callableWrapper = buildCallableWrapper()
-    private val _instruments = new ExecutorMetrics.ThreadPoolInstruments(name, extraTags)
+    private val _instruments = new ExecutorMetrics.ThreadPoolInstruments(name, extraTags, executorType)
     private val _timeInQueueTimer = _instruments.timeInQueue
     private val _sampler = Kamon.scheduler().scheduleAtFixedRate(new Runnable {
       val submittedTasksSource = Counter.delta(() => wrapped.getTaskCount)
@@ -286,6 +331,9 @@ object ExecutorInstrumentation {
         completedTaskCountSource.accept(_instruments.completedTasks)
       }
     }, _sampleInterval.toMillis, _sampleInterval.toMillis, TimeUnit.MILLISECONDS)
+
+    protected def executorType: String =
+      "ThreadPoolExecutor"
 
     override def execute(command: Runnable): Unit =
       wrapped.execute(_runableWrapper(command))
@@ -343,13 +391,13 @@ object ExecutorInstrumentation {
     }
 
     private def buildRunnableWrapper(): Runnable => Runnable = {
-      if(options.shouldTrackTimeInQueue) {
-        if (options.shouldPropagateContextOnSubmit)
+      if(settings.shouldTrackTimeInQueue) {
+        if (settings.shouldPropagateContextOnSubmit)
           runnable => new TimingAndContextPropagatingRunnable(runnable)
         else
           runnable => new TimingRunnable(runnable)
       } else {
-        if(options.shouldPropagateContextOnSubmit)
+        if(settings.shouldPropagateContextOnSubmit)
           runnable => new ContextPropagationRunnable(runnable)
         else
           runnable => runnable
@@ -357,13 +405,13 @@ object ExecutorInstrumentation {
     }
 
     private def buildCallableWrapper(): CallableWrapper = {
-      if(options.shouldTrackTimeInQueue) {
-        if (options.shouldPropagateContextOnSubmit)
+      if(settings.shouldTrackTimeInQueue) {
+        if (settings.shouldPropagateContextOnSubmit)
           new TimingAndContextPropagatingCallableWrapper()
         else
           new TimingCallableWrapper
       } else {
-        if (options.shouldPropagateContextOnSubmit)
+        if (settings.shouldPropagateContextOnSubmit)
           new ContextPropagationCallableWrapper()
         else
           new CallableWrapper {
@@ -440,6 +488,32 @@ object ExecutorInstrumentation {
     }
   }
 
+  /**
+    * Executor service wrapper for ScheduledThreadPool executors that keeps track of submitted and completed tasks.
+    * Since tasks submitted to this type of executor are expected to be delayed for some time we are not explicitly
+    * tracking the time-in-queue metric, nor allowing to perform context propagation (at least manually).
+    *
+    * The instruments used to track the pool's behavior are removed once the pool is shut down.
+    */
+  class InstrumentedScheduledThreadPoolExecutor(wrapped: ScheduledThreadPoolExecutor, name: String, extraTags: TagSet)
+      extends InstrumentedThreadPool(wrapped, name, extraTags, NoExtraSettings) with ScheduledExecutorService {
+
+    override protected def executorType: String =
+      "ScheduledThreadPoolExecutor"
+
+    override def schedule(command: Runnable, delay: Long, unit: TimeUnit): ScheduledFuture[_] =
+      wrapped.schedule(command, delay, unit)
+
+    override def schedule[V](callable: Callable[V], delay: Long, unit: TimeUnit): ScheduledFuture[V] =
+      wrapped.schedule(callable, delay, unit)
+
+    override def scheduleAtFixedRate(command: Runnable, initialDelay: Long, period: Long, unit: TimeUnit): ScheduledFuture[_] =
+      wrapped.scheduleAtFixedRate(command, initialDelay, period, unit)
+
+    override def scheduleWithFixedDelay(command: Runnable, initialDelay: Long, delay: Long, unit: TimeUnit): ScheduledFuture[_] =
+      wrapped.scheduleWithFixedDelay(command, initialDelay, delay, unit)
+  }
+
 
   /**
     * Executor service wrapper for ForkJoin Pool executors that keeps track of submitted and completed tasks and
@@ -450,7 +524,7 @@ object ExecutorInstrumentation {
     * The instruments used to track the pool's behavior are removed once the pool is shut down.
     */
   class InstrumentedForkJoinPool(wrapped: ExecutorService, telemetryReader: ForkJoinPoolTelemetryReader, name: String,
-      extraTags: TagSet, options: Settings) extends ExecutorService {
+      extraTags: TagSet, settings: Settings) extends ExecutorService {
 
     private val _runableWrapper = buildRunnableWrapper()
     private val _callableWrapper = buildCallableWrapper()
@@ -542,13 +616,13 @@ object ExecutorInstrumentation {
     }
 
     private def buildRunnableWrapper(): Runnable => Runnable = {
-      if(options.shouldTrackTimeInQueue) {
-        if (options.shouldPropagateContextOnSubmit)
+      if(settings.shouldTrackTimeInQueue) {
+        if (settings.shouldPropagateContextOnSubmit)
           runnable => new TimingAndContextPropagatingRunnable(runnable)
         else
           runnable => new TimingRunnable(runnable)
       } else {
-        if(options.shouldPropagateContextOnSubmit)
+        if(settings.shouldPropagateContextOnSubmit)
           runnable => new ContextPropagationRunnable(runnable)
         else
           runnable => runnable
@@ -556,13 +630,13 @@ object ExecutorInstrumentation {
     }
 
     private def buildCallableWrapper(): CallableWrapper = {
-      if(options.shouldTrackTimeInQueue) {
-        if (options.shouldPropagateContextOnSubmit)
+      if(settings.shouldTrackTimeInQueue) {
+        if (settings.shouldPropagateContextOnSubmit)
           new TimingAndContextPropagatingCallableWrapper()
         else
           new TimingCallableWrapper
       } else {
-        if (options.shouldPropagateContextOnSubmit)
+        if (settings.shouldPropagateContextOnSubmit)
           new ContextPropagationCallableWrapper()
         else
           new CallableWrapper {

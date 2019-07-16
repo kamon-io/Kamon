@@ -69,7 +69,7 @@ object ExecutorMetrics {
   /**
     * Instruments required to track the behavior of a Thread Pool Executor Service.
     */
-  class ThreadPoolInstruments(name: String, extraTags: TagSet, executorType: String = "tpe")
+  class ThreadPoolInstruments(name: String, extraTags: TagSet, executorType: String = "ThreadPoolExecutor")
       extends InstrumentGroup(extraTags.withTag("name", name).withTag("type", executorType)) {
 
     val poolMin = register(MinThreads)
@@ -86,7 +86,7 @@ object ExecutorMetrics {
     * Instruments required to track the behavior of a Fork-Join Pool Executor Service.
     */
   class ForkJoinPoolInstruments(name: String, extraTags: TagSet)
-      extends ThreadPoolInstruments(name, extraTags, executorType = "fjp") {
+      extends ThreadPoolInstruments(name, extraTags, executorType = "ForkJoinPool") {
 
     val parallelism = register(Parallelism)
   }
