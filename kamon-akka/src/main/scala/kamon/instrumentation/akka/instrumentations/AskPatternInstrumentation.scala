@@ -56,24 +56,24 @@ object AskPatternInstrumentation {
 
     if(AkkaPrivateAccess.isInternalAndActiveActorRef(actor) && Kamon.currentContext().nonEmpty()) {
       AkkaInstrumentation.settings().askPatternWarning match {
-        case Off         ⇒
-        case Lightweight ⇒ hookLightweightWarning(future, sourceLocation(origin), actor)
-        case Heavyweight ⇒ hookHeavyweightWarning(future, new StackTraceCaptureException, actor)
+        case Off         =>
+        case Lightweight => hookLightweightWarning(future, sourceLocation(origin), actor)
+        case Heavyweight => hookHeavyweightWarning(future, new StackTraceCaptureException, actor)
       }
 
       hookHeavyweightWarning(future, new StackTraceCaptureException, actor)
     }
   }
 
-  private def ifAskTimeoutException(code: ⇒ Unit): PartialFunction[Throwable, Unit] = {
-    case _: AskTimeoutException ⇒ code
-    case _                      ⇒
+  private def ifAskTimeoutException(code: => Unit): PartialFunction[Throwable, Unit] = {
+    case _: AskTimeoutException => code
+    case _                      =>
   }
 
 
   private def hookLightweightWarning(future: Future[AnyRef], sourceLocation: SourceLocation, actor: ActorRef): Unit = {
     val locationString = Option(sourceLocation)
-      .map(location ⇒ s"${location.declaringType}:${location.method}")
+      .map(location => s"${location.declaringType}:${location.method}")
       .getOrElse("<unknown position>")
 
     future.failed.foreach(ifAskTimeoutException {
@@ -82,7 +82,7 @@ object AskPatternInstrumentation {
   }
 
   private def hookHeavyweightWarning(future: Future[AnyRef], captureException: StackTraceCaptureException, actor: ActorRef): Unit = {
-    val locationString = captureException.getStackTrace.drop(3).mkString("", EOL, EOL)
+    val locationString = captureException.getStackTrace.drop(3).mkString("", System.lineSeparator, System.lineSeparator)
 
     future.failed.foreach(ifAskTimeoutException {
       _log.warn(s"Timeout triggered for ask pattern to actor [${actor.path.name}] at [$locationString]")

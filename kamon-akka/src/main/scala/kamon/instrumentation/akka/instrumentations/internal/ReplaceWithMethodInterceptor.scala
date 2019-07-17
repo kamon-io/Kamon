@@ -35,7 +35,7 @@ object ReplaceWithMethodInterceptor {
     val lock = unstartedCellLockField.get(unStartedCell).asInstanceOf[ReentrantLock]
     val sysQueueHead = systemMsgQueueField.get(unStartedCell).asInstanceOf[SystemMessage]
 
-    def locked[T](body: ⇒ T): T = {
+    def locked[T](body: => T): T = {
       lock.lock()
       try body finally lock.unlock()
     }

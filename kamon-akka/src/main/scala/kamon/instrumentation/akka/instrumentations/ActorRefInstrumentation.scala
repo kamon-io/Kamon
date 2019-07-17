@@ -26,7 +26,7 @@ class ActorRefInstrumentation extends InstrumentationBuilder {
 
 trait HasGroupPath {
   def groupPath: String
-  def setGroupPath(groupPath: String)
+  def setGroupPath(groupPath: String): Unit
 }
 
 object HasGroupPath {

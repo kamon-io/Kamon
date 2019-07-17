@@ -45,7 +45,7 @@ class ActorCellInstrumentationSpec extends TestKit(ActorSystem("ActorCellInstrum
     }
 
     "capture and propagate the current context for messages sent when the target actor might be a repointable ref" in {
-      for (_ ← 1 to 100) {
+      for (_ <- 1 to 100) {
         val ta = system.actorOf(Props[ContextStringEcho])
         Kamon.storeContext(testContext("propagate-with-tell")) {
           ta.tell("test", testActor)
@@ -147,7 +147,7 @@ class ContextStringEcho extends Actor {
   import ContextTesting._
 
   def receive = {
-    case _: String ⇒
+    case _: String =>
       sender ! Kamon.currentContext().getTag(plain(TestKey))
   }
 }

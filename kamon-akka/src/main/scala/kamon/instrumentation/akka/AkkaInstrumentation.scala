@@ -94,10 +94,10 @@ object AkkaInstrumentation {
       val allowDoomsdayWildcards = akkaConfig.getBoolean("filters.actors.doomsday-wildcard")
 
       val askPatternWarning = akkaConfig.getString("ask-pattern-timeout-warning") match {
-        case "off"          ⇒ Off
-        case "lightweight"  ⇒ Lightweight
-        case "heavyweight"  ⇒ Heavyweight
-        case other ⇒ sys.error(s"Unrecognized option [$other] for the kamon.akka.ask-pattern-timeout-warning config.")
+        case "off"          => Off
+        case "lightweight"  => Lightweight
+        case "heavyweight"  => Heavyweight
+        case other => sys.error(s"Unrecognized option [$other] for the kamon.akka.ask-pattern-timeout-warning config.")
       }
 
       AkkaInstrumentation.Settings(

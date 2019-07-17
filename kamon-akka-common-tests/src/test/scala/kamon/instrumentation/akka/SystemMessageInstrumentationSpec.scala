@@ -38,7 +38,7 @@ class SystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSystemM
       Kamon.storeContext(testContext("creating-top-level-actor")) {
         system.actorOf(Props(new Actor {
           testActor ! propagatedContextKey()
-          def receive: Actor.Receive = { case any ⇒ }
+          def receive: Actor.Receive = { case any => }
         }))
       }
 
@@ -49,10 +49,10 @@ class SystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSystemM
       Kamon.storeContext(testContext("creating-non-top-level-actor")) {
         system.actorOf(Props(new Actor {
           def receive: Actor.Receive = {
-            case _ ⇒
+            case _ =>
               context.actorOf(Props(new Actor {
                 testActor ! propagatedContextKey()
-                def receive: Actor.Receive = { case _ ⇒ }
+                def receive: Actor.Receive = { case _ => }
               }))
           }
         })) ! "any"
@@ -126,11 +126,11 @@ class SystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSystemM
       val child = context.actorOf(Props(new Parent))
 
       override def supervisorStrategy: SupervisorStrategy = OneForOneStrategy() {
-        case NonFatal(_) ⇒ testActor ! propagatedContextKey(); Stop
+        case NonFatal(_) => testActor ! propagatedContextKey(); Stop
       }
 
       def receive = {
-        case any ⇒ child forward any
+        case any => child forward any
       }
     }
 
@@ -138,11 +138,11 @@ class SystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSystemM
       val child = context.actorOf(Props(new Child))
 
       override def supervisorStrategy: SupervisorStrategy = OneForOneStrategy() {
-        case NonFatal(_) ⇒ testActor ! propagatedContextKey(); directive
+        case NonFatal(_) => testActor ! propagatedContextKey(); directive
       }
 
       def receive: Actor.Receive = {
-        case any ⇒ child forward any
+        case any => child forward any
       }
 
       override def postStop(): Unit = {
@@ -153,8 +153,8 @@ class SystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSystemM
 
     class Child extends Actor {
       def receive = {
-        case "fail"    ⇒ throw new ArithmeticException("Division by zero.")
-        case "context" ⇒ sender ! propagatedContextKey()
+        case "fail"    => throw new ArithmeticException("Division by zero.")
+        case "context" => sender ! propagatedContextKey()
       }
 
       override def preRestart(reason: Throwable, message: Option[Any]): Unit = {

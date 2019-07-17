@@ -88,6 +88,6 @@ class AskPatternInstrumentationSpec extends TestKit(ActorSystem("AskPatternInstr
 
 class NoReply extends Actor {
   def receive = {
-    case _ ⇒
+    case _ =>
   }
 }
