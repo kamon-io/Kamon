@@ -5,12 +5,12 @@ import java.util.concurrent.TimeUnit
 
 import com.typesafe.config.Config
 import kamon.influxdb.InfluxDBReporter.Settings
-import kamon.metric.{MeasurementUnit, MetricSnapshot, PeriodSnapshot}
+import kamon.metric.{MetricSnapshot, PeriodSnapshot}
 import kamon.Kamon
 import kamon.module.{MetricReporter, ModuleFactory}
 import kamon.tag.{Tag, TagSet}
 import kamon.util.{EnvironmentTags, Filter}
-import okhttp3.{Authenticator, Credentials, Interceptor, MediaType, OkHttpClient, Request, RequestBody, Response, Route}
+import okhttp3.{Credentials, Interceptor, MediaType, OkHttpClient, Request, RequestBody, Response}
 import org.slf4j.LoggerFactory
 
 import scala.util.Try
@@ -33,9 +33,11 @@ class InfluxDBReporter extends MetricReporter {
 
     Try {
       val response = client.newCall(request).execute()
-      if(response.isSuccessful() && logger.isTraceEnabled())
-        logger.trace("Successfully sent metrics to InfluxDB")
-      else {
+      if(response.isSuccessful()) {
+        if (logger.isTraceEnabled()) {
+          logger.trace("Successfully sent metrics to InfluxDB")
+        }
+      } else {
         logger.error(
           "Metrics POST to InfluxDB failed with status code [{}], response body: {}",
           response.code(),
