@@ -18,7 +18,7 @@ import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.api.instrumentation.mixin.Initializer
 import kanela.agent.libs.net.bytebuddy.implementation.bind.annotation._
 
-import scala.concurrent.{ExecutionContext, Future, Promise}
+import scala.concurrent.{ExecutionContext, Future, Promise, Batchable}
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
@@ -67,12 +67,12 @@ class AkkaHttpServerInstrumentation extends InstrumentationBuilder {
     */
   onTypes("akka.http.scaladsl.util.FastFuture$FulfilledFuture", "akka.http.scaladsl.util.FastFuture$ErrorFuture")
     .mixin(classOf[HasContext.MixinWithInitializer])
-      .advise(method("transform"), InvokeWithCapturedContext)
-      .advise(method("transformWith"), InvokeWithCapturedContext)
-      .advise(method("onComplete"), InvokeWithCapturedContext)
+    .advise(method("transform"), InvokeWithCapturedContext)
+    .advise(method("transformWith"), InvokeWithCapturedContext)
+    .advise(method("onComplete"), InvokeWithCapturedContext)
 
   onType("akka.http.scaladsl.util.FastFuture$")
-    .intercept(method("transformWith$extension"), FastFutureTransformWithAdvice)
+    .intercept(method("transformWith$extension").and(takesArguments(4)), FastFutureTransformWithAdvice)
 }
 
 trait HasMatchingContext {
@@ -243,9 +243,15 @@ object FastFutureTransformWithAdvice {
       try f(x)
       catch { case NonFatal(e) => FastFuture.failed(e) }
 
-    // If we get a FulfilledFuture or ErrorFuture, those will have the HasContext mixin,
-    // otherwise we are getting a regular Future which has the context mixed into its value.
-    if(future.isInstanceOf[HasContext])
+    // If we get a FulfilledFuture or ErrorFuture, those will have the HasContext mixin but since Scala 2.13 the
+    // "future" will also have a HasContext mixin (its actually a Transformation instance) and since we can't directly
+    // access FulfilledFuture or ErrorFuture, we are assuming that if it got to this point, it HasContext and it is not
+    // a Batchable (i.e. a Transformation) then we can do the same we were doing for previous Scala versions.
+    //
+    // When we get a regular Future the path is a bit different because the actual Context is not stored in the Future
+    // but in the value itself via HasContext instrumentation on scala.util.Try
+    //
+    if(future.isInstanceOf[HasContext] && !future.isInstanceOf[Batchable])
       zuper.call()
     else {
       future.value match {
