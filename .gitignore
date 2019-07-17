@@ -32,6 +32,8 @@ project/plugins/project/
 .cache
 .cache-main
 .cache-tests
+.bloop
+.metals
 bin/
 
 _site

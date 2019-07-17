@@ -1,35 +1,42 @@
-Annotation Module ![Build Status](https://travis-ci.org/kamon-io/kamon-annotation.svg?branch=master)
+Annotation Module ![Build Status](https://travis-ci.org/kamon-io/kamon-annotation.svg?branch=kanela)
 ==========================
 
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/kamon-io/Kamon?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-
-***kamon-annotation*** [![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-play-25_2.11/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-annotation_2.11)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-annotation_2.12/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-annotation_2.12)
 
 The Annotation module provides a set of annotations that allow you to easily integrate Kamon's metrics and tracing
 facilities with your application.
 
-The <b>kamon-annotation</b> module require you to start your application using the AspectJ Weaver Agent. Kamon will warn
-you at startup if you failed to do so.
+The <b>kamon-annotation</b> module require you to start your application using the Kanela Agent. 
 
 
-Enabling Annotation Support
----------------------------
+### Getting Started
 
-Besides starting your application with the AspectJ Weaver Agent, there are two additional steps required to use
-annotations. First you must add the `@EnableKamon` annotation to the classes you would like to be scanned for any of the
-provided annotations, otherwise the rest of the annotations described bellow wont be able to work at all.
+Kamon annotation module is currently available for Scala 2.11, 2.12 and 2.13.
 
-Manipulating Traces and Segments
+Supported releases and dependencies are shown below.
+
+| kamon-annotation  | status | jdk  | scala            
+|:------:|:------:|:----:|------------------
+|  2.0.0-RC1 | experimental | 1.8+ | 2.11, 2.12, 2.13  
+
+To get started with SBT, simply add the following to your `build.sbt`
+file:
+
+```scala
+libraryDependencies += "io.kamon" %% "kamon-annotation-api" % "1.0.0-RC1"
+```
+
+Manipulating Traces
 --------------------------------
 
 Delimiting traces and segments are one of the most basic tasks you would want to perform to start monitoring your
-application using Kamon, and the `@Trace` and `@Segment` annotations allow you to do just that:
+application using Kamon, and the `@Trace` annotation allow you to do just that:
 
 * __@Trace__: when a method is marked with this annotation a new [Trace] will be started every time the method is called
-and automatically finished once the method returns. Also, the generated `TraceContext` becomes the current context while
+and automatically finished once the method returns. Also, the generated `Context` becomes the current context while
 the method is executing, making it possible to propagate it at will.
-* __@Segment__: when a method is marked with this annotation a new [Segment] will be created only if there is a current
-`TraceContext` while the annotated method is called.
+
 
 Manipulating Instruments
 ------------------------
@@ -39,8 +46,7 @@ to create Counters, Histograms and MinMaxCounters that are automatically updated
 annotations are:
 
 * __@Time__: when a method is marked with this annotation Kamon will create a Histogram tracking the latency of each
-invocation to the method. Please keep in mind that in most situations you might want to use `@Segment` if you are tracking
-some functionality that is executed within a trace.
+invocation to the method. 
 
 * __@Histogram__: when a method is marked with this annotation Kamon will create a Histogram that stores the values
 returned every time the method is invoked. Obviously, only methods returning numeric values are accepted.
@@ -48,9 +54,12 @@ returned every time the method is invoked. Obviously, only methods returning num
 * __@Count__: when a method is marked with this annotation Kamon will be create a Counter and automatically increment it
 every time the method is invoked.
 
-* __@MinMaxCount__: when a method is marked with this annotation Kamon will be create a MinMaxCounter and automatically
+* __@Gauge__: when a method is marked with this annotation Kamon will be create a Gauge and set the returned value of the invoked method.
+
+* __@RangeSampler__: when a method is marked with this annotation Kamon will be create a RangeSampler and automatically
 increment it every time method is invoked and decremented when the method returns.
 
+* __@SpanCustomizer__: annotation to allows users to customize and add additional information to Spans created by instrumentation. 
 
 ### EL Expression Support ###
 
