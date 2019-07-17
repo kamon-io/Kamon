@@ -95,7 +95,7 @@ class ProcessMetricsCollector(ec: ExecutionContext) extends Module {
 
     private def recordProcessULimits(): Unit = {
       val process = _os.getProcess(_pid)
-      _processCpuInstruments.openFilesCurrent.record(Math.max(process.getOpenFiles(), 0))
+      _processCpuInstruments.openFilesCurrent.update(Math.max(process.getOpenFiles(), 0))
 
       Try {
         if (Platform.isLinux()) {

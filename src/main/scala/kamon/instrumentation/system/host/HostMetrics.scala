@@ -19,13 +19,13 @@ object HostMetrics {
 
   val MemoryUsed = Kamon.gauge (
     name = "host.memory.used",
-    description = "Tracks the used memory Memory percentage",
+    description = "Tracks the amount of used memory",
     unit = MeasurementUnit.information.bytes
   )
 
   val MemoryFree = Kamon.gauge (
     name = "host.memory.free",
-    description = "Tracks the free Memory percentage",
+    description = "Tracks the amount of free memory",
     unit = MeasurementUnit.information.bytes
   )
 
@@ -48,7 +48,7 @@ object HostMetrics {
   )
 
   val SwapTotal = Kamon.gauge (
-    name = "host.swap.max",
+    name = "host.swap.total",
     description = "Tracks the total Swap space",
     unit = MeasurementUnit.information.bytes
   )
@@ -99,13 +99,23 @@ object HostMetrics {
   )
 
   val NetworkPacketsRead = Kamon.counter (
-    name = "host.network.packets.read",
+    name = "host.network.packets.read.total",
     description = "Counts how many packets have been read from a network interface"
   )
 
   val NetworkPacketsWrite = Kamon.counter (
-    name = "host.network.packets.write",
+    name = "host.network.packets.write.total",
     description = "Counts how many packets have been written to a network interface"
+  )
+
+  val NetworkPacketsReadFailed = Kamon.counter (
+    name = "host.network.packets.read.failed",
+    description = "Counts how many packets failed to be read from a network interface"
+  )
+
+  val NetworkPacketsWriteFailed = Kamon.counter (
+    name = "host.network.packets.write.failed",
+    description = "Counts how many packets failed to be written to a network interface"
   )
 
   val NetworkDataRead = Kamon.counter (
@@ -207,16 +217,14 @@ object HostMetrics {
     def interfaceInstruments(interfaceName: String): InterfaceInstruments =
       _interfaceCache.getOrElseUpdate(interfaceName, {
         val interface = TagSet.of("interface", interfaceName)
-        val success = TagSet.of("state", "success")
-        val error = TagSet.of("state", "error")
 
         InterfaceInstruments(
           DiffCounter(register(NetworkDataRead, interface)),
-          DiffCounter(register(NetworkPacketsRead, interface.withTags(success))),
-          DiffCounter(register(NetworkPacketsRead, interface.withTags(error))),
+          DiffCounter(register(NetworkPacketsRead, interface)),
+          DiffCounter(register(NetworkPacketsReadFailed, interface)),
           DiffCounter(register(NetworkDataWrite, interface)),
-          DiffCounter(register(NetworkPacketsWrite, interface.withTags(success))),
-          DiffCounter(register(NetworkPacketsWrite, interface.withTags(error)))
+          DiffCounter(register(NetworkPacketsWrite, interface)),
+          DiffCounter(register(NetworkPacketsWriteFailed, interface))
         )
       })
   }
