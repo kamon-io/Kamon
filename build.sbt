@@ -16,8 +16,8 @@
 
 val kamonCore       = "io.kamon" %% "kamon-core"         % "2.0.0-RC1"
 val kamonTestkit    = "io.kamon" %% "kamon-testkit"      % "2.0.0-RC1"
-val kamonScala      = "io.kamon" %% "kamon-scala-future" % "2.0.0-RC2"
-val kamonExecutors  = "io.kamon" %% "kamon-executors"    % "2.0.0-RC2"
+val kamonScala      = "io.kamon" %% "kamon-scala-future" % "2.0.0-RC3"
+val kamonExecutors  = "io.kamon" %% "kamon-executors"    % "2.0.0-RC3"
 val kamonInstrument = "io.kamon" %% "kamon-instrumentation-common" % "2.0.0-RC2"
 val kanelaAgent     =  "io.kamon" % "kanela-agent"       % "1.0.0-RC4"
 
