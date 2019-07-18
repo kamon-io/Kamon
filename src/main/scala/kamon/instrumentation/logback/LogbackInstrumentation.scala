@@ -40,9 +40,6 @@ class LogbackInstrumentation extends InstrumentationBuilder {
   onSubTypesOf("ch.qos.logback.core.spi.DeferredProcessingAware")
     .mixin(classOf[HasContext.MixinWithInitializer])
 
-  onType("ch.qos.logback.core.AsyncAppenderBase")
-    .advise(method("append"), classOf[AppendMethodAdvisor])
-
   onType("ch.qos.logback.core.spi.AppenderAttachableImpl")
     .intercept(method("appendLoopOnAppenders"), AppendLoopMethodInterceptor)
 
@@ -77,14 +74,6 @@ object LogbackInstrumentation {
       logbackConfig.getStringList("mdc.copy.entries").asScala.toSeq
     )
   }
-}
-
-class AppendMethodAdvisor
-object AppendMethodAdvisor {
-
-  @Advice.OnMethodExit(onThrowable = classOf[Throwable], suppress = classOf[Throwable])
-  def onExit(@Argument(0) event: AnyRef): Unit =
-    event.asInstanceOf[HasContext].setContext(Kamon.currentContext())
 }
 
 object AppendLoopMethodInterceptor {
