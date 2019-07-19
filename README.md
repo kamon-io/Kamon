@@ -62,6 +62,21 @@ scrape_configs:
 [1]: https://github.com/kamon-io/kamon-prometheus/blob/master/src/main/resources/reference.conf
 [2]: http://prometheus.io/docs/operating/configuration/#scrape-configurations-scrape_config
 
+#### Pushing the metrics
+
+All you need to do is [configure a pushgateway instance][1], check [reference.conf][2] for any special configuration
+and enable and setup pushgateway in your configuration
+
+```yaml
+kamon {
+  modules.pushgateway-reporter.enabled = true
+  prometheus.pushgateway.api-url = "http://localhost:9091/metrics/job/<example>"
+}
+```
+
+[1]: https://github.com/prometheus/pushgateway
+[2]: https://github.com/kamon-io/kamon-prometheus/blob/master/src/main/resources/reference.conf
+
 #### Custom environment tags
 Kamon allows you to provide custom environment tags to all your metrics by configuring `kamon.environment.tags` in your `application.conf`, e.g.
 ```

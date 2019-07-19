@@ -8,7 +8,7 @@ import okhttp3._
 
 import scala.util.{Failure, Success, Try}
 
-class HttpClient(apiUrl: String, connectTimeout: Duration, readTimeout: Duration, writeTimeout: Duration) {
+class HttpClient(val apiUrl: String, connectTimeout: Duration, readTimeout: Duration, writeTimeout: Duration) {
 
   val httpClient: OkHttpClient = createHttpClient()
 
