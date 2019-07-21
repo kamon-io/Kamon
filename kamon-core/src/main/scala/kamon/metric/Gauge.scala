@@ -26,6 +26,26 @@ import kamon.tag.TagSet
 trait Gauge extends Instrument[Gauge, Metric.Settings.ForValueInstrument] {
 
   /**
+   * Increments the current value by one.
+   */
+  def increment(): Gauge
+
+  /**
+   * Increments the current value the provided number of times.
+   */
+  def increment(times: Double): Gauge
+
+  /**
+   * Decrements the current value by one.
+   */
+  def decrement(): Gauge
+
+  /**
+   * Decrements the current value the provided number of times.
+   */
+  def decrement(times: Double): Gauge
+  
+  /**
     * Sets the current value of the gauge to the provided value.
     */
   def update(value: Double): Gauge
@@ -41,6 +61,20 @@ object Gauge {
       with Instrument.Snapshotting[Double] with BaseMetricAutoUpdate[Gauge, Metric.Settings.ForValueInstrument, Double] {
 
     @volatile private var _currentValue = 0D
+
+    override def increment(): Gauge = increment(1)
+
+    override def increment(times: Double): Gauge = {
+      _currentValue += times
+      this
+    }
+
+    override def decrement(): Gauge = decrement(1)
+
+    override def decrement(times: Double): Gauge = {
+      _currentValue -= times
+      this
+    }
 
     override def update(newValue: Double): Gauge = {
       if(newValue >= 0D)
