@@ -17,7 +17,7 @@
 package kamon
 package trace
 
-import java.time.Instant
+import java.time.{Duration, Instant}
 
 import kamon.context.Context
 import kamon.tag.TagSet
@@ -204,6 +204,12 @@ sealed abstract class Span extends Sampler.Operation {
     * modify/write information on the Span, once it is finished no further changes are taken into account.
     */
   def finish(at: Instant): Unit
+
+  /**
+   * Finishes this Span using the provided duration. Even though it is possible to call any of the methods that
+   * modify/write information on the Span, once it is finished no further changes are taken into account.
+   */
+  def finishAfter(duration: Duration): Unit
 
 }
 
@@ -552,6 +558,8 @@ object Span {
     override def finish(): Unit =
       finish(clock.instant())
 
+    override def finishAfter(at: Duration): Unit = finish(_startedAt.plus(at))
+
     override def finish(finishedAt: Instant): Unit = synchronized {
       import Span.Local._logger
 
@@ -662,6 +670,7 @@ object Span {
     override def takeSamplingDecision(): Span = this
     override def finish(): Unit = {}
     override def finish(at: Instant): Unit = {}
+    override def finishAfter(duration: Duration): Unit = {}
     override def operationName(): String = "empty"
     override def toString(): String = "Span.Empty"
   }
@@ -695,6 +704,7 @@ object Span {
     override def takeSamplingDecision(): Span = this
     override def finish(): Unit = {}
     override def finish(at: Instant): Unit = {}
+    override def finishAfter(duration: Duration): Unit = {}
     override def operationName(): String = "empty"
     override def toString(): String = s"Span.Remote{id=${id.string},parentId=${parentId.string},trace=${trace}"
   }
