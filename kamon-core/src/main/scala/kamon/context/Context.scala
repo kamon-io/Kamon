@@ -61,7 +61,7 @@ class Context private (private val _underlying: UnifiedMap[String, Any], private
     * Creates a new Context instance that includes the provided key and value. If the provided key was already
     * associated with another value then the previous value will be discarded and overwritten with the provided one.
     */
-  def withKey[T](key: Context.Key[T], value: T): Context = {
+  def withEntry[T](key: Context.Key[T], value: T): Context = {
     if(key == Span.Key)
       new Context(_underlying, value.asInstanceOf[Span], tags)
     else {
@@ -76,7 +76,7 @@ class Context private (private val _underlying: UnifiedMap[String, Any], private
   /**
     * Creates a new Context without the specified Context entry.
     */
-  def withoutKey[T](key: Context.Key[T]): Context = {
+  def withoutEntry[T](key: Context.Key[T]): Context = {
     if(_underlying.containsKey(key.name)) {
       if (key == Span.Key)
         if(_span.isEmpty) this else new Context(_underlying, Span.Empty, tags)

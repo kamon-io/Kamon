@@ -61,7 +61,7 @@ object SpanPropagation {
           case _ => SamplingDecision.Unknown
         }
 
-        context.withKey(Span.Key, new Span.Remote(spanID, parentID, Trace(traceID, samplingDecision)))
+        context.withEntry(Span.Key, new Span.Remote(spanID, parentID, Trace(traceID, samplingDecision)))
 
       } else context
     }
@@ -138,7 +138,7 @@ object SpanPropagation {
             case _ => SamplingDecision.Unknown
           }
 
-          context.withKey(Span.Key, new Span.Remote(si, parentID, Trace(ti, sd)))
+          context.withEntry(Span.Key, new Span.Remote(si, parentID, Trace(ti, sd)))
         } else context
       }.getOrElse(context)
     }
@@ -216,7 +216,7 @@ object SpanPropagation {
         val colferSpan = new ColferSpan()
         colferSpan.unmarshal(medium.readAll(), 0)
 
-        context.withKey(Span.Key, new Span.Remote(
+        context.withEntry(Span.Key, new Span.Remote(
           id = identityProvider.spanIdFactory.from(colferSpan.spanID),
           parentId = identityProvider.spanIdFactory.from(colferSpan.parentID),
           trace = Trace(

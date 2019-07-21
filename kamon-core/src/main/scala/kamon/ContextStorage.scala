@@ -76,7 +76,7 @@ trait ContextStorage {
     * finishes.
     */
   def runWithContextEntry[T, K](key: Context.Key[K], value: K)(f: => T): T =
-    runWithContext(currentContext().withKey(key, value))(f)
+    runWithContext(currentContext().withEntry(key, value))(f)
 
   /**
     * Temporarily stores the provided Context tag on Kamon's Context Storage. The provided Context tag will be added to

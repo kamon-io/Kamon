@@ -144,7 +144,7 @@ object HttpPropagationSpec {
 
     override def read(reader: HttpPropagation.HeaderReader, context: Context): Context = {
       reader.read(HeaderName)
-        .map(v => context.withKey(StringKey, v))
+        .map(v => context.withEntry(StringKey, v))
         .getOrElse(context)
     }
 
@@ -156,7 +156,7 @@ object HttpPropagationSpec {
   class IntegerEntryCodec extends EntryReader[HeaderReader] {
     override def read(reader: HttpPropagation.HeaderReader, context: Context): Context = {
       reader.read("integer-header")
-        .map(v => context.withKey(IntegerKey, v.toInt))
+        .map(v => context.withEntry(IntegerKey, v.toInt))
         .getOrElse(context)
 
     }
