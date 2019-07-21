@@ -80,9 +80,9 @@ class B3SingleSpanPropagationSpec extends WordSpecLike with Matchers with Option
     "not include the X-B3-Sampled header if the sampling decision is unknown" in {
       val context = testContext()
       val sampledSpan = context.get(Span.Key)
-      val notSampledSpanContext = Context.Empty.withKey(Span.Key,
+      val notSampledSpanContext = Context.Empty.withEntry(Span.Key,
         new Span.Remote(sampledSpan.id, sampledSpan.parentId, Trace(sampledSpan.trace.id, SamplingDecision.DoNotSample)))
-      val unknownSamplingSpanContext = Context.Empty.withKey(Span.Key,
+      val unknownSamplingSpanContext = Context.Empty.withEntry(Span.Key,
         new Span.Remote(sampledSpan.id, sampledSpan.parentId, Trace(sampledSpan.trace.id, SamplingDecision.Unknown)))
 
       val headersMap = mutable.Map.empty[String, String]

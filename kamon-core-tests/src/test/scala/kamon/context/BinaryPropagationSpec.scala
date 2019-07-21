@@ -94,8 +94,8 @@ class BinaryPropagationSpec extends WordSpec with Matchers with OptionValues {
 
     "round trip a Context that with tags and entries" in {
       val context = Context.of(TagSet.from(Map("hello" -> "world", "kamon" -> "rulez")))
-        .withKey(BinaryPropagationSpec.StringKey, "string-value")
-        .withKey(BinaryPropagationSpec.IntegerKey, 42)
+        .withEntry(BinaryPropagationSpec.StringKey, "string-value")
+        .withEntry(BinaryPropagationSpec.IntegerKey, 42)
 
       val writer = inspectableByteStreamWriter()
       binaryPropagation.write(context, writer)
@@ -138,7 +138,7 @@ object BinaryPropagationSpec {
       val valueData = medium.readAll()
 
       if(valueData.length > 0) {
-        context.withKey(StringKey, new String(valueData))
+        context.withEntry(StringKey, new String(valueData))
       } else context
     }
 
@@ -161,7 +161,7 @@ object BinaryPropagationSpec {
           sys.error("The fail string entry reader has triggered")
         }
 
-        context.withKey(FailStringKey, stringValue)
+        context.withEntry(FailStringKey, stringValue)
       } else context
     }
 
