@@ -40,8 +40,8 @@ class TracerSpec extends WordSpec with Matchers with SpanInspection.Syntax with 
 
     "pass the operation name and tags to started Span" in {
       val span = Kamon.spanBuilder("myOperation")
-        .tagMetric("metric-tag", "value")
-        .tagMetric("metric-tag", "value")
+        .tagMetrics("metric-tag", "value")
+        .tagMetrics("metric-tag", "value")
         .tag("hello", "world")
         .tag("kamon", "rulez")
         .tag("number", 123)

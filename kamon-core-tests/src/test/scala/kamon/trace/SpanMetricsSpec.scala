@@ -64,9 +64,9 @@ class SpanMetricsSpec extends WordSpecLike with Matchers with InstrumentInspecti
     "allow specifying custom Span metric tags" in {
       val operation = "span-with-custom-metric-tags"
       spanBuilder(operation)
-        .tagMetric("custom-metric-tag-on-builder", "value")
+        .tagMetrics("custom-metric-tag-on-builder", "value")
         .start()
-        .tagMetric("custom-metric-tag-on-span", "value")
+        .tagMetrics("custom-metric-tag-on-span", "value")
         .finish()
 
       Span.Metrics.ProcessingTime.tagValues("custom-metric-tag-on-builder") should contain("value")

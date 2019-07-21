@@ -123,22 +123,34 @@ sealed abstract class Span extends Sampler.Operation {
   def tag(key: String, value: Boolean): Span
 
   /**
-    * Adds the provided key/value pair to the Span metric tags. If a tag with the provided key was already present then
-    * its value will be overwritten.
+    * Adds all key/value pairs in the provided tags to the Span tags. If a tag with the provided key was already present
+    * then its value will be overwritten.
     */
-  def tagMetric(key: String, value: String): Span
+  def tag(tags: TagSet): Span
 
   /**
     * Adds the provided key/value pair to the Span metric tags. If a tag with the provided key was already present then
     * its value will be overwritten.
     */
-  def tagMetric(key: String, value: Long): Span
+  def tagMetrics(key: String, value: String): Span
 
   /**
     * Adds the provided key/value pair to the Span metric tags. If a tag with the provided key was already present then
     * its value will be overwritten.
     */
-  def tagMetric(key: String, value: Boolean): Span
+  def tagMetrics(key: String, value: Long): Span
+
+  /**
+    * Adds the provided key/value pair to the Span metric tags. If a tag with the provided key was already present then
+    * its value will be overwritten.
+    */
+  def tagMetrics(key: String, value: Boolean): Span
+
+  /**
+    * Adds all key/value pairs in the provided tags to the Span metric tags. If a tag with the provided key was already
+    * present then its value will be overwritten.
+    */
+  def tagMetrics(tags: TagSet): Span
 
   /**
     * Adds a new mark with the provided key using the current instant from Kamon's clock.
@@ -445,21 +457,33 @@ object Span {
       this
     }
 
-    override def tagMetric(key: String, value: String): Span = synchronized {
+    override def tag(tags: TagSet): Span = synchronized {
+      if(isSampled && _isOpen)
+        _spanTags.add(tags)
+      this
+    }
+
+    override def tagMetrics(key: String, value: String): Span = synchronized {
       if(_isOpen && _trackMetrics)
         _metricTags.add(key, value)
       this
     }
 
-    override def tagMetric(key: String, value: Long): Span = synchronized {
+    override def tagMetrics(key: String, value: Long): Span = synchronized {
       if(_isOpen && _trackMetrics)
         _metricTags.add(key, value)
       this
     }
 
-    override def tagMetric(key: String, value: Boolean): Span = synchronized {
+    override def tagMetrics(key: String, value: Boolean): Span = synchronized {
       if(_isOpen && _trackMetrics)
         _metricTags.add(key, value)
+      this
+    }
+
+    override def tagMetrics(tags: TagSet): Span = synchronized {
+      if(_isOpen && _trackMetrics)
+        _metricTags.add(tags)
       this
     }
 
@@ -655,9 +679,11 @@ object Span {
     override def tag(key: String, value: String): Span = this
     override def tag(key: String, value: Long): Span = this
     override def tag(key: String, value: Boolean): Span = this
-    override def tagMetric(key: String, value: String): Span = this
-    override def tagMetric(key: String, value: Long): Span = this
-    override def tagMetric(key: String, value: Boolean): Span = this
+    override def tag(tagSet: TagSet): Span = this
+    override def tagMetrics(key: String, value: String): Span = this
+    override def tagMetrics(key: String, value: Long): Span = this
+    override def tagMetrics(key: String, value: Boolean): Span = this
+    override def tagMetrics(tagSet: TagSet): Span = this
     override def mark(key: String): Span = this
     override def mark(key: String, at: Instant): Span = this
     override def link(span: Span, kind: Link.Kind): Span = this
@@ -689,9 +715,11 @@ object Span {
     override def tag(key: String, value: String): Span = this
     override def tag(key: String, value: Long): Span = this
     override def tag(key: String, value: Boolean): Span = this
-    override def tagMetric(key: String, value: String): Span = this
-    override def tagMetric(key: String, value: Long): Span = this
-    override def tagMetric(key: String, value: Boolean): Span = this
+    override def tag(tagSet: TagSet): Span = this
+    override def tagMetrics(key: String, value: String): Span = this
+    override def tagMetrics(key: String, value: Long): Span = this
+    override def tagMetrics(key: String, value: Boolean): Span = this
+    override def tagMetrics(tagSet: TagSet): Span = this
     override def mark(key: String): Span = this
     override def mark(key: String, at: Instant): Span = this
     override def link(span: Span, kind: Link.Kind): Span = this

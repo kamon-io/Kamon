@@ -71,7 +71,7 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
     * generating the Span.
     */
   def serverSpanBuilder(operationName: String, component: String): SpanBuilder =
-    spanBuilder(operationName).kind(Kind.Server).tagMetric(Span.TagKeys.Component, component)
+    spanBuilder(operationName).kind(Kind.Server).tagMetrics(Span.TagKeys.Component, component)
 
 
   /**
@@ -80,7 +80,7 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
     * generating the Span.
     */
   def clientSpanBuilder(operationName: String, component: String): SpanBuilder =
-    spanBuilder(operationName).kind(Kind.Client).tagMetric(Span.TagKeys.Component, component)
+    spanBuilder(operationName).kind(Kind.Client).tagMetrics(Span.TagKeys.Component, component)
 
 
   /**
@@ -89,7 +89,7 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
     * generating the Span.
     */
   def producerSpanBuilder(operationName: String, component: String): SpanBuilder =
-    spanBuilder(operationName).kind(Kind.Producer).tagMetric(Span.TagKeys.Component, component)
+    spanBuilder(operationName).kind(Kind.Producer).tagMetrics(Span.TagKeys.Component, component)
 
 
   /**
@@ -98,7 +98,7 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
     * generating the Span.
     */
   def consumerSpanBuilder(operationName: String, component: String): SpanBuilder =
-    spanBuilder(operationName).kind(Kind.Consumer).tagMetric(Span.TagKeys.Component, component)
+    spanBuilder(operationName).kind(Kind.Consumer).tagMetrics(Span.TagKeys.Component, component)
 
 
   /**
@@ -107,7 +107,7 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
     * generating the Span.
     */
   def internalSpanBuilder(operationName: String, component: String): SpanBuilder =
-    spanBuilder(operationName).kind(Kind.Internal).tagMetric(Span.TagKeys.Component, component)
+    spanBuilder(operationName).kind(Kind.Internal).tagMetrics(Span.TagKeys.Component, component)
 
 
   /**
@@ -172,18 +172,28 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
       this
     }
 
-    override def tagMetric(key: String, value: String): SpanBuilder = {
+    override def tag(tags: TagSet): SpanBuilder = {
+      _spanTags.add(tags)
+      this
+    }
+
+    override def tagMetrics(key: String, value: String): SpanBuilder = {
       _metricTags.add(key, value)
       this
     }
 
-    override def tagMetric(key: String, value: Long): SpanBuilder = {
+    override def tagMetrics(key: String, value: Long): SpanBuilder = {
       _metricTags.add(key, value)
       this
     }
 
-    override def tagMetric(key: String, value: Boolean): SpanBuilder = {
+    override def tagMetrics(key: String, value: Boolean): SpanBuilder = {
       _metricTags.add(key, value)
+      this
+    }
+
+    override def tagMetrics(tags: TagSet): SpanBuilder = {
+      _metricTags.add(tags)
       this
     }
 
