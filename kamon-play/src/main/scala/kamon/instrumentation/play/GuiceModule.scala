@@ -21,7 +21,7 @@ object GuiceModule {
     Kamon.reconfigure(configuration.underlying)
     Kamon.loadModules()
 
-    lifecycle.addStopHook { () ⇒
+    lifecycle.addStopHook { () =>
       if(environment.mode != Mode.Dev)
         Future.successful(Kamon.stopModules())
       else

@@ -47,8 +47,6 @@ class WSInstrumentationSpec extends PlaySpec with GuiceOneServerPerSuite with Sc
 
   System.setProperty("config.file", "./common-tests/src/test/resources/conf/application.conf")
 
-  override lazy val port: Port = 19003
-
   override def fakeApplication(): Application = new GuiceApplicationBuilder()
     .appRoutes(testRoutes)
     .build
@@ -57,11 +55,11 @@ class WSInstrumentationSpec extends PlaySpec with GuiceOneServerPerSuite with Sc
     val action = app.injector.instanceOf(classOf[DefaultActionBuilder])
 
     {
-      case ("GET", "/ok")                 ⇒ handler(action { Ok })
-      case ("GET", "/trace-id")           ⇒ handler(action { Ok(Kamon.currentSpan().trace.id.string) })
-      case ("GET", "/example-tag")        ⇒ handler(action { Ok(Kamon.currentContext().getTag(plain("example"))) })
-      case ("GET", "/error")              ⇒ handler(action { InternalServerError })
-      case ("GET", "/inside-controller")  ⇒ handler(insideController(s"http://localhost:$port/async")(app))
+      case ("GET", "/ok")                 => handler(action { Ok })
+      case ("GET", "/trace-id")           => handler(action { Ok(Kamon.currentSpan().trace.id.string) })
+      case ("GET", "/example-tag")        => handler(action { Ok(Kamon.currentContext().getTag(plain("example"))) })
+      case ("GET", "/error")              => handler(action { InternalServerError })
+      case ("GET", "/inside-controller")  => handler(insideController(s"http://localhost:$port/async")(app))
     }
   }
 
@@ -103,7 +101,7 @@ class WSInstrumentationSpec extends PlaySpec with GuiceOneServerPerSuite with Sc
       val parentSpan = Kamon.internalSpanBuilder("inside-controller-operation-span", "test").start()
       val endpoint = s"http://localhost:$port/trace-id"
 
-      val response = Kamon.storeSpan(parentSpan)(await(wsClient.url(endpoint).get()))
+      val response = Kamon.runWithSpan(parentSpan)(await(wsClient.url(endpoint).get()))
       response.status mustBe 200
 
       eventually(timeout(2 seconds)) {
@@ -123,7 +121,7 @@ class WSInstrumentationSpec extends PlaySpec with GuiceOneServerPerSuite with Sc
       val testContext = Context.of("example", "one")
       val endpoint = s"http://localhost:$port/example-tag"
 
-      val response = Kamon.storeContext(testContext)(await(wsClient.url(endpoint).get()))
+      val response = Kamon.runWithContext(testContext)(await(wsClient.url(endpoint).get()))
       response.status mustBe 200
       response.body mustBe "one"
     }
@@ -133,7 +131,7 @@ class WSInstrumentationSpec extends PlaySpec with GuiceOneServerPerSuite with Sc
       val okSpan = Kamon.internalSpanBuilder("ok-operation-span", "test").start()
       val endpoint = s"http://localhost:$port/ok"
 
-      Kamon.storeSpan(okSpan) {
+      Kamon.runWithSpan(okSpan) {
         val response = await(wsClient.url(endpoint)
           .withRequestFilter(new DumbRequestFilter())
           .get())
@@ -157,7 +155,7 @@ class WSInstrumentationSpec extends PlaySpec with GuiceOneServerPerSuite with Sc
     val wsClient = app.injector.instanceOf[WSClient]
 
     action.async {
-      wsClient.url(url).get().map(_ ⇒ Ok("Ok"))
+      wsClient.url(url).get().map(_ => Ok("Ok"))
     }
   }
 

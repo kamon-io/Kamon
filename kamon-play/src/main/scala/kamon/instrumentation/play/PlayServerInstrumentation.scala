@@ -126,7 +126,7 @@ object NettyPlayRequestHandlerHandleAdvice {
     }
 
     playRequestHandler.requestHandled()
-    RequestProcessingContext(serverRequestHandler, Kamon.store(serverRequestHandler.context))
+    RequestProcessingContext(serverRequestHandler, Kamon.storeContext(serverRequestHandler.context))
   }
 
   @Advice.OnMethodExit

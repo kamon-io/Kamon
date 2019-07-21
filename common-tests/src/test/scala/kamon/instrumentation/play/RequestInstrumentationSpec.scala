@@ -57,21 +57,19 @@ abstract class RequestHandlerInstrumentationSpec extends PlaySpec with GuiceOneS
   val expectedServer: String
 
   System.setProperty("config.file", System.getProperty("user.dir") + confFile)
-
-  override lazy val port: Port = 19002
-
+  
   implicit val executor: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
   def testRoutes(app: Application): PartialFunction[(String, String), Handler] = {
     val action = app.injector.instanceOf(classOf[DefaultActionBuilder])
 
     {
-      case ("GET", "/ok")         ⇒ handler(action { Ok })
-      case ("GET", "/request-id") ⇒ handler(action { Ok(Kamon.currentContext().getTag(option("request-id")).getOrElse("undefined")) })
-      case ("GET", "/async")      ⇒ handler(action.async { Future { Ok } })
-      case ("GET", "/not-found")  ⇒ handler(action { NotFound })
-      case ("GET", "/server")     ⇒ handler(action { req => Ok(serverImplementationName(req)) })
-      case ("GET", "/error")      ⇒ handler(action(_ => sys.error("This page generates an error!")))
+      case ("GET", "/ok")         => handler(action { Ok })
+      case ("GET", "/request-id") => handler(action { Ok(Kamon.currentContext().getTag(option("request-id")).getOrElse("undefined")) })
+      case ("GET", "/async")      => handler(action.async { Future { Ok } })
+      case ("GET", "/not-found")  => handler(action { NotFound })
+      case ("GET", "/server")     => handler(action { req => Ok(serverImplementationName(req)) })
+      case ("GET", "/error")      => handler(action(_ => sys.error("This page generates an error!")))
     }
   }
 
@@ -162,7 +160,7 @@ abstract class RequestHandlerInstrumentationSpec extends PlaySpec with GuiceOneS
       val wsClient = app.injector.instanceOf[WSClient]
       val endpoint = s"http://localhost:$port/ok"
       val parentSpan = Kamon.internalSpanBuilder("client-parent", "play.test").start()
-      val response = Kamon.storeSpan(parentSpan)(await(wsClient.url(endpoint).get()))
+      val response = Kamon.runWithSpan(parentSpan, finishSpan = false)(await(wsClient.url(endpoint).get()))
       response.status mustBe 200
 
       eventually(timeout(5 seconds)) {

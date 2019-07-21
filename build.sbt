@@ -14,14 +14,14 @@
  */
 
 val play26Version     = "2.6.23"
-val play27Version     = "2.7.1"
+val play27Version     = "2.7.3"
 
-val kamonCore         = "io.kamon"  %%  "kamon-core"                    % "2.0.0-RC1"
-val kamonTestkit      = "io.kamon"  %%  "kamon-testkit"                 % "2.0.0-RC1"
-val kamonScala        = "io.kamon"  %%  "kamon-scala-future"            % "2.0.0-RC1"
-val kamonCommon       = "io.kamon"  %%  "kamon-instrumentation-common"  % "2.0.0-RC2"
-val kamonAkkaHttp     = "io.kamon"  %%  "kamon-akka-http"               % "2.0.0-RC2"
-val kanelaAgent       = "io.kamon"  %   "kanela-agent"                  % "1.0.0-M3"
+val kamonCore         = "io.kamon"  %%  "kamon-core"                    % "2.0.0"
+val kamonTestkit      = "io.kamon"  %%  "kamon-testkit"                 % "2.0.0"
+val kamonScala        = "io.kamon"  %%  "kamon-scala-future"            % "2.0.0"
+val kamonCommon       = "io.kamon"  %%  "kamon-instrumentation-common"  % "2.0.0"
+val kamonAkkaHttp     = "io.kamon"  %%  "kamon-akka-http"               % "2.0.0"
+val kanelaAgent       = "io.kamon"  %   "kanela-agent"                  % "1.0.0"
 
 val play              = "com.typesafe.play"       %%  "play"                  % play27Version
 val playNetty         = "com.typesafe.play"       %%  "play-netty-server"     % play27Version
@@ -29,11 +29,12 @@ val playAkkaHttp      = "com.typesafe.play"       %%  "play-akka-http-server" % 
 val playWS            = "com.typesafe.play"       %%  "play-ws"               % play27Version
 val playLogback       = "com.typesafe.play"       %%  "play-logback"          % play27Version
 val playTest          = "com.typesafe.play"       %%  "play-test"             % play27Version
-val scalatestPlus     = "org.scalatestplus.play"  %%  "scalatestplus-play"    % "3.1.2"
+val scalatestPlus     = "org.scalatestplus.play"  %%  "scalatestplus-play"    % "4.0.3"
 
 
 lazy val root = Project("kamon-play", file("."))
   .settings(noPublishing: _*)
+  .settings(crossScalaVersions := Nil)
   .aggregate(instrumentation, commonTests, testsOnPlay26, testsOnPlay27)
 
 
@@ -44,6 +45,7 @@ lazy val instrumentation = Project("instrumentation", file("kamon-play"))
     bintrayPackage := "kamon-play",
     moduleName := "kamon-play",
     scalaVersion := "2.12.8",
+    crossScalaVersions := Seq("2.11.12", "2.12.8", "2.13.0"),
     testGrouping in Test := singleTestPerJvm((definedTests in Test).value, (javaOptions in Test).value),
     libraryDependencies ++=
       compileScope(kamonCore, kamonScala, kamonAkkaHttp, kamonCommon) ++
@@ -71,6 +73,7 @@ lazy val testsOnPlay26 = Project("tests-26", file("tests-2.6"))
   .settings(
     name := "tests-2.6",
     scalaVersion := "2.12.8",
+    crossScalaVersions := Seq("2.11.12", "2.12.8"),
     testGrouping in Test := singleTestPerJvm((definedTests in Test).value, (javaOptions in Test).value),
     unmanagedSourceDirectories in Test ++= (unmanagedSourceDirectories in Test in commonTests).value,
     unmanagedResourceDirectories in Test ++= (unmanagedResourceDirectories in Test in commonTests).value,
@@ -89,6 +92,7 @@ lazy val testsOnPlay27 = Project("tests-27", file("tests-2.7"))
   .settings(
     name := "tests-2.7",
     scalaVersion := "2.12.8",
+    crossScalaVersions := Seq("2.12.8", "2.13.0"),
     testGrouping in Test := singleTestPerJvm((definedTests in Test).value, (javaOptions in Test).value),
     unmanagedSourceDirectories in Test ++= (unmanagedSourceDirectories in Test in commonTests).value,
     unmanagedResourceDirectories in Test ++= (unmanagedResourceDirectories in Test in commonTests).value,

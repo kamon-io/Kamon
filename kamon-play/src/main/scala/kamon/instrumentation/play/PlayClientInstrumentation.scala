@@ -41,7 +41,7 @@ object WSClientUrlInterceptor {
       override def apply(request: StandaloneWSRequest): Future[StandaloneWSResponse] = {
         val currentContext = Kamon.currentContext()
         val requestHandler = _httpClientInstrumentation.createHandler(toRequestBuilder(request), currentContext)
-        val responseFuture =  Kamon.storeSpan(requestHandler.span, finishSpan = false) {
+        val responseFuture =  Kamon.runWithSpan(requestHandler.span, finishSpan = false) {
           rf(requestHandler.request)
         }
 
@@ -73,7 +73,7 @@ object WSClientUrlInterceptor {
         request.header(header)
 
       override def readAll(): Map[String, String] =
-        request.headers.mapValues(_.head)
+        request.headers.mapValues(_.head).toMap
 
       override def url: String =
         request.url
