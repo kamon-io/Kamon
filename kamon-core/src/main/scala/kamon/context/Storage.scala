@@ -17,6 +17,9 @@
 package kamon
 package context
 
+import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.atomic.AtomicReferenceArray
+
 /**
   * A temporary space to store a Context instance.
   */
@@ -85,6 +88,97 @@ object Storage {
   }
 
   object ThreadLocal {
-    def apply(): ThreadLocal = new ThreadLocal()
+
+    def apply(): Storage.ThreadLocal =
+      new Storage.ThreadLocal()
+  }
+
+
+  /**
+    * A Storage implementation that keeps track of all Contexts across all Threads in the application and exposes them
+    * through its companion object. Using the Debug storage can only be enabled when the System Property
+    * "kamon.context.debug" is set to "true" (we don't allow this be discovered from configuration because it can cause
+    * initialization issues when Kamon is first initialized via instrumentation trying to access the current Context).
+    *
+    * This implementation is considerably less efficient than the default implementation since it is taking at least two
+    * different stack traces for every store/close operation pair. Do not use this for any reason other than debugging
+    * Context propagation issues (like, dirty Threads) in a controlled environment.
+    *
+    */
+  class Debug extends Storage {
+    import Debug._
+
+    private val _tls = new java.lang.ThreadLocal[AtomicReferenceArray[AnyRef]]() {
+      override def initialValue(): AtomicReferenceArray[AnyRef] = {
+        val localArray = new AtomicReferenceArray[AnyRef](3)
+        localArray.set(0, Context.Empty)
+        localArray.set(1, Thread.currentThread())
+        localArray.set(2, stackTraceString())
+        _allThreadContexts.add(localArray)
+        localArray
+      }
+    }
+
+    override def current(): Context =
+      _tls.get().get(0).asInstanceOf[Context]
+
+    override def store(newContext: Context): Scope = {
+      val ref = _tls.get()
+      val previousContext = ref.get(0)
+      ref.set(0, newContext)
+      ref.set(2, stackTraceString())
+
+      new Scope {
+        override def context: Context =
+          newContext
+
+        override def close(): Unit = {
+          ref.set(0, previousContext)
+          ref.set(2, stackTraceString())
+        }
+      }
+    }
+
+    private def stackTraceString(): String =
+      Thread.currentThread().getStackTrace().mkString("\n")
+  }
+
+  object Debug {
+
+    private val _allThreadContexts = new ConcurrentLinkedQueue[AtomicReferenceArray[AnyRef]]()
+
+    def apply(): Storage.Debug =
+      new Storage.Debug()
+
+    /**
+      * Contains information about the current context in a thread. The lastUpdateStackTracer can be either a store or
+      * a scope close, depending on what was the last action executed on the thread.
+      */
+    case class ThreadContext (
+      thread: Thread,
+      currentContext: Context,
+      lastUpdateStackTrace: String
+    )
+
+    /**
+      * Returns all Threads where a Context has been stored, along with the current Context on that thread and the
+      * stack trace from when it was last modified. Users will typically take this information log it periodically for
+      * debugging purposes.
+      */
+    def allThreadContexts(): Seq[ThreadContext] = {
+      val contexts = Seq.newBuilder[ThreadContext]
+      val threads = _allThreadContexts.iterator()
+
+      while(threads.hasNext) {
+        val threadEntry = threads.next()
+        contexts += ThreadContext(
+          thread = threadEntry.get(1).asInstanceOf[Thread],
+          currentContext = threadEntry.get(0).asInstanceOf[Context],
+          lastUpdateStackTrace = threadEntry.get(2).asInstanceOf[String]
+        )
+      }
+
+      contexts.result()
+    }
   }
 }
