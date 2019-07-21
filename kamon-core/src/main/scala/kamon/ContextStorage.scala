@@ -54,14 +54,14 @@ trait ContextStorage {
     *       execution.
     *
     */
-  def store(context: Context): Storage.Scope =
+  def storeContext(context: Context): Storage.Scope =
     _contextStorage.store(context)
 
   /**
     * Temporarily stores the provided Context on Kamon's Context Storage. The provided Context will be stored before
     * executing the provided function and removed right after it finishes executing.
     */
-  @inline def storeContext[T](context: Context)(f: => T): T = {
+  @inline def runWithContext[T](context: Context)(f: => T): T = {
     val scope = _contextStorage.store(context)
     try {
       f
@@ -75,25 +75,16 @@ trait ContextStorage {
     * the current Context and stored before executing the provided function, then removed right after execution
     * finishes.
     */
-  def storeContextKey[T, K](key: Context.Key[K], value: K)(f: => T): T =
-    storeContext(currentContext().withKey(key, value))(f)
+  def runWithContextEntry[T, K](key: Context.Key[K], value: K)(f: => T): T =
+    runWithContext(currentContext().withKey(key, value))(f)
 
   /**
     * Temporarily stores the provided Context tag on Kamon's Context Storage. The provided Context tag will be added to
     * the current Context and stored before executing the provided function, then removed right after execution
     * finishes.
     */
-  def storeContextTag[T](key: String, value: String)(f: => T): T =
-    storeContext(currentContext().withTag(key, value))(f)
-
-
-  /**
-    * Temporarily stores the provided Context tag on Kamon's Context Storage. The provided Context tag will be added to
-    * the current Context and stored before executing the provided function, then removed right after execution
-    * finishes.
-    */
-  def storeContextTag[T](key: String, value: Boolean)(f: => T): T =
-    storeContext(currentContext().withTag(key, value))(f)
+  def runWithContextTag[T](key: String, value: String)(f: => T): T =
+    runWithContext(currentContext().withTag(key, value))(f)
 
 
   /**
@@ -101,24 +92,33 @@ trait ContextStorage {
     * the current Context and stored before executing the provided function, then removed right after execution
     * finishes.
     */
-  def storeContextTag[T](key: String, value: Long)(f: => T): T =
-    storeContext(currentContext().withTag(key, value))(f)
+  def runWithContextTag[T](key: String, value: Boolean)(f: => T): T =
+    runWithContext(currentContext().withTag(key, value))(f)
+
+
+  /**
+    * Temporarily stores the provided Context tag on Kamon's Context Storage. The provided Context tag will be added to
+    * the current Context and stored before executing the provided function, then removed right after execution
+    * finishes.
+    */
+  def runWithContextTag[T](key: String, value: Long)(f: => T): T =
+    runWithContext(currentContext().withTag(key, value))(f)
 
   /**
     * Temporarily stores the provided Span on Kamon's Context Storage. The provided Span will be added to the current
     * Context and stored before executing the provided function, then removed right after execution finishes.
     */
-  def storeSpan[T](span: Span)(f: => T): T =
-    storeSpan(span, true)(f)
+  def runWithSpan[T](span: Span)(f: => T): T =
+    runWithSpan(span, true)(f)
 
   /**
     * Temporarily stores the provided Span on Kamon's Context Storage. The provided Span will be added to the current
     * Context and stored before executing the provided function, then removed right after execution finishes.
     * Optionally, this function can finish the provided Span once the function execution finishes.
     */
-  @inline def storeSpan[T](span: Span, finishSpan: Boolean)(f: => T): T = {
+  @inline def runWithSpan[T](span: Span, finishSpan: Boolean)(f: => T): T = {
     try {
-      storeContextKey(Span.Key, span)(f)
+      runWithContextEntry(Span.Key, span)(f)
     } catch {
       case NonFatal(t) =>
         span.fail(t.getMessage, t)
