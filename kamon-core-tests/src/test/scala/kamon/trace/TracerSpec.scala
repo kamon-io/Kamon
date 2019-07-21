@@ -63,7 +63,7 @@ class TracerSpec extends WordSpec with Matchers with SpanInspection.Syntax with 
 
     "automatically take the Span from the current Context as parent" in {
       val parent = Kamon.spanBuilder("myOperation").start()
-      val child = Kamon.storeSpan(parent) {
+      val child = Kamon.runWithSpan(parent) {
         Kamon.spanBuilder("childOperation").asChildOf(parent).start()
       }
 
@@ -72,7 +72,7 @@ class TracerSpec extends WordSpec with Matchers with SpanInspection.Syntax with 
 
     "ignore the span from the current context as parent if explicitly requested" in {
       val parent = Kamon.spanBuilder("myOperation").start()
-      val child = Kamon.storeSpan(parent) {
+      val child = Kamon.runWithSpan(parent) {
         Kamon.spanBuilder("childOperation").ignoreParentFromContext().start()
       }
 
@@ -244,7 +244,7 @@ class TracerSpec extends WordSpec with Matchers with SpanInspection.Syntax with 
     }
 
     "apply pre-start hooks to all Spans" in {
-      val span = Kamon.storeContextKey(PreStart.Key, PreStart.updateOperationName("customName")) {
+      val span = Kamon.runWithContextEntry(PreStart.Key, PreStart.updateOperationName("customName")) {
         Kamon.spanBuilder("defaultOperationName").start()
       }
 
@@ -253,7 +253,7 @@ class TracerSpec extends WordSpec with Matchers with SpanInspection.Syntax with 
 
     "apply pre-finish hooks to all Spans" in {
       val span = Kamon.spanBuilder("defaultOperationName").start()
-      Kamon.storeContextKey(PreFinish.Key, PreFinish.updateOperationName("customName")) {
+      Kamon.runWithContextEntry(PreFinish.Key, PreFinish.updateOperationName("customName")) {
         span.finish()
       }
 
