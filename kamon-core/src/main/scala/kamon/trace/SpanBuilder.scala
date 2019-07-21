@@ -62,6 +62,12 @@ trait SpanBuilder extends Sampler.Operation {
   def tag(key: String, value: Boolean): SpanBuilder
 
   /**
+    * Adds all key/value pairs in the provided tags to the Span tags. If a tag with the provided key was already present
+    * then its value will be overwritten.
+    */
+  def tag(tags: TagSet): SpanBuilder
+
+  /**
     * Returns the Span tags that have been added so far to the SpanBuilder.
     */
   def tags(): TagSet
@@ -70,19 +76,25 @@ trait SpanBuilder extends Sampler.Operation {
     * Adds the provided key/value pair to the Span metric tags. If a tag with the provided key was already present then
     * its value will be overwritten.
     */
-  def tagMetric(key: String, value: String): SpanBuilder
+  def tagMetrics(key: String, value: String): SpanBuilder
 
   /**
     * Adds the provided key/value pair to the Span metric tags. If a tag with the provided key was already present then
     * its value will be overwritten.
     */
-  def tagMetric(key: String, value: Long): SpanBuilder
+  def tagMetrics(key: String, value: Long): SpanBuilder
 
   /**
     * Adds the provided key/value pair to the Span metric tags. If a tag with the provided key was already present then
     * its value will be overwritten.
     */
-  def tagMetric(key: String, value: Boolean): SpanBuilder
+  def tagMetrics(key: String, value: Boolean): SpanBuilder
+
+  /**
+    * Adds all key/value pairs in the provided tags to the Span metric tags. If a tag with the provided key was already
+    * present then its value will be overwritten.
+    */
+  def tagMetrics(tags: TagSet): SpanBuilder
 
   /**
     * Returns the Span metric tags that have been added so far to the SpanBuilder.

@@ -282,6 +282,9 @@ object TagSet {
     /** Adds a new key/value pair to the builder. */
     def add(key: String, value: Boolean): Builder
 
+    /** Adds all key/value pairs to the builder. */
+    def add(tags: TagSet): Builder
+
     /** Creates a new TagSet instance that includes all valid key/value pairs added to this builder. */
     def build(): TagSet
   }
@@ -462,6 +465,13 @@ object TagSet {
 
       override def add(key: String, value: Boolean): Builder = {
         addPair(key, value)
+        this
+      }
+
+      override def add(tags: TagSet): Builder = {
+        if(tags.nonEmpty())
+          tags.iterator().foreach(t => addPair(t.key, Tag.unwrapValue(t)))
+
         this
       }
 
