@@ -17,6 +17,7 @@
 package kamon.metric
 
 import java.util.concurrent.atomic.AtomicLong
+import java.util.function.LongUnaryOperator
 
 import kamon.metric.Metric.{BaseMetric, BaseMetricAutoUpdate}
 import kamon.tag.TagSet
@@ -68,14 +69,18 @@ object Gauge {
     override def increment(): Gauge = increment(1)
 
     override def increment(times: Double): Gauge = {
-      _currentValue.updateAndGet(v => java.lang.Double.doubleToLongBits(if(v + times < 0) v else v + times))
+      _currentValue.updateAndGet(new LongUnaryOperator {
+        override def applyAsLong(v: Long): Long = java.lang.Double.doubleToLongBits(if (v + times < 0) v else v + times)
+      })
       this
     }
 
     override def decrement(): Gauge = decrement(1)
 
     override def decrement(times: Double): Gauge = {
-      _currentValue.updateAndGet(v => java.lang.Double.doubleToLongBits(if(v - times < 0) v else v - times))
+      _currentValue.updateAndGet(new LongUnaryOperator {
+        override def applyAsLong(v: Long): Long = java.lang.Double.doubleToLongBits(if(v - times < 0) v else v - times)
+      })
       this
     }
 
