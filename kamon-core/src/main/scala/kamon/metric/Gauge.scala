@@ -16,6 +16,8 @@
 
 package kamon.metric
 
+import java.util.concurrent.atomic.AtomicLong
+
 import kamon.metric.Metric.{BaseMetric, BaseMetricAutoUpdate}
 import kamon.tag.TagSet
 
@@ -60,31 +62,32 @@ object Gauge {
   class Volatile(val metric: BaseMetric[Gauge, Metric.Settings.ForValueInstrument, Double], val tags: TagSet) extends Gauge
       with Instrument.Snapshotting[Double] with BaseMetricAutoUpdate[Gauge, Metric.Settings.ForValueInstrument, Double] {
 
-    @volatile private var _currentValue = 0D
+    //https://stackoverflow.com/questions/5505460/java-is-there-no-atomicfloat-or-atomicdouble
+    private val _currentValue = new AtomicLong(0)
 
     override def increment(): Gauge = increment(1)
 
     override def increment(times: Double): Gauge = {
-      _currentValue += times
+      _currentValue.updateAndGet(v => java.lang.Double.doubleToLongBits(if(v + times < 0) v else v + times))
       this
     }
 
     override def decrement(): Gauge = decrement(1)
 
     override def decrement(times: Double): Gauge = {
-      _currentValue -= times
+      _currentValue.updateAndGet(v => java.lang.Double.doubleToLongBits(if(v - times < 0) v else v - times))
       this
     }
 
     override def update(newValue: Double): Gauge = {
       if(newValue >= 0D)
-        _currentValue = newValue
+        _currentValue.set(java.lang.Double.doubleToLongBits(newValue))
 
       this
     }
 
     override def snapshot(resetState: Boolean): Double =
-      _currentValue
+      java.lang.Double.doubleToLongBits(_currentValue.get())
 
     override def baseMetric: BaseMetric[Gauge, Metric.Settings.ForValueInstrument, Double] =
       metric
