@@ -87,7 +87,7 @@ object Gauge {
     }
 
     override def snapshot(resetState: Boolean): Double =
-      java.lang.Double.doubleToLongBits(_currentValue.get())
+      java.lang.Double.longBitsToDouble(_currentValue.get())
 
     override def baseMetric: BaseMetric[Gauge, Metric.Settings.ForValueInstrument, Double] =
       metric
