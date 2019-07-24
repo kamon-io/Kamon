@@ -1,4 +1,4 @@
-val kamonCore = "io.kamon" %% "kamon-core" % "2.0.0-RC1"
+val kamonCore = "io.kamon" %% "kamon-core" % "2.0.0"
 
 lazy val root = (project in file("."))
   .settings(
