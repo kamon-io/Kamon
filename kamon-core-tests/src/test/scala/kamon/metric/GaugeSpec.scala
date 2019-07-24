@@ -42,6 +42,40 @@ class GaugeSpec extends WordSpec with Matchers with InstrumentInspection.Syntax 
       gauge.value shouldBe 30D
       gauge.update(-20D)
       gauge.value shouldBe 30D
+
+      gauge.decrement(100)
+      gauge.value shouldBe 30D
+
+      gauge.increment(-100)
+      gauge.value shouldBe 30D
     }
+
+    "increment and decrement the current value of the gauge" in {
+      val gauge = Kamon.gauge("increment-decrement").withoutTags().update(30)
+      gauge.value shouldBe 30D
+      gauge.increment(10D)
+      gauge.increment(10D)
+      gauge.value shouldBe 50D
+
+      gauge.decrement(15)
+      gauge.decrement(15D)
+      gauge.value shouldBe 20D
+    }
+
+    "increment and decrement the current value of the gauge with non whole values" in {
+      val gauge = Kamon.gauge("increment-decrement").withoutTags().update(30)
+      gauge.value shouldBe 30D
+      gauge.increment(10.5D)
+      gauge.increment(10.5D)
+      gauge.value shouldBe 51D
+
+      gauge.decrement(10.5D)
+      gauge.decrement(10.5D)
+      gauge.value shouldBe 30D
+    }
+
+
+
+
   }
 }
