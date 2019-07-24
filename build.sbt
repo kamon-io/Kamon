@@ -31,6 +31,11 @@ val akkaRemote      = "com.typesafe.akka"   %% "akka-remote"            % akka25
 val akkaCluster     = "com.typesafe.akka"   %% "akka-cluster"           % akka25Version
 val akkaSharding    = "com.typesafe.akka"   %% "akka-cluster-sharding"  % akka25Version
 
+lazy val root = (project in file("."))
+  .settings(noPublishing)
+  .settings(crossScalaVersions := Nil)
+  .aggregate(instrumentation, commonTests, testsOnAkka24, testsOnAkka25, benchmarks)
+
 // These common modules contains all the stuff that can be reused between different Akka versions. They compile with
 // Akka 2.4, but the actual modules for each Akka version are only using the sources from these project instead of the
 // compiled classes. This is just to ensure that if there are any binary incompatible changes between Akka 2.4 and 2.5
