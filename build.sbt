@@ -14,7 +14,7 @@
  * =========================================================================================
  */
 
-val kamonCore = "io.kamon"          %% "kamon-core"       % "2.0.0-RC1"
+val kamonCore = "io.kamon"          %% "kamon-core"       % "2.0.0"
 val logback   = "ch.qos.logback"    %  "logback-classic"  % "1.0.13"
 val oshi      = "com.github.oshi"   %  "oshi-core"        % "3.13.2"
 
