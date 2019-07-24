@@ -80,7 +80,7 @@ object AppendLoopMethodInterceptor {
 
   @RuntimeType
   def aroundAppendLoop(@SuperCall callable: Callable[Int], @annotation.Argument(0) event:AnyRef): Int =
-    Kamon.storeContext(event.asInstanceOf[HasContext].context)(callable.call())
+    Kamon.runWithContext(event.asInstanceOf[HasContext].context)(callable.call())
 }
 
 object GetPropertyMapMethodInterceptor {

@@ -49,5 +49,5 @@ package object logback {
   }
 
   def logMany(times: Int, level: Level)(implicit appender: Appender[ILoggingEvent], loggerContext: LoggerContext): Unit =
-    for(_ ← 1 to times) { appender.doAppend(createLoggingEvent(context, level)) }
+    for(_ <- 1 to times) { appender.doAppend(createLoggingEvent(context, level)) }
 }

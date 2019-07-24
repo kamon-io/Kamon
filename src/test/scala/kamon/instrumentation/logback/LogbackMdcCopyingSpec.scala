@@ -44,7 +44,7 @@ class LogbackMdcCopyingSpec extends WordSpec with Matchers with Eventually {
         val traceID = span.trace.id
         val contextWithSpan = Context.of(Span.Key, span)
 
-        Kamon.storeContext(contextWithSpan) {
+        Kamon.runWithContext(contextWithSpan) {
           memoryAppender.doAppend(createLoggingEvent(context))
         }
 
@@ -60,7 +60,7 @@ class LogbackMdcCopyingSpec extends WordSpec with Matchers with Eventually {
         val contextWithSpan = Context.of(Span.Key, span)
 
         MDC.put("mdc_key","mdc_value")
-        Kamon.storeContext(contextWithSpan) {
+        Kamon.runWithContext(contextWithSpan) {
           memoryAppender.doAppend(createLoggingEvent(context))
         }
 
@@ -80,10 +80,10 @@ class LogbackMdcCopyingSpec extends WordSpec with Matchers with Eventually {
 
         val contextWithSpan = Context
           .of(Span.Key, span)
-          .withKey(Context.key[Option[String]]("testKey1", None), Some("testKey1Value"))
-          .withKey(Context.key[Option[String]]("testKey2", None), Some("testKey2Value"))
+          .withEntry(Context.key[Option[String]]("testKey1", None), Some("testKey1Value"))
+          .withEntry(Context.key[Option[String]]("testKey2", None), Some("testKey2Value"))
 
-        Kamon.storeContext(contextWithSpan) {
+        Kamon.runWithContext(contextWithSpan) {
           memoryAppender.doAppend(createLoggingEvent(context))
         }
 
@@ -101,7 +101,7 @@ class LogbackMdcCopyingSpec extends WordSpec with Matchers with Eventually {
         val contextWithSpan = Context
           .of(Span.Key, span)
 
-        Kamon.storeContext(contextWithSpan) {
+        Kamon.runWithContext(contextWithSpan) {
           memoryAppender.doAppend(createLoggingEvent(context))
         }
 
@@ -120,7 +120,7 @@ class LogbackMdcCopyingSpec extends WordSpec with Matchers with Eventually {
         val span = Kamon.spanBuilder("my-span").start()
         val contextWithSpan = Context.of(Span.Key, span)
 
-        Kamon.storeContext(contextWithSpan) {
+        Kamon.runWithContext(contextWithSpan) {
           memoryAppender.doAppend(createLoggingEvent(context))
         }
 
@@ -134,7 +134,7 @@ class LogbackMdcCopyingSpec extends WordSpec with Matchers with Eventually {
         val traceID = span.trace.id
         val contextWithSpan = Context.of(Span.Key, span)
 
-        Kamon.storeContext(contextWithSpan) {
+        Kamon.runWithContext(contextWithSpan) {
           asyncAppender.doAppend(createLoggingEvent(context))
         }
 
@@ -146,7 +146,7 @@ class LogbackMdcCopyingSpec extends WordSpec with Matchers with Eventually {
       "allow using Context tags in the logging patterns" in {
         val memoryAppender = buildMemoryAppender(configurator, "%contextTag{oneTag} %contextTag{otherTag:default}")
         val contextWithTags = Context.of("oneTag", "oneValue")
-        Kamon.storeContext(contextWithTags)(memoryAppender.doAppend(createLoggingEvent(context)))
+        Kamon.runWithContext(contextWithTags)(memoryAppender.doAppend(createLoggingEvent(context)))
 
         memoryAppender.getLastLine shouldBe "oneValue default"
       }
@@ -154,7 +154,7 @@ class LogbackMdcCopyingSpec extends WordSpec with Matchers with Eventually {
       "allow using Context entries in the logging patterns" in {
         val memoryAppender = buildMemoryAppender(configurator, "%contextEntry{oneEntry} %contextEntry{otherEntry:default}")
         val contextWithTags = Context.of(Context.key[String]("oneEntry", null), "oneValue")
-        Kamon.storeContext(contextWithTags)(memoryAppender.doAppend(createLoggingEvent(context)))
+        Kamon.runWithContext(contextWithTags)(memoryAppender.doAppend(createLoggingEvent(context)))
 
         memoryAppender.getLastLine shouldBe "oneValue default"
       }
