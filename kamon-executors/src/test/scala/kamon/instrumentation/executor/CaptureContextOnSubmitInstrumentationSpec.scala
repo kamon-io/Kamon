@@ -30,7 +30,7 @@ class CaptureContextOnSubmitInstrumentationSpec extends WordSpec with Matchers w
 
   "the CaptureContextOnSubmitInstrumentation" should {
     "capture the context when call execute(Runnable) in DirectExecutor" in {
-      val ctx = Kamon.storeContext(testContext("in-runnable-body")) {
+      val ctx = Kamon.runWithContext(testContext("in-runnable-body")) {
         val runnable = new SimpleRunnable
         MoreExecutors.directExecutor().execute(runnable)
         runnable.latch.await()
@@ -42,7 +42,7 @@ class CaptureContextOnSubmitInstrumentationSpec extends WordSpec with Matchers w
 
     "capture the context when call execute(Runnable) in ThreadPool" in {
       val executor = JavaExecutors.newSingleThreadExecutor()
-      val ctx = Kamon.storeContext(testContext("in-runnable-body")) {
+      val ctx = Kamon.runWithContext(testContext("in-runnable-body")) {
         val runnable = new SimpleRunnable
         executor.execute(runnable)
         runnable.latch.await()
@@ -54,7 +54,7 @@ class CaptureContextOnSubmitInstrumentationSpec extends WordSpec with Matchers w
 
     "capture the context when call submit(Runnable) in ThreadPool" in {
       val executor = JavaExecutors.newSingleThreadExecutor()
-      val ctx = Kamon.storeContext(testContext("in-runnable-body")) {
+      val ctx = Kamon.runWithContext(testContext("in-runnable-body")) {
         val runnable = new SimpleRunnable
         executor.submit(runnable)
         runnable.latch.await()
@@ -67,7 +67,7 @@ class CaptureContextOnSubmitInstrumentationSpec extends WordSpec with Matchers w
     "capture the context when call execute(Runnable) in ForkJoinPool" in {
       val executor = JavaExecutors.newWorkStealingPool()
 
-      val ctx = Kamon.storeContext(testContext("in-runnable-body")) {
+      val ctx = Kamon.runWithContext(testContext("in-runnable-body")) {
         val runnable = new SimpleRunnable
         executor.execute(runnable)
         runnable.latch.await()
@@ -80,7 +80,7 @@ class CaptureContextOnSubmitInstrumentationSpec extends WordSpec with Matchers w
     "capture the context when call submit(Runnable) in ForkJoinPool" in {
       val executor = JavaExecutors.newWorkStealingPool()
 
-      val ctx = Kamon.storeContext(testContext("in-runnable-body")) {
+      val ctx = Kamon.runWithContext(testContext("in-runnable-body")) {
         val runnable = new SimpleRunnable
         executor.submit(runnable)
         runnable.latch.await()
@@ -93,7 +93,7 @@ class CaptureContextOnSubmitInstrumentationSpec extends WordSpec with Matchers w
     "capture the context when call execute(Runnable) in ScheduledThreadPool" in {
       val executor = JavaExecutors.newScheduledThreadPool(1)
 
-      val ctx = Kamon.storeContext(testContext("in-runnable-body")) {
+      val ctx = Kamon.runWithContext(testContext("in-runnable-body")) {
         val runnable = new SimpleRunnable
         executor.execute(runnable)
         runnable.latch.await()
@@ -106,7 +106,7 @@ class CaptureContextOnSubmitInstrumentationSpec extends WordSpec with Matchers w
     "capture the context when call submit(Runnable) in ScheduledThreadPool" in {
       val executor = JavaExecutors.newScheduledThreadPool(1)
 
-      val ctx = Kamon.storeContext(testContext("in-runnable-body")) {
+      val ctx = Kamon.runWithContext(testContext("in-runnable-body")) {
         val runnable = new SimpleRunnable
         executor.submit(runnable)
         runnable.latch.await()
@@ -118,7 +118,7 @@ class CaptureContextOnSubmitInstrumentationSpec extends WordSpec with Matchers w
 
     "capture the context when call submit(Callable) in ThreadPool" in {
       val executor = JavaExecutors.newSingleThreadExecutor()
-      val ctx = Kamon.storeContext(testContext("in-callable-body")) {
+      val ctx = Kamon.runWithContext(testContext("in-callable-body")) {
         val callable = new SimpleCallable
         executor.submit(callable)
         callable.latch.await()
@@ -130,7 +130,7 @@ class CaptureContextOnSubmitInstrumentationSpec extends WordSpec with Matchers w
 
     "capture the context when call submit(Callable) in ScheduledThreadPool" in {
       val executor = JavaExecutors.newSingleThreadExecutor()
-      val ctx = Kamon.storeContext(testContext("in-callable-body")) {
+      val ctx = Kamon.runWithContext(testContext("in-callable-body")) {
         val callable = new SimpleCallable
         executor.submit(callable)
         callable.latch.await()
@@ -143,7 +143,7 @@ class CaptureContextOnSubmitInstrumentationSpec extends WordSpec with Matchers w
     "capture the context when call submit(Callable) in ForkJoinPool" in {
       val executor = JavaExecutors.newWorkStealingPool()
 
-      val ctx = Kamon.storeContext(testContext("in-callable-body")) {
+      val ctx = Kamon.runWithContext(testContext("in-callable-body")) {
         val callable = new SimpleCallable
         executor.submit(callable)
         callable.latch.await()
@@ -156,7 +156,7 @@ class CaptureContextOnSubmitInstrumentationSpec extends WordSpec with Matchers w
     "capture the context when call invokeAll(Colection<Callables>) in ExecutorService" in {
       import scala.collection.JavaConverters._
 
-      val values = Kamon.storeContext(testContext("all-callables-should-see-this-key")) {
+      val values = Kamon.runWithContext(testContext("all-callables-should-see-this-key")) {
         val callables = new CallableWithContext("A") :: new CallableWithContext( "B") :: new CallableWithContext("C") :: Nil
         JavaExecutors.newCachedThreadPool().invokeAll(callables.asJava).asScala.foldLeft(ListBuffer.empty[String]) { (acc, f) => acc += f.get() }
       }

@@ -436,7 +436,7 @@ object ExecutorInstrumentation {
       override def run(): Unit = {
         _timeInQueueTimer.record(System.nanoTime() - _createdAt)
 
-        val scope = Kamon.store(_context)
+        val scope = Kamon.storeContext(_context)
         try { runnable.run() } finally { scope.close() }
       }
     }
@@ -460,7 +460,7 @@ object ExecutorInstrumentation {
         override def call(): T = {
           _timeInQueueTimer.record(System.nanoTime() - _createdAt)
 
-          val scope = Kamon.store(_context)
+          val scope = Kamon.storeContext(_context)
           try { callable.call() } finally { scope.close() }
         }
       }
@@ -470,7 +470,7 @@ object ExecutorInstrumentation {
       private val _context = Kamon.currentContext()
 
       override def run(): Unit = {
-        val scope = Kamon.store(_context)
+        val scope = Kamon.storeContext(_context)
         runnable.run()
         scope.close()
       }
@@ -481,7 +481,7 @@ object ExecutorInstrumentation {
         val _context = Kamon.currentContext()
 
         override def call(): T = {
-          val scope = Kamon.store(_context)
+          val scope = Kamon.storeContext(_context)
           try { callable.call() } finally { scope.close() }
         }
       }
@@ -661,7 +661,7 @@ object ExecutorInstrumentation {
       override def run(): Unit = {
         _timeInQueueTimer.record(System.nanoTime() - _createdAt)
 
-        val scope = Kamon.store(_context)
+        val scope = Kamon.storeContext(_context)
         try { runnable.run() } finally {
           _completedTasksCounter.increment()
           scope.close()
@@ -688,7 +688,7 @@ object ExecutorInstrumentation {
         override def call(): T = {
           _timeInQueueTimer.record(System.nanoTime() - _createdAt)
 
-          val scope = Kamon.store(_context)
+          val scope = Kamon.storeContext(_context)
           try { callable.call() } finally {
             _completedTasksCounter.increment()
             scope.close()
@@ -701,7 +701,7 @@ object ExecutorInstrumentation {
       private val _context = Kamon.currentContext()
 
       override def run(): Unit = {
-        val scope = Kamon.store(_context)
+        val scope = Kamon.storeContext(_context)
         try { runnable.run() } finally {
           _completedTasksCounter.increment()
           scope.close()
@@ -714,7 +714,7 @@ object ExecutorInstrumentation {
         val _context = Kamon.currentContext()
 
         override def call(): T = {
-          val scope = Kamon.store(_context)
+          val scope = Kamon.storeContext(_context)
           try { callable.call() } finally {
             _completedTasksCounter.increment()
             scope.close()

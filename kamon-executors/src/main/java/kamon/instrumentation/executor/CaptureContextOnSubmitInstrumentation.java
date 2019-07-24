@@ -76,7 +76,7 @@ public final class CaptureContextOnSubmitInstrumentation extends Instrumentation
 
         @Override
         public void run() {
-            final Scope scope = Kamon.store(context);
+            final Scope scope = Kamon.storeContext(context);
             try {
                 underlying.run();
             } finally {
@@ -99,7 +99,7 @@ public final class CaptureContextOnSubmitInstrumentation extends Instrumentation
         }
 
         public A call() throws Exception {
-            final Scope scope = Kamon.store(context);
+            final Scope scope = Kamon.storeContext(context);
             try {
                 return underlying.call();
             } finally {
