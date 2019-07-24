@@ -69,7 +69,7 @@ object ServerFlowWrapper {
 
           // The only reason why it's safe to leave the Thread dirty is because the Actor
           // instrumentation will cleanup afterwards.
-          Kamon.store(requestHandler.context)
+          Kamon.storeContext(requestHandler.context)
           push(requestOut, request)
         }
 

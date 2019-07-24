@@ -68,7 +68,7 @@ object HttpExtSingleRequestAdvice {
     val requestBuilder = toRequestBuilder(request)
     val handler = _httpClientInstrumentation.createHandler(requestBuilder, Kamon.currentContext())
 
-    val responseFuture = Kamon.storeContextKey(Span.Key, handler.span) {
+    val responseFuture = Kamon.runWithSpan(handler.span, finishSpan = false) {
       httpExt.asInstanceOf[SingleRequestImplBridge].invokeSingleRequestImpl(
         handler.request, connectionContext, settings, log
       )

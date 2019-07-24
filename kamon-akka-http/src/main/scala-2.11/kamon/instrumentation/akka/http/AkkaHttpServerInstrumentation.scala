@@ -263,7 +263,7 @@ object FastFutureTransformWithAdvice {
         case Some(value) =>
           // This is possible because of the Future's instrumentation
           val futureContext = value.asInstanceOf[HasContext].context
-          val scope = Kamon.store(futureContext)
+          val scope = Kamon.storeContext(futureContext)
 
           val transformedFuture = value match {
             case Success(a) => strictTransform(a, s)

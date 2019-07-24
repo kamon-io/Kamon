@@ -22,8 +22,8 @@ class FastFutureInstrumentationSpec extends WordSpec with Matchers {
     "keep the Context captured by the Future from which it was created" when {
       "calling .map/.flatMap/.onComplete and the original Future has not completed yet" in {
         val completeSignal = new CountDownLatch(1)
-        val future = Future {
-          trace("async-operation") {
+        val future = trace("async-operation") {
+          Future {
             completeSignal.await()
             "Hello World"
           }
@@ -53,8 +53,8 @@ class FastFutureInstrumentationSpec extends WordSpec with Matchers {
 
       "calling .map/.flatMap/.onComplete and the original Future has already completed" in {
         val completeSignal = new CountDownLatch(1)
-        val future = Future {
-          trace("async-operation") {
+        val future = trace("async-operation") {
+          Future {
             completeSignal.await()
             "Hello World"
           }

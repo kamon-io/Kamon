@@ -65,7 +65,7 @@ class AkkaHttpClientTracingSpec extends WordSpecLike with Matchers with BeforeAn
       val tagKey = "custom.message"
       val tagValue = "Hello World :D"
 
-      val response = Kamon.storeContextTag(tagKey, tagValue) {
+      val response = Kamon.runWithContextTag(tagKey, tagValue) {
         Http().singleRequest(HttpRequest(uri = target, headers = List(RawHeader("X-Foo", "bar"))))
       }.flatMap(r => r.entity.toStrict(timeoutTest))
 
