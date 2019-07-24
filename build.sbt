@@ -4,21 +4,20 @@ import BundleKeys._
 resolvers += Resolver.mavenLocal
 
 lazy val instrumentationModules: Seq[ModuleID] = Seq(
-  "io.kamon" %% "kamon-executors"         % "2.0.0-RC1",
-  "io.kamon" %% "kamon-scala-future"      % "2.0.0-RC1",
-  "io.kamon" %% "kamon-akka"              % "2.0.0-RC3",
-  "io.kamon" %% "kamon-akka-http"         % "2.0.0-RC3",
-  "io.kamon" %% "kamon-akka-remote"       % "2.0.0-RC2",
-  "io.kamon" %% "kamon-play"              % "2.0.0-RC3",
-  "io.kamon" %% "kamon-jdbc"              % "2.0.0-RC3",
-  "io.kamon" %% "kamon-logback"           % "2.0.0-RC1",
-  "io.kamon" %% "kamon-system-metrics"    % "2.0.0-RC1" exclude("org.slf4j", "slf4j-api")
+  "io.kamon" %% "kamon-executors"         % "2.0.0",
+  "io.kamon" %% "kamon-scala-future"      % "2.0.0",
+  "io.kamon" %% "kamon-akka"              % "2.0.0",
+  "io.kamon" %% "kamon-akka-http"         % "2.0.0",
+  "io.kamon" %% "kamon-play"              % "2.0.0",
+  "io.kamon" %% "kamon-jdbc"              % "2.0.0",
+  "io.kamon" %% "kamon-logback"           % "2.0.0",
+  "io.kamon" %% "kamon-system-metrics"    % "2.0.0" exclude("org.slf4j", "slf4j-api")
 )
 
 val versionSettings = Seq(
-  kamonCoreVersion := "2.0.0-RC1",
-  kanelaAgentVersion := "1.0.0-RC3",
-  instrumentationCommonVersion := "2.0.0-RC2"
+  kamonCoreVersion := "2.0.0",
+  kanelaAgentVersion := "1.0.0",
+  instrumentationCommonVersion := "2.0.0"
 )
 
 lazy val root = Project("kamon-bundle", file("."))
