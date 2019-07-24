@@ -56,7 +56,7 @@ object StatementMonitor extends LoggingSupport {
         .tag("db.statement", sql)
 
       databaseTags.spanTags.iterator().foreach(t => clientSpan.tag(t.key, databaseTags.spanTags.get(Lookups.coerce(t.key))))
-      databaseTags.metricTags.iterator().foreach(t => clientSpan.tagMetric(t.key, databaseTags.metricTags.get(Lookups.coerce(t.key))))
+      databaseTags.metricTags.iterator().foreach(t => clientSpan.tagMetrics(t.key, databaseTags.metricTags.get(Lookups.coerce(t.key))))
       inFlightRangeSampler.increment()
 
       Some(Invocation(statement, clientSpan.start(startTimestamp), sql, startTimestamp, inFlightRangeSampler))

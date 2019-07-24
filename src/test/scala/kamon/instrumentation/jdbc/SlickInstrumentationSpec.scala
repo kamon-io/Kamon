@@ -37,7 +37,7 @@ class SlickInstrumentationSpec extends WordSpec with Matchers with Eventually wi
       val db = setup(Database.forConfig("slick-h2"))
       val parent = Kamon.spanBuilder("parent").start()
 
-      Kamon.storeSpan(parent) {
+      Kamon.runWithSpan(parent) {
         db.run(addresses += (5, "test"))
       }
 
@@ -53,7 +53,7 @@ class SlickInstrumentationSpec extends WordSpec with Matchers with Eventually wi
       val db = setup(Database.forConfig("slick-h2-with-pool"))
       val parent = Kamon.spanBuilder("parent").start()
 
-      Kamon.storeSpan(parent) {
+      Kamon.runWithSpan(parent) {
         db.run(addresses += (5, "test"))
       }
 

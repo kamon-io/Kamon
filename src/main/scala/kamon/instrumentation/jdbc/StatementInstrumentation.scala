@@ -170,7 +170,7 @@ object ConnectionIsValidAdvice {
 
   @Advice.OnMethodEnter
   def enter(): Scope =
-    Kamon.store(Kamon.currentContext().withKey(PreStart.Key, PreStart.updateOperationName("isValid")))
+    Kamon.storeContext(Kamon.currentContext().withEntry(PreStart.Key, PreStart.updateOperationName("isValid")))
 
   @Advice.OnMethodExit
   def exit(@Advice.Enter scope: Scope): Unit =

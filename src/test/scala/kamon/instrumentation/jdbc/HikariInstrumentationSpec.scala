@@ -63,7 +63,7 @@ class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually w
 
     "track the number of open connections to the database" in {
       val pool = createH2Pool("track-open-connections", 16)
-      val connections = (1 to 10) map { _ ⇒ pool.getConnection() }
+      val connections = (1 to 10) map { _ => pool.getConnection() }
 
       val tags = TagSet.builder()
         .add("jdbc.pool.vendor", "hikari")
@@ -86,7 +86,7 @@ class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually w
 
     "track the number of borrowed connections" in {
       val pool = createH2Pool("track-borrowed-connections", 16)
-      val connections = (1 to 10) map { _ ⇒
+      val connections = (1 to 10) map { _ =>
         pool.getConnection()
       }
 
@@ -112,7 +112,7 @@ class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually w
 
     "track the time it takes to borrow a connection" in {
       val pool = createH2Pool("track-borrow-time", 5)
-      for (_ ← 1 to 5) {
+      for (_ <- 1 to 5) {
         pool.getConnection()
       }
 
@@ -129,7 +129,7 @@ class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually w
 
     "track timeout errors when borrowing a connection" in {
       val pool = createH2Pool("track-borrow-timeouts", 5)
-      for (id ← 1 to 5) {
+      for (id <- 1 to 5) {
         pool.getConnection()
       }
 
@@ -149,7 +149,7 @@ class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually w
         .add("db.vendor", "h2")
         .build()
 
-      eventually(timeout(30 seconds),  interval(1 second)) {
+      eventually(timeout(5 seconds),  interval(1 second)) {
         JdbcMetrics.BorrowTime.withTags(tags).distribution(resetState = false).max shouldBe ((1 seconds).toNanos +- (100 milliseconds).toNanos)
       }
 

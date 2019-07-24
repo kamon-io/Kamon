@@ -14,14 +14,14 @@
  */
 
 
-val kamonCore           = "io.kamon"            %% "kamon-core"               % "2.0.0-RC1"
-val kamonTestkit        = "io.kamon"            %% "kamon-testkit"            % "2.0.0-RC1"
-val kamonExecutors      = "io.kamon"            %% "kamon-executors"          % "2.0.0-RC1"
-val kanela              = "io.kamon"            %  "kanela-agent"             % "1.0.0-RC3"
-val kamonCommon         = "io.kamon"            %% "kamon-instrumentation-common" % "2.0.0-RC1"
+val kamonCore           = "io.kamon"            %% "kamon-core"               % "2.0.0"
+val kamonTestkit        = "io.kamon"            %% "kamon-testkit"            % "2.0.0"
+val kamonExecutors      = "io.kamon"            %% "kamon-executors"          % "2.0.0"
+val kanela              = "io.kamon"            %  "kanela-agent"             % "1.0.0"
+val kamonCommon         = "io.kamon"            %% "kamon-instrumentation-common" % "2.0.0"
 
-val slick               = "com.typesafe.slick"       %% "slick"                     % "3.2.3"
-val slickHikari         = "com.typesafe.slick"       %% "slick-hikaricp"            % "3.2.3"
+val slick               = "com.typesafe.slick"       %% "slick"                     % "3.3.2"
+val slickHikari         = "com.typesafe.slick"       %% "slick-hikaricp"            % "3.3.2"
 val h2                  = "com.h2database"            % "h2"                        % "1.4.182"
 val sqlite              = "org.xerial"                % "sqlite-jdbc"               % "3.27.2.1"
 val mariaConnector      = "org.mariadb.jdbc"          % "mariadb-java-client"       % "2.2.6"

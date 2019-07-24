@@ -192,7 +192,7 @@ object PoolBaseNewConnectionAdvice {
   @Advice.OnMethodEnter
   def enter(@Advice.This pool: Any, @Advice.Argument(0) connection: Any): Scope = {
     connection.asInstanceOf[HasConnectionPoolTelemetry].setConnectionPoolTelemetry(pool.asInstanceOf[HasConnectionPoolTelemetry].connectionPoolTelemetry)
-    Kamon.store(Kamon.currentContext().withKey(PreStart.Key, PreStart.updateOperationName("init")))
+    Kamon.storeContext(Kamon.currentContext().withEntry(PreStart.Key, PreStart.updateOperationName("init")))
   }
 
   @Advice.OnMethodExit
