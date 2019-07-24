@@ -6,12 +6,18 @@ resolvers += Resolver.mavenLocal
 lazy val instrumentationModules: Seq[ModuleID] = Seq(
   "io.kamon" %% "kamon-executors"         % "2.0.0",
   "io.kamon" %% "kamon-scala-future"      % "2.0.0",
+  "io.kamon" %% "kamon-scalaz-future"     % "2.0.0",
   "io.kamon" %% "kamon-akka"              % "2.0.0",
   "io.kamon" %% "kamon-akka-http"         % "2.0.0",
   "io.kamon" %% "kamon-play"              % "2.0.0",
   "io.kamon" %% "kamon-jdbc"              % "2.0.0",
   "io.kamon" %% "kamon-logback"           % "2.0.0",
   "io.kamon" %% "kamon-system-metrics"    % "2.0.0" exclude("org.slf4j", "slf4j-api")
+)
+
+lazy val instrumentationModulesWithoutTwoThirteen: Seq[ModuleID] = Seq(
+  "io.kamon" %% "kamon-cats-io"           % "2.0.0",
+  "io.kamon" %% "kamon-twitter-future"    % "2.0.0"
 )
 
 val versionSettings = Seq(
@@ -46,7 +52,11 @@ val bundle = (project in file("bundle"))
       "io.kamon"      %% "kamon-instrumentation-common" % instrumentationCommonVersion.value excludeAll(kamonCoreExclusion.value) changing(),
       "net.bytebuddy" %  "byte-buddy-agent"             % "1.9.12",
     ),
-    libraryDependencies ++= bundleDependencies.value ++ instrumentationModules.map(_.excludeAll(kamonCoreExclusion.value)),
+    libraryDependencies ++= {
+      val optionalInstrumentation = if(scalaBinaryVersion.value != "2.13") instrumentationModulesWithoutTwoThirteen else Seq.empty
+      val allInstrumentation = instrumentationModules ++ optionalInstrumentation
+      bundleDependencies.value ++ allInstrumentation.map(_.excludeAll(kamonCoreExclusion.value))
+    },
     packageBin in Compile := assembly.value,
     assembleArtifact in assemblyPackageScala := false,
     assemblyShadeRules in assembly := Seq(
