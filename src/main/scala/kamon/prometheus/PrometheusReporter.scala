@@ -125,9 +125,9 @@ object PrometheusReporter {
         startEmbeddedServer = prometheusConfig.getBoolean("start-embedded-http-server"),
         embeddedServerHostname = prometheusConfig.getString("embedded-server.hostname"),
         embeddedServerPort = prometheusConfig.getInt("embedded-server.port"),
-        defaultBuckets = prometheusConfig.getDoubleList("buckets.default-buckets").asScala,
-        timeBuckets = prometheusConfig.getDoubleList("buckets.time-buckets").asScala,
-        informationBuckets = prometheusConfig.getDoubleList("buckets.information-buckets").asScala,
+        defaultBuckets = prometheusConfig.getDoubleList("buckets.default-buckets").asScala.toSeq,
+        timeBuckets = prometheusConfig.getDoubleList("buckets.time-buckets").asScala.toSeq,
+        informationBuckets = prometheusConfig.getDoubleList("buckets.information-buckets").asScala.toSeq,
         customBuckets = readCustomBuckets(prometheusConfig.getConfig("buckets.custom")),
         includeEnvironmentTags = prometheusConfig.getBoolean("include-environment-tags")
       )
@@ -139,7 +139,7 @@ object PrometheusReporter {
     private def readCustomBuckets(customBuckets: Config): Map[String, Seq[java.lang.Double]] =
       customBuckets
         .topLevelKeys
-        .map(k => (k, customBuckets.getDoubleList(ConfigUtil.quoteString(k)).asScala))
+        .map(k => (k, customBuckets.getDoubleList(ConfigUtil.quoteString(k)).asScala.toSeq))
         .toMap
   }
 }
