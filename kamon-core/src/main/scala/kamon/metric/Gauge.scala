@@ -21,7 +21,7 @@ import java.util.function.LongUnaryOperator
 
 import kamon.metric.Metric.{BaseMetric, BaseMetricAutoUpdate}
 import kamon.tag.TagSet
-
+import java.lang.Double.{longBitsToDouble,doubleToLongBits}
 
 /**
   * Instrument that tracks the latest observed value of a given measure.
@@ -70,7 +70,10 @@ object Gauge {
 
     override def increment(times: Double): Gauge = {
       _currentValue.updateAndGet(new LongUnaryOperator {
-        override def applyAsLong(v: Long): Long = java.lang.Double.doubleToLongBits(if (v + times < 0) v else v + times)
+        override def applyAsLong(v: Long): Long = {
+          val newValue: Double = longBitsToDouble(v) + times
+          if(newValue < 0) v else doubleToLongBits(newValue)
+        }
       })
       this
     }
@@ -79,20 +82,23 @@ object Gauge {
 
     override def decrement(times: Double): Gauge = {
       _currentValue.updateAndGet(new LongUnaryOperator {
-        override def applyAsLong(v: Long): Long = java.lang.Double.doubleToLongBits(if(v - times < 0) v else v - times)
+        override def applyAsLong(v: Long): Long = {
+          val newValue: Double = longBitsToDouble(v) - times
+          if(newValue < 0) v else doubleToLongBits(newValue)
+        }
       })
       this
     }
 
     override def update(newValue: Double): Gauge = {
       if(newValue >= 0D)
-        _currentValue.set(java.lang.Double.doubleToLongBits(newValue))
+        _currentValue.set(doubleToLongBits(newValue))
 
       this
     }
 
     override def snapshot(resetState: Boolean): Double =
-      java.lang.Double.longBitsToDouble(_currentValue.get())
+      longBitsToDouble(_currentValue.get())
 
     override def baseMetric: BaseMetric[Gauge, Metric.Settings.ForValueInstrument, Double] =
       metric
