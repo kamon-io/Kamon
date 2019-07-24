@@ -119,7 +119,7 @@ object InvokeAllMethodInterceptor {
   @Advice.OnMethodEnter
   def enter(@Advice.Argument(0) message: Any): Option[Scope] =
     message match {
-      case m: HasContext => Some(Kamon.store(m.context))
+      case m: HasContext => Some(Kamon.storeContext(m.context))
       case _ => None
     }
 

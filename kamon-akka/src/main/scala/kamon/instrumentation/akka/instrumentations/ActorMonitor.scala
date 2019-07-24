@@ -197,7 +197,7 @@ object ActorMonitor {
 
       } else {
         val messageSpan = buildSpan(cellInfo, context, envelopeTimestamp, envelope).start()
-        val contextWithMessageSpan = incomingContext.withKey(Span.Key, messageSpan)
+        val contextWithMessageSpan = incomingContext.withEntry(Span.Key, messageSpan)
         new SpanAndMonitorState(messageSpan, monitor.onMessageProcessingStart(contextWithMessageSpan, envelopeTimestamp, envelope))
       }
     }
@@ -271,7 +271,7 @@ object ActorMonitor {
 
     override def onMessageProcessingStart(context: Context, envelopeTimestamp: Long, envelope: Envelope): Any = {
       _systemMetrics.processedMessagesByNonTracked.increment()
-      Kamon.store(context)
+      Kamon.storeContext(context)
     }
 
     override def onMessageProcessingEnd(context: Context, envelopeTimestamp: Long, processingStartTimestamp: Long, stateFromStart: Any): Unit =
@@ -307,7 +307,7 @@ object ActorMonitor {
 
     override def onMessageProcessingStart(context: Context, envelopeTimestamp: Long, envelope: Envelope): Any = {
       _processedMessagesCounter.increment()
-      Kamon.store(context)
+      Kamon.storeContext(context)
     }
 
     override def onMessageProcessingEnd(context: Context, envelopeTimestamp: Long, processingStartTimestamp: Long, stateFromStart: Any): Unit = {
@@ -352,7 +352,7 @@ object ActorMonitor {
 
     override def onMessageProcessingStart(context: Context, envelopeTimestamp: Long, envelope: Envelope): Any = {
       processedMessagesCounter.increment()
-      Kamon.store(context)
+      Kamon.storeContext(context)
     }
 
     override def onMessageProcessingEnd(context: Context, envelopeTimestamp: Long, processingStartTimestamp: Long, stateFromStart: Any): Unit = {

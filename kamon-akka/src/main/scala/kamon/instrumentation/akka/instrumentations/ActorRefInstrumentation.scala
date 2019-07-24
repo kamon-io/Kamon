@@ -41,7 +41,7 @@ object RepointableActorRefPointAdvice {
 
   @Advice.OnMethodEnter
   def enter(@Advice.This repointableActorRef: Object): Scope =
-    Kamon.store(repointableActorRef.asInstanceOf[HasContext].context)
+    Kamon.storeContext(repointableActorRef.asInstanceOf[HasContext].context)
 
   @Advice.OnMethodExit
   def exit(@Advice.Enter scope: Scope): Unit =

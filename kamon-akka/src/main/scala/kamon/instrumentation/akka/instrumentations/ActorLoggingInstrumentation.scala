@@ -40,7 +40,7 @@ object WithMdcMethodAdvice {
 
   @OnMethodEnter
   def enter(@Argument(1) logEvent: LogEvent): Scope =
-    Kamon.store(logEvent.asInstanceOf[HasContext].context)
+    Kamon.storeContext(logEvent.asInstanceOf[HasContext].context)
 
   @OnMethodExit
   def exit(@Enter scope: Scope): Unit =

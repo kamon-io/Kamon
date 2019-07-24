@@ -78,7 +78,7 @@ class ShardingMessageBufferingSpec extends TestKitBase with WordSpecLike with Ma
         extractEntityId = extractEntityId,
         extractShardId = extractShardId)
 
-      Kamon.storeContext(contextWithBroadcast("cluster-sharding-actor-123")) {
+      Kamon.runWithContext(contextWithBroadcast("cluster-sharding-actor-123")) {
         replierRegion ! "123"
       }
 

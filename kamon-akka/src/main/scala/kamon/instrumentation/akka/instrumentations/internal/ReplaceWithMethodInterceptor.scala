@@ -63,7 +63,7 @@ object ReplaceWithMethodInterceptor {
         while (!queue.isEmpty) {
           queue.poll() match {
             case e: HasContext =>
-              Kamon.storeContext(e.context) {
+              Kamon.runWithContext(e.context) {
                 cell.asInstanceOf[Cell].sendMessage(e.asInstanceOf[Envelope])
               }
           }

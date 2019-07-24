@@ -14,12 +14,12 @@
  */
 import sbt.Tests.{Group, SubProcess}
 
-val kamonCore       = "io.kamon" %% "kamon-core"         % "2.0.0-RC1"
-val kamonTestkit    = "io.kamon" %% "kamon-testkit"      % "2.0.0-RC1"
-val kamonScala      = "io.kamon" %% "kamon-scala-future" % "2.0.0-RC3"
-val kamonExecutors  = "io.kamon" %% "kamon-executors"    % "2.0.0-RC3"
-val kamonInstrument = "io.kamon" %% "kamon-instrumentation-common" % "2.0.0-RC2"
-val kanelaAgent     =  "io.kamon" % "kanela-agent"       % "1.0.0-RC4"
+val kamonCore       = "io.kamon" %% "kamon-core"         % "2.0.0"
+val kamonTestkit    = "io.kamon" %% "kamon-testkit"      % "2.0.0"
+val kamonScala      = "io.kamon" %% "kamon-scala-future" % "2.0.0"
+val kamonExecutors  = "io.kamon" %% "kamon-executors"    % "2.0.0"
+val kamonInstrument = "io.kamon" %% "kamon-instrumentation-common" % "2.0.0"
+val kanelaAgent     =  "io.kamon" % "kanela-agent"       % "1.0.0"
 
 val akka24Version = "2.4.20"
 val akka25Version = "2.5.23"
@@ -38,10 +38,10 @@ val akkaSharding    = "com.typesafe.akka"   %% "akka-cluster-sharding"  % akka25
 //
 lazy val instrumentation = Project("instrumentation", file("kamon-akka"))
   .settings(
-    name := "kamon-akka",
     moduleName := "kamon-akka",
     bintrayPackage := "kamon-akka",
     scalacOptions += "-target:jvm-1.8",
+    scalaVersion := "2.12.8",
     crossScalaVersions := Seq("2.11.12", "2.12.8", "2.13.0"),
     libraryDependencies ++=
       compileScope(kamonCore, kamonInstrument, kamonScala, kamonExecutors) ++
@@ -54,6 +54,7 @@ lazy val commonTests = Project("common-tests", file("kamon-akka-common-tests"))
     test := ((): Unit),
     testOnly := ((): Unit),
     testQuick := ((): Unit),
+    scalaVersion := "2.12.8",
     crossScalaVersions := Seq("2.11.12", "2.12.8", "2.13.0"),
     libraryDependencies ++=
       compileScope(kamonCore, kamonInstrument, kamonScala, kamonExecutors) ++
@@ -68,6 +69,7 @@ lazy val testsOnAkka24 = Project("kamon-akka-tests-24", file("kamon-akka-tests-2
   .settings(noPublishing: _*)
   .settings(
     name := "kamon-akka-tests-2.4",
+    scalaVersion := "2.12.8",
     crossScalaVersions := Seq("2.11.12", "2.12.8"),
     testGrouping in Test := removeUnsupportedTests((definedTests in Test).value, kanelaAgentJar.value),
     unmanagedSourceDirectories in Test ++= (unmanagedSourceDirectories in Test in commonTests).value,
@@ -83,6 +85,7 @@ lazy val testsOnAkka25 = Project("kamon-akka-tests-25", file("kamon-akka-tests-2
   .settings(noPublishing: _*)
   .settings(
     name := "kamon-akka-tests-2.5",
+    scalaVersion := "2.12.8",
     crossScalaVersions := Seq("2.11.12", "2.12.8", "2.13.0"),
     unmanagedSourceDirectories in Test ++= (unmanagedSourceDirectories in Test in commonTests).value,
     unmanagedResourceDirectories in Test ++= (unmanagedResourceDirectories in Test in commonTests).value,
@@ -95,6 +98,7 @@ lazy val benchmarks = Project("benchmarks", file("kamon-akka-bench"))
   .dependsOn(instrumentation)
   .settings(noPublishing: _*)
   .settings(
+    scalaVersion := "2.12.8",
     crossScalaVersions := Seq("2.11.12", "2.12.8", "2.13.0"),
     libraryDependencies ++= compileScope(akkaActor, akkaRemote, akkaCluster, akkaSharding, kanelaAgent))
 

@@ -42,7 +42,7 @@ class AskPatternInstrumentationSpec extends TestKit(ActorSystem("AskPatternInstr
         setAskPatternTimeoutWarningMode("heavyweight")
 
         EventFilter.warning(start = "Timeout triggered for ask pattern to actor [no-reply-1] at").intercept {
-          Kamon.storeContext(testContext("ask-timeout-warning")) {
+          Kamon.runWithContext(testContext("ask-timeout-warning")) {
             noReplyActorRef ? "hello"
           }
         }
@@ -55,7 +55,7 @@ class AskPatternInstrumentationSpec extends TestKit(ActorSystem("AskPatternInstr
         setAskPatternTimeoutWarningMode("lightweight")
 
         EventFilter.warning(start = "Timeout triggered for ask pattern to actor [no-reply-2] at").intercept {
-          Kamon.storeContext(testContext("ask-timeout-warning")) {
+          Kamon.runWithContext(testContext("ask-timeout-warning")) {
             noReplyActorRef ? "hello"
           }
         }
@@ -69,7 +69,7 @@ class AskPatternInstrumentationSpec extends TestKit(ActorSystem("AskPatternInstr
 
         intercept[AssertionError] { // No message will be logged and the event filter will fail.
           EventFilter.warning(start = "Timeout triggered for ask pattern to actor", occurrences = 1).intercept {
-            Kamon.storeContext(testContext("ask-timeout-warning")) {
+            Kamon.runWithContext(testContext("ask-timeout-warning")) {
               noReplyActorRef ? "hello"
             }
           }

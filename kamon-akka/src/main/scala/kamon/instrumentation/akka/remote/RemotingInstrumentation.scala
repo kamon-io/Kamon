@@ -53,7 +53,7 @@ object WriteSendWithContext {
 
   @Advice.OnMethodEnter
   def enter(@Advice.Argument(0) send: Any): Scope = {
-    Kamon.store(send.asInstanceOf[HasContext].context)
+    Kamon.storeContext(send.asInstanceOf[HasContext].context)
   }
 
   @Advice.OnMethodExit

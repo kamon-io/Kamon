@@ -67,7 +67,7 @@ class RemotingInstrumentationSpec extends TestKitBase with WordSpecLike with Mat
 
   "The Akka Remote instrumentation" should {
     "propagate the current Context when creating a new remote actor" in {
-      val a = Kamon.storeContext(contextWithBroadcast("deploy-remote-actor-1")) {
+      val a = Kamon.runWithContext(contextWithBroadcast("deploy-remote-actor-1")) {
         system.actorOf(ContextEchoActor.remoteProps(Some(testActor), RemoteSystemAddress), "remote-deploy-fixture")
       }
 
@@ -78,7 +78,7 @@ class RemotingInstrumentationSpec extends TestKitBase with WordSpecLike with Mat
     "propagate the Context when sending a message to a remotely deployed actor" in {
       val remoteRef = system.actorOf(ContextEchoActor.remoteProps(None, RemoteSystemAddress), "remote-message-fixture")
 
-      Kamon.storeContext(contextWithBroadcast("message-remote-actor-1")) {
+      Kamon.runWithContext(contextWithBroadcast("message-remote-actor-1")) {
         remoteRef ! "reply-trace-token"
       }
       expectMsg("name=message-remote-actor-1")
@@ -90,7 +90,7 @@ class RemotingInstrumentationSpec extends TestKitBase with WordSpecLike with Mat
       implicit val askTimeout = Timeout(10 seconds)
       val remoteRef = system.actorOf(ContextEchoActor.remoteProps(None, RemoteSystemAddress), "remote-ask-and-pipe-fixture")
 
-      Kamon.storeContext(contextWithBroadcast("ask-and-pipe-remote-actor-1")) {
+      Kamon.runWithContext(contextWithBroadcast("ask-and-pipe-remote-actor-1")) {
         (remoteRef ? "reply-trace-token") pipeTo testActor
       }
 
@@ -103,7 +103,7 @@ class RemotingInstrumentationSpec extends TestKitBase with WordSpecLike with Mat
       remoteSystem.actorOf(ContextEchoActor.props(None), "actor-selection-target-b")
       val selection = system.actorSelection(RemoteSystemAddress + "/user/actor-selection-target-*")
 
-      Kamon.storeContext(contextWithBroadcast("message-remote-actor-selection-1")) {
+      Kamon.runWithContext(contextWithBroadcast("message-remote-actor-selection-1")) {
         selection ! "reply-trace-token"
       }
 
@@ -120,7 +120,7 @@ class RemotingInstrumentationSpec extends TestKitBase with WordSpecLike with Mat
         RemoteSystemAddress + "/user/router-target-b"
       )).props(), "router")
 
-      Kamon.storeContext(contextWithBroadcast("remote-routee-1")) {
+      Kamon.runWithContext(contextWithBroadcast("remote-routee-1")) {
         router ! "reply-trace-token"
       }
 
@@ -130,7 +130,7 @@ class RemotingInstrumentationSpec extends TestKitBase with WordSpecLike with Mat
     "propagate the current Context when a remotely supervised child fails" in {
       val supervisor = system.actorOf(Props(new SupervisorOfRemote(testActor, RemoteSystemAddress)),"SUPERVISOR")
 
-      Kamon.storeContext(contextWithBroadcast("remote-supervision-1")) {
+      Kamon.runWithContext(contextWithBroadcast("remote-supervision-1")) {
         supervisor ! "fail"
       }
 

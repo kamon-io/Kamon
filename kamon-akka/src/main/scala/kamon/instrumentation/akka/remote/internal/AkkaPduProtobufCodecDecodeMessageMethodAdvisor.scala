@@ -23,7 +23,7 @@ object AkkaPduProtobufCodecDecodeMessage {
 
       if(remoteCtx.getContext.size() > 0) {
         val ctx = Kamon.defaultBinaryPropagation().read(ByteStreamReader.of(remoteCtx.getContext.toByteArray))
-        Kamon.store(ctx)
+        Kamon.storeContext(ctx)
       }
 
       val messageSize = ackAndEnvelope.getEnvelope.getMessage.getMessage.size()
