@@ -32,18 +32,18 @@ import scala.concurrent.{ExecutionContext, Future}
 class FutureInstrumentationSpec extends WordSpec with ScalaFutures with Matchers with PatienceConfiguration
     with OptionValues with Eventually with TestSpanReporter {
 
-  import kamon.instrumentation.futures.scala.ScalaFutureInstrumentation.{trace, traceAsync}
+  import kamon.instrumentation.futures.scala.ScalaFutureInstrumentation.{traceBody, traceFunc}
   implicit val ec: ExecutionContext = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(1))
 
   "a Scala Future" when {
     "manually instrumented" should {
       "create Delayed Spans for a traced future and traced callbacks" in {
-        Future(trace("future-body")("this is the future body"))
-          .map(traceAsync("first-callback")(_.length))
+        Future(traceBody("future-body")("this is the future body"))
+          .map(traceFunc("first-callback")(_.length))
           .map(_ * 10)
-          .flatMap(traceAsync("second-callback")(Future(_)))
+          .flatMap(traceFunc("second-callback")(Future(_)))
           .map(_ * 10)
-          .filter(traceAsync("third-callback")(_.toString.length > 10))
+          .filter(traceFunc("third-callback")(_.toString.length > 10))
 
         val spans = testSpanReporter.spans(200 millis)
         val bodySpan = spans.find(_.operationName == "future-body").get
@@ -64,13 +64,13 @@ class FutureInstrumentationSpec extends WordSpec with ScalaFutures with Matchers
       }
 
       "propagate the last chained Context when failures happen" in {
-        Future(trace("future-body")("this is the future body"))
-          .map(traceAsync("first-callback")(_.length))
+        Future(traceBody("future-body")("this is the future body"))
+          .map(traceFunc("first-callback")(_.length))
           .map(_ / 0)
-          .flatMap(traceAsync("second-callback")(Future(_))) // this will never happen
+          .flatMap(traceFunc("second-callback")(Future(_))) // this will never happen
           .map(_ * 10)
           .recover { case _ => "recovered" }
-          .map(traceAsync("third-callback")(_.toString))
+          .map(traceFunc("third-callback")(_.toString))
 
         val spans = testSpanReporter.spans(200 millis)
         val bodySpan = spans.find(_.operationName == "future-body").get
@@ -87,10 +87,10 @@ class FutureInstrumentationSpec extends WordSpec with ScalaFutures with Matchers
 
       "be usable when working with for comprehensions" in {
         for {
-          first <- Future(trace("first-future")("this is the future body"))
-          second <- Future(trace("second-future")(first.length))
-          third <- Future(trace("third-future")(second * 10))
-        } yield trace("yield") {
+          first <- Future(traceBody("first-future")("this is the future body"))
+          second <- Future(traceBody("second-future")(first.length))
+          third <- Future(traceBody("third-future")(second * 10))
+        } yield traceBody("yield") {
           Kamon.currentSpan().tag("location", "atTheYield")
           "Hello World! " * third
         }
@@ -117,7 +117,7 @@ class FutureInstrumentationSpec extends WordSpec with ScalaFutures with Matchers
     "instrumented with the default bytecode instrumentation" should {
       "propagate the context to the thread executing the future's body" in {
         val context = Context.of("key", "value")
-        val contextTag = Kamon.storeContext(context) {
+        val contextTag = Kamon.runWithContext(context) {
           Future(Kamon.currentContext().getTag(plain("key")))
         }
 
@@ -127,7 +127,7 @@ class FutureInstrumentationSpec extends WordSpec with ScalaFutures with Matchers
 
       "propagate the context to the thread executing callbacks on the future" in {
         val context = Context.of("key", "value")
-        val tagAfterTransformation = Kamon.storeContext(context) {
+        val tagAfterTransformation = Kamon.runWithContext(context) {
             Future("Hello Kamon!")
               // The current context is expected to be available during all intermediate processing.
               .map(_.length)

@@ -39,7 +39,7 @@ class FutureInstrumentationSpec extends WordSpec with Matchers with ScalaFutures
       "must be available when executing the future's body" in {
 
         val context = Context.of("key", "value")
-        val tagInBody = Kamon.storeContext(context) {
+        val tagInBody = Kamon.runWithContext(context) {
           Future(Kamon.currentContext().getTag(plain("key"))).unsafeStart
         }
 
@@ -48,7 +48,7 @@ class FutureInstrumentationSpec extends WordSpec with Matchers with ScalaFutures
 
       "must be available when executing callbacks on the future" in {
         val context = Context.of("key", "value")
-        val baggageAfterTransformations = Kamon.storeContext(context) {
+        val baggageAfterTransformations = Kamon.runWithContext(context) {
           Future("Hello Kamon!")
             // The current context is expected to be available during all intermediate processing.
             .map(_.length)

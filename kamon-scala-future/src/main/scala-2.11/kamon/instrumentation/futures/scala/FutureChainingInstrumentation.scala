@@ -74,7 +74,7 @@ object CallbackRunnableRunInstrumentation {
     val context = if(valueContext.nonEmpty()) valueContext else runnable.context
 
     storeCurrentRunnableTimestamp(timestamp)
-    Kamon.store(context)
+    Kamon.storeContext(context)
   }
 
   @Advice.OnMethodExit(suppress = classOf[Throwable])
@@ -105,7 +105,7 @@ object PromiseCompletingRunnableRunInstrumentation {
   @Advice.OnMethodEnter(suppress = classOf[Throwable])
   def enter(@Advice.This runnable: HasContext with HasTimestamp): Scope = {
     CallbackRunnableRunInstrumentation.storeCurrentRunnableTimestamp(runnable.timestamp)
-    Kamon.store(runnable.context)
+    Kamon.storeContext(runnable.context)
   }
 
   @Advice.OnMethodExit(suppress = classOf[Throwable])

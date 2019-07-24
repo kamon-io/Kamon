@@ -13,11 +13,11 @@
  * =========================================================================================
  */
 
-val kamonCore        = "io.kamon"     %% "kamon-core"                   % "2.0.0-RC1"
-val kamonTestkit     = "io.kamon"     %% "kamon-testkit"                % "2.0.0-RC1"
-val kamonExecutors   = "io.kamon"     %% "kamon-executors"              % "2.0.0-RC2"
-val kamonInstrument  = "io.kamon"     %% "kamon-instrumentation-common" % "2.0.0-RC1"
-val kanelaAgent      = "io.kamon"     %  "kanela-agent"                 % "1.0.0-RC4"
+val kamonCore        = "io.kamon"     %% "kamon-core"                   % "2.0.0"
+val kamonTestkit     = "io.kamon"     %% "kamon-testkit"                % "2.0.0"
+val kamonExecutors   = "io.kamon"     %% "kamon-executors"              % "2.0.0"
+val kamonInstrument  = "io.kamon"     %% "kamon-instrumentation-common" % "2.0.0"
+val kanelaAgent      = "io.kamon"     %  "kanela-agent"                 % "1.0.0"
 
 val twitterUtilCore  = "com.twitter"   %% "util-core"                   % "6.40.0"
 val scalazConcurrent = "org.scalaz"    %% "scalaz-concurrent"           % "7.2.28"
@@ -25,7 +25,7 @@ val catsEffect       = "org.typelevel" %%  "cats-effect"                % "1.2.0
 
 resolvers in ThisBuild += Resolver.bintrayRepo("kamon-io", "snapshots")
 resolvers in ThisBuild += Resolver.mavenLocal
-scalaVersion := "2.13.0"
+scalaVersion := "2.12.8"
 
 lazy val `kamon-futures` = (project in file("."))
   .enablePlugins(JavaAgent)
@@ -38,25 +38,25 @@ lazy val `kamon-futures` = (project in file("."))
 
 lazy val `kamon-twitter-future` = (project in file("kamon-twitter-future"))
   .enablePlugins(JavaAgent)
-  .settings(noPublishing: _*)
   .settings(instrumentationSettings)
   .settings(
+    scalaVersion := "2.12.8",
     bintrayPackage := "kamon-futures",
+    crossScalaVersions := Seq("2.11.12", "2.12.8"),
     libraryDependencies ++=
-      compileScope(kamonCore) ++
-      providedScope(twitterUtilCore, kamonExecutors) ++
+      compileScope(kamonCore, kamonExecutors) ++
+      providedScope(kanelaAgent, twitterUtilCore) ++
       testScope(scalatest, kamonTestkit, logbackClassic))
 
 lazy val `kamon-scalaz-future` = (project in file("kamon-scalaz-future"))
   .enablePlugins(JavaAgent)
-  .settings(noPublishing: _*)
   .settings(instrumentationSettings)
   .settings(
     bintrayPackage := "kamon-futures",
     crossScalaVersions := Seq("2.11.12", "2.12.8", "2.13.0"),
     libraryDependencies ++=
-      compileScope(kamonCore) ++
-      providedScope(scalazConcurrent, kamonExecutors) ++
+      compileScope(kamonCore, kamonExecutors) ++
+      providedScope(kanelaAgent, scalazConcurrent) ++
       testScope(scalatest, kamonTestkit, logbackClassic))
 
 lazy val `kamon-scala-future` = (project in file("kamon-scala-future"))
@@ -72,11 +72,12 @@ lazy val `kamon-scala-future` = (project in file("kamon-scala-future"))
 
 lazy val `kamon-cats-io` = (project in file("kamon-cats-io"))
   .enablePlugins(JavaAgent)
-  .settings(noPublishing: _*)
   .settings(bintrayPackage := "kamon-futures")
   .settings(instrumentationSettings)
   .settings(
+    scalaVersion := "2.12.8",
+    crossScalaVersions := Seq("2.11.12", "2.12.8"),
     libraryDependencies ++=
-      compileScope(kamonCore, kamonInstrument) ++
-      providedScope(catsEffect, kanelaAgent, kamonExecutors) ++
+      compileScope(kamonCore, kamonExecutors) ++
+      providedScope(catsEffect, kanelaAgent) ++
       testScope(scalatest, kamonTestkit, logbackClassic))

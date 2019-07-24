@@ -75,7 +75,7 @@ object CallbackRunnableRunInstrumentation {
     val context = if(valueContext.nonEmpty()) valueContext else runnable.context
 
     storeCurrentRunnableTimestamp(timestamp)
-    Kamon.store(context)
+    Kamon.storeContext(context)
   }
 
   @Advice.OnMethodExit(suppress = classOf[Throwable])

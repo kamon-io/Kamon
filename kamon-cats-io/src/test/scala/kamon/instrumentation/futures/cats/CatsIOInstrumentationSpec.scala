@@ -30,7 +30,7 @@ class CatsIoInstrumentationSpec extends WordSpec with ScalaFutures with Matchers
         val contextTagAfterTransformations =
           for {
             scope <- IO {
-              Kamon.store(context)
+              Kamon.storeContext(context)
             }
             len <- IO("Hello Kamon!").map(_.length)
             _ <- IO(len.toString)
