@@ -71,6 +71,7 @@ class ActorSystemMetricsSpec extends TestKit(ActorSystem("ActorSystemMetricsSpec
     "record dead letters" in {
       val doaActor = system.actorOf(Props[ActorMetricsTestActor], "doa")
       val deathWatcher = TestProbe()
+      systemMetrics.deadLetters.value(true)
       deathWatcher.watch(doaActor)
       doaActor ! PoisonPill
       deathWatcher.expectTerminated(doaActor)
