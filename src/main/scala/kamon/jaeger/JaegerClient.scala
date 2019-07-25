@@ -30,19 +30,22 @@ import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
 
 object JaegerClient {
+
+  private val log = LoggerFactory.getLogger(classOf[JaegerClient])
+
   def apply(config: Config): JaegerClient = {
     val jaegerConfig = config.getConfig("kamon.jaeger")
-    val useAgent = jaegerConfig.getBoolean("use-agent")
+    val protocol = jaegerConfig.getString("protocol")
     val host = jaegerConfig.getString("host")
+    val port = jaegerConfig.getInt("port")
     val includeEnvTags = jaegerConfig.getBoolean("include-environment-tags")
 
-    if(useAgent) {
-      val port = jaegerConfig.getInt("agent-port")
-      buildAgentClient(host, port, includeEnvTags)
-    } else {
-      val port = jaegerConfig.getInt("port")
-      val tls = jaegerConfig.getBoolean("tls")
-      buildCollectorClient(host, port, tls, includeEnvTags)
+    protocol match {
+      case "udp"            => buildAgentClient(host, port, includeEnvTags)
+      case "http" | "https" => buildCollectorClient(host, port, protocol, includeEnvTags)
+      case anyOther         =>
+        log.warn("Unknown protocol [{}] found in the configuration, falling back to UDP", anyOther)
+        buildAgentClient(host, port, includeEnvTags)
     }
   }
 
@@ -54,8 +57,7 @@ object JaegerClient {
     new JaegerClient(Some(agentMaxPacketSize - agentBatchOverhead), jaegerSender)
   }
 
-  private def buildCollectorClient(host: String, port: Int, tls: Boolean, includeEnvTags: Boolean): JaegerClient = {
-    val scheme = if (tls) "https" else "http"
+  private def buildCollectorClient(host: String, port: Int, scheme: String, includeEnvTags: Boolean): JaegerClient = {
     val endpoint = s"$scheme://$host:$port/api/traces"
     val sender = new HttpSender.Builder(endpoint).build()
     val jaegerSender = new JaegerSender(sender, includeEnvTags)
