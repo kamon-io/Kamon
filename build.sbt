@@ -13,8 +13,8 @@
  * =========================================================================================
  */
 
-val kamonCore        = "io.kamon"             %% "kamon-core"    % "2.0.0-RC1"
-val kamonTestkit     = "io.kamon"             %% "kamon-testkit" % "2.0.0-RC1"
+val kamonCore        = "io.kamon"             %% "kamon-core"    % "2.0.0"
+val kamonTestkit     = "io.kamon"             %% "kamon-testkit" % "2.0.0"
 val okHttp           = "com.squareup.okhttp3" %  "okhttp"        % "3.9.1"
 val okHttpMockServer = "com.squareup.okhttp3" %  "mockwebserver" % "3.9.1"
 val scalatest2_13    = "org.scalatest"        %% "scalatest"     % "3.0.8"
