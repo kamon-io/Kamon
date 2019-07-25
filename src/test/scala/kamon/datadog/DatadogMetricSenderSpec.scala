@@ -123,6 +123,34 @@ class DatadogMetricSenderSpec extends WordSpec with Matchers with Reconfigure {
         buffer.lst should contain("test.counter" -> "0|c|#service:kamon-application,env:staging,tag1:value1,tag2:value2,otherTag:otherValue")
     }
 
+    "append no tags" in AgentReporter(new TestBuffer(), ConfigFactory.parseString(
+      """
+        |kamon.datadog.environment-tags.include-service = no
+        |kamon.datadog.environment-tags.exclude = [env]
+        |""".stripMargin).withFallback(Kamon.config())) {
+      case (buffer, reporter) =>
+
+        val now = Instant.now()
+        reporter.reportPeriodSnapshot(
+          PeriodSnapshot.apply(
+            now.minusMillis(1000),
+            now,
+            MetricSnapshot.ofValues[Long](
+              "test.counter",
+              "test",
+              Metric.Settings.ForValueInstrument(MeasurementUnit.none, java.time.Duration.ZERO),
+              Instrument.Snapshot.apply(TagSet.Empty, 0L) :: Nil) :: Nil,
+            Nil,
+            Nil,
+            Nil,
+            Nil
+          )
+        )
+
+        buffer.lst should have size 1
+        buffer.lst should contain("test.counter" -> "0|c")
+    }
+
   }
 
   def AgentReporter[A, B <: PacketBuffer](buffer: B, config: Config)(f: (B, DatadogAgentReporter) => A): A = {

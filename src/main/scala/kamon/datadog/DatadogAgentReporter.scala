@@ -127,7 +127,11 @@ object DatadogAgentReporter {
 
       val filteredTags = envTags.iterator(_.toString) ++ tags.iterator(_.toString).filter(p => filter.accept(p.key))
 
-      val stringTags: String = "|#" + filteredTags.map { p => s"${p.key}:${p.value}" }.mkString(",")
+      val stringTags: String = if (filteredTags.nonEmpty) {
+        "|#" + filteredTags.map { p => s"${p.key}:${p.value}" }.mkString(",")
+      } else {
+        ""
+      }
 
       new StringBuilder()
         .append(measurementData)
@@ -214,4 +218,3 @@ object DatadogAgentReporter {
     }
   }
 }
-
