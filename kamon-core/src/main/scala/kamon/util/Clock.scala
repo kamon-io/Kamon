@@ -106,7 +106,7 @@ object Clock {
       _systemClock.getZone()
 
     override def nanosSince(instant: Instant): Long = {
-      return nanosBetween(instant, this.instant())
+      nanosBetween(instant, this.instant())
     }
   }
 
@@ -116,7 +116,7 @@ object Clock {
   def nanosBetween(left: Instant, right: Instant): Long = {
     val secsDiff = Math.subtractExact(right.getEpochSecond, left.getEpochSecond)
     val totalNanos = Math.multiplyExact(secsDiff, _nanosInSecond)
-    return Math.addExact(totalNanos, right.getNano - left.getNano)
+    Math.addExact(totalNanos, right.getNano - left.getNano)
   }
 
   /**
