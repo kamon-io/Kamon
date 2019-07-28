@@ -15,8 +15,8 @@
 
 resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
 
-val kamonCore       = "io.kamon" %% "kamon-core"        % "2.0.0-RC1"
-val kamonTestKit    = "io.kamon" %% "kamon-testkit"     % "2.0.0-RC1"
+val kamonCore       = "io.kamon" %% "kamon-core"        % "2.0.0"
+val kamonTestKit    = "io.kamon" %% "kamon-testkit"     % "2.0.0"
 val nanohttpd       = "org.nanohttpd" % "nanohttpd"     % "2.3.1"
 val asyncHttpClient = "com.squareup.okhttp3" % "okhttp" % "3.10.0"
 
