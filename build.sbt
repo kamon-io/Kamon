@@ -136,7 +136,7 @@ lazy val commonSettings = Seq(
   startYear := Some(2013),
   concurrentRestrictions in Global += Tags.limit(Tags.Test, 1),
   scalaVersion := "2.13.0",
-  crossScalaVersions := Seq("2.11.12", "2.12.7", "2.13.0"),
+  crossScalaVersions := Seq("2.11.12", "2.12.8", "2.13.0"),
   scalacOptions ++= Seq(
     "-deprecation",
     "-encoding", "UTF-8",
