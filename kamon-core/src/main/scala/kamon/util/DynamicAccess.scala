@@ -50,7 +50,7 @@ class DynamicAccess(val classLoader: ClassLoader) {
       val obj = constructor.newInstance(values: _*)
       val t = implicitly[ClassTag[T]].runtimeClass
       if (t.isInstance(obj)) obj.asInstanceOf[T] else throw new ClassCastException(clazz.getName + " is not a subtype of " + t)
-    } catch { case i: InvocationTargetException if i.getTargetException ne null ⇒ throw i.getTargetException }
+    } catch { case i: InvocationTargetException if i.getTargetException ne null => throw i.getTargetException }
 
   /**
     * Tries to create an instance of the provided fully-qualified class name, passing the provided arguments to the

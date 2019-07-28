@@ -181,8 +181,8 @@ object Filter {
     private val _pathRegex = pattern.r
 
     override def accept(value: String): Boolean = value match {
-      case _pathRegex(_*) ⇒ true
-      case _              ⇒ false
+      case _pathRegex(_*) => true
+      case _              => false
     }
   }
 
