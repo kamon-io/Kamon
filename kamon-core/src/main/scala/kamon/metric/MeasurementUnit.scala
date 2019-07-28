@@ -78,7 +78,7 @@ object MeasurementUnit {
       value
     } else if(from == to)
       value
-    else (from.magnitude.scaleFactor / to.magnitude.scaleFactor) * value.toDouble
+    else (from.magnitude.scaleFactor / to.magnitude.scaleFactor) * value
   }
 
   /**

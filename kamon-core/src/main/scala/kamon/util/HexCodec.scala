@@ -57,20 +57,6 @@ object HexCodec {
   }
 
   /**
-    * Returns 16 or 32 character hex string depending on if {@code high} is zero.
-    */
-  private def toLowerHex(high: Long, low: Long): String = {
-    val result = new Array[Char](if (high != 0) 32 else 16)
-    var pos = 0
-    if (high != 0) {
-      writeHexLong(result, pos, high)
-      pos += 16
-    }
-    writeHexLong(result, pos, low)
-    new String(result)
-  }
-
-  /**
     * Inspired by {@code okio.Buffer.writeLong}
     */
   def toLowerHex(v: Long): String = {

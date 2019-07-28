@@ -58,7 +58,7 @@ object MetricInspection {
   def instruments[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings](metric: Metric[Inst, Sett], tags: TagSet): Map[TagSet, Inst] = {
     def hasAllRequestedTags(instrumentTags: TagSet): Boolean = {
       val instrumentPairs = instrumentTags.iterator().map(t => (t.key -> Tag.unwrapValue(t))).toMap
-      tags.iterator().forall(t => instrumentPairs.get(t.key).filter(sv => sv == Tag.unwrapValue(t)).nonEmpty)
+      tags.iterator().forall(t => instrumentPairs.get(t.key).exists(sv => sv == Tag.unwrapValue(t)))
     }
 
     instrumentsMap(metric)

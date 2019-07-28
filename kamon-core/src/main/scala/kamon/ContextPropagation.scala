@@ -63,7 +63,7 @@ trait ContextPropagation { self: Configuration =>
     _defaultBinaryPropagation
 
   private def init(config: Config): Unit = synchronized {
-    _propagationComponents = ContextPropagation.Channels.from(self.config)
+    _propagationComponents = ContextPropagation.Channels.from(config)
     _defaultHttpPropagation = _propagationComponents.httpChannels(ContextPropagation.DefaultHttpChannel)
     _defaultBinaryPropagation = _propagationComponents.binaryChannels(ContextPropagation.DefaultBinaryChannel)
   }

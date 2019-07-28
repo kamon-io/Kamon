@@ -106,7 +106,7 @@ object Timer {
           _logger.warn (
             s"Failed to record value [$nanos] on [${metric.name},${tags}] because the value is outside of the " +
             s"configured range. The recorded value was adjusted to the highest trackable value [$highestTrackableValue]. " +
-            s"You might need to change your dynamic range configuration for this metric"
+            "You might need to change your dynamic range configuration for this metric"
           )
       }
 

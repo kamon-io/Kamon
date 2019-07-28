@@ -24,7 +24,6 @@ import org.slf4j.LoggerFactory
 
 import scala.reflect.ClassTag
 import scala.util.control.NonFatal
-import scala.util.{Failure, Success}
 
 /**
   * Context propagation that uses HTTP headers as the transport medium. HTTP propagation mechanisms read any number of
@@ -169,33 +168,30 @@ object HttpPropagation {
 
     private val _longTypePrefix = "l:"
     private val _booleanTypePrefix = "b:"
-    private val _booleanTrue = "true"
-    private val _booleanFalse = "false"
 
     /**
       * Tries to infer and parse a value into one of the supported tag types: String, Long or Boolean by looking for the
       * type indicator prefix on the tag value. If the inference fails it will default to treat the value as a String.
       */
     private def parseTagValue(value: String): Any = {
-      if (value.isEmpty || value.length < 2) // Empty and short values definitely do not have type indicators.
+      if (value.length < 2) // Empty and short values definitely do not have type indicators.
         value
       else {
         if(value.startsWith(_longTypePrefix)) {
           // Try to parse the content as a Long value.
           val remaining = value.substring(2)
           try {
-            java.lang.Long.parseLong(remaining)
+            remaining.toLong
           } catch {
-            case _: Throwable => remaining
+            case _: java.lang.NumberFormatException => remaining
           }
 
         } else if(value.startsWith(_booleanTypePrefix)) {
-
           // Try to parse the content as a Boolean value.
           val remaining = value.substring(2)
-          if(remaining.equals(_booleanTrue))
+          if(remaining == "true")
             true
-          else if(remaining.equals(_booleanFalse))
+          else if(remaining == "false")
             false
           else
             remaining

@@ -135,7 +135,7 @@ object PeriodSnapshot {
     }
 
     private def isSameDurationAsTickInterval(): Boolean = {
-      Kamon.config().getDuration("kamon.metric.tick-interval").equals(period)
+      Kamon.config().getDuration("kamon.metric.tick-interval") == period
     }
 
     private def buildPeriodSnapshot(from: Instant, to: Instant, resetState: Boolean): PeriodSnapshot = {

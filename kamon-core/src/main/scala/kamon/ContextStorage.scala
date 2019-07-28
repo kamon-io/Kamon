@@ -141,7 +141,7 @@ object ContextStorage {
     * instrumentation follows them around.
     */
   private val _contextStorage: Storage = {
-    if("true".equals(System.getProperty("kamon.context.debug")))
+    if(sys.props("kamon.context.debug") == "true")
       Storage.Debug()
     else
       Storage.ThreadLocal()
