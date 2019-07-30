@@ -21,6 +21,7 @@ import kanela.agent.libs.net.bytebuddy.implementation.bind.annotation._
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
+import java.util.regex.Pattern
 
 
 class AkkaHttpServerInstrumentation extends InstrumentationBuilder {
@@ -193,7 +194,7 @@ object ResolveOperationNameOnRouteInterceptor {
           case a: Any     => List(a.toString)
         }
         values.flatten.fold(consumedSegment) { (full, value) =>
-          val r = s"(?i)(^|/)" + value + "($|/)"
+          val r = "(?i)(^|/)" + Pattern.quote(value) + "($|/)"
           full.replaceFirst(r, "$1{}$2")
         }
     }
