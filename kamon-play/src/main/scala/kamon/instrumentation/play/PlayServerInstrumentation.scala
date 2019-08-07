@@ -14,6 +14,7 @@ import kamon.instrumentation.http.HttpServerInstrumentation.RequestHandler
 import kamon.instrumentation.http.{HttpMessage, HttpServerInstrumentation}
 import kamon.util.CallingThreadExecutionContext
 import kanela.agent.api.instrumentation.InstrumentationBuilder
+import kanela.agent.api.instrumentation.classloader.ClassRefiner
 import kanela.agent.api.instrumentation.mixin.Initializer
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 import play.api.mvc.RequestHeader
@@ -26,50 +27,41 @@ import scala.util.{Failure, Success}
 
 class PlayServerInstrumentation extends InstrumentationBuilder {
 
-  if(isAkkaHttpAround) {
-
     /**
       * When using the Akka HTTP server, we will use the exact same instrumentation that comes from the Akka HTTP module,
       * the only difference here is that we will change the component name.
       */
-    onType("play.core.server.AkkaHttpServer")
-      .advise(anyMethods("createServerBinding", "play$core$server$AkkaHttpServer$$createServerBinding"), CreateServerBindingAdvice)
-  }
+  private val isAkkaHttpAround = ClassRefiner.builder().mustContains("play.core.server.AkkaHttpServerProvider").build()
 
-  if(isNettyAround) {
+  onType("play.core.server.AkkaHttpServer")
+      .when(isAkkaHttpAround)
+      .advise(anyMethods("createServerBinding", "play$core$server$AkkaHttpServer$$createServerBinding"), CreateServerBindingAdvice)
+
 
     /**
       * When using the Netty HTTP server we are rolling our own instrumentation which simply requires us to create the
       * HttpServerInstrumentation instance and call the expected callbacks on it.
       */
-    onTypes("play.core.server.NettyServer")
+  private val isNettyAround = ClassRefiner.builder().mustContains("play.core.server.NettyServerProvider").build()
+
+  onType("play.core.server.NettyServer")
+      .when(isNettyAround)
       .mixin(classOf[HasServerInstrumentation.Mixin])
       .advise(isConstructor, NettyServerInitializationAdvice)
 
-    onType("play.core.server.netty.PlayRequestHandler")
+  onType("play.core.server.netty.PlayRequestHandler")
+      .when(isNettyAround)
       .mixin(classOf[HasServerInstrumentation.Mixin])
       .mixin(classOf[HasTimestamp.Mixin])
       .advise(isConstructor, PlayRequestHandlerConstructorAdvice)
       .advise(isConstructor, CaptureCurrentTimestampOnExit)
       .advise(method("handle"), NettyPlayRequestHandlerHandleAdvice)
-  }
 
   /**
     * This final bit ensures that we will apply an operation name right before filters get to execute.
     */
   onType("play.api.http.DefaultHttpRequestHandler")
     .advise(method("filterHandler").and(takesArguments(2)), GenerateOperationNameOnFilterHandler)
-
-
-  private def isNettyAround(): Boolean =
-    try { Class.forName("play.core.server.NettyServerProvider", false, getClass.getClassLoader) != null } catch {
-      case _: Throwable => false
-    }
-
-  private def isAkkaHttpAround(): Boolean =
-    try { Class.forName("play.core.server.AkkaHttpServerProvider", false, getClass.getClassLoader) != null } catch {
-      case _: Throwable => false
-    }
 }
 
 
@@ -160,7 +152,7 @@ object NettyPlayRequestHandlerHandleAdvice {
       Option(request.headers().get(header))
 
     override def readAll(): Map[String, String] =
-      request.headers().entries().asScala.map(e => (e.getKey -> e.getValue)).toMap
+      request.headers().entries().asScala.map(e => e.getKey -> e.getValue).toMap
   }
 
   private def toResponse(response: HttpResponse): HttpMessage.ResponseBuilder[HttpResponse] = new HttpMessage.ResponseBuilder[HttpResponse] {
