@@ -20,7 +20,7 @@ class FutureChainingInstrumentation extends InstrumentationBuilder {
     * if they are not being used in a future, although that is just one extra field that will not be used or visible to
     * anybody who is not looking for it.
     */
-  onSubTypesOf("scala.util.Try")
+  onTypes("scala.util.Success", "scala.util.Failure")
     .mixin(classOf[HasContext.Mixin])
     .advise(isConstructor, CaptureCurrentContextOnExit)
 
