@@ -56,6 +56,7 @@ trait TestWebServer extends TracingDirectives {
           complete("OK")
         } ~
         pathPrefix("extraction") {
+          authenticateBasic("realm", credentials => Option("Okay")) { srt =>
           (post | get) {
             pathPrefix("nested") {
               pathPrefix(IntNumber / "fixed") { num =>
@@ -104,6 +105,7 @@ trait TestWebServer extends TracingDirectives {
             path("segment" / Segment){ segment =>
               complete(HttpResponse(entity = HttpEntity(ContentTypes.`text/plain(UTF-8)`, segment)))
             }
+          }
           }
         } ~
         path(rootOk) {
