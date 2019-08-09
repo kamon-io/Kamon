@@ -105,7 +105,7 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
     }
 
     // Remove all modules that no longer exist in the configuration.
-    val missingModules = automaticallyRegisteredModules.filterKeys(moduleName => configuredModules.find(_.name == moduleName).isEmpty)
+    val missingModules = automaticallyRegisteredModules.filterKeys(moduleName => !configuredModules.exists(_.name == moduleName))
     missingModules.foreach {
       case (_, entry) => stopModule(entry)
     }

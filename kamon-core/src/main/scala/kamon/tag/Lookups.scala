@@ -169,16 +169,16 @@ object Lookups {
   private val _plainString = (a: String) => a
   private val _stringOption = (a: String) => Option(a)
   private val _stringOptional = (a: String) => Optional.of(a)
-  private val _stringSafetyCheck = (a: Any) => a != null && a.isInstanceOf[String]
+  private val _stringSafetyCheck = (a: Any) => a.isInstanceOf[String]
 
   private val _plainLong = (a: java.lang.Long) => a
   private val _longOption = (a: Long) => Option(a)
   private val _longOptional = (a: Long) => Optional.of(a)
-  private val _longSafetyCheck = (a: Any) => a != null && a.isInstanceOf[Long]
+  private val _longSafetyCheck = (a: Any) => a.isInstanceOf[Long]
 
   private val _plainBoolean = (a: java.lang.Boolean) => a
   private val _booleanOption = (a: Boolean) => Option(a)
   private val _booleanOptional = (a: Boolean) => Optional.of(a)
-  private val _booleanSafetyCheck = (a: Any) => a != null && a.isInstanceOf[Boolean]
+  private val _booleanSafetyCheck = (a: Any) => a.isInstanceOf[Boolean]
 
 }

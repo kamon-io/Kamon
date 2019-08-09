@@ -134,19 +134,19 @@ class MetricRegistry(config: Config, scheduler: ScheduledExecutorService, clock:
       sys.error(s"Cannot redefine metric [$name] as a [${instrumentType.name}], it was already registered as a [${metric.getClass.getName}]")
 
   private def checkDescription(name: String, description: String, providedDescription: Option[String]): Unit =
-    if(providedDescription.filter(d => d != description).nonEmpty)
+    if(providedDescription.exists(d => d != description))
       _logger.warn(s"Ignoring new description [${providedDescription.getOrElse("")}] for metric [${name}]")
 
   private def checkUnit(name: String, unit: MeasurementUnit, providedUnit: Option[MeasurementUnit]): Unit =
-    if(providedUnit.filter(u => u != unit).nonEmpty)
+    if(providedUnit.exists(u => u != unit))
       _logger.warn(s"Ignoring new unit [${providedUnit.getOrElse("")}] for metric [${name}]")
 
   private def checkAutoUpdate(name: String, autoUpdateInterval: Duration, providedAutoUpdateInterval: Option[Duration]): Unit =
-    if(providedAutoUpdateInterval.filter(u => u != autoUpdateInterval).nonEmpty)
+    if(providedAutoUpdateInterval.exists(u => u != autoUpdateInterval))
       _logger.warn(s"Ignoring new auto-update interval [${providedAutoUpdateInterval.getOrElse("")}] for metric [${name}]")
 
   private def checkDynamicRange(name: String, dynamicRange: DynamicRange, providedDynamicRange: Option[DynamicRange]): Unit =
-    if(providedDynamicRange.filter(dr => dr != dynamicRange).nonEmpty)
+    if(providedDynamicRange.exists(dr => dr != dynamicRange))
       _logger.warn(s"Ignoring new dynamic range [${providedDynamicRange.getOrElse("")}] for metric [${name}]")
 
 

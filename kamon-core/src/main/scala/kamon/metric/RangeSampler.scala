@@ -134,7 +134,7 @@ object RangeSampler {
         case _: ArrayIndexOutOfBoundsException =>
           _logger.warn (
             s"Failed to record value on [${metric.name},${tags}] because the value is outside of the " +
-            s"configured range. You might need to change your dynamic range configuration for this metric"
+            "configured range. You might need to change your dynamic range configuration for this metric"
           )
       }
 

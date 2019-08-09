@@ -17,11 +17,10 @@
 package kamon.metric
 
 import java.nio.ByteBuffer
-import java.time.Duration
 
 import kamon.metric.Metric.{BaseMetric, BaseMetricAutoUpdate}
 import kamon.tag.TagSet
-import org.HdrHistogram.{BaseAtomicHdrHistogram, BaseLocalHdrHistogram, HdrHistogramInternalState, ZigZag}
+import org.HdrHistogram.{BaseAtomicHdrHistogram, HdrHistogramInternalState, ZigZag}
 import org.slf4j.LoggerFactory
 
 
@@ -71,7 +70,7 @@ object Histogram {
           _logger.warn (
             s"Failed to record value [$value] on [${metric.name},${tags}] because the value is outside of the " +
             s"configured range. The recorded value was adjusted to the highest trackable value [$highestTrackableValue]. " +
-            s"You might need to change your dynamic range configuration for this metric"
+            "You might need to change your dynamic range configuration for this metric"
           )
       }
 
@@ -89,7 +88,7 @@ object Histogram {
           _logger.warn (
             s"Failed to record value [$value] on [${metric.name},${tags}] because the value is outside of the " +
             s"configured range. The recorded value was adjusted to the highest trackable value [$highestTrackableValue]. " +
-            s"You might need to change your dynamic range configuration for this metric"
+            "You might need to change your dynamic range configuration for this metric"
           )
       }
 
