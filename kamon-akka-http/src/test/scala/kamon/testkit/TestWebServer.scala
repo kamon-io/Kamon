@@ -100,6 +100,9 @@ trait TestWebServer extends TracingDirectives {
                   failWith(failure)
                 }
               }
+            } ~
+            path("segment" / Segment){ segment =>
+              complete(HttpResponse(entity = HttpEntity(ContentTypes.`text/plain(UTF-8)`, segment)))
             }
           }
         } ~

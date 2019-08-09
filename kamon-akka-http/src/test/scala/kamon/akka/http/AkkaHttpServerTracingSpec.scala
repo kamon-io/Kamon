@@ -21,6 +21,7 @@ import java.util.UUID
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.HttpRequest
+import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.ActorMaterializer
 import kamon.testkit._
 import kamon.tag.Lookups.{plain, plainLong, plainBoolean}
@@ -29,6 +30,7 @@ import org.scalatest._
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 
 import scala.concurrent.duration._
+import akka.http.scaladsl.model.StatusCodes
 
 class AkkaHttpServerTracingSpec extends WordSpecLike with Matchers with ScalaFutures with Inside with BeforeAndAfterAll
     with MetricInspection.Syntax with Reconfigure with TestWebServer with Eventually with OptionValues with TestSpanReporter {
@@ -70,6 +72,21 @@ class AkkaHttpServerTracingSpec extends WordSpecLike with Matchers with ScalaFut
            span.operationName shouldBe expected
          }
        }
+
+       "not fail when request url contains special regexp chars" in {
+        val path = "extraction/segment/special**"
+        val expected = "/extraction/segment/{}"
+        val target = s"http://$interface:$port/$path"
+        val response = Http().singleRequest(HttpRequest(uri = target)).futureValue
+
+        response.status shouldBe StatusCodes.OK
+        Unmarshal(response).to[String].futureValue shouldBe "special**"
+
+        eventually(timeout(10 seconds)) {
+          val span = testSpanReporter().nextSpan().value
+          span.operationName shouldBe expected
+        }
+      }       
 
       "take a sampling decision when the routing tree hits an onComplete directive" in {
         val path = "extraction/on-complete/42/more-path"
