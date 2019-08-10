@@ -23,6 +23,8 @@ import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 import java.util.regex.Pattern
 
+import kamon.context.Context
+
 
 class AkkaHttpServerInstrumentation extends InstrumentationBuilder {
 
@@ -157,22 +159,25 @@ object ResolveOperationNameOnRouteInterceptor {
     }
 
   private def resolveOperationName(requestContext: RequestContext): RequestContext = {
-    val defaultOperationName = ServerFlowWrapper.defaultOperationName(requestContext.request.uri.authority.port)
 
-    // We will only change the operation name if no change was applied to it. At this point, the only way in which it
-    // might have changed is if the user changed it with the operationName directive or just accessing the Span and
-    // changing it there, so we wouldn't want to overwrite that.
-    //
-    if(Kamon.currentSpan().operationName() == defaultOperationName) {
-      val allMatches = requestContext.asInstanceOf[HasMatchingContext].matchingContext.reverse.map(singleMatch)
-      val operationName = allMatches.mkString("")
+    // We will only change the operation name if the last edit made to it was an automatic one. At this point, the only
+    // way in which the operation name might have changed is if the user changed it with the operationName directive or
+    // by accessing the Span and changing it directly there, so we wouldn't want to overwrite that.
 
-      if(operationName.nonEmpty) {
-        Kamon.currentSpan()
-          .name(operationName)
-          .takeSamplingDecision()
+    Kamon.currentContext().get(LastAutomaticOperationNameEdit.Key).foreach(lastEdit => {
+      if(Kamon.currentSpan().operationName() == lastEdit.operationName) {
+        val allMatches = requestContext.asInstanceOf[HasMatchingContext].matchingContext.reverse.map(singleMatch)
+        val operationName = allMatches.mkString("")
+
+        if(operationName.nonEmpty) {
+          Kamon.currentSpan()
+            .name(operationName)
+            .takeSamplingDecision()
+
+          lastEdit.operationName = operationName
+        }
       }
-    }
+    })
 
     requestContext
   }
@@ -199,6 +204,15 @@ object ResolveOperationNameOnRouteInterceptor {
         }
     }
   }
+}
+
+class LastAutomaticOperationNameEdit(@volatile var operationName: String)
+
+object LastAutomaticOperationNameEdit {
+  val Key = Context.key[Option[LastAutomaticOperationNameEdit]]("laone", None)
+
+  def apply(operationName: String): LastAutomaticOperationNameEdit =
+    new LastAutomaticOperationNameEdit(operationName)
 }
 
 object RequestContextCopyInterceptor {

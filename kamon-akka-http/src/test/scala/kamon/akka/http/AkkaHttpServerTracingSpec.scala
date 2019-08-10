@@ -90,7 +90,7 @@ class AkkaHttpServerTracingSpec extends WordSpecLike with Matchers with ScalaFut
 
       "take a sampling decision when the routing tree hits an onComplete directive" in {
         val path = "extraction/on-complete/42/more-path"
-        val expected = "/extraction/on-complete/{}"
+        val expected = "/extraction/on-complete/{}/more-path"
         val target = s"http://$interface:$port/$path"
         Http().singleRequest(HttpRequest(uri = target)).map(_.discardEntityBytes())
 
@@ -102,7 +102,7 @@ class AkkaHttpServerTracingSpec extends WordSpecLike with Matchers with ScalaFut
 
       "take a sampling decision when the routing tree hits an onSuccess directive" in {
         val path = "extraction/on-success/42/after"
-        val expected = "/extraction/on-success/{}"
+        val expected = "/extraction/on-success/{}/after"
         val target = s"http://$interface:$port/$path"
         Http().singleRequest(HttpRequest(uri = target)).map(_.discardEntityBytes())
 
@@ -114,7 +114,7 @@ class AkkaHttpServerTracingSpec extends WordSpecLike with Matchers with ScalaFut
 
       "take a sampling decision when the routing tree hits a completeOrRecoverWith directive with a failed future" in {
         val path = "extraction/complete-or-recover-with/42/after"
-        val expected = "/extraction/complete-or-recover-with/{}"
+        val expected = "/extraction/complete-or-recover-with/{}/after"
         val target = s"http://$interface:$port/$path"
         Http().singleRequest(HttpRequest(uri = target)).map(_.discardEntityBytes())
 
