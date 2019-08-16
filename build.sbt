@@ -22,7 +22,7 @@ val kamonInstrument = "io.kamon" %% "kamon-instrumentation-common" % "2.0.0"
 val kanelaAgent     =  "io.kamon" % "kanela-agent"       % "1.0.0"
 
 val akka24Version = "2.4.20"
-val akka25Version = "2.5.23"
+val akka25Version = "2.5.24"
 
 val akkaActor       = "com.typesafe.akka"   %% "akka-actor"             % akka25Version
 val akkaTestkit     = "com.typesafe.akka"   %% "akka-testkit"           % akka25Version
