@@ -124,7 +124,7 @@ class DatadogAPIReporter(@volatile private var configuration: Configuration, @vo
       }
     }
 
-    (snapshot.histograms ++ snapshot.rangeSamplers).foreach(addDistribution)
+    (snapshot.histograms ++ snapshot.rangeSamplers ++ snapshot.timers).foreach(addDistribution)
 
     seriesBuilder
       .insert(0, "{\"series\":[")
