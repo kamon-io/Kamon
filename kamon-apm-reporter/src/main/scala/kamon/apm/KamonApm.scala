@@ -9,8 +9,8 @@ import com.typesafe.config.Config
 import kamino.IngestionV1
 import kamino.IngestionV1.InstrumentType.{COUNTER, GAUGE, HISTOGRAM, MIN_MAX_COUNTER}
 import kamino.IngestionV1._
-import kamon.lib.org.HdrHistogram.ZigZag
-import kamon.metric.Distribution.ZigZagCounts
+import kamon.lib.org.HdrHistogram.{BaseAtomicHdrHistogram, ZigZag}
+import kamon.metric.Distribution.{LocalHistogram, ZigZagCounts}
 import kamon.metric.{DynamicRange, Instrument, MetricSnapshot, PeriodSnapshot}
 import kamon.metric.MeasurementUnit.{information, time}
 import kamon.module.{CombinedReporter, Module, ModuleFactory}
@@ -165,7 +165,11 @@ class KamonApm(configPath: String) extends CombinedReporter {
       case Instrument.Snapshot(tags, value) =>
         _valueBuffer.clear()
         // TODO: Keep the decimal parts of the gauge when reporting data to APM.
-        ZigZag.putLong(_valueBuffer, _unitConverter.convertValue(value, metric.settings.unit).toLong)
+        val convertedValue = _unitConverter.convertValue(value, metric.settings.unit).toLong
+        val offset = countsArrayIndex(convertedValue)
+
+        if(offset > 0) ZigZag.putLong(_valueBuffer, -offset)
+        ZigZag.putLong(_valueBuffer, 1)
         _valueBuffer.flip()
 
         IngestionV1.Metric.newBuilder()

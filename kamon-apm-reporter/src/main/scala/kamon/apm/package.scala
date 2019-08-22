@@ -67,4 +67,40 @@ package object apm {
     def shutdownMark    = s"$ingestionApi/goodbye"
     def tracingRoute    = s"$ingestionApi/tracing/ingest"
   }
+
+  /*
+   *  Internal HDR Histogram state required to convert index to values and get bucket size information. These values
+   *  correspond to a histogram configured to have 2 significant value digits prevision and a smallest discernible value
+   *  of 1.
+   */
+  def countsArrayIndex(value: Long): Int = {
+
+    val SubBucketHalfCountMagnitude = 7
+    val SubBucketHalfCount          = 128
+    val UnitMagnitude               = 0
+    val SubBucketCount              = Math.pow(2, SubBucketHalfCountMagnitude + 1).toInt
+    val LeadingZeroCountBase        = 64 - UnitMagnitude - SubBucketHalfCountMagnitude - 1
+    val SubBucketMask               = (SubBucketCount.toLong - 1) << UnitMagnitude
+
+    def countsArrayIndex(bucketIndex: Int, subBucketIndex: Int): Int = {
+      assert(subBucketIndex < SubBucketCount)
+      assert(bucketIndex == 0 || (subBucketIndex >= SubBucketHalfCount))
+      val bucketBaseIndex = (bucketIndex + 1) << SubBucketHalfCountMagnitude
+      val offsetInBucket = subBucketIndex - SubBucketHalfCount
+      bucketBaseIndex + offsetInBucket
+    }
+
+    def getBucketIndex(value: Long): Int =
+      LeadingZeroCountBase - java.lang.Long.numberOfLeadingZeros(value | SubBucketMask)
+
+    def getSubBucketIndex(value: Long, bucketIndex: Long): Int  =
+      Math.floor(value / Math.pow(2, (bucketIndex + UnitMagnitude))).toInt
+
+    if (value < 0) throw new ArrayIndexOutOfBoundsException("Histogram recorded value cannot be negative.")
+    val bucketIndex = getBucketIndex(value)
+    val subBucketIndex = getSubBucketIndex(value, bucketIndex)
+    countsArrayIndex(bucketIndex, subBucketIndex)
+  }
+
+
 }
