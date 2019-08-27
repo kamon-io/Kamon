@@ -126,23 +126,23 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
     * Stops all registered modules. As part of the stop process, all modules get a last chance to report metrics and
     * spans available until the call to stop.
     */
-  def stop(): Future[Unit] = synchronized {
+  def stopModules(): Future[Unit] = synchronized {
     implicit val cleanupExecutor = ExecutionContext.Implicits.global
     scheduleMetricsTicker(once = true)
     scheduleSpansTicker(once = true)
 
-    val stopSignals =  _registeredModules.values.map(stopModule)
-    val latch = new CountDownLatch(stopSignals.size)
-    stopSignals.foreach(f => f.onComplete(_ => latch.countDown()))
+    var stoppedSignals: List[Future[Unit]] = Nil
+    _registeredModules.dropWhile {
+      case (_, entry) =>
+        stoppedSignals = stopModule(entry) :: stoppedSignals
+        true
+    }
 
-    // There is a global 30 seconds limit to shutdown after which all executors will shut down.
-    val stopCompletionFuture = Future(latch.await(30, TimeUnit.SECONDS))
-    stopCompletionFuture.onComplete(_ => {
-      _metricsTickerExecutor.shutdown()
-      _spansTickerExecutor.shutdown()
-    })
+    val latch = new CountDownLatch(stoppedSignals.size)
+    stoppedSignals.foreach(f => f.onComplete(_ => latch.countDown()))
 
-    stopCompletionFuture.map(_ => ())
+    // TODO: Completely destroy modules that fail to stop within the 30 second timeout.
+    Future(latch.await(30, TimeUnit.SECONDS))
   }
 
 
