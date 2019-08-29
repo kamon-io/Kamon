@@ -1,0 +1,13 @@
+language: scala
+script:
+  - sbt test
+scala:
+  - 2.12.3
+  - 2.13.0
+jdk:
+  - openjdk8
+  - openjdk11
+before_script:
+  - mkdir $TRAVIS_BUILD_DIR/tmp
+  - export SBT_OPTS="-Djava.io.tmpdir=$TRAVIS_BUILD_DIR/tmp"
+sudo: false
