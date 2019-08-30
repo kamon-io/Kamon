@@ -13,7 +13,7 @@ class GraphiteSenderSpec extends WordSpec with BeforeAndAfterAll with Matchers {
     val from = Instant.ofEpochSecond(1517000974)
     val to = Instant.ofEpochSecond(1517000993)
 
-    val senderConfig = GraphiteSenderConfig("hostX", 123, "kamon-graphiteprefix", legacySupport = false, TagSet.of("tag1", "111"), Filter.Accept, Seq(.5, .9, .999))
+    val senderConfig = GraphiteSenderConfig("hostX", 123, "kamon-graphiteprefix", legacySupport = false, TagSet.of("tag1", "111"), Filter.Accept, Seq(50.0, 90.0, 99.0))
 
     "send counter metrics" in {
       //arrange
@@ -73,9 +73,9 @@ class GraphiteSenderSpec extends WordSpec with BeforeAndAfterAll with Matchers {
         "kamon-graphiteprefix.my_histogram.count;tag1=111 4 1517000993\n",
         "kamon-graphiteprefix.my_histogram.min;tag1=111 1 1517000993\n",
         "kamon-graphiteprefix.my_histogram.max;tag1=111 6 1517000993\n",
-        "kamon-graphiteprefix.my_histogram.p0.5;tag1=111 1 1517000993\n",
-        "kamon-graphiteprefix.my_histogram.p0.9;tag1=111 1 1517000993\n",
-        "kamon-graphiteprefix.my_histogram.p0.999;tag1=111 1 1517000993\n",
+        "kamon-graphiteprefix.my_histogram.p50.0;tag1=111 2 1517000993\n",
+        "kamon-graphiteprefix.my_histogram.p90.0;tag1=111 6 1517000993\n",
+        "kamon-graphiteprefix.my_histogram.p99.0;tag1=111 6 1517000993\n",
         "kamon-graphiteprefix.my_histogram.average;tag1=111 3 1517000993\n",
         "kamon-graphiteprefix.my_histogram.sum;tag1=111 13 1517000993\n")
     }
@@ -100,9 +100,9 @@ class GraphiteSenderSpec extends WordSpec with BeforeAndAfterAll with Matchers {
         "kamon-graphiteprefix.my_timer.count;tag1=111 4 1517000993\n",
         "kamon-graphiteprefix.my_timer.min;tag1=111 1 1517000993\n",
         "kamon-graphiteprefix.my_timer.max;tag1=111 6 1517000993\n",
-        "kamon-graphiteprefix.my_timer.p0.5;tag1=111 1 1517000993\n",
-        "kamon-graphiteprefix.my_timer.p0.9;tag1=111 1 1517000993\n",
-        "kamon-graphiteprefix.my_timer.p0.999;tag1=111 1 1517000993\n",
+        "kamon-graphiteprefix.my_timer.p50.0;tag1=111 2 1517000993\n",
+        "kamon-graphiteprefix.my_timer.p90.0;tag1=111 6 1517000993\n",
+        "kamon-graphiteprefix.my_timer.p99.0;tag1=111 6 1517000993\n",
         "kamon-graphiteprefix.my_timer.average;tag1=111 3 1517000993\n",
         "kamon-graphiteprefix.my_timer.sum;tag1=111 13 1517000993\n")
     }
@@ -127,9 +127,9 @@ class GraphiteSenderSpec extends WordSpec with BeforeAndAfterAll with Matchers {
         "kamon-graphiteprefix.my_range.count;tag1=111 4 1517000993\n",
         "kamon-graphiteprefix.my_range.min;tag1=111 1 1517000993\n",
         "kamon-graphiteprefix.my_range.max;tag1=111 6 1517000993\n",
-        "kamon-graphiteprefix.my_range.p0.5;tag1=111 1 1517000993\n",
-        "kamon-graphiteprefix.my_range.p0.9;tag1=111 1 1517000993\n",
-        "kamon-graphiteprefix.my_range.p0.999;tag1=111 1 1517000993\n",
+        "kamon-graphiteprefix.my_range.p50.0;tag1=111 2 1517000993\n",
+        "kamon-graphiteprefix.my_range.p90.0;tag1=111 6 1517000993\n",
+        "kamon-graphiteprefix.my_range.p99.0;tag1=111 6 1517000993\n",
         "kamon-graphiteprefix.my_range.average;tag1=111 3 1517000993\n",
         "kamon-graphiteprefix.my_range.sum;tag1=111 13 1517000993\n")
     }
@@ -151,6 +151,25 @@ class GraphiteSenderSpec extends WordSpec with BeforeAndAfterAll with Matchers {
 
       //assert
       testee.messages(0) should be("kamon-graphiteprefix.akka_actor_errors.count;tag2.123=3;tag1=111;tag3=333_3;path=as/user/actor 10 1517000993\n")
+    }
+
+    "format tags as path for legacy tag support" in {
+      //arrange
+      val periodSnapshot = PeriodSnapshot(
+        from, to,
+        counters = List(MetricSnapshotBuilder.counter("akka.actor.errors", TagSet.of("path", "as/user/actor").withTag("tag3", "333;3").withTag("tag2.123", 3L), 10)),
+        gauges = List.empty,
+        histograms = List.empty,
+        timers = List.empty,
+        rangeSamplers = List.empty
+      )
+      val testee = new TestGraphiteSender(senderConfig.copy(legacySupport = true))
+
+      //act
+      testee.reportPeriodSnapshot(periodSnapshot)
+
+      //assert
+      testee.messages(0) should be("kamon-graphiteprefix.akka_actor_errors.count.tag2_123.3.tag1.111.tag3.333;3.path.as/user/actor 10 1517000993\n")
     }
   }
 
