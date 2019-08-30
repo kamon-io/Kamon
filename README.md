@@ -27,15 +27,12 @@ application.conf
 
 ## Config
 Per default the graphite tag support (available since graphite 1.1) is enabled (see include-tags feature flag).
-This is the default config which can be adapted to your needs using a custom `application.conf`.
+These are the relevant config values that chan be adapted to your needs using a custom `application.conf`.
 
     kamon {
         modules {
           graphite-reporter {
             enabled = true
-            name = "Graphite Reporter"
-            description = "Sends metrics to any graphite endpoint"
-            factory = "kamon.graphite.GraphiteReporterFactory"
           }
         }
     
