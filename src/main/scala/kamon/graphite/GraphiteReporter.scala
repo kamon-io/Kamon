@@ -56,7 +56,7 @@ private object GraphiteSenderConfig {
     val legacySupport = graphiteConfig.getBoolean("legacy-support")
     val envTags = EnvironmentTags.from(Kamon.environment, graphiteConfig.getConfig("environment-tags"))
     val tagFilter = Kamon.filter("kamon.graphite.tag-filter")
-    import scala.jdk.CollectionConverters._
+    import scala.collection.JavaConverters._
     val percentiles = graphiteConfig.getDoubleList("percentiles").asScala.map(_.toDouble).toSeq
     new GraphiteSenderConfig(hostname, port, metricPrefix, legacySupport, envTags, tagFilter, percentiles)
   }

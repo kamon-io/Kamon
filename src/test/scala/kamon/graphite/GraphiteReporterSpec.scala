@@ -2,7 +2,6 @@ package kamon.graphite
 
 import java.io.InputStream
 import java.net.ServerSocket
-import java.nio.charset.StandardCharsets
 import java.time.Instant
 import java.util.Scanner
 import java.util.concurrent.{CopyOnWriteArrayList, CountDownLatch, TimeUnit}
@@ -14,7 +13,7 @@ import org.scalatest.concurrent.Eventually
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
 import org.slf4j.LoggerFactory
 
-import scala.jdk.CollectionConverters._
+import scala.collection.JavaConverters._
 
 class GraphiteReporterSpec extends WordSpec with BeforeAndAfterAll with Matchers with Eventually {
   private val graphite = new GraphiteServer()
