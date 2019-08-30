@@ -22,6 +22,6 @@ lazy val root = (project in file("."))
     .settings(name := "kamon-graphite")
     .settings(
       libraryDependencies ++=
-        compileScope(kamonCore) ++
-        testScope(scalatest, slf4jApi, logbackClassic, kamonCore, kamonTestKit)
+        compileScope(kamonCore, slf4jApi) ++
+        testScope(scalatest, logbackClassic, kamonTestKit)
     )
