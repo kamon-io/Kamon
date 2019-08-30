@@ -37,7 +37,7 @@ class GraphiteReporter extends MetricReporter {
       sender.reportPeriodSnapshot(snapshot)
     } catch {
       case e: Throwable =>
-        log.warn("sending failed - dispose current snapshot and retry sending next snapshot using a new connection", e)
+        log.warn(s"sending failed to ${reporterConfig.hostname}:${reporterConfig.port} - dispose current snapshot and retry sending next snapshot using a new connection", e)
         sender.close()
         sender = buildNewSender()
     }
