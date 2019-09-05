@@ -5,7 +5,6 @@ import java.nio.channels.DatagramChannel
 
 import kamon.statsd.StatsDReporter.MetricDataPacketBuffer
 import kamon.statsd.StatsDServer.Metric
-import org.scalatest.OptionValues._
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, Matchers, WordSpec}
 
 class MetricDataPacketBufferSpec extends WordSpec with Matchers with BeforeAndAfterAll with BeforeAndAfter {

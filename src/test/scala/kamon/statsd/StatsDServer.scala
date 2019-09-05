@@ -1,7 +1,7 @@
 package kamon.statsd
 
 import java.io.IOException
-import java.net.{DatagramPacket, DatagramSocket, ServerSocket, SocketException}
+import java.net.{DatagramPacket, DatagramSocket, InetAddress, ServerSocket, SocketException}
 
 import kamon.statsd.StatsDServer._
 import org.slf4j.LoggerFactory
@@ -32,7 +32,7 @@ class StatsDServer(val port: Int = selectRandomPort) {
     var isRunning = true
     while (isRunning) {
       try {
-        val buffer = new Array[Byte](256)
+        val buffer = new Array[Byte](1024)
         val packet = new DatagramPacket(buffer, buffer.length)
         socket.receive(packet)
         val data = new String(packet.getData.take(packet.getLength))
@@ -54,7 +54,7 @@ class StatsDServer(val port: Int = selectRandomPort) {
 
   case class PacketRequest(promise: Promise[List[Packet]], condition: (List[Packet]) => Boolean)
 
-  def getPackets(condition: (List[Packet]) => Boolean, waitFor: Duration = 2.seconds): List[Packet] = {
+  def getPackets(condition: List[Packet] => Boolean, waitFor: Duration = 2.seconds): List[Packet] = {
     val promise = Promise[List[Packet]]()
     synchronized {
       if (condition(packets)) promise.success(packets)
@@ -63,7 +63,7 @@ class StatsDServer(val port: Int = selectRandomPort) {
     Await.result(promise.future, waitFor)
   }
 
-  def getPacket(condition: (Packet) => Boolean, waitFor: Duration = 2.seconds): Packet = {
+  def getPacket(condition: Packet => Boolean, waitFor: Duration = 2.seconds): Packet = {
     getPackets(_.exists(condition), waitFor).find(condition).get
   }
 
@@ -82,8 +82,8 @@ object StatsDServer {
 
   case class Packet(metrics: List[Metric]) {
 
-    def getMetric(condition: (Metric) => Boolean): Option[Metric] = metrics.find(condition)
-    def hasMetric(condition: (Metric) => Boolean): Boolean = metrics.exists(condition)
+    def getMetric(condition: Metric => Boolean): Option[Metric] = metrics.find(condition)
+    def hasMetric(condition: Metric => Boolean): Boolean = metrics.exists(condition)
 
   }
 

@@ -21,8 +21,10 @@ import java.util.concurrent.atomic.AtomicInteger
 import com.typesafe.config.{Config, ConfigFactory}
 import kamon.Kamon
 import kamon.metric.{MeasurementUnit, PeriodSnapshot}
+import kamon.module.Module.Registration
 import kamon.statsd.StatsDReporterSpec._
 import kamon.statsd.StatsDServer.Metric
+import kamon.tag.TagSet
 import org.scalatest.OptionValues._
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, Matchers, WordSpec}
 
@@ -52,16 +54,18 @@ class StatsDReporterSpec extends WordSpec with Matchers with BeforeAndAfter with
         |
       """.stripMargin
     )
-  val metricKeyGenerator = new SimpleMetricKeyGenerator(config)
+  val metricKeyGenerator = new SimpleMetricKeyGenerator(config.getConfig("kamon.statsd"))
   val testConfig: Config = ConfigFactory.load(config).withFallback(ConfigFactory.load())
   val statsDReporter = new TestStatsDReporter()
+  var moduleRegistration: Registration = _
 
   "the StatsDReporterSpec" should {
 
     "flush the gauge metric data it receives" in  {
       val name = generateMetricName()
+
       statsDReporter.waitForNextSnapshot()
-      Kamon.gauge(name).increment()
+      Kamon.gauge(name).withoutTags().increment()
 
       val packet = statsDServer.getPacket(_.metrics.exists(_.name.contains(name)))
       val metric = packet.getMetric(_.name == name.asMetricName)
@@ -71,7 +75,7 @@ class StatsDReporterSpec extends WordSpec with Matchers with BeforeAndAfter with
     "flush the counter metric data it receives" in  {
       val name = generateMetricName()
       statsDReporter.waitForNextSnapshot()
-      Kamon.counter(name).increment(3)
+      Kamon.counter(name).withoutTags().increment(3)
 
       val packet = statsDServer.getPacket(_.metrics.exists(_.name.contains(name)))
       val metric = packet.getMetric(_.name == name.asMetricName)
@@ -81,27 +85,27 @@ class StatsDReporterSpec extends WordSpec with Matchers with BeforeAndAfter with
     "flush the histogram metric data it receives" in  {
       val name = generateMetricName()
       statsDReporter.waitForNextSnapshot()
-      Kamon.histogram(name).record(2)
+      Kamon.histogram(name).withoutTags().record(2)
 
       val packet = statsDServer.getPacket(_.metrics.exists(_.name.contains(name)))
       val metric = packet.getMetric(_.name == name.asMetricName)
       metric.value should be (Metric(name.asMetricName, "2.0", Timer, None))
     }
 
-    "convert time metric in seconds before flushing it" in  {
+    "convert time metric in milliseconds before flushing it" in  {
       val name = generateMetricName()
       statsDReporter.waitForNextSnapshot()
-      Kamon.histogram(name, MeasurementUnit.time.milliseconds).record(1000)
+      Kamon.histogram(name, MeasurementUnit.time.seconds).withoutTags().record(1)
 
       val packet = statsDServer.getPacket(_.metrics.exists(_.name.contains(name)))
       val metric = packet.getMetric(_.name == name.asMetricName)
-      metric.value should be (Metric(name.asMetricName, "1.0", Timer, None))
+      metric.value should be (Metric(name.asMetricName, "1000.0", Timer, None))
     }
 
     "convert information metric in byte before flushing it" in  {
       val name = generateMetricName()
       statsDReporter.waitForNextSnapshot()
-      Kamon.histogram(name, MeasurementUnit.information.kilobytes).record(1)
+      Kamon.histogram(name, MeasurementUnit.information.kilobytes).withoutTags().record(1)
 
       val packet = statsDServer.getPacket(_.metrics.exists(_.name.contains(name)))
       val metric = packet.getMetric(_.name == name.asMetricName)
@@ -112,15 +116,16 @@ class StatsDReporterSpec extends WordSpec with Matchers with BeforeAndAfter with
 
   private implicit class StringToMetricName(name: String) {
     def asMetricName: String = {
-      metricKeyGenerator.generateKey(name, Map.empty)
+      metricKeyGenerator.generateKey(name, TagSet.Empty)
     }
   }
 
   override def beforeAll(): Unit = {
+    super.beforeAll()
     statsDServer.start()
+    moduleRegistration = Kamon.registerModule("statsd-test", statsDReporter)
     Kamon.reconfigure(testConfig)
-    Kamon.gauge(generateMetricName()).increment(1)
-    Kamon.addReporter(statsDReporter)
+    Kamon.gauge(generateMetricName()).withoutTags().increment(1)
   }
 
   before {
@@ -129,14 +134,14 @@ class StatsDReporterSpec extends WordSpec with Matchers with BeforeAndAfter with
   }
 
   override def afterAll(): Unit = {
-    Kamon.stopAllReporters()
+    super.afterAll()
+    moduleRegistration.cancel()
+    Kamon.stopModules()
     statsDServer.stop()
   }
-
 }
 
 object StatsDReporterSpec {
-
   val Application = "kamon-test"
   val HostnameOverride = "kamon-host-test"
   val Gauge = "g"
@@ -160,7 +165,5 @@ object StatsDReporterSpec {
       promise = Some(Promise())
       Await.ready(promise.get.future, Interval * 10)
     }
-
   }
-
 }

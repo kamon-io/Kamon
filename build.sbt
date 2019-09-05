@@ -1,5 +1,5 @@
 /* =========================================================================================
- * Copyright © 2013-2017 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2019 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -13,10 +13,17 @@
  * =========================================================================================
  */
 
-val kamonCore = "io.kamon"  %%  "kamon-core"  % "1.1.2"
+import Dependencies._
 
-name := "kamon-statsd"
-
-libraryDependencies ++=
-  compileScope(kamonCore) ++
-  testScope(scalatest, slf4jApi, logbackClassic)
+lazy val root = (project in file("."))
+  .settings(
+    name := "kamon-statsd",
+    organization := "io.kamon",
+    scalaVersion := "2.13.0",
+    crossScalaVersions := Seq("2.11.12", "2.12.9", "2.13.0"),
+    libraryDependencies ++= Seq(
+      kamonCore % Provided,
+      scalaTest % Test
+    ),
+    Test / parallelExecution := false
+  )
