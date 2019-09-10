@@ -9,26 +9,27 @@ The <b>kamon-logback</b> module requires you to start your application using the
 
 ### Getting Started
 
-Kamon Logback is currently available for Scala 2.10, 2.11 and 2.12.
+Kamon Logback is currently available for Scala 2.10, 2.11, 2.12 and 2.13.
 
 Supported releases and dependencies are shown below.
 
 | kamon  | status | jdk  | scala            
 |:------:|:------:|:----:|------------------
 |  1.0.6 | stable | 1.8+ | 2.10, 2.11, 2.12
+|  2.0.0 | stable | 1.8+ | 2.11, 2.12, 2.13
 
 To get started with SBT, simply add the following to your `build.sbt` or `pom.xml`
 file:
 
 ```scala
-libraryDependencies += "io.kamon" %% "kamon-logback" % "1.0.6"
+libraryDependencies += "io.kamon" %% "kamon-logback" % "2.0.0"
 ```
 
 ```xml
 <dependency>
     <groupId>io.kamon</groupId>
     <artifactId>kamon-logback_2.12</artifactId>
-    <version>1.0.6</version>
+    <version>2.0.0</version>
 </dependency>
 ```
 
@@ -40,7 +41,7 @@ Inserting a `conversionRule` allows you to incorporate the trace ID for a reques
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration scan="false" debug="false">
-  <conversionRule conversionWord="traceID" converterClass="kamon.instrumentation.logback.tools.LogbackTraceIDConverter" />
+  <conversionRule conversionWord="traceID" converterClass="kamon.instrumentation.logback.tools.TraceIDConverter" />
 
   <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
     <encoder>
@@ -91,14 +92,14 @@ This library allows you to do that by just changing the logback.xml file and add
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration scan="false" debug="false">
-  <conversionRule conversionWord="traceID" converterClass="kamon.logback.LogbackTraceIDConverter" />
+  <conversionRule conversionWord="traceID" converterClass="kamon.instrumentation.logback.tools.TraceIDConverter" />
 
   <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
     <encoder>
       <pattern>%d{yyyy-MM-dd HH:mm:ss} | %-5level | %traceID | %c{0} -> %m%n</pattern>
     </encoder>
   </appender>
-  <appender name="COUNTER" class="kamon.instrumentation.logback.LogbackEntriesCounterAppender"/>
+  <appender name="COUNTER" class="kamon.instrumentation.logback.tools.EntriesCounterAppender"/>
 
   <root level="DEBUG">
     <appender-ref ref="STDOUT" />
