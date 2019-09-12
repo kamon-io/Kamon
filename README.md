@@ -1,4 +1,5 @@
-# kamon-graphite
+# Graphite Integration  <img align="right" src="https://rawgit.com/kamon-io/Kamon/master/kamon-logo.svg" height="150px" style="padding-left: 20px"/>
+[![Build Status](https://travis-ci.org/kamon-io/kamon-graphite.svg?branch=master)](https://travis-ci.org/kamon-io/kamon-graphite)
 
 Write report metrics in graphite format.
    

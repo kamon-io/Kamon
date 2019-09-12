@@ -45,11 +45,28 @@ class GraphiteReporterSpec extends WordSpec with BeforeAndAfterAll with Matchers
 }
 
 class GraphiteServer {
-  private val log = LoggerFactory.getLogger(classOf[GraphiteSender])
   private val listeners = new CopyOnWriteArrayList[LineListener]
+  private lazy val t = new GraphiteTcpSocketListener(2003, listeners)
+
+  def start(): Unit =
+    t.start()
+
+  def stop(): Unit =
+    t.close()
+
+  def lineListener(expectedLines: Int): LineListener = {
+    val listener = new LineListener(expectedLines)
+    listeners.add(listener)
+    listener
+  }
+}
+
+class GraphiteTcpSocketListener(port: Int, listeners: java.util.List[LineListener]) extends Thread {
+  private val log = LoggerFactory.getLogger(classOf[GraphiteTcpSocketListener])
   private val ss = new CopyOnWriteArrayList[InputStream]
-  private val t = new Thread(() => {
-    val serverSocket = new ServerSocket(2003)
+  private lazy val serverSocket = new ServerSocket(port)
+
+  override def run(): Unit = {
     log.debug("starting graphite simulator serversocket {}:{}", serverSocket.getInetAddress, serverSocket.getLocalPort)
     try {
       val is = serverSocket.accept().getInputStream
@@ -60,25 +77,19 @@ class GraphiteServer {
         listeners.asScala.foreach(_.putLine(line))
       }
     }
-    catch {
-      case _: Exception =>
-        log.debug("stopping graphite simulator")
-        serverSocket.close()
+    finally {
+      log.debug("stopping graphite simulator")
+      serverSocket.close()
     }
-  })
-
-  def start(): Unit =
-    t.start()
-
-  def stop(): Unit = {
-    ss.asScala.foreach(_.close())
-    t.join()
   }
 
-  def lineListener(expectedLines: Int): LineListener = {
-    val listener = new LineListener(expectedLines)
-    listeners.add(listener)
-    listener
+  def close(): Unit = {
+    try {
+      ss.asScala.foreach(_.close())
+    }
+    finally {
+      serverSocket.close()
+    }
   }
 }
 
