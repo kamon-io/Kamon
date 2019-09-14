@@ -43,7 +43,7 @@ class AnnotationInstrumentationSpec extends WordSpec
   "the Kamon Annotation module" should {
 
     "create a new trace when is invoked a method annotated with @Trace" in {
-     for (id ← 1 to 10) Annotated(id).trace()
+     for (id <- 1 to 10) Annotated(id).trace()
 
       eventually(timeout(3 seconds)) {
         val span = reporter.nextSpan().value
@@ -55,7 +55,7 @@ class AnnotationInstrumentationSpec extends WordSpec
     }
 
     "pickup a SpanCustomizer from the current context and apply it to the new spans" in {
-      for (id ← 1 to 10) Annotated(id).traceWithSpanCustomizer()
+      for (id <- 1 to 10) Annotated(id).traceWithSpanCustomizer()
 
       eventually(timeout(3 seconds)) {
         val span = reporter.nextSpan().value
@@ -67,20 +67,20 @@ class AnnotationInstrumentationSpec extends WordSpec
     }
 
     "count the invocations of a method annotated with @Count" in {
-      for (id ← 1 to 10) Annotated(id).count()
+      for (id <- 1 to 10) Annotated(id).count()
 
       Kamon.counter("count").withoutTags().value() should be(10)
     }
 
     "count the invocations of a method annotated with @Count and evaluate EL expressions" in {
-      for (id ← 1 to 2) Annotated(id).countWithEL()
+      for (id <- 1 to 2) Annotated(id).countWithEL()
 
       Kamon.counter("counter:1").withTags(TagSet.from(Map("counter" -> "1", "env" -> "prod"))).value()should be(1)
       Kamon.counter("counter:2").withTags(TagSet.from(Map("counter" -> "1", "env" -> "prod"))).value()should be(1)
     }
 
     "count the current invocations of a method annotated with @RangeSampler" in {
-      for (id ← 1 to 10) {
+      for (id <- 1 to 10) {
         Annotated(id).countMinMax()
       }
       eventually(timeout(5 seconds)) {
@@ -89,7 +89,7 @@ class AnnotationInstrumentationSpec extends WordSpec
     }
 
     "count the current invocations of a method annotated with @RangeSampler and evaluate EL expressions" in {
-      for (id ← 1 to 10) Annotated(id).countMinMaxWithEL()
+      for (id <- 1 to 10) Annotated(id).countMinMaxWithEL()
 
       eventually(timeout(5 seconds)) {
         Kamon.rangeSampler("minMax:1").withTags(TagSet.from(Map("minMax" -> "1", "env" -> "dev"))).distribution().sum should be(0)
@@ -98,19 +98,19 @@ class AnnotationInstrumentationSpec extends WordSpec
     }
 
     "measure the time spent in the execution of a method annotated with @Timer" in {
-      for (id ← 1 to 1) Annotated(id).time()
+      for (id <- 1 to 1) Annotated(id).time()
 
       Kamon.timer("time").withoutTags().distribution().count should be(1)
     }
 
     "measure the time spent in the execution of a method annotated with @Timer and evaluate EL expressions" in {
-      for (id ← 1 to 1) Annotated(id).timeWithEL()
+      for (id <- 1 to 1) Annotated(id).timeWithEL()
 
       Kamon.timer("time:1").withTags(TagSet.from(Map("slow-service" -> "service", "env" -> "prod"))).distribution().count should be(1)
     }
 
     "record the operationName returned by a method annotated with @Histogram" in {
-      for (operationName ← 1 to 5) Annotated().histogram(operationName)
+      for (operationName <- 1 to 5) Annotated().histogram(operationName)
 
       val snapshot = Kamon.histogram("histogram").withoutTags().distribution()
       snapshot.count should be(5)
@@ -120,7 +120,7 @@ class AnnotationInstrumentationSpec extends WordSpec
     }
 
     "record the operationName returned by a method annotated with @Histogram and evaluate EL expressions" in {
-      for (operationName ← 1 to 2) Annotated(operationName).histogramWithEL(operationName)
+      for (operationName <- 1 to 2) Annotated(operationName).histogramWithEL(operationName)
 
       val snapshot1 = Kamon.histogram("histogram:1").withTags(TagSet.from(Map("histogram" -> "hdr", "env" -> "prod"))).distribution()
       snapshot1.count should be(1)
@@ -162,7 +162,7 @@ case class Annotated(id: Long) {
   def traceWithSpanCustomizer(): Unit = {
     val spanBuilder = Kamon.spanBuilder("unknown").tag("slow-service", "service").tag("env", "prod").start()
 
-    Kamon.storeSpan(spanBuilder) {
+    Kamon.runWithSpan(spanBuilder) {
       customizeSpan()
     }
   }

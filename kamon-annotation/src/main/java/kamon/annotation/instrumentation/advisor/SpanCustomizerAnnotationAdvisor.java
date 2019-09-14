@@ -29,7 +29,7 @@ public final class SpanCustomizerAnnotationAdvisor {
                                @Advice.Local("scope") Storage.Scope scope) {
 
         final SpanCustomizer annotation = method.getAnnotation(SpanCustomizer.class);
-        scope = Kamon.store(Kamon.currentContext().withKey(kamon.annotation.util.Hooks.key(), kamon.annotation.util.Hooks.updateOperationName(annotation.operationName())));
+        scope = Kamon.storeContext(Kamon.currentContext().withEntry(kamon.annotation.util.Hooks.key(), kamon.annotation.util.Hooks.updateOperationName(annotation.operationName())));
     }
 
     @Advice.OnMethodExit(suppress = Throwable.class)

@@ -18,13 +18,13 @@ Supported releases and dependencies are shown below.
 
 | kamon-annotation  | status | jdk  | scala            
 |:------:|:------:|:----:|------------------
-|  2.0.0-RC1 | experimental | 1.8+ | 2.11, 2.12, 2.13  
+|  2.0.0 | stable | 1.8+ | 2.11, 2.12, 2.13  
 
 To get started with SBT, simply add the following to your `build.sbt`
 file:
 
 ```scala
-libraryDependencies += "io.kamon" %% "kamon-annotation-api" % "1.0.0-RC1"
+libraryDependencies += "io.kamon" %% "kamon-annotation-api" % "2.0.0"
 ```
 
 Manipulating Traces

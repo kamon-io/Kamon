@@ -74,7 +74,7 @@ class StaticAnnotationInstrumentationSpec extends WordSpec
     }
 
     "count the current invocations of a method annotated with @RangeSampler and evaluate EL expressions in a Scala Object" in {
-      for (_ ← 1 to 10) AnnotatedObject.countMinMaxWithEL()
+      for (_ <- 1 to 10) AnnotatedObject.countMinMaxWithEL()
 
       eventually(timeout(5 seconds)) {
         Kamon.rangeSampler("minMax:10").withTags(TagSet.from(Map("minMax" -> "1", "env" -> "dev"))).distribution().sum should be(0)
@@ -94,7 +94,7 @@ class StaticAnnotationInstrumentationSpec extends WordSpec
     }
 
     "record the operationName returned by a method annotated with @Histogram in a Scala Object" in {
-      for (operationName ← 1 to 5) AnnotatedObject.histogram(operationName)
+      for (operationName <- 1 to 5) AnnotatedObject.histogram(operationName)
 
       val snapshot = Kamon.histogram("histogram").withoutTags().distribution()
       snapshot.count should be(5)
@@ -104,7 +104,7 @@ class StaticAnnotationInstrumentationSpec extends WordSpec
     }
 
     "record the operationName returned by a method annotated with @Histogram and evaluate EL expressions in a Scala Object" in {
-      for (operationName ← 1 to 2) AnnotatedObject.histogramWithEL(operationName)
+      for (operationName <- 1 to 2) AnnotatedObject.histogramWithEL(operationName)
 
       val snapshot = Kamon.histogram("histogram:10").withTags(TagSet.from(Map("histogram" -> "hdr", "env" -> "prod"))).distribution()
       snapshot.count should be(2)

@@ -39,7 +39,7 @@ class StaticAnnotationInstrumentationJavaSpec extends WordSpec
 
   "the Kamon Annotation module" should {
     "create a new trace when is invoked a static method annotated with @Trace" in {
-      for (_ ← 1 to 10) AnnotatedJavaClass.trace()
+      for (_ <- 1 to 10) AnnotatedJavaClass.trace()
 
       eventually(timeout(5 seconds)) {
         val span = reporter.nextSpan().value
@@ -51,19 +51,19 @@ class StaticAnnotationInstrumentationJavaSpec extends WordSpec
     }
 
     "count the invocations of a static method annotated with @Count" in {
-      for (_ ← 1 to 10) AnnotatedJavaClass.count()
+      for (_ <- 1 to 10) AnnotatedJavaClass.count()
 
       Kamon.counter("count").withoutTags().value() should be(10)
     }
 
     "count the invocations of a static method annotated with @Count and evaluate EL expressions" in {
-      for (_ ← 1 to 2) AnnotatedJavaClass.countWithEL()
+      for (_ <- 1 to 2) AnnotatedJavaClass.countWithEL()
 
       Kamon.counter("count:10").withTags(TagSet.from(Map("counter" -> "1", "env" -> "prod"))).value()should be(2)
     }
 
     "count the current invocations of a static method annotated with @RangeSampler" in {
-      for (_ ← 1 to 10) AnnotatedJavaClass.countMinMax()
+      for (_ <- 1 to 10) AnnotatedJavaClass.countMinMax()
 
       eventually(timeout(5 seconds)) {
         Kamon.rangeSampler("minMax").withoutTags().distribution().max should be(0)
@@ -71,7 +71,7 @@ class StaticAnnotationInstrumentationJavaSpec extends WordSpec
     }
 
     "count the current invocations of a static method annotated with @RangeSampler and evaluate EL expressions" in {
-      for (_ ← 1 to 10) AnnotatedJavaClass.countMinMaxWithEL()
+      for (_ <- 1 to 10) AnnotatedJavaClass.countMinMaxWithEL()
 
       eventually(timeout(5 seconds)) {
         Kamon.rangeSampler("minMax:10").withTags(TagSet.from(Map("minMax" -> "1", "env" -> "dev"))).distribution().sum should be(0)
@@ -79,19 +79,19 @@ class StaticAnnotationInstrumentationJavaSpec extends WordSpec
     }
 
     "measure the time spent in the execution of a static method annotated with @Timer" in {
-      for (_ ← 1 to 1) AnnotatedJavaClass.time()
+      for (_ <- 1 to 1) AnnotatedJavaClass.time()
 
       Kamon.timer("time").withoutTags().distribution().count should be(1)
     }
 
     "measure the time spent in the execution of a static method annotated with @Timer and evaluate EL expressions" in {
-      for (_ ← 1 to 1) AnnotatedJavaClass.timeWithEL()
+      for (_ <- 1 to 1) AnnotatedJavaClass.timeWithEL()
 
       Kamon.timer("time:10").withTags(TagSet.from(Map("slow-service" -> "service", "env" -> "prod"))).distribution().count should be(1)
     }
 
     "record the operationName returned by a static method annotated with @Histogram" in {
-      for (operationName ← 1 to 5) AnnotatedJavaClass.histogram(operationName.toLong)
+      for (operationName <- 1 to 5) AnnotatedJavaClass.histogram(operationName.toLong)
 
       val snapshot = Kamon.histogram("histogram").withoutTags().distribution()
       snapshot.count should be(5)
@@ -101,7 +101,7 @@ class StaticAnnotationInstrumentationJavaSpec extends WordSpec
     }
 
     "record the operationName returned by a static method annotated with @Histogram and evaluate EL expressions" in {
-      for (operationName ← 1 to 2) AnnotatedJavaClass.histogramWithEL(operationName.toLong)
+      for (operationName <- 1 to 2) AnnotatedJavaClass.histogramWithEL(operationName.toLong)
 
       val snapshot = Kamon.histogram("histogram:10").withTags(TagSet.from(Map("histogram" -> "hdr", "env" -> "prod"))).distribution()
       snapshot.count should be(2)

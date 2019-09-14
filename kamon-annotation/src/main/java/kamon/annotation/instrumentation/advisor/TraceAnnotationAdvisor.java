@@ -38,7 +38,7 @@ public final class TraceAnnotationAdvisor {
 
         final SpanBuilder builder = AnnotationCache.getSpanBuilder(method, obj, clazz, className, methodName);
         span = builder.start();
-        scope = Kamon.store(Kamon.currentContext().withKey(Span.Key(), span));
+        scope = Kamon.storeContext(Kamon.currentContext().withEntry(span.Key(), span));
     }
 
     @Advice.OnMethodExit(onThrowable = Throwable.class, suppress = Throwable.class)

@@ -13,8 +13,8 @@
  * =========================================================================================
  */
 
-val kamonCore       = "io.kamon"      %% "kamon-core"     % "2.0.0-RC1"
-val kamonTestkit    = "io.kamon"      %% "kamon-testkit"  % "2.0.0-RC1"
+val kamonCore       = "io.kamon"      %% "kamon-core"     % "2.0.0"
+val kamonTestkit    = "io.kamon"      %% "kamon-testkit"  % "2.0.0"
 
 val el              = "org.glassfish" % "javax.el"        % "3.0.1-b11"
 
@@ -45,7 +45,7 @@ lazy val annotation = (project in file("kamon-annotation"))
   .enablePlugins(AssemblyPlugin)
   .settings(moduleName := "kamon-annotation")
   .settings(commonSettings: _*)
-  .settings(javaAgents += "io.kamon"  % "kanela-agent"  % "1.0.0-RC4"  % "compile;test")
+  .settings(javaAgents += "io.kamon"  % "kanela-agent"  % "1.0.1"  % "compile;test")
   .settings(
       packageBin in Compile := assembly.value,
       assemblyExcludedJars in assembly := filterOut((fullClasspath in assembly).value, "slf4j-api", "config", "kamon-core"),
