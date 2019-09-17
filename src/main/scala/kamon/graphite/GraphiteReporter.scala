@@ -2,7 +2,7 @@ package kamon.graphite
 
 import java.io.{BufferedOutputStream, OutputStream}
 import java.net.Socket
-import java.nio.charset.StandardCharsets
+import java.nio.charset.{Charset, StandardCharsets}
 
 import com.typesafe.config.Config
 import kamon.Kamon
@@ -142,7 +142,7 @@ private class MetricPacketBuilder(baseName: String, timestamp: Long, config: Gra
 }
 
 object GraphiteSender {
-  final val GraphiteEncoding = StandardCharsets.US_ASCII
+  final val GraphiteEncoding: Charset = StandardCharsets.US_ASCII
 }
 
 private trait Sender extends AutoCloseable {

@@ -1,7 +1,7 @@
 package kamon.graphite
 
 import java.io.InputStream
-import java.net.ServerSocket
+import java.net.{InetSocketAddress, ServerSocket}
 import java.time.Instant
 import java.util.Scanner
 import java.util.concurrent.{CopyOnWriteArrayList, CountDownLatch, TimeUnit}
@@ -46,10 +46,13 @@ class GraphiteReporterSpec extends WordSpec with BeforeAndAfterAll with Matchers
 
 class GraphiteServer {
   private val listeners = new CopyOnWriteArrayList[LineListener]
-  private lazy val t = new GraphiteTcpSocketListener(2003, listeners)
+  private val started = new CountDownLatch(1)
+  private lazy val t = new GraphiteTcpSocketListener(2003, listeners, started)
 
-  def start(): Unit =
+  def start(): Unit = {
     t.start()
+    started.await()
+  }
 
   def stop(): Unit =
     t.close()
@@ -61,17 +64,20 @@ class GraphiteServer {
   }
 }
 
-class GraphiteTcpSocketListener(port: Int, listeners: java.util.List[LineListener]) extends Thread {
+class GraphiteTcpSocketListener(port: Int, listeners: java.util.List[LineListener], started: CountDownLatch) extends Thread {
   private val log = LoggerFactory.getLogger(classOf[GraphiteTcpSocketListener])
   private val ss = new CopyOnWriteArrayList[InputStream]
-  private lazy val serverSocket = new ServerSocket(port)
+  private val serverSocket = new ServerSocket()
 
   override def run(): Unit = {
-    log.debug("starting graphite simulator serversocket {}:{}", serverSocket.getInetAddress, serverSocket.getLocalPort)
     try {
+      val address = new InetSocketAddress(port)
+      log.debug("starting graphite simulator serversocket {}", address)
+      serverSocket.bind(address)
+      started.countDown()
       val is = serverSocket.accept().getInputStream
       ss.add(is)
-      val lineReader = new Scanner(is, GraphiteSender.GraphiteEncoding)
+      val lineReader = new Scanner(is, GraphiteSender.GraphiteEncoding.name())
       while (lineReader.hasNextLine) {
         val line = lineReader.nextLine()
         listeners.asScala.foreach(_.putLine(line))
