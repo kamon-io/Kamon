@@ -26,9 +26,9 @@ val kanelaAgent         = "io.kamon" %  "kanela-agent"                  % "1.0.0
 
 val akkaHttpJson        = "de.heikoseeberger" %% "akka-http-json4s"     % "1.27.0"
 val json4sNative        = "org.json4s"        %% "json4s-native"        % "3.6.7"
-val http25              = "com.typesafe.akka" %% "akka-http"            % "10.1.8"
-val httpTestKit25       = "com.typesafe.akka" %% "akka-http-testkit"    % "10.1.8"
-val stream25            = "com.typesafe.akka" %% "akka-stream"          % "2.5.23"
+val http25              = "com.typesafe.akka" %% "akka-http"            % "10.1.9"
+val httpTestKit25       = "com.typesafe.akka" %% "akka-http-testkit"    % "10.1.9"
+val stream25            = "com.typesafe.akka" %% "akka-stream"          % "2.5.24"
 
 
 lazy val root = (project in file("."))
