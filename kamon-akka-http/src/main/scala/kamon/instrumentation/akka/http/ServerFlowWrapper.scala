@@ -4,7 +4,7 @@ import java.time.Duration
 import java.util.concurrent.atomic.AtomicLong
 
 import akka.NotUsed
-import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
+import akka.http.scaladsl.model.{HttpEntity, HttpRequest, HttpResponse}
 import akka.stream.scaladsl.{BidiFlow, Flow, Keep}
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import akka.stream.{Attributes, BidiShape, Inlet, Outlet}
@@ -110,24 +110,30 @@ object ServerFlowWrapper {
             responseWithContext.entity
           } else {
 
-            val responseSizeCounter = new AtomicLong(0L)
             requestSpan.mark("http.response.ready")
 
-            responseWithContext.entity.transformDataBytes(
-              Flow[ByteString]
-                .watchTermination()(Keep.right)
-                .wireTap(bs => responseSizeCounter.addAndGet(bs.size))
-                .mapMaterializedValue { f =>
-                  f.andThen {
-                    case Success(_) =>
-                      requestHandler.responseSent(responseSizeCounter.get())
-                    case Failure(e) =>
-                      requestSpan.fail("Response entity stream failed", e)
-                      requestHandler.responseSent(responseSizeCounter.get())
+            responseWithContext.entity match {
+              case strict@HttpEntity.Strict(_, bs) =>
+                requestHandler.responseSent(bs.size)
+                strict
+              case _ =>
+                val responseSizeCounter = new AtomicLong(0L)
+                responseWithContext.entity.transformDataBytes(
+                  Flow[ByteString]
+                    .watchTermination()(Keep.right)
+                    .wireTap(bs => responseSizeCounter.addAndGet(bs.size))
+                    .mapMaterializedValue { f =>
+                      f.andThen {
+                        case Success(_) =>
+                          requestHandler.responseSent(responseSizeCounter.get())
+                        case Failure(e) =>
+                          requestSpan.fail("Response entity stream failed", e)
+                          requestHandler.responseSent(responseSizeCounter.get())
 
-                  }(CallingThreadExecutionContext)
-                }
-            )
+                      }(CallingThreadExecutionContext)
+                    }
+                )
+            }
           }
 
           _completedRequests += 1
