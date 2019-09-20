@@ -43,7 +43,7 @@ trait TestWebServer extends TracingDirectives {
   implicit val formats = DefaultFormats
   import Json4sSupport._
 
-  def startServer(interface: String, port: Int, http2: UseHttp2 = UseHttp2.Never)(implicit system: ActorSystem): WebServer = {
+  def startServer(interface: String, port: Int, https: Boolean = false)(implicit system: ActorSystem): WebServer = {
     import Endpoints._
 
     implicit val ec: ExecutionContext = system.dispatcher
@@ -170,14 +170,13 @@ trait TestWebServer extends TracingDirectives {
       }
     }
 
-    if(http2 == UseHttp2.Never) {
-      new WebServer(interface, port, "http", Http().bindAndHandle(routes, interface, port))
-    }
+    if(https)
+      new WebServer(interface, port, "https", Http().bindAndHandleAsync(Route.asyncHandler(routes), interface, port, httpContext()))
     else
-      new WebServer(interface, port, "https", Http().bindAndHandleAsync(Route.asyncHandler(routes), interface, port, httpContext(http2)))
+      new WebServer(interface, port, "http", Http().bindAndHandle(routes, interface, port))
   }
 
-  def httpContext(useHttp2: UseHttp2) = {
+  def httpContext() = {
     val password = "kamon".toCharArray
     val ks = KeyStore.getInstance("PKCS12")
     ks.load(getClass.getClassLoader.getResourceAsStream("https/server.p12"), password)
@@ -188,7 +187,7 @@ trait TestWebServer extends TracingDirectives {
     val context = SSLContext.getInstance("TLS")
     context.init(keyManagerFactory.getKeyManagers, null, new SecureRandom)
 
-    new HttpsConnectionContext(context, http2 = useHttp2)
+    new HttpsConnectionContext(context)
   }
 
   def clientSSL(): (SSLSocketFactory, X509TrustManager) = {

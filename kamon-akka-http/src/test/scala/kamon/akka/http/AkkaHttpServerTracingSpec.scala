@@ -49,8 +49,8 @@ class AkkaHttpServerTracingSpec extends WordSpecLike with Matchers with ScalaFut
 
   val timeoutTest: FiniteDuration = 5 second
   val interface = "127.0.0.1"
-  val http1WebServer = startServer(interface, 8081, UseHttp2.Never)
-  val http2WebServer = startServer(interface, 8082, UseHttp2.Negotiated)
+  val http1WebServer = startServer(interface, 8081, https = false)
+  val http2WebServer = startServer(interface, 8082, https = true)
 
   testSuite("HTTP/1", http1WebServer)
   testSuite("HTTP/2", http2WebServer)
