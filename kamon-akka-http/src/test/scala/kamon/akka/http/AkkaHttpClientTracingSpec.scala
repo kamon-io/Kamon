@@ -60,6 +60,21 @@ class AkkaHttpClientTracingSpec extends WordSpecLike with Matchers with BeforeAn
       }
     }
 
+    "create a client Span when using the request level API - Http().singleRequest(...) from Java" in {
+      val target = s"http://$interface:$port/$dummyPathOk"
+
+      val http = akka.http.javadsl.Http.get(system)
+      http.singleRequest(HttpRequest(uri = target))
+
+      eventually(timeout(10 seconds)) {
+        val span = testSpanReporter.nextSpan().value
+        span.operationName shouldBe "GET"
+        span.tags.get(plain("http.url")) shouldBe target
+        span.metricTags.get(plain("component")) shouldBe "akka.http.client"
+        span.metricTags.get(plain("http.method")) shouldBe "GET"
+      }
+    }
+
     "serialize the current context into HTTP Headers" in {
       val target = s"http://$interface:$port/$replyWithHeaders"
       val tagKey = "custom.message"
