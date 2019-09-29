@@ -21,14 +21,12 @@ import java.util.concurrent.Callable
 import com.typesafe.config.Config
 import kamon.Kamon
 import kamon.context.Context
-import kamon.context.Context.Key
+import kamon.context.Storage.Scope
 import kamon.instrumentation.context.HasContext
 import kamon.tag.Tag
 import kamon.trace.{Identifier, Span}
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.asm.Advice
-import kanela.agent.libs.net.bytebuddy.asm.Advice.Argument
-import kanela.agent.libs.net.bytebuddy.implementation.bind.annotation
 import kanela.agent.libs.net.bytebuddy.implementation.bind.annotation.{RuntimeType, SuperCall}
 import org.slf4j.MDC
 
@@ -41,7 +39,7 @@ class LogbackInstrumentation extends InstrumentationBuilder {
     .mixin(classOf[HasContext.MixinWithInitializer])
 
   onType("ch.qos.logback.core.spi.AppenderAttachableImpl")
-    .intercept(method("appendLoopOnAppenders"), AppendLoopMethodInterceptor)
+    .advise(method("appendLoopOnAppenders"), AppendLoopOnAppendersAdvice)
 
   onType("ch.qos.logback.classic.util.LogbackMDCAdapter")
     .intercept(method("getPropertyMap"), GetPropertyMapMethodInterceptor)
@@ -76,11 +74,15 @@ object LogbackInstrumentation {
   }
 }
 
-object AppendLoopMethodInterceptor {
+object AppendLoopOnAppendersAdvice {
 
-  @RuntimeType
-  def aroundAppendLoop(@SuperCall callable: Callable[Int], @annotation.Argument(0) event:AnyRef): Int =
-    Kamon.runWithContext(event.asInstanceOf[HasContext].context)(callable.call())
+  @Advice.OnMethodEnter
+  def enter(@Advice.Argument(0) event: Any): Scope =
+    Kamon.storeContext(event.asInstanceOf[HasContext].context)
+
+  @Advice.OnMethodExit
+  def exit(@Advice.Enter scope: Scope): Unit =
+    scope.close()
 }
 
 object GetPropertyMapMethodInterceptor {

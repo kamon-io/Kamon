@@ -1,15 +1,10 @@
 language: scala
 script:
-  - sbt +test && sbt -Dagent=kanela +test
+  - sbt +test
 scala:
    - 2.12.4
-env:
-  matrix:
-    - TRAVIS_JDK=adopt@1.8.202-08
-before_install:
-  - curl -Ls https://git.io/jabba | bash && . ~/.jabba/jabba.sh
-install:
-  - jabba install "$TRAVIS_JDK" && jabba use $_ && java -Xmx32m -version
+jdk:
+   - openjdk8
 before_script:
   - mkdir $TRAVIS_BUILD_DIR/tmp
   - export SBT_OPTS="-Djava.io.tmpdir=$TRAVIS_BUILD_DIR/tmp"
