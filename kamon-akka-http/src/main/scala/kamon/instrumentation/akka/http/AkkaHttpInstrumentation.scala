@@ -9,7 +9,7 @@ import scala.collection.immutable
 
 object AkkaHttpInstrumentation {
 
-  Kamon.onReconfigure(_ => HttpExtSingleRequestAdvice.rebuildHttpClientInstrumentation(): Unit)
+  Kamon.onReconfigure(_ => AkkaHttpClientInstrumentation.rebuildHttpClientInstrumentation(): Unit)
 
   def toRequest(httpRequest: HttpRequest): HttpMessage.Request = new RequestReader {
     val request = httpRequest

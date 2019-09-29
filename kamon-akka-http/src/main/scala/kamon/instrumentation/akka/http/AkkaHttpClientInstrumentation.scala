@@ -16,18 +16,13 @@
 
 package kamon.instrumentation.akka.http
 
-import akka.event.LoggingAdapter
-import akka.http.scaladsl.HttpsConnectionContext
 import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
-import akka.http.scaladsl.settings.ConnectionPoolSettings
 import kamon.Kamon
 import kamon.instrumentation.http.HttpClientInstrumentation
-import kamon.instrumentation.akka.http.AkkaHttpInstrumentation.{toRequestBuilder, toResponse}
-import kamon.trace.Span
+import kamon.instrumentation.akka.http.AkkaHttpInstrumentation.toResponse
+import kamon.instrumentation.http.HttpClientInstrumentation.RequestHandler
 import kamon.util.CallingThreadExecutionContext
 import kanela.agent.api.instrumentation.InstrumentationBuilder
-import kanela.agent.api.instrumentation.bridge.Bridge
-import kanela.agent.libs.net.bytebuddy.implementation.bind.annotation.{Argument, RuntimeType, This}
 
 import scala.concurrent.Future
 import scala.util.{Failure, Success}
@@ -39,41 +34,20 @@ class AkkaHttpClientInstrumentation extends InstrumentationBuilder {
     * via the Http.singleRequest mechanism.
     */
   onType("akka.http.scaladsl.HttpExt")
-    .bridge(classOf[SingleRequestImplBridge])
-    .intercept(method("singleRequest"), classOf[HttpExtSingleRequestAdvice])
+    .advise(method("singleRequestImpl"), classOf[HttpExtSingleRequestAdvice])
 }
 
-trait SingleRequestImplBridge {
+object AkkaHttpClientInstrumentation {
 
-  @Bridge("scala.concurrent.Future singleRequestImpl(akka.http.scaladsl.model.HttpRequest, akka.http.scaladsl.HttpsConnectionContext, akka.http.scaladsl.settings.ConnectionPoolSettings, akka.event.LoggingAdapter)")
-  def invokeSingleRequestImpl(request: HttpRequest, connectionContext: HttpsConnectionContext,
-    settings: ConnectionPoolSettings, log: LoggingAdapter): Future[HttpResponse]
-}
+    @volatile var httpClientInstrumentation: HttpClientInstrumentation = rebuildHttpClientInstrumentation
 
-class HttpExtSingleRequestAdvice
-object HttpExtSingleRequestAdvice {
-
-  @volatile private var _httpClientInstrumentation: HttpClientInstrumentation = rebuildHttpClientInstrumentation
-
-  private[http] def rebuildHttpClientInstrumentation(): HttpClientInstrumentation = {
-    val httpClientConfig = Kamon.config().getConfig("kamon.instrumentation.akka.http.client")
-    _httpClientInstrumentation = HttpClientInstrumentation.from(httpClientConfig, "akka.http.client")
-    _httpClientInstrumentation
-  }
-
-  @RuntimeType
-  def singleRequest(@This httpExt: Any, @Argument(0) request: HttpRequest, @Argument(1) connectionContext: HttpsConnectionContext,
-      @Argument(2) settings: ConnectionPoolSettings, @Argument(3) log: LoggingAdapter): Future[HttpResponse] = {
-
-    val requestBuilder = toRequestBuilder(request)
-    val handler = _httpClientInstrumentation.createHandler(requestBuilder, Kamon.currentContext())
-
-    val responseFuture = Kamon.runWithSpan(handler.span, finishSpan = false) {
-      httpExt.asInstanceOf[SingleRequestImplBridge].invokeSingleRequestImpl(
-        handler.request, connectionContext, settings, log
-      )
+    private[http] def rebuildHttpClientInstrumentation(): HttpClientInstrumentation = {
+      val httpClientConfig = Kamon.config().getConfig("kamon.instrumentation.akka.http.client")
+      httpClientInstrumentation = HttpClientInstrumentation.from(httpClientConfig, "akka.http.client")
+      httpClientInstrumentation
     }
 
+  def handleResponse(responseFuture: Future[HttpResponse], handler: RequestHandler[HttpRequest]): Future[HttpResponse] = {
     responseFuture.onComplete {
       case Success(response) => handler.processResponse(toResponse(response))
       case Failure(t) => handler.span.fail(t).finish()
