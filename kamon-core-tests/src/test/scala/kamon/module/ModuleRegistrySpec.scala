@@ -16,11 +16,17 @@
 package kamon
 package module
 
+import java.util.concurrent.atomic.AtomicLong
+
 import com.typesafe.config.Config
 import kamon.metric.PeriodSnapshot
 import kamon.testkit.Reconfigure
+import org.scalactic.TimesOnInt.convertIntToRepeater
 import org.scalatest.concurrent.Eventually
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
+
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 class ModuleRegistrySpec extends WordSpec with Matchers with Reconfigure with Eventually with BeforeAndAfterAll  {
   "The ModuleRegistry" when {
@@ -83,6 +89,16 @@ class ModuleRegistrySpec extends WordSpec with Matchers with Reconfigure with Ev
         subscription.cancel()
       }
     }
+
+    "starting and stopping modules" should {
+      "allow for all all modules to be stopped and started within the same process" in {
+        10 times {
+          val module = new DummyModule()
+          Kamon.registerModule("dummy", module)
+          Await.ready(Kamon.stopModules(), 5 seconds)
+        }
+      }
+    }
   }
 
 
@@ -126,5 +142,14 @@ class ModuleRegistrySpec extends WordSpec with Matchers with Reconfigure with Ev
 
     override def stop(): Unit = {}
     override def reconfigure(config: Config): Unit = {}
+  }
+
+  val dummyModuleCount = new AtomicLong(0L)
+
+  class DummyModule extends Module {
+    dummyModuleCount.incrementAndGet()
+
+    override def reconfigure(newConfig: Config): Unit = {}
+    override def stop(): Unit = dummyModuleCount.decrementAndGet()
   }
 }

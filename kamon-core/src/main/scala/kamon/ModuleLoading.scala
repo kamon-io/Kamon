@@ -70,6 +70,6 @@ trait ModuleLoading { self: Configuration with Utilities with Metrics with Traci
     * have been completed. This includes automatically and programmatically registered modules.
     */
   def stopModules(): Future[Unit] =
-    _moduleRegistry.stop()
+    _moduleRegistry.stopModules()
 
 }
