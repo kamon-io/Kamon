@@ -4,14 +4,14 @@ import BundleKeys._
 resolvers += Resolver.mavenLocal
 
 lazy val instrumentationModules: Seq[ModuleID] = Seq(
-  "io.kamon" %% "kamon-executors"         % "2.0.0",
+  "io.kamon" %% "kamon-executors"         % "2.0.1",
   "io.kamon" %% "kamon-scala-future"      % "2.0.1",
   "io.kamon" %% "kamon-scalaz-future"     % "2.0.0",
   "io.kamon" %% "kamon-akka"              % "2.0.0",
-  "io.kamon" %% "kamon-akka-http"         % "2.0.1",
+  "io.kamon" %% "kamon-akka-http"         % "2.0.2",
   "io.kamon" %% "kamon-play"              % "2.0.0",
   "io.kamon" %% "kamon-jdbc"              % "2.0.1",
-  "io.kamon" %% "kamon-logback"           % "2.0.0",
+  "io.kamon" %% "kamon-logback"           % "2.0.1",
   "io.kamon" %% "kamon-system-metrics"    % "2.0.0" exclude("org.slf4j", "slf4j-api")
 )
 
@@ -21,7 +21,7 @@ lazy val instrumentationModulesWithoutTwoThirteen: Seq[ModuleID] = Seq(
 )
 
 val versionSettings = Seq(
-  kamonCoreVersion := "2.0.0",
+  kamonCoreVersion := "2.0.1",
   kanelaAgentVersion := "1.0.1",
   instrumentationCommonVersion := "2.0.0"
 )
