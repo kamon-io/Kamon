@@ -69,6 +69,23 @@ class LogbackMdcCopyingSpec extends WordSpec with Matchers with Eventually {
         MDC.get(LogbackInstrumentation.settings().mdcSpanIdKey) shouldBe null
       }
 
+      "copy context tags into the MDC" in {
+        val memoryAppender = buildMemoryAppender(configurator,s"%X{my-tag} %X{mdc_key}")
+
+        val span = Kamon.spanBuilder("my-span").start()
+        val traceID = span.trace.id
+        val spanID = span.id
+        val contextWithSpan = Context.of("my-tag", "my-value")
+
+        MDC.put("mdc_key","mdc_value")
+        Kamon.runWithContext(contextWithSpan) {
+          memoryAppender.doAppend(createLoggingEvent(context))
+        }
+
+        memoryAppender.getLastLine shouldBe "my-value" + " mdc_value"
+        MDC.get("my-tag") shouldBe null
+      }
+
       "copy the configured Context entries into the MDC" in {
         Kamon.reconfigure(
           ConfigFactory

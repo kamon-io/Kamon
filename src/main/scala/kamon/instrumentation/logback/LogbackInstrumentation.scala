@@ -92,6 +92,7 @@ object GetPropertyMapMethodInterceptor {
     val settings = LogbackInstrumentation.settings()
 
     if (settings.propagateContextToMDC) {
+      val mdcContextMapBeforePropagation = MDC.getCopyOfContextMap
       val currentContext = Kamon.currentContext()
       val span = currentContext.get(Span.Key)
 
@@ -115,9 +116,11 @@ object GetPropertyMapMethodInterceptor {
       }
 
       try callable.call() finally {
-        MDC.remove(settings.mdcTraceIdKey)
-        MDC.remove(settings.mdcSpanIdKey)
-        settings.mdcCopyKeys.foreach(key => MDC.remove(key))
+        if (mdcContextMapBeforePropagation != null) {
+          MDC.setContextMap(mdcContextMapBeforePropagation)
+        } else { // a null contextMap is possible and means 'empty'
+          MDC.clear()
+        }
       }
     } else {
       callable.call()
