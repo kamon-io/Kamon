@@ -63,14 +63,14 @@ object Histogram {
       try {
         recordValue(value)
       } catch {
-        case _: ArrayIndexOutOfBoundsException =>
+        case e: ArrayIndexOutOfBoundsException =>
           val highestTrackableValue = getHighestTrackableValue()
           recordValue(highestTrackableValue)
 
           _logger.warn (
             s"Failed to record value [$value] on [${metric.name},${tags}] because the value is outside of the " +
             s"configured range. The recorded value was adjusted to the highest trackable value [$highestTrackableValue]. " +
-            "You might need to change your dynamic range configuration for this metric"
+            "You might need to change your dynamic range configuration for this metric", e
           )
       }
 
@@ -81,14 +81,14 @@ object Histogram {
       try {
         recordValueWithCount(value, times)
       } catch {
-        case _: ArrayIndexOutOfBoundsException =>
+        case e: ArrayIndexOutOfBoundsException =>
           val highestTrackableValue = getHighestTrackableValue()
           recordValueWithCount(highestTrackableValue, times)
 
           _logger.warn (
             s"Failed to record value [$value] on [${metric.name},${tags}] because the value is outside of the " +
             s"configured range. The recorded value was adjusted to the highest trackable value [$highestTrackableValue]. " +
-            "You might need to change your dynamic range configuration for this metric"
+            "You might need to change your dynamic range configuration for this metric", e
           )
       }
 
