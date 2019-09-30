@@ -4,7 +4,7 @@ import java.util.concurrent.Callable
 
 import akka.http.scaladsl.marshalling.{ToResponseMarshallable, ToResponseMarshaller}
 import akka.http.scaladsl.model.StatusCodes.Redirection
-import akka.http.scaladsl.model.Uri
+import akka.http.scaladsl.model.{HttpRequest, HttpResponse, Uri}
 import akka.http.scaladsl.server.PathMatcher.{Matched, Unmatched}
 import akka.http.scaladsl.server.directives.{BasicDirectives, CompleteOrRecoverWithMagnet, OnSuccessMagnet}
 import akka.http.scaladsl.server.directives.RouteDirectives.reject
@@ -23,7 +23,10 @@ import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 import java.util.regex.Pattern
 
+import akka.NotUsed
+import akka.stream.scaladsl.Flow
 import kamon.context.Context
+import kanela.agent.libs.net.bytebuddy.matcher.ElementMatchers.isPublic
 
 
 class AkkaHttpServerInstrumentation extends InstrumentationBuilder {
@@ -40,6 +43,16 @@ class AkkaHttpServerInstrumentation extends InstrumentationBuilder {
   onType("akka.http.scaladsl.HttpExt")
     .advise(method("bindAndHandle"), classOf[HttpExtBindAndHandleAdvice])
 
+  /**
+    * For the HTTP/2 instrumentation, since the parts where we can capture the interface/port and the actual flow
+    * creation happen at different times we are wrapping the handler with the interface/port data and reading that
+    * information when turning the handler function into a flow and wrapping it the same way we would for HTTP/1.
+    */
+  onType("akka.http.scaladsl.Http2Ext")
+    .advise(method("bindAndHandleAsync") and isPublic(), classOf[Http2ExtBindAndHandleAdvice])
+
+  onType("akka.http.impl.engine.http2.Http2Blueprint$")
+    .intercept(method("handleWithStreamIdHeader"), Http2BlueprintInterceptor)
 
   /**
     * The rest of these sections are just about making sure that we can generate an appropriate operation name (i.e. free
@@ -78,7 +91,6 @@ class AkkaHttpServerInstrumentation extends InstrumentationBuilder {
   onType("akka.http.scaladsl.util.FastFuture$")
     .intercept(method("transformWith$extension1"), FastFutureTransformWithAdvice)
 }
-
 
 trait HasMatchingContext {
   def defaultOperationName: String
@@ -208,7 +220,6 @@ object ResolveOperationNameOnRouteInterceptor {
   }
 }
 
-
 class LastAutomaticOperationNameEdit(@volatile var operationName: String)
 
 object LastAutomaticOperationNameEdit {
@@ -252,7 +263,6 @@ object PathDirectivesRawPathPrefixInterceptor {
   }
 }
 
-
 object FastFutureTransformWithAdvice {
 
   @RuntimeType
@@ -289,6 +299,28 @@ object FastFutureTransformWithAdvice {
           scope.close()
           transformedFuture
       }
+    }
+  }
+}
+
+object Http2BlueprintInterceptor {
+
+  case class HandlerWithEndpoint(interface: String, port: Int, handler: HttpRequest => Future[HttpResponse])
+      extends (HttpRequest => Future[HttpResponse]) {
+
+    override def apply(request: HttpRequest): Future[HttpResponse] = handler(request)
+  }
+
+  @RuntimeType
+  def handleWithStreamIdHeader(@Argument(1) handler: HttpRequest => Future[HttpResponse],
+    @SuperCall zuper: Callable[Flow[HttpRequest, HttpResponse, NotUsed]]): Flow[HttpRequest, HttpResponse, NotUsed] = {
+
+    handler match {
+      case HandlerWithEndpoint(interface, port, _) =>
+        ServerFlowWrapper(zuper.call(), interface, port)
+
+      case _ =>
+        zuper.call()
     }
   }
 }

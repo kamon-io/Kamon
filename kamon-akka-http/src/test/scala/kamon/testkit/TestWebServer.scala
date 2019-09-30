@@ -16,35 +16,34 @@
 
 package kamon.testkit
 
+import java.security.cert.{Certificate, CertificateFactory}
+import java.security.{KeyStore, SecureRandom}
+
 import akka.actor.ActorSystem
-import akka.http.scaladsl.Http
+import akka.http.scaladsl.{Http, HttpsConnectionContext, UseHttp2}
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpResponse}
 import de.heikoseeberger.akkahttpjson4s.Json4sSupport
 import akka.http.scaladsl.model.StatusCodes.{BadRequest, InternalServerError, OK}
 import akka.http.scaladsl.model.headers.{Connection, RawHeader}
 import akka.http.scaladsl.server.Directives._
-import akka.http.scaladsl.server.RequestContext
+import akka.http.scaladsl.server.{RequestContext, Route}
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
+import javax.net.ssl.{KeyManagerFactory, SSLContext, SSLSocketFactory, TrustManagerFactory, X509TrustManager}
 import kamon.Kamon
 import kamon.instrumentation.akka.http.TracingDirectives
 import org.json4s.{DefaultFormats, native}
-
-import scala.concurrent.duration._
 import kamon.tag.Lookups.plain
 import kamon.trace.Trace
-
-import scala.util.{Failure, Success}
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Random
 
 trait TestWebServer extends TracingDirectives {
   implicit val serialization = native.Serialization
   implicit val formats = DefaultFormats
   import Json4sSupport._
 
-  def startServer(interface: String, port: Int)(implicit system: ActorSystem): WebServer = {
+  def startServer(interface: String, port: Int, https: Boolean = false)(implicit system: ActorSystem): WebServer = {
     import Endpoints._
 
     implicit val ec: ExecutionContext = system.dispatcher
@@ -171,8 +170,43 @@ trait TestWebServer extends TracingDirectives {
       }
     }
 
-    new WebServer(Http().bindAndHandle(routes, interface, port))
+    if(https)
+      new WebServer(interface, port, "https", Http().bindAndHandleAsync(Route.asyncHandler(routes), interface, port, httpContext()))
+    else
+      new WebServer(interface, port, "http", Http().bindAndHandle(routes, interface, port))
   }
+
+  def httpContext() = {
+    val password = "kamon".toCharArray
+    val ks = KeyStore.getInstance("PKCS12")
+    ks.load(getClass.getClassLoader.getResourceAsStream("https/server.p12"), password)
+
+    val keyManagerFactory = KeyManagerFactory.getInstance("SunX509")
+    keyManagerFactory.init(ks, password)
+
+    val context = SSLContext.getInstance("TLS")
+    context.init(keyManagerFactory.getKeyManagers, null, new SecureRandom)
+
+    new HttpsConnectionContext(context)
+  }
+
+  def clientSSL(): (SSLSocketFactory, X509TrustManager) = {
+    val certStore = KeyStore.getInstance(KeyStore.getDefaultType)
+    certStore.load(null, null)
+    // only do this if you want to accept a custom root CA. Understand what you are doing!
+    certStore.setCertificateEntry("ca", loadX509Certificate("https/rootCA.crt"))
+
+    val certManagerFactory = TrustManagerFactory.getInstance("SunX509")
+    certManagerFactory.init(certStore)
+
+    val context = SSLContext.getInstance("TLS")
+    context.init(null, certManagerFactory.getTrustManagers, new SecureRandom)
+
+    (context.getSocketFactory, certManagerFactory.getTrustManagers.apply(0).asInstanceOf[X509TrustManager])
+  }
+
+  def loadX509Certificate(resourceName: String): Certificate =
+    CertificateFactory.getInstance("X.509").generateCertificate(getClass.getClassLoader.getResourceAsStream(resourceName))
 
   def samplingDecision(ctx: RequestContext): Trace.SamplingDecision =
     Kamon.currentSpan().trace.samplingDecision
@@ -195,7 +229,7 @@ trait TestWebServer extends TracingDirectives {
     }
   }
 
-  class WebServer(bindingFuture: Future[Http.ServerBinding])(implicit ec: ExecutionContext) {
+  class WebServer(val interface: String, val port: Int, val protocol: String, bindingFuture: Future[Http.ServerBinding])(implicit ec: ExecutionContext) {
     def shutdown(): Future[_] = {
       bindingFuture.flatMap(binding => binding.unbind())
     }
