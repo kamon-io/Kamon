@@ -32,7 +32,7 @@ class ContextEntryConverter extends ClassicConverter {
     if(firstOption != null && firstOption.nonEmpty) {
       val optionParts = firstOption.split(':')
       _default = if(optionParts.length > 1) optionParts(1) else ""
-      _entryKey = Context.key(getFirstOption, _default)
+      _entryKey = Context.key(optionParts(0), _default)
     }
   }
 
