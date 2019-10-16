@@ -48,6 +48,38 @@ class MetricLookupSpec extends WordSpec with Matchers {
         val rangeSamplerTwo = Kamon.rangeSampler("range-sampler-lookup")
         rangeSamplerOne shouldBe theSameInstanceAs(rangeSamplerTwo)
       }
+
+      "throw an IllegalArgumentException when a metric redefinition is attempted" in {
+        the[IllegalArgumentException] thrownBy {
+          Kamon.counter("original-counter")
+          Kamon.gauge("original-counter")
+
+        } should have message(redefinitionError("original-counter", "counter", "gauge"))
+
+        the[IllegalArgumentException] thrownBy {
+          Kamon.counter("original-counter")
+          Kamon.histogram("original-counter")
+
+        } should have message(redefinitionError("original-counter", "counter", "histogram"))
+
+        the[IllegalArgumentException] thrownBy {
+          Kamon.counter("original-counter")
+          Kamon.rangeSampler("original-counter")
+
+        } should have message(redefinitionError("original-counter", "counter", "rangeSampler"))
+
+        the[IllegalArgumentException] thrownBy {
+          Kamon.counter("original-counter")
+          Kamon.timer("original-counter")
+
+        } should have message(redefinitionError("original-counter", "counter", "timer"))
+
+        the[IllegalArgumentException] thrownBy {
+          Kamon.histogram("original-histogram")
+          Kamon.counter("original-histogram")
+
+        } should have message(redefinitionError("original-histogram", "histogram", "counter"))
+      }
     }
 
     "refine a metric with tags and" should {
@@ -88,4 +120,7 @@ class MetricLookupSpec extends WordSpec with Matchers {
       }
     }
   }
+
+  def redefinitionError(name: String, currentType: String, newType: String): String =
+    s"Cannot redefine metric [$name] as a [$newType], it was already registered as a [$currentType]"
 }
