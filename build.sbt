@@ -13,17 +13,15 @@
  * =========================================================================================
  */
 
-import Dependencies._
-
 lazy val root = (project in file("."))
   .settings(
     name := "kamon-statsd",
     organization := "io.kamon",
     scalaVersion := "2.13.0",
-    crossScalaVersions := Seq("2.11.12", "2.12.9", "2.13.0"),
+    crossScalaVersions := Seq("2.11.12", "2.12.10", "2.13.0"),
     libraryDependencies ++= Seq(
-      kamonCore % Provided,
-      scalaTest % Test
+      "io.kamon" %% "kamon-core" % "2.0.1" % Provided,
+      "org.scalatest" %% "scalatest" % "3.0.8" % Test
     ),
     Test / parallelExecution := false
   )

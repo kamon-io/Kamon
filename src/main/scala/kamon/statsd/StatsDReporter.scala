@@ -53,7 +53,7 @@ class StatsDReporter(configPath: String) extends MetricReporter {
   override def stop(): Unit = {}
 
   override def reconfigure(config: Config): Unit = {
-    reporterConfiguration = StatsDReporter.Settings.readSettings(Kamon.config().getConfig(configPath))
+    reporterConfiguration = StatsDReporter.Settings.readSettings(config.getConfig(configPath))
     logger.info("The configuration was reloaded successfully.")
   }
 
@@ -76,7 +76,7 @@ class StatsDReporter(configPath: String) extends MetricReporter {
     }
 
     for (
-      metric <- snapshot.histograms ++ snapshot.rangeSamplers;
+      metric <- snapshot.histograms ++ snapshot.rangeSamplers ++ snapshot.timers;
       instrument <- metric.instruments;
       bucket <- instrument.value.bucketsIterator
     ) {
