@@ -1,3 +1,8 @@
+/*
+ *  Copyright 2019 New Relic Corporation. All rights reserved.
+ *  SPDX-License-Identifier: Apache-2.0
+ */
+
 package kamon.newrelic.metrics
 
 import com.newrelic.telemetry.Attributes
@@ -12,10 +17,10 @@ import org.slf4j.LoggerFactory
 object DistributionConverter {
   private val logger = LoggerFactory.getLogger(getClass)
 
-  def convert(start: Long, end: Long, dist: MetricSnapshot.Distributions): Seq[Metric] = {
+  def convert(start: Long, end: Long, dist: MetricSnapshot.Distributions, sourceMetricType: String): Seq[Metric] = {
     logger.debug("name: {} ; numberOfInstruments: {}", dist.name, dist.instruments.size)
 
-    val baseAttributes = buildBaseAttributes(dist)
+    val baseAttributes = buildBaseAttributes(dist, sourceMetricType)
 
     dist.instruments.flatMap { inst  =>
       val tags: TagSet = inst.tags
@@ -50,7 +55,7 @@ object DistributionConverter {
     }
   }
 
-  private def buildBaseAttributes(dist: Distributions): Attributes = {
+  private def buildBaseAttributes(dist: Distributions, sourceMetricType: String): Attributes = {
     val dynamicRange: DynamicRange = dist.settings.dynamicRange
     val lowestDiscernibleValue = dynamicRange.lowestDiscernibleValue
     val highestTrackableValue = dynamicRange.highestTrackableValue
@@ -61,7 +66,7 @@ object DistributionConverter {
     val dimension: MeasurementUnit.Dimension = unit.dimension
 
     new Attributes()
-      .put("sourceMetricType", "histogram")
+      .put("sourceMetricType", sourceMetricType)
       .put("lowestDiscernibleValue", lowestDiscernibleValue)
       .put("highestTrackableValue", highestTrackableValue)
       .put("significantValueDigits", significantValueDigits)

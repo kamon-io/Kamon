@@ -1,10 +1,15 @@
+/*
+ *  Copyright 2019 New Relic Corporation. All rights reserved.
+ *  SPDX-License-Identifier: Apache-2.0
+ */
+
 package kamon.newrelic.metrics
 
 import com.newrelic.telemetry.metrics.{Count, Metric}
 import kamon.metric.{Instrument, MetricSnapshot}
+import kamon.newrelic.TagSetToAttributes.addTags
 import kamon.newrelic.metrics.ConversionSupport.buildAttributes
 import org.slf4j.LoggerFactory
-import kamon.newrelic.TagSetToAttributes.addTags
 
 object CounterConverter {
   private val logger = LoggerFactory.getLogger(getClass)

@@ -1,3 +1,8 @@
+/*
+ *  Copyright 2019 New Relic Corporation. All rights reserved.
+ *  SPDX-License-Identifier: Apache-2.0
+ */
+
 package kamon.newrelic.metrics
 
 import com.newrelic.telemetry.Attributes
@@ -28,7 +33,7 @@ class NewRelicMetricsReporterSpec extends WordSpec with Matchers {
     .put("foo", "bar")
     .put("sourceMetricType", "gauge")
 
-  private val summaryAttributes = new Attributes()
+  private val histogramSummaryAttributes = new Attributes()
     .put("magnitude.name", "eimer")
     .put("magnitude.scaleFactor", 603.3d)
     .put("lowestDiscernibleValue", 1L)
@@ -38,26 +43,44 @@ class NewRelicMetricsReporterSpec extends WordSpec with Matchers {
     .put("dimension", "information")
     .put("sourceMetricType", "histogram")
 
+  private val timerSummaryAttributes = new Attributes()
+    .put("magnitude.name", "timer")
+    .put("magnitude.scaleFactor", 333.3)
+    .put("lowestDiscernibleValue", 1L)
+    .put("highestTrackableValue", 3600000000000L)
+    .put("significantValueDigits", 2)
+    .put("thirteen", "queen")
+    .put("dimension", "information")
+    .put("sourceMetricType", "timer")
+
   private val count1: Metric = new Count("flib", TestMetricHelper.value1, TestMetricHelper.start, TestMetricHelper.end, countAttributes)
   private val count2: Metric = new Count("flib", TestMetricHelper.value2, TestMetricHelper.start, TestMetricHelper.end, countAttributes)
-  private val gauge1: Metric = new Gauge("shirley", 15.6d, TestMetricHelper.end, gaugeAttributes)
-  private val gauge2: Metric = new Gauge("trev.percentiles", 2.0, TestMetricHelper.end,
-    summaryAttributes.copy().put("percentile.countAtRank", 816L).put("percentile", 19.0d))
-  private val summary1: Metric = new Summary("trev.summary", 44, 101.0, 13.0, 17.0,
-    TestMetricHelper.start, TestMetricHelper.end, summaryAttributes)
+
+  private val gauge: Metric = new Gauge("shirley", 15.6d, TestMetricHelper.end, gaugeAttributes)
+
+  private val histogramGauge: Metric = new Gauge("trev.percentiles", 2.0, TestMetricHelper.end,
+    histogramSummaryAttributes.copy().put("percentile.countAtRank", 816L).put("percentile", 19.0d))
+  private val histogramSummary: Metric = new Summary("trev.summary", 44, 101.0, 13.0, 17.0,
+    TestMetricHelper.start, TestMetricHelper.end, histogramSummaryAttributes)
+
+  private val timerGauge: Metric = new Gauge("timer.percentiles", 4.0, TestMetricHelper.end,
+    timerSummaryAttributes.copy().put("percentile.countAtRank", 1632L).put("percentile", 38.0d))
+  private val timerSummary: Metric = new Summary("timer.summary", 88, 202.0, 26.0, 34.0,
+    TestMetricHelper.start, TestMetricHelper.end, timerSummaryAttributes)
 
   "The metrics reporter" should {
     "send some metrics" in {
       val counter: MetricSnapshot.Values[Long] = TestMetricHelper.buildCounter
       val kamonGauge = TestMetricHelper.buildGauge
-      val histogram = TestMetricHelper.buildDistribution
+      val histogram = TestMetricHelper.buildHistogramDistribution
+      val timer = TestMetricHelper.buildTimerDistribution
       val periodSnapshot = new PeriodSnapshot(TestMetricHelper.startInstant, TestMetricHelper.endInstant,
-        Seq(counter), Seq(kamonGauge), Seq(histogram), Seq(), Seq())
+        Seq(counter), Seq(kamonGauge), Seq(histogram), Seq(timer), Seq())
 
       val expectedCommonAttributes: Attributes = new Attributes()
         .put("service.name", "kamon-application")
         .put("instrumentation.source", "kamon-agent")
-      val expectedBatch: MetricBatch = new MetricBatch(Seq(count1, count2, gauge1, gauge2, summary1).asJava, expectedCommonAttributes)
+      val expectedBatch: MetricBatch = new MetricBatch(Seq(count1, count2, gauge, histogramGauge, histogramSummary, timerGauge, timerSummary).asJava, expectedCommonAttributes)
 
       val sender = mock(classOf[MetricBatchSender])
 
@@ -70,14 +93,14 @@ class NewRelicMetricsReporterSpec extends WordSpec with Matchers {
     "be reconfigurable" in {
       val counter = TestMetricHelper.buildCounter
       val kamonGauge = TestMetricHelper.buildGauge
-      val histogram = TestMetricHelper.buildDistribution
+      val histogram = TestMetricHelper.buildHistogramDistribution
       val periodSnapshot = new PeriodSnapshot(TestMetricHelper.startInstant, TestMetricHelper.endInstant,
         Seq(counter), Seq(kamonGauge), Seq(histogram), Seq(), Seq())
 
       val expectedCommonAttributes: Attributes = new Attributes()
         .put("service.name", "cheese-whiz")
         .put("instrumentation.source", "kamon-agent")
-      val expectedBatch: MetricBatch = new MetricBatch(Seq(count1, count2, gauge1, gauge2, summary1).asJava, expectedCommonAttributes)
+      val expectedBatch: MetricBatch = new MetricBatch(Seq(count1, count2, gauge, histogramGauge, histogramSummary).asJava, expectedCommonAttributes)
 
       val configObject: ConfigValue = ConfigValueFactory.fromMap(Map("service" -> "cheese-whiz").asJava)
       val config: Config = Kamon.config().withValue("kamon.environment", configObject)
