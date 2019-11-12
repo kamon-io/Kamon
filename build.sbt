@@ -1,3 +1,4 @@
+
 /* =========================================================================================
  * Copyright © 2013-2017 the kamon project <http://kamon.io/>
  *
@@ -13,22 +14,20 @@
  * =========================================================================================
  */
 
-val kamonCore         = "io.kamon"                  %%  "kamon-core"                  % "0.6.7"
-val kamonTestkit      = "io.kamon"                  %%  "kamon-testkit"               % "0.6.7"
-val newrelic          = "com.newrelic.agent.java"   %   "newrelic-agent"              % "3.26.1"
-val sprayJson         = "io.spray"                  %%  "spray-json"                  % "1.3.3"
-val sprayJsonLenses   = "net.virtual-void"          %%  "json-lenses"                 % "0.6.2"
-val scalaTest         = "org.scalatest"             %%  "scalatest"                   % "3.0.3"
-val scalaMock         = "org.scalamock"             %%  "scalamock-scalatest-support" % "3.6.0"
-val scalajHttp        = "org.scalaj"                %% "scalaj-http"                  % "2.3.0"
+name := "kamon-newrelic-reporter"
+version := "0.0.2-SNAPSHOT"
+description := "New Relic Kamon Reporter"
 
-lazy val root = (project in file("."))
-  .settings(name := "kamon-newrelic")
-  .settings(Seq(
-    scalaVersion := "2.12.2",
-    crossScalaVersions := Seq("2.10.6", "2.11.8", "2.12.2")))
-  .settings(
-      libraryDependencies ++=
-        compileScope(kamonCore, sprayJson, scalajHttp, sprayJsonLenses, newrelic) ++
-        providedScope(aspectJ, newrelic) ++
-        testScope(scalatest, akkaDependency("testkit").value, scalaTest, scalaMock, kamonTestkit, slf4jApi, slf4jnop))
+scalaVersion := "2.13.0"
+crossScalaVersions := Seq("2.10.6", "2.11.8", "2.12.2")
+
+resolvers += Resolver.mavenLocal
+resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
+
+libraryDependencies ++= Seq(
+  "io.kamon" %% "kamon-core" % "2.0.1",
+  "com.newrelic.telemetry" % "telemetry" % "0.3.2",
+  "com.newrelic.telemetry" % "telemetry-http-okhttp" % "0.3.2",
+  scalatest % "test",
+  "org.mockito" % "mockito-core" % "3.1.0"
+)
