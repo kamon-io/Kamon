@@ -15,10 +15,11 @@ import org.slf4j.LoggerFactory
 
 import scala.jdk.CollectionConverters._
 
-class NewRelicMetricsReporter(sender: MetricBatchSender = NewRelicMetricsReporter.buildSender()) extends MetricReporter {
+class NewRelicMetricsReporter(senderBuilder: () => MetricBatchSender = () => NewRelicMetricsReporter.buildSender()) extends MetricReporter {
 
   private val logger = LoggerFactory.getLogger(classOf[NewRelicMetricsReporter])
-  private var commonAttributes = buildCommonAttributes(Kamon.config())
+  @volatile private var commonAttributes = buildCommonAttributes(Kamon.config())
+  @volatile private var sender: MetricBatchSender = senderBuilder()
 
   private def buildCommonAttributes(config: Config) = {
     new Attributes()
@@ -32,16 +33,16 @@ class NewRelicMetricsReporter(sender: MetricBatchSender = NewRelicMetricsReporte
     val periodEndTime = snapshot.to.toEpochMilli
 
     val counters = snapshot.counters.flatMap { counter =>
-      CounterConverter.convert(periodStartTime, periodEndTime, counter)
+      NewRelicCounters(periodStartTime, periodEndTime, counter)
     }
     val gauges = snapshot.gauges.flatMap { gauge =>
-      GaugeConverter.convert(periodEndTime, gauge)
+      NewRelicGauges(periodEndTime, gauge)
     }
     val histogramMetrics = snapshot.histograms.flatMap { histogram =>
-      DistributionConverter.convert(periodStartTime, periodEndTime, histogram, "histogram")
+      NewRelicDistributionMetrics(periodStartTime, periodEndTime, histogram, "histogram")
     }
     val timerMetrics = snapshot.timers.flatMap { timer =>
-      DistributionConverter.convert(periodStartTime, periodEndTime, timer, "timer")
+      NewRelicDistributionMetrics(periodStartTime, periodEndTime, timer, "timer")
     }
 
     val metrics = Seq(counters, gauges, histogramMetrics, timerMetrics).flatten.asJava
@@ -54,6 +55,7 @@ class NewRelicMetricsReporter(sender: MetricBatchSender = NewRelicMetricsReporte
 
   override def reconfigure(newConfig: Config): Unit = {
     commonAttributes = buildCommonAttributes(newConfig)
+    sender = senderBuilder()
   }
 }
 

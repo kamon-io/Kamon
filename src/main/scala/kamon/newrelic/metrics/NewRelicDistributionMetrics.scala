@@ -14,15 +14,16 @@ import kamon.newrelic.TagSetToAttributes
 import kamon.tag.TagSet
 import org.slf4j.LoggerFactory
 
-object DistributionConverter {
+object NewRelicDistributionMetrics {
+  private val percentilesToReport = Seq(50d, 75d, 90d, 95d, 99d, 99.9d)
   private val logger = LoggerFactory.getLogger(getClass)
 
-  def convert(start: Long, end: Long, dist: MetricSnapshot.Distributions, sourceMetricType: String): Seq[Metric] = {
+  def apply(start: Long, end: Long, dist: MetricSnapshot.Distributions, sourceMetricType: String): Seq[Metric] = {
     logger.debug("name: {} ; numberOfInstruments: {}", dist.name, dist.instruments.size)
 
     val baseAttributes = buildBaseAttributes(dist, sourceMetricType)
 
-    dist.instruments.flatMap { inst  =>
+    dist.instruments.flatMap { inst =>
       val tags: TagSet = inst.tags
       val instrumentBaseAttributes: Attributes = TagSetToAttributes.addTags(Seq(tags), baseAttributes.copy())
 
@@ -46,13 +47,15 @@ object DistributionConverter {
   }
 
   private def makePercentiles(name: String, end: Long, distValue: Distribution, instrumentBaseAttributes: Attributes): Seq[Metric] = {
-    val kamonPercentiles: Seq[Distribution.Percentile] = distValue.percentiles
-    kamonPercentiles.map { percentile =>
-      val attributes: Attributes = instrumentBaseAttributes.copy()
-        .put("percentile.countAtRank", percentile.countAtRank)
-        .put("percentile", percentile.rank)
-      new Gauge(name + ".percentiles", percentile.value, end, attributes)
-    }
+    percentilesToReport
+      .map(rank => distValue.percentile(rank))
+      .filter(percentileValue => percentileValue != null)
+      .map { percentile =>
+        val attributes: Attributes = instrumentBaseAttributes.copy()
+          .put("percentile.countAtRank", percentile.countAtRank)
+          .put("percentile", percentile.rank)
+        new Gauge(name + ".percentiles", percentile.value, end, attributes)
+      }
   }
 
   private def buildBaseAttributes(dist: Distributions, sourceMetricType: String): Attributes = {

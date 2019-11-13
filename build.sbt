@@ -29,5 +29,5 @@ libraryDependencies ++= Seq(
   "com.newrelic.telemetry" % "telemetry" % "0.3.2",
   "com.newrelic.telemetry" % "telemetry-http-okhttp" % "0.3.2",
   scalatest % "test",
-  "org.mockito" % "mockito-core" % "3.1.0"
+  "org.mockito" % "mockito-core" % "3.1.0" % "test"
 )

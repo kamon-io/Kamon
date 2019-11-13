@@ -9,7 +9,7 @@ import com.newrelic.telemetry.Attributes
 import com.newrelic.telemetry.metrics.Gauge
 import org.scalatest.{Matchers, WordSpec}
 
-class GaugeConverterSpec extends WordSpec with Matchers {
+class NewRelicGaugesSpec extends WordSpec with Matchers {
 
   "gauge converter" should {
     "convert a gauge" in {
@@ -23,7 +23,7 @@ class GaugeConverterSpec extends WordSpec with Matchers {
         .put("foo", "bar")
         .put("sourceMetricType", "gauge")
       val expectedGauge = new Gauge("shirley", 15.6d, timestamp, attributes)
-      val result = GaugeConverter.convert(timestamp, kamonGauge)
+      val result = NewRelicGauges(timestamp, kamonGauge)
       result shouldBe Seq(expectedGauge)
     }
   }

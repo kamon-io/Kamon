@@ -13,6 +13,8 @@ import kamon.metric.MeasurementUnit.Dimension
 import kamon.metric.{Distribution, _}
 import kamon.tag.TagSet
 
+import scala.collection.immutable
+
 object TestMetricHelper {
 
   val end: Long = System.currentTimeMillis()
@@ -43,7 +45,11 @@ object TestMetricHelper {
     val dynamicRange: DynamicRange = DynamicRange.Default
     val settings = Metric.Settings.ForDistributionInstrument(
       new MeasurementUnit(Dimension.Information, new metric.MeasurementUnit.Magnitude("eimer", 603.3d)), Duration.ofMillis(12), dynamicRange)
-    val distribution: Distribution = buildHistogramDist(Percentage(19d, 2L, 816L), Bucket(717L, 881L), Distro(13L, 17L, 101L, 44L))
+    val percentiles = immutable.Map.newBuilder
+      .addOne(90d, Percentage(90d, 2L, 816L))
+      .addOne(87d, Percentage(87d, 2L, 816L))
+      .result()
+    val distribution: Distribution = buildHistogramDist(Percentage(19d, 2L, 816L), Bucket(717L, 881L), Distro(13L, 17L, 101L, 44L), percentiles)
     val inst: Snapshot[Distribution] = new Snapshot[Distribution](tagSet, distribution)
     new metric.MetricSnapshot.Distributions("trev", "a good trevor", settings, Seq(inst))
   }
@@ -53,7 +59,11 @@ object TestMetricHelper {
     val dynamicRange: DynamicRange = DynamicRange.Default
     val settings = Metric.Settings.ForDistributionInstrument(
       new MeasurementUnit(Dimension.Information, new metric.MeasurementUnit.Magnitude("timer", 333.3d)), Duration.ofMillis(15), dynamicRange)
-    val distribution: Distribution = buildHistogramDist(Percentage(38d, 4L, 1632L), Bucket(1424L, 1672L), Distro(26L, 34L, 202L, 88L))
+    val percentiles = immutable.Map.newBuilder
+      .addOne(95d, Percentage(95d, 4L, 1632L))
+      .addOne(87d, Percentage(87d, 2L, 816L))
+      .result()
+    val distribution: Distribution = buildHistogramDist(Percentage(38d, 4L, 1632L), Bucket(1424L, 1672L), Distro(26L, 34L, 202L, 88L), percentiles)
     val inst: Snapshot[Distribution] = new Snapshot[Distribution](tagSet, distribution)
     new metric.MetricSnapshot.Distributions("timer", "a good timer", settings, Seq(inst))
   }
@@ -83,7 +93,7 @@ object TestMetricHelper {
 
   case class Distro(min: Long, max: Long, sum: Long, count: Long)
 
-  private def buildHistogramDist(perc: Percentage, bucket: Bucket, distro: Distro) = {
+  private def buildHistogramDist(perc: Percentage, bucket: Bucket, distro: Distro, percentileValues: Map[Double, Percentage]) = {
 
     val distribution: Distribution = new Distribution() {
       override def dynamicRange: DynamicRange = DynamicRange.Default
@@ -96,7 +106,7 @@ object TestMetricHelper {
 
       override def count: Long = distro.count
 
-      override def percentile(rank: Double): Distribution.Percentile = null
+      override def percentile(rank: Double): Distribution.Percentile = percentileValues.get(rank).map(r => r.toPercentile).orNull
 
       override def percentiles: Seq[Distribution.Percentile] = Seq(perc.toPercentile)
 

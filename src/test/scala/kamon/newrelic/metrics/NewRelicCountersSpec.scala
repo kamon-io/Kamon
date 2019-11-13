@@ -9,7 +9,7 @@ import com.newrelic.telemetry.Attributes
 import com.newrelic.telemetry.metrics.{Count, Metric => NewRelicMetric}
 import org.scalatest.{Matchers, WordSpec}
 
-class CounterConverterSpec extends WordSpec with Matchers {
+class NewRelicCountersSpec extends WordSpec with Matchers {
 
   "the counter converter" should {
     "convert a counter with multiple instruments" in {
@@ -27,7 +27,7 @@ class CounterConverterSpec extends WordSpec with Matchers {
 
       val expectedResult: Seq[NewRelicMetric] = Seq(expected1, expected2)
 
-      val result = CounterConverter.convert(TestMetricHelper.start, TestMetricHelper.end, snapshot)
+      val result = NewRelicCounters(TestMetricHelper.start, TestMetricHelper.end, snapshot)
       result shouldBe expectedResult
     }
   }

@@ -11,10 +11,10 @@ import kamon.newrelic.TagSetToAttributes.addTags
 import kamon.newrelic.metrics.ConversionSupport.buildAttributes
 import org.slf4j.LoggerFactory
 
-object GaugeConverter {
+object NewRelicGauges {
   private val logger = LoggerFactory.getLogger(getClass)
 
-  def convert(timestamp: Long, gauge: MetricSnapshot.Values[Double]): Seq[Metric] = {
+  def apply(timestamp: Long, gauge: MetricSnapshot.Values[Double]): Seq[Metric] = {
     val attributes = buildAttributes(gauge)
     logger.debug("name: {} ; numberOfInstruments: {}", gauge.name, gauge.instruments.size)
     gauge.instruments.map { inst: Instrument.Snapshot[Double] =>

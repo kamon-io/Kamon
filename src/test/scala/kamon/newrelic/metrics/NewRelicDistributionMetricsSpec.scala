@@ -10,7 +10,7 @@ import com.newrelic.telemetry.metrics.{Gauge, Summary}
 import kamon.metric.MetricSnapshot.Distributions
 import org.scalatest.{Matchers, WordSpec}
 
-class DistributionConverterSpec extends WordSpec with Matchers {
+class NewRelicDistributionMetricsSpec extends WordSpec with Matchers {
 
   "distribution converter" should {
     "convert a distribution" in {
@@ -25,10 +25,10 @@ class DistributionConverterSpec extends WordSpec with Matchers {
         .put("dimension", "information")
         .put("sourceMetricType", "mountain")
       val summary = new Summary("trev.summary", 44, 101.0, 13.0, 17.0, TestMetricHelper.start, TestMetricHelper.end, summaryAttributes)
-      val gaugeAttributes = summaryAttributes.copy().put("percentile.countAtRank", 816L).put("percentile", 19.0d)
+      val gaugeAttributes = summaryAttributes.copy().put("percentile.countAtRank", 816L).put("percentile", 90.0d)
       val gauge = new Gauge("trev.percentiles", 2.0, TestMetricHelper.end, gaugeAttributes)
       val expectedMetrics = Seq(gauge, summary)
-      val result = DistributionConverter.convert(TestMetricHelper.start, TestMetricHelper.end, distributions, "mountain")
+      val result = NewRelicDistributionMetrics(TestMetricHelper.start, TestMetricHelper.end, distributions, "mountain")
       result shouldBe expectedMetrics
     }
   }

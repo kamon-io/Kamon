@@ -19,8 +19,8 @@ class NewRelicSpanReporter(spanBatchSenderBuilder: SpanBatchSenderBuilder =
                            new SimpleSpanBatchSenderBuilder()) extends SpanReporter {
 
   private val logger = LoggerFactory.getLogger(classOf[NewRelicSpanReporter])
-  private var spanBatchSender = spanBatchSenderBuilder.build(Kamon.config())
-  private var commonAttributes = buildCommonAttributes(Kamon.config())
+  @volatile private var spanBatchSender = spanBatchSenderBuilder.build(Kamon.config())
+  @volatile private var commonAttributes = buildCommonAttributes(Kamon.config())
 
   private def buildCommonAttributes(config: Config) = {
     new Attributes()
@@ -49,13 +49,13 @@ class NewRelicSpanReporter(spanBatchSenderBuilder: SpanBatchSenderBuilder =
    * @param spans - spans to report to New Relic
    */
   override def reportSpans(spans: Seq[Span.Finished]): Unit = {
-    logger.warn("NewRelicSpanReporter reportSpans...")
+    logger.debug("NewRelicSpanReporter reportSpans...")
     val newRelicSpans = spans.map(NewRelicSpanConverter.convertSpan).asJava
     spanBatchSender.sendBatch(new SpanBatch(newRelicSpans, commonAttributes))
   }
 
   override def reconfigure(newConfig: Config): Unit = {
-    logger.warn("NewRelicSpanReporter reconfigure...")
+    logger.debug("NewRelicSpanReporter reconfigure...")
     spanBatchSender = spanBatchSenderBuilder.build(newConfig)
     commonAttributes = buildCommonAttributes(newConfig)
     checkJoinParameter()

@@ -26,6 +26,7 @@ object NewRelicSpanConverter {
    */
   def convertSpan(kamonSpan: Span.Finished): NewRelicSpan = {
     val durationMs = Math.floorDiv(Clock.nanosBetween(kamonSpan.from, kamonSpan.to), 1000000)
+    // If parent id is an empty string, just null it out so it doesn't get sent to NR
     val parentId = if (kamonSpan.parentId.isEmpty) null else kamonSpan.parentId.string
     NewRelicSpan.builder(kamonSpan.id.string)
       .traceId(kamonSpan.trace.id.string)
@@ -47,8 +48,9 @@ object NewRelicSpanConverter {
         getStringTag(kamonSpan, PeerKeys.IPv6),
         getLongTag(kamonSpan, PeerKeys.Port).toInt)
 
-      if (hasAnyData(remoteEndpoint))
+      if (hasAnyData(remoteEndpoint)) {
         attributes.put("remoteEndpoint", remoteEndpoint.toString)
+      }
     }
 
     kamonSpan.marks.foreach {
