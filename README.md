@@ -1,14 +1,72 @@
-New Relic Integration    ![Build Status](https://travis-ci.org/kamon-io/kamon-newrelic.svg?branch=master)
-==========================
+# New Relic Integration
 
-[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/kamon-io/Kamon?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+This repository provides an integration with the [New Relic](https://newrelic.com) platform.
+It provides two reporters capable of sending trace spans and dimensional 
+metrics to New Relic data ingest APIs. 
 
-***kamon-newrelic*** [![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-newrelic_2.11/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-newrelic_2.11)
+# Installation
 
-Reporting Metrics to New Relic
-==============================
+In order to use the New Relic reporters in your application, you must first
+add the `kamon-newrelic` reporter dependency to your `build.sbt`:
 
-[New Relic] is a well know and widely spread Application Performance Management provider that, among other platforms,
-supports monitoring applications running on the JVM. 
+```
+libraryDependencies ++= Seq(
+    "io.kamon" %% "kamon-bundle" % "2.0.2",
+    "com.newrelic.telemetry" %% "kamon-newrelic-reporter" % "0.0.3",
+    ...
+)
+```
 
-## TODO:  re-write this documentation!
+Once the dependency is included in your project, Kamon will automatically
+register the reporters.
+
+## Configuration
+
+In order for the reporters to send data, they require a [New Relic Insights API key](https://docs.newrelic.com/docs/apis/get-started/intro-apis/types-new-relic-api-keys#insert-key-create).  
+You should populate an environment variable called `INSIGHTS_INSERT_KEY` with your
+API key, and configure it in your `application.conf` like this:
+
+```hocon
+kamon.newrelic {
+    # A New Relic Insights API Insert Key is required to send trace data to New Relic
+    # https://docs.newrelic.com/docs/apis/get-started/intro-apis/types-new-relic-api-keys#insert-key-create
+    nr-insights-insert-key = ${?INSIGHTS_INSERT_KEY}
+}
+```
+
+If you can't use an environment variable, you can replace the above with the actual key like  
+`nr-insights-insert-key = abc123secretvalue123`. 
+
+**Note**: This is less secure and additional precautions must be taken (like considering file
+permissions and excluding from source control).
+
+
+# Data
+
+For a detailed explanation of what data is exported and how it
+appears inside the New Relic platform, please 
+see the documentation in [the New Relic exporter specs repo](https://github.com/newrelic/newrelic-exporter-specs/tree/master/kamon).
+
+# Development
+
+Great!  You have cloned this repository and want to build it in order to test 
+things out, experiment, and make changes...awesome!
+
+First, make sure that you have a working installation of scala 2.13.0 and
+sbt. Then you can run:
+
+```
+$ sbt compile  
+```
+
+If you are developing locally, you may also be interested in:
+
+* `sbt publishLocal` - (publish to [local Ivy repo](https://www.scala-sbt.org/1.x/docs/Publishing.html#Publishing+locally))
+* `sbt publishM2` - (publish to [local Maven repo](https://www.scala-sbt.org/1.x/docs/Publishing.html#Publishing+locally))
+* `sbt package` - (build a local jar, output in `kamon-newrelic/target/scala-2.13/`)
+
+
+# Contributing
+
+Please see [CONTRIBUTING.md](CONTRIBUTING.md) for information on helping out 
+with this project.
