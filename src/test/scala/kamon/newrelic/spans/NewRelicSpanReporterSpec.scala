@@ -42,21 +42,22 @@ class NewRelicSpanReporterSpec extends WordSpec with Matchers {
       when(builder.build(any[Config])).thenReturn(sender)
 
       val reporter = new NewRelicSpanReporter(builder)
-      //change the service name attribute and make sure that we reconfigure with it!
-      val configObject: ConfigValue = ConfigValueFactory.fromMap(Map("service" -> "cheese-whiz").asJava)
+      //change the service name attribute and tags and make sure that we reconfigure with it!
+      val tagDetails = ConfigValueFactory.fromMap(Map("testTag" -> "testThing").asJava)
+      val configObject: ConfigValue = ConfigValueFactory.fromMap(Map("service" -> "cheese-whiz", "host" -> "thing", "tags" -> tagDetails).asJava)
       val config: Config = Kamon.config().withValue("kamon.environment", configObject)
       reporter.reconfigure(config)
 
       val kamonSpan = TestSpanHelper.makeKamonSpan(Client, TestSpanHelper.spanId)
       val spans: Seq[Span.Finished] = Seq(kamonSpan)
-      val expectedBatch: SpanBatch = buildExpectedBatch("cheese-whiz")
+      val expectedBatch: SpanBatch = buildExpectedBatch("cheese-whiz", "thing", "testThing")
 
       reporter.reportSpans(spans)
       verify(sender).sendBatch(expectedBatch);
     }
   }
 
-  private def buildExpectedBatch(serviceName: String = "kamon-application") = {
+  private def buildExpectedBatch(serviceName: String = "kamon-application", hostName : String = "auto", tagValue: String = "testValue" ) = {
     val expectedAttributes = new Attributes()
       .put("xx", TestSpanHelper.now)
       .put("span.kind", "client")
@@ -72,6 +73,8 @@ class NewRelicSpanReporterSpec extends WordSpec with Matchers {
     val commonAttributes = new Attributes()
       .put("instrumentation.source", "kamon-agent")
       .put("service.name", serviceName)
+      .put("host", hostName)
+      .put("testTag", tagValue)
     val expectedSpans = List(expectedSpan).asJava
     new SpanBatch(expectedSpans, commonAttributes)
   }

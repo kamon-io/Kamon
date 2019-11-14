@@ -10,7 +10,8 @@ import com.newrelic.telemetry.metrics.{Gauge, Metric, Summary}
 import kamon.metric.Distribution.Bucket
 import kamon.metric.MetricSnapshot.Distributions
 import kamon.metric.{Distribution, DynamicRange, MeasurementUnit, MetricSnapshot}
-import kamon.newrelic.TagSetToAttributes
+import kamon.newrelic.AttributeBuddy
+import kamon.newrelic.AttributeBuddy._
 import kamon.tag.TagSet
 import org.slf4j.LoggerFactory
 
@@ -25,7 +26,7 @@ object NewRelicDistributionMetrics {
 
     dist.instruments.flatMap { inst =>
       val tags: TagSet = inst.tags
-      val instrumentBaseAttributes: Attributes = TagSetToAttributes.addTags(Seq(tags), baseAttributes.copy())
+      val instrumentBaseAttributes: Attributes = addTagsFromTagSets(Seq(tags), baseAttributes.copy())
 
       val distValue: Distribution = inst.value
 

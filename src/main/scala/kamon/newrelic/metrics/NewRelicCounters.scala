@@ -7,7 +7,7 @@ package kamon.newrelic.metrics
 
 import com.newrelic.telemetry.metrics.{Count, Metric}
 import kamon.metric.{Instrument, MetricSnapshot}
-import kamon.newrelic.TagSetToAttributes.addTags
+import kamon.newrelic.AttributeBuddy.addTagsFromTagSets
 import kamon.newrelic.metrics.ConversionSupport.buildAttributes
 import org.slf4j.LoggerFactory
 
@@ -18,7 +18,7 @@ object NewRelicCounters {
     val attributes = buildAttributes(counter)
     logger.debug("name: {} ; numberOfInstruments: {}", counter.name, counter.instruments.size)
     counter.instruments.map { inst: Instrument.Snapshot[Long] =>
-      new Count(counter.name, inst.value, start, end, addTags(Seq(inst.tags), attributes.copy().put("sourceMetricType", "counter")))
+      new Count(counter.name, inst.value, start, end, addTagsFromTagSets(Seq(inst.tags), attributes.copy().put("sourceMetricType", "counter")))
     }
   }
 }

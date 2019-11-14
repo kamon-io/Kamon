@@ -7,7 +7,7 @@ package kamon.newrelic.spans
 
 import com.newrelic.telemetry.Attributes
 import com.newrelic.telemetry.spans.{Span => NewRelicSpan}
-import kamon.newrelic.TagSetToAttributes
+import kamon.newrelic.AttributeBuddy._
 import kamon.tag.Lookups.{longOption, option}
 import kamon.trace.Span
 import kamon.trace.Span.Mark
@@ -57,7 +57,7 @@ object NewRelicSpanConverter {
       case Mark(instant, key) => attributes.put(key, Clock.toEpochMicros(instant) / 1000) // convert to milliseconds
     }
 
-    TagSetToAttributes.addTags( Seq(kamonSpan.tags, kamonSpan.metricTags), attributes)
+    addTagsFromTagSets(Seq(kamonSpan.tags, kamonSpan.metricTags), attributes)
   }
 
   private def getStringTag(span: Span.Finished, tagName: String): String =

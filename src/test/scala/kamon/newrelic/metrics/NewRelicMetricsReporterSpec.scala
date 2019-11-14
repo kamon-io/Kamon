@@ -80,6 +80,8 @@ class NewRelicMetricsReporterSpec extends WordSpec with Matchers {
       val expectedCommonAttributes: Attributes = new Attributes()
         .put("service.name", "kamon-application")
         .put("instrumentation.source", "kamon-agent")
+        .put("host", "auto")
+        .put("testTag", "testValue")
       val expectedBatch: MetricBatch = new MetricBatch(Seq(count1, count2, gauge, histogramGauge, histogramSummary, timerGauge, timerSummary).asJava, expectedCommonAttributes)
 
       val sender = mock(classOf[MetricBatchSender])
@@ -100,9 +102,12 @@ class NewRelicMetricsReporterSpec extends WordSpec with Matchers {
       val expectedCommonAttributes: Attributes = new Attributes()
         .put("service.name", "cheese-whiz")
         .put("instrumentation.source", "kamon-agent")
+        .put("testTag", "testThing")
+        .put("host", "thing")
       val expectedBatch: MetricBatch = new MetricBatch(Seq(count1, count2, gauge, histogramGauge, histogramSummary).asJava, expectedCommonAttributes)
 
-      val configObject: ConfigValue = ConfigValueFactory.fromMap(Map("service" -> "cheese-whiz").asJava)
+      val tagDetails = ConfigValueFactory.fromMap(Map("testTag" -> "testThing").asJava)
+      val configObject: ConfigValue = ConfigValueFactory.fromMap(Map("service" -> "cheese-whiz", "host" -> "thing", "tags" -> tagDetails).asJava)
       val config: Config = Kamon.config().withValue("kamon.environment", configObject)
 
       val sender = mock(classOf[MetricBatchSender])

@@ -7,7 +7,7 @@ package kamon.newrelic.metrics
 
 import com.newrelic.telemetry.metrics.{Gauge, Metric}
 import kamon.metric.{Instrument, MetricSnapshot}
-import kamon.newrelic.TagSetToAttributes.addTags
+import kamon.newrelic.AttributeBuddy.addTagsFromTagSets
 import kamon.newrelic.metrics.ConversionSupport.buildAttributes
 import org.slf4j.LoggerFactory
 
@@ -18,7 +18,7 @@ object NewRelicGauges {
     val attributes = buildAttributes(gauge)
     logger.debug("name: {} ; numberOfInstruments: {}", gauge.name, gauge.instruments.size)
     gauge.instruments.map { inst: Instrument.Snapshot[Double] =>
-      new Gauge(gauge.name, inst.value, timestamp, addTags(Seq(inst.tags), attributes.copy().put("sourceMetricType", "gauge")))
+      new Gauge(gauge.name, inst.value, timestamp, addTagsFromTagSets(Seq(inst.tags), attributes.copy().put("sourceMetricType", "gauge")))
     }
   }
 
