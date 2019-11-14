@@ -27,7 +27,7 @@ class NewRelicSpanConverterSpec extends WordSpec with Matchers {
       val newRelicSpan = NewRelicSpanConverter.convertSpan(kamonSpan)
       newRelicSpan shouldBe expected
     }
-    "convert the an error span" in {
+    "convert an error span" in {
       val tags = TagSet.of("foo", "bar").withTag("boop", true).withTag("baz", 21L);
       val kamonSpan: Span.Finished = TestSpanHelper.makeKamonSpan(Span.Kind.Server, tags = tags, hasError = true)
       val expectedAttributes = new Attributes()
