@@ -28,19 +28,21 @@ object NewRelicSpanConverter {
     val durationMs = Math.floorDiv(Clock.nanosBetween(kamonSpan.from, kamonSpan.to), 1000000)
     // If parent id is an empty string, just null it out so it doesn't get sent to NR
     val parentId = if (kamonSpan.parentId.isEmpty) null else kamonSpan.parentId.string
-    NewRelicSpan.builder(kamonSpan.id.string)
+    val builder = NewRelicSpan.builder(kamonSpan.id.string)
       .traceId(kamonSpan.trace.id.string)
       .parentId(parentId)
       .name(kamonSpan.operationName)
       .timestamp(Clock.toEpochMicros(kamonSpan.from) / 1000) // convert to milliseconds
       .durationMs(durationMs)
       .attributes(buildAttributes(kamonSpan))
-      .build()
+    if (kamonSpan.hasError) {
+      builder.withError()
+    }
+    builder.build()
   }
 
   private def buildAttributes(kamonSpan: Span.Finished) = {
     val attributes = new Attributes().put("span.kind", kamonSpan.kind.toString)
-
     // Span is a client span
     if (kamonSpan.kind == Span.Kind.Client) {
       val remoteEndpoint = Endpoint(

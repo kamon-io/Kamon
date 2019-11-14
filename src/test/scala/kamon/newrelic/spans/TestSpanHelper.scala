@@ -21,7 +21,7 @@ object TestSpanHelper {
   val traceId = "nineohtwooneoh"
   val parentId = "pppppppppppppppp21"
 
-  def makeKamonSpan(kind: Kind, id: String = spanId, tags: TagSet = TagSet.of("foo", "bar")) = {
+  def makeKamonSpan(kind: Kind, id: String = spanId, tags: TagSet = TagSet.of("foo", "bar"), hasError: Boolean = false) = {
     val kamonSpan = Span.Finished(
       id = Identifier(id, Array[Byte](2)),
       trace = Trace(Identifier(traceId, Array[Byte](1)), SamplingDecision.Sample),
@@ -32,7 +32,7 @@ object TestSpanHelper {
       tags = tags,
       metricTags = TagSet.Empty,
       marks = Seq(Mark(Instant.ofEpochMilli(now), "xx")),
-      hasError = false,
+      hasError = hasError,
       wasDelayed = false,
       links = Seq.empty,
       kind = kind,
