@@ -42,7 +42,6 @@ class MongoScalaDriverInstrumentationSpec extends EmbeddedMongoTest(port = 4445)
 
       eventually(timeout(5 seconds)) {
         val span = testSpanReporter().nextSpan().value
-        println("SAW SPAN: " + span)
         span.parentId shouldBe mainSpan.id
         span.trace shouldBe mainSpan.trace
         span.operationName shouldBe "tools.aggregate.getMore"
@@ -73,7 +72,6 @@ class MongoScalaDriverInstrumentationSpec extends EmbeddedMongoTest(port = 4445)
 
       eventually(timeout(5 seconds)) {
         val span = testSpanReporter().nextSpan().value
-        println("SPAN " + span)
         span.operationName shouldBe "tools.deleteMany"
         span.metricTags.get(plain("db.instance")) shouldBe "test"
         span.metricTags.get(plain("mongo.collection")) shouldBe "tools"
@@ -332,7 +330,6 @@ class MongoScalaDriverInstrumentationSpec extends EmbeddedMongoTest(port = 4445)
 
       eventually(timeout(5 seconds)) {
         val span = testSpanReporter().nextSpan().value
-        println("SPAN IS: " + span)
         span.operationName shouldBe "tools.updateOne"
         span.metricTags.get(plain("db.instance")) shouldBe "test"
         span.metricTags.get(plain("mongo.collection")) shouldBe "tools"

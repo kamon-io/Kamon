@@ -74,7 +74,6 @@ class MongoSyncDriverInstrumentationSpec extends EmbeddedMongoTest(port = 4445) 
 
       eventually(timeout(5 seconds)) {
         val span = testSpanReporter().nextSpan().value
-        println("FOUND SPAN " + span)
         span.operationName shouldBe "tools.deleteMany"
         span.metricTags.get(plain("db.instance")) shouldBe "test"
         span.metricTags.get(plain("mongo.collection")) shouldBe "tools"

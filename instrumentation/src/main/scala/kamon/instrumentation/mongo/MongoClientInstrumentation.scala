@@ -1,3 +1,19 @@
+/*
+ *  ==========================================================================================
+ *  Copyright © 2013-2019 The Kamon Project <https://kamon.io/>
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
+ *  except in compliance with the License. You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software distributed under the
+ *  License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ *  either express or implied. See the License for the specific language governing permissions
+ *  and limitations under the License.
+ *  ==========================================================================================
+ */
+
 package kamon.instrumentation
 package mongo
 
@@ -11,72 +27,75 @@ import kanela.agent.libs.net.bytebuddy.asm.Advice
 
 class MongoClientInstrumentation extends InstrumentationBuilder {
 
-  when(classIsPresent("com.mongodb.internal.operation.Operations"), new Runnable {
-    override def run(): Unit = {
+  /**
+    * This first section just ensures that operations will get the right name, specially the ones that are
+    * implemented as bulk writes to Mongo. In the cases where we know that the name will not be captured properly
+    * we are explicitly adding the operation name to the operation instance so that it can be used when naming
+    * the Spans.
+    */
+  val OperationsAdviceFQCN = "kamon.instrumentation.mongo.CopyOperationNameIntoMixedBulkWriteOperation"
 
-      /**
-        * This first section just ensures that operations will get the right name, specially the ones that are
-        * implemented as bulk writes to Mongo. In the cases where we know that the name will not be captured properly
-        * we are explicitly adding the operation name to the operation instance so that it can be used when naming
-        * the Spans.
-        */
-      onType("com.mongodb.operation.MixedBulkWriteOperation")
-        .mixin(classOf[MongoClientInstrumentation.HasOperationName.Mixin])
+  onType("com.mongodb.internal.operation.Operations")
+    .when(classIsPresent("com.mongodb.internal.operation.Operations"))
+    .advise(method("deleteOne"), OperationsAdviceFQCN)
+    .advise(method("deleteMany"), OperationsAdviceFQCN)
+    .advise(method("findOneAndDelete"), OperationsAdviceFQCN)
+    .advise(method("findOneAndReplace"), OperationsAdviceFQCN)
+    .advise(method("findOneAndUpdate"), OperationsAdviceFQCN)
+    .advise(method("insertOne"), OperationsAdviceFQCN)
+    .advise(method("insertMany"), OperationsAdviceFQCN)
+    .advise(method("replaceOne"), OperationsAdviceFQCN)
+    .advise(method("updateMany"), OperationsAdviceFQCN)
+    .advise(method("updateOne"), OperationsAdviceFQCN)
 
-      onSubTypesOf("com.mongodb.operation.BaseFindAndModifyOperation")
-        .mixin(classOf[MongoClientInstrumentation.HasOperationName.Mixin])
+  onType("com.mongodb.operation.MixedBulkWriteOperation")
+    .when(classIsPresent("com.mongodb.internal.operation.Operations"))
+    .mixin(classOf[MongoClientInstrumentation.HasOperationName.Mixin])
 
-      onType("com.mongodb.internal.operation.Operations")
-        .advise(method("deleteOne"), CopyOperationNameIntoMixedBulkWriteOperation)
-        .advise(method("deleteMany"), CopyOperationNameIntoMixedBulkWriteOperation)
-        .advise(method("findOneAndDelete"), CopyOperationNameIntoMixedBulkWriteOperation)
-        .advise(method("findOneAndReplace"), CopyOperationNameIntoMixedBulkWriteOperation)
-        .advise(method("findOneAndUpdate"), CopyOperationNameIntoMixedBulkWriteOperation)
-        .advise(method("insertOne"), CopyOperationNameIntoMixedBulkWriteOperation)
-        .advise(method("insertMany"), CopyOperationNameIntoMixedBulkWriteOperation)
-        .advise(method("replaceOne"), CopyOperationNameIntoMixedBulkWriteOperation)
-        .advise(method("updateMany"), CopyOperationNameIntoMixedBulkWriteOperation)
-        .advise(method("updateOne"), CopyOperationNameIntoMixedBulkWriteOperation)
+  onSubTypesOf("com.mongodb.operation.BaseFindAndModifyOperation")
+    .when(classIsPresent("com.mongodb.internal.operation.Operations"))
+    .mixin(classOf[MongoClientInstrumentation.HasOperationName.Mixin])
 
+  /**
+    * These are the actual classes we are instrumenting to track operations. Since the same classes are used for
+    * both Sync and Async variants (and the Async driver is used for the Reactive Streams and Scala Drivers) we
+    * are going for a unified instrumentation that only needs special treatment around the execute/executeAsync
+    * methods.
+    */
+  val instrumentedOperations = Seq(
+    "com.mongodb.operation.AggregateOperationImpl",
+    "com.mongodb.operation.CountOperation",
+    "com.mongodb.operation.DistinctOperation",
+    "com.mongodb.operation.FindOperation",
+    "com.mongodb.operation.BaseFindAndModifyOperation",
+    "com.mongodb.operation.MapReduceWithInlineResultsOperation",
+    "com.mongodb.operation.MapReduceToCollectionOperation",
+    "com.mongodb.operation.MixedBulkWriteOperation"
+  )
 
-      /**
-        * These are the actual classes we are instrumenting to track operations. Since the same classes are used for
-        * both Sync and Async variants (and the Asyn driver is used for the Reactive Streams and Scala Drivers) we
-        * are going for a unified instrumentation that only needs special treatment around the execute/executeAsync
-        * methods.
-        */
-      val instrumentedOperations = Seq(
-        "com.mongodb.operation.AggregateOperationImpl",
-        "com.mongodb.operation.CountOperation",
-        "com.mongodb.operation.DistinctOperation",
-        "com.mongodb.operation.FindOperation",
-        "com.mongodb.operation.BaseFindAndModifyOperation",
-        "com.mongodb.operation.MapReduceWithInlineResultsOperation",
-        "com.mongodb.operation.MapReduceToCollectionOperation",
-        "com.mongodb.operation.MixedBulkWriteOperation"
-      )
+  onTypes(instrumentedOperations: _*)
+    .when(classIsPresent("com.mongodb.internal.operation.Operations"))
+    .advise(method("execute"), classOf[ExecuteOperationAdvice])
+    .advise(method("executeAsync"), classOf[ExecuteAsyncOperationAdvice])
 
-      onTypes(instrumentedOperations: _*)
-        .advise(method("execute"), classOf[ExecuteOperationAdvice])
-        .advise(method("executeAsync"), classOf[ExecuteAsyncOperationAdvice])
+  /**
+    * Ensures that calls to .getMore() inside a BatchCursor/AsyncBatchCursor will generate Spans for the round trip
+    * to Mongo and that those Spans will be children of the first operation that created BatchCursor/AsyncBatchCursor.
+    */
+  onType("com.mongodb.operation.AsyncQueryBatchCursor")
+    .when(classIsPresent("com.mongodb.internal.operation.Operations"))
+    .mixin(classOf[HasContext.Mixin])
+    .advise(method("getMore").and(takesArguments(4)), classOf[AsyncBatchCursorGetMoreAdvice])
 
+  onType("com.mongodb.operation.QueryBatchCursor")
+    .when(classIsPresent("com.mongodb.internal.operation.Operations"))
+    .mixin(classOf[HasContext.VolatileMixin])
+    .advise(method("getMore"), classOf[BatchCursorGetMoreAdvice])
 
-      /**
-        * Ensures that calls to .getMore() inside a BatchCursor/AsyncBatchCursor will generate Spans for the round trip
-        * to Mongo and that those Spans will be children of the first operation that created BatchCursor/AsyncBatchCursor.
-        */
-      onType("com.mongodb.operation.AsyncQueryBatchCursor")
-        .mixin(classOf[HasContext.VolatileMixin])
-        .advise(method("getMore").and(takesArguments(4)), classOf[AsyncBatchCursorGetMoreAdvice])
-
-      onType("com.mongodb.operation.QueryBatchCursor")
-        .mixin(classOf[HasContext.VolatileMixin])
-        .advise(method("getMore"), classOf[BatchCursorGetMoreAdvice])
-    }
-  })
 }
 
 
+class CopyOperationNameIntoMixedBulkWriteOperation
 object CopyOperationNameIntoMixedBulkWriteOperation {
 
   private val x = new MongoNamespace("FullName.Something")
@@ -107,7 +126,6 @@ object MongoClientInstrumentation {
     }
   }
 
-
   val OperationClassToOperation = Map(
     "com.mongodb.operation.AggregateOperationImpl" -> "aggregate",
     "com.mongodb.operation.CountOperation" -> "countDocuments",
@@ -117,7 +135,6 @@ object MongoClientInstrumentation {
     "com.mongodb.operation.MapReduceWithInlineResultsOperation" -> "mapReduce",
     "com.mongodb.operation.MapReduceToCollectionOperation" -> "mapReduceToCollection"
   )
-
 
   def clientSpanBuilder(namespace: MongoNamespace, operationClassName: String): SpanBuilder = {
     val mongoOperationName = OperationClassToOperation.getOrElse(operationClassName, operationClassName)
