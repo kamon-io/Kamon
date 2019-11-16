@@ -27,6 +27,7 @@ import kamon.util.Clock
 import org.slf4j.LoggerFactory
 
 import scala.collection.concurrent.TrieMap
+import scala.reflect.ClassTag
 
 /**
   * Handles creation and snapshotting of metrics. If a metric is created twice, the very same instance will be returned.
@@ -47,10 +48,10 @@ class MetricRegistry(config: Config, scheduler: ScheduledExecutorService, clock:
   def counter(name: String, description: Option[String], unit: Option[MeasurementUnit], autoUpdateInterval: Option[Duration]):
       Metric.Counter = {
 
-    val metric = _metrics.atomicGetOrElseUpdate(name, _factory.counter(name, description, unit, autoUpdateInterval))
-        .asInstanceOf[Metric.Counter]
+    val metric = validateInstrumentType[Metric.Counter] {
+      _metrics.atomicGetOrElseUpdate(name, _factory.counter(name, description, unit, autoUpdateInterval))
+    } (name, Instrument.Type.Counter)
 
-    checkInstrumentType(name, Instrument.Type.Counter, metric)
     checkDescription(metric.name, metric.description, description)
     checkUnit(metric.name, metric.settings.unit, unit)
     checkAutoUpdate(metric.name, metric.settings.autoUpdateInterval, autoUpdateInterval)
@@ -63,10 +64,10 @@ class MetricRegistry(config: Config, scheduler: ScheduledExecutorService, clock:
   def gauge(name: String, description: Option[String], unit: Option[MeasurementUnit], autoUpdateInterval: Option[Duration]):
   Metric.Gauge = {
 
-    val metric = _metrics.atomicGetOrElseUpdate(name, _factory.gauge(name, description, unit, autoUpdateInterval))
-      .asInstanceOf[Metric.Gauge]
+    val metric = validateInstrumentType[Metric.Gauge] {
+      _metrics.atomicGetOrElseUpdate(name, _factory.gauge(name, description, unit, autoUpdateInterval))
+    } (name, Instrument.Type.Gauge)
 
-    checkInstrumentType(name, Instrument.Type.Gauge, metric)
     checkDescription(metric.name, metric.description, description)
     checkUnit(metric.name, metric.settings.unit, unit)
     checkAutoUpdate(metric.name, metric.settings.autoUpdateInterval, autoUpdateInterval)
@@ -79,10 +80,10 @@ class MetricRegistry(config: Config, scheduler: ScheduledExecutorService, clock:
   def histogram(name: String, description: Option[String], unit: Option[MeasurementUnit], dynamicRange: Option[DynamicRange],
     autoUpdateInterval: Option[Duration]): Metric.Histogram = {
 
-    val metric = _metrics.atomicGetOrElseUpdate(name, _factory.histogram(name, description, unit, dynamicRange,
-      autoUpdateInterval)).asInstanceOf[Metric.Histogram]
+    val metric = validateInstrumentType[Metric.Histogram] {
+      _metrics.atomicGetOrElseUpdate(name, _factory.histogram(name, description, unit, dynamicRange, autoUpdateInterval))
+    } (name, Instrument.Type.Histogram)
 
-    checkInstrumentType(name, Instrument.Type.Histogram, metric)
     checkDescription(metric.name, metric.description, description)
     checkUnit(metric.name, metric.settings.unit, unit)
     checkDynamicRange(metric.name, metric.settings.dynamicRange, dynamicRange)
@@ -95,10 +96,11 @@ class MetricRegistry(config: Config, scheduler: ScheduledExecutorService, clock:
     */
   def timer(name: String, description: Option[String], dynamicRange: Option[DynamicRange], autoUpdateInterval: Option[Duration]): Metric.Timer = {
 
-    val metric = _metrics.atomicGetOrElseUpdate(name, _factory.timer(name, description, Some(MeasurementUnit.time.nanoseconds),
-      dynamicRange, autoUpdateInterval)).asInstanceOf[Metric.Timer]
+    val metric = validateInstrumentType[Metric.Timer] {
+      _metrics.atomicGetOrElseUpdate(name, _factory.timer(name, description, Some(MeasurementUnit.time.nanoseconds),
+        dynamicRange, autoUpdateInterval))
+    } (name, Instrument.Type.Timer)
 
-    checkInstrumentType(name, Instrument.Type.Timer, metric)
     checkDescription(metric.name, metric.description, description)
     checkDynamicRange(metric.name, metric.settings.dynamicRange, dynamicRange)
     checkAutoUpdate(metric.name, metric.settings.autoUpdateInterval, autoUpdateInterval)
@@ -111,10 +113,10 @@ class MetricRegistry(config: Config, scheduler: ScheduledExecutorService, clock:
   def rangeSampler(name: String, description: Option[String], unit: Option[MeasurementUnit], dynamicRange: Option[DynamicRange],
     autoUpdateInterval: Option[Duration]): Metric.RangeSampler = {
 
-    val metric = _metrics.atomicGetOrElseUpdate(name, _factory.rangeSampler(name, description, unit, dynamicRange,
-      autoUpdateInterval)).asInstanceOf[Metric.RangeSampler]
+    val metric = validateInstrumentType[Metric.RangeSampler] {
+      _metrics.atomicGetOrElseUpdate(name, _factory.rangeSampler(name, description, unit, dynamicRange, autoUpdateInterval))
+    } (name, Instrument.Type.RangeSampler)
 
-    checkInstrumentType(name, Instrument.Type.RangeSampler, metric)
     checkDescription(metric.name, metric.description, description)
     checkUnit(metric.name, metric.settings.unit, unit)
     checkDynamicRange(metric.name, metric.settings.dynamicRange, dynamicRange)
@@ -127,6 +129,25 @@ class MetricRegistry(config: Config, scheduler: ScheduledExecutorService, clock:
     */
   def reconfigure(newConfig: Config): Unit = {
     _factory = MetricFactory.from(newConfig, scheduler, clock)
+  }
+
+  private def validateInstrumentType[T](metric: => Metric[_, _])(name: String, instrumentType: Instrument.Type): T = {
+    val lookedUpMetric = metric
+    if(instrumentType.implementation.isInstance(lookedUpMetric))
+      lookedUpMetric.asInstanceOf[T]
+    else
+      throw new IllegalArgumentException(
+        s"Cannot redefine metric [$name] as a [${instrumentType.name}], it was already " +
+        s"registered as a [${implementationName(metric)}]"
+      )
+  }
+
+  private def implementationName(metric: Metric[_, _]): String = metric match {
+    case _: Metric.Counter      => Instrument.Type.Counter.name
+    case _: Metric.Gauge        => Instrument.Type.Gauge.name
+    case _: Metric.Histogram    => Instrument.Type.Histogram.name
+    case _: Metric.RangeSampler => Instrument.Type.RangeSampler.name
+    case _: Metric.Timer        => Instrument.Type.Timer.name
   }
 
   private def checkInstrumentType(name: String, instrumentType: Instrument.Type, metric: Metric[_, _]): Unit =
