@@ -9,7 +9,7 @@ import com.typesafe.config.Config
 import javax.management.openmbean.CompositeData
 import javax.management.{Notification, NotificationEmitter, NotificationListener}
 import kamon.Kamon
-import kamon.instrumentation.system.jvm.JvmMetrics.{GarbageCollectionInstruments, MemoryUsageInstruments}
+import kamon.instrumentation.system.jvm.JvmMetrics.{GarbageCollectionInstruments, MemoryUsageInstruments, ThreadsInstruments}
 import kamon.instrumentation.system.jvm.JvmMetricsCollector.{Collector, MemoryPool}
 import kamon.module.{Module, ModuleFactory}
 import kamon.tag.TagSet
@@ -23,11 +23,12 @@ class JvmMetricsCollector(ec: ExecutionContext) extends Module {
   private val _defaultTags = TagSet.of("component", "jvm")
   private val _gcListener = registerGcListener(_defaultTags)
   private val _memoryUsageInstruments = new MemoryUsageInstruments(_defaultTags)
-  private val _memoryUsageTask = new MemoryUsageCollectorTask(_memoryUsageInstruments)
-  private val _memoryUsageSchedule = Kamon.scheduler().scheduleAtFixedRate(_memoryUsageTask, 1, 10, TimeUnit.SECONDS)
+  private val _threadsUsageInstruments = new ThreadsInstruments()
+  private val _jmxCollectorTask = new JmxMetricsCollectorTask(_memoryUsageInstruments, _threadsUsageInstruments)
+  private val _jmxCollectorSchedule = Kamon.scheduler().scheduleAtFixedRate(_jmxCollectorTask, 1, 10, TimeUnit.SECONDS)
 
   override def stop(): Unit = {
-    _memoryUsageSchedule.cancel(false)
+    _jmxCollectorSchedule.cancel(false)
     deregisterGcListener()
   }
 
@@ -52,9 +53,6 @@ class JvmMetricsCollector(ec: ExecutionContext) extends Module {
       }
     })
   }
-
-
-
 
   class GcNotificationListener(val gcInstruments: GarbageCollectionInstruments) extends NotificationListener {
     private val _previousUsageAfterGc = TrieMap.empty[String, MemoryUsage]
@@ -108,11 +106,17 @@ class JvmMetricsCollector(ec: ExecutionContext) extends Module {
     }
   }
 
-  class MemoryUsageCollectorTask(memoryUsageInstruments: MemoryUsageInstruments) extends Runnable {
+  class JmxMetricsCollectorTask(memoryUsageInstruments: MemoryUsageInstruments, threadsInstruments: ThreadsInstruments)
+      extends Runnable {
+
     private val _heapUsage = memoryUsageInstruments.regionInstruments("heap")
     private val _nonHeapUsage = memoryUsageInstruments.regionInstruments("non-heap")
 
     override def run(): Unit = {
+      val threadsMxBen = ManagementFactory.getThreadMXBean()
+      threadsInstruments.total.update(threadsMxBen.getThreadCount())
+      threadsInstruments.peak.update(threadsMxBen.getPeakThreadCount())
+      threadsInstruments.daemon.update(threadsMxBen.getDaemonThreadCount())
 
       val currentHeapUsage = ManagementFactory.getMemoryMXBean.getHeapMemoryUsage
       val freeHeap = Math.max(0L, currentHeapUsage.getMax -  currentHeapUsage.getUsed)

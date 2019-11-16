@@ -76,6 +76,21 @@ object JvmMetrics {
     unit = MeasurementUnit.information.bytes
   )
 
+  val ThreadsTotal = Kamon.gauge (
+    name = "jvm.threads.total",
+    description = "Tracks the current number of live threads on the JVM"
+  )
+
+  val ThreadsPeak = Kamon.gauge (
+    name = "jvm.threads.peak",
+    description = "Tracks the peak live thread count since the JVM started"
+  )
+
+  val ThreadsDaemon = Kamon.gauge (
+    name = "jvm.threads.daemon",
+    description = "Tracks the current number of daemon threads on the JVM"
+  )
+
   class GarbageCollectionInstruments(tags: TagSet) extends InstrumentGroup(tags) {
     private val _collectorCache = mutable.Map.empty[String, Histogram]
 
@@ -120,6 +135,12 @@ object JvmMetrics {
           register(MemoryPoolMax, region)
         )
       })
+  }
+
+  class ThreadsInstruments extends InstrumentGroup(TagSet.Empty) {
+    val total = register(ThreadsTotal)
+    val peak = register(ThreadsPeak)
+    val daemon = register(ThreadsDaemon)
   }
 
   object MemoryUsageInstruments {
