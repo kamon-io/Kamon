@@ -148,9 +148,9 @@ class HostMetricsCollector(ec: ExecutionContext) extends Module {
       _memoryInstruments.free.update(memory.getAvailable())
       _memoryInstruments.used.update(memory.getTotal() - memory.getAvailable())
 
-      _swapInstruments.total.update(memory.getSwapTotal())
-      _swapInstruments.free.update(memory.getSwapUsed())
-      _swapInstruments.used.update(memory.getSwapTotal() - memory.getSwapUsed())
+      _swapInstruments.total.update(memory.getVirtualMemory.getSwapTotal())
+      _swapInstruments.free.update(memory.getVirtualMemory.getSwapUsed())
+      _swapInstruments.used.update(memory.getVirtualMemory.getSwapTotal() - memory.getVirtualMemory.getSwapUsed())
     }
 
     private def recordLoadAverage(): Unit = {
