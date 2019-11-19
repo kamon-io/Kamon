@@ -19,16 +19,21 @@ package kamon.annotation.api;
 import java.lang.annotation.*;
 
 /**
- * A marker annotation to start a new Trace.
+ * Indicates a Span should be created to represent invocations of the annotated method. If there is already a Span in
+ * the current Context, the new Span will be created as a child of that Span, otherwise a new Trace will be started.
+ *
+ * The generated Span be automatically finished when the annotated method returns. If the return type of the annotated
+ * method is a Future or a CompletionStage, the generated Span will be finished when the Future or CompletionStage
+ * completes.
+ *
  * <p>
- * <p>
- * Given a method like this:
- * <pre><code>
- *     {@literal @}Trace(operationName = "coolTraceName", tags="${'my-cool-tag':'my-cool-operationName'}")
- *     public String coolName(String name) {
- *         return "Hello " + name;
- *     }
- * </code></pre>
+ * For example, given a method like this:
+ * <pre>{@code
+ * @Trace(operationName = "coolTraceName", tags="${'my-cool-tag':'my-cool-operationName'}")
+ * public String coolName(String name) {
+ *   return "Hello " + name;
+ * }
+ * }</pre>
  * <p>
  * <p>
  * A new Trace will be created for the defining method with the name each time the
@@ -39,31 +44,40 @@ import java.lang.annotation.*;
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Trace {
-    /**
-     * @return The Trace's name.
-     * <p>
-     * Also, the Trace name can be resolved with an EL expression that evaluates to a String:
-     * <p>
-     * <pre>
-     * {@code
-     *  class Traced  {
-     *        private long id;
-     *
-     *        public long getId() { return id; }
-     *
-     *        {@literal @}Trace (operationName = "${'traceID:' += this.id}")
-     *        void countedMethod() {} // create a Trace with name => traceID:[id]
-     *    }
-     * }
-     * </pre>
-     */
-    String operationName() default "";
 
-    /**
-     * Tags are a way of adding dimensions to metrics,
-     * these are constructed using EL syntax e.g. "${'algorithm':'1','env':'production'}"
-     *
-     * @return the tags associated to the trace
-     */
-    String tags() default "";
+  /**
+   * @return The operation name to be used for the newly created Span. If no name is provided, a name will be
+   * generated using the fully qualified class name and the method name.
+   */
+  String operationName() default "";
+
+  /**
+   * An EL expression that contains tags for the generated Span. For example, the "${'algorithm':'1','env':'production'}"
+   * adds the tags "algorithm=1" and "env=production" to the Span.
+   *
+   * @return an EL expression that generates tags for the counter metric.
+   */
+  String tags() default "";
+
+  /**
+   * @return the Span Kind for the newly created Span.
+   */
+  SpanKind kind() default SpanKind.Internal;
+
+  /**
+   * @return the application component that is generated the Span.
+   */
+  String component() default "annotation";
+
+  /**
+   * Describes the kind of operation represented by a Span. This directly matches the Span.Kind values in Kamon.
+   */
+  enum SpanKind {
+    Server,
+    Client,
+    Producer,
+    Consumer,
+    Internal,
+    Unknown
+  }
 }

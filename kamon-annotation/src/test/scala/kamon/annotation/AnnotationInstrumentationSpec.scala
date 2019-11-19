@@ -16,6 +16,8 @@
 
 package kamon.annotation
 
+import java.util.concurrent.{CompletableFuture, CompletionStage}
+
 import kamon.annotation.api._
 import kamon.metric.{Histogram => _, RangeSampler => _, Timer => _}
 import kamon.module.Module.Registration
@@ -27,6 +29,8 @@ import kamon.{Kamon, testkit}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.SpanSugar
 import org.scalatest.{BeforeAndAfterAll, Matchers, OptionValues, WordSpec}
+
+import scala.concurrent.Future
 
 class AnnotationInstrumentationSpec extends WordSpec
   with Matchers
@@ -42,15 +46,46 @@ class AnnotationInstrumentationSpec extends WordSpec
 
   "the Kamon Annotation module" should {
 
-    "create a new trace when is invoked a method annotated with @Trace" in {
+    "create a new Span for methods annotated with @Trace" in {
      for (id <- 1 to 10) Annotated(id).trace()
 
       eventually(timeout(3 seconds)) {
         val span = reporter.nextSpan().value
         val spanTags = stringTag(span) _
+        span.kind shouldBe Span.Kind.Internal
         span.operationName shouldBe "trace"
         spanTags("slow-service") shouldBe "service"
         spanTags("env") shouldBe "prod"
+      }
+    }
+
+    "create a new Span for methods annotated with @Trace without parameters" in {
+      for (id <- 1 to 10) Annotated(id).traceWithoutParameters()
+
+      eventually(timeout(3 seconds)) {
+        val span = reporter.nextSpan().value
+        span.kind shouldBe Span.Kind.Internal
+        span.operationName shouldBe "kamon.annotation.Annotated.traceWithoutParameters"
+      }
+    }
+
+    "create a new Span for methods annotated with @Trace without parameters and returning a Future" in {
+      for (id <- 1 to 10) Annotated(id).traceWithFuture()
+
+      eventually(timeout(3 seconds)) {
+        val span = reporter.nextSpan().value
+        span.kind shouldBe Span.Kind.Internal
+        span.operationName shouldBe "kamon.annotation.Annotated.traceWithoutParameters"
+      }
+    }
+
+    "create a new Span for methods annotated with @Trace without parameters and returning a CompletionStage" in {
+      for (id <- 1 to 10) Annotated(id).traceWithCompletionStage()
+
+      eventually(timeout(3 seconds)) {
+        val span = reporter.nextSpan().value
+        span.kind shouldBe Span.Kind.Internal
+        span.operationName shouldBe "kamon.annotation.Annotated.traceWithCompletionStage"
       }
     }
 
@@ -161,8 +196,20 @@ class AnnotationInstrumentationSpec extends WordSpec
 }
 
 case class Annotated(id: Long) {
+
   @Trace(operationName = "trace", tags = "${'slow-service':'service', 'env':'prod'}")
   def trace(): Unit = {}
+
+  @Trace
+  def traceWithoutParameters(): Unit = {}
+
+  @Trace
+  def traceWithFuture(): Future[String] =
+    Future.successful("Hello")
+
+  @Trace
+  def traceWithCompletionStage(): CompletionStage[String] =
+    CompletableFuture.completedFuture("Hello")
 
   @SpanCustomizer(operationName = "customized-operation-name" )
   def traceWithSpanCustomizer(): Unit = {
