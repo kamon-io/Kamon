@@ -12,7 +12,7 @@ The <b>kamon-annotation</b> module require you to start your application using t
 
 ### Getting Started
 
-Kamon annotation module is currently available for Scala 2.11, 2.12 and 2.13.
+The Kamon Annotation module is currently available for Scala 2.11, 2.12 and 2.13.
 
 Supported releases and dependencies are shown below.
 
@@ -20,46 +20,60 @@ Supported releases and dependencies are shown below.
 |:------:|:------:|:----:|------------------
 |  2.0.0 | stable | 1.8+ | 2.11, 2.12, 2.13  
 
-To get started with SBT, simply add the following to your `build.sbt`
-file:
+To get started with SBT, simply add the following to your `build.sbt` file:
 
 ```scala
-libraryDependencies += "io.kamon" %% "kamon-annotation-api" % "2.0.0"
+libraryDependencies += "io.kamon" %% "kamon-annotation-api" % "2.0.1"
+```
+
+Initial Setup
+-------------
+
+It is necessary to tell Kamon where to search for annotated classes using the `kanela.modules.annotation.within` configuration
+setting. For example, if you want to process annotations on all classes withing the `my.company` package, the following
+settings should be added to your `application.conf` file:
+
+```
+kanela.modules.annotation {
+  within += "my.company.*"
+}
 ```
 
 Manipulating Traces
---------------------------------
+-------------------
 
-Delimiting traces and segments are one of the most basic tasks you would want to perform to start monitoring your
-application using Kamon, and the `@Trace` annotation allow you to do just that:
+Creating Spans is one of the most basic tasks you would want to perform to start monitoring your application using Kamon
+and the `@Trace` annotation allow you to do just that:
 
-* __@Trace__: when a method is marked with this annotation a new [Trace] will be started every time the method is called
-and automatically finished once the method returns. Also, the generated `Context` becomes the current context while
-the method is executing, making it possible to propagate it at will.
+* __@Trace__: Creates a new Span every time the method is called and automatically finished once the method returns. If
+the annotated method returns a Scala Future or a CompletionStage, the Span will be finished when the Future/CompletionStage
+finishes.
+
+* __@CustomizeInnerSpan__: Tells Kamon to use the provided customizations when any Span is created within the Scope of
+the annotated method. This is specially useful when you want to customize the operation name of Spans that are
+automatically created by Kamon (e.g. customizing JDBC operation names)
 
 
-Manipulating Instruments
+Manipulating Metrics
 ------------------------
 
-Additionally to manipulating traces and segments, the `kamon-annotation` module provides annotations that can be used
-to create Counters, Histograms and MinMaxCounters that are automatically updated as the annotated methods execute. These
-annotations are:
+Additionally to manipulating Spans, this module can automatically track metrics as the annotated methods execute. The
+available annotations are:
 
-* __@Time__: when a method is marked with this annotation Kamon will create a Histogram tracking the latency of each
-invocation to the method. 
+* __@Count__: Creates a Counter that tracks invocations of the annotated method.
 
-* __@Histogram__: when a method is marked with this annotation Kamon will create a Histogram that stores the values
-returned every time the method is invoked. Obviously, only methods returning numeric values are accepted.
+* __@Time__: Creates a Timer that tracks the latency of each invocation of the annotated method. If the annotated method
+returns a Scala Future or a CompletionStage, the Timer will be stopped when the Future/CompletionStage finishes.
 
-* __@Count__: when a method is marked with this annotation Kamon will be create a Counter and automatically increment it
-every time the method is invoked.
+* __@Histogram__: Creates a Histogram that tracks the values returned by the annotated method. Obviously, only methods
+returning numeric values are accepted.
 
-* __@Gauge__: when a method is marked with this annotation Kamon will be create a Gauge and set the returned value of the invoked method.
+* __@Gauge__: Creates a Gauge that tracks the last returned value by the annotated method.
 
-* __@RangeSampler__: when a method is marked with this annotation Kamon will be create a RangeSampler and automatically
-increment it every time method is invoked and decremented when the method returns.
+* __@TrackConcurrency__: Creates a Range Sampler that is incremented when the annotated method starts executing and
+decremented when it finishes. If the annotated method returns a Scala Future or a CompletionStage, the Timer will be
+stopped when the Future/CompletionStage finishes.
 
-* __@SpanCustomizer__: annotation to allows users to customize and add additional information to Spans created by instrumentation. 
 
 ### EL Expression Support ###
 
