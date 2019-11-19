@@ -67,12 +67,15 @@ public final class AnnotationCache {
     public static Counter getCounter(Method method, Object obj, Class<?> clazz, String className, String methodName) {
         final MetricKey metricKey = MetricKey.from("Counter", method, clazz);
         final kamon.annotation.api.Count countAnnotation = method.getAnnotation(kamon.annotation.api.Count.class);
+        final String counterMetricName = countAnnotation.name().equals("") ?
+            className + "." + methodName :
+            countAnnotation.name();
 
-        final Counter counter = (Counter) metrics.computeIfAbsent(metricKey, x -> Kamon.counter(countAnnotation.name()).withoutTags());
+        final Counter counter = (Counter) metrics.computeIfAbsent(metricKey, x -> Kamon.counter(counterMetricName).withoutTags());
 
         if(containsELExpression(countAnnotation.name(), countAnnotation.tags())) {
             return (Counter) metrics.computeIfPresent(metricKey, (key, c) -> key.cache.computeIfAbsent(obj, (x) -> {
-                final String name = getOperationName(countAnnotation.name(), obj, clazz, className, methodName);
+                final String name = getOperationName(counterMetricName, obj, clazz, className, methodName);
                 final Map<String, Object> tags = getTags(obj, clazz, countAnnotation.tags());
                 if (tags.isEmpty()) return Kamon.counter(name).withoutTags();
                 return Kamon.counter(name).withTags(TagSet.from(tags));

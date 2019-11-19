@@ -51,6 +51,12 @@ class StaticAnnotationInstrumentationSpec extends WordSpec
       }
     }
 
+    "count the invocations of a method annotated with @Count without parameters in a Scala Object" in {
+      for (_ <- 1 to 10) AnnotatedObject.countWithoutParameters()
+
+      Kamon.counter("kamon.annotation.AnnotatedObject$.countWithoutParameters").withoutTags().value() should be(10)
+    }
+
     "count the invocations of a method annotated with @Count in a Scala Object" in {
       for (_ <- 1 to 10) AnnotatedObject.count()
 
@@ -137,6 +143,9 @@ object AnnotatedObject {
 
   @Trace(operationName = "trace", tags = "${'slow-service':'service', 'env':'prod'}")
   def trace(): Unit = {}
+
+  @Count()
+  def countWithoutParameters(): Unit = {}
 
   @Count(name = "count")
   def count(): Unit = {}

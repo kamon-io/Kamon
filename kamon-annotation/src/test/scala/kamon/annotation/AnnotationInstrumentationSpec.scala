@@ -72,6 +72,12 @@ class AnnotationInstrumentationSpec extends WordSpec
       Kamon.counter("count").withoutTags().value() should be(10)
     }
 
+    "count the invocations of a method annotated with @Count without parameters" in {
+      for (id <- 1 to 10) Annotated(id).countWithoutParameters()
+
+      Kamon.counter("kamon.annotation.Annotated.countWithoutParameters").withoutTags().value() should be(10)
+    }
+
     "count the invocations of a method annotated with @Count and evaluate EL expressions" in {
       for (id <- 1 to 2) Annotated(id).countWithEL()
 
@@ -166,6 +172,9 @@ case class Annotated(id: Long) {
       customizeSpan()
     }
   }
+
+  @Count()
+  def countWithoutParameters(): Unit = {}
 
   @Count(name = "count")
   def count(): Unit = {}

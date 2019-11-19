@@ -25,6 +25,9 @@ public class AnnotatedJavaClass {
     @Trace(operationName = "trace", tags = "${'slow-service':'service', 'env':'prod'}")
     public static void trace() {}
 
+    @Count()
+    public static void countWithoutParameters() {}
+
     @Count(name = "count")
     public static void count() {}
 

@@ -50,6 +50,12 @@ class StaticAnnotationInstrumentationJavaSpec extends WordSpec
       }
     }
 
+    "count the invocations of a static method annotated with @Count without parameters" in {
+      for (_ <- 1 to 10) AnnotatedJavaClass.countWithoutParameters()
+
+      Kamon.counter("kamon.annotation.AnnotatedJavaClass.countWithoutParameters").withoutTags().value() should be(10)
+    }
+
     "count the invocations of a static method annotated with @Count" in {
       for (_ <- 1 to 10) AnnotatedJavaClass.count()
 
