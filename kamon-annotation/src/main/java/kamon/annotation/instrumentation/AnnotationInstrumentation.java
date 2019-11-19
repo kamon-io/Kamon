@@ -23,35 +23,35 @@ import static kanela.agent.libs.net.bytebuddy.matcher.ElementMatchers.*;
 
 public final class AnnotationInstrumentation extends InstrumentationBuilder {
 
-    private static final String Trace = "kamon.annotation.api.Trace";
-    private static final String SpanCustomizer = "kamon.annotation.api.SpanCustomizer";
-    private static final String Count = "kamon.annotation.api.Count";
-    private static final String RangeSampler = "kamon.annotation.api.RangeSampler";
-    private static final String Timer = "kamon.annotation.api.Time";
-    private static final String Histogram = "kamon.annotation.api.Histogram";
-    private static final String Gauge = "kamon.annotation.api.Gauge";
+  private static final String Trace = "kamon.annotation.api.Trace";
+  private static final String CustomizeSpan = "kamon.annotation.api.CustomizeInnerSpan";
+  private static final String Count = "kamon.annotation.api.Count";
+  private static final String RangeSampler = "kamon.annotation.api.RangeSampler";
+  private static final String Timer = "kamon.annotation.api.Time";
+  private static final String Histogram = "kamon.annotation.api.Histogram";
+  private static final String Gauge = "kamon.annotation.api.Gauge";
 
-    public AnnotationInstrumentation() {
+  public AnnotationInstrumentation() {
 
-        onTypesWithMethodsAnnotatedWith(Trace)
-                .advise(isAnnotatedWith(named(Trace)), TraceAnnotationAdvisor.class);
+    onTypesWithMethodsAnnotatedWith(Trace)
+        .advise(isAnnotatedWith(named(Trace)), TraceAnnotationAdvisor.class);
 
-        onTypesWithMethodsAnnotatedWith(SpanCustomizer)
-                .advise(isAnnotatedWith(named(SpanCustomizer)), SpanCustomizerAnnotationAdvisor.class);
+    onTypesWithMethodsAnnotatedWith(CustomizeSpan)
+        .advise(isAnnotatedWith(named(CustomizeSpan)), SpanCustomizerAnnotationAdvisor.class);
 
-        onTypesWithMethodsAnnotatedWith(Count)
-                .advise(isAnnotatedWith(named(Count)), CountAnnotationAdvisor.class);
+    onTypesWithMethodsAnnotatedWith(Count)
+        .advise(isAnnotatedWith(named(Count)), CountAnnotationAdvisor.class);
 
-        onTypesWithMethodsAnnotatedWith(RangeSampler)
-                .advise(isAnnotatedWith(named(RangeSampler)), RangeSamplerAnnotationAdvisor.class);
+    onTypesWithMethodsAnnotatedWith(RangeSampler)
+        .advise(isAnnotatedWith(named(RangeSampler)), RangeSamplerAnnotationAdvisor.class);
 
-        onTypesWithMethodsAnnotatedWith(Timer)
-                .advise(isAnnotatedWith(named(Timer)), TimerAnnotationAdvisor.class);
+    onTypesWithMethodsAnnotatedWith(Timer)
+        .advise(isAnnotatedWith(named(Timer)), TimerAnnotationAdvisor.class);
 
-        onTypesWithMethodsAnnotatedWith(Histogram)
-                .advise(isAnnotatedWith(named(Histogram)).and(withReturnTypes(long.class, double.class, int.class, float.class)),HistogramAnnotationAdvisor.class);
+    onTypesWithMethodsAnnotatedWith(Histogram)
+        .advise(isAnnotatedWith(named(Histogram)).and(withReturnTypes(long.class, double.class, int.class, float.class)), HistogramAnnotationAdvisor.class);
 
-        onTypesWithMethodsAnnotatedWith(Gauge)
-                .advise(isAnnotatedWith(named(Gauge)).and(withReturnTypes(long.class, double.class, int.class, float.class)), GaugeAnnotationAdvisor.class);
-    }
+    onTypesWithMethodsAnnotatedWith(Gauge)
+        .advise(isAnnotatedWith(named(Gauge)).and(withReturnTypes(long.class, double.class, int.class, float.class)), GaugeAnnotationAdvisor.class);
+  }
 }

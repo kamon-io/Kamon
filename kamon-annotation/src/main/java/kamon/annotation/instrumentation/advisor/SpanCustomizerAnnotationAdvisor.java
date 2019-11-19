@@ -17,23 +17,30 @@
 package kamon.annotation.instrumentation.advisor;
 
 import kamon.Kamon;
-import kamon.annotation.api.SpanCustomizer;
+import kamon.annotation.api.CustomizeInnerSpan;
 import kamon.context.Storage;
 import kanela.agent.libs.net.bytebuddy.asm.Advice;
 
 import java.lang.reflect.Method;
 
 public final class SpanCustomizerAnnotationAdvisor {
-    @Advice.OnMethodEnter
-    public static void onEnter(@Advice.Origin Method method,
-                               @Advice.Local("scope") Storage.Scope scope) {
 
-        final SpanCustomizer annotation = method.getAnnotation(SpanCustomizer.class);
-        scope = Kamon.storeContext(Kamon.currentContext().withEntry(kamon.annotation.util.Hooks.key(), kamon.annotation.util.Hooks.updateOperationName(annotation.operationName())));
-    }
+  @Advice.OnMethodEnter
+  public static void onEnter(
+      @Advice.Origin Method method,
+      @Advice.Local("scope") Storage.Scope scope) {
 
-    @Advice.OnMethodExit(suppress = Throwable.class)
-    public static void onExit(@Advice.Local("scope") Storage.Scope scope) {
-        scope.close();
-    }
+    final CustomizeInnerSpan annotation = method.getAnnotation(CustomizeInnerSpan.class);
+    scope = Kamon.storeContext(
+        Kamon.currentContext().withEntry(
+            kamon.annotation.util.Hooks.key(),
+            kamon.annotation.util.Hooks.updateOperationName(annotation.operationName())
+        )
+    );
+  }
+
+  @Advice.OnMethodExit(suppress = Throwable.class)
+  public static void onExit(@Advice.Local("scope") Storage.Scope scope) {
+    scope.close();
+  }
 }

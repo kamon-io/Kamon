@@ -89,7 +89,7 @@ class AnnotationInstrumentationSpec extends WordSpec
       }
     }
 
-    "pickup a SpanCustomizer from the current context and apply it to the new spans" in {
+    "pickup a CustomizeInnerSpan from the current context and apply it to the new spans" in {
       for (id <- 1 to 10) Annotated(id).traceWithSpanCustomizer()
 
       eventually(timeout(3 seconds)) {
@@ -227,7 +227,7 @@ case class Annotated(id: Long) {
   def traceWithCompletionStage(): CompletionStage[String] =
     CompletableFuture.completedFuture("Hello")
 
-  @SpanCustomizer(operationName = "customized-operation-name" )
+  @CustomizeInnerSpan(operationName = "customized-operation-name" )
   def traceWithSpanCustomizer(): Unit = {
     val spanBuilder = Kamon.spanBuilder("unknown").tag("slow-service", "service").tag("env", "prod").start()
 

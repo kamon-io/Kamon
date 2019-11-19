@@ -24,24 +24,25 @@ import java.lang.annotation.Target;
 
 
 /**
- * A marker annotation to allows users to customize and add additional information to Spans created by instrumentation.
- * <p>
- * <p>
- * Given a method like this:
- * <pre><code>
- *     {@literal @}SpanCustomizer(operationName = "coolName")
- *     public String callDatabase(String query) {
- *         return Db.executeQuery(query);
- *     }
- * </code></pre>
+ * Indicates that any Spans created within the scope of the annotated method should have the customizations provided by
+ * this annotation. Currently the only supported customization is to change the operation name. For example, given a
+ * method like this:
+ *
+ * <pre>{@code
+ * @CustomizeSpan(operationName = "coolName")
+ * public String callDatabase(String query) {
+ *   return Db.executeQuery(query);
+ * }
+ * }</pre>
  * <p>
  * <p>
  */
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface SpanCustomizer {
-    /**
-     * @return The operationName for the current span.
-     */
-    String operationName();
+public @interface CustomizeInnerSpan {
+
+  /**
+   * @return The operationName for any Span created within the Scope of the annotated method.
+   */
+  String operationName();
 }
