@@ -24,7 +24,7 @@ import java.lang.annotation.*;
  * <p>
  * Given a method like this:
  * <pre><code>
- *     {@literal @}0Histogram(name = "coolName", tags="${'my-cool-tag':'my-cool-operationName'}")
+ *     {@literal @}Histogram(name = "coolName", tags="${'my-cool-tag':'my-cool-operationName'}")
  *     public (Long|Double|Float|Integer) coolName() {
  *         return someComputation();
  *     }

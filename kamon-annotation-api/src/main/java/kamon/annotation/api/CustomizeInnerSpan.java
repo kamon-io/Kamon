@@ -29,7 +29,7 @@ import java.lang.annotation.Target;
  * method like this:
  *
  * <pre>{@code
- * @CustomizeSpan(operationName = "coolName")
+ * @CustomizeInnerSpan(operationName = "coolName")
  * public String callDatabase(String query) {
  *   return Db.executeQuery(query);
  * }
