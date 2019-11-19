@@ -13,48 +13,56 @@
  * =========================================================================================
  */
 
-val kamonCore       = "io.kamon"      %% "kamon-core"     % "2.0.0"
-val kamonTestkit    = "io.kamon"      %% "kamon-testkit"  % "2.0.0"
-
-val el              = "org.glassfish" % "javax.el"        % "3.0.1-b11"
+val kamonCore       = "io.kamon"      %% "kamon-core"     % "2.0.2"
+val kamonTestkit    = "io.kamon"      %% "kamon-testkit"  % "2.0.2"
+val kanelaAgent     = "io.kamon"      %  "kanela-agent"   % "1.0.3"
+val el              = "org.glassfish" %  "javax.el"       % "3.0.1-b11"
 
 lazy val root = (project in file("."))
   .settings(noPublishing: _*)
+  .settings(name := "kamon-annotation")
   .aggregate(annotationApi, annotation)
 
 val commonSettings = Seq(
-    scalaVersion := "2.12.8",
-    resolvers += Resolver.mavenLocal,
-    crossScalaVersions := Seq("2.12.8", "2.11.12", "2.13.0"),
-    assembleArtifact in assemblyPackageScala := false,
-    assemblyMergeStrategy in assembly := {
-        case s if s.startsWith("LICENSE") => MergeStrategy.discard
-        case s if s.startsWith("about") => MergeStrategy.discard
-        case x => (assemblyMergeStrategy in assembly).value(x)
-    })
+  scalaVersion := "2.12.8",
+  resolvers += Resolver.mavenLocal,
+  crossScalaVersions := Seq("2.12.8", "2.11.12", "2.13.0"),
+  assembleArtifact in assemblyPackageScala := false,
+  assemblyMergeStrategy in assembly := {
+    case s if s.startsWith("LICENSE") => MergeStrategy.discard
+    case s if s.startsWith("about") => MergeStrategy.discard
+    case x => (assemblyMergeStrategy in assembly).value(x)
+  })
 
 lazy val annotationApi = (project in file("kamon-annotation-api"))
-  .settings(moduleName := "kamon-annotation-api", resolvers += Resolver.mavenLocal)
-  .settings(crossPaths := false, autoScalaLibrary := false) // vanilla java
-  .settings(publishMavenStyle := true)
-  .settings(javacOptions in (Compile, doc) := Seq("-Xdoclint:none"))
   .settings(commonSettings: _*)
+  .settings(
+    name := "annotation-api",
+    moduleName := "kamon-annotation-api",
+    resolvers += Resolver.mavenLocal,
+    crossPaths := false,
+    autoScalaLibrary := false,
+    publishMavenStyle := true,
+    javacOptions in (Compile, doc) := Seq("-Xdoclint:none")
+  )
 
 lazy val annotation = (project in file("kamon-annotation"))
   .enablePlugins(JavaAgent)
   .enablePlugins(AssemblyPlugin)
-  .settings(moduleName := "kamon-annotation")
   .settings(commonSettings: _*)
-  .settings(javaAgents += "io.kamon"  % "kanela-agent"  % "1.0.1"  % "compile;test")
+  .settings(instrumentationSettings: _*)
   .settings(
-      packageBin in Compile := assembly.value,
-      assemblyExcludedJars in assembly := filterOut((fullClasspath in assembly).value, "slf4j-api", "config", "kamon-core"),
-      assemblyShadeRules in assembly := Seq(
+    name := "annotation",
+    moduleName := "kamon-annotation",
+    packageBin in Compile := assembly.value,
+    assemblyExcludedJars in assembly := filterOut((fullClasspath in assembly).value, "slf4j-api", "config", "kamon-core"),
+    assemblyShadeRules in assembly := Seq(
       ShadeRule.rename("javax.el.**"    -> "kamon.lib.@0").inAll,
       ShadeRule.rename("com.sun.el.**"    -> "kamon.lib.@0").inAll,
     ),
     libraryDependencies ++=
       compileScope(kamonCore, el) ++
+      providedScope(kanelaAgent) ++
       testScope(scalatest, logbackClassic, kamonTestkit)
   ).dependsOn(annotationApi)
 
