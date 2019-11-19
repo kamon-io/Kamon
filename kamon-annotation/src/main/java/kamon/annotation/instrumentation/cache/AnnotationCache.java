@@ -18,6 +18,7 @@ package kamon.annotation.instrumentation.cache;
 
 import kamon.Kamon;
 import kamon.annotation.api.Time;
+import kamon.annotation.api.TrackConcurrency;
 import kamon.annotation.el.StringEvaluator;
 import kamon.annotation.el.TagsEvaluator;
 import kamon.metric.*;
@@ -106,14 +107,17 @@ public final class AnnotationCache {
 
   public static RangeSampler getRangeSampler(Method method, Object obj, Class<?> clazz, String className, String methodName) {
     final MetricKey metricKey = MetricKey.from("Sampler", method, clazz);
-    final kamon.annotation.api.RangeSampler rangeSamplerAnnotation = method.getAnnotation(kamon.annotation.api.RangeSampler.class);
+    final TrackConcurrency trackConcurrencyAnnotation = method.getAnnotation(TrackConcurrency.class);
+    final String rangeSamplerName = trackConcurrencyAnnotation.name().equals("") ?
+        className + "." + methodName :
+        trackConcurrencyAnnotation.name();
 
-    final RangeSampler rangeSampler = (RangeSampler) metrics.computeIfAbsent(metricKey, x -> Kamon.rangeSampler(rangeSamplerAnnotation.name()).withoutTags());
+    final RangeSampler rangeSampler = (RangeSampler) metrics.computeIfAbsent(metricKey, x -> Kamon.rangeSampler(rangeSamplerName).withoutTags());
 
-    if (containsELExpression(rangeSamplerAnnotation.name(), rangeSamplerAnnotation.tags())) {
+    if (containsELExpression(trackConcurrencyAnnotation.name(), trackConcurrencyAnnotation.tags())) {
       return (RangeSampler) metrics.computeIfPresent(metricKey, (key, c) -> key.cache.computeIfAbsent(obj, (x) -> {
-        final String name = getOperationName(rangeSamplerAnnotation.name(), obj, clazz, className, methodName);
-        final Map<String, Object> tags = getTags(obj, clazz, rangeSamplerAnnotation.tags());
+        final String name = getOperationName(rangeSamplerName, obj, clazz, className, methodName);
+        final Map<String, Object> tags = getTags(obj, clazz, trackConcurrencyAnnotation.tags());
         if (tags.isEmpty()) return Kamon.rangeSampler(name).withoutTags();
         return Kamon.rangeSampler(name).withTags(TagSet.from(tags));
       }));

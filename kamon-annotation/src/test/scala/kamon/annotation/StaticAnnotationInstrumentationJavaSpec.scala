@@ -68,7 +68,7 @@ class StaticAnnotationInstrumentationJavaSpec extends WordSpec
       Kamon.counter("count:10").withTags(TagSet.from(Map("counter" -> "1", "env" -> "prod"))).value()should be(2)
     }
 
-    "count the current invocations of a static method annotated with @RangeSampler" in {
+    "count the current invocations of a static method annotated with @TrackConcurrency" in {
       for (_ <- 1 to 10) AnnotatedJavaClass.countMinMax()
 
       eventually(timeout(5 seconds)) {
@@ -76,7 +76,7 @@ class StaticAnnotationInstrumentationJavaSpec extends WordSpec
       }
     }
 
-    "count the current invocations of a static method annotated with @RangeSampler and evaluate EL expressions" in {
+    "count the current invocations of a static method annotated with @TrackConcurrency and evaluate EL expressions" in {
       for (_ <- 1 to 10) AnnotatedJavaClass.countMinMaxWithEL()
 
       eventually(timeout(5 seconds)) {

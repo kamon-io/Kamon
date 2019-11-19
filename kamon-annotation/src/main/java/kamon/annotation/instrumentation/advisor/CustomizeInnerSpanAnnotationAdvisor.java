@@ -23,7 +23,7 @@ import kanela.agent.libs.net.bytebuddy.asm.Advice;
 
 import java.lang.reflect.Method;
 
-public final class SpanCustomizerAnnotationAdvisor {
+public final class CustomizeInnerSpanAnnotationAdvisor {
 
   @Advice.OnMethodEnter
   public static void onEnter(

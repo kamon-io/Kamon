@@ -17,12 +17,32 @@
 package kamon.annotation.util
 
 import kamon.context.Context
-import kamon.trace.Tracer
+import kamon.metric.{RangeSampler, Timer}
+import kamon.trace.{Span, Tracer}
+import kamon.util.CallingThreadExecutionContext
+
+import scala.concurrent.Future
+import scala.util.{Failure, Success}
 
 object Hooks {
+
   def key(): Context.Key[Tracer.PreStartHook] =
     kamon.trace.Hooks.PreStart.Key
 
   def updateOperationName(operationName:String): Tracer.PreStartHook =
     kamon.trace.Hooks.PreStart.updateOperationName(operationName)
+
+  def finishSpanOnComplete[T](future: Future[T], span: Span): Unit =
+    future.onComplete {
+      case Success(_) => span.finish()
+      case Failure(t) => span.fail(t).finish()
+    } (CallingThreadExecutionContext)
+
+  def decrementRangeSamplerOnComplete[T](future: Future[T], rangeSampler: RangeSampler): Unit =
+    future.onComplete { _ => rangeSampler.decrement() } (CallingThreadExecutionContext)
+
+  def stopTimerOnComplete[T](future: Future[T], timer: Timer.Started): Unit =
+    future.onComplete { _ => timer.stop() } (CallingThreadExecutionContext)
+
+
 }

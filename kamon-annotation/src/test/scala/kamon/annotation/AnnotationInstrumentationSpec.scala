@@ -26,11 +26,13 @@ import kamon.tag.TagSet
 import kamon.testkit.{InstrumentInspection, MetricInspection, Reconfigure, SpanInspection}
 import kamon.trace.Span
 import kamon.{Kamon, testkit}
+import org.scalactic.TimesOnInt.convertIntToRepeater
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.SpanSugar
 import org.scalatest.{BeforeAndAfterAll, Matchers, OptionValues, WordSpec}
 
 import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class AnnotationInstrumentationSpec extends WordSpec
   with Matchers
@@ -120,17 +122,56 @@ class AnnotationInstrumentationSpec extends WordSpec
       Kamon.counter("counter:2").withTags(TagSet.from(Map("counter" -> "1", "env" -> "prod"))).value()should be(1)
     }
 
-    "count the current invocations of a method annotated with @RangeSampler" in {
+    "count the current invocations of a method annotated with @TrackConcurrency" in {
       for (id <- 1 to 10) {
-        Annotated(id).countMinMax()
+        Annotated(id).trackConcurrency()
       }
       eventually(timeout(5 seconds)) {
         Kamon.rangeSampler("minMax").withoutTags().distribution().max should be(0)
       }
     }
 
-    "count the current invocations of a method annotated with @RangeSampler and evaluate EL expressions" in {
-      for (id <- 1 to 10) Annotated(id).countMinMaxWithEL()
+    "count the current invocations of a method annotated with @TrackConcurrency without parameters" in {
+      100 times {
+        Future {
+          Annotated(10).trackConcurrencyWithoutParameters()
+        }
+      }
+
+      eventually(timeout(5 seconds)) {
+        Kamon.rangeSampler("kamon.annotation.Annotated.trackConcurrencyWithoutParameters")
+          .withoutTags().distribution().max should be > 0L
+      }
+    }
+
+    "count the current invocations of a method annotated with @TrackConcurrency with Futures" in {
+      100 times {
+        Future {
+          Annotated(10).trackConcurrencyWithFuture()
+        }
+      }
+
+      eventually(timeout(5 seconds)) {
+        Kamon.rangeSampler("kamon.annotation.Annotated.trackConcurrencyWithFuture")
+          .withoutTags().distribution().max should be > 0L
+      }
+    }
+
+    "count the current invocations of a method annotated with @TrackConcurrency with CompletionStage" in {
+      100 times {
+        Future {
+          Annotated(10).trackConcurrencyWithCompletionStage()
+        }
+      }
+
+      eventually(timeout(5 seconds)) {
+        Kamon.rangeSampler("kamon.annotation.Annotated.trackConcurrencyWithCompletionStage")
+          .withoutTags().distribution().max should be > 0L
+      }
+    }
+
+    "count the current invocations of a method annotated with @TrackConcurrency and evaluate EL expressions" in {
+      for (id <- 1 to 10) Annotated(id).trackConcurrencyWithEL()
 
       eventually(timeout(5 seconds)) {
         Kamon.rangeSampler("minMax:1").withTags(TagSet.from(Map("minMax" -> "1", "env" -> "dev"))).distribution().sum should be(0)
@@ -245,11 +286,22 @@ case class Annotated(id: Long) {
   @Count(name = "${'counter:' += this.id}", tags = "${'counter':'1', 'env':'prod'}")
   def countWithEL(): Unit = {}
 
-  @RangeSampler(name = "minMax")
-  def countMinMax(): Unit = {}
+  @TrackConcurrency(name = "minMax")
+  def trackConcurrency(): Unit = {}
 
-  @RangeSampler(name = "#{'minMax:' += this.id}", tags = "#{'minMax':'1', 'env':'dev'}")
-  def countMinMaxWithEL(): Unit = {}
+  @TrackConcurrency
+  def trackConcurrencyWithoutParameters(): Unit = {}
+
+  @TrackConcurrency
+  def trackConcurrencyWithFuture(): Future[String] =
+    Future.successful("Hello")
+
+  @TrackConcurrency
+  def trackConcurrencyWithCompletionStage(): CompletionStage[String] =
+    CompletableFuture.completedFuture("Hello")
+
+  @TrackConcurrency(name = "#{'minMax:' += this.id}", tags = "#{'minMax':'1', 'env':'dev'}")
+  def trackConcurrencyWithEL(): Unit = {}
 
   @Time(name = "time")
   def time(): Unit = {}

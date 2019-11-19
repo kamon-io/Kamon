@@ -16,17 +16,13 @@
 
 package kamon.annotation.instrumentation.advisor;
 
-import kamon.Kamon;
 import kamon.annotation.instrumentation.cache.AnnotationCache;
 import kamon.annotation.util.Hooks;
-import kamon.context.Storage;
-import kamon.trace.Span;
-import kamon.trace.SpanBuilder;
+import kamon.metric.RangeSampler;
 import kamon.util.CallingThreadExecutionContext$;
 import kanela.agent.libs.net.bytebuddy.asm.Advice;
 import kanela.agent.libs.net.bytebuddy.implementation.bytecode.assign.Assigner;
 import scala.Function1;
-import scala.Unit;
 import scala.concurrent.ExecutionContext;
 import scala.concurrent.Future;
 import scala.util.Try;
@@ -34,66 +30,51 @@ import scala.util.Try;
 import java.lang.reflect.Method;
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
-import java.util.function.Consumer;
-import java.util.function.Function;
 
-public final class TraceAnnotationAdvisor {
+public final class TrackConcurrencyAnnotationAdvisor {
 
   public final static ExecutionContext CallingThreadEC = CallingThreadExecutionContext$.MODULE$;
 
   @Advice.OnMethodEnter(suppress = Throwable.class)
-  public static void startSpan(
+  public static void increment(
       @Advice.This(optional = true) Object obj,
       @Advice.Origin Class<?> clazz,
       @Advice.Origin Method method,
       @Advice.Origin("#t") String className,
       @Advice.Origin("#m") String methodName,
-      @Advice.Local("span") Span span,
-      @Advice.Local("scope") Storage.Scope scope) {
+      @Advice.Local("rangeSampler") kamon.metric.RangeSampler sampler) {
 
-    final SpanBuilder builder = AnnotationCache.getSpanBuilder(method, obj, clazz, className, methodName);
-    span = builder.start();
-    scope = Kamon.storeContext(Kamon.currentContext().withEntry(span.Key(), span));
+    final RangeSampler rangeSampler = AnnotationCache.getRangeSampler(method, obj, clazz, className, methodName);
+    rangeSampler.increment();
+    sampler = rangeSampler;
   }
 
-  @Advice.OnMethodExit(onThrowable = Throwable.class, suppress = Throwable.class)
-  public static void stopSpan(
-      @Advice.Local("span") Span span,
-      @Advice.Local("scope") Storage.Scope scope,
-      @Advice.Thrown Throwable throwable,
+  @Advice.OnMethodExit(suppress = Throwable.class)
+  public static void decrement(
+      @Advice.Local("rangeSampler") kamon.metric.RangeSampler rangeSampler,
       @Advice.Return(typing = Assigner.Typing.DYNAMIC) Object result) {
 
-    scope.close();
-
     if (result instanceof Future) {
-      Hooks.finishSpanOnComplete((Future<?>)result, span);
+      Hooks.decrementRangeSamplerOnComplete((Future<?>) result, rangeSampler);
 
     } else if (result instanceof CompletionStage) {
-      ((CompletionStage<?>) result).handle(new CompletionStageCompleteFunction(span));
+      ((CompletionStage<?>) result).handle(new CompletionStageCompleteFunction(rangeSampler));
 
     } else {
-      if (throwable != null)
-        span.fail(throwable.getMessage(), throwable);
-
-      span.finish();
+      rangeSampler.decrement();
     }
   }
 
   public static class CompletionStageCompleteFunction<T> implements BiFunction<T, Throwable, Object> {
-    private final Span span;
+    private final RangeSampler rangeSampler;
 
-    public CompletionStageCompleteFunction(Span span) {
-      this.span = span;
+    public CompletionStageCompleteFunction(RangeSampler rangeSampler) {
+      this.rangeSampler = rangeSampler;
     }
 
     @Override
     public Object apply(T t, Throwable throwable) {
-      if(throwable == null) {
-        span.finish();
-      } else {
-        span.fail(throwable).finish();
-      }
-
+      rangeSampler.decrement();
       return null;
     }
   }

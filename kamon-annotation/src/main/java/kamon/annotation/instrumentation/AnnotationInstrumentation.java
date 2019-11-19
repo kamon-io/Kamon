@@ -26,7 +26,7 @@ public final class AnnotationInstrumentation extends InstrumentationBuilder {
   private static final String Trace = "kamon.annotation.api.Trace";
   private static final String CustomizeSpan = "kamon.annotation.api.CustomizeInnerSpan";
   private static final String Count = "kamon.annotation.api.Count";
-  private static final String RangeSampler = "kamon.annotation.api.RangeSampler";
+  private static final String TrackConcurrency = "kamon.annotation.api.TrackConcurrency";
   private static final String Timer = "kamon.annotation.api.Time";
   private static final String Histogram = "kamon.annotation.api.Histogram";
   private static final String Gauge = "kamon.annotation.api.Gauge";
@@ -37,16 +37,16 @@ public final class AnnotationInstrumentation extends InstrumentationBuilder {
         .advise(isAnnotatedWith(named(Trace)), TraceAnnotationAdvisor.class);
 
     onTypesWithMethodsAnnotatedWith(CustomizeSpan)
-        .advise(isAnnotatedWith(named(CustomizeSpan)), SpanCustomizerAnnotationAdvisor.class);
+        .advise(isAnnotatedWith(named(CustomizeSpan)), CustomizeInnerSpanAnnotationAdvisor.class);
 
     onTypesWithMethodsAnnotatedWith(Count)
         .advise(isAnnotatedWith(named(Count)), CountAnnotationAdvisor.class);
 
-    onTypesWithMethodsAnnotatedWith(RangeSampler)
-        .advise(isAnnotatedWith(named(RangeSampler)), RangeSamplerAnnotationAdvisor.class);
+    onTypesWithMethodsAnnotatedWith(TrackConcurrency)
+        .advise(isAnnotatedWith(named(TrackConcurrency)), TrackConcurrencyAnnotationAdvisor.class);
 
     onTypesWithMethodsAnnotatedWith(Timer)
-        .advise(isAnnotatedWith(named(Timer)), TimerAnnotationAdvisor.class);
+        .advise(isAnnotatedWith(named(Timer)), TimeAnnotationAdvisor.class);
 
     onTypesWithMethodsAnnotatedWith(Histogram)
         .advise(isAnnotatedWith(named(Histogram)).and(withReturnTypes(long.class, double.class, int.class, float.class)), HistogramAnnotationAdvisor.class);

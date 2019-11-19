@@ -34,10 +34,10 @@ public class AnnotatedJavaClass {
     @Count(name = "${'count:' += AnnotatedJavaClass.ID}", tags = "${'counter':'1', 'env':'prod'}")
     public static void countWithEL() {}
 
-    @RangeSampler(name = "minMax")
+    @TrackConcurrency(name = "minMax")
     public static void countMinMax() {}
 
-    @RangeSampler(name = "#{'minMax:' += AnnotatedJavaClass.ID}", tags = "#{'minMax':'1', 'env':'dev'}")
+    @TrackConcurrency(name = "#{'minMax:' += AnnotatedJavaClass.ID}", tags = "#{'minMax':'1', 'env':'dev'}")
     public static void countMinMaxWithEL() {}
 
     @Time(name = "time")

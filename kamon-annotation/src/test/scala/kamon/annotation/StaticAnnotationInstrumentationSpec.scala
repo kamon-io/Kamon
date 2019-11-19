@@ -69,7 +69,7 @@ class StaticAnnotationInstrumentationSpec extends WordSpec
       Kamon.counter("count:10").withTags(TagSet.from(Map("counter" -> "1", "env" -> "prod"))).value()should be(2)
     }
 
-    "count the current invocations of a method annotated with @RangeSampler in a Scala Object" in {
+    "count the current invocations of a method annotated with @TrackConcurrency in a Scala Object" in {
       for (_ <- 1 to 10) {
         AnnotatedObject.countMinMax()
       }
@@ -79,7 +79,7 @@ class StaticAnnotationInstrumentationSpec extends WordSpec
       }
     }
 
-    "count the current invocations of a method annotated with @RangeSampler and evaluate EL expressions in a Scala Object" in {
+    "count the current invocations of a method annotated with @TrackConcurrency and evaluate EL expressions in a Scala Object" in {
       for (_ <- 1 to 10) AnnotatedObject.countMinMaxWithEL()
 
       eventually(timeout(5 seconds)) {
@@ -153,10 +153,10 @@ object AnnotatedObject {
   @Count(name = "${'count:' += AnnotatedObject$.MODULE$.Id}", tags = "${'counter':'1', 'env':'prod'}")
   def countWithEL(): Unit = {}
 
-  @RangeSampler(name = "minMax")
+  @TrackConcurrency(name = "minMax")
   def countMinMax(): Unit = {}
 
-  @RangeSampler(name = "#{'minMax:' += AnnotatedObject$.MODULE$.Id}", tags = "#{'minMax':'1', 'env':'dev'}")
+  @TrackConcurrency(name = "#{'minMax:' += AnnotatedObject$.MODULE$.Id}", tags = "#{'minMax':'1', 'env':'dev'}")
   def countMinMaxWithEL(): Unit = {}
 
   @Time(name = "time")
