@@ -27,7 +27,7 @@ public final class AnnotationInstrumentation extends InstrumentationBuilder {
     private static final String SpanCustomizer = "kamon.annotation.api.SpanCustomizer";
     private static final String Count = "kamon.annotation.api.Count";
     private static final String RangeSampler = "kamon.annotation.api.RangeSampler";
-    private static final String Timer = "kamon.annotation.api.Timer";
+    private static final String Timer = "kamon.annotation.api.Time";
     private static final String Histogram = "kamon.annotation.api.Histogram";
     private static final String Gauge = "kamon.annotation.api.Gauge";
 

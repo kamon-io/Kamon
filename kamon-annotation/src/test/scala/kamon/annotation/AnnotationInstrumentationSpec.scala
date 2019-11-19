@@ -138,13 +138,29 @@ class AnnotationInstrumentationSpec extends WordSpec
       }
     }
 
-    "measure the time spent in the execution of a method annotated with @Timer" in {
+    "measure the time spent in the execution of a method annotated with @Time" in {
       for (id <- 1 to 1) Annotated(id).time()
 
       Kamon.timer("time").withoutTags().distribution().count should be(1)
     }
 
-    "measure the time spent in the execution of a method annotated with @Timer and evaluate EL expressions" in {
+    "measure the time spent in the execution of a method annotated with @Time without parameters" in {
+      for (id <- 1 to 1) Annotated(id).timeWithoutParameters()
+
+      Kamon.timer("kamon.annotation.Annotated.timeWithoutParameters").withoutTags().distribution().count should be(1)
+    }
+
+    "measure the time spent in the execution of a method annotated with @Time and returning a Future" in {
+      Annotated(1).timeWithFuture()
+      Kamon.timer("kamon.annotation.Annotated.timeWithFuture").withoutTags().distribution().count should be(1)
+    }
+
+    "measure the time spent in the execution of a method annotated with @Time and returning a CompletionStage" in {
+      Annotated(1).timeWithCompletionStage()
+      Kamon.timer("kamon.annotation.Annotated.timeWithCompletionStage").withoutTags().distribution().count should be(1)
+    }
+
+    "measure the time spent in the execution of a method annotated with @Time and evaluate EL expressions" in {
       for (id <- 1 to 1) Annotated(id).timeWithEL()
 
       Kamon.timer("time:1").withTags(TagSet.from(Map("slow-service" -> "service", "env" -> "prod"))).distribution().count should be(1)
@@ -235,10 +251,21 @@ case class Annotated(id: Long) {
   @RangeSampler(name = "#{'minMax:' += this.id}", tags = "#{'minMax':'1', 'env':'dev'}")
   def countMinMaxWithEL(): Unit = {}
 
-  @Timer(name = "time")
+  @Time(name = "time")
   def time(): Unit = {}
 
-  @Timer(name = "${'time:' += this.id}", tags = "${'slow-service':'service', 'env':'prod'}")
+  @Time
+  def timeWithoutParameters(): Unit = {}
+
+  @Time
+  def timeWithFuture(): Future[String] =
+    Future.successful("Hello")
+
+  @Time
+  def timeWithCompletionStage(): CompletionStage[String] =
+    CompletableFuture.completedFuture("Hello")
+
+  @Time(name = "${'time:' += this.id}", tags = "${'slow-service':'service', 'env':'prod'}")
   def timeWithEL(): Unit = {}
 
   @Histogram(name = "histogram")

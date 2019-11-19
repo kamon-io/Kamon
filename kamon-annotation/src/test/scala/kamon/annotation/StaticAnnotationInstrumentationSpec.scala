@@ -87,13 +87,13 @@ class StaticAnnotationInstrumentationSpec extends WordSpec
       }
     }
 
-    "measure the time spent in the execution of a method annotated with @Timer in a Scala Object" in {
+    "measure the time spent in the execution of a method annotated with @Time in a Scala Object" in {
       AnnotatedObject.time()
 
       Kamon.timer("time").withoutTags().distribution().count should be(1)
     }
 
-    "measure the time spent in the execution of a method annotated with @Timer and evaluate EL expressions in a Scala Object" in {
+    "measure the time spent in the execution of a method annotated with @Time and evaluate EL expressions in a Scala Object" in {
       AnnotatedObject.timeWithEL()
 
       Kamon.timer("time:10").withTags(TagSet.from(Map("slow-service" -> "service", "env" -> "prod"))).distribution().count should be(1)
@@ -159,10 +159,10 @@ object AnnotatedObject {
   @RangeSampler(name = "#{'minMax:' += AnnotatedObject$.MODULE$.Id}", tags = "#{'minMax':'1', 'env':'dev'}")
   def countMinMaxWithEL(): Unit = {}
 
-  @Timer(name = "time")
+  @Time(name = "time")
   def time(): Unit = {}
 
-  @Timer(name = "${'time:' += AnnotatedObject$.MODULE$.Id}", tags = "${'slow-service':'service', 'env':'prod'}")
+  @Time(name = "${'time:' += AnnotatedObject$.MODULE$.Id}", tags = "${'slow-service':'service', 'env':'prod'}")
   def timeWithEL(): Unit = {}
 
   @Histogram(name = "histogram")

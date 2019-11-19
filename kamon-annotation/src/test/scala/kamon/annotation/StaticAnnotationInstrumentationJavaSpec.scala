@@ -84,13 +84,13 @@ class StaticAnnotationInstrumentationJavaSpec extends WordSpec
       }
     }
 
-    "measure the time spent in the execution of a static method annotated with @Timer" in {
+    "measure the time spent in the execution of a static method annotated with @Time" in {
       for (_ <- 1 to 1) AnnotatedJavaClass.time()
 
       Kamon.timer("time").withoutTags().distribution().count should be(1)
     }
 
-    "measure the time spent in the execution of a static method annotated with @Timer and evaluate EL expressions" in {
+    "measure the time spent in the execution of a static method annotated with @Time and evaluate EL expressions" in {
       for (_ <- 1 to 1) AnnotatedJavaClass.timeWithEL()
 
       Kamon.timer("time:10").withTags(TagSet.from(Map("slow-service" -> "service", "env" -> "prod"))).distribution().count should be(1)

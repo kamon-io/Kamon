@@ -17,12 +17,11 @@
 package kamon.annotation.instrumentation.cache;
 
 import kamon.Kamon;
-import kamon.annotation.api.Trace;
+import kamon.annotation.api.Time;
 import kamon.annotation.el.StringEvaluator;
 import kamon.annotation.el.TagsEvaluator;
 import kamon.metric.*;
 import kamon.tag.TagSet;
-import kamon.trace.Span;
 import kamon.trace.SpanBuilder;
 import kanela.agent.libs.net.jodah.expiringmap.ExpirationListener;
 import kanela.agent.libs.net.jodah.expiringmap.ExpirationPolicy;
@@ -124,15 +123,18 @@ public final class AnnotationCache {
 
 
   public static Timer getTimer(Method method, Object obj, Class<?> clazz, String className, String methodName) {
-    final MetricKey metricKey = MetricKey.from("Timer", method, clazz);
-    final kamon.annotation.api.Timer timerAnnotation = method.getAnnotation(kamon.annotation.api.Timer.class);
+    final MetricKey metricKey = MetricKey.from("Time", method, clazz);
+    final Time timeAnnotation = method.getAnnotation(Time.class);
+    final String timerMetricName = timeAnnotation.name().equals("") ?
+        className + "." + methodName :
+        timeAnnotation.name();
 
-    final Timer timer = (Timer) metrics.computeIfAbsent(metricKey, x -> Kamon.timer(timerAnnotation.name()).withoutTags());
+    final Timer timer = (Timer) metrics.computeIfAbsent(metricKey, x -> Kamon.timer(timerMetricName).withoutTags());
 
-    if (containsELExpression(timerAnnotation.name(), timerAnnotation.tags())) {
+    if (containsELExpression(timeAnnotation.name(), timeAnnotation.tags())) {
       return (Timer) metrics.computeIfPresent(metricKey, (key, c) -> key.cache.computeIfAbsent(obj, (x) -> {
-        final String name = getOperationName(timerAnnotation.name(), obj, clazz, className, methodName);
-        final Map<String, Object> tags = getTags(obj, clazz, timerAnnotation.tags());
+        final String name = getOperationName(timerMetricName, obj, clazz, className, methodName);
+        final Map<String, Object> tags = getTags(obj, clazz, timeAnnotation.tags());
         if (tags.isEmpty()) return Kamon.timer(name).withoutTags();
         return Kamon.timer(name).withTags(TagSet.from(tags));
       }));

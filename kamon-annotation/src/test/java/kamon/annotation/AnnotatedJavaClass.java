@@ -40,10 +40,10 @@ public class AnnotatedJavaClass {
     @RangeSampler(name = "#{'minMax:' += AnnotatedJavaClass.ID}", tags = "#{'minMax':'1', 'env':'dev'}")
     public static void countMinMaxWithEL() {}
 
-    @Timer(name = "time")
+    @Time(name = "time")
     public static void time() {}
 
-    @Timer(name = "${'time:' += AnnotatedJavaClass.ID}", tags = "${'slow-service':'service', 'env':'prod'}")
+    @Time(name = "${'time:' += AnnotatedJavaClass.ID}", tags = "${'slow-service':'service', 'env':'prod'}")
     public static void timeWithEL() {}
 
     @Histogram(name = "histogram")
