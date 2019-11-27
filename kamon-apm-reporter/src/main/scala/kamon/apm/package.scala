@@ -83,8 +83,6 @@ package object apm {
     val SubBucketMask               = (SubBucketCount.toLong - 1) << UnitMagnitude
 
     def countsArrayIndex(bucketIndex: Int, subBucketIndex: Int): Int = {
-      assert(subBucketIndex < SubBucketCount)
-      assert(bucketIndex == 0 || (subBucketIndex >= SubBucketHalfCount))
       val bucketBaseIndex = (bucketIndex + 1) << SubBucketHalfCountMagnitude
       val offsetInBucket = subBucketIndex - SubBucketHalfCount
       bucketBaseIndex + offsetInBucket
