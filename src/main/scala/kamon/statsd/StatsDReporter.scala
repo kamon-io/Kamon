@@ -31,10 +31,6 @@ import kamon.statsd.StatsDReporter.MetricDataPacketBuffer
 import kamon.util.DynamicAccess
 import org.slf4j.LoggerFactory
 
-class StatsDReporterFactory extends ModuleFactory {
-  override def create(settings: ModuleFactory.Settings): StatsDReporter = new StatsDReporter()
-}
-
 class StatsDReporter(configPath: String) extends MetricReporter {
   private val logger = LoggerFactory.getLogger(classOf[StatsDReporter])
   @volatile private var reporterConfiguration = StatsDReporter.Settings.readSettings(Kamon.config().getConfig(configPath))
@@ -42,7 +38,7 @@ class StatsDReporter(configPath: String) extends MetricReporter {
   val symbols: DecimalFormatSymbols = DecimalFormatSymbols.getInstance(Locale.US)
   symbols.setDecimalSeparator('.') // Just in case there is some weird locale config we are not aware of.
 
-  // Absurdly high number of decimal digits, let the other end lose precision if it needs to.
+  // Absurdly high number of decimal digits, let the other end loose precision if it needs to.
   val samplingRateFormat = new DecimalFormat("#.################################################################", symbols)
   val clientChannel: DatagramChannel = DatagramChannel.open()
 
@@ -61,25 +57,29 @@ class StatsDReporter(configPath: String) extends MetricReporter {
     val keyGenerator = reporterConfiguration.keyGenerator
     val packetBuffer = new MetricDataPacketBuffer(reporterConfiguration.maxPacketSize, clientChannel, reporterConfiguration.agentAddress)
 
-    for (
-      counter <- snapshot.counters;
-      instrument <- counter.instruments
-    ) {
-      packetBuffer.appendMeasurement(keyGenerator.generateKey(counter.name, instrument.tags), encodeStatsDCounter(reporterConfiguration, instrument.value, counter.settings.unit))
+    for {
+      counter     <- snapshot.counters
+      instrument  <- counter.instruments
+    } {
+      packetBuffer.appendMeasurement(
+        key = keyGenerator.generateKey(counter.name, instrument.tags),
+        measurementData = encodeStatsDCounter(reporterConfiguration, instrument.value, counter.settings.unit))
     }
 
-    for (
-      gauge <- snapshot.gauges;
-      instrument <- gauge.instruments
-    ) {
-      packetBuffer.appendMeasurement(keyGenerator.generateKey(gauge.name, instrument.tags), encodeStatsDGauge(reporterConfiguration, instrument.value, gauge.settings.unit))
+    for {
+      gauge       <- snapshot.gauges
+      instrument  <- gauge.instruments
+    } {
+      packetBuffer.appendMeasurement(
+        key = keyGenerator.generateKey(gauge.name, instrument.tags),
+        measurementData = encodeStatsDGauge(reporterConfiguration, instrument.value, gauge.settings.unit))
     }
 
-    for (
-      metric <- snapshot.histograms ++ snapshot.rangeSamplers ++ snapshot.timers;
-      instrument <- metric.instruments;
-      bucket <- instrument.value.bucketsIterator
-    ) {
+    for {
+      metric      <- snapshot.histograms ++ snapshot.rangeSamplers ++ snapshot.timers
+      instrument  <- metric.instruments
+      bucket      <- instrument.value.bucketsIterator
+    } {
       val bucketData = encodeStatsDTimer(reporterConfiguration, bucket.value, bucket.frequency, metric.settings.unit)
       packetBuffer.appendMeasurement(keyGenerator.generateKey(metric.name, instrument.tags), bucketData)
     }
@@ -87,9 +87,11 @@ class StatsDReporter(configPath: String) extends MetricReporter {
     packetBuffer.flush()
   }
 
-  private def encodeStatsDCounter(config: StatsDReporter.Settings, count: Long, unit: MeasurementUnit): String = s"${scale(config, count, unit)}|c"
+  private def encodeStatsDCounter(config: StatsDReporter.Settings, count: Long, unit: MeasurementUnit): String =
+    s"${scale(config, count, unit)}|c"
 
-  private def encodeStatsDGauge(config: StatsDReporter.Settings, value: Double, unit: MeasurementUnit): String = s"${scale(config, value.toLong, unit)}|g"
+  private def encodeStatsDGauge(config: StatsDReporter.Settings, value: Double, unit: MeasurementUnit): String =
+    s"${scale(config, value.toLong, unit)}|g"
 
   private def encodeStatsDTimer(config: StatsDReporter.Settings, level: Long, count: Long, unit: MeasurementUnit): String = {
     val samplingRate: Double = 1D / count
@@ -105,6 +107,12 @@ class StatsDReporter(configPath: String) extends MetricReporter {
 }
 
 object StatsDReporter {
+
+  class Factory extends ModuleFactory {
+    override def create(settings: ModuleFactory.Settings): StatsDReporter =
+      new StatsDReporter()
+  }
+
   case class Settings(
     agentAddress: InetSocketAddress,
     maxPacketSize: Long,

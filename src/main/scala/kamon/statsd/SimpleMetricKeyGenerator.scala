@@ -28,15 +28,15 @@ class SimpleMetricKeyGenerator(statsDConfig: Config) extends MetricKeyGenerator 
   type Normalizer = String => String
 
   val configSettings: Config = statsDConfig.getConfig("simple-metric-key-generator")
-  val application: String = Kamon.environment.service
+  val serviceName: String = Kamon.environment.service
   val includeHostname: Boolean = configSettings.getBoolean("include-hostname")
   val hostname: String = Kamon.environment.host
   val normalizer: Normalizer = createNormalizer(configSettings.getString("metric-name-normalization-strategy"))
   val normalizedHostname: String = normalizer(hostname)
 
   val baseName: String =
-    if (includeHostname) s"$application.$normalizedHostname"
-    else application
+    if (includeHostname) s"$serviceName.$normalizedHostname"
+    else serviceName
 
   private def createNormalizer(strategy: String): Normalizer = strategy match {
     case "percent-encode" => PercentEncoder.encode
