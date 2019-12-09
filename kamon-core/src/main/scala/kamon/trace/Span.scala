@@ -517,8 +517,12 @@ object Span {
       if(_isOpen) {
         _hasError = true
 
-        if(isSampled && includeErrorStacktrace)
-          _spanTags.add(TagKeys.ErrorStacktrace, toStackTraceString(throwable))
+        if(isSampled) {
+          _spanTags.add(TagKeys.ErrorMessage, throwable.getMessage)
+
+          if(includeErrorStacktrace)
+            _spanTags.add(TagKeys.ErrorStacktrace, toStackTraceString(throwable))
+        }
       }
       this
     }
