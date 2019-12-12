@@ -93,9 +93,9 @@ package object kamon {
     }
 
     def pairs: Map[String, String] = {
-      topLevelKeys
-        .map(key => (key, config.getString(key)))
-        .toMap
+      config.root().entrySet().asScala.map { entry =>
+        (entry.getKey, entry.getValue.unwrapped().asInstanceOf[String])
+      }.toMap
     }
   }
 }
