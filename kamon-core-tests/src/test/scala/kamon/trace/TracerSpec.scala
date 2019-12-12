@@ -259,6 +259,35 @@ class TracerSpec extends WordSpec with Matchers with SpanInspection.Syntax with 
 
       span.operationName() shouldBe "customName"
     }
+
+    "collect exception information for failed Spans" in {
+      val byMessage = Kamon.spanBuilder("o1").start()
+        .fail("byMessage")
+      val byException = Kamon.spanBuilder("o2").start()
+        .fail(new RuntimeException("byException"))
+      val byMessageAndException = Kamon.spanBuilder("o3").start()
+        .fail("byMessageAndException", new RuntimeException("byException"))
+
+      Reconfigure.applyConfig("kamon.trace.include-error-stacktrace=false")
+      val byExceptionDisabled = Kamon.spanBuilder("o2").start()
+        .fail(new RuntimeException("byExceptionDisabled"))
+
+      byMessage.metricTags().get(plainBoolean("error")) shouldBe true
+      byMessage.spanTags().get(plain("error.message")) shouldBe "byMessage"
+      byMessage.spanTags().get(option("error.stacktrace")) shouldBe None
+
+      byException.metricTags().get(plainBoolean("error")) shouldBe true
+      byException.spanTags().get(plain("error.message")) shouldBe "byException"
+      byException.spanTags().get(option("error.stacktrace")) shouldBe defined
+
+      byMessageAndException.metricTags().get(plainBoolean("error")) shouldBe true
+      byMessageAndException.spanTags().get(plain("error.message")) shouldBe "byMessageAndException"
+      byException.spanTags().get(option("error.stacktrace")) shouldBe defined
+
+      byExceptionDisabled.metricTags().get(plainBoolean("error")) shouldBe true
+      byExceptionDisabled.spanTags().get(plain("error.message")) shouldBe "byExceptionDisabled"
+      byExceptionDisabled.spanTags().get(option("error.stacktrace")) shouldBe None
+    }
   }
 
   private def remoteSpan(samplingDecision: SamplingDecision = SamplingDecision.Sample): Span.Remote =
