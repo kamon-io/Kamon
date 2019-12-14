@@ -192,7 +192,6 @@ class AkkaHttpServerTracingSpec extends WordSpecLike with Matchers with ScalaFut
         }
       }
 
-
       "change the operation name to 'unhandled' when the response status code is 404" in {
         val target = s"$protocol://$interface:$port/unknown-path"
         okHttp.newCall(new Request.Builder().url(target).build()).execute()
@@ -207,7 +206,6 @@ class AkkaHttpServerTracingSpec extends WordSpecLike with Matchers with ScalaFut
           span.metricTags.get(plainLong("http.status_code")) shouldBe 404L
         }
       }
-
 
       "correctly time entity transfer timings" in {
         val target = s"$protocol://$interface:$port/$stream"
@@ -237,6 +235,16 @@ class AkkaHttpServerTracingSpec extends WordSpecLike with Matchers with ScalaFut
           "extra"
         )
       }
+
+      "keep operation names provided by the HTTP Server instrumentation" in {
+        val target = s"$protocol://$interface:$port/name-will-be-changed"
+        okHttp.newCall(new Request.Builder().url(target).build()).execute()
+
+        eventually(timeout(10 seconds)) {
+          val span = testSpanReporter().nextSpan().value
+          span.operationName shouldBe "named-via-config"
+        }
+      }
     }
   }
 
@@ -244,7 +252,5 @@ class AkkaHttpServerTracingSpec extends WordSpecLike with Matchers with ScalaFut
     http1WebServer.shutdown()
     http2WebServer.shutdown()
   }
-
-
 }
 
