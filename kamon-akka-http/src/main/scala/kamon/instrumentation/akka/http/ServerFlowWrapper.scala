@@ -65,12 +65,20 @@ object ServerFlowWrapper {
           val requestHandler = httpServerInstrumentation.createHandler(toRequest(request), deferSamplingDecision = true)
             .requestReceived()
 
+          val defaultOperationName = httpServerInstrumentation.settings.defaultOperationName
+          val requestSpan = requestHandler.span
+
+          // Automatic Operation name changes will only be allowed if the initial name HTTP Server didn't assign a
+          // user-defined name to the operation (that would be, either via an Operation Name Generator or a custom
+          // operation mapping).
+          val allowAutomaticChanges = requestSpan.operationName() == defaultOperationName
+
           _pendingRequests.enqueue(requestHandler)
 
           // The only reason why it's safe to leave the Thread dirty is because the Actor
           // instrumentation will cleanup afterwards.
           Kamon.storeContext(requestHandler.context.withEntry(
-            LastAutomaticOperationNameEdit.Key, Option(LastAutomaticOperationNameEdit(requestHandler.span.operationName()))
+            LastAutomaticOperationNameEdit.Key, Option(LastAutomaticOperationNameEdit(requestSpan.operationName(), allowAutomaticChanges))
           ))
 
           push(requestOut, request)

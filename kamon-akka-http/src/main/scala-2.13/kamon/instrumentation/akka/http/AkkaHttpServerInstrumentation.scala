@@ -179,17 +179,25 @@ object ResolveOperationNameOnRouteInterceptor {
     // by accessing the Span and changing it directly there, so we wouldn't want to overwrite that.
 
     Kamon.currentContext().get(LastAutomaticOperationNameEdit.Key).foreach(lastEdit => {
-      if(Kamon.currentSpan().operationName() == lastEdit.operationName) {
-        val allMatches = requestContext.asInstanceOf[HasMatchingContext].matchingContext.reverse.map(singleMatch)
-        val operationName = allMatches.mkString("")
+      val currentSpan = Kamon.currentSpan()
 
-        if(operationName.nonEmpty) {
-          Kamon.currentSpan()
-            .name(operationName)
-            .takeSamplingDecision()
+      if(lastEdit.allowAutomaticChanges) {
+        if(currentSpan.operationName() == lastEdit.operationName) {
+          val allMatches = requestContext.asInstanceOf[HasMatchingContext].matchingContext.reverse.map(singleMatch)
+          val operationName = allMatches.mkString("")
 
-          lastEdit.operationName = operationName
+          if (operationName.nonEmpty) {
+            currentSpan
+              .name(operationName)
+              .takeSamplingDecision()
+
+            lastEdit.operationName = operationName
+          }
+        } else {
+          lastEdit.allowAutomaticChanges = false
         }
+      } else {
+        currentSpan.takeSamplingDecision()
       }
     })
 
@@ -220,13 +228,27 @@ object ResolveOperationNameOnRouteInterceptor {
   }
 }
 
-class LastAutomaticOperationNameEdit(@volatile var operationName: String)
+/**
+  * Tracks the last operation name that was automatically assigned to an operation via instrumentation. The
+  * instrumentation might assign a name to the operations via settings on the HTTP Server instrumentation instance or
+  * via the Path directives instrumentation, but might never reassign a name if the user somehow assigned their own name
+  * to the operation. Users chan change operation names by:
+  *   - Using operation mappings via configuration of the HTTP Server.
+  *   - Providing a custom HTTP Operation Name Generator for the server.
+  *   - Using the "operationName" directive.
+  *   - Directly accessing the Span for the current operation and changing the name on it.
+  *
+  */
+class LastAutomaticOperationNameEdit(
+  @volatile var operationName: String,
+  @volatile var allowAutomaticChanges: Boolean
+)
 
 object LastAutomaticOperationNameEdit {
   val Key = Context.key[Option[LastAutomaticOperationNameEdit]]("laone", None)
 
-  def apply(operationName: String): LastAutomaticOperationNameEdit =
-    new LastAutomaticOperationNameEdit(operationName)
+  def apply(operationName: String, allowAutomaticChanges: Boolean): LastAutomaticOperationNameEdit =
+    new LastAutomaticOperationNameEdit(operationName, allowAutomaticChanges)
 }
 
 object RequestContextCopyInterceptor {

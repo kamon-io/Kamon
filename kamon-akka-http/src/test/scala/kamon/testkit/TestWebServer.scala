@@ -166,6 +166,9 @@ trait TestWebServer extends TracingDirectives {
           respondWithHeader(RawHeader("extra", "extra-header")) {
             complete(OK)
           }
+        } ~
+        path("name-will-be-changed") {
+          complete("OK")
         }
       }
     }

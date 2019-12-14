@@ -18,11 +18,11 @@ resolvers += Resolver.mavenLocal
 resolvers += Resolver.bintrayRepo("hseeberger", "maven")
 
 
-val kamonCore           = "io.kamon" %% "kamon-core"                    % "2.0.0"
-val kamonTestKit        = "io.kamon" %% "kamon-testkit"                 % "2.0.0"
-val kamonCommon         = "io.kamon" %% "kamon-instrumentation-common"  % "2.0.0"
-val kamonAkka25         = "io.kamon" %% "kamon-akka"                    % "2.0.0"
-val kanelaAgent         = "io.kamon" %  "kanela-agent"                  % "1.0.1"
+val kamonCore           = "io.kamon" %% "kamon-core"                    % "2.0.3"
+val kamonTestKit        = "io.kamon" %% "kamon-testkit"                 % "2.0.3"
+val kamonCommon         = "io.kamon" %% "kamon-instrumentation-common"  % "2.0.1"
+val kamonAkka25         = "io.kamon" %% "kamon-akka"                    % "2.0.1"
+val kanelaAgent         = "io.kamon" %  "kanela-agent"                  % "1.0.4"
 
 val akkaHttpJson        = "de.heikoseeberger" %% "akka-http-json4s"     % "1.27.0"
 val json4sNative        = "org.json4s"        %% "json4s-native"        % "3.6.7"
