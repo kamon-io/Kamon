@@ -50,6 +50,30 @@ class PeriodSnapshotAccumulatorSpec extends WordSpec with Reconfigure with Instr
       accumulator.add(nineSeconds).value should be theSameInstanceAs(nineSeconds)
     }
 
+    "remove snapshots once they have been flushed" in {
+      val accumulator = newAccumulator(15, 0)
+
+      accumulator.add(fiveSecondsOne) shouldBe empty
+      accumulator.add(fiveSecondsTwo) shouldBe empty
+      val firstSnapshot = accumulator.add(fiveSecondsThree).value
+
+      firstSnapshot.counters.size shouldBe 1
+      firstSnapshot.gauges.size shouldBe 1
+      firstSnapshot.histograms.size shouldBe 1
+      firstSnapshot.timers.size shouldBe 1
+      firstSnapshot.rangeSamplers.size shouldBe 1
+
+      accumulator.add(clear(fiveSecondsFour)) shouldBe empty
+      accumulator.add(clear(fiveSecondsFive)) shouldBe empty
+      val secondSnapshot = accumulator.add(clear(fiveSecondsSix)).value
+
+      secondSnapshot.counters.size shouldBe 0
+      secondSnapshot.gauges.size shouldBe 0
+      secondSnapshot.histograms.size shouldBe 0
+      secondSnapshot.timers.size shouldBe 0
+      secondSnapshot.rangeSamplers.size shouldBe 0
+    }
+
     "align snapshot production to round boundaries" in {
       // If accumulating over 15 seconds, the snapshots should be generated at 00:00:00, 00:00:15, 00:00:30 and so on.
       // The first snapshot will almost always be shorter than 15 seconds as it gets adjusted to the nearest initial period.
@@ -186,6 +210,15 @@ class PeriodSnapshotAccumulatorSpec extends WordSpec with Reconfigure with Instr
       rangeSamplers = Seq(MetricSnapshot.ofDistributions("rangeSampler", "", distributionSettings, Seq(Instrument.Snapshot(TagSet.of("metric", "rangeSampler"), distribution))))
     )
   }
+
+  def clear(periodSnapshot: PeriodSnapshot): PeriodSnapshot =
+    periodSnapshot.copy(
+      counters = Seq.empty,
+      gauges = Seq.empty,
+      histograms = Seq.empty,
+      timers = Seq.empty,
+      rangeSamplers = Seq.empty
+    )
 
   override protected def beforeAll(): Unit = {
     applyConfig("kamon.metric.tick-interval = 10 seconds")
