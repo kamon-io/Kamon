@@ -85,7 +85,6 @@ object PeriodSnapshot {
     * @param margin error margin for expected reporting period
     * @param stalePeriod the period of time an instrument should be missing from the incoming snapshots to consider it
     *                    stale and remove it.
-    * @param clock the Clock from which the notion of "now" will be
     */
   class Accumulator(period: Duration, margin: Duration, stalePeriod: Duration) {
     private val _counters: ValueMetricStorage[Long] = mutable.Map.empty
@@ -238,7 +237,7 @@ object PeriodSnapshot {
         }}
 
         // Removes all metrics that don't have any instruments left
-        store.retain { case (_, metricEntry) =>metricEntry.instruments.nonEmpty }
+        store.retain { case (_, metricEntry) => metricEntry.instruments.nonEmpty }
       }
 
       clean(_counters)
@@ -249,10 +248,10 @@ object PeriodSnapshot {
     }
 
     private def clearAccumulatedData(): Unit = {
-      _histograms.clear()
-      _rangeSamplers.clear()
       _counters.clear()
       _gauges.clear()
+      _histograms.clear()
+      _timers.clear()
       _rangeSamplers.clear()
     }
 
