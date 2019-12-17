@@ -8,7 +8,7 @@ lazy val instrumentationModules: Seq[ModuleID] = Seq(
   "io.kamon" %% "kamon-scala-future"      % "2.0.1",
   "io.kamon" %% "kamon-scalaz-future"     % "2.0.0",
   "io.kamon" %% "kamon-akka"              % "2.0.1",
-  "io.kamon" %% "kamon-akka-http"         % "2.0.2",
+  "io.kamon" %% "kamon-akka-http"         % "2.0.3",
   "io.kamon" %% "kamon-play"              % "2.0.0",
   "io.kamon" %% "kamon-jdbc"              % "2.0.1",
   "io.kamon" %% "kamon-logback"           % "2.0.2",
@@ -22,9 +22,9 @@ lazy val instrumentationModulesWithoutTwoThirteen: Seq[ModuleID] = Seq(
 )
 
 val versionSettings = Seq(
-  kamonCoreVersion := "2.0.2",
-  kanelaAgentVersion := "1.0.3",
-  instrumentationCommonVersion := "2.0.0"
+  kamonCoreVersion := "2.0.4",
+  kanelaAgentVersion := "1.0.4",
+  instrumentationCommonVersion := "2.0.1"
 )
 
 lazy val root = Project("kamon-bundle", file("."))
