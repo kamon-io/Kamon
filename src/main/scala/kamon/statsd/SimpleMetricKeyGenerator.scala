@@ -31,6 +31,8 @@ class SimpleMetricKeyGenerator(statsDConfig: Config) extends MetricKeyGenerator 
   val serviceName: String = Kamon.environment.service
   val includeHostname: Boolean = configSettings.getBoolean("include-hostname")
   val hostname: String = Kamon.environment.host
+  val includeEnvironmentTags: Boolean = configSettings.getBoolean("include-environment-tags")
+  val environmentTags: TagSet = Kamon.environment.tags
   val normalizer: Normalizer = createNormalizer(configSettings.getString("metric-name-normalization-strategy"))
   val normalizedHostname: String = normalizer(hostname)
 
@@ -43,7 +45,8 @@ class SimpleMetricKeyGenerator(statsDConfig: Config) extends MetricKeyGenerator 
     case "normalize"      => (s: String) => s.replace(": ", "-").replace(":", "-").replace(" ", "_").replace("/", "_").replace(".", "_")
   }
 
-  def generateKey(name: String, tags: TagSet): String = {
+  def generateKey(name: String, metricTags: TagSet): String = {
+    val tags = if(includeEnvironmentTags) metricTags.withTags(environmentTags) else metricTags
     val stringTags = if (tags.nonEmpty) "." + sortAndConcatenateTags(tags) else ""
     s"$baseName.${normalizer(name)}$stringTags"
   }
