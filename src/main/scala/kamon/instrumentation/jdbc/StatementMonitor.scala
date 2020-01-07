@@ -73,7 +73,7 @@ object StatementMonitor extends LoggingSupport {
 
       inFlight.decrement()
       val endedAt = Kamon.clock().instant()
-      val elapsedTime = startedAt.until(endedAt, ChronoUnit.MICROS)
+      val elapsedTime = startedAt.until(endedAt, ChronoUnit.NANOS)
       span.finish(endedAt)
 
       JdbcInstrumentation.onStatementFinish(sql, elapsedTime)
