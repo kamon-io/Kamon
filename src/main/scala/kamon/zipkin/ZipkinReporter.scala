@@ -102,7 +102,9 @@ class ZipkinReporter(configPath: String) extends SpanReporter {
   }
 
   private def addTags(tags: TagSet, builder: ZipkinSpan.Builder): Unit =
-    tags.iterator(_.toString).foreach(pair => builder.putTag(pair.key, pair.value))
+    tags.iterator(_.toString)
+      .filterNot(pair => pair.key == Span.TagKeys.Error && pair.value == "false") // zipkin considers any error tag as failed request
+      .foreach(pair => builder.putTag(pair.key, pair.value))
 
   private def getStringTag(span: Span.Finished, tagName: String): String =
     span.tags.get(option(tagName)).orElse(span.metricTags.get(option(tagName))).orNull
