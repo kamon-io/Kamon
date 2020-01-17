@@ -8,21 +8,21 @@ The kamon-zipkin module allows you to send tracing data collected by Kamon to Zi
 
 ### Getting Started
 
-Currently available for Scala 2.10, 2.11 and 2.12.
+Currently available for Scala 2.11, 2.12 and 2.13.
 
 Supported releases and dependencies are shown below.
 
 | kamon-zipkin | status | jdk  | scala            |
 |:------------:|:------:|:----:|------------------|
-|  1.0.0   |   stable   | 1.8+ | 2.10, 2.11, 2.12 |
+|  2.0.1       | stable | 1.8+ | 2.11, 2.12, 2.13 |
 
 
 To get started with SBT, simply add the following to your `build.sbt` file:
 
 ```scala
-libraryDependencies += "io.kamon" %% "kamon-zipkin" % "1.0.0"
+libraryDependencies += "io.kamon" %% "kamon-zipkin" % "2.0.1"
 ```
 
-You can find more info on [kamon.io](http://kamon.io) and in our [Monitoring Akka Quickstart Recipe][1]
+You can find more info on [kamon.io](https://kamon.io) and in our [Elementary Akka Setup Guide][1]
 
-[1]: http://kamon.io/documentation/1.x/recipes/monitoring-akka-quickstart/
+[1]: https://kamon.io/docs/latest/guides/frameworks/elementary-akka-setup/
