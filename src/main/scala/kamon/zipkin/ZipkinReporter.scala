@@ -134,7 +134,7 @@ class ZipkinReporter(configPath: String) extends SpanReporter {
 
   private def buildReporter(config: Config) = {
     val zipkinConfig = config.getConfig(configPath)
-    val fullServerUrl = zipkinConfig.getString("full-server-url")
+    val fullServerUrl = zipkinConfig.getString("url")
 
     AsyncReporter.create(OkHttpSender.create(fullServerUrl))
   }
