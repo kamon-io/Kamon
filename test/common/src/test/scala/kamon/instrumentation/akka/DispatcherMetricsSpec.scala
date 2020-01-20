@@ -15,6 +15,8 @@
 
 package kamon.instrumentation.akka
 
+import java.util.concurrent.Executors
+
 import akka.actor.{ActorSystem, Props}
 import akka.dispatch.MessageDispatcher
 import akka.routing.BalancingPool
@@ -27,7 +29,7 @@ import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 import RouterMetricsTestActor._
 import akka.Version
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 class DispatcherMetricsSpec extends TestKit(ActorSystem("DispatcherMetricsSpec")) with WordSpecLike with MetricInspection.Syntax with Matchers
   with BeforeAndAfterAll with ImplicitSender with Eventually {
@@ -43,6 +45,8 @@ class DispatcherMetricsSpec extends TestKit(ActorSystem("DispatcherMetricsSpec")
 
     val excluded = "explicitly-excluded"
     val allDispatchers = trackedDispatchers :+ excluded
+    val builtInDispatchers = Seq("akka.actor.default-dispatcher")++ (if(Version.current.startsWith("2.6")) Seq("akka.actor.internal-dispatcher") else Seq.empty)
+
 
     "track dispatchers configured in the akka.dispatcher filter" in {
       allDispatchers.foreach(id => forceInit(system.dispatchers.lookup(id)))
@@ -66,8 +70,6 @@ class DispatcherMetricsSpec extends TestKit(ActorSystem("DispatcherMetricsSpec")
         .map(_.get(plain("name")))
 
       instrumentExecutorsWithSystem should contain only(trackedDispatchers: _*)
-
-
     }
 
 
@@ -84,6 +86,17 @@ class DispatcherMetricsSpec extends TestKit(ActorSystem("DispatcherMetricsSpec")
       expectMsg(Pong)
 
       ExecutorMetrics.Parallelism.tagValues("name") should contain("BalancingPool-/test-balancing-pool")
+    }
+
+    "pick up default execution contexts provided when creating an actor system" in {
+      val dec = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(8))
+      val system = ActorSystem(name = "with-default-ec", defaultExecutionContext = Some(dec))
+
+      val instrumentExecutorsWithSystem = ExecutorMetrics.ThreadsActive.instruments().keys
+        .filter(_.get(plain("akka.system")) == system.name)
+        .map(_.get(plain("name")))
+
+      instrumentExecutorsWithSystem should contain only(builtInDispatchers: _*)
     }
   }
 
