@@ -14,12 +14,12 @@
  */
 import sbt.Tests.{Group, SubProcess}
 
-val kamonCore       = "io.kamon" %% "kamon-core"         % "2.0.0"
-val kamonTestkit    = "io.kamon" %% "kamon-testkit"      % "2.0.0"
+val kamonCore       = "io.kamon" %% "kamon-core"         % "2.0.4"
+val kamonTestkit    = "io.kamon" %% "kamon-testkit"      % "2.0.4"
 val kamonScala      = "io.kamon" %% "kamon-scala-future" % "2.0.0"
 val kamonExecutors  = "io.kamon" %% "kamon-executors"    % "2.0.0"
 val kamonInstrument = "io.kamon" %% "kamon-instrumentation-common" % "2.0.0"
-val kanelaAgent     =  "io.kamon" % "kanela-agent"       % "1.0.3"
+val kanelaAgent     =  "io.kamon" % "kanela-agent"       % "1.0.4"
 
 val akka24Version = "2.4.20"
 val akka25Version = "2.5.26"

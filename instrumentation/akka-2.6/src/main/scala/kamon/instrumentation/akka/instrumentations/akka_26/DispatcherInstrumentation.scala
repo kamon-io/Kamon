@@ -16,18 +16,18 @@
 
 package kamon.instrumentation.akka.instrumentations.akka_26
 
-import java.util.concurrent.{Callable, ExecutorService}
+import java.util.concurrent.{AbstractExecutorService, Callable, ExecutorService, ThreadFactory, TimeUnit}
 
-import akka.dispatch.{DispatcherPrerequisites, ForkJoinExecutorConfigurator, PinnedDispatcherConfigurator, ThreadPoolExecutorConfigurator}
+import akka.dispatch.{DefaultExecutorServiceConfigurator, DispatcherPrerequisites, Dispatchers, ExecutorServiceFactory, ExecutorServiceFactoryProvider, ForkJoinExecutorConfigurator, PinnedDispatcherConfigurator, ThreadPoolExecutorConfigurator}
 import kamon.instrumentation.akka.instrumentations.VersionFiltering
 import kamon.Kamon
 import kamon.instrumentation.akka.AkkaInstrumentation
-import kamon.instrumentation.akka.instrumentations.DispatcherInfo.{HasActorSystemName, HasDispatcherName}
+import kamon.instrumentation.akka.instrumentations.DispatcherInfo.{HasDispatcherName, HasDispatcherPrerequisites}
 import kamon.instrumentation.executor.ExecutorInstrumentation
 import kamon.tag.TagSet
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.asm.Advice
-import kanela.agent.libs.net.bytebuddy.implementation.bind.annotation.{SuperCall, This}
+import kanela.agent.libs.net.bytebuddy.implementation.bind.annotation.{Argument, SuperCall, This}
 
 class DispatcherInstrumentation extends InstrumentationBuilder with VersionFiltering  {
 
@@ -39,7 +39,7 @@ class DispatcherInstrumentation extends InstrumentationBuilder with VersionFilte
       * names down to the ExecutorServiceFactory and use them to tag the newly instrumented ExecutorService.
       */
     onSubTypesOf("akka.dispatch.ExecutorServiceFactory")
-      .mixin(classOf[HasActorSystemName.Mixin])
+      .mixin(classOf[HasDispatcherPrerequisites.Mixin])
       .mixin(classOf[HasDispatcherName.Mixin])
       .intercept(method("createExecutorService"), InstrumentNewExecutorServiceOnAkka26)
 
@@ -47,15 +47,23 @@ class DispatcherInstrumentation extends InstrumentationBuilder with VersionFilte
       * First step on getting the Actor System name is to read it from the prerequisites instance passed to the
       * constructors of these two classes.
       */
-    onTypes("akka.dispatch.ThreadPoolExecutorConfigurator", "akka.dispatch.ForkJoinExecutorConfigurator", "akka.dispatch.PinnedDispatcherConfigurator")
-      .advise(isConstructor, CaptureActorSystemNameOnExecutorConfigurator)
+    onTypes(
+        "akka.dispatch.ThreadPoolExecutorConfigurator",
+        "akka.dispatch.ForkJoinExecutorConfigurator",
+        "akka.dispatch.PinnedDispatcherConfigurator",
+        "akka.dispatch.DefaultExecutorServiceConfigurator")
+      .mixin(classOf[HasDispatcherPrerequisites.Mixin])
+      .advise(isConstructor, CaptureDispatcherPrerequisitesOnExecutorConfigurator)
 
     /**
       * Copies the Actor System and Dispatcher names to the ExecutorServiceFactory instances for the two types of
       * executors instrumented by Kamon.
       */
-    onTypes("akka.dispatch.ThreadPoolConfig", "akka.dispatch.ForkJoinExecutorConfigurator", "akka.dispatch.PinnedDispatcherConfigurator")
-      .mixin(classOf[HasActorSystemName.Mixin])
+    onTypes(
+        "akka.dispatch.ThreadPoolConfig",
+        "akka.dispatch.ForkJoinExecutorConfigurator",
+        "akka.dispatch.PinnedDispatcherConfigurator",
+        "akka.dispatch.DefaultExecutorServiceConfigurator")
       .mixin(classOf[HasDispatcherName.Mixin])
       .advise(method("createExecutorServiceFactory"), CopyDispatcherInfoToExecutorServiceFactory)
 
@@ -63,21 +71,21 @@ class DispatcherInstrumentation extends InstrumentationBuilder with VersionFilte
       * This ensures that the ActorSystem name is not lost when creating PinnedDispatcher instances.
       */
     onType("akka.dispatch.ThreadPoolConfig")
+      .mixin(classOf[HasDispatcherPrerequisites.Mixin])
       .advise(method("copy"), ThreadPoolConfigCopyAdvice)
   }
 
 }
 
-object CaptureActorSystemNameOnExecutorConfigurator {
+object CaptureDispatcherPrerequisitesOnExecutorConfigurator {
 
   @Advice.OnMethodExit(suppress = classOf[Throwable])
   def exit(@Advice.This configurator: Any, @Advice.Argument(1) prerequisites: DispatcherPrerequisites): Unit = {
-    val actorSystemName = prerequisites.settings.name
-
     configurator match {
-      case fjec: ForkJoinExecutorConfigurator => fjec.asInstanceOf[HasActorSystemName].setActorSystemName(actorSystemName)
-      case tpec: ThreadPoolExecutorConfigurator => tpec.threadPoolConfig.asInstanceOf[HasActorSystemName].setActorSystemName(actorSystemName)
-      case pdc: PinnedDispatcherConfigurator => pdc.asInstanceOf[HasActorSystemName].setActorSystemName(actorSystemName)
+      case fjec: ForkJoinExecutorConfigurator => fjec.asInstanceOf[HasDispatcherPrerequisites].setDispatcherPrerequisites(prerequisites)
+      case tpec: ThreadPoolExecutorConfigurator => tpec.threadPoolConfig.asInstanceOf[HasDispatcherPrerequisites].setDispatcherPrerequisites(prerequisites)
+      case pdc: PinnedDispatcherConfigurator => pdc.asInstanceOf[HasDispatcherPrerequisites].setDispatcherPrerequisites(prerequisites)
+      case desc: DefaultExecutorServiceConfigurator => desc.asInstanceOf[HasDispatcherPrerequisites].setDispatcherPrerequisites(prerequisites)
       case _ => // just ignore any other case.
     }
   }
@@ -86,26 +94,28 @@ object CaptureActorSystemNameOnExecutorConfigurator {
 object CopyDispatcherInfoToExecutorServiceFactory {
 
   @Advice.OnMethodExit
-  def exit(@Advice.This poolConfig: HasActorSystemName, @Advice.Argument(0) dispatcherName: String, @Advice.Return factory: Any): Unit = {
-    val factoryWithMixins = factory.asInstanceOf[HasDispatcherName with HasActorSystemName]
-    factoryWithMixins.setActorSystemName(poolConfig.actorSystemName)
+  def exit(@Advice.This poolConfig: HasDispatcherPrerequisites, @Advice.Argument(0) dispatcherName: String, @Advice.Return factory: Any): Unit = {
+    val factoryWithMixins = factory.asInstanceOf[HasDispatcherName with HasDispatcherPrerequisites]
+    factoryWithMixins.setDispatcherPrerequisites(poolConfig.dispatcherPrerequisites)
     factoryWithMixins.setDispatcherName(dispatcherName)
   }
 }
 
 object InstrumentNewExecutorServiceOnAkka26 {
 
-  def around(@This factory: HasActorSystemName with HasDispatcherName, @SuperCall callable: Callable[ExecutorService]): ExecutorService = {
+  def around(@This factory: HasDispatcherPrerequisites with HasDispatcherName, @SuperCall callable: Callable[ExecutorService]): ExecutorService = {
     val executor = callable.call()
-    val name = factory.dispatcherName
-    val systemTags = TagSet.of("akka.system", factory.actorSystemName)
+    val dispatcherName = factory.dispatcherName
+    val systemTags = TagSet.of("akka.system", factory.dispatcherPrerequisites.settings.name)
 
-    if(Kamon.filter(AkkaInstrumentation.TrackDispatcherFilterName).accept(name)) {
-      executor match {
-        case otherExecutor =>
-          ExecutorInstrumentation.instrument(otherExecutor, name, systemTags)
+    if(Kamon.filter(AkkaInstrumentation.TrackDispatcherFilterName).accept(dispatcherName)) {
+      val defaultEcOption = factory.dispatcherPrerequisites.defaultExecutionContext
+
+      if(dispatcherName == Dispatchers.DefaultDispatcherId && defaultEcOption.isDefined) {
+        ExecutorInstrumentation.instrumentExecutionContext(defaultEcOption.get, dispatcherName, systemTags)
+      } else {
+        ExecutorInstrumentation.instrument(executor, dispatcherName, systemTags)
       }
-
     } else executor
   }
 }
@@ -114,7 +124,7 @@ object ThreadPoolConfigCopyAdvice {
 
   @Advice.OnMethodExit
   def exit(@Advice.This original: Any, @Advice.Return copy: Any): Unit = {
-    copy.asInstanceOf[HasActorSystemName].setActorSystemName(original.asInstanceOf[HasActorSystemName].actorSystemName)
+    copy.asInstanceOf[HasDispatcherPrerequisites].setDispatcherPrerequisites(original.asInstanceOf[HasDispatcherPrerequisites].dispatcherPrerequisites)
     copy.asInstanceOf[HasDispatcherName].setDispatcherName(original.asInstanceOf[HasDispatcherName].dispatcherName)
   }
 }

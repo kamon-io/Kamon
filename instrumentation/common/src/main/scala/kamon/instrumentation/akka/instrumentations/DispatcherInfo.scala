@@ -16,32 +16,21 @@
 
 package kamon.instrumentation.akka.instrumentations
 
-import java.util.concurrent.{Callable, ExecutorService}
-
-import akka.dispatch.{DispatcherPrerequisites, ForkJoinExecutorConfigurator, PinnedDispatcherConfigurator, ThreadPoolExecutorConfigurator}
-import kamon.Kamon
-import kamon.instrumentation.akka.AkkaInstrumentation
-import kamon.instrumentation.akka.instrumentations.DispatcherInfo.{HasActorSystemName, HasDispatcherName}
-import kamon.instrumentation.executor.ExecutorInstrumentation
-import kamon.instrumentation.executor.ExecutorInstrumentation.ForkJoinPoolTelemetryReader
-import kamon.tag.TagSet
-import kanela.agent.api.instrumentation.InstrumentationBuilder
-import kanela.agent.libs.net.bytebuddy.asm.Advice
-import kanela.agent.libs.net.bytebuddy.implementation.bind.annotation.{SuperCall, This}
-
+import akka.dispatch.DispatcherPrerequisites
 
 object DispatcherInfo {
 
-  trait HasActorSystemName {
-    def actorSystemName: String
-    def setActorSystemName(actorSystemName: String): Unit
+  trait HasDispatcherPrerequisites {
+    def dispatcherPrerequisites: DispatcherPrerequisites
+    def setDispatcherPrerequisites(dispatcherPrerequisites: DispatcherPrerequisites): Unit
   }
 
-  object HasActorSystemName {
-    class Mixin extends HasActorSystemName {
-      @volatile private var _actorSystemName: String = _
-      override def actorSystemName: String = _actorSystemName
-      override def setActorSystemName(actorSystemName: String): Unit = _actorSystemName = actorSystemName
+  object HasDispatcherPrerequisites {
+    class Mixin extends HasDispatcherPrerequisites {
+      @volatile private var _dispatcherPrerequisites: DispatcherPrerequisites = _
+      override def dispatcherPrerequisites: DispatcherPrerequisites = _dispatcherPrerequisites
+      override def setDispatcherPrerequisites(dispatcherPrerequisites: DispatcherPrerequisites): Unit =
+        _dispatcherPrerequisites = dispatcherPrerequisites
     }
   }
 
