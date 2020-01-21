@@ -71,8 +71,10 @@ public class ExecuteAsyncOperationAdvice {
             }
 
             span.finish();
-          } else {
+          } else if (t != null) {
             span.fail(t).finish();
+          } else {
+            span.finish();
           }
         } finally {
           originalCallback.onResult(result, t);
