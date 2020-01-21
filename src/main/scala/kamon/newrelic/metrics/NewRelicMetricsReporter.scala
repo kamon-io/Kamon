@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019 New Relic Corporation. All rights reserved.
+ *  Copyright 2020 New Relic Corporation. All rights reserved.
  *  SPDX-License-Identifier: Apache-2.0
  */
 
@@ -14,7 +14,7 @@ import kamon.module.{MetricReporter, Module, ModuleFactory}
 import kamon.newrelic.AttributeBuddy.buildCommonAttributes
 import org.slf4j.LoggerFactory
 
-import scala.jdk.CollectionConverters._
+import scala.collection.JavaConverters._
 
 class NewRelicMetricsReporter(senderBuilder: () => MetricBatchSender = () => NewRelicMetricsReporter.buildSender()) extends MetricReporter {
 

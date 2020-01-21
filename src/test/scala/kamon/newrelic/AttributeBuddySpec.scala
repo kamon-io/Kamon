@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019 New Relic Corporation. All rights reserved.
+ *  Copyright 2020 New Relic Corporation. All rights reserved.
  *  SPDX-License-Identifier: Apache-2.0
  */
 
@@ -10,7 +10,7 @@ import com.typesafe.config.ConfigValueFactory
 import kamon.tag.TagSet
 import org.scalatest.{Matchers, WordSpec}
 
-import scala.jdk.CollectionConverters._
+import scala.collection.JavaConverters._
 
 class AttributeBuddySpec extends WordSpec with Matchers  {
   "the tag set converter" should {

@@ -1,13 +1,17 @@
 /*
- *  Copyright 2019 New Relic Corporation. All rights reserved.
+ *  Copyright 2020 New Relic Corporation. All rights reserved.
  *  SPDX-License-Identifier: Apache-2.0
  */
 
 package kamon.newrelic
 
+import java.util
+
 import com.newrelic.telemetry.Attributes
-import com.typesafe.config.Config
+import com.typesafe.config.{Config, ConfigValue}
 import kamon.tag.{Tag, TagSet}
+
+import scala.collection.JavaConverters._
 
 object AttributeBuddy {
   def addTagsFromTagSets(tagSeq: Seq[TagSet], attributes: Attributes = new Attributes()): Attributes = {
@@ -21,11 +25,11 @@ object AttributeBuddy {
   }
 
   def addTagsFromConfig(config: Config, attributes: Attributes = new Attributes()): Attributes = {
-    config.entrySet().forEach(entry => {
+    config.entrySet().asScala.foreach { entry =>
       val key: String = entry.getKey
-      val v : Any = entry.getValue.unwrapped()
+      val v: Any = entry.getValue.unwrapped()
       putTypedValue(attributes, key, v)
-    })
+    }
     attributes
   }
 

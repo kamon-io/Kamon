@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019 New Relic Corporation. All rights reserved.
+ *  Copyright 2020 New Relic Corporation. All rights reserved.
  *  SPDX-License-Identifier: Apache-2.0
  */
 
@@ -13,7 +13,7 @@ import kamon.newrelic.AttributeBuddy.buildCommonAttributes
 import kamon.trace.Span
 import org.slf4j.LoggerFactory
 
-import scala.jdk.CollectionConverters._
+import scala.collection.JavaConverters._
 
 class NewRelicSpanReporter(spanBatchSenderBuilder: SpanBatchSenderBuilder =
                            new SimpleSpanBatchSenderBuilder()) extends SpanReporter {

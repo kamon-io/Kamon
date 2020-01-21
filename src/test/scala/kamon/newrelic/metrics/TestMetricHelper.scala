@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019 New Relic Corporation. All rights reserved.
+ *  Copyright 2020 New Relic Corporation. All rights reserved.
  *  SPDX-License-Identifier: Apache-2.0
  */
 
@@ -13,7 +13,7 @@ import kamon.metric.MeasurementUnit.Dimension
 import kamon.metric.{Distribution, _}
 import kamon.tag.TagSet
 
-import scala.collection.immutable
+import scala.collection.{immutable, mutable}
 
 object TestMetricHelper {
 
@@ -44,11 +44,9 @@ object TestMetricHelper {
     val tagSet: TagSet = TagSet.from(Map("twelve" -> "bishop"))
     val dynamicRange: DynamicRange = DynamicRange.Default
     val settings = Metric.Settings.ForDistributionInstrument(
-      new MeasurementUnit(Dimension.Information, new metric.MeasurementUnit.Magnitude("eimer", 603.3d)), Duration.ofMillis(12), dynamicRange)
-    val percentiles = immutable.Map.newBuilder
-      .addOne(90d, Percentage(90d, 2L, 816L))
-      .addOne(87d, Percentage(87d, 2L, 816L))
-      .result()
+      new MeasurementUnit(Dimension.Information, metric.MeasurementUnit.Magnitude("eimer", 603.3d)), Duration.ofMillis(12), dynamicRange)
+
+    val percentiles = Map(90d -> Percentage(90d, 2L, 816L), 87d -> Percentage(87d, 2L, 816L))
     val distribution: Distribution = buildHistogramDist(Percentage(19d, 2L, 816L), Bucket(717L, 881L), Distro(13L, 17L, 101L, 44L), percentiles)
     val inst: Snapshot[Distribution] = new Snapshot[Distribution](tagSet, distribution)
     new metric.MetricSnapshot.Distributions("trev", "a good trevor", settings, Seq(inst))
@@ -59,10 +57,7 @@ object TestMetricHelper {
     val dynamicRange: DynamicRange = DynamicRange.Default
     val settings = Metric.Settings.ForDistributionInstrument(
       new MeasurementUnit(Dimension.Information, new metric.MeasurementUnit.Magnitude("timer", 333.3d)), Duration.ofMillis(15), dynamicRange)
-    val percentiles = immutable.Map.newBuilder
-      .addOne(95d, Percentage(95d, 4L, 1632L))
-      .addOne(87d, Percentage(87d, 2L, 816L))
-      .result()
+    val percentiles = Map(95d -> Percentage(95d, 4L, 1632L), 87d -> Percentage(87d, 2L, 816L))
     val distribution: Distribution = buildHistogramDist(Percentage(38d, 4L, 1632L), Bucket(1424L, 1672L), Distro(26L, 34L, 202L, 88L), percentiles)
     val inst: Snapshot[Distribution] = new Snapshot[Distribution](tagSet, distribution)
     new metric.MetricSnapshot.Distributions("timer", "a good timer", settings, Seq(inst))

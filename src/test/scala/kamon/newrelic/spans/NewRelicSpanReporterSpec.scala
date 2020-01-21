@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019 New Relic Corporation. All rights reserved.
+ *  Copyright 2020 New Relic Corporation. All rights reserved.
  *  SPDX-License-Identifier: Apache-2.0
  */
 
@@ -15,7 +15,7 @@ import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito._
 import org.scalatest.{Matchers, WordSpec}
 
-import scala.jdk.CollectionConverters._
+import scala.collection.JavaConverters._
 
 class NewRelicSpanReporterSpec extends WordSpec with Matchers {
 

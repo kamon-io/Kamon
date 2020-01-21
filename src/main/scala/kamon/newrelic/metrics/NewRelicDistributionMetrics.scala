@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019 New Relic Corporation. All rights reserved.
+ *  Copyright 2020 New Relic Corporation. All rights reserved.
  *  SPDX-License-Identifier: Apache-2.0
  */
 
@@ -35,7 +35,7 @@ object NewRelicDistributionMetrics {
 
       val summary: Summary = buildSummary(start, end, dist, instrumentBaseAttributes, distValue)
       val percentiles: scala.Seq[_root_.com.newrelic.telemetry.metrics.Metric] = makePercentiles(dist.name, end, distValue, instrumentBaseAttributes)
-      percentiles.appended(summary)
+      percentiles :+ summary
     }
   }
 
