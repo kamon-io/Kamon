@@ -43,7 +43,7 @@ public class AsyncBatchCursorGetMoreAdvice {
       @Override
       public void onResult(T result, Throwable t) {
         try {
-          if(result != null) {
+          if(t == null) {
             span.finish();
           } else {
             span.fail(t).finish();

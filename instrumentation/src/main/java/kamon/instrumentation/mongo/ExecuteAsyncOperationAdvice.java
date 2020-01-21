@@ -54,7 +54,7 @@ public class ExecuteAsyncOperationAdvice {
         try {
           final Span span = context.get(Span.Key());
 
-          if (result != null) {
+          if (t == null) {
             if (result instanceof BulkWriteResult) {
               final BulkWriteResult bulkResult = (BulkWriteResult) result;
 
@@ -71,10 +71,8 @@ public class ExecuteAsyncOperationAdvice {
             }
 
             span.finish();
-          } else if (t != null) {
-            span.fail(t).finish();
           } else {
-            span.finish();
+            span.fail(t).finish();
           }
         } finally {
           originalCallback.onResult(result, t);
