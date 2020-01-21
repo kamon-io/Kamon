@@ -14,10 +14,10 @@
  *  ==========================================================================================
  */
 
-val kamonCore         = "io.kamon"            %%  "kamon-core"                      % "2.0.2"
-val kamonTestkit      = "io.kamon"            %%  "kamon-testkit"                   % "2.0.2"
+val kamonCore         = "io.kamon"            %%  "kamon-core"                      % "2.0.4"
+val kamonTestkit      = "io.kamon"            %%  "kamon-testkit"                   % "2.0.4"
 val kamonCommon       = "io.kamon"            %%  "kamon-instrumentation-common"    % "2.0.0"
-val kanela            = "io.kamon"            %   "kanela-agent"                    % "1.0.3"
+val kanela            = "io.kamon"            %   "kanela-agent"                    % "1.0.4"
 val mongoSyncDriver   = "org.mongodb"         %   "mongodb-driver-sync"             % "3.11.0"
 val mongoScalaDriver  = "org.mongodb.scala"   %%  "mongo-scala-driver"              % "2.7.0"
 val mongoDriver       = "org.mongodb"         %   "mongodb-driver-reactivestreams"  % "1.12.0"
