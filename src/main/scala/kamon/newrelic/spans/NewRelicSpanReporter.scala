@@ -10,6 +10,7 @@ import com.typesafe.config.Config
 import kamon.Kamon
 import kamon.module.{Module, ModuleFactory, SpanReporter}
 import kamon.newrelic.AttributeBuddy.buildCommonAttributes
+import kamon.status.Environment
 import kamon.trace.Span
 import org.slf4j.LoggerFactory
 
@@ -20,7 +21,7 @@ class NewRelicSpanReporter(spanBatchSenderBuilder: SpanBatchSenderBuilder =
 
   private val logger = LoggerFactory.getLogger(classOf[NewRelicSpanReporter])
   @volatile private var spanBatchSender = spanBatchSenderBuilder.build(Kamon.config())
-  @volatile private var commonAttributes = buildCommonAttributes(Kamon.config())
+  @volatile private var commonAttributes = buildCommonAttributes(Kamon.environment)
 
   checkJoinParameter()
   logger.info("Started the New Relic Span reporter")
@@ -49,9 +50,14 @@ class NewRelicSpanReporter(spanBatchSenderBuilder: SpanBatchSenderBuilder =
   }
 
   override def reconfigure(newConfig: Config): Unit = {
+    reconfigure(newConfig, Kamon.environment)
+  }
+
+  //exposed for testing
+  def reconfigure(newConfig: Config, environment: Environment): Unit = {
     logger.debug("NewRelicSpanReporter reconfigure...")
     spanBatchSender = spanBatchSenderBuilder.build(newConfig)
-    commonAttributes = buildCommonAttributes(newConfig)
+    commonAttributes = buildCommonAttributes(environment)
     checkJoinParameter()
   }
 

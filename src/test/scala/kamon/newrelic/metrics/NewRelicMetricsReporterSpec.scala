@@ -5,11 +5,15 @@
 
 package kamon.newrelic.metrics
 
+import java.net.InetAddress
+
 import com.newrelic.telemetry.Attributes
 import com.newrelic.telemetry.metrics._
 import com.typesafe.config.{Config, ConfigValue, ConfigValueFactory}
 import kamon.Kamon
 import kamon.metric.{MetricSnapshot, PeriodSnapshot}
+import kamon.status.Environment
+import kamon.tag.TagSet
 import org.mockito.Mockito._
 import org.scalatest.{Matchers, WordSpec}
 
@@ -80,7 +84,7 @@ class NewRelicMetricsReporterSpec extends WordSpec with Matchers {
       val expectedCommonAttributes: Attributes = new Attributes()
         .put("service.name", "kamon-application")
         .put("instrumentation.source", "kamon-agent")
-        .put("host", "auto")
+        .put("host", InetAddress.getLocalHost.getHostName)
         .put("testTag", "testValue")
       val expectedBatch: MetricBatch = new MetricBatch(Seq(count1, count2, gauge, histogramGauge, histogramSummary, timerGauge, timerSummary).asJava, expectedCommonAttributes)
 
@@ -113,7 +117,7 @@ class NewRelicMetricsReporterSpec extends WordSpec with Matchers {
       val sender = mock(classOf[MetricBatchSender])
       val reporter = new NewRelicMetricsReporter(() => sender)
 
-      reporter.reconfigure(config)
+      reporter.reconfigure(Environment("thing", "cheese-whiz", null, null, TagSet.of("testTag", "testThing")))
       reporter.reportPeriodSnapshot(periodSnapshot)
 
       verify(sender).sendBatch(expectedBatch)

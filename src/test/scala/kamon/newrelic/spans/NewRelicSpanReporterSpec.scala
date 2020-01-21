@@ -5,10 +5,14 @@
 
 package kamon.newrelic.spans
 
+import java.net.InetAddress
+
 import com.newrelic.telemetry.Attributes
 import com.newrelic.telemetry.spans.{SpanBatch, SpanBatchSender, Span => NewRelicSpan}
 import com.typesafe.config.{Config, ConfigValue, ConfigValueFactory}
 import kamon.Kamon
+import kamon.status.Environment
+import kamon.tag.TagSet
 import kamon.trace.Span
 import kamon.trace.Span.Kind.Client
 import org.mockito.ArgumentMatchers.any
@@ -46,7 +50,7 @@ class NewRelicSpanReporterSpec extends WordSpec with Matchers {
       val tagDetails = ConfigValueFactory.fromMap(Map("testTag" -> "testThing").asJava)
       val configObject: ConfigValue = ConfigValueFactory.fromMap(Map("service" -> "cheese-whiz", "host" -> "thing", "tags" -> tagDetails).asJava)
       val config: Config = Kamon.config().withValue("kamon.environment", configObject)
-      reporter.reconfigure(config)
+      reporter.reconfigure(config, Environment("thing", "cheese-whiz", null, null, TagSet.of("testTag", "testThing")))
 
       val kamonSpan = TestSpanHelper.makeKamonSpan(Client, TestSpanHelper.spanId)
       val spans: Seq[Span.Finished] = Seq(kamonSpan)
@@ -57,7 +61,7 @@ class NewRelicSpanReporterSpec extends WordSpec with Matchers {
     }
   }
 
-  private def buildExpectedBatch(serviceName: String = "kamon-application", hostName : String = "auto", tagValue: String = "testValue" ) = {
+  private def buildExpectedBatch(serviceName: String = "kamon-application", hostName : String = InetAddress.getLocalHost.getHostName, tagValue: String = "testValue" ) = {
     val expectedAttributes = new Attributes()
       .put("xx", TestSpanHelper.now)
       .put("span.kind", "client")

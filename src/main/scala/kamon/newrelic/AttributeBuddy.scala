@@ -5,10 +5,10 @@
 
 package kamon.newrelic
 
-import java.util
-
 import com.newrelic.telemetry.Attributes
 import com.typesafe.config.{Config, ConfigValue}
+import kamon.Kamon
+import kamon.status.Environment
 import kamon.tag.{Tag, TagSet}
 
 import scala.collection.JavaConverters._
@@ -42,18 +42,12 @@ object AttributeBuddy {
     }
   }
 
-  def buildCommonAttributes(config: Config): Attributes = {
-    val environment = config.getConfig("kamon.environment")
-    val serviceName = if (environment.hasPath("service")) environment.getString("service") else null
-    val host = if (environment.hasPath("host")) environment.getString("host") else null
+  def buildCommonAttributes(environment: Environment): Attributes = {
     val attributes = new Attributes()
       .put("instrumentation.source", "kamon-agent")
-      .put("service.name", serviceName)
-      .put("host", host)
-    if (environment.hasPath("tags")) {
-      val environmentTags = environment.getConfig("tags")
-      AttributeBuddy.addTagsFromConfig(environmentTags, attributes)
-    }
+      .put("service.name", environment.service)
+      .put("host", environment.host)
+      AttributeBuddy.addTagsFromTagSets(Seq(environment.tags), attributes)
     attributes
   }
 }
