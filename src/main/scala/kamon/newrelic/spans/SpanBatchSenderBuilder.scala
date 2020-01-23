@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019 New Relic Corporation. All rights reserved.
+ *  Copyright 2020 New Relic Corporation. All rights reserved.
  *  SPDX-License-Identifier: Apache-2.0
  */
 
@@ -10,6 +10,7 @@ import java.time.Duration
 import com.newrelic.telemetry.SimpleSpanBatchSender
 import com.newrelic.telemetry.spans.SpanBatchSender
 import com.typesafe.config.Config
+import kamon.newrelic.LibraryVersion
 import org.slf4j.LoggerFactory
 
 trait SpanBatchSenderBuilder {
@@ -39,6 +40,7 @@ class SimpleSpanBatchSenderBuilder() extends SpanBatchSenderBuilder {
 
     SimpleSpanBatchSender.builder(nrInsightsInsertKey, Duration.ofSeconds(5))
       .enableAuditLogging()
+      .secondaryUserAgent("newrelic-kamon-reporter", LibraryVersion.version)
       .build()
   }
 }
