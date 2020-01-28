@@ -20,10 +20,10 @@ lazy val kamon = (project in file("."))
   .aggregate(core, testkit, coreTests)
 
 val commonSettings = Seq(
-  scalaVersion := "2.12.8",
+  scalaVersion := "2.13.1",
   javacOptions += "-XDignore.symbol.file",
   resolvers += Resolver.mavenLocal,
-  crossScalaVersions := Seq("2.12.8", "2.11.12", "2.10.7"),
+  crossScalaVersions := Seq("2.13.1", "2.12.8", "2.11.12", "2.10.7"),
   concurrentRestrictions in Global += Tags.limit(Tags.Test, 1),
   scalacOptions ++= Seq(
     "-deprecation",
@@ -36,6 +36,7 @@ val commonSettings = Seq(
     case Some((2,10)) => Seq("-Yno-generic-signatures", "-target:jvm-1.7")
     case Some((2,11)) => Seq("-Ybackend:GenBCode","-Ydelambdafy:method","-target:jvm-1.8")
     case Some((2,12)) => Seq("-opt:l:method")
+    case Some((2,13)) => Seq("-opt:l:method")
     case _ => Seq.empty
   })
 )
@@ -48,7 +49,10 @@ lazy val core = (project in file("kamon-core"))
       "com.typesafe"     %  "config"          % "1.3.1",
       "org.slf4j"        %  "slf4j-api"       % "1.7.25",
       "org.hdrhistogram" %  "HdrHistogram"    % "2.1.11",
-      "com.lihaoyi"      %% "fansi"           % "0.2.4"
+      "com.lihaoyi"      %% "fansi"           % (CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((2, 10 | 11 | 12)) => "0.2.4"
+        case Some((2, 13)) | _ => "0.2.8"
+      })
     )
   )
 
@@ -57,7 +61,7 @@ lazy val testkit = (project in file("kamon-testkit"))
   .settings(commonSettings: _*)
   .settings(
     libraryDependencies ++= Seq(
-      "org.scalatest" %% "scalatest" % "3.0.1"
+      "org.scalatest" %% "scalatest" % "3.0.8"
     )
   ).dependsOn(core)
 
@@ -71,7 +75,7 @@ lazy val coreTests = (project in file("kamon-core-tests"))
   .settings(commonSettings: _*)
   .settings(
     libraryDependencies ++= Seq(
-      "org.scalatest" %% "scalatest" % "3.0.1" % "test",
+      "org.scalatest" %% "scalatest" % "3.0.8" % "test",
       "ch.qos.logback" % "logback-classic" % "1.2.2" % "test"
     )
   ).dependsOn(testkit)

@@ -381,7 +381,7 @@ object ReporterRegistry {
 
             Future {
               Try {
-                entry.reporter.reportSpans(spanBatch.asScala)
+                entry.reporter.reportSpans(spanBatch.asScala.toSeq)
               }.failed.foreach { error =>
                 logger.error(s"Reporter [${entry.name}] failed to report spans.", error)
               }
@@ -396,7 +396,7 @@ object ReporterRegistry {
         optimisticMetricTickAlignment = config.getBoolean("kamon.metric.optimistic-tick-alignment"),
         traceTickInterval = config.getDuration("kamon.trace.tick-interval"),
         traceReporterQueueSize = config.getInt("kamon.trace.reporter-queue-size"),
-        configuredReporters = config.getStringList("kamon.reporters").asScala
+        configuredReporters = config.getStringList("kamon.reporters").asScala.toSeq
       )
 
     private case class Configuration(metricTickInterval: Duration, optimisticMetricTickAlignment: Boolean,

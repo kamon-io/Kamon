@@ -3,6 +3,7 @@ script:
   - sbt +test
 scala:
    - 2.12.4
+dist: trusty
 jdk:
    - oraclejdk8
 before_script:

@@ -34,7 +34,7 @@ class DynamicAccess(val classLoader: ClassLoader) {
     Try[Class[_ <: T]]({
       val c = Class.forName(fqcn, false, classLoader).asInstanceOf[Class[_ <: T]]
       val t = implicitly[ClassTag[T]].runtimeClass
-      if (t.isAssignableFrom(c)) c else throw new ClassCastException(t + " is not assignable from " + c)
+      if (t.isAssignableFrom(c)) c else throw new ClassCastException(s"$t is not assignable from $c")
     })
 
   def createInstanceFor[T: ClassTag](clazz: Class[_], args: immutable.Seq[(Class[_], AnyRef)]): Try[T] =
