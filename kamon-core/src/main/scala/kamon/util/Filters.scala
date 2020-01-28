@@ -39,7 +39,7 @@ object Filters {
     val configKey = ConfigUtil.joinPath(name, key)
 
     if(filtersConfig.hasPath(configKey))
-      filtersConfig.getStringList(configKey).asScala.map(readMatcher)
+      filtersConfig.getStringList(configKey).asScala.toSeq.map(readMatcher)
     else
       Seq.empty
   }

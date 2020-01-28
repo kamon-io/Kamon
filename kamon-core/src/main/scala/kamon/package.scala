@@ -67,7 +67,7 @@ package object kamon {
   implicit class AtomicGetOrElseUpdateOnTrieMap[K, V](val trieMap: TrieMap[K, V]) extends AnyVal {
 
     def atomicGetOrElseUpdate(key: K, op: ⇒ V): V =
-      atomicGetOrElseUpdate(key, op, { v: V ⇒ Unit })
+      atomicGetOrElseUpdate(key, op, { v: V ⇒ () })
 
     def atomicGetOrElseUpdate(key: K, op: ⇒ V, cleanup: V ⇒ Unit): V =
       trieMap.get(key) match {
