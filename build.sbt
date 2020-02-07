@@ -17,7 +17,7 @@ val play26Version     = "2.6.23"
 val play27Version     = "2.7.3"
 
 val kamonCore         = "io.kamon"  %%  "kamon-core"                    % "2.0.0"
-val kamonTestkit      = "io.kamon"  %%  "kamon-testkit"                 % "2.0.0"
+val kamonTestkit      = "io.kamon"  %%  "kamon-testkit"                 % "2.0.2"
 val kamonScala        = "io.kamon"  %%  "kamon-scala-future"            % "2.0.0"
 val kamonCommon       = "io.kamon"  %%  "kamon-instrumentation-common"  % "2.0.0"
 val kamonAkkaHttp     = "io.kamon"  %%  "kamon-akka-http"               % "2.0.0"

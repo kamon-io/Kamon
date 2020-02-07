@@ -23,7 +23,7 @@ object GuiceModule {
 
     lifecycle.addStopHook { () =>
       if(environment.mode != Mode.Dev)
-        Future.successful(Kamon.stopModules())
+        Kamon.stopModules()
       else
         Future.successful(())
     }
