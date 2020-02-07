@@ -43,7 +43,7 @@ object ExecutorInstrumentation {
     *
     * Once the returned executor is shutdown, all related metric instruments will be removed.
     */
-  def instrumentExecutionContext(executionContext: ExecutionContext, name: String): ExecutionContextExecutorService =
+  def instrumentExecutionContext(executionContext: ExecutionContext, name: String): InstrumentedExecutionContext =
     instrumentExecutionContext(executionContext, name, TagSet.Empty, DefaultSettings)
 
   /**
@@ -87,7 +87,7 @@ object ExecutorInstrumentation {
     *
     * Once the returned executor is shutdown, all related metric instruments will be removed.
     */
-  def instrumentExecutionContext(executionContext: ExecutionContext, name: String, settings: Settings): ExecutionContextExecutorService =
+  def instrumentExecutionContext(executionContext: ExecutionContext, name: String, settings: Settings): InstrumentedExecutionContext =
     instrumentExecutionContext(executionContext, name, TagSet.Empty, settings)
 
   /**
@@ -115,7 +115,7 @@ object ExecutorInstrumentation {
     *
     * Once the returned executor is shutdown, all related metric instruments will be removed.
     */
-  def instrumentExecutionContext(executionContext: ExecutionContext, name: String, extraTags: TagSet): ExecutionContextExecutorService =
+  def instrumentExecutionContext(executionContext: ExecutionContext, name: String, extraTags: TagSet): InstrumentedExecutionContext =
     instrumentExecutionContext(executionContext, name, extraTags, DefaultSettings)
 
   /**
@@ -181,12 +181,12 @@ object ExecutorInstrumentation {
     * Once the returned executor is shutdown, all related metric instruments will be removed.
     */
   def instrumentExecutionContext(executionContext: ExecutionContext, name: String, extraTags: TagSet,
-      settings: Settings): ExecutionContextExecutorService = {
+      settings: Settings): InstrumentedExecutionContext = {
 
-    val executor = unwrapExecutionContext(executionContext)
-    val instrumentedExecutor = instrument(executor, name, extraTags, settings)
+    val underlyingExecutor = unwrapExecutionContext(executionContext)
+      .map(executor => instrument(executor, name, extraTags, settings))
 
-    ExecutionContext.fromExecutorService(instrumentedExecutor)
+    new InstrumentedExecutionContext(executionContext, underlyingExecutor)
   }
 
   /**
@@ -263,8 +263,17 @@ object ExecutorInstrumentation {
   private def unwrap(delegatedExecutor: ExecutorService): ExecutorService =
     _delegatedExecutorField.get(delegatedExecutor).asInstanceOf[ExecutorService]
 
-  private def unwrapExecutionContext(executionContext: ExecutionContext): ExecutorService =
-    _executionContextExecutorField.get(executionContext).asInstanceOf[ExecutorService]
+  private def unwrapExecutionContext(executionContext: ExecutionContext): Option[ExecutorService] =
+    try {
+
+      // This function can only unwrap ExecutionContext instances created via ExecutionContext.fromExecutor
+      // or ExecutionContext.fromExecutorService.
+      Some(_executionContextExecutorField.get(executionContext).asInstanceOf[ExecutorService])
+    } catch {
+      case anyError =>
+        _logger.warn("Cannot unwrap unsupported ExecutionContext [{}]", executionContext)
+        None
+    }
 
   /**
     * Abstracts the means of reading some telemetry information from concrete executor implementations. This allows us
@@ -721,6 +730,23 @@ object ExecutorInstrumentation {
           }
         }
       }
+    }
+  }
+
+  /**
+   * Wraps an Execution Context and its underlying ExecutorService, if known. The only purpose of wrapping is to
+   * to provide a shutdown method that can be used to clear shutdown the underlying ExecutorService and remove all the
+   * metrics related to it.
+   */
+  class InstrumentedExecutionContext(ec: ExecutionContext, val underlyingExecutor: Option[ExecutorService]) extends ExecutionContext {
+    override def execute(runnable: Runnable): Unit =
+      ec.execute(runnable)
+
+    override def reportFailure(cause: Throwable): Unit =
+      ec.reportFailure(cause)
+
+    def shutdown(): Unit = {
+      underlyingExecutor.foreach(_.shutdown())
     }
   }
 }

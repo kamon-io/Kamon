@@ -64,6 +64,12 @@ class ExecutorsRegistrationSpec extends WordSpec with Matchers with MetricInspec
       assertDoesNotContainAllExecutorNames(QueueSize.tagValues("name"))
 
     }
+
+    "not fail when an unknown ExecutionContext implementation is provided" in {
+      val ec = new WrappingExecutionContext(ExecutionContext.global)
+      val registered = ExecutorInstrumentation.instrumentExecutionContext(ec, "unknown-execution-context")
+      ThreadsActive.tagValues("name") shouldNot contain("unknown-execution-context")
+    }
   }
 
   def assertContainsAllExecutorNames(names: Seq[String]) = {
@@ -92,5 +98,10 @@ class ExecutorsRegistrationSpec extends WordSpec with Matchers with MetricInspec
       "unconfigurable-scheduled-thread-pool",
       "execution-context"
     )
+  }
+
+  class WrappingExecutionContext(ec: ExecutionContext) extends ExecutionContext {
+    override def execute(runnable: Runnable): Unit = ec.execute(runnable)
+    override def reportFailure(cause: Throwable): Unit = ec.reportFailure(cause)
   }
 }
