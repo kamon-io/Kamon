@@ -14,10 +14,10 @@
  */
 import Tests._
 
-val kamonCore             = "io.kamon"  %%  "kamon-core"                    % "2.0.0"
-val kamonTestkit          = "io.kamon"  %%  "kamon-testkit"                 % "2.0.0"
-val kamonInstrumentation  = "io.kamon"  %%  "kamon-instrumentation-common"  % "2.0.0"
-val kanelaAgent           = "io.kamon"  %   "kanela-agent"                  % "1.0.2"
+val kamonCore             = "io.kamon"  %%  "kamon-core"                    % "2.0.4"
+val kamonTestkit          = "io.kamon"  %%  "kamon-testkit"                 % "2.0.4"
+val kamonInstrumentation  = "io.kamon"  %%  "kamon-instrumentation-common"  % "2.0.1"
+val kanelaAgent           = "io.kamon"  %   "kanela-agent"                  % "1.0.5"
 
 val guava         = "com.google.guava"  % "guava"  % "24.1-jre"
 
