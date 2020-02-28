@@ -75,7 +75,7 @@ class NewRelicSpanReporterSpec extends WordSpec with Matchers {
       .parentId(TestSpanHelper.parentId)
       .build()
     val commonAttributes = new Attributes()
-      .put("instrumentation.source", "kamon-agent")
+      .put("instrumentation.provider", "kamon-agent")
       .put("service.name", serviceName)
       .put("host", hostName)
       .put("testTag", tagValue)

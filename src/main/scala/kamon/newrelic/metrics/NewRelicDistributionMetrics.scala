@@ -10,7 +10,6 @@ import com.newrelic.telemetry.metrics.{Gauge, Metric, Summary}
 import kamon.metric.Distribution.Bucket
 import kamon.metric.MetricSnapshot.Distributions
 import kamon.metric.{Distribution, DynamicRange, MeasurementUnit, MetricSnapshot}
-import kamon.newrelic.AttributeBuddy
 import kamon.newrelic.AttributeBuddy._
 import kamon.tag.TagSet
 import org.slf4j.LoggerFactory
@@ -53,7 +52,6 @@ object NewRelicDistributionMetrics {
       .filter(percentileValue => percentileValue != null)
       .map { percentile =>
         val attributes: Attributes = instrumentBaseAttributes.copy()
-          .put("percentile.countAtRank", percentile.countAtRank)
           .put("percentile", percentile.rank)
         new Gauge(name + ".percentiles", percentile.value, end, attributes)
       }

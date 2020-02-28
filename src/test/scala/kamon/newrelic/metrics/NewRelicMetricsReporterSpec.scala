@@ -63,12 +63,12 @@ class NewRelicMetricsReporterSpec extends WordSpec with Matchers {
   private val gauge: Metric = new Gauge("shirley", 15.6d, TestMetricHelper.end, gaugeAttributes)
 
   private val histogramGauge: Metric = new Gauge("trev.percentiles", 2.0, TestMetricHelper.end,
-    histogramSummaryAttributes.copy().put("percentile.countAtRank", 816L).put("percentile", 90.0d))
+    histogramSummaryAttributes.copy().put("percentile", 90.0d))
   private val histogramSummary: Metric = new Summary("trev.summary", 44, 101.0, 13.0, 17.0,
     TestMetricHelper.start, TestMetricHelper.end, histogramSummaryAttributes)
 
   private val timerGauge: Metric = new Gauge("timer.percentiles", 4.0, TestMetricHelper.end,
-    timerSummaryAttributes.copy().put("percentile.countAtRank", 1632L).put("percentile", 95.0d))
+    timerSummaryAttributes.copy().put("percentile", 95.0d))
   private val timerSummary: Metric = new Summary("timer.summary", 88, 202.0, 26.0, 34.0,
     TestMetricHelper.start, TestMetricHelper.end, timerSummaryAttributes)
 
@@ -83,7 +83,7 @@ class NewRelicMetricsReporterSpec extends WordSpec with Matchers {
 
       val expectedCommonAttributes: Attributes = new Attributes()
         .put("service.name", "kamon-application")
-        .put("instrumentation.source", "kamon-agent")
+        .put("instrumentation.provider", "kamon-agent")
         .put("host", InetAddress.getLocalHost.getHostName)
         .put("testTag", "testValue")
       val expectedBatch: MetricBatch = new MetricBatch(Seq(count1, count2, gauge, histogramGauge, histogramSummary, timerGauge, timerSummary).asJava, expectedCommonAttributes)
@@ -105,7 +105,7 @@ class NewRelicMetricsReporterSpec extends WordSpec with Matchers {
 
       val expectedCommonAttributes: Attributes = new Attributes()
         .put("service.name", "cheese-whiz")
-        .put("instrumentation.source", "kamon-agent")
+        .put("instrumentation.provider", "kamon-agent")
         .put("testTag", "testThing")
         .put("host", "thing")
       val expectedBatch: MetricBatch = new MetricBatch(Seq(count1, count2, gauge, histogramGauge, histogramSummary).asJava, expectedCommonAttributes)

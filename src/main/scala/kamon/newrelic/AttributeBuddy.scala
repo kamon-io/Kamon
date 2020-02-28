@@ -6,8 +6,7 @@
 package kamon.newrelic
 
 import com.newrelic.telemetry.Attributes
-import com.typesafe.config.{Config, ConfigValue}
-import kamon.Kamon
+import com.typesafe.config.Config
 import kamon.status.Environment
 import kamon.tag.{Tag, TagSet}
 
@@ -44,10 +43,10 @@ object AttributeBuddy {
 
   def buildCommonAttributes(environment: Environment): Attributes = {
     val attributes = new Attributes()
-      .put("instrumentation.source", "kamon-agent")
+      .put("instrumentation.provider", "kamon-agent")
       .put("service.name", environment.service)
       .put("host", environment.host)
-      AttributeBuddy.addTagsFromTagSets(Seq(environment.tags), attributes)
+    AttributeBuddy.addTagsFromTagSets(Seq(environment.tags), attributes)
     attributes
   }
 }

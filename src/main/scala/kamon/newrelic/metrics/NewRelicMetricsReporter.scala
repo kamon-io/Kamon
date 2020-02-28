@@ -41,6 +41,8 @@ class NewRelicMetricsReporter(senderBuilder: () => MetricBatchSender = () => New
       NewRelicDistributionMetrics(periodStartTime, periodEndTime, timer, "timer")
     }
 
+    //todo: add range sampler metrics as well
+
     val metrics = Seq(counters, gauges, histogramMetrics, timerMetrics).flatten.asJava
     val batch = new MetricBatch(metrics, commonAttributes)
 
