@@ -31,7 +31,10 @@ class KamonApmApiClient(settings: Settings) {
   def postSpans(spanBatch: SpanBatch): Unit =
     postWithRetry(spanBatch.toByteArray, "spans-ingestion", settings.tracingRoute, settings.tracingRetries)
 
-  def stop(): Unit = _httpClient.dispatcher().executorService().shutdown()
+  def stop(): Unit = {
+    _httpClient.dispatcher().executorService().shutdown()
+    _httpClient.connectionPool().evictAll()
+  }
 
   @tailrec
   private def postWithRetry(body: Array[Byte], endpointName: String, apiUrl: String, retries: Int): Unit = {
