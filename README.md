@@ -9,14 +9,14 @@ The `kamon-apm-reporter` module allows you to send metrics and tracing data coll
 
 | kamon-apm | status | jdk  | scala            |
 |:---------:|:------:|:----:|------------------|
-|  1.1.3    | Stable | 1.8+ |    2.11, 2.12    |
+|  2.0.3    | Stable | 1.8+ | 2.11, 2.12, 2.13 |
 
 
 
 To get started with SBT add the following to your `build.sbt` file:
 
 ```scala
-libraryDependencies += "io.kamon" %% "kamon-apm-reporter" % "1.1.3"
+libraryDependencies += "io.kamon" %% "kamon-apm-reporter" % "2.0.3"
 ```
 
 
