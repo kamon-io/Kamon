@@ -32,7 +32,7 @@ class LogbackMdcCopyingSpec extends WordSpec with Matchers with Eventually {
       "report an undefined context" in {
         val appender = buildMemoryAppender(configurator)
         appender.doAppend(createLoggingEvent(context))
-        appender.getLastLine should be("undefined undefined")
+        appender.getLastLine should be("undefined undefined undefined")
       }
     }
 
@@ -41,6 +41,7 @@ class LogbackMdcCopyingSpec extends WordSpec with Matchers with Eventually {
         val memoryAppender = buildMemoryAppender(configurator)
 
         val span = Kamon.spanBuilder("my-span").start()
+        val spanOperationName = span.operationName()
         val traceID = span.trace.id
         val contextWithSpan = Context.of(Span.Key, span)
 
@@ -48,7 +49,7 @@ class LogbackMdcCopyingSpec extends WordSpec with Matchers with Eventually {
           memoryAppender.doAppend(createLoggingEvent(context))
         }
 
-        memoryAppender.getLastLine shouldBe (traceID.string + " " + span.id.string)
+        memoryAppender.getLastLine shouldBe (traceID.string + " " + span.id.string + " " + spanOperationName)
       }
 
       "copy context information into the MDC" in {
@@ -73,8 +74,6 @@ class LogbackMdcCopyingSpec extends WordSpec with Matchers with Eventually {
         val memoryAppender = buildMemoryAppender(configurator,s"%X{my-tag} %X{mdc_key}")
 
         val span = Kamon.spanBuilder("my-span").start()
-        val traceID = span.trace.id
-        val spanID = span.id
         val contextWithSpan = Context.of("my-tag", "my-value")
 
         MDC.put("mdc_key","mdc_value")
@@ -156,7 +155,7 @@ class LogbackMdcCopyingSpec extends WordSpec with Matchers with Eventually {
         }
 
         eventually(timeout(2 seconds)) {
-          memoryAppender.getLastLine shouldBe (traceID.string + " " + span.id.string)
+          memoryAppender.getLastLine shouldBe (traceID.string + " " + span.id.string + " " + span.operationName())
         }
       }
 
