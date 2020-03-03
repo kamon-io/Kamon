@@ -60,7 +60,7 @@ Propagating TraceID to AsyncAppender
 
 If you choose to use [`AsyncAppender`](https://logback.qos.ch/manual/appenders.html#AsyncAppender), your trace ID will automatically be propagated to the thread where the log is actually published. No configuration needed. The same applies for the span ID. You can use them in the logback pattern like this:
 ```xml
- <pattern>%d{yyyy-MM-dd HH:mm:ss} | %-5level | %X{kamonTraceID} | %X{kamonSpanID} | %c{0} -> %m%n</pattern>
+ <pattern>%d{yyyy-MM-dd HH:mm:ss} | %-5level | %X{kamonTraceID} | %X{kamonSpanID} | %X{kamonSpanName} | %c{0} -> %m%n</pattern>
 ```
 
 You can also add custom values to MDC. To do this, simply add the key value in the library configuration: 
