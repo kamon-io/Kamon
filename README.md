@@ -22,14 +22,14 @@ To get started with SBT, simply add the following to your `build.sbt` or `pom.xm
 file:
 
 ```scala
-libraryDependencies += "io.kamon" %% "kamon-logback" % "2.1.0"
+libraryDependencies += "io.kamon" %% "kamon-logback" % "2.0.3"
 ```
 
 ```xml
 <dependency>
     <groupId>io.kamon</groupId>
     <artifactId>kamon-logback_2.12</artifactId>
-    <version>2.1.0</version>
+    <version>2.0.3</version>
 </dependency>
 ```
 
