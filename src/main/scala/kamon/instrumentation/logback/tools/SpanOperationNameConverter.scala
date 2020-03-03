@@ -27,7 +27,7 @@ class SpanOperationNameConverter extends ClassicConverter {
     val currentSpan = Kamon.currentSpan()
     val spanOperationName = currentSpan.operationName()
 
-    if(spanOperationName.isEmpty)
+    if(spanOperationName.equals("empty"))
       "undefined"
     else
       spanOperationName
