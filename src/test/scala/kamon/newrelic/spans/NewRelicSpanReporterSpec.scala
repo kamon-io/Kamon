@@ -77,7 +77,7 @@ class NewRelicSpanReporterSpec extends WordSpec with Matchers {
     val commonAttributes = new Attributes()
       .put("instrumentation.provider", "kamon-agent")
       .put("service.name", serviceName)
-      .put("host", hostName)
+      .put("host.hostname", hostName)
       .put("testTag", tagValue)
     val expectedSpans = List(expectedSpan).asJava
     new SpanBatch(expectedSpans, commonAttributes)

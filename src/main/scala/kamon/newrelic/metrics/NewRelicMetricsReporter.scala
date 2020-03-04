@@ -12,6 +12,7 @@ import kamon.Kamon
 import kamon.metric.PeriodSnapshot
 import kamon.module.{MetricReporter, Module, ModuleFactory}
 import kamon.newrelic.AttributeBuddy.buildCommonAttributes
+import kamon.newrelic.LibraryVersion
 import kamon.status.Environment
 import org.slf4j.LoggerFactory
 
@@ -76,6 +77,7 @@ object NewRelicMetricsReporter {
     val nrInsightsInsertKey = nrConfig.getString("nr-insights-insert-key")
     SimpleMetricBatchSender.builder(nrInsightsInsertKey)
       .enableAuditLogging()
+      .secondaryUserAgent("newrelic-kamon-reporter", LibraryVersion.version)
       .build()
   }
 }
