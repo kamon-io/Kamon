@@ -68,6 +68,7 @@ object NewRelicDistributionMetrics {
     val dimension: MeasurementUnit.Dimension = unit.dimension
 
     new Attributes()
+      .put("description", dist.description)
       .put("sourceMetricType", sourceMetricType)
       .put("lowestDiscernibleValue", lowestDiscernibleValue)
       .put("highestTrackableValue", highestTrackableValue)

@@ -16,6 +16,7 @@ class NewRelicDistributionMetricsSpec extends WordSpec with Matchers {
     "convert a distribution" in {
       val distributions: Distributions = TestMetricHelper.buildHistogramDistribution
       val summaryAttributes = new Attributes()
+        .put("description", "a good trevor")
         .put("magnitude.name", "eimer")
         .put("magnitude.scaleFactor", 603.3d)
         .put("lowestDiscernibleValue", 1L)
