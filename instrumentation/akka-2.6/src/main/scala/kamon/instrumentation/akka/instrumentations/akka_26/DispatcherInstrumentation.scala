@@ -113,6 +113,7 @@ object InstrumentNewExecutorServiceOnAkka26 {
 
       if(dispatcherName == Dispatchers.DefaultDispatcherId && defaultEcOption.isDefined) {
         ExecutorInstrumentation.instrumentExecutionContext(defaultEcOption.get, dispatcherName, systemTags)
+          .underlyingExecutor.getOrElse(executor)
       } else {
         ExecutorInstrumentation.instrument(executor, dispatcherName, systemTags)
       }

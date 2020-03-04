@@ -98,6 +98,17 @@ class DispatcherMetricsSpec extends TestKit(ActorSystem("DispatcherMetricsSpec")
 
       instrumentExecutorsWithSystem should contain only(builtInDispatchers: _*)
     }
+
+    "pick up default execution contexts provided when creating an actor system when the type is unknown" in {
+      val dec = new WrappingExecutionContext(ExecutionContext.fromExecutor(Executors.newFixedThreadPool(8)))
+      val system = ActorSystem(name = "with-default-ec", defaultExecutionContext = Some(dec))
+
+      val instrumentExecutorsWithSystem = ExecutorMetrics.ThreadsActive.instruments().keys
+        .filter(_.get(plain("akka.system")) == system.name)
+        .map(_.get(plain("name")))
+
+      instrumentExecutorsWithSystem should contain only(builtInDispatchers: _*)
+    }
   }
 
 
@@ -118,4 +129,9 @@ class DispatcherMetricsSpec extends TestKit(ActorSystem("DispatcherMetricsSpec")
   }
 
   override protected def afterAll(): Unit = system.terminate()
+
+  class WrappingExecutionContext(ec: ExecutionContext) extends ExecutionContext {
+    override def execute(runnable: Runnable): Unit = ec.execute(runnable)
+    override def reportFailure(cause: Throwable): Unit = ec.reportFailure(cause)
+  }
 }

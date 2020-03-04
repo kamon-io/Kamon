@@ -125,6 +125,7 @@ object InstrumentNewExecutorServiceOnAkka24 {
 
       if(dispatcherName == Dispatchers.DefaultDispatcherId && defaultEcOption.isDefined) {
         ExecutorInstrumentation.instrumentExecutionContext(defaultEcOption.get, dispatcherName, systemTags)
+          .underlyingExecutor.getOrElse(executor)
       } else {
         ExecutorInstrumentation.instrument(executor, dispatcherName, systemTags)
       }
@@ -146,6 +147,7 @@ object InstrumentNewExecutorServiceOnAkka25 {
 
       if(dispatcherName == Dispatchers.DefaultDispatcherId && defaultEcOption.isDefined) {
         ExecutorInstrumentation.instrumentExecutionContext(defaultEcOption.get, dispatcherName, systemTags)
+          .underlyingExecutor.getOrElse(executor)
       } else {
         executor match {
           case afjp: ForkJoinPool =>

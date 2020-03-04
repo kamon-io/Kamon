@@ -17,9 +17,9 @@ import sbt.Tests.{Group, SubProcess}
 val kamonCore       = "io.kamon" %% "kamon-core"         % "2.0.4"
 val kamonTestkit    = "io.kamon" %% "kamon-testkit"      % "2.0.4"
 val kamonScala      = "io.kamon" %% "kamon-scala-future" % "2.0.0"
-val kamonExecutors  = "io.kamon" %% "kamon-executors"    % "2.0.0"
-val kamonInstrument = "io.kamon" %% "kamon-instrumentation-common" % "2.0.0"
-val kanelaAgent     =  "io.kamon" % "kanela-agent"       % "1.0.4"
+val kamonExecutors  = "io.kamon" %% "kamon-executors"    % "2.0.3"
+val kamonInstrument = "io.kamon" %% "kamon-instrumentation-common" % "2.0.2"
+val kanelaAgent     =  "io.kamon" % "kanela-agent"       % "1.0.5"
 
 val akka24Version = "2.4.20"
 val akka25Version = "2.5.26"
@@ -34,7 +34,7 @@ val akkaSharding    = "com.typesafe.akka"   %% "akka-cluster-sharding"  % akka25
 val akkaProtobuf    = "com.typesafe.akka"   %% "akka-protobuf"          % akka25Version
 val netty           = "io.netty"            %  "netty"                  % "3.10.6.Final"
 
-kanelaAgentVersion in ThisBuild := "1.0.3"
+kanelaAgentVersion in ThisBuild := "1.0.5"
 
 lazy val root = Project("kamon-akka", file("."))
   .settings(noPublishing)
