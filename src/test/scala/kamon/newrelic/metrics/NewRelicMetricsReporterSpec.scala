@@ -59,6 +59,17 @@ class NewRelicMetricsReporterSpec extends WordSpec with Matchers {
     .put("dimension", "information")
     .put("sourceMetricType", "timer")
 
+  private val rangeSamplerAttributes = new Attributes()
+    .put("description", "baby's first range sampler")
+    .put("magnitude.name", "home")
+    .put("magnitude.scaleFactor", 333.3)
+    .put("lowestDiscernibleValue", 1L)
+    .put("highestTrackableValue", 3600000000000L)
+    .put("significantValueDigits", 2)
+    .put("eleven", "elevenses")
+    .put("dimension", "information")
+    .put("sourceMetricType", "rangeSampler")
+
   private val count1: Metric = new Count("flib", TestMetricHelper.value1, TestMetricHelper.start, TestMetricHelper.end, countAttributes)
   private val count2: Metric = new Count("flib", TestMetricHelper.value2, TestMetricHelper.start, TestMetricHelper.end, countAttributes)
 
@@ -68,6 +79,11 @@ class NewRelicMetricsReporterSpec extends WordSpec with Matchers {
     histogramSummaryAttributes.copy().put("percentile", 90.0d))
   private val histogramSummary: Metric = new Summary("trev.summary", 44, 101.0, 13.0, 17.0,
     TestMetricHelper.start, TestMetricHelper.end, histogramSummaryAttributes)
+
+  private val rangeSamplerGauge: Metric = new Gauge("ranger.percentiles", 8.0, TestMetricHelper.end,
+    rangeSamplerAttributes.copy().put("percentile", 95.0d))
+  private val rangeSamplerSummary: Metric = new Summary("ranger.summary", 88, 202.0, 26.0, 34.0,
+    TestMetricHelper.start, TestMetricHelper.end, rangeSamplerAttributes)
 
   private val timerGauge: Metric = new Gauge("timer.percentiles", 4.0, TestMetricHelper.end,
     timerSummaryAttributes.copy().put("percentile", 95.0d))
@@ -80,15 +96,18 @@ class NewRelicMetricsReporterSpec extends WordSpec with Matchers {
       val kamonGauge = TestMetricHelper.buildGauge
       val histogram = TestMetricHelper.buildHistogramDistribution
       val timer = TestMetricHelper.buildTimerDistribution
+      val rangeSampler = TestMetricHelper.buildRangeSamplerDistribution
       val periodSnapshot = new PeriodSnapshot(TestMetricHelper.startInstant, TestMetricHelper.endInstant,
-        Seq(counter), Seq(kamonGauge), Seq(histogram), Seq(timer), Seq())
+        Seq(counter), Seq(kamonGauge), Seq(histogram), Seq(timer), Seq(rangeSampler))
 
       val expectedCommonAttributes: Attributes = new Attributes()
         .put("service.name", "kamon-application")
         .put("instrumentation.provider", "kamon-agent")
         .put("host", InetAddress.getLocalHost.getHostName)
         .put("testTag", "testValue")
-      val expectedBatch: MetricBatch = new MetricBatch(Seq(count1, count2, gauge, histogramGauge, histogramSummary, timerGauge, timerSummary).asJava, expectedCommonAttributes)
+      val expectedBatch: MetricBatch =
+        new MetricBatch(Seq(count1, count2, gauge, histogramGauge, histogramSummary, timerGauge, timerSummary, rangeSamplerGauge, rangeSamplerSummary).asJava,
+          expectedCommonAttributes)
 
       val sender = mock(classOf[MetricBatchSender])
 

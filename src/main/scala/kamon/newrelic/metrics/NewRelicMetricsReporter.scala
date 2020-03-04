@@ -40,10 +40,11 @@ class NewRelicMetricsReporter(senderBuilder: () => MetricBatchSender = () => New
     val timerMetrics = snapshot.timers.flatMap { timer =>
       NewRelicDistributionMetrics(periodStartTime, periodEndTime, timer, "timer")
     }
+    val rangeSamplerMetrics = snapshot.rangeSamplers.flatMap { rangeSampler =>
+      NewRelicDistributionMetrics(periodStartTime, periodEndTime, rangeSampler, "rangeSampler")
+    }
 
-    //todo: add range sampler metrics as well
-
-    val metrics = Seq(counters, gauges, histogramMetrics, timerMetrics).flatten.asJava
+    val metrics = Seq(counters, gauges, histogramMetrics, timerMetrics, rangeSamplerMetrics).flatten.asJava
     val batch = new MetricBatch(metrics, commonAttributes)
 
     sender.sendBatch(batch)
