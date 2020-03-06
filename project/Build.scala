@@ -215,7 +215,7 @@ object BaseProject extends AutoPlugin {
 
   private def setupGpg(): Unit = {
     sys.env.get("PGP_SECRET").foreach(secret => {
-      (s"echo $secret" #| "base64 --decode" #| "gpg --import ").!
+      (s"echo $secret" #| "base64 --decode" #| "gpg --import --no-tty --batch ").!
     })
   }
 
