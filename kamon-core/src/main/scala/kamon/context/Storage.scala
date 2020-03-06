@@ -43,7 +43,7 @@ object Storage {
     * Encapsulates the extend during which a Context is held by an Storage implementation. Once a Scope is closed, the
     * Context will be removed from the Storage that created the Scope.
     */
-  trait Scope {
+  trait Scope extends AutoCloseable {
 
     /**
       * Returns the Context managed by this Scope.
