@@ -1,0 +1,14 @@
+name: Test all the things
+
+on:
+  push:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - run: git fetch --depth=1 origin '+refs/tags/*:refs/tags/*'
+      - uses: olafurpg/setup-scala@v2
+      - name: Test
+        run: csbt +test

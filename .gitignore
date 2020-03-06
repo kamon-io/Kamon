@@ -24,6 +24,7 @@ project/plugins/project/
 .idea/
 *.iml
 *.iws
+.metals/
 
 # Eclipse
 .project
