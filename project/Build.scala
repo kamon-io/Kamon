@@ -37,20 +37,13 @@ object BaseProject extends AutoPlugin {
     val kanelaAgentJar = taskKey[File]("Kanela Agent jar")
 
     val noPublishing = Seq(
-      publish := {},
+      skip in publish := true,
       publishLocal := {},
       publishArtifact := false
     )
 
     val instrumentationSettings = Seq(
       javaAgents := Seq("io.kamon" % "kanela-agent" % kanelaAgentVersion.value % "runtime;test")
-    )
-
-    // More info here: https://www.scala-sbt.org/1.x/docs/Cross-Build.html#Note+about+sbt-release
-    val crossBuildingRootSettings = Seq(
-      crossScalaVersions := Nil,
-      publish / skip := true,
-      releaseCrossBuild := false
     )
 
     // This installs the GPG signing key from the
@@ -85,8 +78,8 @@ object BaseProject extends AutoPlugin {
 
   private lazy val compilationSettings = Seq(
     crossPaths := true,
-    scalaVersion := "2.13.1",
-    crossScalaVersions := Seq("2.11.12", "2.12.8", "2.13.1"),
+    scalaVersion := "2.12.10",
+    crossScalaVersions := Seq("2.11.12", "2.12.10", "2.13.1"),
     javacOptions := Seq(
       "-source", "1.8",
       "-target", "1.8",
@@ -108,7 +101,7 @@ object BaseProject extends AutoPlugin {
       "-language:existentials",
       "-language:implicitConversions"
     ) ++ (CrossVersion.partialVersion(scalaVersion.value) match {
-      case Some((2,11)) => Seq("-Xfuture", "-Ybackend:GenASM","-Ydelambdafy:method","-target:jvm-1.8")
+      case Some((2,11)) => Seq("-Xfuture", "-Ybackend:GenASM")
       case Some((2,12)) => Seq("-Xfuture", "-opt:l:method")
       case Some((2,13)) => Seq.empty
       case _ => Seq.empty
