@@ -1,3 +1,4 @@
+
 /* =========================================================================================
  * Copyright © 2013-2018 the kamon project <http://kamon.io/>
  *
@@ -18,7 +19,7 @@
 lazy val kamon = (project in file("."))
   .disablePlugins(AssemblyPlugin)
   .settings(noPublishing: _*)
-  .aggregate(core)
+  .aggregate(core, instrumentation)
 
 lazy val core = (project in file("core"))
   .disablePlugins(AssemblyPlugin)
@@ -102,3 +103,27 @@ lazy val `kamon-core-bench` = (project in file("core/kamon-core-bench"))
   .settings(moduleName := "kamon-core-bench")
   .settings(noPublishing: _*)
   .dependsOn(`kamon-core`)
+
+
+/**
+  * Instrumentation Projects
+  */
+
+lazy val instrumentation = (project in file("instrumentation"))
+  .disablePlugins(AssemblyPlugin)
+  .settings(noPublishing: _*)
+  .aggregate(`kamon-instrumentation-common`)
+
+lazy val `kamon-instrumentation-common` = (project in file("instrumentation/kamon-instrumentation-common"))
+  .enablePlugins(JavaAgent)
+  .settings(instrumentationSettings)
+  .settings(
+    name := "kamon-instrumentation-common",
+    moduleName := "kamon-instrumentation-common",
+    resolvers += Resolver.mavenLocal,
+    libraryDependencies ++= Seq(
+      scalatest % "test",
+      slf4jApi % "test",
+      kanelaAgent % "provided"
+    )
+  ).dependsOn(`kamon-core`, `kamon-testkit` % "test")
