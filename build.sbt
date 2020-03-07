@@ -1,4 +1,3 @@
-
 /* =========================================================================================
  * Copyright © 2013-2018 the kamon project <http://kamon.io/>
  *
@@ -13,8 +12,6 @@
  * and limitations under the License.
  * =========================================================================================
  */
-
-
 
 lazy val kamon = (project in file("."))
   .disablePlugins(AssemblyPlugin)
@@ -127,3 +124,52 @@ lazy val `kamon-instrumentation-common` = (project in file("instrumentation/kamo
       kanelaAgent % "provided"
     )
   ).dependsOn(`kamon-core`, `kamon-testkit` % "test")
+
+import Tests._
+
+val commonSettings = Seq(
+  crossScalaVersions := List("2.11.12", "2.12.8", "2.13.0"),
+  resolvers += Resolver.mavenLocal,
+  resolvers += Resolver.bintrayRepo("kamon-io", "snapshots")
+)
+
+lazy val `kamon-executors` = (project in file("kamon-executors"))
+  .settings(commonSettings: _*)
+  .settings(
+    moduleName := "kamon-executors",
+    testGrouping in Test := groupByExperimentalExecutorTests((definedTests in Test).value, kanelaAgentJar.value),
+    libraryDependencies ++=
+      providedScope(kanelaAgent) ++
+      testScope(scalatest, logbackClassic, "com.google.guava"  % "guava"  % "24.1-jre")
+  ).dependsOn(`kamon-core`, `kamon-instrumentation-common`, `kamon-testkit` % "test")
+
+lazy val benchmark = (project in file("kamon-executors-bench"))
+  .enablePlugins(JmhPlugin)
+  .settings(noPublishing: _*)
+  .settings(commonSettings: _*)
+  .settings(
+    moduleName := "kamon-executors-bench",
+    resolvers += Resolver.mavenLocal,
+    libraryDependencies ++= compileScope(kanelaAgent, "com.google.guava"  % "guava"  % "24.1-jre")
+  ).dependsOn(`kamon-core`, `kamon-instrumentation-common`)
+
+
+def groupByExperimentalExecutorTests(tests: Seq[TestDefinition], kanelaJar: File): Seq[Group] = {
+  val (stable, experimental) = tests.partition(t => t.name != "kamon.instrumentation.executor.CaptureContextOnSubmitInstrumentationSpec")
+
+  val stableGroup = Group("stableTests", stable, SubProcess(
+    ForkOptions().withRunJVMOptions(Vector(
+      "-javaagent:" + kanelaJar.toString
+    ))
+  ))
+
+  val experimentalGroup = Group("experimentalTests", experimental, SubProcess(
+    ForkOptions().withRunJVMOptions(Vector(
+      "-javaagent:" + kanelaJar.toString,
+      "-Dkanela.modules.executor-service.enabled=false",
+      "-Dkanela.modules.executor-service-capture-on-submit.enabled=true"
+    ))
+  ))
+
+  Seq(stableGroup, experimentalGroup)
+}
