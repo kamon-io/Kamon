@@ -127,7 +127,8 @@ lazy val instrumentation = (project in file("instrumentation"))
     `kamon-jdbc`,
     `kamon-mongo`,
     `kamon-annotation`,
-    `kamon-annotation-api`
+    `kamon-annotation-api`,
+    `kamon-system-metrics`
   )
 
 lazy val `kamon-instrumentation-common` = (project in file("instrumentation/kamon-instrumentation-common"))
@@ -313,3 +314,14 @@ lazy val `kamon-annotation` = (project in file("instrumentation/kamon-annotation
       providedScope(kanelaAgent) ++
       testScope(scalatest, logbackClassic)
   ).dependsOn(`kamon-core`, `kamon-annotation-api`, `kamon-testkit` % "test")
+
+lazy val `kamon-system-metrics` = (project in file("instrumentation/kamon-annotation"))
+  .disablePlugins(AssemblyPlugin)
+  .settings(instrumentationSettings: _*)
+  .settings(
+    moduleName := "kamon-system-metrics",
+    libraryDependencies ++=
+      Seq("com.github.oshi" % "oshi-core" % "4.2.1") ++
+      providedScope(kanelaAgent) ++
+      testScope(scalatest, logbackClassic)
+  ).dependsOn(`kamon-core`)
