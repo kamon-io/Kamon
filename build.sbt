@@ -122,7 +122,8 @@ lazy val instrumentation = (project in file("instrumentation"))
     `kamon-scala-future`,
     `kamon-twitter-future`,
     `kamon-scalaz-future`,
-    `kamon-cats-io`
+    `kamon-cats-io`,
+    `kamon-logback`
   )
 
 lazy val `kamon-instrumentation-common` = (project in file("instrumentation/kamon-instrumentation-common"))
@@ -232,3 +233,15 @@ lazy val `kamon-cats-io` = (project in file("instrumentation/kamon-cats-io"))
       providedScope(catsEffect, kanelaAgent) ++
       testScope(scalatest, logbackClassic)
   ).dependsOn(`kamon-core`, `kamon-executors`, `kamon-testkit` % "test")
+
+
+lazy val `kamon-logback` = (project in file("."))
+  .disablePlugins(AssemblyPlugin)
+  .enablePlugins(JavaAgent)
+  .settings(instrumentationSettings)
+  .settings(
+    moduleName := "kamon-logback",
+    libraryDependencies ++=
+      providedScope(kanelaAgent, "ch.qos.logback"  %   "logback-classic" % "1.2.3") ++
+      testScope(scalatest)
+  ).dependsOn(`kamon-core`, `kamon-instrumentation-common`, `kamon-testkit` % "test")
