@@ -57,6 +57,7 @@ object LogbackInstrumentation {
     propagateContextToMDC: Boolean,
     mdcTraceIdKey: String,
     mdcSpanIdKey: String,
+    mdcSpanOperationNameKey: String,
     mdcCopyTags: Boolean,
     mdcCopyKeys: Seq[String]
   )
@@ -68,6 +69,7 @@ object LogbackInstrumentation {
       logbackConfig.getBoolean("mdc.copy.enabled"),
       logbackConfig.getString("mdc.trace-id-key"),
       logbackConfig.getString("mdc.span-id-key"),
+      logbackConfig.getString("mdc.span-operation-name-key"),
       logbackConfig.getBoolean("mdc.copy.tags"),
       logbackConfig.getStringList("mdc.copy.entries").asScala.toSeq
     )
@@ -99,6 +101,7 @@ object GetPropertyMapMethodInterceptor {
       if(span.trace.id != Identifier.Empty) {
         MDC.put(settings.mdcTraceIdKey, span.trace.id.string)
         MDC.put(settings.mdcSpanIdKey, span.id.string)
+        MDC.put(settings.mdcSpanOperationNameKey, span.operationName())
       }
 
       if(settings.mdcCopyTags) {

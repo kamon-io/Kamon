@@ -13,10 +13,10 @@
  * =========================================================================================
  */
 
-val kamonCore     = "io.kamon" %%  "kamon-core"     % "2.0.0"
-val kamonTestkit  = "io.kamon" %%  "kamon-testkit"  % "2.0.0"
-val kanela        = "io.kamon" %   "kanela-agent"   % "1.0.0"
-val kamonCommon   = "io.kamon" %%  "kamon-instrumentation-common"  % "2.0.0"
+val kamonCore     = "io.kamon" %%  "kamon-core"     % "2.0.4"
+val kamonTestkit  = "io.kamon" %%  "kamon-testkit"  % "2.0.4"
+val kanela        = "io.kamon" %   "kanela-agent"   % "1.0.5"
+val kamonCommon   = "io.kamon" %%  "kamon-instrumentation-common"  % "2.0.1"
 
 val latestLogbackClassic  = "ch.qos.logback"  %   "logback-classic" % "1.2.3"
 

@@ -4,7 +4,7 @@
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-logback_2.12/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.kamon/kamon-logback_2.12)
 
 
-The <b>kamon-logback</b> module requires you to start your application using the AspectJ Weaver Agent.
+The <b>kamon-logback</b> module requires you to start your application using the Kanela Agent.
 
 
 ### Getting Started
@@ -22,14 +22,14 @@ To get started with SBT, simply add the following to your `build.sbt` or `pom.xm
 file:
 
 ```scala
-libraryDependencies += "io.kamon" %% "kamon-logback" % "2.0.0"
+libraryDependencies += "io.kamon" %% "kamon-logback" % "2.0.3"
 ```
 
 ```xml
 <dependency>
     <groupId>io.kamon</groupId>
     <artifactId>kamon-logback_2.12</artifactId>
-    <version>2.0.0</version>
+    <version>2.0.3</version>
 </dependency>
 ```
 
@@ -60,7 +60,7 @@ Propagating TraceID to AsyncAppender
 
 If you choose to use [`AsyncAppender`](https://logback.qos.ch/manual/appenders.html#AsyncAppender), your trace ID will automatically be propagated to the thread where the log is actually published. No configuration needed. The same applies for the span ID. You can use them in the logback pattern like this:
 ```xml
- <pattern>%d{yyyy-MM-dd HH:mm:ss} | %-5level | %X{kamonTraceID} | %X{kamonSpanID} | %c{0} -> %m%n</pattern>
+ <pattern>%d{yyyy-MM-dd HH:mm:ss} | %-5level | %X{kamonTraceID} | %X{kamonSpanID} | %X{kamonSpanName} | %c{0} -> %m%n</pattern>
 ```
 
 You can also add custom values to MDC. To do this, simply add the key value in the library configuration: 
