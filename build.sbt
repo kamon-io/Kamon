@@ -124,7 +124,8 @@ lazy val instrumentation = (project in file("instrumentation"))
     `kamon-scalaz-future`,
     `kamon-cats-io`,
     `kamon-logback`,
-    `kamon-jdbc`
+    `kamon-jdbc`,
+    `kamon-mongo`
   )
 
 lazy val `kamon-instrumentation-common` = (project in file("instrumentation/kamon-instrumentation-common"))
@@ -266,3 +267,18 @@ lazy val `kamon-jdbc` = (project in file("instrumentation/kamon-jdbc"))
       providedScope(kanelaAgent, hikariCP, mariaConnector, slick, postgres) ++
       testScope(h2, sqlite, mariaDB4j, postgres,  slickHikari, scalatest, slf4jApi, logbackClassic)
   ).dependsOn(`kamon-core`, `kamon-executors`, `kamon-testkit` % "test")
+
+val mongoSyncDriver   = "org.mongodb"         %   "mongodb-driver-sync"             % "3.11.0"
+val mongoScalaDriver  = "org.mongodb.scala"   %%  "mongo-scala-driver"              % "2.7.0"
+val mongoDriver       = "org.mongodb"         %   "mongodb-driver-reactivestreams"  % "1.12.0"
+val embeddedMongo     = "de.flapdoodle.embed" %   "de.flapdoodle.embed.mongo"       % "2.2.0"
+
+lazy val `kamon-mongo` = Project("instrumentation", file("instrumentation"))
+  .enablePlugins(JavaAgent)
+  .settings(instrumentationSettings)
+  .settings(
+    moduleName := "kamon-mongo",
+    libraryDependencies ++=
+      providedScope(kanelaAgent, mongoDriver, mongoSyncDriver, mongoScalaDriver) ++
+      testScope(embeddedMongo, scalatest)
+  ).dependsOn(`kamon-core`, `kamon-instrumentation-common`, `kamon-testkit` % "test")
