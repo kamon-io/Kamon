@@ -235,7 +235,7 @@ lazy val `kamon-cats-io` = (project in file("instrumentation/kamon-cats-io"))
   ).dependsOn(`kamon-core`, `kamon-executors`, `kamon-testkit` % "test")
 
 
-lazy val `kamon-logback` = (project in file("."))
+lazy val `kamon-logback` = (project in file("instrumentation/kamon-logback"))
   .disablePlugins(AssemblyPlugin)
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
