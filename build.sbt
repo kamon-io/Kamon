@@ -123,7 +123,8 @@ lazy val instrumentation = (project in file("instrumentation"))
     `kamon-twitter-future`,
     `kamon-scalaz-future`,
     `kamon-cats-io`,
-    `kamon-logback`
+    `kamon-logback`,
+    `kamon-jdbc`
   )
 
 lazy val `kamon-instrumentation-common` = (project in file("instrumentation/kamon-instrumentation-common"))
@@ -245,3 +246,22 @@ lazy val `kamon-logback` = (project in file("instrumentation/kamon-logback"))
       providedScope(kanelaAgent, "ch.qos.logback"  %   "logback-classic" % "1.2.3") ++
       testScope(scalatest)
   ).dependsOn(`kamon-core`, `kamon-instrumentation-common`, `kamon-testkit` % "test")
+
+val slick               = "com.typesafe.slick"       %% "slick"                     % "3.3.2"
+val slickHikari         = "com.typesafe.slick"       %% "slick-hikaricp"            % "3.3.2"
+val h2                  = "com.h2database"            % "h2"                        % "1.4.182"
+val sqlite              = "org.xerial"                % "sqlite-jdbc"               % "3.27.2.1"
+val mariaConnector      = "org.mariadb.jdbc"          % "mariadb-java-client"       % "2.2.6"
+val mariaDB4j           = "ch.vorburger.mariaDB4j"    % "mariaDB4j"                 % "2.4.0"
+val postgres            = "org.postgresql"            % "postgresql"                % "42.2.5"
+val hikariCP            = "com.zaxxer"                % "HikariCP"                  % "2.6.2"
+
+lazy val `kamon-jdbc` = (project in file("."))
+  .enablePlugins(JavaAgent)
+  .settings(instrumentationSettings)
+  .settings(
+    moduleName := "kamon-jdbc",
+    libraryDependencies ++=
+      providedScope(kanelaAgent, hikariCP, mariaConnector, slick, postgres) ++
+      testScope(h2, sqlite, mariaDB4j, postgres,  slickHikari, scalatest, slf4jApi, logbackClassic)
+  ).dependsOn(`kamon-core`, `kamon-executors`, `kamon-testkit` % "test")
