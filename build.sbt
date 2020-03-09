@@ -273,7 +273,8 @@ val mongoScalaDriver  = "org.mongodb.scala"   %%  "mongo-scala-driver"          
 val mongoDriver       = "org.mongodb"         %   "mongodb-driver-reactivestreams"  % "1.12.0"
 val embeddedMongo     = "de.flapdoodle.embed" %   "de.flapdoodle.embed.mongo"       % "2.2.0"
 
-lazy val `kamon-mongo` = Project("instrumentation", file("instrumentation"))
+lazy val `kamon-mongo` = (project in file("instrumentation/kamon-mongo"))
+  .disablePlugins(AssemblyPlugin)
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
