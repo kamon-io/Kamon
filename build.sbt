@@ -315,7 +315,7 @@ lazy val `kamon-annotation` = (project in file("instrumentation/kamon-annotation
       testScope(scalatest, logbackClassic)
   ).dependsOn(`kamon-core`, `kamon-annotation-api`, `kamon-testkit` % "test")
 
-lazy val `kamon-system-metrics` = (project in file("instrumentation/kamon-annotation"))
+lazy val `kamon-system-metrics` = (project in file("instrumentation/kamon-system-metrics"))
   .disablePlugins(AssemblyPlugin)
   .settings(instrumentationSettings: _*)
   .settings(
