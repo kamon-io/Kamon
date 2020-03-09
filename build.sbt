@@ -287,7 +287,7 @@ lazy val `kamon-mongo` = (project in file("instrumentation/kamon-mongo"))
   ).dependsOn(`kamon-core`, `kamon-instrumentation-common`, `kamon-testkit` % "test")
 
 
-lazy val `kamon-annotation-api` = (project in file("kamon-annotation-api"))
+lazy val `kamon-annotation-api` = (project in file("instrumentation/kamon-annotation-api"))
   .disablePlugins(AssemblyPlugin)
   .settings(
     moduleName := "kamon-annotation-api",
@@ -298,7 +298,7 @@ lazy val `kamon-annotation-api` = (project in file("kamon-annotation-api"))
     javacOptions in (Compile, doc) := Seq("-Xdoclint:none")
   )
 
-lazy val `kamon-annotation` = (project in file("kamon-annotation"))
+lazy val `kamon-annotation` = (project in file("instrumentation/kamon-annotation"))
   .enablePlugins(JavaAgent)
   .enablePlugins(AssemblyPlugin)
   .settings(instrumentationSettings: _*)
@@ -309,7 +309,7 @@ lazy val `kamon-annotation` = (project in file("kamon-annotation"))
       ShadeRule.rename("com.sun.el.**"    -> "kamon.lib.@0").inAll,
     ),
     libraryDependencies ++=
-      compileScope("org.glassfish" % "javax.el" % "3.0.1-b11" % "shaded") ++
+      Seq("org.glassfish" % "javax.el" % "3.0.1-b11" % "shaded") ++
       providedScope(kanelaAgent) ++
       testScope(scalatest, logbackClassic)
   ).dependsOn(`kamon-core`, `kamon-annotation-api`, `kamon-testkit` % "test")
