@@ -256,7 +256,8 @@ val mariaDB4j           = "ch.vorburger.mariaDB4j"    % "mariaDB4j"             
 val postgres            = "org.postgresql"            % "postgresql"                % "42.2.5"
 val hikariCP            = "com.zaxxer"                % "HikariCP"                  % "2.6.2"
 
-lazy val `kamon-jdbc` = (project in file("."))
+lazy val `kamon-jdbc` = (project in file("instrumentation/kamon-jdbc"))
+  .disablePlugins(AssemblyPlugin)
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
