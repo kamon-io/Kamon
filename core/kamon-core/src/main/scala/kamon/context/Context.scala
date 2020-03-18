@@ -22,7 +22,6 @@ import kamon.tag.TagSet
 import kamon.trace.Span
 import kamon.util.UnifiedMap
 
-
 /**
   * An immutable set of information that is tied to the processing of single operation in a service. A Context instance
   * can contain tags and entries.
@@ -43,12 +42,11 @@ class Context private (private val _underlying: UnifiedMap[String, Any], private
     * Gets an entry from this Context. If the entry is present it's current value is returned, otherwise the empty value
     * from the provided key will be returned.
     */
-  def get[T](key: Context.Key[T]): T = {
-    if(key == Span.Key)
+  def get[T](key: Context.Key[T]): T =
+    if (key == Span.Key)
       _span.asInstanceOf[T]
     else
-    _underlying.getOrDefault(key.name, key.emptyValue).asInstanceOf[T]
-  }
+      _underlying.getOrDefault(key.name, key.emptyValue).asInstanceOf[T]
 
   /**
     * Executes a lookup on the context tags. The actual return type depends on the provided lookup instance. Take a look
@@ -62,7 +60,7 @@ class Context private (private val _underlying: UnifiedMap[String, Any], private
     * associated with another value then the previous value will be discarded and overwritten with the provided one.
     */
   def withEntry[T](key: Context.Key[T], value: T): Context = {
-    if(key == Span.Key)
+    if (key == Span.Key)
       new Context(_underlying, value.asInstanceOf[Span], tags)
     else {
       val mergedEntries = new UnifiedMap[String, Any](_underlying.size() + 1)
@@ -77,9 +75,9 @@ class Context private (private val _underlying: UnifiedMap[String, Any], private
     * Creates a new Context without the specified Context entry.
     */
   def withoutEntry[T](key: Context.Key[T]): Context = {
-    if(_underlying.containsKey(key.name)) {
+    if (_underlying.containsKey(key.name)) {
       if (key == Span.Key)
-        if(_span.isEmpty) this else new Context(_underlying, Span.Empty, tags)
+        if (_span.isEmpty) this else new Context(_underlying, Span.Empty, tags)
       else {
         val mergedEntries = new UnifiedMap[String, Any](_underlying.size())
         mergedEntries.putAll(_underlying)
@@ -134,28 +132,29 @@ class Context private (private val _underlying: UnifiedMap[String, Any], private
   /**
     * Returns a loosely typed iterator of all entries in this Context.
     */
-  def entries(): Iterator[Context.Entry] = new Iterator[Context.Entry] {
-    private val _entriesIterator = _underlying.entrySet().iterator()
-    private val _entry = Entry.Mutable(null, null)
-    private var _processedSpanEntry = _span == Span.Empty
+  def entries(): Iterator[Context.Entry] =
+    new Iterator[Context.Entry] {
+      private val _entriesIterator = _underlying.entrySet().iterator()
+      private val _entry = Entry.Mutable(null, null)
+      private var _processedSpanEntry = _span == Span.Empty
 
-    override def hasNext: Boolean =
-      !_processedSpanEntry || _entriesIterator.hasNext
+      override def hasNext: Boolean =
+        !_processedSpanEntry || _entriesIterator.hasNext
 
-    override def next(): Context.Entry = {
-      if(!_processedSpanEntry) {
-        _processedSpanEntry = true
-        _entry.key = Span.Key.name
-        _entry.value = _span
-        _entry
-      } else {
-        val pair = _entriesIterator.next()
-        _entry.key = pair.getKey
-        _entry.value = pair.getValue
-        _entry
+      override def next(): Context.Entry = {
+        if (!_processedSpanEntry) {
+          _processedSpanEntry = true
+          _entry.key = Span.Key.name
+          _entry.value = _span
+          _entry
+        } else {
+          val pair = _entriesIterator.next()
+          _entry.key = pair.getKey
+          _entry.value = pair.getValue
+          _entry
+        }
       }
     }
-  }
 
   override def toString: String = {
     val sb = new StringBuilder()
@@ -163,7 +162,7 @@ class Context private (private val _underlying: UnifiedMap[String, Any], private
       .append(_span.toString)
 
     val iterator = _underlying.entrySet().iterator()
-    while(iterator.hasNext) {
+    while (iterator.hasNext) {
       val pair = iterator.next()
       sb.append(",")
         .append(pair.getKey)
@@ -192,7 +191,7 @@ object Context {
     */
   def of(tags: TagSet): Context =
     new Context(_emptyEntries, Span.Empty, tags)
-  
+
   /**
     * Creates a new Context instance with one tag.
     */
@@ -214,30 +213,28 @@ object Context {
   /**
     * Creates a new Context instance with the provided key and no tags.
     */
-  def of[T](key: Context.Key[T], value: T): Context = {
-    if(key == Span.Key)
+  def of[T](key: Context.Key[T], value: T): Context =
+    if (key == Span.Key)
       new Context(_emptyEntries, value.asInstanceOf[Span], TagSet.Empty)
     else
       new Context(UnifiedMap.newWithKeysValues(key.name, value), Span.Empty, TagSet.Empty)
-  }
 
   /**
     * Creates a new Context instance with a single entry and the provided tags.
     */
-  def of[T](key: Context.Key[T], value: T, tags: TagSet): Context = {
-    if(key == Span.Key)
+  def of[T](key: Context.Key[T], value: T, tags: TagSet): Context =
+    if (key == Span.Key)
       new Context(_emptyEntries, value.asInstanceOf[Span], tags)
     else
       new Context(UnifiedMap.newWithKeysValues(key.name, value), Span.Empty, tags)
-  }
 
   /**
     * Creates a new Context instance with two entries and no tags.
     */
   def of[T, U](keyOne: Context.Key[T], valueOne: T, keyTwo: Context.Key[U], valueTwo: U): Context = {
-    if(keyOne == Span.Key)
+    if (keyOne == Span.Key)
       new Context(UnifiedMap.newWithKeysValues(keyTwo.name, valueTwo), valueOne.asInstanceOf[Span], TagSet.Empty)
-    else if(keyTwo == Span.Key)
+    else if (keyTwo == Span.Key)
       new Context(UnifiedMap.newWithKeysValues(keyOne.name, valueOne), valueTwo.asInstanceOf[Span], TagSet.Empty)
     else
       new Context(UnifiedMap.newWithKeysValues(keyOne.name, valueOne, keyTwo.name, valueTwo), Span.Empty, TagSet.Empty)
@@ -247,9 +244,9 @@ object Context {
     * Creates a new Context instance with two entries and the provided tags.
     */
   def of[T, U](keyOne: Context.Key[T], valueOne: T, keyTwo: Context.Key[U], valueTwo: U, tags: TagSet): Context = {
-    if(keyOne == Span.Key)
+    if (keyOne == Span.Key)
       new Context(UnifiedMap.newWithKeysValues(keyTwo.name, valueTwo), valueOne.asInstanceOf[Span], tags)
-    else if(keyTwo == Span.Key)
+    else if (keyTwo == Span.Key)
       new Context(UnifiedMap.newWithKeysValues(keyOne.name, valueOne), valueTwo.asInstanceOf[Span], tags)
     else
       new Context(UnifiedMap.newWithKeysValues(keyOne.name, valueOne, keyTwo.name, valueTwo), Span.Empty, tags)

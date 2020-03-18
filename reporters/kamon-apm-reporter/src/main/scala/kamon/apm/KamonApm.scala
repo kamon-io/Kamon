@@ -21,7 +21,6 @@ import kamon.util.{Clock, UnitConverter}
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.util.Try
 
-
 class KamonApm(configPath: String) extends CombinedReporter {
   private val _maxSnapshotAge = Duration.ofMinutes(30)
   private var _settings = readSettings(Kamon.config(), configPath)
@@ -30,13 +29,12 @@ class KamonApm(configPath: String) extends CombinedReporter {
   private val _accumulator = PeriodSnapshot.accumulator(Duration.ofSeconds(60), Duration.ofSeconds(1))
   private val _unitConverter = new UnitConverter(time.nanoseconds, information.bytes, DynamicRange.Default)
 
-  if(isAcceptableApiKey(_settings.apiKey)) {
+  if (isAcceptableApiKey(_settings.apiKey)) {
     val serviceName = Kamon.environment.service
-    _logger.info(s"Starting the Kamon APM Reporter. Your service will be displayed as [${serviceName}] at https://apm.kamon.io/")
+    _logger.info(s"Starting the Kamon APM Reporter. Your service will be displayed as [$serviceName] at https://apm.kamon.io/")
     Try(reportBoot(Kamon.clock().millis())).failed.foreach(t => _logger.error("Failed boot", t))
-  } else {
+  } else
     _logger.warn(s"The Kamon APM Reporter was started with an invalid API key [${_settings.apiKey}]")
-  }
 
   def this() =
     this("kamon.apm")
@@ -55,35 +53,41 @@ class KamonApm(configPath: String) extends CombinedReporter {
 
   override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
     val snapshotAge = java.time.Duration.between(snapshot.to, Kamon.clock().instant()).toMillis
-    if(snapshotAge >= 0 && snapshotAge < _maxSnapshotAge.toMillis)
-      if(isAcceptableApiKey(_settings.apiKey))
+    if (snapshotAge >= 0 && snapshotAge < _maxSnapshotAge.toMillis)
+      if (isAcceptableApiKey(_settings.apiKey))
         reportIngestion(snapshot)
       else
         _logger.error(s"Dropping metrics because an invalid API key has been configured [${_settings.apiKey}]")
     else
-      _logger.warn("Dropping stale metrics for period from: [{}], to: [{}]. The snapshot is [{} millis] old",
-        snapshot.from.toEpochMilli().toString(), snapshot.to.toEpochMilli().toString(), snapshotAge.toString())
+      _logger.warn(
+        "Dropping stale metrics for period from: [{}], to: [{}]. The snapshot is [{} millis] old",
+        snapshot.from.toEpochMilli().toString(),
+        snapshot.to.toEpochMilli().toString(),
+        snapshotAge.toString()
+      )
   }
 
-  override def reportSpans(spans: Seq[Span.Finished]): Unit = if(spans.nonEmpty) {
-    if(isAcceptableApiKey(_settings.apiKey)) {
-      val env = Kamon.environment
-      val apmSpans = spans map convertSpan
+  override def reportSpans(spans: Seq[Span.Finished]): Unit =
+    if (spans.nonEmpty) {
+      if (isAcceptableApiKey(_settings.apiKey)) {
+        val env = Kamon.environment
+        val apmSpans = spans map convertSpan
 
-      val batch = SpanBatch.newBuilder()
-        .setAgent("kamon-2.x")
-        .setServiceName(env.service)
-        .setHost(env.host)
-        .setInstance(env.instance)
-        .setApiKey(_settings.apiKey)
-        .addAllSpans(apmSpans.asJava)
-        .build()
+        val batch = SpanBatch
+          .newBuilder()
+          .setAgent("kamon-2.x")
+          .setServiceName(env.service)
+          .setHost(env.host)
+          .setInstance(env.instance)
+          .setApiKey(_settings.apiKey)
+          .addAllSpans(apmSpans.asJava)
+          .build()
 
-      _httpClient.foreach(_.postSpans(batch))
+        _httpClient.foreach(_.postSpans(batch))
 
-    } else
-      _logger.error(s"Dropping Spans because an invalid API key has been configured [${_settings.apiKey}]")
-  }
+      } else
+        _logger.error(s"Dropping Spans because an invalid API key has been configured [${_settings.apiKey}]")
+    }
 
   private def reportIngestion(snapshot: PeriodSnapshot): Unit = {
     _accumulator.add(snapshot).foreach { accumulatedSnapshot =>
@@ -95,11 +99,13 @@ class KamonApm(configPath: String) extends CombinedReporter {
 
       val plan = Plan.METRIC_TRACING
       val allMetrics = histograms ++ timers ++ rangeSamplers ++ gauges ++ counters
-      val interval = IngestionV1.Interval.newBuilder()
+      val interval = IngestionV1.Interval
+        .newBuilder()
         .setFrom(accumulatedSnapshot.from.toEpochMilli)
         .setTo(accumulatedSnapshot.to.toEpochMilli)
 
-      val batch = IngestionV1.MetricBatch.newBuilder()
+      val batch = IngestionV1.MetricBatch
+        .newBuilder()
         .setInterval(interval)
         .setApiKey(_settings.apiKey)
         .setAgent("kamon-2.x")
@@ -115,7 +121,8 @@ class KamonApm(configPath: String) extends CombinedReporter {
   }
 
   private def reportBoot(initializationTimestamp: Long): Unit = {
-    val hello = IngestionV1.Hello.newBuilder()
+    val hello = IngestionV1.Hello
+      .newBuilder()
       .setNode(nodeIdentity)
       .setTime(initializationTimestamp)
       .setIncarnation(Kamon.environment.incarnation)
@@ -126,7 +133,8 @@ class KamonApm(configPath: String) extends CombinedReporter {
   }
 
   private def reportShutdown(shutdownTimestamp: Long): Unit = {
-    val goodBye = IngestionV1.Goodbye.newBuilder()
+    val goodBye = IngestionV1.Goodbye
+      .newBuilder()
       .setNode(nodeIdentity)
       .setTime(shutdownTimestamp)
       .build()
@@ -137,7 +145,8 @@ class KamonApm(configPath: String) extends CombinedReporter {
   private def nodeIdentity(): IngestionV1.NodeIdentity = {
     val env = Kamon.environment
 
-    IngestionV1.NodeIdentity.newBuilder()
+    IngestionV1.NodeIdentity
+      .newBuilder()
       .setService(env.service)
       .setInstance(env.instance)
       .setHost(env.host)
@@ -152,7 +161,8 @@ class KamonApm(configPath: String) extends CombinedReporter {
         ZigZag.putLong(_valueBuffer, _unitConverter.convertValue(value, metric.settings.unit).toLong)
         _valueBuffer.flip()
 
-        IngestionV1.Metric.newBuilder()
+        IngestionV1.Metric
+          .newBuilder()
           .setName(metric.name)
           .putAllTags(stringifyTags(tags))
           .setInstrumentType(metricType)
@@ -168,11 +178,12 @@ class KamonApm(configPath: String) extends CombinedReporter {
         val convertedValue = _unitConverter.convertValue(value, metric.settings.unit).toLong
         val offset = countsArrayIndex(convertedValue)
 
-        if(offset > 0) ZigZag.putLong(_valueBuffer, -offset)
+        if (offset > 0) ZigZag.putLong(_valueBuffer, -offset)
         ZigZag.putLong(_valueBuffer, 1)
         _valueBuffer.flip()
 
-        IngestionV1.Metric.newBuilder()
+        IngestionV1.Metric
+          .newBuilder()
           .setName(metric.name)
           .putAllTags(stringifyTags(tags))
           .setInstrumentType(metricType)
@@ -186,7 +197,8 @@ class KamonApm(configPath: String) extends CombinedReporter {
         val convertedDistribution = _unitConverter.convertDistribution(distribution, metric.settings.unit)
         val counts = convertedDistribution.asInstanceOf[ZigZagCounts].countsArray()
 
-        IngestionV1.Metric.newBuilder()
+        IngestionV1.Metric
+          .newBuilder()
           .setName(metric.name)
           .putAllTags(stringifyTags(tags))
           .setInstrumentType(metricType)
@@ -214,7 +226,8 @@ class KamonApm(configPath: String) extends CombinedReporter {
 
     val tags = stringifyTags(span.tags)
     val metricTags = stringifyTags(span.metricTags)
-    IngestionV1.Span.newBuilder()
+    IngestionV1.Span
+      .newBuilder()
       .setId(span.id.string)
       .setTraceId(span.trace.id.string)
       .setParentId(span.parentId.string)
@@ -234,29 +247,28 @@ class KamonApm(configPath: String) extends CombinedReporter {
 
   private def stringifyTags(tags: TagSet): java.util.Map[String, String] = {
     val javaMap = new java.util.HashMap[String, String]()
-    tags.iterator(_.toString).foreach(pair => {
-      javaMap.put(pair.key, pair.value)
-    })
+    tags.iterator(_.toString).foreach(pair => javaMap.put(pair.key, pair.value))
 
     javaMap
   }
 
-  private def convertSpanKind(kind: Span.Kind): SpanKind = kind match {
-    case Span.Kind.Server   => SpanKind.SERVER
-    case Span.Kind.Client   => SpanKind.CLIENT
-    case Span.Kind.Producer => SpanKind.PRODUCER
-    case Span.Kind.Consumer => SpanKind.CONSUMER
-    case Span.Kind.Internal => SpanKind.INTERNAL
-    case Span.Kind.Unknown  => SpanKind.UNKNOWN
-  }
+  private def convertSpanKind(kind: Span.Kind): SpanKind =
+    kind match {
+      case Span.Kind.Server   => SpanKind.SERVER
+      case Span.Kind.Client   => SpanKind.CLIENT
+      case Span.Kind.Producer => SpanKind.PRODUCER
+      case Span.Kind.Consumer => SpanKind.CONSUMER
+      case Span.Kind.Internal => SpanKind.INTERNAL
+      case Span.Kind.Unknown  => SpanKind.UNKNOWN
+    }
 
-  private def convertSpanPosition(position: Span.Position): SpanPosition = position match {
-    case Span.Position.Root       => SpanPosition.ROOT
-    case Span.Position.LocalRoot  => SpanPosition.LOCAL_ROOT
-    case Span.Position.Unknown    => SpanPosition.POSITION_UNKNOWN
-  }
+  private def convertSpanPosition(position: Span.Position): SpanPosition =
+    position match {
+      case Span.Position.Root      => SpanPosition.ROOT
+      case Span.Position.LocalRoot => SpanPosition.LOCAL_ROOT
+      case Span.Position.Unknown   => SpanPosition.POSITION_UNKNOWN
+    }
 }
-
 
 object KamonApm {
 
@@ -265,4 +277,3 @@ object KamonApm {
       new KamonApm()
   }
 }
-

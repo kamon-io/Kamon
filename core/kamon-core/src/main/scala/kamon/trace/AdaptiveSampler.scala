@@ -45,7 +45,6 @@ class AdaptiveSampler extends Sampler {
   private val _affirmativeDecisionCounter = Sampler.Metrics.samplingDecisions("adaptive", SamplingDecision.Sample)
   private val _negativeDecisionCounter = Sampler.Metrics.samplingDecisions("adaptive", SamplingDecision.DoNotSample)
 
-
   override def decide(operation: Sampler.Operation): SamplingDecision = {
     val operationName = operation.operationName()
     val operationSampler = _samplers.get(operationName).getOrElse {
@@ -57,7 +56,7 @@ class AdaptiveSampler extends Sampler {
     }
 
     val decision = operationSampler.decide()
-    if(decision == SamplingDecision.Sample)
+    if (decision == SamplingDecision.Sample)
       _affirmativeDecisionCounter.increment()
     else
       _negativeDecisionCounter.increment()
@@ -65,134 +64,136 @@ class AdaptiveSampler extends Sampler {
     decision
   }
 
-  private def buildOperationSampler(operationName: String): AdaptiveSampler.OperationSampler = synchronized {
-    _settings.groups
-      .find(g => g.operations.contains(operationName))
-      .map(group => {
-        group.rules.sample
-          .map(fixedSamplingDecision => new OperationSampler.Constant(operationName, fixedSamplingDecision))
-          .getOrElse(new OperationSampler.Random(operationName, group.rules))
-      }).getOrElse(new OperationSampler.Random(operationName, Settings.Rules(None, None, None)))
-  }
+  private def buildOperationSampler(operationName: String): AdaptiveSampler.OperationSampler =
+    synchronized {
+      _settings.groups
+        .find(g => g.operations.contains(operationName))
+        .map { group =>
+          group.rules.sample
+            .map(fixedSamplingDecision => new OperationSampler.Constant(operationName, fixedSamplingDecision))
+            .getOrElse(new OperationSampler.Random(operationName, group.rules))
+        }
+        .getOrElse(new OperationSampler.Random(operationName, Settings.Rules(None, None, None)))
+    }
 
   /**
     * Makes the sampler update its internal state and reassign probabilities to all known operations. Rebalancing only
     * happens when new operations appear and does not take the actual operation throughput into account to assign the
     * base throughput to each operation.
     */
-  def rebalance(): Unit = synchronized {
+  def rebalance(): Unit =
+    synchronized {
 
-    // Step 1: Exclude all operations that have a fixed sampling decision. The global throughput goal is then split
-    //         across all dynamically sampled operations, taking into account minimum/maximum throughput rules.
-    //
-    val dynamicallySampledOperations = randomOperationSamplers()
-    val throughputGoal = _settings.throughput
-    val basePerOperationThroughput = throughputGoal / dynamicallySampledOperations.size.toDouble
+      // Step 1: Exclude all operations that have a fixed sampling decision. The global throughput goal is then split
+      //         across all dynamically sampled operations, taking into account minimum/maximum throughput rules.
+      //
+      val dynamicallySampledOperations = randomOperationSamplers()
+      val throughputGoal = _settings.throughput
+      val basePerOperationThroughput = throughputGoal / dynamicallySampledOperations.size.toDouble
 
-    var allocationDelta = 0D
-    var allocationsWithCustomThroughput = 0L
-    val allocations = dynamicallySampledOperations.map { operationSampler => {
-      import operationSampler.rules
+      var allocationDelta = 0d
+      var allocationsWithCustomThroughput = 0L
+      val allocations = dynamicallySampledOperations.map { operationSampler =>
+        import operationSampler.rules
 
-      // On the first round we only assign throughput values to operations that require modifications to their default
-      // allocation in order to meet their rules.
-      var hasCustomThroughput = false
-      var operationThroughput = basePerOperationThroughput
-      val minimumCap = rules.minimumThroughput.getOrElse(0D)
-      val maximumCap = rules.maximumThroughput.getOrElse(throughputGoal)
+        // On the first round we only assign throughput values to operations that require modifications to their default
+        // allocation in order to meet their rules.
+        var hasCustomThroughput = false
+        var operationThroughput = basePerOperationThroughput
+        val minimumCap = rules.minimumThroughput.getOrElse(0d)
+        val maximumCap = rules.maximumThroughput.getOrElse(throughputGoal)
 
-      if(operationThroughput < minimumCap) {
-        operationThroughput = minimumCap
-        hasCustomThroughput = true
+        if (operationThroughput < minimumCap) {
+          operationThroughput = minimumCap
+          hasCustomThroughput = true
+        }
+
+        if (operationThroughput > maximumCap) {
+          operationThroughput = maximumCap
+          hasCustomThroughput = true
+        }
+
+        if (hasCustomThroughput) {
+          allocationDelta += basePerOperationThroughput - operationThroughput
+          allocationsWithCustomThroughput += 1
+        }
+
+        Allocation(operationThroughput, hasCustomThroughput, operationSampler)
       }
 
-      if(operationThroughput > maximumCap) {
-        operationThroughput = maximumCap
-        hasCustomThroughput = true
-      }
+      // Step 2: Adjust the per-operation throughput allocation for all operations that do not have any custom throughput
+      //         based on configured rules. This section compensates for any deficit or surplus that might arise from
+      //         trying to satisfy the configured rules and distributes that difference across all operations that can be
+      //         dynamically adjusted without affecting compliance with their rules.
+      //
+      val correctedAllocations =
+        if (allocationsWithCustomThroughput == 0) allocations
+        else {
+          val perOperationDelta = allocationDelta / (allocations.size - allocationsWithCustomThroughput).toDouble
+          allocations.map(a => if (a.hasFixedThroughput) a else a.copy(throughput = a.throughput + perOperationDelta))
+        }
 
-      if(hasCustomThroughput) {
-        allocationDelta += basePerOperationThroughput - operationThroughput
-        allocationsWithCustomThroughput += 1
-      }
+      // Step 3: Apply the base throughput allocations to all operations samplers.
+      //
+      correctedAllocations.foreach(a => a.operationSampler.updateThroughput(a.throughput))
 
-      Allocation(operationThroughput, hasCustomThroughput, operationSampler)
-    }}
-
-
-    // Step 2: Adjust the per-operation throughput allocation for all operations that do not have any custom throughput
-    //         based on configured rules. This section compensates for any deficit or surplus that might arise from
-    //         trying to satisfy the configured rules and distributes that difference across all operations that can be
-    //         dynamically adjusted without affecting compliance with their rules.
-    //
-    val correctedAllocations =
-      if(allocationsWithCustomThroughput == 0) allocations else {
-        val perOperationDelta = allocationDelta / (allocations.size - allocationsWithCustomThroughput).toDouble
-        allocations.map(a => if (a.hasFixedThroughput) a else a.copy(throughput = a.throughput + perOperationDelta))
-      }
-
-
-    // Step 3: Apply the base throughput allocations to all operations samplers.
-    //
-    correctedAllocations.foreach(a => a.operationSampler.updateThroughput(a.throughput))
-
-  }
+    }
 
   /**
     * Uses the throughput information from all operations to update their sampling probability and optionally boost
     * operations if there is any throughput leftover.
     */
-  def adapt(): Unit = synchronized {
-    val randomSamplers = randomOperationSamplers()
-    val operationCount = randomSamplers.size
-    val randomSamplersWithStats = randomSamplers
-      .map(s => (s, s.throughputAverage()))
-      .sortBy { case (sampler, throughputAverage) => Math.min(sampler.throughputCap(), throughputAverage) }
+  def adapt(): Unit =
+    synchronized {
+      val randomSamplers = randomOperationSamplers()
+      val operationCount = randomSamplers.size
+      val randomSamplersWithStats = randomSamplers
+        .map(s => (s, s.throughputAverage()))
+        .sortBy { case (sampler, throughputAverage) => Math.min(sampler.throughputCap(), throughputAverage) }
 
+      // Step 1: Go through all operations and try to find chunks of unused throughput that will be later distributed
+      //         across operations that could make us of that throughput, if any.
+      //
+      var totalUnusedThroughput = 0d
+      randomSamplersWithStats.foreach(p => totalUnusedThroughput += calculateUnusedThroughput(p))
 
-    // Step 1: Go through all operations and try to find chunks of unused throughput that will be later distributed
-    //         across operations that could make us of that throughput, if any.
-    //
-    var totalUnusedThroughput = 0D
-    randomSamplersWithStats.foreach { p => totalUnusedThroughput += calculateUnusedThroughput(p) }
+      // Step 2: Figure out which operations can make use of additional throughput and boost them accordingly. Since the
+      //         samplers are ordered by throughput any unused shares will be accumulated, giving bigger shares to the
+      //         operations with more throughput.
+      //
+      var boostedOperationCount = 0
+      randomSamplersWithStats.foreach {
+        case (sampler, throughputAverage) =>
+          val canBoost =
+            sampler.probability() > 0d && // Skips boosting on the first round of each sampler
+              totalUnusedThroughput > 0d // Only boost if there is actually some leftover to boost
 
+          val boost = if (canBoost) {
+            val boostShare = totalUnusedThroughput / (operationCount - boostedOperationCount).toDouble
+            val proposedThroughput = sampler.throughput() + boostShare
 
-    // Step 2: Figure out which operations can make use of additional throughput and boost them accordingly. Since the
-    //         samplers are ordered by throughput any unused shares will be accumulated, giving bigger shares to the
-    //         operations with more throughput.
-    //
-    var boostedOperationCount = 0
-    randomSamplersWithStats.foreach { case (sampler, throughputAverage) => {
-      val canBoost =
-        sampler.probability() > 0D &&   // Skips boosting on the first round of each sampler
-        totalUnusedThroughput > 0D      // Only boost if there is actually some leftover to boost
+            // Figure out how much we can boost this operation without breaking the expected maximum throughput, and taking
+            // into account that even though an operation could reach higher throughput from the limits perspective, its
+            // historical throughput is what really tells us what throughput we can expect.
+            val maximumAllowedThroughput = Math.min(proposedThroughput, sampler.throughputCap())
+            val maximumPossibleThroughput = Math.min(maximumAllowedThroughput, throughputAverage)
+            val usableBoost = maximumPossibleThroughput - sampler.throughput()
+            boostedOperationCount += 1
 
-      val boost = if(canBoost) {
-        val boostShare = totalUnusedThroughput / (operationCount - boostedOperationCount).toDouble
-        val proposedThroughput = sampler.throughput() + boostShare
+            if (usableBoost >= boostShare) {
+              totalUnusedThroughput -= boostShare
+              boostShare
+            } else if (usableBoost > 0d) {
+              totalUnusedThroughput -= usableBoost
+              boostShare
+            } else 0d
 
-        // Figure out how much we can boost this operation without breaking the expected maximum throughput, and taking
-        // into account that even though an operation could reach higher throughput from the limits perspective, its
-        // historical throughput is what really tells us what throughput we can expect.
-        val maximumAllowedThroughput = Math.min(proposedThroughput, sampler.throughputCap())
-        val maximumPossibleThroughput = Math.min(maximumAllowedThroughput, throughputAverage)
-        val usableBoost = maximumPossibleThroughput - sampler.throughput()
-        boostedOperationCount += 1
+          } else 0d
 
-        if(usableBoost >= boostShare) {
-          totalUnusedThroughput -= boostShare
-          boostShare
-        } else if(usableBoost > 0D) {
-          totalUnusedThroughput -= usableBoost
-          boostShare
-        } else 0D
-
-      } else 0D
-
-      val probability = (sampler.throughput() + boost) / throughputAverage
-      sampler.updateProbability(probability)
-    }}
-  }
+          val probability = (sampler.throughput() + boost) / throughputAverage
+          sampler.updateProbability(probability)
+      }
+    }
 
   def reconfigure(newConfig: Config): Unit = {
     _settings = AdaptiveSampler.Settings.from(newConfig)
@@ -205,7 +206,7 @@ class AdaptiveSampler extends Sampler {
   private def calculateUnusedThroughput(pair: (OperationSampler.Random, Double)): Double = {
     val (sampler, throughputAverage) = pair
     val throughputDelta = sampler.throughput() - throughputAverage
-    if (throughputDelta > 0D) throughputDelta else 0D
+    if (throughputDelta > 0d) throughputDelta else 0d
   }
 
 }
@@ -228,7 +229,7 @@ object AdaptiveSampler {
     * Settings for an adaptive sampler instance. Take a look at the "kamon.trace.adaptive-sampler" section on the
     * configuration file for more details.
     */
-  case class Settings (
+  case class Settings(
     throughput: Double,
     groups: Seq[Settings.Group]
   )
@@ -242,7 +243,7 @@ object AdaptiveSampler {
       * @param operations Names of all operations that will be part of the group.
       * @param rules Rules to should be applied to all operations in this group.
       */
-    case class Group (
+    case class Group(
       name: String,
       operations: Seq[String],
       rules: Rules
@@ -255,7 +256,7 @@ object AdaptiveSampler {
       * @param minimumThroughput Minimum throughput that the sampler will try to guarantee for a matched operation.
       * @param maximumThroughput Maximum throughput that the sampler will try to guarantee for a matched operation.
       */
-    case class Rules (
+    case class Rules(
       sample: Option[SamplingDecision],
       minimumThroughput: Option[Double],
       maximumThroughput: Option[Double]
@@ -299,7 +300,7 @@ object AdaptiveSampler {
   }
 
   /** Encapsulates throughput allocation information for the rebalancing phase of the adaptive sampler */
-  private case class Allocation (
+  private case class Allocation(
     throughput: Double,
     hasFixedThroughput: Boolean,
     operationSampler: OperationSampler.Random
@@ -329,8 +330,8 @@ object AdaptiveSampler {
     class Random(operationName: String, val rules: Settings.Rules) extends OperationSampler {
       @volatile private var _lowerBoundary = 0L
       @volatile private var _upperBoundary = 0L
-      @volatile private var _throughput = 0D
-      @volatile private var _probability = 0D
+      @volatile private var _throughput = 0d
+      @volatile private var _probability = 0d
 
       private val _decisions = new LongAdder()
       private val _throughputAverage = EWMA.create()
@@ -350,10 +351,11 @@ object AdaptiveSampler {
           SamplingDecision.DoNotSample
       }
 
-      def throughputAverage(): Double = synchronized {
-        _throughputAverage.add(decisionHistory())
-        _throughputAverage.average()
-      }
+      def throughputAverage(): Double =
+        synchronized {
+          _throughputAverage.add(decisionHistory())
+          _throughputAverage.average()
+        }
 
       /**
         * Calculates how many decisions have been made during the last 60 intervals. If less than 60 intervals have
@@ -362,11 +364,11 @@ object AdaptiveSampler {
         */
       private def decisionHistory(): Long = {
         val decisions = _decisions.sumAndReset()
-        _decisionsPerTickPos = if(_decisionsPerTickPos == (_decisionsHistorySize - 1)) 0 else _decisionsPerTickPos + 1
+        _decisionsPerTickPos = if (_decisionsPerTickPos == (_decisionsHistorySize - 1)) 0 else _decisionsPerTickPos + 1
         _decisionsPerTick.update(_decisionsPerTickPos, decisions)
         _tickCount += 1
 
-        if(_tickCount < _decisionsHistorySize) {
+        if (_tickCount < _decisionsHistorySize) {
           val currentSum = _decisionsPerTick.sum
           val currentAverage = Math.floorDiv(currentSum, _tickCount)
           currentSum + (currentAverage * _decisionsHistorySize - _tickCount)
@@ -374,7 +376,7 @@ object AdaptiveSampler {
         } else _decisionsPerTick.sum
       }
 
-      def throughput(): Double  =
+      def throughput(): Double =
         _throughput
 
       def throughputCap(): Double =
@@ -386,12 +388,13 @@ object AdaptiveSampler {
       def updateThroughput(throughput: Double): Unit =
         _throughput = throughput
 
-      def updateProbability(probability: Double): Unit = synchronized {
-        val actualProbability = if(probability > 1D) 1D else if (probability < 0D) 0D else probability
-        _probability = actualProbability
-        _upperBoundary = (Long.MaxValue * actualProbability).toLong
-        _lowerBoundary = -_upperBoundary
-      }
+      def updateProbability(probability: Double): Unit =
+        synchronized {
+          val actualProbability = if (probability > 1d) 1d else if (probability < 0d) 0d else probability
+          _probability = actualProbability
+          _upperBoundary = (Long.MaxValue * actualProbability).toLong
+          _lowerBoundary = -_upperBoundary
+        }
 
       override def toString: String =
         s"Constant{operation=$operationName, probability=${_probability}"

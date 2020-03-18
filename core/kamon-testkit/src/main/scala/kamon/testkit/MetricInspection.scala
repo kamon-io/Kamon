@@ -23,7 +23,6 @@ import kamon.tag.Lookups._
 
 import scala.collection.concurrent.TrieMap
 
-
 /**
   * Utility functions to extract tags and instrument information from metrics. These utilities are only meant to be used
   * for testing purposes.
@@ -33,12 +32,11 @@ object MetricInspection {
   /**
     * Returns all values for a given tag across all instruments of the inspected metric.
     */
-  def tagValues[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings](metric: Metric[Inst, Sett], key: String): Seq[String] = {
+  def tagValues[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings](metric: Metric[Inst, Sett], key: String): Seq[String] =
     instrumentsMap(metric).keys
       .map(t => t.get(coerce(key, "")))
       .filter(_.nonEmpty)
       .toSeq
-  }
 
   private def extractInstrumentFromEntry[Inst](e: Any): Inst =
     Reflection.getFieldFromClass[Inst](e, "kamon.metric.Metric$BaseMetric$InstrumentEntry", "instrument")
@@ -46,11 +44,10 @@ object MetricInspection {
   /**
     * Returns all instruments currently registered for the inspected metric.
     */
-  def instruments[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings](metric: Metric[Inst, Sett]): Map[TagSet, Inst] = {
+  def instruments[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings](metric: Metric[Inst, Sett]): Map[TagSet, Inst] =
     instrumentsMap(metric)
       .mapValues(extractInstrumentFromEntry[Inst])
       .toMap
-  }
 
   /**
     * Returns all instruments that contain at least the provided tags for the inspected metric.
@@ -67,14 +64,13 @@ object MetricInspection {
       .toMap
   }
 
-
-  private def instrumentsMap[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings](metric: Metric[Inst, Sett]): TrieMap[TagSet, Any] = {
-    Reflection.getFieldFromClass[TrieMap[TagSet, Any]](metric, "kamon.metric.Metric$BaseMetric", "_instruments")
-      .filter { case (_, entry) =>
-        !Reflection.getFieldFromClass[Boolean](entry, "kamon.metric.Metric$BaseMetric$InstrumentEntry", "removeOnNextSnapshot")
+  private def instrumentsMap[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings](metric: Metric[Inst, Sett]): TrieMap[TagSet, Any] =
+    Reflection
+      .getFieldFromClass[TrieMap[TagSet, Any]](metric, "kamon.metric.Metric$BaseMetric", "_instruments")
+      .filter {
+        case (_, entry) =>
+          !Reflection.getFieldFromClass[Boolean](entry, "kamon.metric.Metric$BaseMetric$InstrumentEntry", "removeOnNextSnapshot")
       }
-  }
-
 
   /**
     * Exposes an implicitly available syntax for inspecting tags and instruments from a metric.
@@ -88,17 +84,17 @@ object MetricInspection {
     }
 
     implicit def metricInspectionSyntax[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings](metric: Metric[Inst, Sett]) =
-        new RichMetric[Inst, Sett] {
+      new RichMetric[Inst, Sett] {
 
-      def tagValues(key: String): Seq[String] =
-        MetricInspection.tagValues(metric, key)
+        def tagValues(key: String): Seq[String] =
+          MetricInspection.tagValues(metric, key)
 
-      def instruments(): Map[TagSet, Inst] =
-        MetricInspection.instruments(metric)
+        def instruments(): Map[TagSet, Inst] =
+          MetricInspection.instruments(metric)
 
-      def instruments(tags: TagSet): Map[TagSet, Inst] =
-        MetricInspection.instruments(metric, tags)
-    }
+        def instruments(tags: TagSet): Map[TagSet, Inst] =
+          MetricInspection.instruments(metric, tags)
+      }
   }
 
   object Syntax extends Syntax

@@ -30,7 +30,6 @@ import scala.reflect.ClassTag
 import scala.util.control.NonFatal
 import scala.util.Try
 
-
 /**
   * Context propagation that uses byte stream abstractions as the transport medium. The Binary propagation uses
   * instances of ByteStreamReader and ByteStreamWriter to decode and encode Context instances, respectively.
@@ -46,6 +45,7 @@ object BinaryPropagation {
     * that wouldn't have a clearly defined behavior in the context of Context propagation.
     */
   trait ByteStreamReader {
+
     /**
       * Number of available bytes on the ByteStream.
       */
@@ -69,21 +69,20 @@ object BinaryPropagation {
     def readAll(): Array[Byte]
   }
 
-
   object ByteStreamReader {
 
     /**
       * Creates a new ByteStreamReader that reads data from a byte array.
       */
-    def of(bytes: Array[Byte]): ByteStreamReader = new ByteArrayInputStream(bytes) with ByteStreamReader {
-      override def readAll(): Array[Byte] = {
-        val target = Array.ofDim[Byte](available())
-        read(target, 0, available())
-        target
+    def of(bytes: Array[Byte]): ByteStreamReader =
+      new ByteArrayInputStream(bytes) with ByteStreamReader {
+        override def readAll(): Array[Byte] = {
+          val target = Array.ofDim[Byte](available())
+          read(target, 0, available())
+          target
+        }
       }
-    }
   }
-
 
   /**
     * Represents a writable stream of bytes. This interface closely resembles OutputStream, minus the functionality
@@ -113,26 +112,24 @@ object BinaryPropagation {
     /**
       * Creates a new [[ByteStreamWriter]] from an OutputStream.
       */
-    def of(outputStream: OutputStream): ByteStreamWriter = new ByteStreamWriter {
-      override def write(bytes: Array[Byte]): Unit =
-        outputStream.write(bytes)
+    def of(outputStream: OutputStream): ByteStreamWriter =
+      new ByteStreamWriter {
+        override def write(bytes: Array[Byte]): Unit =
+          outputStream.write(bytes)
 
-      override def write(bytes: Array[Byte], offset: Int, count: Int): Unit =
-        outputStream.write(bytes, offset, count)
+        override def write(bytes: Array[Byte], offset: Int, count: Int): Unit =
+          outputStream.write(bytes, offset, count)
 
-      override def write(byte: Int): Unit =
-        outputStream.write(byte)
-    }
+        override def write(byte: Int): Unit =
+          outputStream.write(byte)
+      }
   }
-
-
 
   /**
     * Create a new Binary Propagation instance from the provided configuration.
     */
-  def from(config: Config): Propagation[ByteStreamReader, ByteStreamWriter] = {
+  def from(config: Config): Propagation[ByteStreamReader, ByteStreamWriter] =
     new BinaryPropagation.Default(Settings.from(config))
-  }
 
   /**
     * Default Binary propagation in Kamon. This implementation uses Colfer to read and write the context tags and
@@ -150,7 +147,7 @@ object BinaryPropagation {
     }
 
     override def read(reader: ByteStreamReader): Context = {
-      if(reader.available() > 0) {
+      if (reader.available() > 0) {
         val contextData = Try {
           val cContext = new ColferContext()
           cContext.unmarshal(reader.readAll(), 0)
@@ -162,10 +159,9 @@ object BinaryPropagation {
         }
 
         contextData.map { colferContext =>
-
           // Context tags
           val tagsBuilder = Map.newBuilder[String, Any]
-          if(colferContext.tags != null) {
+          if (colferContext.tags != null) {
             colferContext.tags.strings.foreach(t => tagsBuilder += (t.key -> t.value))
             colferContext.tags.longs.foreach(t => tagsBuilder += (t.key -> t.value))
             colferContext.tags.booleans.foreach(t => tagsBuilder += (t.key -> t.value))
@@ -175,18 +171,20 @@ object BinaryPropagation {
           // Only reads the entries for which there is a registered reader
           colferContext.entries.foldLeft(Context.of(tags)) {
             case (context, entryData) =>
-              settings.incomingEntries.get(entryData.key).map { entryReader =>
-                var contextWithEntry = context
-                try {
-                  contextWithEntry = entryReader.read(ByteStreamReader.of(entryData.value), context)
-                } catch {
-                  case NonFatal(t) => _logger.warn("Failed to read entry [{}]", entryData.key.asInstanceOf[Any], t)
-                }
+              settings.incomingEntries
+                .get(entryData.key)
+                .map { entryReader =>
+                  var contextWithEntry = context
+                  try contextWithEntry = entryReader.read(ByteStreamReader.of(entryData.value), context)
+                  catch {
+                    case NonFatal(t) => _logger.warn("Failed to read entry [{}]", entryData.key.asInstanceOf[Any], t)
+                  }
 
-                contextWithEntry
-              }.getOrElse(context)
+                  contextWithEntry
+                }
+                .getOrElse(context)
           }
-        } getOrElse(Context.Empty)
+        } getOrElse (Context.Empty)
       } else Context.Empty
     }
 
@@ -196,11 +194,11 @@ object BinaryPropagation {
         val output = _streamPool.get()
         val contextOutgoingBuffer = _contextBufferPool.get()
 
-        if(context.tags.nonEmpty() || settings.includeUpstreamName) {
+        if (context.tags.nonEmpty() || settings.includeUpstreamName) {
           val tagsData = new ColferTags()
           val strings = Array.newBuilder[ColferStringTag]
 
-          if(context.tags.nonEmpty()) {
+          if (context.tags.nonEmpty()) {
             val longs = Array.newBuilder[ColferLongTag]
             val booleans = Array.newBuilder[ColferBooleanTag]
 
@@ -228,7 +226,7 @@ object BinaryPropagation {
             tagsData.setBooleans(booleans.result())
           }
 
-          if(settings.includeUpstreamName) {
+          if (settings.includeUpstreamName) {
             val st = new ColferStringTag()
             st.setKey(TagKeys.UpstreamName)
             st.setValue(Kamon.environment.service)
@@ -238,7 +236,6 @@ object BinaryPropagation {
           tagsData.setStrings(strings.result())
           contextData.setTags(tagsData)
         }
-
 
         val entriesBuilder = Array.newBuilder[ColferEntry]
         context.entries().foreach { entry =>
@@ -287,16 +284,16 @@ object BinaryPropagation {
     private val log = LoggerFactory.getLogger(classOf[BinaryPropagation.Settings])
 
     def from(config: Config): BinaryPropagation.Settings = {
-      def buildInstances[ExpectedType : ClassTag](mappings: Map[String, String]): Map[String, ExpectedType] = {
+      def buildInstances[ExpectedType: ClassTag](mappings: Map[String, String]): Map[String, ExpectedType] = {
         val instanceMap = Map.newBuilder[String, ExpectedType]
 
         mappings.foreach {
           case (contextKey, componentClass) =>
-            try {
-              instanceMap += (contextKey -> ClassLoading.createInstance[ExpectedType](componentClass, Nil))
-            } catch { case exception: Exception => log.warn("Failed to instantiate {} [{}] due to []",
-              implicitly[ClassTag[ExpectedType]].runtimeClass.getName, componentClass, exception)
-          }
+            try instanceMap += (contextKey -> ClassLoading.createInstance[ExpectedType](componentClass, Nil))
+            catch {
+              case exception: Exception =>
+                log.warn("Failed to instantiate {} [{}] due to []", implicitly[ClassTag[ExpectedType]].runtimeClass.getName, componentClass, exception)
+            }
         }
 
         instanceMap.result()

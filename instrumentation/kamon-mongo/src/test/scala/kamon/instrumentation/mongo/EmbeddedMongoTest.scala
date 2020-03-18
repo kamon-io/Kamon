@@ -14,23 +14,22 @@ abstract class EmbeddedMongoTest(port: Int) extends WordSpec with BeforeAndAfter
   private var mongodExecutable: MongodExecutable = _
   private var mongodProcess: MongodProcess = _
 
-  protected def reactiveClient(): ReactiveMongoClient = {
+  protected def reactiveClient(): ReactiveMongoClient =
     ???
-  }
 
-  protected def syncClient(): SyncMongoClient = {
-    SyncMongoClients.create(s"mongodb://localhost:${port}")
-  }
+  protected def syncClient(): SyncMongoClient =
+    SyncMongoClients.create(s"mongodb://localhost:$port")
 
-  protected def scalaClient(): ScalaMongoClient = {
-    ScalaMongoClient(s"mongodb://localhost:${port}")
-  }
+  protected def scalaClient(): ScalaMongoClient =
+    ScalaMongoClient(s"mongodb://localhost:$port")
 
   override protected def beforeAll(): Unit = {
-    mongodExecutable = starter.prepare(new MongodConfigBuilder()
-      .version(Version.Main.V4_0)
-      .net(new Net(port, false))
-      .build())
+    mongodExecutable = starter.prepare(
+      new MongodConfigBuilder()
+        .version(Version.Main.V4_0)
+        .net(new Net(port, false))
+        .build()
+    )
 
     mongodProcess = mongodExecutable.start()
   }
@@ -39,6 +38,5 @@ abstract class EmbeddedMongoTest(port: Int) extends WordSpec with BeforeAndAfter
     mongodProcess.stop()
     mongodExecutable.stop()
   }
-
 
 }

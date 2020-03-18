@@ -13,8 +13,7 @@ import scala.concurrent.ExecutionContext.global
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-class CatsIoInstrumentationSpec extends WordSpec with ScalaFutures with Matchers with PatienceConfiguration
-    with OptionValues with Eventually {
+class CatsIoInstrumentationSpec extends WordSpec with ScalaFutures with Matchers with PatienceConfiguration with OptionValues with Eventually {
 
   // NOTE: We have this test just to ensure that the Context propagation is working, but starting with Kamon 2.0 there
   //       is no need to have explicit Runnable/Callable instrumentation because the instrumentation brought by the
@@ -30,8 +29,8 @@ class CatsIoInstrumentationSpec extends WordSpec with ScalaFutures with Matchers
         val contextTagAfterTransformations =
           for {
             scope <- IO {
-              Kamon.storeContext(context)
-            }
+                       Kamon.storeContext(context)
+                     }
             len <- IO("Hello Kamon!").map(_.length)
             _ <- IO(len.toString)
             _ <- IO.shift(global)
@@ -44,7 +43,6 @@ class CatsIoInstrumentationSpec extends WordSpec with ScalaFutures with Matchers
           }
 
         val contextTagFuture = contextTagAfterTransformations.unsafeToFuture()
-
 
         eventually(timeout(10 seconds)) {
           contextTagFuture.value.get.get shouldBe "value"

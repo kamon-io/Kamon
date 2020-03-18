@@ -27,7 +27,6 @@ import kamon.trace.Trace.SamplingDecision
 
 import scala.util.Try
 
-
 /**
   * Propagation mechanisms for Kamon's Span data to and from HTTP and Binary mediums.
   */
@@ -49,16 +48,19 @@ object SpanPropagation {
 
     override def read(reader: HttpPropagation.HeaderReader, context: Context): Context = {
       val identifierScheme = Kamon.identifierScheme
-      val traceID = reader.read(Headers.TraceIdentifier)
+      val traceID = reader
+        .read(Headers.TraceIdentifier)
         .map(id => identifierScheme.traceIdFactory.from(urlDecode(id)))
         .getOrElse(Identifier.Empty)
 
-      val spanID = reader.read(Headers.SpanIdentifier)
+      val spanID = reader
+        .read(Headers.SpanIdentifier)
         .map(id => identifierScheme.spanIdFactory.from(urlDecode(id)))
         .getOrElse(Identifier.Empty)
 
-      if(traceID != Identifier.Empty && spanID != Identifier.Empty) {
-        val parentID = reader.read(Headers.ParentSpanIdentifier)
+      if (traceID != Identifier.Empty && spanID != Identifier.Empty) {
+        val parentID = reader
+          .read(Headers.ParentSpanIdentifier)
           .map(id => identifierScheme.spanIdFactory.from(urlDecode(id)))
           .getOrElse(Identifier.Empty)
 
@@ -67,7 +69,7 @@ object SpanPropagation {
         val samplingDecision = flags.orElse(reader.read(Headers.Sampled)) match {
           case Some(sampled) if sampled == "1" => SamplingDecision.Sample
           case Some(sampled) if sampled == "0" => SamplingDecision.DoNotSample
-          case _ => SamplingDecision.Unknown
+          case _                               => SamplingDecision.Unknown
         }
 
         context.withEntry(Span.Key, new Span.Remote(spanID, parentID, Trace(traceID, samplingDecision)))
@@ -78,24 +80,23 @@ object SpanPropagation {
     override def write(context: Context, writer: HttpPropagation.HeaderWriter): Unit = {
       val span = context.get(Span.Key)
 
-      if(span != Span.Empty) {
+      if (span != Span.Empty) {
         writer.write(Headers.TraceIdentifier, urlEncode(span.trace.id.string))
         writer.write(Headers.SpanIdentifier, urlEncode(span.id.string))
 
-        if(span.parentId != Identifier.Empty)
+        if (span.parentId != Identifier.Empty)
           writer.write(Headers.ParentSpanIdentifier, urlEncode(span.parentId.string))
 
-        encodeSamplingDecision(span.trace.samplingDecision).foreach { samplingDecision =>
-          writer.write(Headers.Sampled, samplingDecision)
-        }
+        encodeSamplingDecision(span.trace.samplingDecision).foreach(samplingDecision => writer.write(Headers.Sampled, samplingDecision))
       }
     }
 
-    private def encodeSamplingDecision(samplingDecision: SamplingDecision): Option[String] = samplingDecision match {
-      case SamplingDecision.Sample      => Some("1")
-      case SamplingDecision.DoNotSample => Some("0")
-      case SamplingDecision.Unknown     => None
-    }
+    private def encodeSamplingDecision(samplingDecision: SamplingDecision): Option[String] =
+      samplingDecision match {
+        case SamplingDecision.Sample      => Some("1")
+        case SamplingDecision.DoNotSample => Some("0")
+        case SamplingDecision.Unknown     => None
+      }
 
   }
 
@@ -121,39 +122,42 @@ object SpanPropagation {
     import B3Single._
 
     override def read(reader: HttpPropagation.HeaderReader, context: Context): Context = {
-      reader.read(Header.B3).map { header =>
-        val identityProvider = Kamon.identifierScheme
+      reader
+        .read(Header.B3)
+        .map { header =>
+          val identityProvider = Kamon.identifierScheme
 
-        val (traceID, spanID, samplingDecision, parentSpanID) = header.splitToTuple("-")
+          val (traceID, spanID, samplingDecision, parentSpanID) = header.splitToTuple("-")
 
-        val ti = traceID
-          .map(id => identityProvider.traceIdFactory.from(urlDecode(id)))
-          .getOrElse(Identifier.Empty)
+          val ti = traceID
+            .map(id => identityProvider.traceIdFactory.from(urlDecode(id)))
+            .getOrElse(Identifier.Empty)
 
-        val si = spanID
-          .map(id => identityProvider.spanIdFactory.from(urlDecode(id)))
-          .getOrElse(Identifier.Empty)
-
-        if (ti != Identifier.Empty && si != Identifier.Empty) {
-          val parentID = parentSpanID
+          val si = spanID
             .map(id => identityProvider.spanIdFactory.from(urlDecode(id)))
             .getOrElse(Identifier.Empty)
 
-          val sd = samplingDecision match {
-            case Some(sampled) if sampled == "1" || sampled.equalsIgnoreCase("d") => SamplingDecision.Sample
-            case Some(sampled) if sampled == "0" => SamplingDecision.DoNotSample
-            case _ => SamplingDecision.Unknown
-          }
+          if (ti != Identifier.Empty && si != Identifier.Empty) {
+            val parentID = parentSpanID
+              .map(id => identityProvider.spanIdFactory.from(urlDecode(id)))
+              .getOrElse(Identifier.Empty)
 
-          context.withEntry(Span.Key, new Span.Remote(si, parentID, Trace(ti, sd)))
-        } else context
-      }.getOrElse(context)
+            val sd = samplingDecision match {
+              case Some(sampled) if sampled == "1" || sampled.equalsIgnoreCase("d") => SamplingDecision.Sample
+              case Some(sampled) if sampled == "0"                                  => SamplingDecision.DoNotSample
+              case _                                                                => SamplingDecision.Unknown
+            }
+
+            context.withEntry(Span.Key, new Span.Remote(si, parentID, Trace(ti, sd)))
+          } else context
+        }
+        .getOrElse(context)
     }
 
     override def write(context: Context, writer: HttpPropagation.HeaderWriter): Unit = {
       val span = context.get(Span.Key)
 
-      if(span != Span.Empty) {
+      if (span != Span.Empty) {
         val buffer = new StringBuilder()
         val traceId = urlEncode(span.trace.id.string)
         val spanId = urlEncode(span.id.string)
@@ -163,19 +167,19 @@ object SpanPropagation {
         encodeSamplingDecision(span.trace.samplingDecision)
           .foreach(samplingDecision => buffer.append("-").append(samplingDecision))
 
-        if(span.parentId != Identifier.Empty)
+        if (span.parentId != Identifier.Empty)
           buffer.append("-").append(urlEncode(span.parentId.string))
 
         writer.write(Header.B3, buffer.toString)
       }
     }
 
-
-    private def encodeSamplingDecision(samplingDecision: SamplingDecision): Option[String] = samplingDecision match {
-      case SamplingDecision.Sample      => Some("1")
-      case SamplingDecision.DoNotSample => Some("0")
-      case SamplingDecision.Unknown     => None
-    }
+    private def encodeSamplingDecision(samplingDecision: SamplingDecision): Option[String] =
+      samplingDecision match {
+        case SamplingDecision.Sample      => Some("1")
+        case SamplingDecision.DoNotSample => Some("0")
+        case SamplingDecision.Unknown     => None
+      }
 
   }
 
@@ -188,8 +192,8 @@ object SpanPropagation {
       def splitToTuple(regex: String): (Option[String], Option[String], Option[String], Option[String]) = {
         s.split(regex) match {
           case Array(str1, str2, str3, str4) => (Option(str1), Option(str2), Option(str3), Option(str4))
-          case Array(str1, str2, str3) => (Option(str1), Option(str2), Option(str3), None)
-          case Array(str1, str2) => (Option(str1), Option(str2), None, None)
+          case Array(str1, str2, str3)       => (Option(str1), Option(str2), Option(str3), None)
+          case Array(str1, str2)             => (Option(str1), Option(str2), None, None)
         }
       }
     }
@@ -198,14 +202,13 @@ object SpanPropagation {
       new B3Single()
   }
 
-
   /**
-   * Reads and Writes a Span instance using the jaeger single-header propagation format.
-   * The specification and semantics can be found here:
-   *   https://www.jaegertracing.io/docs/1.7/client-libraries/#propagation-format
-   *
-   * The description somewhat ambiguous, a lots of implementation details are second-guessed from existing clients
-   */
+    * Reads and Writes a Span instance using the jaeger single-header propagation format.
+    * The specification and semantics can be found here:
+    *   https://www.jaegertracing.io/docs/1.7/client-libraries/#propagation-format
+    *
+    * The description somewhat ambiguous, a lots of implementation details are second-guessed from existing clients
+    */
   object Uber {
     def apply(): Uber = new Uber()
     val HeaderName = "uber-trace-id"
@@ -246,9 +249,8 @@ object SpanPropagation {
         val parent = stringToId(identifierScheme, parentContext)
         val samplingDecision = decodeSamplingDecision(flags)
         context.withEntry(Span.Key, Span.Remote(span, parent, Trace(trace, samplingDecision)))
-      } else {
+      } else
         context
-      }
     }
 
     private def stringToId(identifierScheme: Identifier.Scheme, s: String) = {
@@ -265,11 +267,12 @@ object SpanPropagation {
       else if (lowestBit(flags).contains(0)) SamplingDecision.DoNotSample
       else SamplingDecision.Unknown
 
-    private def encodeSamplingDecision(samplingDecision: SamplingDecision): Byte = samplingDecision match {
-      case SamplingDecision.Sample      => 1
-      case SamplingDecision.DoNotSample => 0
-      case SamplingDecision.Unknown     => 0 // the sampling decision is mandatory in this format
-    }
+    private def encodeSamplingDecision(samplingDecision: SamplingDecision): Byte =
+      samplingDecision match {
+        case SamplingDecision.Sample      => 1
+        case SamplingDecision.DoNotSample => 0
+        case SamplingDecision.Unknown     => 0 // the sampling decision is mandatory in this format
+      }
 
   }
 
@@ -288,28 +291,31 @@ object SpanPropagation {
   class Colfer extends Propagation.EntryReader[ByteStreamReader] with Propagation.EntryWriter[ByteStreamWriter] {
 
     override def read(medium: ByteStreamReader, context: Context): Context = {
-      if(medium.available() == 0)
+      if (medium.available() == 0)
         context
       else {
         val identityProvider = Kamon.identifierScheme
         val colferSpan = new ColferSpan()
         colferSpan.unmarshal(medium.readAll(), 0)
 
-        context.withEntry(Span.Key, new Span.Remote(
-          id = identityProvider.spanIdFactory.from(colferSpan.spanID),
-          parentId = identityProvider.spanIdFactory.from(colferSpan.parentID),
-          trace = Trace(
-            id = identityProvider.traceIdFactory.from(colferSpan.traceID),
-            samplingDecision = byteToSamplingDecision(colferSpan.samplingDecision)
+        context.withEntry(
+          Span.Key,
+          new Span.Remote(
+            id = identityProvider.spanIdFactory.from(colferSpan.spanID),
+            parentId = identityProvider.spanIdFactory.from(colferSpan.parentID),
+            trace = Trace(
+              id = identityProvider.traceIdFactory.from(colferSpan.traceID),
+              samplingDecision = byteToSamplingDecision(colferSpan.samplingDecision)
+            )
           )
-        ))
+        )
       }
     }
 
     override def write(context: Context, medium: ByteStreamWriter): Unit = {
       val span = context.get(Span.Key)
 
-      if(span != Span.Empty) {
+      if (span != Span.Empty) {
         val marshalBuffer = Colfer.codecBuffer.get()
         val colferSpan = new ColferSpan()
 
@@ -324,17 +330,19 @@ object SpanPropagation {
       }
     }
 
-    private def samplingDecisionToByte(samplingDecision: SamplingDecision): Byte = samplingDecision match {
-      case SamplingDecision.Sample      => 1
-      case SamplingDecision.DoNotSample => 2
-      case SamplingDecision.Unknown     => 3
-    }
+    private def samplingDecisionToByte(samplingDecision: SamplingDecision): Byte =
+      samplingDecision match {
+        case SamplingDecision.Sample      => 1
+        case SamplingDecision.DoNotSample => 2
+        case SamplingDecision.Unknown     => 3
+      }
 
-    private def byteToSamplingDecision(byte: Byte): SamplingDecision = byte match {
-      case 1 => SamplingDecision.Sample
-      case 2 => SamplingDecision.DoNotSample
-      case _ => SamplingDecision.Unknown
-    }
+    private def byteToSamplingDecision(byte: Byte): SamplingDecision =
+      byte match {
+        case 1 => SamplingDecision.Sample
+        case 2 => SamplingDecision.DoNotSample
+        case _ => SamplingDecision.Unknown
+      }
   }
 
   object Colfer {

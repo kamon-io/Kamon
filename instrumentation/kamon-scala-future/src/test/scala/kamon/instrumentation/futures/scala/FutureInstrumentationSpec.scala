@@ -29,8 +29,14 @@ import org.scalatest.concurrent.{Eventually, PatienceConfiguration, ScalaFutures
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
-class FutureInstrumentationSpec extends WordSpec with ScalaFutures with Matchers with PatienceConfiguration
-    with OptionValues with Eventually with TestSpanReporter {
+class FutureInstrumentationSpec
+    extends WordSpec
+    with ScalaFutures
+    with Matchers
+    with PatienceConfiguration
+    with OptionValues
+    with Eventually
+    with TestSpanReporter {
 
   import kamon.instrumentation.futures.scala.ScalaFutureInstrumentation.{traceBody, traceFunc}
   implicit val ec: ExecutionContext = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(1))
@@ -128,12 +134,12 @@ class FutureInstrumentationSpec extends WordSpec with ScalaFutures with Matchers
       "propagate the context to the thread executing callbacks on the future" in {
         val context = Context.of("key", "value")
         val tagAfterTransformation = Kamon.runWithContext(context) {
-            Future("Hello Kamon!")
-              // The current context is expected to be available during all intermediate processing.
-              .map(_.length)
-              .flatMap(len => Future(len.toString))
-              .map(_ => Kamon.currentContext().getTag(plain("key")))
-          }
+          Future("Hello Kamon!")
+          // The current context is expected to be available during all intermediate processing.
+            .map(_.length)
+            .flatMap(len => Future(len.toString))
+            .map(_ => Kamon.currentContext().getTag(plain("key")))
+        }
 
         whenReady(tagAfterTransformation)(tagValue => tagValue shouldBe "value")
         ensureExecutionContextIsClean()
@@ -158,7 +164,6 @@ class FutureInstrumentationSpec extends WordSpec with ScalaFutures with Matchers
 }
 
 class ContextReturningRunnable(ref: AtomicReference[Option[Context]]) extends Runnable {
-  override def run(): Unit = {
+  override def run(): Unit =
     ref.set(Some(Kamon.currentContext()))
-  }
 }

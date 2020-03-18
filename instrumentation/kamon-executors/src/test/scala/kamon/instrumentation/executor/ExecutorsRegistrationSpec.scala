@@ -29,15 +29,19 @@ class ExecutorsRegistrationSpec extends WordSpec with Matchers with MetricInspec
 
   "the Executors registration function" should {
     "accept all types of known executors" in {
-      val registeredForkJoin  = ExecutorInstrumentation.instrument(new JavaForkJoinPool(1), "fjp")
+      val registeredForkJoin = ExecutorInstrumentation.instrument(new JavaForkJoinPool(1), "fjp")
       val registeredThreadPool = ExecutorInstrumentation.instrument(JavaExecutors.newFixedThreadPool(1), "thread-pool")
       val registeredScheduled = ExecutorInstrumentation.instrument(JavaExecutors.newScheduledThreadPool(1), "scheduled-thread-pool")
       val registeredSingle = ExecutorInstrumentation.instrument(JavaExecutors.newSingleThreadExecutor(), "single-thread-pool")
       val registeredSingleScheduled = ExecutorInstrumentation.instrument(JavaExecutors.newSingleThreadScheduledExecutor(), "single-scheduled-thread-pool")
-      val registeredSingleAsScheduled = ExecutorInstrumentation.instrumentScheduledExecutor(JavaExecutors.newSingleThreadScheduledExecutor(), "single-scheduled-thread-pool-as-scheduled")
-      val registeredUThreadPool = ExecutorInstrumentation.instrument(JavaExecutors.unconfigurableExecutorService(JavaExecutors.newFixedThreadPool(1)), "unconfigurable-thread-pool")
-      val registeredUScheduled = ExecutorInstrumentation.instrument(JavaExecutors.unconfigurableScheduledExecutorService(JavaExecutors.newScheduledThreadPool(1)), "unconfigurable-scheduled-thread-pool")
-      val registeredExecContext = ExecutorInstrumentation.instrumentExecutionContext(ExecutionContext.fromExecutorService(JavaExecutors.newFixedThreadPool(1)), "execution-context")
+      val registeredSingleAsScheduled =
+        ExecutorInstrumentation.instrumentScheduledExecutor(JavaExecutors.newSingleThreadScheduledExecutor(), "single-scheduled-thread-pool-as-scheduled")
+      val registeredUThreadPool =
+        ExecutorInstrumentation.instrument(JavaExecutors.unconfigurableExecutorService(JavaExecutors.newFixedThreadPool(1)), "unconfigurable-thread-pool")
+      val registeredUScheduled = ExecutorInstrumentation
+        .instrument(JavaExecutors.unconfigurableScheduledExecutorService(JavaExecutors.newScheduledThreadPool(1)), "unconfigurable-scheduled-thread-pool")
+      val registeredExecContext =
+        ExecutorInstrumentation.instrumentExecutionContext(ExecutionContext.fromExecutorService(JavaExecutors.newFixedThreadPool(1)), "execution-context")
 
       assertContainsAllExecutorNames(ThreadsActive.tagValues("name"))
       assertContainsAllExecutorNames(TasksSubmitted.tagValues("name"))

@@ -2,7 +2,17 @@ package kamon.instrumentation.executor
 
 import java.time.Duration
 import java.util
-import java.util.concurrent.{Callable, ExecutorService, Future, ScheduledExecutorService, ScheduledFuture, ScheduledThreadPoolExecutor, ThreadPoolExecutor, TimeUnit, ForkJoinPool => JavaForkJoinPool}
+import java.util.concurrent.{
+  Callable,
+  ExecutorService,
+  Future,
+  ScheduledExecutorService,
+  ScheduledFuture,
+  ScheduledThreadPoolExecutor,
+  ThreadPoolExecutor,
+  TimeUnit,
+  ForkJoinPool => JavaForkJoinPool
+}
 
 import com.typesafe.config.Config
 import kamon.Kamon
@@ -133,9 +143,9 @@ object ExecutorInstrumentation {
   def instrument(executor: ExecutorService, name: String, extraTags: TagSet, settings: Settings): ExecutorService = {
     executor match {
       case es: ExecutorService if isWrapper(es) => instrument(unwrap(es), name, extraTags, settings)
-      case tpe: ThreadPoolExecutor  => new InstrumentedThreadPool(tpe, name, extraTags, settings)
-      case jfjp: JavaForkJoinPool   => new InstrumentedForkJoinPool(jfjp, ForkJoinPoolTelemetryReader.forJava(jfjp), name, extraTags, settings)
-      case sfjp: ScalaForkJoinPool  => new InstrumentedForkJoinPool(sfjp, ForkJoinPoolTelemetryReader.forScala(sfjp), name, extraTags, settings)
+      case tpe: ThreadPoolExecutor              => new InstrumentedThreadPool(tpe, name, extraTags, settings)
+      case jfjp: JavaForkJoinPool               => new InstrumentedForkJoinPool(jfjp, ForkJoinPoolTelemetryReader.forJava(jfjp), name, extraTags, settings)
+      case sfjp: ScalaForkJoinPool              => new InstrumentedForkJoinPool(sfjp, ForkJoinPoolTelemetryReader.forScala(sfjp), name, extraTags, settings)
       case anyOther =>
         _logger.warn("Cannot instrument unknown executor [{}]", anyOther)
         executor
@@ -180,8 +190,7 @@ object ExecutorInstrumentation {
     *
     * Once the returned executor is shutdown, all related metric instruments will be removed.
     */
-  def instrumentExecutionContext(executionContext: ExecutionContext, name: String, extraTags: TagSet,
-      settings: Settings): InstrumentedExecutionContext = {
+  def instrumentExecutionContext(executionContext: ExecutionContext, name: String, extraTags: TagSet, settings: Settings): InstrumentedExecutionContext = {
 
     val underlyingExecutor = unwrapExecutionContext(executionContext)
       .map(executor => instrument(executor, name, extraTags, settings))
@@ -201,10 +210,14 @@ object ExecutorInstrumentation {
     *
     * Once the returned executor is shutdown, all related metric instruments will be removed.
     */
-  def instrument(executor: ExecutorService, telemetryReader: ForkJoinPoolTelemetryReader, name: String, extraTags: TagSet,
-      settings: Settings): ExecutorService = {
+  def instrument(
+    executor: ExecutorService,
+    telemetryReader: ForkJoinPoolTelemetryReader,
+    name: String,
+    extraTags: TagSet,
+    settings: Settings
+  ): ExecutorService =
     new InstrumentedForkJoinPool(executor, telemetryReader, name, extraTags, settings)
-  }
 
   /**
     * We do not perform context propagation on submit by default because the automatic instrumentation provided by
@@ -235,7 +248,6 @@ object ExecutorInstrumentation {
       new Settings(shouldTrackTimeInQueue, false)
   }
 
-
   private val _delegatedExecutorClass = Class.forName("java.util.concurrent.Executors$DelegatedExecutorService")
   private val _finalizableDelegatedClass = Class.forName("java.util.concurrent.Executors$FinalizableDelegatedExecutorService")
   private val _delegateScheduledClass = Class.forName("java.util.concurrent.Executors$DelegatedScheduledExecutorService")
@@ -254,22 +266,21 @@ object ExecutorInstrumentation {
   private def isAssignableTo(executor: ExecutorService, expectedClass: Class[_]): Boolean =
     expectedClass.isAssignableFrom(executor.getClass)
 
-  private def isWrapper(executor: ExecutorService): Boolean = {
+  private def isWrapper(executor: ExecutorService): Boolean =
     isAssignableTo(executor, _delegatedExecutorClass) ||
-    isAssignableTo(executor, _finalizableDelegatedClass) ||
-    isAssignableTo(executor, _delegateScheduledClass)
-  }
+      isAssignableTo(executor, _finalizableDelegatedClass) ||
+      isAssignableTo(executor, _delegateScheduledClass)
 
   private def unwrap(delegatedExecutor: ExecutorService): ExecutorService =
     _delegatedExecutorField.get(delegatedExecutor).asInstanceOf[ExecutorService]
 
   private def unwrapExecutionContext(executionContext: ExecutionContext): Option[ExecutorService] =
-    try {
+    try
 
-      // This function can only unwrap ExecutionContext instances created via ExecutionContext.fromExecutor
-      // or ExecutionContext.fromExecutorService.
-      Some(_executionContextExecutorField.get(executionContext).asInstanceOf[ExecutorService])
-    } catch {
+    // This function can only unwrap ExecutionContext instances created via ExecutionContext.fromExecutor
+    // or ExecutionContext.fromExecutorService.
+    Some(_executionContextExecutorField.get(executionContext).asInstanceOf[ExecutorService])
+    catch {
       case anyError =>
         _logger.warn("Cannot unwrap unsupported ExecutionContext [{}]", executionContext)
         None
@@ -290,19 +301,21 @@ object ExecutorInstrumentation {
 
   object ForkJoinPoolTelemetryReader {
 
-    def forJava(pool: JavaForkJoinPool): ForkJoinPoolTelemetryReader = new ForkJoinPoolTelemetryReader {
-      override def activeThreads: Int  = pool.getActiveThreadCount
-      override def poolSize: Int       = pool.getPoolSize
-      override def queuedTasks: Int    = pool.getQueuedSubmissionCount
-      override def parallelism: Int    = pool.getParallelism
-    }
+    def forJava(pool: JavaForkJoinPool): ForkJoinPoolTelemetryReader =
+      new ForkJoinPoolTelemetryReader {
+        override def activeThreads: Int = pool.getActiveThreadCount
+        override def poolSize: Int = pool.getPoolSize
+        override def queuedTasks: Int = pool.getQueuedSubmissionCount
+        override def parallelism: Int = pool.getParallelism
+      }
 
-    def forScala(pool: ScalaForkJoinPool): ForkJoinPoolTelemetryReader = new ForkJoinPoolTelemetryReader {
-      override def activeThreads: Int  = pool.getActiveThreadCount
-      override def poolSize: Int       = pool.getPoolSize
-      override def queuedTasks: Int    = pool.getQueuedSubmissionCount
-      override def parallelism: Int    = pool.getParallelism
-    }
+    def forScala(pool: ScalaForkJoinPool): ForkJoinPoolTelemetryReader =
+      new ForkJoinPoolTelemetryReader {
+        override def activeThreads: Int = pool.getActiveThreadCount
+        override def poolSize: Int = pool.getPoolSize
+        override def queuedTasks: Int = pool.getQueuedSubmissionCount
+        override def parallelism: Int = pool.getParallelism
+      }
   }
 
   private def readSampleInterval(config: Config): Duration =
@@ -319,27 +332,33 @@ object ExecutorInstrumentation {
     *
     * The instruments used to track the pool's behavior are removed once the pool is shut down.
     */
-  class InstrumentedThreadPool(wrapped: ThreadPoolExecutor, name: String, extraTags: TagSet, settings: Settings)
-      extends ExecutorService {
+  class InstrumentedThreadPool(wrapped: ThreadPoolExecutor, name: String, extraTags: TagSet, settings: Settings) extends ExecutorService {
 
     private val _runableWrapper = buildRunnableWrapper()
     private val _callableWrapper = buildCallableWrapper()
     private val _instruments = new ExecutorMetrics.ThreadPoolInstruments(name, extraTags, executorType)
     private val _timeInQueueTimer = _instruments.timeInQueue
-    private val _sampler = Kamon.scheduler().scheduleAtFixedRate(new Runnable {
-      val submittedTasksSource = Counter.delta(() => wrapped.getTaskCount)
-      val completedTaskCountSource = Counter.delta(() => wrapped.getCompletedTaskCount)
+    private val _sampler = Kamon
+      .scheduler()
+      .scheduleAtFixedRate(
+        new Runnable {
+          val submittedTasksSource = Counter.delta(() => wrapped.getTaskCount)
+          val completedTaskCountSource = Counter.delta(() => wrapped.getCompletedTaskCount)
 
-      override def run(): Unit = {
-        _instruments.poolMin.update(wrapped.getCorePoolSize)
-        _instruments.poolMax.update(wrapped.getMaximumPoolSize)
-        _instruments.totalThreads.record(wrapped.getPoolSize)
-        _instruments.activeThreads.record(wrapped.getActiveCount)
-        _instruments.queuedTasks.record(wrapped.getQueue.size())
-        submittedTasksSource.accept(_instruments.submittedTasks)
-        completedTaskCountSource.accept(_instruments.completedTasks)
-      }
-    }, _sampleInterval.toMillis, _sampleInterval.toMillis, TimeUnit.MILLISECONDS)
+          override def run(): Unit = {
+            _instruments.poolMin.update(wrapped.getCorePoolSize)
+            _instruments.poolMax.update(wrapped.getMaximumPoolSize)
+            _instruments.totalThreads.record(wrapped.getPoolSize)
+            _instruments.activeThreads.record(wrapped.getActiveCount)
+            _instruments.queuedTasks.record(wrapped.getQueue.size())
+            submittedTasksSource.accept(_instruments.submittedTasks)
+            completedTaskCountSource.accept(_instruments.completedTasks)
+          }
+        },
+        _sampleInterval.toMillis,
+        _sampleInterval.toMillis,
+        TimeUnit.MILLISECONDS
+      )
 
     protected def executorType: String =
       "ThreadPoolExecutor"
@@ -359,7 +378,7 @@ object ExecutorInstrumentation {
     override def invokeAll[T](tasks: java.util.Collection[_ <: Callable[T]]): java.util.List[Future[T]] =
       wrapped.invokeAll(wrapTasks(tasks).asInstanceOf[java.util.Collection[Callable[T]]])
 
-    override def invokeAll[T](tasks: java.util.Collection[_ <: Callable[T]], timeout: Long, unit: TimeUnit):  java.util.List[Future[T]] =
+    override def invokeAll[T](tasks: java.util.Collection[_ <: Callable[T]], timeout: Long, unit: TimeUnit): java.util.List[Future[T]] =
       wrapped.invokeAll(wrapTasks(tasks).asInstanceOf[java.util.Collection[Callable[T]]], timeout, unit)
 
     override def isTerminated: Boolean =
@@ -392,34 +411,31 @@ object ExecutorInstrumentation {
     private def wrapTasks[T](tasks: java.util.Collection[_ <: Callable[T]]): java.util.Collection[_ <: Callable[T]] = {
       val wrappedTasks = new util.LinkedList[Callable[T]]()
       val iterator = tasks.iterator()
-      while(iterator.hasNext) {
+      while (iterator.hasNext)
         wrappedTasks.add(_callableWrapper.wrap(iterator.next()))
-      }
 
       wrappedTasks
     }
 
     private def buildRunnableWrapper(): Runnable => Runnable = {
-      if(settings.shouldTrackTimeInQueue) {
+      if (settings.shouldTrackTimeInQueue)
         if (settings.shouldPropagateContextOnSubmit)
           runnable => new TimingAndContextPropagatingRunnable(runnable)
         else
           runnable => new TimingRunnable(runnable)
-      } else {
-        if(settings.shouldPropagateContextOnSubmit)
-          runnable => new ContextPropagationRunnable(runnable)
-        else
-          runnable => runnable
-      }
+      else if (settings.shouldPropagateContextOnSubmit)
+        runnable => new ContextPropagationRunnable(runnable)
+      else
+        runnable => runnable
     }
 
     private def buildCallableWrapper(): CallableWrapper = {
-      if(settings.shouldTrackTimeInQueue) {
+      if (settings.shouldTrackTimeInQueue)
         if (settings.shouldPropagateContextOnSubmit)
           new TimingAndContextPropagatingCallableWrapper()
         else
           new TimingCallableWrapper
-      } else {
+      else {
         if (settings.shouldPropagateContextOnSubmit)
           new ContextPropagationCallableWrapper()
         else
@@ -446,33 +462,37 @@ object ExecutorInstrumentation {
         _timeInQueueTimer.record(System.nanoTime() - _createdAt)
 
         val scope = Kamon.storeContext(_context)
-        try { runnable.run() } finally { scope.close() }
+        try runnable.run()
+        finally scope.close()
       }
     }
 
     private class TimingCallableWrapper extends CallableWrapper {
-      override def wrap[T](callable: Callable[T]): Callable[T] = new Callable[T] {
-        val _createdAt = System.nanoTime()
+      override def wrap[T](callable: Callable[T]): Callable[T] =
+        new Callable[T] {
+          val _createdAt = System.nanoTime()
 
-        override def call(): T = {
-          _timeInQueueTimer.record(System.nanoTime() - _createdAt)
-          callable.call()
+          override def call(): T = {
+            _timeInQueueTimer.record(System.nanoTime() - _createdAt)
+            callable.call()
+          }
         }
-      }
     }
 
     private class TimingAndContextPropagatingCallableWrapper extends CallableWrapper {
-      override def wrap[T](callable: Callable[T]): Callable[T] = new Callable[T] {
-        val _createdAt = System.nanoTime()
-        val _context = Kamon.currentContext()
+      override def wrap[T](callable: Callable[T]): Callable[T] =
+        new Callable[T] {
+          val _createdAt = System.nanoTime()
+          val _context = Kamon.currentContext()
 
-        override def call(): T = {
-          _timeInQueueTimer.record(System.nanoTime() - _createdAt)
+          override def call(): T = {
+            _timeInQueueTimer.record(System.nanoTime() - _createdAt)
 
-          val scope = Kamon.storeContext(_context)
-          try { callable.call() } finally { scope.close() }
+            val scope = Kamon.storeContext(_context)
+            try callable.call()
+            finally scope.close()
+          }
         }
-      }
     }
 
     private class ContextPropagationRunnable(runnable: Runnable) extends Runnable {
@@ -486,14 +506,16 @@ object ExecutorInstrumentation {
     }
 
     private class ContextPropagationCallableWrapper extends CallableWrapper {
-      override def wrap[T](callable: Callable[T]): Callable[T] = new Callable[T] {
-        val _context = Kamon.currentContext()
+      override def wrap[T](callable: Callable[T]): Callable[T] =
+        new Callable[T] {
+          val _context = Kamon.currentContext()
 
-        override def call(): T = {
-          val scope = Kamon.storeContext(_context)
-          try { callable.call() } finally { scope.close() }
+          override def call(): T = {
+            val scope = Kamon.storeContext(_context)
+            try callable.call()
+            finally scope.close()
+          }
         }
-      }
     }
   }
 
@@ -505,7 +527,8 @@ object ExecutorInstrumentation {
     * The instruments used to track the pool's behavior are removed once the pool is shut down.
     */
   class InstrumentedScheduledThreadPoolExecutor(wrapped: ScheduledThreadPoolExecutor, name: String, extraTags: TagSet)
-      extends InstrumentedThreadPool(wrapped, name, extraTags, NoExtraSettings) with ScheduledExecutorService {
+      extends InstrumentedThreadPool(wrapped, name, extraTags, NoExtraSettings)
+      with ScheduledExecutorService {
 
     override protected def executorType: String =
       "ScheduledThreadPoolExecutor"
@@ -523,7 +546,6 @@ object ExecutorInstrumentation {
       wrapped.scheduleWithFixedDelay(command, initialDelay, delay, unit)
   }
 
-
   /**
     * Executor service wrapper for ForkJoin Pool executors that keeps track of submitted and completed tasks and
     * optionally tracks the time tasks spend waiting on the underlying executor service's queue. This instrumented
@@ -532,8 +554,8 @@ object ExecutorInstrumentation {
     *
     * The instruments used to track the pool's behavior are removed once the pool is shut down.
     */
-  class InstrumentedForkJoinPool(wrapped: ExecutorService, telemetryReader: ForkJoinPoolTelemetryReader, name: String,
-      extraTags: TagSet, settings: Settings) extends ExecutorService {
+  class InstrumentedForkJoinPool(wrapped: ExecutorService, telemetryReader: ForkJoinPoolTelemetryReader, name: String, extraTags: TagSet, settings: Settings)
+      extends ExecutorService {
 
     private val _runableWrapper = buildRunnableWrapper()
     private val _callableWrapper = buildCallableWrapper()
@@ -541,21 +563,28 @@ object ExecutorInstrumentation {
     private val _timeInQueueTimer = _instruments.timeInQueue
     private val _submittedTasksCounter: LongAdder = new LongAdder
     private val _completedTasksCounter: LongAdder = new LongAdder
-    private val _sampler = Kamon.scheduler().scheduleAtFixedRate(new Runnable {
-      val submittedTasksSource = Counter.delta(() => _submittedTasksCounter.longValue())
-      val completedTaskCountSource = Counter.delta(() => _completedTasksCounter.longValue())
+    private val _sampler = Kamon
+      .scheduler()
+      .scheduleAtFixedRate(
+        new Runnable {
+          val submittedTasksSource = Counter.delta(() => _submittedTasksCounter.longValue())
+          val completedTaskCountSource = Counter.delta(() => _completedTasksCounter.longValue())
 
-      override def run(): Unit = {
-        _instruments.poolMin.update(0D)
-        _instruments.poolMax.update(telemetryReader.parallelism)
-        _instruments.parallelism.update(telemetryReader.parallelism)
-        _instruments.totalThreads.record(telemetryReader.poolSize)
-        _instruments.activeThreads.record(telemetryReader.activeThreads)
-        _instruments.queuedTasks.record(telemetryReader.queuedTasks)
-        submittedTasksSource.accept(_instruments.submittedTasks)
-        completedTaskCountSource.accept(_instruments.completedTasks)
-      }
-    }, _sampleInterval.toMillis, _sampleInterval.toMillis, TimeUnit.MILLISECONDS)
+          override def run(): Unit = {
+            _instruments.poolMin.update(0d)
+            _instruments.poolMax.update(telemetryReader.parallelism)
+            _instruments.parallelism.update(telemetryReader.parallelism)
+            _instruments.totalThreads.record(telemetryReader.poolSize)
+            _instruments.activeThreads.record(telemetryReader.activeThreads)
+            _instruments.queuedTasks.record(telemetryReader.queuedTasks)
+            submittedTasksSource.accept(_instruments.submittedTasks)
+            completedTaskCountSource.accept(_instruments.completedTasks)
+          }
+        },
+        _sampleInterval.toMillis,
+        _sampleInterval.toMillis,
+        TimeUnit.MILLISECONDS
+      )
 
     override def execute(command: Runnable): Unit = {
       _submittedTasksCounter.increment()
@@ -582,7 +611,7 @@ object ExecutorInstrumentation {
       wrapped.invokeAll(wrapTasks(tasks).asInstanceOf[java.util.Collection[Callable[T]]])
     }
 
-    override def invokeAll[T](tasks: java.util.Collection[_ <: Callable[T]], timeout: Long, unit: TimeUnit):  java.util.List[Future[T]] = {
+    override def invokeAll[T](tasks: java.util.Collection[_ <: Callable[T]], timeout: Long, unit: TimeUnit): java.util.List[Future[T]] = {
       _submittedTasksCounter.add(tasks.size())
       wrapped.invokeAll(wrapTasks(tasks).asInstanceOf[java.util.Collection[Callable[T]]], timeout, unit)
     }
@@ -617,34 +646,31 @@ object ExecutorInstrumentation {
     private def wrapTasks[T](tasks: java.util.Collection[_ <: Callable[T]]): java.util.Collection[_ <: Callable[T]] = {
       val wrappedTasks = new util.LinkedList[Callable[T]]()
       val iterator = tasks.iterator()
-      while(iterator.hasNext) {
+      while (iterator.hasNext)
         wrappedTasks.add(_callableWrapper.wrap(iterator.next()))
-      }
 
       wrappedTasks
     }
 
     private def buildRunnableWrapper(): Runnable => Runnable = {
-      if(settings.shouldTrackTimeInQueue) {
+      if (settings.shouldTrackTimeInQueue)
         if (settings.shouldPropagateContextOnSubmit)
           runnable => new TimingAndContextPropagatingRunnable(runnable)
         else
           runnable => new TimingRunnable(runnable)
-      } else {
-        if(settings.shouldPropagateContextOnSubmit)
-          runnable => new ContextPropagationRunnable(runnable)
-        else
-          runnable => runnable
-      }
+      else if (settings.shouldPropagateContextOnSubmit)
+        runnable => new ContextPropagationRunnable(runnable)
+      else
+        runnable => runnable
     }
 
     private def buildCallableWrapper(): CallableWrapper = {
-      if(settings.shouldTrackTimeInQueue) {
+      if (settings.shouldTrackTimeInQueue)
         if (settings.shouldPropagateContextOnSubmit)
           new TimingAndContextPropagatingCallableWrapper()
         else
           new TimingCallableWrapper
-      } else {
+      else {
         if (settings.shouldPropagateContextOnSubmit)
           new ContextPropagationCallableWrapper()
         else
@@ -659,7 +685,8 @@ object ExecutorInstrumentation {
 
       override def run(): Unit = {
         _timeInQueueTimer.record(System.nanoTime() - _createdAt)
-        try { runnable.run() } finally { _completedTasksCounter.increment() }
+        try runnable.run()
+        finally _completedTasksCounter.increment()
       }
     }
 
@@ -671,7 +698,8 @@ object ExecutorInstrumentation {
         _timeInQueueTimer.record(System.nanoTime() - _createdAt)
 
         val scope = Kamon.storeContext(_context)
-        try { runnable.run() } finally {
+        try runnable.run()
+        finally {
           _completedTasksCounter.increment()
           scope.close()
         }
@@ -679,31 +707,35 @@ object ExecutorInstrumentation {
     }
 
     private class TimingCallableWrapper extends CallableWrapper {
-      override def wrap[T](callable: Callable[T]): Callable[T] = new Callable[T] {
-        val _createdAt = System.nanoTime()
+      override def wrap[T](callable: Callable[T]): Callable[T] =
+        new Callable[T] {
+          val _createdAt = System.nanoTime()
 
-        override def call(): T = {
-          _timeInQueueTimer.record(System.nanoTime() - _createdAt)
-          try { callable.call() } finally { _completedTasksCounter.increment() }
+          override def call(): T = {
+            _timeInQueueTimer.record(System.nanoTime() - _createdAt)
+            try callable.call()
+            finally _completedTasksCounter.increment()
+          }
         }
-      }
     }
 
     private class TimingAndContextPropagatingCallableWrapper extends CallableWrapper {
-      override def wrap[T](callable: Callable[T]): Callable[T] = new Callable[T] {
-        val _createdAt = System.nanoTime()
-        val _context = Kamon.currentContext()
+      override def wrap[T](callable: Callable[T]): Callable[T] =
+        new Callable[T] {
+          val _createdAt = System.nanoTime()
+          val _context = Kamon.currentContext()
 
-        override def call(): T = {
-          _timeInQueueTimer.record(System.nanoTime() - _createdAt)
+          override def call(): T = {
+            _timeInQueueTimer.record(System.nanoTime() - _createdAt)
 
-          val scope = Kamon.storeContext(_context)
-          try { callable.call() } finally {
-            _completedTasksCounter.increment()
-            scope.close()
+            val scope = Kamon.storeContext(_context)
+            try callable.call()
+            finally {
+              _completedTasksCounter.increment()
+              scope.close()
+            }
           }
         }
-      }
     }
 
     private class ContextPropagationRunnable(runnable: Runnable) extends Runnable {
@@ -711,7 +743,8 @@ object ExecutorInstrumentation {
 
       override def run(): Unit = {
         val scope = Kamon.storeContext(_context)
-        try { runnable.run() } finally {
+        try runnable.run()
+        finally {
           _completedTasksCounter.increment()
           scope.close()
         }
@@ -719,25 +752,27 @@ object ExecutorInstrumentation {
     }
 
     private class ContextPropagationCallableWrapper extends CallableWrapper {
-      override def wrap[T](callable: Callable[T]): Callable[T] = new Callable[T] {
-        val _context = Kamon.currentContext()
+      override def wrap[T](callable: Callable[T]): Callable[T] =
+        new Callable[T] {
+          val _context = Kamon.currentContext()
 
-        override def call(): T = {
-          val scope = Kamon.storeContext(_context)
-          try { callable.call() } finally {
-            _completedTasksCounter.increment()
-            scope.close()
+          override def call(): T = {
+            val scope = Kamon.storeContext(_context)
+            try callable.call()
+            finally {
+              _completedTasksCounter.increment()
+              scope.close()
+            }
           }
         }
-      }
     }
   }
 
   /**
-   * Wraps an Execution Context and its underlying ExecutorService, if known. The only purpose of wrapping is to
-   * to provide a shutdown method that can be used to clear shutdown the underlying ExecutorService and remove all the
-   * metrics related to it.
-   */
+    * Wraps an Execution Context and its underlying ExecutorService, if known. The only purpose of wrapping is to
+    * to provide a shutdown method that can be used to clear shutdown the underlying ExecutorService and remove all the
+    * metrics related to it.
+    */
   class InstrumentedExecutionContext(ec: ExecutionContext, val underlyingExecutor: Option[ExecutorService]) extends ExecutionContext {
     override def execute(runnable: Runnable): Unit =
       ec.execute(runnable)
@@ -745,8 +780,7 @@ object ExecutorInstrumentation {
     override def reportFailure(cause: Throwable): Unit =
       ec.reportFailure(cause)
 
-    def shutdown(): Unit = {
+    def shutdown(): Unit =
       underlyingExecutor.foreach(_.shutdown())
-    }
   }
 }

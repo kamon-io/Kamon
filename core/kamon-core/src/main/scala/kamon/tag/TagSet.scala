@@ -50,7 +50,7 @@ import org.slf4j.LoggerFactory
   *      cumbersome operation is rarely necessary on user-facing code.
   *
   */
-class TagSet private(private val _underlying: UnifiedMap[String, Any]) {
+class TagSet private (private val _underlying: UnifiedMap[String, Any]) {
   import TagSet.withPair
 
   /**
@@ -90,11 +90,11 @@ class TagSet private(private val _underlying: UnifiedMap[String, Any]) {
     * Creates a new TagSet instance without the provided key, if it was present.
     */
   def without(key: String): TagSet = {
-    if(_underlying.containsKey(key)) {
+    if (_underlying.containsKey(key)) {
       val withoutKey = new UnifiedMap[String, Any](_underlying.size())
       _underlying.forEachKeyValue(new BiConsumer[String, Any] {
         override def accept(t: String, u: Any): Unit =
-          if(t != key) withoutKey.put(t, u)
+          if (t != key) withoutKey.put(t, u)
       })
 
       new TagSet(withoutKey)
@@ -132,11 +132,12 @@ class TagSet private(private val _underlying: UnifiedMap[String, Any]) {
     var tags: List[Tag] = Nil
 
     _underlying.forEach(new BiConsumer[String, Any] {
-      override def accept(key: String, value: Any): Unit = value match {
-        case v: String  => tags = new TagSet.immutable.String(key, v) :: tags
-        case v: Boolean => tags = new TagSet.immutable.Boolean(key, v) :: tags
-        case v: Long    => tags = new TagSet.immutable.Long(key, v) :: tags
-      }
+      override def accept(key: String, value: Any): Unit =
+        value match {
+          case v: String  => tags = new TagSet.immutable.String(key, v) :: tags
+          case v: Boolean => tags = new TagSet.immutable.Boolean(key, v) :: tags
+          case v: Long    => tags = new TagSet.immutable.Long(key, v) :: tags
+        }
     })
 
     tags
@@ -153,20 +154,21 @@ class TagSet private(private val _underlying: UnifiedMap[String, Any]) {
     * Returns a pairs iterator from this TagSet. All values are transformed using the provided valueTransform before
     * being returned by the iterator.
     */
-  def iterator[T](valueTransform: Any => T): Iterator[Tag.Pair[T]] = new Iterator[Tag.Pair[T]] {
-    private val _entriesIterator = _underlying.entrySet().iterator()
-    private val _mutablePair = new TagSet.mutable.Pair[T](null, null.asInstanceOf[T])
+  def iterator[T](valueTransform: Any => T): Iterator[Tag.Pair[T]] =
+    new Iterator[Tag.Pair[T]] {
+      private val _entriesIterator = _underlying.entrySet().iterator()
+      private val _mutablePair = new TagSet.mutable.Pair[T](null, null.asInstanceOf[T])
 
-    override def hasNext: Boolean =
-      _entriesIterator.hasNext
+      override def hasNext: Boolean =
+        _entriesIterator.hasNext
 
-    override def next(): Tag.Pair[T] = {
-      val pair = _entriesIterator.next()
-      _mutablePair.pairKey = pair.getKey
-      _mutablePair.pairValue = valueTransform(pair.getValue)
-      _mutablePair
+      override def next(): Tag.Pair[T] = {
+        val pair = _entriesIterator.next()
+        _mutablePair.pairKey = pair.getKey
+        _mutablePair.pairValue = valueTransform(pair.getValue)
+        _mutablePair
+      }
     }
-  }
 
   /**
     * Returns an iterator of tags. The underlying iterator reuses the Tag instances to avoid unnecessary intermediate
@@ -174,42 +176,43 @@ class TagSet private(private val _underlying: UnifiedMap[String, Any]) {
     * reporters which will need to iterate through all existent tags only to copy their values into a separate data
     * structure that will be sent to the external systems.
     */
-  def iterator(): Iterator[Tag] = new Iterator[Tag] {
-    private val _entriesIterator = _underlying.entrySet().iterator()
-    private var _longTag: TagSet.mutable.Long = null
-    private var _stringTag: TagSet.mutable.String = null
-    private var _booleanTag: TagSet.mutable.Boolean = null
+  def iterator(): Iterator[Tag] =
+    new Iterator[Tag] {
+      private val _entriesIterator = _underlying.entrySet().iterator()
+      private var _longTag: TagSet.mutable.Long = null
+      private var _stringTag: TagSet.mutable.String = null
+      private var _booleanTag: TagSet.mutable.Boolean = null
 
-    override def hasNext: Boolean =
-      _entriesIterator.hasNext
+      override def hasNext: Boolean =
+        _entriesIterator.hasNext
 
-    override def next(): Tag = {
-      val pair = _entriesIterator.next()
-      pair.getValue match {
-        case v: String  => stringTag(pair.getKey, v)
-        case v: Boolean => booleanTag(pair.getKey, v)
-        case v: Long    => longTag(pair.getKey, v)
+      override def next(): Tag = {
+        val pair = _entriesIterator.next()
+        pair.getValue match {
+          case v: String  => stringTag(pair.getKey, v)
+          case v: Boolean => booleanTag(pair.getKey, v)
+          case v: Long    => longTag(pair.getKey, v)
+        }
       }
+
+      private def stringTag(key: String, value: String): Tag.String =
+        if (_stringTag == null) {
+          _stringTag = new TagSet.mutable.String(key, value)
+          _stringTag
+        } else _stringTag.updated(key, value)
+
+      private def booleanTag(key: String, value: Boolean): Tag.Boolean =
+        if (_booleanTag == null) {
+          _booleanTag = new TagSet.mutable.Boolean(key, value)
+          _booleanTag
+        } else _booleanTag.updated(key, value)
+
+      private def longTag(key: String, value: Long): Tag.Long =
+        if (_longTag == null) {
+          _longTag = new TagSet.mutable.Long(key, value)
+          _longTag
+        } else _longTag.updated(key, value)
     }
-
-    private def stringTag(key: String, value: String): Tag.String =
-      if(_stringTag == null) {
-        _stringTag = new TagSet.mutable.String(key, value)
-        _stringTag
-      } else _stringTag.updated(key, value)
-
-    private def booleanTag(key: String, value: Boolean): Tag.Boolean =
-      if(_booleanTag == null) {
-        _booleanTag = new TagSet.mutable.Boolean(key, value)
-        _booleanTag
-      } else _booleanTag.updated(key, value)
-
-    private def longTag(key: String, value: Long): Tag.Long =
-      if(_longTag == null) {
-        _longTag = new TagSet.mutable.Long(key, value)
-        _longTag
-      } else _longTag.updated(key, value)
-  }
 
   override def equals(other: Any): Boolean =
     other != null && other.isInstanceOf[TagSet] && other.asInstanceOf[TagSet]._underlying == _underlying
@@ -223,9 +226,9 @@ class TagSet private(private val _underlying: UnifiedMap[String, Any]) {
 
     var hasTags = false
     val iterator = _underlying.entrySet().iterator()
-    while(iterator.hasNext) {
+    while (iterator.hasNext) {
       val pair = iterator.next()
-      if(hasTags)
+      if (hasTags)
         sb.append(",")
 
       sb.append(pair.getKey)
@@ -265,7 +268,6 @@ object TagSet {
     def execute(storage: TagSet.Storage): T
   }
 
-
   /**
     * A temporary structure that accumulates key/value and creates a new TagSet instance from them. It is faster to use
     * a Builder and add tags to it rather than creating TagSet and add each key individually. Builder instances rely on
@@ -288,7 +290,6 @@ object TagSet {
     /** Creates a new TagSet instance that includes all valid key/value pairs added to this builder. */
     def build(): TagSet
   }
-
 
   /**
     * Abstracts the actual storage used for a TagSet. This interface resembles a stripped down interface of an immutable
@@ -316,12 +317,10 @@ object TagSet {
 
   }
 
-
   /**
     * A valid instance of tags that doesn't contain any pairs.
     */
   val Empty = new TagSet(UnifiedMap.newMap[String, Any]())
-
 
   /**
     * Creates a new Builder instance.
@@ -329,13 +328,11 @@ object TagSet {
   def builder(): Builder =
     new Builder.ChainedArray
 
-
   /**
     * Construct a new TagSet instance with a single key/value pair.
     */
   def of(key: String, value: java.lang.String): TagSet =
     withPair(Empty, key, value)
-
 
   /**
     * Construct a new TagSet instance with a single key/value pair.
@@ -343,13 +340,11 @@ object TagSet {
   def of(key: String, value: java.lang.Boolean): TagSet =
     withPair(Empty, key, value)
 
-
   /**
     * Construct a new TagSet instance with a single key/value pair.
     */
   def of(key: String, value: java.lang.Long): TagSet =
     withPair(Empty, key, value)
-
 
   /**
     * Constructs a new TagSet instance from a Map. The returned TagSet will only contain the entries that have String,
@@ -357,11 +352,10 @@ object TagSet {
     */
   def from(map: Map[String, Any]): TagSet = {
     val unifiedMap = new UnifiedMap[String, Any](map.size)
-    map.foreach { pair => if(isValidPair(pair._1, pair._2, checkValueType = true)) unifiedMap.put(pair._1, pair._2)}
+    map.foreach(pair => if (isValidPair(pair._1, pair._2, checkValueType = true)) unifiedMap.put(pair._1, pair._2))
 
     new TagSet(unifiedMap)
   }
-
 
   /**
     * Constructs a new TagSet instance from a Map. The returned TagSet will only contain the entries that have String,
@@ -371,17 +365,16 @@ object TagSet {
     val unifiedMap = new UnifiedMap[String, Any](map.size)
     map.forEach(new BiConsumer[String, Any] {
       override def accept(key: String, value: Any): Unit =
-        if(isValidPair(key, value, checkValueType = true)) unifiedMap.put(key, value)
+        if (isValidPair(key, value, checkValueType = true)) unifiedMap.put(key, value)
     })
 
     new TagSet(unifiedMap)
   }
 
-
   private val _logger = LoggerFactory.getLogger(classOf[TagSet])
 
   private def withPair(parent: TagSet, key: String, value: Any): TagSet =
-    if(isValidPair(key, value, checkValueType = true)) {
+    if (isValidPair(key, value, checkValueType = true)) {
       val mergedMap = new UnifiedMap[String, Any](parent._underlying.size() + 1)
       mergedMap.putAll(parent._underlying)
       mergedMap.put(key, value)
@@ -394,10 +387,10 @@ object TagSet {
     val isValidValue = value != null && (!checkValueType || isAllowedTagValue(value))
     val isValid = isValidKey && isValidValue
 
-    if(!isValid && _logger.isDebugEnabled) {
-      if(!isValidKey && !isValidValue)
+    if (!isValid && _logger.isDebugEnabled) {
+      if (!isValidKey && !isValidValue)
         _logger.debug(s"Dismissing tag with invalid key [$key] and invalid value [$value]")
-      else if(!isValidKey)
+      else if (!isValidKey)
         _logger.debug(s"Dismissing tag with invalid key [$key] and value [$value]")
       else
         _logger.debug(s"Dismissing tag with key [$key] and invalid value [$value]")
@@ -407,7 +400,7 @@ object TagSet {
   }
 
   private def isAllowedTagValue(v: Any): Boolean =
-    (v.isInstanceOf[String] || v.isInstanceOf[Boolean] || v.isInstanceOf[Long])
+    v.isInstanceOf[String] || v.isInstanceOf[Boolean] || v.isInstanceOf[Long]
 
   private object immutable {
     import java.lang.{Boolean => JBoolean, Long => JLong, String => JString}
@@ -469,7 +462,7 @@ object TagSet {
       }
 
       override def add(tags: TagSet): Builder = {
-        if(tags.nonEmpty())
+        if (tags.nonEmpty())
           tags.iterator().foreach(t => addPair(t.key, Tag.unwrapValue(t)))
 
         this
@@ -482,13 +475,13 @@ object TagSet {
         var currentKey = currentBlock(position)
         var currentValue = currentBlock(position + 1)
 
-        while(currentKey != null) {
+        while (currentKey != null) {
           unifiedMap.put(currentKey.asInstanceOf[String], currentValue)
           position += 2
 
-          if(position == ChainedArray.BlockSize) {
+          if (position == ChainedArray.BlockSize) {
             val nextBlock = currentBlock(currentBlock.length - 1)
-            if(nextBlock == null) {
+            if (nextBlock == null) {
               currentKey = null
               currentValue = null
             } else {
@@ -507,7 +500,7 @@ object TagSet {
       }
 
       private def addPair(key: String, value: Any): Unit = {
-        if(isValidPair(key, value, checkValueType = false)) {
+        if (isValidPair(key, value, checkValueType = false)) {
           if (_position == ChainedArray.BlockSize) {
             // Adds an extra block at the end of the current one.
             val extraBlock = newBlock()

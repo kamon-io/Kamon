@@ -34,11 +34,11 @@ class ProcessMetricsCollector(ec: ExecutionContext) extends Module {
   override def reconfigure(newConfig: Config): Unit =
     _hiccupMonitor.updateInterval(newConfig.getDuration(_hiccupIntervalPath))
 
-
-  private def scheduleOnModuleEC(task: MetricsCollectionTask): Runnable = new Runnable {
-    override def run(): Unit =
-      task.schedule(ec)
-  }
+  private def scheduleOnModuleEC(task: MetricsCollectionTask): Runnable =
+    new Runnable {
+      override def run(): Unit =
+        task.schedule(ec)
+    }
 
   private def startHiccupMonitor(): HiccupMonitor = {
     val interval = Kamon.config().getDuration(_hiccupIntervalPath)
@@ -57,33 +57,30 @@ class ProcessMetricsCollector(ec: ExecutionContext) extends Module {
     private val _processorCount = _hal.getProcessor.getLogicalProcessorCount().toDouble
     private var _previousProcessCpuTime: Array[Long] = Array.empty[Long]
 
-    def schedule(ec: ExecutionContext): Unit = {
+    def schedule(ec: ExecutionContext): Unit =
       Future {
         recordProcessCpu()
         recordProcessULimits()
       }(ec)
-    }
 
-    def cleanup(): Unit = {
+    def cleanup(): Unit =
       _processCpuInstruments.remove()
-    }
 
     private def recordProcessCpu(): Unit = {
       val process = _os.getProcess(_pid)
       val previous = _previousProcessCpuTime
-      val current = Array (
+      val current = Array(
         process.getKernelTime(),
         process.getUserTime(),
         process.getUpTime()
       )
 
-      if(previous.nonEmpty) {
+      if (previous.nonEmpty) {
         val kernelTime = math.max(0L, current(0) - previous(0))
         val userTime = math.max(0L, current(1) - previous(1))
         val totalTime = math.max(0L, current(2) - previous(2))
-        def toPercent(value: Long): Long = {
-          if(totalTime > 0) ((100D * value.toDouble) / totalTime.toDouble / _processorCount).toLong else 0
-        }
+        def toPercent(value: Long): Long =
+          if (totalTime > 0) ((100d * value.toDouble) / totalTime.toDouble / _processorCount).toLong else 0
 
         _processCpuInstruments.user.record(toPercent(userTime))
         _processCpuInstruments.system.record(toPercent(kernelTime))
@@ -146,7 +143,7 @@ class ProcessMetricsCollector(ec: ExecutionContext) extends Module {
       }
     }
 
-    def terminate():Unit =
+    def terminate(): Unit =
       _doRun = false
 
     def updateInterval(duration: Duration): Unit =

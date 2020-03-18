@@ -20,8 +20,6 @@ import kamon.instrumentation.http.{HttpMessage, HttpOperationNameGenerator}
 
 class TestNameGenerator extends HttpOperationNameGenerator {
 
-
-
 //  def serverOperationName(request: HttpRequest): String = {
 //    val path = request.uri.path.toString()
 //    // turns "/dummy-path" into "dummy"

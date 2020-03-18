@@ -29,18 +29,10 @@ class NewRelicMetricsReporter(senderBuilder: () => MetricBatchSender = () => New
     val periodStartTime = snapshot.from.toEpochMilli
     val periodEndTime = snapshot.to.toEpochMilli
 
-    val counters = snapshot.counters.flatMap { counter =>
-      NewRelicCounters(periodStartTime, periodEndTime, counter)
-    }
-    val gauges = snapshot.gauges.flatMap { gauge =>
-      NewRelicGauges(periodEndTime, gauge)
-    }
-    val histogramMetrics = snapshot.histograms.flatMap { histogram =>
-      NewRelicDistributionMetrics(periodStartTime, periodEndTime, histogram, "histogram")
-    }
-    val timerMetrics = snapshot.timers.flatMap { timer =>
-      NewRelicDistributionMetrics(periodStartTime, periodEndTime, timer, "timer")
-    }
+    val counters = snapshot.counters.flatMap(counter => NewRelicCounters(periodStartTime, periodEndTime, counter))
+    val gauges = snapshot.gauges.flatMap(gauge => NewRelicGauges(periodEndTime, gauge))
+    val histogramMetrics = snapshot.histograms.flatMap(histogram => NewRelicDistributionMetrics(periodStartTime, periodEndTime, histogram, "histogram"))
+    val timerMetrics = snapshot.timers.flatMap(timer => NewRelicDistributionMetrics(periodStartTime, periodEndTime, timer, "timer"))
     val rangeSamplerMetrics = snapshot.rangeSamplers.flatMap { rangeSampler =>
       NewRelicDistributionMetrics(periodStartTime, periodEndTime, rangeSampler, "rangeSampler")
     }
@@ -53,9 +45,8 @@ class NewRelicMetricsReporter(senderBuilder: () => MetricBatchSender = () => New
 
   override def stop(): Unit = {}
 
-  override def reconfigure(newConfig: Config): Unit = {
+  override def reconfigure(newConfig: Config): Unit =
     reconfigure(Kamon.environment)
-  }
 
   //exposed for testing
   def reconfigure(environment: Environment): Unit = {
@@ -76,7 +67,8 @@ object NewRelicMetricsReporter {
     val config = Kamon.config();
     val nrConfig = config.getConfig("kamon.newrelic")
     val nrInsightsInsertKey = nrConfig.getString("nr-insights-insert-key")
-    SimpleMetricBatchSender.builder(nrInsightsInsertKey)
+    SimpleMetricBatchSender
+      .builder(nrInsightsInsertKey)
       .enableAuditLogging()
       .secondaryUserAgent("newrelic-kamon-reporter", LibraryVersion.version)
       .build()

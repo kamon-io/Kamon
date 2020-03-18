@@ -26,9 +26,13 @@ class GraphiteReporterSpec extends WordSpec with BeforeAndAfterAll with Matchers
     val to = Instant.ofEpochSecond(1517000993)
 
     val periodSnapshot = PeriodSnapshot.apply(
-      from, to,
+      from,
+      to,
       counters = List(MetricSnapshotBuilder.counter("custom.user.counter", TagSet.of("tag.1", "value.1.2"), 42)),
-      gauges = List.empty, histograms = List.empty, timers = List.empty, rangeSamplers = List.empty
+      gauges = List.empty,
+      histograms = List.empty,
+      timers = List.empty,
+      rangeSamplers = List.empty
     )
 
     val lines = graphite.lineListener(1)
@@ -37,7 +41,9 @@ class GraphiteReporterSpec extends WordSpec with BeforeAndAfterAll with Matchers
     "send counter metrics to a server socket" in {
       reporter.reportPeriodSnapshot(periodSnapshot)
 
-      lines.awaitLines() shouldBe List("kamon-graphite.custom_user_counter.count;special-shouldsee-tag=bla;service=kamon-application;tag.1=value.1.2 42 1517000993")
+      lines.awaitLines() shouldBe List(
+        "kamon-graphite.custom_user_counter.count;special-shouldsee-tag=bla;service=kamon-application;tag.1=value.1.2 42 1517000993"
+      )
     }
 
     reporter.stop()
@@ -82,30 +88,25 @@ class GraphiteTcpSocketListener(port: Int, listeners: java.util.List[LineListene
         val line = lineReader.nextLine()
         listeners.asScala.foreach(_.putLine(line))
       }
-    }
-    finally {
+    } finally {
       log.debug("stopping graphite simulator")
       serverSocket.close()
     }
   }
 
-  def close(): Unit = {
-    try {
-      ss.asScala.foreach(_.close())
-    }
-    finally {
-      serverSocket.close()
-    }
-  }
+  def close(): Unit =
+    try ss.asScala.foreach(_.close())
+    finally serverSocket.close()
 }
 
 class LineListener(lineCount: Int) {
   private val counter = new CountDownLatch(lineCount)
   private val lines = new CopyOnWriteArrayList[String]
-  def putLine(l: String): Unit = this.synchronized {
-    lines.add(l)
-    counter.countDown()
-  }
+  def putLine(l: String): Unit =
+    this.synchronized {
+      lines.add(l)
+      counter.countDown()
+    }
 
   def awaitLines(): List[String] = {
     counter.await(1, TimeUnit.SECONDS)

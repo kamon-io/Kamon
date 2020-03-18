@@ -21,7 +21,7 @@ import java.util.concurrent.LinkedBlockingQueue
 import scala.collection.JavaConverters._
 import com.typesafe.config.Config
 import kamon.module.SpanReporter
-import kamon.{Kamon, testkit}
+import kamon.{testkit, Kamon}
 import kamon.trace.Span
 
 import scala.concurrent.duration.Duration

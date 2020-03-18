@@ -9,10 +9,10 @@ import kamon.module.{MetricReporter, Module, ModuleFactory}
 import org.slf4j.LoggerFactory
 
 class PrometheusPushgatewayReporter(
-    configPath: String,
-    pushgatewayPath: String,
-    @volatile private var httpClientFactory: Config => HttpClient
-  ) extends MetricReporter {
+  configPath: String,
+  pushgatewayPath: String,
+  @volatile private var httpClientFactory: Config => HttpClient
+) extends MetricReporter {
 
   private val _logger = LoggerFactory.getLogger(classOf[PrometheusPushgatewayReporter])
   private val _snapshotAccumulator = PeriodSnapshot.accumulator(Duration.ofDays(365 * 5), Duration.ZERO)
@@ -20,9 +20,7 @@ class PrometheusPushgatewayReporter(
   @volatile private var httpClient: HttpClient = _
   @volatile private var settings: PrometheusSettings.Generic = _
 
-  {
-    reconfigure(Kamon.config())
-  }
+  reconfigure(Kamon.config())
 
   def this(httpClientFactory: Config => HttpClient) =
     this("kamon.prometheus", "pushgateway", httpClientFactory)
@@ -40,9 +38,10 @@ class PrometheusPushgatewayReporter(
 
     val message = scrapeDataBuilder.build()
 
-    httpClient.doPost("text/plain; version=0.0.4", message.toCharArray.map(_.toByte)).failed.foreach(
-      exception => _logger.error("Failed to send metrics to Prometheus Pushgateway", exception)
-    )
+    httpClient
+      .doPost("text/plain; version=0.0.4", message.toCharArray.map(_.toByte))
+      .failed
+      .foreach(exception => _logger.error("Failed to send metrics to Prometheus Pushgateway", exception))
   }
 
   override def stop(): Unit = ()
@@ -57,8 +56,7 @@ class PrometheusPushgatewayReporter(
 object PrometheusPushgatewayReporter {
 
   class Factory extends ModuleFactory {
-    override def create(settings: ModuleFactory.Settings): Module = {
+    override def create(settings: ModuleFactory.Settings): Module =
       new PrometheusPushgatewayReporter((config: Config) => new HttpClient(config))
-    }
   }
 }

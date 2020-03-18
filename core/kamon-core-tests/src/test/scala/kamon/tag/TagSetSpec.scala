@@ -24,7 +24,8 @@ class TagSetSpec extends WordSpec with Matchers {
     }
 
     "silently drop null keys and/or values when created with the .withTag or .withTags methods" in {
-      val tags = TagSet.of("initialKey", "initialValue")
+      val tags = TagSet
+        .of("initialKey", "initialValue")
         .withTag(NullString, NullString)
         .withTag(EmptyString, NullString)
         .withTag(EmptyString, "value")
@@ -53,14 +54,16 @@ class TagSetSpec extends WordSpec with Matchers {
       TagSet.from(GoodScalaTagMap).all().size shouldBe 3
       TagSet.from(GoodJavaTagMap).all().size shouldBe 3
 
-      TagSet.of("initial", "initial")
+      TagSet
+        .of("initial", "initial")
         .withTag("isAwesome", true)
         .withTag("name", "Kamon")
         .withTag("age", 5L)
         .withTag("isAvailable", true)
         .withTag("website", "kamon.io")
         .withTag("supportedPlatforms", 1L)
-        .all().size shouldBe 7
+        .all()
+        .size shouldBe 7
     }
 
     "override pre-existent tags when merging with other Tags instance" in {
@@ -111,14 +114,16 @@ class TagSetSpec extends WordSpec with Matchers {
     }
 
     "allow iterating over all contained tags" in {
-      val tags = TagSet.from(Map(
-        "age" -> 5L,
-        "name" -> "Kamon",
-        "isAwesome" -> true,
-        "hasTracing" -> true,
-        "website" -> "kamon.io",
-        "luckyNumber" -> 7L
-      ))
+      val tags = TagSet.from(
+        Map(
+          "age"         -> 5L,
+          "name"        -> "Kamon",
+          "isAwesome"   -> true,
+          "hasTracing"  -> true,
+          "website"     -> "kamon.io",
+          "luckyNumber" -> 7L
+        )
+      )
 
       tags.iterator().length shouldBe 6
       tags.iterator().find(matchPair("age", 5L)) shouldBe defined
@@ -141,7 +146,8 @@ class TagSetSpec extends WordSpec with Matchers {
     }
 
     "allow creating them from a builder instance" in {
-      val tags = TagSet.builder()
+      val tags = TagSet
+        .builder()
         .add("age", 5L)
         .add("name", "Kamon")
         .add("isAwesome", true)
@@ -163,29 +169,30 @@ class TagSetSpec extends WordSpec with Matchers {
     }
 
     "allow removing keys" in {
-      val tags = TagSet.from(Map(
-        "age" -> 5L,
-        "name" -> "Kamon",
-        "isAwesome" -> true,
-        "hasTracing" -> true,
-        "website" -> "kamon.io",
-        "luckyNumber" -> 7L
-      ))
+      val tags = TagSet.from(
+        Map(
+          "age"         -> 5L,
+          "name"        -> "Kamon",
+          "isAwesome"   -> true,
+          "hasTracing"  -> true,
+          "website"     -> "kamon.io",
+          "luckyNumber" -> 7L
+        )
+      )
 
       tags.without("name").get(option("name")) shouldBe empty
       tags.without("website").get(plain("name")) shouldBe "Kamon"
     }
   }
 
-  def matchPair(key: String, value: Any) = { tag: Tag => {
+  def matchPair(key: String, value: Any) = { tag: Tag =>
     tag match {
       case t: Tag.String  => t.key == key && t.value == value
       case t: Tag.Long    => t.key == key && t.value == value
       case t: Tag.Boolean => t.key == key && t.value == value
     }
 
-  }}
-
+  }
 
   val NullString: java.lang.String = null
   val NullBoolean: java.lang.Boolean = null
@@ -193,21 +200,21 @@ class TagSetSpec extends WordSpec with Matchers {
   val EmptyString: java.lang.String = ""
 
   val GoodScalaTagMap: Map[String, Any] = Map(
-    "age" -> 5L,
-    "name" -> "Kamon",
+    "age"       -> 5L,
+    "name"      -> "Kamon",
     "isAwesome" -> true
   )
 
   val BadScalaTagMap: Map[String, Any] = Map(
-    NullString -> NullString,
+    NullString  -> NullString,
     EmptyString -> NullString,
-    NullString -> NullString,
+    NullString  -> NullString,
     EmptyString -> NullString,
     EmptyString -> "value",
-    NullString -> "value",
-    "key" -> NullString,
-    "key" -> NullBoolean,
-    "key" -> NullLong
+    NullString  -> "value",
+    "key"       -> NullString,
+    "key"       -> NullBoolean,
+    "key"       -> NullLong
   )
 
   val GoodJavaTagMap = GoodScalaTagMap.asJava

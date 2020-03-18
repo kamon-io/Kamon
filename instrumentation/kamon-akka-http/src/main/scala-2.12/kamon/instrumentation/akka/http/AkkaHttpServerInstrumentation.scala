@@ -28,7 +28,6 @@ import akka.stream.scaladsl.Flow
 import kamon.context.Context
 import kanela.agent.libs.net.bytebuddy.matcher.ElementMatchers.isPublic
 
-
 class AkkaHttpServerInstrumentation extends InstrumentationBuilder {
 
   /**
@@ -76,7 +75,6 @@ class AkkaHttpServerInstrumentation extends InstrumentationBuilder {
     .intercept(method("redirect"), classOf[ResolveOperationNameOnRouteInterceptor])
     .intercept(method("failWith"), classOf[ResolveOperationNameOnRouteInterceptor])
 
-
   /**
     * This allows us to keep the right Context when Futures go through Akka HTTP's FastFuture and transformantions made
     * to them. Without this, it might happen that when a Future is already completed and used on any of the Futures
@@ -84,9 +82,9 @@ class AkkaHttpServerInstrumentation extends InstrumentationBuilder {
     */
   onTypes("akka.http.scaladsl.util.FastFuture$FulfilledFuture", "akka.http.scaladsl.util.FastFuture$ErrorFuture")
     .mixin(classOf[HasContext.MixinWithInitializer])
-      .advise(method("transform"), InvokeWithCapturedContext)
-      .advise(method("transformWith"), InvokeWithCapturedContext)
-      .advise(method("onComplete"), InvokeWithCapturedContext)
+    .advise(method("transform"), InvokeWithCapturedContext)
+    .advise(method("transformWith"), InvokeWithCapturedContext)
+    .advise(method("onComplete"), InvokeWithCapturedContext)
 
   onType("akka.http.scaladsl.util.FastFuture$")
     .intercept(method("transformWith$extension1"), FastFutureTransformWithAdvice)
@@ -102,7 +100,7 @@ trait HasMatchingContext {
 
 object HasMatchingContext {
 
-  case class PathMatchingContext (
+  case class PathMatchingContext(
     fullPath: String,
     matched: Matched[_]
   )
@@ -178,28 +176,26 @@ object ResolveOperationNameOnRouteInterceptor {
     // way in which the operation name might have changed is if the user changed it with the operationName directive or
     // by accessing the Span and changing it directly there, so we wouldn't want to overwrite that.
 
-    Kamon.currentContext().get(LastAutomaticOperationNameEdit.Key).foreach(lastEdit => {
+    Kamon.currentContext().get(LastAutomaticOperationNameEdit.Key).foreach { lastEdit =>
       val currentSpan = Kamon.currentSpan()
 
-      if(lastEdit.allowAutomaticChanges) {
-        if(currentSpan.operationName() == lastEdit.operationName) {
-        val allMatches = requestContext.asInstanceOf[HasMatchingContext].matchingContext.reverse.map(singleMatch)
-        val operationName = allMatches.mkString("")
+      if (lastEdit.allowAutomaticChanges) {
+        if (currentSpan.operationName() == lastEdit.operationName) {
+          val allMatches = requestContext.asInstanceOf[HasMatchingContext].matchingContext.reverse.map(singleMatch)
+          val operationName = allMatches.mkString("")
 
-        if(operationName.nonEmpty) {
+          if (operationName.nonEmpty) {
             currentSpan
-            .name(operationName)
-            .takeSamplingDecision()
+              .name(operationName)
+              .takeSamplingDecision()
 
-          lastEdit.operationName = operationName
-        }
-        } else {
+            lastEdit.operationName = operationName
+          }
+        } else
           lastEdit.allowAutomaticChanges = false
-        }
-      } else {
+      } else
         currentSpan.takeSamplingDecision()
-      }
-    })
+    }
 
     requestContext
   }
@@ -268,7 +264,7 @@ object PathDirectivesRawPathPrefixInterceptor {
   def rawPathPrefix[T](@Argument(0) matcher: PathMatcher[T]): Directive[T] = {
     implicit val LIsTuple = matcher.ev
 
-    extract(ctx => {
+    extract { ctx =>
       val fullPath = ctx.unmatchedPath.toString()
       val matching = matcher(ctx.unmatchedPath)
       matching match {
@@ -277,7 +273,7 @@ object PathDirectivesRawPathPrefixInterceptor {
         case _ =>
       }
       matching
-    }).flatMap {
+    }.flatMap {
       case Matched(rest, values) => tprovide(values) & mapRequestContext(_ withUnmatchedPath rest)
       case Unmatched             => reject
     }
@@ -287,8 +283,13 @@ object PathDirectivesRawPathPrefixInterceptor {
 object FastFutureTransformWithAdvice {
 
   @RuntimeType
-  def transformWith[A, B](@Argument(0) future: Future[A], @Argument(1) s: A => Future[B], @Argument(2) f: Throwable => Future[B],
-    @Argument(3) ec: ExecutionContext, @SuperCall zuper: Callable[Future[B]]): Future[B] = {
+  def transformWith[A, B](
+    @Argument(0) future: Future[A],
+    @Argument(1) s: A => Future[B],
+    @Argument(2) f: Throwable => Future[B],
+    @Argument(3) ec: ExecutionContext,
+    @SuperCall zuper: Callable[Future[B]]
+  ): Future[B] = {
 
     def strictTransform[T](x: T, f: T => Future[B]) =
       try f(x)
@@ -296,7 +297,7 @@ object FastFutureTransformWithAdvice {
 
     // If we get a FulfilledFuture or ErrorFuture, those will have the HasContext mixin,
     // otherwise we are getting a regular Future which has the context mixed into its value.
-    if(future.isInstanceOf[HasContext])
+    if (future.isInstanceOf[HasContext])
       zuper.call()
     else {
       future.value match {
@@ -324,18 +325,18 @@ object FastFutureTransformWithAdvice {
   }
 }
 
-
 object Http2BlueprintInterceptor {
 
-  case class HandlerWithEndpoint(interface: String, port: Int, handler: HttpRequest => Future[HttpResponse])
-      extends (HttpRequest => Future[HttpResponse]) {
+  case class HandlerWithEndpoint(interface: String, port: Int, handler: HttpRequest => Future[HttpResponse]) extends (HttpRequest => Future[HttpResponse]) {
 
     override def apply(request: HttpRequest): Future[HttpResponse] = handler(request)
   }
 
   @RuntimeType
-  def handleWithStreamIdHeader(@Argument(1) handler: HttpRequest => Future[HttpResponse],
-    @SuperCall zuper: Callable[Flow[HttpRequest, HttpResponse, NotUsed]]): Flow[HttpRequest, HttpResponse, NotUsed] = {
+  def handleWithStreamIdHeader(
+    @Argument(1) handler: HttpRequest => Future[HttpResponse],
+    @SuperCall zuper: Callable[Flow[HttpRequest, HttpResponse, NotUsed]]
+  ): Flow[HttpRequest, HttpResponse, NotUsed] = {
 
     handler match {
       case HandlerWithEndpoint(interface, port, _) =>

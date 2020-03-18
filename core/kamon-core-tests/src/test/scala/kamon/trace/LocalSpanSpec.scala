@@ -28,14 +28,15 @@ class LocalSpanSpec extends WordSpec with Matchers with OptionValues with SpanIn
   "a real span" when {
     "sampled and finished" should {
       "be sent to the Span reporters" in {
-        val finishedSpan = Kamon.spanBuilder("test-span")
+        val finishedSpan = Kamon
+          .spanBuilder("test-span")
           .tag("test", "value")
           .doNotTrackMetrics()
           .trackMetrics()
           .start(Instant.EPOCH.plusSeconds(1))
           .toFinished(Instant.EPOCH.plusSeconds(10))
 
-        finishedSpan.operationName shouldBe("test-span")
+        finishedSpan.operationName shouldBe "test-span"
         finishedSpan.from shouldBe Instant.EPOCH.plusSeconds(1)
         finishedSpan.to shouldBe Instant.EPOCH.plusSeconds(10)
         finishedSpan.tags.get(any("test")) shouldBe "value"
@@ -45,23 +46,24 @@ class LocalSpanSpec extends WordSpec with Matchers with OptionValues with SpanIn
       "pass all the tags and marks to the FinishedSpan instance when started and finished" in {
         val linkedSpan = Kamon.spanBuilder("linked").start()
 
-        val finishedSpan = Kamon.spanBuilder("full-span")
-                  .tag("builder-string-tag", "value")
-                  .tag("builder-boolean-tag-true", true)
-                  .tag("builder-boolean-tag-false", false)
-                  .tag("builder-number-tag", 42)
-                  .start(Instant.EPOCH.plusSeconds(1))
-                  .tag("span-string-tag", "value")
-                  .tag("span-boolean-tag-true", true)
-                  .tag("span-boolean-tag-false", false)
-                  .tag("span-number-tag", 42)
-                  .mark("my-mark")
-                  .mark("my-custom-timetamp-mark", Instant.EPOCH.plusSeconds(4))
+        val finishedSpan = Kamon
+          .spanBuilder("full-span")
+          .tag("builder-string-tag", "value")
+          .tag("builder-boolean-tag-true", true)
+          .tag("builder-boolean-tag-false", false)
+          .tag("builder-number-tag", 42)
+          .start(Instant.EPOCH.plusSeconds(1))
+          .tag("span-string-tag", "value")
+          .tag("span-boolean-tag-true", true)
+          .tag("span-boolean-tag-false", false)
+          .tag("span-number-tag", 42)
+          .mark("my-mark")
+          .mark("my-custom-timetamp-mark", Instant.EPOCH.plusSeconds(4))
           .link(linkedSpan, Span.Link.Kind.FollowsFrom)
           .name("fully-populated-span")
           .toFinished(Instant.EPOCH.plusSeconds(10))
 
-        finishedSpan.operationName shouldBe ("fully-populated-span")
+        finishedSpan.operationName shouldBe "fully-populated-span"
         finishedSpan.from shouldBe Instant.EPOCH.plusSeconds(1)
         finishedSpan.to shouldBe Instant.EPOCH.plusSeconds(10)
         finishedSpan.tags.get(plain("builder-string-tag")) shouldBe "value"
@@ -72,17 +74,20 @@ class LocalSpanSpec extends WordSpec with Matchers with OptionValues with SpanIn
         finishedSpan.tags.get(plainBoolean("span-boolean-tag-false")) shouldBe false
         finishedSpan.tags.get(plainLong("builder-number-tag")) shouldBe 42L
         finishedSpan.tags.get(plainLong("span-number-tag")) shouldBe 42L
-        finishedSpan.marks.map(_.key) should contain allOf(
+        finishedSpan.marks.map(_.key) should contain allOf (
           "my-mark",
           "my-custom-timetamp-mark"
         )
 
-        finishedSpan.links should contain only(
-          Span.Link(Kind.FollowsFrom, linkedSpan.trace, linkedSpan.id)
+        finishedSpan.links should contain only (
+          Span.Link(
+            Kind.FollowsFrom,
+            linkedSpan.trace,
+            linkedSpan.id
+          )
         )
 
-        finishedSpan.marks.find(_.key == "my-custom-timetamp-mark")
-          .value.instant should be(Instant.EPOCH.plusSeconds(4))
+        finishedSpan.marks.find(_.key == "my-custom-timetamp-mark").value.instant should be(Instant.EPOCH.plusSeconds(4))
 
       }
     }

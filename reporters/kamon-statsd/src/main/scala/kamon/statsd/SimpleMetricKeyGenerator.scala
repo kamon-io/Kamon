@@ -40,13 +40,14 @@ class SimpleMetricKeyGenerator(statsDConfig: Config) extends MetricKeyGenerator 
     if (includeHostname) s"$serviceName.$normalizedHostname"
     else serviceName
 
-  private def createNormalizer(strategy: String): Normalizer = strategy match {
-    case "percent-encode" => PercentEncoder.encode
-    case "normalize"      => (s: String) => s.replace(": ", "-").replace(":", "-").replace(" ", "_").replace("/", "_").replace(".", "_")
-  }
+  private def createNormalizer(strategy: String): Normalizer =
+    strategy match {
+      case "percent-encode" => PercentEncoder.encode
+      case "normalize"      => (s: String) => s.replace(": ", "-").replace(":", "-").replace(" ", "_").replace("/", "_").replace(".", "_")
+    }
 
   def generateKey(name: String, metricTags: TagSet): String = {
-    val tags = if(includeEnvironmentTags) metricTags.withTags(environmentTags) else metricTags
+    val tags = if (includeEnvironmentTags) metricTags.withTags(environmentTags) else metricTags
     val stringTags = if (tags.nonEmpty) "." + sortAndConcatenateTags(tags) else ""
     s"$baseName.${normalizer(name)}$stringTags"
   }
@@ -55,7 +56,7 @@ class SimpleMetricKeyGenerator(statsDConfig: Config) extends MetricKeyGenerator 
     tags
       .all()
       .sortBy(tag => (tag.key, Tag.unwrapValue(tag).toString))
-      .flatMap { tag => List(tag.key, Tag.unwrapValue(tag).toString) }
+      .flatMap(tag => List(tag.key, Tag.unwrapValue(tag).toString))
       .map(normalizer)
       .mkString(".")
   }
@@ -75,15 +76,13 @@ object PercentEncoder {
 
         encodedString.append(charHexValue)
 
-      } else {
+      } else
         encodedString.append(character)
-      }
     }
     encodedString.toString()
   }
 
-  private def shouldEncode(ch: Char): Boolean = {
+  private def shouldEncode(ch: Char): Boolean =
     if (ch > 128 || ch < 0) true
     else " %$&+,./:;=?@<>#%".indexOf(ch) >= 0
-  }
 }

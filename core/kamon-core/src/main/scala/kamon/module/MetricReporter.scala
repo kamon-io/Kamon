@@ -42,30 +42,30 @@ object MetricReporter {
     * the period snapshots sent the provided reporter in the same order they are provided to this method.
     */
   def withTransformations(reporter: MetricReporter, transformations: Transformation*): MetricReporter =
-      new Module.Wrapped with MetricReporter {
+    new Module.Wrapped with MetricReporter {
 
-    override def stop(): Unit = reporter.stop()
-    override def reconfigure(newConfig: Config): Unit = reporter.reconfigure(newConfig)
-    override def originalClass: Class[_ <: Module] = reporter.getClass
+      override def stop(): Unit = reporter.stop()
+      override def reconfigure(newConfig: Config): Unit = reporter.reconfigure(newConfig)
+      override def originalClass: Class[_ <: Module] = reporter.getClass
 
-    override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
-      reporter.reportPeriodSnapshot(transformations.tail.foldLeft(transformations.head.apply(snapshot))((s, t) => t.apply(s)))
+      override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit =
+        reporter.reportPeriodSnapshot(transformations.tail.foldLeft(transformations.head.apply(snapshot))((s, t) => t.apply(s)))
     }
-  }
 
   /**
     * Creates a transformation that only report metrics whose name matches the provided filter.
     */
-  def filterMetrics(filterName: String): Transformation = new Transformation {
-    override def apply(snapshot: PeriodSnapshot): PeriodSnapshot = {
-      val filter = Kamon.filter(filterName)
-      snapshot.copy(
-        counters = snapshot.counters.filter(m => filter.accept(m.name)),
-        gauges = snapshot.gauges.filter(m => filter.accept(m.name)),
-        histograms = snapshot.histograms.filter(m => filter.accept(m.name)),
-        timers = snapshot.timers.filter(m => filter.accept(m.name)),
-        rangeSamplers = snapshot.rangeSamplers.filter(m => filter.accept(m.name))
-      )
+  def filterMetrics(filterName: String): Transformation =
+    new Transformation {
+      override def apply(snapshot: PeriodSnapshot): PeriodSnapshot = {
+        val filter = Kamon.filter(filterName)
+        snapshot.copy(
+          counters = snapshot.counters.filter(m => filter.accept(m.name)),
+          gauges = snapshot.gauges.filter(m => filter.accept(m.name)),
+          histograms = snapshot.histograms.filter(m => filter.accept(m.name)),
+          timers = snapshot.timers.filter(m => filter.accept(m.name)),
+          rangeSamplers = snapshot.rangeSamplers.filter(m => filter.accept(m.name))
+        )
+      }
     }
-  }
 }

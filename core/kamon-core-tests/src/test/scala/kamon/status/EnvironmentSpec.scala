@@ -20,15 +20,17 @@ import kamon.tag.TagSet
 import org.scalatest.{Matchers, WordSpec}
 
 class EnvironmentSpec extends WordSpec with Matchers {
-  private val baseConfig = ConfigFactory.parseString(
-    """
+  private val baseConfig = ConfigFactory
+    .parseString(
+      """
       |kamon.environment {
       |  service = environment-spec
       |  host = auto
       |  instance = auto
       |}
     """.stripMargin
-  ).withFallback(ConfigFactory.defaultReference())
+    )
+    .withFallback(ConfigFactory.defaultReference())
 
   "the Kamon environment" should {
     "assign a host and instance name when they are set to 'auto'" in {
@@ -41,8 +43,7 @@ class EnvironmentSpec extends WordSpec with Matchers {
     }
 
     "use the configured host and instance, if provided" in {
-      val customConfig = ConfigFactory.parseString(
-        """
+      val customConfig = ConfigFactory.parseString("""
           |kamon.environment {
           |  host = spec-host
           |  instance = spec-instance
@@ -57,8 +58,7 @@ class EnvironmentSpec extends WordSpec with Matchers {
     }
 
     "read all environment tags, if provided" in {
-      val customConfig = ConfigFactory.parseString(
-        """
+      val customConfig = ConfigFactory.parseString("""
           |kamon.environment.tags {
           |  custom1 = "test1"
           |  env = staging
@@ -67,9 +67,9 @@ class EnvironmentSpec extends WordSpec with Matchers {
 
       val env = Environment.from(customConfig.withFallback(baseConfig))
 
-      env.tags.toMap should contain allOf(
+      env.tags.toMap should contain allOf (
         ("custom1" -> "test1"),
-        ("env" -> "staging")
+        ("env"     -> "staging")
       )
     }
 

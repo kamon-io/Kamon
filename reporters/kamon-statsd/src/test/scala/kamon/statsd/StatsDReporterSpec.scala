@@ -35,7 +35,7 @@ class StatsDReporterSpec extends WordSpec with Matchers with BeforeAndAfter with
 
   val statsDServer = new StatsDServer()
   val config: Config = ConfigFactory.parseString(
-      s"""
+    s"""
         |kamon {
         |  statsd {
         |    hostname = "127.0.0.1"
@@ -54,7 +54,7 @@ class StatsDReporterSpec extends WordSpec with Matchers with BeforeAndAfter with
         |}
         |
       """.stripMargin
-    )
+  )
   val metricKeyGenerator = new SimpleMetricKeyGenerator(config.getConfig("kamon.statsd"))
   val testConfig: Config = ConfigFactory.load(config).withFallback(ConfigFactory.load())
   val statsDReporter = new TestStatsDReporter()
@@ -62,7 +62,7 @@ class StatsDReporterSpec extends WordSpec with Matchers with BeforeAndAfter with
 
   "the StatsDReporterSpec" should {
 
-    "flush the gauge metric data it receives" in  {
+    "flush the gauge metric data it receives" in {
       val name = generateMetricName()
 
       statsDReporter.waitForNextSnapshot()
@@ -70,55 +70,54 @@ class StatsDReporterSpec extends WordSpec with Matchers with BeforeAndAfter with
 
       val packet = statsDServer.getPacket(_.metrics.exists(_.name.contains(name)))
       val metric = packet.getMetric(_.name == name.asMetricName)
-      metric.value should be (Metric(name.asMetricName, "1.0", Gauge, None))
+      metric.value should be(Metric(name.asMetricName, "1.0", Gauge, None))
     }
 
-    "flush the counter metric data it receives" in  {
+    "flush the counter metric data it receives" in {
       val name = generateMetricName()
       statsDReporter.waitForNextSnapshot()
       Kamon.counter(name).withoutTags().increment(3)
 
       val packet = statsDServer.getPacket(_.metrics.exists(_.name.contains(name)))
       val metric = packet.getMetric(_.name == name.asMetricName)
-      metric.value should be (Metric(name.asMetricName, "3.0", Counter, None))
+      metric.value should be(Metric(name.asMetricName, "3.0", Counter, None))
     }
 
-    "flush the histogram metric data it receives" in  {
+    "flush the histogram metric data it receives" in {
       val name = generateMetricName()
       statsDReporter.waitForNextSnapshot()
       Kamon.histogram(name).withoutTags().record(2)
 
       val packet = statsDServer.getPacket(_.metrics.exists(_.name.contains(name)))
       val metric = packet.getMetric(_.name == name.asMetricName)
-      metric.value should be (Metric(name.asMetricName, "2.0", Timer, None))
+      metric.value should be(Metric(name.asMetricName, "2.0", Timer, None))
     }
 
-    "convert time metric in milliseconds before flushing it" in  {
+    "convert time metric in milliseconds before flushing it" in {
       val name = generateMetricName()
       statsDReporter.waitForNextSnapshot()
       Kamon.histogram(name, MeasurementUnit.time.seconds).withoutTags().record(1)
 
       val packet = statsDServer.getPacket(_.metrics.exists(_.name.contains(name)))
       val metric = packet.getMetric(_.name == name.asMetricName)
-      metric.value should be (Metric(name.asMetricName, "1000.0", Timer, None))
+      metric.value should be(Metric(name.asMetricName, "1000.0", Timer, None))
     }
 
-    "convert information metric in byte before flushing it" in  {
+    "convert information metric in byte before flushing it" in {
       val name = generateMetricName()
       statsDReporter.waitForNextSnapshot()
       Kamon.histogram(name, MeasurementUnit.information.kilobytes).withoutTags().record(1)
 
       val packet = statsDServer.getPacket(_.metrics.exists(_.name.contains(name)))
       val metric = packet.getMetric(_.name == name.asMetricName)
-      metric.value should be (Metric(name.asMetricName, "1024.0", Timer, None))
+      metric.value should be(Metric(name.asMetricName, "1024.0", Timer, None))
     }
 
   }
 
   private implicit class StringToMetricName(name: String) {
-    def asMetricName: String = {
+    def asMetricName: String =
       metricKeyGenerator.generateKey(name, TagSet.Empty)
-    }
   }
 
   override def beforeAll(): Unit = {

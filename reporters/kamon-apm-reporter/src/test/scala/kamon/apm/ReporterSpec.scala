@@ -25,38 +25,42 @@ import org.scalatest.concurrent.Eventually
 
 import scala.concurrent.duration._
 
-
-class ReporterSpec extends TestKit(ActorSystem("MetricReporterSpec")) with WordSpecLike
-  with Matchers with BeforeAndAfterAll with ImplicitSender with BeforeAndAfterEach with Eventually {
+class ReporterSpec
+    extends TestKit(ActorSystem("MetricReporterSpec"))
+    with WordSpecLike
+    with Matchers
+    with BeforeAndAfterAll
+    with ImplicitSender
+    with BeforeAndAfterEach
+    with Eventually {
 
   var server: Future[ServerBinding] = null
 
-  private var (helloCount, goodByeCount, ingestCount, tracingCount) = (0,0,0,0)
+  private var (helloCount, goodByeCount, ingestCount, tracingCount) = (0, 0, 0, 0)
 
   override def beforeAll(): Unit = {
     implicit val materializer: ActorMaterializer = ActorMaterializer()
     implicit val executionContext: ExecutionContext = system.dispatcher
 
-
     lazy val routes: Route = entity(as[Array[Byte]]) { buff =>
       post {
         pathPrefix("v1") {
           path("hello") {
-            helloCount+=1
+            helloCount += 1
             testActor ! Hello.parseFrom(buff)
-            if(helloCount > 2) complete("") else complete(StatusCodes.InternalServerError)
+            if (helloCount > 2) complete("") else complete(StatusCodes.InternalServerError)
           } ~ path("goodbye") {
-            goodByeCount+=1
+            goodByeCount += 1
             testActor ! Goodbye.parseFrom(buff)
-            if(goodByeCount > 2) complete("") else complete(StatusCodes.InternalServerError)
+            if (goodByeCount > 2) complete("") else complete(StatusCodes.InternalServerError)
           } ~ path("ingest") {
-            ingestCount+=1
+            ingestCount += 1
             testActor ! MetricBatch.parseFrom(buff)
-            if(ingestCount > 2) complete("") else complete(StatusCodes.InternalServerError)
-          } ~ path("tracing" / "ingest")  {
-            tracingCount+=1
+            if (ingestCount > 2) complete("") else complete(StatusCodes.InternalServerError)
+          } ~ path("tracing" / "ingest") {
+            tracingCount += 1
             testActor ! SpanBatch.parseFrom(buff)
-            if(tracingCount > 2) complete("") else complete(StatusCodes.InternalServerError)
+            if (tracingCount > 2) complete("") else complete(StatusCodes.InternalServerError)
           }
         }
       }
@@ -94,17 +98,30 @@ class ReporterSpec extends TestKit(ActorSystem("MetricReporterSpec")) with WordS
       reporter.reportPeriodSnapshot(initialSnapshot)
       reporter.reportPeriodSnapshot(nextSnapshot)
 
-      expectMsgType[MetricBatch].getInterval.getFrom should be (initialTimestamp.toEpochMilli)
-      expectMsgType[MetricBatch].getInterval.getFrom should be (initialTimestamp.toEpochMilli)
-      expectMsgType[MetricBatch].getInterval.getFrom should be (initialTimestamp.toEpochMilli)
-      expectMsgType[MetricBatch].getInterval.getFrom should be (nextTimestamp.toEpochMilli)
+      expectMsgType[MetricBatch].getInterval.getFrom should be(initialTimestamp.toEpochMilli)
+      expectMsgType[MetricBatch].getInterval.getFrom should be(initialTimestamp.toEpochMilli)
+      expectMsgType[MetricBatch].getInterval.getFrom should be(initialTimestamp.toEpochMilli)
+      expectMsgType[MetricBatch].getInterval.getFrom should be(nextTimestamp.toEpochMilli)
       expectNoMsg(1 second)
     }
 
     "retry span ingestion" in {
-      val span = Span.Finished(Identifier.Empty, Trace.Empty, Identifier.Empty, "", false, false,
-        Instant.ofEpochMilli(0), Instant.ofEpochMilli(0), Span.Kind.Unknown, Span.Position.Unknown,
-        TagSet.Empty, TagSet.Empty, Seq.empty, Seq.empty)
+      val span = Span.Finished(
+        Identifier.Empty,
+        Trace.Empty,
+        Identifier.Empty,
+        "",
+        false,
+        false,
+        Instant.ofEpochMilli(0),
+        Instant.ofEpochMilli(0),
+        Span.Kind.Unknown,
+        Span.Position.Unknown,
+        TagSet.Empty,
+        TagSet.Empty,
+        Seq.empty,
+        Seq.empty
+      )
 
       reporter.reportSpans(Seq(span))
       expectMsgType[SpanBatch]

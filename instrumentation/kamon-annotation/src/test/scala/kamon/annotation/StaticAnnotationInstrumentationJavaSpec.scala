@@ -16,7 +16,7 @@
 
 package kamon.annotation
 
-import kamon.{Kamon, testkit}
+import kamon.{testkit, Kamon}
 import kamon.module.Module.Registration
 import kamon.tag.Lookups._
 import kamon.tag.TagSet
@@ -26,16 +26,17 @@ import org.scalatest.concurrent.Eventually
 import org.scalatest.time.SpanSugar
 import org.scalatest.{BeforeAndAfterAll, Matchers, OptionValues, WordSpec}
 
-class StaticAnnotationInstrumentationJavaSpec extends WordSpec
-  with Matchers
-  with Eventually
-  with SpanSugar
-  with Reconfigure
-  with InstrumentInspection.Syntax
-  with SpanInspection
-  with MetricInspection.Syntax
-  with BeforeAndAfterAll
-  with OptionValues {
+class StaticAnnotationInstrumentationJavaSpec
+    extends WordSpec
+    with Matchers
+    with Eventually
+    with SpanSugar
+    with Reconfigure
+    with InstrumentInspection.Syntax
+    with SpanInspection
+    with MetricInspection.Syntax
+    with BeforeAndAfterAll
+    with OptionValues {
 
   "the Kamon Annotation module" should {
     "create a new trace when is invoked a static method annotated with @Trace" in {
@@ -65,7 +66,7 @@ class StaticAnnotationInstrumentationJavaSpec extends WordSpec
     "count the invocations of a static method annotated with @Count and evaluate EL expressions" in {
       for (_ <- 1 to 2) AnnotatedJavaClass.countWithEL()
 
-      Kamon.counter("count:10").withTags(TagSet.from(Map("counter" -> "1", "env" -> "prod"))).value()should be(2)
+      Kamon.counter("count:10").withTags(TagSet.from(Map("counter" -> "1", "env" -> "prod"))).value() should be(2)
     }
 
     "count the current invocations of a static method annotated with @TrackConcurrency" in {
@@ -125,11 +126,9 @@ class StaticAnnotationInstrumentationJavaSpec extends WordSpec
     registration = Kamon.registerModule("test-reporter", reporter)
   }
 
-  override protected def afterAll(): Unit = {
+  override protected def afterAll(): Unit =
     registration.cancel()
-  }
 
-  def stringTag(span: Span.Finished)(tag: String): String = {
+  def stringTag(span: Span.Finished)(tag: String): String =
     span.tags.get(plain(tag))
-  }
 }

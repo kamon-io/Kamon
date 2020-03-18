@@ -33,7 +33,6 @@ trait ContextPropagation { self: Configuration =>
   init(self.config)
   self.onReconfigure(newConfig => self.init(newConfig))
 
-
   /**
     * Retrieves the HTTP propagation channel with the supplied name. Propagation channels are configured on the
     * kamon.propagation.http configuration section.
@@ -62,11 +61,12 @@ trait ContextPropagation { self: Configuration =>
   def defaultBinaryPropagation(): Propagation[ByteStreamReader, ByteStreamWriter] =
     _defaultBinaryPropagation
 
-  private def init(config: Config): Unit = synchronized {
-    _propagationComponents = ContextPropagation.Channels.from(config)
-    _defaultHttpPropagation = _propagationComponents.httpChannels(ContextPropagation.DefaultHttpChannel)
-    _defaultBinaryPropagation = _propagationComponents.binaryChannels(ContextPropagation.DefaultBinaryChannel)
-  }
+  private def init(config: Config): Unit =
+    synchronized {
+      _propagationComponents = ContextPropagation.Channels.from(config)
+      _defaultHttpPropagation = _propagationComponents.httpChannels(ContextPropagation.DefaultHttpChannel)
+      _defaultBinaryPropagation = _propagationComponents.binaryChannels(ContextPropagation.DefaultBinaryChannel)
+    }
 }
 
 object ContextPropagation {

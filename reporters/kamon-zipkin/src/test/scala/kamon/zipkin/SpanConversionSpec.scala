@@ -59,7 +59,8 @@ class SpanConversionSpec extends WordSpec with Matchers {
         .copy(kind = Span.Kind.Client)
 
       convert(serverSpan).remoteEndpoint() shouldBe null
-      convert(clientSpan).remoteEndpoint() shouldBe Endpoint.newBuilder()
+      convert(clientSpan).remoteEndpoint() shouldBe Endpoint
+        .newBuilder()
         .ip("1.2.3.4")
         .ip("::1")
         .port(9999)
@@ -96,7 +97,6 @@ class SpanConversionSpec extends WordSpec with Matchers {
 
   def newSpan(operationName: String = "test-span"): FinishedSpanBuilder =
     new FinishedSpanBuilder(operationName)
-
 
   class FinishedSpanBuilder(operationName: String) {
     var span = Span.Finished(
@@ -138,7 +138,7 @@ class SpanConversionSpec extends WordSpec with Matchers {
 
     def hasError(error: Boolean): FinishedSpanBuilder = {
       span = span.copy(hasError = error)
-      if(error)
+      if (error)
         trueTag(Span.TagKeys.Error)
       else
         falseTag(Span.TagKeys.Error)

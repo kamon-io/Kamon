@@ -18,21 +18,21 @@ package kamon.datadog
 
 import java.lang.StringBuilder
 import java.nio.charset.StandardCharsets
-import java.text.{ DecimalFormat, DecimalFormatSymbols }
+import java.text.{DecimalFormat, DecimalFormatSymbols}
 import java.time.Duration
 import java.util.Locale
 
 import com.typesafe.config.Config
-import kamon.metric.MeasurementUnit.Dimension.{ Information, Time }
-import kamon.metric.{ MeasurementUnit, MetricSnapshot, PeriodSnapshot }
-import kamon.tag.{ Tag, TagSet }
-import kamon.util.{ EnvironmentTags, Filter }
-import kamon.{ module, Kamon }
+import kamon.metric.MeasurementUnit.Dimension.{Information, Time}
+import kamon.metric.{MeasurementUnit, MetricSnapshot, PeriodSnapshot}
+import kamon.tag.{Tag, TagSet}
+import kamon.util.{EnvironmentTags, Filter}
+import kamon.{module, Kamon}
 import kamon.datadog.DatadogAPIReporter.Configuration
-import kamon.module.{ MetricReporter, ModuleFactory }
+import kamon.module.{MetricReporter, ModuleFactory}
 import org.slf4j.LoggerFactory
 
-import scala.util.{ Failure, Success }
+import scala.util.{Failure, Success}
 
 class DatadogAPIReporterFactory extends ModuleFactory {
   override def create(settings: ModuleFactory.Settings): DatadogAPIReporter = {
@@ -52,9 +52,8 @@ class DatadogAPIReporter(@volatile private var configuration: Configuration, @vo
 
   logger.info("Started the Datadog API reporter.")
 
-  override def stop(): Unit = {
+  override def stop(): Unit =
     logger.info("Stopped the Datadog API reporter.")
-  }
 
   override def reconfigure(config: Config): Unit = {
     val newConfiguration = readConfiguration(config)
@@ -75,7 +74,7 @@ class DatadogAPIReporter(@volatile private var configuration: Configuration, @vo
     val timestamp = snapshot.from.getEpochSecond.toString
 
     val host = Kamon.environment.host
-    val interval = Math.round(Duration.between(snapshot.from, snapshot.to).toMillis() / 1000D)
+    val interval = Math.round(Duration.between(snapshot.from, snapshot.to).toMillis() / 1000d)
     val seriesBuilder = new StringBuilder()
 
     def addDistribution(metric: MetricSnapshot.Distributions): Unit = {
@@ -86,15 +85,17 @@ class DatadogAPIReporter(@volatile private var configuration: Configuration, @vo
         val average = if (dist.count > 0L) (dist.sum / dist.count) else 0L
         addMetric(metric.name + ".avg", valueFormat.format(scale(average, unit)), gauge, d.tags)
         addMetric(metric.name + ".count", valueFormat.format(dist.count), count, d.tags)
-        addMetric(metric.name + ".median", valueFormat.format(scale(dist.percentile(50D).value, unit)), gauge, d.tags)
-        addMetric(metric.name + ".95percentile", valueFormat.format(scale(dist.percentile(95D).value, unit)), gauge, d.tags)
+        addMetric(metric.name + ".median", valueFormat.format(scale(dist.percentile(50d).value, unit)), gauge, d.tags)
+        addMetric(metric.name + ".95percentile", valueFormat.format(scale(dist.percentile(95d).value, unit)), gauge, d.tags)
         addMetric(metric.name + ".max", valueFormat.format(scale(dist.max, unit)), gauge, d.tags)
         addMetric(metric.name + ".min", valueFormat.format(scale(dist.min, unit)), gauge, d.tags)
       }
     }
 
     def addMetric(metricName: String, value: String, metricType: String, tags: TagSet): Unit = {
-      val customTags = (configuration.extraTags ++ tags.iterator(_.toString).map(p => p.key -> p.value).filter(t => configuration.tagFilter.accept(t._1))).map { case (k, v) ⇒ quote"$k:$v" }
+      val customTags = (configuration.extraTags ++ tags.iterator(_.toString).map(p => p.key -> p.value).filter(t => configuration.tagFilter.accept(t._1))).map {
+        case (k, v) ⇒ quote"$k:$v"
+      }
       val allTagsString = customTags.mkString("[", ",", "]")
 
       if (seriesBuilder.length() > 0) seriesBuilder.append(",")
@@ -134,15 +135,16 @@ class DatadogAPIReporter(@volatile private var configuration: Configuration, @vo
 
   }
 
-  private def scale(value: Double, unit: MeasurementUnit): Double = unit.dimension match {
-    case Time if unit.magnitude != configuration.timeUnit.magnitude =>
-      MeasurementUnit.convert(value, unit, configuration.timeUnit)
+  private def scale(value: Double, unit: MeasurementUnit): Double =
+    unit.dimension match {
+      case Time if unit.magnitude != configuration.timeUnit.magnitude =>
+        MeasurementUnit.convert(value, unit, configuration.timeUnit)
 
-    case Information if unit.magnitude != configuration.informationUnit.magnitude =>
-      MeasurementUnit.convert(value, unit, configuration.informationUnit)
+      case Information if unit.magnitude != configuration.informationUnit.magnitude =>
+        MeasurementUnit.convert(value, unit, configuration.informationUnit)
 
-    case _ => value
-  }
+      case _ => value
+    }
 }
 
 private object DatadogAPIReporter {

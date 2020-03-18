@@ -93,7 +93,6 @@ object Storage {
       new Storage.ThreadLocal()
   }
 
-
   /**
     * A Storage implementation that keeps track of all Contexts across all Threads in the application and exposes them
     * through its companion object. Using the Debug storage can only be enabled when the System Property
@@ -154,7 +153,7 @@ object Storage {
       * Contains information about the current context in a thread. The lastUpdateStackTracer can be either a store or
       * a scope close, depending on what was the last action executed on the thread.
       */
-    case class ThreadContext (
+    case class ThreadContext(
       thread: Thread,
       currentContext: Context,
       lastUpdateStackTrace: String
@@ -169,7 +168,7 @@ object Storage {
       val contexts = Seq.newBuilder[ThreadContext]
       val threads = _allThreadContexts.iterator()
 
-      while(threads.hasNext) {
+      while (threads.hasNext) {
         val threadEntry = threads.next()
         contexts += ThreadContext(
           thread = threadEntry.get(1).asInstanceOf[Thread],

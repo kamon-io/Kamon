@@ -18,7 +18,6 @@ package kamon
 
 import kamon.status.{Environment, Status}
 
-
 /**
   * Exposes access to the Kamon's current status. The status information contains details about the internal state of
   * several Kamon components and is exposed for the sole purpose of troubleshooting and debugging issues that might be
@@ -30,7 +29,7 @@ trait CurrentStatus { self: ModuleLoading with Metrics with Configuration =>
   @volatile private var _environment = Environment.from(self.config())
   private val _status = new Status(self._moduleRegistry, self._metricRegistry, self)
 
-  onReconfigure(newConfig => _environment = Environment.from(newConfig) )
+  onReconfigure(newConfig => _environment = Environment.from(newConfig))
 
   /**
     * Returns the current enviroment instance constructed by Kamon using the "kamon.environment" settings.

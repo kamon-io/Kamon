@@ -25,8 +25,7 @@ import org.scalatest.{Matchers, OptionValues, WordSpec}
 import org.scalatest.concurrent.{PatienceConfiguration, ScalaFutures}
 import scalaz.concurrent.Future
 
-class FutureInstrumentationSpec extends WordSpec with Matchers with ScalaFutures with PatienceConfiguration
-    with OptionValues {
+class FutureInstrumentationSpec extends WordSpec with Matchers with ScalaFutures with PatienceConfiguration with OptionValues {
 
   // NOTE: We have this test just to ensure that the Context propagation is working, but starting with Kamon 2.0 there
   //       is no need to have explicit Runnable/Callable instrumentation because the instrumentation brought by the
@@ -50,7 +49,7 @@ class FutureInstrumentationSpec extends WordSpec with Matchers with ScalaFutures
         val context = Context.of("key", "value")
         val baggageAfterTransformations = Kamon.runWithContext(context) {
           Future("Hello Kamon!")
-            // The current context is expected to be available during all intermediate processing.
+          // The current context is expected to be available during all intermediate processing.
             .map(_.length)
             .flatMap(len => Future(len.toString))
             .map(_ => Kamon.currentContext().getTag(plain("key")))
@@ -62,4 +61,3 @@ class FutureInstrumentationSpec extends WordSpec with Matchers with ScalaFutures
     }
   }
 }
-

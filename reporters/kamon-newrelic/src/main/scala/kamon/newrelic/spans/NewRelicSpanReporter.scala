@@ -16,8 +16,7 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 
-class NewRelicSpanReporter(spanBatchSenderBuilder: SpanBatchSenderBuilder =
-                           new SimpleSpanBatchSenderBuilder()) extends SpanReporter {
+class NewRelicSpanReporter(spanBatchSenderBuilder: SpanBatchSenderBuilder = new SimpleSpanBatchSenderBuilder()) extends SpanReporter {
 
   private val logger = LoggerFactory.getLogger(classOf[NewRelicSpanReporter])
   @volatile private var spanBatchSender = spanBatchSenderBuilder.build(Kamon.config())
@@ -29,29 +28,29 @@ class NewRelicSpanReporter(spanBatchSenderBuilder: SpanBatchSenderBuilder =
   //   TODO is this actually needed with NR Telemetry SDK? research exactly what this does
   def checkJoinParameter(): Unit = {
     val joinRemoteParentsWithSameID = Kamon.config().getBoolean("kamon.trace.join-remote-parents-with-same-span-id")
-    if (!joinRemoteParentsWithSameID) {
-      logger.warn("For full distributed trace compatibility enable `kamon.trace.join-remote-parents-with-same-span-id` to " +
-        "preserve span id across client/server sides of a Span.")
-    }
+    if (!joinRemoteParentsWithSameID)
+      logger.warn(
+        "For full distributed trace compatibility enable `kamon.trace.join-remote-parents-with-same-span-id` to " +
+          "preserve span id across client/server sides of a Span."
+      )
   }
 
   /**
-   * Sends batches of Spans to New Relic using the Telemetry SDK
-   *
-   * Modules implementing the SpanReporter trait will get registered for periodically receiving span batches. The frequency of the
-   * span batches is controlled by the kamon.trace.tick-interval setting.
-   *
-   * @param spans - spans to report to New Relic
-   */
+    * Sends batches of Spans to New Relic using the Telemetry SDK
+    *
+    * Modules implementing the SpanReporter trait will get registered for periodically receiving span batches. The frequency of the
+    * span batches is controlled by the kamon.trace.tick-interval setting.
+    *
+    * @param spans - spans to report to New Relic
+    */
   override def reportSpans(spans: Seq[Span.Finished]): Unit = {
     logger.debug("NewRelicSpanReporter reportSpans...")
     val newRelicSpans = spans.map(NewRelicSpanConverter.convertSpan).asJava
     spanBatchSender.sendBatch(new SpanBatch(newRelicSpans, commonAttributes))
   }
 
-  override def reconfigure(newConfig: Config): Unit = {
+  override def reconfigure(newConfig: Config): Unit =
     reconfigure(newConfig, Kamon.environment)
-  }
 
   //exposed for testing
   def reconfigure(newConfig: Config, environment: Environment): Unit = {

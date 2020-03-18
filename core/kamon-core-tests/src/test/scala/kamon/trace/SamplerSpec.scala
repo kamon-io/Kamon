@@ -261,12 +261,11 @@ class SamplerSpec extends WordSpec with TimesOnInt with Matchers with BeforeAndA
   override protected def beforeEach(): Unit =
     resetCounters()
 
-  def simulate(duration: Duration)(perSecond: => Unit)(implicit sampler: AdaptiveSampler): Unit = {
-    duration.toSeconds.toInt.times{
+  def simulate(duration: Duration)(perSecond: => Unit)(implicit sampler: AdaptiveSampler): Unit =
+    duration.toSeconds.toInt.times {
       perSecond
       sampler.adapt()
     }
-  }
 
   def adaptiveSampler(): AdaptiveSampler =
     new AdaptiveSampler()

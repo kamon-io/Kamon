@@ -14,16 +14,28 @@ import org.scalatest.{Matchers, OptionValues, WordSpec}
 
 import scala.collection.mutable
 
-class HttpServerInstrumentationSpec extends WordSpec with Matchers with InstrumentInspection.Syntax with OptionValues
-    with SpanInspection.Syntax with Eventually {
+class HttpServerInstrumentationSpec
+    extends WordSpec
+    with Matchers
+    with InstrumentInspection.Syntax
+    with OptionValues
+    with SpanInspection.Syntax
+    with Eventually {
 
   "the HTTP server instrumentation" when {
     "configured for context propagation" should {
       "read context entries and tags from the incoming request" in {
-        val handler = httpServer().createHandler(fakeRequest("http://localhost:8080/", "/", "GET", Map(
-          "context-tags" -> "tag=value;none=0011223344556677;",
-          "custom-trace-id" -> "0011223344556677"
-        )))
+        val handler = httpServer().createHandler(
+          fakeRequest(
+            "http://localhost:8080/",
+            "/",
+            "GET",
+            Map(
+              "context-tags"    -> "tag=value;none=0011223344556677;",
+              "custom-trace-id" -> "0011223344556677"
+            )
+          )
+        )
 
         handler.context.tags.get(plain("tag")) shouldBe "value"
         handler.context.tags.get(plain("none")) shouldBe "0011223344556677"
@@ -32,10 +44,17 @@ class HttpServerInstrumentationSpec extends WordSpec with Matchers with Instrume
       }
 
       "use the configured HTTP propagation channel" in {
-        val handler = httpServer().createHandler(fakeRequest("http://localhost:8080/", "/", "GET", Map(
-          "context-tags" -> "tag=value;none=0011223344556677;",
-          "custom-trace-id" -> "0011223344556677"
-        )))
+        val handler = httpServer().createHandler(
+          fakeRequest(
+            "http://localhost:8080/",
+            "/",
+            "GET",
+            Map(
+              "context-tags"    -> "tag=value;none=0011223344556677;",
+              "custom-trace-id" -> "0011223344556677"
+            )
+          )
+        )
 
         handler.context.tags.get(plain("tag")) shouldBe "value"
         handler.context.tags.get(plain("none")) shouldBe "0011223344556677"
@@ -81,7 +100,7 @@ class HttpServerInstrumentationSpec extends WordSpec with Matchers with Instrume
         httpServer().connectionClosed(Duration.ofSeconds(30), 15)
 
         val connectionUsageSnapshot = connectionUsage(8081).distribution()
-        connectionUsageSnapshot.buckets.map(_.value) should contain allOf(
+        connectionUsageSnapshot.buckets.map(_.value) should contain allOf (
           10,
           15
         )
@@ -96,9 +115,9 @@ class HttpServerInstrumentationSpec extends WordSpec with Matchers with Instrume
         httpServer().connectionClosed(Duration.ofSeconds(30), 15)
 
         val connectionLifetimeSnapshot = connectionLifetime(8081).distribution()
-        connectionLifetimeSnapshot.buckets.map(_.value) should contain allOf(
+        connectionLifetimeSnapshot.buckets.map(_.value) should contain allOf (
           19998441472L, // 20 seconds with 1% precision
-          29930553344L  // 30 seconds with 1% precision
+          29930553344L // 30 seconds with 1% precision
         )
       }
 
@@ -131,7 +150,7 @@ class HttpServerInstrumentationSpec extends WordSpec with Matchers with Instrume
         httpServer().createHandler(fakeRequest("http://localhost:8080/", "/", "GET", Map.empty)).requestReceived(400)
 
         val requestSizeSnapshot = requestSize(8081).distribution()
-        requestSizeSnapshot.buckets.map(_.value) should contain allOf(
+        requestSizeSnapshot.buckets.map(_.value) should contain allOf (
           300,
           400
         )
@@ -144,7 +163,7 @@ class HttpServerInstrumentationSpec extends WordSpec with Matchers with Instrume
         httpServer().createHandler(fakeRequest("http://localhost:8080/", "/", "GET", Map.empty)).responseSent(400)
 
         val requestSizeSnapshot = responseSize(8081).distribution()
-        requestSizeSnapshot.buckets.map(_.value) should contain allOf(
+        requestSizeSnapshot.buckets.map(_.value) should contain allOf (
           300,
           400
         )
@@ -157,7 +176,6 @@ class HttpServerInstrumentationSpec extends WordSpec with Matchers with Instrume
         completedRequests(8081, 300).value()
         completedRequests(8081, 400).value()
         completedRequests(8081, 500).value()
-
 
         val request = fakeRequest("http://localhost:8080/", "/", "GET", Map.empty)
         httpServer().createHandler(request).buildResponse(fakeResponse(200, mutable.Map.empty), Context.Empty)
@@ -196,10 +214,17 @@ class HttpServerInstrumentationSpec extends WordSpec with Matchers with Instrume
       }
 
       "adopt a traceID when explicitly provided" in {
-        val handler = httpServer().createHandler(fakeRequest("http://localhost:8080/", "/", "GET", Map(
-          "context-tags" -> "tag=value;none=0011223344556677;",
-          "x-correlation-id" -> "0011223344556677"
-        )))
+        val handler = httpServer().createHandler(
+          fakeRequest(
+            "http://localhost:8080/",
+            "/",
+            "GET",
+            Map(
+              "context-tags"     -> "tag=value;none=0011223344556677;",
+              "x-correlation-id" -> "0011223344556677"
+            )
+          )
+        )
 
         handler.span.trace.id.string shouldBe "0011223344556677"
       }
@@ -220,18 +245,32 @@ class HttpServerInstrumentationSpec extends WordSpec with Matchers with Instrume
       }
 
       "receive tags from context when available" in {
-        val handler = httpServer().createHandler(fakeRequest("http://localhost:8080/", "/", "GET", Map(
-          "context-tags" -> "tag=value;none=0011223344556677;initiator.name=superservice;",
-          "custom-trace-id" -> "0011223344556677"
-        )))
+        val handler = httpServer().createHandler(
+          fakeRequest(
+            "http://localhost:8080/",
+            "/",
+            "GET",
+            Map(
+              "context-tags"    -> "tag=value;none=0011223344556677;initiator.name=superservice;",
+              "custom-trace-id" -> "0011223344556677"
+            )
+          )
+        )
 
         handler.context.getTag(plain("initiator.name")) shouldBe "superservice"
       }
 
       "write trace identifiers on the responses" in {
-        val handler = httpServer().createHandler(fakeRequest("http://localhost:8080/", "/", "GET", Map(
-          "x-correlation-id" -> "0011223344556677"
-        )))
+        val handler = httpServer().createHandler(
+          fakeRequest(
+            "http://localhost:8080/",
+            "/",
+            "GET",
+            Map(
+              "x-correlation-id" -> "0011223344556677"
+            )
+          )
+        )
 
         val responseHeaders = mutable.Map.empty[String, String]
         handler.buildResponse(fakeResponse(200, responseHeaders), handler.context)
@@ -271,20 +310,34 @@ class HttpServerInstrumentationSpec extends WordSpec with Matchers with Instrume
     "all capabilities are disabled" should {
       "not read any context from the incoming requests" in {
         val httpServer = noopHttpServer()
-        val handler = httpServer.createHandler(fakeRequest("http://localhost:8080/", "/", "GET", Map(
-          "context-tags" -> "tag=value;none=0011223344556677;",
-          "custom-trace-id" -> "0011223344556677"
-        )))
+        val handler = httpServer.createHandler(
+          fakeRequest(
+            "http://localhost:8080/",
+            "/",
+            "GET",
+            Map(
+              "context-tags"    -> "tag=value;none=0011223344556677;",
+              "custom-trace-id" -> "0011223344556677"
+            )
+          )
+        )
 
         handler.context shouldBe Context.Empty
       }
 
       "not create any span to represent the server request" in {
         val httpServer = noopHttpServer()
-        val handler = httpServer.createHandler(fakeRequest("http://localhost:8080/", "/", "GET", Map(
-          "context-tags" -> "tag=value;none=0011223344556677;",
-          "custom-trace-id" -> "0011223344556677"
-        )))
+        val handler = httpServer.createHandler(
+          fakeRequest(
+            "http://localhost:8080/",
+            "/",
+            "GET",
+            Map(
+              "context-tags"    -> "tag=value;none=0011223344556677;",
+              "custom-trace-id" -> "0011223344556677"
+            )
+          )
+        )
 
         handler.span.isEmpty shouldBe true
       }
@@ -311,17 +364,19 @@ class HttpServerInstrumentationSpec extends WordSpec with Matchers with Instrume
 
   def httpServer(): HttpServerInstrumentation = HttpServerInstrumentation.from(ConfigFactory.empty(), TestComponent, TestInterface, port = 8081)
 
-  def noSpanMetricsHttpServer(): HttpServerInstrumentation = HttpServerInstrumentation.from(
-    Kamon.config().getConfig("kamon.instrumentation.http-server.no-span-metrics"), TestComponent, TestInterface, port = 8082)
+  def noSpanMetricsHttpServer(): HttpServerInstrumentation =
+    HttpServerInstrumentation.from(Kamon.config().getConfig("kamon.instrumentation.http-server.no-span-metrics"), TestComponent, TestInterface, port = 8082)
 
-  def noopHttpServer(): HttpServerInstrumentation = HttpServerInstrumentation.from(
-    Kamon.config().getConfig("kamon.instrumentation.http-server.noop"), TestComponent, TestInterface, port = 8083)
+  def noopHttpServer(): HttpServerInstrumentation =
+    HttpServerInstrumentation.from(Kamon.config().getConfig("kamon.instrumentation.http-server.noop"), TestComponent, TestInterface, port = 8083)
 
-  def methodNamingHttpServer(): HttpServerInstrumentation = HttpServerInstrumentation.from(
-    Kamon.config().getConfig("kamon.instrumentation.http-server.with-method-operation-name-generator"), TestComponent, TestInterface, port = 8084)
+  def methodNamingHttpServer(): HttpServerInstrumentation =
+    HttpServerInstrumentation
+      .from(Kamon.config().getConfig("kamon.instrumentation.http-server.with-method-operation-name-generator"), TestComponent, TestInterface, port = 8084)
 
-  def customNamingHttpServer(): HttpServerInstrumentation = HttpServerInstrumentation.from(
-    Kamon.config().getConfig("kamon.instrumentation.http-server.with-custom-operation-name-generator"), TestComponent, TestInterface, port = 8084)
+  def customNamingHttpServer(): HttpServerInstrumentation =
+    HttpServerInstrumentation
+      .from(Kamon.config().getConfig("kamon.instrumentation.http-server.with-custom-operation-name-generator"), TestComponent, TestInterface, port = 8084)
 
   def fakeRequest(requestUrl: String, requestPath: String, requestMethod: String, headers: Map[String, String]): HttpMessage.Request =
     new HttpMessage.Request {
@@ -374,7 +429,6 @@ class HttpServerInstrumentationSpec extends WordSpec with Matchers with Instrume
 }
 
 class DedicatedNameGenerator extends HttpOperationNameGenerator {
-  override def name(request: HttpMessage.Request): Option[String] = {
+  override def name(request: HttpMessage.Request): Option[String] =
     Some(request.host + ":" + request.method)
-  }
 }

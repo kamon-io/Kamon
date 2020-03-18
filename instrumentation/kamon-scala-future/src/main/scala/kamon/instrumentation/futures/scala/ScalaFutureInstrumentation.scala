@@ -26,7 +26,6 @@ import scala.concurrent.Future
 import scala.util.{Failure, Success}
 import scala.util.control.NonFatal
 
-
 object ScalaFutureInstrumentation {
 
   val Component = "scala.future"
@@ -40,12 +39,13 @@ object ScalaFutureInstrumentation {
     * computation might be the result of applying several transformations to an initial Future. If you are interested in
     * tracing the intermediate computations as well, take a look at the `traceBody` and `traceFunc` functions bellow.
     */
-  def trace[T](operationName: String, tags: TagSet = TagSet.Empty, metricTags: TagSet = TagSet.Empty)(future: => Future[T])
-      (implicit settings: Settings): Future[T] = {
+  def trace[T](operationName: String, tags: TagSet = TagSet.Empty, metricTags: TagSet = TagSet.Empty)(
+    future: => Future[T]
+  )(implicit settings: Settings): Future[T] = {
 
     val spanBuilder = Kamon.internalSpanBuilder(operationName, Component)
-    if(tags.nonEmpty()) spanBuilder.tag(tags)
-    if(metricTags.nonEmpty()) spanBuilder.tagMetrics(metricTags)
+    if (tags.nonEmpty()) spanBuilder.tag(tags)
+    if (metricTags.nonEmpty()) spanBuilder.tagMetrics(metricTags)
 
     trace(spanBuilder)(future)(settings)
   }
@@ -60,7 +60,7 @@ object ScalaFutureInstrumentation {
     * tracing the intermediate computations as well, take a look at the `traceBody` and `traceFunc` functions bellow.
     */
   def trace[T](spanBuilder: SpanBuilder)(future: => Future[T])(implicit settings: Settings): Future[T] = {
-    if(settings.trackMetrics)
+    if (settings.trackMetrics)
       spanBuilder.trackMetrics()
     else
       spanBuilder.doNotTrackMetrics()
@@ -70,7 +70,7 @@ object ScalaFutureInstrumentation {
     evaluatedFuture.onComplete {
       case Success(_)       => futureSpan.finish()
       case Failure(failure) => futureSpan.fail(failure).finish()
-    } (CallingThreadExecutionContext)
+    }(CallingThreadExecutionContext)
 
     evaluatedFuture
   }
@@ -93,12 +93,11 @@ object ScalaFutureInstrumentation {
     *            bytecode instrumentation. If instrumentation is disabled you risk leaving dirty threads that can cause
     *            incorrect Context propagation behavior.
     */
-  def traceBody[S](operationName: String, tags: TagSet = TagSet.Empty, metricTags: TagSet = TagSet.Empty)(body: => S)
-      (implicit settings: Settings): S = {
+  def traceBody[S](operationName: String, tags: TagSet = TagSet.Empty, metricTags: TagSet = TagSet.Empty)(body: => S)(implicit settings: Settings): S = {
 
     val spanBuilder = Kamon.internalSpanBuilder(operationName, Component)
-    if(tags.nonEmpty()) spanBuilder.tag(tags)
-    if(metricTags.nonEmpty()) spanBuilder.tagMetrics(metricTags)
+    if (tags.nonEmpty()) spanBuilder.tag(tags)
+    if (metricTags.nonEmpty()) spanBuilder.tagMetrics(metricTags)
 
     traceBody(spanBuilder)(body)(settings)
   }
@@ -125,15 +124,12 @@ object ScalaFutureInstrumentation {
     val span = startedSpan(spanBuilder, settings)
     Kamon.storeContext(Kamon.currentContext().withEntry(Span.Key, span))
 
-    try {
-      body
-    } catch {
+    try body
+    catch {
       case NonFatal(error) =>
         span.fail(error.getMessage, error)
         throw error
-    } finally {
-      span.finish()
-    }
+    } finally span.finish()
   }
 
   /**
@@ -154,12 +150,13 @@ object ScalaFutureInstrumentation {
     *            bytecode instrumentation. If instrumentation is disabled you risk leaving dirty threads that can cause
     *            incorrect Context propagation behavior.
     */
-  def traceFunc[T, S](operationName: String, tags: TagSet = TagSet.Empty, metricTags: TagSet = TagSet.Empty)(body: T => S)
-      (implicit settings: Settings): T => S = {
+  def traceFunc[T, S](operationName: String, tags: TagSet = TagSet.Empty, metricTags: TagSet = TagSet.Empty)(
+    body: T => S
+  )(implicit settings: Settings): T => S = {
 
     val spanBuilder = Kamon.internalSpanBuilder(operationName, Component)
-    if(tags.nonEmpty()) spanBuilder.tag(tags)
-    if(metricTags.nonEmpty()) spanBuilder.tagMetrics(metricTags)
+    if (tags.nonEmpty()) spanBuilder.tag(tags)
+    if (metricTags.nonEmpty()) spanBuilder.tagMetrics(metricTags)
 
     traceFunc(spanBuilder)(body)(settings)
   }
@@ -186,17 +183,13 @@ object ScalaFutureInstrumentation {
     val span = startedSpan(spanBuilder, settings)
     Kamon.storeContext(Kamon.currentContext().withEntry(Span.Key, span))
 
-    try {
-      body(t)
-    } catch {
+    try body(t)
+    catch {
       case NonFatal(error) =>
         span.fail(error.getMessage, error)
         throw error
-    } finally {
-      span.finish()
-    }
+    } finally span.finish()
   }
-
 
   /**
     * Settings for the Delayed Spans created by the traceBody and traceFunc helper functions.
@@ -225,7 +218,6 @@ object ScalaFutureInstrumentation {
       */
     val NoDelayedSpanMetrics = Settings(true, false)
 
-
     private def readSettingsFromConfig(config: Config): Settings = {
       val futureInstrumentationConfig = config.getConfig("kamon.instrumentation.futures.scala")
 
@@ -245,14 +237,13 @@ object ScalaFutureInstrumentation {
       case Some(timestamp) =>
         val scheduledAt = Kamon.clock().toInstant(timestamp)
         val span = spanBuilder.delay(scheduledAt)
-        if(!settings.trackMetrics) span.doNotTrackMetrics()
-        if(!settings.trackDelayedSpanMetrics) span.doNotTrackDelayedSpanMetrics()
+        if (!settings.trackMetrics) span.doNotTrackMetrics()
+        if (!settings.trackDelayedSpanMetrics) span.doNotTrackDelayedSpanMetrics()
         span.start()
 
       case None =>
-        if(!settings.trackMetrics) spanBuilder.doNotTrackMetrics()
+        if (!settings.trackMetrics) spanBuilder.doNotTrackMetrics()
         spanBuilder.start()
     }
   }
 }
-

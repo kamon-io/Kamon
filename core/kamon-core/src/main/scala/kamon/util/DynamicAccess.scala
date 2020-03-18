@@ -42,7 +42,8 @@ class DynamicAccess(val classLoader: ClassLoader) {
   /**
     * Tries to create an instance of the provided class, passing the provided arguments to the constructor.
     */
-  def createInstanceFor[T: ClassTag](clazz: Class[_], args: immutable.Seq[(Class[_], AnyRef)]): T = try {
+  def createInstanceFor[T: ClassTag](clazz: Class[_], args: immutable.Seq[(Class[_], AnyRef)]): T =
+    try {
       val types = args.map(_._1).toArray
       val values = args.map(_._2).toArray
       val constructor = clazz.getDeclaredConstructor(types: _*)

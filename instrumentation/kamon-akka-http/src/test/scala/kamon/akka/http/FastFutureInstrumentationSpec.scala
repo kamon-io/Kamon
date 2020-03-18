@@ -35,7 +35,9 @@ class FastFutureInstrumentationSpec extends WordSpec with Matchers {
           future.fast.flatMap(_ => Future(Kamon.currentContext())),
           future.fast.map(_ => "").flatMap(_ => Future(Kamon.currentContext())),
           future.fast.map(_ => "").map(_ => Kamon.currentContext()),
-          future.fast.map(_ => { val c = Kamon.currentContext(); onCompleteFuture.complete(Try(c)); c }),
+          future.fast.map { _ =>
+            val c = Kamon.currentContext(); onCompleteFuture.complete(Try(c)); c
+          },
           onCompleteFuture.future
         )
 
@@ -46,7 +48,6 @@ class FastFutureInstrumentationSpec extends WordSpec with Matchers {
         Await.ready(future, 10 seconds)
         val fastFutureContexts = Await.result(FastFuture.sequence(fastFutures), 10 seconds)
         val futureContext = future.value.get.asInstanceOf[HasContext].context
-
 
         fastFutureContexts.foreach(context => context shouldBe futureContext)
       }
@@ -73,7 +74,9 @@ class FastFutureInstrumentationSpec extends WordSpec with Matchers {
           future.fast.flatMap(_ => Future(Kamon.currentContext())),
           future.fast.map(_ => "").flatMap(_ => Future(Kamon.currentContext())),
           future.fast.map(_ => "").map(_ => Kamon.currentContext()),
-          future.fast.map(_ => { val c = Kamon.currentContext(); onCompleteFuture.complete(Try(c)); c }),
+          future.fast.map { _ =>
+            val c = Kamon.currentContext(); onCompleteFuture.complete(Try(c)); c
+          },
           onCompleteFuture.future
         )
 

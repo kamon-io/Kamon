@@ -12,12 +12,13 @@ import org.scalatest.{Matchers, WordSpec}
 
 import scala.collection.JavaConverters._
 
-class AttributeBuddySpec extends WordSpec with Matchers  {
+class AttributeBuddySpec extends WordSpec with Matchers {
   "the tag set converter" should {
     "convert a tagset" in {
       val tags1 = TagSet.from(Map("foo" -> "bar", "boop" -> 1234L, "flower" -> false))
       val tags2 = TagSet.from(Map("a" -> "b"))
-      val expectedAttributes = new Attributes().put("foo", "bar")
+      val expectedAttributes = new Attributes()
+        .put("foo", "bar")
         .put("boop", 1234L)
         .put("flower", false)
         .put("a", "b")
@@ -26,11 +27,9 @@ class AttributeBuddySpec extends WordSpec with Matchers  {
     }
 
     "convert some config" in {
-      val tagDetails = ConfigValueFactory.fromMap(Map(
-        "stringTag" -> "testThing",
-        "numberTag" -> 234,
-        "booleanTag" -> true,
-        "complexType" -> Map("lemon" -> "danishes").asJava).asJava)
+      val tagDetails = ConfigValueFactory.fromMap(
+        Map("stringTag" -> "testThing", "numberTag" -> 234, "booleanTag" -> true, "complexType" -> Map("lemon" -> "danishes").asJava).asJava
+      )
       val result = AttributeBuddy.addTagsFromConfig(tagDetails.toConfig)
 
       val expected = new Attributes()

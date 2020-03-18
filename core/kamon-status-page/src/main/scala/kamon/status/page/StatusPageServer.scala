@@ -30,24 +30,23 @@ import scala.compat.Platform.EOL
 /**
   * Exposes an embedded HTTP server based on NanoHTTP.
   */
-class StatusPageServer(hostname: String, port: Int, resourceLoader: ClassLoader, status: Status)
-    extends NanoHTTPD(hostname, port) {
+class StatusPageServer(hostname: String, port: Int, resourceLoader: ClassLoader, status: Status) extends NanoHTTPD(hostname, port) {
 
   private val RootResourceDirectory = "status-page"
   private val ResourceExtensionRegex = ".*\\.([a-zA-Z0-9]*)".r
 
   override def serve(session: NanoHTTPD.IHTTPSession): NanoHTTPD.Response = {
-    if(session.getMethod() == NanoHTTPD.Method.GET) {
+    if (session.getMethod() == NanoHTTPD.Method.GET) {
       try {
         if (session.getUri().startsWith("/status")) {
 
           // Serve the current status data on Json.
           session.getUri() match {
-            case "/status/settings" => json(status.settings())
-            case "/status/modules" => json(status.moduleRegistry())
-            case "/status/metrics" => json(status.metricRegistry())
+            case "/status/settings"        => json(status.settings())
+            case "/status/modules"         => json(status.moduleRegistry())
+            case "/status/metrics"         => json(status.metricRegistry())
             case "/status/instrumentation" => json(status.instrumentation())
-            case _ => NotFound
+            case _                         => NotFound
           }
 
         } else {
@@ -74,13 +73,13 @@ class StatusPageServer(hostname: String, port: Int, resourceLoader: ClassLoader,
   private def mimeType(resource: String): String = {
     val ResourceExtensionRegex(resourceExtension) = resource
     resourceExtension match {
-      case "css"    => "text/css"
-      case "js"     => "application/javascript"
-      case "ico"    => "image/x-icon"
-      case "svg"    => "image/svg+xml"
-      case "html"   => "text/html"
-      case "woff2"  => "font/woff2"
-      case _        => "text/plain"
+      case "css"   => "text/css"
+      case "js"    => "application/javascript"
+      case "ico"   => "image/x-icon"
+      case "svg"   => "image/svg+xml"
+      case "html"  => "text/html"
+      case "woff2" => "font/woff2"
+      case _       => "text/plain"
     }
   }
 
@@ -99,11 +98,12 @@ class StatusPageServer(hostname: String, port: Int, resourceLoader: ClassLoader,
     response
   }
 
-  private def serverError(cause: Throwable) = NanoHTTPD.newFixedLengthResponse(
-    StatusCode.INTERNAL_ERROR,
-    NanoHTTPD.MIME_PLAINTEXT,
-    "Failed to serve request due to: \n\n" + cause.getStackTrace.mkString("", EOL, EOL)
-  )
+  private def serverError(cause: Throwable) =
+    NanoHTTPD.newFixedLengthResponse(
+      StatusCode.INTERNAL_ERROR,
+      NanoHTTPD.MIME_PLAINTEXT,
+      "Failed to serve request due to: \n\n" + cause.getStackTrace.mkString("", EOL, EOL)
+    )
 
   private val NotAllowed = NanoHTTPD.newFixedLengthResponse(
     StatusCode.METHOD_NOT_ALLOWED,
@@ -121,7 +121,6 @@ class StatusPageServer(hostname: String, port: Int, resourceLoader: ClassLoader,
   // connections from the browsers.
   NotAllowed.closeConnection(true)
   NotFound.closeConnection(true)
-
 
   /**
     * AsyncRunner that uses a thread pool for handling requests rather than spawning a new thread for each request (as

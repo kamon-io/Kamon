@@ -62,18 +62,18 @@ object Clock {
       var nanos = System.nanoTime()
       var isCandidate = false
 
-      while(calibrationIterations > 0) {
+      while (calibrationIterations > 0) {
         val currentMillis = System.currentTimeMillis()
         val currentNanos = System.nanoTime()
 
-        if(isCandidate && millis != currentMillis) {
+        if (isCandidate && millis != currentMillis) {
           millis = currentMillis
           nanos = currentNanos
           calibrationIterations = 0
         } else {
-          if(millis == currentMillis) {
+          if (millis == currentMillis)
             isCandidate = true
-          } else {
+          else {
             millis = currentMillis
             nanos = currentNanos
           }
@@ -105,9 +105,8 @@ object Clock {
     override def getZone: ZoneId =
       _systemClock.getZone()
 
-    override def nanosSince(instant: Instant): Long = {
+    override def nanosSince(instant: Instant): Long =
       nanosBetween(instant, this.instant())
-    }
   }
 
   /**
@@ -122,9 +121,8 @@ object Clock {
   /**
     * Returns the number of microseconds between the EPOCH and the provided instant.
     */
-  def toEpochMicros(instant: Instant): Long = {
+  def toEpochMicros(instant: Instant): Long =
     Math.multiplyExact(instant.getEpochSecond, _microsInSecond) + Math.floorDiv(instant.getNano, _nanosInMicro)
-  }
 
   /**
     * Returns the next Instant that aligns with the provided bucket size duration. For example, if this function is

@@ -21,7 +21,7 @@ package object logback {
   configurator.conversionRule("contextTag", classOf[ContextTagConverter])
   configurator.conversionRule("contextEntry", classOf[ContextEntryConverter])
 
-  def buildMemoryAppender(config: LogbackConfigurator): LogbackMemoryAppender = buildMemoryAppender(config,"%traceID %spanID %spanOperationName")
+  def buildMemoryAppender(config: LogbackConfigurator): LogbackMemoryAppender = buildMemoryAppender(config, "%traceID %spanID %spanOperationName")
 
   def buildMemoryAppender(config: LogbackConfigurator, logPattern: String): LogbackMemoryAppender = {
     val appender = new LogbackMemoryAppender()
@@ -45,10 +45,9 @@ package object logback {
     appender
   }
 
-  def createLoggingEvent(loggerContext: LoggerContext, level: Level = Level.DEBUG): LoggingEvent = {
+  def createLoggingEvent(loggerContext: LoggerContext, level: Level = Level.DEBUG): LoggingEvent =
     new LoggingEvent(this.getClass.getName, loggerContext.getLogger("ROOT"), level, "test message", null, null)
-  }
 
   def logMany(times: Int, level: Level)(implicit appender: Appender[ILoggingEvent], loggerContext: LoggerContext): Unit =
-    for(_ <- 1 to times) { appender.doAppend(createLoggingEvent(context, level)) }
+    for (_ <- 1 to times) appender.doAppend(createLoggingEvent(context, level))
 }

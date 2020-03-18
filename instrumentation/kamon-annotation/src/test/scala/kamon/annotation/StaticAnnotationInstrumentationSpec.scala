@@ -22,25 +22,26 @@ import kamon.tag.Lookups.plain
 import kamon.tag.TagSet
 import kamon.testkit.{MetricInspection, Reconfigure, _}
 import kamon.trace.Span
-import kamon.{Kamon, testkit}
+import kamon.{testkit, Kamon}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.SpanSugar
 import org.scalatest.{BeforeAndAfterAll, Matchers, OptionValues, WordSpec}
 
-class StaticAnnotationInstrumentationSpec extends WordSpec
-  with Matchers
-  with Eventually
-  with SpanSugar
-  with Reconfigure
-  with InstrumentInspection.Syntax
-  with SpanInspection
-  with MetricInspection.Syntax
-  with BeforeAndAfterAll
-  with OptionValues {
+class StaticAnnotationInstrumentationSpec
+    extends WordSpec
+    with Matchers
+    with Eventually
+    with SpanSugar
+    with Reconfigure
+    with InstrumentInspection.Syntax
+    with SpanInspection
+    with MetricInspection.Syntax
+    with BeforeAndAfterAll
+    with OptionValues {
 
   "the Kamon Annotation module" should {
     "create a new trace when is invoked a method annotated with @Trace in a Scala Object" in {
-      for (_<- 1 to 10) AnnotatedObject.trace()
+      for (_ <- 1 to 10) AnnotatedObject.trace()
 
       eventually(timeout(10 seconds)) {
         val span = reporter.nextSpan().value
@@ -66,13 +67,12 @@ class StaticAnnotationInstrumentationSpec extends WordSpec
     "count the invocations of a method annotated with @Count and evaluate EL expressions in a Scala Object" in {
       for (_ <- 1 to 2) AnnotatedObject.countWithEL()
 
-      Kamon.counter("count:10").withTags(TagSet.from(Map("counter" -> "1", "env" -> "prod"))).value()should be(2)
+      Kamon.counter("count:10").withTags(TagSet.from(Map("counter" -> "1", "env" -> "prod"))).value() should be(2)
     }
 
     "count the current invocations of a method annotated with @TrackConcurrency in a Scala Object" in {
-      for (_ <- 1 to 10) {
+      for (_ <- 1 to 10)
         AnnotatedObject.countMinMax()
-      }
 
       eventually(timeout(5 seconds)) {
         Kamon.rangeSampler("minMax").withoutTags().distribution().max should be(0)
@@ -128,13 +128,11 @@ class StaticAnnotationInstrumentationSpec extends WordSpec
     registration = Kamon.registerModule("test-reporter", reporter)
   }
 
-  override protected def afterAll(): Unit = {
+  override protected def afterAll(): Unit =
     registration.cancel()
-  }
 
-  def stringTag(span: Span.Finished)(tag: String): String = {
+  def stringTag(span: Span.Finished)(tag: String): String =
     span.tags.get(plain(tag))
-  }
 }
 
 object AnnotatedObject {

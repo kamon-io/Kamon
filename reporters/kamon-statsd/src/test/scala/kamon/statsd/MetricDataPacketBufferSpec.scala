@@ -22,7 +22,7 @@ class MetricDataPacketBufferSpec extends WordSpec with Matchers with BeforeAndAf
       buffer.flush()
       val packet = statsDServer.getPacket(_.hasMetric(_.name == "counter"))
       packet.metrics should have size 1
-      packet.metrics should contain (Metric("counter", "1.0", "c"))
+      packet.metrics should contain(Metric("counter", "1.0", "c"))
     }
 
     "flush multiple metrics in the same udp packet" in {
@@ -33,8 +33,8 @@ class MetricDataPacketBufferSpec extends WordSpec with Matchers with BeforeAndAf
       buffer.flush()
       val packet = statsDServer.getPacket(_.hasMetric(_.name == "counter"))
       packet.metrics should have size 2
-      packet.metrics should contain (Metric("counter", "1.0", "c"))
-      packet.metrics should contain (Metric("other_counter", "2.0", "c"))
+      packet.metrics should contain(Metric("counter", "1.0", "c"))
+      packet.metrics should contain(Metric("other_counter", "2.0", "c"))
     }
 
     "flush multiple metrics in different udp packets when max packet size is reached" in {
@@ -45,10 +45,10 @@ class MetricDataPacketBufferSpec extends WordSpec with Matchers with BeforeAndAf
       buffer.flush()
       val packet = statsDServer.getPacket(_.hasMetric(_.name == "counter"))
       packet.metrics should have size 1
-      packet.metrics should contain (Metric("counter", "1.0", "c"))
+      packet.metrics should contain(Metric("counter", "1.0", "c"))
       val otherPacket = statsDServer.getPacket(_.hasMetric(_.name == "other_counter"))
       otherPacket.metrics should have size 1
-      otherPacket.metrics should contain (Metric("other_counter", "2.0", "c"))
+      otherPacket.metrics should contain(Metric("other_counter", "2.0", "c"))
     }
 
     "flush when max packet size is reached" in {
@@ -58,7 +58,7 @@ class MetricDataPacketBufferSpec extends WordSpec with Matchers with BeforeAndAf
       buffer.appendMeasurement("other_counter", "2.0|c")
       val packet = statsDServer.getPacket(_.hasMetric(_.name == "counter"))
       packet.metrics should have size 1
-      packet.metrics should contain (Metric("counter", "1.0", "c"))
+      packet.metrics should contain(Metric("counter", "1.0", "c"))
     }
 
     "flush same metric in one udp packet because is compressed" in {
@@ -71,8 +71,8 @@ class MetricDataPacketBufferSpec extends WordSpec with Matchers with BeforeAndAf
       packet.metrics should have size 2
       val metrics = packet.metrics.filter(_.name == "counter")
       metrics should have size 2
-      metrics should contain (Metric("counter", "1.0", "c"))
-      metrics should contain (Metric("counter", "2.0", "c"))
+      metrics should contain(Metric("counter", "1.0", "c"))
+      metrics should contain(Metric("counter", "2.0", "c"))
     }
 
     "flush different metric in two udp packets because not compressed" in {
@@ -95,22 +95,20 @@ class MetricDataPacketBufferSpec extends WordSpec with Matchers with BeforeAndAf
       buffer.appendMeasurement("counter", "3.0|c")
       buffer.flush()
       val packets = statsDServer.getPackets(_.size == 2)
-      packets.exists(_.metrics.size == 2) should be (true)
-      packets.exists(_.metrics.size == 1) should be (true)
+      packets.exists(_.metrics.size == 2) should be(true)
+      packets.exists(_.metrics.size == 1) should be(true)
     }
 
   }
 
-  override def beforeAll(): Unit = {
+  override def beforeAll(): Unit =
     statsDServer.start()
-  }
 
   before {
     statsDServer.clear()
   }
 
-  override def afterAll(): Unit = {
+  override def afterAll(): Unit =
     statsDServer.stop()
-  }
 
 }

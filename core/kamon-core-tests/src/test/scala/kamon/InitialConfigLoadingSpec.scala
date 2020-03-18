@@ -24,9 +24,8 @@ class InitialConfigLoadingSpec extends WordSpec with Matchers with Eventually {
         outputLine shouldBe "All Good"
       }
 
-      if(process.isAlive) {
+      if (process.isAlive)
         process.destroyForcibly().waitFor(5, TimeUnit.SECONDS)
-      }
     }
   }
 
@@ -39,7 +38,7 @@ class InitialConfigLoadingSpec extends WordSpec with Matchers with Eventually {
 
     val configOptions = "-Dconfig.trace=loads -Dconfig.file=" + tempConfigFile.getAbsolutePath()
     System.getProperty("java.home") + File.separator + "bin" + File.separator + "java " + configOptions +
-    " -cp " + System.getProperty("java.class.path") + " " + mainClass
+      " -cp " + System.getProperty("java.class.path") + " " + mainClass
   }
 }
 

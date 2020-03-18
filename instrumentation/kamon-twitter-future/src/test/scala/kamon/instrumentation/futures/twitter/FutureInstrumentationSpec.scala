@@ -49,7 +49,8 @@ class FutureInstrumentationSpec extends WordSpec with Matchers with ScalaFutures
 
         val context = Context.of("key", "value")
         val tagAfterTransformations = Kamon.runWithContext(context) {
-          FuturePool.unboundedPool("Hello Kamon!")
+          FuturePool
+            .unboundedPool("Hello Kamon!")
             // The current context is expected to be available during all intermediate processing.
             .map(_.length)
             .flatMap(len => FuturePool.unboundedPool(len.toString))
@@ -61,4 +62,3 @@ class FutureInstrumentationSpec extends WordSpec with Matchers with ScalaFutures
     }
   }
 }
-

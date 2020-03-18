@@ -75,20 +75,16 @@ class NewRelicMetricsReporterSpec extends WordSpec with Matchers {
 
   private val gauge: Metric = new Gauge("shirley", 15.6d, TestMetricHelper.end, gaugeAttributes)
 
-  private val histogramGauge: Metric = new Gauge("trev.percentiles", 2.0, TestMetricHelper.end,
-    histogramSummaryAttributes.copy().put("percentile", 90.0d))
-  private val histogramSummary: Metric = new Summary("trev.summary", 44, 101.0, 13.0, 17.0,
-    TestMetricHelper.start, TestMetricHelper.end, histogramSummaryAttributes)
+  private val histogramGauge: Metric = new Gauge("trev.percentiles", 2.0, TestMetricHelper.end, histogramSummaryAttributes.copy().put("percentile", 90.0d))
+  private val histogramSummary: Metric =
+    new Summary("trev.summary", 44, 101.0, 13.0, 17.0, TestMetricHelper.start, TestMetricHelper.end, histogramSummaryAttributes)
 
-  private val rangeSamplerGauge: Metric = new Gauge("ranger.percentiles", 8.0, TestMetricHelper.end,
-    rangeSamplerAttributes.copy().put("percentile", 95.0d))
-  private val rangeSamplerSummary: Metric = new Summary("ranger.summary", 88, 202.0, 26.0, 34.0,
-    TestMetricHelper.start, TestMetricHelper.end, rangeSamplerAttributes)
+  private val rangeSamplerGauge: Metric = new Gauge("ranger.percentiles", 8.0, TestMetricHelper.end, rangeSamplerAttributes.copy().put("percentile", 95.0d))
+  private val rangeSamplerSummary: Metric =
+    new Summary("ranger.summary", 88, 202.0, 26.0, 34.0, TestMetricHelper.start, TestMetricHelper.end, rangeSamplerAttributes)
 
-  private val timerGauge: Metric = new Gauge("timer.percentiles", 4.0, TestMetricHelper.end,
-    timerSummaryAttributes.copy().put("percentile", 95.0d))
-  private val timerSummary: Metric = new Summary("timer.summary", 88, 202.0, 26.0, 34.0,
-    TestMetricHelper.start, TestMetricHelper.end, timerSummaryAttributes)
+  private val timerGauge: Metric = new Gauge("timer.percentiles", 4.0, TestMetricHelper.end, timerSummaryAttributes.copy().put("percentile", 95.0d))
+  private val timerSummary: Metric = new Summary("timer.summary", 88, 202.0, 26.0, 34.0, TestMetricHelper.start, TestMetricHelper.end, timerSummaryAttributes)
 
   "The metrics reporter" should {
     "send some metrics" in {
@@ -97,8 +93,15 @@ class NewRelicMetricsReporterSpec extends WordSpec with Matchers {
       val histogram = TestMetricHelper.buildHistogramDistribution
       val timer = TestMetricHelper.buildTimerDistribution
       val rangeSampler = TestMetricHelper.buildRangeSamplerDistribution
-      val periodSnapshot = new PeriodSnapshot(TestMetricHelper.startInstant, TestMetricHelper.endInstant,
-        Seq(counter), Seq(kamonGauge), Seq(histogram), Seq(timer), Seq(rangeSampler))
+      val periodSnapshot = new PeriodSnapshot(
+        TestMetricHelper.startInstant,
+        TestMetricHelper.endInstant,
+        Seq(counter),
+        Seq(kamonGauge),
+        Seq(histogram),
+        Seq(timer),
+        Seq(rangeSampler)
+      )
 
       val expectedCommonAttributes: Attributes = new Attributes()
         .put("service.name", "kamon-application")
@@ -106,8 +109,10 @@ class NewRelicMetricsReporterSpec extends WordSpec with Matchers {
         .put("host.hostname", InetAddress.getLocalHost.getHostName)
         .put("testTag", "testValue")
       val expectedBatch: MetricBatch =
-        new MetricBatch(Seq(count1, count2, gauge, histogramGauge, histogramSummary, timerGauge, timerSummary, rangeSamplerGauge, rangeSamplerSummary).asJava,
-          expectedCommonAttributes)
+        new MetricBatch(
+          Seq(count1, count2, gauge, histogramGauge, histogramSummary, timerGauge, timerSummary, rangeSamplerGauge, rangeSamplerSummary).asJava,
+          expectedCommonAttributes
+        )
 
       val sender = mock(classOf[MetricBatchSender])
 
@@ -121,8 +126,8 @@ class NewRelicMetricsReporterSpec extends WordSpec with Matchers {
       val counter = TestMetricHelper.buildCounter
       val kamonGauge = TestMetricHelper.buildGauge
       val histogram = TestMetricHelper.buildHistogramDistribution
-      val periodSnapshot = new PeriodSnapshot(TestMetricHelper.startInstant, TestMetricHelper.endInstant,
-        Seq(counter), Seq(kamonGauge), Seq(histogram), Seq(), Seq())
+      val periodSnapshot =
+        new PeriodSnapshot(TestMetricHelper.startInstant, TestMetricHelper.endInstant, Seq(counter), Seq(kamonGauge), Seq(histogram), Seq(), Seq())
 
       val expectedCommonAttributes: Attributes = new Attributes()
         .put("service.name", "cheese-whiz")

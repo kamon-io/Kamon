@@ -33,7 +33,7 @@ import akka.util.ByteString
 import javax.net.ssl.{KeyManagerFactory, SSLContext, SSLSocketFactory, TrustManagerFactory, X509TrustManager}
 import kamon.Kamon
 import kamon.instrumentation.akka.http.TracingDirectives
-import org.json4s.{DefaultFormats, native}
+import org.json4s.{native, DefaultFormats}
 import kamon.tag.Lookups.plain
 import kamon.trace.Trace
 import scala.concurrent.{ExecutionContext, Future}
@@ -54,126 +54,118 @@ trait TestWebServer extends TracingDirectives {
         path("v3" / "user" / IntNumber / "post" / IntNumber) { (_, _) =>
           complete("OK")
         } ~
-        pathPrefix("extraction") {
-          authenticateBasic("realm", credentials => Option("Okay")) { srt =>
-          (post | get) {
-            pathPrefix("nested") {
-              pathPrefix(IntNumber / "fixed") { num =>
-                pathPrefix("anchor" / IntNumber.? / JavaUUID / "fixed") { (number, uuid) =>
-                  pathPrefix(LongNumber / HexIntNumber) { (longNum, hex) =>
-                    complete("OK")
+          pathPrefix("extraction") {
+            authenticateBasic("realm", credentials => Option("Okay")) { srt =>
+              (post | get) {
+                pathPrefix("nested") {
+                  pathPrefix(IntNumber / "fixed") { num =>
+                    pathPrefix("anchor" / IntNumber.? / JavaUUID / "fixed") { (number, uuid) =>
+                      pathPrefix(LongNumber / HexIntNumber)((longNum, hex) => complete("OK"))
+                    }
                   }
-                }
+                } ~
+                  pathPrefix("concat") {
+                    path("fixed" ~ JavaUUID ~ HexIntNumber)((uuid, num) => complete("OK"))
+                  } ~
+                  pathPrefix("on-complete" / IntNumber) { _ =>
+                    onComplete(Future("hello")) { _ =>
+                      extract(samplingDecision) { decision =>
+                        path("more-path") {
+                          complete(decision.toString)
+                        }
+                      }
+                    }
+                  } ~
+                  pathPrefix("on-success" / IntNumber) { _ =>
+                    onSuccess(Future("hello")) { text =>
+                      pathPrefix("after") {
+                        complete(text)
+                      }
+                    }
+                  } ~
+                  pathPrefix("complete-or-recover-with" / IntNumber) { _ =>
+                    completeOrRecoverWith(Future("bad".charAt(10).toString)) { failure =>
+                      pathPrefix("after") {
+                        failWith(failure)
+                      }
+                    }
+                  } ~
+                  pathPrefix("complete-or-recover-with-success" / IntNumber) { _ =>
+                    completeOrRecoverWith(Future("good")) { failure =>
+                      pathPrefix("after") {
+                        failWith(failure)
+                      }
+                    }
+                  } ~
+                  path("segment" / Segment)(segment => complete(HttpResponse(entity = HttpEntity(ContentTypes.`text/plain(UTF-8)`, segment))))
               }
-            } ~
-            pathPrefix("concat") {
-              path("fixed" ~ JavaUUID ~ HexIntNumber) { (uuid, num) =>
-                complete("OK")
-              }
-            } ~
-            pathPrefix("on-complete" / IntNumber) { _ =>
-              onComplete(Future("hello")) { _ =>
-                extract(samplingDecision) { decision =>
-                  path("more-path") {
-                    complete(decision.toString)
-                  }
-                }
-              }
-            } ~
-            pathPrefix("on-success" / IntNumber) { _ =>
-              onSuccess(Future("hello")) { text =>
-                pathPrefix("after") {
-                  complete(text)
-                }
-              }
-            } ~
-            pathPrefix("complete-or-recover-with" / IntNumber) { _ =>
-              completeOrRecoverWith(Future("bad".charAt(10).toString)) { failure =>
-                pathPrefix("after") {
-                  failWith(failure)
-                }
-              }
-            } ~
-            pathPrefix("complete-or-recover-with-success" / IntNumber) { _ =>
-              completeOrRecoverWith(Future("good")) { failure =>
-                pathPrefix("after") {
-                  failWith(failure)
-                }
-              }
-            } ~
-            path("segment" / Segment){ segment =>
-              complete(HttpResponse(entity = HttpEntity(ContentTypes.`text/plain(UTF-8)`, segment)))
             }
-          }
-          }
-        } ~
-        path(rootOk) {
-          complete(OK)
-        } ~
-        path(dummyPathOk) {
-          complete(OK)
-        } ~
-        path(dummyPathError) {
-          complete(InternalServerError)
-        } ~
-        path(traceOk) {
-          operationName("user-supplied-operation") {
+          } ~
+          path(rootOk) {
             complete(OK)
-          }
-        } ~
-        path(traceBadRequest) {
-          complete(BadRequest)
-        } ~
-        path(metricsOk) {
-          complete(OK)
-        } ~
-        path(metricsBadRequest) {
-          complete(BadRequest)
-        } ~
-        path(replyWithHeaders) {
-          extractRequest { req =>
-            complete(req.headers.map(h => (h.name(), h.value())).toMap[String, String])
-          }
-        } ~
-        path(basicContext) {
-          complete {
-            Map(
-              "custom-string-key" -> Kamon.currentContext().getTag(plain("custom-string-key")),
-              "trace-id" -> Kamon.currentSpan().trace.id.string
-            )
-          }
-        } ~
-        path(waitTen) {
-          respondWithHeader(Connection("close")) {
+          } ~
+          path(dummyPathOk) {
+            complete(OK)
+          } ~
+          path(dummyPathError) {
+            complete(InternalServerError)
+          } ~
+          path(traceOk) {
+            operationName("user-supplied-operation") {
+              complete(OK)
+            }
+          } ~
+          path(traceBadRequest) {
+            complete(BadRequest)
+          } ~
+          path(metricsOk) {
+            complete(OK)
+          } ~
+          path(metricsBadRequest) {
+            complete(BadRequest)
+          } ~
+          path(replyWithHeaders) {
+            extractRequest(req => complete(req.headers.map(h => (h.name(), h.value())).toMap[String, String]))
+          } ~
+          path(basicContext) {
             complete {
-              Thread.sleep(5000)
-              OK
+              Map(
+                "custom-string-key" -> Kamon.currentContext().getTag(plain("custom-string-key")),
+                "trace-id"          -> Kamon.currentSpan().trace.id.string
+              )
             }
-          }
-        } ~
-        path(stream) {
-          complete {
-            val longStringContentStream = Source.fromIterator(() =>
-              Range(1, 16)
-                .map(i => ByteString(100 * ('a' + i).toChar))
-                .iterator
-            )
+          } ~
+          path(waitTen) {
+            respondWithHeader(Connection("close")) {
+              complete {
+                Thread.sleep(5000)
+                OK
+              }
+            }
+          } ~
+          path(stream) {
+            complete {
+              val longStringContentStream = Source.fromIterator(() =>
+                Range(1, 16)
+                  .map(i => ByteString(100 * ('a' + i).toChar))
+                  .iterator
+              )
 
-            HttpResponse(entity = HttpEntity(ContentTypes.`text/plain(UTF-8)`, 1600, longStringContentStream))
+              HttpResponse(entity = HttpEntity(ContentTypes.`text/plain(UTF-8)`, 1600, longStringContentStream))
+            }
+          } ~
+          path("extra-header") {
+            respondWithHeader(RawHeader("extra", "extra-header")) {
+              complete(OK)
+            }
+          } ~
+          path("name-will-be-changed") {
+            complete("OK")
           }
-        } ~
-        path("extra-header") {
-          respondWithHeader(RawHeader("extra", "extra-header")) {
-            complete(OK)
-          }
-        } ~
-        path("name-will-be-changed") {
-          complete("OK")
-        }
       }
     }
 
-    if(https)
+    if (https)
       new WebServer(interface, port, "https", Http().bindAndHandleAsync(Route.asyncHandler(routes), interface, port, httpContext()))
     else
       new WebServer(interface, port, "http", Http().bindAndHandle(routes, interface, port))
@@ -233,9 +225,8 @@ trait TestWebServer extends TracingDirectives {
   }
 
   class WebServer(val interface: String, val port: Int, val protocol: String, bindingFuture: Future[Http.ServerBinding])(implicit ec: ExecutionContext) {
-    def shutdown(): Future[_] = {
+    def shutdown(): Future[_] =
       bindingFuture.flatMap(binding => binding.unbind())
-    }
   }
 
 }

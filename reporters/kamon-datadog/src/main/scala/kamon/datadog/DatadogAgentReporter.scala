@@ -19,23 +19,22 @@ package kamon.datadog
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
 import java.nio.channels.DatagramChannel
-import java.text.{ DecimalFormat, DecimalFormatSymbols }
+import java.text.{DecimalFormat, DecimalFormatSymbols}
 import java.util.Locale
 
 import com.typesafe.config.Config
-import kamon.{ module, ClassLoading, Kamon }
-import kamon.metric.{ MeasurementUnit, PeriodSnapshot }
-import kamon.metric.MeasurementUnit.{ information, Dimension }
-import kamon.metric.MeasurementUnit.Dimension.{ Information, Time }
-import kamon.module.{ MetricReporter, ModuleFactory }
+import kamon.{module, ClassLoading, Kamon}
+import kamon.metric.{MeasurementUnit, PeriodSnapshot}
+import kamon.metric.MeasurementUnit.{information, Dimension}
+import kamon.metric.MeasurementUnit.Dimension.{Information, Time}
+import kamon.module.{MetricReporter, ModuleFactory}
 import kamon.tag.TagSet
 import kamon.util.EnvironmentTags
 import org.slf4j.LoggerFactory
 
 class DatadogAgentReporterFactory extends ModuleFactory {
-  override def create(settings: ModuleFactory.Settings): DatadogAgentReporter = {
+  override def create(settings: ModuleFactory.Settings): DatadogAgentReporter =
     new DatadogAgentReporter(DatadogAgentReporter.readConfiguration(Kamon.config()))
-  }
 }
 // 1 arg constructor is intended for injecting config via unit tests
 class DatadogAgentReporter private[datadog] (@volatile private var config: DatadogAgentReporter.Configuration) extends MetricReporter {
@@ -52,25 +51,26 @@ class DatadogAgentReporter private[datadog] (@volatile private var config: Datad
 
   override def stop(): Unit = {}
 
-  override def reconfigure(config: Config): Unit = {
+  override def reconfigure(config: Config): Unit =
     this.config = readConfiguration(config)
-  }
 
   override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
 
     for {
       counter <- snapshot.counters
       instrument <- counter.instruments
-    } {
-      config.packetBuffer.appendMeasurement(counter.name, config.measurementFormatter.formatMeasurement(encodeDatadogCounter(instrument.value, counter.settings.unit), instrument.tags))
-    }
+    } config.packetBuffer.appendMeasurement(
+      counter.name,
+      config.measurementFormatter.formatMeasurement(encodeDatadogCounter(instrument.value, counter.settings.unit), instrument.tags)
+    )
 
     for {
       gauge <- snapshot.gauges
       instrument <- gauge.instruments
-    } {
-      config.packetBuffer.appendMeasurement(gauge.name, config.measurementFormatter.formatMeasurement(encodeDatadogGauge(instrument.value, gauge.settings.unit), instrument.tags))
-    }
+    } config.packetBuffer.appendMeasurement(
+      gauge.name,
+      config.measurementFormatter.formatMeasurement(encodeDatadogGauge(instrument.value, gauge.settings.unit), instrument.tags)
+    )
 
     for {
       metric <- snapshot.histograms ++ snapshot.rangeSamplers ++ snapshot.timers
@@ -78,7 +78,8 @@ class DatadogAgentReporter private[datadog] (@volatile private var config: Datad
       bucket <- instruments.value.bucketsIterator
     } {
 
-      val bucketData = config.measurementFormatter.formatMeasurement(encodeDatadogHistogramBucket(bucket.value, bucket.frequency, metric.settings.unit), instruments.tags)
+      val bucketData =
+        config.measurementFormatter.formatMeasurement(encodeDatadogHistogramBucket(bucket.value, bucket.frequency, metric.settings.unit), instruments.tags)
       config.packetBuffer.appendMeasurement(metric.name, bucketData)
     }
 
@@ -88,8 +89,8 @@ class DatadogAgentReporter private[datadog] (@volatile private var config: Datad
 
   private def encodeDatadogHistogramBucket(value: Long, frequency: Long, unit: MeasurementUnit): String = {
     val metricType = if (unit.dimension == Dimension.Time) "ms" else "h"
-    val samplingRate: Double = 1D / frequency.toDouble
-    valueFormat.format(scale(value, unit)) + "|" + metricType + (if (samplingRate != 1D) "|@" + samplingRateFormat.format(samplingRate) else "")
+    val samplingRate: Double = 1d / frequency.toDouble
+    valueFormat.format(scale(value, unit)) + "|" + metricType + (if (samplingRate != 1d) "|@" + samplingRateFormat.format(samplingRate) else "")
   }
 
   private def encodeDatadogCounter(count: Long, unit: MeasurementUnit): String =
@@ -98,11 +99,12 @@ class DatadogAgentReporter private[datadog] (@volatile private var config: Datad
   private def encodeDatadogGauge(value: Double, unit: MeasurementUnit): String =
     valueFormat.format(scale(value, unit)) + "|g"
 
-  private def scale(value: Double, unit: MeasurementUnit): Double = unit.dimension match {
-    case Time if unit.magnitude != config.timeUnit.magnitude          => MeasurementUnit.convert(value, unit, config.timeUnit)
-    case Information if unit.magnitude != information.bytes.magnitude => MeasurementUnit.convert(value, unit, information.bytes)
-    case _                                                            => value.toDouble
-  }
+  private def scale(value: Double, unit: MeasurementUnit): Double =
+    unit.dimension match {
+      case Time if unit.magnitude != config.timeUnit.magnitude          => MeasurementUnit.convert(value, unit, config.timeUnit)
+      case Information if unit.magnitude != information.bytes.magnitude => MeasurementUnit.convert(value, unit, information.bytes)
+      case _                                                            => value.toDouble
+    }
 
 }
 
@@ -122,16 +124,16 @@ object DatadogAgentReporter {
 
     override def formatMeasurement(
       measurementData: String,
-      tags:            TagSet
+      tags: TagSet
     ): String = {
 
       val filteredTags = envTags.iterator(_.toString) ++ tags.iterator(_.toString).filter(p => filter.accept(p.key))
 
-      val stringTags: String = if (filteredTags.nonEmpty) {
-        "|#" + filteredTags.map { p => s"${p.key}:${p.value}" }.mkString(",")
-      } else {
-        ""
-      }
+      val stringTags: String =
+        if (filteredTags.nonEmpty)
+          "|#" + filteredTags.map(p => s"${p.key}:${p.value}").mkString(",")
+        else
+          ""
 
       new StringBuilder()
         .append(measurementData)
@@ -151,25 +153,23 @@ object DatadogAgentReporter {
     )
   }
 
-  private def getMeasurementFormatter(config: Config): MeasurementFormatter = {
+  private def getMeasurementFormatter(config: Config): MeasurementFormatter =
     config.getString("agent.measurement-formatter") match {
       case "default" => new DefaultMeasurementFormatter(config)
       case fqn       => ClassLoading.createInstance[MeasurementFormatter](fqn, List(classOf[Config] -> config))
     }
-  }
 
-  private def getPacketBuffer(config: Config): PacketBuffer = {
+  private def getPacketBuffer(config: Config): PacketBuffer =
     config.getString("agent.packetbuffer") match {
       case "default" => new PacketBufferImpl(config)
       case fqn       => ClassLoading.createInstance[PacketBuffer](fqn, List(classOf[Config] -> config))
     }
-  }
 
   private[datadog] case class Configuration(
-    timeUnit:             MeasurementUnit,
-    informationUnit:      MeasurementUnit,
+    timeUnit: MeasurementUnit,
+    informationUnit: MeasurementUnit,
     measurementFormatter: MeasurementFormatter,
-    packetBuffer:         PacketBuffer
+    packetBuffer: PacketBuffer
   )
 
   trait PacketBuffer {
@@ -205,11 +205,8 @@ object DatadogAgentReporter {
 
     private def flushToUDP(data: String): Unit = {
       val channel = DatagramChannel.open()
-      try {
-        channel.send(ByteBuffer.wrap(data.getBytes), remote)
-      } finally {
-        channel.close()
-      }
+      try channel.send(ByteBuffer.wrap(data.getBytes), remote)
+      finally channel.close()
     }
 
     def flush(): Unit = {

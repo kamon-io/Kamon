@@ -19,7 +19,7 @@ import org.scalactic.TimesOnInt._
 import org.scalatest.{Matchers, OptionValues, WordSpecLike}
 
 class DoubleLengthIdentifierSchemeSpec extends WordSpecLike with Matchers with OptionValues {
-  import Identifier.Scheme.Double.{traceIdFactory, spanIdFactory}
+  import Identifier.Scheme.Double.{spanIdFactory, traceIdFactory}
 
   "The double length identifier scheme" when {
     "generating trace identifiers" should {

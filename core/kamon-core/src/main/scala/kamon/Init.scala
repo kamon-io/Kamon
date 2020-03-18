@@ -50,7 +50,7 @@ trait Init { self: ModuleLoading with Configuration with CurrentStatus =>
     * the Status module indicates that instrumentation has been already applied this method will not try to do anything.
     */
   def attachInstrumentation(): Unit = {
-    if(!InstrumentationStatus.create(warnIfFailed = false).present) {
+    if (!InstrumentationStatus.create(warnIfFailed = false).present) {
       try {
         val attacherClass = Class.forName("kamon.bundle.Bundle")
         val attachMethod = attacherClass.getDeclaredMethod("attach")

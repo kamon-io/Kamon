@@ -14,15 +14,14 @@ class ServerFlowWrapperSpec extends WordSpecLike with Matchers with ScalaFutures
   implicit private val executor = system.dispatcher
   implicit private val materializer = ActorMaterializer()
 
-  private val okReturningFlow = Flow[HttpRequest].map { _ =>
-    HttpResponse(status = StatusCodes.OK, entity = HttpEntity("OK"))
-  }
+  private val okReturningFlow = Flow[HttpRequest].map(_ => HttpResponse(status = StatusCodes.OK, entity = HttpEntity("OK")))
 
   "the server flow wrapper" should {
     "keep strict entities strict" in {
       val flow = ServerFlowWrapper(okReturningFlow, "localhost", 8080)
       val request = HttpRequest()
-      val response = Source.single(request)
+      val response = Source
+        .single(request)
         .via(flow)
         .runWith(Sink.head)
         .futureValue

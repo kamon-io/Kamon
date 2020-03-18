@@ -2,7 +2,6 @@ package kamon
 package instrumentation
 package context
 
-
 import kamon.context.Storage
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 

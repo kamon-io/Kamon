@@ -31,8 +31,15 @@ import org.scalatest.{Matchers, OptionValues, WordSpec}
 
 import scala.concurrent.ExecutionContext
 
-class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually with SpanSugar with MetricInspection.Syntax
-    with InstrumentInspection.Syntax with TestSpanReporter with OptionValues {
+class HikariInstrumentationSpec
+    extends WordSpec
+    with Matchers
+    with Eventually
+    with SpanSugar
+    with MetricInspection.Syntax
+    with InstrumentInspection.Syntax
+    with TestSpanReporter
+    with OptionValues {
 
   import HikariInstrumentationSpec.{createH2Pool, createSQLitePool}
   implicit val parallelQueriesContext = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(16))
@@ -48,7 +55,7 @@ class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually w
       val pool1 = createH2Pool("example-1")
       val pool2 = createH2Pool("example-2")
 
-      JdbcMetrics.OpenConnections.tagValues("jdbc.pool.name") should contain allOf(
+      JdbcMetrics.OpenConnections.tagValues("jdbc.pool.name") should contain allOf (
         "example-1",
         "example-2"
       )
@@ -65,20 +72,21 @@ class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually w
       val pool = createH2Pool("track-open-connections", 16)
       val connections = (1 to 10) map { _ => pool.getConnection() }
 
-      val tags = TagSet.builder()
+      val tags = TagSet
+        .builder()
         .add("jdbc.pool.vendor", "hikari")
         .add("jdbc.pool.name", "track-open-connections")
         .add("db.vendor", "h2")
         .build()
 
       eventually(timeout(20 seconds), interval(200 millis)) {
-        JdbcMetrics.OpenConnections.withTags(tags).distribution(false).max shouldBe (10)
+        JdbcMetrics.OpenConnections.withTags(tags).distribution(false).max shouldBe 10
       }
 
       connections.foreach(_.close())
 
-      eventually(timeout(20 seconds),  interval(1 second)) {
-        JdbcMetrics.OpenConnections.withTags(tags).distribution(true).max shouldBe (0)
+      eventually(timeout(20 seconds), interval(1 second)) {
+        JdbcMetrics.OpenConnections.withTags(tags).distribution(true).max shouldBe 0
       }
 
       pool.close()
@@ -86,70 +94,67 @@ class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually w
 
     "track the number of borrowed connections" in {
       val pool = createH2Pool("track-borrowed-connections", 16)
-      val connections = (1 to 10) map { _ =>
-        pool.getConnection()
-      }
+      val connections = (1 to 10) map { _ => pool.getConnection() }
 
-      val tags = TagSet.builder()
+      val tags = TagSet
+        .builder()
         .add("jdbc.pool.vendor", "hikari")
         .add("jdbc.pool.name", "track-borrowed-connections")
         .add("db.vendor", "h2")
         .build()
 
-      eventually(timeout(30 seconds),  interval(1 second)) {
-        JdbcMetrics.BorrowedConnections.withTags(tags).distribution().max shouldBe (10)
+      eventually(timeout(30 seconds), interval(1 second)) {
+        JdbcMetrics.BorrowedConnections.withTags(tags).distribution().max shouldBe 10
       }
 
       connections.drop(5).foreach(_.close())
 
-      eventually(timeout(30 seconds),  interval(1 second)) {
-        JdbcMetrics.BorrowedConnections.withTags(tags).distribution().max shouldBe (5)
+      eventually(timeout(30 seconds), interval(1 second)) {
+        JdbcMetrics.BorrowedConnections.withTags(tags).distribution().max shouldBe 5
       }
 
       pool.close()
     }
 
-
     "track the time it takes to borrow a connection" in {
       val pool = createH2Pool("track-borrow-time", 5)
-      for (_ <- 1 to 5) {
+      for (_ <- 1 to 5)
         pool.getConnection()
-      }
 
-      val tags = TagSet.builder()
+      val tags = TagSet
+        .builder()
         .add("jdbc.pool.vendor", "hikari")
         .add("jdbc.pool.name", "track-borrow-time")
         .add("db.vendor", "h2")
         .build()
 
       eventually(timeout(5 seconds)) {
-        JdbcMetrics.BorrowTime.withTags(tags).distribution(resetState = false).count shouldBe (6) // 5 + 1 during setup
+        JdbcMetrics.BorrowTime.withTags(tags).distribution(resetState = false).count shouldBe 6 // 5 + 1 during setup
       }
     }
 
     "track timeout errors when borrowing a connection" in {
       val pool = createH2Pool("track-borrow-timeouts", 5)
-      for (id <- 1 to 5) {
+      for (id <- 1 to 5)
         pool.getConnection()
-      }
 
       intercept[SQLException] {
-        try {
-          pool.getConnection()
-        } catch {
+        try pool.getConnection()
+        catch {
           case ex: Throwable =>
             println(ex.getMessage)
             throw ex
         }
       }
 
-      val tags = TagSet.builder()
+      val tags = TagSet
+        .builder()
         .add("jdbc.pool.vendor", "hikari")
         .add("jdbc.pool.name", "track-borrow-timeouts")
         .add("db.vendor", "h2")
         .build()
 
-      eventually(timeout(5 seconds),  interval(1 second)) {
+      eventually(timeout(5 seconds), interval(1 second)) {
         JdbcMetrics.BorrowTime.withTags(tags).distribution(resetState = false).max shouldBe ((1 seconds).toNanos +- (100 milliseconds).toNanos)
       }
 
@@ -178,7 +183,6 @@ class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually w
       connection.isValid(10)
       connection.isValid(10)
 
-
       eventually(timeout(5 seconds)) {
         val span = testSpanReporter().nextSpan().value
         span.operationName shouldBe "isValid"
@@ -203,8 +207,7 @@ object HikariInstrumentationSpec {
     val hikariPool = new HikariDataSource(config)
     val setupConnection = hikariPool.getConnection()
     setupConnection
-      .prepareStatement(
-        """|CREATE TABLE Address (Nr INTEGER, Name VARCHAR(128));
+      .prepareStatement("""|CREATE TABLE Address (Nr INTEGER, Name VARCHAR(128));
            |CREATE ALIAS SLEEP FOR "java.lang.Thread.sleep(long)";
         """.stripMargin)
       .executeUpdate()
@@ -236,4 +239,3 @@ object HikariInstrumentationSpec {
     config
   }
 }
-

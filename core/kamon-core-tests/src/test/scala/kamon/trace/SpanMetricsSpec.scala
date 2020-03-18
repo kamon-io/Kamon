@@ -24,8 +24,7 @@ import org.scalatest.{Matchers, WordSpecLike}
 
 import scala.util.control.NoStackTrace
 
-class SpanMetricsSpec extends WordSpecLike with Matchers with InstrumentInspection.Syntax with MetricInspection.Syntax
-    with Reconfigure {
+class SpanMetricsSpec extends WordSpecLike with Matchers with InstrumentInspection.Syntax with MetricInspection.Syntax with Reconfigure {
 
   sampleNever()
 
@@ -215,7 +214,7 @@ class SpanMetricsSpec extends WordSpecLike with Matchers with InstrumentInspecti
     }
   }
 
-  val errorTag = "error" -> true
+  val errorTag = "error"   -> true
   val noErrorTag = "error" -> false
 
   private def withoutSpanScopingEnabled[T](f: => T): T = {
@@ -225,5 +224,3 @@ class SpanMetricsSpec extends WordSpecLike with Matchers with InstrumentInspecti
     evaluated
   }
 }
-
-

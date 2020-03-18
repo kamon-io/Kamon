@@ -90,4 +90,3 @@ class SlickInstrumentationSpec extends WordSpec with Matchers with Eventually wi
   }
 
 }
-

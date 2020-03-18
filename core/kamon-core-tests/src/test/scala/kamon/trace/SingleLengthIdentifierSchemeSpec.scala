@@ -55,8 +55,8 @@ class SingleLengthIdentifierSchemeSpec extends WordSpecLike with Matchers with O
       }
 
       "return IdentityProvider.NoIdentifier if the provided input cannot be decoded into a Identifier" in {
-        factory.from("zzzz") shouldBe(Identifier.Empty)
-        factory.from(Array[Byte](1)) shouldBe(Identifier.Empty)
+        factory.from("zzzz") shouldBe (Identifier.Empty)
+        factory.from(Array[Byte](1)) shouldBe (Identifier.Empty)
       }
     }
   }

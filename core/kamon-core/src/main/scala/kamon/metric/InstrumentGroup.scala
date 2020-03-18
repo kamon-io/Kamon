@@ -64,18 +64,18 @@ abstract class InstrumentGroup(val commonTags: TagSet) {
   def register[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings](metric: Metric[Inst, Sett], extraTags: TagSet): Inst =
     registerInstrument(metric, commonTags.withTags(extraTags))
 
-
-  private def registerInstrument[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings](metric: Metric[Inst, Sett],
-      tags: TagSet): Inst = synchronized {
-    val instrument = metric.withTags(tags)
-    _groupInstruments = instrument :: _groupInstruments
-    instrument
-  }
+  private def registerInstrument[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings](metric: Metric[Inst, Sett], tags: TagSet): Inst =
+    synchronized {
+      val instrument = metric.withTags(tags)
+      _groupInstruments = instrument :: _groupInstruments
+      instrument
+    }
 
   /**
     * Removes all instruments that were registered by this group.
     */
-  def remove(): Unit = synchronized {
-    _groupInstruments foreach(_.remove())
-  }
+  def remove(): Unit =
+    synchronized {
+      _groupInstruments foreach (_.remove())
+    }
 }

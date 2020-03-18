@@ -17,8 +17,10 @@ class InfluxDBReporterSpec extends WordSpec with Matchers with BeforeAndAfterAll
 
   "the InfluxDB reporter" should {
     "convert and post all metrics using the line protocol over HTTP" in {
-      reporter.reconfigure(ConfigFactory.parseString(
-        s"""
+      reporter.reconfigure(
+        ConfigFactory
+          .parseString(
+            s"""
            |kamon.influxdb {
            |  hostname = ${influxDB.getHostName}
            |  port = ${influxDB.getPort}
@@ -32,7 +34,9 @@ class InfluxDBReporterSpec extends WordSpec with Matchers with BeforeAndAfterAll
            |  }
            |}
       """.stripMargin
-      ).withFallback(Kamon.config()))
+          )
+          .withFallback(Kamon.config())
+      )
 
       reporter.reportPeriodSnapshot(periodSnapshot)
       val reportedLines = influxDB.takeRequest(10, TimeUnit.SECONDS).getBody.readString(Charset.forName("UTF-8")).split("\n")
@@ -52,8 +56,10 @@ class InfluxDBReporterSpec extends WordSpec with Matchers with BeforeAndAfterAll
     }
     "include the additional env tags if enabled" in {
       //enable env tags
-      reporter.reconfigure(ConfigFactory.parseString(
-        s"""
+      reporter.reconfigure(
+        ConfigFactory
+          .parseString(
+            s"""
            |kamon.influxdb {
            |  hostname = ${influxDB.getHostName}
            |  port = ${influxDB.getPort}
@@ -64,7 +70,9 @@ class InfluxDBReporterSpec extends WordSpec with Matchers with BeforeAndAfterAll
            |  }
            |}
       """.stripMargin
-      ).withFallback(Kamon.config()))
+          )
+          .withFallback(Kamon.config())
+      )
 
       reporter.reportPeriodSnapshot(periodSnapshot)
       val reportedLines = influxDB.takeRequest(10, TimeUnit.SECONDS).getBody.readString(Charset.forName("UTF-8")).split("\n")
@@ -102,13 +110,14 @@ class InfluxDBReporterSpec extends WordSpec with Matchers with BeforeAndAfterAll
     rangeSamplers = MetricSnapshotBuilder.histogram("queue.monitor", TagSet.of("one", "tag"))(1, 2, 4, 6) :: Nil
   )
 
-
   override protected def beforeAll(): Unit = {
     influxDB.enqueue(new MockResponse().setResponseCode(204))
     influxDB.enqueue(new MockResponse().setResponseCode(204))
     influxDB.start()
-    Kamon.reconfigure(ConfigFactory.parseString(
-      s"""
+    Kamon.reconfigure(
+      ConfigFactory
+        .parseString(
+          s"""
          |kamon.environment {
          |    host = "test.host"
          |    service = "test-service"
@@ -119,19 +128,23 @@ class InfluxDBReporterSpec extends WordSpec with Matchers with BeforeAndAfterAll
          |    }
          |}
        """.stripMargin
-    ).withFallback(Kamon.config()))
-    reporter.reconfigure(ConfigFactory.parseString(
-      s"""
+        )
+        .withFallback(Kamon.config())
+    )
+    reporter.reconfigure(
+      ConfigFactory
+        .parseString(
+          s"""
         |kamon.influxdb {
         |  hostname = ${influxDB.getHostName}
         |  port = ${influxDB.getPort}
         |}
       """.stripMargin
-    ).withFallback(Kamon.config()))
+        )
+        .withFallback(Kamon.config())
+    )
   }
 
-
-  override protected def afterAll(): Unit = {
+  override protected def afterAll(): Unit =
     influxDB.shutdown()
-  }
 }

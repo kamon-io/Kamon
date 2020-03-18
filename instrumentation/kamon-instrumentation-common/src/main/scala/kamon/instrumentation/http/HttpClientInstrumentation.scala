@@ -91,7 +91,8 @@ object HttpClientInstrumentation {
   private val _defaultHttpClientConfiguration = "kamon.instrumentation.http-client.default"
 
   private class Default(val settings: Settings, component: String) extends HttpClientInstrumentation {
-    private val _propagation = Kamon.httpPropagation(settings.propagationChannel)
+    private val _propagation = Kamon
+      .httpPropagation(settings.propagationChannel)
       .getOrElse {
         _log.warn(s"Could not find HTTP propagation [${settings.propagationChannel}], falling back to the default HTTP propagation")
         Kamon.defaultHttpPropagation()
@@ -100,9 +101,10 @@ object HttpClientInstrumentation {
     override def createHandler[T](requestBuilder: HttpMessage.RequestBuilder[T], context: Context): RequestHandler[T] = {
       val requestSpan: Span = {
         if (settings.enableContextPropagation) {
-          val contextToPropagate = if (settings.enableTracing)
-            context.withEntry(Span.Key, createClientSpan(requestBuilder, context))
-          else context.withoutEntry(Span.Key)
+          val contextToPropagate =
+            if (settings.enableTracing)
+              context.withEntry(Span.Key, createClientSpan(requestBuilder, context))
+            else context.withoutEntry(Span.Key)
 
           _propagation.write(contextToPropagate, requestBuilder)
           contextToPropagate.get(Span.Key)
@@ -119,9 +121,8 @@ object HttpClientInstrumentation {
 
         override def processResponse(response: HttpMessage.Response): Unit = {
           val statusCode = response.statusCode
-          if(statusCode >= 500) {
+          if (statusCode >= 500)
             span.fail("Request failed with HTTP Status Code " + statusCode)
-          }
 
           SpanTagger.tag(span, TagKeys.HttpStatusCode, statusCode, settings.statusCodeTagMode)
           span.finish()
@@ -134,7 +135,7 @@ object HttpClientInstrumentation {
         .clientSpanBuilder(operationName(requestMessage), component)
         .context(context)
 
-      if(!settings.enableSpanMetrics)
+      if (!settings.enableSpanMetrics)
         span.doNotTrackMetrics()
 
       SpanTagger.tag(span, TagKeys.HttpUrl, requestMessage.url, settings.urlTagMode)
@@ -154,7 +155,7 @@ object HttpClientInstrumentation {
       settings.operationNameGenerator.name(requestMessage).getOrElse(settings.defaultOperationName)
   }
 
-  case class Settings (
+  case class Settings(
     enableContextPropagation: Boolean,
     propagationChannel: String,
     enableTracing: Boolean,
@@ -175,7 +176,7 @@ object HttpClientInstrumentation {
       val enablePropagation = config.getBoolean("propagation.enabled")
       val propagationChannel = config.getString("propagation.channel")
 
-       // Tracing settings
+      // Tracing settings
       val enableTracing = config.getBoolean("tracing.enabled")
       val enableSpanMetrics = config.getBoolean("tracing.span-metrics")
       val urlTagMode = TagMode.from(config.getString("tracing.tags.url"))

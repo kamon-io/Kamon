@@ -22,8 +22,10 @@ import kamon.tag.TagSet
 import org.scalatest.{Matchers, WordSpec}
 
 class EnvironmentTagsSpec extends WordSpec with Matchers {
-  private val testEnv = Environment.from(ConfigFactory.parseString(
-    """
+  private val testEnv = Environment.from(
+    ConfigFactory
+      .parseString(
+        """
       |kamon.environment {
       |  service = environment-spec
       |  host = my-hostname
@@ -35,13 +37,14 @@ class EnvironmentTagsSpec extends WordSpec with Matchers {
       |  }
       |}
     """.stripMargin
-  ).withFallback(ConfigFactory.defaultReference()))
+      )
+      .withFallback(ConfigFactory.defaultReference())
+  )
 
   "the EnvironmentTagBuilder" should {
 
     "build the tags from a configuration using the current Environment" in {
-      val config = ConfigFactory.parseString(
-        """
+      val config = ConfigFactory.parseString("""
           |include-service = yes
           |include-host = yes
           |include-instance = yes
@@ -56,8 +59,7 @@ class EnvironmentTagsSpec extends WordSpec with Matchers {
     }
 
     "build tags from a custom Environment" in {
-      val config = ConfigFactory.parseString(
-        """
+      val config = ConfigFactory.parseString("""
           |include-service = yes
           |include-host = yes
           |include-instance = yes
@@ -74,8 +76,7 @@ class EnvironmentTagsSpec extends WordSpec with Matchers {
     }
 
     "remove excluded tags" in {
-      val config = ConfigFactory.parseString(
-        """
+      val config = ConfigFactory.parseString("""
           |include-service = yes
           |include-host = yes
           |include-instance = yes
@@ -91,8 +92,7 @@ class EnvironmentTagsSpec extends WordSpec with Matchers {
     }
 
     "remove all disabled elements" in {
-      val config = ConfigFactory.parseString(
-        """
+      val config = ConfigFactory.parseString("""
           |include-service = no
           |include-host = no
           |include-instance = no

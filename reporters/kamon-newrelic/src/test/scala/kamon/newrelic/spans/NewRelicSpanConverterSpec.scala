@@ -41,7 +41,8 @@ class NewRelicSpanConverterSpec extends WordSpec with Matchers {
       newRelicSpan shouldBe expected
     }
     "convert a client span" in {
-      val extraTags = TagSet.of("peer.host", "wonder.wall")
+      val extraTags = TagSet
+        .of("peer.host", "wonder.wall")
         .withTag("peer.ipv4", "10.2.3.1")
         .withTag("peer.ipv6", "fe80::6846:cfaf:e3f5:bea")
         .withTag("peer.port", 9021L)
@@ -62,7 +63,8 @@ class NewRelicSpanConverterSpec extends WordSpec with Matchers {
   }
 
   private def buildBaseNewRelicSpan(expectedAttributes: Attributes) = {
-    NewRelicSpan.builder(TestSpanHelper.spanId)
+    NewRelicSpan
+      .builder(TestSpanHelper.spanId)
       .name(TestSpanHelper.name)
       .traceId(TestSpanHelper.traceId)
       .timestamp(TestSpanHelper.before)

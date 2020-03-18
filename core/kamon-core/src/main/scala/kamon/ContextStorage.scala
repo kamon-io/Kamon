@@ -63,11 +63,8 @@ trait ContextStorage {
     */
   @inline def runWithContext[T](context: Context)(f: => T): T = {
     val scope = _contextStorage.store(context)
-    try {
-      f
-    } finally {
-      scope.close()
-    }
+    try f
+    finally scope.close()
   }
 
   /**
@@ -86,7 +83,6 @@ trait ContextStorage {
   def runWithContextTag[T](key: String, value: String)(f: => T): T =
     runWithContext(currentContext().withTag(key, value))(f)
 
-
   /**
     * Temporarily stores the provided Context tag on Kamon's Context Storage. The provided Context tag will be added to
     * the current Context and stored before executing the provided function, then removed right after execution
@@ -94,7 +90,6 @@ trait ContextStorage {
     */
   def runWithContextTag[T](key: String, value: Boolean)(f: => T): T =
     runWithContext(currentContext().withTag(key, value))(f)
-
 
   /**
     * Temporarily stores the provided Context tag on Kamon's Context Storage. The provided Context tag will be added to
@@ -117,17 +112,14 @@ trait ContextStorage {
     * Optionally, this function can finish the provided Span once the function execution finishes.
     */
   @inline def runWithSpan[T](span: Span, finishSpan: Boolean)(f: => T): T = {
-    try {
-      runWithContextEntry(Span.Key, span)(f)
-    } catch {
+    try runWithContextEntry(Span.Key, span)(f)
+    catch {
       case NonFatal(t) =>
         span.fail(t.getMessage, t)
         throw t
 
-    } finally {
-      if(finishSpan)
-        span.finish()
-    }
+    } finally if (finishSpan)
+      span.finish()
   }
 }
 
@@ -141,7 +133,7 @@ object ContextStorage {
     * instrumentation follows them around.
     */
   private val _contextStorage: Storage = {
-    if(sys.props("kamon.context.debug") == "true")
+    if (sys.props("kamon.context.debug") == "true")
       Storage.Debug()
     else
       Storage.ThreadLocal()

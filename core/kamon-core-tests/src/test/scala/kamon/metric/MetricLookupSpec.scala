@@ -54,31 +54,31 @@ class MetricLookupSpec extends WordSpec with Matchers {
           Kamon.counter("original-counter")
           Kamon.gauge("original-counter")
 
-        } should have message(redefinitionError("original-counter", "counter", "gauge"))
+        } should have message (redefinitionError("original-counter", "counter", "gauge"))
 
         the[IllegalArgumentException] thrownBy {
           Kamon.counter("original-counter")
           Kamon.histogram("original-counter")
 
-        } should have message(redefinitionError("original-counter", "counter", "histogram"))
+        } should have message (redefinitionError("original-counter", "counter", "histogram"))
 
         the[IllegalArgumentException] thrownBy {
           Kamon.counter("original-counter")
           Kamon.rangeSampler("original-counter")
 
-        } should have message(redefinitionError("original-counter", "counter", "rangeSampler"))
+        } should have message (redefinitionError("original-counter", "counter", "rangeSampler"))
 
         the[IllegalArgumentException] thrownBy {
           Kamon.counter("original-counter")
           Kamon.timer("original-counter")
 
-        } should have message(redefinitionError("original-counter", "counter", "timer"))
+        } should have message (redefinitionError("original-counter", "counter", "timer"))
 
         the[IllegalArgumentException] thrownBy {
           Kamon.histogram("original-histogram")
           Kamon.counter("original-histogram")
 
-        } should have message(redefinitionError("original-histogram", "histogram", "counter"))
+        } should have message (redefinitionError("original-histogram", "histogram", "counter"))
       }
     }
 

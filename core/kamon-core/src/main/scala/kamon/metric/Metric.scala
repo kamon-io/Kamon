@@ -28,7 +28,6 @@ import scala.collection.JavaConverters.asScalaBufferConverter
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 
-
 /**
   * Describes a property of a system to be measured, and contains all the necessary information to create the actual
   * instrument instances used to measure and record said property. Practically, a Metric can be seen as a group
@@ -48,24 +47,20 @@ trait Metric[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings] extends Ta
     */
   def name: String
 
-
   /**
     * Short, concise and human readable explanation of what is being measured by a metric.
     */
   def description: String
-
 
   /**
     * Configuration settings that apply to all instruments of this metric.
     */
   def settings: Sett
 
-
   /**
     * Returns an instrument without tags for this metric.
     */
   def withoutTags(): Inst
-
 
   /**
     * Removes an instrument with the provided tags from a metric, if it exists. Returns true if the instrument existed
@@ -73,8 +68,6 @@ trait Metric[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings] extends Ta
     */
   def remove(tags: TagSet): Boolean
 }
-
-
 
 object Metric {
 
@@ -108,7 +101,6 @@ object Metric {
     */
   trait RangeSampler extends Metric[kamon.metric.RangeSampler, Settings.ForDistributionInstrument]
 
-
   /**
     * Describes the minimum settings that should be provided to all metrics.
     */
@@ -118,7 +110,6 @@ object Metric {
       * Measurement unit of the values tracked by a metric.
       */
     def unit: MeasurementUnit
-
 
     /**
       * Interval at which auto-update actions will be scheduled.
@@ -131,23 +122,21 @@ object Metric {
     /**
       * Settings that apply to all metrics backed by instruments that produce a single value (e.g. counters and gauges).
       */
-    case class ForValueInstrument (
+    case class ForValueInstrument(
       unit: MeasurementUnit,
       autoUpdateInterval: Duration
     ) extends Metric.Settings
-
 
     /**
       * Settings that apply to all metrics backed by instruments that produce value distributions (e.g. timers, range
       * samplers and, of course, histograms).
       */
-    case class ForDistributionInstrument (
+    case class ForDistributionInstrument(
       unit: MeasurementUnit,
       autoUpdateInterval: Duration,
       dynamicRange: kamon.metric.DynamicRange
     ) extends Metric.Settings
   }
-
 
   /**
     * Exposes the required API to create metric snapshots. This API is not meant to be exposed to users.
@@ -161,7 +150,6 @@ object Metric {
     def snapshot(resetState: Boolean): MetricSnapshot[Sett, Snap]
   }
 
-
   /**
     * Provides basic creation, lifecycle, tagging, scheduling and snapshotting operations for Kamon metrics. This base
     * metric keeps track of all instruments created for a given metric and ensures that every time an instrument is
@@ -170,7 +158,6 @@ object Metric {
     *
     * Any actions scheduled on an instrument will be cancelled if that instrument is removed from the metric.
     */
-
   type RichInstrument[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings, Snap] = Inst
     with Instrument.Snapshotting[Snap]
     with BaseMetricAutoUpdate[Inst, Sett, Snap]
@@ -178,13 +165,14 @@ object Metric {
   type InstrumentBuilder[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings, Snap] =
     (BaseMetric[Inst, Sett, Snap], TagSet) => RichInstrument[Inst, Sett, Snap]
 
-
-  abstract class BaseMetric[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings, Snap] (
-      val name: String,
-      val description: String,
-      val settings: Sett,
-      instrumentBuilder: InstrumentBuilder[Inst, Sett, Snap],
-      scheduler: ScheduledExecutorService) extends Metric[Inst, Sett] with Metric.Snapshotting[Sett, Snap] {
+  abstract class BaseMetric[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings, Snap](
+    val name: String,
+    val description: String,
+    val settings: Sett,
+    instrumentBuilder: InstrumentBuilder[Inst, Sett, Snap],
+    scheduler: ScheduledExecutorService
+  ) extends Metric[Inst, Sett]
+      with Metric.Snapshotting[Sett, Snap] {
 
     private val _instruments = TrieMap.empty[TagSet, InstrumentEntry]
 
@@ -203,39 +191,45 @@ object Metric {
     override def withoutTags(): Inst =
       lookupInstrument(TagSet.Empty)
 
-    override def remove(tags: TagSet): Boolean = synchronized {
-      _instruments.get(tags).map(entry => {
-        entry.removeOnNextSnapshot = true
-        entry.scheduledActions.dropWhile(sa => {
-          sa.cancel(false)
-          true
-        })
-      }).nonEmpty
-    }
-
-    override def snapshot(resetState: Boolean): MetricSnapshot[Sett, Snap] = synchronized {
-      var instrumentSnapshots = List.empty[Instrument.Snapshot[Snap]]
-      _instruments.foreach {
-        case (tags, entry) =>
-          val instrumentSnapshot = entry.instrument.snapshot(resetState)
-          if(entry.removeOnNextSnapshot && resetState)
-            _instruments.remove(tags)
-
-          instrumentSnapshots = Instrument.Snapshot(tags, instrumentSnapshot) :: instrumentSnapshots
+    override def remove(tags: TagSet): Boolean =
+      synchronized {
+        _instruments
+          .get(tags)
+          .map { entry =>
+            entry.removeOnNextSnapshot = true
+            entry.scheduledActions.dropWhile { sa =>
+              sa.cancel(false)
+              true
+            }
+          }
+          .nonEmpty
       }
 
-      buildMetricSnapshot(this, instrumentSnapshots)
-    }
+    override def snapshot(resetState: Boolean): MetricSnapshot[Sett, Snap] =
+      synchronized {
+        var instrumentSnapshots = List.empty[Instrument.Snapshot[Snap]]
+        _instruments.foreach {
+          case (tags, entry) =>
+            val instrumentSnapshot = entry.instrument.snapshot(resetState)
+            if (entry.removeOnNextSnapshot && resetState)
+              _instruments.remove(tags)
 
-    def schedule(instrument: Inst, action: Runnable, interval: Duration): Any = synchronized {
-      _instruments.get(instrument.tags).map { entry =>
-        val scheduledAction = scheduler.scheduleAtFixedRate(action, interval.toNanos, interval.toNanos, TimeUnit.NANOSECONDS)
-        entry.scheduledActions += scheduledAction
+            instrumentSnapshots = Instrument.Snapshot(tags, instrumentSnapshot) :: instrumentSnapshots
+        }
+
+        buildMetricSnapshot(this, instrumentSnapshots)
       }
-    }
+
+    def schedule(instrument: Inst, action: Runnable, interval: Duration): Any =
+      synchronized {
+        _instruments.get(instrument.tags).map { entry =>
+          val scheduledAction = scheduler.scheduleAtFixedRate(action, interval.toNanos, interval.toNanos, TimeUnit.NANOSECONDS)
+          entry.scheduledActions += scheduledAction
+        }
+      }
 
     def status(): Status.Metric =
-      Status.Metric (
+      Status.Metric(
         name,
         description,
         settings.unit,
@@ -268,7 +262,7 @@ object Metric {
     private def cleanupStaleEntry(entry: InstrumentEntry): Unit =
       entry.scheduledActions.foreach(sa => sa.cancel(false))
 
-    private class InstrumentEntry (
+    private class InstrumentEntry(
       val instrument: RichInstrument[Inst, Sett, Snap],
       val scheduledActions: mutable.Buffer[ScheduledFuture[_]],
       @volatile var removeOnNextSnapshot: Boolean
@@ -279,7 +273,7 @@ object Metric {
     * Handles registration of auto-update actions on a base metric.
     */
   trait BaseMetricAutoUpdate[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings, Snap] {
-      self: Inst =>
+    self: Inst =>
 
     protected def baseMetric: BaseMetric[Inst, Sett, Snap]
 

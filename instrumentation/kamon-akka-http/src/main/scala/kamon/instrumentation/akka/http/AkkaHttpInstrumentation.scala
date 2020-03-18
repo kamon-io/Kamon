@@ -11,13 +11,15 @@ object AkkaHttpInstrumentation {
 
   Kamon.onReconfigure(_ => AkkaHttpClientInstrumentation.rebuildHttpClientInstrumentation(): Unit)
 
-  def toRequest(httpRequest: HttpRequest): HttpMessage.Request = new RequestReader {
-    val request = httpRequest
-  }
+  def toRequest(httpRequest: HttpRequest): HttpMessage.Request =
+    new RequestReader {
+      val request = httpRequest
+    }
 
-  def toResponse(httpResponse: HttpResponse): HttpMessage.Response = new HttpMessage.Response {
-    override val statusCode: Int = httpResponse.status.intValue()
-  }
+  def toResponse(httpResponse: HttpResponse): HttpMessage.Response =
+    new HttpMessage.Response {
+      override val statusCode: Int = httpResponse.status.intValue()
+    }
 
   def toRequestBuilder(httpRequest: HttpRequest): HttpMessage.RequestBuilder[HttpRequest] =
     new RequestReader with HttpMessage.RequestBuilder[HttpRequest] {
@@ -31,18 +33,19 @@ object AkkaHttpInstrumentation {
         request.withHeaders(request.headers ++ _extraHeaders)
     }
 
-  def toResponseBuilder(response: HttpResponse): HttpMessage.ResponseBuilder[HttpResponse] = new HttpMessage.ResponseBuilder[HttpResponse] {
-    private var _headers = response.headers
+  def toResponseBuilder(response: HttpResponse): HttpMessage.ResponseBuilder[HttpResponse] =
+    new HttpMessage.ResponseBuilder[HttpResponse] {
+      private var _headers = response.headers
 
-    override def statusCode: Int =
-      response.status.intValue()
+      override def statusCode: Int =
+        response.status.intValue()
 
-    override def write(header: String, value: String): Unit =
-      _headers = RawHeader(header, value) +: _headers
+      override def write(header: String, value: String): Unit =
+        _headers = RawHeader(header, value) +: _headers
 
-    override def build(): HttpResponse =
-      response.withHeaders(_headers)
-  }
+      override def build(): HttpResponse =
+        response.withHeaders(_headers)
+    }
 
   /**
     * Bundles together the read parts of the HTTP Request mapping
@@ -67,7 +70,7 @@ object AkkaHttpInstrumentation {
 
     override def read(header: String): Option[String] = {
       val headerValue = request.getHeader(header)
-      if(headerValue.isPresent)
+      if (headerValue.isPresent)
         Some(headerValue.get().value())
       else None
     }

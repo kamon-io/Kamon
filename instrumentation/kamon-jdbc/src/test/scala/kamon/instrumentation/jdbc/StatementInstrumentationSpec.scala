@@ -33,8 +33,17 @@ import kamon.tag.TagSet
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
-class StatementInstrumentationSpec extends WordSpec with Matchers with Eventually with SpanSugar with BeforeAndAfterAll
-    with MetricInspection.Syntax with InstrumentInspection.Syntax with Reconfigure with OptionValues with TestSpanReporter {
+class StatementInstrumentationSpec
+    extends WordSpec
+    with Matchers
+    with Eventually
+    with SpanSugar
+    with BeforeAndAfterAll
+    with MetricInspection.Syntax
+    with InstrumentInspection.Syntax
+    with Reconfigure
+    with OptionValues
+    with TestSpanReporter {
 
   implicit val parallelQueriesExecutor = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(10))
 
@@ -60,14 +69,12 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
 
       s"instrumenting the ${driver.name} driver" should {
         "track in-flight operations" in {
-          if(driver.supportSleeping) {
-           val vendorTags = TagSet.of("db.vendor", driver.vendor)
+          if (driver.supportSleeping) {
+            val vendorTags = TagSet.of("db.vendor", driver.vendor)
 
-            for (_ ← 1 to 10) yield {
-              Future {
-                val connection = driver.connect()
-                driver.sleep(connection, Duration.ofMillis(500))
-              }
+            for (_ ← 1 to 10) yield Future {
+              val connection = driver.connect()
+              driver.sleep(connection, Duration.ofMillis(500))
             }
 
             eventually(timeout(2 seconds)) {
@@ -105,7 +112,6 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
           val statement = connection.createStatement()
           statement.execute(select)
           validateNextRow(statement.getResultSet, valueNr = 2, valueName = "foo")
-
 
           eventually {
             val span = testSpanReporter().nextSpan().value
@@ -216,7 +222,7 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
             span.metricTags.get(plain("component")) shouldBe "jdbc"
             span.metricTags.get(plain("db.vendor")) shouldBe driver.vendor
             span.tags.get(plain("db.url")) shouldBe driver.url
-            span.metricTags.get(plainBoolean("error")) shouldBe (true)
+            span.metricTags.get(plainBoolean("error")) shouldBe true
             span.tags.get(option("error.stacktrace")) should be('defined)
             testSpanReporter().nextSpan() shouldBe None
           }
@@ -229,7 +235,7 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
             span.metricTags.get(plain("component")) shouldBe "jdbc"
             span.metricTags.get(plain("db.vendor")) shouldBe driver.vendor
             span.tags.get(plain("db.url")) shouldBe driver.url
-            span.metricTags.get(plainBoolean("error")) shouldBe (true)
+            span.metricTags.get(plainBoolean("error")) shouldBe true
             span.tags.get(option("error.stacktrace")) should be('defined)
             testSpanReporter().nextSpan() shouldBe None
           }
@@ -240,7 +246,7 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
             val span = testSpanReporter().nextSpan().value
             span.operationName shouldBe StatementTypes.Update
             span.metricTags.get(plain("component")) shouldBe "jdbc"
-            span.metricTags.get(plainBoolean("error")) shouldBe (true)
+            span.metricTags.get(plainBoolean("error")) shouldBe true
             span.metricTags.get(plain("db.vendor")) shouldBe driver.vendor
             span.tags.get(plain("db.url")) shouldBe driver.url
           }
@@ -249,10 +255,7 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
         "rethrow the exception when error happen" in {
           val select = s"SELECT * FROM NotATable where Nr = 1"
 
-          Try(connection.createStatement().execute(select))
-            .failed
-            .get
-            .getMessage
+          Try(connection.createStatement().execute(select)).failed.get.getMessage
             .toLowerCase() should include("notatable")
         }
       }
@@ -267,6 +270,7 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
   }
 
   trait DriverSuite {
+
     /**
       * Name of the driver being tested.
       */
@@ -391,7 +395,6 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
     }
   }
 
-  def canRunInCurrentEnvironment(driverSuite: DriverSuite): Boolean = {
+  def canRunInCurrentEnvironment(driverSuite: DriverSuite): Boolean =
     !(System.getenv("TRAVIS") != null && driverSuite.vendor == "mysql")
-  }
 }

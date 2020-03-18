@@ -27,29 +27,28 @@ import scala.util.{Failure, Success}
 
 class PlayServerInstrumentation extends InstrumentationBuilder {
 
-    /**
-      * When using the Akka HTTP server, we will use the exact same instrumentation that comes from the Akka HTTP module,
-      * the only difference here is that we will change the component name.
-      */
+  /**
+    * When using the Akka HTTP server, we will use the exact same instrumentation that comes from the Akka HTTP module,
+    * the only difference here is that we will change the component name.
+    */
   private val isAkkaHttpAround = ClassRefiner.builder().mustContains("play.core.server.AkkaHttpServerProvider").build()
 
   onType("play.core.server.AkkaHttpServer")
-      .when(isAkkaHttpAround)
-      .advise(anyMethods("createServerBinding", "play$core$server$AkkaHttpServer$$createServerBinding"), CreateServerBindingAdvice)
+    .when(isAkkaHttpAround)
+    .advise(anyMethods("createServerBinding", "play$core$server$AkkaHttpServer$$createServerBinding"), CreateServerBindingAdvice)
 
-
-    /**
-      * When using the Netty HTTP server we are rolling our own instrumentation which simply requires us to create the
-      * HttpServerInstrumentation instance and call the expected callbacks on it.
-      */
+  /**
+    * When using the Netty HTTP server we are rolling our own instrumentation which simply requires us to create the
+    * HttpServerInstrumentation instance and call the expected callbacks on it.
+    */
   private val isNettyAround = ClassRefiner.builder().mustContains("play.core.server.NettyServerProvider").build()
 
   onType("play.core.server.NettyServer")
-      .when(isNettyAround)
-      .mixin(classOf[HasServerInstrumentation.Mixin])
-      .advise(isConstructor, NettyServerInitializationAdvice)
+    .when(isNettyAround)
+    .mixin(classOf[HasServerInstrumentation.Mixin])
+    .advise(isConstructor, NettyServerInitializationAdvice)
 
-  if(hasGenericFutureListener()) {
+  if (hasGenericFutureListener()) {
     onType("play.core.server.netty.PlayRequestHandler")
       .when(isNettyAround)
       .mixin(classOf[HasServerInstrumentation.Mixin])
@@ -65,11 +64,10 @@ class PlayServerInstrumentation extends InstrumentationBuilder {
   onType("play.api.http.DefaultHttpRequestHandler")
     .advise(method("filterHandler").and(takesArguments(2)), GenerateOperationNameOnFilterHandler)
 
-  private def hasGenericFutureListener(): Boolean = {
-    try { Class.forName("io.netty.util.concurrent.GenericFutureListener") != null} catch { case _ => false }
-  }
+  private def hasGenericFutureListener(): Boolean =
+    try Class.forName("io.netty.util.concurrent.GenericFutureListener") != null
+    catch { case _ => false }
 }
-
 
 object CreateServerBindingAdvice {
 
@@ -112,15 +110,17 @@ object NettyPlayRequestHandlerHandleAdvice {
       deferSamplingDecision = true
     )
 
-    if(!playRequestHandler.hasBeenUsedBefore()) {
+    if (!playRequestHandler.hasBeenUsedBefore()) {
       playRequestHandler.markAsUsed()
-      channel.closeFuture().addListener(new GenericFutureListener[io.netty.util.concurrent.Future[_ >: Void]] {
-        override def operationComplete(future: io.netty.util.concurrent.Future[_ >: Void]): Unit = {
-          val connectionEstablishedTime = Kamon.clock().toInstant(playRequestHandler.asInstanceOf[HasTimestamp].timestamp)
-          val aliveTime = Duration.between(connectionEstablishedTime, Kamon.clock().instant())
-          serverInstrumentation.connectionClosed(aliveTime, playRequestHandler.handledRequests())
-        }
-      })
+      channel
+        .closeFuture()
+        .addListener(new GenericFutureListener[io.netty.util.concurrent.Future[_ >: Void]] {
+          override def operationComplete(future: io.netty.util.concurrent.Future[_ >: Void]): Unit = {
+            val connectionEstablishedTime = Kamon.clock().toInstant(playRequestHandler.asInstanceOf[HasTimestamp].timestamp)
+            val aliveTime = Duration.between(connectionEstablishedTime, Kamon.clock().instant())
+            serverInstrumentation.connectionClosed(aliveTime, playRequestHandler.handledRequests())
+          }
+        })
     }
 
     playRequestHandler.requestHandled()
@@ -147,30 +147,32 @@ object NettyPlayRequestHandlerHandleAdvice {
 
   case class RequestProcessingContext(requestHandler: RequestHandler, scope: Storage.Scope)
 
-  private def toRequest(request: HttpRequest, serverHost: String, serverPort: Int): HttpMessage.Request = new HttpMessage.Request {
-    override def url: String = request.uri()
-    override def path: String = request.uri()
-    override def method: String = request.method().name()
-    override def host: String = serverHost
-    override def port: Int = serverPort
+  private def toRequest(request: HttpRequest, serverHost: String, serverPort: Int): HttpMessage.Request =
+    new HttpMessage.Request {
+      override def url: String = request.uri()
+      override def path: String = request.uri()
+      override def method: String = request.method().name()
+      override def host: String = serverHost
+      override def port: Int = serverPort
 
-    override def read(header: String): Option[String] =
-      Option(request.headers().get(header))
+      override def read(header: String): Option[String] =
+        Option(request.headers().get(header))
 
-    override def readAll(): Map[String, String] =
-      request.headers().entries().asScala.map(e => e.getKey -> e.getValue).toMap
-  }
+      override def readAll(): Map[String, String] =
+        request.headers().entries().asScala.map(e => e.getKey -> e.getValue).toMap
+    }
 
-  private def toResponse(response: HttpResponse): HttpMessage.ResponseBuilder[HttpResponse] = new HttpMessage.ResponseBuilder[HttpResponse] {
-    override def build(): HttpResponse =
-      response
+  private def toResponse(response: HttpResponse): HttpMessage.ResponseBuilder[HttpResponse] =
+    new HttpMessage.ResponseBuilder[HttpResponse] {
+      override def build(): HttpResponse =
+        response
 
-    override def statusCode: Int =
-      response.status().code()
+      override def statusCode: Int =
+        response.status().code()
 
-    override def write(header: String, value: String): Unit =
-      response.headers().add(header, value)
-  }
+      override def write(header: String, value: String): Unit =
+        response.headers().add(header, value)
+    }
 }
 
 object PlayRequestHandlerConstructorAdvice {
@@ -182,7 +184,6 @@ object PlayRequestHandlerConstructorAdvice {
     instrumentation.connectionOpened()
   }
 }
-
 
 trait HasServerInstrumentation {
   def serverInstrumentation(): HttpServerInstrumentation
@@ -211,12 +212,10 @@ object HasServerInstrumentation {
       this._handledRequests.get()
 
     @Initializer
-    def init(): Unit = {
+    def init(): Unit =
       _handledRequests = new AtomicLong()
-    }
   }
 }
-
 
 object GenerateOperationNameOnFilterHandler {
 
@@ -225,17 +224,18 @@ object GenerateOperationNameOnFilterHandler {
 
   @Advice.OnMethodEnter
   def enter(@Advice.Argument(0) request: RequestHeader): Unit = {
-    request.attrs.get(Router.Attrs.HandlerDef).map(handler => {
+    request.attrs.get(Router.Attrs.HandlerDef).map { handler =>
       val span = Kamon.currentSpan()
       span.name(generateOperationName(handler))
       span.takeSamplingDecision()
-    })
+    }
   }
 
   private def generateOperationName(handlerDef: HandlerDef): String =
-    _operationNameCache.getOrElseUpdate(handlerDef.path, {
+    _operationNameCache.getOrElseUpdate(
+      handlerDef.path,
       // Convert paths of form /foo/bar/$paramname<regexp>/blah to /foo/bar/paramname/blah
       _normalizePattern.replaceAllIn(handlerDef.path, "$1")
-  })
+    )
 
 }

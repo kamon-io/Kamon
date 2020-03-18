@@ -22,7 +22,6 @@ import kamon.metric.Histogram.DistributionSnapshotBuilder
 import org.HdrHistogram.{BaseLocalHdrHistogram, ZigZag}
 import org.slf4j.LoggerFactory
 
-
 /**
   * A distribution of values observed by an instrument. All Kamon distributions are based on the HdrHistogram and as
   * such, they represent a distribution of values within a configured range and precision. By default, all instruments
@@ -100,6 +99,7 @@ object Distribution {
     * Describes a single bucket within a distribution.
     */
   trait Bucket {
+
     /**
       * Value at which the bucket starts
       */
@@ -142,7 +142,6 @@ object Distribution {
   def merge(left: Distribution, right: Distribution): Distribution =
     merge(left, right, left.dynamicRange)
 
-
   /**
     * Merges two distributions into a new one, which includes the values from both distributions, adjusting the values
     * to the provided dynamic range if necessary.
@@ -184,27 +183,29 @@ object Distribution {
     */
   def convert(distribution: Distribution, unit: MeasurementUnit, toUnit: MeasurementUnit, toDynamicRange: DynamicRange): Distribution = {
 
-    if(unit == toUnit && distribution.dynamicRange == toDynamicRange)
+    if (unit == toUnit && distribution.dynamicRange == toDynamicRange)
       distribution
     else {
-      val actualToUnit = if(unit.dimension == toUnit.dimension) toUnit else {
-        _logger.warn(
-          s"Can't convert distributions from the [${unit.dimension.name}] dimension into the " +
-          s"[${toUnit.dimension.name}] dimension."
-        )
+      val actualToUnit =
+        if (unit.dimension == toUnit.dimension) toUnit
+        else {
+          _logger.warn(
+            s"Can't convert distributions from the [${unit.dimension.name}] dimension into the " +
+              s"[${toUnit.dimension.name}] dimension."
+          )
 
-        unit
-      }
+          unit
+        }
 
-      if(unit == actualToUnit && distribution.dynamicRange == toDynamicRange)
+      if (unit == actualToUnit && distribution.dynamicRange == toDynamicRange)
         distribution
       else {
         val scaledHistogram = Histogram.Local.get(toDynamicRange)
-        distribution.bucketsIterator.foreach(bucket => {
+        distribution.bucketsIterator.foreach { bucket =>
           val roundValue = Math.round(MeasurementUnit.convert(bucket.value, unit, toUnit))
-          val convertedValue = if(roundValue == 0L) 1L else roundValue
+          val convertedValue = if (roundValue == 0L) 1L else roundValue
           scaledHistogram.recordValueWithCount(convertedValue, bucket.frequency)
-        })
+        }
 
         scaledHistogram.snapshot(true)
       }
@@ -217,17 +218,25 @@ object Distribution {
     * zero run-length encoded version of the counts array in a histogram and the actual buckets and percentiles expected
     * to be seen by users.
     */
-  private[kamon] class ZigZagCounts(val count: Long, minIndex: Int, maxIndex: Int, zigZagCounts: ByteBuffer, unitMagnitude: Int,
-      subBucketHalfCount: Int, subBucketHalfCountMagnitude: Int, val dynamicRange: DynamicRange) extends Distribution {
+  private[kamon] class ZigZagCounts(
+    val count: Long,
+    minIndex: Int,
+    maxIndex: Int,
+    zigZagCounts: ByteBuffer,
+    unitMagnitude: Int,
+    subBucketHalfCount: Int,
+    subBucketHalfCountMagnitude: Int,
+    val dynamicRange: DynamicRange
+  ) extends Distribution {
 
-    val min: Long = if(count == 0) 0 else bucketValueAtIndex(minIndex)
+    val min: Long = if (count == 0) 0 else bucketValueAtIndex(minIndex)
     val max: Long = bucketValueAtIndex(maxIndex)
     lazy val sum: Long = bucketsIterator.foldLeft(0L)((a, b) => a + (b.value * b.frequency))
 
     def buckets: Seq[Bucket] = {
       val builder = Seq.newBuilder[Bucket]
       val allBuckets = bucketsIterator
-      while(allBuckets.hasNext) {
+      while (allBuckets.hasNext) {
         val b = allBuckets.next()
         builder += immutable.Bucket(b.value, b.frequency)
       }
@@ -235,66 +244,67 @@ object Distribution {
       builder.result()
     }
 
-    def bucketsIterator: Iterator[Bucket] = new Iterator[Bucket] {
-      val buffer = zigZagCounts.duplicate()
-      val bucket = mutable.Bucket(0, 0)
-      var countsArrayIndex = 0
+    def bucketsIterator: Iterator[Bucket] =
+      new Iterator[Bucket] {
+        val buffer = zigZagCounts.duplicate()
+        val bucket = mutable.Bucket(0, 0)
+        var countsArrayIndex = 0
 
-      def hasNext: Boolean =
-        buffer.remaining() > 0
+        def hasNext: Boolean =
+          buffer.remaining() > 0
 
-      def next(): Bucket = {
-        val readLong = ZigZag.getLong(buffer)
-        val frequency = if(readLong > 0) {
-          readLong
-        } else {
-          countsArrayIndex += (-readLong.toInt)
-          ZigZag.getLong(buffer)
+        def next(): Bucket = {
+          val readLong = ZigZag.getLong(buffer)
+          val frequency =
+            if (readLong > 0)
+              readLong
+            else {
+              countsArrayIndex += (-readLong.toInt)
+              ZigZag.getLong(buffer)
+            }
+
+          bucket.value = bucketValueAtIndex(countsArrayIndex)
+          bucket.frequency = frequency
+          countsArrayIndex += 1
+          bucket
         }
-
-        bucket.value = bucketValueAtIndex(countsArrayIndex)
-        bucket.frequency = frequency
-        countsArrayIndex += 1
-        bucket
       }
-    }
 
-    def percentilesIterator: Iterator[Percentile] = new Iterator[Percentile]{
-      val buckets = bucketsIterator
-      val percentile = mutable.Percentile(0D, 0, 0)
-      var countUnderQuantile = 0L
+    def percentilesIterator: Iterator[Percentile] =
+      new Iterator[Percentile] {
+        val buckets = bucketsIterator
+        val percentile = mutable.Percentile(0d, 0, 0)
+        var countUnderQuantile = 0L
 
-      def hasNext: Boolean =
-        buckets.hasNext
+        def hasNext: Boolean =
+          buckets.hasNext
 
-      def next(): Percentile = {
-        val bucket = buckets.next()
-        countUnderQuantile += bucket.frequency
-        percentile.rank = (countUnderQuantile * 100D) / ZigZagCounts.this.count
-        percentile.countAtRank = countUnderQuantile
-        percentile.value = bucket.value
-        percentile
+        def next(): Percentile = {
+          val bucket = buckets.next()
+          countUnderQuantile += bucket.frequency
+          percentile.rank = (countUnderQuantile * 100d) / ZigZagCounts.this.count
+          percentile.countAtRank = countUnderQuantile
+          percentile.value = bucket.value
+          percentile
+        }
       }
-    }
 
     def percentile(p: Double): Percentile = {
       val percentiles = percentilesIterator
-      if(percentiles.hasNext) {
+      if (percentiles.hasNext) {
         var currentPercentile = percentiles.next()
-        while(percentiles.hasNext && currentPercentile.rank < p) {
+        while (percentiles.hasNext && currentPercentile.rank < p)
           currentPercentile = percentiles.next()
-        }
 
         currentPercentile
 
       } else immutable.Percentile(p, 0, 0)
     }
 
-
     def percentiles: Seq[Percentile] = {
       val builder = Seq.newBuilder[Percentile]
       val allPercentiles = percentilesIterator
-      while(allPercentiles.hasNext) {
+      while (allPercentiles.hasNext) {
         val p = allPercentiles.next()
         builder += immutable.Percentile(p.rank, p.value, p.countAtRank)
       }
@@ -302,9 +312,8 @@ object Distribution {
       builder.result()
     }
 
-    def countsArray(): ByteBuffer = {
+    def countsArray(): ByteBuffer =
       zigZagCounts.duplicate()
-    }
 
     @inline private def bucketValueAtIndex(index: Int): Long = {
       var bucketIndex: Int = (index >> subBucketHalfCountMagnitude) - 1
@@ -317,9 +326,8 @@ object Distribution {
       subBucketIndex.toLong << (bucketIndex + unitMagnitude)
     }
 
-    override def toString(): String = {
+    override def toString(): String =
       s"Distribution{count=$count,min=$min,max=$max}"
-    }
   }
 
   /** Mutable versions of buckets and percentiles, used to avoid allocations when returned iterators */

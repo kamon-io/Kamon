@@ -1,5 +1,5 @@
 import sbt.librarymanagement.syntax.ExclusionRule
-import sbt.{ ModuleID, settingKey, taskKey}
+import sbt.{settingKey, taskKey, ModuleID}
 
 object BundleKeys {
   val kanelaAgentModule = settingKey[ModuleID]("Dependency on the Kanela agent")

@@ -1,6 +1,5 @@
 package kamon.instrumentation.http
 
-
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
 import kamon.context.Context
@@ -13,18 +12,30 @@ import org.scalatest.{Matchers, OptionValues, WordSpec}
 
 import scala.collection.mutable
 
-class HttpClientInstrumentationSpec extends WordSpec with Matchers with InstrumentInspection.Syntax with OptionValues
-    with SpanInspection.Syntax with Eventually {
+class HttpClientInstrumentationSpec
+    extends WordSpec
+    with Matchers
+    with InstrumentInspection.Syntax
+    with OptionValues
+    with SpanInspection.Syntax
+    with Eventually {
 
   "the HTTP server instrumentation" when {
     "configured for context propagation" should {
       "write context entries and tags to the outgoing request" in {
         val context = Context.of(TagSet.of("example", "tag"))
-        val handler = httpClient().createHandler(fakeRequest("http://localhost:8080/", "/", "GET", Map(
-          "some-header" -> "tag=value;none=0011223344556677;",
-          "some-other-header" -> "0011223344556677"
-        )), context)
-
+        val handler = httpClient().createHandler(
+          fakeRequest(
+            "http://localhost:8080/",
+            "/",
+            "GET",
+            Map(
+              "some-header"       -> "tag=value;none=0011223344556677;",
+              "some-other-header" -> "0011223344556677"
+            )
+          ),
+          context
+        )
 
         handler.request.read("context-tags").value shouldBe "example=tag;upstream.name=kamon-application;"
         handler.request.readAll().keys should contain allOf (
@@ -110,15 +121,20 @@ class HttpClientInstrumentationSpec extends WordSpec with Matchers with Instrume
     HttpClientInstrumentation.from(ConfigFactory.empty(), TestComponent)
 
   def noSpanMetricsHttpClient(): HttpClientInstrumentation =
-    HttpClientInstrumentation.from( Kamon.config().getConfig("kamon.instrumentation.http-client.no-span-metrics"), TestComponent)
+    HttpClientInstrumentation.from(Kamon.config().getConfig("kamon.instrumentation.http-client.no-span-metrics"), TestComponent)
 
   def noopHttpClient(): HttpClientInstrumentation =
-    HttpClientInstrumentation.from( Kamon.config().getConfig("kamon.instrumentation.http-client.noop"), TestComponent)
+    HttpClientInstrumentation.from(Kamon.config().getConfig("kamon.instrumentation.http-client.noop"), TestComponent)
 
-  def fakeRequest(requestUrl: String, requestPath: String, requestMethod: String, initialHeaders: Map[String, String]): HttpMessage.RequestBuilder[HttpMessage.Request] =
+  def fakeRequest(
+    requestUrl: String,
+    requestPath: String,
+    requestMethod: String,
+    initialHeaders: Map[String, String]
+  ): HttpMessage.RequestBuilder[HttpMessage.Request] =
     new HttpMessage.RequestBuilder[HttpMessage.Request] {
       private var _headers = mutable.Map.empty[String, String]
-      initialHeaders.foreach { case (k, v) => _headers += (k -> v)}
+      initialHeaders.foreach { case (k, v) => _headers += (k -> v) }
 
       override def url: String = requestUrl
       override def path: String = requestPath

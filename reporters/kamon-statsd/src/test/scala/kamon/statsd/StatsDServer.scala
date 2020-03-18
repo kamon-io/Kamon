@@ -27,30 +27,32 @@ class StatsDServer(val port: Int = selectRandomPort) {
 
   def start(): Unit = run()
 
-  private def run(): Unit = Future {
-    logger.info(s"Start StatsD Server (port: $port)")
-    var isRunning = true
-    while (isRunning) {
-      try {
-        val buffer = new Array[Byte](1024)
-        val packet = new DatagramPacket(buffer, buffer.length)
-        socket.receive(packet)
-        val data = new String(packet.getData.take(packet.getLength))
-        addPacket(data)
-      } catch {
-        case e: SocketException =>
-          isRunning = false
+  private def run(): Unit =
+    Future {
+      logger.info(s"Start StatsD Server (port: $port)")
+      var isRunning = true
+      while (isRunning) {
+        try {
+          val buffer = new Array[Byte](1024)
+          val packet = new DatagramPacket(buffer, buffer.length)
+          socket.receive(packet)
+          val data = new String(packet.getData.take(packet.getLength))
+          addPacket(data)
+        } catch {
+          case e: SocketException =>
+            isRunning = false
+        }
       }
+      logger.info("Stop StatsD Server")
     }
-    logger.info("Stop StatsD Server")
-  }
 
-  private def addPacket(packet: String): Unit = synchronized {
-    packets = Packet(packet) :: packets
-    val (satisfiedRequests, notSatisfiedRequests) = packetRequests.partition(_.condition(packets))
-    satisfiedRequests.foreach(_.promise.success(packets))
-    packetRequests = notSatisfiedRequests
-  }
+  private def addPacket(packet: String): Unit =
+    synchronized {
+      packets = Packet(packet) :: packets
+      val (satisfiedRequests, notSatisfiedRequests) = packetRequests.partition(_.condition(packets))
+      satisfiedRequests.foreach(_.promise.success(packets))
+      packetRequests = notSatisfiedRequests
+    }
 
   case class PacketRequest(promise: Promise[List[Packet]], condition: (List[Packet]) => Boolean)
 
@@ -63,18 +65,17 @@ class StatsDServer(val port: Int = selectRandomPort) {
     Await.result(promise.future, waitFor)
   }
 
-  def getPacket(condition: Packet => Boolean, waitFor: Duration = 2.seconds): Packet = {
+  def getPacket(condition: Packet => Boolean, waitFor: Duration = 2.seconds): Packet =
     getPackets(_.exists(condition), waitFor).find(condition).get
-  }
 
-  def stop(): Unit = {
+  def stop(): Unit =
     socket.close()
-  }
 
-  def clear(): Unit = synchronized {
-    packets = Nil
-    packetRequests = Nil
-  }
+  def clear(): Unit =
+    synchronized {
+      packets = Nil
+      packetRequests = Nil
+    }
 
 }
 
@@ -124,9 +125,7 @@ object StatsDServer {
     } catch {
       case e: IOException =>
         throw new IllegalStateException("Impossible to find a free port", e)
-    } finally {
-      Try { socket.close() }
-    }
+    } finally Try(socket.close())
   }
 
 }

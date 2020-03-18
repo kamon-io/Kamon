@@ -28,21 +28,23 @@ import kamon.tag.Lookups.any
 @State(Scope.Benchmark)
 class TagSetLookupBenchmark {
 
-  def builderTags() = TagSet.builder()
-    .add("http.url", "http://localhost:8080/test")
-    .add("http.status_code", 200L)
-    .add("error", false)
-    .add("userID", "abcdef")
-    .add("correlationID", "0123456")
-    .build()
+  def builderTags() =
+    TagSet
+      .builder()
+      .add("http.url", "http://localhost:8080/test")
+      .add("http.status_code", 200L)
+      .add("error", false)
+      .add("userID", "abcdef")
+      .add("correlationID", "0123456")
+      .build()
 
-  def keyByKeyTags() = TagSet.Empty
-    .withTag("http.url", "http://localhost:8080/test")
-    .withTag("http.status_code", 200L)
-    .withTag("error", false)
-    .withTag("userID", "abcdef")
-    .withTag("correlationID", "0123456")
-
+  def keyByKeyTags() =
+    TagSet.Empty
+      .withTag("http.url", "http://localhost:8080/test")
+      .withTag("http.status_code", 200L)
+      .withTag("error", false)
+      .withTag("userID", "abcdef")
+      .withTag("correlationID", "0123456")
 
   val builderLeft = builderTags()
   val builderRight = builderTags()
@@ -50,22 +52,18 @@ class TagSetLookupBenchmark {
   val keyByKeyRight = keyByKeyTags()
 
   @Benchmark
-  def equalityOnBuilderTagSets(): Boolean = {
+  def equalityOnBuilderTagSets(): Boolean =
     builderLeft == builderRight
-  }
 
   @Benchmark
-  def equalityOnKeyByKeyTagSets(): Boolean = {
+  def equalityOnKeyByKeyTagSets(): Boolean =
     keyByKeyLeft == keyByKeyRight
-  }
 
   @Benchmark
-  def anyLookupOnBuilderTagSet(): Any = {
+  def anyLookupOnBuilderTagSet(): Any =
     builderLeft.get(any("userID"))
-  }
 
   @Benchmark
-  def anyLookupOnKeyByKeyTagSet(): Any = {
+  def anyLookupOnKeyByKeyTagSet(): Any =
     keyByKeyLeft.get(any("userID"))
-  }
 }

@@ -27,7 +27,7 @@ class TraceIDConverter extends ClassicConverter {
     val currentSpan = Kamon.currentSpan()
     val traceID = currentSpan.trace.id
 
-    if(traceID == Identifier.Empty)
+    if (traceID == Identifier.Empty)
       "undefined"
     else
       traceID.string

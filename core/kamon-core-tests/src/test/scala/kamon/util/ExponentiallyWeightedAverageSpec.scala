@@ -12,17 +12,16 @@ class ExponentiallyWeightedAverageSpec extends WordSpec with Matchers with Event
   "an Exponentially Weighted Moving Average" should {
     "converge to the actual average in few iterations from startup with the default weighting factor" in {
       val ewma = EWMA.create()
-      ewma.add(60D)
-      ewma.add(40D)
-      ewma.add(55D)
-      ewma.add(45D)
-      ewma.add(50D)
-      ewma.add(50D)
-      ewma.add(50D)
+      ewma.add(60d)
+      ewma.add(40d)
+      ewma.add(55d)
+      ewma.add(45d)
+      ewma.add(50d)
+      ewma.add(50d)
+      ewma.add(50d)
 
-      ewma.average() shouldBe 50D +- 5D
+      ewma.average() shouldBe 50d +- 5d
     }
-
 
     "catch up with an up trend" in {
       val ewma = EWMA.create()
@@ -33,24 +32,24 @@ class ExponentiallyWeightedAverageSpec extends WordSpec with Matchers with Event
         ewma.add(value)
       }
 
-      ewma.average() shouldBe value.toDouble +- 50D
+      ewma.average() shouldBe value.toDouble +- 50d
     }
 
     "take many iterations to converge on the average with a high weighting factor" in {
-      val ewma = EWMA.create(0.99D)
-      ewma.add(60D)
-      ewma.add(40D)
-      ewma.add(50D)
-      ewma.add(50D)
-      ewma.add(50D)
+      val ewma = EWMA.create(0.99d)
+      ewma.add(60d)
+      ewma.add(40d)
+      ewma.add(50d)
+      ewma.add(50d)
+      ewma.add(50d)
 
       30 times {
-        ewma.add(50D)
-        ewma.add(50D)
-        ewma.add(50D)
+        ewma.add(50d)
+        ewma.add(50d)
+        ewma.add(50d)
       }
 
-      ewma.average() shouldBe 50D +- 5D
+      ewma.average() shouldBe 50d +- 5d
     }
 
   }

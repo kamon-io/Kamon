@@ -59,14 +59,11 @@ object HttpPropagation {
     def write(header: String, value: String): Unit
   }
 
-
-
   /**
     * Create a new HTTP propagation instance from the provided configuration.
     */
-  def from(config: Config): Propagation[HttpPropagation.HeaderReader, HttpPropagation.HeaderWriter] = {
+  def from(config: Config): Propagation[HttpPropagation.HeaderReader, HttpPropagation.HeaderWriter] =
     new HttpPropagation.Default(Settings.from(config))
-  }
 
   /**
     * Default HTTP Propagation in Kamon.
@@ -87,12 +84,11 @@ object HttpPropagation {
       // Tags encoded together in the context tags header.
       try {
         reader.read(settings.tagsHeaderName).foreach { contextTagsHeader =>
-          contextTagsHeader.split(";").foreach(tagData => {
+          contextTagsHeader.split(";").foreach { tagData =>
             val tagPair = tagData.split("=")
-            if (tagPair.length == 2) {
+            if (tagPair.length == 2)
               tags += (tagPair(0) -> parseTagValue(tagPair(1)))
-            }
-          })
+          }
         }
       } catch {
         case NonFatal(t) => log.warn("Failed to read the context tags header", t.asInstanceOf[Any])
@@ -101,9 +97,8 @@ object HttpPropagation {
       // Tags explicitly mapped on the tags.mappings configuration.
       settings.tagsMappings.foreach {
         case (tagName, httpHeader) =>
-          try {
-            reader.read(httpHeader).foreach(tagValue => tags += (tagName -> tagValue))
-          } catch {
+          try reader.read(httpHeader).foreach(tagValue => tags += (tagName -> tagValue))
+          catch {
             case NonFatal(t) => log.warn("Failed to read mapped tag [{}]", tagName, t.asInstanceOf[Any])
           }
       }
@@ -112,9 +107,8 @@ object HttpPropagation {
       settings.incomingEntries.foldLeft(Context.of(TagSet.from(tags.result()))) {
         case (context, (entryName, entryDecoder)) =>
           var result = context
-          try {
-            result = entryDecoder.read(reader, context)
-          } catch {
+          try result = entryDecoder.read(reader, context)
+          catch {
             case NonFatal(t) => log.warn("Failed to read entry [{}]", entryName.asInstanceOf[Any], t.asInstanceOf[Any])
           }
 
@@ -146,25 +140,22 @@ object HttpPropagation {
       }
 
       // Write the upstream name, if needed
-      if(settings.includeUpstreamName)
+      if (settings.includeUpstreamName)
         appendTag(Span.TagKeys.UpstreamName, Kamon.environment.service)
 
       // Write the context tags header.
-      if(contextTagsHeader.nonEmpty) {
+      if (contextTagsHeader.nonEmpty)
         writer.write(settings.tagsHeaderName, contextTagsHeader.result())
-      }
 
       // Write entries for the specified direction.
       settings.outgoingEntries.foreach {
         case (entryName, entryWriter) =>
-          try {
-            entryWriter.write(context, writer)
-          } catch {
+          try entryWriter.write(context, writer)
+          catch {
             case NonFatal(t) => log.warn("Failed to write entry [{}] due to: {}", entryName.asInstanceOf[Any], t.asInstanceOf[Any])
           }
       }
     }
-
 
     private val _longTypePrefix = "l:"
     private val _booleanTypePrefix = "b:"
@@ -177,21 +168,20 @@ object HttpPropagation {
       if (value.length < 2) // Empty and short values definitely do not have type indicators.
         value
       else {
-        if(value.startsWith(_longTypePrefix)) {
+        if (value.startsWith(_longTypePrefix)) {
           // Try to parse the content as a Long value.
           val remaining = value.substring(2)
-          try {
-            remaining.toLong
-          } catch {
+          try remaining.toLong
+          catch {
             case _: java.lang.NumberFormatException => remaining
           }
 
-        } else if(value.startsWith(_booleanTypePrefix)) {
+        } else if (value.startsWith(_booleanTypePrefix)) {
           // Try to parse the content as a Boolean value.
           val remaining = value.substring(2)
-          if(remaining == "true")
+          if (remaining == "true")
             true
-          else if(remaining == "false")
+          else if (remaining == "false")
             false
           else
             remaining
@@ -203,11 +193,12 @@ object HttpPropagation {
     /**
       * Returns the actual value to be written in the HTTP transport, with a type prefix if applicable.
       */
-    private def tagValueWithPrefix(tag: Tag): String = tag match {
-      case t: Tag.String  => t.value
-      case t: Tag.Boolean => _booleanTypePrefix + t.value.toString
-      case t: Tag.Long    => _longTypePrefix + t.value.toString
-    }
+    private def tagValueWithPrefix(tag: Tag): String =
+      tag match {
+        case t: Tag.String  => t.value
+        case t: Tag.Boolean => _booleanTypePrefix + t.value.toString
+        case t: Tag.Long    => _longTypePrefix + t.value.toString
+      }
 
   }
 
@@ -224,26 +215,27 @@ object HttpPropagation {
 
     private val log = LoggerFactory.getLogger(classOf[HttpPropagation.Settings])
     private val readerWriterShortcuts: Map[String, ReaderWriter] = Map(
-      "span/b3" -> SpanPropagation.B3(),
-      "span/uber" -> SpanPropagation.Uber(),
+      "span/b3"        -> SpanPropagation.B3(),
+      "span/uber"      -> SpanPropagation.Uber(),
       "span/b3-single" -> SpanPropagation.B3Single()
     )
 
     def from(config: Config): Settings = {
-      def buildInstances[ExpectedType : ClassTag](mappings: Map[String, String]): Map[String, ExpectedType] = {
+      def buildInstances[ExpectedType: ClassTag](mappings: Map[String, String]): Map[String, ExpectedType] = {
         val instanceMap = Map.newBuilder[String, ExpectedType]
 
         mappings.foreach {
           case (contextKey, componentClass) =>
             val shortcut = s"$contextKey/$componentClass".toLowerCase()
-            readerWriterShortcuts.get(shortcut).fold({
-              try {
-                instanceMap += (contextKey -> ClassLoading.createInstance[ExpectedType](componentClass, Nil))
-              } catch {
-                case exception: Exception => log.warn("Failed to instantiate {} [{}] due to []",
-                  implicitly[ClassTag[ExpectedType]].runtimeClass.getName, componentClass, exception)
-              }
-            })(readerWriter => instanceMap += (contextKey -> readerWriter.asInstanceOf[ExpectedType]))
+            readerWriterShortcuts
+              .get(shortcut)
+              .fold {
+                try instanceMap += (contextKey -> ClassLoading.createInstance[ExpectedType](componentClass, Nil))
+                catch {
+                  case exception: Exception =>
+                    log.warn("Failed to instantiate {} [{}] due to []", implicitly[ClassTag[ExpectedType]].runtimeClass.getName, componentClass, exception)
+                }
+              }(readerWriter => instanceMap += (contextKey -> readerWriter.asInstanceOf[ExpectedType]))
         }
 
         instanceMap.result()

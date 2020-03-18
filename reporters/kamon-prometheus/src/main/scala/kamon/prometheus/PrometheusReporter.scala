@@ -20,7 +20,7 @@ import java.time.Duration
 
 import com.typesafe.config.Config
 import fi.iki.elonen.NanoHTTPD
-import fi.iki.elonen.NanoHTTPD.{Response, newFixedLengthResponse}
+import fi.iki.elonen.NanoHTTPD.{newFixedLengthResponse, Response}
 import kamon.metric._
 import kamon.module.{MetricReporter, Module, ModuleFactory}
 import org.slf4j.LoggerFactory
@@ -42,7 +42,7 @@ class PrometheusReporter(configPath: String) extends MetricReporter {
 
   {
     val initialSettings = readSettings(Kamon.config().getConfig(configPath))
-    if(initialSettings.startEmbeddedServer)
+    if (initialSettings.startEmbeddedServer)
       startEmbeddedServer(initialSettings)
   }
 
@@ -53,9 +53,8 @@ class PrometheusReporter(configPath: String) extends MetricReporter {
     val config = readSettings(newConfig.getConfig(configPath))
 
     stopEmbeddedServer()
-    if(config.startEmbeddedServer) {
+    if (config.startEmbeddedServer)
       startEmbeddedServer(config)
-    }
   }
 
   override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
@@ -76,9 +75,8 @@ class PrometheusReporter(configPath: String) extends MetricReporter {
     _preparedScrapeData
 
   class EmbeddedHttpServer(hostname: String, port: Int) extends NanoHTTPD(hostname, port) {
-    override def serve(session: NanoHTTPD.IHTTPSession): NanoHTTPD.Response = {
+    override def serve(session: NanoHTTPD.IHTTPSession): NanoHTTPD.Response =
       newFixedLengthResponse(Response.Status.OK, "text/plain; version=0.0.4; charset=utf-8", scrapeData())
-    }
   }
 
   private def startEmbeddedServer(config: PrometheusReporter.Settings): Unit = {
@@ -100,9 +98,8 @@ object PrometheusReporter {
       new PrometheusReporter()
   }
 
-  def create(): PrometheusReporter = {
+  def create(): PrometheusReporter =
     new PrometheusReporter()
-  }
 
   case class Settings(
     startEmbeddedServer: Boolean,

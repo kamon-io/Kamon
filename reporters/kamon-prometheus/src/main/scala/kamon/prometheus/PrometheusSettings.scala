@@ -30,8 +30,7 @@ object PrometheusSettings {
     if (reporterConfiguration.includeEnvironmentTags) Kamon.environment.tags else TagSet.Empty
 
   def readCustomBuckets(customBuckets: Config): Map[String, Seq[java.lang.Double]] =
-    customBuckets
-      .topLevelKeys
+    customBuckets.topLevelKeys
       .map(k => (k, customBuckets.getDoubleList(ConfigUtil.quoteString(k)).asScala.toSeq))
       .toMap
 }

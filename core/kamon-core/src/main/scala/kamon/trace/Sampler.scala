@@ -46,7 +46,8 @@ object Sampler {
 
     def samplingDecisions(samplerName: String, decision: SamplingDecision): Counter =
       SamplingDecisions.withTags(
-        TagSet.builder()
+        TagSet
+          .builder()
           .add("sampler", samplerName)
           .add("decision", decision.toString)
           .build()

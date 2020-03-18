@@ -44,14 +44,17 @@ object JaegerSpanConverter {
 
     import scala.collection.JavaConverters._
     convertedSpan.setTags(
-      (kamonSpan.tags.iterator() ++ kamonSpan.metricTags.iterator()).map {
-        case t: kamon.tag.Tag.String =>
-          new Tag(t.key, TagType.STRING).setVStr(t.value)
-        case t: kamon.tag.Tag.Boolean =>
-          new Tag(t.key, TagType.BOOL).setVBool(t.value)
-        case t: kamon.tag.Tag.Long =>
-          new Tag(t.key, TagType.LONG).setVLong(t.value)
-      }.toList.asJava
+      (kamonSpan.tags.iterator() ++ kamonSpan.metricTags.iterator())
+        .map {
+          case t: kamon.tag.Tag.String =>
+            new Tag(t.key, TagType.STRING).setVStr(t.value)
+          case t: kamon.tag.Tag.Boolean =>
+            new Tag(t.key, TagType.BOOL).setVBool(t.value)
+          case t: kamon.tag.Tag.Long =>
+            new Tag(t.key, TagType.LONG).setVLong(t.value)
+        }
+        .toList
+        .asJava
     )
 
     kamonSpan.marks.foreach { m =>

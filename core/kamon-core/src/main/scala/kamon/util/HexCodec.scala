@@ -18,6 +18,7 @@ package kamon.util
 
 // Extracted from https://github.com/openzipkin/brave/blob/master/brave/src/main/java/brave/internal/HexCodec.java
 object HexCodec {
+
   /**
     * Parses a 1 to 32 character lower-hex string with no prefix into an unsigned long, tossing any
     * bits higher than 64.
@@ -26,8 +27,9 @@ object HexCodec {
     val length = lowerHex.length
     if (length < 1 || length > 32) throw isntLowerHexLong(lowerHex)
     // trim off any high bits
-    val beginIndex = if (length > 16) length - 16
-    else 0
+    val beginIndex =
+      if (length > 16) length - 16
+      else 0
     lowerHexToUnsignedLong(lowerHex, beginIndex)
   }
 

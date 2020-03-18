@@ -16,15 +16,11 @@ object Bundle {
   def attach(): Unit = {
     val springBootClassLoader = findSpringBootJarLauncherClassLoader()
 
-    if(isKanelaLoaded) {
-
+    if (isKanelaLoaded)
       // If Kanela has already been loaded and we are running on a Spring Boot application, we might need to reload
       // Kanela to ensure it will use the proper ClassLoader for loading the instrumentations.
-      springBootClassLoader.foreach(sbClassLoader => {
-        withInstrumentationClassLoader(sbClassLoader)(reloadKanela())
-      })
-
-    } else {
+      springBootClassLoader.foreach(sbClassLoader => withInstrumentationClassLoader(sbClassLoader)(reloadKanela()))
+    else {
 
       val embeddedAgentFile = Bundle.getClass.getClassLoader.getResourceAsStream(BuildInfo.kanelaAgentJarName)
       val temporaryAgentFile = Files.createTempFile(BuildInfo.kanelaAgentJarName, ".jar")
@@ -45,9 +41,9 @@ object Bundle {
     */
   private def isKanelaLoaded(): Boolean = {
     val isLoadedProperty = java.lang.Boolean.parseBoolean(System.getProperty("kanela.loaded"))
-    val hasKanelaClasses = try {
-      Class.forName("kanela.agent.Kanela", false, ClassLoader.getSystemClassLoader) != null
-    } catch { case _: Throwable => false }
+    val hasKanelaClasses =
+      try Class.forName("kanela.agent.Kanela", false, ClassLoader.getSystemClassLoader) != null
+      catch { case _: Throwable => false }
 
     hasKanelaClasses && isLoadedProperty
   }
@@ -58,23 +54,20 @@ object Bundle {
     * used to unpack them when the jar launches. This function will try to find that ClassLoader which should be used to
     * load all Kanela modules.
     */
-  private def findSpringBootJarLauncherClassLoader(): Option[ClassLoader] = {
+  private def findSpringBootJarLauncherClassLoader(): Option[ClassLoader] =
     Option(Thread.currentThread().getContextClassLoader())
       .filter(cl => cl.getClass.getName == "org.springframework.boot.loader.LaunchedURLClassLoader")
-  }
-
 
   /**
     * Reloads the Kanela agent. This will cause all instrumentation definitions to be dropped and re-initialized.
     */
-  private def reloadKanela(): Unit = {
-
+  private def reloadKanela(): Unit =
     // We know that if the agent has been attached, its classes are in the System ClassLoader so we try to find
     // the Kanela class from there and call reload on it.
-    Class.forName("kanela.agent.Kanela", true, ClassLoader.getSystemClassLoader)
+    Class
+      .forName("kanela.agent.Kanela", true, ClassLoader.getSystemClassLoader)
       .getDeclaredMethod("reload")
       .invoke(null)
-  }
 
   private def pid(): String = {
     val jvm = ManagementFactory.getRuntimeMXBean.getName
@@ -83,11 +76,9 @@ object Bundle {
 
   def withInstrumentationClassLoader[T](classLoader: ClassLoader)(thunk: => T): T = {
     try {
-      if(classLoader != null)
+      if (classLoader != null)
         System.getProperties.put(_instrumentationClassLoaderProp, classLoader)
       thunk
-    } finally {
-      System.getProperties.remove(_instrumentationClassLoaderProp)
-    }
+    } finally System.getProperties.remove(_instrumentationClassLoaderProp)
   }
 }

@@ -13,7 +13,6 @@
  * =========================================================================================
  */
 
-
 package kamon.instrumentation.bench
 
 import java.util.concurrent.{Executor, TimeUnit}
@@ -35,9 +34,8 @@ class ExecutorInstrumentationBenchmark {
   @BenchmarkMode(Array(Mode.AverageTime))
   @OutputTimeUnit(TimeUnit.NANOSECONDS)
   @Fork
-  def control(blackhole: Blackhole): Unit = {
+  def control(blackhole: Blackhole): Unit =
     MoreExecutors.directExecutor.execute(new BlackholeRunnable(blackhole))
- }
 
   /**
     * This benchmark attempts to measure the performance with manual context propagation.
@@ -48,9 +46,8 @@ class ExecutorInstrumentationBenchmark {
   @BenchmarkMode(Array(Mode.AverageTime))
   @OutputTimeUnit(TimeUnit.NANOSECONDS)
   @Fork
-  def wrapped(blackhole: Blackhole): Unit = {
+  def wrapped(blackhole: Blackhole): Unit =
     MoreExecutors.directExecutor.execute(new Wrapper(new BlackholeRunnable(blackhole)))
-  }
 
   /**
     * This benchmark attempts to measure the performance with manual context propagation.
@@ -61,9 +58,8 @@ class ExecutorInstrumentationBenchmark {
   @BenchmarkMode(Array(Mode.AverageTime))
   @OutputTimeUnit(TimeUnit.NANOSECONDS)
   @Fork
-  def instrumentedViaMixin(blackhole: Blackhole): Unit = {
+  def instrumentedViaMixin(blackhole: Blackhole): Unit =
     MoreExecutors.directExecutor.execute(new InstrumentedViaMixin(blackhole))
-  }
 
   /**
     * This benchmark attempts to measure the performance with manual context propagation.
@@ -74,15 +70,13 @@ class ExecutorInstrumentationBenchmark {
   @BenchmarkMode(Array(Mode.AverageTime))
   @OutputTimeUnit(TimeUnit.NANOSECONDS)
   @Fork
-  def instrumentedViaWrapper(blackhole: Blackhole): Unit = {
+  def instrumentedViaWrapper(blackhole: Blackhole): Unit =
     MoreExecutors.directExecutor.execute(new InstrumentedWrapper(new BlackholeRunnable(blackhole)))
-  }
 }
 
 private class BlackholeRunnable(blackhole: Blackhole) extends Runnable {
-  override def run(): Unit = {
+  override def run(): Unit =
     blackhole.consume(Kamon.currentContext())
-  }
 }
 
 private class Wrapper(runnable: Runnable) extends Runnable {

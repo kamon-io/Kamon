@@ -40,7 +40,8 @@ class LogbackEntriesCounterAppenderSpec extends WordSpec with Matchers with Inst
   }
 
   def level(level: String): TagSet =
-    TagSet.builder()
+    TagSet
+      .builder()
       .add("component", "logback")
       .add("level", level)
       .build()

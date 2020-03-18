@@ -9,7 +9,8 @@ import java.util.Optional
 
 object LibraryVersion {
   val version: String =
-    Optional.ofNullable(classOf[LibraryVersion].getPackage.getImplementationVersion)
+    Optional
+      .ofNullable(classOf[LibraryVersion].getPackage.getImplementationVersion)
       .orElse("UnknownVersion");
 }
 

@@ -13,7 +13,6 @@
  * =========================================================================================
  */
 
-
 package kamon.metric
 
 import java.time.Duration
@@ -79,11 +78,13 @@ class RangeSamplerSpec extends WordSpec with Matchers with InstrumentInspection.
     }
 
     "should be sampled automatically by default" in {
-      val rangeSampler = Kamon.rangeSampler(
-        "auto-update",
-        MeasurementUnit.none,
-        Duration.ofMillis(1)
-      ).withoutTags()
+      val rangeSampler = Kamon
+        .rangeSampler(
+          "auto-update",
+          MeasurementUnit.none,
+          Duration.ofMillis(1)
+        )
+        .withoutTags()
       rangeSampler.increment()
       rangeSampler.increment(3)
       rangeSampler.increment()

@@ -18,7 +18,6 @@ import org.slf4j.LoggerFactory
 
 import scala.util.Try
 
-
 /**
   * HTTP Server instrumentation handler that takes care of context propagation, distributed tracing and HTTP server
   * metrics. Instances can be created by using the `HttpServerInstrumentation.from` method with the desired
@@ -116,7 +115,7 @@ trait HttpServerInstrumentation {
 object HttpServerInstrumentation {
 
   private val _log = LoggerFactory.getLogger(classOf[Default])
-  
+
   /**
     * Handler associated to the processing of a single request. The instrumentation code using this class is responsible
     * of creating a dedicated `HttpServer.RequestHandler` instance for each received request and invoking the
@@ -173,7 +172,6 @@ object HttpServerInstrumentation {
 
   }
 
-
   /**
     * Creates a new HTTP Server Instrumentation, configured with the settings on the provided config path. If any of the
     * settings are missing they will be taken from the default HTTP server instrumentation. All HTTP server variants
@@ -190,12 +188,12 @@ object HttpServerInstrumentation {
 
   private val _defaultHttpServerConfiguration = "kamon.instrumentation.http-server.default"
 
-  private class Default(val settings: Settings, component: String, val interface: String, val port: Int)
-      extends HttpServerInstrumentation {
+  private class Default(val settings: Settings, component: String, val interface: String, val port: Int) extends HttpServerInstrumentation {
 
-    private val _metrics = if(settings.enableServerMetrics) Some(HttpServerMetrics.of(component, interface, port)) else None
+    private val _metrics = if (settings.enableServerMetrics) Some(HttpServerMetrics.of(component, interface, port)) else None
     private val _log = LoggerFactory.getLogger(classOf[Default])
-    private val _propagation = Kamon.httpPropagation(settings.propagationChannel)
+    private val _propagation = Kamon
+      .httpPropagation(settings.propagationChannel)
       .getOrElse {
         _log.warn(s"Could not find HTTP propagation [${settings.propagationChannel}], falling back to the default HTTP propagation")
         Kamon.defaultHttpPropagation()
@@ -203,21 +201,22 @@ object HttpServerInstrumentation {
 
     override def createHandler(request: HttpMessage.Request, deferSamplingDecision: Boolean): RequestHandler = {
 
-      val incomingContext = if(settings.enableContextPropagation)
-        _propagation.read(request)
-      else Context.Empty
+      val incomingContext =
+        if (settings.enableContextPropagation)
+          _propagation.read(request)
+        else Context.Empty
 
-      val requestSpan = if(settings.enableTracing)
-        buildServerSpan(incomingContext, request, deferSamplingDecision)
-      else Span.Empty
+      val requestSpan =
+        if (settings.enableTracing)
+          buildServerSpan(incomingContext, request, deferSamplingDecision)
+        else Span.Empty
 
-      val handlerContext = if(!requestSpan.isEmpty)
-        incomingContext.withEntry(Span.Key, requestSpan)
-      else incomingContext
+      val handlerContext =
+        if (!requestSpan.isEmpty)
+          incomingContext.withEntry(Span.Key, requestSpan)
+        else incomingContext
 
-      _metrics.foreach { httpServerMetrics =>
-        httpServerMetrics.activeRequests.increment()
-      }
+      _metrics.foreach(httpServerMetrics => httpServerMetrics.activeRequests.increment())
 
       new HttpServerInstrumentation.RequestHandler {
         override def context: Context =
@@ -227,30 +226,24 @@ object HttpServerInstrumentation {
           requestSpan
 
         override def requestReceived(receivedBytes: Long): RequestHandler = {
-          if(receivedBytes >= 0) {
-            _metrics.foreach { httpServerMetrics =>
-              httpServerMetrics.requestSize.record(receivedBytes)
-            }
-          }
+          if (receivedBytes >= 0)
+            _metrics.foreach(httpServerMetrics => httpServerMetrics.requestSize.record(receivedBytes))
 
           this
         }
 
         override def buildResponse[HttpResponse](response: HttpMessage.ResponseBuilder[HttpResponse], context: Context): HttpResponse = {
-          _metrics.foreach { httpServerMetrics =>
-            httpServerMetrics.countCompletedRequest(response.statusCode)
-          }
+          _metrics.foreach(httpServerMetrics => httpServerMetrics.countCompletedRequest(response.statusCode))
 
-          if(!span.isEmpty) {
+          if (!span.isEmpty) {
             settings.traceIDResponseHeader.foreach(traceIDHeader => response.write(traceIDHeader, span.trace.id.string))
             settings.spanIDResponseHeader.foreach(spanIDHeader => response.write(spanIDHeader, span.id.string))
 
             SpanTagger.tag(span, TagKeys.HttpStatusCode, response.statusCode, settings.statusCodeTagMode)
 
             val statusCode = response.statusCode
-            if(statusCode >= 500) {
+            if (statusCode >= 500)
               span.fail("Request failed with HTTP Status Code " + response.statusCode)
-            }
           }
 
           response.build()
@@ -260,7 +253,7 @@ object HttpServerInstrumentation {
           _metrics.foreach { httpServerMetrics =>
             httpServerMetrics.activeRequests.decrement()
 
-            if(sentBytes >= 0)
+            if (sentBytes >= 0)
               httpServerMetrics.responseSize.record(sentBytes)
           }
 
@@ -269,44 +262,37 @@ object HttpServerInstrumentation {
       }
     }
 
-    override def connectionOpened(): Unit = {
-      _metrics.foreach { httpServerMetrics =>
-        httpServerMetrics.openConnections.increment()
-      }
-    }
+    override def connectionOpened(): Unit =
+      _metrics.foreach(httpServerMetrics => httpServerMetrics.openConnections.increment())
 
     override def connectionClosed(lifetime: Duration, handledRequests: Long): Unit = {
       _metrics.foreach { httpServerMetrics =>
         httpServerMetrics.openConnections.decrement()
 
-        if(lifetime != Duration.ZERO)
+        if (lifetime != Duration.ZERO)
           httpServerMetrics.connectionLifetime.record(lifetime.toNanos)
 
-        if(handledRequests > 0)
+        if (handledRequests > 0)
           httpServerMetrics.connectionUsage.record(handledRequests)
       }
     }
 
-    override def shutdown(): Unit = {
-      _metrics.foreach { httpServerMetrics =>
-        httpServerMetrics.remove()
-      }
-    }
-
+    override def shutdown(): Unit =
+      _metrics.foreach(httpServerMetrics => httpServerMetrics.remove())
 
     private def buildServerSpan(context: Context, request: HttpMessage.Request, deferSamplingDecision: Boolean): Span = {
       val span = Kamon.serverSpanBuilder(operationName(request), component)
       span.context(context)
 
-      if(!settings.enableSpanMetrics)
+      if (!settings.enableSpanMetrics)
         span.doNotTrackMetrics()
 
-      if(deferSamplingDecision)
+      if (deferSamplingDecision)
         span.samplingDecision(SamplingDecision.Unknown)
 
       for { traceIdTag <- settings.traceIDTag; customTraceID <- context.getTag(option(traceIdTag)) } {
         val identifier = Kamon.identifierScheme.traceIdFactory.from(customTraceID)
-        if(!identifier.isEmpty)
+        if (!identifier.isEmpty)
           span.traceId(identifier)
       }
 
@@ -319,22 +305,22 @@ object HttpServerInstrumentation {
             .foreach(tagValue => SpanTagger.tag(span, tagName, tagValue, mode))
       }
 
-      
       span.start()
     }
 
     private def operationName(request: HttpMessage.Request): String = {
       val requestPath = request.path
       //first apply any mappings rules
-      val customMapping = settings.operationMappings.collectFirst {
-        case (pattern, operationName) if pattern.accept(requestPath) => operationName
-      }.orElse( //fallback to use any configured name generator
-        settings.operationNameGenerator.name(request)
-     )
+      val customMapping = settings.operationMappings
+        .collectFirst {
+          case (pattern, operationName) if pattern.accept(requestPath) => operationName
+        }
+        .orElse( //fallback to use any configured name generator
+          settings.operationNameGenerator.name(request)
+        )
       customMapping.getOrElse(settings.defaultOperationName)
     }
   }
-
 
   case class Settings(
     enableContextPropagation: Boolean,
@@ -358,7 +344,7 @@ object HttpServerInstrumentation {
   object Settings {
 
     def from(config: Config): Settings = {
-      def optionalString(value: String): Option[String] = if(value.equalsIgnoreCase("none")) None else Some(value)
+      def optionalString(value: String): Option[String] = if (value.equalsIgnoreCase("none")) None else Some(value)
 
       // Context propagation settings
       val enablePropagation = config.getBoolean("propagation.enabled")
@@ -385,8 +371,8 @@ object HttpServerInstrumentation {
       val operationNameGenerator: Try[HttpOperationNameGenerator] = Try {
         config.getString("tracing.operations.name-generator") match {
           case "default" => new HttpOperationNameGenerator.Static(defaultOperationName)
-          case "method" => HttpOperationNameGenerator.Method
-          case fqcn => ClassLoading.createInstance[HttpOperationNameGenerator](fqcn)
+          case "method"  => HttpOperationNameGenerator.Method
+          case fqcn      => ClassLoading.createInstance[HttpOperationNameGenerator](fqcn)
         }
       } recover {
         case t: Throwable =>

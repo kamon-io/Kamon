@@ -64,11 +64,12 @@ class DatadogAPIReporterSpec extends AbstractHttpReporter with Matchers with Rec
         override def max: Long = 10
         override def sum: Long = 100
         override def count: Long = 5
-        override def percentile(rank: Double): Distribution.Percentile = new Percentile {
-          override def rank: Double = 0
-          override def value: Long = 0
-          override def countAtRank: Long = 0
-        }
+        override def percentile(rank: Double): Distribution.Percentile =
+          new Percentile {
+            override def rank: Double = 0
+            override def value: Long = 0
+            override def countAtRank: Long = 0
+          }
         override def percentiles: Seq[Distribution.Percentile] = ???
         override def percentilesIterator: Iterator[Distribution.Percentile] = ???
         override def buckets: Seq[Distribution.Bucket] = ???

@@ -75,9 +75,8 @@ object HasConnectionPoolTelemetry {
 object CheckFailFastAdvice {
 
   @Advice.OnMethodEnter
-  def enter(@Advice.This hikariPool: Any): Unit = {
+  def enter(@Advice.This hikariPool: Any): Unit =
     hikariPool.asInstanceOf[HasConnectionPoolTelemetry].setConnectionPoolTelemetry(new AtomicReference[ConnectionPoolTelemetry]())
-  }
 }
 
 object HikariPoolConstructorAdvice {
@@ -87,13 +86,15 @@ object HikariPoolConstructorAdvice {
     val url = config.getJdbcUrl()
     val vendor = Try(url.split(':')(1)).getOrElse("unknown")
 
-    val metricTags = TagSet.builder()
+    val metricTags = TagSet
+      .builder()
       .add("jdbc.pool.vendor", "hikari")
       .add("jdbc.pool.name", config.getPoolName)
       .add("db.vendor", vendor)
       .build()
 
-    val spanTags = TagSet.builder()
+    val spanTags = TagSet
+      .builder()
       .add("db.url", url)
       .build()
 
@@ -113,13 +114,12 @@ object HikariPoolCreatePoolEntryMethodAdvice {
 
   @Advice.OnMethodExit
   def exit(@This hikariPool: HasConnectionPoolTelemetry, @Advice.Return poolEntry: Any): Unit = {
-    if(hikariPool != null) {
+    if (hikariPool != null) {
       poolEntry.asInstanceOf[HasConnectionPoolTelemetry].setConnectionPoolTelemetry(hikariPool.connectionPoolTelemetry)
 
       val poolTelemetry = hikariPool.connectionPoolTelemetry.get
-      if (poolTelemetry != null) {
+      if (poolTelemetry != null)
         poolTelemetry.instruments.openConnections.increment()
-      }
     }
   }
 }
@@ -127,9 +127,8 @@ object HikariPoolCreatePoolEntryMethodAdvice {
 object HikariPoolCloseConnectionMethodAdvice {
 
   @Advice.OnMethodExit
-  def exit(@This hikariPool: Any): Unit = {
+  def exit(@This hikariPool: Any): Unit =
     hikariPool.asInstanceOf[HasConnectionPoolTelemetry].connectionPoolTelemetry.get.instruments.openConnections.decrement()
-  }
 }
 
 object HikariPoolCreateTimeoutExceptionMethodAdvice {
@@ -142,9 +141,8 @@ object HikariPoolCreateTimeoutExceptionMethodAdvice {
 object ProxyConnectionCloseMethodAdvice {
 
   @Advice.OnMethodExit
-  def exit(@This proxyConnection: Any): Unit = {
+  def exit(@This proxyConnection: Any): Unit =
     proxyConnection.asInstanceOf[HasConnectionPoolTelemetry].connectionPoolTelemetry.get.instruments.borrowedConnections.decrement()
-  }
 }
 
 object ProxyConnectionStatementMethodsAdvice {
@@ -164,20 +162,23 @@ object ProxyConnectionStatementMethodsAdvice {
 object HikariPoolGetConnectionAdvice {
 
   @Advice.OnMethodEnter
-  def executeStart(): Long = {
+  def executeStart(): Long =
     System.nanoTime()
-  }
 
   @Advice.OnMethodExit(onThrowable = classOf[Exception])
-  def executeEnd(@Advice.Enter startTime: Long, @Advice.Return connection: Connection, @Advice.This pool: HasConnectionPoolTelemetry,
-      @Advice.Thrown throwable: java.lang.Throwable): Unit = {
+  def executeEnd(
+    @Advice.Enter startTime: Long,
+    @Advice.Return connection: Connection,
+    @Advice.This pool: HasConnectionPoolTelemetry,
+    @Advice.Thrown throwable: java.lang.Throwable
+  ): Unit = {
 
     val borrowTime = System.nanoTime() - startTime
     val poolMetrics = pool.connectionPoolTelemetry.get
 
     poolMetrics.instruments.borrowTime.record(borrowTime)
 
-    if(throwable == null && connection != null) {
+    if (throwable == null && connection != null) {
       poolMetrics.instruments.borrowedConnections.increment()
       connection
         .asInstanceOf[HasConnectionPoolTelemetry]
@@ -196,9 +197,8 @@ object PoolBaseNewConnectionAdvice {
   }
 
   @Advice.OnMethodExit
-  def exit(@Advice.Enter scope: Scope): Unit = {
+  def exit(@Advice.Enter scope: Scope): Unit =
     scope.close()
-  }
 }
 
 object CreateProxyConnectionAdvice {
@@ -206,8 +206,9 @@ object CreateProxyConnectionAdvice {
   @Advice.OnMethodExit
   def exit(@Advice.This poolEntry: Any): Unit = {
     val realConnection = PoolEntryProtectedAccess.underlyingConnection(poolEntry)
-    if(realConnection != null) {
-      realConnection.asInstanceOf[HasConnectionPoolTelemetry].setConnectionPoolTelemetry(poolEntry.asInstanceOf[HasConnectionPoolTelemetry].connectionPoolTelemetry)
-    }
+    if (realConnection != null)
+      realConnection
+        .asInstanceOf[HasConnectionPoolTelemetry]
+        .setConnectionPoolTelemetry(poolEntry.asInstanceOf[HasConnectionPoolTelemetry].connectionPoolTelemetry)
   }
 }

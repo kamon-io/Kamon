@@ -19,7 +19,6 @@ import com.typesafe.config.ConfigFactory
 import kamon.Kamon
 import org.scalatest.{Matchers, WordSpec}
 
-
 class FilterSpec extends WordSpec with Matchers {
   val testConfig = ConfigFactory.parseString(
     """

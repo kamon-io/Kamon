@@ -35,8 +35,10 @@ class BinaryPropagationSpec extends WordSpec with Matchers with OptionValues {
 
     "handle read failures in an entry reader" in {
       val context = Context.of(
-        BinaryPropagationSpec.StringKey, "string-value",
-        BinaryPropagationSpec.FailStringKey, "fail-read"
+        BinaryPropagationSpec.StringKey,
+        "string-value",
+        BinaryPropagationSpec.FailStringKey,
+        "fail-read"
       )
       val writer = inspectableByteStreamWriter()
       binaryPropagation.write(context, writer)
@@ -49,8 +51,10 @@ class BinaryPropagationSpec extends WordSpec with Matchers with OptionValues {
 
     "handle write failures in an entry writer" in {
       val context = Context.of(
-        BinaryPropagationSpec.StringKey, "string-value",
-        BinaryPropagationSpec.FailStringKey, "fail-write"
+        BinaryPropagationSpec.StringKey,
+        "string-value",
+        BinaryPropagationSpec.FailStringKey,
+        "fail-write"
       )
       val writer = inspectableByteStreamWriter()
       binaryPropagation.write(context, writer)
@@ -93,7 +97,8 @@ class BinaryPropagationSpec extends WordSpec with Matchers with OptionValues {
     }
 
     "round trip a Context that with tags and entries" in {
-      val context = Context.of(TagSet.from(Map("hello" -> "world", "kamon" -> "rulez")))
+      val context = Context
+        .of(TagSet.from(Map("hello" -> "world", "kamon" -> "rulez")))
         .withEntry(BinaryPropagationSpec.StringKey, "string-value")
         .withEntry(BinaryPropagationSpec.IntegerKey, 42)
 
@@ -109,8 +114,9 @@ class BinaryPropagationSpec extends WordSpec with Matchers with OptionValues {
   }
 
   val binaryPropagation = BinaryPropagation.from(
-    ConfigFactory.parseString(
-      """
+    ConfigFactory
+      .parseString(
+        """
         |max-outgoing-size = 128
         |tags.include-upstream-name = yes
         |entries.incoming.string = "kamon.context.BinaryPropagationSpec$StringEntryCodec"
@@ -119,8 +125,9 @@ class BinaryPropagationSpec extends WordSpec with Matchers with OptionValues {
         |entries.outgoing.failString = "kamon.context.BinaryPropagationSpec$FailStringEntryCodec"
         |
       """.stripMargin
-    ).withFallback(ConfigFactory.load().getConfig("kamon.propagation")))
-
+      )
+      .withFallback(ConfigFactory.load().getConfig("kamon.propagation"))
+  )
 
   def inspectableByteStreamWriter() = new ByteArrayOutputStream(32) with ByteStreamWriter
 
@@ -137,16 +144,15 @@ object BinaryPropagationSpec {
     override def read(medium: ByteStreamReader, context: Context): Context = {
       val valueData = medium.readAll()
 
-      if(valueData.length > 0) {
+      if (valueData.length > 0)
         context.withEntry(StringKey, new String(valueData))
-      } else context
+      else context
     }
 
     override def write(context: Context, medium: ByteStreamWriter): Unit = {
       val value = context.get(StringKey)
-      if(value != null) {
+      if (value != null)
         medium.write(value.getBytes)
-      }
     }
   }
 
@@ -155,11 +161,10 @@ object BinaryPropagationSpec {
     override def read(medium: ByteStreamReader, context: Context): Context = {
       val valueData = medium.readAll()
 
-      if(valueData.length > 0) {
+      if (valueData.length > 0) {
         val stringValue = new String(valueData)
-        if(stringValue == "fail-read") {
+        if (stringValue == "fail-read")
           sys.error("The fail string entry reader has triggered")
-        }
 
         context.withEntry(FailStringKey, stringValue)
       } else context
@@ -167,9 +172,9 @@ object BinaryPropagationSpec {
 
     override def write(context: Context, medium: ByteStreamWriter): Unit = {
       val value = context.get(FailStringKey)
-      if(value != null && value != "fail-write") {
+      if (value != null && value != "fail-write")
         medium.write(value.getBytes)
-      } else {
+      else {
         medium.write(42) // malformed data on purpose
         sys.error("The fail string entry writer has triggered")
       }

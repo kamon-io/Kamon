@@ -21,9 +21,8 @@ class HttpClient(val apiUrl: String, connectTimeout: Duration, readTimeout: Dura
     )
   }
 
-  private def doRequest(request: Request): Try[Response] = {
+  private def doRequest(request: Request): Try[Response] =
     Try(httpClient.newCall(request).execute())
-  }
 
   def doMethodWithBody(method: String, contentType: String, contentBody: Array[Byte]): Try[String] = {
     val body = RequestBody.create(MediaType.parse(contentType), contentBody)
@@ -33,22 +32,25 @@ class HttpClient(val apiUrl: String, connectTimeout: Duration, readTimeout: Dura
       case Success(response) =>
         val responseBody = response.body().string()
         response.close()
-        if (response.isSuccessful) {
+        if (response.isSuccessful)
           Success(responseBody)
-        } else {
-          Failure(new Exception(s"Failed to $method metrics to Prometheus Pushgateway with status code [${response.code()}], "
-            + s"Body: [$responseBody]"))
+        else {
+          Failure(
+            new Exception(
+              s"Failed to $method metrics to Prometheus Pushgateway with status code [${response.code()}], "
+                + s"Body: [$responseBody]"
+            )
+          )
         }
       case Failure(f) if f.getCause != null =>
         Failure(f.getCause)
-      case f@Failure(_) =>
+      case f @ Failure(_) =>
         f.asInstanceOf[Try[String]]
     }
   }
 
-  def doPost(contentType: String, contentBody: Array[Byte]): Try[String] = {
+  def doPost(contentType: String, contentBody: Array[Byte]): Try[String] =
     doMethodWithBody("POST", contentType, contentBody)
-  }
 
   private def createHttpClient(): OkHttpClient = {
     new OkHttpClient.Builder()

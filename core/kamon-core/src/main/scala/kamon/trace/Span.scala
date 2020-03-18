@@ -86,6 +86,7 @@ sealed abstract class Span extends Sampler.Operation {
     * Returns true if this Span is a placeholder because no Span information is available.
     */
   def isEmpty: Boolean
+
   /**
     * Returns the position of this Span in the trace to which it belongs.
     */
@@ -218,9 +219,9 @@ sealed abstract class Span extends Sampler.Operation {
   def finish(at: Instant): Unit
 
   /**
-   * Finishes this Span using the provided duration. Even though it is possible to call any of the methods that
-   * modify/write information on the Span, once it is finished no further changes are taken into account.
-   */
+    * Finishes this Span using the provided duration. Even though it is possible to call any of the methods that
+    * modify/write information on the Span, once it is finished no further changes are taken into account.
+    */
   def finishAfter(duration: Duration): Unit
 
 }
@@ -306,7 +307,6 @@ object Span {
       override def toString: String = "producer"
     }
 
-
     /**
       * The Span represents an operation that consumes messages from a message broker.
       */
@@ -331,7 +331,6 @@ object Span {
       override def toString: String = "unknown"
     }
   }
-
 
   /**
     * Describes a Span's position within the trace they belong to.
@@ -386,7 +385,7 @@ object Span {
   /**
     * Represents a Span that has already been finished and should be exposed to the SpanReporters.
     */
-  case class Finished (
+  case class Finished(
     id: Identifier,
     trace: Trace,
     parentId: Identifier,
@@ -406,11 +405,28 @@ object Span {
   /**
     * A writable Span created on this process and implementing all the capabilities defined by the Span interface.
     */
-  final class Local(val id: Identifier, val parentId: Identifier, val trace: Trace, val position: Position,
-      val kind: Kind, localParent: Option[Span], initialOperationName: String, spanTags: TagSet.Builder, metricTags: TagSet.Builder,
-      createdAt: Instant, initialMarks: List[Mark], initialLinks: List[Link], initialTrackMetrics: Boolean, tagWithParentOperation: Boolean,
-      includeErrorStacktrace: Boolean, isDelayed: Boolean, clock: Clock, preFinishHooks: Array[Tracer.PreFinishHook],
-      onFinish: Span.Finished => Unit, sampler: Sampler) extends Span.Delayed {
+  final class Local(
+    val id: Identifier,
+    val parentId: Identifier,
+    val trace: Trace,
+    val position: Position,
+    val kind: Kind,
+    localParent: Option[Span],
+    initialOperationName: String,
+    spanTags: TagSet.Builder,
+    metricTags: TagSet.Builder,
+    createdAt: Instant,
+    initialMarks: List[Mark],
+    initialLinks: List[Link],
+    initialTrackMetrics: Boolean,
+    tagWithParentOperation: Boolean,
+    includeErrorStacktrace: Boolean,
+    isDelayed: Boolean,
+    clock: Clock,
+    preFinishHooks: Array[Tracer.PreFinishHook],
+    onFinish: Span.Finished => Unit,
+    sampler: Sampler
+  ) extends Span.Delayed {
 
     private val _metricTags = metricTags
     private val _spanTags = spanTags
@@ -430,186 +446,206 @@ object Span {
     override def start(): Delayed =
       start(clock.instant())
 
-    override def start(at: Instant): Delayed = synchronized {
-      if(_isOpen && isDelayed && !_isDelayedStarted) {
-        _startedAt = at
-        _isDelayedStarted = true
-        mark(MarkKeys.SpanStarted, at)
+    override def start(at: Instant): Delayed =
+      synchronized {
+        if (_isOpen && isDelayed && !_isDelayedStarted) {
+          _startedAt = at
+          _isDelayedStarted = true
+          mark(MarkKeys.SpanStarted, at)
+        }
+        this
       }
-      this
-    }
 
-    override def tag(key: String, value: String): Span = synchronized {
-      if(isSampled && _isOpen)
-        _spanTags.add(key, value)
-      this
-    }
+    override def tag(key: String, value: String): Span =
+      synchronized {
+        if (isSampled && _isOpen)
+          _spanTags.add(key, value)
+        this
+      }
 
-    override def tag(key: String, value: Long): Span = synchronized {
-      if(isSampled && _isOpen)
-        _spanTags.add(key, value)
-      this
-    }
+    override def tag(key: String, value: Long): Span =
+      synchronized {
+        if (isSampled && _isOpen)
+          _spanTags.add(key, value)
+        this
+      }
 
-    override def tag(key: String, value: Boolean): Span = synchronized {
-      if(isSampled && _isOpen)
-        _spanTags.add(key, value)
-      this
-    }
+    override def tag(key: String, value: Boolean): Span =
+      synchronized {
+        if (isSampled && _isOpen)
+          _spanTags.add(key, value)
+        this
+      }
 
-    override def tag(tags: TagSet): Span = synchronized {
-      if(isSampled && _isOpen)
-        _spanTags.add(tags)
-      this
-    }
+    override def tag(tags: TagSet): Span =
+      synchronized {
+        if (isSampled && _isOpen)
+          _spanTags.add(tags)
+        this
+      }
 
-    override def tagMetrics(key: String, value: String): Span = synchronized {
-      if(_isOpen && _trackMetrics)
-        _metricTags.add(key, value)
-      this
-    }
+    override def tagMetrics(key: String, value: String): Span =
+      synchronized {
+        if (_isOpen && _trackMetrics)
+          _metricTags.add(key, value)
+        this
+      }
 
-    override def tagMetrics(key: String, value: Long): Span = synchronized {
-      if(_isOpen && _trackMetrics)
-        _metricTags.add(key, value)
-      this
-    }
+    override def tagMetrics(key: String, value: Long): Span =
+      synchronized {
+        if (_isOpen && _trackMetrics)
+          _metricTags.add(key, value)
+        this
+      }
 
-    override def tagMetrics(key: String, value: Boolean): Span = synchronized {
-      if(_isOpen && _trackMetrics)
-        _metricTags.add(key, value)
-      this
-    }
+    override def tagMetrics(key: String, value: Boolean): Span =
+      synchronized {
+        if (_isOpen && _trackMetrics)
+          _metricTags.add(key, value)
+        this
+      }
 
-    override def tagMetrics(tags: TagSet): Span = synchronized {
-      if(_isOpen && _trackMetrics)
-        _metricTags.add(tags)
-      this
-    }
+    override def tagMetrics(tags: TagSet): Span =
+      synchronized {
+        if (_isOpen && _trackMetrics)
+          _metricTags.add(tags)
+        this
+      }
 
-    override def mark(key: String): Span = {
+    override def mark(key: String): Span =
       mark(key, clock.instant())
-    }
 
-    override def mark(key: String, at: Instant): Span = synchronized {
-      if(_isOpen)
-        _marks = Mark(at, key) :: _marks
-      this
-    }
-
-    override def link(span: Span, kind: Link.Kind): Span = synchronized {
-      if(_isOpen)
-        _links = Link(kind, span.trace, span.id) :: _links
-      this
-    }
-
-    override def fail(message: String): Span = synchronized {
-      if(_isOpen) {
-        _hasError = true
-
-        if(isSampled)
-          _spanTags.add(TagKeys.ErrorMessage, message)
+    override def mark(key: String, at: Instant): Span =
+      synchronized {
+        if (_isOpen)
+          _marks = Mark(at, key) :: _marks
+        this
       }
-      this
-    }
 
-    override def fail(throwable: Throwable): Span = synchronized {
-      if(_isOpen) {
-        _hasError = true
+    override def link(span: Span, kind: Link.Kind): Span =
+      synchronized {
+        if (_isOpen)
+          _links = Link(kind, span.trace, span.id) :: _links
+        this
+      }
 
-        if(isSampled) {
-          _spanTags.add(TagKeys.ErrorMessage, throwable.getMessage)
+    override def fail(message: String): Span =
+      synchronized {
+        if (_isOpen) {
+          _hasError = true
 
-          if(includeErrorStacktrace)
-            _spanTags.add(TagKeys.ErrorStacktrace, toStackTraceString(throwable))
+          if (isSampled)
+            _spanTags.add(TagKeys.ErrorMessage, message)
         }
+        this
       }
-      this
-    }
 
-    override def fail(message: String, throwable: Throwable): Span = synchronized {
-      if(_isOpen) {
-        _hasError = true
+    override def fail(throwable: Throwable): Span =
+      synchronized {
+        if (_isOpen) {
+          _hasError = true
 
-        if(isSampled) {
-          _spanTags.add(TagKeys.ErrorMessage, message)
+          if (isSampled) {
+            _spanTags.add(TagKeys.ErrorMessage, throwable.getMessage)
 
-          if(includeErrorStacktrace)
-            _spanTags.add(TagKeys.ErrorStacktrace, toStackTraceString(throwable))
+            if (includeErrorStacktrace)
+              _spanTags.add(TagKeys.ErrorStacktrace, toStackTraceString(throwable))
+          }
         }
+        this
       }
-      this
-    }
 
-    override def trackMetrics(): Span = synchronized {
-      _trackMetrics = true
-      this
-    }
+    override def fail(message: String, throwable: Throwable): Span =
+      synchronized {
+        if (_isOpen) {
+          _hasError = true
 
-    override def doNotTrackMetrics(): Span = synchronized {
-      _trackMetrics = false
-      this
-    }
+          if (isSampled) {
+            _spanTags.add(TagKeys.ErrorMessage, message)
 
-    override def trackDelayedSpanMetrics(): Delayed =  synchronized {
-      _trackDelayedSpanMetrics = true
-      this
-    }
-
-    override def doNotTrackDelayedSpanMetrics(): Delayed =  synchronized {
-      _trackDelayedSpanMetrics = false
-      this
-    }
-
-    override def takeSamplingDecision(): Span = synchronized {
-      if(trace.samplingDecision == SamplingDecision.Unknown) {
-        sampler.decide(this) match {
-          case SamplingDecision.Sample      => trace.keep()
-          case SamplingDecision.DoNotSample => trace.drop()
-          case SamplingDecision.Unknown     => // We should never get to this point!
+            if (includeErrorStacktrace)
+              _spanTags.add(TagKeys.ErrorStacktrace, toStackTraceString(throwable))
+          }
         }
+        this
       }
 
-      this
-    }
+    override def trackMetrics(): Span =
+      synchronized {
+        _trackMetrics = true
+        this
+      }
 
-    override def operationName(): String = synchronized {
-      _operationName
-    }
+    override def doNotTrackMetrics(): Span =
+      synchronized {
+        _trackMetrics = false
+        this
+      }
 
-    override def name(operationName: String): Span = synchronized {
-      if(_isOpen)
-        _operationName = operationName
-      this
-    }
+    override def trackDelayedSpanMetrics(): Delayed =
+      synchronized {
+        _trackDelayedSpanMetrics = true
+        this
+      }
+
+    override def doNotTrackDelayedSpanMetrics(): Delayed =
+      synchronized {
+        _trackDelayedSpanMetrics = false
+        this
+      }
+
+    override def takeSamplingDecision(): Span =
+      synchronized {
+        if (trace.samplingDecision == SamplingDecision.Unknown) {
+          sampler.decide(this) match {
+            case SamplingDecision.Sample      => trace.keep()
+            case SamplingDecision.DoNotSample => trace.drop()
+            case SamplingDecision.Unknown     => // We should never get to this point!
+          }
+        }
+
+        this
+      }
+
+    override def operationName(): String =
+      synchronized {
+        _operationName
+      }
+
+    override def name(operationName: String): Span =
+      synchronized {
+        if (_isOpen)
+          _operationName = operationName
+        this
+      }
 
     override def finish(): Unit =
       finish(clock.instant())
 
     override def finishAfter(at: Duration): Unit = finish(_startedAt.plus(at))
 
-    override def finish(finishedAt: Instant): Unit = synchronized {
-      import Span.Local._logger
+    override def finish(finishedAt: Instant): Unit =
+      synchronized {
+        import Span.Local._logger
 
-      if (_isOpen) {
+        if (_isOpen) {
 
-        if(preFinishHooks.nonEmpty) {
-          preFinishHooks.foreach(pfh => {
-            try {
-              pfh.beforeFinish(this)
-            } catch {
-              case t: Throwable =>
-                _logger.error("Failed to apply pre-finish hook", t)
+          if (preFinishHooks.nonEmpty) {
+            preFinishHooks.foreach { pfh =>
+              try pfh.beforeFinish(this)
+              catch {
+                case t: Throwable =>
+                  _logger.error("Failed to apply pre-finish hook", t)
+              }
             }
-          })
-        }
+          }
 
-        _isOpen = false
-        val finalMetricTags = createMetricTags()
-        recordSpanMetrics(finishedAt, finalMetricTags)
-        reportSpan(finishedAt, finalMetricTags)
+          _isOpen = false
+          val finalMetricTags = createMetricTags()
+          recordSpanMetrics(finishedAt, finalMetricTags)
+          reportSpan(finishedAt, finalMetricTags)
+        }
       }
-    }
 
     private def isSampled: Boolean =
       trace.samplingDecision == Trace.SamplingDecision.Sample
@@ -618,12 +654,11 @@ object Span {
       throwable.getStackTrace().mkString("", EOL, EOL)
 
     private def toFinishedSpan(to: Instant, metricTags: TagSet): Span.Finished =
-      Span.Finished(id, trace, parentId, _operationName, _hasError, isDelayed, createdAt, to, kind, position, _spanTags.build(),
-        metricTags, _marks, _links)
+      Span.Finished(id, trace, parentId, _operationName, _hasError, isDelayed, createdAt, to, kind, position, _spanTags.build(), metricTags, _marks, _links)
 
     private def recordSpanMetrics(finishedAt: Instant, metricTags: TagSet): Unit = {
-      if(_trackMetrics) {
-        if(!isDelayed) {
+      if (_trackMetrics) {
+        if (!isDelayed) {
           val processingTime = Clock.nanosBetween(createdAt, finishedAt)
           Span.Metrics.ProcessingTime.withTags(metricTags).record(processingTime)
 
@@ -642,22 +677,21 @@ object Span {
       }
     }
 
-    private def reportSpan(finishedAt: Instant, metricTags: TagSet): Unit = {
-      if(isSampled)
+    private def reportSpan(finishedAt: Instant, metricTags: TagSet): Unit =
+      if (isSampled)
         onFinish(toFinishedSpan(finishedAt, metricTags))
-    }
 
     private def createMetricTags(): TagSet = {
       _metricTags.add(TagKeys.OperationName, _operationName)
       _metricTags.add(TagKeys.Error, _hasError)
 
-      if(kind != Span.Kind.Unknown)
+      if (kind != Span.Kind.Unknown)
         _metricTags.add(TagKeys.SpanKind, kind.toString)
 
-      if(tagWithParentOperation)
+      if (tagWithParentOperation)
         localParent.foreach {
-          case p: Span.Local  => _metricTags.add(TagKeys.ParentOperationName, p.operationName())
-          case _              => // Can't get an operation name from anything else than a local span.
+          case p: Span.Local => _metricTags.add(TagKeys.ParentOperationName, p.operationName())
+          case _             => // Can't get an operation name from anything else than a local span.
         }
 
       _metricTags.build()
@@ -705,7 +739,6 @@ object Span {
     override def toString(): String = "Span.Empty"
   }
 
-
   /**
     * A immutable, no-op Span that holds information from a Span that was initially created in another process and then
     * transferred to this process. This is the minimal representation of a Span that gets transferred through Context
@@ -738,31 +771,29 @@ object Span {
     override def finish(at: Instant): Unit = {}
     override def finishAfter(duration: Duration): Unit = {}
     override def operationName(): String = "empty"
-    override def toString(): String = s"Span.Remote{id=${id.string},parentId=${parentId.string},trace=${trace}"
+    override def toString(): String = s"Span.Remote{id=${id.string},parentId=${parentId.string},trace=$trace"
   }
-
 
   /**
     * Metrics tracked by the Span implementation.
     */
   object Metrics {
 
-    val ProcessingTime = Kamon.timer (
+    val ProcessingTime = Kamon.timer(
       name = "span.processing-time",
       description = "Tracks the time between the instant a Span started and finished processing"
     )
 
-    val ElapsedTime = Kamon.timer (
+    val ElapsedTime = Kamon.timer(
       name = "span.elapsed-time",
       description = "Tracks the total elapsed time between the instant a Span was created until it finishes processing"
     )
 
-    val WaitTime = Kamon.timer (
+    val WaitTime = Kamon.timer(
       name = "span.wait-time",
       description = "Tracks the waiting time between creation of a delayed Span and the instant it starts processing"
     )
   }
-
 
   /**
     * Tag keys used by the implementations to record Span and metric tags.

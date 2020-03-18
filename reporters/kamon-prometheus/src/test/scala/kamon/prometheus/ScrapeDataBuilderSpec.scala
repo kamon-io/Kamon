@@ -18,7 +18,7 @@ class ScrapeDataBuilderSpec extends WordSpec with Matchers {
         .appendCounters(Seq(counterOne))
         .appendGauges(Seq(gaugeOne))
         .build() should include {
-          """
+        """
             |# TYPE counter_one_seconds_total counter
             |counter_one_seconds_total 10.0
             |# TYPE gauge_one_seconds gauge
@@ -32,9 +32,9 @@ class ScrapeDataBuilderSpec extends WordSpec with Matchers {
       val gaugeOne = MetricSnapshotBuilder.gauge("gauge-one", "", TagSet.Empty, information.bytes, 20)
 
       builder()
-      .appendCounters(Seq(counterOne))
-      .appendGauges(Seq(gaugeOne))
-      .build() should include {
+        .appendCounters(Seq(counterOne))
+        .appendGauges(Seq(gaugeOne))
+        .build() should include {
         """
           |# TYPE counter_one_bytes_total counter
           |counter_one_bytes_total 10.0
@@ -49,9 +49,9 @@ class ScrapeDataBuilderSpec extends WordSpec with Matchers {
       val gaugeOne = MetricSnapshotBuilder.gauge("gauge-one", "", TagSet.of("tag-with-dashes", "value"), time.seconds, 20)
 
       builder()
-      .appendCounters(Seq(counterOne))
-      .appendGauges(Seq(gaugeOne))
-      .build() should include {
+        .appendCounters(Seq(counterOne))
+        .appendGauges(Seq(gaugeOne))
+        .build() should include {
         """
           |# TYPE app:counter_one_seconds_total counter
           |app:counter_one_seconds_total{tag_with_dots="value"} 10.0
@@ -95,18 +95,23 @@ class ScrapeDataBuilderSpec extends WordSpec with Matchers {
 //    }
 
     "read custom bucket configurations" in {
-      val config = PrometheusSettings.readSettings(ConfigFactory.parseString(
-        """
+      val config = PrometheusSettings.readSettings(
+        ConfigFactory
+          .parseString(
+            """
           |kamon.prometheus.buckets.custom {
           |  singleword = [1, 2, 3]
           |  "with.several.dots" = [3, 2, 1]
           |}
         """.stripMargin
-      ).withFallback(ConfigFactory.defaultReference()).getConfig("kamon.prometheus"))
+          )
+          .withFallback(ConfigFactory.defaultReference())
+          .getConfig("kamon.prometheus")
+      )
 
-      config.customBuckets should contain allOf(
-        ("singleword" -> Seq(1D, 2D, 3D)),
-        ("with.several.dots" -> Seq(3D, 2D, 1D))
+      config.customBuckets should contain allOf (
+        ("singleword"        -> Seq(1d, 2d, 3d)),
+        ("with.several.dots" -> Seq(3d, 2d, 1d))
       )
 
     }
@@ -114,7 +119,7 @@ class ScrapeDataBuilderSpec extends WordSpec with Matchers {
     "override histogram buckets with custom configuration" in {
       val customBucketsHistogram = constantDistribution("histogram.custom-buckets", none, 1, 10)
 
-      builder(customBuckets = Map("histogram.custom-buckets" -> Seq(1D, 2D, 4D))).appendHistograms(Seq(customBucketsHistogram)).build() should include {
+      builder(customBuckets = Map("histogram.custom-buckets" -> Seq(1d, 2d, 4d))).appendHistograms(Seq(customBucketsHistogram)).build() should include {
         """
           |# TYPE histogram_custom_buckets histogram
           |histogram_custom_buckets_bucket{le="1.0"} 1.0
@@ -133,7 +138,7 @@ class ScrapeDataBuilderSpec extends WordSpec with Matchers {
       val histogramThree = constantDistribution("histogram-three", none, 5, 10)
       val histogramWithZero = constantDistribution("histogram-with-zero", none, 0, 10)
 
-      builder(buckets = Seq(15D)).appendHistograms(Seq(histogramOne)).build() should include {
+      builder(buckets = Seq(15d)).appendHistograms(Seq(histogramOne)).build() should include {
         """
           |# TYPE histogram_one histogram
           |histogram_one_bucket{le="15.0"} 10.0
@@ -143,7 +148,7 @@ class ScrapeDataBuilderSpec extends WordSpec with Matchers {
         """.stripMargin.trim()
       }
 
-      builder(buckets = Seq(5D, 10D, 15D, 20D)).appendHistograms(Seq(histogramTwo)).build() should include {
+      builder(buckets = Seq(5d, 10d, 15d, 20d)).appendHistograms(Seq(histogramTwo)).build() should include {
         """
           |# TYPE histogram_two histogram
           |histogram_two_bucket{le="5.0"} 5.0
@@ -156,7 +161,7 @@ class ScrapeDataBuilderSpec extends WordSpec with Matchers {
         """.stripMargin.trim()
       }
 
-      builder(buckets = Seq(3D)).appendHistograms(Seq(histogramThree)).build() should include {
+      builder(buckets = Seq(3d)).appendHistograms(Seq(histogramThree)).build() should include {
         """
           |# TYPE histogram_three histogram
           |histogram_three_bucket{le="3.0"} 0.0
@@ -166,7 +171,7 @@ class ScrapeDataBuilderSpec extends WordSpec with Matchers {
         """.stripMargin.trim()
       }
 
-      builder(buckets = Seq(3D, 50D)).appendHistograms(Seq(histogramThree)).build() should include {
+      builder(buckets = Seq(3d, 50d)).appendHistograms(Seq(histogramThree)).build() should include {
         """
           |# TYPE histogram_three histogram
           |histogram_three_bucket{le="3.0"} 0.0
@@ -177,7 +182,7 @@ class ScrapeDataBuilderSpec extends WordSpec with Matchers {
         """.stripMargin.trim()
       }
 
-      builder(buckets = Seq(3D, 50D, 60D, 70D)).appendHistograms(Seq(histogramThree)).build() should include {
+      builder(buckets = Seq(3d, 50d, 60d, 70d)).appendHistograms(Seq(histogramThree)).build() should include {
         """
           |# TYPE histogram_three histogram
           |histogram_three_bucket{le="3.0"} 0.0
@@ -190,7 +195,7 @@ class ScrapeDataBuilderSpec extends WordSpec with Matchers {
         """.stripMargin.trim()
       }
 
-      builder(buckets = Seq(7D)).appendHistograms(Seq(histogramThree)).build() should include {
+      builder(buckets = Seq(7d)).appendHistograms(Seq(histogramThree)).build() should include {
         """
           |# TYPE histogram_three histogram
           |histogram_three_bucket{le="7.0"} 3.0
@@ -200,7 +205,7 @@ class ScrapeDataBuilderSpec extends WordSpec with Matchers {
         """.stripMargin.trim()
       }
 
-      builder(buckets = Seq(0.005D, 0.05D, 0.5D, 1D, 2D, 2.1D, 2.2D, 2.3D, 10D)).appendHistograms(Seq(histogramWithZero)).build() should include {
+      builder(buckets = Seq(0.005d, 0.05d, 0.5d, 1d, 2d, 2.1d, 2.2d, 2.3d, 10d)).appendHistograms(Seq(histogramWithZero)).build() should include {
         """
           |# TYPE histogram_with_zero histogram
           |histogram_with_zero_bucket{le="0.005"} 1.0
@@ -224,9 +229,9 @@ class ScrapeDataBuilderSpec extends WordSpec with Matchers {
       val gaugeOne = MetricSnapshotBuilder.gauge("gauge-one", "", TagSet.Empty, time.seconds, 20)
 
       builder(environmentTags = TagSet.of("env_key", "env_value"))
-      .appendCounters(Seq(counterOne))
-      .appendGauges(Seq(gaugeOne))
-      .build() should include {
+        .appendCounters(Seq(counterOne))
+        .appendGauges(Seq(gaugeOne))
+        .build() should include {
         """
           |# TYPE counter_one_seconds_total counter
           |counter_one_seconds_total{tag_with_dots="value",env_key="env_value"} 10.0
@@ -238,7 +243,7 @@ class ScrapeDataBuilderSpec extends WordSpec with Matchers {
 
     "let environment tags have precedence over custom tags" in {
       val counter = MetricSnapshotBuilder.counter("some-metric", "", TagSet.of("custom.tag", "custom-value"), time.seconds, 10)
-      val gauge = MetricSnapshotBuilder.gauge("some-metric", "", TagSet.of("custom.tag", "custom-value"), time.seconds, 10D)
+      val gauge = MetricSnapshotBuilder.gauge("some-metric", "", TagSet.of("custom.tag", "custom-value"), time.seconds, 10d)
 
       builder(environmentTags = TagSet.of("custom.tag", "environment-value"))
         .appendCounters(Seq(counter))
@@ -254,11 +259,15 @@ class ScrapeDataBuilderSpec extends WordSpec with Matchers {
     }
   }
 
-  private def builder(buckets: Seq[java.lang.Double] = Seq(5D, 7D, 8D, 9D, 10D, 11D, 12D), customBuckets: Map[String, Seq[java.lang.Double]] =
-    Map("histogram.custom-buckets" -> Seq(1D, 3D)), environmentTags: TagSet = TagSet.Empty) = new ScrapeDataBuilder(
+  private def builder(
+    buckets: Seq[java.lang.Double] = Seq(5d, 7d, 8d, 9d, 10d, 11d, 12d),
+    customBuckets: Map[String, Seq[java.lang.Double]] = Map("histogram.custom-buckets" -> Seq(1d, 3d)),
+    environmentTags: TagSet = TagSet.Empty
+  ) =
+    new ScrapeDataBuilder(
       PrometheusSettings.Generic(buckets, buckets, buckets, customBuckets, false),
-    environmentTags
-  )
+      environmentTags
+    )
 
   private def constantDistribution(name: String, unit: MeasurementUnit, lower: Long, upper: Long): MetricSnapshot.Distributions =
     MetricSnapshotBuilder.histogram(name, "", TagSet.Empty)((lower to upper): _*)

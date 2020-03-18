@@ -15,7 +15,6 @@
 
 package kamon.context
 
-
 import org.scalatest.{Matchers, WordSpec}
 
 class ThreadLocalStorageSpec extends WordSpec with Matchers {
@@ -39,7 +38,7 @@ class ThreadLocalStorageSpec extends WordSpec with Matchers {
       TLS.current() shouldBe Context.Empty
 
       val scope = TLS.store(ScopeWithKey)
-        TLS.current() shouldBe theSameInstanceAs(ScopeWithKey)
+      TLS.current() shouldBe theSameInstanceAs(ScopeWithKey)
       scope.close()
 
       TLS.current() shouldBe Context.Empty

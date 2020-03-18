@@ -14,30 +14,30 @@ import kamon.trace.Span.Mark
 import kamon.util.Clock
 
 /**
- * Converts a Kamon span to a New Relic span
- */
+  * Converts a Kamon span to a New Relic span
+  */
 object NewRelicSpanConverter {
 
   /**
-   * Converts a Kamon Span$Finished instance into a New Relic Span
-   *
-   * @param kamonSpan Kamon Span$Finished
-   * @return New Relic Span
-   */
+    * Converts a Kamon Span$Finished instance into a New Relic Span
+    *
+    * @param kamonSpan Kamon Span$Finished
+    * @return New Relic Span
+    */
   def convertSpan(kamonSpan: Span.Finished): NewRelicSpan = {
     val durationMs = Math.floorDiv(Clock.nanosBetween(kamonSpan.from, kamonSpan.to), 1000000)
     // If parent id is an empty string, just null it out so it doesn't get sent to NR
     val parentId = if (kamonSpan.parentId.isEmpty) null else kamonSpan.parentId.string
-    val builder = NewRelicSpan.builder(kamonSpan.id.string)
+    val builder = NewRelicSpan
+      .builder(kamonSpan.id.string)
       .traceId(kamonSpan.trace.id.string)
       .parentId(parentId)
       .name(kamonSpan.operationName)
       .timestamp(Clock.toEpochMicros(kamonSpan.from) / 1000) // convert to milliseconds
       .durationMs(durationMs)
       .attributes(buildAttributes(kamonSpan))
-    if (kamonSpan.hasError) {
+    if (kamonSpan.hasError)
       builder.withError()
-    }
     builder.build()
   }
 
@@ -45,14 +45,10 @@ object NewRelicSpanConverter {
     val attributes = new Attributes().put("span.kind", kamonSpan.kind.toString)
     // Span is a client span
     if (kamonSpan.kind == Span.Kind.Client) {
-      val remoteEndpoint = Endpoint(
-        getStringTag(kamonSpan, PeerKeys.IPv4),
-        getStringTag(kamonSpan, PeerKeys.IPv6),
-        getLongTag(kamonSpan, PeerKeys.Port).toInt)
+      val remoteEndpoint = Endpoint(getStringTag(kamonSpan, PeerKeys.IPv4), getStringTag(kamonSpan, PeerKeys.IPv6), getLongTag(kamonSpan, PeerKeys.Port).toInt)
 
-      if (hasAnyData(remoteEndpoint)) {
+      if (hasAnyData(remoteEndpoint))
         attributes.put("remoteEndpoint", remoteEndpoint.toString)
-      }
     }
 
     kamonSpan.marks.foreach {
@@ -68,7 +64,6 @@ object NewRelicSpanConverter {
   private def getLongTag(span: Span.Finished, tagName: String): Long =
     span.tags.get(longOption(tagName)).orElse(span.metricTags.get(longOption(tagName))).getOrElse(0L)
 
-
   private def hasAnyData(endpoint: Endpoint): Boolean =
     endpoint.ipv4 != null || endpoint.ipv6 != null || endpoint.port != 0
 
@@ -80,7 +75,7 @@ object NewRelicSpanConverter {
   }
 
   case class Endpoint(ipv4: String, ipv6: String, port: Integer) {
-    override def toString: String = s"Endpoint{ipv4=${ipv4}, ipv6=${ipv6}, port=${port}}"
+    override def toString: String = s"Endpoint{ipv4=$ipv4, ipv6=$ipv6, port=$port}"
   }
 
 }

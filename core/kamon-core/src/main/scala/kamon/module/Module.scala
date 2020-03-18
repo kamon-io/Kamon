@@ -59,7 +59,7 @@ object ModuleFactory {
   /**
     * Initial settings that get passed into factories when creating an automatically detected module.
     */
-  case class Settings (
+  case class Settings(
     config: Config,
     executionContext: ExecutionContext
   )
@@ -70,7 +70,6 @@ object ModuleFactory {
   * batches.
   */
 trait CombinedReporter extends MetricReporter with SpanReporter
-
 
 object Module {
 
@@ -111,7 +110,7 @@ object Module {
     *                started in any call to Kamon.loadModules().
     * @param factory FQCN of the ModuleFactory implementation for the module.
     */
-  case class Settings (
+  case class Settings(
     name: String,
     description: String,
     enabled: Boolean,

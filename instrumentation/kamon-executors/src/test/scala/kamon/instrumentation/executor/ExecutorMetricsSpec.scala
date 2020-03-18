@@ -1,4 +1,3 @@
-
 /*
  * =========================================================================================
  * Copyright © 2013-2017 the kamon project <http://kamon.io/>
@@ -29,20 +28,18 @@ import org.scalatest.{Matchers, WordSpec}
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future, Promise}
 
-
 class ExecutorMetricsSpec extends WordSpec with Matchers with InstrumentInspection.Syntax with MetricInspection.Syntax with Eventually {
 
   implicit override val patienceConfig =
     PatienceConfig(timeout = scaled(Span(2000, Millis)), interval = scaled(Span(20, Millis)))
-
 
   "the ExecutorServiceMetrics" should {
     "register a SingleThreadPool, collect their metrics and remove it" in {
       val singleThreadPoolExecutor = JavaExecutors.newSingleThreadExecutor()
       val registeredPool = ExecutorInstrumentation.instrument(singleThreadPoolExecutor, "single-thread-pool-metrics")
 
-      ExecutorMetrics.ThreadsActive.tagValues("name")  should contain ("single-thread-pool-metrics")
-      ExecutorMetrics.ThreadsActive.tagValues("type")  should contain ("ThreadPoolExecutor")
+      ExecutorMetrics.ThreadsActive.tagValues("name") should contain("single-thread-pool-metrics")
+      ExecutorMetrics.ThreadsActive.tagValues("type") should contain("ThreadPoolExecutor")
 
       registeredPool.shutdown()
     }
@@ -51,8 +48,8 @@ class ExecutorMetricsSpec extends WordSpec with Matchers with InstrumentInspecti
       val threadPoolExecutor = JavaExecutors.newCachedThreadPool()
       val registeredPool = ExecutorInstrumentation.instrument(threadPoolExecutor, "thread-pool-executor-metrics")
 
-      ExecutorMetrics.ThreadsActive.tagValues("name")  should contain ("thread-pool-executor-metrics")
-      ExecutorMetrics.ThreadsActive.tagValues("type")  should contain ("ThreadPoolExecutor")
+      ExecutorMetrics.ThreadsActive.tagValues("name") should contain("thread-pool-executor-metrics")
+      ExecutorMetrics.ThreadsActive.tagValues("type") should contain("ThreadPoolExecutor")
 
       registeredPool.shutdown()
     }
@@ -61,8 +58,8 @@ class ExecutorMetricsSpec extends WordSpec with Matchers with InstrumentInspecti
       val scheduledThreadPoolExecutor = JavaExecutors.newSingleThreadScheduledExecutor()
       val registeredPool = ExecutorInstrumentation.instrument(scheduledThreadPoolExecutor, "scheduled-thread-pool-executor-metrics")
 
-      ExecutorMetrics.ThreadsActive.tagValues("name")  should contain ("scheduled-thread-pool-executor-metrics")
-      ExecutorMetrics.ThreadsActive.tagValues("type")  should contain ("ThreadPoolExecutor")
+      ExecutorMetrics.ThreadsActive.tagValues("name") should contain("scheduled-thread-pool-executor-metrics")
+      ExecutorMetrics.ThreadsActive.tagValues("type") should contain("ThreadPoolExecutor")
 
       registeredPool.shutdown()
     }
@@ -71,8 +68,8 @@ class ExecutorMetricsSpec extends WordSpec with Matchers with InstrumentInspecti
       val javaForkJoinPool = JavaExecutors.newWorkStealingPool()
       val registeredForkJoin = ExecutorInstrumentation.instrument(javaForkJoinPool, "java-fork-join-pool-metrics")
 
-      ExecutorMetrics.ThreadsActive.tagValues("name")  should contain ("java-fork-join-pool-metrics")
-      ExecutorMetrics.ThreadsActive.tagValues("type")  should contain ("ForkJoinPool")
+      ExecutorMetrics.ThreadsActive.tagValues("name") should contain("java-fork-join-pool-metrics")
+      ExecutorMetrics.ThreadsActive.tagValues("type") should contain("ForkJoinPool")
 
       registeredForkJoin.shutdown()
     }
@@ -81,8 +78,8 @@ class ExecutorMetricsSpec extends WordSpec with Matchers with InstrumentInspecti
       val scalaForkJoinPool = new ScalaForkJoinPool(10)
       val registeredForkJoin = ExecutorInstrumentation.instrument(scalaForkJoinPool, "scala-fork-join-pool-metrics")
 
-      ExecutorMetrics.ThreadsActive.tagValues("name")  should contain ("scala-fork-join-pool-metrics")
-      ExecutorMetrics.ThreadsActive.tagValues("type")  should contain ("ForkJoinPool")
+      ExecutorMetrics.ThreadsActive.tagValues("name") should contain("scala-fork-join-pool-metrics")
+      ExecutorMetrics.ThreadsActive.tagValues("type") should contain("ForkJoinPool")
 
       registeredForkJoin.shutdown()
     }
@@ -100,22 +97,22 @@ class ExecutorMetricsSpec extends WordSpec with Matchers with InstrumentInspecti
   def setupTestPool(executor: ExecutorService): TestPool =
     new TestPool(executor)
 
-  def poolInstruments(testPool: TestPool): ExecutorMetrics.ThreadPoolInstruments = testPool.executor match {
-    case tpe:ThreadPoolExecutor      => new ExecutorMetrics.ThreadPoolInstruments(testPool.name, TagSet.Empty)
-    case javaFjp: ForkJoinPool       => new ExecutorMetrics.ForkJoinPoolInstruments(testPool.name, TagSet.Empty)
-    case scalaFjp: ScalaForkJoinPool => new ExecutorMetrics.ForkJoinPoolInstruments(testPool.name, TagSet.Empty)
-  }
+  def poolInstruments(testPool: TestPool): ExecutorMetrics.ThreadPoolInstruments =
+    testPool.executor match {
+      case tpe: ThreadPoolExecutor     => new ExecutorMetrics.ThreadPoolInstruments(testPool.name, TagSet.Empty)
+      case javaFjp: ForkJoinPool       => new ExecutorMetrics.ForkJoinPoolInstruments(testPool.name, TagSet.Empty)
+      case scalaFjp: ScalaForkJoinPool => new ExecutorMetrics.ForkJoinPoolInstruments(testPool.name, TagSet.Empty)
+    }
 
   def fjpInstruments(testPool: TestPool): ExecutorMetrics.ForkJoinPoolInstruments =
     new ExecutorMetrics.ForkJoinPoolInstruments(testPool.name, TagSet.Empty)
-
 
   def commonExecutorBehaviour(executor: Int => ExecutorService, size: Int) = {
 
     "track settings" in {
       val pool = setupTestPool(executor(size))
       val metrics = poolInstruments(pool)
-      eventually(metrics.poolMax.value should be (size))
+      eventually(metrics.poolMax.value should be(size))
       pool.close()
     }
 
@@ -125,29 +122,30 @@ class ExecutorMetricsSpec extends WordSpec with Matchers with InstrumentInspecti
       val semaphore = Promise[String]()
 
       eventually {
-        metrics.submittedTasks.value(false)      should be (0)
-        metrics.completedTasks.value(false)      should be (0)
+        metrics.submittedTasks.value(false) should be(0)
+        metrics.completedTasks.value(false) should be(0)
       }
 
       val blockedTask = new Runnable {
         override def run(): Unit = {
           Await.result(semaphore.future, Duration.Inf)
           ()
-        }}
+        }
+      }
 
       pool.submit(blockedTask)
       eventually {
-        (metrics.submittedTasks.value(false), metrics.completedTasks.value(false)) should be (1, 0)
+        (metrics.submittedTasks.value(false), metrics.completedTasks.value(false)) should be(1, 0)
       }
 
       semaphore.success("done")
       eventually {
-        (metrics.submittedTasks.value(false), metrics.submittedTasks.value(false)) should be (1, 1)
+        (metrics.submittedTasks.value(false), metrics.submittedTasks.value(false)) should be(1, 1)
       }
 
       (1 to 10).foreach(_ => pool.submit(blockedTask))
       eventually {
-        (metrics.submittedTasks.value(false), metrics.submittedTasks.value(false)) should be (11, 11)
+        (metrics.submittedTasks.value(false), metrics.submittedTasks.value(false)) should be(11, 11)
       }
       pool.close()
     }
@@ -157,19 +155,21 @@ class ExecutorMetricsSpec extends WordSpec with Matchers with InstrumentInspecti
       val metrics = poolInstruments(pool)
 
       eventually {
-        metrics.totalThreads.distribution(false).max should be (0)
-        metrics.activeThreads.distribution(false).max should be (0)
+        metrics.totalThreads.distribution(false).max should be(0)
+        metrics.activeThreads.distribution(false).max should be(0)
       }
 
       Future(
-        (1 to 10000).foreach(_ => pool.submit(new Runnable {
-          override def run(): Unit = Thread.sleep(1)
-        }))
+        (1 to 10000).foreach(_ =>
+          pool.submit(new Runnable {
+            override def run(): Unit = Thread.sleep(1)
+          })
+        )
       )(scala.concurrent.ExecutionContext.global)
 
       eventually {
-        metrics.activeThreads.distribution(false).max should be (2)
-        metrics.totalThreads.distribution(false).max should be (2)
+        metrics.activeThreads.distribution(false).max should be(2)
+        metrics.totalThreads.distribution(false).max should be(2)
       }
       pool.close()
     }
@@ -183,9 +183,10 @@ class ExecutorMetricsSpec extends WordSpec with Matchers with InstrumentInspecti
         override def run(): Unit = {
           Await.result(semaphore.future, Duration.Inf)
           ()
-        }}
+        }
+      }
 
-      eventually(metrics.queuedTasks.distribution(false).max should be (0))
+      eventually(metrics.queuedTasks.distribution(false).max should be(0))
 
       (1 to 100).foreach(_ => pool.submit(blockedTask))
 
@@ -206,8 +207,8 @@ class ExecutorMetricsSpec extends WordSpec with Matchers with InstrumentInspecti
 
     "track FJP specific metrics" in {
       eventually {
-        metrics.parallelism.value should be (size)
-        metrics.poolMin.value should be (0)
+        metrics.parallelism.value should be(size)
+        metrics.poolMin.value should be(0)
       }
       pool.close()
     }
@@ -219,7 +220,7 @@ class ExecutorMetricsSpec extends WordSpec with Matchers with InstrumentInspecti
 
     "track TPE specific metrics" in {
       eventually {
-        metrics.poolMin.value should be (size)
+        metrics.poolMin.value should be(size)
         pool.close()
 
       }
@@ -243,4 +244,3 @@ class ExecutorMetricsSpec extends WordSpec with Matchers with InstrumentInspecti
     }
   }
 }
-

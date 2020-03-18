@@ -72,7 +72,7 @@ object CallbackRunnableRunInstrumentation {
   def enter(@Advice.This runnable: HasContext with HasTimestamp with InternalState): Scope = {
     val timestamp = runnable.timestamp
     val valueContext = runnable.valueBridge().asInstanceOf[HasContext].context
-    val context = if(valueContext.nonEmpty()) valueContext else runnable.context
+    val context = if (valueContext.nonEmpty()) valueContext else runnable.context
 
     storeCurrentRunnableTimestamp(timestamp)
     Kamon.storeContext(context)
@@ -104,9 +104,8 @@ object CallbackRunnableRunInstrumentation {
 object CopyContextFromArgumentToResult {
 
   @Advice.OnMethodExit(suppress = classOf[Throwable])
-  def exit(@Advice.Argument(0) arg: Any, @Advice.Return result: Any): Unit = {
+  def exit(@Advice.Argument(0) arg: Any, @Advice.Return result: Any): Unit =
     result.asInstanceOf[HasContext].setContext(arg.asInstanceOf[HasContext].context)
-  }
 }
 
 object CopyCurrentContextToArgument {
@@ -122,8 +121,6 @@ object CleanContextFromSeedFuture {
   def exit(@Advice.This futureCompanionObject: Any): Unit = {
     val unitField = futureCompanionObject.getClass.getDeclaredField("unit")
     unitField.setAccessible(true)
-    unitField.get(futureCompanionObject).asInstanceOf[Future[Unit]].value.foreach(unitValue => {
-      unitValue.asInstanceOf[HasContext].setContext(Context.Empty)
-    })
+    unitField.get(futureCompanionObject).asInstanceOf[Future[Unit]].value.foreach(unitValue => unitValue.asInstanceOf[HasContext].setContext(Context.Empty))
   }
 }

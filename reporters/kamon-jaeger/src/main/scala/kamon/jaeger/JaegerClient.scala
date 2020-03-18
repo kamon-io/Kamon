@@ -43,7 +43,7 @@ object JaegerClient {
     protocol match {
       case "udp"            => buildAgentClient(host, port, includeEnvTags)
       case "http" | "https" => buildCollectorClient(host, port, protocol, includeEnvTags)
-      case anyOther         =>
+      case anyOther =>
         log.warn("Unknown protocol [{}] found in the configuration, falling back to UDP", anyOther)
         buildAgentClient(host, port, includeEnvTags)
     }
@@ -75,10 +75,12 @@ class JaegerSender(sender: ThriftSender, includeEnvTags: Boolean) {
 
   if (includeEnvTags)
     process.setTags(
-      Kamon.environment.tags.iterator(_.toString)
-        .map { p => new Tag(p.key, TagType.STRING).setVStr(p.value) }
+      Kamon.environment.tags
+        .iterator(_.toString)
+        .map(p => new Tag(p.key, TagType.STRING).setVStr(p.value))
         .toList
-        .asJava)
+        .asJava
+    )
 
   /**
     * The overhead (in bytes) required for process information in every batch.
@@ -86,7 +88,7 @@ class JaegerSender(sender: ThriftSender, includeEnvTags: Boolean) {
   val processOverhead = getSize(process)
 
   def sendSpans(spans: mutable.Buffer[JaegerSpan]): Unit = {
-    if(spans.nonEmpty) {
+    if (spans.nonEmpty) {
       Try(sender.send(process, spans.asJava)) match {
         case Failure(e) =>
           log.warn(s"Reporting spans to jaeger failed. ${spans.size} spans discarded.", e)
@@ -109,22 +111,20 @@ class JaegerSender(sender: ThriftSender, includeEnvTags: Boolean) {
   */
 class JaegerClient(maxPacketSize: Option[Int], jaegerSender: JaegerSender) {
 
-  def sendSpans(spans: Seq[Span.Finished]): Unit = {
-    if(maxPacketSize.isDefined) sendSpansBatched(spans, maxPacketSize.get) else sendAllSpans(spans)
-  }
+  def sendSpans(spans: Seq[Span.Finished]): Unit =
+    if (maxPacketSize.isDefined) sendSpansBatched(spans, maxPacketSize.get) else sendAllSpans(spans)
 
-  private def sendAllSpans(spans: Seq[Span.Finished]): Unit = {
+  private def sendAllSpans(spans: Seq[Span.Finished]): Unit =
     jaegerSender.sendSpans(spans.map(JaegerSpanConverter.convertSpan).toBuffer)
-  }
 
   private def sendSpansBatched(spans: Seq[Span.Finished], maxPacketSize: Int): Unit = {
     var bufferBytes = 0
     var buffer: mutable.Buffer[JaegerSpan] = mutable.Buffer()
-    for(kamonSpan <- spans) {
+    for (kamonSpan <- spans) {
       val span = JaegerSpanConverter.convertSpan(kamonSpan)
       val spanBytes = jaegerSender.getSize(span)
 
-      if(bufferBytes + spanBytes > maxPacketSize - jaegerSender.processOverhead) {
+      if (bufferBytes + spanBytes > maxPacketSize - jaegerSender.processOverhead) {
         jaegerSender.sendSpans(buffer)
         bufferBytes = 0
         buffer = mutable.Buffer()

@@ -41,7 +41,7 @@ class KamonApmApiClient(settings: Settings) {
     val clock = Kamon.clock()
 
     val timeSinceLastPost = Duration.between(_lastAttempt, clock.instant())
-    if(timeSinceLastPost.compareTo(settings.clientBackoff) < 0) backoff
+    if (timeSinceLastPost.compareTo(settings.clientBackoff) < 0) backoff
 
     val request: () => Response = () => {
       val reqBody = RequestBody.create(MediaType.parse("application/octet-stream"), body)
@@ -54,28 +54,30 @@ class KamonApmApiClient(settings: Settings) {
       _httpClient.newCall(request).execute
     }
 
-    def tryPosting: Try[Response] = Try {
-      _lastAttempt = clock.instant()
-      request()
-    }
-
-    def parseResponse(response: Response): Try[IngestionResponse] = Try {
-      val respBuilder = IngestionResponse.newBuilder()
-      val body = response.body().bytes()
-      response.code() match {
-        case 200 =>
-          respBuilder
-            .setStatus(OK)
-            .build()
-        case 490 if body.nonEmpty =>
-          IngestionResponse
-            .parseFrom(body)
-        case _ =>
-          respBuilder
-            .setStatus(IngestionStatus.ERROR)
-            .build()
+    def tryPosting: Try[Response] =
+      Try {
+        _lastAttempt = clock.instant()
+        request()
       }
-    }
+
+    def parseResponse(response: Response): Try[IngestionResponse] =
+      Try {
+        val respBuilder = IngestionResponse.newBuilder()
+        val body = response.body().bytes()
+        response.code() match {
+          case 200 =>
+            respBuilder
+              .setStatus(OK)
+              .build()
+          case 490 if body.nonEmpty =>
+            IngestionResponse
+              .parseFrom(body)
+          case _ =>
+            respBuilder
+              .setStatus(IngestionStatus.ERROR)
+              .build()
+        }
+      }
 
     tryPosting.flatMap(parseResponse) match {
       case Success(ingestionResult) =>
@@ -121,7 +123,6 @@ class KamonApmApiClient(settings: Settings) {
     builder.build()
   }
 
-  private def backoff = {
+  private def backoff =
     Thread.sleep(settings.clientBackoff.toMillis)
-  }
 }

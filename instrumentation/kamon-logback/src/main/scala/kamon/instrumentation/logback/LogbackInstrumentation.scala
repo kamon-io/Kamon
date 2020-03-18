@@ -32,7 +32,6 @@ import org.slf4j.MDC
 
 import scala.collection.JavaConverters._
 
-
 class LogbackInstrumentation extends InstrumentationBuilder {
 
   onSubTypesOf("ch.qos.logback.core.spi.DeferredProcessingAware")
@@ -53,7 +52,7 @@ object LogbackInstrumentation {
   def settings(): Settings =
     _settings
 
-  case class Settings (
+  case class Settings(
     propagateContextToMDC: Boolean,
     mdcTraceIdKey: String,
     mdcSpanIdKey: String,
@@ -65,7 +64,7 @@ object LogbackInstrumentation {
   private def readSettings(config: Config): Settings = {
     val logbackConfig = config.getConfig("kamon.instrumentation.logback")
 
-    Settings (
+    Settings(
       logbackConfig.getBoolean("mdc.copy.enabled"),
       logbackConfig.getString("mdc.trace-id-key"),
       logbackConfig.getString("mdc.span-id-key"),
@@ -98,35 +97,29 @@ object GetPropertyMapMethodInterceptor {
       val currentContext = Kamon.currentContext()
       val span = currentContext.get(Span.Key)
 
-      if(span.trace.id != Identifier.Empty) {
+      if (span.trace.id != Identifier.Empty) {
         MDC.put(settings.mdcTraceIdKey, span.trace.id.string)
         MDC.put(settings.mdcSpanIdKey, span.id.string)
         MDC.put(settings.mdcSpanOperationNameKey, span.operationName())
       }
 
-      if(settings.mdcCopyTags) {
-        currentContext.tags.iterator().foreach(t => {
-          MDC.put(t.key, Tag.unwrapValue(t).toString)
-        })
-      }
+      if (settings.mdcCopyTags)
+        currentContext.tags.iterator().foreach(t => MDC.put(t.key, Tag.unwrapValue(t).toString))
 
       settings.mdcCopyKeys.foreach { key =>
         currentContext.get(Context.key[Any](key, "")) match {
           case Some(value)                  => MDC.put(key, value.toString)
           case keyValue if keyValue != null => MDC.put(key, keyValue.toString)
-          case _ => // Just ignore the nulls.
+          case _                            => // Just ignore the nulls.
         }
       }
 
-      try callable.call() finally {
-        if (mdcContextMapBeforePropagation != null) {
-          MDC.setContextMap(mdcContextMapBeforePropagation)
-        } else { // a null contextMap is possible and means 'empty'
-          MDC.clear()
-        }
-      }
-    } else {
+      try callable.call()
+      finally if (mdcContextMapBeforePropagation != null)
+        MDC.setContextMap(mdcContextMapBeforePropagation)
+      else // a null contextMap is possible and means 'empty'
+        MDC.clear()
+    } else
       callable.call()
-    }
   }
 }

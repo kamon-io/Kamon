@@ -16,12 +16,13 @@
 
 package kamon
 
-object Kamon extends Configuration
-  with Utilities
-  with Metrics
-  with Tracing
-  with ModuleLoading
-  with ContextPropagation
-  with ContextStorage
-  with CurrentStatus
-  with Init
+object Kamon
+    extends Configuration
+    with Utilities
+    with Metrics
+    with Tracing
+    with ModuleLoading
+    with ContextPropagation
+    with ContextStorage
+    with CurrentStatus
+    with Init

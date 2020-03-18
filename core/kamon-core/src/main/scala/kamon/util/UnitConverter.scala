@@ -31,9 +31,9 @@ class UnitConverter(targetTimeUnit: MeasurementUnit, targetInformationUnit: Meas
     * UnitConverter. If the value unit's dimension is not time or information then values will be returned unchanged.
     */
   def convertValue(value: Double, unit: MeasurementUnit): Double =
-    if(unit.dimension == Dimension.Time)
+    if (unit.dimension == Dimension.Time)
       MeasurementUnit.convert(value, unit, targetTimeUnit)
-    else if(unit.dimension == Dimension.Information)
+    else if (unit.dimension == Dimension.Information)
       MeasurementUnit.convert(value, unit, targetInformationUnit)
     else
       value
@@ -44,9 +44,9 @@ class UnitConverter(targetTimeUnit: MeasurementUnit, targetInformationUnit: Meas
     * be converted to a different dynamic range, if necessary.
     */
   def convertDistribution(distribution: Distribution, unit: MeasurementUnit): Distribution =
-    if(unit.dimension == Dimension.Time)
+    if (unit.dimension == Dimension.Time)
       Distribution.convert(distribution, unit, targetTimeUnit, dynamicRange)
-    else if(unit.dimension == Dimension.Information)
+    else if (unit.dimension == Dimension.Information)
       Distribution.convert(distribution, unit, targetInformationUnit, dynamicRange)
     else
       Distribution.convert(distribution, unit, unit, dynamicRange)

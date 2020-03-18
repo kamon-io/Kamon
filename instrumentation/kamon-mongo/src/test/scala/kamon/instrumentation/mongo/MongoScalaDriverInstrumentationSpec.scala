@@ -13,8 +13,7 @@ import org.scalatest.{Matchers, OptionValues}
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-class MongoScalaDriverInstrumentationSpec extends EmbeddedMongoTest(port = 4445) with Matchers with TestSpanReporter
-    with Eventually with OptionValues {
+class MongoScalaDriverInstrumentationSpec extends EmbeddedMongoTest(port = 4445) with Matchers with TestSpanReporter with Eventually with OptionValues {
 
   val client = scalaClient()
   val tools = client.getDatabase("test").getCollection("tools")
@@ -27,10 +26,15 @@ class MongoScalaDriverInstrumentationSpec extends EmbeddedMongoTest(port = 4445)
       tools.insertOne(Document("name" -> "prometheus", "aggregatable" -> true, "license" -> "apache")).consume()
       tools.insertOne(Document("name" -> "linux", "aggregatable" -> true, "license" -> "gpl")).consume()
 
-      tools.aggregate(Seq(
-        Aggregates.`match`(Filters.eq("aggregatable", true)),
-        Aggregates.group("$license", Accumulators.sum("count", 1))
-      )).batchSize(1).consume()
+      tools
+        .aggregate(
+          Seq(
+            Aggregates.`match`(Filters.eq("aggregatable", true)),
+            Aggregates.group("$license", Accumulators.sum("count", 1))
+          )
+        )
+        .batchSize(1)
+        .consume()
 
       val mainSpan = eventually(timeout(5 seconds)) {
         val span = testSpanReporter().nextSpan().value
@@ -153,10 +157,12 @@ class MongoScalaDriverInstrumentationSpec extends EmbeddedMongoTest(port = 4445)
       tools.insertOne(Document("name" -> "kamon", "findOneAndReplace" -> "one")).consume()
       tools.insertOne(Document("name" -> "zipkin", "findOneAndReplace" -> "two")).consume()
       tools.insertOne(Document("name" -> "prometheus", "findOneAndReplace" -> "three")).consume()
-      tools.findOneAndReplace(
-        Filters.equal("findOneAndReplace", "one"),
-        Document("name" -> "kamon", "findOneAndReplace" -> "four")
-      ).consume()
+      tools
+        .findOneAndReplace(
+          Filters.equal("findOneAndReplace", "one"),
+          Document("name" -> "kamon", "findOneAndReplace" -> "four")
+        )
+        .consume()
 
       eventually(timeout(5 seconds)) {
         val span = testSpanReporter().nextSpan().value
@@ -170,10 +176,12 @@ class MongoScalaDriverInstrumentationSpec extends EmbeddedMongoTest(port = 4445)
       tools.insertOne(Document("name" -> "kamon", "findOneAndUpdate" -> "one")).consume()
       tools.insertOne(Document("name" -> "zipkin", "findOneAndUpdate" -> "two")).consume()
       tools.insertOne(Document("name" -> "prometheus", "findOneAndUpdate" -> "three")).consume()
-      tools.findOneAndUpdate(
-        Filters.equal("findOneAndUpdate", "one"),
-        Updates.set("findOneAndUpdate", "four")
-      ).consume()
+      tools
+        .findOneAndUpdate(
+          Filters.equal("findOneAndUpdate", "one"),
+          Updates.set("findOneAndUpdate", "four")
+        )
+        .consume()
 
       eventually(timeout(5 seconds)) {
         val span = testSpanReporter().nextSpan().value
@@ -220,8 +228,9 @@ class MongoScalaDriverInstrumentationSpec extends EmbeddedMongoTest(port = 4445)
       tools.insertOne(Document("name" -> "prometheus", "reduce" -> true, "license" -> "apache", "value" -> 100)).consume()
       tools.insertOne(Document("name" -> "linux", "reduce" -> true, "license" -> "gpl", "value" -> 100)).consume()
 
-      tools.mapReduce(
-        """
+      tools
+        .mapReduce(
+          """
           |function() {
           |  if(this.license !== undefined) {
           |    emit(this.license + "_0", this.value)
@@ -230,13 +239,14 @@ class MongoScalaDriverInstrumentationSpec extends EmbeddedMongoTest(port = 4445)
           |  }
           |}
         """.stripMargin,
-
-        """
+          """
           |function(key, values) {
           |  return Array.sum(values)
           |}
         """.stripMargin
-      ).batchSize(2).consume()
+        )
+        .batchSize(2)
+        .consume()
 
       eventually(timeout(5 seconds)) {
         val span = testSpanReporter().nextSpan().value
@@ -257,8 +267,9 @@ class MongoScalaDriverInstrumentationSpec extends EmbeddedMongoTest(port = 4445)
       tools.insertOne(Document("name" -> "prometheus", "reduce" -> true, "license" -> "apache", "value" -> 100)).consume()
       tools.insertOne(Document("name" -> "linux", "reduce" -> true, "license" -> "gpl", "value" -> 100)).consume()
 
-      tools.mapReduce(
-        """
+      tools
+        .mapReduce(
+          """
           |function() {
           |  if(this.license !== undefined) {
           |    emit(this.license + "_0", this.value)
@@ -267,13 +278,15 @@ class MongoScalaDriverInstrumentationSpec extends EmbeddedMongoTest(port = 4445)
           |  }
           |}
         """.stripMargin,
-
-        """
+          """
           |function(key, values) {
           |  return Array.sum(values)
           |}
         """.stripMargin
-      ).collectionName("mapReducedCollection").toCollection().consume()
+        )
+        .collectionName("mapReducedCollection")
+        .toCollection()
+        .consume()
 
       eventually(timeout(5 seconds)) {
         val span = testSpanReporter().nextSpan().value
@@ -287,10 +300,12 @@ class MongoScalaDriverInstrumentationSpec extends EmbeddedMongoTest(port = 4445)
       tools.insertOne(Document("name" -> "kamon", "replaceOne" -> "one")).consume()
       tools.insertOne(Document("name" -> "zipkin", "replaceOne" -> "two")).consume()
       tools.insertOne(Document("name" -> "prometheus", "replaceOne" -> "one")).consume()
-      tools.replaceOne(
-        Filters.equal("replaceOne", "one"),
-        Document("name" -> "kamon", "replaceOne" -> "four")
-      ).consume()
+      tools
+        .replaceOne(
+          Filters.equal("replaceOne", "one"),
+          Document("name" -> "kamon", "replaceOne" -> "four")
+        )
+        .consume()
 
       eventually(timeout(5 seconds)) {
         val span = testSpanReporter().nextSpan().value
@@ -305,10 +320,12 @@ class MongoScalaDriverInstrumentationSpec extends EmbeddedMongoTest(port = 4445)
       tools.insertOne(Document("name" -> "kamon", "updateMany" -> "one")).consume()
       tools.insertOne(Document("name" -> "zipkin", "updateMany" -> "one")).consume()
       tools.insertOne(Document("name" -> "prometheus", "updateMany" -> "one")).consume()
-      tools.updateMany(
-        Filters.equal("updateMany", "one"),
-        Updates.set("findOneAndUpdate", "four")
-      ).consume()
+      tools
+        .updateMany(
+          Filters.equal("updateMany", "one"),
+          Updates.set("findOneAndUpdate", "four")
+        )
+        .consume()
 
       eventually(timeout(5 seconds)) {
         val span = testSpanReporter().nextSpan().value
@@ -323,10 +340,12 @@ class MongoScalaDriverInstrumentationSpec extends EmbeddedMongoTest(port = 4445)
       tools.insertOne(Document("name" -> "kamon", "updateOne" -> "one")).consume()
       tools.insertOne(Document("name" -> "zipkin", "updateOne" -> "one")).consume()
       tools.insertOne(Document("name" -> "prometheus", "updateOne" -> "one")).consume()
-      tools.updateOne(
-        Filters.equal("updateOne", "one"),
-        Updates.set("findOneAndUpdate", "four")
-      ).consume()
+      tools
+        .updateOne(
+          Filters.equal("updateOne", "one"),
+          Updates.set("findOneAndUpdate", "four")
+        )
+        .consume()
 
       eventually(timeout(5 seconds)) {
         val span = testSpanReporter().nextSpan().value
@@ -337,15 +356,12 @@ class MongoScalaDriverInstrumentationSpec extends EmbeddedMongoTest(port = 4445)
       }
     }
 
-
   }
-
 
   implicit class RichSingleObservable[T](observable: Observable[T]) {
 
     // Shorthand for just consuming results from an observable.
-    def consume(): Unit = {
+    def consume(): Unit =
       Await.result(observable.toFuture(), 10 seconds)
-    }
   }
 }

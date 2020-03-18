@@ -15,10 +15,10 @@ import scala.collection.JavaConverters._
 object AttributeBuddy {
   def addTagsFromTagSets(tagSeq: Seq[TagSet], attributes: Attributes = new Attributes()): Attributes = {
     tagSeq.foreach { tagset: TagSet =>
-      tagset.iterator().foreach(pair => {
+      tagset.iterator().foreach { pair =>
         val value: Any = Tag.unwrapValue(pair)
         putTypedValue(attributes, pair.key, value)
-      })
+      }
     }
     attributes
   }
@@ -35,8 +35,8 @@ object AttributeBuddy {
   private def putTypedValue(attributes: Attributes, key: String, value: Any) = {
     // Maintain the type of the tag value consistent with NR Attribute types
     value match {
-      case v: String => attributes.put(key, v)
-      case v: Number => attributes.put(key, v)
+      case v: String  => attributes.put(key, v)
+      case v: Number  => attributes.put(key, v)
       case v: Boolean => attributes.put(key, v)
     }
   }

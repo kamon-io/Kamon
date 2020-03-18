@@ -14,7 +14,7 @@ class MetricInspectionSpec extends WordSpec with Matchers with MetricInspection.
 
       metric.withTags(ts1).increment(1)
       metric.withTags(ts2).increment(2)
-      metric.instruments().values.map(_.tags) should contain allOf(ts1, ts2)
+      metric.instruments().values.map(_.tags) should contain allOf (ts1, ts2)
       metric.instruments(ts1).keys.headOption shouldBe Some(ts1)
     }
 
@@ -26,7 +26,7 @@ class MetricInspectionSpec extends WordSpec with Matchers with MetricInspection.
       metric.withTag("season", "autumn").increment()
 
       metric.tagValues("unknown") shouldBe empty
-      metric.tagValues("season") should contain allOf(
+      metric.tagValues("season") should contain allOf (
         "summer",
         "winter",
         "spring",
@@ -36,5 +36,3 @@ class MetricInspectionSpec extends WordSpec with Matchers with MetricInspection.
   }
 
 }
-
-

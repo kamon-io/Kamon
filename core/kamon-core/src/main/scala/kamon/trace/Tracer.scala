@@ -32,13 +32,11 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters.collectionAsScalaIterableConverter
 
-
 /**
   * A Tracer assists on the creation of Spans and temporarily holds finished Spans until they are flushed to the
   * available reporters.
   */
-class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage,
-    scheduler: ScheduledExecutorService) {
+class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage, scheduler: ScheduledExecutorService) {
 
   import Tracer._logger
 
@@ -57,13 +55,11 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
 
   reconfigure(initialConfig)
 
-
   /**
     * Returns the Identifier Scheme currently used by the tracer.
     */
   def identifierScheme: Identifier.Scheme =
     _identifierScheme
-
 
   /**
     * Creates a new SpanBuilder for a Server Span and applies the provided component name as a metric tag. It is
@@ -73,7 +69,6 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
   def serverSpanBuilder(operationName: String, component: String): SpanBuilder =
     spanBuilder(operationName).kind(Kind.Server).tagMetrics(Span.TagKeys.Component, component)
 
-
   /**
     * Creates a new SpanBuilder for a Client Span and applies the provided component name as a metric tag. It is
     * recommended that all Spans include a "component" metric tag that indicates what library or library section is
@@ -81,7 +76,6 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
     */
   def clientSpanBuilder(operationName: String, component: String): SpanBuilder =
     spanBuilder(operationName).kind(Kind.Client).tagMetrics(Span.TagKeys.Component, component)
-
 
   /**
     * Creates a new SpanBuilder for a Producer Span and applies the provided component name as a metric tag. It is
@@ -91,7 +85,6 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
   def producerSpanBuilder(operationName: String, component: String): SpanBuilder =
     spanBuilder(operationName).kind(Kind.Producer).tagMetrics(Span.TagKeys.Component, component)
 
-
   /**
     * Creates a new SpanBuilder for a Consumer Span and applies the provided component name as a metric tag. It is
     * recommended that all Spans include a "component" metric tag that indicates what library or library section is
@@ -100,7 +93,6 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
   def consumerSpanBuilder(operationName: String, component: String): SpanBuilder =
     spanBuilder(operationName).kind(Kind.Consumer).tagMetrics(Span.TagKeys.Component, component)
 
-
   /**
     * Creates a new SpanBuilder for an Internal Span and applies the provided component name as a metric tag. It is
     * recommended that all Spans include a "component" metric tag that indicates what library or library section is
@@ -108,7 +100,6 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
     */
   def internalSpanBuilder(operationName: String, component: String): SpanBuilder =
     spanBuilder(operationName).kind(Kind.Internal).tagMetrics(Span.TagKeys.Component, component)
-
 
   /**
     * Creates a new raw SpanBuilder instance using the provided operation name.
@@ -281,23 +272,19 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
 
     /** Uses all the accumulated information to create a new Span */
     private def createSpan(at: Instant, isDelayed: Boolean): Span.Delayed = {
-      if(_preStartHooks.nonEmpty) {
-        _preStartHooks.foreach(psh => {
-          try {
-            psh.beforeStart(this)
-          } catch {
+      if (_preStartHooks.nonEmpty) {
+        _preStartHooks.foreach { psh =>
+          try psh.beforeStart(this)
+          catch {
             case t: Throwable =>
               _logger.error("Failed to apply pre-start hook", t)
           }
-        })
+        }
       }
 
       val context = _context.getOrElse(contextStorage.currentContext())
-      if(_tagWithUpstreamService) {
-        context.getTag(option(TagKeys.UpstreamName)).foreach(upstreamName => {
-          _metricTags.add(TagKeys.UpstreamName, upstreamName)
-        })
-      }
+      if (_tagWithUpstreamService)
+        context.getTag(option(TagKeys.UpstreamName)).foreach(upstreamName => _metricTags.add(TagKeys.UpstreamName, upstreamName))
 
       val parent = _parent.getOrElse(if (_ignoreParentFromContext) Span.Empty else context.get(Span.Key))
       val localParent = if (!parent.isRemote && !parent.isEmpty) Some(parent) else None
@@ -317,17 +304,15 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
           Position.Unknown
 
       val trace = {
-        if(position == Position.Root) {
-
+        if (position == Position.Root)
           // When this is the Root Span in the trace we create a new Trace instance and use any sampling decision
           // suggestion we might have. In any other cases we will always reuse the Trace.
           Trace(suggestedOrGeneratedTraceId(), suggestedOrSamplerDecision())
-
-        } else {
+        else {
 
           // The tracer will not allow a local root Span to have an known sampling decision unless it is explicitly
           // set on the SpanBuilder.
-          if(parent.isRemote && parent.trace.samplingDecision == SamplingDecision.Unknown) {
+          if (parent.isRemote && parent.trace.samplingDecision == SamplingDecision.Unknown) {
             suggestedOrSamplerDecision() match {
               case SamplingDecision.Sample      => parent.trace.keep()
               case SamplingDecision.DoNotSample => parent.trace.drop()
@@ -339,107 +324,137 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
         }
       }
 
-      new Span.Local(id, parentId, trace, position, _kind, localParent, _name, _spanTags, _metricTags, at, _marks, _links,
-        _trackMetrics, _tagWithParentOperation, _includeErrorStacktrace, isDelayed, clock, _preFinishHooks, _onSpanFinish, _sampler)
+      new Span.Local(
+        id,
+        parentId,
+        trace,
+        position,
+        _kind,
+        localParent,
+        _name,
+        _spanTags,
+        _metricTags,
+        at,
+        _marks,
+        _links,
+        _trackMetrics,
+        _tagWithParentOperation,
+        _includeErrorStacktrace,
+        isDelayed,
+        clock,
+        _preFinishHooks,
+        _onSpanFinish,
+        _sampler
+      )
     }
 
     private def suggestedOrSamplerDecision(): SamplingDecision =
       _suggestedSamplingDecision.getOrElse(_sampler.decide(this))
 
     private def suggestedOrGeneratedTraceId(): Identifier =
-      if(_suggestedTraceId.isEmpty) identifierScheme.traceIdFactory.generate() else _suggestedTraceId
+      if (_suggestedTraceId.isEmpty) identifierScheme.traceIdFactory.generate() else _suggestedTraceId
   }
-
 
   /**
     * Applies a new configuration to the tracer and its related components.
     */
-  def reconfigure(newConfig: Config): Unit = synchronized {
-    try {
-      val traceConfig = newConfig.getConfig("kamon.trace")
-      val sampler = traceConfig.getString("sampler") match {
-        case "always"     => ConstantSampler.Always
-        case "never"      => ConstantSampler.Never
-        case "random"     => RandomSampler(traceConfig.getDouble("random-sampler.probability"))
-        case "adaptive"   => AdaptiveSampler()
-        case fqcn         =>
+  def reconfigure(newConfig: Config): Unit =
+    synchronized {
+      try {
+        val traceConfig = newConfig.getConfig("kamon.trace")
+        val sampler = traceConfig.getString("sampler") match {
+          case "always"   => ConstantSampler.Always
+          case "never"    => ConstantSampler.Never
+          case "random"   => RandomSampler(traceConfig.getDouble("random-sampler.probability"))
+          case "adaptive" => AdaptiveSampler()
+          case fqcn       =>
+            // We assume that any other value must be a FQCN of a Sampler implementation and try to build an
+            // instance from it.
+            try ClassLoading.createInstance[Sampler](fqcn)
+            catch {
+              case t: Throwable =>
+                _logger.error(s"Failed to create sampler instance from FQCN [$fqcn], falling back to random sampling with 10% probability", t)
+                RandomSampler(0.1d)
+            }
+        }
 
-          // We assume that any other value must be a FQCN of a Sampler implementation and try to build an
-          // instance from it.
-          try ClassLoading.createInstance[Sampler](fqcn) catch {
-            case t: Throwable =>
-              _logger.error(s"Failed to create sampler instance from FQCN [$fqcn], falling back to random sampling with 10% probability", t)
-              RandomSampler(0.1D)
-          }
+        val identifierScheme = traceConfig.getString("identifier-scheme") match {
+          case "single" => Identifier.Scheme.Single
+          case "double" => Identifier.Scheme.Double
+          case fqcn     =>
+            // We assume that any other value must be a FQCN of an Identifier Scheme implementation and try to build an
+            // instance from it.
+            try ClassLoading.createInstance[Identifier.Scheme](fqcn)
+            catch {
+              case t: Throwable =>
+                _logger.error(s"Failed to create identifier scheme instance from FQCN [$fqcn], falling back to the single scheme", t)
+                Identifier.Scheme.Single
+            }
+        }
+
+        if (sampler.isInstanceOf[AdaptiveSampler]) {
+          if (_adaptiveSamplerSchedule.isEmpty)
+            _adaptiveSamplerSchedule = Some(
+              scheduler.scheduleAtFixedRate(
+                adaptiveSamplerAdaptRunnable(),
+                1,
+                1,
+                TimeUnit.SECONDS
+              )
+            )
+        } else {
+          _adaptiveSamplerSchedule.foreach(_.cancel(false))
+          _adaptiveSamplerSchedule = None
+        }
+
+        val preStartHooks = traceConfig
+          .getStringList("hooks.pre-start")
+          .asScala
+          .map(preStart => ClassLoading.createInstance[Tracer.PreStartHook](preStart))
+          .toArray
+
+        val preFinishHooks = traceConfig
+          .getStringList("hooks.pre-finish")
+          .asScala
+          .map(preFinish => ClassLoading.createInstance[Tracer.PreFinishHook](preFinish))
+          .toArray
+
+        val traceReporterQueueSize = traceConfig.getInt("reporter-queue-size")
+        val joinRemoteParentsWithSameSpanID = traceConfig.getBoolean("join-remote-parents-with-same-span-id")
+        val tagWithUpstreamService = traceConfig.getBoolean("span-metric-tags.upstream-service")
+        val tagWithParentOperation = traceConfig.getBoolean("span-metric-tags.parent-operation")
+        val includeErrorStacktrace = traceConfig.getBoolean("include-error-stacktrace")
+
+        if (_traceReporterQueueSize != traceReporterQueueSize)
+          // By simply changing the buffer we might be dropping Spans that have not been collected yet by the reporters.
+          // Since reconfigures are very unlikely to happen beyond application startup this might not be a problem.
+          // If we eventually decide to keep those possible Spans around then we will need to change the queue type to
+          // multiple consumer as the reconfiguring thread will need to drain the contents before replacing.
+          _spanBuffer = new MpscArrayQueue[Span.Finished](traceReporterQueueSize)
+
+        _sampler = sampler
+        _identifierScheme = identifierScheme
+        _joinRemoteParentsWithSameSpanID = joinRemoteParentsWithSameSpanID
+        _includeErrorStacktrace = includeErrorStacktrace
+        _tagWithUpstreamService = tagWithUpstreamService
+        _tagWithParentOperation = tagWithParentOperation
+        _traceReporterQueueSize = traceReporterQueueSize
+        _preStartHooks = preStartHooks
+        _preFinishHooks = preFinishHooks
+
+      } catch {
+        case t: Throwable => _logger.error("Failed to reconfigure the Kamon tracer", t)
       }
-
-      val identifierScheme = traceConfig.getString("identifier-scheme") match {
-        case "single" => Identifier.Scheme.Single
-        case "double" => Identifier.Scheme.Double
-        case fqcn =>
-
-          // We assume that any other value must be a FQCN of an Identifier Scheme implementation and try to build an
-          // instance from it.
-          try ClassLoading.createInstance[Identifier.Scheme](fqcn) catch {
-            case t: Throwable =>
-              _logger.error(s"Failed to create identifier scheme instance from FQCN [$fqcn], falling back to the single scheme", t)
-              Identifier.Scheme.Single
-          }
-      }
-
-      if(sampler.isInstanceOf[AdaptiveSampler]) {
-        if(_adaptiveSamplerSchedule.isEmpty)
-          _adaptiveSamplerSchedule = Some(scheduler.scheduleAtFixedRate(
-            adaptiveSamplerAdaptRunnable(), 1, 1, TimeUnit.SECONDS
-          ))
-      } else {
-        _adaptiveSamplerSchedule.foreach(_.cancel(false))
-        _adaptiveSamplerSchedule = None
-      }
-
-      val preStartHooks = traceConfig.getStringList("hooks.pre-start").asScala
-        .map(preStart => ClassLoading.createInstance[Tracer.PreStartHook](preStart)).toArray
-
-      val preFinishHooks = traceConfig.getStringList("hooks.pre-finish").asScala
-        .map(preFinish => ClassLoading.createInstance[Tracer.PreFinishHook](preFinish)).toArray
-
-      val traceReporterQueueSize = traceConfig.getInt("reporter-queue-size")
-      val joinRemoteParentsWithSameSpanID = traceConfig.getBoolean("join-remote-parents-with-same-span-id")
-      val tagWithUpstreamService = traceConfig.getBoolean("span-metric-tags.upstream-service")
-      val tagWithParentOperation = traceConfig.getBoolean("span-metric-tags.parent-operation")
-      val includeErrorStacktrace = traceConfig.getBoolean("include-error-stacktrace")
-
-      if(_traceReporterQueueSize != traceReporterQueueSize) {
-        // By simply changing the buffer we might be dropping Spans that have not been collected yet by the reporters.
-        // Since reconfigures are very unlikely to happen beyond application startup this might not be a problem.
-        // If we eventually decide to keep those possible Spans around then we will need to change the queue type to
-        // multiple consumer as the reconfiguring thread will need to drain the contents before replacing.
-        _spanBuffer = new MpscArrayQueue[Span.Finished](traceReporterQueueSize)
-      }
-
-      _sampler = sampler
-      _identifierScheme = identifierScheme
-      _joinRemoteParentsWithSameSpanID = joinRemoteParentsWithSameSpanID
-      _includeErrorStacktrace = includeErrorStacktrace
-      _tagWithUpstreamService = tagWithUpstreamService
-      _tagWithParentOperation = tagWithParentOperation
-      _traceReporterQueueSize = traceReporterQueueSize
-      _preStartHooks = preStartHooks
-      _preFinishHooks = preFinishHooks
-
-    } catch {
-      case t: Throwable => _logger.error("Failed to reconfigure the Kamon tracer", t)
     }
-  }
 
-  private def adaptiveSamplerAdaptRunnable(): Runnable = new Runnable {
-    override def run(): Unit = {
-      _sampler match {
-        case adaptiveSampler: AdaptiveSampler => adaptiveSampler.adapt()
-        case _ => // just ignore any other sampler type.
-      }
+  private def adaptiveSamplerAdaptRunnable(): Runnable =
+    new Runnable {
+      override def run(): Unit =
+        _sampler match {
+          case adaptiveSampler: AdaptiveSampler => adaptiveSampler.adapt()
+          case _                                => // just ignore any other sampler type.
+        }
     }
-  }
 }
 
 object Tracer {
@@ -454,7 +469,6 @@ object Tracer {
   trait PreStartHook {
     def beforeStart(builder: SpanBuilder): Unit
   }
-
 
   /**
     * A callback function that is applied to all Span instances right before they are finished and flushed to Span

@@ -32,11 +32,9 @@ class KamonLifecycleSpec extends WordSpec with Matchers with Eventually {
     }
   }
 
-
-  def createProcessCommand(mainClass: String): String = {
+  def createProcessCommand(mainClass: String): String =
     System.getProperty("java.home") + File.separator + "bin" + File.separator + "java" +
-    " -cp " + System.getProperty("java.class.path") + " " + mainClass
-  }
+      " -cp " + System.getProperty("java.class.path") + " " + mainClass
 }
 
 class DummyMetricReporter extends kamon.module.MetricReporter {

@@ -66,7 +66,6 @@ class StatementInstrumentation extends InstrumentationBuilder {
     .advise(method("executeQuery"), classOf[PreparedStatementExecuteQueryMethodAdvisor])
     .advise(method("executeUpdate"), classOf[PreparedStatementExecuteUpdateMethodAdvisor])
 
-
   /**
     * We are specifically targeting some of the SQLite Driver classes because due to the way in which inheritance is
     * handled within the Driver these advices were not applied at all. All other drivers tested so far should work just
@@ -125,14 +124,11 @@ object HasStatementSQL {
 object DriverConnectAdvice {
 
   @Advice.OnMethodExit
-  def exit(@Advice.Argument(0) url: String, @Advice.Argument(1) properties: Properties, @Advice.Return connection: Any): Unit = {
-
+  def exit(@Advice.Argument(0) url: String, @Advice.Argument(1) properties: Properties, @Advice.Return connection: Any): Unit =
     // The connection could be null if there is more than one registered driver and the DriverManager is looping
     // through them to figure out which one accepts the URL.
-    if(connection != null) {
+    if (connection != null)
       connection.asInstanceOf[HasDatabaseTags].setDatabaseTags(createDatabaseTags(url, properties))
-    }
-  }
 
   private def createDatabaseTags(url: String, properties: Properties): DatabaseTags = {
     val splitUrl = url.split(':')
@@ -177,7 +173,6 @@ object ConnectionIsValidAdvice {
     scope.close()
 }
 
-
 object PgConnectionIsAliveAdvice {
 
   trait PgConnectionPrivateAccess {
@@ -188,10 +183,10 @@ object PgConnectionIsAliveAdvice {
 
   @Advice.OnMethodEnter
   def enter(@Advice.This connection: Any): Unit = {
-    if(connection != null) {
+    if (connection != null) {
       val statement = connection.asInstanceOf[PgConnectionPrivateAccess].getCheckConnectionStatement()
 
-      if(statement != null) {
+      if (statement != null) {
         val connectionPoolTelemetry = connection.asInstanceOf[HasConnectionPoolTelemetry].connectionPoolTelemetry
         statement.asInstanceOf[HasConnectionPoolTelemetry].setConnectionPoolTelemetry(connectionPoolTelemetry)
       }

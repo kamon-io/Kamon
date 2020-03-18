@@ -27,39 +27,23 @@ class MetricOverrideReporterSpec extends WordSpec with Matchers with MetricInspe
 
   "A MetricOverrideReporter" should {
     "apply metric overrides" in {
-      report(histogram("default.metric-name", Map.empty)) { snapshot =>
-        snapshot.histograms.head.name shouldEqual "new-metric-name"
-      }
+      report(histogram("default.metric-name", Map.empty))(snapshot => snapshot.histograms.head.name shouldEqual "new-metric-name")
 
-      report(rangeSampler("default.metric-name", Map.empty)) { snapshot =>
-        snapshot.rangeSamplers.head.name shouldEqual "new-metric-name"
-      }
+      report(rangeSampler("default.metric-name", Map.empty))(snapshot => snapshot.rangeSamplers.head.name shouldEqual "new-metric-name")
 
-      report(gauge("default.metric-name", Map.empty)) { snapshot =>
-        snapshot.gauges.head.name shouldEqual "new-metric-name"
-      }
+      report(gauge("default.metric-name", Map.empty))(snapshot => snapshot.gauges.head.name shouldEqual "new-metric-name")
 
-      report(counter("default.metric-name", Map.empty)) { snapshot =>
-        snapshot.counters.head.name shouldEqual "new-metric-name"
-      }
+      report(counter("default.metric-name", Map.empty))(snapshot => snapshot.counters.head.name shouldEqual "new-metric-name")
     }
 
     "not modify metrics that do not appear in the override configuration" in {
-      report(histogram("other-metric-name", Map.empty)) { snapshot =>
-        snapshot.histograms.head.name shouldEqual "other-metric-name"
-      }
+      report(histogram("other-metric-name", Map.empty))(snapshot => snapshot.histograms.head.name shouldEqual "other-metric-name")
 
-      report(rangeSampler("other-metric-name", Map.empty)) { snapshot =>
-        snapshot.rangeSamplers.head.name shouldEqual "other-metric-name"
-      }
+      report(rangeSampler("other-metric-name", Map.empty))(snapshot => snapshot.rangeSamplers.head.name shouldEqual "other-metric-name")
 
-      report(gauge("other-metric-name", Map.empty)) { snapshot =>
-        snapshot.gauges.head.name shouldEqual "other-metric-name"
-      }
+      report(gauge("other-metric-name", Map.empty))(snapshot => snapshot.gauges.head.name shouldEqual "other-metric-name")
 
-      report(counter("other-metric-name", Map.empty)) { snapshot =>
-        snapshot.counters.head.name shouldEqual "other-metric-name"
-      }
+      report(counter("other-metric-name", Map.empty))(snapshot => snapshot.counters.head.name shouldEqual "other-metric-name")
     }
 
     "apply metric tag deletes" in {
@@ -135,8 +119,7 @@ class MetricOverrideReporterSpec extends WordSpec with Matchers with MetricInspe
     }
   }
 
-  val config = ConfigFactory.parseString(
-    """
+  val config = ConfigFactory.parseString("""
       |kamon.prometheus {
       |  metric-overrides {
       |    "default.metric-name" {
@@ -163,9 +146,8 @@ class MetricOverrideReporterSpec extends WordSpec with Matchers with MetricInspe
 
     var latestSnapshot: PeriodSnapshot = _
 
-    override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
+    override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit =
       latestSnapshot = snapshot
-    }
   }
 
   def report(periodSnapshot: PeriodSnapshot)(assertions: PeriodSnapshot => Unit): Unit = {
@@ -173,14 +155,13 @@ class MetricOverrideReporterSpec extends WordSpec with Matchers with MetricInspe
     assertions(reporter.latestSnapshot)
   }
 
-  val emptyPeriodSnapshot = PeriodSnapshot(Kamon.clock().instant(), Kamon.clock().instant(),
-    Seq.empty, Seq.empty, Seq.empty, Seq.empty, Seq.empty)
+  val emptyPeriodSnapshot = PeriodSnapshot(Kamon.clock().instant(), Kamon.clock().instant(), Seq.empty, Seq.empty, Seq.empty, Seq.empty, Seq.empty)
 
   def counter(metricName: String, tags: Map[String, String]): PeriodSnapshot =
     emptyPeriodSnapshot.copy(counters = Seq(MetricSnapshotBuilder.counter(metricName, TagSet.from(tags), 1L)))
 
   def gauge(metricName: String, tags: Map[String, String]): PeriodSnapshot =
-    emptyPeriodSnapshot.copy(gauges = Seq(MetricSnapshotBuilder.gauge(metricName, TagSet.from(tags), 1D)))
+    emptyPeriodSnapshot.copy(gauges = Seq(MetricSnapshotBuilder.gauge(metricName, TagSet.from(tags), 1d)))
 
   def histogram(metricName: String, tags: Map[String, String]): PeriodSnapshot =
     emptyPeriodSnapshot.copy(histograms = Seq(MetricSnapshotBuilder.histogram(metricName, TagSet.from(tags))(1)))

@@ -23,7 +23,7 @@ import kamon.testkit.{Reconfigure, SpanInspection}
 import kamon.trace.Identifier.Factory.EightBytesIdentifier
 import kamon.trace.Span.Position
 import kamon.trace.Trace.SamplingDecision
-import kamon.trace.Hooks.{PreStart, PreFinish}
+import kamon.trace.Hooks.{PreFinish, PreStart}
 import org.scalatest.{Matchers, OptionValues, WordSpec}
 
 class TracerSpec extends WordSpec with Matchers with SpanInspection.Syntax with OptionValues {
@@ -39,7 +39,8 @@ class TracerSpec extends WordSpec with Matchers with SpanInspection.Syntax with 
     }
 
     "pass the operation name and tags to started Span" in {
-      val span = Kamon.spanBuilder("myOperation")
+      val span = Kamon
+        .spanBuilder("myOperation")
         .tagMetrics("metric-tag", "value")
         .tagMetrics("metric-tag", "value")
         .tag("hello", "world")
@@ -101,19 +102,16 @@ class TracerSpec extends WordSpec with Matchers with SpanInspection.Syntax with 
       val sampledRemoteParent = remoteSpan(SamplingDecision.Sample)
       val notSampledRemoteParent = remoteSpan(SamplingDecision.DoNotSample)
 
-      Kamon.spanBuilder("childOfSampled").asChildOf(sampledRemoteParent).start().trace
-        .samplingDecision shouldBe(SamplingDecision.Sample)
+      Kamon.spanBuilder("childOfSampled").asChildOf(sampledRemoteParent).start().trace.samplingDecision shouldBe (SamplingDecision.Sample)
 
-      Kamon.spanBuilder("childOfNotSampled").asChildOf(notSampledRemoteParent).start().trace
-        .samplingDecision shouldBe(SamplingDecision.DoNotSample)
+      Kamon.spanBuilder("childOfNotSampled").asChildOf(notSampledRemoteParent).start().trace.samplingDecision shouldBe (SamplingDecision.DoNotSample)
     }
 
     "take a sampling decision if the parent's decision is unknown" in {
       Reconfigure.sampleAlways()
 
       val unknownSamplingRemoteParent = remoteSpan(SamplingDecision.Unknown)
-      Kamon.spanBuilder("childOfSampled").asChildOf(unknownSamplingRemoteParent).start().trace
-        .samplingDecision shouldBe(SamplingDecision.Sample)
+      Kamon.spanBuilder("childOfSampled").asChildOf(unknownSamplingRemoteParent).start().trace.samplingDecision shouldBe (SamplingDecision.Sample)
 
       Reconfigure.reset()
     }
@@ -127,69 +125,89 @@ class TracerSpec extends WordSpec with Matchers with SpanInspection.Syntax with 
       val sampledParent = remoteSpan(SamplingDecision.Sample)
       val notSampledParent = remoteSpan(SamplingDecision.DoNotSample)
 
-      Kamon.spanBuilder("suggestions")
+      Kamon
+        .spanBuilder("suggestions")
         .asChildOf(sampledParent)
         .samplingDecision(SamplingDecision.Unknown)
         .start()
-        .trace.samplingDecision shouldBe SamplingDecision.Sample
+        .trace
+        .samplingDecision shouldBe SamplingDecision.Sample
 
-      Kamon.spanBuilder("suggestions")
+      Kamon
+        .spanBuilder("suggestions")
         .asChildOf(notSampledParent)
         .samplingDecision(SamplingDecision.Unknown)
         .start()
-        .trace.samplingDecision shouldBe SamplingDecision.DoNotSample
+        .trace
+        .samplingDecision shouldBe SamplingDecision.DoNotSample
     }
 
     "use sampling decision suggestions when there is no parent" in {
-      Kamon.spanBuilder("suggestions")
+      Kamon
+        .spanBuilder("suggestions")
         .samplingDecision(SamplingDecision.Unknown)
         .start()
-        .trace.samplingDecision shouldBe SamplingDecision.Unknown
+        .trace
+        .samplingDecision shouldBe SamplingDecision.Unknown
 
-      Kamon.spanBuilder("suggestions")
+      Kamon
+        .spanBuilder("suggestions")
         .samplingDecision(SamplingDecision.Sample)
         .start()
-        .trace.samplingDecision shouldBe SamplingDecision.Sample
+        .trace
+        .samplingDecision shouldBe SamplingDecision.Sample
 
-      Kamon.spanBuilder("suggestions")
+      Kamon
+        .spanBuilder("suggestions")
         .samplingDecision(SamplingDecision.DoNotSample)
         .start()
-        .trace.samplingDecision shouldBe SamplingDecision.DoNotSample
+        .trace
+        .samplingDecision shouldBe SamplingDecision.DoNotSample
     }
 
     "use sampling decision suggestions when the parent has an unknown sampling decision" in {
-      Kamon.spanBuilder("suggestions")
+      Kamon
+        .spanBuilder("suggestions")
         .asChildOf(remoteSpan(SamplingDecision.Unknown))
         .samplingDecision(SamplingDecision.Sample)
         .start()
-        .trace.samplingDecision shouldBe SamplingDecision.Sample
+        .trace
+        .samplingDecision shouldBe SamplingDecision.Sample
 
-      Kamon.spanBuilder("suggestions")
+      Kamon
+        .spanBuilder("suggestions")
         .asChildOf(remoteSpan(SamplingDecision.Unknown))
         .samplingDecision(SamplingDecision.DoNotSample)
         .start()
-        .trace.samplingDecision shouldBe SamplingDecision.DoNotSample
+        .trace
+        .samplingDecision shouldBe SamplingDecision.DoNotSample
 
-      Kamon.spanBuilder("suggestions")
+      Kamon
+        .spanBuilder("suggestions")
         .asChildOf(remoteSpan(SamplingDecision.Unknown))
         .samplingDecision(SamplingDecision.Unknown)
         .start()
-        .trace.samplingDecision shouldBe SamplingDecision.Unknown
+        .trace
+        .samplingDecision shouldBe SamplingDecision.Unknown
     }
 
     "not let Spans with remote parents remain with a Unknown sampling decision, even without suggestions" in {
-      Kamon.spanBuilder("suggestions")
+      Kamon
+        .spanBuilder("suggestions")
         .asChildOf(remoteSpan(SamplingDecision.Unknown))
         .start()
-        .trace.samplingDecision should not be(SamplingDecision.Unknown)
+        .trace
+        .samplingDecision should not be (SamplingDecision.Unknown)
     }
 
     "not change a Spans sampling decision if they were created with Sample or DoNotSample decisions sampling decision" in {
-      val sampledSpan = Kamon.spanBuilder("suggestions")
+      val sampledSpan = Kamon
+        .spanBuilder("suggestions")
         .samplingDecision(SamplingDecision.Sample)
         .start()
 
-      val notSampledSpan = Kamon.spanBuilder("suggestions")
+      val notSampledSpan = Kamon
+        .spanBuilder("suggestions")
         .samplingDecision(SamplingDecision.DoNotSample)
         .start()
 
@@ -203,7 +221,8 @@ class TracerSpec extends WordSpec with Matchers with SpanInspection.Syntax with 
     }
 
     "allow Spans to take a sampling decision if they were created with Unknown sampling decision" in {
-      val span = Kamon.spanBuilder("suggestions")
+      val span = Kamon
+        .spanBuilder("suggestions")
         .samplingDecision(SamplingDecision.Unknown)
         .start()
 
@@ -224,7 +243,8 @@ class TracerSpec extends WordSpec with Matchers with SpanInspection.Syntax with 
     }
 
     "allow explicitly dropping traces" in {
-      val span = Kamon.spanBuilder("suggestions")
+      val span = Kamon
+        .spanBuilder("suggestions")
         .samplingDecision(SamplingDecision.Sample)
         .start()
 
@@ -234,7 +254,8 @@ class TracerSpec extends WordSpec with Matchers with SpanInspection.Syntax with 
     }
 
     "allow explicitly keep traces" in {
-      val span = Kamon.spanBuilder("suggestions")
+      val span = Kamon
+        .spanBuilder("suggestions")
         .samplingDecision(SamplingDecision.DoNotSample)
         .start()
 
@@ -261,15 +282,23 @@ class TracerSpec extends WordSpec with Matchers with SpanInspection.Syntax with 
     }
 
     "collect exception information for failed Spans" in {
-      val byMessage = Kamon.spanBuilder("o1").start()
+      val byMessage = Kamon
+        .spanBuilder("o1")
+        .start()
         .fail("byMessage")
-      val byException = Kamon.spanBuilder("o2").start()
+      val byException = Kamon
+        .spanBuilder("o2")
+        .start()
         .fail(new RuntimeException("byException"))
-      val byMessageAndException = Kamon.spanBuilder("o3").start()
+      val byMessageAndException = Kamon
+        .spanBuilder("o3")
+        .start()
         .fail("byMessageAndException", new RuntimeException("byException"))
 
       Reconfigure.applyConfig("kamon.trace.include-error-stacktrace=false")
-      val byExceptionDisabled = Kamon.spanBuilder("o2").start()
+      val byExceptionDisabled = Kamon
+        .spanBuilder("o2")
+        .start()
         .fail(new RuntimeException("byExceptionDisabled"))
 
       byMessage.metricTags().get(plainBoolean("error")) shouldBe true

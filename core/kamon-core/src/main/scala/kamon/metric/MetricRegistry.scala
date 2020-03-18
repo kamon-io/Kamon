@@ -41,16 +41,14 @@ class MetricRegistry(config: Config, scheduler: ScheduledExecutorService, clock:
   @volatile private var _lastSnapshotInstant: Instant = clock.instant()
   @volatile private var _factory: MetricFactory = MetricFactory.from(config, scheduler, clock)
 
-
   /**
     * Retrieves or registers a new counter-based metric.
     */
-  def counter(name: String, description: Option[String], unit: Option[MeasurementUnit], autoUpdateInterval: Option[Duration]):
-      Metric.Counter = {
+  def counter(name: String, description: Option[String], unit: Option[MeasurementUnit], autoUpdateInterval: Option[Duration]): Metric.Counter = {
 
     val metric = validateInstrumentType[Metric.Counter] {
       _metrics.atomicGetOrElseUpdate(name, _factory.counter(name, description, unit, autoUpdateInterval))
-    } (name, Instrument.Type.Counter)
+    }(name, Instrument.Type.Counter)
 
     checkDescription(metric.name, metric.description, description)
     checkUnit(metric.name, metric.settings.unit, unit)
@@ -61,12 +59,11 @@ class MetricRegistry(config: Config, scheduler: ScheduledExecutorService, clock:
   /**
     * Retrieves or registers a new gauge-based metric.
     */
-  def gauge(name: String, description: Option[String], unit: Option[MeasurementUnit], autoUpdateInterval: Option[Duration]):
-  Metric.Gauge = {
+  def gauge(name: String, description: Option[String], unit: Option[MeasurementUnit], autoUpdateInterval: Option[Duration]): Metric.Gauge = {
 
     val metric = validateInstrumentType[Metric.Gauge] {
       _metrics.atomicGetOrElseUpdate(name, _factory.gauge(name, description, unit, autoUpdateInterval))
-    } (name, Instrument.Type.Gauge)
+    }(name, Instrument.Type.Gauge)
 
     checkDescription(metric.name, metric.description, description)
     checkUnit(metric.name, metric.settings.unit, unit)
@@ -77,12 +74,17 @@ class MetricRegistry(config: Config, scheduler: ScheduledExecutorService, clock:
   /**
     * Retrieves or registers a new histogram-based metric.
     */
-  def histogram(name: String, description: Option[String], unit: Option[MeasurementUnit], dynamicRange: Option[DynamicRange],
-    autoUpdateInterval: Option[Duration]): Metric.Histogram = {
+  def histogram(
+    name: String,
+    description: Option[String],
+    unit: Option[MeasurementUnit],
+    dynamicRange: Option[DynamicRange],
+    autoUpdateInterval: Option[Duration]
+  ): Metric.Histogram = {
 
     val metric = validateInstrumentType[Metric.Histogram] {
       _metrics.atomicGetOrElseUpdate(name, _factory.histogram(name, description, unit, dynamicRange, autoUpdateInterval))
-    } (name, Instrument.Type.Histogram)
+    }(name, Instrument.Type.Histogram)
 
     checkDescription(metric.name, metric.description, description)
     checkUnit(metric.name, metric.settings.unit, unit)
@@ -97,9 +99,8 @@ class MetricRegistry(config: Config, scheduler: ScheduledExecutorService, clock:
   def timer(name: String, description: Option[String], dynamicRange: Option[DynamicRange], autoUpdateInterval: Option[Duration]): Metric.Timer = {
 
     val metric = validateInstrumentType[Metric.Timer] {
-      _metrics.atomicGetOrElseUpdate(name, _factory.timer(name, description, Some(MeasurementUnit.time.nanoseconds),
-        dynamicRange, autoUpdateInterval))
-    } (name, Instrument.Type.Timer)
+      _metrics.atomicGetOrElseUpdate(name, _factory.timer(name, description, Some(MeasurementUnit.time.nanoseconds), dynamicRange, autoUpdateInterval))
+    }(name, Instrument.Type.Timer)
 
     checkDescription(metric.name, metric.description, description)
     checkDynamicRange(metric.name, metric.settings.dynamicRange, dynamicRange)
@@ -110,12 +111,17 @@ class MetricRegistry(config: Config, scheduler: ScheduledExecutorService, clock:
   /**
     * Retrieves or registers a new range sampler-based metric.
     */
-  def rangeSampler(name: String, description: Option[String], unit: Option[MeasurementUnit], dynamicRange: Option[DynamicRange],
-    autoUpdateInterval: Option[Duration]): Metric.RangeSampler = {
+  def rangeSampler(
+    name: String,
+    description: Option[String],
+    unit: Option[MeasurementUnit],
+    dynamicRange: Option[DynamicRange],
+    autoUpdateInterval: Option[Duration]
+  ): Metric.RangeSampler = {
 
     val metric = validateInstrumentType[Metric.RangeSampler] {
       _metrics.atomicGetOrElseUpdate(name, _factory.rangeSampler(name, description, unit, dynamicRange, autoUpdateInterval))
-    } (name, Instrument.Type.RangeSampler)
+    }(name, Instrument.Type.RangeSampler)
 
     checkDescription(metric.name, metric.description, description)
     checkUnit(metric.name, metric.settings.unit, unit)
@@ -127,79 +133,79 @@ class MetricRegistry(config: Config, scheduler: ScheduledExecutorService, clock:
   /**
     * Reconfigures the registry using the provided configuration.
     */
-  def reconfigure(newConfig: Config): Unit = {
+  def reconfigure(newConfig: Config): Unit =
     _factory = MetricFactory.from(newConfig, scheduler, clock)
-  }
 
   private def validateInstrumentType[T](metric: => Metric[_, _])(name: String, instrumentType: Instrument.Type): T = {
     val lookedUpMetric = metric
-    if(instrumentType.implementation.isInstance(lookedUpMetric))
+    if (instrumentType.implementation.isInstance(lookedUpMetric))
       lookedUpMetric.asInstanceOf[T]
     else
       throw new IllegalArgumentException(
         s"Cannot redefine metric [$name] as a [${instrumentType.name}], it was already " +
-        s"registered as a [${implementationName(metric)}]"
+          s"registered as a [${implementationName(metric)}]"
       )
   }
 
-  private def implementationName(metric: Metric[_, _]): String = metric match {
-    case _: Metric.Counter      => Instrument.Type.Counter.name
-    case _: Metric.Gauge        => Instrument.Type.Gauge.name
-    case _: Metric.Histogram    => Instrument.Type.Histogram.name
-    case _: Metric.RangeSampler => Instrument.Type.RangeSampler.name
-    case _: Metric.Timer        => Instrument.Type.Timer.name
-  }
+  private def implementationName(metric: Metric[_, _]): String =
+    metric match {
+      case _: Metric.Counter      => Instrument.Type.Counter.name
+      case _: Metric.Gauge        => Instrument.Type.Gauge.name
+      case _: Metric.Histogram    => Instrument.Type.Histogram.name
+      case _: Metric.RangeSampler => Instrument.Type.RangeSampler.name
+      case _: Metric.Timer        => Instrument.Type.Timer.name
+    }
 
   private def checkInstrumentType(name: String, instrumentType: Instrument.Type, metric: Metric[_, _]): Unit =
-    if(!instrumentType.implementation.isInstance(metric))
+    if (!instrumentType.implementation.isInstance(metric))
       sys.error(s"Cannot redefine metric [$name] as a [${instrumentType.name}], it was already registered as a [${metric.getClass.getName}]")
 
   private def checkDescription(name: String, description: String, providedDescription: Option[String]): Unit =
-    if(providedDescription.exists(d => d != description))
-      _logger.warn(s"Ignoring new description [${providedDescription.getOrElse("")}] for metric [${name}]")
+    if (providedDescription.exists(d => d != description))
+      _logger.warn(s"Ignoring new description [${providedDescription.getOrElse("")}] for metric [$name]")
 
   private def checkUnit(name: String, unit: MeasurementUnit, providedUnit: Option[MeasurementUnit]): Unit =
-    if(providedUnit.exists(u => u != unit))
-      _logger.warn(s"Ignoring new unit [${providedUnit.getOrElse("")}] for metric [${name}]")
+    if (providedUnit.exists(u => u != unit))
+      _logger.warn(s"Ignoring new unit [${providedUnit.getOrElse("")}] for metric [$name]")
 
   private def checkAutoUpdate(name: String, autoUpdateInterval: Duration, providedAutoUpdateInterval: Option[Duration]): Unit =
-    if(providedAutoUpdateInterval.exists(u => u != autoUpdateInterval))
-      _logger.warn(s"Ignoring new auto-update interval [${providedAutoUpdateInterval.getOrElse("")}] for metric [${name}]")
+    if (providedAutoUpdateInterval.exists(u => u != autoUpdateInterval))
+      _logger.warn(s"Ignoring new auto-update interval [${providedAutoUpdateInterval.getOrElse("")}] for metric [$name]")
 
   private def checkDynamicRange(name: String, dynamicRange: DynamicRange, providedDynamicRange: Option[DynamicRange]): Unit =
-    if(providedDynamicRange.exists(dr => dr != dynamicRange))
-      _logger.warn(s"Ignoring new dynamic range [${providedDynamicRange.getOrElse("")}] for metric [${name}]")
-
-
+    if (providedDynamicRange.exists(dr => dr != dynamicRange))
+      _logger.warn(s"Ignoring new dynamic range [${providedDynamicRange.getOrElse("")}] for metric [$name]")
 
   /**
     * Creates a period snapshot of all metrics contained in this registry. The period always starts at the instant of
     * the last snapshot taken in which the state was reset and until the current instant. The special case of the first
     * snapshot uses the registry creation instant as the starting point.
     */
-  def snapshot(resetState: Boolean): PeriodSnapshot = synchronized {
-    var counters = List.empty[MetricSnapshot.Values[Long]]
-    var gauges = List.empty[MetricSnapshot.Values[Double]]
-    var histograms = List.empty[MetricSnapshot.Distributions]
-    var timers = List.empty[MetricSnapshot.Distributions]
-    var rangeSamplers = List.empty[MetricSnapshot.Distributions]
+  def snapshot(resetState: Boolean): PeriodSnapshot =
+    synchronized {
+      var counters = List.empty[MetricSnapshot.Values[Long]]
+      var gauges = List.empty[MetricSnapshot.Values[Double]]
+      var histograms = List.empty[MetricSnapshot.Distributions]
+      var timers = List.empty[MetricSnapshot.Distributions]
+      var rangeSamplers = List.empty[MetricSnapshot.Distributions]
 
-    _metrics.foreach {
-      case (_, metric) => metric match {
-        case m: Metric.Counter      => counters = m.snapshot(resetState).asInstanceOf[MetricSnapshot.Values[Long]] :: counters
-        case m: Metric.Gauge        => gauges = m.snapshot(resetState).asInstanceOf[MetricSnapshot.Values[Double]] :: gauges
-        case m: Metric.Histogram    => histograms = m.snapshot(resetState).asInstanceOf[MetricSnapshot.Distributions] :: histograms
-        case m: Metric.Timer        => timers = m.snapshot(resetState).asInstanceOf[MetricSnapshot.Distributions] :: timers
-        case m: Metric.RangeSampler => rangeSamplers = m.snapshot(resetState).asInstanceOf[MetricSnapshot.Distributions] :: rangeSamplers
+      _metrics.foreach {
+        case (_, metric) =>
+          metric match {
+            case m: Metric.Counter      => counters = m.snapshot(resetState).asInstanceOf[MetricSnapshot.Values[Long]] :: counters
+            case m: Metric.Gauge        => gauges = m.snapshot(resetState).asInstanceOf[MetricSnapshot.Values[Double]] :: gauges
+            case m: Metric.Histogram    => histograms = m.snapshot(resetState).asInstanceOf[MetricSnapshot.Distributions] :: histograms
+            case m: Metric.Timer        => timers = m.snapshot(resetState).asInstanceOf[MetricSnapshot.Distributions] :: timers
+            case m: Metric.RangeSampler => rangeSamplers = m.snapshot(resetState).asInstanceOf[MetricSnapshot.Distributions] :: rangeSamplers
+          }
       }
+
+      val periodStart = _lastSnapshotInstant
+      val periodEnd = clock.instant()
+      _lastSnapshotInstant = periodEnd
+
+      PeriodSnapshot(periodStart, periodEnd, counters, gauges, histograms, timers, rangeSamplers)
     }
-
-    val periodStart = _lastSnapshotInstant
-    val periodEnd = clock.instant()
-    _lastSnapshotInstant = periodEnd
-
-    PeriodSnapshot(periodStart, periodEnd, counters, gauges, histograms, timers, rangeSamplers)
-  }
 
   /** Returns the current status of all metrics contained in the registry */
   def status(): Status.MetricRegistry =

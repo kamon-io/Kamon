@@ -25,7 +25,7 @@ import kamon.tag.Lookups._
 import kamon.tag.TagSet
 import kamon.testkit.{InstrumentInspection, MetricInspection, Reconfigure, SpanInspection}
 import kamon.trace.Span
-import kamon.{Kamon, testkit}
+import kamon.{testkit, Kamon}
 import org.scalactic.TimesOnInt.convertIntToRepeater
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.SpanSugar
@@ -34,22 +34,22 @@ import org.scalatest.{BeforeAndAfterAll, Matchers, OptionValues, WordSpec}
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class AnnotationInstrumentationSpec extends WordSpec
-  with Matchers
-  with Eventually
-  with SpanSugar
-  with Reconfigure
-  with InstrumentInspection.Syntax
-  with SpanInspection
-  with MetricInspection.Syntax
-  with BeforeAndAfterAll
-  with OptionValues {
-
+class AnnotationInstrumentationSpec
+    extends WordSpec
+    with Matchers
+    with Eventually
+    with SpanSugar
+    with Reconfigure
+    with InstrumentInspection.Syntax
+    with SpanInspection
+    with MetricInspection.Syntax
+    with BeforeAndAfterAll
+    with OptionValues {
 
   "the Kamon Annotation module" should {
 
     "create a new Span for methods annotated with @Trace" in {
-     for (id <- 1 to 10) Annotated(id).trace()
+      for (id <- 1 to 10) Annotated(id).trace()
 
       eventually(timeout(3 seconds)) {
         val span = reporter.nextSpan().value
@@ -118,14 +118,13 @@ class AnnotationInstrumentationSpec extends WordSpec
     "count the invocations of a method annotated with @Count and evaluate EL expressions" in {
       for (id <- 1 to 2) Annotated(id).countWithEL()
 
-      Kamon.counter("counter:1").withTags(TagSet.from(Map("counter" -> "1", "env" -> "prod"))).value()should be(1)
-      Kamon.counter("counter:2").withTags(TagSet.from(Map("counter" -> "1", "env" -> "prod"))).value()should be(1)
+      Kamon.counter("counter:1").withTags(TagSet.from(Map("counter" -> "1", "env" -> "prod"))).value() should be(1)
+      Kamon.counter("counter:2").withTags(TagSet.from(Map("counter" -> "1", "env" -> "prod"))).value() should be(1)
     }
 
     "count the current invocations of a method annotated with @TrackConcurrency" in {
-      for (id <- 1 to 10) {
+      for (id <- 1 to 10)
         Annotated(id).trackConcurrency()
-      }
       eventually(timeout(5 seconds)) {
         Kamon.rangeSampler("minMax").withoutTags().distribution().max should be(0)
       }
@@ -139,8 +138,11 @@ class AnnotationInstrumentationSpec extends WordSpec
       }
 
       eventually(timeout(5 seconds)) {
-        Kamon.rangeSampler("kamon.annotation.Annotated.trackConcurrencyWithoutParameters")
-          .withoutTags().distribution().max should be > 0L
+        Kamon
+          .rangeSampler("kamon.annotation.Annotated.trackConcurrencyWithoutParameters")
+          .withoutTags()
+          .distribution()
+          .max should be > 0L
       }
     }
 
@@ -152,8 +154,11 @@ class AnnotationInstrumentationSpec extends WordSpec
       }
 
       eventually(timeout(5 seconds)) {
-        Kamon.rangeSampler("kamon.annotation.Annotated.trackConcurrencyWithFuture")
-          .withoutTags().distribution().max should be > 0L
+        Kamon
+          .rangeSampler("kamon.annotation.Annotated.trackConcurrencyWithFuture")
+          .withoutTags()
+          .distribution()
+          .max should be > 0L
       }
     }
 
@@ -165,8 +170,11 @@ class AnnotationInstrumentationSpec extends WordSpec
       }
 
       eventually(timeout(5 seconds)) {
-        Kamon.rangeSampler("kamon.annotation.Annotated.trackConcurrencyWithCompletionStage")
-          .withoutTags().distribution().max should be > 0L
+        Kamon
+          .rangeSampler("kamon.annotation.Annotated.trackConcurrencyWithCompletionStage")
+          .withoutTags()
+          .distribution()
+          .max should be > 0L
       }
     }
 
@@ -243,13 +251,11 @@ class AnnotationInstrumentationSpec extends WordSpec
     registration = Kamon.registerModule("test-module", reporter)
   }
 
-  override protected def afterAll(): Unit = {
+  override protected def afterAll(): Unit =
     registration.cancel()
-  }
 
-  def stringTag(span: Span.Finished)(tag: String): String = {
+  def stringTag(span: Span.Finished)(tag: String): String =
     span.tags.get(plain(tag))
-  }
 }
 
 case class Annotated(id: Long) {
@@ -268,7 +274,7 @@ case class Annotated(id: Long) {
   def traceWithCompletionStage(): CompletionStage[String] =
     CompletableFuture.completedFuture("Hello")
 
-  @CustomizeInnerSpan(operationName = "customized-operation-name" )
+  @CustomizeInnerSpan(operationName = "customized-operation-name")
   def traceWithSpanCustomizer(): Unit = {
     val spanBuilder = Kamon.spanBuilder("unknown").tag("slow-service", "service").tag("env", "prod").start()
 
@@ -326,10 +332,9 @@ case class Annotated(id: Long) {
   @Histogram(name = "#{'histogram:' += this.id}", tags = "${'histogram':'hdr', 'env':'prod'}")
   def histogramWithEL(operationName: Long): Long = operationName
 
-  def customizeSpan():Unit = {}
+  def customizeSpan(): Unit = {}
 }
 
 object Annotated {
   def apply(): Annotated = new Annotated(0L)
 }
-

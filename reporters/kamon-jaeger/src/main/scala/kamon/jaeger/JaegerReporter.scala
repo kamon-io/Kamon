@@ -23,9 +23,8 @@ import kamon.trace.Span
 import org.slf4j.LoggerFactory
 
 class JaegerReporterFactory extends ModuleFactory {
-  override def create(settings: ModuleFactory.Settings): module.Module = {
+  override def create(settings: ModuleFactory.Settings): module.Module =
     new JaegerReporter(JaegerClient(settings.config))
-  }
 }
 
 class JaegerReporter(@volatile private var jaegerClient: JaegerClient) extends SpanReporter {
@@ -34,16 +33,12 @@ class JaegerReporter(@volatile private var jaegerClient: JaegerClient) extends S
 
   logger.info("Started the Kamon Jaeger reporter")
 
-  override def reconfigure(newConfig: Config): Unit = {
+  override def reconfigure(newConfig: Config): Unit =
     jaegerClient = JaegerClient(newConfig)
-  }
 
-  override def stop(): Unit = {
+  override def stop(): Unit =
     logger.info("Stopped the Kamon Jaeger reporter")
-  }
 
-  override def reportSpans(spans: Seq[Span.Finished]): Unit = {
+  override def reportSpans(spans: Seq[Span.Finished]): Unit =
     jaegerClient.sendSpans(spans)
-  }
 }
-

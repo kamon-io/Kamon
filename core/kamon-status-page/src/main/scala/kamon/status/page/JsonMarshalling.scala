@@ -26,7 +26,6 @@ import kamon.tag.{Tag, TagSet}
 
 import scala.compat.Platform.EOL
 
-
 trait JsonMarshalling[T] {
 
   /**
@@ -40,20 +39,23 @@ object JsonMarshalling {
 
   implicit object ModuleRegistryStatusJsonMarshalling extends JsonMarshalling[Status.ModuleRegistry] {
     override def toJson(instance: Status.ModuleRegistry, builder: JavaStringBuilder): Unit = {
-      def moduleKindString(moduleKind: Module.Kind): String = moduleKind match {
-        case Module.Kind.Combined => "combined"
-        case Module.Kind.Metric   => "metric"
-        case Module.Kind.Span     => "span"
-        case Module.Kind.Plain    => "plain"
-        case Module.Kind.Unknown  => "unknown"
-      }
+      def moduleKindString(moduleKind: Module.Kind): String =
+        moduleKind match {
+          case Module.Kind.Combined => "combined"
+          case Module.Kind.Metric   => "metric"
+          case Module.Kind.Span     => "span"
+          case Module.Kind.Plain    => "plain"
+          case Module.Kind.Unknown  => "unknown"
+        }
 
-      val array = JsonWriter.on(builder)
+      val array = JsonWriter
+        .on(builder)
         .`object`()
         .array("modules")
 
-      instance.modules.foreach(m => {
-        array.`object`()
+      instance.modules.foreach { m =>
+        array
+          .`object`()
           .value("name", m.name)
           .value("description", m.description)
           .value("clazz", m.clazz)
@@ -62,7 +64,7 @@ object JsonMarshalling {
           .value("enabled", m.enabled)
           .value("started", m.started)
           .end()
-      })
+      }
 
       array.end().end().done()
     }
@@ -70,20 +72,20 @@ object JsonMarshalling {
 
   implicit object BaseInfoJsonMarshalling extends JsonMarshalling[Status.Settings] {
     override def toJson(instance: Status.Settings, builder: JavaStringBuilder): Unit = {
-      val baseConfigJson = JsonWriter.on(builder)
+      val baseConfigJson = JsonWriter
+        .on(builder)
         .`object`()
-          .value("version", instance.version)
-          .value("config", instance.config.root().render(ConfigRenderOptions.concise()))
+        .value("version", instance.version)
+        .value("config", instance.config.root().render(ConfigRenderOptions.concise()))
 
-      baseConfigJson.`object`("environment")
+      baseConfigJson
+        .`object`("environment")
         .value("service", instance.environment.service)
         .value("host", instance.environment.host)
         .value("instance", instance.environment.instance)
         .`object`("tags")
 
-      instance.environment.tags.iterator(_.toString).foreach { pair =>
-        baseConfigJson.value(pair.key, pair.value)
-      }
+      instance.environment.tags.iterator(_.toString).foreach(pair => baseConfigJson.value(pair.key, pair.value))
 
       baseConfigJson
         .end() // ends tags
@@ -95,19 +97,20 @@ object JsonMarshalling {
 
   implicit object MetricRegistryStatusJsonMarshalling extends JsonMarshalling[Status.MetricRegistry] {
     override def toJson(instance: Status.MetricRegistry, builder: JavaStringBuilder): Unit = {
-      val metricsObject = JsonWriter.on(builder)
+      val metricsObject = JsonWriter
+        .on(builder)
         .`object`
-          .array("metrics")
+        .array("metrics")
 
-      instance.metrics.foreach(metric => {
+      instance.metrics.foreach { metric =>
         metricsObject
           .`object`()
-            .value("name", metric.name)
-            .value("description", metric.description)
-            .value("type", metric.instrumentType.name)
-            .value("unitDimension", metric.unit.dimension.name)
-            .value("unitMagnitude", metric.unit.magnitude.name)
-            .value("instrumentType", metric.instrumentType.name)
+          .value("name", metric.name)
+          .value("description", metric.description)
+          .value("type", metric.instrumentType.name)
+          .value("unitDimension", metric.unit.dimension.name)
+          .value("unitMagnitude", metric.unit.magnitude.name)
+          .value("instrumentType", metric.instrumentType.name)
 
         val instrumentsArray = metricsObject.array("instruments")
         metric.instruments.foreach(i => tagSetToJson(i.tags, instrumentsArray))
@@ -115,7 +118,7 @@ object JsonMarshalling {
         metricsObject
           .end() // instruments
           .end() // metric info
-      })
+      }
 
       metricsObject
         .end() // metrics array
@@ -132,13 +135,15 @@ object JsonMarshalling {
 
   implicit object InstrumentationStatusJsonMarshalling extends JsonMarshalling[Status.Instrumentation] {
     override def toJson(instance: Status.Instrumentation, builder: JavaStringBuilder): Unit = {
-      val instrumentationObject = JsonWriter.on(builder)
+      val instrumentationObject = JsonWriter
+        .on(builder)
         .`object`()
-          .value("present", instance.present)
-          .`object`("modules")
+        .value("present", instance.present)
+        .`object`("modules")
 
       instance.modules.foreach { module =>
-        instrumentationObject.`object`(module.path)
+        instrumentationObject
+          .`object`(module.path)
           .value("name", module.name)
           .value("description", module.description)
           .value("enabled", module.enabled)
@@ -152,12 +157,13 @@ object JsonMarshalling {
 
       instance.errors.foreach { typeError =>
         val errorsArray = instrumentationObject.array(typeError.targetType)
-        typeError.errors.foreach(t => {
-          errorsArray.`object`()
+        typeError.errors.foreach { t =>
+          errorsArray
+            .`object`()
             .value("message", t.getMessage)
             .value("stacktrace", t.getStackTrace.mkString("", EOL, EOL))
             .end()
-        })
+        }
         errorsArray.end()
       }
 

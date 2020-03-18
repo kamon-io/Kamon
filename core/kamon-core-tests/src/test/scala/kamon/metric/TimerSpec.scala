@@ -19,7 +19,6 @@ import kamon.Kamon
 import kamon.testkit.InstrumentInspection
 import org.scalatest.{Matchers, WordSpec}
 
-
 class TimerSpec extends WordSpec with Matchers with InstrumentInspection.Syntax {
 
   "a Timer" should {
@@ -41,7 +40,6 @@ class TimerSpec extends WordSpec with Matchers with InstrumentInspection.Syntax 
 
       timer.distribution().count shouldBe 1
     }
-
 
     "allow to record values and produce distributions as Histograms do" in {
       val timer = Kamon.timer("test-timer").withoutTags()

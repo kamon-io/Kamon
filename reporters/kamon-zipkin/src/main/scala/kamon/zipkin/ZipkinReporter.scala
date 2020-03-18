@@ -48,9 +48,11 @@ class ZipkinReporter(configPath: String) extends SpanReporter {
 
   def checkJoinParameter() = {
     val joinRemoteParentsWithSameID = Kamon.config().getBoolean("kamon.trace.join-remote-parents-with-same-span-id")
-    if(!joinRemoteParentsWithSameID)
-      _logger.warn("For full Zipkin compatibility enable `kamon.trace.join-remote-parents-with-same-span-id` to " +
-        "preserve span id across client/server sides of a Span.")
+    if (!joinRemoteParentsWithSameID)
+      _logger.warn(
+        "For full Zipkin compatibility enable `kamon.trace.join-remote-parents-with-same-span-id` to " +
+          "preserve span id across client/server sides of a Span."
+      )
   }
 
   override def reportSpans(spans: Seq[Span.Finished]): Unit =
@@ -60,7 +62,8 @@ class ZipkinReporter(configPath: String) extends SpanReporter {
     val duration = Math.floorDiv(Clock.nanosBetween(kamonSpan.from, kamonSpan.to), 1000L)
     // Zipkin uses null to identify no identifier
     val parentId: String = if (kamonSpan.parentId.isEmpty) null else kamonSpan.parentId.string
-    val builder = ZipkinSpan.newBuilder()
+    val builder = ZipkinSpan
+      .newBuilder()
       .localEndpoint(_localEndpoint)
       .traceId(kamonSpan.trace.id.string)
       .id(kamonSpan.id.string)
@@ -72,14 +75,15 @@ class ZipkinReporter(configPath: String) extends SpanReporter {
     val kind = spanKind(kamonSpan)
     builder.kind(kind)
 
-    if(kind == ZipkinSpan.Kind.CLIENT) {
-      val remoteEndpoint = Endpoint.newBuilder()
+    if (kind == ZipkinSpan.Kind.CLIENT) {
+      val remoteEndpoint = Endpoint
+        .newBuilder()
         .ip(getStringTag(kamonSpan, PeerKeys.IPv4))
         .ip(getStringTag(kamonSpan, PeerKeys.IPv6))
         .port(getLongTag(kamonSpan, PeerKeys.Port).toInt)
         .build()
 
-      if(hasAnyData(remoteEndpoint))
+      if (hasAnyData(remoteEndpoint))
         builder.remoteEndpoint(remoteEndpoint)
     }
 
@@ -93,16 +97,18 @@ class ZipkinReporter(configPath: String) extends SpanReporter {
     builder.build()
   }
 
-  private def spanKind(span: Span.Finished): ZipkinSpan.Kind = span.kind match {
-    case Span.Kind.Client   => ZipkinSpan.Kind.CLIENT
-    case Span.Kind.Server   => ZipkinSpan.Kind.SERVER
-    case Span.Kind.Producer => ZipkinSpan.Kind.PRODUCER
-    case Span.Kind.Consumer => ZipkinSpan.Kind.CONSUMER
-    case _ => null
-  }
+  private def spanKind(span: Span.Finished): ZipkinSpan.Kind =
+    span.kind match {
+      case Span.Kind.Client   => ZipkinSpan.Kind.CLIENT
+      case Span.Kind.Server   => ZipkinSpan.Kind.SERVER
+      case Span.Kind.Producer => ZipkinSpan.Kind.PRODUCER
+      case Span.Kind.Consumer => ZipkinSpan.Kind.CONSUMER
+      case _                  => null
+    }
 
   private def addTags(tags: TagSet, builder: ZipkinSpan.Builder): Unit =
-    tags.iterator(_.toString)
+    tags
+      .iterator(_.toString)
       .filterNot(pair => pair.key == Span.TagKeys.Error && pair.value == "false") // zipkin considers any error tag as failed request
       .foreach(pair => builder.putTag(pair.key, pair.value))
 
@@ -112,10 +118,8 @@ class ZipkinReporter(configPath: String) extends SpanReporter {
   private def getLongTag(span: Span.Finished, tagName: String): Long =
     span.tags.get(longOption(tagName)).orElse(span.metricTags.get(longOption(tagName))).getOrElse(0L)
 
-
   private def hasAnyData(endpoint: Endpoint): Boolean =
     endpoint.ipv4() != null || endpoint.ipv6() != null || endpoint.port() != null || endpoint.serviceName() != null
-
 
   override def reconfigure(newConfig: Config): Unit = {
     _localEndpoint = buildEndpoint()
@@ -128,7 +132,8 @@ class ZipkinReporter(configPath: String) extends SpanReporter {
     val localAddress = Try(InetAddress.getByName(env.host))
       .getOrElse(InetAddress.getLocalHost)
 
-    Endpoint.newBuilder()
+    Endpoint
+      .newBuilder()
       .ip(localAddress)
       .serviceName(env.service)
       .build()
@@ -153,9 +158,9 @@ object ZipkinReporter {
   }
 
   private object PeerKeys {
-    val Host     = "peer.host"
-    val Port     = "peer.port"
-    val IPv4     = "peer.ipv4"
-    val IPv6     = "peer.ipv6"
+    val Host = "peer.host"
+    val Port = "peer.port"
+    val IPv4 = "peer.ipv4"
+    val IPv6 = "peer.ipv6"
   }
 }

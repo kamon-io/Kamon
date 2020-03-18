@@ -39,10 +39,11 @@ sealed trait ClassLoading {
   /**
     * Changes the ClassLoader used by Kamon to load resources and dynamically created instances.
     */
-  def changeClassLoader(classLoader: ClassLoader): Unit = synchronized {
-    _dynamicAccessClassLoader = classLoader
-    _dynamicAccess = new DynamicAccess(_dynamicAccessClassLoader)
-  }
+  def changeClassLoader(classLoader: ClassLoader): Unit =
+    synchronized {
+      _dynamicAccessClassLoader = classLoader
+      _dynamicAccess = new DynamicAccess(_dynamicAccessClassLoader)
+    }
 
   /**
     * Tries to create an instance of a class with the provided fully-qualified class name and its no-arg constructor.

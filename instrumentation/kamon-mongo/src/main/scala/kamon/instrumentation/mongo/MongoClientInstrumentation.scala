@@ -94,19 +94,17 @@ class MongoClientInstrumentation extends InstrumentationBuilder {
 
 }
 
-
 class CopyOperationNameIntoMixedBulkWriteOperation
 object CopyOperationNameIntoMixedBulkWriteOperation {
 
   private val x = new MongoNamespace("FullName.Something")
 
   @Advice.OnMethodExit
-  def exit(@Advice.Return writeOperation: Any, @Advice.Origin("#m") methodName: String): Unit = {
+  def exit(@Advice.Return writeOperation: Any, @Advice.Origin("#m") methodName: String): Unit =
     writeOperation match {
       case hon: HasOperationName => hon.setName(methodName)
-      case _ =>
+      case _                     =>
     }
-  }
 }
 
 object MongoClientInstrumentation {
@@ -127,20 +125,21 @@ object MongoClientInstrumentation {
   }
 
   val OperationClassToOperation = Map(
-    "com.mongodb.operation.AggregateOperationImpl" -> "aggregate",
-    "com.mongodb.operation.CountOperation" -> "countDocuments",
-    "com.mongodb.operation.DistinctOperation" -> "distinct",
-    "com.mongodb.operation.FindOperation" -> "find",
-    "com.mongodb.operation.FindAndDeleteOperation" -> "findAndDelete",
+    "com.mongodb.operation.AggregateOperationImpl"              -> "aggregate",
+    "com.mongodb.operation.CountOperation"                      -> "countDocuments",
+    "com.mongodb.operation.DistinctOperation"                   -> "distinct",
+    "com.mongodb.operation.FindOperation"                       -> "find",
+    "com.mongodb.operation.FindAndDeleteOperation"              -> "findAndDelete",
     "com.mongodb.operation.MapReduceWithInlineResultsOperation" -> "mapReduce",
-    "com.mongodb.operation.MapReduceToCollectionOperation" -> "mapReduceToCollection"
+    "com.mongodb.operation.MapReduceToCollectionOperation"      -> "mapReduceToCollection"
   )
 
   def clientSpanBuilder(namespace: MongoNamespace, operationClassName: String): SpanBuilder = {
     val mongoOperationName = OperationClassToOperation.getOrElse(operationClassName, operationClassName)
     val spanOperationName = namespace.getCollectionName + "." + mongoOperationName
 
-    Kamon.clientSpanBuilder(spanOperationName, "mongo.driver.sync")
+    Kamon
+      .clientSpanBuilder(spanOperationName, "mongo.driver.sync")
       .tagMetrics("db.instance", namespace.getDatabaseName)
       .tagMetrics("mongo.collection", namespace.getCollectionName)
   }
@@ -148,7 +147,8 @@ object MongoClientInstrumentation {
   def getMoreSpanBuilder(parentSpan: Span, namespace: MongoNamespace): SpanBuilder = {
     val spanOperationName = parentSpan.operationName() + ".getMore"
 
-    Kamon.clientSpanBuilder(spanOperationName, "mongo.driver.sync")
+    Kamon
+      .clientSpanBuilder(spanOperationName, "mongo.driver.sync")
       .asChildOf(parentSpan)
       .tagMetrics("db.instance", namespace.getDatabaseName)
       .tagMetrics("mongo.collection", namespace.getCollectionName)

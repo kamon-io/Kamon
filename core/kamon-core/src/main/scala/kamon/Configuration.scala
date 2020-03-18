@@ -27,7 +27,6 @@ trait Configuration {
   private var _currentConfig: Config = loadInitialConfiguration()
   private var _onReconfigureHooks = Seq.empty[Configuration.OnReconfigureHook]
 
-
   /**
     * Retrieve Kamon's current configuration.
     */
@@ -37,40 +36,38 @@ trait Configuration {
   /**
     * Supply a new Config instance to rule Kamon's world.
     */
-  def reconfigure(newConfig: Config): Unit = synchronized {
-    _currentConfig = newConfig
-    _onReconfigureHooks.foreach(hook => {
-      try {
-        hook.onReconfigure(newConfig)
-      } catch {
-        case error: Throwable => logger.error("Exception occurred while trying to run a OnReconfigureHook", error)
+  def reconfigure(newConfig: Config): Unit =
+    synchronized {
+      _currentConfig = newConfig
+      _onReconfigureHooks.foreach { hook =>
+        try hook.onReconfigure(newConfig)
+        catch {
+          case error: Throwable => logger.error("Exception occurred while trying to run a OnReconfigureHook", error)
+        }
       }
-    })
-  }
+    }
 
   /**
     * Register a reconfigure hook that will be run when the a call to Kamon.reconfigure(config) is performed. All
     * registered hooks will run sequentially in the same Thread that calls Kamon.reconfigure(config).
     */
-  def onReconfigure(hook: Configuration.OnReconfigureHook): Unit = synchronized {
-    _onReconfigureHooks = hook +: _onReconfigureHooks
-  }
+  def onReconfigure(hook: Configuration.OnReconfigureHook): Unit =
+    synchronized {
+      _onReconfigureHooks = hook +: _onReconfigureHooks
+    }
 
   /**
     * Register a reconfigure hook that will be run when the a call to Kamon.reconfigure(config) is performed. All
     * registered hooks will run sequentially in the same Thread that calls Kamon.reconfigure(config).
     */
-  def onReconfigure(hook: (Config) => Unit): Unit = {
+  def onReconfigure(hook: (Config) => Unit): Unit =
     onReconfigure(new Configuration.OnReconfigureHook {
       override def onReconfigure(newConfig: Config): Unit = hook.apply(newConfig)
     })
-  }
-
 
   private def loadInitialConfiguration(): Config = {
-    try {
-      ConfigFactory.load(ClassLoading.classLoader())
-    } catch {
+    try ConfigFactory.load(ClassLoading.classLoader())
+    catch {
       case t: Throwable =>
         logger.warn("Failed to load the default configuration, attempting to load the reference configuration", t)
 

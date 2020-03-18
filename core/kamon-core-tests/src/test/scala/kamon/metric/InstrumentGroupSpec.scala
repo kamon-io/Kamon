@@ -11,10 +11,10 @@ class InstrumentGroupSpec extends WordSpec with MetricInspection.Syntax with Mat
     "register instruments with common tags and remove them when cleaning up" in {
       val group = new CommonTagsOnly(TagSet.of("type", "common"))
 
-      Counter.tagValues("type") should contain only("common")
-      Gauge.tagValues("type") should contain only("common")
-      Histogram.tagValues("type") should contain only("common")
-      RangeSampler.tagValues("type") should contain only("common")
+      Counter.tagValues("type") should contain only "common"
+      Gauge.tagValues("type") should contain only "common"
+      Histogram.tagValues("type") should contain only "common"
+      RangeSampler.tagValues("type") should contain only "common"
 
       group.remove()
 
@@ -27,10 +27,10 @@ class InstrumentGroupSpec extends WordSpec with MetricInspection.Syntax with Mat
     "override common tags with tags supplied to the register method" in {
       val group = new MixedTags(TagSet.of("type", "basic"))
 
-      Counter.tagValues("type") should contain only("basic")
-      Gauge.tagValues("type") should contain only("simple")
-      Histogram.tagValues("type") should contain only("42")
-      RangeSampler.tagValues("type") should contain only("true")
+      Counter.tagValues("type") should contain only "basic"
+      Gauge.tagValues("type") should contain only "simple"
+      Histogram.tagValues("type") should contain only "42"
+      RangeSampler.tagValues("type") should contain only "true"
 
       group.remove()
 
@@ -40,7 +40,6 @@ class InstrumentGroupSpec extends WordSpec with MetricInspection.Syntax with Mat
       RangeSampler.tagValues("type") shouldBe empty
     }
   }
-
 
   val Counter = Kamon.counter("metric.group.counter")
   val Gauge = Kamon.gauge("metric.group.gauge")

@@ -51,7 +51,6 @@ package object kamon {
       }
     }
 
-
   /**
     *  Workaround to the non thread-safe [scala.collection.concurrent.TrieMap#getOrElseUpdate()] method. More details on
     *  why this is necessary can be found at [[https://issues.scala-lang.org/browse/SI-7943]].
@@ -86,16 +85,12 @@ package object kamon {
     def topLevelKeys: Set[String] =
       config.root().entrySet().asScala.map(_.getKey).toSet
 
-    def configurations: Map[String, Config] = {
+    def configurations: Map[String, Config] =
       topLevelKeys
         .map(entry => (entry, config.getConfig(ConfigUtil.joinPath(entry))))
         .toMap
-    }
 
-    def pairs: Map[String, String] = {
-      config.root().entrySet().asScala.map { entry =>
-        (entry.getKey, entry.getValue.unwrapped().asInstanceOf[String])
-      }.toMap
-    }
+    def pairs: Map[String, String] =
+      config.root().entrySet().asScala.map(entry => (entry.getKey, entry.getValue.unwrapped().asInstanceOf[String])).toMap
   }
 }

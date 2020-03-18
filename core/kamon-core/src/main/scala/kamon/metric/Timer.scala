@@ -26,7 +26,6 @@ import kamon.util.Clock
 import org.HdrHistogram.BaseAtomicHdrHistogram
 import org.slf4j.LoggerFactory
 
-
 /**
   * Instrument that tracks the distribution of latency values within a configured range and precision. Timers are just a
   * special case of histograms that provide special APIs dedicated to recording latency measurements.
@@ -62,7 +61,6 @@ trait Timer extends Instrument[Timer, Metric.Settings.ForDistributionInstrument]
 
 }
 
-
 object Timer {
 
   private val _logger = LoggerFactory.getLogger(classOf[Timer])
@@ -79,16 +77,21 @@ object Timer {
 
   }
 
-
   /**
     * Timer implementation with thread safety guarantees. Instances of this class can be safely shared across threads
     * and updated concurrently. This is, in fact, a close copy of the Histogram.Atomic implementation, modified to match
     * the Timer interface.
     */
-  class Atomic(val metric: BaseMetric[Timer, Metric.Settings.ForDistributionInstrument, Distribution],
-    val tags: TagSet, val dynamicRange: DynamicRange, clock: Clock) extends BaseAtomicHdrHistogram(dynamicRange) with Timer
-    with Instrument.Snapshotting[Distribution] with DistributionSnapshotBuilder
-    with BaseMetricAutoUpdate[Timer, Metric.Settings.ForDistributionInstrument, Distribution] {
+  class Atomic(
+    val metric: BaseMetric[Timer, Metric.Settings.ForDistributionInstrument, Distribution],
+    val tags: TagSet,
+    val dynamicRange: DynamicRange,
+    clock: Clock
+  ) extends BaseAtomicHdrHistogram(dynamicRange)
+      with Timer
+      with Instrument.Snapshotting[Distribution]
+      with DistributionSnapshotBuilder
+      with BaseMetricAutoUpdate[Timer, Metric.Settings.ForDistributionInstrument, Distribution] {
 
     /** Starts a timer that will record the elapsed time between the start and stop instants */
     override def start(): Started =
@@ -96,17 +99,16 @@ object Timer {
 
     /** Records a value on the underlying histogram, handling the case of overflowing the dynamic range */
     override def record(nanos: Long): Timer = {
-      try {
-        recordValue(nanos)
-      } catch {
+      try recordValue(nanos)
+      catch {
         case _: ArrayIndexOutOfBoundsException =>
           val highestTrackableValue = getHighestTrackableValue()
           recordValue(highestTrackableValue)
 
-          _logger.warn (
-            s"Failed to record value [$nanos] on [${metric.name},${tags}] because the value is outside of the " +
-            s"configured range. The recorded value was adjusted to the highest trackable value [$highestTrackableValue]. " +
-            "You might need to change your dynamic range configuration for this metric"
+          _logger.warn(
+            s"Failed to record value [$nanos] on [${metric.name},$tags] because the value is outside of the " +
+              s"configured range. The recorded value was adjusted to the highest trackable value [$highestTrackableValue]. " +
+              "You might need to change your dynamic range configuration for this metric"
           )
       }
 
@@ -124,7 +126,6 @@ object Timer {
     override protected def baseMetric: BaseMetric[Timer, Settings.ForDistributionInstrument, Distribution] =
       metric
   }
-
 
   /**
     * Started timer implementation that allows applying tags before the timer is stopped.
@@ -144,11 +145,12 @@ object Timer {
     override def withTags(tags: TagSet): Timer.Started =
       new TaggableStartedTimer(startedAt, clock, instrument.withTags(tags))
 
-    override def stop(): Unit = synchronized {
-      if(!stopped) {
-        instrument.record(clock.nanosSince(startedAt))
-        stopped = true
+    override def stop(): Unit =
+      synchronized {
+        if (!stopped) {
+          instrument.record(clock.nanosSince(startedAt))
+          stopped = true
+        }
       }
-    }
   }
 }

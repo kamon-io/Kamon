@@ -52,7 +52,8 @@ object StatementMonitor extends LoggingSupport {
           (JdbcMetrics.InFlightStatements.withoutTags(), DatabaseTags(TagSet.Empty, TagSet.Empty))
       }
 
-      val clientSpan = Kamon.clientSpanBuilder(statementType, "jdbc")
+      val clientSpan = Kamon
+        .clientSpanBuilder(statementType, "jdbc")
         .tag("db.statement", sql)
 
       databaseTags.spanTags.iterator().foreach(t => clientSpan.tag(t.key, databaseTags.spanTags.get(Lookups.coerce(t.key))))

@@ -18,13 +18,13 @@ package kamon.datadog
 
 import java.time.Instant
 
-import com.typesafe.config.{ Config, ConfigFactory }
+import com.typesafe.config.{Config, ConfigFactory}
 import kamon.Kamon
 import kamon.datadog.DatadogAgentReporter.PacketBuffer
 import kamon.metric._
 import kamon.tag.TagSet
 import kamon.testkit.Reconfigure
-import org.scalatest.{ Matchers, WordSpec }
+import org.scalatest.{Matchers, WordSpec}
 
 class DatadogMetricSenderSpec extends WordSpec with Matchers with Reconfigure {
   reconfigure =>
@@ -35,17 +35,15 @@ class DatadogMetricSenderSpec extends WordSpec with Matchers with Reconfigure {
 
     override def flush(): Unit = {}
     override def appendMeasurement(
-      key:             String,
+      key: String,
       measurementData: String
-    ): Unit = {
+    ): Unit =
       lst += (key -> measurementData)
-    }
   }
 
   "the DataDogMetricSender" should {
     "send counter metrics" in AgentReporter(new TestBuffer(), ConfigFactory.parseString("kamon.environment.tags.env = staging").withFallback(Kamon.config())) {
       case (buffer, reporter) =>
-
         val now = Instant.now()
         reporter.reportPeriodSnapshot(
           PeriodSnapshot.apply(
@@ -55,7 +53,8 @@ class DatadogMetricSenderSpec extends WordSpec with Matchers with Reconfigure {
               "test.counter",
               "test",
               Metric.Settings.ForValueInstrument(MeasurementUnit.none, java.time.Duration.ZERO),
-              Instrument.Snapshot.apply(TagSet.of("tag1", "value1"), 0L) :: Nil) :: Nil,
+              Instrument.Snapshot.apply(TagSet.of("tag1", "value1"), 0L) :: Nil
+            ) :: Nil,
             Nil,
             Nil,
             Nil,
@@ -67,13 +66,14 @@ class DatadogMetricSenderSpec extends WordSpec with Matchers with Reconfigure {
         buffer.lst should contain("test.counter" -> "0|c|#service:kamon-application,env:staging,tag1:value1")
     }
 
-    "filter out blacklisted tags" in AgentReporter(new TestBuffer(), ConfigFactory.parseString(
-      """
+    "filter out blacklisted tags" in AgentReporter(
+      new TestBuffer(),
+      ConfigFactory.parseString("""
         |kamon.datadog.environment-tags.exclude = [env]
         |kamon.environment.tags.env = staging
-        |""".stripMargin).withFallback(Kamon.config())) {
+        |""".stripMargin).withFallback(Kamon.config())
+    ) {
       case (buffer, reporter) =>
-
         val now = Instant.now()
         reporter.reportPeriodSnapshot(
           PeriodSnapshot.apply(
@@ -83,7 +83,8 @@ class DatadogMetricSenderSpec extends WordSpec with Matchers with Reconfigure {
               "test.counter",
               "test",
               Metric.Settings.ForValueInstrument(MeasurementUnit.none, java.time.Duration.ZERO),
-              Instrument.Snapshot.apply(TagSet.of("tag1", "value1"), 0L) :: Nil) :: Nil,
+              Instrument.Snapshot.apply(TagSet.of("tag1", "value1"), 0L) :: Nil
+            ) :: Nil,
             Nil,
             Nil,
             Nil,
@@ -95,13 +96,14 @@ class DatadogMetricSenderSpec extends WordSpec with Matchers with Reconfigure {
         buffer.lst should contain("test.counter" -> "0|c|#service:kamon-application,tag1:value1")
     }
 
-    "filter other tags" in AgentReporter(new TestBuffer(), ConfigFactory.parseString(
-      """
+    "filter other tags" in AgentReporter(
+      new TestBuffer(),
+      ConfigFactory.parseString("""
         |kamon.datadog.environment-tags.exclude = [ "tag*" ]
         |kamon.environment.tags.env = staging
-        |""".stripMargin).withFallback(Kamon.config())) {
+        |""".stripMargin).withFallback(Kamon.config())
+    ) {
       case (buffer, reporter) =>
-
         val now = Instant.now()
         reporter.reportPeriodSnapshot(
           PeriodSnapshot.apply(
@@ -111,7 +113,8 @@ class DatadogMetricSenderSpec extends WordSpec with Matchers with Reconfigure {
               "test.counter",
               "test",
               Metric.Settings.ForValueInstrument(MeasurementUnit.none, java.time.Duration.ZERO),
-              Instrument.Snapshot.apply(TagSet.of("tag1", "value1").withTag("tag2", "value2").withTag("otherTag", "otherValue"), 0L) :: Nil) :: Nil,
+              Instrument.Snapshot.apply(TagSet.of("tag1", "value1").withTag("tag2", "value2").withTag("otherTag", "otherValue"), 0L) :: Nil
+            ) :: Nil,
             Nil,
             Nil,
             Nil,
@@ -123,13 +126,14 @@ class DatadogMetricSenderSpec extends WordSpec with Matchers with Reconfigure {
         buffer.lst should contain("test.counter" -> "0|c|#service:kamon-application,env:staging,tag1:value1,tag2:value2,otherTag:otherValue")
     }
 
-    "append no tags" in AgentReporter(new TestBuffer(), ConfigFactory.parseString(
-      """
+    "append no tags" in AgentReporter(
+      new TestBuffer(),
+      ConfigFactory.parseString("""
         |kamon.datadog.environment-tags.include-service = no
         |kamon.datadog.environment-tags.exclude = [env]
-        |""".stripMargin).withFallback(Kamon.config())) {
+        |""".stripMargin).withFallback(Kamon.config())
+    ) {
       case (buffer, reporter) =>
-
         val now = Instant.now()
         reporter.reportPeriodSnapshot(
           PeriodSnapshot.apply(
@@ -139,7 +143,8 @@ class DatadogMetricSenderSpec extends WordSpec with Matchers with Reconfigure {
               "test.counter",
               "test",
               Metric.Settings.ForValueInstrument(MeasurementUnit.none, java.time.Duration.ZERO),
-              Instrument.Snapshot.apply(TagSet.Empty, 0L) :: Nil) :: Nil,
+              Instrument.Snapshot.apply(TagSet.Empty, 0L) :: Nil
+            ) :: Nil,
             Nil,
             Nil,
             Nil,
@@ -161,7 +166,8 @@ class DatadogMetricSenderSpec extends WordSpec with Matchers with Reconfigure {
       DatadogAgentReporter
         .readConfiguration(
           Kamon.config()
-        ).copy(packetBuffer = buffer)
+        )
+        .copy(packetBuffer = buffer)
     )
     f(buffer, reporter)
   }

@@ -53,14 +53,17 @@ class LogbackMdcCopyingSpec extends WordSpec with Matchers with Eventually {
       }
 
       "copy context information into the MDC" in {
-        val memoryAppender = buildMemoryAppender(configurator,s"%X{${LogbackInstrumentation.settings().mdcTraceIdKey}} %X{${LogbackInstrumentation.settings().mdcSpanIdKey}} %X{mdc_key}")
+        val memoryAppender = buildMemoryAppender(
+          configurator,
+          s"%X{${LogbackInstrumentation.settings().mdcTraceIdKey}} %X{${LogbackInstrumentation.settings().mdcSpanIdKey}} %X{mdc_key}"
+        )
 
         val span = Kamon.spanBuilder("my-span").start()
         val traceID = span.trace.id
         val spanID = span.id
         val contextWithSpan = Context.of(Span.Key, span)
 
-        MDC.put("mdc_key","mdc_value")
+        MDC.put("mdc_key", "mdc_value")
         Kamon.runWithContext(contextWithSpan) {
           memoryAppender.doAppend(createLoggingEvent(context))
         }
@@ -71,12 +74,12 @@ class LogbackMdcCopyingSpec extends WordSpec with Matchers with Eventually {
       }
 
       "copy context tags into the MDC" in {
-        val memoryAppender = buildMemoryAppender(configurator,s"%X{my-tag} %X{mdc_key}")
+        val memoryAppender = buildMemoryAppender(configurator, s"%X{my-tag} %X{mdc_key}")
 
         val span = Kamon.spanBuilder("my-span").start()
         val contextWithSpan = Context.of("my-tag", "my-value")
 
-        MDC.put("mdc_key","mdc_value")
+        MDC.put("mdc_key", "mdc_value")
         Kamon.runWithContext(contextWithSpan) {
           memoryAppender.doAppend(createLoggingEvent(context))
         }
@@ -89,7 +92,8 @@ class LogbackMdcCopyingSpec extends WordSpec with Matchers with Eventually {
         Kamon.reconfigure(
           ConfigFactory
             .parseString("kamon.instrumentation.logback.mdc.copy.entries = [ testKey1, testKey2 ]")
-            .withFallback(ConfigFactory.defaultReference()))
+            .withFallback(ConfigFactory.defaultReference())
+        )
         val memoryAppender = buildMemoryAppender(configurator, "%X{testKey1} %X{testKey2}")
 
         val span = Kamon.spanBuilder("my-span").start()
@@ -110,7 +114,8 @@ class LogbackMdcCopyingSpec extends WordSpec with Matchers with Eventually {
         Kamon.reconfigure(
           ConfigFactory
             .parseString("kamon.logback.mdc-traced-broadcast-keys = [ testKey1, testKey2 ]")
-            .withFallback(ConfigFactory.defaultReference()))
+            .withFallback(ConfigFactory.defaultReference())
+        )
         val memoryAppender = buildMemoryAppender(configurator, "%X{testKey1} %X{testKey2}")
 
         val span = Kamon.spanBuilder("my-span").start()
@@ -124,7 +129,6 @@ class LogbackMdcCopyingSpec extends WordSpec with Matchers with Eventually {
         memoryAppender.getLastLine shouldBe " "
       }
 
-
       "ignore copying information into the MDC when disabled" in {
         Kamon.reconfigure(
           ConfigFactory
@@ -132,7 +136,7 @@ class LogbackMdcCopyingSpec extends WordSpec with Matchers with Eventually {
             .withFallback(ConfigFactory.defaultReference())
         )
 
-        val memoryAppender = buildMemoryAppender(configurator,s"%X{${LogbackInstrumentation.settings().mdcTraceIdKey}}")
+        val memoryAppender = buildMemoryAppender(configurator, s"%X{${LogbackInstrumentation.settings().mdcTraceIdKey}}")
         val span = Kamon.spanBuilder("my-span").start()
         val contextWithSpan = Context.of(Span.Key, span)
 

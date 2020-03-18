@@ -17,15 +17,16 @@ package object instrumentation {
     def advise[A](method: Junction[MethodDescription], advice: A)(implicit singletonEvidence: A <:< Singleton): InstrumentationBuilder.Target
   }
 
-  implicit def adviseWithCompanionObject(target: InstrumentationBuilder.Target) = new AdviseWithCompanionObject {
+  implicit def adviseWithCompanionObject(target: InstrumentationBuilder.Target) =
+    new AdviseWithCompanionObject {
 
-    override def advise[A](method: Junction[MethodDescription], advice: A)(implicit singletonEvidence: A <:< Singleton): InstrumentationBuilder.Target = {
-      // Companion object instances always have the '$' sign at the end of their class name, we must remove it to get
-      // to the class that exposes the static methods.
-      val className = advice.getClass.getName.dropRight(1)
-      val adviseClass = Class.forName(className, true, advice.getClass.getClassLoader)
+      override def advise[A](method: Junction[MethodDescription], advice: A)(implicit singletonEvidence: A <:< Singleton): InstrumentationBuilder.Target = {
+        // Companion object instances always have the '$' sign at the end of their class name, we must remove it to get
+        // to the class that exposes the static methods.
+        val className = advice.getClass.getName.dropRight(1)
+        val adviseClass = Class.forName(className, true, advice.getClass.getClassLoader)
 
-      target.advise(method, adviseClass)
+        target.advise(method, adviseClass)
+      }
     }
-  }
 }

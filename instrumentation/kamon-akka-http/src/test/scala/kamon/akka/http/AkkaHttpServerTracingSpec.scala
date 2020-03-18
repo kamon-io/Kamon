@@ -12,7 +12,7 @@
  * either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
  * =========================================================================================
-*/
+ */
 
 package kamon.akka.http
 
@@ -32,8 +32,18 @@ import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import scala.concurrent.duration._
 import okhttp3.{OkHttpClient, Request}
 
-class AkkaHttpServerTracingSpec extends WordSpecLike with Matchers with ScalaFutures with Inside with BeforeAndAfterAll
-    with MetricInspection.Syntax with Reconfigure with TestWebServer with Eventually with OptionValues with TestSpanReporter {
+class AkkaHttpServerTracingSpec
+    extends WordSpecLike
+    with Matchers
+    with ScalaFutures
+    with Inside
+    with BeforeAndAfterAll
+    with MetricInspection.Syntax
+    with Reconfigure
+    with TestWebServer
+    with Eventually
+    with OptionValues
+    with TestSpanReporter {
 
   import TestWebServer.Endpoints._
 
@@ -60,7 +70,7 @@ class AkkaHttpServerTracingSpec extends WordSpecLike with Matchers with ScalaFut
     val port = server.port
     val protocol = server.protocol
 
-    s"the Akka HTTP server instrumentation with ${httpVersion}" should {
+    s"the Akka HTTP server instrumentation with $httpVersion" should {
       "create a server Span when receiving requests" in {
         val target = s"$protocol://$interface:$port/$dummyPathOk"
         okHttp.newCall(new Request.Builder().url(target).build()).execute()
@@ -217,8 +227,8 @@ class AkkaHttpServerTracingSpec extends WordSpecLike with Matchers with ScalaFut
           span
         }
 
-        inside(span.marks){
-          case List(_ @ Mark(_, "http.response.ready")) =>
+        inside(span.marks) {
+          case List(_ @Mark(_, "http.response.ready")) =>
         }
 
         span.tags.get(plain("http.url")) shouldBe target
@@ -253,4 +263,3 @@ class AkkaHttpServerTracingSpec extends WordSpecLike with Matchers with ScalaFut
     http2WebServer.shutdown()
   }
 }
-

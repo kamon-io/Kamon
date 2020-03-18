@@ -12,7 +12,7 @@
  * either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
  * =========================================================================================
-*/
+ */
 
 package kamon.akka.http
 
@@ -24,7 +24,7 @@ import akka.stream.ActorMaterializer
 import kamon.Kamon
 import kamon.testkit._
 import kamon.trace.Span
-import kamon.tag.Lookups.{plain, plainLong, plainBoolean}
+import kamon.tag.Lookups.{plain, plainBoolean, plainLong}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.{BeforeAndAfterAll, Matchers, OptionValues, WordSpecLike}
 import org.json4s._
@@ -32,8 +32,16 @@ import org.json4s.native.JsonMethods._
 
 import scala.concurrent.duration._
 
-class AkkaHttpClientTracingSpec extends WordSpecLike with Matchers with BeforeAndAfterAll with MetricInspection.Syntax
-    with Reconfigure with TestWebServer with Eventually with OptionValues with TestSpanReporter {
+class AkkaHttpClientTracingSpec
+    extends WordSpecLike
+    with Matchers
+    with BeforeAndAfterAll
+    with MetricInspection.Syntax
+    with Reconfigure
+    with TestWebServer
+    with Eventually
+    with OptionValues
+    with TestSpanReporter {
 
   import TestWebServer.Endpoints._
 
@@ -80,15 +88,17 @@ class AkkaHttpClientTracingSpec extends WordSpecLike with Matchers with BeforeAn
       val tagKey = "custom.message"
       val tagValue = "Hello World :D"
 
-      val response = Kamon.runWithContextTag(tagKey, tagValue) {
-        Http().singleRequest(HttpRequest(uri = target, headers = List(RawHeader("X-Foo", "bar"))))
-      }.flatMap(r => r.entity.toStrict(timeoutTest))
+      val response = Kamon
+        .runWithContextTag(tagKey, tagValue) {
+          Http().singleRequest(HttpRequest(uri = target, headers = List(RawHeader("X-Foo", "bar"))))
+        }
+        .flatMap(r => r.entity.toStrict(timeoutTest))
 
       eventually(timeout(10 seconds)) {
         val httpResponse = response.value.value.get
         val headersMap = parse(httpResponse.data.utf8String).extract[Map[String, String]]
 
-        headersMap.keys.toList should contain allOf(
+        headersMap.keys.toList should contain allOf (
           "context-tags",
           "X-Foo",
           "X-B3-TraceId",
@@ -117,8 +127,6 @@ class AkkaHttpClientTracingSpec extends WordSpecLike with Matchers with BeforeAn
     }
   }
 
-  override protected def afterAll(): Unit = {
+  override protected def afterAll(): Unit =
     webServer.shutdown()
-  }
 }
-

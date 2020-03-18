@@ -11,8 +11,7 @@ import org.scalatest.concurrent.Eventually
 
 import scala.concurrent.duration._
 
-class MongoSyncDriverInstrumentationSpec extends EmbeddedMongoTest(port = 4445) with Matchers with TestSpanReporter
-    with Eventually with OptionValues {
+class MongoSyncDriverInstrumentationSpec extends EmbeddedMongoTest(port = 4445) with Matchers with TestSpanReporter with Eventually with OptionValues {
 
   val client = syncClient()
   val tools = client.getDatabase("test").getCollection("tools")
@@ -25,10 +24,15 @@ class MongoSyncDriverInstrumentationSpec extends EmbeddedMongoTest(port = 4445) 
       tools.insertOne(new Document("name", "prometheus").append("aggregatable", true).append("license", "apache"))
       tools.insertOne(new Document("name", "linux").append("aggregatable", true).append("license", "gpl"))
 
-      val aggregateResults = tools.aggregate(util.Arrays.asList(
-        Aggregates.`match`(Filters.eq("aggregatable", true)),
-        Aggregates.group("$license", Accumulators.sum("count", 1))
-      )).batchSize(1).iterator()
+      val aggregateResults = tools
+        .aggregate(
+          util.Arrays.asList(
+            Aggregates.`match`(Filters.eq("aggregatable", true)),
+            Aggregates.group("$license", Accumulators.sum("count", 1))
+          )
+        )
+        .batchSize(1)
+        .iterator()
 
       val mainSpan = eventually(timeout(5 seconds)) {
         val span = testSpanReporter().nextSpan().value
@@ -38,9 +42,8 @@ class MongoSyncDriverInstrumentationSpec extends EmbeddedMongoTest(port = 4445) 
         span
       }
 
-      while(aggregateResults.hasNext) {
+      while (aggregateResults.hasNext)
         aggregateResults.next()
-      }
 
       eventually(timeout(5 seconds)) {
         val span = testSpanReporter().nextSpan().value
@@ -106,7 +109,8 @@ class MongoSyncDriverInstrumentationSpec extends EmbeddedMongoTest(port = 4445) 
       tools.insertOne(new Document("name", "kamon").append("distinct", "one"))
       tools.insertOne(new Document("name", "zipkin").append("distinct", "two"))
       tools.insertOne(new Document("name", "prometheus").append("distinct", "three"))
-      tools.distinct("distinct", classOf[String])
+      tools
+        .distinct("distinct", classOf[String])
         .batchSize(1)
         .iterator()
 
@@ -122,7 +126,8 @@ class MongoSyncDriverInstrumentationSpec extends EmbeddedMongoTest(port = 4445) 
       tools.insertOne(new Document("name", "kamon").append("find", "yes"))
       tools.insertOne(new Document("name", "zipkin").append("find", "yes"))
       tools.insertOne(new Document("name", "prometheus").append("find", "yes"))
-      val results = tools.find(new Document("find", "yes"))
+      val results = tools
+        .find(new Document("find", "yes"))
         .batchSize(2)
         .iterator()
 
@@ -135,9 +140,8 @@ class MongoSyncDriverInstrumentationSpec extends EmbeddedMongoTest(port = 4445) 
       }
 
       // We are exhausting the iterator to for the getMore operation to happen
-      while(results.hasNext) {
+      while (results.hasNext)
         results.next()
-      }
 
       eventually(timeout(5 seconds)) {
         val span = testSpanReporter().nextSpan().value
@@ -230,8 +234,9 @@ class MongoSyncDriverInstrumentationSpec extends EmbeddedMongoTest(port = 4445) 
       tools.insertOne(new Document("name", "prometheus").append("reduce", true).append("license", "apache").append("value", 100))
       tools.insertOne(new Document("name", "linux").append("reduce", true).append("license", "gpl").append("value", 100))
 
-      tools.mapReduce(
-        """
+      tools
+        .mapReduce(
+          """
           |function() {
           |  if(this.license !== undefined) {
           |    emit(this.license + "_0", this.value)
@@ -240,13 +245,14 @@ class MongoSyncDriverInstrumentationSpec extends EmbeddedMongoTest(port = 4445) 
           |  }
           |}
         """.stripMargin,
-
-        """
+          """
           |function(key, values) {
           |  return Array.sum(values)
           |}
         """.stripMargin
-      ).batchSize(2).iterator()
+        )
+        .batchSize(2)
+        .iterator()
 
       eventually(timeout(5 seconds)) {
         val span = testSpanReporter().nextSpan().value

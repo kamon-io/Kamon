@@ -61,12 +61,17 @@ class NewRelicSpanReporterSpec extends WordSpec with Matchers {
     }
   }
 
-  private def buildExpectedBatch(serviceName: String = "kamon-application", hostName : String = InetAddress.getLocalHost.getHostName, tagValue: String = "testValue" ) = {
+  private def buildExpectedBatch(
+    serviceName: String = "kamon-application",
+    hostName: String = InetAddress.getLocalHost.getHostName,
+    tagValue: String = "testValue"
+  ) = {
     val expectedAttributes = new Attributes()
       .put("xx", TestSpanHelper.now)
       .put("span.kind", "client")
       .put("foo", "bar")
-    val expectedSpan = NewRelicSpan.builder(TestSpanHelper.spanId)
+    val expectedSpan = NewRelicSpan
+      .builder(TestSpanHelper.spanId)
       .name(TestSpanHelper.name)
       .traceId(TestSpanHelper.traceId)
       .timestamp(TestSpanHelper.before)

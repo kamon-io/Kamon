@@ -38,27 +38,25 @@ class JvmMetricsCollector(ec: ExecutionContext) extends Module {
     val gcInstruments = new GarbageCollectionInstruments(defaultTags)
     val gcListener = new GcNotificationListener(gcInstruments)
 
-    ManagementFactory.getGarbageCollectorMXBeans().asScala.foreach(gcBean => {
-      if(gcBean.isInstanceOf[NotificationEmitter])
+    ManagementFactory.getGarbageCollectorMXBeans().asScala.foreach { gcBean =>
+      if (gcBean.isInstanceOf[NotificationEmitter])
         gcBean.asInstanceOf[NotificationEmitter].addNotificationListener(gcListener, null, null)
-    })
+    }
 
     gcListener
   }
 
-  private def deregisterGcListener(): Unit = {
-    ManagementFactory.getGarbageCollectorMXBeans().asScala.foreach(gcBean => {
-      if(gcBean.isInstanceOf[NotificationEmitter]) {
+  private def deregisterGcListener(): Unit =
+    ManagementFactory.getGarbageCollectorMXBeans().asScala.foreach { gcBean =>
+      if (gcBean.isInstanceOf[NotificationEmitter])
         gcBean.asInstanceOf[NotificationEmitter].removeNotificationListener(_gcListener)
-      }
-    })
-  }
+    }
 
   class GcNotificationListener(val gcInstruments: GarbageCollectionInstruments) extends NotificationListener {
     private val _previousUsageAfterGc = TrieMap.empty[String, MemoryUsage]
 
     override def handleNotification(notification: Notification, handback: Any): Unit = {
-      if(notification.getType() == GARBAGE_COLLECTION_NOTIFICATION) {
+      if (notification.getType() == GARBAGE_COLLECTION_NOTIFICATION) {
         val compositeData = notification.getUserData.asInstanceOf[CompositeData]
         val info = GarbageCollectionNotificationInfo.from(compositeData)
         val collector = Collector.find(info.getGcName)
@@ -75,29 +73,31 @@ class JvmMetricsCollector(ec: ExecutionContext) extends Module {
             // We assume that if the old generation grew during this GC event then some data was promoted to it and will
             // record it as promotion to the old generation.
             //
-            if(region.usage == MemoryPool.Usage.OldGeneration) {
+            if (region.usage == MemoryPool.Usage.OldGeneration) {
               val regionUsageAfterGc = usageAfterGc(regionName)
               val diff = regionUsageAfterGc.getUsed - regionUsageBeforeGc.getUsed
 
-              if(diff > 0)
+              if (diff > 0)
                 gcInstruments.promotionToOld.record(diff)
 
             }
 
             // We will record the growth of Eden spaces in between GC events as the allocation rate.
-            if(region.usage == MemoryPool.Usage.Eden) {
-              _previousUsageAfterGc.get(regionName).fold({
+            if (region.usage == MemoryPool.Usage.Eden) {
+              _previousUsageAfterGc
+                .get(regionName)
+                .fold {
 
-                // We wont have the previous GC value the first time an Eden region is processed so we can assume
-                // that all used space before GC was just allocation.
-                gcInstruments.allocation.increment(regionUsageBeforeGc.getUsed): Unit
+                  // We wont have the previous GC value the first time an Eden region is processed so we can assume
+                  // that all used space before GC was just allocation.
+                  gcInstruments.allocation.increment(regionUsageBeforeGc.getUsed): Unit
 
-              })(previousUsageAfterGc => {
-                val currentUsageBeforeGc = regionUsageBeforeGc
-                val allocated = currentUsageBeforeGc.getUsed - previousUsageAfterGc.getUsed
-                if(allocated > 0)
-                  gcInstruments.allocation.increment(allocated)
-              })
+                } { previousUsageAfterGc =>
+                  val currentUsageBeforeGc = regionUsageBeforeGc
+                  val allocated = currentUsageBeforeGc.getUsed - previousUsageAfterGc.getUsed
+                  if (allocated > 0)
+                    gcInstruments.allocation.increment(allocated)
+                }
 
               _previousUsageAfterGc.put(regionName, usageAfterGc(regionName))
             }
@@ -106,8 +106,7 @@ class JvmMetricsCollector(ec: ExecutionContext) extends Module {
     }
   }
 
-  class JmxMetricsCollectorTask(memoryUsageInstruments: MemoryUsageInstruments, threadsInstruments: ThreadsInstruments)
-      extends Runnable {
+  class JmxMetricsCollectorTask(memoryUsageInstruments: MemoryUsageInstruments, threadsInstruments: ThreadsInstruments) extends Runnable {
 
     private val _heapUsage = memoryUsageInstruments.regionInstruments("heap")
     private val _nonHeapUsage = memoryUsageInstruments.regionInstruments("non-heap")
@@ -119,29 +118,29 @@ class JvmMetricsCollector(ec: ExecutionContext) extends Module {
       threadsInstruments.daemon.update(threadsMxBen.getDaemonThreadCount())
 
       val currentHeapUsage = ManagementFactory.getMemoryMXBean.getHeapMemoryUsage
-      val freeHeap = Math.max(0L, currentHeapUsage.getMax -  currentHeapUsage.getUsed)
+      val freeHeap = Math.max(0L, currentHeapUsage.getMax - currentHeapUsage.getUsed)
       _heapUsage.free.record(freeHeap)
       _heapUsage.used.record(currentHeapUsage.getUsed)
       _heapUsage.max.update(currentHeapUsage.getMax)
       _heapUsage.committed.update(currentHeapUsage.getCommitted)
 
       val currentNonHeapUsage = ManagementFactory.getMemoryMXBean.getNonHeapMemoryUsage
-      val freeNonHeap = Math.max(0L, currentNonHeapUsage.getMax -  currentNonHeapUsage.getUsed)
+      val freeNonHeap = Math.max(0L, currentNonHeapUsage.getMax - currentNonHeapUsage.getUsed)
       _nonHeapUsage.free.record(freeNonHeap)
       _nonHeapUsage.used.record(currentNonHeapUsage.getUsed)
       _nonHeapUsage.max.update(currentNonHeapUsage.getMax)
       _nonHeapUsage.committed.update(currentNonHeapUsage.getCommitted)
 
-      ManagementFactory.getMemoryPoolMXBeans.asScala.foreach(memoryBean => {
+      ManagementFactory.getMemoryPoolMXBeans.asScala.foreach { memoryBean =>
         val poolInstruments = memoryUsageInstruments.poolInstruments(MemoryPool.find(memoryBean.getName))
         val memoryUsage = memoryBean.getUsage
-        val freeMemory = Math.max(0L, memoryUsage.getMax -  memoryUsage.getUsed)
+        val freeMemory = Math.max(0L, memoryUsage.getMax - memoryUsage.getUsed)
 
         poolInstruments.free.record(freeMemory)
         poolInstruments.used.record(memoryUsage.getUsed)
         poolInstruments.max.update(memoryUsage.getMax)
         poolInstruments.committed.update(memoryUsage.getCommitted)
-      })
+      }
     }
   }
 }
@@ -153,7 +152,7 @@ object JvmMetricsCollector {
       new JvmMetricsCollector(settings.executionContext)
   }
 
-  case class Collector (
+  case class Collector(
     name: String,
     alias: String,
     generation: Collector.Generation
@@ -169,11 +168,13 @@ object JvmMetricsCollector {
     }
 
     def find(collectorName: String): Collector =
-      _collectorMappings.get(collectorName).getOrElse (
-        Collector(collectorName, sanitizeCollectorName(collectorName), Collector.Generation.Unknown)
-      )
+      _collectorMappings
+        .get(collectorName)
+        .getOrElse(
+          Collector(collectorName, sanitizeCollectorName(collectorName), Collector.Generation.Unknown)
+        )
 
-    private val _collectorMappings: Map[String, Collector] = Map (
+    private val _collectorMappings: Map[String, Collector] = Map(
       "Copy"                -> Collector("Copy", "copy", Generation.Young),
       "ParNew"              -> Collector("ParNew", "par-new", Generation.Young),
       "MarkSweepCompact"    -> Collector("MarkSweepCompact", "mark-sweep-compact", Generation.Old),
@@ -188,7 +189,7 @@ object JvmMetricsCollector {
       name.replaceAll("""[^\w]""", "-").toLowerCase
   }
 
-  case class MemoryPool (
+  case class MemoryPool(
     name: String,
     alias: String,
     usage: MemoryPool.Usage
@@ -208,16 +209,16 @@ object JvmMetricsCollector {
 
     def find(poolName: String): MemoryPool =
       _memoryRegionMappings.get(poolName).getOrElse {
-        MemoryPool(poolName, sanitize(poolName), if(poolName.endsWith("Eden Space")) Usage.Eden else Usage.Unknown)
+        MemoryPool(poolName, sanitize(poolName), if (poolName.endsWith("Eden Space")) Usage.Eden else Usage.Unknown)
       }
 
-    private val _memoryRegionMappings: Map[String, MemoryPool] = Map (
-      "Metaspace"               -> MemoryPool("Metaspace", "metaspace", Usage.Metaspace),
-      "Code Cache"              -> MemoryPool("Code Cache", "code-cache", Usage.CodeCache),
-      "Compressed Class Space"  -> MemoryPool("Compressed Class Space", "compressed-class-space", Usage.CodeCache),
-      "PS Eden Space"           -> MemoryPool("PS Eden Space", "eden", Usage.Eden),
-      "PS Survivor Space"       -> MemoryPool("PS Survivor Space", "survivor", Usage.YoungGeneration),
-      "PS Old Gen"              -> MemoryPool("PS Old Gen", "old", Usage.OldGeneration)
+    private val _memoryRegionMappings: Map[String, MemoryPool] = Map(
+      "Metaspace"              -> MemoryPool("Metaspace", "metaspace", Usage.Metaspace),
+      "Code Cache"             -> MemoryPool("Code Cache", "code-cache", Usage.CodeCache),
+      "Compressed Class Space" -> MemoryPool("Compressed Class Space", "compressed-class-space", Usage.CodeCache),
+      "PS Eden Space"          -> MemoryPool("PS Eden Space", "eden", Usage.Eden),
+      "PS Survivor Space"      -> MemoryPool("PS Survivor Space", "survivor", Usage.YoungGeneration),
+      "PS Old Gen"             -> MemoryPool("PS Old Gen", "old", Usage.OldGeneration)
     )
 
     private val _invalidChars: Regex = """[^a-z0-9]""".r
