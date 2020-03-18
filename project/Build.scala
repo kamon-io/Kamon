@@ -1,10 +1,11 @@
-import sbt._
+import sbt.{Configuration, _}
 import Keys._
 import sbt.librarymanagement.{Configuration, Configurations}
 import Configurations.Compile
 import sbtassembly.AssemblyPlugin
 import sbtassembly.AssemblyPlugin.autoImport.{MergeStrategy, assembleArtifact, assembly, assemblyExcludedJars, assemblyMergeStrategy, assemblyPackageScala}
 import java.util.Calendar
+import Def.Initialize
 
 import bintray.{Bintray, BintrayPlugin}
 import bintray.BintrayKeys.{bintray, bintrayOrganization, bintrayRepository, bintrayVcsUrl}
@@ -53,6 +54,31 @@ object BaseProject extends AutoPlugin {
     def testScope(deps: ModuleID*): Seq[ModuleID]     = deps map (_ % "test")
     def providedScope(deps: ModuleID*): Seq[ModuleID] = deps map (_ % "provided")
     def optionalScope(deps: ModuleID*): Seq[ModuleID] = deps map (_ % "compile,optional")
+
+    /**
+      * Joins all the sources from the base and extra configurations. If the same source exists in both configurations
+      * then the one in the base configuration will remain.
+      */
+    def joinSources(base: Configuration, extra: Configuration): Initialize[Task[Seq[File]]] = Def.task {
+      import Path.relativeTo
+      val baseSources = (sources in base).value.pair(relativeTo((unmanagedSourceDirectories in base).value))
+      val extraSources = (sources in extra).value.pair(relativeTo((unmanagedSourceDirectories in extra).value))
+      val allSources = baseSources.filterNot { case (_, path) => extraSources.exists(_._2 == path) } ++ extraSources
+      allSources.map(_._1)
+    }
+
+    /**
+      * Joins all products found within the provided folders. If the same file exists in more than one folder then the
+      * last occurrence wins.
+      */
+    def joinProducts(allProducts: Seq[File]*): Seq[(File, String)] = {
+      val joinedProducts = scala.collection.mutable.Map.empty[String, File]
+      allProducts.flatMap(_.flatMap(Path.allSubpaths)).foreach {
+        case (file, name) => joinedProducts.put(name, file)
+      }
+
+      joinedProducts.map(_.swap).toSeq
+    }
   }
 
   override def requires: Plugins = BintrayPlugin && JvmPlugin && HeaderPlugin
