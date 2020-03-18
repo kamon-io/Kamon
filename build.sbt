@@ -189,16 +189,15 @@ def groupByExperimentalExecutorTests(tests: Seq[TestDefinition], kanelaJar: File
 
 val twitterUtilCore  = "com.twitter"   %% "util-core"         % "6.40.0"
 val scalazConcurrent = "org.scalaz"    %% "scalaz-concurrent" % "7.2.28"
-val catsEffect       = "org.typelevel" %%  "cats-effect"      % "1.2.0"
+val catsEffect       = "org.typelevel" %%  "cats-effect"      % "2.1.2"
 
 lazy val `kamon-twitter-future` = (project in file("instrumentation/kamon-twitter-future"))
   .disablePlugins(AssemblyPlugin)
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
-    scalaVersion := "2.12.10",
     bintrayPackage := "kamon-futures",
-    crossScalaVersions := Seq("2.11.12", "2.12.10"),
+    crossScalaVersions := Seq("2.11.12", "2.12.10", "2.13.1"),
     libraryDependencies ++=
       providedScope(kanelaAgent, twitterUtilCore) ++
       testScope(scalatest, logbackClassic)
@@ -231,9 +230,8 @@ lazy val `kamon-cats-io` = (project in file("instrumentation/kamon-cats-io"))
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
-    scalaVersion := "2.12.10",
     bintrayPackage := "kamon-futures",
-    crossScalaVersions := Seq("2.11.12", "2.12.10"),
+    crossScalaVersions := Seq("2.11.12", "2.12.10", "2.13.1"),
     libraryDependencies ++=
       providedScope(catsEffect, kanelaAgent) ++
       testScope(scalatest, logbackClassic)

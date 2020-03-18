@@ -104,7 +104,7 @@ object BaseProject extends AutoPlugin {
 
   private lazy val compilationSettings = Seq(
     crossPaths := true,
-    scalaVersion := "2.12.10",
+    scalaVersion := "2.13.1",
     crossScalaVersions := Seq("2.11.12", "2.12.10", "2.13.1"),
     javacOptions := Seq(
       "-source", "1.8",
