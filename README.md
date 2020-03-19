@@ -1,10 +1,10 @@
-# New Relic Integration
+# New Relic integration
 
 This repository provides an integration with the [New Relic](https://newrelic.com) platform.
 It provides two reporters capable of sending trace spans and dimensional 
 metrics to New Relic data ingest APIs. 
 
-# Installation
+# Install
 
 In order to use the New Relic reporters in your application, you must first
 add the `kamon-newrelic` reporter dependency to your `build.sbt`:
@@ -40,12 +40,18 @@ If you can't use an environment variable, you can replace the above with the act
 **Note**: This is less secure and additional precautions must be taken (like considering file
 permissions and excluding from source control).
 
+# Find and use your data
 
-# Data
-
-For a detailed explanation of what data is exported and how it
-appears inside the New Relic platform, please 
+For a detailed explanation of what data is exported and how it appears inside the New Relic platform, please 
 see the documentation in [the New Relic exporter specs repo](https://github.com/newrelic/newrelic-exporter-specs/tree/master/kamon).
+
+Tips on how to find and query your data in New Relic:
+- [Find metric data](https://docs.newrelic.com/docs/data-ingest-apis/get-data-new-relic/metric-api/introduction-metric-api#find-data)
+- [Find trace/span data](https://docs.newrelic.com/docs/understand-dependencies/distributed-tracing/trace-api/introduction-trace-api#view-data)
+
+For general querying information, see:
+- [Query New Relic data](https://docs.newrelic.com/docs/using-new-relic/data/understand-data/query-new-relic-data)
+- [Intro to NRQL](https://docs.newrelic.com/docs/query-data/nrql-new-relic-query-language/getting-started/nrql-syntax-clauses-functions)
 
 # Development
 
