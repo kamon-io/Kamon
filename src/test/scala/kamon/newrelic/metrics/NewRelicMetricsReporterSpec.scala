@@ -38,6 +38,7 @@ class NewRelicMetricsReporterSpec extends WordSpec with Matchers {
     .put("sourceMetricType", "gauge")
 
   private val histogramSummaryAttributes = new Attributes()
+    .put("description", "a good trevor")
     .put("magnitude.name", "eimer")
     .put("magnitude.scaleFactor", 603.3d)
     .put("lowestDiscernibleValue", 1L)
@@ -48,6 +49,7 @@ class NewRelicMetricsReporterSpec extends WordSpec with Matchers {
     .put("sourceMetricType", "histogram")
 
   private val timerSummaryAttributes = new Attributes()
+    .put("description", "a good timer")
     .put("magnitude.name", "timer")
     .put("magnitude.scaleFactor", 333.3)
     .put("lowestDiscernibleValue", 1L)
