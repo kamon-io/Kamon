@@ -63,6 +63,16 @@ object TestMetricHelper {
     new metric.MetricSnapshot.Distributions("timer", "a good timer", settings, Seq(inst))
   }
 
+  def buildRangeSamplerDistribution = {
+    val tagSet: TagSet = TagSet.from(Map("eleven" -> "elevenses"))
+    val dynamicRange: DynamicRange = DynamicRange.Default
+    val settings = Metric.Settings.ForDistributionInstrument(
+      new MeasurementUnit(Dimension.Information, new metric.MeasurementUnit.Magnitude("home", 333.3d)), Duration.ofMillis(15), dynamicRange)
+    val percentiles = Map(95d -> Percentage(95d, 8L, 1632L), 87d -> Percentage(87d, 4L, 816L))
+    val distribution: Distribution = buildHistogramDist(Percentage(38d, 4L, 1632L), Bucket(1424L, 1672L), Distro(26L, 34L, 202L, 88L), percentiles)
+    val inst: Snapshot[Distribution] = new Snapshot[Distribution](tagSet, distribution)
+    new metric.MetricSnapshot.Distributions("ranger", "baby's first range sampler", settings, Seq(inst))
+  }
 
   case class Percentage(r: Double, v: Long, c: Long) {
     def toPercentile: Distribution.Percentile = {
