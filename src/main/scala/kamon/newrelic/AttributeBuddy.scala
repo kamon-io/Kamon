@@ -45,7 +45,7 @@ object AttributeBuddy {
     val attributes = new Attributes()
       .put("instrumentation.provider", "kamon-agent")
       .put("service.name", environment.service)
-      .put("host", environment.host)
+      .put("host.hostname", environment.host)
     AttributeBuddy.addTagsFromTagSets(Seq(environment.tags), attributes)
     attributes
   }

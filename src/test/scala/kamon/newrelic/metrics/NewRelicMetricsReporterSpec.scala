@@ -84,7 +84,7 @@ class NewRelicMetricsReporterSpec extends WordSpec with Matchers {
       val expectedCommonAttributes: Attributes = new Attributes()
         .put("service.name", "kamon-application")
         .put("instrumentation.provider", "kamon-agent")
-        .put("host", InetAddress.getLocalHost.getHostName)
+        .put("host.hostname", InetAddress.getLocalHost.getHostName)
         .put("testTag", "testValue")
       val expectedBatch: MetricBatch = new MetricBatch(Seq(count1, count2, gauge, histogramGauge, histogramSummary, timerGauge, timerSummary).asJava, expectedCommonAttributes)
 
@@ -107,7 +107,7 @@ class NewRelicMetricsReporterSpec extends WordSpec with Matchers {
         .put("service.name", "cheese-whiz")
         .put("instrumentation.provider", "kamon-agent")
         .put("testTag", "testThing")
-        .put("host", "thing")
+        .put("host.hostname", "thing")
       val expectedBatch: MetricBatch = new MetricBatch(Seq(count1, count2, gauge, histogramGauge, histogramSummary).asJava, expectedCommonAttributes)
 
       val tagDetails = ConfigValueFactory.fromMap(Map("testTag" -> "testThing").asJava)
