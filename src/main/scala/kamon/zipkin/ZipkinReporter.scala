@@ -57,7 +57,7 @@ class ZipkinReporter(configPath: String) extends SpanReporter {
     spans.map(convertSpan).foreach(_reporter.report)
 
   private[zipkin] def convertSpan(kamonSpan: Span.Finished): ZipkinSpan = {
-    val duration = Math.floorDiv(Clock.nanosBetween(kamonSpan.from, kamonSpan.to), 1000)
+    val duration = Math.floorDiv(Clock.nanosBetween(kamonSpan.from, kamonSpan.to), 1000L)
     // Zipkin uses null to identify no identifier
     val parentId: String = if (kamonSpan.parentId.isEmpty) null else kamonSpan.parentId.string
     val builder = ZipkinSpan.newBuilder()
