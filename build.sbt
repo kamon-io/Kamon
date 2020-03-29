@@ -438,3 +438,15 @@ lazy val `kamon-statsd` = (project in file("reporters/kamon-statsd"))
     libraryDependencies += scalatest % Test,
     parallelExecution in Test := false
   ).dependsOn(`kamon-core`)
+
+lazy val `kamon-zipkin` = (project in file("reporters/kamon-zipkin"))
+  .settings(
+    name := "kamon-zipkin",
+    parallelExecution in Test := false,
+    libraryDependencies ++= Seq(
+      "io.zipkin.reporter2" % "zipkin-reporter" % "2.7.15",
+      "io.zipkin.reporter2" % "zipkin-sender-okhttp3" % "2.7.15",
+      scalatest % "test"
+    )
+  ).dependsOn(`kamon-core`)
+
