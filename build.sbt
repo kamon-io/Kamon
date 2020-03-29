@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 /* =========================================================================================
  * Copyright © 2013-2018 the kamon project <http://kamon.io/>
  *
@@ -386,6 +385,7 @@ lazy val reporters = (project in file("reporters"))
   .aggregate(
     `kamon-apm-reporter`,
     `kamon-datadog`,
+    `kamon-jaeger`,
     `kamon-statsd`,
     `kamon-zipkin`,
   )
