@@ -32,11 +32,25 @@ class SimpleMetricKeyGeneratorSpec extends WordSpec with Matchers {
       |  }
       |  statsd.simple-metric-key-generator {
       |    include-hostname = true
+      |    include-environment-tags = true
       |    metric-name-normalization-strategy = normalize
       |  }
       |}
     """.stripMargin
   ).withFallback(ConfigFactory.load())
+
+  val environmentTagsConfiguration: Config = ConfigFactory.parseString(
+    """
+      |kamon {
+      |  environment {
+      |    tags {
+      |      tag-3 = "value-3"
+      |      tag-4 = "value-4"
+      |    }
+      |  }
+      |}
+    """.stripMargin
+  ).withFallback(defaultConfiguration)
 
   "the SimpleMetricKeyGenerator" should {
 
@@ -56,6 +70,15 @@ class SimpleMetricKeyGeneratorSpec extends WordSpec with Matchers {
 
       generator.generateKey("actor", TagSet.from(Map("tag-1" -> "value-1", "tag-2" -> "value-2"))) should be(s"kamon.$host.actor.tag-1.value-1.tag-2.value-2")
       generator.generateKey("actor", TagSet.from(Map("tag-2" -> "value-2", "tag-1" -> "value-1"))) should be(s"kamon.$host.actor.tag-1.value-1.tag-2.value-2")
+    }
+
+    "generate metric names with environment tags sorted by tag name" in {
+      Kamon.reconfigure(environmentTagsConfiguration)
+      val generator = new SimpleMetricKeyGenerator(defaultConfiguration.getConfig("kamon.statsd"))
+      val host = generator.normalizer(Kamon.environment.host)
+
+      generator.generateKey("actor", TagSet.from(Map("tag-1" -> "value-1", "tag-2" -> "value-2"))) should be(s"kamon.$host.actor.tag-1.value-1.tag-2.value-2.tag-3.value-3.tag-4.value-4")
+      generator.generateKey("actor", TagSet.from(Map("tag-2" -> "value-2", "tag-1" -> "value-1"))) should be(s"kamon.$host.actor.tag-1.value-1.tag-2.value-2.tag-3.value-3.tag-4.value-4")
     }
 
     "generate metric names without tags that follow the application.host.entity.entity-name.metric-name pattern by default" in {

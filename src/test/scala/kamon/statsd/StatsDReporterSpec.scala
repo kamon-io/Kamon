@@ -44,6 +44,7 @@ class StatsDReporterSpec extends WordSpec with Matchers with BeforeAndAfter with
         |      application = $Application
         |      hostname-override = $HostnameOverride
         |      include-hostname = true
+        |      include-environment-tags = true
         |      metric-name-normalization-strategy = normalize
         |    }
         |  }
