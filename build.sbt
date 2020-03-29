@@ -130,7 +130,8 @@ lazy val instrumentation = (project in file("instrumentation"))
     `kamon-annotation-api`,
     `kamon-system-metrics`,
     `kamon-akka`,
-    `kamon-akka-http`
+    `kamon-akka-http`,
+    `kamon-play`
   )
 
 lazy val `kamon-instrumentation-common` = (project in file("instrumentation/kamon-instrumentation-common"))
@@ -333,12 +334,12 @@ lazy val `kamon-akka` = (project in file("instrumentation/kamon-akka"))
   .settings(instrumentationSettings: _*)
   .settings(
     moduleName := "kamon-akka",
-  ).dependsOn(`kamon-scala-future` % "compile,common,akka-2.5,akka-2.6", `kamon-testkit` % "test,test-common,test-akka-2.5,test-akka-2.6")
+  ).dependsOn(
+    `kamon-scala-future` % "compile,common,akka-2.5,akka-2.6",
+    `kamon-testkit` % "test,test-common,test-akka-2.5,test-akka-2.6"
+  )
 
-resolvers += Resolver.mavenLocal
 resolvers += Resolver.bintrayRepo("hseeberger", "maven")
-
-
 val akkaHttpJson        = "de.heikoseeberger" %% "akka-http-json4s"     % "1.27.0"
 val json4sNative        = "org.json4s"        %% "json4s-native"        % "3.6.7"
 val http25              = "com.typesafe.akka" %% "akka-http"            % "10.1.9"
@@ -359,107 +360,14 @@ lazy val `kamon-akka-http` = (project in file("instrumentation/kamon-akka-http")
       testScope(httpTestKit25, scalatest, slf4jApi, slf4jnop, akkaHttpJson, json4sNative, okHttp)
   )).dependsOn(`kamon-akka`, `kamon-testkit` % "test")
 
-//val play26Version     = "2.6.23"
-//val play27Version     = "2.7.3"
-//
-//val kamonCore         = "io.kamon"  %%  "kamon-core"                    % "2.0.0"
-//val kamonTestkit      = "io.kamon"  %%  "kamon-testkit"                 % "2.0.2"
-//val kamonScala        = "io.kamon"  %%  "kamon-scala-future"            % "2.0.0"
-//val kamonCommon       = "io.kamon"  %%  "kamon-instrumentation-common"  % "2.0.0"
-//val kamonAkkaHttp     = "io.kamon"  %%  "kamon-akka-http"               % "2.0.0"
-//val kanelaAgent       = "io.kamon"  %   "kanela-agent"                  % "1.0.0"
-//
-//val play              = "com.typesafe.play"       %%  "play"                  % play27Version
-//val playNetty         = "com.typesafe.play"       %%  "play-netty-server"     % play27Version
-//val playAkkaHttp      = "com.typesafe.play"       %%  "play-akka-http-server" % play27Version
-//val playWS            = "com.typesafe.play"       %%  "play-ws"               % play27Version
-//val playLogback       = "com.typesafe.play"       %%  "play-logback"          % play27Version
-//val playTest          = "com.typesafe.play"       %%  "play-test"             % play27Version
-//val scalatestPlus     = "org.scalatestplus.play"  %%  "scalatestplus-play"    % "4.0.3"
-//
-//
-//
-//lazy val instrumentation = Project("instrumentation", file("kamon-play"))
-//  .enablePlugins(JavaAgent)
-//  .settings(
-//    name := "instrumentation",
-//    bintrayPackage := "kamon-play",
-//    moduleName := "kamon-play",
-//    scalaVersion := "2.12.8",
-//    crossScalaVersions := Seq("2.11.12", "2.12.8", "2.13.0"),
-//    testGrouping in Test := singleTestPerJvm((definedTests in Test).value, (javaOptions in Test).value),
-//    libraryDependencies ++=
-//      compileScope(kamonCore, kamonScala, kamonAkkaHttp, kamonCommon) ++
-//      providedScope(play, playNetty, playAkkaHttp, playWS, kanelaAgent))
-//
-//
-//lazy val commonTests = Project("common-tests", file("common-tests"))
-//  .dependsOn(instrumentation)
-//  .settings(noPublishing: _*)
-//  .settings(
-//    test := ((): Unit),
-//    testOnly := ((): Unit),
-//    testQuick := ((): Unit),
-//    scalaVersion := "2.12.8",
-//    libraryDependencies ++=
-//      compileScope(kamonCore, kamonScala, kamonAkkaHttp, kamonCommon) ++
-//      providedScope(play, playNetty, playAkkaHttp, playWS, kanelaAgent) ++
-//      testScope(playTest, scalatestPlus, playLogback, kamonTestkit))
-//
-//lazy val testsOnPlay26 = Project("tests-26", file("tests-2.6"))
-//  .dependsOn(instrumentation)
-//  .enablePlugins(JavaAgent)
-//  .settings(instrumentationSettings)
-//  .settings(noPublishing: _*)
-//  .settings(
-//    name := "tests-2.6",
-//    scalaVersion := "2.12.8",
-//    crossScalaVersions := Seq("2.11.12", "2.12.8"),
-//    testGrouping in Test := singleTestPerJvm((definedTests in Test).value, (javaOptions in Test).value),
-//    unmanagedSourceDirectories in Test ++= (unmanagedSourceDirectories in Test in commonTests).value,
-//    unmanagedResourceDirectories in Test ++= (unmanagedResourceDirectories in Test in commonTests).value,
-//    libraryDependencies ++=
-//      compileScope(kamonCore, kamonScala, kamonAkkaHttp, kamonCommon) ++
-//      providedScope(kanelaAgent) ++
-//      providedScope(onPlay26(play, playNetty, playAkkaHttp, playWS): _*) ++
-//      testScope(onPlay26(playTest, playLogback): _*) ++
-//      testScope(scalatestPlus, kamonTestkit))
-//
-//lazy val testsOnPlay27 = Project("tests-27", file("tests-2.7"))
-//  .dependsOn(instrumentation)
-//  .enablePlugins(JavaAgent)
-//  .settings(instrumentationSettings)
-//  .settings(noPublishing: _*)
-//  .settings(
-//    name := "tests-2.7",
-//    scalaVersion := "2.12.8",
-//    crossScalaVersions := Seq("2.12.8", "2.13.0"),
-//    testGrouping in Test := singleTestPerJvm((definedTests in Test).value, (javaOptions in Test).value),
-//    unmanagedSourceDirectories in Test ++= (unmanagedSourceDirectories in Test in commonTests).value,
-//    unmanagedResourceDirectories in Test ++= (unmanagedResourceDirectories in Test in commonTests).value,
-//    libraryDependencies ++=
-//      compileScope(kamonCore, kamonScala, kamonAkkaHttp, kamonCommon) ++
-//      providedScope(play, playNetty, playAkkaHttp, playWS, kanelaAgent) ++
-//      testScope(playTest, scalatestPlus, playLogback, kamonTestkit))
-//
-//
-//import sbt.Tests._
-//def singleTestPerJvm(tests: Seq[TestDefinition], jvmSettings: Seq[String]): Seq[Group] =
-//  tests map { test =>
-//    Group(
-//      name = test.name,
-//      tests = Seq(test),
-//      runPolicy = SubProcess(ForkOptions(
-//        javaHome = Option.empty[File],
-//        outputStrategy = Option.empty[OutputStrategy],
-//        bootJars = Vector(),
-//        workingDirectory = Option.empty[File],
-//        runJVMOptions = jvmSettings.toVector,
-//        connectInput = false,
-//        envVars = Map.empty[String, String])
-//      )
-//    )
-//  }
-//
-//def onPlay26(modules: ModuleID*): Seq[ModuleID] =
-//  modules.map(_.withRevision(play26Version))
+lazy val `kamon-play` = (project in file("instrumentation/kamon-play"))
+  .enablePlugins(JavaAgent)
+  .disablePlugins(AssemblyPlugin)
+  .settings(instrumentationSettings)
+  .settings(
+    moduleName := "kamon-play"
+  ).dependsOn(
+    `kamon-akka` % "compile,test-common,test-play-2.7,test-play-2.6",
+    `kamon-akka-http` % "compile,test-common,test-play-2.7,test-play-2.6",
+    `kamon-testkit` % "test-common,test-play-2.7,test-play-2.6"
+  )

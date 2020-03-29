@@ -39,14 +39,14 @@ import play.api.test._
 import scala.concurrent.{ExecutionContext, Future}
 
 class AkkaHTTPRequestHandlerInstrumentationSpec extends {
-  val confFile = "/common-tests/src/test/resources/conf/application-akka-http.conf"
+  val confFile = "/instrumentation/kamon-play/src/test-common/resources/conf/application-akka-http.conf"
   //https://www.playframaework.com/documentation/2.6.x/NettyServer#Verifying-that-the-Netty-server-is-running
   //The Akka HTTP backend will not set a value for this request attribute.
   val expectedServer = "play.server.akka-http"
 } with RequestHandlerInstrumentationSpec
 
 class NettyRequestHandlerInstrumentationSpec extends {
-  val confFile = "/common-tests/src/test/resources/conf/application-netty.conf"
+  val confFile = "/instrumentation/kamon-play/src/test-common/resources/conf/application-netty.conf"
   val expectedServer = "play.server.netty"
 } with RequestHandlerInstrumentationSpec
 

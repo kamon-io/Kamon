@@ -90,14 +90,16 @@ libraryDependencies ++= Seq(
 // Ensure that the packaged artifact contains the instrumentation for all Akka versions.
 mappings in packageBin in Compile := Def.taskDyn {
   if(scalaBinaryVersion.value == "2.11")
-    Def.task { joinProducts(
-      (products in `Compile-Akka-2.5`).value
-    )}
+    Def.task {
+      joinProducts((products in `Compile-Akka-2.5`).value) ++
+      joinProducts((unmanagedResourceDirectories in Common).value)
+    }
   else
-    Def.task { joinProducts(
-      (products in `Compile-Akka-2.5`).value,
-      (products in `Compile-Akka-2.6`).value
-    )}
+    Def.task {
+      joinProducts(
+        (products in `Compile-Akka-2.5`).value ++
+        (products in `Compile-Akka-2.6`).value
+      ) ++ joinProducts((unmanagedResourceDirectories in Common).value)}
 }.value
 
 // Compile will return the compile analysis for the Common configuration but will run on all Akka configurations.
@@ -112,6 +114,8 @@ compile in Compile := Def.taskDyn {
       (compile in `Compile-Akka-2.6`).value
     }
 }.value
+
+exportJars := true
 
 
 /**

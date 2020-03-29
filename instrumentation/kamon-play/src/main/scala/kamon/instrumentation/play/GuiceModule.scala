@@ -18,6 +18,8 @@ object GuiceModule {
   @Singleton
   class KamonLoader @Inject() (lifecycle: ApplicationLifecycle, environment: Environment, configuration: Configuration) {
     Logger(classOf[KamonLoader]).info("Reconfiguring Kamon with Play's Config")
+    Logger(classOf[KamonLoader]).info(configuration.underlying.getString("play.server.provider"))
+    Logger(classOf[KamonLoader]).info(configuration.underlying.getString("kamon.trace.tick-interval"))
     Kamon.reconfigure(configuration.underlying)
     Kamon.loadModules()
 
