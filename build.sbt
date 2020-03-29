@@ -383,7 +383,9 @@ lazy val reporters = (project in file("reporters"))
   .settings(noPublishing: _*)
   .settings(crossScalaVersions := Nil)
   .aggregate(
-    `kamon-datadog`
+    `kamon-apm-reporter`,
+    `kamon-datadog`,
+    `kamon-statsd`,
   )
 
 val playJson              = "com.typesafe.play"      %% "play-json"     % "2.7.4"
@@ -429,3 +431,10 @@ lazy val `kamon-apm-reporter` = (project in file("reporters/kamon-apm-reporter")
       "com.typesafe.akka" %% "akka-testkit"     % "2.5.23" % "test"
     )
   ).dependsOn(`kamon-core` % "provided", `kamon-testkit` % "test")
+
+lazy val `kamon-statsd` = (project in file("reporters/kamon-statsd"))
+  .settings(
+    name := "kamon-statsd",
+    libraryDependencies += scalatest % Test,
+    parallelExecution in Test := false
+  ).dependsOn(`kamon-core`)
