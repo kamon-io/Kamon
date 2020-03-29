@@ -333,3 +333,35 @@ lazy val `kamon-akka` = (project in file("instrumentation/kamon-akka"))
   .settings(
     moduleName := "kamon-akka",
   ).dependsOn(`kamon-scala-future` % "compile,common,akka-2.5,akka-2.6", `kamon-testkit` % "test,test-common,test-akka-2.5,test-akka-2.6")
+
+resolvers += Resolver.mavenLocal
+resolvers += Resolver.bintrayRepo("hseeberger", "maven")
+
+
+val kamonCore           = "io.kamon" %% "kamon-core"                    % "2.0.3"
+val kamonTestKit        = "io.kamon" %% "kamon-testkit"                 % "2.0.3"
+val kamonCommon         = "io.kamon" %% "kamon-instrumentation-common"  % "2.0.1"
+val kamonAkka25         = "io.kamon" %% "kamon-akka"                    % "2.0.1"
+val kanelaAgent         = "io.kamon" %  "kanela-agent"                  % "1.0.4"
+
+val akkaHttpJson        = "de.heikoseeberger" %% "akka-http-json4s"     % "1.27.0"
+val json4sNative        = "org.json4s"        %% "json4s-native"        % "3.6.7"
+val http25              = "com.typesafe.akka" %% "akka-http"            % "10.1.9"
+val http2Support        = "com.typesafe.akka" %% "akka-http2-support"   % "10.1.9"
+val httpTestKit25       = "com.typesafe.akka" %% "akka-http-testkit"    % "10.1.9"
+val stream25            = "com.typesafe.akka" %% "akka-stream"          % "2.5.24"
+val okHttp              = "com.squareup.okhttp3" % "okhttp"             % "3.14.2"
+
+lazy val `kamon-akka-http` = Project("kamon-akka-http", file("kamon-akka-http"))
+  .enablePlugins(JavaAgent)
+  .settings(instrumentationSettings)
+  .settings(Seq(
+    name := "kamon-akka-http",
+    moduleName := "kamon-akka-http",
+    bintrayPackage := "kamon-akka-http",
+    crossScalaVersions := Seq("2.11.12", "2.12.8", "2.13.0")),
+    javaAgents += "org.mortbay.jetty.alpn" % "jetty-alpn-agent" % "2.0.9" % "test",
+    libraryDependencies ++=
+      compileScope(kamonCore, kamonAkka25, kamonCommon) ++
+      providedScope(kanelaAgent, http25, http2Support, stream25) ++
+      testScope(httpTestKit25, scalatest, slf4jApi, slf4jnop, kamonTestKit, akkaHttpJson, json4sNative, okHttp))
