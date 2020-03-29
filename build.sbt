@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /* =========================================================================================
  * Copyright © 2013-2018 the kamon project <http://kamon.io/>
  *
@@ -451,3 +452,12 @@ lazy val `kamon-zipkin` = (project in file("reporters/kamon-zipkin"))
     )
   ).dependsOn(`kamon-core`)
 
+lazy val `kamon-jaeger` = (project in file("reporters/kamon-jaeger"))
+  .settings(
+    name := "kamon-jaeger",
+    parallelExecution in Test := false,
+    libraryDependencies ++= Seq(
+      "io.jaegertracing" % "jaeger-thrift" % "1.1.0",
+      scalatest % "test"
+    )
+  ).dependsOn(`kamon-core`)
