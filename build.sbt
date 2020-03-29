@@ -37,8 +37,9 @@ lazy val `kamon-core` = (project in file("core/kamon-core"))
     buildInfoPackage := "kamon.status",
     scalacOptions ++= { if(scalaBinaryVersion.value == "2.11") Seq("-Ydelambdafy:method") else Seq.empty },
     assemblyShadeRules in assembly := Seq(
-      ShadeRule.rename("org.HdrHistogram.**"    -> "kamon.lib.@0").inAll,
-      ShadeRule.rename("org.jctools.**"         -> "kamon.lib.@0").inAll,
+      ShadeRule.rename("org.jctools.**"           -> "kamon.lib.@0").inAll,
+      ShadeRule.rename("org.HdrHistogram.ZigZag"  -> "@0").inAll,
+      ShadeRule.rename("org.HdrHistogram.**"      -> "kamon.lib.@0").inAll,
       ShadeRule.keep(
         "kamon.Kamon",
         "kamon.context.**",
@@ -390,8 +391,41 @@ val asyncHttpClient       = "com.squareup.okhttp3"    % "okhttp"        % "3.10.
 val asyncHttpClientMock   = "com.squareup.okhttp3"    % "mockwebserver" % "3.10.0"
 
 lazy val `kamon-datadog` = (project in file("reporters/kamon-datadog"))
+  .disablePlugins(AssemblyPlugin)
   .settings(
     libraryDependencies ++=
       compileScope(asyncHttpClient, playJson) ++
       testScope(scalatest, slf4jApi, slf4jnop, asyncHttpClientMock),
   ).dependsOn(`kamon-core`, `kamon-testkit` % "test")
+
+lazy val `kamon-apm-reporter` = (project in file("reporters/kamon-apm-reporter"))
+  .enablePlugins(AssemblyPlugin)
+  .settings(
+    test in assembly := {},
+    assemblyMergeStrategy in assembly := {
+      case PathList("META-INF", xs @ _*)  => MergeStrategy.discard
+      case _                              => MergeStrategy.first
+    },
+    assemblyShadeRules in assembly := Seq(
+       ShadeRule.rename("fastparse.**"              -> "kamon.apm.shaded.@0").inAll
+      ,ShadeRule.rename("fansi.**"                  -> "kamon.apm.shaded.@0").inAll
+      ,ShadeRule.rename("sourcecode.**"             -> "kamon.apm.shaded.@0").inAll
+      ,ShadeRule.rename("com.google.protobuf.**"    -> "kamon.apm.shaded.@0").inAll
+      ,ShadeRule.rename("google.protobuf.**"        -> "kamon.apm.shaded.@0").inAll
+      ,ShadeRule.rename("okhttp3.**"                -> "kamon.apm.shaded.@0").inAll
+      ,ShadeRule.rename("okio.**"                   -> "kamon.apm.shaded.@0").inAll
+      ,ShadeRule.rename("kamino.**"                 -> "kamon.apm.shaded.@0").inAll
+    ),
+
+    libraryDependencies ++= Seq(
+      "com.google.protobuf"   % "protobuf-java" % "3.8.0" % "shaded",
+      "com.squareup.okhttp3"  % "okhttp"        % "3.9.1" % "shaded",
+
+      scalatest % "test",
+      "ch.qos.logback"    %  "logback-classic"  % "1.2.3" % "test",
+      "org.scalatest"     %% "scalatest"        % "3.0.8" % "test",
+      "com.typesafe.akka" %% "akka-http"        % "10.1.8" % "test",
+      "com.typesafe.akka" %% "akka-stream"      % "2.5.23" % "test",
+      "com.typesafe.akka" %% "akka-testkit"     % "2.5.23" % "test"
+    )
+  ).dependsOn(`kamon-core` % "provided", `kamon-testkit` % "test")
