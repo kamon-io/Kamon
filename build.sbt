@@ -19,7 +19,7 @@ lazy val kamon = (project in file("."))
   .disablePlugins(AssemblyPlugin)
   .settings(noPublishing: _*)
   .settings(crossScalaVersions := Nil)
-  .aggregate(core, instrumentation)
+  .aggregate(core, instrumentation, reporters)
 
 lazy val core = (project in file("core"))
   .disablePlugins(AssemblyPlugin)
@@ -371,3 +371,27 @@ lazy val `kamon-play` = (project in file("instrumentation/kamon-play"))
     `kamon-akka-http` % "compile,test-common,test-play-2.7,test-play-2.6",
     `kamon-testkit` % "test-common,test-play-2.7,test-play-2.6"
   )
+
+
+/**
+  * Reporters
+  */
+
+lazy val reporters = (project in file("reporters"))
+  .disablePlugins(AssemblyPlugin)
+  .settings(noPublishing: _*)
+  .settings(crossScalaVersions := Nil)
+  .aggregate(
+    `kamon-datadog`
+  )
+
+val playJson              = "com.typesafe.play"      %% "play-json"     % "2.7.4"
+val asyncHttpClient       = "com.squareup.okhttp3"    % "okhttp"        % "3.10.0"
+val asyncHttpClientMock   = "com.squareup.okhttp3"    % "mockwebserver" % "3.10.0"
+
+lazy val `kamon-datadog` = (project in file("reporters/kamon-datadog"))
+  .settings(
+    libraryDependencies ++=
+      compileScope(asyncHttpClient, playJson) ++
+      testScope(scalatest, slf4jApi, slf4jnop, asyncHttpClientMock),
+  ).dependsOn(`kamon-core`, `kamon-testkit` % "test")
