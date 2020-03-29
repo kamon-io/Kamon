@@ -386,6 +386,7 @@ lazy val reporters = (project in file("reporters"))
     `kamon-apm-reporter`,
     `kamon-datadog`,
     `kamon-statsd`,
+    `kamon-zipkin`,
   )
 
 val playJson              = "com.typesafe.play"      %% "play-json"     % "2.7.4"
