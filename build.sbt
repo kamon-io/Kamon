@@ -482,3 +482,14 @@ lazy val `kamon-graphite` = (project in file("reporters/kamon-graphite"))
       logbackClassic % "test"
     )
   ).dependsOn(`kamon-core`, `kamon-testkit` % "test")
+
+lazy val `kamon-newrelic` = (project in file("reporters/kamon-newrelic"))
+  .settings(
+    name := "kamon-newrelic",
+    libraryDependencies ++= Seq(
+      "com.newrelic.telemetry" % "telemetry" % "0.4.0",
+      "com.newrelic.telemetry" % "telemetry-http-okhttp" % "0.4.0",
+      scalatest % "test",
+      "org.mockito" % "mockito-core" % "3.1.0" % "test"
+    )
+  ).dependsOn(`kamon-core`)
