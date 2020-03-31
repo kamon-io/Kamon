@@ -109,6 +109,7 @@ class InfluxDBReporter extends MetricReporter {
         writeNameAndTags(builder, metric.name, instrument.tags)
         writeIntField(builder, "count", instrument.value.count)
         writeIntField(builder, "sum", instrument.value.sum)
+        writeIntField(builder, "mean", instrument.value.sum / instrument.value.count)
         writeIntField(builder, "min", instrument.value.min)
 
         percentiles.foreach { p =>
