@@ -24,7 +24,7 @@ import kamon.metric.MeasurementUnit.{information, time}
 import kamon.metric.MeasurementUnit.Dimension._
 import kamon.tag.TagSet
 
-class ScrapeDataBuilder(prometheusConfig: PrometheusReporter.Settings, environmentTags: TagSet = TagSet.Empty) {
+class ScrapeDataBuilder(prometheusConfig: PrometheusSettings.Generic, environmentTags: TagSet = TagSet.Empty) {
   private val _builder = new StringBuilder()
   private val _decimalFormatSymbols = DecimalFormatSymbols.getInstance(Locale.ROOT)
   private val _numberFormat = new DecimalFormat("#0.0########", _decimalFormatSymbols)
@@ -191,7 +191,7 @@ class ScrapeDataBuilder(prometheusConfig: PrometheusReporter.Settings, environme
   }
 
   private def normalizeMetricName(metricName: String, unit: MeasurementUnit): String = {
-    val normalizedMetricName = metricName.map(validNameChar)
+    val normalizedMetricName = metricName.map(validNameChar(_))
 
     unit.dimension match  {
       case Time         => normalizedMetricName + "_seconds"

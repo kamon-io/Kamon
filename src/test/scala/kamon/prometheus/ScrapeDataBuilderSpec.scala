@@ -1,11 +1,11 @@
 package kamon.prometheus
 
 import com.typesafe.config.ConfigFactory
-import kamon.metric.{DynamicRange, MeasurementUnit, MetricSnapshot}
-import org.scalatest.{Matchers, WordSpec}
 import kamon.metric.MeasurementUnit.{information, none, time}
+import kamon.metric.{MeasurementUnit, MetricSnapshot}
 import kamon.tag.TagSet
 import kamon.testkit.MetricSnapshotBuilder
+import org.scalatest.{Matchers, WordSpec}
 
 class ScrapeDataBuilderSpec extends WordSpec with Matchers {
 
@@ -95,7 +95,7 @@ class ScrapeDataBuilderSpec extends WordSpec with Matchers {
 //    }
 
     "read custom bucket configurations" in {
-      val config = PrometheusReporter.Settings.readSettings(ConfigFactory.parseString(
+      val config = PrometheusSettings.readSettings(ConfigFactory.parseString(
         """
           |kamon.prometheus.buckets.custom {
           |  singleword = [1, 2, 3]
@@ -256,7 +256,8 @@ class ScrapeDataBuilderSpec extends WordSpec with Matchers {
 
   private def builder(buckets: Seq[java.lang.Double] = Seq(5D, 7D, 8D, 9D, 10D, 11D, 12D), customBuckets: Map[String, Seq[java.lang.Double]] =
     Map("histogram.custom-buckets" -> Seq(1D, 3D)), environmentTags: TagSet = TagSet.Empty) = new ScrapeDataBuilder(
-      PrometheusReporter.Settings(false, "localhost", 1, buckets, buckets, buckets, customBuckets, false), environmentTags
+      PrometheusSettings.Generic(buckets, buckets, buckets, customBuckets, false),
+    environmentTags
   )
 
   private def constantDistribution(name: String, unit: MeasurementUnit, lower: Long, upper: Long): MetricSnapshot.Distributions =
