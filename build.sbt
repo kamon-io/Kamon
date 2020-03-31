@@ -393,6 +393,7 @@ lazy val reporters = (project in file("reporters"))
     `kamon-influxdb`,
     `kamon-jaeger`,
     `kamon-newrelic`,
+    `kamon-prometheus`,
     `kamon-statsd`,
     `kamon-zipkin`,
   )
