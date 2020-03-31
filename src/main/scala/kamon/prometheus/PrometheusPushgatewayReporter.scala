@@ -1,5 +1,7 @@
 package kamon.prometheus
 
+import java.time.Duration
+
 import com.typesafe.config.Config
 import kamon.Kamon
 import kamon.metric.PeriodSnapshot
@@ -13,6 +15,7 @@ class PrometheusPushgatewayReporter(
   ) extends MetricReporter {
 
   private val _logger = LoggerFactory.getLogger(classOf[PrometheusPushgatewayReporter])
+  private val _snapshotAccumulator = PeriodSnapshot.accumulator(Duration.ofDays(365 * 5), Duration.ZERO)
 
   @volatile private var httpClient: HttpClient = _
   @volatile private var settings: PrometheusSettings.Generic = _
@@ -25,12 +28,15 @@ class PrometheusPushgatewayReporter(
     this("kamon.prometheus", "pushgateway", httpClientFactory)
 
   override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
+    _snapshotAccumulator.add(snapshot)
+    val currentData = _snapshotAccumulator.peek()
+
     val scrapeDataBuilder = new ScrapeDataBuilder(settings, PrometheusSettings.environmentTags(settings))
-    scrapeDataBuilder.appendCounters(snapshot.counters)
-    scrapeDataBuilder.appendGauges(snapshot.gauges)
-    scrapeDataBuilder.appendHistograms(snapshot.histograms)
-    scrapeDataBuilder.appendHistograms(snapshot.timers)
-    scrapeDataBuilder.appendHistograms(snapshot.rangeSamplers)
+    scrapeDataBuilder.appendCounters(currentData.counters)
+    scrapeDataBuilder.appendGauges(currentData.gauges)
+    scrapeDataBuilder.appendHistograms(currentData.histograms)
+    scrapeDataBuilder.appendHistograms(currentData.timers)
+    scrapeDataBuilder.appendHistograms(currentData.rangeSamplers)
 
     val message = scrapeDataBuilder.build()
 
