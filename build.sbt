@@ -389,6 +389,7 @@ lazy val reporters = (project in file("reporters"))
   .aggregate(
     `kamon-apm-reporter`,
     `kamon-datadog`,
+    `kamon-graphite`,
     `kamon-influxdb`,
     `kamon-jaeger`,
     `kamon-statsd`,
@@ -470,5 +471,14 @@ lazy val `kamon-influxdb` = (project in file("reporters/kamon-influxdb"))
       okHttp,
       okHttpMockServer % "test",
       scalatest % "test"
+    )
+  ).dependsOn(`kamon-core`, `kamon-testkit` % "test")
+
+lazy val `kamon-graphite` = (project in file("reporters/kamon-graphite"))
+  .settings(
+    name := "kamon-graphite",
+    libraryDependencies ++= Seq(
+      scalatest % "test",
+      logbackClassic % "test"
     )
   ).dependsOn(`kamon-core`, `kamon-testkit` % "test")
