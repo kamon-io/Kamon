@@ -340,14 +340,15 @@ lazy val `kamon-akka` = (project in file("instrumentation/kamon-akka"))
     `kamon-testkit` % "test,test-common,test-akka-2.5,test-akka-2.6"
   )
 
-resolvers += Resolver.bintrayRepo("hseeberger", "maven")
 val akkaHttpJson        = "de.heikoseeberger" %% "akka-http-json4s"     % "1.27.0"
 val json4sNative        = "org.json4s"        %% "json4s-native"        % "3.6.7"
 val http25              = "com.typesafe.akka" %% "akka-http"            % "10.1.9"
 val http2Support        = "com.typesafe.akka" %% "akka-http2-support"   % "10.1.9"
 val httpTestKit25       = "com.typesafe.akka" %% "akka-http-testkit"    % "10.1.9"
 val stream25            = "com.typesafe.akka" %% "akka-stream"          % "2.5.24"
-val okHttp              = "com.squareup.okhttp3" % "okhttp"             % "3.14.2"
+val okHttp              = "com.squareup.okhttp3" % "okhttp"             % "3.14.7"
+
+resolvers += Resolver.bintrayRepo("hseeberger", "maven")
 
 lazy val `kamon-akka-http` = (project in file("instrumentation/kamon-akka-http"))
   .enablePlugins(JavaAgent)
@@ -378,6 +379,9 @@ lazy val `kamon-play` = (project in file("instrumentation/kamon-play"))
   * Reporters
   */
 
+val playJson          = "com.typesafe.play"      %% "play-json"     % "2.7.4"
+val okHttpMockServer  = "com.squareup.okhttp3"    % "mockwebserver" % "3.10.0"
+
 lazy val reporters = (project in file("reporters"))
   .disablePlugins(AssemblyPlugin)
   .settings(noPublishing: _*)
@@ -385,14 +389,11 @@ lazy val reporters = (project in file("reporters"))
   .aggregate(
     `kamon-apm-reporter`,
     `kamon-datadog`,
+    `kamon-influxdb`,
     `kamon-jaeger`,
     `kamon-statsd`,
     `kamon-zipkin`,
   )
-
-val playJson          = "com.typesafe.play"      %% "play-json"     % "2.7.4"
-val okHttp            = "com.squareup.okhttp3"    % "okhttp"        % "3.10.0"
-val okHttpMockServer  = "com.squareup.okhttp3"    % "mockwebserver" % "3.10.0"
 
 lazy val `kamon-datadog` = (project in file("reporters/kamon-datadog"))
   .disablePlugins(AssemblyPlugin)

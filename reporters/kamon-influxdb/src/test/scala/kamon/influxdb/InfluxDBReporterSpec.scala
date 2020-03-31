@@ -41,8 +41,8 @@ class InfluxDBReporterSpec extends WordSpec with Matchers with BeforeAndAfterAll
         "custom.user.counter count=42i 1517000993",
         "jvm.heap-size value=1.5E8 1517000993",
         "akka.actor.errors,path=as/user/actor count=10i 1517000993",
-        "my.histogram,one=tag count=4i,sum=13i,min=1i,p50.0=2.0,p70.0=4.0,p90.0=6.0,p95.0=6.0,p99.0=6.0,p99.9=6.0,max=6i 1517000993",
-        "queue.monitor,one=tag count=4i,sum=13i,min=1i,p50.0=2.0,p70.0=4.0,p90.0=6.0,p95.0=6.0,p99.0=6.0,p99.9=6.0,max=6i 1517000993"
+        "my.histogram,one=tag count=4i,sum=13i,mean=3i,min=1i,p50.0=2.0,p70.0=4.0,p90.0=6.0,p95.0=6.0,p99.0=6.0,p99.9=6.0,max=6i 1517000993",
+        "queue.monitor,one=tag count=4i,sum=13i,mean=3i,min=1i,p50.0=2.0,p70.0=4.0,p90.0=6.0,p95.0=6.0,p99.0=6.0,p99.9=6.0,max=6i 1517000993"
       )
 
       reportedLines.sorted.zip(expectedLines.sorted) foreach {
@@ -73,8 +73,8 @@ class InfluxDBReporterSpec extends WordSpec with Matchers with BeforeAndAfterAll
         "custom.user.counter,service=test-service,host=test.host,instance=test-instance,env=staging,context=test-context count=42i 1517000993",
         "jvm.heap-size,service=test-service,host=test.host,instance=test-instance,env=staging,context=test-context value=1.5E8 1517000993",
         "akka.actor.errors,path=as/user/actor,service=test-service,host=test.host,instance=test-instance,env=staging,context=test-context count=10i 1517000993",
-        "my.histogram,one=tag,service=test-service,host=test.host,instance=test-instance,env=staging,context=test-context count=4i,sum=13i,min=1i,p50.0=2.0,p70.0=4.0,p90.0=6.0,p95.0=6.0,p99.0=6.0,p99.9=6.0,max=6i 1517000993",
-        "queue.monitor,one=tag,service=test-service,host=test.host,instance=test-instance,env=staging,context=test-context count=4i,sum=13i,min=1i,p50.0=2.0,p70.0=4.0,p90.0=6.0,p95.0=6.0,p99.0=6.0,p99.9=6.0,max=6i 1517000993"
+        "my.histogram,one=tag,service=test-service,host=test.host,instance=test-instance,env=staging,context=test-context count=4i,sum=13i,mean=3i,min=1i,p50.0=2.0,p70.0=4.0,p90.0=6.0,p95.0=6.0,p99.0=6.0,p99.9=6.0,max=6i 1517000993",
+        "queue.monitor,one=tag,service=test-service,host=test.host,instance=test-instance,env=staging,context=test-context count=4i,sum=13i,mean=3i,min=1i,p50.0=2.0,p70.0=4.0,p90.0=6.0,p95.0=6.0,p99.0=6.0,p99.9=6.0,max=6i 1517000993"
       )
 
       reportedLines.sorted.zip(expectedLines.sorted) foreach {
