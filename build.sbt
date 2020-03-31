@@ -494,3 +494,14 @@ lazy val `kamon-newrelic` = (project in file("reporters/kamon-newrelic"))
       "org.mockito" % "mockito-core" % "3.1.0" % "test"
     )
   ).dependsOn(`kamon-core`)
+
+lazy val `kamon-prometheus` = (project in file("reporters/kamon-prometheus"))
+  .settings(
+    name := "kamon-prometheus",
+    libraryDependencies ++= Seq(
+      okHttp,
+      "org.nanohttpd" % "nanohttpd" % "2.3.1",
+      scalatest % "test",
+      logbackClassic % "test"
+    )
+  ).dependsOn(`kamon-core`, `kamon-testkit` % "test")
