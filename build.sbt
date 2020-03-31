@@ -390,16 +390,16 @@ lazy val reporters = (project in file("reporters"))
     `kamon-zipkin`,
   )
 
-val playJson              = "com.typesafe.play"      %% "play-json"     % "2.7.4"
-val asyncHttpClient       = "com.squareup.okhttp3"    % "okhttp"        % "3.10.0"
-val asyncHttpClientMock   = "com.squareup.okhttp3"    % "mockwebserver" % "3.10.0"
+val playJson          = "com.typesafe.play"      %% "play-json"     % "2.7.4"
+val okHttp            = "com.squareup.okhttp3"    % "okhttp"        % "3.10.0"
+val okHttpMockServer  = "com.squareup.okhttp3"    % "mockwebserver" % "3.10.0"
 
 lazy val `kamon-datadog` = (project in file("reporters/kamon-datadog"))
   .disablePlugins(AssemblyPlugin)
   .settings(
     libraryDependencies ++=
-      compileScope(asyncHttpClient, playJson) ++
-      testScope(scalatest, slf4jApi, slf4jnop, asyncHttpClientMock),
+      compileScope(okHttp, playJson) ++
+      testScope(scalatest, slf4jApi, slf4jnop, okHttpMockServer),
   ).dependsOn(`kamon-core`, `kamon-testkit` % "test")
 
 lazy val `kamon-apm-reporter` = (project in file("reporters/kamon-apm-reporter"))
@@ -422,10 +422,10 @@ lazy val `kamon-apm-reporter` = (project in file("reporters/kamon-apm-reporter")
     ),
 
     libraryDependencies ++= Seq(
-      "com.google.protobuf"   % "protobuf-java" % "3.8.0" % "shaded",
-      "com.squareup.okhttp3"  % "okhttp"        % "3.9.1" % "shaded",
-
+      okHttp % "shaded",
       scalatest % "test",
+      "com.google.protobuf"   % "protobuf-java" % "3.8.0" % "shaded",
+
       "ch.qos.logback"    %  "logback-classic"  % "1.2.3" % "test",
       "org.scalatest"     %% "scalatest"        % "3.0.8" % "test",
       "com.typesafe.akka" %% "akka-http"        % "10.1.8" % "test",
@@ -461,3 +461,13 @@ lazy val `kamon-jaeger` = (project in file("reporters/kamon-jaeger"))
       scalatest % "test"
     )
   ).dependsOn(`kamon-core`)
+
+lazy val `kamon-influxdb` = (project in file("reporters/kamon-influxdb"))
+  .settings(
+    name := "kamon-influxdb",
+    libraryDependencies ++= Seq(
+      okHttp,
+      okHttpMockServer % "test",
+      scalatest % "test"
+    )
+  ).dependsOn(`kamon-core`, `kamon-testkit` % "test")
