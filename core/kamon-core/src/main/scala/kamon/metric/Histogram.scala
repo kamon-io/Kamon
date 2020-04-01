@@ -20,7 +20,7 @@ import java.nio.ByteBuffer
 
 import kamon.metric.Metric.{BaseMetric, BaseMetricAutoUpdate}
 import kamon.tag.TagSet
-import org.HdrHistogram.{BaseAtomicHdrHistogram, HdrHistogramInternalState, ZigZag}
+import org.HdrHistogram.{BaseAtomicHdrHistogram, BaseLocalHdrHistogram, HdrHistogramInternalState, ZigZag}
 import org.slf4j.LoggerFactory
 
 
@@ -160,6 +160,36 @@ object Histogram {
   private object DistributionSnapshotBuilder {
     private val _tempSnapshotBuffer = new ThreadLocal[ByteBuffer] {
       override def initialValue(): ByteBuffer = ByteBuffer.allocate(33792)
+    }
+  }
+
+  /**
+    * Histogram implementation that can only be used local to a thread or with external synchronization. This is only
+    * used to power aggregation of distributions given that it is a lot simpler to create histograms and dump all the
+    * values on them rather than trying to manually aggregate the buckets and take into account adjustments on dynamic
+    * range.
+    */
+  private[kamon] class Local(val dynamicRange: DynamicRange) extends BaseLocalHdrHistogram(dynamicRange)
+    with Instrument.Snapshotting[Distribution] with DistributionSnapshotBuilder
+
+  private[kamon] object Local {
+
+    /** Keeps a thread-local cache of local histograms that can be reused when aggregating distributions. */
+    private val _localHistograms = new ThreadLocal[collection.mutable.Map[DynamicRange, Histogram.Local]] {
+      override def initialValue(): collection.mutable.Map[DynamicRange, Histogram.Local] =
+        collection.mutable.Map.empty
+    }
+
+    /**
+      * Creates or retrieves a local histogram for the provided dynamic range. In theory, it is safe to do this from the
+      * memory usage perspective since distribution merging or converting (the use cases for a Local Histogram) are only
+      * expected to happen on reporter threads and all reporters have their own dedicated thread so we wont have many
+      * instances around.
+      */
+    def get(dynamicRange: DynamicRange): Histogram.Local = {
+      val histogram = _localHistograms.get().getOrElseUpdate(dynamicRange, new Histogram.Local(dynamicRange))
+      histogram.reset()
+      histogram
     }
   }
 }

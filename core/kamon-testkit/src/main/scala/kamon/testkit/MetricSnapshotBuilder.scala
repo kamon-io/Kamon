@@ -2,7 +2,7 @@ package kamon.testkit
 
 import java.time.Duration
 
-import kamon.metric.Distribution.LocalHistogram
+import kamon.metric.Histogram
 import kamon.metric.Metric.Settings
 import kamon.metric.{DynamicRange, Instrument, MeasurementUnit, MetricSnapshot}
 import kamon.tag.TagSet
@@ -79,7 +79,7 @@ object MetricSnapshotBuilder {
     * attributes and values.
     */
   def histogram(name: String, description: String, tags: TagSet, unit: MeasurementUnit)(values: Long*): MetricSnapshot.Distributions = {
-    val localHistogram = LocalHistogram.get(DynamicRange.Default)
+    val localHistogram = Histogram.Local.get(DynamicRange.Default)
     localHistogram.reset()
 
     values.foreach(v => localHistogram.recordValue(v))

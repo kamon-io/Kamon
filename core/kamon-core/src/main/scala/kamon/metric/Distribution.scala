@@ -148,7 +148,7 @@ object Distribution {
     * to the provided dynamic range if necessary.
     */
   def merge(left: Distribution, right: Distribution, dynamicRange: DynamicRange): Distribution = {
-    val h = LocalHistogram.get(dynamicRange)
+    val h = Histogram.Local.get(dynamicRange)
     left.bucketsIterator.foreach(b => h.recordValueWithCount(b.value, b.frequency))
     right.bucketsIterator.foreach(b => h.recordValueWithCount(b.value, b.frequency))
     h.snapshot(true)
@@ -199,7 +199,7 @@ object Distribution {
       if(unit == actualToUnit && distribution.dynamicRange == toDynamicRange)
         distribution
       else {
-        val scaledHistogram = LocalHistogram.get(toDynamicRange)
+        val scaledHistogram = Histogram.Local.get(toDynamicRange)
         distribution.bucketsIterator.foreach(bucket => {
           val roundValue = Math.round(MeasurementUnit.convert(bucket.value, unit, toUnit))
           val convertedValue = if(roundValue == 0L) 1L else roundValue
@@ -332,35 +332,5 @@ object Distribution {
   private object immutable {
     case class Bucket(value: Long, frequency: Long) extends Distribution.Bucket
     case class Percentile(rank: Double, value: Long, countAtRank: Long) extends Distribution.Percentile
-  }
-
-  /**
-    * Histogram implementation that can only be used local to a thread or with external synchronization. This is only
-    * used to power aggregation of distributions given that it is a lot simpler to create histograms and dump all the
-    * values on them rather than trying to manually aggregate the buckets and take into account adjustments on dynamic
-    * range.
-    */
-  private[kamon] class LocalHistogram(val dynamicRange: DynamicRange) extends BaseLocalHdrHistogram(dynamicRange)
-    with Instrument.Snapshotting[Distribution] with DistributionSnapshotBuilder
-
-  private[kamon] object LocalHistogram {
-
-    /** Keeps a thread-local cache of local histograms that can be reused when aggregating distributions. */
-    private val _localHistograms = new ThreadLocal[collection.mutable.Map[DynamicRange, LocalHistogram]] {
-      override def initialValue(): collection.mutable.Map[DynamicRange, LocalHistogram] =
-        collection.mutable.Map.empty
-    }
-
-    /**
-      * Creates or retrieves a local histogram for the provided dynamic range. In theory, it is safe to do this from the
-      * memory usage perspective since distribution merging or converting (the use cases for a Local Histogram) are only
-      * expected to happen on reporter threads and all reporters have their own dedicated thread so we wont have many
-      * instances around.
-      */
-    def get(dynamicRange: DynamicRange): LocalHistogram = {
-      val histogram = _localHistograms.get().getOrElseUpdate(dynamicRange, new LocalHistogram(dynamicRange))
-      histogram.reset()
-      histogram
-    }
   }
 }

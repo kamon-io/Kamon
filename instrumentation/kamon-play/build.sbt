@@ -51,12 +51,12 @@ lazy val baseTestSettings = Seq(
 )
 
 inConfig(TestCommon)(Defaults.testSettings ++ instrumentationSettings ++ baseTestSettings ++ Seq(
-  crossScalaVersions := Seq("2.11.12", "2.12.10")
+  crossScalaVersions := Seq("2.11.12", "2.12.11")
 ))
 
 inConfig(`Test-Play-2.6`)(Defaults.testSettings ++ instrumentationSettings ++ baseTestSettings ++ Seq(
   sources := joinSources(TestCommon, `Test-Play-2.6`).value,
-  crossScalaVersions := Seq("2.11.12", "2.12.10"),
+  crossScalaVersions := Seq("2.11.12", "2.12.11"),
   testGrouping := singleTestPerJvm(definedTests.value, javaOptions.value),
   unmanagedResourceDirectories ++= (unmanagedResourceDirectories in Compile).value,
   unmanagedResourceDirectories ++= (unmanagedResourceDirectories in TestCommon).value,

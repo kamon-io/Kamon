@@ -10,7 +10,7 @@ import kamino.IngestionV1
 import kamino.IngestionV1.InstrumentType.{COUNTER, GAUGE, HISTOGRAM, MIN_MAX_COUNTER}
 import kamino.IngestionV1._
 import org.HdrHistogram.ZigZag
-import kamon.metric.Distribution.{LocalHistogram, ZigZagCounts}
+import kamon.metric.Distribution.ZigZagCounts
 import kamon.metric.{DynamicRange, Instrument, MetricSnapshot, PeriodSnapshot}
 import kamon.metric.MeasurementUnit.{information, time}
 import kamon.module.{CombinedReporter, Module, ModuleFactory}

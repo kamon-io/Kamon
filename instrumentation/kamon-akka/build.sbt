@@ -31,7 +31,7 @@ configs(
 // The Common configuration should always depend on the latest version of Akka. All code in the Common configuration
 // should be source compatible with all Akka versions.
 inConfig(Common)(Defaults.compileSettings ++ Seq(
-  crossScalaVersions := Seq("2.12.10", "2.13.1")
+  crossScalaVersions := Seq("2.12.11", "2.13.1")
 ))
 
 libraryDependencies ++= { if(scalaBinaryVersion.value == "2.11") Seq.empty else Seq(
@@ -50,7 +50,7 @@ libraryDependencies ++= { if(scalaBinaryVersion.value == "2.11") Seq.empty else 
 
 
 inConfig(`Compile-Akka-2.6`)(Defaults.compileSettings ++ Seq(
-  crossScalaVersions := Seq("2.12.10", "2.13.1"),
+  crossScalaVersions := Seq("2.12.11", "2.13.1"),
   sources := joinSources(Common, `Compile-Akka-2.6`).value
 ))
 
@@ -130,7 +130,7 @@ lazy val baseTestSettings = Seq(
 )
 
 inConfig(TestCommon)(Defaults.testSettings ++ instrumentationSettings ++ baseTestSettings ++ Seq(
-  crossScalaVersions := Seq("2.12.10", "2.13.1")
+  crossScalaVersions := Seq("2.12.11", "2.13.1")
 ))
 
 inConfig(`Test-Akka-2.5`)(Defaults.testSettings ++ instrumentationSettings ++ baseTestSettings ++ Seq(
@@ -140,7 +140,7 @@ inConfig(`Test-Akka-2.5`)(Defaults.testSettings ++ instrumentationSettings ++ ba
 ))
 
 inConfig(`Test-Akka-2.6`)(Defaults.testSettings ++ instrumentationSettings ++ baseTestSettings ++ Seq(
-  crossScalaVersions := Seq("2.12.10", "2.13.1"),
+  crossScalaVersions := Seq("2.12.11", "2.13.1"),
   sources := joinSources(TestCommon, `Test-Akka-2.6`).value,
   unmanagedResourceDirectories ++= (unmanagedResourceDirectories in Common).value,
   unmanagedResourceDirectories ++= (unmanagedResourceDirectories in TestCommon).value

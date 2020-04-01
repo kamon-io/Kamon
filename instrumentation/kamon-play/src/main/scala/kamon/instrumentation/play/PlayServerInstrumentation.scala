@@ -49,19 +49,25 @@ class PlayServerInstrumentation extends InstrumentationBuilder {
       .mixin(classOf[HasServerInstrumentation.Mixin])
       .advise(isConstructor, NettyServerInitializationAdvice)
 
-  onType("play.core.server.netty.PlayRequestHandler")
+  if(hasGenericFutureListener()) {
+    onType("play.core.server.netty.PlayRequestHandler")
       .when(isNettyAround)
       .mixin(classOf[HasServerInstrumentation.Mixin])
       .mixin(classOf[HasTimestamp.Mixin])
       .advise(isConstructor, PlayRequestHandlerConstructorAdvice)
       .advise(isConstructor, CaptureCurrentTimestampOnExit)
       .advise(method("handle"), NettyPlayRequestHandlerHandleAdvice)
+  }
 
   /**
     * This final bit ensures that we will apply an operation name right before filters get to execute.
     */
   onType("play.api.http.DefaultHttpRequestHandler")
     .advise(method("filterHandler").and(takesArguments(2)), GenerateOperationNameOnFilterHandler)
+
+  private def hasGenericFutureListener(): Boolean = {
+    try { Class.forName("io.netty.util.concurrent.GenericFutureListener") != null} catch { case _ => false }
+  }
 }
 
 

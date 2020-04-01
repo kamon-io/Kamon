@@ -13,13 +13,12 @@
  * =========================================================================================
  */
 
-import Tests._
-
 lazy val kamon = (project in file("."))
   .disablePlugins(AssemblyPlugin)
   .settings(noPublishing: _*)
   .settings(crossScalaVersions := Nil)
-  .aggregate(core, instrumentation, reporters)
+  .aggregate(core, instrumentation, reporters, bundle)
+
 
 lazy val core = (project in file("core"))
   .disablePlugins(AssemblyPlugin)
@@ -27,19 +26,20 @@ lazy val core = (project in file("core"))
   .settings(crossScalaVersions := Nil)
   .aggregate(`kamon-core`, `kamon-status-page`, `kamon-testkit`, `kamon-core-tests`, `kamon-core-bench`)
 
+
 lazy val `kamon-core` = (project in file("core/kamon-core"))
   .enablePlugins(BuildInfoPlugin)
   .enablePlugins(AssemblyPlugin)
   .settings(
-    name := "kamon-core",
-    moduleName := "kamon-core",
     buildInfoKeys := Seq[BuildInfoKey](version),
     buildInfoPackage := "kamon.status",
     scalacOptions ++= { if(scalaBinaryVersion.value == "2.11") Seq("-Ydelambdafy:method") else Seq.empty },
     assemblyShadeRules in assembly := Seq(
-      ShadeRule.rename("org.jctools.**"           -> "kamon.lib.@0").inAll,
-      ShadeRule.rename("org.HdrHistogram.ZigZag"  -> "@0").inAll,
-      ShadeRule.rename("org.HdrHistogram.**"      -> "kamon.lib.@0").inAll,
+      ShadeRule.rename("org.jctools.**"                             -> "kamon.lib.@0").inAll,
+      ShadeRule.rename("org.HdrHistogram.Base*"                     -> "@0").inAll,
+      ShadeRule.rename("org.HdrHistogram.HdrHistogramInternalState" -> "@0").inAll,
+      ShadeRule.rename("org.HdrHistogram.ZigZag"                    -> "@0").inAll,
+      ShadeRule.rename("org.HdrHistogram.*"                         -> "org.HdrHistogram.Shaded@1").inAll,
       ShadeRule.keep(
         "kamon.Kamon",
         "kamon.context.**",
@@ -56,8 +56,8 @@ lazy val `kamon-core` = (project in file("core/kamon-core"))
     libraryDependencies ++= Seq(
       "com.typesafe"      %  "config"       % "1.3.1",
       "org.slf4j"         %  "slf4j-api"    % "1.7.25",
-      "org.hdrhistogram"  %  "HdrHistogram" % "2.1.9" % "shaded",
-      "org.jctools"       %  "jctools-core" % "2.1.1" % "shaded",
+      "org.hdrhistogram"  %  "HdrHistogram" % "2.1.9" % "provided,shaded",
+      "org.jctools"       %  "jctools-core" % "2.1.1" % "provided,shaded",
     ),
   )
 
@@ -65,26 +65,21 @@ lazy val `kamon-core` = (project in file("core/kamon-core"))
 lazy val `kamon-status-page` = (project in file("core/kamon-status-page"))
   .enablePlugins(AssemblyPlugin)
   .settings(
-    name := "kamon-status-page",
-    moduleName := "kamon-status-page",
     assemblyShadeRules in assembly := Seq(
       ShadeRule.rename("com.grack.nanojson.**"  -> "kamon.lib.@0").inAll,
       ShadeRule.rename("fi.iki.elonen.**"       -> "kamon.lib.@0").inAll,
     ),
     libraryDependencies ++= Seq(
-      "org.nanohttpd" %  "nanohttpd" % "2.3.1" % "shaded",
-      "com.grack"     %  "nanojson"  % "1.1"   % "shaded"
+      "com.grack"     %  "nanojson"  % "1.1"   % "provided,shaded",
+      "org.nanohttpd" %  "nanohttpd" % "2.3.1" % "provided,shaded"
     )
-  ).dependsOn(`kamon-core` % "provided")
+  ).dependsOn(`kamon-core`)
 
 
 lazy val `kamon-testkit` = (project in file("core/kamon-testkit"))
   .disablePlugins(AssemblyPlugin)
   .settings(
-    moduleName := "kamon-testkit",
-    libraryDependencies ++= Seq(
-      "org.scalatest" %% "scalatest" % "3.0.8" % "test"
-    )
+    libraryDependencies += scalatest % "test"
   ).dependsOn(`kamon-core`)
 
 
@@ -92,10 +87,9 @@ lazy val `kamon-core-tests` = (project in file("core/kamon-core-tests"))
   .disablePlugins(AssemblyPlugin)
   .settings(noPublishing: _*)
   .settings(
-    moduleName := "kamon-core-tests",
     libraryDependencies ++= Seq(
-      "org.scalatest" %% "scalatest"        % "3.0.8" % "test",
-      "ch.qos.logback" % "logback-classic"  % "1.2.3" % "test"
+      scalatest % "test",
+      logbackClassic % "test"
     )
   ).dependsOn(`kamon-testkit`)
 
@@ -103,7 +97,6 @@ lazy val `kamon-core-tests` = (project in file("core/kamon-core-tests"))
 lazy val `kamon-core-bench` = (project in file("core/kamon-core-bench"))
   .disablePlugins(AssemblyPlugin)
   .enablePlugins(JmhPlugin)
-  .settings(moduleName := "kamon-core-bench")
   .settings(noPublishing: _*)
   .dependsOn(`kamon-core`)
 
@@ -135,29 +128,30 @@ lazy val instrumentation = (project in file("instrumentation"))
     `kamon-play`
   )
 
+
 lazy val `kamon-instrumentation-common` = (project in file("instrumentation/kamon-instrumentation-common"))
   .disablePlugins(AssemblyPlugin)
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
-    name := "kamon-instrumentation-common",
-    moduleName := "kamon-instrumentation-common",
     resolvers += Resolver.mavenLocal,
     libraryDependencies ++= Seq(
-      scalatest % "test",
       slf4jApi % "test",
+      scalatest % "test",
       kanelaAgent % "provided"
     )
   ).dependsOn(`kamon-core`, `kamon-testkit` % "test")
 
+
 lazy val `kamon-executors` = (project in file("instrumentation/kamon-executors"))
   .disablePlugins(AssemblyPlugin)
   .settings(
-    moduleName := "kamon-executors",
-    testGrouping in Test := groupByExperimentalExecutorTests((definedTests in Test).value, kanelaAgentJar.value),
-    libraryDependencies ++=
-      providedScope(kanelaAgent) ++
-      testScope(scalatest, logbackClassic, "com.google.guava"  % "guava"  % "24.1-jre")
+    libraryDependencies ++= Seq(
+      kanelaAgent % "provided",
+      scalatest % "test",
+      logbackClassic % "test",
+      "com.google.guava" % "guava" % "24.1-jre" % "test",
+    )
   ).dependsOn(`kamon-core`, `kamon-instrumentation-common`, `kamon-testkit` % "test")
 
 lazy val `kamon-executors-bench` = (project in file("instrumentation/kamon-executors-bench"))
@@ -165,48 +159,27 @@ lazy val `kamon-executors-bench` = (project in file("instrumentation/kamon-execu
   .enablePlugins(JmhPlugin)
   .settings(noPublishing: _*)
   .settings(
-    moduleName := "kamon-executors-bench",
-    resolvers += Resolver.mavenLocal,
-    libraryDependencies ++= compileScope(kanelaAgent, "com.google.guava"  % "guava"  % "24.1-jre")
+    libraryDependencies ++= Seq(
+      "com.google.guava" % "guava" % "24.1-jre",
+      kanelaAgent % "provided",
+    )
   ).dependsOn(`kamon-core`, `kamon-instrumentation-common`)
 
-
-def groupByExperimentalExecutorTests(tests: Seq[TestDefinition], kanelaJar: File): Seq[Group] = {
-  val (stable, experimental) = tests.partition(t => t.name != "kamon.instrumentation.executor.CaptureContextOnSubmitInstrumentationSpec")
-
-  val stableGroup = Group("stableTests", stable, SubProcess(
-    ForkOptions().withRunJVMOptions(Vector(
-      "-javaagent:" + kanelaJar.toString
-    ))
-  ))
-
-  val experimentalGroup = Group("experimentalTests", experimental, SubProcess(
-    ForkOptions().withRunJVMOptions(Vector(
-      "-javaagent:" + kanelaJar.toString,
-      "-Dkanela.modules.executor-service.enabled=false",
-      "-Dkanela.modules.executor-service-capture-on-submit.enabled=true"
-    ))
-  ))
-
-  Seq(stableGroup, experimentalGroup)
-}
-
-val twitterUtilCore  = "com.twitter"   %% "util-core"         % "6.40.0"
-val scalazConcurrent = "org.scalaz"    %% "scalaz-concurrent" % "7.2.28"
-val catsEffect       = "org.typelevel" %%  "cats-effect"      % "1.2.0"
 
 lazy val `kamon-twitter-future` = (project in file("instrumentation/kamon-twitter-future"))
   .disablePlugins(AssemblyPlugin)
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
-    scalaVersion := "2.12.10",
     bintrayPackage := "kamon-futures",
-    crossScalaVersions := Seq("2.11.12", "2.12.10"),
-    libraryDependencies ++=
-      providedScope(kanelaAgent, twitterUtilCore) ++
-      testScope(scalatest, logbackClassic)
+    libraryDependencies ++= Seq(
+      kanelaAgent % "provided",
+      "com.twitter" %% "util-core" % "20.3.0" % "provided",
+      scalatest % "test",
+      logbackClassic % "test"
+    )
   ).dependsOn(`kamon-core`, `kamon-executors`, `kamon-testkit` % "test")
+
 
 lazy val `kamon-scalaz-future` = (project in file("instrumentation/kamon-scalaz-future"))
   .disablePlugins(AssemblyPlugin)
@@ -214,10 +187,14 @@ lazy val `kamon-scalaz-future` = (project in file("instrumentation/kamon-scalaz-
   .settings(instrumentationSettings)
   .settings(
     bintrayPackage := "kamon-futures",
-    libraryDependencies ++=
-      providedScope(kanelaAgent, scalazConcurrent) ++
-      testScope(scalatest,  logbackClassic)
+    libraryDependencies ++= Seq(
+      kanelaAgent % "provided",
+      "org.scalaz" %% "scalaz-concurrent" % "7.2.28" % "provided",
+      scalatest % "test",
+      logbackClassic % "test"
+    )
   ).dependsOn(`kamon-core`, `kamon-executors`, `kamon-testkit` % "test")
+
 
 lazy val `kamon-scala-future` = (project in file("instrumentation/kamon-scala-future"))
   .disablePlugins(AssemblyPlugin)
@@ -225,22 +202,32 @@ lazy val `kamon-scala-future` = (project in file("instrumentation/kamon-scala-fu
   .settings(instrumentationSettings)
   .settings(
     bintrayPackage := "kamon-futures",
-    libraryDependencies ++=
-      providedScope(kanelaAgent) ++
-      testScope(scalatest, logbackClassic)
+    libraryDependencies ++=Seq(
+      kanelaAgent % "provided",
+      scalatest % "test",
+      logbackClassic % "test"
+    )
   ).dependsOn(`kamon-core`, `kamon-executors`, `kamon-testkit` % "test")
+
 
 lazy val `kamon-cats-io` = (project in file("instrumentation/kamon-cats-io"))
   .disablePlugins(AssemblyPlugin)
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
-    scalaVersion := "2.12.10",
     bintrayPackage := "kamon-futures",
-    crossScalaVersions := Seq("2.11.12", "2.12.10"),
-    libraryDependencies ++=
-      providedScope(catsEffect, kanelaAgent) ++
-      testScope(scalatest, logbackClassic)
+    libraryDependencies ++= Seq(
+      kanelaAgent % "provided",
+      {
+        if(scalaBinaryVersion.value == "2.11")
+          "org.typelevel" %% "cats-effect" % "2.0.0" % "provided"
+        else
+          "org.typelevel" %% "cats-effect" % "2.1.2" % "provided"
+      },
+      scalatest % "test",
+      logbackClassic % "test"
+    ),
+
   ).dependsOn(`kamon-core`, `kamon-executors`, `kamon-testkit` % "test")
 
 
@@ -249,126 +236,133 @@ lazy val `kamon-logback` = (project in file("instrumentation/kamon-logback"))
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
-    moduleName := "kamon-logback",
-    libraryDependencies ++=
-      providedScope(kanelaAgent, "ch.qos.logback"  %   "logback-classic" % "1.2.3") ++
-      testScope(scalatest)
+    libraryDependencies ++= Seq(
+      kanelaAgent % "provided",
+      logbackClassic % "provided",
+      scalatest % "test",
+    )
   ).dependsOn(`kamon-core`, `kamon-instrumentation-common`, `kamon-testkit` % "test")
 
-val slick               = "com.typesafe.slick"       %% "slick"                     % "3.3.2"
-val slickHikari         = "com.typesafe.slick"       %% "slick-hikaricp"            % "3.3.2"
-val h2                  = "com.h2database"            % "h2"                        % "1.4.182"
-val sqlite              = "org.xerial"                % "sqlite-jdbc"               % "3.27.2.1"
-val mariaConnector      = "org.mariadb.jdbc"          % "mariadb-java-client"       % "2.2.6"
-val mariaDB4j           = "ch.vorburger.mariaDB4j"    % "mariaDB4j"                 % "2.4.0"
-val postgres            = "org.postgresql"            % "postgresql"                % "42.2.5"
-val hikariCP            = "com.zaxxer"                % "HikariCP"                  % "2.6.2"
 
 lazy val `kamon-jdbc` = (project in file("instrumentation/kamon-jdbc"))
   .disablePlugins(AssemblyPlugin)
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
-    moduleName := "kamon-jdbc",
-    libraryDependencies ++=
-      providedScope(kanelaAgent, hikariCP, mariaConnector, slick, postgres) ++
-      testScope(h2, sqlite, mariaDB4j, postgres,  slickHikari, scalatest, slf4jApi, logbackClassic)
+    libraryDependencies ++= Seq(
+      kanelaAgent % "provided",
+      "com.zaxxer"                % "HikariCP"                  % "2.6.2" % "provided",
+      "org.mariadb.jdbc"          % "mariadb-java-client"       % "2.2.6" % "provided",
+      "com.typesafe.slick"       %% "slick"                     % "3.3.2" % "provided",
+      "org.postgresql"            % "postgresql"                % "42.2.5" % "provided",
+
+      scalatest % "test",
+      logbackClassic % "test",
+      "com.typesafe.slick"       %% "slick-hikaricp"            % "3.3.2" % "test",
+      "com.h2database"            % "h2"                        % "1.4.182" % "test",
+      "org.xerial"                % "sqlite-jdbc"               % "3.27.2.1" % "test",
+      "ch.vorburger.mariaDB4j"    % "mariaDB4j"                 % "2.4.0" % "test"
+    )
   ).dependsOn(`kamon-core`, `kamon-executors`, `kamon-testkit` % "test")
 
-val mongoSyncDriver   = "org.mongodb"         %   "mongodb-driver-sync"             % "3.11.0"
-val mongoScalaDriver  = "org.mongodb.scala"   %%  "mongo-scala-driver"              % "2.7.0"
-val mongoDriver       = "org.mongodb"         %   "mongodb-driver-reactivestreams"  % "1.12.0"
-val embeddedMongo     = "de.flapdoodle.embed" %   "de.flapdoodle.embed.mongo"       % "2.2.0"
 
 lazy val `kamon-mongo` = (project in file("instrumentation/kamon-mongo"))
   .disablePlugins(AssemblyPlugin)
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
-    moduleName := "kamon-mongo",
-    libraryDependencies ++=
-      providedScope(kanelaAgent, mongoDriver, mongoSyncDriver, mongoScalaDriver) ++
-      testScope(embeddedMongo, scalatest)
+    libraryDependencies ++= Seq(
+      kanelaAgent % "provided",
+      "org.mongodb"         %   "mongodb-driver-sync"             % "3.11.0" % "provided",
+      "org.mongodb.scala"   %%  "mongo-scala-driver"              % "2.7.0" % "provided",
+      "org.mongodb"         %   "mongodb-driver-reactivestreams"  % "1.12.0" % "provided",
+
+      scalatest % "test",
+      logbackClassic % "test",
+      "de.flapdoodle.embed" %   "de.flapdoodle.embed.mongo"       % "2.2.0" % "test"
+    )
   ).dependsOn(`kamon-core`, `kamon-instrumentation-common`, `kamon-testkit` % "test")
 
 
 lazy val `kamon-annotation-api` = (project in file("instrumentation/kamon-annotation-api"))
   .disablePlugins(AssemblyPlugin)
   .settings(
-    moduleName := "kamon-annotation-api",
-    resolvers += Resolver.mavenLocal,
     crossPaths := false,
     autoScalaLibrary := false,
     publishMavenStyle := true,
     javacOptions in (Compile, doc) := Seq("-Xdoclint:none")
   )
 
+
 lazy val `kamon-annotation` = (project in file("instrumentation/kamon-annotation"))
   .enablePlugins(JavaAgent)
   .enablePlugins(AssemblyPlugin)
   .settings(instrumentationSettings: _*)
   .settings(
-    moduleName := "kamon-annotation",
     assemblyShadeRules in assembly := Seq(
       ShadeRule.rename("javax.el.**"    -> "kamon.lib.@0").inAll,
-      ShadeRule.rename("com.sun.el.**"    -> "kamon.lib.@0").inAll,
+      ShadeRule.rename("com.sun.el.**"  -> "kamon.lib.@0").inAll,
     ),
-    libraryDependencies ++=
-      Seq("org.glassfish" % "javax.el" % "3.0.1-b11" % "shaded") ++
-      providedScope(kanelaAgent) ++
-      testScope(scalatest, logbackClassic)
+    libraryDependencies ++= Seq(
+      kanelaAgent % "provided",
+      "org.glassfish" % "javax.el" % "3.0.1-b11" % "provided,shaded",
+      scalatest % "test",
+      logbackClassic % "test",
+    )
   ).dependsOn(`kamon-core`, `kamon-annotation-api`, `kamon-testkit` % "test")
+
 
 lazy val `kamon-system-metrics` = (project in file("instrumentation/kamon-system-metrics"))
   .disablePlugins(AssemblyPlugin)
   .settings(instrumentationSettings: _*)
   .settings(
-    moduleName := "kamon-system-metrics",
-    libraryDependencies ++=
-      Seq("com.github.oshi" % "oshi-core" % "4.2.1") ++
-      testScope(scalatest, logbackClassic)
+    libraryDependencies ++= Seq(
+      "com.github.oshi" % "oshi-core" % "4.2.1",
+      scalatest % "test",
+      logbackClassic % "test"
+    )
   ).dependsOn(`kamon-core`)
+
 
 lazy val `kamon-akka` = (project in file("instrumentation/kamon-akka"))
   .enablePlugins(JavaAgent)
   .disablePlugins(AssemblyPlugin)
   .settings(instrumentationSettings: _*)
-  .settings(
-    moduleName := "kamon-akka",
-  ).dependsOn(
+  .dependsOn(
     `kamon-scala-future` % "compile,common,akka-2.5,akka-2.6",
     `kamon-testkit` % "test,test-common,test-akka-2.5,test-akka-2.6"
   )
 
-val akkaHttpJson        = "de.heikoseeberger" %% "akka-http-json4s"     % "1.27.0"
-val json4sNative        = "org.json4s"        %% "json4s-native"        % "3.6.7"
-val http25              = "com.typesafe.akka" %% "akka-http"            % "10.1.9"
-val http2Support        = "com.typesafe.akka" %% "akka-http2-support"   % "10.1.9"
-val httpTestKit25       = "com.typesafe.akka" %% "akka-http-testkit"    % "10.1.9"
-val stream25            = "com.typesafe.akka" %% "akka-stream"          % "2.5.24"
-val okHttp              = "com.squareup.okhttp3" % "okhttp"             % "3.14.7"
-
-resolvers += Resolver.bintrayRepo("hseeberger", "maven")
 
 lazy val `kamon-akka-http` = (project in file("instrumentation/kamon-akka-http"))
   .enablePlugins(JavaAgent)
   .disablePlugins(AssemblyPlugin)
   .settings(instrumentationSettings)
   .settings(Seq(
-    moduleName := "kamon-akka-http",
+    resolvers += Resolver.bintrayRepo("hseeberger", "maven"),
     javaAgents += "org.mortbay.jetty.alpn" % "jetty-alpn-agent" % "2.0.9" % "test",
-    libraryDependencies ++=
-      providedScope(kanelaAgent, http25, http2Support, stream25) ++
-      testScope(httpTestKit25, scalatest, slf4jApi, slf4jnop, akkaHttpJson, json4sNative, okHttp)
+    libraryDependencies ++= Seq(
+      kanelaAgent % "provided",
+      "com.typesafe.akka" %% "akka-http"            % "10.1.9" % "provided",
+      "com.typesafe.akka" %% "akka-http2-support"   % "10.1.9" % "provided",
+      "com.typesafe.akka" %% "akka-stream"          % "2.5.24" % "provided",
+
+      scalatest % "test",
+      slf4jApi % "test",
+      slf4jnop % "test",
+      okHttp % "test",
+      "com.typesafe.akka" %% "akka-http-testkit"    % "10.1.9" % "test",
+      "de.heikoseeberger" %% "akka-http-json4s"     % "1.27.0" % "test",
+      "org.json4s"        %% "json4s-native"        % "3.6.7" % "test",
+    )
   )).dependsOn(`kamon-akka`, `kamon-testkit` % "test")
+
 
 lazy val `kamon-play` = (project in file("instrumentation/kamon-play"))
   .enablePlugins(JavaAgent)
   .disablePlugins(AssemblyPlugin)
   .settings(instrumentationSettings)
-  .settings(
-    moduleName := "kamon-play"
-  ).dependsOn(
+  .dependsOn(
     `kamon-akka` % "compile,test-common,test-play-2.7,test-play-2.6",
     `kamon-akka-http` % "compile,test-common,test-play-2.7,test-play-2.6",
     `kamon-testkit` % "test-common,test-play-2.7,test-play-2.6"
@@ -378,9 +372,6 @@ lazy val `kamon-play` = (project in file("instrumentation/kamon-play"))
 /**
   * Reporters
   */
-
-val playJson          = "com.typesafe.play"      %% "play-json"     % "2.7.4"
-val okHttpMockServer  = "com.squareup.okhttp3"    % "mockwebserver" % "3.10.0"
 
 lazy val reporters = (project in file("reporters"))
   .disablePlugins(AssemblyPlugin)
@@ -398,13 +389,22 @@ lazy val reporters = (project in file("reporters"))
     `kamon-zipkin`,
   )
 
+
 lazy val `kamon-datadog` = (project in file("reporters/kamon-datadog"))
   .disablePlugins(AssemblyPlugin)
   .settings(
-    libraryDependencies ++=
-      compileScope(okHttp, playJson) ++
-      testScope(scalatest, slf4jApi, slf4jnop, okHttpMockServer),
+    libraryDependencies ++= Seq(
+      okHttp,
+      "com.typesafe.play" %% "play-json" % "2.7.4",
+
+      scalatest % "test",
+      slf4jApi % "test",
+      slf4jnop % "test",
+      okHttpMockServer % "test"
+    )
+
   ).dependsOn(`kamon-core`, `kamon-testkit` % "test")
+
 
 lazy val `kamon-apm-reporter` = (project in file("reporters/kamon-apm-reporter"))
   .enablePlugins(AssemblyPlugin)
@@ -422,13 +422,12 @@ lazy val `kamon-apm-reporter` = (project in file("reporters/kamon-apm-reporter")
       ,ShadeRule.rename("google.protobuf.**"        -> "kamon.apm.shaded.@0").inAll
       ,ShadeRule.rename("okhttp3.**"                -> "kamon.apm.shaded.@0").inAll
       ,ShadeRule.rename("okio.**"                   -> "kamon.apm.shaded.@0").inAll
-      ,ShadeRule.rename("kamino.**"                 -> "kamon.apm.shaded.@0").inAll
     ),
 
     libraryDependencies ++= Seq(
-      okHttp % "shaded",
       scalatest % "test",
-      "com.google.protobuf"   % "protobuf-java" % "3.8.0" % "shaded",
+      okHttp % "provided,shaded",
+      "com.google.protobuf"   % "protobuf-java" % "3.8.0" % "provided,shaded",
 
       "ch.qos.logback"    %  "logback-classic"  % "1.2.3" % "test",
       "org.scalatest"     %% "scalatest"        % "3.0.8" % "test",
@@ -436,18 +435,20 @@ lazy val `kamon-apm-reporter` = (project in file("reporters/kamon-apm-reporter")
       "com.typesafe.akka" %% "akka-stream"      % "2.5.23" % "test",
       "com.typesafe.akka" %% "akka-testkit"     % "2.5.23" % "test"
     )
-  ).dependsOn(`kamon-core` % "provided", `kamon-testkit` % "test")
+  ).dependsOn(`kamon-core`, `kamon-testkit` % "test")
+
 
 lazy val `kamon-statsd` = (project in file("reporters/kamon-statsd"))
+  .disablePlugins(AssemblyPlugin)
   .settings(
-    name := "kamon-statsd",
     libraryDependencies += scalatest % Test,
     parallelExecution in Test := false
   ).dependsOn(`kamon-core`)
 
+
 lazy val `kamon-zipkin` = (project in file("reporters/kamon-zipkin"))
+  .disablePlugins(AssemblyPlugin)
   .settings(
-    name := "kamon-zipkin",
     parallelExecution in Test := false,
     libraryDependencies ++= Seq(
       "io.zipkin.reporter2" % "zipkin-reporter" % "2.7.15",
@@ -456,9 +457,10 @@ lazy val `kamon-zipkin` = (project in file("reporters/kamon-zipkin"))
     )
   ).dependsOn(`kamon-core`)
 
+
 lazy val `kamon-jaeger` = (project in file("reporters/kamon-jaeger"))
+  .disablePlugins(AssemblyPlugin)
   .settings(
-    name := "kamon-jaeger",
     parallelExecution in Test := false,
     libraryDependencies ++= Seq(
       "io.jaegertracing" % "jaeger-thrift" % "1.1.0",
@@ -466,9 +468,10 @@ lazy val `kamon-jaeger` = (project in file("reporters/kamon-jaeger"))
     )
   ).dependsOn(`kamon-core`)
 
+
 lazy val `kamon-influxdb` = (project in file("reporters/kamon-influxdb"))
+  .disablePlugins(AssemblyPlugin)
   .settings(
-    name := "kamon-influxdb",
     libraryDependencies ++= Seq(
       okHttp,
       okHttpMockServer % "test",
@@ -476,18 +479,20 @@ lazy val `kamon-influxdb` = (project in file("reporters/kamon-influxdb"))
     )
   ).dependsOn(`kamon-core`, `kamon-testkit` % "test")
 
+
 lazy val `kamon-graphite` = (project in file("reporters/kamon-graphite"))
+  .disablePlugins(AssemblyPlugin)
   .settings(
-    name := "kamon-graphite",
     libraryDependencies ++= Seq(
       scalatest % "test",
       logbackClassic % "test"
     )
   ).dependsOn(`kamon-core`, `kamon-testkit` % "test")
 
+
 lazy val `kamon-newrelic` = (project in file("reporters/kamon-newrelic"))
+  .disablePlugins(AssemblyPlugin)
   .settings(
-    name := "kamon-newrelic",
     libraryDependencies ++= Seq(
       "com.newrelic.telemetry" % "telemetry" % "0.4.0",
       "com.newrelic.telemetry" % "telemetry-http-okhttp" % "0.4.0",
@@ -496,9 +501,10 @@ lazy val `kamon-newrelic` = (project in file("reporters/kamon-newrelic"))
     )
   ).dependsOn(`kamon-core`)
 
+
 lazy val `kamon-prometheus` = (project in file("reporters/kamon-prometheus"))
+  .disablePlugins(AssemblyPlugin)
   .settings(
-    name := "kamon-prometheus",
     libraryDependencies ++= Seq(
       okHttp,
       "org.nanohttpd" % "nanohttpd" % "2.3.1",
@@ -506,3 +512,73 @@ lazy val `kamon-prometheus` = (project in file("reporters/kamon-prometheus"))
       logbackClassic % "test"
     )
   ).dependsOn(`kamon-core`, `kamon-testkit` % "test")
+
+
+lazy val bundle = (project in file("bundle"))
+  .disablePlugins(AssemblyPlugin)
+  .settings(noPublishing: _*)
+  .settings(crossScalaVersions := Nil)
+  .aggregate(
+    `kamon-bundle`
+  )
+
+
+import com.lightbend.sbt.javaagent.Modules
+import BundleKeys._
+
+val `kamon-bundle` = (project in file("bundle/kamon-bundle"))
+  .enablePlugins(BuildInfoPlugin)
+  .enablePlugins(AssemblyPlugin)
+  .settings(
+    moduleName := "kamon-bundle",
+    kanelaAgentVersion := "1.0.4",
+    buildInfoPackage := "kamon.bundle",
+    buildInfoKeys := Seq[BuildInfoKey](kanelaAgentJarName),
+    kanelaAgentJar := update.value.matching(Modules.exactFilter(kanelaAgent)).head,
+    kanelaAgentJarName := kanelaAgentJar.value.getName,
+    resourceGenerators in Compile += Def.task(Seq(kanelaAgentJar.value)).taskValue,
+    libraryDependencies ++= Seq(
+      "com.github.oshi" % "oshi-core" % "4.2.1",
+      kanelaAgent % "provided",
+      "net.bytebuddy" % "byte-buddy-agent" % "1.9.12" % "provided,shaded",
+    ),
+    fullClasspath in assembly ++= (internalDependencyClasspath in Shaded).value,
+    assemblyShadeRules in assembly := Seq(
+      ShadeRule.zap("**module-info").inAll,
+      ShadeRule.rename("net.bytebuddy.agent.**" -> "kamon.lib.@0").inAll
+    ),
+    assemblyExcludedJars in assembly := {
+      (fullClasspath in assembly).value.filter(f => {
+        val fileName = f.data.getName()
+        fileName.contains("kamon-core") || fileName.contains("oshi-core")
+      })
+    },
+    assemblyOption in assembly := (assemblyOption in assembly).value.copy(
+      includeBin = true,
+      includeScala = false,
+      includeDependency = false,
+      cacheOutput = false
+    ),
+    assemblyMergeStrategy in assembly := {
+      case "reference.conf" => MergeStrategy.concat
+      case anyOther         => (assemblyMergeStrategy in assembly).value(anyOther)
+    }
+  ).dependsOn(
+    `kamon-core`,
+    `kamon-status-page` % "shaded",
+    `kamon-instrumentation-common` % "shaded",
+    `kamon-executors` % "shaded",
+    `kamon-scala-future` % "shaded",
+    `kamon-twitter-future` % "shaded",
+    `kamon-scalaz-future` % "shaded",
+    `kamon-cats-io` % "shaded",
+    `kamon-logback` % "shaded",
+    `kamon-jdbc` % "shaded",
+    `kamon-mongo` % "shaded",
+    `kamon-annotation` % "shaded",
+    `kamon-annotation-api` % "shaded",
+    `kamon-system-metrics` % "shaded",
+    `kamon-akka` % "shaded",
+    `kamon-akka-http` % "shaded",
+    `kamon-play` % "shaded"
+  )

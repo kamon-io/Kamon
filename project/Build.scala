@@ -3,7 +3,7 @@ import Keys._
 import sbt.librarymanagement.{Configuration, Configurations}
 import Configurations.Compile
 import sbtassembly.AssemblyPlugin
-import sbtassembly.AssemblyPlugin.autoImport.{MergeStrategy, assembleArtifact, assembly, assemblyExcludedJars, assemblyMergeStrategy, assemblyPackageScala}
+import sbtassembly.AssemblyPlugin.autoImport.{MergeStrategy, assembleArtifact, assembly, assemblyExcludedJars, assemblyMergeStrategy, assemblyPackageScala, assemblyOption}
 import java.util.Calendar
 import Def.Initialize
 
@@ -27,12 +27,14 @@ object BaseProject extends AutoPlugin {
     /** Marker configuration for dependencies that will be shaded into their module's jar.  */
     lazy val Shaded = config("shaded").hide
 
-    val kanelaAgent    = "io.kamon"         %  "kanela-agent"    % "1.0.4"
-    val slf4jApi       = "org.slf4j"        %  "slf4j-api"       % "1.7.25"
-    val slf4jnop       = "org.slf4j"        %  "slf4j-nop"       % "1.7.24"
-    val logbackClassic = "ch.qos.logback"   %  "logback-classic" % "1.2.3"
-    val scalatest      = "org.scalatest"    %% "scalatest"       % "3.0.8"
-    val hdrHistogram   = "org.hdrhistogram" %  "HdrHistogram"    % "2.1.10"
+    val kanelaAgent       = "io.kamon"              %  "kanela-agent"    % "1.0.4"
+    val slf4jApi          = "org.slf4j"             %  "slf4j-api"       % "1.7.25"
+    val slf4jnop          = "org.slf4j"             %  "slf4j-nop"       % "1.7.24"
+    val logbackClassic    = "ch.qos.logback"        %  "logback-classic" % "1.2.3"
+    val scalatest         = "org.scalatest"         %% "scalatest"       % "3.0.8"
+    val hdrHistogram      = "org.hdrhistogram"      %  "HdrHistogram"    % "2.1.10"
+    val okHttp            = "com.squareup.okhttp3"  %  "okhttp"          % "3.14.7"
+    val okHttpMockServer  = "com.squareup.okhttp3"  %  "mockwebserver"   % "3.10.0"
 
     val kanelaAgentVersion = settingKey[String]("Kanela Agent version")
     val kanelaAgentJar = taskKey[File]("Kanela Agent jar")
@@ -87,6 +89,7 @@ object BaseProject extends AutoPlugin {
     commonSettings ++ compilationSettings ++ releaseSettings ++ publishingSettings
 
   private lazy val commonSettings = Seq(
+    exportJars := true,
     fork in Test := true,
     startYear := Some(2013),
     organization := "io.kamon",
@@ -104,8 +107,8 @@ object BaseProject extends AutoPlugin {
 
   private lazy val compilationSettings = Seq(
     crossPaths := true,
-    scalaVersion := "2.12.10",
-    crossScalaVersions := Seq("2.11.12", "2.12.10", "2.13.1"),
+    scalaVersion := "2.12.11",
+    crossScalaVersions := Seq("2.11.12", "2.12.11", "2.13.1"),
     javacOptions := Seq(
       "-source", "1.8",
       "-target", "1.8",
@@ -128,7 +131,7 @@ object BaseProject extends AutoPlugin {
       "-language:implicitConversions"
     ) ++ (CrossVersion.partialVersion(scalaVersion.value) match {
       case Some((2,11)) => Seq("-Xfuture", "-Ybackend:GenASM")
-      case Some((2,12)) => Seq("-Xfuture", "-opt:l:method")
+      case Some((2,12)) => Seq("-Xfuture", "-opt:l:method,-closure-invocations")
       case Some((2,13)) => Seq.empty
       case _ => Seq.empty
     })
@@ -172,14 +175,6 @@ object BaseProject extends AutoPlugin {
          | ==========================================================================================
       """.trim().stripMargin
     ))
-  }
-
-  private def scalaVersionSetting = Def.setting {
-    if (sbtPlugin.value) scalaVersion.value else "2.13.1"
-  }
-
-  private def crossScalaVersionsSetting = Def.setting {
-    if (sbtPlugin.value) Seq(scalaVersion.value) else Seq("2.11.12", "2.12.10", "2.13.1")
   }
 
   def findKanelaAgentJar = Def.task {
@@ -267,19 +262,20 @@ object AssemblyTweaks extends AutoPlugin {
   override def trigger = allRequirements
   override def projectConfigurations: Seq[Configuration] = Seq(Shaded)
   override def projectSettings: Seq[Def.Setting[_]] = Seq(
+    exportJars := true,
+    test in assembly := {},
     packageBin in Compile := assembly.value,
-    assembleArtifact in assemblyPackageScala := false,
-    exportedProducts in Compile ++= (unmanagedClasspath in Compile).value,
-    unmanagedClasspath in Compile ++= update.value.select(configurationFilter(Shaded.name)),
-    assemblyExcludedJars in assembly := {
-      val classpath = (fullClasspath in assembly).value
-      val shadedDependencies = update.value.select(configurationFilter(Shaded.name)).map(_.getPath)
-      classpath filterNot { file => shadedDependencies.exists(file.data.getPath.contains(_))}
-    },
+    fullClasspath in assembly := (externalDependencyClasspath in Shaded).value ++ (products in Compile).value.classpath,
+    assemblyOption in assembly := (assemblyOption in assembly).value.copy(
+      includeBin = true,
+      includeScala = false,
+      includeDependency = true,
+      cacheOutput = false
+    ),
     assemblyMergeStrategy in assembly := {
       case s if s.startsWith("LICENSE") => MergeStrategy.discard
       case s if s.startsWith("about") => MergeStrategy.discard
       case x => (assemblyMergeStrategy in assembly).value(x)
     }
-  )
+  ) ++ inConfig(Shaded)(Defaults.configSettings)
 }
