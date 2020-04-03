@@ -56,7 +56,7 @@ class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually w
       pool1.close()
       pool2.close()
 
-      eventually {
+      eventually(timeout(5 seconds)) {
         JdbcMetrics.OpenConnections.tagValues("jdbc.pool.name") shouldBe empty
       }
     }
@@ -71,13 +71,13 @@ class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually w
         .add("db.vendor", "h2")
         .build()
 
-      eventually(timeout(15 seconds), interval(200 millis)) {
+      eventually(timeout(20 seconds), interval(200 millis)) {
         JdbcMetrics.OpenConnections.withTags(tags).distribution(false).max shouldBe (10)
       }
 
       connections.foreach(_.close())
 
-      eventually(timeout(15 seconds),  interval(1 second)) {
+      eventually(timeout(20 seconds),  interval(1 second)) {
         JdbcMetrics.OpenConnections.withTags(tags).distribution(true).max shouldBe (0)
       }
 
@@ -122,7 +122,7 @@ class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually w
         .add("db.vendor", "h2")
         .build()
 
-      eventually {
+      eventually(timeout(5 seconds)) {
         JdbcMetrics.BorrowTime.withTags(tags).distribution(resetState = false).count shouldBe (6) // 5 + 1 during setup
       }
     }

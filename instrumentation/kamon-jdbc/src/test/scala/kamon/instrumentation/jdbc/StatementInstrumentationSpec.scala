@@ -44,6 +44,8 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
       .withFallback(Kamon.config())
   )
 
+  override implicit def patienceConfig: PatienceConfig = PatienceConfig(timeout = scaled(2 seconds))
+
   val drivers = Seq(
     DriverSuite.H2,
     DriverSuite.SQLite,
@@ -87,7 +89,7 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
           statement.execute()
           validateNextRow(statement.getResultSet, valueNr = 1, valueName = "foo")
 
-          eventually(timeout(5 seconds)) {
+          eventually(timeout(scaled(5 seconds))) {
             val span = testSpanReporter().nextSpan().value
             span.operationName shouldBe StatementTypes.GenericExecute
             span.metricTags.get(plain("component")) shouldBe "jdbc"
@@ -298,7 +300,7 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
     /**
       * Issues a execute (or similar) call on the connection that should last for approximately the provided duration.
       */
-    def sleep(connection: Connection, duration: Duration)
+    def sleep(connection: Connection, duration: Duration): Unit
 
   }
 
