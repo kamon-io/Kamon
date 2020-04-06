@@ -19,7 +19,7 @@ package context
 
 import com.typesafe.config.Config
 import kamon.tag.{Tag, TagSet}
-import kamon.trace.Span
+import kamon.trace.{Span, SpanPropagation}
 import org.slf4j.LoggerFactory
 
 import scala.reflect.ClassTag
@@ -220,7 +220,14 @@ object HttpPropagation {
   )
 
   object Settings {
+    type ReaderWriter = Propagation.EntryReader[HeaderReader] with Propagation.EntryWriter[HeaderWriter]
+
     private val log = LoggerFactory.getLogger(classOf[HttpPropagation.Settings])
+    private val readerWriterShortcuts: Map[String, ReaderWriter] = Map(
+      "span/b3" -> SpanPropagation.B3(),
+      "span/uber" -> SpanPropagation.Uber(),
+      "span/b3-single" -> SpanPropagation.B3Single()
+    )
 
     def from(config: Config): Settings = {
       def buildInstances[ExpectedType : ClassTag](mappings: Map[String, String]): Map[String, ExpectedType] = {
@@ -228,11 +235,15 @@ object HttpPropagation {
 
         mappings.foreach {
           case (contextKey, componentClass) =>
-            try {
-              instanceMap += (contextKey -> ClassLoading.createInstance[ExpectedType](componentClass, Nil))
-            } catch { case exception: Exception => log.warn("Failed to instantiate {} [{}] due to []",
-              implicitly[ClassTag[ExpectedType]].runtimeClass.getName, componentClass, exception)
-            }
+            val shortcut = s"$contextKey/$componentClass".toLowerCase()
+            readerWriterShortcuts.get(shortcut).fold({
+              try {
+                instanceMap += (contextKey -> ClassLoading.createInstance[ExpectedType](componentClass, Nil))
+              } catch {
+                case exception: Exception => log.warn("Failed to instantiate {} [{}] due to []",
+                  implicitly[ClassTag[ExpectedType]].runtimeClass.getName, componentClass, exception)
+              }
+            })(readerWriter => instanceMap += (contextKey -> readerWriter.asInstanceOf[ExpectedType]))
         }
 
         instanceMap.result()
