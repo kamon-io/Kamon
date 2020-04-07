@@ -69,7 +69,8 @@ object CassandraInstrumentation {
       hostTagMode                    = TagMode.from(cassandraConfig.getString("tracing.tags.host")),
       rackTagMode                    = TagMode.from(cassandraConfig.getString("tracing.tags.rack")),
       dcTagMode                      = TagMode.from(cassandraConfig.getString("tracing.tags.dc")),
-      clusterTagMode                 = TagMode.from(cassandraConfig.getString("tracing.tags.cluster"))
+      clusterTagMode                 = TagMode.from(cassandraConfig.getString("tracing.tags.cluster")),
+      traceExecutions                = cassandraConfig.getBoolean("tracing.enabled")
     )
   }
 
@@ -81,7 +82,8 @@ object CassandraInstrumentation {
       hostTagMode:                    TagMode,
       rackTagMode:                    TagMode,
       dcTagMode:                      TagMode,
-      clusterTagMode:                 TagMode
+      clusterTagMode:                 TagMode,
+      traceExecutions:                Boolean
   )
 
   object Tags {

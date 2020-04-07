@@ -52,10 +52,12 @@ object QueryExecutionAdvice {
     val nodeMonitor = host.nodeMonitor
 
     val clientSpan = Kamon.currentSpan()
-    val executionSpan = Kamon
-      .clientSpanBuilder(ExecutionOperationName, Tags.CassandraDriverComponent)
-      .asChildOf(clientSpan)
-      .start()
+    val executionSpan = if(CassandraInstrumentation.settings.traceExecutions) {
+      Kamon
+        .clientSpanBuilder(ExecutionOperationName, Tags.CassandraDriverComponent)
+        .asChildOf(clientSpan)
+        .start()
+    } else Span.Empty
 
     val isSpeculative = position > 0
     if (isSpeculative) {

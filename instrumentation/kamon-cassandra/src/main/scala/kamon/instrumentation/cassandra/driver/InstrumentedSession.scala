@@ -23,6 +23,7 @@ import com.datastax.driver.core._
 import com.google.common.base.Function
 import com.google.common.util.concurrent.{FutureCallback, Futures, ListenableFuture, ListeningExecutorService, MoreExecutors}
 import kamon.Kamon
+import kamon.instrumentation.cassandra.CassandraInstrumentation
 import kamon.trace.Span
 
 import scala.collection.JavaConverters._
@@ -55,7 +56,7 @@ class InstrumentedSession(underlying: Session) extends AbstractSession {
     underlying.prepareAsync(statement)
   }
 
-  override def executeAsync(statement: Statement): ResultSetFuture = {
+  private def buildClientSpan(statement: Statement): Span = if(CassandraInstrumentation.settings.traceExecutions) {
     val query         = extractQuery(statement)
     val statementKind = extractStatementType(query)
 
@@ -67,6 +68,12 @@ class InstrumentedSession(underlying: Session) extends AbstractSession {
       .start()
 
     Option(statement.getKeyspace).foreach(ks => clientSpan.tag("db.instance", ks))
+
+    clientSpan
+  } else Span.Empty
+
+  override def executeAsync(statement: Statement): ResultSetFuture = {
+    val clientSpan = buildClientSpan(statement)
 
     val future = Try(
       Kamon.runWithContext(Kamon.currentContext().withEntry(Span.Key, clientSpan)) {
