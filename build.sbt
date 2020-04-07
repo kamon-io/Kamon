@@ -120,6 +120,7 @@ lazy val instrumentation = (project in file("instrumentation"))
     `kamon-logback`,
     `kamon-jdbc`,
     `kamon-mongo`,
+    `kamon-cassandra`,
     `kamon-annotation`,
     `kamon-annotation-api`,
     `kamon-system-metrics`,
@@ -282,6 +283,22 @@ lazy val `kamon-mongo` = (project in file("instrumentation/kamon-mongo"))
       "de.flapdoodle.embed" %   "de.flapdoodle.embed.mongo"       % "2.2.0" % "test"
     )
   ).dependsOn(`kamon-core`, `kamon-instrumentation-common`, `kamon-testkit` % "test")
+
+lazy val `kamon-cassandra` = (project in file("instrumentation/kamon-cassandra"))
+  .disablePlugins(AssemblyPlugin)
+  .enablePlugins(JavaAgent)
+  .settings(instrumentationSettings)
+  .settings(
+    libraryDependencies ++= Seq(
+      kanelaAgent % "provided",
+      "com.datastax.cassandra" % "cassandra-driver-core" % "3.6.0" % "provided",
+      "org.apache.cassandra"   % "cassandra-all"         % "3.11.2" % "provided",
+      scalatest % "test",
+      logbackClassic % "test",
+      "org.cassandraunit"      % "cassandra-unit"        % "3.11.2.0" % "test"
+    )
+  ).dependsOn(`kamon-core`, `kamon-instrumentation-common`, `kamon-testkit` % "test", `kamon-executors`)
+
 
 
 lazy val `kamon-annotation-api` = (project in file("instrumentation/kamon-annotation-api"))
@@ -575,6 +592,7 @@ val `kamon-bundle` = (project in file("bundle/kamon-bundle"))
     `kamon-logback` % "shaded",
     `kamon-jdbc` % "shaded",
     `kamon-mongo` % "shaded",
+    `kamon-cassandra` % "shaded",
     `kamon-annotation` % "shaded",
     `kamon-annotation-api` % "shaded",
     `kamon-system-metrics` % "shaded",
