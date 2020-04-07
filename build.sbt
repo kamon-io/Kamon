@@ -507,7 +507,6 @@ lazy val `kamon-prometheus` = (project in file("reporters/kamon-prometheus"))
   .settings(
     libraryDependencies ++= Seq(
       okHttp,
-      "org.nanohttpd" % "nanohttpd" % "2.3.1",
       scalatest % "test",
       logbackClassic % "test"
     )

@@ -21,11 +21,11 @@ class HttpClient(val apiUrl: String, connectTimeout: Duration, readTimeout: Dura
     )
   }
 
-  private def doRequest(request: Request): Try[Response] = {
-    Try(httpClient.newCall(request).execute())
+  def doPost(contentType: String, contentBody: Array[Byte]): Try[String] = {
+    doMethodWithBody("POST", contentType, contentBody)
   }
 
-  def doMethodWithBody(method: String, contentType: String, contentBody: Array[Byte]): Try[String] = {
+  private def doMethodWithBody(method: String, contentType: String, contentBody: Array[Byte]): Try[String] = {
     val body = RequestBody.create(MediaType.parse(contentType), contentBody)
     val request = new Request.Builder().url(apiUrl).method(method, body).build
 
@@ -46,8 +46,8 @@ class HttpClient(val apiUrl: String, connectTimeout: Duration, readTimeout: Dura
     }
   }
 
-  def doPost(contentType: String, contentBody: Array[Byte]): Try[String] = {
-    doMethodWithBody("POST", contentType, contentBody)
+  private def doRequest(request: Request): Try[Response] = {
+    Try(httpClient.newCall(request).execute())
   }
 
   private def createHttpClient(): OkHttpClient = {
