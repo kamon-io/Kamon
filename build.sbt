@@ -119,6 +119,7 @@ lazy val instrumentation = (project in file("instrumentation"))
     `kamon-cats-io`,
     `kamon-logback`,
     `kamon-jdbc`,
+    `kamon-kafka-clients`,
     `kamon-mongo`,
     `kamon-cassandra`,
     `kamon-annotation`,
@@ -265,6 +266,25 @@ lazy val `kamon-jdbc` = (project in file("instrumentation/kamon-jdbc"))
       "ch.vorburger.mariaDB4j"    % "mariaDB4j"                 % "2.4.0" % "test"
     )
   ).dependsOn(`kamon-core`, `kamon-executors`, `kamon-testkit` % "test")
+
+
+lazy val `kamon-kafka-clients` = (project in file("instrumentation/kamon-kafka-clients"))
+  .disablePlugins(AssemblyPlugin)
+  .enablePlugins(JavaAgent)
+  .settings(instrumentationSettings)
+  .settings(
+    libraryDependencies ++= Seq(
+      kanelaAgent % "provided",
+
+      "org.apache.kafka"    % "kafka-clients"	                    % "2.3.0" % "provided",
+
+      scalatest % "test",
+      logbackClassic % "test",
+      "io.github.embeddedkafka" %% "embedded-kafka"               % "2.3.0" % "test"
+    )
+  ).dependsOn(`kamon-core`, `kamon-executors`, `kamon-testkit` % "test")
+
+
 
 
 lazy val `kamon-mongo` = (project in file("instrumentation/kamon-mongo"))
@@ -590,6 +610,7 @@ val `kamon-bundle` = (project in file("bundle/kamon-bundle"))
     `kamon-cats-io` % "shaded",
     `kamon-logback` % "shaded",
     `kamon-jdbc` % "shaded",
+    `kamon-kafka-clients` % "shaded",
     `kamon-mongo` % "shaded",
     `kamon-cassandra` % "shaded",
     `kamon-annotation` % "shaded",
