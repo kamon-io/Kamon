@@ -60,8 +60,6 @@ object AskPatternInstrumentation {
         case Lightweight => hookLightweightWarning(future, sourceLocation(origin), actor)
         case Heavyweight => hookHeavyweightWarning(future, new StackTraceCaptureException, actor)
       }
-
-      hookHeavyweightWarning(future, new StackTraceCaptureException, actor)
     }
   }
 
