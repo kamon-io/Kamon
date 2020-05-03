@@ -83,6 +83,18 @@ class HttpClientInstrumentationSpec extends WordSpec with Matchers with Instrume
         handler.request.read("X-B3-ParentSpanId").value shouldBe parent.id.string
         handler.request.read("X-B3-Sampled") shouldBe defined
       }
+
+      "honour user provided operation name mappings" in {
+        val handler = httpClient().createHandler(fakeRequest("http://localhost:8080/", "/events/123/rsvps", "GET", Map.empty), Context.Empty)
+        handler.processResponse(fakeResponse(200))
+
+        val span = handler.span
+        span.operationName() shouldBe "EventRSVPs"
+        span.tags().get(plain("http.method")) shouldBe "GET"
+        span.tags().get(plain("http.url")) shouldBe "http://localhost:8080/"
+        span.tags().get(plainLong("http.status_code")) shouldBe 200
+        span.tags().get(plain("operation")) shouldBe "EventRSVPs"
+      }
     }
 
     "all capabilities are disabled" should {

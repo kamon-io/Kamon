@@ -10,6 +10,7 @@ import kamon.instrumentation.trace.SpanTagger
 import kamon.instrumentation.trace.SpanTagger.TagMode
 import kamon.tag.Lookups.option
 import kamon.trace.Span
+import kamon.util.Filter
 import org.slf4j.LoggerFactory
 
 import scala.util.Try
@@ -131,7 +132,7 @@ object HttpClientInstrumentation {
 
     private def createClientSpan(requestMessage: HttpMessage.Request, context: Context): Span = {
       val span = Kamon
-        .clientSpanBuilder(operationName(requestMessage), component)
+        .clientSpanBuilder(settings.operationNameSettings.operationName(requestMessage), component)
         .context(context)
 
       if(!settings.enableSpanMetrics)
@@ -149,12 +150,9 @@ object HttpClientInstrumentation {
 
       span.start()
     }
-
-    private def operationName(requestMessage: HttpMessage.Request): String =
-      settings.operationNameGenerator.name(requestMessage).getOrElse(settings.defaultOperationName)
   }
 
-  case class Settings (
+  final case class Settings (
     enableContextPropagation: Boolean,
     propagationChannel: String,
     enableTracing: Boolean,
@@ -164,8 +162,11 @@ object HttpClientInstrumentation {
     statusCodeTagMode: TagMode,
     contextTags: Map[String, TagMode],
     defaultOperationName: String,
+    operationMappings: Map[Filter.Glob, String],
     operationNameGenerator: HttpOperationNameGenerator
-  )
+  ) {
+    val operationNameSettings = OperationNameSettings(defaultOperationName, operationMappings, operationNameGenerator)
+  }
 
   object Settings {
 
@@ -197,6 +198,9 @@ object HttpClientInstrumentation {
           _log.warn("Failed to create an HTTP Operation Name Generator, falling back to the default operation name", t)
           new HttpOperationNameGenerator.Static(defaultOperationName)
       }
+      val operationMappings = config.getConfig("tracing.operations.mappings").pairs.map {
+        case (pattern, operationName) => (Filter.Glob(pattern), operationName)
+      }
 
       Settings(
         enablePropagation,
@@ -208,6 +212,7 @@ object HttpClientInstrumentation {
         statusCodeTagMode,
         contextTags,
         defaultOperationName,
+        operationMappings,
         operationNameGenerator.get
       )
     }

@@ -19,18 +19,16 @@ package kamon.akka.http
 import java.util.UUID
 
 import akka.actor.ActorSystem
-import akka.http.scaladsl.UseHttp2
-import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.ActorMaterializer
 import javax.net.ssl.{HostnameVerifier, SSLSession}
-import kamon.testkit._
 import kamon.tag.Lookups.{plain, plainBoolean, plainLong}
+import kamon.testkit._
 import kamon.trace.Span.Mark
+import okhttp3.{OkHttpClient, Request}
 import org.scalatest._
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 
 import scala.concurrent.duration._
-import okhttp3.{OkHttpClient, Request}
 
 class AkkaHttpServerTracingSpec extends WordSpecLike with Matchers with ScalaFutures with Inside with BeforeAndAfterAll
     with MetricInspection.Syntax with Reconfigure with TestWebServer with Eventually with OptionValues with TestSpanReporter {
