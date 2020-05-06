@@ -62,7 +62,7 @@ class ScrapeDataBuilderSpec extends WordSpec with Matchers {
     }
     "not add extra '_total' postfix if metric name already ends with it when using units" in {
       val counterOne = MetricSnapshotBuilder.counter("app:counter-one-seconds-total", "", TagSet.of("tag.with.dots", "value"), time.seconds, 10)
-      val gaugeOne = MetricSnapshotBuilder.gauge("gauge-one", "", TagSet.of("tag-with-dashes", "value"), time.seconds, 20)
+      val gaugeOne = MetricSnapshotBuilder.gauge("gauge-one-seconds", "", TagSet.of("tag-with-dashes", "value"), time.seconds, 20)
 
       builder()
         .appendCounters(Seq(counterOne))
@@ -78,17 +78,17 @@ class ScrapeDataBuilderSpec extends WordSpec with Matchers {
     }
     "not add extra '_total' postfix if metric name already ends with it when not using units" in {
       val counterOne = MetricSnapshotBuilder.counter("app:counter-one-total", "", TagSet.of("tag.with.dots", "value"), 10)
-      val gaugeOne = MetricSnapshotBuilder.gauge("gauge-one", "", TagSet.of("tag-with-dashes", "value"), time.seconds, 20)
+      val gaugeOne = MetricSnapshotBuilder.gauge("gauge-one", "", TagSet.of("tag-with-dashes", "value"), 20)
 
       builder()
         .appendCounters(Seq(counterOne))
         .appendGauges(Seq(gaugeOne))
         .build() should include {
         """
-          |# TYPE app:counter_one_seconds_total counter
-          |app:counter_one_seconds_total{tag_with_dots="value"} 10.0
-          |# TYPE gauge_one_seconds gauge
-          |gauge_one_seconds{tag_with_dashes="value"} 20.0
+          |# TYPE app:counter_one_total counter
+          |app:counter_one_total{tag_with_dots="value"} 10.0
+          |# TYPE gauge_one gauge
+          |gauge_one{tag_with_dashes="value"} 20.0
         """.stripMargin.trim()
       }
     }
