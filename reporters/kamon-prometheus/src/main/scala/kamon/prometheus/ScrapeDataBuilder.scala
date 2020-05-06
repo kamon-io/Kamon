@@ -194,8 +194,8 @@ class ScrapeDataBuilder(prometheusConfig: PrometheusSettings.Generic, environmen
     val normalizedMetricName = metricName.map(validNameChar(_))
 
     unit.dimension match  {
-      case Time         => addPostfixOnlyIfMissing(normalizedMetricName, "_total_seconds")
-      case Information  => addPostfixOnlyIfMissing(normalizedMetricName, "_total_bytes")
+      case Time         => addPostfixOnlyIfMissing(normalizedMetricName, "_seconds_total")
+      case Information  => addPostfixOnlyIfMissing(normalizedMetricName, "_bytes_total")
       case _            => addPostfixOnlyIfMissing(normalizedMetricName, "_total")
     }
   }
