@@ -51,7 +51,7 @@ class ScrapeDataBuilder(prometheusConfig: PrometheusSettings.Generic, environmen
 
   private def appendCounterMetric(metric: MetricSnapshot.Values[Long]): Unit = {
     val unit = metric.settings.unit
-    val normalizedMetricName = normalizeMetricName(metric.name, unit) + "_total"
+    val normalizedMetricName = addPostfixOnlyIfMissing(normalizeMetricName(metric.name, unit), "_total")
 
     if(metric.description.nonEmpty)
       append("# HELP ").append(normalizedMetricName).append(" ").append(metric.description).append("\n")
@@ -194,11 +194,14 @@ class ScrapeDataBuilder(prometheusConfig: PrometheusSettings.Generic, environmen
     val normalizedMetricName = metricName.map(validNameChar(_))
 
     unit.dimension match  {
-      case Time         => normalizedMetricName + "_seconds"
-      case Information  => normalizedMetricName + "_bytes"
+      case Time         => addPostfixOnlyIfMissing(normalizedMetricName, "_seconds")
+      case Information  => addPostfixOnlyIfMissing(normalizedMetricName, "_bytes")
       case _            => normalizedMetricName
     }
   }
+  private def addPostfixOnlyIfMissing(metricName: String, postfix: String) =
+    if (metricName.endsWith(postfix)) metricName
+    else metricName + postfix
 
   private def normalizeLabelName(label: String): String =
     label.map(validLabelChar)

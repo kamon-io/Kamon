@@ -60,6 +60,22 @@ class ScrapeDataBuilderSpec extends WordSpec with Matchers {
         """.stripMargin.trim()
       }
     }
+    "not add extra '_total' postfix if metric name already ends with it" in {
+      val counterOne = MetricSnapshotBuilder.counter("app:counter-one-total", "", TagSet.of("tag.with.dots", "value"), time.seconds, 10)
+      val gaugeOne = MetricSnapshotBuilder.gauge("gauge-one", "", TagSet.of("tag-with-dashes", "value"), time.seconds, 20)
+
+      builder()
+        .appendCounters(Seq(counterOne))
+        .appendGauges(Seq(gaugeOne))
+        .build() should include {
+        """
+          |# TYPE app:counter_one_seconds_total counter
+          |app:counter_one_seconds_total{tag_with_dots="value"} 10.0
+          |# TYPE gauge_one_seconds gauge
+          |gauge_one_seconds{tag_with_dashes="value"} 20.0
+        """.stripMargin.trim()
+      }
+    }
 
 //    "append counters and group them together by metric name" in {
 //      val counterOne = MetricValue("counter-one", Map.empty, none, 10)
