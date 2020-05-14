@@ -2,6 +2,7 @@ package kamon.prometheus
 
 import com.typesafe.config.{Config, ConfigUtil}
 import kamon.tag.TagSet
+import kamon.util.Filter.Glob
 import kamon.{Kamon, UtilsOnConfig}
 
 import scala.collection.JavaConverters._
@@ -13,7 +14,14 @@ object PrometheusSettings {
     timeBuckets: Seq[java.lang.Double],
     informationBuckets: Seq[java.lang.Double],
     customBuckets: Map[String, Seq[java.lang.Double]],
-    includeEnvironmentTags: Boolean
+    includeEnvironmentTags: Boolean,
+    summarySettings: SummarySettings
+  )
+
+  case class SummarySettings(
+    exclusive: Boolean,
+    quantiles: Seq[java.lang.Double],
+    metricMatchers: Seq[Glob]
   )
 
   def readSettings(prometheusConfig: Config): Generic = {
@@ -22,7 +30,12 @@ object PrometheusSettings {
       timeBuckets = prometheusConfig.getDoubleList("buckets.time-buckets").asScala.toSeq,
       informationBuckets = prometheusConfig.getDoubleList("buckets.information-buckets").asScala.toSeq,
       customBuckets = readCustomBuckets(prometheusConfig.getConfig("buckets.custom")),
-      includeEnvironmentTags = prometheusConfig.getBoolean("include-environment-tags")
+      includeEnvironmentTags = prometheusConfig.getBoolean("include-environment-tags"),
+      summarySettings = SummarySettings(
+        exclusive = prometheusConfig.getBoolean("summary.exclusive"),
+        quantiles = prometheusConfig.getDoubleList("summary.quantiles").asScala.toSeq,
+        metricMatchers = prometheusConfig.getStringList("summary.metrics").asScala.map(Glob).toSeq
+      )
     )
   }
 

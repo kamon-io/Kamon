@@ -86,6 +86,19 @@ class ScrapeDataBuilder(prometheusConfig: PrometheusSettings.Generic, environmen
   }
 
   private def appendDistributionMetric(metric: MetricSnapshot.Distributions): Unit = {
+    val reportAsSummary = prometheusConfig.summarySettings.metricMatchers.exists(_.accept(metric.name))
+    (reportAsSummary, prometheusConfig.summarySettings.exclusive) match {
+      case (true, true) =>
+        appendDistributionMetricAsSummary(metric)
+      case (true, false) =>
+        appendDistributionMetricAsSummary(metric)
+        appendDistributionMetricAsHistogram(metric)
+      case _ =>
+        appendDistributionMetricAsHistogram(metric)
+    }
+  }
+
+  private def appendDistributionMetricAsHistogram(metric: MetricSnapshot.Distributions): Unit = {
     val unit = metric.settings.unit
     val normalizedMetricName = normalizeMetricName(metric.name, unit)
 
@@ -107,6 +120,33 @@ class ScrapeDataBuilder(prometheusConfig: PrometheusSettings.Generic, environmen
     })
   }
 
+  private def appendDistributionMetricAsSummary(metric: MetricSnapshot.Distributions): Unit = {
+    val unit = metric.settings.unit
+    val normalizedMetricName = normalizeMetricName(metric.name, unit)
+
+    if(metric.description.nonEmpty)
+      append("# HELP ").append(normalizedMetricName).append(" ").append(metric.description).append("\n")
+
+    append("# TYPE ").append(normalizedMetricName).append(" summary").append("\n")
+
+    metric.instruments.foreach(instrument => {
+      if(instrument.value.count > 0) {
+        appendSummaryQuantiles(
+          normalizedMetricName,
+          instrument.tags,
+          instrument.value,
+          unit,
+          prometheusConfig.summarySettings.quantiles
+        )
+        appendTimeSerieValue(normalizedMetricName, instrument.tags, format(instrument.value.max), "_max")
+        appendTimeSerieValue(normalizedMetricName, instrument.tags, format(instrument.value.min), "_min")
+        appendTimeSerieValue(normalizedMetricName, instrument.tags, format(instrument.value.count), "_count")
+        appendTimeSerieValue(normalizedMetricName, instrument.tags, format(instrument.value.sum), "_sum")
+      }
+    })
+
+  }
+
   private def appendTimeSerieValue(name: String, tags: TagSet, value: String, suffix: String = ""): Unit = {
     append(name)
     append(suffix)
@@ -125,6 +165,19 @@ class ScrapeDataBuilder(prometheusConfig: PrometheusSettings.Generic, environmen
         case _            => prometheusConfig.defaultBuckets
       }
     )
+
+  private def appendSummaryQuantiles(name: String,
+                                     tags: TagSet,
+                                     distribution: Distribution,
+                                     unit: MeasurementUnit,
+                                     quantiles: Seq[java.lang.Double]): Unit = {
+    // Add percentiles timeseries for each percentile
+    val percentiles = quantiles.map(quant => quant -> distribution.percentile(quant * 100))
+    percentiles.foreach{case (quantileRank, percentile) =>
+      val percTags = tags.withTag("quantile", format(quantileRank))
+      appendTimeSerieValue(name, percTags, format(convert(percentile.value, unit)))
+    }
+  }
 
   private def appendHistogramBuckets(name: String, tags: TagSet, distribution: Distribution, unit: MeasurementUnit,
       buckets: Seq[java.lang.Double]): Unit = {
