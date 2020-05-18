@@ -25,6 +25,8 @@ project/plugins/project/
 *.iml
 *.iws
 .metals/
+.bloop
+project/metals.sbt
 
 # Eclipse
 .project
