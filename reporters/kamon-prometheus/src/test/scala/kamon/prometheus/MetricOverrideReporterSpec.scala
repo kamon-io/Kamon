@@ -23,41 +23,41 @@ import kamon.module.MetricReporter
 import kamon.tag.TagSet
 import org.scalatest.{Matchers, WordSpec}
 
-class MetricOverrideReporterSpec extends WordSpec with Matchers with MetricInspection.Syntax with InstrumentInspection.Syntax {
+class MetricOverrideReporterSpec extends WordSpec with Matchers with MetricInspection.Syntax with InstrumentInspection.Syntax with KamonTestSnapshotSupport {
 
   "A MetricOverrideReporter" should {
     "apply metric overrides" in {
-      report(histogram("default.metric-name", Map.empty)) { snapshot =>
+      report(histogram("default.metric-name")) { snapshot =>
         snapshot.histograms.head.name shouldEqual "new-metric-name"
       }
 
-      report(rangeSampler("default.metric-name", Map.empty)) { snapshot =>
+      report(rangeSampler("default.metric-name")) { snapshot =>
         snapshot.rangeSamplers.head.name shouldEqual "new-metric-name"
       }
 
-      report(gauge("default.metric-name", Map.empty)) { snapshot =>
+      report(gauge("default.metric-name")) { snapshot =>
         snapshot.gauges.head.name shouldEqual "new-metric-name"
       }
 
-      report(counter("default.metric-name", Map.empty)) { snapshot =>
+      report(counter("default.metric-name")) { snapshot =>
         snapshot.counters.head.name shouldEqual "new-metric-name"
       }
     }
 
     "not modify metrics that do not appear in the override configuration" in {
-      report(histogram("other-metric-name", Map.empty)) { snapshot =>
+      report(histogram("other-metric-name")) { snapshot =>
         snapshot.histograms.head.name shouldEqual "other-metric-name"
       }
 
-      report(rangeSampler("other-metric-name", Map.empty)) { snapshot =>
+      report(rangeSampler("other-metric-name")) { snapshot =>
         snapshot.rangeSamplers.head.name shouldEqual "other-metric-name"
       }
 
-      report(gauge("other-metric-name", Map.empty)) { snapshot =>
+      report(gauge("other-metric-name")) { snapshot =>
         snapshot.gauges.head.name shouldEqual "other-metric-name"
       }
 
-      report(counter("other-metric-name", Map.empty)) { snapshot =>
+      report(counter("other-metric-name")) { snapshot =>
         snapshot.counters.head.name shouldEqual "other-metric-name"
       }
     }
@@ -135,7 +135,7 @@ class MetricOverrideReporterSpec extends WordSpec with Matchers with MetricInspe
     }
   }
 
-  val config = ConfigFactory.parseString(
+  val config: Config = ConfigFactory.parseString(
     """
       |kamon.prometheus {
       |  metric-overrides {
@@ -173,21 +173,5 @@ class MetricOverrideReporterSpec extends WordSpec with Matchers with MetricInspe
     assertions(reporter.latestSnapshot)
   }
 
-  val emptyPeriodSnapshot = PeriodSnapshot(Kamon.clock().instant(), Kamon.clock().instant(),
-    Seq.empty, Seq.empty, Seq.empty, Seq.empty, Seq.empty)
 
-  def counter(metricName: String, tags: Map[String, String]): PeriodSnapshot =
-    emptyPeriodSnapshot.copy(counters = Seq(MetricSnapshotBuilder.counter(metricName, TagSet.from(tags), 1L)))
-
-  def gauge(metricName: String, tags: Map[String, String]): PeriodSnapshot =
-    emptyPeriodSnapshot.copy(gauges = Seq(MetricSnapshotBuilder.gauge(metricName, TagSet.from(tags), 1D)))
-
-  def histogram(metricName: String, tags: Map[String, String]): PeriodSnapshot =
-    emptyPeriodSnapshot.copy(histograms = Seq(MetricSnapshotBuilder.histogram(metricName, TagSet.from(tags))(1)))
-
-  def rangeSampler(metricName: String, tags: Map[String, String]): PeriodSnapshot =
-    emptyPeriodSnapshot.copy(rangeSamplers = Seq(MetricSnapshotBuilder.histogram(metricName, TagSet.from(tags))(1)))
-
-  def timers(metricName: String, tags: Map[String, String]): PeriodSnapshot =
-    emptyPeriodSnapshot.copy(rangeSamplers = Seq(MetricSnapshotBuilder.histogram(metricName, TagSet.from(tags))(1)))
 }
