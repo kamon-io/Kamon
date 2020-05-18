@@ -51,7 +51,7 @@ class ScrapeDataBuilder(prometheusConfig: PrometheusSettings.Generic, environmen
 
   private def appendCounterMetric(metric: MetricSnapshot.Values[Long]): Unit = {
     val unit = metric.settings.unit
-    val normalizedMetricName = normalizeMetricName(metric.name, unit) + "_total"
+    val normalizedMetricName = normalizeCounterMetricName(metric.name, unit)
 
     if(metric.description.nonEmpty)
       append("# HELP ").append(normalizedMetricName).append(" ").append(metric.description).append("\n")
@@ -190,15 +190,27 @@ class ScrapeDataBuilder(prometheusConfig: PrometheusSettings.Generic, environmen
     if(allTags.nonEmpty) buffer.append("}")
   }
 
+  private def normalizeCounterMetricName(metricName: String, unit: MeasurementUnit): String = {
+    val normalizedMetricName = metricName.map(validNameChar(_))
+
+    unit.dimension match  {
+      case Time         => addPostfixOnlyIfMissing(normalizedMetricName, "_seconds_total")
+      case Information  => addPostfixOnlyIfMissing(normalizedMetricName, "_bytes_total")
+      case _            => addPostfixOnlyIfMissing(normalizedMetricName, "_total")
+    }
+  }
   private def normalizeMetricName(metricName: String, unit: MeasurementUnit): String = {
     val normalizedMetricName = metricName.map(validNameChar(_))
 
     unit.dimension match  {
-      case Time         => normalizedMetricName + "_seconds"
-      case Information  => normalizedMetricName + "_bytes"
+      case Time         => addPostfixOnlyIfMissing(normalizedMetricName, "_seconds")
+      case Information  => addPostfixOnlyIfMissing(normalizedMetricName, "_bytes")
       case _            => normalizedMetricName
     }
   }
+  private def addPostfixOnlyIfMissing(metricName: String, postfix: String) =
+    if (metricName.endsWith(postfix)) metricName
+    else metricName + postfix
 
   private def normalizeLabelName(label: String): String =
     label.map(validLabelChar)
