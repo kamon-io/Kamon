@@ -26,6 +26,9 @@ trait Configuration {
   private val logger = LoggerFactory.getLogger(classOf[Configuration])
   private var _currentConfig: Config = loadInitialConfiguration()
   private var _onReconfigureHooks = Seq.empty[Configuration.OnReconfigureHook]
+  
+  def enabled: Boolean = _enabled
+  @volatile private var _enabled = _currentConfig.getBoolean("kamon.enabled")
 
 
   /**
@@ -39,6 +42,7 @@ trait Configuration {
     */
   def reconfigure(newConfig: Config): Unit = synchronized {
     _currentConfig = newConfig
+    _enabled = newConfig.getBoolean("kamon.enabled")
     _onReconfigureHooks.foreach(hook => {
       try {
         hook.onReconfigure(newConfig)

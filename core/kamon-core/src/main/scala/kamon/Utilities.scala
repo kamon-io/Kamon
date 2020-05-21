@@ -19,7 +19,7 @@ package kamon
 import java.util.concurrent.{Executors, ScheduledExecutorService, ScheduledThreadPoolExecutor}
 
 import com.typesafe.config.Config
-import kamon.util.{Clock, Filter}
+import kamon.util.{Clock, Filter, NoOpExecutorService}
 
 import scala.collection.concurrent.TrieMap
 
@@ -28,7 +28,8 @@ import scala.collection.concurrent.TrieMap
   */
 trait Utilities { self: Configuration =>
   private val _clock = new Clock.Anchored()
-  private val _scheduler = Executors.newScheduledThreadPool(1, numberedThreadFactory("kamon-scheduler", daemon = true))
+  private val _scheduler: ScheduledExecutorService = if(enabled) Executors.newScheduledThreadPool(0, numberedThreadFactory("kamon-scheduler", daemon = true)) else
+    new NoOpExecutorService
   private val _filters = TrieMap.empty[String, Filter]
 
   reconfigureUtilities(self.config())

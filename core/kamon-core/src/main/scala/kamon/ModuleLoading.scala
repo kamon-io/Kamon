@@ -16,8 +16,7 @@
 
 package kamon
 
-import kamon.module.Module
-import kamon.module.ModuleRegistry
+import kamon.module.{Module, ModuleRegistry, ModuleRegistryImpl, NoopModuleRegistry}
 import kamon.module.Module.Registration
 
 import scala.concurrent.Future
@@ -42,7 +41,9 @@ import scala.concurrent.Future
   *
   */
 trait ModuleLoading { self: Configuration with Utilities with Metrics with Tracing =>
-  protected val _moduleRegistry = new ModuleRegistry(self, clock(), self.registry(), self.tracer())
+  protected val _moduleRegistry: ModuleRegistry = if(self.enabled) new ModuleRegistryImpl(self, clock(), self.registry(), self.tracer()) 
+  else new NoopModuleRegistry
+  
   self.onReconfigure(newConfig => self._moduleRegistry.reconfigure(newConfig))
 
   /**

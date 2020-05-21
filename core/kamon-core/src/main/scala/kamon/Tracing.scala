@@ -22,8 +22,8 @@ import kamon.trace.{Identifier, SpanBuilder, Tracer}
   * Exposes the Tracing APIs using a built-in, globally shared tracer.
   */
 trait Tracing { self: Configuration with Utilities with ContextStorage =>
-  private val _tracer = new Tracer(config(), clock(), self, self.scheduler())
-  onReconfigure(newConfig => _tracer.reconfigure(newConfig))
+  private val _tracer = new Tracer(self.enabled, config(), clock(), self, self.scheduler())
+  onReconfigure(newConfig => _tracer.reconfigure(self.enabled, newConfig))
 
 
   /**

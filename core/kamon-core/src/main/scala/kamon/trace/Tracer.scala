@@ -37,7 +37,7 @@ import scala.collection.JavaConverters.collectionAsScalaIterableConverter
   * A Tracer assists on the creation of Spans and temporarily holds finished Spans until they are flushed to the
   * available reporters.
   */
-class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage,
+class Tracer(enabled: Boolean, initialConfig: Config, clock: Clock, contextStorage: ContextStorage,
     scheduler: ScheduledExecutorService) {
 
   import Tracer._logger
@@ -53,9 +53,9 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
   @volatile private var _adaptiveSamplerSchedule: Option[ScheduledFuture[_]] = None
   @volatile private var _preStartHooks: Array[Tracer.PreStartHook] = Array.empty
   @volatile private var _preFinishHooks: Array[Tracer.PreFinishHook] = Array.empty
-  private val _onSpanFinish: Span.Finished => Unit = _spanBuffer.offer
+  @volatile private var _onSpanFinish: Span.Finished => Unit = _spanBuffer.offer
 
-  reconfigure(initialConfig)
+  reconfigure(enabled, initialConfig)
 
 
   /**
@@ -354,7 +354,7 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
   /**
     * Applies a new configuration to the tracer and its related components.
     */
-  def reconfigure(newConfig: Config): Unit = synchronized {
+  def reconfigure(enabled: Boolean, newConfig: Config): Unit = synchronized {
     try {
       val traceConfig = newConfig.getConfig("kamon.trace")
       val sampler = traceConfig.getString("sampler") match {
@@ -403,7 +403,7 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
       val preFinishHooks = traceConfig.getStringList("hooks.pre-finish").asScala
         .map(preFinish => ClassLoading.createInstance[Tracer.PreFinishHook](preFinish)).toArray
 
-      val traceReporterQueueSize = traceConfig.getInt("reporter-queue-size")
+      val traceReporterQueueSize = if (enabled) traceConfig.getInt("reporter-queue-size") else 0
       val joinRemoteParentsWithSameSpanID = traceConfig.getBoolean("join-remote-parents-with-same-span-id")
       val tagWithUpstreamService = traceConfig.getBoolean("span-metric-tags.upstream-service")
       val tagWithParentOperation = traceConfig.getBoolean("span-metric-tags.parent-operation")
@@ -426,6 +426,7 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
       _traceReporterQueueSize = traceReporterQueueSize
       _preStartHooks = preStartHooks
       _preFinishHooks = preFinishHooks
+      _onSpanFinish = if (enabled) _spanBuffer.offer else _ => ()
 
     } catch {
       case t: Throwable => _logger.error("Failed to reconfigure the Kamon tracer", t)

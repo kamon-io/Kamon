@@ -36,7 +36,20 @@ import scala.util.control.NonFatal
 /**
   * Controls the lifecycle of all available modules.
   */
-class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry: MetricRegistry, tracer: Tracer) {
+trait ModuleRegistry {
+  private[kamon] def status(): Status.ModuleRegistry
+
+  def stopModules(): Future[Unit]
+
+  def load(config: Config): Unit
+
+  def register(name: String, description: Option[String], module: Module): Registration
+
+  def reconfigure(newConfig: Config): Unit
+
+}
+
+class ModuleRegistryImpl(configuration: Configuration, clock: Clock, metricRegistry: MetricRegistry, tracer: Tracer) extends ModuleRegistry {
 
   private val _logger = LoggerFactory.getLogger(classOf[ModuleRegistry])
   private val _metricsTickerExecutor = Executors.newScheduledThreadPool(1, threadFactory("kamon-metrics-ticker", daemon = true))
@@ -435,3 +448,20 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
   )
 }
 
+class NoopModuleRegistry extends ModuleRegistry {
+  override def stopModules(): Future[Unit] = Future.successful(())
+
+  override def load(config: Config): Unit = ()
+
+  override def register(name: String, description: Option[String], module: Module): Registration = {
+    //stop module so its resources are cleaned
+    module.stop()
+    new Registration {
+      override def cancel(): Unit = ()
+    }
+  }
+
+  override def reconfigure(newConfig: Config): Unit = ()
+
+  override def status(): Status.ModuleRegistry = Status.ModuleRegistry(Seq.empty)
+}
