@@ -7,8 +7,10 @@ import java.util.concurrent.*;
 /**
  * An executor service that does nothing. Used with empty metrics so that no
  * threads are created wasting time / space.
+ * 
+ * From https://giraph.apache.org/xref/com/yammer/metrics/core/NoOpExecutorService.html
  */
-public class NoOpExecutorService implements ScheduledExecutorService {
+public class NoopExecutorService implements ScheduledExecutorService {
   @Override
   public ScheduledFuture<?> schedule(Runnable runnable, long l,
                                      TimeUnit timeUnit) {
