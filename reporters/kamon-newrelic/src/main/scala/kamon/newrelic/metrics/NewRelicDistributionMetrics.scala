@@ -48,12 +48,12 @@ object NewRelicDistributionMetrics {
 
   private def makePercentiles(name: String, end: Long, distValue: Distribution, instrumentBaseAttributes: Attributes): Seq[Metric] = {
     percentilesToReport
-      .map(rank => distValue.percentile(rank))
-      .filter(percentileValue => percentileValue != null)
-      .map { percentile =>
+      .map(rank => (distValue.percentile(rank), rank))
+      .filter(percentileAndRank => percentileAndRank._1 != null)
+      .map { percentileAndRank =>
         val attributes: Attributes = instrumentBaseAttributes.copy()
-          .put("percentile", percentile.rank)
-        new Gauge(name + ".percentiles", percentile.value, end, attributes)
+          .put("percentile", percentileAndRank._2)
+        new Gauge(name + ".percentiles", percentileAndRank._1.value, end, attributes)
       }
   }
 

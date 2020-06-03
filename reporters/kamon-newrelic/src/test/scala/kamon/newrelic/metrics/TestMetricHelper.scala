@@ -46,7 +46,7 @@ object TestMetricHelper {
     val settings = Metric.Settings.ForDistributionInstrument(
       new MeasurementUnit(Dimension.Information, metric.MeasurementUnit.Magnitude("eimer", 603.3d)), Duration.ofMillis(12), dynamicRange)
 
-    val percentiles = Map(90d -> Percentage(90d, 2L, 816L), 87d -> Percentage(87d, 2L, 816L))
+    val percentiles = Map(90d -> Percentage(89.9996d, 2L, 816L), 87d -> Percentage(87d, 2L, 816L))
     val distribution: Distribution = buildHistogramDist(Percentage(19d, 2L, 816L), Bucket(717L, 881L), Distro(13L, 17L, 101L, 44L), percentiles)
     val inst: Snapshot[Distribution] = new Snapshot[Distribution](tagSet, distribution)
     new metric.MetricSnapshot.Distributions("trev", "a good trevor", settings, Seq(inst))
