@@ -285,7 +285,7 @@ object Distribution {
           currentPercentile = percentiles.next()
         }
 
-        currentPercentile
+        immutable.Percentile(p, currentPercentile.value, currentPercentile.countAtRank)
 
       } else immutable.Percentile(p, 0, 0)
     }

@@ -74,6 +74,16 @@ class HistogramSpec extends WordSpec with Matchers with InstrumentInspection.Syn
       )
     }
 
+    "return the same percentile value that was request on a resulting distribution" in {
+      val histogram = Kamon.histogram("returned-percentile").withoutTags()
+      (1L to 10L).foreach(histogram.record)
+
+      val distribution = histogram.distribution()
+      distribution.percentile(99).rank shouldBe(99)
+      distribution.percentile(99.9).rank shouldBe(99.9)
+      distribution.percentile(99.99).rank shouldBe(99.99D)
+    }
+
     "[private api] record values and optionally keep the internal state when a snapshot is taken" in {
       val histogram = Kamon.histogram("test", unit = time.nanoseconds).withoutTags()
       histogram.record(100)
