@@ -22,11 +22,11 @@ class SimpleSpanBatchSenderBuilder() extends SpanBatchSenderBuilder {
   private val logger = LoggerFactory.getLogger(classOf[SpanBatchSenderBuilder])
 
   /**
-   * SpanBatchSender responsible for sending batches of Spans to New Relic using the Telemetry SDK
-   *
-   * @param config User defined config
-   * @return New Relic SpanBatchSender
-   */
+    * SpanBatchSender responsible for sending batches of Spans to New Relic using the Telemetry SDK
+    *
+    * @param config User defined config
+    * @return New Relic SpanBatchSender
+    */
   override def build(config: Config) = {
     logger.warn("NewRelicSpanReporter buildReporter...")
     val nrConfig = config.getConfig("kamon.newrelic")
@@ -37,10 +37,14 @@ class SimpleSpanBatchSenderBuilder() extends SpanBatchSenderBuilder {
       logger.error("No Insights Insert API Key defined for the kamon.newrelic.nr-insights-insert-key config setting. " +
         "No spans will be sent to New Relic.")
     }
+    val enableAuditLogging = if (nrConfig.getIsNull("enable-audit-logging")) false else nrConfig.getBoolean("enable-audit-logging")
 
-    SimpleSpanBatchSender.builder(nrInsightsInsertKey, Duration.ofSeconds(5))
-      .enableAuditLogging()
+    val builder = SimpleSpanBatchSender.builder(nrInsightsInsertKey, Duration.ofSeconds(5))
       .secondaryUserAgent("newrelic-kamon-reporter", LibraryVersion.version)
-      .build()
+
+    if (enableAuditLogging) {
+      builder.enableAuditLogging()
+    }
+    builder.build()
   }
 }

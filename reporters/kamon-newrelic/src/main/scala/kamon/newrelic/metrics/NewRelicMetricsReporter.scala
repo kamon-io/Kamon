@@ -76,9 +76,13 @@ object NewRelicMetricsReporter {
     val config = Kamon.config();
     val nrConfig = config.getConfig("kamon.newrelic")
     val nrInsightsInsertKey = nrConfig.getString("nr-insights-insert-key")
-    SimpleMetricBatchSender.builder(nrInsightsInsertKey)
-      .enableAuditLogging()
+    val enableAuditLogging = if (nrConfig.getIsNull("enable-audit-logging")) false else nrConfig.getBoolean("enable-audit-logging")
+    val builder = SimpleMetricBatchSender.builder(nrInsightsInsertKey)
       .secondaryUserAgent("newrelic-kamon-reporter", LibraryVersion.version)
-      .build()
+
+    if (enableAuditLogging) {
+      builder.enableAuditLogging()
+    }
+    builder.build()
   }
 }
