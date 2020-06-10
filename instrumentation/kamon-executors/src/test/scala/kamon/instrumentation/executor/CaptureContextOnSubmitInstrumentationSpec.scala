@@ -16,7 +16,7 @@
 
 package kamon.instrumentation.executor
 
-import java.util.concurrent.{Callable, CountDownLatch, Executors => JavaExecutors}
+import java.util.concurrent.{Callable, CountDownLatch, TimeUnit, Executors => JavaExecutors}
 
 import com.google.common.util.concurrent.MoreExecutors
 import kamon.Kamon
@@ -116,6 +116,19 @@ class CaptureContextOnSubmitInstrumentationSpec extends WordSpec with Matchers w
       ctx.value should be ("in-runnable-body")
     }
 
+    "capture the context when call schedule(Runnable,long,TimeUnit) in ScheduledThreadPool" in {
+      val executor = JavaExecutors.newScheduledThreadPool(1)
+
+      val ctx = Kamon.runWithContext(testContext("in-runnable-body")) {
+        val runnable = new SimpleRunnable
+        executor.schedule(runnable, 1, TimeUnit.MILLISECONDS)
+        runnable.latch.await()
+        runnable.ctx
+      }
+
+      ctx.value should be ("in-runnable-body")
+    }
+
     "capture the context when call submit(Callable) in ThreadPool" in {
       val executor = JavaExecutors.newSingleThreadExecutor()
       val ctx = Kamon.runWithContext(testContext("in-callable-body")) {
@@ -133,6 +146,19 @@ class CaptureContextOnSubmitInstrumentationSpec extends WordSpec with Matchers w
       val ctx = Kamon.runWithContext(testContext("in-callable-body")) {
         val callable = new SimpleCallable
         executor.submit(callable)
+        callable.latch.await()
+        callable.ctx
+      }
+
+      ctx.value should be ("in-callable-body")
+    }
+
+    "capture the context when call schedule(Callable,long,TimeUnit) in ScheduledThreadPool" in {
+      val executor = JavaExecutors.newScheduledThreadPool(1)
+
+      val ctx = Kamon.runWithContext(testContext("in-callable-body")) {
+        val callable = new SimpleCallable
+        executor.schedule(callable, 1, TimeUnit.MILLISECONDS)
         callable.latch.await()
         callable.ctx
       }
