@@ -59,6 +59,18 @@ public final class CaptureContextOnSubmitInstrumentation extends Instrumentation
                 .advise(method("submit").and(withArgument(Runnable.class)), RunnableWrapperAdvisor.class)
                 .advise(method("submit").and(withArgument(Callable.class)), CallableWrapperAdvisor.class)
                 .advise(anyMethods("invokeAny", "invokeAll").and(withArgument(Collection.class)), CallableCollectionWrapperAdvisor.class);
+
+        /**
+         * Instrument all implementations of:
+         *
+         * java.util.concurrent.ScheduledExecutorService::schedule(Runnable, long, TimeUnit)
+         * java.util.concurrent.ScheduledExecutorService::schedule(Callable, long, TimeUnit)
+         *
+         */
+        onSubTypesOf("java.util.concurrent.ScheduledExecutorService")
+                .advise(method("schedule").and(withArgument(0, Runnable.class)), RunnableWrapperAdvisor.class)
+                .advise(method("schedule").and(withArgument(0, Callable.class)), CallableWrapperAdvisor.class);
+
     }
 
     /**
