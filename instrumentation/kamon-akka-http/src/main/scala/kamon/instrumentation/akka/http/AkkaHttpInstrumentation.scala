@@ -1,11 +1,9 @@
 package kamon.instrumentation.akka.http
 
-import akka.http.scaladsl.model.{HttpHeader, HttpRequest, HttpResponse}
+import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
 import akka.http.scaladsl.model.headers.RawHeader
 import kamon.Kamon
 import kamon.instrumentation.http.HttpMessage
-
-import scala.collection.immutable
 
 object AkkaHttpInstrumentation {
 

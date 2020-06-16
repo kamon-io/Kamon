@@ -295,7 +295,7 @@ object HttpServerInstrumentation {
 
 
     private def buildServerSpan(context: Context, request: HttpMessage.Request, deferSamplingDecision: Boolean): Span = {
-      val span = Kamon.serverSpanBuilder(operationName(request), component)
+      val span = Kamon.serverSpanBuilder(settings.operationNameSettings.operationName(request), component)
       span.context(context)
 
       if(!settings.enableSpanMetrics)
@@ -322,21 +322,10 @@ object HttpServerInstrumentation {
       
       span.start()
     }
-
-    private def operationName(request: HttpMessage.Request): String = {
-      val requestPath = request.path
-      //first apply any mappings rules
-      val customMapping = settings.operationMappings.collectFirst {
-        case (pattern, operationName) if pattern.accept(requestPath) => operationName
-      }.orElse( //fallback to use any configured name generator
-        settings.operationNameGenerator.name(request)
-     )
-      customMapping.getOrElse(settings.defaultOperationName)
-    }
   }
 
 
-  case class Settings(
+  final case class Settings(
     enableContextPropagation: Boolean,
     propagationChannel: String,
     enableServerMetrics: Boolean,
@@ -353,7 +342,9 @@ object HttpServerInstrumentation {
     unhandledOperationName: String,
     operationMappings: Map[Filter.Glob, String],
     operationNameGenerator: HttpOperationNameGenerator
-  )
+  ) {
+    val operationNameSettings = OperationNameSettings(defaultOperationName, operationMappings, operationNameGenerator)
+  }
 
   object Settings {
 
@@ -395,7 +386,7 @@ object HttpServerInstrumentation {
       }
       val unhandledOperationName = config.getString("tracing.operations.unhandled")
       val operationMappings = config.getConfig("tracing.operations.mappings").pairs.map {
-        case (pattern, operationName) => (new Filter.Glob(pattern), operationName)
+        case (pattern, operationName) => (Filter.Glob(pattern), operationName)
       }
 
       Settings(

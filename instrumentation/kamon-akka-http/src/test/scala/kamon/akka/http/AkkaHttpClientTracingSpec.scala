@@ -18,17 +18,16 @@ package kamon.akka.http
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.headers.RawHeader
 import akka.http.scaladsl.model.HttpRequest
+import akka.http.scaladsl.model.headers.RawHeader
 import akka.stream.ActorMaterializer
 import kamon.Kamon
+import kamon.tag.Lookups.{plain, plainBoolean, plainLong}
 import kamon.testkit._
-import kamon.trace.Span
-import kamon.tag.Lookups.{plain, plainLong, plainBoolean}
-import org.scalatest.concurrent.Eventually
-import org.scalatest.{BeforeAndAfterAll, Matchers, OptionValues, WordSpecLike}
 import org.json4s._
 import org.json4s.native.JsonMethods._
+import org.scalatest.concurrent.Eventually
+import org.scalatest.{BeforeAndAfterAll, Matchers, OptionValues, WordSpecLike}
 
 import scala.concurrent.duration._
 
@@ -113,6 +112,16 @@ class AkkaHttpClientTracingSpec extends WordSpecLike with Matchers with BeforeAn
         span.metricTags.get(plainBoolean("error")) shouldBe true
         span.metricTags.get(plainLong("http.status_code")) shouldBe 500
         span.hasError shouldBe true
+      }
+    }
+
+    "keep operation names provided by the HTTP Client instrumentation" in {
+      val target = s"http://$interface:$port/name-will-be-changed"
+      Http().singleRequest(HttpRequest(uri = target)).map(_.discardEntityBytes())
+
+      eventually(timeout(10 seconds)) {
+        val span = testSpanReporter().nextSpan().value
+        span.operationName shouldBe "named-via-config"
       }
     }
   }

@@ -89,7 +89,7 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
           statement.execute()
           validateNextRow(statement.getResultSet, valueNr = 1, valueName = "foo")
 
-          eventually(timeout(scaled(5 seconds))) {
+          eventually(timeout(scaled(5 seconds)), interval(200 millis)) {
             val span = testSpanReporter().nextSpan().value
             span.operationName shouldBe StatementTypes.GenericExecute
             span.metricTags.get(plain("component")) shouldBe "jdbc"
