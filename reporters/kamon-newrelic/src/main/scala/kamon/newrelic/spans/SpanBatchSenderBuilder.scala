@@ -49,10 +49,11 @@ class SimpleSpanBatchSenderBuilder() extends SpanBatchSenderBuilder {
       .secondaryUserAgent(userAgent)
       .auditLoggingEnabled(enableAuditLogging)
 
-    if(nrConfig.hasPath("span-ingest-uri")){
+    if (nrConfig.hasPath("span-ingest-uri")) {
       val uriOverride = nrConfig.getString("span-ingest-uri")
       senderConfig.endpointWithPath(new URL(uriOverride))
     }
 
     SpanBatchSender.create(senderConfig)
+  }
 }
