@@ -6,8 +6,9 @@
 package kamon.newrelic.metrics
 
 import java.net.{URI, URL}
+import java.time.Duration
 
-import com.newrelic.telemetry.SimpleMetricBatchSender
+import com.newrelic.telemetry.{OkHttpPoster, SenderConfiguration, SimpleMetricBatchSender}
 import com.newrelic.telemetry.metrics.{MetricBatch, MetricBatchSender}
 import com.typesafe.config.Config
 import kamon.Kamon
@@ -74,23 +75,28 @@ object NewRelicMetricsReporter {
       new NewRelicMetricsReporter()
   }
 
-  def buildSender(): MetricBatchSender = {
-    val config = Kamon.config();
+  def buildSender(config: Config = Kamon.config()): MetricBatchSender = {
+    val senderConfig = buildSenderConfig(config)
+    MetricBatchSender.create(senderConfig);
+  }
+
+  def buildSenderConfig(config: Config): SenderConfiguration = {
     val nrConfig = config.getConfig("kamon.newrelic")
     val nrInsightsInsertKey = nrConfig.getString("nr-insights-insert-key")
     val enableAuditLogging = nrConfig.getBoolean("enable-audit-logging")
     val userAgent = s"newrelic-kamon-reporter/${LibraryVersion.version}"
+    val callTimeout = Duration.ofSeconds(5)
 
     val senderConfig = MetricBatchSender.configurationBuilder()
       .apiKey(nrInsightsInsertKey)
+      .httpPoster(new OkHttpPoster(callTimeout))
       .auditLoggingEnabled(enableAuditLogging)
       .secondaryUserAgent(userAgent)
 
-    if(nrConfig.hasPath("metric-ingest-uri")) {
+    if (nrConfig.hasPath("metric-ingest-uri")) {
       val uriOverride = nrConfig.getString("metric-ingest-uri")
       senderConfig.endpointWithPath(new URL(uriOverride))
     }
-
-    MetricBatchSender.create(senderConfig.build());
+    senderConfig.build()
   }
 }

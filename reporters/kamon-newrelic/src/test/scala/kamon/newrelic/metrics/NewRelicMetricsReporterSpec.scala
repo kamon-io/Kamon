@@ -5,7 +5,7 @@
 
 package kamon.newrelic.metrics
 
-import java.net.InetAddress
+import java.net.{InetAddress, URL}
 
 import com.newrelic.telemetry.Attributes
 import com.newrelic.telemetry.metrics._
@@ -142,6 +142,31 @@ class NewRelicMetricsReporterSpec extends WordSpec with Matchers {
       reporter.reportPeriodSnapshot(periodSnapshot)
 
       verify(sender).sendBatch(expectedBatch)
+    }
+  }
+
+  "The metrics reporter builder" should {
+    "default the url when config not provided" in {
+      val newrelicConfig: ConfigValue = ConfigValueFactory.fromMap(Map(
+        "enable-audit-logging" -> false,
+        "nr-insights-insert-key" -> "secret"
+      ).asJava)
+      val config: Config = Kamon.config().withValue("kamon.newrelic", newrelicConfig)
+
+      val result = NewRelicMetricsReporter.buildSenderConfig(config)
+      assert(new URL("https://metric-api.newrelic.com/metric/v1") == result.getEndpointUrl)
+    }
+
+    "use config to override the URI" in {
+      val newrelicConfig: ConfigValue = ConfigValueFactory.fromMap(Map(
+        "enable-audit-logging" -> false,
+        "nr-insights-insert-key" -> "secret",
+        "metric-ingest-uri" -> "https://example.com/foo"
+      ).asJava)
+      val config: Config = Kamon.config().withValue("kamon.newrelic", newrelicConfig)
+
+      val result = NewRelicMetricsReporter.buildSenderConfig(config)
+      assert(new URL("https://example.com/foo") == result.getEndpointUrl)
     }
   }
 
