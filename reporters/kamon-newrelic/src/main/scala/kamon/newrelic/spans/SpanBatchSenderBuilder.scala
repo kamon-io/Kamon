@@ -8,7 +8,7 @@ package kamon.newrelic.spans
 import java.net.URL
 import java.time.Duration
 
-import com.newrelic.telemetry.{OkHttpPoster, SimpleSpanBatchSender}
+import com.newrelic.telemetry.{OkHttpPoster, SenderConfiguration, SimpleSpanBatchSender}
 import com.newrelic.telemetry.spans.SpanBatchSender
 import com.typesafe.config.Config
 import kamon.newrelic.LibraryVersion
@@ -30,6 +30,11 @@ class SimpleSpanBatchSenderBuilder() extends SpanBatchSenderBuilder {
     */
   override def build(config: Config) = {
     logger.warn("NewRelicSpanReporter buildReporter...")
+    val senderConfig = buildConfig(config)
+    SpanBatchSender.create(senderConfig)
+  }
+
+  def buildConfig(config: Config): SenderConfiguration = {
     val nrConfig = config.getConfig("kamon.newrelic")
     // TODO maybe some validation around these values?
     val nrInsightsInsertKey = nrConfig.getString("nr-insights-insert-key")
@@ -54,6 +59,6 @@ class SimpleSpanBatchSenderBuilder() extends SpanBatchSenderBuilder {
       senderConfig.endpointWithPath(new URL(uriOverride))
     }
 
-    SpanBatchSender.create(senderConfig.build())
+    senderConfig.build
   }
 }
