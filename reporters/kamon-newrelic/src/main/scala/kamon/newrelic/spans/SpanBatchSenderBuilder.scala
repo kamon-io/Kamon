@@ -54,6 +54,6 @@ class SimpleSpanBatchSenderBuilder() extends SpanBatchSenderBuilder {
       senderConfig.endpointWithPath(new URL(uriOverride))
     }
 
-    SpanBatchSender.create(senderConfig)
+    SpanBatchSender.create(senderConfig.build())
   }
 }
