@@ -5,6 +5,8 @@
 
 package kamon.newrelic.metrics
 
+import java.net.{URI, URL}
+
 import com.newrelic.telemetry.SimpleMetricBatchSender
 import com.newrelic.telemetry.metrics.{MetricBatch, MetricBatchSender}
 import com.typesafe.config.Config
@@ -77,12 +79,18 @@ object NewRelicMetricsReporter {
     val nrConfig = config.getConfig("kamon.newrelic")
     val nrInsightsInsertKey = nrConfig.getString("nr-insights-insert-key")
     val enableAuditLogging = nrConfig.getBoolean("enable-audit-logging")
-    val builder = SimpleMetricBatchSender.builder(nrInsightsInsertKey)
-      .secondaryUserAgent("newrelic-kamon-reporter", LibraryVersion.version)
+    val userAgent = s"newrelic-kamon-reporter/${LibraryVersion.version}"
 
-    if (enableAuditLogging) {
-      builder.enableAuditLogging()
+    val senderConfig = MetricBatchSender.configurationBuilder()
+      .apiKey(nrInsightsInsertKey)
+      .auditLoggingEnabled(enableAuditLogging)
+      .secondaryUserAgent(userAgent)
+
+    if(nrConfig.hasPath("metric-ingest-uri")) {
+      val uriOverride = nrConfig.getString("metric-ingest-uri")
+      senderConfig.endpointWithPath(new URL(uriOverride))
     }
-    builder.build()
+
+    MetricBatchSender.create(senderConfig.build());
   }
 }
