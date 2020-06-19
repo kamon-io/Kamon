@@ -12,7 +12,7 @@
  * and limitations under the License.
  * =========================================================================================
  */
- 
+
 package kamon.prometheus
 
 import java.lang.StringBuilder
@@ -171,11 +171,17 @@ class ScrapeDataBuilder(prometheusConfig: PrometheusSettings.Generic, environmen
                                      distribution: Distribution,
                                      unit: MeasurementUnit,
                                      quantiles: Seq[java.lang.Double]): Unit = {
+    val percentileIter = distribution.percentilesIterator
+    val percentiles = quantiles.sorted.map { quant =>
+      //find first percentile in iterator that is grater or equal to wanted quantile and extract value right away since the percentile is mutable
+      quant -> percentileIter.find {
+        _.rank >= (quant * 100)
+      }.map(_.value).getOrElse(0L)
+    }
     // Add percentiles timeseries for each percentile
-    val percentiles = quantiles.map(quant => quant -> distribution.percentile(quant * 100))
-    percentiles.foreach{case (quantileRank, percentile) =>
+    percentiles.foreach { case (quantileRank, percentile) =>
       val percTags = tags.withTag("quantile", format(quantileRank))
-      appendTimeSerieValue(name, percTags, format(convert(percentile.value, unit)))
+      appendTimeSerieValue(name, percTags, format(convert(percentile.toDouble, unit)))
     }
   }
 
