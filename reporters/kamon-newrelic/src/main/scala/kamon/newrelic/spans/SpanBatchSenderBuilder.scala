@@ -5,9 +5,10 @@
 
 package kamon.newrelic.spans
 
+import java.net.URL
 import java.time.Duration
 
-import com.newrelic.telemetry.SimpleSpanBatchSender
+import com.newrelic.telemetry.{OkHttpPoster, SenderConfiguration, SimpleSpanBatchSender}
 import com.newrelic.telemetry.spans.SpanBatchSender
 import com.typesafe.config.Config
 import kamon.newrelic.LibraryVersion
@@ -29,6 +30,11 @@ class SimpleSpanBatchSenderBuilder() extends SpanBatchSenderBuilder {
     */
   override def build(config: Config) = {
     logger.warn("NewRelicSpanReporter buildReporter...")
+    val senderConfig = buildConfig(config)
+    SpanBatchSender.create(senderConfig)
+  }
+
+  def buildConfig(config: Config): SenderConfiguration = {
     val nrConfig = config.getConfig("kamon.newrelic")
     // TODO maybe some validation around these values?
     val nrInsightsInsertKey = nrConfig.getString("nr-insights-insert-key")
@@ -39,12 +45,20 @@ class SimpleSpanBatchSenderBuilder() extends SpanBatchSenderBuilder {
     }
     val enableAuditLogging = nrConfig.getBoolean("enable-audit-logging")
 
-    val builder = SimpleSpanBatchSender.builder(nrInsightsInsertKey, Duration.ofSeconds(5))
-      .secondaryUserAgent("newrelic-kamon-reporter", LibraryVersion.version)
+    val userAgent = s"newrelic-kamon-reporter/${LibraryVersion.version}"
+    val callTimeout = Duration.ofSeconds(5)
 
-    if (enableAuditLogging) {
-      builder.enableAuditLogging()
+    val senderConfig = SpanBatchSender.configurationBuilder()
+      .apiKey(nrInsightsInsertKey)
+      .httpPoster(new OkHttpPoster(callTimeout))
+      .secondaryUserAgent(userAgent)
+      .auditLoggingEnabled(enableAuditLogging)
+
+    if (nrConfig.hasPath("span-ingest-uri")) {
+      val uriOverride = nrConfig.getString("span-ingest-uri")
+      senderConfig.endpointWithPath(new URL(uriOverride))
     }
-    builder.build()
+
+    senderConfig.build
   }
 }
