@@ -27,6 +27,9 @@ class CatsIoInstrumentationSpec extends WordSpec with ScalaFutures with Matchers
         val anotherExecutionContext: ExecutionContext =
           ExecutionContext.fromExecutorService(Executors.newCachedThreadPool())
         val context = Context.of("key", "value")
+
+        implicit val timer = IO.timer(global)
+
         val contextTagAfterTransformations =
           for {
             scope <- IO {
@@ -36,6 +39,7 @@ class CatsIoInstrumentationSpec extends WordSpec with ScalaFutures with Matchers
             _ <- IO(len.toString)
             _ <- IO.shift(global)
             _ <- IO.shift
+            _ <- IO.sleep(Duration.Zero)
             _ <- IO.shift(anotherExecutionContext)
           } yield {
             val tagValue = Kamon.currentContext().getTag(plain("key"))
