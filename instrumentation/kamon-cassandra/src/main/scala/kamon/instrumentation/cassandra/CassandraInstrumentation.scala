@@ -40,6 +40,8 @@ object CassandraInstrumentation {
 
   private def readSettings(config: Config) = {
     val cassandraConfig = config.getConfig("kamon.instrumentation.cassandra")
+    val enableTracing = cassandraConfig.getBoolean("tracing.enabled")
+    val createRoundTripSpans = enableTracing && cassandraConfig.getBoolean("tracing.create-round-trip-spans")
 
     Settings(
       sampleInterval                 = Duration.fromNanos(cassandraConfig.getDuration("metrics.sample-interval").toNanos),
@@ -47,7 +49,8 @@ object CassandraInstrumentation {
       nodeTagMode                    = TagMode.from(cassandraConfig.getString("tracing.tags.node")),
       rackTagMode                    = TagMode.from(cassandraConfig.getString("tracing.tags.rack")),
       dcTagMode                      = TagMode.from(cassandraConfig.getString("tracing.tags.dc")),
-      traceExecutions                = cassandraConfig.getBoolean("tracing.enabled")
+      enableTracing                  = enableTracing,
+      createRoundTripSpans           = createRoundTripSpans
     )
   }
 
@@ -59,7 +62,8 @@ object CassandraInstrumentation {
       nodeTagMode:                    TagMode,
       rackTagMode:                    TagMode,
       dcTagMode:                      TagMode,
-      traceExecutions:                Boolean
+      enableTracing:                  Boolean,
+      createRoundTripSpans:           Boolean
   )
 
   object Tags {

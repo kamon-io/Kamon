@@ -56,21 +56,22 @@ class InstrumentedSession(underlying: Session) extends AbstractSession {
     underlying.prepareAsync(statement)
   }
 
-  private def buildClientSpan(statement: Statement): Span = if(CassandraInstrumentation.settings.traceExecutions) {
-    val query         = extractQuery(statement)
-    val statementKind = extractStatementType(query)
+  private def buildClientSpan(statement: Statement): Span =
+    if(CassandraInstrumentation.settings.enableTracing) {
+      val query         = extractQuery(statement)
+      val statementKind = extractStatementType(query)
 
-    val clientSpan = Kamon
-      .clientSpanBuilder(QueryOperations.QueryOperationName, "cassandra.driver")
-      .tagMetrics("cassandra.query.kind", statementKind.getOrElse("other"))
-      .tag("db.statement", query)
-      .tag("db.type", "cassandra")
-      .start()
+      val clientSpan = Kamon
+        .clientSpanBuilder(QueryOperations.QueryOperationName, "cassandra.driver")
+        .tagMetrics("cassandra.query.kind", statementKind.getOrElse("other"))
+        .tag("db.statement", query)
+        .tag("db.type", "cassandra")
+        .start()
 
-    Option(statement.getKeyspace).foreach(ks => clientSpan.tag("db.instance", ks))
+      Option(statement.getKeyspace).foreach(ks => clientSpan.tag("db.instance", ks))
 
-    clientSpan
-  } else Span.Empty
+      clientSpan
+    } else Span.Empty
 
   override def executeAsync(statement: Statement): ResultSetFuture = {
     val clientSpan = buildClientSpan(statement)

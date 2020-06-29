@@ -25,6 +25,7 @@ import kamon.trace.Span
 
 class NodeMonitor(node: Node) {
   val sessionMetrics = new SessionInstruments()
+
   val poolMetrics = if (CassandraInstrumentation.settings.trackHostConnectionPoolMetrics) {
     new NodeConnectionPoolInstruments(node)
   } else null

@@ -52,7 +52,7 @@ object QueryExecutionAdvice {
     val nodeMonitor = host.nodeMonitor
 
     val clientSpan = Kamon.currentSpan()
-    val executionSpan = if(CassandraInstrumentation.settings.traceExecutions) {
+    val executionSpan = if(CassandraInstrumentation.settings.createRoundTripSpans) {
       Kamon
         .clientSpanBuilder(ExecutionOperationName, Tags.CassandraDriverComponent)
         .asChildOf(clientSpan)
