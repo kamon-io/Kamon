@@ -17,20 +17,22 @@
 package kamon.instrumentation.cassandra.metrics
 
 import kamon.instrumentation.cassandra.CassandraInstrumentation
-import kamon.instrumentation.cassandra.CassandraInstrumentation.Node
-import kamon.instrumentation.cassandra.HostConnectionPoolMetrics.HostConnectionPoolInstruments
+import kamon.instrumentation.cassandra.CassandraInstrumentation.{Node, Tags, settings}
+import kamon.instrumentation.cassandra.NodeConnectionPoolMetrics.NodeConnectionPoolInstruments
 import kamon.instrumentation.cassandra.SessionMetrics.SessionInstruments
-import kamon.metric.Timer
+import kamon.instrumentation.trace.SpanTagger
 import kamon.trace.Span
 
 class NodeMonitor(node: Node) {
-  val sessionMetrics = new SessionInstruments(node)
+  val sessionMetrics = new SessionInstruments()
   val poolMetrics = if (CassandraInstrumentation.settings.trackHostConnectionPoolMetrics) {
-    new HostConnectionPoolInstruments(node)
+    new NodeConnectionPoolInstruments(node)
   } else null
 
   def applyNodeTags(span: Span): Unit = {
-    CassandraInstrumentation.tagSpanWithNode(node, span)
+    SpanTagger.tag(span, Tags.DC, node.dc, settings.dcTagMode)
+    SpanTagger.tag(span, Tags.Rack, node.rack, settings.rackTagMode)
+    SpanTagger.tag(span, Tags.Node, node.address, settings.nodeTagMode)
   }
 
   def poolMetricsEnabled = poolMetrics != null

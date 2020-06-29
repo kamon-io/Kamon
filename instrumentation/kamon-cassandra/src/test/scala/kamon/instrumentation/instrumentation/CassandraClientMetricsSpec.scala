@@ -18,7 +18,7 @@ package kamon.instrumentation.instrumentation
 import com.datastax.driver.core.Session
 import kamon.Kamon
 import kamon.instrumentation.cassandra.CassandraInstrumentation.Node
-import kamon.instrumentation.cassandra.HostConnectionPoolMetrics.HostConnectionPoolInstruments
+import kamon.instrumentation.cassandra.NodeConnectionPoolMetrics.NodeConnectionPoolInstruments
 import kamon.instrumentation.cassandra.metrics.NodeMonitor
 import kamon.instrumentation.executor.ExecutorMetrics
 import kamon.tag.TagSet
@@ -53,7 +53,7 @@ class CassandraClientMetricsSpec
       }
 
       val node        = Node("127.0.0.1", "datacenter1", "rack1")
-      val poolMetrics = new HostConnectionPoolInstruments(node)
+      val poolMetrics = new NodeConnectionPoolInstruments(node)
 
       eventually(timeout(3 seconds)) {
         poolMetrics.borrow.distribution(false).max shouldBe >=(1L)

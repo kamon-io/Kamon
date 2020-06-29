@@ -20,47 +20,47 @@ import kamon.Kamon
 import kamon.instrumentation.cassandra.CassandraInstrumentation.Node
 import CassandraInstrumentation.Tags
 import kamon.metric._
+import kamon.tag.TagSet
 
-object HostConnectionPoolMetrics {
-  private val poolPrefix = "cassandra.driver.host-connection-pool."
+object NodeConnectionPoolMetrics {
+  private val NodePoolPrefix = "cassandra.driver.node.pool."
 
   val BorrowTime = Kamon.timer(
-    name        = poolPrefix + "borrow-time",
+    name        = NodePoolPrefix + "borrow-time",
     description = "Time spent acquiring connection from the pool"
   )
 
   val Size = Kamon.rangeSampler(
-    name        = poolPrefix + "size",
+    name        = NodePoolPrefix + "size",
     description = "Connection pool size for this host"
   )
 
   val InFlight = Kamon.histogram(
-    name        = poolPrefix + "in-flight",
+    name        = NodePoolPrefix + "in-flight",
     description = "Number of in-flight request on this connection measured at the moment a new query is issued"
   )
 
   val Errors = Kamon.counter(
-    name        = poolPrefix + "errors",
+    name        = NodePoolPrefix + "errors",
     description = "Number of client errors during execution"
   )
 
   val Timeouts = Kamon.counter(
-    name        = poolPrefix + "timeouts",
+    name        = NodePoolPrefix + "timeouts",
     description = "Number of timed-out executions"
   )
 
   val Canceled = Kamon.counter(
-    name        = poolPrefix + "canceled",
+    name        = NodePoolPrefix + "canceled",
     description = "Number of canceled executions"
   )
 
   val TriggeredSpeculations = Kamon.counter(
-    name        = poolPrefix + "retries",
+    name        = NodePoolPrefix + "retries",
     description = "Number of retried executions"
   )
 
-  class HostConnectionPoolInstruments(node: Node)
-      extends InstrumentGroup(CassandraInstrumentation.createNodeTags(node)) {
+  class NodeConnectionPoolInstruments(node: Node) extends InstrumentGroup(createNodeTags(node)) {
     val borrow:                Timer        = register(BorrowTime)
     val size:                  RangeSampler = register(Size)
     val inFlight:              Histogram    = register(InFlight)
@@ -70,4 +70,14 @@ object HostConnectionPoolMetrics {
     val canceled:              Counter      = register(Canceled)
     val triggeredSpeculations: Counter      = register(TriggeredSpeculations)
   }
+
+  private def createNodeTags(node: Node): TagSet =
+    TagSet.from(
+      Map(
+        Tags.DC      -> node.dc,
+        Tags.Rack    -> node.rack,
+        Tags.Node    -> node.address,
+      )
+    )
+
 }

@@ -18,19 +18,15 @@ package kamon.instrumentation.cassandra
 
 import com.datastax.driver.core.Host
 import com.typesafe.config.Config
-import kamon.Configuration.OnReconfigureHook
 import kamon.Kamon
-import kamon.instrumentation.cassandra.metrics.NodeMonitor
-import kamon.instrumentation.trace.SpanTagger
 import kamon.instrumentation.trace.SpanTagger.TagMode
-import kamon.tag.TagSet
-import kamon.trace.Span
 
 import scala.concurrent.duration.Duration
 
 object CassandraInstrumentation {
 
   private val UnknownTargetTagValue = "unknown"
+
   @volatile var settings: Settings = readSettings(Kamon.config())
   Kamon.onReconfigure(newConfig => settings = readSettings(newConfig))
 
@@ -42,28 +38,13 @@ object CassandraInstrumentation {
     )
   }
 
-  def createNodeTags(node: Node): TagSet =
-    TagSet.from(
-      Map(
-        Tags.Host    -> node.address,
-        Tags.DC      -> node.dc,
-        Tags.Rack    -> node.rack
-      )
-    )
-
-  def tagSpanWithNode(node: Node, span: Span): Unit = {
-    SpanTagger.tag(span, Tags.Host, node.address, settings.hostTagMode)
-    SpanTagger.tag(span, Tags.DC, node.dc, settings.dcTagMode)
-    SpanTagger.tag(span, Tags.Rack, node.rack, settings.rackTagMode)
-  }
-
   private def readSettings(config: Config) = {
     val cassandraConfig = config.getConfig("kamon.instrumentation.cassandra")
 
     Settings(
       sampleInterval                 = Duration.fromNanos(cassandraConfig.getDuration("metrics.sample-interval").toNanos),
       trackHostConnectionPoolMetrics = cassandraConfig.getBoolean("metrics.track-host-connection-pool-metrics"),
-      hostTagMode                    = TagMode.from(cassandraConfig.getString("tracing.tags.host")),
+      nodeTagMode                    = TagMode.from(cassandraConfig.getString("tracing.tags.node")),
       rackTagMode                    = TagMode.from(cassandraConfig.getString("tracing.tags.rack")),
       dcTagMode                      = TagMode.from(cassandraConfig.getString("tracing.tags.dc")),
       traceExecutions                = cassandraConfig.getBoolean("tracing.enabled")
@@ -75,17 +56,17 @@ object CassandraInstrumentation {
   case class Settings(
       sampleInterval:                 Duration,
       trackHostConnectionPoolMetrics: Boolean,
-      hostTagMode:                    TagMode,
+      nodeTagMode:                    TagMode,
       rackTagMode:                    TagMode,
       dcTagMode:                      TagMode,
       traceExecutions:                Boolean
   )
 
   object Tags {
-    val CassandraDriverComponent = "cassandra.driver"
-    val Host                     = "cassandra.host"
-    val DC                       = "cassandra.dc"
-    val Rack                     = "cassandra.rack"
     val ErrorSource              = "source"
+    val DC                       = "cassandra.dc"
+    val Node                     = "cassandra.node"
+    val Rack                     = "cassandra.rack"
+    val CassandraDriverComponent = "cassandra.driver"
   }
 }

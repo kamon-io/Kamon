@@ -69,7 +69,7 @@ object SessionMetrics {
     description = "Number of canceled executions"
   )
 
-  class SessionInstruments(node: Node) extends InstrumentGroup(TagSet.Empty) {
+  class SessionInstruments extends InstrumentGroup(TagSet.Empty) {
     val trashedConnections: Counter      = register(TrashedConnections)
     val borrow:             Timer        = register(PoolBorrowTime)
     val size:               RangeSampler = register(ConnectionPoolSize)
