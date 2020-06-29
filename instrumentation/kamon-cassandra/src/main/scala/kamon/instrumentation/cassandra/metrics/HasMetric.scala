@@ -16,24 +16,16 @@
 
 package kamon.instrumentation.cassandra.metrics
 
-import java.util.concurrent.ScheduledFuture
-
 trait HasPoolMetrics {
-  def setNodeMonitor(proxy: NodeMonitor): Unit
   def nodeMonitor: NodeMonitor
-  def setSampling(future: ScheduledFuture[_]): Unit
-  def getSampling: ScheduledFuture[_]
+  def setNodeMonitor(proxy: NodeMonitor): Unit
 }
 
 object HasPoolMetrics {
   class Mixin extends HasPoolMetrics {
-    private var _metricProxy: NodeMonitor        = _
-    private var _sampling:    ScheduledFuture[_] = _
+    private var _metricProxy: NodeMonitor = _
 
     def setNodeMonitor(proxy: NodeMonitor): Unit = _metricProxy = proxy
     def nodeMonitor: NodeMonitor = _metricProxy
-
-    def setSampling(future: ScheduledFuture[_]): Unit = _sampling = future
-    def getSampling: ScheduledFuture[_] = _sampling
   }
 }

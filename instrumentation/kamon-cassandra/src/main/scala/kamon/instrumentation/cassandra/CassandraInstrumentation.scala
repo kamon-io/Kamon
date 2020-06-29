@@ -16,12 +16,12 @@
 
 package kamon.instrumentation.cassandra
 
+import java.time.Duration
+
 import com.datastax.driver.core.Host
 import com.typesafe.config.Config
 import kamon.Kamon
 import kamon.instrumentation.trace.SpanTagger.TagMode
-
-import scala.concurrent.duration.Duration
 
 object CassandraInstrumentation {
 
@@ -44,8 +44,8 @@ object CassandraInstrumentation {
     val createRoundTripSpans = enableTracing && cassandraConfig.getBoolean("tracing.create-round-trip-spans")
 
     Settings(
-      sampleInterval                 = Duration.fromNanos(cassandraConfig.getDuration("metrics.sample-interval").toNanos),
-      trackHostConnectionPoolMetrics = cassandraConfig.getBoolean("metrics.track-host-connection-pool-metrics"),
+      sampleInterval                 = cassandraConfig.getDuration("metrics.sample-interval"),
+      trackNodeConnectionPoolMetrics = cassandraConfig.getBoolean("metrics.track-node-connection-pool-metrics"),
       nodeTagMode                    = TagMode.from(cassandraConfig.getString("tracing.tags.node")),
       rackTagMode                    = TagMode.from(cassandraConfig.getString("tracing.tags.rack")),
       dcTagMode                      = TagMode.from(cassandraConfig.getString("tracing.tags.dc")),
@@ -58,7 +58,7 @@ object CassandraInstrumentation {
 
   case class Settings(
       sampleInterval:                 Duration,
-      trackHostConnectionPoolMetrics: Boolean,
+      trackNodeConnectionPoolMetrics: Boolean,
       nodeTagMode:                    TagMode,
       rackTagMode:                    TagMode,
       dcTagMode:                      TagMode,

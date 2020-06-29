@@ -26,7 +26,7 @@ import kamon.trace.Span
 class NodeMonitor(node: Node) {
   val sessionMetrics = new SessionInstruments()
 
-  val poolMetrics = if (CassandraInstrumentation.settings.trackHostConnectionPoolMetrics) {
+  val poolMetrics = if (CassandraInstrumentation.settings.trackNodeConnectionPoolMetrics) {
     new NodeConnectionPoolInstruments(node)
   } else null
 
@@ -95,5 +95,10 @@ class NodeMonitor(node: Node) {
   def recordBorrow(nanos: Long): Unit = {
     sessionMetrics.borrow.record(nanos)
     if (poolMetricsEnabled) poolMetrics.borrow.record(nanos)
+  }
+
+  def cleanup(): Unit = {
+    if(poolMetrics != null)
+      poolMetrics.remove()
   }
 }

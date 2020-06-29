@@ -16,14 +16,12 @@
 
 package com.datastax.driver.core
 
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 import com.google.common.util.concurrent.{FutureCallback, ListenableFuture}
 import kamon.Kamon
 import kamon.instrumentation.cassandra.metrics.{HasPoolMetrics, NodeMonitor}
 import kamon.instrumentation.cassandra.CassandraInstrumentation
-import kamon.metric.Timer
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 
 object PoolConstructorAdvice {
@@ -35,24 +33,16 @@ object PoolConstructorAdvice {
       @Advice.FieldValue("totalInFlight") totalInflight: AtomicInteger
   ): Unit = {
     val node             = CassandraInstrumentation.createNode(host)
-    val samplingInterval = CassandraInstrumentation.settings.sampleInterval.toMillis
+    val samplingInterval = CassandraInstrumentation.settings.sampleInterval
 
     poolWithMetrics.setNodeMonitor(new NodeMonitor(node))
 
-    val samplingSchedule = Kamon
-      .scheduler()
-      .scheduleAtFixedRate(
-        new Runnable {
-          override def run(): Unit = {
-            poolWithMetrics.nodeMonitor.recordInFlightSample(totalInflight.longValue())
-          }
-        },
-        samplingInterval,
-        samplingInterval,
-        TimeUnit.MILLISECONDS
-      )
-
-    poolWithMetrics.setSampling(samplingSchedule)
+    if(poolWithMetrics.nodeMonitor.poolMetricsEnabled) {
+      poolWithMetrics.nodeMonitor.poolMetrics.inFlight.autoUpdate(inFlightTracker => {
+        inFlightTracker.record(totalInflight.longValue())
+        ()
+      }, samplingInterval)
+    }
   }
 }
 
@@ -60,7 +50,7 @@ object PoolCloseAdvice {
 
   @Advice.OnMethodExit
   def onClose(@Advice.This poolWithMetrics: HostConnectionPool with HasPoolMetrics): Unit = {
-    Option(poolWithMetrics.getSampling).foreach(_.cancel(true))
+    poolWithMetrics.nodeMonitor.cleanup()
   }
 }
 
