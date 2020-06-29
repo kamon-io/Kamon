@@ -45,7 +45,7 @@ object CassandraInstrumentation {
 
     Settings(
       sampleInterval                 = cassandraConfig.getDuration("metrics.sample-interval"),
-      trackNodeConnectionPoolMetrics = cassandraConfig.getBoolean("metrics.track-node-connection-pool-metrics"),
+      trackNodeConnectionPoolMetrics = cassandraConfig.getBoolean("metrics.track-node-connection-pools"),
       nodeTagMode                    = TagMode.from(cassandraConfig.getString("tracing.tags.node")),
       rackTagMode                    = TagMode.from(cassandraConfig.getString("tracing.tags.rack")),
       dcTagMode                      = TagMode.from(cassandraConfig.getString("tracing.tags.dc")),
