@@ -34,8 +34,7 @@ object PoolConstructorAdvice {
       @Advice.FieldValue("host") host:                   Host,
       @Advice.FieldValue("totalInFlight") totalInflight: AtomicInteger
   ): Unit = {
-    val clusterName      = poolWithMetrics.manager.getCluster.getClusterName
-    val node             = CassandraInstrumentation.createNode(host, clusterName)
+    val node             = CassandraInstrumentation.createNode(host)
     val samplingInterval = CassandraInstrumentation.settings.sampleInterval.toMillis
 
     poolWithMetrics.setNodeMonitor(new NodeMonitor(node))

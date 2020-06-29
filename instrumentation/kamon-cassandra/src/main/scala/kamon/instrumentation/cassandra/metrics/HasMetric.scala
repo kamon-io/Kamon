@@ -21,7 +21,7 @@ import java.util.concurrent.ScheduledFuture
 trait HasPoolMetrics {
   def setNodeMonitor(proxy: NodeMonitor): Unit
   def nodeMonitor: NodeMonitor
-  def setSampling(future: ScheduledFuture[_])
+  def setSampling(future: ScheduledFuture[_]): Unit
   def getSampling: ScheduledFuture[_]
 }
 

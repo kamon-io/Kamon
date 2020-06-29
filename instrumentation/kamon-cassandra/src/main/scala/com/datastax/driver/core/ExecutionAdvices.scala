@@ -206,8 +206,7 @@ object HostLocationAdvice {
       @Advice.FieldValue("manager") clusterManager: Any
   ): Unit = {
 
-    val clusterName = clusterManager.asInstanceOf[ClusterManagerBridge].getClusterName
-    val targetHost  = CassandraInstrumentation.createNode(host, clusterName)
+    val targetHost  = CassandraInstrumentation.createNode(host)
     host.setNodeMonitor(new NodeMonitor(targetHost))
   }
 }

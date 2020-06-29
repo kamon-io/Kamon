@@ -34,12 +34,11 @@ object CassandraInstrumentation {
   @volatile var settings: Settings = readSettings(Kamon.config())
   Kamon.onReconfigure(newConfig => settings = readSettings(newConfig))
 
-  def createNode(host: Host, cluster: String): Node = {
+  def createNode(host: Host): Node = {
     Node(
       host.getAddress.getHostAddress,
       Option(host.getDatacenter).getOrElse(UnknownTargetTagValue),
-      Option(host.getRack).getOrElse(UnknownTargetTagValue),
-      cluster
+      Option(host.getRack).getOrElse(UnknownTargetTagValue)
     )
   }
 
@@ -48,8 +47,7 @@ object CassandraInstrumentation {
       Map(
         Tags.Host    -> node.address,
         Tags.DC      -> node.dc,
-        Tags.Rack    -> node.rack,
-        Tags.Cluster -> node.cluster
+        Tags.Rack    -> node.rack
       )
     )
 
@@ -57,7 +55,6 @@ object CassandraInstrumentation {
     SpanTagger.tag(span, Tags.Host, node.address, settings.hostTagMode)
     SpanTagger.tag(span, Tags.DC, node.dc, settings.dcTagMode)
     SpanTagger.tag(span, Tags.Rack, node.rack, settings.rackTagMode)
-    SpanTagger.tag(span, Tags.Cluster, node.cluster, settings.clusterTagMode)
   }
 
   private def readSettings(config: Config) = {
@@ -69,12 +66,11 @@ object CassandraInstrumentation {
       hostTagMode                    = TagMode.from(cassandraConfig.getString("tracing.tags.host")),
       rackTagMode                    = TagMode.from(cassandraConfig.getString("tracing.tags.rack")),
       dcTagMode                      = TagMode.from(cassandraConfig.getString("tracing.tags.dc")),
-      clusterTagMode                 = TagMode.from(cassandraConfig.getString("tracing.tags.cluster")),
       traceExecutions                = cassandraConfig.getBoolean("tracing.enabled")
     )
   }
 
-  case class Node(address: String, dc: String, rack: String, cluster: String)
+  case class Node(address: String, dc: String, rack: String)
 
   case class Settings(
       sampleInterval:                 Duration,
@@ -82,7 +78,6 @@ object CassandraInstrumentation {
       hostTagMode:                    TagMode,
       rackTagMode:                    TagMode,
       dcTagMode:                      TagMode,
-      clusterTagMode:                 TagMode,
       traceExecutions:                Boolean
   )
 
@@ -91,7 +86,6 @@ object CassandraInstrumentation {
     val Host                     = "cassandra.host"
     val DC                       = "cassandra.dc"
     val Rack                     = "cassandra.rack"
-    val Cluster                  = "cassandra.cluster"
     val ErrorSource              = "source"
   }
 }

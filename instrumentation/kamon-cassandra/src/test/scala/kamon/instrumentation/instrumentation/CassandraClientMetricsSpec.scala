@@ -52,7 +52,7 @@ class CassandraClientMetricsSpec
         session.execute(st)
       }
 
-      val node        = Node("127.0.0.1", "datacenter1", "rack1", "cluster1")
+      val node        = Node("127.0.0.1", "datacenter1", "rack1")
       val poolMetrics = new HostConnectionPoolInstruments(node)
 
       eventually(timeout(3 seconds)) {
@@ -87,7 +87,6 @@ class CassandraClientMetricsSpec
               "span.kind"         -> "client",
               "operation"         -> "query.execution",
               "error"             -> false,
-              "cassandra.cluster" -> "cluster1",
               "component"         -> "cassandra.driver"
             )
           )
