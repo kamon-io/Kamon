@@ -32,7 +32,7 @@ import kamon.trace.Span
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 
 object QueryOperations {
-  val QueryOperationName = "query"
+  val QueryOperationName = "cassandra.query"
   val QueryPrepareOperationName: String = QueryOperationName + ".prepare"
   val ExecutionOperationName:    String = QueryOperationName + ".execution"
 }

@@ -57,7 +57,7 @@ class CassandraClientMetricsSpec
 
       eventually(timeout(3 seconds)) {
         poolMetrics.borrow.distribution(false).max shouldBe >=(1L)
-        poolMetrics.size.distribution(false).max should be > 0L
+        poolMetrics.openConnections.distribution(false).max should be > 0L
         poolMetrics.inFlight.distribution(false).max should be > 0L
 
         poolMetrics.clientErrors.value(true) should equal(0)
@@ -73,7 +73,7 @@ class CassandraClientMetricsSpec
               "component"            -> "cassandra.driver",
               "cassandra.query.kind" -> "select",
               "span.kind"            -> "client",
-              "operation"            -> "query",
+              "operation"            -> "cassandra.query",
               "error"                -> false
             )
           )
@@ -85,7 +85,7 @@ class CassandraClientMetricsSpec
           TagSet.from(
             Map(
               "span.kind"         -> "client",
-              "operation"         -> "query.execution",
+              "operation"         -> "cassandra.query.execution",
               "error"             -> false,
               "component"         -> "cassandra.driver"
             )

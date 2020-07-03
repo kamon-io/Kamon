@@ -39,13 +39,13 @@ class NodeMonitor(node: Node) {
   def poolMetricsEnabled = poolMetrics != null
 
   def connectionsOpened(count: Int): Unit = {
-    sessionMetrics.size.increment(count)
-    if (poolMetricsEnabled) poolMetrics.size.increment(count)
+    sessionMetrics.openConnections.increment(count)
+    if (poolMetricsEnabled) poolMetrics.openConnections.increment(count)
   }
 
   def connectionClosed(): Unit = {
-    sessionMetrics.size.decrement()
-    if (poolMetricsEnabled) poolMetrics.size.decrement()
+    sessionMetrics.openConnections.decrement()
+    if (poolMetricsEnabled) poolMetrics.openConnections.decrement()
   }
 
   def clientError(): Unit = {

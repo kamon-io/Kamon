@@ -27,47 +27,47 @@ object NodeConnectionPoolMetrics {
 
   val BorrowTime = Kamon.timer(
     name        = NodePoolPrefix + "borrow-time",
-    description = "Time spent acquiring connection from the pool"
+    description = "Time spent acquiring connection to the node"
   )
 
-  val Size = Kamon.rangeSampler(
-    name        = NodePoolPrefix + "size",
-    description = "Connection pool size for this host"
+  val OpenConnections = Kamon.rangeSampler(
+    name        = NodePoolPrefix + "connections.open",
+    description = "Tracks the number of open connections to a node"
   )
 
   val InFlight = Kamon.histogram(
     name        = NodePoolPrefix + "in-flight",
-    description = "Number of in-flight request on this connection measured at the moment a new query is issued"
+    description = "Tracks the Number of in-flight request sent to a node"
   )
 
   val Errors = Kamon.counter(
     name        = NodePoolPrefix + "errors",
-    description = "Number of client errors during execution"
+    description = "Counts the number of failed executions"
   )
 
   val Timeouts = Kamon.counter(
     name        = NodePoolPrefix + "timeouts",
-    description = "Number of timed-out executions"
+    description = "Counts the Number of timed-out executions"
   )
 
-  val Canceled = Kamon.counter(
-    name        = NodePoolPrefix + "canceled",
-    description = "Number of canceled executions"
+  val Cancelled = Kamon.counter(
+    name        = NodePoolPrefix + "cancelled",
+    description = "Counts the number of cancelled executions"
   )
 
   val TriggeredSpeculations = Kamon.counter(
     name        = NodePoolPrefix + "retries",
-    description = "Number of retried executions"
+    description = "Counts the number of retried executions"
   )
 
   class NodeConnectionPoolInstruments(node: Node) extends InstrumentGroup(createNodeTags(node)) {
     val borrow:                Timer        = register(BorrowTime)
-    val size:                  RangeSampler = register(Size)
+    val openConnections:       RangeSampler = register(OpenConnections)
     val inFlight:              Histogram    = register(InFlight)
     val clientErrors:          Counter      = register(Errors, Tags.ErrorSource, "client")
     val serverErrors:          Counter      = register(Errors, Tags.ErrorSource, "server")
     val timeouts:              Counter      = register(Timeouts)
-    val canceled:              Counter      = register(Canceled)
+    val canceled:              Counter      = register(Cancelled)
     val triggeredSpeculations: Counter      = register(TriggeredSpeculations)
   }
 
