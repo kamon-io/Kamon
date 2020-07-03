@@ -76,7 +76,7 @@ object NodeConnectionPoolMetrics {
       Map(
         Tags.DC      -> node.dc,
         Tags.Rack    -> node.rack,
-        Tags.Node    -> node.address,
+        Tags.Node    -> node.address
       )
     )
 
