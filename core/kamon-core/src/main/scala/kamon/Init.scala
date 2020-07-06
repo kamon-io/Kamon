@@ -20,11 +20,13 @@ import com.typesafe.config.Config
 import kamon.status.InstrumentationStatus
 import org.slf4j.LoggerFactory
 
+import scala.concurrent.Future
+
 /**
   * Provides APIs for handling common initialization tasks like starting modules, attaching instrumentation and
   * reconfiguring Kamon.
   */
-trait Init { self: ModuleLoading with Configuration with CurrentStatus =>
+trait Init { self: ModuleLoading with Configuration with CurrentStatus with Tracing =>
   private val _logger = LoggerFactory.getLogger(classOf[Init])
 
   /**
@@ -43,6 +45,11 @@ trait Init { self: ModuleLoading with Configuration with CurrentStatus =>
     self.attachInstrumentation()
     self.reconfigure(config)
     self.loadModules()
+  }
+  
+  def stop(): Future[Unit] = {
+    self.stopTracer()
+    self.stopModules()
   }
 
   /**

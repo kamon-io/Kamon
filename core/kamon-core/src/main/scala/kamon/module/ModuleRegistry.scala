@@ -39,8 +39,8 @@ import scala.util.control.NonFatal
 class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry: MetricRegistry, tracer: Tracer) {
 
   private val _logger = LoggerFactory.getLogger(classOf[ModuleRegistry])
-  private val _metricsTickerExecutor = Executors.newScheduledThreadPool(1, threadFactory("kamon-metrics-ticker", daemon = true))
-  private val _spansTickerExecutor = Executors.newScheduledThreadPool(1, threadFactory("kamon-spans-ticker", daemon = true))
+  private val _metricsTickerExecutor = newScheduledThreadPool(1, threadFactory("kamon-metrics-ticker", daemon = true))
+  private val _spansTickerExecutor = newScheduledThreadPool(1, threadFactory("kamon-spans-ticker", daemon = true))
 
   private val _metricsTickerSchedule = new AtomicReference[ScheduledFuture[_]]()
   private val _spansTickerSchedule = new AtomicReference[ScheduledFuture[_]]()

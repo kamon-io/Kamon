@@ -24,7 +24,7 @@ import play.api.{Configuration, Environment, Logger, Mode}
 import scala.concurrent.Future
 
 class GuiceModule extends Module {
-  def bindings(environment: Environment, configuration: Configuration): Seq[Binding[GuiceModule.KamonLoader]] = {
+  def bindings(environment: Environment, configuration: Configuration): Seq[Binding[_]] = {
     Seq(bind[GuiceModule.KamonLoader].toSelf.eagerly())
   }
 }
@@ -40,10 +40,8 @@ object GuiceModule {
     Kamon.loadModules()
 
     lifecycle.addStopHook { () =>
-      if(environment.mode != Mode.Dev)
-        Kamon.stopModules()
-      else
-        Future.successful(())
+      Logger(classOf[KamonLoader]).info("Stopping Kamon")
+      Kamon.stop()
     }
   }
 }
