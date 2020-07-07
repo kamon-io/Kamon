@@ -93,18 +93,13 @@ class InstrumentedSession(underlying: Session) extends AbstractSession {
       new FutureCallback[ResultSet] {
         override def onSuccess(result: ResultSet): Unit = {
           recordClientQueryExecutionInfo(clientSpan, result)
-          result.getExecutionInfo.getStatement match {
-            case b: BoundStatement =>
-              b.preparedStatement.getQueryString
-            case r: RegularStatement =>
-              r.getQueryString
-          }
           clientSpan.finish()
         }
 
         override def onFailure(cause: Throwable): Unit = {
-          clientSpan.fail(cause.getMessage, cause)
-          clientSpan.finish()
+          clientSpan
+            .fail(cause.getMessage, cause)
+            .finish()
         }
       },
       MoreExecutors.directExecutor()
