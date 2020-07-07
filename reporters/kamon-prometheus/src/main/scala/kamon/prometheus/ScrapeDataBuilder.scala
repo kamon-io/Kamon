@@ -87,13 +87,9 @@ class ScrapeDataBuilder(prometheusConfig: PrometheusSettings.Generic, environmen
 
   private def appendDistributionMetric(metric: MetricSnapshot.Distributions): Unit = {
     val reportAsSummary = prometheusConfig.summarySettings.metricMatchers.exists(_.accept(metric.name))
-    (reportAsSummary, prometheusConfig.summarySettings.exclusive) match {
-      case (true, true) =>
+    if (reportAsSummary) {
         appendDistributionMetricAsSummary(metric)
-      case (true, false) =>
-        appendDistributionMetricAsSummary(metric)
-        appendDistributionMetricAsHistogram(metric)
-      case _ =>
+    } else {
         appendDistributionMetricAsHistogram(metric)
     }
   }
@@ -138,8 +134,6 @@ class ScrapeDataBuilder(prometheusConfig: PrometheusSettings.Generic, environmen
           unit,
           prometheusConfig.summarySettings.quantiles
         )
-        appendTimeSerieValue(normalizedMetricName, instrument.tags, format(instrument.value.max), "_max")
-        appendTimeSerieValue(normalizedMetricName, instrument.tags, format(instrument.value.min), "_min")
         appendTimeSerieValue(normalizedMetricName, instrument.tags, format(instrument.value.count), "_count")
         appendTimeSerieValue(normalizedMetricName, instrument.tags, format(instrument.value.sum), "_sum")
       }

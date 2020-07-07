@@ -19,7 +19,6 @@ object PrometheusSettings {
   )
 
   case class SummarySettings(
-    exclusive: Boolean,
     quantiles: Seq[java.lang.Double],
     metricMatchers: Seq[Glob]
   )
@@ -32,9 +31,8 @@ object PrometheusSettings {
       customBuckets = readCustomBuckets(prometheusConfig.getConfig("buckets.custom")),
       includeEnvironmentTags = prometheusConfig.getBoolean("include-environment-tags"),
       summarySettings = SummarySettings(
-        exclusive = prometheusConfig.getBoolean("summary.exclusive"),
-        quantiles = prometheusConfig.getDoubleList("summary.quantiles").asScala.toSeq,
-        metricMatchers = prometheusConfig.getStringList("summary.metrics").asScala.map(Glob).toSeq
+        quantiles = prometheusConfig.getDoubleList("summaries.quantiles").asScala.toSeq,
+        metricMatchers = prometheusConfig.getStringList("summaries.metrics").asScala.map(Glob).toSeq
       )
     )
   }

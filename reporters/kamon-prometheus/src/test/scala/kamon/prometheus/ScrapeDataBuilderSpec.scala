@@ -252,43 +252,15 @@ class ScrapeDataBuilderSpec extends WordSpec with Matchers {
         """.stripMargin.trim()
       }
     }
-
-    "append summaries per metric inclusive" in {
+    "append summaries per metric" in {
       val histogramWithHundredEntries = constantDistribution("distribution-100", none, 1, 100)
-      builder(withSummary = Seq("**"), exclusive = false).appendHistograms(Seq(histogramWithHundredEntries)).build() should include {
-        """|# TYPE distribution_100 summary
-          |distribution_100{quantile="0.5"} 50.0
-          |distribution_100{quantile="0.75"} 75.0
-          |distribution_100{quantile="0.95"} 95.0
-          |distribution_100{quantile="0.99"} 99.0
-          |distribution_100_max 100.0
-          |distribution_100_min 1.0
-          |distribution_100_count 100.0
-          |distribution_100_sum 5050.0
-          |# TYPE distribution_100 histogram
-          |distribution_100_bucket{le="5.0"} 5.0
-          |distribution_100_bucket{le="7.0"} 7.0
-          |distribution_100_bucket{le="8.0"} 8.0
-          |distribution_100_bucket{le="9.0"} 9.0
-          |distribution_100_bucket{le="10.0"} 10.0
-          |distribution_100_bucket{le="11.0"} 11.0
-          |distribution_100_bucket{le="12.0"} 12.0
-          |distribution_100_bucket{le="+Inf"} 100.0
-          |""".stripMargin
-      }
-    }
-
-    "append summaries per metric exclusive" in {
-      val histogramWithHundredEntries = constantDistribution("distribution-100", none, 1, 100)
-      val result = builder(withSummary = Seq("**"), exclusive = true).appendHistograms(Seq(histogramWithHundredEntries)).build()
+      val result = builder(withSummary = Seq("**")).appendHistograms(Seq(histogramWithHundredEntries)).build()
       result should include {
         """|# TYPE distribution_100 summary
           |distribution_100{quantile="0.5"} 50.0
           |distribution_100{quantile="0.75"} 75.0
           |distribution_100{quantile="0.95"} 95.0
           |distribution_100{quantile="0.99"} 99.0
-          |distribution_100_max 100.0
-          |distribution_100_min 1.0
           |distribution_100_count 100.0
           |distribution_100_sum 5050.0
           |""".stripMargin
@@ -319,8 +291,6 @@ class ScrapeDataBuilderSpec extends WordSpec with Matchers {
            |firstMetric{quantile="0.75"} 75.0
            |firstMetric{quantile="0.95"} 95.0
            |firstMetric{quantile="0.99"} 99.0
-           |firstMetric_max 100.0
-           |firstMetric_min 1.0
            |firstMetric_count 100.0
            |firstMetric_sum 5050.0
            |""".stripMargin
@@ -331,8 +301,6 @@ class ScrapeDataBuilderSpec extends WordSpec with Matchers {
            |firstMetric{quantile="0.75"} 75.0
            |firstMetric{quantile="0.95"} 95.0
            |firstMetric{quantile="0.99"} 99.0
-           |firstMetric_max 100.0
-           |firstMetric_min 1.0
            |firstMetric_count 100.0
            |firstMetric_sum 5050.0
            |""".stripMargin
@@ -390,8 +358,7 @@ class ScrapeDataBuilderSpec extends WordSpec with Matchers {
   private def builder(buckets: Seq[java.lang.Double] = Seq(5D, 7D, 8D, 9D, 10D, 11D, 12D),
                       customBuckets: Map[String, Seq[java.lang.Double]] = Map("histogram.custom-buckets" -> Seq(1D, 3D)),
                       environmentTags: TagSet = TagSet.Empty,
-                      withSummary: Seq[String] = Seq.empty,
-                      exclusive: Boolean = false) = {
+                      withSummary: Seq[String] = Seq.empty) = {
     new ScrapeDataBuilder(
       PrometheusSettings.Generic(
         buckets,
@@ -399,7 +366,7 @@ class ScrapeDataBuilderSpec extends WordSpec with Matchers {
         buckets,
         customBuckets,
         false,
-        SummarySettings(exclusive, Seq(0.5, 0.75, 0.95, 0.99), withSummary.map(Glob))),
+        SummarySettings(Seq(0.5, 0.75, 0.95, 0.99), withSummary.map(Glob))),
       environmentTags
     )
   }
