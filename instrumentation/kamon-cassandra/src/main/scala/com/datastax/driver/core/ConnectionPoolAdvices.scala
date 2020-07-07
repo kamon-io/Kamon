@@ -58,6 +58,7 @@ object PoolCloseAdvice {
   * Measure time spent waiting for a connection
   * Record number of in-flight queries on just-acquired connection
   */
+class BorrowAdvice
 object BorrowAdvice {
 
   @Advice.OnMethodEnter
@@ -65,11 +66,11 @@ object BorrowAdvice {
     Kamon.clock().nanos()
   }
 
-  @Advice.OnMethodExit(suppress = classOf[Throwable])
+  @Advice.OnMethodExit(suppress = classOf[Throwable], inline = false)
   def onBorrowed(
-      @Advice.Return(readOnly = false) connection: ListenableFuture[Connection],
-      @Advice.Enter start:                               Long,
-      @Advice.This poolMetrics:                          HasPoolMetrics,
+      @Advice.Return connection:  ListenableFuture[Connection],
+      @Advice.Enter start:        Long,
+      @Advice.This poolMetrics:   HasPoolMetrics,
       @Advice.FieldValue("totalInFlight") totalInflight: AtomicInteger
   ): Unit = {
 

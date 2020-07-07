@@ -32,7 +32,7 @@ class DriverInstrumentation extends InstrumentationBuilder {
     * Wraps the client session with an InstrumentedSession.
     */
   onType("com.datastax.driver.core.Cluster$Manager")
-    .intercept(method("newSession"), SessionInterceptor)
+    .intercept(method("newSession"), classOf[SessionInterceptor])
     .bridge(classOf[ClusterManagerBridge])
 
   /**
@@ -42,7 +42,7 @@ class DriverInstrumentation extends InstrumentationBuilder {
     * Pool metrics are mixed in the pool object itself
     */
   onType("com.datastax.driver.core.HostConnectionPool")
-    .advise(method("borrowConnection"), BorrowAdvice)
+    .advise(method("borrowConnection"), classOf[BorrowAdvice])
     .advise(method("trashConnection"), TrashConnectionAdvice)
     .advise(method("addConnectionIfUnderMaximum"), CreateConnectionAdvice)
     .advise(method("onConnectionDefunct"), ConnectionDefunctAdvice)
