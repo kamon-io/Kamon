@@ -37,7 +37,6 @@ public class SendMethodAdvisor {
 
         String nullKey = KafkaInstrumentation.Keys$.MODULE$.Null();
         String topic = record.topic() == null ? nullKey : record.topic();
-        String partition = record.partition() == null ? nullKey : record.partition().toString();
         String key = record.key() == null ? nullKey : record.key().toString();
 
         Span span = Kamon.producerSpanBuilder("send", "kafka.producer")
@@ -45,7 +44,6 @@ public class SendMethodAdvisor {
                 .tag("kafka.topic", topic)
                 .tag("kafka.clientId", clientId)
                 .tag("kafka.key", key)
-                .tag("kafka.partition", partition)
                 .start();
 
         Context ctx  = recordContext.withEntry(Span.Key(), span);

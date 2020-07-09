@@ -41,10 +41,13 @@ class ProducerInstrumentation extends InstrumentationBuilder {
   */
 final class ProducerCallback(callback: Callback, sendingSpan: Span, context: Context) extends Callback {
   override def onCompletion(metadata: RecordMetadata, exception: Exception): Unit = {
-    if(exception != null)
-      sendingSpan.fail(exception)
 
     try {
+      if(exception != null)
+        sendingSpan.fail(exception)
+      else
+        sendingSpan.tag("kafka.partition", metadata.partition())
+
       if(callback != null)
         Kamon.runWithContext(context)(callback.onCompletion(metadata, exception))
     }
