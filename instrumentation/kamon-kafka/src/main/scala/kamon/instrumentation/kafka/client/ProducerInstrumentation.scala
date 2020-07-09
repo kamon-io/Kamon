@@ -30,7 +30,7 @@ class ProducerInstrumentation extends InstrumentationBuilder {
     * Instruments "org.apache.kafka.clients.producer.KafkaProducer::Send()
     */
   onType("org.apache.kafka.clients.producer.KafkaProducer")
-    .advise(method("send").and(takesArguments(2)), classOf[SendMethodAdvisor])
+    .advise(method("doSend").and(takesArguments(2)), classOf[SendMethodAdvisor])
 
   onType("org.apache.kafka.clients.producer.ProducerRecord")
     .mixin(classOf[HasContext.VolatileMixinWithInitializer])
@@ -41,7 +41,9 @@ class ProducerInstrumentation extends InstrumentationBuilder {
   */
 final class ProducerCallback(callback: Callback, sendingSpan: Span, context: Context) extends Callback {
   override def onCompletion(metadata: RecordMetadata, exception: Exception): Unit = {
-    if(exception != null) sendingSpan.fail(exception.getMessage, exception)
+    if(exception != null)
+      sendingSpan.fail(exception)
+
     try {
       if(callback != null)
         Kamon.runWithContext(context)(callback.onCompletion(metadata, exception))
