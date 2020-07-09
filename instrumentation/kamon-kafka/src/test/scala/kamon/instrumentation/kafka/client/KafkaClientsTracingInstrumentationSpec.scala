@@ -20,7 +20,7 @@ import kamon.instrumentation.kafka.testutil.{DotFileGenerator, SpanReportingTest
 import kamon.tag.Lookups._
 import kamon.testkit.Reconfigure
 import kamon.trace.Span
-import net.manub.embeddedkafka.{Consumers, EmbeddedKafka, EmbeddedKafkaConfig}
+import net.manub.embeddedkafka.{EmbeddedKafka, EmbeddedKafkaConfig}
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.SpanSugar
@@ -37,7 +37,6 @@ class KafkaClientsTracingInstrumentationSpec extends WordSpec
   with EmbeddedKafka
   with Reconfigure
   with OptionValues
-  with Consumers
   with TestSpanReporting {
 
   // increase zk connection timeout to avoid failing tests in "slow" environments
@@ -65,7 +64,7 @@ class KafkaClientsTracingInstrumentationSpec extends WordSpec
         span.metricTags.get(plain("span.kind")) shouldBe "producer"
         span.tags.get(plain("kafka.topic")) shouldBe testTopicName
         span.tags.get(plain("kafka.key")) shouldBe KafkaInstrumentation.Keys.Null
-        span.tags.get(plain("kafka.partition")) shouldBe KafkaInstrumentation.Keys.Null
+        span.tags.get(plainLong("kafka.partition")) shouldBe 0L
       }
 
       assertNoSpansReported()
@@ -95,7 +94,7 @@ class KafkaClientsTracingInstrumentationSpec extends WordSpec
         span.metricTags.get(plain("span.kind")) shouldBe "producer"
         span.tags.get(plain("kafka.topic")) shouldBe testTopicName
         span.tags.get(plain("kafka.key")) shouldBe KafkaInstrumentation.Keys.Null
-        span.tags.get(plain("kafka.partition")) shouldBe KafkaInstrumentation.Keys.Null
+        span.tags.get(plainLong("kafka.partition")) shouldBe 0L
       }
 
       assertReportedSpan(_.operationName == "poll") { span =>
@@ -171,7 +170,7 @@ class KafkaClientsTracingInstrumentationSpec extends WordSpec
         span.tags.get(plain("kafka.clientId")) should not be empty
         span.tags.get(plain("kafka.topic")) shouldBe testTopicName
         span.tags.get(plain("kafka.key")) shouldBe KafkaInstrumentation.Keys.Null
-        span.tags.get(plain("kafka.partition")) shouldBe KafkaInstrumentation.Keys.Null
+        span.tags.get(plainLong("kafka.partition")) shouldBe 0L
         sendingSpan = Some(span)
       }
 
@@ -216,7 +215,7 @@ class KafkaClientsTracingInstrumentationSpec extends WordSpec
         span.tags.get(plain("kafka.clientId")) should not be empty
         span.tags.get(plain("kafka.topic")) shouldBe testTopicName
         span.tags.get(plain("kafka.key")) shouldBe KafkaInstrumentation.Keys.Null
-        span.tags.get(plain("kafka.partition")) shouldBe KafkaInstrumentation.Keys.Null
+        span.tags.get(plainLong("kafka.partition")) shouldBe 0L
         sendingSpan = Some(span)
       }
 

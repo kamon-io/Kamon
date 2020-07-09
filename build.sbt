@@ -280,7 +280,7 @@ lazy val `kamon-kafka` = (project in file("instrumentation/kamon-kafka"))
 
       scalatest % "test",
       logbackClassic % "test",
-      "io.github.embeddedkafka" %% "embedded-kafka"               % "2.3.1" % "test"
+      "io.github.embeddedkafka" %% "embedded-kafka"               % "2.4.1.1" % "test"
     )
   ).dependsOn(`kamon-core`, `kamon-executors`, `kamon-testkit` % "test")
 
