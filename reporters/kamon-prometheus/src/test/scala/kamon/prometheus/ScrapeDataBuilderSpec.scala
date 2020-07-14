@@ -3,8 +3,10 @@ package kamon.prometheus
 import com.typesafe.config.ConfigFactory
 import kamon.metric.MeasurementUnit.{information, none, time}
 import kamon.metric.{MeasurementUnit, MetricSnapshot}
+import kamon.prometheus.PrometheusSettings.SummarySettings
 import kamon.tag.TagSet
 import kamon.testkit.MetricSnapshotBuilder
+import kamon.util.Filter.Glob
 import org.scalatest.{Matchers, WordSpec}
 
 class ScrapeDataBuilderSpec extends WordSpec with Matchers {
@@ -250,6 +252,73 @@ class ScrapeDataBuilderSpec extends WordSpec with Matchers {
         """.stripMargin.trim()
       }
     }
+    "append summaries per metric" in {
+      val histogramWithHundredEntries = constantDistribution("distribution-100", none, 1, 100)
+      val result = builder(withSummary = Seq("**")).appendHistograms(Seq(histogramWithHundredEntries)).build()
+      result should include {
+        """|# TYPE distribution_100 summary
+          |distribution_100{quantile="0.5"} 50.0
+          |distribution_100{quantile="0.75"} 75.0
+          |distribution_100{quantile="0.95"} 95.0
+          |distribution_100{quantile="0.99"} 99.0
+          |distribution_100_count 100.0
+          |distribution_100_sum 5050.0
+          |""".stripMargin
+      }
+      result should not include {
+        """|# TYPE distribution_100 histogram
+          |distribution_100_bucket{le="5.0"} 5.0
+          |distribution_100_bucket{le="7.0"} 7.0
+          |distribution_100_bucket{le="8.0"} 8.0
+          |distribution_100_bucket{le="9.0"} 9.0
+          |distribution_100_bucket{le="10.0"} 10.0
+          |distribution_100_bucket{le="11.0"} 11.0
+          |distribution_100_bucket{le="12.0"} 12.0
+          |distribution_100_bucket{le="+Inf"} 100.0
+          |""".stripMargin
+      }
+    }
+
+    "append summary only for matching metrics" in {
+      val histogramWithHundredEntries = constantDistribution("firstMetric", none, 1, 100)
+      val histogramWithHundredEntriesTwo = constantDistribution("secondMetric", none, 1, 100)
+      val result = builder(withSummary = Seq("first*"))
+        .appendHistograms(Seq(histogramWithHundredEntries, histogramWithHundredEntriesTwo))
+        .build()
+      result should include {
+        """|# TYPE firstMetric summary
+           |firstMetric{quantile="0.5"} 50.0
+           |firstMetric{quantile="0.75"} 75.0
+           |firstMetric{quantile="0.95"} 95.0
+           |firstMetric{quantile="0.99"} 99.0
+           |firstMetric_count 100.0
+           |firstMetric_sum 5050.0
+           |""".stripMargin
+      }
+      result should not include {
+        """|# TYPE secondMetric summary
+           |firstMetric{quantile="0.5"} 50.0
+           |firstMetric{quantile="0.75"} 75.0
+           |firstMetric{quantile="0.95"} 95.0
+           |firstMetric{quantile="0.99"} 99.0
+           |firstMetric_count 100.0
+           |firstMetric_sum 5050.0
+           |""".stripMargin
+      }
+      result should include {
+        """|# TYPE secondMetric histogram
+           |secondMetric_bucket{le="5.0"} 5.0
+           |secondMetric_bucket{le="7.0"} 7.0
+           |secondMetric_bucket{le="8.0"} 8.0
+           |secondMetric_bucket{le="9.0"} 9.0
+           |secondMetric_bucket{le="10.0"} 10.0
+           |secondMetric_bucket{le="11.0"} 11.0
+           |secondMetric_bucket{le="12.0"} 12.0
+           |secondMetric_bucket{le="+Inf"} 100.0
+           |""".stripMargin
+      }
+
+    }
 
     "include global custom tags from the Kamon.environment.tags" in {
       val counterOne = MetricSnapshotBuilder.counter("counter-one", "", TagSet.of("tag.with.dots", "value"), time.seconds, 10)
@@ -286,11 +355,21 @@ class ScrapeDataBuilderSpec extends WordSpec with Matchers {
     }
   }
 
-  private def builder(buckets: Seq[java.lang.Double] = Seq(5D, 7D, 8D, 9D, 10D, 11D, 12D), customBuckets: Map[String, Seq[java.lang.Double]] =
-    Map("histogram.custom-buckets" -> Seq(1D, 3D)), environmentTags: TagSet = TagSet.Empty) = new ScrapeDataBuilder(
-      PrometheusSettings.Generic(buckets, buckets, buckets, customBuckets, false),
-    environmentTags
-  )
+  private def builder(buckets: Seq[java.lang.Double] = Seq(5D, 7D, 8D, 9D, 10D, 11D, 12D),
+                      customBuckets: Map[String, Seq[java.lang.Double]] = Map("histogram.custom-buckets" -> Seq(1D, 3D)),
+                      environmentTags: TagSet = TagSet.Empty,
+                      withSummary: Seq[String] = Seq.empty) = {
+    new ScrapeDataBuilder(
+      PrometheusSettings.Generic(
+        buckets,
+        buckets,
+        buckets,
+        customBuckets,
+        false,
+        SummarySettings(Seq(0.5, 0.75, 0.95, 0.99), withSummary.map(Glob))),
+      environmentTags
+    )
+  }
 
   private def constantDistribution(name: String, unit: MeasurementUnit, lower: Long, upper: Long): MetricSnapshot.Distributions =
     MetricSnapshotBuilder.histogram(name, "", TagSet.Empty)((lower to upper): _*)
