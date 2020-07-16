@@ -39,7 +39,7 @@ public class SendMethodAdvisor {
         String topic = record.topic() == null ? nullKey : record.topic();
         String key = record.key() == null ? nullKey : record.key().toString();
 
-        Span span = Kamon.producerSpanBuilder("send", "kafka.producer")
+        Span span = Kamon.producerSpanBuilder("producer.send", "kafka.producer")
                 .asChildOf(recordContext.get(Span.Key()))
                 .tag("kafka.topic", topic)
                 .tag("kafka.clientId", clientId)
@@ -47,7 +47,7 @@ public class SendMethodAdvisor {
                 .start();
 
         Context ctx  = recordContext.withEntry(Span.Key(), span);
-        record.headers().add("kamon-context", ContextSerializationHelper.toByteArray(ctx));
+        record.headers().add(KafkaInstrumentation.Keys$.MODULE$.ContextHeader(), ContextSerializationHelper.toByteArray(ctx));
 
         callback = new ProducerCallback(callback, span, ctx);
     }

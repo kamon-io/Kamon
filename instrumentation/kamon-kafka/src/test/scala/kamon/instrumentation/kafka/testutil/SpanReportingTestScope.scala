@@ -16,6 +16,7 @@ package kamon.instrumentation.kafka.testutil
 
 import java.util.Properties
 
+import kamon.instrumentation.kafka.client.KafkaInstrumentation
 import kamon.testkit.TestSpanReporter
 import kamon.trace.Span
 import org.apache.kafka.clients.consumer.ConsumerRecord
@@ -89,7 +90,10 @@ abstract class SpanReportingTestScope(_reporter: TestSpanReporter.BufferingSpanR
     import net.manub.embeddedkafka.ConsumerExtensions.ConsumerOps
 
     withConsumer[K, V, ConsumerRecord[K,V]] { consumer =>
-      consumer.consumeLazily(topicName){ cr: ConsumerRecord[K, V] => cr}.take(1).toList.head
+      val record = consumer.consumeLazily(topicName){ cr: ConsumerRecord[K, V] => cr}.take(1).toList.head
+      KafkaInstrumentation.runWithConsumerSpan(record)(() => ())
+      consumer.commitSync()
+      record
     }
   }
 

@@ -15,9 +15,10 @@
  */
 package kamon.instrumentation.kafka.client
 
-import java.time.Duration
+import java.time.{Duration, Instant}
 
-import kamon.instrumentation.context.HasContext
+import kamon.context.Context
+import kamon.instrumentation.kafka.client.ConsumedRecordData.ConsumerInfo
 import kamon.instrumentation.kafka.client.advisor.PollMethodAdvisor
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 
@@ -41,7 +42,40 @@ class ConsumerInstrumentation extends InstrumentationBuilder {
     * to make the span available as parent for down stream operations
     */
   onSubTypesOf("org.apache.kafka.clients.consumer.ConsumerRecord")
-    .mixin(classOf[HasContext.Mixin])
+    .mixin(classOf[ConsumedRecordData.Mixin])
 
+}
+
+trait ConsumedRecordData {
+  def incomingContext(): Context
+  def nanosSincePollStart(): Long
+  def consumerInfo(): ConsumerInfo
+  def set(incomingContext: Context, nanosSincePollStart: Long, consumerInfo: ConsumerInfo)
+}
+
+object ConsumedRecordData {
+
+  case class ConsumerInfo(groupId: String, clientId: String)
+
+  class Mixin extends ConsumedRecordData {
+    private var _incomingContext: Context = _
+    private var _nanosSincePollStart: Long = _
+    private var _consumerInfo: ConsumerInfo = _
+
+    override def incomingContext(): Context =
+      _incomingContext
+
+    override def nanosSincePollStart(): Long =
+      _nanosSincePollStart
+
+    override def consumerInfo(): ConsumerInfo =
+      _consumerInfo
+
+    override def set(incomingContext: Context, nanosSincePollStart: Long, consumerInfo: ConsumerInfo): Unit = {
+      _incomingContext = incomingContext
+      _nanosSincePollStart = nanosSincePollStart
+      _consumerInfo = consumerInfo
+    }
+  }
 }
 
