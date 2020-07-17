@@ -42,7 +42,7 @@ public class SendMethodAdvisor {
         Span span = Kamon.producerSpanBuilder("producer.send", "kafka.producer")
                 .asChildOf(recordContext.get(Span.Key()))
                 .tag("kafka.topic", topic)
-                .tag("kafka.clientId", clientId)
+                .tag("kafka.client-id", clientId)
                 .tag("kafka.key", key)
                 .start();
 

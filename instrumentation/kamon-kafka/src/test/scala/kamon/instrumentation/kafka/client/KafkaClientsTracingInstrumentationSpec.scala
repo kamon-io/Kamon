@@ -103,11 +103,11 @@ class KafkaClientsTracingInstrumentationSpec extends WordSpec
         span.metricTags.get(plain("component")) shouldBe "kafka.consumer"
         span.metricTags.get(plain("span.kind")) shouldBe "consumer"
         span.tags.get(plain("kafka.topic")) shouldBe testTopicName
-        span.tags.get(plain("kafka.clientId")) should not be empty
-        span.tags.get(plain("kafka.groupId")) should not be empty
+        span.tags.get(plain("kafka.client-id")) should not be empty
+        span.tags.get(plain("kafka.group-id")) should not be empty
         span.tags.get(plainLong("kafka.partition")) shouldBe 0L
         span.tags.get(plainLong("kafka.timestamp")) shouldBe consumedRecord.timestamp()
-        span.tags.get(plain("kafka.timestampType")) shouldBe consumedRecord.timestampType().name
+        span.tags.get(plain("kafka.timestamp-type")) shouldBe consumedRecord.timestampType().name
       }
     }
 
@@ -123,7 +123,7 @@ class KafkaClientsTracingInstrumentationSpec extends WordSpec
       assertReportedSpan(_.operationName == "producer.send") { span =>
         span.metricTags.get(plain("span.kind")) shouldBe "producer"
         span.metricTags.get(plain("component")) shouldBe "kafka.producer"
-        span.tags.get(plain("kafka.clientId")) should not be empty
+        span.tags.get(plain("kafka.client-id")) should not be empty
         span.tags.get(plain("kafka.topic")) shouldBe testTopicName
         span.tags.get(plain("kafka.key")) shouldBe KafkaInstrumentation.Keys.Null
         span.tags.get(plainLong("kafka.partition")) shouldBe 0L
@@ -134,8 +134,8 @@ class KafkaClientsTracingInstrumentationSpec extends WordSpec
         span.metricTags.get(plain("span.kind")) shouldBe "consumer"
         span.metricTags.get(plain("component")) shouldBe "kafka.consumer"
         span.tags.get(plain("kafka.topic")) shouldBe testTopicName
-        span.tags.get(plain("kafka.clientId")) should not be empty
-        span.tags.get(plain("kafka.groupId")) should not be empty
+        span.tags.get(plain("kafka.client-id")) should not be empty
+        span.tags.get(plain("kafka.group-id")) should not be empty
         span.tags.get(plainLong("kafka.partition")) shouldBe 0L
         span.links should have size 1
         val sendinglinks = span.links.filter(_.trace.id == sendingSpan.get.trace.id)
@@ -163,7 +163,7 @@ class KafkaClientsTracingInstrumentationSpec extends WordSpec
       assertReportedSpan(_.operationName == "producer.send") { span =>
         span.metricTags.get(plain("span.kind")) shouldBe "producer"
         span.metricTags.get(plain("component")) shouldBe "kafka.producer"
-        span.tags.get(plain("kafka.clientId")) should not be empty
+        span.tags.get(plain("kafka.client-id")) should not be empty
         span.tags.get(plain("kafka.topic")) shouldBe testTopicName
         span.tags.get(plain("kafka.key")) shouldBe KafkaInstrumentation.Keys.Null
         span.tags.get(plainLong("kafka.partition")) shouldBe 0L
@@ -175,8 +175,8 @@ class KafkaClientsTracingInstrumentationSpec extends WordSpec
         span.metricTags.get(plain("span.kind")) shouldBe "consumer"
         span.metricTags.get(plain("component")) shouldBe "kafka.consumer"
         span.tags.get(plain("kafka.topic")) shouldBe testTopicName
-        span.tags.get(plain("kafka.clientId")) should not be empty
-        span.tags.get(plain("kafka.groupId")) should not be empty
+        span.tags.get(plain("kafka.client-id")) should not be empty
+        span.tags.get(plain("kafka.group-id")) should not be empty
         span.tags.get(plainLong("kafka.partition")) shouldBe 0L
         span.links should have size 1
         val sendinglinks = span.links.filter(_.trace.id == sendingSpan.get.trace.id)

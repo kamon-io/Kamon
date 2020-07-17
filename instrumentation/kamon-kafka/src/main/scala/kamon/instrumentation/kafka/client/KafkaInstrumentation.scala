@@ -144,7 +144,7 @@ object KafkaInstrumentation {
       .tag("kafka.partition", record.partition())
       .tag("kafka.offset", record.offset)
       .tag("kafka.timestamp", record.timestamp())
-      .tag("kafka.timestampType", record.timestampType.name)
+      .tag("kafka.timestamp-type", record.timestampType.name)
 
     Option(record.key()).foreach(k => consumerSpan.tag("kafka.key", k.toString()))
 
@@ -155,9 +155,9 @@ object KafkaInstrumentation {
       val incomingSpan = incomingContext.get(Span.Key)
 
       consumerSpan
-        .tag("kafka.groupId", consumerRecordData.consumerInfo().groupId)
-        .tag("kafka.clientId", consumerRecordData.consumerInfo().clientId)
-        .tag("kafka.pollTime", consumerRecordData.nanosSincePollStart())
+        .tag("kafka.group-id", consumerRecordData.consumerInfo().groupId)
+        .tag("kafka.client-id", consumerRecordData.consumerInfo().clientId)
+        .tag("kafka.poll-time", consumerRecordData.nanosSincePollStart())
 
       if(!incomingSpan.isEmpty) {
         if (settings.continueTraceOnConsumer)
@@ -177,7 +177,7 @@ object KafkaInstrumentation {
 
   object Keys {
     val Null = "NULL"
-    val ContextHeader = "kamon-context"
+    val ContextHeader = "kctx"
   }
 
   case class Settings (
