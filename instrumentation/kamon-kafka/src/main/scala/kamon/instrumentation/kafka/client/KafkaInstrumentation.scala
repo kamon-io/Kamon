@@ -18,10 +18,12 @@ object KafkaInstrumentation {
 
   private def readSettings(config: Config): Settings = {
     val kafkaConfig = config.getConfig("kamon.instrumentation.kafka.client")
+    val sensorConfig = config.getConfig("kamon.instrumentation.kafka.sensor")
 
     Settings(
       continueTraceOnConsumer = kafkaConfig.getBoolean("tracing.continue-trace-on-consumer"),
-      useDelayedSpans = kafkaConfig.getBoolean("tracing.use-delayed-spans")
+      useDelayedSpans = kafkaConfig.getBoolean("tracing.use-delayed-spans"),
+      enableSensorMetrics = sensorConfig.getBoolean("metrics.enable")
     )
   }
 
@@ -182,6 +184,7 @@ object KafkaInstrumentation {
 
   case class Settings (
     continueTraceOnConsumer: Boolean,
-    useDelayedSpans: Boolean
+    useDelayedSpans: Boolean,
+    enableSensorMetrics: Boolean
   )
 }
