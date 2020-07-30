@@ -55,24 +55,35 @@ class StatsDReporter(configPath: String) extends MetricReporter {
 
   override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
     val keyGenerator = reporterConfiguration.keyGenerator
-    val packetBuffer = new MetricDataPacketBuffer(reporterConfiguration.maxPacketSize, clientChannel, reporterConfiguration.agentAddress)
+    val packetBuffer = new MetricDataPacketBuffer(
+      reporterConfiguration.maxPacketSize,
+      reporterConfiguration.maxPacketsPerMilli,
+      clientChannel,
+      reporterConfiguration.agentAddress
+    )
 
     for {
       counter     <- snapshot.counters
       instrument  <- counter.instruments
     } {
-      packetBuffer.appendMeasurement(
-        key = keyGenerator.generateKey(counter.name, instrument.tags),
-        measurementData = encodeStatsDCounter(reporterConfiguration, instrument.value, counter.settings.unit))
+
+      if(instrument.value != 0 || reporterConfiguration.sendZeroValues)
+        packetBuffer.appendMeasurement(
+          key = keyGenerator.generateKey(counter.name, instrument.tags),
+          measurementData = encodeStatsDCounter(reporterConfiguration, instrument.value, counter.settings.unit)
+        )
     }
 
     for {
       gauge       <- snapshot.gauges
       instrument  <- gauge.instruments
     } {
-      packetBuffer.appendMeasurement(
-        key = keyGenerator.generateKey(gauge.name, instrument.tags),
-        measurementData = encodeStatsDGauge(reporterConfiguration, instrument.value, gauge.settings.unit))
+
+      if(instrument.value != 0D || reporterConfiguration.sendZeroValues) {
+        packetBuffer.appendMeasurement(
+          key = keyGenerator.generateKey(gauge.name, instrument.tags),
+          measurementData = encodeStatsDGauge(reporterConfiguration, instrument.value, gauge.settings.unit))
+      }
     }
 
     for {
@@ -80,8 +91,10 @@ class StatsDReporter(configPath: String) extends MetricReporter {
       instrument  <- metric.instruments
       bucket      <- instrument.value.bucketsIterator
     } {
-      val bucketData = encodeStatsDTimer(reporterConfiguration, bucket.value, bucket.frequency, metric.settings.unit)
-      packetBuffer.appendMeasurement(keyGenerator.generateKey(metric.name, instrument.tags), bucketData)
+      if(bucket.value != 0 || reporterConfiguration.sendZeroValues) {
+        val bucketData = encodeStatsDTimer(reporterConfiguration, bucket.value, bucket.frequency, metric.settings.unit)
+        packetBuffer.appendMeasurement(keyGenerator.generateKey(metric.name, instrument.tags), bucketData)
+      }
     }
 
     packetBuffer.flush()
@@ -118,7 +131,9 @@ object StatsDReporter {
     maxPacketSize: Long,
     timeUnit: MeasurementUnit,
     informationUnit: MeasurementUnit,
-    keyGenerator: MetricKeyGenerator
+    keyGenerator: MetricKeyGenerator,
+    maxPacketsPerMilli: Int,
+    sendZeroValues: Boolean
   )
 
   object Settings {
@@ -128,7 +143,9 @@ object StatsDReporter {
         maxPacketSize = reporterConfiguration.getBytes("max-packet-size"),
         timeUnit = readTimeUnit(reporterConfiguration.getString("time-unit")),
         informationUnit = readInformationUnit(reporterConfiguration.getString("information-unit")),
-        keyGenerator = loadKeyGenerator(reporterConfiguration.getString("metric-key-generator"), reporterConfiguration)
+        keyGenerator = loadKeyGenerator(reporterConfiguration.getString("metric-key-generator"), reporterConfiguration),
+        maxPacketsPerMilli = reporterConfiguration.getInt("max-packets-per-milli"),
+        sendZeroValues = reporterConfiguration.getBoolean("send-zero-values")
       )
     }
 
@@ -137,7 +154,10 @@ object StatsDReporter {
     }
   }
 
-  private[statsd] class MetricDataPacketBuffer(maxPacketSizeInBytes: Long, channel: DatagramChannel, remote: InetSocketAddress) {
+  private[statsd] class MetricDataPacketBuffer(maxPacketSizeInBytes: Long, maxPacketsPerMilli: Int,
+      channel: DatagramChannel, remote: InetSocketAddress) {
+
+    val rateLimiter = new FlushRateLimiter(maxPacketsPerMilli)
     val metricSeparator = "\n"
     val measurementSeparator = ":"
 
@@ -169,6 +189,8 @@ object StatsDReporter {
     private def fitsOnBuffer(data: String): Boolean = (buffer.length + data.length) <= maxPacketSizeInBytes
 
     def flush(): Unit = {
+      rateLimiter.waitIfNecessary()
+
       flushToUDP(buffer.toString)
       buffer.clear()
     }
@@ -176,5 +198,36 @@ object StatsDReporter {
     private def flushToUDP(data: String): Unit = {
       channel.send(ByteBuffer.wrap(data.getBytes), remote)
     }
+  }
+
+  /**
+    * A simple rate limiter that only allows for a said number of flush calls per millisecond. This class is not thread
+    * safe and it is not meant to be used anywhere else outside of a reporter.
+    */
+  private[statsd] class FlushRateLimiter(maxPacketsPerMilli: Int) {
+    private val startTime = System.nanoTime()
+    private var lastMilli = currentMilli()
+    private var countAtLastMilli = 0
+
+    def waitIfNecessary(): Unit = {
+      val current = currentMilli()
+
+      if(current == lastMilli) {
+        if(countAtLastMilli < maxPacketsPerMilli)
+          countAtLastMilli += 1
+        else {
+          Thread.sleep(1)
+          lastMilli = currentMilli()
+          countAtLastMilli = 1
+        }
+      } else {
+        lastMilli = current
+        countAtLastMilli = 1
+      }
+    }
+
+    private def currentMilli(): Long =
+      (System.nanoTime() - startTime) / 1000000
+
   }
 }
