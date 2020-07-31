@@ -15,7 +15,7 @@ class PrometheusPushgatewayReporter(
   ) extends MetricReporter {
 
   private val _logger = LoggerFactory.getLogger(classOf[PrometheusPushgatewayReporter])
-  private val _snapshotAccumulator = PeriodSnapshot.accumulator(Duration.ofDays(365 * 5), Duration.ZERO)
+  private val _snapshotAccumulator = PeriodSnapshot.accumulator(Duration.ofDays(365 * 5), Duration.ZERO, Duration.ofDays(365 * 5))
 
   @volatile private var httpClient: HttpClient = _
   @volatile private var settings: PrometheusSettings.Generic = _
