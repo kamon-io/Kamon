@@ -55,7 +55,7 @@ trait ConsumedRecordData {
 
 object ConsumedRecordData {
 
-  case class ConsumerInfo(groupId: String, clientId: String)
+  case class ConsumerInfo(groupId: Option[String], clientId: String)
 
   class Mixin extends ConsumedRecordData {
     private var _incomingContext: Context = _
