@@ -155,7 +155,7 @@ object KafkaInstrumentation {
       val incomingSpan = incomingContext.get(Span.Key)
 
       consumerSpan
-        .tag("kafka.group-id", consumerRecordData.consumerInfo().groupId)
+        .tag("kafka.group-id", consumerRecordData.consumerInfo().groupId.getOrElse("unknown"))
         .tag("kafka.client-id", consumerRecordData.consumerInfo().clientId)
         .tag("kafka.poll-time", consumerRecordData.nanosSincePollStart())
 
