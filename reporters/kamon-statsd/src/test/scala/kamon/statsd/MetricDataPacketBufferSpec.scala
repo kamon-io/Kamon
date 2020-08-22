@@ -12,12 +12,14 @@ class MetricDataPacketBufferSpec extends WordSpec with Matchers with BeforeAndAf
   val statsDServer = new StatsDServer()
   val address = new InetSocketAddress("localhost", statsDServer.port)
   val hugePacketSize = 1024
+  val maxPacketsPerMilli = 3
+
 
   "MetricDataPacketBuffer" should {
 
     "flush a single metric in one udp packet" in {
       val channel = DatagramChannel.open()
-      val buffer = new MetricDataPacketBuffer(hugePacketSize, channel, address)
+      val buffer = new MetricDataPacketBuffer(hugePacketSize, maxPacketsPerMilli, channel, address)
       buffer.appendMeasurement("counter", "1.0|c")
       buffer.flush()
       val packet = statsDServer.getPacket(_.hasMetric(_.name == "counter"))
@@ -27,7 +29,7 @@ class MetricDataPacketBufferSpec extends WordSpec with Matchers with BeforeAndAf
 
     "flush multiple metrics in the same udp packet" in {
       val channel = DatagramChannel.open()
-      val buffer = new MetricDataPacketBuffer(hugePacketSize, channel, address)
+      val buffer = new MetricDataPacketBuffer(hugePacketSize, maxPacketsPerMilli, channel, address)
       buffer.appendMeasurement("counter", "1.0|c")
       buffer.appendMeasurement("other_counter", "2.0|c")
       buffer.flush()
@@ -39,7 +41,7 @@ class MetricDataPacketBufferSpec extends WordSpec with Matchers with BeforeAndAf
 
     "flush multiple metrics in different udp packets when max packet size is reached" in {
       val channel = DatagramChannel.open()
-      val buffer = new MetricDataPacketBuffer(maxPacketSizeInBytes = 20, channel, address)
+      val buffer = new MetricDataPacketBuffer(maxPacketSizeInBytes = 20, maxPacketsPerMilli, channel, address)
       buffer.appendMeasurement("counter", "1.0|c")
       buffer.appendMeasurement("other_counter", "2.0|c")
       buffer.flush()
@@ -53,7 +55,7 @@ class MetricDataPacketBufferSpec extends WordSpec with Matchers with BeforeAndAf
 
     "flush when max packet size is reached" in {
       val channel = DatagramChannel.open()
-      val buffer = new MetricDataPacketBuffer(maxPacketSizeInBytes = 20, channel, address)
+      val buffer = new MetricDataPacketBuffer(maxPacketSizeInBytes = 20, maxPacketsPerMilli, channel, address)
       buffer.appendMeasurement("counter", "1.0|c")
       buffer.appendMeasurement("other_counter", "2.0|c")
       val packet = statsDServer.getPacket(_.hasMetric(_.name == "counter"))
@@ -63,7 +65,7 @@ class MetricDataPacketBufferSpec extends WordSpec with Matchers with BeforeAndAf
 
     "flush same metric in one udp packet because is compressed" in {
       val channel = DatagramChannel.open()
-      val buffer = new MetricDataPacketBuffer(maxPacketSizeInBytes = 20, channel, address)
+      val buffer = new MetricDataPacketBuffer(maxPacketSizeInBytes = 20, maxPacketsPerMilli, channel, address)
       buffer.appendMeasurement("counter", "1.0|c")
       buffer.appendMeasurement("counter", "2.0|c")
       buffer.flush()
@@ -77,7 +79,7 @@ class MetricDataPacketBufferSpec extends WordSpec with Matchers with BeforeAndAf
 
     "flush different metric in two udp packets because not compressed" in {
       val channel = DatagramChannel.open()
-      val buffer = new MetricDataPacketBuffer(maxPacketSizeInBytes = 20, channel, address)
+      val buffer = new MetricDataPacketBuffer(maxPacketSizeInBytes = 20, maxPacketsPerMilli, channel, address)
       buffer.appendMeasurement("counter", "1.0|c")
       buffer.appendMeasurement("count3r", "2.0|c")
       buffer.flush()
@@ -89,7 +91,7 @@ class MetricDataPacketBufferSpec extends WordSpec with Matchers with BeforeAndAf
 
     "flush same metric in two udp packets when max packet size is reached" in {
       val channel = DatagramChannel.open()
-      val buffer = new MetricDataPacketBuffer(maxPacketSizeInBytes = 20, channel, address)
+      val buffer = new MetricDataPacketBuffer(maxPacketSizeInBytes = 20, maxPacketsPerMilli, channel, address)
       buffer.appendMeasurement("counter", "1.0|c")
       buffer.appendMeasurement("counter", "2.0|c")
       buffer.appendMeasurement("counter", "3.0|c")
