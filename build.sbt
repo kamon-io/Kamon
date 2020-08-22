@@ -127,7 +127,8 @@ lazy val instrumentation = (project in file("instrumentation"))
     `kamon-system-metrics`,
     `kamon-akka`,
     `kamon-akka-http`,
-    `kamon-play`
+    `kamon-play`,
+    `kamon-okhttp`,
   )
 
 
@@ -406,6 +407,23 @@ lazy val `kamon-play` = (project in file("instrumentation/kamon-play"))
   )
 
 
+lazy val `kamon-okhttp` = (project in file("instrumentation/kamon-okhttp"))
+  .disablePlugins(AssemblyPlugin)
+  .enablePlugins(JavaAgent)
+  .settings(instrumentationSettings)
+  .settings(
+    libraryDependencies ++= Seq(
+      kanelaAgent % "provided",
+      "com.squareup.okhttp3"      % "okhttp"                    % "3.14.9" % "provided",
+
+      scalatest % "test",
+      logbackClassic % "test",
+      "org.eclipse.jetty"         % "jetty-server"              % "9.4.25.v20191220" % "test",
+      "org.eclipse.jetty"         % "jetty-servlet"             % "9.4.25.v20191220" % "test",
+    )
+  ).dependsOn(`kamon-core`, `kamon-executors`, `kamon-testkit` % "test")
+
+
 /**
   * Reporters
   */
@@ -618,5 +636,6 @@ val `kamon-bundle` = (project in file("bundle/kamon-bundle"))
     `kamon-system-metrics` % "shaded",
     `kamon-akka` % "shaded",
     `kamon-akka-http` % "shaded",
-    `kamon-play` % "shaded"
+    `kamon-play` % "shaded",
+    `kamon-okhttp` % "shaded",
   )
