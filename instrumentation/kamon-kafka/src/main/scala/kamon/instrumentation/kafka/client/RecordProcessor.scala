@@ -44,7 +44,7 @@ private[kafka] object RecordProcessor {
   /**
     * In order to be backward compatible we need check the groupId field.
     *
-    * KafkaConsumer which versions < 2.5 relies on internal groupId: String and and higher versions in Optional[String].
+    * KafkaConsumer which versions < 2.5 relies on internal groupId: String and higher versions in Optional[String].
     */
   private def resolve(groupId: AnyRef): Option[String] = groupId match {
       case opt: Optional[String] => if (opt.isPresent) Some(opt.get()) else None

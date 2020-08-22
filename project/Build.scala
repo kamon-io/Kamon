@@ -102,7 +102,7 @@ object BaseProject extends AutoPlugin {
     concurrentRestrictions in Global += Tags.limit(Tags.Test, 1),
     licenses += (("Apache-2.0", url("http://www.apache.org/licenses/LICENSE-2.0"))),
     resolvers += Resolver.bintrayRepo("kamon-io", "releases"),
-    resolvers += Resolver.mavenLocal,
+    resolvers += Resolver.mavenLocal
   )
 
   private lazy val compilationSettings = Seq(
@@ -114,7 +114,7 @@ object BaseProject extends AutoPlugin {
       "-target", "1.8",
       "-Xlint:-options",
       "-encoding", "UTF-8",
-      "-XDignore.symbol.file",
+      "-XDignore.symbol.file"
     ),
     scalacOptions := Seq(
       "-g:vars",
@@ -243,7 +243,7 @@ object BaseProject extends AutoPlugin {
     Seq[ReleaseStep](
       runClean,
       publishStep,
-      releaseStepCommandAndRemaining("sonatypeBundleRelease"),
+      releaseStepCommandAndRemaining("sonatypeBundleRelease")
     )
   }
 }
