@@ -20,7 +20,7 @@ import java.security.cert.{Certificate, CertificateFactory}
 import java.security.{KeyStore, SecureRandom}
 
 import akka.actor.ActorSystem
-import akka.http.scaladsl.{Http, HttpsConnectionContext, UseHttp2}
+import akka.http.scaladsl.{Http, HttpsConnectionContext}
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpResponse}
 import de.heikoseeberger.akkahttpjson4s.Json4sSupport
 import akka.http.scaladsl.model.StatusCodes.{BadRequest, InternalServerError, OK}
