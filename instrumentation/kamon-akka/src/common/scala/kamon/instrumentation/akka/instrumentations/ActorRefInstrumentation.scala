@@ -1,6 +1,7 @@
 package kamon.instrumentation.akka.instrumentations
 
 import kamon.Kamon
+import kamon.context.Context
 import kamon.context.Storage.Scope
 import kamon.instrumentation.context.HasContext
 import kanela.agent.api.instrumentation.InstrumentationBuilder
@@ -44,8 +45,13 @@ object RepointableActorRefPointAdvice {
     Kamon.storeContext(repointableActorRef.asInstanceOf[HasContext].context)
 
   @Advice.OnMethodExit
-  def exit(@Advice.Enter scope: Scope): Unit =
+  def exit(@Advice.Enter scope: Scope, @Advice.This repointableActorRef: Object): Unit = {
     scope.close()
+
+    repointableActorRef
+      .asInstanceOf[HasContext]
+      .setContext(Context.Empty)
+  }
 }
 
 
