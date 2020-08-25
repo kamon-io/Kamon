@@ -95,6 +95,18 @@ class HttpClientInstrumentationSpec extends WordSpec with Matchers with Instrume
         span.tags().get(plainLong("http.status_code")) shouldBe 200
         span.tags().get(plain("operation")) shouldBe "EventRSVPs"
       }
+
+      "fallback to the default operation name when there is a problem while figuring out a custom operation name" in {
+        val handler = httpClient().createHandler(fakeRequest("http://localhost:8080/", "/fail-operation-name", "GET", Map.empty), Context.Empty)
+        handler.processResponse(fakeResponse(200))
+
+        val span = handler.span
+        span.operationName() shouldBe "default-name"
+        span.tags().get(plain("http.method")) shouldBe "GET"
+        span.tags().get(plain("http.url")) shouldBe "http://localhost:8080/"
+        span.tags().get(plainLong("http.status_code")) shouldBe 200
+        span.tags().get(plain("operation")) shouldBe "default-name"
+      }
     }
 
     "all capabilities are disabled" should {
@@ -133,7 +145,7 @@ class HttpClientInstrumentationSpec extends WordSpec with Matchers with Instrume
       initialHeaders.foreach { case (k, v) => _headers += (k -> v)}
 
       override def url: String = requestUrl
-      override def path: String = requestPath
+      override def path: String = if(requestPath == "/fail-operation-name") sys.error("fail") else requestPath
       override def method: String = requestMethod
       override def read(header: String): Option[String] = _headers.get(header)
       override def readAll(): Map[String, String] = _headers.toMap
