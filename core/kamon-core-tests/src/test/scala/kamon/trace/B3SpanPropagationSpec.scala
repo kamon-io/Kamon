@@ -130,6 +130,37 @@ class B3SpanPropagationSpec extends WordSpecLike with Matchers with OptionValues
       span.trace.samplingDecision shouldBe SamplingDecision.Sample
     }
 
+    "fall back to sampling header if debug flag is set to any other value" in {
+      val sampledHeaders = Map(
+        "X-B3-TraceId" -> "1234",
+        "X-B3-SpanId" -> "4321",
+        "X-B3-Sampled" -> "1",
+        "X-B3-Flags" -> "0"
+      )
+
+      val notSampledHeaders = Map(
+        "X-B3-TraceId" -> "1234",
+        "X-B3-SpanId" -> "4321",
+        "X-B3-Sampled" -> "0",
+        "X-B3-Flags" -> "0"
+      )
+
+      val noSamplingHeaders = Map(
+        "X-B3-TraceId" -> "1234",
+        "X-B3-SpanId" -> "4321",
+        "X-B3-Flags" -> "0"
+      )
+
+      b3Propagation.read(headerReaderFromMap(sampledHeaders), Context.Empty)
+        .get(Span.Key).trace.samplingDecision shouldBe SamplingDecision.Sample
+
+      b3Propagation.read(headerReaderFromMap(notSampledHeaders), Context.Empty)
+        .get(Span.Key).trace.samplingDecision shouldBe SamplingDecision.DoNotSample
+
+      b3Propagation.read(headerReaderFromMap(noSamplingHeaders), Context.Empty)
+        .get(Span.Key).trace.samplingDecision shouldBe SamplingDecision.Unknown
+    }
+
     "use the Debug flag as sampling decision when Sampled is not provided" in {
       val headers = Map(
         "X-B3-TraceId" -> "1234",

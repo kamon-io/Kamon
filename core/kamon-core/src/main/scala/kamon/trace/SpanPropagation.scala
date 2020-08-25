@@ -64,10 +64,14 @@ object SpanPropagation {
 
         val flags = reader.read(Headers.Flags)
 
-        val samplingDecision = flags.orElse(reader.read(Headers.Sampled)) match {
-          case Some(sampled) if sampled == "1" => SamplingDecision.Sample
-          case Some(sampled) if sampled == "0" => SamplingDecision.DoNotSample
-          case _ => SamplingDecision.Unknown
+        val samplingDecision = flags match {
+          case Some(debug) if debug == "1" => SamplingDecision.Sample
+          case _ =>
+            reader.read(Headers.Sampled) match {
+              case Some(sampled) if sampled == "1" => SamplingDecision.Sample
+              case Some(sampled) if sampled == "0" => SamplingDecision.DoNotSample
+              case _ => SamplingDecision.Unknown
+            }
         }
 
         context.withEntry(Span.Key, new Span.Remote(spanID, parentID, Trace(traceID, samplingDecision)))
