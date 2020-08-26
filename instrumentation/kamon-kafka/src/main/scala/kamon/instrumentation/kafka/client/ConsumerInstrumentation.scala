@@ -50,12 +50,12 @@ trait ConsumedRecordData {
   def incomingContext(): Context
   def nanosSincePollStart(): Long
   def consumerInfo(): ConsumerInfo
-  def set(incomingContext: Context, nanosSincePollStart: Long, consumerInfo: ConsumerInfo)
+  def set(incomingContext: Context, nanosSincePollStart: Long, consumerInfo: ConsumerInfo): Unit
 }
 
 object ConsumedRecordData {
 
-  case class ConsumerInfo(groupId: String, clientId: String)
+  case class ConsumerInfo(groupId: Option[String], clientId: String)
 
   class Mixin extends ConsumedRecordData {
     private var _incomingContext: Context = _
