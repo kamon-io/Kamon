@@ -363,9 +363,9 @@ lazy val `kamon-play` = (project in file("instrumentation/kamon-play"))
   .disablePlugins(AssemblyPlugin)
   .settings(instrumentationSettings)
   .dependsOn(
-    `kamon-akka` % "compile,test-common,test-play-2.7,test-play-2.6",
-    `kamon-akka-http` % "compile,test-common,test-play-2.7,test-play-2.6",
-    `kamon-testkit` % "test-common,test-play-2.7,test-play-2.6"
+    `kamon-akka` % "compile,test-common,test-play-2.8,test-play-2.7,test-play-2.6",
+    `kamon-akka-http` % "compile,test-common,test-play-2.8,test-play-2.7,test-play-2.6",
+    `kamon-testkit` % "test-common,test-play-2.8,test-play-2.7,test-play-2.6"
   )
 
 

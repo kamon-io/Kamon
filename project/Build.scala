@@ -63,9 +63,17 @@ object BaseProject extends AutoPlugin {
       */
     def joinSources(base: Configuration, extra: Configuration): Initialize[Task[Seq[File]]] = Def.task {
       import Path.relativeTo
-      val baseSources = (sources in base).value.pair(relativeTo((unmanagedSourceDirectories in base).value))
-      val extraSources = (sources in extra).value.pair(relativeTo((unmanagedSourceDirectories in extra).value))
-      val allSources = baseSources.filterNot { case (_, path) => extraSources.exists(_._2 == path) } ++ extraSources
+
+      val baseSources = (unmanagedSources in base).value.pair(relativeTo((unmanagedSourceDirectories in base).value))
+      val extraSources = (unmanagedSources in extra).value.pair(relativeTo((unmanagedSourceDirectories in extra).value))
+      val manSources = (managedSources in extra).value.pair(relativeTo((managedSourceDirectories in extra).value))
+
+      val allSources = (
+        baseSources.filterNot { case (_, path) => extraSources.exists(_._2 == path) } ++
+        manSources ++
+        extraSources
+      )
+
       allSources.map(_._1)
     }
 
@@ -102,7 +110,7 @@ object BaseProject extends AutoPlugin {
     concurrentRestrictions in Global += Tags.limit(Tags.Test, 1),
     licenses += (("Apache-2.0", url("http://www.apache.org/licenses/LICENSE-2.0"))),
     resolvers += Resolver.bintrayRepo("kamon-io", "releases"),
-    resolvers += Resolver.mavenLocal,
+    resolvers += Resolver.mavenLocal
   )
 
   private lazy val compilationSettings = Seq(
@@ -114,7 +122,7 @@ object BaseProject extends AutoPlugin {
       "-target", "1.8",
       "-Xlint:-options",
       "-encoding", "UTF-8",
-      "-XDignore.symbol.file",
+      "-XDignore.symbol.file"
     ),
     scalacOptions := Seq(
       "-g:vars",
@@ -243,7 +251,7 @@ object BaseProject extends AutoPlugin {
     Seq[ReleaseStep](
       runClean,
       publishStep,
-      releaseStepCommandAndRemaining("sonatypeBundleRelease"),
+      releaseStepCommandAndRemaining("sonatypeBundleRelease")
     )
   }
 }
