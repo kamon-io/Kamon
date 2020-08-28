@@ -2,9 +2,9 @@ package kamon.instrumentation.akka.http
 
 import java.util.concurrent.Callable
 
-import akka.http.scaladsl.marshalling.{ToResponseMarshallable, ToResponseMarshaller}
+import akka.http.scaladsl.marshalling.{ToEntityMarshaller, ToResponseMarshallable, ToResponseMarshaller}
 import akka.http.scaladsl.model.StatusCodes.Redirection
-import akka.http.scaladsl.model.{HttpRequest, HttpResponse, Uri}
+import akka.http.scaladsl.model.{HttpHeader, HttpRequest, HttpResponse, StatusCode, Uri}
 import akka.http.scaladsl.server.PathMatcher.{Matched, Unmatched}
 import akka.http.scaladsl.server.directives.{BasicDirectives, CompleteOrRecoverWithMagnet, OnSuccessMagnet}
 import akka.http.scaladsl.server.directives.RouteDirectives.reject
@@ -27,6 +27,8 @@ import akka.NotUsed
 import akka.stream.scaladsl.Flow
 import kamon.context.Context
 import kanela.agent.libs.net.bytebuddy.matcher.ElementMatchers.isPublic
+
+import scala.collection.immutable
 
 
 class AkkaHttpServerInstrumentation extends InstrumentationBuilder {
@@ -134,6 +136,12 @@ object ResolveOperationNameOnRouteInterceptor {
 
   def complete(m: => ToResponseMarshallable): StandardRoute =
     StandardRoute(resolveOperationName(_).complete(m))
+
+  def complete[T](status: StatusCode, v: => T)(implicit m: ToEntityMarshaller[T]): StandardRoute =
+    StandardRoute(resolveOperationName(_).complete((status, v)))
+
+  def complete[T](status: StatusCode, headers: immutable.Seq[HttpHeader], v: => T)(implicit m: ToEntityMarshaller[T]): StandardRoute =
+    complete((status, headers, v))
 
   def redirect(uri: Uri, redirectionType: Redirection): StandardRoute =
     StandardRoute(resolveOperationName(_).redirect(uri, redirectionType))

@@ -377,18 +377,18 @@ lazy val `kamon-akka-http` = (project in file("instrumentation/kamon-akka-http")
   .settings(instrumentationSettings)
   .settings(Seq(
     resolvers += Resolver.bintrayRepo("hseeberger", "maven"),
-    javaAgents += "org.mortbay.jetty.alpn" % "jetty-alpn-agent" % "2.0.9" % "test",
+    javaAgents += "org.mortbay.jetty.alpn" % "jetty-alpn-agent" % "2.0.10" % "test",
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
-      "com.typesafe.akka" %% "akka-http"            % "10.1.9" % "provided",
-      "com.typesafe.akka" %% "akka-http2-support"   % "10.1.9" % "provided",
-      "com.typesafe.akka" %% "akka-stream"          % "2.5.24" % "provided",
+      "com.typesafe.akka" %% "akka-http"            % "10.1.12" % "provided",
+      "com.typesafe.akka" %% "akka-http2-support"   % "10.1.12" % "provided",
+      "com.typesafe.akka" %% "akka-stream"          % "2.5.31" % "provided",
 
       scalatest % "test",
       slf4jApi % "test",
       slf4jnop % "test",
       okHttp % "test",
-      "com.typesafe.akka" %% "akka-http-testkit"    % "10.1.9" % "test",
+      "com.typesafe.akka" %% "akka-http-testkit"    % "10.1.12" % "test",
       "de.heikoseeberger" %% "akka-http-json4s"     % "1.27.0" % "test",
       "org.json4s"        %% "json4s-native"        % "3.6.7" % "test",
     )
