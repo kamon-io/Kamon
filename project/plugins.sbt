@@ -10,3 +10,7 @@ addSbtPlugin("org.foundweekends" % "sbt-bintray" % "0.5.4")
 addSbtPlugin("de.heikoseeberger" % "sbt-header" % "5.2.0")
 addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "3.8.1")
 addSbtPlugin("com.jsuereth" % "sbt-pgp" % "2.0.1")
+
+addSbtPlugin("com.lightbend.akka.grpc" % "sbt-akka-grpc" % "1.0.0")
+resolvers += Resolver.bintrayRepo("playframework", "maven")
+libraryDependencies += "com.lightbend.play" %% "play-grpc-generators" % "0.9.0"

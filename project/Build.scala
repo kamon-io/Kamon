@@ -63,9 +63,17 @@ object BaseProject extends AutoPlugin {
       */
     def joinSources(base: Configuration, extra: Configuration): Initialize[Task[Seq[File]]] = Def.task {
       import Path.relativeTo
-      val baseSources = (sources in base).value.pair(relativeTo((unmanagedSourceDirectories in base).value))
-      val extraSources = (sources in extra).value.pair(relativeTo((unmanagedSourceDirectories in extra).value))
-      val allSources = baseSources.filterNot { case (_, path) => extraSources.exists(_._2 == path) } ++ extraSources
+
+      val baseSources = (unmanagedSources in base).value.pair(relativeTo((unmanagedSourceDirectories in base).value))
+      val extraSources = (unmanagedSources in extra).value.pair(relativeTo((unmanagedSourceDirectories in extra).value))
+      val manSources = (managedSources in extra).value.pair(relativeTo((managedSourceDirectories in extra).value))
+
+      val allSources = (
+        baseSources.filterNot { case (_, path) => extraSources.exists(_._2 == path) } ++
+        manSources ++
+        extraSources
+      )
+
       allSources.map(_._1)
     }
 

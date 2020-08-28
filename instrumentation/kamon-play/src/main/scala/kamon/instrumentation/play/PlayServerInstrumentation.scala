@@ -68,6 +68,13 @@ class PlayServerInstrumentation extends InstrumentationBuilder {
   private def hasGenericFutureListener(): Boolean = {
     try { Class.forName("io.netty.util.concurrent.GenericFutureListener") != null} catch { case _ => false }
   }
+
+  /**
+    * When using play gRPC, we can reuse the instrumentation that is provided by the akka HTTP module, we just need to
+    * apply the operation name and make a sampling decision.
+    */
+  onType("play.grpc.internal.PlayRouter$$anon$1")
+    .advise(method("apply"), GenerateGRPCOperationName)
 }
 
 
@@ -238,4 +245,14 @@ object GenerateOperationNameOnFilterHandler {
       _normalizePattern.replaceAllIn(handlerDef.path, "$1")
   })
 
+}
+
+object GenerateGRPCOperationName {
+  @Advice.OnMethodEnter
+  def enter(@Advice.Argument(0) request: akka.http.scaladsl.model.HttpRequest): Unit = {
+    val span = Kamon.currentSpan()
+    span.name(request.uri.toRelative.toString)
+    span.tag("http.protocol", request.protocol.value)
+    span.takeSamplingDecision()
+  }
 }
