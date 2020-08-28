@@ -19,11 +19,13 @@ package kamon
 import com.typesafe.config.{Config, ConfigFactory}
 import org.slf4j.LoggerFactory
 
+import scala.util.control.NonFatal
+
 /**
   * Exposes APIs to access and modify Kamon's configuration and to get notified of reconfigure events.
   */
 trait Configuration {
-  private val logger = LoggerFactory.getLogger(classOf[Configuration])
+  private val _logger = LoggerFactory.getLogger(classOf[Configuration])
   private var _currentConfig: Config = loadInitialConfiguration()
   private var _onReconfigureHooks = Seq.empty[Configuration.OnReconfigureHook]
 
@@ -43,7 +45,7 @@ trait Configuration {
       try {
         hook.onReconfigure(newConfig)
       } catch {
-        case error: Throwable => logger.error("Exception occurred while trying to run a OnReconfigureHook", error)
+        case NonFatal(t) => _logger.error("Exception occurred while trying to run a OnReconfigureHook", t)
       }
     })
   }
@@ -68,19 +70,24 @@ trait Configuration {
 
 
   private def loadInitialConfiguration(): Config = {
+    import System.{err, lineSeparator}
+
     try {
       ConfigFactory.load(ClassLoading.classLoader())
     } catch {
-      case t: Throwable =>
-        logger.warn("Failed to load the default configuration, attempting to load the reference configuration", t)
+      case NonFatal(t) =>
+        err.println("Kamon couldn't load configuration settings from your *.conf files due to: " +
+          t.getMessage + " at " + t.getStackTrace().mkString("", lineSeparator, lineSeparator))
 
         try {
           val referenceConfig = ConfigFactory.defaultReference(ClassLoading.classLoader())
-          logger.warn("Initializing with the default reference configuration, none of the user settings might be in effect", t)
+          err.println("Initializing Kamon with the reference configuration, none of the user settings will be in effect")
           referenceConfig
         } catch {
-          case t: Throwable =>
-            logger.error("Failed to load the reference configuration, please check your reference.conf files for errors", t)
+          case NonFatal(t) =>
+            err.println("Kamon couldn't load the reference configuration settings from the reference.conf files due to: " +
+              t.getMessage + " at " + t.getStackTrace().mkString("", lineSeparator, lineSeparator))
+
             ConfigFactory.empty()
         }
     }
