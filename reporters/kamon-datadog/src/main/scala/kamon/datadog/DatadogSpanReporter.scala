@@ -80,7 +80,7 @@ class DatadogSpanReporterFactory extends ModuleFactory {
 
 class DatadogSpanReporter(@volatile private var configuration: Configuration) extends SpanReporter {
 
-  private val logger = LoggerFactory.getLogger(classOf[DatadogAPIReporter])
+  private val logger = LoggerFactory.getLogger(classOf[DatadogSpanReporter])
 
   override def reportSpans(spans: Seq[Span.Finished]): Unit = if (spans.nonEmpty) {
     val spanList: List[Seq[JsObject]] = spans
