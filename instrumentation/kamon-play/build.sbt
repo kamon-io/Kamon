@@ -56,8 +56,9 @@ libraryDependencies ++= { if(scalaBinaryVersion.value == "2.11") Seq.empty else 
   "com.typesafe.play" %%  "play-logback"          % `Play-2.8-version` % "test-play-2.8",
 )}
 
-// We are explicitly removing the gRPC-related dependencies because they are not published for Scala 2.11.
-PB.additionalDependencies := { if(scalaBinaryVersion.value == "2.11") Seq.empty else PB.additionalDependencies.value }
+// We are explicitly removing the gRPC-related dependencies because the are manually added
+// on the Test configuration for Play 2.8.
+PB.additionalDependencies := Seq.empty
 
 
 /**
