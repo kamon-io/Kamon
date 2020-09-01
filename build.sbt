@@ -145,7 +145,8 @@ val instrumentationProjects = Seq[ProjectReference](
   `kamon-lagom`,
   `kamon-finagle`,
   `kamon-aws-sdk`,
-  `kamon-alpakka-kafka`
+  `kamon-alpakka-kafka`,
+  `kamon-armeria`
 )
 
 lazy val instrumentation = (project in file("instrumentation"))
@@ -656,6 +657,21 @@ lazy val `kamon-alpakka-kafka` = (project in file("instrumentation/kamon-alpakka
     )
   ).dependsOn(`kamon-core`, `kamon-akka`, `kamon-testkit` % "test")
 
+lazy val `kamon-armeria` = (project in file("instrumentation/kamon-armeria"))
+  .disablePlugins(AssemblyPlugin)
+  .enablePlugins(JavaAgent)
+  .settings(instrumentationSettings)
+  .settings(
+    libraryDependencies ++= Seq(
+      kanelaAgent % "provided",
+      "com.linecorp.armeria" % "armeria" % "1.1.0" % "provided",
+
+      scalatest % "test",
+      okHttp % "test",
+      logbackClassic % "test"
+    )
+  ).dependsOn(`kamon-instrumentation-common`, `kamon-testkit` % "test")
+
 /**
  * Reporters
  */
@@ -954,7 +970,8 @@ lazy val `kamon-bundle-dependencies-2-12-and-up` = (project in file("bundle/kamo
     `kamon-cats-io-3`,
     `kamon-finagle`,
     `kamon-tapir`,
-    `kamon-alpakka-kafka`
+    `kamon-alpakka-kafka`,
+    `kamon-armeria`
   )
 
 lazy val `kamon-bundle` = (project in file("bundle/kamon-bundle"))
