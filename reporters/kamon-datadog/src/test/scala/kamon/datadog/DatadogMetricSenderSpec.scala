@@ -67,7 +67,7 @@ class DatadogMetricSenderSpec extends WordSpec with Matchers with Reconfigure {
         buffer.lst should contain("test.counter" -> "0|c|#service:kamon-application,env:staging,tag1:value1")
     }
 
-    "filter out blacklisted tags" in AgentReporter(new TestBuffer(), ConfigFactory.parseString(
+    "filter out environment tags" in AgentReporter(new TestBuffer(), ConfigFactory.parseString(
       """
         |kamon.datadog.environment-tags.exclude = [env]
         |kamon.environment.tags.env = staging
@@ -97,7 +97,8 @@ class DatadogMetricSenderSpec extends WordSpec with Matchers with Reconfigure {
 
     "filter other tags" in AgentReporter(new TestBuffer(), ConfigFactory.parseString(
       """
-        |kamon.datadog.environment-tags.exclude = [ "tag*" ]
+        |kamon.datadog.environment-tags.exclude = []
+        |kamon.datadog.environment-tags.filter.excludes = [ "tag*" ]
         |kamon.environment.tags.env = staging
         |""".stripMargin).withFallback(Kamon.config())) {
       case (buffer, reporter) =>
@@ -120,7 +121,7 @@ class DatadogMetricSenderSpec extends WordSpec with Matchers with Reconfigure {
         )
 
         buffer.lst should have size 1
-        buffer.lst should contain("test.counter" -> "0|c|#service:kamon-application,env:staging,tag1:value1,tag2:value2,otherTag:otherValue")
+        buffer.lst should contain("test.counter" -> "0|c|#service:kamon-application,env:staging,otherTag:otherValue")
     }
 
     "append no tags" in AgentReporter(new TestBuffer(), ConfigFactory.parseString(
