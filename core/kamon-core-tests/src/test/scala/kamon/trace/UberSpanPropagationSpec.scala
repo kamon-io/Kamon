@@ -32,14 +32,14 @@ class UberSpanPropagationSpec extends WordSpecLike with Matchers with OptionValu
       val headersMap = mutable.Map.empty[String, String]
       uberPropagation.write(testContext(), headerWriterFromMap(headersMap))
 
-      headersMap.get("uber-trace-id").value shouldBe "1234%3A4321%3A2222%3A1"
+      headersMap.get("uber-trace-id").value shouldBe "1234:4321:2222:1"
     }
 
     "do not include the ParentSpanId if there is no parent" in {
       val headersMap = mutable.Map.empty[String, String]
       uberPropagation.write(testContextWithoutParent(), headerWriterFromMap(headersMap))
 
-      headersMap.get(Uber.HeaderName).value shouldBe "1234%3A4321%3A0%3A1"
+      headersMap.get(Uber.HeaderName).value shouldBe "1234:4321:0:1"
     }
 
 
@@ -89,15 +89,15 @@ class UberSpanPropagationSpec extends WordSpecLike with Matchers with OptionValu
       val headersMap = mutable.Map.empty[String, String]
 
       uberPropagation.write(context, headerWriterFromMap(headersMap))
-      headersMap.get(Uber.HeaderName).value shouldBe "1234%3A4321%3A2222%3A1"
+      headersMap.get(Uber.HeaderName).value shouldBe "1234:4321:2222:1"
       headersMap.clear()
 
       uberPropagation.write(notSampledSpanContext, headerWriterFromMap(headersMap))
-      headersMap.get(Uber.HeaderName).value shouldBe "1234%3A4321%3A2222%3A0"
+      headersMap.get(Uber.HeaderName).value shouldBe "1234:4321:2222:0"
       headersMap.clear()
 
       uberPropagation.write(unknownSamplingSpanContext,headerWriterFromMap(headersMap))
-      headersMap.get(Uber.HeaderName).value shouldBe "1234%3A4321%3A2222%3A0"
+      headersMap.get(Uber.HeaderName).value shouldBe "1234:4321:2222:0"
       headersMap.clear()
     }
 
@@ -142,6 +142,16 @@ class UberSpanPropagationSpec extends WordSpecLike with Matchers with OptionValu
       val context = uberPropagation.read(headerReaderFromMap(headers), Context.Empty)
       uberPropagation.write(context, headerWriterFromMap(writenHeaders))
       writenHeaders.map { case (k, v) => k -> SpanPropagation.Util.urlDecode(v) } should contain theSameElementsAs headers
+    }
+
+    "extract a SpanContext from a URL-encoded header" in {
+      val headers = Map(Uber.HeaderName -> "1234:5678:4321:1")
+
+      val span = uberPropagation.read(headerReaderFromMap(headers), Context.Empty).get(Span.Key)
+      span.id.string shouldBe "5678"
+      span.parentId.string shouldBe "4321"
+      span.trace.id.string shouldBe "1234"
+      span.trace.samplingDecision shouldBe SamplingDecision.Sample
     }
   }
 
