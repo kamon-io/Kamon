@@ -1,7 +1,7 @@
 name: Test all the things
 
-on:
-  push:
+on: [push, pull-request]
+
 
 jobs:
   ci:
