@@ -14,10 +14,12 @@ class SunEmbeddedHttpServer(hostname: String, port: Int, scrapeSource: ScrapeSou
     val handler = new HttpHandler {
       override def handle(httpExchange: HttpExchange): Unit = {
         val data = scrapeSource.scrapeData()
-        httpExchange.sendResponseHeaders(200, data.length)
+        val bytes = data.getBytes(StandardCharsets.UTF_8)
+        httpExchange.sendResponseHeaders(200, bytes.length)
         val os = httpExchange.getResponseBody
-        try
-          os.write(data.getBytes(StandardCharsets.UTF_8))
+        try {
+          os.write(bytes)
+        }
         finally
           os.close()
       }
