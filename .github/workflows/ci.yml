@@ -1,6 +1,6 @@
 name: Test all the things
 
-on: [push, pull-request]
+on: [push, pull_request]
 
 
 jobs:
