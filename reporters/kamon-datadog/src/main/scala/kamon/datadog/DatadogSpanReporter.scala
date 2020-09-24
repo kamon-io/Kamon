@@ -12,6 +12,8 @@ import kamon.util.{ EnvironmentTags, Filter }
 import org.slf4j.LoggerFactory
 import play.api.libs.json.{ JsObject, Json }
 
+import scala.util.{ Failure, Success }
+
 trait KamonDataDogTranslator {
   def translate(span: Span.Finished, additionalTags: TagSet, tagFilter: Filter): DdSpan
 }
@@ -88,7 +90,11 @@ class DatadogSpanReporter(@volatile private var configuration: Configuration) ex
       .groupBy { _.\("trace_id").get.toString() }
       .values
       .toList
-    configuration.httpClient.doJsonPut(Json.toJson(spanList))
+    configuration.httpClient.doJsonPut(Json.toJson(spanList)) match {
+      case Failure(exception) =>
+        throw exception
+      case _ => ()
+    }
   }
 
   logger.info("Started the Kamon DataDog span reporter")
