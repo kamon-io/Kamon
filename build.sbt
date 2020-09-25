@@ -122,6 +122,7 @@ lazy val instrumentation = (project in file("instrumentation"))
     `kamon-kafka`,
     `kamon-mongo`,
     `kamon-cassandra`,
+    `kamon-elasticsearch`,
     `kamon-annotation`,
     `kamon-annotation-api`,
     `kamon-system-metrics`,
@@ -319,6 +320,22 @@ lazy val `kamon-cassandra` = (project in file("instrumentation/kamon-cassandra")
     )
   ).dependsOn(`kamon-core`, `kamon-instrumentation-common`, `kamon-testkit` % "test", `kamon-executors`)
 
+lazy val `kamon-elasticsearch` = (project in file("instrumentation/kamon-elasticsearch"))
+  .disablePlugins(AssemblyPlugin)
+  .enablePlugins(JavaAgent)
+  .settings(instrumentationSettings)
+  .settings(
+    fork in (Test,run) := true,
+    libraryDependencies ++= Seq(
+      kanelaAgent % "provided",
+      "org.elasticsearch.client" % "elasticsearch-rest-client" % "7.9.1" % "provided",
+      "org.elasticsearch.client" % "elasticsearch-rest-high-level-client" % "7.9.1" % "provided",
+      scalatest % "test",
+      logbackClassic % "test",
+      "com.dimafeng" %% "testcontainers-scala" % "0.38.3" % "test",
+      "com.dimafeng" %% "testcontainers-scala-elasticsearch" % "0.38.3" % "test"
+    )
+  ).dependsOn(`kamon-core`, `kamon-instrumentation-common`, `kamon-testkit` % "test")
 
 
 lazy val `kamon-annotation-api` = (project in file("instrumentation/kamon-annotation-api"))
@@ -630,6 +647,7 @@ val `kamon-bundle` = (project in file("bundle/kamon-bundle"))
     `kamon-kafka` % "shaded",
     `kamon-mongo` % "shaded",
     `kamon-cassandra` % "shaded",
+    `kamon-elasticsearch` % "shaded",
     `kamon-annotation` % "shaded",
     `kamon-annotation-api` % "shaded",
     `kamon-system-metrics` % "shaded",
