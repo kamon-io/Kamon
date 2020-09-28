@@ -47,7 +47,7 @@ object ConfigureMethodAdvisor {
 
   @Advice.OnMethodExit
   def around(@Advice.This configurer: Object,
-             @Advice.Argument(0) p: ChannelPipeline): Unit = {
+             @Advice.Argument(0) channelPipeline: ChannelPipeline): Unit = {
     val serverPort = configurer.asInstanceOf[HttpPipelineConfiguratorInternalState].getServerPort
     val hostName = serverPort.localAddress().getHostName
     val port = serverPort.localAddress().getPort
@@ -55,8 +55,8 @@ object ConfigureMethodAdvisor {
     lazy val httpServerConfig = Kamon.config().getConfig("kamon.instrumentation.armeria.http-server")
     lazy val serverInstrumentation = HttpServerInstrumentation.from(httpServerConfig, "armeria-http-server", hostName, port)
 
-    p.addBefore("HttpServerHandler#0", "armeria-http-server-request-handler", ArmeriaHttpServerRequestHandler(serverInstrumentation))
-    p.addLast("armeria-http-server-response-handler", ArmeriaHttpServerResponseHandler(serverInstrumentation))
+    channelPipeline.addBefore("HttpServerHandler#0", "armeria-http-server-request-handler", ArmeriaHttpServerRequestHandler(serverInstrumentation))
+    channelPipeline.addLast("armeria-http-server-response-handler", ArmeriaHttpServerResponseHandler(serverInstrumentation))
   }
 }
 
