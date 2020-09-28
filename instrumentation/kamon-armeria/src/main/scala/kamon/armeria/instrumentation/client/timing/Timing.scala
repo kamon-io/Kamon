@@ -32,24 +32,24 @@ object Timing {
 
       logTiming(span, "connection-acquire.start", "connection-acquire.end",
         timings.connectionAcquisitionStartTimeMicros(),
-        timings.connectionAcquisitionDurationNanos());
+        timings.connectionAcquisitionDurationNanos())
 
       if (timings.dnsResolutionDurationNanos() != -1) {
         logTiming(span, "dns-resolve.start", "dns-resolve.end",
           timings.dnsResolutionStartTimeMicros(),
-          timings.dnsResolutionDurationNanos());
+          timings.dnsResolutionDurationNanos())
       }
 
       if (timings.socketConnectDurationNanos() != -1) {
         logTiming(span, "socket-connect.start", "socket-connect.end",
           timings.socketConnectStartTimeMicros(),
-          timings.socketConnectDurationNanos());
+          timings.socketConnectDurationNanos())
       }
 
       if (timings.pendingAcquisitionDurationNanos() != -1) {
         logTiming(span, "connection-reuse.start", "connection-reuse.end",
           timings.pendingAcquisitionStartTimeMicros(),
-          timings.pendingAcquisitionDurationNanos());
+          timings.pendingAcquisitionDurationNanos())
       }
     })
   }
