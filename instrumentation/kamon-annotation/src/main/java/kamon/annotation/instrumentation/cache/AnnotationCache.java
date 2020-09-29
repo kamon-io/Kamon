@@ -16,6 +16,8 @@
 
 package kamon.annotation.instrumentation.cache;
 
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.RemovalListener;
 import kamon.Kamon;
 import kamon.annotation.api.Time;
 import kamon.annotation.api.TrackConcurrency;
@@ -24,9 +26,6 @@ import kamon.annotation.el.TagsEvaluator;
 import kamon.metric.*;
 import kamon.tag.TagSet;
 import kamon.trace.SpanBuilder;
-import kanela.agent.libs.net.jodah.expiringmap.ExpirationListener;
-import kanela.agent.libs.net.jodah.expiringmap.ExpirationPolicy;
-import kanela.agent.libs.net.jodah.expiringmap.ExpiringMap;
 import kanela.agent.util.log.Logger;
 
 import java.lang.reflect.Method;
@@ -34,6 +33,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 
 public final class AnnotationCache {
@@ -41,12 +41,11 @@ public final class AnnotationCache {
   private static Map<MetricKey, Object> metrics = buildCache();
 
   private static Map<MetricKey, Object> buildCache() {
-    return ExpiringMap
-        .builder()
-        .expiration(1, TimeUnit.MINUTES)
-        .expirationPolicy(ExpirationPolicy.ACCESSED)
-        .asyncExpirationListener(ExpirationListener())
-        .build();
+    return Caffeine.newBuilder()
+            .expireAfterAccess(1, TimeUnit.MINUTES)
+            .removalListener(LogExpirationListener())
+            .build()
+            .asMap();
   }
 
   public static Gauge getGauge(Method method, Object obj, Class<?> clazz, String className, String methodName) {
@@ -193,8 +192,8 @@ public final class AnnotationCache {
     return (evaluatedString.isEmpty() || evaluatedString.equals("unknown")) ? className + "." + methodName: evaluatedString;
   }
 
-  private static ExpirationListener<MetricKey, Object> ExpirationListener() {
-    return (key, value) ->   {
+  private static RemovalListener<MetricKey, Object> LogExpirationListener() {
+    return (key, value, cause) ->   {
       if(value instanceof Instrument) ((Instrument) value).remove();
       Logger.debug(() -> "Expiring key: " + key + "with value" + value);
     };
