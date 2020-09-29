@@ -12,7 +12,7 @@ import kamon.util.{ EnvironmentTags, Filter }
 import org.slf4j.LoggerFactory
 import play.api.libs.json.{ JsObject, Json }
 
-import scala.util.{ Failure, Success }
+import scala.util.{ Failure }
 
 trait KamonDataDogTranslator {
   def translate(span: Span.Finished, additionalTags: TagSet, tagFilter: Filter): DdSpan
