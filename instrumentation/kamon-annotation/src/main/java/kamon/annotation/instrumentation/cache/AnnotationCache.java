@@ -38,9 +38,9 @@ import java.util.concurrent.TimeUnit;
 
 public final class AnnotationCache {
 
-  private static ConcurrentMap<MetricKey, Object> metrics = buildCache();
+  private static Map<MetricKey, Object> metrics = buildCache();
 
-  private static ConcurrentMap<MetricKey, Object> buildCache() {
+  private static Map<MetricKey, Object> buildCache() {
     return Caffeine.newBuilder()
             .expireAfterAccess(1, TimeUnit.MINUTES)
             .removalListener(LogExpirationListener())
