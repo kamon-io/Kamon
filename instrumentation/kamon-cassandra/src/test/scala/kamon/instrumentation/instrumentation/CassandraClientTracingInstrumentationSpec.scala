@@ -16,17 +16,17 @@
 package kamon.instrumentation.instrumentation
 
 import com.datastax.driver.core.exceptions.DriverException
-import com.datastax.driver.core.{QueryOperations, Session}
 import com.datastax.driver.core.querybuilder.QueryBuilder
+import com.datastax.driver.core.{QueryOperations, Session}
 import kamon.module.Module.Registration
+import kamon.tag.Lookups._
 import kamon.testkit.{InstrumentInspection, MetricInspection, Reconfigure, TestSpanReporter}
 import org.cassandraunit.utils.EmbeddedCassandraServerHelper
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.SpanSugar
-import org.scalatest.{BeforeAndAfterAll, Matchers, OptionValues, WordSpec}
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, Matchers, OptionValues, WordSpec}
 
 import scala.collection.JavaConverters._
-import kamon.tag.Lookups._
 
 class CassandraClientTracingInstrumentationSpec
     extends WordSpec
@@ -34,11 +34,15 @@ class CassandraClientTracingInstrumentationSpec
     with Eventually
     with SpanSugar
     with BeforeAndAfterAll
+    with BeforeAndAfterEach
     with MetricInspection.Syntax
     with InstrumentInspection.Syntax
     with Reconfigure
     with OptionValues
     with TestSpanReporter {
+
+  override protected def beforeEach(): Unit = testSpanReporter().clear()
+  override protected def afterEach(): Unit = testSpanReporter().clear()
 
   "the CassandraClientTracingInstrumentation" should {
 
@@ -54,7 +58,6 @@ class CassandraClientTracingInstrumentationSpec
     }
 
     "trace execution" in {
-      testSpanReporter().clear()
       session.execute(
         "SELECT * FROM users where name = 'kamon' ALLOW FILTERING"
       )
@@ -73,8 +76,6 @@ class CassandraClientTracingInstrumentationSpec
     }
 
     "not swallow exceptions" in {
-      testSpanReporter().clear()
-
       val query = QueryBuilder
         .select("name")
         .from("illegaltablename")
@@ -85,11 +86,14 @@ class CassandraClientTracingInstrumentationSpec
       assertThrows[DriverException] {
         session.execute(query)
       }
+
+      eventually(timeout(10 seconds)) {
+        val span = testSpanReporter().nextSpan()
+        span should not be empty
+      }
     }
 
     "trace individual page executions" in {
-      testSpanReporter().clear()
-
       val query = QueryBuilder
         .select("name")
         .from("users")
@@ -101,8 +105,8 @@ class CassandraClientTracingInstrumentationSpec
 
       eventually(timeout(10 seconds)) {
         val spans          = testSpanReporter().spans()
-        val clientSpan     = spans.find(_.operationName == QueryOperations.QueryOperationName)
-        val executionSpans = spans.filter(_.operationName == QueryOperations.ExecutionOperationName)
+        val clientSpan     = spans.find(span => span.operationName == QueryOperations.QueryOperationName)
+        val executionSpans = spans.filter(span => span.operationName == QueryOperations.ExecutionOperationName)
 
         clientSpan should not be empty
         executionSpans.size should equal(3)
@@ -138,4 +142,7 @@ class CassandraClientTracingInstrumentationSpec
     }
   }
 
+  override protected def afterAll(): Unit = {
+    session.close()
+  }
 }
