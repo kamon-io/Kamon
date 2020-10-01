@@ -26,15 +26,25 @@ import kamon.instrumentation.jdbc.StatementMonitor.StatementTypes
 import kamon.testkit.{InstrumentInspection, MetricInspection, Reconfigure, TestSpanReporter}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.SpanSugar
-import org.scalatest.{BeforeAndAfterAll, Matchers, OptionValues, WordSpec}
+import org.scalatest.{BeforeAndAfterEach, Matchers, OptionValues, ParallelTestExecution, WordSpec}
 import kamon.tag.Lookups._
 import kamon.tag.TagSet
+import kamon.testkit.TestSpanReporter.BufferingSpanReporter
+import kamon.trace.Span
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
-class StatementInstrumentationSpec extends WordSpec with Matchers with Eventually with SpanSugar with BeforeAndAfterAll
-    with MetricInspection.Syntax with InstrumentInspection.Syntax with Reconfigure with OptionValues with TestSpanReporter {
+class StatementInstrumentationSpec extends WordSpec
+  with Matchers
+  with Eventually
+  with SpanSugar
+  with BeforeAndAfterEach
+  with MetricInspection.Syntax
+  with InstrumentInspection.Syntax
+  with Reconfigure
+  with OptionValues
+  with TestSpanReporter {
 
   implicit val parallelQueriesExecutor = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(10))
 
@@ -43,6 +53,8 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
       .parseString("""kamon.trace.hooks.pre-start = [ "kamon.trace.Hooks$PreStart$FromContext" ]""")
       .withFallback(Kamon.config())
   )
+
+  override def beforeEach() = testSpanReporter().clear()
 
   override implicit def patienceConfig: PatienceConfig = PatienceConfig(timeout = scaled(2 seconds))
 
@@ -53,35 +65,13 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
     DriverSuite.HikariH2
   ).filter(canRunInCurrentEnvironment)
 
+
   "the StatementInstrumentation" when {
     drivers.foreach { driver =>
       driver.init()
       val connection = driver.connect()
 
       s"instrumenting the ${driver.name} driver" should {
-        "track in-flight operations" in {
-          if(driver.supportSleeping) {
-           val vendorTags = TagSet.of("db.vendor", driver.vendor)
-
-            for (_ ← 1 to 10) yield {
-              Future {
-                val connection = driver.connect()
-                driver.sleep(connection, Duration.ofMillis(500))
-              }
-            }
-
-            eventually(timeout(2 seconds)) {
-              JdbcMetrics.InFlightStatements.withTags(vendorTags).distribution().max shouldBe 10
-            }
-
-            eventually(timeout(2 seconds)) {
-              JdbcMetrics.InFlightStatements.withTags(vendorTags).distribution().max shouldBe 0
-            }
-
-            testSpanReporter().clear()
-          }
-        }
-
         "generate Spans on calls to .execute() in prepared statements" in {
           val select = s"SELECT * FROM Address where Nr = ?"
           val statement = connection.prepareStatement(select)
@@ -89,14 +79,10 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
           statement.execute()
           validateNextRow(statement.getResultSet, valueNr = 1, valueName = "foo")
 
-          eventually(timeout(scaled(5 seconds)), interval(200 millis)) {
-            val span = testSpanReporter().nextSpan().value
-            span.operationName shouldBe StatementTypes.GenericExecute
-            span.metricTags.get(plain("component")) shouldBe "jdbc"
-            span.metricTags.get(plain("db.vendor")) shouldBe driver.vendor
-            span.tags.get(plain("db.url")) shouldBe driver.url
-            span.tags.get(plain("db.statement")) should include("SELECT * FROM Address where Nr = ?")
-            testSpanReporter().nextSpan() shouldBe None
+          eventually(timeout(20 seconds), interval(100 millis)) {
+            val span = commonSpanValidations(testSpanReporter(), driver)
+            validateQuery(span, StatementTypes.GenericExecute, select)
+            validateNextSpanIsEmpty(testSpanReporter())
           }
         }
 
@@ -107,14 +93,10 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
           validateNextRow(statement.getResultSet, valueNr = 2, valueName = "foo")
 
 
-          eventually {
-            val span = testSpanReporter().nextSpan().value
-            span.operationName shouldBe StatementTypes.GenericExecute
-            span.metricTags.get(plain("component")) shouldBe "jdbc"
-            span.metricTags.get(plain("db.vendor")) shouldBe driver.vendor
-            span.tags.get(plain("db.url")) shouldBe driver.url
-            span.tags.get(plain("db.statement")) should include("SELECT * FROM Address where Nr = 2")
-            testSpanReporter().nextSpan() shouldBe None
+          eventually(timeout(scaled(5 seconds)), interval(200 millis)) {
+            val span = commonSpanValidations(testSpanReporter(), driver)
+            validateQuery(span, StatementTypes.GenericExecute, select)
+            validateNextSpanIsEmpty(testSpanReporter())
           }
         }
 
@@ -124,14 +106,10 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
           val rs = statement.executeQuery()
           validateNextRow(rs, valueNr = 3, valueName = "foo")
 
-          eventually {
-            val span = testSpanReporter().nextSpan().value
-            span.operationName shouldBe StatementTypes.Query
-            span.metricTags.get(plain("component")) shouldBe "jdbc"
-            span.metricTags.get(plain("db.vendor")) shouldBe driver.vendor
-            span.tags.get(plain("db.url")) shouldBe driver.url
-            span.tags.get(plain("db.statement")) should include("SELECT * FROM Address where Nr = 3")
-            testSpanReporter().nextSpan() shouldBe None
+          eventually(timeout(5 seconds), interval(200 millis)) {
+            val span = commonSpanValidations(testSpanReporter(), driver)
+            validateQuery(span, StatementTypes.Query, select)
+            validateNextSpanIsEmpty(testSpanReporter())
           }
         }
 
@@ -141,14 +119,10 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
           val rs = statement.executeQuery(select)
           validateNextRow(rs, valueNr = 4, valueName = "foo")
 
-          eventually {
-            val span = testSpanReporter().nextSpan().value
-            span.operationName shouldBe StatementTypes.Query
-            span.metricTags.get(plain("component")) shouldBe "jdbc"
-            span.metricTags.get(plain("db.vendor")) shouldBe driver.vendor
-            span.tags.get(plain("db.url")) shouldBe driver.url
-            span.tags.get(plain("db.statement")) should include("SELECT * FROM Address where Nr = 4")
-            testSpanReporter().nextSpan() shouldBe None
+          eventually(timeout(5 seconds), interval(100 millis)) {
+            val span = commonSpanValidations(testSpanReporter(), driver)
+            validateQuery(span, StatementTypes.Query, select)
+            validateNextSpanIsEmpty(testSpanReporter())
           }
         }
 
@@ -157,14 +131,10 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
           val affectedRows = connection.prepareStatement(insert).executeUpdate()
           affectedRows shouldBe 1
 
-          eventually {
-            val span = testSpanReporter().nextSpan().value
-            span.operationName shouldBe StatementTypes.Update
-            span.metricTags.get(plain("component")) shouldBe "jdbc"
-            span.metricTags.get(plain("db.vendor")) shouldBe driver.vendor
-            span.tags.get(plain("db.url")) shouldBe driver.url
-            span.tags.get(plain("db.statement")) should include("INSERT INTO Address (Nr, Name) VALUES(5, 'foo')")
-            testSpanReporter().nextSpan() shouldBe None
+          eventually(timeout(5 seconds), interval(200 millis)) {
+            val span = commonSpanValidations(testSpanReporter(), driver)
+            validateQuery(span, StatementTypes.Update, insert)
+            validateNextSpanIsEmpty(testSpanReporter())
           }
         }
 
@@ -173,34 +143,27 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
           val affectedRows = connection.createStatement().executeUpdate(insert)
           affectedRows shouldBe 1
 
-          eventually {
-            val span = testSpanReporter().nextSpan().value
-            span.operationName shouldBe StatementTypes.Update
-            span.metricTags.get(plain("component")) shouldBe "jdbc"
-            span.metricTags.get(plain("db.vendor")) shouldBe driver.vendor
-            span.tags.get(plain("db.url")) shouldBe driver.url
-            span.tags.get(plain("db.statement")) should include("INSERT INTO Address (Nr, Name) VALUES(6, 'foo')")
-            testSpanReporter().nextSpan() shouldBe None
+          eventually(timeout(5 seconds), interval(100 millis)) {
+            val span = commonSpanValidations(testSpanReporter(), driver)
+            validateQuery(span, StatementTypes.Update, insert)
+            validateNextSpanIsEmpty(testSpanReporter())
           }
         }
 
         "generate Spans on calls to .executeBatch() in prepared statements" in {
-          val statement = connection.prepareStatement("INSERT INTO Address (Nr, Name) VALUES(?, 'foo')")
-          statement.setInt(1, 1)
-          statement.addBatch()
+          val statement = "INSERT INTO Address (Nr, Name) VALUES(?, 'foo')"
+          val preparedStatement = connection.prepareStatement(statement)
+          preparedStatement.setInt(1, 1)
+          preparedStatement.addBatch()
 
-          statement.setInt(1, 2)
-          statement.addBatch()
-          statement.executeBatch()
+          preparedStatement.setInt(1, 2)
+          preparedStatement.addBatch()
+          preparedStatement.executeBatch()
 
-          eventually {
-            val span = testSpanReporter().nextSpan().value
-            span.operationName shouldBe StatementTypes.Batch
-            span.metricTags.get(plain("component")) shouldBe "jdbc"
-            span.metricTags.get(plain("db.vendor")) shouldBe driver.vendor
-            span.tags.get(plain("db.url")) shouldBe driver.url
-            span.tags.get(plain("db.statement")).toString should include("INSERT INTO Address (Nr, Name) VALUES(?, 'foo')")
-            testSpanReporter().nextSpan() shouldBe None
+          eventually(timeout(5 seconds), interval(200 millis)) {
+            val span = commonSpanValidations(testSpanReporter(), driver)
+            validateQuery(span, StatementTypes.Batch, statement)
+            validateNextSpanIsEmpty(testSpanReporter())
           }
         }
 
@@ -210,39 +173,29 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
 
           Try(connection.createStatement().execute(select))
 
-          eventually {
-            val span = testSpanReporter().nextSpan().value
+          eventually(timeout(5 seconds), interval(100 millis)) {
+            val span = commonSpanValidations(testSpanReporter(), driver)
             span.operationName shouldBe StatementTypes.GenericExecute
-            span.metricTags.get(plain("component")) shouldBe "jdbc"
-            span.metricTags.get(plain("db.vendor")) shouldBe driver.vendor
-            span.tags.get(plain("db.url")) shouldBe driver.url
-            span.metricTags.get(plainBoolean("error")) shouldBe (true)
+            span.metricTags.get(plainBoolean("error")) shouldBe true
             span.tags.get(option("error.stacktrace")) should be('defined)
-            testSpanReporter().nextSpan() shouldBe None
+            validateNextSpanIsEmpty(testSpanReporter())
           }
 
           Try(connection.createStatement().executeQuery(select))
 
-          eventually {
-            val span = testSpanReporter().nextSpan().value
-            span.operationName shouldBe StatementTypes.Query
-            span.metricTags.get(plain("component")) shouldBe "jdbc"
-            span.metricTags.get(plain("db.vendor")) shouldBe driver.vendor
-            span.tags.get(plain("db.url")) shouldBe driver.url
-            span.metricTags.get(plainBoolean("error")) shouldBe (true)
+          eventually(timeout(5 seconds), interval(200 millis)) {
+            val span = commonSpanValidations(testSpanReporter(), driver)
+            span.metricTags.get(plainBoolean("error")) shouldBe true
             span.tags.get(option("error.stacktrace")) should be('defined)
-            testSpanReporter().nextSpan() shouldBe None
+            validateNextSpanIsEmpty(testSpanReporter())
           }
 
           Try(connection.createStatement().executeUpdate(insert))
 
-          eventually {
-            val span = testSpanReporter().nextSpan().value
+          eventually(timeout(5 seconds), interval(200 millis)) {
+            val span = commonSpanValidations(testSpanReporter(), driver)
             span.operationName shouldBe StatementTypes.Update
-            span.metricTags.get(plain("component")) shouldBe "jdbc"
-            span.metricTags.get(plainBoolean("error")) shouldBe (true)
-            span.metricTags.get(plain("db.vendor")) shouldBe driver.vendor
-            span.tags.get(plain("db.url")) shouldBe driver.url
+            span.metricTags.get(plainBoolean("error")) shouldBe true
           }
         }
 
@@ -255,8 +208,58 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
             .getMessage
             .toLowerCase() should include("notatable")
         }
+
+        "track in-flight operations" in {
+          if (driver.supportSleeping) {
+            val vendorTags = TagSet.of("db.vendor", driver.vendor)
+
+            for (id ← 1 to 10) yield {
+              Future {
+                val connection = driver.connect()
+                driver.sleep(connection, Duration.ofMillis(1500))
+                connection
+              }.onComplete {
+                case Success(conn) => conn.close()
+                case Failure(error) => println(s"An error has occured ${error.getMessage}")
+              }
+            }
+
+            eventually(timeout(4 seconds)) {
+              val max = JdbcMetrics.InFlightStatements.withTags(vendorTags).distribution().max
+              max shouldBe 10
+            }
+
+            eventually(timeout(10 seconds)) {
+              val max = JdbcMetrics.InFlightStatements.withTags(vendorTags).distribution().max
+              max shouldBe 0
+            }
+
+          }
+          connection.close()
+          driver.cleanup()
+        }
       }
     }
+  }
+
+  private def commonSpanValidations(testSpanReporter: BufferingSpanReporter, driver: DriverSuite with DriverSuite.AddressTableSetup) = {
+    val span = testSpanReporter.nextSpan().value
+    span.metricTags.get(plain("db.vendor")) shouldBe driver.vendor
+    span.metricTags.get(plain("component")) shouldBe "jdbc"
+    span.tags.get(plain("db.url")) shouldBe driver.url
+    span
+  }
+
+  private def validateNextSpanIsEmpty(testSpanReporter: BufferingSpanReporter) = {
+    val span = testSpanReporter.nextSpan()
+    span shouldBe None
+    span
+  }
+
+  private def validateQuery(span: Span.Finished, operationName: String, dbStatement: String) = {
+    span.operationName shouldBe operationName
+    span.tags.get(plain("db.statement")).toString should include(dbStatement)
+    span
   }
 
   private def validateNextRow(resultSet: ResultSet, valueNr: Int, valueName: String, shouldBeMore: Boolean = false): Unit = {
@@ -302,6 +305,11 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
       */
     def sleep(connection: Connection, duration: Duration): Unit
 
+
+    /**
+      * Closes created connections and pools
+      */
+    def cleanup(): Unit
   }
 
   object DriverSuite {
@@ -312,17 +320,19 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
       val url = "jdbc:h2:mem:jdbc-spec;MULTI_THREADED=1"
       val supportSleeping = true
 
+
       override def init(): Unit = {
         val connection = connect()
         initializeAddressTable(connection)
         connection.prepareStatement("CREATE ALIAS SLEEP FOR \"java.lang.Thread.sleep(long)\"").executeUpdate()
       }
 
-      override def connect(): Connection =
-        DriverManager.getConnection(url, "SA", "")
+      override def connect(): Connection = DriverManager.getConnection(url, "SA", "")
 
       override def sleep(connection: Connection, duration: Duration): Unit =
         connection.prepareStatement(s"SELECT 1; CALL SLEEP(${duration.toMillis})").execute()
+
+      override def cleanup(): Unit = ()
     }
 
     object HikariH2 extends DriverSuite with AddressTableSetup {
@@ -342,6 +352,8 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
 
       override def sleep(connection: Connection, duration: Duration): Unit =
         connection.prepareStatement(s"SELECT 1; CALL SLEEP(${duration.toMillis})").execute()
+
+      override def cleanup(): Unit = pool.close()
     }
 
     object SQLite extends DriverSuite with AddressTableSetup {
@@ -359,6 +371,7 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
 
       override def sleep(connection: Connection, duration: Duration): Unit = {}
 
+      override def cleanup() = connection.close()
     }
 
     object MySQL extends DriverSuite with AddressTableSetup {
@@ -366,17 +379,18 @@ class StatementInstrumentationSpec extends WordSpec with Matchers with Eventuall
       val vendor = "mysql"
       val url = "jdbc:mysql://localhost/test"
       val supportSleeping = false
+      lazy val connection = DriverManager.getConnection(url)
 
       override def init(): Unit = {
         DB.newEmbeddedDB(3306).start()
         initializeAddressTable(connect())
       }
 
-      override def connect(): Connection =
-        DriverManager.getConnection(url)
+      override def connect(): Connection = connection
 
       override def sleep(connection: Connection, duration: Duration): Unit = {}
 
+      override def cleanup() = connection.close()
     }
 
     trait AddressTableSetup {
