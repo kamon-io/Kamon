@@ -1,6 +1,7 @@
 package kamon.datadog
 
-import java.time.{ Duration, Instant }
+import java.net.SocketException
+import java.time.{Duration, Instant}
 import java.util.concurrent.TimeUnit
 
 import kamon.Kamon
@@ -188,7 +189,9 @@ class DatadogSpanReporterSpec extends AbstractHttpReporter with Matchers with Re
       val baseUrl = mockResponse("/test", new MockResponse().setStatus("HTTP/1.1 500 Internal Server Error"))
       applyConfig("kamon.datadog.trace.api-url = \"" + baseUrl + "\"")
       reporter.reconfigure(Kamon.config())
-      reporter.reportSpans(firstSpan)
+      assertThrows[Exception] {
+        reporter.reportSpans(firstSpan)
+      }
       server.takeRequest()
     }
 
@@ -197,7 +200,9 @@ class DatadogSpanReporterSpec extends AbstractHttpReporter with Matchers with Re
       val baseUrl = mockResponse("/test", new MockResponse().setStatus("HTTP/1.1 200 OK").setBody("OK").throttleBody(1, 6, TimeUnit.SECONDS))
       applyConfig("kamon.datadog.trace.http.api-url = \"" + baseUrl + "\"")
       reporter.reconfigure(Kamon.config())
-      reporter.reportSpans(firstSpan)
+      assertThrows[SocketException] {
+        reporter.reportSpans(firstSpan)
+      }
 
     }
 
