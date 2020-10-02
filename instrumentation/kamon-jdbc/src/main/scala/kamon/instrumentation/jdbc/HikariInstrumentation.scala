@@ -113,7 +113,7 @@ object HikariPoolCreatePoolEntryMethodAdvice {
 
   @Advice.OnMethodExit
   def exit(@This hikariPool: HasConnectionPoolTelemetry, @Advice.Return poolEntry: Any): Unit = {
-    if(hikariPool != null) {
+    if(hikariPool != null && poolEntry != null) {
       poolEntry.asInstanceOf[HasConnectionPoolTelemetry].setConnectionPoolTelemetry(hikariPool.connectionPoolTelemetry)
 
       val poolTelemetry = hikariPool.connectionPoolTelemetry.get
