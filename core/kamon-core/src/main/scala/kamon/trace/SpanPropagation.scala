@@ -231,7 +231,7 @@ object SpanPropagation {
         val flags = (sampling + (debug << 1)).toHexString
         val headerValue = Seq(span.trace.id.string, span.id.string, parentContext, flags).mkString(Separator)
 
-        writer.write(HeaderName, urlEncode(headerValue))
+        writer.write(HeaderName, headerValue)
       }
 
     }
@@ -239,7 +239,7 @@ object SpanPropagation {
     override def read(reader: HttpPropagation.HeaderReader, context: Context): Context = {
       val identifierScheme = Kamon.identifierScheme
       val header = reader.read(HeaderName)
-      val headerParts = header.toList.flatMap(_.split(':'))
+      val headerParts = header.map(urlDecode).toList.flatMap(_.split(':'))
       val parts = headerParts ++ List.fill(4)("") // all parts are mandatory, but we want to be resilient
 
       val List(traceID, spanID, parentContext, flags) = parts.take(4)
@@ -257,7 +257,7 @@ object SpanPropagation {
 
     private def stringToId(identifierScheme: Identifier.Scheme, s: String) = {
       val str = if (s == null || s.isEmpty) None else Option(s)
-      val id = str.map(urlDecode).map(identifierScheme.traceIdFactory.from)
+      val id = str.map(identifierScheme.traceIdFactory.from)
       id.getOrElse(Identifier.Empty)
     }
 
