@@ -38,7 +38,7 @@ object JaegerClient {
     val protocol = jaegerConfig.getString("protocol")
     val host = jaegerConfig.getString("host")
     val port = jaegerConfig.getInt("port")
-    val httpUrl = jaegerConfig.getInt("http-url")
+    val httpUrl = jaegerConfig.getString("http-url")
     val includeEnvTags = jaegerConfig.getBoolean("include-environment-tags")
 
     protocol match {
