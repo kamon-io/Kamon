@@ -304,6 +304,16 @@ class HttpServerInstrumentationSpec extends WordSpec with Matchers with Instrume
         completedRequests(8083, 500).value() shouldBe 0L
       }
     }
+    
+    "configured for custom response header generation" should {
+      "provide additional headers in response" in {
+        val handler = customHttpServerResponseHeaderGenerator().createHandler(fakeRequest("http://localhost:8080/", "/", "PUT", Map.empty))
+        val responseHeaders = mutable.Map.empty[String, String]
+        handler.buildResponse(fakeResponse(200, responseHeaders), handler.context)
+
+        responseHeaders.get("custom-header").value shouldBe "123-321"
+      }
+    }
   }
 
   val TestComponent = "http.server"
@@ -322,6 +332,9 @@ class HttpServerInstrumentationSpec extends WordSpec with Matchers with Instrume
 
   def customNamingHttpServer(): HttpServerInstrumentation = HttpServerInstrumentation.from(
     Kamon.config().getConfig("kamon.instrumentation.http-server.with-custom-operation-name-generator"), TestComponent, TestInterface, port = 8084)
+
+  def customHttpServerResponseHeaderGenerator(): HttpServerInstrumentation = HttpServerInstrumentation.from(
+    Kamon.config().getConfig("kamon.instrumentation.http-server.with-custom-server-response-header-generator"), TestComponent, TestInterface, port = 8084)
 
   def fakeRequest(requestUrl: String, requestPath: String, requestMethod: String, headers: Map[String, String]): HttpMessage.Request =
     new HttpMessage.Request {
@@ -377,4 +390,8 @@ class DedicatedNameGenerator extends HttpOperationNameGenerator {
   override def name(request: HttpMessage.Request): Option[String] = {
     Some(request.host + ":" + request.method)
   }
+}
+
+class DedicatedResponseHeaderGenerator extends HttpServerResponseHeaderGenerator {
+  override def headers(context: Context): Map[String, String] = Map("custom-header" -> "123-321")
 }
