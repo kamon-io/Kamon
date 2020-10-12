@@ -38,11 +38,12 @@ object JaegerClient {
     val protocol = jaegerConfig.getString("protocol")
     val host = jaegerConfig.getString("host")
     val port = jaegerConfig.getInt("port")
+    val httpUrl = jaegerConfig.getString("http-url")
     val includeEnvTags = jaegerConfig.getBoolean("include-environment-tags")
 
     protocol match {
       case "udp"            => buildAgentClient(host, port, includeEnvTags)
-      case "http" | "https" => buildCollectorClient(host, port, protocol, includeEnvTags)
+      case "http" | "https" => buildCollectorClient(httpUrl, includeEnvTags)
       case anyOther         =>
         log.warn("Unknown protocol [{}] found in the configuration, falling back to UDP", anyOther)
         buildAgentClient(host, port, includeEnvTags)
@@ -57,8 +58,7 @@ object JaegerClient {
     new JaegerClient(Some(agentMaxPacketSize - agentBatchOverhead), jaegerSender)
   }
 
-  private def buildCollectorClient(host: String, port: Int, scheme: String, includeEnvTags: Boolean): JaegerClient = {
-    val endpoint = s"$scheme://$host:$port/api/traces"
+  private def buildCollectorClient(endpoint: String, includeEnvTags: Boolean): JaegerClient = {
     val sender = new HttpSender.Builder(endpoint).build()
     val jaegerSender = new JaegerSender(sender, includeEnvTags)
     new JaegerClient(None, jaegerSender)
