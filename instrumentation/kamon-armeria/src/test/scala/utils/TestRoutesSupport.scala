@@ -55,4 +55,5 @@ object TestEndpoints {
   val dummyMultipleResourcesPath = "dummy-resources/a/other-resources/b"
   val dummyNotFoundPath = "dummy-not-found"
   val dummyResourceNotFoundPath = "dummy-resource-not-found"
+  val docs = "docs"
 }

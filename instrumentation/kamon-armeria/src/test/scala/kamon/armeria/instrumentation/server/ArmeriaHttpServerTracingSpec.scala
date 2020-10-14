@@ -128,11 +128,46 @@ class ArmeriaHttpServerTracingSpec extends WordSpec
 
         eventually(timeout(10 seconds)) {
           val span = testSpanReporter().nextSpan().value
+          span.operationName shouldBe expected
           span.tags.get(plain("http.url")) shouldBe target
           span.metricTags.get(plain("component")) shouldBe "armeria-http-server"
           span.metricTags.get(plain("http.method")) shouldBe "GET"
           span.metricTags.get(plainBoolean("error")) shouldBe true
           span.metricTags.get(plainLong("http.status_code")) shouldBe 500
+        }
+      }
+
+      "return a redirect status code" when {
+        "a request to /docs is redirected to /docs/" in {
+          val target = s"$protocol://$interface:$port/$docs"
+          val expected = s"$docs.get"
+          okHttp.newCall(new Request.Builder().url(target).get().build()).execute().close()
+
+          eventually(timeout(10 seconds)) {
+            val span = testSpanReporter().nextSpan().value
+            span.operationName shouldBe expected
+            span.tags.get(plain("http.url")) shouldBe target
+            span.metricTags.get(plain("component")) shouldBe "armeria-http-server"
+            span.metricTags.get(plain("http.method")) shouldBe "GET"
+            span.metricTags.get(plainLong("http.status_code")) shouldBe 307L
+          }
+        }
+      }
+
+      "return a ok status code " when {
+        "a request to /docs/ is done" in {
+          val target = s"$protocol://$interface:$port/$docs/"
+          val expected = s"$docs.get"
+          okHttp.newCall(new Request.Builder().url(target).get().build()).execute().close()
+
+          eventually(timeout(10 seconds)) {
+            val span = testSpanReporter().nextSpan().value
+            span.operationName shouldBe expected
+            span.tags.get(plain("http.url")) shouldBe target
+            span.metricTags.get(plain("component")) shouldBe "armeria-http-server"
+            span.metricTags.get(plain("http.method")) shouldBe "GET"
+            span.metricTags.get(plainLong("http.status_code")) shouldBe 200L
+          }
         }
       }
     }

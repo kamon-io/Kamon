@@ -34,7 +34,7 @@ class ArmeriaHttpServerInstrumentation extends InstrumentationBuilder {
     .advise(method("configureHttp"), classOf[ConfigureMethodAdvisor])
 
   onType("com.linecorp.armeria.server.FallbackService")
-    .advise(method("serve"), classOf[ServeMethodAdvisor])
+    .advise(method("handleNotFound"), classOf[ServeMethodAdvisor])
 
   onType("com.linecorp.armeria.server.DefaultServiceRequestContext")
     .bridge(classOf[ServiceRequestContextInternalState])
@@ -69,14 +69,15 @@ class ServeMethodAdvisor
 
 object ServeMethodAdvisor {
   /**
-    * When an HttpStatusException is thrown in {@link com.linecorp.armeria.server.FallbackService.handleNotFound()} is because the route doesn't  exist
-    * so we must set unhandled operation name and we'll do it in {@link server.ArmeriaHttpServerResponseHandler.write()}
+    * When an HttpStatusException is thrown in [[FallbackService#handleNotFound()]] method is because the route doesn't  exist
+    * so we must set unhandled operation name and we'll do it in [[ArmeriaHttpServerResponseHandler.write]]
     */
-  @Advice.OnMethodExit(onThrowable = classOf[HttpStatusException])
+  @Advice.OnMethodExit(onThrowable = classOf[Throwable])
   def around(@Advice.Argument(0) ctx: ServiceRequestContext with ServiceRequestContextInternalState,
-             @Advice.Thrown statusException: HttpStatusException): Unit = {
-    val processingContext = ctx.getChannel.asInstanceOf[HasRequestProcessingContext].getRequestProcessingContext
-    if (statusException.httpStatus.code() == NOT_FOUND.code()) {
+             @Advice.Argument(2) statusException: HttpStatusException,
+             @Advice.Thrown throwable: Throwable): Unit = {
+    if (throwable != null && statusException.httpStatus.code() == NOT_FOUND.code()) {
+      val processingContext = ctx.getChannel.asInstanceOf[HasRequestProcessingContext].getRequestProcessingContext
       processingContext.requestHandler.span.name("")
     }
   }

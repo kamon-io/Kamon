@@ -18,6 +18,7 @@ package utils
 import java.net.InetSocketAddress
 
 import com.linecorp.armeria.server.Server
+import com.linecorp.armeria.server.docs.DocService
 import com.linecorp.armeria.server.healthcheck.HealthCheckService
 
 object ArmeriaServerSupport {
@@ -26,6 +27,7 @@ object ArmeriaServerSupport {
     val server = Server
       .builder()
       .service("/health-check", HealthCheckService.of())
+      .serviceUnder("/docs", new DocService())
       .annotatedService().build(TestRoutesSupport())
       .http(InetSocketAddress.createUnresolved("localhost", port))
       .build()
