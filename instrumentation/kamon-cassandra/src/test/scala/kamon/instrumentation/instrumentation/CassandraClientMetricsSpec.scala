@@ -19,7 +19,6 @@ import com.datastax.driver.core.Session
 import kamon.Kamon
 import kamon.instrumentation.cassandra.CassandraInstrumentation.Node
 import kamon.instrumentation.cassandra.NodeConnectionPoolMetrics.NodeConnectionPoolInstruments
-import kamon.instrumentation.cassandra.metrics.NodeMonitor
 import kamon.instrumentation.executor.ExecutorMetrics
 import kamon.tag.TagSet
 import kamon.testkit.{InstrumentInspection, MetricInspection}
@@ -27,8 +26,6 @@ import org.cassandraunit.utils.EmbeddedCassandraServerHelper
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.SpanSugar
 import org.scalatest.{BeforeAndAfterAll, Matchers, OptionValues, WordSpec}
-
-import scala.util.Try
 
 class CassandraClientMetricsSpec
     extends WordSpec
@@ -128,4 +125,6 @@ class CassandraClientMetricsSpec
     session.execute("create table users (id uuid primary key, name text )")
     session.execute("insert into users (id, name) values (uuid(), 'kamon')")
   }
+
+  override protected def afterAll(): Unit = session.close()
 }
