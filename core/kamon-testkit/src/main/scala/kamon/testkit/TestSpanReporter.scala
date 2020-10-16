@@ -27,7 +27,7 @@ import kamon.trace.Span
 import scala.concurrent.duration.Duration
 
 /**
-  * A Mixing that creates and initializes an inspectable Span reporter, setting up the typical options required for it
+  * A Mixin that creates and initializes an inspectable Span reporter, setting up the typical options required for it
   * to work as expected (sample always and fast span flushing).
   */
 trait TestSpanReporter extends Reconfigure { self =>

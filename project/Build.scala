@@ -3,10 +3,10 @@ import Keys._
 import sbt.librarymanagement.{Configuration, Configurations}
 import Configurations.Compile
 import sbtassembly.AssemblyPlugin
-import sbtassembly.AssemblyPlugin.autoImport.{MergeStrategy, assembleArtifact, assembly, assemblyExcludedJars, assemblyMergeStrategy, assemblyPackageScala, assemblyOption}
+import sbtassembly.AssemblyPlugin.autoImport.{MergeStrategy, assembleArtifact, assembly, assemblyExcludedJars, assemblyMergeStrategy, assemblyOption, assemblyPackageScala}
 import java.util.Calendar
-import Def.Initialize
 
+import Def.Initialize
 import bintray.{Bintray, BintrayPlugin}
 import bintray.BintrayKeys.{bintray, bintrayOrganization, bintrayRepository, bintrayVcsUrl}
 import com.jsuereth.sbtpgp.PgpKeys.useGpgPinentry
@@ -98,7 +98,9 @@ object BaseProject extends AutoPlugin {
 
   private lazy val commonSettings = Seq(
     exportJars := true,
+    parallelExecution in Test := false,
     fork in Test := true,
+    testOptions in Test += Tests.Argument(TestFrameworks.ScalaCheck, "-F", "2.5"),
     startYear := Some(2013),
     organization := "io.kamon",
     version := versionSetting.value,
@@ -110,7 +112,10 @@ object BaseProject extends AutoPlugin {
     concurrentRestrictions in Global += Tags.limit(Tags.Test, 1),
     licenses += (("Apache-2.0", url("http://www.apache.org/licenses/LICENSE-2.0"))),
     resolvers += Resolver.bintrayRepo("kamon-io", "releases"),
-    resolvers += Resolver.mavenLocal
+    resolvers += Resolver.mavenLocal,
+    Keys.commands += Command.command("testUntilFailed") { state: State =>
+      "test" :: "testUntilFailed" :: state
+    }
   )
 
   private lazy val compilationSettings = Seq(

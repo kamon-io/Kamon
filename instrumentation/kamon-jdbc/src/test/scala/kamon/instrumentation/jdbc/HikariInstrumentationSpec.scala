@@ -24,18 +24,26 @@ import kamon.Kamon
 import kamon.tag.Lookups.plain
 import kamon.tag.TagSet
 import kamon.testkit.{InstrumentInspection, MetricInspection, TestSpanReporter}
-import org.scalactic.TimesOnInt.convertIntToRepeater
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.SpanSugar
-import org.scalatest.{Matchers, OptionValues, WordSpec}
+import org.scalatest.{BeforeAndAfterEach, Matchers, OptionValues, WordSpec}
 
 import scala.concurrent.ExecutionContext
 
-class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually with SpanSugar with MetricInspection.Syntax
-    with InstrumentInspection.Syntax with TestSpanReporter with OptionValues {
+class HikariInstrumentationSpec extends WordSpec
+  with Matchers
+  with Eventually
+  with SpanSugar
+  with MetricInspection.Syntax
+  with InstrumentInspection.Syntax
+  with TestSpanReporter
+  with BeforeAndAfterEach
+  with OptionValues {
 
   import HikariInstrumentationSpec.{createH2Pool, createSQLitePool}
   implicit val parallelQueriesContext = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(16))
+
+  override def beforeEach() = testSpanReporter().clear()
 
   Kamon.reconfigure(
     ConfigFactory
@@ -106,13 +114,14 @@ class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually w
         JdbcMetrics.BorrowedConnections.withTags(tags).distribution().max shouldBe (5)
       }
 
+      connections.take(5).foreach(_.close())
       pool.close()
     }
 
 
     "track the time it takes to borrow a connection" in {
       val pool = createH2Pool("track-borrow-time", 5)
-      for (_ <- 1 to 5) {
+      val connections = (1 to 5).map { _ =>
         pool.getConnection()
       }
 
@@ -123,13 +132,17 @@ class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually w
         .build()
 
       eventually(timeout(5 seconds)) {
-        JdbcMetrics.BorrowTime.withTags(tags).distribution(resetState = false).count shouldBe (6) // 5 + 1 during setup
+        val count = JdbcMetrics.BorrowTime.withTags(tags).distribution(resetState = false).count
+        count shouldBe (6) // 5 + 1 during setup
       }
+
+      connections.foreach(_.close)
+      pool.close()
     }
 
     "track timeout errors when borrowing a connection" in {
       val pool = createH2Pool("track-borrow-timeouts", 5)
-      for (id <- 1 to 5) {
+      val connections = (1 to 5).map { _ =>
         pool.getConnection()
       }
 
@@ -149,16 +162,16 @@ class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually w
         .add("db.vendor", "h2")
         .build()
 
-      eventually(timeout(5 seconds),  interval(1 second)) {
-        JdbcMetrics.BorrowTime.withTags(tags).distribution(resetState = false).max shouldBe ((1 seconds).toNanos +- (100 milliseconds).toNanos)
-      }
+     val borrowTimeouts = JdbcMetrics.BorrowTimeouts.withTags(tags).value()
+     borrowTimeouts shouldBe 1
 
-      JdbcMetrics.BorrowTimeouts.withTags(tags).value() shouldBe 1
+      connections.foreach(_.close)
+      pool.close()
     }
 
     "add the pool information to the execution of the connection init SQL" in {
       val pool = createH2Pool("connection-init", 5)
-      5 times { pool.getConnection() }
+      val connections = (1 to 5).map(_ => pool.getConnection())
 
       eventually(timeout(5 seconds)) {
         val span = testSpanReporter().nextSpan().value
@@ -169,6 +182,9 @@ class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually w
         span.metricTags.get(plain("jdbc.pool.name")) shouldBe "connection-init"
         span.tags.get(plain("db.statement")) should include("SELECT 1;")
       }
+
+      connections.foreach(_.close)
+      pool.close()
     }
 
     "add the pool information to the execution of the connection isValid query, if any" in {
@@ -188,6 +204,9 @@ class HikariInstrumentationSpec extends WordSpec with Matchers with Eventually w
         span.metricTags.get(plain("jdbc.pool.name")) shouldBe "connection-is-valid"
         span.tags.get(plain("db.statement")) should include("select 1")
       }
+
+      connection.close()
+      pool.close()
     }
   }
 }
@@ -229,11 +248,10 @@ object HikariInstrumentationSpec {
     config.setPoolName(name)
     config.setUsername("SA")
     config.setPassword("")
-    config.setMinimumIdle(1)
+    config.setMinimumIdle(0)
     config.setMaximumPoolSize(size)
     config.setConnectionTimeout(1000)
     config.setIdleTimeout(10000) // If this setting is lower than 10 seconds it will be overridden by Hikari.
     config
   }
 }
-

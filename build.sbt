@@ -515,14 +515,12 @@ lazy val `kamon-statsd` = (project in file("reporters/kamon-statsd"))
   .disablePlugins(AssemblyPlugin)
   .settings(
     libraryDependencies += scalatest % Test,
-    parallelExecution in Test := false
   ).dependsOn(`kamon-core`)
 
 
 lazy val `kamon-zipkin` = (project in file("reporters/kamon-zipkin"))
   .disablePlugins(AssemblyPlugin)
   .settings(
-    parallelExecution in Test := false,
     libraryDependencies ++= Seq(
       "io.zipkin.reporter2" % "zipkin-reporter" % "2.7.15",
       "io.zipkin.reporter2" % "zipkin-sender-okhttp3" % "2.7.15",
@@ -534,7 +532,6 @@ lazy val `kamon-zipkin` = (project in file("reporters/kamon-zipkin"))
 lazy val `kamon-jaeger` = (project in file("reporters/kamon-jaeger"))
   .disablePlugins(AssemblyPlugin)
   .settings(
-    parallelExecution in Test := false,
     libraryDependencies ++= Seq(
       "io.jaegertracing" % "jaeger-thrift" % "1.1.0",
       scalatest % "test"
