@@ -373,7 +373,7 @@ lazy val `kamon-system-metrics` = (project in file("instrumentation/kamon-system
   .settings(instrumentationSettings: _*)
   .settings(
     libraryDependencies ++= Seq(
-      "com.github.oshi" % "oshi-core" % "4.2.1",
+      oshiCore,
       scalatest % "test",
       logbackClassic % "test"
     )
@@ -607,7 +607,7 @@ val `kamon-bundle` = (project in file("bundle/kamon-bundle"))
     kanelaAgentJarName := kanelaAgentJar.value.getName,
     resourceGenerators in Compile += Def.task(Seq(kanelaAgentJar.value)).taskValue,
     libraryDependencies ++= Seq(
-      "com.github.oshi" % "oshi-core" % "4.2.1",
+      oshiCore,
       kanelaAgent % "provided",
       "net.bytebuddy" % "byte-buddy-agent" % "1.9.12" % "provided,shaded",
     ),

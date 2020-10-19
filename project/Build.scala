@@ -35,6 +35,8 @@ object BaseProject extends AutoPlugin {
     val hdrHistogram      = "org.hdrhistogram"      %  "HdrHistogram"    % "2.1.10"
     val okHttp            = "com.squareup.okhttp3"  %  "okhttp"          % "3.14.7"
     val okHttpMockServer  = "com.squareup.okhttp3"  %  "mockwebserver"   % "3.10.0"
+    val oshiCore          = "com.github.oshi"       %  "oshi-core"       % "5.2.5"
+
 
     val kanelaAgentVersion = settingKey[String]("Kanela Agent version")
     val kanelaAgentJar = taskKey[File]("Kanela Agent jar")

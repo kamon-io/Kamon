@@ -12,7 +12,9 @@ import kamon.tag.TagSet
 import kamon.util.Filter
 import oshi.SystemInfo
 import oshi.hardware.CentralProcessor.TickType
+import oshi.hardware.NetworkIF
 
+import scala.collection.JavaConverters._
 import scala.concurrent.{ExecutionContext, Future}
 
 /**
@@ -56,6 +58,7 @@ class HostMetricsCollector(ec: ExecutionContext) extends Module {
 
   trait CollectionTask {
     def schedule(ec: ExecutionContext): Unit
+
     def cleanup(): Unit
   }
 
@@ -77,7 +80,7 @@ class HostMetricsCollector(ec: ExecutionContext) extends Module {
     }
 
     private def recordCpuUsage(): Unit = {
-      if(_prevCpuLoadTicks.length > 0) {
+      if (_prevCpuLoadTicks.length > 0) {
         val previousTicks = _prevCpuLoadTicks
         val currentTicks = _hal.getProcessor().getSystemCpuLoadTicks()
 
@@ -89,7 +92,8 @@ class HostMetricsCollector(ec: ExecutionContext) extends Module {
         val irq = ticksDiff(previousTicks, currentTicks, TickType.IRQ)
         val softirq = ticksDiff(previousTicks, currentTicks, TickType.SOFTIRQ)
         val steal = ticksDiff(previousTicks, currentTicks, TickType.STEAL)
-        val total = user + nice + system + idle + iowait +irq + softirq + steal
+        val total = user + nice + system + idle + iowait + irq + softirq + steal
+
         def toPercent(value: Long): Long = ((100D * value.toDouble) / total.toDouble).toLong
 
         _cpuInstruments.user.record(toPercent(user))
@@ -110,7 +114,7 @@ class HostMetricsCollector(ec: ExecutionContext) extends Module {
 
   }
 
-  private class InfrequentCollectionTask extends CollectionTask  {
+  private class InfrequentCollectionTask extends CollectionTask {
     private val _defaultTags = TagSet.of("component", "host")
     private val _systemInfo = new SystemInfo()
     private val _hal = _systemInfo.getHardware()
@@ -155,16 +159,16 @@ class HostMetricsCollector(ec: ExecutionContext) extends Module {
 
     private def recordLoadAverage(): Unit = {
       val loadAverage = _hal.getProcessor.getSystemLoadAverage(3)
-      if(loadAverage(0) >= 0D) _loadAverageInstruments.oneMinute.update(loadAverage(0))
-      if(loadAverage(1) >= 0D) _loadAverageInstruments.fiveMinutes.update(loadAverage(1))
-      if(loadAverage(2) >= 0D) _loadAverageInstruments.fifteenMinutes.update(loadAverage(2))
+      if (loadAverage(0) >= 0D) _loadAverageInstruments.oneMinute.update(loadAverage(0))
+      if (loadAverage(1) >= 0D) _loadAverageInstruments.fiveMinutes.update(loadAverage(1))
+      if (loadAverage(2) >= 0D) _loadAverageInstruments.fifteenMinutes.update(loadAverage(2))
     }
 
     private def recordStorageUsage(): Unit = {
       val fileStores = _os.getFileSystem().getFileStores
 
-      fileStores.foreach(fs => {
-        if(_settings.trackedMounts.accept(fs.getType)) {
+      fileStores.asScala.foreach(fs => {
+        if (_settings.trackedMounts.accept(fs.getType)) {
           val mountInstruments = _fileSystemUsageInstruments.mountInstruments(fs.getMount)
           mountInstruments.free.update(fs.getUsableSpace)
           mountInstruments.total.update(fs.getTotalSpace)
@@ -175,9 +179,8 @@ class HostMetricsCollector(ec: ExecutionContext) extends Module {
 
     private def recordStorageActivity(): Unit = {
       val devices = _hal.getDiskStores
-
-      devices.foreach(device => {
-        if(device.getPartitions.nonEmpty) {
+      devices.asScala.foreach(device => {
+        if (!device.getPartitions.isEmpty) {
           val deviceInstruments = _fileSystemActivityInstruments.deviceInstruments(device.getName)
           deviceInstruments.reads.diff(device.getReads)
           deviceInstruments.writes.diff(device.getWrites)
@@ -190,8 +193,8 @@ class HostMetricsCollector(ec: ExecutionContext) extends Module {
     private def recordNetworkActivity(): Unit = {
       val interfaces = _hal.getNetworkIFs()
 
-      interfaces.foreach(interface => {
-        if(_settings.trackedInterfaces.accept(interface.getName)) {
+      interfaces.asScala.foreach(interface => {
+        if (_settings.trackedInterfaces.accept(interface.getName)) {
           val interfaceInstruments = _networkActivityInstruments.interfaceInstruments(interface.getName)
           interfaceInstruments.receivedBytes.diff(interface.getBytesRecv)
           interfaceInstruments.sentBytes.diff(interface.getBytesSent)
@@ -203,6 +206,7 @@ class HostMetricsCollector(ec: ExecutionContext) extends Module {
       })
     }
   }
+
 }
 
 object HostMetricsCollector {
@@ -212,7 +216,7 @@ object HostMetricsCollector {
       new HostMetricsCollector(settings.executionContext)
   }
 
-  case class Settings (
+  case class Settings(
     trackedInterfaces: Filter,
     trackedMounts: Filter
   )
