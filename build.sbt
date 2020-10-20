@@ -117,6 +117,7 @@ lazy val instrumentation = (project in file("instrumentation"))
     `kamon-twitter-future`,
     `kamon-scalaz-future`,
     `kamon-cats-io`,
+    `kamon-monix`,
     `kamon-logback`,
     `kamon-jdbc`,
     `kamon-kafka`,
@@ -233,6 +234,21 @@ lazy val `kamon-cats-io` = (project in file("instrumentation/kamon-cats-io"))
     ),
 
   ).dependsOn(`kamon-core`, `kamon-executors`, `kamon-testkit` % "test")
+
+lazy val `kamon-monix` = (project in file("instrumentation/kamon-monix"))
+  .disablePlugins(AssemblyPlugin)
+  .enablePlugins(JavaAgent)
+  .settings(instrumentationSettings)
+  .settings(
+    bintrayPackage := "kamon-futures",
+    libraryDependencies ++= Seq(
+      kanelaAgent % "provided",
+      "io.monix" %% "monix-eval" % "3.2.2" % "provided",
+      "io.monix" %% "monix-bio"  % "1.0.0" % "provided",
+      scalatest % "test",
+      logbackClassic % "test"
+    )
+  ).dependsOn(`kamon-core`, `kamon-executors`, `kamon-testkit` % "test", `kamon-cats-io` % "compile->compile;test->test")
 
 
 lazy val `kamon-logback` = (project in file("instrumentation/kamon-logback"))
@@ -641,6 +657,7 @@ val `kamon-bundle` = (project in file("bundle/kamon-bundle"))
     `kamon-twitter-future` % "shaded",
     `kamon-scalaz-future` % "shaded",
     `kamon-cats-io` % "shaded",
+    `kamon-monix` % "shaded",
     `kamon-logback` % "shaded",
     `kamon-jdbc` % "shaded",
     `kamon-kafka` % "shaded",
