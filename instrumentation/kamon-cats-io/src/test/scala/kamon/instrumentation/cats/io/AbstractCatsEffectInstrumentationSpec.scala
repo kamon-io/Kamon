@@ -36,6 +36,7 @@ abstract class AbstractCatsEffectInstrumentationSpec[F[_]: LiftIO](effectName: S
 
   override protected def afterAll(): Unit = {
     customExecutionContext.shutdown()
+    shutdownTestSpanReporter()
     super.afterAll()
   }
 

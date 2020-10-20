@@ -240,7 +240,7 @@ lazy val `kamon-monix` = (project in file("instrumentation/kamon-monix"))
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
-    bintrayPackage := "kamon-futures",
+    crossScalaVersions := crossScalaVersions.value.filter(!_.startsWith("2.11")),
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       "io.monix" %% "monix-eval" % "3.2.2" % "provided",
