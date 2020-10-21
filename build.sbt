@@ -240,15 +240,21 @@ lazy val `kamon-monix` = (project in file("instrumentation/kamon-monix"))
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
+    // do not build for 2.11
     crossScalaVersions := crossScalaVersions.value.filter(!_.startsWith("2.11")),
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
-      "io.monix" %% "monix-eval" % "3.2.2" % "provided",
-      "io.monix" %% "monix-bio"  % "1.0.0" % "provided",
       scalatest % "test",
       logbackClassic % "test"
-    )
-  ).dependsOn(`kamon-core`, `kamon-executors`, `kamon-testkit` % "test", `kamon-cats-io` % "compile->compile;test->test")
+    ) ++ {
+      // dependencies must be added only for scala versions strictly above 2.11, otherwise the resolution will be
+      // attempted for 2.11 and fail
+      if (scalaBinaryVersion.value == "2.11") Nil else Seq(
+        "io.monix" %% "monix-eval" % "3.2.2" % "provided",
+        "io.monix" %% "monix-bio" % "1.0.0" % "provided")
+    }
+  )
+  .dependsOn(`kamon-core`, `kamon-executors`, `kamon-testkit` % "test", `kamon-cats-io` % "compile->compile;test->test")
 
 
 lazy val `kamon-logback` = (project in file("instrumentation/kamon-logback"))
