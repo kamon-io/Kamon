@@ -1,5 +1,7 @@
 package kamon.instrumentation.system.jvm
 
+import java.lang.management.ManagementFactory
+
 import kamon.Kamon
 import kamon.instrumentation.system.jvm.JvmMetrics.MemoryUsageInstruments.MemoryRegionInstruments
 import kamon.instrumentation.system.jvm.JvmMetricsCollector.{Collector, MemoryPool}
@@ -10,85 +12,100 @@ import scala.collection.mutable
 
 object JvmMetrics {
 
-  val GC = Kamon.histogram (
+  val GC = Kamon.histogram(
     name = "jvm.gc",
     description = "Tracks the distribution of GC events duration",
     unit = MeasurementUnit.time.milliseconds
   )
 
-  val GcPromotion = Kamon.histogram (
+  val GcPromotion = Kamon.histogram(
     name = "jvm.gc.promotion",
     description = "Tracks the distribution of promoted bytes to the old generation regions after a GC",
     unit = MeasurementUnit.information.bytes
   )
 
-  val MemoryUsed = Kamon.histogram (
+  val MemoryUsed = Kamon.histogram(
     name = "jvm.memory.used",
     description = "Samples the used space in a memory region",
     unit = MeasurementUnit.information.bytes
   )
 
-  val MemoryFree = Kamon.histogram (
+  val MemoryFree = Kamon.histogram(
     name = "jvm.memory.free",
     description = "Samples the free space in a memory region",
     unit = MeasurementUnit.information.bytes
   )
 
-  val MemoryCommitted = Kamon.gauge (
+  val MemoryCommitted = Kamon.gauge(
     name = "jvm.memory.committed",
     description = "Tracks the committed space in a memory region",
     unit = MeasurementUnit.information.bytes
   )
 
-  val MemoryMax = Kamon.gauge (
+  val MemoryMax = Kamon.gauge(
     name = "jvm.memory.max",
     description = "Tracks the max space in a memory region",
     unit = MeasurementUnit.information.bytes
   )
 
-  val MemoryPoolUsed = Kamon.histogram (
+  val MemoryPoolUsed = Kamon.histogram(
     name = "jvm.memory.pool.used",
     description = "Samples the used space in a memory pool",
     unit = MeasurementUnit.information.bytes
   )
 
-  val MemoryPoolFree = Kamon.histogram (
+  val MemoryPoolFree = Kamon.histogram(
     name = "jvm.memory.pool.free",
     description = "Samples the free space in a memory pool",
     unit = MeasurementUnit.information.bytes
   )
 
-  val MemoryPoolCommitted = Kamon.gauge (
+  val MemoryPoolCommitted = Kamon.gauge(
     name = "jvm.memory.pool.committed",
     description = "Tracks the committed space in a memory pool",
     unit = MeasurementUnit.information.bytes
   )
 
-  val MemoryPoolMax = Kamon.gauge (
+  val MemoryPoolMax = Kamon.gauge(
     name = "jvm.memory.pool.max",
     description = "Tracks the max space in a memory pool",
     unit = MeasurementUnit.information.bytes
   )
 
-  val MemoryAllocation = Kamon.counter (
+  val MemoryAllocation = Kamon.counter(
     name = "jvm.memory.allocation",
     description = "Tracks the number amount of bytes allocated",
     unit = MeasurementUnit.information.bytes
   )
 
-  val ThreadsTotal = Kamon.gauge (
+  val ThreadsTotal = Kamon.gauge(
     name = "jvm.threads.total",
     description = "Tracks the current number of live threads on the JVM"
   )
 
-  val ThreadsPeak = Kamon.gauge (
+  val ThreadsPeak = Kamon.gauge(
     name = "jvm.threads.peak",
     description = "Tracks the peak live thread count since the JVM started"
   )
 
-  val ThreadsDaemon = Kamon.gauge (
+  val ThreadsDaemon = Kamon.gauge(
     name = "jvm.threads.daemon",
     description = "Tracks the current number of daemon threads on the JVM"
+  )
+
+  val ClassesLoaded = Kamon.gauge(
+    name = "jvm.class-loading.loaded",
+    description = "Total number od classes loaded"
+  )
+
+  val ClassesUnloaded = Kamon.gauge(
+    name = "jvm.class-loading.unloaded",
+    description = "Total number od classes unloaded"
+  )
+
+  val ClassesCurrentlyLoaded = Kamon.gauge(
+    name = "jvm.class-loading.currently-loaded",
+    description = "Total number od classes currently loaded"
   )
 
   class GarbageCollectionInstruments(tags: TagSet) extends InstrumentGroup(tags) {
@@ -116,7 +133,7 @@ object JvmMetrics {
       _memoryRegionsCache.getOrElseUpdate(regionName, {
         val region = TagSet.of("region", regionName)
 
-        MemoryRegionInstruments (
+        MemoryRegionInstruments(
           register(MemoryUsed, region),
           register(MemoryFree, region),
           register(MemoryCommitted, region),
@@ -128,13 +145,19 @@ object JvmMetrics {
       _memoryPoolsCache.getOrElseUpdate(pool.alias, {
         val region = TagSet.of("pool", pool.alias)
 
-        MemoryRegionInstruments (
+        MemoryRegionInstruments(
           register(MemoryPoolUsed, region),
           register(MemoryPoolFree, region),
           register(MemoryPoolCommitted, region),
           register(MemoryPoolMax, region)
         )
       })
+  }
+
+  class ClassLoadingInstruments(tags: TagSet) extends InstrumentGroup(tags) {
+    val loaded = register(ClassesLoaded, TagSet.from(Map("mode" -> "loaded")))
+    val unloaded = register(ClassesUnloaded, TagSet.from(Map("mode" -> "unloaded")))
+    val currentlyLoaded = register(ClassesCurrentlyLoaded, TagSet.from(Map("mode" -> "currently-loaded")))
   }
 
   class ThreadsInstruments extends InstrumentGroup(TagSet.Empty) {
@@ -144,8 +167,7 @@ object JvmMetrics {
   }
 
   object MemoryUsageInstruments {
-
-    case class MemoryRegionInstruments (
+    case class MemoryRegionInstruments(
       used: Histogram,
       free: Histogram,
       committed: Gauge,
@@ -153,3 +175,5 @@ object JvmMetrics {
     )
   }
 }
+
+

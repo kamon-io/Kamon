@@ -143,14 +143,23 @@ class HostMetricsCollector(ec: ExecutionContext) extends Module {
     }
 
     private def recordMemoryUsage(): Unit = {
-      val memory = _hal.getMemory
-      _memoryInstruments.total.update(memory.getTotal())
-      _memoryInstruments.free.update(memory.getAvailable())
-      _memoryInstruments.used.update(memory.getTotal() - memory.getAvailable())
 
-      _swapInstruments.total.update(memory.getVirtualMemory.getSwapTotal())
-      _swapInstruments.used.update(memory.getVirtualMemory.getSwapUsed())
-      _swapInstruments.free.update(memory.getVirtualMemory.getSwapTotal() - memory.getVirtualMemory.getSwapUsed())
+      val memory = _hal.getMemory
+      val totalMemory = memory.getTotal
+      val availableMemory = memory.getAvailable
+      val usedMemory = totalMemory - availableMemory
+
+      _memoryInstruments.total.update(totalMemory)
+      _memoryInstruments.free.update(availableMemory)
+      _memoryInstruments.used.update(usedMemory)
+      _memoryInstruments.usage.record(toPercent(usedMemory, totalMemory))
+
+      val usedSwap = memory.getVirtualMemory.getSwapUsed
+      val totalSwap = memory.getVirtualMemory.getSwapTotal
+      _swapInstruments.total.update(totalSwap)
+      _swapInstruments.used.update(usedSwap)
+      _swapInstruments.usage.record(toPercent(usedSwap, totalSwap))
+      _swapInstruments.free.update(totalSwap - usedSwap)
     }
 
     private def recordLoadAverage(): Unit = {
@@ -166,12 +175,18 @@ class HostMetricsCollector(ec: ExecutionContext) extends Module {
       fileStores.foreach(fs => {
         if(_settings.trackedMounts.accept(fs.getType)) {
           val mountInstruments = _fileSystemUsageInstruments.mountInstruments(fs.getMount)
+          val totalSpace = fs.getTotalSpace
+          val usedSpace = totalSpace - fs.getUsableSpace
+
           mountInstruments.free.update(fs.getUsableSpace)
-          mountInstruments.total.update(fs.getTotalSpace)
-          mountInstruments.used.update(fs.getTotalSpace - fs.getUsableSpace)
+          mountInstruments.total.update(totalSpace)
+          mountInstruments.used.update(usedSpace)
+          mountInstruments.usage.record(toPercent(usedSpace, totalSpace))
         }
       })
     }
+
+    private def toPercent(value: Long, total: Long): Long = ((100D * value.toDouble) / total.toDouble).toLong
 
     private def recordStorageActivity(): Unit = {
       val devices = _hal.getDiskStores
