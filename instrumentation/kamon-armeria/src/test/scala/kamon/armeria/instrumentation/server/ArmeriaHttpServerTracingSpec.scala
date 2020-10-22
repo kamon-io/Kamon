@@ -35,7 +35,7 @@ class ArmeriaHttpServerTracingSpec extends WordSpec
   private val okHttp = new OkHttpClient.Builder().build()
 
   val interface = "127.0.0.1"
-  val httpPort = 8081
+  val httpPort = 8080
 
   private val httpServer = startArmeriaServer(httpPort)
 

@@ -15,91 +15,63 @@
 
 package kamon.armeria.instrumentation.server
 
-import com.linecorp.armeria.common.HttpStatus.NOT_FOUND
-import com.linecorp.armeria.server
-import com.linecorp.armeria.server._
-import io.netty.channel.{Channel, ChannelPipeline}
+import com.linecorp.armeria.server.{HttpService, ServerBuilder, ServerPort}
 import kamon.Kamon
+import kamon.armeria.instrumentation.converters.JavaConverters
+import kamon.armeria.instrumentation.server.InternalState.ServerBuilderInternalState
 import kamon.instrumentation.http.HttpServerInstrumentation
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.api.instrumentation.bridge.FieldBridge
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 
+import scala.collection.JavaConverters.collectionAsScalaIterableConverter
+
 class ArmeriaHttpServerInstrumentation extends InstrumentationBuilder {
-  onSubTypesOf("io.netty.channel.Channel")
-    .mixin(classOf[HasRequestProcessingContextMixin])
-
-  onType("com.linecorp.armeria.server.HttpServerPipelineConfigurator")
-    .bridge(classOf[HttpPipelineConfiguratorInternalState])
-    .advise(method("configureHttp"), classOf[ConfigureMethodAdvisor])
-
-  onType("com.linecorp.armeria.server.FallbackService")
-    .advise(method("handleNotFound"), classOf[ServeMethodAdvisor])
-
-  onType("com.linecorp.armeria.server.DefaultServiceRequestContext")
-    .bridge(classOf[ServiceRequestContextInternalState])
-
+  onType("com.linecorp.armeria.server.ServerBuilder")
+    .advise(method("build"), classOf[ArmeriaServerBuilderAdvisor])
+    .bridge(classOf[ServerBuilderInternalState])
 }
 
-class ConfigureMethodAdvisor
+class ArmeriaServerBuilderAdvisor
 
-object ConfigureMethodAdvisor {
+/**
+  * After enter to <a href="https://github.com/line/armeria/blob/master/core/src/main/java/com/linecorp/armeria/server/ServerBuilder.java">build()</a>
+  * some things are done with the ports field, so we aren't entirely sure that this ports are gonna to be final
+  */
+object ArmeriaServerBuilderAdvisor extends JavaConverters {
+  lazy val httpServerConfig = Kamon.config().getConfig("kamon.instrumentation.armeria.http-server")
 
-  @Advice.OnMethodExit
-  def around(@Advice.This configurer: Object,
-             @Advice.Argument(0) channelPipeline: ChannelPipeline): Unit = {
-    val serverPort = configurer.asInstanceOf[HttpPipelineConfiguratorInternalState].getServerPort
-    val hostName = serverPort.localAddress().getHostName
-    val port = serverPort.localAddress().getPort
-
-    lazy val httpServerConfig = Kamon.config().getConfig("kamon.instrumentation.armeria.http-server")
-    lazy val serverInstrumentation = HttpServerInstrumentation.from(httpServerConfig, "armeria-http-server", hostName, port)
-
-    channelPipeline.addBefore("HttpServerHandler#0", "armeria-http-server-request-handler", ArmeriaHttpServerRequestHandler(serverInstrumentation))
-    channelPipeline.addLast("armeria-http-server-response-handler", ArmeriaHttpServerResponseHandler(serverInstrumentation))
+  @Advice.OnMethodEnter
+  def addKamonDecorator(@Advice.This builder: ServerBuilder): Unit = {
+    // until now all tests were done with http so we'll work with this ports
+    builder.asInstanceOf[ServerBuilderInternalState].getServerPorts.asScala
+      .filter(_.hasHttp)
+      .foreach(serverPort =>
+        builder.decorator(
+          toJavaFunction((delegate: HttpService) => {
+            val hostname = serverPort.localAddress().getHostName
+            val port = serverPort.localAddress().getPort
+            val serverInstrumentation = HttpServerInstrumentation.from(httpServerConfig, "armeria-http-server", hostname, port)
+            new ArmeriaHttpServerDecorator(delegate, serverInstrumentation, hostname, port)
+          }
+          )
+        )
+      )
   }
 }
 
-trait HttpPipelineConfiguratorInternalState {
-  @FieldBridge("port")
-  def getServerPort: ServerPort
-}
+object InternalState {
 
-class ServeMethodAdvisor
-
-object ServeMethodAdvisor {
-  /**
-    * When an HttpStatusException is thrown in [[FallbackService#handleNotFound()]] method is because the route doesn't  exist
-    * so we must set unhandled operation name and we'll do it in [[ArmeriaHttpServerResponseHandler.write]]
-    */
-  @Advice.OnMethodExit(onThrowable = classOf[Throwable])
-  def around(@Advice.Argument(0) ctx: ServiceRequestContext with ServiceRequestContextInternalState,
-             @Advice.Argument(2) statusException: HttpStatusException,
-             @Advice.Thrown throwable: Throwable): Unit = {
-    if (throwable != null && statusException.httpStatus.code() == NOT_FOUND.code()) {
-      val processingContext = ctx.getChannel.asInstanceOf[HasRequestProcessingContext].getRequestProcessingContext
-      processingContext.requestHandler.span.name("")
-    }
+  trait ServerBuilderInternalState {
+    @FieldBridge(value = "ports")
+    def getServerPorts: java.util.List[ServerPort]
   }
+
 }
 
-trait ServiceRequestContextInternalState {
-  @FieldBridge("ch")
-  def getChannel: Channel
-}
 
-trait HasRequestProcessingContext {
-  def setRequestProcessingContext(requestProcessingContext: RequestProcessingContext): Unit
 
-  def getRequestProcessingContext: RequestProcessingContext
-}
 
-class HasRequestProcessingContextMixin extends HasRequestProcessingContext {
-  @volatile var _requestProcessingContext: RequestProcessingContext = _
 
-  override def setRequestProcessingContext(requestProcessing: RequestProcessingContext): Unit =
-    _requestProcessingContext = requestProcessing
 
-  override def getRequestProcessingContext: RequestProcessingContext =
-    _requestProcessingContext
-}
+

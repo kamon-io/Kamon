@@ -43,8 +43,9 @@ class ArmeriaHttpClientTracingSpec extends WordSpec
         client.execute(request).aggregate().get()
       }
 
-      val span = eventually(timeout(3 seconds)) {
+      val span = eventually(timeout(10 seconds)) {
         val span = testSpanReporter().nextSpan().value
+
         span.operationName shouldBe s"$interface.dummy.get"
         span.kind shouldBe Span.Kind.Client
         span.metricTags.get(plain("component")) shouldBe "armeria-http-client"
@@ -52,9 +53,8 @@ class ArmeriaHttpClientTracingSpec extends WordSpec
         span.metricTags.get(plainLong("http.status_code")) shouldBe 200
         span.metricTags.get(plainBoolean("error")) shouldBe false
         span.tags.get(plain("http.url")) shouldBe s"$url$path"
-        okSpan.id shouldBe span.parentId
 
-        testSpanReporter().nextSpan() shouldBe None
+        okSpan.id shouldBe span.parentId
 
         span
       }
@@ -81,7 +81,7 @@ class ArmeriaHttpClientTracingSpec extends WordSpec
         client.execute(request).aggregate().get()
       }
 
-      val span: Span.Finished = eventually(timeout(3 seconds)) {
+      val span: Span.Finished = eventually(timeout(10 seconds)) {
         val span = testSpanReporter().nextSpan().value
 
         span.operationName shouldBe s"$interface.dummy.get"
@@ -93,9 +93,7 @@ class ArmeriaHttpClientTracingSpec extends WordSpec
         span.tags.get(plain("http.url")) shouldBe s"$url$path"
         span.tags.get(plain(customTag)) shouldBe "1234"
 
-        okSpan.id == span.parentId
-
-        testSpanReporter().nextSpan() shouldBe None
+        okSpan.id shouldBe span.parentId
 
         span
       }
@@ -123,7 +121,7 @@ class ArmeriaHttpClientTracingSpec extends WordSpec
         response.aggregate().get()
       }
 
-      val span: Span.Finished = eventually(timeout(3 seconds)) {
+      val span: Span.Finished = eventually(timeout(10 seconds)) {
         val span = testSpanReporter().nextSpan().value
 
         span.operationName shouldBe s"$interface.dummy-error.get"
@@ -134,9 +132,7 @@ class ArmeriaHttpClientTracingSpec extends WordSpec
         span.metricTags.get(plainLong("http.status_code")) shouldBe 500
         span.tags.get(plain("http.url")) shouldBe s"$url$path"
 
-        okSpan.id == span.parentId
-
-        testSpanReporter().nextSpan() shouldBe None
+        okSpan.id shouldBe span.parentId
 
         span
       }
@@ -169,7 +165,7 @@ class ArmeriaHttpClientTracingSpec extends WordSpec
         client.execute(request).aggregate().get()
       }
 
-      val span = eventually(timeout(3 seconds)) {
+      val span = eventually(timeout(10 seconds)) {
         val span = testSpanReporter().nextSpan().value
 
         span.operationName shouldBe s"$interface.dummy.get"
@@ -188,7 +184,7 @@ class ArmeriaHttpClientTracingSpec extends WordSpec
           "socket-connect.end"
         )
 
-        testSpanReporter().nextSpan() shouldBe None
+        okSpan.id shouldBe span.parentId
 
         span
       }

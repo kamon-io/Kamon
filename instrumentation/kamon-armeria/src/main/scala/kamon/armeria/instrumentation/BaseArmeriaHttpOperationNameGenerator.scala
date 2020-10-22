@@ -20,7 +20,7 @@ import kamon.instrumentation.http.HttpOperationNameGenerator
 
 import scala.collection.concurrent.TrieMap
 
-trait BaseKamonArmeriaOperationNameGenerator extends HttpOperationNameGenerator {
+trait BaseArmeriaHttpOperationNameGenerator extends HttpOperationNameGenerator {
 
   private val localCache = TrieMap.empty[String, String]
   private val normalizePattern = """\$([^<]+)<[^>]+>""".r

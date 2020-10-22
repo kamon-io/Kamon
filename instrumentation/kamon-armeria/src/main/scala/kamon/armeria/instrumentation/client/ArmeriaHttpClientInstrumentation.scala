@@ -15,20 +15,12 @@
 
 package kamon.armeria.instrumentation.client
 
-import java.util.concurrent.Executors
-
-import com.linecorp.armeria.client.{ClientBuilder, ClientRequestContext, DecoratingHttpClientFunction, HttpClient}
-import com.linecorp.armeria.common.{HttpRequest, HttpResponse}
+import com.linecorp.armeria.client.{ClientBuilder, HttpClient}
 import kamon.Kamon
-import kamon.armeria.instrumentation.client.ArmeriaHttpClientTracing.{getRequestBuilder, toKamonResponse}
-import kamon.armeria.instrumentation.client.timing.Timing.takeTimings
-import kamon.armeria.instrumentation.converters.FutureConverters
+import kamon.armeria.instrumentation.converters.JavaConverters
 import kamon.instrumentation.http.HttpClientInstrumentation
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.asm.Advice
-
-import scala.concurrent.ExecutionContext
-import scala.util.control.NonFatal
 
 class ArmeriaHttpClientInstrumentation extends InstrumentationBuilder {
   onType("com.linecorp.armeria.client.ClientBuilder")
@@ -37,38 +29,21 @@ class ArmeriaHttpClientInstrumentation extends InstrumentationBuilder {
 
 class ArmeriaHttpClientBuilderAdvisor
 
-object ArmeriaHttpClientBuilderAdvisor {
+object ArmeriaHttpClientBuilderAdvisor extends JavaConverters {
+  lazy val httpClientConfig = Kamon.config().getConfig("kamon.instrumentation.armeria.http-client")
+
   @Advice.OnMethodExit(suppress = classOf[Throwable])
   def addKamonDecorator(@Advice.This builder: ClientBuilder): Unit = {
-    builder.decorator(new KamonArmeriaDecoratingFunction())
+    val clientInstrumentation = HttpClientInstrumentation.from(httpClientConfig, "armeria-http-client");
+    builder.decorator(toJavaFunction((delegate: HttpClient) => new ArmeriaHttpClientDecorator(delegate, clientInstrumentation)))
   }
 }
 
 
-class KamonArmeriaDecoratingFunction extends DecoratingHttpClientFunction with FutureConverters {
-  private implicit val ec = ExecutionContext.fromExecutor(Executors.newCachedThreadPool())
 
-  private val httpClientConfig = Kamon.config.getConfig("kamon.instrumentation.armeria.http-client")
-  private val instrumentation = HttpClientInstrumentation.from(httpClientConfig, "armeria-http-client")
 
-  override def execute(delegate: HttpClient, ctx: ClientRequestContext, req: HttpRequest): HttpResponse = {
-    val requestHandler = instrumentation.createHandler(getRequestBuilder(req), Kamon.currentContext)
 
-    try {
-      ctx.log()
-        .whenComplete()
-        .toScala
-        .foreach(log => {
-          takeTimings(log, requestHandler.span)
-          requestHandler.processResponse(toKamonResponse(log))
-        })
-      delegate.execute(ctx, requestHandler.request)
-    } catch {
-      case NonFatal(error) =>
-        requestHandler.span.fail(error)
-        requestHandler.span.finish()
-        throw error
-    }
-  }
-}
+
+
+
 
