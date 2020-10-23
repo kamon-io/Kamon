@@ -113,6 +113,7 @@ object BaseProject extends AutoPlugin {
     licenses += (("Apache-2.0", url("http://www.apache.org/licenses/LICENSE-2.0"))),
     resolvers += Resolver.bintrayRepo("kamon-io", "releases"),
     resolvers += Resolver.mavenLocal,
+    headerLicense := Some(HeaderLicense.ALv2("2013-2020","The Kamon Project <https://kamon.io>")),
     Keys.commands += Command.command("testUntilFailed") { state: State =>
       "test" :: "testUntilFailed" :: state
     }
