@@ -24,9 +24,7 @@ class JvmMetricsCollector(ec: ExecutionContext) extends Module {
   private val _gcListener = registerGcListener(_defaultTags)
   private val _memoryUsageInstruments = new MemoryUsageInstruments(_defaultTags)
   private val _threadsUsageInstruments = new ThreadsInstruments()
-  // use default tags?
-  // jvm does make more sense than system-metrics
-  private val _classLoadingInstruments = new ClassLoadingInstruments(TagSet.of("component", "system-metrics"))
+  private val _classLoadingInstruments = new ClassLoadingInstruments(_defaultTags)
   private val _jmxCollectorTask = new JmxMetricsCollectorTask(_memoryUsageInstruments, _threadsUsageInstruments, _classLoadingInstruments)
   private val _jmxCollectorSchedule = Kamon.scheduler().scheduleAtFixedRate(_jmxCollectorTask, 1, 10, TimeUnit.SECONDS)
 

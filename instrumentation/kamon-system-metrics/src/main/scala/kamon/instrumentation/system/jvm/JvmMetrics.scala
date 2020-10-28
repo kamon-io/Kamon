@@ -155,9 +155,9 @@ object JvmMetrics {
   }
 
   class ClassLoadingInstruments(tags: TagSet) extends InstrumentGroup(tags) {
-    val loaded = register(ClassesLoaded, TagSet.from(Map("mode" -> "loaded")))
-    val unloaded = register(ClassesUnloaded, TagSet.from(Map("mode" -> "unloaded")))
-    val currentlyLoaded = register(ClassesCurrentlyLoaded, TagSet.from(Map("mode" -> "currently-loaded")))
+    val loaded = register(ClassesLoaded)
+    val unloaded = register(ClassesUnloaded)
+    val currentlyLoaded = register(ClassesCurrentlyLoaded)
   }
 
   class ThreadsInstruments extends InstrumentGroup(TagSet.Empty) {
