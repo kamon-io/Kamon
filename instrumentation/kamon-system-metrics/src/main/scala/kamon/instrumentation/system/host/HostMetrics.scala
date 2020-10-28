@@ -23,7 +23,7 @@ object HostMetrics {
     unit = MeasurementUnit.information.bytes
   )
 
-  val MemoryUsage = Kamon.histogram(
+  val MemoryUsage = Kamon.gauge(
     name = "host.memory.usage",
     description = "Tracks the percetange of memory used",
     unit = MeasurementUnit.percentage
@@ -47,7 +47,7 @@ object HostMetrics {
     unit = MeasurementUnit.information.bytes
   )
 
-  val SwapUsage = Kamon.histogram(
+  val SwapUsage = Kamon.gauge(
     name = "host.swap.usage",
     description = "Tracks the percentage of swap used",
     unit = MeasurementUnit.percentage
@@ -76,7 +76,7 @@ object HostMetrics {
     unit = MeasurementUnit.information.bytes
   )
 
-  val FileSystemMountSpaceUsage = Kamon.histogram(
+  val FileSystemMountSpaceUsage = Kamon.gauge(
     name = "host.storage.mount.space.usage",
     description = "Tracks the usage of space on a file system mount/volume",
     unit = MeasurementUnit.percentage
@@ -199,7 +199,7 @@ object HostMetrics {
 
     case class MountInstruments(
       used: Gauge,
-      usage: Histogram,
+      usage: Gauge,
       free: Gauge,
       total: Gauge
     )

@@ -152,13 +152,13 @@ class HostMetricsCollector(ec: ExecutionContext) extends Module {
       _memoryInstruments.total.update(totalMemory)
       _memoryInstruments.free.update(availableMemory)
       _memoryInstruments.used.update(usedMemory)
-      _memoryInstruments.usage.record(toPercent(usedMemory, totalMemory))
+      _memoryInstruments.usage.update(toPercent(usedMemory, totalMemory))
 
       val usedSwap = memory.getVirtualMemory.getSwapUsed
       val totalSwap = memory.getVirtualMemory.getSwapTotal
       _swapInstruments.total.update(totalSwap)
       _swapInstruments.used.update(usedSwap)
-      _swapInstruments.usage.record(toPercent(usedSwap, totalSwap))
+      _swapInstruments.usage.update(toPercent(usedSwap, totalSwap))
       _swapInstruments.free.update(totalSwap - usedSwap)
     }
 
@@ -181,7 +181,7 @@ class HostMetricsCollector(ec: ExecutionContext) extends Module {
           mountInstruments.free.update(fs.getUsableSpace)
           mountInstruments.total.update(totalSpace)
           mountInstruments.used.update(usedSpace)
-          mountInstruments.usage.record(toPercent(usedSpace, totalSpace))
+          mountInstruments.usage.update(toPercent(usedSpace, totalSpace))
         }
       })
     }
