@@ -20,7 +20,6 @@ import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.typesafe.config.Config;
 import io.netty.util.AttributeKey;
 import kamon.Kamon;
 import kamon.armeria.instrumentation.client.timing.Timing;
@@ -41,9 +40,6 @@ public class ArmeriaHttpClientDecorator extends SimpleDecoratingHttpClient {
   @Override
   public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
 
-    final Storage.Scope scope = Kamon.storeContext(Kamon.currentContext());
-    ctx.setAttr(CLIENT_TRACE_SCOPE_KEY, scope);
-
     final HttpClientInstrumentation.RequestHandler<HttpRequest> requestHandler =
         clientInstrumentation.createHandler(KamonArmeriaMessageConverter.getRequestBuilder(req), Kamon.currentContext());
 
@@ -56,7 +52,8 @@ public class ArmeriaHttpClientDecorator extends SimpleDecoratingHttpClient {
           }
         });
 
-    try (Storage.Scope ignored = Kamon.storeContext(ctx.attr(CLIENT_TRACE_SCOPE_KEY).context())) {
+    try (Storage.Scope scope = Kamon.storeContext(Kamon.currentContext())) {
+      ctx.setAttr(CLIENT_TRACE_SCOPE_KEY, scope);
       return unwrap().execute(ctx, requestHandler.request());
     } catch (Exception exception) {
       requestHandler.span().fail(exception.getMessage(), exception).finish();

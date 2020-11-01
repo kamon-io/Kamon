@@ -27,6 +27,8 @@ import kamon.armeria.instrumentation.converters.KamonArmeriaMessageConverter;
 import kamon.context.Storage;
 import kamon.instrumentation.http.HttpServerInstrumentation;
 
+import java.net.InetSocketAddress;
+
 public class ArmeriaHttpServerDecorator extends SimpleDecoratingHttpService {
   private static final String FALLBACK_SERVICE_NAME = "com.linecorp.armeria.server.FallbackService";
   private static final AttributeKey<Storage.Scope> SERVER_TRACE_SCOPE_KEY = AttributeKey.valueOf(Storage.Scope.class, "SERVER_TRACE_SCOPE");
@@ -34,7 +36,7 @@ public class ArmeriaHttpServerDecorator extends SimpleDecoratingHttpService {
   private final HttpServerInstrumentation httpServerInstrumentation;
   private final String serverHost;
 
-  public ArmeriaHttpServerDecorator(HttpService delegate, HttpServerInstrumentation httpServerInstrumentation, String serverHost, Integer serverPort) {
+  public ArmeriaHttpServerDecorator(HttpService delegate, HttpServerInstrumentation httpServerInstrumentation, String serverHost) {
     super(delegate);
     this.serverHost = serverHost;
     this.httpServerInstrumentation = httpServerInstrumentation;
@@ -42,32 +44,35 @@ public class ArmeriaHttpServerDecorator extends SimpleDecoratingHttpService {
 
   @Override
   public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+    //I'm not sure about ((InetSocketAddress) ctx.localAddress()), i need the request port
+    // to check if this is the decorator that corresponds to this port
+    if (httpServerInstrumentation.port() == ((InetSocketAddress) ctx.localAddress()).getPort()) {
 
-    final Storage.Scope scope = Kamon.storeContext(Kamon.currentContext());
-    ctx.setAttr(SERVER_TRACE_SCOPE_KEY, scope);
+      final HttpServerInstrumentation.RequestHandler requestHandler =
+          httpServerInstrumentation.createHandler(KamonArmeriaMessageConverter.toRequest(req, serverHost, httpServerInstrumentation.port()));
 
-    final HttpServerInstrumentation.RequestHandler requestHandler =
-        httpServerInstrumentation.createHandler(KamonArmeriaMessageConverter.toRequest(req, serverHost, httpServerInstrumentation.port()));
-
-    ctx.log()
-        .whenComplete()
-        .thenAccept(log -> {
-          try (Storage.Scope requestCtxScope = ctx.attr(SERVER_TRACE_SCOPE_KEY)) {
-            //Fixme: this is working fine with a Armeria server but the behaviour is unexpected with a dropwizard application and static files serve.
-            // With proxy services like https://github.com/lucasamoroso/kamon-armeria-test/tree/master/src/main/java/example/proxy  the operation name is set
-            // with 2 values one is the configured unhandled operation name and the other is te request path
-            if (HttpStatus.NOT_FOUND.equals(log.responseHeaders().status()) && FALLBACK_SERVICE_NAME.equals(log.serviceName())) {
-              requestHandler.span().name(httpServerInstrumentation.settings().unhandledOperationName());
+      ctx.log()
+          .whenComplete()
+          .thenAccept(log -> {
+            try (Storage.Scope ignored = Kamon.storeContext(requestHandler.context())) {
+              //Fixme: this is working fine with a Armeria server but the behaviour is unexpected with a dropwizard application and static files serve.
+              // With proxy services like https://github.com/lucasamoroso/kamon-armeria-test/tree/master/src/main/java/example/proxy  the operation name is set
+              // with 2 values one is the configured unhandled operation name and the other is te request path
+              if (HttpStatus.NOT_FOUND.equals(log.responseHeaders().status()) && FALLBACK_SERVICE_NAME.equals(log.serviceName())) {
+                requestHandler.span().name(httpServerInstrumentation.settings().unhandledOperationName());
+              }
+              requestHandler.buildResponse(KamonArmeriaMessageConverter.toResponse(log), requestHandler.context());
+              requestHandler.responseSent();
             }
-            requestHandler.buildResponse(KamonArmeriaMessageConverter.toResponse(log), requestCtxScope.context());
-            requestHandler.responseSent();
-          }
-        });
+          });
 
-    try (Storage.Scope ignored = Kamon.storeContext(scope.context())) {
-      return unwrap().serve(ctx, req);
+      try (Storage.Scope ignored = Kamon.storeContext(requestHandler.context())) {
+        return unwrap().serve(ctx, req);
+      }
     }
+    return unwrap().serve(ctx, req);
   }
+
 }
 
 
