@@ -14,3 +14,8 @@ addSbtPlugin("com.jsuereth" % "sbt-pgp" % "2.0.1")
 addSbtPlugin("de.heikoseeberger" % "sbt-header" % "5.5.0")
 
 addSbtPlugin("com.lightbend.akka.grpc" % "sbt-akka-grpc" % "2.1.3")
+addSbtPlugin("com.thesamet" % "sbt-protoc" % "0.99.34")
+
+libraryDependencies ++= Seq(
+  "com.thesamet.scalapb" %% "compilerplugin" % "0.10.8"
+)

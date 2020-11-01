@@ -662,15 +662,35 @@ lazy val `kamon-armeria` = (project in file("instrumentation/kamon-armeria"))
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
-    libraryDependencies ++= Seq(
-      kanelaAgent % "provided",
-      "com.linecorp.armeria" % "armeria" % "1.1.0" % "provided",
+    libraryDependencies ++= {
+      val grpcDependencies = {
+        CrossVersion.partialVersion(scalaVersion.value) match {
+          case Some((2, n)) if n >= 12 =>
+            Seq(
+              "com.linecorp.armeria" % "armeria-grpc" % "1.1.0" % "test",
+              "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % scalapb.compiler.Version.scalapbVersion % "test"
+            )
+          case _ => Nil // ignore this dependencies on scala 2.11 test because test will be ignored and this dependency scalapb-runtime-grpc is no available anymore
+        }
+      }
+      Seq(
+        kanelaAgent % "provided",
+        "com.linecorp.armeria" % "armeria" % "1.1.0" % "provided",
 
-      scalatest % "test",
-      okHttp % "test",
-      logbackClassic % "test"
-    )
-  ).dependsOn(`kamon-instrumentation-common`, `kamon-testkit` % "test")
+        scalatest % "test",
+        logbackClassic % "test"
+      ) ++ grpcDependencies
+    },
+    skip in Test := {
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((2, n)) if n >= 12 => false
+        case _                       => true // skip scala 2.11 tests because of compatibility issues with protobuf
+    }
+    },
+    PB.protoSources in Test := Seq(file("instrumentation/kamon-armeria/src/test/protobuf")),
+    PB.targets in Test := Seq(scalapb.gen() -> (sourceManaged in Test).value)
+  )
+  .dependsOn(`kamon-instrumentation-common`, `kamon-testkit` % "test")
 
 /**
  * Reporters

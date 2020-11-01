@@ -15,12 +15,13 @@
 
 package kamon.armeria.instrumentation.server
 
+import com.linecorp.armeria.client.{ClientFactory, Clients, WebClient}
+import com.linecorp.armeria.common.{HttpMethod, HttpRequest, RequestHeaders}
 import kamon.tag.Lookups.{plain, plainBoolean, plainLong}
 import kamon.testkit._
-import okhttp3.{OkHttpClient, Request}
 import org.scalatest.OptionValues.convertOptionToValuable
 import org.scalatest.concurrent.Eventually
-import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, Matchers, WordSpec}
 import utils.ArmeriaServerSupport.startArmeriaServer
 import utils.TestEndpoints._
 
@@ -29,28 +30,33 @@ import scala.concurrent.duration._
 class ArmeriaHttpServerTracingSpec extends WordSpec
   with Matchers
   with BeforeAndAfterAll
+  with BeforeAndAfterEach
   with Eventually
   with TestSpanReporter {
 
-  private val okHttp = new OkHttpClient.Builder().build()
-
   val interface = "127.0.0.1"
   val httpPort = 8080
+  val httpsPort = 8081
 
-  private val httpServer = startArmeriaServer(httpPort)
+  private val httpServer = startArmeriaServer(httpPort, maybeHttpsPort = Some(httpsPort))
 
   testSuite("http", interface, httpPort)
+  testSuite("https", interface, httpsPort)
 
   private def testSuite(protocol: String, interface: String, port: Int): Unit = {
+
+    val webClient = newWebClient(protocol,port)
 
     s"The Armeria $protocol server" should {
 
       "create a server Span when receiving requests" in {
         val target = s"$protocol://$interface:$port/$dummyPath"
-        val expected = "dummy.get"
-        okHttp.newCall(new Request.Builder().url(target).get().build()).execute().close()
+        val expected = "/dummy"
 
-        eventually(timeout(10 seconds)) {
+        val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, dummyPath))
+        webClient.execute(request)
+
+        eventually(timeout(3 seconds)) {
           val span = testSpanReporter().nextSpan().value
           span.operationName shouldBe expected
           span.tags.get(plain("http.url")) shouldBe target
@@ -64,11 +70,12 @@ class ArmeriaHttpServerTracingSpec extends WordSpec
         "request path doesn't exists" in {
           val target = s"$protocol://$interface:$port/$dummyNotFoundPath"
           val expected = "unhandled"
-          okHttp.newCall(new Request.Builder().url(target).get().build()).execute().close()
 
-          eventually(timeout(10 seconds)) {
+          val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, dummyNotFoundPath))
+          webClient.execute(request)
+
+          eventually(timeout(3 seconds)) {
             val span = testSpanReporter().nextSpan().value
-            println(span.operationName)
             span.operationName shouldBe expected
             span.tags.get(plain("http.url")) shouldBe target
             span.metricTags.get(plain("component")) shouldBe "armeria-http-server"
@@ -82,10 +89,12 @@ class ArmeriaHttpServerTracingSpec extends WordSpec
       "set operation name with path + http method" when {
         "resource doesn't exist" in {
           val target = s"$protocol://$interface:$port/$dummyResourceNotFoundPath"
-          val expected = "dummy-resource-not-found.get"
-          okHttp.newCall(new Request.Builder().url(target).get().build()).execute().close()
+          val expected = "/dummy-resource-not-found"
 
-          eventually(timeout(10 seconds)) {
+          val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, dummyResourceNotFoundPath))
+          webClient.execute(request)
+
+          eventually(timeout(3 seconds)) {
             val span = testSpanReporter().nextSpan().value
             span.operationName shouldBe expected
             span.tags.get(plain("http.url")) shouldBe target
@@ -98,35 +107,38 @@ class ArmeriaHttpServerTracingSpec extends WordSpec
       }
 
       "not include path variables names" in {
-        val target = s"$protocol://$interface:$port/$dummyMultipleResourcesPath"
         val expected = "dummy-resources/{}/other-resources/{}"
-        okHttp.newCall(new Request.Builder().url(target).get().build()).execute().close()
 
-        eventually(timeout(10 seconds)) {
+        val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, dummyMultipleResourcesPath))
+        webClient.execute(request)
+
+        eventually(timeout(3 seconds)) {
           val span = testSpanReporter().nextSpan().value
           span.operationName shouldBe expected
         }
       }
 
       "not fail when request url contains special regexp chars" in {
-        val target = s"$protocol://$interface:$port/$dummyMultipleResourcesPath**"
         val expected = "dummy-resources/{}/other-resources/{}"
-        val response = okHttp.newCall(new Request.Builder().url(target).build()).execute()
 
-        eventually(timeout(10 seconds)) {
+        val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, s"$dummyMultipleResourcesPath**"))
+        val response = webClient.execute(request).aggregate().get()
+
+        eventually(timeout(3 seconds)) {
           val span = testSpanReporter().nextSpan().value
           span.operationName shouldBe expected
-          response.code() shouldBe 200
+          response.status().code() shouldBe 200
         }
-        response.close()
       }
 
       "mark spans as failed when request fails" in {
         val target = s"$protocol://$interface:$port/$dummyErrorPath"
-        val expected = s"$dummyErrorPath.get"
-        okHttp.newCall(new Request.Builder().url(target).build()).execute().close()
+        val expected = s"/$dummyErrorPath"
 
-        eventually(timeout(10 seconds)) {
+        val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, dummyErrorPath))
+        webClient.execute(request)
+
+        eventually(timeout(3 seconds)) {
           val span = testSpanReporter().nextSpan().value
           span.operationName shouldBe expected
           span.tags.get(plain("http.url")) shouldBe target
@@ -140,10 +152,12 @@ class ArmeriaHttpServerTracingSpec extends WordSpec
       "return a redirect status code" when {
         "a request to /docs is redirected to /docs/" in {
           val target = s"$protocol://$interface:$port/$docs"
-          val expected = s"$docs.get"
-          okHttp.newCall(new Request.Builder().url(target).get().build()).execute().close()
+          val expected = s"/$docs"
 
-          eventually(timeout(10 seconds)) {
+          val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, docs))
+          webClient.execute(request)
+
+          eventually(timeout(3 seconds)) {
             val span = testSpanReporter().nextSpan().value
             span.operationName shouldBe expected
             span.tags.get(plain("http.url")) shouldBe target
@@ -157,10 +171,12 @@ class ArmeriaHttpServerTracingSpec extends WordSpec
       "return a ok status code " when {
         "a request to /docs/ is done" in {
           val target = s"$protocol://$interface:$port/$docs/"
-          val expected = s"$docs.get"
-          okHttp.newCall(new Request.Builder().url(target).get().build()).execute().close()
+          val expected = s"/$docs"
 
-          eventually(timeout(10 seconds)) {
+          val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, s"$docs/"))
+          webClient.execute(request)
+
+          eventually(timeout(3 seconds)) {
             val span = testSpanReporter().nextSpan().value
             span.operationName shouldBe expected
             span.tags.get(plain("http.url")) shouldBe target
@@ -171,6 +187,12 @@ class ArmeriaHttpServerTracingSpec extends WordSpec
         }
       }
     }
+  }
+
+  private def newWebClient(protocol: String, port: Int): WebClient = {
+    val clientFactory = ClientFactory.builder().tlsNoVerifyHosts("localhost", "127.0.0.1").build()
+    val webClient = Clients.builder(s"$protocol://$interface:$port").build(classOf[WebClient])
+    clientFactory.newClient(webClient).asInstanceOf[WebClient]
   }
 
   override protected def afterAll(): Unit =

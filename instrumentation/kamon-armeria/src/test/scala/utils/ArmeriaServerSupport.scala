@@ -19,18 +19,30 @@ import java.net.InetSocketAddress
 
 import com.linecorp.armeria.server.Server
 import com.linecorp.armeria.server.docs.DocService
+import com.linecorp.armeria.server.grpc.GrpcService
 import com.linecorp.armeria.server.healthcheck.HealthCheckService
 
 object ArmeriaServerSupport {
 
-  def startArmeriaServer(port: Int, https: Boolean = false): Server = {
-    val server = Server
+  def startArmeriaServer(port: Int, maybeHttpsPort: Option[Int] = None, maybeGrpcService: Option[GrpcService] = None): Server = {
+    val serverBuilder = Server
       .builder()
       .service("/health-check", HealthCheckService.of())
       .serviceUnder("/docs", new DocService())
       .annotatedService().build(TestRoutesSupport())
       .http(InetSocketAddress.createUnresolved("localhost", port))
-      .build()
+
+    maybeHttpsPort.foreach {
+      serverBuilder
+        .https(_)
+        .tlsSelfSigned()
+    }
+
+    maybeGrpcService.foreach {
+      serverBuilder.service(_)
+    }
+
+    val server = serverBuilder.build()
 
     server
       .start()

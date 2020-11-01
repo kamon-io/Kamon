@@ -43,16 +43,14 @@ object ArmeriaServerBuilderAdvisor extends JavaConverters {
 
   @Advice.OnMethodEnter
   def addKamonDecorator(@Advice.This builder: ServerBuilder): Unit = {
-    // until now all tests were done with http so we'll work with this ports
     builder.asInstanceOf[ServerBuilderInternalState].getServerPorts.asScala
-      .filter(_.hasHttp)
       .foreach(serverPort =>
         builder.decorator(
           toJavaFunction((delegate: HttpService) => {
             val hostname = serverPort.localAddress().getHostName
             val port = serverPort.localAddress().getPort
             val serverInstrumentation = HttpServerInstrumentation.from(httpServerConfig, "armeria-http-server", hostname, port)
-            new ArmeriaHttpServerDecorator(delegate, serverInstrumentation, hostname, port)
+            new ArmeriaHttpServerDecorator(delegate, serverInstrumentation, hostname)
           }
           )
         )

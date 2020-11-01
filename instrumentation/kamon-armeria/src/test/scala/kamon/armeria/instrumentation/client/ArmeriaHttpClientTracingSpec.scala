@@ -25,7 +25,7 @@ class ArmeriaHttpClientTracingSpec extends WordSpec
   val customHeaderName = "X-Request-Id"
 
   val interface = "127.0.0.1"
-  val httpPort = 8081
+  val httpPort = 8080
 
   val httpServer = startArmeriaServer(httpPort)
 
@@ -43,10 +43,10 @@ class ArmeriaHttpClientTracingSpec extends WordSpec
         client.execute(request).aggregate().get()
       }
 
-      val span = eventually(timeout(10 seconds)) {
+      val span = eventually(timeout(3 seconds)) {
         val span = testSpanReporter().nextSpan().value
 
-        span.operationName shouldBe s"$interface.dummy.get"
+        span.operationName shouldBe path
         span.kind shouldBe Span.Kind.Client
         span.metricTags.get(plain("component")) shouldBe "armeria-http-client"
         span.metricTags.get(plain("http.method")) shouldBe "GET"
@@ -81,10 +81,10 @@ class ArmeriaHttpClientTracingSpec extends WordSpec
         client.execute(request).aggregate().get()
       }
 
-      val span: Span.Finished = eventually(timeout(10 seconds)) {
+      val span: Span.Finished = eventually(timeout(3 seconds)) {
         val span = testSpanReporter().nextSpan().value
 
-        span.operationName shouldBe s"$interface.dummy.get"
+        span.operationName shouldBe path
         span.kind shouldBe Span.Kind.Client
         span.metricTags.get(plain("component")) shouldBe "armeria-http-client"
         span.metricTags.get(plain("http.method")) shouldBe "GET"
@@ -121,10 +121,10 @@ class ArmeriaHttpClientTracingSpec extends WordSpec
         response.aggregate().get()
       }
 
-      val span: Span.Finished = eventually(timeout(10 seconds)) {
+      val span: Span.Finished = eventually(timeout(3 seconds)) {
         val span = testSpanReporter().nextSpan().value
 
-        span.operationName shouldBe s"$interface.dummy-error.get"
+        span.operationName shouldBe path
         span.kind shouldBe Span.Kind.Client
         span.metricTags.get(plain("component")) shouldBe "armeria-http-client"
         span.metricTags.get(plain("http.method")) shouldBe "GET"
@@ -165,10 +165,10 @@ class ArmeriaHttpClientTracingSpec extends WordSpec
         client.execute(request).aggregate().get()
       }
 
-      val span = eventually(timeout(10 seconds)) {
+      val span = eventually(timeout(3 seconds)) {
         val span = testSpanReporter().nextSpan().value
 
-        span.operationName shouldBe s"$interface.dummy.get"
+        span.operationName shouldBe path
         span.kind shouldBe Span.Kind.Client
         span.metricTags.get(plain("component")) shouldBe "armeria-http-client"
         span.metricTags.get(plain("http.method")) shouldBe "GET"
