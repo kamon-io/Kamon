@@ -69,8 +69,10 @@ public class ArmeriaHttpServerDecorator extends SimpleDecoratingHttpService {
       try (Storage.Scope ignored = Kamon.storeContext(requestHandler.context())) {
         return unwrap().serve(ctx, req);
       }
+    } else {
+      return unwrap().serve(ctx, req);
     }
-    return unwrap().serve(ctx, req);
+
   }
 
 }
