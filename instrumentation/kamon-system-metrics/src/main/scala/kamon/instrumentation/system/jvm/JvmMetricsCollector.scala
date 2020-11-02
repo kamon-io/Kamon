@@ -25,7 +25,7 @@ import com.typesafe.config.Config
 import javax.management.openmbean.CompositeData
 import javax.management.{Notification, NotificationEmitter, NotificationListener}
 import kamon.Kamon
-import kamon.instrumentation.system.jvm.JvmMetrics.{GarbageCollectionInstruments, MemoryUsageInstruments, ThreadsInstruments}
+import kamon.instrumentation.system.jvm.JvmMetrics.{ClassLoadingInstruments, GarbageCollectionInstruments, MemoryUsageInstruments, ThreadsInstruments}
 import kamon.instrumentation.system.jvm.JvmMetricsCollector.{Collector, MemoryPool}
 import kamon.module.{Module, ModuleFactory}
 import kamon.tag.TagSet
@@ -40,7 +40,8 @@ class JvmMetricsCollector(ec: ExecutionContext) extends Module {
   private val _gcListener = registerGcListener(_defaultTags)
   private val _memoryUsageInstruments = new MemoryUsageInstruments(_defaultTags)
   private val _threadsUsageInstruments = new ThreadsInstruments()
-  private val _jmxCollectorTask = new JmxMetricsCollectorTask(_memoryUsageInstruments, _threadsUsageInstruments)
+  private val _classLoadingInstruments = new ClassLoadingInstruments(_defaultTags)
+  private val _jmxCollectorTask = new JmxMetricsCollectorTask(_memoryUsageInstruments, _threadsUsageInstruments, _classLoadingInstruments)
   private val _jmxCollectorSchedule = Kamon.scheduler().scheduleAtFixedRate(_jmxCollectorTask, 1, 10, TimeUnit.SECONDS)
 
   override def stop(): Unit = {
@@ -90,7 +91,6 @@ class JvmMetricsCollector(ec: ExecutionContext) extends Module {
 
             // We assume that if the old generation grew during this GC event then some data was promoted to it and will
             // record it as promotion to the old generation.
-            //
             if(region.usage == MemoryPool.Usage.OldGeneration) {
               val regionUsageAfterGc = usageAfterGc(regionName)
               val diff = regionUsageAfterGc.getUsed - regionUsageBeforeGc.getUsed
@@ -122,11 +122,12 @@ class JvmMetricsCollector(ec: ExecutionContext) extends Module {
     }
   }
 
-  class JmxMetricsCollectorTask(memoryUsageInstruments: MemoryUsageInstruments, threadsInstruments: ThreadsInstruments)
+  class JmxMetricsCollectorTask(memoryUsageInstruments: MemoryUsageInstruments, threadsInstruments: ThreadsInstruments, classLoadingInstruments: ClassLoadingInstruments)
       extends Runnable {
 
     private val _heapUsage = memoryUsageInstruments.regionInstruments("heap")
     private val _nonHeapUsage = memoryUsageInstruments.regionInstruments("non-heap")
+    private val _classLoading = classLoadingInstruments
 
     override def run(): Unit = {
       val threadsMxBen = ManagementFactory.getThreadMXBean()
@@ -147,6 +148,11 @@ class JvmMetricsCollector(ec: ExecutionContext) extends Module {
       _nonHeapUsage.used.record(currentNonHeapUsage.getUsed)
       _nonHeapUsage.max.update(currentNonHeapUsage.getMax)
       _nonHeapUsage.committed.update(currentNonHeapUsage.getCommitted)
+
+      val classLoadingBean = ManagementFactory.getClassLoadingMXBean
+      _classLoading.loaded.update(classLoadingBean.getTotalLoadedClassCount)
+      _classLoading.unloaded.update(classLoadingBean.getUnloadedClassCount)
+      _classLoading.currentlyLoaded.update(classLoadingBean.getLoadedClassCount)
 
       ManagementFactory.getMemoryPoolMXBeans.asScala.foreach(memoryBean => {
         val poolInstruments = memoryUsageInstruments.poolInstruments(MemoryPool.find(memoryBean.getName))
