@@ -468,8 +468,9 @@ lazy val `kamon-datadog` = (project in file("reporters/kamon-datadog"))
   .settings(
     libraryDependencies ++= Seq(
       okHttp,
-      "com.typesafe.play" %% "play-json" % "2.7.4",
+      "com.grack" % "nanojson" % "1.1",
 
+      "com.typesafe.play" %% "play-json" % "2.7.4" % "test",
       scalatest % "test",
       slf4jApi % "test",
       slf4jnop % "test",
