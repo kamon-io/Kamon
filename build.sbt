@@ -70,7 +70,7 @@ lazy val `kamon-status-page` = (project in file("core/kamon-status-page"))
       ShadeRule.rename("fi.iki.elonen.**"       -> "kamon.lib.@0").inAll,
     ),
     libraryDependencies ++= Seq(
-      "com.grack"     %  "nanojson"  % "1.1"   % "provided,shaded",
+      "com.grack"     %  "nanojson"  % "1.6"   % "provided,shaded",
       "org.nanohttpd" %  "nanohttpd" % "2.3.1" % "provided,shaded"
     )
   ).dependsOn(`kamon-core`)
@@ -464,11 +464,14 @@ lazy val reporters = (project in file("reporters"))
 
 
 lazy val `kamon-datadog` = (project in file("reporters/kamon-datadog"))
-  .disablePlugins(AssemblyPlugin)
+  .enablePlugins(AssemblyPlugin)
   .settings(
+    assemblyShadeRules in assembly := Seq(
+      ShadeRule.rename("com.grack.nanojson.**"  -> "kamon.lib.@0").inAll,
+    ),
     libraryDependencies ++= Seq(
       okHttp,
-      "com.grack" % "nanojson" % "1.1",
+      "com.grack" % "nanojson" % "1.6" % "provided,shaded",
 
       "com.typesafe.play" %% "play-json" % "2.7.4" % "test",
       scalatest % "test",
