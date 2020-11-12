@@ -96,7 +96,9 @@ object ActorMonitor {
         val trackingGroups: Seq[ActorGroupInstruments] = if (cell.isRootSupervisor) List() else {
           val configuredMatchingGroups = AkkaInstrumentation.matchingActorGroups(cell.path)
 
-          if (configuredMatchingGroups.isEmpty && !isTracked && settings.autoGrouping && !cell.isRouter && !cell.isRoutee) {
+          if (configuredMatchingGroups.isEmpty && !isTracked
+            && settings.autoGrouping && !cell.isRouter
+            && !cell.isRoutee && !ActorCellInfo.isTyped(cell.actorOrRouterClass)) {
             if (!trackedFilter.excludes(cell.path) && Kamon.filter(TrackAutoGroupFilterName).accept(autoGroupingPath))
               List(AkkaMetrics.forGroup(autoGroupingPath, system.name))
             else
