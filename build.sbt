@@ -464,14 +464,11 @@ lazy val reporters = (project in file("reporters"))
 
 
 lazy val `kamon-datadog` = (project in file("reporters/kamon-datadog"))
-  .enablePlugins(AssemblyPlugin)
+  .disablePlugins(AssemblyPlugin)
   .settings(
-    assemblyShadeRules in assembly := Seq(
-      ShadeRule.rename("com.grack.nanojson.**"  -> "kamon.lib.@0").inAll,
-    ),
     libraryDependencies ++= Seq(
       okHttp,
-      "com.grack" % "nanojson" % "1.6" % "provided,shaded",
+      "com.grack" % "nanojson" % "1.6",
 
       "com.typesafe.play" %% "play-json" % "2.7.4" % "test",
       scalatest % "test",
