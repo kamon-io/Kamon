@@ -130,7 +130,7 @@ object ActorMonitor {
           cellInfo.path,
           cellInfo.systemName,
           cellInfo.dispatcherName,
-          cellInfo.actorOrRouterClass.getName
+          cellInfo.actorOrRouterClass
         ))
       }
 
@@ -149,7 +149,7 @@ object ActorMonitor {
       cellInfo.path,
       cellInfo.systemName,
       cellInfo.dispatcherName,
-      cellInfo.actorOrRouterClass.getName,
+      cellInfo.actorOrRouterClass,
       cellInfo.routeeClass.map(_.getName).getOrElse("Unknown")
     )
 
@@ -177,8 +177,6 @@ object ActorMonitor {
     * Wraps another ActorMonitor implementation and provides tracing capabilities on top of it.
     */
   class TracedMonitor(cellInfo: ActorCellInfo, startsTrace: Boolean, monitor: ActorMonitor) extends ActorMonitor {
-    private val _actorClassName = cellInfo.actorOrRouterClass.getName
-    private val _actorSimpleClassName = ActorCellInfo.simpleClassName(cellInfo.actorOrRouterClass)
 
     override def captureEnvelopeTimestamp(): Long =
       monitor.captureEnvelopeTimestamp()
@@ -225,23 +223,24 @@ object ActorMonitor {
       val messageClass = ActorCellInfo.simpleClassName(envelope.message.getClass)
       val parentSpan = context.get(Span.Key)
 
-      Kamon.internalSpanBuilder(operationName(messageClass, envelope.sender), "akka.actor")
+      val spanBuilder = Kamon.internalSpanBuilder(operationName(messageClass, envelope.sender), "akka.actor")
         .asChildOf(parentSpan)
         .doNotTrackMetrics()
         .tag("akka.system", cellInfo.systemName)
         .tag("akka.actor.path", cellInfo.path)
-        .tag("akka.actor.class", _actorClassName)
         .tag("akka.actor.message-class", messageClass)
-        .delay(Kamon.clock().toInstant(envelopeTimestamp))
+      if (!ActorCellInfo.isTyped(cellInfo.actorOrRouterClass)) {
+        spanBuilder.tag("akka.actor.class", cellInfo.actorOrRouterClass.getName)
+      }
+      spanBuilder.delay(Kamon.clock().toInstant(envelopeTimestamp))
     }
 
     private def operationName(messageClass: String, sender: ActorRef): String = {
-      val operationType = if(AkkaPrivateAccess.isPromiseActorRef(sender)) "ask(" else "tell("
+      val operationType = if(AkkaPrivateAccess.isPromiseActorRef(sender)) "ask" else "tell"
 
       StringBuilder.newBuilder
         .append(operationType)
-        .append(_actorSimpleClassName)
-        .append(", ")
+        .append("(")
         .append(messageClass)
         .append(")")
         .result()

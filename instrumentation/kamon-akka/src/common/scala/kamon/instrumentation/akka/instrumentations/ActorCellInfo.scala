@@ -84,6 +84,10 @@ object ActorCellInfo {
     }}
   }
 
+  def isTyped(className: Class[_]): Boolean = {
+    simpleClassName(className) == "ActorAdapter"
+  }
+
   private def hasRouterProps(props: Props): Boolean =
     props.deploy.routerConfig != NoRouter
 

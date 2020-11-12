@@ -54,7 +54,7 @@ object RouterMonitor {
           cell.path,
           cell.systemName,
           cell.dispatcherName,
-          cell.actorOrRouterClass.getName,
+          cell.actorOrRouterClass,
           cell.routeeClass.map(_.getName).getOrElse("Unknown")
         )
       )

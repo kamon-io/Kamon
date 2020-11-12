@@ -1,6 +1,7 @@
 package kamon.instrumentation.akka
 
 import kamon.Kamon
+import kamon.instrumentation.akka.instrumentations.ActorCellInfo
 import kamon.metric.InstrumentGroup
 import kamon.tag.TagSet
 
@@ -35,13 +36,14 @@ object AkkaMetrics {
     description = "Counts the number of processing errors experienced by an Actor"
   )
 
-  def forActor(path: String, system: String, dispatcher: String, actorClass: String): ActorInstruments =
-    new ActorInstruments(TagSet.builder()
+  def forActor(path: String, system: String, dispatcher: String, actorClass: Class[_]): ActorInstruments = {
+    val tags = TagSet.builder()
       .add("path", path)
       .add("system", system)
       .add("dispatcher", dispatcher)
-      .add("class", actorClass)
-      .build())
+    if (!ActorCellInfo.isTyped(actorClass)) tags.add("class", actorClass.getName)
+    new ActorInstruments(tags.build())
+  }
 
   class ActorInstruments(tags: TagSet) extends InstrumentGroup(tags) {
     val timeInMailbox = register(ActorTimeInMailbox)
@@ -85,14 +87,16 @@ object AkkaMetrics {
     description = "Counts the number of processing errors experienced by the routees of a router"
   )
 
-  def forRouter(path: String, system: String, dispatcher: String, routerClass: String, routeeClass: String): RouterInstruments =
-    new RouterInstruments(TagSet.builder()
+  def forRouter(path: String, system: String, dispatcher: String, routerClass: Class[_], routeeClass: String): RouterInstruments = {
+    val tags = TagSet.builder()
       .add("path", path)
       .add("system", system)
       .add("dispatcher", dispatcher)
-      .add("routerClass", routerClass)
       .add("routeeClass", routeeClass)
-      .build())
+    if (!ActorCellInfo.isTyped(routerClass)) tags.add("routerClass", routerClass.getName)
+    new RouterInstruments(tags.build())
+
+  }
 
   class RouterInstruments(tags: TagSet) extends InstrumentGroup(tags) {
     val routingTime = register(RouterRoutingTime)
