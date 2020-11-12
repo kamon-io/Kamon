@@ -24,7 +24,6 @@ import com.typesafe.config.Config
 import kamon.metric.MeasurementUnit
 import kamon.metric.MeasurementUnit.{ information, time }
 import okhttp3._
-import play.api.libs.json.JsValue
 
 import scala.util.{ Failure, Success, Try }
 
@@ -86,14 +85,14 @@ package object datadog {
       doMethodWithBody("PUT", contentType, contentBody)
     }
 
-    def doJsonPost(contentBody: JsValue): Try[String] = {
+    def doJsonPost(contentBody: String): Try[String] = {
       // Datadog Agent does not accept ";charset=UTF-8", using bytes to send Json posts
-      doPost("application/json", contentBody.toString().getBytes(StandardCharsets.UTF_8))
+      doPost("application/json", contentBody.getBytes(StandardCharsets.UTF_8))
     }
 
-    def doJsonPut(contentBody: JsValue): Try[String] = {
+    def doJsonPut(contentBody: String): Try[String] = {
       // Datadog Agent does not accept ";charset=UTF-8", using bytes to send Json posts
-      doPut("application/json", contentBody.toString().getBytes(StandardCharsets.UTF_8))
+      doPut("application/json", contentBody.getBytes(StandardCharsets.UTF_8))
     }
 
     // Apparently okhttp doesn't require explicit closing of the connection
