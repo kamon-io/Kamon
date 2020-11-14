@@ -24,22 +24,26 @@ class KamonArmeriaHttpOperationNameGenerator extends HttpOperationNameGenerator 
 
   private val localCache = TrieMap.empty[String, String]
   private val normalizePattern = """\$([^<]+)<[^>]+>""".r
+  private val grpcContentTypeRegex = "application/grpc.*"
 
   def name(request: Request): Option[String] =
     Some(
       localCache.getOrElseUpdate(request.path, {
-        normalisePath(request.path)
+        normalisePath(request.path, isGrpc(request))
       })
     )
 
-  private def normalisePath(path: String): String = {
+  private def normalisePath(path: String, isGrpc: Boolean): String = {
     val p = normalizePattern.replaceAllIn(path, "$1").dropWhile(_ == '.')
     val normalisedPath = {
-      if (p.lastOption.contains('/')) p.dropRight(1)
+      if (p.lastOption.contains('/') && p.length > 1) p.dropRight(1)
       else p
     }
-    normalisedPath.split("\\.").last
+    if (isGrpc) normalisedPath.split("\\.").last
+    else normalisedPath
   }
+
+  private def isGrpc(request: Request): Boolean = request.read("content-type").exists(_.matches(grpcContentTypeRegex))
 }
 
 object KamonArmeriaHttpOperationNameGenerator {
