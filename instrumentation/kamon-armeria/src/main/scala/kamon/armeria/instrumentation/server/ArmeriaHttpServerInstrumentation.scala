@@ -15,9 +15,11 @@
 
 package kamon.armeria.instrumentation.server
 
-import com.linecorp.armeria.server.{HttpService, ServerBuilder, ServerPort}
+import com.linecorp.armeria.common.HttpStatus
+import com.linecorp.armeria.server._
 import kamon.Kamon
 import kamon.armeria.instrumentation.converters.JavaConverters
+import kamon.armeria.instrumentation.server.ArmeriaHttpServerDecorator.REQUEST_HANDLER_TRACE_KEY
 import kamon.armeria.instrumentation.server.InternalState.ServerBuilderInternalState
 import kamon.instrumentation.http.HttpServerInstrumentation
 import kanela.agent.api.instrumentation.InstrumentationBuilder
@@ -30,6 +32,9 @@ class ArmeriaHttpServerInstrumentation extends InstrumentationBuilder {
   onType("com.linecorp.armeria.server.ServerBuilder")
     .advise(method("build"), classOf[ArmeriaServerBuilderAdvisor])
     .bridge(classOf[ServerBuilderInternalState])
+
+  onType("com.linecorp.armeria.server.FallbackService")
+    .advise(method("handleNotFound"), classOf[HandleNotFoundMethodAdvisor])
 }
 
 class ArmeriaServerBuilderAdvisor
@@ -55,6 +60,28 @@ object ArmeriaServerBuilderAdvisor extends JavaConverters {
           )
         )
       )
+  }
+}
+
+class HandleNotFoundMethodAdvisor
+
+object HandleNotFoundMethodAdvisor {
+  lazy val unhandledOperationName = Kamon.config().getConfig("kamon.instrumentation.armeria.http-server").getString("tracing.operations.unhandled")
+
+  /**
+    * When an HttpStatusException is thrown in {@link com.linecorp.armeria.server.FallbackService.handleNotFound( )} is because the route doesn't  exist
+    * so we must set unhandled operation name
+    */
+  @Advice.OnMethodExit(onThrowable = classOf[Throwable])
+  def around(@Advice.Argument(0) ctx: ServiceRequestContext,
+             @Advice.Argument(2) statusException: HttpStatusException,
+             @Advice.Thrown throwable: Throwable): Unit = {
+    if (throwable != null && statusException.httpStatus.code() == HttpStatus.NOT_FOUND.code()) {
+      val requestHandler = ctx.attr(REQUEST_HANDLER_TRACE_KEY)
+      Kamon.runWithContext(requestHandler.context) {
+        requestHandler.span.name(unhandledOperationName)
+      }
+    }
   }
 }
 

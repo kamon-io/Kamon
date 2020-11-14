@@ -17,7 +17,6 @@ package kamon.armeria.instrumentation.server;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
@@ -30,8 +29,9 @@ import kamon.instrumentation.http.HttpServerInstrumentation;
 import java.net.InetSocketAddress;
 
 public class ArmeriaHttpServerDecorator extends SimpleDecoratingHttpService {
-  private static final String FALLBACK_SERVICE_NAME = "com.linecorp.armeria.server.FallbackService";
-  private static final AttributeKey<Storage.Scope> SERVER_TRACE_SCOPE_KEY = AttributeKey.valueOf(Storage.Scope.class, "SERVER_TRACE_SCOPE");
+  public static final AttributeKey<HttpServerInstrumentation.RequestHandler> REQUEST_HANDLER_TRACE_KEY =
+      AttributeKey.valueOf(HttpServerInstrumentation.RequestHandler.class, "REQUEST_HANDLER_TRACE");
+
 
   private final HttpServerInstrumentation httpServerInstrumentation;
   private final String serverHost;
@@ -54,19 +54,14 @@ public class ArmeriaHttpServerDecorator extends SimpleDecoratingHttpService {
       ctx.log()
           .whenComplete()
           .thenAccept(log -> {
-            try (Storage.Scope ignored = Kamon.storeContext(requestHandler.context())) {
-              //Fixme: this is working fine with a Armeria server but the behaviour is unexpected with a dropwizard application and static files serve.
-              // With proxy services like https://github.com/lucasamoroso/kamon-armeria-test/tree/master/src/main/java/example/proxy  the operation name is set
-              // with 2 values one is the configured unhandled operation name and the other is te request path
-              if (HttpStatus.NOT_FOUND.equals(log.responseHeaders().status()) && FALLBACK_SERVICE_NAME.equals(log.serviceName())) {
-                requestHandler.span().name(httpServerInstrumentation.settings().unhandledOperationName());
-              }
-              requestHandler.buildResponse(KamonArmeriaMessageConverter.toResponse(log), requestHandler.context());
+            try (Storage.Scope scope = Kamon.storeContext(ctx.attr(REQUEST_HANDLER_TRACE_KEY).context())) {
+              requestHandler.buildResponse(KamonArmeriaMessageConverter.toResponse(log), scope.context());
               requestHandler.responseSent();
             }
           });
 
       try (Storage.Scope ignored = Kamon.storeContext(requestHandler.context())) {
+        ctx.setAttr(REQUEST_HANDLER_TRACE_KEY, requestHandler);
         return unwrap().serve(ctx, req);
       }
     } else {
