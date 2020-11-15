@@ -675,7 +675,7 @@ lazy val `kamon-armeria` = (project in file("instrumentation/kamon-armeria"))
       }
       Seq(
         kanelaAgent % "provided",
-        "com.linecorp.armeria" % "armeria" % "1.1.0" % "provided",
+        "com.linecorp.armeria" % "armeria" % "1.2.0" % "provided",
 
         scalatest % "test",
         logbackClassic % "test"
