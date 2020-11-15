@@ -26,30 +26,27 @@ import kamon.armeria.instrumentation.converters.KamonArmeriaMessageConverter;
 import kamon.context.Storage;
 import kamon.instrumentation.http.HttpServerInstrumentation;
 
-import java.net.InetSocketAddress;
+import java.util.Map;
 
 public class ArmeriaHttpServerDecorator extends SimpleDecoratingHttpService {
   public static final AttributeKey<HttpServerInstrumentation.RequestHandler> REQUEST_HANDLER_TRACE_KEY =
       AttributeKey.valueOf(HttpServerInstrumentation.RequestHandler.class, "REQUEST_HANDLER_TRACE");
 
+  private final Map<Integer, HttpServerInstrumentation> serverInstrumentationMap;
 
-  private final HttpServerInstrumentation httpServerInstrumentation;
-  private final String serverHost;
-
-  public ArmeriaHttpServerDecorator(HttpService delegate, HttpServerInstrumentation httpServerInstrumentation, String serverHost) {
+  public ArmeriaHttpServerDecorator(HttpService delegate, Map<Integer, HttpServerInstrumentation> serverInstrumentations) {
     super(delegate);
-    this.serverHost = serverHost;
-    this.httpServerInstrumentation = httpServerInstrumentation;
+    this.serverInstrumentationMap = serverInstrumentations;
   }
 
   @Override
   public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-    //I'm not sure about ((InetSocketAddress) ctx.localAddress()), i need the request port
-    // to check if this is the decorator that corresponds to this port
-    if (httpServerInstrumentation.port() == ((InetSocketAddress) ctx.localAddress()).getPort()) {
+    final HttpServerInstrumentation httpServerInstrumentation = serverInstrumentationMap.get(req.uri().getPort());
+
+    if (httpServerInstrumentation != null) {
 
       final HttpServerInstrumentation.RequestHandler requestHandler =
-          httpServerInstrumentation.createHandler(KamonArmeriaMessageConverter.toRequest(req, serverHost, httpServerInstrumentation.port()));
+          httpServerInstrumentation.createHandler(KamonArmeriaMessageConverter.toRequest(req));
 
       ctx.log()
           .whenComplete()

@@ -25,7 +25,7 @@ import scala.collection.immutable.Map
 import scala.collection.{JavaConverters, mutable}
 
 object KamonArmeriaMessageConverter {
-  def toRequest(request: HttpRequest, serverHost: String, serverPort: Int): HttpMessage.Request = new HttpMessage.Request {
+  def toRequest(request: HttpRequest): HttpMessage.Request = new HttpMessage.Request {
 
     override def url: String = request.uri().toString
 
@@ -33,9 +33,9 @@ object KamonArmeriaMessageConverter {
 
     override def method: String = request.method().name()
 
-    override def host: String = serverHost
+    override def host: String = request.uri().getHost
 
-    override def port: Int = serverPort
+    override def port: Int = request.uri().getPort
 
     override def read(header: String): Option[String] =
       Option(request.headers().get(header))
@@ -103,4 +103,5 @@ object KamonArmeriaMessageConverter {
 
     def headers: mutable.Map[String, String] = _headers
   }
+
 }

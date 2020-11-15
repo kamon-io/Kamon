@@ -15,6 +15,8 @@
 
 package kamon.armeria.instrumentation.server
 
+import java.util
+
 import com.linecorp.armeria.common.HttpStatus
 import com.linecorp.armeria.server._
 import kamon.Kamon
@@ -27,6 +29,9 @@ import kanela.agent.api.instrumentation.bridge.FieldBridge
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 
 import scala.collection.JavaConverters.collectionAsScalaIterableConverter
+import scala.collection.JavaConverters.mapAsJavaMapConverter
+
+
 
 class ArmeriaHttpServerInstrumentation extends InstrumentationBuilder {
   onType("com.linecorp.armeria.server.ServerBuilder")
@@ -48,18 +53,16 @@ object ArmeriaServerBuilderAdvisor extends JavaConverters {
 
   @Advice.OnMethodEnter
   def addKamonDecorator(@Advice.This builder: ServerBuilder): Unit = {
-    builder.asInstanceOf[ServerBuilderInternalState].getServerPorts.asScala
-      .foreach(serverPort =>
-        builder.decorator(
-          toJavaFunction((delegate: HttpService) => {
-            val hostname = serverPort.localAddress().getHostName
-            val port = serverPort.localAddress().getPort
-            val serverInstrumentation = HttpServerInstrumentation.from(httpServerConfig, "armeria-http-server", hostname, port)
-            new ArmeriaHttpServerDecorator(delegate, serverInstrumentation, hostname)
-          }
-          )
-        )
-      )
+    val serverPorts = builder.asInstanceOf[ServerBuilderInternalState].getServerPorts.asScala
+
+    val instrumentations: util.Map[Integer, HttpServerInstrumentation] = serverPorts.map(serverPort => {
+      val hostname = serverPort.localAddress().getHostName
+      val port = serverPort.localAddress().getPort
+      (Int.box(port), HttpServerInstrumentation.from(httpServerConfig, "armeria-http-server", hostname, port))
+    }).toMap.asJava
+
+    builder.decorator(toJavaFunction((delegate: HttpService) => new ArmeriaHttpServerDecorator(delegate, instrumentations)))
+
   }
 }
 
