@@ -34,7 +34,7 @@ class ArmeriaGrpcClientTracingSpec extends WordSpec
       .enableUnframedRequests(true)
       .build()
 
-  private val httpServer = startArmeriaServer(httpPort, maybeGrpcService = Some(grpcService))
+  private val httpServer = startArmeriaServer(httpPort, grpcService = Some(grpcService))
 
   "The Armeria http client tracing instrumentation" should {
 

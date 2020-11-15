@@ -38,7 +38,7 @@ class ArmeriaHttpServerTracingSpec extends WordSpec
   val httpPort = 8080
   val httpsPort = 8081
 
-  private val httpServer = startArmeriaServer(httpPort, maybeHttpsPort = Some(httpsPort))
+  private val httpServer = startArmeriaServer(httpPort, httpsPort = Some(httpsPort))
 
   testSuite("http", interface, httpPort)
   testSuite("https", interface, httpsPort)

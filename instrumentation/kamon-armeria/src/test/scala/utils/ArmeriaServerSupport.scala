@@ -24,7 +24,7 @@ import com.linecorp.armeria.server.healthcheck.HealthCheckService
 
 object ArmeriaServerSupport {
 
-  def startArmeriaServer(port: Int, maybeHttpsPort: Option[Int] = None, maybeGrpcService: Option[GrpcService] = None): Server = {
+  def startArmeriaServer(port: Int, httpsPort: Option[Int] = None, grpcService: Option[GrpcService] = None): Server = {
     val serverBuilder = Server
       .builder()
       .service("/health-check", HealthCheckService.of())
@@ -32,13 +32,13 @@ object ArmeriaServerSupport {
       .annotatedService().build(TestRoutesSupport())
       .http(InetSocketAddress.createUnresolved("localhost", port))
 
-    maybeHttpsPort.foreach {
+    httpsPort.foreach {
       serverBuilder
         .https(_)
         .tlsSelfSigned()
     }
 
-    maybeGrpcService.foreach {
+    grpcService.foreach {
       serverBuilder.service(_)
     }
 
