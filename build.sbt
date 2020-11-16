@@ -356,11 +356,13 @@ lazy val `kamon-annotation` = (project in file("instrumentation/kamon-annotation
     assemblyShadeRules in assembly := Seq(
       ShadeRule.rename("javax.el.**"    -> "kamon.lib.@0").inAll,
       ShadeRule.rename("com.sun.el.**"  -> "kamon.lib.@0").inAll,
-      ShadeRule.rename("com.github.ben-manes.**"  -> "kamon.lib.@0").inAll,
+      ShadeRule.rename("com.github.benmanes.**"  -> "kamon.lib.@0").inAll,
+      ShadeRule.rename("com.google.errorprone.**"  -> "kamon.lib.@0").inAll,
+      ShadeRule.rename("org.checkerframework.**"  -> "kamon.lib.@0").inAll,
     ),
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
-      "com.github.ben-manes.caffeine" % "caffeine" % "2.8.5" % "provided,shaded", // provided? no?
+      "com.github.ben-manes.caffeine" % "caffeine" % "2.8.5" % "provided,shaded",
       "org.glassfish" % "javax.el" % "3.0.1-b11" % "provided,shaded",
       scalatest % "test",
       logbackClassic % "test",
