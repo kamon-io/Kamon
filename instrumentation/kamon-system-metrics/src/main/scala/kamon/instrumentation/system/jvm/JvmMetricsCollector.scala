@@ -16,7 +16,7 @@
 
 package kamon.instrumentation.system.jvm
 
-import java.lang.management.{ManagementFactory, MemoryUsage}
+import java.lang.management.{BufferPoolMXBean, ManagementFactory, MemoryUsage}
 import java.util.concurrent.TimeUnit
 
 import com.sun.management.GarbageCollectionNotificationInfo
@@ -26,6 +26,7 @@ import javax.management.openmbean.CompositeData
 import javax.management.{Notification, NotificationEmitter, NotificationListener}
 import kamon.Kamon
 import kamon.instrumentation.system.jvm.JvmMetrics.{ClassLoadingInstruments, GarbageCollectionInstruments, MemoryUsageInstruments, ThreadsInstruments}
+import kamon.instrumentation.system.jvm.JvmMetricsCollector.MemoryPool.sanitize
 import kamon.instrumentation.system.jvm.JvmMetricsCollector.{Collector, MemoryPool}
 import kamon.module.{Module, ModuleFactory}
 import kamon.tag.TagSet
@@ -164,6 +165,15 @@ class JvmMetricsCollector(ec: ExecutionContext) extends Module {
         poolInstruments.max.update(memoryUsage.getMax)
         poolInstruments.committed.update(memoryUsage.getCommitted)
       })
+
+      ManagementFactory.getPlatformMXBeans(classOf[BufferPoolMXBean]).asScala.toList.map { bean =>
+        val bufferPoolInstruments = memoryUsageInstruments.bufferPoolInstruments(
+          MemoryPool.sanitize(bean.getName))
+
+        bufferPoolInstruments.count.update(bean.getCount)
+        bufferPoolInstruments.used.update(bean.getMemoryUsed)
+        bufferPoolInstruments.capacity.update(bean.getTotalCapacity)
+      }
     }
   }
 }
@@ -229,9 +239,9 @@ object JvmMetricsCollector {
     }
 
     def find(poolName: String): MemoryPool =
-      _memoryRegionMappings.get(poolName).getOrElse {
-        MemoryPool(poolName, sanitize(poolName), if(poolName.endsWith("Eden Space")) Usage.Eden else Usage.Unknown)
-      }
+      _memoryRegionMappings.getOrElse(poolName,
+        MemoryPool(poolName,
+          sanitize(poolName), if (poolName.endsWith("Eden Space")) Usage.Eden else Usage.Unknown))
 
     private val _memoryRegionMappings: Map[String, MemoryPool] = Map (
       "Metaspace"               -> MemoryPool("Metaspace", "metaspace", Usage.Metaspace),
