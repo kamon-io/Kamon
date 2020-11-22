@@ -54,7 +54,7 @@ class ArmeriaGrpcClientTracingSpec extends WordSpec
         val span = testSpanReporter().nextSpan().value
         span.operationName shouldBe "ArmeriaHelloService/Hello"
         span.kind shouldBe Span.Kind.Client
-        span.metricTags.get(plain("component")) shouldBe "armeria-http-client"
+        span.metricTags.get(plain("component")) shouldBe "armeria.http.client"
         span.metricTags.get(plain("http.method")) shouldBe "POST"
         span.metricTags.get(plainLong("http.status_code")) shouldBe 200
         span.metricTags.get(plainBoolean("error")) shouldBe false

@@ -48,7 +48,7 @@ class ArmeriaHttpClientTracingSpec extends WordSpec
 
         span.operationName shouldBe path
         span.kind shouldBe Span.Kind.Client
-        span.metricTags.get(plain("component")) shouldBe "armeria-http-client"
+        span.metricTags.get(plain("component")) shouldBe "armeria.http.client"
         span.metricTags.get(plain("http.method")) shouldBe "GET"
         span.metricTags.get(plainLong("http.status_code")) shouldBe 200
         span.metricTags.get(plainBoolean("error")) shouldBe false
@@ -86,7 +86,7 @@ class ArmeriaHttpClientTracingSpec extends WordSpec
 
         span.operationName shouldBe path
         span.kind shouldBe Span.Kind.Client
-        span.metricTags.get(plain("component")) shouldBe "armeria-http-client"
+        span.metricTags.get(plain("component")) shouldBe "armeria.http.client"
         span.metricTags.get(plain("http.method")) shouldBe "GET"
         span.metricTags.get(plainLong("http.status_code")) shouldBe 200
         span.metricTags.get(plainBoolean("error")) shouldBe false
@@ -126,7 +126,7 @@ class ArmeriaHttpClientTracingSpec extends WordSpec
 
         span.operationName shouldBe path
         span.kind shouldBe Span.Kind.Client
-        span.metricTags.get(plain("component")) shouldBe "armeria-http-client"
+        span.metricTags.get(plain("component")) shouldBe "armeria.http.client"
         span.metricTags.get(plain("http.method")) shouldBe "GET"
         span.metricTags.get(plainBoolean("error")) shouldBe true
         span.metricTags.get(plainLong("http.status_code")) shouldBe 500
@@ -170,7 +170,7 @@ class ArmeriaHttpClientTracingSpec extends WordSpec
 
         span.operationName shouldBe path
         span.kind shouldBe Span.Kind.Client
-        span.metricTags.get(plain("component")) shouldBe "armeria-http-client"
+        span.metricTags.get(plain("component")) shouldBe "armeria.http.client"
         span.metricTags.get(plain("http.method")) shouldBe "GET"
         span.metricTags.get(plainLong("http.status_code")) shouldBe 200
         span.metricTags.get(plainBoolean("error")) shouldBe false

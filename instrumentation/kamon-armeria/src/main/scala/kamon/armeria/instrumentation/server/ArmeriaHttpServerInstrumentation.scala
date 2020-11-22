@@ -31,8 +31,6 @@ import kanela.agent.libs.net.bytebuddy.asm.Advice
 import scala.collection.JavaConverters.collectionAsScalaIterableConverter
 import scala.collection.JavaConverters.mapAsJavaMapConverter
 
-
-
 class ArmeriaHttpServerInstrumentation extends InstrumentationBuilder {
   onType("com.linecorp.armeria.server.ServerBuilder")
     .advise(method("build"), classOf[ArmeriaServerBuilderAdvisor])
@@ -49,7 +47,7 @@ class ArmeriaServerBuilderAdvisor
   * some things are done with the ports field, so we aren't entirely sure that this ports are gonna to be final
   */
 object ArmeriaServerBuilderAdvisor extends JavaConverters {
-  lazy val httpServerConfig = Kamon.config().getConfig("kamon.instrumentation.armeria.http-server")
+  lazy val httpServerConfig = Kamon.config().getConfig("kamon.instrumentation.armeria.server")
 
   @Advice.OnMethodEnter
   def addKamonDecorator(@Advice.This builder: ServerBuilder): Unit = {
@@ -58,7 +56,7 @@ object ArmeriaServerBuilderAdvisor extends JavaConverters {
     val instrumentations: util.Map[Integer, HttpServerInstrumentation] = serverPorts.map(serverPort => {
       val hostname = serverPort.localAddress().getHostName
       val port = serverPort.localAddress().getPort
-      (Int.box(port), HttpServerInstrumentation.from(httpServerConfig, "armeria-http-server", hostname, port))
+      (Int.box(port), HttpServerInstrumentation.from(httpServerConfig, "armeria.http.server", hostname, port))
     }).toMap.asJava
 
     builder.decorator(toJavaFunction((delegate: HttpService) => new ArmeriaHttpServerDecorator(delegate, instrumentations)))
@@ -69,7 +67,7 @@ object ArmeriaServerBuilderAdvisor extends JavaConverters {
 class HandleNotFoundMethodAdvisor
 
 object HandleNotFoundMethodAdvisor {
-  lazy val unhandledOperationName = Kamon.config().getConfig("kamon.instrumentation.armeria.http-server").getString("tracing.operations.unhandled")
+  lazy val unhandledOperationName = Kamon.config().getConfig("kamon.instrumentation.armeria.server").getString("tracing.operations.unhandled")
 
   /**
     * When an HttpStatusException is thrown in {@link com.linecorp.armeria.server.FallbackService.handleNotFound( )} is because the route doesn't  exist

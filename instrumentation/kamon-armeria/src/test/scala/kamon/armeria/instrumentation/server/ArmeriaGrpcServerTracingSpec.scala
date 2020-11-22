@@ -47,7 +47,7 @@ class ArmeriaGrpcServerTracingSpec extends WordSpec
         val span = testSpanReporter().nextSpan().value
         span.operationName shouldBe "ArmeriaHelloService/Hello"
         span.hasError shouldBe false
-        span.metricTags.get(plain("component")) shouldBe "armeria-http-server"
+        span.metricTags.get(plain("component")) shouldBe "armeria.http.server"
         span.metricTags.get(plain("http.method")) shouldBe "POST"
         span.metricTags.get(plainLong("http.status_code")) shouldBe 200L
       }

@@ -60,7 +60,7 @@ class ArmeriaHttpServerTracingSpec extends WordSpec
           val span = testSpanReporter().nextSpan().value
           span.operationName shouldBe expected
           span.tags.get(plain("http.url")) shouldBe target
-          span.metricTags.get(plain("component")) shouldBe "armeria-http-server"
+          span.metricTags.get(plain("component")) shouldBe "armeria.http.server"
           span.metricTags.get(plain("http.method")) shouldBe "GET"
           span.metricTags.get(plainLong("http.status_code")) shouldBe 200L
         }
@@ -78,7 +78,7 @@ class ArmeriaHttpServerTracingSpec extends WordSpec
             val span = testSpanReporter().nextSpan().value
             span.operationName shouldBe expected
             span.tags.get(plain("http.url")) shouldBe target
-            span.metricTags.get(plain("component")) shouldBe "armeria-http-server"
+            span.metricTags.get(plain("component")) shouldBe "armeria.http.server"
             span.metricTags.get(plain("http.method")) shouldBe "GET"
             span.metricTags.get(plainBoolean("error")) shouldBe false
             span.metricTags.get(plainLong("http.status_code")) shouldBe 404
@@ -98,7 +98,7 @@ class ArmeriaHttpServerTracingSpec extends WordSpec
             val span = testSpanReporter().nextSpan().value
             span.operationName shouldBe expected
             span.tags.get(plain("http.url")) shouldBe target
-            span.metricTags.get(plain("component")) shouldBe "armeria-http-server"
+            span.metricTags.get(plain("component")) shouldBe "armeria.http.server"
             span.metricTags.get(plain("http.method")) shouldBe "GET"
             span.metricTags.get(plainBoolean("error")) shouldBe false
             span.metricTags.get(plainLong("http.status_code")) shouldBe 404
@@ -142,7 +142,7 @@ class ArmeriaHttpServerTracingSpec extends WordSpec
           val span = testSpanReporter().nextSpan().value
           span.operationName shouldBe expected
           span.tags.get(plain("http.url")) shouldBe target
-          span.metricTags.get(plain("component")) shouldBe "armeria-http-server"
+          span.metricTags.get(plain("component")) shouldBe "armeria.http.server"
           span.metricTags.get(plain("http.method")) shouldBe "GET"
           span.metricTags.get(plainBoolean("error")) shouldBe true
           span.metricTags.get(plainLong("http.status_code")) shouldBe 500
@@ -161,7 +161,7 @@ class ArmeriaHttpServerTracingSpec extends WordSpec
             val span = testSpanReporter().nextSpan().value
             span.operationName shouldBe expected
             span.tags.get(plain("http.url")) shouldBe target
-            span.metricTags.get(plain("component")) shouldBe "armeria-http-server"
+            span.metricTags.get(plain("component")) shouldBe "armeria.http.server"
             span.metricTags.get(plain("http.method")) shouldBe "GET"
             span.metricTags.get(plainLong("http.status_code")) shouldBe 307L
           }
@@ -180,7 +180,7 @@ class ArmeriaHttpServerTracingSpec extends WordSpec
             val span = testSpanReporter().nextSpan().value
             span.operationName shouldBe expected
             span.tags.get(plain("http.url")) shouldBe target
-            span.metricTags.get(plain("component")) shouldBe "armeria-http-server"
+            span.metricTags.get(plain("component")) shouldBe "armeria.http.server"
             span.metricTags.get(plain("http.method")) shouldBe "GET"
             span.metricTags.get(plainLong("http.status_code")) shouldBe 200L
           }
