@@ -13,7 +13,7 @@
  * =========================================================================================
  */
 
-package kamon.armeria.instrumentation.server
+package kamon.instrumentation.armeria.server
 
 import com.linecorp.armeria.client.{ClientFactory, Clients, WebClient}
 import com.linecorp.armeria.common.{HttpMethod, HttpRequest, RequestHeaders}

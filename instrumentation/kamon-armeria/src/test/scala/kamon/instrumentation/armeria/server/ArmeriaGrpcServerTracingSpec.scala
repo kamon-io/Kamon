@@ -1,4 +1,4 @@
-package kamon.armeria.instrumentation.server
+package kamon.instrumentation.armeria.server
 
 import com.linecorp.armeria.client.Clients
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats
@@ -14,7 +14,6 @@ import utils.ArmeriaServerSupport.startArmeriaServer
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
-
 
 class ArmeriaGrpcServerTracingSpec extends WordSpec
   with Matchers

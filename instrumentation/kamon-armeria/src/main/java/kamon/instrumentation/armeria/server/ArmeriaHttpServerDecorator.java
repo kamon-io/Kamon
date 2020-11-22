@@ -13,7 +13,7 @@
  * =========================================================================================
  */
 
-package kamon.armeria.instrumentation.server;
+package kamon.instrumentation.armeria.server;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -22,8 +22,8 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import io.netty.util.AttributeKey;
 import kamon.Kamon;
-import kamon.armeria.instrumentation.converters.KamonArmeriaMessageConverter;
 import kamon.context.Storage;
+import kamon.instrumentation.armeria.converters.KamonArmeriaMessageConverter;
 import kamon.instrumentation.http.HttpServerInstrumentation;
 
 import java.util.Map;

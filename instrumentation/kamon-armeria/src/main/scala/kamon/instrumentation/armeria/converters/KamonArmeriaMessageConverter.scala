@@ -13,7 +13,7 @@
  * =========================================================================================
  */
 
-package kamon.armeria.instrumentation.converters
+package kamon.instrumentation.armeria.converters
 
 import com.linecorp.armeria.common.HttpRequest
 import com.linecorp.armeria.common.logging.RequestLog

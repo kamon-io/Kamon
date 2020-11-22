@@ -13,7 +13,7 @@
  * =========================================================================================
  */
 
-package kamon.armeria.instrumentation.client;
+package kamon.instrumentation.armeria.client;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
@@ -22,9 +22,9 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import io.netty.util.AttributeKey;
 import kamon.Kamon;
-import kamon.armeria.instrumentation.client.timing.Timing;
-import kamon.armeria.instrumentation.converters.KamonArmeriaMessageConverter;
 import kamon.context.Storage;
+import kamon.instrumentation.armeria.client.timing.Timing;
+import kamon.instrumentation.armeria.converters.KamonArmeriaMessageConverter;
 import kamon.instrumentation.http.HttpClientInstrumentation;
 
 public class ArmeriaHttpClientDecorator extends SimpleDecoratingHttpClient {

@@ -1,4 +1,4 @@
-package kamon.armeria.instrumentation.converters
+package kamon.instrumentation.armeria.converters
 
 import java.util.function.{Function => JFunction}
 

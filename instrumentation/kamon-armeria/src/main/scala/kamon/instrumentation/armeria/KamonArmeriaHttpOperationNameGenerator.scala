@@ -13,7 +13,7 @@
  * =========================================================================================
  */
 
-package kamon.armeria.instrumentation
+package kamon.instrumentation.armeria
 
 import kamon.instrumentation.http.HttpMessage.Request
 import kamon.instrumentation.http.HttpOperationNameGenerator

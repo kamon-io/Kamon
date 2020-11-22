@@ -13,23 +13,22 @@
  * =========================================================================================
  */
 
-package kamon.armeria.instrumentation.server
+package kamon.instrumentation.armeria.server
 
 import java.util
 
 import com.linecorp.armeria.common.HttpStatus
 import com.linecorp.armeria.server._
 import kamon.Kamon
-import kamon.armeria.instrumentation.converters.JavaConverters
-import kamon.armeria.instrumentation.server.ArmeriaHttpServerDecorator.REQUEST_HANDLER_TRACE_KEY
-import kamon.armeria.instrumentation.server.InternalState.ServerBuilderInternalState
+import kamon.instrumentation.armeria.converters.JavaConverters
+import kamon.instrumentation.armeria.server.ArmeriaHttpServerDecorator.REQUEST_HANDLER_TRACE_KEY
+import kamon.instrumentation.armeria.server.InternalState.ServerBuilderInternalState
 import kamon.instrumentation.http.HttpServerInstrumentation
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.api.instrumentation.bridge.FieldBridge
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 
-import scala.collection.JavaConverters.collectionAsScalaIterableConverter
-import scala.collection.JavaConverters.mapAsJavaMapConverter
+import scala.collection.JavaConverters.{collectionAsScalaIterableConverter, mapAsJavaMapConverter}
 
 class ArmeriaHttpServerInstrumentation extends InstrumentationBuilder {
   onType("com.linecorp.armeria.server.ServerBuilder")

@@ -1,4 +1,4 @@
-package kamon.armeria.instrumentation.client
+package kamon.instrumentation.armeria.client
 
 import com.linecorp.armeria.client.Clients
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats

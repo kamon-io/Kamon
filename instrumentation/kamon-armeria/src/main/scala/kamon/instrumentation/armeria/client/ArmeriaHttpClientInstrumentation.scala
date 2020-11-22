@@ -13,11 +13,11 @@
  * =========================================================================================
  */
 
-package kamon.armeria.instrumentation.client
+package kamon.instrumentation.armeria.client
 
 import com.linecorp.armeria.client.{ClientBuilder, HttpClient}
 import kamon.Kamon
-import kamon.armeria.instrumentation.converters.JavaConverters
+import kamon.instrumentation.armeria.converters.JavaConverters
 import kamon.instrumentation.http.HttpClientInstrumentation
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.asm.Advice
