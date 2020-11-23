@@ -152,7 +152,7 @@ object ActorMonitor {
       cellInfo.systemName,
       cellInfo.dispatcherName,
       cellInfo.actorOrRouterClass,
-      cellInfo.routeeClass.map(_.getName).getOrElse("Unknown")
+      cellInfo.routeeClass.filterNot(ActorCellInfo.isTyped).map(_.getName).getOrElse("Unknown")
     )
 
     new TrackedRoutee(routerMetrics, groupMetrics, cellInfo)
