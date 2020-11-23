@@ -128,17 +128,18 @@ object JvmMetrics {
     name = s"jvm.memory.buffer-pool.count",
     description = "Estimated number of buffers in the pool"
   )
-  val BufferPoolUsage = Kamon.gauge(
-    name = s"jvm.memory.buffer-pool.usage",
+
+  val BufferPoolUsed = Kamon.gauge(
+    name = s"jvm.memory.buffer-pool.used",
     description = "Estimate of memory used by the JVM for this buffer pool in bytes",
     unit = MeasurementUnit.information.bytes
   )
+
   val BufferPoolCapacity = Kamon.gauge(
     name = s"jvm.memory.buffer-pool.capacity",
     description = "Estimate of the total capacity of this pool in bytes",
     unit = MeasurementUnit.information.bytes
   )
-
 
   class GarbageCollectionInstruments(tags: TagSet) extends InstrumentGroup(tags) {
     private val _collectorCache = mutable.Map.empty[String, Histogram]
@@ -188,19 +189,16 @@ object JvmMetrics {
 
     def bufferPoolInstruments(poolName: String): BufferPoolInstruments = {
       _memoryBuffersCache.getOrElseUpdate(poolName, {
-        val commonTags = tags
+        val bufferTags = tags
           .withTag("pool", poolName)
-        val usageTags = commonTags.withTag("measure", "used")
-        val capacityTags = commonTags.withTag("measure", "capacity")
 
         BufferPoolInstruments(
-          register(BufferPoolCount, commonTags),
-          register(BufferPoolUsage, usageTags),
-          register(BufferPoolCapacity, capacityTags)
+          register(BufferPoolCount, bufferTags),
+          register(BufferPoolUsed, bufferTags),
+          register(BufferPoolCapacity, bufferTags)
         )
       })
     }
-
   }
 
   class ClassLoadingInstruments(tags: TagSet) extends InstrumentGroup(tags) {
