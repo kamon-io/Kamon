@@ -54,8 +54,8 @@ object RouterMonitor {
           cell.path,
           cell.systemName,
           cell.dispatcherName,
-          cell.actorOrRouterClass.getName,
-          cell.routeeClass.map(_.getName).getOrElse("Unknown")
+          cell.actorOrRouterClass,
+          cell.routeeClass.filterNot(ActorCellInfo.isTyped).map(_.getName).getOrElse("Unknown")
         )
       )
     else NoOpRouterMonitor
