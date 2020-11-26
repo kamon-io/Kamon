@@ -70,7 +70,7 @@ lazy val `kamon-status-page` = (project in file("core/kamon-status-page"))
       ShadeRule.rename("fi.iki.elonen.**"       -> "kamon.lib.@0").inAll,
     ),
     libraryDependencies ++= Seq(
-      "com.grack"     %  "nanojson"  % "1.1"   % "provided,shaded",
+      "com.grack"     %  "nanojson"  % "1.6"   % "provided,shaded",
       "org.nanohttpd" %  "nanohttpd" % "2.3.1" % "provided,shaded"
     )
   ).dependsOn(`kamon-core`)
@@ -378,11 +378,13 @@ lazy val `kamon-annotation` = (project in file("instrumentation/kamon-annotation
     assemblyShadeRules in assembly := Seq(
       ShadeRule.rename("javax.el.**"    -> "kamon.lib.@0").inAll,
       ShadeRule.rename("com.sun.el.**"  -> "kamon.lib.@0").inAll,
-      ShadeRule.rename("com.github.ben-manes.**"  -> "kamon.lib.@0").inAll,
+      ShadeRule.rename("com.github.benmanes.**"  -> "kamon.lib.@0").inAll,
+      ShadeRule.rename("com.google.errorprone.**"  -> "kamon.lib.@0").inAll,
+      ShadeRule.rename("org.checkerframework.**"  -> "kamon.lib.@0").inAll,
     ),
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
-      "com.github.ben-manes.caffeine" % "caffeine" % "2.8.5" % "provided,shaded", // provided? no?
+      "com.github.ben-manes.caffeine" % "caffeine" % "2.8.5" % "provided,shaded",
       "org.glassfish" % "javax.el" % "3.0.1-b11" % "provided,shaded",
       scalatest % "test",
       logbackClassic % "test",
@@ -395,7 +397,7 @@ lazy val `kamon-system-metrics` = (project in file("instrumentation/kamon-system
   .settings(instrumentationSettings: _*)
   .settings(
     libraryDependencies ++= Seq(
-      "com.github.oshi" % "oshi-core" % "4.2.1",
+      oshiCore,
       scalatest % "test",
       logbackClassic % "test"
     )
@@ -490,8 +492,9 @@ lazy val `kamon-datadog` = (project in file("reporters/kamon-datadog"))
   .settings(
     libraryDependencies ++= Seq(
       okHttp,
-      "com.typesafe.play" %% "play-json" % "2.7.4",
+      "com.grack" % "nanojson" % "1.6",
 
+      "com.typesafe.play" %% "play-json" % "2.7.4" % "test",
       scalatest % "test",
       slf4jApi % "test",
       slf4jnop % "test",
@@ -629,7 +632,7 @@ val `kamon-bundle` = (project in file("bundle/kamon-bundle"))
     kanelaAgentJarName := kanelaAgentJar.value.getName,
     resourceGenerators in Compile += Def.task(Seq(kanelaAgentJar.value)).taskValue,
     libraryDependencies ++= Seq(
-      "com.github.oshi" % "oshi-core" % "4.2.1",
+      oshiCore,
       kanelaAgent % "provided",
       "net.bytebuddy" % "byte-buddy-agent" % "1.9.12" % "provided,shaded",
     ),

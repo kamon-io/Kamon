@@ -1,3 +1,19 @@
+/*
+ * Copyright 2013-2020 The Kamon Project <https://kamon.io>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package kamon
 package instrumentation
 package system
@@ -12,7 +28,9 @@ import kamon.tag.TagSet
 import kamon.util.Filter
 import oshi.SystemInfo
 import oshi.hardware.CentralProcessor.TickType
+import oshi.hardware.NetworkIF
 
+import scala.collection.JavaConverters._
 import scala.concurrent.{ExecutionContext, Future}
 
 /**
@@ -56,6 +74,7 @@ class HostMetricsCollector(ec: ExecutionContext) extends Module {
 
   trait CollectionTask {
     def schedule(ec: ExecutionContext): Unit
+
     def cleanup(): Unit
   }
 
@@ -77,7 +96,7 @@ class HostMetricsCollector(ec: ExecutionContext) extends Module {
     }
 
     private def recordCpuUsage(): Unit = {
-      if(_prevCpuLoadTicks.length > 0) {
+      if (_prevCpuLoadTicks.length > 0) {
         val previousTicks = _prevCpuLoadTicks
         val currentTicks = _hal.getProcessor().getSystemCpuLoadTicks()
 
@@ -89,7 +108,8 @@ class HostMetricsCollector(ec: ExecutionContext) extends Module {
         val irq = ticksDiff(previousTicks, currentTicks, TickType.IRQ)
         val softirq = ticksDiff(previousTicks, currentTicks, TickType.SOFTIRQ)
         val steal = ticksDiff(previousTicks, currentTicks, TickType.STEAL)
-        val total = user + nice + system + idle + iowait +irq + softirq + steal
+        val total = user + nice + system + idle + iowait + irq + softirq + steal
+
         def toPercent(value: Long): Long = ((100D * value.toDouble) / total.toDouble).toLong
 
         _cpuInstruments.user.record(toPercent(user))
@@ -110,7 +130,7 @@ class HostMetricsCollector(ec: ExecutionContext) extends Module {
 
   }
 
-  private class InfrequentCollectionTask extends CollectionTask  {
+  private class InfrequentCollectionTask extends CollectionTask {
     private val _defaultTags = TagSet.of("component", "host")
     private val _systemInfo = new SystemInfo()
     private val _hal = _systemInfo.getHardware()
@@ -143,41 +163,55 @@ class HostMetricsCollector(ec: ExecutionContext) extends Module {
     }
 
     private def recordMemoryUsage(): Unit = {
-      val memory = _hal.getMemory
-      _memoryInstruments.total.update(memory.getTotal())
-      _memoryInstruments.free.update(memory.getAvailable())
-      _memoryInstruments.used.update(memory.getTotal() - memory.getAvailable())
 
-      _swapInstruments.total.update(memory.getVirtualMemory.getSwapTotal())
-      _swapInstruments.used.update(memory.getVirtualMemory.getSwapUsed())
-      _swapInstruments.free.update(memory.getVirtualMemory.getSwapTotal() - memory.getVirtualMemory.getSwapUsed())
+      val memory = _hal.getMemory
+      val totalMemory = memory.getTotal
+      val availableMemory = memory.getAvailable
+      val usedMemory = totalMemory - availableMemory
+
+      _memoryInstruments.total.update(totalMemory)
+      _memoryInstruments.free.update(availableMemory)
+      _memoryInstruments.used.update(usedMemory)
+      _memoryInstruments.usage.update(toPercent(usedMemory, totalMemory))
+
+      val usedSwap = memory.getVirtualMemory.getSwapUsed
+      val totalSwap = memory.getVirtualMemory.getSwapTotal
+      _swapInstruments.total.update(totalSwap)
+      _swapInstruments.used.update(usedSwap)
+      _swapInstruments.usage.update(toPercent(usedSwap, totalSwap))
+      _swapInstruments.free.update(totalSwap - usedSwap)
     }
 
     private def recordLoadAverage(): Unit = {
       val loadAverage = _hal.getProcessor.getSystemLoadAverage(3)
-      if(loadAverage(0) >= 0D) _loadAverageInstruments.oneMinute.update(loadAverage(0))
-      if(loadAverage(1) >= 0D) _loadAverageInstruments.fiveMinutes.update(loadAverage(1))
-      if(loadAverage(2) >= 0D) _loadAverageInstruments.fifteenMinutes.update(loadAverage(2))
+      if (loadAverage(0) >= 0D) _loadAverageInstruments.oneMinute.update(loadAverage(0))
+      if (loadAverage(1) >= 0D) _loadAverageInstruments.fiveMinutes.update(loadAverage(1))
+      if (loadAverage(2) >= 0D) _loadAverageInstruments.fifteenMinutes.update(loadAverage(2))
     }
 
     private def recordStorageUsage(): Unit = {
       val fileStores = _os.getFileSystem().getFileStores
 
-      fileStores.foreach(fs => {
-        if(_settings.trackedMounts.accept(fs.getType)) {
+      fileStores.asScala.foreach(fs => {
+        if (_settings.trackedMounts.accept(fs.getType)) {
           val mountInstruments = _fileSystemUsageInstruments.mountInstruments(fs.getMount)
+          val totalSpace = fs.getTotalSpace
+          val usedSpace = totalSpace - fs.getUsableSpace
+
           mountInstruments.free.update(fs.getUsableSpace)
-          mountInstruments.total.update(fs.getTotalSpace)
-          mountInstruments.used.update(fs.getTotalSpace - fs.getUsableSpace)
+          mountInstruments.total.update(totalSpace)
+          mountInstruments.used.update(usedSpace)
+          mountInstruments.usage.update(toPercent(usedSpace, totalSpace))
         }
       })
     }
 
+    private def toPercent(value: Long, total: Long): Long = ((100D * value.toDouble) / total.toDouble).toLong
+
     private def recordStorageActivity(): Unit = {
       val devices = _hal.getDiskStores
-
-      devices.foreach(device => {
-        if(device.getPartitions.nonEmpty) {
+      devices.asScala.foreach(device => {
+        if (!device.getPartitions.isEmpty) {
           val deviceInstruments = _fileSystemActivityInstruments.deviceInstruments(device.getName)
           deviceInstruments.reads.diff(device.getReads)
           deviceInstruments.writes.diff(device.getWrites)
@@ -190,8 +224,8 @@ class HostMetricsCollector(ec: ExecutionContext) extends Module {
     private def recordNetworkActivity(): Unit = {
       val interfaces = _hal.getNetworkIFs()
 
-      interfaces.foreach(interface => {
-        if(_settings.trackedInterfaces.accept(interface.getName)) {
+      interfaces.asScala.foreach(interface => {
+        if (_settings.trackedInterfaces.accept(interface.getName)) {
           val interfaceInstruments = _networkActivityInstruments.interfaceInstruments(interface.getName)
           interfaceInstruments.receivedBytes.diff(interface.getBytesRecv)
           interfaceInstruments.sentBytes.diff(interface.getBytesSent)
@@ -203,6 +237,7 @@ class HostMetricsCollector(ec: ExecutionContext) extends Module {
       })
     }
   }
+
 }
 
 object HostMetricsCollector {
@@ -212,7 +247,7 @@ object HostMetricsCollector {
       new HostMetricsCollector(settings.executionContext)
   }
 
-  case class Settings (
+  case class Settings(
     trackedInterfaces: Filter,
     trackedMounts: Filter
   )

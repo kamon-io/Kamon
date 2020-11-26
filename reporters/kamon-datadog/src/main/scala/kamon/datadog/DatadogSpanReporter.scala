@@ -1,7 +1,24 @@
+/*
+ * Copyright 2013-2020 The Kamon Project <https://kamon.io>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package kamon.datadog
 
 import java.time.Duration
 
+import com.grack.nanojson.{JsonArray, JsonObject, JsonWriter}
 import com.typesafe.config.Config
 import kamon.trace.Span
 import kamon.{ ClassLoading, Kamon }
@@ -10,7 +27,6 @@ import kamon.module.{ ModuleFactory, SpanReporter }
 import kamon.tag.{ Lookups, Tag, TagSet }
 import kamon.util.{ EnvironmentTags, Filter }
 import org.slf4j.LoggerFactory
-import play.api.libs.json.{ JsObject, Json }
 
 import scala.util.{ Failure }
 
@@ -85,12 +101,19 @@ class DatadogSpanReporter(@volatile private var configuration: Configuration) ex
   private val logger = LoggerFactory.getLogger(classOf[DatadogSpanReporter])
 
   override def reportSpans(spans: Seq[Span.Finished]): Unit = if (spans.nonEmpty) {
-    val spanList: List[Seq[JsObject]] = spans
+    val spanLists: Array[Array[JsonObject]] = spans
       .map(span => configuration.translator.translate(span, configuration.envTags, configuration.tagFilter).toJson())
-      .groupBy { _.\("trace_id").get.toString() }
+      .groupBy { jsonObj => Option(jsonObj.getNumber("trace_id")).get.toString() }
+      .mapValues(_.toArray)
       .values
-      .toList
-    configuration.httpClient.doJsonPut(Json.toJson(spanList)) match {
+      .toArray
+
+    val jsonBuilder = JsonArray.builder
+    spanLists.foreach { span =>
+      jsonBuilder.value(span)
+    }
+
+    configuration.httpClient.doJsonPut(JsonWriter.string(jsonBuilder.done)) match {
       case Failure(exception) =>
         throw exception
       case _ => ()
@@ -109,4 +132,3 @@ class DatadogSpanReporter(@volatile private var configuration: Configuration) ex
   }
 
 }
-

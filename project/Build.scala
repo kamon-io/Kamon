@@ -35,6 +35,8 @@ object BaseProject extends AutoPlugin {
     val hdrHistogram      = "org.hdrhistogram"      %  "HdrHistogram"    % "2.1.10"
     val okHttp            = "com.squareup.okhttp3"  %  "okhttp"          % "3.14.7"
     val okHttpMockServer  = "com.squareup.okhttp3"  %  "mockwebserver"   % "3.10.0"
+    val oshiCore          = "com.github.oshi"       %  "oshi-core"       % "5.3.6"
+
 
     val kanelaAgentVersion = settingKey[String]("Kanela Agent version")
     val kanelaAgentJar = taskKey[File]("Kanela Agent jar")
@@ -113,6 +115,7 @@ object BaseProject extends AutoPlugin {
     licenses += (("Apache-2.0", url("http://www.apache.org/licenses/LICENSE-2.0"))),
     resolvers += Resolver.bintrayRepo("kamon-io", "releases"),
     resolvers += Resolver.mavenLocal,
+    headerLicense := Some(HeaderLicense.ALv2("2013-2020","The Kamon Project <https://kamon.io>")),
     Keys.commands += Command.command("testUntilFailed") { state: State =>
       "test" :: "testUntilFailed" :: state
     }
