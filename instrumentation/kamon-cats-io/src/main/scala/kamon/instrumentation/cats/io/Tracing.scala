@@ -23,10 +23,21 @@ object Tracing {
   def operationName[F[_] : Sync, A](name: String, tags: Map[String, Any] = Map.empty, takeSamplingDecision: Boolean = true)(fa: F[A]): F[A] = {
     val F = implicitly[Sync[F]]
     buildSpan(name, tags).flatMap { span =>
+      val ctx = Kamon.currentContext()
+      val scope = Kamon.storeContext(ctx.withEntry(Span.Key, span))
       F.guaranteeCase(fa) {
-        case ExitCase.Completed => F.delay(finishSpan(span, takeSamplingDecision))
-        case ExitCase.Error(err) => F.delay(failSpan(span, err, takeSamplingDecision))
-        case ExitCase.Canceled => F.delay(finishSpan(span.tag("cancel", value = true), takeSamplingDecision))
+        case ExitCase.Completed => F.delay {
+          finishSpan(span, takeSamplingDecision)
+          scope.close()
+        }
+        case ExitCase.Error(err) => F.delay {
+          failSpan(span, err, takeSamplingDecision)
+          scope.close()
+        }
+        case ExitCase.Canceled => F.delay {
+          finishSpan(span.tag("cancel", value = true), takeSamplingDecision)
+          scope.close()
+        }
       }
     }
   }

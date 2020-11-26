@@ -250,8 +250,8 @@ lazy val `kamon-monix` = (project in file("instrumentation/kamon-monix"))
       // dependencies must be added only for scala versions strictly above 2.11, otherwise the resolution will be
       // attempted for 2.11 and fail
       if (scalaBinaryVersion.value == "2.11") Nil else Seq(
-        "io.monix" %% "monix-eval" % "3.2.2" % "provided",
-        "io.monix" %% "monix-bio" % "1.0.0" % "provided")
+        "io.monix" %% "monix-eval" % "3.3.0" % "provided",
+        "io.monix" %% "monix-bio" % "1.1.0" % "provided")
     }
   )
   .dependsOn(`kamon-core`, `kamon-executors`, `kamon-testkit` % "test", `kamon-cats-io` % "compile->compile;test->test")

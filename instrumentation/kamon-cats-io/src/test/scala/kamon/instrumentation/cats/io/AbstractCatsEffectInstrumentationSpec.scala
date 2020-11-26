@@ -9,8 +9,9 @@ import kamon.context.Context
 import kamon.instrumentation.cats.io.Tracing.Implicits._
 import kamon.tag.Lookups.plain
 import kamon.testkit.TestSpanReporter
-import org.scalatest.concurrent.{PatienceConfiguration, ScalaFutures}
-import org.scalatest.{BeforeAndAfterAll, Inspectors, Matchers, WordSpec}
+import kamon.trace.Span
+import org.scalatest.concurrent.{Eventually, PatienceConfiguration, ScalaFutures}
+import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, Inspectors, Matchers, WordSpec}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContext.global
@@ -26,7 +27,9 @@ abstract class AbstractCatsEffectInstrumentationSpec[F[_]: LiftIO](effectName: S
     with PatienceConfiguration
     with TestSpanReporter
     with Inspectors
-    with BeforeAndAfterAll {
+    with Eventually
+    with BeforeAndAfterAll
+    with BeforeAndAfter {
 
   implicit def contextShift: ContextShift[F]
 
@@ -38,6 +41,16 @@ abstract class AbstractCatsEffectInstrumentationSpec[F[_]: LiftIO](effectName: S
     customExecutionContext.shutdown()
     shutdownTestSpanReporter()
     super.afterAll()
+  }
+
+  before {
+    Kamon.storeContext(Context.Empty)
+    testSpanReporter().clear()
+  }
+
+  after {
+    Kamon.storeContext(Context.Empty)
+    testSpanReporter().clear()
   }
 
   s"A Cats Effect $effectName" should {
@@ -69,22 +82,34 @@ abstract class AbstractCatsEffectInstrumentationSpec[F[_]: LiftIO](effectName: S
       //    - 2 (value = 2)
       //    - 3 (value = 3)
       val rootSpan = for {
-        root  <- F.delay(Kamon.spanBuilder("root").start())
-        _     <- (1L to 3L)
-                   .toList
-                   .map { idx =>
-                     F.delay(idx).named(idx.toString, Map("value" -> idx))
-                   }.sequence
-        _     <- F.delay(root.finish())
+        rootAndScope <- F.delay {
+                          val span = Kamon.spanBuilder("root").start()
+                          val ctx = Kamon.storeContext(Kamon.currentContext().withEntry(Span.Key, span))
+                          (span, ctx)
+                        }
+        (root, scope) = rootAndScope
+        _            <- (1L to 3L)
+                          .toList
+                          .traverse { idx =>
+                            F.delay(idx).named(idx.toString, Map("value" -> idx))
+                          }
+        _            <- F.delay {
+                          root.finish()
+                          scope.close()
+                        }
       } yield root
 
       val root = F.toIO(rootSpan).unsafeRunSync()
 
-      val spans = testSpanReporter().spans()
-      forAll(spans) { span =>
+      eventually {
+        testSpanReporter().spans().size shouldEqual 4
+        testSpanReporter().spans().map(_.operationName).toSet shouldEqual Set("root", "1", "2", "3")
+      }
+
+      val childrenSpans = testSpanReporter().spans().filter(_.id.string != root.id.string)
+      forAll(childrenSpans) { span =>
         span.parentId.string shouldEqual root.id.string
       }
     }
   }
-
 }
