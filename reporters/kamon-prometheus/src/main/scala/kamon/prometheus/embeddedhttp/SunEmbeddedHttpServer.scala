@@ -16,12 +16,15 @@
 
 package kamon.prometheus.embeddedhttp
 
-import java.net.{InetAddress, InetSocketAddress}
-import java.nio.charset.StandardCharsets
-
 import com.sun.net.httpserver.{HttpExchange, HttpHandler, HttpServer}
 import com.typesafe.config.Config
 import kamon.prometheus.ScrapeSource
+import kamon.prometheus.embeddedhttp.SunEmbeddedHttpServer.shouldUseCompression
+
+import java.net.{InetAddress, InetSocketAddress}
+import java.nio.charset.StandardCharsets
+import java.util.zip.GZIPOutputStream
+import scala.collection.JavaConverters._
 
 class SunEmbeddedHttpServer(hostname: String, port: Int, scrapeSource: ScrapeSource, config: Config) extends EmbeddedHttpServer(hostname, port, scrapeSource, config) {
   private val server = {
@@ -31,16 +34,19 @@ class SunEmbeddedHttpServer(hostname: String, port: Int, scrapeSource: ScrapeSou
       override def handle(httpExchange: HttpExchange): Unit = {
         val data = scrapeSource.scrapeData()
         val bytes = data.getBytes(StandardCharsets.UTF_8)
-        httpExchange.sendResponseHeaders(200, bytes.length)
         val os = httpExchange.getResponseBody
         try {
           os.write(bytes)
-        }
-        finally
-          os.close()
+          if (shouldUseCompression(httpExchange)) {
+            val gzip = new GZIPOutputStream(os)
+            httpExchange.sendResponseHeaders(200, 0)
+            gzip.write(bytes)
+            gzip.close()
+          } else httpExchange.sendResponseHeaders(200, bytes.length)
+        } finally os.close()
       }
-
     }
+
     s.createContext("/metrics", handler)
     s.createContext("/", handler)
     s.start()
@@ -48,4 +54,20 @@ class SunEmbeddedHttpServer(hostname: String, port: Int, scrapeSource: ScrapeSou
   }
 
   def stop(): Unit = server.stop(0)
+}
+
+object SunEmbeddedHttpServer {
+  def shouldUseCompression(httpExchange: HttpExchange): Boolean = {
+    val encodingHeaders = httpExchange.getRequestHeaders.asScala.get("Accept-Encoding")
+    encodingHeaders match {
+      case Some(headerList) =>
+        val trimmedEncodings = for {
+          encodingHeader <- headerList.asScala
+          encodings = encodingHeader.split(",")
+          encoding <- encodings
+        } yield encoding.trim().toLowerCase()
+        trimmedEncodings.contains("gzip")
+      case None => false
+    }
+  }
 }
