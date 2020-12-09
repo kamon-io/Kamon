@@ -32,23 +32,24 @@ class SunEmbeddedHttpServer(hostname: String, port: Int, scrapeSource: ScrapeSou
     s.setExecutor(null)
     val handler = new HttpHandler {
       override def handle(httpExchange: HttpExchange): Unit = {
-        val data = scrapeSource.scrapeData()
-        val bytes = data.getBytes(StandardCharsets.UTF_8)
-        val os = httpExchange.getResponseBody
-        try {
-          os.write(bytes)
-          if (shouldUseCompression(httpExchange)) {
-            val gzip = new GZIPOutputStream(os)
-            httpExchange.sendResponseHeaders(200, 0)
-            gzip.write(bytes)
-            gzip.close()
-          } else httpExchange.sendResponseHeaders(200, bytes.length)
-        } finally os.close()
+        if (httpExchange.getRequestURI.getPath == "/metrics") {
+          val data = scrapeSource.scrapeData()
+          val bytes = data.getBytes(StandardCharsets.UTF_8)
+          val os = httpExchange.getResponseBody
+          try {
+            os.write(bytes)
+            if (shouldUseCompression(httpExchange)) {
+              val gzip = new GZIPOutputStream(os)
+              httpExchange.sendResponseHeaders(200, 0)
+              gzip.write(bytes)
+              gzip.close()
+            } else httpExchange.sendResponseHeaders(200, bytes.length)
+          } finally os.close()
+        } else httpExchange.sendResponseHeaders(404, -1)
       }
     }
 
     s.createContext("/metrics", handler)
-    s.createContext("/", handler)
     s.start()
     s
   }
