@@ -27,7 +27,7 @@ import kamon.context.{BinaryPropagation, HttpPropagation, Propagation}
 trait ContextPropagation { self: Configuration =>
   @volatile private var _propagationComponents: ContextPropagation.Channels = _
   @volatile private var _defaultHttpPropagation: Propagation[HeaderReader, HeaderWriter] = _
-  @volatile private var _defaultBinaryPropagation: Propagation[ByteStreamReader, ByteStreamWriter] = _
+  @volatile private var _defaultBinaryPropagation: BinaryPropagation[ByteStreamReader, ByteStreamWriter] = _
 
   // Initial configuration and reconfigures
   init(self.config)
@@ -59,7 +59,7 @@ trait ContextPropagation { self: Configuration =>
     * Retrieves the default binary propagation channel. Configuration for this channel can be found under the
     * kamon.propagation.binary.default configuration section.
     */
-  def defaultBinaryPropagation(): Propagation[ByteStreamReader, ByteStreamWriter] =
+  def defaultBinaryPropagation(): BinaryPropagation[ByteStreamReader, ByteStreamWriter] =
     _defaultBinaryPropagation
 
   private def init(config: Config): Unit = synchronized {
@@ -76,7 +76,7 @@ object ContextPropagation {
 
   case class Channels(
     httpChannels: Map[String, Propagation[HeaderReader, HeaderWriter]],
-    binaryChannels: Map[String, Propagation[ByteStreamReader, ByteStreamWriter]]
+    binaryChannels: Map[String, BinaryPropagation[ByteStreamReader, ByteStreamWriter]]
   )
 
   object Channels {
