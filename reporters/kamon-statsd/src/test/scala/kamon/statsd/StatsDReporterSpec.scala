@@ -137,7 +137,7 @@ class StatsDReporterSpec extends WordSpec with Matchers with BeforeAndAfter with
   override def afterAll(): Unit = {
     super.afterAll()
     moduleRegistration.cancel()
-    Kamon.stopModules()
+    Kamon.stop()
     statsDServer.stop()
   }
 }
