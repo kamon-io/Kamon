@@ -39,6 +39,7 @@ import scala.util.control.NonFatal
 class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry: MetricRegistry, tracer: Tracer) {
 
   private val _logger = LoggerFactory.getLogger(classOf[ModuleRegistry])
+  private val _moduleRegistryEC: ExecutionContext = ExecutionContext.fromExecutor(newScheduledThreadPool(1, threadFactory("kamon-module-registry", daemon = true)))
   private val _metricsTickerExecutor = newScheduledThreadPool(1, threadFactory("kamon-metrics-ticker", daemon = true))
   private val _spansTickerExecutor = newScheduledThreadPool(1, threadFactory("kamon-spans-ticker", daemon = true))
 
@@ -127,7 +128,7 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
     * spans available until the call to stop.
     */
   def stopModules(): Future[Unit] = synchronized {
-    implicit val cleanupExecutor = ExecutionContext.Implicits.global
+    implicit val cleanupExecutor = _moduleRegistryEC
     stopReporterTickers()
 
     var stoppedSignals: List[Future[Unit]] = Nil
@@ -369,7 +370,7 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
     * context. The returned future completes when the module finishes its stop procedure.
     */
   private def stopModule(entry: Entry[Module]): Future[Unit] = synchronized {
-    val cleanupExecutor = ExecutionContext.Implicits.global
+    val cleanupExecutor = _moduleRegistryEC
 
     // Remove the module from all registries
     _registeredModules = _registeredModules - entry.name
