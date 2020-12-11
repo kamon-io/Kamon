@@ -18,9 +18,8 @@ package kamon
 package module
 
 import java.time.{Duration, Instant}
-import java.util.concurrent.{CountDownLatch, Executors, ScheduledFuture, TimeUnit}
+import java.util.concurrent.{CountDownLatch, Executors, ForkJoinPool, ScheduledFuture, TimeUnit}
 import java.util.concurrent.atomic.AtomicReference
-
 import com.typesafe.config.Config
 import kamon.module.Module.Registration
 import kamon.status.Status
@@ -138,11 +137,7 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
         true
     }
 
-    val latch = new CountDownLatch(stoppedSignals.size)
-    stoppedSignals.foreach(f => f.onComplete(_ => latch.countDown()))
-
-    // TODO: Completely destroy modules that fail to stop within the 30 second timeout.
-    Future(latch.await(30, TimeUnit.SECONDS))
+    Future.sequence(stoppedSignals).map(_ => ())
   }
 
 
