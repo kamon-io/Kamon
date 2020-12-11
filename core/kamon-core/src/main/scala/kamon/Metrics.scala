@@ -32,4 +32,7 @@ trait Metrics extends MetricBuilding { self: Configuration with Utilities =>
   protected def registry(): MetricRegistry =
     _metricRegistry
 
+  protected def clearRegistry(): Unit = {
+    _metricRegistry.clear()
+  }
 }
