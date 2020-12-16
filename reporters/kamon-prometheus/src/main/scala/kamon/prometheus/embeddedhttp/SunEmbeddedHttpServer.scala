@@ -37,13 +37,15 @@ class SunEmbeddedHttpServer(hostname: String, port: Int, scrapeSource: ScrapeSou
           val bytes = data.getBytes(StandardCharsets.UTF_8)
           val os = httpExchange.getResponseBody
           try {
-            os.write(bytes)
             if (shouldUseCompression(httpExchange)) {
-              val gzip = new GZIPOutputStream(os)
-              httpExchange.sendResponseHeaders(200, 0)
-              gzip.write(bytes)
-              gzip.close()
-            } else httpExchange.sendResponseHeaders(200, bytes.length)
+            val gzip = new GZIPOutputStream(os)
+            httpExchange.sendResponseHeaders(200, 0)
+            httpExchange.getResponseHeaders.set("Content-Encoding", "gzip")
+            gzip.write(bytes)
+          } else {
+            httpExchange.sendResponseHeaders(200, bytes.length)
+            os.write(bytes)
+          }
           } finally os.close()
         } else httpExchange.sendResponseHeaders(404, -1)
       }
