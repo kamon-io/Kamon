@@ -2,9 +2,10 @@ package kamon.prometheus
 
 import java.io.FileNotFoundException
 import java.net.URL
-
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
+
+import java.util.zip.GZIPInputStream
 
 class SunHttpServerSpecSuite extends EmbeddedHttpServerSpecSuite {
   override def testConfig: Config = ConfigFactory.load()
@@ -82,19 +83,27 @@ abstract class EmbeddedHttpServerSpecSuite extends WordSpec with Matchers with B
       testee.reportPeriodSnapshot(counter("jvm.mem"))
       //act
       val metrics = httpGetMetrics("/metrics")
-      val gzippedMetrics = httpGetMetrics("/metrics", gzip = true)
+      val gzippedMetrics = httpGetGzippedMetrics("/metrics")
       //assert
-      metrics should be < gzippedMetrics
+      metrics.length should be < gzippedMetrics.length
     }
   }
 
-  private def httpGetMetrics(endpoint: String, gzip: Boolean = false): String = {
+  private def httpGetMetrics(endpoint: String): String = {
+    val url = new URL(s"http://127.0.0.1:$port$endpoint")
+    val src = scala.io.Source.fromURL(url)
+    try src.mkString
+    finally src.close()
+  }
+
+  private def httpGetGzippedMetrics(endpoint: String): String = {
     val url = new URL(s"http://127.0.0.1:$port$endpoint")
     val connection = url.openConnection
-    if (gzip) connection.setRequestProperty("Accept-Encoding", "gzip")
-    val src = scala.io.Source.fromInputStream(connection.getInputStream)
-    if (gzip) connection.getRequestProperty("Accept-Encoding") shouldBe "gzip"
+    connection.setRequestProperty("Accept-Encoding", "gzip")
+    val gzipStream = new GZIPInputStream(connection.getInputStream)
+    val src = scala.io.Source.fromInputStream(gzipStream)
+    connection.getRequestProperty("Accept-Encoding") shouldBe "gzip"
     try src.getLines.mkString
-    finally src.close()
+    finally gzipStream.close()
   }
 }
