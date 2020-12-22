@@ -9,6 +9,7 @@ import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
 class SunHttpServerSpecSuite extends EmbeddedHttpServerSpecSuite {
   override def testConfig: Config = ConfigFactory.load()
 }
+
 //class NanoHttpServerSpecSuite extends EmbeddedHttpServerSpecSuite {
 //  override def testConfig: Config = ConfigFactory.parseString(
 //    """
@@ -22,6 +23,7 @@ class SunHttpServerSpecSuite extends EmbeddedHttpServerSpecSuite {
 
 abstract class EmbeddedHttpServerSpecSuite extends WordSpec with Matchers with BeforeAndAfterAll with KamonTestSnapshotSupport {
   protected def testConfig: Config
+
   protected def port: Int = 9095
 
   private var testee: PrometheusReporter = _
@@ -74,13 +76,25 @@ abstract class EmbeddedHttpServerSpecSuite extends WordSpec with Matchers with B
         httpGetMetrics("/metricsss")
       }
     }
+
+    "gzipped metrics have smaller size" in {
+      //arrange
+      testee.reportPeriodSnapshot(counter("jvm.mem"))
+      //act
+      val metrics = httpGetMetrics("/metrics")
+      val gzippedMetrics = httpGetMetrics("/metrics", gzip = true)
+      //assert
+      metrics should be < gzippedMetrics
+    }
   }
 
-  private def httpGetMetrics(endpoint: String): String = {
-    val src = scala.io.Source.fromURL(new URL(s"http://127.0.0.1:$port$endpoint"))
-    try
-      src.mkString
-    finally
-      src.close()
+  private def httpGetMetrics(endpoint: String, gzip: Boolean = false): String = {
+    val url = new URL(s"http://127.0.0.1:$port$endpoint")
+    val connection = url.openConnection
+    if (gzip) connection.setRequestProperty("Accept-Encoding", "gzip")
+    val src = scala.io.Source.fromInputStream(connection.getInputStream)
+    if (gzip) connection.getRequestProperty("Accept-Encoding") shouldBe "gzip"
+    try src.getLines.mkString
+    finally src.close()
   }
 }
