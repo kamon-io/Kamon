@@ -221,8 +221,12 @@ object ActorMonitor {
     override def cleanup(): Unit =
       monitor.cleanup()
 
+    private def extractMessageClass(envelope: Envelope): String = {
+      ActorCellInfo.simpleClassName(envelope.message.getClass)
+    }
+
     private def buildSpan(cellInfo: ActorCellInfo, context: Context, envelopeTimestamp: Long, envelope: Envelope): Span.Delayed = {
-      val messageClass = ActorCellInfo.simpleClassName(envelope.message.getClass)
+      val messageClass = extractMessageClass(envelope)
       val parentSpan = context.get(Span.Key)
 
       val spanBuilder = Kamon.internalSpanBuilder(operationName(messageClass, envelope.sender), "akka.actor")
