@@ -78,14 +78,14 @@ abstract class EmbeddedHttpServerSpecSuite extends WordSpec with Matchers with B
       }
     }
 
-    "gzipped metrics have smaller size" in {
+    "respect gzip Content-Encoding headers" in {
       //arrange
       testee.reportPeriodSnapshot(counter("jvm.mem"))
       //act
       val metrics = httpGetMetrics("/metrics")
       val gzippedMetrics = httpGetGzippedMetrics("/metrics")
       //assert
-      metrics.length should be < gzippedMetrics.length
+      metrics.length should be > gzippedMetrics.length
     }
   }
 
