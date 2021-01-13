@@ -17,11 +17,12 @@ class KamonRemoteInstrument(system: ExtendedActorSystem) extends RemoteInstrumen
   private val serializationInstruments = AkkaRemoteMetrics.serializationInstruments(system.name)
 
   override def identifier: Byte = 8
+
   override def serializationTimingEnabled: Boolean = true
 
   override def remoteWriteMetadata(recipient: ActorRef, message: Object, sender: ActorRef, buffer: ByteBuffer): Unit = {
     val currentContext = Kamon.currentContext()
-    if(currentContext.nonEmpty()) {
+    if (currentContext.nonEmpty()) {
       Kamon.defaultBinaryPropagation().write(currentContext, ByteStreamWriter.of(buffer))
     }
   }
@@ -40,11 +41,10 @@ class KamonRemoteInstrument(system: ExtendedActorSystem) extends RemoteInstrumen
       buffer.get(contextData)
 
       val incomingContext = Kamon.defaultBinaryPropagation().read(ByteStreamReader.of(contextData))
-      val currentInboundEnvelope = CaptureCurrentInboundEnvelope.CurrentInboundEnvelope.get()
 
-      if(currentInboundEnvelope != null) {
-        currentInboundEnvelope.asInstanceOf[HasContext].setContext(incomingContext)
-      }
+      Option(CaptureCurrentInboundEnvelope.CurrentInboundEnvelope.get())
+        .foreach(_.asInstanceOf[HasContext].setContext(incomingContext))
+
     } catch {
       case NonFatal(t) =>
         logger.warn("Failed to deserialized incoming Context", t)
@@ -77,6 +77,7 @@ class KamonRemoteInstrument(system: ExtendedActorSystem) extends RemoteInstrumen
 }
 
 class CaptureCurrentInboundEnvelope
+
 object CaptureCurrentInboundEnvelope {
 
   val CurrentInboundEnvelope = new ThreadLocal[InboundEnvelope]() {
