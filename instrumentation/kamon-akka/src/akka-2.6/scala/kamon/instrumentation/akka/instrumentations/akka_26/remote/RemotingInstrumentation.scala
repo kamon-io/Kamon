@@ -47,11 +47,6 @@ class RemotingInstrumentation extends InstrumentationBuilder with VersionFilteri
       .mixin(classOf[HasSerializationInstruments.Mixin])
       .advise(isConstructor, InitializeActorSystemAdvice)
 
-    onType("akka.remote.MessageSerializer$")
-      .advise(method("serialize"), MeasureSerializationTime)
-      .advise(method("deserialize"), MeasureDeserializationTime)
-
-
     /**
       * Artery
       */
