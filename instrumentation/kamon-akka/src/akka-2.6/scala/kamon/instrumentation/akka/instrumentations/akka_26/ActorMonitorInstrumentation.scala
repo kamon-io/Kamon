@@ -2,9 +2,13 @@ package kamon.instrumentation.akka.instrumentations.akka_26
 
 import akka.actor.WrappedMessage
 import akka.dispatch.Envelope
+import akka.remote.artery.KamonRemoteInstrument
 import kamon.instrumentation.akka.instrumentations.{ActorCellInfo, VersionFiltering}
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.implementation.bind.annotation.Argument
+import org.slf4j.LoggerFactory
+
+import scala.util.control.NonFatal
 
 class ActorMonitorInstrumentation extends InstrumentationBuilder with VersionFiltering {
 
@@ -19,11 +23,24 @@ class ActorMonitorInstrumentation extends InstrumentationBuilder with VersionFil
   }
 }
 
+class MessageClassAdvice
 object MessageClassAdvice {
+  private val logger = LoggerFactory.getLogger(classOf[MessageClassAdvice])
+
   def extractMessageClass(@Argument(0) envelope: Envelope): String = {
-    envelope.message match {
-      case message: WrappedMessage => ActorCellInfo.simpleClassName(message.message.getClass)
-      case _ => ActorCellInfo.simpleClassName(envelope.message.getClass)
+    try {
+      envelope.message match {
+        case message: WrappedMessage => ActorCellInfo.simpleClassName(message.message.getClass)
+        case _ => ActorCellInfo.simpleClassName(envelope.message.getClass)
+      }
+    } catch {
+      // NoClassDefFound is thrown in early versions of akka 2.6
+      // so we can safely fallback to the original method
+      case _: NoClassDefFoundError =>
+        ActorCellInfo.simpleClassName(envelope.message.getClass)
+      case NonFatal(e) =>
+        logger.info(s"Expected NoClassDefFoundError, got: ${e}")
+        ActorCellInfo.simpleClassName(envelope.message.getClass)
     }
   }
 }
