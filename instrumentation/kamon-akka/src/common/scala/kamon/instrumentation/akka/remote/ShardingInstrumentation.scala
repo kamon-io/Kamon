@@ -1,7 +1,6 @@
 package kamon.instrumentation.akka.remote
 
 import java.util.concurrent.atomic.AtomicLong
-
 import akka.actor.Actor
 import kamon.instrumentation.akka.AkkaClusterShardingMetrics.ShardingInstruments
 import kamon.instrumentation.akka.AkkaInstrumentation
@@ -34,13 +33,17 @@ class ShardingInstrumentation extends InstrumentationBuilder with VersionFilteri
       * whether it should be buffered or forwarded).
       */
     onType("akka.cluster.sharding.Shard")
+      // add sharding instruments
       .mixin(classOf[HasShardingInstruments.Mixin])
       .mixin(classOf[HasShardCounters.Mixin])
       .advise(isConstructor, InitializeShardAdvice)
-      .advise(method("onLeaseAcquired"), ShardOnLeaseAcquiredAdvice)
+      .advise(method("onLeaseAcquired"), ShardInitializedAdvice)
+      .advise(method("onEntitiesRemembered"), ShardInitializedAdvice)
       .advise(method("postStop"), ShardPostStopStoppedAdvice)
       .advise(method("getOrCreateEntity"), ShardGetOrCreateEntityAdvice)
+      .advise(method("passivateCompleted"), ShardEntityTerminatedAdvice)
       .advise(method("entityTerminated"), ShardEntityTerminatedAdvice)
+      .advise(method("akka$cluster$sharding$Shard$$deliverMessage"), ShardDeliverMessageAdvice)
       .advise(method("deliverMessage"), ShardDeliverMessageAdvice)
   }
 
@@ -125,7 +128,7 @@ object RegionPostStopAdvice {
 }
 
 
-object ShardOnLeaseAcquiredAdvice {
+object ShardInitializedAdvice {
 
   @Advice.OnMethodExit
   def enter(@Advice.This shard: HasShardingInstruments): Unit =
@@ -161,9 +164,9 @@ object ShardEntityTerminatedAdvice {
 }
 
 object ShardDeliverMessageAdvice {
-
   @Advice.OnMethodEnter
-  def enter(@Advice.This shard: Actor with HasShardingInstruments with HasShardCounters): Unit =
+  def enter(@Advice.This shard: Actor with HasShardingInstruments with HasShardCounters): Unit = {
     shard.processedMessagesCounter.incrementAndGet()
+  }
 
 }
