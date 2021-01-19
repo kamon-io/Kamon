@@ -2,13 +2,15 @@ package kamon.prometheus
 
 import java.io.FileNotFoundException
 import java.net.URL
-
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
+
+import java.util.zip.GZIPInputStream
 
 class SunHttpServerSpecSuite extends EmbeddedHttpServerSpecSuite {
   override def testConfig: Config = ConfigFactory.load()
 }
+
 //class NanoHttpServerSpecSuite extends EmbeddedHttpServerSpecSuite {
 //  override def testConfig: Config = ConfigFactory.parseString(
 //    """
@@ -22,6 +24,7 @@ class SunHttpServerSpecSuite extends EmbeddedHttpServerSpecSuite {
 
 abstract class EmbeddedHttpServerSpecSuite extends WordSpec with Matchers with BeforeAndAfterAll with KamonTestSnapshotSupport {
   protected def testConfig: Config
+
   protected def port: Int = 9095
 
   private var testee: PrometheusReporter = _
@@ -74,13 +77,33 @@ abstract class EmbeddedHttpServerSpecSuite extends WordSpec with Matchers with B
         httpGetMetrics("/metricsss")
       }
     }
+
+    "respect gzip Content-Encoding headers" in {
+      //arrange
+      testee.reportPeriodSnapshot(counter("jvm.mem"))
+      //act
+      val metrics = httpGetMetrics("/metrics")
+      val gzippedMetrics = httpGetGzippedMetrics("/metrics")
+      //assert
+      metrics.length should be > gzippedMetrics.length
+    }
   }
 
   private def httpGetMetrics(endpoint: String): String = {
-    val src = scala.io.Source.fromURL(new URL(s"http://127.0.0.1:$port$endpoint"))
-    try
-      src.mkString
-    finally
-      src.close()
+    val url = new URL(s"http://127.0.0.1:$port$endpoint")
+    val src = scala.io.Source.fromURL(url)
+    try src.mkString
+    finally src.close()
+  }
+
+  private def httpGetGzippedMetrics(endpoint: String): String = {
+    val url = new URL(s"http://127.0.0.1:$port$endpoint")
+    val connection = url.openConnection
+    connection.setRequestProperty("Accept-Encoding", "gzip")
+    val gzipStream = new GZIPInputStream(connection.getInputStream)
+    val src = scala.io.Source.fromInputStream(gzipStream)
+    connection.getRequestProperty("Accept-Encoding") shouldBe "gzip"
+    try src.getLines.mkString
+    finally gzipStream.close()
   }
 }
