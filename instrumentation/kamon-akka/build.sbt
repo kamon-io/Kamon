@@ -2,10 +2,8 @@ import sbt.Tests.{Group, SubProcess}
 import Def.Initialize
 
 val `Akka-2.4-version` = "2.4.20"
-// latest is 2.5.9
 val `Akka-2.5-version` = "2.5.26"
-// latest is 2.6.10
-val `Akka-2.6-version` = "2.6.8"
+val `Akka-2.6-version` = "2.6.11"
 
 /**
   * Compile Configurations

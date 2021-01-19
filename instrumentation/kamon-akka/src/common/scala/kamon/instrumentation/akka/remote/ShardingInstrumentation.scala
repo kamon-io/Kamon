@@ -33,18 +33,26 @@ class ShardingInstrumentation extends InstrumentationBuilder with VersionFilteri
       * whether it should be buffered or forwarded).
       */
     onType("akka.cluster.sharding.Shard")
-      // add sharding instruments
       .mixin(classOf[HasShardingInstruments.Mixin])
       .mixin(classOf[HasShardCounters.Mixin])
       .advise(isConstructor, InitializeShardAdvice)
       .advise(method("onLeaseAcquired"), ShardInitializedAdvice)
-      .advise(method("onEntitiesRemembered"), ShardInitializedAdvice)
       .advise(method("postStop"), ShardPostStopStoppedAdvice)
       .advise(method("getOrCreateEntity"), ShardGetOrCreateEntityAdvice)
       .advise(method("passivateCompleted"), ShardEntityTerminatedAdvice)
       .advise(method("entityTerminated"), ShardEntityTerminatedAdvice)
       .advise(method("akka$cluster$sharding$Shard$$deliverMessage"), ShardDeliverMessageAdvice)
       .advise(method("deliverMessage"), ShardDeliverMessageAdvice)
+  }
+
+  untilAkkaVersion("2.6", 10) {
+    onType("akka.cluster.sharding.Shard")
+    .advise(method("onEntitiesRemembered"), ShardInitializedAdvice)
+  }
+
+  afterAkkaVersion("2.6", 11) {
+    onType("akka.cluster.sharding.Shard")
+      .advise(method("shardInitialized"), ShardInitializedAdvice)
   }
 
 }
