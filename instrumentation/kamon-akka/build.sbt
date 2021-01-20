@@ -3,7 +3,7 @@ import Def.Initialize
 
 val `Akka-2.4-version` = "2.4.20"
 val `Akka-2.5-version` = "2.5.26"
-val `Akka-2.6-version` = "2.6.0"
+val `Akka-2.6-version` = "2.6.11"
 
 /**
   * Compile Configurations

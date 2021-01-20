@@ -3,8 +3,9 @@ package kamon.instrumentation.akka.instrumentations.akka_26.remote
 import akka.actor.ActorSystem
 import akka.remote.kamon.instrumentation.akka.instrumentations.akka_26.remote.{CaptureContextOnInboundEnvelope, DeserializeForArteryAdvice, SerializeForArteryAdvice}
 import akka.kamon.instrumentation.akka.instrumentations.akka_26.remote.internal.{AkkaPduProtobufCodecConstructMessageMethodInterceptor, AkkaPduProtobufCodecDecodeMessage}
+import akka.remote.artery.CaptureCurrentInboundEnvelope
 import kamon.Kamon
-import kamon.context.Storage
+import kamon.context.{Context, Storage}
 import kamon.context.Storage.Scope
 import kamon.instrumentation.akka.AkkaRemoteInstrumentation
 import kamon.instrumentation.akka.AkkaRemoteMetrics.SerializationInstruments
@@ -46,11 +47,6 @@ class RemotingInstrumentation extends InstrumentationBuilder with VersionFilteri
       .mixin(classOf[HasSerializationInstruments.Mixin])
       .advise(isConstructor, InitializeActorSystemAdvice)
 
-    onType("akka.remote.MessageSerializer$")
-      .advise(method("serialize"), MeasureSerializationTime)
-      .advise(method("deserialize"), MeasureDeserializationTime)
-
-
     /**
       * Artery
       */
@@ -61,13 +57,11 @@ class RemotingInstrumentation extends InstrumentationBuilder with VersionFilteri
     onType("akka.remote.artery.Association")
       .advise(method("createOutboundEnvelope$1"), CaptureCurrentContextOnReusableEnvelope)
 
-    onType("akka.remote.MessageSerializer$")
-      .advise(method("serializeForArtery"), classOf[SerializeForArteryAdvice])
-      .advise(method("deserializeForArtery"), classOf[DeserializeForArteryAdvice])
+    onType("akka.remote.artery.RemoteInstruments")
+      .advise(method("deserialize"), classOf[CaptureCurrentInboundEnvelope])
 
     onType("akka.remote.artery.ReusableInboundEnvelope")
       .mixin(classOf[HasContext.Mixin])
-      .advise(method("withMessage"), classOf[CaptureContextOnInboundEnvelope])
       .advise(method("copyForLane"), CopyContextOnReusableEnvelope)
 
     onType("akka.remote.artery.MessageDispatcher")
