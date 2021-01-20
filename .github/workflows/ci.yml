@@ -9,7 +9,7 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - run: git fetch --depth=1 origin '+refs/tags/*:refs/tags/*'
-      - uses: olafurpg/setup-scala@v2
+      - uses: olafurpg/setup-scala@v10
         with:
           java-version: adopt@1.8.0-242
       - name: Test

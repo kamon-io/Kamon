@@ -1,10 +1,9 @@
 package kamon.instrumentation.akka.instrumentations.akka_25.remote
 
 import akka.actor.ActorSystem
-import akka.remote.kamon.instrumentation.akka.instrumentations.akka_25.remote.{ArteryMessageDispatcherAdvice, CaptureContextOnInboundEnvelope, DeserializeForArteryAdvice, SerializeForArteryAdvice}
 import akka.kamon.instrumentation.akka.instrumentations.akka_25.remote.{AkkaPduProtobufCodecConstructMessageMethodInterceptor, AkkaPduProtobufCodecDecodeMessage}
+import akka.remote.kamon.instrumentation.akka.instrumentations.akka_25.remote.{ArteryMessageDispatcherAdvice, CaptureContextOnInboundEnvelope, DeserializeForArteryAdvice, SerializeForArteryAdvice}
 import kamon.Kamon
-import kamon.context.Storage
 import kamon.context.Storage.Scope
 import kamon.instrumentation.akka.AkkaRemoteInstrumentation
 import kamon.instrumentation.akka.AkkaRemoteMetrics.SerializationInstruments
@@ -75,9 +74,7 @@ class RemotingInstrumentation extends InstrumentationBuilder with VersionFilteri
 
 }
 
-
 object CopyContextOnReusableEnvelope {
-
   @Advice.OnMethodExit
   def exit(@Advice.This oldEnvelope: Any, @Advice.Return newEnvelope: Any): Unit =
     newEnvelope.asInstanceOf[HasContext].setContext(oldEnvelope.asInstanceOf[HasContext].context)
@@ -131,7 +128,6 @@ object MeasureSerializationTime {
   def enter(): Long = {
     if(AkkaRemoteInstrumentation.settings().trackSerializationMetrics) System.nanoTime() else 0L
   }
-
   @Advice.OnMethodExit
   def exit(@Advice.Argument(0) system: AnyRef, @Advice.Enter startNanoTime: Long): Unit = {
     if(startNanoTime != 0L) {

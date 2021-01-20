@@ -10,7 +10,7 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - run: git fetch --depth=1 origin '+refs/tags/*:refs/tags/*'
-      - uses: olafurpg/setup-scala@v2
+      - uses: olafurpg/setup-scala@v10
       - name: Release
         run: csbt release
         shell: bash

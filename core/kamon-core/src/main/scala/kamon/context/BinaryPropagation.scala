@@ -18,7 +18,6 @@ package kamon
 package context
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, OutputStream}
-
 import com.typesafe.config.Config
 import kamon.context.generated.binary.context.{Context => ColferContext, Entry => ColferEntry, Tags => ColferTags}
 import kamon.context.generated.binary.context.{BooleanTag => ColferBooleanTag, LongTag => ColferLongTag, StringTag => ColferStringTag}
@@ -26,6 +25,7 @@ import kamon.tag.{Tag, TagSet}
 import kamon.trace.Span.TagKeys
 import org.slf4j.LoggerFactory
 
+import java.nio.ByteBuffer
 import scala.reflect.ClassTag
 import scala.util.control.NonFatal
 import scala.util.Try
@@ -122,6 +122,20 @@ object BinaryPropagation {
 
       override def write(byte: Int): Unit =
         outputStream.write(byte)
+    }
+
+    /**
+      * Creates a new [[ByteStreamWriter]] from a ByteBuffer.
+      */
+    def of(byteBuffer: ByteBuffer): ByteStreamWriter = new ByteStreamWriter {
+      override def write(bytes: Array[Byte]): Unit =
+        byteBuffer.put(bytes)
+
+      override def write(bytes: Array[Byte], offset: Int, count: Int): Unit =
+        byteBuffer.put(bytes, offset, count)
+
+      override def write(byte: Int): Unit =
+        byteBuffer.put(byte.toByte)
     }
   }
 

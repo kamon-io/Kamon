@@ -19,7 +19,7 @@ package kamon.instrumentation.system.jvm
 import java.lang.management.ManagementFactory
 
 import kamon.Kamon
-import kamon.instrumentation.system.jvm.JvmMetrics.MemoryUsageInstruments.MemoryRegionInstruments
+import kamon.instrumentation.system.jvm.JvmMetrics.MemoryUsageInstruments.{BufferPoolInstruments, MemoryRegionInstruments}
 import kamon.instrumentation.system.jvm.JvmMetricsCollector.{Collector, MemoryPool}
 import kamon.metric.{Gauge, Histogram, InstrumentGroup, MeasurementUnit}
 import kamon.tag.TagSet
@@ -124,6 +124,23 @@ object JvmMetrics {
     description = "Total number od classes currently loaded"
   )
 
+  val BufferPoolCount = Kamon.gauge(
+    name = s"jvm.memory.buffer-pool.count",
+    description = "Estimated number of buffers in the pool"
+  )
+
+  val BufferPoolUsed = Kamon.gauge(
+    name = s"jvm.memory.buffer-pool.used",
+    description = "Estimate of memory used by the JVM for this buffer pool in bytes",
+    unit = MeasurementUnit.information.bytes
+  )
+
+  val BufferPoolCapacity = Kamon.gauge(
+    name = s"jvm.memory.buffer-pool.capacity",
+    description = "Estimate of the total capacity of this pool in bytes",
+    unit = MeasurementUnit.information.bytes
+  )
+
   class GarbageCollectionInstruments(tags: TagSet) extends InstrumentGroup(tags) {
     private val _collectorCache = mutable.Map.empty[String, Histogram]
 
@@ -144,6 +161,7 @@ object JvmMetrics {
   class MemoryUsageInstruments(tags: TagSet) extends InstrumentGroup(tags) {
     private val _memoryRegionsCache = mutable.Map.empty[String, MemoryRegionInstruments]
     private val _memoryPoolsCache = mutable.Map.empty[String, MemoryRegionInstruments]
+    private val _memoryBuffersCache = mutable.Map.empty[String, BufferPoolInstruments]
 
     def regionInstruments(regionName: String): MemoryRegionInstruments =
       _memoryRegionsCache.getOrElseUpdate(regionName, {
@@ -168,6 +186,19 @@ object JvmMetrics {
           register(MemoryPoolMax, region)
         )
       })
+
+    def bufferPoolInstruments(poolName: String): BufferPoolInstruments = {
+      _memoryBuffersCache.getOrElseUpdate(poolName, {
+        val bufferTags = tags
+          .withTag("pool", poolName)
+
+        BufferPoolInstruments(
+          register(BufferPoolCount, bufferTags),
+          register(BufferPoolUsed, bufferTags),
+          register(BufferPoolCapacity, bufferTags)
+        )
+      })
+    }
   }
 
   class ClassLoadingInstruments(tags: TagSet) extends InstrumentGroup(tags) {
@@ -183,11 +214,17 @@ object JvmMetrics {
   }
 
   object MemoryUsageInstruments {
-    case class MemoryRegionInstruments(
+    case class MemoryRegionInstruments (
       used: Histogram,
       free: Histogram,
       committed: Gauge,
       max: Gauge
+    )
+
+    case class BufferPoolInstruments (
+      count: Gauge,
+      used: Gauge,
+      capacity: Gauge
     )
   }
 }

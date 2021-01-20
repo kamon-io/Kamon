@@ -67,4 +67,5 @@ object Propagation {
       */
     def write(context: Context, medium: Medium): Unit
   }
+
 }
