@@ -19,10 +19,11 @@ package kamon.instrumentation.play
 import java.time.Duration
 import java.util.concurrent.atomic.AtomicLong
 
+import com.typesafe.config.Config
 import io.netty.channel.Channel
 import io.netty.handler.codec.http.{HttpRequest, HttpResponse}
 import io.netty.util.concurrent.GenericFutureListener
-import kamon.Kamon
+import kamon.{ClassLoading, Kamon}
 import kamon.context.Storage
 import kamon.instrumentation.akka.http.ServerFlowWrapper
 import kamon.instrumentation.context.{CaptureCurrentTimestampOnExit, HasTimestamp}
@@ -33,12 +34,13 @@ import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.api.instrumentation.classloader.ClassRefiner
 import kanela.agent.api.instrumentation.mixin.Initializer
 import kanela.agent.libs.net.bytebuddy.asm.Advice
+import org.slf4j.LoggerFactory
 import play.api.mvc.RequestHeader
 import play.api.routing.{HandlerDef, Router}
 import play.core.server.NettyServer
 
 import scala.collection.JavaConverters.asScalaBufferConverter
-import scala.collection.concurrent.TrieMap
+import scala.util.Try
 import scala.util.{Failure, Success}
 
 class PlayServerInstrumentation extends InstrumentationBuilder {
@@ -243,32 +245,61 @@ object HasServerInstrumentation {
 
 object GenerateOperationNameOnFilterHandler {
 
-  private val _operationNameCache = TrieMap.empty[String, String]
-  private val _normalizePattern = """\$([^<]+)<[^>]+>""".r
+  private val defaultRouterNameGenerator = new DefaultRouterOperationNameGenerator()
+  private val _logger = LoggerFactory.getLogger(GenerateOperationNameOnFilterHandler.getClass)
+
+  @volatile private var _routerNameGenerator: RouterOperationNameGenerator = rebuildRouterNameGenerator(Kamon.config())
+
+  Kamon.onReconfigure(newConfig => _routerNameGenerator = rebuildRouterNameGenerator(newConfig))
+
+  private def rebuildRouterNameGenerator(config: Config): RouterOperationNameGenerator = {
+    val nameGeneratorClazz = config.getString("kamon.instrumentation.play.http.server.name-generator")
+    Try(ClassLoading.createInstance[RouterOperationNameGenerator](nameGeneratorClazz)) match {
+      case Failure(exception) =>
+        _logger.error(s"Exception occurred on $nameGeneratorClazz instance creation, used default", exception)
+        defaultRouterNameGenerator
+      case Success(value) =>
+        value
+    }
+  }
 
   @Advice.OnMethodEnter
   def enter(@Advice.Argument(0) request: RequestHeader): Unit = {
     request.attrs.get(Router.Attrs.HandlerDef).map(handler => {
       val span = Kamon.currentSpan()
-      span.name(generateOperationName(handler))
+      span.name(_routerNameGenerator.generateOperationName(handler))
       span.takeSamplingDecision()
     })
   }
 
-  private def generateOperationName(handlerDef: HandlerDef): String =
-    _operationNameCache.getOrElseUpdate(handlerDef.path, {
-      // Convert paths of form /foo/bar/$paramname<regexp>/blah to /foo/bar/paramname/blah
-      _normalizePattern.replaceAllIn(handlerDef.path, "$1")
-  })
-
 }
 
 object GenerateGRPCOperationName {
+
+  private val defaultGrpcRouterNameGenerator = new DefaultGrpcRouterNameGenerator()
+  private val _logger = LoggerFactory.getLogger(GenerateOperationNameOnFilterHandler.getClass)
+
+  @volatile private var _grpcRouterNameGenerator: GrpcRouterNameGenerator = rebuildRouterNameGenerator(Kamon.config())
+
+  Kamon.onReconfigure(newConfig => _grpcRouterNameGenerator = rebuildRouterNameGenerator(newConfig))
+
+  private def rebuildRouterNameGenerator(config: Config): GrpcRouterNameGenerator = {
+    val nameGeneratorClazz = config.getString("kamon.instrumentation.play.http.server.grpc-name-generator")
+    Try(ClassLoading.createInstance[GrpcRouterNameGenerator](nameGeneratorClazz)) match {
+      case Failure(exception) =>
+        _logger.error(s"Exception occurred on $nameGeneratorClazz instance creation, used default", exception)
+        defaultGrpcRouterNameGenerator
+      case Success(value) =>
+        value
+    }
+  }
+
   @Advice.OnMethodEnter
   def enter(@Advice.Argument(0) request: akka.http.scaladsl.model.HttpRequest): Unit = {
     val span = Kamon.currentSpan()
-    span.name(request.uri.toRelative.toString)
+    span.name(_grpcRouterNameGenerator.generateOperationName(request))
     span.tag("http.protocol", request.protocol.value)
     span.takeSamplingDecision()
   }
+
 }
