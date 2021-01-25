@@ -226,7 +226,8 @@ object HttpPropagation {
     private val readerWriterShortcuts: Map[String, ReaderWriter] = Map(
       "span/b3" -> SpanPropagation.B3(),
       "span/uber" -> SpanPropagation.Uber(),
-      "span/b3-single" -> SpanPropagation.B3Single()
+      "span/b3-single" -> SpanPropagation.B3Single(),
+      "span/w3c" -> SpanPropagation.W3CTraceContext()
     )
 
     def from(config: Config): Settings = {
