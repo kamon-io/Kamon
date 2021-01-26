@@ -101,6 +101,7 @@ package object datadog {
         .connectTimeout(connectTimeout.toMillis, TimeUnit.MILLISECONDS)
         .readTimeout(readTimeout.toMillis, TimeUnit.MILLISECONDS)
         .writeTimeout(writeTimeout.toMillis, TimeUnit.MILLISECONDS)
+        .addInterceptor(new LoggingInterceptor)
         .retryOnConnectionFailure(false)
         .build()
     }
