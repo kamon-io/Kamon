@@ -36,7 +36,7 @@ package object datadog {
     }
   }
 
-  private[datadog] case class HttpClient(apiUrl: String, apiKey: Option[String], usingAgent: Boolean, connectTimeout: Duration,
+  private[datadog] case class HttpClient(apiUrl: String, apiKey: Option[String], usingCompression: Boolean, usingAgent: Boolean, connectTimeout: Duration,
                                          readTimeout: Duration, writeTimeout: Duration) {
 
     val httpClient: OkHttpClient = createHttpClient()
@@ -45,6 +45,7 @@ package object datadog {
       this(
         config.getString("api-url"),
         if (usingAgent) None else Some(config.getString("api-key")),
+        if (usingAgent) false else config.getBoolean("compression"),
         usingAgent,
         config.getDuration("connect-timeout"),
         config.getDuration("read-timeout"),
@@ -97,13 +98,14 @@ package object datadog {
 
     // Apparently okhttp doesn't require explicit closing of the connection
     private def createHttpClient(): OkHttpClient = {
-      new OkHttpClient.Builder()
+      val builder = new OkHttpClient.Builder()
         .connectTimeout(connectTimeout.toMillis, TimeUnit.MILLISECONDS)
         .readTimeout(readTimeout.toMillis, TimeUnit.MILLISECONDS)
         .writeTimeout(writeTimeout.toMillis, TimeUnit.MILLISECONDS)
-        .addInterceptor(new LoggingInterceptor)
         .retryOnConnectionFailure(false)
-        .build()
+
+      if (usingCompression) builder.addInterceptor(new DeflateInterceptor).build()
+      else builder.build()
     }
   }
 
