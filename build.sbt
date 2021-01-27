@@ -392,6 +392,12 @@ lazy val `kamon-akka` = (project in file("instrumentation/kamon-akka"))
   )
 
 
+def akkaHttpVersion(scalaVersion: String) = scalaVersion match {
+  case "2.11" => "10.1.12"
+  case _      => "10.2.3"
+}
+
+
 lazy val `kamon-akka-http` = (project in file("instrumentation/kamon-akka-http"))
   .enablePlugins(JavaAgent)
   .disablePlugins(AssemblyPlugin)
@@ -401,18 +407,18 @@ lazy val `kamon-akka-http` = (project in file("instrumentation/kamon-akka-http")
     javaAgents += "org.mortbay.jetty.alpn" % "jetty-alpn-agent" % "2.0.10" % "test",
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
-      "com.typesafe.akka" %% "akka-http"            % "10.1.12" % "provided",
-      "com.typesafe.akka" %% "akka-http2-support"   % "10.1.12" % "provided",
-      "com.typesafe.akka" %% "akka-stream"          % "2.5.31" % "provided",
+      "com.typesafe.akka" %% "akka-http"            % akkaHttpVersion(scalaBinaryVersion.value) % "provided",
+      "com.typesafe.akka" %% "akka-http2-support"   % akkaHttpVersion(scalaBinaryVersion.value)  % "provided",
+      "com.typesafe.akka" %% "akka-stream"          % "2.5.32" % "provided",
 
       scalatest % "test",
       slf4jApi % "test",
       slf4jnop % "test",
       okHttp % "test",
-      "com.typesafe.akka" %% "akka-http-testkit"    % "10.1.12" % "test",
+      "com.typesafe.akka" %% "akka-http-testkit"    % akkaHttpVersion(scalaBinaryVersion.value) % "test",
       "de.heikoseeberger" %% "akka-http-json4s"     % "1.27.0" % "test",
       "org.json4s"        %% "json4s-native"        % "3.6.7" % "test",
-    )
+    ),
   )).dependsOn(`kamon-akka`, `kamon-testkit` % "test")
 
 
