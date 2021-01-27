@@ -33,7 +33,10 @@ class AkkaHttpClientInstrumentation extends InstrumentationBuilder {
     * Simply modifies the requests as they are submitted. This does not cover connection pooling, just requests sent
     * via the Http.singleRequest mechanism.
     */
+
   onType("akka.http.scaladsl.HttpExt")
+    .advise(method("singleRequest"), classOf[HttpExtSingleRequestAdvice])
+    // akka-http 10.1.x compatibility
     .advise(method("singleRequestImpl"), classOf[HttpExtSingleRequestAdvice])
 
   onType("akka.http.impl.engine.client.PoolMaster")
