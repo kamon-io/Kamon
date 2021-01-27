@@ -32,7 +32,7 @@ class DeflateInterceptor extends Interceptor {
     def contentType: MediaType = body.contentType
 
     def writeTo(sink: BufferedSink): Unit = {
-      val deflateSink = Okio.buffer(new DeflaterSink(sink, new Deflater))
+      val deflateSink = Okio.buffer(new DeflaterSink(sink, new Deflater()))
       body.writeTo(deflateSink)
       deflateSink.close
     }
