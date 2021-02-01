@@ -16,9 +16,8 @@
 
 package kamon.instrumentation.akka.instrumentations
 
+import akka.actor.instrumentation.ReplaceWithAdvice
 import akka.actor.{ActorRef, ActorSystem}
-import akka.instrumentation.ReplaceWithMethodInterceptor
-
 import kamon.Kamon
 import kamon.context.Storage.Scope
 import kamon.instrumentation.akka.instrumentations.HasActorMonitor.actorMonitor
@@ -26,8 +25,6 @@ import kamon.instrumentation.context.{HasContext, HasTimestamp}
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 import kanela.agent.libs.net.bytebuddy.asm.Advice.{Argument, OnMethodEnter, OnMethodExit, This}
-
-import scala.util.Properties
 
 class ActorInstrumentation extends InstrumentationBuilder {
 
@@ -51,31 +48,7 @@ class ActorInstrumentation extends InstrumentationBuilder {
     .mixin(classOf[HasActorMonitor.Mixin])
     .advise(isConstructor, RepointableActorCellConstructorAdvice)
     .advise(method("sendMessage").and(takesArguments(1)), SendMessageAdvice)
-    .intercept(method("replaceWith"), ReplaceWithMethodInterceptor)
-
-}
-
-object ActorInstrumentation {
-
-  val (unstartedCellQueueField, unstartedCellLockField, systemMsgQueueField) = {
-    val unstartedCellClass = AkkaPrivateAccess.unstartedActorCellClass()
-
-    val prefix = Properties.versionNumberString.split("\\.").take(2).mkString(".") match {
-      case _@ "2.11" => "akka$actor$UnstartedCell$$"
-      case _@ "2.12" => ""
-      case _@ "2.13" => ""
-      case v         => throw new IllegalStateException(s"Incompatible Scala version: $v")
-    }
-
-    val queueField = unstartedCellClass.getDeclaredField(prefix+"queue")
-    val lockField = unstartedCellClass.getDeclaredField("lock")
-    val sysQueueField = unstartedCellClass.getDeclaredField(prefix+"sysmsgQueue")
-    queueField.setAccessible(true)
-    lockField.setAccessible(true)
-    sysQueueField.setAccessible(true)
-
-    (queueField, lockField, sysQueueField)
-  }
+    .advise(method("replaceWith"), classOf[ReplaceWithAdvice])
 
 }
 
