@@ -432,6 +432,10 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
     }
   }
 
+  def stop(): Unit = {
+    _adaptiveSamplerSchedule.foreach(_.cancel(false))
+  }
+
   private def adaptiveSamplerAdaptRunnable(): Runnable = new Runnable {
     override def run(): Unit = {
       _sampler match {

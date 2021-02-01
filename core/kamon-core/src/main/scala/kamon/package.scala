@@ -15,13 +15,24 @@
  */
 
 import java.util.concurrent.atomic.AtomicLong
-import java.util.concurrent.{Executors, ThreadFactory}
-
+import java.util.concurrent.{Executors, ScheduledExecutorService, ScheduledThreadPoolExecutor, ThreadFactory, TimeUnit}
 import com.typesafe.config.{Config, ConfigUtil}
 
 import scala.collection.concurrent.TrieMap
 
 package object kamon {
+
+  def newScheduledThreadPool(corePoolSize: Int, threadFactory: ThreadFactory): ScheduledExecutorService = {
+    val tp = new ScheduledThreadPoolExecutor(corePoolSize, threadFactory)
+    val timeout = 5000
+    // Call in this order or it throws!
+    tp.setKeepAliveTime(timeout, TimeUnit.MILLISECONDS)
+    tp.allowCoreThreadTimeOut(true)
+
+    tp.setRemoveOnCancelPolicy(true)
+
+    tp
+  }
 
   /**
     * Creates a thread factory that assigns the specified name to all created Threads.
