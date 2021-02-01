@@ -37,11 +37,12 @@ object HttpOperationNameGenerator {
     * Uses the request Host to assign a name.
     */
   object Hostname extends HttpOperationNameGenerator {
-    override def name(request: Request): Option[String] =
-      Option(request.host)
+    override def name(request: Request): Option[String] = {
+      Option(request.host).filter(_.nonEmpty) orElse request.read("host").map(_.takeWhile(_ != ':'))
+    }
   }
- 
- /**
+
+  /**
     * Uses the request Host and Port to assign a name.
     */
   object HostnameAndPort extends HttpOperationNameGenerator {
@@ -61,7 +62,7 @@ object HttpOperationNameGenerator {
   /**
     * Uses a static name.
     */
-  class Static(name:String) extends HttpOperationNameGenerator {
+  class Static(name: String) extends HttpOperationNameGenerator {
     override def name(request: Request): Option[String] =
       Option(name)
   }
