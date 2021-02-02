@@ -18,10 +18,10 @@ package kamon
 package trace
 
 import java.time.{Duration, Instant}
-
 import kamon.context.Context
 import kamon.tag.TagSet
 import kamon.trace.Span.Link
+import kamon.trace.Span.Local._logger
 import kamon.trace.Trace.SamplingDecision
 import kamon.util.Clock
 import org.slf4j.LoggerFactory
@@ -76,6 +76,10 @@ sealed abstract class Span extends Sampler.Operation {
     * Trace to which this Span belongs.
     */
   def trace: Trace
+
+  /**
+    * Returns true if this Span was finished.
+    */
 
   /**
     * Returns true if this Span was initially created in another process and then transferred to this process.
@@ -225,7 +229,7 @@ sealed abstract class Span extends Sampler.Operation {
 
 }
 
-object Span {
+object Span extends Configuration {
 
   /**
     * Key used to store and retrieve Span instances from the Context
@@ -417,6 +421,7 @@ object Span {
     private var _trackMetrics: Boolean = initialTrackMetrics
     private var _trackDelayedSpanMetrics: Boolean = true
     private var _isOpen: Boolean = true
+    private var _debug: Boolean = config().getBoolean("kamon.trace.debug")
     private var _hasError: Boolean = false
     private var _operationName: String = initialOperationName
     private var _marks: List[Mark] = initialMarks
@@ -435,55 +440,81 @@ object Span {
         _startedAt = at
         _isDelayedStarted = true
         mark(MarkKeys.SpanStarted, at)
-      }
+      } else if (warnOnClosed)
+        _logger.warn(s"Cannot start finished span with name: ${_operationName}")
       this
     }
 
     override def tag(key: String, value: String): Span = synchronized {
-      if(isSampled && _isOpen)
+      if(isSampled && _isOpen) {
         _spanTags.add(key, value)
+      } else if (warnOnClosed) {
+        _logger.warn(s"Cannot apply tag: Tag(${key}, ${value}) to finished span with name: ${_operationName}")
+      }
       this
     }
 
     override def tag(key: String, value: Long): Span = synchronized {
-      if(isSampled && _isOpen)
+      if(isSampled && _isOpen) {
         _spanTags.add(key, value)
+      } else if (warnOnClosed) {
+        _logger.warn(s"Cannot apply tag: Tag(${key}, ${value}) to finished span with name: ${_operationName}")
+      }
       this
     }
 
     override def tag(key: String, value: Boolean): Span = synchronized {
-      if(isSampled && _isOpen)
+      if(isSampled && _isOpen) {
         _spanTags.add(key, value)
+      } else if (warnOnClosed) {
+        _logger.warn(s"Cannot apply tag: Tag(${key}, ${value}) to finished span with name: ${_operationName}")
+      }
       this
     }
 
     override def tag(tags: TagSet): Span = synchronized {
-      if(isSampled && _isOpen)
+      if(isSampled && _isOpen) {
         _spanTags.add(tags)
+      } else if (warnOnClosed) {
+        _logger.warn(s"Cannot apply tags: ${tags} to finished span with name: ${_operationName}")
+      }
       this
     }
 
     override def tagMetrics(key: String, value: String): Span = synchronized {
-      if(_isOpen && _trackMetrics)
+      if(_isOpen && _trackMetrics) {
         _metricTags.add(key, value)
+      } else if (warnOnClosed) {
+        _logger.warn(s"Cannot apply metric: Metric(${key}, ${value}) to finished span with name: ${_operationName}")
+      }
       this
     }
 
     override def tagMetrics(key: String, value: Long): Span = synchronized {
-      if(_isOpen && _trackMetrics)
+      if(_isOpen && _trackMetrics) {
         _metricTags.add(key, value)
-      this
+      } else if (warnOnClosed) {
+        _logger.warn(s"Cannot apply metric: Metric(${key}, ${value}) to finished span with name: ${_operationName}")
+      }
+    this
     }
 
     override def tagMetrics(key: String, value: Boolean): Span = synchronized {
-      if(_isOpen && _trackMetrics)
+      if(_isOpen && _trackMetrics) {
         _metricTags.add(key, value)
+      } else if (warnOnClosed) {
+        _logger.warn(s"Cannot apply metric: Metric(${key}, ${value}) to finished span with name: ${_operationName}")
+      }
+
       this
     }
 
     override def tagMetrics(tags: TagSet): Span = synchronized {
-      if(_isOpen && _trackMetrics)
+      if(_isOpen && _trackMetrics) {
         _metricTags.add(tags)
+      } else if (warnOnClosed) {
+        _logger.warn(s"Cannot apply tag metrics: ${tags} to finished span with name: ${_operationName}")
+      }
       this
     }
 
@@ -492,14 +523,21 @@ object Span {
     }
 
     override def mark(key: String, at: Instant): Span = synchronized {
-      if(_isOpen)
+      if(_isOpen) {
         _marks = Mark(at, key) :: _marks
+      } else if (warnOnClosed) {
+        _logger.warn(s"Cannot apply mark: Mark(${key}, ${at}) to finished span with name: ${_operationName}")
+      }
       this
     }
 
     override def link(span: Span, kind: Link.Kind): Span = synchronized {
-      if(_isOpen)
+      if(_isOpen) {
         _links = Link(kind, span.trace, span.id) :: _links
+      } else if (warnOnClosed) {
+        _logger.warn(s"Cannot link span ${span.operationName()} to finished span with name: ${_operationName}")
+      }
+
       this
     }
 
@@ -509,6 +547,8 @@ object Span {
 
         if(isSampled)
           _spanTags.add(TagKeys.ErrorMessage, message)
+      } else if (warnOnClosed) {
+        _logger.warn(s"Cannot fail finished span with name: ${_operationName}")
       }
       this
     }
@@ -523,6 +563,8 @@ object Span {
           if(includeErrorStacktrace)
             _spanTags.add(TagKeys.ErrorStacktrace, toStackTraceString(throwable))
         }
+      } else if (warnOnClosed) {
+        _logger.warn(s"Cannot fail finished span with name: ${_operationName}")
       }
       this
     }
@@ -537,7 +579,10 @@ object Span {
           if(includeErrorStacktrace)
             _spanTags.add(TagKeys.ErrorStacktrace, toStackTraceString(throwable))
         }
+      } else if (warnOnClosed) {
+        _logger.warn(s"Cannot fail finished span with name: ${_operationName}")
       }
+
       this
     }
 
@@ -578,8 +623,12 @@ object Span {
     }
 
     override def name(operationName: String): Span = synchronized {
-      if(_isOpen)
+      if(_isOpen) {
         _operationName = operationName
+      } else if (warnOnClosed) {
+        _logger.warn(s"Cannot name finished span with name: ${_operationName}")
+      }
+
       this
     }
 
@@ -608,7 +657,14 @@ object Span {
         val finalMetricTags = createMetricTags()
         recordSpanMetrics(finishedAt, finalMetricTags)
         reportSpan(finishedAt, finalMetricTags)
+      } else if (warnOnClosed) {
+        _logger.warn(s"Cannot finish already finished span with name: ${_operationName}")
       }
+
+    }
+
+    private def warnOnClosed = {
+      _debug && !_isOpen
     }
 
     private def isSampled: Boolean =
@@ -667,7 +723,6 @@ object Span {
   object Local {
     private val _logger = LoggerFactory.getLogger(classOf[Span.Local])
   }
-
   /**
     * A immutable, no-op Span that can be used to signal that there is no Span information. An empty Span completely
     * ignores all writes made to it.
@@ -680,29 +735,38 @@ object Span {
     override def isRemote: Boolean = false
     override def isEmpty: Boolean = true
     override def position(): Position = Position.Unknown
-    override def tag(key: String, value: String): Span = this
-    override def tag(key: String, value: Long): Span = this
-    override def tag(key: String, value: Boolean): Span = this
-    override def tag(tagSet: TagSet): Span = this
-    override def tagMetrics(key: String, value: String): Span = this
-    override def tagMetrics(key: String, value: Long): Span = this
-    override def tagMetrics(key: String, value: Boolean): Span = this
-    override def tagMetrics(tagSet: TagSet): Span = this
-    override def mark(key: String): Span = this
-    override def mark(key: String, at: Instant): Span = this
-    override def link(span: Span, kind: Link.Kind): Span = this
-    override def fail(errorMessage: String): Span = this
-    override def fail(cause: Throwable): Span = this
-    override def fail(errorMessage: String, cause: Throwable): Span = this
-    override def name(name: String): Span = this
+    override def tag(key: String, value: String): Span = warnAndDiscard()
+    override def tag(key: String, value: Long): Span = warnAndDiscard()
+    override def tag(key: String, value: Boolean): Span = warnAndDiscard()
+    override def tag(tagSet: TagSet): Span = warnAndDiscard()
+    override def tagMetrics(key: String, value: String): Span = warnAndDiscard()
+    override def tagMetrics(key: String, value: Long): Span = warnAndDiscard()
+    override def tagMetrics(key: String, value: Boolean): Span = warnAndDiscard()
+    override def tagMetrics(tagSet: TagSet): Span = warnAndDiscard()
+    override def mark(key: String): Span = warnAndDiscard()
+    override def mark(key: String, at: Instant): Span = warnAndDiscard()
+    override def link(span: Span, kind: Link.Kind): Span = warnAndDiscard()
+    override def fail(errorMessage: String): Span = warnAndDiscard()
+    override def fail(cause: Throwable): Span = warnAndDiscard()
+    override def fail(errorMessage: String, cause: Throwable): Span = warnAndDiscard()
+    override def name(name: String): Span = warnAndDiscard()
     override def trackMetrics(): Span = this
     override def doNotTrackMetrics(): Span = this
     override def takeSamplingDecision(): Span = this
-    override def finish(): Unit = {}
-    override def finish(at: Instant): Unit = {}
-    override def finishAfter(duration: Duration): Unit = {}
+    override def finish(): Unit = { warnAndDiscard(); {}}
+    override def finish(at: Instant): Unit = { warnAndDiscard(); {}}
+    override def finishAfter(duration: Duration): Unit = { warnAndDiscard(); {}}
     override def operationName(): String = "empty"
     override def toString(): String = "Span.Empty"
+
+    private val _logger = LoggerFactory.getLogger(classOf[Span])
+    private def _debug: Boolean = config().getBoolean("kamon.trace.debug")
+    private def warnAndDiscard(): Span = {
+      if (_debug) {
+        _logger.debug("Cannot perform operations on Empty spans.")
+      }
+      this
+    }
   }
 
 
@@ -716,29 +780,38 @@ object Span {
     override def isRemote: Boolean = true
     override def isEmpty: Boolean = false
     override def position(): Position = Position.Unknown
-    override def tag(key: String, value: String): Span = this
-    override def tag(key: String, value: Long): Span = this
-    override def tag(key: String, value: Boolean): Span = this
-    override def tag(tagSet: TagSet): Span = this
-    override def tagMetrics(key: String, value: String): Span = this
-    override def tagMetrics(key: String, value: Long): Span = this
-    override def tagMetrics(key: String, value: Boolean): Span = this
-    override def tagMetrics(tagSet: TagSet): Span = this
-    override def mark(key: String): Span = this
-    override def mark(key: String, at: Instant): Span = this
-    override def link(span: Span, kind: Link.Kind): Span = this
-    override def fail(errorMessage: String): Span = this
-    override def fail(cause: Throwable): Span = this
-    override def fail(errorMessage: String, cause: Throwable): Span = this
-    override def name(name: String): Span = this
+    override def tag(key: String, value: String): Span = warnAndDiscard()
+    override def tag(key: String, value: Long): Span = warnAndDiscard()
+    override def tag(key: String, value: Boolean): Span = warnAndDiscard()
+    override def tag(tagSet: TagSet): Span = warnAndDiscard()
+    override def tagMetrics(key: String, value: String): Span = warnAndDiscard()
+    override def tagMetrics(key: String, value: Long): Span = warnAndDiscard()
+    override def tagMetrics(key: String, value: Boolean): Span = warnAndDiscard()
+    override def tagMetrics(tagSet: TagSet): Span = warnAndDiscard()
+    override def mark(key: String): Span = warnAndDiscard()
+    override def mark(key: String, at: Instant): Span = warnAndDiscard()
+    override def link(span: Span, kind: Link.Kind): Span = warnAndDiscard()
+    override def fail(errorMessage: String): Span = warnAndDiscard()
+    override def fail(cause: Throwable): Span = warnAndDiscard()
+    override def fail(errorMessage: String, cause: Throwable): Span = warnAndDiscard()
+    override def name(name: String): Span = warnAndDiscard()
     override def trackMetrics(): Span = this
     override def doNotTrackMetrics(): Span = this
     override def takeSamplingDecision(): Span = this
-    override def finish(): Unit = {}
-    override def finish(at: Instant): Unit = {}
-    override def finishAfter(duration: Duration): Unit = {}
+    override def finish(): Unit = { warnAndDiscard(); {}}
+    override def finish(at: Instant): Unit = { warnAndDiscard(); {}}
+    override def finishAfter(duration: Duration): Unit = { warnAndDiscard(); {}}
     override def operationName(): String = "empty"
     override def toString(): String = s"Span.Remote{id=${id.string},parentId=${parentId.string},trace=${trace}"
+
+    private val _logger = LoggerFactory.getLogger(classOf[Span.Remote])
+    private def _debug: Boolean = config().getBoolean("kamon.trace.debug")
+    private def warnAndDiscard(): Span = {
+      if (_debug) {
+        _logger.debug("Cannot perform operations on Remote spans.")
+      }
+      this
+    }
   }
 
 
