@@ -3,9 +3,11 @@ package kamon.prometheus
 import java.io.FileNotFoundException
 import java.net.URL
 import com.typesafe.config.{Config, ConfigFactory}
+import org.scalatest.concurrent.Eventually
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
 
 import java.util.zip.GZIPInputStream
+import scala.concurrent.duration.DurationInt
 
 class SunHttpServerSpecSuite extends EmbeddedHttpServerSpecSuite {
   override def testConfig: Config = ConfigFactory.load()
@@ -22,7 +24,11 @@ class SunHttpServerSpecSuite extends EmbeddedHttpServerSpecSuite {
 //  override def port = 9096
 //}
 
-abstract class EmbeddedHttpServerSpecSuite extends WordSpec with Matchers with BeforeAndAfterAll with KamonTestSnapshotSupport {
+abstract class EmbeddedHttpServerSpecSuite extends WordSpec
+  with Matchers
+  with BeforeAndAfterAll
+  with KamonTestSnapshotSupport
+  with Eventually {
   protected def testConfig: Config
 
   protected def port: Int = 9095
@@ -69,15 +75,6 @@ abstract class EmbeddedHttpServerSpecSuite extends WordSpec with Matchers with B
       metrics shouldBe "# TYPE jvm_mem_total counter\njvm_mem_total 2.0\n"
     }
 
-    "provide the metrics strictly on /metrics endpoint" in {
-      assertThrows[FileNotFoundException] {
-        httpGetMetrics("")
-      }
-      assertThrows[FileNotFoundException] {
-        httpGetMetrics("/metricsss")
-      }
-    }
-
     "respect gzip Content-Encoding headers" in {
       //arrange
       testee.reportPeriodSnapshot(counter("jvm.mem"))
@@ -86,6 +83,20 @@ abstract class EmbeddedHttpServerSpecSuite extends WordSpec with Matchers with B
       val gzippedMetrics = httpGetGzippedMetrics("/metrics")
       //assert
       metrics.length should be > gzippedMetrics.length
+    }
+
+    "respect the path configuration" in {
+      httpGetMetrics("/metrics") should not be empty
+      assertThrows[FileNotFoundException] {
+        httpGetMetrics("/new-metrics")
+      }
+
+      testee.reconfigure(changeEndpoint("/new-metrics"))
+      httpGetMetrics("/new-metrics") should not be empty
+
+      assertThrows[FileNotFoundException] {
+        httpGetMetrics("/metrics")
+      }
     }
   }
 
@@ -105,5 +116,10 @@ abstract class EmbeddedHttpServerSpecSuite extends WordSpec with Matchers with B
     connection.getRequestProperty("Accept-Encoding") shouldBe "gzip"
     try src.getLines.mkString
     finally gzipStream.close()
+  }
+
+  private def changeEndpoint(path: String): Config = {
+    ConfigFactory.parseString(
+      s"""kamon.prometheus.embedded-server.path = ${path}""").withFallback(testConfig)
   }
 }
