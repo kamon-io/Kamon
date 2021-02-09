@@ -124,7 +124,7 @@ object PrometheusReporter {
         startEmbeddedServer = prometheusConfig.getBoolean("start-embedded-http-server"),
         embeddedServerHostname = prometheusConfig.getString("embedded-server.hostname"),
         embeddedServerPort = prometheusConfig.getInt("embedded-server.port"),
-        embeddedServerPath = prometheusConfig.getString("embedded-server.path"),
+        embeddedServerPath = prometheusConfig.getString("embedded-server.metrics_path"),
         embeddedServerImpl = prometheusConfig.getString("embedded-server.impl"),
         generic = PrometheusSettings.readSettings(prometheusConfig)
       )
