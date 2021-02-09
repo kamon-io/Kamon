@@ -120,6 +120,6 @@ abstract class EmbeddedHttpServerSpecSuite extends WordSpec
 
   private def changeEndpoint(path: String): Config = {
     ConfigFactory.parseString(
-      s"""kamon.prometheus.embedded-server.metrics_path = ${path}""").withFallback(testConfig)
+      s"""kamon.prometheus.embedded-server.metrics-path = ${path}""").withFallback(testConfig)
   }
 }
