@@ -1,7 +1,6 @@
 package kamon.datadog
 
 import java.time.Instant
-
 import kamon.Kamon
 import kamon.metric.Distribution.Percentile
 import kamon.metric._
@@ -9,9 +8,11 @@ import kamon.module.ModuleFactory
 import kamon.tag.TagSet
 import kamon.testkit.Reconfigure
 import okhttp3.mockwebserver.MockResponse
+import okio.{Buffer, InflaterSource, Okio}
 import org.scalatest.Matchers
 import play.api.libs.json.Json
 
+import java.util.zip.Inflater
 import scala.concurrent.ExecutionContext
 
 class DatadogAPIReporterSpec extends AbstractHttpReporter with Matchers with Reconfigure {
@@ -20,10 +21,45 @@ class DatadogAPIReporterSpec extends AbstractHttpReporter with Matchers with Rec
     val reporter = new DatadogAPIReporterFactory().create(ModuleFactory.Settings(Kamon.config(), ExecutionContext.global))
     val now = Instant.ofEpochMilli(1523395554)
 
+    "sends metrics - compressed" in {
+      val baseUrl = mockResponse("/test", new MockResponse().setStatus("HTTP/1.1 200 OK"))
+      applyConfig("kamon.datadog.api.api-url = \"" + baseUrl + "\"")
+      applyConfig("kamon.datadog.api.api-key = \"dummy\"")
+      applyConfig("kamon.datadog.api.compression = true")
+      reporter.reconfigure(Kamon.config())
+
+      reporter.reportPeriodSnapshot(
+        PeriodSnapshot.apply(
+          now.minusMillis(1000),
+          now,
+          MetricSnapshot.ofValues[Long](
+            "test.counter",
+            "test",
+            Metric.Settings.ForValueInstrument(MeasurementUnit.none, java.time.Duration.ZERO),
+            Instrument.Snapshot.apply(TagSet.of("tag1", "value1"), 0L) :: Nil
+          ) :: Nil,
+          Nil,
+          Nil,
+          Nil,
+          Nil
+        )
+      )
+
+      val request = server.takeRequest()
+
+      val decompressedBody = Okio.buffer(new InflaterSource(request.getBody.buffer(), new Inflater())).readByteString().utf8()
+
+      Json.parse(decompressedBody) shouldEqual Json
+        .parse(
+          """{"series":[{"metric":"test.counter","interval":1,"points":[[1523394,0]],"type":"count","host":"test","tags":["env:staging","service:kamon-application","tag1:value1"]}]}"""
+        )
+    }
+
     "sends counter metrics" in {
       val baseUrl = mockResponse("/test", new MockResponse().setStatus("HTTP/1.1 200 OK"))
       applyConfig("kamon.datadog.api.api-url = \"" + baseUrl + "\"")
       applyConfig("kamon.datadog.api.api-key = \"dummy\"")
+      applyConfig("kamon.datadog.api.compression = false")
       reporter.reconfigure(Kamon.config())
 
       reporter.reportPeriodSnapshot(
@@ -56,6 +92,7 @@ class DatadogAPIReporterSpec extends AbstractHttpReporter with Matchers with Rec
       val baseUrl = mockResponse("/test", new MockResponse().setStatus("HTTP/1.1 200 OK"))
       applyConfig("kamon.datadog.api.api-url = \"" + baseUrl + "\"")
       applyConfig("kamon.datadog.api.api-key = \"dummy\"")
+      applyConfig("kamon.datadog.api.compression = false")
       reporter.reconfigure(Kamon.config())
 
       val distribution = new Distribution {
