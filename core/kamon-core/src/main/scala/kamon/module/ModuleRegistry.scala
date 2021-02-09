@@ -18,9 +18,8 @@ package kamon
 package module
 
 import java.time.{Duration, Instant}
-import java.util.concurrent.{CountDownLatch, Executors, ScheduledFuture, TimeUnit}
+import java.util.concurrent.{CountDownLatch, Executors, ForkJoinPool, ScheduledFuture, TimeUnit}
 import java.util.concurrent.atomic.AtomicReference
-
 import com.typesafe.config.Config
 import kamon.module.Module.Registration
 import kamon.status.Status
@@ -39,8 +38,9 @@ import scala.util.control.NonFatal
 class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry: MetricRegistry, tracer: Tracer) {
 
   private val _logger = LoggerFactory.getLogger(classOf[ModuleRegistry])
-  private val _metricsTickerExecutor = Executors.newScheduledThreadPool(1, threadFactory("kamon-metrics-ticker", daemon = true))
-  private val _spansTickerExecutor = Executors.newScheduledThreadPool(1, threadFactory("kamon-spans-ticker", daemon = true))
+  private val _moduleRegistryEC: ExecutionContext = ExecutionContext.fromExecutor(newScheduledThreadPool(1, threadFactory("kamon-module-registry", daemon = true)))
+  private val _metricsTickerExecutor = newScheduledThreadPool(1, threadFactory("kamon-metrics-ticker", daemon = true))
+  private val _spansTickerExecutor = newScheduledThreadPool(1, threadFactory("kamon-spans-ticker", daemon = true))
 
   private val _metricsTickerSchedule = new AtomicReference[ScheduledFuture[_]]()
   private val _spansTickerSchedule = new AtomicReference[ScheduledFuture[_]]()
@@ -127,7 +127,7 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
     * spans available until the call to stop.
     */
   def stopModules(): Future[Unit] = synchronized {
-    implicit val cleanupExecutor = ExecutionContext.Implicits.global
+    implicit val cleanupExecutor = _moduleRegistryEC
     stopReporterTickers()
 
     var stoppedSignals: List[Future[Unit]] = Nil
@@ -137,11 +137,7 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
         true
     }
 
-    val latch = new CountDownLatch(stoppedSignals.size)
-    stoppedSignals.foreach(f => f.onComplete(_ => latch.countDown()))
-
-    // TODO: Completely destroy modules that fail to stop within the 30 second timeout.
-    Future(latch.await(30, TimeUnit.SECONDS))
+    Future.sequence(stoppedSignals).map(_ => ())
   }
 
 
@@ -369,7 +365,7 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
     * context. The returned future completes when the module finishes its stop procedure.
     */
   private def stopModule(entry: Entry[Module]): Future[Unit] = synchronized {
-    val cleanupExecutor = ExecutionContext.Implicits.global
+    val cleanupExecutor = _moduleRegistryEC
 
     // Remove the module from all registries
     _registeredModules = _registeredModules - entry.name

@@ -32,7 +32,6 @@ import scala.collection.immutable
 
 
 class AkkaHttpServerInstrumentation extends InstrumentationBuilder {
-
   /**
     * When instrumenting bindAndHandle what we do is wrap the Flow[HttpRequest, HttpResponse, NotUsed] provided by
     * the user and add all the processing there. This is the part of the instrumentation that performs Context
@@ -49,8 +48,9 @@ class AkkaHttpServerInstrumentation extends InstrumentationBuilder {
     * For the HTTP/2 instrumentation, since the parts where we can capture the interface/port and the actual flow
     * creation happen at different times we are wrapping the handler with the interface/port data and reading that
     * information when turning the handler function into a flow and wrapping it the same way we would for HTTP/1.
+    *
     */
-  onType("akka.http.scaladsl.Http2Ext")
+  onType("akka.http.impl.engine.http2.Http2Ext")
     .advise(method("bindAndHandleAsync") and isPublic(), classOf[Http2ExtBindAndHandleAdvice])
 
   onType("akka.http.impl.engine.http2.Http2Blueprint$")
@@ -92,6 +92,13 @@ class AkkaHttpServerInstrumentation extends InstrumentationBuilder {
 
   onType("akka.http.scaladsl.util.FastFuture$")
     .intercept(method("transformWith$extension").and(takesArguments(4)), FastFutureTransformWithAdvice)
+
+  /**
+    * Akka-http 10.1.x compatibility.
+    */
+
+  onType("akka.http.scaladsl.Http2Ext")
+    .advise(method("bindAndHandleAsync") and isPublic(), classOf[Http2ExtBindAndHandleAdvice])
 }
 
 trait HasMatchingContext {

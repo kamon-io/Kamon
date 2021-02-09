@@ -89,4 +89,7 @@ trait Tracing { self: Configuration with Utilities with ContextStorage =>
   protected def tracer(): Tracer =
     _tracer
 
+  def stopTracer(): Unit = {
+    _tracer.stop()
+  }
 }

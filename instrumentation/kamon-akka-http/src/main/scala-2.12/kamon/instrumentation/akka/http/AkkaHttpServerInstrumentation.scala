@@ -58,6 +58,7 @@ class AkkaHttpServerInstrumentation extends InstrumentationBuilder {
     * operation name before the request processing hits the routing tree, we are delaying the sampling decision to the
     * point at which we have some operation name.
     */
+
   onType("akka.http.scaladsl.HttpExt")
     .advise(method("bindAndHandle"), classOf[HttpExtBindAndHandleAdvice])
 
@@ -66,7 +67,8 @@ class AkkaHttpServerInstrumentation extends InstrumentationBuilder {
     * creation happen at different times we are wrapping the handler with the interface/port data and reading that
     * information when turning the handler function into a flow and wrapping it the same way we would for HTTP/1.
     */
-  onType("akka.http.scaladsl.Http2Ext")
+
+  onType("akka.http.impl.engine.http2.Http2Ext")
     .advise(method("bindAndHandleAsync") and isPublic(), classOf[Http2ExtBindAndHandleAdvice])
 
   onType("akka.http.impl.engine.http2.Http2Blueprint$")
@@ -102,12 +104,20 @@ class AkkaHttpServerInstrumentation extends InstrumentationBuilder {
     */
   onTypes("akka.http.scaladsl.util.FastFuture$FulfilledFuture", "akka.http.scaladsl.util.FastFuture$ErrorFuture")
     .mixin(classOf[HasContext.MixinWithInitializer])
-      .advise(method("transform"), InvokeWithCapturedContext)
-      .advise(method("transformWith"), InvokeWithCapturedContext)
-      .advise(method("onComplete"), InvokeWithCapturedContext)
+    .advise(method("transform"), InvokeWithCapturedContext)
+    .advise(method("transformWith"), InvokeWithCapturedContext)
+    .advise(method("onComplete"), InvokeWithCapturedContext)
 
   onType("akka.http.scaladsl.util.FastFuture$")
     .intercept(method("transformWith$extension1"), FastFutureTransformWithAdvice)
+
+
+  /**
+    * Akka-http 10.1.x compatibility.
+    */
+
+  onType("akka.http.scaladsl.Http2Ext")
+    .advise(method("bindAndHandleAsync") and isPublic(), classOf[Http2ExtBindAndHandleAdvice])
 }
 
 trait HasMatchingContext {

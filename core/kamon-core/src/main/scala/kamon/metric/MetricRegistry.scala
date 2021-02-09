@@ -27,7 +27,6 @@ import kamon.util.Clock
 import org.slf4j.LoggerFactory
 
 import scala.collection.concurrent.TrieMap
-import scala.reflect.ClassTag
 
 /**
   * Handles creation and snapshotting of metrics. If a metric is created twice, the very same instance will be returned.
@@ -204,4 +203,8 @@ class MetricRegistry(config: Config, scheduler: ScheduledExecutorService, clock:
   /** Returns the current status of all metrics contained in the registry */
   def status(): Status.MetricRegistry =
     Status.MetricRegistry(_metrics.values.map(_.status()).toSeq)
+
+  def clear(): Unit = {
+    _metrics.values.foreach { metric => metric.status().instruments.foreach(i => metric.remove(i.tags)) }
+  }
 }
