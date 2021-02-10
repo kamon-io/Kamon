@@ -74,9 +74,12 @@ class PrometheusReporter(configPath: String = DefaultConfigPath, initialConfig: 
   private def startEmbeddedServerIfEnabled(): Unit = {
     if (_reporterSettings.startEmbeddedServer) {
       val server = _reporterSettings.createEmbeddedHttpServerClass()
-          .getConstructor(Array[Class[_]](classOf[String], classOf[Int], classOf[ScrapeSource], classOf[Config]): _*)
-          .newInstance(_reporterSettings.embeddedServerHostname, _reporterSettings.embeddedServerPort:Integer, this, _config)
-      _logger.info(s"Started the embedded HTTP server on http://${_reporterSettings.embeddedServerHostname}:${_reporterSettings.embeddedServerPort}")
+          .getConstructor(Array[Class[_]](classOf[String], classOf[Int], classOf[String], classOf[ScrapeSource], classOf[Config]): _*)
+          .newInstance(_reporterSettings.embeddedServerHostname,
+            _reporterSettings.embeddedServerPort:Integer,
+            _reporterSettings.embeddedServerPath,
+            this, _config)
+      _logger.info(s"Started the embedded HTTP server on http://${_reporterSettings.embeddedServerHostname}:${_reporterSettings.embeddedServerPort}${_reporterSettings.embeddedServerPath}")
       _embeddedHttpServer = Some(server)
     }
   }
@@ -101,6 +104,7 @@ object PrometheusReporter {
                          startEmbeddedServer: Boolean,
                          embeddedServerHostname: String,
                          embeddedServerPort: Int,
+                         embeddedServerPath: String,
                          embeddedServerImpl: String,
                          generic: PrometheusSettings.Generic
                      ) {
@@ -120,6 +124,7 @@ object PrometheusReporter {
         startEmbeddedServer = prometheusConfig.getBoolean("start-embedded-http-server"),
         embeddedServerHostname = prometheusConfig.getString("embedded-server.hostname"),
         embeddedServerPort = prometheusConfig.getInt("embedded-server.port"),
+        embeddedServerPath = prometheusConfig.getString("embedded-server.metrics-path"),
         embeddedServerImpl = prometheusConfig.getString("embedded-server.impl"),
         generic = PrometheusSettings.readSettings(prometheusConfig)
       )
