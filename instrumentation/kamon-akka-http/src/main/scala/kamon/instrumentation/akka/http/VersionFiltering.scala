@@ -2,7 +2,17 @@ package kamon.instrumentation.akka.http
 
 trait VersionFiltering {
   def onAkkaHttp(version: String)(block: => Unit): Unit = {
-    if(akka.http.Version.current.startsWith(version))
+    val akkaHttpVersion = getVersion
+
+    if (akkaHttpVersion.exists(_.startsWith(version)))
       block
+  }
+
+  private def getVersion: Option[String] = {
+    try {
+      Option(akka.http.Version.current)
+    } catch {
+      case _: Throwable => None
+    }
   }
 }
