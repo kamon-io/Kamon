@@ -65,5 +65,6 @@ private[kafka] object RecordProcessor {
   private def resolve(groupId: AnyRef): Option[String] = groupId match {
       case opt: Optional[String] => if (opt.isPresent) Some(opt.get()) else None
       case value: String => Option(value)
+      case _ => None
     }
 }
