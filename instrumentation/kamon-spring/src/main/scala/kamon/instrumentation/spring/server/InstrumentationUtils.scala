@@ -1,18 +1,43 @@
 package kamon.instrumentation.spring.server
 
 import kamon.instrumentation.http.HttpMessage
-import org.springframework.web.servlet.HandlerMapping
+import kamon.instrumentation.http.HttpMessage.ResponseBuilder
 
 import java.util.Collections
-import javax.servlet.http.HttpServletRequest
+import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
 
-object RequestConverter {
-  def toRequest(incoming: HttpServletRequest): RequestReader = {
+object InstrumentationUtils {
+  def responseBuilder(response: HttpServletResponse): ResponseBuilder[HttpServletResponse] = {
+    new ResponseBuilder[HttpServletResponse] {
+      private var _headers = Map.empty[String, String]
+
+      override def statusCode: Int = {
+        response.getStatus
+      }
+
+      override def write(header: String, value: String): Unit = {
+        // guard against double trace-id?
+        if (response.getHeader(header) == null) {
+          _headers += (header -> value)
+        }
+      }
+
+      override def build(): HttpServletResponse = {
+        // change response in place
+        _headers.foreach(header =>
+          response.addHeader(header._1, header._2)
+        )
+        // and then return it
+        response
+      }
+    }
+  }
+
+  def requestReader(incoming: HttpServletRequest): RequestReader = {
     new RequestReader {
       override def request: HttpServletRequest = incoming
     }
   }
-
 
   trait RequestReader extends HttpMessage.Request {
     def request: HttpServletRequest
