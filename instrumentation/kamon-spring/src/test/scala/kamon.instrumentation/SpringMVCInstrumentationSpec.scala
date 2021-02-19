@@ -58,11 +58,9 @@ class SpringMVCInstrumentationSpec
 
     "mark span as failed when throwing unchecked exception" in {
       executeGetRequest(s"${baseUrl}/throwIO")
-        .foreach(response => println(s"Response code: ${response.code()}"))
 
       eventually(timeout(2.seconds)) {
         val span = testSpanReporter().nextSpan().value
-        println(s"span: ${span}")
 
         span.hasError shouldBe true
         span.tags.get(plain("error.stacktrace")) should not be empty
