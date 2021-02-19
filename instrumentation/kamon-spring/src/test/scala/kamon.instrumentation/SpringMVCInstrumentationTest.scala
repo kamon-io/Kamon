@@ -1,6 +1,6 @@
 package kamon.instrumentation
 
-import kamon.tag.Lookups.plain
+import kamon.tag.Lookups.{plain, plainLong}
 import kamon.testkit.TestSpanReporter
 import okhttp3.{MediaType, OkHttpClient, Request, RequestBody}
 import org.scalatest.OptionValues.convertOptionToValuable
@@ -31,7 +31,7 @@ class SpringMVCInstrumentationTest
       eventually(timeout(2.seconds)) {
         val span = testSpanReporter().nextSpan().value
 
-        span.operationName shouldBe "http.server.request"
+        span.operationName shouldBe "/employees"
         span.metricTags.get(plain("component")) shouldBe "spring.server"
       }
     }
@@ -41,17 +41,18 @@ class SpringMVCInstrumentationTest
       eventually(timeout(2.seconds)) {
         val span = testSpanReporter().nextSpan().value
 
-        span.operationName shouldBe "http.server.request"
+        span.operationName shouldBe "/employees"
         span.metricTags.get(plain("component")) shouldBe "spring.server"
+        span.metricTags.get(plain("http.method")) shouldBe "POST"
       }
 
       executeGetRequest(s"${baseUrl}/employees/1/foo/bar")
       eventually(timeout(2.seconds)) {
         val span = testSpanReporter().nextSpan().value
 
-        span.operationName shouldBe "http.server.request"
+        span.operationName shouldBe "/employees/{id}/foo/{test}"
         span.metricTags.get(plain("component")) shouldBe "spring.server"
-        span.tags.get(plain("http.url")) shouldBe "/employees/{id}/foo/{test}"
+        span.tags.get(plain("http.url")) shouldBe "http://localhost:8080/employees/1/foo/bar"
       }
     }
 

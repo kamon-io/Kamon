@@ -18,18 +18,11 @@ object RequestConverter {
     def request: HttpServletRequest
 
     override def url: String = {
-      // This attribute can be null if the HandlerAdapter doesn't support it
-      // so we need a fallback.
-      // Default Spring HandlerAdapters will have it, but if someone writes
-      // a custom HandlerAdapter they might omit this.
-      // At which point, we have a possible cardinality problem
-      Option(request.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE))
-        .map(_.toString)
-        .getOrElse(request.getServletPath)
+      request.getRequestURL.toString
     }
 
     override def path: String = {
-      url
+      request.getServletPath
     }
 
     override def method: String = {
