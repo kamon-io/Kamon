@@ -1,30 +1,32 @@
 <template>
-  <div class="container">
-    <div class="row">
-      <div class="col-12">
-        <overview-card :module-registry="moduleRegistry" :metric-registry="metricRegistry" :instrumentation="instrumentation"/>
-      </div>
+  <v-container style="max-width: 1024px">
+    <overview-card
+      class="overview-card"
+      :module-registry="moduleRegistry"
+      :metric-registry="metricRegistry"
+      :instrumentation="instrumentation"
+    />
 
-      <div class="col-12">
+    <v-row>
+
+      <v-col cols="12">
         <environment-card :environment="environment"/>
-      </div>
+      </v-col>
 
-      <div class="col-12">
+      <v-col cols="12">
         <module-list :modules="modules"/>
-      </div>
+      </v-col>
 
-      <div class="col-12 pt-4 pb-2" v-if="metrics.length > 0">
-        <h2>Metrics</h2>
-      </div>
-      <div class="col-12" v-if="metrics.length > 0">
+      <v-col cols="12" v-if="metrics.length > 0">
         <metric-list :metrics="metrics"/>
-      </div>
-      <div class="col-12 mb-5">
-        <instrumentation-module-list :modules="instrumentationModules"/>
-      </div>
+      </v-col>
 
-    </div>
-  </div>
+      <v-col cols="12" class="mb-5">
+        <instrumentation-module-list :modules="instrumentationModules"/>
+      </v-col>
+
+    </v-row>
+  </v-container>
 </template>
 
 <script lang="ts">
@@ -123,3 +125,11 @@ export default class Overview extends Vue {
   }
 }
 </script>
+
+<style lang="scss">
+.overview-card {
+  position: relative;
+  top: -89px;
+  z-index: 100;
+}
+</style>

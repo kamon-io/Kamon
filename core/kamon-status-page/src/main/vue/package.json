@@ -8,26 +8,29 @@
     "lint": "vue-cli-service lint"
   },
   "dependencies": {
-    "axios": "0.19.0",
-    "bootstrap": "4.3.1",
+    "axios": "^0.21.1",
     "ts-option": "1.1.5",
     "underscore": "1.9.1",
     "vue": "2.6.10",
     "vue-class-component": "7.0.2",
     "vue-property-decorator": "8.1.0",
-    "vue-router": "3.0.6"
+    "vue-router": "3.0.6",
+    "vuetify": "^2.4.0"
   },
   "devDependencies": {
     "@fortawesome/fontawesome-free": "5.8.1",
     "@types/underscore": "1.8.14",
     "@vue/cli-plugin-typescript": "3.6.0",
     "@vue/cli-service": "3.6.0",
-    "node-sass": "4.11.0",
-    "sass-loader": "7.1.0",
-    "typescript": "3.4.5",
-    "vue-template-compiler": "2.6.10",
     "fstream": ">=1.0.12",
-    "tar": ">=2.2.2"
+    "node-sass": "4.11.0",
+    "sass": "^1.32.0",
+    "sass-loader": "^7.1.0",
+    "tar": ">=2.2.2",
+    "typescript": "3.4.5",
+    "vue-cli-plugin-vuetify": "~2.1.0",
+    "vue-template-compiler": "2.6.10",
+    "vuetify-loader": "^1.7.0"
   },
   "postcss": {
     "plugins": {

@@ -1,47 +1,41 @@
 <template>
-  <div id="app">
-    <div class="header w-100 mb-1 sticky-top">
-      <div class="container h-100">
-        <div class="row h-100 justify-content-between">
-          <div class="col-auto h-100">
-            <img class="logo h-100 img-fluid" src="./assets/logo.svg" alt="">
-          </div>
+  <v-app>
+    <v-app-bar
+      app
+      color="dark"
+      flat
+      height="300"
+      absolute
+    >
+      <div class="d-flex justify-center pa-5 w-100 h-100 text-center">
+        <div class="d-flex flex-column">
+          <brand />
+
+          <h1 class="white--text my-5">Status page</h1>
         </div>
       </div>
-    </div>
 
-    <router-view/>
-  </div>
+      <v-spacer></v-spacer>
+    </v-app-bar>
 
+    <v-main class="background">
+      <router-view />
+    </v-main>
+  </v-app>
 </template>
 
-<style lang="scss">
 
-$header-height: 85px;
+<script lang="ts">
+import { Component, Vue } from 'vue-property-decorator'
 
-.header {
-  height: $header-height;
-  background-color: white;
-  box-shadow: 0 5px 9px 1px rgba(0,0,0,0.1);
+import Brand from './components/Brand.vue'
 
-  .navigation {
-    line-height: $header-height;
+@Component({
+  name: 'App',
 
-    .navigation-link, a {
-      display: inline-block;
-      padding: 0 0.5rem;
-      text-transform: uppercase;
-      text-decoration: none;
-      color: #b3b3b3;
-
-      &:hover {
-        color: #888888;
-      }
-    }
+  components: {
+    Brand,
   }
-
-  .logo {
-    padding: 1rem 0rem;
-  }
-}
-</style>
+})
+export default class App extends Vue {}
+</script>

@@ -1,42 +1,59 @@
 <template>
-  <status-section title="Overview">
-    <card>
-      <div class="row py-2 no-gutters">
-        <div class="col-12 col-md-3 py-2 px-3">
-          <div class="text-uppercase text-label pb-1">Instrumentation</div>
-          <h5>{{instrumentationStatusMessage}}</h5>
-        </div>
-        <div class="col-12 col-md-3 py-2 px-3">
-          <div class="text-uppercase text-label pb-1">Reporters</div>
-          <h5>{{ activeReporters.length }} Started</h5>
-        </div>
-        <div class="col-12 col-md-3 py-2 px-3">
-          <div class="text-uppercase text-label pb-1">Metrics</div>
-          <h5>{{metricsStatusMessage}}</h5>
-        </div>
-      </div>
-    </card>
-  </status-section>
+  <v-card elevation="0" color="white">
+    <v-row no-gutters class="text-center">
+      <v-col cols="4" class="py-5 px-4 d-flex flex-column position-relative overview-col">
+        <h2 class="dark1--text" v-if="enabledInstruments > 0">
+          {{enabledInstruments}} Enabled <v-divider vertical class="mx-1" /> {{disabledInstruments}} Disabled
+        </h2>
+        <h2 class="dark1--text" v-else>
+          Not Connected
+        </h2>
+        <div class="mt-1 subtitle dark3--text subtitle">Instrumentation</div>
+        <v-avatar size="40" class="overview-status-indicator" :color="instrumentsOk ? 'primary' : 'error'">
+          <v-icon size="18" color="white">{{instrumentsOk ? 'fa-check' : 'fa-times'}}</v-icon>
+        </v-avatar>
+      </v-col>
+      <v-col cols="4" class="py-5 px-4 d-flex flex-column position-relative overview-col">
+        <h2 class="dark1--text">{{ activeReporters.length }} Started</h2>
+        <div class="mt-1 subtitle dark3--text subtitle">Reporters</div>
+        <v-avatar size="40" class="overview-status-indicator" :color="reportersOk ? 'primary' : 'error'">
+          <v-icon size="18" color="white">{{reportersOk ? 'fa-check' : 'fa-times'}}</v-icon>
+        </v-avatar>
+      </v-col>
+      <v-col cols="4" class="py-5 px-4 d-flex flex-column position-relative overview-col">
+        <h2 class="dark1--text">{{ trackedMetrics }} Metrics</h2>
+        <div class="mt-1 subtitle dark3--text subtitle">Metrics</div>
+        <v-avatar size="40" class="overview-status-indicator" :color="metricsOk ? 'primary' : 'warning'">
+          <v-icon size="18" color="white">{{metricsOk ? 'fa-check' : 'fa-exclamation'}}</v-icon>
+        </v-avatar>
+      </v-col>
+    </v-row>
+  </v-card>
 </template>
 
 
 <script lang="ts">
 import { Component, Vue, Prop } from 'vue-property-decorator'
-import {Option, none, some} from 'ts-option'
-import Card from '../components/Card.vue'
+import {Option, none} from 'ts-option'
 import StatusSection from '../components/StatusSection.vue'
-import {StatusApi, ModuleRegistry, ModuleKind, MetricRegistry, Module, Metric, Instrumentation} from '../api/StatusApi'
+import {
+  ModuleRegistry,
+  ModuleKind,
+  MetricRegistry,
+  Module,
+  Instrumentation,
+  InstrumentationModule, Metric
+} from '../api/StatusApi'
 
 @Component({
   components: {
-    'card': Card,
-    'status-section': StatusSection
+    StatusSection,
   },
 })
 export default class OverviewCard extends Vue {
-  @Prop() private moduleRegistry: Option<ModuleRegistry> = none
-  @Prop() private metricRegistry: Option<MetricRegistry> = none
-  @Prop() private instrumentation: Option<Instrumentation> = none
+  @Prop({ required: true }) private moduleRegistry!: Option<ModuleRegistry>
+  @Prop({ required: true }) private metricRegistry!: Option<MetricRegistry>
+  @Prop({ required: true }) private instrumentation!: Option<Instrumentation>
 
   get reporterModules(): Module[] {
     return this.moduleRegistry
@@ -48,16 +65,48 @@ export default class OverviewCard extends Vue {
     return this.reporterModules.filter(this.isStarted)
   }
 
-  get trackedMetrics(): Option<number> {
-    return this.metricRegistry.map(metricRegistry => metricRegistry.metrics.length)
+  get reportersOk(): boolean {
+    return this.moduleRegistry.isEmpty || this.activeReporters.length > 0
+  }
+
+  get trackedMetrics(): number {
+    return this.metricRegistry.map(metricRegistry => metricRegistry.metrics.length).getOrElse(0)
+  }
+
+  get metricsOk(): boolean {
+    if (this.metricRegistry.isEmpty) {
+      return true
+    }
+
+    return this.metricRegistry
+      .map((mr: MetricRegistry) => mr.metrics.length > 0)
+      .getOrElse(false) &&
+
+      this.metricRegistry
+        .map((mr: MetricRegistry) => mr.metrics.every((m: Metric) => m.instruments.length < 300))
+        .getOrElse(true)
+  }
+
+  get instrumentsOk(): boolean {
+    return this.instrumentation
+      .map((i: Instrumentation) => Object.keys(i.errors).length === 0)
+      .getOrElse(true)
+  }
+
+  get enabledInstruments(): number {
+    return this.instrumentation
+      .map((i: Instrumentation) => i.modules.filter((m: InstrumentationModule) => m.enabled).length)
+      .getOrElse(0)
+  }
+
+  get disabledInstruments(): number {
+    return this.instrumentation
+      .map((i: Instrumentation) => i.modules.filter((m: InstrumentationModule) => !m.enabled).length)
+      .getOrElse(0)
   }
 
   get instrumentationStatusMessage(): string {
     return this.instrumentation.map(i => (i.present ? 'Active' : 'Disabled') as string).getOrElse('Unknown')
-  }
-
-  get metricsStatusMessage(): string {
-    return this.trackedMetrics.map(mc => mc + ' Metrics').getOrElse('Unknown')
   }
 
   private isReporter(module: Module): boolean {
@@ -69,3 +118,18 @@ export default class OverviewCard extends Vue {
   }
 }
 </script>
+
+<style lang="scss">
+  .overview-col {
+    &:not(:last-child) {
+      border-right: 1px solid #E4E4EB;
+    }
+
+    .overview-status-indicator {
+      position: absolute;
+      bottom: -40px;
+      left: calc(50% - 40px);
+      transform: translate(50%, -50%);
+    }
+  }
+</style>
