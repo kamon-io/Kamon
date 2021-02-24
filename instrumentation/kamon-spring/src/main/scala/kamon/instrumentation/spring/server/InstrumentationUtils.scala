@@ -17,6 +17,7 @@ object InstrumentationUtils {
 
       override def write(header: String, value: String): Unit = {
         // guard against double trace-id?
+        // double any header really
         if (response.getHeader(header) == null) {
           _headers += (header -> value)
         }
