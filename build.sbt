@@ -348,6 +348,7 @@ lazy val `kamon-spring` = (project in file("instrumentation/kamon-spring"))
       // check that dependencies are shaded
       kanelaAgent % "provided",
       "org.springframework.boot" % "spring-boot-starter-web" % "2.4.2" % "provided",
+      "org.springframework.boot" % "spring-boot-starter-webflux" % "2.4.2" % "provided",
 
       okHttp % "test",
       "com.h2database" % "h2" % "1.4.200" % "test",
