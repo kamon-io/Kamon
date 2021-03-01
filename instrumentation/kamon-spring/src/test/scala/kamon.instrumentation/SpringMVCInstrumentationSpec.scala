@@ -17,12 +17,11 @@ class SpringMVCInstrumentationSpec
     with Matchers
     with BeforeAndAfterAll
     with TestSpanReporter {
-  val baseUrl = "http://localhost:8080"
+  val port = "8080"
+  val baseUrl = s"http://localhost:${port}"
   val client = new OkHttpClient()
 
-  override def beforeAll(): Unit = {
-    TestApp.main(Array.empty[String])
-  }
+  override def beforeAll(): Unit = TestApp.main(Array(port))
 
   "SpringMVC instrumentation" should {
     "create a span when receiving a request" in {
