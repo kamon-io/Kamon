@@ -376,8 +376,8 @@ object Span {
 
       /**
         * Indicates that the the current Span is a continuation of the work started by the linked Span. A use case for
-        * this link kind is when having secondary or fire-and-forget operations spawned from a Trace but that do not
-        * necessarily should be part of the original trace.
+        * this link kind is when having secondary or fire-and-forget operations spawned from a Trace but that should not
+        * necessarily be part of the original trace.
         */
       case object FollowsFrom extends Link.Kind
       /**
