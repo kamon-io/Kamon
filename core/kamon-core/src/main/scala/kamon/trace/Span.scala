@@ -384,7 +384,7 @@ object Span {
         * Indicates that the the current Span is a child of the linked Span. A use case for
         * this link kind is when performing batch operations that aggregate the results of multiple parent spans
         */
-      case object Child extends Link.Kind
+      case object ChildOf extends Link.Kind
     }
   }
 
