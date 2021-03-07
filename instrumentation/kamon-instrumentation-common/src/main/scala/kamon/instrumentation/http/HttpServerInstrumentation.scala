@@ -32,6 +32,7 @@ import kamon.trace.Trace.SamplingDecision
 import kamon.util.Filter
 import org.slf4j.LoggerFactory
 
+import scala.collection.JavaConverters._
 import scala.util.Try
 
 
@@ -218,12 +219,12 @@ object HttpServerInstrumentation {
       }
 
     override def createHandler(request: HttpMessage.Request, deferSamplingDecision: Boolean): RequestHandler = {
+      val excluded = settings.excludes(request)
 
-      val incomingContext = if(settings.enableContextPropagation)
+      val incomingContext = if(settings.enableContextPropagation && !excluded)
         _propagation.read(request)
       else Context.Empty
-
-      val requestSpan = if(settings.enableTracing)
+      val requestSpan = if(settings.enableTracing && !excluded)
         buildServerSpan(incomingContext, request, deferSamplingDecision)
       else Span.Empty
 
@@ -261,7 +262,7 @@ object HttpServerInstrumentation {
             settings.traceIDResponseHeader.foreach(traceIDHeader => response.write(traceIDHeader, span.trace.id.string))
             settings.spanIDResponseHeader.foreach(spanIDHeader => response.write(spanIDHeader, span.id.string))
             settings.httpServerResponseHeaderGenerator.headers(handlerContext).foreach(header => response.write(header._1, header._2))
-            
+
             SpanTagger.tag(span, TagKeys.HttpStatusCode, response.statusCode, settings.statusCodeTagMode)
 
             val statusCode = response.statusCode
@@ -341,6 +342,15 @@ object HttpServerInstrumentation {
     }
   }
 
+  final case class ExcludesPath(glob: String) {
+    val matches: String => Boolean = if (glob.contains('*')) {
+      val reg = glob.replace("*", ".*").r
+      reg.matches
+    } else glob ==
+  }
+  final case class Excludes(excludePaths: Set[ExcludesPath]) {
+    def apply(req: HttpMessage.Request): Boolean = excludePaths.exists(_.matches(req.path))
+  }
 
   final case class Settings(
     enableContextPropagation: Boolean,
@@ -359,7 +369,8 @@ object HttpServerInstrumentation {
     unhandledOperationName: String,
     operationMappings: Map[Filter.Glob, String],
     operationNameGenerator: HttpOperationNameGenerator,
-    httpServerResponseHeaderGenerator:HttpServerResponseHeaderGenerator
+    httpServerResponseHeaderGenerator:HttpServerResponseHeaderGenerator,
+    excludes: Excludes
   ) {
     val operationNameSettings = OperationNameSettings(defaultOperationName, operationMappings, operationNameGenerator)
   }
@@ -417,6 +428,9 @@ object HttpServerInstrumentation {
       val operationMappings = config.getConfig("tracing.operations.mappings").pairs.map {
         case (pattern, operationName) => (Filter.Glob(pattern), operationName)
       }
+      val excludes: Excludes = if (config.hasPath("excludes"))
+        Excludes(config.getStringList("excludes").asScala.toSet.map(ExcludesPath.apply))
+      else Excludes(Set.empty)
 
       Settings(
         enablePropagation,
@@ -435,7 +449,8 @@ object HttpServerInstrumentation {
         unhandledOperationName,
         operationMappings,
         operationNameGenerator.get,
-        httpServerResponseHeaderGenerator.get
+        httpServerResponseHeaderGenerator.get,
+        excludes
       )
     }
   }
