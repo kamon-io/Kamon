@@ -7,7 +7,7 @@ import java.util.concurrent.Callable
 object CallableContextWrapper {
 
   def wrap[T](callable: Callable[T]): Callable[T] = new Callable[T] {
-    val _context = Kamon.currentContext()
+    private val _context = Kamon.currentContext()
 
     override def call(): T = {
       val scope = Kamon.storeContext(_context)

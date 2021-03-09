@@ -28,7 +28,6 @@ class SpringMVCInstrumentation extends InstrumentationBuilder {
    * Changes Callable argument of startCallableProcesing with an
    * instrumented one that stores the context when called.
    */
-
   onType("org.springframework.web.context.request.async.WebAsyncManager")
     .advise(
       method("startCallableProcessing")
