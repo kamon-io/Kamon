@@ -18,17 +18,16 @@ object InstrumentationUtils {
       override def write(header: String, value: String): Unit = {
         // guard against double trace-id?
         // double any header really
+        // Do I need to do this?
         if (response.getHeader(header) == null) {
           _headers += (header -> value)
         }
       }
 
       override def build(): HttpServletResponse = {
-        // change response in place
         _headers.foreach(header =>
           response.addHeader(header._1, header._2)
         )
-        // and then return it
         response
       }
     }

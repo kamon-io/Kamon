@@ -12,10 +12,10 @@ import scala.collection.JavaConverters.mapAsScalaMapConverter
 import scala.collection.mutable
 
 object ClientInstrumentation {
-  private val instrumentation: HttpClientInstrumentation =
-    HttpClientInstrumentation.from(ConfigFactory.empty(), "spring.client")
+  private val instrumentation = HttpClientInstrumentation.from(
+    Kamon.config().getConfig("kamon.instrumentation.spring.client"), "spring.client")
 
-  def getHandler(request: ClientRequest): RequestHandler[ClientRequest] = {
+  def getHandler(request: ClientRequest) = {
     instrumentation.createHandler(toRequestBuilder(request), Kamon.currentContext())
   }
 
