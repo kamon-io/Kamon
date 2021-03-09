@@ -71,12 +71,11 @@ object DispatchAdvice {
 object GetHandlerAdvice {
   @Advice.OnMethodExit()
   def exit(@Advice.Argument(0) request: HttpServletRequest): Unit = {
-    for {
-      handler <- Option(request.getAttribute("kamon-handler").asInstanceOf[RequestHandler])
-      pattern <- Option(request.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE))
-        .map(_.toString)
-    } yield {
-      handler.span.name(pattern)
+    val handler = request.getAttribute("kamon-handler").asInstanceOf[RequestHandler]
+    val pattern = request.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE)
+
+    if (handler != null && pattern != null) {
+      handler.span.name(pattern.toString)
       handler.span.takeSamplingDecision()
     }
   }
@@ -84,8 +83,11 @@ object GetHandlerAdvice {
 
 object ProcessHandlerExceptionAdvice {
   @Advice.OnMethodExit(onThrowable = classOf[Throwable], suppress = classOf[Throwable])
-  def exit(@Advice.Argument(3) throwable: Throwable): Unit =
-    Option(throwable).map(Kamon.currentSpan().fail)
+  def exit(@Advice.Argument(3) throwable: Throwable): Unit = {
+    if (throwable != null) {
+      Kamon.currentSpan().fail(throwable)
+    }
+  }
 }
 
 object RenderAdvice {
