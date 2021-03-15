@@ -87,7 +87,7 @@ object ClientInstrumentation {
       new Consumer[ClientResponse] {
         override def accept(t: ClientResponse): Unit = {
           handler.processResponse(new HttpMessage.Response {
-            override def statusCode: Int = t.rawStatusCode()
+            override def statusCode: Int = t.statusCode().value()
           })
         }
       }
