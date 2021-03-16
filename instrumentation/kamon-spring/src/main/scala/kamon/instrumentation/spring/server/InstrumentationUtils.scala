@@ -16,12 +16,10 @@ object InstrumentationUtils {
       }
 
       override def write(header: String, value: String): Unit = {
-        // guard against double trace-id?
-        // double any header really
-        // Do I need to do this?
-        if (response.getHeader(header) == null) {
-          _headers += (header -> value)
-        }
+        // this used to guard against double headers
+        // but I believe this is not necessary
+        // correct me if I'm wrong!
+        _headers += (header -> value)
       }
 
       override def build(): HttpServletResponse = {
@@ -80,12 +78,13 @@ object InstrumentationUtils {
       // while loop because scala 2.11
       while (headerNames.hasMoreElements) {
         val header = headerNames.nextElement()
+        val value = request.getHeader(header)
         // Technically, this could be null
         // so better not risk it
-        Option(request.getHeader(header))
-          .foreach(value => builder += (header -> value))
+        if (value != null) {
+          builder += (header -> value)
+        }
       }
-
       builder.result()
     }
   }

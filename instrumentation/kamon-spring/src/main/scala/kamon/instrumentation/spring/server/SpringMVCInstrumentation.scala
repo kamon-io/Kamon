@@ -25,13 +25,12 @@ class SpringMVCInstrumentation extends InstrumentationBuilder {
     .advise(method("getHandler").and(takesArguments(1)), GetHandlerAdvice)
 
   /*
-   * Changes Callable argument of startCallableProcesing with an
+   * Changes Callable argument of startCallableProcessing with an
    * instrumented one that stores the context when called.
    */
   onType("org.springframework.web.context.request.async.WebAsyncManager")
     .advise(
       method("startCallableProcessing")
-        // is this [_] ok?
         .and(withArgument(0, classOf[Callable[_]])), classOf[CallableWrapper])
 }
 

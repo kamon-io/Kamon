@@ -1,6 +1,5 @@
 package kamon.instrumentation.spring.client
 
-import com.typesafe.config.ConfigFactory
 import kamon.Kamon
 import kamon.instrumentation.http.HttpClientInstrumentation.RequestHandler
 import kamon.instrumentation.http.{HttpClientInstrumentation, HttpMessage}
@@ -15,7 +14,7 @@ object ClientInstrumentation {
   private val instrumentation = HttpClientInstrumentation.from(
     Kamon.config().getConfig("kamon.instrumentation.spring.client"), "spring.client")
 
-  def getHandler(request: ClientRequest) = {
+  def getHandler(request: ClientRequest): RequestHandler[ClientRequest] = {
     instrumentation.createHandler(toRequestBuilder(request), Kamon.currentContext())
   }
 

@@ -1,6 +1,7 @@
 package kamon.instrumentation.spring.server;
 
 import kanela.agent.libs.net.bytebuddy.asm.Advice;
+
 import java.util.concurrent.Callable;
 
 public class CallableWrapper {
