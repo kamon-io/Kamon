@@ -21,7 +21,7 @@
         class="module-status text-indicator px-2 py-1 rounded"
         :class="chipClasses"
       >
-        {{module.enabled && started ? "Enabled" : "Disabled"}}
+        {{status}}
       </div>
     </template>
     <template #action v-if="isSuggestion">
@@ -55,11 +55,11 @@ export default class ModuleStatusCard extends Vue {
 
   get status(): string {
     if (this.started) {
-      return 'started'
+      return 'Enabled'
     } else if (this.module.enabled) {
-      return 'present'
+      return 'Present'
     } else {
-      return 'disabled'
+      return 'Disabled'
     }
   }
 

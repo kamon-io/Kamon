@@ -83,7 +83,7 @@ export default class ModuleList extends Vue {
       'kamon.apm.KamonApm'
     ]
 
-    return this.modules.find(m => knownApmClasses.includes(m.clazz)) !== undefined
+    return this.modules.some(m => knownApmClasses.includes(m.clazz))
   }
 
   private isReporter(module: Module): boolean {
