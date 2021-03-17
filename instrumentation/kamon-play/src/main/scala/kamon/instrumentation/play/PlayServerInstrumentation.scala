@@ -253,7 +253,7 @@ object GenerateOperationNameOnFilterHandler {
   Kamon.onReconfigure(newConfig => _routerNameGenerator = rebuildRouterNameGenerator(newConfig))
 
   private def rebuildRouterNameGenerator(config: Config): RouterOperationNameGenerator = {
-    val nameGeneratorClazz = config.getString("kamon.instrumentation.play.http.server.name-generator")
+    val nameGeneratorClazz = config.getString("kamon.instrumentation.play.http.server.extra.name-generator")
     Try(ClassLoading.createInstance[RouterOperationNameGenerator](nameGeneratorClazz)) match {
       case Failure(exception) =>
         _logger.error(s"Exception occurred on $nameGeneratorClazz instance creation, used default", exception)
@@ -284,7 +284,7 @@ object GenerateGRPCOperationName {
   Kamon.onReconfigure(newConfig => _grpcRouterNameGenerator = rebuildRouterNameGenerator(newConfig))
 
   private def rebuildRouterNameGenerator(config: Config): GrpcRouterNameGenerator = {
-    val nameGeneratorClazz = config.getString("kamon.instrumentation.play.http.server.grpc-name-generator")
+    val nameGeneratorClazz = config.getString("kamon.instrumentation.play.http.server.extra.grpc-name-generator")
     Try(ClassLoading.createInstance[GrpcRouterNameGenerator](nameGeneratorClazz)) match {
       case Failure(exception) =>
         _logger.error(s"Exception occurred on $nameGeneratorClazz instance creation, used default", exception)
