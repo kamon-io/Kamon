@@ -1,5 +1,5 @@
 <template>
-  <v-container style="max-width: 1024px">
+  <v-container style="max-width: 1080px">
     <overview-card
       class="overview-card"
       :module-registry="moduleRegistry"
@@ -17,12 +17,12 @@
         <module-list :modules="modules"/>
       </v-col>
 
-      <v-col cols="12" v-if="metrics.length > 0">
-        <metric-list :metrics="metrics"/>
+      <v-col cols="12">
+        <instrumentation-module-list :modules="instrumentationModules"/>
       </v-col>
 
-      <v-col cols="12" class="mb-5">
-        <instrumentation-module-list :modules="instrumentationModules"/>
+      <v-col cols="12" class="mb-5" v-if="metrics.length > 0">
+        <metric-list :metrics="metrics"/>
       </v-col>
 
     </v-row>

@@ -3,7 +3,10 @@
     <v-row no-gutters class="text-center">
       <v-col cols="4" class="py-5 px-4 d-flex flex-column position-relative overview-col">
         <h2 class="dark1--text" v-if="enabledInstruments > 0">
-          {{enabledInstruments}} Enabled <v-divider vertical class="mx-1" /> {{disabledInstruments}} Disabled
+          {{activeInstruments}}/{{enabledInstruments}} Active
+          <span v-if="disabledInstruments > 0">
+            <v-divider vertical class="mx-1" /> {{disabledInstruments}} Disabled
+          </span>
         </h2>
         <h2 class="dark1--text" v-else>
           Not Connected
@@ -99,10 +102,16 @@ export default class OverviewCard extends Vue {
       .getOrElse(0)
   }
 
+  get activeInstruments(): number {
+    return this.instrumentation
+      .map((i: Instrumentation) => i.modules.filter((m: InstrumentationModule) => m.active).length)
+      .getOrElse(0)
+  }
+
   get disabledInstruments(): number {
     return this.instrumentation
       .map((i: Instrumentation) => i.modules.filter((m: InstrumentationModule) => !m.enabled).length)
-      .getOrElse(0)
+      .getOrElse(0) + 1
   }
 
   get instrumentationStatusMessage(): string {

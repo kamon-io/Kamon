@@ -49,12 +49,11 @@
     </template>
 
     <template #append v-if="expanded">
-      <div class="px-2" @click.stop>
-        <v-card
+      <div class="white rounded mb-2 ml-2" @click.stop>
+        <div
           v-for="(instrument, index) in visibleInstruments"
           :key="instrument.key"
-          elevation="0"
-          class="pa-2 mb-1"
+          class="pa-2 instrument"
         >
           <v-row align="center">
             <v-col cols="3">
@@ -63,14 +62,14 @@
             <v-col cols="9" class="text-right d-flex justify-end flex-wrap">
               <div
                 v-for="tag in instrument.tags"
-                class="text-sublabel light2 dark3--text px-2 py-1 ml-1 mb rounded"
+                class="text-sublabel light2 dark3--text px-2 py-1 ml-1 mb"
                 style="margin-top: 2px; margin-bottom: 2px;"
               >
                 {{tag[0]}} <strong class="dark1--text">{{tag[1]}}</strong>
               </div>
             </v-col>
           </v-row>
-        </v-card>
+        </div>
 
         <div
           v-if="canShowMore"
@@ -162,5 +161,9 @@ export default class MetricListItem extends Vue {
 <style lang="scss">
 .disabled.metric-toggle {
   opacity: 0.4;
+}
+
+.instrument:not(:last-child) {
+  border-bottom: 1px solid #E5E5E5;
 }
 </style>
