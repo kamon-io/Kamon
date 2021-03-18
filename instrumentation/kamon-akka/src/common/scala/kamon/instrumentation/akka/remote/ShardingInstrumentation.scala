@@ -39,7 +39,6 @@ class ShardingInstrumentation extends InstrumentationBuilder with VersionFilteri
       .advise(method("onLeaseAcquired"), ShardInitializedAdvice)
       .advise(method("postStop"), ShardPostStopStoppedAdvice)
       .advise(method("getOrCreateEntity"), ShardGetOrCreateEntityAdvice)
-      .advise(method("passivateCompleted"), ShardEntityTerminatedAdvice)
       .advise(method("entityTerminated"), ShardEntityTerminatedAdvice)
       .advise(method("akka$cluster$sharding$Shard$$deliverMessage"), ShardDeliverMessageAdvice)
       .advise(method("deliverMessage"), ShardDeliverMessageAdvice)
