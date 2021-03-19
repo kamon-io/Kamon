@@ -16,8 +16,6 @@
 
 package kamon.instrumentation.logback
 
-import java.util.concurrent.Callable
-
 import com.typesafe.config.Config
 import kamon.Kamon
 import kamon.context.Context
@@ -30,6 +28,7 @@ import kanela.agent.libs.net.bytebuddy.asm.Advice
 import kanela.agent.libs.net.bytebuddy.implementation.bind.annotation.{RuntimeType, SuperCall}
 import org.slf4j.MDC
 
+import java.util.concurrent.Callable
 import scala.collection.JavaConverters._
 
 
@@ -53,7 +52,7 @@ object LogbackInstrumentation {
   def settings(): Settings =
     _settings
 
-  case class Settings (
+  case class Settings(
     propagateContextToMDC: Boolean,
     mdcTraceIdKey: String,
     mdcSpanIdKey: String,
@@ -65,7 +64,7 @@ object LogbackInstrumentation {
   private def readSettings(config: Config): Settings = {
     val logbackConfig = config.getConfig("kamon.instrumentation.logback")
 
-    Settings (
+    Settings(
       logbackConfig.getBoolean("mdc.copy.enabled"),
       logbackConfig.getString("mdc.trace-id-key"),
       logbackConfig.getString("mdc.span-id-key"),
@@ -98,13 +97,13 @@ object GetPropertyMapMethodInterceptor {
       val currentContext = Kamon.currentContext()
       val span = currentContext.get(Span.Key)
 
-      if(span.trace.id != Identifier.Empty) {
+      if (span.trace.id != Identifier.Empty) {
         MDC.put(settings.mdcTraceIdKey, span.trace.id.string)
         MDC.put(settings.mdcSpanIdKey, span.id.string)
         MDC.put(settings.mdcSpanOperationNameKey, span.operationName())
       }
 
-      if(settings.mdcCopyTags) {
+      if (settings.mdcCopyTags) {
         currentContext.tags.iterator().foreach(t => {
           MDC.put(t.key, Tag.unwrapValue(t).toString)
         })
@@ -112,9 +111,9 @@ object GetPropertyMapMethodInterceptor {
 
       settings.mdcCopyKeys.foreach { key =>
         currentContext.get(Context.key[Any](key, "")) match {
-          case Some(value)                  => MDC.put(key, value.toString)
-          case keyValue if keyValue != null => MDC.put(key, keyValue.toString)
-          case _ => // Just ignore the nulls.
+          case Some(value) if value.toString.nonEmpty => MDC.put(key, value.toString)
+          case keyValue if keyValue != null && keyValue.toString.nonEmpty => MDC.put(key, keyValue.toString)
+          case _ => // Just ignore the nulls and empty strings
         }
       }
 
