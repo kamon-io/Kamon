@@ -18,8 +18,9 @@ package kamon.jaeger
 
 import java.nio.ByteBuffer
 
-import io.jaegertracing.thriftjava.{Log, Tag, TagType, Span => JaegerSpan}
+import io.jaegertracing.thriftjava.{Log, SpanRef, SpanRefType, Tag, TagType, Span => JaegerSpan}
 import kamon.trace.{Identifier, Span}
+import kamon.trace.Span.Link.Kind.FollowsFrom
 import kamon.util.Clock
 
 import scala.util.Try
@@ -65,6 +66,8 @@ object JaegerSpanConverter {
       )
     }
 
+    if (kamonSpan.links.nonEmpty) convertedSpan.setReferences(kamonSpan.links.map(convertLinkToReference).asJava)
+
     convertedSpan
   }
 
@@ -81,4 +84,12 @@ object JaegerSpanConverter {
     } getOrElse {
       (0L, convertIdentifier(identifier))
     }
+
+  private def convertLinkToReference(identifier: Span.Link): SpanRef = {
+    val refType = identifier.kind match {
+      case FollowsFrom => SpanRefType.FOLLOWS_FROM
+    }
+    val (traceIdHigh, traceIdLow) = convertDoubleSizeIdentifier(identifier.trace.id)
+    new SpanRef(refType, traceIdLow, traceIdHigh, convertIdentifier(identifier.spanId))
+  }
 }

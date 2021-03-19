@@ -333,8 +333,8 @@ lazy val `kamon-elasticsearch` = (project in file("instrumentation/kamon-elastic
       "org.elasticsearch.client" % "elasticsearch-rest-high-level-client" % "7.9.1" % "provided",
       scalatest % "test",
       logbackClassic % "test",
-      "com.dimafeng" %% "testcontainers-scala" % "0.39.1" % "test",
-      "com.dimafeng" %% "testcontainers-scala-elasticsearch" % "0.39.1" % "test"
+      "com.dimafeng" %% "testcontainers-scala" % "0.39.3" % "test",
+      "com.dimafeng" %% "testcontainers-scala-elasticsearch" % "0.39.3" % "test"
     )
   ).dependsOn(`kamon-core`, `kamon-instrumentation-common`, `kamon-testkit` % "test")
 
