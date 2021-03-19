@@ -19,7 +19,7 @@
       <module-status-card v-for="reporter in reporterModules" :key="reporter.name" :module="reporter" />
       <div v-if="!hasApmModule" class="apm-suggestion">
         <a href="https://kamon.io/apm/?utm_source=kamon&utm_medium=status-page&utm_campaign=kamon-status" target="_blank">
-          <module-status-card is-suggestion :module="apmModuleSuggestion" />
+          <module-status-card :isSuggestion="true" :module="apmModuleSuggestion" />
         </a>
       </div>
     </status-section>
