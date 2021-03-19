@@ -1,27 +1,29 @@
 <template>
-  <v-container style="max-width: 1080px">
+  <v-container class="position-relative" style="width: 1080px">
     <overview-card
       class="overview-card"
       :module-registry="moduleRegistry"
       :metric-registry="metricRegistry"
       :instrumentation="instrumentation"
+      @click:instrumentation="goToInstrumentation"
+      @click:reporters="goToReporters"
+      @click:metrics="goToMetrics"
     />
 
     <v-row>
-
-      <v-col cols="12">
+      <v-col class="mt-12" cols="12">
         <environment-card :environment="environment"/>
       </v-col>
 
-      <v-col cols="12">
+      <v-col cols="12" class="js-reporters">
         <module-list :modules="modules"/>
       </v-col>
 
-      <v-col cols="12">
+      <v-col cols="12" class="js-instrumentation">
         <instrumentation-module-list :modules="instrumentationModules"/>
       </v-col>
 
-      <v-col cols="12" class="mb-5" v-if="metrics.length > 0">
+      <v-col cols="12" class="mb-5 js-metrics" v-if="metrics.length > 0">
         <metric-list :metrics="metrics"/>
       </v-col>
 
@@ -109,6 +111,18 @@ export default class Overview extends Vue {
     this.refreshData()
   }
 
+  public goToInstrumentation(): void {
+    this.$vuetify.goTo('.js-instrumentation')
+  }
+
+  public goToReporters(): void {
+    this.$vuetify.goTo('.js-reporters')
+  }
+
+  public goToMetrics(): void {
+    this.$vuetify.goTo('.js-metrics')
+  }
+
   private refreshData(): void {
     StatusApi.settings().then(settings => { this.settings = some(settings) })
     StatusApi.metricRegistryStatus().then(metricRegistry => { this.metricRegistry = some(metricRegistry) })
@@ -128,8 +142,12 @@ export default class Overview extends Vue {
 
 <style lang="scss">
 .overview-card {
-  position: relative;
-  top: -89px;
+  position: fixed;
+  top: 232px;
+  left: 50%;
+  width: 1080px;
   z-index: 100;
+  transform: translateX(-50%);
+  transition: box-shadow 200ms linear;
 }
 </style>

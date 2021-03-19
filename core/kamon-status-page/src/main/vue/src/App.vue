@@ -5,13 +5,13 @@
       color="dark"
       flat
       height="300"
-      absolute
+      fixed
     >
       <div class="d-flex justify-center pa-5 w-100 h-100 text-center">
         <div class="d-flex flex-column">
           <brand />
 
-          <h1 class="white--text my-5">Status page</h1>
+          <h1 class="white--text my-5">Status Page</h1>
         </div>
       </div>
 

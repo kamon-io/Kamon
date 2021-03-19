@@ -1,7 +1,7 @@
 <template>
-  <v-card elevation="0" color="white">
+  <v-card :elevation="elevation" v-scroll="onScroll" color="white">
     <v-row no-gutters class="text-center">
-      <v-col cols="4" class="py-5 px-4 d-flex flex-column position-relative overview-col">
+      <v-col cols="4" class="py-5 px-4 d-flex flex-column position-relative overview-col" @click="$emit('click:instrumentation')">
         <h2 class="dark1--text" v-if="enabledInstruments > 0">
           {{activeInstruments}}/{{enabledInstruments}} Active
           <span v-if="disabledInstruments > 0">
@@ -12,21 +12,21 @@
           Not Connected
         </h2>
         <div class="mt-1 subtitle dark3--text subtitle">Instrumentation</div>
-        <v-avatar size="40" class="overview-status-indicator" :color="instrumentsOk ? 'primary' : 'error'">
+        <v-avatar size="40" class="overview-status-indicator" :class="`elevation-${this.elevation}`" :color="instrumentsOk ? 'primary' : 'error'">
           <v-icon size="18" color="white">{{instrumentsOk ? 'fa-check' : 'fa-times'}}</v-icon>
         </v-avatar>
       </v-col>
-      <v-col cols="4" class="py-5 px-4 d-flex flex-column position-relative overview-col">
+      <v-col cols="4" class="py-5 px-4 d-flex flex-column position-relative overview-col" @click="$emit('click:reporters')">
         <h2 class="dark1--text">{{ activeReporters.length }} Started</h2>
         <div class="mt-1 subtitle dark3--text subtitle">Reporters</div>
-        <v-avatar size="40" class="overview-status-indicator" :color="reportersOk ? 'primary' : 'error'">
+        <v-avatar size="40" class="overview-status-indicator" :class="`elevation-${this.elevation}`" :color="reportersOk ? 'primary' : 'error'">
           <v-icon size="18" color="white">{{reportersOk ? 'fa-check' : 'fa-times'}}</v-icon>
         </v-avatar>
       </v-col>
-      <v-col cols="4" class="py-5 px-4 d-flex flex-column position-relative overview-col">
+      <v-col cols="4" class="py-5 px-4 d-flex flex-column position-relative overview-col" @click="$emit('click:metrics')">
         <h2 class="dark1--text">{{ trackedMetrics }} Metrics</h2>
         <div class="mt-1 subtitle dark3--text subtitle">Metrics</div>
-        <v-avatar size="40" class="overview-status-indicator" :color="metricsOk ? 'primary' : 'warning'">
+        <v-avatar size="40" class="overview-status-indicator" :class="`elevation-${this.elevation}`" :color="metricsOk ? 'primary' : 'warning'">
           <v-icon size="18" color="white">{{metricsOk ? 'fa-check' : 'fa-exclamation'}}</v-icon>
         </v-avatar>
       </v-col>
@@ -37,7 +37,8 @@
 
 <script lang="ts">
 import { Component, Vue, Prop } from 'vue-property-decorator'
-import {Option, none} from 'ts-option'
+import {Option} from 'ts-option'
+
 import StatusSection from '../components/StatusSection.vue'
 import {
   ModuleRegistry,
@@ -54,6 +55,8 @@ import {
   },
 })
 export default class OverviewCard extends Vue {
+  public elevation: number = 0
+
   @Prop({ required: true }) private moduleRegistry!: Option<ModuleRegistry>
   @Prop({ required: true }) private metricRegistry!: Option<MetricRegistry>
   @Prop({ required: true }) private instrumentation!: Option<Instrumentation>
@@ -111,11 +114,15 @@ export default class OverviewCard extends Vue {
   get disabledInstruments(): number {
     return this.instrumentation
       .map((i: Instrumentation) => i.modules.filter((m: InstrumentationModule) => !m.enabled).length)
-      .getOrElse(0) + 1
+      .getOrElse(0)
   }
 
   get instrumentationStatusMessage(): string {
     return this.instrumentation.map(i => (i.present ? 'Active' : 'Disabled') as string).getOrElse('Unknown')
+  }
+
+  public onScroll() {
+    this.elevation = window.scrollY > 0 ? 3 : 0
   }
 
   private isReporter(module: Module): boolean {
@@ -130,6 +137,8 @@ export default class OverviewCard extends Vue {
 
 <style lang="scss">
   .overview-col {
+    cursor:pointer;
+
     &:not(:last-child) {
       border-right: 1px solid #E4E4EB;
     }
@@ -139,6 +148,7 @@ export default class OverviewCard extends Vue {
       bottom: -40px;
       left: calc(50% - 40px);
       transform: translate(50%, -50%);
+      transition: box-shadow 200ms linear;
     }
   }
 </style>
