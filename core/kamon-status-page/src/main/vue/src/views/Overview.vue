@@ -1,30 +1,34 @@
 <template>
-  <div class="container">
-    <div class="row">
-      <div class="col-12">
-        <overview-card :module-registry="moduleRegistry" :metric-registry="metricRegistry" :instrumentation="instrumentation"/>
-      </div>
+  <v-container class="position-relative" style="width: 1080px">
+    <overview-card
+      class="overview-card"
+      :module-registry="moduleRegistry"
+      :metric-registry="metricRegistry"
+      :instrumentation="instrumentation"
+      @click:instrumentation="goToInstrumentation"
+      @click:reporters="goToReporters"
+      @click:metrics="goToMetrics"
+    />
 
-      <div class="col-12">
+    <v-row>
+      <v-col class="mt-12" cols="12">
         <environment-card :environment="environment"/>
-      </div>
+      </v-col>
 
-      <div class="col-12">
+      <v-col cols="12" class="js-reporters">
         <module-list :modules="modules"/>
-      </div>
+      </v-col>
 
-      <div class="col-12 pt-4 pb-2" v-if="metrics.length > 0">
-        <h2>Metrics</h2>
-      </div>
-      <div class="col-12" v-if="metrics.length > 0">
-        <metric-list :metrics="metrics"/>
-      </div>
-      <div class="col-12 mb-5">
+      <v-col cols="12" class="js-instrumentation">
         <instrumentation-module-list :modules="instrumentationModules"/>
-      </div>
+      </v-col>
 
-    </div>
-  </div>
+      <v-col cols="12" class="mb-5 js-metrics" v-if="metrics.length > 0">
+        <metric-list :metrics="metrics"/>
+      </v-col>
+
+    </v-row>
+  </v-container>
 </template>
 
 <script lang="ts">
@@ -107,6 +111,18 @@ export default class Overview extends Vue {
     this.refreshData()
   }
 
+  public goToInstrumentation(): void {
+    this.$vuetify.goTo('.js-instrumentation')
+  }
+
+  public goToReporters(): void {
+    this.$vuetify.goTo('.js-reporters')
+  }
+
+  public goToMetrics(): void {
+    this.$vuetify.goTo('.js-metrics')
+  }
+
   private refreshData(): void {
     StatusApi.settings().then(settings => { this.settings = some(settings) })
     StatusApi.metricRegistryStatus().then(metricRegistry => { this.metricRegistry = some(metricRegistry) })
@@ -123,3 +139,15 @@ export default class Overview extends Vue {
   }
 }
 </script>
+
+<style lang="scss">
+.overview-card {
+  position: fixed;
+  top: 232px;
+  left: 50%;
+  width: 1080px;
+  z-index: 100;
+  transform: translateX(-50%);
+  transition: box-shadow 200ms linear;
+}
+</style>

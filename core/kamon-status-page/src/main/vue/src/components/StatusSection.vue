@@ -1,12 +1,15 @@
 <template>
-  <div class="row">
-    <div class="col-12 pt-4 pb-2">
-      <h3>{{ title }}</h3>
-    </div>
-    <div class="col-12 py-1">
-      <slot name="default"/>
-    </div>
-  </div>
+  <v-row no-gutters>
+    <v-col cols="12" class="d-flex align-center justify-space-between py-0 dark1--text">
+      <slot name="title" :title="title">
+        <h3>{{title}}</h3>
+      </slot>
+      <slot name="actions"></slot>
+    </v-col>
+    <v-col cols="12" class="my-2">
+      <slot name="default" />
+    </v-col>
+  </v-row>
 </template>
 
 <script lang="ts">

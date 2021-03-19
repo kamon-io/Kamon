@@ -1,24 +1,31 @@
 <template>
   <div class="w-100">
     <status-section title="Reporters">
-      <div class="row">
-        <div class="col-12 py-1" v-for="reporter in reporterModules" :key="reporter.name">
-          <module-status-card :module="reporter" />
+      <template #title="{ title }">
+        <div class="d-flex align-center">
+          <h3>{{title}}</h3>
+          <v-tooltip v-if="noReportersStarted" bottom content-class="white dark1--text">
+            <template #activator="{ on, attrs }">
+              <v-avatar class="ml-2 c-pointer" size="26" color="error" v-on="on" v-bind="attrs">
+                <v-icon size="13" color="white">fa-times</v-icon>
+              </v-avatar>
+            </template>
+
+            No reporters have been started yet!
+          </v-tooltip>
         </div>
-        <div v-if="!hasApmModule" class="col-12 py-1 apm-suggestion">
-          <a href="https://kamon.io/apm/?utm_source=kamon&utm_medium=status-page&utm_campaign=kamon-status" target="_blank">
-            <module-status-card :is-suggestion="true" :module="apmModuleSuggestion" />
-          </a>
-        </div>
+      </template>
+
+      <module-status-card v-for="reporter in reporterModules" :key="reporter.name" :module="reporter" />
+      <div v-if="!hasApmModule" class="apm-suggestion">
+        <a href="https://kamon.io/apm/?utm_source=kamon&utm_medium=status-page&utm_campaign=kamon-status" target="_blank">
+          <module-status-card :isSuggestion="true" :module="apmModuleSuggestion" />
+        </a>
       </div>
     </status-section>
 
     <status-section title="Modules" v-if="plainModules.length > 0">
-      <div class="row">
-        <div class="col-12 py-1" v-for="module in plainModules" :key="module.name">
-          <module-status-card :module="module"/>
-        </div>
-      </div>
+      <module-status-card v-for="reporter in plainModules" :key="reporter.name" :module="reporter" />
     </status-section>
   </div>
 </template>
@@ -32,14 +39,14 @@ import StatusSection from './StatusSection.vue'
 
 @Component({
   components: {
-    'status-section': StatusSection,
-    'module-status-card': ModuleStatusCard
-  }
+    StatusSection,
+    ModuleStatusCard,
+  },
 })
 export default class ModuleList extends Vue {
   @Prop() private modules!: Module[]
   private apmModuleSuggestion: Module = {
-    name: 'Kamon APM',
+    name: 'Kamon APM Reporter',
     description: 'See your metrics and trace data for free with a Starter account.',
     kind: ModuleKind.Combined,
     programmaticallyRegistered: false,
@@ -63,6 +70,10 @@ export default class ModuleList extends Vue {
     return this.sortedModules.filter(this.isReporter)
   }
 
+  get noReportersStarted(): boolean {
+    return this.reporterModules.every(r => !r.started)
+  }
+
   get plainModules(): Module[] {
     return this.sortedModules.filter(m => !this.isReporter(m))
   }
@@ -72,15 +83,11 @@ export default class ModuleList extends Vue {
       'kamon.apm.KamonApm'
     ]
 
-    return this.modules.find(m => knownApmClasses.includes(m.clazz)) !== undefined
+    return this.modules.some(m => knownApmClasses.includes(m.clazz))
   }
 
   private isReporter(module: Module): boolean {
     return [ModuleKind.Combined, ModuleKind.Span, ModuleKind.Metric].includes(module.kind)
-  }
-
-  private isStarted(module: Module): boolean {
-    return module.started
   }
 }
 </script>
