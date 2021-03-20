@@ -58,10 +58,42 @@ object Storage {
   }
 
   /**
+    * A ThreadLocal context storage that allows the scope to be closed in a different
+    * thread than the thread where store(..) was called.
+    * This is roughly 25% slower than [[kamon.context.Storage.ThreadLocal]] but is required for certain
+    * library integrations such as cats-effect IO or Monix.
+    * Turn this on by setting the System Property "kamon.context.crossThread" to "true".
+    */
+  class CrossThreadLocal extends Storage {
+    private val tls = new java.lang.ThreadLocal[Context]() {
+      override def initialValue(): Context = Context.Empty
+    }
+
+    override def current(): Context =
+      tls.get()
+
+    override def store(newContext: Context): Scope = {
+      val previousContext = tls.get()
+      tls.set(newContext)
+
+      new Scope {
+        override def context: Context = newContext
+        override def close(): Unit = tls.set(previousContext)
+      }
+    }
+  }
+
+  object CrossThreadLocal {
+    def apply(): Storage.CrossThreadLocal =
+      new Storage.CrossThreadLocal()
+  }
+
+  /**
     * Wrapper that implements an optimized ThreadLocal access pattern ideal for heavily used ThreadLocals. It is faster
     * to use a mutable holder object and always perform ThreadLocal.get() and never use ThreadLocal.set(), because the
     * value is more likely to be found in the ThreadLocalMap direct hash slot and avoid the slow path of
-    * ThreadLocalMap.getEntryAfterMiss().
+    * ThreadLocalMap.getEntryAfterMiss(). Closing of the returned Scope **MUST** be called in the same thread as
+    * store(..) was originally called.
     *
     * Credit to @trask from the FastThreadLocal in glowroot. One small change is that we don't use an kamon-defined
     * holder object as that would prevent class unloading.
@@ -104,6 +136,8 @@ object Storage {
     * different stack traces for every store/close operation pair. Do not use this for any reason other than debugging
     * Context propagation issues (like, dirty Threads) in a controlled environment.
     *
+    * Note: Similar to the default ThreadLocal storage, the scope must be closed in the same thread as where store(..)
+    * was called, otherwise you are potentially modifying the context of another thread.
     */
   class Debug extends Storage {
     import Debug._

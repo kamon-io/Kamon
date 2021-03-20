@@ -141,8 +141,10 @@ object ContextStorage {
     * instrumentation follows them around.
     */
   private val _contextStorage: Storage = {
-    if(sys.props("kamon.context.debug") == "true")
+    if (sys.props("kamon.context.debug") == "true")
       Storage.Debug()
+    else if (sys.props("kamon.context.crossThread") == "true")
+      Storage.CrossThreadLocal()
     else
       Storage.ThreadLocal()
   }
