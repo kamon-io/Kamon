@@ -18,13 +18,12 @@ package kamon.instrumentation.instrumentation
 import com.datastax.driver.core.exceptions.DriverException
 import com.datastax.driver.core.querybuilder.QueryBuilder
 import com.datastax.driver.core.{QueryOperations, Session}
-import kamon.module.Module.Registration
 import kamon.tag.Lookups._
 import kamon.testkit.{InstrumentInspection, MetricInspection, Reconfigure, TestSpanReporter}
-import org.cassandraunit.utils.EmbeddedCassandraServerHelper
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.SpanSugar
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, Matchers, OptionValues, WordSpec}
+import org.testcontainers.containers.CassandraContainer
 
 import scala.collection.JavaConverters._
 
@@ -118,8 +117,8 @@ class CassandraClientTracingInstrumentationSpec
     }
   }
 
-  var registration: Registration = _
-  var session:      Session      = _
+  var session: Session = _
+  val cassandra = new CassandraContainer("cassandra:3.11.10")
 
   override protected def beforeAll(): Unit = {
     enableFastSpanFlushing()
@@ -127,8 +126,8 @@ class CassandraClientTracingInstrumentationSpec
 
     val keyspace = s"keyspaceTracingSpec"
 
-    EmbeddedCassandraServerHelper.startEmbeddedCassandra(40000L)
-    session = EmbeddedCassandraServerHelper.getCluster.newSession()
+    cassandra.start()
+    session = cassandra.getCluster.newSession()
 
     session.execute(
       s"create keyspace $keyspace with replication = {'class':'SimpleStrategy', 'replication_factor':3}"
@@ -137,7 +136,7 @@ class CassandraClientTracingInstrumentationSpec
     session.execute(s"USE $keyspace")
 
     session.execute("create table users (id uuid primary key, name text )")
-    for (i <- 1 to 12) {
+    for (_ <- 1 to 12) {
       session.execute("insert into users (id, name) values (uuid(), 'kamon')")
     }
   }
