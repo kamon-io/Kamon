@@ -310,16 +310,7 @@ lazy val `kamon-cassandra` = (project in file("instrumentation/kamon-cassandra")
   .disablePlugins(AssemblyPlugin)
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
-  .settings(
-    libraryDependencies ++= Seq(
-      kanelaAgent % "provided",
-      "com.datastax.cassandra" % "cassandra-driver-core" % "3.6.0" % "provided",
-      "org.apache.cassandra"   % "cassandra-all"         % "3.11.2" % "provided",
-      scalatest % "test",
-      logbackClassic % "test",
-      "org.cassandraunit"      % "cassandra-unit"        % "3.11.2.0" % "test"
-    )
-  ).dependsOn(`kamon-core`, `kamon-instrumentation-common`, `kamon-testkit` % "test", `kamon-executors`)
+  .dependsOn(`kamon-core`, `kamon-instrumentation-common`, `kamon-testkit` % "test", `kamon-executors`)
 
 lazy val `kamon-elasticsearch` = (project in file("instrumentation/kamon-elasticsearch"))
   .disablePlugins(AssemblyPlugin)

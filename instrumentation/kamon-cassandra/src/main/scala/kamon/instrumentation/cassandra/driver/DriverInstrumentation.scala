@@ -20,11 +20,19 @@ package cassandra
 package driver
 
 import com.datastax.driver.core._
+import com.datastax.oss.driver.api.core.cql
+import com.datastax.oss.driver.api.core.cql.PrepareRequest
+import com.datastax.oss.driver.internal.core.cql.{CqlPrepareHandler, CqlRequestHandler}
 import kamon.instrumentation.cassandra.driver.DriverInstrumentation.ClusterManagerBridge
 import kamon.instrumentation.cassandra.metrics.HasPoolMetrics
-import kamon.instrumentation.context.HasContext.MixinWithInitializer
+import kamon.instrumentation.context.HasContext
+import kamon.trace.Span
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.api.instrumentation.bridge.FieldBridge
+import kanela.agent.libs.net.bytebuddy.asm.Advice
+
+import java.util.concurrent.CompletionStage
+import java.util.function.BiConsumer
 
 class DriverInstrumentation extends InstrumentationBuilder {
 
@@ -63,10 +71,10 @@ class DriverInstrumentation extends InstrumentationBuilder {
     .advise(method("onException"), OnExceptionAdvice)
     .advise(method("onTimeout"), OnTimeoutAdvice)
     .advise(method("onSet"), OnSetAdvice)
-    .mixin(classOf[MixinWithInitializer])
+    .mixin(classOf[HasContext.MixinWithInitializer])
 
   onSubTypesOf("com.datastax.driver.core.Message$Response")
-    .mixin(classOf[MixinWithInitializer])
+    .mixin(classOf[HasContext.MixinWithInitializer])
 
   onType("com.datastax.driver.core.ArrayBackedResultSet")
     .advise(method("fromMessage"), OnResultSetConstruction)
@@ -76,7 +84,7 @@ class DriverInstrumentation extends InstrumentationBuilder {
     * we need to carry parent-span id through result sets
     */
   onType("com.datastax.driver.core.ArrayBackedResultSet$MultiPage")
-    .mixin(classOf[MixinWithInitializer])
+    .mixin(classOf[HasContext.MixinWithInitializer])
   onType("com.datastax.driver.core.ArrayBackedResultSet$MultiPage")
     .advise(method("queryNextPage"), OnFetchMore)
 
@@ -88,11 +96,73 @@ class DriverInstrumentation extends InstrumentationBuilder {
     .mixin(classOf[HasPoolMetrics.Mixin])
     .advise(method("setLocationInfo"), HostLocationAdvice)
 
+
+  /**
+    * Cassandra Driver 4.10 support
+    */
+  onTypes(
+      "com.datastax.oss.driver.internal.core.cql.CqlPrepareHandler",
+      "com.datastax.oss.driver.internal.core.cql.CqlRequestHandler")
+    .mixin(classOf[HasContext.Mixin])
+    .advise(isConstructor(), OnRequestHandlerConstructorAdvice)
+    .advise(method("onThrottleReady"), OnThrottleReadyAdvice)
+
 }
 
 object DriverInstrumentation {
   trait ClusterManagerBridge {
     @FieldBridge("clusterName")
     def getClusterName: String
+  }
+}
+
+object OnRequestHandlerConstructorAdvice {
+
+  @Advice.OnMethodExit()
+  def exit(@Advice.This requestHandler: HasContext, @Advice.Argument(0) req: Any): Unit = {
+    val (operationName, statement) = req match {
+      case pr: PrepareRequest => (QueryOperations.QueryPrepareOperationName, pr.getQuery())
+      case ss: cql.SimpleStatement => (QueryOperations.QueryOperationName, ss.getQuery())
+      case bs: cql.BoundStatement => (QueryOperations.QueryOperationName, bs.getPreparedStatement.getQuery())
+      case bs: cql.BatchStatement =>  (QueryOperations.BatchOperationName, "")
+    }
+
+    // Make that every case added to the "onTypes" clause for the Cassandra 4.x support
+    // is also handled in this match.
+    val resultStage: CompletionStage[_] = requestHandler match {
+      case cph: CqlPrepareHandler => cph.handle()
+      case crh: CqlRequestHandler => crh.handle()
+    }
+
+    val clientSpan = Kamon.clientSpanBuilder(operationName, "cassandra.driver")
+      .tag("db.type", "cassandra")
+      .tag("db.statement", statement)
+      .start()
+
+    /**
+      * We are registering a callback on the result CompletionStage because the setFinalResult and
+      * setFinalError methods might be called more than once on the same request handler.
+      */
+    resultStage.whenComplete(new BiConsumer[Any, Throwable] {
+      override def accept(result: Any, error: Throwable): Unit = {
+        if(error != null) {
+          clientSpan
+            .fail(error)
+            .finish()
+        }
+        else {
+          clientSpan.finish()
+        }
+      }
+    })
+  }
+}
+
+object OnThrottleReadyAdvice {
+
+  @Advice.OnMethodEnter()
+  def enter(@Advice.This requestHandler: HasContext): Unit = {
+    val querySpan = requestHandler.context.get(Span.Key)
+    querySpan.mark("cassandra.throttle.ready")
   }
 }

@@ -22,10 +22,10 @@ import kamon.instrumentation.cassandra.NodeConnectionPoolMetrics.NodeConnectionP
 import kamon.instrumentation.executor.ExecutorMetrics
 import kamon.tag.TagSet
 import kamon.testkit.{InstrumentInspection, MetricInspection}
-import org.cassandraunit.utils.EmbeddedCassandraServerHelper
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.SpanSugar
 import org.scalatest.{BeforeAndAfterAll, Matchers, OptionValues, WordSpec}
+import org.testcontainers.containers.CassandraContainer
 
 class CassandraClientMetricsSpec
     extends WordSpec
@@ -111,11 +111,12 @@ class CassandraClientMetricsSpec
   }
 
   var session: Session = _
+  val cassandra = new CassandraContainer("cassandra:3.11.10")
+
 
   override protected def beforeAll(): Unit = {
-    EmbeddedCassandraServerHelper.startEmbeddedCassandra(40000L)
-    session = EmbeddedCassandraServerHelper.getCluster.newSession()
-
+    cassandra.start()
+    session = cassandra.getCluster.newSession()
     val keyspace = s"keyspaceMetricSpec"
 
     session.execute(
