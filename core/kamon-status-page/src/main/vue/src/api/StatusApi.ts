@@ -122,7 +122,7 @@ export class StatusApi {
   public static instrumentationStatus(): Promise<Instrumentation> {
     return axios.get('/status/instrumentation').then(response => {
       const instrumentation: Instrumentation = {
-        present: response.data.present as boolean,
+        present: response.data.present,
         modules: [],
         errors: response.data.errors
       }

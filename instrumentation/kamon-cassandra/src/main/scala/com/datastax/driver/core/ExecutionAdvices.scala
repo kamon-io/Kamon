@@ -33,6 +33,7 @@ import kanela.agent.libs.net.bytebuddy.asm.Advice
 
 object QueryOperations {
   val QueryOperationName = "cassandra.query"
+  val BatchOperationName = "cassandra.batch"
   val QueryPrepareOperationName: String = QueryOperationName + ".prepare"
   val ExecutionOperationName:    String = QueryOperationName + ".execution"
 }

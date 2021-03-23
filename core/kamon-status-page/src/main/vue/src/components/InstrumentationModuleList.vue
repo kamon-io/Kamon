@@ -1,24 +1,21 @@
 <template>
-  <div class="row">
-    <div class="col-12 pt-4 pb-2" v-if="modules.length > 0">
-      <h2>Instrumentation Modules</h2>
-    </div>
-    <div class="col-12 py-1" v-for="module in sortedModules" :key="module.name">
-      <instrumentation-module-status-card :module="module"/>
-    </div>
-  </div>
+  <status-section v-if="modules.length > 0" title="Instrumentation Modules">
+    <module-status-card v-for="module in sortedModules" :key="module.name" :module="module" />
+  </status-section>
 </template>
 
 <script lang="ts">
 import { Component, Prop, Vue } from 'vue-property-decorator'
-import {InstrumentationModule} from '../api/StatusApi'
-import InstrumentationModuleStatusCard from './InstrumentationModuleStatusCard.vue'
 
+import {InstrumentationModule} from '../api/StatusApi'
+import ModuleStatusCard from './ModuleStatusCard.vue'
+import StatusSection from './StatusSection.vue'
 
 @Component({
   components: {
-    'instrumentation-module-status-card': InstrumentationModuleStatusCard
-  }
+    StatusSection,
+    ModuleStatusCard,
+  },
 })
 export default class ModuleList extends Vue {
   @Prop() private modules!: InstrumentationModule[]
@@ -34,11 +31,3 @@ export default class ModuleList extends Vue {
   }
 }
 </script>
-
-<style lang="scss">
-.apm-suggestion {
-  .kind-label {
-    background-color: #d0f3f0;
-  }
-}
-</style>

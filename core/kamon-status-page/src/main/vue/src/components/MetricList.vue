@@ -1,108 +1,101 @@
 <template>
-  <div class="row no-gutters">
-    <div class="col-12">
-      <div class="search-box mb-3">
-        <span class="search-icon"><i class="fas fa-search fa-fw fa-flip-horizontal"></i></span>
-        <input class="w-100" v-model="filterPattern" type="text">
-        <span class="search-stats">{{ searchStats }}</span>
-      </div>
-    </div>
+  <status-section title="Metrics">
+    <template #title="{ title }">
+      <div>
+        <div class="d-flex align-center">
+          <h3>{{title}}</h3>
+          <v-tooltip v-if="hasPotentialCardinalityIssues" bottom content-class="white dark1--text">
+            <template #activator="{ on, attrs }">
+              <v-avatar class="ml-2 c-pointer" size="26" color="warning" v-on="on" v-bind="attrs">
+                <v-icon size="13" color="white">fa-exclamation</v-icon>
+              </v-avatar>
+            </template>
 
-    <div class="col-12" v-if="matchedMetrics.length > 0">
-      <div class="row no-gutters" v-for="(metric, index) in matchedMetrics" :key="metric.name">
-        <div class="col-12">
-          <metric-list-item :metric="metric"/>
+            Some of your metrics may have a cardinality issue!
+          </v-tooltip>
         </div>
-        <hr v-if="index < (metrics.length - 1)" class="w-100">
+        <div class="text-note dark3--text" style="margin-top: 4px">
+          {{matchedMetrics.length}} metrics found
+        </div>
       </div>
-    </div>
-  </div>
+    </template>
+
+    <template #actions>
+      <div style="max-width: 240px">
+        <v-text-field
+          v-model="filterPattern"
+          placeholder="Search..."
+          hide-details
+          flat
+          solo
+          background-color="white"
+          color="dark3"
+          class="search-field"
+        >
+          <template #prepend-inner>
+            <v-icon color="dark3" size="20" class="mr-1">fa-search</v-icon>
+          </template>
+        </v-text-field>
+      </div>
+    </template>
+
+    <metric-list-item
+      v-for="metric in matchedMetrics"
+      :key="metric.name"
+      :metric="metric"
+    />
+  </status-section>
 </template>
 
 <script lang="ts">
 import { Component, Prop, Vue } from 'vue-property-decorator'
 import {Metric} from '../api/StatusApi'
-import Card from './Card.vue'
 import MetricListItem from './MetricListItem.vue'
-import StatusCard from './StatusCard.vue'
-import _ from 'underscore'
+import StatusSection from '@/components/StatusSection.vue'
 
 @Component({
   components: {
-    'card': Card,
-    'status-card': StatusCard,
-    'metric-list-item': MetricListItem
-  }
+    StatusSection,
+    MetricListItem,
+  },
 })
 export default class MetricList extends Vue {
   @Prop( { default: [] }) private metrics!: Metric[]
   private filterPattern: string = ''
 
-  get totalMetrics(): number {
-    return this.metrics.length
-  }
-
   get filterRegex(): RegExp {
     return new RegExp(this.filterPattern)
   }
 
-  get searchStats(): string {
-    if (this.filterPattern.length > 0) {
-      return 'showing ' + this.matchedMetrics.length + ' out of ' + this.totalMetrics + ' metrics'
-    } else {
-      return this.totalMetrics + ' metrics'
-    }
+  get sortedMetrics(): Metric[] {
+    return this.metrics.sort((a, b) => {
+      if (a.instruments.length === 0 && b.instruments.length > 0) {
+        return 1
+      } else if (a.instruments.length > 0 && b.instruments.length === 0) {
+        return -1
+      }
+      return a.name.localeCompare(b.name)
+    })
+  }
+
+  get hasPotentialCardinalityIssues(): boolean {
+    return this.metrics.some((m: Metric) => m.instruments.length > 300)
   }
 
   get matchedMetrics(): Metric[] {
     if (this.filterPattern.length > 0) {
-      return this.metrics.filter(m => m.search.match(this.filterRegex) != null)
+      return this.sortedMetrics.filter(m => m.search.match(this.filterRegex) != null)
     } else {
-      return this.metrics
+      return this.sortedMetrics
     }
   }
 }
 </script>
 
 <style lang="scss">
-.search-box {
-  input {
-    color: #676767;
-    caret-color: #676767;
-    height: 3rem;
-    border: none;
-    border-radius: 0.4rem;
-    background-color: #efefef;
-    padding-left: 3.5rem;
-    font-size: 1.1rem;
-    box-shadow: 0 2px 4px 1px rgba(0, 0, 0, 0.1);
-
-
-    &:focus {
-      outline: none;
-    }
-  }
-
-  ::placeholder {
-    color: #929292;
-  }
-
-  .search-icon {
-    color: #c0c0c0;
-    line-height: 3rem;
-    font-size: 1.4rem;
-    position: absolute;
-    left: 1rem;
-  }
-
-  .search-stats {
-    color: #a2a2a2;
-    font-size: 1.1rem;
-    position: absolute;
-    line-height: 3rem;
-    right: 0;
-    padding-right: 1rem;
+.search-field {
+  .v-input__control {
+    min-height: 39px !important;
   }
 }
-
 </style>

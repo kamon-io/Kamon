@@ -1,46 +1,85 @@
 <template>
-  <status-card indicator-background-color="#7ade94" class="metric-list-item c-pointer my-1" :class="{ 'my-4': expanded }">
+  <status-card
+    :indicator-background-color="backgroundColor"
+    :indicator-color="textColor"
+    :class="{ 'c-pointer': metric.instruments.length > 0 }"
+    @click.native="onCardClick"
+  >
+    <template #status-indicator="{ indicatorBackgroundColor, indicatorColor }">
+      <v-tooltip bottom content-class="white dark1--text" :disabled="metric.instruments.length <= 300">
+        <template #activator="{ on }">
+          <v-avatar v-on="on" size="32" :color="indicatorBackgroundColor">
+            <span v-on="on" class="text-indicator" :class="`${indicatorColor}--text`">
+              {{metric.instruments.length}}
+            </span>
+          </v-avatar>
+        </template>
 
-    <div slot="status-indicator" @click="onCardClick">
-      <div class="metric-count">
-        {{ metric.instruments.length }}
+        This metric might have cardinality issues
+      </v-tooltip>
+    </template>
+
+    <template #default>
+      <div>
+        <div class="text-label dark1--text">
+          {{metric.name}}
+        </div>
+        <div class="text-sublabel mt-1 dark3--text">
+          {{metric.description}}
+        </div>
       </div>
-      <div class="indicator-label">INSTANCES</div>
-    </div>
+    </template>
 
-    <div slot="default" @click="onCardClick">
-      <div class="row no-gutters">
-        <div class="col">
-          <div class="py-3 pl-4">
-            <h5 class="mb-0 mr-3 d-inline-block">{{ metric.name }}</h5>
-            <span class="tag">{{ metric.instrumentType }}</span>
-            <span class="tag" v-if="metric.unitMagnitude !== 'none'">{{ metric.unitMagnitude }}</span>
-            <div class="text-label">
-              <span>{{metric.description}}</span>
-            </div>
-          </div>
+    <template #status>
+      <div class="d-flex">
+        <div class="text-indicator light2 dark3--text px-2 py-1 rounded text-capitalized">
+          {{metric.instrumentType}}
         </div>
-        <div class="col-auto expansion-icon px-5">
-          <i class="fas fa-fw" :class="expansionIcon"></i>
+        <div
+          v-if="metric.unitDimension !== 'none'"
+          class="text-indicator light2 dark3--text px-2 py-1 rounded ml-1 text-capitalized"
+        >
+          {{metric.unitMagnitude}}
         </div>
-        <div class="col-12 series-container" v-if="expanded">
-          <div v-for="(instrument, index) in metric.instruments" :key="index">
-            <div class="p-3">
-              <h6>Instance #{{ index + 1 }}</h6>
-              <div class="tag-container">
-                <span class="tag" v-for="tag in Object.keys(instrument)" :key="tag">
-                  {{ tag }}=<span class="tag-value">{{ instrument[tag] }}</span>
-                </span>
-                <span v-if="Object.keys(instrument).length === 0" class="pl-2">No Tags</span>
+      </div>
+    </template>
+
+    <template #action>
+      <v-icon color="dark4" size="16" class="metric-toggle" :class="{ disabled: metric.instruments.length === 0 }">{{expansionIcon}}</v-icon>
+    </template>
+
+    <template #append v-if="expanded">
+      <div class="white rounded mb-2 ml-2" @click.stop>
+        <div
+          v-for="(instrument, index) in visibleInstruments"
+          :key="instrument.key"
+          class="pa-2 instrument"
+        >
+          <v-row align="center">
+            <v-col cols="3">
+              <span class="text-label dark1--text">Instrument #{{index + 1}}</span>
+            </v-col>
+            <v-col cols="9" class="text-right d-flex justify-end flex-wrap">
+              <div
+                v-for="tag in instrument.tags"
+                class="text-sublabel light2 dark3--text px-2 py-1 ml-1 mb"
+                style="margin-top: 2px; margin-bottom: 2px;"
+              >
+                {{tag[0]}} <strong class="dark1--text">{{tag[1]}}</strong>
               </div>
-            </div>
-            <hr v-if="index < (metric.instruments.length - 1)" class="w-100 instance-hr">
-          </div>
+            </v-col>
+          </v-row>
+        </div>
+
+        <div
+          v-if="canShowMore"
+          @click.stop="onShowMore"
+          class="mb-2 text-decoration-underline text-sublabel primary--text font-weight-bold text-uppercase text-center w-100 pa-1"
+        >
+          View More
         </div>
       </div>
-    </div>
-
-
+    </template>
   </status-card>
 </template>
 
@@ -51,56 +90,80 @@ import Card from './Card.vue'
 import StatusCard from './StatusCard.vue'
 import _ from 'underscore'
 
+interface InstrumentVM {
+  key: string
+  tags: Array<[string, string]>
+}
+
+const PAGE_SIZE = 25
 
 @Component({
   components: {
-    'status-card': StatusCard
-  }
+    StatusCard,
+  },
 })
 export default class MetricListItem extends Vue {
   @Prop( { default: null }) private metric!: Metric
   private expanded: boolean = false
+  private visibleInstrumentIndex = PAGE_SIZE
+
+  get backgroundColor(): string {
+    if (this.metric.instruments.length > 300) {
+      return 'warning'
+    }
+
+    if (this.metric.instruments.length === 0) {
+      return 'light2'
+    }
+
+    return 'primary'
+  }
+
+  get textColor(): string {
+    return this.metric.instruments.length > 0 ? 'white' : 'dark4'
+  }
 
   get expansionIcon(): string {
-    return this.expanded ? 'fa-angle-up' : 'fa-angle-down'
+    return this.expanded ? 'fa-chevron-up' : 'fa-chevron-down'
+  }
+
+  get visibleInstruments(): InstrumentVM[] {
+    return this.metric.instruments.slice(0, this.visibleInstrumentIndex).map(inst => {
+      const tags = Object.keys(inst).map((k: string): [string, string] => [k, inst[k]])
+      const key = tags.map(p => p.join('-')).join(':')
+
+      return { tags, key }
+    })
+  }
+
+  get canShowMore(): boolean {
+    return this.metric.instruments.length > this.visibleInstrumentIndex
+  }
+
+  private onShowMore(): void {
+    this.visibleInstrumentIndex += PAGE_SIZE
   }
 
   private onCardClick() {
+    if (this.metric.instruments.length === 0) {
+      return
+    }
+
     this.expanded = !this.expanded
+
+    if (!this.expanded) {
+      this.visibleInstrumentIndex = PAGE_SIZE
+    }
   }
 }
 </script>
 
 <style lang="scss">
-
-.metric-count {
-  font-size: 2rem;
-  font-weight: 700;
-  line-height: 4rem;
+.disabled.metric-toggle {
+  opacity: 0.4;
 }
 
-.expansion-icon {
-  line-height: 6rem;
-  color: #d0d0d0;
-  font-size: 2rem;
-}
-
-.series-container {
-  background-color: #f7f7f7;
-}
-
-.indicator-label {
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-
-.instance-hr {
-  border-color: #e2e2e2;
-}
-
-.metric-list-item {
-  .tag {
-    background-color: #e6e6e6;
-  }
+.instrument:not(:last-child) {
+  border-bottom: 1px solid #E5E5E5;
 }
 </style>
