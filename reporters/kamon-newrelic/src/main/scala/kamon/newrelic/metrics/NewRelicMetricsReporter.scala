@@ -19,7 +19,7 @@ package kamon.newrelic.metrics
 import java.net.{URI, URL}
 import java.time.Duration
 
-import com.newrelic.telemetry.{OkHttpPoster, SenderConfiguration, SimpleMetricBatchSender}
+import com.newrelic.telemetry.{OkHttpPoster, SenderConfiguration}
 import com.newrelic.telemetry.metrics.{MetricBatch, MetricBatchSender}
 import com.typesafe.config.Config
 import kamon.Kamon
@@ -106,7 +106,7 @@ object NewRelicMetricsReporter {
 
     if (nrConfig.hasPath("metric-ingest-uri")) {
       val uriOverride = nrConfig.getString("metric-ingest-uri")
-      senderConfig.endpointWithPath(new URL(uriOverride))
+      senderConfig.endpoint(new URL(uriOverride))
     }
     senderConfig.build()
   }
