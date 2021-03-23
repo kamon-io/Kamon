@@ -92,12 +92,13 @@ object Storage {
     * Wrapper that implements an optimized ThreadLocal access pattern ideal for heavily used ThreadLocals. It is faster
     * to use a mutable holder object and always perform ThreadLocal.get() and never use ThreadLocal.set(), because the
     * value is more likely to be found in the ThreadLocalMap direct hash slot and avoid the slow path of
-    * ThreadLocalMap.getEntryAfterMiss(). Closing of the returned Scope **MUST** be called in the same thread as
-    * store(..) was originally called.
+    * ThreadLocalMap.getEntryAfterMiss().
+    * WARNING: Closing of the returned Scope **MUST** be called in the same thread as store(..) was originally called.
     *
     * Credit to @trask from the FastThreadLocal in glowroot. One small change is that we don't use an kamon-defined
     * holder object as that would prevent class unloading.
     */
+  // Named ThreadLocal for binary compatibility reasons, despite the fact that this isn't the default storage type
   class ThreadLocal extends Storage {
     private val tls = new java.lang.ThreadLocal[Array[AnyRef]]() {
       override def initialValue(): Array[AnyRef] =
@@ -135,9 +136,6 @@ object Storage {
     * This implementation is considerably less efficient than the default implementation since it is taking at least two
     * different stack traces for every store/close operation pair. Do not use this for any reason other than debugging
     * Context propagation issues (like, dirty Threads) in a controlled environment.
-    *
-    * Note: Similar to the default ThreadLocal storage, the scope must be closed in the same thread as where store(..)
-    * was called, otherwise you are potentially modifying the context of another thread.
     */
   class Debug extends Storage {
     import Debug._
@@ -167,8 +165,9 @@ object Storage {
           newContext
 
         override def close(): Unit = {
-          ref.set(0, previousContext)
-          ref.set(2, stackTraceString())
+          val thisRef = _tls.get()
+          thisRef.set(0, previousContext)
+          thisRef.set(2, stackTraceString())
         }
       }
     }
