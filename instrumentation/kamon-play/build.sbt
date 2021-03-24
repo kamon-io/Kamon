@@ -3,7 +3,7 @@ import play.grpc.gen.scaladsl.{PlayScalaServerCodeGenerator, PlayScalaClientCode
 
 val `Play-2.6-version` = "2.6.25"
 val `Play-2.7-version` = "2.7.9"
-val `Play-2.8-version` = "2.8.7"
+val `Play-2.8-version` = "2.8.2"
 
 /**
   * Test Configurations
