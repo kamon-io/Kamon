@@ -141,9 +141,18 @@ object ContextStorage {
     * instrumentation follows them around.
     */
   private val _contextStorage: Storage = {
-    if(sys.props("kamon.context.debug") == "true")
+    val storageTypeStr = Option(sys.props("kamon.context.storageType"))
+
+    if (sys.props("kamon.context.debug") == "true")
       Storage.Debug()
-    else
-      Storage.ThreadLocal()
+    else {
+      storageTypeStr match {
+        case None => Storage.CrossThreadLocal()
+        case Some("debug") => Storage.Debug()
+        case Some("sameThreadScope") => Storage.ThreadLocal()
+        case Some("default") => Storage.CrossThreadLocal()
+        case Some(other) => throw new IllegalArgumentException(s"Unrecognized kamon.context.storageType value: $other")
+      }
+    }
   }
 }

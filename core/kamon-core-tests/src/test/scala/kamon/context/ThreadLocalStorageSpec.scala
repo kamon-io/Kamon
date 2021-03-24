@@ -16,9 +16,17 @@
 package kamon.context
 
 
-import org.scalatest.{Matchers, WordSpec}
+import kamon.context.Storage.Scope
+import org.scalatest.{WordSpec, BeforeAndAfterAll, AsyncWordSpec, Matchers, Assertion}
 
-class ThreadLocalStorageSpec extends WordSpec with Matchers {
+import java.util.concurrent.Executors
+import scala.concurrent.{Promise, ExecutionContext, Future}
+import scala.util.Try
+import org.scalatest.concurrent.ScalaFutures._
+
+class ThreadLocalStorageSpec extends WordSpec with Matchers with BeforeAndAfterAll {
+
+  private val ec = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(2))
 
   "the Storage.ThreadLocal implementation of Context storage" should {
     "return a empty context when no context has been set" in {
@@ -47,9 +55,64 @@ class ThreadLocalStorageSpec extends WordSpec with Matchers {
 
   }
 
-  val TLS: Storage = new Storage.ThreadLocal
+  "the Storage.CrossThreadLocal implementation of Context storage" should {
+    "return a empty context when no context has been set" in {
+      CrossTLS.current() shouldBe Context.Empty
+    }
+
+    "return the empty value for keys that have not been set in the context" in {
+      CrossTLS.current().get(TestKey) shouldBe 42
+      CrossTLS.current().get(AnotherKey) shouldBe 99
+      CrossTLS.current().get(BroadcastKey) shouldBe "i travel around"
+
+      ScopeWithKey.get(TestKey) shouldBe 43
+      ScopeWithKey.get(AnotherKey) shouldBe 99
+      ScopeWithKey.get(BroadcastKey) shouldBe "i travel around"
+    }
+
+    "allow setting a context as current and remove it when closing the Scope" in {
+      CrossTLS.current() shouldBe Context.Empty
+
+      val scope = CrossTLS.store(ScopeWithKey)
+      CrossTLS.current() shouldBe theSameInstanceAs(ScopeWithKey)
+      scope.close()
+
+      CrossTLS.current() shouldBe Context.Empty
+    }
+
+    "Allow closing the scope in a different thread than the original" in {
+      var scope: Scope = null
+
+      val f1 = Future {
+        // previous context
+        CrossTLS.store(ContextWithAnotherKey)
+        scope = CrossTLS.store(ScopeWithKey)
+        Thread.sleep(10)
+        CrossTLS.current() shouldBe theSameInstanceAs(ScopeWithKey)
+      }(ec)
+
+      val f2 = Future {
+        while (scope == null) {} // wait for scope to be created in the other thread
+        CrossTLS.current() shouldBe Context.Empty
+        scope.close()
+        CrossTLS.current() shouldBe theSameInstanceAs(ContextWithAnotherKey)
+      }(ec)
+
+      f1.flatMap(_ => f2)(ec).futureValue
+    }
+
+  }
+
+  override protected def afterAll(): Unit = {
+    ec.shutdown()
+    super.afterAll()
+  }
+
+  val TLS: Storage = Storage.ThreadLocal()
+  val CrossTLS: Storage = Storage.CrossThreadLocal()
   val TestKey = Context.key("test-key", 42)
   val AnotherKey = Context.key("another-key", 99)
   val BroadcastKey = Context.key("broadcast", "i travel around")
   val ScopeWithKey = Context.of(TestKey, 43)
+  val ContextWithAnotherKey = Context.of(AnotherKey, 98)
 }
