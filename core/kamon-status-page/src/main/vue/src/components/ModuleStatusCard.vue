@@ -4,7 +4,7 @@
     :indicator-icon="runStatus.icon"
     :indicator-background-color="runStatus.color"
     :indicator-color="runStatus.indicatorColor"
-    :content-class="{ 'suggestion-card': isSuggestion }"
+    :content-class="{ 'suggestion-card': isSuggestion, 'misconfigured-card': isMissingKey }"
   >
     <template #default>
       <div>
@@ -12,11 +12,16 @@
           {{module.name}}
         </div>
         <div class="text-sublabel mt-1 dark3--text">
-          {{module.description}}
+          <span v-if="isMissingKey">
+            Setting <strong>kamon.apm.api-key</strong> in <strong>application.conf</strong> invalid or missing
+          </span>
+          <span v-else>
+            {{module.description}}
+          </span>
         </div>
       </div>
     </template>
-    <template #status v-if="!isSuggestion">
+    <template #status v-if="!isSuggestion && !isMissingKey">
       <div
         class="module-status text-indicator px-2 py-1 rounded"
         :class="chipClasses"
@@ -27,6 +32,11 @@
     <template #action v-if="isSuggestion">
       <v-btn depressed color="primary" class="px-4 font-weight-bold" @click>
         Connect APM
+      </v-btn>
+    </template>
+    <template #action v-else-if="isMissingKey">
+      <v-btn depressed color="warning" class="px-4 font-weight-bold" @click="showApmApiKey">
+        Configure API Key
       </v-btn>
     </template>
   </status-card>
@@ -47,6 +57,7 @@ const isInstrumentationModule = (m: any): m is InstrumentationModule =>
 })
 export default class ModuleStatusCard extends Vue {
   @Prop({ default: false }) private isSuggestion!: boolean
+  @Prop({ default: false }) private isMissingKey!: boolean
   @Prop() private module!: Module | InstrumentationModule
 
   get started(): boolean {
@@ -54,7 +65,9 @@ export default class ModuleStatusCard extends Vue {
   }
 
   get status(): string {
-    if (this.started) {
+    if (this.isMissingKey) {
+      return 'Not Configured'
+    } else if (this.started) {
       return 'Enabled'
     } else if (this.module.enabled) {
       return 'Present'
@@ -68,6 +81,8 @@ export default class ModuleStatusCard extends Vue {
       return { message: 'suggested', color: 'primary', icon: 'fa-plug', indicatorColor: 'white' }
     } else if (!this.module.enabled) {
       return { message: 'disabled', color: 'error', icon: 'fa-stop-circle', indicatorColor: 'white' }
+    } else if (this.isMissingKey) {
+      return { message: 'not configured', color: 'warning', icon: 'fa-plug', indicatorColor: 'white'}
     } else {
       return this.started ?
         { message: 'active', color: 'primary', icon: 'fa-check', indicatorColor: 'white' } :
@@ -84,6 +99,10 @@ export default class ModuleStatusCard extends Vue {
       return 'red4 error--text'
     }
   }
+
+  public showApmApiKey() {
+    window.open('https://apm.kamon.io?envinfo=show')
+  }
 }
 </script>
 
@@ -91,5 +110,10 @@ export default class ModuleStatusCard extends Vue {
 .suggestion-card {
   border: 1px solid #3BC882 !important;
   background-color: #E3FFF1 !important;
+}
+
+.misconfigured-card {
+  border: 1px solid #FFCC00 !important;
+  background-color: #FFF8E5 !important;
 }
 </style>

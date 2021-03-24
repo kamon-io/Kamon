@@ -16,7 +16,7 @@
       </v-col>
 
       <v-col cols="12" class="js-reporters">
-        <module-list :modules="modules"/>
+        <module-list :config="config" :modules="modules"/>
       </v-col>
 
       <v-col cols="12" class="js-instrumentation">
@@ -105,6 +105,10 @@ export default class Overview extends Vue {
 
   get environment(): Option<Environment> {
     return this.settings.map(s => s.environment)
+  }
+
+  get config(): Option<any> {
+    return this.settings.map(s => s.config)
   }
 
   public mounted() {
