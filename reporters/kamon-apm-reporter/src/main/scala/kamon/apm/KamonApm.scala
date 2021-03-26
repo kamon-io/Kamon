@@ -87,7 +87,7 @@ class KamonApm(configPath: String) extends CombinedReporter {
       val apmSpans = spans map convertSpan
 
       val batch = SpanBatch.newBuilder()
-        .setAgent("kamon-2.x")
+        .setAgent(_settings.agent)
         .setServiceName(env.service)
         .setHost(env.host)
         .setInstance(env.instance)
@@ -118,7 +118,7 @@ class KamonApm(configPath: String) extends CombinedReporter {
       val batch = IngestionV1.MetricBatch.newBuilder()
         .setInterval(interval)
         .setApiKey(_settings.apiKey)
-        .setAgent("kamon-2.x")
+        .setAgent(_settings.agent)
         .setService(Kamon.environment.service)
         .setHost(Kamon.environment.host)
         .setInstance(Kamon.environment.instance)
