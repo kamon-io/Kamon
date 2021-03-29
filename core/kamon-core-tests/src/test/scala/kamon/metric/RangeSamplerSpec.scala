@@ -17,10 +17,11 @@
 package kamon.metric
 
 import java.time.Duration
-
 import kamon.Kamon
 import kamon.testkit.InstrumentInspection
 import org.scalatest.{Matchers, WordSpec}
+
+import scala.concurrent.duration.DurationInt
 
 class RangeSamplerSpec extends WordSpec with Matchers with InstrumentInspection.Syntax {
 
@@ -84,6 +85,7 @@ class RangeSamplerSpec extends WordSpec with Matchers with InstrumentInspection.
         MeasurementUnit.none,
         Duration.ofMillis(1)
       ).withoutTags()
+
       rangeSampler.increment()
       rangeSampler.increment(3)
       rangeSampler.increment()
@@ -93,6 +95,26 @@ class RangeSamplerSpec extends WordSpec with Matchers with InstrumentInspection.
       val snapshot = rangeSampler.distribution()
       snapshot.min should be(0)
       snapshot.max should be(5)
+    }
+
+    "can be reset" in {
+      val rangeSampler = Kamon.rangeSampler(
+        "auto-update2",
+        MeasurementUnit.none,
+        Duration.ofMillis(1)
+      ).withoutTags()
+
+      rangeSampler.increment(5)
+      rangeSampler.resetDistribution()
+
+      Thread.sleep(50)
+      rangeSampler.resetDistribution()
+
+      val snapshot = rangeSampler.distribution()
+
+      snapshot.min should be(0)
+      snapshot.max should be(0)
+      snapshot.sum should be(0)
     }
   }
 }

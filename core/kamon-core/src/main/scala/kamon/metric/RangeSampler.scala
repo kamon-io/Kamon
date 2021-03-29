@@ -65,6 +65,11 @@ trait RangeSampler extends Instrument[RangeSampler, Metric.Settings.ForDistribut
     */
   def sample(): RangeSampler
 
+  /**
+    * Resets the minimum, maximum and current value indicators.
+    */
+  def resetDistribution(): RangeSampler
+
 }
 
 
@@ -84,7 +89,7 @@ object RangeSampler {
 
     private val _min = new AtomicLongMaxUpdater(new AtomicLong(0L))
     private val _max = new AtomicLongMaxUpdater(new AtomicLong(0L))
-    private val _sum = new AtomicLong()
+    private val _current = new AtomicLong()
 
     override def increment(): RangeSampler =
       increment(1)
@@ -93,13 +98,20 @@ object RangeSampler {
       decrement(1)
 
     override def increment(times: Long): RangeSampler = {
-      val currentValue = _sum.addAndGet(times)
+      val currentValue = _current.addAndGet(times)
       _max.update(currentValue)
       this
     }
 
+    override def resetDistribution(): RangeSampler = {
+      _min.maxThenReset(0)
+      _max.maxThenReset(0)
+      _current.set(0)
+      this
+    }
+
     override def decrement(times: Long): RangeSampler = {
-      val currentValue = _sum.addAndGet(-times)
+      val currentValue = _current.addAndGet(-times)
       _min.update(-currentValue)
       this
     }
@@ -112,7 +124,7 @@ object RangeSampler {
     override def sample(): RangeSampler = {
       try {
         val currentValue = {
-          val value = _sum.get()
+          val value = _current.get()
           if (value <= 0) 0 else value
         }
 
@@ -153,7 +165,11 @@ object RangeSampler {
       def update(newMax: Long):Unit = {
         @tailrec def compare(): Long = {
           val currentMax = value.get()
-          if(newMax > currentMax) if (!value.compareAndSet(currentMax, newMax)) compare() else newMax
+          if(newMax > currentMax) {
+            if (!value.compareAndSet(currentMax, newMax)) {
+              compare()
+            } else newMax
+          }
           else currentMax
         }
         compare()
