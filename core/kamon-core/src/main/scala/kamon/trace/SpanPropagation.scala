@@ -41,6 +41,76 @@ object SpanPropagation {
   import Util._
 
   /**
+    * Reads and Writes a Span instance using the W3C Trace Context propagation format.
+    * The specification can be found here: https://www.w3.org/TR/trace-context-1/
+    */
+  class W3CTraceContext extends Propagation.EntryReader[HeaderReader] with Propagation.EntryWriter[HeaderWriter] {
+    import W3CTraceContext._
+
+    override def read(medium: HeaderReader, context: Context): Context = {
+      val contextWithParent = for {
+        traceParent <- medium.read(Headers.TraceParent)
+        span <- decodeTraceParent(traceParent)
+      } yield {
+        val traceState = medium.read(Headers.TraceState).getOrElse("")
+        context.withEntry(Span.Key, span).withEntry(TraceStateKey, traceState)
+      }
+
+      contextWithParent.getOrElse(context)
+    }
+
+    override def write(context: Context, medium: HeaderWriter): Unit = {
+      val span = context.get(Span.Key)
+
+      if (span != Span.Empty) {
+        medium.write(Headers.TraceParent, encodeTraceParent(span))
+        medium.write(Headers.TraceState, context.get(TraceStateKey))
+      }
+    }
+  }
+
+object W3CTraceContext {
+  val Version: String = "00"
+  val TraceStateKey: Context.Key[String] = Context.key("tracestate", "")
+
+  object Headers {
+    val TraceParent = "traceparent"
+    val TraceState = "tracestate"
+  }
+
+  def apply(): W3CTraceContext =
+    new W3CTraceContext()
+
+  def decodeTraceParent(traceParent: String): Option[Span] = {
+    val identityProvider = Identifier.Scheme.Double
+
+    def unpackSamplingDecision(decision: String): SamplingDecision =
+      if ("01" == decision) SamplingDecision.Sample else SamplingDecision.Unknown
+
+    val traceParentComponents = traceParent.split("-")
+
+    if (traceParentComponents.length != 4) None else {
+      val traceID = identityProvider.traceIdFactory.from(traceParentComponents(1))
+      val spanID = identityProvider.spanIdFactory.from(traceParentComponents(2))
+      val samplingDecision = unpackSamplingDecision(traceParentComponents(3))
+
+      Some(Span.Remote(traceID, spanID, Trace(traceID, samplingDecision)))
+    }
+  }
+
+  def encodeTraceParent(parent: Span): String = {
+    def idToHex(identifier: Identifier, length: Int): String = {
+      val leftPad = (string: String) => "0" * (length - string.length) + string
+      leftPad(identifier.bytes.map("%02X" format _).mkString)
+    }
+
+    val samplingDecision = if (parent.trace.samplingDecision == SamplingDecision.Sample) "01" else "00"
+
+    s"$Version-${idToHex(parent.trace.id, 32)}-${idToHex(parent.id, 16)}-${samplingDecision}"
+  }
+}
+
+  /**
     * Reads and Writes a Span instance using the B3 propagation format. The specification and semantics of the B3
     * Propagation format can be found here: https://github.com/openzipkin/b3-propagation
     */

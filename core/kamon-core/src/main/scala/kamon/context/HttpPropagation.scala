@@ -64,8 +64,8 @@ object HttpPropagation {
   /**
     * Create a new HTTP propagation instance from the provided configuration.
     */
-  def from(config: Config): Propagation[HttpPropagation.HeaderReader, HttpPropagation.HeaderWriter] = {
-    new HttpPropagation.Default(Settings.from(config))
+  def from(propagationConfig: Config, identifierScheme: String): Propagation[HttpPropagation.HeaderReader, HttpPropagation.HeaderWriter] = {
+    new HttpPropagation.Default(Settings.from(propagationConfig, identifierScheme))
   }
 
   /**
@@ -226,16 +226,22 @@ object HttpPropagation {
     private val readerWriterShortcuts: Map[String, ReaderWriter] = Map(
       "span/b3" -> SpanPropagation.B3(),
       "span/uber" -> SpanPropagation.Uber(),
-      "span/b3-single" -> SpanPropagation.B3Single()
+      "span/b3-single" -> SpanPropagation.B3Single(),
+      "span/w3c" -> SpanPropagation.W3CTraceContext()
     )
 
-    def from(config: Config): Settings = {
+    def from(config: Config, identifierScheme: String): Settings = {
       def buildInstances[ExpectedType : ClassTag](mappings: Map[String, String]): Map[String, ExpectedType] = {
         val instanceMap = Map.newBuilder[String, ExpectedType]
 
         mappings.foreach {
           case (contextKey, componentClass) =>
             val shortcut = s"$contextKey/$componentClass".toLowerCase()
+
+            if (componentClass == "span/w3c" && identifierScheme != "double") {
+              log.warn("W3C TraceContext propagation should be used only with identifier-scheme = double")
+            }
+
             readerWriterShortcuts.get(shortcut).fold({
               try {
                 instanceMap += (contextKey -> ClassLoading.createInstance[ExpectedType](componentClass, Nil))
