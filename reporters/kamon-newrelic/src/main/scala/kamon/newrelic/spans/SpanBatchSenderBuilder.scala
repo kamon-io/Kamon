@@ -19,7 +19,7 @@ package kamon.newrelic.spans
 import java.net.URL
 import java.time.Duration
 
-import com.newrelic.telemetry.{OkHttpPoster, SenderConfiguration, SimpleSpanBatchSender}
+import com.newrelic.telemetry.{OkHttpPoster, SenderConfiguration}
 import com.newrelic.telemetry.spans.SpanBatchSender
 import com.typesafe.config.Config
 import kamon.newrelic.LibraryVersion
@@ -67,7 +67,7 @@ class SimpleSpanBatchSenderBuilder() extends SpanBatchSenderBuilder {
 
     if (nrConfig.hasPath("span-ingest-uri")) {
       val uriOverride = nrConfig.getString("span-ingest-uri")
-      senderConfig.endpointWithPath(new URL(uriOverride))
+      senderConfig.endpoint(new URL(uriOverride))
     }
 
     senderConfig.build

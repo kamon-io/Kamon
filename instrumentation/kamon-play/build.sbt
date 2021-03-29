@@ -1,8 +1,8 @@
 import sbt.Tests._
 import play.grpc.gen.scaladsl.{PlayScalaServerCodeGenerator, PlayScalaClientCodeGenerator}
 
-val `Play-2.6-version` = "2.6.23"
-val `Play-2.7-version` = "2.7.3"
+val `Play-2.6-version` = "2.6.25"
+val `Play-2.7-version` = "2.7.9"
 val `Play-2.8-version` = "2.8.2"
 
 /**
@@ -45,8 +45,8 @@ libraryDependencies ++= { if(scalaBinaryVersion.value == "2.13") Seq.empty else 
 )}
 
 libraryDependencies ++= { if(scalaBinaryVersion.value == "2.11") Seq.empty else Seq(
-  "com.lightbend.play" %%  "play-grpc-runtime"    % "0.9.0" % "test-play-2.8",
-  "com.lightbend.play" %%  "play-grpc-scalatest"  % "0.9.0" % "test-play-2.8",
+  "com.lightbend.play" %%  "play-grpc-runtime"    % "0.9.1" % "test-play-2.8",
+  "com.lightbend.play" %%  "play-grpc-scalatest"  % "0.9.1" % "test-play-2.8",
   "com.typesafe.play" %%  "play-akka-http2-support" % `Play-2.8-version` % "test-play-2.8",
   "com.typesafe.play" %%  "play"                  % `Play-2.8-version` % "test-play-2.8",
   "com.typesafe.play" %%  "play-netty-server"     % `Play-2.8-version` % "test-play-2.8",
@@ -73,12 +73,12 @@ lazy val baseTestSettings = Seq(
 )
 
 inConfig(TestCommon)(Defaults.testSettings ++ instrumentationSettings ++ baseTestSettings ++ Seq(
-  crossScalaVersions := Seq("2.11.12", "2.12.11")
+  crossScalaVersions := Seq("2.11.12", "2.12.13")
 ))
 
 inConfig(`Test-Play-2.6`)(Defaults.testSettings ++ instrumentationSettings ++ baseTestSettings ++ Seq(
   sources := joinSources(TestCommon, `Test-Play-2.6`).value,
-  crossScalaVersions := Seq("2.11.12", "2.12.11"),
+  crossScalaVersions := Seq("2.11.12", "2.12.13"),
   testGrouping := singleTestPerJvm(definedTests.value, javaOptions.value),
   unmanagedResourceDirectories ++= (unmanagedResourceDirectories in Compile).value,
   unmanagedResourceDirectories ++= (unmanagedResourceDirectories in TestCommon).value,
@@ -93,7 +93,7 @@ inConfig(`Test-Play-2.7`)(Defaults.testSettings ++ instrumentationSettings ++ ba
 
 inConfig(`Test-Play-2.8`)(Defaults.testSettings ++ instrumentationSettings ++ baseTestSettings ++ Seq(
   sources := joinSources(TestCommon, `Test-Play-2.8`).value,
-  crossScalaVersions := Seq("2.12.11", "2.13.1"),
+  crossScalaVersions := Seq("2.12.13", "2.13.3"),
   akkaGrpcGeneratedSources := Seq(AkkaGrpc.Server, AkkaGrpc.Client),
   akkaGrpcGeneratedLanguages := Seq(AkkaGrpc.Scala),
   akkaGrpcExtraGenerators += PlayScalaServerCodeGenerator,

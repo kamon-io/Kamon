@@ -16,9 +16,9 @@
 
 package kamon.bench
 
-import java.util.concurrent.TimeUnit
+import kamon.context.Storage.CrossThreadLocal
 
-import kamon.context.Storage.Scope
+import java.util.concurrent.TimeUnit
 import kamon.context.{Context, Storage}
 import org.openjdk.jmh.annotations._
 
@@ -28,7 +28,7 @@ class ThreadLocalStorageBenchmark {
   val TestKey: Context.Key[Int] = Context.key("test-key", 0)
   val ContextWithKey: Context = Context.of(TestKey, 43)
 
-  val TLS: Storage =  new OldThreadLocal
+  val CrossTLS: Storage =  new CrossThreadLocal
   val FTLS: Storage =  new Storage.ThreadLocal
 
 
@@ -36,11 +36,11 @@ class ThreadLocalStorageBenchmark {
   @BenchmarkMode(Array(Mode.AverageTime))
   @OutputTimeUnit(TimeUnit.NANOSECONDS)
   @Fork
-  def currentThreadLocal: Context = {
-    val scope = TLS.store(ContextWithKey)
-    TLS.current()
+  def crossThreadLocal: Context = {
+    val scope = CrossTLS.store(ContextWithKey)
+    CrossTLS.current()
     scope.close()
-    TLS.current()
+    CrossTLS.current()
   }
 
   @Benchmark
@@ -53,29 +53,4 @@ class ThreadLocalStorageBenchmark {
     scope.close()
     FTLS.current()
   }
-}
-
-
-class OldThreadLocal extends Storage {
-  private val tls = new java.lang.ThreadLocal[Context]() {
-    override def initialValue(): Context = Context.Empty
-  }
-
-  override def current(): Context =
-    tls.get()
-
-  override def store(context: Context): Scope = {
-    val newContext = context
-    val previousContext = tls.get()
-    tls.set(newContext)
-
-    new Scope {
-      override def context: Context = newContext
-      override def close(): Unit = tls.set(previousContext)
-    }
-  }
-}
-
-object OldThreadLocal {
-  def apply(): OldThreadLocal = new OldThreadLocal()
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2020 The Kamon Project <https://kamon.io>
+ * Copyright 2013-2021 The Kamon Project <https://kamon.io>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
