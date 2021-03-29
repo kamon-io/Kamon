@@ -113,7 +113,7 @@ class HttpPropagationSpec extends WordSpec with Matchers with OptionValues {
         |entries.outgoing.string = "kamon.context.HttpPropagationSpec$StringEntryCodec"
         |
       """.stripMargin
-    ).withFallback(ConfigFactory.load().getConfig("kamon.propagation")))
+    ).withFallback(ConfigFactory.load().getConfig("kamon.propagation")), identifierScheme = "single")
 
 
   def headerReaderFromMap(map: Map[String, String]): HttpPropagation.HeaderReader = new HttpPropagation.HeaderReader {

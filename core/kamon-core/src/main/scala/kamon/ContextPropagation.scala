@@ -89,9 +89,10 @@ object ContextPropagation {
       val propagationConfig = config.getConfig("kamon.propagation")
       val httpChannelsConfig = propagationConfig.getConfig("http").configurations
       val binaryChannelsConfig = propagationConfig.getConfig("binary").configurations
+      val identifierScheme = config.getString("kamon.trace.identifier-scheme")
 
       val httpChannels = httpChannelsConfig.map {
-        case (channelName, channelConfig) => (channelName -> HttpPropagation.from(channelConfig))
+        case (channelName, channelConfig) => (channelName -> HttpPropagation.from(channelConfig, identifierScheme))
       }
 
       val binaryChannels = binaryChannelsConfig.map {
