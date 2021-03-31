@@ -21,6 +21,7 @@
         :key="reporter.name"
         :module="reporter"
         :is-missing-key="isMisconfiguredApmModule(reporter)"
+        @show:api-key="$emit('show:api-key')"
       />
       <div v-if="!hasApmModule" class="apm-suggestion">
         <a href="https://kamon.io/apm/?utm_source=kamon&utm_medium=status-page&utm_campaign=kamon-status" target="_blank">

@@ -16,7 +16,7 @@
       </v-col>
 
       <v-col cols="12" class="js-reporters">
-        <module-list :config="config" :modules="modules"/>
+        <module-list :config="config" :modules="modules" @show:api-key="showApmApiKey" />
       </v-col>
 
       <v-col cols="12" class="js-instrumentation">
@@ -111,6 +111,28 @@ export default class Overview extends Vue {
     return this.settings.map(s => s.config)
   }
 
+  get redirectInfo() {
+    const serviceName = this.config.map(c => c?.kamon?.environment?.service).orNull
+    const usedInstrumentation = this.instrumentationModules.filter(m => m.enabled && m.active)
+    const framework = (() => {
+      if (usedInstrumentation.some(i => i.name.toLocaleLowerCase().includes('play'))) {
+        return 'play'
+      } else if (usedInstrumentation.some(i => i.name.toLocaleLowerCase().includes('akka'))) {
+        return 'akka'
+      } else if (usedInstrumentation.some(i => i.name.toLocaleLowerCase().includes('spring'))) {
+        return 'spring'
+      } else {
+        return 'plain'
+      }
+    })()
+    const query = new URLSearchParams()
+
+    query.set('continueOnboarding', 'true')
+    query.set('framework', framework)
+    query.set('serviceName', serviceName)
+    return `https://apm.kamon.io?${query.toString()}`
+  }
+
   public mounted() {
     this.refreshData()
   }
@@ -125,6 +147,10 @@ export default class Overview extends Vue {
 
   public goToMetrics(): void {
     this.$vuetify.goTo('.js-metrics')
+  }
+
+  private showApmApiKey() {
+    window.open(this.redirectInfo)
   }
 
   private refreshData(): void {

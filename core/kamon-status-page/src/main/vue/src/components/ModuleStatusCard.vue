@@ -101,7 +101,7 @@ export default class ModuleStatusCard extends Vue {
   }
 
   public showApmApiKey() {
-    window.open('https://apm.kamon.io?envinfo=show')
+    this.$emit('show:api-key')
   }
 }
 </script>
