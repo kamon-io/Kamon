@@ -31,7 +31,6 @@ class W3CTraceContextSpanPropagationSpec extends WordSpecLike with Matchers with
       )
 
       val spanContext = traceContextPropagation.read(headerReaderFromMap(headersMap), Context.Empty).get(Span.Key)
-      spanContext.id.string shouldBe "00000000000000000000000001020304"
       spanContext.parentId.string shouldBe "0000000004030201"
       spanContext.trace.id.string shouldBe "00000000000000000000000001020304"
       spanContext.trace.samplingDecision shouldBe SamplingDecision.Sample
