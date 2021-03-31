@@ -112,15 +112,15 @@ export default class Overview extends Vue {
   }
 
   public goToInstrumentation(): void {
-    this.$vuetify.goTo('.js-instrumentation')
+    this.$vuetify.goTo('.js-instrumentation', { offset: 80 })
   }
 
   public goToReporters(): void {
-    this.$vuetify.goTo('.js-reporters')
+    this.$vuetify.goTo('.js-reporters', { offset: 80 })
   }
 
   public goToMetrics(): void {
-    this.$vuetify.goTo('.js-metrics')
+    this.$vuetify.goTo('.js-metrics', { offset: 80 })
   }
 
   private refreshData(): void {
