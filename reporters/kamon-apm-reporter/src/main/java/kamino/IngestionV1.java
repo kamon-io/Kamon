@@ -4406,6 +4406,23 @@ public final class IngestionV1 {
      */
     com.google.protobuf.ByteString
         getApiKeyBytes();
+
+    /**
+     * <code>optional string agent = 5;</code>
+     * @return Whether the agent field is set.
+     */
+    boolean hasAgent();
+    /**
+     * <code>optional string agent = 5;</code>
+     * @return The agent.
+     */
+    java.lang.String getAgent();
+    /**
+     * <code>optional string agent = 5;</code>
+     * @return The bytes for agent.
+     */
+    com.google.protobuf.ByteString
+        getAgentBytes();
   }
   /**
    * Protobuf type {@code NodeIdentity}
@@ -4424,6 +4441,7 @@ public final class IngestionV1 {
       instance_ = "";
       host_ = "";
       apiKey_ = "";
+      agent_ = "";
     }
 
     @java.lang.Override
@@ -4479,6 +4497,12 @@ public final class IngestionV1 {
               com.google.protobuf.ByteString bs = input.readBytes();
               bitField0_ |= 0x00000008;
               apiKey_ = bs;
+              break;
+            }
+            case 42: {
+              com.google.protobuf.ByteString bs = input.readBytes();
+              bitField0_ |= 0x00000010;
+              agent_ = bs;
               break;
             }
             default: {
@@ -4682,6 +4706,54 @@ public final class IngestionV1 {
       }
     }
 
+    public static final int AGENT_FIELD_NUMBER = 5;
+    private volatile java.lang.Object agent_;
+    /**
+     * <code>optional string agent = 5;</code>
+     * @return Whether the agent field is set.
+     */
+    @java.lang.Override
+    public boolean hasAgent() {
+      return ((bitField0_ & 0x00000010) != 0);
+    }
+    /**
+     * <code>optional string agent = 5;</code>
+     * @return The agent.
+     */
+    @java.lang.Override
+    public java.lang.String getAgent() {
+      java.lang.Object ref = agent_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          agent_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>optional string agent = 5;</code>
+     * @return The bytes for agent.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getAgentBytes() {
+      java.lang.Object ref = agent_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        agent_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
     private byte memoizedIsInitialized = -1;
     @java.lang.Override
     public final boolean isInitialized() {
@@ -4724,6 +4796,9 @@ public final class IngestionV1 {
       if (((bitField0_ & 0x00000008) != 0)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 4, apiKey_);
       }
+      if (((bitField0_ & 0x00000010) != 0)) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 5, agent_);
+      }
       unknownFields.writeTo(output);
     }
 
@@ -4744,6 +4819,9 @@ public final class IngestionV1 {
       }
       if (((bitField0_ & 0x00000008) != 0)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(4, apiKey_);
+      }
+      if (((bitField0_ & 0x00000010) != 0)) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(5, agent_);
       }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
@@ -4780,6 +4858,11 @@ public final class IngestionV1 {
         if (!getApiKey()
             .equals(other.getApiKey())) return false;
       }
+      if (hasAgent() != other.hasAgent()) return false;
+      if (hasAgent()) {
+        if (!getAgent()
+            .equals(other.getAgent())) return false;
+      }
       if (!unknownFields.equals(other.unknownFields)) return false;
       return true;
     }
@@ -4806,6 +4889,10 @@ public final class IngestionV1 {
       if (hasApiKey()) {
         hash = (37 * hash) + APIKEY_FIELD_NUMBER;
         hash = (53 * hash) + getApiKey().hashCode();
+      }
+      if (hasAgent()) {
+        hash = (37 * hash) + AGENT_FIELD_NUMBER;
+        hash = (53 * hash) + getAgent().hashCode();
       }
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
@@ -4948,6 +5035,8 @@ public final class IngestionV1 {
         bitField0_ = (bitField0_ & ~0x00000004);
         apiKey_ = "";
         bitField0_ = (bitField0_ & ~0x00000008);
+        agent_ = "";
+        bitField0_ = (bitField0_ & ~0x00000010);
         return this;
       }
 
@@ -4992,6 +5081,10 @@ public final class IngestionV1 {
           to_bitField0_ |= 0x00000008;
         }
         result.apiKey_ = apiKey_;
+        if (((from_bitField0_ & 0x00000010) != 0)) {
+          to_bitField0_ |= 0x00000010;
+        }
+        result.agent_ = agent_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -5059,6 +5152,11 @@ public final class IngestionV1 {
         if (other.hasApiKey()) {
           bitField0_ |= 0x00000008;
           apiKey_ = other.apiKey_;
+          onChanged();
+        }
+        if (other.hasAgent()) {
+          bitField0_ |= 0x00000010;
+          agent_ = other.agent_;
           onChanged();
         }
         this.mergeUnknownFields(other.unknownFields);
@@ -5403,6 +5501,90 @@ public final class IngestionV1 {
   }
   bitField0_ |= 0x00000008;
         apiKey_ = value;
+        onChanged();
+        return this;
+      }
+
+      private java.lang.Object agent_ = "";
+      /**
+       * <code>optional string agent = 5;</code>
+       * @return Whether the agent field is set.
+       */
+      public boolean hasAgent() {
+        return ((bitField0_ & 0x00000010) != 0);
+      }
+      /**
+       * <code>optional string agent = 5;</code>
+       * @return The agent.
+       */
+      public java.lang.String getAgent() {
+        java.lang.Object ref = agent_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            agent_ = s;
+          }
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>optional string agent = 5;</code>
+       * @return The bytes for agent.
+       */
+      public com.google.protobuf.ByteString
+          getAgentBytes() {
+        java.lang.Object ref = agent_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          agent_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string agent = 5;</code>
+       * @param value The agent to set.
+       * @return This builder for chaining.
+       */
+      public Builder setAgent(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000010;
+        agent_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string agent = 5;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearAgent() {
+        bitField0_ = (bitField0_ & ~0x00000010);
+        agent_ = getDefaultInstance().getAgent();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string agent = 5;</code>
+       * @param value The bytes for agent to set.
+       * @return This builder for chaining.
+       */
+      public Builder setAgentBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000010;
+        agent_ = value;
         onChanged();
         return this;
       }
@@ -14152,41 +14334,41 @@ public final class IngestionV1 {
       "c\022\014\n\004name\030\001 \002(\t\022\037\n\004tags\030\002 \003(\0132\021.Metric.T" +
       "agsEntry\022\'\n\016instrumentType\030\003 \002(\0162\017.Instr" +
       "umentType\022\014\n\004data\030\004 \002(\014\032+\n\tTagsEntry\022\013\n\003" +
-      "key\030\001 \001(\t\022\r\n\005value\030\002 \001(\t:\0028\001\"O\n\014NodeIden" +
+      "key\030\001 \001(\t\022\r\n\005value\030\002 \001(\t:\0028\001\"^\n\014NodeIden" +
       "tity\022\017\n\007service\030\001 \002(\t\022\020\n\010instance\030\002 \002(\t\022" +
-      "\014\n\004host\030\003 \002(\t\022\016\n\006apiKey\030\004 \002(\t\"X\n\005Hello\022\033" +
-      "\n\004node\030\001 \002(\0132\r.NodeIdentity\022\014\n\004time\030\002 \002(" +
-      "\003\022\023\n\013incarnation\030\003 \002(\t\022\017\n\007version\030\004 \002(\t\"" +
-      "4\n\007Goodbye\022\033\n\004node\030\001 \002(\0132\r.NodeIdentity\022" +
-      "\014\n\004time\030\002 \002(\003\"u\n\tSpanBatch\022\023\n\013serviceNam" +
-      "e\030\001 \002(\t\022\016\n\006apiKey\030\002 \002(\t\022\014\n\004host\030\003 \002(\t\022\020\n" +
-      "\010instance\030\004 \002(\t\022\024\n\005spans\030\005 \003(\0132\005.Span\022\r\n" +
-      "\005agent\030\006 \001(\t\"$\n\004Mark\022\017\n\007instant\030\001 \002(\003\022\013\n" +
-      "\003key\030\002 \002(\t\"\252\003\n\004Span\022\n\n\002id\030\001 \002(\t\022\017\n\007trace" +
-      "Id\030\002 \002(\t\022\020\n\010parentId\030\003 \002(\t\022\025\n\roperationN" +
-      "ame\030\004 \002(\t\022\023\n\013startMicros\030\005 \002(\003\022\021\n\tendMic" +
-      "ros\030\006 \002(\003\022\035\n\004tags\030\007 \003(\0132\017.Span.TagsEntry" +
-      "\022\024\n\005marks\030\010 \003(\0132\005.Mark\022\020\n\010hasError\030\t \001(\010" +
-      "\022\022\n\nwasDelayed\030\n \001(\010\022\027\n\004kind\030\013 \001(\0162\t.Spa" +
-      "nKind\022\037\n\010position\030\014 \001(\0162\r.SpanPosition\022)" +
-      "\n\nmetricTags\030\r \003(\0132\025.Span.MetricTagsEntr" +
-      "y\022\024\n\005links\030\016 \003(\0132\005.Link\032+\n\tTagsEntry\022\013\n\003" +
-      "key\030\001 \001(\t\022\r\n\005value\030\002 \001(\t:\0028\001\0321\n\017MetricTa" +
-      "gsEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\t:\0028\001\"" +
-      "5\n\021IngestionResponse\022 \n\006status\030\001 \002(\0162\020.I" +
-      "ngestionStatus\"@\n\004Link\022\027\n\004kind\030\001 \002(\0162\t.L" +
-      "inkKind\022\017\n\007traceId\030\002 \002(\t\022\016\n\006spanId\030\003 \002(\t" +
-      "*L\n\016InstrumentType\022\013\n\007COUNTER\020\000\022\t\n\005GAUGE" +
-      "\020\001\022\r\n\tHISTOGRAM\020\002\022\023\n\017MIN_MAX_COUNTER\020\003*+" +
-      "\n\004Plan\022\017\n\013METRIC_ONLY\020\001\022\022\n\016METRIC_TRACIN" +
-      "G\020\002*]\n\017IngestionStatus\022\006\n\002OK\020\000\022\t\n\005ERROR\020" +
-      "\001\022\t\n\005STALE\020\002\022\020\n\014UNAUTHORIZED\020\003\022\013\n\007BLOCKE" +
-      "D\020\004\022\r\n\tCORRUPTED\020\005*Y\n\010SpanKind\022\013\n\007UNKNOW" +
-      "N\020\000\022\n\n\006SERVER\020\001\022\n\n\006CLIENT\020\002\022\014\n\010PRODUCER\020" +
-      "\003\022\014\n\010CONSUMER\020\004\022\014\n\010INTERNAL\020\005*>\n\014SpanPos" +
-      "ition\022\024\n\020POSITION_UNKNOWN\020\000\022\010\n\004ROOT\020\001\022\016\n" +
-      "\nLOCAL_ROOT\020\002*\034\n\010LinkKind\022\020\n\014FOLLOWS_FRO" +
-      "M\020\001B\010\n\006kamino"
+      "\014\n\004host\030\003 \002(\t\022\016\n\006apiKey\030\004 \002(\t\022\r\n\005" +
+      "agent\030\005 \001(\t\"X\n\005Hello\022\033\n\004node\030\001 \002(\0132\r.Nod" +
+      "eIdentity\022\014\n\004time\030\002 \002(\003\022\023\n\013incarnation\030\003" +
+      " \002(\t\022\017\n\007version\030\004 \002(\t\"4\n\007Goodbye\022\033\n\004node" +
+      "\030\001 \002(\0132\r.NodeIdentity\022\014\n\004time\030\002 \002(\003\"u\n\tS" +
+      "panBatch\022\023\n\013serviceName\030\001 \002(\t\022\016\n\006apiKey\030" +
+      "\002 \002(\t\022\014\n\004host\030\003 \002(\t\022\020\n\010instance\030\004 \002(\t\022\024\n" +
+      "\005spans\030\005 \003(\0132\005.Span\022\r\n\005agent\030\006 \001(\t\"$\n\004Ma" +
+      "rk\022\017\n\007instant\030\001 \002(\003\022\013\n\003key\030\002 \002(\t\"\252\003\n\004Spa" +
+      "n\022\n\n\002id\030\001 \002(\t\022\017\n\007traceId\030\002 \002(\t\022\020\n\010parent" +
+      "Id\030\003 \002(\t\022\025\n\roperationName\030\004 \002(\t\022\023\n\013start" +
+      "Micros\030\005 \002(\003\022\021\n\tendMicros\030\006 \002(\003\022\035\n\004tags\030" +
+      "\007 \003(\0132\017.Span.TagsEntry\022\024\n\005marks\030\010 \003(\0132\005." +
+      "Mark\022\020\n\010hasError\030\t \001(\010\022\022\n\nwasDelayed\030\n \001" +
+      "(\010\022\027\n\004kind\030\013 \001(\0162\t.SpanKind\022\037\n\010position\030" +
+      "\014 \001(\0162\r.SpanPosition\022)\n\nmetricTags\030\r \003(\013" +
+      "2\025.Span.MetricTagsEntry\022\024\n\005links\030\016 \003(\0132\005" +
+      ".Link\032+\n\tTagsEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005value" +
+      "\030\002 \001(\t:\0028\001\0321\n\017MetricTagsEntry\022\013\n\003key\030\001 \001" +
+      "(\t\022\r\n\005value\030\002 \001(\t:\0028\001\"5\n\021IngestionRespon" +
+      "se\022 \n\006status\030\001 \002(\0162\020.IngestionStatus\"@\n\004" +
+      "Link\022\027\n\004kind\030\001 \002(\0162\t.LinkKind\022\017\n\007traceId" +
+      "\030\002 \002(\t\022\016\n\006spanId\030\003 \002(\t*L\n\016InstrumentType" +
+      "\022\013\n\007COUNTER\020\000\022\t\n\005GAUGE\020\001\022\r\n\tHISTOGRAM\020\002\022" +
+      "\023\n\017MIN_MAX_COUNTER\020\003*+\n\004Plan\022\017\n\013METRIC_O" +
+      "NLY\020\001\022\022\n\016METRIC_TRACING\020\002*]\n\017IngestionSt" +
+      "atus\022\006\n\002OK\020\000\022\t\n\005ERROR\020\001\022\t\n\005STALE\020\002\022\020\n\014UN" +
+      "AUTHORIZED\020\003\022\013\n\007BLOCKED\020\004\022\r\n\tCORRUPTED\020\005" +
+      "*Y\n\010SpanKind\022\013\n\007UNKNOWN\020\000\022\n\n\006SERVER\020\001\022\n\n" +
+      "\006CLIENT\020\002\022\014\n\010PRODUCER\020\003\022\014\n\010CONSUMER\020\004\022\014\n" +
+      "\010INTERNAL\020\005*>\n\014SpanPosition\022\024\n\020POSITION_" +
+      "UNKNOWN\020\000\022\010\n\004ROOT\020\001\022\016\n\nLOCAL_ROOT\020\002*\034\n\010L" +
+      "inkKind\022\020\n\014FOLLOWS_FROM\020\001B\010\n\006kamino"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -14221,7 +14403,7 @@ public final class IngestionV1 {
     internal_static_NodeIdentity_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_NodeIdentity_descriptor,
-        new java.lang.String[] { "Service", "Instance", "Host", "ApiKey", });
+        new java.lang.String[] { "Service", "Instance", "Host", "ApiKey", "Agent", });
     internal_static_Hello_descriptor =
       getDescriptor().getMessageTypes().get(4);
     internal_static_Hello_fieldAccessorTable = new

@@ -132,7 +132,7 @@ class KamonApm(configPath: String) extends CombinedReporter {
 
   private def reportBoot(initializationTimestamp: Long): Unit = {
     val hello = IngestionV1.Hello.newBuilder()
-      .setNode(nodeIdentity)
+      .setNode(nodeIdentity())
       .setTime(initializationTimestamp)
       .setIncarnation(Kamon.environment.incarnation)
       .setVersion(_settings.appVersion)
@@ -143,7 +143,7 @@ class KamonApm(configPath: String) extends CombinedReporter {
 
   private def reportShutdown(shutdownTimestamp: Long): Unit = {
     val goodBye = IngestionV1.Goodbye.newBuilder()
-      .setNode(nodeIdentity)
+      .setNode(nodeIdentity())
       .setTime(shutdownTimestamp)
       .build()
 
@@ -158,6 +158,7 @@ class KamonApm(configPath: String) extends CombinedReporter {
       .setInstance(env.instance)
       .setHost(env.host)
       .setApiKey(_settings.apiKey)
+      .setAgent(_settings.agent)
       .build()
   }
 

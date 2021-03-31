@@ -42,6 +42,7 @@ message NodeIdentity {
   required string instance = 2;
   required string host = 3;
   required string apiKey = 4;
+  optional string agent = 5;
 }
 
 message Hello {
