@@ -90,11 +90,12 @@ object W3CTraceContext {
     val traceParentComponents = traceParent.split("-")
 
     if (traceParentComponents.length != 4) None else {
+      val spanID = identityProvider.spanIdFactory.generate()
       val traceID = identityProvider.traceIdFactory.from(traceParentComponents(1))
-      val spanID = identityProvider.spanIdFactory.from(traceParentComponents(2))
+      val parentSpanID = identityProvider.spanIdFactory.from(traceParentComponents(2))
       val samplingDecision = unpackSamplingDecision(traceParentComponents(3))
 
-      Some(Span.Remote(traceID, spanID, Trace(traceID, samplingDecision)))
+      Some(Span.Remote(spanID, parentSpanID, Trace(traceID, samplingDecision)))
     }
   }
 
