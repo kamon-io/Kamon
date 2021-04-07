@@ -102,7 +102,7 @@ object W3CTraceContext {
   def encodeTraceParent(parent: Span): String = {
     def idToHex(identifier: Identifier, length: Int): String = {
       val leftPad = (string: String) => "0" * (length - string.length) + string
-      leftPad(identifier.bytes.map("%02X" format _).mkString)
+      leftPad(identifier.bytes.map("%02x" format _).mkString)
     }
 
     val samplingDecision = if (parent.trace.samplingDecision == SamplingDecision.Sample) "01" else "00"
