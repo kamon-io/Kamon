@@ -107,7 +107,7 @@ object W3CTraceContext {
 
     val samplingDecision = if (parent.trace.samplingDecision == SamplingDecision.Sample) "01" else "00"
 
-    s"$Version-${idToHex(parent.trace.id, 32)}-${idToHex(parent.id, 16)}-${samplingDecision}"
+    s"$Version-${idToHex(parent.trace.id, 32)}-${idToHex(parent.parentId, 16)}-${samplingDecision}"
   }
 }
 
