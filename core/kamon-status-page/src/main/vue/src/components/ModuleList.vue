@@ -16,7 +16,13 @@
         </div>
       </template>
 
-      <module-status-card v-for="reporter in reporterModules" :key="reporter.name" :module="reporter" />
+      <module-status-card
+        v-for="reporter in reporterModules"
+        :key="reporter.name"
+        :module="reporter"
+        :is-missing-key="isMisconfiguredApmModule(reporter)"
+        @show:api-key="$emit('show:api-key')"
+      />
       <div v-if="!hasApmModule" class="apm-suggestion">
         <a href="https://kamon.io/apm/?utm_source=kamon&utm_medium=status-page&utm_campaign=kamon-status" target="_blank">
           <module-status-card :isSuggestion="true" :module="apmModuleSuggestion" />
@@ -31,11 +37,17 @@
 </template>
 
 <script lang="ts">
+import { Option } from 'ts-option'
 import { Component, Prop, Vue } from 'vue-property-decorator'
+
 import {Module, ModuleKind} from '../api/StatusApi'
 import ModuleStatusCard from './ModuleStatusCard.vue'
 import StatusSection from './StatusSection.vue'
 
+const VALID_API_KEY_PATTERN = /^[a-zA-Z0-9]{26}$/
+const KNOWN_APM_CLASSES = [
+  'kamon.apm.KamonApm'
+]
 
 @Component({
   components: {
@@ -45,6 +57,8 @@ import StatusSection from './StatusSection.vue'
 })
 export default class ModuleList extends Vue {
   @Prop() private modules!: Module[]
+  @Prop({ required: true }) private config!: Option<any>
+
   private apmModuleSuggestion: Module = {
     name: 'Kamon APM Reporter',
     description: 'See your metrics and trace data for free with a Starter account.',
@@ -79,15 +93,29 @@ export default class ModuleList extends Vue {
   }
 
   get hasApmModule(): boolean {
-    const knownApmClasses = [
-      'kamon.apm.KamonApm'
-    ]
+    return this.modules.some(m => KNOWN_APM_CLASSES.includes(m.clazz))
+  }
 
-    return this.modules.some(m => knownApmClasses.includes(m.clazz))
+  get missingApmApiKey(): boolean {
+    if (this.config.isEmpty) {
+      return false
+    }
+
+    if (!this.hasApmModule) {
+      return false
+    }
+
+    const apiKey = this.config.get?.kamon?.apm?.['api-key']
+
+    return apiKey == null || !VALID_API_KEY_PATTERN.test(apiKey)
   }
 
   private isReporter(module: Module): boolean {
     return [ModuleKind.Combined, ModuleKind.Span, ModuleKind.Metric].includes(module.kind)
+  }
+
+  private isMisconfiguredApmModule(m: Module) {
+    return KNOWN_APM_CLASSES.includes(m.clazz) && this.missingApmApiKey
   }
 }
 </script>
