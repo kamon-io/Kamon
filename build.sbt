@@ -476,6 +476,7 @@ lazy val reporters = (project in file("reporters"))
     `kamon-influxdb`,
     `kamon-jaeger`,
     `kamon-newrelic`,
+    `kamon-opentelemetry`,
     `kamon-prometheus`,
     `kamon-statsd`,
     `kamon-zipkin`,
@@ -591,6 +592,16 @@ lazy val `kamon-newrelic` = (project in file("reporters/kamon-newrelic"))
     )
   ).dependsOn(`kamon-core`)
 
+lazy val `kamon-opentelemetry` = (project in file("reporters/kamon-opentelemetry"))
+  .disablePlugins(AssemblyPlugin)
+  .settings(
+    libraryDependencies ++= Seq(
+      "io.opentelemetry" % "opentelemetry-proto" % "0.17.1",
+      "io.grpc" % "grpc-netty" % "1.36.0",
+      scalatest % "test",
+      logbackClassic % "test"
+    )
+  ).dependsOn(`kamon-core`, `kamon-testkit` % "test")
 
 lazy val `kamon-prometheus` = (project in file("reporters/kamon-prometheus"))
   .disablePlugins(AssemblyPlugin)
