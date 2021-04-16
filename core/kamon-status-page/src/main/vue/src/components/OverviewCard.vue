@@ -96,7 +96,7 @@ export default class OverviewCard extends Vue {
   get instrumentsOk(): boolean {
     return this.instrumentation
       .map((i: Instrumentation) => Object.keys(i.errors).length === 0)
-      .getOrElse(true)
+      .getOrElse(true) && this.enabledInstruments > 0
   }
 
   get enabledInstruments(): number {
