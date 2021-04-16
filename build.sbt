@@ -460,6 +460,22 @@ lazy val `kamon-okhttp` = (project in file("instrumentation/kamon-okhttp"))
     )
   ).dependsOn(`kamon-core`, `kamon-executors`, `kamon-testkit` % "test")
 
+lazy val `kamon-tapir` = (project in file("instrumentation/kamon-tapir"))
+  .disablePlugins(AssemblyPlugin)
+  .enablePlugins(JavaAgent)
+  .settings(instrumentationSettings)
+  .settings(
+    libraryDependencies ++= Seq(
+      kanelaAgent % "provided",
+      "com.softwaremill.sttp.tapir" %% "tapir-core" % "0.17.9" % "provided",
+      "com.typesafe.akka" %% "akka-http" % akkaHttpVersion(scalaBinaryVersion.value) % "provided",
+
+      "com.softwaremill.sttp.client3" %% "core" % "3.3.0-RC2" % "test",
+      "com.softwaremill.sttp.tapir" %% "tapir-akka-http-server" % "0.17.9" % "test",
+      scalatest % "test",
+      logbackClassic % "test",
+    )
+  ).dependsOn(`kamon-core`, `kamon-akka-http`, `kamon-testkit` % "test")
 
 /**
   * Reporters
@@ -603,6 +619,7 @@ lazy val `kamon-opentelemetry` = (project in file("reporters/kamon-opentelemetry
     )
   ).dependsOn(`kamon-core`, `kamon-testkit` % "test")
 
+
 lazy val `kamon-prometheus` = (project in file("reporters/kamon-prometheus"))
   .disablePlugins(AssemblyPlugin)
   .settings(
@@ -686,4 +703,5 @@ val `kamon-bundle` = (project in file("bundle/kamon-bundle"))
     `kamon-akka-http` % "shaded",
     `kamon-play` % "shaded",
     `kamon-okhttp` % "shaded",
-  )
+    `kamon-tapir` % "shaded",
+)
