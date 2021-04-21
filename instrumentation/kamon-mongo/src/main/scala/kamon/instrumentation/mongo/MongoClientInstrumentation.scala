@@ -99,9 +99,6 @@ class CopyOperationNameIntoMixedBulkWriteOperation
 
 object CopyOperationNameIntoMixedBulkWriteOperation {
 
-  // ??? unused variable ???
-  private val x = new MongoNamespace("FullName.Something")
-
   @Advice.OnMethodExit
   def exit(@Advice.Return writeOperation: Any, @Advice.Origin("#m") methodName: String): Unit = {
     writeOperation match {
