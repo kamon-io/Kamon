@@ -17,13 +17,11 @@
 package kamon.instrumentation.mongo;
 
 import com.mongodb.MongoNamespace;
-import com.mongodb.async.AsyncBatchCursor;
-import com.mongodb.async.SingleResultCallback;
+import com.mongodb.internal.async.AsyncBatchCursor;
+import com.mongodb.internal.async.SingleResultCallback;
 import com.mongodb.bulk.BulkWriteResult;
-import com.mongodb.operation.BatchCursor;
 import kamon.Kamon;
 import kamon.context.Context;
-import kamon.context.Storage;
 import kamon.instrumentation.context.HasContext;
 import kamon.trace.Span;
 import kanela.agent.libs.net.bytebuddy.asm.Advice;

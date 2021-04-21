@@ -17,9 +17,9 @@
 package kamon.instrumentation.mongo;
 
 import com.mongodb.MongoNamespace;
-import com.mongodb.async.SingleResultCallback;
+import com.mongodb.internal.async.SingleResultCallback;
 import com.mongodb.bulk.BulkWriteResult;
-import com.mongodb.operation.BatchCursor;
+import com.mongodb.internal.operation.BatchCursor;
 import kamon.Kamon;
 import kamon.context.Context;
 import kamon.context.Storage;

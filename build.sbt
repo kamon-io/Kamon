@@ -297,9 +297,9 @@ lazy val `kamon-mongo` = (project in file("instrumentation/kamon-mongo"))
   .settings(
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
-      "org.mongodb"         %   "mongodb-driver-sync"             % "3.11.0" % "provided",
-      "org.mongodb.scala"   %%  "mongo-scala-driver"              % "2.7.0" % "provided",
-      "org.mongodb"         %   "mongodb-driver-reactivestreams"  % "1.12.0" % "provided",
+      "org.mongodb"         %   "mongodb-driver-sync"             % "4.2.3" % "provided",
+      "org.mongodb.scala"   %%  "mongo-scala-driver"              % "4.2.3" % "provided",
+      "org.mongodb"         %   "mongodb-driver-reactivestreams"  % "4.2.3" % "provided",
 
       scalatest % "test",
       logbackClassic % "test",

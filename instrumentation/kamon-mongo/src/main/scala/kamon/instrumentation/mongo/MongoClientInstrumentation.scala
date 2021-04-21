@@ -48,11 +48,11 @@ class MongoClientInstrumentation extends InstrumentationBuilder {
     .advise(method("updateMany"), OperationsAdviceFQCN)
     .advise(method("updateOne"), OperationsAdviceFQCN)
 
-  onType("com.mongodb.operation.MixedBulkWriteOperation")
+  onType("com.mongodb.internal.operation.MixedBulkWriteOperation")
     .when(classIsPresent("com.mongodb.internal.operation.Operations"))
     .mixin(classOf[MongoClientInstrumentation.HasOperationName.Mixin])
 
-  onSubTypesOf("com.mongodb.operation.BaseFindAndModifyOperation")
+  onSubTypesOf("com.mongodb.internal.operation.BaseFindAndModifyOperation")
     .when(classIsPresent("com.mongodb.internal.operation.Operations"))
     .mixin(classOf[MongoClientInstrumentation.HasOperationName.Mixin])
 
@@ -63,14 +63,14 @@ class MongoClientInstrumentation extends InstrumentationBuilder {
     * methods.
     */
   val instrumentedOperations = Seq(
-    "com.mongodb.operation.AggregateOperationImpl",
-    "com.mongodb.operation.CountOperation",
-    "com.mongodb.operation.DistinctOperation",
-    "com.mongodb.operation.FindOperation",
-    "com.mongodb.operation.BaseFindAndModifyOperation",
-    "com.mongodb.operation.MapReduceWithInlineResultsOperation",
-    "com.mongodb.operation.MapReduceToCollectionOperation",
-    "com.mongodb.operation.MixedBulkWriteOperation"
+    "com.mongodb.internal.operation.AggregateOperationImpl",
+    "com.mongodb.internal.operation.CountOperation",
+    "com.mongodb.internal.operation.DistinctOperation",
+    "com.mongodb.internal.operation.FindOperation",
+    "com.mongodb.internal.operation.BaseFindAndModifyOperation",
+    "com.mongodb.internal.operation.MapReduceWithInlineResultsOperation",
+    "com.mongodb.internal.operation.MapReduceToCollectionOperation",
+    "com.mongodb.internal.operation.MixedBulkWriteOperation"
   )
 
   onTypes(instrumentedOperations: _*)
@@ -82,12 +82,12 @@ class MongoClientInstrumentation extends InstrumentationBuilder {
     * Ensures that calls to .getMore() inside a BatchCursor/AsyncBatchCursor will generate Spans for the round trip
     * to Mongo and that those Spans will be children of the first operation that created BatchCursor/AsyncBatchCursor.
     */
-  onType("com.mongodb.operation.AsyncQueryBatchCursor")
+  onType("com.mongodb.internal.operation.AsyncQueryBatchCursor")
     .when(classIsPresent("com.mongodb.internal.operation.Operations"))
     .mixin(classOf[HasContext.Mixin])
     .advise(method("getMore").and(takesArguments(4)), classOf[AsyncBatchCursorGetMoreAdvice])
 
-  onType("com.mongodb.operation.QueryBatchCursor")
+  onType("com.mongodb.internal.operation.QueryBatchCursor")
     .when(classIsPresent("com.mongodb.internal.operation.Operations"))
     .mixin(classOf[HasContext.VolatileMixin])
     .advise(method("getMore"), classOf[BatchCursorGetMoreAdvice])
@@ -96,8 +96,10 @@ class MongoClientInstrumentation extends InstrumentationBuilder {
 
 
 class CopyOperationNameIntoMixedBulkWriteOperation
+
 object CopyOperationNameIntoMixedBulkWriteOperation {
 
+  // ??? unused variable ???
   private val x = new MongoNamespace("FullName.Something")
 
   @Advice.OnMethodExit
@@ -117,23 +119,26 @@ object MongoClientInstrumentation {
     */
   trait HasOperationName {
     def name: String
+
     def setName(name: String): Unit
   }
 
   object HasOperationName {
+
     class Mixin(@volatile var name: String) extends HasOperationName {
       override def setName(name: String): Unit = this.name = name
     }
+
   }
 
   val OperationClassToOperation = Map(
-    "com.mongodb.operation.AggregateOperationImpl" -> "aggregate",
-    "com.mongodb.operation.CountOperation" -> "countDocuments",
-    "com.mongodb.operation.DistinctOperation" -> "distinct",
-    "com.mongodb.operation.FindOperation" -> "find",
-    "com.mongodb.operation.FindAndDeleteOperation" -> "findAndDelete",
-    "com.mongodb.operation.MapReduceWithInlineResultsOperation" -> "mapReduce",
-    "com.mongodb.operation.MapReduceToCollectionOperation" -> "mapReduceToCollection"
+    "com.mongodb.internal.operation.AggregateOperationImpl" -> "aggregate",
+    "com.mongodb.internal.operation.CountOperation" -> "countDocuments",
+    "com.mongodb.internal.operation.DistinctOperation" -> "distinct",
+    "com.mongodb.internal.operation.FindOperation" -> "find",
+    "com.mongodb.internal.operation.FindAndDeleteOperation" -> "findAndDelete",
+    "com.mongodb.internal.operation.MapReduceWithInlineResultsOperation" -> "mapReduce",
+    "com.mongodb.internal.operation.MapReduceToCollectionOperation" -> "mapReduceToCollection"
   )
 
   def clientSpanBuilder(namespace: MongoNamespace, operationClassName: String): SpanBuilder = {
