@@ -102,7 +102,6 @@ object BaseProject extends AutoPlugin {
     exportJars := true,
     parallelExecution in Test := false,
     fork in Test := true,
-    crossScalaVersions := Seq("2.12.11", "2.13.1"),
     testOptions in Test += Tests.Argument(TestFrameworks.ScalaCheck, "-F", "2.5"),
     startYear := Some(2013),
     organization := "io.kamon",
@@ -125,6 +124,7 @@ object BaseProject extends AutoPlugin {
   private lazy val compilationSettings = Seq(
     crossPaths := true,
     scalaVersion := "2.12.11",
+    crossScalaVersions := Seq("2.11.12", "2.12.11", "2.13.1"),
     javacOptions := Seq(
       "-source", "1.8",
       "-target", "1.8",
