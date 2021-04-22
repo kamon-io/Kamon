@@ -26,6 +26,7 @@ project/plugins/project/
 *.iws
 .metals/
 .bloop
+.bsp
 project/metals.sbt
 
 # Eclipse

@@ -13,4 +13,4 @@ jobs:
         with:
           java-version: adopt@1.8.0-252
       - name: Test
-        run: csbt +test
+        run: csbt ";+instrumentation/publishLocal;+test"

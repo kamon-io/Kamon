@@ -131,6 +131,7 @@ lazy val instrumentation = (project in file("instrumentation"))
     `kamon-akka-http`,
     `kamon-play`,
     `kamon-okhttp`,
+    `kamon-tapir`
   )
 
 
@@ -460,6 +461,23 @@ lazy val `kamon-okhttp` = (project in file("instrumentation/kamon-okhttp"))
     )
   ).dependsOn(`kamon-core`, `kamon-executors`, `kamon-testkit` % "test")
 
+lazy val `kamon-tapir` = (project in file("instrumentation/kamon-tapir"))
+  .disablePlugins(AssemblyPlugin)
+  .enablePlugins(JavaAgent)
+  .settings(
+    instrumentationSettings,
+    crossScalaVersions := Seq("2.12.11", "2.13.1"),
+    libraryDependencies ++= Seq(
+      kanelaAgent % "provided",
+      "com.softwaremill.sttp.tapir" %% "tapir-core" % "0.17.9" % "provided",
+      "com.typesafe.akka" %% "akka-http" % akkaHttpVersion(scalaBinaryVersion.value) % "provided",
+
+      "com.softwaremill.sttp.tapir" %% "tapir-akka-http-server" % "0.17.9" % "test",
+      "com.softwaremill.sttp.client3" %% "core" % "3.3.0-RC2" % "test",
+      scalatest % "test",
+      logbackClassic % "test",
+    )
+  ).dependsOn(`kamon-core`, `kamon-akka-http`, `kamon-testkit` % "test")
 
 /**
   * Reporters
@@ -637,11 +655,6 @@ val `kamon-bundle` = (project in file("bundle/kamon-bundle"))
     kanelaAgentJar := update.value.matching(Modules.exactFilter(kanelaAgent)).head,
     kanelaAgentJarName := kanelaAgentJar.value.getName,
     resourceGenerators in Compile += Def.task(Seq(kanelaAgentJar.value)).taskValue,
-    libraryDependencies ++= Seq(
-      oshiCore,
-      kanelaAgent % "provided",
-      "net.bytebuddy" % "byte-buddy-agent" % "1.9.12" % "provided,shaded",
-    ),
     fullClasspath in assembly ++= (internalDependencyClasspath in Shaded).value,
     assemblyShadeRules in assembly := Seq(
       ShadeRule.zap("**module-info").inAll,
@@ -662,7 +675,24 @@ val `kamon-bundle` = (project in file("bundle/kamon-bundle"))
     assemblyMergeStrategy in assembly := {
       case "reference.conf" => MergeStrategy.concat
       case anyOther         => (assemblyMergeStrategy in assembly).value(anyOther)
-    }
+    },
+    libraryDependencies ++= Seq(
+      oshiCore,
+      kanelaAgent % "provided",
+      "net.bytebuddy" % "byte-buddy-agent" % "1.9.12" % "provided,shaded",
+    ),
+    libraryDependencies ++= {
+      // We are adding the Tapir instrumentation as library dependency (instead as a project dependency
+      // via .dependsOn(...) as all other projects below) because it is not published for Scala 2.11 and
+      // any proper solution requires major changes in the build. We might need to start using
+      // sbt-projectmatrix in the future.
+      //
+      // Since the bundle dependencies are only important when publishing we can force a run of
+      // publishLocal to get Tapir deployed on the local Ivy and then publish on the bundle as usual.
+      if(scalaBinaryVersion.value == "2.11") Seq.empty else Seq(
+        "io.kamon" %% "kamon-tapir" % version.value % "shaded"
+      )
+    },
   ).dependsOn(
     `kamon-core`,
     `kamon-status-page` % "shaded",
@@ -685,5 +715,5 @@ val `kamon-bundle` = (project in file("bundle/kamon-bundle"))
     `kamon-akka` % "shaded",
     `kamon-akka-http` % "shaded",
     `kamon-play` % "shaded",
-    `kamon-okhttp` % "shaded",
+    `kamon-okhttp` % "shaded"
   )
