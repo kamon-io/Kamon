@@ -23,12 +23,14 @@ import kamon.metric.PeriodSnapshot
 import kamon.testkit.Reconfigure
 import org.scalactic.TimesOnInt.convertIntToRepeater
 import org.scalatest.concurrent.Eventually
-import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
+import org.scalatest.BeforeAndAfterAll
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-class ModuleRegistrySpec extends WordSpec with Matchers with Reconfigure with Eventually with BeforeAndAfterAll  {
+class ModuleRegistrySpec extends AnyWordSpec with Matchers with Reconfigure with Eventually with BeforeAndAfterAll  {
   "The ModuleRegistry" when {
     "working with metrics reporters" should {
       "report all metrics if no filters are applied" in {

@@ -18,12 +18,14 @@ package kamon.trace
 
 import kamon.context.{Context, HttpPropagation}
 import kamon.trace.Trace.SamplingDecision
-import org.scalatest.{Matchers, OptionValues, WordSpecLike}
+import org.scalatest.OptionValues
 
 import scala.collection.mutable
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 
 
-class UberSpanPropagationSpec extends WordSpecLike with Matchers with OptionValues {
+class UberSpanPropagationSpec extends AnyWordSpecLike with Matchers with OptionValues {
   import SpanPropagation.Uber
   val uberPropagation = Uber()
 

@@ -2,11 +2,12 @@ package kamon.tag
 
 import java.util.Optional
 
-import org.scalatest.{Matchers, WordSpec}
 
 import scala.collection.JavaConverters.mapAsJavaMapConverter
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-class TagSetSpec extends WordSpec with Matchers {
+class TagSetSpec extends AnyWordSpec with Matchers {
   import Lookups._
 
   "Tags" should {
@@ -177,7 +178,7 @@ class TagSetSpec extends WordSpec with Matchers {
     }
   }
 
-  def matchPair(key: String, value: Any) = { tag: Tag => {
+  def matchPair(key: String, value: Any) = { (tag: Tag) => {
     tag match {
       case t: Tag.String  => t.key == key && t.value == value
       case t: Tag.Long    => t.key == key && t.value == value

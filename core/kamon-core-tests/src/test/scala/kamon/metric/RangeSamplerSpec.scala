@@ -20,9 +20,10 @@ import java.time.Duration
 
 import kamon.Kamon
 import kamon.testkit.InstrumentInspection
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-class RangeSamplerSpec extends WordSpec with Matchers with InstrumentInspection.Syntax {
+class RangeSamplerSpec extends AnyWordSpec with Matchers with InstrumentInspection.Syntax {
 
   "a RangeSampler" should {
     "track ascending tendencies" in {

@@ -26,7 +26,7 @@ import scala.concurrent.Future
   * Provides APIs for handling common initialization tasks like starting modules, attaching instrumentation and
   * reconfiguring Kamon.
   */
-trait Init { self: ModuleLoading with Configuration with CurrentStatus with Metrics with Tracing =>
+trait Init { self: ModuleLoading with Configuration with CurrentStatus with Metrics with Utilities with Tracing with ContextStorage =>
   private val _logger = LoggerFactory.getLogger(classOf[Init])
 
   /**

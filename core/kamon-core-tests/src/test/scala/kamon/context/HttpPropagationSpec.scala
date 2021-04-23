@@ -4,13 +4,15 @@ import com.typesafe.config.ConfigFactory
 import kamon.Kamon
 import kamon.context.HttpPropagation.{HeaderReader, HeaderWriter}
 import kamon.context.Propagation.{EntryReader, EntryWriter}
-import org.scalatest.{Matchers, OptionValues, WordSpec}
+import org.scalatest.OptionValues
 import kamon.tag.Lookups._
 import kamon.tag.TagSet
 
 import scala.collection.mutable
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-class HttpPropagationSpec extends WordSpec with Matchers with OptionValues {
+class HttpPropagationSpec extends AnyWordSpec with Matchers with OptionValues {
 
   "The HTTP Context Propagation" when {
     "reading from incoming requests" should {
@@ -35,7 +37,7 @@ class HttpPropagationSpec extends WordSpec with Matchers with OptionValues {
         val headers = Map("fail" -> "")
         val context = httpPropagation.read(headerReaderFromMap(headers))
         context.tags shouldBe empty
-        context.entries shouldBe empty
+        context.entries() shouldBe empty
       }
 
       "read context with entries and tags" in {

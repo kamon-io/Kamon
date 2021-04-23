@@ -4,12 +4,14 @@ import kamon.Kamon
 import kamon.tag.TagSet
 import kamon.trace.Trace.SamplingDecision
 import org.scalactic.TimesOnInt
-import org.scalatest.{BeforeAndAfterEach, Matchers, WordSpec}
+import org.scalatest.BeforeAndAfterEach
 
 import scala.collection.mutable
 import scala.concurrent.duration._
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-class SamplerSpec extends WordSpec with TimesOnInt with Matchers with BeforeAndAfterEach {
+class SamplerSpec extends AnyWordSpec with TimesOnInt with Matchers with BeforeAndAfterEach {
 
   "sampling on the Kamon tracer" when {
 //    "configured for never sampling" should {

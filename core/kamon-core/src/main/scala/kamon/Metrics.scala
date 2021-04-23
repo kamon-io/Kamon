@@ -29,7 +29,7 @@ trait Metrics extends MetricBuilding { self: Configuration with Utilities =>
     * Metric registry from which all metric-building APIs will draw instances. For more details on the entire set of
     * exposes APIs please refer to [[kamon.metric.MetricBuilding.]]
     */
-  protected def registry(): MetricRegistry =
+  protected def registry: MetricRegistry =
     _metricRegistry
 
   protected def clearRegistry(): Unit = {

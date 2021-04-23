@@ -30,7 +30,7 @@ trait ContextPropagation { self: Configuration =>
   @volatile private var _defaultBinaryPropagation: Propagation[ByteStreamReader, ByteStreamWriter] = _
 
   // Initial configuration and reconfigures
-  init(self.config)
+  init(self.config())
   self.onReconfigure(newConfig => self.init(newConfig))
 
 

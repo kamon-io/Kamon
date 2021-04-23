@@ -21,9 +21,11 @@ import kamon.testkit.SpanInspection
 import kamon.Kamon
 import kamon.tag.Lookups._
 import kamon.trace.Span.Link.Kind
-import org.scalatest.{Matchers, OptionValues, WordSpec}
+import org.scalatest.OptionValues
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-class LocalSpanSpec extends WordSpec with Matchers with OptionValues with SpanInspection.Syntax {
+class LocalSpanSpec extends AnyWordSpec with Matchers with OptionValues with SpanInspection.Syntax {
 
   "a real span" when {
     "sampled and finished" should {

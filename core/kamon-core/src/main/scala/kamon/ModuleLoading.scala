@@ -41,8 +41,8 @@ import scala.concurrent.Future
   * Take a look at the reference.conf file for more details.
   *
   */
-trait ModuleLoading { self: Configuration with Utilities with Metrics with Tracing =>
-  protected val _moduleRegistry = new ModuleRegistry(self, clock(), self.registry(), self.tracer())
+trait ModuleLoading { self: Configuration with Utilities with Metrics with Tracing with ContextStorage =>
+  protected val _moduleRegistry = new ModuleRegistry(self, clock(), self.registry, self.tracer())
   self.onReconfigure(newConfig => self._moduleRegistry.reconfigure(newConfig))
 
   /**

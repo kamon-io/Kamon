@@ -17,10 +17,11 @@ package kamon.util
 
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
 
-class FilterSpec extends WordSpec with Matchers {
+class FilterSpec extends AnyWordSpec with Matchers {
   val testConfig = ConfigFactory.parseString(
     """
       |kamon.util.filters {

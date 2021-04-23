@@ -2,11 +2,13 @@ package kamon.trace
 
 import kamon.context.{Context, HttpPropagation}
 import kamon.trace.Trace.SamplingDecision
-import org.scalatest.{Matchers, OptionValues, WordSpecLike}
+import org.scalatest.OptionValues
 
 import scala.collection.mutable
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 
-class W3CTraceContextSpanPropagationSpec extends WordSpecLike with Matchers with OptionValues {
+class W3CTraceContextSpanPropagationSpec extends AnyWordSpecLike with Matchers with OptionValues {
   val traceContextPropagation = SpanPropagation.W3CTraceContext()
 
   "The TraceContext Span propagation for HTTP" should {

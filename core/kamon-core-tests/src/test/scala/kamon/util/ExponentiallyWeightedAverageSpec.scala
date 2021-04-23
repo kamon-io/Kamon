@@ -3,11 +3,12 @@ package kamon.util
 import org.scalactic.TimesOnInt
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.SpanSugar
-import org.scalatest.{Matchers, WordSpec}
 
 import scala.concurrent.duration._
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-class ExponentiallyWeightedAverageSpec extends WordSpec with Matchers with Eventually with SpanSugar with TimesOnInt {
+class ExponentiallyWeightedAverageSpec extends AnyWordSpec with Matchers with Eventually with SpanSugar with TimesOnInt {
 
   "an Exponentially Weighted Moving Average" should {
     "converge to the actual average in few iterations from startup with the default weighting factor" in {

@@ -21,9 +21,11 @@ import kamon.Kamon
 import kamon.tag.TagSet
 import kamon.testkit.{InstrumentInspection, Reconfigure}
 import kamon.util.Clock
-import org.scalatest.{BeforeAndAfterAll, Matchers, OptionValues, WordSpec}
+import org.scalatest.{BeforeAndAfterAll, OptionValues}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-class PeriodSnapshotAccumulatorSpec extends WordSpec with Reconfigure with InstrumentInspection.Syntax with Matchers
+class PeriodSnapshotAccumulatorSpec extends AnyWordSpec with Reconfigure with InstrumentInspection.Syntax with Matchers
     with BeforeAndAfterAll with OptionValues {
 
   "the PeriodSnapshotAccumulator" should {

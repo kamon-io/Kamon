@@ -87,7 +87,7 @@ object MetricInspection {
       def instruments(tags: TagSet): Map[TagSet, Inst]
     }
 
-    implicit def metricInspectionSyntax[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings](metric: Metric[Inst, Sett]) =
+    implicit def metricInspectionSyntax[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings](metric: Metric[Inst, Sett]): RichMetric[Inst,Sett] =
         new RichMetric[Inst, Sett] {
 
       def tagValues(key: String): Seq[String] =

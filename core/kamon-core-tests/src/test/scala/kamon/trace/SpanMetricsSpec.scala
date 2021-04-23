@@ -20,11 +20,12 @@ import java.time.Instant
 import kamon.Kamon._
 import kamon.tag.TagSet
 import kamon.testkit.{InstrumentInspection, MetricInspection, Reconfigure}
-import org.scalatest.{Matchers, WordSpecLike}
 
 import scala.util.control.NoStackTrace
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 
-class SpanMetricsSpec extends WordSpecLike with Matchers with InstrumentInspection.Syntax with MetricInspection.Syntax
+class SpanMetricsSpec extends AnyWordSpecLike with Matchers with InstrumentInspection.Syntax with MetricInspection.Syntax
     with Reconfigure {
 
   sampleNever()
@@ -209,9 +210,9 @@ class SpanMetricsSpec extends WordSpecLike with Matchers with InstrumentInspecti
         "internal"
       )
 
-      Span.Metrics.ProcessingTime.tagValues("span.kind") should contain only (expectedSpanKinds: _*)
-      Span.Metrics.ElapsedTime.tagValues("span.kind") should contain only (expectedSpanKinds: _*)
-      Span.Metrics.WaitTime.tagValues("span.kind") should contain only (expectedSpanKinds: _*)
+      Span.Metrics.ProcessingTime.tagValues("span.kind") should contain theSameElementsAs expectedSpanKinds
+      Span.Metrics.ElapsedTime.tagValues("span.kind") should contain theSameElementsAs expectedSpanKinds
+      Span.Metrics.WaitTime.tagValues("span.kind") should contain theSameElementsAs expectedSpanKinds
     }
   }
 
@@ -225,5 +226,3 @@ class SpanMetricsSpec extends WordSpecLike with Matchers with InstrumentInspecti
     evaluated
   }
 }
-
-

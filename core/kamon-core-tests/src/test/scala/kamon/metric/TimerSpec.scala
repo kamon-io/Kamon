@@ -17,10 +17,11 @@ package kamon.metric
 
 import kamon.Kamon
 import kamon.testkit.InstrumentInspection
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
 
-class TimerSpec extends WordSpec with Matchers with InstrumentInspection.Syntax {
+class TimerSpec extends AnyWordSpec with Matchers with InstrumentInspection.Syntax {
 
   "a Timer" should {
     "record the duration between calls to .start() and .stop() in the StartedTimer" in {

@@ -249,6 +249,7 @@ object Metric {
     protected def buildMetricSnapshot(metric: Metric[Inst, Sett], instruments: Seq[Instrument.Snapshot[Snap]]): MetricSnapshot[Sett, Snap]
 
     private def lookupInstrument(tags: TagSet): Inst = {
+      import kamon.AtomicGetOrElseUpdateOnTrieMap
       val entry = _instruments.atomicGetOrElseUpdate(tags, newInstrumentEntry(tags), cleanupStaleEntry, triggerDefaultSchedule)
       entry.removeOnNextSnapshot = false
       entry.instrument
@@ -279,7 +280,7 @@ object Metric {
     * Handles registration of auto-update actions on a base metric.
     */
   trait BaseMetricAutoUpdate[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings, Snap] {
-      self: Inst =>
+    self: Inst =>
 
     protected def baseMetric: BaseMetric[Inst, Sett, Snap]
 

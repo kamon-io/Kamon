@@ -32,7 +32,7 @@ object BaseProject extends AutoPlugin {
     val slf4jApi          = "org.slf4j"             %  "slf4j-api"       % "1.7.25"
     val slf4jnop          = "org.slf4j"             %  "slf4j-nop"       % "1.7.24"
     val logbackClassic    = "ch.qos.logback"        %  "logback-classic" % "1.2.3"
-    val scalatest         = "org.scalatest"         %% "scalatest"       % "3.0.8"
+    val scalatest         = "org.scalatest"         %% "scalatest"       % "3.2.8"
     val hdrHistogram      = "org.hdrhistogram"      %  "HdrHistogram"    % "2.1.10"
     val okHttp            = "com.squareup.okhttp3"  %  "okhttp"          % "3.14.7"
     val okHttpMockServer  = "com.squareup.okhttp3"  %  "mockwebserver"   % "3.10.0"
@@ -154,6 +154,7 @@ object BaseProject extends AutoPlugin {
       case Some((2,11)) => Seq("-Xfuture", "-Ybackend:GenASM")
       case Some((2,12)) => Seq("-Xfuture", "-opt:l:method,-closure-invocations")
       case Some((2,13)) => Seq.empty
+      case Some((3, _)) => Seq("-source:3.0-migration")
       case _ => Seq.empty
     })
   )

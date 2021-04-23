@@ -123,7 +123,7 @@ class Context private (private val _underlying: UnifiedMap[String, Any], private
     * Returns whether this Context does not have any tags and does not have any entries.
     */
   def isEmpty(): Boolean =
-    _underlying.isEmpty && tags.isEmpty && _span.isEmpty
+    _underlying.isEmpty && tags.isEmpty() && _span.isEmpty
 
   /**
     * Returns whether this Context has any information, either as tags or entries.

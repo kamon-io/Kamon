@@ -69,47 +69,47 @@ object SpanPropagation {
     }
   }
 
-object W3CTraceContext {
-  val Version: String = "00"
-  val TraceStateKey: Context.Key[String] = Context.key("tracestate", "")
+  object W3CTraceContext {
+    val Version: String = "00"
+    val TraceStateKey: Context.Key[String] = Context.key("tracestate", "")
 
-  object Headers {
-    val TraceParent = "traceparent"
-    val TraceState = "tracestate"
-  }
-
-  def apply(): W3CTraceContext =
-    new W3CTraceContext()
-
-  def decodeTraceParent(traceParent: String): Option[Span] = {
-    val identityProvider = Identifier.Scheme.Double
-
-    def unpackSamplingDecision(decision: String): SamplingDecision =
-      if ("01" == decision) SamplingDecision.Sample else SamplingDecision.Unknown
-
-    val traceParentComponents = traceParent.split("-")
-
-    if (traceParentComponents.length != 4) None else {
-      val spanID = identityProvider.spanIdFactory.generate()
-      val traceID = identityProvider.traceIdFactory.from(traceParentComponents(1))
-      val parentSpanID = identityProvider.spanIdFactory.from(traceParentComponents(2))
-      val samplingDecision = unpackSamplingDecision(traceParentComponents(3))
-
-      Some(Span.Remote(spanID, parentSpanID, Trace(traceID, samplingDecision)))
-    }
-  }
-
-  def encodeTraceParent(parent: Span): String = {
-    def idToHex(identifier: Identifier, length: Int): String = {
-      val leftPad = (string: String) => "0" * (length - string.length) + string
-      leftPad(identifier.bytes.map("%02x" format _).mkString)
+    object Headers {
+      val TraceParent = "traceparent"
+      val TraceState = "tracestate"
     }
 
-    val samplingDecision = if (parent.trace.samplingDecision == SamplingDecision.Sample) "01" else "00"
+    def apply(): W3CTraceContext =
+      new W3CTraceContext()
 
-    s"$Version-${idToHex(parent.trace.id, 32)}-${idToHex(parent.parentId, 16)}-${samplingDecision}"
+    def decodeTraceParent(traceParent: String): Option[Span] = {
+      val identityProvider = Identifier.Scheme.Double
+
+      def unpackSamplingDecision(decision: String): SamplingDecision =
+        if ("01" == decision) SamplingDecision.Sample else SamplingDecision.Unknown
+
+      val traceParentComponents = traceParent.split("-")
+
+      if (traceParentComponents.length != 4) None else {
+        val spanID = identityProvider.spanIdFactory.generate()
+        val traceID = identityProvider.traceIdFactory.from(traceParentComponents(1))
+        val parentSpanID = identityProvider.spanIdFactory.from(traceParentComponents(2))
+        val samplingDecision = unpackSamplingDecision(traceParentComponents(3))
+
+        Some(Span.Remote(spanID, parentSpanID, Trace(traceID, samplingDecision)))
+      }
+    }
+
+    def encodeTraceParent(parent: Span): String = {
+      def idToHex(identifier: Identifier, length: Int): String = {
+        val leftPad = (string: String) => "0" * (length - string.length) + string
+        leftPad(identifier.bytes.map("%02x" format _).mkString)
+      }
+
+      val samplingDecision = if (parent.trace.samplingDecision == SamplingDecision.Sample) "01" else "00"
+
+      s"$Version-${idToHex(parent.trace.id, 32)}-${idToHex(parent.parentId, 16)}-${samplingDecision}"
+    }
   }
-}
 
   /**
     * Reads and Writes a Span instance using the B3 propagation format. The specification and semantics of the B3

@@ -679,7 +679,7 @@ object Span {
     override def kind: Kind = Kind.Unknown
     override def isRemote: Boolean = false
     override def isEmpty: Boolean = true
-    override def position(): Position = Position.Unknown
+    override def position: Position = Position.Unknown
     override def tag(key: String, value: String): Span = this
     override def tag(key: String, value: Long): Span = this
     override def tag(key: String, value: Boolean): Span = this
@@ -715,7 +715,7 @@ object Span {
     override def kind: Kind = Kind.Unknown
     override def isRemote: Boolean = true
     override def isEmpty: Boolean = false
-    override def position(): Position = Position.Unknown
+    override def position: Position = Position.Unknown
     override def tag(key: String, value: String): Span = this
     override def tag(key: String, value: Long): Span = this
     override def tag(key: String, value: Boolean): Span = this

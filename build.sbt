@@ -33,6 +33,7 @@ lazy val `kamon-core` = (project in file("core/kamon-core"))
   .settings(
     buildInfoKeys := Seq[BuildInfoKey](version),
     buildInfoPackage := "kamon.status",
+    crossScalaVersions += "3.0.0-RC3",
     scalacOptions ++= { if(scalaBinaryVersion.value == "2.11") Seq("-Ydelambdafy:method") else Seq.empty },
     assemblyShadeRules in assembly := Seq(
       ShadeRule.rename("org.jctools.**"                             -> "kamon.lib.@0").inAll,
@@ -65,6 +66,7 @@ lazy val `kamon-core` = (project in file("core/kamon-core"))
 lazy val `kamon-status-page` = (project in file("core/kamon-status-page"))
   .enablePlugins(AssemblyPlugin)
   .settings(
+    crossScalaVersions += "3.0.0-RC3",
     assemblyShadeRules in assembly := Seq(
       ShadeRule.rename("com.grack.nanojson.**"  -> "kamon.lib.@0").inAll,
       ShadeRule.rename("fi.iki.elonen.**"       -> "kamon.lib.@0").inAll,
@@ -79,6 +81,7 @@ lazy val `kamon-status-page` = (project in file("core/kamon-status-page"))
 lazy val `kamon-testkit` = (project in file("core/kamon-testkit"))
   .disablePlugins(AssemblyPlugin)
   .settings(
+    crossScalaVersions += "3.0.0-RC3",
     libraryDependencies += scalatest % "test"
   ).dependsOn(`kamon-core`)
 
@@ -87,6 +90,7 @@ lazy val `kamon-core-tests` = (project in file("core/kamon-core-tests"))
   .disablePlugins(AssemblyPlugin)
   .settings(noPublishing: _*)
   .settings(
+    crossScalaVersions += "3.0.0-RC3",
     libraryDependencies ++= Seq(
       scalatest % "test",
       logbackClassic % "test"
@@ -97,6 +101,7 @@ lazy val `kamon-core-tests` = (project in file("core/kamon-core-tests"))
 lazy val `kamon-core-bench` = (project in file("core/kamon-core-bench"))
   .disablePlugins(AssemblyPlugin)
   .enablePlugins(JmhPlugin)
+  .settings(crossScalaVersions += "3.0.0-RC3")
   .settings(noPublishing: _*)
   .dependsOn(`kamon-core`)
 

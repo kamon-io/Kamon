@@ -16,12 +16,13 @@
 package kamon.metric
 
 import kamon.Kamon
-import org.scalatest.{Matchers, WordSpec}
 import MeasurementUnit._
 import kamon.testkit.InstrumentInspection
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
 
-class HistogramSpec extends WordSpec with Matchers with InstrumentInspection.Syntax {
+class HistogramSpec extends AnyWordSpec with Matchers with InstrumentInspection.Syntax {
 
   "a Histogram" should {
     "record values and reset internal state when a snapshot is taken" in {

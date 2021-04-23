@@ -17,9 +17,10 @@ package kamon.status
 
 import com.typesafe.config.ConfigFactory
 import kamon.tag.TagSet
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-class EnvironmentSpec extends WordSpec with Matchers {
+class EnvironmentSpec extends AnyWordSpec with Matchers {
   private val baseConfig = ConfigFactory.parseString(
     """
       |kamon.environment {

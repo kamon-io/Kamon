@@ -16,9 +16,10 @@
 
 package kamon.util
 
-import org.scalatest.{Matchers, WordSpecLike}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 
-class RegexPathFilterSpec extends WordSpecLike with Matchers {
+class RegexPathFilterSpec extends AnyWordSpecLike with Matchers {
   "The RegexPathFilter" should {
 
     "match a single expression" in {

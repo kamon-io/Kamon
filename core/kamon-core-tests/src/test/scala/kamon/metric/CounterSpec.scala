@@ -21,10 +21,11 @@ import java.util.function.Supplier
 import kamon.Kamon
 import kamon.testkit.InstrumentInspection
 import org.scalatest.concurrent.Eventually
-import org.scalatest.{Matchers, WordSpec}
 import kamon.metric.Counter.delta
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-class CounterSpec extends WordSpec with Matchers with InstrumentInspection.Syntax with Eventually {
+class CounterSpec extends AnyWordSpec with Matchers with InstrumentInspection.Syntax with Eventually {
 
   "a Counter" should {
     "allow unit and bundled increments" in {

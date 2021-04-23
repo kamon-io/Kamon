@@ -17,14 +17,16 @@ package kamon.context
 
 
 import kamon.context.Storage.Scope
-import org.scalatest.{WordSpec, BeforeAndAfterAll, AsyncWordSpec, Matchers, Assertion}
+import org.scalatest.{BeforeAndAfterAll, Assertion}
 
 import java.util.concurrent.Executors
 import scala.concurrent.{Promise, ExecutionContext, Future}
 import scala.util.Try
 import org.scalatest.concurrent.ScalaFutures._
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-class ThreadLocalStorageSpec extends WordSpec with Matchers with BeforeAndAfterAll {
+class ThreadLocalStorageSpec extends AnyWordSpec with Matchers with BeforeAndAfterAll {
 
   private val ec = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(2))
 
