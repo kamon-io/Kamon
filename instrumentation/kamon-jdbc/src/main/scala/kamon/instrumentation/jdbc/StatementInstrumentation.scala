@@ -27,11 +27,12 @@ import kamon.trace.Hooks
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.api.instrumentation.bridge.FieldBridge
 import kanela.agent.libs.net.bytebuddy.asm.Advice
-
 import scala.util.Try
+
+import kamon.instrumentation.jdbc.utils.LoggingSupport
 import kanela.agent.libs.net.bytebuddy.matcher.ElementMatchers._
 
-class StatementInstrumentation extends InstrumentationBuilder {
+class StatementInstrumentation extends InstrumentationBuilder with LoggingSupport {
 
   private val withOneStringArgument = withArgument(0, classOf[String])
 
@@ -78,11 +79,30 @@ class StatementInstrumentation extends InstrumentationBuilder {
     .advise(method("executeQuery"), classOf[PreparedStatementExecuteQueryMethodAdvisor])
     .advise(method("executeUpdate"), classOf[PreparedStatementExecuteUpdateMethodAdvisor])
 
-  onType("org.sqlite.jdbc3.JDBC3Statement")
-    .advise(method("execute").and(withOneStringArgument), classOf[StatementExecuteMethodAdvisor])
-    .advise(method("executeQuery").and(withOneStringArgument), classOf[StatementExecuteQueryMethodAdvisor])
-    .advise(method("executeUpdate").and(withOneStringArgument), classOf[StatementExecuteUpdateMethodAdvisor])
-    .advise(anyMethods("executeBatch", "executeLargeBatch"), classOf[StatementExecuteBatchMethodAdvisor])
+
+  try {
+    val prop = new Properties()
+    prop.load(this.getClass().getResourceAsStream("sqlite-jdbc.properties"))
+    val sqliteVersion = prop.getProperty("version", "0").split('.').map(_.toInt).toList
+
+    sqliteVersion match {
+      case epoch :: maj :: _ if epoch <= 3 && maj < 32 =>
+        onType("org.sqlite.jdbc3.JDBC3Statement")
+          .advise(method("execute").and(withOneStringArgument), classOf[StatementExecuteMethodAdvisor])
+          .advise(method("executeQuery").and(withOneStringArgument), classOf[StatementExecuteQueryMethodAdvisor])
+          .advise(method("executeUpdate").and(withOneStringArgument), classOf[StatementExecuteUpdateMethodAdvisor])
+          .advise(anyMethods("executeBatch", "executeLargeBatch"), classOf[StatementExecuteBatchMethodAdvisor])
+      case 3 :: 32 :: 3 :: p :: _ if p < 3 =>
+        onType("org.sqlite.jdbc3.JDBC3Statement")
+          .advise(method("execute").and(withOneStringArgument), classOf[StatementExecuteMethodAdvisor])
+          .advise(method("executeQuery").and(withOneStringArgument), classOf[StatementExecuteQueryMethodAdvisor])
+          .advise(method("executeUpdate").and(withOneStringArgument), classOf[StatementExecuteUpdateMethodAdvisor])
+          .advise(anyMethods("executeBatch", "executeLargeBatch"), classOf[StatementExecuteBatchMethodAdvisor])
+      case _ =>
+        logWarn("Could not instrument org.sqlite.jdbc3.JDBC3Statement. Prepared statements will be instrumented, but direct SQL calls will not")
+    }
+
+  }
 
   /**
     * Since Postgres is reusing the same statement in the implementation if isAlive, we need to "refresh" the

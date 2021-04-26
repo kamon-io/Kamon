@@ -86,17 +86,19 @@ class StatementInstrumentationSpec extends WordSpec
           }
         }
 
-        "generate Spans on calls to .execute(sql) in statements" in {
-          val select = s"SELECT * FROM Address where Nr = 2"
-          val statement = connection.createStatement()
-          statement.execute(select)
-          validateNextRow(statement.getResultSet, valueNr = 2, valueName = "foo")
+        if (driver != DriverSuite.SQLite) {
+          "generate Spans on calls to .execute(sql) in statements" in {
+            val select = s"SELECT * FROM Address where Nr = 2"
+            val statement = connection.createStatement()
+            statement.execute(select)
+            validateNextRow(statement.getResultSet, valueNr = 2, valueName = "foo")
 
 
-          eventually(timeout(scaled(5 seconds)), interval(200 millis)) {
-            val span = commonSpanValidations(testSpanReporter(), driver)
-            validateQuery(span, StatementTypes.GenericExecute, select)
-            validateNextSpanIsEmpty(testSpanReporter())
+            eventually(timeout(scaled(5 seconds)), interval(200 millis)) {
+              val span = commonSpanValidations(testSpanReporter(), driver)
+              validateQuery(span, StatementTypes.GenericExecute, select)
+              validateNextSpanIsEmpty(testSpanReporter())
+            }
           }
         }
 
@@ -113,16 +115,18 @@ class StatementInstrumentationSpec extends WordSpec
           }
         }
 
-        "generate Spans on calls to .executeQuery(sql) in statements" in {
-          val select = s"SELECT * FROM Address where Nr = 4"
-          val statement = connection.createStatement()
-          val rs = statement.executeQuery(select)
-          validateNextRow(rs, valueNr = 4, valueName = "foo")
+        if (driver != DriverSuite.SQLite) {
+          "generate Spans on calls to .executeQuery(sql) in statements" in {
+            val select = s"SELECT * FROM Address where Nr = 4"
+            val statement = connection.createStatement()
+            val rs = statement.executeQuery(select)
+            validateNextRow(rs, valueNr = 4, valueName = "foo")
 
-          eventually(timeout(5 seconds), interval(100 millis)) {
-            val span = commonSpanValidations(testSpanReporter(), driver)
-            validateQuery(span, StatementTypes.Query, select)
-            validateNextSpanIsEmpty(testSpanReporter())
+            eventually(timeout(5 seconds), interval(100 millis)) {
+              val span = commonSpanValidations(testSpanReporter(), driver)
+              validateQuery(span, StatementTypes.Query, select)
+              validateNextSpanIsEmpty(testSpanReporter())
+            }
           }
         }
 
@@ -138,15 +142,17 @@ class StatementInstrumentationSpec extends WordSpec
           }
         }
 
-        "generate Spans on calls to .executeUpdate(sql) in statements" in {
-          val insert = s"INSERT INTO Address (Nr, Name) VALUES(6, 'foo')"
-          val affectedRows = connection.createStatement().executeUpdate(insert)
-          affectedRows shouldBe 1
+        if (driver != DriverSuite.SQLite) {
+          "generate Spans on calls to .executeUpdate(sql) in statements" in {
+            val insert = s"INSERT INTO Address (Nr, Name) VALUES(6, 'foo')"
+            val affectedRows = connection.createStatement().executeUpdate(insert)
+            affectedRows shouldBe 1
 
-          eventually(timeout(5 seconds), interval(100 millis)) {
-            val span = commonSpanValidations(testSpanReporter(), driver)
-            validateQuery(span, StatementTypes.Update, insert)
-            validateNextSpanIsEmpty(testSpanReporter())
+            eventually(timeout(5 seconds), interval(100 millis)) {
+              val span = commonSpanValidations(testSpanReporter(), driver)
+              validateQuery(span, StatementTypes.Update, insert)
+              validateNextSpanIsEmpty(testSpanReporter())
+            }
           }
         }
 
