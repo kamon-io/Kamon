@@ -112,13 +112,13 @@ object HostMetrics {
 
   val StorageDeviceRead = Kamon.counter(
     name = "host.storage.device.data.read",
-    description = "Counts the amount of byes that have been read from a storage device",
+    description = "Counts the amount of bytes that have been read from a storage device",
     unit = MeasurementUnit.information.bytes
   )
 
   val StorageDeviceWrite = Kamon.counter(
     name = "host.storage.device.data.write",
-    description = "Counts the amount of byes that have been written to a storage device",
+    description = "Counts the amount of bytes that have been written to a storage device",
     unit = MeasurementUnit.information.bytes
   )
 
