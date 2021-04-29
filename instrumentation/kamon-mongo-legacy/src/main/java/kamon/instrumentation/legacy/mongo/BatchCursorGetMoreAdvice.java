@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package kamon.instrumentation.mongo;
+package kamon.instrumentation.legacy.mongo;
 
 import com.mongodb.MongoNamespace;
 import kamon.Kamon;

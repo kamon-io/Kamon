@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package kamon.instrumentation
+package kamon.instrumentation.legacy
 package mongo
 
 import com.mongodb.MongoNamespace
 import kamon.Kamon
 import kamon.instrumentation.context.HasContext
-import kamon.instrumentation.mongo.MongoClientInstrumentation.HasOperationName
+import kamon.instrumentation.legacy.mongo.MongoClientInstrumentation.HasOperationName
 import kamon.trace.{Span, SpanBuilder}
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.asm.Advice
@@ -33,7 +33,7 @@ class MongoClientInstrumentation extends InstrumentationBuilder {
     * we are explicitly adding the operation name to the operation instance so that it can be used when naming
     * the Spans.
     */
-  val OperationsAdviceFQCN = "kamon.instrumentation.mongo.CopyOperationNameIntoMixedBulkWriteOperation"
+  val OperationsAdviceFQCN = "kamon.instrumentation.legacy.mongo.CopyOperationNameIntoMixedBulkWriteOperation"
 
   onType("com.mongodb.internal.operation.Operations")
     .when(classIsPresent("com.mongodb.internal.operation.Operations"))
