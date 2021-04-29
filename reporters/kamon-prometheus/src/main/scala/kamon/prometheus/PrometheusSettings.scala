@@ -31,13 +31,16 @@ object PrometheusSettings {
     informationBuckets: Seq[java.lang.Double],
     customBuckets: Map[String, Seq[java.lang.Double]],
     includeEnvironmentTags: Boolean,
-    summarySettings: SummarySettings
+    summarySettings: SummarySettings,
+    gaugeSettings: GaugeSettings
   )
 
   case class SummarySettings(
     quantiles: Seq[java.lang.Double],
     metricMatchers: Seq[Glob]
   )
+
+  case class GaugeSettings(metricMatchers: Seq[Glob])
 
   def readSettings(prometheusConfig: Config): Generic = {
     Generic(
@@ -49,6 +52,9 @@ object PrometheusSettings {
       summarySettings = SummarySettings(
         quantiles = prometheusConfig.getDoubleList("summaries.quantiles").asScala.toSeq,
         metricMatchers = prometheusConfig.getStringList("summaries.metrics").asScala.map(Glob).toSeq
+      ),
+      gaugeSettings = GaugeSettings(
+        metricMatchers = prometheusConfig.getStringList("gauges.metrics").asScala.map(Glob).toSeq
       )
     )
   }

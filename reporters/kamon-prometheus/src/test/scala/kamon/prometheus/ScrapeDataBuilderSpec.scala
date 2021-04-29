@@ -3,7 +3,7 @@ package kamon.prometheus
 import com.typesafe.config.ConfigFactory
 import kamon.metric.MeasurementUnit.{information, none, time}
 import kamon.metric.{MeasurementUnit, MetricSnapshot}
-import kamon.prometheus.PrometheusSettings.SummarySettings
+import kamon.prometheus.PrometheusSettings.{GaugeSettings, SummarySettings}
 import kamon.tag.TagSet
 import kamon.testkit.MetricSnapshotBuilder
 import kamon.util.Filter.Glob
@@ -320,6 +320,43 @@ class ScrapeDataBuilderSpec extends WordSpec with Matchers {
 
     }
 
+    "append gauges only for matching metrics" in {
+      val histogramWithHundredEntries = constantDistribution("firstMetric", none, 1, 100)
+      val histogramWithHundredEntriesTwo = constantDistribution("secondMetric", none, 1, 100)
+      val result = builder(withGauges = Seq("first*"))
+        .appendDistributionMetricsAsGauges(Seq(histogramWithHundredEntries, histogramWithHundredEntriesTwo))
+        .build()
+      println(result)
+      result should include {
+        """|# TYPE firstMetric_min gauge
+           |firstMetric_min 1.0
+           |""".stripMargin
+      }
+      result should include {
+        """|# TYPE firstMetric_max gauge
+           |firstMetric_max 100.0
+           |""".stripMargin
+      }
+      result should include {
+        """|# TYPE firstMetric_avg gauge
+           |firstMetric_avg 50.0
+           |""".stripMargin
+      }
+
+      result should not include {
+        """|# TYPE secondMetric_min gauge
+           |""".stripMargin
+      }
+      result should not include {
+        """|# TYPE secondMetric_max gauge
+           |""".stripMargin
+      }
+      result should not include {
+        """|# TYPE secondMetric_avg gauge
+           |""".stripMargin
+      }
+    }
+
     "include global custom tags from the Kamon.environment.tags" in {
       val counterOne = MetricSnapshotBuilder.counter("counter-one", "", TagSet.of("tag.with.dots", "value"), time.seconds, 10)
       val gaugeOne = MetricSnapshotBuilder.gauge("gauge-one", "", TagSet.Empty, time.seconds, 20)
@@ -358,7 +395,8 @@ class ScrapeDataBuilderSpec extends WordSpec with Matchers {
   private def builder(buckets: Seq[java.lang.Double] = Seq(5D, 7D, 8D, 9D, 10D, 11D, 12D),
                       customBuckets: Map[String, Seq[java.lang.Double]] = Map("histogram.custom-buckets" -> Seq(1D, 3D)),
                       environmentTags: TagSet = TagSet.Empty,
-                      withSummary: Seq[String] = Seq.empty) = {
+                      withSummary: Seq[String] = Seq.empty,
+                      withGauges: Seq[String] = Seq.empty) = {
     new ScrapeDataBuilder(
       PrometheusSettings.Generic(
         buckets,
@@ -366,7 +404,8 @@ class ScrapeDataBuilderSpec extends WordSpec with Matchers {
         buckets,
         customBuckets,
         false,
-        SummarySettings(Seq(0.5, 0.75, 0.95, 0.99), withSummary.map(Glob))),
+        SummarySettings(Seq(0.5, 0.75, 0.95, 0.99), withSummary.map(Glob)),
+        GaugeSettings(withGauges.map(Glob))),
       environmentTags
     )
   }

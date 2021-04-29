@@ -19,8 +19,7 @@ package kamon.prometheus
 import java.lang.StringBuilder
 import java.text.{DecimalFormat, DecimalFormatSymbols}
 import java.util.Locale
-
-import kamon.metric.{Distribution, MeasurementUnit, MetricSnapshot}
+import kamon.metric.{Distribution, Instrument, MeasurementUnit, Metric, MetricSnapshot}
 import kamon.metric.MeasurementUnit.{information, time}
 import kamon.metric.MeasurementUnit.Dimension._
 import kamon.tag.TagSet
@@ -47,6 +46,39 @@ class ScrapeDataBuilder(prometheusConfig: PrometheusSettings.Generic, environmen
 
   def appendHistograms(histograms: Seq[MetricSnapshot.Distributions]): ScrapeDataBuilder = {
     histograms.foreach(appendDistributionMetric)
+    this
+  }
+
+  def appendDistributionMetricsAsGauges(distributions: Seq[MetricSnapshot.Distributions]): ScrapeDataBuilder = {
+    def gaugeFilter(metric:MetricSnapshot.Distributions):Boolean = prometheusConfig.gaugeSettings.metricMatchers.exists(_.accept(metric.name))
+    def avg(snap:Instrument.Snapshot[Distribution]):Double = if(snap.value.count == 0) 0 else snap.value.sum/snap.value.count
+
+    distributions
+      .filter(gaugeFilter)
+      .map{ metric =>
+        val settings = Metric.Settings.ForValueInstrument(metric.settings.unit, metric.settings.autoUpdateInterval)
+        Seq(
+          MetricSnapshot.ofValues(
+            name = metric.name+".min",
+            description = metric.description,
+            settings = settings,
+            instruments = metric.instruments.map(snap => Instrument.Snapshot[Double](snap.tags, snap.value.min.toDouble))
+          ),
+          MetricSnapshot.ofValues(
+            name = metric.name+".max",
+            description = metric.description,
+            settings = settings,
+            instruments = metric.instruments.map(snap => Instrument.Snapshot[Double](snap.tags, snap.value.max.toDouble))
+          ),
+          MetricSnapshot.ofValues(
+            name = metric.name+".avg",
+            description = metric.description,
+            settings = settings,
+            instruments = metric.instruments.map(snap => Instrument.Snapshot[Double](snap.tags, avg(snap)))
+          )
+        )
+    }.flatten
+     .foreach(appendGaugeMetric)
     this
   }
 
