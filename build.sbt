@@ -289,8 +289,6 @@ lazy val `kamon-kafka` = (project in file("instrumentation/kamon-kafka"))
   ).dependsOn(`kamon-core`, `kamon-executors`, `kamon-testkit` % "test")
 
 
-// should this perhaps go into /instrumentation/legacy
-// or just /legacy?
 lazy val `kamon-mongo-legacy` = (project in file("instrumentation/kamon-mongo-legacy"))
   .disablePlugins(AssemblyPlugin)
   .enablePlugins(JavaAgent)
