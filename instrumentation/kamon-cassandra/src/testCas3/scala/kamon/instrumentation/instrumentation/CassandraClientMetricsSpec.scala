@@ -127,5 +127,8 @@ class CassandraClientMetricsSpec
     session.execute("insert into users (id, name) values (uuid(), 'kamon')")
   }
 
-  override protected def afterAll(): Unit = session.close()
+  override protected def afterAll(): Unit = {
+    session.close()
+    cassandra.stop()
+  }
 }
