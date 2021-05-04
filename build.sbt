@@ -257,6 +257,7 @@ lazy val `kamon-jdbc` = (project in file("instrumentation/kamon-jdbc"))
   .settings(instrumentationSettings)
   .settings(
     libraryDependencies ++= Seq(
+      jsqlparser,
       kanelaAgent % "provided",
       "com.zaxxer"                % "HikariCP"                  % "2.6.2" % "provided",
       "org.mariadb.jdbc"          % "mariadb-java-client"       % "2.2.6" % "provided",

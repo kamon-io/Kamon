@@ -37,6 +37,7 @@ object BaseProject extends AutoPlugin {
     val okHttp            = "com.squareup.okhttp3"  %  "okhttp"          % "3.14.7"
     val okHttpMockServer  = "com.squareup.okhttp3"  %  "mockwebserver"   % "3.10.0"
     val oshiCore          = "com.github.oshi"       %  "oshi-core"       % "5.7.0"
+    val jsqlparser        = "com.github.jsqlparser" % "jsqlparser"       % "4.0"
 
 
     val kanelaAgentVersion = settingKey[String]("Kanela Agent version")
