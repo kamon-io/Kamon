@@ -121,6 +121,7 @@ lazy val instrumentation = (project in file("instrumentation"))
     `kamon-jdbc`,
     `kamon-kafka`,
     `kamon-mongo`,
+    `kamon-mongo-legacy`,
     `kamon-cassandra`,
     `kamon-elasticsearch`,
     `kamon-spring`,
@@ -288,9 +289,7 @@ lazy val `kamon-kafka` = (project in file("instrumentation/kamon-kafka"))
   ).dependsOn(`kamon-core`, `kamon-executors`, `kamon-testkit` % "test")
 
 
-
-
-lazy val `kamon-mongo` = (project in file("instrumentation/kamon-mongo"))
+lazy val `kamon-mongo-legacy` = (project in file("instrumentation/kamon-mongo-legacy"))
   .disablePlugins(AssemblyPlugin)
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
@@ -300,6 +299,24 @@ lazy val `kamon-mongo` = (project in file("instrumentation/kamon-mongo"))
       "org.mongodb"         %   "mongodb-driver-sync"             % "3.11.0" % "provided",
       "org.mongodb.scala"   %%  "mongo-scala-driver"              % "2.7.0" % "provided",
       "org.mongodb"         %   "mongodb-driver-reactivestreams"  % "1.12.0" % "provided",
+
+      scalatest % "test",
+      logbackClassic % "test",
+      "de.flapdoodle.embed" %   "de.flapdoodle.embed.mongo"       % "2.2.0" % "test"
+    )
+  ).dependsOn(`kamon-core`, `kamon-instrumentation-common`, `kamon-testkit` % "test")
+
+
+lazy val `kamon-mongo` = (project in file("instrumentation/kamon-mongo"))
+  .disablePlugins(AssemblyPlugin)
+  .enablePlugins(JavaAgent)
+  .settings(instrumentationSettings)
+  .settings(
+    libraryDependencies ++= Seq(
+      kanelaAgent % "provided",
+      "org.mongodb"         %   "mongodb-driver-sync"             % "4.2.3" % "provided",
+      "org.mongodb.scala"   %%  "mongo-scala-driver"              % "4.2.3" % "provided",
+      "org.mongodb"         %   "mongodb-driver-reactivestreams"  % "4.2.3" % "provided",
 
       scalatest % "test",
       logbackClassic % "test",
@@ -706,6 +723,7 @@ val `kamon-bundle` = (project in file("bundle/kamon-bundle"))
     `kamon-jdbc` % "shaded",
     `kamon-kafka` % "shaded",
     `kamon-mongo` % "shaded",
+    `kamon-mongo-legacy` % "shaded",
     `kamon-cassandra` % "shaded",
     `kamon-elasticsearch` % "shaded",
     `kamon-spring` % "shaded",

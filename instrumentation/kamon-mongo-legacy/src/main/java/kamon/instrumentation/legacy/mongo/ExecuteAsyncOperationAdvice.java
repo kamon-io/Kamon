@@ -14,18 +14,20 @@
  * limitations under the License.
  */
 
-package kamon.instrumentation.mongo;
+package kamon.instrumentation.legacy.mongo;
 
 import com.mongodb.MongoNamespace;
-import com.mongodb.internal.async.AsyncBatchCursor;
-import com.mongodb.internal.async.SingleResultCallback;
+import com.mongodb.async.AsyncBatchCursor;
+import com.mongodb.async.SingleResultCallback;
 import com.mongodb.bulk.BulkWriteResult;
+import com.mongodb.operation.BatchCursor;
 import kamon.Kamon;
 import kamon.context.Context;
+import kamon.context.Storage;
 import kamon.instrumentation.context.HasContext;
 import kamon.trace.Span;
 import kanela.agent.libs.net.bytebuddy.asm.Advice;
-import kamon.instrumentation.mongo.MongoClientInstrumentation.HasOperationName;
+import kamon.instrumentation.legacy.mongo.MongoClientInstrumentation.HasOperationName;
 
 public class ExecuteAsyncOperationAdvice {
 

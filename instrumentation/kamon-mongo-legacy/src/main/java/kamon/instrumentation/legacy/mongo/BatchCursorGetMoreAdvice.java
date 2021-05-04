@@ -14,45 +14,38 @@
  * limitations under the License.
  */
 
-package kamon.instrumentation.mongo;
+package kamon.instrumentation.legacy.mongo;
 
 import com.mongodb.MongoNamespace;
-import com.mongodb.internal.async.SingleResultCallback;
+import kamon.Kamon;
+import kamon.context.Storage;
 import kamon.instrumentation.context.HasContext;
 import kamon.trace.Span;
 import kanela.agent.libs.net.bytebuddy.asm.Advice;
 
-import java.util.List;
-
-public class AsyncBatchCursorGetMoreAdvice {
+public class BatchCursorGetMoreAdvice {
 
   @Advice.OnMethodEnter
-  public static <T> void enter(
+  public static Storage.Scope enter(
       @Advice.This Object batchCursor,
-      @Advice.FieldValue("namespace") MongoNamespace namespace,
-      @Advice.Argument(value = 2, readOnly = false) SingleResultCallback<T> callback) {
+      @Advice.FieldValue("namespace") MongoNamespace namespace) {
 
     final Span parentSpan = ((HasContext) batchCursor).context().get(Span.Key());
     final Span getMoreSpan = MongoClientInstrumentation.getMoreSpanBuilder(parentSpan, namespace).start();
-    callback = spanCompletingCallback(callback, getMoreSpan);
+
+    return Kamon.storeContext(Kamon.currentContext().withEntry(Span.Key(), getMoreSpan));
   }
 
-  public static <T> SingleResultCallback<T> spanCompletingCallback(SingleResultCallback<T> originalCallback, Span span) {
-    return new SingleResultCallback<T>() {
+  @Advice.OnMethodExit(onThrowable = Throwable.class)
+  public static void exit(@Advice.Enter Storage.Scope scope, @Advice.Thrown Throwable t) {
+    final Span span = scope.context().get(Span.Key());
 
-      @Override
-      public void onResult(T result, Throwable t) {
-        try {
-          if(t == null) {
-            span.finish();
-          } else {
-            span.fail(t).finish();
-          }
+    if(t == null) {
+      span.finish();
+    } else {
+      span.fail(t).finish();
+    }
 
-        } finally {
-          originalCallback.onResult(result, t);
-        }
-      }
-    };
+    scope.close();
   }
 }

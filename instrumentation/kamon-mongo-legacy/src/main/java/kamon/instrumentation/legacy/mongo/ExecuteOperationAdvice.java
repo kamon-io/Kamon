@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package kamon.instrumentation.mongo;
+package kamon.instrumentation.legacy.mongo;
 
 import com.mongodb.MongoNamespace;
-import com.mongodb.internal.async.SingleResultCallback;
+import com.mongodb.async.SingleResultCallback;
 import com.mongodb.bulk.BulkWriteResult;
-import com.mongodb.internal.operation.BatchCursor;
+import com.mongodb.operation.BatchCursor;
 import kamon.Kamon;
 import kamon.context.Context;
 import kamon.context.Storage;

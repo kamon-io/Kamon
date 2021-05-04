@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package kamon.instrumentation.mongo;
+package kamon.instrumentation.legacy.mongo;
 
 import com.mongodb.MongoNamespace;
-import com.mongodb.internal.async.SingleResultCallback;
+import com.mongodb.async.SingleResultCallback;
 import kamon.instrumentation.context.HasContext;
 import kamon.trace.Span;
 import kanela.agent.libs.net.bytebuddy.asm.Advice;
