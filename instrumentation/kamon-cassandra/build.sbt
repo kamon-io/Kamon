@@ -8,7 +8,7 @@ libraryDependencies ++= Seq(
   kanelaAgent % "provided",
   scalatest % "test",
   logbackClassic % "test",
-  "org.testcontainers" % "cassandra" % "1.15.2" % "test"
+  "org.testcontainers" % "cassandra" % "1.15.3" % "test"
 )
 
 libraryDependencies ++= Seq(

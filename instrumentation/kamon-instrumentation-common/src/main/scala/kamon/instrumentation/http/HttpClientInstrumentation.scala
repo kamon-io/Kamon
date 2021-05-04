@@ -115,11 +115,14 @@ object HttpClientInstrumentation {
       }
 
     override def createHandler[T](requestBuilder: HttpMessage.RequestBuilder[T], context: Context): RequestHandler[T] = {
+      val shouldCreateSpan = !Kamon.currentSpan().isEmpty || settings.startTrace
       val requestSpan: Span = {
-        if (settings.enableContextPropagation) {
-          val contextToPropagate = if (settings.enableTracing)
+        if (settings.enableContextPropagation && shouldCreateSpan) {
+          val contextToPropagate = if (settings.enableTracing) {
             context.withEntry(Span.Key, createClientSpan(requestBuilder, context))
-          else context.withoutEntry(Span.Key)
+          } else {
+            context.withoutEntry(Span.Key)
+          }
 
           _propagation.write(contextToPropagate, requestBuilder)
           contextToPropagate.get(Span.Key)
@@ -179,7 +182,8 @@ object HttpClientInstrumentation {
     contextTags: Map[String, TagMode],
     defaultOperationName: String,
     operationMappings: Map[Filter.Glob, String],
-    operationNameGenerator: HttpOperationNameGenerator
+    operationNameGenerator: HttpOperationNameGenerator,
+    startTrace: Boolean
   ) {
     val operationNameSettings = OperationNameSettings(defaultOperationName, operationMappings, operationNameGenerator)
   }
@@ -218,6 +222,8 @@ object HttpClientInstrumentation {
         case (pattern, operationName) => (Filter.Glob(pattern), operationName)
       }
 
+      val startTrace = config.getBoolean("tracing.start-trace")
+
       Settings(
         enablePropagation,
         propagationChannel,
@@ -229,7 +235,8 @@ object HttpClientInstrumentation {
         contextTags,
         defaultOperationName,
         operationMappings,
-        operationNameGenerator.get
+        operationNameGenerator.get,
+        startTrace
       )
     }
   }

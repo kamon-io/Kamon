@@ -143,5 +143,6 @@ class CassandraClientTracingInstrumentationSpec
 
   override protected def afterAll(): Unit = {
     session.close()
+    cassandra.stop()
   }
 }
