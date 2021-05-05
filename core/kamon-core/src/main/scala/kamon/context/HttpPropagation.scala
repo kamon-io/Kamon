@@ -20,8 +20,10 @@ package context
 import com.typesafe.config.Config
 import kamon.tag.{Tag, TagSet}
 import kamon.trace.{Span, SpanPropagation}
+import kamon.util.Filter.Glob
 import org.slf4j.LoggerFactory
 
+import scala.collection.JavaConverters._
 import scala.reflect.ClassTag
 import scala.util.control.NonFatal
 
@@ -108,8 +110,11 @@ object HttpPropagation {
           }
       }
 
+      //apply filter on tags on the exclusion list
+      val filteredTags = tags.result().filterNot(kv => tagFilter(kv._1))
+
       // Incoming Entries
-      settings.incomingEntries.foldLeft(Context.of(TagSet.from(tags.result()))) {
+      settings.incomingEntries.foldLeft(Context.of(TagSet.from(filteredTags))) {
         case (context, (entryName, entryDecoder)) =>
           var result = context
           try {
@@ -136,7 +141,7 @@ object HttpPropagation {
       }
 
       // Write tags with specific mappings or append them to the context tags header.
-      context.tags.iterator().foreach { tag =>
+      context.tags.iterator().filterNot(tagFilter).foreach { tag =>
         val tagKey = tag.key
 
         settings.tagsMappings.get(tagKey) match {
@@ -165,9 +170,14 @@ object HttpPropagation {
       }
     }
 
-
     private val _longTypePrefix = "l:"
     private val _booleanTypePrefix = "b:"
+
+    /**
+      * Filter for checking the tag towards the configured filter from ''kamon.propagation.http.default.tags.filter''
+      */
+    private def tagFilter(tag:Tag):Boolean = tagFilter(tag.key)
+    private def tagFilter(tagName:String):Boolean = settings.tagsFilter.exists(_.accept(tagName))
 
     /**
       * Tries to infer and parse a value into one of the supported tag types: String, Long or Boolean by looking for the
@@ -214,6 +224,7 @@ object HttpPropagation {
   case class Settings(
     tagsHeaderName: String,
     includeUpstreamName: Boolean,
+    tagsFilter: Seq[Glob],
     tagsMappings: Map[String, String],
     incomingEntries: Map[String, Propagation.EntryReader[HeaderReader]],
     outgoingEntries: Map[String, Propagation.EntryWriter[HeaderWriter]]
@@ -257,11 +268,12 @@ object HttpPropagation {
 
       val tagsHeaderName = config.getString("tags.header-name")
       val tagsIncludeUpstreamName = config.getBoolean("tags.include-upstream-name")
+      val tagsFilter = config.getStringList("tags.filter").asScala.map(Glob).toSeq
       val tagsMappings = config.getConfig("tags.mappings").pairs
       val incomingEntries = buildInstances[Propagation.EntryReader[HeaderReader]](config.getConfig("entries.incoming").pairs)
       val outgoingEntries = buildInstances[Propagation.EntryWriter[HeaderWriter]](config.getConfig("entries.outgoing").pairs)
 
-      Settings(tagsHeaderName, tagsIncludeUpstreamName, tagsMappings, incomingEntries, outgoingEntries)
+      Settings(tagsHeaderName, tagsIncludeUpstreamName, tagsFilter, tagsMappings, incomingEntries, outgoingEntries)
     }
   }
 

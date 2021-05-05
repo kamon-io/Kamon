@@ -53,6 +53,24 @@ class HttpPropagationSpec extends WordSpec with Matchers with OptionValues {
         context.getTag(option("correlation")).value shouldBe "1234"
         context.getTag(option("unknown")) shouldBe empty
       }
+
+      "not read filtered headers into context" in {
+        val headers = Map(
+          "x-content-tags" -> "hello=world;correlation=1234;privateMappedTag=value;myLocalTag=value",
+          "string-header" -> "hey",
+          "integer-header" -> "123"
+        )
+
+        val context = httpPropagation.read(headerReaderFromMap(headers))
+        context.get(HttpPropagationSpec.StringKey) shouldBe "hey"
+        context.get(HttpPropagationSpec.IntegerKey) shouldBe 123
+        context.get(HttpPropagationSpec.OptionalKey) shouldBe empty
+        context.getTag(plain("hello")) shouldBe "world"
+        context.getTag(option("correlation")).value shouldBe "1234"
+        context.getTag(option("unknown")) shouldBe empty
+        context.getTag(option("myLocalTag")) shouldBe empty //should be removed by the filter
+        context.getTag(option("privateMappedTag")) shouldBe empty //should be removed by the filter
+      }
     }
 
 
@@ -92,6 +110,24 @@ class HttpPropagationSpec extends WordSpec with Matchers with OptionValues {
           "string-header" -> "out-we-go"
           )
       }
+
+      "not write filtered context tags" in {
+        val headers = mutable.Map.empty[String, String]
+        val context = Context.of(TagSet.from(Map(
+          "hello" -> "world",
+          "mappedTag" -> "value",
+          "privateHello" -> "world", //should be filtered
+          "privateMappedTag" -> "value", //should be filtered
+          "myLocalTag" -> "value" //should be filtered
+        )))
+
+        httpPropagation.write(context, headerWriterFromMap(headers))
+        headers should contain only(
+          "x-content-tags" -> "hello=world;upstream.name=kamon-application;",
+          "x-mapped-tag" -> "value"
+        )
+      }
+
     }
   }
 
@@ -102,7 +138,7 @@ class HttpPropagationSpec extends WordSpec with Matchers with OptionValues {
         |tags {
         |  header-name = "x-content-tags"
         |  include-upstream-name = yes
-        |
+        |  filter = ["private*", "myLocalTag"]
         |  mappings {
         |    mappedTag = "x-mapped-tag"
         |  }
