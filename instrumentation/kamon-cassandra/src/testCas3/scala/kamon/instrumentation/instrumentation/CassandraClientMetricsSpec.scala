@@ -52,7 +52,7 @@ class CassandraClientMetricsSpec
       val node        = Node("127.0.0.1", "datacenter1", "rack1")
       val poolMetrics = new NodeConnectionPoolInstruments(node)
 
-      eventually(timeout(3 seconds)) {
+      eventually(timeout(10 seconds)) {
         poolMetrics.borrow.distribution(false).max shouldBe >=(1L)
         poolMetrics.openConnections.distribution(false).max should be > 0L
         poolMetrics.inFlight.distribution(false).max should be > 0L
