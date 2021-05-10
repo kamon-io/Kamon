@@ -62,6 +62,7 @@ class PrometheusReporter(configPath: String = DefaultConfigPath, initialConfig: 
 
     scrapeDataBuilder.appendCounters(currentData.counters)
     scrapeDataBuilder.appendGauges(currentData.gauges)
+    scrapeDataBuilder.appendDistributionMetricsAsGauges(snapshot.rangeSamplers ++ snapshot.histograms ++ snapshot.timers)
     scrapeDataBuilder.appendHistograms(currentData.histograms)
     scrapeDataBuilder.appendHistograms(currentData.timers)
     scrapeDataBuilder.appendHistograms(currentData.rangeSamplers)
