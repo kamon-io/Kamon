@@ -426,7 +426,6 @@ def akkaHttpVersion(scalaVersion: String) = scalaVersion match {
   case _      => "10.2.3"
 }
 
-
 lazy val `kamon-akka-http` = (project in file("instrumentation/kamon-akka-http"))
   .enablePlugins(JavaAgent)
   .disablePlugins(AssemblyPlugin)
