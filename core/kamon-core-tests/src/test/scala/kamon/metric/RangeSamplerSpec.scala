@@ -97,7 +97,7 @@ class RangeSamplerSpec extends WordSpec with Matchers with InstrumentInspection.
       snapshot.max should be(5)
     }
 
-    "can be reset" in {
+    "reset values to 0 after calling resetDistribution" in {
       val rangeSampler = Kamon.rangeSampler(
         "auto-update2",
         MeasurementUnit.none,
