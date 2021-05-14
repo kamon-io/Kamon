@@ -39,11 +39,6 @@ class AkkaHttpClientInstrumentation extends InstrumentationBuilder with VersionF
       .advise(method("singleRequestImpl"), classOf[HttpExtSingleRequestAdvice])
   }
 
-  onAkkaHttp("10.2") {
-    onType("akka.http.scaladsl.HttpExt")
-      .advise(method("singleRequest"), classOf[HttpExtSingleRequestAdvice])
-  }
-
   onType("akka.http.impl.engine.client.PoolMaster")
     .advise(method("dispatchRequest"), classOf[PoolMasterDispatchRequestAdvice])
 }
