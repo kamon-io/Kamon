@@ -495,6 +495,21 @@ lazy val `kamon-tapir` = (project in file("instrumentation/kamon-tapir"))
     )
   ).dependsOn(`kamon-core`, `kamon-akka-http`, `kamon-testkit` % "test")
 
+lazy val `kamon-redis` = (project in file("instrumentation/kamon-redis"))
+  .disablePlugins(AssemblyPlugin)
+  .enablePlugins(JavaAgent)
+  .settings(instrumentationSettings)
+  .settings(
+    libraryDependencies ++= Seq(
+      kanelaAgent % "provided",
+      "redis.clients"      % "jedis"                    % "3.6.0" % "provided",
+
+      scalatest % "test",
+      logbackClassic % "test",
+      "org.testcontainers" % "testcontainers" % "1.15.3" % "test",
+    )
+  ).dependsOn(`kamon-core`, `kamon-testkit` % "test")
+
 /**
   * Reporters
   */
