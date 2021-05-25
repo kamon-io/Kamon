@@ -132,7 +132,8 @@ lazy val instrumentation = (project in file("instrumentation"))
     `kamon-akka-http`,
     `kamon-play`,
     `kamon-okhttp`,
-    `kamon-tapir`
+    `kamon-tapir`,
+    `kamon-redis`,
   )
 
 
@@ -747,5 +748,6 @@ val `kamon-bundle` = (project in file("bundle/kamon-bundle"))
     `kamon-akka` % "shaded",
     `kamon-akka-http` % "shaded",
     `kamon-play` % "shaded",
-    `kamon-okhttp` % "shaded"
+    `kamon-redis` % "shaded",
+    `kamon-okhttp` % "shaded",
   )

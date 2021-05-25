@@ -11,6 +11,7 @@ import redis.clients.jedis.Jedis
 
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 import scala.concurrent.duration.DurationInt
+import scala.util.control.NonFatal
 
 
 class JedisInstrumentationSpec extends WordSpec
@@ -47,10 +48,29 @@ class JedisInstrumentationSpec extends WordSpec
 
       jedis.get("foo")
       eventually(timeout(10.seconds)) {
-        val span = testSpanReporter().nextSpan().get
+        val spans = testSpanReporter().spans()
+        val span = spans.head
         span.operationName shouldBe "redis.command.GET"
         span.kind shouldBe Kind.Client
+        spans.size shouldBe 1
       }
     }
+
+    "fail the span when encountering an error" in {
+      val jedis = new Jedis(container.getHost, container.getFirstMappedPort)
+      try {
+        jedis.zscan("fake", "fake")
+      } catch {
+        case NonFatal(e) => println("ZScan failed successfully")
+      }
+
+      eventually(timeout(10.seconds)) {
+        val span = testSpanReporter().nextSpan().get
+        span.operationName shouldBe "redis.command.ZSCAN"
+        span.kind shouldBe Kind.Client
+        span.hasError shouldBe true
+      }
+    }
+
   }
 }
