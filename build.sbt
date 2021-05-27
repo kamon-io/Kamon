@@ -132,7 +132,8 @@ lazy val instrumentation = (project in file("instrumentation"))
     `kamon-akka-http`,
     `kamon-play`,
     `kamon-okhttp`,
-    `kamon-tapir`
+    `kamon-tapir`,
+    `kamon-redis`,
   )
 
 
@@ -495,6 +496,21 @@ lazy val `kamon-tapir` = (project in file("instrumentation/kamon-tapir"))
     )
   ).dependsOn(`kamon-core`, `kamon-akka-http`, `kamon-testkit` % "test")
 
+lazy val `kamon-redis` = (project in file("instrumentation/kamon-redis"))
+  .disablePlugins(AssemblyPlugin)
+  .enablePlugins(JavaAgent)
+  .settings(instrumentationSettings)
+  .settings(
+    libraryDependencies ++= Seq(
+      kanelaAgent % "provided",
+      "redis.clients"      % "jedis"                    % "3.6.0" % "provided",
+
+      scalatest % "test",
+      logbackClassic % "test",
+      "org.testcontainers" % "testcontainers" % "1.15.3" % "test",
+    )
+  ).dependsOn(`kamon-core`, `kamon-testkit` % "test")
+
 /**
   * Reporters
   */
@@ -732,5 +748,6 @@ val `kamon-bundle` = (project in file("bundle/kamon-bundle"))
     `kamon-akka` % "shaded",
     `kamon-akka-http` % "shaded",
     `kamon-play` % "shaded",
-    `kamon-okhttp` % "shaded"
+    `kamon-redis` % "shaded",
+    `kamon-okhttp` % "shaded",
   )
