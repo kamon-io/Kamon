@@ -18,7 +18,6 @@ package kamon
 package trace
 
 import java.time.{Duration, Instant}
-
 import kamon.context.Context
 import kamon.tag.TagSet
 import kamon.trace.Span.Link
@@ -26,6 +25,7 @@ import kamon.trace.Trace.SamplingDecision
 import kamon.util.Clock
 import org.slf4j.LoggerFactory
 
+import java.util.concurrent.{ScheduledExecutorService, TimeUnit}
 import scala.compat.Platform.EOL
 
 /**
@@ -410,7 +410,7 @@ object Span {
       val kind: Kind, localParent: Option[Span], initialOperationName: String, spanTags: TagSet.Builder, metricTags: TagSet.Builder,
       createdAt: Instant, initialMarks: List[Mark], initialLinks: List[Link], initialTrackMetrics: Boolean, tagWithParentOperation: Boolean,
       includeErrorStacktrace: Boolean, isDelayed: Boolean, clock: Clock, preFinishHooks: Array[Tracer.PreFinishHook],
-      onFinish: Span.Finished => Unit, sampler: Sampler) extends Span.Delayed {
+      onFinish: Span.Finished => Unit, sampler: Sampler, scheduler: ScheduledExecutorService, reportingDelay: Duration) extends Span.Delayed {
 
     private val _metricTags = metricTags
     private val _spanTags = spanTags
@@ -440,25 +440,25 @@ object Span {
     }
 
     override def tag(key: String, value: String): Span = synchronized {
-      if(isSampled && _isOpen)
+      if((isSampled || !reportingDelay.isZero) && _isOpen)
         _spanTags.add(key, value)
       this
     }
 
     override def tag(key: String, value: Long): Span = synchronized {
-      if(isSampled && _isOpen)
+      if((isSampled || !reportingDelay.isZero) && _isOpen)
         _spanTags.add(key, value)
       this
     }
 
     override def tag(key: String, value: Boolean): Span = synchronized {
-      if(isSampled && _isOpen)
+      if((isSampled || !reportingDelay.isZero) && _isOpen)
         _spanTags.add(key, value)
       this
     }
 
     override def tag(tags: TagSet): Span = synchronized {
-      if(isSampled && _isOpen)
+      if((isSampled || !reportingDelay.isZero) && _isOpen)
         _spanTags.add(tags)
       this
     }
@@ -507,7 +507,7 @@ object Span {
       if(_isOpen) {
         _hasError = true
 
-        if(isSampled)
+        if((isSampled || !reportingDelay.isZero))
           _spanTags.add(TagKeys.ErrorMessage, message)
       }
       this
@@ -517,7 +517,7 @@ object Span {
       if(_isOpen) {
         _hasError = true
 
-        if(isSampled) {
+        if((isSampled || !reportingDelay.isZero)) {
           _spanTags.add(TagKeys.ErrorMessage, throwable.getMessage)
 
           if(includeErrorStacktrace)
@@ -531,7 +531,7 @@ object Span {
       if(_isOpen) {
         _hasError = true
 
-        if(isSampled) {
+        if((isSampled || !reportingDelay.isZero)) {
           _spanTags.add(TagKeys.ErrorMessage, message)
 
           if(includeErrorStacktrace)
@@ -617,7 +617,7 @@ object Span {
     private def toStackTraceString(throwable: Throwable): String =
       throwable.getStackTrace().mkString("", EOL, EOL)
 
-    private def toFinishedSpan(to: Instant, metricTags: TagSet): Span.Finished =
+    protected def toFinishedSpan(to: Instant, metricTags: TagSet): Span.Finished =
       Span.Finished(id, trace, parentId, _operationName, _hasError, isDelayed, createdAt, to, kind, position, _spanTags.build(),
         metricTags, _marks, _links)
 
@@ -643,9 +643,19 @@ object Span {
     }
 
     private def reportSpan(finishedAt: Instant, metricTags: TagSet): Unit = {
-      if(isSampled)
-        onFinish(toFinishedSpan(finishedAt, metricTags))
+      if(reportingDelay.isZero) {
+        if(isSampled)
+          onFinish(toFinishedSpan(finishedAt, metricTags))
+      }
+      else {
+        scheduler.schedule(
+          new DelayedReportingRunnable(finishedAt, metricTags),
+          reportingDelay.toMillis,
+          TimeUnit.MILLISECONDS
+        )
+      }
     }
+
 
     private def createMetricTags(): TagSet = {
       _metricTags.add(TagKeys.OperationName, _operationName)
@@ -661,6 +671,13 @@ object Span {
         }
 
       _metricTags.build()
+    }
+
+    private class DelayedReportingRunnable(finishedAt: Instant, metricTags: TagSet) extends Runnable {
+      override def run(): Unit = {
+        if (isSampled)
+          onFinish(toFinishedSpan(finishedAt, metricTags))
+      }
     }
   }
 
