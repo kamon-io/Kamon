@@ -18,19 +18,18 @@ object SendCommandAdvice {
     command match {
       case command: ProtocolCommand =>
         val spanName = s"redis.command.${command}"
-        Some(Kamon.clientSpanBuilder(spanName, "redis.client.jedis")
-          .start())
-      case _ => None
+        Kamon.clientSpanBuilder(spanName, "redis.client.jedis")
+          .start()
+      case _ => Span.Empty
     }
   }
 
   @Advice.OnMethodExit(onThrowable = classOf[Throwable])
-  def exit(@Advice.Enter span: Option[Span],
+  def exit(@Advice.Enter span: Span,
            @Advice.Thrown t: Throwable) = {
-
     if (t != null) {
-      span.map(_.fail(t))
+      span.fail(t)
     }
-    span.map(_.finish())
+    span.finish()
   }
 }
