@@ -503,7 +503,9 @@ lazy val `kamon-redis` = (project in file("instrumentation/kamon-redis"))
   .settings(
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
-      "redis.clients"      % "jedis"                    % "3.6.0" % "provided",
+//      "redis.clients"      % "jedis"                    % "3.6.0" % "compile",
+//      "redis.clients"      % "jedis"                    % "3.2.0" % "compile",
+      "redis.clients"      % "jedis"                    % "3.4.1" % "compile",
 
       scalatest % "test",
       logbackClassic % "test",

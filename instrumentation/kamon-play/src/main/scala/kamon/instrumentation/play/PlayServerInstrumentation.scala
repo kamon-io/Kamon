@@ -36,7 +36,7 @@ import kanela.agent.api.instrumentation.mixin.Initializer
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 import org.slf4j.LoggerFactory
 import play.api.mvc.RequestHeader
-import play.api.routing.{HandlerDef, Router}
+import play.api.routing.Router
 import play.core.server.NettyServer
 
 import scala.collection.JavaConverters.asScalaBufferConverter
@@ -49,7 +49,7 @@ class PlayServerInstrumentation extends InstrumentationBuilder {
       * When using the Akka HTTP server, we will use the exact same instrumentation that comes from the Akka HTTP module,
       * the only difference here is that we will change the component name.
       */
-  private val isAkkaHttpAround = ClassRefiner.builder().mustContains("play.core.server.AkkaHttpServerProvider").build()
+  private val isAkkaHttpAround = ClassRefiner.builder().mustContain("play.core.server.AkkaHttpServerProvider").build()
 
   onType("play.core.server.AkkaHttpServer")
       .when(isAkkaHttpAround)
@@ -60,7 +60,7 @@ class PlayServerInstrumentation extends InstrumentationBuilder {
       * When using the Netty HTTP server we are rolling our own instrumentation which simply requires us to create the
       * HttpServerInstrumentation instance and call the expected callbacks on it.
       */
-  private val isNettyAround = ClassRefiner.builder().mustContains("play.core.server.NettyServerProvider").build()
+  private val isNettyAround = ClassRefiner.builder().mustContain("play.core.server.NettyServerProvider").build()
 
   onType("play.core.server.NettyServer")
       .when(isNettyAround)

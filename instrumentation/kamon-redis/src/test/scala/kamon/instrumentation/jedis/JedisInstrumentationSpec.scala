@@ -1,5 +1,6 @@
 package kamon.instrumentation.jedis
 
+import kamon.Kamon
 import kamon.testkit.{MetricInspection, TestSpanReporter}
 import kamon.trace.Span.Kind
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
