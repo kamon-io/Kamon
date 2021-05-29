@@ -1,3 +1,19 @@
+/*
+ * Copyright 2013-2021 The Kamon Project <https://kamon.io>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package kamon.instrumentation.jedis
 
 import kamon.Kamon
@@ -8,20 +24,21 @@ import redis.clients.jedis.commands.ProtocolCommand
 
 class JedisInstrumentation extends InstrumentationBuilder {
   onType("redis.clients.jedis.Protocol")
-//    .when(classIsPresent("redis.clients.jedis.Protocol"))
-    .advise(method("sendCommand").and(withArgument(1, classOf[ProtocolCommand])), classOf[SendCommandAdvice])
+    .advise(method("sendCommand"), classOf[SendCommandAdvice])
 }
 
 class SendCommandAdvice
 
 object SendCommandAdvice {
   @Advice.OnMethodEnter(suppress = classOf[Throwable])
-  def enter(@Advice.Argument(1) command: ProtocolCommand): Span = {
-    val spanName = s"redis.command.${command}"
-    val span = Kamon
-      .clientSpanBuilder(spanName, "redis.client.jedis")
-      .start()
-    span
+  def enter(@Advice.Argument(1) command: Any): Span = {
+    command match {
+      case command: ProtocolCommand =>
+        val spanName = s"redis.command.$command"
+        Kamon.clientSpanBuilder(spanName, "redis.client.jedis")
+          .start()
+      case _ => Span.Empty
+    }
   }
 
   @Advice.OnMethodExit(onThrowable = classOf[Throwable], suppress = classOf[Throwable])
