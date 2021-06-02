@@ -102,6 +102,21 @@ mappings in packageBin in Compile := Def.taskDyn {
       ) ++ joinProducts((unmanagedResourceDirectories in Common).value)}
 }.value
 
+// Ensure that the packaged sources contains the instrumentation for all Akka versions.
+mappings in packageSrc in Compile := Def.taskDyn {
+  if(scalaBinaryVersion.value == "2.11") {
+    Def.task {
+      (mappings in packageSrc in `Compile-Akka-2.5`).value ++
+        (mappings in packageSrc in Common).value
+    }
+  } else
+    Def.task {
+      (mappings in packageSrc in `Compile-Akka-2.5`).value ++
+        (mappings in packageSrc in `Compile-Akka-2.6`).value ++
+        (mappings in packageSrc in Common).value
+    }
+  }.value
+
 // Compile will return the compile analysis for the Common configuration but will run on all Akka configurations.
 compile in Compile := Def.taskDyn {
   if(scalaBinaryVersion.value == "2.11")
