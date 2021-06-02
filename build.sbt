@@ -1,5 +1,5 @@
 /* =========================================================================================
- * Copyright © 2013-2018 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2021 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -17,14 +17,17 @@ lazy val kamon = (project in file("."))
   .disablePlugins(AssemblyPlugin)
   .settings(noPublishing: _*)
   .settings(crossScalaVersions := Nil)
-  .aggregate(core, instrumentation, reporters, bundle)
+  .aggregate(core, instrumentation, reporters, bundle, `bill-of-materials`)
 
+val coreProjects = Seq[ProjectReference](
+  `kamon-core`, `kamon-status-page`, `kamon-testkit`, `kamon-core-tests`, `kamon-core-bench`
+)
 
 lazy val core = (project in file("core"))
   .disablePlugins(AssemblyPlugin)
   .settings(noPublishing: _*)
   .settings(crossScalaVersions := Nil)
-  .aggregate(`kamon-core`, `kamon-status-page`, `kamon-testkit`, `kamon-core-tests`, `kamon-core-bench`)
+  .aggregate(coreProjects: _*)
 
 
 lazy val `kamon-core` = (project in file("core/kamon-core"))
@@ -102,39 +105,40 @@ lazy val `kamon-core-bench` = (project in file("core/kamon-core-bench"))
 
 
 /**
-  * Instrumentation Projects
-  */
+ * Instrumentation Projects
+ */
+val instrumentationProjects = Seq[ProjectReference](
+  `kamon-instrumentation-common`,
+  `kamon-executors`,
+  `kamon-executors-bench`,
+  `kamon-scala-future`,
+  `kamon-twitter-future`,
+  `kamon-scalaz-future`,
+  `kamon-cats-io`,
+  `kamon-logback`,
+  `kamon-jdbc`,
+  `kamon-kafka`,
+  `kamon-mongo`,
+  `kamon-mongo-legacy`,
+  `kamon-cassandra`,
+  `kamon-elasticsearch`,
+  `kamon-spring`,
+  `kamon-annotation`,
+  `kamon-annotation-api`,
+  `kamon-system-metrics`,
+  `kamon-akka`,
+  `kamon-akka-http`,
+  `kamon-play`,
+  `kamon-okhttp`,
+  `kamon-tapir`,
+  `kamon-redis`,
+)
 
 lazy val instrumentation = (project in file("instrumentation"))
   .disablePlugins(AssemblyPlugin)
   .settings(noPublishing: _*)
   .settings(crossScalaVersions := Nil)
-  .aggregate(
-    `kamon-instrumentation-common`,
-    `kamon-executors`,
-    `kamon-executors-bench`,
-    `kamon-scala-future`,
-    `kamon-twitter-future`,
-    `kamon-scalaz-future`,
-    `kamon-cats-io`,
-    `kamon-logback`,
-    `kamon-jdbc`,
-    `kamon-kafka`,
-    `kamon-mongo`,
-    `kamon-mongo-legacy`,
-    `kamon-cassandra`,
-    `kamon-elasticsearch`,
-    `kamon-spring`,
-    `kamon-annotation`,
-    `kamon-annotation-api`,
-    `kamon-system-metrics`,
-    `kamon-akka`,
-    `kamon-akka-http`,
-    `kamon-play`,
-    `kamon-okhttp`,
-    `kamon-tapir`,
-    `kamon-redis`,
-  )
+  .aggregate(instrumentationProjects: _*)
 
 
 lazy val `kamon-instrumentation-common` = (project in file("instrumentation/kamon-instrumentation-common"))
@@ -512,25 +516,26 @@ lazy val `kamon-redis` = (project in file("instrumentation/kamon-redis"))
   ).dependsOn(`kamon-core`, `kamon-testkit` % "test")
 
 /**
-  * Reporters
-  */
+ * Reporters
+ */
+val reportersProjects = Seq[ProjectReference](
+  `kamon-apm-reporter`,
+  `kamon-datadog`,
+  `kamon-graphite`,
+  `kamon-influxdb`,
+  `kamon-jaeger`,
+  `kamon-newrelic`,
+  `kamon-opentelemetry`,
+  `kamon-prometheus`,
+  `kamon-statsd`,
+  `kamon-zipkin`,
+)
 
 lazy val reporters = (project in file("reporters"))
   .disablePlugins(AssemblyPlugin)
   .settings(noPublishing: _*)
   .settings(crossScalaVersions := Nil)
-  .aggregate(
-    `kamon-apm-reporter`,
-    `kamon-datadog`,
-    `kamon-graphite`,
-    `kamon-influxdb`,
-    `kamon-jaeger`,
-    `kamon-newrelic`,
-    `kamon-opentelemetry`,
-    `kamon-prometheus`,
-    `kamon-statsd`,
-    `kamon-zipkin`,
-  )
+  .aggregate(reportersProjects: _*)
 
 
 lazy val `kamon-datadog` = (project in file("reporters/kamon-datadog"))
@@ -750,4 +755,13 @@ val `kamon-bundle` = (project in file("bundle/kamon-bundle"))
     `kamon-play` % "shaded",
     `kamon-redis` % "shaded",
     `kamon-okhttp` % "shaded",
+  )
+
+lazy val `bill-of-materials` = (project in file("bill-of-materials"))
+  .enablePlugins(BillOfMaterialsPlugin)
+  .settings(
+    name := "kamon-bom",
+    crossVersion := CrossVersion.disabled,
+    bomIncludeProjects := coreProjects ++ instrumentationProjects ++ reportersProjects,
+    pomExtra := pomExtra.value :+ bomDependenciesListing.value,
   )
