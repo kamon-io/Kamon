@@ -96,9 +96,18 @@ class AkkaHttpServerInstrumentation extends InstrumentationBuilder {
     .intercept(method("redirect"), classOf[ResolveOperationNameOnRouteInterceptor])
     .intercept(method("failWith"), classOf[ResolveOperationNameOnRouteInterceptor])
 
+  /**
+    * Akka-http 10.1.x compatibility.
+    */
+
+  onType("akka.http.scaladsl.Http2Ext")
+    .advise(method("bindAndHandleAsync") and isPublic(), classOf[Http2ExtBindAndHandleAdvice])
+}
+
+class FastFutureInstrumentation extends InstrumentationBuilder {
 
   /**
-    * This allows us to keep the right Context when Futures go through Akka HTTP's FastFuture and transformantions made
+    * This allows us to keep the right Context when Futures go through Akka HTTP's FastFuture and transformations made
     * to them. Without this, it might happen that when a Future is already completed and used on any of the Futures
     * directives we might get a Context mess up.
     */
@@ -110,14 +119,6 @@ class AkkaHttpServerInstrumentation extends InstrumentationBuilder {
 
   onType("akka.http.scaladsl.util.FastFuture$")
     .intercept(method("transformWith$extension1"), FastFutureTransformWithAdvice)
-
-
-  /**
-    * Akka-http 10.1.x compatibility.
-    */
-
-  onType("akka.http.scaladsl.Http2Ext")
-    .advise(method("bindAndHandleAsync") and isPublic(), classOf[Http2ExtBindAndHandleAdvice])
 }
 
 trait HasMatchingContext {
@@ -329,7 +330,9 @@ object FastFutureTransformWithAdvice {
       catch { case NonFatal(e) => FastFuture.failed(e) }
 
     // If we get a FulfilledFuture or ErrorFuture, those will have the HasContext mixin,
-    // otherwise we are getting a regular Future which has the context mixed into its value.
+    // otherwise we are getting a regular Future that might have a context mixed into its
+    // value if the Future Chaining instrumentation is manually enabled (it was deprecated
+    // in Kamon 2.1.21).
     if(future.isInstanceOf[HasContext])
       zuper.call()
     else {
@@ -341,18 +344,25 @@ object FastFutureTransformWithAdvice {
             case Failure(e) => p completeWith strictTransform(e, f)
           }(ec)
           p.future
-        case Some(value) =>
-          // This is possible because of the Future's instrumentation
-          val futureContext = value.asInstanceOf[HasContext].context
-          val scope = Kamon.storeContext(futureContext)
 
-          val transformedFuture = value match {
+        case Some(value) =>
+          value match {
+            case hc: HasContext =>
+              // The Future's value (Try[A]) might have a Context stored if the
+              // Future Chaining instrumentation is enabled.
+              val scope = Kamon.storeContext(hc.context)
+
+              val transformedFuture = value match {
+                case Success(a) => strictTransform(a, s)
+                case Failure(e) => strictTransform(e, f)
+              }
+
+              scope.close()
+              transformedFuture
+
             case Success(a) => strictTransform(a, s)
             case Failure(e) => strictTransform(e, f)
           }
-
-          scope.close()
-          transformedFuture
       }
     }
   }
