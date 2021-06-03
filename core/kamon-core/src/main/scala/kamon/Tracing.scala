@@ -23,6 +23,7 @@ import java.util.concurrent.CompletionStage
 import java.util.function.BiFunction
 import scala.concurrent.Future
 import scala.util.Failure
+import scala.util.control.NonFatal
 
 /**
   * Exposes the Tracing APIs using a built-in, globally shared tracer.
@@ -135,26 +136,32 @@ trait Tracing { self: Configuration with Utilities with ContextStorage =>
       .tagMetrics(Span.TagKeys.Component, component)
       .start()
 
-    runWithSpan(span, finishSpan = false)(f) match {
-      case future: Future[_] =>
-        future.onComplete {
-          case Failure(t) =>
-            span
-              .fail(t)
-              .finish()
+    try {
+      runWithSpan(span, finishSpan = false)(f) match {
+        case future: Future[_] =>
+          future.onComplete {
+            case Failure(t) =>
+              span
+                .fail(t)
+                .finish()
 
-          case _ =>
+            case _ =>
               span.finish()
-        }(CallingThreadExecutionContext)
+          }(CallingThreadExecutionContext)
 
-        future.asInstanceOf[A]
+          future.asInstanceOf[A]
 
-      case cs: CompletionStage[_] =>
-        CompletionStageSpanFinisher.finishWhenDone(cs, span).asInstanceOf[A]
+        case cs: CompletionStage[_] =>
+          CompletionStageSpanFinisher.finishWhenDone(cs, span).asInstanceOf[A]
 
-      case other =>
+        case other =>
+          span.finish()
+          other
+      }
+    } catch {
+      case NonFatal(t) =>
         span.finish()
-        other
+        throw t
     }
   }
 

@@ -34,6 +34,21 @@ class QuickSpanCreationSpec extends WordSpec with Matchers with OptionValues wit
       }
     }
 
+    "finish and fail Spans if an exception is thrown while running the wrapped code" in {
+      intercept[Throwable] {
+        span("failSpanWithThrowable") {
+          throw new Throwable()
+          "I'm never going to finish nicely"
+        }
+      }
+
+      eventually(timeout(5 seconds)) {
+        val reportedSpan = testSpanReporter().nextSpan().value
+        reportedSpan.operationName shouldBe "failSpanWithThrowable"
+        reportedSpan.hasError shouldBe true
+      }
+    }
+
     "apply the component tag, if provided" in {
       span("finishSimpleSpanWithComponent", "customComponentTag") {
         "I'm done right away"
