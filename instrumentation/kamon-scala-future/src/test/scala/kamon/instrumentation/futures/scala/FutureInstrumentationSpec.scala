@@ -15,150 +15,49 @@
  * ========================================================== */
 package kamon.instrumentation.futures.scala
 
-import java.util.concurrent.Executors
-import java.util.concurrent.atomic.AtomicReference
-
 import kamon.Kamon
-import kamon.tag.Lookups.plain
 import kamon.context.Context
-import kamon.instrumentation.context.HasContext
-import kamon.testkit.TestSpanReporter
+import kamon.tag.Lookups.plain
+import org.scalatest.concurrent.{PatienceConfiguration, ScalaFutures}
 import org.scalatest.{Matchers, OptionValues, WordSpec}
-import org.scalatest.concurrent.{Eventually, PatienceConfiguration, ScalaFutures}
 
-import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.{Await, ExecutionContext, Future}
 
-class FutureInstrumentationSpec extends WordSpec with ScalaFutures with Matchers with PatienceConfiguration
-    with OptionValues with Eventually with TestSpanReporter {
+class FutureInstrumentationSpec extends WordSpec with Matchers with ScalaFutures with PatienceConfiguration
+    with OptionValues {
 
-  import kamon.instrumentation.futures.scala.ScalaFutureInstrumentation.{traceBody, traceFunc}
-  implicit val ec: ExecutionContext = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(1))
+  // NOTE: We have this test just to ensure that the Context propagation is working, but starting with Kamon 2.0 there
+  //       is no need to have explicit Runnable/Callable instrumentation because the instrumentation brought by the
+  //       kamon-executors module should take care of all non-JDK Runnable/Callable implementations.
 
-  "a Scala Future" when {
-    "manually instrumented" should {
-      "create Delayed Spans for a traced future and traced callbacks" in {
-        Future(traceBody("future-body")("this is the future body"))
-          .map(traceFunc("first-callback")(_.length))
-          .map(_ * 10)
-          .flatMap(traceFunc("second-callback")(Future(_)))
-          .map(_ * 10)
-          .filter(traceFunc("third-callback")(_.toString.length > 10))
+  implicit val execContext = ExecutionContext.Implicits.global
 
-        val spans = testSpanReporter.spans(200 millis)
-        val bodySpan = spans.find(_.operationName == "future-body").get
-        val firstCallbackSpan = spans.find(_.operationName == "first-callback").get
-        val secondCallbackSpan = spans.find(_.operationName == "second-callback").get
-        val thirdCallbackSpan = spans.find(_.operationName == "third-callback").get
+  "a Scala Future created when instrumentation is active" should {
+    "capture the Context available when created" which {
+      "must be available when executing the future's body" in {
 
-        firstCallbackSpan.trace shouldBe bodySpan.trace
-        secondCallbackSpan.trace shouldBe bodySpan.trace
-        thirdCallbackSpan.trace shouldBe bodySpan.trace
-
-        firstCallbackSpan.parentId shouldBe bodySpan.id
-        secondCallbackSpan.parentId shouldBe firstCallbackSpan.id
-        thirdCallbackSpan.parentId shouldBe secondCallbackSpan.id
-
-        testSpanReporter.clear()
-        ensureExecutionContextIsClean()
-      }
-
-      "propagate the last chained Context when failures happen" in {
-        Future(traceBody("future-body")("this is the future body"))
-          .map(traceFunc("first-callback")(_.length))
-          .map(_ / 0)
-          .flatMap(traceFunc("second-callback")(Future(_))) // this will never happen
-          .map(_ * 10)
-          .recover { case _ => "recovered" }
-          .map(traceFunc("third-callback")(_.toString))
-
-        val spans = testSpanReporter.spans(200 millis)
-        val bodySpan = spans.find(_.operationName == "future-body").get
-        val firstCallbackSpan = spans.find(_.operationName == "first-callback").get
-        val thirdCallbackSpan = spans.find(_.operationName == "third-callback").get
-
-        firstCallbackSpan.trace shouldBe bodySpan.trace
-        thirdCallbackSpan.trace shouldBe bodySpan.trace
-        spans.find(_.operationName == "second-callback") shouldBe empty
-
-        testSpanReporter.clear()
-        ensureExecutionContextIsClean()
-      }
-
-      "be usable when working with for comprehensions" in {
-        for {
-          first <- Future(traceBody("first-future")("this is the future body"))
-          second <- Future(traceBody("second-future")(first.length))
-          third <- Future(traceBody("third-future")(second * 10))
-        } yield traceBody("yield") {
-          Kamon.currentSpan().tag("location", "atTheYield")
-          "Hello World! " * third
-        }
-
-        val spans = testSpanReporter.spans(200 millis)
-        val firstFutureSpan = spans.find(_.operationName == "first-future").get
-        val secondFutureSpan = spans.find(_.operationName == "second-future").get
-        val thirdFutureSpan = spans.find(_.operationName == "third-future").get
-        val yieldSpan = spans.find(_.operationName == "yield").get
-
-        firstFutureSpan.trace shouldBe yieldSpan.trace
-        secondFutureSpan.trace shouldBe yieldSpan.trace
-        thirdFutureSpan.trace shouldBe yieldSpan.trace
-
-        secondFutureSpan.parentId shouldBe firstFutureSpan.id
-        thirdFutureSpan.parentId shouldBe secondFutureSpan.id
-        yieldSpan.parentId shouldBe thirdFutureSpan.id
-
-        testSpanReporter.clear()
-        ensureExecutionContextIsClean()
-      }
-    }
-
-    "instrumented with the default bytecode instrumentation" should {
-      "propagate the context to the thread executing the future's body" in {
         val context = Context.of("key", "value")
-        val contextTag = Kamon.runWithContext(context) {
+        val tagInBody = Kamon.runWithContext(context) {
           Future(Kamon.currentContext().getTag(plain("key")))
         }
 
-        whenReady(contextTag)(tagValue => tagValue shouldBe "value")
-        ensureExecutionContextIsClean()
+        Await.result(tagInBody, 5.seconds) shouldBe "value"
       }
 
-      "propagate the context to the thread executing callbacks on the future" in {
+      "must be available when executing callbacks on the future" in {
         val context = Context.of("key", "value")
-        val tagAfterTransformation = Kamon.runWithContext(context) {
-            Future("Hello Kamon!")
-              // The current context is expected to be available during all intermediate processing.
-              .map(_.length)
-              .flatMap(len => Future(len.toString))
-              .map(_ => Kamon.currentContext().getTag(plain("key")))
-          }
+        val baggageAfterTransformations = Kamon.runWithContext(context) {
+          Future("Hello Kamon!")
+            // The current context is expected to be available during all intermediate processing.
+            .map(_.length)
+            .flatMap(len => Future(len.toString))
+            .map(_ => Kamon.currentContext().getTag(plain("key")))
+        }
 
-        whenReady(tagAfterTransformation)(tagValue => tagValue shouldBe "value")
-        ensureExecutionContextIsClean()
+        Await.result(baggageAfterTransformations, 5.seconds) shouldBe "value"
       }
     }
   }
-
-  def ensureExecutionContextIsClean(): Unit = {
-    val ref = new AtomicReference[Option[Context]](None)
-    val contextReturn = new ContextReturningRunnable(ref)
-
-    // Ensure that our test Runnable is not being instrumented
-    contextReturn.isInstanceOf[HasContext] shouldBe false
-    ec.execute(contextReturn)
-
-    val contextInThreadPool = eventually {
-      ref.get().value
-    }
-
-    contextInThreadPool shouldBe Context.Empty
-  }
 }
 
-class ContextReturningRunnable(ref: AtomicReference[Option[Context]]) extends Runnable {
-  override def run(): Unit = {
-    ref.set(Some(Kamon.currentContext()))
-  }
-}

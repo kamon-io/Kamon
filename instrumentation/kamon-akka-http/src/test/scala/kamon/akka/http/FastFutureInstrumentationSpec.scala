@@ -18,7 +18,16 @@ import scala.util.Try
 
 class FastFutureInstrumentationSpec extends WordSpec with Matchers {
 
-  "the FastFuture instrumentation" should {
+  /**
+    *  DEPRECATED
+    *
+    *  This spec is ignored since Kamon 2.2.0, along with the deprecation of the Future Chaining instrumentation, and
+    *  should be completely removed before releasing Kamon 2.3.0.
+    *
+    *  We are keeping this spec only for the rare case that we might need to fix a bug on the Future Chaining
+    *  instrumentation while we keep it in maintenance mode.
+    */
+  "the FastFuture instrumentation" ignore {
     "keep the Context captured by the Future from which it was created" when {
       "calling .map/.flatMap/.onComplete and the original Future has not completed yet" in {
         val completeSignal = new CountDownLatch(1)
