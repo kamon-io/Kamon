@@ -507,7 +507,7 @@ lazy val `kamon-redis` = (project in file("instrumentation/kamon-redis"))
   .settings(
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
-      "redis.clients"      % "jedis"                    % "3.6.0" % "provided",
+      "redis.clients" % "jedis"  % "3.6.0" % "provided",
 
       scalatest % "test",
       logbackClassic % "test",
@@ -686,7 +686,7 @@ val `kamon-bundle` = (project in file("bundle/kamon-bundle"))
   .enablePlugins(AssemblyPlugin)
   .settings(
     moduleName := "kamon-bundle",
-    kanelaAgentVersion := "1.0.9",
+    kanelaAgentVersion := "1.0.11",
     buildInfoPackage := "kamon.bundle",
     buildInfoKeys := Seq[BuildInfoKey](kanelaAgentJarName),
     kanelaAgentJar := update.value.matching(Modules.exactFilter(kanelaAgent)).head,
