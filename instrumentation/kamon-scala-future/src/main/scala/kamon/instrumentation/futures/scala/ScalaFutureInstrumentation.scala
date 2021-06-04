@@ -40,6 +40,7 @@ object ScalaFutureInstrumentation {
     * computation might be the result of applying several transformations to an initial Future. If you are interested in
     * tracing the intermediate computations as well, take a look at the `traceBody` and `traceFunc` functions bellow.
     */
+  @deprecated("This method will be removed in Kamon 2.3.0. Use kamon.Tracing.span instead.", "Kamon 2.1.21")
   def trace[T](operationName: String, tags: TagSet = TagSet.Empty, metricTags: TagSet = TagSet.Empty)(future: => Future[T])
       (implicit settings: Settings): Future[T] = {
 
@@ -59,6 +60,7 @@ object ScalaFutureInstrumentation {
     * computation might be the result of applying several transformations to an initial Future. If you are interested in
     * tracing the intermediate computations as well, take a look at the `traceBody` and `traceFunc` functions bellow.
     */
+  @deprecated("This method will be removed in Kamon 2.3.0. Use kamon.Tracing.span instead.", "Kamon 2.1.21")
   def trace[T](spanBuilder: SpanBuilder)(future: => Future[T])(implicit settings: Settings): Future[T] = {
     if(settings.trackMetrics)
       spanBuilder.trackMetrics()
@@ -93,6 +95,7 @@ object ScalaFutureInstrumentation {
     *            bytecode instrumentation. If instrumentation is disabled you risk leaving dirty threads that can cause
     *            incorrect Context propagation behavior.
     */
+  @deprecated("This method will be removed in Kamon 2.3.0. Use kamon.Tracing.span instead.", "Kamon 2.1.21")
   def traceBody[S](operationName: String, tags: TagSet = TagSet.Empty, metricTags: TagSet = TagSet.Empty)(body: => S)
       (implicit settings: Settings): S = {
 
@@ -121,6 +124,7 @@ object ScalaFutureInstrumentation {
     *            bytecode instrumentation. If instrumentation is disabled you risk leaving dirty threads that can cause
     *            incorrect Context propagation behavior.
     */
+  @deprecated("This method will be removed in Kamon 2.3.0. Use kamon.Tracing.span instead.", "Kamon 2.1.21")
   def traceBody[S](spanBuilder: SpanBuilder)(body: => S)(implicit settings: Settings): S = {
     val span = startedSpan(spanBuilder, settings)
     Kamon.storeContext(Kamon.currentContext().withEntry(Span.Key, span))
@@ -154,6 +158,7 @@ object ScalaFutureInstrumentation {
     *            bytecode instrumentation. If instrumentation is disabled you risk leaving dirty threads that can cause
     *            incorrect Context propagation behavior.
     */
+  @deprecated("This method will be removed in Kamon 2.3.0. Use kamon.Tracing.span instead.", "Kamon 2.1.21")
   def traceFunc[T, S](operationName: String, tags: TagSet = TagSet.Empty, metricTags: TagSet = TagSet.Empty)(body: T => S)
       (implicit settings: Settings): T => S = {
 
@@ -182,6 +187,7 @@ object ScalaFutureInstrumentation {
     *            bytecode instrumentation. If instrumentation is disabled you risk leaving dirty threads that can cause
     *            incorrect Context propagation behavior.
     */
+  @deprecated("This method will be removed in Kamon 2.3.0. Use kamon.Tracing.span instead.", "Kamon 2.1.21")
   def traceFunc[T, S](spanBuilder: SpanBuilder)(body: T => S)(implicit settings: Settings): T => S = { t: T =>
     val span = startedSpan(spanBuilder, settings)
     Kamon.storeContext(Kamon.currentContext().withEntry(Span.Key, span))
@@ -201,8 +207,10 @@ object ScalaFutureInstrumentation {
   /**
     * Settings for the Delayed Spans created by the traceBody and traceFunc helper functions.
     */
+  @deprecated("This class will be removed in Kamon 2.3.0. Access the current Span and change settings on it instead.", "Kamon 2.1.21")
   case class Settings(trackMetrics: Boolean, trackDelayedSpanMetrics: Boolean)
 
+  @deprecated("This object will be removed in Kamon 2.3.0. Access the current Span and change settings on it instead.", "Kamon 2.1.21")
   object Settings {
 
     @volatile private var _settingsFromConfig = readSettingsFromConfig(Kamon.config())
