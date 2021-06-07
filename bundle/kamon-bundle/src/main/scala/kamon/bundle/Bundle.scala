@@ -49,6 +49,8 @@ object Bundle {
       withInstrumentationClassLoader(springBootClassLoader.orNull) {
         ByteBuddyAgent.attach(temporaryAgentFile.toFile, pid())
       }
+
+      temporaryAgentFile.toFile.deleteOnExit()
     }
   }
 
