@@ -263,7 +263,7 @@ lazy val `kamon-jdbc` = (project in file("instrumentation/kamon-jdbc"))
   .settings(
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
-      "com.zaxxer"                % "HikariCP"                  % "2.6.2" % "provided",
+      "com.zaxxer"                % "HikariCP"                  % "4.0.3" % "provided",
       "org.mariadb.jdbc"          % "mariadb-java-client"       % "2.2.6" % "provided",
       "com.typesafe.slick"       %% "slick"                     % "3.3.2" % "provided",
       "org.postgresql"            % "postgresql"                % "42.2.5" % "provided",
