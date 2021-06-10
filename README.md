@@ -7,6 +7,15 @@ Kamon is a set of tools for instrumenting applications running on the JVM. The b
 official [Get Started Page](https://kamon.io/get-started/) and start instrumenting your applications right away! There
 you will also find guides and reference documentation for the core APIs, instrumentation and reporting modules.
 
+# Importing the project into Intellij IDEA
+This project has a library dependency on a subproject of itself (`kamon-tapir`).
+As a result of that, if you just clone this project and open it in IDEA, it will fail to import it.
+First, run `sbt +kamon-tapir/publishLocal` from the console, and then IDEA will be able to import the project.
+
+## Why is this necessary?
+Among our instrumented libraries is `Tapir`, which is also the only library we instrument that does not have a scala 2.11 version. 
+In order to be able to cross publish `kamon-bundle` to all scala versions, while excluding `kamon-tapir` from the 2.11 bundle, 
+we had to define `kamon-tapir` as a library dependency of `kamon-bundle` (instead of as a subproject).
 
 ## License
 
