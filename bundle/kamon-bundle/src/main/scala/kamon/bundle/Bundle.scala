@@ -18,8 +18,10 @@ package kamon.bundle
 
 import java.lang.management.ManagementFactory
 import java.nio.file.{Files, StandardCopyOption}
-
 import net.bytebuddy.agent.ByteBuddyAgent
+import org.slf4j.LoggerFactory
+
+import scala.util.control.NonFatal
 
 object Bundle {
 
@@ -50,7 +52,15 @@ object Bundle {
         ByteBuddyAgent.attach(temporaryAgentFile.toFile, pid())
       }
 
-      temporaryAgentFile.toFile.deleteOnExit()
+      try {
+        temporaryAgentFile.toFile.deleteOnExit()
+      } catch {
+        case NonFatal(t) =>
+          // We initialize the logger here instead of as a static member to avoid loading
+          // Logger-related classes before attaching Kanela to the current JVM.
+          LoggerFactory.getLogger(Bundle.getClass)
+            .warn("Failed to mark the temporary Kanela Agent file for deletion after exiting the JVM", t)
+      }
     }
   }
 
