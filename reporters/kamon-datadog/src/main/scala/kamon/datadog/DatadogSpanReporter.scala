@@ -36,7 +36,9 @@ trait KamonDataDogTranslator {
 
 object KamonDataDogTranslatorDefault extends KamonDataDogTranslator {
   def translate(span: Span.Finished, additionalTags: TagSet, tagFilter: Filter): DdSpan = {
-    val traceId = BigInt(span.trace.id.string, 16)
+    // DataDog only accepts 64-bit trace IDs, and its agent will use the lower 64 bits when presented with a 128-bit ID.
+    // Do the same truncation here for compatibility.
+    val traceId = BigInt(span.trace.id.string.takeRight(16), 16)
     val spanId = BigInt(span.id.string, 16)
 
     val parentId = if (span.parentId.isEmpty) None else Some(BigInt(span.parentId.string, 16))

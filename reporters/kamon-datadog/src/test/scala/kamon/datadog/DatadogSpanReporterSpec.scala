@@ -53,6 +53,9 @@ trait TestData {
       links = Nil
     )
 
+  val traceId128Bit = "13d350d23e4424d4" + contextSpan.trace.id.string
+  val spanWith128BitTraceId = span.copy(trace = Trace(Identifier(traceId128Bit, BigInt(traceId128Bit, 16).toByteArray), Trace.SamplingDecision.Sample))
+
   val json = Json.obj(
     "trace_id" -> BigDecimal(traceId),
     "span_id" -> BigDecimal(BigInt(contextSpan.id.string, 16)),
@@ -140,6 +143,7 @@ trait TestData {
 
   val testMap: ListMap[String, (Seq[Span.Finished], JsValue)] = ListMap(
     "single span" -> (Seq(span), Json.arr(Json.arr(json))),
+    "single span with 128 bit trace ID" -> (Seq(spanWith128BitTraceId), Json.arr(Json.arr(json))),
     "single span without parent_id" -> (Seq(spanWithoutParentId), Json.arr(Json.arr(jsonWithoutParentId))),
     "span with meta" -> (Seq(spanWithTags), Json.arr(Json.arr(jsonWithTags))),
     "span with marks" -> (Seq(spanWithMarks), Json.arr(Json.arr(jsonWithMarks))),
@@ -218,4 +222,3 @@ class DatadogSpanReporterSpec extends AbstractHttpReporter with Matchers with Re
     traceId1 > traceId2
   }
 }
-
