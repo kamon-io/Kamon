@@ -45,10 +45,11 @@ class StatusPage(configPath: String) extends Module {
   private def init(config: Config): Unit = synchronized {
     val hostname = config.getString("listen.hostname")
     val port = config.getInt("listen.port")
+    val retryOnRandomPort = config.getBoolean("listen.retry-on-random-port")
 
     _statusPageServer.fold {
       // Starting a new server on the configured hostname/port
-      startServer(hostname, port, ClassLoading.classLoader())
+      startServer(hostname, port, ClassLoading.classLoader(), retryOnRandomPort)
 
     }(existentServer => {
       // If the configuration has changed we will stop the previous version
@@ -56,12 +57,12 @@ class StatusPage(configPath: String) extends Module {
 
       if(existentServer.getHostname != hostname || existentServer.getListeningPort != port) {
         stopServer()
-        startServer(hostname, port, ClassLoading.classLoader())
+        startServer(hostname, port, ClassLoading.classLoader(), retryOnRandomPort)
       }
     })
   }
 
-  private def startServer(hostname: String, port: Int, resourceLoader: ClassLoader): Unit = {
+  private def startServer(hostname: String, port: Int, resourceLoader: ClassLoader, retryOnRandomPort: Boolean): Unit = {
     Try {
       val server = new StatusPageServer(hostname, port, resourceLoader, Kamon.status())
       server.start()
@@ -69,8 +70,12 @@ class StatusPage(configPath: String) extends Module {
 
     } match {
       case Success(server) =>
-        _logger.info(s"Status page started on http://$hostname:$port/")
+        _logger.info(s"Status Page started on http://$hostname:${server.getListeningPort}/")
         _statusPageServer = Some(server)
+
+      case Failure(_) if retryOnRandomPort =>
+        // Try to bind again on a random port number
+        startServer(hostname, 0, resourceLoader, false)
 
       case Failure(t) =>
         _logger.error("Failed to start the status page embedded server", t)
