@@ -14,7 +14,7 @@ class W3CTraceContextSpanPropagationSpec extends WordSpecLike with Matchers with
       val headersMap = mutable.Map.empty[String, String]
       traceContextPropagation.write(testContext(), headerWriterFromMap(headersMap))
 
-      headersMap.get("traceparent").value shouldBe "00-00000000000000000000000001020304-0000000002020202-01"
+      headersMap.get("traceparent").value shouldBe "00-00000000000000000000000001020304-0000000004030201-01"
       headersMap.get("tracestate").value shouldBe ""
     }
 
@@ -31,7 +31,7 @@ class W3CTraceContextSpanPropagationSpec extends WordSpecLike with Matchers with
       )
 
       val spanContext = traceContextPropagation.read(headerReaderFromMap(headersMap), Context.Empty).get(Span.Key)
-      spanContext.parentId.string shouldBe "0000000004030201"
+      spanContext.parentId.string shouldBe empty
       spanContext.trace.id.string shouldBe "00000000000000000000000001020304"
       spanContext.trace.samplingDecision shouldBe SamplingDecision.Sample
     }
