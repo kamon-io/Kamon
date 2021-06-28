@@ -80,6 +80,8 @@ private[otel] object SpanConverter {
 
     //converts Kamon span links to proto links
     val links:Seq[ProtoSpan.Link] = span.links.map(toProtoLink)
+    //converts Kamon span marks to proto events
+    val events:Seq[ProtoSpan.Event] = span.marks.map(toProtoEvent)
 
     import collection.JavaConverters._
     val builder = ProtoSpan.newBuilder()
@@ -92,6 +94,7 @@ private[otel] object SpanConverter {
       .setStatus(getStatus(span))
       .addAllAttributes(attributes.asJava)
       .addAllLinks(links.asJava)
+      .addAllEvents(events.asJava)
 
     //TODO add set traceState once we have something to set. Need w3c context
     //It is a trace_state in w3c-trace-context format: https://www.w3.org/TR/trace-context/#tracestate-header
@@ -176,6 +179,18 @@ private[otel] object SpanConverter {
     ProtoSpan.Link.newBuilder()
       .setTraceId(traceIdToByteString(link.trace.id))
       .setSpanId(spanIdToByteString(link.spanId))
+      .build()
+  }
+
+  /**
+    * Converts a Kamon Mark to a proto span event
+    * @param mark
+    * @return
+    */
+  private[otel] def toProtoEvent(mark:Span.Mark):ProtoSpan.Event = {
+    ProtoSpan.Event.newBuilder()
+      .setName(mark.key)
+      .setTimeUnixNano(toEpocNano(mark.instant))
       .build()
   }
 
