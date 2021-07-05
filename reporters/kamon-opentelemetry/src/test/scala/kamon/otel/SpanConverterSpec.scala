@@ -100,6 +100,13 @@ class SpanConverterSpec extends WordSpec with Matchers with ByteStringMatchers w
     protoLink.getSpanId shouldEqual toByteString(spanId, false)
   }
 
+  "should convert a Kamon mark to the proto event" in {
+    val mark = Span.Mark(Instant.now(), "some-key")
+    val protoEvent = toProtoEvent(mark)
+    protoEvent.getName shouldEqual mark.key
+    protoEvent.getTimeUnixNano shouldEqual toEpocNano(mark.instant)
+  }
+
   "converting a Kamon identifier to a proto bytestring" should {
     def padded(id:Identifier):Array[Byte] = Array.fill[Byte](8)(0)++id.bytes
     "return a 16 byte array for a 16 byte identifier, padding enabled" in {
