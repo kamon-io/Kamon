@@ -29,7 +29,9 @@ class CaffeineSyncCacheSpec
     }
 
     "create a span when accessing an existing key" in {
-      cache.get("a", (a: String) => "value")
+      cache.get("a", new java.util.function.Function[String, String] {
+        override def apply(a: String): String = "value"
+      })
       eventually(timeout(2.seconds)) {
         val span = testSpanReporter().nextSpan().value
         span.operationName shouldBe "caffeine.computeIfAbsent"
@@ -43,17 +45,6 @@ class CaffeineSyncCacheSpec
       eventually(timeout(2.seconds)) {
         val span = testSpanReporter().nextSpan().value
         span.operationName shouldBe "caffeine.putAll"
-        testSpanReporter().spans() shouldBe empty
-        testSpanReporter().clear()
-      }
-    }
-
-    "create only one span when using getAll" in {
-      val valueMap = Map("b" -> "value", "c" -> "value").asJava
-      cache.getAll(List("a", "b", "c").asJava, _ => valueMap)
-      eventually(timeout(2.seconds)) {
-        val span = testSpanReporter().nextSpan().value
-        span.operationName shouldBe "caffeine.getAll"
         testSpanReporter().spans() shouldBe empty
         testSpanReporter().clear()
       }

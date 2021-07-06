@@ -6,6 +6,7 @@ import org.scalatest.concurrent.Eventually.eventually
 import org.scalatest.concurrent.Waiters.timeout
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
 
+import java.util
 import java.util.concurrent.CompletableFuture
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.DurationInt
@@ -27,15 +28,9 @@ class CaffeineAsyncCacheSpec
     }
 
     "not create a span when using get" in {
-      cache.get("a", (a: String) => "value")
-      eventually(timeout(2.seconds)) {
-        testSpanReporter().spans() shouldBe empty
-      }
-    }
-
-    "not create a span when using getAll" in {
-      val valueMap = Map("b" -> "value", "c" -> "value").asJava
-      cache.getAll(List("a", "b", "c").asJava, _ => valueMap)
+      cache.get("a", new java.util.function.Function[String, String] {
+        override def apply(a: String): String = "value"
+      })
       eventually(timeout(2.seconds)) {
         testSpanReporter().spans() shouldBe empty
       }
