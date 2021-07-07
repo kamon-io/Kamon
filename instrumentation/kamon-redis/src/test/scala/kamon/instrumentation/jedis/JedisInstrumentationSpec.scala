@@ -40,7 +40,7 @@ class JedisInstrumentationSpec extends WordSpec
       val jedis = new Jedis(container.getHost, container.getFirstMappedPort)
       jedis.set("foo", "bar")
 
-      eventually(timeout(10.seconds)) {
+      eventually(timeout(2.seconds)) {
         val span = testSpanReporter().nextSpan().get
         span.operationName shouldBe "redis.command.SET"
         span.kind shouldBe Kind.Client
@@ -49,7 +49,7 @@ class JedisInstrumentationSpec extends WordSpec
       testSpanReporter().clear()
 
       jedis.get("foo")
-      eventually(timeout(10.seconds)) {
+      eventually(timeout(2.seconds)) {
         val span = testSpanReporter().nextSpan().get
         span.operationName shouldBe "redis.command.GET"
         span.kind shouldBe Kind.Client
