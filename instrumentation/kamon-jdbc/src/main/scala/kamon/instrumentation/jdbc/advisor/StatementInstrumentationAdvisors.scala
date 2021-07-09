@@ -28,7 +28,7 @@ import kanela.agent.libs.net.bytebuddy.asm.Advice.Thrown
   */
 class StatementExecuteMethodAdvisor
 object StatementExecuteMethodAdvisor {
-  @Advice.OnMethodEnter()
+  @Advice.OnMethodEnter(suppress = classOf[Throwable])
   def executeStart(@Advice.This statement: Any, @Advice.Argument(0) sql: String): Option[Invocation] = {
     StatementMonitor.start(statement, sql, StatementTypes.GenericExecute)
   }
@@ -61,7 +61,7 @@ object PreparedStatementExecuteMethodAdvisor {
   */
 class StatementExecuteQueryMethodAdvisor
 object StatementExecuteQueryMethodAdvisor  {
-  @Advice.OnMethodEnter()
+  @Advice.OnMethodEnter(suppress = classOf[Throwable])
   def executeStart(@Advice.This statement: Any, @Advice.Argument(0) sql: String): Option[Invocation] = {
     StatementMonitor.start(statement, sql, StatementTypes.Query)
   }
@@ -93,7 +93,7 @@ object PreparedStatementExecuteQueryMethodAdvisor {
   */
 class StatementExecuteUpdateMethodAdvisor
 object StatementExecuteUpdateMethodAdvisor  {
-  @Advice.OnMethodEnter()
+  @Advice.OnMethodEnter(suppress = classOf[Throwable])
   def executeStart(@Advice.This statement: Any, @Advice.Argument(0) sql: String): Option[Invocation] = {
     StatementMonitor.start(statement, sql, StatementTypes.Update)
   }
@@ -127,7 +127,7 @@ object PreparedStatementExecuteUpdateMethodAdvisor {
 class StatementExecuteBatchMethodAdvisor
 object StatementExecuteBatchMethodAdvisor  {
   // inline
-  @Advice.OnMethodEnter()
+  @Advice.OnMethodEnter(suppress = classOf[Throwable])
   def executeStart(@Advice.This statement: Any): Option[Invocation] = {
     val statementSQL = statement match {
       case hSQL: HasStatementSQL => hSQL.capturedStatementSQL()

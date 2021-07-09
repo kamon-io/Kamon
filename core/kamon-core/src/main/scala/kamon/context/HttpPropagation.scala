@@ -249,7 +249,7 @@ object HttpPropagation {
           case (contextKey, componentClass) =>
             val shortcut = s"$contextKey/$componentClass".toLowerCase()
 
-            if (componentClass == "span/w3c" && identifierScheme != "double") {
+            if (shortcut == "span/w3c" && identifierScheme != "double") {
               log.warn("W3C TraceContext propagation should be used only with identifier-scheme = double")
             }
 

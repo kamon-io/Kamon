@@ -16,7 +16,14 @@
 
 package kamon
 
-import kamon.trace.{Identifier, SpanBuilder, Tracer}
+import kamon.trace.{Identifier, Span, SpanBuilder, Tracer}
+import kamon.util.{CallingThreadExecutionContext, CompletionStageSpanFinisher}
+
+import java.util.concurrent.CompletionStage
+import java.util.function.BiFunction
+import scala.concurrent.Future
+import scala.util.Failure
+import scala.util.control.NonFatal
 
 /**
   * Exposes the Tracing APIs using a built-in, globally shared tracer.
@@ -83,6 +90,80 @@ trait Tracing { self: Configuration with Utilities with ContextStorage =>
     */
   def spanBuilder(operationName: String): SpanBuilder =
     _tracer.spanBuilder(operationName)
+
+
+  /**
+    * Creates an Internal Span that finishes automatically when the provided function finishes execution. If the
+    * provided function returns a scala.concurrent.Future or java.util.concurrent.CompletionStage implementation then
+    * the Span will be finished with the Future/CompletionState completes.
+    *
+    * You can get access to the created Span within the provided function using Kamon.currentSpan. For example, if you
+    * wanted to add a tag to a Span created with this function you could do it as follows:
+    *
+    *   span("fetchUserDetails") {
+    *     Kamon.currentSpan.tag("user.id", userId)
+    *
+    *     // Your business logic...
+    *   }
+    *
+    * If you need more customization options for the Span or complete control over Context propagation and Span
+    * lifecycle then create a SpanBuilder instead.
+    */
+  def span[A](operationName: String)(f: => A): A =
+    span(operationName, null)(f)
+
+
+  /**
+    * Creates an Internal Span that finishes automatically when the provided function finishes execution. If the
+    * provided function returns a scala.concurrent.Future or java.util.concurrent.CompletionStage implementation then
+    * the Span will be finished with the Future/CompletionState completes.
+    *
+    * You can get access to the created Span within the provided function using Kamon.currentSpan. For example, if you
+    * wanted to add a tag to a Span created with this function you could do it as follows:
+    *
+    *   span("fetchUserDetails") {
+    *     Kamon.currentSpan.tag("user.id", userId)
+    *
+    *     // Your business logic...
+    *   }
+    *
+    * If you need more customization options for the Span or complete control over Context propagation and Span
+    * lifecycle then create a SpanBuilder instead.
+    */
+  def span[A](operationName: String, component: String)(f: => A): A = {
+    val span = Kamon.spanBuilder(operationName)
+      .kind(Span.Kind.Internal)
+      .tagMetrics(Span.TagKeys.Component, component)
+      .start()
+
+    try {
+      runWithSpan(span, finishSpan = false)(f) match {
+        case future: Future[_] =>
+          future.onComplete {
+            case Failure(t) =>
+              span
+                .fail(t)
+                .finish()
+
+            case _ =>
+              span.finish()
+          }(CallingThreadExecutionContext)
+
+          future.asInstanceOf[A]
+
+        case cs: CompletionStage[_] =>
+          CompletionStageSpanFinisher.finishWhenDone(cs, span).asInstanceOf[A]
+
+        case other =>
+          span.finish()
+          other
+      }
+    } catch {
+      case NonFatal(t) =>
+        span.finish()
+        throw t
+    }
+  }
 
 
   /** The Tracer instance is only exposed to other Kamon components that need it like the Module Registry and Status */

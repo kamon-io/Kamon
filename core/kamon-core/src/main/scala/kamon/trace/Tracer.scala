@@ -17,9 +17,8 @@
 package kamon
 package trace
 
-import java.time.Instant
+import java.time.{Duration, Instant}
 import java.util.concurrent.{ScheduledExecutorService, ScheduledFuture, TimeUnit}
-
 import com.typesafe.config.Config
 import kamon.context.Context
 import kamon.tag.TagSet
@@ -53,6 +52,7 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
   @volatile private var _adaptiveSamplerSchedule: Option[ScheduledFuture[_]] = None
   @volatile private var _preStartHooks: Array[Tracer.PreStartHook] = Array.empty
   @volatile private var _preFinishHooks: Array[Tracer.PreFinishHook] = Array.empty
+  @volatile private var _delayedSpanReportingDelay: Duration = Duration.ZERO
   private val _onSpanFinish: Span.Finished => Unit = _spanBuffer.offer
 
   reconfigure(initialConfig)
@@ -340,7 +340,8 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
       }
 
       new Span.Local(id, parentId, trace, position, _kind, localParent, _name, _spanTags, _metricTags, at, _marks, _links,
-        _trackMetrics, _tagWithParentOperation, _includeErrorStacktrace, isDelayed, clock, _preFinishHooks, _onSpanFinish, _sampler)
+        _trackMetrics, _tagWithParentOperation, _includeErrorStacktrace, isDelayed, clock, _preFinishHooks, _onSpanFinish,
+        _sampler, scheduler, _delayedSpanReportingDelay)
     }
 
     private def suggestedOrSamplerDecision(): SamplingDecision =
@@ -408,6 +409,7 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
       val tagWithUpstreamService = traceConfig.getBoolean("span-metric-tags.upstream-service")
       val tagWithParentOperation = traceConfig.getBoolean("span-metric-tags.parent-operation")
       val includeErrorStacktrace = traceConfig.getBoolean("include-error-stacktrace")
+      val delayedSpanReportingDelay = traceConfig.getDuration("span-reporting-delay")
 
       if(_traceReporterQueueSize != traceReporterQueueSize) {
         // By simply changing the buffer we might be dropping Spans that have not been collected yet by the reporters.
@@ -424,6 +426,7 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
       _tagWithUpstreamService = tagWithUpstreamService
       _tagWithParentOperation = tagWithParentOperation
       _traceReporterQueueSize = traceReporterQueueSize
+      _delayedSpanReportingDelay = delayedSpanReportingDelay
       _preStartHooks = preStartHooks
       _preFinishHooks = preFinishHooks
 
