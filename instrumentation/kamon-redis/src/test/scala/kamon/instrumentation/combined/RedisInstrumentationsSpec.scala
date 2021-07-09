@@ -61,6 +61,7 @@ class RedisInstrumentationsSpec extends WordSpec
       }
     }
   }
+
   "the Lettuce instrumentation" should {
     "generate a client span for async commands" in {
       val client = LettuceClient.create(s"redis://${container.getHost}:${container.getFirstMappedPort}")
@@ -122,24 +123,24 @@ class RedisInstrumentationsSpec extends WordSpec
       val client = RedisClient(host = container.getHost, port = container.getFirstMappedPort)
       client.set("a", "a")
 
-      eventually(timeout(2.seconds)) {
+      eventually(timeout(30.seconds)) {
         val span = testSpanReporter().nextSpan().value
-        logger.warn(s"Span: ${span}")
         span.operationName shouldBe "redis.command.Set"
         span.hasError shouldBe false
       }
+      client.shutdown()
     }
 
     "generate only one client span when using the blocking client" in {
       val blockingClient = RedisBlockingClient(host = container.getHost, port = container.getFirstMappedPort)
       blockingClient.blpop(Seq("a", "b", "c"))
 
-      eventually(timeout(5.seconds)) {
+      eventually(timeout(30.seconds)) {
         val span = testSpanReporter().nextSpan().value
-        logger.warn(s"Span: ${span}")
         span.operationName shouldBe "redis.command.Blpop"
         span.hasError shouldBe true
       }
+      client.shutdown()
     }
 
   }
