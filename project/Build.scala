@@ -36,7 +36,7 @@ object BaseProject extends AutoPlugin {
     val hdrHistogram      = "org.hdrhistogram"      %  "HdrHistogram"    % "2.1.10"
     val okHttp            = "com.squareup.okhttp3"  %  "okhttp"          % "3.14.7"
     val okHttpMockServer  = "com.squareup.okhttp3"  %  "mockwebserver"   % "3.10.0"
-    val jsqlparser        = "com.github.jsqlparser" % "jsqlparser"       % "4.0"
+    val jsqlparser        = "com.github.jsqlparser" % "jsqlparser"       % "4.1"
     val oshiCore          = "com.github.oshi"       %  "oshi-core"       % "5.7.5"
 
 
