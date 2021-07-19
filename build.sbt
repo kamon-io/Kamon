@@ -511,6 +511,7 @@ lazy val `kamon-redis` = (project in file("instrumentation/kamon-redis"))
       kanelaAgent % "provided",
       "redis.clients" % "jedis"  % "3.6.0" % "provided",
       "io.lettuce" % "lettuce-core"  % "6.1.2.RELEASE" % "provided",
+      "com.github.etaty" %% "rediscala" % "1.9.0" % "provided",
 
       scalatest % "test",
       logbackClassic % "test",
