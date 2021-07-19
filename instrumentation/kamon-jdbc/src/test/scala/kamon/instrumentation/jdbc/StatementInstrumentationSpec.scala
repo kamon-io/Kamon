@@ -81,7 +81,7 @@ class StatementInstrumentationSpec extends WordSpec
 
           eventually(timeout(20 seconds), interval(100 millis)) {
             val span = commonSpanValidations(testSpanReporter(), driver)
-            validateQuery(span, StatementTypes.GenericExecute, select)
+            validateQuery(span, "select Address", select)
             validateNextSpanIsEmpty(testSpanReporter())
           }
         }
@@ -95,7 +95,7 @@ class StatementInstrumentationSpec extends WordSpec
 
           eventually(timeout(scaled(5 seconds)), interval(200 millis)) {
             val span = commonSpanValidations(testSpanReporter(), driver)
-            validateQuery(span, StatementTypes.GenericExecute, select)
+            validateQuery(span, "select Address", select)
             validateNextSpanIsEmpty(testSpanReporter())
           }
         }
@@ -108,7 +108,7 @@ class StatementInstrumentationSpec extends WordSpec
 
           eventually(timeout(5 seconds), interval(200 millis)) {
             val span = commonSpanValidations(testSpanReporter(), driver)
-            validateQuery(span, StatementTypes.Query, select)
+            validateQuery(span, "select Address", select)
             validateNextSpanIsEmpty(testSpanReporter())
           }
         }
@@ -121,7 +121,7 @@ class StatementInstrumentationSpec extends WordSpec
 
           eventually(timeout(5 seconds), interval(100 millis)) {
             val span = commonSpanValidations(testSpanReporter(), driver)
-            validateQuery(span, StatementTypes.Query, select)
+            validateQuery(span, "select Address", select)
             validateNextSpanIsEmpty(testSpanReporter())
           }
         }
@@ -133,7 +133,7 @@ class StatementInstrumentationSpec extends WordSpec
 
           eventually(timeout(5 seconds), interval(200 millis)) {
             val span = commonSpanValidations(testSpanReporter(), driver)
-            validateQuery(span, StatementTypes.Update, insert)
+            validateQuery(span, "insert Address", insert)
             validateNextSpanIsEmpty(testSpanReporter())
           }
         }
@@ -145,7 +145,7 @@ class StatementInstrumentationSpec extends WordSpec
 
           eventually(timeout(5 seconds), interval(100 millis)) {
             val span = commonSpanValidations(testSpanReporter(), driver)
-            validateQuery(span, StatementTypes.Update, insert)
+            validateQuery(span, "insert Address", insert)
             validateNextSpanIsEmpty(testSpanReporter())
           }
         }
@@ -162,7 +162,7 @@ class StatementInstrumentationSpec extends WordSpec
 
           eventually(timeout(5 seconds), interval(200 millis)) {
             val span = commonSpanValidations(testSpanReporter(), driver)
-            validateQuery(span, StatementTypes.Batch, statement)
+            validateQuery(span, "insert Address", statement)
             validateNextSpanIsEmpty(testSpanReporter())
           }
         }
@@ -175,7 +175,7 @@ class StatementInstrumentationSpec extends WordSpec
 
           eventually(timeout(5 seconds), interval(100 millis)) {
             val span = commonSpanValidations(testSpanReporter(), driver)
-            span.operationName shouldBe StatementTypes.GenericExecute
+            span.operationName shouldBe "select NotATable"
             span.metricTags.get(plainBoolean("error")) shouldBe true
             span.tags.get(option("error.stacktrace")) should be('defined)
             validateNextSpanIsEmpty(testSpanReporter())
@@ -194,7 +194,7 @@ class StatementInstrumentationSpec extends WordSpec
 
           eventually(timeout(5 seconds), interval(200 millis)) {
             val span = commonSpanValidations(testSpanReporter(), driver)
-            span.operationName shouldBe StatementTypes.Update
+            span.operationName shouldBe "insert NotATable"
             span.metricTags.get(plainBoolean("error")) shouldBe true
           }
         }
