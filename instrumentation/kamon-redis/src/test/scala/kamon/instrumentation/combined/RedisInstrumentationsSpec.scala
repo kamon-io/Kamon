@@ -140,7 +140,7 @@ class RedisInstrumentationsSpec extends WordSpec
         span.operationName shouldBe "redis.command.Blpop"
         span.hasError shouldBe true
       }
-      client.shutdown()
+      blockingClient.stop()
     }
 
   }
