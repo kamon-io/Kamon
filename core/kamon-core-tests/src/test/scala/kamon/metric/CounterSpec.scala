@@ -17,14 +17,13 @@ package kamon.metric
 
 import java.time.Duration
 import java.util.function.Supplier
-
 import kamon.Kamon
 import kamon.testkit.InstrumentInspection
 import org.scalatest.concurrent.Eventually
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
 import kamon.metric.Counter.delta
 
-class CounterSpec extends WordSpec with Matchers with InstrumentInspection.Syntax with Eventually {
+class CounterSpec extends WordSpec with Matchers with InstrumentInspection.Syntax with Eventually with BeforeAndAfterAll {
 
   "a Counter" should {
     "allow unit and bundled increments" in {
@@ -95,5 +94,15 @@ class CounterSpec extends WordSpec with Matchers with InstrumentInspection.Synta
         head
       }
     }
+  }
+
+  override protected def beforeAll(): Unit = {
+    super.beforeAll()
+    Kamon.init()
+  }
+
+  override protected def afterAll(): Unit = {
+    super.afterAll()
+    Kamon.stop()
   }
 }

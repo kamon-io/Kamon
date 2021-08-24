@@ -19,11 +19,11 @@ package kamon.instrumentation.executor
 import java.time.Duration
 import java.util
 import java.util.concurrent.{Callable, ExecutorService, Future, ScheduledExecutorService, ScheduledFuture, ScheduledThreadPoolExecutor, ThreadPoolExecutor, TimeUnit, ForkJoinPool => JavaForkJoinPool}
-
 import com.typesafe.config.Config
 import kamon.Kamon
 import kamon.jsr166.LongAdder
 import kamon.metric.Counter
+import kamon.module.ScheduledCollector
 import kamon.tag.TagSet
 import org.slf4j.LoggerFactory
 
@@ -342,11 +342,11 @@ object ExecutorInstrumentation {
     private val _callableWrapper = buildCallableWrapper()
     private val _instruments = new ExecutorMetrics.ThreadPoolInstruments(name, extraTags, executorType)
     private val _timeInQueueTimer = _instruments.timeInQueue
-    private val _sampler = Kamon.scheduler().scheduleAtFixedRate(new Runnable {
+    private val _collectorRegistration = Kamon.addCollector(name, None, new ScheduledCollector {
       val submittedTasksSource = Counter.delta(() => wrapped.getTaskCount)
       val completedTaskCountSource = Counter.delta(() => wrapped.getCompletedTaskCount)
 
-      override def run(): Unit = {
+      override def collect(): Unit = {
         _instruments.poolMin.update(wrapped.getCorePoolSize)
         _instruments.poolMax.update(wrapped.getMaximumPoolSize)
         _instruments.totalThreads.record(wrapped.getPoolSize)
@@ -355,7 +355,10 @@ object ExecutorInstrumentation {
         submittedTasksSource.accept(_instruments.submittedTasks)
         completedTaskCountSource.accept(_instruments.completedTasks)
       }
-    }, _sampleInterval.toMillis, _sampleInterval.toMillis, TimeUnit.MILLISECONDS)
+
+      override def stop(): Unit = {}
+      override def reconfigure(newConfig: Config): Unit = {}
+    }, _sampleInterval)
 
     protected def executorType: String =
       "ThreadPoolExecutor"
@@ -385,7 +388,7 @@ object ExecutorInstrumentation {
       wrapped.awaitTermination(timeout, unit)
 
     override def shutdownNow(): java.util.List[Runnable] = {
-      _sampler.cancel(false)
+      _collectorRegistration.cancel()
       _instruments.remove()
       wrapped.shutdownNow()
     }
@@ -397,7 +400,7 @@ object ExecutorInstrumentation {
       wrapped.invokeAny(tasks, timeout, unit)
 
     override def shutdown(): Unit = {
-      _sampler.cancel(false)
+      _collectorRegistration.cancel()
       _instruments.remove()
       wrapped.shutdown()
     }
@@ -557,11 +560,11 @@ object ExecutorInstrumentation {
     private val _timeInQueueTimer = _instruments.timeInQueue
     private val _submittedTasksCounter: LongAdder = new LongAdder
     private val _completedTasksCounter: LongAdder = new LongAdder
-    private val _sampler = Kamon.scheduler().scheduleAtFixedRate(new Runnable {
+    private val _collectorRegistration = Kamon.addCollector(name, None, new ScheduledCollector {
       val submittedTasksSource = Counter.delta(() => _submittedTasksCounter.longValue())
       val completedTaskCountSource = Counter.delta(() => _completedTasksCounter.longValue())
 
-      override def run(): Unit = {
+      override def collect(): Unit = {
         _instruments.poolMin.update(0D)
         _instruments.poolMax.update(telemetryReader.parallelism)
         _instruments.parallelism.update(telemetryReader.parallelism)
@@ -571,7 +574,11 @@ object ExecutorInstrumentation {
         submittedTasksSource.accept(_instruments.submittedTasks)
         completedTaskCountSource.accept(_instruments.completedTasks)
       }
-    }, _sampleInterval.toMillis, _sampleInterval.toMillis, TimeUnit.MILLISECONDS)
+
+      override def stop(): Unit = {}
+      override def reconfigure(newConfig: Config): Unit = {}
+
+    }, _sampleInterval)
 
     override def execute(command: Runnable): Unit = {
       _submittedTasksCounter.increment()
@@ -610,7 +617,7 @@ object ExecutorInstrumentation {
       wrapped.awaitTermination(timeout, unit)
 
     override def shutdownNow(): java.util.List[Runnable] = {
-      _sampler.cancel(false)
+      _collectorRegistration.cancel()
       _instruments.remove()
       wrapped.shutdownNow()
     }
@@ -622,7 +629,7 @@ object ExecutorInstrumentation {
       wrapped.invokeAny(tasks, timeout, unit)
 
     override def shutdown(): Unit = {
-      _sampler.cancel(false)
+      _collectorRegistration.cancel()
       _instruments.remove()
       wrapped.shutdown()
     }

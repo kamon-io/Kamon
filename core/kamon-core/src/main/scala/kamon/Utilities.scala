@@ -16,8 +16,6 @@
 
 package kamon
 
-import java.util.concurrent.{Executors, ScheduledExecutorService, ScheduledThreadPoolExecutor}
-
 import com.typesafe.config.Config
 import kamon.util.{Clock, Filter}
 
@@ -28,7 +26,6 @@ import scala.collection.concurrent.TrieMap
   */
 trait Utilities { self: Configuration =>
   private val _clock = new Clock.Anchored()
-  private val _scheduler = newScheduledThreadPool(1, numberedThreadFactory("kamon-scheduler", daemon = true))
   private val _filters = TrieMap.empty[String, Filter]
 
   reconfigureUtilities(self.config())
@@ -57,20 +54,7 @@ trait Utilities { self: Configuration =>
   def clock(): Clock =
     _clock
 
-  /**
-    * Scheduler to be used for Kamon-related tasks like updating range samplers.
-    */
-  def scheduler(): ScheduledExecutorService =
-    _scheduler
-
   private def reconfigureUtilities(config: Config): Unit = {
     _filters.clear()
-    _scheduler match {
-      case stpe: ScheduledThreadPoolExecutor =>
-        val newPoolSize = config.getInt("kamon.scheduler-pool-size")
-        stpe.setCorePoolSize(newPoolSize)
-
-      case _ => // cannot change the pool size on other unknown types.
-    }
   }
 }

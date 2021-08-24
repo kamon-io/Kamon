@@ -42,9 +42,9 @@ object JsonMarshalling {
     override def toJson(instance: Status.ModuleRegistry, builder: JavaStringBuilder): Unit = {
       def moduleKindString(moduleKind: Module.Kind): String = moduleKind match {
         case Module.Kind.Combined => "combined"
-        case Module.Kind.Metric   => "metric"
-        case Module.Kind.Span     => "span"
-        case Module.Kind.Plain    => "plain"
+        case Module.Kind.MetricsReporter   => "metric"
+        case Module.Kind.SpansReporter     => "span"
+        case Module.Kind.RecurringCollector    => "plain"
         case Module.Kind.Unknown  => "unknown"
       }
 

@@ -36,10 +36,8 @@ import scala.collection.JavaConverters.collectionAsScalaIterableConverter
   * A Tracer assists on the creation of Spans and temporarily holds finished Spans until they are flushed to the
   * available reporters.
   */
-class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage,
-    scheduler: ScheduledExecutorService) {
-
-  import Tracer._logger
+class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage) {
+  private val _logger = LoggerFactory.getLogger(classOf[Tracer])
 
   @volatile private var _traceReporterQueueSize = 4096
   @volatile private var _spanBuffer = new MpscArrayQueue[Span.Finished](_traceReporterQueueSize)
@@ -53,6 +51,7 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
   @volatile private var _preStartHooks: Array[Tracer.PreStartHook] = Array.empty
   @volatile private var _preFinishHooks: Array[Tracer.PreFinishHook] = Array.empty
   @volatile private var _delayedSpanReportingDelay: Duration = Duration.ZERO
+  @volatile private var _scheduler: Option[ScheduledExecutorService] = None
   private val _onSpanFinish: Span.Finished => Unit = _spanBuffer.offer
 
   reconfigure(initialConfig)
@@ -128,6 +127,18 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
 
     spans
   }
+
+  def bindScheduler(scheduler: ScheduledExecutorService): Unit = {
+    _scheduler = Some(scheduler)
+    schedulerAdaptiveSampling()
+  }
+
+  def shutdown(): Unit = {
+    _scheduler = None
+    _adaptiveSamplerSchedule.foreach(_.cancel(false))
+  }
+
+
 
   private class MutableSpanBuilder(initialOperationName: String) extends SpanBuilder {
     private val _spanTags = TagSet.builder()
@@ -281,67 +292,77 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
 
     /** Uses all the accumulated information to create a new Span */
     private def createSpan(at: Instant, isDelayed: Boolean): Span.Delayed = {
-      if(_preStartHooks.nonEmpty) {
-        _preStartHooks.foreach(psh => {
-          try {
-            psh.beforeStart(this)
-          } catch {
-            case t: Throwable =>
-              _logger.error("Failed to apply pre-start hook", t)
-          }
-        })
+
+      // Having a scheduler is a proxy to knowing whether Kamon has been initialized or not. We might consider
+      // introducing some sort if "isActive" state if we start having more variables that only need to be defined
+      // when Kamon has started.
+      if(_scheduler.isEmpty) {
+        Span.Empty
       }
+      else {
+        if (_preStartHooks.nonEmpty) {
+          _preStartHooks.foreach(psh => {
+            try {
+              psh.beforeStart(this)
+            } catch {
+              case t: Throwable =>
+                _logger.error("Failed to apply pre-start hook", t)
+            }
+          })
+        }
+
 
       val context = _context.getOrElse(contextStorage.currentContext())
-      if(_tagWithUpstreamService) {
-        context.getTag(option(TagKeys.UpstreamName)).foreach(upstreamName => {
-          _metricTags.add(TagKeys.UpstreamName, upstreamName)
-        })
-      }
-
-      val parent = _parent.getOrElse(if (_ignoreParentFromContext) Span.Empty else context.get(Span.Key))
-      val localParent = if (!parent.isRemote && !parent.isEmpty) Some(parent) else None
-
-      val (id, parentId) =
-        if (parent.isRemote && _kind == Span.Kind.Server && _joinRemoteParentsWithSameSpanID)
-          (parent.id, parent.parentId)
-        else
-          (identifierScheme.spanIdFactory.generate(), parent.id)
-
-      val position =
-        if (parent.isEmpty)
-          Position.Root
-        else if (parent.isRemote)
-          Position.LocalRoot
-        else
-          Position.Unknown
-
-      val trace = {
-        if(position == Position.Root) {
-
-          // When this is the Root Span in the trace we create a new Trace instance and use any sampling decision
-          // suggestion we might have. In any other cases we will always reuse the Trace.
-          Trace(suggestedOrGeneratedTraceId(), suggestedOrSamplerDecision())
-
-        } else {
-
-          // The tracer will not allow a local root Span to have an known sampling decision unless it is explicitly
-          // set on the SpanBuilder.
-          if(parent.isRemote && parent.trace.samplingDecision == SamplingDecision.Unknown) {
-            suggestedOrSamplerDecision() match {
-              case SamplingDecision.Sample      => parent.trace.keep()
-              case SamplingDecision.DoNotSample => parent.trace.drop()
-              case SamplingDecision.Unknown     => // Nothing to do in this case.
-            }
-          }
-
-          parent.trace
+        if (_tagWithUpstreamService) {
+          context.getTag(option(TagKeys.UpstreamName)).foreach(upstreamName => {
+            _metricTags.add(TagKeys.UpstreamName, upstreamName)
+          })
         }
-      }
 
-      new Span.Local(id, parentId, trace, position, _kind, localParent, _name, _spanTags, _metricTags, at, _marks, _links,
-        _trackMetrics, _tagWithParentOperation, _includeErrorStacktrace, isDelayed, clock, _preFinishHooks, _onSpanFinish,
-        _sampler, scheduler, _delayedSpanReportingDelay)
+        val parent = _parent.getOrElse(if (_ignoreParentFromContext) Span.Empty else context.get(Span.Key))
+        val localParent = if (!parent.isRemote && !parent.isEmpty) Some(parent) else None
+
+        val (id, parentId) =
+          if (parent.isRemote && _kind == Span.Kind.Server && _joinRemoteParentsWithSameSpanID)
+            (parent.id, parent.parentId)
+          else
+            (identifierScheme.spanIdFactory.generate(), parent.id)
+
+        val position =
+          if (parent.isEmpty)
+            Position.Root
+          else if (parent.isRemote)
+            Position.LocalRoot
+          else
+            Position.Unknown
+
+        val trace = {
+          if (position == Position.Root) {
+
+            // When this is the Root Span in the trace we create a new Trace instance and use any sampling decision
+            // suggestion we might have. In any other cases we will always reuse the Trace.
+            Trace(suggestedOrGeneratedTraceId(), suggestedOrSamplerDecision())
+
+          } else {
+
+            // The tracer will not allow a local root Span to have an known sampling decision unless it is explicitly
+            // set on the SpanBuilder.
+            if (parent.isRemote && parent.trace.samplingDecision == SamplingDecision.Unknown) {
+              suggestedOrSamplerDecision() match {
+                case SamplingDecision.Sample => parent.trace.keep()
+                case SamplingDecision.DoNotSample => parent.trace.drop()
+                case SamplingDecision.Unknown => // Nothing to do in this case.
+              }
+            }
+
+            parent.trace
+          }
+        }
+
+        new Span.Local(id, parentId, trace, position, _kind, localParent, _name, _spanTags, _metricTags, at, _marks, _links,
+          _trackMetrics, _tagWithParentOperation, _includeErrorStacktrace, isDelayed, clock, _preFinishHooks, _onSpanFinish,
+          _sampler, _scheduler.get, _delayedSpanReportingDelay)
+      }
     }
 
     private def suggestedOrSamplerDecision(): SamplingDecision =
@@ -389,10 +410,7 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
       }
 
       if(sampler.isInstanceOf[AdaptiveSampler]) {
-        if(_adaptiveSamplerSchedule.isEmpty)
-          _adaptiveSamplerSchedule = Some(scheduler.scheduleAtFixedRate(
-            adaptiveSamplerAdaptRunnable(), 1, 1, TimeUnit.SECONDS
-          ))
+        schedulerAdaptiveSampling()
       } else {
         _adaptiveSamplerSchedule.foreach(_.cancel(false))
         _adaptiveSamplerSchedule = None
@@ -435,8 +453,11 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
     }
   }
 
-  def stop(): Unit = {
-    _adaptiveSamplerSchedule.foreach(_.cancel(false))
+  private def schedulerAdaptiveSampling(): Unit = {
+    if(_sampler.isInstanceOf[AdaptiveSampler] && _adaptiveSamplerSchedule.isEmpty && _scheduler.nonEmpty)
+      _adaptiveSamplerSchedule = Some(_scheduler.get.scheduleAtFixedRate(
+        adaptiveSamplerAdaptRunnable(), 1, 1, TimeUnit.SECONDS
+      ))
   }
 
   private def adaptiveSamplerAdaptRunnable(): Runnable = new Runnable {
@@ -450,8 +471,6 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
 }
 
 object Tracer {
-
-  private val _logger = LoggerFactory.getLogger(classOf[Tracer])
 
   /**
     * A callback function that is applied to all SpanBuilder instances right before they are turned into an actual

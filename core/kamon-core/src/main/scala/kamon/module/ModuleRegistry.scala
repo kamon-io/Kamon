@@ -18,14 +18,14 @@ package kamon
 package module
 
 import java.time.{Duration, Instant}
-import java.util.concurrent.{CountDownLatch, Executors, ForkJoinPool, ScheduledFuture, TimeUnit}
+import java.util.concurrent.{CountDownLatch, Executors, ForkJoinPool, ScheduledExecutorService, ScheduledFuture, TimeUnit}
 import java.util.concurrent.atomic.AtomicReference
 import com.typesafe.config.Config
 import kamon.module.Module.Registration
 import kamon.status.Status
 import kamon.metric.{MetricRegistry, PeriodSnapshot}
 import kamon.trace.{Span, Tracer}
-import kamon.util.Clock
+import kamon.util.{CallingThreadExecutionContext, Clock, Filter}
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutorService, Future, Promise}
@@ -38,9 +38,7 @@ import scala.util.control.NonFatal
 class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry: MetricRegistry, tracer: Tracer) {
 
   private val _logger = LoggerFactory.getLogger(classOf[ModuleRegistry])
-  private val _moduleRegistryEC: ExecutionContext = ExecutionContext.fromExecutor(newScheduledThreadPool(1, threadFactory("kamon-module-registry", daemon = true)))
-  private val _metricsTickerExecutor = newScheduledThreadPool(1, threadFactory("kamon-metrics-ticker", daemon = true))
-  private val _spansTickerExecutor = newScheduledThreadPool(1, threadFactory("kamon-spans-ticker", daemon = true))
+  @volatile private var _tickerExecutor: Option[ScheduledExecutorService] = None
 
   private val _metricsTickerSchedule = new AtomicReference[ScheduledFuture[_]]()
   private val _spansTickerSchedule = new AtomicReference[ScheduledFuture[_]]()
@@ -50,25 +48,56 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
   private var _metricReporterModules: Map[String, Entry[MetricReporter]] = Map.empty
   private var _spanReporterModules: Map[String, Entry[SpanReporter]] = Map.empty
 
-  // Start ticking as soon as the registry is created.
-  scheduleMetricsTicker()
-  scheduleSpansTicker()
+  def init(): Unit = synchronized {
+    val tickerExecutor = newScheduledThreadPool(3, threadFactory("kamon-ticker", daemon = true))
+    _tickerExecutor = Some(tickerExecutor)
+
+    scheduleMetricsTicker(tickerExecutor)
+    scheduleSpansTicker(tickerExecutor)
+    scheduleCollectors(tickerExecutor)
+  }
+
+  def shutdown(): Unit = synchronized {
+    if(_metricsTickerSchedule.get() != null)
+      _metricsTickerSchedule.get().cancel(true)
+
+    if(_spansTickerSchedule.get() != null)
+      _spansTickerSchedule.get().cancel(true)
+
+    _tickerExecutor.foreach(_.shutdown())
+  }
+
+  def addReporter(name: String, description: Option[String], reporter: SpanReporter): Registration = {
+    register(name, description, reporter)
+  }
+
+  def addReporter(name: String, description: Option[String], reporter: MetricReporter, metricFilter: Option[Filter]): Registration = {
+    register(name, description, reporter, metricFilter, None)
+  }
+
+  def addCollector(name: String, description: Option[String], collector: ScheduledCollector, interval: Duration): Registration = {
+    register(name, description, collector, None, interval)
+  }
 
   /**
     * Registers a module that has created programmatically. If a module with the specified name already exists the
     * registration will fail. If the registered module is a MetricReporter and/or SpanReporter it will also be
     * registered to receive the metrics and/or spans data upon every tick.
     */
-  def register(name: String, description: Option[String], module: Module): Registration = synchronized {
+  def register(name: String, description: Option[String], module: Module, metricFilter: Option[Filter] = None,
+      interval: Option[Duration] = None): Registration = synchronized {
+
     if(_registeredModules.get(name).isEmpty) {
       val inferredSettings = Module.Settings(
         name,
         description.getOrElse(module.getClass.getName),
         true,
-        factory = None
+        factory = None,
+        metricFilter,
+        interval
       )
 
-      val moduleEntry = Entry(name, createExecutor(inferredSettings), true, inferredSettings, module)
+      val moduleEntry = Entry(name, createExecutor(inferredSettings), true, inferredSettings, new AtomicReference(), module)
       registerModule(moduleEntry)
       registration(moduleEntry)
 
@@ -118,8 +147,8 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
   def reconfigure(newConfig: Config): Unit = synchronized {
     _registrySettings = readRegistrySettings(configuration.config())
     _registeredModules.values.foreach(entry => reconfigureModule(entry, newConfig))
-    scheduleMetricsTicker()
-    scheduleSpansTicker()
+    _tickerExecutor.foreach(scheduleMetricsTicker)
+    _tickerExecutor.foreach(scheduleSpansTicker)
   }
 
   /**
@@ -127,7 +156,7 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
     * spans available until the call to stop.
     */
   def stopModules(): Future[Unit] = synchronized {
-    implicit val cleanupExecutor = _moduleRegistryEC
+    implicit val cleanupExecutor = CallingThreadExecutionContext
     stopReporterTickers()
 
     var stoppedSignals: List[Future[Unit]] = Nil
@@ -146,7 +175,7 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
     * all available metric reporting modules. If a ticker was already scheduled then that scheduled job will be
     * cancelled and scheduled again.
     */
-  private def scheduleMetricsTicker(): Unit = {
+  private def scheduleMetricsTicker(scheduler: ScheduledExecutorService): Unit = {
     val currentMetricsTicker = _metricsTickerSchedule.get()
     if(currentMetricsTicker != null)
       currentMetricsTicker.cancel(false)
@@ -173,7 +202,7 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
         }
       }
 
-      _metricsTickerExecutor.scheduleAtFixedRate(ticker, initialDelay, interval, TimeUnit.MILLISECONDS)
+      scheduler.scheduleAtFixedRate(ticker, initialDelay, interval, TimeUnit.MILLISECONDS)
     }
   }
 
@@ -182,7 +211,7 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
     * all available span reporting modules. If a ticker was already scheduled then that scheduled job will be
     * cancelled and scheduled again.
     */
-  private def scheduleSpansTicker(): Unit = {
+  private def scheduleSpansTicker(scheduler: ScheduledExecutorService): Unit = {
     val currentSpansTicker = _spansTickerSchedule.get()
     if(currentSpansTicker != null)
       currentSpansTicker.cancel(false)
@@ -200,8 +229,25 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
         }
       }
 
-      _spansTickerExecutor.scheduleAtFixedRate(ticker, interval, interval, TimeUnit.MILLISECONDS)
+      scheduler.scheduleAtFixedRate(ticker, interval, interval, TimeUnit.MILLISECONDS)
     }
+  }
+
+  private def scheduleCollectors(scheduler: ScheduledExecutorService): Unit = {
+    _registeredModules.values
+      .collect { case e if e.module.isInstanceOf[ScheduledCollector] => e }
+      .foreach { collectorEntry =>
+        val intervalMills = collectorEntry.settings.collectInterval.get.toMillis
+
+        val scheduledFuture =  scheduler.scheduleAtFixedRate(
+          collectorScheduleRunnable(collectorEntry.asInstanceOf[Entry[ScheduledCollector]]),
+          intervalMills,
+          intervalMills,
+          TimeUnit.MILLISECONDS
+        )
+
+        collectorEntry.collectSchedule.set(scheduledFuture)
+      }
   }
 
   private def scheduleMetricsTick(entry: Entry[MetricReporter], periodSnapshot: PeriodSnapshot): Unit = {
@@ -218,6 +264,14 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
         _logger.error(s"Reporter [${entry.name}] failed to process a spans tick.", error)
       }
     }(entry.executionContext)
+  }
+
+  private def collectorScheduleRunnable(entry: Entry[ScheduledCollector]): Runnable = new Runnable {
+    override def run(): Unit = entry.executionContext.submit(collectRunnable(entry.module))
+  }
+
+  private def collectRunnable(collector: ScheduledCollector): Runnable = new Runnable {
+    override def run(): Unit = collector.collect()
   }
 
   private def stopReporterTickers(): Unit = {
@@ -244,11 +298,16 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
     moduleConfigs.map {
       case (modulePath, moduleConfig) =>
         val moduleSettings = Try {
+          val metricsFilter = Try(Filter.from(moduleConfig.getConfig("metric-filter"))).toOption
+          val collectInterval = Try(moduleConfig.getDuration("interval")).toOption
+
           Module.Settings(
             moduleConfig.getString("name"),
             moduleConfig.getString("description"),
             moduleConfig.getBoolean("enabled"),
-            Option(moduleConfig.getString("factory"))
+            Option(moduleConfig.getString("factory")),
+            metricsFilter,
+            collectInterval
           )
         }
 
@@ -282,7 +341,7 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
       val factory = ClassLoading.createInstance[ModuleFactory](settings.factory.get, Nil)
       val instance = factory.create(ModuleFactory.Settings(Kamon.config(), moduleEC))
 
-      Some(Entry(settings.name, moduleEC, programmaticallyAdded, settings, instance))
+      Some(Entry(settings.name, moduleEC, programmaticallyAdded, settings, new AtomicReference(), instance))
 
     } catch {
       case t: Throwable =>
@@ -305,14 +364,17 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
   }
 
   private def inferModuleKind(clazz: Class[_ <: Module]): Module.Kind = {
-    if(classOf[CombinedReporter].isAssignableFrom(clazz))
-      Module.Kind.Combined
-    else if(classOf[MetricReporter].isAssignableFrom(clazz))
-      Module.Kind.Metric
-    else if(classOf[SpanReporter].isAssignableFrom(clazz))
-      Module.Kind.Span
+    val isMetricReporter = classOf[MetricReporter].isAssignableFrom(clazz)
+    val isSpanReporter = classOf[SpanReporter].isAssignableFrom(clazz)
+
+    if(isSpanReporter && isMetricReporter)
+      Module.Kind.CombinedReporter
+    else if(isMetricReporter)
+      Module.Kind.MetricsReporter
+    else if(isSpanReporter)
+      Module.Kind.SpansReporter
     else
-      Module.Kind.Plain
+      Module.Kind.RecurringCollector
   }
 
   /**
@@ -353,8 +415,10 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
     */
   private def registerModule(entry: Entry[Module]): Unit = {
     _registeredModules = _registeredModules + (entry.name -> entry)
+
     if(entry.module.isInstanceOf[MetricReporter])
       _metricReporterModules = _metricReporterModules + (entry.name -> entry.asInstanceOf[Entry[MetricReporter]])
+
     if(entry.module.isInstanceOf[SpanReporter])
       _spanReporterModules = _spanReporterModules + (entry.name -> entry.asInstanceOf[Entry[SpanReporter]])
 
@@ -365,7 +429,6 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
     * context. The returned future completes when the module finishes its stop procedure.
     */
   private def stopModule(entry: Entry[Module]): Future[Unit] = synchronized {
-    val cleanupExecutor = _moduleRegistryEC
 
     // Remove the module from all registries
     _registeredModules = _registeredModules - entry.name
@@ -373,6 +436,7 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
       _metricReporterModules = _metricReporterModules - entry.name
       scheduleMetricsTick(entry.asInstanceOf[Entry[MetricReporter]], metricRegistry.snapshot(resetState = false))
     }
+
     if(entry.module.isInstanceOf[SpanReporter]) {
       _spanReporterModules = _spanReporterModules - entry.name
       scheduleSpansBatch(entry.asInstanceOf[Entry[SpanReporter]], tracer.spans())
@@ -391,7 +455,7 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
 
     })
 
-    stopPromise.future.onComplete(_ => entry.executionContext.shutdown())(cleanupExecutor)
+    stopPromise.future.onComplete(_ => entry.executionContext.shutdown())(CallingThreadExecutionContext)
     stopPromise.future
   }
 
@@ -436,6 +500,7 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
     executionContext: ExecutionContextExecutorService,
     programmaticallyAdded: Boolean,
     settings: Module.Settings,
+    collectSchedule: AtomicReference[ScheduledFuture[_]],
     module: T
   )
 }

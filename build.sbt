@@ -52,6 +52,7 @@ lazy val `kamon-core` = (project in file("core/kamon-core"))
         "kamon.tag.**",
         "kamon.trace.**",
         "kamon.util.**",
+        "kamon.svm.**",
         "org.HdrHistogram.AtomicHistogram",
         "org.jctools.queues.MpscArrayQueue",
       ).inAll
@@ -60,7 +61,8 @@ lazy val `kamon-core` = (project in file("core/kamon-core"))
       "com.typesafe"      %  "config"       % "1.3.1",
       "org.slf4j"         %  "slf4j-api"    % "1.7.25",
       "org.hdrhistogram"  %  "HdrHistogram" % "2.1.9" % "provided,shaded",
-      "org.jctools"       %  "jctools-core" % "2.1.1" % "provided,shaded",
+      "org.jctools"       %  "jctools-core" % "3.3.0" % "provided,shaded",
+      "com.oracle.substratevm" % "svm"      % "19.2.1" % "provided"
     ),
   )
 

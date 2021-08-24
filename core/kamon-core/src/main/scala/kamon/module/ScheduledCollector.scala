@@ -14,33 +14,13 @@
  * limitations under the License.
  */
 
-package kamon
+package kamon.module
 
-import kamon.metric.MetricRegistry
-import kamon.trace.Tracer
-import kamon.util.Clock
 
-import java.util.concurrent.ScheduledExecutorService
-
-//class Kamon {
-//
-//
-//  def tracer: Tracer = ???
-//  def clock: Clock = ???
-//  def scheduler: ScheduledExecutorService = ???
-//  def metricRegistry: MetricRegistry = ???
-//
-//}
-
-object Kamon extends Configuration
-  with Utilities
-  with Metrics
-  with Tracing
-  with Modules
-  with ContextPropagation
-  with ContextStorage
-  with CurrentStatus
-  with Init {
-
-//  private val _global = new Kamon()
+/**
+  * Modules implementing this trait will get registered for periodically receiving span batches. The frequency of the
+  * span batches is controlled by the kamon.trace.tick-interval setting.
+  */
+trait ScheduledCollector extends Module {
+  def collect(): Unit
 }

@@ -29,7 +29,7 @@ import scala.util.control.NonFatal
   * Exposes the Tracing APIs using a built-in, globally shared tracer.
   */
 trait Tracing { self: Configuration with Utilities with ContextStorage =>
-  private val _tracer = new Tracer(config(), clock(), self, self.scheduler())
+  private val _tracer = new Tracer(config(), clock(), self)
   onReconfigure(newConfig => _tracer.reconfigure(newConfig))
 
 
@@ -169,8 +169,4 @@ trait Tracing { self: Configuration with Utilities with ContextStorage =>
   /** The Tracer instance is only exposed to other Kamon components that need it like the Module Registry and Status */
   protected def tracer(): Tracer =
     _tracer
-
-  def stopTracer(): Unit = {
-    _tracer.stop()
-  }
 }

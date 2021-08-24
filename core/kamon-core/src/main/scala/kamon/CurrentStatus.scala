@@ -26,7 +26,7 @@ import kamon.status.{Environment, Status}
   *
   * The Status APIs might change between minor versions.
   */
-trait CurrentStatus { self: ModuleLoading with Metrics with Configuration =>
+trait CurrentStatus { self: Modules with Metrics with Configuration =>
   @volatile private var _environment = Environment.from(self.config())
   private val _status = new Status(self._moduleRegistry, self._metricRegistry, self)
 

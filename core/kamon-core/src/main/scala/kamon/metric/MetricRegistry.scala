@@ -34,11 +34,13 @@ import scala.collection.concurrent.TrieMap
   * those of the already registered metric.
   *
   */
-class MetricRegistry(config: Config, scheduler: ScheduledExecutorService, clock: Clock) {
+class MetricRegistry(config: Config, clock: Clock) {
   private val _logger = LoggerFactory.getLogger(classOf[MetricRegistry])
   private val _metrics = TrieMap.empty[String, BaseMetric[_, _, _]]
+
   @volatile private var _lastSnapshotInstant: Instant = clock.instant()
-  @volatile private var _factory: MetricFactory = MetricFactory.from(config, scheduler, clock)
+  @volatile private var _scheduler: Option[ScheduledExecutorService] = None
+  @volatile private var _factory: MetricFactory = MetricFactory.from(config, clock, _scheduler)
 
 
   /**
@@ -127,7 +129,18 @@ class MetricRegistry(config: Config, scheduler: ScheduledExecutorService, clock:
     * Reconfigures the registry using the provided configuration.
     */
   def reconfigure(newConfig: Config): Unit = {
-    _factory = MetricFactory.from(newConfig, scheduler, clock)
+    _factory = MetricFactory.from(newConfig, clock, _scheduler)
+  }
+
+  def bindScheduler(scheduler: ScheduledExecutorService): Unit = {
+    _scheduler = Some(scheduler)
+    _factory = MetricFactory.from(config, clock, _scheduler)
+    _metrics.values.foreach(_.bindScheduler(scheduler))
+  }
+
+  def shutdown(): Unit = {
+    _scheduler = None
+    _metrics.values.foreach(_.shutdown())
   }
 
   private def validateInstrumentType[T](metric: => Metric[_, _])(name: String, instrumentType: Instrument.Type): T = {

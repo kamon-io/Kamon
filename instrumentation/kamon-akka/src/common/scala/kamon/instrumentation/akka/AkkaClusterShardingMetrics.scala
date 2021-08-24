@@ -1,10 +1,13 @@
 package kamon.instrumentation.akka
 
+import com.typesafe.config.Config
+
 import java.util.concurrent.{ScheduledFuture, TimeUnit}
 import java.util.concurrent.atomic.AtomicLong
-
 import kamon.{AtomicGetOrElseUpdateOnTrieMap, Kamon}
 import kamon.metric.{Histogram, InstrumentGroup}
+import kamon.module.Module.Registration
+import kamon.module.ScheduledCollector
 import kamon.tag.TagSet
 
 import scala.collection.concurrent.TrieMap
@@ -76,7 +79,7 @@ object AkkaClusterShardingMetrics {
     case class ShardTelemetry (
       entitiesPerShard: TrieMap[String, AtomicLong],
       messagesPerShard: TrieMap[String, AtomicLong],
-      schedule: ScheduledFuture[_]
+      schedule: Registration
     )
 
     private val _shardTelemetryMap = TrieMap.empty[String, ShardTelemetry]
@@ -87,20 +90,24 @@ object AkkaClusterShardingMetrics {
         val messagesPerShard = TrieMap.empty[String, AtomicLong]
         val samplingInterval = AkkaRemoteInstrumentation.settings().shardMetricsSampleInterval
 
-        val schedule = Kamon.scheduler().scheduleAtFixedRate(new Runnable {
-          override def run(): Unit = {
+        val schedule = Kamon.addCollector("shargindCollector", None, new ScheduledCollector {
+          override def collect(): Unit = {
             entitiesPerShard.foreach {case (shard, value) => shardEntities.record(value.get())}
             messagesPerShard.foreach {case (shard, value) => shardMessages.record(value.getAndSet(0L))}
           }
-        }, samplingInterval.toMillis, samplingInterval.toMillis, TimeUnit.MILLISECONDS)
+
+          override def stop(): Unit = {}
+          override def reconfigure(newConfig: Config): Unit = {}
+
+        }, samplingInterval)
 
 
         ShardTelemetry(entitiesPerShard, messagesPerShard, schedule)
-      }, _.schedule.cancel(false): Unit, _ => ())
+      }, _.schedule.cancel(): Unit, _ => ())
     }
 
     private def removeShardTelemetry(system: String, typeName: String): Unit =
-      _shardTelemetryMap.remove(shardTelemetryKey(system, typeName)).foreach(_.schedule.cancel(true))
+      _shardTelemetryMap.remove(shardTelemetryKey(system, typeName)).foreach(_.schedule.cancel())
 
     private def shardTelemetryKey(system: String, typeName: String): String =
       system + ":" + typeName

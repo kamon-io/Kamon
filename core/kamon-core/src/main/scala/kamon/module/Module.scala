@@ -18,7 +18,9 @@ package kamon
 package module
 
 import com.typesafe.config.Config
+import kamon.util.Filter
 
+import java.time.Duration
 import scala.concurrent.ExecutionContext
 
 /**
@@ -76,10 +78,10 @@ object Module {
 
   sealed trait Kind
   object Kind {
-    case object Combined extends Kind
-    case object Metric extends Kind
-    case object Span extends Kind
-    case object Plain extends Kind
+    case object MetricsReporter extends Kind
+    case object SpansReporter extends Kind
+    case object CombinedReporter extends Kind
+    case object RecurringCollector extends Kind
     case object Unknown extends Kind
   }
 
@@ -115,6 +117,8 @@ object Module {
     name: String,
     description: String,
     enabled: Boolean,
-    factory: Option[String]
+    factory: Option[String],
+    metricsFilter: Option[Filter],
+    collectInterval: Option[Duration]
   )
 }
