@@ -1,10 +1,10 @@
 package kamon.instrumentation
 
-import kamon.testkit.TestSpanReporter
+import kamon.testkit.{InitAndStopKamonAfterAll, TestSpanReporter}
 import org.scalatest.OptionValues.convertOptionToValuable
 import org.scalatest.concurrent.Eventually.eventually
 import org.scalatest.concurrent.Waiters.timeout
-import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
+import org.scalatest.{Matchers, WordSpec}
 import org.springframework.web.reactive.function.client.WebClient
 import testapp.TestApp
 
@@ -13,13 +13,16 @@ import scala.concurrent.duration.DurationInt
 class SpringClientInstrumentationSpec
   extends WordSpec
     with Matchers
-    with BeforeAndAfterAll
+    with InitAndStopKamonAfterAll
     with TestSpanReporter {
 
   val port = "8081"
   val baseUrl = s"http://localhost:${port}/"
 
-  override def beforeAll(): Unit = TestApp.main(Array(port))
+  override def beforeAll(): Unit = {
+    super.beforeAll()
+    TestApp.main(Array(port))
+  }
 
 
   "WebClient instrumentation" should {

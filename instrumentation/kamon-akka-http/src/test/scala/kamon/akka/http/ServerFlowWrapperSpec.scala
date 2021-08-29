@@ -5,10 +5,11 @@ import akka.http.scaladsl.model.{HttpEntity, HttpRequest, HttpResponse, StatusCo
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import kamon.instrumentation.akka.http.ServerFlowWrapper
+import kamon.testkit.InitAndStopKamonAfterAll
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{Matchers, WordSpecLike}
 
-class ServerFlowWrapperSpec extends WordSpecLike with Matchers with ScalaFutures {
+class ServerFlowWrapperSpec extends WordSpecLike with Matchers with ScalaFutures with InitAndStopKamonAfterAll {
 
   implicit private val system = ActorSystem("http-client-instrumentation-spec")
   implicit private val executor = system.dispatcher

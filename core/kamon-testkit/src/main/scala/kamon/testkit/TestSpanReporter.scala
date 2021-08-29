@@ -17,12 +17,13 @@
 package kamon.testkit
 
 import java.util.concurrent.LinkedBlockingQueue
-
 import scala.collection.JavaConverters._
 import com.typesafe.config.Config
+import kamon.module.Module.Registration
 import kamon.module.SpanReporter
 import kamon.{Kamon, testkit}
 import kamon.trace.Span
+import org.scalatest.{BeforeAndAfterAll, Suite}
 
 import scala.concurrent.duration.Duration
 
@@ -30,12 +31,21 @@ import scala.concurrent.duration.Duration
   * A Mixin that creates and initializes an inspectable Span reporter, setting up the typical options required for it
   * to work as expected (sample always and fast span flushing).
   */
-trait TestSpanReporter extends Reconfigure { self =>
+trait TestSpanReporter extends Reconfigure with BeforeAndAfterAll { self: Suite =>
   private val _reporter = new testkit.TestSpanReporter.BufferingSpanReporter()
-  private val _registration = {
+  private var _registration: Option[Registration] = None
+
+  override protected def beforeAll(): Unit = {
+    super.beforeAll()
+
     sampleAlways()
     enableFastSpanFlushing()
-    Kamon.registerModule("test-span-reporter-" + self.getClass.getSimpleName, _reporter)
+    _registration = Option(Kamon.registerModule("test-span-reporter-" + self.getClass.getSimpleName, _reporter))
+  }
+
+  override protected def afterAll(): Unit = {
+    _registration.foreach(_.cancel())
+    super.afterAll()
   }
 
   /**
@@ -49,7 +59,7 @@ trait TestSpanReporter extends Reconfigure { self =>
     * can still be inspected.
     */
   def shutdownTestSpanReporter(): Unit =
-    _registration.cancel()
+    _registration.foreach(_.cancel())
 }
 
 object TestSpanReporter {

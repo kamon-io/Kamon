@@ -18,19 +18,15 @@ package kamon.instrumentation.akka
 import akka.actor._
 import akka.routing.RoundRobinPool
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
-import kamon.instrumentation.akka.ActorMetricsTestActor.Block
-import kamon.instrumentation.akka.AkkaMetrics._
-import kamon.tag.TagSet
-import kamon.testkit.{InstrumentInspection, MetricInspection}
-import kamon.util.Filter.Glob
+import kamon.testkit.{InitAndStopKamonAfterAll, InstrumentInspection, MetricInspection}
 import org.scalactic.TimesOnInt.convertIntToRepeater
 import org.scalatest.concurrent.Eventually
-import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
+import org.scalatest.{Matchers, WordSpecLike}
 
 import scala.concurrent.duration._
 
 class AutoGroupingSpec extends TestKit(ActorSystem("AutoGroupingSpec")) with WordSpecLike with MetricInspection.Syntax
-  with InstrumentInspection.Syntax with Matchers with BeforeAndAfterAll with ImplicitSender with Eventually {
+  with InstrumentInspection.Syntax with Matchers with InitAndStopKamonAfterAll with ImplicitSender with Eventually {
 
   import AutoGroupingSpec._
 
@@ -90,8 +86,10 @@ class AutoGroupingSpec extends TestKit(ActorSystem("AutoGroupingSpec")) with Wor
   override implicit def patienceConfig: PatienceConfig =
     PatienceConfig(timeout = 5 seconds, interval = 5 milliseconds)
 
-  override protected def afterAll(): Unit =
+  override protected def afterAll(): Unit = {
     shutdown()
+    super.afterAll()
+  }
 
   def createTestRouter(routerName: String): ActorRef = {
     val router = system.actorOf(RoundRobinPool(5).props(reproducer(1, 0)), routerName)

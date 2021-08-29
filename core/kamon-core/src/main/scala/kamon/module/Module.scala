@@ -81,7 +81,7 @@ object Module {
     case object MetricsReporter extends Kind
     case object SpansReporter extends Kind
     case object CombinedReporter extends Kind
-    case object RecurringCollector extends Kind
+    case object ScheduledAction extends Kind
     case object Unknown extends Kind
   }
 

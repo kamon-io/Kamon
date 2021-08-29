@@ -17,7 +17,7 @@ package kamon.instrumentation.jdbc
 
 import kamon.Kamon
 import kamon.tag.Lookups.plain
-import kamon.testkit.TestSpanReporter
+import kamon.testkit.{InitAndStopKamonAfterAll, TestSpanReporter}
 import kamon.trace.Span
 import org.scalatest.concurrent.Eventually
 import org.scalatest.{Matchers, OptionValues, WordSpec}
@@ -26,7 +26,8 @@ import slick.jdbc.H2Profile.api._
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-class SlickInstrumentationSpec extends WordSpec with Matchers with Eventually with TestSpanReporter with OptionValues {
+class SlickInstrumentationSpec extends WordSpec with Matchers with Eventually with TestSpanReporter with OptionValues
+    with InitAndStopKamonAfterAll {
 
   // NOTE: There is no need for dedicated AsyncExecutor instrumentation because the kamon-executors module
   //       instrumentation will pick up the runnables from Slick and get the job done. These tests are just for

@@ -18,12 +18,11 @@ package kamon.instrumentation.jdbc
 import java.sql.{Connection, DriverManager, ResultSet}
 import java.time.Duration
 import java.util.concurrent.Executors
-
 import ch.vorburger.mariadb4j.DB
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
 import kamon.instrumentation.jdbc.StatementMonitor.StatementTypes
-import kamon.testkit.{InstrumentInspection, MetricInspection, Reconfigure, TestSpanReporter}
+import kamon.testkit.{InitAndStopKamonAfterAll, InstrumentInspection, MetricInspection, Reconfigure, TestSpanReporter}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.SpanSugar
 import org.scalatest.{BeforeAndAfterEach, Matchers, OptionValues, ParallelTestExecution, WordSpec}
@@ -44,15 +43,21 @@ class StatementInstrumentationSpec extends WordSpec
   with InstrumentInspection.Syntax
   with Reconfigure
   with OptionValues
+  with InitAndStopKamonAfterAll
   with TestSpanReporter {
 
   implicit val parallelQueriesExecutor = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(10))
 
-  Kamon.reconfigure(
-    ConfigFactory
-      .parseString("""kamon.trace.hooks.pre-start = [ "kamon.trace.Hooks$PreStart$FromContext" ]""")
-      .withFallback(Kamon.config())
-  )
+
+  override protected def beforeAll(): Unit = {
+    super.beforeAll()
+
+    Kamon.reconfigure(
+      ConfigFactory
+        .parseString("""kamon.trace.hooks.pre-start = [ "kamon.trace.Hooks$PreStart$FromContext" ]""")
+        .withFallback(Kamon.config())
+    )
+  }
 
   override def beforeEach() = testSpanReporter().clear()
 

@@ -18,7 +18,7 @@ import com.typesafe.config.ConfigFactory
 import kamon.Kamon
 import kamon.instrumentation.kafka.testutil.{DotFileGenerator, SpanReportingTestScope, TestSpanReporting, TestTopicScope}
 import kamon.tag.Lookups._
-import kamon.testkit.Reconfigure
+import kamon.testkit.{InitAndStopKamonAfterAll, Reconfigure}
 import kamon.trace.Span
 import net.manub.embeddedkafka.{EmbeddedKafka, EmbeddedKafkaConfig}
 import org.apache.kafka.common.serialization.StringDeserializer
@@ -33,7 +33,7 @@ class KafkaClientsTracingInstrumentationSpec extends WordSpec
   with Eventually
   with SpanSugar
   with BeforeAndAfter
-  with BeforeAndAfterAll
+  with InitAndStopKamonAfterAll
   with EmbeddedKafka
   with Reconfigure
   with OptionValues
@@ -50,11 +50,15 @@ class KafkaClientsTracingInstrumentationSpec extends WordSpec
   implicit val patienceConfigTimeout = timeout(20 seconds)
 
   override def beforeAll(): Unit = {
+    super.beforeAll()
     enableFastSpanFlushing()
     sampleAlways()
     EmbeddedKafka.start()(defaultConfig)
   }
-  override def afterAll(): Unit = EmbeddedKafka.stop()
+  override def afterAll(): Unit = {
+    EmbeddedKafka.stop()
+    super.afterAll()
+  }
 
   "The Kafka Clients Tracing Instrumentation" should {
     "create a Producer Span when publish a message" in new SpanReportingTestScope(reporter) with TestTopicScope {

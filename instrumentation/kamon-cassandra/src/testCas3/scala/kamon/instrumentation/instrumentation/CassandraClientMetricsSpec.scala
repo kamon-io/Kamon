@@ -21,10 +21,10 @@ import kamon.instrumentation.cassandra.CassandraInstrumentation.Node
 import kamon.instrumentation.cassandra.NodeConnectionPoolMetrics.NodeConnectionPoolInstruments
 import kamon.instrumentation.executor.ExecutorMetrics
 import kamon.tag.TagSet
-import kamon.testkit.{InstrumentInspection, MetricInspection}
+import kamon.testkit.{InitAndStopKamonAfterAll, InstrumentInspection, MetricInspection}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.SpanSugar
-import org.scalatest.{BeforeAndAfterAll, Matchers, OptionValues, WordSpec}
+import org.scalatest.{Matchers, OptionValues, WordSpec}
 import org.testcontainers.containers.CassandraContainer
 
 class CassandraClientMetricsSpec
@@ -32,7 +32,7 @@ class CassandraClientMetricsSpec
     with Matchers
     with Eventually
     with SpanSugar
-    with BeforeAndAfterAll
+    with InitAndStopKamonAfterAll
     with MetricInspection.Syntax
     with InstrumentInspection.Syntax
     with OptionValues {
@@ -52,7 +52,7 @@ class CassandraClientMetricsSpec
       val node        = Node("127.0.0.1", "datacenter1", "rack1")
       val poolMetrics = new NodeConnectionPoolInstruments(node)
 
-      eventually(timeout(15 seconds)) {
+      eventually(timeout(20 seconds)) {
         poolMetrics.borrow.distribution(false).max shouldBe >=(1L)
         poolMetrics.openConnections.distribution(false).max should be > 0L
         poolMetrics.inFlight.distribution(false).max should be > 0L
@@ -115,6 +115,7 @@ class CassandraClientMetricsSpec
 
 
   override protected def beforeAll(): Unit = {
+    super.beforeAll()
     cassandra.start()
     session = cassandra.getCluster.newSession()
     val keyspace = s"keyspaceMetricSpec"
@@ -130,5 +131,6 @@ class CassandraClientMetricsSpec
   override protected def afterAll(): Unit = {
     session.close()
     cassandra.stop()
+    super.afterAll()
   }
 }

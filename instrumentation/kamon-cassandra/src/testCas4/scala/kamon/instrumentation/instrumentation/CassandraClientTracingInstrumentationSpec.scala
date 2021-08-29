@@ -19,7 +19,7 @@ package kamon.instrumentation.instrumentation
 import com.datastax.driver.core.QueryOperations
 import com.datastax.oss.driver.api.core.servererrors.SyntaxError
 import com.datastax.oss.driver.api.core.{CqlSession, DriverException}
-import kamon.testkit.{InstrumentInspection, MetricInspection, Reconfigure, TestSpanReporter}
+import kamon.testkit.{InitAndStopKamonAfterAll, InstrumentInspection, MetricInspection, Reconfigure, TestSpanReporter}
 import kamon.trace.Span
 import org.scalactic.TimesOnInt.convertIntToRepeater
 import org.scalatest.concurrent.Eventually
@@ -35,7 +35,7 @@ class CassandraClientTracingInstrumentationSpec
     with Matchers
     with Eventually
     with SpanSugar
-    with BeforeAndAfterAll
+    with InitAndStopKamonAfterAll
     with BeforeAndAfterEach
     with MetricInspection.Syntax
     with InstrumentInspection.Syntax
@@ -105,6 +105,7 @@ class CassandraClientTracingInstrumentationSpec
   val cassandra = new CassandraContainer("cassandra:3.11.10")
 
   override protected def beforeAll(): Unit = {
+    super.beforeAll()
     enableFastSpanFlushing()
     sampleAlways()
 
@@ -132,5 +133,6 @@ class CassandraClientTracingInstrumentationSpec
   override protected def afterAll(): Unit = {
     session.close()
     cassandra.stop()
+    super.afterAll()
   }
 }

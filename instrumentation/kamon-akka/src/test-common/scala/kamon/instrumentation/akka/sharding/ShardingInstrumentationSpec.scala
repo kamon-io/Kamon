@@ -10,7 +10,7 @@ import akka.testkit.{ImplicitSender, TestKitBase}
 import com.typesafe.config.ConfigFactory
 import kamon.instrumentation.akka.AkkaClusterShardingMetrics._
 import kamon.tag.TagSet
-import kamon.testkit.{InstrumentInspection, MetricInspection}
+import kamon.testkit.{InitAndStopKamonAfterAll, InstrumentInspection, MetricInspection}
 import org.scalactic.TimesOnInt.convertIntToRepeater
 import org.scalatest.concurrent.Eventually
 import org.scalatest.{Matchers, WordSpecLike}
@@ -29,6 +29,7 @@ class ShardingInstrumentationSpec
     with ImplicitSender
     with MetricInspection.Syntax
     with InstrumentInspection.Syntax
+    with InitAndStopKamonAfterAll
     with Eventually {
 
   lazy val system: ActorSystem = {

@@ -17,21 +17,19 @@ package kamon.instrumentation.akka
 
 import akka.actor._
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
-import com.typesafe.config.ConfigFactory
-import kamon.Kamon
 import ActorMetricsTestActor._
 import kamon.instrumentation.akka.AkkaMetrics._
 import kamon.tag.TagSet
-import kamon.testkit.{InstrumentInspection, MetricInspection}
+import kamon.testkit.{InitAndStopKamonAfterAll, InstrumentInspection, MetricInspection}
 import org.scalactic.TimesOnInt._
 import org.scalatest.concurrent.Eventually
-import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
+import org.scalatest.{Matchers, WordSpecLike}
 
 import scala.concurrent.duration._
 
 
 class ActorMetricsSpec extends TestKit(ActorSystem("ActorMetricsSpec")) with WordSpecLike with MetricInspection.Syntax with InstrumentInspection.Syntax with Matchers
-    with BeforeAndAfterAll with ImplicitSender with Eventually {
+    with ImplicitSender with Eventually with InitAndStopKamonAfterAll {
 
   "the Kamon actor metrics" should {
     "respect the configured include and exclude filters" in new ActorMetricsFixtures {
@@ -115,7 +113,10 @@ class ActorMetricsSpec extends TestKit(ActorSystem("ActorMetricsSpec")) with Wor
   }
 
 
-  override protected def afterAll(): Unit = shutdown()
+  override protected def afterAll(): Unit = {
+    shutdown()
+    super.afterAll()
+  }
 
   def actorTags(path: String): TagSet =
     TagSet.from(

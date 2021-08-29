@@ -6,7 +6,7 @@ import kamon.Kamon
 import kamon.context.Context
 import kamon.tag.Lookups._
 import kamon.tag.TagSet
-import kamon.testkit.{InstrumentInspection, SpanInspection}
+import kamon.testkit.{InitAndStopKamonAfterAll, InstrumentInspection, SpanInspection}
 import kamon.trace.Span
 import org.scalatest.concurrent.Eventually
 import org.scalatest.{Matchers, OptionValues, WordSpec}
@@ -14,7 +14,7 @@ import org.scalatest.{Matchers, OptionValues, WordSpec}
 import scala.collection.mutable
 
 class HttpClientInstrumentationSpec extends WordSpec with Matchers with InstrumentInspection.Syntax with OptionValues
-    with SpanInspection.Syntax with Eventually {
+    with SpanInspection.Syntax with Eventually with InitAndStopKamonAfterAll {
 
   "the HTTP server instrumentation" when {
     "configured for context propagation" should {

@@ -16,7 +16,7 @@
 
 package kamon
 
-import kamon.module.{MetricReporter, Module, ModuleRegistry, ScheduledCollector, SpanReporter}
+import kamon.module.{MetricReporter, Module, ModuleRegistry, ScheduledAction, SpanReporter}
 import kamon.module.Module.Registration
 import kamon.util.Filter
 
@@ -97,15 +97,9 @@ trait Modules { self: Configuration with Utilities with Metrics with Tracing =>
       }
     }
   }
-  def addCollector(name: String, description: Option[String], collector: ScheduledCollector, interval: Duration): Registration = {
-    new Registration {
-      /**
-        * Removes and stops the related module.
-        */
-      override def cancel(): Unit = {
 
-      }
-    }
+  def addScheduledAction(name: String, description: Option[String], collector: ScheduledAction, interval: Duration): Registration = {
+    _moduleRegistry.addScheduledAction(name, description, collector, interval)
   }
 
   /**

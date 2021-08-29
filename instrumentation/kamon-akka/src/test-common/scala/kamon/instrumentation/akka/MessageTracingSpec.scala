@@ -1,24 +1,24 @@
 package kamon.instrumentation.akka
 
 import java.util.concurrent.TimeUnit
-
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.routing.{RoundRobinGroup, RoundRobinPool}
 import akka.testkit.{ImplicitSender, TestKit}
 import akka.pattern.ask
 import akka.util.Timeout
+import kamon.Kamon
 import kamon.tag.Lookups
-import kamon.testkit.{MetricInspection, Reconfigure, SpanInspection, TestSpanReporter}
+import kamon.testkit.{InitAndStopKamonAfterAll, MetricInspection, Reconfigure, SpanInspection, TestSpanReporter}
 import kamon.trace.Span
 import org.scalatest.concurrent.Eventually
-import org.scalatest.{BeforeAndAfterAll, Matchers, OptionValues, WordSpecLike}
+import org.scalatest.{Matchers, OptionValues, WordSpecLike}
 import org.scalatest.time.SpanSugar._
 
 import scala.concurrent.Await
 
 
 class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with WordSpecLike with MetricInspection.Syntax with Matchers
-  with SpanInspection with Reconfigure with BeforeAndAfterAll with ImplicitSender with Eventually with OptionValues with TestSpanReporter {
+  with SpanInspection with Reconfigure with InitAndStopKamonAfterAll with ImplicitSender with Eventually with OptionValues with TestSpanReporter {
 
   "Message tracing instrumentation" should {
     "skip filtered out actors" in {
@@ -173,11 +173,6 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Wor
       span.tags.withTags(span.metricTags).get(Lookups.plain(tag))
     }
 
-  }
-
-  override protected def beforeAll(): Unit = {
-    enableFastSpanFlushing()
-    sampleAlways()
   }
 }
 

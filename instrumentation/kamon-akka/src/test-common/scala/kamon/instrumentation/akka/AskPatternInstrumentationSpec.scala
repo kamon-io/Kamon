@@ -25,10 +25,12 @@ import com.typesafe.config.ConfigFactory
 import kamon.Kamon
 import org.scalatest.{BeforeAndAfterAll, WordSpecLike}
 import ContextTesting._
+import kamon.testkit.InitAndStopKamonAfterAll
 
 import scala.concurrent.duration._
 
-class AskPatternInstrumentationSpec extends TestKit(ActorSystem("AskPatternInstrumentationSpec")) with WordSpecLike with BeforeAndAfterAll with ImplicitSender {
+class AskPatternInstrumentationSpec extends TestKit(ActorSystem("AskPatternInstrumentationSpec")) with WordSpecLike
+    with InitAndStopKamonAfterAll with ImplicitSender {
 
   implicit lazy val ec = system.dispatcher
   implicit val askTimeout = Timeout(10 millis)
@@ -78,7 +80,10 @@ class AskPatternInstrumentationSpec extends TestKit(ActorSystem("AskPatternInstr
     }
   }
 
-  override protected def afterAll(): Unit = shutdown()
+  override protected def afterAll(): Unit = {
+    shutdown()
+    super.afterAll()
+  }
 
   def setAskPatternTimeoutWarningMode(mode: String): Unit = {
     val newConfiguration = ConfigFactory.parseString(s"kamon.akka.ask-pattern-timeout-warning=$mode").withFallback(Kamon.config())

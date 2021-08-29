@@ -7,7 +7,7 @@ import java.util.concurrent.atomic.AtomicLong
 import kamon.{AtomicGetOrElseUpdateOnTrieMap, Kamon}
 import kamon.metric.{Histogram, InstrumentGroup}
 import kamon.module.Module.Registration
-import kamon.module.ScheduledCollector
+import kamon.module.ScheduledAction
 import kamon.tag.TagSet
 
 import scala.collection.concurrent.TrieMap
@@ -90,16 +90,19 @@ object AkkaClusterShardingMetrics {
         val messagesPerShard = TrieMap.empty[String, AtomicLong]
         val samplingInterval = AkkaRemoteInstrumentation.settings().shardMetricsSampleInterval
 
-        val schedule = Kamon.addCollector("shargindCollector", None, new ScheduledCollector {
-          override def collect(): Unit = {
-            entitiesPerShard.foreach {case (shard, value) => shardEntities.record(value.get())}
-            messagesPerShard.foreach {case (shard, value) => shardMessages.record(value.getAndSet(0L))}
-          }
+        val schedule = Kamon.addScheduledAction(
+          s"akka/shards/${typeName}",
+          Some(s"Updates health metrics for the ${system}/${typeName} shard every ${samplingInterval.getSeconds} seconds"),
+          new ScheduledAction {
+            override def run(): Unit = {
+              entitiesPerShard.foreach {case (shard, value) => shardEntities.record(value.get())}
+              messagesPerShard.foreach {case (shard, value) => shardMessages.record(value.getAndSet(0L))}
+            }
 
-          override def stop(): Unit = {}
-          override def reconfigure(newConfig: Config): Unit = {}
+            override def stop(): Unit = {}
+            override def reconfigure(newConfig: Config): Unit = {}
 
-        }, samplingInterval)
+          }, samplingInterval)
 
 
         ShardTelemetry(entitiesPerShard, messagesPerShard, schedule)

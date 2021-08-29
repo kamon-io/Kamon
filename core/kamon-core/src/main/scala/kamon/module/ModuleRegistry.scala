@@ -54,7 +54,7 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
 
     scheduleMetricsTicker(tickerExecutor)
     scheduleSpansTicker(tickerExecutor)
-    scheduleCollectors(tickerExecutor)
+    scheduleActions(tickerExecutor)
   }
 
   def shutdown(): Unit = synchronized {
@@ -75,8 +75,8 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
     register(name, description, reporter, metricFilter, None)
   }
 
-  def addCollector(name: String, description: Option[String], collector: ScheduledCollector, interval: Duration): Registration = {
-    register(name, description, collector, None, interval)
+  def addScheduledAction(name: String, description: Option[String], collector: ScheduledAction, interval: Duration): Registration = {
+    register(name, description, collector, None, Some(interval))
   }
 
   /**
@@ -233,21 +233,23 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
     }
   }
 
-  private def scheduleCollectors(scheduler: ScheduledExecutorService): Unit = {
+  private def scheduleActions(scheduler: ScheduledExecutorService): Unit = {
     _registeredModules.values
-      .collect { case e if e.module.isInstanceOf[ScheduledCollector] => e }
-      .foreach { collectorEntry =>
-        val intervalMills = collectorEntry.settings.collectInterval.get.toMillis
+      .collect { case e if e.module.isInstanceOf[ScheduledAction] => e }
+      .foreach { actionEntry => scheduleAction(actionEntry.asInstanceOf[Entry[ScheduledAction]], scheduler) }
+  }
 
-        val scheduledFuture =  scheduler.scheduleAtFixedRate(
-          collectorScheduleRunnable(collectorEntry.asInstanceOf[Entry[ScheduledCollector]]),
-          intervalMills,
-          intervalMills,
-          TimeUnit.MILLISECONDS
-        )
+  private def scheduleAction(entry: Entry[ScheduledAction], scheduler: ScheduledExecutorService): Unit = {
+    val intervalMills = entry.settings.collectInterval.get.toMillis
 
-        collectorEntry.collectSchedule.set(scheduledFuture)
-      }
+    val scheduledFuture =  scheduler.scheduleAtFixedRate(
+      collectorScheduleRunnable(entry),
+      intervalMills,
+      intervalMills,
+      TimeUnit.MILLISECONDS
+    )
+
+    entry.collectSchedule.set(scheduledFuture)
   }
 
   private def scheduleMetricsTick(entry: Entry[MetricReporter], periodSnapshot: PeriodSnapshot): Unit = {
@@ -266,12 +268,12 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
     }(entry.executionContext)
   }
 
-  private def collectorScheduleRunnable(entry: Entry[ScheduledCollector]): Runnable = new Runnable {
+  private def collectorScheduleRunnable(entry: Entry[ScheduledAction]): Runnable = new Runnable {
     override def run(): Unit = entry.executionContext.submit(collectRunnable(entry.module))
   }
 
-  private def collectRunnable(collector: ScheduledCollector): Runnable = new Runnable {
-    override def run(): Unit = collector.collect()
+  private def collectRunnable(collector: ScheduledAction): Runnable = new Runnable {
+    override def run(): Unit = collector.run()
   }
 
   private def stopReporterTickers(): Unit = {
@@ -374,7 +376,7 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
     else if(isSpanReporter)
       Module.Kind.SpansReporter
     else
-      Module.Kind.RecurringCollector
+      Module.Kind.ScheduledAction
   }
 
   /**
@@ -416,12 +418,18 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
   private def registerModule(entry: Entry[Module]): Unit = {
     _registeredModules = _registeredModules + (entry.name -> entry)
 
-    if(entry.module.isInstanceOf[MetricReporter])
-      _metricReporterModules = _metricReporterModules + (entry.name -> entry.asInstanceOf[Entry[MetricReporter]])
+    entry.module match {
+      case metricReporter: MetricReporter =>
+        _metricReporterModules = _metricReporterModules + (entry.name -> entry.asInstanceOf[Entry[MetricReporter]])
 
-    if(entry.module.isInstanceOf[SpanReporter])
-      _spanReporterModules = _spanReporterModules + (entry.name -> entry.asInstanceOf[Entry[SpanReporter]])
+      case spanReporter: SpanReporter =>
+        _spanReporterModules = _spanReporterModules + (entry.name -> entry.asInstanceOf[Entry[SpanReporter]])
 
+      case scheduledAction: ScheduledAction if _tickerExecutor.nonEmpty =>
+        scheduleAction(entry.asInstanceOf[Entry[ScheduledAction]], _tickerExecutor.get)
+
+      case _ => // Nothing special to do in any other cases
+    }
   }
 
   /**
@@ -429,6 +437,7 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
     * context. The returned future completes when the module finishes its stop procedure.
     */
   private def stopModule(entry: Entry[Module]): Future[Unit] = synchronized {
+    println("Trying to stop module: " + entry.name)
 
     // Remove the module from all registries
     _registeredModules = _registeredModules - entry.name

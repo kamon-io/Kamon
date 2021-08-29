@@ -1,12 +1,12 @@
 package kamon.instrumentation
 
 import kamon.tag.Lookups.{plain, plainLong}
-import kamon.testkit.TestSpanReporter
+import kamon.testkit.{InitAndStopKamonAfterAll, TestSpanReporter}
 import okhttp3.{MediaType, OkHttpClient, Request, RequestBody}
 import org.scalatest.OptionValues.convertOptionToValuable
 import org.scalatest.concurrent.Eventually.eventually
 import org.scalatest.concurrent.Waiters.timeout
-import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
+import org.scalatest.{Matchers, WordSpec}
 import testapp.TestApp
 
 import scala.concurrent.duration.DurationInt
@@ -15,13 +15,16 @@ import scala.util.Try
 class SpringMVCInstrumentationSpec
   extends WordSpec
     with Matchers
-    with BeforeAndAfterAll
+    with InitAndStopKamonAfterAll
     with TestSpanReporter {
   val port = "8080"
   val baseUrl = s"http://localhost:${port}"
   val client = new OkHttpClient()
 
-  override def beforeAll(): Unit = TestApp.main(Array(port))
+  override def beforeAll(): Unit = {
+    super.beforeAll()
+    TestApp.main(Array(port))
+  }
 
   "SpringMVC instrumentation" should {
     "create a span when receiving a request" in {

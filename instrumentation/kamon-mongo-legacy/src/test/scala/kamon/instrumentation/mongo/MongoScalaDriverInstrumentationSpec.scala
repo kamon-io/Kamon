@@ -1,7 +1,7 @@
 package kamon.instrumentation.mongo
 
 import kamon.tag.Lookups._
-import kamon.testkit.TestSpanReporter
+import kamon.testkit.{InitAndStopKamonAfterAll, TestSpanReporter}
 import org.mongodb.scala._
 import org.mongodb.scala.model.Filters
 import org.mongodb.scala.model.Aggregates
@@ -14,7 +14,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 
 class MongoScalaDriverInstrumentationSpec extends EmbeddedMongoTest(port = 4445) with Matchers with TestSpanReporter
-    with Eventually with OptionValues {
+    with Eventually with OptionValues with InitAndStopKamonAfterAll {
 
   val client = scalaClient()
   val tools = client.getDatabase("test").getCollection("tools")

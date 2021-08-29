@@ -30,7 +30,7 @@ import org.scalatest.concurrent.{Eventually, ScalaFutures}
 
 import scala.concurrent.duration._
 
-class AkkaHttpServerTracingSpec extends WordSpecLike with Matchers with ScalaFutures with Inside with BeforeAndAfterAll
+class AkkaHttpServerTracingSpec extends WordSpecLike with Matchers with ScalaFutures with Inside with InitAndStopKamonAfterAll
     with MetricInspection.Syntax with Reconfigure with TestWebServer with Eventually with OptionValues with TestSpanReporter {
 
   import TestWebServer.Endpoints._
@@ -247,6 +247,7 @@ class AkkaHttpServerTracingSpec extends WordSpecLike with Matchers with ScalaFut
   }
 
   override protected def afterAll(): Unit = {
+    super.afterAll()
     http1WebServer.shutdown()
     http2WebServer.shutdown()
   }

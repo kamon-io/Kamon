@@ -21,6 +21,6 @@ package kamon.module
   * Modules implementing this trait will get registered for periodically receiving span batches. The frequency of the
   * span batches is controlled by the kamon.trace.tick-interval setting.
   */
-trait ScheduledCollector extends Module {
-  def collect(): Unit
+trait ScheduledAction extends Module {
+  def run(): Unit
 }

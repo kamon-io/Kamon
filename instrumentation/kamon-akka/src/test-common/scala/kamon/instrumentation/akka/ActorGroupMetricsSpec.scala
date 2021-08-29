@@ -18,20 +18,20 @@ package kamon.instrumentation.akka
 import akka.actor._
 import akka.routing.RoundRobinPool
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
-import ActorMetricsTestActor.{Block, BlockAndDie, Die, Discard}
+import ActorMetricsTestActor.{Block, Die}
 import kamon.instrumentation.akka.AkkaMetrics._
 import kamon.tag.TagSet
-import kamon.testkit.{InstrumentInspection, MetricInspection}
+import kamon.testkit.{InitAndStopKamonAfterAll, InstrumentInspection, MetricInspection}
 import kamon.util.Filter
 import org.scalactic.TimesOnInt.convertIntToRepeater
 import org.scalatest.concurrent.Eventually
-import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
+import org.scalatest.{Matchers, WordSpecLike}
 
 import scala.concurrent.duration._
 import scala.util.Random
 
-class ActorGroupMetricsSpec extends TestKit(ActorSystem("ActorGroupMetricsSpec")) with WordSpecLike with MetricInspection.Syntax with InstrumentInspection.Syntax with Matchers
-    with BeforeAndAfterAll with ImplicitSender with Eventually {
+class ActorGroupMetricsSpec extends TestKit(ActorSystem("ActorGroupMetricsSpec")) with WordSpecLike with MetricInspection.Syntax
+    with InstrumentInspection.Syntax with Matchers with InitAndStopKamonAfterAll with ImplicitSender with Eventually {
 
   "the Kamon actor-group metrics" should {
     "increase the member count when an actor matching the pattern is created" in new ActorGroupMetricsFixtures {
@@ -40,7 +40,7 @@ class ActorGroupMetricsSpec extends TestKit(ActorSystem("ActorGroupMetricsSpec")
       val trackedActor3 = watch(createTestActor("group-of-actors-3"))
       val nonTrackedActor = createTestActor("someone-else")
 
-      eventually {
+      eventually (timeout(5 seconds)) {
         GroupMembers.withTags(groupTags("group-of-actors")).distribution().max shouldBe(3)
       }
 
@@ -51,15 +51,21 @@ class ActorGroupMetricsSpec extends TestKit(ActorSystem("ActorGroupMetricsSpec")
       system.stop(trackedActor3)
       expectTerminated(trackedActor3)
 
-      eventually(GroupMembers.withTags(groupTags("group-of-actors")).distribution().max shouldBe (0))
+      eventually (timeout(5 seconds)) {
+        GroupMembers.withTags(groupTags("group-of-actors")).distribution().max shouldBe (0)
+      }
     }
 
 
     "increase the member count when a routee matching the pattern is created" in new ActorGroupMetricsFixtures {
       val trackedRouter = createTestPoolRouter("group-of-routees")
-      val nonTrackedRouter = createTestPoolRouter("group-non-tracked-router")
+      val nonTrackedRouter = createTestPoolRouter("non-tracked-group-of-routees")
 
-      eventually(GroupMembers.withTags(groupTags("group-of-routees")).distribution().max shouldBe(5))
+      eventually (timeout(5 seconds)) {
+        val valueNow = GroupMembers.withTags(groupTags("group-of-routees")).distribution().max
+        println("ValueNow: " + valueNow)
+        valueNow shouldBe(5)
+      }
 
       val trackedRouter2 = createTestPoolRouter("group-of-routees-2")
       val trackedRouter3 = createTestPoolRouter("group-of-routees-3")
@@ -130,13 +136,16 @@ class ActorGroupMetricsSpec extends TestKit(ActorSystem("ActorGroupMetricsSpec")
 
   override implicit def patienceConfig: PatienceConfig = PatienceConfig(timeout = 5 seconds, interval = 5 milliseconds)
 
-  override protected def afterAll(): Unit = shutdown()
+  override protected def afterAll(): Unit = {
+    shutdown()
+    super.afterAll()
+  }
 
   def groupTags(group: String): TagSet =
     TagSet.from(
       Map(
-        "group" -> group,
-        "system" -> "ActorGroupMetricsSpec"
+        "system" -> "ActorGroupMetricsSpec",
+        "group" -> group
       )
     )
 

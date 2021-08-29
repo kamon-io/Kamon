@@ -17,19 +17,18 @@
 package kamon.annotation
 
 import java.util.concurrent.{CompletableFuture, CompletionStage}
-
 import kamon.annotation.api._
 import kamon.metric.{Histogram => _, RangeSampler => _, Timer => _}
 import kamon.module.Module.Registration
 import kamon.tag.Lookups._
 import kamon.tag.TagSet
-import kamon.testkit.{InstrumentInspection, MetricInspection, Reconfigure, SpanInspection}
+import kamon.testkit.{InitAndStopKamonAfterAll, InstrumentInspection, MetricInspection, Reconfigure, SpanInspection}
 import kamon.trace.Span
 import kamon.{Kamon, testkit}
 import org.scalactic.TimesOnInt.convertIntToRepeater
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.SpanSugar
-import org.scalatest.{BeforeAndAfterAll, Matchers, OptionValues, WordSpec}
+import org.scalatest.{Matchers, OptionValues, WordSpec}
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -42,7 +41,7 @@ class AnnotationInstrumentationSpec extends WordSpec
   with InstrumentInspection.Syntax
   with SpanInspection
   with MetricInspection.Syntax
-  with BeforeAndAfterAll
+  with InitAndStopKamonAfterAll
   with OptionValues {
 
 
@@ -238,6 +237,7 @@ class AnnotationInstrumentationSpec extends WordSpec
   val reporter = new testkit.TestSpanReporter.BufferingSpanReporter()
 
   override protected def beforeAll(): Unit = {
+    super.beforeAll()
     enableFastSpanFlushing()
     sampleAlways()
     registration = Kamon.registerModule("test-module", reporter)
@@ -245,6 +245,7 @@ class AnnotationInstrumentationSpec extends WordSpec
 
   override protected def afterAll(): Unit = {
     registration.cancel()
+    super.afterAll()
   }
 
   def stringTag(span: Span.Finished)(tag: String): String = {

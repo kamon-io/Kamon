@@ -2,13 +2,14 @@ package kamon
 
 import java.io.File
 import java.util.concurrent.TimeUnit
-
-import com.typesafe.config.Config
+import com.typesafe.config.{Config, ConfigFactory}
 import kamon.metric.PeriodSnapshot
 import kamon.trace.Span
 import org.scalatest.{Matchers, WordSpec}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.SpanSugar._
+
+import scala.collection.JavaConverters.iterableAsScalaIterableConverter
 
 class KamonLifecycleSpec extends WordSpec with Matchers with Eventually {
 
@@ -24,6 +25,24 @@ class KamonLifecycleSpec extends WordSpec with Matchers with Eventually {
       val process = Runtime.getRuntime.exec(createProcessCommand("kamon.KamonWithTemporaryReporter"))
       Thread.sleep(2000)
       process.isAlive shouldBe true
+
+      eventually(timeout(7 seconds)) {
+        process.isAlive shouldBe false
+        process.exitValue() shouldBe 0
+      }
+    }
+
+    "not create any threads if Kamon.init was not called" in {
+      val process = Runtime.getRuntime.exec(createProcessCommand("kamon.UsingKamonApisWithoutInit"))
+
+      eventually(timeout(7 seconds)) {
+        process.isAlive shouldBe false
+        process.exitValue() shouldBe 0
+      }
+    }
+
+    "process calls to reconfigure before and after being operational" in {
+      val process = Runtime.getRuntime.exec(createProcessCommand("kamon.ReconfiguringBeforeInit"))
 
       eventually(timeout(7 seconds)) {
         process.isAlive shouldBe false
@@ -62,4 +81,26 @@ object KamonWithTemporaryReporter extends App {
 
   Thread.sleep(5000)
   Kamon.stop()
+}
+
+object UsingKamonApisWithoutInit extends App {
+  Kamon.counter("my-counter")
+  Kamon.runWithContextTag("hello", "kamon") {
+    Kamon.currentSpan().takeSamplingDecision()
+  }
+
+  val allKamonThreadNames = Thread.getAllStackTraces
+    .keySet()
+    .asScala
+    .filter(_.getName.startsWith("kamon"))
+
+  if(allKamonThreadNames.nonEmpty)
+    sys.error("Kamon shouldn't start or create threads until init is called")
+}
+
+object ReconfiguringBeforeInit extends App {
+  Kamon.reconfigure(ConfigFactory.load())
+  Kamon.init()
+  Kamon.stop()
+  Kamon.reconfigure(ConfigFactory.load())
 }
