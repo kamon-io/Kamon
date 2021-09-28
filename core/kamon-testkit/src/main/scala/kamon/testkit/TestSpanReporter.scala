@@ -40,7 +40,7 @@ trait TestSpanReporter extends Reconfigure with BeforeAndAfterAll { self: Suite 
 
     sampleAlways()
     enableFastSpanFlushing()
-    _registration = Option(Kamon.registerModule("test-span-reporter-" + self.getClass.getSimpleName, _reporter))
+    _registration = Option(Kamon.addReporter("test-span-reporter-" + self.getClass.getSimpleName, _reporter))
   }
 
   override protected def afterAll(): Unit = {

@@ -60,7 +60,7 @@ trait Modules { self: Configuration with Utilities with Metrics with Tracing =>
     * Register a module instantiated by the user and returns a Registration that can be used to stop and deregister the
     * module at any time.
     */
-  @deprecated("Use addReporter or addCollector instead", since = "2.3.0")
+  @deprecated("Use addReporter or addScheduledAction instead", since = "2.3.0")
   def registerModule(name: String, module: Module): Registration =
     _moduleRegistry.register(name, None, module)
 
@@ -68,35 +68,25 @@ trait Modules { self: Configuration with Utilities with Metrics with Tracing =>
     * Register a module instantiated by the user and returns a Registration that can be used to stop and deregister the
     * module at any time.
     */
-  @deprecated("Use addReporter or addCollector instead", since = "2.3.0")
+  @deprecated("Use addReporter or addScheduledAction instead", since = "2.3.0")
   def registerModule(name: String, description: String, module: Module, configPath: String): Registration =
     _moduleRegistry.register(name, Some(description), module)
 
 
+  def addReporter(name: String, reporter: SpanReporter): Registration =
+    _moduleRegistry.addReporter(name, None, reporter)
 
+  def addReporter(name: String, description: String, reporter: SpanReporter): Registration =
+    _moduleRegistry.addReporter(name, Option(description), reporter)
 
+  def addReporter(name: String, reporter: MetricReporter): Registration =
+    _moduleRegistry.addReporter(name, None, reporter, None)
 
-  def addReporter(name: String, description: Option[String], exporter: SpanReporter): Registration = {
-    new Registration {
-      /**
-        * Removes and stops the related module.
-        */
-      override def cancel(): Unit = {
+  def addReporter(name: String, reporter: MetricReporter, metricFilter: Filter): Registration =
+    _moduleRegistry.addReporter(name, None, reporter, Option(metricFilter))
 
-      }
-    }
-  }
-
-  def addReporter(name: String, description: Option[String], exporter: MetricReporter, metricFilter: Option[Filter]): Registration = {
-    new Registration {
-      /**
-        * Removes and stops the related module.
-        */
-      override def cancel(): Unit = {
-
-      }
-    }
-  }
+  def addReporter(name: String, description: String, reporter: MetricReporter, metricFilter: Filter): Registration =
+    _moduleRegistry.addReporter(name, Option(description), reporter, Option(metricFilter))
 
   def addScheduledAction(name: String, description: Option[String], collector: ScheduledAction, interval: Duration): Registration = {
     _moduleRegistry.addScheduledAction(name, description, collector, interval)

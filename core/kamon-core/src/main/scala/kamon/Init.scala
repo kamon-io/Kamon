@@ -85,7 +85,7 @@ trait Init { self: Modules with Configuration with CurrentStatus with Metrics wi
   }
 
   private def initScheduler(): Unit = {
-    val newScheduler = newScheduledThreadPool(1, numberedThreadFactory("kamon-scheduler", daemon = true))
+    val newScheduler = newScheduledThreadPool(2, numberedThreadFactory("kamon-scheduler", daemon = true))
     self.tracer().bindScheduler(newScheduler)
     self.registry().bindScheduler(newScheduler)
   }

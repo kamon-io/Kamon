@@ -64,7 +64,6 @@ object RoutedActorRefConstructorAdvice {
 
   @OnMethodExit(suppress = classOf[Throwable])
   def exit(@This ref: ActorRef, @Argument(1) routerProps: Props, @Argument(4) routeeProps: Props): Unit = {
-    println("Constructed a router " + ref.path.toStringWithoutAddress)
     val routedRef = ref.asInstanceOf[HasRouterProps]
     routedRef.setRouteeProps(routeeProps)
     routedRef.setRouterProps(routerProps)

@@ -18,7 +18,6 @@ package kamon.metric
 
 import java.lang.Math.abs
 import java.util.concurrent.atomic.AtomicLong
-
 import kamon.metric.Histogram.DistributionSnapshotBuilder
 import kamon.metric.Metric.{BaseMetric, BaseMetricAutoUpdate, Settings}
 import kamon.tag.TagSet

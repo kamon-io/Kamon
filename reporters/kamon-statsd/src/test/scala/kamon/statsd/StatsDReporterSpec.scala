@@ -123,8 +123,9 @@ class StatsDReporterSpec extends WordSpec with Matchers with BeforeAndAfter with
 
   override def beforeAll(): Unit = {
     super.beforeAll()
+    Kamon.init()
     statsDServer.start()
-    moduleRegistration = Kamon.registerModule("statsd-test", statsDReporter)
+    moduleRegistration = Kamon.addReporter("statsd-test", statsDReporter)
     Kamon.reconfigure(testConfig)
     Kamon.gauge(generateMetricName()).withoutTags().increment(1)
   }

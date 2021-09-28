@@ -18,6 +18,7 @@ package kamon.instrumentation.instrumentation
 import com.datastax.driver.core.Session
 import kamon.Kamon
 import kamon.instrumentation.cassandra.CassandraInstrumentation.Node
+import kamon.instrumentation.cassandra.NodeConnectionPoolMetrics
 import kamon.instrumentation.cassandra.NodeConnectionPoolMetrics.NodeConnectionPoolInstruments
 import kamon.instrumentation.executor.ExecutorMetrics
 import kamon.tag.TagSet
@@ -49,7 +50,10 @@ class CassandraClientMetricsSpec
         session.execute(st)
       }
 
-      val node        = Node("127.0.0.1", "datacenter1", "rack1")
+      // We are reading the only possible host from the metric tags to ensure that we lookup the
+      // right instruments, regardless of whether localhost resolved to 127.0.0.1 or 0:0:0:0:0:0:0:1
+      val hostAddress = NodeConnectionPoolMetrics.InFlight.tagValues("cassandra.node").head
+      val node        = Node(hostAddress, "datacenter1", "rack1")
       val poolMetrics = new NodeConnectionPoolInstruments(node)
 
       eventually(timeout(20 seconds)) {
@@ -99,9 +103,11 @@ class CassandraClientMetricsSpec
           "SELECT * FROM users where name = 'kamon' ALLOW FILTERING"
         )
         .bind()
+
       for (_ <- 1 to 10) yield {
         session.executeAsync(stmt)
       }
+
       eventually(timeout(10 seconds)) {
         val all = ExecutorMetrics.ThreadsTotal.instruments()
         all.map(_._2.distribution(false).max).forall(_ > 0) === true

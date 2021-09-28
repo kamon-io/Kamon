@@ -88,10 +88,12 @@ class ActorGroupMetricsSpec extends TestKit(ActorSystem("ActorGroupMetricsSpec")
     }
 
     "cleanup pending-messages metric on member shutdown" in new ActorGroupMetricsFixtures {
-      val actors = (1 to 10).map(id => watch(createTestActor(s"group-of-actors-$id")))
-      eventually{
-        GroupMembers.withTags(groupTags("group-of-actors")).distribution().min shouldBe (10)
-        GroupMembers.withTags(groupTags("group-of-actors")).distribution().max shouldBe (10)
+      val actors = (1 to 10).map(id => watch(createTestActor(s"group-of-actors-for-cleaning-$id")))
+
+      eventually {
+        val memberCountDistribution = GroupMembers.withTags(groupTags("group-of-actors-for-cleaning")).distribution()
+        memberCountDistribution.min shouldBe (10)
+        memberCountDistribution.max shouldBe (10)
       }
 
       val hangQueue = Block(1 milliseconds)
@@ -102,8 +104,9 @@ class ActorGroupMetricsSpec extends TestKit(ActorSystem("ActorGroupMetricsSpec")
       }
 
       actors.foreach(system.stop)
+
       eventually {
-        val pendingMessagesDistribution = GroupPendingMessages.withTags(groupTags("group-of-actors")).distribution()
+        val pendingMessagesDistribution = GroupPendingMessages.withTags(groupTags("group-of-actors-for-cleaning")).distribution()
         pendingMessagesDistribution.count should be > 0L
         pendingMessagesDistribution.max shouldBe 0L
       }
@@ -112,9 +115,10 @@ class ActorGroupMetricsSpec extends TestKit(ActorSystem("ActorGroupMetricsSpec")
     "cleanup pending-messages metric on member shutdown there are messages still being sent to the members" in new ActorGroupMetricsFixtures {
       val parent = watch(system.actorOf(Props[SecondLevelGrouping], "second-level-group"))
 
-      eventually{
-        GroupMembers.withTags(groupTags("second-level-group")).distribution().min shouldBe (10)
-        GroupMembers.withTags(groupTags("second-level-group")).distribution().max shouldBe (10)
+      eventually {
+        val memberCountDistribution = GroupMembers.withTags(groupTags("second-level-group")).distribution()
+        memberCountDistribution.min shouldBe (10)
+        memberCountDistribution.max shouldBe (10)
       }
 
       1000 times  {

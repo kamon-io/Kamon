@@ -663,7 +663,7 @@ lazy val `kamon-newrelic` = (project in file("reporters/kamon-newrelic"))
       "com.newrelic.telemetry" % "telemetry-core" % "0.12.0",
       "com.newrelic.telemetry" % "telemetry-http-okhttp" % "0.12.0",
       scalatest % "test",
-      "org.mockito" % "mockito-core" % "3.1.0" % "test"
+      "org.mockito" % "mockito-core" % "3.12.4" % "test"
     )
   ).dependsOn(`kamon-core`)
 

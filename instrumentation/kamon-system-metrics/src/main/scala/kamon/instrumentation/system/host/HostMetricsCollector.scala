@@ -19,19 +19,17 @@ package instrumentation
 package system
 package host
 
-import java.util.concurrent.TimeUnit
-
 import com.typesafe.config.Config
 import kamon.instrumentation.system.host.HostMetrics._
-import kamon.module.{Module, ModuleFactory}
+import kamon.module.{Module, ModuleFactory, ScheduledAction}
 import kamon.tag.TagSet
 import kamon.util.Filter
 import oshi.SystemInfo
 import oshi.hardware.CentralProcessor.TickType
-import oshi.hardware.NetworkIF
 
+import java.time.{Duration, Instant}
 import scala.collection.JavaConverters._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 /**
   * Collects CPU, Memory, Swap, Storage and Network metrics. The metrics collection is split into two groups: frequent
@@ -39,18 +37,25 @@ import scala.concurrent.{ExecutionContext, Future}
   * time, like the CPU usage, while the infrequent collector focuses on metrics that can be updated less frequently like
   * swap and memory usage and cumulative metrics like network and storage usage.
   */
-class HostMetricsCollector(ec: ExecutionContext) extends Module {
+class HostMetricsCollector(ec: ExecutionContext) extends ScheduledAction {
   private val _configPath = "kamon.instrumentation.system.host"
+  private var _lastInfrequentTick = Instant.now()
   @volatile private var _settings: HostMetricsCollector.Settings = readSettings(Kamon.config())
 
   private val _frequentCollector = new FrequentCollectionTask
   private val _infrequentCollector = new InfrequentCollectionTask
-  private val _fcSchedule = Kamon.scheduler().scheduleAtFixedRate(scheduleOnModuleEC(_frequentCollector), 1, 1, TimeUnit.SECONDS)
-  private val _ifcSchedule = Kamon.scheduler().scheduleAtFixedRate(scheduleOnModuleEC(_infrequentCollector), 1, 10, TimeUnit.SECONDS)
+
+
+  override def run(): Unit = {
+    _frequentCollector.run()
+
+    if(Duration.between(_lastInfrequentTick, Instant.now()).getSeconds() >= 10) {
+      _infrequentCollector.run()
+      _lastInfrequentTick = Instant.now()
+    }
+  }
 
   override def stop(): Unit = {
-    _fcSchedule.cancel(false)
-    _ifcSchedule.cancel(false)
     _frequentCollector.cleanup()
     _infrequentCollector.cleanup()
   }
@@ -67,14 +72,8 @@ class HostMetricsCollector(ec: ExecutionContext) extends Module {
     )
   }
 
-  private def scheduleOnModuleEC(task: CollectionTask): Runnable = new Runnable {
-    override def run(): Unit =
-      task.schedule(ec)
-  }
-
   trait CollectionTask {
-    def schedule(ec: ExecutionContext): Unit
-
+    def run(): Unit
     def cleanup(): Unit
   }
 
@@ -85,10 +84,8 @@ class HostMetricsCollector(ec: ExecutionContext) extends Module {
     private val _cpuInstruments = new CpuInstruments(_defaultTags)
     private var _prevCpuLoadTicks: Array[Long] = Array.ofDim(0)
 
-    def schedule(ec: ExecutionContext): Unit = {
-      Future {
-        recordCpuUsage()
-      }(ec)
+    def run(): Unit = {
+      recordCpuUsage()
     }
 
     def cleanup(): Unit = {
@@ -143,14 +140,12 @@ class HostMetricsCollector(ec: ExecutionContext) extends Module {
     private val _fileSystemActivityInstruments = new StorageDeviceInstruments(_defaultTags)
     private val _networkActivityInstruments = new NetworkActivityInstruments(_defaultTags)
 
-    def schedule(ec: ExecutionContext): Unit = {
-      Future {
-        recordMemoryUsage()
-        recordLoadAverage()
-        recordStorageUsage()
-        recordStorageActivity()
-        recordNetworkActivity()
-      }(ec)
+    def run(): Unit = {
+      recordMemoryUsage()
+      recordLoadAverage()
+      recordStorageUsage()
+      recordStorageActivity()
+      recordNetworkActivity()
     }
 
     def cleanup(): Unit = {

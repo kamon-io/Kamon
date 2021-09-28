@@ -249,6 +249,8 @@ object Metric {
             true
           })
       }
+
+      _instruments.clear()
     }
 
     def schedule(instrument: Inst, action: Runnable, interval: Duration): Any = synchronized {
@@ -289,7 +291,6 @@ object Metric {
       val actions = Collections.synchronizedList(new util.ArrayList[(Runnable, Duration)]()).asScala
       val scheduledActions = Collections.synchronizedList(new util.ArrayList[ScheduledFuture[_]]()).asScala
       val instrument = instrumentBuilder(this, tags)
-      instrument.defaultSchedule()
 
       new InstrumentEntry(instrument, actions, scheduledActions, false)
     }

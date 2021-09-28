@@ -65,6 +65,7 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
       _spansTickerSchedule.get().cancel(true)
 
     _tickerExecutor.foreach(_.shutdown())
+    _tickerExecutor = None
   }
 
   def addReporter(name: String, description: Option[String], reporter: SpanReporter): Registration = {
@@ -418,18 +419,15 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
   private def registerModule(entry: Entry[Module]): Unit = {
     _registeredModules = _registeredModules + (entry.name -> entry)
 
-    entry.module match {
-      case metricReporter: MetricReporter =>
-        _metricReporterModules = _metricReporterModules + (entry.name -> entry.asInstanceOf[Entry[MetricReporter]])
+    if(entry.module.isInstanceOf[MetricReporter])
+      _metricReporterModules = _metricReporterModules + (entry.name -> entry.asInstanceOf[Entry[MetricReporter]])
 
-      case spanReporter: SpanReporter =>
-        _spanReporterModules = _spanReporterModules + (entry.name -> entry.asInstanceOf[Entry[SpanReporter]])
+    if(entry.module.isInstanceOf[SpanReporter])
+      _spanReporterModules = _spanReporterModules + (entry.name -> entry.asInstanceOf[Entry[SpanReporter]])
 
-      case scheduledAction: ScheduledAction if _tickerExecutor.nonEmpty =>
-        scheduleAction(entry.asInstanceOf[Entry[ScheduledAction]], _tickerExecutor.get)
+    if(entry.module.isInstanceOf[ScheduledAction] && _tickerExecutor.nonEmpty)
+      scheduleAction(entry.asInstanceOf[Entry[ScheduledAction]], _tickerExecutor.get)
 
-      case _ => // Nothing special to do in any other cases
-    }
   }
 
   /**
@@ -437,35 +435,36 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
     * context. The returned future completes when the module finishes its stop procedure.
     */
   private def stopModule(entry: Entry[Module]): Future[Unit] = synchronized {
-    println("Trying to stop module: " + entry.name)
+    if(_registeredModules.get(entry.name).nonEmpty) {
 
-    // Remove the module from all registries
-    _registeredModules = _registeredModules - entry.name
-    if(entry.module.isInstanceOf[MetricReporter]) {
-      _metricReporterModules = _metricReporterModules - entry.name
-      scheduleMetricsTick(entry.asInstanceOf[Entry[MetricReporter]], metricRegistry.snapshot(resetState = false))
-    }
+      // Remove the module from all registries
+      _registeredModules = _registeredModules - entry.name
+      if (entry.module.isInstanceOf[MetricReporter]) {
+        _metricReporterModules = _metricReporterModules - entry.name
+        scheduleMetricsTick(entry.asInstanceOf[Entry[MetricReporter]], metricRegistry.snapshot(resetState = false))
+      }
 
-    if(entry.module.isInstanceOf[SpanReporter]) {
-      _spanReporterModules = _spanReporterModules - entry.name
-      scheduleSpansBatch(entry.asInstanceOf[Entry[SpanReporter]], tracer.spans())
-    }
+      if (entry.module.isInstanceOf[SpanReporter]) {
+        _spanReporterModules = _spanReporterModules - entry.name
+        scheduleSpansBatch(entry.asInstanceOf[Entry[SpanReporter]], tracer.spans())
+      }
 
 
-    // Schedule a call to stop on the module
-    val stopPromise = Promise[Unit]()
-    entry.executionContext.execute(new Runnable {
-      override def run(): Unit =
-        stopPromise.complete {
-          val stopResult = Try(entry.module.stop())
-          stopResult.failed.foreach(t => _logger.warn(s"Failure occurred while stopping module [${entry.name}]", t))
-          stopResult
-        }
+      // Schedule a call to stop on the module
+      val stopPromise = Promise[Unit]()
+      entry.executionContext.execute(new Runnable {
+        override def run(): Unit =
+          stopPromise.complete {
+            val stopResult = Try(entry.module.stop())
+            stopResult.failed.foreach(t => _logger.warn(s"Failure occurred while stopping module [${entry.name}]", t))
+            stopResult
+          }
 
-    })
+      })
 
-    stopPromise.future.onComplete(_ => entry.executionContext.shutdown())(CallingThreadExecutionContext)
-    stopPromise.future
+      stopPromise.future.onComplete(_ => entry.executionContext.shutdown())(CallingThreadExecutionContext)
+      stopPromise.future
+    } else Future.successful[Unit](())
   }
 
   /**

@@ -23,7 +23,10 @@ import scala.util.Random
  */
 trait TestData {
 
-  val contextSpan = Kamon.spanBuilder("operation name").start()
+  val contextSpan = Kamon.spanBuilder("operation name")
+    .traceId(Identifier.Scheme.Single.traceIdFactory.from("0123456789ABCDEF"))
+    .start()
+
   val traceId = BigInt(contextSpan.trace.id.string, 16)
 
   val to = Instant.now()
@@ -155,17 +158,15 @@ trait TestData {
   )
 }
 
-class DatadogSpanReporterSpec extends AbstractHttpReporter with Matchers with Reconfigure with TestData {
-
-  //implicit val lcs = new Patience[JsValue]
-  //import DiffsonProtocol._
+class DatadogSpanReporterSpec extends AbstractHttpReporter with Matchers with Reconfigure {
 
   "the DatadogSpanReporter" should {
     val reporter = new DatadogSpanReporterFactory().create(ModuleFactory.Settings(Kamon.config(), ExecutionContext.global))
+    val testData = new TestData { }
 
-    val (firstSpan, _) = testMap.get("single span").head
+    val (firstSpan, _) = testData.testMap.get("single span").head
 
-    for ((name, (spans, json)) <- testMap) {
+    for ((name, (spans, json)) <- testData.testMap) {
 
       s"send ${name} to API" in {
 

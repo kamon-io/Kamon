@@ -218,6 +218,6 @@ class MetricRegistry(config: Config, clock: Clock) {
     Status.MetricRegistry(_metrics.values.map(_.status()).toSeq)
 
   def clear(): Unit = {
-    _metrics.values.foreach { metric => metric.status().instruments.foreach(i => metric.remove(i.tags)) }
+    _metrics.values.foreach { metric => metric.shutdown() }
   }
 }

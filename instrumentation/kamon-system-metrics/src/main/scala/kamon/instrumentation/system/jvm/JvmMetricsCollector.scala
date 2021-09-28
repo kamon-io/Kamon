@@ -18,17 +18,17 @@ package kamon.instrumentation.system.jvm
 
 import java.lang.management.{BufferPoolMXBean, ManagementFactory, MemoryUsage}
 import java.util.concurrent.TimeUnit
-
 import com.sun.management.GarbageCollectionNotificationInfo
 import com.sun.management.GarbageCollectionNotificationInfo.GARBAGE_COLLECTION_NOTIFICATION
 import com.typesafe.config.Config
+
 import javax.management.openmbean.CompositeData
 import javax.management.{Notification, NotificationEmitter, NotificationListener}
 import kamon.Kamon
 import kamon.instrumentation.system.jvm.JvmMetrics.{ClassLoadingInstruments, GarbageCollectionInstruments, MemoryUsageInstruments, ThreadsInstruments}
 import kamon.instrumentation.system.jvm.JvmMetricsCollector.MemoryPool.sanitize
 import kamon.instrumentation.system.jvm.JvmMetricsCollector.{Collector, MemoryPool}
-import kamon.module.{Module, ModuleFactory}
+import kamon.module.{Module, ModuleFactory, ScheduledAction}
 import kamon.tag.TagSet
 
 import scala.collection.JavaConverters.{collectionAsScalaIterableConverter, mapAsScalaMapConverter}
@@ -36,17 +36,19 @@ import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.util.matching.Regex
 
-class JvmMetricsCollector(ec: ExecutionContext) extends Module {
+class JvmMetricsCollector(ec: ExecutionContext) extends ScheduledAction {
   private val _defaultTags = TagSet.of("component", "jvm")
   private val _gcListener = registerGcListener(_defaultTags)
   private val _memoryUsageInstruments = new MemoryUsageInstruments(_defaultTags)
   private val _threadsUsageInstruments = new ThreadsInstruments()
   private val _classLoadingInstruments = new ClassLoadingInstruments(_defaultTags)
   private val _jmxCollectorTask = new JmxMetricsCollectorTask(_memoryUsageInstruments, _threadsUsageInstruments, _classLoadingInstruments)
-  private val _jmxCollectorSchedule = Kamon.scheduler().scheduleAtFixedRate(_jmxCollectorTask, 1, 10, TimeUnit.SECONDS)
+
+  override def run(): Unit = {
+    _jmxCollectorTask.run()
+  }
 
   override def stop(): Unit = {
-    _jmxCollectorSchedule.cancel(false)
     deregisterGcListener()
   }
 
