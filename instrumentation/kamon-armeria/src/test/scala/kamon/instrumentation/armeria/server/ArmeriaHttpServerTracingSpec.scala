@@ -23,7 +23,7 @@ import org.scalatest.OptionValues.convertOptionToValuable
 import org.scalatest.concurrent.Eventually
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, Matchers, WordSpec}
 import utils.ArmeriaServerSupport.startArmeriaServer
-import utils.TestEndpoints._
+import utils.Endpoints._
 
 import scala.concurrent.duration._
 
@@ -50,10 +50,10 @@ class ArmeriaHttpServerTracingSpec extends WordSpec
     s"The Armeria $protocol server" should {
 
       "create a server Span when receiving requests" in {
-        val target = s"$protocol://$interface:$port/$dummyPath"
-        val expected = "/dummy"
+        val target = s"$protocol://$interface:$port/$usersEndpoint"
+        val expected = "/users"
 
-        val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, dummyPath))
+        val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, usersEndpoint))
         webClient.execute(request)
 
         eventually(timeout(3 seconds)) {
@@ -68,11 +68,11 @@ class ArmeriaHttpServerTracingSpec extends WordSpec
 
       "set operation name with unhandled" when {
         "request path doesn't exists" in {
-          val target = s"$protocol://$interface:$port/$dummyNotFoundPath"
+          val target = s"$protocol://$interface:$port/$pathNotFoundEndpoint"
           val expected = "unhandled"
 
-          val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, dummyNotFoundPath))
-          webClient.execute(request)
+            val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, pathNotFoundEndpoint))
+            webClient.execute(request)
 
           eventually(timeout(3 seconds)) {
             val span = testSpanReporter().nextSpan().value
@@ -86,13 +86,13 @@ class ArmeriaHttpServerTracingSpec extends WordSpec
         }
       }
 
-      "set operation name with path + http method" when {
-        "resource doesn't exist" in {
-          val target = s"$protocol://$interface:$port/$dummyResourceNotFoundPath"
-          val expected = "/dummy-resource-not-found"
+        "set operation name with path + http method" when {
+          "resource doesn't exist" in {
+            val target = s"$protocol://$interface:$port/$usersEndpoint/not-found"
+            val expected = "/users/{}"
 
-          val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, dummyResourceNotFoundPath))
-          webClient.execute(request)
+            val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, s"$usersEndpoint/not-found"))
+            webClient.execute(request)
 
           eventually(timeout(3 seconds)) {
             val span = testSpanReporter().nextSpan().value
@@ -107,9 +107,9 @@ class ArmeriaHttpServerTracingSpec extends WordSpec
       }
 
       "not include path variables names" in {
-        val expected = "dummy-resources/{}/other-resources/{}"
+        val expected = "/users/{}/accounts/{}"
 
-        val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, dummyMultipleResourcesPath))
+        val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, userAccountEndpoint))
         webClient.execute(request)
 
         eventually(timeout(3 seconds)) {
@@ -119,9 +119,9 @@ class ArmeriaHttpServerTracingSpec extends WordSpec
       }
 
       "not fail when request url contains special regexp chars" in {
-        val expected = "dummy-resources/{}/other-resources/{}"
+        val expected = "/users/{}/accounts/{}"
 
-        val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, s"$dummyMultipleResourcesPath**"))
+        val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, s"$userAccountEndpoint**"))
         val response = webClient.execute(request).aggregate().get()
 
         eventually(timeout(3 seconds)) {
@@ -132,10 +132,10 @@ class ArmeriaHttpServerTracingSpec extends WordSpec
       }
 
       "mark spans as failed when request fails" in {
-        val target = s"$protocol://$interface:$port/$dummyErrorPath"
-        val expected = s"/$dummyErrorPath"
+        val target = s"$protocol://$interface:$port/$usersEndpoint/error"
+        val expected = "/users/{}"
 
-        val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, dummyErrorPath))
+        val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, s"$usersEndpoint/error"))
         webClient.execute(request)
 
         eventually(timeout(3 seconds)) {
@@ -151,10 +151,10 @@ class ArmeriaHttpServerTracingSpec extends WordSpec
 
       "return a redirect status code" when {
         "a request to /docs is redirected to /docs/" in {
-          val target = s"$protocol://$interface:$port/$docs"
-          val expected = s"/$docs"
+          val target = s"$protocol://$interface:$port/$docsEndpoint"
+          val expected = s"/docs"
 
-          val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, docs))
+          val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, docsEndpoint))
           webClient.execute(request)
 
           eventually(timeout(3 seconds)) {
@@ -170,10 +170,10 @@ class ArmeriaHttpServerTracingSpec extends WordSpec
 
       "return a ok status code " when {
         "a request to /docs/ is done" in {
-          val target = s"$protocol://$interface:$port/$docs/"
-          val expected = s"/$docs"
+          val target = s"$protocol://$interface:$port/$docsEndpoint/"
+          val expected = s"/docs"
 
-          val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, s"$docs/"))
+          val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, s"$docsEndpoint/"))
           webClient.execute(request)
 
           eventually(timeout(3 seconds)) {

@@ -32,7 +32,7 @@ class ArmeriaHttpClientTracingSpec extends WordSpec
   "The Armeria http client tracing instrumentation" should {
 
     "propagate the current context and generate a span around an async request" in {
-      val path = "/dummy"
+      val path = "/users"
       val url = s"http://$interface:$httpPort"
 
       val okSpan = Kamon.spanBuilder("ok-async-operation-span").start()
@@ -70,7 +70,7 @@ class ArmeriaHttpClientTracingSpec extends WordSpec
     }
 
     "propagate context tags" in {
-      val path = "/dummy"
+      val path = "/users"
       val url = s"http://$interface:$httpPort"
 
       val okSpan = Kamon.spanBuilder("ok-span-with-extra-tags").start()
@@ -109,7 +109,7 @@ class ArmeriaHttpClientTracingSpec extends WordSpec
     }
 
     "mark span as failed when server response with 5xx on async execution" in {
-      val path = "/dummy-error"
+      val path = "/users/error"
       val url = s"http://$interface:$httpPort"
 
       val okSpan = Kamon.spanBuilder("ok-async-operation-span").start()
@@ -146,7 +146,7 @@ class ArmeriaHttpClientTracingSpec extends WordSpec
     }
 
     "add timing marks to the generated span" in {
-      val path = "/dummy"
+      val path = "/users"
       val url = s"http://$interface:$httpPort"
 
       val okSpan = Kamon.spanBuilder("ok-async-operation-span").start()

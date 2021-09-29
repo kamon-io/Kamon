@@ -29,7 +29,7 @@ object ArmeriaServerSupport {
       .builder()
       .service("/health-check", HealthCheckService.of())
       .serviceUnder("/docs", new DocService())
-      .annotatedService().build(TestRoutesSupport())
+      .annotatedService().build(UserRoutes())
       .http(InetSocketAddress.createUnresolved("localhost", port))
 
     httpsPort.foreach {
