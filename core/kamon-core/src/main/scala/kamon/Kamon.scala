@@ -16,31 +16,12 @@
 
 package kamon
 
-import kamon.metric.MetricRegistry
-import kamon.trace.Tracer
-import kamon.util.Clock
-
-import java.util.concurrent.ScheduledExecutorService
-
-//class Kamon {
-//
-//
-//  def tracer: Tracer = ???
-//  def clock: Clock = ???
-//  def scheduler: ScheduledExecutorService = ???
-//  def metricRegistry: MetricRegistry = ???
-//
-//}
-
 object Kamon extends Configuration
   with Utilities
   with Metrics
   with Tracing
-  with Modules
+  with ModuleManagement
   with ContextPropagation
   with ContextStorage
   with CurrentStatus
-  with Init {
-
-//  private val _global = new Kamon()
-}
+  with Init {}

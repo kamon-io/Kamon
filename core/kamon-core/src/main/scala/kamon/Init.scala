@@ -27,7 +27,7 @@ import scala.concurrent.Future
   * Provides APIs for handling common initialization tasks like starting modules, attaching instrumentation and
   * reconfiguring Kamon.
   */
-trait Init { self: Modules with Configuration with CurrentStatus with Metrics with Tracing =>
+trait Init { self: ModuleManagement with Configuration with CurrentStatus with Metrics with Tracing =>
   private val _logger = LoggerFactory.getLogger(classOf[Init])
   @volatile private var _scheduler: Option[ScheduledExecutorService] = None
 
@@ -84,13 +84,13 @@ trait Init { self: Modules with Configuration with CurrentStatus with Metrics wi
     }
   }
 
-  private def initScheduler(): Unit = {
+  private def initScheduler(): Unit = synchronized {
     val newScheduler = newScheduledThreadPool(2, numberedThreadFactory("kamon-scheduler", daemon = true))
     self.tracer().bindScheduler(newScheduler)
     self.registry().bindScheduler(newScheduler)
   }
 
-  private def stopScheduler(): Unit = {
+  private def stopScheduler(): Unit = synchronized {
     self.tracer().shutdown()
     self.registry().shutdown()
     _scheduler.foreach(_.shutdown())
