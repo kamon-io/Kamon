@@ -168,7 +168,7 @@ test in Test := Def.taskDyn {
     }
   else
     Def.task {
-//      (test in `Test-Akka-2.5`).value
+      (test in `Test-Akka-2.5`).value
       (test in `Test-Akka-2.6`).value
     }
 }.value
