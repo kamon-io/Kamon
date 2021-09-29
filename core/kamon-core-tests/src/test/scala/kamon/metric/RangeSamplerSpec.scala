@@ -18,12 +18,12 @@ package kamon.metric
 
 import java.time.Duration
 import kamon.Kamon
-import kamon.testkit.InstrumentInspection
-import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
+import kamon.testkit.{InitAndStopKamonAfterAll, InstrumentInspection}
+import org.scalatest.{Matchers, WordSpec}
 
 import scala.concurrent.duration.DurationInt
 
-class RangeSamplerSpec extends WordSpec with Matchers with InstrumentInspection.Syntax with BeforeAndAfterAll {
+class RangeSamplerSpec extends WordSpec with Matchers with InstrumentInspection.Syntax with InitAndStopKamonAfterAll {
 
   "a RangeSampler" should {
     "track ascending tendencies" in {
@@ -116,15 +116,5 @@ class RangeSamplerSpec extends WordSpec with Matchers with InstrumentInspection.
       snapshot.max should be(0)
       snapshot.sum should be(0)
     }
-  }
-
-  override protected def beforeAll(): Unit = {
-    super.beforeAll()
-    Kamon.init()
-  }
-
-  override protected def afterAll(): Unit = {
-    super.afterAll()
-    Kamon.stop()
   }
 }

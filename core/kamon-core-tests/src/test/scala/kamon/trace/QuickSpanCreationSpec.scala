@@ -1,9 +1,8 @@
 package kamon.trace
 
-import kamon.Kamon
 import kamon.tag.Lookups._
-import kamon.testkit.{Reconfigure, SpanInspection, TestSpanReporter}
-import org.scalatest.{BeforeAndAfterAll, Matchers, OptionValues, WordSpec}
+import kamon.testkit.{InitAndStopKamonAfterAll, Reconfigure, SpanInspection, TestSpanReporter}
+import org.scalatest.{Matchers, OptionValues, WordSpec}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.SpanSugar
 
@@ -13,7 +12,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class QuickSpanCreationSpec extends WordSpec with Matchers with OptionValues with SpanInspection.Syntax with Eventually
-  with SpanSugar with TestSpanReporter with Reconfigure with BeforeAndAfterAll {
+  with SpanSugar with TestSpanReporter with Reconfigure with InitAndStopKamonAfterAll {
 
   import kamon.Kamon.{span, currentSpan}
 
@@ -97,15 +96,5 @@ class QuickSpanCreationSpec extends WordSpec with Matchers with OptionValues wit
         Duration.between(reportedSpan.from, reportedSpan.to).toMillis should be >= 1000L
       }
     }
-  }
-
-  override protected def beforeAll(): Unit = {
-    super.beforeAll()
-    Kamon.init()
-  }
-
-  override protected def afterAll(): Unit = {
-    super.afterAll()
-    Kamon.stop()
   }
 }

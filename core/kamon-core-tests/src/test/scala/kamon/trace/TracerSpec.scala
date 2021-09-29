@@ -18,14 +18,14 @@ package kamon.trace
 import java.time.Instant
 import kamon.Kamon
 import kamon.tag.Lookups._
-import kamon.testkit.{Reconfigure, SpanInspection}
+import kamon.testkit.{InitAndStopKamonAfterAll, Reconfigure, SpanInspection}
 import kamon.trace.Identifier.Factory.EightBytesIdentifier
 import kamon.trace.Span.Position
 import kamon.trace.Trace.SamplingDecision
 import kamon.trace.Hooks.{PreFinish, PreStart}
-import org.scalatest.{BeforeAndAfterAll, Matchers, OptionValues, WordSpec}
+import org.scalatest.{Matchers, OptionValues, WordSpec}
 
-class TracerSpec extends WordSpec with Matchers with SpanInspection.Syntax with OptionValues with BeforeAndAfterAll {
+class TracerSpec extends WordSpec with Matchers with SpanInspection.Syntax with OptionValues with InitAndStopKamonAfterAll {
 
   "the Kamon tracer" should {
     "construct a minimal Span that only has a operation name and default metric tags" in {
@@ -290,16 +290,6 @@ class TracerSpec extends WordSpec with Matchers with SpanInspection.Syntax with 
   }
 
   private def remoteSpan(samplingDecision: SamplingDecision = SamplingDecision.Sample): Span.Remote =
-    new Span.Remote(EightBytesIdentifier.generate(), EightBytesIdentifier.generate(), Trace(EightBytesIdentifier.generate(), samplingDecision))
-
-  override protected def beforeAll(): Unit = {
-    super.beforeAll()
-    Kamon.init()
-  }
-
-  override protected def afterAll(): Unit = {
-    super.afterAll()
-    Kamon.stop()
-  }
+    Span.Remote(EightBytesIdentifier.generate(), EightBytesIdentifier.generate(), Trace(EightBytesIdentifier.generate(), samplingDecision))
 
 }

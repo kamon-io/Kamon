@@ -15,18 +15,16 @@
 
 package kamon.trace
 
-import kamon.Kamon
-
 import java.time.Instant
 import kamon.Kamon._
 import kamon.tag.TagSet
-import kamon.testkit.{InstrumentInspection, MetricInspection, Reconfigure}
-import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
+import kamon.testkit.{InitAndStopKamonAfterAll, InstrumentInspection, MetricInspection, Reconfigure}
+import org.scalatest.{Matchers, WordSpecLike}
 
 import scala.util.control.NoStackTrace
 
 class SpanMetricsSpec extends WordSpecLike with Matchers with InstrumentInspection.Syntax with MetricInspection.Syntax
-    with Reconfigure with BeforeAndAfterAll {
+    with Reconfigure with InitAndStopKamonAfterAll {
 
   sampleNever()
 
@@ -224,16 +222,6 @@ class SpanMetricsSpec extends WordSpecLike with Matchers with InstrumentInspecti
     val evaluated = f
     enableSpanMetricScoping()
     evaluated
-  }
-
-  override protected def beforeAll(): Unit = {
-    super.beforeAll()
-    Kamon.init()
-  }
-
-  override protected def afterAll(): Unit = {
-    super.afterAll()
-    Kamon.stop()
   }
 }
 
