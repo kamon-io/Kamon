@@ -78,9 +78,7 @@ object HandleNotFoundMethodAdvisor {
              @Advice.Thrown throwable: Throwable): Unit = {
     if (throwable != null && statusException.httpStatus.code() == HttpStatus.NOT_FOUND.code()) {
       val requestHandler = ctx.attr(REQUEST_HANDLER_TRACE_KEY)
-      Kamon.runWithContext(requestHandler.context) {
         requestHandler.span.name(unhandledOperationName)
-      }
     }
   }
 }
