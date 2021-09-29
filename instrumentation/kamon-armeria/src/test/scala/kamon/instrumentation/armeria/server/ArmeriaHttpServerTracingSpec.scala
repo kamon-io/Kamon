@@ -47,114 +47,15 @@ class ArmeriaHttpServerTracingSpec extends WordSpec
 
     val webClient = newWebClient(protocol,port)
 
-    s"The Armeria $protocol server" should {
+    s"The Armeria $protocol server" when {
 
-      "create a server Span when receiving requests" in {
-        val target = s"$protocol://$interface:$port/$usersEndpoint"
-        val expected = "/users"
+      "Non blocking route" should {
 
-        val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, usersEndpoint))
-        webClient.execute(request)
+        "create a server Span when receiving requests" in {
+          val target = s"$protocol://$interface:$port/$usersEndpoint"
+          val expected = "/users"
 
-        eventually(timeout(3 seconds)) {
-          val span = testSpanReporter().nextSpan().value
-          span.operationName shouldBe expected
-          span.tags.get(plain("http.url")) shouldBe target
-          span.metricTags.get(plain("component")) shouldBe "armeria.http.server"
-          span.metricTags.get(plain("http.method")) shouldBe "GET"
-          span.metricTags.get(plainLong("http.status_code")) shouldBe 200L
-        }
-      }
-
-      "set operation name with unhandled" when {
-        "request path doesn't exists" in {
-          val target = s"$protocol://$interface:$port/$pathNotFoundEndpoint"
-          val expected = "unhandled"
-
-            val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, pathNotFoundEndpoint))
-            webClient.execute(request)
-
-          eventually(timeout(3 seconds)) {
-            val span = testSpanReporter().nextSpan().value
-            span.operationName shouldBe expected
-            span.tags.get(plain("http.url")) shouldBe target
-            span.metricTags.get(plain("component")) shouldBe "armeria.http.server"
-            span.metricTags.get(plain("http.method")) shouldBe "GET"
-            span.metricTags.get(plainBoolean("error")) shouldBe false
-            span.metricTags.get(plainLong("http.status_code")) shouldBe 404
-          }
-        }
-      }
-
-        "set operation name with path + http method" when {
-          "resource doesn't exist" in {
-            val target = s"$protocol://$interface:$port/$usersEndpoint/not-found"
-            val expected = "/users/{}"
-
-            val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, s"$usersEndpoint/not-found"))
-            webClient.execute(request)
-
-          eventually(timeout(3 seconds)) {
-            val span = testSpanReporter().nextSpan().value
-            span.operationName shouldBe expected
-            span.tags.get(plain("http.url")) shouldBe target
-            span.metricTags.get(plain("component")) shouldBe "armeria.http.server"
-            span.metricTags.get(plain("http.method")) shouldBe "GET"
-            span.metricTags.get(plainBoolean("error")) shouldBe false
-            span.metricTags.get(plainLong("http.status_code")) shouldBe 404
-          }
-        }
-      }
-
-      "not include path variables names" in {
-        val expected = "/users/{}/accounts/{}"
-
-        val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, userAccountEndpoint))
-        webClient.execute(request)
-
-        eventually(timeout(3 seconds)) {
-          val span = testSpanReporter().nextSpan().value
-          span.operationName shouldBe expected
-        }
-      }
-
-      "not fail when request url contains special regexp chars" in {
-        val expected = "/users/{}/accounts/{}"
-
-        val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, s"$userAccountEndpoint**"))
-        val response = webClient.execute(request).aggregate().get()
-
-        eventually(timeout(3 seconds)) {
-          val span = testSpanReporter().nextSpan().value
-          span.operationName shouldBe expected
-          response.status().code() shouldBe 200
-        }
-      }
-
-      "mark spans as failed when request fails" in {
-        val target = s"$protocol://$interface:$port/$usersEndpoint/error"
-        val expected = "/users/{}"
-
-        val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, s"$usersEndpoint/error"))
-        webClient.execute(request)
-
-        eventually(timeout(3 seconds)) {
-          val span = testSpanReporter().nextSpan().value
-          span.operationName shouldBe expected
-          span.tags.get(plain("http.url")) shouldBe target
-          span.metricTags.get(plain("component")) shouldBe "armeria.http.server"
-          span.metricTags.get(plain("http.method")) shouldBe "GET"
-          span.metricTags.get(plainBoolean("error")) shouldBe true
-          span.metricTags.get(plainLong("http.status_code")) shouldBe 500
-        }
-      }
-
-      "return a redirect status code" when {
-        "a request to /docs is redirected to /docs/" in {
-          val target = s"$protocol://$interface:$port/$docsEndpoint"
-          val expected = s"/docs"
-
-          val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, docsEndpoint))
+          val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, usersEndpoint))
           webClient.execute(request)
 
           eventually(timeout(3 seconds)) {
@@ -163,17 +64,139 @@ class ArmeriaHttpServerTracingSpec extends WordSpec
             span.tags.get(plain("http.url")) shouldBe target
             span.metricTags.get(plain("component")) shouldBe "armeria.http.server"
             span.metricTags.get(plain("http.method")) shouldBe "GET"
-            span.metricTags.get(plainLong("http.status_code")) shouldBe 307L
+            span.metricTags.get(plainLong("http.status_code")) shouldBe 200L
+          }
+        }
+
+        "set operation name with unhandled" when {
+          "request path doesn't exists" in {
+            val target = s"$protocol://$interface:$port/$pathNotFoundEndpoint"
+            val expected = "unhandled"
+
+              val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, pathNotFoundEndpoint))
+              webClient.execute(request)
+
+            eventually(timeout(3 seconds)) {
+              val span = testSpanReporter().nextSpan().value
+              span.operationName shouldBe expected
+              span.tags.get(plain("http.url")) shouldBe target
+              span.metricTags.get(plain("component")) shouldBe "armeria.http.server"
+              span.metricTags.get(plain("http.method")) shouldBe "GET"
+              span.metricTags.get(plainBoolean("error")) shouldBe false
+              span.metricTags.get(plainLong("http.status_code")) shouldBe 404
+            }
+          }
+        }
+
+          "set operation name with path + http method" when {
+            "resource doesn't exist" in {
+              val target = s"$protocol://$interface:$port/$usersEndpoint/not-found"
+              val expected = "/users/{}"
+
+              val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, s"$usersEndpoint/not-found"))
+              webClient.execute(request)
+
+            eventually(timeout(3 seconds)) {
+              val span = testSpanReporter().nextSpan().value
+              span.operationName shouldBe expected
+              span.tags.get(plain("http.url")) shouldBe target
+              span.metricTags.get(plain("component")) shouldBe "armeria.http.server"
+              span.metricTags.get(plain("http.method")) shouldBe "GET"
+              span.metricTags.get(plainBoolean("error")) shouldBe false
+              span.metricTags.get(plainLong("http.status_code")) shouldBe 404
+            }
+          }
+        }
+
+        "not include path variables names" in {
+          val expected = "/users/{}/accounts/{}"
+
+          val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, userAccountEndpoint))
+          webClient.execute(request)
+
+          eventually(timeout(3 seconds)) {
+            val span = testSpanReporter().nextSpan().value
+            span.operationName shouldBe expected
+          }
+        }
+
+        "not fail when request url contains special regexp chars" in {
+          val expected = "/users/{}/accounts/{}"
+
+          val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, s"$userAccountEndpoint**"))
+          val response = webClient.execute(request).aggregate().get()
+
+          eventually(timeout(3 seconds)) {
+            val span = testSpanReporter().nextSpan().value
+            span.operationName shouldBe expected
+            response.status().code() shouldBe 200
+          }
+        }
+
+        "mark spans as failed when request fails" in {
+          val target = s"$protocol://$interface:$port/$usersEndpoint/error"
+          val expected = "/users/{}"
+
+          val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, s"$usersEndpoint/error"))
+          webClient.execute(request)
+
+          eventually(timeout(3 seconds)) {
+            val span = testSpanReporter().nextSpan().value
+            span.operationName shouldBe expected
+            span.tags.get(plain("http.url")) shouldBe target
+            span.metricTags.get(plain("component")) shouldBe "armeria.http.server"
+            span.metricTags.get(plain("http.method")) shouldBe "GET"
+            span.metricTags.get(plainBoolean("error")) shouldBe true
+            span.metricTags.get(plainLong("http.status_code")) shouldBe 500
+          }
+        }
+
+        "return a redirect status code" when {
+          "a request to /docs is redirected to /docs/" in {
+            val target = s"$protocol://$interface:$port/$docsEndpoint"
+            val expected = s"/docs"
+
+            val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, docsEndpoint))
+            webClient.execute(request)
+
+            eventually(timeout(3 seconds)) {
+              val span = testSpanReporter().nextSpan().value
+              span.operationName shouldBe expected
+              span.tags.get(plain("http.url")) shouldBe target
+              span.metricTags.get(plain("component")) shouldBe "armeria.http.server"
+              span.metricTags.get(plain("http.method")) shouldBe "GET"
+              span.metricTags.get(plainLong("http.status_code")) shouldBe 307L
+            }
+          }
+        }
+
+        "return a ok status code " when {
+          "a request to /docs/ is done" in {
+            val target = s"$protocol://$interface:$port/$docsEndpoint/"
+            val expected = s"/docs"
+
+            val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, s"$docsEndpoint/"))
+            webClient.execute(request)
+
+            eventually(timeout(3 seconds)) {
+              val span = testSpanReporter().nextSpan().value
+              span.operationName shouldBe expected
+              span.tags.get(plain("http.url")) shouldBe target
+              span.metricTags.get(plain("component")) shouldBe "armeria.http.server"
+              span.metricTags.get(plain("http.method")) shouldBe "GET"
+              span.metricTags.get(plainLong("http.status_code")) shouldBe 200L
+            }
           }
         }
       }
 
-      "return a ok status code " when {
-        "a request to /docs/ is done" in {
-          val target = s"$protocol://$interface:$port/$docsEndpoint/"
-          val expected = s"/docs"
+      "Blocking route" should {
 
-          val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, s"$docsEndpoint/"))
+        "create a server Span when receiving requests" in {
+          val target = s"$protocol://$interface:$port/$usersBlockingEndpoint"
+          val expected = "/users-blocking"
+
+          val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, usersBlockingEndpoint))
           webClient.execute(request)
 
           eventually(timeout(3 seconds)) {
