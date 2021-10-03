@@ -1,0 +1,6 @@
+[
+  {
+    "name": "kamon.influxdb.InfluxDBReporterFactory",
+    "allDeclaredConstructors": true
+  }
+]
