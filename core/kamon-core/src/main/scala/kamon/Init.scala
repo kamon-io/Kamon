@@ -76,10 +76,14 @@ trait Init { self: ModuleManagement with Configuration with CurrentStatus with M
         attachMethod.invoke(null)
       } catch {
         case _: ClassNotFoundException =>
-          _logger.warn("Failed to attach the instrumentation because the Kamon Bundle is not present on the classpath")
+          _logger.warn(
+            "Your application is running without the Kanela instrumentation agent. None of Kamon's automatic " +
+            "instrumentation will be applied to the current JVM. Consider using the kamon-bundle dependency " +
+            "or setting up the Kanela agent via the -javaagent:/path/to/kanela.jar command-line option"
+          )
 
         case t: Throwable =>
-          _logger.error("Failed to attach the instrumentation agent", t)
+          _logger.error("Failed to attach the Kanela agent included in the kamon-bundle", t)
       }
     }
   }
