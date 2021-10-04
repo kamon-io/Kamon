@@ -16,10 +16,11 @@
 
 package kamon
 
-import kamon.module.Module
-import kamon.module.ModuleRegistry
+import kamon.module.{MetricReporter, Module, ModuleRegistry, ScheduledAction, SpanReporter}
 import kamon.module.Module.Registration
+import kamon.util.Filter
 
+import java.time.Duration
 import scala.concurrent.Future
 
 /**
@@ -35,13 +36,23 @@ import scala.concurrent.Future
   *       name = "My Module Name"
   *       description = "A module description"
   *       factory = "com.example.MyModuleFactory"
+  *
+  *       // For Metric Reporters only:
+  *       metric-filter {
+  *         includes = []
+  *         excludes = []
+  *       }
+  *
+  *       // For Periodic Collectors only:
+  *       interval = 10 seconds
   *     }
   *   }
+  *
   *
   * Take a look at the reference.conf file for more details.
   *
   */
-trait ModuleLoading { self: Configuration with Utilities with Metrics with Tracing =>
+trait ModuleManagement { self: Configuration with Utilities with Metrics with Tracing =>
   protected val _moduleRegistry = new ModuleRegistry(self, clock(), self.registry(), self.tracer())
   self.onReconfigure(newConfig => self._moduleRegistry.reconfigure(newConfig))
 
@@ -49,6 +60,7 @@ trait ModuleLoading { self: Configuration with Utilities with Metrics with Traci
     * Register a module instantiated by the user and returns a Registration that can be used to stop and deregister the
     * module at any time.
     */
+  @deprecated("Use addReporter or addScheduledAction instead", since = "2.3.0")
   def registerModule(name: String, module: Module): Registration =
     _moduleRegistry.register(name, None, module)
 
@@ -56,8 +68,29 @@ trait ModuleLoading { self: Configuration with Utilities with Metrics with Traci
     * Register a module instantiated by the user and returns a Registration that can be used to stop and deregister the
     * module at any time.
     */
+  @deprecated("Use addReporter or addScheduledAction instead", since = "2.3.0")
   def registerModule(name: String, description: String, module: Module, configPath: String): Registration =
     _moduleRegistry.register(name, Some(description), module)
+
+
+  def addReporter(name: String, reporter: SpanReporter): Registration =
+    _moduleRegistry.addReporter(name, None, reporter)
+
+  def addReporter(name: String, description: String, reporter: SpanReporter): Registration =
+    _moduleRegistry.addReporter(name, Option(description), reporter)
+
+  def addReporter(name: String, reporter: MetricReporter): Registration =
+    _moduleRegistry.addReporter(name, None, reporter, None)
+
+  def addReporter(name: String, reporter: MetricReporter, metricFilter: Filter): Registration =
+    _moduleRegistry.addReporter(name, None, reporter, Option(metricFilter))
+
+  def addReporter(name: String, description: String, reporter: MetricReporter, metricFilter: Filter): Registration =
+    _moduleRegistry.addReporter(name, Option(description), reporter, Option(metricFilter))
+
+  def addScheduledAction(name: String, description: Option[String], collector: ScheduledAction, interval: Duration): Registration = {
+    _moduleRegistry.addScheduledAction(name, description, collector, interval)
+  }
 
   /**
     * Loads modules from Kamon's configuration.
@@ -71,5 +104,8 @@ trait ModuleLoading { self: Configuration with Utilities with Metrics with Traci
     */
   def stopModules(): Future[Unit] =
     _moduleRegistry.stopModules()
+
+  protected def moduleRegistry(): ModuleRegistry =
+    _moduleRegistry
 
 }

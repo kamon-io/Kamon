@@ -16,16 +16,15 @@
 package kamon.trace
 
 import java.time.Instant
-
 import kamon.Kamon._
 import kamon.tag.TagSet
-import kamon.testkit.{InstrumentInspection, MetricInspection, Reconfigure}
+import kamon.testkit.{InitAndStopKamonAfterAll, InstrumentInspection, MetricInspection, Reconfigure}
 import org.scalatest.{Matchers, WordSpecLike}
 
 import scala.util.control.NoStackTrace
 
 class SpanMetricsSpec extends WordSpecLike with Matchers with InstrumentInspection.Syntax with MetricInspection.Syntax
-    with Reconfigure {
+    with Reconfigure with InitAndStopKamonAfterAll {
 
   sampleNever()
 

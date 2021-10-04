@@ -1,7 +1,7 @@
 package kamon.instrumentation.caffeine
 
 import com.github.benmanes.caffeine.cache.{Cache, Caffeine}
-import kamon.testkit.TestSpanReporter
+import kamon.testkit.{InitAndStopKamonAfterAll, TestSpanReporter}
 import org.scalatest.OptionValues.convertOptionToValuable
 import org.scalatest.concurrent.Eventually.eventually
 import org.scalatest.concurrent.Waiters.timeout
@@ -13,8 +13,9 @@ import scala.concurrent.duration.DurationInt
 class CaffeineSyncCacheSpec
   extends WordSpec
     with Matchers
-    with BeforeAndAfterAll
+    with InitAndStopKamonAfterAll
     with TestSpanReporter {
+
   "Caffeine instrumentation for sync caches" should {
     val cache: Cache[String, String] = Caffeine.newBuilder()
       .build[String, String]()

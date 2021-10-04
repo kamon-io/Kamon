@@ -19,16 +19,16 @@ import akka.Version
 import akka.actor._
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import kamon.instrumentation.akka.ActorMetricsTestActor._
-import kamon.testkit.{InstrumentInspection, MetricInspection}
+import kamon.testkit.{InitAndStopKamonAfterAll, InstrumentInspection, MetricInspection}
 import org.scalactic.TimesOnInt._
 import org.scalatest.concurrent.Eventually
-import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
+import org.scalatest.{Matchers, WordSpecLike}
 
 import scala.concurrent.duration._
 
 
-class ActorSystemMetricsSpec extends TestKit(ActorSystem("ActorSystemMetricsSpec")) with WordSpecLike with MetricInspection.Syntax with InstrumentInspection.Syntax with Matchers
-    with BeforeAndAfterAll with ImplicitSender with Eventually {
+class ActorSystemMetricsSpec extends TestKit(ActorSystem("ActorSystemMetricsSpec")) with WordSpecLike with MetricInspection.Syntax
+    with InstrumentInspection.Syntax with Matchers with InitAndStopKamonAfterAll with ImplicitSender with Eventually {
 
   // Akka 2.6 creates two more actors by default for the streams materializers supervisor.
   val baseActorCount = if(Version.current.startsWith("2.6")) 8L else 6L
@@ -113,5 +113,8 @@ class ActorSystemMetricsSpec extends TestKit(ActorSystem("ActorSystemMetricsSpec
     }
   }
 
-  override protected def afterAll(): Unit = shutdown()
+  override protected def afterAll(): Unit = {
+    shutdown()
+    super.afterAll()
+  }
 }

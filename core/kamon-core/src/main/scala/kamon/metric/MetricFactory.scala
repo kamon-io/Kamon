@@ -17,14 +17,14 @@
 package kamon
 package metric
 
-import java.util.concurrent.ScheduledExecutorService
-
 import com.typesafe.config.Config
-import java.time.Duration
 
+import java.time.Duration
 import kamon.metric.Metric.{BaseMetric, Settings}
 import kamon.tag.TagSet
 import kamon.util.Clock
+
+import java.util.concurrent.ScheduledExecutorService
 
 
 /**
@@ -33,10 +33,15 @@ import kamon.util.Clock
   * not; that kind of verification is handled on the Kamon metric registry.
   *
   */
-class MetricFactory private (defaultCounterSettings: Metric.Settings.ForValueInstrument, defaultGaugeSettings: Metric.Settings.ForValueInstrument,
-    defaultHistogramSettings: Metric.Settings.ForDistributionInstrument, defaultTimerSettings: Metric.Settings.ForDistributionInstrument,
-    defaultRangeSamplerSettings: Metric.Settings.ForDistributionInstrument, customSettings: Map[String, MetricFactory.CustomSettings],
-    scheduler: ScheduledExecutorService, clock: Clock) {
+class MetricFactory private (
+    defaultCounterSettings: Metric.Settings.ForValueInstrument,
+    defaultGaugeSettings: Metric.Settings.ForValueInstrument,
+    defaultHistogramSettings: Metric.Settings.ForDistributionInstrument,
+    defaultTimerSettings: Metric.Settings.ForDistributionInstrument,
+    defaultRangeSamplerSettings: Metric.Settings.ForDistributionInstrument,
+    customSettings: Map[String, MetricFactory.CustomSettings],
+    clock: Clock,
+    scheduler: Option[ScheduledExecutorService]) {
 
 
   /**
@@ -197,7 +202,7 @@ class MetricFactory private (defaultCounterSettings: Metric.Settings.ForValueIns
 
 object MetricFactory {
 
-  def from(config: Config, scheduler: ScheduledExecutorService, clock: Clock): MetricFactory = {
+  def from(config: Config, clock: Clock, scheduler: Option[ScheduledExecutorService]): MetricFactory = {
     val factoryConfig = config.getConfig("kamon.metric.factory")
     val defaultCounterSettings = Metric.Settings.ForValueInstrument (
       MeasurementUnit.none,
@@ -233,7 +238,7 @@ object MetricFactory {
       .map(readCustomSettings)
 
     new MetricFactory(defaultCounterSettings, defaultGaugeSettings, defaultHistogramSettings, defaultTimerSettings,
-      defaultRangeSamplerSettings, customSettings, scheduler, clock)
+      defaultRangeSamplerSettings, customSettings, clock, scheduler)
   }
 
   private def nonEmptySection(entry: (String, Config)): Boolean = entry match {

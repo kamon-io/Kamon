@@ -25,12 +25,12 @@ import akka.stream.scaladsl.{Sink, Source}
 import kamon.instrumentation.http.HttpServerMetrics
 import kamon.testkit._
 import org.scalatest.concurrent.Eventually
-import org.scalatest.{BeforeAndAfterAll, Matchers, OptionValues, WordSpecLike}
+import org.scalatest.{Matchers, OptionValues, WordSpecLike}
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class AkkaHttpServerMetricsSpec extends WordSpecLike with Matchers with BeforeAndAfterAll with InstrumentInspection.Syntax
+class AkkaHttpServerMetricsSpec extends WordSpecLike with Matchers with InitAndStopKamonAfterAll with InstrumentInspection.Syntax
   with Reconfigure with TestWebServer with Eventually with OptionValues {
 
   import TestWebServer.Endpoints._
@@ -76,6 +76,7 @@ class AkkaHttpServerMetricsSpec extends WordSpecLike with Matchers with BeforeAn
   }
 
   override protected def afterAll(): Unit = {
+    super.afterAll()
     webServer.shutdown()
   }
 }

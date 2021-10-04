@@ -1,15 +1,19 @@
 package kamon.datadog
 
-import okhttp3.mockwebserver.{ MockResponse, MockWebServer }
-import org.scalatest.{ BeforeAndAfterAll, WordSpec }
+import kamon.Kamon
+import okhttp3.mockwebserver.{MockResponse, MockWebServer}
+import org.scalatest.{BeforeAndAfterAll, WordSpec}
 
-abstract class AbstractHttpReporter extends WordSpec with BeforeAndAfterAll {
+trait AbstractHttpReporter extends WordSpec with BeforeAndAfterAll {
+  // Not happy about having this here instead of in the beforeAll (as it should be)
+  // but doing otherwise would require bigger refactoring on the tests.
+  Kamon.init()
 
   protected val server = new MockWebServer()
 
-  override def beforeAll(): Unit = {
-    server.start()
+  override protected def beforeAll(): Unit = {
     super.beforeAll()
+    server.start()
   }
 
   protected def mockResponse(path: String, response: MockResponse): String = {
@@ -17,9 +21,10 @@ abstract class AbstractHttpReporter extends WordSpec with BeforeAndAfterAll {
     server.url(path).toString
   }
 
-  override def afterAll(): Unit = {
-    server.shutdown()
+  override protected def afterAll(): Unit = {
     super.afterAll()
+    server.shutdown()
+    Kamon.stop()
   }
 
 }

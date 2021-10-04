@@ -19,13 +19,14 @@ package kamon.instrumentation.logback
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
 import kamon.context.Context
+import kamon.testkit.InitAndStopKamonAfterAll
 import kamon.trace.Span
 import org.scalatest._
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.SpanSugar._
 import org.slf4j.MDC
 
-class LogbackMdcCopyingSpec extends WordSpec with Matchers with Eventually {
+class LogbackMdcCopyingSpec extends WordSpec with Matchers with Eventually with InitAndStopKamonAfterAll {
 
   "the Logback appender instrumentation" when {
     "there is no context attached to the logging events" should {

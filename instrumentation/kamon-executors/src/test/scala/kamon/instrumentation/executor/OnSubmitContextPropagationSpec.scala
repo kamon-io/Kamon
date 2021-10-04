@@ -17,16 +17,17 @@
 package kamon.instrumentation.executor
 
 import java.util.concurrent.{ExecutorService, Executors => JavaExecutors}
-
 import com.google.common.util.concurrent.MoreExecutors
 import kamon.Kamon
+import kamon.testkit.InitAndStopKamonAfterAll
 import org.scalatest.concurrent.Eventually
 import org.scalatest.{Matchers, OptionValues, WordSpec}
 
 import scala.collection.mutable.ListBuffer
 import scala.util.Random
 
-class OnSubmitContextPropagationSpec extends WordSpec with Matchers with ContextTesting with Eventually with OptionValues {
+class OnSubmitContextPropagationSpec extends WordSpec with Matchers with ContextTesting with Eventually with OptionValues
+    with InitAndStopKamonAfterAll {
 
   "an instrumented executor with context propagation on submit enabled" should {
     "capture the context when call execute(Runnable) in DirectExecutor" in {

@@ -2,10 +2,10 @@ package kamon.instrumentation.combined
 
 
 import io.lettuce.core.{RedisClient => LettuceClient}
-import kamon.testkit.{MetricInspection, TestSpanReporter}
+import kamon.testkit.{InitAndStopKamonAfterAll, MetricInspection, TestSpanReporter}
 import kamon.trace.Span.Kind
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
-import org.scalatest.{BeforeAndAfterAll, Matchers, OptionValues, WordSpec}
+import org.scalatest.{Matchers, OptionValues, WordSpec}
 import org.slf4j.LoggerFactory
 import org.testcontainers.containers.GenericContainer
 import org.testcontainers.utility.DockerImageName
@@ -21,7 +21,7 @@ class RedisInstrumentationsSpec extends WordSpec
   with Matchers
   with ScalaFutures
   with Eventually
-  with BeforeAndAfterAll
+  with InitAndStopKamonAfterAll
   with MetricInspection.Syntax
   with OptionValues
   with TestSpanReporter {
@@ -30,6 +30,7 @@ class RedisInstrumentationsSpec extends WordSpec
   var container: GenericContainer[Nothing] = _
 
   override def beforeAll: Unit = {
+    super.beforeAll()
     val REDIS_IMAGE = DockerImageName.parse("redis")
     container = new GenericContainer(REDIS_IMAGE).withExposedPorts(6379)
 
@@ -38,6 +39,7 @@ class RedisInstrumentationsSpec extends WordSpec
 
   override def afterAll: Unit = {
     container.stop()
+    super.afterAll()
   }
 
   "the Jedis instrumentation" should {

@@ -21,16 +21,17 @@ import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import kamon.instrumentation.akka.AkkaMetrics._
 import kamon.tag.Lookups._
 import kamon.tag.TagSet
-import kamon.testkit.{InstrumentInspection, MetricInspection}
+import kamon.testkit.{InitAndStopKamonAfterAll, InstrumentInspection, MetricInspection}
 import org.scalactic.TimesOnInt._
 import org.scalatest.concurrent.Eventually
-import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
+import org.scalatest.{Matchers, WordSpecLike}
 import RouterMetricsTestActor._
+import kamon.Kamon
 
 import scala.concurrent.duration._
 
-class RouterMetricsSpec extends TestKit(ActorSystem("RouterMetricsSpec")) with WordSpecLike with MetricInspection.Syntax with InstrumentInspection.Syntax with Matchers
-  with BeforeAndAfterAll with ImplicitSender with Eventually {
+class RouterMetricsSpec extends TestKit(ActorSystem("RouterMetricsSpec")) with WordSpecLike with MetricInspection.Syntax
+  with InstrumentInspection.Syntax with Matchers with InitAndStopKamonAfterAll with ImplicitSender with Eventually {
 
   "the Kamon router metrics" should {
     "respect the configured include and exclude filters" in new RouterMetricsFixtures {
@@ -268,7 +269,10 @@ class RouterMetricsSpec extends TestKit(ActorSystem("RouterMetricsSpec")) with W
 
   override implicit def patienceConfig: PatienceConfig = PatienceConfig(timeout = 5 seconds, interval = 5 milliseconds)
 
-  override protected def afterAll(): Unit = shutdown()
+  override protected def afterAll(): Unit = {
+    shutdown()
+    super.afterAll()
+  }
 
   def routerTags(path: String): TagSet = {
     val routerClass = if(path.contains("balancing")) "akka.routing.BalancingPool" else "akka.routing.RoundRobinPool"

@@ -17,13 +17,12 @@ package kamon.instrumentation.jdbc
 
 import java.sql.SQLException
 import java.util.concurrent.Executors
-
 import com.typesafe.config.ConfigFactory
 import com.zaxxer.hikari.{HikariConfig, HikariDataSource}
 import kamon.Kamon
 import kamon.tag.Lookups.plain
 import kamon.tag.TagSet
-import kamon.testkit.{InstrumentInspection, MetricInspection, TestSpanReporter}
+import kamon.testkit.{InitAndStopKamonAfterAll, InstrumentInspection, MetricInspection, TestSpanReporter}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.SpanSugar
 import org.scalatest.{BeforeAndAfterEach, Matchers, OptionValues, WordSpec}
@@ -38,6 +37,7 @@ class HikariInstrumentationSpec extends WordSpec
   with InstrumentInspection.Syntax
   with TestSpanReporter
   with BeforeAndAfterEach
+  with InitAndStopKamonAfterAll
   with OptionValues {
 
   import HikariInstrumentationSpec.{createH2Pool, createSQLitePool}

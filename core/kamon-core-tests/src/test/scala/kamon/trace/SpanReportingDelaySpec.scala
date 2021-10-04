@@ -16,15 +16,15 @@
 package kamon.trace
 
 import kamon.Kamon
-import kamon.testkit.{Reconfigure, SpanInspection, TestSpanReporter}
+import kamon.testkit.{InitAndStopKamonAfterAll, Reconfigure, SpanInspection, TestSpanReporter}
 import org.scalactic.TimesOnInt.convertIntToRepeater
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.SpanSugar
-import org.scalatest.{Matchers, OptionValues, WordSpec}
+import org.scalatest.{BeforeAndAfterAll, Matchers, OptionValues, WordSpec}
 
 
 class SpanReportingDelaySpec extends WordSpec with Matchers with OptionValues with SpanInspection.Syntax with Eventually
-    with SpanSugar with TestSpanReporter with Reconfigure {
+    with SpanSugar with TestSpanReporter with Reconfigure with InitAndStopKamonAfterAll {
 
   "the Kamon tracer" when {
     "has span reporting delay disabled" should {

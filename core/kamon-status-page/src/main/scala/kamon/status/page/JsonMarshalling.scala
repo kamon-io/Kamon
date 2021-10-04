@@ -41,10 +41,10 @@ object JsonMarshalling {
   implicit object ModuleRegistryStatusJsonMarshalling extends JsonMarshalling[Status.ModuleRegistry] {
     override def toJson(instance: Status.ModuleRegistry, builder: JavaStringBuilder): Unit = {
       def moduleKindString(moduleKind: Module.Kind): String = moduleKind match {
-        case Module.Kind.Combined => "combined"
-        case Module.Kind.Metric   => "metric"
-        case Module.Kind.Span     => "span"
-        case Module.Kind.Plain    => "plain"
+        case Module.Kind.CombinedReporter => "combined"
+        case Module.Kind.MetricsReporter   => "metric"
+        case Module.Kind.SpansReporter     => "span"
+        case Module.Kind.ScheduledAction    => "scheduled"
         case Module.Kind.Unknown  => "unknown"
       }
 

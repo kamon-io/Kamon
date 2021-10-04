@@ -17,11 +17,11 @@
 package com.datastax.driver.core
 
 import java.util.concurrent.atomic.AtomicInteger
-
 import com.google.common.util.concurrent.{FutureCallback, ListenableFuture}
 import kamon.Kamon
 import kamon.instrumentation.cassandra.metrics.{HasPoolMetrics, NodeMonitor}
 import kamon.instrumentation.cassandra.CassandraInstrumentation
+import kamon.util.CallingThreadExecutionContext
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 
 object PoolConstructorAdvice {
@@ -104,7 +104,7 @@ object InitPoolAdvice {
       override def run(): Unit = {
         hasPoolMetrics.nodeMonitor.connectionsOpened(openConnections.get())
       }
-    }, Kamon.scheduler())
+    }, CallingThreadExecutionContext)
   }
 }
 

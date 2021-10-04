@@ -16,13 +16,12 @@
 package kamon.okhttp3.instrumentation
 
 import java.io.IOException
-
 import javax.servlet.http.{HttpServlet, HttpServletRequest, HttpServletResponse}
 import kamon.Kamon
 import kamon.context.Context
 import kamon.okhttp3.utils.{JettySupport, ServletTestSupport}
 import kamon.tag.Lookups.{plain, plainBoolean, plainLong}
-import kamon.testkit.{Reconfigure, TestSpanReporter}
+import kamon.testkit.{InitAndStopKamonAfterAll, Reconfigure, TestSpanReporter}
 import kamon.trace.Span
 import kamon.trace.SpanPropagation.B3
 import okhttp3._
@@ -30,13 +29,13 @@ import org.scalatest.concurrent.Eventually
 import org.scalatest.Matchers
 import org.scalatest.time.SpanSugar
 import org.scalatest.WordSpec
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, OptionValues}
+import org.scalatest.{BeforeAndAfterEach, OptionValues}
 
 class OkHttpTracingInstrumentationSpec extends WordSpec
   with Matchers
   with Eventually
   with SpanSugar
-  with BeforeAndAfterAll
+  with InitAndStopKamonAfterAll
   with BeforeAndAfterEach
   with TestSpanReporter
   with JettySupport
@@ -281,6 +280,7 @@ class OkHttpTracingInstrumentationSpec extends WordSpec
   }
 
   override protected def beforeAll(): Unit = {
+    super.beforeAll()
     applyConfig(
       s"""
          |kamon {
@@ -300,6 +300,7 @@ class OkHttpTracingInstrumentationSpec extends WordSpec
 
   override protected def afterAll(): Unit = {
     stopServer()
+    super.afterAll()
   }
 
   override protected def beforeEach(): Unit = {

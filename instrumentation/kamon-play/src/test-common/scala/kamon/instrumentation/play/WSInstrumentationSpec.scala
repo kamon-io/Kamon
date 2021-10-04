@@ -43,7 +43,7 @@ import scala.util.{Failure, Success}
 
 
 class WSInstrumentationSpec extends PlaySpec with GuiceOneServerPerSuite with ScalaFutures with Eventually with SpanSugar
-  with BeforeAndAfterAll with MetricInspection.Syntax with Reconfigure with OptionValues with TestSpanReporter {
+  with InitAndStopKamonAfterAll with MetricInspection.Syntax with Reconfigure with OptionValues with TestSpanReporter {
 
   System.setProperty("config.file", "./instrumentation/kamon-play/src/test-common/resources/conf/application.conf")
 

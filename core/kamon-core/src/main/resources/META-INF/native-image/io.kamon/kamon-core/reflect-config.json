@@ -1,0 +1,66 @@
+[
+  {
+    "name": "kamon.trace.SpanPropagation$B3",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "kamon.trace.SpanPropagation$B3Single",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "kamon.trace.SpanPropagation$Colfer",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "kamon.trace.SpanPropagation$Uber",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "kamon.trace.SpanPropagation$W3CTraceContext",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "kamon.trace.Hooks$PreStart$FromContext",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "kamon.trace.Hooks$PreFinish$FromContext",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name" : "kamon.lib.org.jctools.queues.MpscArrayQueueProducerIndexField",
+    "fields": [
+      {
+        "name": "producerIndex",
+        "allowUnsafeAccess": true
+      }
+    ]
+  },
+  {
+    "name" : "kamon.lib.org.jctools.queues.MpscArrayQueueProducerLimitField",
+    "fields": [
+      {
+        "name": "producerLimit",
+        "allowUnsafeAccess": true
+      }
+    ]
+  },
+  {
+    "name" : "kamon.lib.org.jctools.queues.MpscArrayQueueConsumerIndexField",
+    "fields": [
+      {
+        "name": "consumerIndex",
+        "allowUnsafeAccess": true
+      }
+    ]
+  },
+  {
+    "name": "sun.misc.Unsafe",
+    "fields": [
+      {
+        "name": "theUnsafe",
+        "allowUnsafeAccess" : true
+      }
+    ]
+  }
+]

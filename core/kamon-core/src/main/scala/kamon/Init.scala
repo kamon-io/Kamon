@@ -20,21 +20,27 @@ import com.typesafe.config.Config
 import kamon.status.InstrumentationStatus
 import org.slf4j.LoggerFactory
 
+import java.util.concurrent.{ScheduledExecutorService, ScheduledThreadPoolExecutor}
 import scala.concurrent.Future
 
 /**
   * Provides APIs for handling common initialization tasks like starting modules, attaching instrumentation and
   * reconfiguring Kamon.
   */
-trait Init { self: ModuleLoading with Configuration with CurrentStatus with Metrics with Tracing =>
+trait Init { self: ModuleManagement with Configuration with CurrentStatus with Metrics with Tracing =>
   private val _logger = LoggerFactory.getLogger(classOf[Init])
+  @volatile private var _scheduler: Option[ScheduledExecutorService] = None
+
+  self.onReconfigure(newConfig => reconfigureInit(newConfig))
 
   /**
     * Attempts to attach the instrumentation agent and start all registered modules.
     */
   def init(): Unit = {
     self.attachInstrumentation()
+    self.initScheduler()
     self.loadModules()
+    self.moduleRegistry().init()
   }
 
   /**
@@ -43,14 +49,19 @@ trait Init { self: ModuleLoading with Configuration with CurrentStatus with Metr
     */
   def init(config: Config): Unit = {
     self.attachInstrumentation()
+    self.initScheduler()
     self.reconfigure(config)
     self.loadModules()
+    self.moduleRegistry().init()
+
   }
   
   def stop(): Future[Unit] = {
     self.clearRegistry()
-    self.stopTracer()
+    self.stopScheduler()
+    self.moduleRegistry().shutdown()
     self.stopModules()
+
   }
 
   /**
@@ -65,11 +76,38 @@ trait Init { self: ModuleLoading with Configuration with CurrentStatus with Metr
         attachMethod.invoke(null)
       } catch {
         case _: ClassNotFoundException =>
-          _logger.warn("Failed to attach the instrumentation because the Kamon Bundle is not present on the classpath")
+          _logger.warn(
+            "Your application is running without the Kanela instrumentation agent. None of Kamon's automatic " +
+            "instrumentation will be applied to the current JVM. Consider using the kamon-bundle dependency " +
+            "or setting up the Kanela agent via the -javaagent:/path/to/kanela.jar command-line option"
+          )
 
         case t: Throwable =>
-          _logger.error("Failed to attach the instrumentation agent", t)
+          _logger.error("Failed to attach the Kanela agent included in the kamon-bundle", t)
       }
+    }
+  }
+
+  private def initScheduler(): Unit = synchronized {
+    val newScheduler = newScheduledThreadPool(2, numberedThreadFactory("kamon-scheduler", daemon = true))
+    self.tracer().bindScheduler(newScheduler)
+    self.registry().bindScheduler(newScheduler)
+  }
+
+  private def stopScheduler(): Unit = synchronized {
+    self.tracer().shutdown()
+    self.registry().shutdown()
+    _scheduler.foreach(_.shutdown())
+    _scheduler = None
+  }
+
+  private def reconfigureInit(config: Config): Unit = {
+    _scheduler.foreach {
+      case stpe: ScheduledThreadPoolExecutor =>
+        val newPoolSize = config.getInt("kamon.scheduler-pool-size")
+        stpe.setCorePoolSize(newPoolSize)
+
+      case _ => // cannot change the pool size on other unknown types.
     }
   }
 }

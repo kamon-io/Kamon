@@ -689,7 +689,7 @@ object Span {
     * A immutable, no-op Span that can be used to signal that there is no Span information. An empty Span completely
     * ignores all writes made to it.
     */
-  object Empty extends Span {
+  object Empty extends Span.Delayed {
     override def id: Identifier = Identifier.Empty
     override def parentId: Identifier = Identifier.Empty
     override def trace: Trace = Trace.Empty
@@ -720,6 +720,10 @@ object Span {
     override def finishAfter(duration: Duration): Unit = {}
     override def operationName(): String = "empty"
     override def toString(): String = "Span.Empty"
+    override def trackDelayedSpanMetrics(): Delayed = this
+    override def doNotTrackDelayedSpanMetrics(): Delayed = this
+    override def start(): Delayed = this
+    override def start(at: Instant): Delayed = this
   }
 
 

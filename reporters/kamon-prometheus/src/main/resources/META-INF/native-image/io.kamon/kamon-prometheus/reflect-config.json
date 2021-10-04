@@ -1,0 +1,14 @@
+[
+  {
+    "name": "kamon.prometheus.PrometheusReporter$Factory",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "kamon.prometheus.PrometheusPushgatewayReporter$Factory",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "kamon.prometheus.embeddedhttp.SunEmbeddedHttpServer",
+    "allDeclaredConstructors": true
+  }
+]

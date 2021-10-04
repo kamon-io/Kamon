@@ -16,14 +16,13 @@
 package kamon.trace
 
 import java.time.Instant
-
-import kamon.testkit.SpanInspection
+import kamon.testkit.{InitAndStopKamonAfterAll, SpanInspection}
 import kamon.Kamon
 import kamon.tag.Lookups._
 import kamon.trace.Span.Link.Kind
 import org.scalatest.{Matchers, OptionValues, WordSpec}
 
-class LocalSpanSpec extends WordSpec with Matchers with OptionValues with SpanInspection.Syntax {
+class LocalSpanSpec extends WordSpec with Matchers with OptionValues with SpanInspection.Syntax with InitAndStopKamonAfterAll {
 
   "a real span" when {
     "sampled and finished" should {

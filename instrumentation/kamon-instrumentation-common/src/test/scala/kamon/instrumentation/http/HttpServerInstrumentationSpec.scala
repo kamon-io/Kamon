@@ -1,13 +1,12 @@
 package kamon.instrumentation.http
 
 import java.time.Duration
-
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
 import kamon.context.Context
 import kamon.tag.Lookups._
 import kamon.metric.{Counter, Histogram, RangeSampler, Timer}
-import kamon.testkit.{InstrumentInspection, SpanInspection}
+import kamon.testkit.{InitAndStopKamonAfterAll, InstrumentInspection, SpanInspection}
 import kamon.trace.Trace.SamplingDecision
 import org.scalatest.concurrent.Eventually
 import org.scalatest.{Matchers, OptionValues, WordSpec}
@@ -15,7 +14,7 @@ import org.scalatest.{Matchers, OptionValues, WordSpec}
 import scala.collection.mutable
 
 class HttpServerInstrumentationSpec extends WordSpec with Matchers with InstrumentInspection.Syntax with OptionValues
-    with SpanInspection.Syntax with Eventually {
+    with SpanInspection.Syntax with Eventually with InitAndStopKamonAfterAll {
 
   "the HTTP server instrumentation" when {
     "configured for context propagation" should {

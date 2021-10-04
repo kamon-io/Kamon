@@ -18,11 +18,11 @@ package kamon.instrumentation.play
 import kamon.Kamon
 import kamon.context.Context
 import kamon.tag.Lookups._
-import kamon.testkit.{MetricInspection, TestSpanReporter}
+import kamon.testkit.{InitAndStopKamonAfterAll, MetricInspection, TestSpanReporter}
 import kamon.trace.Span
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.time.SpanSugar
-import org.scalatest.{BeforeAndAfterAll, OptionValues}
+import org.scalatest.OptionValues
 import org.scalatestplus.play._
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
@@ -51,7 +51,7 @@ class NettyRequestHandlerInstrumentationSpec extends {
 } with RequestHandlerInstrumentationSpec
 
 abstract class RequestHandlerInstrumentationSpec extends PlaySpec with GuiceOneServerPerSuite with ScalaFutures
-    with Eventually with SpanSugar with BeforeAndAfterAll with MetricInspection.Syntax with OptionValues with TestSpanReporter {
+    with Eventually with SpanSugar with InitAndStopKamonAfterAll with MetricInspection.Syntax with OptionValues with TestSpanReporter {
 
   val confFile: String
   val expectedServer: String

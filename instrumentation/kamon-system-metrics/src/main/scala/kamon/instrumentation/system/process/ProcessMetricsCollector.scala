@@ -18,12 +18,11 @@ package kamon.instrumentation.system.process
 
 import java.time.Duration
 import java.util.concurrent.{Executors, TimeUnit}
-
 import com.sun.jna.Platform
 import com.typesafe.config.Config
 import kamon.instrumentation.system.process.ProcessMetrics.ProcessInstruments
 import kamon.metric.Timer
-import kamon.module.{Module, ModuleFactory}
+import kamon.module.{Module, ModuleFactory, ScheduledAction}
 import kamon.tag.TagSet
 import kamon.Kamon
 import oshi.SystemInfo
@@ -33,28 +32,25 @@ import scala.collection.JavaConverters.iterableAsScalaIterableConverter
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
-class ProcessMetricsCollector(ec: ExecutionContext) extends Module {
+class ProcessMetricsCollector(ec: ExecutionContext) extends ScheduledAction {
   private val _hiccupIntervalPath = "kamon.instrumentation.system.process.hiccup-monitor-interval"
   private val _defaultTags = TagSet.of("component", "process")
   private val _processCpuInstruments = new ProcessInstruments(_defaultTags)
   private val _collectionTask = new MetricsCollectionTask
-  private val _collectionSchedule = Kamon.scheduler().scheduleAtFixedRate(scheduleOnModuleEC(_collectionTask), 1, 1, TimeUnit.SECONDS)
   private val _hiccupMonitor = startHiccupMonitor()
+
+
+  override def run(): Unit = {
+    _collectionTask.run()
+  }
 
   override def stop(): Unit = {
     _hiccupMonitor.terminate()
-    _collectionSchedule.cancel(false)
     _collectionTask.cleanup()
   }
 
   override def reconfigure(newConfig: Config): Unit =
     _hiccupMonitor.updateInterval(newConfig.getDuration(_hiccupIntervalPath))
-
-
-  private def scheduleOnModuleEC(task: MetricsCollectionTask): Runnable = new Runnable {
-    override def run(): Unit =
-      task.schedule(ec)
-  }
 
   private def startHiccupMonitor(): HiccupMonitor = {
     val interval = Kamon.config().getDuration(_hiccupIntervalPath)
@@ -73,11 +69,9 @@ class ProcessMetricsCollector(ec: ExecutionContext) extends Module {
     private val _processorCount = _hal.getProcessor.getLogicalProcessorCount().toDouble
     private var _previousProcessCpuTime: Array[Long] = Array.empty[Long]
 
-    def schedule(ec: ExecutionContext): Unit = {
-      Future {
-        recordProcessCpu()
-        recordProcessULimits()
-      }(ec)
+    def run(): Unit = {
+      recordProcessCpu()
+      recordProcessULimits()
     }
 
     def cleanup(): Unit = {

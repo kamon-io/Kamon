@@ -184,8 +184,10 @@ object Metric {
       val description: String,
       val settings: Sett,
       instrumentBuilder: InstrumentBuilder[Inst, Sett, Snap],
-      scheduler: ScheduledExecutorService) extends Metric[Inst, Sett] with Metric.Snapshotting[Sett, Snap] {
+      scheduler: Option[ScheduledExecutorService])
+    extends Metric[Inst, Sett] with Metric.Snapshotting[Sett, Snap] {
 
+    @volatile private var _scheduler: Option[ScheduledExecutorService] = scheduler
     private val _instruments = TrieMap.empty[TagSet, InstrumentEntry]
 
     override def withTag(key: String, value: String): Inst =
@@ -227,10 +229,41 @@ object Metric {
       buildMetricSnapshot(this, instrumentSnapshots)
     }
 
+    def bindScheduler(scheduler: ScheduledExecutorService): Unit = synchronized {
+      _scheduler = Some(scheduler)
+      _instruments.foreach {
+        case (_, entry) =>
+          entry.actions.foreach(action => {
+            val (runnable, interval) = action
+            entry.scheduledActions += scheduler.scheduleAtFixedRate(runnable, interval.toNanos, interval.toNanos, TimeUnit.NANOSECONDS)
+          })
+      }
+    }
+
+    def shutdown(): Unit = synchronized {
+      _scheduler = None
+      _instruments.foreach {
+        case (_, entry) =>
+          entry.scheduledActions.dropWhile(sa => {
+            sa.cancel(false)
+            true
+          })
+      }
+
+      _instruments.clear()
+    }
+
     def schedule(instrument: Inst, action: Runnable, interval: Duration): Any = synchronized {
       _instruments.get(instrument.tags).map { entry =>
-        val scheduledAction = scheduler.scheduleAtFixedRate(action, interval.toNanos, interval.toNanos, TimeUnit.NANOSECONDS)
-        entry.scheduledActions += scheduledAction
+        _scheduler match {
+          case Some(scheduler) =>
+            val scheduledAction = scheduler.scheduleAtFixedRate(action, interval.toNanos, interval.toNanos, TimeUnit.NANOSECONDS)
+            entry.scheduledActions += (scheduledAction)
+            entry.actions += ((action, interval))
+
+          case None =>
+            entry.actions += ((action, interval))
+        }
       }
     }
 
@@ -255,11 +288,11 @@ object Metric {
     }
 
     private def newInstrumentEntry(tags: TagSet): InstrumentEntry = {
+      val actions = Collections.synchronizedList(new util.ArrayList[(Runnable, Duration)]()).asScala
       val scheduledActions = Collections.synchronizedList(new util.ArrayList[ScheduledFuture[_]]()).asScala
       val instrument = instrumentBuilder(this, tags)
-      instrument.defaultSchedule()
 
-      new InstrumentEntry(instrument, scheduledActions, false)
+      new InstrumentEntry(instrument, actions, scheduledActions, false)
     }
 
     private def triggerDefaultSchedule(entry: InstrumentEntry): Unit =
@@ -270,6 +303,7 @@ object Metric {
 
     private class InstrumentEntry (
       val instrument: RichInstrument[Inst, Sett, Snap],
+      val actions: mutable.Buffer[(Runnable, Duration)],
       val scheduledActions: mutable.Buffer[ScheduledFuture[_]],
       @volatile var removeOnNextSnapshot: Boolean
     )

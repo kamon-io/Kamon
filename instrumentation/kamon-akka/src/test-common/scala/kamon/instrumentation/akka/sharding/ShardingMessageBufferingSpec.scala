@@ -8,11 +8,13 @@ import com.typesafe.config.ConfigFactory
 import kamon.Kamon
 import kamon.context.Context
 import kamon.instrumentation.akka.ContextEchoActor
-import kamon.testkit.MetricInspection
+import kamon.testkit.{InitAndStopKamonAfterAll, MetricInspection}
 import org.scalatest.{Matchers, WordSpecLike}
+
 import scala.concurrent.duration._
 
-class ShardingMessageBufferingSpec extends TestKitBase with WordSpecLike with Matchers with ImplicitSender with MetricInspection.Syntax  {
+class ShardingMessageBufferingSpec extends TestKitBase with WordSpecLike with Matchers with ImplicitSender
+    with MetricInspection.Syntax with InitAndStopKamonAfterAll {
 
   implicit lazy val system: ActorSystem = {
     ActorSystem("cluster-sharding-spec-system", ConfigFactory.parseString(

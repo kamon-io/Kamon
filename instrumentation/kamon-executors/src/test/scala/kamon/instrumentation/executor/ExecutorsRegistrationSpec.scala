@@ -16,16 +16,15 @@
 package kamon.instrumentation.executor
 
 import java.util.concurrent.{Executors => JavaExecutors, ForkJoinPool => JavaForkJoinPool}
-
 import kamon.instrumentation.executor.ExecutorMetrics._
 import kamon.tag.TagSet
 import kamon.tag.Lookups.coerce
-import kamon.testkit.MetricInspection
+import kamon.testkit.{InitAndStopKamonAfterAll, MetricInspection}
 import org.scalatest.{Matchers, WordSpec}
 
 import scala.concurrent.ExecutionContext
 
-class ExecutorsRegistrationSpec extends WordSpec with Matchers with MetricInspection.Syntax {
+class ExecutorsRegistrationSpec extends WordSpec with Matchers with MetricInspection.Syntax with InitAndStopKamonAfterAll {
 
   "the Executors registration function" should {
     "accept all types of known executors" in {

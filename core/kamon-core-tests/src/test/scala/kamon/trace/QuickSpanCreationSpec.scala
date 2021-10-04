@@ -1,7 +1,7 @@
 package kamon.trace
 
 import kamon.tag.Lookups._
-import kamon.testkit.{Reconfigure, SpanInspection, TestSpanReporter}
+import kamon.testkit.{InitAndStopKamonAfterAll, Reconfigure, SpanInspection, TestSpanReporter}
 import org.scalatest.{Matchers, OptionValues, WordSpec}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.SpanSugar
@@ -12,7 +12,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class QuickSpanCreationSpec extends WordSpec with Matchers with OptionValues with SpanInspection.Syntax with Eventually
-  with SpanSugar with TestSpanReporter with Reconfigure {
+  with SpanSugar with TestSpanReporter with Reconfigure with InitAndStopKamonAfterAll {
 
   import kamon.Kamon.{span, currentSpan}
 

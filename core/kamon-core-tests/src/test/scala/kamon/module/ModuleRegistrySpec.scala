@@ -28,7 +28,8 @@ import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-class ModuleRegistrySpec extends WordSpec with Matchers with Reconfigure with Eventually with BeforeAndAfterAll  {
+class ModuleRegistrySpec extends WordSpec with Matchers with Reconfigure with Eventually with BeforeAndAfterAll {
+
   "The ModuleRegistry" when {
     "working with metrics reporters" should {
       "report all metrics if no filters are applied" in {
@@ -103,6 +104,8 @@ class ModuleRegistrySpec extends WordSpec with Matchers with Reconfigure with Ev
 
 
   override protected def beforeAll(): Unit = {
+    Kamon.init()
+
     applyConfig(
       """
         |kamon.metric.tick-interval = 10 millis
@@ -117,6 +120,7 @@ class ModuleRegistrySpec extends WordSpec with Matchers with Reconfigure with Ev
 
   override protected def afterAll(): Unit = {
     reset()
+    Kamon.stop()
   }
 
   class SeenMetricsReporter extends MetricReporter {

@@ -18,13 +18,15 @@ package kamon
 package util
 
 import org.slf4j.LoggerFactory
+
+import java.util.concurrent.Executor
 import scala.concurrent.ExecutionContext
 
 /**
   * Execution Context that runes any submitted task on the calling thread. This is meant to be used for small code
   * blocks like recording or finishing a Span that usually happen after completing a Future.
   */
-object CallingThreadExecutionContext extends ExecutionContext {
+object CallingThreadExecutionContext extends ExecutionContext with Executor {
 
   private val _logger = LoggerFactory.getLogger("kamon.util.CallingThreadExecutionContext")
 

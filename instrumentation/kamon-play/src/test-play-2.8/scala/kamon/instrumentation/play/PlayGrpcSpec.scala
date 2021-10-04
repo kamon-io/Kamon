@@ -2,10 +2,11 @@ package kamon.instrumentation.play
 
 import akka.actor.ActorSystem
 import akka.grpc.GrpcClientSettings
+
 import javax.inject.Inject
 import kamon.instrumentation.play.grpc.{AbstractReplyServiceRouter, HelloRequest, HelloResponse, ReplyServiceClient, ReplyServiceClientProvider}
 import kamon.tag.Lookups.{plain, plainLong}
-import kamon.testkit.TestSpanReporter
+import kamon.testkit.{InitAndStopKamonAfterAll, TestSpanReporter}
 import org.scalatest.concurrent.{Eventually, IntegrationPatience, ScalaFutures}
 import org.scalatest.time.SpanSugar
 import org.scalatestplus.play.PlaySpec
@@ -24,7 +25,7 @@ class ReplyServiceRouter @Inject()(implicit system: ActorSystem) extends Abstrac
 }
 
 
-class PlayGrpcSpec extends PlaySpec with GuiceOneServerPerTest with ServerGrpcClient
+class PlayGrpcSpec extends PlaySpec with GuiceOneServerPerTest with ServerGrpcClient with InitAndStopKamonAfterAll
   with ScalaFutures with IntegrationPatience with TestSpanReporter with Eventually with SpanSugar {
 
   System.setProperty("config.file", System.getProperty("user.dir") + "/instrumentation/kamon-play/src/test-common/resources/conf/application-play-grpc.conf")

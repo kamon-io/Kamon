@@ -1,0 +1,14 @@
+[
+  {
+    "name": "kamon.datadog.DatadogAgentReporterFactory",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "kamon.datadog.DatadogAPIReporterFactory",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "kamon.datadog.DatadogSpanReporterFactory",
+    "allDeclaredConstructors": true
+  }
+]

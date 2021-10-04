@@ -1,0 +1,10 @@
+[
+  {
+    "name": "kamon.newrelic.spans.NewRelicSpanReporter$Factory",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "kamon.newrelic.metrics.NewRelicMetricsReporter$Factory",
+    "allDeclaredConstructors": true
+  }
+]

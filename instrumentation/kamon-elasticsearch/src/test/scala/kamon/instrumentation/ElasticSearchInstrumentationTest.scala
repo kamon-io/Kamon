@@ -2,7 +2,7 @@ package kamon.instrumentation
 
 import com.dimafeng.testcontainers.{ElasticsearchContainer, ForAllTestContainer}
 import kamon.tag.Lookups.plain
-import kamon.testkit.{Reconfigure, TestSpanReporter}
+import kamon.testkit.{InitAndStopKamonAfterAll, Reconfigure, TestSpanReporter}
 import org.apache.http.HttpHost
 import org.apache.http.auth.{AuthScope, UsernamePasswordCredentials}
 import org.apache.http.impl.client.{BasicCredentialsProvider, HttpClientBuilder}
@@ -11,7 +11,7 @@ import org.elasticsearch.action.admin.cluster.node.tasks.list.{ListTasksRequest,
 import org.elasticsearch.client._
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.SpanSugar
-import org.scalatest.{BeforeAndAfterAll, Matchers, OptionValues, WordSpec}
+import org.scalatest.{Matchers, OptionValues, WordSpec}
 
 
 class ElasticSearchInstrumentationTest
@@ -22,7 +22,7 @@ class ElasticSearchInstrumentationTest
     with Reconfigure
     with OptionValues
     with TestSpanReporter
-    with BeforeAndAfterAll
+    with InitAndStopKamonAfterAll
     with ForAllTestContainer {
 
   val endpointTag = "elasticsearch.http.endpoint"
@@ -90,6 +90,7 @@ class ElasticSearchInstrumentationTest
   var highLevelClient: RestHighLevelClient = _
 
   override protected def beforeAll(): Unit = {
+    super.beforeAll()
     container.start()
 
     client = RestClient
@@ -102,5 +103,6 @@ class ElasticSearchInstrumentationTest
 
   override protected def afterAll(): Unit = {
     container.stop()
+    super.afterAll()
   }
 }

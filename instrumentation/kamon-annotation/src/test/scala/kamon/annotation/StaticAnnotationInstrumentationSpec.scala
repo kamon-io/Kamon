@@ -35,7 +35,7 @@ class StaticAnnotationInstrumentationSpec extends WordSpec
   with InstrumentInspection.Syntax
   with SpanInspection
   with MetricInspection.Syntax
-  with BeforeAndAfterAll
+  with InitAndStopKamonAfterAll
   with OptionValues {
 
   "the Kamon Annotation module" should {
@@ -123,6 +123,7 @@ class StaticAnnotationInstrumentationSpec extends WordSpec
   val reporter = new testkit.TestSpanReporter.BufferingSpanReporter()
 
   override protected def beforeAll(): Unit = {
+    super.beforeAll()
     enableFastSpanFlushing()
     sampleAlways()
     registration = Kamon.registerModule("test-reporter", reporter)
@@ -130,6 +131,7 @@ class StaticAnnotationInstrumentationSpec extends WordSpec
 
   override protected def afterAll(): Unit = {
     registration.cancel()
+    super.afterAll()
   }
 
   def stringTag(span: Span.Finished)(tag: String): String = {
