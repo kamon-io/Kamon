@@ -160,8 +160,9 @@ class InstrumentedSession(underlying: Session) extends AbstractSession {
     * @return dml statement type, none if not a dml statement
     */
   private def extractStatementType(query: String): Option[String] = {
-    Option(query.substring(0, query.indexOf(" ")).toLowerCase)
+    Try(query.substring(0, query.indexOf(" ")).toLowerCase)
       .filter(DmlStatementPrefixes.contains)
+      .toOption
   }
 
   private def unsafeExtractExecutor(session: Session): ListeningExecutorService = {
