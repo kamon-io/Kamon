@@ -5,13 +5,14 @@ import java.util.concurrent.TimeUnit
 import com.typesafe.config.{Config, ConfigFactory}
 import kamon.metric.PeriodSnapshot
 import kamon.trace.Span
-import org.scalatest.{Matchers, WordSpec}
 import org.scalatest.concurrent.Eventually
+import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.SpanSugar._
+import org.scalatest.wordspec.AnyWordSpec
 
 import scala.collection.JavaConverters.iterableAsScalaIterableConverter
 
-class KamonLifecycleSpec extends WordSpec with Matchers with Eventually {
+class KamonLifecycleSpec extends AnyWordSpec with Matchers with Eventually {
 
   "the Kamon lifecycle" should {
     "keep the JVM running if modules are running" in {

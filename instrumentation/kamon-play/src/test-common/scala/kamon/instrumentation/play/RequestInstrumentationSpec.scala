@@ -21,8 +21,10 @@ import kamon.tag.Lookups._
 import kamon.testkit.{InitAndStopKamonAfterAll, MetricInspection, TestSpanReporter}
 import kamon.trace.Span
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
+import org.scalatest.matchers.must.Matchers
 import org.scalatest.time.SpanSugar
 import org.scalatest.OptionValues
+import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.play._
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
@@ -50,7 +52,7 @@ class NettyRequestHandlerInstrumentationSpec extends {
   val expectedServer = "play.server.netty"
 } with RequestHandlerInstrumentationSpec
 
-abstract class RequestHandlerInstrumentationSpec extends PlaySpec with GuiceOneServerPerSuite with ScalaFutures
+abstract class RequestHandlerInstrumentationSpec extends PlaySpecShim with GuiceOneServerPerSuite with ScalaFutures
     with Eventually with SpanSugar with InitAndStopKamonAfterAll with MetricInspection.Syntax with OptionValues with TestSpanReporter {
 
   val confFile: String

@@ -1,6 +1,5 @@
 package kamon.datadog
 
-import java.time.Instant
 import kamon.Kamon
 import kamon.metric.Distribution.Percentile
 import kamon.metric._
@@ -8,10 +7,11 @@ import kamon.module.ModuleFactory
 import kamon.tag.TagSet
 import kamon.testkit.Reconfigure
 import okhttp3.mockwebserver.MockResponse
-import okio.{Buffer, InflaterSource, Okio}
-import org.scalatest.Matchers
+import okio.{InflaterSource, Okio}
+import org.scalatest.matchers.should.Matchers
 import play.api.libs.json.Json
 
+import java.time.Instant
 import java.util.zip.Inflater
 import scala.concurrent.ExecutionContext
 

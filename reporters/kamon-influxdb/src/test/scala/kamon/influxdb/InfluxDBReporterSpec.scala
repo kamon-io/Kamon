@@ -1,9 +1,5 @@
 package kamon.influxdb
 
-import java.nio.charset.Charset
-import java.time.Instant
-import java.util.concurrent.TimeUnit
-
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
 import kamon.influxdb.InfluxDBCustomMatchers._
@@ -12,8 +8,14 @@ import kamon.tag.TagSet
 import kamon.testkit.MetricSnapshotBuilder
 import okhttp3.mockwebserver.{MockResponse, MockWebServer}
 import org.scalatest._
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-class InfluxDBReporterSpec extends WordSpec with Matchers with BeforeAndAfterAll {
+import java.nio.charset.Charset
+import java.time.Instant
+import java.util.concurrent.TimeUnit
+
+class InfluxDBReporterSpec extends AnyWordSpec with Matchers with BeforeAndAfterAll {
 
   "the InfluxDB reporter" should {
     "convert and post all metrics using the line protocol over HTTP" in {

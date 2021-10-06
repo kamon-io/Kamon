@@ -3,16 +3,15 @@ package kamon
 import java.io._
 import java.util.concurrent.TimeUnit
 
-import com.typesafe.config.{Config, ConfigFactory}
-import kamon.metric.PeriodSnapshot
-import kamon.trace.Span
-import org.scalatest.{Matchers, WordSpec}
 import org.scalatest.concurrent.Eventually
+import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.SpanSugar._
+import org.scalatest.wordspec.AnyWordSpec
 
+import java.io.{BufferedReader, InputStreamReader}
 import scala.util.{Failure, Success, Try}
 
-class InitialConfigLoadingSpec extends WordSpec with Matchers with Eventually {
+class InitialConfigLoadingSpec extends AnyWordSpec with Matchers with Eventually {
 
   "the initial config loading" should {
     "fallback to using reference configuration only when application.conf files are malformed" in {

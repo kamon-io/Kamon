@@ -2,13 +2,14 @@ package kamon.instrumentation.mongo
 
 import com.mongodb.client.{MongoClient => SyncMongoClient, MongoClients => SyncMongoClients}
 import com.mongodb.reactivestreams.client.{MongoClient => ReactiveMongoClient}
-import org.mongodb.scala.{MongoClient => ScalaMongoClient}
 import de.flapdoodle.embed.mongo.config.{MongodConfigBuilder, Net}
 import de.flapdoodle.embed.mongo.distribution.Version
 import de.flapdoodle.embed.mongo.{MongodExecutable, MongodProcess, MongodStarter}
-import org.scalatest.{BeforeAndAfterAll, WordSpec}
+import org.mongodb.scala.{MongoClient => ScalaMongoClient}
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.wordspec.AnyWordSpec
 
-abstract class EmbeddedMongoTest(port: Int) extends WordSpec with BeforeAndAfterAll {
+abstract class EmbeddedMongoTest(port: Int) extends AnyWordSpec with BeforeAndAfterAll {
 
   private val starter = MongodStarter.getDefaultInstance()
   private var mongodExecutable: MongodExecutable = _

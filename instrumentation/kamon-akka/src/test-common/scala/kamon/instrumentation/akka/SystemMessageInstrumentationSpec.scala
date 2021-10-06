@@ -21,15 +21,15 @@ import akka.actor.SupervisorStrategy.{Escalate, Restart, Resume, Stop}
 import akka.actor._
 import akka.testkit.{ImplicitSender, TestKit}
 import kamon.Kamon
-import ContextTesting._
-import kamon.context.Context
+import kamon.instrumentation.akka.ContextTesting._
 import kamon.tag.Lookups._
-import org.scalatest.{BeforeAndAfterAll, WordSpecLike}
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.{AnyWordSpec, AnyWordSpecLike}
 
-import scala.concurrent.duration._
 import scala.util.control.NonFatal
 
-class SystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSystemMessageInstrumentationSpec")) with WordSpecLike
+class SystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSystemMessageInstrumentationSpec")) with AnyWordSpecLike with Matchers
   with BeforeAndAfterAll with ImplicitSender {
   implicit lazy val executionContext = system.dispatcher
 

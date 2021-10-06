@@ -23,10 +23,12 @@ import kamon.tag.TagSet
 import kamon.testkit._
 import kamon.trace.Span
 import org.scalatest.concurrent.Eventually
+import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.SpanSugar
-import org.scalatest.{Matchers, OptionValues, WordSpec}
+import org.scalatest.OptionValues
+import org.scalatest.wordspec.AnyWordSpec
 
-class StaticAnnotationInstrumentationJavaSpec extends WordSpec
+class StaticAnnotationInstrumentationJavaSpec extends AnyWordSpec
   with Matchers
   with Eventually
   with SpanSugar

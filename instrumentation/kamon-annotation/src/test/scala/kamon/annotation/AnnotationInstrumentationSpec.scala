@@ -27,13 +27,15 @@ import kamon.trace.Span
 import kamon.{Kamon, testkit}
 import org.scalactic.TimesOnInt.convertIntToRepeater
 import org.scalatest.concurrent.Eventually
+import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.SpanSugar
-import org.scalatest.{Matchers, OptionValues, WordSpec}
+import org.scalatest.OptionValues
+import org.scalatest.wordspec.AnyWordSpec
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class AnnotationInstrumentationSpec extends WordSpec
+class AnnotationInstrumentationSpec extends AnyWordSpec
   with Matchers
   with Eventually
   with SpanSugar

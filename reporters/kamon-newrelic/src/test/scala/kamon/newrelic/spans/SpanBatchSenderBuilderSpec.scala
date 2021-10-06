@@ -5,15 +5,15 @@
 
 package kamon.newrelic.spans
 
-import java.net.URL
-
 import com.typesafe.config.ConfigValueFactory
 import kamon.Kamon
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
+import java.net.URL
 import scala.collection.JavaConverters._
 
-class SpanBatchSenderBuilderSpec extends WordSpec with Matchers {
+class SpanBatchSenderBuilderSpec extends AnyWordSpec with Matchers {
 
   "the span batch sender builder" should {
     "default the uri if not configured" in {

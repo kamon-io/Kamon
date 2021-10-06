@@ -1,12 +1,12 @@
 package kamon.tag
 
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
+
 import java.util.Optional
-
-import org.scalatest.{Matchers, WordSpec}
-
 import scala.collection.JavaConverters.mapAsJavaMapConverter
 
-class TagSetSpec extends WordSpec with Matchers {
+class TagSetSpec extends AnyWordSpec with Matchers {
   import Lookups._
 
   "Tags" should {

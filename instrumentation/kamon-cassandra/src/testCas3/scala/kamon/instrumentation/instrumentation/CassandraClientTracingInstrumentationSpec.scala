@@ -21,14 +21,16 @@ import com.datastax.driver.core.{QueryOperations, Session}
 import kamon.tag.Lookups._
 import kamon.testkit.{InitAndStopKamonAfterAll, InstrumentInspection, MetricInspection, Reconfigure, TestSpanReporter}
 import org.scalatest.concurrent.Eventually
+import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.SpanSugar
-import org.scalatest.{BeforeAndAfterEach, Matchers, OptionValues, WordSpec}
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.{BeforeAndAfterEach, OptionValues}
 import org.testcontainers.containers.CassandraContainer
 
 import scala.collection.JavaConverters._
 
 class CassandraClientTracingInstrumentationSpec
-    extends WordSpec
+    extends AnyWordSpec
     with Matchers
     with Eventually
     with SpanSugar

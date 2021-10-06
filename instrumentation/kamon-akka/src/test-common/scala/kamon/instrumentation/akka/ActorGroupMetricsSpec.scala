@@ -25,12 +25,13 @@ import kamon.testkit.{InitAndStopKamonAfterAll, InstrumentInspection, MetricInsp
 import kamon.util.Filter
 import org.scalactic.TimesOnInt.convertIntToRepeater
 import org.scalatest.concurrent.Eventually
-import org.scalatest.{Matchers, WordSpecLike}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 
 import scala.concurrent.duration._
 import scala.util.Random
 
-class ActorGroupMetricsSpec extends TestKit(ActorSystem("ActorGroupMetricsSpec")) with WordSpecLike with MetricInspection.Syntax
+class ActorGroupMetricsSpec extends TestKit(ActorSystem("ActorGroupMetricsSpec")) with AnyWordSpecLike with MetricInspection.Syntax
     with InstrumentInspection.Syntax with Matchers with InitAndStopKamonAfterAll with ImplicitSender with Eventually {
 
   "the Kamon actor-group metrics" should {
@@ -63,7 +64,6 @@ class ActorGroupMetricsSpec extends TestKit(ActorSystem("ActorGroupMetricsSpec")
 
       eventually (timeout(5 seconds)) {
         val valueNow = GroupMembers.withTags(groupTags("group-of-routees")).distribution().max
-        println("ValueNow: " + valueNow)
         valueNow shouldBe(5)
       }
 

@@ -17,13 +17,13 @@ package kamon.prometheus
 
 import com.typesafe.config.{Config, ConfigFactory}
 import kamon.metric._
-import kamon.testkit.{InstrumentInspection, MetricInspection, MetricSnapshotBuilder}
-import kamon.Kamon
 import kamon.module.MetricReporter
 import kamon.tag.TagSet
-import org.scalatest.{Matchers, WordSpec}
+import kamon.testkit.{InstrumentInspection, MetricInspection}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-class MetricOverrideReporterSpec extends WordSpec with Matchers with MetricInspection.Syntax with InstrumentInspection.Syntax with KamonTestSnapshotSupport {
+class MetricOverrideReporterSpec extends AnyWordSpec with Matchers with MetricInspection.Syntax with InstrumentInspection.Syntax with KamonTestSnapshotSupport {
 
   "A MetricOverrideReporter" should {
     "apply metric overrides" in {

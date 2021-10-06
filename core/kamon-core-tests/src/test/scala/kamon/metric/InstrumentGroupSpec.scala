@@ -3,9 +3,10 @@ package kamon.metric
 import kamon.Kamon
 import kamon.tag.TagSet
 import kamon.testkit.MetricInspection
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-class InstrumentGroupSpec extends WordSpec with MetricInspection.Syntax with Matchers {
+class InstrumentGroupSpec extends AnyWordSpec with Matchers with MetricInspection.Syntax  {
 
   "an Instrument Group" should {
     "register instruments with common tags and remove them when cleaning up" in {

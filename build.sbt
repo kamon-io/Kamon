@@ -36,6 +36,7 @@ lazy val `kamon-core` = (project in file("core/kamon-core"))
   .settings(
     buildInfoKeys := Seq[BuildInfoKey](version),
     buildInfoPackage := "kamon.status",
+    crossScalaVersions += "3.0.2",
     scalacOptions ++= { if(scalaBinaryVersion.value == "2.11") Seq("-Ydelambdafy:method") else Seq.empty },
     assemblyShadeRules in assembly := Seq(
       ShadeRule.rename("org.jctools.**"                             -> "kamon.lib.@0").inAll,
@@ -70,6 +71,7 @@ lazy val `kamon-core` = (project in file("core/kamon-core"))
 lazy val `kamon-status-page` = (project in file("core/kamon-status-page"))
   .enablePlugins(AssemblyPlugin)
   .settings(
+    crossScalaVersions += "3.0.2",
     assemblyShadeRules in assembly := Seq(
       ShadeRule.rename("com.grack.nanojson.**"  -> "kamon.lib.@0").inAll,
       ShadeRule.rename("fi.iki.elonen.**"       -> "kamon.lib.@0").inAll,
@@ -84,6 +86,7 @@ lazy val `kamon-status-page` = (project in file("core/kamon-status-page"))
 lazy val `kamon-testkit` = (project in file("core/kamon-testkit"))
   .disablePlugins(AssemblyPlugin)
   .settings(
+    crossScalaVersions += "3.0.2",
     libraryDependencies += scalatest % "provided,test"
   ).dependsOn(`kamon-core`)
 
@@ -92,6 +95,7 @@ lazy val `kamon-core-tests` = (project in file("core/kamon-core-tests"))
   .disablePlugins(AssemblyPlugin)
   .settings(noPublishing: _*)
   .settings(
+    crossScalaVersions += "3.0.2",
     libraryDependencies ++= Seq(
       scalatest % "test",
       logbackClassic % "test"
@@ -102,6 +106,7 @@ lazy val `kamon-core-tests` = (project in file("core/kamon-core-tests"))
 lazy val `kamon-core-bench` = (project in file("core/kamon-core-bench"))
   .disablePlugins(AssemblyPlugin)
   .enablePlugins(JmhPlugin)
+  .settings(crossScalaVersions += "3.0.2")
   .settings(noPublishing: _*)
   .dependsOn(`kamon-core`)
 
@@ -599,7 +604,7 @@ lazy val `kamon-apm-reporter` = (project in file("reporters/kamon-apm-reporter")
       "com.google.protobuf"   % "protobuf-java" % "3.8.0" % "provided,shaded",
 
       "ch.qos.logback"    %  "logback-classic"  % "1.2.3" % "test",
-      "org.scalatest"     %% "scalatest"        % "3.0.8" % "test",
+      "org.scalatest"     %% "scalatest"        % "3.2.9" % "test",
       "com.typesafe.akka" %% "akka-http"        % "10.1.8" % "test",
       "com.typesafe.akka" %% "akka-stream"      % "2.5.23" % "test",
       "com.typesafe.akka" %% "akka-testkit"     % "2.5.23" % "test"
@@ -706,7 +711,7 @@ val `kamon-bundle` = (project in file("bundle/kamon-bundle"))
   .enablePlugins(AssemblyPlugin)
   .settings(
     moduleName := "kamon-bundle",
-    kanelaAgentVersion := "1.0.11",
+    kanelaAgentVersion := "1.0.12",
     buildInfoPackage := "kamon.bundle",
     buildInfoKeys := Seq[BuildInfoKey](kanelaAgentJarName),
     kanelaAgentJar := update.value.matching(Modules.exactFilter(kanelaAgent)).head,

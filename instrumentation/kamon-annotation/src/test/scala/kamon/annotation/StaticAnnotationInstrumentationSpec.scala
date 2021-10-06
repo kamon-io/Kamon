@@ -20,14 +20,16 @@ import kamon.annotation.api._
 import kamon.module.Module.Registration
 import kamon.tag.Lookups.plain
 import kamon.tag.TagSet
-import kamon.testkit.{MetricInspection, Reconfigure, _}
+import kamon.testkit._
 import kamon.trace.Span
 import kamon.{Kamon, testkit}
 import org.scalatest.concurrent.Eventually
+import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.SpanSugar
-import org.scalatest.{BeforeAndAfterAll, Matchers, OptionValues, WordSpec}
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.OptionValues
 
-class StaticAnnotationInstrumentationSpec extends WordSpec
+class StaticAnnotationInstrumentationSpec extends AnyWordSpec
   with Matchers
   with Eventually
   with SpanSugar

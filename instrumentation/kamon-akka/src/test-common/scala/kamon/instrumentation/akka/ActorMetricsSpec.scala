@@ -17,18 +17,20 @@ package kamon.instrumentation.akka
 
 import akka.actor._
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
-import ActorMetricsTestActor._
+import kamon.instrumentation.akka.ActorMetricsTestActor._
 import kamon.instrumentation.akka.AkkaMetrics._
 import kamon.tag.TagSet
 import kamon.testkit.{InitAndStopKamonAfterAll, InstrumentInspection, MetricInspection}
 import org.scalactic.TimesOnInt._
+import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.Eventually
-import org.scalatest.{Matchers, WordSpecLike}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 
 import scala.concurrent.duration._
 
 
-class ActorMetricsSpec extends TestKit(ActorSystem("ActorMetricsSpec")) with WordSpecLike with MetricInspection.Syntax with InstrumentInspection.Syntax with Matchers
+class ActorMetricsSpec extends TestKit(ActorSystem("ActorMetricsSpec")) with AnyWordSpecLike with MetricInspection.Syntax with InstrumentInspection.Syntax with Matchers
     with ImplicitSender with Eventually with InitAndStopKamonAfterAll {
 
   "the Kamon actor metrics" should {

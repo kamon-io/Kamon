@@ -22,9 +22,11 @@ import akka.dispatch.Envelope
 import akka.testkit.{ImplicitSender, TestKit}
 import kamon.Kamon
 import kamon.instrumentation.context.{HasContext, HasTimestamp}
-import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 
-class EnvelopeSpec extends TestKit(ActorSystem("EnvelopeSpec")) with WordSpecLike with Matchers
+class EnvelopeSpec extends TestKit(ActorSystem("EnvelopeSpec")) with AnyWordSpecLike with Matchers
     with BeforeAndAfterAll with ImplicitSender {
 
   "EnvelopeInstrumentation" should {

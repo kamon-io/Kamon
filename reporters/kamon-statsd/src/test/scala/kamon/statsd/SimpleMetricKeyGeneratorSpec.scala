@@ -19,9 +19,10 @@ package kamon.statsd
 import com.typesafe.config.{Config, ConfigFactory}
 import kamon.Kamon
 import kamon.tag.TagSet
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-class SimpleMetricKeyGeneratorSpec extends WordSpec with Matchers {
+class SimpleMetricKeyGeneratorSpec extends AnyWordSpec with Matchers {
 
   val defaultConfiguration: Config = ConfigFactory.parseString(
     """

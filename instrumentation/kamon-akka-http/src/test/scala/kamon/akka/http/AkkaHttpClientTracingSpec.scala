@@ -27,11 +27,13 @@ import kamon.testkit._
 import org.json4s._
 import org.json4s.native.JsonMethods._
 import org.scalatest.concurrent.Eventually
-import org.scalatest.{Matchers, OptionValues, WordSpecLike}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatest.OptionValues
 
 import scala.concurrent.duration._
 
-class AkkaHttpClientTracingSpec extends WordSpecLike with Matchers with InitAndStopKamonAfterAll with MetricInspection.Syntax
+class AkkaHttpClientTracingSpec extends AnyWordSpecLike with Matchers with InitAndStopKamonAfterAll with MetricInspection.Syntax
     with Reconfigure with TestWebServer with Eventually with OptionValues with TestSpanReporter {
 
   import TestWebServer.Endpoints._

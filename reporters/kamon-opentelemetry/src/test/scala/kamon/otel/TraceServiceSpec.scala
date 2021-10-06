@@ -23,15 +23,16 @@ import io.opentelemetry.proto.resource.v1.Resource
 import kamon.otel.CustomMatchers._
 import kamon.otel.SpanConverter.stringKeyValue
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.{Millis, Seconds, Span}
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.wordspec.AnyWordSpec
 
 import java.util.Collections
 
 /**
  * Tests for the [[TraceService]]
  */
-class TraceServiceSpec extends WordSpec with Matchers with ScalaFutures {
+class TraceServiceSpec extends AnyWordSpec with Matchers with ScalaFutures {
   private implicit val defaultPatience = PatienceConfig(timeout =  Span(2, Seconds), interval = Span(15, Millis))
 
   private val resource =  Resource.newBuilder()

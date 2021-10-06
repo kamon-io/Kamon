@@ -3,12 +3,11 @@ package kamon.instrumentation.mongo
 import kamon.tag.Lookups._
 import kamon.testkit.{InitAndStopKamonAfterAll, TestSpanReporter}
 import org.mongodb.scala._
-import org.mongodb.scala.model.Filters
-import org.mongodb.scala.model.Aggregates
-import org.mongodb.scala.model.Accumulators
-import org.mongodb.scala.model.Updates
+import org.mongodb.scala.model.{Accumulators, Aggregates, Filters, Updates}
+import org.scalatest.OptionValues
 import org.scalatest.concurrent.Eventually
-import org.scalatest.{Matchers, OptionValues}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
 import scala.concurrent.Await
 import scala.concurrent.duration._

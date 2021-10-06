@@ -14,17 +14,13 @@
  */
 package kamon.instrumentation.kafka.testutil
 
-import java.util.Properties
-
 import kamon.instrumentation.kafka.client.KafkaInstrumentation
 import kamon.testkit.TestSpanReporter
 import kamon.trace.Span
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.serialization.Deserializer
-import org.scalatest.Matchers
 import org.scalatest.concurrent.{Eventually, PatienceConfiguration}
-
-import scala.util.Random
+import org.scalatest.matchers.should.Matchers
 
 abstract class SpanReportingTestScope(_reporter: TestSpanReporter.BufferingSpanReporter) extends Eventually with Matchers {
   private var _reportedSpans: List[Span.Finished] = Nil
@@ -86,8 +82,8 @@ abstract class SpanReportingTestScope(_reporter: TestSpanReporter.BufferingSpanR
   }
 
   def consumeFirstRawRecord[K,V](topicName: String)(implicit dk: Deserializer[K], dv: Deserializer[V]): ConsumerRecord[K,V] = {
-    import net.manub.embeddedkafka.EmbeddedKafka.withConsumer
     import net.manub.embeddedkafka.ConsumerExtensions.ConsumerOps
+    import net.manub.embeddedkafka.EmbeddedKafka.withConsumer
 
     withConsumer[K, V, ConsumerRecord[K,V]] { consumer =>
       val record = consumer.consumeLazily(topicName){ cr: ConsumerRecord[K, V] => cr}.take(1).toList.head

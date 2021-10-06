@@ -16,8 +16,6 @@
 
 package kamon.statsd
 
-import java.util.concurrent.atomic.AtomicInteger
-
 import com.typesafe.config.{Config, ConfigFactory}
 import kamon.Kamon
 import kamon.metric.{MeasurementUnit, PeriodSnapshot}
@@ -26,12 +24,15 @@ import kamon.statsd.StatsDReporterSpec._
 import kamon.statsd.StatsDServer.Metric
 import kamon.tag.TagSet
 import org.scalatest.OptionValues._
-import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, Matchers, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
 
+import java.util.concurrent.atomic.AtomicInteger
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Promise}
 
-class StatsDReporterSpec extends WordSpec with Matchers with BeforeAndAfter with BeforeAndAfterAll {
+class StatsDReporterSpec extends AnyWordSpec with Matchers with BeforeAndAfter with BeforeAndAfterAll {
 
   val statsDServer = new StatsDServer()
   val config: Config = ConfigFactory.parseString(

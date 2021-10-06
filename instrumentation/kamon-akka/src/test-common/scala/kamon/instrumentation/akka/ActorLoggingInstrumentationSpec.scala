@@ -21,11 +21,13 @@ import akka.event.Logging.LogEvent
 import akka.testkit.{ImplicitSender, TestKit}
 import kamon.Kamon
 import kamon.instrumentation.context.HasContext
-import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 import kamon.tag.Lookups._
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 
-class ActorLoggingInstrumentationSpec extends TestKit(ActorSystem("ActorCellInstrumentationSpec")) with WordSpecLike
-    with BeforeAndAfterAll with Matchers with ImplicitSender {
+class ActorLoggingInstrumentationSpec extends TestKit(ActorSystem("ActorCellInstrumentationSpec")) with AnyWordSpecLike with Matchers
+    with BeforeAndAfterAll with ImplicitSender {
   import ContextTesting._
 
   "the ActorLogging instrumentation" should {

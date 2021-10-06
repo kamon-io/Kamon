@@ -23,9 +23,11 @@ import kamon.trace.Identifier.Factory.EightBytesIdentifier
 import kamon.trace.Span.Position
 import kamon.trace.Trace.SamplingDecision
 import kamon.trace.Hooks.{PreFinish, PreStart}
-import org.scalatest.{Matchers, OptionValues, WordSpec}
+import org.scalatest.OptionValues
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-class TracerSpec extends WordSpec with Matchers with SpanInspection.Syntax with OptionValues with InitAndStopKamonAfterAll {
+class TracerSpec extends AnyWordSpec with Matchers with SpanInspection.Syntax with OptionValues with InitAndStopKamonAfterAll {
 
   "the Kamon tracer" should {
     "construct a minimal Span that only has a operation name and default metric tags" in {

@@ -5,8 +5,6 @@
 
 package kamon.newrelic.metrics
 
-import java.net.{InetAddress, URL}
-
 import com.newrelic.telemetry.Attributes
 import com.newrelic.telemetry.metrics._
 import com.typesafe.config.{Config, ConfigValue, ConfigValueFactory}
@@ -15,11 +13,13 @@ import kamon.metric.{MetricSnapshot, PeriodSnapshot}
 import kamon.status.Environment
 import kamon.tag.TagSet
 import org.mockito.Mockito._
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
+import java.net.{InetAddress, URL}
 import scala.collection.JavaConverters._
 
-class NewRelicMetricsReporterSpec extends WordSpec with Matchers {
+class NewRelicMetricsReporterSpec extends AnyWordSpec with Matchers {
 
   private val countAttributes = new Attributes()
     .put("description", "flam")

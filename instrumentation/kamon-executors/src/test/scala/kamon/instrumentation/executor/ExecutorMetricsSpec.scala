@@ -23,13 +23,14 @@ import kamon.tag.TagSet
 import kamon.testkit.{InitAndStopKamonAfterAll, InstrumentInspection, MetricInspection}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Span}
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future, Promise}
 
 
-class ExecutorMetricsSpec extends WordSpec with Matchers with InstrumentInspection.Syntax with MetricInspection.Syntax with Eventually
+class ExecutorMetricsSpec extends AnyWordSpec with Matchers with InstrumentInspection.Syntax with MetricInspection.Syntax with Eventually
   with InitAndStopKamonAfterAll {
 
   implicit override val patienceConfig =

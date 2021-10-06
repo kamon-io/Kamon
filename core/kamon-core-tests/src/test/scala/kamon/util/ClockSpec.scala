@@ -1,11 +1,12 @@
 package kamon.util
 
+import kamon.util
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
+
 import java.time.{Duration, Instant}
 
-import kamon.util
-import org.scalatest.{Matchers, WordSpec}
-
-class ClockSpec extends WordSpec with Matchers {
+class ClockSpec extends AnyWordSpec with Matchers {
   "the Clock" should {
     "generate nanosecond precision Instants" in {
       newClock().instant().getNano() % MicrosInSecond shouldNot be(0)

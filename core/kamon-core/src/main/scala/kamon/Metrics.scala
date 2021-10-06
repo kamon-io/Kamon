@@ -21,7 +21,7 @@ import kamon.metric._
 /**
   * Exposes all metric building APIs using a built-in, globally shared metric registry.
   */
-trait Metrics extends MetricBuilding { self: Configuration with Utilities =>
+trait Metrics extends MetricBuilding { self: Configuration with Utilities with ContextStorage =>
   protected val _metricRegistry = new MetricRegistry(self.config(), self.clock())
   onReconfigure(newConfig => _metricRegistry.reconfigure(newConfig))
 

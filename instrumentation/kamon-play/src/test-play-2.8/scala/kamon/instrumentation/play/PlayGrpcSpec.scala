@@ -25,7 +25,7 @@ class ReplyServiceRouter @Inject()(implicit system: ActorSystem) extends Abstrac
 }
 
 
-class PlayGrpcSpec extends PlaySpec with GuiceOneServerPerTest with ServerGrpcClient with InitAndStopKamonAfterAll
+class PlayGrpcSpec extends PlaySpec with GuiceOneServerPerTest with ServerGrpcClient
   with ScalaFutures with IntegrationPatience with TestSpanReporter with Eventually with SpanSugar {
 
   System.setProperty("config.file", System.getProperty("user.dir") + "/instrumentation/kamon-play/src/test-common/resources/conf/application-play-grpc.conf")

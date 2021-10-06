@@ -19,18 +19,18 @@ import akka.actor._
 import akka.routing._
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import kamon.instrumentation.akka.AkkaMetrics._
+import kamon.instrumentation.akka.RouterMetricsTestActor._
 import kamon.tag.Lookups._
 import kamon.tag.TagSet
 import kamon.testkit.{InitAndStopKamonAfterAll, InstrumentInspection, MetricInspection}
 import org.scalactic.TimesOnInt._
 import org.scalatest.concurrent.Eventually
-import org.scalatest.{Matchers, WordSpecLike}
-import RouterMetricsTestActor._
-import kamon.Kamon
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 
 import scala.concurrent.duration._
 
-class RouterMetricsSpec extends TestKit(ActorSystem("RouterMetricsSpec")) with WordSpecLike with MetricInspection.Syntax
+class RouterMetricsSpec extends TestKit(ActorSystem("RouterMetricsSpec")) with AnyWordSpecLike with MetricInspection.Syntax
   with InstrumentInspection.Syntax with Matchers with InitAndStopKamonAfterAll with ImplicitSender with Eventually {
 
   "the Kamon router metrics" should {

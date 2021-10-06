@@ -7,9 +7,10 @@ package kamon.newrelic.metrics
 
 import com.newrelic.telemetry.Attributes
 import com.newrelic.telemetry.metrics.Gauge
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-class NewRelicGaugesSpec extends WordSpec with Matchers {
+class NewRelicGaugesSpec extends AnyWordSpec with Matchers {
 
   "gauge converter" should {
     "convert a gauge" in {

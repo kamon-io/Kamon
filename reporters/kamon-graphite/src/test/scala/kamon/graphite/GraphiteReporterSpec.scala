@@ -1,21 +1,22 @@
 package kamon.graphite
 
+import kamon.metric.PeriodSnapshot
+import kamon.tag.TagSet
+import kamon.testkit.MetricSnapshotBuilder
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.concurrent.Eventually
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
+import org.slf4j.LoggerFactory
+
 import java.io.InputStream
 import java.net.{InetSocketAddress, ServerSocket}
 import java.time.Instant
 import java.util.Scanner
 import java.util.concurrent.{CopyOnWriteArrayList, CountDownLatch, TimeUnit}
-
-import kamon.metric.PeriodSnapshot
-import kamon.tag.TagSet
-import kamon.testkit.MetricSnapshotBuilder
-import org.scalatest.concurrent.Eventually
-import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
-import org.slf4j.LoggerFactory
-
 import scala.collection.JavaConverters._
 
-class GraphiteReporterSpec extends WordSpec with BeforeAndAfterAll with Matchers with Eventually {
+class GraphiteReporterSpec extends AnyWordSpec with Matchers with BeforeAndAfterAll with Eventually {
   private val graphite = new GraphiteServer()
 
   override def beforeAll(): Unit = graphite.start()

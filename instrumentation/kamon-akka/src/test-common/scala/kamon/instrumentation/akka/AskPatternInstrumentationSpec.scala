@@ -23,13 +23,14 @@ import akka.testkit.{EventFilter, ImplicitSender, TestKit}
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
-import org.scalatest.{BeforeAndAfterAll, WordSpecLike}
-import ContextTesting._
 import kamon.testkit.InitAndStopKamonAfterAll
+import kamon.instrumentation.akka.ContextTesting._
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 
 import scala.concurrent.duration._
 
-class AskPatternInstrumentationSpec extends TestKit(ActorSystem("AskPatternInstrumentationSpec")) with WordSpecLike
+class AskPatternInstrumentationSpec extends TestKit(ActorSystem("AskPatternInstrumentationSpec")) with AnyWordSpecLike
     with InitAndStopKamonAfterAll with ImplicitSender {
 
   implicit lazy val ec = system.dispatcher

@@ -6,14 +6,15 @@ import okhttp3.{MediaType, OkHttpClient, Request, RequestBody}
 import org.scalatest.OptionValues.convertOptionToValuable
 import org.scalatest.concurrent.Eventually.eventually
 import org.scalatest.concurrent.Waiters.timeout
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 import testapp.TestApp
 
 import scala.concurrent.duration.DurationInt
 import scala.util.Try
 
 class SpringMVCInstrumentationSpec
-  extends WordSpec
+  extends AnyWordSpec
     with Matchers
     with InitAndStopKamonAfterAll
     with TestSpanReporter {

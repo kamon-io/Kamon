@@ -4,18 +4,18 @@ import com.dimafeng.testcontainers.{ElasticsearchContainer, ForAllTestContainer}
 import kamon.tag.Lookups.plain
 import kamon.testkit.{InitAndStopKamonAfterAll, Reconfigure, TestSpanReporter}
 import org.apache.http.HttpHost
-import org.apache.http.auth.{AuthScope, UsernamePasswordCredentials}
-import org.apache.http.impl.client.{BasicCredentialsProvider, HttpClientBuilder}
 import org.elasticsearch.action.ActionListener
 import org.elasticsearch.action.admin.cluster.node.tasks.list.{ListTasksRequest, ListTasksResponse}
 import org.elasticsearch.client._
 import org.scalatest.concurrent.Eventually
+import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.SpanSugar
-import org.scalatest.{Matchers, OptionValues, WordSpec}
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.OptionValues
 
 
 class ElasticSearchInstrumentationTest
-  extends WordSpec
+  extends AnyWordSpec
     with Matchers
     with Eventually
     with SpanSugar

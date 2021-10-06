@@ -15,17 +15,18 @@
  * ========================================================== */
 package kamon.instrumentation.futures.twitter
 
-import java.util.concurrent.Executors
-
-import org.scalatest.{Matchers, OptionValues, WordSpec}
-import org.scalatest.concurrent.{PatienceConfiguration, ScalaFutures}
 import com.twitter.util.{Await, FuturePool}
 import kamon.Kamon
 import kamon.context.Context
 import kamon.tag.Lookups.plain
-import kamon.tag.TagSet
+import org.scalatest.OptionValues
+import org.scalatest.concurrent.{PatienceConfiguration, ScalaFutures}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-class FutureInstrumentationSpec extends WordSpec with Matchers with ScalaFutures with PatienceConfiguration with OptionValues {
+import java.util.concurrent.Executors
+
+class FutureInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutures with PatienceConfiguration with OptionValues {
 
   // NOTE: We have this test just to ensure that the Context propagation is working, but starting with Kamon 2.0 there
   //       is no need to have explicit Runnable/Callable instrumentation because the instrumentation brought by the

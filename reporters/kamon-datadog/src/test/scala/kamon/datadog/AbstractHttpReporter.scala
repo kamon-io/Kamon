@@ -2,9 +2,10 @@ package kamon.datadog
 
 import kamon.Kamon
 import okhttp3.mockwebserver.{MockResponse, MockWebServer}
-import org.scalatest.{BeforeAndAfterAll, WordSpec}
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.wordspec.AnyWordSpec
 
-trait AbstractHttpReporter extends WordSpec with BeforeAndAfterAll {
+abstract class AbstractHttpReporter extends AnyWordSpec with BeforeAndAfterAll {
   // Not happy about having this here instead of in the beforeAll (as it should be)
   // but doing otherwise would require bigger refactoring on the tests.
   Kamon.init()

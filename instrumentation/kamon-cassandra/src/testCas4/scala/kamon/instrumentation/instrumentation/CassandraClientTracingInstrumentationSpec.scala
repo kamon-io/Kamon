@@ -22,16 +22,18 @@ import com.datastax.oss.driver.api.core.{CqlSession, DriverException}
 import kamon.testkit.{InitAndStopKamonAfterAll, InstrumentInspection, MetricInspection, Reconfigure, TestSpanReporter}
 import kamon.trace.Span
 import org.scalactic.TimesOnInt.convertIntToRepeater
-import org.scalatest.concurrent.Eventually
-import org.scalatest.time.SpanSugar
 import org.scalatest._
+import org.scalatest.concurrent.Eventually
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.time.SpanSugar
+import org.scalatest.wordspec.AnyWordSpec
 import org.testcontainers.containers.CassandraContainer
 
 import java.net.InetSocketAddress
 import java.util.concurrent.ExecutionException
 
 class CassandraClientTracingInstrumentationSpec
-    extends WordSpec
+    extends AnyWordSpec
     with Matchers
     with Eventually
     with SpanSugar

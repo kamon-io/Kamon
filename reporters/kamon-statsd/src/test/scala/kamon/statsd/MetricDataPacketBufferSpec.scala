@@ -1,13 +1,15 @@
 package kamon.statsd
 
+import kamon.statsd.StatsDReporter.MetricDataPacketBuffer
+import kamon.statsd.StatsDServer.Metric
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
+
 import java.net.InetSocketAddress
 import java.nio.channels.DatagramChannel
 
-import kamon.statsd.StatsDReporter.MetricDataPacketBuffer
-import kamon.statsd.StatsDServer.Metric
-import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, Matchers, WordSpec}
-
-class MetricDataPacketBufferSpec extends WordSpec with Matchers with BeforeAndAfterAll with BeforeAndAfter {
+class MetricDataPacketBufferSpec extends AnyWordSpec with Matchers with BeforeAndAfterAll with BeforeAndAfter {
 
   val statsDServer = new StatsDServer()
   val address = new InetSocketAddress("localhost", statsDServer.port)

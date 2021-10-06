@@ -16,20 +16,21 @@ package kamon.instrumentation.kafka.client
 
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
-import kamon.instrumentation.kafka.testutil.{DotFileGenerator, SpanReportingTestScope, TestSpanReporting, TestTopicScope}
+import kamon.instrumentation.kafka.testutil.{SpanReportingTestScope, TestSpanReporting, TestTopicScope}
 import kamon.tag.Lookups._
 import kamon.testkit.{InitAndStopKamonAfterAll, Reconfigure}
 import kamon.trace.Span
 import net.manub.embeddedkafka.{EmbeddedKafka, EmbeddedKafkaConfig}
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.scalatest.concurrent.Eventually
+import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.SpanSugar
-import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, Matchers, OptionValues, WordSpec}
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, OptionValues}
 
 import scala.util.Try
 
-class KafkaClientsTracingInstrumentationSpec extends WordSpec
-  with Matchers
+class KafkaClientsTracingInstrumentationSpec extends AnyWordSpec with Matchers
   with Eventually
   with SpanSugar
   with BeforeAndAfter
@@ -87,7 +88,6 @@ class KafkaClientsTracingInstrumentationSpec extends WordSpec
     }
 
     "create a Producer/Consumer Span when publish/consume a message" in new SpanReportingTestScope(reporter) with TestTopicScope  {
-      import net.manub.embeddedkafka.Codecs.stringDeserializer
 
       publishStringMessageToKafka(testTopicName, "Hello world!!!")
       val consumedRecord = consumeFirstRawRecord[String, String](testTopicName)

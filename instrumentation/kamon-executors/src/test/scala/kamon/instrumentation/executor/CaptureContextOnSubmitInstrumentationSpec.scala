@@ -16,17 +16,18 @@
 
 package kamon.instrumentation.executor
 
-import java.util.concurrent.{Callable, CountDownLatch, TimeUnit, Executors => JavaExecutors}
-
 import com.google.common.util.concurrent.MoreExecutors
 import kamon.Kamon
 import kamon.tag.Lookups
+import org.scalatest.OptionValues
 import org.scalatest.concurrent.Eventually
-import org.scalatest.{Matchers, OptionValues, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
+import java.util.concurrent.{Callable, CountDownLatch, TimeUnit, Executors => JavaExecutors}
 import scala.collection.mutable.ListBuffer
 
-class CaptureContextOnSubmitInstrumentationSpec extends WordSpec with Matchers with ContextTesting with Eventually with OptionValues {
+class CaptureContextOnSubmitInstrumentationSpec extends AnyWordSpec with Matchers with ContextTesting with Eventually with OptionValues {
 
   "the CaptureContextOnSubmitInstrumentation" should {
     "capture the context when call execute(Runnable) in DirectExecutor" in {

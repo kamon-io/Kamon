@@ -6,13 +6,13 @@
 package kamon.newrelic.metrics
 
 import java.time.Duration
-
 import com.newrelic.telemetry.Attributes
 import kamon.metric.MetricSnapshot.Values
 import kamon.metric.{MeasurementUnit, Metric, MetricSnapshot}
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-class ConversionSupportSpec extends WordSpec with Matchers {
+class ConversionSupportSpec extends AnyWordSpec with Matchers {
 
   "conversion support" should {
     "build attributes" in {

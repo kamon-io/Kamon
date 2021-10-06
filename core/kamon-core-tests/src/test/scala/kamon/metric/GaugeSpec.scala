@@ -17,9 +17,10 @@ package kamon.metric
 
 import kamon.Kamon
 import kamon.testkit.InstrumentInspection
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-class GaugeSpec extends WordSpec with Matchers with InstrumentInspection.Syntax {
+class GaugeSpec extends AnyWordSpec with Matchers with InstrumentInspection.Syntax {
 
   "a Gauge" should {
     "have a starting value of zero" in {

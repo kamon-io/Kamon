@@ -24,12 +24,14 @@ import kamon.instrumentation.executor.ExecutorMetrics
 import kamon.tag.TagSet
 import kamon.testkit.{InitAndStopKamonAfterAll, InstrumentInspection, MetricInspection}
 import org.scalatest.concurrent.Eventually
+import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.SpanSugar
-import org.scalatest.{Matchers, OptionValues, WordSpec}
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.OptionValues
 import org.testcontainers.containers.CassandraContainer
 
 class CassandraClientMetricsSpec
-    extends WordSpec
+    extends AnyWordSpec
     with Matchers
     with Eventually
     with SpanSugar

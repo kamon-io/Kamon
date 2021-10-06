@@ -2,9 +2,10 @@ package kamon.testkit
 
 import kamon.Kamon
 import kamon.tag.TagSet
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-class MetricInspectionSpec extends WordSpec with Matchers with MetricInspection.Syntax {
+class MetricInspectionSpec extends AnyWordSpec with Matchers with MetricInspection.Syntax {
 
   "MetricInspection" should {
     "extract instruments for given metric and TagSet" in {

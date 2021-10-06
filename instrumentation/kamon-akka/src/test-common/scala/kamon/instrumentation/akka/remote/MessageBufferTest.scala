@@ -4,9 +4,10 @@ import akka.actor.Actor
 import akka.util.MessageBuffer
 import kamon.Kamon
 import kamon.context.Context
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-class MessageBufferTest extends WordSpec with Matchers {
+class MessageBufferTest extends AnyWordSpec with Matchers {
 
   "the MessageBuffer instrumentation" should {
     "remember the current context when appending message and apply it when foreach is called when used directly" in {

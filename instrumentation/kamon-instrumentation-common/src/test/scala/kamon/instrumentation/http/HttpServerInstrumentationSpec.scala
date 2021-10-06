@@ -7,13 +7,16 @@ import kamon.context.Context
 import kamon.tag.Lookups._
 import kamon.metric.{Counter, Histogram, RangeSampler, Timer}
 import kamon.testkit.{InitAndStopKamonAfterAll, InstrumentInspection, SpanInspection}
+import kamon.tag.Lookups._
 import kamon.trace.Trace.SamplingDecision
+import org.scalatest.OptionValues
 import org.scalatest.concurrent.Eventually
-import org.scalatest.{Matchers, OptionValues, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
 import scala.collection.mutable
 
-class HttpServerInstrumentationSpec extends WordSpec with Matchers with InstrumentInspection.Syntax with OptionValues
+class HttpServerInstrumentationSpec extends AnyWordSpec with Matchers with InstrumentInspection.Syntax with OptionValues
     with SpanInspection.Syntax with Eventually with InitAndStopKamonAfterAll {
 
   "the HTTP server instrumentation" when {

@@ -8,11 +8,12 @@ package kamon.newrelic
 import com.newrelic.telemetry.Attributes
 import com.typesafe.config.ConfigValueFactory
 import kamon.tag.TagSet
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
 import scala.collection.JavaConverters._
 
-class AttributeBuddySpec extends WordSpec with Matchers  {
+class AttributeBuddySpec extends AnyWordSpec with Matchers  {
   "the tag set converter" should {
     "convert a tagset" in {
       val tags1 = TagSet.from(Map("foo" -> "bar", "boop" -> 1234L, "flower" -> false))

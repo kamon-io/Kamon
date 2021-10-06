@@ -15,10 +15,12 @@
 
 package kamon.trace
 
-import org.scalatest.{Matchers, OptionValues, WordSpecLike}
 import org.scalactic.TimesOnInt._
+import org.scalatest.OptionValues
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-class SingleLengthIdentifierSchemeSpec extends WordSpecLike with Matchers with OptionValues {
+class SingleLengthIdentifierSchemeSpec extends AnyWordSpec with Matchers with OptionValues {
 
   validateFactory("trace identifier factory", Identifier.Scheme.Single.traceIdFactory)
   validateFactory("span identifier factory", Identifier.Scheme.Single.spanIdFactory)
