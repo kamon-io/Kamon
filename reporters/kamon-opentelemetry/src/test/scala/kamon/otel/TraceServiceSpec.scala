@@ -33,7 +33,7 @@ import java.util.Collections
  * Tests for the [[TraceService]]
  */
 class TraceServiceSpec extends AnyWordSpec with Matchers with ScalaFutures {
-  private implicit val defaultPatience = PatienceConfig(timeout =  Span(2, Seconds), interval = Span(15, Millis))
+  private implicit val defaultPatience: PatienceConfig = PatienceConfig(timeout =  Span(2, Seconds), interval = Span(15, Millis))
 
   private val resource =  Resource.newBuilder()
     .addAttributes(stringKeyValue("service.name", "TestService"))
@@ -50,10 +50,10 @@ class TraceServiceSpec extends AnyWordSpec with Matchers with ScalaFutures {
 
       //the actual data does not really matter as this will fail due to connection issues
       val resources = SpanConverter.toProtoResourceSpan(resource, instrumentationLibrary)(Seq(finishedSpan()))
-      val export = ExportTraceServiceRequest.newBuilder()
+      val exported = ExportTraceServiceRequest.newBuilder()
         .addAllResourceSpans(Collections.singletonList(resources))
         .build()
-      val f = traceService.export(export)
+      val f = traceService.exportSpans(exported)
       whenReady(f.failed) { e =>
         e shouldBe a [StatusRuntimeException]
       }

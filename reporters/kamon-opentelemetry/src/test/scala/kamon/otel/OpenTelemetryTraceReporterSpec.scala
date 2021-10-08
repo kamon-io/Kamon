@@ -89,7 +89,7 @@ class OpenTelemetryTraceReporterSpec extends AnyWordSpec with Matchers with Opti
   private class MockTraceService extends TraceService{
     var exportTraceServiceRequest:Option[ExportTraceServiceRequest] = None
     var hasBeenClosed = false
-    override def export(request: ExportTraceServiceRequest): Future[ExportTraceServiceResponse] = {
+    override def exportSpans(request: ExportTraceServiceRequest): Future[ExportTraceServiceResponse] = {
       exportTraceServiceRequest = Option(request)
       Future.successful(ExportTraceServiceResponse.getDefaultInstance)
     }

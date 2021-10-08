@@ -50,7 +50,7 @@ import kamon.otel.OpenTelemetryTraceReporter._
  * Converts internal finished Kamon spans to OpenTelemetry format and sends to a configured OpenTelemetry endpoint using gRPC.
  */
 class OpenTelemetryTraceReporter(traceServiceFactory:Config=>TraceService)(implicit ec:ExecutionContext) extends SpanReporter {
-  private var traceService:Option[TraceService] = None
+  private var traceService: Option[TraceService] = None
   private var spanConverterFunc:Seq[Span.Finished]=>ResourceSpans = (_ => ResourceSpans.newBuilder().build())
 
   override def reportSpans(spans: Seq[Span.Finished]): Unit = {
@@ -60,15 +60,13 @@ class OpenTelemetryTraceReporter(traceServiceFactory:Config=>TraceService)(impli
         .addAllResourceSpans(resources)
         .build()
 
-      traceService.foreach (
-        _.export(exportTraceServiceRequest).onComplete {
-          case Success(_) => logger.debug("Successfully exported traces")
+      traceService.foreach(ts => ts.exportSpans(exportTraceServiceRequest).onComplete {
+        case Success(_) => logger.debug("Successfully exported traces")
 
-          //TODO is there result for which a retry is relevant? Perhaps a glitch in the receiving service
-          //Keeping logs to debug as other exporters (e.g.Zipkin) won't log anything if it fails to export traces
-          case Failure(t) => logger.debug("Failed to export traces", t)
-        }
-      )
+        //TODO is there result for which a retry is relevant? Perhaps a glitch in the receiving service
+        //Keeping logs to debug as other exporters (e.g.Zipkin) won't log anything if it fails to export traces
+        case Failure(t) => logger.debug("Failed to export traces", t)
+      })
     }
   }
 

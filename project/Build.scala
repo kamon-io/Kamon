@@ -52,6 +52,8 @@ object BaseProject extends AutoPlugin {
       javaAgents := Seq("io.kamon" % "kanela-agent" % kanelaAgentVersion.value % "runtime;test")
     )
 
+    val scala3Version = "3.0.2"
+
     // This installs the GPG signing key from the
     setupGpg()
 

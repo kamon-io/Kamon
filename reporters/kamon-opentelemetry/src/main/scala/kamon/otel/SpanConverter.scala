@@ -76,7 +76,7 @@ private[otel] object SpanConverter {
    */
   private[otel] def toProtoSpan(span:Span.Finished):ProtoSpan = {
     //converts Kamon span tags to proto KeyValue attributes
-    val attributes:List[KeyValue] = span.tags.iterator.map(toProtoKeyValue).toList
+    val attributes:List[KeyValue] = span.tags.iterator().map(toProtoKeyValue).toList
 
     //converts Kamon span links to proto links
     val links:Seq[ProtoSpan.Link] = span.links.map(toProtoLink)
