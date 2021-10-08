@@ -17,7 +17,7 @@ package kamon.instrumentation.instrumentation
 
 import com.datastax.driver.core.exceptions.DriverException
 import com.datastax.driver.core.querybuilder.QueryBuilder
-import com.datastax.driver.core.{QueryOperations, Session}
+import com.datastax.driver.core.{QueryOperations, Session, SimpleStatement}
 import kamon.tag.Lookups._
 import kamon.testkit.{InitAndStopKamonAfterAll, InstrumentInspection, MetricInspection, Reconfigure, TestSpanReporter}
 import org.scalatest.concurrent.Eventually
@@ -134,16 +134,19 @@ class CassandraClientTracingInstrumentationSpec
     cassandra.start()
     session = cassandra.getCluster.newSession()
 
-    session.execute(
-      s"create keyspace $keyspace with replication = {'class':'SimpleStrategy', 'replication_factor':3}"
-    )
+    session.execute(statement(s"create keyspace $keyspace with replication = {'class':'SimpleStrategy', 'replication_factor':3}"))
+    session.execute(statement(s"USE $keyspace"))
+    session.execute(statement("create table users (id uuid primary key, name text )"))
 
-    session.execute(s"USE $keyspace")
-
-    session.execute("create table users (id uuid primary key, name text )")
     for (_ <- 1 to 12) {
       session.execute("insert into users (id, name) values (uuid(), 'kamon')")
     }
+  }
+
+  def statement(query: String): SimpleStatement = {
+    val stmt = new SimpleStatement(query)
+    stmt.setReadTimeoutMillis(20000)
+    stmt
   }
 
   override protected def afterAll(): Unit = {
