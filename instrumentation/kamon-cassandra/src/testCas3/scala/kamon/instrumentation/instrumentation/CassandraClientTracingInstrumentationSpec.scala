@@ -27,6 +27,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.{BeforeAndAfterEach, OptionValues}
 import org.testcontainers.containers.CassandraContainer
 
+import java.time.Duration
 import scala.collection.JavaConverters._
 
 class CassandraClientTracingInstrumentationSpec
@@ -129,6 +130,7 @@ class CassandraClientTracingInstrumentationSpec
 
     val keyspace = s"keyspaceTracingSpec"
 
+    cassandra.withStartupTimeout(Duration.ofMinutes(5))
     cassandra.start()
     session = cassandra.getCluster.newSession()
 

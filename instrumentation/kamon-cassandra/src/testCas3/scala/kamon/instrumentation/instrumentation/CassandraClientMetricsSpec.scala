@@ -30,6 +30,8 @@ import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.OptionValues
 import org.testcontainers.containers.CassandraContainer
 
+import java.time.Duration
+
 class CassandraClientMetricsSpec
     extends AnyWordSpec
     with Matchers
@@ -124,6 +126,8 @@ class CassandraClientMetricsSpec
 
   override protected def beforeAll(): Unit = {
     super.beforeAll()
+
+    cassandra.withStartupTimeout(Duration.ofMinutes(5))
     cassandra.start()
     session = cassandra.getCluster.newSession()
     val keyspace = s"keyspaceMetricSpec"

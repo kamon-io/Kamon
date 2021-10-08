@@ -30,6 +30,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import org.testcontainers.containers.CassandraContainer
 
 import java.net.InetSocketAddress
+import java.time.Duration
 import java.util.concurrent.ExecutionException
 
 class CassandraClientTracingInstrumentationSpec
@@ -111,6 +112,7 @@ class CassandraClientTracingInstrumentationSpec
     enableFastSpanFlushing()
     sampleAlways()
 
+    cassandra.withStartupTimeout(Duration.ofMinutes(5))
     cassandra.start()
 
     val keyspace = s"keyspaceTracingSpec"
