@@ -1,6 +1,6 @@
 import sbt.Tests.{Group, SubProcess}
 
-testGrouping in Test := groupByExperimentalExecutorTests((definedTests in Test).value, kanelaAgentJar.value)
+Test / testGrouping := groupByExperimentalExecutorTests((Test / definedTests).value, kanelaAgentJar.value)
 
 def groupByExperimentalExecutorTests(tests: Seq[TestDefinition], kanelaJar: File): Seq[Group] = {
   val (stable, experimental) = tests.partition(t => t.name != "kamon.instrumentation.executor.CaptureContextOnSubmitInstrumentationSpec")

@@ -88,45 +88,45 @@ libraryDependencies ++= Seq(
 )
 
 // Ensure that the packaged artifact contains the instrumentation for all Akka versions.
-mappings in packageBin in Compile := Def.taskDyn {
+Compile / packageBin / mappings := Def.taskDyn {
   if(scalaBinaryVersion.value == "2.11")
     Def.task {
-      joinProducts((products in `Compile-Akka-2.5`).value) ++
-      joinProducts((unmanagedResourceDirectories in Common).value)
+      joinProducts((`Compile-Akka-2.5` / products).value) ++
+      joinProducts((Common / unmanagedResourceDirectories).value)
     }
   else
     Def.task {
       joinProducts(
-        (products in `Compile-Akka-2.5`).value ++
-        (products in `Compile-Akka-2.6`).value
-      ) ++ joinProducts((unmanagedResourceDirectories in Common).value)}
+        (`Compile-Akka-2.5` / products).value ++
+        (`Compile-Akka-2.6` / products).value
+      ) ++ joinProducts((Common / unmanagedResourceDirectories).value)}
 }.value
 
 // Ensure that the packaged sources contains the instrumentation for all Akka versions.
-mappings in packageSrc in Compile := Def.taskDyn {
+Compile / packageSrc / mappings := Def.taskDyn {
   if(scalaBinaryVersion.value == "2.11") {
     Def.task {
-      (mappings in packageSrc in `Compile-Akka-2.5`).value ++
-        (mappings in packageSrc in Common).value
+      (`Compile-Akka-2.5` / packageSrc / mappings).value ++
+      (Common / packageSrc / mappings).value
     }
   } else
     Def.task {
-      (mappings in packageSrc in `Compile-Akka-2.5`).value ++
-        (mappings in packageSrc in `Compile-Akka-2.6`).value ++
-        (mappings in packageSrc in Common).value
+      (`Compile-Akka-2.5` / packageSrc / mappings).value ++
+      (`Compile-Akka-2.6` / packageSrc / mappings).value ++
+      (Common / packageSrc / mappings).value
     }
   }.value
 
 // Compile will return the compile analysis for the Common configuration but will run on all Akka configurations.
-compile in Compile := Def.taskDyn {
+Compile / compile := Def.taskDyn {
   if(scalaBinaryVersion.value == "2.11")
     Def.task {
-      (compile in `Compile-Akka-2.5`).value
+      (`Compile-Akka-2.5` / compile).value
     }
   else
     Def.task {
-      (compile in `Compile-Akka-2.5`).value
-      (compile in `Compile-Akka-2.6`).value
+      (`Compile-Akka-2.5` / compile).value
+      (`Compile-Akka-2.6` / compile).value
     }
 }.value
 
@@ -140,8 +140,8 @@ exportJars := true
 lazy val baseTestSettings = Seq(
   fork := true,
   parallelExecution := false,
-  javaOptions := (javaOptions in Test).value,
-  dependencyClasspath += (packageBin in Compile).value,
+  javaOptions := (Test / javaOptions).value,
+  dependencyClasspath += (Compile / packageBin).value,
 )
 
 inConfig(TestCommon)(Defaults.testSettings ++ instrumentationSettings ++ baseTestSettings ++ Seq(
@@ -150,25 +150,25 @@ inConfig(TestCommon)(Defaults.testSettings ++ instrumentationSettings ++ baseTes
 
 inConfig(`Test-Akka-2.5`)(Defaults.testSettings ++ instrumentationSettings ++ baseTestSettings ++ Seq(
   sources := joinSources(TestCommon, `Test-Akka-2.5`).value,
-  unmanagedResourceDirectories ++= (unmanagedResourceDirectories in Common).value,
-  unmanagedResourceDirectories ++= (unmanagedResourceDirectories in TestCommon).value
+  unmanagedResourceDirectories ++= (Common / unmanagedResourceDirectories).value,
+  unmanagedResourceDirectories ++= (TestCommon / unmanagedResourceDirectories).value
 ))
 
 inConfig(`Test-Akka-2.6`)(Defaults.testSettings ++ instrumentationSettings ++ baseTestSettings ++ Seq(
   crossScalaVersions := Seq("2.12.11", "2.13.1"),
   sources := joinSources(TestCommon, `Test-Akka-2.6`).value,
-  unmanagedResourceDirectories ++= (unmanagedResourceDirectories in Common).value,
-  unmanagedResourceDirectories ++= (unmanagedResourceDirectories in TestCommon).value
+  unmanagedResourceDirectories ++= (Common / unmanagedResourceDirectories).value,
+  unmanagedResourceDirectories ++= (TestCommon / unmanagedResourceDirectories).value
 ))
 
-test in Test := Def.taskDyn {
+Test / test := Def.taskDyn {
   if(scalaBinaryVersion.value == "2.11")
     Def.task {
-      (test in `Test-Akka-2.5`).value
+      (`Test-Akka-2.5` / test).value
     }
   else
     Def.task {
-      (test in `Test-Akka-2.5`).value
-      (test in `Test-Akka-2.6`).value
+      (`Test-Akka-2.5` / test).value
+      (`Test-Akka-2.6` / test).value
     }
 }.value

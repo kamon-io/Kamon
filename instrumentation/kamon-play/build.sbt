@@ -68,8 +68,8 @@ PB.additionalDependencies := Seq.empty
 lazy val baseTestSettings = Seq(
   fork := true,
   parallelExecution := false,
-  javaOptions := (javaOptions in Test).value ++ Seq("-Dkanela.loglevel=DEBUG","-Dkanela.debug-mode=yes"),
-  dependencyClasspath += (packageBin in Compile).value,
+  javaOptions := (Test / javaOptions).value ++ Seq("-Dkanela.loglevel=DEBUG","-Dkanela.debug-mode=yes"),
+  dependencyClasspath += (Compile / packageBin).value,
 )
 
 inConfig(TestCommon)(Defaults.testSettings ++ instrumentationSettings ++ baseTestSettings ++ Seq(
@@ -80,15 +80,15 @@ inConfig(`Test-Play-2.6`)(Defaults.testSettings ++ instrumentationSettings ++ ba
   sources := joinSources(TestCommon, `Test-Play-2.6`).value,
   crossScalaVersions := Seq("2.11.12", "2.12.13"),
   testGrouping := singleTestPerJvm(definedTests.value, javaOptions.value),
-  unmanagedResourceDirectories ++= (unmanagedResourceDirectories in Compile).value,
-  unmanagedResourceDirectories ++= (unmanagedResourceDirectories in TestCommon).value,
+  unmanagedResourceDirectories ++= (Compile / unmanagedResourceDirectories).value,
+  unmanagedResourceDirectories ++= (TestCommon / unmanagedResourceDirectories).value,
 ))
 
 inConfig(`Test-Play-2.7`)(Defaults.testSettings ++ instrumentationSettings ++ baseTestSettings ++ Seq(
   sources := joinSources(TestCommon, `Test-Play-2.7`).value,
   testGrouping := singleTestPerJvm(definedTests.value, javaOptions.value),
-  unmanagedResourceDirectories ++= (unmanagedResourceDirectories in Compile).value,
-  unmanagedResourceDirectories ++= (unmanagedResourceDirectories in TestCommon).value
+  unmanagedResourceDirectories ++= (Compile / unmanagedResourceDirectories).value,
+  unmanagedResourceDirectories ++= (TestCommon / unmanagedResourceDirectories).value
 ))
 
 inConfig(`Test-Play-2.8`)(Defaults.testSettings ++ instrumentationSettings ++ baseTestSettings ++ Seq(
@@ -99,23 +99,23 @@ inConfig(`Test-Play-2.8`)(Defaults.testSettings ++ instrumentationSettings ++ ba
   akkaGrpcExtraGenerators += PlayScalaServerCodeGenerator,
   akkaGrpcExtraGenerators += PlayScalaClientCodeGenerator,
   testGrouping := singleTestPerJvm(definedTests.value, javaOptions.value),
-  unmanagedResourceDirectories ++= (unmanagedResourceDirectories in Compile).value,
-  unmanagedResourceDirectories ++= (unmanagedResourceDirectories in TestCommon).value,
+  unmanagedResourceDirectories ++= (Compile / unmanagedResourceDirectories).value,
+  unmanagedResourceDirectories ++= (TestCommon / unmanagedResourceDirectories).value,
 ))
 
 AkkaGrpcPlugin.configSettings(TestCommon)
 AkkaGrpcPlugin.configSettings(`Test-Play-2.8`)
 
-test in Test := Def.taskDyn {
+Test / test := Def.taskDyn {
   if(scalaBinaryVersion.value == "2.13")
     Def.task {
-      (test in `Test-Play-2.7`).value
-      (test in `Test-Play-2.8`).value
+      (`Test-Play-2.7` / test).value
+      (`Test-Play-2.8` / test).value
     }
   else
     Def.task {
-      (test in `Test-Play-2.6`).value
-      (test in `Test-Play-2.7`).value
+      (`Test-Play-2.6` / test).value
+      (`Test-Play-2.7` / test).value
     }
 }.value
 

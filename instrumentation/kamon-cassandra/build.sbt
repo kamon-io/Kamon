@@ -24,7 +24,7 @@ configs(Cassandra3xTest, Cassandra4xTest)
 inConfig(Cassandra3xTest)(Defaults.testSettings)
 inConfig(Cassandra4xTest)(Defaults.testSettings)
 
-test in Test :=  {
-  (test in Cassandra3xTest).value
-  (test in Cassandra4xTest).value
+Test / test :=  {
+  (Cassandra3xTest / test).value
+  (Cassandra4xTest / test).value
 }

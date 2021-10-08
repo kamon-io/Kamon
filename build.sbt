@@ -38,7 +38,7 @@ lazy val `kamon-core` = (project in file("core/kamon-core"))
     buildInfoPackage := "kamon.status",
     crossScalaVersions += "3.0.2",
     scalacOptions ++= { if(scalaBinaryVersion.value == "2.11") Seq("-Ydelambdafy:method") else Seq.empty },
-    assemblyShadeRules in assembly := Seq(
+    assembly / assemblyShadeRules := Seq(
       ShadeRule.rename("org.jctools.**"                             -> "kamon.lib.@0").inAll,
       ShadeRule.rename("org.HdrHistogram.Base*"                     -> "@0").inAll,
       ShadeRule.rename("org.HdrHistogram.HdrHistogramInternalState" -> "@0").inAll,
@@ -72,7 +72,7 @@ lazy val `kamon-status-page` = (project in file("core/kamon-status-page"))
   .enablePlugins(AssemblyPlugin)
   .settings(
     crossScalaVersions += "3.0.2",
-    assemblyShadeRules in assembly := Seq(
+    assembly / assemblyShadeRules := Seq(
       ShadeRule.rename("com.grack.nanojson.**"  -> "kamon.lib.@0").inAll,
       ShadeRule.rename("fi.iki.elonen.**"       -> "kamon.lib.@0").inAll,
     ),
@@ -349,7 +349,7 @@ lazy val `kamon-elasticsearch` = (project in file("instrumentation/kamon-elastic
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
-    fork in (Test,run) := true,
+    Test / run / fork := true,
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       "org.elasticsearch.client" % "elasticsearch-rest-client" % "7.9.1" % "provided",
@@ -366,7 +366,7 @@ lazy val `kamon-spring` = (project in file("instrumentation/kamon-spring"))
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
-    fork in (Test,run) := true,
+    Test / run / fork := true,
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       "org.springframework.boot" % "spring-boot-starter-web" % "2.4.2" % "provided",
@@ -387,7 +387,7 @@ lazy val `kamon-annotation-api` = (project in file("instrumentation/kamon-annota
     crossPaths := false,
     autoScalaLibrary := false,
     publishMavenStyle := true,
-    javacOptions in (Compile, doc) := Seq("-Xdoclint:none")
+    Compile / doc / javacOptions := Seq("-Xdoclint:none")
   )
 
 
@@ -396,7 +396,7 @@ lazy val `kamon-annotation` = (project in file("instrumentation/kamon-annotation
   .enablePlugins(AssemblyPlugin)
   .settings(instrumentationSettings: _*)
   .settings(
-    assemblyShadeRules in assembly := Seq(
+    assembly / assemblyShadeRules := Seq(
       ShadeRule.rename("javax.el.**"    -> "kamon.lib.@0").inAll,
       ShadeRule.rename("com.sun.el.**"  -> "kamon.lib.@0").inAll,
       ShadeRule.rename("com.github.benmanes.**"  -> "kamon.lib.@0").inAll,
@@ -415,7 +415,6 @@ lazy val `kamon-annotation` = (project in file("instrumentation/kamon-annotation
 
 lazy val `kamon-system-metrics` = (project in file("instrumentation/kamon-system-metrics"))
   .disablePlugins(AssemblyPlugin)
-  .settings(instrumentationSettings: _*)
   .settings(
     libraryDependencies ++= Seq(
       oshiCore,
@@ -583,12 +582,12 @@ lazy val `kamon-datadog` = (project in file("reporters/kamon-datadog"))
 lazy val `kamon-apm-reporter` = (project in file("reporters/kamon-apm-reporter"))
   .enablePlugins(AssemblyPlugin)
   .settings(
-    test in assembly := {},
-    assemblyMergeStrategy in assembly := {
+    assembly / test := {},
+    assembly / assemblyMergeStrategy := {
       case PathList("META-INF", xs @ _*)  => MergeStrategy.discard
       case _                              => MergeStrategy.first
     },
-    assemblyShadeRules in assembly := Seq(
+    assembly / assemblyShadeRules := Seq(
        ShadeRule.rename("fastparse.**"              -> "kamon.apm.shaded.@0").inAll
       ,ShadeRule.rename("fansi.**"                  -> "kamon.apm.shaded.@0").inAll
       ,ShadeRule.rename("sourcecode.**"             -> "kamon.apm.shaded.@0").inAll
@@ -711,32 +710,31 @@ val `kamon-bundle` = (project in file("bundle/kamon-bundle"))
   .enablePlugins(AssemblyPlugin)
   .settings(
     moduleName := "kamon-bundle",
-    kanelaAgentVersion := "1.0.12",
     buildInfoPackage := "kamon.bundle",
     buildInfoKeys := Seq[BuildInfoKey](kanelaAgentJarName),
     kanelaAgentJar := update.value.matching(Modules.exactFilter(kanelaAgent)).head,
     kanelaAgentJarName := kanelaAgentJar.value.getName,
-    resourceGenerators in Compile += Def.task(Seq(kanelaAgentJar.value)).taskValue,
-    fullClasspath in assembly ++= (internalDependencyClasspath in Shaded).value,
-    assemblyShadeRules in assembly := Seq(
+    Compile / resourceGenerators += Def.task(Seq(kanelaAgentJar.value)).taskValue,
+    assembly / fullClasspath ++= (Shaded / internalDependencyClasspath).value,
+    assembly / assemblyShadeRules := Seq(
       ShadeRule.zap("**module-info").inAll,
       ShadeRule.rename("net.bytebuddy.agent.**" -> "kamon.lib.@0").inAll
     ),
-    assemblyExcludedJars in assembly := {
-      (fullClasspath in assembly).value.filter(f => {
+    assembly / assemblyExcludedJars := {
+      (assembly / fullClasspath).value.filter(f => {
         val fileName = f.data.getName()
         fileName.contains("kamon-core") || fileName.contains("oshi-core")
       })
     },
-    assemblyOption in assembly := (assemblyOption in assembly).value.copy(
+    assembly / assemblyOption := (assembly / assemblyOption).value.copy(
       includeBin = true,
       includeScala = false,
       includeDependency = false,
       cacheOutput = false
     ),
-    assemblyMergeStrategy in assembly := {
+    assembly / assemblyMergeStrategy := {
       case "reference.conf" => MergeStrategy.concat
-      case anyOther         => (assemblyMergeStrategy in assembly).value(anyOther)
+      case anyOther         => (assembly / assemblyMergeStrategy).value(anyOther)
     },
     libraryDependencies ++= Seq(
       oshiCore,
