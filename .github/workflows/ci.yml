@@ -2,10 +2,12 @@ name: Test all the things
 
 on: [push, pull_request]
 
-
 jobs:
   ci:
     runs-on: ubuntu-latest
+    env:
+      JAVA_OPTS: -Xms2048M -Xmx5120M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
+      JVM_OPTS: -Xms2048M -Xmx5120M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
     steps:
       - uses: actions/checkout@v1
       - run: git fetch --depth=1 origin '+refs/tags/*:refs/tags/*'
@@ -13,4 +15,4 @@ jobs:
         with:
           java-version: adopt@1.8.0-292
       - name: Test
-        run: sbt ";+instrumentation/publishLocal;+test"
+        run: sbt -v ";+instrumentation/publishLocal;+test"
