@@ -28,6 +28,8 @@ abstract class EmbeddedMongoTest(port: Int) extends AnyWordSpec with BeforeAndAf
   }
 
   override protected def beforeAll(): Unit = {
+    super.beforeAll()
+
     mongodExecutable = starter.prepare(new MongodConfigBuilder()
       .version(Version.Main.V4_0)
       .net(new Net(port, false))
@@ -39,6 +41,8 @@ abstract class EmbeddedMongoTest(port: Int) extends AnyWordSpec with BeforeAndAf
   override protected def afterAll(): Unit = {
     mongodProcess.stop()
     mongodExecutable.stop()
+
+    super.afterAll()
   }
 
 
