@@ -170,6 +170,12 @@ trait TestWebServer extends TracingDirectives {
         path("name-will-be-changed") {
           complete("OK")
         }
+      } ~
+      path("some_endpoint") {
+        post(complete(OK))
+      } ~
+      path("some_endpoint") {
+        get(complete(OK))
       }
     }
 

@@ -72,6 +72,23 @@ class AkkaHttpServerTracingSpec extends WordSpecLike with Matchers with ScalaFut
         }
       }
 
+      "return the correct operation name with overloaded route" in {
+        val target = s"$protocol://$interface:$port/some_endpoint"
+
+        // this endpoint isn't affected
+//        okHttp.newCall(new Request.Builder()
+//          .post(RequestBody.create(MediaType.get("application/json"), "{}"))
+//          .url(target).build())
+//          .execute()
+
+        okHttp.newCall(new Request.Builder()
+          .get()
+          .url(target).build())
+          .execute()
+
+        val span = eventually(timeout(10 seconds))(testSpanReporter().nextSpan().value)
+        span.operationName shouldBe "/some_endpoint"
+      }
       "not include variables in operation name" when {
         "including nested directives" in {
           val path = s"extraction/nested/42/fixed/anchor/32/${UUID.randomUUID().toString}/fixed/44/CafE"
