@@ -75,12 +75,6 @@ class AkkaHttpServerTracingSpec extends WordSpecLike with Matchers with ScalaFut
       "return the correct operation name with overloaded route" in {
         val target = s"$protocol://$interface:$port/some_endpoint"
 
-        // this endpoint isn't affected
-//        okHttp.newCall(new Request.Builder()
-//          .post(RequestBody.create(MediaType.get("application/json"), "{}"))
-//          .url(target).build())
-//          .execute()
-
         okHttp.newCall(new Request.Builder()
           .get()
           .url(target).build())

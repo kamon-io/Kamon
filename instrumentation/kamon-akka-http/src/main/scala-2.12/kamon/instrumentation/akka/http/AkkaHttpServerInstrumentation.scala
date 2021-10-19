@@ -17,7 +17,6 @@
 package kamon.instrumentation.akka.http
 
 import java.util.concurrent.Callable
-
 import akka.http.scaladsl.marshalling.{ToEntityMarshaller, ToResponseMarshallable, ToResponseMarshaller}
 import akka.http.scaladsl.model.StatusCodes.Redirection
 import akka.http.scaladsl.model.{HttpHeader, HttpRequest, HttpResponse, StatusCode, Uri}
@@ -38,8 +37,8 @@ import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 import java.util.regex.Pattern
-
 import akka.NotUsed
+import akka.http.scaladsl.server.RouteResult.Rejected
 import akka.stream.scaladsl.Flow
 import kamon.context.Context
 import kanela.agent.libs.net.bytebuddy.matcher.ElementMatchers.isPublic
@@ -127,6 +126,7 @@ trait HasMatchingContext {
   def setMatchingContext(ctx: Seq[PathMatchingContext]): Unit
   def setDefaultOperationName(defaultOperationName: String): Unit
   def prependMatchingContext(matched: PathMatchingContext): Unit
+  def popOneMatchingContext(): Unit
 }
 
 object HasMatchingContext {
@@ -146,6 +146,9 @@ object HasMatchingContext {
 
     override def prependMatchingContext(matched: PathMatchingContext): Unit =
       matchingContext = matched +: matchingContext
+
+    override def popOneMatchingContext(): Unit =
+      matchingContext = matchingContext.tail
 
     @Initializer
     def initialize(): Unit =
@@ -303,18 +306,29 @@ object PathDirectivesRawPathPrefixInterceptor {
   def rawPathPrefix[T](@Argument(0) matcher: PathMatcher[T]): Directive[T] = {
     implicit val LIsTuple = matcher.ev
 
-    extract(ctx => {
+    extract { ctx =>
       val fullPath = ctx.unmatchedPath.toString()
       val matching = matcher(ctx.unmatchedPath)
+
       matching match {
         case m: Matched[_] =>
-          ctx.asInstanceOf[HasMatchingContext].prependMatchingContext(PathMatchingContext(fullPath, m))
+          ctx.asInstanceOf[HasMatchingContext]
+            .prependMatchingContext(PathMatchingContext(fullPath, m))
         case _ =>
       }
-      matching
-    }).flatMap {
-      case Matched(rest, values) => tprovide(values) & mapRequestContext(_ withUnmatchedPath rest)
-      case Unmatched             => reject
+
+      (ctx, matching)
+    } flatMap {
+      case (ctx, Matched(rest, values)) =>
+        tprovide(values) & mapRequestContext(_ withUnmatchedPath rest) & mapRouteResult { routeResult =>
+
+          if(routeResult.isInstanceOf[Rejected])
+            ctx.asInstanceOf[HasMatchingContext].popOneMatchingContext()
+
+          routeResult
+        }
+
+      case (_, Unmatched) => reject
     }
   }
 }
