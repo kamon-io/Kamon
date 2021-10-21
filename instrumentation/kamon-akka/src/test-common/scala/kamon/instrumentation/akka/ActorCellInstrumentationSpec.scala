@@ -22,15 +22,17 @@ import akka.testkit.{ImplicitSender, TestKit}
 import akka.util.Timeout
 import kamon.Kamon
 import kamon.testkit.{InitAndStopKamonAfterAll, MetricInspection}
-import org.scalatest.concurrent.Eventually
-import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 import kamon.tag.Lookups._
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.concurrent.Eventually
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration._
 
 
-class ActorCellInstrumentationSpec extends TestKit(ActorSystem("ActorCellInstrumentationSpec")) with WordSpecLike
+class ActorCellInstrumentationSpec extends TestKit(ActorSystem("ActorCellInstrumentationSpec")) with AnyWordSpecLike
     with BeforeAndAfterAll with ImplicitSender with Eventually with MetricInspection.Syntax with Matchers with InitAndStopKamonAfterAll {
   implicit lazy val executionContext = system.dispatcher
   import ContextTesting._

@@ -15,15 +15,17 @@
 
 package kamon.metric
 
-import java.time.{Duration, Instant}
-
 import kamon.Kamon
 import kamon.tag.TagSet
 import kamon.testkit.{InstrumentInspection, Reconfigure}
 import kamon.util.Clock
-import org.scalatest.{BeforeAndAfterAll, Matchers, OptionValues, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.{BeforeAndAfterAll, OptionValues}
 
-class PeriodSnapshotAccumulatorSpec extends WordSpec with Reconfigure with InstrumentInspection.Syntax with Matchers
+import java.time.{Duration, Instant}
+
+class PeriodSnapshotAccumulatorSpec extends AnyWordSpec with Matchers with Reconfigure with InstrumentInspection.Syntax
     with BeforeAndAfterAll with OptionValues {
 
   "the PeriodSnapshotAccumulator" should {

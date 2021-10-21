@@ -17,6 +17,7 @@ package kamon.instrumentation.jdbc
 
 import java.sql.SQLException
 import java.util.concurrent.Executors
+
 import com.typesafe.config.ConfigFactory
 import com.zaxxer.hikari.{HikariConfig, HikariDataSource}
 import kamon.Kamon
@@ -24,12 +25,14 @@ import kamon.tag.Lookups.plain
 import kamon.tag.TagSet
 import kamon.testkit.{InitAndStopKamonAfterAll, InstrumentInspection, MetricInspection, TestSpanReporter}
 import org.scalatest.concurrent.Eventually
+import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.SpanSugar
-import org.scalatest.{BeforeAndAfterEach, Matchers, OptionValues, WordSpec}
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.{BeforeAndAfterEach, OptionValues}
 
 import scala.concurrent.ExecutionContext
 
-class HikariInstrumentationSpec extends WordSpec
+class HikariInstrumentationSpec extends AnyWordSpec
   with Matchers
   with Eventually
   with SpanSugar

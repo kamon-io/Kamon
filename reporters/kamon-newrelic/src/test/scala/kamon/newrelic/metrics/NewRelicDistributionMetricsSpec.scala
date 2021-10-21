@@ -8,9 +8,10 @@ package kamon.newrelic.metrics
 import com.newrelic.telemetry.Attributes
 import com.newrelic.telemetry.metrics.{Gauge, Summary}
 import kamon.metric.MetricSnapshot.Distributions
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-class NewRelicDistributionMetricsSpec extends WordSpec with Matchers {
+class NewRelicDistributionMetricsSpec extends AnyWordSpec with Matchers {
 
   "distribution converter" should {
     "convert a distribution" in {

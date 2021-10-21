@@ -9,9 +9,10 @@ import com.newrelic.telemetry.Attributes
 import com.newrelic.telemetry.spans.{Span => NewRelicSpan}
 import kamon.tag.TagSet
 import kamon.trace.Span
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-class NewRelicSpanConverterSpec extends WordSpec with Matchers {
+class NewRelicSpanConverterSpec extends AnyWordSpec with Matchers {
 
   "the span converter" should {
     "convert the a full server span" in {

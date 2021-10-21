@@ -6,7 +6,6 @@
 package kamon.newrelic.spans
 
 import java.net.InetAddress
-
 import com.newrelic.telemetry.Attributes
 import com.newrelic.telemetry.spans.{SpanBatch, SpanBatchSender, Span => NewRelicSpan}
 import com.typesafe.config.{Config, ConfigValue, ConfigValueFactory}
@@ -17,11 +16,12 @@ import kamon.trace.Span
 import kamon.trace.Span.Kind.Client
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito._
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
 import scala.collection.JavaConverters._
 
-class NewRelicSpanReporterSpec extends WordSpec with Matchers {
+class NewRelicSpanReporterSpec extends AnyWordSpec with Matchers {
 
   "the span reporter" should {
     "report spans" in {

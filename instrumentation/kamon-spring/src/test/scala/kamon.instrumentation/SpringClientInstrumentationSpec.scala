@@ -4,14 +4,15 @@ import kamon.testkit.{InitAndStopKamonAfterAll, TestSpanReporter}
 import org.scalatest.OptionValues.convertOptionToValuable
 import org.scalatest.concurrent.Eventually.eventually
 import org.scalatest.concurrent.Waiters.timeout
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 import org.springframework.web.reactive.function.client.WebClient
 import testapp.TestApp
 
 import scala.concurrent.duration.DurationInt
 
 class SpringClientInstrumentationSpec
-  extends WordSpec
+  extends AnyWordSpec
     with Matchers
     with InitAndStopKamonAfterAll
     with TestSpanReporter {

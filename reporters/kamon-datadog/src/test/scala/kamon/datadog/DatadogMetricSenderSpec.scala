@@ -16,17 +16,19 @@
 
 package kamon.datadog
 
-import java.time.Instant
-
-import com.typesafe.config.{ Config, ConfigFactory }
+import com.typesafe.config.{Config, ConfigFactory}
 import kamon.Kamon
 import kamon.datadog.DatadogAgentReporter.PacketBuffer
 import kamon.metric._
 import kamon.tag.TagSet
 import kamon.testkit.Reconfigure
-import org.scalatest.{ Matchers, WordSpec }
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-class DatadogMetricSenderSpec extends WordSpec with Matchers with Reconfigure {
+import java.time.Instant
+
+class DatadogMetricSenderSpec extends AnyWordSpec
+  with Matchers with Reconfigure {
   reconfigure =>
 
   class TestBuffer extends PacketBuffer {

@@ -18,13 +18,14 @@ package kamon.instrumentation.tapir
 
 import kamon.testkit.TestSpanReporter
 import org.scalatest.concurrent.Eventually
-import org.scalatest.{BeforeAndAfterAll, Matchers, OptionValues, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.{BeforeAndAfterAll, OptionValues}
 import sttp.client3.{HttpURLConnectionBackend, Identity, SttpBackend, UriContext, asStringAlways, basicRequest}
 
 import scala.concurrent.duration.DurationInt
 
-class TapirSpec extends WordSpec
-  with Matchers
+class TapirSpec extends AnyWordSpec with Matchers
   with TestSpanReporter
   with Eventually
   with BeforeAndAfterAll

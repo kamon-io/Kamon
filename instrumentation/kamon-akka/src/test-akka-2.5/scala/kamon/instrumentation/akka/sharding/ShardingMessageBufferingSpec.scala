@@ -9,11 +9,12 @@ import kamon.Kamon
 import kamon.context.Context
 import kamon.instrumentation.akka.ContextEchoActor
 import kamon.testkit.{InitAndStopKamonAfterAll, MetricInspection}
-import org.scalatest.{Matchers, WordSpecLike}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 
 import scala.concurrent.duration._
 
-class ShardingMessageBufferingSpec extends TestKitBase with WordSpecLike with Matchers with ImplicitSender
+class ShardingMessageBufferingSpec extends TestKitBase with AnyWordSpecLike with Matchers with ImplicitSender
   with MetricInspection.Syntax with InitAndStopKamonAfterAll {
 
   implicit lazy val system: ActorSystem = {

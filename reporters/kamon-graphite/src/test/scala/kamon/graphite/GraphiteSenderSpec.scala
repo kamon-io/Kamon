@@ -1,14 +1,16 @@
 package kamon.graphite
 
-import java.time.Instant
-
 import kamon.metric.PeriodSnapshot
 import kamon.tag.TagSet
 import kamon.testkit.MetricSnapshotBuilder
 import kamon.util.Filter
-import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-class GraphiteSenderSpec extends WordSpec with BeforeAndAfterAll with Matchers {
+import java.time.Instant
+
+class GraphiteSenderSpec extends AnyWordSpec with Matchers with BeforeAndAfterAll {
   "the GraphiteSender" should {
     val from = Instant.ofEpochSecond(1517000974)
     val to = Instant.ofEpochSecond(1517000993)

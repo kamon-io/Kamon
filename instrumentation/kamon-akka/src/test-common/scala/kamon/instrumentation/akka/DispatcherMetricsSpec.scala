@@ -15,23 +15,24 @@
 
 package kamon.instrumentation.akka
 
-import java.util.concurrent.Executors
-
+import akka.Version
 import akka.actor.{ActorSystem, Props}
 import akka.dispatch.MessageDispatcher
 import akka.routing.BalancingPool
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
-import kamon.tag.Lookups.plain
+import kamon.instrumentation.akka.RouterMetricsTestActor._
 import kamon.instrumentation.executor.ExecutorMetrics
+import kamon.tag.Lookups.plain
 import kamon.testkit.MetricInspection
+import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.Eventually
-import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
-import RouterMetricsTestActor._
-import akka.Version
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 
+import java.util.concurrent.Executors
 import scala.concurrent.{ExecutionContext, Future}
 
-class DispatcherMetricsSpec extends TestKit(ActorSystem("DispatcherMetricsSpec")) with WordSpecLike with MetricInspection.Syntax with Matchers
+class DispatcherMetricsSpec extends TestKit(ActorSystem("DispatcherMetricsSpec")) with AnyWordSpecLike with Matchers with MetricInspection.Syntax
   with BeforeAndAfterAll with ImplicitSender with Eventually {
 
   "the Kamon dispatcher metrics" should {

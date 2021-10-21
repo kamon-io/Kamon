@@ -7,8 +7,6 @@ import sbtassembly.AssemblyPlugin.autoImport.{MergeStrategy, assembleArtifact, a
 import java.util.Calendar
 
 import Def.Initialize
-import bintray.{Bintray, BintrayPlugin}
-import bintray.BintrayKeys.{bintray, bintrayOrganization, bintrayRepository, bintrayVcsUrl}
 import com.jsuereth.sbtpgp.PgpKeys.useGpgPinentry
 import sbtrelease.ReleasePlugin.autoImport._
 import de.heikoseeberger.sbtheader.HeaderPlugin.autoImport._
@@ -28,11 +26,11 @@ object BaseProject extends AutoPlugin {
     /** Marker configuration for dependencies that will be shaded into their module's jar.  */
     lazy val Shaded = config("shaded").hide
 
-    val kanelaAgent       = "io.kamon"              %  "kanela-agent"    % "1.0.11"
+    val kanelaAgent       = "io.kamon"              %  "kanela-agent"    % "1.0.12"
     val slf4jApi          = "org.slf4j"             %  "slf4j-api"       % "1.7.25"
     val slf4jnop          = "org.slf4j"             %  "slf4j-nop"       % "1.7.24"
     val logbackClassic    = "ch.qos.logback"        %  "logback-classic" % "1.2.3"
-    val scalatest         = "org.scalatest"         %% "scalatest"       % "3.0.8"
+    val scalatest         = "org.scalatest"         %% "scalatest"       % "3.2.9"
     val hdrHistogram      = "org.hdrhistogram"      %  "HdrHistogram"    % "2.1.10"
     val okHttp            = "com.squareup.okhttp3"  %  "okhttp"          % "3.14.7"
     val okHttpMockServer  = "com.squareup.okhttp3"  %  "mockwebserver"   % "3.10.0"
@@ -44,14 +42,17 @@ object BaseProject extends AutoPlugin {
     val kanelaAgentJar = taskKey[File]("Kanela Agent jar")
 
     val noPublishing = Seq(
-      skip in publish := true,
+      publish / skip := true,
       publishLocal := {},
       publishArtifact := false
     )
 
     val instrumentationSettings = Seq(
+      kanelaAgentVersion := kanelaAgent.revision,
       javaAgents := Seq("io.kamon" % "kanela-agent" % kanelaAgentVersion.value % "runtime;test")
     )
+
+    val scala3Version = "3.0.2"
 
     // This installs the GPG signing key from the
     setupGpg()
@@ -68,9 +69,9 @@ object BaseProject extends AutoPlugin {
     def joinSources(base: Configuration, extra: Configuration): Initialize[Task[Seq[File]]] = Def.task {
       import Path.relativeTo
 
-      val baseSources = (unmanagedSources in base).value.pair(relativeTo((unmanagedSourceDirectories in base).value))
-      val extraSources = (unmanagedSources in extra).value.pair(relativeTo((unmanagedSourceDirectories in extra).value))
-      val manSources = (managedSources in extra).value.pair(relativeTo((managedSourceDirectories in extra).value))
+      val baseSources = (base / unmanagedSources).value.pair(relativeTo((base / unmanagedSourceDirectories).value))
+      val extraSources = (extra / unmanagedSources).value.pair(relativeTo((extra / unmanagedSourceDirectories).value))
+      val manSources = (extra / managedSources).value.pair(relativeTo((extra / managedSourceDirectories).value))
 
       val allSources = (
         baseSources.filterNot { case (_, path) => extraSources.exists(_._2 == path) } ++
@@ -95,7 +96,7 @@ object BaseProject extends AutoPlugin {
     }
   }
 
-  override def requires: Plugins = BintrayPlugin && JvmPlugin && HeaderPlugin
+  override def requires: Plugins = JvmPlugin && HeaderPlugin
   override def trigger: PluginTrigger = allRequirements
   override def projectSettings: Seq[_root_.sbt.Def.Setting[_]] =
     commonSettings ++ compilationSettings ++ releaseSettings ++ publishingSettings
@@ -107,19 +108,17 @@ object BaseProject extends AutoPlugin {
     version ~= (_.replaceAll("[+]\\d{8}[-]\\d{4}", "-dirty")),
     dynver ~= (_.replaceAll("[+]\\d{8}[-]\\d{4}", "-dirty")),
     exportJars := true,
-    parallelExecution in Test := false,
-    fork in Test := true,
-    testOptions in Test += Tests.Argument(TestFrameworks.ScalaCheck, "-F", "2.5"),
+    Test / fork := true,
+    Test / parallelExecution := false,
+    Test / testOptions += Tests.Argument(TestFrameworks.ScalaCheck, "-F", "2.5"),
     startYear := Some(2013),
     organization := "io.kamon",
     organizationName := "The Kamon Project",
     headerLicense := licenseTemplate(startYear.value),
     autoImport.kanelaAgentJar := findKanelaAgentJar.value,
     organizationHomepage := Some(url("https://kamon.io/")),
-    autoImport.kanelaAgentVersion := autoImport.kanelaAgent.revision,
-    concurrentRestrictions in Global += Tags.limit(Tags.Test, 1),
+    Global / concurrentRestrictions += Tags.limit(Tags.Test, 1),
     licenses += (("Apache-2.0", url("http://www.apache.org/licenses/LICENSE-2.0"))),
-    resolvers += Resolver.bintrayRepo("kamon-io", "releases"),
     resolvers += Resolver.mavenLocal,
     headerLicense := Some(HeaderLicense.ALv2("2013-2021","The Kamon Project <https://kamon.io>")),
     Keys.commands += Command.command("testUntilFailed") { state: State =>
@@ -130,7 +129,7 @@ object BaseProject extends AutoPlugin {
   private lazy val compilationSettings = Seq(
     crossPaths := true,
     scalaVersion := "2.12.11",
-    crossScalaVersions := Seq("2.11.12", "2.12.11", "2.13.1"),
+    crossScalaVersions := Seq("2.11.12", "2.12.11", "2.13.6"),
     javacOptions := Seq(
       "-source", "1.8",
       "-target", "1.8",
@@ -155,6 +154,7 @@ object BaseProject extends AutoPlugin {
       case Some((2,11)) => Seq("-Xfuture", "-Ybackend:GenASM")
       case Some((2,12)) => Seq("-Xfuture", "-opt:l:method,-closure-invocations")
       case Some((2,13)) => Seq.empty
+      case Some((3, _)) => Seq("-source:3.0-migration")
       case _ => Seq.empty
     })
   )
@@ -165,15 +165,11 @@ object BaseProject extends AutoPlugin {
   )
 
   private lazy val publishingSettings = Seq(
-    publishTo := publishTask.value,
+    publishTo := sonatypePublishToBundle.value,
     pomExtra := defaultPomExtra(),
-    publishArtifact in Test := false,
-    useGpgPinentry in Global := true,
-    pomIncludeRepository := { _ => false },
-    bintrayOrganization := Some("kamon-io"),
-    publishMavenStyle := publishMavenStyleSetting.value,
-    bintrayRepository := bintrayRepositorySetting.value,
-    bintrayVcsUrl := Some("git@github.com:kamon-io/Kamon.git")
+    Test / publishArtifact := false,
+    Global / useGpgPinentry := true,
+    pomIncludeRepository := { _ => false }
   )
 
   private def licenseTemplate(startYear: Option[Int]) = {
@@ -204,37 +200,6 @@ object BaseProject extends AutoPlugin {
       moduleFilter(organization = "io.kamon", name = "kanela-agent") &&
         artifactFilter(`type` = "jar")
     }.head
-  }
-
-  private def versionSetting = Def.setting {
-    val originalVersion = (version in ThisBuild).value
-    if (isSnapshotVersion(originalVersion)) {
-      val gitRevision = Process("git rev-parse HEAD").lineStream.head
-      originalVersion.replace("SNAPSHOT", gitRevision)
-    } else {
-      originalVersion
-    }
-  }
-
-  private def publishTask = Def.taskDyn[Option[Resolver]] {
-    if (isSnapshot.value)
-      Def.task(publishTo in bintray).value
-    else
-      Def.task(sonatypePublishToBundle.value)
-  }
-
-  private def publishMavenStyleSetting = Def.setting {
-    if (sbtPlugin.value) false else publishMavenStyle.value
-  }
-
-  private def isSnapshotVersion(version: String): Boolean = {
-    (version matches """(?:\d+\.)?(?:\d+\.)?(?:\d+)(?:-[A-Z0-9]*)?-[0-9a-f]{5,40}""") || (version endsWith "-SNAPSHOT")
-  }
-
-  private def bintrayRepositorySetting = Def.setting {
-    if (isSnapshot.value) "snapshots"
-    else if (sbtPlugin.value) Bintray.defaultSbtPluginRepository
-    else "releases"
   }
 
   private def defaultPomExtra() = {
@@ -285,19 +250,19 @@ object AssemblyTweaks extends AutoPlugin {
   override def projectConfigurations: Seq[Configuration] = Seq(Shaded)
   override def projectSettings: Seq[Def.Setting[_]] = Seq(
     exportJars := true,
-    test in assembly := {},
-    packageBin in Compile := assembly.value,
-    fullClasspath in assembly := (externalDependencyClasspath in Shaded).value ++ (products in Compile).value.classpath,
-    assemblyOption in assembly := (assemblyOption in assembly).value.copy(
+    assembly / test := {},
+    Compile / packageBin := assembly.value,
+    assembly / fullClasspath := (Shaded / externalDependencyClasspath).value ++ (Compile / products).value.classpath,
+    assembly / assemblyOption := (assembly / assemblyOption).value.copy(
       includeBin = true,
       includeScala = false,
       includeDependency = true,
       cacheOutput = false
     ),
-    assemblyMergeStrategy in assembly := {
+    assembly / assemblyMergeStrategy := {
       case s if s.startsWith("LICENSE") => MergeStrategy.discard
       case s if s.startsWith("about") => MergeStrategy.discard
-      case x => (assemblyMergeStrategy in assembly).value(x)
+      case x => (assembly / assemblyMergeStrategy).value(x)
     }
   ) ++ inConfig(Shaded)(Defaults.configSettings)
 }

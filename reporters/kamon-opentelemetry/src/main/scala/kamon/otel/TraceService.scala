@@ -31,7 +31,7 @@ import scala.concurrent.{Future, Promise}
  * Service for exporting OpenTelemetry traces
  */
 private[otel] trait TraceService extends Closeable {
-  def export(request:ExportTraceServiceRequest):Future[ExportTraceServiceResponse]
+  def exportSpans(request: ExportTraceServiceRequest): Future[ExportTraceServiceResponse]
 }
 
 /**
@@ -83,9 +83,9 @@ private[otel] class GrpcTraceService(channel:ManagedChannel, traceService:TraceS
    * @param request The trace data to export
    * @return
    */
-  override def export(request: ExportTraceServiceRequest): Future[ExportTraceServiceResponse] = {
+  override def exportSpans(request: ExportTraceServiceRequest): Future[ExportTraceServiceResponse] = {
     val promise = Promise[ExportTraceServiceResponse]()
-    Futures.addCallback(traceService.export(request), exportCallback(promise), executor)
+    Futures.addCallback(traceService.`export`(request), exportCallback(promise), executor)
     promise.future
   }
 

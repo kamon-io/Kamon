@@ -19,11 +19,12 @@ package kamon.metric
 import java.time.Duration
 import kamon.Kamon
 import kamon.testkit.{InitAndStopKamonAfterAll, InstrumentInspection}
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
 import scala.concurrent.duration.DurationInt
 
-class RangeSamplerSpec extends WordSpec with Matchers with InstrumentInspection.Syntax with InitAndStopKamonAfterAll {
+class RangeSamplerSpec extends AnyWordSpec with Matchers with InstrumentInspection.Syntax with InitAndStopKamonAfterAll {
 
   "a RangeSampler" should {
     "track ascending tendencies" in {

@@ -1,33 +1,33 @@
 package kamon.apm
 
-import java.time.Instant
-
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.Http.ServerBinding
 import akka.http.scaladsl.model.StatusCodes
+import akka.http.scaladsl.server.Directives.{pathPrefix, _}
 import akka.http.scaladsl.server.Route
+import akka.http.scaladsl.server.directives.MethodDirectives.post
+import akka.http.scaladsl.server.directives.PathDirectives.path
+import akka.http.scaladsl.server.directives.RouteDirectives.complete
 import akka.stream.ActorMaterializer
 import akka.testkit.{ImplicitSender, TestKit}
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, Matchers, WordSpecLike}
-
-import scala.concurrent.{ExecutionContext, Future}
-import akka.http.scaladsl.server.directives.MethodDirectives.post
-import akka.http.scaladsl.server.directives.RouteDirectives.complete
-import akka.http.scaladsl.server.directives.PathDirectives.path
-import akka.http.scaladsl.server.Directives.{pathPrefix, _}
 import kamino.IngestionV1.{Goodbye, Hello, MetricBatch, SpanBatch}
 import kamon.Kamon
 import kamon.metric.PeriodSnapshot
 import kamon.tag.TagSet
 import kamon.trace.{Identifier, Span, Trace}
 import org.scalatest.concurrent.Eventually
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 
+import java.time.Instant
 import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
 
 
-class ReporterSpec extends TestKit(ActorSystem("MetricReporterSpec")) with WordSpecLike
-  with Matchers with BeforeAndAfterAll with ImplicitSender with BeforeAndAfterEach with Eventually {
+class ReporterSpec extends TestKit(ActorSystem("MetricReporterSpec"))
+  with AnyWordSpecLike with Matchers with BeforeAndAfterAll with ImplicitSender with BeforeAndAfterEach with Eventually {
 
   var server: Future[ServerBinding] = null
 

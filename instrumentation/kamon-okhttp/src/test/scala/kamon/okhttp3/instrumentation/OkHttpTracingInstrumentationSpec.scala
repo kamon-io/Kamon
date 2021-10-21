@@ -16,6 +16,7 @@
 package kamon.okhttp3.instrumentation
 
 import java.io.IOException
+
 import javax.servlet.http.{HttpServlet, HttpServletRequest, HttpServletResponse}
 import kamon.Kamon
 import kamon.context.Context
@@ -26,12 +27,12 @@ import kamon.trace.Span
 import kamon.trace.SpanPropagation.B3
 import okhttp3._
 import org.scalatest.concurrent.Eventually
-import org.scalatest.Matchers
+import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.SpanSugar
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.{BeforeAndAfterEach, OptionValues}
 
-class OkHttpTracingInstrumentationSpec extends WordSpec
+class OkHttpTracingInstrumentationSpec extends AnyWordSpec
   with Matchers
   with Eventually
   with SpanSugar

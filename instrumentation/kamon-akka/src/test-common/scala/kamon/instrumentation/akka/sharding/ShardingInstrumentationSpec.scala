@@ -13,19 +13,19 @@ import kamon.tag.TagSet
 import kamon.testkit.{InitAndStopKamonAfterAll, InstrumentInspection, MetricInspection}
 import org.scalactic.TimesOnInt.convertIntToRepeater
 import org.scalatest.concurrent.Eventually
-import org.scalatest.{Matchers, WordSpecLike}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.time._
+import org.scalatest.wordspec.AnyWordSpecLike
 
 import scala.collection.immutable
 import scala.concurrent.Future
 import scala.util.Random
-import org.scalatest.time._
 
 case class TestMessage(shard: String, entity: String)
 
 class ShardingInstrumentationSpec
     extends TestKitBase
-    with WordSpecLike
-    with Matchers
+    with AnyWordSpecLike with Matchers
     with ImplicitSender
     with MetricInspection.Syntax
     with InstrumentInspection.Syntax

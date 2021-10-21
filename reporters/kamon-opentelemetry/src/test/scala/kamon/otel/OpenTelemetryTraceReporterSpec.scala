@@ -15,19 +15,21 @@
  */
 package kamon.otel
 
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.ConfigFactory
 import io.opentelemetry.proto.collector.trace.v1.{ExportTraceServiceRequest, ExportTraceServiceResponse}
 import kamon.Kamon
 import kamon.module.ModuleFactory
 import kamon.otel.CustomMatchers.{ByteStringMatchers, KeyValueMatchers, finishedSpan}
-import org.scalatest.{Matchers, OptionValues, WordSpec}
+import org.scalatest.OptionValues
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
 import scala.concurrent.{ExecutionContext, Future}
 
 /**
  * Tests for [[OpenTelemetryTraceReporter]]
  */
-class OpenTelemetryTraceReporterSpec extends WordSpec with Matchers with OptionValues with ByteStringMatchers with KeyValueMatchers {
+class OpenTelemetryTraceReporterSpec extends AnyWordSpec with Matchers with OptionValues with ByteStringMatchers with KeyValueMatchers {
 
   private def openTelemetryTraceReporter():(OpenTelemetryTraceReporter, MockTraceService) = {
     val traceService = new MockTraceService()
@@ -87,7 +89,7 @@ class OpenTelemetryTraceReporterSpec extends WordSpec with Matchers with OptionV
   private class MockTraceService extends TraceService{
     var exportTraceServiceRequest:Option[ExportTraceServiceRequest] = None
     var hasBeenClosed = false
-    override def export(request: ExportTraceServiceRequest): Future[ExportTraceServiceResponse] = {
+    override def exportSpans(request: ExportTraceServiceRequest): Future[ExportTraceServiceResponse] = {
       exportTraceServiceRequest = Option(request)
       Future.successful(ExportTraceServiceResponse.getDefaultInstance)
     }

@@ -8,12 +8,14 @@ import kamon.tag.Lookups._
 import kamon.tag.TagSet
 import kamon.testkit.{InitAndStopKamonAfterAll, InstrumentInspection, SpanInspection}
 import kamon.trace.Span
+import org.scalatest.OptionValues
 import org.scalatest.concurrent.Eventually
-import org.scalatest.{Matchers, OptionValues, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
 import scala.collection.mutable
 
-class HttpClientInstrumentationSpec extends WordSpec with Matchers with InstrumentInspection.Syntax with OptionValues
+class HttpClientInstrumentationSpec extends AnyWordSpec with Matchers with InstrumentInspection.Syntax with OptionValues
     with SpanInspection.Syntax with Eventually with InitAndStopKamonAfterAll {
 
   "the HTTP server instrumentation" when {

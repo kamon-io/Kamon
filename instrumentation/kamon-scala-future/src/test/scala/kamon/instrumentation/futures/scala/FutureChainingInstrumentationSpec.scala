@@ -15,21 +15,22 @@
  * ========================================================== */
 package kamon.instrumentation.futures.scala
 
-import java.util.concurrent.Executors
-import java.util.concurrent.atomic.AtomicReference
-
 import kamon.Kamon
-import kamon.tag.Lookups.plain
 import kamon.context.Context
 import kamon.instrumentation.context.HasContext
+import kamon.tag.Lookups.plain
 import kamon.testkit.TestSpanReporter
-import org.scalatest.{Matchers, OptionValues, WordSpec}
+import org.scalatest.OptionValues
 import org.scalatest.concurrent.{Eventually, PatienceConfiguration, ScalaFutures}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
+import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicReference
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
-class FutureChainingInstrumentationSpec extends WordSpec with ScalaFutures with Matchers with PatienceConfiguration
+class FutureChainingInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutures with PatienceConfiguration
     with OptionValues with Eventually with TestSpanReporter {
 
   import kamon.instrumentation.futures.scala.ScalaFutureInstrumentation.{traceBody, traceFunc}

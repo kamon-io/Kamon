@@ -22,7 +22,9 @@ import kamon.tag.Lookups.{plain, plainLong}
 import kamon.testkit._
 import kamon.trace.Span
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
+import org.scalatest.matchers.must.Matchers
 import org.scalatest.time.SpanSugar
+import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatest.{BeforeAndAfterAll, OptionValues}
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
@@ -31,18 +33,17 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.ws.WSClient
 import play.api.mvc.Results.{InternalServerError, NotFound, Ok}
 import play.api.mvc.{Action, AnyContent, DefaultActionBuilder, Handler}
-import play.api.test.Helpers._
 import play.api.test._
 import play.api.libs.ws.{WSRequestExecutor, WSRequestFilter}
 import play.api.mvc.Handler.Stage
 import play.api.routing.{HandlerDef, Router}
-
+import play.api.mvc._
+import play.api.test.Helpers._
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
 
-class WSInstrumentationSpec extends PlaySpec with GuiceOneServerPerSuite with ScalaFutures with Eventually with SpanSugar
+class WSInstrumentationSpec extends PlaySpecShim with GuiceOneServerPerSuite with ScalaFutures with Eventually with SpanSugar
   with InitAndStopKamonAfterAll with MetricInspection.Syntax with Reconfigure with OptionValues with TestSpanReporter {
 
   System.setProperty("config.file", "./instrumentation/kamon-play/src/test-common/resources/conf/application.conf")

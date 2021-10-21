@@ -21,12 +21,13 @@ import kamon.Kamon
 import kamon.context.Context
 import kamon.testkit.InitAndStopKamonAfterAll
 import kamon.trace.Span
-import org.scalatest._
 import org.scalatest.concurrent.Eventually
+import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.SpanSugar._
+import org.scalatest.wordspec.AnyWordSpec
 import org.slf4j.MDC
 
-class LogbackMdcCopyingSpec extends WordSpec with Matchers with Eventually with InitAndStopKamonAfterAll {
+class LogbackMdcCopyingSpec extends AnyWordSpec with Matchers with Eventually with InitAndStopKamonAfterAll {
 
   "the Logback appender instrumentation" when {
     "there is no context attached to the logging events" should {

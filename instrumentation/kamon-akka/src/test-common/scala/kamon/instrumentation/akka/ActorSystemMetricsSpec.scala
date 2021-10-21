@@ -21,13 +21,15 @@ import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import kamon.instrumentation.akka.ActorMetricsTestActor._
 import kamon.testkit.{InitAndStopKamonAfterAll, InstrumentInspection, MetricInspection}
 import org.scalactic.TimesOnInt._
+import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.Eventually
-import org.scalatest.{Matchers, WordSpecLike}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 
 import scala.concurrent.duration._
 
 
-class ActorSystemMetricsSpec extends TestKit(ActorSystem("ActorSystemMetricsSpec")) with WordSpecLike with MetricInspection.Syntax
+class ActorSystemMetricsSpec extends TestKit(ActorSystem("ActorSystemMetricsSpec")) with AnyWordSpecLike with MetricInspection.Syntax
     with InstrumentInspection.Syntax with Matchers with InitAndStopKamonAfterAll with ImplicitSender with Eventually {
 
   // Akka 2.6 creates two more actors by default for the streams materializers supervisor.

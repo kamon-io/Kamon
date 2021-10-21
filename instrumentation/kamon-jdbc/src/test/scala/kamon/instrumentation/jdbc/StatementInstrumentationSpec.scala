@@ -15,26 +15,27 @@
 
 package kamon.instrumentation.jdbc
 
-import java.sql.{Connection, DriverManager, ResultSet}
-import java.time.Duration
-import java.util.concurrent.Executors
 import ch.vorburger.mariadb4j.DB
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
-import kamon.instrumentation.jdbc.StatementMonitor.StatementTypes
-import kamon.testkit.{InitAndStopKamonAfterAll, InstrumentInspection, MetricInspection, Reconfigure, TestSpanReporter}
-import org.scalatest.concurrent.Eventually
-import org.scalatest.time.SpanSugar
-import org.scalatest.{BeforeAndAfterEach, Matchers, OptionValues, ParallelTestExecution, WordSpec}
 import kamon.tag.Lookups._
 import kamon.tag.TagSet
 import kamon.testkit.TestSpanReporter.BufferingSpanReporter
+import kamon.testkit.{InitAndStopKamonAfterAll, InstrumentInspection, MetricInspection, Reconfigure, TestSpanReporter}
 import kamon.trace.Span
+import org.scalatest.concurrent.Eventually
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.time.SpanSugar
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.{BeforeAndAfterEach, OptionValues}
 
+import java.sql.{Connection, DriverManager, ResultSet}
+import java.time.Duration
+import java.util.concurrent.Executors
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
-class StatementInstrumentationSpec extends WordSpec
+class StatementInstrumentationSpec extends AnyWordSpec
   with Matchers
   with Eventually
   with SpanSugar

@@ -16,10 +16,12 @@
 package kamon.trace
 
 import org.scalactic.TimesOnInt._
-import org.scalatest.{Matchers, OptionValues, WordSpecLike}
+import org.scalatest.OptionValues
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-class DoubleLengthIdentifierSchemeSpec extends WordSpecLike with Matchers with OptionValues {
-  import Identifier.Scheme.Double.{traceIdFactory, spanIdFactory}
+class DoubleLengthIdentifierSchemeSpec extends AnyWordSpec with Matchers with OptionValues {
+  import Identifier.Scheme.Double.{spanIdFactory, traceIdFactory}
 
   "The double length identifier scheme" when {
     "generating trace identifiers" should {

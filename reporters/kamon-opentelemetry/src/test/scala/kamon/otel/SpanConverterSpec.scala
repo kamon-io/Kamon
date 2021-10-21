@@ -18,13 +18,14 @@ package kamon.otel
 import io.opentelemetry.proto.common.v1.InstrumentationLibrary
 import io.opentelemetry.proto.resource.v1.Resource
 import io.opentelemetry.proto.trace.v1.{Span => ProtoSpan}
+import kamon.otel.CustomMatchers._
+import kamon.otel.SpanConverter._
 import kamon.tag.{Tag, TagSet}
 import kamon.trace.Span.{Kind, Link}
 import kamon.trace.Trace.SamplingDecision
 import kamon.trace.{Identifier, Span, Trace}
-import kamon.otel.CustomMatchers.{ByteStringMatchers, KeyValueMatchers, _}
-import kamon.otel.SpanConverter._
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
 import java.time.Instant
 import java.util.concurrent.TimeUnit
@@ -32,7 +33,7 @@ import java.util.concurrent.TimeUnit
 /**
  * Tests for [[SpanConverter]]
  */
-class SpanConverterSpec extends WordSpec with Matchers with ByteStringMatchers with KeyValueMatchers {
+class SpanConverterSpec extends AnyWordSpec with Matchers with ByteStringMatchers with KeyValueMatchers {
   private val resource =  Resource.newBuilder()
     .addAttributes(stringKeyValue("service.name", "TestService"))
     .addAttributes(stringKeyValue("telemetry.sdk.name", "kamon"))

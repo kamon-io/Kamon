@@ -7,9 +7,10 @@ package kamon.newrelic.metrics
 
 import com.newrelic.telemetry.Attributes
 import com.newrelic.telemetry.metrics.{Count, Metric => NewRelicMetric}
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-class NewRelicCountersSpec extends WordSpec with Matchers {
+class NewRelicCountersSpec extends AnyWordSpec with Matchers {
 
   "the counter converter" should {
     "convert a counter with multiple instruments" in {

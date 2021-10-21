@@ -1,14 +1,15 @@
 package kamon.instrumentation.mongo
 
-import java.util
 import com.mongodb.client.model.{Accumulators, Aggregates, Filters}
 import kamon.tag.Lookups._
 import kamon.testkit.{InitAndStopKamonAfterAll, TestSpanReporter}
 import org.bson.Document
-import org.scalatest.{Matchers, OptionValues}
+import org.scalatest.OptionValues
 import org.scalatest.concurrent.Eventually
+import org.scalatest.matchers.should.Matchers
 
 import scala.concurrent.duration._
+import java.util
 
 class MongoSyncDriverInstrumentationSpec extends EmbeddedMongoTest(port = 4445) with Matchers with TestSpanReporter
     with Eventually with OptionValues with InitAndStopKamonAfterAll {

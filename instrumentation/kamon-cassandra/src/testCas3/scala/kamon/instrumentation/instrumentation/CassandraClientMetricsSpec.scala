@@ -15,7 +15,7 @@
 
 package kamon.instrumentation.instrumentation
 
-import com.datastax.driver.core.Session
+import com.datastax.driver.core.{Session, SimpleStatement}
 import kamon.Kamon
 import kamon.instrumentation.cassandra.CassandraInstrumentation.Node
 import kamon.instrumentation.cassandra.NodeConnectionPoolMetrics
@@ -24,12 +24,16 @@ import kamon.instrumentation.executor.ExecutorMetrics
 import kamon.tag.TagSet
 import kamon.testkit.{InitAndStopKamonAfterAll, InstrumentInspection, MetricInspection}
 import org.scalatest.concurrent.Eventually
+import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.SpanSugar
-import org.scalatest.{Matchers, OptionValues, WordSpec}
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.OptionValues
 import org.testcontainers.containers.CassandraContainer
 
+import java.time.Duration
+
 class CassandraClientMetricsSpec
-    extends WordSpec
+    extends AnyWordSpec
     with Matchers
     with Eventually
     with SpanSugar
@@ -122,16 +126,23 @@ class CassandraClientMetricsSpec
 
   override protected def beforeAll(): Unit = {
     super.beforeAll()
+
+    cassandra.withStartupTimeout(Duration.ofMinutes(5))
     cassandra.start()
-    session = cassandra.getCluster.newSession()
+
+    session = cassandra.getCluster().newSession()
     val keyspace = s"keyspaceMetricSpec"
 
-    session.execute(
-      s"create keyspace $keyspace with replication = {'class':'SimpleStrategy', 'replication_factor':3}"
-    )
-    session.execute(s"USE $keyspace")
-    session.execute("create table users (id uuid primary key, name text )")
-    session.execute("insert into users (id, name) values (uuid(), 'kamon')")
+    session.execute(statement(s"create keyspace $keyspace with replication = {'class':'SimpleStrategy', 'replication_factor':3}"))
+    session.execute(statement(s"USE $keyspace"))
+    session.execute(statement("create table users (id uuid primary key, name text )"))
+    session.execute(statement("insert into users (id, name) values (uuid(), 'kamon')"))
+  }
+
+  def statement(query: String): SimpleStatement = {
+    val stmt = new SimpleStatement(query)
+    stmt.setReadTimeoutMillis(20000)
+    stmt
   }
 
   override protected def afterAll(): Unit = {

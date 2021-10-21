@@ -2,17 +2,17 @@ package kamon.instrumentation.caffeine
 
 import com.github.benmanes.caffeine.cache.{AsyncCache, Caffeine}
 import kamon.testkit.TestSpanReporter
+import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.Eventually.eventually
 import org.scalatest.concurrent.Waiters.timeout
-import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-import java.util
 import java.util.concurrent.CompletableFuture
-import scala.collection.JavaConverters._
 import scala.concurrent.duration.DurationInt
 
 class CaffeineAsyncCacheSpec
-  extends WordSpec
+  extends AnyWordSpec
     with Matchers
     with BeforeAndAfterAll
     with TestSpanReporter {

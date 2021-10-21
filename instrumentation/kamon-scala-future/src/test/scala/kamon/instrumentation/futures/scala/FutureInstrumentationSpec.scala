@@ -18,13 +18,15 @@ package kamon.instrumentation.futures.scala
 import kamon.Kamon
 import kamon.context.Context
 import kamon.tag.Lookups.plain
+import org.scalatest.OptionValues
 import org.scalatest.concurrent.{PatienceConfiguration, ScalaFutures}
-import org.scalatest.{Matchers, OptionValues, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, ExecutionContext, Future}
 
-class FutureInstrumentationSpec extends WordSpec with Matchers with ScalaFutures with PatienceConfiguration
+class FutureInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutures with PatienceConfiguration
     with OptionValues {
 
   // NOTE: We have this test just to ensure that the Context propagation is working, but starting with Kamon 2.0 there

@@ -1,19 +1,20 @@
 package kamon.instrumentation.futures.cats
 
-import java.util.concurrent.Executors
-
 import cats.effect.{ContextShift, IO}
 import kamon.Kamon
-import kamon.tag.Lookups.plain
 import kamon.context.Context
-import org.scalatest.{Matchers, OptionValues, WordSpec}
+import kamon.tag.Lookups.plain
+import org.scalatest.OptionValues
 import org.scalatest.concurrent.{Eventually, PatienceConfiguration, ScalaFutures}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-import scala.concurrent.ExecutionContext.global
+import java.util.concurrent.Executors
 import scala.concurrent.ExecutionContext
+import scala.concurrent.ExecutionContext.global
 import scala.concurrent.duration._
 
-class CatsIoInstrumentationSpec extends WordSpec with ScalaFutures with Matchers with PatienceConfiguration
+class CatsIoInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutures with PatienceConfiguration
     with OptionValues with Eventually {
 
   // NOTE: We have this test just to ensure that the Context propagation is working, but starting with Kamon 2.0 there

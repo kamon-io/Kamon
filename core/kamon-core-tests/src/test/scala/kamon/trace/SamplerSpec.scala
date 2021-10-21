@@ -1,23 +1,18 @@
 package kamon.trace
 
 import kamon.Kamon
-import kamon.tag.TagSet
 import kamon.trace.Trace.SamplingDecision
-import org.scalactic.TimesOnInt
-import org.scalatest.{BeforeAndAfterEach, Matchers, WordSpec}
+import org.scalactic.TimesOnInt.convertIntToRepeater
+import org.scalatest.BeforeAndAfterEach
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
 import scala.collection.mutable
 import scala.concurrent.duration._
 
-class SamplerSpec extends WordSpec with TimesOnInt with Matchers with BeforeAndAfterEach {
+class SamplerSpec extends AnyWordSpec with Matchers with BeforeAndAfterEach {
 
   "sampling on the Kamon tracer" when {
-//    "configured for never sampling" should {
-//      "always return a negative sampling decision" in {
-//
-//      }
-//    }
-
     "configured for adaptive sampling" should {
       "spread the throughput across operations when the overall throughput doesn't exceed the global limit" in {
         implicit val sampler = adaptiveSampler()

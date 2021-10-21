@@ -1,15 +1,16 @@
 package kamon.zipkin
 
-import java.time.Instant
-
 import kamon.tag.TagSet
 import kamon.trace.Trace.SamplingDecision
 import kamon.trace.{Identifier, Span, Trace}
 import kamon.util.Clock
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 import zipkin2.{Endpoint, Span => ZipkinSpan}
-import org.scalatest.{Matchers, WordSpec}
 
-class SpanConversionSpec extends WordSpec with Matchers {
+import java.time.Instant
+
+class SpanConversionSpec extends AnyWordSpec with Matchers {
 
   "the Span conversion" should {
     "convert the basic Span identification data" in {

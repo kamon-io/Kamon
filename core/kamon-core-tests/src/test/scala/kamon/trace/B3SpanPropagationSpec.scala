@@ -18,12 +18,14 @@ package kamon.trace
 
 import kamon.context.{Context, HttpPropagation}
 import kamon.trace.Trace.SamplingDecision
-import org.scalatest.{Matchers, OptionValues, WordSpecLike}
+import org.scalatest.OptionValues
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
 import scala.collection.mutable
 
 
-class B3SpanPropagationSpec extends WordSpecLike with Matchers with OptionValues {
+class B3SpanPropagationSpec extends AnyWordSpec with Matchers with OptionValues {
   val b3Propagation = SpanPropagation.B3()
 
   "The B3 Span propagation for HTTP" should {

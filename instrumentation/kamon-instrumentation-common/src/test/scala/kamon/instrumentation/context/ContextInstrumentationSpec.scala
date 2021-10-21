@@ -4,9 +4,10 @@ import kamon.Kamon
 import kamon.context.Context
 import kamon.tag.TagSet
 import kanela.agent.api.instrumentation.InstrumentationBuilder
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-class ContextInstrumentationSpec extends WordSpec with Matchers {
+class ContextInstrumentationSpec extends AnyWordSpec with Matchers {
   import ContextInstrumentationSpec.{Target, TargetWithInitializer}
 
   "the HasContext instrumentation" should {

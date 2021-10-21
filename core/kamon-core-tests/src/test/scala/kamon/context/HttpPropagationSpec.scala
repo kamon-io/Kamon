@@ -1,16 +1,17 @@
 package kamon.context
 
 import com.typesafe.config.ConfigFactory
-import kamon.Kamon
 import kamon.context.HttpPropagation.{HeaderReader, HeaderWriter}
 import kamon.context.Propagation.{EntryReader, EntryWriter}
-import org.scalatest.{Matchers, OptionValues, WordSpec}
 import kamon.tag.Lookups._
 import kamon.tag.TagSet
+import org.scalatest.OptionValues
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
 import scala.collection.mutable
 
-class HttpPropagationSpec extends WordSpec with Matchers with OptionValues {
+class HttpPropagationSpec extends AnyWordSpec with Matchers with OptionValues {
 
   "The HTTP Context Propagation" when {
     "reading from incoming requests" should {

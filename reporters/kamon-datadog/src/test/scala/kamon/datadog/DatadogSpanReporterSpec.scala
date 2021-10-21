@@ -4,14 +4,14 @@ import java.io.IOException
 import java.net.{SocketException, SocketTimeoutException}
 import java.time.{Duration, Instant}
 import java.util.concurrent.TimeUnit
-
 import kamon.Kamon
 import kamon.module.ModuleFactory
 import kamon.tag.TagSet
 import kamon.testkit.Reconfigure
 import kamon.trace._
 import okhttp3.mockwebserver.MockResponse
-import org.scalatest.Matchers
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 import play.api.libs.json._
 
 import scala.collection.immutable.ListMap

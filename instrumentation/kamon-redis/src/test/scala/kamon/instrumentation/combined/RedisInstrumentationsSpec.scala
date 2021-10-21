@@ -5,7 +5,9 @@ import io.lettuce.core.{RedisClient => LettuceClient}
 import kamon.testkit.{InitAndStopKamonAfterAll, MetricInspection, TestSpanReporter}
 import kamon.trace.Span.Kind
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
-import org.scalatest.{Matchers, OptionValues, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.OptionValues
 import org.slf4j.LoggerFactory
 import org.testcontainers.containers.GenericContainer
 import org.testcontainers.utility.DockerImageName
@@ -17,7 +19,7 @@ import scala.concurrent.duration.DurationInt
 import scala.util.control.NonFatal
 
 
-class RedisInstrumentationsSpec extends WordSpec
+class RedisInstrumentationsSpec extends AnyWordSpec
   with Matchers
   with ScalaFutures
   with Eventually

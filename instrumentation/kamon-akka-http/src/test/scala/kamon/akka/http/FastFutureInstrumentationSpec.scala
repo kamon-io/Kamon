@@ -1,22 +1,21 @@
 package kamon.akka.http
 
-import java.util.concurrent.CountDownLatch
-
 import akka.http.scaladsl.util.FastFuture
-import kamon.instrumentation.context.HasContext
-import org.scalatest.{Matchers, WordSpec}
-
-import scala.concurrent.duration._
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Await, Future, Promise}
-import kamon.instrumentation.futures.scala.ScalaFutureInstrumentation.trace
 import akka.http.scaladsl.util.FastFuture.EnhancedFuture
 import kamon.Kamon
 import kamon.context.Context
+import kamon.instrumentation.context.HasContext
+import kamon.instrumentation.futures.scala.ScalaFutureInstrumentation.trace
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
+import java.util.concurrent.CountDownLatch
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration._
+import scala.concurrent.{Await, Future, Promise}
 import scala.util.Try
 
-class FastFutureInstrumentationSpec extends WordSpec with Matchers {
+class FastFutureInstrumentationSpec extends AnyWordSpec with Matchers {
 
   /**
     *  DEPRECATED

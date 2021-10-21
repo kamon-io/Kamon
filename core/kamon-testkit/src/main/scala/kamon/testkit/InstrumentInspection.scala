@@ -66,7 +66,7 @@ object InstrumentInspection {
     }
 
     /** Retrieves the current value of a Counter instrument */
-    implicit def counterInstrumentInspection(instrument: Instrument[Counter, Metric.Settings.ForValueInstrument]) =
+    implicit def counterInstrumentInspection(instrument: Instrument[Counter, Metric.Settings.ForValueInstrument]): RichCounterInstrument =
         new RichCounterInstrument {
 
       def value(): Long =
@@ -77,7 +77,7 @@ object InstrumentInspection {
     }
 
     /** Retrieves the current value of a Gauge instrument */
-    implicit def gaugeInstrumentInspection(instrument: Instrument[Gauge, Metric.Settings.ForValueInstrument]) =
+    implicit def gaugeInstrumentInspection(instrument: Instrument[Gauge, Metric.Settings.ForValueInstrument]): RichGaugeInstrument =
         new RichGaugeInstrument {
 
       def value(): Double =
@@ -86,7 +86,7 @@ object InstrumentInspection {
 
     /** Retrieves the current distribution of a histogram, timer or range sampler instrument */
     implicit def distributionInstrumentInspection[T <: Instrument[T, Metric.Settings.ForDistributionInstrument]]
-    (instrument: T) = new RichDistributionInstrument {
+    (instrument: T): RichDistributionInstrument = new RichDistributionInstrument {
 
       def distribution(): Distribution =
         InstrumentInspection.distribution(instrument)

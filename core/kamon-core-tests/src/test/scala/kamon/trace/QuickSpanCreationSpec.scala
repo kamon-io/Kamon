@@ -2,19 +2,21 @@ package kamon.trace
 
 import kamon.tag.Lookups._
 import kamon.testkit.{InitAndStopKamonAfterAll, Reconfigure, SpanInspection, TestSpanReporter}
-import org.scalatest.{Matchers, OptionValues, WordSpec}
+import org.scalatest.OptionValues
 import org.scalatest.concurrent.Eventually
+import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.SpanSugar
+import org.scalatest.wordspec.AnyWordSpec
 
 import java.time.Duration
 import java.util.concurrent.CompletableFuture
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class QuickSpanCreationSpec extends WordSpec with Matchers with OptionValues with SpanInspection.Syntax with Eventually
+class QuickSpanCreationSpec extends AnyWordSpec with Matchers with OptionValues with SpanInspection.Syntax with Eventually
   with SpanSugar with TestSpanReporter with Reconfigure with InitAndStopKamonAfterAll {
 
-  import kamon.Kamon.{span, currentSpan}
+  import kamon.Kamon.{currentSpan, span}
 
   "the kamon.Tracing.span function" should {
     "create a Span and set it as the current Span while running the provided function" in {
@@ -37,8 +39,7 @@ class QuickSpanCreationSpec extends WordSpec with Matchers with OptionValues wit
     "finish and fail Spans if an exception is thrown while running the wrapped code" in {
       intercept[Throwable] {
         span("failSpanWithThrowable") {
-          throw new Throwable()
-          "I'm never going to finish nicely"
+          throw new Throwable("I'm never going to finish nicely")
         }
       }
 

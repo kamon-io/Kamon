@@ -1,9 +1,10 @@
 package kamon.statsd
 
-import org.scalatest.{Matchers, WordSpec}
 import kamon.metric.MeasurementUnit.{information, time}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-class ReadConfigUnitSpec extends WordSpec with Matchers {
+class ReadConfigUnitSpec extends AnyWordSpec with Matchers {
 
   "time unit config" should {
 

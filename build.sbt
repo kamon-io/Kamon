@@ -36,8 +36,9 @@ lazy val `kamon-core` = (project in file("core/kamon-core"))
   .settings(
     buildInfoKeys := Seq[BuildInfoKey](version),
     buildInfoPackage := "kamon.status",
+    crossScalaVersions += scala3Version,
     scalacOptions ++= { if(scalaBinaryVersion.value == "2.11") Seq("-Ydelambdafy:method") else Seq.empty },
-    assemblyShadeRules in assembly := Seq(
+    assembly / assemblyShadeRules := Seq(
       ShadeRule.rename("org.jctools.**"                             -> "kamon.lib.@0").inAll,
       ShadeRule.rename("org.HdrHistogram.Base*"                     -> "@0").inAll,
       ShadeRule.rename("org.HdrHistogram.HdrHistogramInternalState" -> "@0").inAll,
@@ -70,7 +71,8 @@ lazy val `kamon-core` = (project in file("core/kamon-core"))
 lazy val `kamon-status-page` = (project in file("core/kamon-status-page"))
   .enablePlugins(AssemblyPlugin)
   .settings(
-    assemblyShadeRules in assembly := Seq(
+    crossScalaVersions += scala3Version,
+    assembly / assemblyShadeRules := Seq(
       ShadeRule.rename("com.grack.nanojson.**"  -> "kamon.lib.@0").inAll,
       ShadeRule.rename("fi.iki.elonen.**"       -> "kamon.lib.@0").inAll,
     ),
@@ -84,6 +86,7 @@ lazy val `kamon-status-page` = (project in file("core/kamon-status-page"))
 lazy val `kamon-testkit` = (project in file("core/kamon-testkit"))
   .disablePlugins(AssemblyPlugin)
   .settings(
+    crossScalaVersions += scala3Version,
     libraryDependencies += scalatest % "provided,test"
   ).dependsOn(`kamon-core`)
 
@@ -92,6 +95,7 @@ lazy val `kamon-core-tests` = (project in file("core/kamon-core-tests"))
   .disablePlugins(AssemblyPlugin)
   .settings(noPublishing: _*)
   .settings(
+    crossScalaVersions += scala3Version,
     libraryDependencies ++= Seq(
       scalatest % "test",
       logbackClassic % "test"
@@ -102,6 +106,7 @@ lazy val `kamon-core-tests` = (project in file("core/kamon-core-tests"))
 lazy val `kamon-core-bench` = (project in file("core/kamon-core-bench"))
   .disablePlugins(AssemblyPlugin)
   .enablePlugins(JmhPlugin)
+  .settings(crossScalaVersions += scala3Version)
   .settings(noPublishing: _*)
   .dependsOn(`kamon-core`)
 
@@ -344,7 +349,7 @@ lazy val `kamon-elasticsearch` = (project in file("instrumentation/kamon-elastic
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
-    fork in (Test,run) := true,
+    Test / run / fork := true,
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       "org.elasticsearch.client" % "elasticsearch-rest-client" % "7.9.1" % "provided",
@@ -361,7 +366,7 @@ lazy val `kamon-spring` = (project in file("instrumentation/kamon-spring"))
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
-    fork in (Test,run) := true,
+    Test / run / fork := true,
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       "org.springframework.boot" % "spring-boot-starter-web" % "2.4.2" % "provided",
@@ -382,7 +387,7 @@ lazy val `kamon-annotation-api` = (project in file("instrumentation/kamon-annota
     crossPaths := false,
     autoScalaLibrary := false,
     publishMavenStyle := true,
-    javacOptions in (Compile, doc) := Seq("-Xdoclint:none")
+    Compile / doc / javacOptions := Seq("-Xdoclint:none")
   )
 
 
@@ -391,7 +396,7 @@ lazy val `kamon-annotation` = (project in file("instrumentation/kamon-annotation
   .enablePlugins(AssemblyPlugin)
   .settings(instrumentationSettings: _*)
   .settings(
-    assemblyShadeRules in assembly := Seq(
+    assembly / assemblyShadeRules := Seq(
       ShadeRule.rename("javax.el.**"    -> "kamon.lib.@0").inAll,
       ShadeRule.rename("com.sun.el.**"  -> "kamon.lib.@0").inAll,
       ShadeRule.rename("com.github.benmanes.**"  -> "kamon.lib.@0").inAll,
@@ -410,7 +415,6 @@ lazy val `kamon-annotation` = (project in file("instrumentation/kamon-annotation
 
 lazy val `kamon-system-metrics` = (project in file("instrumentation/kamon-system-metrics"))
   .disablePlugins(AssemblyPlugin)
-  .settings(instrumentationSettings: _*)
   .settings(
     libraryDependencies ++= Seq(
       oshiCore,
@@ -561,11 +565,12 @@ lazy val reporters = (project in file("reporters"))
 lazy val `kamon-datadog` = (project in file("reporters/kamon-datadog"))
   .disablePlugins(AssemblyPlugin)
   .settings(
+    crossScalaVersions += scala3Version,
     libraryDependencies ++= Seq(
       okHttp,
       "com.grack" % "nanojson" % "1.6",
 
-      "com.typesafe.play" %% "play-json" % "2.7.4" % "test",
+      ("com.typesafe.play" %% "play-json" % "2.7.4" % "test").cross(CrossVersion.for3Use2_13),
       scalatest % "test",
       slf4jApi % "test",
       slf4jnop % "test",
@@ -578,12 +583,13 @@ lazy val `kamon-datadog` = (project in file("reporters/kamon-datadog"))
 lazy val `kamon-apm-reporter` = (project in file("reporters/kamon-apm-reporter"))
   .enablePlugins(AssemblyPlugin)
   .settings(
-    test in assembly := {},
-    assemblyMergeStrategy in assembly := {
+    crossScalaVersions += scala3Version,
+    assembly / test := {},
+    assembly / assemblyMergeStrategy := {
       case PathList("META-INF", xs @ _*)  => MergeStrategy.discard
       case _                              => MergeStrategy.first
     },
-    assemblyShadeRules in assembly := Seq(
+    assembly / assemblyShadeRules := Seq(
        ShadeRule.rename("fastparse.**"              -> "kamon.apm.shaded.@0").inAll
       ,ShadeRule.rename("fansi.**"                  -> "kamon.apm.shaded.@0").inAll
       ,ShadeRule.rename("sourcecode.**"             -> "kamon.apm.shaded.@0").inAll
@@ -599,10 +605,10 @@ lazy val `kamon-apm-reporter` = (project in file("reporters/kamon-apm-reporter")
       "com.google.protobuf"   % "protobuf-java" % "3.8.0" % "provided,shaded",
 
       "ch.qos.logback"    %  "logback-classic"  % "1.2.3" % "test",
-      "org.scalatest"     %% "scalatest"        % "3.0.8" % "test",
-      "com.typesafe.akka" %% "akka-http"        % "10.1.8" % "test",
-      "com.typesafe.akka" %% "akka-stream"      % "2.5.23" % "test",
-      "com.typesafe.akka" %% "akka-testkit"     % "2.5.23" % "test"
+      "org.scalatest"     %% "scalatest"        % "3.2.9" % "test",
+      ("com.typesafe.akka" %% "akka-http"        % "10.1.8" % "test").cross(CrossVersion.for3Use2_13),
+      ("com.typesafe.akka" %% "akka-stream"      % "2.5.23" % "test").cross(CrossVersion.for3Use2_13),
+      ("com.typesafe.akka" %% "akka-testkit"     % "2.5.23" % "test").cross(CrossVersion.for3Use2_13)
     )
   ).dependsOn(`kamon-core`, `kamon-testkit` % "test")
 
@@ -610,6 +616,7 @@ lazy val `kamon-apm-reporter` = (project in file("reporters/kamon-apm-reporter")
 lazy val `kamon-statsd` = (project in file("reporters/kamon-statsd"))
   .disablePlugins(AssemblyPlugin)
   .settings(
+    crossScalaVersions += scala3Version,
     libraryDependencies += scalatest % Test,
   ).dependsOn(`kamon-core`)
 
@@ -617,6 +624,7 @@ lazy val `kamon-statsd` = (project in file("reporters/kamon-statsd"))
 lazy val `kamon-zipkin` = (project in file("reporters/kamon-zipkin"))
   .disablePlugins(AssemblyPlugin)
   .settings(
+    crossScalaVersions += scala3Version,
     libraryDependencies ++= Seq(
       "io.zipkin.reporter2" % "zipkin-reporter" % "2.7.15",
       "io.zipkin.reporter2" % "zipkin-sender-okhttp3" % "2.7.15",
@@ -628,6 +636,7 @@ lazy val `kamon-zipkin` = (project in file("reporters/kamon-zipkin"))
 lazy val `kamon-jaeger` = (project in file("reporters/kamon-jaeger"))
   .disablePlugins(AssemblyPlugin)
   .settings(
+    crossScalaVersions += scala3Version,
     libraryDependencies ++= Seq(
       "io.jaegertracing" % "jaeger-thrift" % "1.1.0",
       scalatest % "test"
@@ -638,6 +647,7 @@ lazy val `kamon-jaeger` = (project in file("reporters/kamon-jaeger"))
 lazy val `kamon-influxdb` = (project in file("reporters/kamon-influxdb"))
   .disablePlugins(AssemblyPlugin)
   .settings(
+    crossScalaVersions += scala3Version,
     libraryDependencies ++= Seq(
       okHttp,
       okHttpMockServer % "test",
@@ -649,6 +659,7 @@ lazy val `kamon-influxdb` = (project in file("reporters/kamon-influxdb"))
 lazy val `kamon-graphite` = (project in file("reporters/kamon-graphite"))
   .disablePlugins(AssemblyPlugin)
   .settings(
+    crossScalaVersions += scala3Version,
     libraryDependencies ++= Seq(
       scalatest % "test",
       logbackClassic % "test"
@@ -659,6 +670,7 @@ lazy val `kamon-graphite` = (project in file("reporters/kamon-graphite"))
 lazy val `kamon-newrelic` = (project in file("reporters/kamon-newrelic"))
   .disablePlugins(AssemblyPlugin)
   .settings(
+    crossScalaVersions += scala3Version,
     libraryDependencies ++= Seq(
       "com.newrelic.telemetry" % "telemetry-core" % "0.12.0",
       "com.newrelic.telemetry" % "telemetry-http-okhttp" % "0.12.0",
@@ -670,9 +682,11 @@ lazy val `kamon-newrelic` = (project in file("reporters/kamon-newrelic"))
 lazy val `kamon-opentelemetry` = (project in file("reporters/kamon-opentelemetry"))
   .disablePlugins(AssemblyPlugin)
   .settings(
+    crossScalaVersions += scala3Version,
     libraryDependencies ++= Seq(
       "io.opentelemetry" % "opentelemetry-proto" % "0.17.1",
       "io.grpc" % "grpc-netty" % "1.36.0",
+
       scalatest % "test",
       logbackClassic % "test"
     )
@@ -681,6 +695,7 @@ lazy val `kamon-opentelemetry` = (project in file("reporters/kamon-opentelemetry
 lazy val `kamon-prometheus` = (project in file("reporters/kamon-prometheus"))
   .disablePlugins(AssemblyPlugin)
   .settings(
+    crossScalaVersions += scala3Version,
     libraryDependencies ++= Seq(
       okHttp,
       scalatest % "test",
@@ -706,32 +721,31 @@ val `kamon-bundle` = (project in file("bundle/kamon-bundle"))
   .enablePlugins(AssemblyPlugin)
   .settings(
     moduleName := "kamon-bundle",
-    kanelaAgentVersion := "1.0.11",
     buildInfoPackage := "kamon.bundle",
     buildInfoKeys := Seq[BuildInfoKey](kanelaAgentJarName),
     kanelaAgentJar := update.value.matching(Modules.exactFilter(kanelaAgent)).head,
     kanelaAgentJarName := kanelaAgentJar.value.getName,
-    resourceGenerators in Compile += Def.task(Seq(kanelaAgentJar.value)).taskValue,
-    fullClasspath in assembly ++= (internalDependencyClasspath in Shaded).value,
-    assemblyShadeRules in assembly := Seq(
+    Compile / resourceGenerators += Def.task(Seq(kanelaAgentJar.value)).taskValue,
+    assembly / fullClasspath ++= (Shaded / internalDependencyClasspath).value,
+    assembly / assemblyShadeRules := Seq(
       ShadeRule.zap("**module-info").inAll,
       ShadeRule.rename("net.bytebuddy.agent.**" -> "kamon.lib.@0").inAll
     ),
-    assemblyExcludedJars in assembly := {
-      (fullClasspath in assembly).value.filter(f => {
+    assembly / assemblyExcludedJars := {
+      (assembly / fullClasspath).value.filter(f => {
         val fileName = f.data.getName()
         fileName.contains("kamon-core") || fileName.contains("oshi-core")
       })
     },
-    assemblyOption in assembly := (assemblyOption in assembly).value.copy(
+    assembly / assemblyOption := (assembly / assemblyOption).value.copy(
       includeBin = true,
       includeScala = false,
       includeDependency = false,
       cacheOutput = false
     ),
-    assemblyMergeStrategy in assembly := {
+    assembly / assemblyMergeStrategy := {
       case "reference.conf" => MergeStrategy.concat
-      case anyOther         => (assemblyMergeStrategy in assembly).value(anyOther)
+      case anyOther         => (assembly / assemblyMergeStrategy).value(anyOther)
     },
     libraryDependencies ++= Seq(
       oshiCore,

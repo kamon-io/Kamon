@@ -23,16 +23,17 @@ import io.opentelemetry.proto.resource.v1.Resource
 import kamon.otel.CustomMatchers._
 import kamon.otel.SpanConverter.stringKeyValue
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.{Millis, Seconds, Span}
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.wordspec.AnyWordSpec
 
 import java.util.Collections
 
 /**
  * Tests for the [[TraceService]]
  */
-class TraceServiceSpec extends WordSpec with Matchers with ScalaFutures {
-  private implicit val defaultPatience = PatienceConfig(timeout =  Span(2, Seconds), interval = Span(15, Millis))
+class TraceServiceSpec extends AnyWordSpec with Matchers with ScalaFutures {
+  private implicit val defaultPatience: PatienceConfig = PatienceConfig(timeout =  Span(2, Seconds), interval = Span(15, Millis))
 
   private val resource =  Resource.newBuilder()
     .addAttributes(stringKeyValue("service.name", "TestService"))
@@ -49,10 +50,10 @@ class TraceServiceSpec extends WordSpec with Matchers with ScalaFutures {
 
       //the actual data does not really matter as this will fail due to connection issues
       val resources = SpanConverter.toProtoResourceSpan(resource, instrumentationLibrary)(Seq(finishedSpan()))
-      val export = ExportTraceServiceRequest.newBuilder()
+      val exported = ExportTraceServiceRequest.newBuilder()
         .addAllResourceSpans(Collections.singletonList(resources))
         .build()
-      val f = traceService.export(export)
+      val f = traceService.exportSpans(exported)
       whenReady(f.failed) { e =>
         e shouldBe a [StatusRuntimeException]
       }

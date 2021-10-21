@@ -7,9 +7,10 @@ import kamon.prometheus.PrometheusSettings.{GaugeSettings, SummarySettings}
 import kamon.tag.TagSet
 import kamon.testkit.MetricSnapshotBuilder
 import kamon.util.Filter.Glob
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-class ScrapeDataBuilderSpec extends WordSpec with Matchers {
+class ScrapeDataBuilderSpec extends AnyWordSpec with Matchers {
 
   "the scrape data builder formatter" should {
     "append units to the metric names when reporting values in the time dimension" in {

@@ -3,15 +3,16 @@ package kamon.instrumentation.logback
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.classic.{Level, LoggerContext}
 import ch.qos.logback.core.Appender
+import kamon.instrumentation.logback.LogbackMetrics.LogEvents
 import kamon.instrumentation.logback.tools.EntriesCounterAppender
 import kamon.logback.util.LogbackConfigurator
-import kamon.instrumentation.logback.LogbackMetrics.LogEvents
 import kamon.tag.TagSet
 import kamon.testkit.InstrumentInspection
-import org.scalatest._
 import org.scalatest.concurrent.Eventually
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-class LogbackEntriesCounterAppenderSpec extends WordSpec with Matchers with InstrumentInspection.Syntax with Eventually {
+class LogbackEntriesCounterAppenderSpec extends AnyWordSpec with Matchers with InstrumentInspection.Syntax with Eventually {
 
   "LogbackEntriesCounterAppender" when {
     "a event is logged" should {

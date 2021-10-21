@@ -25,12 +25,14 @@ import akka.stream.scaladsl.{Sink, Source}
 import kamon.instrumentation.http.HttpServerMetrics
 import kamon.testkit._
 import org.scalatest.concurrent.Eventually
-import org.scalatest.{Matchers, OptionValues, WordSpecLike}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatest.OptionValues
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class AkkaHttpServerMetricsSpec extends WordSpecLike with Matchers with InitAndStopKamonAfterAll with InstrumentInspection.Syntax
+class AkkaHttpServerMetricsSpec extends AnyWordSpecLike with Matchers with InitAndStopKamonAfterAll with InstrumentInspection.Syntax
   with Reconfigure with TestWebServer with Eventually with OptionValues {
 
   import TestWebServer.Endpoints._

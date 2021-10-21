@@ -1,30 +1,20 @@
 package kamon.prometheus
 
+import com.typesafe.config.{Config, ConfigFactory}
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.concurrent.Eventually
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
+
 import java.io.FileNotFoundException
 import java.net.URL
-import com.typesafe.config.{Config, ConfigFactory}
-import org.scalatest.concurrent.Eventually
-import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
-
 import java.util.zip.GZIPInputStream
-import scala.concurrent.duration.DurationInt
 
 class SunHttpServerSpecSuite extends EmbeddedHttpServerSpecSuite {
   override def testConfig: Config = ConfigFactory.load()
 }
 
-//class NanoHttpServerSpecSuite extends EmbeddedHttpServerSpecSuite {
-//  override def testConfig: Config = ConfigFactory.parseString(
-//    """
-//      kamon.prometheus.embedded-server{
-//        impl=nano
-//        port=9096
-//      }
-//      """).withFallback(ConfigFactory.load())
-//  override def port = 9096
-//}
-
-abstract class EmbeddedHttpServerSpecSuite extends WordSpec
+abstract class EmbeddedHttpServerSpecSuite extends AnyWordSpec
   with Matchers
   with BeforeAndAfterAll
   with KamonTestSnapshotSupport

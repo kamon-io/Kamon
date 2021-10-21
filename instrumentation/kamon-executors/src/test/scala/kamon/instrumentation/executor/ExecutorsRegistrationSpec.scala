@@ -20,11 +20,14 @@ import kamon.instrumentation.executor.ExecutorMetrics._
 import kamon.tag.TagSet
 import kamon.tag.Lookups.coerce
 import kamon.testkit.{InitAndStopKamonAfterAll, MetricInspection}
-import org.scalatest.{Matchers, WordSpec}
+import kamon.tag.TagSet
+import kamon.testkit.MetricInspection
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
 import scala.concurrent.ExecutionContext
 
-class ExecutorsRegistrationSpec extends WordSpec with Matchers with MetricInspection.Syntax with InitAndStopKamonAfterAll {
+class ExecutorsRegistrationSpec extends AnyWordSpec with Matchers with MetricInspection.Syntax with InitAndStopKamonAfterAll {
 
   "the Executors registration function" should {
     "accept all types of known executors" in {

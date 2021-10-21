@@ -19,9 +19,10 @@ package util
 import com.typesafe.config.ConfigFactory
 import kamon.status.Environment
 import kamon.tag.TagSet
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-class EnvironmentTagsSpec extends WordSpec with Matchers {
+class EnvironmentTagsSpec extends AnyWordSpec with Matchers {
   private val testEnv = Environment.from(ConfigFactory.parseString(
     """
       |kamon.environment {

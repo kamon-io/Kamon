@@ -21,11 +21,12 @@ import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import kamon.testkit.{InitAndStopKamonAfterAll, InstrumentInspection, MetricInspection}
 import org.scalactic.TimesOnInt.convertIntToRepeater
 import org.scalatest.concurrent.Eventually
-import org.scalatest.{Matchers, WordSpecLike}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 
 import scala.concurrent.duration._
 
-class AutoGroupingSpec extends TestKit(ActorSystem("AutoGroupingSpec")) with WordSpecLike with MetricInspection.Syntax
+class AutoGroupingSpec extends TestKit(ActorSystem("AutoGroupingSpec")) with AnyWordSpecLike with MetricInspection.Syntax
   with InstrumentInspection.Syntax with Matchers with InitAndStopKamonAfterAll with ImplicitSender with Eventually {
 
   import AutoGroupingSpec._
