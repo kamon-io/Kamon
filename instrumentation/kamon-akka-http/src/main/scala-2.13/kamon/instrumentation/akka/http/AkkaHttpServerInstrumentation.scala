@@ -86,23 +86,6 @@ class AkkaHttpServerInstrumentation extends InstrumentationBuilder {
     .advise(method("bindAndHandleAsync") and isPublic(), classOf[Http2ExtBindAndHandleAdvice])
 }
 
-class FastFutureInstrumentation extends InstrumentationBuilder {
-
-  /**
-    * This allows us to keep the right Context when Futures go through Akka HTTP's FastFuture and transformantions made
-    * to them. Without this, it might happen that when a Future is already completed and used on any of the Futures
-    * directives we might get a Context mess up.
-    */
-  onTypes("akka.http.scaladsl.util.FastFuture$FulfilledFuture", "akka.http.scaladsl.util.FastFuture$ErrorFuture")
-    .mixin(classOf[HasContext.MixinWithInitializer])
-    .advise(method("transform"), InvokeWithCapturedContext)
-    .advise(method("transformWith"), InvokeWithCapturedContext)
-    .advise(method("onComplete"), InvokeWithCapturedContext)
-
-  onType("akka.http.scaladsl.util.FastFuture$")
-    .intercept(method("transformWith$extension").and(takesArguments(4)), FastFutureTransformWithAdvice)
-}
-
 trait HasMatchingContext {
   def defaultOperationName: String
   def matchingContext: Seq[PathMatchingContext]
@@ -315,60 +298,6 @@ object PathDirectivesRawPathPrefixInterceptor {
     }
   }
 }
-
-object FastFutureTransformWithAdvice {
-
-  @RuntimeType
-  def transformWith[A, B](@Argument(0) future: Future[A], @Argument(1) s: A => Future[B], @Argument(2) f: Throwable => Future[B],
-    @Argument(3) ec: ExecutionContext, @SuperCall zuper: Callable[Future[B]]): Future[B] = {
-
-    def strictTransform[T](x: T, f: T => Future[B]) =
-      try f(x)
-      catch { case NonFatal(e) => FastFuture.failed(e) }
-
-    // If we get a FulfilledFuture or ErrorFuture, those will have the HasContext mixin but since Scala 2.13 the
-    // "future" will also have a HasContext mixin (its actually a Transformation instance) and since we can't directly
-    // access FulfilledFuture or ErrorFuture, we are assuming that if it got to this point, it HasContext and it is not
-    // a Batchable (i.e. a Transformation) then we can do the same we were doing for previous Scala versions.
-    //
-    // When we get a regular Future the path is a bit different because the actual Context is not stored in the Future
-    // but in the value itself via HasContext instrumentation on scala.util.Try
-    //
-    if(future.isInstanceOf[HasContext] && !future.isInstanceOf[Batchable])
-      zuper.call()
-    else {
-      future.value match {
-        case None =>
-          val p = Promise[B]()
-          future.onComplete {
-            case Success(a) => p completeWith strictTransform(a, s)
-            case Failure(e) => p completeWith strictTransform(e, f)
-          }(ec)
-          p.future
-
-        case Some(value) =>
-          value match {
-            case hc: HasContext =>
-              // The Future's value (Try[A]) might have a Context stored if the
-              // Future Chaining instrumentation is enabled.
-              val scope = Kamon.storeContext(hc.context)
-
-              val transformedFuture = value match {
-                case Success(a) => strictTransform(a, s)
-                case Failure(e) => strictTransform(e, f)
-              }
-
-              scope.close()
-              transformedFuture
-
-            case Success(a) => strictTransform(a, s)
-            case Failure(e) => strictTransform(e, f)
-          }
-      }
-    }
-  }
-}
-
 
 object Http2BlueprintInterceptor {
 
