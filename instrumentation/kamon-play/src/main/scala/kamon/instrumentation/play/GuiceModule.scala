@@ -36,8 +36,7 @@ object GuiceModule {
     Logger(classOf[KamonLoader]).info("Reconfiguring Kamon with Play's Config")
     Logger(classOf[KamonLoader]).info(configuration.underlying.getString("play.server.provider"))
     Logger(classOf[KamonLoader]).info(configuration.underlying.getString("kamon.trace.tick-interval"))
-    Kamon.reconfigure(configuration.underlying)
-    Kamon.loadModules()
+    Kamon.initWithoutAttaching(configuration.underlying)
 
     lifecycle.addStopHook { () =>
       Logger(classOf[KamonLoader]).info("Stopping Kamon")
