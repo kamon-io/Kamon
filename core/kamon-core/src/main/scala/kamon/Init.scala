@@ -55,7 +55,25 @@ trait Init { self: ModuleManagement with Configuration with CurrentStatus with M
     self.moduleRegistry().init()
 
   }
-  
+
+  /**
+    * Initializes Kamon without trying to attach the instrumentation agent from the Kamon Bundle.
+    */
+  def initWithoutAttaching(): Unit = {
+    self.initScheduler()
+    self.loadModules()
+    self.moduleRegistry().init()
+  }
+
+  /**
+    * Initializes Kamon without trying to attach the instrumentation agent from the Kamon Bundle.
+    */
+  def initWithoutAttaching(config: Config): Unit = {
+    self.reconfigure(config)
+    self.initWithoutAttaching()
+  }
+
+
   def stop(): Future[Unit] = {
     self.clearRegistry()
     self.stopScheduler()
