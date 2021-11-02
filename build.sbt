@@ -797,7 +797,6 @@ val `kamon-bundle` = (project in file("bundle/kamon-bundle"))
     `kamon-redis` % "shaded",
     `kamon-okhttp` % "shaded",
     `kamon-caffeine` % "shaded",
-    `kamon-datadog` % "shaded",
 )
 
 lazy val `bill-of-materials` = (project in file("bill-of-materials"))
