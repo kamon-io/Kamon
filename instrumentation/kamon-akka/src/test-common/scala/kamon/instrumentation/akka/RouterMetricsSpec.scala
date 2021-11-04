@@ -254,7 +254,7 @@ class RouterMetricsSpec extends TestKit(ActorSystem("RouterMetricsSpec")) with A
       val trackedRouter = createTestPoolRouter("stop-in-pool-router")
       RouterProcessingTime.tagValues("path") should contain("RouterMetricsSpec/user/stop-in-pool-router")
 
-      // Killing the router should remove it's RouterMetrics and registering again bellow should create a new one.
+      // Killing the router should remove it's RouterMetrics and registering again below should create a new one.
       val deathWatcher = TestProbe()
       deathWatcher.watch(trackedRouter)
       trackedRouter ! PoisonPill

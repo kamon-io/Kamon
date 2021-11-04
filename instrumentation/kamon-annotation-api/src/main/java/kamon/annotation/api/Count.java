@@ -40,7 +40,7 @@ public @interface Count {
 
   /**
    * The counter's metric name. It can be provided as a plain String or as an EL expression. For example, the code
-   * bellow uses the "id" property of the class in an EL expression to create the counter name.
+   * below uses the "id" property of the class in an EL expression to create the counter name.
    *
    * <pre>{@code
    * class Counted  {

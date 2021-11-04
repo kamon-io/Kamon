@@ -112,13 +112,13 @@ object Distribution {
   }
 
   /**
-    * Indicates the value bellow which a given percentage (or rank) of the entire distribution are.
+    * Indicates the value below which a given percentage (or rank) of the entire distribution are.
     */
   trait Percentile {
 
     /**
       * Percentile rank for a given percentile. E.g. a rank of 99.05 expresses that 99.95% of all values on a
-      * distribution are at or bellow the value of this percentile.
+      * distribution are at or below the value of this percentile.
       */
     def rank: Double
 

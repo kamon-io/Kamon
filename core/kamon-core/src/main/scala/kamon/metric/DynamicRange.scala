@@ -26,7 +26,7 @@ import java.util.concurrent.TimeUnit
   *
   * The lowest discernible value limits the smallest value that can be discerned within the range. E.g. if you are
   * tracking latency for a range between 0 and 3.6e+12 (one hour in nanoseconds), it might be the case that you will
-  * never experience measurements bellow 1 microsecond, and thus, all buckets created to cover the range between 0 and
+  * never experience measurements below 1 microsecond, and thus, all buckets created to cover the range between 0 and
   * 1000 nanoseconds are never used. Setting a lowest discernible value of 1000 will prevent the allocation of buckets
   * for the range between 0 and 1000, saving a bit of space.
   *

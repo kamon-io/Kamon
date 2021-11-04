@@ -69,7 +69,7 @@ class RangeSamplerSpec extends AnyWordSpec with Matchers with InstrumentInspecti
       secondSnapshot.max should be(2)
     }
 
-    "report zero as the min and current values if the current value fell bellow zero" in {
+    "report zero as the min and current values if the current value fell below zero" in {
       val rangeSampler = Kamon.rangeSampler("report-zero").withoutTags()
 
       rangeSampler.decrement(3)
