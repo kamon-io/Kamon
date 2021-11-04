@@ -44,7 +44,7 @@ public @interface TrackConcurrency {
 
     /**
      * The Range Sampler's metric name. It can be provided as a plain String or as an EL expression. For example, the
-     * code bellow uses the "id" property of the class in an EL expression to create the Range Sampler name.
+     * code below uses the "id" property of the class in an EL expression to create the Range Sampler name.
      *
      * <pre>
      * {@code

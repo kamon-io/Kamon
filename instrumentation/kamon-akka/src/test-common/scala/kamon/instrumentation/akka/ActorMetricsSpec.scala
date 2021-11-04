@@ -102,7 +102,7 @@ class ActorMetricsSpec extends TestKit(ActorSystem("ActorMetricsSpec")) with Any
    "clean up the associated recorder when the actor is stopped" in new ActorMetricsFixtures {
      val trackedActor = createTestActor("stop")
 
-     // Killing the actor should remove it's ActorMetrics and registering again bellow should create a new one.
+     // Killing the actor should remove it's ActorMetrics and registering again below should create a new one.
      val deathWatcher = TestProbe()
      deathWatcher.watch(trackedActor)
      trackedActor ! PoisonPill

@@ -22,7 +22,7 @@ class RemotingInstrumentation extends InstrumentationBuilder with VersionFilteri
     /**
       * Send messages might be buffered if they reach the EndpointWriter before it has been initialized and the current
       * Context might be lost after the buffering, so we make sure we capture the context when the Send command was
-      * created and then apply it during the EndpointWrite.writeSend method execution (see bellow).
+      * created and then apply it during the EndpointWrite.writeSend method execution (see below).
       */
     onType("akka.remote.EndpointManager$Send")
       .mixin(classOf[HasContext.Mixin])

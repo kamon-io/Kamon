@@ -25,7 +25,7 @@ class SamplerSpec extends AnyWordSpec with Matchers with BeforeAndAfterEach {
           }
         }
 
-        // Each operations should get 180 traces per minute for 10 minutes, which is bellow the global
+        // Each operations should get 180 traces per minute for 10 minutes, which is below the global
         // throughput goal of 600 traces per minute, shared across all operations. Roughly all traces
         // should be sampled.
         sampledTraces("op4") shouldBe 1800 +- 50
@@ -46,7 +46,7 @@ class SamplerSpec extends AnyWordSpec with Matchers with BeforeAndAfterEach {
           }
         }
 
-        // Each operations should get 180 traces per minute for 10 minutes, which is bellow the global
+        // Each operations should get 180 traces per minute for 10 minutes, which is below the global
         // throughput goal of 600 traces per minute, shared across all operations. Roughly all traces
         // should be sampled.
         sampledTraces("op4") shouldBe 1800 +- 50
