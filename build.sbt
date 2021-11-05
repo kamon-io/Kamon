@@ -563,11 +563,19 @@ lazy val reporters = (project in file("reporters"))
 
 
 lazy val `kamon-datadog` = (project in file("reporters/kamon-datadog"))
-  .disablePlugins(AssemblyPlugin)
+  .enablePlugins(AssemblyPlugin)
   .settings(
     crossScalaVersions += scala3Version,
+    assembly / assemblyMergeStrategy := {
+      case PathList("META-INF", xs @ _*)  => MergeStrategy.discard
+      case _                              => MergeStrategy.first
+    },
+    assembly / assemblyShadeRules := Seq(
+      ShadeRule.rename("okhttp3.**"                -> "kamon.lib.@1").inAll,
+      ShadeRule.rename("okio.**"                   -> "kamon.lib.@1").inAll
+    ),
     libraryDependencies ++= Seq(
-      okHttp,
+      okHttp % "shaded,provided",
       "com.grack" % "nanojson" % "1.6",
 
       ("com.typesafe.play" %% "play-json" % "2.7.4" % "test").cross(CrossVersion.for3Use2_13),
@@ -576,7 +584,6 @@ lazy val `kamon-datadog` = (project in file("reporters/kamon-datadog"))
       slf4jnop % "test",
       okHttpMockServer % "test"
     )
-
   ).dependsOn(`kamon-core`, `kamon-testkit` % "test")
 
 
