@@ -45,8 +45,17 @@ class PrometheusReporter(configPath: String = DefaultConfigPath, initialConfig: 
     startEmbeddedServerIfEnabled()
   }
 
-  override def stop(): Unit =
+  override def stop(): Unit = {
     stopEmbeddedServerIfStarted()
+
+    // Removes a reference to the last reporter to avoid leaking instances.
+    //
+    // It might not be safe to assume that **this** object is the last created instance, but in practice
+    // users never have more than one instance running. If they do, they can handle access to their instances
+    // by themselves.
+    PrometheusReporter._lastCreatedInstance = None
+  }
+
 
   override def reconfigure(newConfig: Config): Unit = {
     _reporterSettings = readSettings(newConfig.getConfig(configPath))
@@ -90,11 +99,31 @@ class PrometheusReporter(configPath: String = DefaultConfigPath, initialConfig: 
 }
 
 object PrometheusReporter {
+
   final val DefaultConfigPath = "kamon.prometheus"
 
+  /**
+    * We keep a reference to the last created Prometheus Reporter instance so that users can easily access it
+    * if they want to publish the scrape data through their own HTTP server.
+    */
+  @volatile private var _lastCreatedInstance: Option[PrometheusReporter] = None
+
+  /**
+    * Returns the last PrometheusReporter instance created automatically by Kamon. If you are creating more than one
+    * PrometheusReporter instance you might prefer to keep references to those instances programmatically instead of
+    * using this function.
+    */
+  def instance(): Option[PrometheusReporter] = {
+    _lastCreatedInstance
+  }
+  
+
   class Factory extends ModuleFactory {
-    override def create(settings: ModuleFactory.Settings): Module =
-      new PrometheusReporter(DefaultConfigPath, settings.config)
+    override def create(settings: ModuleFactory.Settings): Module = {
+      val reporter = new PrometheusReporter(DefaultConfigPath, settings.config)
+      _lastCreatedInstance = Some(reporter)
+      reporter
+    }
   }
 
   def create(): PrometheusReporter = {
