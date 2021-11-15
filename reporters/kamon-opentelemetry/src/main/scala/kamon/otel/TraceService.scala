@@ -30,14 +30,14 @@ import scala.concurrent.{Future, Promise}
 /**
  * Service for exporting OpenTelemetry traces
  */
-private[otel] trait TraceService extends Closeable {
+trait TraceService extends Closeable {
   def exportSpans(request: ExportTraceServiceRequest): Future[ExportTraceServiceResponse]
 }
 
 /**
  * Companion object to [[GrpcTraceService]]
  */
-private[otel] object GrpcTraceService {
+object GrpcTraceService {
   private val logger = LoggerFactory.getLogger(classOf[GrpcTraceService])
   private val executor = Executors.newSingleThreadExecutor(new ThreadFactory {
     override def newThread(r: Runnable): Thread = new Thread(r, "OpenTelemetryTraceReporterRemote")
@@ -76,7 +76,7 @@ import kamon.otel.GrpcTraceService._
 /**
  * Manages the remote communication over gRPC to the OpenTelemetry service.
  */
-private[otel] class GrpcTraceService(channel:ManagedChannel, traceService:TraceServiceFutureStub) extends TraceService {
+class GrpcTraceService(channel:ManagedChannel, traceService:TraceServiceFutureStub) extends TraceService {
 
   /**
    * Exports the trace data asynchronously.
