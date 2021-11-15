@@ -20,10 +20,12 @@ import kamon.Kamon
 import kamon.trace.Span
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.asm.Advice
+import kanela.agent.libs.net.bytebuddy.description.method.MethodDescription
+import kanela.agent.libs.net.bytebuddy.matcher.ElementMatchers.isPublic
 
 class JedisInstrumentation extends InstrumentationBuilder {
   onType("redis.clients.jedis.Protocol")
-    .advise(method("sendCommand"), classOf[SendCommandAdvice])
+    .advise(method("sendCommand").and(isPublic[MethodDescription]), classOf[SendCommandAdvice])
 }
 
 class SendCommandAdvice
