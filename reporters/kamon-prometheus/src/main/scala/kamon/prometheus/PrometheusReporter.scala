@@ -109,14 +109,14 @@ object PrometheusReporter {
   @volatile private var _lastCreatedInstance: Option[PrometheusReporter] = None
 
   /**
-    * Returns the last PrometheusReporter instance created automatically by Kamon. If you are creating more than one
-    * PrometheusReporter instance you might prefer to keep references to those instances programmatically instead of
-    * using this function.
+    * Returns the latest Prometheus scrape data created by the latest PrometheusReporter instance created automatically
+    * by Kamon. If you are creating more than one PrometheusReporter instance you might prefer to keep references to
+    * those instances programmatically and calling `.scrapeData()` directly on them instead of using this function.
     */
-  def instance(): Option[PrometheusReporter] = {
-    _lastCreatedInstance
+  def latestScrapeData(): Option[String] = {
+    _lastCreatedInstance.map(_.scrapeData())
   }
-  
+
 
   class Factory extends ModuleFactory {
     override def create(settings: ModuleFactory.Settings): Module = {
