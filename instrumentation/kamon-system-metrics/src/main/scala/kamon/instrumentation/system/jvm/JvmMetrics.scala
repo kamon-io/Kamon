@@ -110,7 +110,7 @@ object JvmMetrics {
   
   val ThreadsStates = Kamon.gauge(
     name = "jvm.threads.states",
-    description = "Tracks the current number of threads states"
+    description = "Tracks the current number of threads on each possible state"
   )
 
   val ClassesLoaded = Kamon.gauge(
