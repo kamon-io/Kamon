@@ -22,6 +22,7 @@ import kamon.context.Context
 import kamon.tag.TagSet
 import kamon.trace.Span.Link
 import kamon.trace.Trace.SamplingDecision
+import kamon.trace.Tracer.LocalTailSamplerSettings
 import kamon.util.Clock
 import org.slf4j.LoggerFactory
 
@@ -410,7 +411,8 @@ object Span {
       val kind: Kind, localParent: Option[Span], initialOperationName: String, spanTags: TagSet.Builder, metricTags: TagSet.Builder,
       createdAt: Instant, initialMarks: List[Mark], initialLinks: List[Link], initialTrackMetrics: Boolean, tagWithParentOperation: Boolean,
       includeErrorStacktrace: Boolean, isDelayed: Boolean, clock: Clock, preFinishHooks: Array[Tracer.PreFinishHook],
-      onFinish: Span.Finished => Unit, sampler: Sampler, scheduler: ScheduledExecutorService, reportingDelay: Duration) extends Span.Delayed {
+      onFinish: Span.Finished => Unit, sampler: Sampler, scheduler: ScheduledExecutorService, reportingDelay: Duration,
+      localTailSamplerSettings: LocalTailSamplerSettings) extends Span.Delayed {
 
     private val _metricTags = metricTags
     private val _spanTags = spanTags
@@ -506,6 +508,7 @@ object Span {
     override def fail(message: String): Span = synchronized {
       if(_isOpen) {
         _hasError = true
+        trace.spanFailed()
 
         if((isSampled || !reportingDelay.isZero))
           _spanTags.add(TagKeys.ErrorMessage, message)
@@ -516,6 +519,7 @@ object Span {
     override def fail(throwable: Throwable): Span = synchronized {
       if(_isOpen) {
         _hasError = true
+        trace.spanFailed()
 
         if((isSampled || !reportingDelay.isZero)) {
           _spanTags.add(TagKeys.ErrorMessage, throwable.getMessage)
@@ -530,6 +534,7 @@ object Span {
     override def fail(message: String, throwable: Throwable): Span = synchronized {
       if(_isOpen) {
         _hasError = true
+        trace.spanFailed()
 
         if((isSampled || !reportingDelay.isZero)) {
           _spanTags.add(TagKeys.ErrorMessage, message)
@@ -643,6 +648,17 @@ object Span {
     }
 
     private def reportSpan(finishedAt: Instant, metricTags: TagSet): Unit = {
+      val isRootSpan = (position == Position.Root || position == Position.LocalRoot)
+
+      if (isRootSpan && localTailSamplerSettings.enabled) {
+        val hasEnoughErrors = trace.failedSpansCount() >= localTailSamplerSettings.errorCountThreshold
+        val hasEnoughLatency = Clock.nanosBetween(_startedAt, finishedAt) >= localTailSamplerSettings.latencyThresholdNanos
+
+        if (hasEnoughErrors || hasEnoughLatency) {
+          trace.keep()
+        }
+      }
+
       if(reportingDelay.isZero) {
         if(isSampled)
           onFinish(toFinishedSpan(finishedAt, metricTags))
@@ -674,6 +690,7 @@ object Span {
     }
 
     private class DelayedReportingRunnable(finishedAt: Instant, metricTags: TagSet) extends Runnable {
+
       override def run(): Unit = {
         if (isSampled)
           onFinish(toFinishedSpan(finishedAt, metricTags))
