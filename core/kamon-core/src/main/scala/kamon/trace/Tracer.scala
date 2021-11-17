@@ -25,6 +25,7 @@ import kamon.tag.TagSet
 import kamon.tag.Lookups.option
 import kamon.trace.Span.{Kind, Link, Position, TagKeys}
 import kamon.trace.Trace.SamplingDecision
+import kamon.trace.Tracer.LocalTailSamplerSettings
 import kamon.util.Clock
 import org.jctools.queues.{MessagePassingQueue, MpscArrayQueue}
 import org.slf4j.LoggerFactory
@@ -51,6 +52,7 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
   @volatile private var _preStartHooks: Array[Tracer.PreStartHook] = Array.empty
   @volatile private var _preFinishHooks: Array[Tracer.PreFinishHook] = Array.empty
   @volatile private var _delayedSpanReportingDelay: Duration = Duration.ZERO
+  @volatile private var _localTailSamplerSettings: LocalTailSamplerSettings = LocalTailSamplerSettings(false, Int.MaxValue, Long.MaxValue)
   @volatile private var _scheduler: Option[ScheduledExecutorService] = None
   private val _onSpanFinish: Span.Finished => Unit = _spanBuffer.offer
 
@@ -361,7 +363,7 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
 
         new Span.Local(id, parentId, trace, position, _kind, localParent, _name, _spanTags, _metricTags, at, _marks, _links,
           _trackMetrics, _tagWithParentOperation, _includeErrorStacktrace, isDelayed, clock, _preFinishHooks, _onSpanFinish,
-          _sampler, _scheduler.get, _delayedSpanReportingDelay)
+          _sampler, _scheduler.get, _delayedSpanReportingDelay, _localTailSamplerSettings)
       }
     }
 
@@ -428,6 +430,17 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
       val tagWithParentOperation = traceConfig.getBoolean("span-metric-tags.parent-operation")
       val includeErrorStacktrace = traceConfig.getBoolean("include-error-stacktrace")
       val delayedSpanReportingDelay = traceConfig.getDuration("span-reporting-delay")
+      val localTailSamplerSettings = LocalTailSamplerSettings(
+        enabled = traceConfig.getBoolean("local-tail-sampler.enabled"),
+        errorCountThreshold = traceConfig.getInt("local-tail-sampler.error-count-threshold"),
+        latencyThresholdNanos = traceConfig.getDuration("local-tail-sampler.latency-threshold").toNanos
+      )
+
+      if(localTailSamplerSettings.enabled && delayedSpanReportingDelay.isZero) {
+        _logger.warn(
+          "Enabling local tail sampling without a span-reporting-delay setting will probably lead to incomplete " +
+          "traces. Consider setting span-reporting-delay to a value slightly above your application's requests timeout")
+      }
 
       if(_traceReporterQueueSize != traceReporterQueueSize) {
         // By simply changing the buffer we might be dropping Spans that have not been collected yet by the reporters.
@@ -445,6 +458,7 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
       _tagWithParentOperation = tagWithParentOperation
       _traceReporterQueueSize = traceReporterQueueSize
       _delayedSpanReportingDelay = delayedSpanReportingDelay
+      _localTailSamplerSettings = localTailSamplerSettings
       _preStartHooks = preStartHooks
       _preFinishHooks = preFinishHooks
 
@@ -490,4 +504,10 @@ object Tracer {
   trait PreFinishHook {
     def beforeFinish(span: Span): Unit
   }
+
+  private[trace] case class LocalTailSamplerSettings(
+    enabled: Boolean,
+    errorCountThreshold: Int,
+    latencyThresholdNanos: Long
+  )
 }

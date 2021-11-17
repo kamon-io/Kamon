@@ -17,6 +17,8 @@
 package kamon
 package trace
 
+import java.util.concurrent.atomic.AtomicInteger
+
 /**
   * Holds information shared across all Spans from the same Trace. It might seem like too little information but all in
   * all, a trace is just a bunch of Spans that share the same trace identifier ;).
@@ -56,6 +58,17 @@ trait Trace {
     */
   def keep(): Unit
 
+  /**
+    * Signals that a Span belonging to this trace has failed.
+    */
+  def spanFailed(): Unit
+
+  /**
+    * Returns the number of failed Spans for this trace in this process. This error count does not reflect errors that
+    * might have happened on other services participating in the same trace.
+    */
+  def failedSpansCount(): Int
+
 }
 
 object Trace {
@@ -80,6 +93,7 @@ object Trace {
 
   private class MutableTrace(val id: Identifier, initialDecision: Trace.SamplingDecision) extends Trace {
     @volatile private var _samplingDecision = initialDecision
+    @volatile private var _failedSpansCount = new AtomicInteger(0)
 
     override def samplingDecision: SamplingDecision =
       _samplingDecision
@@ -89,6 +103,12 @@ object Trace {
 
     override def keep(): Unit =
       _samplingDecision = SamplingDecision.Sample
+
+    override def spanFailed(): Unit =
+      _failedSpansCount.incrementAndGet()
+
+    override def failedSpansCount(): Int =
+      _failedSpansCount.get()
 
     override def toString(): String =
       s"{id=${id.string},samplingDecision=${_samplingDecision}"
