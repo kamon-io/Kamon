@@ -275,7 +275,7 @@ object JvmMetricsCollector {
     case object Runnable extends ThreadState { override def toString: String = "runnable" }
     case object Blocked extends ThreadState { override def toString: String = "blocked" }
     case object Waiting extends ThreadState { override def toString: String = "waiting" }
-    case object TimedWaiting extends ThreadState { override def toString: String = "timed_waiting" }
+    case object TimedWaiting extends ThreadState { override def toString: String = "timed-waiting" }
     case object Terminated extends ThreadState { override def toString: String = "terminated" }
     case object Unknown extends ThreadState { override def toString: String = "unknown" }
     
