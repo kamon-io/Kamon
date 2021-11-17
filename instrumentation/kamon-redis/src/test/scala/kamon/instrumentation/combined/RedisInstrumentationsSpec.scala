@@ -53,6 +53,7 @@ class RedisInstrumentationsSpec extends AnyWordSpec
         val span = testSpanReporter().nextSpan().get
         span.operationName shouldBe "redis.command.SET"
         span.kind shouldBe Kind.Client
+        testSpanReporter().spans() shouldBe empty
       }
 
       testSpanReporter().clear()
@@ -62,6 +63,7 @@ class RedisInstrumentationsSpec extends AnyWordSpec
         val span = testSpanReporter().nextSpan().get
         span.operationName shouldBe "redis.command.GET"
         span.kind shouldBe Kind.Client
+        testSpanReporter().spans() shouldBe empty
       }
     }
   }
