@@ -288,7 +288,7 @@ object JvmMetricsCollector {
       "BLOCKED"       -> Blocked,
       "WAITING"       -> Waiting,
       "TIMED_WAITING" -> TimedWaiting,
-      "TERMINATED"    -> Terminated,
+      "TERMINATED"    -> Terminated
     )
   }
 }
