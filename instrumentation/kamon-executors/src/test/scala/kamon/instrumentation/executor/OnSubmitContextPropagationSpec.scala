@@ -133,7 +133,7 @@ class OnSubmitContextPropagationSpec extends AnyWordSpec with Matchers with Cont
     }
 
     "capture the context when call submit(Callable) in ScheduledThreadPool" in {
-      val executor = instrument(JavaExecutors.newSingleThreadExecutor())
+      val executor = instrument(JavaExecutors.newScheduledThreadPool(1))
       val ctx = Kamon.runWithContext(testContext("in-callable-body")) {
         val callable = new SimpleCallable
         executor.submit(callable)
@@ -157,7 +157,7 @@ class OnSubmitContextPropagationSpec extends AnyWordSpec with Matchers with Cont
       ctx.value should be ("in-callable-body")
     }
 
-    "capture the context when call invokeAll(Colection<Callables>) in ExecutorService" in {
+    "capture the context when call invokeAll(Collection<Callables>) in ExecutorService" in {
       import scala.collection.JavaConverters._
 
       val values = Kamon.runWithContext(testContext("all-callables-should-see-this-key")) {
