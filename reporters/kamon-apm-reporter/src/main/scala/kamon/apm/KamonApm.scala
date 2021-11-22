@@ -83,20 +83,24 @@ class KamonApm(configPath: String) extends CombinedReporter {
 
   override def reportSpans(spans: Seq[Span.Finished]): Unit = if(spans.nonEmpty) {
     if(isAcceptableApiKey(_settings.apiKey)) {
-      val env = Kamon.environment
-      val apmSpans = spans map convertSpan
+      val spansFinishLimit = Kamon.clock().instant().minus(_maxSnapshotAge)
+      val recentSpans = spans.filter(_.to.isAfter(spansFinishLimit))
 
-      val batch = SpanBatch.newBuilder()
-        .setAgent(_settings.agent)
-        .setServiceName(env.service)
-        .setHost(env.host)
-        .setInstance(env.instance)
-        .setApiKey(_settings.apiKey)
-        .addAllSpans(apmSpans.asJava)
-        .build()
+      if(recentSpans.nonEmpty) {
+        val env = Kamon.environment
+        val apmSpans = recentSpans map convertSpan
 
-      _httpClient.foreach(_.postSpans(batch))
+        val batch = SpanBatch.newBuilder()
+          .setAgent(_settings.agent)
+          .setServiceName(env.service)
+          .setHost(env.host)
+          .setInstance(env.instance)
+          .setApiKey(_settings.apiKey)
+          .addAllSpans(apmSpans.asJava)
+          .build()
 
+        _httpClient.foreach(_.postSpans(batch))
+      }
     } else
       _logger.error(s"Dropping Spans because an invalid API key has been configured [${_settings.apiKey}]")
   }

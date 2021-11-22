@@ -103,7 +103,7 @@ class ReporterSpec extends TestKit(ActorSystem("MetricReporterSpec"))
 
     "retry span ingestion" in {
       val span = Span.Finished(Identifier.Empty, Trace.Empty, Identifier.Empty, "", false, false,
-        Instant.ofEpochMilli(0), Instant.ofEpochMilli(0), Span.Kind.Unknown, Span.Position.Unknown,
+        Instant.now(), Instant.now(), Span.Kind.Unknown, Span.Position.Unknown,
         TagSet.Empty, TagSet.Empty, Seq.empty, Seq.empty)
 
       reporter.reportSpans(Seq(span))
