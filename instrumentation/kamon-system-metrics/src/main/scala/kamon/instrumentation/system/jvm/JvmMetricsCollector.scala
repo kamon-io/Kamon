@@ -27,7 +27,7 @@ import javax.management.{Notification, NotificationEmitter, NotificationListener
 import kamon.Kamon
 import kamon.instrumentation.system.jvm.JvmMetrics.{ClassLoadingInstruments, GarbageCollectionInstruments, MemoryUsageInstruments, ThreadsInstruments}
 import kamon.instrumentation.system.jvm.JvmMetricsCollector.MemoryPool.sanitize
-import kamon.instrumentation.system.jvm.JvmMetricsCollector.{Collector, MemoryPool}
+import kamon.instrumentation.system.jvm.JvmMetricsCollector.{Collector, MemoryPool, ThreadState}
 import kamon.module.{Module, ModuleFactory, ScheduledAction}
 import kamon.tag.TagSet
 
@@ -137,6 +137,15 @@ class JvmMetricsCollector(ec: ExecutionContext) extends ScheduledAction {
       threadsInstruments.total.update(threadsMxBen.getThreadCount())
       threadsInstruments.peak.update(threadsMxBen.getPeakThreadCount())
       threadsInstruments.daemon.update(threadsMxBen.getDaemonThreadCount())
+      
+      threadsMxBen.getAllThreadIds.map(threadsMxBen.getThreadInfo(_, 0))
+        .groupBy(_.getThreadState)
+        .mapValues(_.length)
+        .foreach { 
+          case (state, count) =>  
+            val threadState = ThreadState.find(state.toString)
+            threadsInstruments.threadState(threadState).update(count) 
+        }
 
       val currentHeapUsage = ManagementFactory.getMemoryMXBean.getHeapMemoryUsage
       val freeHeap = Math.max(0L, currentHeapUsage.getMax -  currentHeapUsage.getUsed)
@@ -258,5 +267,28 @@ object JvmMetricsCollector {
 
     def sanitize(name: String): String =
       _invalidChars.replaceAllIn(name.toLowerCase, "-")
+  }
+  
+  sealed trait ThreadState
+  object ThreadState {
+    case object New extends ThreadState { override def toString: String = "new"}
+    case object Runnable extends ThreadState { override def toString: String = "runnable" }
+    case object Blocked extends ThreadState { override def toString: String = "blocked" }
+    case object Waiting extends ThreadState { override def toString: String = "waiting" }
+    case object TimedWaiting extends ThreadState { override def toString: String = "timed-waiting" }
+    case object Terminated extends ThreadState { override def toString: String = "terminated" }
+    case object Unknown extends ThreadState { override def toString: String = "unknown" }
+    
+    def find(state: String): ThreadState =
+      _threadStateMapping.getOrElse(state, Unknown)
+    
+    private val _threadStateMapping: Map[String, ThreadState] = Map(
+      "NEW"           -> New,
+      "RUNNABLE"      -> Runnable,
+      "BLOCKED"       -> Blocked,
+      "WAITING"       -> Waiting,
+      "TIMED_WAITING" -> TimedWaiting,
+      "TERMINATED"    -> Terminated
+    )
   }
 }

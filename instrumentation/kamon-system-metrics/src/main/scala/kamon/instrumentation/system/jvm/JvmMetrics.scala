@@ -17,10 +17,9 @@
 package kamon.instrumentation.system.jvm
 
 import java.lang.management.ManagementFactory
-
 import kamon.Kamon
 import kamon.instrumentation.system.jvm.JvmMetrics.MemoryUsageInstruments.{BufferPoolInstruments, MemoryRegionInstruments}
-import kamon.instrumentation.system.jvm.JvmMetricsCollector.{Collector, MemoryPool}
+import kamon.instrumentation.system.jvm.JvmMetricsCollector.{Collector, MemoryPool, ThreadState}
 import kamon.metric.{Gauge, Histogram, InstrumentGroup, MeasurementUnit}
 import kamon.tag.TagSet
 
@@ -107,6 +106,11 @@ object JvmMetrics {
   val ThreadsDaemon = Kamon.gauge(
     name = "jvm.threads.daemon",
     description = "Tracks the current number of daemon threads on the JVM"
+  )
+  
+  val ThreadsStates = Kamon.gauge(
+    name = "jvm.threads.states",
+    description = "Tracks the current number of threads on each possible state"
   )
 
   val ClassesLoaded = Kamon.gauge(
@@ -208,9 +212,18 @@ object JvmMetrics {
   }
 
   class ThreadsInstruments extends InstrumentGroup(TagSet.Empty) {
+    private val _threadsStatesCache = mutable.Map.empty[ThreadState, Gauge]
     val total = register(ThreadsTotal)
     val peak = register(ThreadsPeak)
     val daemon = register(ThreadsDaemon)
+    
+    def threadState(threadState: ThreadState): Gauge = {
+      _threadsStatesCache.getOrElseUpdate(threadState, {
+        val stateTag = TagSet.of("state", threadState.toString)
+        
+        register(ThreadsStates, stateTag)
+      })
+    }
   }
 
   object MemoryUsageInstruments {
