@@ -137,9 +137,14 @@ object ServerFlowWrapper {
             requestSpan.mark("http.response.ready")
 
             responseWithContext.entity match {
-              case strict@HttpEntity.Strict(_, bs) =>
+              case strict @ HttpEntity.Strict(_, bs) =>
                 requestHandler.responseSent(bs.size)
                 strict
+
+              case default: HttpEntity.Default =>
+                requestHandler.responseSent(default.contentLength)
+                default
+
               case _ =>
                 val responseSizeCounter = new AtomicLong(0L)
                 responseWithContext.entity.transformDataBytes(
