@@ -21,7 +21,7 @@ import akka.stream.ActorMaterializer
 import kamon.tag.Lookups.{plain, plainBoolean, plainLong}
 import kamon.testkit._
 import kamon.trace.Span.Mark
-import okhttp3.{OkHttpClient, Request}
+import okhttp3.{OkHttpClient, Protocol, Request}
 import org.scalatest._
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
@@ -30,6 +30,7 @@ import org.scalatest.wordspec.AnyWordSpecLike
 import java.util.UUID
 import javax.net.ssl.{HostnameVerifier, SSLSession}
 import scala.concurrent.duration._
+import scala.collection.JavaConverters._
 
 class AkkaHttpServerTracingSpec extends AnyWordSpecLike with Matchers with ScalaFutures with Inside with InitAndStopKamonAfterAll
     with MetricInspection.Syntax with Reconfigure with TestWebServer with Eventually with OptionValues with TestSpanReporter {
@@ -43,16 +44,17 @@ class AkkaHttpServerTracingSpec extends AnyWordSpecLike with Matchers with Scala
   val (sslSocketFactory, trustManager) = clientSSL()
   val okHttp = new OkHttpClient.Builder()
     .sslSocketFactory(sslSocketFactory, trustManager)
+    .protocols(List(Protocol.HTTP_1_1).asJava)
     .hostnameVerifier(new HostnameVerifier { override def verify(s: String, sslSession: SSLSession): Boolean = true })
     .build()
 
   val timeoutTest: FiniteDuration = 5 second
   val interface = "127.0.0.1"
-  val http1WebServer = startServer(interface, 8081, https = false)
-  val http2WebServer = startServer(interface, 8082, https = true)
+  val httpWebServer = startServer(interface, 8081, https = false)
+  val httpsWebServer = startServer(interface, 8082, https = true)
 
-  testSuite("HTTP/1", http1WebServer)
-  testSuite("HTTP/2", http2WebServer)
+  testSuite("HTTP", httpWebServer)
+  testSuite("HTTPS", httpsWebServer)
 
   def testSuite(httpVersion: String, server: WebServer) = {
     val interface = server.interface
@@ -260,8 +262,8 @@ class AkkaHttpServerTracingSpec extends AnyWordSpecLike with Matchers with Scala
 
   override protected def afterAll(): Unit = {
     super.afterAll()
-    http1WebServer.shutdown()
-    http2WebServer.shutdown()
+    httpWebServer.shutdown()
+    httpsWebServer.shutdown()
   }
 }
 
