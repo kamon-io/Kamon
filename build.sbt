@@ -539,6 +539,20 @@ lazy val `kamon-caffeine` = (project in file("instrumentation/kamon-caffeine"))
     )
   ).dependsOn(`kamon-core`, `kamon-testkit` % "test")
 
+lazy val `kamon-finagle` = (project in file("instrumentation/kamon-finagle"))
+  .disablePlugins(AssemblyPlugin)
+  .enablePlugins(JavaAgent)
+  .settings(instrumentationSettings)
+  .settings(
+    libraryDependencies ++= Seq(
+      kanelaAgent % "provided",
+      "com.twitter" %% "finagle-http" % "21.12.0" % "provided",
+      "com.twitter" %% "bijection-util" % "0.9.5" % "provided",
+      scalatest % "test",
+      logbackClassic % "test",
+    )
+  ).dependsOn(`kamon-core`, `kamon-instrumentation-common`, `kamon-testkit` % "test")
+
 /**
  * Reporters
  */
