@@ -547,7 +547,7 @@ lazy val `kamon-finagle` = (project in file("instrumentation/kamon-finagle"))
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       "com.twitter" %% "finagle-http" % "21.12.0" % "provided",
-      "com.twitter" %% "bijection-util" % "0.9.5" % "provided",
+      "com.twitter" %% "bijection-util" % "0.9.5" % "test",
       scalatest % "test",
       logbackClassic % "test",
     )
