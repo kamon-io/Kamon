@@ -140,6 +140,7 @@ val instrumentationProjects = Seq[ProjectReference](
   `kamon-tapir`,
   `kamon-redis`,
   `kamon-caffeine`,
+  `kamon-finagle`,
 )
 
 lazy val instrumentation = (project in file("instrumentation"))
