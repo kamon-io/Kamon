@@ -544,6 +544,7 @@ lazy val `kamon-finagle` = (project in file("instrumentation/kamon-finagle"))
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
+    crossScalaVersions := Seq("2.12.11", "2.13.1"),
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       "com.twitter" %% "finagle-http" % "21.12.0" % "provided",
@@ -811,6 +812,7 @@ val `kamon-bundle` = (project in file("bundle/kamon-bundle"))
     `kamon-redis` % "shaded",
     `kamon-okhttp` % "shaded",
     `kamon-caffeine` % "shaded",
+    `kamon-finagle` % "shaded",
 )
 
 lazy val `bill-of-materials` = (project in file("bill-of-materials"))
