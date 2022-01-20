@@ -38,7 +38,6 @@ class HttpClientOpsSpec extends AnyWordSpecLike with Matchers with Reconfigure w
         span.metricTags.get(Lookups.plainBoolean("error")) shouldBe false
         span.metricTags.get(Lookups.plain("component")) shouldBe "finagle.http.client.request"
         span.metricTags.get(Lookups.plain("span.kind")) shouldBe "client"
-        span.tags.get(Lookups.plain("span.type")) shouldBe "http"
       }
 
       "set request span tags" in {
@@ -48,7 +47,10 @@ class HttpClientOpsSpec extends AnyWordSpecLike with Matchers with Reconfigure w
 
       "set response span tags" in {
         span.metricTags.get(Lookups.plainLong("http.status_code")) shouldBe 200
-        span.metricTags.get(Lookups.plain("http.status_category")) shouldBe "2xx"
+      }
+
+      "set marks for standard finagle annotations" in {
+        span.marks.map(_.key) should contain allOf("wire/recv", "wire/send", "client/send")
       }
 
       "add trace propagation headers to the request" in {
@@ -70,7 +72,6 @@ class HttpClientOpsSpec extends AnyWordSpecLike with Matchers with Reconfigure w
 
       "set response span tags" in {
         span.metricTags.get(Lookups.plainLong("http.status_code")) shouldBe 400
-        span.metricTags.get(Lookups.plain("http.status_category")) shouldBe "4xx"
       }
 
       "set error metric tags" in {

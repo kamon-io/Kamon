@@ -34,7 +34,6 @@ object ClientStatusTraceFilter {
         BroadcastRequestHandler.get.foreach { handler =>
           response match {
             case Return(r) =>
-              Tags.setHttpResponseCategory(handler.span, r.status)
               if (isError(r.status))
                 handler.span.fail(s"Error HTTP response code '${r.status.code}'")
               // processResponse will finish the span

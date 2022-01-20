@@ -64,8 +64,6 @@ final class SpanInitializer[Req <: Request, Res]
       val handler = FinagleHttpInstrumentation.createHandler(req)
       val span = handler.span
 
-      Tags.setHttpClientTags(span)
-
       letTracerAndSpan(span, parent, finagleTracer) {
         BroadcastRequestHandler.let(handler) {
           // finish the span when the Future completes if it's not already finished by processResponse
