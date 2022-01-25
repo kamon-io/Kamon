@@ -140,6 +140,7 @@ val instrumentationProjects = Seq[ProjectReference](
   `kamon-tapir`,
   `kamon-redis`,
   `kamon-caffeine`,
+  `kamon-lagom`,
   `kamon-finagle`,
 )
 
@@ -540,6 +541,19 @@ lazy val `kamon-caffeine` = (project in file("instrumentation/kamon-caffeine"))
     )
   ).dependsOn(`kamon-core`, `kamon-testkit` % "test")
 
+
+lazy val `kamon-lagom` = (project in file("instrumentation/kamon-lagom"))
+  .disablePlugins(AssemblyPlugin)
+  .settings(
+    libraryDependencies ++= {
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((2, scalaMajor)) if scalaMajor == 11 => providedScope("com.lightbend.lagom" %% "lagom-server" % "1.4.13")
+        case _ => providedScope("com.lightbend.lagom" %% "lagom-server" % "1.6.7")
+      }
+    }
+  )
+  .dependsOn(`kamon-core` % "compile")
+
 lazy val `kamon-finagle` = (project in file("instrumentation/kamon-finagle"))
   .disablePlugins(AssemblyPlugin)
   .enablePlugins(JavaAgent)
@@ -813,8 +827,9 @@ val `kamon-bundle` = (project in file("bundle/kamon-bundle"))
     `kamon-redis` % "shaded",
     `kamon-okhttp` % "shaded",
     `kamon-caffeine` % "shaded",
+    `kamon-lagom` % "shaded",
     `kamon-finagle` % "shaded",
-)
+  )
 
 lazy val `bill-of-materials` = (project in file("bill-of-materials"))
   .enablePlugins(BillOfMaterialsPlugin)
