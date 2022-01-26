@@ -96,6 +96,7 @@ class KamonApm(configPath: String) extends CombinedReporter {
           .setHost(env.host)
           .setInstance(env.instance)
           .setApiKey(_settings.apiKey)
+          .putAllEnvironmentTags(_settings.environmentTags)
           .addAllSpans(apmSpans.asJava)
           .build()
 
@@ -126,6 +127,7 @@ class KamonApm(configPath: String) extends CombinedReporter {
         .setService(Kamon.environment.service)
         .setHost(Kamon.environment.host)
         .setInstance(Kamon.environment.instance)
+        .putAllEnvironmentTags(_settings.environmentTags)
         .addAllMetrics(allMetrics.asJava)
         .setPlan(plan)
         .build()

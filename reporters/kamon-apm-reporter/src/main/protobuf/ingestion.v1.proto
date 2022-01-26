@@ -11,6 +11,7 @@ message MetricBatch {
   repeated Metric metrics = 6;
   optional Plan plan = 7;
   optional string agent = 8;
+  map<string, string> environmentTags = 9;
 }
 
 message Interval {
@@ -64,6 +65,7 @@ message SpanBatch {
   required string instance = 4;
   repeated Span spans = 5;
   optional string agent = 6;
+  map<string, string> environmentTags = 7;
 }
 
 message Mark {

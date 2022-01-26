@@ -17,10 +17,11 @@
 package kamon
 
 import java.time.Duration
-
 import com.typesafe.config.Config
 import _root_.kamino.IngestionV1.Plan
+import kamon.tag.Tag.unwrapValue
 import org.slf4j.LoggerFactory
+
 import java.net.Proxy
 import java.util.regex.Pattern
 
@@ -34,6 +35,9 @@ package object apm {
 
     if(apiKey.equals("none"))
       _logger.error("No API key defined in the kamon.apm.api-key setting")
+
+    val environmentTagsMap = new java.util.HashMap[String, String]()
+    Kamon.environment.tags.all().foreach(t => environmentTagsMap.put(t.key, String.valueOf(unwrapValue(t))))
 
     Settings (
       apiKey            = apiKey,
@@ -55,7 +59,8 @@ package object apm {
         case "system" => None
         case "socks"  => Some(Proxy.Type.SOCKS)
         case "https"  => Some(Proxy.Type.HTTP)
-      }
+      },
+      environmentTags = environmentTagsMap
     )
   }
 
@@ -78,7 +83,8 @@ package object apm {
     clientBackoff: Duration,
     proxy: Option[Proxy.Type],
     proxyHost: String,
-    proxyPort: Int
+    proxyPort: Int,
+    environmentTags: java.util.Map[String, String]
   ) {
     def ingestionRoute  = s"$ingestionApi/ingest"
     def bootMark        = s"$ingestionApi/hello"
