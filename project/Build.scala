@@ -52,7 +52,14 @@ object BaseProject extends AutoPlugin {
       javaAgents := Seq("io.kamon" % "kanela-agent" % kanelaAgentVersion.value % "runtime;test")
     )
 
-    val scala3Version = "3.0.2"
+    val ideSkipProject = Seq(
+      SettingKey[Boolean]("ideSkipProject") := true
+    )
+
+    val `scala_2.11_version` = "2.11.12"
+    val `scala_2.12_version` = "2.12.15"
+    val `scala_2.13_version` = "2.13.8"
+    val scala_3_version = "3.0.2"
 
     // This installs the GPG signing key from the
     setupGpg()
@@ -128,8 +135,12 @@ object BaseProject extends AutoPlugin {
 
   private lazy val compilationSettings = Seq(
     crossPaths := true,
-    scalaVersion := "2.12.11",
-    crossScalaVersions := Seq("2.11.12", "2.12.11", "2.13.6"),
+    scalaVersion := autoImport.`scala_2.12_version`,
+    crossScalaVersions := Seq(
+      autoImport.`scala_2.11_version`,
+      autoImport.`scala_2.12_version`,
+      autoImport.`scala_2.13_version`
+    ),
     javacOptions := Seq(
       "-source", "1.8",
       "-target", "1.8",

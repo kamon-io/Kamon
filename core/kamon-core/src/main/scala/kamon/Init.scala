@@ -89,7 +89,7 @@ trait Init { self: ModuleManagement with Configuration with CurrentStatus with M
   def attachInstrumentation(): Unit = {
     if(!InstrumentationStatus.create(warnIfFailed = false).present) {
       try {
-        val attacherClass = Class.forName("kamon.bundle.Bundle")
+        val attacherClass = Class.forName("kamon.runtime.Attacher")
         val attachMethod = attacherClass.getDeclaredMethod("attach")
         attachMethod.invoke(null)
       } catch {

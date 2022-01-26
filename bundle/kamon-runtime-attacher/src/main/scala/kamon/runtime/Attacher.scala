@@ -1,29 +1,14 @@
-/*
- * Copyright 2013-2020 The Kamon Project <https://kamon.io>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+package kamon.runtime
 
-package kamon.bundle
-
-import java.lang.management.ManagementFactory
-import java.nio.file.{Files, StandardCopyOption}
+import kamon.runtime.attacher.BuildInfo
 import net.bytebuddy.agent.ByteBuddyAgent
 import org.slf4j.LoggerFactory
 
+import java.lang.management.ManagementFactory
+import java.nio.file.{Files, StandardCopyOption}
 import scala.util.control.NonFatal
 
-object Bundle {
+object Attacher {
 
   private val _instrumentationClassLoaderProp = "kanela.instrumentation.classLoader"
 
@@ -34,7 +19,7 @@ object Bundle {
   def attach(): Unit = {
     val springBootClassLoader = findSpringBootJarLauncherClassLoader()
 
-    if(isKanelaLoaded) {
+    if (isKanelaLoaded) {
 
       // If Kanela has already been loaded and we are running on a Spring Boot application, we might need to reload
       // Kanela to ensure it will use the proper ClassLoader for loading the instrumentations.
@@ -44,7 +29,7 @@ object Bundle {
 
     } else {
 
-      val embeddedAgentFile = Bundle.getClass.getClassLoader.getResourceAsStream(BuildInfo.kanelaAgentJarName)
+      val embeddedAgentFile = Attacher.getClass.getClassLoader.getResourceAsStream(BuildInfo.kanelaAgentJarName)
       val temporaryAgentFile = Files.createTempFile(BuildInfo.kanelaAgentJarName, ".jar")
       Files.copy(embeddedAgentFile, temporaryAgentFile, StandardCopyOption.REPLACE_EXISTING)
 
@@ -58,7 +43,7 @@ object Bundle {
         case NonFatal(t) =>
           // We initialize the logger here instead of as a static member to avoid loading
           // Logger-related classes before attaching Kanela to the current JVM.
-          LoggerFactory.getLogger(Bundle.getClass)
+          LoggerFactory.getLogger(Attacher.getClass)
             .warn("Failed to mark the temporary Kanela Agent file for deletion after exiting the JVM", t)
       }
     }
@@ -75,7 +60,9 @@ object Bundle {
     val isLoadedProperty = java.lang.Boolean.parseBoolean(System.getProperty("kanela.loaded"))
     val hasKanelaClasses = try {
       Class.forName("kanela.agent.Kanela", false, ClassLoader.getSystemClassLoader) != null
-    } catch { case _: Throwable => false }
+    } catch {
+      case _: Throwable => false
+    }
 
     hasKanelaClasses && isLoadedProperty
   }
@@ -111,7 +98,7 @@ object Bundle {
 
   def withInstrumentationClassLoader[T](classLoader: ClassLoader)(thunk: => T): T = {
     try {
-      if(classLoader != null)
+      if (classLoader != null)
         System.getProperties.put(_instrumentationClassLoaderProp, classLoader)
       thunk
     } finally {

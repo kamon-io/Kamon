@@ -36,7 +36,7 @@ lazy val `kamon-core` = (project in file("core/kamon-core"))
   .settings(
     buildInfoKeys := Seq[BuildInfoKey](version),
     buildInfoPackage := "kamon.status",
-    crossScalaVersions += scala3Version,
+    crossScalaVersions += `scala_3_version`,
     scalacOptions ++= { if(scalaBinaryVersion.value == "2.11") Seq("-Ydelambdafy:method") else Seq.empty },
     assembly / assemblyShadeRules := Seq(
       ShadeRule.rename("org.jctools.**"                             -> "kamon.lib.@0").inAll,
@@ -71,7 +71,7 @@ lazy val `kamon-core` = (project in file("core/kamon-core"))
 lazy val `kamon-status-page` = (project in file("core/kamon-status-page"))
   .enablePlugins(AssemblyPlugin)
   .settings(
-    crossScalaVersions += scala3Version,
+    crossScalaVersions += `scala_3_version`,
     assembly / assemblyShadeRules := Seq(
       ShadeRule.rename("com.grack.nanojson.**"  -> "kamon.lib.@0").inAll,
       ShadeRule.rename("fi.iki.elonen.**"       -> "kamon.lib.@0").inAll,
@@ -86,7 +86,7 @@ lazy val `kamon-status-page` = (project in file("core/kamon-status-page"))
 lazy val `kamon-testkit` = (project in file("core/kamon-testkit"))
   .disablePlugins(AssemblyPlugin)
   .settings(
-    crossScalaVersions += scala3Version,
+    crossScalaVersions += `scala_3_version`,
     libraryDependencies += scalatest % "provided,test"
   ).dependsOn(`kamon-core`)
 
@@ -95,7 +95,7 @@ lazy val `kamon-core-tests` = (project in file("core/kamon-core-tests"))
   .disablePlugins(AssemblyPlugin)
   .settings(noPublishing: _*)
   .settings(
-    crossScalaVersions += scala3Version,
+    crossScalaVersions += `scala_3_version`,
     libraryDependencies ++= Seq(
       scalatest % "test",
       logbackClassic % "test"
@@ -106,7 +106,7 @@ lazy val `kamon-core-tests` = (project in file("core/kamon-core-tests"))
 lazy val `kamon-core-bench` = (project in file("core/kamon-core-bench"))
   .disablePlugins(AssemblyPlugin)
   .enablePlugins(JmhPlugin)
-  .settings(crossScalaVersions += scala3Version)
+  .settings(crossScalaVersions += `scala_3_version`)
   .settings(noPublishing: _*)
   .dependsOn(`kamon-core`)
 
@@ -559,7 +559,7 @@ lazy val `kamon-finagle` = (project in file("instrumentation/kamon-finagle"))
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
-    crossScalaVersions := Seq("2.12.11", "2.13.1"),
+    crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`),
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       "com.twitter" %% "finagle-http" % "21.12.0" % "provided",
@@ -595,7 +595,7 @@ lazy val reporters = (project in file("reporters"))
 lazy val `kamon-datadog` = (project in file("reporters/kamon-datadog"))
   .enablePlugins(AssemblyPlugin)
   .settings(
-    crossScalaVersions += scala3Version,
+    crossScalaVersions += `scala_3_version`,
     assembly / assemblyMergeStrategy := {
       case PathList("META-INF", xs @ _*)  => MergeStrategy.discard
       case _                              => MergeStrategy.first
@@ -620,7 +620,7 @@ lazy val `kamon-datadog` = (project in file("reporters/kamon-datadog"))
 lazy val `kamon-apm-reporter` = (project in file("reporters/kamon-apm-reporter"))
   .enablePlugins(AssemblyPlugin)
   .settings(
-    crossScalaVersions += scala3Version,
+    crossScalaVersions += `scala_3_version`,
     assembly / test := {},
     assembly / assemblyMergeStrategy := {
       case PathList("META-INF", xs @ _*)  => MergeStrategy.discard
@@ -653,7 +653,7 @@ lazy val `kamon-apm-reporter` = (project in file("reporters/kamon-apm-reporter")
 lazy val `kamon-statsd` = (project in file("reporters/kamon-statsd"))
   .disablePlugins(AssemblyPlugin)
   .settings(
-    crossScalaVersions += scala3Version,
+    crossScalaVersions += `scala_3_version`,
     libraryDependencies += scalatest % Test,
   ).dependsOn(`kamon-core`)
 
@@ -661,7 +661,7 @@ lazy val `kamon-statsd` = (project in file("reporters/kamon-statsd"))
 lazy val `kamon-zipkin` = (project in file("reporters/kamon-zipkin"))
   .disablePlugins(AssemblyPlugin)
   .settings(
-    crossScalaVersions += scala3Version,
+    crossScalaVersions += `scala_3_version`,
     libraryDependencies ++= Seq(
       "io.zipkin.reporter2" % "zipkin-reporter" % "2.7.15",
       "io.zipkin.reporter2" % "zipkin-sender-okhttp3" % "2.7.15",
@@ -673,7 +673,7 @@ lazy val `kamon-zipkin` = (project in file("reporters/kamon-zipkin"))
 lazy val `kamon-jaeger` = (project in file("reporters/kamon-jaeger"))
   .disablePlugins(AssemblyPlugin)
   .settings(
-    crossScalaVersions += scala3Version,
+    crossScalaVersions += `scala_3_version`,
     libraryDependencies ++= Seq(
       "io.jaegertracing" % "jaeger-thrift" % "1.1.0",
       scalatest % "test"
@@ -684,7 +684,7 @@ lazy val `kamon-jaeger` = (project in file("reporters/kamon-jaeger"))
 lazy val `kamon-influxdb` = (project in file("reporters/kamon-influxdb"))
   .disablePlugins(AssemblyPlugin)
   .settings(
-    crossScalaVersions += scala3Version,
+    crossScalaVersions += `scala_3_version`,
     libraryDependencies ++= Seq(
       okHttp,
       okHttpMockServer % "test",
@@ -696,7 +696,7 @@ lazy val `kamon-influxdb` = (project in file("reporters/kamon-influxdb"))
 lazy val `kamon-graphite` = (project in file("reporters/kamon-graphite"))
   .disablePlugins(AssemblyPlugin)
   .settings(
-    crossScalaVersions += scala3Version,
+    crossScalaVersions += `scala_3_version`,
     libraryDependencies ++= Seq(
       scalatest % "test",
       logbackClassic % "test"
@@ -707,7 +707,7 @@ lazy val `kamon-graphite` = (project in file("reporters/kamon-graphite"))
 lazy val `kamon-newrelic` = (project in file("reporters/kamon-newrelic"))
   .disablePlugins(AssemblyPlugin)
   .settings(
-    crossScalaVersions += scala3Version,
+    crossScalaVersions += `scala_3_version`,
     libraryDependencies ++= Seq(
       "com.newrelic.telemetry" % "telemetry-core" % "0.12.0",
       "com.newrelic.telemetry" % "telemetry-http-okhttp" % "0.12.0",
@@ -719,7 +719,7 @@ lazy val `kamon-newrelic` = (project in file("reporters/kamon-newrelic"))
 lazy val `kamon-opentelemetry` = (project in file("reporters/kamon-opentelemetry"))
   .disablePlugins(AssemblyPlugin)
   .settings(
-    crossScalaVersions += scala3Version,
+    crossScalaVersions += `scala_3_version`,
     libraryDependencies ++= Seq(
       "io.opentelemetry" % "opentelemetry-proto" % "0.17.1",
       "io.grpc" % "grpc-netty" % "1.36.0",
@@ -732,7 +732,7 @@ lazy val `kamon-opentelemetry` = (project in file("reporters/kamon-opentelemetry
 lazy val `kamon-prometheus` = (project in file("reporters/kamon-prometheus"))
   .disablePlugins(AssemblyPlugin)
   .settings(
-    crossScalaVersions += scala3Version,
+    crossScalaVersions += `scala_3_version`,
     libraryDependencies ++= Seq(
       okHttp,
       scalatest % "test",
@@ -741,98 +741,163 @@ lazy val `kamon-prometheus` = (project in file("reporters/kamon-prometheus"))
   ).dependsOn(`kamon-core`, `kamon-testkit` % "test")
 
 
+/**
+  *  Bundle Projects
+  */
 lazy val bundle = (project in file("bundle"))
   .disablePlugins(AssemblyPlugin)
   .settings(noPublishing: _*)
   .settings(crossScalaVersions := Nil)
   .aggregate(
-    `kamon-bundle`
+    `kamon-bundle`,
+    `kamon-bundle_2_11`,
+    `kamon-runtime-attacher`
   )
-
 
 import com.lightbend.sbt.javaagent.Modules
 import BundleKeys._
 
-val `kamon-bundle` = (project in file("bundle/kamon-bundle"))
+lazy val commonBundleSettings = Seq(
+  moduleName := "kamon-bundle",
+  assembly / fullClasspath ++= (Shaded / internalDependencyClasspath).value,
+  assembly / assemblyShadeRules := Seq(
+    ShadeRule.zap("**module-info").inAll,
+    ShadeRule.rename("net.bytebuddy.agent.**" -> "kamon.lib.@0").inAll
+  ),
+  assembly / assemblyExcludedJars := {
+    (assembly / fullClasspath).value.filter(f => {
+      val fileName = f.data.getName()
+      fileName.contains("kamon-core") || fileName.contains("oshi-core")
+    })
+  },
+  assembly / assemblyOption := (assembly / assemblyOption).value.copy(
+    includeBin = true,
+    includeScala = false,
+    includeDependency = false,
+    cacheOutput = false
+  ),
+  assembly / assemblyMergeStrategy := {
+    case "reference.conf" => MergeStrategy.concat
+    case anyOther         => (assembly / assemblyMergeStrategy).value(anyOther)
+  },
+  libraryDependencies ++= Seq(
+    oshiCore
+  )
+)
+
+lazy val `kamon-runtime-attacher` = (project in file("bundle/kamon-runtime-attacher"))
   .enablePlugins(BuildInfoPlugin)
   .enablePlugins(AssemblyPlugin)
   .settings(
-    moduleName := "kamon-bundle",
-    buildInfoPackage := "kamon.bundle",
+    moduleName := "kamon-runtime-attacher",
+    buildInfoPackage := "kamon.runtime.attacher",
     buildInfoKeys := Seq[BuildInfoKey](kanelaAgentJarName),
     kanelaAgentJar := update.value.matching(Modules.exactFilter(kanelaAgent)).head,
     kanelaAgentJarName := kanelaAgentJar.value.getName,
     Compile / resourceGenerators += Def.task(Seq(kanelaAgentJar.value)).taskValue,
-    assembly / fullClasspath ++= (Shaded / internalDependencyClasspath).value,
     assembly / assemblyShadeRules := Seq(
       ShadeRule.zap("**module-info").inAll,
       ShadeRule.rename("net.bytebuddy.agent.**" -> "kamon.lib.@0").inAll
     ),
-    assembly / assemblyExcludedJars := {
-      (assembly / fullClasspath).value.filter(f => {
-        val fileName = f.data.getName()
-        fileName.contains("kamon-core") || fileName.contains("oshi-core")
-      })
-    },
-    assembly / assemblyOption := (assembly / assemblyOption).value.copy(
-      includeBin = true,
-      includeScala = false,
-      includeDependency = false,
-      cacheOutput = false
-    ),
-    assembly / assemblyMergeStrategy := {
-      case "reference.conf" => MergeStrategy.concat
-      case anyOther         => (assembly / assemblyMergeStrategy).value(anyOther)
-    },
     libraryDependencies ++= Seq(
-      oshiCore,
+      slf4jApi % "compile",
       kanelaAgent % "provided",
-      "net.bytebuddy" % "byte-buddy-agent" % "1.9.12" % "provided,shaded",
-    ),
-    libraryDependencies ++= {
-      // We are adding the Tapir instrumentation as library dependency (instead as a project dependency
-      // via .dependsOn(...) as all other projects below) because it is not published for Scala 2.11 and
-      // any proper solution requires major changes in the build. We might need to start using
-      // sbt-projectmatrix in the future.
-      //
-      // Since the bundle dependencies are only important when publishing we can force a run of
-      // publishLocal to get Tapir deployed on the local Ivy and then publish on the bundle as usual.
-      if(scalaBinaryVersion.value == "2.11") Seq.empty else Seq(
-        "io.kamon" %% "kamon-tapir" % version.value % "shaded"
-      )
-    },
-  ).dependsOn(
-    `kamon-core`,
-    `kamon-status-page` % "shaded",
-    `kamon-instrumentation-common` % "shaded",
-    `kamon-executors` % "shaded",
-    `kamon-scala-future` % "shaded",
-    `kamon-twitter-future` % "shaded",
-    `kamon-scalaz-future` % "shaded",
-    `kamon-cats-io` % "shaded",
-    `kamon-logback` % "shaded",
-    `kamon-jdbc` % "shaded",
-    `kamon-kafka` % "shaded",
-    `kamon-mongo` % "shaded",
-    `kamon-mongo-legacy` % "shaded",
-    `kamon-cassandra` % "shaded",
-    `kamon-elasticsearch` % "shaded",
-    `kamon-spring` % "shaded",
-    `kamon-annotation` % "shaded",
-    `kamon-annotation-api` % "shaded",
-    `kamon-system-metrics` % "shaded",
-    `kamon-akka` % "shaded",
-    `kamon-akka-http` % "shaded",
-    `kamon-play` % "shaded",
-    `kamon-redis` % "shaded",
-    `kamon-okhttp` % "shaded",
-    `kamon-caffeine` % "shaded",
-    `kamon-lagom` % "shaded",
-    `kamon-finagle` % "shaded",
+      "net.bytebuddy" % "byte-buddy-agent" % "1.12.7" % "provided,shaded"
+    )
   )
+
+
+/**
+  *   Add a reference here to all the project dependencies that can be built
+  *   for Scala 2.11, 2.12, and 2.13.
+  */
+lazy val `kamon-bundle-dependencies-all` = (project in file("bundle/kamon-bundle-dependencies-all"))
+  .disablePlugins(AssemblyPlugin)
+  .settings(noPublishing: _*)
+  .settings(ideSkipProject: _*)
+  .dependsOn(
+    `kamon-runtime-attacher`,
+    `kamon-status-page`,
+    `kamon-instrumentation-common`,
+    `kamon-executors`,
+    `kamon-scala-future`,
+    `kamon-twitter-future`,
+    `kamon-scalaz-future`,
+    `kamon-cats-io`,
+    `kamon-logback`,
+    `kamon-jdbc`,
+    `kamon-kafka`,
+    `kamon-mongo`,
+    `kamon-mongo-legacy`,
+    `kamon-cassandra`,
+    `kamon-elasticsearch`,
+    `kamon-spring`,
+    `kamon-annotation`,
+    `kamon-annotation-api`,
+    `kamon-system-metrics`,
+    `kamon-akka`,
+    `kamon-akka-http`,
+    `kamon-play`,
+    `kamon-redis`,
+    `kamon-okhttp`,
+    `kamon-caffeine`,
+    `kamon-lagom`
+  )
+
+/**
+  *   Add a reference here to all the project dependencies that can be built
+  *   from 2.12. Currently only Scala 2.12 and 2.13.
+  */
+lazy val `kamon-bundle-dependencies-2-12-and-up` = (project in file("bundle/kamon-bundle-dependencies-2-12-and-up"))
+  .disablePlugins(AssemblyPlugin)
+  .settings(noPublishing: _*)
+  .settings(ideSkipProject: _*)
+  .settings(
+    crossScalaVersions := Seq(
+      `scala_2.12_version`,
+      `scala_2.13_version`
+    )
+  )
+  .dependsOn(
+    `kamon-bundle-dependencies-all`,
+    `kamon-finagle`,
+    `kamon-tapir`
+  )
+
+lazy val `kamon-bundle` = (project in file("bundle/kamon-bundle"))
+  .enablePlugins(AssemblyPlugin)
+  .settings(commonBundleSettings)
+  .settings(ideSkipProject: _*)
+  .settings(
+    crossScalaVersions := Seq(
+      `scala_2.12_version`,
+      `scala_2.13_version`
+    )
+  )
+  .dependsOn(
+    `kamon-core`,
+    `kamon-bundle-dependencies-2-12-and-up` % "shaded"
+  )
+
+lazy val `kamon-bundle_2_11` = (project in file("bundle/kamon-bundle_2.11"))
+  .enablePlugins(AssemblyPlugin)
+  .settings(commonBundleSettings)
+  .settings(ideSkipProject: _*)
+  .settings(
+    scalaVersion := `scala_2.11_version`,
+    crossScalaVersions := Seq(
+      `scala_2.11_version`
+    ),
+  )
+  .dependsOn(
+    `kamon-core`,
+    `kamon-bundle-dependencies-all` % "shaded"
+  )
+
 
 lazy val `bill-of-materials` = (project in file("bill-of-materials"))
   .enablePlugins(BillOfMaterialsPlugin)
+  .settings(ideSkipProject: _*)
   .settings(
     name := "kamon-bom",
     crossVersion := CrossVersion.disabled,

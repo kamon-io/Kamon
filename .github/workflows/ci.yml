@@ -15,4 +15,4 @@ jobs:
         with:
           java-version: adopt@1.8.0-292
       - name: Test
-        run: sbt -v ";+instrumentation/publishLocal;+core/test;+instrumentation/test;+reporters/test"
+        run: sbt -v ";+core/test;+instrumentation/test;+reporters/test"
