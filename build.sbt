@@ -141,6 +141,7 @@ val instrumentationProjects = Seq[ProjectReference](
   `kamon-redis`,
   `kamon-caffeine`,
   `kamon-lagom`,
+  `kamon-finagle`,
 )
 
 lazy val instrumentation = (project in file("instrumentation"))
@@ -553,6 +554,21 @@ lazy val `kamon-lagom` = (project in file("instrumentation/kamon-lagom"))
   )
   .dependsOn(`kamon-core` % "compile")
 
+lazy val `kamon-finagle` = (project in file("instrumentation/kamon-finagle"))
+  .disablePlugins(AssemblyPlugin)
+  .enablePlugins(JavaAgent)
+  .settings(instrumentationSettings)
+  .settings(
+    crossScalaVersions := Seq("2.12.11", "2.13.1"),
+    libraryDependencies ++= Seq(
+      kanelaAgent % "provided",
+      "com.twitter" %% "finagle-http" % "21.12.0" % "provided",
+      "com.twitter" %% "bijection-util" % "0.9.7" % "test",
+      scalatest % "test",
+      logbackClassic % "test",
+    )
+  ).dependsOn(`kamon-core`, `kamon-instrumentation-common`, `kamon-testkit` % "test")
+
 /**
  * Reporters
  */
@@ -812,6 +828,7 @@ val `kamon-bundle` = (project in file("bundle/kamon-bundle"))
     `kamon-okhttp` % "shaded",
     `kamon-caffeine` % "shaded",
     `kamon-lagom` % "shaded",
+    `kamon-finagle` % "shaded",
   )
 
 lazy val `bill-of-materials` = (project in file("bill-of-materials"))
