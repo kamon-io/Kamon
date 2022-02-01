@@ -21,11 +21,12 @@ import java.util.concurrent.TimeUnit
 import scala.collection.JavaConverters._
 
 import io.opentelemetry.api.common.AttributeKey
-import io.opentelemetry.api.trace.SpanKind
+import io.opentelemetry.api.trace.{SpanId, SpanKind, TraceId}
 import io.opentelemetry.sdk.common.InstrumentationLibraryInfo
 import io.opentelemetry.sdk.resources.Resource
 import io.opentelemetry.sdk.trace.data.SpanData
 import kamon.tag.{Tag, TagSet}
+import kamon.trace.Identifier.Factory
 import kamon.trace.Span.{Kind, Link}
 import kamon.trace.Trace.SamplingDecision
 import kamon.trace.{Span, Trace}
@@ -87,6 +88,19 @@ class SpanConverterSpec extends AnyWordSpec with Matchers with Utils {
     val otelEvent = SpanConverter.toEvent(mark)
     otelEvent.getName shouldEqual mark.key
     otelEvent.getEpochNanos shouldEqual SpanConverter.toEpocNano(mark.instant)
+  }
+
+  "constructing a valid SpanContext" should {
+    "work with an 8 byte traceid" in {
+      val spanContext = SpanConverter.mkSpanContext(true, Factory.EightBytesIdentifier.generate(), spanIDFactory.generate())
+      SpanId.isValid(spanContext.getSpanId) shouldEqual true
+      TraceId.isValid(spanContext.getTraceId) shouldEqual true
+    }
+    "work with a 16 byte traceid" in {
+      val spanContext = SpanConverter.mkSpanContext(true, Factory.SixteenBytesIdentifier.generate(), spanIDFactory.generate())
+      SpanId.isValid(spanContext.getSpanId) shouldEqual true
+      TraceId.isValid(spanContext.getTraceId) shouldEqual true
+    }
   }
 
   "should convert an Instant into nanos since EPOC" in {
