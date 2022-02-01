@@ -102,9 +102,9 @@ class OpenTelemetryHttpTraceReporter(traceServiceFactory: Config => TraceService
     //add all kamon.environment.tags as KeyValues to the Resource object
     if (includeEnvTags) {
       env.tags.iterator().foreach {
-        case t: Tag.String => builder.put(t.key, t.value)
-        case t: Tag.Boolean => builder.put(t.key, t.value)
-        case t: Tag.Long => builder.put(t.key, t.value)
+        case t: Tag.String => builder.put(t.key.replace('-', '.'), t.value)
+        case t: Tag.Boolean => builder.put(t.key.replace('-', '.'), t.value)
+        case t: Tag.Long => builder.put(t.key.replace('-', '.'), t.value)
       }
     }
 
