@@ -19,7 +19,6 @@ package status
 
 import java.net.InetAddress
 import java.util.concurrent.ThreadLocalRandom
-
 import com.typesafe.config.Config
 import kamon.tag.TagSet
 import kamon.util.HexCodec
@@ -64,12 +63,29 @@ object Environment {
     val environmentConfig = config.getConfig("kamon.environment")
     val service = environmentConfig.getString("service")
     val tagsConfig = environmentConfig.getConfig("tags")
-    val tags = TagSet.from(tagsConfig.topLevelKeys.map(tag => (tag -> tagsConfig.getString(tag))).toMap)
+    val tags = flattenedTags(tagsConfig)
 
     val host = readValueOrGenerate(environmentConfig.getString("host"), generateHostname())
     val instance = readValueOrGenerate(environmentConfig.getString("instance"), s"$service@$host")
 
     Environment(host, service, instance, _incarnation, tags)
+  }
+
+  /**
+    * Flattens all the configuration keys in the configuration so that we can have namespaced tag names
+    * like `k8s.namespace.name` or nested configurations and they will still generate a flat `x.y.z=value`
+    * set of tags.
+    */
+  private def flattenedTags(tagsConfig: Config): TagSet = {
+    import scala.collection.JavaConverters._
+
+    TagSet.from(
+      tagsConfig.entrySet()
+        .iterator()
+        .asScala
+        .map { e => e.getKey -> e.getValue.unwrapped().toString }
+        .toMap
+    )
   }
 
   private def generateHostname(): String = {
