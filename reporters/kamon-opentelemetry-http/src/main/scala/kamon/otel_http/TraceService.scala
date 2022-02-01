@@ -66,10 +66,12 @@ private[otel_http] class HttpProtoTraceService(endpoint: String) extends TraceSe
     completableResultCode.whenComplete {
       () =>
         if (completableResultCode.isSuccess) result.success(())
-        else result.failure(new RuntimeException("Exporting trace span failed"))
+        else result.failure(StatusRuntimeException)
     }
     result.future
   }
 
   override def close(): Unit = delegate.close()
 }
+
+case object StatusRuntimeException extends RuntimeException("Exporting trace span failed")
