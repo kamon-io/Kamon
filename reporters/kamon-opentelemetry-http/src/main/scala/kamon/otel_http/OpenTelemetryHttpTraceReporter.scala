@@ -40,7 +40,7 @@ object OpenTelemetryHttpTraceReporter {
     override def create(settings: ModuleFactory.Settings): Module = {
       logger.info("Creating OpenTelemetry Trace Reporter")
 
-      val module = new OpenTelemetryHttpTraceReporter(HttpProtoTraceService(_))(settings.executionContext)
+      val module = new OpenTelemetryHttpTraceReporter(HttpProtoTraceService.apply)(settings.executionContext)
       module.reconfigure(settings.config)
       module
     }
@@ -69,11 +69,11 @@ class OpenTelemetryHttpTraceReporter(traceServiceFactory: Config => TraceService
   }
 
   override def reconfigure(newConfig: Config): Unit = {
-    logger.info("Reconfigure OpenTelemetry Trace Reporter")
+    logger.info("Reconfigure OpenTelemetry Http Trace Reporter")
 
     //pre-generate the function for converting Kamon span to proto span
     val instrumentationLibraryInfo: InstrumentationLibraryInfo = InstrumentationLibraryInfo.create("kamon", kamonVersion)
-    val resource: Resource = buildResource(newConfig.getBoolean("kamon.otel.trace.include-environment-tags"))
+    val resource: Resource = buildResource(newConfig.getBoolean("kamon.otel-http.trace.include-environment-tags"))
     this.spanConverterFunc = SpanConverter.convert(resource, instrumentationLibraryInfo)
 
     this.traceService = Option(traceServiceFactory.apply(newConfig))
