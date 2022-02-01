@@ -51,7 +51,7 @@ private[otel_http] object HttpProtoTraceService {
     val endpoint = otelExporterConfig.getString("endpoint")
     val url = new URL(endpoint)
 
-    logger.info(s"Configured endpoint for OpenTelemetry trace reporting [${url.getHost}:${url.getPort}] using ${traceProtocol} traceProtocol")
+    logger.info(s"Configured endpoint for OpenTelemetry trace reporting [${url.getHost}:${url.getPort}] using http/protobuf protocol")
 
     new HttpProtoTraceService(endpoint)
   }

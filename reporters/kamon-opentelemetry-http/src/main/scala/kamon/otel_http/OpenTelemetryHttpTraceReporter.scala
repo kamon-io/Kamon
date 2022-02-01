@@ -15,12 +15,14 @@
  */
 package kamon.otel_http
 
+import java.util
+
 import com.typesafe.config.Config
 import kamon.Kamon
 import kamon.module.{Module, ModuleFactory, SpanReporter}
 import kamon.trace.Span
 import org.slf4j.LoggerFactory
-import java.util.{Collections, Collection => JCollection, List => JList}
+import java.util.{Collection => JCollection}
 
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success}
@@ -52,7 +54,7 @@ import kamon.otel_http.OpenTelemetryHttpTraceReporter._
   */
 class OpenTelemetryHttpTraceReporter(traceServiceFactory: Config => TraceService)(implicit ec: ExecutionContext) extends SpanReporter {
   private var traceService: Option[TraceService] = None
-  private var spanConverterFunc: Seq[Span.Finished] => JCollection[SpanData] = _ => JList.of()
+  private var spanConverterFunc: Seq[Span.Finished] => JCollection[SpanData] = (_ => new util.ArrayList[SpanData](0))
 
   override def reportSpans(spans: Seq[Span.Finished]): Unit = {
     if (spans.nonEmpty) {
