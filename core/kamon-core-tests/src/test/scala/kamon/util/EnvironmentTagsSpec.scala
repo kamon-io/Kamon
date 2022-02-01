@@ -33,6 +33,14 @@ class EnvironmentTagsSpec extends AnyWordSpec with Matchers {
       |  tags {
       |    env = staging
       |    region = asia-1
+      |
+      |    k8s.namespace.name = production
+      |
+      |    some {
+      |      tag {
+      |        inside = example
+      |      }
+      |    }
       |  }
       |}
     """.stripMargin
@@ -97,11 +105,16 @@ class EnvironmentTagsSpec extends AnyWordSpec with Matchers {
           |include-service = no
           |include-host = no
           |include-instance = no
-          |exclude = [ "region", "env" ]
+          |exclude = [ "region", "env", "k8s.namespace.name", "some.tag.inside" ]
         """.stripMargin)
 
       val tags = EnvironmentTags.from(testEnv, config)
       tags shouldBe empty
+    }
+
+    "allow for nested tag names" in {
+      testEnv.tags("k8s.namespace.name") shouldBe "production"
+      testEnv.tags("some.tag.inside") shouldBe "example"
     }
   }
 
