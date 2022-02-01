@@ -38,7 +38,7 @@ object OpenTelemetryHttpTraceReporter {
 
   class Factory extends ModuleFactory {
     override def create(settings: ModuleFactory.Settings): Module = {
-      logger.info("Creating OpenTelemetry Trace Reporter")
+      logger.info("Creating OpenTelemetry Http Trace Reporter")
 
       val module = new OpenTelemetryHttpTraceReporter(HttpProtoTraceService.apply)(settings.executionContext)
       module.reconfigure(settings.config)

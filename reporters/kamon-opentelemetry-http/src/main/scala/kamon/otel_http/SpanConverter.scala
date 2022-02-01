@@ -89,8 +89,10 @@ private[otel_http] object SpanConverter {
   private[otel_http] def getTraceFlags(sample: Boolean): TraceFlags =
     if (sample) TraceFlags.getSampled else TraceFlags.getDefault
 
-  private[otel_http] def mkSpanContext(sample: Boolean, traceId: Identifier, spanId: Identifier): SpanContext =
-    SpanContext.create(traceId.string, spanId.string, getTraceFlags(sample), TraceState.getDefault)
+  private[otel_http] def mkSpanContext(sample: Boolean, traceId: Identifier, spanId: Identifier): SpanContext = {
+    val paddedTraceId = if (traceId.string.length == 16) s"0000000000000000${traceId.string}" else traceId.string
+    SpanContext.create(paddedTraceId, spanId.string, getTraceFlags(sample), TraceState.getDefault)
+  }
 
   private[otel_http] def getStatus(span: Span.Finished): StatusData =
     if (span.hasError) {
