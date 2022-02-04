@@ -63,10 +63,13 @@ private[otel_http] class HttpProtoTraceService(endpoint: String) extends TraceSe
   override def exportSpans(spans: JCollection[SpanData]): Future[Unit] = {
     val result = Promise[Unit]
     val completableResultCode = delegate.`export`(spans)
-    completableResultCode.whenComplete {
-      () =>
+    val runnable: Runnable = new Runnable {
+      override def run(): Unit =
         if (completableResultCode.isSuccess) result.success(())
         else result.failure(StatusRuntimeException)
+    }
+    completableResultCode.whenComplete {
+      runnable
     }
     result.future
   }
