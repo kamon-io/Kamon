@@ -79,6 +79,8 @@ class StatementInstrumentationSpec extends AnyWordSpec
 
       s"instrumenting the ${driver.name} driver" should {
         "generate Spans on calls to .execute() in prepared statements" in {
+          applyConfig("kamon.instrumentation.jdbc.add-db-statement-as-span-tag=always")
+
           val select = s"SELECT * FROM Address where Nr = ?"
           val statement = connection.prepareStatement(select)
           statement.setLong(1, 1)
@@ -215,6 +217,54 @@ class StatementInstrumentationSpec extends AnyWordSpec
             .toLowerCase() should include("notatable")
         }
 
+        "include the db.statement tag in prepared statements only when enabled via configuration" in {
+          applyConfig("kamon.instrumentation.jdbc.add-db-statement-as-span-tag=prepared")
+
+          connection
+            .createStatement()
+            .execute("SELECT * FROM Address where Nr = 1")
+
+          eventually(timeout(scaled(5 seconds)), interval(200 millis)) {
+            val span = commonSpanValidations(testSpanReporter(), driver)
+            span.tags.get(option("db.statement")) shouldBe empty
+          }
+
+
+          val ps = connection.prepareStatement("INSERT INTO Address VALUES(?, ?)")
+          ps.setInt(1, 1)
+          ps.setString(2, "test")
+          ps.execute()
+
+          eventually(timeout(scaled(5 seconds)), interval(200 millis)) {
+            val span = commonSpanValidations(testSpanReporter(), driver)
+            span.tags.get(plain("db.statement")) shouldBe "INSERT INTO Address VALUES(?, ?)"
+          }
+        }
+
+        "not include the db.statement tag when disabled via configuration" in {
+          applyConfig("kamon.instrumentation.jdbc.add-db-statement-as-span-tag=never")
+
+          connection
+            .createStatement()
+            .execute("SELECT * FROM Address where Nr = 1")
+
+          eventually(timeout(scaled(5 seconds)), interval(200 millis)) {
+            val span = commonSpanValidations(testSpanReporter(), driver)
+            span.tags.get(option("db.statement")) shouldBe empty
+          }
+
+
+          val ps = connection.prepareStatement("INSERT INTO Address VALUES(?, ?)")
+          ps.setInt(1, 1)
+          ps.setString(2, "test")
+          ps.execute()
+
+          eventually(timeout(scaled(5 seconds)), interval(200 millis)) {
+            val span = commonSpanValidations(testSpanReporter(), driver)
+            span.tags.get(option("db.statement")) shouldBe empty
+          }
+        }
+
         "track in-flight operations" in {
           if (driver.supportSleeping) {
             val vendorTags = TagSet.of("db.vendor", driver.vendor)
@@ -241,6 +291,7 @@ class StatementInstrumentationSpec extends AnyWordSpec
             }
 
           }
+
           connection.close()
           driver.cleanup()
         }
