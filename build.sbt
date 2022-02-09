@@ -723,6 +723,7 @@ lazy val `kamon-opentelemetry` = (project in file("reporters/kamon-opentelemetry
     libraryDependencies ++= Seq(
       "io.opentelemetry" % "opentelemetry-proto" % "0.17.1",
       "io.grpc" % "grpc-netty" % "1.36.0",
+      okHttp,
 
       scalatest % "test",
       logbackClassic % "test"
