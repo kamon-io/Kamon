@@ -76,7 +76,7 @@ private[otel] object GrpcTraceService {
 
     //inspiration from https://github.com/open-telemetry/opentelemetry-java/blob/main/exporters/otlp/trace/src/main/java/io/opentelemetry/exporter/otlp/trace/OtlpGrpcSpanExporterBuilder.java
 
-    logger.info(s"Configured endpoint for OpenTelemetry trace reporting [${url.getHost}:${url.getPort}]")
+    logger.info(s"Configured endpoint for OpenTelemetry trace reporting [${url.getHost}:${url.getPort}] using $protocol protocol")
 
     protocol match {
       case "http/protobuf" => new HTTPTraceService(url, compression, headers, timeoutNanos)
