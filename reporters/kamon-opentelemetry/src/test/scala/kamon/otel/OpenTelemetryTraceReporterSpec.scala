@@ -15,25 +15,28 @@
  */
 package kamon.otel
 
+import java.util.{Collection => JCollection}
+
+import scala.collection.JavaConverters._
+import scala.concurrent.{ExecutionContext, Future}
+
 import com.typesafe.config.ConfigFactory
-import io.opentelemetry.proto.collector.trace.v1.{ExportTraceServiceRequest, ExportTraceServiceResponse}
+import io.opentelemetry.api.common.AttributeKey
+import io.opentelemetry.sdk.trace.data.SpanData
 import kamon.Kamon
 import kamon.module.ModuleFactory
-import kamon.otel.CustomMatchers.{ByteStringMatchers, KeyValueMatchers, finishedSpan}
 import org.scalatest.OptionValues
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
-import scala.concurrent.{ExecutionContext, Future}
-
 /**
- * Tests for [[OpenTelemetryTraceReporter]]
- */
-class OpenTelemetryTraceReporterSpec extends AnyWordSpec with Matchers with OptionValues with ByteStringMatchers with KeyValueMatchers {
+  * Tests for [[OpenTelemetryHttpTraceReporter]]
+  */
+class OpenTelemetryTraceReporterSpec extends AnyWordSpec with Matchers with OptionValues with Utils {
 
-  private def openTelemetryTraceReporter():(OpenTelemetryTraceReporter, MockTraceService) = {
+  private def openTelemetryTraceReporter(): (OpenTelemetryHttpTraceReporter, MockTraceService) = {
     val traceService = new MockTraceService()
-    val reporter = new OpenTelemetryTraceReporter(_ => traceService)(ExecutionContext.global)
+    val reporter = new OpenTelemetryHttpTraceReporter(_ => traceService)(ExecutionContext.global)
     reporter.reconfigure(config)
     (reporter, traceService)
   }
@@ -49,28 +52,19 @@ class OpenTelemetryTraceReporterSpec extends AnyWordSpec with Matchers with Opti
       val (reporter, traceService) = openTelemetryTraceReporter()
       val span = finishedSpan()
       reporter.reportSpans(Seq(span))
-      traceService.exportTraceServiceRequest.value.getResourceSpansCount should be(1)
-      val resourceSpans = traceService.exportTraceServiceRequest.value.getResourceSpansList.get(0)
+      //there should be a single span reported
+      traceService.exportTraceServiceRequest.value.size() shouldEqual 1
+      val spanData = traceService.exportTraceServiceRequest.value.iterator().next()
       val kamonVersion = Kamon.status().settings().version
-      resourceSpans.getResource.getAttributesList should containStringKV("service.name", "kamon-test-application")
-      resourceSpans.getResource.getAttributesList should containStringKV("telemetry.sdk.name", "kamon")
-      resourceSpans.getResource.getAttributesList should containStringKV("telemetry.sdk.language", "scala")
-      resourceSpans.getResource.getAttributesList should containStringKV("telemetry.sdk.version", kamonVersion)
-
-      //all kamon spans should belong to the same instance of InstrumentationLibrarySpans
-      val instSpans = resourceSpans.getInstrumentationLibrarySpansList
-      instSpans.size() should be(1)
+      spanData.getResource.getAttributes.asMap().asScala should contain(AttributeKey.stringKey("service.name"), "kamon-test-application")
+      spanData.getResource.getAttributes.asMap().asScala should contain(AttributeKey.stringKey("telemetry.sdk.name"), "kamon")
+      spanData.getResource.getAttributes.asMap().asScala should contain(AttributeKey.stringKey("telemetry.sdk.language"), "scala")
+      spanData.getResource.getAttributes.asMap().asScala should contain(AttributeKey.stringKey("telemetry.sdk.version"), kamonVersion)
 
       //assert instrumentation labels
-      val instrumentationLibrarySpans = instSpans.get(0)
-      instrumentationLibrarySpans.getInstrumentationLibrary.getName should be("kamon")
-      instrumentationLibrarySpans.getInstrumentationLibrary.getVersion should be(kamonVersion)
-
-      //there should be a single span reported
-      val spans = instSpans.get(0).getSpansList
-      spans.size() should be(1)
-
-      //not doing deeper comparison of the span conversion as these are tested in the SpanConverterSpec
+      val instrumentationLibraryInfo = spanData.getInstrumentationLibraryInfo
+      instrumentationLibraryInfo.getName should be("kamon")
+      instrumentationLibraryInfo.getVersion should be(kamonVersion)
     }
   }
 
@@ -82,17 +76,19 @@ class OpenTelemetryTraceReporterSpec extends AnyWordSpec with Matchers with Opti
   }
 
   "building instance with the factory should work" in {
-    val reporter = new OpenTelemetryTraceReporter.Factory().create(ModuleFactory.Settings(config, ExecutionContext.global))
+    val reporter = new OpenTelemetryHttpTraceReporter.Factory().create(ModuleFactory.Settings(config, ExecutionContext.global))
     reporter.stop()
   }
 
-  private class MockTraceService extends TraceService{
-    var exportTraceServiceRequest:Option[ExportTraceServiceRequest] = None
+  private class MockTraceService extends TraceService {
+    var exportTraceServiceRequest: Option[JCollection[SpanData]] = None
     var hasBeenClosed = false
-    override def exportSpans(request: ExportTraceServiceRequest): Future[ExportTraceServiceResponse] = {
-      exportTraceServiceRequest = Option(request)
-      Future.successful(ExportTraceServiceResponse.getDefaultInstance)
+
+    override def exportSpans(spans: JCollection[SpanData]): Future[Unit] = {
+      exportTraceServiceRequest = Option(spans)
+      Future.successful(())
     }
+
     override def close(): Unit = hasBeenClosed = true
   }
 }

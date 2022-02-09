@@ -16,51 +16,43 @@
 package kamon.otel
 
 import com.typesafe.config.ConfigFactory
-import io.grpc.StatusRuntimeException
-import io.opentelemetry.proto.collector.trace.v1.ExportTraceServiceRequest
-import io.opentelemetry.proto.common.v1.InstrumentationLibrary
-import io.opentelemetry.proto.resource.v1.Resource
-import kamon.otel.CustomMatchers._
-import kamon.otel.SpanConverter.stringKeyValue
+import io.opentelemetry.sdk.common.InstrumentationLibraryInfo
+import io.opentelemetry.sdk.resources.Resource
+import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.{Millis, Seconds, Span}
 import org.scalatest.wordspec.AnyWordSpec
 
-import java.util.Collections
-
 /**
  * Tests for the [[TraceService]]
  */
-class TraceServiceSpec extends AnyWordSpec with Matchers with ScalaFutures {
+class TraceServiceSpec extends AnyWordSpec with Matchers with ScalaFutures with Utils {
   private implicit val defaultPatience: PatienceConfig = PatienceConfig(timeout =  Span(2, Seconds), interval = Span(15, Millis))
 
-  private val resource =  Resource.newBuilder()
-    .addAttributes(stringKeyValue("service.name", "TestService"))
-    .addAttributes(stringKeyValue("telemetry.sdk.name", "kamon"))
-    .addAttributes(stringKeyValue("telemetry.sdk.language", "scala"))
-    .addAttributes(stringKeyValue("telemetry.sdk.version", "0.0.0"))
+  private val resource =  Resource.builder()
+    .put("service.name", "TestService")
+    .put("telemetry.sdk.name", "kamon")
+    .put("telemetry.sdk.language", "scala")
+    .put("telemetry.sdk.version", "0.0.0")
     .build()
-  private val instrumentationLibrary = InstrumentationLibrary.newBuilder().setName("kamon").setVersion("0.0.0").build()
+  private val instrumentationLibrary = InstrumentationLibraryInfo.create("kamon", "0.0.0")
   private val config = ConfigFactory.defaultApplication().withFallback(ConfigFactory.defaultReference()).resolve()
 
   "exporting traces" should {
     "fail in case the remote service is not operable" in {
-      val traceService = GrpcTraceService(config)
+      val traceService = HttpProtoTraceService(config)
 
       //the actual data does not really matter as this will fail due to connection issues
-      val resources = SpanConverter.toProtoResourceSpan(resource, instrumentationLibrary)(Seq(finishedSpan()))
-      val exported = ExportTraceServiceRequest.newBuilder()
-        .addAllResourceSpans(Collections.singletonList(resources))
-        .build()
-      val f = traceService.exportSpans(exported)
-      whenReady(f.failed) { e =>
-        e shouldBe a [StatusRuntimeException]
+      val resources = SpanConverter.convert(resource, instrumentationLibrary)(Seq(finishedSpan()))
+      val f = traceService.exportSpans(resources)
+      whenReady(f.failed, Timeout(Span.apply(12, Seconds))) { e =>
+        e shouldEqual StatusRuntimeException
       }
     }
   }
 
   "closing service should execute without errors" in {
-    GrpcTraceService(config).close()
+    HttpProtoTraceService(config).close()
   }
 }

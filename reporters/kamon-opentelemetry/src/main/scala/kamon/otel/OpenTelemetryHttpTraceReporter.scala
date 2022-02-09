@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package kamon.otel_http
+package kamon.otel
 
 import java.util
 
@@ -47,7 +47,7 @@ object OpenTelemetryHttpTraceReporter {
   }
 }
 
-import kamon.otel_http.OpenTelemetryHttpTraceReporter._
+import OpenTelemetryHttpTraceReporter._
 
 /**
   * Converts internal finished Kamon spans to OpenTelemetry format and sends to a configured OpenTelemetry endpoint using gRPC.
@@ -73,7 +73,7 @@ class OpenTelemetryHttpTraceReporter(traceServiceFactory: Config => TraceService
 
     //pre-generate the function for converting Kamon span to proto span
     val instrumentationLibraryInfo: InstrumentationLibraryInfo = InstrumentationLibraryInfo.create("kamon", kamonVersion)
-    val resource: Resource = buildResource(newConfig.getBoolean("kamon.otel-http.trace.include-environment-tags"))
+    val resource: Resource = buildResource(newConfig.getBoolean("kamon.otel.trace.include-environment-tags"))
     this.spanConverterFunc = SpanConverter.convert(resource, instrumentationLibraryInfo)
 
     this.traceService = Option(traceServiceFactory.apply(newConfig))

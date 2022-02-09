@@ -580,7 +580,6 @@ val reportersProjects = Seq[ProjectReference](
   `kamon-jaeger`,
   `kamon-newrelic`,
   `kamon-opentelemetry`,
-  `kamon-opentelemetry-http`,
   `kamon-prometheus`,
   `kamon-statsd`,
   `kamon-zipkin`,
@@ -722,20 +721,8 @@ lazy val `kamon-opentelemetry` = (project in file("reporters/kamon-opentelemetry
   .settings(
     crossScalaVersions += `scala_3_version`,
     libraryDependencies ++= Seq(
-      "io.opentelemetry" % "opentelemetry-proto" % "0.17.1",
-      "io.grpc" % "grpc-netty" % "1.36.0",
-
-      scalatest % "test",
-      logbackClassic % "test"
-    )
-  ).dependsOn(`kamon-core`, `kamon-testkit` % "test")
-
-lazy val `kamon-opentelemetry-http` = (project in file("reporters/kamon-opentelemetry-http"))
-  .disablePlugins(AssemblyPlugin)
-  .settings(
-    crossScalaVersions += `scala_3_version`,
-    libraryDependencies ++= Seq(
-      "io.opentelemetry" % "opentelemetry-exporter-otlp-http-trace" % "1.10.1",
+      "io.opentelemetry" % "opentelemetry-exporter-otlp-http-trace" % "1.11.0",
+      "io.opentelemetry" % "opentelemetry-exporter-otlp-trace" % "1.11.0",
 
       scalatest % "test",
       logbackClassic % "test"

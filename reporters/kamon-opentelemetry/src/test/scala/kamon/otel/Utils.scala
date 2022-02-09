@@ -1,4 +1,4 @@
-package kamon.otel_http
+package kamon.otel
 
 import java.time.Instant
 
